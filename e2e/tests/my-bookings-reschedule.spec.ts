@@ -144,7 +144,7 @@ async function openActionsMenu(page: Page, card: Locator): Promise<Locator> {
  * Filters on the `.action-menu-item__label` descendant specifically so an
  * anchored pattern like `/^Reschedule$/` matches only the label span. */
 function menuItem(menu: Locator, labelPattern: RegExp): Locator {
-  return menu.locator('li.p-menuitem').filter({
+  return menu.locator('li.p-menu-item').filter({
     has: menu.page().locator('.action-menu-item__label', { hasText: labelPattern }),
   });
 }
@@ -164,7 +164,7 @@ async function openRescheduleFromCard(page: Page, card: Locator): Promise<void> 
 }
 
 /**
- * Opens the PrimeNG p-calendar panel.
+ * Opens the PrimeNG p-datepicker panel.
  *
  * Click the INPUT, not the icon: OBRS-185 moved every date field onto the shared
  * `.app-date-field` style with `[iconDisplay]="'input'"` (see
@@ -838,7 +838,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
   });
 });
 
-/** Clicks a day cell in the currently open PrimeNG p-calendar panel, navigating
+/** Clicks a day cell in the currently open PrimeNG p-datepicker panel, navigating
  * months first if the target isn't on the visible one.
  *
  * PrimeNG 17 stamps each day cell's <span> with `data-date="YYYY-M-D"` — 1-based

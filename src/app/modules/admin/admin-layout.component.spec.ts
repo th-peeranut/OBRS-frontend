@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from
 import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { PrimeNGConfig } from 'primeng/api';
+import { PrimeNG } from 'primeng/config';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 
@@ -85,7 +85,7 @@ describe('AdminLayoutComponent', () => {
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
-        { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: PrimeNG, useValue: { setTranslation: () => {} } },
         { provide: ThemeService, useValue: themeServiceStub },
         { provide: LanguageService, useValue: createLanguageServiceStub() },
         {
@@ -740,7 +740,7 @@ describe('AdminLayoutComponent — usability report badge', () => {
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
-        { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: PrimeNG, useValue: { setTranslation: () => {} } },
         { provide: ThemeService, useValue: themeServiceStub },
         { provide: LanguageService, useValue: createLanguageServiceStub() },
         // Placeholder — each test overrides this with its own count source
@@ -985,7 +985,7 @@ describe('AdminLayoutComponent — usability report badge (admin badgeStatus)', 
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
-        { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: PrimeNG, useValue: { setTranslation: () => {} } },
         { provide: ThemeService, useValue: themeServiceStub },
         { provide: LanguageService, useValue: createLanguageServiceStub() },
         { provide: AdminApiService, useValue: { getUsabilityReportCountByStatus: () => of(0) } },

@@ -253,7 +253,7 @@ test('AFTER — ADMIN switches to the jump-seat tab', async ({ page }) => {
   await expect(page.locator('[data-testid="system-settings-tab-jump-seat"]')).toHaveClass(/active/, {
     timeout: 30_000,
   });
-  await expect(page.locator('p-inputswitch').first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('p-toggleswitch').first()).toBeVisible({ timeout: 15_000 });
 
   await page.screenshot({ path: `${ASSETS}/after-settings-admin-jump-seat.png` });
 });

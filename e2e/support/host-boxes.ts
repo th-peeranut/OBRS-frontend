@@ -484,13 +484,13 @@ export const ADMIN_SWEEP: SweepPage[] = [
 
   // The two admin form modals. Their host elements are written unconditionally
   // into their pages, so they are in the DOM from the first paint -- but the
-  // template root of each is `<div *ngIf="isOpen">`, so the `p-calendar` inside
+  // template root of each is `<div *ngIf="isOpen">`, so the `p-datepicker` inside
   // renders only once the modal opens. Both open from the page's own Add button
   // with no seeded data at all, which is what makes them worth one click each:
   // `expense-form-modal` is the ONLY place in the app that renders a
-  // `p-calendar` with `styleClass="schedule-calendar-filter"` on a page this
+  // `p-datepicker` with `styleClass="schedule-calendar-filter"` on a page this
   // lane can reach, and that is a materially different box from the
-  // `app-date-field` one -- `.p-calendar.app-date-field` is `display: flex` in
+  // `app-date-field` one -- `.p-datepicker.app-date-field` is `display: flex` in
   // styles.scss and blockifies PrimeNG's inner span, while
   // `schedule-calendar-filter` matches no rule anywhere and leaves it
   // `inline-flex`. Without these two entries the global rule would be shipped
@@ -524,8 +524,8 @@ export const ADMIN_SWEEP: SweepPage[] = [
     },
   },
   {
-    // The bare `<p-calendar>` -- no styleClass at all, so none of the
-    // `.p-calendar.app-date-field` rules in styles.scss apply and PrimeNG's own
+    // The bare `<p-datepicker>` -- no styleClass at all, so none of the
+    // `.p-datepicker.app-date-field` rules in styles.scss apply and PrimeNG's own
     // `inline-flex` container survives. Four components write one and this is
     // the only one of the four that opens on a click with no seeded data, which
     // is what makes it the screen that measures the shape for all of them.
@@ -561,8 +561,8 @@ export const ADMIN_SWEEP: SweepPage[] = [
     ],
     act: async (page) => {
       await page.locator('.trip-row').first().click();
-      await expect(page.locator('app-walk-in-center-panel p-tabview')).toBeVisible({ timeout: 10_000 });
-      await page.locator('.p-tabview-nav').getByText('Trip Details').click();
+      await expect(page.locator('app-walk-in-center-panel p-tabs')).toBeVisible({ timeout: 10_000 });
+      await page.locator('.p-tablist-tab-list').getByText('Trip Details').click();
       await expect(page.locator('app-trip-details-edit-form')).toBeVisible({ timeout: 10_000 });
     },
   },
@@ -648,7 +648,7 @@ export const CUSTOMER_EXTRA_SWEEP: SweepPage[] = [
     act: async (page) => {
       await page.locator('button.actions-menu-btn').first().click();
       await page.locator('.my-bookings-action-menu').getByText('Reschedule').click();
-      await expect(page.locator('app-reschedule-date-picker-step p-calendar')).toBeVisible({ timeout: 10_000 });
+      await expect(page.locator('app-reschedule-date-picker-step p-datepicker')).toBeVisible({ timeout: 10_000 });
     },
   },
 ];
@@ -680,7 +680,7 @@ export function featureFlags(): Record<string, boolean> {
  * The four library hosts OBRS-775 measured as `display: inline` around block
  * children and could not fix from a component stylesheet.
  */
-export const PRIMENG_TARGETS = ['p-tabview', 'p-tabpanel', 'p-card', 'p-calendar'] as const;
+export const PRIMENG_TARGETS = ['p-tabs', 'p-tabpanel', 'p-card', 'p-datepicker'] as const;
 
 export interface PrimengHostUser {
   /** Our component's selector, e.g. `app-expenses-page`. */
@@ -697,7 +697,7 @@ export interface PrimengHostUser {
    * hosts is malformed -- and therefore what blockifying it does -- is whether
    * PrimeNG's inner container is block-level. `styleClass` lands on that
    * container, so a class matters here IF AND ONLY IF something sets `display`
-   * through it. `.p-calendar.app-date-field` is `display: flex; width: 100%` in
+   * through it. `.p-datepicker.app-date-field` is `display: flex; width: 100%` in
    * styles.scss and is exactly what blockifies the span, so `app-date-field` is
    * a real variant. `schedule-calendar-filter` matches no rule anywhere in the
    * tree, and `center-tabview` is styled through `::ng-deep` for backgrounds,
@@ -717,7 +717,7 @@ export interface PrimengHostUser {
  * ones on pages nobody swept. OBRS-775 refused to ship it for exactly that
  * reason and carded the widening instead. A widening whose completeness is a
  * sentence in a card is worth nothing a year from now: the twenty-sixth
- * component to render a `p-calendar` will be added by someone who never read it.
+ * component to render a `p-datepicker` will be added by someone who never read it.
  * Deriving the population from the tree means the sweep either covers it or the
  * gate goes red, and the day PrimeNG's own tags change this list empties and
  * `no stale ALLOW entries` says so.
@@ -825,10 +825,10 @@ export function primengHostUsers(): PrimengHostUser[] {
  * and it was wrong in the direction that matters. `app-expense-form-modal` is
  * written unconditionally into `expenses-page.component.html`, so its host
  * element is always in the DOM -- but its template root is
- * `<div *ngIf="isOpen">`, so the `p-calendar` inside it renders only once
+ * `<div *ngIf="isOpen">`, so the `p-datepicker` inside it renders only once
  * somebody opens the modal. Counting the component as covered because its host
- * existed would have reported a `p-calendar` variant as measured when no
- * `p-calendar` had rendered at all, which is the precise failure this whole
+ * existed would have reported a `p-datepicker` variant as measured when no
+ * `p-datepicker` had rendered at all, which is the precise failure this whole
  * card is about, reproduced inside the check meant to prevent it.
  *
  * Attribution is to the NEAREST `app-*` ancestor, which is the component whose

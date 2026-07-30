@@ -60,7 +60,7 @@ const directionButtons = (page: Page) =>
 
 /** Return the currently highlighted (active) direction button */
 const activeDirectionButton = (page: Page) =>
-  page.locator('.p-selectbutton .p-button.p-highlight');
+  page.locator('.p-selectbutton .p-togglebutton.p-togglebutton-checked');
 
 // ---------------------------------------------------------------------------
 // AC1 + AC8: Default state and map degradation for Chonburi→Bangkok
@@ -86,7 +86,7 @@ test.describe('AC1 + AC8: Default Chonburi→Bangkok, map degradation', () => {
     expect(firstPickupName.toLowerCase()).toContain('nong chak');
 
     // Switch to the drop-off tab and verify Bangkok-side stops
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const firstDropoffRow = page.locator('.stop-row--dropoff').first();
     await firstDropoffRow.waitFor({ state: 'visible', timeout: 10_000 });
     const firstDropoffName = await firstDropoffRow.locator('.stop-name').innerText();
@@ -195,7 +195,7 @@ test.describe('AC3: Switch direction reloads correct stops from live API', () =>
     expect(firstPickupName.toLowerCase()).toContain('mo chit 2 bus terminal');
 
     // Switch to dropoff tab and verify Chonburi-side stops
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const firstDropoffRow = page.locator('.stop-row--dropoff').first();
     await firstDropoffRow.waitFor({ state: 'visible', timeout: 10_000 });
     const firstDropoffName = await firstDropoffRow.locator('.stop-name').innerText();
@@ -254,7 +254,7 @@ test.describe('AC4: Selections cleared on direction switch', () => {
     await expect(firstPickupRow).toHaveClass(/stop-row--selected/);
 
     // Switch to dropoff tab and select first dropoff stop
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const firstDropoffRow = page.locator('.stop-row--dropoff').first();
     await firstDropoffRow.waitFor({ state: 'visible' });
     await firstDropoffRow.click();
@@ -571,7 +571,7 @@ test.describe('AC9: Regression — existing pickup/dropoff confirm path', () => 
     await expect(pickupRow).toHaveClass(/stop-row--selected/);
 
     // Switch to dropoff tab and select first dropoff stop
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const dropoffRow = page.locator('.stop-row--dropoff').first();
     await dropoffRow.waitFor({ state: 'visible' });
     await dropoffRow.click();

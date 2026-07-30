@@ -1,0 +1,31 @@
+base=http://localhost:4241
+
+== light ==
+home-routemap                button                 v17  backgroundColor=rgb(7, 114, 162)  color=rgb(255, 255, 255)  borderColor=rgb(255, 255, 255)
+home-routemap                selectbutton-selected  v17  backgroundColor=rgb(7, 114, 162)  color=rgb(255, 255, 255)
+home-routemap                selectbutton-idle      v17  backgroundColor=rgba(0, 0, 0, 0)  color=rgb(83, 89, 104)
+home-routemap                tab-active             v17  color=rgb(59, 97, 169)  backgroundColor=rgb(237, 249, 254)  borderColor=rgb(59, 97, 169)
+home-routemap                tab-idle               v17  color=rgb(113, 117, 129)  backgroundColor=rgba(0, 0, 0, 0)
+home-routemap                datepicker-input       v17  backgroundColor=rgb(255, 255, 255)  color=rgb(53, 60, 68)  borderColor=rgb(221, 222, 225)
+home-routemap                badge                  v17  backgroundColor=rgba(75, 194, 247, 0.22)  color=rgb(59, 97, 169)
+home-routemap                card                   v17  backgroundColor=rgb(255, 255, 255)  color=rgb(75, 85, 99)
+account-notification-prefs   button                 v17  backgroundColor=rgb(59, 97, 169)  color=rgb(255, 255, 255)  borderColor=rgb(59, 97, 169)
+account-notification-prefs   switch-checked         v17  backgroundColor=rgb(59, 130, 246)
+
+== dark ==
+home-routemap                button                 v17  backgroundColor=rgb(75, 194, 247)  color=rgb(15, 17, 23)  borderColor=rgb(15, 17, 23)
+home-routemap                selectbutton-selected  v17  backgroundColor=rgb(75, 194, 247)  color=rgb(15, 17, 23)
+home-routemap                selectbutton-idle      v17  backgroundColor=rgba(0, 0, 0, 0)  color=rgb(154, 163, 184)
+home-routemap                tab-active             v17  color=rgb(75, 194, 247)  backgroundColor=rgb(34, 38, 58)  borderColor=rgb(75, 194, 247)
+home-routemap                tab-idle               v17  color=rgb(154, 163, 184)  backgroundColor=rgba(0, 0, 0, 0)
+home-routemap                datepicker-input       v17  backgroundColor=rgb(22, 25, 34)  color=rgb(232, 234, 240)  borderColor=rgba(255, 255, 255, 0.1)
+home-routemap                badge                  v17  backgroundColor=rgba(75, 194, 247, 0.22)  color=rgb(232, 234, 240)
+home-routemap                card                   v17  backgroundColor=rgb(26, 29, 39)  color=rgb(75, 85, 99)
+account-notification-prefs   button                 v17  backgroundColor=rgb(75, 194, 247)  color=rgb(15, 17, 23)  borderColor=rgb(75, 194, 247)
+account-notification-prefs   switch-checked         v17  backgroundColor=rgb(75, 194, 247)
+
+== MISSES ==
+light/my-bookings: wait selector never appeared (.p-button, p-menu)
+dark/my-bookings: wait selector never appeared (.p-button, p-menu)
+light: role 'switch-idle' matched nothing on any surface
+dark: role 'switch-idle' matched nothing on any surface

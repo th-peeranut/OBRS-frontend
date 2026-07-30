@@ -33,7 +33,7 @@ import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { PrimeNGConfig } from 'primeng/api';
+import { PrimeNG } from 'primeng/config';
 import { BehaviorSubject, Subject, of } from 'rxjs';
 
 import { staffRoutes } from './staff/staff.module';
@@ -160,7 +160,7 @@ async function navEntriesFor(
         },
       },
       { provide: AlertService, useValue: { success: () => {} } },
-      { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+      { provide: PrimeNG, useValue: { setTranslation: () => {} } },
       { provide: LanguageService, useValue: createLanguageServiceStub() },
       {
         provide: ThemeService,

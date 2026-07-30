@@ -18,7 +18,7 @@ import { Component, Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { PrimeNGConfig } from 'primeng/api';
+import { PrimeNG } from 'primeng/config';
 import { BehaviorSubject } from 'rxjs';
 
 import { StaffLayoutComponent } from './staff-layout.component';
@@ -63,7 +63,7 @@ async function renderNav(layout: Type<unknown>, roles: readonly string[]): Promi
         },
       },
       { provide: AlertService, useValue: { success: () => {} } },
-      { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+      { provide: PrimeNG, useValue: { setTranslation: () => {} } },
       { provide: LanguageService, useValue: createLanguageServiceStub() },
       {
         provide: ThemeService,

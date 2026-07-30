@@ -63,7 +63,7 @@ import {
  * PrimeNG tag the sweep never saw RENDER. Rendering is the bar, not mounting:
  * `app-expense-form-modal` sits in the DOM on every visit to `/admin/expenses`
  * while its whole template is behind `*ngIf="isOpen"`, so treating a present
- * host as coverage would report a `p-calendar` as measured when none had
+ * host as coverage would report a `p-datepicker` as measured when none had
  * rendered. That is the assertion that makes an empty ALLOW mean something.
  *
  * OBRS-782 EMPTIED THE EXCUSE LIST, and doing so was the point. OBRS-776 left
@@ -144,7 +144,7 @@ const census = new Map<string, MalformedHost>();
  * first page it happened on. OBRS-776 reads this to prove the sweep reaches the
  * instances a global rule would land on: a clean malformed-host census cannot
  * tell a page that is fine from a page nobody opened, and a component's host
- * being present cannot tell a rendered `p-calendar` from an `*ngIf` that is
+ * being present cannot tell a rendered `p-datepicker` from an `*ngIf` that is
  * false.
  */
 const rendered = new Map<string, string>();
@@ -382,7 +382,7 @@ test.describe('OBRS-775 malformed host boxes', () => {
   test('the parcel-booking exclusion has not expired', async () => {
     expect(
       featureFlags()['onlineParcelBooking'],
-      'onlineParcelBooking is ON, so /parcel-booking now renders app-parcel-trip-form and its p-calendar. ' +
+      'onlineParcelBooking is ON, so /parcel-booking now renders app-parcel-trip-form and its p-datepicker. ' +
         'Add the page to ADMIN_SWEEP and drop the NOT_SWEPT entry'
     ).toBe(false);
   });

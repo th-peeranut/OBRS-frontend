@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { PrimeNGConfig } from 'primeng/api';
+import { PrimeNG } from 'primeng/config';
 import { BehaviorSubject } from 'rxjs';
 
 import { StaffLayoutComponent } from './staff-layout.component';
@@ -53,7 +53,7 @@ describe('StaffLayoutComponent', () => {
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
-        { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: PrimeNG, useValue: { setTranslation: () => {} } },
         { provide: LanguageService, useValue: createLanguageServiceStub() },
         { provide: ThemeService, useValue: themeServiceStub },
         {
