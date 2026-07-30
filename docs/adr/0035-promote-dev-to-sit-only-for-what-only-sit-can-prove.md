@@ -16,6 +16,7 @@ not neutral, it was a slow spend nobody was measuring.
 
 | quantity | value | where it is read |
 |---|---|---|
+| the billed unit | **a successful production deploy** — previews, branch deploys, failed builds and rollbacks are 0 | Netlify credit documentation |
 | credits per production deploy | **~15** | `105 credits ÷ 7 deploys`, Usage & billing → Credit usage breakdown |
 | share of all credits spent on builds | **105 of 108.9** | same screen — bandwidth 2.2 + web requests 1.7 are noise |
 | remaining | **191.1 / 300**, expires Aug 20 2026 | same screen |
@@ -67,9 +68,11 @@ this site, and neither is obvious from the deploys list alone:
 - **A pull request into `sit` builds; a pull request into `dev` does not.** Deploy
   previews are on for "any pull request against your production branch", and the
   production branch is `sit`. This is why PR #87 ran exactly four checks, all of them
-  GitHub Actions — it targeted `dev`. Promote by fast-forwarding `sit`, which is the
-  existing practice; opening a PR into `sit` would pay for a preview *and* the production
-  deploy that follows the merge.
+  GitHub Actions — it targeted `dev`. Netlify's credit model bills the **successful
+  production deploy** and prices previews, branch deploys, failed builds and rollbacks
+  at **0**, so a preview is minutes and not credits. Worth knowing before someone
+  "saves credits" by avoiding PRs into `sit`, or spends them expecting a preview to be
+  free of *time*.
 
 ## Decision
 
@@ -134,8 +137,13 @@ right — `sit` it is. In the same breath it claimed **"deploy previews are not 
 on the evidence that PR #87 ran four checks and all four were GitHub Actions. That claim
 was wrong. Previews are on; PR #87 simply targeted `dev`, and previews only fire against
 the production branch. A sample of one PR into `dev` licenses a statement about PRs into
-`dev` and nothing wider — and the difference is a build nobody budgeted for, on exactly
-the kind of PR a promote would use.
+`dev` and nothing wider.
+
+The right conclusion happened to survive the wrong reason — PRs into `dev` really are
+free — and the first attempt at repairing it overshot in the other direction, asserting
+that a PR into `sit` therefore "pays twice". It does not: previews are billed at 0. Both
+the original claim and its correction were reasoning about a price list neither had
+read.
 
 Two inferences from the same screenshot, one right and one wrong, and no way to tell them
 apart without opening the screen. **If a number here drives a decision, read the setting.**
@@ -148,9 +156,6 @@ apart without opening the screen. **If a number here drives a decision, read the
 - **Do not turn off auto-build and have a person press `Deploy site`.** It is the
   strongest guarantee available and it moves the work onto a human queue, which this
   project has repeatedly decided against.
-- **Do not promote by opening a pull request into `sit`.** It looks like the safer,
-  more reviewable route and it doubles the bill — the preview build, then the production
-  deploy on merge. The review already happened on the PR into `dev`.
 - **Do not re-trigger a deploy to "make sure".** The artifact is already built and
   published; the re-run costs a full build and changes nothing.
 - **Do not hardcode "15 credits" into a gate or an acceptance criterion.** It is a
