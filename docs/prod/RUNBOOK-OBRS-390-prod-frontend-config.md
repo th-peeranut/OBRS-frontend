@@ -44,6 +44,34 @@ Output: `dist/obrs/browser`.
 is safe in a browser. The Omise **secret** key (`skey_live_…`) belongs only to the
 backend and must never appear in this repo or in these env vars.
 
+### The optional vars — read this before deciding you don't need them
+
+`inject-prod-env.js` reads three more variables that are **deliberately not in the
+failure check**, because their absence costs a map or a chart, never a payment, and
+they must not be able to fail a prod build:
+
+```bash
+export PROD_MAPTILER_API_KEY='<MapTiler key, origin-restricted>'  # OBRS-424 / OBRS-831
+export PROD_GA4_MEASUREMENT_ID='G-…'                              # OBRS-867
+export PROD_CLARITY_PROJECT_ID='<project id>'                     # OBRS-867
+```
+
+Unset means the generated file gets `''`, the build stays green, and the feature
+degrades silently: a blank `maptilerKey` makes `FleetMapPanelComponent.canShowMap`
+false, so every map surface renders the `MAP_UNAVAILABLE` placeholder, and blank
+analytics IDs inject no tag at all.
+
+**Silently is the problem.** Until 2026-07-30 this runbook listed only the five
+required vars, so anyone following it produced a prod bundle whose maps could never
+work, with nothing anywhere reporting it — which is precisely how OBRS-831 AC6 came to
+be open with no owner. They are listed here so that "we chose not to set it" and "we
+never knew about it" stop looking identical.
+
+`PROD_MAPTILER_API_KEY` also has a second half that is **not** an env var: the staff
+fleet map is behind `features.fleetMap`, which is `false` in `environment.base.ts` for
+the go-live scope cut (ADR-0031). Providing the key does **not** make the prod fleet
+map appear; the flag flip is a separate, deliberate decision (OBRS-622 AC6).
+
 ### Which configurations deploy, and which do not
 
 **`prod` is the real one.** Until OBRS-472 it had a neighbour called `production` — one
