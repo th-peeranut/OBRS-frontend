@@ -106,6 +106,18 @@ means:
 - Re-enabling either feature post-go-live is a one-line change in
   `environment.base.ts` (or a per-environment override, if a future need
   ever requires divergence — none exists today).
+  - **Update (OBRS-831, 2026-07-30): that divergence now exists for
+    `fleetMap`.** `environment.sit.ts` overrides it to `true`; the base value
+    stays `false`. Reason: this flag's ACs are *visual* (tiles render, real
+    markers appear) so they can only be measured on a served build, but the
+    prod build shares `environmentBase` and still has two open preconditions —
+    `PROD_MAPTILER_API_KEY` has never been provisioned (a prod build would
+    inherit `maptilerKey: ''` and show the MAP_UNAVAILABLE placeholder), and
+    OBRS-833's CSP `img-src` fix is committed but not yet applied to the VM's
+    Caddyfile. Flipping the base value would therefore have put a
+    go-live-*cut* feature in front of prod staff in its degraded state. The
+    base flip remains the post-go-live one-liner OBRS-622 AC6 describes; this
+    override is additive and does not change it.
 - `nav-reachability.spec.ts`'s orphan sweep needed one documented exemption:
   while `environment.features.fleetMap` is `false`, the `fleet-map` route is
   *intentionally* unreachable from the nav (that's the gate working), so it's
