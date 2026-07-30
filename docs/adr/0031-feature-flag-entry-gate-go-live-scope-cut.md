@@ -110,14 +110,40 @@ means:
     `fleetMap`.** `environment.sit.ts` overrides it to `true`; the base value
     stays `false`. Reason: this flag's ACs are *visual* (tiles render, real
     markers appear) so they can only be measured on a served build, but the
-    prod build shares `environmentBase` and still has two open preconditions —
-    `PROD_MAPTILER_API_KEY` has never been provisioned (a prod build would
-    inherit `maptilerKey: ''` and show the MAP_UNAVAILABLE placeholder), and
-    OBRS-833's CSP `img-src` fix is committed but not yet applied to the VM's
-    Caddyfile. Flipping the base value would therefore have put a
-    go-live-*cut* feature in front of prod staff in its degraded state. The
-    base flip remains the post-go-live one-liner OBRS-622 AC6 describes; this
-    override is additive and does not change it.
+    prod build shares `environmentBase` and prod cannot render the feature —
+    `PROD_MAPTILER_API_KEY` has never been provisioned (a prod build inherits
+    `maptilerKey: ''` and shows the MAP_UNAVAILABLE placeholder), and,
+    confirmed the same day, **prod is deliberately not serving this SPA yet**:
+    every FE route on `https://nj-phuyaipu.com` returns 404 while
+    `/api/public/schedules` returns the security headers, so Caddy and the
+    backend are live and the frontend has simply never been published.
+    OBRS-205 recorded that on 2026-07-23 and owns it — the publish is held
+    because `npm run build:prod` requires a live `pkey_live_` (OBRS-206) and
+    because the moment `index.html` lands on the VM is the moment the app is
+    public. Flipping the base value would therefore have put a go-live-*cut*
+    feature in front of prod staff in its degraded state, in an environment
+    that is not serving the app on purpose. The base flip remains the
+    post-go-live one-liner OBRS-622 AC6 describes; this override is additive
+    and does not change it.
+    - ⚠️ **Correction, recorded because the wrong version shipped first.** The
+      original wording of this bullet gave a second reason: that OBRS-833's CSP
+      `img-src` fix was "committed but not yet applied to the VM's Caddyfile".
+      That was **asserted from a stale worktree and never measured**. The
+      running prod host serves `img-src … https://api.maptiler.com` today, and
+      serves it as `Content-Security-Policy-Report-Only`, which cannot block a
+      tile in any case. The lesson is the cheap one: the file in a checkout is
+      not the header on the wire, and `curl -D -` on the live host answers in
+      one call. Note that a 404 strips the header entirely, so the probe has to
+      be aimed at a path that actually responds — reading `/` alone would have
+      shown "no CSP" and proved nothing.
+    - ⚠️ **Second correction, from the same habit.** The prod-404 finding above
+      was first written here as a discovery and as a defect ("the bundle is not
+      where its file server looks"). It is neither. OBRS-205 comment 10829 had
+      already measured and recorded the identical 404 on 2026-07-23, annotated
+      `ยังไม่มี FE (ตั้งใจ)`. Reading the owning card before writing up a
+      finding against it costs one fetch; not reading it produced a false
+      defect claim about someone else's deliberate decision, in the same
+      changeset whose purpose was to retract a false claim.
 - `nav-reachability.spec.ts`'s orphan sweep needed one documented exemption:
   while `environment.features.fleetMap` is `false`, the `fleet-map` route is
   *intentionally* unreachable from the nav (that's the gate working), so it's
