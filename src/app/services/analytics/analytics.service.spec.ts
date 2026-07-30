@@ -25,13 +25,34 @@ describe('AnalyticsService', () => {
 
   const originalProduction = environment.production;
 
-  /** Builds a snapshot chain the way ActivatedRouteSnapshot nests. */
-  function snapshotChain(...paths: string[]): unknown {
+  /** One node of a fixture chain: a bare path, or a path carrying route data. */
+  type ChainNode = string | { path: string; data: Record<string, unknown> };
+
+  /**
+   * Builds a snapshot chain the way ActivatedRouteSnapshot nests.
+   *
+   * Populates BOTH `firstChild` and `children`: the page_view walk reads the
+   * former and the OBRS-887 scope walk reads the latter, and a fixture that
+   * only built one would let a regression in the other pass unseen.
+   */
+  function snapshotChain(...nodes: ChainNode[]): unknown {
     let node: unknown = null;
-    for (const path of [...paths].reverse()) {
-      node = { routeConfig: { path }, firstChild: node };
+    for (const entry of [...nodes].reverse()) {
+      const path = typeof entry === 'string' ? entry : entry.path;
+      const data = typeof entry === 'string' ? {} : entry.data;
+      node = {
+        routeConfig: { path },
+        data,
+        firstChild: node,
+        children: node ? [node] : [],
+      };
     }
-    return { routeConfig: null, firstChild: node };
+    return { routeConfig: null, data: {}, firstChild: node, children: node ? [node] : [] };
+  }
+
+  /** Completes a navigation, which is what moves the scope off `unknown`. */
+  function navigate(url = '/passenger-info'): void {
+    routerEvents.next(new NavigationEnd(1, url, url));
   }
 
   beforeEach(() => {
@@ -41,6 +62,7 @@ describe('AnalyticsService', () => {
     tags = jasmine.createSpyObj<AnalyticsTagsService>('AnalyticsTagsService', [
       'load',
       'sendEvent',
+      'setSuspended',
     ]);
 
     TestBed.resetTestingModule();
@@ -125,6 +147,7 @@ describe('AnalyticsService', () => {
   describe('after consent is granted', () => {
     it('loads the tags exactly once', () => {
       service.init();
+      navigate();
 
       consent.grant();
       consent.grant();
@@ -136,8 +159,23 @@ describe('AnalyticsService', () => {
       consent.grant();
 
       service.init();
+      navigate();
 
       expect(tags.load).toHaveBeenCalledTimes(1);
+    });
+
+    it('waits for a resolved route before loading, even with consent in hand', () => {
+      // OBRS-887. Both of the tests above used to pass with no navigation at
+      // all, because loading asked one question ("granted?"). That is the exact
+      // window a deep link to /staff/sell arrives in: a returning staff member
+      // carries `granted` in localStorage, so a loader that did not wait would
+      // inject Clarity before anything knew which page was opening — and there
+      // is no unloading it afterwards.
+      consent.grant();
+
+      service.init();
+
+      expect(tags.load).not.toHaveBeenCalled();
     });
 
     it('forwards the event', () => {
@@ -188,15 +226,22 @@ describe('AnalyticsService', () => {
     });
 
     it('joins a nested lazy-loaded route into one path', () => {
-      routeSnapshotRoot = snapshotChain('admin', 'settings/booking-policy');
+      // OBRS-887 changed this fixture. It used to be
+      // `snapshotChain('admin', 'settings/booking-policy')`, i.e. this suite
+      // asserted that an ADMIN page_view is delivered — the behaviour that card
+      // forbids. The nesting shape is what is under test, so it now uses a
+      // customer route; the child path is illustrative, the join is not.
+      routeSnapshotRoot = snapshotChain('parcel-booking', 'summary');
       service.init();
       consent.grant();
 
-      routerEvents.next(new NavigationEnd(1, '/admin/settings', '/admin/settings'));
+      routerEvents.next(
+        new NavigationEnd(1, '/parcel-booking/summary', '/parcel-booking/summary')
+      );
 
       expect(tags.sendEvent).toHaveBeenCalledWith(
         'page_view',
-        jasmine.objectContaining({ page_path: '/admin/settings/booking-policy' })
+        jasmine.objectContaining({ page_path: '/parcel-booking/summary' })
       );
     });
 
@@ -256,6 +301,155 @@ describe('AnalyticsService', () => {
         payment_method: 'card',
       });
       expect(console.error).toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * OBRS-887. The screens behind `requiredRoles` display *customers'* personal
+   * data, and the staff member holding the keyboard cannot consent to Clarity
+   * recording it on their behalf. Consent stays necessary; it stops being
+   * sufficient.
+   *
+   * Both halves are pinned here on purpose. A gate that blocks everything would
+   * pass every must-catch below and quietly switch off the sign-up funnel —
+   * which is measured through routes that carry NO `customerArea` marker, so an
+   * allowlist would have been the easy wrong answer.
+   */
+  describe('OBRS-887 — staff and admin routes are never measured', () => {
+    const STAFF = { path: 'staff', data: { requiredRoles: ['driver', 'salesperson'] } };
+    const ADMIN = { path: 'admin', data: { requiredRoles: ['admin'] } };
+
+    describe('must catch', () => {
+      it('loads no tag when a returning staff member deep-links into /staff', () => {
+        routeSnapshotRoot = snapshotChain(STAFF, 'sell');
+        consent.grant();
+
+        service.init();
+        navigate('/staff/sell');
+
+        expect(tags.load).not.toHaveBeenCalled();
+      });
+
+      it('suspends tags already loaded when the staff member walks in from a customer page', () => {
+        // The common path, and the one `load()` refusing to run cannot cover:
+        // accept on '/', then sign in and open the POS with both tags live.
+        service.init();
+        navigate('/');
+        consent.grant();
+        expect(tags.load).toHaveBeenCalledTimes(1);
+        tags.setSuspended.calls.reset();
+
+        routeSnapshotRoot = snapshotChain(STAFF, 'sell');
+        navigate('/staff/sell');
+
+        expect(tags.setSuspended).toHaveBeenCalledWith(true);
+      });
+
+      it('sends no event from a staff page', () => {
+        routeSnapshotRoot = snapshotChain(STAFF, 'sell');
+        service.init();
+        consent.grant();
+        navigate('/staff/sell');
+        tags.sendEvent.calls.reset();
+
+        service.track('booking_completed', { payment_method: 'cash' });
+
+        expect(tags.sendEvent).not.toHaveBeenCalled();
+      });
+
+      it('sends no page_view from a staff page — not even the route pattern', () => {
+        // A single admin path is not personal data. A stream of them is a
+        // description of how a named employee spent their shift.
+        routeSnapshotRoot = snapshotChain(STAFF, 'sell');
+        service.init();
+        consent.grant();
+
+        navigate('/staff/sell');
+
+        expect(tags.sendEvent).not.toHaveBeenCalled();
+      });
+
+      it('covers the admin portal on the same rule', () => {
+        routeSnapshotRoot = snapshotChain(ADMIN, 'settings/booking-policy');
+        consent.grant();
+
+        service.init();
+        navigate('/admin/settings');
+
+        expect(tags.load).not.toHaveBeenCalled();
+        expect(tags.sendEvent).not.toHaveBeenCalled();
+      });
+
+      it('catches requiredRoles declared on a CHILD, not only on the shell', () => {
+        // admin.module.ts declares roles per page as well as on the shell; a
+        // walk that only read the root would miss a page whose own route is the
+        // one carrying the marker.
+        routeSnapshotRoot = snapshotChain('reports', {
+          path: 'refund-void',
+          data: { requiredRoles: ['admin', 'owner'] },
+        });
+        consent.grant();
+
+        service.init();
+        navigate('/reports/refund-void');
+
+        expect(tags.load).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('must NOT catch — the funnel stays measured', () => {
+      // These three carry no `customerArea` marker in app-routing.module.ts.
+      // Gating on an allowlist instead of on `requiredRoles` would switch every
+      // one of them off, and nothing would have reported it.
+      for (const [label, chain, url] of [
+        ['/login', snapshotChain('login'), '/login'],
+        ['/register', snapshotChain('register'), '/register'],
+        [
+          '/otp/:option/:phoneno',
+          snapshotChain('otp/:option/:phoneno'),
+          '/otp/sms/0812345678',
+        ],
+      ] as [string, unknown, string][]) {
+        it(`still loads and measures ${label}`, () => {
+          routeSnapshotRoot = chain;
+          consent.grant();
+
+          service.init();
+          navigate(url);
+
+          expect(tags.load).toHaveBeenCalledTimes(1);
+          expect(tags.sendEvent).toHaveBeenCalledWith(
+            'page_view',
+            jasmine.objectContaining({ page_path: label })
+          );
+        });
+      }
+
+      it('resumes when the staff member goes back to a customer page', () => {
+        routeSnapshotRoot = snapshotChain(STAFF, 'sell');
+        service.init();
+        consent.grant();
+        navigate('/staff/sell');
+        expect(tags.load).not.toHaveBeenCalled();
+
+        routeSnapshotRoot = snapshotChain('my-bookings');
+        navigate('/my-bookings');
+
+        expect(tags.setSuspended).toHaveBeenCalledWith(false);
+        expect(tags.load).toHaveBeenCalledTimes(1);
+      });
+
+      it('does not treat an empty requiredRoles array as a restriction', () => {
+        // AuthGuard reads an empty array as "no role required", so this must
+        // not become a second, disagreeing definition of what is protected.
+        routeSnapshotRoot = snapshotChain({ path: 'promo', data: { requiredRoles: [] } });
+        consent.grant();
+
+        service.init();
+        navigate('/promo');
+
+        expect(tags.load).toHaveBeenCalledTimes(1);
+      });
     });
   });
 

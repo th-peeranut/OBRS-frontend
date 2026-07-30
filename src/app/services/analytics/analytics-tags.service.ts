@@ -47,6 +47,7 @@ const CLARITY_SCRIPT_ID = 'obrs-clarity-tag';
 export class AnalyticsTagsService {
   private ga4Loaded = false;
   private clarityLoaded = false;
+  private suspended = false;
 
   constructor(@Inject(DOCUMENT) private readonly document: Document) {}
 
@@ -58,6 +59,63 @@ export class AnalyticsTagsService {
   /** Whether a Clarity tag is present. */
   get isClarityActive(): boolean {
     return this.clarityLoaded;
+  }
+
+  /** Whether collection is currently switched off at the vendor. */
+  get isSuspended(): boolean {
+    return this.suspended;
+  }
+
+  /**
+   * OBRS-887 — switches collection off (and back on) at the vendor, for a tag
+   * that is already in the document.
+   *
+   * `load()` refusing to run on a staff route only covers the visitor who lands
+   * there first. The common path is the opposite one: a staff member opens `/`,
+   * accepts the banner, and only then signs in and walks into `/staff/sell`
+   * with both tags live. There is no supported teardown for either script, so
+   * "stop collecting" has to be asked of the vendor rather than done to the DOM.
+   *
+   * Both switches are best-effort and neither is a substitute for `load()` not
+   * having run:
+   * - `window['ga-disable-<id>']` is gtag's own documented kill switch; it is
+   *   read at send time, so setting it before the script arrives works too.
+   *   Written unconditionally whenever an ID is configured, for that reason.
+   * - `clarity('stop')` / `clarity('start')` is Clarity's documented pair.
+   *   Wrapped in a try/catch and probed for existence because it is a third
+   *   party's global: a vendor that renames it must degrade to "we still never
+   *   loaded it on a restricted route", not to a thrown error on navigation.
+   *
+   * ⚠️ Suspending is NOT a privacy guarantee on its own. It is the second line;
+   * the guarantee is that {@link load} is not called while the route is
+   * restricted. Anything asserted about this method should be asserted about
+   * that one first.
+   */
+  setSuspended(suspended: boolean): void {
+    if (this.suspended === suspended) {
+      return;
+    }
+    this.suspended = suspended;
+
+    const target = this.document.defaultView as AnalyticsWindow | null;
+    if (!target) {
+      return;
+    }
+
+    const measurementId = environment.analytics?.ga4MeasurementId?.trim();
+    if (measurementId) {
+      (target as unknown as Record<string, unknown>)[`ga-disable-${measurementId}`] =
+        suspended;
+    }
+
+    if (typeof target.clarity === 'function') {
+      try {
+        target.clarity(suspended ? 'stop' : 'start');
+      } catch (error) {
+        // A vendor API that moved is not worth a broken navigation.
+        console.warn('Analytics could not be suspended at the vendor', error);
+      }
+    }
   }
 
   /**
@@ -83,6 +141,14 @@ export class AnalyticsTagsService {
     name: AnalyticsEventName,
     params: Readonly<Record<string, AnalyticsParamValue>>
   ): void {
+    // OBRS-887: a suspended tag takes no events. `AnalyticsService.track()`
+    // already drops these, so this is the redundant inner ring — it exists so a
+    // future call site that reaches the tag loader directly cannot bypass the
+    // route gate by accident.
+    if (this.suspended) {
+      return;
+    }
+
     const target = this.document.defaultView as AnalyticsWindow | null;
     if (!target) {
       return;
