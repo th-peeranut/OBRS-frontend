@@ -9,6 +9,11 @@ import { ETicketCardComponent } from '../../../../shared/components/e-ticket-car
 import { ETicketCardModule } from '../../../../shared/components/e-ticket-card/e-ticket-card.module';
 import { TicketService } from '../../../../services/ticket/ticket.service';
 import { MyBookingTicketModalComponent } from './my-booking-ticket-modal.component';
+// OBRS-907 scrutinize follow-up: declared (not left to NO_ERRORS_SCHEMA below) so
+// the loading-state render test can measure its REAL computed size — an
+// undeclared custom element under NO_ERRORS_SCHEMA renders as an opaque leaf
+// with no children, which would make the ring span impossible to query at all.
+import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
 
 function buildTicketsData(): BookingTicketsData {
   return {
@@ -147,7 +152,7 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [MyBookingTicketModalComponent],
+      declarations: [MyBookingTicketModalComponent, LoadingStateComponent],
       // app-trip-track-panel (SPEC-OBRS-426) is a real child component of a
       // sibling module (MyBookingsModule) — not declared here, same NO_ERRORS_SCHEMA
       // pattern as FleetMapPageComponent's own template-wiring spec: this
@@ -241,5 +246,27 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
     );
     expect(cardIndex).toBeGreaterThanOrEqual(0);
     expect(panelIndex).toBeGreaterThan(cardIndex); // below the card, not inside it
+  });
+
+  // OBRS-907 scrutinize follow-up: pin the ACTUAL COMPUTED size, not just presence.
+  // The notification-inbox-panel sibling migration silently grew 28px -> 34px past
+  // 4334 green tests because nothing read getComputedStyle -- this is that class of
+  // regression, closed for the ticket modal's ring graphic too. Karma's `styles`
+  // array already loads src/styles.scss (OBRS-721 lesson), so this sees the REAL
+  // cascade, not a guess about it.
+  it('OBRS-907: pins the ring spinner at its computed 36px size / 4px border width (matching the old .ticket-modal__spinner it replaced)', () => {
+    component.loading = true;
+    fixture.detectChanges();
+    document.body.appendChild(fixture.nativeElement);
+    try {
+      const ring = fixture.debugElement.query(By.css('.loading-state-ring'));
+      expect(ring).withContext('the ring graphic must render while loading is true').not.toBeNull();
+      const style = getComputedStyle(ring.nativeElement);
+      expect(style.width).toBe('36px');
+      expect(style.height).toBe('36px');
+      expect(style.borderWidth).toBe('4px');
+    } finally {
+      fixture.nativeElement.remove();
+    }
   });
 });

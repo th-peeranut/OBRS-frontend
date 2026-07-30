@@ -1,0 +1,34 @@
+<span class="loading-state loading-state--{{ variant }}" role="status" aria-live="polite" aria-busy="true">
+  <ng-container *ngIf="variant === 'skeleton'; else graphicTpl">
+    <span
+      *ngFor="let row of skeletonRowIndexes"
+      class="admin-skeleton"
+      [class.admin-skeleton--sm]="skeletonShape === 'sm'"
+      [class.admin-skeleton--pill]="skeletonShape === 'pill'"
+      aria-hidden="true"
+    ></span>
+  </ng-container>
+
+  <ng-template #graphicTpl>
+    <span
+      *ngIf="graphic === 'icon'; else ringTpl"
+      class="material-symbols-outlined admin-loading-spinner loading-state-icon"
+      [style.fontSize.px]="sizePx"
+      [style.animationDuration.ms]="durationMs"
+      aria-hidden="true"
+      >{{ icon }}</span
+    >
+    <ng-template #ringTpl>
+      <span
+        class="loading-state-ring"
+        [style.width.px]="sizePx"
+        [style.height.px]="sizePx"
+        [style.borderWidth.px]="ringWidthPx"
+        [style.animationDuration.ms]="durationMs"
+        aria-hidden="true"
+      ></span>
+    </ng-template>
+  </ng-template>
+
+  <span class="visually-hidden">{{ messageKey | translate }}</span>
+</span>

@@ -11,7 +11,12 @@
 
     <div class="ticket-modal__body">
       <div class="ticket-modal__state" *ngIf="loading">
-        <span class="ticket-modal__spinner" aria-hidden="true"></span>
+        <!-- OBRS-907: shared indicator, sized/timed to match the ring spinner
+             it replaces exactly (36px, 4px border, 0.8s) — see
+             `.loading-state-ring`'s own default in
+             loading-state.component.scss for what these three overrides
+             deviate from. -->
+        <app-loading-state variant="spinner" [sizePx]="36" [ringWidthPx]="4" [durationMs]="800"></app-loading-state>
         <p>{{ "MY_BOOKINGS.TICKET_MODAL.LOADING" | translate }}</p>
       </div>
 

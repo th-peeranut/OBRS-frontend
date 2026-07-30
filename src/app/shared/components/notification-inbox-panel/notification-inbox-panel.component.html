@@ -13,7 +13,19 @@
 
   <div class="notification-inbox-body">
     <div class="notification-inbox-state" *ngIf="showInitialLoading">
-      <span class="material-symbols-outlined admin-loading-spinner" aria-hidden="true">sync</span>
+      <!-- OBRS-907: same primitive as before (.admin-loading-spinner "sync"
+           glyph, --accent-text), now rendered through the shared component
+           instead of inline markup. The old inline size (28px) came from THIS
+           component's descendant rule `.notification-inbox-state
+           .material-symbols-outlined { font-size: 28px }` — but under Angular
+           emulated encapsulation that rule compiles with a content attribute
+           on its LAST compound too, and the icon span now belongs to
+           LoadingStateComponent's template (a different content attribute), so
+           the rule no longer reaches it and the global .admin-loading-spinner
+           34px would take over. Pass the size as an inline input so the icon
+           stays 28px exactly as before (inline style beats the global rule),
+           independent of encapsulation. (OBRS-907 scrutinize self-fix.) -->
+      <app-loading-state graphic="icon" icon="sync" [sizePx]="28"></app-loading-state>
     </div>
 
     <div class="notification-inbox-state" *ngIf="showError">
