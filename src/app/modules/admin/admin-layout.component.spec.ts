@@ -481,6 +481,105 @@ describe('AdminLayoutComponent', () => {
       expect(highlighted.nativeElement.textContent.trim()).toBe('provinces');
     });
 
+    // ── OBRS-900 follow-up: a live-app check found the description rendering
+    // as one unbroken `nowrap` line that ran off the sidebar, taking the
+    // highlighted match with it — off-screen, not just off-colour. The specs
+    // above asserted `textContent`/existence, which the DOM satisfied even
+    // while the match was physically invisible; that is exactly the "coverage
+    // ≠ rendered" trap CORE.md warns about. These two pin the GEOMETRY.
+    it('the description does not inherit `.admin-nav-link`\'s nowrap — must WRAP, not run off (OBRS-900 follow-up)', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      comp.applyNavSearch('provinces');
+      fixture.detectChanges();
+
+      const descriptionEl = fixture.debugElement.query(By.css('.admin-nav-link-description'))
+        .nativeElement as HTMLElement;
+      const cs = getComputedStyle(descriptionEl);
+      // `.admin-nav-link` sets `white-space: nowrap` on ITSELF (min-width:1101px
+      // block, so the label can animate to width:0 on the collapsed rail) —
+      // that value INHERITS to every descendant, including this new
+      // description line, unless the descendant sets its own. This is a
+      // property assertion (not layout-dependent), so it holds regardless of
+      // Karma's own browser viewport width.
+      expect(cs.whiteSpace)
+        .withContext(
+          '.admin-nav-link-description must set its OWN white-space (normal), overriding what it ' +
+            'would otherwise inherit from .admin-nav-link\'s nowrap — that inheritance is the exact ' +
+            'mechanism that ran the description (and the highlighted match inside it) off the sidebar'
+        )
+        .not.toBe('nowrap');
+      expect(cs.overflowWrap === 'anywhere' || cs.overflowWrap === 'break-word' || cs.wordBreak === 'break-word')
+        .withContext(
+          'a long unbroken run (Thai/CJK text often carries no space to break on) must still be ' +
+            'forced to wrap onto a new line rather than widening the box'
+        )
+        .toBeTrue();
+    });
+
+    it('the highlighted match renders INSIDE the nav link — measures containment, not just presence (OBRS-900 follow-up)', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      comp.applyNavSearch('provinces');
+      fixture.detectChanges();
+
+      const linkEl = fixture.debugElement.query(By.css('.admin-nav-link:not(.admin-nav-btn)'))
+        .nativeElement as HTMLElement;
+      // getBoundingClientRect()/scrollWidth are meaningless on a detached
+      // fixture — attach the REAL rendered tree to the document (same
+      // requirement as the mountInChain helper in testing/contrast.ts) so the
+      // browser actually lays it out, then constrain to the real pinned
+      // sidebar link's width (admin-theme.scss) so this assertion doesn't
+      // depend on Karma's own window happening to clear the
+      // min-width:1101px breakpoint that normally sets it.
+      document.body.appendChild(fixture.nativeElement);
+      const originalWidth = linkEl.style.width;
+      linkEl.style.width = '247px';
+      // Karma has no network access to the Material Symbols webfont, so the
+      // icon glyph falls back to rendering its ligature TEXT ("route") in a
+      // system font — much wider than the real ~20px icon — which starves
+      // .admin-nav-link-text of its production-realistic share of the row
+      // and makes this a font-loading artifact, not a layout assertion. Pin
+      // the icon to its real rendered size so the flex distribution matches
+      // production regardless of whether the icon font loaded.
+      const iconEl = linkEl.querySelector('.material-symbols-outlined') as HTMLElement | null;
+      const originalIconWidth = iconEl?.style.width ?? '';
+      const originalIconFlex = iconEl?.style.flex ?? '';
+      if (iconEl) {
+        iconEl.style.flex = '0 0 auto';
+        iconEl.style.width = '20px';
+      }
+      try {
+        fixture.detectChanges();
+        const descriptionEl = linkEl.querySelector('.admin-nav-link-description') as HTMLElement;
+        expect(descriptionEl).withContext('the matched item must render a description line').toBeTruthy();
+        expect(descriptionEl.scrollWidth)
+          .withContext(
+            `description must WRAP inside its own box, not overflow it ` +
+              `(scrollWidth=${descriptionEl.scrollWidth} clientWidth=${descriptionEl.clientWidth})`
+          )
+          .toBeLessThanOrEqual(descriptionEl.clientWidth + 1);
+
+        const highlightEl = descriptionEl.querySelector('.admin-nav-search-highlight') as HTMLElement;
+        expect(highlightEl).withContext('the match must be highlighted').toBeTruthy();
+        const linkRect = linkEl.getBoundingClientRect();
+        const highlightRect = highlightEl.getBoundingClientRect();
+        expect(highlightRect.left >= linkRect.left - 1)
+          .withContext(`highlight must not start before the nav link (link.left=${linkRect.left}, highlight.left=${highlightRect.left})`)
+          .toBeTrue();
+        expect(highlightRect.right <= linkRect.right + 1)
+          .withContext(`highlight must not run past the nav link's right edge (link.right=${linkRect.right}, highlight.right=${highlightRect.right})`)
+          .toBeTrue();
+      } finally {
+        linkEl.style.width = originalWidth;
+        if (iconEl) {
+          iconEl.style.width = originalIconWidth;
+          iconEl.style.flex = originalIconFlex;
+        }
+        fixture.nativeElement.remove();
+      }
+    });
+
     it('is case-insensitive: a differently-cased query still highlights the substring in its ORIGINAL casing', () => {
       seedNavTranslations();
       const comp = fixture.componentInstance as unknown as SearchComp;

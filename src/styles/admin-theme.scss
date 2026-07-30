@@ -962,6 +962,26 @@
   font-size: 11px;
   font-weight: 500;
   color: var(--admin-muted);
+  /* OBRS-900 follow-up: `.admin-nav-link` (min-width:1101px block, ~line 746
+     region below) sets `white-space: nowrap` on itself so the label can
+     animate to width:0 on the collapsed rail — that value INHERITS down to
+     every descendant, including this new description line, unless a
+     descendant explicitly sets its own. Without this override the
+     description rendered as one unbroken line that ran off the sidebar
+     entirely, taking the highlighted match with it — measured via
+     `e2e/probe-obrs-900-visibility.mjs`: scrollWidth 292 vs clientWidth 191,
+     the highlight box starting 3px past the nav link's own right edge.
+     `white-space: normal` here does NOT touch `.admin-nav-link`'s own nowrap
+     (the label / collapsed-rail path is untouched) — it only overrides what
+     THIS element inherits. `overflow-wrap: anywhere` covers Thai/CJK runs
+     that carry no space to break on, so a long word cannot force the box
+     wide again the same way `nowrap` did. No line-clamp: the query can land
+     anywhere in the description, so a clamp could truncate the exact
+     substring this card exists to make visible — full wrap is the only shape
+     that can't cut off a match. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Same token pair as `.admin-nav-link.active`/`:hover` above (--accent-soft
