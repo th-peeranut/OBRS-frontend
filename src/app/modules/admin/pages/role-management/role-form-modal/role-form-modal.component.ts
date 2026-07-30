@@ -58,9 +58,10 @@ import {
 // (all three keep their own private copy rather than taking a resolved
 // locale from the parent).
 @Component({
-  selector: 'app-role-form-modal',
-  templateUrl: './role-form-modal.component.html',
-  styleUrl: './role-form-modal.component.scss',
+    selector: 'app-role-form-modal',
+    templateUrl: './role-form-modal.component.html',
+    styleUrl: './role-form-modal.component.scss',
+    standalone: false
 })
 export class RoleFormModalComponent implements OnChanges {
   @Input() isOpen = false;

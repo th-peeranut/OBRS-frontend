@@ -21,18 +21,17 @@ import { takeUntil } from 'rxjs/operators';
 import { localizedDropdownName } from '../../lib/localized-dropdown-name';
 
 @Component({
-  selector: 'app-dropdown-group-obrs',
-  templateUrl: './dropdown-group-obrs.component.html',
-  styleUrls: ['./dropdown-group-obrs.component.scss'],
-  standalone: true,
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => DropdownGroupObrsComponent),
-      multi: true,
-    },
-  ],
-  imports: [CommonModule, TranslateModule, FormsModule],
+    selector: 'app-dropdown-group-obrs',
+    templateUrl: './dropdown-group-obrs.component.html',
+    styleUrls: ['./dropdown-group-obrs.component.scss'],
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => DropdownGroupObrsComponent),
+            multi: true,
+        },
+    ],
+    imports: [CommonModule, TranslateModule, FormsModule]
 })
 export class DropdownGroupObrsComponent
   implements ControlValueAccessor, OnInit, OnChanges, AfterViewInit, OnDestroy

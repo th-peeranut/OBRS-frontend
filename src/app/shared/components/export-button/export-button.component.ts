@@ -29,9 +29,10 @@ const GENERIC_ERROR_KEY = 'COMMON.EXPORT.ERROR_GENERIC';
  * no cross-page state to share, so local `loading` is sufficient.
  */
 @Component({
-  selector: 'app-export-button',
-  templateUrl: './export-button.component.html',
-  styleUrl: './export-button.component.scss',
+    selector: 'app-export-button',
+    templateUrl: './export-button.component.html',
+    styleUrl: './export-button.component.scss',
+    standalone: false
 })
 export class ExportButtonComponent implements OnInit, OnDestroy {
   @Input() datasetKey!: string;

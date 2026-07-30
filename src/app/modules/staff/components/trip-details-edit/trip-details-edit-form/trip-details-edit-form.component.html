@@ -24,7 +24,7 @@
       {{ 'STAFF.SELL.TRIP_DETAIL_EDIT_TIME' | translate }}
       <span class="text-danger">*</span>
     </label>
-    <p-calendar
+    <p-datePicker
       formControlName="departureTime"
       [timeOnly]="true"
       [showTime]="true"
@@ -38,7 +38,7 @@
       <ng-template pTemplate="inputicon">
         <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
       </ng-template>
-    </p-calendar>
+    </p-datePicker>
     <div *ngIf="isFieldInvalid('departureTime')" class="text-danger small mt-1">
       {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
     </div>

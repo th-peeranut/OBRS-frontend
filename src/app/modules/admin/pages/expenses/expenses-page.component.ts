@@ -39,9 +39,10 @@ import {
  * design-system/CLAUDE.md's reuse-before-you-write gate.
  */
 @Component({
-  selector: 'app-expenses-page',
-  templateUrl: './expenses-page.component.html',
-  styleUrl: './expenses-page.component.scss',
+    selector: 'app-expenses-page',
+    templateUrl: './expenses-page.component.html',
+    styleUrl: './expenses-page.component.scss',
+    standalone: false
 })
 export class ExpensesPageComponent implements OnInit, OnDestroy {
   protected readonly VEHICLE_CENTRAL_SENTINEL = VEHICLE_CENTRAL_SENTINEL;

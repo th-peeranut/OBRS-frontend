@@ -5,8 +5,8 @@ import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { MenuModule } from 'primeng/menu';
-import { CalendarModule } from 'primeng/calendar';
-import { OverlayPanelModule } from 'primeng/overlaypanel';
+import { DatePickerModule } from 'primeng/datepicker';
+import { PopoverModule } from 'primeng/popover';
 
 // Components
 import { NavbarComponent } from './components/navbar/navbar.component';
@@ -68,8 +68,8 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     ReactiveFormsModule,
     SelectButtonModule,
     MenuModule,
-    CalendarModule,
-    OverlayPanelModule,
+    DatePickerModule,
+    PopoverModule,
   ],
   exports: [
     // Modules

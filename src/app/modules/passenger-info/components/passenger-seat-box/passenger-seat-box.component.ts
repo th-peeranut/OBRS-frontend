@@ -8,9 +8,10 @@ import {
 } from '@angular/core';
 
 @Component({
-  selector: 'app-passenger-seat-box',
-  templateUrl: './passenger-seat-box.component.html',
-  styleUrl: './passenger-seat-box.component.scss',
+    selector: 'app-passenger-seat-box',
+    templateUrl: './passenger-seat-box.component.html',
+    styleUrl: './passenger-seat-box.component.scss',
+    standalone: false
 })
 export class PassengerSeatBoxComponent implements OnChanges {
   @Input() label: string = '';

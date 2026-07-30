@@ -17,7 +17,10 @@ import { NotificationInboxService } from '../../shared/services/notification-inb
 
 // OBRS-317: stub the bell selector so this layout-chrome spec stays scoped
 // to the layout itself (same approach as admin-layout.component.spec.ts).
-@Component({ selector: 'app-notification-bell', template: '' })
+@Component({
+    selector: 'app-notification-bell', template: '',
+    standalone: false
+})
 class NotificationBellStubComponent {}
 
 // localStorage shim — keeps spec storage isolated

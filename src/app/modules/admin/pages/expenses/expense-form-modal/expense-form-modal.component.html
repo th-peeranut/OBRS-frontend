@@ -112,7 +112,7 @@
         <label class="admin-form-label">
           {{ 'ADMIN.EXPENSES.EXPENSE_DATE' | translate }} <span class="admin-required">*</span>
         </label>
-        <p-calendar
+        <p-datePicker
           formControlName="expenseDate"
           styleClass="schedule-calendar-filter"
           inputStyleClass="schedule-calendar-filter-input"
@@ -121,7 +121,7 @@
           [showIcon]="true"
           [showButtonBar]="true"
           [placeholder]="'ADMIN.EXPENSES.EXPENSE_DATE' | translate"
-        ></p-calendar>
+        ></p-datePicker>
         <small class="admin-error" *ngIf="isFieldInvalid('expenseDate')">
           {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
         </small>

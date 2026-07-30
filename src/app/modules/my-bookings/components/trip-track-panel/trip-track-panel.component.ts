@@ -15,9 +15,10 @@ import { resolveTripTrackView, TRIP_TRACK_POLL_ACTIVE_MS, TripTrackView } from '
  * journey leg with an eligible ticket (BR-2/BR-4).
  */
 @Component({
-  selector: 'app-trip-track-panel',
-  templateUrl: './trip-track-panel.component.html',
-  styleUrl: './trip-track-panel.component.scss',
+    selector: 'app-trip-track-panel',
+    templateUrl: './trip-track-panel.component.html',
+    styleUrl: './trip-track-panel.component.scss',
+    standalone: false
 })
 export class TripTrackPanelComponent implements OnChanges, OnDestroy {
   @Input() ticketId!: number;

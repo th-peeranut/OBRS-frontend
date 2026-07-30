@@ -13,9 +13,10 @@ const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 @Component({
-  selector: 'app-reports-page',
-  templateUrl: './reports-page.component.html',
-  styleUrl: './reports-page.component.scss',
+    selector: 'app-reports-page',
+    templateUrl: './reports-page.component.html',
+    styleUrl: './reports-page.component.scss',
+    standalone: false
 })
 export class ReportsPageComponent implements OnInit, OnDestroy {
   protected summary: ReportsSummaryDto | null = null;

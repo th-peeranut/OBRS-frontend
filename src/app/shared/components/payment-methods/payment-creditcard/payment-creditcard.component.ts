@@ -29,9 +29,10 @@ import { isHandledByBackendMessage } from '../../../../shared/lib/payment-error-
 type PaymentTab = 'creditcard' | 'qrcode';
 
 @Component({
-  selector: 'app-payment-creditcard',
-  templateUrl: './payment-creditcard.component.html',
-  styleUrl: './payment-creditcard.component.scss',
+    selector: 'app-payment-creditcard',
+    templateUrl: './payment-creditcard.component.html',
+    styleUrl: './payment-creditcard.component.scss',
+    standalone: false
 })
 export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   @Input() activeTab: PaymentTab = 'creditcard';

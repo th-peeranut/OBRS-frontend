@@ -81,9 +81,10 @@ const SUBMIT_ERROR_KEYS: Record<string, string> = {
  * seats, so that filter is wrong here.
  */
 @Component({
-  selector: 'app-parcel-booking-page',
-  templateUrl: './parcel-booking-page.component.html',
-  styleUrl: './parcel-booking-page.component.scss',
+    selector: 'app-parcel-booking-page',
+    templateUrl: './parcel-booking-page.component.html',
+    styleUrl: './parcel-booking-page.component.scss',
+    standalone: false
 })
 export class ParcelBookingPageComponent implements OnInit, OnDestroy {
   protected readonly steps: ParcelBookingProgressStep[] = [

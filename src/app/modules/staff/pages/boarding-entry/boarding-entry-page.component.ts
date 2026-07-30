@@ -19,9 +19,10 @@ interface BoardingEntryRow {
 }
 
 @Component({
-  selector: 'app-boarding-entry-page',
-  templateUrl: './boarding-entry-page.component.html',
-  styleUrl: './boarding-entry-page.component.scss',
+    selector: 'app-boarding-entry-page',
+    templateUrl: './boarding-entry-page.component.html',
+    styleUrl: './boarding-entry-page.component.scss',
+    standalone: false
 })
 export class BoardingEntryPageComponent implements OnInit, OnDestroy {
   protected rows: BoardingEntryRow[] = [];

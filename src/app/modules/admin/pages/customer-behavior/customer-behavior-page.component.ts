@@ -18,9 +18,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * server-computed; the page renders bars from them and never handles PII.
  */
 @Component({
-  selector: 'app-customer-behavior-page',
-  templateUrl: './customer-behavior-page.component.html',
-  styleUrl: './customer-behavior-page.component.scss',
+    selector: 'app-customer-behavior-page',
+    templateUrl: './customer-behavior-page.component.html',
+    styleUrl: './customer-behavior-page.component.scss',
+    standalone: false
 })
 export class CustomerBehaviorPageComponent implements OnInit, OnDestroy {
   protected data: CustomerBehaviorDto | null = null;

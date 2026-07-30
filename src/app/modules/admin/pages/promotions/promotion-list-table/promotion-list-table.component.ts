@@ -7,9 +7,10 @@ import { PromotionRow, statusClass as statusClassValue } from '../promotions-pag
 // @Output. The round-trip row ("Managed above", no actions) is preserved
 // verbatim from the original template.
 @Component({
-  selector: 'app-promotion-list-table',
-  templateUrl: './promotion-list-table.component.html',
-  styleUrl: './promotion-list-table.component.scss',
+    selector: 'app-promotion-list-table',
+    templateUrl: './promotion-list-table.component.html',
+    styleUrl: './promotion-list-table.component.scss',
+    standalone: false
 })
 export class PromotionListTableComponent {
   @Input() rows: PromotionRow[] = [];

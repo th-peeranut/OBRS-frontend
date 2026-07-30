@@ -43,9 +43,10 @@ import { formatDisplayDateTime } from '../../../../../shared/lib/display-date-ti
  * blocks gated on `detail.status`, not one table reused for both.
  */
 @Component({
-  selector: 'app-settlement-detail-modal',
-  templateUrl: './settlement-detail-modal.component.html',
-  styleUrl: './settlement-detail-modal.component.scss',
+    selector: 'app-settlement-detail-modal',
+    templateUrl: './settlement-detail-modal.component.html',
+    styleUrl: './settlement-detail-modal.component.scss',
+    standalone: false
 })
 export class SettlementDetailModalComponent implements OnChanges {
   @Input() isOpen = false;

@@ -10,9 +10,10 @@ import { NotificationItem } from '../../interfaces/notification.interface';
  * even when `bookingScheduleId` is present; it only marks the item read.
  */
 @Component({
-  selector: 'app-notification-inbox-row',
-  templateUrl: './notification-inbox-row.component.html',
-  styleUrl: './notification-inbox-row.component.scss',
+    selector: 'app-notification-inbox-row',
+    templateUrl: './notification-inbox-row.component.html',
+    styleUrl: './notification-inbox-row.component.scss',
+    standalone: false
 })
 export class NotificationInboxRowComponent {
   @Input({ required: true }) item!: NotificationItem;

@@ -10,9 +10,10 @@ import { parcelStopLabel } from '../../../../shared/lib/parcel-stop-label';
  * appears on this surface ONLY — never on the public tracking response/page.
  */
 @Component({
-  selector: 'app-parcel-waybill-paper',
-  templateUrl: './parcel-waybill-paper.component.html',
-  styleUrl: './parcel-waybill-paper.component.scss',
+    selector: 'app-parcel-waybill-paper',
+    templateUrl: './parcel-waybill-paper.component.html',
+    styleUrl: './parcel-waybill-paper.component.scss',
+    standalone: false
 })
 export class ParcelWaybillPaperComponent {
   @Input() waybill: WaybillRespDto | null = null;

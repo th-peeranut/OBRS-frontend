@@ -18,9 +18,10 @@ const NOTE_MAX_LENGTH = 5000;
  * in the form either way, so the reporter can retry without retyping).
  */
 @Component({
-  selector: 'app-my-report-follow-up-composer',
-  templateUrl: './my-report-follow-up-composer.component.html',
-  styleUrl: './my-report-follow-up-composer.component.scss',
+    selector: 'app-my-report-follow-up-composer',
+    templateUrl: './my-report-follow-up-composer.component.html',
+    styleUrl: './my-report-follow-up-composer.component.scss',
+    standalone: false
 })
 export class MyReportFollowUpComposerComponent implements OnDestroy {
   @Input() reportId!: number;

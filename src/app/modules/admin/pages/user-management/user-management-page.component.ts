@@ -35,9 +35,10 @@ import {
  * delete/unlock orchestration state.
  */
 @Component({
-  selector: 'app-user-management-page',
-  templateUrl: './user-management-page.component.html',
-  styleUrl: './user-management-page.component.scss',
+    selector: 'app-user-management-page',
+    templateUrl: './user-management-page.component.html',
+    styleUrl: './user-management-page.component.scss',
+    standalone: false
 })
 export class UserManagementPageComponent implements OnInit, OnDestroy {
   protected users: UserRow[] = [];

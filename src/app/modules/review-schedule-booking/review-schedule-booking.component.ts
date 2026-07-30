@@ -13,9 +13,10 @@ import {
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 
 @Component({
-  selector: 'app-review-schedule-booking',
-  templateUrl: './review-schedule-booking.component.html',
-  styleUrl: './review-schedule-booking.component.scss',
+    selector: 'app-review-schedule-booking',
+    templateUrl: './review-schedule-booking.component.html',
+    styleUrl: './review-schedule-booking.component.scss',
+    standalone: false
 })
 export class ReviewScheduleBookingComponent {
   constructor(private store: Store) {}

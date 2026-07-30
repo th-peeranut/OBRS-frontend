@@ -11,7 +11,10 @@ import { NotificationInboxService } from '../../shared/services/notification-inb
 // dependency chain) — stub the selector so these layout-chrome specs stay
 // scoped to the layout itself, same approach as every other cross-cutting
 // child mounted here.
-@Component({ selector: 'app-notification-bell', template: '' })
+@Component({
+    selector: 'app-notification-bell', template: '',
+    standalone: false
+})
 class NotificationBellStubComponent {}
 
 // localStorage shim — keeps spec storage isolated

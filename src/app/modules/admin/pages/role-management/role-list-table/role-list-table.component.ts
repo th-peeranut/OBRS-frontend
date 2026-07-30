@@ -15,9 +15,10 @@ import { RoleRow, statusClass as statusClassValue } from '../role-management.map
 // wired it in (see the split report) — preserved as dead code rather than
 // "fixed", per the behavior-preservation invariant.
 @Component({
-  selector: 'app-role-list-table',
-  templateUrl: './role-list-table.component.html',
-  styleUrl: './role-list-table.component.scss',
+    selector: 'app-role-list-table',
+    templateUrl: './role-list-table.component.html',
+    styleUrl: './role-list-table.component.scss',
+    standalone: false
 })
 export class RoleListTableComponent {
   @Input() rows: RoleRow[] = [];

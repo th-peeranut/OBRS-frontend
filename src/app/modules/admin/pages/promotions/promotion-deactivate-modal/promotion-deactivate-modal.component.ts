@@ -8,9 +8,10 @@ import { PromotionRow } from '../promotions-page.mappers';
 // isDeactivating guard on close; this component only renders its inputs and
 // emits intent.
 @Component({
-  selector: 'app-promotion-deactivate-modal',
-  templateUrl: './promotion-deactivate-modal.component.html',
-  styleUrl: './promotion-deactivate-modal.component.scss',
+    selector: 'app-promotion-deactivate-modal',
+    templateUrl: './promotion-deactivate-modal.component.html',
+    styleUrl: './promotion-deactivate-modal.component.scss',
+    standalone: false
 })
 export class PromotionDeactivateModalComponent {
   @Input() isOpen = false;

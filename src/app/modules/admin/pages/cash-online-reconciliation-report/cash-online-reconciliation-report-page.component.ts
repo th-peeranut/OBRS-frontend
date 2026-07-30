@@ -19,9 +19,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * are new for this report.
  */
 @Component({
-  selector: 'app-cash-online-reconciliation-report-page',
-  templateUrl: './cash-online-reconciliation-report-page.component.html',
-  styleUrl: './cash-online-reconciliation-report-page.component.scss',
+    selector: 'app-cash-online-reconciliation-report-page',
+    templateUrl: './cash-online-reconciliation-report-page.component.html',
+    styleUrl: './cash-online-reconciliation-report-page.component.scss',
+    standalone: false
 })
 export class CashOnlineReconciliationReportPageComponent implements OnInit, OnDestroy {
   protected report: CashOnlineReconciliationReportDto | null = null;

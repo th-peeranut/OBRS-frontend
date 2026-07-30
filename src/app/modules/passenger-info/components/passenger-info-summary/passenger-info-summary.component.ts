@@ -36,9 +36,10 @@ import {
 } from '../../../../shared/lib/trip-format';
 
 @Component({
-  selector: 'app-passenger-info-summary',
-  templateUrl: './passenger-info-summary.component.html',
-  styleUrl: './passenger-info-summary.component.scss',
+    selector: 'app-passenger-info-summary',
+    templateUrl: './passenger-info-summary.component.html',
+    styleUrl: './passenger-info-summary.component.scss',
+    standalone: false
 })
 export class PassengerInfoSummaryComponent {
   @Input() isNextDisabled = true;

@@ -10,9 +10,10 @@ import { HomeBookingComponent } from './components/home-booking/home-booking.com
 import { PickupDropoffConfirmedEvent } from '../../shared/interfaces/route-map.interface';
 
 @Component({
-  selector: 'app-home',
-  templateUrl: './home.component.html',
-  styleUrl: './home.component.scss',
+    selector: 'app-home',
+    templateUrl: './home.component.html',
+    styleUrl: './home.component.scss',
+    standalone: false
 })
 export class HomeComponent implements OnInit, OnDestroy {
   @ViewChild(HomeBookingComponent) homeBookingRef!: HomeBookingComponent;

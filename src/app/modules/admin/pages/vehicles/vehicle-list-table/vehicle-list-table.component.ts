@@ -14,9 +14,10 @@ import { VehicleRow, statusClass as statusClassValue } from '../vehicles-page.ma
 // (see the split report) — preserved as dead code rather than "fixed", per
 // the behavior-preservation invariant.
 @Component({
-  selector: 'app-vehicle-list-table',
-  templateUrl: './vehicle-list-table.component.html',
-  styleUrl: './vehicle-list-table.component.scss',
+    selector: 'app-vehicle-list-table',
+    templateUrl: './vehicle-list-table.component.html',
+    styleUrl: './vehicle-list-table.component.scss',
+    standalone: false
 })
 export class VehicleListTableComponent {
   @Input() rows: VehicleRow[] = [];

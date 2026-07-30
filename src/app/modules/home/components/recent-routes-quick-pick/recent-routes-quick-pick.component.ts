@@ -37,11 +37,10 @@ interface RecentRouteView {
  * needs it.
  */
 @Component({
-  selector: 'app-recent-routes-quick-pick',
-  templateUrl: './recent-routes-quick-pick.component.html',
-  styleUrl: './recent-routes-quick-pick.component.scss',
-  standalone: true,
-  imports: [CommonModule, TranslateModule],
+    selector: 'app-recent-routes-quick-pick',
+    templateUrl: './recent-routes-quick-pick.component.html',
+    styleUrl: './recent-routes-quick-pick.component.scss',
+    imports: [CommonModule, TranslateModule]
 })
 export class RecentRoutesQuickPickComponent implements OnInit, OnChanges, OnDestroy {
   @Input() routes: RecentRouteCandidate[] = [];

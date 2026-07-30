@@ -13,9 +13,10 @@ const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 @Component({
-  selector: 'app-refund-void-report-page',
-  templateUrl: './refund-void-report-page.component.html',
-  styleUrl: './refund-void-report-page.component.scss',
+    selector: 'app-refund-void-report-page',
+    templateUrl: './refund-void-report-page.component.html',
+    styleUrl: './refund-void-report-page.component.scss',
+    standalone: false
 })
 export class RefundVoidReportPageComponent implements OnInit, OnDestroy {
   protected report: RefundVoidReportDto | null = null;

@@ -44,9 +44,10 @@ type MeasuredField = 'actualWeightKg' | 'actualLengthCm' | 'actualWidthCm' | 'ac
  * `ParcelCollectDialogComponent`/`ParcelConsignFormComponent`.
  */
 @Component({
-  selector: 'app-parcel-verify-dialog',
-  templateUrl: './parcel-verify-dialog.component.html',
-  styleUrl: './parcel-verify-dialog.component.scss',
+    selector: 'app-parcel-verify-dialog',
+    templateUrl: './parcel-verify-dialog.component.html',
+    styleUrl: './parcel-verify-dialog.component.scss',
+    standalone: false
 })
 export class ParcelVerifyDialogComponent implements OnChanges {
   @Input() isOpen = false;

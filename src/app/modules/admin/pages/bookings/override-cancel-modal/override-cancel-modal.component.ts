@@ -73,9 +73,10 @@ const CANCEL_WINDOW_HOURS = 2; // mirrors backend CANCEL_WINDOW_HOURS_DEFAULT
 const MS_PER_HOUR = 60 * 60 * 1000;
 
 @Component({
-  selector: 'app-override-cancel-modal',
-  templateUrl: './override-cancel-modal.component.html',
-  styleUrl: './override-cancel-modal.component.scss',
+    selector: 'app-override-cancel-modal',
+    templateUrl: './override-cancel-modal.component.html',
+    styleUrl: './override-cancel-modal.component.scss',
+    standalone: false
 })
 export class OverrideCancelModalComponent implements OnChanges {
   @Input() isOpen = false;

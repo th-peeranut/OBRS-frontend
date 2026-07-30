@@ -19,9 +19,10 @@ import {
 } from '../routes.mappers';
 
 @Component({
-  selector: 'app-route-form-modal',
-  templateUrl: './route-form-modal.component.html',
-  styleUrl: './route-form-modal.component.scss',
+    selector: 'app-route-form-modal',
+    templateUrl: './route-form-modal.component.html',
+    styleUrl: './route-form-modal.component.scss',
+    standalone: false
 })
 export class RouteFormModalComponent {
   @Input() statusOptions: Option[] = [];

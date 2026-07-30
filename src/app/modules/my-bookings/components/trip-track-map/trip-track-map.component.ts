@@ -19,9 +19,10 @@ import { mapTileUrl, MAP_TILE_ATTRIBUTION } from '../../../../shared/lib/map-til
  *      survive a LIVE→STALE→LIVE round trip, not just the first flip).
  */
 @Component({
-  selector: 'app-trip-track-map',
-  templateUrl: './trip-track-map.component.html',
-  styleUrl: './trip-track-map.component.scss',
+    selector: 'app-trip-track-map',
+    templateUrl: './trip-track-map.component.html',
+    styleUrl: './trip-track-map.component.scss',
+    standalone: false
 })
 export class TripTrackMapComponent implements OnChanges, AfterViewInit, OnDestroy {
   @Input() lat: number | null = null;

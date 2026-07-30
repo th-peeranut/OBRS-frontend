@@ -8,9 +8,10 @@ import { selectProvinceWithStation } from '../../../../shared/stores/station/sta
 import { Station, StationApi } from '../../../../shared/interfaces/station.interface';
 
 @Component({
-  selector: 'app-station-home',
-  templateUrl: './station-home.component.html',
-  styleUrl: './station-home.component.scss',
+    selector: 'app-station-home',
+    templateUrl: './station-home.component.html',
+    styleUrl: './station-home.component.scss',
+    standalone: false
 })
 export class StationHomeComponent implements OnInit, OnDestroy {
   currentDirection: 'forward' | 'reverse' = 'forward';

@@ -31,7 +31,10 @@ import { createLanguageServiceStub } from '../../testing/test-stubs';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 import { environment } from '../../../environments/environment';
 
-@Component({ selector: 'app-notification-bell', template: '' })
+@Component({
+    selector: 'app-notification-bell', template: '',
+    standalone: false
+})
 class NotificationBellStubComponent {}
 
 const SALES = 'STAFF.NAV.SECTION.SALES';

@@ -88,12 +88,13 @@ interface TicketPassengerGroup {
 type Locale = 'en' | 'th' | 'zh';
 
 @Component({
-  selector: 'app-e-ticket',
-  templateUrl: './e-ticket.component.html',
-  styleUrl: './e-ticket.component.scss',
-  // Component-scoped so its dedupe/cache state doesn't leak across page
-  // visits — see the class comment on BoardingQrService.
-  providers: [BoardingQrService],
+    selector: 'app-e-ticket',
+    templateUrl: './e-ticket.component.html',
+    styleUrl: './e-ticket.component.scss',
+    // Component-scoped so its dedupe/cache state doesn't leak across page
+    // visits — see the class comment on BoardingQrService.
+    providers: [BoardingQrService],
+    standalone: false
 })
 export class ETicketComponent implements OnInit, OnDestroy {
   @ViewChild('ticketPaper') private ticketPaper?: ElementRef<HTMLElement>;

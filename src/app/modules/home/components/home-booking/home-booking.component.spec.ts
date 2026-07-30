@@ -2,7 +2,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { Store } from '@ngrx/store';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -241,7 +241,7 @@ describe('HomeBookingComponent', () => {
 // pick a return date past the real cap and eat a 400 from the server. A
 // unit-level construction test (above) can't see a missing template
 // binding, only a compiled-template render can, so this block renders the
-// real component via TestBed (same CalendarModule/ReactiveFormsModule/
+// real component via TestBed (same DatePickerModule/ReactiveFormsModule/
 // standalone-dropdown-component recipe already proven for a PrimeNG
 // calendar form in parcel-trip-form.component.spec.ts).
 describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', () => {
@@ -265,7 +265,7 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
-        CalendarModule,
+        DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         DropdownObrsPassengerComponent,
@@ -292,8 +292,8 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
     component = fixture.componentInstance;
   });
 
-  it('applies the resolved maxDate to BOTH the departure and return p-calendar controls', () => {
-    // Reveal the return-trip calendar too, so both p-calendar instances exist.
+  it('applies the resolved maxDate to BOTH the departure and return p-datePicker controls', () => {
+    // Reveal the return-trip calendar too, so both p-datePicker instances exist.
     component.isRoundTripReturn = true;
 
     fixture.detectChanges(); // ngOnInit -> bookingPolicyServiceStub resolves synchronously
@@ -301,7 +301,7 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
     const expected = dayjs().add(CONFIGURED_MAX_ADVANCE_DAYS, 'day');
     expect(dayjs(component.maxDate).isSame(expected, 'day')).toBeTrue();
 
-    const calendars = fixture.debugElement.queryAll(By.css('p-calendar'));
+    const calendars = fixture.debugElement.queryAll(By.css('p-datePicker'));
     expect(calendars.length).toBe(2);
 
     for (const calendarDe of calendars) {

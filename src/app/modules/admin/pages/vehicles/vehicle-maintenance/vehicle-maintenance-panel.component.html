@@ -115,7 +115,7 @@
         <label class="admin-form-label">
           {{ 'ADMIN.VEHICLES.MAINTENANCE.START_DATE' | translate }} <span class="admin-required">*</span>
         </label>
-        <p-calendar
+        <p-datePicker
           formControlName="startDate"
           styleClass="schedule-calendar-filter"
           inputStyleClass="schedule-calendar-filter-input"
@@ -124,7 +124,7 @@
           [showIcon]="true"
           [showButtonBar]="true"
           [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.START_DATE' | translate"
-        ></p-calendar>
+        ></p-datePicker>
         <small class="admin-error" *ngIf="isFieldInvalid('startDate')">
           {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
         </small>
@@ -132,7 +132,7 @@
 
       <div class="admin-form-field">
         <label class="admin-form-label">{{ 'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate }}</label>
-        <p-calendar
+        <p-datePicker
           formControlName="endDate"
           styleClass="schedule-calendar-filter"
           inputStyleClass="schedule-calendar-filter-input"
@@ -141,7 +141,7 @@
           [showIcon]="true"
           [showButtonBar]="true"
           [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate"
-        ></p-calendar>
+        ></p-datePicker>
         <small class="admin-error" *ngIf="hasDateRangeError()">
           {{ 'ADMIN.VEHICLES.MAINTENANCE.DATE_RANGE_VALIDATION' | translate }}
         </small>
@@ -149,7 +149,7 @@
 
       <div class="admin-form-field">
         <label class="admin-form-label">{{ 'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate }}</label>
-        <p-calendar
+        <p-datePicker
           formControlName="nextDueDate"
           styleClass="schedule-calendar-filter"
           inputStyleClass="schedule-calendar-filter-input"
@@ -158,7 +158,7 @@
           [showIcon]="true"
           [showButtonBar]="true"
           [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate"
-        ></p-calendar>
+        ></p-datePicker>
       </div>
 
       <div class="admin-form-field">

@@ -17,9 +17,10 @@ type WorklistContentState = 'loading' | 'error' | 'empty' | 'data';
  * `RefundVoidReportStore` is NOT the one to copy).
  */
 @Component({
-  selector: 'app-manual-refund-worklist-page',
-  templateUrl: './manual-refund-worklist-page.component.html',
-  styleUrl: './manual-refund-worklist-page.component.scss',
+    selector: 'app-manual-refund-worklist-page',
+    templateUrl: './manual-refund-worklist-page.component.html',
+    styleUrl: './manual-refund-worklist-page.component.scss',
+    standalone: false
 })
 export class ManualRefundWorklistPageComponent implements OnInit, OnDestroy {
   protected rows: PendingRefund[] = [];

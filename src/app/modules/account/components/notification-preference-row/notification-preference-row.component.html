@@ -9,7 +9,7 @@
   <div class="npref-row__cell">
     <span class="npref-row__cell-label">{{ 'NOTIFICATION_PREFS.CHANNEL_EMAIL' | translate }}</span>
     <ng-container *ngIf="row.emailSupported; else emailNa">
-      <p-inputSwitch
+      <p-toggleSwitch
         #emailSwitch
         [ngModel]="row.emailEnabled"
         [disabled]="disabled"
@@ -17,7 +17,7 @@
           (('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_EMAIL' | translate))
         "
         (onChange)="onEmailChange($event)"
-      ></p-inputSwitch>
+      ></p-toggleSwitch>
     </ng-container>
     <ng-template #emailNa>
       <span
@@ -31,7 +31,7 @@
 
   <div class="npref-row__cell">
     <span class="npref-row__cell-label">{{ 'NOTIFICATION_PREFS.CHANNEL_SMS' | translate }}</span>
-    <p-inputSwitch
+    <p-toggleSwitch
       #smsSwitch
       [ngModel]="row.smsEnabled"
       [disabled]="disabled"
@@ -39,7 +39,7 @@
         (('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_SMS' | translate))
       "
       (onChange)="onSmsChange($event)"
-    ></p-inputSwitch>
+    ></p-toggleSwitch>
   </div>
 
   <p

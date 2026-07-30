@@ -63,9 +63,10 @@ type PaymentTab = 'creditcard' | 'qrcode';
  * customer shell). See docs/adr for the flow-level decisions.
  */
 @Component({
-  selector: 'app-reschedule-dialog',
-  templateUrl: './reschedule-dialog.component.html',
-  styleUrl: './reschedule-dialog.component.scss',
+    selector: 'app-reschedule-dialog',
+    templateUrl: './reschedule-dialog.component.html',
+    styleUrl: './reschedule-dialog.component.scss',
+    standalone: false
 })
 export class RescheduleDialogComponent implements OnInit, OnDestroy {
   @Input() bookingId!: number;

@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { RevenueAnalyticsPageComponent } from './revenue-analytics-page.component';
 import { RevenueAnalyticsStore } from './revenue-analytics.store';
 import { RevenueAnalyticsDto } from '../../../../shared/interfaces/revenue-analytics.interface';
@@ -143,7 +143,7 @@ describe('RevenueAnalyticsPageComponent', () => {
       store = makeStoreStub(makeAnalytics());
       await TestBed.configureTestingModule({
         declarations: [RevenueAnalyticsPageComponent],
-        imports: [CommonModule, FormsModule, CalendarModule, AdminSharedModule, TranslateModule.forRoot()],
+        imports: [CommonModule, FormsModule, DatePickerModule, AdminSharedModule, TranslateModule.forRoot()],
         providers: [{ provide: RevenueAnalyticsStore, useValue: store }],
       }).compileComponents();
       fixture = TestBed.createComponent(RevenueAnalyticsPageComponent);

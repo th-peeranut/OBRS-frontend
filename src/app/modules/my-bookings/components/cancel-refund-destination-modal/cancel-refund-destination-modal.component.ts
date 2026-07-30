@@ -36,9 +36,10 @@ import {
  * customer-shell modal chrome.
  */
 @Component({
-  selector: 'app-cancel-refund-destination-modal',
-  templateUrl: './cancel-refund-destination-modal.component.html',
-  styleUrl: './cancel-refund-destination-modal.component.scss',
+    selector: 'app-cancel-refund-destination-modal',
+    templateUrl: './cancel-refund-destination-modal.component.html',
+    styleUrl: './cancel-refund-destination-modal.component.scss',
+    standalone: false
 })
 export class CancelRefundDestinationModalComponent implements OnInit, OnChanges {
   @Input({ required: true }) booking!: MyBookingView;

@@ -26,10 +26,16 @@ import { RouterTestingModule } from '@angular/router/testing';
 
 import { staffRoutes } from '../../staff.module';
 
-@Component({ selector: 'app-blank', template: '' })
+@Component({
+    selector: 'app-blank', template: '',
+    standalone: false
+})
 class BlankComponent {}
 
-@Component({ selector: 'app-root-harness', template: '<router-outlet></router-outlet>' })
+@Component({
+    selector: 'app-root-harness', template: '<router-outlet></router-outlet>',
+    standalone: false
+})
 class RootHarnessComponent {}
 
 function shellChildren(): Route[] {

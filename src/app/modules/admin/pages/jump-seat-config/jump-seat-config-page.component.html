@@ -21,11 +21,11 @@
     (ngSubmit)="save()"
   >
     <div class="admin-form-field full d-flex align-items-center gap-3">
-      <p-inputSwitch
+      <p-toggleSwitch
         formControlName="enabled"
         inputId="jumpSeatEnabled"
         [attr.aria-label]="'ADMIN.JUMP_SEAT_CONFIG.ENABLED_LABEL' | translate"
-      ></p-inputSwitch>
+      ></p-toggleSwitch>
       <label class="admin-form-label mb-0" for="jumpSeatEnabled">
         {{ 'ADMIN.JUMP_SEAT_CONFIG.ENABLED_LABEL' | translate }}
       </label>

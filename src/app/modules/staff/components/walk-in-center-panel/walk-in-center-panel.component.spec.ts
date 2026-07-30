@@ -11,7 +11,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { of } from 'rxjs';
@@ -850,7 +850,7 @@ describe('WalkInCenterPanelComponent — OBRS-517 seat-map phantom control (full
         RouterTestingModule,
         TranslateModule.forRoot(),
         ReactiveFormsModule,
-        CalendarModule,
+        DatePickerModule,
         InputNumberModule,
         NoopAnimationsModule,
       ],

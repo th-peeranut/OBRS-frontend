@@ -52,7 +52,10 @@ import { AdminApiService } from '../services/admin/admin-api.service';
 import { BadgeSocketService } from '../services/admin/badge-socket.service';
 import { environment } from '../../environments/environment';
 
-@Component({ selector: 'app-notification-bell', template: '' })
+@Component({
+    selector: 'app-notification-bell', template: '',
+    standalone: false
+})
 class NotificationBellStubComponent {}
 
 /** Roles that can enter each shell, per app-routing.module.ts. */

@@ -15,7 +15,7 @@
     >{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
   </button>
 
-  <p-overlayPanel
+  <p-popover
     #overlayPanel
     appendTo="body"
     [styleClass]="overlayStyleClass"
@@ -32,5 +32,5 @@
       (markAllRead)="onMarkAllRead()"
       (retry)="onRetry()"
     ></app-notification-inbox-panel>
-  </p-overlayPanel>
+  </p-popover>
 </div>

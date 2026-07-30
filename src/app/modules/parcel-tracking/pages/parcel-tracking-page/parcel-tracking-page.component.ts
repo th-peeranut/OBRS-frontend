@@ -23,9 +23,10 @@ type TrackingContentState = 'idle' | 'loading' | 'found' | 'not-found';
  * lookup on load.
  */
 @Component({
-  selector: 'app-parcel-tracking-page',
-  templateUrl: './parcel-tracking-page.component.html',
-  styleUrl: './parcel-tracking-page.component.scss',
+    selector: 'app-parcel-tracking-page',
+    templateUrl: './parcel-tracking-page.component.html',
+    styleUrl: './parcel-tracking-page.component.scss',
+    standalone: false
 })
 export class ParcelTrackingPageComponent implements OnInit, OnDestroy {
   protected readonly form: FormGroup;

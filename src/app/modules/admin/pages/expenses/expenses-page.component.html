@@ -27,7 +27,7 @@
     (valueChange)="onCategoryFilterChange($event)"
   ></app-admin-dropdown>
 
-  <p-calendar
+  <p-datePicker
     styleClass="app-date-field"
     panelStyleClass="app-date-field-panel"
     dateFormat="dd/mm/yy"
@@ -41,9 +41,9 @@
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
-  </p-calendar>
+  </p-datePicker>
 
-  <p-calendar
+  <p-datePicker
     styleClass="app-date-field"
     panelStyleClass="app-date-field-panel"
     dateFormat="dd/mm/yy"
@@ -57,7 +57,7 @@
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
-  </p-calendar>
+  </p-datePicker>
 
   <button
     *ngIf="canWrite"

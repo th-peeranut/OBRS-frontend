@@ -8,9 +8,10 @@ import { NotificationPreferenceRowChange } from '../notification-preference-row/
  * from the row — this component holds no state of its own.
  */
 @Component({
-  selector: 'app-notification-preference-matrix',
-  templateUrl: './notification-preference-matrix.component.html',
-  styleUrl: './notification-preference-matrix.component.scss',
+    selector: 'app-notification-preference-matrix',
+    templateUrl: './notification-preference-matrix.component.html',
+    styleUrl: './notification-preference-matrix.component.scss',
+    standalone: false
 })
 export class NotificationPreferenceMatrixComponent {
   @Input() preferences: NotificationPreferenceRow[] = [];

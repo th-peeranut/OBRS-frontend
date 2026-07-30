@@ -40,9 +40,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AnalyticsService } from '../../services/analytics/analytics.service';
 
 @Component({
-  selector: 'app-passenger-info',
-  templateUrl: './passenger-info.component.html',
-  styleUrl: './passenger-info.component.scss',
+    selector: 'app-passenger-info',
+    templateUrl: './passenger-info.component.html',
+    styleUrl: './passenger-info.component.scss',
+    standalone: false
 })
 export class PassengerInfoComponent {
   @ViewChild(PassengerInfoFormComponent)

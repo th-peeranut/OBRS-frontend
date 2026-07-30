@@ -69,9 +69,10 @@ const SECTION_ORDER: { key: NavSectionKey; titleKey: string }[] = [
 const NEW_REPORT_COUNT_POLL_MS = 60_000;
 
 @Component({
-  selector: 'app-admin-layout',
-  templateUrl: './admin-layout.component.html',
-  styleUrl: './admin-layout.component.scss',
+    selector: 'app-admin-layout',
+    templateUrl: './admin-layout.component.html',
+    styleUrl: './admin-layout.component.scss',
+    standalone: false
 })
 export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   // ── Abstract member implementations ─────────────────────────────────────────

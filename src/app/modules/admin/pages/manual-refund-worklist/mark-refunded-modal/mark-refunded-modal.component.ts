@@ -22,9 +22,10 @@ import { PendingRefund } from '../../../../../shared/interfaces/payment.interfac
  * like an error.
  */
 @Component({
-  selector: 'app-mark-refunded-modal',
-  templateUrl: './mark-refunded-modal.component.html',
-  styleUrl: './mark-refunded-modal.component.scss',
+    selector: 'app-mark-refunded-modal',
+    templateUrl: './mark-refunded-modal.component.html',
+    styleUrl: './mark-refunded-modal.component.scss',
+    standalone: false
 })
 export class MarkRefundedModalComponent implements OnChanges {
   @Input({ required: true }) row!: PendingRefund;

@@ -8,9 +8,10 @@ import { UserRow } from '../user-management.mappers';
 // store.mutate, and the isDeleting guard on close; this component only
 // renders its inputs and emits intent.
 @Component({
-  selector: 'app-user-delete-modal',
-  templateUrl: './user-delete-modal.component.html',
-  styleUrl: './user-delete-modal.component.scss',
+    selector: 'app-user-delete-modal',
+    templateUrl: './user-delete-modal.component.html',
+    styleUrl: './user-delete-modal.component.scss',
+    standalone: false
 })
 export class UserDeleteModalComponent {
   @Input() isOpen = false;

@@ -13,9 +13,10 @@ export interface WalkInTripSelection {
 }
 
 @Component({
-  selector: 'app-walk-in-trip-browser',
-  templateUrl: './walk-in-trip-browser.component.html',
-  styleUrl: './walk-in-trip-browser.component.scss',
+    selector: 'app-walk-in-trip-browser',
+    templateUrl: './walk-in-trip-browser.component.html',
+    styleUrl: './walk-in-trip-browser.component.scss',
+    standalone: false
 })
 export class WalkInTripBrowserComponent {
   @Input() isLoading = false;

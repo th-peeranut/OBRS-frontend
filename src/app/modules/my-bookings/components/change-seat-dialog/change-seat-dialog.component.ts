@@ -40,9 +40,10 @@ type ChangeSeatStep = 'loading' | 'map' | 'error';
  * `docs/adr/0009-change-seat-dialog.md`.
  */
 @Component({
-  selector: 'app-change-seat-dialog',
-  templateUrl: './change-seat-dialog.component.html',
-  styleUrl: './change-seat-dialog.component.scss',
+    selector: 'app-change-seat-dialog',
+    templateUrl: './change-seat-dialog.component.html',
+    styleUrl: './change-seat-dialog.component.scss',
+    standalone: false
 })
 export class ChangeSeatDialogComponent implements OnInit, OnDestroy {
   @Input() bookingId!: number;

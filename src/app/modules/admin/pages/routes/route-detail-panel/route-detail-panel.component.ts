@@ -15,9 +15,10 @@ import {
 // parent template — this component's content is gated by `hasRoute`, not a
 // host-level *ngIf, so the instance itself is never destroyed/recreated).
 @Component({
-  selector: 'app-route-detail-panel',
-  templateUrl: './route-detail-panel.component.html',
-  styleUrl: './route-detail-panel.component.scss',
+    selector: 'app-route-detail-panel',
+    templateUrl: './route-detail-panel.component.html',
+    styleUrl: './route-detail-panel.component.scss',
+    standalone: false
 })
 export class RouteDetailPanelComponent implements OnChanges {
   @Input() hasRoute = false;

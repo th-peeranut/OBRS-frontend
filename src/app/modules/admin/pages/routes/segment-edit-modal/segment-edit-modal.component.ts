@@ -8,9 +8,10 @@ import { TranslateService } from '@ngx-translate/core';
 import { SegmentRow, StopPoint, toSegmentUpdatePayload } from '../routes.mappers';
 
 @Component({
-  selector: 'app-segment-edit-modal',
-  templateUrl: './segment-edit-modal.component.html',
-  styleUrl: './segment-edit-modal.component.scss',
+    selector: 'app-segment-edit-modal',
+    templateUrl: './segment-edit-modal.component.html',
+    styleUrl: './segment-edit-modal.component.scss',
+    standalone: false
 })
 export class SegmentEditModalComponent {
   @Input() stops: StopPoint[] = [];

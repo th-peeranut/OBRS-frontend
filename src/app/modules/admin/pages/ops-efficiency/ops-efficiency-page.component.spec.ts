@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { OpsEfficiencyPageComponent } from './ops-efficiency-page.component';
 import { OpsEfficiencyStore } from './ops-efficiency.store';
 import { OpsEfficiencyDto } from '../../../../shared/interfaces/ops-efficiency.interface';
@@ -72,7 +72,7 @@ describe('OpsEfficiencyPageComponent', () => {
       const store = makeStoreStub(makeData());
       await TestBed.configureTestingModule({
         declarations: [OpsEfficiencyPageComponent],
-        imports: [CommonModule, FormsModule, CalendarModule, AdminSharedModule, TranslateModule.forRoot()],
+        imports: [CommonModule, FormsModule, DatePickerModule, AdminSharedModule, TranslateModule.forRoot()],
         providers: [{ provide: OpsEfficiencyStore, useValue: store }],
       }).compileComponents();
       fixture = TestBed.createComponent(OpsEfficiencyPageComponent);

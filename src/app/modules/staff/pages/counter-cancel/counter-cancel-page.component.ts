@@ -28,9 +28,10 @@ const SEARCH_ERROR_CRITERIA_REQUIRED = errorCodeFromMessageKey('booking.search.e
  * render via the shell topbar — this component renders neither (design-system §7).
  */
 @Component({
-  selector: 'app-counter-cancel-page',
-  templateUrl: './counter-cancel-page.component.html',
-  styleUrl: './counter-cancel-page.component.scss',
+    selector: 'app-counter-cancel-page',
+    templateUrl: './counter-cancel-page.component.html',
+    styleUrl: './counter-cancel-page.component.scss',
+    standalone: false
 })
 export class CounterCancelPageComponent implements OnDestroy {
   private readonly destroy$ = new Subject<void>();

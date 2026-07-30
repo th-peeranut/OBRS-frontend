@@ -10,9 +10,10 @@ import { normalizeSeatNumber } from '../../../../shared/lib/seat-label';
 import { DEFAULT_VAN_SEAT_LAYOUT, SeatLayout } from '../../../../shared/lib/seat-layout';
 
 @Component({
-  selector: 'app-passenger-seat-van',
-  templateUrl: './passenger-seat-van.component.html',
-  styleUrl: './passenger-seat-van.component.scss',
+    selector: 'app-passenger-seat-van',
+    templateUrl: './passenger-seat-van.component.html',
+    styleUrl: './passenger-seat-van.component.scss',
+    standalone: false
 })
 export class PassengerSeatVanComponent implements OnChanges {
   @Input() gender: string = '';

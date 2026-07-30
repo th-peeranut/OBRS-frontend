@@ -9,6 +9,13 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AppRoutingModule } from './app-routing.module';
 import { errorInterceptor } from './shared/interceptors/error.interceptor';
 
+// PrimeNG theming (OBRS-915). PrimeNG 18 deleted the CSS-file theme system, so
+// `primeng/resources/themes/lara-light-blue/theme.css` no longer exists and the
+// two `styles[]` entries that loaded it are gone from angular.json. The theme is
+// configured here instead.
+import { providePrimeNG } from 'primeng/config';
+import Lara from '@primeng/themes/lara';
+
 // auth
 import { AuthGuard } from './auth/auth.guard';
 import { authInterceptor } from './auth/auth.interceptor';
@@ -64,6 +71,33 @@ export function HttpLoaderFactory(http: HttpClient) {
     AuthService,
     AuthGuard,
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+    providePrimeNG({
+      theme: {
+        // Lara, because that is what the deleted stylesheet was
+        // (`lara-light-blue`). Aura is PrimeNG's own default and would be a
+        // second, undeclared visual change riding along with the upgrade.
+        preset: Lara,
+        options: {
+          // NOT the default. PrimeNG 19 defaults `darkModeSelector` to
+          // 'system', i.e. prefers-color-scheme - which would put PrimeNG
+          // components into dark mode whenever the OS is dark, even while the
+          // app is showing its light theme, because this app decides dark from
+          // `body.is-dark` (ThemeService, localStorage `app_admin_theme`) and
+          // never from the OS. Pointing PrimeNG at the same class is what keeps
+          // the two halves of a page agreeing.
+          darkModeSelector: '.is-dark',
+          cssLayer: {
+            // Our own SCSS overrides PrimeNG in ~230 places and none of it is
+            // written in a layer, so unlayered rules must win. A named layer
+            // makes PrimeNG's base styles lose to every plain selector we have,
+            // which is the only ordering under which those overrides keep the
+            // meaning they had against the v17 stylesheet.
+            name: 'primeng',
+            order: 'primeng',
+          },
+        },
+      },
+    }),
   ],
   bootstrap: [AppComponent],
 })

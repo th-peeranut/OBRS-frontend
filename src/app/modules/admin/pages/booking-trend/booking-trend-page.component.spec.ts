@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { BookingTrendPageComponent } from './booking-trend-page.component';
 import { BookingTrendStore } from './booking-trend.store';
 import { BookingTrendDto } from '../../../../shared/interfaces/booking-trend.interface';
@@ -110,7 +110,7 @@ describe('BookingTrendPageComponent', () => {
       const store = makeStoreStub(makeTrend());
       await TestBed.configureTestingModule({
         declarations: [BookingTrendPageComponent],
-        imports: [CommonModule, FormsModule, CalendarModule, AdminSharedModule, TranslateModule.forRoot()],
+        imports: [CommonModule, FormsModule, DatePickerModule, AdminSharedModule, TranslateModule.forRoot()],
         providers: [{ provide: BookingTrendStore, useValue: store }],
       }).compileComponents();
       fixture = TestBed.createComponent(BookingTrendPageComponent);

@@ -9,9 +9,10 @@ import { UserRow, statusClass as statusClassValue } from '../user-management.map
 // presentational component like its siblings; the per-row unlock action is
 // additionally gated on `user.locked`, same as the pre-split template.
 @Component({
-  selector: 'app-user-list-table',
-  templateUrl: './user-list-table.component.html',
-  styleUrl: './user-list-table.component.scss',
+    selector: 'app-user-list-table',
+    templateUrl: './user-list-table.component.html',
+    styleUrl: './user-list-table.component.scss',
+    standalone: false
 })
 export class UserListTableComponent {
   @Input() rows: UserRow[] = [];
