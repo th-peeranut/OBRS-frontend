@@ -45,11 +45,20 @@
  * It records it, so that a future change to either component's stacking has to look at
  * the trade instead of discovering it through a red gate lane four commits later.
  *
- * ⚠️ OPEN PRODUCT QUESTION, NOT A TEST CONCERN (raised on OBRS-882): the same banner
- * covers `button.btn-success` on the walk-in POS and the save button on the trip-details
- * edit form. Staff dismiss it once and never see it again, so it is a first-run cost
- * rather than a block — but whether a PDPA *analytics* banner belongs on staff routes at
- * all is a decision for the owner, and this spec deliberately does not encode an answer.
+ * ✅ THE OPEN PRODUCT QUESTION THIS COMMENT USED TO CARRY IS ANSWERED (OBRS-887).
+ * It was raised on OBRS-882 as an overlap: the banner covered `button.btn-success` on the
+ * walk-in POS and the save button on the trip-details edit form, and the note said staff
+ * dismiss it once so it is a first-run cost rather than a block.
+ *
+ * The overlap turned out to be the small half of it. Clarity does session REPLAY, and a
+ * POS screen is full of a *customer's* name and phone number — which the staff member
+ * pressing accept has no standing to consent to. So the answer is not "hide the bar":
+ * measurement is off entirely on every route carrying `requiredRoles`, and the bar not
+ * rendering there is a consequence of having nothing to ask for. See
+ * `src/app/shared/lib/analytics-route-scope.ts` and ADR-0034 §6.
+ *
+ * Nothing in THIS spec changed with that card: every case here runs on customer routes,
+ * where the banner and the overlap it pins both still exist.
  */
 
 import { test, expect, Page } from '@playwright/test';

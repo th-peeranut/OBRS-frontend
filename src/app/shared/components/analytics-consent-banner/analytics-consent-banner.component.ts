@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
-import { Observable } from 'rxjs';
+import { combineLatest, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { AnalyticsConsentService } from '../../../services/analytics/analytics-consent.service';
+import { AnalyticsRouteScopeService } from '../../../services/analytics/analytics-route-scope.service';
 
 /**
  * OBRS-867 — the PDPA ask that stands in front of every measurement tag.
@@ -21,6 +23,18 @@ import { AnalyticsConsentService } from '../../../services/analytics/analytics-c
  * bar disappears after either one and never nags. (See the service for why
  * `unset` is a distinct third state rather than a synonym for denied.)
  *
+ * **It does not ask on staff or admin pages (OBRS-887).** Not as a layout fix —
+ * there is nothing there worth asking for. A salesperson cannot consent to
+ * Clarity recording a screen full of a *customer's* name and phone number, and
+ * measurement of an internal tool would rest on the employment relationship,
+ * not on a bar at the bottom of the screen. An ask whose answer changes nothing
+ * is worse than no ask. The tags are off there regardless of what is stored
+ * here; see {@link AnalyticsService}.
+ *
+ * It hides only on a route KNOWN to be restricted, never on `unknown` — the
+ * privacy property belongs to the tag loader, and a bar that blinks out while
+ * the first route resolves would buy nothing for it.
+ *
  * The component holds no state of its own: `AnalyticsConsentService` is the
  * single source of truth, consumed through the async pipe so there is nothing
  * to unsubscribe.
@@ -31,11 +45,20 @@ import { AnalyticsConsentService } from '../../../services/analytics/analytics-c
   styleUrl: './analytics-consent-banner.component.scss',
 })
 export class AnalyticsConsentBannerComponent {
-  /** True only while the visitor has not answered — i.e. while the bar shows. */
+  /**
+   * True only while the visitor has not answered AND this is a page we would
+   * actually measure — i.e. exactly while the bar should be on screen.
+   */
   protected readonly isUndecided$: Observable<boolean>;
 
-  constructor(private readonly consent: AnalyticsConsentService) {
-    this.isUndecided$ = this.consent.isUndecided$;
+  constructor(
+    private readonly consent: AnalyticsConsentService,
+    private readonly scope: AnalyticsRouteScopeService
+  ) {
+    this.isUndecided$ = combineLatest([
+      this.consent.isUndecided$,
+      this.scope.isRestricted$,
+    ]).pipe(map(([undecided, restricted]) => undecided && !restricted));
   }
 
   protected accept(): void {

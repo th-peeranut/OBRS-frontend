@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NavigationEnd, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
+import { Subject } from 'rxjs';
 import { AnalyticsConsentService } from '../../../services/analytics/analytics-consent.service';
 import { AnalyticsConsentBannerComponent } from './analytics-consent-banner.component';
 
@@ -98,5 +100,110 @@ describe('AnalyticsConsentBannerComponent', () => {
       expect(el?.getAttribute('role')).toBe('region');
       expect(el?.getAttribute('aria-modal')).toBeNull();
     });
+  });
+});
+
+/**
+ * OBRS-887 — the bar does not ask on staff or admin pages.
+ *
+ * This is not the layout fix (OBRS-878 solved the covered button). It is that
+ * there is nothing there worth asking for: a salesperson cannot consent to a
+ * recording of a screen showing a *customer's* name and phone number, and an
+ * ask whose answer changes nothing is worse than no ask.
+ *
+ * Runs against its own Router double rather than RouterTestingModule, because
+ * what is under test is what the bar does at a specific point in a navigation.
+ */
+describe('AnalyticsConsentBannerComponent — route scope', () => {
+  let fixture: ComponentFixture<AnalyticsConsentBannerComponent>;
+  let routerEvents: Subject<NavigationEnd>;
+  let routeSnapshotRoot: unknown;
+
+  function banner(): HTMLElement | null {
+    return fixture.nativeElement.querySelector('.consent-banner');
+  }
+
+  function chain(path: string, data: Record<string, unknown> = {}): unknown {
+    const leaf = { routeConfig: { path }, data, firstChild: null, children: [] };
+    return { routeConfig: null, data: {}, firstChild: leaf, children: [leaf] };
+  }
+
+  function navigate(url: string): void {
+    routerEvents.next(new NavigationEnd(1, url, url));
+    fixture.detectChanges();
+  }
+
+  beforeEach(async () => {
+    localStorage.clear();
+    routerEvents = new Subject<NavigationEnd>();
+    routeSnapshotRoot = chain('');
+
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      declarations: [AnalyticsConsentBannerComponent],
+      imports: [TranslateModule.forRoot(), RouterTestingModule],
+      providers: [
+        {
+          provide: Router,
+          useValue: {
+            events: routerEvents.asObservable(),
+            get routerState() {
+              return { snapshot: { root: routeSnapshotRoot } };
+            },
+            createUrlTree: () => ({}),
+            serializeUrl: () => '',
+          },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(AnalyticsConsentBannerComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('shows before any route has resolved — scope `unknown` is not a reason to hide', () => {
+    // The privacy property belongs to the tag loader, which treats `unknown` as
+    // "load nothing". Blinking the bar out here would buy none of it.
+    expect(banner()).not.toBeNull();
+  });
+
+  it('is not rendered on a staff page', () => {
+    routeSnapshotRoot = chain('staff', { requiredRoles: ['driver', 'salesperson'] });
+
+    navigate('/staff/sell');
+
+    expect(banner()).toBeNull();
+  });
+
+  it('is not rendered on an admin page', () => {
+    routeSnapshotRoot = chain('admin', { requiredRoles: ['admin'] });
+
+    navigate('/admin/settings');
+
+    expect(banner()).toBeNull();
+  });
+
+  it('still asks on a customer page that carries no customerArea marker', () => {
+    // /login and /register are customer pages with no `customerArea` in their
+    // route data. A gate written as an allowlist would have silenced the bar
+    // — and the whole sign-up funnel — on exactly these.
+    routeSnapshotRoot = chain('login');
+
+    navigate('/login');
+
+    expect(banner()).not.toBeNull();
+  });
+
+  it('comes back when the staff member returns to a customer page', () => {
+    routeSnapshotRoot = chain('staff', { requiredRoles: ['salesperson'] });
+    navigate('/staff/sell');
+    expect(banner()).toBeNull();
+
+    routeSnapshotRoot = chain('my-bookings');
+    navigate('/my-bookings');
+
+    expect(banner()).not.toBeNull();
   });
 });

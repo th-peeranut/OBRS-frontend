@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { Subject } from 'rxjs';
+import { combineLatest, Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
@@ -13,6 +13,7 @@ import {
   sanitizeAnalyticsParams,
 } from '../../shared/lib/analytics-pii-guard';
 import { AnalyticsConsentService } from './analytics-consent.service';
+import { AnalyticsRouteScopeService } from './analytics-route-scope.service';
 import { AnalyticsTagsService } from './analytics-tags.service';
 
 /**
@@ -34,6 +35,11 @@ import { AnalyticsTagsService } from './analytics-tags.service';
  *   console warning. The one thing deliberately NOT swallowed is a PII
  *   violation on a non-production build, because that is a defect in our code
  *   and should stop the developer, not the customer.
+ * - **Consent is necessary but not sufficient (OBRS-887).** On `/staff/**` and
+ *   `/admin/**` the screen shows *customers'* personal data, and the person
+ *   holding the keyboard cannot consent on their behalf. So the route gate sits
+ *   beside the consent gate rather than behind it: measurement needs a granted
+ *   answer AND a route that is ours to measure.
  */
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
@@ -43,6 +49,7 @@ export class AnalyticsService {
   constructor(
     private readonly consent: AnalyticsConsentService,
     private readonly tags: AnalyticsTagsService,
+    private readonly scope: AnalyticsRouteScopeService,
     private readonly router: Router,
     private readonly translate: TranslateService
   ) {}
@@ -54,6 +61,12 @@ export class AnalyticsService {
    * Note what does NOT happen until consent arrives: no script tag, no network
    * request, no global. Subscribing to the router here is free — the events it
    * produces are dropped by `track()` while consent is anything but granted.
+   *
+   * OBRS-887 made loading depend on TWO streams instead of one. `combineLatest`
+   * rather than a `filter` on consent alone, because the pair has to be
+   * re-evaluated when EITHER side changes: granting consent on a customer page
+   * loads the tags, and walking into `/staff/sell` afterwards has to suspend
+   * them again. A `filter(granted)` can only ever fire in the first direction.
    */
   init(): void {
     if (this.initialised) {
@@ -61,12 +74,21 @@ export class AnalyticsService {
     }
     this.initialised = true;
 
-    this.consent.isGranted$
-      .pipe(
-        filter((granted) => granted),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(() => this.tags.load());
+    combineLatest([this.consent.isGranted$, this.scope.isMeasurable$])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(([granted, measurable]) => {
+        if (granted && measurable) {
+          this.tags.setSuspended(false);
+          this.tags.load();
+          return;
+        }
+
+        // Covers three different states with one call, deliberately: not yet
+        // consented, consent withdrawn, and "on a staff page right now". Only
+        // the last one has anything to suspend, and `setSuspended` is a no-op
+        // when the value has not changed.
+        this.tags.setSuspended(true);
+      });
 
     this.router.events
       .pipe(
@@ -100,6 +122,19 @@ export class AnalyticsService {
     }
 
     if (!this.consent.isGranted) {
+      return;
+    }
+
+    // OBRS-887. Read live from the router rather than from a cached flag: this
+    // also runs on the `page_view` path, where `AnalyticsRouteScopeService` and
+    // this service are two subscribers to the same `NavigationEnd` and the
+    // order they are notified in is an accident of construction.
+    //
+    // This drops `page_view` for staff pages too, which is the point. The
+    // pattern of an admin route is not personal data, but a stream of them is a
+    // description of how a named employee spends their shift, and we have no
+    // basis to hand that to Google either.
+    if (this.scope.isRestricted) {
       return;
     }
 

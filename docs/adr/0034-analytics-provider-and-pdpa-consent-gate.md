@@ -112,15 +112,75 @@ Two consequences worth stating plainly:
 The deny list errs toward blocking: it will also refuse a future `station_name`. A false
 positive costs one chart column; a false negative costs a PDPA incident.
 
+### 6. Staff and admin routes are not measured at all (OBRS-887 — supersedes a decision made here)
+
+**This section reverses a bullet that was in Consequences below.** It read:
+
+> Staff and admin traffic is measured too. It is separable in GA4 (`page_path` starts
+> `/admin` or `/staff`) rather than excluded, because excluding it would need a second
+> gate that could itself drift.
+
+Both halves of that reasoning fail, and it is worth recording why rather than just
+deleting it — the same argument will be offered again for the next vendor.
+
+**"Separable in GA4" answers the wrong question.** It is true, and it is about
+*attribution*: which numbers belong to customers. The problem is not attribution. Clarity
+does session **replay** — it uploads what was on the screen — and a POS or admin screen is
+full of passenger names, phone numbers, bookings and receipts. Being able to filter those
+recordings out of a report afterwards does not unsend them. §1 chose Clarity precisely
+*because* it records rather than counts, so the property that makes it valuable on a
+customer page is the property that makes it unacceptable on a staff one.
+
+**Consent cannot be obtained from the person at the keyboard.** A salesperson pressing
+accept consents for themselves. The data subject in the recording is the customer standing
+at the counter, who is not present in the interaction and cannot be asked. Nothing in §2's
+gate — which is sound for the visitor measuring their own session — supplies a basis for
+that. Separately, measurement of an internal work tool would rest on the employment
+relationship, not on consent at all; an ask whose answer changes nothing is a worse
+artefact than no ask.
+
+**"A second gate that could itself drift" — the drift concern is real and is answered by
+which marker the gate reads.** The gate is a denylist on `data.requiredRoles`, the same
+marker `AuthGuard` enforces access control with. A new staff page that forgot it would be
+publicly reachable, and `nav-reachability.spec.ts` already fails on exactly that drift. So
+the gate cannot rot quietly in the dangerous direction; it can only rot in the direction of
+a *customer* page accidentally declaring roles, which measures less, not more.
+
+Not an allowlist on `customerArea`, for the symmetric reason: `/login`, `/register`,
+`/otp/:option/:phoneno`, `/forget-password`, `/reset-password`, `/verify-email` and
+`/change-email/confirm` do **not** carry it. Gating on it would switch analytics off across
+the whole sign-up funnel — the funnel OBRS-862 and OBRS-872 are blocked on — and nothing
+would report that it had.
+
+Shape, because "don't send events" is not enough on its own:
+
+1. `AnalyticsTagsService.load()` is not called while the route is restricted — and not
+   called before ANY route has resolved either. The `unknown` window is where a deep link
+   to `/staff/sell` lands, carrying a `granted` answer from a previous visit.
+2. Navigating from a customer page into a staff page suspends the already-loaded tags at
+   the vendor (`clarity('stop')`, `window['ga-disable-<id>']`). This is the common path,
+   and §2's loader could never have covered it: there is no teardown for either script.
+3. `track()` drops every event on a restricted route, `page_view` included. A single admin
+   path is not personal data; a stream of them describes how a named employee spent a
+   shift.
+4. The banner does not render there. That is a consequence of having nothing to ask for,
+   not a layout fix — OBRS-878 already solved the covered button.
+
+If staff-usage numbers are wanted later, the answer is GA4 only, under a notice in the
+staff handbook, never Clarity. That is a new decision, not this one.
+
 ---
 
 ## Consequences
 
 - Consent must be described accurately in `/privacy-policy` before this goes live with a
   real ID — including the cross-border transfer named above. **Not done in this card.**
-- Staff and admin traffic is measured too. It is separable in GA4 (`page_path` starts
+- ~~Staff and admin traffic is measured too. It is separable in GA4 (`page_path` starts
   `/admin` or `/staff`) rather than excluded, because excluding it would need a second
-  gate that could itself drift.
+  gate that could itself drift.~~ **Superseded by §6 (OBRS-887).** Struck through rather
+  than deleted: this is the argument to answer, not to forget. Staff and admin traffic is
+  now not collected at all — GA4 will show no `/admin` or `/staff` rows, and their absence
+  is the intended state, not a broken tag.
 - Withdrawing consent (`AnalyticsConsentService.reset()`) stops future collection and
   cannot un-send what was already delivered, nor unload an already-injected tag without a
   reload. The tag vendors offer no teardown; a page reload is the honest answer.
