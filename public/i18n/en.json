@@ -458,7 +458,12 @@
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation",
       "EXPENSES": "Expenses",
       "MANUAL_REFUNDS": "Manual Refunds",
-      "CASH_REFUND_APPROVALS": "Cash refund approvals"
+      "CASH_REFUND_APPROVALS": "Cash refund approvals",
+      "REVENUE_ANALYTICS": "Revenue Analytics",
+      "BOOKING_TREND": "Booking Trend",
+      "ROUTE_PERFORMANCE": "Route Performance",
+      "CUSTOMER_BEHAVIOR": "Customer Behavior",
+      "OPS_EFFICIENCY": "Ops Efficiency"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -509,6 +514,7 @@
       "PREVIOUS": "Previous",
       "NEXT": "Next",
       "PAGINATION_NAV_ARIA": "Pagination",
+      "PAGINATION_STATUS_ARIA": "Page {{current}} of {{total}}",
       "ENTRIES": "entries",
       "SHOWING": "Showing",
       "OF": "of",
@@ -1094,6 +1100,7 @@
       "TABLE_TITLE": "All Reports",
       "FILTER_STATUS": "Filter by Status",
       "SEARCH_PLACEHOLDER": "Search reports...",
+      "NEW_REPORTS_PILL": "{{count}} new — refresh",
       "COL": {
         "ID": "ID",
         "CATEGORY": "Category",
@@ -1592,6 +1599,88 @@
         "AMOUNT": "Cash to refund",
         "REQUESTED_BY": "Requested by",
         "REQUESTED_AT": "Requested at"
+      }
+    },
+    "REVENUE_ANALYTICS": {
+      "SUBTITLE": "Net revenue totals, trend, and period-over-period change for a date range.",
+      "LOAD_FAILED": "Could not load revenue analytics. Please try again.",
+      "TREND_TITLE": "Daily net revenue",
+      "VS_PREV": "vs previous period",
+      "CHANGE_VS_PREV": "{{pct}} versus the previous period",
+      "CHANGE_NA": "No previous-period data",
+      "TILE": {
+        "NET": "Net revenue",
+        "PAID": "Collected",
+        "REFUNDED": "Refunded"
+      }
+    },
+    "BOOKING_TREND": {
+      "SUBTITLE": "Daily booking volume, day-of-week pattern, and period-over-period change.",
+      "LOAD_FAILED": "Could not load booking trend. Please try again.",
+      "SERIES_TITLE": "Daily bookings",
+      "DOW_TITLE": "Bookings by day of week",
+      "VS_PREV": "vs previous period",
+      "CHANGE_VS_PREV": "{{pct}} versus the previous period",
+      "CHANGE_NA": "No previous-period data",
+      "TILE": {
+        "TOTAL": "Total bookings",
+        "PEAK": "Peak day",
+        "DAYS": "Days in range"
+      }
+    },
+    "ROUTE_PERFORMANCE": {
+      "SUBTITLE": "Per-route departures, tickets sold, and net revenue for a date range.",
+      "LOAD_FAILED": "Could not load route performance. Please try again.",
+      "TABLE_TITLE": "Routes by revenue",
+      "BASIS": "by departure date",
+      "TILE": {
+        "REVENUE": "Net revenue",
+        "TICKETS": "Tickets sold",
+        "ROUTES": "Routes"
+      },
+      "COL": {
+        "ROUTE": "Route",
+        "DEPARTURES": "Departures",
+        "TICKETS": "Tickets",
+        "REVENUE": "Net revenue",
+        "SHARE": "Revenue share"
+      }
+    },
+    "CUSTOMER_BEHAVIOR": {
+      "SUBTITLE": "Aggregate booking behavior — customers, repeat rate, and channel mix.",
+      "LOAD_FAILED": "Could not load customer behavior. Please try again.",
+      "CHANNEL_TITLE": "Bookings by channel",
+      "REPEAT_TITLE": "Repeat frequency",
+      "REPEAT_BOOKINGS": "{{count}} booking(s)",
+      "TILE": {
+        "CUSTOMERS": "Customers",
+        "RETURNING": "Returning rate",
+        "BOOKINGS": "Total bookings",
+        "AVG": "Avg per customer"
+      },
+      "CHANNEL": {
+        "online": "Online",
+        "walk_in": "Walk-in",
+        "agent": "Agent",
+        "kiosk": "Kiosk"
+      }
+    },
+    "OPS_EFFICIENCY": {
+      "SUBTITLE": "Departure completion and seat fill, by vehicle type.",
+      "LOAD_FAILED": "Could not load operational efficiency. Please try again.",
+      "TABLE_TITLE": "By vehicle type",
+      "BASIS": "by departure date",
+      "TILE": {
+        "DEPARTURES": "Departures",
+        "COMPLETION": "Completion rate",
+        "FILL": "Seat fill",
+        "SEATS": "Seats sold / capacity"
+      },
+      "COL": {
+        "TYPE": "Vehicle type",
+        "DEPARTURES": "Departures",
+        "SEATS": "Seats sold / cap",
+        "FILL": "Fill rate"
       }
     }
   },

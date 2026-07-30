@@ -282,7 +282,7 @@ export function toUsabilityReportDetailFallback(
 // single row's status by id, leaving every other row untouched.
 export function updateRowStatus(
   content: UsabilityReportSummary[],
-  id: string,
+  id: number,
   status: UsabilityReportStatus
 ): UsabilityReportSummary[] {
   return content.map((r) => (r.id === id ? { ...r, status } : r));
@@ -302,7 +302,7 @@ export function extractUsabilityReportErrorCode(error: unknown): string | null {
 // alongside updateRowStatus() above.
 export function removeRow(
   content: UsabilityReportSummary[],
-  id: string
+  id: number
 ): UsabilityReportSummary[] {
   return content.filter((r) => r.id !== id);
 }

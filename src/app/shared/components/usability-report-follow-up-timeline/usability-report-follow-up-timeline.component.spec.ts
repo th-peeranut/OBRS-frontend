@@ -15,7 +15,7 @@ describe('UsabilityReportFollowUpTimelineComponent', () => {
       authorName: 'reporter@example.com',
       createdAt: '2026-01-01T00:00:00Z',
       images: [
-        { id: '1', publicUrl: 'https://x/1.png', contentType: 'image/png', sizeBytes: 100, position: 1 },
+        { id: 1, publicUrl: 'https://x/1.png', contentType: 'image/png', sizeBytes: 100, position: 1 },
       ],
     },
     {

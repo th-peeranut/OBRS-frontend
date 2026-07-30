@@ -187,7 +187,7 @@ describe('MyReportDetailModalComponent', () => {
       ...detail,
       category: 'suggestion',
       description: 'Updated description',
-      images: [{ id: '1', publicUrl: 'x', contentType: 'image/png', sizeBytes: 1, position: 1 }],
+      images: [{ id: 1, publicUrl: 'x', contentType: 'image/png', sizeBytes: 1, position: 1 }],
     };
     component['onEditSaved'](updated);
 

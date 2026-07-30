@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { NavigationEnd } from '@angular/router';
+import { IsActiveMatchOptions, NavigationEnd } from '@angular/router';
 import { EMPTY, catchError, filter, merge, switchMap, takeUntil, timer } from 'rxjs';
 import { SidebarLayoutBaseComponent } from '../../shared/sidebar-layout/sidebar-layout-base.component';
 import { AdminApiService } from '../../services/admin/admin-api.service';
@@ -8,6 +8,7 @@ import { BadgeSocketService } from '../../services/admin/badge-socket.service';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 import { UsabilityReportStatus } from '../../shared/interfaces/usability-report.interface';
 import { SYSTEM_SETTINGS_ROLES } from './pages/system-settings/system-settings-tabs';
+import { NavSearchHighlightSegment, buildHighlightSegments } from '../../shared/lib/nav-search-highlight';
 
 interface AdminNavItem {
   path: string;
@@ -18,6 +19,17 @@ interface AdminNavItem {
   // subtitleKey) so the sidebar search can match on what a menu *does*, not
   // just its name — the user often recalls the function but not the label.
   descriptionKey?: string;
+  // OBRS-900: precomputed highlight segments for the CURRENT query, built once
+  // per applyNavSearch() call (query or language change) — never recomputed in
+  // the template, per the same stable-field/no-getter change-detection rule
+  // this file already documents for navItems/filteredNavItems/
+  // filteredNavSections. `undefined` whenever no query is active (or, for
+  // descriptionSegments, whenever the item has no descriptionKey) — the
+  // template treats presence/absence as the single switch between the
+  // plain "today" rendering and the highlighted one, rather than re-checking
+  // navSearchQuery a second time.
+  labelSegments?: NavSearchHighlightSegment[];
+  descriptionSegments?: NavSearchHighlightSegment[];
   // OBRS-289: which nav section this item belongs to (see SECTION_ORDER).
   section: NavSectionKey;
   // OBRS-702: highlight this entry for its whole subtree, not just its exact
@@ -74,6 +86,24 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // navItems, which is built the same way to role-gate its own entries.
   protected navItems: AdminNavItem[] = [];
 
+  // OBRS-586: sidebar active-state. The nav links previously used the boolean
+  // `[routerLinkActiveOptions]="{ exact: ... }"` form, which expands to
+  // `queryParams: 'exact'` — so the active highlight was LOST the instant the URL
+  // carried any query param, matrix param, or fragment (e.g. an admin page
+  // reflecting a filter/page into the URL). This returns an explicit
+  // IsActiveMatchOptions that still honours each item's `matchSubtree` for PATH
+  // matching (exact for a leaf, subset for a parent that should stay lit on its
+  // children), while ignoring query params / matrix params / fragment so the
+  // highlight tracks the page you are on rather than the exact query string.
+  protected navLinkActiveMatch(item: AdminNavItem): IsActiveMatchOptions {
+    return {
+      paths: item.matchSubtree ? 'subset' : 'exact',
+      queryParams: 'ignored',
+      matrixParams: 'ignored',
+      fragment: 'ignored',
+    };
+  }
+
   // OBRS-290: sidebar menu search. `filteredNavItems` is a stable field
   // recomputed only on query/language change — NOT a getter, for the same
   // *ngFor + change-detection reason as navItems above.
@@ -111,6 +141,11 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell', descriptionKey: 'ADMIN.PROMOTIONS.SUBTITLE', section: 'operations' },
       { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true, descriptionKey: 'ADMIN.USABILITY_REPORTS.SUBTITLE', section: 'reports' },
       { path: 'reports', labelKey: 'ADMIN.PAGES.REPORTS', icon: 'bar_chart', descriptionKey: 'ADMIN.REPORTS.SUBTITLE', section: 'reports' },
+      { path: 'revenue-analytics', labelKey: 'ADMIN.PAGES.REVENUE_ANALYTICS', icon: 'monitoring', descriptionKey: 'ADMIN.REVENUE_ANALYTICS.SUBTITLE', section: 'reports' },
+      { path: 'booking-trend', labelKey: 'ADMIN.PAGES.BOOKING_TREND', icon: 'insights', descriptionKey: 'ADMIN.BOOKING_TREND.SUBTITLE', section: 'reports' },
+      { path: 'route-performance', labelKey: 'ADMIN.PAGES.ROUTE_PERFORMANCE', icon: 'alt_route', descriptionKey: 'ADMIN.ROUTE_PERFORMANCE.SUBTITLE', section: 'reports' },
+      { path: 'customer-behavior', labelKey: 'ADMIN.PAGES.CUSTOMER_BEHAVIOR', icon: 'groups', descriptionKey: 'ADMIN.CUSTOMER_BEHAVIOR.SUBTITLE', section: 'reports' },
+      { path: 'ops-efficiency', labelKey: 'ADMIN.PAGES.OPS_EFFICIENCY', icon: 'speed', descriptionKey: 'ADMIN.OPS_EFFICIENCY.SUBTITLE', section: 'reports' },
       // OBRS-231: EOD sales report — admin+owner (route `requiredRoles:
       // ['admin','owner']`), same audience as the base admin nav, so it lives
       // in the always-shown list (not role-gated further like settlements).
@@ -323,6 +358,29 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
           return label.includes(q) || description.includes(q);
         })
       : this.navItems;
+
+    // OBRS-900: precompute highlight segments for EVERY item here (query or
+    // language change), never in the template — same CD-safety rule as the
+    // fields above. Segments live on the item objects themselves, which
+    // navItems and filteredNavItems already share by reference, so this is
+    // one assignment site regardless of which list a given item currently
+    // sits in. Cleared to `undefined` when the (trimmed) query is blank —
+    // deliberately the SAME trim this method already applies to `q` above, so
+    // a whitespace-only query behaves identically for highlighting as it
+    // already does for filtering (matches nothing extra, shows everything).
+    const rawQuery = query.trim();
+    this.navItems.forEach((item) => {
+      if (!rawQuery) {
+        item.labelSegments = undefined;
+        item.descriptionSegments = undefined;
+        return;
+      }
+      item.labelSegments = buildHighlightSegments(this.translate.instant(item.labelKey), rawQuery);
+      item.descriptionSegments = item.descriptionKey
+        ? buildHighlightSegments(this.translate.instant(item.descriptionKey), rawQuery)
+        : undefined;
+    });
+
     this.filteredNavSections = this.buildSections(this.filteredNavItems);
   }
 
