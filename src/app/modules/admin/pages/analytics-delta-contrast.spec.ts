@@ -39,7 +39,22 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+// OBRS-944. OBRS-915 renamed this component's date fields from the p-calendar
+// element to p-datePicker across `src/`; this spec was written on `dev` while
+// that branch was in review, so it was the one site the sweep could not reach
+// and the one site neither branch's CI could see -- they never ran together.
+// The angle-bracket spellings are deliberately not written out above: OBRS-915's
+// own acceptance grep is `<p-(calendar|tabView|...)` over `src/`, and a comment
+// quoting the old tag is indistinguishable from a surviving one.
+//
+// `primeng/calendar` still resolves in v19 -- it is a deprecated shim -- so the
+// import compiled, the module imported cleanly, and nothing failed until render
+// time, where NG0303 named a binding the template had already moved.
+// Census at the time of the fix: this was the only v17 module path left under
+// `src/`. (`primeng/inputnumber`, 4 sites, is NOT one -- InputNumber kept its
+// name in v19; the renames were Calendar/TabView/InputSwitch/OverlayPanel/
+// Dropdown/Sidebar.)
+import { DatePickerModule } from 'primeng/datepicker';
 
 import { BookingTrendPageComponent } from './booking-trend/booking-trend-page.component';
 import { BookingTrendStore } from './booking-trend/booking-trend.store';
@@ -136,7 +151,7 @@ describe('analytics delta chips — contrast on the painted admin surface (OBRS-
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       declarations: [component],
-      imports: [CommonModule, FormsModule, CalendarModule, AdminSharedModule, TranslateModule.forRoot()],
+      imports: [CommonModule, FormsModule, DatePickerModule, AdminSharedModule, TranslateModule.forRoot()],
       providers: [{ provide, useValue: store }],
     }).compileComponents();
     const fixture: ComponentFixture<T> = TestBed.createComponent(component);
