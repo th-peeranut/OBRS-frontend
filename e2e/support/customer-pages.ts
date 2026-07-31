@@ -133,7 +133,22 @@ const lookup = (id: number, code: string, label: string) => ({
   display: { th: { label }, en: { label: code } },
 });
 
-const myBooking = (id: number, number: string, status: string, amount: number) => ({
+// OBRS-938. `to` is a parameter rather than a constant because the home page's
+// recent-route strip derives its whole population from THIS list for a logged-in
+// session (`HomeBookingComponent.loadRecentRoutesFromApi()` -- the localStorage
+// source below is never read when `auth_token` is seeded). Three bookings on one
+// route tally to ONE distinct pair, so the strip rendered a single pill; OBRS-928
+// then prefills the top-ranked route, so that single pill was always `.is-active`
+// and `body.is-dark .booking-section .recent-route-btn { color }` had no element
+// at rest anywhere in the sweep to control. It read as a dead declaration for a
+// week while the rule is in fact correct -- see the header of MY_BOOKINGS.
+const myBooking = (
+  id: number,
+  number: string,
+  status: string,
+  amount: number,
+  to: { id: number; slug: string; label: string } = { id: 4, slug: 'bkr_mochit2', label: 'Mo Chit 2 Terminal' }
+) => ({
   id,
   bookingNumber: number,
   totalAmount: amount,
@@ -152,7 +167,7 @@ const myBooking = (id: number, number: string, status: string, amount: number) =
       arrivalDateTime: '2030-06-17T10:30:00+07:00',
       legType: 'outbound',
       fromStop: lookup(1, 'nong_chak', 'Nong Chak'),
-      toStop: lookup(4, 'bkr_mochit2', 'Mo Chit 2 Terminal'),
+      toStop: lookup(to.id, to.slug, to.label),
       routeSlug: 'chonburi_bangkok',
       seatingMode: 'ASSIGNED',
       tickets: [
@@ -179,11 +194,30 @@ const pageOf = <T>(content: T[]) => ({
 // THREE statuses on purpose: `statusClass()` maps them to three different badge
 // colours, and one booking would have measured one badge while claiming to have
 // covered the screen.
+//
+// TWO DESTINATIONS on purpose (OBRS-938), and it is a claim about the HOME page,
+// not this one. `/bookings/me` is also the recent-route strip's source for a
+// logged-in session: `extractRecentRoutePairsFromBookings` keeps duplicates
+// because the duplicates ARE the frequency signal, then `tallyRecentRoutePairs`
+// collapses them to one entry per DISTINCT pair. Three bookings on 1->4 are one
+// distinct pair, so the strip rendered exactly one pill -- and since OBRS-928
+// prefills the top-ranked route into the search form on load, that one pill
+// carried `.is-active` on every load. Every rule keyed on a plain
+// `.recent-route-btn` was then measuring nothing: the dark-override gate went red
+// on `color` (the `&.is-active` variant paints $dk-bg over it and the base
+// declaration had no other element to control), and the contrast gate had
+// silently stopped scoring the un-filled pill -- which is the exact 2.79:1 site
+// OBRS-575 opened for. 503 books 1->3 so the strip renders an active pill AND an
+// inactive one, which is what a customer with more than one habit sees.
+//
+// The pinning is `mustRender: '.recent-route-btn:not(.is-active)'` on the home
+// target below. Change these ids back to one pair and that fires by name rather
+// than surfacing a week later as a CSS rule that looks broken and is not.
 const MY_BOOKINGS = ok(
   pageOf([
     myBooking(501, 'B-000501', 'confirmed', 360),
     myBooking(502, 'B-000502', 'refunded', 180),
-    myBooking(503, 'B-000503', 'cancelled', 180),
+    myBooking(503, 'B-000503', 'cancelled', 180, { id: 3, slug: 'bts_mochit', label: 'BTS Mo Chit' }),
   ])
 );
 
@@ -225,12 +259,29 @@ const FIXTURES: [RegExp, (m: RegExpExecArray) => unknown][] = [
   [/\/tickets/, () => TICKETS],
 ];
 
-/** `saveRecentRoute()`'s on-disk shape -- see src/app/shared/lib/recent-routes.ts. */
+/**
+ * `saveRecentRoute()`'s on-disk shape -- see src/app/shared/lib/recent-routes.ts.
+ *
+ * OBRS-938: this is the ANONYMOUS source and it is not what the sweep measures.
+ * `AuthService.authStatusSubject` is a `BehaviorSubject(this.isAuthenticated())`,
+ * so with `auth_token` seeded below it emits `true` once, synchronously, and
+ * `HomeBookingComponent` takes the `/bookings/me` branch and never reads this key
+ * at all. Kept, and kept CORRECT, because a fixture that looks like the source of
+ * a population and is not is worse than no fixture: it invites the next reader to
+ * edit this and wonder why the page did not move.
+ *
+ * It was NOT correct until now. OBRS-923 bumped the cache key v1 -> v2 (entries
+ * gained `count`) and nothing updated this seed, so it wrote `obrs.recentRoutes.v1`
+ * -- a key the app has not read since. Nothing caught it, and nothing could: for
+ * the authenticated sweep the key is dead either way. Matched to
+ * `RECENT_ROUTES_CACHE_KEY` / `RECENT_ROUTES_CACHE_VERSION`, counts included, so
+ * the day a spec does seed an anonymous visitor it gets the two pills it reads as.
+ */
 const RECENT_ROUTES_SEED = JSON.stringify({
-  version: 'v1',
+  version: 'v2',
   routes: [
-    { originId: 1, destinationId: 4, savedAt: '2026-07-20T10:00:00.000Z' },
-    { originId: 2, destinationId: 3, savedAt: '2026-07-19T10:00:00.000Z' },
+    { originId: 1, destinationId: 4, savedAt: '2026-07-20T10:00:00.000Z', count: 3 },
+    { originId: 2, destinationId: 3, savedAt: '2026-07-19T10:00:00.000Z', count: 1 },
   ],
 });
 
@@ -297,9 +348,17 @@ export interface CustomerPage {
    * A population floor catches a page that failed to render. It does not catch
    * the narrower and likelier failure: the page renders, the count clears the
    * floor, and the one element the gate was built for is absent because a
-   * fixture drifted. `.recent-route-btn` needs a localStorage history AND a
+   * fixture drifted. `.recent-route-btn` needs a recent-route history AND a
    * station roster that resolves it -- two things that can rot independently,
    * and the whole of AC1 rests on that element being measured.
+   *
+   * OBRS-938: PRESENT is not the same as MEASURABLE, and this list has to say
+   * which one it means. `.recent-route-btn` kept rendering after OBRS-928; what
+   * stopped was any pill in the un-filled state, because the strip was down to
+   * one pill and the prefill made it `.is-active`. Every rule written for the
+   * base state then had nothing to control, which is a silent hole in two gates
+   * at once. A selector here may therefore carry state -- what the sweep needs is
+   * an element in the state under test, not a tag name.
    */
   mustRender: string[];
   /**
@@ -326,7 +385,13 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     minControls: 5,
     // .recent-route-btn is the OBRS-575 defect this card exists for; .btn-search
     // is the OBRS-746 boundary finding. Both must be in the population.
-    mustRender: ['.recent-route-btn', '.btn-search'],
+    //
+    // OBRS-938 adds the `:not(.is-active)` row. The bare selector above stayed
+    // satisfied by the single prefilled pill while the un-filled state -- the
+    // 2.79:1 site OBRS-575 was opened for -- disappeared from both sweeps for a
+    // week. This row is the one that goes red if MY_BOOKINGS ever collapses back
+    // to a single distinct route pair.
+    mustRender: ['.recent-route-btn', '.recent-route-btn:not(.is-active)', '.btn-search'],
     hoverTargets: ['.recent-route-btn', '.btn-search'],
   },
   {
