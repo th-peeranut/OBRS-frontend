@@ -83,6 +83,16 @@ const ROLES = [
     props: ['backgroundColor'],
   },
   { role: 'datepicker-input', v17: '.p-calendar input', v19: '.p-datepicker input, .p-calendar input', props: ['backgroundColor', 'color', 'borderColor'] },
+  // The WRAPPER, measured apart from the input inside it -- added after the
+  // upgrade shipped a regression that neither this script nor 4524 unit specs
+  // could see. v17 named the inline wrapper `.p-calendar` and the popup
+  // `.p-datepicker`; v19 gave `.p-datepicker` to the WRAPPER and moved the popup
+  // to `.p-datepicker-panel`, so renaming one to the other aimed the popup's
+  // dark-mode card fill at the field. `datepicker-input` above did NOT move,
+  // because what changed was the box around the input, not the input. What
+  // caught it was `customer-contrast-gate`, which walks up to the backdrop --
+  // this entry is that lesson written where this card's own evidence can see it.
+  { role: 'datepicker-wrapper', v17: '.p-calendar', v19: 'span.p-datepicker, .p-calendar', props: ['backgroundColor', 'borderColor'] },
   { role: 'badge', v17: '.p-badge', v19: '.p-badge', props: ['backgroundColor', 'color'] },
   { role: 'card', v17: '.p-card', v19: '.p-card', props: ['backgroundColor', 'color'] },
 ];
