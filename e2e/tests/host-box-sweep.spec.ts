@@ -8,6 +8,7 @@ import {
   MalformedHost,
   PAGE_READY_TIMEOUT_MS,
   PER_SWEEP_PAGE_MS,
+  PRIMENG_TARGETS,
   PUBLIC_SWEEP,
   SWEEP_SETUP_MS,
   SweepPage,
@@ -313,6 +314,22 @@ test.describe('OBRS-775 malformed host boxes', () => {
     const users = primengHostUsers();
     // eslint-disable-next-line no-console
     console.log(`OBRS776 primeng host users=${users.length} ` + JSON.stringify(users, null, 1));
+
+    // OBRS-941. Everything below derives its population from `PRIMENG_TARGETS`,
+    // so a target no template writes any more makes this test pass by measuring
+    // nothing -- the one failure mode a derived population was supposed to be
+    // immune to. It is not hypothetical: OBRS-915 upgrades PrimeNG to 19 on a
+    // branch right now, and its acceptance criteria require
+    // `<p-(calendar|tabView|tabPanel)` to appear ZERO times in `src/` when it
+    // lands. Twenty-seven of the thirty entries above are `p-calendar`, so that
+    // one criterion turns this census into an empty list that reports success.
+    const orphanTargets = PRIMENG_TARGETS.filter((t) => !users.some((u) => u.uses.includes(t)));
+    expect(
+      orphanTargets,
+      'PRIMENG_TARGETS names tag(s) NO template in src/ writes. Either the library renamed them (update ' +
+        'PRIMENG_TARGETS and re-derive the sweep) or they are gone -- until then every assertion below is ' +
+        'measuring a smaller app than the one that ships'
+    ).toEqual([]);
 
     const unswept = users.filter((u) => !rendered.has(u.selector) && !(u.selector in NOT_SWEPT));
     expect(
