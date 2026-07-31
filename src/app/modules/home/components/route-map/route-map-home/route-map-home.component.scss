@@ -225,8 +225,18 @@
 }
 
 // ---- Retry button (severity danger) → brand cyan ----
+//
+// OBRS-915: `color` added for the same reason as route-stop-list's two severity
+// rules -- PrimeNG 19 turned the button label into a runtime token that inverts
+// in dark mode, and a rule that replaces the fill but not the label inherits
+// whatever the theme decided. This one renders only when the route request
+// fails, so the UI could not be driven to it; the value was measured by
+// injecting a bare `.p-button.p-component` into the dark page instead:
+// #ffffff under v17, rgb(24,24,27) under v19, which on this $primary-blue fill
+// is 3.32:1.
 :host ::ng-deep .route-error .p-button {
   background: $primary-blue;
   border-color: $primary-blue;
+  color: $text-white;
   border-radius: $radius-lg;
 }
