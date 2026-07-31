@@ -479,9 +479,25 @@ body.is-dark {
 // =============================================================================
 // 13. PrimeNG calendar (booking widget date, payment expiry)
 // =============================================================================
-// The.p-datepicker input keeps PrimeNG's light theme (white field) on the dark
-// surface. Dark-theme the input and the open datepicker overlay. The overlay
-// renders under body (inline or appendTo="body"), so body.is-dark reaches it.
+// The date field keeps PrimeNG's light theme (white field) on the dark surface.
+// Dark-theme the input and the open datepicker overlay. The overlay renders
+// under body (inline or appendTo="body"), so body.is-dark reaches it.
+//
+// OBRS-915 — WHY THE OVERLAY IS `.p-datepicker-panel` AND NOT `.p-datepicker`.
+// In v17 the two halves of this component had different class names: the inline
+// wrapper span was `.p-calendar` and the popup was `.p-datepicker`, so a rule
+// written for one could not reach the other. v19 renamed the WRAPPER to
+// `.p-datepicker` and moved the popup to `.p-datepicker-panel` — so a
+// mechanical `.p-calendar` -> `.p-datepicker` rename leaves TWO rules pointing
+// at the same element, and the popup's card fill lands on the inline field.
+//
+// That is not hypothetical, it shipped: the build was green, `ng test` was
+// green, and the wrapper quietly painted `$dk-bg-card` behind the date input.
+// What caught it was `customer-contrast-gate` — the backdrop it measures behind
+// that input moved from `#22263a` to `#1a1d27`, which renamed the finding's key
+// and tripped the gate's STALE-ENTRY check. The gate was not looking for this;
+// it went red because a debt entry stopped matching, and the entry stopped
+// matching because the colour underneath had changed.
 body.is-dark {
   .p-datepicker .p-inputtext {
     background-color: $dk-bg-input !important;
@@ -489,7 +505,7 @@ body.is-dark {
     color: $dk-text !important;
   }
 
-  .p-datepicker {
+  .p-datepicker-panel {
     background: $dk-bg-card;
     border-color: $dk-border;
     color: $dk-text;

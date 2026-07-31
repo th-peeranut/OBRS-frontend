@@ -162,8 +162,8 @@ label {
 // rounded PILL field with the calendar icon inline on the LEFT inside the
 // field (a custom `inputicon` template rendering `.app-date-field-icon`,
 // paired with `[iconDisplay]="'input'"` + `[showIcon]="true"` on the
-// .p-datepicker`) — no separate trailing calendar button. Every in-scope
-// .p-datepicker` in the app shares three classes:
+// `p-datePicker`) — no separate trailing calendar button. Every in-scope
+// `p-datePicker` in the app shares three classes:
 //   - `app-date-field`       → styleClass (outer field; also carries the
 //                              display:flex/width:100% layout fix previously
 //                              duplicated per-component, e.g. the walk-in

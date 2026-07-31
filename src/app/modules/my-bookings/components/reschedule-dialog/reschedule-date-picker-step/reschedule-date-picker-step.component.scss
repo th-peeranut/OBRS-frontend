@@ -28,7 +28,7 @@
   color: $text-black;
 }
 
-// OBRS-185: the date.p-datepicker now uses the shared `.app-date-field` /
+// OBRS-185: the date picker now uses the shared `.app-date-field` /
 // `.app-date-field-panel` classes defined globally in src/styles.scss
 // (full-width pill field), which already covers what this override used to
 // do — no component-scoped rule needed here anymore.
