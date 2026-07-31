@@ -423,6 +423,50 @@ export const ADMIN_SWEEP: SweepPage[] = [
   // sweeping whichever page it redirected to.
   { key: 'admin-schedules', url: '/admin/schedules', landsOn: /\/admin\/schedules$/, requires: 'app-schedules-page' },
   { key: 'admin-reports', url: '/admin/reports', landsOn: /\/admin\/reports$/, requires: 'app-reports-page' },
+
+  // --- OBRS-941 -------------------------------------------------------------
+  // The five analytics pages OBRS-151..155 added under the same `reports`
+  // section of the admin nav, each with the identical
+  // `<section class="admin-page-filters">` holding two `p-calendar`s that
+  // `admin-reports` above already sweeps. They were never added here, so the
+  // gate below named them -- correctly, and from the day they landed.
+  //
+  // Nobody saw it say so for six weeks: `host-box-sweep.spec.ts` is a serial
+  // describe and `admin, staff and session-bound pages` timed out on the
+  // OBRS-939 wedge, which skipped every case after it. A gate cannot report a
+  // gap while an earlier case in its own file is red, which is why this one
+  // arrived as five pages at once instead of one page five times.
+  {
+    key: 'admin-revenue-analytics',
+    url: '/admin/revenue-analytics',
+    landsOn: /\/admin\/revenue-analytics$/,
+    requires: 'app-revenue-analytics-page',
+  },
+  {
+    key: 'admin-booking-trend',
+    url: '/admin/booking-trend',
+    landsOn: /\/admin\/booking-trend$/,
+    requires: 'app-booking-trend-page',
+  },
+  {
+    key: 'admin-route-performance',
+    url: '/admin/route-performance',
+    landsOn: /\/admin\/route-performance$/,
+    requires: 'app-route-performance-page',
+  },
+  {
+    key: 'admin-customer-behavior',
+    url: '/admin/customer-behavior',
+    landsOn: /\/admin\/customer-behavior$/,
+    requires: 'app-customer-behavior-page',
+  },
+  {
+    key: 'admin-ops-efficiency',
+    url: '/admin/ops-efficiency',
+    landsOn: /\/admin\/ops-efficiency$/,
+    requires: 'app-ops-efficiency-page',
+  },
+
   {
     key: 'admin-settlements',
     url: '/admin/settlements',
