@@ -273,9 +273,18 @@ const FIXTURES: [RegExp, (m: RegExpExecArray) => unknown][] = [
  * It was NOT correct until now. OBRS-923 bumped the cache key v1 -> v2 (entries
  * gained `count`) and nothing updated this seed, so it wrote `obrs.recentRoutes.v1`
  * -- a key the app has not read since. Nothing caught it, and nothing could: for
- * the authenticated sweep the key is dead either way. Matched to
- * `RECENT_ROUTES_CACHE_KEY` / `RECENT_ROUTES_CACHE_VERSION`, counts included, so
- * the day a spec does seed an anonymous visitor it gets the two pills it reads as.
+ * the authenticated sweep the key is dead either way.
+ *
+ * A version lives in TWO places here and only one of them decides whether the app
+ * reads the seed at all. The first pass at this fixed the payload -- `version` and
+ * the `count` fields, right here -- and left the KEY the write site passes to
+ * `localStorage.setItem` still saying v1, then said in the commit message that the
+ * two were matched. They were not. The payload is what `readRecentRoutePairs()`
+ * validates AFTER it finds something; the key is what decides whether it finds
+ * anything. Both now say v2 -- see the write site in `seedCustomerSession` below,
+ * which has to repeat the literal because nothing under e2e/ imports from src/
+ * (and `RECENT_ROUTES_CACHE_VERSION` is not exported at all). That repetition is
+ * how the drift happened once already, so the next key bump has to come here too.
  */
 const RECENT_ROUTES_SEED = JSON.stringify({
   version: 'v2',
@@ -488,7 +497,10 @@ export async function seedCustomerSession(page: Page, dark: boolean): Promise<vo
       localStorage.setItem('auth_token', 'obrs-584-contrast-gate-token');
       localStorage.setItem('auth_username', 'customer@system.local');
       localStorage.setItem('auth_roles', JSON.stringify(['user']));
-      localStorage.setItem('obrs.recentRoutes.v1', recent as string);
+      // Must equal RECENT_ROUTES_CACHE_KEY (src/app/shared/lib/recent-routes.ts).
+      // Hand-copied -- see RECENT_ROUTES_SEED's note on why, and on the v1 that
+      // sat here unread from OBRS-923 until OBRS-938.
+      localStorage.setItem('obrs.recentRoutes.v2', recent as string);
       if (isDark) localStorage.setItem('app_admin_theme', 'dark');
       else localStorage.removeItem('app_admin_theme');
     },
