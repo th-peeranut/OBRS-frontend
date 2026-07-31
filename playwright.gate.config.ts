@@ -125,6 +125,15 @@ export default defineConfig({
     // page.emulateMedia({ reducedMotion: 'reduce' }) actually freezes the
     // real compiled CSS cascade. Hermetic on the same terms as the rest.
     '**/obrs-907-loading-state-reduced-motion.spec.ts',
+    // OBRS-939. Asks the one question a screenshot cannot: is the renderer still
+    // ANSWERING. A `routerLinkActiveOptions` binding pointed at a method call gave
+    // RouterLinkActive a new object every cycle, so its ngOnChanges scheduled a
+    // microtask every cycle and zone.js never ran out of microtasks — change
+    // detection looped forever and the admin shell stopped responding to
+    // anything, on every /admin page, whether its API calls succeeded or failed.
+    // The last paint stays on screen, so it photographs as a healthy page.
+    // Hermetic on the same terms as the rest: synthetic session, no backend.
+    '**/obrs-939-admin-shell-responsive.spec.ts',
   ],
 
   timeout: 60_000,

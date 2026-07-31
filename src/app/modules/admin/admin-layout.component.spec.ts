@@ -126,6 +126,35 @@ describe('AdminLayoutComponent', () => {
     expect(parent).toEqual({ paths: 'subset', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' });
   });
 
+  // ── OBRS-939: identity, not shape ───────────────────────────────────────────
+  // The test above passes just as happily against the version that built a fresh
+  // object per call — `toEqual` compares structure, and structure was never
+  // wrong. What was wrong is that RouterLinkActive reads this as an @Input and
+  // compares it by IDENTITY: a new object every change-detection cycle made its
+  // ngOnChanges fire every cycle, its update() schedule a microtask every cycle,
+  // and zone.js re-run ApplicationRef.tick() forever — the admin shell stopped
+  // answering clicks and page.evaluate entirely, a few seconds after every load.
+  //
+  // This is a unit-level tripwire, not the proof: a single detectChanges() call
+  // can never reach a loop that needs a real zone driving ticks, which is why no
+  // Karma case caught the original defect and why the real gate is
+  // e2e/tests/obrs-939-admin-shell-responsive.spec.ts. Keep both — this one
+  // fails in milliseconds and names the cause.
+  it('returns the SAME routerLinkActiveOptions instance across calls (OBRS-939)', () => {
+    const match = fixture.componentInstance['navLinkActiveMatch'] as (item: never) => unknown;
+    const leafA = match.call(fixture.componentInstance, { matchSubtree: false } as never);
+    const leafB = match.call(fixture.componentInstance, { matchSubtree: false } as never);
+    const parentA = match.call(fixture.componentInstance, { matchSubtree: true } as never);
+    const parentB = match.call(fixture.componentInstance, { matchSubtree: true } as never);
+
+    expect(leafA)
+      .withContext('a fresh object per call re-triggers RouterLinkActive.ngOnChanges every cycle')
+      .toBe(leafB as never);
+    expect(parentA).toBe(parentB as never);
+    // The two shapes must still be different objects, or matchSubtree would be dead.
+    expect(leafA).not.toBe(parentA as never);
+  });
+
   it('should create', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });

@@ -273,6 +273,12 @@
       "why": "OBRS-907. Seeds a synthetic admin session (seedGateAdminSession, no live SIT/storageState) and hangs the one call it depends on -- GET .../private/notifications never resolves, via a route handler registered after the shell's own stub so it wins by Playwright's reverse-registration-order matching -- so NotificationInboxService.loading$ stays true and the notification-bell's first-load spinner never races to the empty state. Asserts prefers-reduced-motion via page.emulateMedia against the real compiled admin-theme.scss + loading-state.component.scss cascade, with a positive control (asserts the un-reduced case actually rotates first) before trusting the frozen-but-visible assertion."
     },
     {
+      "spec": "obrs-939-admin-shell-responsive.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-939. Asserts that the admin shell still ANSWERS -- a trivial page.evaluate must resolve within 5s, sampled 5s after navigation because the freeze started 2.6-3.8s in and a check that samples immediately passes while broken. It caught a change-detection loop that no unit test could reach (Karma runs one detectChanges() by hand; the loop needs a real zone driving ticks) and that no screenshot could show (the last paint before the freeze stays on screen). Population is the shell, not the page the bug was reported on: /admin/dashboard under abort, 500 and 401, plus all five OBRS-151..155 analytics pages. Hermetic on the same terms as the rest of the lane -- synthetic in-browser session, every /api/private/** call answered by the spec itself, no backend."
+    },
+    {
       "spec": "obrs-907-qa-parity-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs907qa.config.ts",
