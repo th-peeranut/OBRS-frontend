@@ -1,0 +1,68 @@
+@import "../../../../styles/variables.scss";
+
+:host {
+  display: inline-block;
+}
+
+.loading-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-state--skeleton {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.loading-state--skeleton .admin-skeleton + .admin-skeleton {
+  margin-top: 8px;
+}
+
+// ---- ring graphic (spinner / inline). No canonical ring spinner existed
+// before this card — this replaces the ~12 hand-rolled `.xxx__spinner`
+// classes and their own rotate-animation copies (design-system.md). Reads `--accent` /
+// `--admin-outline` with an SCSS-var fallback so it's already theme-aware on
+// an admin-shell surface, and pixel-identical to the plain SCSS-var version
+// it replaces everywhere else (those vars are only ever declared inside
+// `.admin-shell`, so outside it this resolves to exactly the fallback). ----
+.loading-state-ring {
+  display: inline-block;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid var(--admin-outline, #{$primary-lightgrey});
+  border-top-color: var(--accent, #{$primary-blue});
+  animation: loading-state-spin 0.9s linear infinite;
+}
+
+.loading-state--inline .loading-state-ring {
+  width: 1em;
+  height: 1em;
+  border-width: 0.14em;
+}
+
+// ---- icon graphic: reuses the existing global `.admin-loading-spinner`
+// primitive (admin-theme.scss) for size/color/animation. `loading-state-icon`
+// is a marker class with no rules of its own — kept so this component's own
+// stylesheet (not just the template) names what it renders, and so the
+// reduced-motion override below has a stable local hook. ----
+.loading-state--inline .loading-state-icon {
+  font-size: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  // Angular's emulated view encapsulation adds a content attribute to every
+  // selector in this file (incl. `.admin-loading-spinner` here), so this
+  // wins over admin-theme.scss's own un-scoped rule by specificity — no
+  // `!important`/source-order fight needed. A frozen indicator must still
+  // read as "loading", not vanish or freeze on a random rotation frame that
+  // reads as broken — the ring keeps its accent segment at a fixed, visible
+  // position; the icon glyph is already a self-explanatory static symbol.
+  .loading-state-ring,
+  .loading-state-icon,
+  .admin-loading-spinner {
+    animation: none;
+  }
+}

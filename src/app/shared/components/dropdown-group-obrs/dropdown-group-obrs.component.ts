@@ -111,9 +111,30 @@ export class DropdownGroupObrsComponent
       this.applyFilter();
     }
 
+    // Runs for the `[value]` @Input() path only. The reactive-forms path never
+    // reaches here (writeValue() is not an input binding, so no SimpleChange is
+    // produced) — writeValue() calls the same resolver directly. Both paths must
+    // keep going through resolveSelectedValue(), never re-implement it (OBRS-916).
+    this.resolveSelectedValue();
+  }
+
+  /**
+   * Resolves `selectedValue` (the option OBJECT the template renders) from
+   * `value` (the option ID the component accepts from either binding path).
+   *
+   * Shared by `ngOnChanges` and `writeValue` — the whole OBRS-916 defect was
+   * that this logic lived inside `ngOnChanges` alone, so a `formControlName`
+   * value landed in `this.value` and was never resolved: the trigger kept
+   * rendering `.is-placeholder` + "เลือกต้นทาง" while the control held a real
+   * station. After OBRS-901 that reads as a confident lie rather than as a
+   * blank box, which is why it is fixed here rather than left latent.
+   */
+  private resolveSelectedValue(): void {
     const options = this.getOptions();
 
-    if (!this.value) {
+    // Deliberately NOT `!this.value`: id `0` is a legitimate option id and must
+    // not be read as "nothing selected". Only a genuinely absent value clears.
+    if (this.value === null || this.value === undefined || this.value === '') {
       this.selectedValue = null;
       return;
     }
@@ -148,6 +169,11 @@ export class DropdownGroupObrsComponent
       this.isDropdownOpen = false;
       this.searchQuery = '';
       this.applyFilter();
+      // Closing the panel is this control's blur — the only moment that means
+      // "the user has finished with this field". Without it `onTouched` was
+      // registered and never called, so a required-station validator could
+      // never show its error (OBRS-916 R4).
+      this.onTouched();
     });
   }
 
@@ -158,12 +184,35 @@ export class DropdownGroupObrsComponent
 
   setCurrentValue(data: any): void {
     this.selectedValue = data;
+    // `value` is kept in step with `selectedValue` so a later resolve (options
+    // arriving late, a language change) re-derives the SAME option instead of
+    // reverting to whatever the previous binding said.
+    this.value = this.toControlValue(data);
+
+    // The (currentValue) @Output() keeps emitting the OPTION OBJECT — all 7
+    // existing call sites bind [value] + (currentValue) and read `$event.id`.
     this.currentValue.emit(data);
-    this.onChange(data);
+    // The CVA channel emits the option ID instead: it must be the same shape
+    // writeValue() accepts, or the component cannot round-trip its own output
+    // (OBRS-916 R3). Two channels, two shapes, on purpose.
+    this.onChange(this.value);
   }
 
+  /**
+   * The CVA-side counterpart of `[value]`. Angular calls this directly, WITHOUT
+   * producing a SimpleChange, so the resolve has to happen here — see
+   * `resolveSelectedValue()`.
+   */
   writeValue(value: any): void {
     this.value = value;
+    this.resolveSelectedValue();
+  }
+
+  /** An option id is what both binding paths accept; an option that carries no
+   *  `id` cannot round-trip, so it is passed through untouched rather than
+   *  silently collapsing to null. */
+  private toControlValue(option: any): any {
+    return option?.id ?? option ?? null;
   }
 
   registerOnChange(fn: any): void {
@@ -181,7 +230,13 @@ export class DropdownGroupObrsComponent
     this.destroy$.complete();
   }
 
-  setDisabledState?(isDisabled: boolean): void {}
+  /** Non-optional on purpose: a no-op here left `form.disable()` cosmetic —
+   *  the trigger button stayed operable and the user could still pick an option
+   *  out of a disabled control (OBRS-916 R5). Writes the same field `[isDisabled]`
+   *  writes; a call site must drive disabled-ness from ONE of the two, not both. */
+  setDisabledState(isDisabled: boolean): void {
+    this.isDisabled = isDisabled;
+  }
 
   getValue(option: any): string {
     if (!option) return '';

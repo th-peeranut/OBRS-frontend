@@ -2018,7 +2018,7 @@
       "SEARCH": "搜索",
       "SEARCH_VALIDATION": "请先选择出发地、目的地，以及至少一名乘客后再搜索。",
       "PASSENGER_MAX_HINT": "每次预订最多 {{max}} 名乘客。",
-      "RECENT_ROUTES_TITLE": "最近路线",
+      "RECENT_ROUTES_TITLE": "您常走的路线 — 点击即可自动填入",
       "RECENT_ROUTE_ARIA_LABEL": "从{{from}}到{{to}}"
     },
     "STATION": {
@@ -2124,7 +2124,8 @@
     "CHANGE": "修改数据",
     "NO_RESULTS": "未找到符合条件的班次。请尝试更改日期、路线或减少乘客人数。",
     "NO_RETURN_RESULTS": "未找到符合条件的返程班次。请尝试更改返程日期或减少乘客人数。",
-    "ESTIMATE_KM_UNIT": "公里"
+    "ESTIMATE_KM_UNIT": "公里",
+    "RESTORED_UNAVAILABLE": "您之前选择的班次已无空位，请重新选择。"
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {

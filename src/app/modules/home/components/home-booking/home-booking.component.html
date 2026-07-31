@@ -4,12 +4,6 @@
 
   <div class="booking-section">
     <div class="booking-card" [formGroup]="bookingForm" *ngIf="bookingForm">
-      <!-- RECENT ROUTES QUICK PICK (OBRS-575) — renders nothing when empty (AC#5) -->
-      <app-recent-routes-quick-pick
-        [routes]="recentRouteCandidates"
-        (routeSelected)="onRecentRouteSelected($event)"
-      ></app-recent-routes-quick-pick>
-
       <div class="d-flex gap-5">
         <!-- DROPDOWN ROUNDTRIP TYPE -->
         <app-dropdown-obrs
@@ -26,7 +20,23 @@
         ></app-dropdown-obrs-passenger>
       </div>
 
-      <div class="station-section mt-4">
+      <!-- RECENT ROUTES QUICK PICK (OBRS-575) — renders nothing when empty (AC#5).
+           OBRS-928 moved it here, directly above the origin/destination fields:
+           the moment a user needs it is the moment they are looking at an empty
+           ต้นทาง, not the moment the page loads. Sits BEFORE `.station-section`
+           rather than inside it — that element is a flex ROW, so a child would
+           land beside the fields instead of above them. -->
+      <app-recent-routes-quick-pick
+        [routes]="recentRouteCandidates"
+        [activeOriginId]="getFormValue('startStationId')"
+        [activeDestinationId]="getFormValue('stopStationId')"
+        (routeSelected)="onRecentRouteSelected($event)"
+      ></app-recent-routes-quick-pick>
+
+      <!-- `mt-4` moved into the scss (OBRS-928): the utility carries
+           `!important`, which would out-rank the tighter `.has-routes +` spacing
+           rule that pulls the fields up against the strip. -->
+      <div class="station-section">
         <div class="station-group" *ngIf="rawProvinceStationList | async">
           <!-- DROPDOWN START STATION -->
           <app-dropdown-group-obrs

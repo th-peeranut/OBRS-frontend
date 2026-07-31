@@ -4015,3 +4015,35 @@ Two self-fixes applied to `UX-SPEC-OBRS-286.md` (spec file, not code):
    site) AND a second source of truth for a security transform. The FE renders the destination string
    verbatim; if `destinationMasked` is ever true the string is already masked. Lesson: don't build a FE
    mirror of a backend-owned derivation "for defense-in-depth" — it drifts.
+
+## OBRS-907 loading-primitives — Scrutinize self-fix (2026-07-30)
+
+**Behavior break caught & self-fixed: a parent component's descendant style rule
+does NOT reach an element that migration moved into a CHILD component.**
+
+`notification-inbox-panel` migrated its first-load spinner from inline markup
+(`<span class="material-symbols-outlined admin-loading-spinner">sync</span>`, sized
+28px by the panel's own rule `.notification-inbox-state .material-symbols-outlined
+{ font-size: 28px }`) to `<app-loading-state graphic="icon" icon="sync">`. The dev's
+comment reasoned the 28px rule "still reaches the icon span through the extra wrapper —
+a descendant combinator matches regardless of nesting depth." That is true for plain
+CSS but FALSE under Angular emulated view encapsulation: the rule compiles to
+`.notification-inbox-state[_ngcontent-PANEL] .material-symbols-outlined[_ngcontent-PANEL]`
+— the content attribute lands on the LAST compound too. The icon span is now rendered by
+LoadingStateComponent's template, so it carries loading-state's content attribute, not the
+panel's → the rule no longer matches → the global `.admin-loading-spinner { font-size: 34px }`
+(unencapsulated, in admin-theme.scss) takes over. The spinner silently grew 28px → 34px.
+No test pinned the size, so it was green. Same family as FRONTEND-GOTCHAS "a dark-theme rule
+can parse, match its element, and STILL never apply — encapsulation outranks it", but the
+inverse direction: a component rule cannot pierce DOWN into a child component (that's what
+::ng-deep exists for).
+
+Fix (1-line): pass the size as an inline input — `[sizePx]="28"` — so the icon span gets
+`style="font-size:28px"`, which beats the global 34px rule regardless of encapsulation.
+
+**General rule for the OBRS-909/910 sweep (enumerate the family):** when migrating a
+hand-rolled spinner/skeleton into `<app-loading-state>`, grep the CALL SITE's own component
+scss for any descendant rule that styled the old inline element (`... .material-symbols-outlined`,
+`... .xxx__spinner`, size/color/margin). Every such rule silently stops applying once the
+element moves into the child component. Reproduce each as an `<app-loading-state>` input
+(sizePx / ringWidthPx / durationMs / icon) or the look drifts with zero test failure.

@@ -3,7 +3,10 @@
 How to build a production OBRS frontend bundle, and what to do when it refuses.
 
 Scope: the **config** the prod bundle is built with. Where that bundle is *hosted*
-(Oracle VM, Caddy, TLS, the domain) is OBRS-205 / OBRS-203.
+(Oracle VM, Caddy, TLS, the domain) is OBRS-205 / OBRS-203, and the single source of
+truth for all of it is **`OBRS-backend/deploy/prod/README.md`** — the domain, the
+Caddyfile, the publish script and the deploy script all live there. Read a host value
+from that README, never from a guess made in this repo.
 
 ---
 
@@ -29,7 +32,7 @@ would do — carries the test key straight to production with nothing to notice 
 ## Building a prod bundle
 
 ```bash
-export PROD_API_URL='https://<prod-domain>'          # must be https
+export PROD_API_URL='https://nj-phuyaipu.com'        # absolute + https — see below
 export PROD_OMISE_PUBLIC_KEY='pkey_live_…'           # must start with pkey_live_
 export PROD_PROMPTPAY_ID='<the real PromptPay id>'
 export PROD_MAPS_API_KEY='<Google Maps browser key>'
@@ -51,7 +54,7 @@ failure check**, because their absence costs a map or a chart, never a payment, 
 they must not be able to fail a prod build:
 
 ```bash
-export PROD_MAPTILER_API_KEY='<MapTiler key, origin-restricted>'  # OBRS-424 / OBRS-831
+export PROD_MAPTILER_API_KEY='<key of obrs-frontend-prod, see below>'  # OBRS-424 / OBRS-831
 export PROD_GA4_MEASUREMENT_ID='G-…'                              # OBRS-867
 export PROD_CLARITY_PROJECT_ID='<project id>'                     # OBRS-867
 ```
@@ -67,10 +70,30 @@ work, with nothing anywhere reporting it — which is precisely how OBRS-831 AC6
 be open with no owner. They are listed here so that "we chose not to set it" and "we
 never knew about it" stop looking identical.
 
+**The prod MapTiler key exists — provisioned 2026-07-30, closing OBRS-831 AC6.** It is a
+separate key from SIT's, as that AC required:
+
+| field | value |
+| --- | --- |
+| Name | `obrs-frontend-prod` |
+| Allowed HTTP Origins | `nj-phuyaipu.com` — one line, **no `localhost`**, no `www.` entry (the Caddyfile redirects `www` → apex permanently, so a page is only ever served from the apex origin) |
+| Allowed user-agent header | empty — deliberately, the browser is the client |
+
+The key **value** is not in this repo and must not be: read it from MapTiler Cloud when
+you export the var. Restricting by origin is what makes a browser-visible key acceptable;
+it also means the failure mode is a *silent* one — a key scoped to the wrong origin
+returns 403 per tile and renders a blank map with no build-time and no boot-time error,
+exactly as `deploy/prod/README.md` warns for `PROD_MAPS_API_KEY`. So the first prod
+publish has to **measure** tiles from a real browser (`img.leaflet-tile` with
+`naturalWidth > 0`, and every `api.maptiler.com` response `200`), never infer them from a
+green build.
+
 `PROD_MAPTILER_API_KEY` also has a second half that is **not** an env var: the staff
 fleet map is behind `features.fleetMap`, which is `false` in `environment.base.ts` for
 the go-live scope cut (ADR-0031). Providing the key does **not** make the prod fleet
-map appear; the flag flip is a separate, deliberate decision (OBRS-622 AC6).
+map appear; the flag flip is a separate, deliberate decision (OBRS-622 AC6). Nor does it
+make anything appear while prod serves no SPA at all — `GET https://nj-phuyaipu.com/` is
+still a Caddy 404 while `/api/routes` answers 200.
 
 ### Which configurations deploy, and which do not
 
@@ -92,9 +115,25 @@ guard: the failure was never silent, only confusing.
 ### There is no container image, on purpose
 
 Prod is **static files behind Caddy on the Oracle VM**, same box as the backend, so the
-browser talks to one origin and `apiUrl` is a relative `/api` (OBRS-205, owner decision
-2026-07-15). Serving the bundle from its own nginx container would put it back on a second
-origin and re-open the cross-origin question that topology exists to remove.
+browser talks to one origin (OBRS-205, owner decision 2026-07-15). Serving the bundle from
+its own nginx container would put it back on a second origin and re-open the cross-origin
+question that topology exists to remove.
+
+⚠️ **Same origin does *not* mean a relative `apiUrl`, and until OBRS-926 this section said
+it did.** `PROD_API_URL` must be the **absolute** `https://nj-phuyaipu.com`. The
+same-origin fact is unchanged — Caddy serves the app and proxies `/api/*` from that one
+host, so there is no preflight either way — but the relative `/api` the card originally
+called for is rejected three times over, and all three are in this repo, not in a
+document you have to go and find:
+
+| where | what happens with `apiUrl = '/api'` |
+| --- | --- |
+| `scripts/inject-prod-env.js:57` | `!values.apiUrl.startsWith('https://')` → exit 1, the build never starts |
+| `src/environments/prod-config-guard.ts:91` | same check at boot, so a hand-edited config dies on load |
+| `src/app/services/admin/badge-socket.service.ts:89` | derives the STOMP URL by swapping `http(s)→ws(s)` on this value. With no scheme to swap there is nothing to fail on: it yields a scheme-less `/ws` and the admin badge socket is simply dead |
+
+The first two fail closed and loudly. **The third does not** — which is the reason this
+correction is worth its own card rather than a quiet edit.
 
 The repo used to carry a `Dockerfile` + `nginx.conf` + `docker-compose.yml` from before that
 decision; OBRS-481 deleted them. If you find yourself reaching for `docker build` here, the

@@ -2,7 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store, select } from '@ngrx/store';
 import { EMPTY, of } from 'rxjs';
-import { map, mergeMap, switchMap, withLatestFrom } from 'rxjs/operators';
+import { map, mergeMap, switchMap, tap, withLatestFrom } from 'rxjs/operators';
+import { rememberBookingSearchPayload } from '../../lib/booking-context-storage';
 import { Appstate } from '../appstate';
 import {
   invokeGetScheduleListApi,
@@ -23,6 +24,12 @@ export class ScheduleListEffect {
   getScheduleLists$ = createEffect(() =>
     this.actions$.pipe(
       ofType(invokeGetScheduleListApi),
+      // OBRS-903: remember the exact search body, not just the UI filter. When a
+      // restored selection has to be re-checked for availability, replaying this
+      // is the only way to ask the same question again — rebuilding it from the
+      // stored filter would need the station list to map id → slug, which is a
+      // second source of truth for something already computed here.
+      tap((action) => rememberBookingSearchPayload(action.schedule_filter ?? null)),
       switchMap((action) => {
         this.store.dispatch(
           setAPIStatus({

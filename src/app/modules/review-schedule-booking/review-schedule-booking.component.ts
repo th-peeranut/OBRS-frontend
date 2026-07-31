@@ -5,6 +5,7 @@ import { Store } from '@ngrx/store';
 import {
   invokeGetScheduleBookingApi,
   invokeSetScheduleBookingApi,
+  revalidateRestoredScheduleBooking,
 } from '../../shared/stores/schedule-booking/schedule-booking.action';
 import {
   invokeGetScheduleFilterApi,
@@ -25,6 +26,10 @@ export class ReviewScheduleBookingComponent {
     this.store.dispatch(invokeGetAllProvinceWithStationApi());
     this.store.dispatch(invokeGetScheduleBookingApi());
     this.store.dispatch(invokeGetScheduleFilterApi());
+    // OBRS-903: a no-op unless this selection was restored from another tab, in
+    // which case its seat snapshot is up to 30 minutes old — re-ask before the
+    // customer builds on it (AC3).
+    this.store.dispatch(revalidateRestoredScheduleBooking());
   }
 }
 

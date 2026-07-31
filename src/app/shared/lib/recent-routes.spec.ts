@@ -5,7 +5,9 @@ import {
   deriveRecentRouteCandidates,
   extractRecentRoutePairsFromBookings,
   loadRecentRoutesFromLocalStorage,
+  rankRecentRoutePairs,
   saveRecentRoute,
+  tallyRecentRoutePairs,
 } from './recent-routes';
 
 function station(id: number, slug = `station-${id}`): StationApi {
@@ -246,7 +248,9 @@ describe('recent-routes lib', () => {
     });
 
     it('clears the key and returns [] when routes is not an array', () => {
-      localStorage.setItem(RECENT_ROUTES_CACHE_KEY, JSON.stringify({ version: 'v1', routes: 'not-an-array' }));
+      // Must be the CURRENT version, or this would pass on the version branch
+      // instead of the not-an-array branch and pin nothing.
+      localStorage.setItem(RECENT_ROUTES_CACHE_KEY, JSON.stringify({ version: 'v2', routes: 'not-an-array' }));
 
       const routes = loadRecentRoutesFromLocalStorage();
 
@@ -261,6 +265,237 @@ describe('recent-routes lib', () => {
 
       expect(routes).toEqual([]);
       expect(localStorage.getItem(RECENT_ROUTES_CACHE_KEY)).toBeNull();
+    });
+  });
+
+  describe('frequency ranking (OBRS-923)', () => {
+    describe('tallyRecentRoutePairs', () => {
+      it('counts repeated pairs — the API source expresses frequency as duplicates', () => {
+        const tallied = tallyRecentRoutePairs([
+          { originId: 1, destinationId: 2 },
+          { originId: 3, destinationId: 4 },
+          { originId: 1, destinationId: 2 },
+          { originId: 1, destinationId: 2 },
+        ]);
+
+        expect(tallied.length).toBe(2);
+        expect(tallied[0]).toEqual({ originId: 1, destinationId: 2, count: 3, recencyIndex: 0 });
+        expect(tallied[1]).toEqual({ originId: 3, destinationId: 4, count: 1, recencyIndex: 1 });
+      });
+
+      it('sums an explicit count — the localStorage source expresses frequency as a field', () => {
+        const tallied = tallyRecentRoutePairs([
+          { originId: 1, destinationId: 2, count: 7 },
+          { originId: 3, destinationId: 4, count: 2 },
+        ]);
+
+        expect(tallied.map((t) => t.count)).toEqual([7, 2]);
+      });
+
+      it('is idempotent — tallying an already-tallied list does not inflate the weights', () => {
+        const once = tallyRecentRoutePairs([
+          { originId: 1, destinationId: 2 },
+          { originId: 1, destinationId: 2 },
+        ]);
+
+        expect(tallyRecentRoutePairs(once).map((t) => t.count)).toEqual([2]);
+      });
+
+      it('treats a missing/garbage count as 1 rather than NaN', () => {
+        const tallied = tallyRecentRoutePairs([
+          { originId: 1, destinationId: 2, count: NaN },
+          { originId: 3, destinationId: 4, count: 0 },
+        ]);
+
+        expect(tallied.map((t) => t.count)).toEqual([1, 1]);
+      });
+
+      it('keeps A->B and B->A as separate tallies (directional)', () => {
+        const tallied = tallyRecentRoutePairs([
+          { originId: 1, destinationId: 2 },
+          { originId: 2, destinationId: 1 },
+        ]);
+
+        expect(tallied.length).toBe(2);
+      });
+    });
+
+    describe('rankRecentRoutePairs', () => {
+      it('reserves slot 1 for the MOST RECENT route even when it is the least frequent', () => {
+        const ranked = rankRecentRoutePairs([
+          { originId: 9, destinationId: 8, count: 1, recencyIndex: 0 },
+          { originId: 1, destinationId: 2, count: 5, recencyIndex: 1 },
+        ]);
+
+        expect(ranked[0].originId).toBe(9);
+        expect(ranked[1].originId).toBe(1);
+      });
+
+      it('orders every slot AFTER the first by frequency, descending', () => {
+        const ranked = rankRecentRoutePairs([
+          { originId: 9, destinationId: 8, count: 1, recencyIndex: 0 },
+          { originId: 1, destinationId: 2, count: 2, recencyIndex: 1 },
+          { originId: 3, destinationId: 4, count: 6, recencyIndex: 2 },
+          { originId: 5, destinationId: 6, count: 4, recencyIndex: 3 },
+        ]);
+
+        expect(ranked.map((r) => r.originId)).toEqual([9, 3, 5, 1]);
+      });
+
+      it('breaks a frequency tie by recency', () => {
+        const ranked = rankRecentRoutePairs([
+          { originId: 9, destinationId: 8, count: 1, recencyIndex: 0 },
+          { originId: 5, destinationId: 6, count: 3, recencyIndex: 2 },
+          { originId: 1, destinationId: 2, count: 3, recencyIndex: 1 },
+        ]);
+
+        // Both 3s — the one seen more recently (lower recencyIndex) wins.
+        expect(ranked.map((r) => r.originId)).toEqual([9, 1, 5]);
+      });
+
+      it('returns the input unchanged for 0 and 1 entries', () => {
+        expect(rankRecentRoutePairs([])).toEqual([]);
+        const single = [{ originId: 1, destinationId: 2, count: 1, recencyIndex: 0 }];
+        expect(rankRecentRoutePairs(single)).toEqual(single);
+      });
+
+      it('does not mutate its input', () => {
+        const input = [
+          { originId: 9, destinationId: 8, count: 1, recencyIndex: 0 },
+          { originId: 1, destinationId: 2, count: 5, recencyIndex: 1 },
+        ];
+        const snapshot = JSON.stringify(input);
+
+        rankRecentRoutePairs(input);
+
+        expect(JSON.stringify(input)).toBe(snapshot);
+      });
+    });
+
+    describe('deriveRecentRouteCandidates — end to end', () => {
+      it('the OBRS-923 case: three off-pattern trips no longer evict the habitual route', () => {
+        const stations = [1, 2, 3, 4, 5, 6, 7, 8].map((id) => station(id));
+        // Newest-first, as both sources deliver: three one-off trips on top of a
+        // route booked five times.
+        const pairs = [
+          { originId: 7, destinationId: 8 },
+          { originId: 5, destinationId: 6 },
+          { originId: 3, destinationId: 4 },
+          ...Array.from({ length: 5 }, () => ({ originId: 1, destinationId: 2 })),
+        ];
+
+        const result = deriveRecentRouteCandidates(pairs, stations);
+
+        // Slot 1 = the trip just taken; slot 2 = the habit that used to be evicted.
+        expect(result.map((c) => c.originStation.id)).toEqual([7, 1, 5]);
+      });
+
+      // Must-NOT: pure frequency would rank the habitual route FIRST and drop the
+      // just-taken trip to slot 2. Without this, "hybrid" and "pure frequency"
+      // would both satisfy the case above's membership.
+      it('does NOT rank purely by frequency — the just-taken trip keeps slot 1', () => {
+        const stations = [1, 2, 9, 8].map((id) => station(id));
+        const pairs = [
+          { originId: 9, destinationId: 8 },
+          ...Array.from({ length: 4 }, () => ({ originId: 1, destinationId: 2 })),
+        ];
+
+        const result = deriveRecentRouteCandidates(pairs, stations);
+
+        expect(result[0].originStation.id).toBe(9);
+      });
+
+      it('honours an explicit count coming from the localStorage source', () => {
+        const stations = [1, 2, 3, 4, 9, 8].map((id) => station(id));
+        // Already deduped, one entry per route — exactly what
+        // loadRecentRoutesFromLocalStorage() hands HomeBookingComponent.
+        const pairs = [
+          { originId: 9, destinationId: 8, count: 1 },
+          { originId: 3, destinationId: 4, count: 1 },
+          { originId: 1, destinationId: 2, count: 9 },
+        ];
+
+        const result = deriveRecentRouteCandidates(pairs, stations);
+
+        expect(result.map((c) => c.originStation.id)).toEqual([9, 1, 3]);
+      });
+
+      it('AC#6 still applies AFTER ranking — a frequent route with a deactivated station is dropped', () => {
+        const stations = [station(9), station(8), station(3), station(4)]; // 1,2 missing
+        const pairs = [
+          { originId: 9, destinationId: 8, count: 1 },
+          { originId: 1, destinationId: 2, count: 99 }, // most frequent, but deactivated
+          { originId: 3, destinationId: 4, count: 2 },
+        ];
+
+        const result = deriveRecentRouteCandidates(pairs, stations);
+
+        expect(result.map((c) => c.originStation.id)).toEqual([9, 3]);
+      });
+    });
+
+    describe('localStorage count contract', () => {
+      it('starts a new route at count 1', () => {
+        saveRecentRoute(1, 2);
+
+        expect(loadRecentRoutesFromLocalStorage()[0].count).toBe(1);
+      });
+
+      it('increments the count when the same directional pair is searched again', () => {
+        saveRecentRoute(1, 2);
+        saveRecentRoute(1, 2);
+        saveRecentRoute(1, 2);
+
+        const routes = loadRecentRoutesFromLocalStorage();
+        expect(routes.length).toBe(1);
+        expect(routes[0].count).toBe(3);
+      });
+
+      it('carries the count across an intervening save of a different route', () => {
+        saveRecentRoute(1, 2);
+        saveRecentRoute(3, 4);
+        saveRecentRoute(1, 2);
+
+        const routes = loadRecentRoutesFromLocalStorage();
+        expect(routes[0]).toEqual(jasmine.objectContaining({ originId: 1, count: 2 }));
+        expect(routes[1]).toEqual(jasmine.objectContaining({ originId: 3, count: 1 }));
+      });
+
+      it('counts A->B and B->A separately', () => {
+        saveRecentRoute(1, 2);
+        saveRecentRoute(2, 1);
+
+        const routes = loadRecentRoutesFromLocalStorage();
+        expect(routes.length).toBe(2);
+        expect(routes.every((r) => r.count === 1)).toBe(true);
+      });
+
+      it('normalizes a garbage stored count to 1 instead of returning NaN', () => {
+        localStorage.setItem(
+          RECENT_ROUTES_CACHE_KEY,
+          JSON.stringify({
+            version: 'v2',
+            routes: [{ originId: 1, destinationId: 2, savedAt: 'x', count: 'lots' }],
+          })
+        );
+
+        expect(loadRecentRoutesFromLocalStorage()[0].count).toBe(1);
+      });
+
+      // The accepted migration consequence, pinned so it cannot regress into a
+      // surprise: a v1 payload carries no counts and is discarded wholesale.
+      it('discards a v1 payload — anonymous history is wiped exactly once on upgrade', () => {
+        localStorage.setItem(
+          RECENT_ROUTES_CACHE_KEY,
+          JSON.stringify({
+            version: 'v1',
+            routes: [{ originId: 1, destinationId: 2, savedAt: 'x' }],
+          })
+        );
+
+        expect(loadRecentRoutesFromLocalStorage()).toEqual([]);
+        expect(localStorage.getItem(RECENT_ROUTES_CACHE_KEY)).toBeNull();
+      });
     });
   });
 });

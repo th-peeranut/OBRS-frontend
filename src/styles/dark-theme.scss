@@ -327,6 +327,16 @@ body.is-dark {
         background-color: $dk-accent;
         color: $dk-bg;
       }
+
+      // OBRS-928 added an active (form-currently-holds-this-route) state that
+      // fills with $brand-customer-strong + $text-white in light mode. Both of
+      // those are broken here for the same reason the border was: repoint to
+      // the same inverted pair the hover above already uses, or the active pill
+      // becomes the one unreadable element on the dark card.
+      &.is-active {
+        background-color: $dk-accent;
+        color: $dk-bg;
+      }
     }
   }
 }
