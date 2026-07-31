@@ -292,7 +292,7 @@ test.describe('FAB modal — open, defaults, close', () => {
 
     // PrimeNG p-selectButton marks the selected item with aria-checked="true"
     // (not aria-pressed — PrimeNG uses aria-checked for selectbutton role="radio").
-    const bugButton = page.locator('p-selectbutton .p-button', { hasText: 'Bug' });
+    const bugButton = page.locator('p-selectbutton .p-togglebutton', { hasText: 'Bug' });
     await bugButton.waitFor({ state: 'visible', timeout: 5_000 });
     await expect(bugButton).toHaveAttribute('aria-checked', 'true');
   });

@@ -56,7 +56,7 @@ async function waitForRouteMapReady(page: Page): Promise<void> {
 
 /** Return all p-selectbutton option buttons */
 const directionButtons = (page: Page) =>
-  page.locator('.p-selectbutton .p-button');
+  page.locator('.p-selectbutton .p-togglebutton');
 
 /** Return the currently highlighted (active) direction button */
 const activeDirectionButton = (page: Page) =>
