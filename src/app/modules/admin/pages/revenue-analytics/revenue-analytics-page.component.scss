@@ -15,12 +15,17 @@
     font-size: 1.1rem;
   }
 
+  // OBRS-932 — the *-fg surface roles, not the *-text chip halves. This chip has
+  // no fill of its own, so it lands on --admin-surface-card: measured 1.84:1 and
+  // 1.71:1 in dark mode. Light is unchanged (both families declare the same light
+  // value on purpose) — proved by measurement in analytics-delta-contrast.spec.ts,
+  // not by reading the tokens.
   &.is-up {
-    color: var(--admin-success-text);
+    color: var(--admin-success-fg);
   }
 
   &.is-down {
-    color: var(--admin-danger-text);
+    color: var(--admin-danger-fg);
   }
 
   &--na {
