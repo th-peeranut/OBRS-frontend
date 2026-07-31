@@ -62,6 +62,27 @@ const SECTION_ORDER: { key: NavSectionKey; titleKey: string }[] = [
   { key: 'system', titleKey: 'ADMIN.NAV.SECTION.SYSTEM' },
 ];
 
+// OBRS-939: the two `routerLinkActiveOptions` values, as module-level frozen
+// singletons. Identity is the point, not the values: `RouterLinkActive` reads
+// this as an @Input, so a fresh object per change-detection cycle makes its
+// ngOnChanges fire forever (see navLinkActiveMatch below). There are exactly two
+// shapes because `matchSubtree` is the only thing that varies, so two constants
+// cover every nav item. `Object.freeze` so a future caller cannot mutate the
+// instance every link is sharing.
+const NAV_MATCH_EXACT: IsActiveMatchOptions = Object.freeze({
+  paths: 'exact',
+  queryParams: 'ignored',
+  matrixParams: 'ignored',
+  fragment: 'ignored',
+});
+
+const NAV_MATCH_SUBTREE: IsActiveMatchOptions = Object.freeze({
+  paths: 'subset',
+  queryParams: 'ignored',
+  matrixParams: 'ignored',
+  fragment: 'ignored',
+});
+
 // Cadence for the "Usability Reports" nav badge count. Separate from
 // ADMIN_POLL_INTERVAL_MS (admin-auto-refresh.ts) — that constant tunes the
 // operational list pages (bookings/dashboard); this is a lightweight,
@@ -84,6 +105,16 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // cycle breaks *ngFor + routerLinkActive, causing change detection never to
   // stabilise (hard-locks the browser). Mirrors StaffLayoutComponent's
   // navItems, which is built the same way to role-gate its own entries.
+  //
+  // OBRS-939 widened this rule, because the browser was hard-locked again by
+  // something this wording did not cover: the rule is not about GETTERS, it is
+  // about ALLOCATION. Any template expression that builds a new object or array
+  // per change-detection cycle — a getter, a method call, an inline `{...}`
+  // Angular cannot memoise — and feeds it to a directive @Input is the same
+  // defect, because directive inputs are compared by identity. `[routerLink]`,
+  // `[routerLinkActiveOptions]` and `*ngFor` on these nav links are all such
+  // inputs. Enforced now, not just written down: the unit tripwire below
+  // navLinkActiveMatch and e2e/tests/obrs-939-admin-shell-responsive.spec.ts.
   protected navItems: AdminNavItem[] = [];
 
   // OBRS-586: sidebar active-state. The nav links previously used the boolean
@@ -95,13 +126,27 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // matching (exact for a leaf, subset for a parent that should stay lit on its
   // children), while ignoring query params / matrix params / fragment so the
   // highlight tracks the page you are on rather than the exact query string.
+  //
+  // OBRS-939: it must return one of the two SHARED constants above rather than
+  // building the object here. Constructing it per call gave RouterLinkActive a
+  // new object identity on every change-detection cycle, so its ngOnChanges
+  // fired every cycle and its update() scheduled a microtask every cycle;
+  // zone.js therefore never saw an empty microtask queue for long,
+  // onMicrotaskEmpty kept re-running ApplicationRef.tick(), and the loop never
+  // terminated. The whole admin shell stopped answering clicks, timers and
+  // page.evaluate a few seconds after every page load, whether its API calls
+  // succeeded or failed — measured on /admin/dashboard and all five analytics
+  // pages, permanent (no recovery inside 60 s), while /staff/sell stayed at a
+  // 231 ms worst-case gap because StaffLayoutComponent still binds the inline
+  // literal `{ exact: false }`, which Angular memoises into a stable instance.
+  //
+  // The comment on `navItems` above already warned that a GETTER returning a new
+  // array each cycle "hard-locks the browser". This was the same defect wearing
+  // a method call, on the same element, and that warning did not cover it —
+  // hence obrs-939-admin-shell-responsive.spec.ts, which measures the property
+  // this reasoning is about instead of restating it.
   protected navLinkActiveMatch(item: AdminNavItem): IsActiveMatchOptions {
-    return {
-      paths: item.matchSubtree ? 'subset' : 'exact',
-      queryParams: 'ignored',
-      matrixParams: 'ignored',
-      fragment: 'ignored',
-    };
+    return item.matchSubtree ? NAV_MATCH_SUBTREE : NAV_MATCH_EXACT;
   }
 
   // OBRS-290: sidebar menu search. `filteredNavItems` is a stable field
