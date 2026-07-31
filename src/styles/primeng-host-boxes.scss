@@ -44,7 +44,17 @@
 // before and after, and fails past 0.5px. See
 // docs/manual-tests/OBRS-776-primeng-host-boxes.md.
 // ============================================================================
+// OBRS-915 ADDITION: `p-tabpanels`. PrimeNG 19's Tabs is not a rename of
+// TabView, it is a restructure — one `p-tabView` element became five nested
+// custom elements, and `p-tabpanels` is a NEW host that did not exist to be
+// measured when this list was written. The sweep found it malformed the first
+// time the migrated tree was measured (`malformed=1 ["p-tabpanels"]`), which is
+// the same inline-box defect the header above describes, arriving through a tag
+// nobody had to forget — it simply had no history. `p-tablist` and `p-tab` came
+// through the same restructure and were measured NOT malformed, so they are
+// deliberately absent: this rule is for the boxes that need it.
 p-tabs,
+p-tabpanels,
 p-tabpanel,
 p-card,
 p-datePicker {

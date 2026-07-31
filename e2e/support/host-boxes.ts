@@ -677,10 +677,17 @@ export function featureFlags(): Record<string, boolean> {
 // --- who renders the PrimeNG hosts (OBRS-776) --------------------------------
 
 /**
- * The four library hosts OBRS-775 measured as `display: inline` around block
+ * The library hosts OBRS-775 measured as `display: inline` around block
  * children and could not fix from a component stylesheet.
+ *
+ * OBRS-915: five, not four. PrimeNG 19 turned `<p-tabView>` into a nest of five
+ * custom elements, and `<p-tabpanels>` — which had no v17 counterpart, so no
+ * history to inherit — measured malformed on `/home` the first time the
+ * migrated tree was swept. It is blockified alongside the other four in
+ * `src/styles/primeng-host-boxes.scss`; this list is what proves every template
+ * rendering one of them is covered by the sweep.
  */
-export const PRIMENG_TARGETS = ['p-tabs', 'p-tabpanel', 'p-card', 'p-datepicker'] as const;
+export const PRIMENG_TARGETS = ['p-tabs', 'p-tabpanels', 'p-tabpanel', 'p-card', 'p-datepicker'] as const;
 
 export interface PrimengHostUser {
   /** Our component's selector, e.g. `app-expenses-page`. */
