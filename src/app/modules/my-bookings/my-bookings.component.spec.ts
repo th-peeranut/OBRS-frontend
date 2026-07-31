@@ -239,6 +239,34 @@ describe('MyBookingsComponent', () => {
         jasmine.objectContaining({ bookingId: view.id })
       );
     });
+
+    it('OBRS-813: taking the offer inside the cancel modal closes it and opens the reschedule dialog', () => {
+      const dispatchSpy = spyOn(storeStub, 'dispatch');
+      const view = toView(
+        buildBooking({ bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }] })
+      );
+
+      component.onRescheduleInsteadOfCancel(view);
+
+      const types = dispatchSpy.calls.allArgs().map(([action]) => (action as { type: string }).type);
+      expect(types.length).toBe(2);
+      expect(types[0]).toBe('[MyBookings API] Close cancel refund destination modal');
+      expect(dispatchSpy.calls.argsFor(1)[0]).toEqual(
+        jasmine.objectContaining({ bookingId: view.id })
+      );
+    });
+
+    it('OBRS-813: the offer cannot route an INELIGIBLE booking into reschedule (guard is shared with onReschedule)', () => {
+      const dispatchSpy = spyOn(storeStub, 'dispatch');
+      const view = toView(
+        buildBooking({ rescheduleCount: 1, bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }] })
+      );
+
+      component.onRescheduleInsteadOfCancel(view);
+
+      // The modal closes either way — but nothing opens the reschedule dialog.
+      expect(dispatchSpy.calls.count()).toBe(1);
+    });
   });
 
   describe('change seat eligibility (card gating, OBRS-110)', () => {

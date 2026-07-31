@@ -134,6 +134,11 @@ export default defineConfig({
     // The last paint stays on screen, so it photographs as a healthy page.
     // Hermetic on the same terms as the rest: synthetic session, no backend.
     '**/obrs-939-admin-shell-responsive.spec.ts',
+    // OBRS-813. The cancel modal now offers the reschedule door; the card forbids
+    // that offer costing a single extra click on the way to cancelling. Measured
+    // with a control arm in the same run (eligible booking vs ineligible, whose
+    // modal is the pre-card layout) rather than a constant nobody measured before.
+    '**/obrs-813-cancel-offers-reschedule.spec.ts',
   ],
 
   timeout: 60_000,

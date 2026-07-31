@@ -193,6 +193,18 @@ export class MyBookingsComponent implements OnInit {
   }
 
   /**
+   * OBRS-813 — the traveler took the other door offered inside the cancel
+   * modal. Closes the cancel modal and hands them to the SAME reschedule
+   * dialog the card menu opens (`onReschedule`), including its eligibility
+   * guard: one entry point, so a booking the backend would refuse can't get in
+   * through this one. Nothing is cancelled — the cancel was never submitted.
+   */
+  onRescheduleInsteadOfCancel(booking: MyBookingView): void {
+    this.store.dispatch(closeCancelRefundDestinationModal());
+    this.onReschedule(booking);
+  }
+
+  /**
    * Builds and opens the single per-card overflow menu (View e-ticket,
    * Reschedule, Cancel booking). Reschedule is always included — disabled
    * with its localized reason as `reasonText` when ineligible, never

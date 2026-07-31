@@ -15,6 +15,7 @@ import {
   toAmountNumber,
 } from '../../../../shared/interfaces/my-booking.interface';
 import { RefundDestinationReqDto } from '../../../../shared/interfaces/refund-destination.interface';
+import { RESCHEDULE_MAX_DAYS_AHEAD } from '../../../../shared/interfaces/reschedule.interface';
 import {
   applyRefundDestinationRequired,
   buildRefundDestinationForm,
@@ -49,9 +50,23 @@ export class CancelRefundDestinationModalComponent implements OnInit, OnChanges 
 
   @Output() readonly confirmed = new EventEmitter<{ refundDestination: RefundDestinationReqDto }>();
   @Output() readonly dismissed = new EventEmitter<void>();
+  /**
+   * OBRS-813 — the traveler chose the other door: close this modal and open the
+   * existing reschedule dialog. Emitted only from the offer block, which only
+   * renders when `booking.rescheduleEligible` (the same predicate the card's
+   * own Reschedule menu item uses), so this can never route someone into a flow
+   * the backend would reject.
+   */
+  @Output() readonly rescheduleRequested = new EventEmitter<void>();
 
   protected readonly form: FormGroup;
   protected submitting = false;
+
+  /** Mirrors `reschedule_max_days_ahead`; already the date picker's bound
+   * (`RescheduleDialogComponent.computeDateBounds`). Quoted here so the offer
+   * states the one limit that can make this door useless to the traveler — if
+   * they don't yet know when they want to travel, only a cancel helps. */
+  protected readonly rescheduleMaxDaysAhead = RESCHEDULE_MAX_DAYS_AHEAD;
 
   constructor(private readonly formBuilder: FormBuilder) {
     this.form = buildRefundDestinationForm(this.formBuilder);
@@ -73,6 +88,32 @@ export class CancelRefundDestinationModalComponent implements OnInit, OnChanges 
 
   protected get canSubmit(): boolean {
     return !this.submitting && this.form.valid;
+  }
+
+  /**
+   * OBRS-813 — offer the reschedule door only when the server would actually
+   * open it. `rescheduleEligible` is computed once in
+   * `MyBookingsComponent.computeRescheduleEligibility` (confirmed + one-way +
+   * never rescheduled + outside the 4h window); this modal re-uses that verdict
+   * rather than re-deriving it, so there is exactly one FE mirror of the
+   * backend's prerequisites and it cannot drift against the menu item that
+   * opens the same dialog.
+   *
+   * This is also what keeps the offer off the operator-cancellation path: a
+   * trip the operator cancelled leaves the booking non-`confirmed`, which fails
+   * the first check above (and takes the Cancel action itself away, so this
+   * modal never opens there at all). That case owes the traveler their money,
+   * never an alternative.
+   */
+  protected get canOfferReschedule(): boolean {
+    return this.booking?.rescheduleEligible === true;
+  }
+
+  protected requestReschedule(): void {
+    if (this.submitting) {
+      return;
+    }
+    this.rescheduleRequested.emit();
   }
 
   @HostListener('document:keydown.escape')
@@ -112,6 +153,23 @@ export class CancelRefundDestinationModalComponent implements OnInit, OnChanges 
 
   protected get penaltyLabel(): string {
     return this.formatCurrency(this.policy?.penaltyAmount ?? 0);
+  }
+
+  /**
+   * OBRS-813 — what the traveler keeps by rescheduling instead of cancelling.
+   * Taken from the cancel-policy response the backend already computed for
+   * THIS booking (`originalAmount`), never re-derived in the FE: the whole
+   * point of the comparison is that both sides are the server's own numbers.
+   *
+   * The reschedule side deliberately quotes no fee. It cannot: the fee depends
+   * on the trip the traveler has not picked yet (`resolveRescheduleFee` keys on
+   * how far away the NEW departure is), and reproducing that predicate here is
+   * exactly the duplication this card forbids. `FEE_SHOWN_FIRST` promises the
+   * number instead, and the reschedule dialog's estimate step keeps that
+   * promise — old fare, new fare, fee and net, all before Confirm.
+   */
+  protected get originalAmountLabel(): string {
+    return this.formatCurrency(this.policy?.originalAmount ?? 0);
   }
 
   private formatCurrency(value: number | string): string {
