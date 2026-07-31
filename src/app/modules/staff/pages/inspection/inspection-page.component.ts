@@ -44,9 +44,10 @@ import {
  * 23-row scroll.
  */
 @Component({
-  selector: 'app-inspection-page',
-  templateUrl: './inspection-page.component.html',
-  styleUrl: './inspection-page.component.scss',
+    selector: 'app-inspection-page',
+    templateUrl: './inspection-page.component.html',
+    styleUrl: './inspection-page.component.scss',
+    standalone: false
 })
 export class InspectionPageComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly form: FormGroup;

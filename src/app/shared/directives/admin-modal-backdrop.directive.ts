@@ -27,7 +27,8 @@ import {
  * docs/adr/0017-schedule-delay-control-and-modal-backdrop-relocation.md.
  */
 @Directive({
-  selector: '[adminModalBackdrop]',
+    selector: '[adminModalBackdrop]',
+    standalone: false
 })
 export class AdminModalBackdropDirective implements OnInit, OnDestroy {
   @Input() dismissOnBackdrop = true;

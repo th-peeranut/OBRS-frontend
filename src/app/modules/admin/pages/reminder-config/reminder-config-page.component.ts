@@ -18,9 +18,10 @@ import { positiveIntegerValidator } from './reminder-config-page.validators';
 // same save() shape — except the wire payload here is a full replace (both
 // fields are always required), not a partial PATCH.
 @Component({
-  selector: 'app-reminder-config-page',
-  templateUrl: './reminder-config-page.component.html',
-  styleUrl: './reminder-config-page.component.scss',
+    selector: 'app-reminder-config-page',
+    templateUrl: './reminder-config-page.component.html',
+    styleUrl: './reminder-config-page.component.scss',
+    standalone: false
 })
 export class ReminderConfigPageComponent
   implements OnInit, OnDestroy, CanComponentDeactivate

@@ -249,7 +249,7 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
 
       // TWO SAMPLES, and a declaration counts as dead only if it is dead in
       // BOTH. Not defensive padding -- measured: `.p-selectbutton
-      // .p-button.p-highlight` reads `transparent` on some loads and
+      // .p-togglebutton.p-togglebutton-checked` reads `transparent` on some loads and
       // `rgb(75,194,247)` on others, because PrimeNG settles that fill after
       // first paint. One sample makes that entry appear and disappear between
       // runs, which is a red build with no defect behind it and the fastest
@@ -321,7 +321,7 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
     //
     // But "not dead" and "not looked at" are different things, and only the
     // first is a stale entry. Some selectors here are transient PrimeNG states
-    // (`.p-button.p-highlight`) that render on some runs and not others; a
+    // (`.p-togglebutton.p-togglebutton-checked`) that render on some runs and not others; a
     // check that could not tell them apart would go red with no defect behind
     // it, and a gate people re-run until it is green is not a gate. So an
     // entry is stale only if its SELECTOR was seen carrying elements while the

@@ -41,12 +41,13 @@ export type TicketPassengerRow = TicketPassenger & BoardingQrState;
  * reintroduce a flat passenger input either.
  */
 @Component({
-  selector: 'app-e-ticket-card',
-  templateUrl: './e-ticket-card.component.html',
-  styleUrl: './e-ticket-card.component.scss',
-  // Component-scoped so its resolved (short-lived!) boarding tokens die with
-  // this card instance — see the class comment on BoardingQrService.
-  providers: [BoardingQrService],
+    selector: 'app-e-ticket-card',
+    templateUrl: './e-ticket-card.component.html',
+    styleUrl: './e-ticket-card.component.scss',
+    // Component-scoped so its resolved (short-lived!) boarding tokens die with
+    // this card instance — see the class comment on BoardingQrService.
+    providers: [BoardingQrService],
+    standalone: false
 })
 export class ETicketCardComponent implements OnChanges {
   @ViewChild('ticketPaper') private ticketPaper?: ElementRef<HTMLElement>;

@@ -2,9 +2,9 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { SharedModule } from '../../shared/shared.module';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { GoogleMapsModule } from '@angular/google-maps';
-import { TabViewModule } from 'primeng/tabview';
+import { TabsModule } from 'primeng/tabs';
 import { ButtonModule } from 'primeng/button';
 import { BadgeModule } from 'primeng/badge';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -61,9 +61,9 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
     ]),
 
     // Add-ons
-    CalendarModule,
+    DatePickerModule,
     GoogleMapsModule,
-    TabViewModule,
+    TabsModule,
     ButtonModule,
     BadgeModule,
     ProgressSpinnerModule,

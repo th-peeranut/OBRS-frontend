@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { CashOnlineReconciliationReportPageComponent } from './cash-online-reconciliation-report-page.component';
 import { CashOnlineReconciliationReportStore } from './cash-online-reconciliation-report.store';
 import { CashOnlineReconciliationReportDto } from '../../../../shared/interfaces/cash-online-reconciliation-report.interface';
@@ -374,7 +374,7 @@ describe('CashOnlineReconciliationReportPageComponent (template rendering)', () 
     };
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, AdminSharedModule],
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, AdminSharedModule],
       declarations: [CashOnlineReconciliationReportPageComponent],
       providers: [{ provide: CashOnlineReconciliationReportStore, useValue: storeStub }],
     }).compileComponents();

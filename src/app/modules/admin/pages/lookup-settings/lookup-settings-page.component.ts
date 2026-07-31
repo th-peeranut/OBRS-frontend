@@ -24,9 +24,10 @@ import {
 } from './lookup-settings-page.mappers';
 
 @Component({
-  selector: 'app-lookup-settings-page',
-  templateUrl: './lookup-settings-page.component.html',
-  styleUrl: './lookup-settings-page.component.scss',
+    selector: 'app-lookup-settings-page',
+    templateUrl: './lookup-settings-page.component.html',
+    styleUrl: './lookup-settings-page.component.scss',
+    standalone: false
 })
 export class LookupSettingsPageComponent implements OnInit, OnDestroy {
   protected categories: CategorySummary[] = [];

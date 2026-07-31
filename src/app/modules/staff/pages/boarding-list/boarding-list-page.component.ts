@@ -11,8 +11,9 @@ import { ActivatedRoute } from '@angular/router';
  * single-owner re-bind contract) — passing `[scheduleId]` is enough.
  */
 @Component({
-  selector: 'app-boarding-list-page',
-  templateUrl: './boarding-list-page.component.html',
+    selector: 'app-boarding-list-page',
+    templateUrl: './boarding-list-page.component.html',
+    standalone: false
 })
 export class BoardingListPageComponent {
   protected readonly scheduleId: number;

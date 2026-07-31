@@ -120,7 +120,7 @@ test('BEFORE (origin/dev 45c66cbd) — desktop: PAN, expiry and CVV are our own 
   // wrong tree and the comparison is meaningless.
   await expect(page.locator('#creditCardNo')).toBeVisible();
   await expect(page.locator('#cvv')).toBeVisible();
-  await expect(page.locator('p-calendar')).toBeVisible();
+  await expect(page.locator('p-datepicker')).toBeVisible();
 
   await shootPaymentCard(page, 'before-payment-desktop.png');
 });
@@ -141,7 +141,7 @@ test('AFTER — desktop: no card field on our origin at all', async ({ page }) =
   // Absence is asserted alongside a POSITIVE check (the pay button above), so a
   // page that failed to render cannot pass this as "no card inputs".
   await expect(page.locator('#creditCardNo, #cvv')).toHaveCount(0);
-  await expect(page.locator('app-payment-creditcard p-calendar')).toHaveCount(0);
+  await expect(page.locator('app-payment-creditcard p-datepicker')).toHaveCount(0);
   await expect(page.locator('app-payment-creditcard input')).toHaveCount(0);
   await expect(page.locator('.hosted-card-hint')).toBeVisible();
 

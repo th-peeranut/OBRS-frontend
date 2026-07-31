@@ -4,7 +4,7 @@
     <!-- OBRS-185: canonical shared date-field look (app-date-field / -panel /
          -icon, defined globally in src/styles.scss) — in-input calendar.svg
          icon (iconDisplay='input'), no separate trailing calendar button. -->
-    <p-calendar
+    <p-datePicker
       styleClass="app-date-field"
       panelStyleClass="app-date-field-panel"
       [(ngModel)]="selectedDate"
@@ -15,7 +15,7 @@
       (ngModelChange)="onDateChange($event)"
     >
       <ng-template pTemplate="inputicon"><img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" /></ng-template>
-    </p-calendar>
+    </p-datePicker>
   </div>
 
   <!-- Add schedule button — visible only to schedule managers (canManageSchedules=true) -->

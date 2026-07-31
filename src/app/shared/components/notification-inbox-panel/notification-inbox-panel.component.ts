@@ -3,15 +3,16 @@ import { NotificationItem } from '../../interfaces/notification.interface';
 
 /**
  * OBRS-317: dumb/presentational inbox panel hosted inside the notification
- * bell's `p-overlayPanel`. Renders the list of the current user's most
+ * bell's `p-popover`. Renders the list of the current user's most
  * recent notifications, empty/loading/error states, "Mark all read", and a
  * "showing latest N of M" footer when the fetched page doesn't cover the
  * full unread+read total (Phase 1 has no full-inbox route).
  */
 @Component({
-  selector: 'app-notification-inbox-panel',
-  templateUrl: './notification-inbox-panel.component.html',
-  styleUrl: './notification-inbox-panel.component.scss',
+    selector: 'app-notification-inbox-panel',
+    templateUrl: './notification-inbox-panel.component.html',
+    styleUrl: './notification-inbox-panel.component.scss',
+    standalone: false
 })
 export class NotificationInboxPanelComponent {
   @Input() items: NotificationItem[] = [];

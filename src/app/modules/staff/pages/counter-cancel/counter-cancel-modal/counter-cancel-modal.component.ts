@@ -110,9 +110,10 @@ export type CounterCancelPreviewState = 'loading' | 'blocked' | 'error' | 'resol
  * loudly and cost nothing to run.
  */
 @Component({
-  selector: 'app-counter-cancel-modal',
-  templateUrl: './counter-cancel-modal.component.html',
-  styleUrl: './counter-cancel-modal.component.scss',
+    selector: 'app-counter-cancel-modal',
+    templateUrl: './counter-cancel-modal.component.html',
+    styleUrl: './counter-cancel-modal.component.scss',
+    standalone: false
 })
 export class CounterCancelModalComponent implements OnChanges, OnDestroy {
   @Input() isOpen = false;

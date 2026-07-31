@@ -31,8 +31,9 @@ import { TranslateService } from '@ngx-translate/core';
 // paginator MOUNTED across the loading window for the focus half to work (the
 // usability page keeps it mounted + disabled; see its footer template).
 @Component({
-  selector: 'app-admin-paginator',
-  templateUrl: './admin-paginator.component.html',
+    selector: 'app-admin-paginator',
+    templateUrl: './admin-paginator.component.html',
+    standalone: false
 })
 export class AdminPaginatorComponent implements OnChanges {
   @Input() currentPage = 1;

@@ -94,10 +94,11 @@ const CARRY_ON_PAY_ERROR_KEYS: Record<string, string> = {
  * new route (locked decision, OBRS-341 brief). Consigned stays the default
  * so existing behaviour is unchanged on load. */
 @Component({
-  selector: 'app-parcel-consign-page',
-  templateUrl: './parcel-consign-page.component.html',
-  styleUrl: './parcel-consign-page.component.scss',
-  providers: [ParcelCargoAvailabilityStore],
+    selector: 'app-parcel-consign-page',
+    templateUrl: './parcel-consign-page.component.html',
+    styleUrl: './parcel-consign-page.component.scss',
+    providers: [ParcelCargoAvailabilityStore],
+    standalone: false
 })
 export class ParcelConsignPageComponent implements OnInit, OnDestroy {
   @ViewChild(ParcelConsignFormComponent) formRef?: ParcelConsignFormComponent;

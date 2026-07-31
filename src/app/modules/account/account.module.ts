@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { InputSwitchModule } from 'primeng/inputswitch';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { SharedModule } from '../../shared/shared.module';
 import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
@@ -34,7 +34,7 @@ const routes: Routes = [
     SharedModule,
     RouterModule.forChild(routes),
     ButtonModule,
-    InputSwitchModule,
+    ToggleSwitchModule,
     ProgressSpinnerModule,
   ],
 })

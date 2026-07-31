@@ -3,16 +3,16 @@
 </section>
 
 <section class="admin-page-filters mt-3">
-  <p-calendar styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
+  <p-datePicker styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
     [ngModel]="fromDate" (ngModelChange)="onFromDateChange($event)" [showIcon]="true" [iconDisplay]="'input'" [showButtonBar]="true"
     [placeholder]="'ADMIN.REPORTS.FILTER_FROM' | translate">
     <ng-template pTemplate="inputicon"><img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" /></ng-template>
-  </p-calendar>
-  <p-calendar styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
+  </p-datePicker>
+  <p-datePicker styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
     [ngModel]="toDate" (ngModelChange)="onToDateChange($event)" [showIcon]="true" [iconDisplay]="'input'" [showButtonBar]="true"
     [placeholder]="'ADMIN.REPORTS.FILTER_TO' | translate">
     <ng-template pTemplate="inputicon"><img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" /></ng-template>
-  </p-calendar>
+  </p-datePicker>
 </section>
 
 <section class="admin-card mt-3 reports-state-card" *ngIf="contentState === 'invalid' || contentState === 'error'">

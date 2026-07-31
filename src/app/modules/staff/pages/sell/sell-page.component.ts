@@ -82,9 +82,10 @@ interface WalkInBookingPayloadDraft {
 }
 
 @Component({
-  selector: 'app-sell-page',
-  templateUrl: './sell-page.component.html',
-  styleUrl: './sell-page.component.scss',
+    selector: 'app-sell-page',
+    templateUrl: './sell-page.component.html',
+    styleUrl: './sell-page.component.scss',
+    standalone: false
 })
 export class SellPageComponent implements OnInit, OnDestroy {
   protected today: Date = new Date();

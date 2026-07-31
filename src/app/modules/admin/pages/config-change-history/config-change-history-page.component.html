@@ -25,9 +25,9 @@
       (valueChange)="onConfigKeyFilterChange($event)"
     ></app-admin-dropdown>
 
-    <!-- Date range: two p-calendar, both start empty — reuses the
+    <!-- Date range: two p-datePicker, both start empty — reuses the
          reports-page/refund-void-report shape verbatim (UX §4.2). -->
-    <p-calendar
+    <p-datePicker
       styleClass="app-date-field"
       panelStyleClass="app-date-field-panel"
       dateFormat="dd/mm/yy"
@@ -41,9 +41,9 @@
       <ng-template pTemplate="inputicon">
         <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
       </ng-template>
-    </p-calendar>
+    </p-datePicker>
 
-    <p-calendar
+    <p-datePicker
       styleClass="app-date-field"
       panelStyleClass="app-date-field-panel"
       dateFormat="dd/mm/yy"
@@ -57,7 +57,7 @@
       <ng-template pTemplate="inputicon">
         <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
       </ng-template>
-    </p-calendar>
+    </p-datePicker>
   </div>
 
   <!-- Invalid range (client guard) or fetch error: the message REPLACES the

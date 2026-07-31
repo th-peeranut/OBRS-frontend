@@ -28,9 +28,10 @@ import { WaybillRespDto } from '../../../../shared/interfaces/parcel.interface';
  * and bound to both `afterprint` and `ngOnDestroy`.
  */
 @Component({
-  selector: 'app-parcel-waybill-page',
-  templateUrl: './parcel-waybill-page.component.html',
-  styleUrl: './parcel-waybill-page.component.scss',
+    selector: 'app-parcel-waybill-page',
+    templateUrl: './parcel-waybill-page.component.html',
+    styleUrl: './parcel-waybill-page.component.scss',
+    standalone: false
 })
 export class ParcelWaybillPageComponent implements OnInit, OnDestroy {
   @ViewChild('printTemplate') printTemplate!: TemplateRef<unknown>;

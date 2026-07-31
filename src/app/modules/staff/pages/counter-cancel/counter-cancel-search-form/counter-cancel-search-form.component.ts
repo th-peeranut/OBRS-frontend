@@ -25,9 +25,10 @@ export interface CounterCancelSearchEvent {
  * backend's `booking.search.error.criteria-required`.
  */
 @Component({
-  selector: 'app-counter-cancel-search-form',
-  templateUrl: './counter-cancel-search-form.component.html',
-  styleUrl: './counter-cancel-search-form.component.scss',
+    selector: 'app-counter-cancel-search-form',
+    templateUrl: './counter-cancel-search-form.component.html',
+    styleUrl: './counter-cancel-search-form.component.scss',
+    standalone: false
 })
 export class CounterCancelSearchFormComponent implements OnChanges {
   @Input() submitting = false;

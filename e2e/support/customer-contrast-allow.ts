@@ -200,8 +200,15 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   'light|input.form-control.mt-1|boundary-on-#ffffff': '1.35:1 -- OBRS-772 form field boundary',
   'dark|input.form-control.mt-1|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 form field boundary',
   'light|input.form-check-input|boundary-on-#ffffff': '1.30:1 -- OBRS-772 checkbox/radio boundary',
-  'light|input.p-inputtext.p-component|boundary-on-#ffffff': '1.35:1 -- OBRS-772 p-calendar field boundary',
-  'dark|input.p-inputtext.p-component|boundary-on-#22263a': '1.36:1 -- OBRS-772 p-calendar field boundary',
+  // OBRS-915 REKEYED, NOT REPAINTED. PrimeNG 19 adds `p-datepicker-input` to the
+  // date field's class list, and the class list is half of this gate's key, so
+  // both entries stopped matching on an upgrade that changed no colour. The
+  // MEASUREMENTS are unchanged and that is the point: 1.35:1 on #ffffff and
+  // 1.36:1 on #22263a are the same numbers OBRS-772 recorded, re-measured after
+  // the upgrade, so the debt these two describe is still exactly the debt they
+  // were written for. Anything else would have needed a new entry, not a rename.
+  'light|input.p-inputtext.p-component.p-datepicker-input|boundary-on-#ffffff': '1.35:1 -- OBRS-772 p-datepicker field boundary',
+  'dark|input.p-inputtext.p-component.p-datepicker-input|boundary-on-#22263a': '1.36:1 -- OBRS-772 p-datepicker field boundary',
   'light|button.theme-toggle-btn|boundary-on-#ffffff': '1.36:1 -- OBRS-772 navbar icon button boundary',
   'dark|button.theme-toggle-btn|boundary-on-#1a1d27': '1.60:1 -- OBRS-772 navbar icon button boundary',
   'light|button.navbar-lang-trigger|boundary-on-#ffffff': '1.36:1 -- OBRS-772 navbar language trigger boundary',

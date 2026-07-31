@@ -42,9 +42,10 @@ import { LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limit
 import { AnalyticsService } from '../../../../services/analytics/analytics.service';
 
 @Component({
-  selector: 'app-schedule-booking-list',
-  templateUrl: './schedule-booking-list.component.html',
-  styleUrl: './schedule-booking-list.component.scss',
+    selector: 'app-schedule-booking-list',
+    templateUrl: './schedule-booking-list.component.html',
+    styleUrl: './schedule-booking-list.component.scss',
+    standalone: false
 })
 export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   scheduleList: Observable<ScheduleList>;

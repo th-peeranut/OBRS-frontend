@@ -30,9 +30,10 @@ interface DirectionOption {
 }
 
 @Component({
-  selector: 'app-route-map-home',
-  templateUrl: './route-map-home.component.html',
-  styleUrl: './route-map-home.component.scss',
+    selector: 'app-route-map-home',
+    templateUrl: './route-map-home.component.html',
+    styleUrl: './route-map-home.component.scss',
+    standalone: false
 })
 export class RouteMapHomeComponent implements OnInit, OnDestroy {
   @Output() pickupDropoffConfirmed =

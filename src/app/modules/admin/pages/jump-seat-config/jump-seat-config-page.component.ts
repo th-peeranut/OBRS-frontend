@@ -14,13 +14,14 @@ import { JumpSeatConfigStore } from './jump-seat-config.store';
 // mirrors ReminderConfigPageComponent (reminder-config-page.component.ts)
 // as closely as possible: same SWR store base, same pristine-only
 // patch-on-later-emission contract, same save() shape. The only difference
-// is a single boolean field (`enabled`) rendered as a `p-inputSwitch`
+// is a single boolean field (`enabled`) rendered as a `p-toggleSwitch`
 // (reused from notification-preference-row.component.html) instead of the
 // numeric inputs there.
 @Component({
-  selector: 'app-jump-seat-config-page',
-  templateUrl: './jump-seat-config-page.component.html',
-  styleUrl: './jump-seat-config-page.component.scss',
+    selector: 'app-jump-seat-config-page',
+    templateUrl: './jump-seat-config-page.component.html',
+    styleUrl: './jump-seat-config-page.component.scss',
+    standalone: false
 })
 export class JumpSeatConfigPageComponent
   implements OnInit, OnDestroy, CanComponentDeactivate

@@ -5,9 +5,10 @@ import { RouteRow, statusClass as statusClassValue } from '../routes.mappers';
 // (OBRS-213). No Store/HTTP access — all data comes in via @Input, all user
 // actions go out via @Output.
 @Component({
-  selector: 'app-route-list-table',
-  templateUrl: './route-list-table.component.html',
-  styleUrl: './route-list-table.component.scss',
+    selector: 'app-route-list-table',
+    templateUrl: './route-list-table.component.html',
+    styleUrl: './route-list-table.component.scss',
+    standalone: false
 })
 export class RouteListTableComponent {
   @Input() routes: RouteRow[] = [];

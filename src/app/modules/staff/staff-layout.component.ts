@@ -33,9 +33,10 @@ const SECTION_ORDER: { key: NavSectionKey; titleKey: string }[] = [
 ];
 
 @Component({
-  selector: 'app-staff-layout',
-  templateUrl: './staff-layout.component.html',
-  styleUrl: './staff-layout.component.scss',
+    selector: 'app-staff-layout',
+    templateUrl: './staff-layout.component.html',
+    styleUrl: './staff-layout.component.scss',
+    standalone: false
 })
 export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   // ── Abstract member implementations ─────────────────────────────────────────

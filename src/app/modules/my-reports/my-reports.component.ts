@@ -27,9 +27,10 @@ import { MyReportSummaryPatch } from './components/my-report-detail-modal/my-rep
  * does NOT need its own copy.
  */
 @Component({
-  selector: 'app-my-reports',
-  templateUrl: './my-reports.component.html',
-  styleUrl: './my-reports.component.scss',
+    selector: 'app-my-reports',
+    templateUrl: './my-reports.component.html',
+    styleUrl: './my-reports.component.scss',
+    standalone: false
 })
 export class MyReportsComponent implements OnInit, OnDestroy {
   protected reports: MyUsabilityReportSummary[] = [];

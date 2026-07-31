@@ -49,9 +49,10 @@ interface MyParcelsVm {
  * re-enter the payment phase yet.
  */
 @Component({
-  selector: 'app-my-parcels',
-  templateUrl: './my-parcels.component.html',
-  styleUrl: './my-parcels.component.scss',
+    selector: 'app-my-parcels',
+    templateUrl: './my-parcels.component.html',
+    styleUrl: './my-parcels.component.scss',
+    standalone: false
 })
 export class MyParcelsComponent implements OnInit {
   protected readonly skeletonRows = Array.from({ length: 3 });

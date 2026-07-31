@@ -73,7 +73,7 @@
             {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
           </label>
           <!-- CALENDAR MAIN ELEMENT -->
-          <p-calendar
+          <p-datePicker
             styleClass="app-date-field"
             panelStyleClass="app-date-field-panel"
             dateFormat="dd/mm/yy"
@@ -92,7 +92,7 @@
                 [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate"
               />
             </ng-template>
-          </p-calendar>
+          </p-datePicker>
         </div>
 
         <!-- ROUND TRIP RETURN -->
@@ -104,7 +104,7 @@
               {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
             </label>
             <!-- CALENDAR MAIN ELEMENT -->
-            <p-calendar
+            <p-datePicker
               styleClass="app-date-field"
               panelStyleClass="app-date-field-panel"
               dateFormat="dd/mm/yy"
@@ -123,7 +123,7 @@
                   [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate"
                 />
               </ng-template>
-            </p-calendar>
+            </p-datePicker>
           </div>
         </ng-container>
       </div>

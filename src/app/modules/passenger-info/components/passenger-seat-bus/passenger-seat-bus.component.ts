@@ -9,9 +9,10 @@ import {
 import { normalizeSeatNumber } from '../../../../shared/lib/seat-label';
 
 @Component({
-  selector: 'app-passenger-seat-bus',
-  templateUrl: './passenger-seat-bus.component.html',
-  styleUrl: './passenger-seat-bus.component.scss',
+    selector: 'app-passenger-seat-bus',
+    templateUrl: './passenger-seat-bus.component.html',
+    styleUrl: './passenger-seat-bus.component.scss',
+    standalone: false
 })
 export class PassengerSeatBusComponent implements OnChanges {
   @Input() gender: string = '';

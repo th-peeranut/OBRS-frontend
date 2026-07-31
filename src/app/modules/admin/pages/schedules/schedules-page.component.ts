@@ -51,9 +51,10 @@ import {
 import { formatCargoCapacityInputValue } from '../cargo-capacity/cargo-capacity-page.mappers';
 
 @Component({
-  selector: 'app-schedules-page',
-  templateUrl: './schedules-page.component.html',
-  styleUrl: './schedules-page.component.scss',
+    selector: 'app-schedules-page',
+    templateUrl: './schedules-page.component.html',
+    styleUrl: './schedules-page.component.scss',
+    standalone: false
 })
 export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected schedules: ScheduleRow[] = [];

@@ -4,7 +4,7 @@ import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testin
 import { FormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
-import { InputSwitchModule } from 'primeng/inputswitch';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 import {
   NotificationPreferenceRowComponent,
@@ -16,16 +16,17 @@ import { NotificationPreferenceRow } from '../../../../shared/interfaces/notific
  * Host that stands in for `NotificationPreferencesPageComponent.onRowChange`:
  * it applies the SAME ≥1-channel veto rule (critical row + would-leave-both-off
  * => don't touch `row`) so this spec exercises the real veto-then-revert path
- * through an actual rendered `p-inputSwitch`, not just the row's emitted event.
+ * through an actual rendered `p-toggleSwitch`, not just the row's emitted event.
  */
 @Component({
-  template: `
+    template: `
     <app-notification-preference-row
       [row]="row"
       [showWarning]="showWarning"
       (rowChange)="onRowChange($event)"
     ></app-notification-preference-row>
   `,
+    standalone: false
 })
 class HostComponent {
   row: NotificationPreferenceRow = {
@@ -54,14 +55,14 @@ class HostComponent {
   }
 }
 
-describe('NotificationPreferenceRowComponent (DOM — real p-inputSwitch, OBRS-141 veto revert)', () => {
+describe('NotificationPreferenceRowComponent (DOM — real p-toggleSwitch, OBRS-141 veto revert)', () => {
   let fixture: ComponentFixture<HostComponent>;
   let host: HostComponent;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [NotificationPreferenceRowComponent, HostComponent],
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), InputSwitchModule],
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), ToggleSwitchModule],
     }).compileComponents();
   });
 
@@ -80,12 +81,12 @@ describe('NotificationPreferenceRowComponent (DOM — real p-inputSwitch, OBRS-1
   }));
 
   function switchEl(index: number): HTMLElement {
-    return fixture.debugElement.queryAll(By.css('.p-inputswitch'))[index].nativeElement;
+    return fixture.debugElement.queryAll(By.css('.p-toggleswitch'))[index].nativeElement;
   }
 
   it('reverts the switch visually when the host vetoes turning off the last channel on a critical row', fakeAsync(() => {
     // Sanity: email switch starts checked (row.emailEnabled = true, the only channel on).
-    expect(switchEl(0).classList).toContain('p-inputswitch-checked');
+    expect(switchEl(0).classList).toContain('p-toggleswitch-checked');
 
     switchEl(0).click();
     fixture.detectChanges();
@@ -93,7 +94,7 @@ describe('NotificationPreferenceRowComponent (DOM — real p-inputSwitch, OBRS-1
     // PrimeNG's InputSwitch flips its own internal `modelValue` synchronously
     // on click, before the host ever sees the emitted change — this is the
     // "lie" the switch would keep telling without the row's resync fix.
-    expect(switchEl(0).classList).not.toContain('p-inputswitch-checked');
+    expect(switchEl(0).classList).not.toContain('p-toggleswitch-checked');
 
     tick(); // flush the row component's macrotask (setTimeout) resync
     fixture.detectChanges();
@@ -101,7 +102,7 @@ describe('NotificationPreferenceRowComponent (DOM — real p-inputSwitch, OBRS-1
     // Host vetoed (critical row, both channels would be off) — the model
     // never moved, and now the switch must be reverted to match it.
     expect(host.row.emailEnabled).toBe(true);
-    expect(switchEl(0).classList).toContain('p-inputswitch-checked');
+    expect(switchEl(0).classList).toContain('p-toggleswitch-checked');
   }));
 
   it('does not flicker/revert an accepted change (non-critical row may go both-off)', fakeAsync(() => {
@@ -121,7 +122,7 @@ describe('NotificationPreferenceRowComponent (DOM — real p-inputSwitch, OBRS-1
     fixture.detectChanges();
 
     expect(host.row.emailEnabled).toBe(false);
-    expect(switchEl(0).classList).not.toContain('p-inputswitch-checked');
+    expect(switchEl(0).classList).not.toContain('p-toggleswitch-checked');
   }));
 
   it('reverts the SMS switch on veto too (last-channel rule applies per-channel)', fakeAsync(() => {
@@ -137,7 +138,7 @@ describe('NotificationPreferenceRowComponent (DOM — real p-inputSwitch, OBRS-1
     tick(); // flush NgModel's deferred writeValue microtask for the changed values
     fixture.detectChanges();
 
-    expect(switchEl(1).classList).toContain('p-inputswitch-checked');
+    expect(switchEl(1).classList).toContain('p-toggleswitch-checked');
 
     switchEl(1).click();
     fixture.detectChanges();
@@ -145,6 +146,6 @@ describe('NotificationPreferenceRowComponent (DOM — real p-inputSwitch, OBRS-1
     fixture.detectChanges();
 
     expect(host.row.smsEnabled).toBe(true);
-    expect(switchEl(1).classList).toContain('p-inputswitch-checked');
+    expect(switchEl(1).classList).toContain('p-toggleswitch-checked');
   }));
 });

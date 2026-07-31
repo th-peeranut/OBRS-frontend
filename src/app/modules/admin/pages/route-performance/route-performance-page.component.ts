@@ -18,9 +18,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * by net revenue, plus totals tiles. Bars use the server `revenueSharePct`; money is display-only.
  */
 @Component({
-  selector: 'app-route-performance-page',
-  templateUrl: './route-performance-page.component.html',
-  styleUrl: './route-performance-page.component.scss',
+    selector: 'app-route-performance-page',
+    templateUrl: './route-performance-page.component.html',
+    styleUrl: './route-performance-page.component.scss',
+    standalone: false
 })
 export class RoutePerformancePageComponent implements OnInit, OnDestroy {
   protected data: RoutePerformanceDto | null = null;

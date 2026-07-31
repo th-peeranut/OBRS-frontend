@@ -23,9 +23,10 @@ import {
 } from '../../shared/constants/thai-msisdn';
 
 @Component({
-  selector: 'app-register',
-  templateUrl: './register.component.html',
-  styleUrl: './register.component.scss',
+    selector: 'app-register',
+    templateUrl: './register.component.html',
+    styleUrl: './register.component.scss',
+    standalone: false
 })
 export class RegisterComponent implements OnDestroy {
   isShowPassword: boolean = false;

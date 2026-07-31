@@ -46,9 +46,10 @@ import {
 // during the refresh — do not reorder this to await reloadStructure before
 // the close/alert.
 @Component({
-  selector: 'app-promotion-form-modal',
-  templateUrl: './promotion-form-modal.component.html',
-  styleUrl: './promotion-form-modal.component.scss',
+    selector: 'app-promotion-form-modal',
+    templateUrl: './promotion-form-modal.component.html',
+    styleUrl: './promotion-form-modal.component.scss',
+    standalone: false
 })
 export class PromotionFormModalComponent implements OnChanges {
   @Input() isOpen = false;

@@ -37,9 +37,10 @@ import {
  * this split and is untouched.
  */
 @Component({
-  selector: 'app-vehicles-page',
-  templateUrl: './vehicles-page.component.html',
-  styleUrl: './vehicles-page.component.scss',
+    selector: 'app-vehicles-page',
+    templateUrl: './vehicles-page.component.html',
+    styleUrl: './vehicles-page.component.scss',
+    standalone: false
 })
 export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected vehicles: VehicleRow[] = [];

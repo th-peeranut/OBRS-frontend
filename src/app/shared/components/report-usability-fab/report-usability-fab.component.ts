@@ -14,9 +14,10 @@ interface SelectOption {
 }
 
 @Component({
-  selector: 'app-report-usability-fab',
-  templateUrl: './report-usability-fab.component.html',
-  styleUrl: './report-usability-fab.component.scss',
+    selector: 'app-report-usability-fab',
+    templateUrl: './report-usability-fab.component.html',
+    styleUrl: './report-usability-fab.component.scss',
+    standalone: false
 })
 export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
   protected isModalOpen = false;

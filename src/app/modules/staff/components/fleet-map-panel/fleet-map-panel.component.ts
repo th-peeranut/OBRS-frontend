@@ -44,9 +44,10 @@ function escapeHtml(value: string): string {
  *      exists (§4.7).
  */
 @Component({
-  selector: 'app-fleet-map-panel',
-  templateUrl: './fleet-map-panel.component.html',
-  styleUrl: './fleet-map-panel.component.scss',
+    selector: 'app-fleet-map-panel',
+    templateUrl: './fleet-map-panel.component.html',
+    styleUrl: './fleet-map-panel.component.scss',
+    standalone: false
 })
 export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestroy {
   @Input() vehicles: FleetPositionRespDto[] = [];

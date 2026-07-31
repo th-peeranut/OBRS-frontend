@@ -23,9 +23,10 @@ import {
 } from './routes.mappers';
 
 @Component({
-  selector: 'app-routes-page',
-  templateUrl: './routes-page.component.html',
-  styleUrl: './routes-page.component.scss',
+    selector: 'app-routes-page',
+    templateUrl: './routes-page.component.html',
+    styleUrl: './routes-page.component.scss',
+    standalone: false
 })
 export class RoutesPageComponent implements OnInit, OnDestroy {
   protected routes: RouteRow[] = [];

@@ -7,7 +7,7 @@
     {{ "MY_BOOKINGS.RESCHEDULE.DATE_LABEL" | translate }}
   </label>
 
-  <p-calendar
+  <p-datePicker
     inputId="reschedule-date-input"
     dateFormat="dd/mm/yy"
     [showIcon]="true"
@@ -22,5 +22,5 @@
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
-  </p-calendar>
+  </p-datePicker>
 </div>

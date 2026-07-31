@@ -40,9 +40,10 @@ import { AnalyticsRouteScopeService } from '../../../services/analytics/analytic
  * to unsubscribe.
  */
 @Component({
-  selector: 'app-analytics-consent-banner',
-  templateUrl: './analytics-consent-banner.component.html',
-  styleUrl: './analytics-consent-banner.component.scss',
+    selector: 'app-analytics-consent-banner',
+    templateUrl: './analytics-consent-banner.component.html',
+    styleUrl: './analytics-consent-banner.component.scss',
+    standalone: false
 })
 export class AnalyticsConsentBannerComponent {
   /**

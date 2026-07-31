@@ -24,9 +24,10 @@ import {
 } from '../../../../shared/constants/thai-msisdn';
 
 @Component({
-  selector: 'app-booker-info-form',
-  templateUrl: './booker-info-form.component.html',
-  styleUrl: './booker-info-form.component.scss',
+    selector: 'app-booker-info-form',
+    templateUrl: './booker-info-form.component.html',
+    styleUrl: './booker-info-form.component.scss',
+    standalone: false
 })
 export class BookerInfoFormComponent implements OnInit, OnDestroy {
   bookerForm: FormGroup;

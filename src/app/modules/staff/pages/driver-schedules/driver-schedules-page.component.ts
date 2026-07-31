@@ -17,9 +17,10 @@ interface DriverScheduleRow {
 }
 
 @Component({
-  selector: 'app-driver-schedules-page',
-  templateUrl: './driver-schedules-page.component.html',
-  styleUrl: './driver-schedules-page.component.scss',
+    selector: 'app-driver-schedules-page',
+    templateUrl: './driver-schedules-page.component.html',
+    styleUrl: './driver-schedules-page.component.scss',
+    standalone: false
 })
 export class DriverSchedulesPageComponent implements OnInit, OnDestroy {
   protected rows: DriverScheduleRow[] = [];

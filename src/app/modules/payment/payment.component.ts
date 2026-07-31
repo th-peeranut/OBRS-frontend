@@ -18,9 +18,10 @@ import { normalizeAnalyticsPaymentMethod } from '../../shared/lib/analytics-paym
 type PaymentTab = 'creditcard' | 'qrcode';
 
 @Component({
-  selector: 'app-payment',
-  templateUrl: './payment.component.html',
-  styleUrl: './payment.component.scss',
+    selector: 'app-payment',
+    templateUrl: './payment.component.html',
+    styleUrl: './payment.component.scss',
+    standalone: false
 })
 export class PaymentComponent {
   activePaymentTab: PaymentTab = 'creditcard';

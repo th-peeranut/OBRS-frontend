@@ -33,7 +33,7 @@ import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { PrimeNGConfig } from 'primeng/api';
+import { PrimeNG } from 'primeng/config';
 import { BehaviorSubject, Subject, of } from 'rxjs';
 
 import { staffRoutes } from './staff/staff.module';
@@ -52,7 +52,10 @@ import { AdminApiService } from '../services/admin/admin-api.service';
 import { BadgeSocketService } from '../services/admin/badge-socket.service';
 import { environment } from '../../environments/environment';
 
-@Component({ selector: 'app-notification-bell', template: '' })
+@Component({
+    selector: 'app-notification-bell', template: '',
+    standalone: false
+})
 class NotificationBellStubComponent {}
 
 /** Roles that can enter each shell, per app-routing.module.ts. */
@@ -157,7 +160,7 @@ async function navEntriesFor(
         },
       },
       { provide: AlertService, useValue: { success: () => {} } },
-      { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+      { provide: PrimeNG, useValue: { setTranslation: () => {} } },
       { provide: LanguageService, useValue: createLanguageServiceStub() },
       {
         provide: ThemeService,

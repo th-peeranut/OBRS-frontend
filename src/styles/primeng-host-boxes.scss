@@ -19,11 +19,21 @@
 // that over a 27-page sweep and carded the widening instead, which is this file
 // plus 12 more pages in `e2e/support/host-boxes.ts`.
 //
-// BOUND TO THE HOST TAG, DELIBERATELY. Not to `.p-tabview`, `.p-tabview-panel`
-// or `.p-calendar` — those class names are PrimeNG's own internal DOM, and a
+// BOUND TO THE HOST TAG, DELIBERATELY. Not to `.p-tabs`, `.p-tabpanel`
+// or `.p-datepicker` — those class names are PrimeNG's own internal DOM, and a
 // PrimeNG upgrade that renames them would leave this rule matching nothing,
-// silently, with no diff to review. The tag is the public API of the component
-// and is the one thing an upgrade cannot quietly change.
+// silently, with no diff to review. The tag is the public API of the component,
+// so it is the more stable of the two.
+//
+// OBRS-915 CORRECTION: the original sentence here read "the one thing an
+// upgrade cannot quietly change", and PrimeNG 19 changed two of these four —
+// `p-tabview` -> `p-tabs`, `p-calendar` -> `p-datePicker`. The failure mode this
+// comment warns about is real and applies to the tag as well: a selector naming
+// a tag nothing renders any more is not an error, it is a rule that stops
+// applying, and the only thing that catches it is the geometry spec below.
+// Binding to the tag is still the better choice — it changes once per major
+// instead of freely — but it is not immune, so this list belongs on the sweep
+// list of every future PrimeNG upgrade card.
 //
 // SPECIFICITY: 0-0-1, the weakest a rule can be. That is intentional. Anything
 // a component or theme has to say about these elements outranks it, and all
@@ -34,9 +44,19 @@
 // before and after, and fails past 0.5px. See
 // docs/manual-tests/OBRS-776-primeng-host-boxes.md.
 // ============================================================================
-p-tabview,
+// OBRS-915 ADDITION: `p-tabpanels`. PrimeNG 19's Tabs is not a rename of
+// TabView, it is a restructure — one `p-tabView` element became five nested
+// custom elements, and `p-tabpanels` is a NEW host that did not exist to be
+// measured when this list was written. The sweep found it malformed the first
+// time the migrated tree was measured (`malformed=1 ["p-tabpanels"]`), which is
+// the same inline-box defect the header above describes, arriving through a tag
+// nobody had to forget — it simply had no history. `p-tablist` and `p-tab` came
+// through the same restructure and were measured NOT malformed, so they are
+// deliberately absent: this rule is for the boxes that need it.
+p-tabs,
+p-tabpanels,
 p-tabpanel,
 p-card,
-p-calendar {
+p-datePicker {
   display: block;
 }

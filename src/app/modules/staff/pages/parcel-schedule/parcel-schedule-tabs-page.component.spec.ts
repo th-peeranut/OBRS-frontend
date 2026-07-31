@@ -25,10 +25,16 @@ import { DriverSchedulesStore } from '../driver-schedules/driver-schedules.store
 import { StaffSchedulesStore } from '../staff-schedules/staff-schedules.store';
 import { ParcelScheduleTabsPageComponent } from './parcel-schedule-tabs-page.component';
 
-@Component({ selector: 'app-parcel-verify-list-page', template: '<div id="verify-list"></div>' })
+@Component({
+    selector: 'app-parcel-verify-list-page', template: '<div id="verify-list"></div>',
+    standalone: false
+})
 class VerifyListStubComponent {}
 
-@Component({ selector: 'app-parcel-delivery-list-page', template: '<div id="handover-list"></div>' })
+@Component({
+    selector: 'app-parcel-delivery-list-page', template: '<div id="handover-list"></div>',
+    standalone: false
+})
 class DeliveryListStubComponent {
   @Input() scheduleId?: number;
 }

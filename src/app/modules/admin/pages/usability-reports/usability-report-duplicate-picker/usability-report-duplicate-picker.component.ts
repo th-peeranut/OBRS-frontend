@@ -23,9 +23,10 @@ import { statusClass as statusClassPure } from '../usability-reports-page.mapper
 // picker); backdrop-click naturally only hits the picker's own (topmost,
 // full-viewport) backdrop element.
 @Component({
-  selector: 'app-usability-report-duplicate-picker',
-  templateUrl: './usability-report-duplicate-picker.component.html',
-  styleUrl: './usability-report-duplicate-picker.component.scss',
+    selector: 'app-usability-report-duplicate-picker',
+    templateUrl: './usability-report-duplicate-picker.component.html',
+    styleUrl: './usability-report-duplicate-picker.component.scss',
+    standalone: false
 })
 export class UsabilityReportDuplicatePickerComponent implements OnChanges {
   @Input() candidates: UsabilityReportSummary[] = [];

@@ -39,9 +39,10 @@ const AMOUNT_MAX_DECIMALS = 2;
 // there is no second detail fetch to gate on (§4.2 of the UX spec, same
 // reasoning as vehicle-maintenance-panel.openEditModal).
 @Component({
-  selector: 'app-expense-form-modal',
-  templateUrl: './expense-form-modal.component.html',
-  styleUrl: './expense-form-modal.component.scss',
+    selector: 'app-expense-form-modal',
+    templateUrl: './expense-form-modal.component.html',
+    styleUrl: './expense-form-modal.component.scss',
+    standalone: false
 })
 export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
   @Input() isOpen = false;

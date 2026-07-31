@@ -4,7 +4,7 @@ import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { BoardingListComponent } from './boarding-list.component';
 import { BoardingListItemDto, StaffApiService } from '../../../services/staff/staff-api.service';
@@ -2341,7 +2341,7 @@ describe('BoardingListComponent — OBRS-272 delay pill / indicator / dialog (Te
   }): void {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, ReactiveFormsModule, CalendarModule, TranslateModule.forRoot()],
+      imports: [CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent, AdminModalBackdropDirective],
       providers: [
         BoardingListStore,

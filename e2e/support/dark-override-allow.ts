@@ -61,7 +61,7 @@ export const DARK_OVERRIDE_ALLOW: Record<string, string> = {
   // direction: a new dead declaration now has nowhere to hide, and the next
   // person to add one has to either fix it or write down whose it is.
 
-  // NOT registered, on purpose: `.p-selectbutton .p-button.p-highlight ::
+  // NOT registered, on purpose: `.p-selectbutton .p-togglebutton.p-togglebutton-checked ::
   // background-color`. The first census flagged it (painted transparent, wants
   // #4bc2f7), and a three-run probe showed why -- PrimeNG settles that fill
   // after first paint, so it reads transparent on some loads and #4bc2f7 on

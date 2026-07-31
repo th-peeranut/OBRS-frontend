@@ -34,9 +34,10 @@ import {
 } from './usability-reports-page.mappers';
 
 @Component({
-  selector: 'app-usability-reports-page',
-  templateUrl: './usability-reports-page.component.html',
-  styleUrl: './usability-reports-page.component.scss',
+    selector: 'app-usability-reports-page',
+    templateUrl: './usability-reports-page.component.html',
+    styleUrl: './usability-reports-page.component.scss',
+    standalone: false
 })
 export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // OBRS-378: the list is now server-filtered by status (?status=), so

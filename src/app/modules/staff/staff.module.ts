@@ -1,8 +1,8 @@
 import { inject, NgModule } from '@angular/core';
 import { Router, RouterModule, Routes, UrlTree } from '@angular/router';
-import { CalendarModule } from 'primeng/calendar';
-import { DropdownModule } from 'primeng/dropdown';
-import { TabViewModule } from 'primeng/tabview';
+import { DatePickerModule } from 'primeng/datepicker';
+import { SelectModule } from 'primeng/select';
+import { TabsModule } from 'primeng/tabs';
 import { BadgeModule } from 'primeng/badge';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -261,9 +261,9 @@ export const staffRoutes: Routes = [
   imports: [
     SharedModule,
     RouterModule.forChild(staffRoutes),
-    CalendarModule,
-    DropdownModule,
-    TabViewModule,
+    DatePickerModule,
+    SelectModule,
+    TabsModule,
     BadgeModule,
     ProgressSpinnerModule,
     InputNumberModule,

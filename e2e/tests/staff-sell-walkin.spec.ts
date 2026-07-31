@@ -678,16 +678,16 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     await page.locator('.trip-row').first().click();
 
     // p-tabView appears with 3 tabs
-    await expect(page.locator('p-tabview')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('p-tabs')).toBeVisible({ timeout: 10_000 });
 
     // PrimeNG tabview: 3 li[role="presentation"] for real tabs + 1 ink-bar li[aria-hidden="true"].
     // The real tab anchors have role="tab" inside each presentation li.
-    await expect(page.locator('.p-tabview-nav a[role="tab"]')).toHaveCount(3, { timeout: 5_000 });
+    await expect(page.locator('.p-tablist-tab-list [role="tab"]')).toHaveCount(3, { timeout: 5_000 });
 
     // Tab labels
-    await expect(page.locator('.p-tabview-nav')).toContainText('Ticket Sales');
-    await expect(page.locator('.p-tabview-nav')).toContainText('Trip Details');
-    await expect(page.locator('.p-tabview-nav')).toContainText('Boarding');
+    await expect(page.locator('.p-tablist-tab-list')).toContainText('Ticket Sales');
+    await expect(page.locator('.p-tablist-tab-list')).toContainText('Trip Details');
+    await expect(page.locator('.p-tablist-tab-list')).toContainText('Boarding');
   });
 
   test('AC-10: Trip Details tab loads the directly-editable form (app-trip-details-edit-form)', async ({ page }) => {
@@ -716,7 +716,7 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     await page.locator('.trip-row').first().click();
 
     // Click Trip Details tab
-    await page.locator('.p-tabview-nav').getByText('Trip Details').click();
+    await page.locator('.p-tablist-tab-list').getByText('Trip Details').click();
 
     // The directly-editable form component is rendered inside the tab.
     await expect(page.locator('app-trip-details-edit-form')).toBeVisible({ timeout: 10_000 });
@@ -965,7 +965,7 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     );
     await gotoSellPage(page);
     // OBRS-185 canonical shared date field: in-input calendar icon (.app-date-field-icon)
-    // rendered inside the p-calendar (styleClass="app-date-field"), iconDisplay='input'.
+    // rendered inside the p-datepicker (styleClass="app-date-field"), iconDisplay='input'.
     await expect(page.locator('app-walk-in-trip-browser .app-date-field-icon')).toBeVisible();
     // The date input fills its container (not crushed into a sliver).
     const input = page.locator('app-walk-in-trip-browser .app-date-field input.p-inputtext');

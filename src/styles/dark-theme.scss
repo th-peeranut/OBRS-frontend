@@ -489,17 +489,33 @@ body.is-dark {
 // =============================================================================
 // 13. PrimeNG calendar (booking widget date, payment expiry)
 // =============================================================================
-// The p-calendar input keeps PrimeNG's light theme (white field) on the dark
-// surface. Dark-theme the input and the open datepicker overlay. The overlay
-// renders under body (inline or appendTo="body"), so body.is-dark reaches it.
+// The date field keeps PrimeNG's light theme (white field) on the dark surface.
+// Dark-theme the input and the open datepicker overlay. The overlay renders
+// under body (inline or appendTo="body"), so body.is-dark reaches it.
+//
+// OBRS-915 — WHY THE OVERLAY IS `.p-datepicker-panel` AND NOT `.p-datepicker`.
+// In v17 the two halves of this component had different class names: the inline
+// wrapper span was `.p-calendar` and the popup was `.p-datepicker`, so a rule
+// written for one could not reach the other. v19 renamed the WRAPPER to
+// `.p-datepicker` and moved the popup to `.p-datepicker-panel` — so a
+// mechanical `.p-calendar` -> `.p-datepicker` rename leaves TWO rules pointing
+// at the same element, and the popup's card fill lands on the inline field.
+//
+// That is not hypothetical, it shipped: the build was green, `ng test` was
+// green, and the wrapper quietly painted `$dk-bg-card` behind the date input.
+// What caught it was `customer-contrast-gate` — the backdrop it measures behind
+// that input moved from `#22263a` to `#1a1d27`, which renamed the finding's key
+// and tripped the gate's STALE-ENTRY check. The gate was not looking for this;
+// it went red because a debt entry stopped matching, and the entry stopped
+// matching because the colour underneath had changed.
 body.is-dark {
-  .p-calendar .p-inputtext {
+  .p-datepicker .p-inputtext {
     background-color: $dk-bg-input !important;
     border-color: $dk-border !important;
     color: $dk-text !important;
   }
 
-  .p-datepicker {
+  .p-datepicker-panel {
     background: $dk-bg-card;
     border-color: $dk-border;
     color: $dk-text;
@@ -509,14 +525,20 @@ body.is-dark {
       color: $dk-text;
       border-bottom-color: $dk-border;
 
-      .p-datepicker-title .p-link,
-      .p-datepicker-prev,
-      .p-datepicker-next { color: $dk-text; }
+      // OBRS-915: the month/year picker in the header used to be a `.p-link`;
+      // v19 gives each its own class.
+      .p-datepicker-title .p-datepicker-select-month,
+      .p-datepicker-title .p-datepicker-select-year,
+      .p-datepicker-prev-button,
+      .p-datepicker-next-button { color: $dk-text; }
     }
 
+    // OBRS-915: the selected day is `.p-datepicker-day-selected` now, not
+    // `.p-highlight` (which v19 removed everywhere). Left unported, the selected
+    // date would have gone back to the light-theme fill on a dark panel.
     table td > span { color: $dk-text; }
-    table td > span.p-highlight { background: $dk-accent; color: #0f1117; }
-    table td > span:not(.p-disabled):not(.p-highlight):hover {
+    table td > span.p-datepicker-day-selected { background: $dk-accent; color: #0f1117; }
+    table td > span:not(.p-disabled):not(.p-datepicker-day-selected):hover {
       background: rgba(75, 194, 247, 0.15);
     }
     table td.p-datepicker-today > span {
@@ -627,7 +649,7 @@ body.is-dark {
 // looked like it "did nothing" once scrolled down). Theme its surfaces to the
 // dark palette and lift the (dark $text-*) copy to light. Scoped under the
 // `app-route-map-home` component host (which wraps this whole block in the DOM)
-// so the global PrimeNG rules below (.p-selectbutton / .p-tabview-nav / .p-badge)
+// so the global PrimeNG rules below (.p-selectbutton / .p-tablist-tab-list / .p-badge)
 // can't leak onto the same components elsewhere — the app-wide usability FAB's
 // p-selectButton, or the staff walk-in p-tabView inside .admin-shell — once dark
 // mode (which lives on <body>, app-wide) is on. The Google-map tiles themselves
@@ -708,38 +730,43 @@ body.is-dark app-route-map-home {
 
   // PrimeNG direction selector (p-selectButton) — the light pill track
   //
-  // OBRS-774: `:not(.p-highlight)` says what this rule already meant. The
-  // `.p-highlight` block below overrides it on the picked button anyway, so
-  // this changes nothing on screen — it stops the rule CLAIMING an element it
-  // never paints, which is the difference between "this declaration is dead"
-  // and "no unpicked button was on screen to judge it by". A home page with one
-  // route pair renders exactly one button and it is the highlighted one.
+  // OBRS-774: `:not(checked)` says what this rule already meant. The checked
+  // block below overrides it on the picked button anyway, so this changes
+  // nothing on screen — it stops the rule CLAIMING an element it never paints,
+  // which is the difference between "this declaration is dead" and "no unpicked
+  // button was on screen to judge it by". A home page with one route pair
+  // renders exactly one button and it is the checked one.
+  // OBRS-915: v19 renders these as <p-togglebutton> with
+  // `.p-togglebutton-checked`; `.p-button` / `.p-highlight` are both gone here.
   .p-selectbutton { background: $dk-bg-soft !important; }
-  .p-selectbutton .p-button:not(.p-highlight) { color: $dk-text-muted !important; }
-  .p-selectbutton .p-button.p-highlight {
+  .p-selectbutton .p-togglebutton:not(.p-togglebutton-checked) { color: $dk-text-muted !important; }
+  .p-selectbutton .p-togglebutton.p-togglebutton-checked {
     background: $dk-accent !important;
     color: $dk-bg !important;
   }
 
   // PrimeNG tab nav (จุดรับ / จุดส่ง) inside the stop-list card
-  .p-tabview-nav { border-bottom-color: $dk-border !important; }
-  // Same as the select-button above (OBRS-774): the `li.p-highlight` block
-  // three rules down already owns the active tab, so scoping the inactive
-  // treatment to `li:not(.p-highlight)` is a no-op on screen and stops this
-  // rule being judged against a tab it does not paint.
-  .p-tabview-nav li:not(.p-highlight) .p-tabview-nav-link {
+  .p-tablist-tab-list { border-bottom-color: $dk-border !important; }
+  // Same as the select-button above (OBRS-774): the active-tab block three
+  // rules down already owns it, so scoping the inactive treatment to
+  // `:not(.p-tab-active)` is a no-op on screen and stops this rule being judged
+  // against a tab it does not paint.
+  //
+  // OBRS-915: v19 has no <li> wrapper — <p-tab> is the list item and carries
+  // `.p-tab` / `.p-tab-active` itself, so the descendant hop is gone.
+  .p-tablist-tab-list .p-tab:not(.p-tab-active) {
     color: $dk-text-muted !important;
     background: transparent !important;
   }
-  .p-tabview-nav li:not(.p-highlight) .p-tabview-nav-link:hover {
+  .p-tablist-tab-list .p-tab:not(.p-tab-active):hover {
     color: $dk-accent !important;
     background: rgba(75, 194, 247, 0.10) !important;
   }
-  .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  .p-tablist-tab-list .p-tab.p-tab-active {
     color: $dk-accent !important;
     background: $dk-bg-soft !important;
   }
-  .p-tabview-panels { background: transparent !important; }
+  .p-tabpanels { background: transparent !important; }
 
   // Count badges — keep the soft pill but lift the number to light
   .p-badge.p-badge-info {
@@ -862,16 +889,16 @@ body.is-dark {
   // PrimeNG InputSwitch reads fine unchecked/checked on light surfaces, but
   // the unchecked light-grey track (#d1d5db) is low-contrast on the dark
   // card — lift it to the dark border/text-muted pair.
-  .npref-row .p-inputswitch:not(.p-inputswitch-checked) .p-inputswitch-slider {
+  .npref-row .p-toggleswitch:not(.p-toggleswitch-checked) .p-toggleswitch-slider {
     background: $dk-border-muted;
   }
-  .npref-row .p-inputswitch:not(.p-inputswitch-checked):not(.p-disabled):hover .p-inputswitch-slider {
+  .npref-row .p-toggleswitch:not(.p-toggleswitch-checked):not(.p-disabled):hover .p-toggleswitch-slider {
     background: $dk-border;
   }
-  .npref-row .p-inputswitch.p-inputswitch-checked .p-inputswitch-slider {
+  .npref-row .p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider {
     background: $dk-accent;
   }
-  .npref-row .p-inputswitch.p-inputswitch-checked:not(.p-disabled):hover .p-inputswitch-slider {
+  .npref-row .p-toggleswitch.p-toggleswitch-checked:not(.p-disabled):hover .p-toggleswitch-slider {
     background: $dk-accent-hover;
   }
 }
@@ -978,24 +1005,35 @@ body.is-dark app-report-usability-fab {
     color: $dk-danger;
   }
 
-  // --- the p-selectButton: the actual white blocks ---
+  // --- the p-selectButton: the actual white blocks (OBRS-520) ---
   // PrimeNG paints an unselected option white with dark grey text and only
-  // themes the `.p-highlight` one, so in dark mode the two unpicked categories
-  // read as bright rectangles on the dialog. `!important` is required: the
-  // PrimeNG theme stylesheet is loaded after this file in angular.json's global
-  // styles array, so an equal-specificity rule here would lose.
-  .p-selectbutton .p-button {
+  // themes the checked one, so in dark mode the two unpicked categories read as
+  // bright rectangles on the dialog.
+  //
+  // OBRS-915: `.p-button` -> `.p-togglebutton` and `.p-highlight` ->
+  // `.p-togglebutton-checked`. This is THE rule that OBRS-520's white-block
+  // regression is about, so a stale selector here would bring that bug straight
+  // back — and it is the one this card's dark-mode AC checks.
+  //
+  // The `!important` no longer earns its keep the way the old comment said: it
+  // was there because the PrimeNG theme stylesheet was listed after this file in
+  // angular.json's global styles, and that stylesheet is gone (v18 deleted the
+  // CSS-file theming system). It is kept because PrimeNG's generated styles now
+  // sit in the `primeng` cascade layer, and an unlayered rule already outranks a
+  // layered one — so the `!important` is now insurance against a future rule of
+  // ours, not against PrimeNG.
+  .p-selectbutton .p-togglebutton {
     background: $dk-bg-soft !important;
     border-color: $dk-border !important;
     color: $dk-text-muted !important;
   }
 
-  .p-selectbutton .p-button:not(.p-highlight):hover {
+  .p-selectbutton .p-togglebutton:not(.p-togglebutton-checked):hover {
     background: $dk-border-muted !important;
     color: $dk-text !important;
   }
 
-  .p-selectbutton .p-button.p-highlight {
+  .p-selectbutton .p-togglebutton.p-togglebutton-checked {
     background: $dk-accent !important;
     border-color: $dk-accent !important;
     color: #0f1117 !important; // $dk-bg — dark ink on the bright accent fill

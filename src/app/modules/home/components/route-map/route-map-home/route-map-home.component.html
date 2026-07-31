@@ -65,44 +65,55 @@
                 <span class="panel-meta ms-auto">{{ 'HOME.ROUTE_MAP.SUBTITLE' | translate }}</span>
               </div>
 
-              <p-tabView [(activeIndex)]="activeTabIndex">
-                <!-- TAB: PICKUP -->
-                <p-tabPanel>
-                  <ng-template pTemplate="header">
+              <!-- OBRS-915: TabView -> Tabs. The header moved out of the panel
+                   (it was a pTemplate="header") into its own <p-tab> inside a
+                   <p-tablist>, and tab/panel are now paired by an explicit
+                   `value` instead of by document order. `activeTabIndex` still
+                   holds the number, so the desktop and mobile strips stay in
+                   sync exactly as they did under [(activeIndex)]. -->
+              <p-tabs [(value)]="activeTabIndex">
+                <p-tablist>
+                  <p-tab [value]="0">
                     <span class="tab-header-content">
                       <span class="tab-header-label">{{ 'HOME.ROUTE_MAP.TAB_PICKUP_LABEL' | translate: { province: routeMeta.originProvinceLabel } }}</span>
                       <p-badge [value]="pickupStops.length.toString()" severity="info" styleClass="tab-header-badge"></p-badge>
                     </span>
-                  </ng-template>
-                  <app-route-stop-list
-                    [stops]="pickupStops"
-                    type="pickup"
-                    [selectedSlug]="selectedPickupSlug"
-                    [province]="routeMeta.originProvinceLabel"
-                    [distancesKm]="pickupDistancesKm"
-                    (stopSelected)="onPickupStopSelected($event)"
-                    (confirmClicked)="onConfirmPickup()"
-                  ></app-route-stop-list>
-                </p-tabPanel>
-
-                <!-- TAB: DROPOFF -->
-                <p-tabPanel>
-                  <ng-template pTemplate="header">
+                  </p-tab>
+                  <p-tab [value]="1">
                     <span class="tab-header-content">
                       <span class="tab-header-label">{{ 'HOME.ROUTE_MAP.TAB_DROPOFF_LABEL' | translate: { province: routeMeta.destinationProvinceLabel } }}</span>
                       <p-badge [value]="dropoffStops.length.toString()" severity="danger" styleClass="tab-header-badge"></p-badge>
                     </span>
-                  </ng-template>
-                  <app-route-stop-list
-                    [stops]="dropoffStops"
-                    type="dropoff"
-                    [selectedSlug]="selectedDropoffSlug"
-                    [province]="routeMeta.destinationProvinceLabel"
-                    (stopSelected)="onDropoffStopSelected($event)"
-                    (confirmClicked)="onConfirmDropoff()"
-                  ></app-route-stop-list>
-                </p-tabPanel>
-              </p-tabView>
+                  </p-tab>
+                </p-tablist>
+
+                <p-tabpanels>
+                  <!-- TAB: PICKUP -->
+                  <p-tabpanel [value]="0">
+                    <app-route-stop-list
+                      [stops]="pickupStops"
+                      type="pickup"
+                      [selectedSlug]="selectedPickupSlug"
+                      [province]="routeMeta.originProvinceLabel"
+                      [distancesKm]="pickupDistancesKm"
+                      (stopSelected)="onPickupStopSelected($event)"
+                      (confirmClicked)="onConfirmPickup()"
+                    ></app-route-stop-list>
+                  </p-tabpanel>
+
+                  <!-- TAB: DROPOFF -->
+                  <p-tabpanel [value]="1">
+                    <app-route-stop-list
+                      [stops]="dropoffStops"
+                      type="dropoff"
+                      [selectedSlug]="selectedDropoffSlug"
+                      [province]="routeMeta.destinationProvinceLabel"
+                      (stopSelected)="onDropoffStopSelected($event)"
+                      (confirmClicked)="onConfirmDropoff()"
+                    ></app-route-stop-list>
+                  </p-tabpanel>
+                </p-tabpanels>
+              </p-tabs>
             </div>
           </div>
 
@@ -168,14 +179,27 @@
 
       <!-- ===== MOBILE/TABLET (<1200px): TabView with 3 tabs ===== -->
       <ng-container *ngIf="!isDesktop">
-        <p-tabView [(activeIndex)]="activeTabIndex">
+        <p-tabs [(value)]="activeTabIndex">
 
-          <!-- TAB 1: Pickup -->
-          <p-tabPanel>
-            <ng-template pTemplate="header">
+          <p-tablist>
+            <p-tab [value]="0">
               <i class="bi bi-geo-alt me-1"></i>
               {{ 'HOME.ROUTE_MAP.TAB_PICKUP_LABEL' | translate: { province: routeMeta.originProvinceLabel } }}
-            </ng-template>
+            </p-tab>
+            <p-tab [value]="1">
+              <i class="bi bi-map me-1"></i>
+              {{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}
+            </p-tab>
+            <p-tab [value]="2">
+              <i class="bi bi-geo-alt-fill me-1"></i>
+              {{ 'HOME.ROUTE_MAP.TAB_DROPOFF_LABEL' | translate: { province: routeMeta.destinationProvinceLabel } }}
+            </p-tab>
+          </p-tablist>
+
+          <p-tabpanels>
+
+          <!-- TAB 1: Pickup -->
+          <p-tabpanel [value]="0">
 
             <app-route-stop-list
               [stops]="pickupStops"
@@ -194,14 +218,10 @@
                 [province]="routeMeta.originProvinceLabel"
               ></app-route-stop-detail-card>
             </div>
-          </p-tabPanel>
+          </p-tabpanel>
 
           <!-- TAB 2: Map -->
-          <p-tabPanel>
-            <ng-template pTemplate="header">
-              <i class="bi bi-map me-1"></i>
-              {{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}
-            </ng-template>
+          <p-tabpanel [value]="1">
 
             <div>
               <app-route-map-panel
@@ -227,14 +247,10 @@
                 [selectedDropoffStop]="selectedDropoffStop"
               ></app-route-travel-summary>
             </div>
-          </p-tabPanel>
+          </p-tabpanel>
 
           <!-- TAB 3: Dropoff -->
-          <p-tabPanel>
-            <ng-template pTemplate="header">
-              <i class="bi bi-geo-alt-fill me-1"></i>
-              {{ 'HOME.ROUTE_MAP.TAB_DROPOFF_LABEL' | translate: { province: routeMeta.destinationProvinceLabel } }}
-            </ng-template>
+          <p-tabpanel [value]="2">
 
             <app-route-stop-list
               [stops]="dropoffStops"
@@ -252,9 +268,10 @@
                 [province]="routeMeta.destinationProvinceLabel"
               ></app-route-stop-detail-card>
             </div>
-          </p-tabPanel>
+          </p-tabpanel>
 
-        </p-tabView>
+          </p-tabpanels>
+        </p-tabs>
       </ng-container>
 
     </ng-container><!-- /loaded -->

@@ -156,8 +156,8 @@ test.describe('OBRS-73 – Non-blocking confirm guidance', () => {
     // (the toast auto-dismisses; we don't need to click anything)
 
     // AC2: Drop-off tab is ALREADY active without any dismissal
-    const dropoffTab = page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first();
-    await expect(dropoffTab).toHaveClass(/p-highlight/);
+    const dropoffTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first();
+    await expect(dropoffTab).toHaveClass(/p-tab-active/);
 
     // AC2: can immediately click a dropoff stop without dismissing anything
     const dropoffRow = page.locator('.stop-row--dropoff').first();
@@ -187,7 +187,7 @@ test.describe('OBRS-73 – Non-blocking confirm guidance', () => {
     await waitForRouteMapLoaded(page);
 
     // Switch to dropoff tab and select only the dropoff; leave pickup unselected
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const dropoffRow = page.locator('.stop-row--dropoff').first();
     await dropoffRow.waitFor({ state: 'visible' });
     await dropoffRow.click();
@@ -202,8 +202,8 @@ test.describe('OBRS-73 – Non-blocking confirm guidance', () => {
     await expect(page.locator('.swal2-backdrop-show')).toHaveCount(0);
 
     // Tab auto-switches to Pickup (tab index 0) without needing to dismiss
-    const pickupTab = page.locator('.p-tabview-nav li').filter({ hasText: 'Pickup' }).first();
-    await expect(pickupTab).toHaveClass(/p-highlight/);
+    const pickupTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Pickup' }).first();
+    await expect(pickupTab).toHaveClass(/p-tab-active/);
 
     // Can immediately click pickup row — page is not blocked
     const pickupRow = page.locator('.stop-row--pickup').first();
@@ -228,7 +228,7 @@ test.describe('OBRS-73 – Non-blocking confirm guidance', () => {
     await expect(confirmPickupBtn).toBeDisabled();
 
     // Switch to dropoff tab with no stop selected — Confirm drop-off button should be disabled
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const confirmDropoffBtn = page.locator('button', { hasText: 'Confirm drop-off' }).first();
     await confirmDropoffBtn.waitFor({ state: 'visible' });
     await expect(confirmDropoffBtn).toBeDisabled();
@@ -269,7 +269,7 @@ test.describe('OBRS-73 – Prefill and stay on /home', () => {
     await expect(pickupRow).toHaveClass(/stop-row--selected/);
 
     // Switch to dropoff tab and select dropoff
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const dropoffRow = page.locator('.stop-row--dropoff').first();
     await dropoffRow.waitFor({ state: 'visible' });
     await dropoffRow.click();
@@ -324,13 +324,13 @@ test.describe('OBRS-73 – Prefill and stay on /home', () => {
     await pickupRow.click();
 
     // Select dropoff (switch to tab first)
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const dropoffRow = page.locator('.stop-row--dropoff').first();
     await dropoffRow.waitFor({ state: 'visible' });
     await dropoffRow.click();
 
     // Switch back to Pickup tab and click "Confirm pickup"
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Pickup' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Pickup' }).first().click();
     const confirmPickupBtn = page.locator('button', { hasText: 'Confirm pickup' }).first();
     await confirmPickupBtn.waitFor({ state: 'visible' });
     await confirmPickupBtn.click();
@@ -362,7 +362,7 @@ test.describe('OBRS-73 – Prefill and stay on /home', () => {
     const pickupRow = page.locator('.stop-row--pickup').first();
     await pickupRow.click();
 
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const dropoffRow = page.locator('.stop-row--dropoff').first();
     await dropoffRow.waitFor({ state: 'visible' });
     await dropoffRow.click();

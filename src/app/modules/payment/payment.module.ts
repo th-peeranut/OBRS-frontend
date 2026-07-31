@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { PaymentComponent } from './payment.component';
 import { Routes, RouterModule } from '@angular/router';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { SharedModule } from '../../shared/shared.module';
 
 // components
@@ -42,7 +42,7 @@ const routes: Routes = [
       RouterModule.forChild(routes),
 
       // Add-ons
-      CalendarModule,
+      DatePickerModule,
       PaymentMethodsModule,
 
       // Store

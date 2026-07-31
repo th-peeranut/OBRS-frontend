@@ -166,12 +166,12 @@ test.describe('Route Map – Success State', () => {
     await expect(pickupRow.locator('.stop-time')).toContainText('05:00');
 
     // Tab header for pickup should contain the province label and badge "1"
-    const pickupTab = page.locator('.p-tabview-nav li').filter({ hasText: 'Pickup' }).first();
+    const pickupTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Pickup' }).first();
     await expect(pickupTab).toBeVisible();
     await expect(pickupTab.locator('.p-badge')).toContainText('1');
 
     // Switch to dropoff tab
-    const dropoffTab = page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first();
+    const dropoffTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first();
     await dropoffTab.click();
 
     // Use .stop-row--dropoff to avoid matching the hidden pickup row still in DOM
@@ -201,7 +201,7 @@ test.describe('Route Map – Success State', () => {
     await expect(pickupRow).toHaveClass(/stop-row--selected/);
 
     // Switch to dropoff tab
-    const dropoffTab = page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first();
+    const dropoffTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first();
     await dropoffTab.click();
 
     // Use .stop-row--dropoff to avoid matching the hidden pickup row still in DOM
@@ -261,8 +261,8 @@ test.describe('Route Map – Success State', () => {
     expect(new URL(page.url()).pathname).toBe('/');
 
     // The active tab should have ALREADY switched to Drop-off (no dismiss needed)
-    const dropoffTab = page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first();
-    await expect(dropoffTab).toHaveClass(/p-highlight/);
+    const dropoffTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first();
+    await expect(dropoffTab).toHaveClass(/p-tab-active/);
 
     // Toast interaction does NOT block the page — we can click the dropoff list immediately
     const dropoffRow = page.locator('.stop-row--dropoff').first();
@@ -279,7 +279,7 @@ test.describe('Route Map – Success State', () => {
     await waitForRouteMapLoaded(page);
 
     // Switch to dropoff tab and select only dropoff (pickup stays unselected)
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const dropoffRow = page.locator('.stop-row--dropoff').first();
     await dropoffRow.waitFor({ state: 'visible' });
     await dropoffRow.click();
@@ -301,8 +301,8 @@ test.describe('Route Map – Success State', () => {
     expect(new URL(page.url()).pathname).toBe('/');
 
     // The active tab should have ALREADY switched back to Pickup (no dismiss needed)
-    const pickupTab = page.locator('.p-tabview-nav li').filter({ hasText: 'Pickup' }).first();
-    await expect(pickupTab).toHaveClass(/p-highlight/);
+    const pickupTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Pickup' }).first();
+    await expect(pickupTab).toHaveClass(/p-tab-active/);
 
     // Page is not blocked — can click pickup row immediately
     const pickupRow = page.locator('.stop-row--pickup').first();
@@ -327,7 +327,7 @@ test.describe('Route Map – Success State', () => {
     await pickupRow.click();
 
     // Switch to dropoff tab and select dropoff stop
-    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const dropoffRow = page.locator('.stop-row--dropoff').first();
     await dropoffRow.waitFor({ state: 'visible' });
     await dropoffRow.click();
@@ -403,7 +403,7 @@ test.describe('Route Map – Success State', () => {
     await page.waitForTimeout(800);
 
     // Pickup tab label in Thai.
-    const pickupTabTh = page.locator('.p-tabview-nav li').filter({ hasText: 'จุดรับ' }).first();
+    const pickupTabTh = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'จุดรับ' }).first();
     await expect(pickupTabTh).toBeVisible();
 
     // Confirm button in Thai
@@ -420,7 +420,7 @@ test.describe('Route Map – Success State', () => {
     await page.waitForTimeout(800);
 
     // Pickup tab label in Chinese: "上车 (Chonburi)"
-    const pickupTabZh = page.locator('.p-tabview-nav li').filter({ hasText: '上车' }).first();
+    const pickupTabZh = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: '上车' }).first();
     await expect(pickupTabZh).toBeVisible();
 
     // Confirm button in Chinese

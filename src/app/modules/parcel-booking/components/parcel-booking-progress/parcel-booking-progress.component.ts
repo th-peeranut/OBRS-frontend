@@ -14,9 +14,10 @@ export interface ParcelBookingProgressStep {
  * clean). No store/router injection — pure `@Input()`s.
  */
 @Component({
-  selector: 'app-parcel-booking-progress',
-  templateUrl: './parcel-booking-progress.component.html',
-  styleUrl: './parcel-booking-progress.component.scss',
+    selector: 'app-parcel-booking-progress',
+    templateUrl: './parcel-booking-progress.component.html',
+    styleUrl: './parcel-booking-progress.component.scss',
+    standalone: false
 })
 export class ParcelBookingProgressComponent {
   @Input() steps: ParcelBookingProgressStep[] = [];

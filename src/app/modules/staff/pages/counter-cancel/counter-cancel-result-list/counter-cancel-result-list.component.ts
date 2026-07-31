@@ -29,9 +29,10 @@ import { formatDisplayDateTime } from '../../../../../shared/lib/display-date-ti
  * have the right booking.
  */
 @Component({
-  selector: 'app-counter-cancel-result-list',
-  templateUrl: './counter-cancel-result-list.component.html',
-  styleUrl: './counter-cancel-result-list.component.scss',
+    selector: 'app-counter-cancel-result-list',
+    templateUrl: './counter-cancel-result-list.component.html',
+    styleUrl: './counter-cancel-result-list.component.scss',
+    standalone: false
 })
 export class CounterCancelResultListComponent {
   @Input() results: CounterBookingSearchResultDto[] = [];

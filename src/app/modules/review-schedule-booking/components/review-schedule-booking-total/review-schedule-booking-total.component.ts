@@ -14,9 +14,10 @@ import { selectScheduleBooking } from '../../../../shared/stores/schedule-bookin
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 
 @Component({
-  selector: 'app-review-schedule-booking-total',
-  templateUrl: './review-schedule-booking-total.component.html',
-  styleUrl: './review-schedule-booking-total.component.scss',
+    selector: 'app-review-schedule-booking-total',
+    templateUrl: './review-schedule-booking-total.component.html',
+    styleUrl: './review-schedule-booking-total.component.scss',
+    standalone: false
 })
 export class ReviewScheduleBookingTotalComponent {
   scheduleBooking: Observable<ScheduleBooking>;

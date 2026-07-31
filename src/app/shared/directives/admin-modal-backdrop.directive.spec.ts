@@ -9,7 +9,7 @@ import { AdminModalBackdropDirective } from './admin-modal-backdrop.directive';
 // un-locked page scroll as soon as the INNER modal closed, while the outer one
 // was still open. These specs fail against that old implementation.
 @Component({
-  template: `
+    template: `
     <div class="admin-modal-backdrop" *ngIf="outer" adminModalBackdrop>
       <div class="admin-modal">
         <h4 class="admin-modal-title">Outer</h4>
@@ -23,6 +23,7 @@ import { AdminModalBackdropDirective } from './admin-modal-backdrop.directive';
       </div>
     </div>
   `,
+    standalone: false
 })
 class BackdropHostComponent {
   outer = false;
@@ -92,7 +93,7 @@ describe('AdminModalBackdropDirective — body scroll lock', () => {
 // comment) but the SAME shared directive for backdrop/ESC/focus-trap/scroll-lock
 // semantics, so the dialog/title selectors must find it too.
 @Component({
-  template: `
+    template: `
     <div class="admin-modal-backdrop" *ngIf="open" adminModalBackdrop>
       <div class="mr-detail-modal">
         <h4 class="mr-detail-title">My Report</h4>
@@ -100,6 +101,7 @@ describe('AdminModalBackdropDirective — body scroll lock', () => {
       </div>
     </div>
   `,
+    standalone: false
 })
 class MrDetailBackdropHostComponent {
   open = false;
