@@ -101,30 +101,48 @@ const ROLES = [
 // own SCSS sets.
 //
 // The admin/staff shell is deliberately NOT in this list. `/admin/dashboard`,
-// `/admin/jump-seat-config`, `/admin/expenses` and `/staff/sell` all block the
-// renderer permanently in headless Chromium on this tree - each one burns its
-// full goto + screenshot + measurement timeouts and yields nothing, while `/`
-// and `/account/**` render in under 4 seconds with the same seeded session. So
-// the shell is the discriminator, not the route, and the working hypothesis is
-// the admin-only STOMP client (ADR-0043) spinning. That is an unrelated defect
-// and it must not be smuggled in as "PrimeNG evidence"; what it costs this card
-// is coverage, which is stated in the output rather than quietly dropped.
+// `/admin/jump-seat-config`, `/admin/expenses` and `/staff/sell` all blocked the
+// renderer permanently in headless Chromium - each one burned its full goto +
+// screenshot + measurement timeouts and yielded nothing, while `/` and
+// `/account/**` rendered in under 4 seconds on the same seeded session. So the
+// shell was the discriminator, not the route. That cost this card coverage, and
+// the loss was printed rather than quietly dropped.
+//
+// OBRS-939 fixed it (dev `e9a3ad0c`, "the admin shell froze the browser on every
+// page, and the API had nothing to do with it") and this branch has merged that,
+// so the admin routes are measured now. The two below were picked for what they
+// render, not for being representative pages:
+//
+//  - `/admin/expenses` renders two `p-datePicker`s -- the component this upgrade
+//    actually broke, since v19 moved `.p-datepicker` from the popup onto the
+//    wrapper. Admin resolves colour through the `--admin-*` tokens that
+//    `.admin-shell` sets, a different theming path from the customer shell, so a
+//    fix verified only on `/` says nothing about this surface.
+//  - `/admin/jump-seat-config` renders the switch. `switch-idle` matches nothing
+//    on any customer surface, so without an admin surface that role stays a
+//    permanent miss and a switch's OFF state is never measured at all.
+//
+// Each `wait` carries the v17 and the v19 spelling on purpose: the same script
+// must run against the control worktree, where these templates still say
+// `<p-inputSwitch>` and the datepicker wrapper is still `.p-calendar`.
 const SURFACES = [
   { name: 'home-routemap', path: '/', wait: '.p-tabview, p-tabs, .p-selectbutton' },
   { name: 'account-notification-prefs', path: '/account/notification-preferences', wait: 'p-inputswitch, p-toggleswitch' },
   { name: 'my-bookings', path: '/my-bookings', wait: '.p-button, p-menu' },
+  { name: 'admin-expenses', path: '/admin/expenses', wait: 'p-calendar, p-datepicker, .p-calendar, .p-datepicker' },
+  { name: 'admin-jump-seat-config', path: '/admin/jump-seat-config', wait: 'p-inputswitch, p-toggleswitch' },
 ];
 
 // Log in over the API and seed the tokens, rather than driving the login form.
 //
-// Not a shortcut for speed: submitting the form lands on /admin/dashboard, and
-// on this tree that route BLOCKS THE RENDERER PERMANENTLY - measured 150s with
-// no recovery, no console output, and page.screenshot() itself timing out,
-// which is the signature of a blocked main thread rather than a slow network.
-// Every authenticated surface then fails identically, because the tab is dead
-// before the test navigates anywhere. Seeding auth skips the dashboard entirely
-// so this card's evidence does not depend on an unrelated defect being fixed
-// first. See docs for OBRS-915; the dashboard hang is reported separately.
+// Not a shortcut for speed. Submitting the form lands on /admin/dashboard, and
+// that route USED TO BLOCK THE RENDERER PERMANENTLY - measured 150s with no
+// recovery, no console output, and page.screenshot() itself timing out, which is
+// the signature of a blocked main thread rather than a slow network. Every
+// authenticated surface then failed identically, because the tab was dead before
+// the test navigated anywhere. OBRS-939 has since fixed that (see SURFACES
+// above), but seeding stays: it keeps this card's evidence independent of the
+// login form and of whatever the dashboard happens to do on the day it runs.
 const API = 'https://sit-obrs-backend.koyeb.app';
 const loginRes = await fetch(`${API}/api/auth/login`, {
   method: 'POST',
