@@ -39,7 +39,15 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+// OBRS-944 — this must stay the same module `admin.module.ts` declares, not
+// merely one that exports something date-shaped. Both page templates render
+// <p-datePicker>, which PrimeNG 19 moved out of CalendarModule; importing the
+// wrong one still compiles the spec and then fails at NG0303 on the real
+// template, taking the measurement down with it. If a future PrimeNG renames
+// this again, read admin.module.ts and follow it — do NOT reach for
+// NO_ERRORS_SCHEMA, which would silence the binding and leave these tests
+// measuring a template that never rendered.
+import { DatePickerModule } from 'primeng/datepicker';
 
 import { BookingTrendPageComponent } from './booking-trend/booking-trend-page.component';
 import { BookingTrendStore } from './booking-trend/booking-trend.store';
@@ -136,7 +144,7 @@ describe('analytics delta chips — contrast on the painted admin surface (OBRS-
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       declarations: [component],
-      imports: [CommonModule, FormsModule, CalendarModule, AdminSharedModule, TranslateModule.forRoot()],
+      imports: [CommonModule, FormsModule, DatePickerModule, AdminSharedModule, TranslateModule.forRoot()],
       providers: [{ provide, useValue: store }],
     }).compileComponents();
     const fixture: ComponentFixture<T> = TestBed.createComponent(component);
