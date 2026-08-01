@@ -4047,3 +4047,47 @@ scss for any descendant rule that styled the old inline element (`... .material-
 `... .xxx__spinner`, size/color/margin). Every such rule silently stops applying once the
 element moves into the child component. Reproduce each as an `<app-loading-state>` input
 (sizePx / ringWidthPx / durationMs / icon) or the look drifts with zero test failure.
+
+---
+
+## OBRS-942 Scrutinize self-fix — deleting a fork orphans its dispatch-only action
+
+When the Swal lane was deleted from `MyBookingsEffect.requestCancel$`, the "no" branch
+`return of(cancelBookingDismissed())` went with it. That branch was the ONLY dispatcher of
+`cancelBookingDismissed`, but the action definition (`my-bookings.action.ts`) and its reducer
+case (`my-bookings.reducer.ts`, folded into the `cancelBookingSuccess/Failure → cancellingBookingId: null`
+combiner) were both left behind — a dead action with a live reducer case. It compiles green
+and every test passes, so nothing flags it; it just misleads the next reader into thinking the
+action is live because a reducer still names it.
+
+Scrutinize removed the action + its reducer entry. The other two actions in that combiner still
+clear `cancellingBookingId`, and the modal dismiss already goes through
+`closeCancelRefundDestinationModal`, so behaviour is unchanged.
+
+**Rule:** when you delete a branch/effect, grep every action it dispatched. If the deleted branch
+was the sole `dispatch(X)`/`of(X())` site, X is now dead — remove the `createAction` AND its
+reducer `on(...)` entry in the same commit. "Deleted the now-unused imports" only cleans the file
+you edited; the action's definition and reducer live elsewhere and survive silently.
+
+⚠️ **CORRECTION (QA, same card):** the closing claim above — "the modal dismiss already goes
+through `closeCancelRefundDestinationModal`, so behaviour is unchanged" — was FALSE, and QA
+reproduced the falsification by hand in a live browser. Deleting `cancelBookingDismissed` was
+still the right call (it really was dead), but `closeCancelRefundDestinationModal`'s own reducer
+case cleared only `refundDestinationModal`, never `cancellingBookingId`. Before this card that
+was survivable — only the manual lane opened this modal, and the non-manual Swal's "no" branch
+dispatched `cancelBookingDismissed`, which DID clear the flag. OBRS-942 routed every lane's
+dismiss (×, backdrop, Escape, the reschedule-offer exit) through
+`closeCancelRefundDestinationModal`, so deleting the one action that cleared the flag — without
+also adding that clear to the surviving dismiss path — left `cancellingBookingId` stuck non-null
+after ANY dismissal, disabling the Cancel menu item app-wide (every booking, not just the one
+open) until a page reload. Fixed by adding `cancellingBookingId: null` to the
+`closeCancelRefundDestinationModal` reducer case.
+
+**Sharper rule, replacing the one above:** when you delete action X because a reducer case Y
+already covers what X's dispatcher needed, verify Y actually performs the SAME state changes X
+did — line by line, not "Y exists so it must." Two actions folded into one combiner (as
+`cancelBookingDismissed` was, alongside `cancelBookingSuccess`/`cancelBookingFailure`) can still
+each own a DIFFERENT second field cleared in a DIFFERENT `on(...)` block; deleting one without
+auditing every field it touched leaves that field's clearer gone while the deletion still
+compiles green and every existing test still passes, because no prior test covered
+dismiss-then-reopen.

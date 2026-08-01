@@ -254,3 +254,77 @@ test('OBRS-942: the non-manual cancel POSTs a wire body of {} — refundDestinat
 
   await expect.poll(() => harness.lastCancelBody).toEqual({});
 });
+
+/**
+ * QA regression (my-bookings.reducer.ts): dismissing the modal via × dispatches
+ * `closeCancelRefundDestinationModal`, which — before the fix — cleared only
+ * `refundDestinationModal`, never `cancellingBookingId`. That flag drives
+ * `[disabled]="cancellingBookingId !== null"` on the SHARED overflow menu's
+ * Cancel item, so one dismissal permanently disabled Cancel for every booking
+ * card, not just the one that was open, until a page reload. Reproduced by QA
+ * by hand; this pins it at the browser layer (the reducer unit test in
+ * `my-bookings.reducer.spec.ts` pins the same fact at the state layer).
+ * Asserts on the item's ENABLED state directly, not just on the modal
+ * reappearing — a stale-disabled item that happens to still be clickable
+ * would pass a looser check.
+ */
+test('OBRS-942 regression: dismissing the modal (×) leaves Cancel enabled on reopen — for every booking, not just the one dismissed', async ({
+  page,
+}) => {
+  await seed(page);
+  await page.goto('/my-bookings');
+
+  await openCancelModal(page, 'B-000701');
+  await page.locator('.crdm-modal__close').click();
+  await expect(page.locator('.crdm-modal')).toHaveCount(0);
+
+  // Reopen the SAME booking's menu.
+  const card = page.locator('.booking-card', { hasText: 'B-000701' });
+  await card.locator('.actions-menu-btn').click();
+  const cancelItem = page.locator('.action-menu-item--danger');
+  await expect(cancelItem).toBeVisible();
+  await expect(cancelItem).not.toHaveClass(/action-menu-item--disabled/);
+
+  await page.locator('.action-menu-item__label', { hasText: 'Cancel booking' }).click();
+  await expect(page.locator('.crdm-modal')).toBeVisible();
+  await page.locator('.crdm-modal__close').click();
+  await expect(page.locator('.crdm-modal')).toHaveCount(0);
+
+  // Also the OTHER booking's Cancel item — this is the "every booking, not
+  // just the one dismissed" half of the regression: `cancellingBookingId` is
+  // a single app-wide flag, so a stale non-null value disables every card's
+  // menu item, not only B-000701's.
+  const otherCard = page.locator('.booking-card', { hasText: 'B-000702' });
+  await otherCard.locator('.actions-menu-btn').click();
+  const otherCancelItem = page.locator('.action-menu-item--danger');
+  await expect(otherCancelItem).toBeVisible();
+  await expect(otherCancelItem).not.toHaveClass(/action-menu-item--disabled/);
+});
+
+/**
+ * The reschedule-offer exit (`onRescheduleInsteadOfCancel`) dispatches
+ * `closeCancelRefundDestinationModal()` then `openRescheduleDialog()` — same
+ * action, same fix, but pinned as its own case since it is a second, distinct
+ * caller of the dismiss action or the QA-found gap would only ever be proven
+ * for the × button.
+ */
+test('OBRS-942 regression: taking the reschedule offer also leaves Cancel enabled on reopen', async ({ page }) => {
+  await seed(page);
+  await page.goto('/my-bookings');
+
+  await openCancelModal(page, 'B-000701');
+  await page.locator('.crdm-offer__cta').click();
+  await expect(page.locator('.reschedule-modal')).toBeVisible();
+  await expect(page.locator('.crdm-modal')).toHaveCount(0);
+
+  // Close the reschedule dialog to get back to the card list, then reopen the
+  // SAME booking's action menu.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.reschedule-modal')).toHaveCount(0);
+
+  const card = page.locator('.booking-card', { hasText: 'B-000701' });
+  await card.locator('.actions-menu-btn').click();
+  const cancelItem = page.locator('.action-menu-item--danger');
+  await expect(cancelItem).toBeVisible();
+  await expect(cancelItem).not.toHaveClass(/action-menu-item--disabled/);
+});

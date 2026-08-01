@@ -57,10 +57,11 @@ export const cancelBookingFailure = createAction(
   props<{ error: string }>()
 );
 
-/** Traveler dismissed the confirmation dialog — clears the in-flight state. */
-export const cancelBookingDismissed = createAction(
-  '[MyBookings API] Cancel booking dismissed'
-);
+// OBRS-942: `cancelBookingDismissed` removed — its sole dispatcher was the
+// Swal-confirm "no" branch in `requestCancel$`, deleted with the second cancel
+// screen. `cancelBookingSuccess`/`cancelBookingFailure` already clear the
+// in-flight `cancellingBookingId`; the modal's own dismiss goes through
+// `closeCancelRefundDestinationModal`, never this action.
 
 // --- Cancel modal (OBRS-286 Flow A1, folded into the ONE cancel screen by
 // OBRS-942) ---
