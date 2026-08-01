@@ -215,6 +215,37 @@ test.beforeEach(async ({ page }) => {
   await seedAnalyticsConsent(page);
 });
 
+/**
+ * OBRS-942. The two FAB-overlap cases below measure `boundingBox()` on the first
+ * `.select-btn`, and `waitFor({ state: 'visible' })` is not enough to make that
+ * measurement mean anything: /schedule-booking resolves its search behind
+ * `AlertService.showLoading()`, whose `.swal2-container` overlay is up while the
+ * schedule list is still growing underneath it. Measured too early, the first
+ * card sits at the very bottom of the viewport — exactly where the FAB lives —
+ * and the assertion reads a position the traveler never sees.
+ *
+ * This went red on CI for the first time on the OBRS-942 merge (`c0338518`,
+ * run 30700904986): the failure screenshot shows the "Loading..." spinner still
+ * on screen with the Select button half-rendered at y≈690 of a 720px viewport.
+ * Nothing in that card touches this page — it added 7 tests to a 2-worker lane
+ * (149 → 156, 6.2m → 6.6m measured), and the extra contention was enough to lose
+ * a race that had always been there. Same shape as OBRS-767.
+ *
+ * Waits for the precondition rather than sleeping: a `waitForTimeout` tuned on
+ * one runner is the same bug with a longer fuse, and every spec that later joins
+ * this lane would have to re-tune it.
+ *
+ * Proved non-vacuous rather than assumed: `waitFor({ state: 'hidden' })` also
+ * resolves instantly against an element that never existed, so the overlay was
+ * pinned first with a throwaway `state: 'visible'` probe in the same position —
+ * it passed on BOTH cases locally, i.e. the dialog really is up here and this
+ * wait has something to wait for.
+ */
+async function settleScheduleList(page: Page): Promise<void> {
+  await page.locator('.swal2-container').waitFor({ state: 'hidden', timeout: 15_000 });
+  await page.locator('.select-btn').first().waitFor({ state: 'visible', timeout: 15_000 });
+}
+
 // ── Section 1: FAB visibility ─────────────────────────────────────────────────
 
 test.describe('FAB — visibility on all routes', () => {
@@ -822,6 +853,7 @@ test.describe('Regression — FAB z-index / overlap', () => {
     await page.locator('.dropdown-menu.show .dropdown-option', { hasText: 'Bangkok' }).click();
     await page.locator('.btn-search').click();
     await page.waitForURL('**/schedule-booking');
+    await settleScheduleList(page);
 
     // FAB must still be visible but must NOT overlap the schedule list
     const fab = page.locator('.report-fab');
@@ -872,6 +904,7 @@ test.describe('Regression — FAB z-index / overlap', () => {
     await page.locator('.dropdown-menu.show .dropdown-option', { hasText: 'Bangkok' }).click();
     await page.locator('.btn-search').click();
     await page.waitForURL('**/schedule-booking');
+    await settleScheduleList(page);
 
     // FAB must be visible on schedule-booking page
     await expect(page.locator('.report-fab')).toBeVisible();
