@@ -13,9 +13,10 @@ import {
 import { AlertService } from '../../shared/services/alert.service';
 
 @Component({
-  selector: 'app-otp-validate',
-  templateUrl: './otp-validate.component.html',
-  styleUrl: './otp-validate.component.scss',
+    selector: 'app-otp-validate',
+    templateUrl: './otp-validate.component.html',
+    styleUrl: './otp-validate.component.scss',
+    standalone: false
 })
 export class OtpValidateComponent implements OnInit, OnDestroy {
   isShowPassword: boolean = false;

@@ -5,9 +5,10 @@ import {
 } from '../../../../../shared/interfaces/route-map.interface';
 
 @Component({
-  selector: 'app-route-travel-summary',
-  templateUrl: './route-travel-summary.component.html',
-  styleUrl: './route-travel-summary.component.scss',
+    selector: 'app-route-travel-summary',
+    templateUrl: './route-travel-summary.component.html',
+    styleUrl: './route-travel-summary.component.scss',
+    standalone: false
 })
 export class RouteTravelSummaryComponent {
   @Input() routeMeta: RouteMeta | null = null;

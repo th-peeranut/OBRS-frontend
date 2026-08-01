@@ -30,9 +30,10 @@ import { SYSTEM_SETTINGS_TABS, SystemSettingsTab } from './system-settings-tabs'
  * See the note on {@link SystemSettingsTab.requiredRoles}.
  */
 @Component({
-  selector: 'app-system-settings-page',
-  templateUrl: './system-settings-page.component.html',
-  styleUrl: './system-settings-page.component.scss',
+    selector: 'app-system-settings-page',
+    templateUrl: './system-settings-page.component.html',
+    styleUrl: './system-settings-page.component.scss',
+    standalone: false
 })
 export class SystemSettingsPageComponent {
   /**

@@ -5,9 +5,10 @@ import { ExpenseRow } from '../expenses-page.mappers';
 // vehicles-page split (VehicleListTableComponent): no Store/HTTP access —
 // data comes in via @Input, user actions go out via @Output.
 @Component({
-  selector: 'app-expense-list-table',
-  templateUrl: './expense-list-table.component.html',
-  styleUrl: './expense-list-table.component.scss',
+    selector: 'app-expense-list-table',
+    templateUrl: './expense-list-table.component.html',
+    styleUrl: './expense-list-table.component.scss',
+    standalone: false
 })
 export class ExpenseListTableComponent {
   @Input() rows: ExpenseRow[] = [];

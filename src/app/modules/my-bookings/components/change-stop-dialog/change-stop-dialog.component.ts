@@ -57,9 +57,10 @@ type PaymentTab = 'creditcard' | 'qrcode';
  * `docs/adr/0010-change-stop-dialog.md`.
  */
 @Component({
-  selector: 'app-change-stop-dialog',
-  templateUrl: './change-stop-dialog.component.html',
-  styleUrl: './change-stop-dialog.component.scss',
+    selector: 'app-change-stop-dialog',
+    templateUrl: './change-stop-dialog.component.html',
+    styleUrl: './change-stop-dialog.component.scss',
+    standalone: false
 })
 export class ChangeStopDialogComponent implements OnInit, OnDestroy {
   @Input() bookingId!: number;

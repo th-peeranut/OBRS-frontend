@@ -54,9 +54,10 @@ import {
 // keep their own private copy for the same reason; this component follows
 // that actual precedent.
 @Component({
-  selector: 'app-vehicle-form-modal',
-  templateUrl: './vehicle-form-modal.component.html',
-  styleUrl: './vehicle-form-modal.component.scss',
+    selector: 'app-vehicle-form-modal',
+    templateUrl: './vehicle-form-modal.component.html',
+    styleUrl: './vehicle-form-modal.component.scss',
+    standalone: false
 })
 export class VehicleFormModalComponent implements OnChanges {
   @Input() isOpen = false;

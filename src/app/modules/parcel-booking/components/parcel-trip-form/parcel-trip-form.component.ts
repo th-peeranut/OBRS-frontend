@@ -38,9 +38,10 @@ function stationsDifferValidator(): ValidatorFn {
  * `stops.id` (verified against SIT — see the frontend implementation report).
  */
 @Component({
-  selector: 'app-parcel-trip-form',
-  templateUrl: './parcel-trip-form.component.html',
-  styleUrl: './parcel-trip-form.component.scss',
+    selector: 'app-parcel-trip-form',
+    templateUrl: './parcel-trip-form.component.html',
+    styleUrl: './parcel-trip-form.component.scss',
+    standalone: false
 })
 export class ParcelTripFormComponent implements OnInit, OnDestroy {
   @Input() fromStationOptions: StationApi[] = [];

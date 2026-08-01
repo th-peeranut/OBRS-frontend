@@ -5,9 +5,10 @@ import { invokeGetScheduleFilterApi } from '../../shared/stores/schedule-filter/
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 
 @Component({
-  selector: 'app-schedule-booking',
-  templateUrl: './schedule-booking.component.html',
-  styleUrl: './schedule-booking.component.scss',
+    selector: 'app-schedule-booking',
+    templateUrl: './schedule-booking.component.html',
+    styleUrl: './schedule-booking.component.scss',
+    standalone: false
 })
 export class ScheduleBookingComponent {
   constructor(private store: Store) {}

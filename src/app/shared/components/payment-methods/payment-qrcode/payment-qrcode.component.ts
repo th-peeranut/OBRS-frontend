@@ -34,9 +34,10 @@ type PaymentTab = 'creditcard' | 'qrcode';
 type PromptPayPaymentData = PaymentResponse | PaymentByBookingIdResponse;
 
 @Component({
-  selector: 'app-payment-qrcode',
-  templateUrl: './payment-qrcode.component.html',
-  styleUrl: './payment-qrcode.component.scss',
+    selector: 'app-payment-qrcode',
+    templateUrl: './payment-qrcode.component.html',
+    styleUrl: './payment-qrcode.component.scss',
+    standalone: false
 })
 export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   @Input() activeTab: PaymentTab = 'qrcode';

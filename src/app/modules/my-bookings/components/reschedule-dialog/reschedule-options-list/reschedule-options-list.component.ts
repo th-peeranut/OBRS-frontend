@@ -5,9 +5,10 @@ import { toAmountNumber } from '../../../../../shared/interfaces/my-booking.inte
 
 /** Dumb, radio-style selectable list of candidate departures. */
 @Component({
-  selector: 'app-reschedule-options-list',
-  templateUrl: './reschedule-options-list.component.html',
-  styleUrl: './reschedule-options-list.component.scss',
+    selector: 'app-reschedule-options-list',
+    templateUrl: './reschedule-options-list.component.html',
+    styleUrl: './reschedule-options-list.component.scss',
+    standalone: false
 })
 export class RescheduleOptionsListComponent {
   @Input() options: RescheduleOption[] = [];

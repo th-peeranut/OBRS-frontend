@@ -28,9 +28,10 @@ type ChangeEmailDialogState = 'form' | 'sent';
  * fetch). See docs/adr/0014-account-identity-settings-page.md.
  */
 @Component({
-  selector: 'app-change-email-dialog',
-  templateUrl: './change-email-dialog.component.html',
-  styleUrl: './change-email-dialog.component.scss',
+    selector: 'app-change-email-dialog',
+    templateUrl: './change-email-dialog.component.html',
+    styleUrl: './change-email-dialog.component.scss',
+    standalone: false
 })
 export class ChangeEmailDialogComponent implements OnInit, OnDestroy {
   @Output() readonly closed = new EventEmitter<void>();

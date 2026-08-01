@@ -33,9 +33,10 @@ interface EodMethodEntry extends EodMethodBreakdownDto {
 }
 
 @Component({
-  selector: 'app-eod-sales-report-page',
-  templateUrl: './eod-sales-report-page.component.html',
-  styleUrl: './eod-sales-report-page.component.scss',
+    selector: 'app-eod-sales-report-page',
+    templateUrl: './eod-sales-report-page.component.html',
+    styleUrl: './eod-sales-report-page.component.scss',
+    standalone: false
 })
 export class EodSalesReportPageComponent implements OnInit, OnDestroy {
   protected report: EodSalesReportDto | null = null;

@@ -8,9 +8,10 @@ import { AlertService } from '../../shared/services/alert.service';
 import { trimmedRequiredValidator } from '../../shared/validators/trimmed-required.validator';
 
 @Component({
-  selector: 'app-verify-email',
-  templateUrl: './verify-email.component.html',
-  styleUrl: './verify-email.component.scss',
+    selector: 'app-verify-email',
+    templateUrl: './verify-email.component.html',
+    styleUrl: './verify-email.component.scss',
+    standalone: false
 })
 export class VerifyEmailComponent implements OnInit, OnDestroy {
   verifyState: 'verifying' | 'success' | 'failed' = 'verifying';

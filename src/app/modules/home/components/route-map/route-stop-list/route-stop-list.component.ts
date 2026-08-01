@@ -9,9 +9,10 @@ import {
 import { RouteStop } from '../../../../../shared/interfaces/route-map.interface';
 
 @Component({
-  selector: 'app-route-stop-list',
-  templateUrl: './route-stop-list.component.html',
-  styleUrl: './route-stop-list.component.scss',
+    selector: 'app-route-stop-list',
+    templateUrl: './route-stop-list.component.html',
+    styleUrl: './route-stop-list.component.scss',
+    standalone: false
 })
 export class RouteStopListComponent implements OnChanges {
   @Input() stops: RouteStop[] = [];

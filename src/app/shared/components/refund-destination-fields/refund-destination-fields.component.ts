@@ -20,9 +20,10 @@ import { RefundDestinationType } from '../../interfaces/refund-destination.inter
  * outside `.admin-shell`).
  */
 @Component({
-  selector: 'app-refund-destination-fields',
-  templateUrl: './refund-destination-fields.component.html',
-  styleUrl: './refund-destination-fields.component.scss',
+    selector: 'app-refund-destination-fields',
+    templateUrl: './refund-destination-fields.component.html',
+    styleUrl: './refund-destination-fields.component.scss',
+    standalone: false
 })
 export class AppRefundDestinationFieldsComponent {
   @Input({ required: true }) formGroup!: FormGroup;

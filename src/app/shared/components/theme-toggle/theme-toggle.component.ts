@@ -13,9 +13,10 @@ import { ThemeService } from '../../services/theme.service';
  * i18n key; it defaults to `COMMON.THEME_TOGGLE`.
  */
 @Component({
-  selector: 'app-theme-toggle',
-  templateUrl: './theme-toggle.component.html',
-  styleUrl: './theme-toggle.component.scss',
+    selector: 'app-theme-toggle',
+    templateUrl: './theme-toggle.component.html',
+    styleUrl: './theme-toggle.component.scss',
+    standalone: false
 })
 export class ThemeToggleComponent implements OnInit, OnDestroy {
   /** i18n key for the button's aria-label. Override at each use-site if needed. */

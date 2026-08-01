@@ -20,9 +20,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * and every derived metric (moving average, bar %, day-of-week share, change %) is server-computed.
  */
 @Component({
-  selector: 'app-booking-trend-page',
-  templateUrl: './booking-trend-page.component.html',
-  styleUrl: './booking-trend-page.component.scss',
+    selector: 'app-booking-trend-page',
+    templateUrl: './booking-trend-page.component.html',
+    styleUrl: './booking-trend-page.component.scss',
+    standalone: false
 })
 export class BookingTrendPageComponent implements OnInit, OnDestroy {
   protected trend: BookingTrendDto | null = null;

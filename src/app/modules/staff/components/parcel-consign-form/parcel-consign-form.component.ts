@@ -130,9 +130,10 @@ function dimensionsAllOrNoneValidator(): ValidatorFn {
 }
 
 @Component({
-  selector: 'app-parcel-consign-form',
-  templateUrl: './parcel-consign-form.component.html',
-  styleUrl: './parcel-consign-form.component.scss',
+    selector: 'app-parcel-consign-form',
+    templateUrl: './parcel-consign-form.component.html',
+    styleUrl: './parcel-consign-form.component.scss',
+    standalone: false
 })
 export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy {
   /** OBRS-341: 'consigned' (default, unchanged behavior) | 'carry_on_seat'.

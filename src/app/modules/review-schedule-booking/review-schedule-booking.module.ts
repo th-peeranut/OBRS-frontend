@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { SharedModule } from '../../shared/shared.module';
 
 // Components
@@ -35,7 +35,7 @@ const routes: Routes = [
     RouterModule.forChild(routes),
 
     // Add-ons
-    CalendarModule,
+    DatePickerModule,
 
     // Store
     StoreModule.forFeature('provinceWithStationList', ProvinceReducer),

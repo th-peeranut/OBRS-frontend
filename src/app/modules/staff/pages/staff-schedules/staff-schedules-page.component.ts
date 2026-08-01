@@ -35,9 +35,10 @@ import {
 } from './staff-schedules-page.mappers';
 
 @Component({
-  selector: 'app-staff-schedules-page',
-  templateUrl: './staff-schedules-page.component.html',
-  styleUrl: './staff-schedules-page.component.scss',
+    selector: 'app-staff-schedules-page',
+    templateUrl: './staff-schedules-page.component.html',
+    styleUrl: './staff-schedules-page.component.scss',
+    standalone: false
 })
 export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
   protected rows: ScheduleRow[] = [];

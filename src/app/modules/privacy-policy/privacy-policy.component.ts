@@ -6,9 +6,10 @@ import {
 } from './privacy-policy.version';
 
 @Component({
-  selector: 'app-privacy-policy',
-  templateUrl: './privacy-policy.component.html',
-  styleUrl: './privacy-policy.component.scss',
+    selector: 'app-privacy-policy',
+    templateUrl: './privacy-policy.component.html',
+    styleUrl: './privacy-policy.component.scss',
+    standalone: false
 })
 export class PrivacyPolicyComponent {
   // OBRS-628 AC-3: read from the version module, never re-typed into i18n — a

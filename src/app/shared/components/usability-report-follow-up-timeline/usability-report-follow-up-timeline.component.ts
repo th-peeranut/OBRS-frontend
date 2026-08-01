@@ -23,9 +23,10 @@ export interface UsabilityReportPendingFollowUp {
 }
 
 @Component({
-  selector: 'app-usability-report-follow-up-timeline',
-  templateUrl: './usability-report-follow-up-timeline.component.html',
-  styleUrl: './usability-report-follow-up-timeline.component.scss',
+    selector: 'app-usability-report-follow-up-timeline',
+    templateUrl: './usability-report-follow-up-timeline.component.html',
+    styleUrl: './usability-report-follow-up-timeline.component.scss',
+    standalone: false
 })
 export class UsabilityReportFollowUpTimelineComponent {
   @Input() followUps: UsabilityReportFollowUp[] = [];

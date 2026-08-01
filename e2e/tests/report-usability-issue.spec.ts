@@ -290,11 +290,21 @@ test.describe('FAB modal — open, defaults, close', () => {
     await page.locator('.report-fab').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
 
-    // PrimeNG p-selectButton marks the selected item with aria-checked="true"
-    // (not aria-pressed — PrimeNG uses aria-checked for selectbutton role="radio").
-    const bugButton = page.locator('p-selectbutton .p-button', { hasText: 'Bug' });
+    // OBRS-915: `aria-pressed`, not `aria-checked`. The comment this replaces
+    // said PrimeNG marks the selection with `aria-checked` "for selectbutton
+    // role=radio", and both halves are now wrong — v19's SelectButton renders
+    // each option as a `<p-togglebutton>` host with `[attr.aria-pressed]="checked"`
+    // and no `aria-checked` at all (the container's role was `group`, never
+    // `radio`, in v17 as well). Read off the host bindings in
+    // `node_modules/primeng/fesm2022/primeng-togglebutton.mjs`, not the docs.
+    //
+    // The attribute is asserted rather than the `.p-togglebutton-checked` class
+    // beside it because what this test is for is the DEFAULT being announced to
+    // a screen reader; a class is styling and would still "pass" if the state
+    // reached nobody.
+    const bugButton = page.locator('p-selectbutton .p-togglebutton', { hasText: 'Bug' });
     await bugButton.waitFor({ state: 'visible', timeout: 5_000 });
-    await expect(bugButton).toHaveAttribute('aria-checked', 'true');
+    await expect(bugButton).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('close button hides modal and unlocks body scroll', async ({ page }) => {

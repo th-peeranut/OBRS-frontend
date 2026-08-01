@@ -13,9 +13,10 @@ import { selectScheduleBooking } from '../../../../shared/stores/schedule-bookin
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 
 @Component({
-  selector: 'app-payment-summary',
-  templateUrl: './payment-summary.component.html',
-  styleUrl: './payment-summary.component.scss',
+    selector: 'app-payment-summary',
+    templateUrl: './payment-summary.component.html',
+    styleUrl: './payment-summary.component.scss',
+    standalone: false
 })
 export class PaymentSummaryComponent {
   @Input() variant: 'default' | 'inline' = 'default';

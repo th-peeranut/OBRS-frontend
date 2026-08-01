@@ -11,9 +11,10 @@ import { AnalyticsService } from '../../../../services/analytics/analytics.servi
 import { normalizeAnalyticsPaymentMethod } from '../../../../shared/lib/analytics-payment-method';
 
 @Component({
-  selector: 'app-payment-result',
-  templateUrl: './payment-result.component.html',
-  styleUrl: './payment-result.component.scss',
+    selector: 'app-payment-result',
+    templateUrl: './payment-result.component.html',
+    styleUrl: './payment-result.component.scss',
+    standalone: false
 })
 export class PaymentResultComponent implements OnInit, OnDestroy {
   protected isChecking = true;

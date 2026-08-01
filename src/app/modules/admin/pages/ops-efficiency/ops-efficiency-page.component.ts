@@ -19,9 +19,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * rates are server-computed.
  */
 @Component({
-  selector: 'app-ops-efficiency-page',
-  templateUrl: './ops-efficiency-page.component.html',
-  styleUrl: './ops-efficiency-page.component.scss',
+    selector: 'app-ops-efficiency-page',
+    templateUrl: './ops-efficiency-page.component.html',
+    styleUrl: './ops-efficiency-page.component.scss',
+    standalone: false
 })
 export class OpsEfficiencyPageComponent implements OnInit, OnDestroy {
   protected data: OpsEfficiencyDto | null = null;

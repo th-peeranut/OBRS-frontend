@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { CustomerBehaviorPageComponent } from './customer-behavior-page.component';
 import { CustomerBehaviorStore } from './customer-behavior.store';
 import { CustomerBehaviorDto } from '../../../../shared/interfaces/customer-behavior.interface';
@@ -80,7 +80,7 @@ describe('CustomerBehaviorPageComponent', () => {
       const store = makeStoreStub(makeData());
       await TestBed.configureTestingModule({
         declarations: [CustomerBehaviorPageComponent],
-        imports: [CommonModule, FormsModule, CalendarModule, AdminSharedModule, TranslateModule.forRoot()],
+        imports: [CommonModule, FormsModule, DatePickerModule, AdminSharedModule, TranslateModule.forRoot()],
         providers: [{ provide: CustomerBehaviorStore, useValue: store }],
       }).compileComponents();
       fixture = TestBed.createComponent(CustomerBehaviorPageComponent);

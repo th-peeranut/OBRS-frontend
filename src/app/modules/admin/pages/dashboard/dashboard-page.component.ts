@@ -12,9 +12,10 @@ import { pollWhileVisible } from '../../shared/admin-auto-refresh';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 
 @Component({
-  selector: 'app-dashboard-page',
-  templateUrl: './dashboard-page.component.html',
-  styleUrl: './dashboard-page.component.scss',
+    selector: 'app-dashboard-page',
+    templateUrl: './dashboard-page.component.html',
+    styleUrl: './dashboard-page.component.scss',
+    standalone: false
 })
 export class DashboardPageComponent implements OnInit, OnDestroy {
   protected snapshot: DashboardTodayDto | null = null;

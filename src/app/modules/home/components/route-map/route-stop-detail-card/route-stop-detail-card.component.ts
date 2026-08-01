@@ -3,9 +3,10 @@ import { RouteStop } from '../../../../../shared/interfaces/route-map.interface'
 import { buildMapsDirectionsUrl } from '../../../../../shared/lib/maps-directions-url';
 
 @Component({
-  selector: 'app-route-stop-detail-card',
-  templateUrl: './route-stop-detail-card.component.html',
-  styleUrl: './route-stop-detail-card.component.scss',
+    selector: 'app-route-stop-detail-card',
+    templateUrl: './route-stop-detail-card.component.html',
+    styleUrl: './route-stop-detail-card.component.scss',
+    standalone: false
 })
 export class RouteStopDetailCardComponent {
   @Input() stop: RouteStop | null = null;

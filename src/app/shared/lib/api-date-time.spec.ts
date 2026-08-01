@@ -61,7 +61,7 @@ describe('API date-time helpers', () => {
 });
 
 // OBRS-272: the split/control-value round-trip used to pre-fill the delay
-// dialog's date+time p-calendar pair from a stored offset ISO string.
+// dialog's date+time p-datePicker pair from a stored offset ISO string.
 describe('splitApiOffsetDateTime()', () => {
   it('splits an offset date-time into date + HH:mm time', () => {
     expect(splitApiOffsetDateTime('2026-06-20T08:30:00+07:00')).toEqual({

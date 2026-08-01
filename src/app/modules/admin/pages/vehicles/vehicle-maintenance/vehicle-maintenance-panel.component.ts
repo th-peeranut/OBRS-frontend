@@ -33,10 +33,11 @@ import {
  * `store.setVehicleId()` itself.
  */
 @Component({
-  selector: 'app-vehicle-maintenance-panel',
-  templateUrl: './vehicle-maintenance-panel.component.html',
-  styleUrl: './vehicle-maintenance-panel.component.scss',
-  providers: [VehicleMaintenanceStore],
+    selector: 'app-vehicle-maintenance-panel',
+    templateUrl: './vehicle-maintenance-panel.component.html',
+    styleUrl: './vehicle-maintenance-panel.component.scss',
+    providers: [VehicleMaintenanceStore],
+    standalone: false
 })
 export class AppVehicleMaintenancePanelComponent implements OnChanges, OnInit, OnDestroy {
   @Input() vehicleId!: number;

@@ -34,9 +34,10 @@ import {
 } from './usability-reports-page.mappers';
 
 @Component({
-  selector: 'app-usability-reports-page',
-  templateUrl: './usability-reports-page.component.html',
-  styleUrl: './usability-reports-page.component.scss',
+    selector: 'app-usability-reports-page',
+    templateUrl: './usability-reports-page.component.html',
+    styleUrl: './usability-reports-page.component.scss',
+    standalone: false
 })
 export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // OBRS-378: the list is now server-filtered by status (?status=), so
@@ -141,6 +142,16 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.buildStatusOptions());
 
+    // store-null-ok: OBRS-943 — the guard below is the OBRS-466 exception, not a
+    // missed reset. The rows and the count ARE cleared unconditionally on null
+    // (`allReports` / `totalElements`, OBRS-467, immediately below). What the
+    // `if (data)` deliberately KEEPS across a transient clear() is the paginator's
+    // position — `currentPage`, `totalPages`, `baselineTotal`, `newReportCount`.
+    // Zeroing `totalPages` there would drop it under its `*ngIf="totalPages > 1"`
+    // and unmount the paginator mid-page-change, which is what dropped keyboard
+    // focus to <body> and killed the aria-live region. Honoring null here would
+    // re-break that. This marker exists because the gate could not tell the two
+    // apart and had been failing `dev` behind OBRS-932's gate.
     this.store.data$
       .pipe(takeUntil(this.destroy$))
       .subscribe((data) => {

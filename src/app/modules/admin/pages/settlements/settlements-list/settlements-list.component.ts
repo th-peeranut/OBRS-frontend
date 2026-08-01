@@ -23,9 +23,10 @@ export type SettlementsContentState = 'loading' | 'invalid' | 'error' | 'empty' 
  * rendered as a static PENDING badge rather than bound to a per-item field.
  */
 @Component({
-  selector: 'app-settlements-list',
-  templateUrl: './settlements-list.component.html',
-  styleUrl: './settlements-list.component.scss',
+    selector: 'app-settlements-list',
+    templateUrl: './settlements-list.component.html',
+    styleUrl: './settlements-list.component.scss',
+    standalone: false
 })
 export class SettlementsListComponent {
   @Input() items: SettlementPendingItemDto[] = [];

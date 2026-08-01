@@ -48,9 +48,10 @@ function maxCapacityValidator(getMax: () => number | null): ValidatorFn {
 }
 
 @Component({
-  selector: 'app-trip-details-edit-form',
-  templateUrl: './trip-details-edit-form.component.html',
-  styleUrl: './trip-details-edit-form.component.scss',
+    selector: 'app-trip-details-edit-form',
+    templateUrl: './trip-details-edit-form.component.html',
+    styleUrl: './trip-details-edit-form.component.scss',
+    standalone: false
 })
 export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestroy {
   // --- Inputs: data for dropdowns ---

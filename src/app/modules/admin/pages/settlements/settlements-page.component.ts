@@ -30,9 +30,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * modal are both dumb — inputs/outputs only.
  */
 @Component({
-  selector: 'app-settlements-page',
-  templateUrl: './settlements-page.component.html',
-  styleUrl: './settlements-page.component.scss',
+    selector: 'app-settlements-page',
+    templateUrl: './settlements-page.component.html',
+    styleUrl: './settlements-page.component.scss',
+    standalone: false
 })
 export class SettlementsPageComponent implements OnInit, OnDestroy {
   protected items: SettlementPendingItemDto[] = [];

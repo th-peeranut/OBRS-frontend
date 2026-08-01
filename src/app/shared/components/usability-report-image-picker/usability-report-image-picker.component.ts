@@ -31,9 +31,10 @@ export interface UsabilityReportImagePickerChange {
  * §12).
  */
 @Component({
-  selector: 'app-usability-report-image-picker',
-  templateUrl: './usability-report-image-picker.component.html',
-  styleUrl: './usability-report-image-picker.component.scss',
+    selector: 'app-usability-report-image-picker',
+    templateUrl: './usability-report-image-picker.component.html',
+    styleUrl: './usability-report-image-picker.component.scss',
+    standalone: false
 })
 export class UsabilityReportImagePickerComponent implements OnChanges, OnDestroy {
   @Input() existingImages: UsabilityReportImage[] = [];

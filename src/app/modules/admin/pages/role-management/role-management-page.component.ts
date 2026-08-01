@@ -28,9 +28,10 @@ import {
  * and confirmDelete (API call + optimistic store update + refresh).
  */
 @Component({
-  selector: 'app-role-management-page',
-  templateUrl: './role-management-page.component.html',
-  styleUrl: './role-management-page.component.scss',
+    selector: 'app-role-management-page',
+    templateUrl: './role-management-page.component.html',
+    styleUrl: './role-management-page.component.scss',
+    standalone: false
 })
 export class RoleManagementPageComponent implements OnInit, OnDestroy {
   protected roles: RoleRow[] = [];

@@ -15,9 +15,10 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
  * design-system §10).
  */
 @Component({
-  selector: 'app-change-seat-map',
-  templateUrl: './change-seat-map.component.html',
-  styleUrl: './change-seat-map.component.scss',
+    selector: 'app-change-seat-map',
+    templateUrl: './change-seat-map.component.html',
+    styleUrl: './change-seat-map.component.scss',
+    standalone: false
 })
 export class ChangeSeatMapComponent {
   @Input() vehicleType = '';

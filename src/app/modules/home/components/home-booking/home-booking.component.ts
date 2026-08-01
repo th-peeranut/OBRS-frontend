@@ -39,9 +39,10 @@ import {
 // since OBRS-647), so a failed fetch hid a month of sellable departures.
 
 @Component({
-  selector: 'app-home-booking',
-  templateUrl: './home-booking.component.html',
-  styleUrl: './home-booking.component.scss',
+    selector: 'app-home-booking',
+    templateUrl: './home-booking.component.html',
+    styleUrl: './home-booking.component.scss',
+    standalone: false
 })
 export class HomeBookingComponent implements OnInit, OnDestroy {
   roundTripDropdowns: Dropdown[] = [

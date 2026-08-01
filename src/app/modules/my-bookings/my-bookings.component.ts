@@ -85,9 +85,10 @@ interface StatusFilterOption {
 }
 
 @Component({
-  selector: 'app-my-bookings',
-  templateUrl: './my-bookings.component.html',
-  styleUrl: './my-bookings.component.scss',
+    selector: 'app-my-bookings',
+    templateUrl: './my-bookings.component.html',
+    styleUrl: './my-bookings.component.scss',
+    standalone: false
 })
 export class MyBookingsComponent implements OnInit {
   selectedStatus = '';

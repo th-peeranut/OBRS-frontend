@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { RoutePerformancePageComponent } from './route-performance-page.component';
 import { RoutePerformanceStore } from './route-performance.store';
 import { RoutePerformanceDto } from '../../../../shared/interfaces/route-performance.interface';
@@ -78,7 +78,7 @@ describe('RoutePerformancePageComponent', () => {
       const store = makeStoreStub(makeData());
       await TestBed.configureTestingModule({
         declarations: [RoutePerformancePageComponent],
-        imports: [CommonModule, FormsModule, CalendarModule, AdminSharedModule, TranslateModule.forRoot()],
+        imports: [CommonModule, FormsModule, DatePickerModule, AdminSharedModule, TranslateModule.forRoot()],
         providers: [{ provide: RoutePerformanceStore, useValue: store }],
       }).compileComponents();
       fixture = TestBed.createComponent(RoutePerformancePageComponent);

@@ -21,9 +21,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * decimal-string money — it only formats for display and sizes bars from the server's bar %.
  */
 @Component({
-  selector: 'app-revenue-analytics-page',
-  templateUrl: './revenue-analytics-page.component.html',
-  styleUrl: './revenue-analytics-page.component.scss',
+    selector: 'app-revenue-analytics-page',
+    templateUrl: './revenue-analytics-page.component.html',
+    styleUrl: './revenue-analytics-page.component.scss',
+    standalone: false
 })
 export class RevenueAnalyticsPageComponent implements OnInit, OnDestroy {
   protected analytics: RevenueAnalyticsDto | null = null;

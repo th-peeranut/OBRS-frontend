@@ -14,9 +14,10 @@ const AUTO_REDIRECT_DELAY_MS = 3000;
  * emailed link. See docs/adr/0014-account-identity-settings-page.md.
  */
 @Component({
-  selector: 'app-change-email-confirm',
-  templateUrl: './change-email-confirm.component.html',
-  styleUrl: './change-email-confirm.component.scss',
+    selector: 'app-change-email-confirm',
+    templateUrl: './change-email-confirm.component.html',
+    styleUrl: './change-email-confirm.component.scss',
+    standalone: false
 })
 export class ChangeEmailConfirmComponent implements OnInit, OnDestroy {
   confirmState: ChangeEmailConfirmState = 'confirming';

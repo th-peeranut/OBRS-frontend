@@ -53,6 +53,19 @@ export type LoadingStateSkeletonShape = 'bar' | 'sm' | 'pill';
   selector: 'app-loading-state',
   templateUrl: './loading-state.component.html',
   styleUrl: './loading-state.component.scss',
+  // OBRS-915: Angular 19 flipped the DEFAULT of `standalone` from false to
+  // true, and `ng update`'s migration wrote `standalone: false` onto every
+  // component that was declared in an NgModule at the time it ran. This
+  // component landed on `dev` (OBRS-907) after that, so the migration never saw
+  // it, and merging `dev` in produced `TS-996008: Component
+  // LoadingStateComponent is standalone, and cannot be declared in an NgModule`
+  // — the decorator did not change, the default underneath it did.
+  //
+  // `false`, not a conversion to standalone: this card is the framework
+  // upgrade, and SharedModule keeps declaring what it declared. Every component
+  // authored against 18 and merged from here on needs this same line until the
+  // tree is converted, which is its own card.
+  standalone: false,
 })
 export class LoadingStateComponent {
   @Input() variant: LoadingStateVariant = 'spinner';

@@ -464,25 +464,25 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
       By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_PREFERENCE_GROUP_ARIA"]')
     );
     expect(prefGroup).not.toBeNull();
-    const prefButtons = prefGroup.queryAll(By.css('.p-button'));
+    const prefButtons = prefGroup.queryAll(By.css('.p-togglebutton'));
     expect(prefButtons.length).toBe(2);
-    expect(prefButtons.some((b) => b.nativeElement.classList.contains('p-highlight'))).toBeFalse();
+    expect(prefButtons.some((b) => b.nativeElement.classList.contains('p-togglebutton-checked'))).toBeFalse();
 
     prefButtons[0].nativeElement.click(); // select WINDOW
     fixture.detectChanges();
     expect(component.getFormValue(0, 'seatPreference')).toBe('WINDOW');
-    expect(prefButtons[0].nativeElement.classList.contains('p-highlight')).toBeTrue();
+    expect(prefButtons[0].nativeElement.classList.contains('p-togglebutton-checked')).toBeTrue();
 
     prefButtons[0].nativeElement.click(); // re-click the SAME option clears it
     fixture.detectChanges();
     expect(component.getFormValue(0, 'seatPreference')).toBeNull();
-    expect(prefButtons.some((b) => b.nativeElement.classList.contains('p-highlight'))).toBeFalse();
+    expect(prefButtons.some((b) => b.nativeElement.classList.contains('p-togglebutton-checked'))).toBeFalse();
 
     const reqGroup = fixture.debugElement.query(
       By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_REQUIREMENT_GROUP_ARIA"]')
     );
     expect(reqGroup).not.toBeNull();
-    const reqButtons = reqGroup.queryAll(By.css('.p-button'));
+    const reqButtons = reqGroup.queryAll(By.css('.p-togglebutton'));
     expect(reqButtons.length).toBe(2);
 
     reqButtons[1].nativeElement.click(); // select EXTRA_LEGROOM
@@ -524,13 +524,16 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     fixture.detectChanges();
 
     const originalDispatch = store.dispatch.bind(store);
-    spyOn(store, 'dispatch').and.callFake((action: any) => {
+    // OBRS-915: NgRx 19 types Store#dispatch as an overload set carrying
+    // CreatorsNotAllowedCheck, so a plain (action: any) => void no longer
+    // satisfies it. Only the cast is new - the fake behaves exactly as before.
+    spyOn(store, 'dispatch').and.callFake(((action: any) => {
       originalDispatch(action);
       if (action.type === invokeSetPassengerInfo.type) {
         store.overrideSelector(selectPassengerInfo, action.passengerInfo);
         store.refreshState();
       }
-    });
+    }) as unknown as typeof store.dispatch);
 
     const prefGroup = fixture.debugElement.query(
       By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_PREFERENCE_GROUP_ARIA"]')
@@ -538,8 +541,8 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     const reqGroup = fixture.debugElement.query(
       By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_REQUIREMENT_GROUP_ARIA"]')
     );
-    const windowBtn = prefGroup.queryAll(By.css('.p-button'))[0];
-    const wheelchairBtn = reqGroup.queryAll(By.css('.p-button'))[0];
+    const windowBtn = prefGroup.queryAll(By.css('.p-togglebutton'))[0];
+    const wheelchairBtn = reqGroup.queryAll(By.css('.p-togglebutton'))[0];
 
     // Click 1: Window. Let the debounced live-sync round trip run to
     // completion BEFORE the 2nd click — the exact timing QA reproduced
@@ -601,13 +604,16 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     // (a synchronous pass-through) — feed each dispatched payload straight back
     // into selectPassengerInfo, exactly as the OBRS-361 defect-repro test above.
     const originalDispatch = store.dispatch.bind(store);
-    spyOn(store, 'dispatch').and.callFake((action: any) => {
+    // OBRS-915: NgRx 19 types Store#dispatch as an overload set carrying
+    // CreatorsNotAllowedCheck, so a plain (action: any) => void no longer
+    // satisfies it. Only the cast is new - the fake behaves exactly as before.
+    spyOn(store, 'dispatch').and.callFake(((action: any) => {
       originalDispatch(action);
       if (action.type === invokeSetPassengerInfo.type) {
         store.overrideSelector(selectPassengerInfo, action.passengerInfo);
         store.refreshState();
       }
-    });
+    }) as unknown as typeof store.dispatch);
 
     // Seeded with 1 adult from the schedule filter.
     expect(component.passengerData.length).toBe(1);
@@ -620,8 +626,8 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     const p1Req = fixture.debugElement.queryAll(
       By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_REQUIREMENT_GROUP_ARIA"]')
     )[0];
-    p1Pref.queryAll(By.css('.p-button'))[0].nativeElement.click(); // WINDOW
-    p1Req.queryAll(By.css('.p-button'))[0].nativeElement.click(); // WHEELCHAIR
+    p1Pref.queryAll(By.css('.p-togglebutton'))[0].nativeElement.click(); // WINDOW
+    p1Req.queryAll(By.css('.p-togglebutton'))[0].nativeElement.click(); // WHEELCHAIR
     fixture.detectChanges();
     tick(300);
     fixture.detectChanges();
@@ -650,7 +656,7 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     const p2Pref = fixture.debugElement.queryAll(
       By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_PREFERENCE_GROUP_ARIA"]')
     )[1];
-    p2Pref.queryAll(By.css('.p-button'))[1].nativeElement.click(); // AISLE
+    p2Pref.queryAll(By.css('.p-togglebutton'))[1].nativeElement.click(); // AISLE
     fixture.detectChanges();
     tick(300);
     fixture.detectChanges();

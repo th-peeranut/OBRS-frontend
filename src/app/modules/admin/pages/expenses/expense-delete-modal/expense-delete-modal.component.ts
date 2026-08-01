@@ -6,9 +6,10 @@ import { ExpenseRow } from '../expenses-page.mappers';
 // state, makes no API calls — the smart parent page owns the deleteExpense()
 // call, the optimistic store.mutate, and the isDeleting guard on close.
 @Component({
-  selector: 'app-expense-delete-modal',
-  templateUrl: './expense-delete-modal.component.html',
-  styleUrl: './expense-delete-modal.component.scss',
+    selector: 'app-expense-delete-modal',
+    templateUrl: './expense-delete-modal.component.html',
+    styleUrl: './expense-delete-modal.component.scss',
+    standalone: false
 })
 export class ExpenseDeleteModalComponent {
   @Input() isOpen = false;

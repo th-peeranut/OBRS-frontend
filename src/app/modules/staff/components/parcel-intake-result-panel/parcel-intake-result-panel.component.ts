@@ -19,9 +19,10 @@ import { ParcelCarryOnRespDto, ParcelConsignedRespDto } from '../../../../shared
  * `isPayingCarryOn`/`carryOnPayErrorKey`) and emits `payCash`/`nextItem`.
  */
 @Component({
-  selector: 'app-parcel-intake-result-panel',
-  templateUrl: './parcel-intake-result-panel.component.html',
-  styleUrl: './parcel-intake-result-panel.component.scss',
+    selector: 'app-parcel-intake-result-panel',
+    templateUrl: './parcel-intake-result-panel.component.html',
+    styleUrl: './parcel-intake-result-panel.component.scss',
+    standalone: false
 })
 export class ParcelIntakeResultPanelComponent {
   @Input() result: ParcelConsignedRespDto | ParcelCarryOnRespDto | null = null;

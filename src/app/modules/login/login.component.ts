@@ -30,9 +30,10 @@ function themeFor(mode: ThemeMode): GisButtonTheme {
 }
 
 @Component({
-  selector: 'app-login',
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.scss',
+    selector: 'app-login',
+    templateUrl: './login.component.html',
+    styleUrl: './login.component.scss',
+    standalone: false
 })
 export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   isShowPassword: boolean = false;

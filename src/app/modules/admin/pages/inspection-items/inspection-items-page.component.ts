@@ -53,9 +53,10 @@ import {
  * — no trash icon, no delete-confirm modal, no `isDeleteModalOpen` member.
  */
 @Component({
-  selector: 'app-inspection-items-page',
-  templateUrl: './inspection-items-page.component.html',
-  styleUrl: './inspection-items-page.component.scss',
+    selector: 'app-inspection-items-page',
+    templateUrl: './inspection-items-page.component.html',
+    styleUrl: './inspection-items-page.component.scss',
+    standalone: false
 })
 export class InspectionItemsPageComponent implements OnInit, OnDestroy {
   protected rows: InspectionItemRow[] = [];

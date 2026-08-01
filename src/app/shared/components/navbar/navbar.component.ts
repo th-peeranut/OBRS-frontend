@@ -15,9 +15,10 @@ import { AlertService } from '../../services/alert.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
-  selector: 'app-navbar',
-  templateUrl: './navbar.component.html',
-  styleUrl: './navbar.component.scss',
+    selector: 'app-navbar',
+    templateUrl: './navbar.component.html',
+    styleUrl: './navbar.component.scss',
+    standalone: false
 })
 export class NavbarComponent implements OnInit, OnDestroy {
   isProfileDropdownOpen: boolean = false;

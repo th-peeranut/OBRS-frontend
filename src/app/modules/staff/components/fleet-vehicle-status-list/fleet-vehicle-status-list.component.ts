@@ -15,9 +15,10 @@ import { FleetPositionRespDto } from '../../../../services/staff/staff-api.servi
  * when the map itself can't render at all (§4.4, no MapTiler key).
  */
 @Component({
-  selector: 'app-fleet-vehicle-status-list',
-  templateUrl: './fleet-vehicle-status-list.component.html',
-  styleUrl: './fleet-vehicle-status-list.component.scss',
+    selector: 'app-fleet-vehicle-status-list',
+    templateUrl: './fleet-vehicle-status-list.component.html',
+    styleUrl: './fleet-vehicle-status-list.component.scss',
+    standalone: false
 })
 export class FleetVehicleStatusListComponent {
   @Input() vehicles: FleetPositionRespDto[] = [];

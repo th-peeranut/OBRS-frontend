@@ -91,7 +91,7 @@
         <label class="admin-form-label">
           {{ 'ADMIN.PROMOTIONS.START_DATE' | translate }} <span class="admin-required">*</span>
         </label>
-        <p-calendar
+        <p-datePicker
           formControlName="startDateTime"
           styleClass="app-date-field"
           panelStyleClass="app-date-field-panel"
@@ -106,7 +106,7 @@
           <ng-template pTemplate="inputicon">
             <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
           </ng-template>
-        </p-calendar>
+        </p-datePicker>
         <small class="admin-error" *ngIf="isFieldInvalid('startDateTime')">
           {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
         </small>
@@ -114,7 +114,7 @@
 
       <div class="admin-form-field">
         <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.END_DATE' | translate }}</label>
-        <p-calendar
+        <p-datePicker
           formControlName="endDateTime"
           styleClass="app-date-field"
           panelStyleClass="app-date-field-panel"
@@ -129,7 +129,7 @@
           <ng-template pTemplate="inputicon">
             <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
           </ng-template>
-        </p-calendar>
+        </p-datePicker>
         <small class="admin-error" *ngIf="hasDateRangeError()">
           {{ 'ADMIN.PROMOTIONS.DATE_RANGE_VALIDATION' | translate }}
         </small>

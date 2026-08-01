@@ -25,9 +25,10 @@ type ConfigHistoryContentState = 'loading' | 'invalid' | 'error' | 'empty' | 'da
  * shape as ReportsPageComponent/UsabilityReportsPageComponent (UX §2).
  */
 @Component({
-  selector: 'app-config-change-history-page',
-  templateUrl: './config-change-history-page.component.html',
-  styleUrl: './config-change-history-page.component.scss',
+    selector: 'app-config-change-history-page',
+    templateUrl: './config-change-history-page.component.html',
+    styleUrl: './config-change-history-page.component.scss',
+    standalone: false
 })
 export class ConfigChangeHistoryPageComponent implements OnInit, OnDestroy {
   protected rows: ConfigHistoryRow[] = [];
@@ -266,7 +267,7 @@ export class ConfigChangeHistoryPageComponent implements OnInit, OnDestroy {
     ];
   }
 
-  // Inverse of toDateInputValue, for seeding the p-calendar controls from the
+  // Inverse of toDateInputValue, for seeding the p-datePicker controls from the
   // store's retained `yyyy-MM-dd` filter on mount (same helper shape as
   // reports-page.component.ts:204).
   private static parseDateInputValue(value: string | undefined): Date | null {

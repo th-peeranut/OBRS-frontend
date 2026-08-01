@@ -4,7 +4,7 @@ import { By } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { MenuModule } from 'primeng/menu';
 import { ReportsPageComponent } from './reports-page.component';
 import { ReportsStore } from './reports.store';
@@ -310,7 +310,7 @@ describe('ReportsPageComponent (export button, OBRS-442)', () => {
     authServiceSpy.hasAnyRole.and.returnValue(hasRole);
 
     TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, MenuModule, AdminSharedModule],
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
       declarations: [ReportsPageComponent, ExportButtonComponent],
       providers: [
         { provide: ReportsStore, useValue: storeStub },

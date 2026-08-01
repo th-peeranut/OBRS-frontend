@@ -22,9 +22,10 @@ interface TimelineEvent {
 }
 
 @Component({
-  selector: 'app-bookings-page',
-  templateUrl: './bookings-page.component.html',
-  styleUrl: './bookings-page.component.scss',
+    selector: 'app-bookings-page',
+    templateUrl: './bookings-page.component.html',
+    styleUrl: './bookings-page.component.scss',
+    standalone: false
 })
 export class BookingsPageComponent implements OnInit, OnDestroy {
   protected allBookings: BookingRow[] = [];

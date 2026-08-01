@@ -106,25 +106,25 @@
               <div class="row g-3">
                 <div class="col-md-6">
                   <label class="form-label">{{ 'STAFF.SCHEDULES.DEPARTURE_DATE' | translate }}</label>
-                  <p-calendar formControlName="departureDate" [showIcon]="true" [iconDisplay]="'input'" dateFormat="yy-mm-dd"
+                  <p-datePicker formControlName="departureDate" [showIcon]="true" [iconDisplay]="'input'" dateFormat="yy-mm-dd"
                               styleClass="app-date-field" panelStyleClass="app-date-field-panel"
                               [class.is-invalid]="isScheduleFieldInvalid('departureDate')">
                     <ng-template pTemplate="inputicon">
                       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
                     </ng-template>
-                  </p-calendar>
+                  </p-datePicker>
                   <div class="invalid-feedback d-block" *ngIf="isScheduleFieldInvalid('departureDate')">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">{{ 'STAFF.SCHEDULES.DEPARTURE_TIME' | translate }}</label>
-                  <p-calendar formControlName="departureTime" [timeOnly]="true" hourFormat="24"
+                  <p-datePicker formControlName="departureTime" [timeOnly]="true" hourFormat="24"
                               [showIcon]="true" [iconDisplay]="'input'"
                               styleClass="app-date-field" panelStyleClass="app-date-field-panel"
                               [class.is-invalid]="isScheduleFieldInvalid('departureTime')">
                     <ng-template pTemplate="inputicon">
                       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
                     </ng-template>
-                  </p-calendar>
+                  </p-datePicker>
                   <div class="invalid-feedback d-block" *ngIf="isScheduleFieldInvalid('departureTime')">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</div>
                 </div>
                 <div class="col-md-6">

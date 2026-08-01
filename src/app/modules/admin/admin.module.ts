@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { CalendarModule } from 'primeng/calendar';
-import { InputSwitchModule } from 'primeng/inputswitch';
+import { DatePickerModule } from 'primeng/datepicker';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { SharedModule } from '../../shared/shared.module';
 import { AdminSharedModule } from './admin-shared.module';
 import { AdminLayoutComponent } from './admin-layout.component';
@@ -434,8 +434,8 @@ export const adminRoutes: Routes = [
   imports: [
     SharedModule,
     RouterModule.forChild(adminRoutes),
-    CalendarModule,
-    InputSwitchModule,
+    DatePickerModule,
+    ToggleSwitchModule,
     AdminSharedModule,
     PhoneFormatPipe,
   ],

@@ -33,9 +33,10 @@ import { TripEstimate } from '../../../../shared/interfaces/route-map.interface'
 import { RouteMapService } from '../../../../services/route-map/route-map.service';
 
 @Component({
-  selector: 'app-review-schedule-booking-summary',
-  templateUrl: './review-schedule-booking-summary.component.html',
-  styleUrl: './review-schedule-booking-summary.component.scss',
+    selector: 'app-review-schedule-booking-summary',
+    templateUrl: './review-schedule-booking-summary.component.html',
+    styleUrl: './review-schedule-booking-summary.component.scss',
+    standalone: false
 })
 export class ReviewScheduleBookingSummaryComponent {
   scheduleBooking: Observable<ScheduleBooking>;

@@ -40,9 +40,10 @@ export interface TripDetailsUpdatedEvent {
 }
 
 @Component({
-  selector: 'app-walk-in-center-panel',
-  templateUrl: './walk-in-center-panel.component.html',
-  styleUrl: './walk-in-center-panel.component.scss',
+    selector: 'app-walk-in-center-panel',
+    templateUrl: './walk-in-center-panel.component.html',
+    styleUrl: './walk-in-center-panel.component.scss',
+    standalone: false
 })
 export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy {
   @Input() selectedTrip: WalkInTripDto | null = null;

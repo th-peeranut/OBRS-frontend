@@ -106,9 +106,27 @@
 }
 
 // Confirm buttons - brand monochrome, overriding PrimeNG severity styles
+//
+// OBRS-915: `color` is declared here now. It always should have been -- this
+// rule calls itself "overriding PrimeNG severity styles" while overriding only
+// two of the three properties that make a severity, and the third one matched
+// by luck. PrimeNG 17 shipped `.p-button.p-button-info { color: #fff }` as a
+// flat literal in its theme CSS, so the label was white in both modes without
+// anyone asking. PrimeNG 19 replaced that with `color: var(--p-button-info-color)`,
+// a runtime token whose dark-mode value is sky.950 (#082f49) because Aura's
+// dark buttons are a LIGHT fill with DARK text. Our fill stays #0772a2, which
+// was derived for white (5.33:1, see variables.scss), so the label landed at
+// 2.60:1 -- under AA, and under the 3:1 large-text floor too.
+//
+// `customer-contrast-gate` cannot catch this and is not wrong not to: at rest
+// this button is `disabled`, and the gate deliberately exempts disabled
+// controls per WCAG 1.4.3/1.4.11 (its own spec pins that behaviour). Nothing
+// declares a separate `:disabled` colour, so the same value is what the user
+// sees once picking a stop enables the button.
 :host ::ng-deep .p-button.p-button-info {
   background: $primary-blue;
   border-color: $primary-blue;
+  color: $text-white;
   border-radius: $radius-xl;
   font-weight: $font-weight-semibold;
 }
@@ -122,9 +140,13 @@
   border-color: $primary-blue-hover;
 }
 
+// OBRS-915: same omission as its `.p-button-info` sibling above, same cause.
+// `--p-button-danger-color` is red.950 (#450a0a) in dark, which on our
+// $secondary-blue fill measured 2.67:1 (was 6.06:1 with white).
 :host ::ng-deep .p-button.p-button-danger {
   background: $secondary-blue;
   border-color: $secondary-blue;
+  color: $text-white;
   border-radius: $radius-xl;
   font-weight: $font-weight-semibold;
 }

@@ -49,9 +49,10 @@ function isParcelScheduleTab(value: string | null): value is ParcelScheduleTab {
  * seven hours off with nothing on screen looking wrong.
  */
 @Component({
-  selector: 'app-parcel-schedule-tabs-page',
-  templateUrl: './parcel-schedule-tabs-page.component.html',
-  styleUrl: './parcel-schedule-tabs-page.component.scss',
+    selector: 'app-parcel-schedule-tabs-page',
+    templateUrl: './parcel-schedule-tabs-page.component.html',
+    styleUrl: './parcel-schedule-tabs-page.component.scss',
+    standalone: false
 })
 export class ParcelScheduleTabsPageComponent implements OnInit, OnDestroy {
   protected readonly tabs = TABS;

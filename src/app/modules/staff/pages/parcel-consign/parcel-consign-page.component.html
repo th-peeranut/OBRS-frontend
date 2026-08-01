@@ -48,7 +48,7 @@
       <div class="row g-3 mb-3">
         <div class="col-md-4">
           <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.DATE' | translate }}</label>
-          <p-calendar
+          <p-datePicker
             [(ngModel)]="selectedDate"
             (onSelect)="onDateChange($event)"
             [showIcon]="true"
@@ -60,7 +60,7 @@
             <ng-template pTemplate="inputicon">
               <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
             </ng-template>
-          </p-calendar>
+          </p-datePicker>
         </div>
       </div>
 

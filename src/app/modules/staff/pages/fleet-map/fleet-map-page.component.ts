@@ -17,9 +17,10 @@ import { FLEET_MAP_POLL_INTERVAL_MS } from './fleet-map.constants';
  * renders the title from route `data.titleKey`/`subtitleKey` (design-system §7).
  */
 @Component({
-  selector: 'app-fleet-map-page',
-  templateUrl: './fleet-map-page.component.html',
-  styleUrl: './fleet-map-page.component.scss',
+    selector: 'app-fleet-map-page',
+    templateUrl: './fleet-map-page.component.html',
+    styleUrl: './fleet-map-page.component.scss',
+    standalone: false
 })
 export class FleetMapPageComponent implements OnInit, OnDestroy {
   protected vehicles: FleetPositionRespDto[] = [];

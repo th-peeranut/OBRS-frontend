@@ -28,9 +28,10 @@ import {
  * soft-delete orchestration state.
  */
 @Component({
-  selector: 'app-promotions-page',
-  templateUrl: './promotions-page.component.html',
-  styleUrl: './promotions-page.component.scss',
+    selector: 'app-promotions-page',
+    templateUrl: './promotions-page.component.html',
+    styleUrl: './promotions-page.component.scss',
+    standalone: false
 })
 export class PromotionsPageComponent implements OnInit, OnDestroy {
   protected rows: PromotionRow[] = [];

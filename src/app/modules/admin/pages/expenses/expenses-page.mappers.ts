@@ -179,7 +179,7 @@ export interface ExpenseRow {
   categoryDisplay: string;
   amount: number;
   vatAmount: number | null;
-  /** Raw "YYYY-MM-DD" — feeds the edit-modal's p-calendar seed and the
+  /** Raw "YYYY-MM-DD" — feeds the edit-modal's p-datePicker seed and the
    * client-side date-range filter's string comparison. */
   expenseDate: string;
   expenseDateDisplay: string;

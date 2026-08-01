@@ -30,9 +30,10 @@ const STALE_ERROR_CODES: ReadonlySet<string> = new Set(['REPORT_NOT_EDITABLE', '
  * duplicates a toast.
  */
 @Component({
-  selector: 'app-my-report-edit-form',
-  templateUrl: './my-report-edit-form.component.html',
-  styleUrl: './my-report-edit-form.component.scss',
+    selector: 'app-my-report-edit-form',
+    templateUrl: './my-report-edit-form.component.html',
+    styleUrl: './my-report-edit-form.component.scss',
+    standalone: false
 })
 export class MyReportEditFormComponent implements OnInit, OnDestroy {
   @Input() detail!: MyUsabilityReportDetail;

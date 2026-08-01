@@ -32,9 +32,10 @@ import {
 } from '../../../../shared/lib/trip-format';
 
 @Component({
-  selector: 'app-payment-info',
-  templateUrl: './payment-info.component.html',
-  styleUrl: './payment-info.component.scss',
+    selector: 'app-payment-info',
+    templateUrl: './payment-info.component.html',
+    styleUrl: './payment-info.component.scss',
+    standalone: false
 })
 export class PaymentInfoComponent {
   scheduleBooking: Observable<ScheduleBooking>;

@@ -32,9 +32,10 @@ type ApprovalsContentState = 'loading' | 'error' | 'empty' | 'data';
  * here would show the owner a request that has already expired.
  */
 @Component({
-  selector: 'app-cash-refund-approvals-page',
-  templateUrl: './cash-refund-approvals-page.component.html',
-  styleUrl: './cash-refund-approvals-page.component.scss',
+    selector: 'app-cash-refund-approvals-page',
+    templateUrl: './cash-refund-approvals-page.component.html',
+    styleUrl: './cash-refund-approvals-page.component.scss',
+    standalone: false
 })
 export class CashRefundApprovalsPageComponent implements OnInit, OnDestroy {
   protected rows: CashRefundApprovalRequest[] = [];

@@ -2,7 +2,7 @@ import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { OverlayPanelModule } from 'primeng/overlaypanel';
+import { PopoverModule } from 'primeng/popover';
 import { BehaviorSubject } from 'rxjs';
 import { NotificationBellComponent } from './notification-bell.component';
 import { NotificationInboxService } from '../../services/notification-inbox.service';
@@ -35,7 +35,7 @@ describe('NotificationBellComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [NotificationBellComponent],
-      imports: [TranslateModule.forRoot(), OverlayPanelModule],
+      imports: [TranslateModule.forRoot(), PopoverModule],
       providers: [
         { provide: NotificationInboxService, useValue: inboxServiceSpy },
         { provide: ThemeService, useValue: { mode$: themeMode$.asObservable() } },
@@ -135,7 +135,7 @@ describe('NotificationBellComponent', () => {
       expect(component['overlayStyleClass']).toBe('notification-inbox-overlay theme-admin');
     });
 
-    it('binds styleClass onto the child p-overlayPanel instance', () => {
+    it('binds styleClass onto the child p-popover instance', () => {
       themeMode$.next('dark');
       component.shellVariant = 'staff';
       fixture.detectChanges();

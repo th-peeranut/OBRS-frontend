@@ -1,5 +1,5 @@
 import { Component, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { OverlayPanel } from 'primeng/overlaypanel';
+import { Popover } from 'primeng/popover';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { NotificationInboxService } from '../../services/notification-inbox.service';
@@ -9,12 +9,12 @@ import { ThemeService } from '../../services/theme.service';
 /**
  * OBRS-317: notification bell + unread badge, mounted in the admin/staff
  * topbar (`.admin-topbar-actions`) next to `app-lang-switcher`. Opens a
- * `p-overlayPanel` hosting `AppNotificationInboxPanelComponent`. Both
+ * `p-popover` hosting `AppNotificationInboxPanelComponent`. Both
  * `/admin` and `/staff` shells are route-guarded (`requiredRoles`), so a
  * customer session never renders this component — no component-level role
  * check needed here.
  *
- * Scrutinize fix (2026-07-14): `p-overlayPanel`'s `appendTo="body"` detaches
+ * Scrutinize fix (2026-07-14): `p-popover`'s `appendTo="body"` detaches
  * the panel from `.admin-shell`'s DOM subtree, so the `--admin-*`/`--accent-*`
  * CSS custom properties declared only on `.admin-shell`/`.admin-shell.is-dark`/
  * `.admin-shell.theme-*` (admin-theme.scss) never inherit down to it — mirrors
@@ -26,9 +26,10 @@ import { ThemeService } from '../../services/theme.service';
  * scoped to that class (see `.notification-inbox-overlay*` rules there).
  */
 @Component({
-  selector: 'app-notification-bell',
-  templateUrl: './notification-bell.component.html',
-  styleUrl: './notification-bell.component.scss',
+    selector: 'app-notification-bell',
+    templateUrl: './notification-bell.component.html',
+    styleUrl: './notification-bell.component.scss',
+    standalone: false
 })
 export class NotificationBellComponent implements OnInit, OnDestroy {
   // Which shell mounted this bell — drives the accent-variant class applied
@@ -38,7 +39,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   // staff-layout) pass their own value explicitly.
   @Input() shellVariant: 'admin' | 'staff' = 'admin';
 
-  @ViewChild('overlayPanel') overlayPanel?: OverlayPanel;
+  @ViewChild('overlayPanel') overlayPanel?: Popover;
 
   protected readonly unreadCount$: Observable<number>;
   protected readonly items$: Observable<NotificationItem[]>;
@@ -61,7 +62,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     this.error$ = notificationInboxService.error$;
   }
 
-  // The class applied (via `[styleClass]`) to the `p-overlayPanel`'s
+  // The class applied (via `[styleClass]`) to the `p-popover`'s
   // `appendTo="body"` root — carries the accent-variant + dark-mode context
   // that `.admin-shell`'s own class list would otherwise supply, since the
   // panel is no longer a DOM descendant of `.admin-shell`.

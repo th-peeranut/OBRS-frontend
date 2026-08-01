@@ -37,9 +37,10 @@ const CUTOFF_MINUTES_MAX = 1440;
 //    to the first invalid control) — reminder-config doesn't do this; adding
 //    it here is deliberate (UX spec).
 @Component({
-  selector: 'app-booking-policy-config-page',
-  templateUrl: './booking-policy-config-page.component.html',
-  styleUrl: './booking-policy-config-page.component.scss',
+    selector: 'app-booking-policy-config-page',
+    templateUrl: './booking-policy-config-page.component.html',
+    styleUrl: './booking-policy-config-page.component.scss',
+    standalone: false
 })
 export class BookingPolicyConfigPageComponent
   implements OnInit, OnDestroy, CanComponentDeactivate

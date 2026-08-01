@@ -24,9 +24,10 @@ interface LanguageOption {
  * instance's element (no class-based matching needed).
  */
 @Component({
-  selector: 'app-lang-switcher',
-  templateUrl: './lang-switcher.component.html',
-  styleUrl: './lang-switcher.component.scss',
+    selector: 'app-lang-switcher',
+    templateUrl: './lang-switcher.component.html',
+    styleUrl: './lang-switcher.component.scss',
+    standalone: false
 })
 export class LangSwitcherComponent implements OnDestroy {
   /** Horizontal alignment of the dropdown menu relative to the trigger. */
