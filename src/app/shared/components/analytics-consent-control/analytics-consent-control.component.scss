@@ -11,6 +11,15 @@
 // which is a contrast defect, not a dark-mode feature. If the policy page ever
 // gains a dark background, this file gains its override in the same change.
 
+// OBRS-775: a component that declares no `:host` display renders as
+// `display: inline`, and an inline box may not contain the block-level children
+// below it — the browser splits the host and wraps them in anonymous blocks,
+// after which the host's own border box describes nothing. `host-box-sweep`
+// fails on exactly this, and it caught this file (2026-08-01) before review did.
+:host {
+  display: block;
+}
+
 .consent-control {
   margin-top: 32px;
   padding: 20px 24px;
