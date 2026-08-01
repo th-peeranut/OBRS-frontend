@@ -76,6 +76,9 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 card: OBRS-151
 status: partially-resolved
 resolved: 2026-07-24 (foundation increment)
+absent: byRoute :: src/main/java/com/example/demo/dto/response/business/*RevenueAnalytics*.java
+absent: byPaymentMethod :: src/main/java/com/example/demo/dto/response/business/*RevenueAnalytics*.java
+note: absent: added 2026-08-01 (OBRS-936). Written before the gate accepted this status, so for a week the entry declared nothing checkable and the two breakdowns went unverified. Re-measured against origin/dev that day: 0 hits for either name in the RevenueAnalytics DTO. The foundation (totals + daily trend + period-over-period) IS shipped - that asymmetry is what partially-resolved means.
 -->
 
 > **PARTIALLY RESOLVED 2026-07-24.** The **foundation** of this endpoint now exists and is documented:
@@ -159,6 +162,8 @@ endpoints should be verified against seeded/synthetic data, and the analytics in
 card: OBRS-152
 status: partially-resolved
 resolved: 2026-07-24 (daily increment)
+absent: granularity :: src/main/java/com/example/demo/dto/response/business/*BookingTrend*.java
+note: absent: added 2026-08-01 (OBRS-936). Daily series + 7-day moving average + day-of-week seasonality + period-over-period + peak are shipped; week/month bucketing is not. Re-measured against origin/dev: 0 hits across all 5 BookingTrend DTOs.
 -->
 
 > **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/booking-trend` now exists (backend
@@ -198,6 +203,8 @@ Server-computed: `movingAvg7`, `barPct` (bucket count / max bucket count × 100)
 card: OBRS-153
 status: partially-resolved
 resolved: 2026-07-24 (ticket-grained increment)
+absent: loadFactor :: src/main/java/com/example/demo/dto/response/business/*RoutePerformance*.java
+note: absent: added 2026-08-01 (OBRS-936). Departures + tickets sold + net revenue + revenueSharePct are shipped, ticket-grained; seat-level load factor / occupancy is not. Re-measured against origin/dev: 0 hits across the 3 RoutePerformance DTOs.
 -->
 
 > **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/route-performance` now exists
@@ -241,6 +248,8 @@ top-N-routes-by-revenue bar list. **Impact**: OBRS-153 page cannot be built. No-
 card: OBRS-154
 status: partially-resolved
 resolved: 2026-07-24 (counts-only increment)
+absent: leadTime :: src/main/java/com/example/demo/dto/response/business/*CustomerBehavior*.java
+note: absent: added 2026-08-01 (OBRS-936). Aggregate counts (distinct/returning, channel split, repeat histogram) are shipped; booking lead-time percentiles are not - PERCENTILE_CONT has 0 hits anywhere in backend src/main, and leadTime has 0 across the 3 CustomerBehavior DTOs. Re-measured against origin/dev.
 -->
 
 > **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/customer-behavior` now exists
@@ -279,6 +288,9 @@ Server-computed: every `*Pct`, the percentiles, and `avgBookingsPerCustomer`. **
 card: OBRS-155
 status: partially-resolved
 resolved: 2026-07-24 (departures + seat-fill increment)
+absent: vehicleUtilization :: src/main/java/com/example/demo/dto/response/business/*OpsEfficiency*.java
+absent: refundRate :: src/main/java/com/example/demo/dto/response/business/*OpsEfficiency*.java
+note: absent: added 2026-08-01 (OBRS-936). Departure completion + seat fill + per-vehicle-type breakdown are shipped; fleet-vehicle utilization and refund rate are not. Re-measured against origin/dev: 0 hits for either in the OpsEfficiency DTO.
 -->
 
 > **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/ops-efficiency` now exists
