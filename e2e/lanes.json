@@ -51,6 +51,18 @@
       "why": "OBRS-867 AC-1, declared by OBRS-882 -- the card shipped this spec without a lanes.json entry, so it belonged to no lane and ran nowhere but by hand. OWN-DB rather than GATE for the same reason that lane exists: it asserts a state that can only exist by construction. It needs the `analytics-e2e` build configuration, the ONLY one carrying a real measurement ID, because it measures consent on the WIRE -- no request to googletagmanager/clarity/google-analytics before accept, and a MUST-CATCH case proving both really do fire after. Against any other build the IDs are blank, the loader no-ops, and every 'nothing was requested' assertion passes vacuously. It touches no database, but the lane's rule -- provisions the environment its premise needs, never runnable against SIT -- is the one that fits."
     },
     {
+      "spec": "obrs-874-analytics-cookie-census.spec.ts",
+      "lane": "SIT-LIVE",
+      "config": "playwright.obrs874census.config.ts",
+      "why": "OBRS-874 AC-5. Reads document.cookie / localStorage / sessionStorage before and after accepting on the DEPLOYED SIT site and prints the DIFFERENCE -- the list OBRS-631 AC-5 copies into the notice's cookie section. SIT-LIVE and never a gate: it consents to real GA4 and Clarity tags on a real deployment, which is precisely what makes the answer true; the analytics-e2e build's IDs are invalid on purpose, so its tags 404 and store nothing, and measuring there would produce an empty list that reads like an answer. It asserts a difference rather than a pinned list, because a hardcoded list would have to be edited to stay green -- turning a vendor adding a cookie from a signal into a chore. Two must-catches keep it honest in both directions: no vendor-shaped name may exist BEFORE consent (that would mean the gate is broken), and at least one must appear AFTER (otherwise the empty census is a false statement waiting to be published)."
+    },
+    {
+      "spec": "obrs-874-analytics-consent-withdraw.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs867.config.ts",
+      "why": "OBRS-874 AC-2. Same premise and therefore the same lane as obrs-867-analytics-consent-gate.spec.ts: it can only be true on the `analytics-e2e` build, the one configuration carrying measurement IDs, because it measures a WITHDRAWAL on the wire. It asserts the two halves separately because different mechanisms guarantee them -- without a reload, collection stops at the vendor (`ga-disable-<id>` plus `clarity('stop')`, driven by AnalyticsService's isGranted$ subscription); after a reload, the scripts are never injected at all because load() is only reached while granted. It reaches the policy page by CLICKING the footer link rather than page.goto, because goto is a fresh document and would throw away the very tags whose in-place shutdown is the claim. Carries its own MUST-CATCH accept leg for the same reason the 867 suite does: on a blank-ID build every 'nothing was requested' expectation passes while proving nothing. Touches no database; OWN-DB is the lane for 'provisions the environment its premise needs, never runnable against SIT'."
+    },
+    {
       "spec": "obrs-867-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs867.config.ts",

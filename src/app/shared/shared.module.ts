@@ -34,6 +34,10 @@ import { AppRefundDestinationFieldsComponent } from './components/refund-destina
 // OBRS-867: the PDPA consent bar. Mounted once in app.component.html as a
 // sibling of <router-outlet>, so it survives every navigation.
 import { AnalyticsConsentBannerComponent } from './components/analytics-consent-banner/analytics-consent-banner.component';
+// OBRS-874: the grant/withdraw control. Lives on /privacy-policy only — but in
+// shared/ rather than in the privacy-policy module because it is a consent
+// surface, and it belongs beside the bar that links to it.
+import { AnalyticsConsentControlComponent } from './components/analytics-consent-control/analytics-consent-control.component';
 // OBRS-907: the one shared loading indicator (skeleton / spinner / inline).
 import { LoadingStateComponent } from './components/loading-state/loading-state.component';
 
@@ -60,6 +64,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     UsabilityReportFollowUpTimelineComponent,
     AppRefundDestinationFieldsComponent,
     AnalyticsConsentBannerComponent,
+    AnalyticsConsentControlComponent,
     LoadingStateComponent,
     AdminModalBackdropDirective,
   ],
@@ -99,6 +104,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     UsabilityReportFollowUpTimelineComponent,
     AppRefundDestinationFieldsComponent,
     AnalyticsConsentBannerComponent,
+    AnalyticsConsentControlComponent,
     LoadingStateComponent,
 
     // Directives

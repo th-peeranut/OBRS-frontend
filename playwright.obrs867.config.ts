@@ -28,6 +28,10 @@ export default defineConfig({
   testDir: './e2e/tests',
   testMatch: [
     'obrs-867-analytics-consent-gate.spec.ts',
+    // OBRS-874 AC-2: the withdrawal half of the same claim, which needs this
+    // build for the same reason — a blank-ID build cannot tell "collection
+    // stopped" apart from "nothing was ever collected".
+    'obrs-874-analytics-consent-withdraw.spec.ts',
     // AFTER evidence + the measured contrast/geometry checks, taken from the
     // very build whose network behaviour the gate suite just asserted.
     'obrs-867-capture.spec.ts',
