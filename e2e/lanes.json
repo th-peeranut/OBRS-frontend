@@ -51,6 +51,12 @@
       "why": "OBRS-867 AC-1, declared by OBRS-882 -- the card shipped this spec without a lanes.json entry, so it belonged to no lane and ran nowhere but by hand. OWN-DB rather than GATE for the same reason that lane exists: it asserts a state that can only exist by construction. It needs the `analytics-e2e` build configuration, the ONLY one carrying a real measurement ID, because it measures consent on the WIRE -- no request to googletagmanager/clarity/google-analytics before accept, and a MUST-CATCH case proving both really do fire after. Against any other build the IDs are blank, the loader no-ops, and every 'nothing was requested' assertion passes vacuously. It touches no database, but the lane's rule -- provisions the environment its premise needs, never runnable against SIT -- is the one that fits."
     },
     {
+      "spec": "obrs-631-privacy-notice.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs631.config.ts",
+      "why": "OBRS-631. The 2.0 privacy notice as rendered, plus the AFTER picture the card needs as evidence. CAPTURE only because of the screenshot -- the four assertions beside it are load-bearing and can each fail for a real reason. They cover the half scripts/check-i18n-parity.mjs structurally cannot see: the notice arrives through [innerHTML], and a <ul> inside a <p> (what 2.0 would have been without the template change to a div) is closed early by the parser, so the markup collapses while every string gate reading the JSON stays green. Hence counting the h2 elements AND asserting they are direct children of .policy-body. Needs no backend, no seed and no third party -- the page renders from public/i18n/*.json and privacy-policy.version.ts alone -- so it runs against the plain development build on its own port."
+    },
+    {
       "spec": "obrs-874-analytics-cookie-census.spec.ts",
       "lane": "SIT-LIVE",
       "config": "playwright.obrs874census.config.ts",
