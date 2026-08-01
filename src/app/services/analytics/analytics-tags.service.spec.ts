@@ -1,4 +1,12 @@
-import { DOCUMENT } from '@angular/common';
+// OBRS-917: `DOCUMENT` moved from `@angular/common` to `@angular/core` in
+// Angular 20. The official `ng update` migration DELETED the `@angular/common`
+// import here and added nothing back - it merges the symbol into an existing
+// `@angular/core` import, and this file only ever imported
+// `@angular/core/testing`, so there was nothing for it to merge into. `ng build`
+// stayed green through that: tsconfig.app.json compiles `src/main.ts` plus
+// `*.d.ts` and never sees a spec. The whole karma run failed to LOAD instead -
+// 0 tests executed, which reads nothing like "one spec is broken".
+import { DOCUMENT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
 import { AnalyticsTagsService } from './analytics-tags.service';

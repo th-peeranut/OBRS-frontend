@@ -14,8 +14,21 @@
          (TRIP_DETAILS_TAB_INDEX), so onTabChange's contract is unchanged.
        - `p-tabs` has no `styleClass` input, so `.center-tabview` moves to a
          plain `class` on the host - same element, same selector.
-       - headers move out of `[header]` on the panel into `<p-tab>` elements. -->
-  <p-tabs *ngIf="selectedTrip" class="center-tabview" [value]="0" (valueChange)="onTabChange(+$event)">
+       - headers move out of `[header]` on the panel into `<p-tab>` elements.
+
+       OBRS-917: `$event` now goes through unconverted. PrimeNG 20 widened
+       `Tabs.value` from `ModelSignal<string | number>` to
+       `ModelSignal<string | number | undefined>` - measured, not inferred:
+       primeng@19.1.4 `tabs/tabs.d.ts:18` against primeng@20.4.0
+       `tabs/index.d.ts:306`. That is not in the release notes, and `+$event`
+       stopped type-checking because of it. `+($event ?? 0)` would have compiled
+       and been wrong: it turns "no tab" into tab 0 and silently switches the
+       panel to Ticket Sales. onTabChange() takes the wide type instead and
+       refuses anything that is not a finite number. This is the only `p-tabs`
+       in the app with a valueChange handler - route-map-home has the other
+       `<p-tabs>` and binds nothing, and the remaining 16 `(valueChange)`
+       bindings are on `p-select`, whose type did not move. -->
+  <p-tabs *ngIf="selectedTrip" class="center-tabview" [value]="0" (valueChange)="onTabChange($event)">
 
     <p-tablist>
       <p-tab [value]="0">{{ 'STAFF.SELL.TAB_TICKET_SALES' | translate }}</p-tab>

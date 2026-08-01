@@ -444,7 +444,14 @@ describe('AdminLayoutComponent', () => {
     comp.applyNavSearch('promotion');
     fixture.detectChanges();
     const link = fixture.debugElement.query(By.css('.admin-nav-link:not(.admin-nav-btn)'));
-    link.triggerEventHandler('click', null); // fires onNavLinkClick() + clearNavSearch()
+    // OBRS-917: a real MouseEvent, not `null`. triggerEventHandler runs EVERY
+    // click listener on the element, and one of them is routerLink's. Angular 20
+    // dereferences the event inside that listener, so `null` now throws
+    // "Cannot read properties of null (reading 'button')" from
+    // router_module.mjs before this component's own handler is reached. Passing
+    // null was always a fiction about what a click is; v19 simply did not charge
+    // for it. Project-wide census: this was the only `triggerEventHandler(..., null)`.
+    link.triggerEventHandler('click', new MouseEvent('click')); // fires onNavLinkClick() + clearNavSearch()
     fixture.detectChanges();
     expect(comp.navSearchQuery).toBe('');
     expect(comp.filteredNavSections.map((s) => s.key)).toEqual(fullSectionKeys);
