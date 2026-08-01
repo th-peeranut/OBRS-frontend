@@ -248,7 +248,14 @@ describe('MyBookingsComponent', () => {
 
       component.onRescheduleInsteadOfCancel(view);
 
-      const types = dispatchSpy.calls.allArgs().map(([action]) => (action as { type: string }).type);
+      // NgRx 19 (arrived with the Angular 19 upgrade, OBRS-915) widened `dispatch`
+      // to `Action | (() => Action)`, so the spy's parameter type now resolves to
+      // the function branch and a direct cast to an action shape stopped
+      // overlapping (TS2352). The dispatched value is always the action object —
+      // route through `unknown` to say so, same as the accessor at line 61.
+      const types = dispatchSpy.calls
+        .allArgs()
+        .map(([action]) => (action as unknown as { type: string }).type);
       expect(types.length).toBe(2);
       expect(types[0]).toBe('[MyBookings API] Close cancel refund destination modal');
       expect(dispatchSpy.calls.argsFor(1)[0]).toEqual(
