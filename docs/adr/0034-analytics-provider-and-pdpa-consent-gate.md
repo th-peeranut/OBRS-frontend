@@ -74,9 +74,10 @@ cover a new purpose is the thing PDPA exists to prevent.
 
 Accept and Decline are the same button — same size, same weight, same class-driven
 geometry — and **Decline comes first in the DOM**, so it is also first in the tab order.
-The banner does not block the page: a visitor who ignores it can search, book and pay,
-and is simply not measured. Consent obtained by making a ticket shop unusable until you
-say yes is not consent.
+~~The banner does not block the page:~~ a visitor who ignores it can search, book and pay,
+and is simply not measured — **but it does cover whatever is anchored to the bottom of the
+viewport until it is answered, which §9 (OBRS-877) records rather than repairs.** Consent
+obtained by making a ticket shop unusable until you say yes is not consent.
 
 A decline is remembered and the banner never asks again.
 
@@ -212,6 +213,69 @@ The bar stands down on that one route (`shared/lib/analytics-consent-control.ts`
 withdrawing would otherwise make the bar appear the instant the button was pressed, on the
 page it was pressed on, which reads as the site ignoring the request.
 
+### 9. The bar covers what is anchored to the bottom of the viewport, and that is the accepted trade (OBRS-877 — qualifies §3)
+
+§3 says the banner "does not block the page". That is true of the flows it names — search,
+booking and payment are untouched — and false as a statement about the layout, which is how
+the next reader takes it. `analytics-consent-banner.component.scss` is `position: fixed;
+left: 0; right: 0; bottom: 0; z-index: 1000` and **nothing compensates for its height**, so
+while `obrs_analytics_consent_v1` is unset every control anchored to the bottom of the
+viewport sits behind it.
+
+Two are known, and both of those placements are deliberate rather than accidents:
+
+- **The usability FAB** (`.report-fab`, `z-index: 900`). The scss states the trade in as
+  many words: *"Above the usability FAB (z-index 900) — the two share the bottom-right
+  corner, and while the question is unanswered this one is the more urgent."*
+- **The close-account button on `/account`, at a 390px viewport.** OBRS-632 puts that card
+  last on the page on purpose — it is the one irreversible action there — so on a phone the
+  two occupy the same pixels. Someone arriving off the counter QR has neither a session nor
+  a consent answer, which is the single path where this is a first-visit block instead of a
+  second-visit non-event.
+
+**The decision is to keep the overlap and pin it, not to pad the page.** A
+`padding-bottom` reservation would have to be measured at runtime and re-measured on every
+resize and language switch: the bar is `flex-wrap: wrap`, so its height is a function of
+the viewport width and of the copy in the active language, not a constant anyone can write
+down. Getting it wrong leaves a permanent gap under every page, on every visit, for a bar
+most visitors see once. Making the bar "not modal" was never a live option because it
+already is not: it swallows its own rectangle and nothing else, and one tap — Decline,
+first in the tab order per §3 — returns every pixel of it for good.
+
+**The cost, in the unit it is actually paid in:** one tap, once, on a first visit, ahead of
+a bug report or an irreversible account action — never ahead of search, booking or payment.
+That is the line §3 draws and this section does not move it. **If a control on the booking
+or payment path is ever anchored to the viewport bottom, this trade is void** and §3's
+sentence becomes a requirement again.
+
+**It is pinned in two specs, which is what makes "fixing" the stacking a decision rather
+than a tidy-up:**
+
+- `e2e/tests/analytics-consent-banner.spec.ts` — *"banner covers the usability FAB while
+  undecided, and stops covering it once answered"*, at 1280×720.
+- `e2e/tests/obrs-854-account-deeplink.spec.ts` — *"first visit off the QR: the consent bar
+  covers the close-account button until answered"*, at 390×844.
+
+Both ask `document.elementFromPoint` at the control's own centre instead of reading a
+`z-index`, so they measure the click the browser would really deliver rather than a proxy
+for it (OBRS-750 recorded what a proxy costs in this lane). Both also assert the second
+half — that answering gives the control back — so a `display: none` on the wrong node
+cannot pass them. **Raising the FAB above the bar, or padding the body, turns both red on
+purpose**: the next person to touch that stacking has to overturn this section instead of
+rediscovering it through a red gate lane four commits later.
+
+**The gate lane answers the question rather than running inside it (OBRS-882).**
+`e2e/support/analytics-consent.ts` seeds a settled decision through `addInitScript` before
+Angular boots, so the 23 cases OBRS-867's merge took out across `report-usability-issue`,
+`trip-details-edit` and `staff-sell-walkin` now run in the state every customer is in from
+their second page view onward. The seed is `denied`, not `granted`, because it additionally
+keeps `AnalyticsTagsService.load()` from ever running — a lane whose premise is "needs
+nothing but a browser" should not depend on a build config to stay off googletagmanager.com
+and clarity.ms. Seeding would be muting the alarm if it stood alone; it does not, because
+the first-visit state moved into the spec above rather than disappearing. AC-1 of OBRS-877
+forbids fixing this by editing the failing tests, and this is why the seeding is not that:
+the tests were not taught to accept a wrong layout, the layout was asserted somewhere else.
+
 ---
 
 ## Consequences
@@ -237,3 +301,7 @@ page it was pressed on, which reads as the site ignoring the request.
   properties and set `GA4_MEASUREMENT_ID` / `CLARITY_PROJECT_ID` on the SIT Netlify site
   (then `PROD_*` on prod). Until then the shipped behaviour is: no tag, no network call,
   no banner cost — and the moment the variables exist, the next deploy starts recording.
+- Until the question is answered, the bar covers bottom-anchored controls — today the
+  usability FAB and the close-account button on a phone (§9, OBRS-877). Accepted, and
+  pinned by two `elementFromPoint` specs that go red if the stacking is "tidied up". The
+  acceptance is scoped: it does not extend to any control on the booking or payment path.
