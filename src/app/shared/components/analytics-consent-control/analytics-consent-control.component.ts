@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AnalyticsConsentService } from '../../../services/analytics/analytics-consent.service';
 import { AnalyticsConsentDecision } from '../../interfaces/analytics.interface';
+import { hasOwnKey } from '../../lib/own-key';
 
 /**
  * OBRS-874 — the withdrawal surface PDPA ม.19 วรรคห้า requires.
@@ -58,8 +59,19 @@ export class AnalyticsConsentControlComponent {
     this.decision$ = this.consent.decision$;
   }
 
+  /**
+   * `decision` is a typed union, so an inherited key looks impossible from here.
+   * It arrives through the async pipe from a `BehaviorSubject` whose seed is
+   * read out of localStorage, and the compile-time type is exactly the guarantee
+   * `hasOwnKey` exists to distrust (OBRS-601): `MAP['constructor']` is the
+   * Object function — non-nullish and truthy, so `?? fallback` never fires and
+   * `translate` would be handed a function. Falling back to the `unset` copy is
+   * also the right answer on its merits: no recognisable answer means we hold
+   * none, which is what that line says.
+   */
   protected statusKey(decision: AnalyticsConsentDecision): string {
-    return AnalyticsConsentControlComponent.STATUS_KEYS[decision];
+    const keys = AnalyticsConsentControlComponent.STATUS_KEYS;
+    return hasOwnKey(keys, decision) ? keys[decision] : keys.unset;
   }
 
   protected withdraw(): void {
