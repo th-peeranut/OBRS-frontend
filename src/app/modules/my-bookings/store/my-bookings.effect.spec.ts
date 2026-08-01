@@ -132,32 +132,27 @@ describe('MyBookingsEffect (OBRS-286)', () => {
       expect(alertService.confirm).not.toHaveBeenCalled();
     });
 
-    it('is byte-identical (still the Swal confirm path) for a non-manual refund method', async () => {
+    it('OBRS-942: a non-manual refund method also opens the cancel modal — the Swal confirm lane is deleted', () => {
       const booking = buildBookingView();
+      const policy = {
+        originalAmount: 500,
+        refundAmount: 500,
+        penaltyAmount: 0,
+        refundRatePercent: '100%',
+        refundMethod: 'card',
+        policyWindow: '24h',
+      };
       bookingService.getCancellationPolicy.and.returnValue(
-        of({
-          code: 200,
-          message: 'ok',
-          data: {
-            originalAmount: 500,
-            refundAmount: 500,
-            penaltyAmount: 0,
-            refundRatePercent: '100%',
-            refundMethod: 'card',
-            policyWindow: '24h',
-          },
-        })
+        of({ code: 200, message: 'ok', data: policy })
       );
-      alertService.confirm.and.resolveTo(false);
 
       const emitted: Action[] = [];
       effect.requestCancel$.subscribe((a) => emitted.push(a));
 
       actionsSubject.next(requestCancelBooking({ booking }));
-      await Promise.resolve();
-      await Promise.resolve();
 
-      expect(alertService.confirm).toHaveBeenCalled();
+      expect(emitted).toEqual([openCancelRefundDestinationModal({ booking, policy })]);
+      expect(alertService.confirm).not.toHaveBeenCalled();
     });
   });
 

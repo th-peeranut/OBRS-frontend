@@ -118,7 +118,8 @@
             </div>
           }
           <!-- MANUAL_REFUND_REQUIRED — byte-identical usage to
-          OverrideCancelModalComponent / CancelRefundDestinationModalComponent. -->
+          OverrideCancelModalComponent / CancelBookingModalComponent (renamed
+          from CancelRefundDestinationModalComponent by OBRS-942). -->
           @if (previewState === 'resolved' && isManualRefund) {
             <div class="admin-form-field full">
               <app-refund-destination-fields

@@ -1,6 +1,16 @@
 @import "../../../../../styles/variables.scss";
 @import "../../../../../styles/dark-tokens";
 
+// OBRS-942: `crdm-` (Cancel Refund Destination Modal) is historical — it
+// predates this component's rename to `CancelBookingModalComponent` /
+// `app-cancel-booking-modal`. Kept as-is on purpose: three e2e/capture files
+// (`e2e/tests/obrs-813-cancel-offers-reschedule.spec.ts`,
+// `e2e/tests/obrs766-counter-cancel.spec.ts`, `e2e/scripts/capture-obrs813.js`)
+// select on these classes literally, and `ng test` cannot see that lane at
+// all — renaming the prefix here would silently break a CI job this commit
+// never runs. Same reasoning already applied to leaving the NgRx action/
+// selector/state-slice names untouched (see `my-bookings.action.ts`).
+//
 // Same modal chrome as change-stop-dialog.component.scss / reschedule-dialog
 // (backdrop, floating close button, fade-in) — kept consistent rather than
 // reintroducing a third pattern (design-system §6).

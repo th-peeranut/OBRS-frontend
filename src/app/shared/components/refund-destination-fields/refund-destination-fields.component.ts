@@ -5,7 +5,8 @@ import { RefundDestinationType } from '../../interfaces/refund-destination.inter
 /**
  * OBRS-286 — dumb, cross-shell input control for a refund bank/PromptPay
  * destination. Renders inside BOTH the customer shell
- * (`CancelRefundDestinationModalComponent`) and the admin shell
+ * (`CancelBookingModalComponent` — renamed from
+ * `CancelRefundDestinationModalComponent` by OBRS-942) and the admin shell
  * (`OverrideCancelModalComponent`), and is declared in `SharedModule` for
  * exactly that reason (precedent: `AdminModalBackdropDirective`, ADR-0017).
  *

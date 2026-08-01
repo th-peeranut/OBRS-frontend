@@ -1039,7 +1039,8 @@ enforced rule with a test behind it.
   cross-shell component that is a genuine **input control** rather than a
   read-only status chip (the `ParcelTrackingPageComponent`/`MyReportsComponent`
   precedents above only re-declare chip token *values*). It renders inside
-  both the customer shell (`CancelRefundDestinationModalComponent`, Flow A1)
+  both the customer shell (`CancelBookingModalComponent` — renamed from
+  `CancelRefundDestinationModalComponent` by OBRS-942, Flow A1)
   and the admin shell (`OverrideCancelModalComponent`, Flow A3), so it can't
   lean on `.admin-field` (depends on `--admin-*`, undefined outside
   `.admin-shell`) or the customer shell's `.form-control` (not a pill, §5).

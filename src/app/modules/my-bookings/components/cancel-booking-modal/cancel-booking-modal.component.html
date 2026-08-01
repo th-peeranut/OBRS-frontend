@@ -10,7 +10,11 @@
     </button>
 
     <div class="crdm-modal__body">
-      <h2 class="crdm-modal__title">{{ 'MY_BOOKINGS.CANCEL.DESTINATION_DIALOG_TITLE' | translate }}</h2>
+      <!-- OBRS-942: DESTINATION_DIALOG_TITLE keeps its name — it stays literally
+      true because it is only rendered on the manual lane. -->
+      <h2 class="crdm-modal__title">
+        {{ (isManualRefund ? 'MY_BOOKINGS.CANCEL.DESTINATION_DIALOG_TITLE' : 'MY_BOOKINGS.CANCEL.CONFIRM_TITLE') | translate }}
+      </h2>
 
       <p class="crdm-line">
         {{ 'MY_BOOKINGS.CANCEL.CONFIRM_TEXT' | translate: { bookingNumber: booking.bookingNumber, route: booking.route } }}
@@ -54,9 +58,13 @@
       <p class="crdm-line">
         {{ 'MY_BOOKINGS.CANCEL.PENALTY_LINE' | translate: { penalty: penaltyLabel } }}
       </p>
-      <p class="crdm-note">{{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE' | translate }}</p>
+      <!-- OBRS-942: both manual-only — nobody moves money by hand on the other
+      lane, so neither the note nor the destination picker applies there. -->
+      @if (isManualRefund) {
+        <p class="crdm-note">{{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE' | translate }}</p>
 
-      <app-refund-destination-fields [formGroup]="form" [disabled]="submitting"></app-refund-destination-fields>
+        <app-refund-destination-fields [formGroup]="form" [disabled]="submitting"></app-refund-destination-fields>
+      }
 
       @if (error) {
         <p class="crdm-error" role="alert">{{ error }}</p>

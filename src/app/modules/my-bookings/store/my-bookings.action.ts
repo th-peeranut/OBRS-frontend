@@ -62,13 +62,17 @@ export const cancelBookingDismissed = createAction(
   '[MyBookings API] Cancel booking dismissed'
 );
 
-// --- Cancel-with-destination modal (OBRS-286 Flow A1) ---
-// Replaces the plain Swal confirm for a cancel that resolves to
-// MANUAL_REFUND_REQUIRED — the traveler must supply a refund destination
-// before the cancel is submitted.
+// --- Cancel modal (OBRS-286 Flow A1, folded into the ONE cancel screen by
+// OBRS-942) ---
+// Originally replaced the plain Swal confirm only for MANUAL_REFUND_REQUIRED;
+// OBRS-942 deleted the Swal lane entirely, so `requestCancel$` now opens this
+// modal for every refund method, and `CancelBookingModalComponent` hides the
+// destination form/note itself when the resolved method isn't manual. Kept
+// under its original `*RefundDestinationModal` names — see the class-level
+// comment on `CancelBookingModalComponent` for why.
 
-/** Opened by `requestCancel$` once the policy resolves to manual — the modal
- * shows the already-fetched policy, no further fetch on open. */
+/** Opened by `requestCancel$` once the policy resolves — the modal shows the
+ * already-fetched policy, no further fetch on open. */
 export const openCancelRefundDestinationModal = createAction(
   '[MyBookings API] Open cancel refund destination modal',
   props<{ booking: MyBookingView; policy: CancellationPolicy }>()
@@ -80,7 +84,9 @@ export const closeCancelRefundDestinationModal = createAction(
 
 export const confirmCancelWithDestination = createAction(
   '[MyBookings API] Confirm cancel with destination',
-  props<{ booking: MyBookingView; refundDestination: RefundDestinationReqDto }>()
+  // OBRS-942: `refundDestination` is optional — this action now also carries
+  // the non-manual lane's Confirm, which never collects a destination.
+  props<{ booking: MyBookingView; refundDestination?: RefundDestinationReqDto }>()
 );
 
 /** A server-side `cancel.error.refund-destination-required` /

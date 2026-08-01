@@ -11,6 +11,7 @@ import {
 import { FormBuilder, FormGroup } from '@angular/forms';
 import {
   CancellationPolicy,
+  MANUAL_REFUND_METHOD,
   MyBookingView,
   toAmountNumber,
 } from '../../../../shared/interfaces/my-booking.interface';
@@ -35,21 +36,33 @@ import {
  * Hand-rolled backdrop, mirroring `ChangeStopDialogComponent` /
  * `ChangeEmailDialogComponent` (design-system §6/§12) rather than a fourth
  * customer-shell modal chrome.
+ *
+ * OBRS-942 — renamed from `CancelRefundDestinationModalComponent`: this is now
+ * the ONLY cancel screen, for every `refundMethod`. `requestCancel$` used to
+ * fork here only for `MANUAL_REFUND_REQUIRED` and fall through to a plain Swal
+ * confirm otherwise (never mentioning the OBRS-813 reschedule offer on that
+ * lane). The fork is gone — `isManualRefund` now gates the destination form
+ * and the manual-only note instead of a second screen existing at all. The
+ * `crdm-*` SCSS class prefix, the `*RefundDestinationModal` action/selector
+ * names and the `refundDestinationModal` state slice keep their pre-rename
+ * names on purpose (see the class-level comment in the .scss and
+ * `my-bookings.action.ts`) — they are still accurate and three e2e/capture
+ * files depend on the `crdm-` prefix literally.
  */
 @Component({
-    selector: 'app-cancel-refund-destination-modal',
-    templateUrl: './cancel-refund-destination-modal.component.html',
-    styleUrl: './cancel-refund-destination-modal.component.scss',
+    selector: 'app-cancel-booking-modal',
+    templateUrl: './cancel-booking-modal.component.html',
+    styleUrl: './cancel-booking-modal.component.scss',
     standalone: false
 })
-export class CancelRefundDestinationModalComponent implements OnInit, OnChanges {
+export class CancelBookingModalComponent implements OnInit, OnChanges {
   @Input({ required: true }) booking!: MyBookingView;
   @Input({ required: true }) policy!: CancellationPolicy;
   /** Server-side destination-invalid 400 (Flow A1 step 5) — the modal stays
    * open and whatever was typed survives; this input never closes it. */
   @Input() error: string | null = null;
 
-  @Output() readonly confirmed = new EventEmitter<{ refundDestination: RefundDestinationReqDto }>();
+  @Output() readonly confirmed = new EventEmitter<{ refundDestination?: RefundDestinationReqDto }>();
   @Output() readonly dismissed = new EventEmitter<void>();
   /**
    * OBRS-813 — the traveler chose the other door: close this modal and open the
@@ -74,9 +87,10 @@ export class CancelRefundDestinationModalComponent implements OnInit, OnChanges 
   }
 
   ngOnInit(): void {
-    // Always required on this path — the modal only ever opens once the
-    // resolved refund method is MANUAL_REFUND_REQUIRED (Flow A1 step 2).
-    applyRefundDestinationRequired(this.form, true);
+    // OBRS-942: required only on the manual lane — this modal now also opens
+    // for card/gateway/CASH refund methods, where no destination is ever
+    // collected (the fields aren't even rendered, see the template).
+    applyRefundDestinationRequired(this.form, this.isManualRefund);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -85,6 +99,20 @@ export class CancelRefundDestinationModalComponent implements OnInit, OnChanges 
       // spinner, but keep everything the traveler typed intact.
       this.submitting = false;
     }
+  }
+
+  /**
+   * OBRS-942 — which of the two lanes this modal is currently rendering.
+   * Read off the pre-cancel policy PREVIEW (`this.policy`), which is exactly
+   * right for this component: it never sees the post-cancel response, only
+   * what `openCancelRefundDestinationModal` carried in. Do NOT reuse
+   * `refundLane()` from `my-booking.interface.ts` here — its own docstring
+   * requires the CANCEL RESPONSE, never the pre-cancel preview, because the
+   * two can disagree; `refundLane()` stays scoped to the post-cancel
+   * SUCCESS/SUCCESS_MANUAL split in `MyBookingsEffect.showCancelSuccess`.
+   */
+  protected get isManualRefund(): boolean {
+    return this.policy?.refundMethod === MANUAL_REFUND_METHOD;
   }
 
   protected get canSubmit(): boolean {
@@ -105,6 +133,9 @@ export class CancelRefundDestinationModalComponent implements OnInit, OnChanges 
    * the first check above (and takes the Cancel action itself away, so this
    * modal never opens there at all). That case owes the traveler their money,
    * never an alternative.
+   *
+   * OBRS-942: unchanged by the lane merge — the offer renders on the SAME
+   * predicate for both lanes, so a card payer now sees it too.
    */
   protected get canOfferReschedule(): boolean {
     return this.booking?.rescheduleEligible === true;
@@ -141,7 +172,12 @@ export class CancelRefundDestinationModalComponent implements OnInit, OnChanges 
       return;
     }
     const refundDestination = toRefundDestinationPayload(this.form);
-    if (!refundDestination) {
+    // OBRS-942: on the non-manual lane no mode is ever chosen (the picker
+    // isn't rendered), so `toRefundDestinationPayload` always returns
+    // `undefined` here — that is the correct, expected payload for that lane,
+    // not a guard failure. Only the manual lane requires a resolved
+    // destination before Confirm may submit.
+    if (this.isManualRefund && !refundDestination) {
       return;
     }
     this.submitting = true;
