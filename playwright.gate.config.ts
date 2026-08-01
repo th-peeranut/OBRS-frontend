@@ -139,6 +139,13 @@ export default defineConfig({
     // with a control arm in the same run (eligible booking vs ineligible, whose
     // modal is the pre-card layout) rather than a constant nobody measured before.
     '**/obrs-813-cancel-offers-reschedule.spec.ts',
+    // OBRS-942. The non-manual (card/gateway) refund lane's control-arm
+    // counterpart to the spec above — before this card that lane fell through
+    // to a plain SweetAlert and never carried the OBRS-813 offer, and had zero
+    // E2E coverage of its own (every existing cancel spec used
+    // MANUAL_REFUND_REQUIRED). Hermetic on the same terms: it stubs every
+    // /api/** call and reuses the same fixture shapes.
+    '**/obrs-942-non-manual-cancel.spec.ts',
   ],
 
   timeout: 60_000,

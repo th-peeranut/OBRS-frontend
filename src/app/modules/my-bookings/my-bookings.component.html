@@ -180,14 +180,14 @@ row on open (same pattern as WalkInTripBrowserComponent.tripActionMenu). -->
   }
 
   @if (cancelRefundDestinationModal$ | async; as cancelRefundModal) {
-    <app-cancel-refund-destination-modal
+    <app-cancel-booking-modal
       [booking]="cancelRefundModal.booking"
       [policy]="cancelRefundModal.policy"
       [error]="cancelRefundModal.error"
       (confirmed)="onConfirmCancelWithDestination(cancelRefundModal.booking, $event)"
       (rescheduleRequested)="onRescheduleInsteadOfCancel(cancelRefundModal.booking)"
       (dismissed)="onCancelRefundDestinationModalClosed()"
-    ></app-cancel-refund-destination-modal>
+    ></app-cancel-booking-modal>
   }
 
   <app-footer></app-footer>

@@ -1,7 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { initialMyBookingsState } from './my-bookings.model';
 import {
-  cancelBookingDismissed,
   cancelBookingFailure,
   cancelBookingSuccess,
   changeStopRequiresPayment,
@@ -86,7 +85,6 @@ export const myBookingsReducer = createReducer(
   on(
     cancelBookingSuccess,
     cancelBookingFailure,
-    cancelBookingDismissed,
     (state) => ({
       ...state,
       cancellingBookingId: null,
@@ -98,6 +96,17 @@ export const myBookingsReducer = createReducer(
     ...state,
     refundDestinationModal: { booking, policy, error: null },
   })),
+  // OBRS-942 QA regression fix: `closeCancelRefundDestinationModal` must also
+  // clear `cancellingBookingId`. Before this card, dismissing the NON-manual
+  // lane's plain Swal confirm dispatched `cancelBookingDismissed`, whose
+  // reducer case cleared this flag; that action (and its sole dispatcher) was
+  // deleted along with the second cancel screen, and every lane's dismiss
+  // (×, backdrop, Escape, or taking the reschedule offer) now routes through
+  // this action instead. Without this line the flag stays set forever after
+  // any dismissal that isn't a submit, and `MyBookingsComponent`'s
+  // `[disabled]="cancellingBookingId !== null"` on the overflow menu's Cancel
+  // item permanently disables Cancel for EVERY booking, not just the one that
+  // was open, until a page reload.
   on(
     closeCancelRefundDestinationModal,
     cancelBookingSuccess,
@@ -105,6 +114,7 @@ export const myBookingsReducer = createReducer(
     (state) => ({
       ...state,
       refundDestinationModal: null,
+      cancellingBookingId: null,
     })
   ),
   on(confirmCancelWithDestination, (state) => ({

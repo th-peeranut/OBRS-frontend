@@ -1,6 +1,36 @@
 import { myBookingsReducer } from './my-bookings.reducer';
 import { initialMyBookingsState } from './my-bookings.model';
-import { confirmChangeStopFailure, loadChangeStopEstimate } from './my-bookings.action';
+import {
+  closeCancelRefundDestinationModal,
+  confirmChangeStopFailure,
+  loadChangeStopEstimate,
+  requestCancelBooking,
+} from './my-bookings.action';
+import { MyBookingView } from '../../../shared/interfaces/my-booking.interface';
+
+function buildBookingView(overrides: Partial<MyBookingView> = {}): MyBookingView {
+  return {
+    id: 5,
+    bookingNumber: 'B-5',
+    statusCode: 'confirmed',
+    bookingType: 'one_way',
+    route: 'A -> B',
+    departureLabel: '21/12/2026',
+    passengerCount: 1,
+    totalAmount: 500,
+    totalAmountLabel: '฿500.00',
+    createdLabel: '01/12/2026',
+    cancellable: true,
+    paid: true,
+    rescheduleEligible: false,
+    rescheduleReasonKey: null,
+    changeSeatEligible: false,
+    changeSeatReasonKey: null,
+    changeStopEligible: false,
+    changeStopReasonKey: null,
+    ...overrides,
+  };
+}
 
 /**
  * Locks the OBRS-83 NO_SEATS lesson for change-stop (OBRS-110 wave 2): a
@@ -37,5 +67,47 @@ describe('myBookingsReducer — change-stop confirm-error persistence', () => {
 
     expect(next.changeStopConfirmError).toBe('no seats');
     expect(next.changeStopConfirmErrorCode).toBe('CHANGE_STOP_ERROR_NO_SEATS');
+  });
+});
+
+/**
+ * OBRS-942 QA regression: dismissing the cancel modal WITHOUT confirming (×,
+ * backdrop, Escape, or taking the reschedule offer — all four dispatch
+ * `closeCancelRefundDestinationModal`) never cleared `cancellingBookingId`,
+ * because that clearing used to happen via `cancelBookingDismissed`'s reducer
+ * case — an action whose sole dispatcher (the non-manual Swal "no" branch) was
+ * deleted along with the second cancel screen. Every lane's dismiss now routes
+ * through `closeCancelRefundDestinationModal`, which only ever cleared
+ * `refundDestinationModal`. Left unfixed, `cancellingBookingId` stays set
+ * forever after one dismissal, and `MyBookingsComponent`'s
+ * `[disabled]="cancellingBookingId !== null"` on the overflow menu's Cancel
+ * item disables Cancel for EVERY booking until a page reload — reproduced by
+ * QA in a live browser. No prior spec covered dismiss-then-reopen, which is
+ * why 4557 unit tests and a 154/154 gate run both stayed green through this.
+ */
+describe('myBookingsReducer — OBRS-942 dismiss must clear cancellingBookingId', () => {
+  it('closeCancelRefundDestinationModal clears BOTH refundDestinationModal and cancellingBookingId', () => {
+    const booking = buildBookingView();
+    const afterRequest = myBookingsReducer(initialMyBookingsState, requestCancelBooking({ booking }));
+    expect(afterRequest.cancellingBookingId).toBe(5);
+
+    const afterDismiss = myBookingsReducer(afterRequest, closeCancelRefundDestinationModal());
+
+    expect(afterDismiss.cancellingBookingId).toBeNull();
+    expect(afterDismiss.refundDestinationModal).toBeNull();
+  });
+
+  it('the same fix covers the reschedule-offer exit — onRescheduleInsteadOfCancel dispatches this same action first', () => {
+    // MyBookingsComponent.onRescheduleInsteadOfCancel dispatches
+    // closeCancelRefundDestinationModal() then openRescheduleDialog() — this
+    // pins that the FIRST of those two already leaves cancellingBookingId
+    // clear, so the reschedule dialog never opens on top of a still-disabled
+    // Cancel menu.
+    const booking = buildBookingView({ id: 9 });
+    const afterRequest = myBookingsReducer(initialMyBookingsState, requestCancelBooking({ booking }));
+
+    const afterDismiss = myBookingsReducer(afterRequest, closeCancelRefundDestinationModal());
+
+    expect(afterDismiss.cancellingBookingId).toBeNull();
   });
 });

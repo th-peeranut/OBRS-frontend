@@ -194,7 +194,7 @@
       "COMPARE": {
         "OFFER_TITLE": "此预订仍可改期——并保留车票的全部价值",
         "KEEP_FULL": "保留全额 {{amount}}（100%），而不是只拿回部分退款",
-        "INSTANT": "立即获得新班次，无需等待工作人员转账",
+        "INSTANT": "立即获得新班次，无需等待退款到账",
         "FEE_SHOWN_FIRST": "如有改期手续费或票价差额，系统都会在您确认前显示",
         "WITHIN_DAYS": "新日期须在原出发日期后的 {{days}} 天以内",
         "RESCHEDULE_BUTTON": "改期而不取消",

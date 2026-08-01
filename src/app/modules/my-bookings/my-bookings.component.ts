@@ -182,7 +182,7 @@ export class MyBookingsComponent implements OnInit {
 
   onConfirmCancelWithDestination(
     booking: MyBookingView,
-    event: { refundDestination: RefundDestinationReqDto }
+    event: { refundDestination?: RefundDestinationReqDto }
   ): void {
     this.store.dispatch(
       confirmCancelWithDestination({ booking, refundDestination: event.refundDestination })

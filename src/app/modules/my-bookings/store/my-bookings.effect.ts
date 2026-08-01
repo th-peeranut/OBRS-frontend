@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
-import { from, of } from 'rxjs';
+import { of } from 'rxjs';
 import { catchError, map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
 import { BookingService } from '../../../services/booking/booking.service';
 import { AlertService } from '../../../shared/services/alert.service';
@@ -10,13 +10,10 @@ import { extractApiErrorMessage } from '../../../shared/lib/api-error';
 import { errorCodeFromMessageKey, extractApiErrorCode } from '../../../shared/lib/api-error-code';
 import {
   CancelBookingResult,
-  CancellationPolicy,
   MANUAL_REFUND_METHOD,
-  MyBookingView,
   formatRefundAmount,
 } from '../../../shared/interfaces/my-booking.interface';
 import {
-  cancelBookingDismissed,
   cancelBookingFailure,
   cancelBookingSuccess,
   confirmCancelWithDestination,
@@ -75,13 +72,16 @@ export class MyBookingsEffect {
     )
   );
 
-  // Preview the refund, confirm with the traveler, then cancel — all in one
-  // exclusive stream so a second click can't race the first.
+  // Preview the refund, then open the cancel modal — one exclusive stream so
+  // a second click can't race the first.
   //
-  // OBRS-286 Flow A1: when the policy resolves to MANUAL_REFUND_REQUIRED, the
-  // plain Swal confirm is replaced by `openCancelRefundDestinationModal` — the
-  // traveler must supply a refund destination first. Every other path
-  // (non-manual) is byte-identical to before.
+  // OBRS-286 Flow A1 introduced this modal only for MANUAL_REFUND_REQUIRED,
+  // falling through to a plain Swal confirm for every other refund method.
+  // OBRS-942 deleted that fork: the two screens quoted identical numbers and
+  // only the Swal lane never mentioned the OBRS-813 reschedule offer, so a
+  // card payer could lose 20% where a free reschedule would have kept 100%.
+  // Every resolved policy now opens the same modal; `CancelBookingModalComponent`
+  // hides the destination form/note itself when the method isn't manual.
   requestCancel$ = createEffect(() =>
     this.actions$.pipe(
       ofType(requestCancelBooking),
@@ -102,18 +102,7 @@ export class MyBookingsEffect {
               );
             }
 
-            if (policy.refundMethod === MANUAL_REFUND_METHOD) {
-              return of(openCancelRefundDestinationModal({ booking, policy }));
-            }
-
-            return from(this.confirmCancellation(booking, policy)).pipe(
-              switchMap((confirmed) => {
-                if (!confirmed) {
-                  return of(cancelBookingDismissed());
-                }
-                return this.cancelConfirmed$(booking);
-              })
-            );
+            return of(openCancelRefundDestinationModal({ booking, policy }));
           }),
           catchError((error: unknown) =>
             of(
@@ -196,61 +185,6 @@ export class MyBookingsEffect {
       ),
     { dispatch: false }
   );
-
-  private cancelConfirmed$(booking: MyBookingView) {
-    return this.service.cancelBooking(booking.id).pipe(
-      map((response) => {
-        const result = response.data;
-        if (!result) {
-          // OBRS-843 — same "OK"-as-an-error-message defect as above.
-          return cancelBookingFailure({
-            error: this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
-          });
-        }
-        return cancelBookingSuccess({ result });
-      }),
-      catchError((error: unknown) =>
-        of(
-          cancelBookingFailure({
-            error:
-              extractApiErrorMessage(error) ||
-              this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
-          })
-        )
-      )
-    );
-  }
-
-  private confirmCancellation(
-    booking: MyBookingView,
-    policy: CancellationPolicy
-  ): Promise<boolean> {
-    const lines = [
-      this.translate.instant('MY_BOOKINGS.CANCEL.CONFIRM_TEXT', {
-        bookingNumber: booking.bookingNumber,
-        route: booking.route,
-      }),
-      this.translate.instant('MY_BOOKINGS.CANCEL.REFUND_LINE', {
-        refund: this.formatCurrency(policy.refundAmount),
-        rate: policy.refundRatePercent,
-      }),
-      this.translate.instant('MY_BOOKINGS.CANCEL.PENALTY_LINE', {
-        penalty: this.formatCurrency(policy.penaltyAmount),
-      }),
-    ];
-
-    if (policy.refundMethod === MANUAL_REFUND_METHOD) {
-      lines.push(this.translate.instant('MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE'));
-    }
-
-    return this.alertService.confirm({
-      icon: 'warning',
-      title: this.translate.instant('MY_BOOKINGS.CANCEL.CONFIRM_TITLE'),
-      text: lines.join('\n'),
-      confirmButtonText: this.translate.instant('MY_BOOKINGS.CANCEL.CONFIRM_BUTTON'),
-      cancelButtonText: this.translate.instant('MY_BOOKINGS.CANCEL.CANCEL_BUTTON'),
-    });
-  }
 
   private showCancelSuccess(result: CancelBookingResult): void {
     const message =

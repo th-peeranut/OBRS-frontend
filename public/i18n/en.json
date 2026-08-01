@@ -194,7 +194,7 @@
       "COMPARE": {
         "OFFER_TITLE": "This booking can still be moved to another date — and you keep its full value",
         "KEEP_FULL": "Keep the full {{amount}} (100%) instead of a partial refund",
-        "INSTANT": "You get the new departure straight away — no waiting for a staff transfer",
+        "INSTANT": "You get the new departure right away — no waiting for the refund to land",
         "FEE_SHOWN_FIRST": "Any reschedule fee or fare difference is always shown before you confirm",
         "WITHIN_DAYS": "The new date must be within {{days}} days of your original departure",
         "RESCHEDULE_BUTTON": "Move to another date instead",

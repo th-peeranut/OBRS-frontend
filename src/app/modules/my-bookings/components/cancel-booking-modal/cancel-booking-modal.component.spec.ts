@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
-import { CancelRefundDestinationModalComponent } from './cancel-refund-destination-modal.component';
+import { CancelBookingModalComponent } from './cancel-booking-modal.component';
 import { AppRefundDestinationFieldsComponent } from '../../../../shared/components/refund-destination-fields/refund-destination-fields.component';
 import { CancellationPolicy, MyBookingView } from '../../../../shared/interfaces/my-booking.interface';
 
@@ -41,17 +41,17 @@ function buildPolicy(): CancellationPolicy {
   };
 }
 
-describe('CancelRefundDestinationModalComponent (OBRS-286)', () => {
-  let fixture: ComponentFixture<CancelRefundDestinationModalComponent>;
-  let component: CancelRefundDestinationModalComponent;
+describe('CancelBookingModalComponent (OBRS-286, one screen since OBRS-942)', () => {
+  let fixture: ComponentFixture<CancelBookingModalComponent>;
+  let component: CancelBookingModalComponent;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
-      declarations: [CancelRefundDestinationModalComponent, AppRefundDestinationFieldsComponent],
+      declarations: [CancelBookingModalComponent, AppRefundDestinationFieldsComponent],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(CancelRefundDestinationModalComponent);
+    fixture = TestBed.createComponent(CancelBookingModalComponent);
     component = fixture.componentInstance;
     component.booking = buildBooking();
     component.policy = buildPolicy();
@@ -189,5 +189,76 @@ describe('CancelRefundDestinationModalComponent (OBRS-286)', () => {
     expect(fixture.debugElement.query(By.css('.crdm-error')).nativeElement.textContent).toContain(
       'Invalid destination'
     );
+  });
+
+  // --- OBRS-942: the non-manual lane (card/gateway/CASH) — same modal, no
+  // destination form. Zero coverage before this card: both arms of the 813
+  // e2e spec and every confirmCancelWithDestination$ unit test used
+  // MANUAL_REFUND_REQUIRED with a populated destination. ---
+
+  describe('non-manual refund method (e.g. card)', () => {
+    function buildNonManualPolicy(): CancellationPolicy {
+      return { ...buildPolicy(), refundMethod: 'card' };
+    }
+
+    /** Always creates a FRESH fixture so `ngOnInit` sees the non-manual policy
+     * from the start — mirroring the real open sequence, where a new instance
+     * is created every time (`@if (…$ | async; as …)` in the host template).
+     * Reusing the outer `beforeEach`'s manual-initialized `component` here
+     * would leave `mode` carrying the manual lane's `Validators.required`
+     * forever, which is not the behaviour being tested. */
+    function createNonManual(
+      overrides: Partial<MyBookingView> = {}
+    ): { fixture: ComponentFixture<CancelBookingModalComponent>; component: CancelBookingModalComponent } {
+      const nonManualFixture = TestBed.createComponent(CancelBookingModalComponent);
+      const nonManualComponent = nonManualFixture.componentInstance;
+      nonManualComponent.booking = { ...buildBooking(), ...overrides };
+      nonManualComponent.policy = buildNonManualPolicy();
+      nonManualFixture.detectChanges();
+      return { fixture: nonManualFixture, component: nonManualComponent };
+    }
+
+    it('does not render the destination fields or the manual-refund note', () => {
+      const { fixture: f } = createNonManual();
+
+      expect(f.debugElement.query(By.css('app-refund-destination-fields'))).toBeNull();
+      expect(f.debugElement.query(By.css('.crdm-note'))).toBeNull();
+    });
+
+    it('renders CONFIRM_TITLE, not DESTINATION_DIALOG_TITLE', () => {
+      const { fixture: f } = createNonManual();
+
+      const title = f.debugElement.query(By.css('.crdm-modal__title')).nativeElement.textContent;
+      expect(title).toContain('MY_BOOKINGS.CANCEL.CONFIRM_TITLE');
+      expect(title).not.toContain('MY_BOOKINGS.CANCEL.DESTINATION_DIALOG_TITLE');
+    });
+
+    it('canSubmit is true the instant the modal opens (no destination to fill in)', () => {
+      const { fixture: f, component: c } = createNonManual();
+
+      expect(c['canSubmit']).toBeTrue();
+      const confirmBtn = f.debugElement.query(By.css('.btn-primary'));
+      expect(confirmBtn.nativeElement.disabled).toBeFalse();
+    });
+
+    it('Confirm emits with refundDestination undefined (never null) and does not early-return', () => {
+      const { fixture: f, component: c } = createNonManual();
+
+      const confirmed = jasmine.createSpy('confirmed');
+      c.confirmed.subscribe(confirmed);
+
+      f.debugElement.query(By.css('.btn-primary')).nativeElement.click();
+
+      expect(confirmed).toHaveBeenCalledWith({ refundDestination: undefined });
+      expect(c['submitting']).toBeTrue();
+    });
+
+    it('the reschedule offer still renders iff rescheduleEligible — same predicate as the manual lane', () => {
+      const ineligible = createNonManual({ rescheduleEligible: false });
+      expect(ineligible.fixture.debugElement.query(By.css('.crdm-offer'))).toBeNull();
+
+      const eligible = createNonManual({ rescheduleEligible: true });
+      expect(eligible.fixture.debugElement.query(By.css('.crdm-offer'))).not.toBeNull();
+    });
   });
 });
