@@ -239,6 +239,41 @@ describe('MyBookingsComponent', () => {
         jasmine.objectContaining({ bookingId: view.id })
       );
     });
+
+    it('OBRS-813: taking the offer inside the cancel modal closes it and opens the reschedule dialog', () => {
+      const dispatchSpy = spyOn(storeStub, 'dispatch');
+      const view = toView(
+        buildBooking({ bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }] })
+      );
+
+      component.onRescheduleInsteadOfCancel(view);
+
+      // NgRx 19 (arrived with the Angular 19 upgrade, OBRS-915) widened `dispatch`
+      // to `Action | (() => Action)`, so the spy's parameter type now resolves to
+      // the function branch and a direct cast to an action shape stopped
+      // overlapping (TS2352). The dispatched value is always the action object —
+      // route through `unknown` to say so, same as the accessor at line 61.
+      const types = dispatchSpy.calls
+        .allArgs()
+        .map(([action]) => (action as unknown as { type: string }).type);
+      expect(types.length).toBe(2);
+      expect(types[0]).toBe('[MyBookings API] Close cancel refund destination modal');
+      expect(dispatchSpy.calls.argsFor(1)[0]).toEqual(
+        jasmine.objectContaining({ bookingId: view.id })
+      );
+    });
+
+    it('OBRS-813: the offer cannot route an INELIGIBLE booking into reschedule (guard is shared with onReschedule)', () => {
+      const dispatchSpy = spyOn(storeStub, 'dispatch');
+      const view = toView(
+        buildBooking({ rescheduleCount: 1, bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }] })
+      );
+
+      component.onRescheduleInsteadOfCancel(view);
+
+      // The modal closes either way — but nothing opens the reschedule dialog.
+      expect(dispatchSpy.calls.count()).toBe(1);
+    });
   });
 
   describe('change seat eligibility (card gating, OBRS-110)', () => {
