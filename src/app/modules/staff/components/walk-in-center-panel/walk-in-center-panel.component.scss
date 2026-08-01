@@ -127,7 +127,16 @@
   // OBRS-915: v19 dropped the <li> wrapper — <p-tab> is the list item and
   // carries `.p-tab` / `.p-tab-active` itself — and the class moved from
   // `styleClass` to a plain `class`, which lands on the same host element.
+  //
+  // OBRS-917: `.p-tablist` added. The white strip this block was written to kill
+  // came back, one element higher: PrimeNG 20 paints the tablist HOST, which
+  // neither `.p-tablist-tab-list` nor `.p-tabpanels` covers. The customer shell
+  // hit the identical defect on the route-map tabs and the contrast gate caught
+  // it there (2.53:1 on a dark-mode label sitting on white); this surface is
+  // staff-only and that gate does not sweep it, so it is fixed here from the
+  // same measurement rather than waiting for someone to notice a white strip.
   ::ng-deep .center-tabview {
+    .p-tablist,
     .p-tablist-tab-list,
     .p-tablist-tab-list .p-tab,
     .p-tabpanels {

@@ -746,6 +746,17 @@ body.is-dark app-route-map-home {
   }
 
   // PrimeNG tab nav (จุดรับ / จุดส่ง) inside the stop-list card
+  //
+  // OBRS-917: `.p-tablist` — the HOST element — is new here and is the whole
+  // fix. PrimeNG 20 paints the tablist white and v19 did not, so in dark mode
+  // the two INACTIVE tabs (which are deliberately transparent, two rules down)
+  // fell through to white: "Drop-off" measured 2.53:1 and its count badge
+  // 1.00:1, invisible. Both foregrounds were CORRECT dark-mode values — the
+  // surface under them was not, which is why `.p-tab`'s own `backgroundColor`
+  // reads identical before and after and only a gate that walks up to the real
+  // backdrop could see it. The active tab was never affected: it sets its own
+  // `$dk-bg-soft` fill and so never reached the white.
+  .p-tablist { background: transparent !important; }
   .p-tablist-tab-list { border-bottom-color: $dk-border !important; }
   // Same as the select-button above (OBRS-774): the active-tab block three
   // rules down already owns it, so scoping the inactive treatment to
