@@ -1,6 +1,6 @@
 <div class="login-container">
   <!-- AMBIENT BRAND BACKDROP — the bus illustration, faded, fills the space
-       around the card so the gradient doesn't read as empty. Decorative only. -->
+  around the card so the gradient doesn't read as empty. Decorative only. -->
   <img class="login-bg" src="images/login.svg" alt="" aria-hidden="true" />
   <!-- CENTERED AUTH CARD -->
   <div class="login-card">
@@ -18,10 +18,12 @@
       {{ "LOGIN.WELCOME" | translate }}
     </div>
     <!-- EMAIL-CHANGED BANNER (OBRS-84) -->
-    <div class="email-changed-banner mt-2" *ngIf="showEmailChangedBanner" role="status">
-      <span class="material-symbols-outlined">check_circle</span>
-      <span>{{ "LOGIN.EMAIL_CHANGED_BANNER" | translate }}</span>
-    </div>
+    @if (showEmailChangedBanner) {
+      <div class="email-changed-banner mt-2" role="status">
+        <span class="material-symbols-outlined">check_circle</span>
+        <span>{{ "LOGIN.EMAIL_CHANGED_BANNER" | translate }}</span>
+      </div>
+    }
     <!-- FORM SECTION -->
     <form class="login-form mt-2" [formGroup]="loginForm">
       <!-- INPUT FIELD -> Email -->
@@ -32,7 +34,7 @@
             getForm('email')?.errors &&
             (getForm('email')?.touched || getForm('email')?.dirty)
           "
-        >
+          >
           {{ "LOGIN.USERNAME" | translate }}
         </label>
         <input
@@ -45,143 +47,151 @@
             getForm('email')?.errors &&
             (getForm('email')?.touched || getForm('email')?.dirty)
           "
-        />
-        <div
-          class="text-error"
-          *ngIf="
+          />
+          @if (
             getForm('email')?.errors &&
             (getForm('email')?.touched || getForm('email')?.dirty)
-          "
-        >
-          {{ "LOGIN.USERNAME_REQUIRED" | translate }}
+            ) {
+            <div
+              class="text-error"
+              >
+              {{ "LOGIN.USERNAME_REQUIRED" | translate }}
+            </div>
+          }
         </div>
-      </div>
-      <!-- INPUT FIELD -> Password -->
-      <div class="mt-2">
-        <label
-          for="password"
+        <!-- INPUT FIELD -> Password -->
+        <div class="mt-2">
+          <label
+            for="password"
           [class.label-error]="
             getForm('password')?.errors &&
             (getForm('password')?.touched || getForm('password')?.dirty)
           "
-        >
-          {{ "LOGIN.PASSWORD" | translate }}
-        </label>
-        <div class="password-container">
-          <input
-            class="form-control mt-1"
-            [type]="isShowPassword ? 'text' : 'password'"
-            id="password"
-            formControlName="password"
-            [placeholder]="'LOGIN.PASSWORD_PLACEHOLDER' | translate"
+            >
+            {{ "LOGIN.PASSWORD" | translate }}
+          </label>
+          <div class="password-container">
+            <input
+              class="form-control mt-1"
+              [type]="isShowPassword ? 'text' : 'password'"
+              id="password"
+              formControlName="password"
+              [placeholder]="'LOGIN.PASSWORD_PLACEHOLDER' | translate"
             [class.form-error]="
               getForm('password')?.errors &&
               (getForm('password')?.touched || getForm('password')?.dirty)
             "
-          />
-          <img
-            *ngIf="isShowPassword"
-            class="icon-eye"
-            src="icons/eyes-close.svg"
-            alt="eyes-close"
-            (click)="toggleShowPassword()"
-          />
-          <img
-            *ngIf="!isShowPassword"
-            class="icon-eye"
-            src="icons/eyes-open.svg"
-            alt="eyes-close"
-            (click)="toggleShowPassword()"
-          />
+              />
+              @if (isShowPassword) {
+                <img
+                  class="icon-eye"
+                  src="icons/eyes-close.svg"
+                  alt="eyes-close"
+                  (click)="toggleShowPassword()"
+                  />
+              }
+              @if (!isShowPassword) {
+                <img
+                  class="icon-eye"
+                  src="icons/eyes-open.svg"
+                  alt="eyes-close"
+                  (click)="toggleShowPassword()"
+                  />
+              }
+            </div>
+            @if (
+              getForm('password')?.errors &&
+              (getForm('password')?.touched || getForm('password')?.dirty)
+              ) {
+              <div
+                class="text-error"
+                >
+                {{ "LOGIN.PASSWORD_REQUIRED" | translate }}
+              </div>
+            }
+          </div>
+          <!-- OPTIONS SECTION -->
+          <div class="option-section mt-2">
+            <!-- FORGET PASSWORD -->
+            <a class="obrs-link" [routerLink]="'/forget-password'">
+              {{ "LOGIN.FORGETPASSWORD" | translate }}
+            </a>
+          </div>
+          <!-- LOGIN BUTTON -->
+          <button type="submit" class="login-btn mt-2" (click)="login()">
+            {{ "LOGIN.LOGIN" | translate }}
+          </button>
+          <!-- OR -->
+          <div class="or-section gap-3 mt-2">
+            <hr />
+            <span>
+              {{ "LOGIN.OR" | translate }}
+            </span>
+            <hr />
+          </div>
+          <!-- LOGIN BY PHONE NUMBER BUTTON -->
+          <button
+            type="button"
+            class="login-by-phone-no-btn mt-2"
+            [routerLink]="'/login-mobile'"
+            >
+            {{ "LOGIN.LOGINMOBILE" | translate }}
+          </button>
+          <!-- GOOGLE SIGN-IN PDPA CONSENT — OBRS-628 AC-1: same rule as /register.
+          This box really does gate the Google button (the overlay below swallows
+          the click until it is ticked), so it is a live consent point and must
+          offer the notice being consented to. New tab, so a typed username and
+          password survive the trip. -->
+          <div class="form-check mt-2">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="pdpaGoogleConsent"
+              [formControl]="pdpaGoogleConsent"
+              />
+              <label class="form-check-label" for="pdpaGoogleConsent">
+                {{ "LOGIN.GOOGLE_SIGNIN_PDPA" | translate }}
+              </label>
+              <a
+                class="obrs-link ms-1"
+                data-testid="pdpa-privacy-policy-link"
+                routerLink="/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                >
+                {{ "COMMON.READ_PRIVACY_POLICY" | translate }}
+              </a>
+            </div>
+            @if (pdpaGoogleConsent.touched && !pdpaGoogleConsent.value) {
+              <div
+                class="text-error"
+                >
+                {{ "LOGIN.GOOGLE_SIGNIN_PDPA_REQUIRED" | translate }}
+              </div>
+            }
+            <!-- GOOGLE SIGN-IN BUTTON -->
+            <div class="gis-btn-wrapper mt-2">
+              <div id="google-signin-btn-container"></div>
+              @if (!pdpaGoogleConsent.value) {
+                <div
+                  class="gis-disabled-overlay"
+                  (click)="pdpaGoogleConsent.markAsTouched()"
+                ></div>
+              }
+            </div>
+            <!-- LOADING STATE FOR GOOGLE -->
+            @if (isGoogleLoading) {
+              <div class="text-center mt-2">
+                <small class="text-muted">{{ "LOGIN.GOOGLE_SIGNIN_LOADING" | translate }}</small>
+              </div>
+            }
+            <!-- REGISTER LINK -->
+            <p class="register-link mt-2">
+              {{ "LOGIN.REGISTERLINK" | translate }}
+              <a class="obrs-link" [routerLink]="'/register'">
+                {{ "LOGIN.REGISTERLINK_CLICK" | translate }}
+              </a>
+            </p>
+          </form>
         </div>
-        <div
-          class="text-error"
-          *ngIf="
-            getForm('password')?.errors &&
-            (getForm('password')?.touched || getForm('password')?.dirty)
-          "
-        >
-          {{ "LOGIN.PASSWORD_REQUIRED" | translate }}
-        </div>
       </div>
-      <!-- OPTIONS SECTION -->
-      <div class="option-section mt-2">
-        <!-- FORGET PASSWORD -->
-        <a class="obrs-link" [routerLink]="'/forget-password'">
-          {{ "LOGIN.FORGETPASSWORD" | translate }}
-        </a>
-      </div>
-      <!-- LOGIN BUTTON -->
-      <button type="submit" class="login-btn mt-2" (click)="login()">
-        {{ "LOGIN.LOGIN" | translate }}
-      </button>
-      <!-- OR -->
-      <div class="or-section gap-3 mt-2">
-        <hr />
-        <span>
-          {{ "LOGIN.OR" | translate }}
-        </span>
-        <hr />
-      </div>
-      <!-- LOGIN BY PHONE NUMBER BUTTON -->
-      <button
-        type="button"
-        class="login-by-phone-no-btn mt-2"
-        [routerLink]="'/login-mobile'"
-      >
-        {{ "LOGIN.LOGINMOBILE" | translate }}
-      </button>
-      <!-- GOOGLE SIGN-IN PDPA CONSENT — OBRS-628 AC-1: same rule as /register.
-           This box really does gate the Google button (the overlay below swallows
-           the click until it is ticked), so it is a live consent point and must
-           offer the notice being consented to. New tab, so a typed username and
-           password survive the trip. -->
-      <div class="form-check mt-2">
-        <input
-          class="form-check-input"
-          type="checkbox"
-          id="pdpaGoogleConsent"
-          [formControl]="pdpaGoogleConsent"
-        />
-        <label class="form-check-label" for="pdpaGoogleConsent">
-          {{ "LOGIN.GOOGLE_SIGNIN_PDPA" | translate }}
-        </label>
-        <a
-          class="obrs-link ms-1"
-          data-testid="pdpa-privacy-policy-link"
-          routerLink="/privacy-policy"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {{ "COMMON.READ_PRIVACY_POLICY" | translate }}
-        </a>
-      </div>
-      <div
-        class="text-error"
-        *ngIf="pdpaGoogleConsent.touched && !pdpaGoogleConsent.value"
-      >
-        {{ "LOGIN.GOOGLE_SIGNIN_PDPA_REQUIRED" | translate }}
-      </div>
-      <!-- GOOGLE SIGN-IN BUTTON -->
-      <div class="gis-btn-wrapper mt-2">
-        <div id="google-signin-btn-container"></div>
-        <div
-          class="gis-disabled-overlay"
-          *ngIf="!pdpaGoogleConsent.value"
-          (click)="pdpaGoogleConsent.markAsTouched()"
-        ></div>
-      </div>
-      <!-- LOADING STATE FOR GOOGLE -->
-      <div class="text-center mt-2" *ngIf="isGoogleLoading">
-        <small class="text-muted">{{ "LOGIN.GOOGLE_SIGNIN_LOADING" | translate }}</small>
-      </div>
-      <!-- REGISTER LINK -->
-      <p class="register-link mt-2">
-        {{ "LOGIN.REGISTERLINK" | translate }}
-        <a class="obrs-link" [routerLink]="'/register'">
-          {{ "LOGIN.REGISTERLINK_CLICK" | translate }}
-        </a>
-      </p>
-    </form>
-  </div>
-</div>

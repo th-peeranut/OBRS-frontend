@@ -1,4 +1,4 @@
-<ng-container *ngIf="canExport">
+@if (canExport) {
   <button
     type="button"
     class="admin-btn export-button-trigger"
@@ -6,15 +6,18 @@
     [attr.aria-busy]="loading"
     [disabled]="loading"
     (click)="menu.toggle($event)"
-  >
-    <span *ngIf="!loading" class="material-symbols-outlined">download</span>
-    <span
-      *ngIf="loading"
-      class="material-symbols-outlined admin-loading-spinner export-button-spinner"
-      aria-hidden="true"
-    >sync</span>
+    >
+    @if (!loading) {
+      <span class="material-symbols-outlined">download</span>
+    }
+    @if (loading) {
+      <span
+        class="material-symbols-outlined admin-loading-spinner export-button-spinner"
+        aria-hidden="true"
+      >sync</span>
+    }
     <span>{{ (loading ? 'COMMON.EXPORT.IN_PROGRESS' : (label || 'COMMON.EXPORT.BUTTON_LABEL')) | translate }}</span>
     <span class="material-symbols-outlined">expand_more</span>
   </button>
   <p-menu #menu [popup]="true" [model]="menuItems" appendTo="body"></p-menu>
-</ng-container>
+}

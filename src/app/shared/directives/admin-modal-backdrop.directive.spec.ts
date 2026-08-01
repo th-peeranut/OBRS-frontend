@@ -10,19 +10,23 @@ import { AdminModalBackdropDirective } from './admin-modal-backdrop.directive';
 // was still open. These specs fail against that old implementation.
 @Component({
     template: `
-    <div class="admin-modal-backdrop" *ngIf="outer" adminModalBackdrop>
-      <div class="admin-modal">
-        <h4 class="admin-modal-title">Outer</h4>
-        <button>outer</button>
+    @if (outer) {
+      <div class="admin-modal-backdrop" adminModalBackdrop>
+        <div class="admin-modal">
+          <h4 class="admin-modal-title">Outer</h4>
+          <button>outer</button>
+        </div>
       </div>
-    </div>
-    <div class="admin-modal-backdrop" *ngIf="inner" adminModalBackdrop>
-      <div class="admin-modal">
-        <h4 class="admin-modal-title">Inner</h4>
-        <button>inner</button>
+    }
+    @if (inner) {
+      <div class="admin-modal-backdrop" adminModalBackdrop>
+        <div class="admin-modal">
+          <h4 class="admin-modal-title">Inner</h4>
+          <button>inner</button>
+        </div>
       </div>
-    </div>
-  `,
+    }
+    `,
     standalone: false
 })
 class BackdropHostComponent {
@@ -94,13 +98,15 @@ describe('AdminModalBackdropDirective — body scroll lock', () => {
 // semantics, so the dialog/title selectors must find it too.
 @Component({
     template: `
-    <div class="admin-modal-backdrop" *ngIf="open" adminModalBackdrop>
-      <div class="mr-detail-modal">
-        <h4 class="mr-detail-title">My Report</h4>
-        <button>close</button>
+    @if (open) {
+      <div class="admin-modal-backdrop" adminModalBackdrop>
+        <div class="mr-detail-modal">
+          <h4 class="mr-detail-title">My Report</h4>
+          <button>close</button>
+        </div>
       </div>
-    </div>
-  `,
+    }
+    `,
     standalone: false
 })
 class MrDetailBackdropHostComponent {

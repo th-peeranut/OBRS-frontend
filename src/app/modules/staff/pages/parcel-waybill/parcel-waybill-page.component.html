@@ -1,29 +1,32 @@
 <div class="container-fluid py-4">
-  <div *ngIf="isLoading" class="text-center py-5">
-    <span class="material-symbols-outlined">hourglass_empty</span>
-  </div>
+  @if (isLoading) {
+    <div class="text-center py-5">
+      <span class="material-symbols-outlined">hourglass_empty</span>
+    </div>
+  }
 
-  <div *ngIf="!isLoading && hasError" class="text-center py-5">
-    <div class="fw-semibold fs-5">{{ 'STAFF.PARCEL_WAYBILL.LOAD_FAILED' | translate }}</div>
-  </div>
+  @if (!isLoading && hasError) {
+    <div class="text-center py-5">
+      <div class="fw-semibold fs-5">{{ 'STAFF.PARCEL_WAYBILL.LOAD_FAILED' | translate }}</div>
+    </div>
+  }
 
-  <ng-container *ngIf="!isLoading && !hasError && waybill">
+  @if (!isLoading && !hasError && waybill) {
     <div class="d-flex justify-content-end mb-3">
       <button type="button" class="admin-btn admin-btn-primary" (click)="printWaybill()">
         {{ 'STAFF.PARCEL_WAYBILL.PRINT' | translate }}
       </button>
     </div>
-
     <div class="card shadow-sm border-0">
       <app-parcel-waybill-paper [waybill]="waybill" [qrDataUrl]="qrDataUrl"></app-parcel-waybill-paper>
     </div>
-  </ng-container>
+  }
 </div>
 
 <!-- OBRS-305: print-only copy, teleported to document.body on printWaybill()
-     via DomPortalOutlet (docs/adr/0015-boarding-manifest-print-isolation.md
-     idiom). Reuses the SAME dumb paper component/inputs as the on-screen card
-     above — one "paper" look, not a second markup copy. -->
+via DomPortalOutlet (docs/adr/0015-boarding-manifest-print-isolation.md
+idiom). Reuses the SAME dumb paper component/inputs as the on-screen card
+above — one "paper" look, not a second markup copy. -->
 <ng-template #printTemplate>
   <app-parcel-waybill-paper [waybill]="waybill" [qrDataUrl]="qrDataUrl"></app-parcel-waybill-paper>
 </ng-template>

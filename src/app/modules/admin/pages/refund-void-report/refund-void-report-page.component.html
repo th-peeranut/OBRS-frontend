@@ -1,12 +1,14 @@
-<section class="admin-page-intro" *ngIf="isRefreshing && !isLoading">
-  <div>
-    <app-admin-refresh-hint
-      [refreshing]="isRefreshing"
-      [failed]="false"
-      [loading]="isLoading"
-    ></app-admin-refresh-hint>
-  </div>
-</section>
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div>
+      <app-admin-refresh-hint
+        [refreshing]="isRefreshing"
+        [failed]="false"
+        [loading]="isLoading"
+      ></app-admin-refresh-hint>
+    </div>
+  </section>
+}
 
 <section class="admin-page-filters mt-3">
   <p-datePicker
@@ -19,7 +21,7 @@
     [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.REFUND_VOID_REPORT.FILTER_FROM' | translate"
-  >
+    >
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
@@ -35,7 +37,7 @@
     [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.REFUND_VOID_REPORT.FILTER_TO' | translate"
-  >
+    >
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
@@ -50,156 +52,185 @@
 </section>
 
 <!-- Mandatory basis note — unlike the state/cards/table sections below, this is NOT
-     gated by contentState: it stays visible even in the invalid-range/error states. -->
+gated by contentState: it stays visible even in the invalid-range/error states. -->
 <p class="admin-muted refund-void-basis-note mt-2">
   {{ 'ADMIN.REFUND_VOID_REPORT.BASIS_NOTE' | translate }}
 </p>
 
 <!-- Invalid range (client guard) or fetch error: the message REPLACES the cards and
-     the daily table — never shown next to stale/zero numbers. -->
-<section class="admin-card mt-3 refund-void-state-card" *ngIf="contentState === 'invalid' || contentState === 'error'">
-  <p class="admin-error" *ngIf="contentState === 'invalid'">{{ rangeError }}</p>
-  <p class="admin-muted" *ngIf="contentState === 'error'">{{ loadError }}</p>
-</section>
+the daily table — never shown next to stale/zero numbers. -->
+@if (contentState === 'invalid' || contentState === 'error') {
+  <section class="admin-card mt-3 refund-void-state-card">
+    @if (contentState === 'invalid') {
+      <p class="admin-error">{{ rangeError }}</p>
+    }
+    @if (contentState === 'error') {
+      <p class="admin-muted">{{ loadError }}</p>
+    }
+  </section>
+}
 
-<section class="admin-grid admin-grid--3 mt-3" *ngIf="contentState === 'loading' || contentState === 'empty' || contentState === 'data'">
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
-    <div>
-      <div class="refund-void-card-label">
-        <p class="admin-muted">{{ 'ADMIN.REFUND_VOID_REPORT.CARD.REFUNDED' | translate }}</p>
-        <button
-          type="button"
-          class="admin-icon-btn refund-void-info-btn"
-          [title]="'ADMIN.REFUND_VOID_REPORT.CARD.REFUNDED_HINT' | translate"
-          [attr.aria-label]="'ADMIN.REFUND_VOID_REPORT.CARD.REFUNDED_HINT' | translate"
-        >
-          <span class="material-symbols-outlined">info</span>
-        </button>
+@if (contentState === 'loading' || contentState === 'empty' || contentState === 'data') {
+  <section class="admin-grid admin-grid--3 mt-3">
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+      <div>
+        <div class="refund-void-card-label">
+          <p class="admin-muted">{{ 'ADMIN.REFUND_VOID_REPORT.CARD.REFUNDED' | translate }}</p>
+          <button
+            type="button"
+            class="admin-icon-btn refund-void-info-btn"
+            [title]="'ADMIN.REFUND_VOID_REPORT.CARD.REFUNDED_HINT' | translate"
+            [attr.aria-label]="'ADMIN.REFUND_VOID_REPORT.CARD.REFUNDED_HINT' | translate"
+            >
+            <span class="material-symbols-outlined">info</span>
+          </button>
+        </div>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ formatMoney(summary?.refunded?.amount ?? '0.00', currency) }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+        @if (!isLoading) {
+          <p class="admin-muted">
+            {{ 'ADMIN.REFUND_VOID_REPORT.CARD.COUNT_LABEL' | translate }}: {{ summary?.refunded?.count ?? 0 }}
+          </p>
+        }
       </div>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ formatMoney(summary?.refunded?.amount ?? '0.00', currency) }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-      <p class="admin-muted" *ngIf="!isLoading">
-        {{ 'ADMIN.REFUND_VOID_REPORT.CARD.COUNT_LABEL' | translate }}: {{ summary?.refunded?.count ?? 0 }}
-      </p>
-    </div>
-  </article>
-
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">hourglass_top</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.REFUND_VOID_REPORT.CARD.MANUAL_PENDING' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ formatMoney(summary?.manualRefundPending?.amount ?? '0.00', currency) }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-      <p class="admin-muted" *ngIf="!isLoading">
-        {{ 'ADMIN.REFUND_VOID_REPORT.CARD.COUNT_LABEL' | translate }}: {{ summary?.manualRefundPending?.count ?? 0 }}
-      </p>
-    </div>
-  </article>
-
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-danger"><span class="material-symbols-outlined">block</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.REFUND_VOID_REPORT.CARD.VOIDED' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ formatMoney(summary?.voided?.amount ?? '0.00', currency) }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-      <ng-container *ngIf="!isLoading">
-        <p class="admin-muted">
-          {{ 'ADMIN.REFUND_VOID_REPORT.CARD.COUNT_LABEL' | translate }}: {{ summary?.voided?.count ?? 0 }}
-        </p>
-        <p class="admin-muted refund-void-sub-line">
-          {{ 'ADMIN.REFUND_VOID_REPORT.CARD.CANCELLED' | translate }}:
-          {{ formatMoney(summary?.voided?.cancelled?.amount ?? '0.00', currency) }} ({{ summary?.voided?.cancelled?.count ?? 0 }})
-        </p>
-        <p class="admin-muted refund-void-sub-line">
-          {{ 'ADMIN.REFUND_VOID_REPORT.CARD.EXPIRED' | translate }}:
-          {{ formatMoney(summary?.voided?.expired?.amount ?? '0.00', currency) }} ({{ summary?.voided?.expired?.count ?? 0 }})
-        </p>
-      </ng-container>
-    </div>
-  </article>
-</section>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">hourglass_top</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.REFUND_VOID_REPORT.CARD.MANUAL_PENDING' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ formatMoney(summary?.manualRefundPending?.amount ?? '0.00', currency) }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+        @if (!isLoading) {
+          <p class="admin-muted">
+            {{ 'ADMIN.REFUND_VOID_REPORT.CARD.COUNT_LABEL' | translate }}: {{ summary?.manualRefundPending?.count ?? 0 }}
+          </p>
+        }
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-danger"><span class="material-symbols-outlined">block</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.REFUND_VOID_REPORT.CARD.VOIDED' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ formatMoney(summary?.voided?.amount ?? '0.00', currency) }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+        @if (!isLoading) {
+          <p class="admin-muted">
+            {{ 'ADMIN.REFUND_VOID_REPORT.CARD.COUNT_LABEL' | translate }}: {{ summary?.voided?.count ?? 0 }}
+          </p>
+          <p class="admin-muted refund-void-sub-line">
+            {{ 'ADMIN.REFUND_VOID_REPORT.CARD.CANCELLED' | translate }}:
+            {{ formatMoney(summary?.voided?.cancelled?.amount ?? '0.00', currency) }} ({{ summary?.voided?.cancelled?.count ?? 0 }})
+          </p>
+          <p class="admin-muted refund-void-sub-line">
+            {{ 'ADMIN.REFUND_VOID_REPORT.CARD.EXPIRED' | translate }}:
+            {{ formatMoney(summary?.voided?.expired?.amount ?? '0.00', currency) }} ({{ summary?.voided?.expired?.count ?? 0 }})
+          </p>
+        }
+      </div>
+    </article>
+  </section>
+}
 
 <!-- Mandatory partition note — like the basis note above, NOT gated by contentState. -->
 <p class="admin-muted refund-void-partition-note mt-2">
   {{ 'ADMIN.REFUND_VOID_REPORT.PARTITION_NOTE' | translate }}
 </p>
 
-<section class="admin-card mt-3" *ngIf="contentState === 'loading' || contentState === 'empty' || contentState === 'data'">
-  <div class="admin-card-head">
-    <h4>{{ 'ADMIN.REFUND_VOID_REPORT.TABLE_TITLE' | translate }}</h4>
-  </div>
-
-  <!-- Valid range with all-zero partitions: the note REPLACES the table, so a
-       screenful of zero rows never reads as "there is data". -->
-  <p class="admin-muted refund-void-empty-note" *ngIf="contentState === 'empty'">
-    {{ 'ADMIN.REFUND_VOID_REPORT.EMPTY' | translate }}
-  </p>
-
-  <div class="admin-table-wrap" *ngIf="contentState !== 'empty'">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>{{ 'ADMIN.REFUND_VOID_REPORT.COL.DATE' | translate }}</th>
-          <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.REFUNDED_COUNT' | translate }}</th>
-          <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.REFUNDED_AMOUNT' | translate }}</th>
-          <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.MANUAL_COUNT' | translate }}</th>
-          <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.MANUAL_AMOUNT' | translate }}</th>
-          <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.VOIDED_COUNT' | translate }}</th>
-          <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.VOIDED_AMOUNT' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngIf="isLoading">
-          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-            <td><span class="admin-skeleton"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          </tr>
-        </ng-container>
-
-        <ng-container *ngIf="!isLoading">
-          <ng-container *ngFor="let row of dailyRows; let i = index; trackBy: trackByRow">
-            <tr [class.zebra]="i % 2 === 1">
-              <td>
-                <button
-                  type="button"
-                  class="admin-icon-btn"
-                  (click)="toggleExpand(row)"
-                  [attr.aria-label]="(isExpanded(row) ? 'ADMIN.REFUND_VOID_REPORT.COLLAPSE_ARIA' : 'ADMIN.REFUND_VOID_REPORT.EXPAND_ARIA') | translate"
-                >
-                  <span class="material-symbols-outlined">{{ isExpanded(row) ? 'expand_less' : 'expand_more' }}</span>
-                </button>
-                <span class="admin-emphasis">{{ row.date }}</span>
-              </td>
-              <td class="refund-void-money">{{ row.refunded.count }}</td>
-              <td class="refund-void-money">{{ formatMoney(row.refunded.amount, currency) }}</td>
-              <td class="refund-void-money">{{ row.manualRefundPending.count }}</td>
-              <td class="refund-void-money">{{ formatMoney(row.manualRefundPending.amount, currency) }}</td>
-              <td class="refund-void-money">{{ row.voided.count }}</td>
-              <td class="refund-void-money">{{ formatMoney(row.voided.amount, currency) }}</td>
+@if (contentState === 'loading' || contentState === 'empty' || contentState === 'data') {
+  <section class="admin-card mt-3">
+    <div class="admin-card-head">
+      <h4>{{ 'ADMIN.REFUND_VOID_REPORT.TABLE_TITLE' | translate }}</h4>
+    </div>
+    <!-- Valid range with all-zero partitions: the note REPLACES the table, so a
+    screenful of zero rows never reads as "there is data". -->
+    @if (contentState === 'empty') {
+      <p class="admin-muted refund-void-empty-note">
+        {{ 'ADMIN.REFUND_VOID_REPORT.EMPTY' | translate }}
+      </p>
+    }
+    @if (contentState !== 'empty') {
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>{{ 'ADMIN.REFUND_VOID_REPORT.COL.DATE' | translate }}</th>
+              <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.REFUNDED_COUNT' | translate }}</th>
+              <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.REFUNDED_AMOUNT' | translate }}</th>
+              <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.MANUAL_COUNT' | translate }}</th>
+              <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.MANUAL_AMOUNT' | translate }}</th>
+              <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.VOIDED_COUNT' | translate }}</th>
+              <th class="refund-void-money">{{ 'ADMIN.REFUND_VOID_REPORT.COL.VOIDED_AMOUNT' | translate }}</th>
             </tr>
-            <tr *ngIf="isExpanded(row)" class="refund-void-detail-row">
-              <td [attr.colspan]="7">
-                <div class="refund-void-chip-list">
-                  <span class="refund-void-chip">
-                    {{ 'ADMIN.REFUND_VOID_REPORT.CARD.CANCELLED' | translate }}:
-                    {{ formatMoney(row.voided.cancelled.amount, currency) }} ({{ row.voided.cancelled.count }})
-                  </span>
-                  <span class="refund-void-chip">
-                    {{ 'ADMIN.REFUND_VOID_REPORT.CARD.EXPIRED' | translate }}:
-                    {{ formatMoney(row.voided.expired.amount, currency) }} ({{ row.voided.expired.count }})
-                  </span>
-                </div>
-              </td>
-            </tr>
-          </ng-container>
-        </ng-container>
-      </tbody>
-    </table>
-  </div>
-</section>
+          </thead>
+          <tbody>
+            @if (isLoading) {
+              @for (row of skeletonRows; track row) {
+                <tr class="admin-skeleton-row" aria-hidden="true">
+                  <td><span class="admin-skeleton"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                </tr>
+              }
+            }
+            @if (!isLoading) {
+              @for (row of dailyRows; track trackByRow(i, row); let i = $index) {
+                <tr [class.zebra]="i % 2 === 1">
+                  <td>
+                    <button
+                      type="button"
+                      class="admin-icon-btn"
+                      (click)="toggleExpand(row)"
+                      [attr.aria-label]="(isExpanded(row) ? 'ADMIN.REFUND_VOID_REPORT.COLLAPSE_ARIA' : 'ADMIN.REFUND_VOID_REPORT.EXPAND_ARIA') | translate"
+                      >
+                      <span class="material-symbols-outlined">{{ isExpanded(row) ? 'expand_less' : 'expand_more' }}</span>
+                    </button>
+                    <span class="admin-emphasis">{{ row.date }}</span>
+                  </td>
+                  <td class="refund-void-money">{{ row.refunded.count }}</td>
+                  <td class="refund-void-money">{{ formatMoney(row.refunded.amount, currency) }}</td>
+                  <td class="refund-void-money">{{ row.manualRefundPending.count }}</td>
+                  <td class="refund-void-money">{{ formatMoney(row.manualRefundPending.amount, currency) }}</td>
+                  <td class="refund-void-money">{{ row.voided.count }}</td>
+                  <td class="refund-void-money">{{ formatMoney(row.voided.amount, currency) }}</td>
+                </tr>
+                @if (isExpanded(row)) {
+                  <tr class="refund-void-detail-row">
+                    <td [attr.colspan]="7">
+                      <div class="refund-void-chip-list">
+                        <span class="refund-void-chip">
+                          {{ 'ADMIN.REFUND_VOID_REPORT.CARD.CANCELLED' | translate }}:
+                          {{ formatMoney(row.voided.cancelled.amount, currency) }} ({{ row.voided.cancelled.count }})
+                        </span>
+                        <span class="refund-void-chip">
+                          {{ 'ADMIN.REFUND_VOID_REPORT.CARD.EXPIRED' | translate }}:
+                          {{ formatMoney(row.voided.expired.amount, currency) }} ({{ row.voided.expired.count }})
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

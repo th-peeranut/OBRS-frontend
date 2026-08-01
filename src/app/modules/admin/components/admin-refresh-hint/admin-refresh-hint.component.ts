@@ -10,13 +10,17 @@ import { Component, Input } from '@angular/core';
 @Component({
     selector: 'app-admin-refresh-hint',
     template: `
-    <p class="admin-muted" *ngIf="refreshing && !loading">
-      {{ 'ADMIN.COMMON.UPDATING' | translate }}
-    </p>
-    <p class="admin-muted" *ngIf="failed && !refreshing && !loading">
-      {{ 'ADMIN.COMMON.REFRESH_FAILED' | translate }}
-    </p>
-  `,
+    @if (refreshing && !loading) {
+      <p class="admin-muted">
+        {{ 'ADMIN.COMMON.UPDATING' | translate }}
+      </p>
+    }
+    @if (failed && !refreshing && !loading) {
+      <p class="admin-muted">
+        {{ 'ADMIN.COMMON.REFRESH_FAILED' | translate }}
+      </p>
+    }
+    `,
     standalone: false
 })
 export class AdminRefreshHintComponent {

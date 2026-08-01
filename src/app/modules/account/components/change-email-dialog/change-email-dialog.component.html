@@ -4,13 +4,13 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="change-email-dialog-title"
-  >
+    >
     <button
       type="button"
       class="change-email-modal__close"
       (click)="close()"
       [attr.aria-label]="'EMAIL_CHANGE.CLOSE' | translate"
-    >
+      >
       <i class="bi bi-x-lg"></i>
     </button>
 
@@ -20,131 +20,154 @@
       </h2>
 
       <!-- FORM STATE -->
-      <form *ngIf="dialogState === 'form'" [formGroup]="changeEmailForm" (ngSubmit)="submit()">
-        <div class="mt-2">
-          <label
-            for="change-email-current-password"
+      @if (dialogState === 'form') {
+        <form [formGroup]="changeEmailForm" (ngSubmit)="submit()">
+          <div class="mt-2">
+            <label
+              for="change-email-current-password"
             [class.label-error]="
               (getForm('currentPassword')?.touched && getForm('currentPassword')?.errors) || passwordErrorKey
             "
-          >
-            {{ "EMAIL_CHANGE.CURRENT_PASSWORD_LABEL" | translate }}
-          </label>
-          <div class="password-container">
-            <input
-              #currentPasswordInput
-              class="form-control mt-1"
-              [type]="isShowPassword ? 'text' : 'password'"
-              id="change-email-current-password"
-              formControlName="currentPassword"
-              [placeholder]="'EMAIL_CHANGE.CURRENT_PASSWORD_PLACEHOLDER' | translate"
-              aria-describedby="change-email-current-password-error"
+              >
+              {{ "EMAIL_CHANGE.CURRENT_PASSWORD_LABEL" | translate }}
+            </label>
+            <div class="password-container">
+              <input
+                #currentPasswordInput
+                class="form-control mt-1"
+                [type]="isShowPassword ? 'text' : 'password'"
+                id="change-email-current-password"
+                formControlName="currentPassword"
+                [placeholder]="'EMAIL_CHANGE.CURRENT_PASSWORD_PLACEHOLDER' | translate"
+                aria-describedby="change-email-current-password-error"
               [class.form-error]="
                 (getForm('currentPassword')?.touched && getForm('currentPassword')?.errors) || passwordErrorKey
               "
-            />
-            <img
-              *ngIf="isShowPassword"
-              class="icon-eye"
-              src="icons/eyes-close.svg"
-              alt="eyes-close"
-              (click)="toggleShowPassword()"
-            />
-            <img
-              *ngIf="!isShowPassword"
-              class="icon-eye"
-              src="icons/eyes-open.svg"
-              alt="eyes-close"
-              (click)="toggleShowPassword()"
-            />
-          </div>
-          <div id="change-email-current-password-error">
-            <div
-              class="text-error"
-              *ngIf="getForm('currentPassword')?.touched && getForm('currentPassword')?.errors?.['required']"
-            >
-              {{ "EMAIL_CHANGE.CURRENT_PASSWORD_REQUIRED" | translate }}
+                />
+                @if (isShowPassword) {
+                  <img
+                    class="icon-eye"
+                    src="icons/eyes-close.svg"
+                    alt="eyes-close"
+                    (click)="toggleShowPassword()"
+                    />
+                }
+                @if (!isShowPassword) {
+                  <img
+                    class="icon-eye"
+                    src="icons/eyes-open.svg"
+                    alt="eyes-close"
+                    (click)="toggleShowPassword()"
+                    />
+                }
+              </div>
+              <div id="change-email-current-password-error">
+                @if (getForm('currentPassword')?.touched && getForm('currentPassword')?.errors?.['required']) {
+                  <div
+                    class="text-error"
+                    >
+                    {{ "EMAIL_CHANGE.CURRENT_PASSWORD_REQUIRED" | translate }}
+                  </div>
+                }
+                @if (passwordErrorKey) {
+                  <div class="text-error">
+                    {{ passwordErrorKey | translate }}
+                  </div>
+                }
+              </div>
             </div>
-            <div class="text-error" *ngIf="passwordErrorKey">
-              {{ passwordErrorKey | translate }}
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-2">
-          <label
-            for="change-email-new-email"
+            <div class="mt-2">
+              <label
+                for="change-email-new-email"
             [class.label-error]="
               (getForm('newEmail')?.touched && getForm('newEmail')?.errors) ||
               emailErrorKey ||
               (newEmailExists && getForm('newEmail')?.value)
             "
-          >
-            {{ "EMAIL_CHANGE.NEW_EMAIL_LABEL" | translate }}
-          </label>
-          <input
-            class="form-control mt-1"
-            type="email"
-            id="change-email-new-email"
-            formControlName="newEmail"
-            [placeholder]="'EMAIL_CHANGE.NEW_EMAIL_PLACEHOLDER' | translate"
-            aria-describedby="change-email-new-email-error"
+                >
+                {{ "EMAIL_CHANGE.NEW_EMAIL_LABEL" | translate }}
+              </label>
+              <input
+                class="form-control mt-1"
+                type="email"
+                id="change-email-new-email"
+                formControlName="newEmail"
+                [placeholder]="'EMAIL_CHANGE.NEW_EMAIL_PLACEHOLDER' | translate"
+                aria-describedby="change-email-new-email-error"
             [class.form-error]="
               (getForm('newEmail')?.touched && getForm('newEmail')?.errors) ||
               emailErrorKey ||
               (newEmailExists && getForm('newEmail')?.value)
             "
-          />
-          <div id="change-email-new-email-error">
-            <div
-              class="text-error"
-              *ngIf="getForm('newEmail')?.touched && getForm('newEmail')?.errors?.['required']"
-            >
-              {{ "EMAIL_CHANGE.NEW_EMAIL_REQUIRED" | translate }}
+                />
+                <div id="change-email-new-email-error">
+                  @if (getForm('newEmail')?.touched && getForm('newEmail')?.errors?.['required']) {
+                    <div
+                      class="text-error"
+                      >
+                      {{ "EMAIL_CHANGE.NEW_EMAIL_REQUIRED" | translate }}
+                    </div>
+                  }
+                  @if (getForm('newEmail')?.touched && !getForm('newEmail')?.errors?.['required'] && getForm('newEmail')?.errors?.['email']) {
+                    <div
+                      class="text-error"
+                      >
+                      {{ "EMAIL_CHANGE.NEW_EMAIL_REQUIRED" | translate }}
+                    </div>
+                  }
+                  @if (getForm('newEmail')?.value && newEmailExists && getForm('newEmail')?.touched) {
+                    <div
+                      class="text-error"
+                      >
+                      {{ "EMAIL_CHANGE.NEW_EMAIL_EXIST" | translate }}
+                    </div>
+                  }
+                  @if (emailErrorKey) {
+                    <div class="text-error">
+                      {{ emailErrorKey | translate }}
+                    </div>
+                  }
+                </div>
+              </div>
+              <div class="change-email-modal__actions">
+                <button type="button" class="btn-secondary" (click)="close()">
+                  {{ "EMAIL_CHANGE.CANCEL" | translate }}
+                </button>
+                <button type="submit" class="btn-primary" [disabled]="isSubmitting">
+                  @if (isSubmitting) {
+                    <span class="spinner" aria-hidden="true"></span>
+                  }
+                  @if (!isSubmitting) {
+                    {{ "EMAIL_CHANGE.SUBMIT" | translate }}
+                  }
+                  @if (isSubmitting) {
+                    {{ "EMAIL_CHANGE.SUBMIT_LOADING" | translate }}
+                  }
+                </button>
+              </div>
+            </form>
+          }
+
+          <!-- SENT STATE -->
+          @if (dialogState === 'sent') {
+            <div class="change-email-sent">
+              <span class="material-symbols-outlined change-email-sent__icon">mark_email_read</span>
+              <h3>{{ "EMAIL_CHANGE.SENT_TITLE" | translate }}</h3>
+              <p>{{ "EMAIL_CHANGE.SENT_MESSAGE" | translate: { email: sentToEmail } }}</p>
+              <p class="change-email-sent__note">{{ "EMAIL_CHANGE.SENT_NOTE" | translate }}</p>
+              <button type="button" class="btn-secondary" [disabled]="isResendLoading" (click)="resend()">
+                @if (isResendLoading) {
+                  <span class="spinner" aria-hidden="true"></span>
+                }
+                @if (!isResendLoading) {
+                  {{ "EMAIL_CHANGE.RESEND_BUTTON" | translate }}
+                }
+                @if (isResendLoading) {
+                  {{ "EMAIL_CHANGE.RESEND_LOADING" | translate }}
+                }
+              </button>
             </div>
-            <div
-              class="text-error"
-              *ngIf="getForm('newEmail')?.touched && !getForm('newEmail')?.errors?.['required'] && getForm('newEmail')?.errors?.['email']"
-            >
-              {{ "EMAIL_CHANGE.NEW_EMAIL_REQUIRED" | translate }}
-            </div>
-            <div
-              class="text-error"
-              *ngIf="getForm('newEmail')?.value && newEmailExists && getForm('newEmail')?.touched"
-            >
-              {{ "EMAIL_CHANGE.NEW_EMAIL_EXIST" | translate }}
-            </div>
-            <div class="text-error" *ngIf="emailErrorKey">
-              {{ emailErrorKey | translate }}
-            </div>
-          </div>
+          }
         </div>
-
-        <div class="change-email-modal__actions">
-          <button type="button" class="btn-secondary" (click)="close()">
-            {{ "EMAIL_CHANGE.CANCEL" | translate }}
-          </button>
-          <button type="submit" class="btn-primary" [disabled]="isSubmitting">
-            <span *ngIf="isSubmitting" class="spinner" aria-hidden="true"></span>
-            <ng-container *ngIf="!isSubmitting">{{ "EMAIL_CHANGE.SUBMIT" | translate }}</ng-container>
-            <ng-container *ngIf="isSubmitting">{{ "EMAIL_CHANGE.SUBMIT_LOADING" | translate }}</ng-container>
-          </button>
-        </div>
-      </form>
-
-      <!-- SENT STATE -->
-      <div class="change-email-sent" *ngIf="dialogState === 'sent'">
-        <span class="material-symbols-outlined change-email-sent__icon">mark_email_read</span>
-        <h3>{{ "EMAIL_CHANGE.SENT_TITLE" | translate }}</h3>
-        <p>{{ "EMAIL_CHANGE.SENT_MESSAGE" | translate: { email: sentToEmail } }}</p>
-        <p class="change-email-sent__note">{{ "EMAIL_CHANGE.SENT_NOTE" | translate }}</p>
-
-        <button type="button" class="btn-secondary" [disabled]="isResendLoading" (click)="resend()">
-          <span *ngIf="isResendLoading" class="spinner" aria-hidden="true"></span>
-          <ng-container *ngIf="!isResendLoading">{{ "EMAIL_CHANGE.RESEND_BUTTON" | translate }}</ng-container>
-          <ng-container *ngIf="isResendLoading">{{ "EMAIL_CHANGE.RESEND_LOADING" | translate }}</ng-container>
-        </button>
       </div>
     </div>
-  </div>
-</div>

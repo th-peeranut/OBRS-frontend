@@ -4,7 +4,7 @@
       type="button"
       class="tab"
       (click)="selectTab('creditcard')"
-    >
+      >
       <img src="icons/payment-creditcard.svg" alt="Credit card icon" />
       <span>{{ "PAYMENT.TAB.CREDIT" | translate }}</span>
     </button>
@@ -13,7 +13,7 @@
       class="tab is-active"
       aria-current="true"
       (click)="selectTab('qrcode')"
-    >
+      >
       <img src="icons/payment-qrcode.svg" alt="QR payment icon" />
       <span>{{ "PAYMENT.TAB.QR" | translate }}</span>
     </button>
@@ -30,71 +30,72 @@
         alt=""
         aria-hidden="true"
         class="qr-logo"
-      />
-    </div>
-
-    <div class="qr-body">
-      <div class="qr-frame">
-        <img
-          *ngIf="qrImageUrl; else qrFallback"
-          [src]="qrImageUrl"
-          [alt]="qrImageAlt"
-          class="qr-image"
-          (error)="onQrError()"
         />
-        <ng-template #qrFallback>
-          <div class="qr-placeholder" role="img" aria-label="QR code preview"></div>
-        </ng-template>
       </div>
-      <div class="qr-amount">{{ amountDisplay }}</div>
-      <div class="qr-countdown">
-        <img src="icons/payment-timer.svg" alt="" aria-hidden="true" />
-        <span>{{ countdown }}</span>
+
+      <div class="qr-body">
+        <div class="qr-frame">
+          @if (qrImageUrl) {
+            <img
+              [src]="qrImageUrl"
+              [alt]="qrImageAlt"
+              class="qr-image"
+              (error)="onQrError()"
+              />
+          } @else {
+            <div class="qr-placeholder" role="img" aria-label="QR code preview"></div>
+          }
+        </div>
+        <div class="qr-amount">{{ amountDisplay }}</div>
+        <div class="qr-countdown">
+          <img src="icons/payment-timer.svg" alt="" aria-hidden="true" />
+          <span>{{ countdown }}</span>
+        </div>
+      </div>
+
+      <div class="qr-footer">
+        <div class="merchant-name">
+          {{ "PAYMENT.QR.MERCHANT_NAME" | translate }}
+        </div>
+        <div class="merchant-ref">
+          {{ "PAYMENT.QR.MERCHANT_REF" | translate }} {{ referenceNo || "-" }}
+        </div>
       </div>
     </div>
 
-    <div class="qr-footer">
-      <div class="merchant-name">
-        {{ "PAYMENT.QR.MERCHANT_NAME" | translate }}
-      </div>
-      <div class="merchant-ref">
-        {{ "PAYMENT.QR.MERCHANT_REF" | translate }} {{ referenceNo || "-" }}
-      </div>
-    </div>
-  </div>
-
-  <button
-    type="button"
-    class="btn-download"
-    (click)="downloadQrCode()"
-    [disabled]="!qrImageUrl"
-  >
-    <img src="icons/payment-download.svg" alt="" aria-hidden="true" />
-    {{ "PAYMENT.QR.DOWNLOAD" | translate }}
-  </button>
-
-  <div class="summary-wrapper">
-    <app-payment-summary variant="inline" [amountOverride]="amountOverride"></app-payment-summary>
-  </div>
-</div>
-
-<div class="payment-actions">
-  <div class="payment-action-item">
-    <button class="back-btn" type="button" (click)="onBack()">
-      {{ "PAYMENT.QR.BACK" | translate }}
-    </button>
-  </div>
-
-  <div class="payment-action-item action-end">
     <button
-      *ngIf="!isWaitingForConfirmation"
-      class="payment-btn"
       type="button"
-      (click)="confirmPayment()"
-      [class.payment-btn-diabled]="isSubmittingPayment || !qrPaymentUrl"
-      [disabled]="isSubmittingPayment || !qrPaymentUrl"
-    >
-      {{ "PAYMENT.QR.CONFIRM_PAYMENT" | translate }}
+      class="btn-download"
+      (click)="downloadQrCode()"
+      [disabled]="!qrImageUrl"
+      >
+      <img src="icons/payment-download.svg" alt="" aria-hidden="true" />
+      {{ "PAYMENT.QR.DOWNLOAD" | translate }}
     </button>
+
+    <div class="summary-wrapper">
+      <app-payment-summary variant="inline" [amountOverride]="amountOverride"></app-payment-summary>
+    </div>
   </div>
-</div>
+
+  <div class="payment-actions">
+    <div class="payment-action-item">
+      <button class="back-btn" type="button" (click)="onBack()">
+        {{ "PAYMENT.QR.BACK" | translate }}
+      </button>
+    </div>
+
+    <div class="payment-action-item action-end">
+      @if (!isWaitingForConfirmation) {
+        <button
+          class="payment-btn"
+          type="button"
+          (click)="confirmPayment()"
+          [class.payment-btn-diabled]="isSubmittingPayment || !qrPaymentUrl"
+          [disabled]="isSubmittingPayment || !qrPaymentUrl"
+          >
+          {{ "PAYMENT.QR.CONFIRM_PAYMENT" | translate }}
+        </button>
+      }
+    </div>
+  </div>

@@ -1,14 +1,14 @@
 <p-card styleClass="route-stop-detail-card h-100">
   <!-- NO SELECTION PLACEHOLDER -->
-  <ng-container *ngIf="!stop">
+  @if (!stop) {
     <div class="detail-empty d-flex flex-column align-items-center justify-content-center py-4">
       <i class="bi bi-geo-alt fs-2 mb-2"></i>
       <span class="small">{{ 'HOME.ROUTE_MAP.DETAIL_NO_SELECTION' | translate }}</span>
     </div>
-  </ng-container>
+  }
 
   <!-- STOP DETAIL -->
-  <ng-container *ngIf="stop">
+  @if (stop) {
     <!-- CARD TITLE -->
     <div class="d-flex align-items-center gap-2 mb-3">
       <span
@@ -19,36 +19,35 @@
       <div>
         <div class="detail-name">{{ stop.name }}</div>
         <div class="detail-sub small">
-          <ng-container *ngIf="type === 'pickup'">
+          @if (type === 'pickup') {
             {{ 'HOME.ROUTE_MAP.DETAIL_PICKUP_TITLE' | translate: { province: province } }}
-          </ng-container>
-          <ng-container *ngIf="type === 'dropoff'">
+          }
+          @if (type === 'dropoff') {
             {{ 'HOME.ROUTE_MAP.DETAIL_DROPOFF_TITLE' | translate: { province: province } }}
-          </ng-container>
+          }
         </div>
       </div>
     </div>
-
     <!-- PHOTO -->
-    <img
-      *ngIf="stop.primaryPhotoUrl"
-      [src]="stop.primaryPhotoUrl"
-      class="detail-photo w-100 rounded mb-2"
-      [alt]="stop.name"
-      loading="lazy"
-    />
-
+    @if (stop.primaryPhotoUrl) {
+      <img
+        [src]="stop.primaryPhotoUrl"
+        class="detail-photo w-100 rounded mb-2"
+        [alt]="stop.name"
+        loading="lazy"
+        />
+    }
     <!-- APPROX TIME -->
     <div class="mb-2 small">
       <i class="bi bi-clock me-1 detail-meta"></i>
       {{ 'HOME.ROUTE_MAP.DETAIL_TIME' | translate: { time: stop.approxTime } }}
     </div>
-
     <!-- ADDRESS -->
-    <div *ngIf="stop.address" class="mb-3 small detail-meta">
-      <i class="bi bi-geo-alt me-1"></i>{{ stop.address }}
-    </div>
-
+    @if (stop.address) {
+      <div class="mb-3 small detail-meta">
+        <i class="bi bi-geo-alt me-1"></i>{{ stop.address }}
+      </div>
+    }
     <!-- ACTION BUTTONS -->
     <div class="d-flex gap-2 flex-wrap">
       <p-button
@@ -57,23 +56,24 @@
         [label]="'HOME.ROUTE_MAP.BTN_OPEN_MAPS' | translate"
         [disabled]="!stop.googleMapsUrl"
         (onClick)="openMaps()"
-      >
+        >
         <ng-template pTemplate="icon">
           <i class="bi bi-map me-1"></i>
         </ng-template>
       </p-button>
-      <p-button
-        *ngIf="type === 'pickup'"
-        severity="secondary"
-        size="small"
-        [label]="'HOME.ROUTE_MAP.BTN_NAVIGATE' | translate"
-        [disabled]="!hasPickupCoords"
-        (onClick)="navigateToPickup()"
-      >
-        <ng-template pTemplate="icon">
-          <i class="bi bi-signpost-2 me-1"></i>
-        </ng-template>
-      </p-button>
+      @if (type === 'pickup') {
+        <p-button
+          severity="secondary"
+          size="small"
+          [label]="'HOME.ROUTE_MAP.BTN_NAVIGATE' | translate"
+          [disabled]="!hasPickupCoords"
+          (onClick)="navigateToPickup()"
+          >
+          <ng-template pTemplate="icon">
+            <i class="bi bi-signpost-2 me-1"></i>
+          </ng-template>
+        </p-button>
+      }
     </div>
-  </ng-container>
+  }
 </p-card>

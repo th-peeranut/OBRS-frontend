@@ -14,7 +14,7 @@ import {
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { CommonModule } from '@angular/common';
+
 import { localizedDropdownName } from '../../lib/localized-dropdown-name';
 
 @Component({
@@ -28,7 +28,7 @@ import { localizedDropdownName } from '../../lib/localized-dropdown-name';
             multi: true,
         },
     ],
-    imports: [CommonModule, TranslateModule]
+    imports: [TranslateModule]
 })
 export class DropdownObrsComponent implements ControlValueAccessor, OnChanges, OnDestroy {
   @Input() isLabel: boolean = false;

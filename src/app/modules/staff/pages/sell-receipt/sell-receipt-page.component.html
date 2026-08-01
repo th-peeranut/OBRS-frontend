@@ -11,145 +11,144 @@
       class="btn btn-success"
       [disabled]="isLoading || loadError"
       (click)="print()"
-    >
+      >
       <span class="material-symbols-outlined align-middle">print</span>
       {{ 'STAFF.SELL.PRINT_TICKET' | translate }}
     </button>
   </div>
 
   <!-- Loading skeleton -->
-  <div class="no-print text-center py-5" *ngIf="isLoading">
-    <div class="spinner-border text-success" role="status">
-      <span class="visually-hidden">{{ 'STAFF.SELL_RECEIPT.LOADING' | translate }}</span>
+  @if (isLoading) {
+    <div class="no-print text-center py-5">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">{{ 'STAFF.SELL_RECEIPT.LOADING' | translate }}</span>
+      </div>
     </div>
-  </div>
+  }
 
   <!-- Error state -->
-  <div class="no-print text-center py-5" *ngIf="!isLoading && loadError">
-    <span class="material-symbols-outlined text-muted d-block mb-2" style="font-size:64px">error_outline</span>
-    <div class="fw-semibold fs-5">{{ 'STAFF.SELL_RECEIPT.LOAD_ERROR' | translate }}</div>
-    <button type="button" class="btn btn-outline-secondary mt-3" (click)="reload()">
-      {{ 'STAFF.SELL_RECEIPT.RETRY' | translate }}
-    </button>
-  </div>
+  @if (!isLoading && loadError) {
+    <div class="no-print text-center py-5">
+      <span class="material-symbols-outlined text-muted d-block mb-2" style="font-size:64px">error_outline</span>
+      <div class="fw-semibold fs-5">{{ 'STAFF.SELL_RECEIPT.LOAD_ERROR' | translate }}</div>
+      <button type="button" class="btn btn-outline-secondary mt-3" (click)="reload()">
+        {{ 'STAFF.SELL_RECEIPT.RETRY' | translate }}
+      </button>
+    </div>
+  }
 
   <!-- Printable receipt content -->
-  <article class="receipt-paper" *ngIf="!isLoading && !loadError">
-    <div class="receipt-header">
-      <img
-        class="receipt-logo"
-        src="images/logo.svg"
-        width="104"
-        height="45"
-        [attr.alt]="'E_TICKET.LOGO_ALT' | translate"
-      />
-      <div class="receipt-subtitle">{{ 'STAFF.SELL_RECEIPT.DOCUMENT_TITLE' | translate }}</div>
-    </div>
-
-    <div class="receipt-divider"></div>
-
-    <div class="receipt-grid">
-      <div class="receipt-item">
-        <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.BOOKING_REF' | translate }}</span>
-        <span class="value">{{ bookingNumber }}</span>
-      </div>
-      <div class="receipt-item full">
-        <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.ROUTE' | translate }}</span>
-        <span class="value">{{ routeLabel }}</span>
-      </div>
-      <div class="receipt-item">
-        <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.DEPARTURE' | translate }}</span>
-        <span class="value">{{ departureDisplay }}</span>
-      </div>
-      <div class="receipt-item">
-        <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.ARRIVAL' | translate }}</span>
-        <span class="value">{{ arrivalDisplay }}</span>
-      </div>
-    </div>
-
-    <div class="receipt-divider dotted"></div>
-
-    <div class="receipt-grid">
-      <div class="receipt-item">
-        <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.PAYMENT_METHOD' | translate }}</span>
-        <span class="value">{{ paymentMethodLabel }}</span>
-      </div>
-      <div class="receipt-item">
-        <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.PAID_AT' | translate }}</span>
-        <span class="value">{{ paidAtDisplay }}</span>
-      </div>
-      <div class="receipt-item">
-        <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.AMOUNT_PAID' | translate }}</span>
-        <span class="value fw-bold">{{ amountPaid }} {{ 'E_TICKET.LABEL.TOTAL_UNIT' | translate }}</span>
-      </div>
-    </div>
-
-    <div class="receipt-divider dotted"></div>
-
-    <div class="receipt-grid">
-      <div class="receipt-item">
-        <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.SOLD_BY' | translate }}</span>
-        <span class="value">{{ soldByUsername }}</span>
-      </div>
-    </div>
-
-    <!-- OBRS-96 reuse: one boarding-token QR per ticket, same rendering as the
-         customer e-ticket page. -->
-    <div class="receipt-tickets mt-3" *ngIf="tickets.length">
-      <div class="receipt-item full">
-        <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.PASSENGERS' | translate }}</span>
-      </div>
-
-      <div class="receipt-ticket-list">
-        <div
-          class="receipt-ticket-card"
-          *ngFor="let ticket of tickets; let i = index; trackBy: trackByIndex"
-        >
-          <div class="receipt-ticket-qr">
-            <ng-container *ngIf="ticket.qrDataUrl; else qrPlaceholder">
-              <img
-                class="qr-code"
-                [src]="ticket.qrDataUrl"
-                [attr.alt]="'E_TICKET.QR_ARIA_LABEL' | translate"
-              />
-            </ng-container>
-            <ng-template #qrPlaceholder>
-              <div
-                class="qr-code qr-code-placeholder"
-                [class.is-unavailable]="ticket.qrUnavailable"
-                role="img"
-                [attr.aria-label]="'E_TICKET.QR_ARIA_LABEL' | translate"
-              >
-                <span
-                  *ngIf="ticket.qrUnavailable"
-                  class="material-symbols-outlined qr-unavailable-icon"
-                  aria-hidden="true"
-                  >block</span
-                >
-              </div>
-            </ng-template>
-            <div class="receipt-ticket-number">{{ ticket.ticketNumber }}</div>
+  @if (!isLoading && !loadError) {
+    <article class="receipt-paper">
+      <div class="receipt-header">
+        <img
+          class="receipt-logo"
+          src="images/logo.svg"
+          width="104"
+          height="45"
+          [attr.alt]="'E_TICKET.LOGO_ALT' | translate"
+          />
+          <div class="receipt-subtitle">{{ 'STAFF.SELL_RECEIPT.DOCUMENT_TITLE' | translate }}</div>
+        </div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-grid">
+          <div class="receipt-item">
+            <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.BOOKING_REF' | translate }}</span>
+            <span class="value">{{ bookingNumber }}</span>
           </div>
-
-          <div class="receipt-passenger-detail">
-            <div class="passenger-index">{{ i + 1 }}.</div>
-            <div class="passenger-field">
-              <span class="label">{{ 'E_TICKET.LABEL.PASSENGER_NAME' | translate }}</span>
-              <span class="value">{{ ticket.passengerName }}</span>
-            </div>
-            <div class="passenger-field">
-              <span class="label">{{ 'E_TICKET.LABEL.SEAT' | translate }}</span>
-              <span class="value">{{ ticket.seatOpen ? ('E_TICKET.LABEL.SEAT_OPEN' | translate) : ticket.seat }}</span>
-            </div>
+          <div class="receipt-item full">
+            <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.ROUTE' | translate }}</span>
+            <span class="value">{{ routeLabel }}</span>
+          </div>
+          <div class="receipt-item">
+            <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.DEPARTURE' | translate }}</span>
+            <span class="value">{{ departureDisplay }}</span>
+          </div>
+          <div class="receipt-item">
+            <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.ARRIVAL' | translate }}</span>
+            <span class="value">{{ arrivalDisplay }}</span>
           </div>
         </div>
-      </div>
+        <div class="receipt-divider dotted"></div>
+        <div class="receipt-grid">
+          <div class="receipt-item">
+            <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.PAYMENT_METHOD' | translate }}</span>
+            <span class="value">{{ paymentMethodLabel }}</span>
+          </div>
+          <div class="receipt-item">
+            <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.PAID_AT' | translate }}</span>
+            <span class="value">{{ paidAtDisplay }}</span>
+          </div>
+          <div class="receipt-item">
+            <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.AMOUNT_PAID' | translate }}</span>
+            <span class="value fw-bold">{{ amountPaid }} {{ 'E_TICKET.LABEL.TOTAL_UNIT' | translate }}</span>
+          </div>
+        </div>
+        <div class="receipt-divider dotted"></div>
+        <div class="receipt-grid">
+          <div class="receipt-item">
+            <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.SOLD_BY' | translate }}</span>
+            <span class="value">{{ soldByUsername }}</span>
+          </div>
+        </div>
+        <!-- OBRS-96 reuse: one boarding-token QR per ticket, same rendering as the
+        customer e-ticket page. -->
+        @if (tickets.length) {
+          <div class="receipt-tickets mt-3">
+            <div class="receipt-item full">
+              <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.PASSENGERS' | translate }}</span>
+            </div>
+            <div class="receipt-ticket-list">
+              @for (ticket of tickets; track trackByIndex(i); let i = $index) {
+                <div
+                  class="receipt-ticket-card"
+                  >
+                  <div class="receipt-ticket-qr">
+                    @if (ticket.qrDataUrl) {
+                      <img
+                        class="qr-code"
+                        [src]="ticket.qrDataUrl"
+                        [attr.alt]="'E_TICKET.QR_ARIA_LABEL' | translate"
+                        />
+                      } @else {
+                        <div
+                          class="qr-code qr-code-placeholder"
+                          [class.is-unavailable]="ticket.qrUnavailable"
+                          role="img"
+                          [attr.aria-label]="'E_TICKET.QR_ARIA_LABEL' | translate"
+                          >
+                          @if (ticket.qrUnavailable) {
+                            <span
+                              class="material-symbols-outlined qr-unavailable-icon"
+                              aria-hidden="true"
+                              >block</span
+                              >
+                          }
+                        </div>
+                      }
+                      <div class="receipt-ticket-number">{{ ticket.ticketNumber }}</div>
+                    </div>
+                    <div class="receipt-passenger-detail">
+                      <div class="passenger-index">{{ i + 1 }}.</div>
+                      <div class="passenger-field">
+                        <span class="label">{{ 'E_TICKET.LABEL.PASSENGER_NAME' | translate }}</span>
+                        <span class="value">{{ ticket.passengerName }}</span>
+                      </div>
+                      <div class="passenger-field">
+                        <span class="label">{{ 'E_TICKET.LABEL.SEAT' | translate }}</span>
+                        <span class="value">{{ ticket.seatOpen ? ('E_TICKET.LABEL.SEAT_OPEN' | translate) : ticket.seat }}</span>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+              <div class="qr-hint">
+                {{ 'E_TICKET.NOTE_LABEL' | translate }}<br />
+                {{ 'E_TICKET.QR_HINT' | translate }}
+              </div>
+            </div>
+          }
+        </article>
+      }
 
-      <div class="qr-hint">
-        {{ 'E_TICKET.NOTE_LABEL' | translate }}<br />
-        {{ 'E_TICKET.QR_HINT' | translate }}
-      </div>
     </div>
-  </article>
-
-</div>

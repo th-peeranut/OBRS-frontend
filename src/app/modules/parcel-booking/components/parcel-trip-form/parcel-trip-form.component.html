@@ -15,68 +15,75 @@
       src="icons/passenger-station-gap.svg"
       alt=""
       aria-hidden="true"
-    />
+      />
 
-    <app-dropdown-group-obrs
-      [isBorder]="true"
-      [isLabel]="true"
-      [label]="'PARCEL_BOOKING.TRIP.TO_STATION'"
-      [value]="form.get('toStationId')?.value"
-      [options]="toStationOptions"
-      [searchable]="true"
-      (currentValue)="onToStationSelect($event)"
-    ></app-dropdown-group-obrs>
-  </div>
-
-  <div class="parcel-trip-form__error" *ngIf="stationsSame">
-    {{ "PARCEL_BOOKING.VALIDATION.FROM_TO_SAME" | translate }}
-  </div>
-
-  <div class="form-group-obrs">
-    <label>{{ "PARCEL_BOOKING.TRIP.DATE" | translate }}</label>
-    <p-datePicker
-      styleClass="app-date-field"
-      panelStyleClass="app-date-field-panel"
-      dateFormat="dd/mm/yy"
-      [minDate]="minDate"
-      [iconDisplay]="'input'"
-      [showIcon]="true"
-      inputId="parcelTripDate"
-      formControlName="date"
-    >
-      <ng-template pTemplate="inputicon">
-        <img
-          class="app-date-field-icon"
-          src="icons/calendar.svg"
-          [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate"
-        />
-      </ng-template>
-    </p-datePicker>
-  </div>
-
-  <div class="form-group-obrs">
-    <label>{{ "PARCEL_BOOKING.TRIP.SCHEDULE" | translate }}</label>
-
-    <div *ngIf="isLoadingSchedules" class="text-center py-3">
-      <span class="material-symbols-outlined">hourglass_empty</span>
+      <app-dropdown-group-obrs
+        [isBorder]="true"
+        [isLabel]="true"
+        [label]="'PARCEL_BOOKING.TRIP.TO_STATION'"
+        [value]="form.get('toStationId')?.value"
+        [options]="toStationOptions"
+        [searchable]="true"
+        (currentValue)="onToStationSelect($event)"
+      ></app-dropdown-group-obrs>
     </div>
 
-    <div class="parcel-trip-form__empty" *ngIf="!isLoadingSchedules && noSchedulesFound">
-      {{ "PARCEL_BOOKING.TRIP.NO_SCHEDULES" | translate }}
-    </div>
+    @if (stationsSame) {
+      <div class="parcel-trip-form__error">
+        {{ "PARCEL_BOOKING.VALIDATION.FROM_TO_SAME" | translate }}
+      </div>
+    }
 
-    <app-dropdown-group-obrs
-      *ngIf="!isLoadingSchedules && !noSchedulesFound"
-      [isBorder]="true"
-      [value]="form.get('scheduleId')?.value"
-      [options]="scheduleOptions"
-      (currentValue)="onScheduleSelect($event)"
-    ></app-dropdown-group-obrs>
-  </div>
+    <div class="form-group-obrs">
+      <label>{{ "PARCEL_BOOKING.TRIP.DATE" | translate }}</label>
+      <p-datePicker
+        styleClass="app-date-field"
+        panelStyleClass="app-date-field-panel"
+        dateFormat="dd/mm/yy"
+        [minDate]="minDate"
+        [iconDisplay]="'input'"
+        [showIcon]="true"
+        inputId="parcelTripDate"
+        formControlName="date"
+        >
+        <ng-template pTemplate="inputicon">
+          <img
+            class="app-date-field-icon"
+            src="icons/calendar.svg"
+            [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate"
+            />
+          </ng-template>
+        </p-datePicker>
+      </div>
 
-  <div class="parcel-trip-form__actions">
-    <button type="button" class="parcel-btn-primary" [disabled]="!canGoNext" (click)="onNext()">
-      {{ "PARCEL_BOOKING.TRIP.NEXT" | translate }}
-    </button>
-  </div>
-</form>
+      <div class="form-group-obrs">
+        <label>{{ "PARCEL_BOOKING.TRIP.SCHEDULE" | translate }}</label>
+
+        @if (isLoadingSchedules) {
+          <div class="text-center py-3">
+            <span class="material-symbols-outlined">hourglass_empty</span>
+          </div>
+        }
+
+        @if (!isLoadingSchedules && noSchedulesFound) {
+          <div class="parcel-trip-form__empty">
+            {{ "PARCEL_BOOKING.TRIP.NO_SCHEDULES" | translate }}
+          </div>
+        }
+
+        @if (!isLoadingSchedules && !noSchedulesFound) {
+          <app-dropdown-group-obrs
+            [isBorder]="true"
+            [value]="form.get('scheduleId')?.value"
+            [options]="scheduleOptions"
+            (currentValue)="onScheduleSelect($event)"
+          ></app-dropdown-group-obrs>
+        }
+      </div>
+
+      <div class="parcel-trip-form__actions">
+        <button type="button" class="parcel-btn-primary" [disabled]="!canGoNext" (click)="onNext()">
+          {{ "PARCEL_BOOKING.TRIP.NEXT" | translate }}
+        </button>
+      </div>
+    </form>

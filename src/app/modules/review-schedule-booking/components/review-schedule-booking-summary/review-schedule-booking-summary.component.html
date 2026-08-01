@@ -2,330 +2,311 @@
   {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HEADER" | translate }}
 </h3>
 
-<ng-container *ngIf="scheduleBooking | async as bookingData">
-  <div
-    class="card-container"
-    *ngIf="getFirstSchedule(bookingData?.schedule) as departureSchedule"
-  >
-    <!-- HEADER -->
-    <div class="card-header">
-      <div class="card-header-text">
-        <!-- BUS ICON -->
-        <img
-          [src]="'icons/schedule-booking-' + departureSchedule.vehicleType + '.svg'"
-          alt="Bus Icon"
-        />
-
-        <!-- HEADER TEXT -->
-        <div class="card-header-text-details">
-          <ng-container
-            *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
-          >
-            <!-- Travel schedule -->
-            <div class="header-text">
-              {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP" | translate }}
-            </div>
-          </ng-container>
-          <ng-container
-            *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
-          >
-            <!-- Travel schedule: outbound leg -->
-            <div class="header-text">
-              {{
-                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_BEGIN" | translate
-              }}
-            </div>
-          </ng-container>
-          <!-- Date xx x.x. 20xx | Chonburi-Bangkok | roundTrip -->
-          <div class="subheader-text">
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
-            {{
-              formatDateFromDateTime(
+@if (scheduleBooking | async; as bookingData) {
+  @if (getFirstSchedule(bookingData?.schedule); as departureSchedule) {
+    <div
+      class="card-container"
+      >
+      <!-- HEADER -->
+      <div class="card-header">
+        <div class="card-header-text">
+          <!-- BUS ICON -->
+          <img
+            [src]="'icons/schedule-booking-' + departureSchedule.vehicleType + '.svg'"
+            alt="Bus Icon"
+            />
+            <!-- HEADER TEXT -->
+            <div class="card-header-text-details">
+              @if (getScheduleBooking(bookingData?.schedule).length == 1) {
+                <!-- Travel schedule -->
+                <div class="header-text">
+                  {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP" | translate }}
+                </div>
+              }
+              @if (getScheduleBooking(bookingData?.schedule).length == 2) {
+                <!-- Travel schedule: outbound leg -->
+                <div class="header-text">
+                  {{
+                  "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_BEGIN" | translate
+                  }}
+                </div>
+              }
+              <!-- Date xx x.x. 20xx | Chonburi-Bangkok | roundTrip -->
+              <div class="subheader-text">
+                {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
+                {{
+                formatDateFromDateTime(
                 departureSchedule.departureDateTime
-              )
-            }}
-            |
-            {{
-              formatVehicleType(departureSchedule.vehicleType)
-            }}
-            |
-            <!-- One-way -->
-            <ng-container
-              *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
-            >
-              {{
-                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY" | translate
-              }}
-            </ng-container>
-            <!-- Round trip -->
-            <ng-container
-              *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
-            >
-              {{
-                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY" | translate
-              }}
-            </ng-container>
-          </div>
-        </div>
-      </div>
-      <!-- Change details -->
-      <div class="card-header-button">
-        <button class="btn-change-info" type="button" (click)="onChangeData()">
-          {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.CHANGE_DATA" | translate }}
-        </button>
-      </div>
-    </div>
-    <!-- BODY -->
-    <div class="card-body">
-      <img
-        src="images/schedule-booking-line-vertical.svg"
-        alt="Bus Line Vertical Icon"
-      />
-
-      <div class="card-body-detail">
-        <div class="card-body-detail-station">
-          <!-- xx:xx time -->
-          <div class="body-header-text">
-            {{
-              formatDateTimeToHHMM(
-                departureSchedule.departureDateTime
-              )
-            }}
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
-          </div>
-          <!-- Province/Station Name -->
-          <div
-            class="card-body-detail-station-info"
-            *ngIf="this.scheduleFilter | async as scheduleFilter"
-          >
-            <ng-container
-              *ngIf="
-                findStationById(scheduleFilter.startStationId)
-                  | async as povinceStation
-              "
-            >
-              <!-- Station Name -->
-              <div class="body-header-text">
-                {{ getStationName(povinceStation?.station) }}
+                )
+                }}
+                |
+                {{
+                formatVehicleType(departureSchedule.vehicleType)
+                }}
+                |
+                <!-- One-way -->
+                @if (getScheduleBooking(bookingData?.schedule).length == 1) {
+                  {{
+                  "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY" | translate
+                  }}
+                }
+                <!-- Round trip -->
+                @if (getScheduleBooking(bookingData?.schedule).length == 2) {
+                  {{
+                  "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY" | translate
+                  }}
+                }
               </div>
-            </ng-container>
+            </div>
+          </div>
+          <!-- Change details -->
+          <div class="card-header-button">
+            <button class="btn-change-info" type="button" (click)="onChangeData()">
+              {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.CHANGE_DATA" | translate }}
+            </button>
           </div>
         </div>
-        <!-- xx hours xx minutes -->
-        <div class="body-subheader-text">
-          {{
-            getDurationHours(
-              departureSchedule.departureDateTime,
-              departureSchedule.arrivalDateTime
-            )
-          }}
-          {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
-          {{
-            getDurationMinutes(
-              departureSchedule.departureDateTime,
-              departureSchedule.arrivalDateTime
-            )
-          }}
-          {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
-        </div>
-        <!-- ~X km (authoritative pickup-dropoff distance estimate; duration is redundant with the clock-time duration above) -->
-        <ng-container *ngIf="findTripEstimate(departureSchedule, false) | async as est">
-          <div class="body-estimate-text" *ngIf="est.distanceKm != null">
-            ≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }}
-          </div>
-        </ng-container>
-        <!-- xx:xx time -->
-        <div class="card-body-detail-station mt-2">
-          <div class="body-header-text">
-            {{
-              formatDateTimeToHHMM(
+        <!-- BODY -->
+        <div class="card-body">
+          <img
+            src="images/schedule-booking-line-vertical.svg"
+            alt="Bus Line Vertical Icon"
+            />
+            <div class="card-body-detail">
+              <div class="card-body-detail-station">
+                <!-- xx:xx time -->
+                <div class="body-header-text">
+                  {{
+                  formatDateTimeToHHMM(
+                  departureSchedule.departureDateTime
+                  )
+                  }}
+                  {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
+                </div>
+                <!-- Province/Station Name -->
+                @if (this.scheduleFilter | async; as scheduleFilter) {
+                  <div
+                    class="card-body-detail-station-info"
+                    >
+                    @if (
+                      findStationById(scheduleFilter.startStationId)
+                      | async; as povinceStation
+                      ) {
+                      <!-- Station Name -->
+                      <div class="body-header-text">
+                        {{ getStationName(povinceStation?.station) }}
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+              <!-- xx hours xx minutes -->
+              <div class="body-subheader-text">
+                {{
+                getDurationHours(
+                departureSchedule.departureDateTime,
                 departureSchedule.arrivalDateTime
-              )
-            }}
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
-          </div>
-          <!-- Province/Station Name -->
-          <div
-            class="card-body-detail-station-info"
-            *ngIf="this.scheduleFilter | async as scheduleFilter"
-          >
-            <ng-container
-              *ngIf="
-                findStationById(scheduleFilter.stopStationId)
-                  | async as povinceStation
-              "
-            >
-              <!-- Station -->
-              <div class="body-header-text">
-                {{ getStationName(povinceStation?.station) }}
+                )
+                }}
+                {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
+                {{
+                getDurationMinutes(
+                departureSchedule.departureDateTime,
+                departureSchedule.arrivalDateTime
+                )
+                }}
+                {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
               </div>
-            </ng-container>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div
-    class="card-container mt-3"
-    *ngIf="getSecondSchedule(bookingData?.schedule) as returnSchedule"
-  >
-    <!-- HEADER -->
-    <div class="card-header">
-      <div class="card-header-text">
-        <!-- BUS ICON -->
-        <img
-          [src]="'icons/schedule-booking-' + returnSchedule.vehicleType + '.svg'"
-          alt="Bus Icon"
-        />
-
-        <!-- HEADER TEXT -->
-        <div class="card-header-text-details">
-          <ng-container
-            *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
-          >
-            <!-- Travel schedule -->
-            <div class="header-text">
-              {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP" | translate }}
+              <!-- ~X km (authoritative pickup-dropoff distance estimate; duration is redundant with the clock-time duration above) -->
+              @if (findTripEstimate(departureSchedule, false) | async; as est) {
+                @if (est.distanceKm != null) {
+                  <div class="body-estimate-text">
+                    ≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }}
+                  </div>
+                }
+              }
+              <!-- xx:xx time -->
+              <div class="card-body-detail-station mt-2">
+                <div class="body-header-text">
+                  {{
+                  formatDateTimeToHHMM(
+                  departureSchedule.arrivalDateTime
+                  )
+                  }}
+                  {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
+                </div>
+                <!-- Province/Station Name -->
+                @if (this.scheduleFilter | async; as scheduleFilter) {
+                  <div
+                    class="card-body-detail-station-info"
+                    >
+                    @if (
+                      findStationById(scheduleFilter.stopStationId)
+                      | async; as povinceStation
+                      ) {
+                      <!-- Station -->
+                      <div class="body-header-text">
+                        {{ getStationName(povinceStation?.station) }}
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
             </div>
-          </ng-container>
-          <ng-container
-            *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
+          </div>
+        </div>
+      }
+      @if (getSecondSchedule(bookingData?.schedule); as returnSchedule) {
+        <div
+          class="card-container mt-3"
           >
-            <!-- Travel schedule: return leg -->
-            <div class="header-text">
-              {{
-                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_RETURN" | translate
-              }}
+          <!-- HEADER -->
+          <div class="card-header">
+            <div class="card-header-text">
+              <!-- BUS ICON -->
+              <img
+                [src]="'icons/schedule-booking-' + returnSchedule.vehicleType + '.svg'"
+                alt="Bus Icon"
+                />
+                <!-- HEADER TEXT -->
+                <div class="card-header-text-details">
+                  @if (getScheduleBooking(bookingData?.schedule).length == 1) {
+                    <!-- Travel schedule -->
+                    <div class="header-text">
+                      {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP" | translate }}
+                    </div>
+                  }
+                  @if (getScheduleBooking(bookingData?.schedule).length == 2) {
+                    <!-- Travel schedule: return leg -->
+                    <div class="header-text">
+                      {{
+                      "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_RETURN" | translate
+                      }}
+                    </div>
+                  }
+                  <!-- Date xx x.x. 20xx | Chonburi-Bangkok | roundTrip -->
+                  <div class="subheader-text">
+                    {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
+                    {{
+                    formatDateFromDateTime(
+                    returnSchedule.departureDateTime
+                    )
+                    }}
+                    |
+                    {{
+                    formatVehicleType(returnSchedule.vehicleType)
+                    }}
+                    |
+                    <!-- One-way -->
+                    @if (getScheduleBooking(bookingData?.schedule).length == 1) {
+                      {{
+                      "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY" | translate
+                      }}
+                    }
+                    <!-- Round trip -->
+                    @if (getScheduleBooking(bookingData?.schedule).length == 2) {
+                      {{
+                      "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY" | translate
+                      }}
+                    }
+                  </div>
+                </div>
+              </div>
+              <!-- Change details -->
+              <div class="card-header-button">
+                <button class="btn-change-info" type="button" (click)="onChangeData()">
+                  {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.CHANGE_DATA" | translate }}
+                </button>
+              </div>
             </div>
-          </ng-container>
-          <!-- Date xx x.x. 20xx | Chonburi-Bangkok | roundTrip -->
-          <div class="subheader-text">
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
-            {{
-              formatDateFromDateTime(
-                returnSchedule.departureDateTime
-              )
-            }}
-            |
-            {{
-              formatVehicleType(returnSchedule.vehicleType)
-            }}
-            |
-            <!-- One-way -->
-            <ng-container
-              *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
-            >
-              {{
-                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY" | translate
-              }}
-            </ng-container>
-            <!-- Round trip -->
-            <ng-container
-              *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
-            >
-              {{
-                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY" | translate
-              }}
-            </ng-container>
-          </div>
-        </div>
-      </div>
-      <!-- Change details -->
-      <div class="card-header-button">
-        <button class="btn-change-info" type="button" (click)="onChangeData()">
-          {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.CHANGE_DATA" | translate }}
-        </button>
-      </div>
-    </div>
-    <!-- BODY -->
-    <div class="card-body">
-      <img
-        src="images/schedule-booking-line-vertical.svg"
-        alt="Bus Line Vertical Icon"
-      />
-
-      <div class="card-body-detail">
-        <div class="card-body-detail-station">
-          <!-- xx:xx time -->
-          <div class="body-header-text">
-            {{
-              formatDateTimeToHHMM(
-                returnSchedule.departureDateTime
-              )
-            }}
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
-          </div>
-          <!-- Province/Station Name -->
-          <div
-            class="card-body-detail-station-info"
-            *ngIf="this.scheduleFilter | async as scheduleFilter"
-          >
-            <ng-container
-              *ngIf="
-                findStationById(scheduleFilter.stopStationId)
-                  | async as povinceStation
-              "
-            >
-              <!-- Station Name -->
-              <div class="body-header-text">
-                {{ getStationName(povinceStation?.station) }}
+            <!-- BODY -->
+            <div class="card-body">
+              <img
+                src="images/schedule-booking-line-vertical.svg"
+                alt="Bus Line Vertical Icon"
+                />
+                <div class="card-body-detail">
+                  <div class="card-body-detail-station">
+                    <!-- xx:xx time -->
+                    <div class="body-header-text">
+                      {{
+                      formatDateTimeToHHMM(
+                      returnSchedule.departureDateTime
+                      )
+                      }}
+                      {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
+                    </div>
+                    <!-- Province/Station Name -->
+                    @if (this.scheduleFilter | async; as scheduleFilter) {
+                      <div
+                        class="card-body-detail-station-info"
+                        >
+                        @if (
+                          findStationById(scheduleFilter.stopStationId)
+                          | async; as povinceStation
+                          ) {
+                          <!-- Station Name -->
+                          <div class="body-header-text">
+                            {{ getStationName(povinceStation?.station) }}
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <!-- xx hours xx minutes -->
+                  <div class="body-subheader-text">
+                    {{
+                    getDurationHours(
+                    returnSchedule.departureDateTime,
+                    returnSchedule.arrivalDateTime
+                    )
+                    }}
+                    {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
+                    {{
+                    getDurationMinutes(
+                    returnSchedule.departureDateTime,
+                    returnSchedule.arrivalDateTime
+                    )
+                    }}
+                    {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
+                  </div>
+                  <!-- ~X km (authoritative pickup-dropoff distance estimate, swapped for the return leg; duration is redundant with the clock-time duration above) -->
+                  @if (findTripEstimate(returnSchedule, true) | async; as est) {
+                    @if (est.distanceKm != null) {
+                      <div class="body-estimate-text">
+                        ≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }}
+                      </div>
+                    }
+                  }
+                  <!-- xx:xx time -->
+                  <div class="card-body-detail-station mt-2">
+                    <div class="body-header-text">
+                      {{
+                      formatDateTimeToHHMM(
+                      returnSchedule.arrivalDateTime
+                      )
+                      }}
+                      {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
+                    </div>
+                    <!-- Province/Station Name -->
+                    @if (this.scheduleFilter | async; as scheduleFilter) {
+                      <div
+                        class="card-body-detail-station-info"
+                        >
+                        @if (
+                          findStationById(scheduleFilter.startStationId)
+                          | async; as povinceStation
+                          ) {
+                          <!-- Station -->
+                          <div class="body-header-text">
+                            {{ getStationName(povinceStation?.station) }}
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
               </div>
-            </ng-container>
-          </div>
-        </div>
-        <!-- xx hours xx minutes -->
-        <div class="body-subheader-text">
-          {{
-            getDurationHours(
-              returnSchedule.departureDateTime,
-              returnSchedule.arrivalDateTime
-            )
-          }}
-          {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
-          {{
-            getDurationMinutes(
-              returnSchedule.departureDateTime,
-              returnSchedule.arrivalDateTime
-            )
-          }}
-          {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
-        </div>
-        <!-- ~X km (authoritative pickup-dropoff distance estimate, swapped for the return leg; duration is redundant with the clock-time duration above) -->
-        <ng-container *ngIf="findTripEstimate(returnSchedule, true) | async as est">
-          <div class="body-estimate-text" *ngIf="est.distanceKm != null">
-            ≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }}
-          </div>
-        </ng-container>
-        <!-- xx:xx time -->
-        <div class="card-body-detail-station mt-2">
-          <div class="body-header-text">
-            {{
-              formatDateTimeToHHMM(
-                returnSchedule.arrivalDateTime
-              )
-            }}
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
-          </div>
-          <!-- Province/Station Name -->
-          <div
-            class="card-body-detail-station-info"
-            *ngIf="this.scheduleFilter | async as scheduleFilter"
-          >
-            <ng-container
-              *ngIf="
-                findStationById(scheduleFilter.startStationId)
-                  | async as povinceStation
-              "
-            >
-              <!-- Station -->
-              <div class="body-header-text">
-                {{ getStationName(povinceStation?.station) }}
-              </div>
-            </ng-container>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</ng-container>
+            </div>
+          }
+        }

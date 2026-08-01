@@ -1,33 +1,40 @@
 <!-- OBRS-384: rendered from `rows` (the caller's seatLayout, or the built-in
-     13-seat van default) instead of hardcoding A1–A13, so any vehicle size —
-     e.g. a 21-seat minibus — can be rendered. The default layout produces the
-     exact same DOM the previous hardcoded template did. -->
+13-seat van default) instead of hardcoding A1–A13, so any vehicle size —
+e.g. a 21-seat minibus — can be rendered. The default layout produces the
+exact same DOM the previous hardcoded template did. -->
 <div class="card-container">
-  <div class="seat-row" *ngFor="let row of rows">
-    <ng-container *ngFor="let cell of row" [ngSwitch]="cell.kind">
-      <!-- SEAT -->
-      <app-passenger-seat-box
-        *ngSwitchCase="'seat'"
-        [label]="cell.label"
-        [gender]="seatGenderFor(cell.label)"
-        [isDisabled]="isSeatDisabled(cell.label) && !isSeatActive(cell.label)"
-        [ownerLabel]="ownerLabelFor(cell.label)"
-        [isActiveOwner]="isActiveOwnerFor(cell.label)"
-        [hasWheelchairBadge]="hasWheelchairBadge(cell.label)"
-        [hasExtraLegroomBadge]="hasExtraLegroomBadge(cell.label)"
-        [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-        [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-        (passengerSeatOutput)="setPassengerSeatPosition($event)"
-      >
-      </app-passenger-seat-box>
-
-      <!-- DRIVER -->
-      <div class="driver-box" *ngSwitchCase="'driver'">
-        <img src="images/passenger-driver.png" alt="Passenger Driver Image" />
-      </div>
-
-      <!-- EMPTY -->
-      <div class="empty-box" *ngSwitchDefault></div>
-    </ng-container>
-  </div>
+  @for (row of rows; track row) {
+    <div class="seat-row">
+      @for (cell of row; track cell) {
+        @switch (cell.kind) {
+          <!-- SEAT -->
+          @case ('seat') {
+            <app-passenger-seat-box
+              [label]="cell.label"
+              [gender]="seatGenderFor(cell.label)"
+              [isDisabled]="isSeatDisabled(cell.label) && !isSeatActive(cell.label)"
+              [ownerLabel]="ownerLabelFor(cell.label)"
+              [isActiveOwner]="isActiveOwnerFor(cell.label)"
+              [hasWheelchairBadge]="hasWheelchairBadge(cell.label)"
+              [hasExtraLegroomBadge]="hasExtraLegroomBadge(cell.label)"
+              [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
+              [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
+              (passengerSeatOutput)="setPassengerSeatPosition($event)"
+              >
+            </app-passenger-seat-box>
+          }
+          <!-- DRIVER -->
+          @case ('driver') {
+            <div class="driver-box">
+              <img src="images/passenger-driver.png" alt="Passenger Driver Image" />
+            </div>
+          }
+          <!-- EMPTY -->
+          @default {
+            <div class="empty-box"></div>
+          }
+        }
+      }
+    </div>
+  }
 </div>

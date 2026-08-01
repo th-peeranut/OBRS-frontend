@@ -13,60 +13,72 @@
       </tr>
     </thead>
     <tbody>
-      <ng-container *ngIf="loading">
-        <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
-          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-        </tr>
-      </ng-container>
+      @if (loading) {
+        @for (row of skeletonRows; track row) {
+          <tr class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          </tr>
+        }
+      }
 
-      <ng-container *ngIf="!loading">
-        <tr *ngFor="let row of results; trackBy: trackByBookingId" class="ccrl-row">
-          <td class="admin-emphasis">{{ row.bookingNumber }}</td>
-          <td>{{ row.contactName }}</td>
-          <td class="ccrl-phone">{{ row.contactPhoneMasked }}</td>
-          <td>
-            <div *ngFor="let journey of row.journeys">{{ routeLabel(journey) }}</div>
-          </td>
-          <td>
-            <div *ngFor="let journey of row.journeys">{{ departureLabel(journey) }}</div>
-          </td>
-          <td class="admin-emphasis">{{ amountLabel(row.netAmount) }}</td>
-          <td>
-            <span class="admin-status" [ngClass]="statusClass(row.status)">
-              {{ statusLabelKey(row.status) | translate }}
-            </span>
-          </td>
-          <td class="text-right">
-            <button
-              *ngIf="isCancellable(row)"
-              type="button"
-              class="admin-btn admin-btn-small"
-              (click)="selectBooking.emit(row)"
-            >
-              {{ 'MY_BOOKINGS.CANCEL.ACTION' | translate }}
-            </button>
-            <span *ngIf="!isCancellable(row)" class="admin-status is-neutral">
-              {{ 'MY_BOOKINGS.NOT_CANCELLABLE' | translate }}
-            </span>
-          </td>
-        </tr>
-
-        <tr *ngIf="hasSearched && results.length === 0" class="admin-empty-row">
-          <td colspan="8">
-            <div class="ccrl-empty">
-              <p class="ccrl-empty-title">{{ 'STAFF.CANCEL_BOOKING.SEARCH.EMPTY_TITLE' | translate }}</p>
-              <p class="ccrl-empty-body admin-muted">{{ 'STAFF.CANCEL_BOOKING.SEARCH.EMPTY_BODY' | translate }}</p>
-            </div>
-          </td>
-        </tr>
-      </ng-container>
+      @if (!loading) {
+        @for (row of results; track trackByBookingId($index, row)) {
+          <tr class="ccrl-row">
+            <td class="admin-emphasis">{{ row.bookingNumber }}</td>
+            <td>{{ row.contactName }}</td>
+            <td class="ccrl-phone">{{ row.contactPhoneMasked }}</td>
+            <td>
+              @for (journey of row.journeys; track journey) {
+                <div>{{ routeLabel(journey) }}</div>
+              }
+            </td>
+            <td>
+              @for (journey of row.journeys; track journey) {
+                <div>{{ departureLabel(journey) }}</div>
+              }
+            </td>
+            <td class="admin-emphasis">{{ amountLabel(row.netAmount) }}</td>
+            <td>
+              <span class="admin-status" [ngClass]="statusClass(row.status)">
+                {{ statusLabelKey(row.status) | translate }}
+              </span>
+            </td>
+            <td class="text-right">
+              @if (isCancellable(row)) {
+                <button
+                  type="button"
+                  class="admin-btn admin-btn-small"
+                  (click)="selectBooking.emit(row)"
+                  >
+                  {{ 'MY_BOOKINGS.CANCEL.ACTION' | translate }}
+                </button>
+              }
+              @if (!isCancellable(row)) {
+                <span class="admin-status is-neutral">
+                  {{ 'MY_BOOKINGS.NOT_CANCELLABLE' | translate }}
+                </span>
+              }
+            </td>
+          </tr>
+        }
+        @if (hasSearched && results.length === 0) {
+          <tr class="admin-empty-row">
+            <td colspan="8">
+              <div class="ccrl-empty">
+                <p class="ccrl-empty-title">{{ 'STAFF.CANCEL_BOOKING.SEARCH.EMPTY_TITLE' | translate }}</p>
+                <p class="ccrl-empty-body admin-muted">{{ 'STAFF.CANCEL_BOOKING.SEARCH.EMPTY_BODY' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+        }
+      }
     </tbody>
   </table>
 </div>

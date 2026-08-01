@@ -5,7 +5,7 @@
       class="crdm-modal__close"
       (click)="requestClose()"
       [attr.aria-label]="'MY_BOOKINGS.TICKET_MODAL.CLOSE' | translate"
-    >
+      >
       <i class="bi bi-x-lg"></i>
     </button>
 
@@ -17,32 +17,36 @@
       </p>
 
       <!-- OBRS-813: the same screen can hand this traveler 100% of the ticket's
-           value, instantly and with nobody in the loop, and until now it never
-           said so. Additive only — the cancel column below is untouched and the
-           Confirm button is still one click from here (proved by
-           e2e/tests/obrs-813-cancel-offers-reschedule.spec.ts), because the
-           point is to inform the choice, not to steer it. -->
-      <section class="crdm-offer" *ngIf="canOfferReschedule">
-        <h3 class="crdm-offer__title">{{ 'MY_BOOKINGS.CANCEL.COMPARE.OFFER_TITLE' | translate }}</h3>
-        <ul class="crdm-offer__points">
-          <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.KEEP_FULL' | translate: { amount: originalAmountLabel } }}</li>
-          <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.INSTANT' | translate }}</li>
-          <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.FEE_SHOWN_FIRST' | translate }}</li>
-          <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.WITHIN_DAYS' | translate: { days: rescheduleMaxDaysAhead } }}</li>
-        </ul>
-        <button
-          type="button"
-          class="btn-secondary crdm-offer__cta"
-          [disabled]="submitting"
-          (click)="requestReschedule()"
-        >
-          {{ 'MY_BOOKINGS.CANCEL.COMPARE.RESCHEDULE_BUTTON' | translate }}
-        </button>
-      </section>
+      value, instantly and with nobody in the loop, and until now it never
+      said so. Additive only — the cancel column below is untouched and the
+      Confirm button is still one click from here (proved by
+      e2e/tests/obrs-813-cancel-offers-reschedule.spec.ts), because the
+      point is to inform the choice, not to steer it. -->
+      @if (canOfferReschedule) {
+        <section class="crdm-offer">
+          <h3 class="crdm-offer__title">{{ 'MY_BOOKINGS.CANCEL.COMPARE.OFFER_TITLE' | translate }}</h3>
+          <ul class="crdm-offer__points">
+            <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.KEEP_FULL' | translate: { amount: originalAmountLabel } }}</li>
+            <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.INSTANT' | translate }}</li>
+            <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.FEE_SHOWN_FIRST' | translate }}</li>
+            <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.WITHIN_DAYS' | translate: { days: rescheduleMaxDaysAhead } }}</li>
+          </ul>
+          <button
+            type="button"
+            class="btn-secondary crdm-offer__cta"
+            [disabled]="submitting"
+            (click)="requestReschedule()"
+            >
+            {{ 'MY_BOOKINGS.CANCEL.COMPARE.RESCHEDULE_BUTTON' | translate }}
+          </button>
+        </section>
+      }
 
-      <h3 class="crdm-subheading" *ngIf="canOfferReschedule">
-        {{ 'MY_BOOKINGS.CANCEL.COMPARE.CANCEL_HEADING' | translate }}
-      </h3>
+      @if (canOfferReschedule) {
+        <h3 class="crdm-subheading">
+          {{ 'MY_BOOKINGS.CANCEL.COMPARE.CANCEL_HEADING' | translate }}
+        </h3>
+      }
 
       <p class="crdm-line">
         {{ 'MY_BOOKINGS.CANCEL.REFUND_LINE' | translate: { refund: refundLabel, rate: policy.refundRatePercent } }}
@@ -54,14 +58,18 @@
 
       <app-refund-destination-fields [formGroup]="form" [disabled]="submitting"></app-refund-destination-fields>
 
-      <p class="crdm-error" role="alert" *ngIf="error">{{ error }}</p>
+      @if (error) {
+        <p class="crdm-error" role="alert">{{ error }}</p>
+      }
 
       <div class="crdm-actions">
         <button type="button" class="btn-secondary" [disabled]="submitting" (click)="requestClose()">
           {{ 'MY_BOOKINGS.CANCEL.CANCEL_BUTTON' | translate }}
         </button>
         <button type="button" class="btn-primary" [disabled]="!canSubmit" (click)="submit()">
-          <span *ngIf="submitting" class="spinner" aria-hidden="true"></span>
+          @if (submitting) {
+            <span class="spinner" aria-hidden="true"></span>
+          }
           {{ 'MY_BOOKINGS.CANCEL.CONFIRM_BUTTON' | translate }}
         </button>
       </div>

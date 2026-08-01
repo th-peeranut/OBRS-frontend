@@ -1,23 +1,29 @@
 <div class="container-fluid pt-4">
   <ul class="nav nav-tabs" role="tablist" data-testid="parcel-schedule-tabs">
-    <li class="nav-item" *ngFor="let tab of tabs">
-      <button
-        type="button"
-        role="tab"
-        class="nav-link"
-        [class.active]="isTabResolved && activeTab === tab"
-        [attr.aria-selected]="isTabResolved && activeTab === tab"
-        [attr.data-testid]="'parcel-schedule-tab-' + tab"
-        (click)="selectTab(tab)"
-      >
-        {{ tabLabelKey(tab) | translate }}
-      </button>
-    </li>
+    @for (tab of tabs; track tab) {
+      <li class="nav-item">
+        <button
+          type="button"
+          role="tab"
+          class="nav-link"
+          [class.active]="isTabResolved && activeTab === tab"
+          [attr.aria-selected]="isTabResolved && activeTab === tab"
+          [attr.data-testid]="'parcel-schedule-tab-' + tab"
+          (click)="selectTab(tab)"
+          >
+          {{ tabLabelKey(tab) | translate }}
+        </button>
+      </li>
+    }
   </ul>
 </div>
 
 <!-- Rendered only once the opening tab is known — see isTabResolved. -->
-<ng-container *ngIf="isTabResolved">
-  <app-parcel-verify-list-page *ngIf="activeTab === 'verify'"></app-parcel-verify-list-page>
-  <app-parcel-delivery-list-page *ngIf="activeTab === 'handover'"></app-parcel-delivery-list-page>
-</ng-container>
+@if (isTabResolved) {
+  @if (activeTab === 'verify') {
+    <app-parcel-verify-list-page></app-parcel-verify-list-page>
+  }
+  @if (activeTab === 'handover') {
+    <app-parcel-delivery-list-page></app-parcel-delivery-list-page>
+  }
+}

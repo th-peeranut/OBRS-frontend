@@ -5,11 +5,12 @@
     <span class="npref-matrix__header-cell">{{ 'NOTIFICATION_PREFS.CHANNEL_SMS' | translate }}</span>
   </div>
 
-  <app-notification-preference-row
-    *ngFor="let row of preferences; trackBy: trackByType"
-    [row]="row"
-    [disabled]="disabled"
-    [showWarning]="warningType === row.type"
-    (rowChange)="rowChange.emit($event)"
-  ></app-notification-preference-row>
+  @for (row of preferences; track trackByType($index, row)) {
+    <app-notification-preference-row
+      [row]="row"
+      [disabled]="disabled"
+      [showWarning]="warningType === row.type"
+      (rowChange)="rowChange.emit($event)"
+    ></app-notification-preference-row>
+  }
 </div>

@@ -1,164 +1,171 @@
-<div
-  class="admin-modal-backdrop"
-  *ngIf="isOpen"
-  adminModalBackdrop
-  (dismiss)="onDismiss()"
->
-  <div class="admin-modal" *ngIf="parcel as p">
-    <div class="admin-modal-header">
-      <h5 class="admin-modal-title">{{ 'STAFF.PARCEL_VERIFY.DIALOG.TITLE' | translate }}</h5>
-      <button type="button" class="admin-icon-btn" (click)="onDismiss()" [attr.aria-label]="'COMMON.CLOSE' | translate">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-
-    <form [formGroup]="form" (ngSubmit)="onSubmit()">
-      <div class="admin-modal-body pv-body">
-        <div class="pv-compare">
-          <div class="pv-declared">
-            <span class="text-muted small">{{ 'STAFF.PARCEL_VERIFY.DIALOG.DECLARED_LABEL' | translate }}</span>
-            <span>{{ p.weightKg }} kg</span>
-          </div>
-          <label class="admin-form-label">{{ 'STAFF.PARCEL_VERIFY.FIELD.WEIGHT_KG' | translate }}</label>
-          <input
-            type="number"
-            step="0.1"
-            inputmode="decimal"
-            class="admin-field"
-            formControlName="actualWeightKg"
-          />
-          <small class="pv-mismatch-hint" *ngIf="isMismatch('actualWeightKg')">
-            <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
-            {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
-          </small>
-        </div>
-
-        <div class="pv-compare">
-          <div class="pv-declared">
-            <span class="text-muted small">{{ 'STAFF.PARCEL_VERIFY.DIALOG.DECLARED_LABEL' | translate }}</span>
-            <span>{{ p.lengthCm != null ? (p.lengthCm + ' cm') : '-' }}</span>
-          </div>
-          <label class="admin-form-label">{{ 'STAFF.PARCEL_VERIFY.FIELD.LENGTH_CM' | translate }}</label>
-          <input
-            type="number"
-            step="1"
-            inputmode="numeric"
-            class="admin-field"
-            formControlName="actualLengthCm"
-          />
-          <small class="pv-mismatch-hint" *ngIf="isMismatch('actualLengthCm')">
-            <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
-            {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
-          </small>
-        </div>
-
-        <div class="pv-compare">
-          <div class="pv-declared">
-            <span class="text-muted small">{{ 'STAFF.PARCEL_VERIFY.DIALOG.DECLARED_LABEL' | translate }}</span>
-            <span>{{ p.widthCm != null ? (p.widthCm + ' cm') : '-' }}</span>
-          </div>
-          <label class="admin-form-label">{{ 'STAFF.PARCEL_VERIFY.FIELD.WIDTH_CM' | translate }}</label>
-          <input
-            type="number"
-            step="1"
-            inputmode="numeric"
-            class="admin-field"
-            formControlName="actualWidthCm"
-          />
-          <small class="pv-mismatch-hint" *ngIf="isMismatch('actualWidthCm')">
-            <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
-            {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
-          </small>
-        </div>
-
-        <div class="pv-compare">
-          <div class="pv-declared">
-            <span class="text-muted small">{{ 'STAFF.PARCEL_VERIFY.DIALOG.DECLARED_LABEL' | translate }}</span>
-            <span>{{ p.heightCm != null ? (p.heightCm + ' cm') : '-' }}</span>
-          </div>
-          <label class="admin-form-label">{{ 'STAFF.PARCEL_VERIFY.FIELD.HEIGHT_CM' | translate }}</label>
-          <input
-            type="number"
-            step="1"
-            inputmode="numeric"
-            class="admin-field"
-            formControlName="actualHeightCm"
-          />
-          <small class="pv-mismatch-hint" *ngIf="isMismatch('actualHeightCm')">
-            <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
-            {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
-          </small>
-        </div>
-
-        <!-- design-system §12 "mandatory notes rendered independent of state"
-             idiom (RefundVoidReportPageComponent precedent) — unconditional,
-             never gated on a mismatch being present: there is no repricing on
-             this screen at all, ever. -->
-        <p class="pv-price-note text-muted small">
-          {{ 'STAFF.PARCEL_VERIFY.PRICE_NOTE' | translate }}
-        </p>
-
-        <div
-          class="pv-outcome-toggle"
-          role="group"
-          [attr.aria-label]="'STAFF.PARCEL_VERIFY.OUTCOME_LABEL' | translate"
-        >
-          <button
-            type="button"
-            class="admin-btn pv-outcome-btn is-accept"
-            [class.is-selected]="outcome === 'accept'"
-            [attr.aria-pressed]="outcome === 'accept'"
-            [disabled]="isSubmitting"
-            (click)="selectOutcome('accept')"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
-            {{ 'STAFF.PARCEL_VERIFY.OUTCOME.ACCEPT' | translate }}
-          </button>
-          <button
-            type="button"
-            class="admin-btn pv-outcome-btn is-reject"
-            [class.is-selected]="outcome === 'reject'"
-            [attr.aria-pressed]="outcome === 'reject'"
-            [disabled]="isSubmitting"
-            (click)="selectOutcome('reject')"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">cancel</span>
-            {{ 'STAFF.PARCEL_VERIFY.OUTCOME.REJECT' | translate }}
+@if (isOpen) {
+  <div
+    class="admin-modal-backdrop"
+    adminModalBackdrop
+    (dismiss)="onDismiss()"
+    >
+    @if (parcel; as p) {
+      <div class="admin-modal">
+        <div class="admin-modal-header">
+          <h5 class="admin-modal-title">{{ 'STAFF.PARCEL_VERIFY.DIALOG.TITLE' | translate }}</h5>
+          <button type="button" class="admin-icon-btn" (click)="onDismiss()" [attr.aria-label]="'COMMON.CLOSE' | translate">
+            <span class="material-symbols-outlined">close</span>
           </button>
         </div>
-
-        <div class="pv-reject-reason" *ngIf="outcome === 'reject'">
-          <label class="admin-form-label">{{ 'STAFF.PARCEL_VERIFY.FIELD.REJECT_REASON' | translate }}</label>
-          <textarea class="admin-field" rows="3" maxlength="500" formControlName="rejectReason"></textarea>
-          <small
-            class="admin-error"
-            *ngIf="form.get('rejectReason')?.invalid && (form.get('rejectReason')?.dirty || form.get('rejectReason')?.touched)"
-          >
-            {{ 'STAFF.PARCEL_VERIFY.VALIDATION.REJECT_REASON_REQUIRED' | translate }}
-          </small>
-        </div>
-
-        <small class="admin-error" *ngIf="serverErrorKey">{{ serverErrorKey | translate }}</small>
-      </div>
-
-      <div class="admin-modal-footer pv-bottom-bar">
-        <button type="button" class="admin-btn" (click)="onDismiss()" [disabled]="isSubmitting">
-          {{ 'STAFF.PARCEL_VERIFY.CANCEL' | translate }}
-        </button>
-        <button
-          type="submit"
-          class="admin-btn"
-          [ngClass]="outcome === 'reject' ? 'admin-btn-danger' : 'admin-btn-primary'"
-          [disabled]="!canSubmit"
-        >
-          {{
-            (isSubmitting
-              ? 'STAFF.PARCEL_VERIFY.SUBMITTING'
-              : (outcome === 'reject' ? 'STAFF.PARCEL_VERIFY.SUBMIT_REJECT' : 'STAFF.PARCEL_VERIFY.SUBMIT_ACCEPT')
-            ) | translate
-          }}
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+          <div class="admin-modal-body pv-body">
+            <div class="pv-compare">
+              <div class="pv-declared">
+                <span class="text-muted small">{{ 'STAFF.PARCEL_VERIFY.DIALOG.DECLARED_LABEL' | translate }}</span>
+                <span>{{ p.weightKg }} kg</span>
+              </div>
+              <label class="admin-form-label">{{ 'STAFF.PARCEL_VERIFY.FIELD.WEIGHT_KG' | translate }}</label>
+              <input
+                type="number"
+                step="0.1"
+                inputmode="decimal"
+                class="admin-field"
+                formControlName="actualWeightKg"
+                />
+                @if (isMismatch('actualWeightKg')) {
+                  <small class="pv-mismatch-hint">
+                    <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
+                    {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
+                  </small>
+                }
+              </div>
+              <div class="pv-compare">
+                <div class="pv-declared">
+                  <span class="text-muted small">{{ 'STAFF.PARCEL_VERIFY.DIALOG.DECLARED_LABEL' | translate }}</span>
+                  <span>{{ p.lengthCm != null ? (p.lengthCm + ' cm') : '-' }}</span>
+                </div>
+                <label class="admin-form-label">{{ 'STAFF.PARCEL_VERIFY.FIELD.LENGTH_CM' | translate }}</label>
+                <input
+                  type="number"
+                  step="1"
+                  inputmode="numeric"
+                  class="admin-field"
+                  formControlName="actualLengthCm"
+                  />
+                  @if (isMismatch('actualLengthCm')) {
+                    <small class="pv-mismatch-hint">
+                      <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
+                      {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
+                    </small>
+                  }
+                </div>
+                <div class="pv-compare">
+                  <div class="pv-declared">
+                    <span class="text-muted small">{{ 'STAFF.PARCEL_VERIFY.DIALOG.DECLARED_LABEL' | translate }}</span>
+                    <span>{{ p.widthCm != null ? (p.widthCm + ' cm') : '-' }}</span>
+                  </div>
+                  <label class="admin-form-label">{{ 'STAFF.PARCEL_VERIFY.FIELD.WIDTH_CM' | translate }}</label>
+                  <input
+                    type="number"
+                    step="1"
+                    inputmode="numeric"
+                    class="admin-field"
+                    formControlName="actualWidthCm"
+                    />
+                    @if (isMismatch('actualWidthCm')) {
+                      <small class="pv-mismatch-hint">
+                        <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
+                        {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
+                      </small>
+                    }
+                  </div>
+                  <div class="pv-compare">
+                    <div class="pv-declared">
+                      <span class="text-muted small">{{ 'STAFF.PARCEL_VERIFY.DIALOG.DECLARED_LABEL' | translate }}</span>
+                      <span>{{ p.heightCm != null ? (p.heightCm + ' cm') : '-' }}</span>
+                    </div>
+                    <label class="admin-form-label">{{ 'STAFF.PARCEL_VERIFY.FIELD.HEIGHT_CM' | translate }}</label>
+                    <input
+                      type="number"
+                      step="1"
+                      inputmode="numeric"
+                      class="admin-field"
+                      formControlName="actualHeightCm"
+                      />
+                      @if (isMismatch('actualHeightCm')) {
+                        <small class="pv-mismatch-hint">
+                          <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
+                          {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
+                        </small>
+                      }
+                    </div>
+                    <!-- design-system §12 "mandatory notes rendered independent of state"
+                    idiom (RefundVoidReportPageComponent precedent) — unconditional,
+                    never gated on a mismatch being present: there is no repricing on
+                    this screen at all, ever. -->
+                    <p class="pv-price-note text-muted small">
+                      {{ 'STAFF.PARCEL_VERIFY.PRICE_NOTE' | translate }}
+                    </p>
+                    <div
+                      class="pv-outcome-toggle"
+                      role="group"
+                      [attr.aria-label]="'STAFF.PARCEL_VERIFY.OUTCOME_LABEL' | translate"
+                      >
+                      <button
+                        type="button"
+                        class="admin-btn pv-outcome-btn is-accept"
+                        [class.is-selected]="outcome === 'accept'"
+                        [attr.aria-pressed]="outcome === 'accept'"
+                        [disabled]="isSubmitting"
+                        (click)="selectOutcome('accept')"
+                        >
+                        <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                        {{ 'STAFF.PARCEL_VERIFY.OUTCOME.ACCEPT' | translate }}
+                      </button>
+                      <button
+                        type="button"
+                        class="admin-btn pv-outcome-btn is-reject"
+                        [class.is-selected]="outcome === 'reject'"
+                        [attr.aria-pressed]="outcome === 'reject'"
+                        [disabled]="isSubmitting"
+                        (click)="selectOutcome('reject')"
+                        >
+                        <span class="material-symbols-outlined" aria-hidden="true">cancel</span>
+                        {{ 'STAFF.PARCEL_VERIFY.OUTCOME.REJECT' | translate }}
+                      </button>
+                    </div>
+                    @if (outcome === 'reject') {
+                      <div class="pv-reject-reason">
+                        <label class="admin-form-label">{{ 'STAFF.PARCEL_VERIFY.FIELD.REJECT_REASON' | translate }}</label>
+                        <textarea class="admin-field" rows="3" maxlength="500" formControlName="rejectReason"></textarea>
+                        @if (form.get('rejectReason')?.invalid && (form.get('rejectReason')?.dirty || form.get('rejectReason')?.touched)) {
+                          <small
+                            class="admin-error"
+                            >
+                            {{ 'STAFF.PARCEL_VERIFY.VALIDATION.REJECT_REASON_REQUIRED' | translate }}
+                          </small>
+                        }
+                      </div>
+                    }
+                    @if (serverErrorKey) {
+                      <small class="admin-error">{{ serverErrorKey | translate }}</small>
+                    }
+                  </div>
+                  <div class="admin-modal-footer pv-bottom-bar">
+                    <button type="button" class="admin-btn" (click)="onDismiss()" [disabled]="isSubmitting">
+                      {{ 'STAFF.PARCEL_VERIFY.CANCEL' | translate }}
+                    </button>
+                    <button
+                      type="submit"
+                      class="admin-btn"
+                      [ngClass]="outcome === 'reject' ? 'admin-btn-danger' : 'admin-btn-primary'"
+                      [disabled]="!canSubmit"
+                      >
+                      {{
+                      (isSubmitting
+                      ? 'STAFF.PARCEL_VERIFY.SUBMITTING'
+                      : (outcome === 'reject' ? 'STAFF.PARCEL_VERIFY.SUBMIT_REJECT' : 'STAFF.PARCEL_VERIFY.SUBMIT_ACCEPT')
+                      ) | translate
+                      }}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            }
+          </div>
+        }

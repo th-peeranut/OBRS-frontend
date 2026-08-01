@@ -5,92 +5,103 @@
       class="change-stop-modal__close"
       (click)="close()"
       [attr.aria-label]="'MY_BOOKINGS.TICKET_MODAL.CLOSE' | translate"
-    >
+      >
       <i class="bi bi-x-lg"></i>
     </button>
 
     <div class="change-stop-modal__body">
       <h2 class="change-stop-modal__title">{{ "MY_BOOKINGS.CHANGE_STOP.DIALOG_TITLE" | translate }}</h2>
 
-      <div class="change-stop-step change-stop-step--error" *ngIf="step === 'error'">
-        <i class="bi bi-exclamation-triangle"></i>
-        <p>{{ routeStopsError }}</p>
-        <button type="button" class="btn-secondary" [disabled]="routeStopsLoading" (click)="onRetry()">
-          <span *ngIf="routeStopsLoading" class="spinner" aria-hidden="true"></span>
-          {{ "MY_BOOKINGS.RETRY" | translate }}
-        </button>
-      </div>
-
-      <div class="change-stop-step" *ngIf="step === 'pickup'">
-        <p class="change-stop-step__hint">{{ "MY_BOOKINGS.CHANGE_STOP.PICKUP_STEP_TITLE" | translate }}</p>
-        <app-route-stop-list
-          [stops]="pickupStops"
-          type="pickup"
-          [province]="pickupProvince"
-          [selectedSlug]="selectedPickupSlug"
-          (stopSelected)="onPickupSelected($event)"
-          (confirmClicked)="onPickupConfirmed()"
-        ></app-route-stop-list>
-      </div>
-
-      <div class="change-stop-step" *ngIf="step === 'dropoff'">
-        <p class="change-stop-step__hint">{{ "MY_BOOKINGS.CHANGE_STOP.DROPOFF_STEP_TITLE" | translate }}</p>
-
-        <div class="change-stop-step__confirm-error" *ngIf="segmentError" role="alert">
+      @if (step === 'error') {
+        <div class="change-stop-step change-stop-step--error">
           <i class="bi bi-exclamation-triangle"></i>
-          <span>{{ segmentError }}</span>
-        </div>
-
-        <app-route-stop-list
-          [stops]="dropoffStops"
-          type="dropoff"
-          [province]="dropoffProvince"
-          [selectedSlug]="selectedDropoffSlug"
-          (stopSelected)="onDropoffSelected($event)"
-          (confirmClicked)="onDropoffConfirmed()"
-        ></app-route-stop-list>
-
-        <div class="change-stop-step__actions change-stop-step__actions--start">
-          <button type="button" class="btn-secondary" (click)="onBackToPickup()">
-            {{ "MY_BOOKINGS.CHANGE_STOP.BACK_BUTTON" | translate }}
+          <p>{{ routeStopsError }}</p>
+          <button type="button" class="btn-secondary" [disabled]="routeStopsLoading" (click)="onRetry()">
+            @if (routeStopsLoading) {
+              <span class="spinner" aria-hidden="true"></span>
+            }
+            {{ "MY_BOOKINGS.RETRY" | translate }}
           </button>
         </div>
-      </div>
+      }
 
-      <app-reschedule-estimate-summary
-        *ngIf="step === 'estimate'"
-        [estimate]="changeStopEstimate$ | async"
-        [loading]="estimateLoading"
-        [error]="estimateError ?? confirmError"
-        [submitting]="submitting"
-        [hideFee]="true"
-        i18nPrefix="MY_BOOKINGS.CHANGE_STOP"
-        (confirm)="onEstimateConfirm()"
-        (back)="onEstimateBack()"
-      ></app-reschedule-estimate-summary>
+      @if (step === 'pickup') {
+        <div class="change-stop-step">
+          <p class="change-stop-step__hint">{{ "MY_BOOKINGS.CHANGE_STOP.PICKUP_STEP_TITLE" | translate }}</p>
+          <app-route-stop-list
+            [stops]="pickupStops"
+            type="pickup"
+            [province]="pickupProvince"
+            [selectedSlug]="selectedPickupSlug"
+            (stopSelected)="onPickupSelected($event)"
+            (confirmClicked)="onPickupConfirmed()"
+          ></app-route-stop-list>
+        </div>
+      }
 
-      <div class="change-stop-step change-stop-payment-step" *ngIf="step === 'payment'">
-        <p class="change-stop-step__hint">
-          {{ "MY_BOOKINGS.CHANGE_STOP.PAYMENT_REQUIRED_NOTE" | translate: { amount: paymentAmountLabel } }}
-        </p>
+      @if (step === 'dropoff') {
+        <div class="change-stop-step">
+          <p class="change-stop-step__hint">{{ "MY_BOOKINGS.CHANGE_STOP.DROPOFF_STEP_TITLE" | translate }}</p>
+          @if (segmentError) {
+            <div class="change-stop-step__confirm-error" role="alert">
+              <i class="bi bi-exclamation-triangle"></i>
+              <span>{{ segmentError }}</span>
+            </div>
+          }
+          <app-route-stop-list
+            [stops]="dropoffStops"
+            type="dropoff"
+            [province]="dropoffProvince"
+            [selectedSlug]="selectedDropoffSlug"
+            (stopSelected)="onDropoffSelected($event)"
+            (confirmClicked)="onDropoffConfirmed()"
+          ></app-route-stop-list>
+          <div class="change-stop-step__actions change-stop-step__actions--start">
+            <button type="button" class="btn-secondary" (click)="onBackToPickup()">
+              {{ "MY_BOOKINGS.CHANGE_STOP.BACK_BUTTON" | translate }}
+            </button>
+          </div>
+        </div>
+      }
 
-        <app-payment-creditcard
-          *ngIf="paymentTab === 'creditcard'"
-          [activeTab]="paymentTab"
-          [successRedirect]="null"
-          (tabChange)="onPaymentTabChange($event)"
-          (back)="onPaymentBack()"
-          (paymentCompleted)="onPaymentCompleted()"
-        ></app-payment-creditcard>
-        <app-payment-qrcode
-          *ngIf="paymentTab === 'qrcode'"
-          [activeTab]="paymentTab"
-          [successRedirect]="null"
-          (tabChange)="onPaymentTabChange($event)"
-          (back)="onPaymentBack()"
-          (paymentCompleted)="onPaymentCompleted()"
-        ></app-payment-qrcode>
-      </div>
+      @if (step === 'estimate') {
+        <app-reschedule-estimate-summary
+          [estimate]="changeStopEstimate$ | async"
+          [loading]="estimateLoading"
+          [error]="estimateError ?? confirmError"
+          [submitting]="submitting"
+          [hideFee]="true"
+          i18nPrefix="MY_BOOKINGS.CHANGE_STOP"
+          (confirm)="onEstimateConfirm()"
+          (back)="onEstimateBack()"
+        ></app-reschedule-estimate-summary>
+      }
+
+      @if (step === 'payment') {
+        <div class="change-stop-step change-stop-payment-step">
+          <p class="change-stop-step__hint">
+            {{ "MY_BOOKINGS.CHANGE_STOP.PAYMENT_REQUIRED_NOTE" | translate: { amount: paymentAmountLabel } }}
+          </p>
+          @if (paymentTab === 'creditcard') {
+            <app-payment-creditcard
+              [activeTab]="paymentTab"
+              [successRedirect]="null"
+              (tabChange)="onPaymentTabChange($event)"
+              (back)="onPaymentBack()"
+              (paymentCompleted)="onPaymentCompleted()"
+            ></app-payment-creditcard>
+          }
+          @if (paymentTab === 'qrcode') {
+            <app-payment-qrcode
+              [activeTab]="paymentTab"
+              [successRedirect]="null"
+              (tabChange)="onPaymentTabChange($event)"
+              (back)="onPaymentBack()"
+              (paymentCompleted)="onPaymentCompleted()"
+            ></app-payment-qrcode>
+          }
+        </div>
+      }
     </div>
   </div>
 </div>

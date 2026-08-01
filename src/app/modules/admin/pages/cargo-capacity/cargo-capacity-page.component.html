@@ -1,7 +1,11 @@
 <section class="admin-page-intro">
   <div>
-    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
-    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    @if (isLoading) {
+      <p class="admin-muted">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    }
+    @if (errorMessage) {
+      <p class="admin-muted">{{ errorMessage }}</p>
+    }
     <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
   </div>
 </section>
@@ -22,64 +26,75 @@
         </tr>
       </thead>
       <tbody>
-        <ng-container *ngIf="isLoading">
-          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-            <td><span class="admin-skeleton"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          </tr>
-        </ng-container>
+        @if (isLoading) {
+          @for (row of skeletonRows; track row) {
+            <tr class="admin-skeleton-row" aria-hidden="true">
+              <td><span class="admin-skeleton"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            </tr>
+          }
+        }
 
-        <ng-container *ngIf="!isLoading">
-          <tr *ngFor="let row of rows; let i = index" [class.zebra]="i % 2 === 1">
-            <td>{{ row.vehicleTypeLabel }}</td>
-            <td>{{ row.totalSeats ?? '-' }}</td>
-            <td>
-              <div class="cargo-capacity-cell">
-                <input
-                  class="admin-field cargo-capacity-input"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  [attr.aria-label]="'ADMIN.CARGO_CAPACITY.COL_CARGO_CAPACITY' | translate"
-                  [attr.aria-invalid]="rowErrorKey(row) ? true : null"
-                  [value]="inputValue(row)"
-                  (input)="onInputChange(row, $any($event.target).value)"
-                />
-                <span class="admin-status is-warning" *ngIf="isRowUnconfigured(row)">
-                  {{ 'ADMIN.CARGO_CAPACITY.NOT_CONFIGURED' | translate }}
-                </span>
-              </div>
-              <small class="admin-error" *ngIf="rowErrorKey(row) as errorKey">
-                {{ errorKey | translate }}
-              </small>
-              <small class="admin-muted" *ngIf="!rowErrorKey(row) && isRowUnconfigured(row)">
-                {{ 'ADMIN.CARGO_CAPACITY.NOT_CONFIGURED_WARNING' | translate }}
-              </small>
-            </td>
-            <td class="text-right">
-              <!-- design-system §4: a repeated per-row action is not "the one
-                   main action of the screen" (this table has one identical
-                   Save per row), so it stays the neutral .admin-btn — never
-                   .admin-btn-primary — matching the boarding-list Board/
-                   Un-board precedent (§13 consolidation debt, OBRS-130). -->
-              <button
-                type="button"
-                class="admin-btn admin-btn-small"
-                [disabled]="isRowSaving(row) || !isRowDirty(row)"
-                (click)="saveRow(row)"
-              >
-                {{ isRowSaving(row) ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-              </button>
-            </td>
-          </tr>
-
-          <tr *ngIf="rows.length === 0 && !errorMessage" class="admin-empty-row">
-            <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
-          </tr>
-        </ng-container>
-      </tbody>
-    </table>
-  </div>
-</section>
+        @if (!isLoading) {
+          @for (row of rows; track row; let i = $index) {
+            <tr [class.zebra]="i % 2 === 1">
+              <td>{{ row.vehicleTypeLabel }}</td>
+              <td>{{ row.totalSeats ?? '-' }}</td>
+              <td>
+                <div class="cargo-capacity-cell">
+                  <input
+                    class="admin-field cargo-capacity-input"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    [attr.aria-label]="'ADMIN.CARGO_CAPACITY.COL_CARGO_CAPACITY' | translate"
+                    [attr.aria-invalid]="rowErrorKey(row) ? true : null"
+                    [value]="inputValue(row)"
+                    (input)="onInputChange(row, $any($event.target).value)"
+                    />
+                    @if (isRowUnconfigured(row)) {
+                      <span class="admin-status is-warning">
+                        {{ 'ADMIN.CARGO_CAPACITY.NOT_CONFIGURED' | translate }}
+                      </span>
+                    }
+                  </div>
+                  @if (rowErrorKey(row); as errorKey) {
+                    <small class="admin-error">
+                      {{ errorKey | translate }}
+                    </small>
+                  }
+                  @if (!rowErrorKey(row) && isRowUnconfigured(row)) {
+                    <small class="admin-muted">
+                      {{ 'ADMIN.CARGO_CAPACITY.NOT_CONFIGURED_WARNING' | translate }}
+                    </small>
+                  }
+                </td>
+                <td class="text-right">
+                  <!-- design-system §4: a repeated per-row action is not "the one
+                  main action of the screen" (this table has one identical
+                  Save per row), so it stays the neutral .admin-btn — never
+                  .admin-btn-primary — matching the boarding-list Board/
+                  Un-board precedent (§13 consolidation debt, OBRS-130). -->
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    [disabled]="isRowSaving(row) || !isRowDirty(row)"
+                    (click)="saveRow(row)"
+                    >
+                    {{ isRowSaving(row) ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+                  </button>
+                </td>
+              </tr>
+            }
+            @if (rows.length === 0 && !errorMessage) {
+              <tr class="admin-empty-row">
+                <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>

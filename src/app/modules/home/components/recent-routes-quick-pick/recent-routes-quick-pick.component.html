@@ -1,28 +1,30 @@
 <!-- AC#5 hard gate: with zero routes this must render NOTHING — no wrapper div,
-     no caption, no reserved margin/padding. The *ngIf guards the entire root. -->
-<div class="recent-routes-quick-pick" *ngIf="routeViews.length > 0">
-  <span class="recent-routes-title">{{ 'HOME.HOME_BOOKING.RECENT_ROUTES_TITLE' | translate }}</span>
-
-  <div class="recent-routes-list">
-    <!-- OBRS-928: the leading icon is what makes this read as a BUTTON rather
-         than as a status tag. An outline pill with nothing but text in it is
-         the same shape this app uses for read-only chips, so a user who does
-         not poke at things had no reason to try tapping it. -->
-    <button
-      type="button"
-      class="recent-route-btn"
-      *ngFor="let view of routeViews; trackBy: trackByRoutePair"
-      [class.is-active]="view.isActive"
-      [attr.aria-pressed]="view.isActive"
-      [attr.aria-label]="view.ariaLabel"
-      (click)="onSelect(view)"
-    >
-      <span class="material-symbols-outlined recent-route-icon" aria-hidden="true">history</span>
-      <!-- The label is wrapped rather than left as a bare text node so it stays
-           addressable now that the button also contains an icon glyph — a
-           `textContent` assertion on the button would otherwise read
-           "history Nong Chak → BTS Mo Chit". -->
-      <span class="recent-route-label">{{ view.displayLabel }}</span>
-    </button>
+no caption, no reserved margin/padding. The *ngIf guards the entire root. -->
+@if (routeViews.length > 0) {
+  <div class="recent-routes-quick-pick">
+    <span class="recent-routes-title">{{ 'HOME.HOME_BOOKING.RECENT_ROUTES_TITLE' | translate }}</span>
+    <div class="recent-routes-list">
+      <!-- OBRS-928: the leading icon is what makes this read as a BUTTON rather
+      than as a status tag. An outline pill with nothing but text in it is
+      the same shape this app uses for read-only chips, so a user who does
+      not poke at things had no reason to try tapping it. -->
+      @for (view of routeViews; track trackByRoutePair($index, view)) {
+        <button
+          type="button"
+          class="recent-route-btn"
+          [class.is-active]="view.isActive"
+          [attr.aria-pressed]="view.isActive"
+          [attr.aria-label]="view.ariaLabel"
+          (click)="onSelect(view)"
+          >
+          <span class="material-symbols-outlined recent-route-icon" aria-hidden="true">history</span>
+          <!-- The label is wrapped rather than left as a bare text node so it stays
+          addressable now that the button also contains an icon glyph — a
+          `textContent` assertion on the button would otherwise read
+          "history Nong Chak → BTS Mo Chit". -->
+          <span class="recent-route-label">{{ view.displayLabel }}</span>
+        </button>
+      }
+    </div>
   </div>
-</div>
+}

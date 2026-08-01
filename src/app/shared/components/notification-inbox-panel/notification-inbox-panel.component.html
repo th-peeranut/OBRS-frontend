@@ -6,49 +6,61 @@
       class="admin-btn admin-btn-small notification-inbox-mark-all"
       [disabled]="unreadCount === 0"
       (click)="markAllRead.emit()"
-    >
+      >
       {{ 'NOTIFICATIONS.MARK_ALL_READ' | translate }}
     </button>
   </div>
 
   <div class="notification-inbox-body">
-    <div class="notification-inbox-state" *ngIf="showInitialLoading">
-      <!-- OBRS-907: same primitive as before (.admin-loading-spinner "sync"
-           glyph, --accent-text), now rendered through the shared component
-           instead of inline markup. The old inline size (28px) came from THIS
-           component's descendant rule `.notification-inbox-state
-           .material-symbols-outlined { font-size: 28px }` — but under Angular
-           emulated encapsulation that rule compiles with a content attribute
-           on its LAST compound too, and the icon span now belongs to
-           LoadingStateComponent's template (a different content attribute), so
-           the rule no longer reaches it and the global .admin-loading-spinner
-           34px would take over. Pass the size as an inline input so the icon
-           stays 28px exactly as before (inline style beats the global rule),
-           independent of encapsulation. (OBRS-907 scrutinize self-fix.) -->
-      <app-loading-state graphic="icon" icon="sync" [sizePx]="28"></app-loading-state>
-    </div>
+    @if (showInitialLoading) {
+      <div class="notification-inbox-state">
+        <!-- OBRS-907: same primitive as before (.admin-loading-spinner "sync"
+        glyph, --accent-text), now rendered through the shared component
+        instead of inline markup. The old inline size (28px) came from THIS
+        component's descendant rule `.notification-inbox-state
+        .material-symbols-outlined { font-size: 28px }` — but under Angular
+        emulated encapsulation that rule compiles with a content attribute
+        on its LAST compound too, and the icon span now belongs to
+        LoadingStateComponent's template (a different content attribute), so
+        the rule no longer reaches it and the global .admin-loading-spinner
+        34px would take over. Pass the size as an inline input so the icon
+        stays 28px exactly as before (inline style beats the global rule),
+        independent of encapsulation. (OBRS-907 scrutinize self-fix.) -->
+        <app-loading-state graphic="icon" icon="sync" [sizePx]="28"></app-loading-state>
+      </div>
+    }
 
-    <div class="notification-inbox-state" *ngIf="showError">
-      <span class="material-symbols-outlined" aria-hidden="true">error_outline</span>
-      <p>{{ 'NOTIFICATIONS.LOAD_ERROR' | translate }}</p>
-      <button type="button" class="admin-btn admin-btn-small" (click)="retry.emit()">
-        {{ 'NOTIFICATIONS.RETRY' | translate }}
-      </button>
-    </div>
+    @if (showError) {
+      <div class="notification-inbox-state">
+        <span class="material-symbols-outlined" aria-hidden="true">error_outline</span>
+        <p>{{ 'NOTIFICATIONS.LOAD_ERROR' | translate }}</p>
+        <button type="button" class="admin-btn admin-btn-small" (click)="retry.emit()">
+          {{ 'NOTIFICATIONS.RETRY' | translate }}
+        </button>
+      </div>
+    }
 
-    <div class="notification-inbox-state" *ngIf="showEmpty">
-      <span class="material-symbols-outlined" aria-hidden="true">notifications_none</span>
-      <p>{{ 'NOTIFICATIONS.EMPTY_TITLE' | translate }}</p>
-    </div>
+    @if (showEmpty) {
+      <div class="notification-inbox-state">
+        <span class="material-symbols-outlined" aria-hidden="true">notifications_none</span>
+        <p>{{ 'NOTIFICATIONS.EMPTY_TITLE' | translate }}</p>
+      </div>
+    }
 
-    <ul class="notification-inbox-list" *ngIf="items.length > 0">
-      <li *ngFor="let item of items">
-        <app-notification-inbox-row [item]="item" (open)="onRowOpen($event)"></app-notification-inbox-row>
-      </li>
-    </ul>
+    @if (items.length > 0) {
+      <ul class="notification-inbox-list">
+        @for (item of items; track item) {
+          <li>
+            <app-notification-inbox-row [item]="item" (open)="onRowOpen($event)"></app-notification-inbox-row>
+          </li>
+        }
+      </ul>
+    }
   </div>
 
-  <p class="notification-inbox-footer" *ngIf="showFooter">
-    {{ 'NOTIFICATIONS.SHOWING_LATEST' | translate: { shown: items.length, total: total } }}
-  </p>
+  @if (showFooter) {
+    <p class="notification-inbox-footer">
+      {{ 'NOTIFICATIONS.SHOWING_LATEST' | translate: { shown: items.length, total: total } }}
+    </p>
+  }
 </div>

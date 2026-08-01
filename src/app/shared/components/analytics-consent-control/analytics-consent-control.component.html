@@ -1,48 +1,45 @@
 <!-- OBRS-874 AC-1: the withdrawal surface. Always rendered on the policy page —
-     it states the current answer even when that answer is "none", because a
-     control that appears only after consent is a control nobody can find. -->
-<section
-  class="consent-control"
-  data-testid="analytics-consent-control"
-  *ngIf="decision$ | async as decision"
->
-  <h2 class="consent-control__title">
-    {{ 'ANALYTICS_CONSENT.CONTROL_TITLE' | translate }}
-  </h2>
-
-  <p
-    class="consent-control__status"
-    data-testid="analytics-consent-status"
-    role="status"
-    [attr.data-decision]="decision"
-  >
-    {{ statusKey(decision) | translate }}
-  </p>
-
-  <div class="consent-control__actions">
-    <button
-      *ngIf="decision === 'granted'; else grantButton"
-      type="button"
-      class="consent-control__btn"
-      data-testid="analytics-consent-withdraw"
-      (click)="withdraw()"
+it states the current answer even when that answer is "none", because a
+control that appears only after consent is a control nobody can find. -->
+@if (decision$ | async; as decision) {
+  <section
+    class="consent-control"
+    data-testid="analytics-consent-control"
     >
-      {{ 'ANALYTICS_CONSENT.CONTROL_WITHDRAW' | translate }}
-    </button>
-
-    <ng-template #grantButton>
-      <button
-        type="button"
-        class="consent-control__btn consent-control__btn--accept"
-        data-testid="analytics-consent-grant"
-        (click)="grant()"
+    <h2 class="consent-control__title">
+      {{ 'ANALYTICS_CONSENT.CONTROL_TITLE' | translate }}
+    </h2>
+    <p
+      class="consent-control__status"
+      data-testid="analytics-consent-status"
+      role="status"
+      [attr.data-decision]="decision"
       >
-        {{ 'ANALYTICS_CONSENT.CONTROL_GRANT' | translate }}
-      </button>
-    </ng-template>
-  </div>
-
-  <p class="consent-control__note">
-    {{ 'ANALYTICS_CONSENT.CONTROL_NOTE' | translate }}
-  </p>
-</section>
+      {{ statusKey(decision) | translate }}
+    </p>
+    <div class="consent-control__actions">
+      @if (decision === 'granted') {
+        <button
+          type="button"
+          class="consent-control__btn"
+          data-testid="analytics-consent-withdraw"
+          (click)="withdraw()"
+          >
+          {{ 'ANALYTICS_CONSENT.CONTROL_WITHDRAW' | translate }}
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="consent-control__btn consent-control__btn--accept"
+          data-testid="analytics-consent-grant"
+          (click)="grant()"
+          >
+          {{ 'ANALYTICS_CONSENT.CONTROL_GRANT' | translate }}
+        </button>
+      }
+    </div>
+    <p class="consent-control__note">
+      {{ 'ANALYTICS_CONSENT.CONTROL_NOTE' | translate }}
+    </p>
+  </section>
+}

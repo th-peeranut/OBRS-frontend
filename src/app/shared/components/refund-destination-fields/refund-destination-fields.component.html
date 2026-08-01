@@ -9,7 +9,7 @@
       [attr.aria-pressed]="mode === 'bank_account'"
       [disabled]="disabled"
       (click)="selectMode('bank_account')"
-    >
+      >
       {{ 'REFUND_DESTINATION.MODE_BANK' | translate }}
     </button>
     <button
@@ -19,12 +19,12 @@
       [attr.aria-pressed]="mode === 'promptpay'"
       [disabled]="disabled"
       (click)="selectMode('promptpay')"
-    >
+      >
       {{ 'REFUND_DESTINATION.MODE_PROMPTPAY' | translate }}
     </button>
   </div>
 
-  <ng-container *ngIf="mode === 'bank_account'">
+  @if (mode === 'bank_account') {
     <div class="rdf-field">
       <label for="rdf-account-name">{{ 'REFUND_DESTINATION.ACCOUNT_NAME' | translate }}</label>
       <input
@@ -35,67 +35,79 @@
         [class.is-invalid]="isInvalid('accountName')"
         [disabled]="disabled"
         [placeholder]="'REFUND_DESTINATION.ACCOUNT_NAME' | translate"
-      />
-      <small class="rdf-error" *ngIf="isInvalid('accountName')">
-        {{ 'REFUND_DESTINATION.ERROR.REQUIRED' | translate }}
-      </small>
-    </div>
+        />
+        @if (isInvalid('accountName')) {
+          <small class="rdf-error">
+            {{ 'REFUND_DESTINATION.ERROR.REQUIRED' | translate }}
+          </small>
+        }
+      </div>
+      <div class="rdf-field">
+        <label for="rdf-bank">{{ 'REFUND_DESTINATION.BANK' | translate }}</label>
+        <input
+          id="rdf-bank"
+          type="text"
+          class="rdf-input"
+          formControlName="bank"
+          [class.is-invalid]="isInvalid('bank')"
+          [disabled]="disabled"
+          [placeholder]="'REFUND_DESTINATION.BANK' | translate"
+          />
+          @if (isInvalid('bank')) {
+            <small class="rdf-error">
+              {{ 'REFUND_DESTINATION.ERROR.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="rdf-field">
+          <label for="rdf-account-number">{{ 'REFUND_DESTINATION.ACCOUNT_NUMBER' | translate }}</label>
+          <input
+            id="rdf-account-number"
+            type="text"
+            inputmode="numeric"
+            class="rdf-input"
+            formControlName="accountNumber"
+            [class.is-invalid]="isInvalid('accountNumber')"
+            [disabled]="disabled"
+            [placeholder]="'REFUND_DESTINATION.ACCOUNT_NUMBER' | translate"
+            />
+            @if (isInvalid('accountNumber')) {
+              <small class="rdf-error">
+                {{ 'REFUND_DESTINATION.ERROR.REQUIRED' | translate }}
+              </small>
+            }
+          </div>
+        }
 
-    <div class="rdf-field">
-      <label for="rdf-bank">{{ 'REFUND_DESTINATION.BANK' | translate }}</label>
-      <input
-        id="rdf-bank"
-        type="text"
-        class="rdf-input"
-        formControlName="bank"
-        [class.is-invalid]="isInvalid('bank')"
-        [disabled]="disabled"
-        [placeholder]="'REFUND_DESTINATION.BANK' | translate"
-      />
-      <small class="rdf-error" *ngIf="isInvalid('bank')">
-        {{ 'REFUND_DESTINATION.ERROR.REQUIRED' | translate }}
-      </small>
-    </div>
-
-    <div class="rdf-field">
-      <label for="rdf-account-number">{{ 'REFUND_DESTINATION.ACCOUNT_NUMBER' | translate }}</label>
-      <input
-        id="rdf-account-number"
-        type="text"
-        inputmode="numeric"
-        class="rdf-input"
-        formControlName="accountNumber"
-        [class.is-invalid]="isInvalid('accountNumber')"
-        [disabled]="disabled"
-        [placeholder]="'REFUND_DESTINATION.ACCOUNT_NUMBER' | translate"
-      />
-      <small class="rdf-error" *ngIf="isInvalid('accountNumber')">
-        {{ 'REFUND_DESTINATION.ERROR.REQUIRED' | translate }}
-      </small>
-    </div>
-  </ng-container>
-
-  <div class="rdf-field" *ngIf="mode === 'promptpay'">
-    <label for="rdf-promptpay-phone">{{ 'REFUND_DESTINATION.PROMPTPAY_PHONE' | translate }}</label>
-    <input
-      id="rdf-promptpay-phone"
-      type="text"
-      inputmode="numeric"
-      maxlength="13"
-      class="rdf-input"
-      formControlName="promptpayPhone"
-      [class.is-invalid]="isInvalid('promptpayPhone')"
-      [disabled]="disabled"
-      [placeholder]="'REFUND_DESTINATION.PROMPTPAY_PHONE' | translate"
-    />
-    <small class="rdf-error" *ngIf="isInvalid('promptpayPhone') && hasError('promptpayPhone', 'nationalId')">
-      {{ 'REFUND_DESTINATION.ERROR.NATIONAL_ID' | translate }}
-    </small>
-    <small class="rdf-error" *ngIf="isInvalid('promptpayPhone') && hasError('promptpayPhone', 'pattern')">
-      {{ 'REFUND_DESTINATION.ERROR.PATTERN' | translate }}
-    </small>
-    <small class="rdf-error" *ngIf="isInvalid('promptpayPhone') && hasError('promptpayPhone', 'required')">
-      {{ 'REFUND_DESTINATION.ERROR.REQUIRED' | translate }}
-    </small>
-  </div>
-</div>
+        @if (mode === 'promptpay') {
+          <div class="rdf-field">
+            <label for="rdf-promptpay-phone">{{ 'REFUND_DESTINATION.PROMPTPAY_PHONE' | translate }}</label>
+            <input
+              id="rdf-promptpay-phone"
+              type="text"
+              inputmode="numeric"
+              maxlength="13"
+              class="rdf-input"
+              formControlName="promptpayPhone"
+              [class.is-invalid]="isInvalid('promptpayPhone')"
+              [disabled]="disabled"
+              [placeholder]="'REFUND_DESTINATION.PROMPTPAY_PHONE' | translate"
+              />
+              @if (isInvalid('promptpayPhone') && hasError('promptpayPhone', 'nationalId')) {
+                <small class="rdf-error">
+                  {{ 'REFUND_DESTINATION.ERROR.NATIONAL_ID' | translate }}
+                </small>
+              }
+              @if (isInvalid('promptpayPhone') && hasError('promptpayPhone', 'pattern')) {
+                <small class="rdf-error">
+                  {{ 'REFUND_DESTINATION.ERROR.PATTERN' | translate }}
+                </small>
+              }
+              @if (isInvalid('promptpayPhone') && hasError('promptpayPhone', 'required')) {
+                <small class="rdf-error">
+                  {{ 'REFUND_DESTINATION.ERROR.REQUIRED' | translate }}
+                </small>
+              }
+            </div>
+          }
+        </div>
