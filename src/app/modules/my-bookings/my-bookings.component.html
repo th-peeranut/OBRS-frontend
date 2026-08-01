@@ -175,6 +175,7 @@
   [policy]="cancelRefundModal.policy"
   [error]="cancelRefundModal.error"
   (confirmed)="onConfirmCancelWithDestination(cancelRefundModal.booking, $event)"
+  (rescheduleRequested)="onRescheduleInsteadOfCancel(cancelRefundModal.booking)"
   (dismissed)="onCancelRefundDestinationModalClosed()"
 ></app-cancel-refund-destination-modal>
 

@@ -214,6 +214,26 @@ jobs:
       - name: gitignored environment file shape gate
         run: npm run test:local-env
 
+      # Tenth pure-node gate (OBRS-946). The gate above checks field NAMES; this one
+      # checks the one VALUE rule that decides whether a prod bundle can take money,
+      # and it checks it in both places that hold a copy of it.
+      #
+      # Both copies demanded an Omise public key starting with `pkey_live_`, which
+      # Omise does not issue - the live key is `pkey_` + 19 chars with no environment
+      # segment (only the TEST key is labelled). So `npm run build:prod` exited 1 on
+      # the real key and a hand-written config would have refused to boot: prod was
+      # unpublishable, and nothing in this workflow could see it, because no lane here
+      # builds the prod configuration and every unit-test fixture was invented from
+      # the same wrong assumption the gates encoded.
+      #
+      # This step is the answer to "why did the tests pass": it asserts the pattern is
+      # byte-identical in scripts/inject-prod-env.js and prod-config-guard.ts, then
+      # runs it against key shapes that were observed rather than imagined - including
+      # the live key measured on the prod VM. Fixing one gate and leaving its twin is
+      # what happened in OBRS-926 and again in OBRS-946; from here it is a red build.
+      - name: Omise prod public-key rule gate
+        run: npm run test:omise-key
+
       - name: Install dependencies
         run: npm ci
 

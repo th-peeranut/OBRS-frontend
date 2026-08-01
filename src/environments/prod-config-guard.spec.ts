@@ -2,12 +2,34 @@ import { assertProdConfig, ProdCheckedConfig, ProdConfigError } from './prod-con
 
 // OBRS-390. Every case below asserts on the THROW, not on the guard's existence —
 // a gate that is only declared can be a silent no-op (OBRS-449, OBRS-419).
+//
+// OBRS-946 — AND EVERY FIXTURE HERE MUST BE A SHAPE THAT REALLY EXISTS.
+// This suite was fully green while the guard rejected the only Omise key we own,
+// because the "valid" fixture was invented (`pkey_live_abcdefghijklmnop`, 16 chars of
+// alphabet after a prefix Omise has never issued). It proved the guard agreed with the
+// fixture; the fixture was written from the same wrong assumption as the guard, so
+// there was nothing left to falsify it. A fixture is a claim about the outside world,
+// and one nobody measured is worth exactly as much as the guess it came from.
+//
+// The keys below are therefore observed values, not plausible ones:
+//   LIVE_KEY — the shape on the prod VM: `pkey_` + 19 chars, no environment segment.
+//              That key took a real 20.00 THB charge (chrg_68iydxbsxsugso4ycv4, Paid
+//              in the LIVE dashboard), which is the proof it is a live key — the
+//              prefix could not have told us, because there is nothing in it to read.
+//   TEST_KEY — copied from environment.base.ts, where it is committed.
+// Their ids are the same 19 characters wide; the ONLY difference between a test key
+// and a live one is the `test_` segment the live key does not carry.
+
+/** The live-key shape measured on the prod VM. Not a live key of ours — a real id would be. */
+const LIVE_KEY = 'pkey_1a2b3c4d5e6f7g8h9i0';
+/** Verbatim from environment.base.ts. */
+const TEST_KEY = 'pkey_test_5rd059u8cgynfe12lds';
 
 function validProdConfig(overrides: Partial<ProdCheckedConfig> = {}): ProdCheckedConfig {
   return {
     production: true,
     apiUrl: 'https://obrs.example.com',
-    omisePublicKey: 'pkey_live_abcdefghijklmnop',
+    omisePublicKey: LIVE_KEY,
     useMockPayments: false,
     useDevApiEndpoints: false,
     promptpay: { id: '0850951898' },
@@ -28,7 +50,7 @@ describe('assertProdConfig', () => {
       const devLike: ProdCheckedConfig = {
         production: false,
         apiUrl: 'http://localhost:8080',
-        omisePublicKey: 'pkey_test_5rd059u8cgynfe12lds',
+        omisePublicKey: TEST_KEY,
         useMockPayments: true,
         useDevApiEndpoints: true,
         promptpay: { id: '0123456789' },
@@ -39,13 +61,46 @@ describe('assertProdConfig', () => {
   });
 
   describe('omisePublicKey', () => {
+    // OBRS-946's regression test, and the one case the old suite could not have had:
+    // this is the value that was failing in production. `pkey_live_` was asserted for
+    // months against a string Omise has never put on a key, so the gate rejected the
+    // correct value — the prod build exited 1 and the bundle refused to boot.
+    it('accepts a live key, which carries NO environment segment at all', () => {
+      expect(LIVE_KEY.length).toBe(24);
+      expect(LIVE_KEY).not.toContain('live');
+      expect(() => assertProdConfig(validProdConfig({ omisePublicKey: LIVE_KEY }))).not.toThrow();
+    });
+
+    // The two shapes differ by the `test_` segment and nothing else — same prefix,
+    // same 19-char id width. A rule that cannot separate these two is the whole job.
+    it('separates the live and test keys, whose ids are the same width', () => {
+      expect(TEST_KEY.replace('test_', '').length).toBe(LIVE_KEY.length);
+    });
+
     it('rejects the pkey_test_ key committed in environment.base.ts', () => {
       expect(() =>
-        assertProdConfig(validProdConfig({ omisePublicKey: 'pkey_test_5rd059u8cgynfe12lds' })),
+        assertProdConfig(validProdConfig({ omisePublicKey: TEST_KEY })),
       ).toThrowMatching(
         (e: ProdConfigError) =>
           e instanceof ProdConfigError && /omisePublicKey is not a live/.test(e.message),
       );
+    });
+
+    // The fixture this suite used to call valid. Keeping it as a REJECT case is what
+    // stops the old assertion being reintroduced: any rule that admits this one is
+    // describing our imagination rather than Omise.
+    it('rejects the invented pkey_live_ shape Omise does not issue', () => {
+      expect(() =>
+        assertProdConfig(validProdConfig({ omisePublicKey: 'pkey_live_abcdefghijklmnop' })),
+      ).toThrowError(ProdConfigError);
+    });
+
+    // Truncation on paste is the realistic way a correct key arrives wrong, and length
+    // is the only thing that separates it from a valid one.
+    it('rejects a live key one character short', () => {
+      expect(() =>
+        assertProdConfig(validProdConfig({ omisePublicKey: LIVE_KEY.slice(0, -1) })),
+      ).toThrowError(ProdConfigError);
     });
 
     it('rejects an empty key', () => {
@@ -54,8 +109,11 @@ describe('assertProdConfig', () => {
       );
     });
 
-    // The reason the check is a `pkey_live_` allowlist and not a `pkey_test_`
-    // denylist: a denylist would wave this straight through.
+    // The reason the check stayed an allowlist after OBRS-946 rather than becoming a
+    // `!startsWith('pkey_test_')` denylist: a denylist waves this straight through.
+    // A live secret key has the same length and charset as a live public key, so the
+    // prefix is the only thing separating "publishable by design" from "hands anyone
+    // who opens devtools the ability to move our money".
     it('rejects a SECRET key pasted in where the public key belongs', () => {
       expect(() =>
         assertProdConfig(validProdConfig({ omisePublicKey: 'skey_live_abcdefghijklmnop' })),
@@ -128,7 +186,7 @@ describe('assertProdConfig', () => {
       assertProdConfig({
         production: true,
         apiUrl: 'http://localhost:8080',
-        omisePublicKey: 'pkey_test_5rd059u8cgynfe12lds',
+        omisePublicKey: TEST_KEY,
         useMockPayments: true,
         useDevApiEndpoints: true,
         promptpay: { id: '0123456789' },

@@ -118,9 +118,14 @@ means:
     `/api/public/schedules` returns the security headers, so Caddy and the
     backend are live and the frontend has simply never been published.
     OBRS-205 recorded that on 2026-07-23 and owns it — the publish is held
-    because `npm run build:prod` requires a live `pkey_live_` (OBRS-206) and
     because the moment `index.html` lands on the VM is the moment the app is
-    public. Flipping the base value would therefore have put a go-live-*cut*
+    public. (This sentence also used to cite `npm run build:prod` requiring a
+    live `pkey_live_` (OBRS-206). **That blocker was never real:** Omise issues
+    no such key — the live key is `pkey_` + 19 chars with no environment
+    segment — so the build gate was rejecting the correct value rather than
+    waiting on a missing one. Corrected in **OBRS-946**; the owner call is now
+    the only thing holding the publish.) Flipping the base value would
+    therefore have put a go-live-*cut*
     feature in front of prod staff in its degraded state, in an environment
     that is not serving the app on purpose. The base flip remains the
     post-go-live one-liner OBRS-622 AC6 describes; this override is additive

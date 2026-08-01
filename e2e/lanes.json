@@ -279,6 +279,12 @@
       "why": "OBRS-939. Asserts that the admin shell still ANSWERS -- a trivial page.evaluate must resolve within 5s, sampled 5s after navigation because the freeze started 2.6-3.8s in and a check that samples immediately passes while broken. It caught a change-detection loop that no unit test could reach (Karma runs one detectChanges() by hand; the loop needs a real zone driving ticks) and that no screenshot could show (the last paint before the freeze stays on screen). Population is the shell, not the page the bug was reported on: /admin/dashboard under abort, 500 and 401, plus all five OBRS-151..155 analytics pages. Hermetic on the same terms as the rest of the lane -- synthetic in-browser session, every /api/private/** call answered by the spec itself, no backend."
     },
     {
+      "spec": "obrs-813-cancel-offers-reschedule.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-813. The cancel modal now names the reschedule door, and the card's hard limit is that this costs the traveler no extra click on the way OUT. That is measured with a control arm rather than a constant: the same cancel journey is walked on a reschedule-ELIGIBLE booking (offer rendered) and on an ineligible one (the pre-card layout), in one run, and the two click counts are compared -- a hardcoded number would be one nobody measured before the change. Also pins the two things the offer must never do: cancel anything by itself, and appear on a booking the backend would refuse to reschedule. Hermetic on the same terms as the rest of the lane -- synthetic customer session in localStorage, every /api/** call fulfilled by the spec, no backend."
+    },
+    {
       "spec": "obrs-907-qa-parity-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs907qa.config.ts",

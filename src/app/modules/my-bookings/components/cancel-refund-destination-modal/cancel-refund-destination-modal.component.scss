@@ -1,4 +1,5 @@
 @import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens";
 
 // Same modal chrome as change-stop-dialog.component.scss / reschedule-dialog
 // (backdrop, floating close button, fade-in) — kept consistent rather than
@@ -76,12 +77,28 @@
   }
 
   .crdm-modal__title,
+  .crdm-subheading,
   .crdm-line {
     color: #e8eaf0;
   }
 
   .crdm-note {
     color: #9aa3b8;
+  }
+
+  // OBRS-813: the offer panel is a tinted card, so it needs its own dark pair
+  // or a pale-blue wash ends up carrying light text. The values above predate
+  // OBRS-767 splitting the palette into the importable `_dark-tokens.scss`
+  // (the "file-private, so copy them" note above is that history, not advice) —
+  // new rules take the tokens by name.
+  .crdm-offer {
+    background: $dk-bg-soft;
+    border-color: $dk-border;
+  }
+
+  .crdm-offer__title,
+  .crdm-offer__points {
+    color: $dk-text;
   }
 }
 
@@ -102,6 +119,93 @@
   margin: $space-sm 0 $space-md;
   font-size: $font-size-sm;
   color: $text-lightblack;
+}
+
+// OBRS-813 — the reschedule offer. Tinted panel rather than a second modal or a
+// step: the traveler is mid-decision and a wizard step here would be one more
+// thing between them and the Cancel they came for.
+.crdm-offer {
+  margin: $space-sm 0 $space-md;
+  padding: $space-sm;
+  border: 1px solid $primary-lightblue;
+  border-radius: $radius-md;
+  background: $primary-lightblue;
+}
+
+.crdm-offer__title {
+  margin: 0 0 $space-xs;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $text-black;
+}
+
+.crdm-offer__points {
+  margin: 0;
+  padding-left: 18px;
+  font-size: $font-size-sm;
+  color: $text-black;
+
+  li + li {
+    margin-top: 4px;
+  }
+}
+
+.crdm-offer__cta {
+  margin-top: $space-xs;
+  width: 100%;
+  justify-content: center;
+}
+
+// `.btn-primary` / `.btn-secondary` are NOT global — every sibling dialog
+// (change-seat, change-stop, reschedule) declares them in its own scoped
+// stylesheet, and this modal never did. Measured on `origin/dev` while
+// capturing this card's BEFORE image: its Confirm / Keep-booking pair renders
+// as unstyled native buttons today. Rather than leave that, add the same block
+// the siblings carry: a reschedule CTA that looked like a real button next to a
+// native-grey "Confirm cancellation" would be visual steering, which is exactly
+// what this card forbids. Copied from change-seat-dialog.component.scss, so all
+// four dialogs in this module still read as one surface.
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2xs;
+  padding: 9px 20px;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: $secondary-blue;
+  color: $text-white;
+  border: 1px solid $secondary-blue;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-secondary {
+  background-color: $primary-white;
+  color: $secondary-blue;
+  border: 1px solid $secondary-blue;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Only rendered alongside the offer — without it the refund lines below would
+// read as a continuation of the reschedule panel rather than the other option.
+.crdm-subheading {
+  margin: 0 0 $space-xs;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $text-black;
 }
 
 .crdm-error {

@@ -33,7 +33,7 @@ would do — carries the test key straight to production with nothing to notice 
 
 ```bash
 export PROD_API_URL='https://nj-phuyaipu.com'        # absolute + https — see below
-export PROD_OMISE_PUBLIC_KEY='pkey_live_…'           # must start with pkey_live_
+export PROD_OMISE_PUBLIC_KEY='pkey_…'                # `pkey_` + 19 chars, NO `live` — see below
 export PROD_PROMPTPAY_ID='<the real PromptPay id>'
 export PROD_MAPS_API_KEY='<Google Maps browser key>'
 export PROD_GOOGLE_CLIENT_ID='<Google OAuth client id>'
@@ -44,8 +44,30 @@ npm run build:prod        # = node scripts/inject-prod-env.js && ng build --conf
 Output: `dist/obrs/browser`.
 
 `PROD_OMISE_PUBLIC_KEY` is a **public** key — it ships inside the bundle by design and
-is safe in a browser. The Omise **secret** key (`skey_live_…`) belongs only to the
-backend and must never appear in this repo or in these env vars.
+is safe in a browser. The Omise **secret** key belongs only to the backend and must
+never appear in this repo or in these env vars.
+
+#### ⚠️ A live Omise key does not say `live` anywhere (OBRS-946)
+
+**Only the TEST key names its environment.** The shapes, measured — not read off a
+docs page:
+
+| | shape | length |
+| --- | --- | --- |
+| test | `pkey_test_` + 19 chars | 29 |
+| **live** | **`pkey_` + 19 chars** | **24** |
+
+So the correct value for this variable looks like `pkey_5s337…` and contains neither
+`live` nor `test`. There is nothing in the prefix that tells you which one you are
+holding; on the prod VM we established it the only way available — that key took a real
+20.00 THB charge, `Paid` in the **live** dashboard.
+
+Both gates below asserted `startsWith('pkey_live_')` until 2026-08-01, so **`npm run
+build:prod` exited 1 on the correct key** and, had you written the generated file by
+hand, the bundle would have refused to boot. If you are reading an older copy of this
+runbook, or an older ADR, that told you to use a `pkey_live_…` value: it was wrong, no
+such key exists, and `npm run test:omise-key` is now the thing that keeps this page and
+the two gates saying the same sentence.
 
 ### The optional vars — read this before deciding you don't need them
 
@@ -141,13 +163,13 @@ answer is `npm run build:prod` and ship `dist/obrs/browser` to the VM.
 
 ---
 
-## The two gates
+## The two gates, and the third one that keeps them honest
 
 Both check the same values. Neither is redundant.
 
 1. **`scripts/inject-prod-env.js`** (build time) — refuses to generate a config with a
-   missing var, a non-`pkey_live_` key, or a non-https API URL. Exits **1**, so the
-   `&&` in `build:prod` stops before `ng build` runs.
+   missing var, a key that is not `pkey_` + 19 chars, or a non-https API URL. Exits
+   **1**, so the `&&` in `build:prod` stops before `ng build` runs.
 2. **`src/environments/prod-config-guard.ts`** (boot time) — re-checks the values in the
    bundle that actually shipped, and throws before Angular bootstraps.
 
@@ -155,6 +177,20 @@ Gate 2 exists because gate 1 is not the only way `environment.prod.local.ts` can
 into being: **it is gitignored**, so a hand-edited or stale copy passes review by
 nobody and builds perfectly cleanly. Gate 1 validates the values it *generates*; gate 2
 validates the values that *shipped*.
+
+3. **`scripts/check-omise-key-format.mjs`** (`npm run test:omise-key`, CI gate lane and
+   `prebuild:prod`) — asserts gates 1 and 2 hold **byte-identical** copies of the key
+   pattern, then runs that pattern against key shapes that were observed rather than
+   invented.
+
+Gate 3 exists because two hand-maintained copies of one rule is how this pair has now
+failed twice: **OBRS-926** (a runbook `PROD_API_URL` both gates rejected — one
+assertion was fixed, its twin was never audited) and **OBRS-946** (both demanded a
+`pkey_live_` Omise never issues, so the gates rejected the only correct value there is).
+Unit tests could not catch either: every fixture was written from the same assumption
+the gates encoded, so the suite proved the guard agreed with the fixture and nothing
+more. **If you change a value rule in one of these files, gate 3 is what tells you the
+other one exists.**
 
 The guard only fires when `production === true`. That flag cannot be lost: it is a
 committed literal in `environment.prod.ts`, alongside `useMockPayments: false` and

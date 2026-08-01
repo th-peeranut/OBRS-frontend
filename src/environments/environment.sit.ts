@@ -23,9 +23,14 @@ export const environment = {
   //     `/login`) answers 404 while `/api/public/schedules` answers with the
   //     security headers, so Caddy and the backend are live and the FE has
   //     simply never been published. OBRS-205 recorded that state on 07-23 and
-  //     owns it: the publish is held because `npm run build:prod` requires a
-  //     live `pkey_live_` (OBRS-206) and because the moment `index.html` lands
-  //     on the VM is the moment the app is public — an owner call, not a bug.
+  //     owns it: the publish is held because the moment `index.html` lands on
+  //     the VM is the moment the app is public — an owner call, not a bug.
+  //     ⚠️ This bullet used to give a SECOND reason — that `npm run build:prod`
+  //     "requires a live `pkey_live_` (OBRS-206)". That reason was never real:
+  //     Omise issues no `pkey_live_` key (the live key is `pkey_` + 19 chars,
+  //     no environment segment), so the build gate was rejecting the one
+  //     correct value we hold rather than waiting for a value we lacked. Fixed
+  //     in OBRS-946; only the owner call above still holds the publish.
   // A base flip would therefore have aimed a go-live-CUT feature at an
   // environment that cannot render it and is not serving the app anyway.
   // Turning it on here is what makes the tile/marker ACs measurable now; the

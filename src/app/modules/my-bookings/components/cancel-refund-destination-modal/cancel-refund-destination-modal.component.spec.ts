@@ -115,6 +115,63 @@ describe('CancelRefundDestinationModalComponent (OBRS-286)', () => {
     expect(dismissed).not.toHaveBeenCalled();
   });
 
+  // --- OBRS-813: the reschedule offer ---
+
+  it('OBRS-813: no offer when the booking is not reschedule-eligible (the default fixture)', () => {
+    expect(fixture.debugElement.query(By.css('.crdm-offer'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('.crdm-subheading'))).toBeNull();
+  });
+
+  it('OBRS-813: an eligible booking is offered the reschedule door, quoting the SERVER originalAmount', () => {
+    component.booking = { ...buildBooking(), rescheduleEligible: true };
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.crdm-offer'))).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('.crdm-offer__cta'))).not.toBeNull();
+
+    // The 100%-kept figure is `policy.originalAmount`, NOT a number the FE
+    // derived — the card's AC-2. Asserted on the getter rather than the
+    // rendered text because `TranslateModule.forRoot()` here has no catalogue:
+    // it echoes the KEY and drops the interpolation params, so a DOM assertion
+    // would be measuring ngx-translate's fallback, not this component.
+    // The rendered path is covered in the gate lane
+    // (e2e/tests/obrs-813-cancel-offers-reschedule.spec.ts).
+    component.policy = { ...buildPolicy(), originalAmount: 777, refundAmount: 400 };
+    expect(component['originalAmountLabel']).toContain('777');
+    expect(component['refundLabel']).toContain('400');
+  });
+
+  it('OBRS-813: the offer emits rescheduleRequested and cancels nothing', () => {
+    const rescheduleRequested = jasmine.createSpy('rescheduleRequested');
+    const confirmed = jasmine.createSpy('confirmed');
+    component.rescheduleRequested.subscribe(rescheduleRequested);
+    component.confirmed.subscribe(confirmed);
+    component.booking = { ...buildBooking(), rescheduleEligible: true };
+    fixture.detectChanges();
+
+    fixture.debugElement.query(By.css('.crdm-offer__cta')).nativeElement.click();
+
+    expect(rescheduleRequested).toHaveBeenCalled();
+    expect(confirmed).not.toHaveBeenCalled();
+    expect(component['submitting']).toBeFalse();
+  });
+
+  it('OBRS-813: adding the offer does not move the cancel path — still one click on Confirm', () => {
+    const confirmed = jasmine.createSpy('confirmed');
+    component.confirmed.subscribe(confirmed);
+    component.booking = { ...buildBooking(), rescheduleEligible: true };
+    const form = (component as any).form;
+    form.get('mode').setValue('promptpay');
+    form.get('promptpayPhone').setValue('0812345678');
+    fixture.detectChanges();
+
+    const confirmBtn = fixture.debugElement.query(By.css('.btn-primary'));
+    expect(confirmBtn.nativeElement.disabled).toBeFalse();
+    confirmBtn.nativeElement.click();
+
+    expect(confirmed).toHaveBeenCalledTimes(1);
+  });
+
   it('Flow A1 step 5: an error input clears submitting but keeps the typed data and stays open', () => {
     const form = (component as any).form;
     form.get('mode').setValue('promptpay');

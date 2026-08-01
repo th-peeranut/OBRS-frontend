@@ -184,6 +184,15 @@
       "REFUND_LINE": "退款：{{refund}}（{{rate}}）",
       "PENALTY_LINE": "取消手续费：{{penalty}}",
       "MANUAL_REFUND_NOTE": "此支付方式不支持自动退款，我们的工作人员将通过银行转账为您办理退款。",
+      "COMPARE": {
+        "OFFER_TITLE": "此预订仍可改期——并保留车票的全部价值",
+        "KEEP_FULL": "保留全额 {{amount}}（100%），而不是只拿回部分退款",
+        "INSTANT": "立即获得新班次，无需等待工作人员转账",
+        "FEE_SHOWN_FIRST": "如有改期手续费或票价差额，系统都会在您确认前显示",
+        "WITHIN_DAYS": "新日期须在原出发日期后的 {{days}} 天以内",
+        "RESCHEDULE_BUTTON": "改期而不取消",
+        "CANCEL_HEADING": "或取消并申请退款"
+      },
       "DESTINATION_DIALOG_TITLE": "确认取消及退款账户",
       "CONFIRM_BUTTON": "确认取消",
       "CANCEL_BUTTON": "保留预订",

@@ -143,6 +143,48 @@ function allowsOrigin(directive, origin) {
   return directive.trim().split(/\s+/).includes(origin);
 }
 
+/**
+ * Sub-resources a third-party SCRIPT injects into our document under a DIFFERENT directive
+ * than the one that allowed the script.
+ *
+ * OBRS-889: `accounts.google.com` was in script-src, connect-src and frame-src, and the
+ * page still failed under an enforcing header — `gsi/client` adds a <link> to
+ * `accounts.google.com/gsi/style`, which is governed by style-src, where the host was
+ * absent. An origin-level allowlist (the `csp-origins` block, `sitCspOrigins` below) is
+ * blind to this by construction: the origin is present and documented, so both inventory
+ * gates stay green while the fetch is denied.
+ *
+ * Directional, like REDIRECT_HOPS: the script host implies the sidecar host, never the
+ * reverse, so removing the vendor outright stays a legal edit. Whole-token comparison, so
+ * `https://*.google.com` in img-src is not read as the named host.
+ */
+const SIDECAR_SUBRESOURCES = [
+  {
+    origin: 'https://accounts.google.com',
+    loadedBy: 'script-src',
+    needs: 'style-src',
+    what: 'gsi/client injects a <link> to accounts.google.com/gsi/style into this document',
+  },
+];
+
+function orphanedSidecarSubresources(policy) {
+  const orphans = [];
+  for (const sidecar of SIDECAR_SUBRESOURCES) {
+    const loader = directiveOf(policy, sidecar.loadedBy);
+    const target = directiveOf(policy, sidecar.needs);
+    if (allowsOrigin(loader, sidecar.origin) && !allowsOrigin(target, sidecar.origin)) {
+      orphans.push(
+        `netlify.toml's ${sidecar.loadedBy} allows ${sidecar.origin} but ${sidecar.needs} does not — ` +
+          `${sidecar.what}. The origin being in the allowlist is not the question; the DIRECTIVE is. ` +
+          'Measured under an enforcing header in OBRS-889: without this the sheet is dropped with ' +
+          'error `csp` and every /login view writes a line into the collector whose documented ' +
+          'steady state (PCI DSS 11.6.1) is zero.'
+      );
+    }
+  }
+  return orphans;
+}
+
 function orphanedRedirectSources(policy) {
   const orphans = [];
   for (const hop of REDIRECT_HOPS) {
@@ -211,6 +253,21 @@ const SELF_TEST_CASES = [
   ['redirect', 0, "img-src 'self' data: blob:"],
   ['redirect', 0, "img-src 'self' https://c.bing.com"],
   ['redirect', 0, "connect-src 'self' https://*.clarity.ms"],
+  // ---- OBRS-889 sidecar sub-resources. must-catch: the policy that shipped for two
+  // months — GIS allowed as a script, its stylesheet not allowed as a stylesheet.
+  ['sidecar', 1, "script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"],
+  // A style-src that is missing altogether falls back to default-src, which is 'self' —
+  // still a denial, so still caught rather than skipped for lack of a directive to read.
+  ['sidecar', 1, "default-src 'self'; script-src 'self' https://accounts.google.com"],
+  // must NOT catch: the fixed policy; dropping Google sign-in entirely (both entries go,
+  // and demanding the sidecar back would block that removal); the reverse direction,
+  // which is odd but is not this rule's business; and a wildcard that must not be read as
+  // the named host — `https://*.google.com` is in img-src for Maps imagery and says
+  // nothing about whether the GIS stylesheet may load.
+  ['sidecar', 0, "script-src 'self' https://accounts.google.com; style-src 'self' https://accounts.google.com"],
+  ['sidecar', 0, "script-src 'self' https://cdn.omise.co; style-src 'self' 'unsafe-inline'"],
+  ['sidecar', 0, "script-src 'self'; style-src 'self' https://accounts.google.com"],
+  ['sidecar', 1, "script-src 'self' https://accounts.google.com; style-src 'self' https://*.google.com"],
 ];
 
 function runSelfTest() {
@@ -221,6 +278,7 @@ function runSelfTest() {
     else if (kind === 'ts') actual = loadsScriptDynamically(input);
     else if (kind === 'srcOrigins') actual = [...httpsOriginsIn(input)].sort().join(',');
     else if (kind === 'redirect') actual = orphanedRedirectSources(input).length;
+    else if (kind === 'sidecar') actual = orphanedSidecarSubresources(input).length;
     else actual = originsOf(input).size;
 
     if (actual !== expected) {
@@ -389,6 +447,9 @@ if (!cspMatch) {
     );
   }
   for (const orphan of orphanedRedirectSources(policy)) {
+    problems.push(orphan);
+  }
+  for (const orphan of orphanedSidecarSubresources(policy)) {
     problems.push(orphan);
   }
   if (!directiveOf(policy, 'report-uri').includes('/api/csp-report')) {
