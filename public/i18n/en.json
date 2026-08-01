@@ -2,10 +2,17 @@
   "ANALYTICS_CONSENT": {
     "ARIA_LABEL": "Usage-statistics consent",
     "TITLE": "May we measure how this site is used?",
-    "BODY": "It shows us which steps are hard to use, so we fix the right ones. We collect anonymous usage data only — your name, phone number, email address and seat number are never sent. You can decline and still book normally.",
+    "BODY": "It shows us which steps are hard to use, so we fix the right ones. We collect usage statistics and record how the screen is used (mouse movement, clicks and scrolling) so a visit can be replayed afterwards. Your name, phone number, email address and seat number are never sent. You can decline and still book normally.",
     "LEARN_MORE": "Read our privacy policy",
     "ACCEPT": "Accept",
-    "DECLINE": "Decline"
+    "DECLINE": "Decline",
+    "CONTROL_TITLE": "Your usage-statistics choice",
+    "CONTROL_STATUS_GRANTED": "Current setting: you allow usage statistics and screen recording.",
+    "CONTROL_STATUS_DENIED": "Current setting: you declined, so we are not measuring your visit.",
+    "CONTROL_STATUS_UNSET": "Current setting: undecided, so we are not measuring your visit.",
+    "CONTROL_WITHDRAW": "Withdraw consent",
+    "CONTROL_GRANT": "Give consent",
+    "CONTROL_NOTE": "Withdrawing takes effect immediately, with no need to reload the page, and on your next visit the analytics scripts are not loaded at all. Data already sent before you withdrew cannot be recalled from the providers. Either choice leaves searching, booking and payment working exactly the same."
   },
   "USABILITY_REPORT": {
     "FAB": {

@@ -169,6 +169,49 @@ Shape, because "don't send events" is not enough on its own:
 If staff-usage numbers are wanted later, the answer is GA4 only, under a notice in the
 staff handbook, never Clarity. That is a new decision, not this one.
 
+### 7. The banner says "we record your screen", because we do (OBRS-874 — corrects §3's copy)
+
+`ANALYTICS_CONSENT.BODY` used to open with *"we collect anonymous usage data only"*. The
+second half of that sentence — name, phone, email and seat number are never sent — is true
+and is enforced by `sanitizeAnalyticsParams` plus 104 specs. The first half was not: §1
+bought Clarity **for** session replay, and a reader of "usage statistics" does not conclude
+that someone can watch where their mouse went.
+
+This is OBRS-631 AC-14's rule arriving on a different surface. That AC forbids the word
+*anonymised* anywhere a `booking_id` still joins back to a name; the same standard applied
+to a banner forbids *anonymous* where a recording exists. A consent obtained by a
+description narrower than the processing is defective at the moment it is given, however
+well the policy page is written afterwards — the banner is what the customer actually read.
+
+So the copy now names the recording (mouse movement, clicks, scrolling) in all three
+languages, and OBRS-631 §3 declares the same category in the notice. **The two must be
+compared sentence by sentence whenever either changes**; they are the same promise written
+twice, and the version that is easier to edit is the one that will drift.
+
+The owner's decision on 2026-08-01 was to keep Clarity and describe it honestly, rather
+than drop it and keep the old wording — the alternative that was on the table. Replay is
+the only tool that answers *why* a customer dropped out, which is the question that bought
+this ADR its two vendors.
+
+### 8. Withdrawal needs a surface, not only a method (OBRS-874)
+
+§2 shipped `AnalyticsConsentService.reset()` and nothing called it. PDPA ม.19 วรรคห้า says
+withdrawing must be as easy as consenting was; a method reachable only from devtools is not
+that, and OBRS-631 could not publish a notice declaring the right while the app could not
+perform it (the OBRS-627 defect, spelled differently).
+
+The control lives on `/privacy-policy` — the page the banner already links to — and it
+states the current answer even when there is none, because a control that appears only
+after consent is a control nobody can find. Withdrawing returns the answer to `unset`, not
+to `denied`: a withdrawal removes consent, it does not record a refusal on the visitor's
+behalf. The visible consequence is that the control goes back to offering "accept", which
+is honest — that IS the state.
+
+The bar stands down on that one route (`shared/lib/analytics-consent-control.ts`). Unlike
+§6 this is not a privacy rule and does not stop the tags loading there: it is that
+withdrawing would otherwise make the bar appear the instant the button was pressed, on the
+page it was pressed on, which reads as the site ignoring the request.
+
 ---
 
 ## Consequences
@@ -181,9 +224,14 @@ staff handbook, never Clarity. That is a new decision, not this one.
   than deleted: this is the argument to answer, not to forget. Staff and admin traffic is
   now not collected at all — GA4 will show no `/admin` or `/staff` rows, and their absence
   is the intended state, not a broken tag.
-- Withdrawing consent (`AnalyticsConsentService.reset()`) stops future collection and
-  cannot un-send what was already delivered, nor unload an already-injected tag without a
-  reload. The tag vendors offer no teardown; a page reload is the honest answer.
+- Withdrawing consent stops future collection and cannot un-send what was already
+  delivered. ~~Nor unload an already-injected tag without a reload; a page reload is the
+  honest answer.~~ **Corrected by OBRS-874, using OBRS-887's machinery.** The tag element
+  does stay in the document — there is still no teardown — but collection stops in the same
+  tick via `setSuspended(true)` (`window['ga-disable-<id>']`, `clarity('stop')`), and on the
+  next load the scripts are not injected at all. The strike-through matters: the customer
+  copy on `/privacy-policy` promises "immediately, with no need to reload", and it may only
+  say that while both halves above hold.
 - OBRS-867 AC-6 — seeing events arrive in a real dashboard on SIT before prod gets a tag
   — is **not satisfiable from the codebase**. It needs the owner to create the two
   properties and set `GA4_MEASUREMENT_ID` / `CLARITY_PROJECT_ID` on the SIT Netlify site

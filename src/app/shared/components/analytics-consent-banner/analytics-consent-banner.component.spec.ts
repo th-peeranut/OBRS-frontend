@@ -206,4 +206,51 @@ describe('AnalyticsConsentBannerComponent — route scope', () => {
 
     expect(banner()).not.toBeNull();
   });
+
+  /**
+   * OBRS-874 — the bar stands down where the full control lives.
+   *
+   * Not a privacy rule: /privacy-policy is measurable and the tags load there.
+   * It is that withdrawing returns the answer to `unset`, so without this the
+   * bar would appear the instant a visitor pressed "withdraw", on the page they
+   * pressed it — which reads as the site ignoring them.
+   */
+  describe('the page that owns the consent control', () => {
+    it('is not asked on by the bar', () => {
+      routeSnapshotRoot = chain('privacy-policy');
+
+      navigate('/privacy-policy');
+
+      expect(banner()).toBeNull();
+    });
+
+    it('is still recognised with a query string or fragment on it', () => {
+      // The policy page links to its own sections; a whole-URL comparison would
+      // put the bar back on exactly those deep links.
+      routeSnapshotRoot = chain('privacy-policy');
+
+      navigate('/privacy-policy?lang=th#rights');
+
+      expect(banner()).toBeNull();
+    });
+
+    it('does not silence the bar on a route that merely starts the same way', () => {
+      routeSnapshotRoot = chain('privacy-policy-archive');
+
+      navigate('/privacy-policy-archive');
+
+      expect(banner()).not.toBeNull();
+    });
+
+    it('gives the bar back as soon as the visitor leaves', () => {
+      routeSnapshotRoot = chain('privacy-policy');
+      navigate('/privacy-policy');
+      expect(banner()).toBeNull();
+
+      routeSnapshotRoot = chain('login');
+      navigate('/login');
+
+      expect(banner()).not.toBeNull();
+    });
+  });
 });
