@@ -1,106 +1,130 @@
-<section class="admin-page-intro" *ngIf="isRefreshing && !isLoading">
-  <div>
-    <app-admin-refresh-hint
-      [refreshing]="isRefreshing"
-      [failed]="refreshFailed"
-      [loading]="isLoading"
-    ></app-admin-refresh-hint>
-  </div>
-</section>
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div>
+      <app-admin-refresh-hint
+        [refreshing]="isRefreshing"
+        [failed]="refreshFailed"
+        [loading]="isLoading"
+      ></app-admin-refresh-hint>
+    </div>
+  </section>
+}
 
 <section class="admin-card mt-3">
   <div class="admin-card-head">
     <h4>{{ 'ADMIN.MANUAL_REFUNDS.SUBTITLE' | translate }}</h4>
   </div>
 
-  <p class="admin-error" *ngIf="contentState === 'error'">{{ errorMessage }}</p>
+  @if (contentState === 'error') {
+    <p class="admin-error">{{ errorMessage }}</p>
+  }
 
   <!-- OBRS-209 full-section empty state — deliberately positive, an empty
-       queue is good news, not an error. -->
-  <div class="mrw-empty" *ngIf="contentState === 'empty'">
-    <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
-    <p class="mrw-empty-title">{{ 'ADMIN.MANUAL_REFUNDS.EMPTY' | translate }}</p>
-  </div>
+  queue is good news, not an error. -->
+  @if (contentState === 'empty') {
+    <div class="mrw-empty">
+      <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+      <p class="mrw-empty-title">{{ 'ADMIN.MANUAL_REFUNDS.EMPTY' | translate }}</p>
+    </div>
+  }
 
-  <div class="admin-table-wrap" *ngIf="contentState === 'loading' || contentState === 'data'">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.REFERENCE' | translate }}</th>
-          <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.AMOUNT_OWED' | translate }}</th>
-          <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.PAYMENT_METHOD' | translate }}</th>
-          <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.DESTINATION' | translate }}</th>
-          <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.QUEUED_AT' | translate }}</th>
-          <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.QUEUE_AGE' | translate }}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngIf="contentState === 'loading'">
-          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-            <td><span class="admin-skeleton"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+  @if (contentState === 'loading' || contentState === 'data') {
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.REFERENCE' | translate }}</th>
+            <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.AMOUNT_OWED' | translate }}</th>
+            <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.PAYMENT_METHOD' | translate }}</th>
+            <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.DESTINATION' | translate }}</th>
+            <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.QUEUED_AT' | translate }}</th>
+            <th>{{ 'ADMIN.MANUAL_REFUNDS.COL.QUEUE_AGE' | translate }}</th>
+            <th></th>
           </tr>
-        </ng-container>
+        </thead>
+        <tbody>
+          @if (contentState === 'loading') {
+            @for (row of skeletonRows; track row) {
+              <tr class="admin-skeleton-row" aria-hidden="true">
+                <td><span class="admin-skeleton"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+              </tr>
+            }
+          }
+          @if (contentState === 'data') {
+            @for (row of rows; track trackByPaymentId(i, row); let i = $index) {
+              <tr [class.zebra]="i % 2 === 1">
+                <td>{{ row.bookingNumber ?? row.bookingId }}</td>
+                <td class="mrw-money">{{ formatMoney(row.amountOwed) }}</td>
+                <td>{{ row.paymentMethod }}</td>
+                <td>
+                  @if (hasDestination(row)) {
+                    @if (row.destinationType === 'bank_account') {
+                      <span>
+                        {{ row.destination?.bank }} — {{ row.destination?.accountNumber }}
+                      </span>
+                    }
+                    @if (row.destinationType === 'promptpay') {
+                      <span>
+                        {{ row.destination?.promptpayPhone }}
+                      </span>
+                    }
+                  } @else {
+                    <span class="admin-status is-neutral">{{ 'ADMIN.MANUAL_REFUNDS.DESTINATION_MISSING' | translate }}</span>
+                    <div class="mrw-contact-links">
+                      @if (row.contactPhone) {
+                        <a [href]="'tel:' + row.contactPhone">{{ row.contactPhone }}</a>
+                      }
+                      @if (row.contactEmail) {
+                        <a [href]="'mailto:' + row.contactEmail">{{ row.contactEmail }}</a>
+                      }
+                    </div>
+                  }
+                </td>
+                <td>{{ row.queuedAt ? (row.queuedAt | date: 'dd/MM/yyyy') : '-' }}</td>
+                <td>
+                  @if (queueAgeDays(row) !== null) {
+                    <span class="admin-status" [ngClass]="queueAgeSeverity(row)">
+                      {{ 'ADMIN.MANUAL_REFUNDS.AGE_DAYS' | translate: { days: queueAgeDays(row) } }}
+                    </span>
+                  } @else {
+                    -
+                  }
+                </td>
+                <td>
+                  <button type="button" class="admin-btn admin-btn-small" (click)="openMarkRefunded(row)">
+                    {{ 'ADMIN.MANUAL_REFUNDS.ACTION.MARK_REFUNDED' | translate }}
+                  </button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 
-        <ng-container *ngIf="contentState === 'data'">
-          <tr *ngFor="let row of rows; let i = index; trackBy: trackByPaymentId" [class.zebra]="i % 2 === 1">
-            <td>{{ row.bookingNumber ?? row.bookingId }}</td>
-            <td class="mrw-money">{{ formatMoney(row.amountOwed) }}</td>
-            <td>{{ row.paymentMethod }}</td>
-            <td>
-              <ng-container *ngIf="hasDestination(row); else destinationMissing">
-                <span *ngIf="row.destinationType === 'bank_account'">
-                  {{ row.destination?.bank }} — {{ row.destination?.accountNumber }}
-                </span>
-                <span *ngIf="row.destinationType === 'promptpay'">
-                  {{ row.destination?.promptpayPhone }}
-                </span>
-              </ng-container>
-              <ng-template #destinationMissing>
-                <span class="admin-status is-neutral">{{ 'ADMIN.MANUAL_REFUNDS.DESTINATION_MISSING' | translate }}</span>
-                <div class="mrw-contact-links">
-                  <a *ngIf="row.contactPhone" [href]="'tel:' + row.contactPhone">{{ row.contactPhone }}</a>
-                  <a *ngIf="row.contactEmail" [href]="'mailto:' + row.contactEmail">{{ row.contactEmail }}</a>
-                </div>
-              </ng-template>
-            </td>
-            <td>{{ row.queuedAt ? (row.queuedAt | date: 'dd/MM/yyyy') : '-' }}</td>
-            <td>
-              <span class="admin-status" [ngClass]="queueAgeSeverity(row)" *ngIf="queueAgeDays(row) !== null; else ageUnknown">
-                {{ 'ADMIN.MANUAL_REFUNDS.AGE_DAYS' | translate: { days: queueAgeDays(row) } }}
-              </span>
-              <ng-template #ageUnknown>-</ng-template>
-            </td>
-            <td>
-              <button type="button" class="admin-btn admin-btn-small" (click)="openMarkRefunded(row)">
-                {{ 'ADMIN.MANUAL_REFUNDS.ACTION.MARK_REFUNDED' | translate }}
-              </button>
-            </td>
-          </tr>
-        </ng-container>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="admin-table-footer" *ngIf="contentState === 'data'">
-    <app-admin-paginator
-      [currentPage]="currentPage"
-      [totalPages]="totalPages"
-      [disabled]="isRefreshing"
-      (pageChange)="onPageChange($event)"
-    ></app-admin-paginator>
-  </div>
+  @if (contentState === 'data') {
+    <div class="admin-table-footer">
+      <app-admin-paginator
+        [currentPage]="currentPage"
+        [totalPages]="totalPages"
+        [disabled]="isRefreshing"
+        (pageChange)="onPageChange($event)"
+      ></app-admin-paginator>
+    </div>
+  }
 </section>
 
-<app-mark-refunded-modal
-  *ngIf="markRefundedRow as row"
-  [row]="row"
-  (completed)="onMarkRefundedCompleted()"
-  (closed)="closeMarkRefunded()"
-></app-mark-refunded-modal>
+@if (markRefundedRow; as row) {
+  <app-mark-refunded-modal
+    [row]="row"
+    (completed)="onMarkRefundedCompleted()"
+    (closed)="closeMarkRefunded()"
+  ></app-mark-refunded-modal>
+}

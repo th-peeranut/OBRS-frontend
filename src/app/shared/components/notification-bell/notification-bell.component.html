@@ -6,13 +6,14 @@
     aria-haspopup="true"
     [attr.aria-expanded]="overlayPanel?.overlayVisible ?? false"
     [attr.aria-label]="'NOTIFICATIONS.BELL_ARIA' | translate: { count: (unreadCount$ | async) ?? 0 }"
-  >
+    >
     <span class="material-symbols-outlined">notifications</span>
-    <span
-      *ngIf="unreadCount$ | async as unreadCount"
-      class="admin-nav-badge notification-bell-badge"
-      aria-hidden="true"
-    >{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+    @if (unreadCount$ | async; as unreadCount) {
+      <span
+        class="admin-nav-badge notification-bell-badge"
+        aria-hidden="true"
+      >{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+    }
   </button>
 
   <p-popover
@@ -21,7 +22,7 @@
     [styleClass]="overlayStyleClass"
     [style]="{ width: '360px' }"
     (onShow)="onPanelShow()"
-  >
+    >
     <app-notification-inbox-panel
       [items]="(items$ | async) ?? []"
       [total]="(totalElements$ | async) ?? 0"

@@ -1,3 +1,4 @@
+import { provideZoneChangeDetection } from "@angular/core";
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 
 import { AppModule } from './app/app.module';
@@ -10,7 +11,5 @@ import { assertProdConfig } from './environments/prod-config-guard';
 // a checkout that silently issues free tickets.
 assertProdConfig(environment);
 
-platformBrowserDynamic().bootstrapModule(AppModule, {
-  ngZoneEventCoalescing: true
-})
+platformBrowserDynamic().bootstrapModule(AppModule, { applicationProviders: [provideZoneChangeDetection({ eventCoalescing: true })], })
   .catch(err => console.error(err));

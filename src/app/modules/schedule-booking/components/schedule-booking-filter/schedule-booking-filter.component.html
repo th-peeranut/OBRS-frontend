@@ -1,121 +1,120 @@
 <div class="booking-container">
   <div class="booking-section">
-    <div class="booking-card" [formGroup]="bookingForm" *ngIf="bookingForm">
-      <div class="d-flex gap-5">
-        <!-- DROPDOWN ROUNDTRIP TYPE -->
-        <app-dropdown-obrs
-          [isBorder]="false"
-          [isLabel]="false"
-          [label]="'roundTrip'"
-          [options]="roundTripDropdowns"
-          formControlName="roundTrip"
-        ></app-dropdown-obrs>
-
-        <!-- DROPDOWN PASSENGER COUNT -->
-        <app-dropdown-obrs-passenger
-          formControlName="passengerInfo"
-        ></app-dropdown-obrs-passenger>
-      </div>
-
-      <div class="station-section mt-4">
-        <div class="station-group" *ngIf="rawProvinceStationList | async">
-          <!-- DROPDOWN START STATION -->
-          <app-dropdown-group-obrs
-            [isBorder]="true"
-            [isLabel]="true"
-            [label]="'HOME.HOME_BOOKING.START_STATION'"
-            [value]="getFormValue('startStationId')"
-            [options]="startProvinceStationList"
-            [searchable]="true"
-            (currentValue)="onStartStationChange($event)"
-          ></app-dropdown-group-obrs>
-          <!-- STATION ICON -->
-          <img
-            class="station-icon"
-            src="icons/passenger-station-gap.svg"
-            alt="Passenger Station Gap Icon"
-          />
-          <!-- DROPDOWN STOP STATION -->
-          <app-dropdown-group-obrs
-            [isBorder]="true"
-            [isLabel]="true"
-            [label]="'HOME.HOME_BOOKING.END_STATION'"
-            [value]="getFormValue('stopStationId')"
-            [options]="endProvinceStationList"
-            [searchable]="true"
-            (currentValue)="onEndStationChange($event)"
-          ></app-dropdown-group-obrs>
+    @if (bookingForm) {
+      <div class="booking-card" [formGroup]="bookingForm">
+        <div class="d-flex gap-5">
+          <!-- DROPDOWN ROUNDTRIP TYPE -->
+          <app-dropdown-obrs
+            [isBorder]="false"
+            [isLabel]="false"
+            [label]="'roundTrip'"
+            [options]="roundTripDropdowns"
+            formControlName="roundTrip"
+          ></app-dropdown-obrs>
+          <!-- DROPDOWN PASSENGER COUNT -->
+          <app-dropdown-obrs-passenger
+            formControlName="passengerInfo"
+          ></app-dropdown-obrs-passenger>
         </div>
-
-        <!-- DEPARTURE DATE -->
-        <div class="form-group-obrs">
-          <!-- LABEL -->
-          <label>
-            {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
-          </label>
-          <!-- CALENDAR MAIN ELEMENT -->
-          <p-datePicker
-            styleClass="app-date-field"
-            panelStyleClass="app-date-field-panel"
-            dateFormat="dd/mm/yy"
-            [minDate]="minDate"
-            [maxDate]="maxDate"
-            [iconDisplay]="'input'"
-            [showIcon]="true"
-            inputId="templatedisplay"
-            formControlName="departureDate"
-          >
-            <!-- CUSTOM CALENDAR ICON -->
-            <ng-template pTemplate="inputicon">
+        <div class="station-section mt-4">
+          @if (rawProvinceStationList | async) {
+            <div class="station-group">
+              <!-- DROPDOWN START STATION -->
+              <app-dropdown-group-obrs
+                [isBorder]="true"
+                [isLabel]="true"
+                [label]="'HOME.HOME_BOOKING.START_STATION'"
+                [value]="getFormValue('startStationId')"
+                [options]="startProvinceStationList"
+                [searchable]="true"
+                (currentValue)="onStartStationChange($event)"
+              ></app-dropdown-group-obrs>
+              <!-- STATION ICON -->
               <img
-                class="app-date-field-icon"
-                src="icons/calendar.svg"
-                [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate"
-              />
-            </ng-template>
-          </p-datePicker>
-        </div>
-
-        <!-- ROUND TRIP RETURN -->
-        <ng-container *ngIf="isRoundTripReturn">
-          <!-- DEPARTURE DATE -->
-          <div class="form-group-obrs">
-            <!-- LABEL -->
-            <label>
-              {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
-            </label>
-            <!-- CALENDAR MAIN ELEMENT -->
-            <p-datePicker
-              styleClass="app-date-field"
-              panelStyleClass="app-date-field-panel"
-              dateFormat="dd/mm/yy"
-              [minDate]="minDate"
-              [maxDate]="maxDate"
-              [iconDisplay]="'input'"
-              [showIcon]="true"
-              inputId="templatedisplay"
-              formControlName="returnDate"
-            >
-              <!-- CUSTOM CALENDAR ICON -->
-              <ng-template pTemplate="inputicon">
-                <img
-                  class="app-date-field-icon"
-                  src="icons/calendar.svg"
-                  [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate"
+                class="station-icon"
+                src="icons/passenger-station-gap.svg"
+                alt="Passenger Station Gap Icon"
                 />
-              </ng-template>
-            </p-datePicker>
-          </div>
-        </ng-container>
+                <!-- DROPDOWN STOP STATION -->
+                <app-dropdown-group-obrs
+                  [isBorder]="true"
+                  [isLabel]="true"
+                  [label]="'HOME.HOME_BOOKING.END_STATION'"
+                  [value]="getFormValue('stopStationId')"
+                  [options]="endProvinceStationList"
+                  [searchable]="true"
+                  (currentValue)="onEndStationChange($event)"
+                ></app-dropdown-group-obrs>
+              </div>
+            }
+            <!-- DEPARTURE DATE -->
+            <div class="form-group-obrs">
+              <!-- LABEL -->
+              <label>
+                {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+              </label>
+              <!-- CALENDAR MAIN ELEMENT -->
+              <p-datePicker
+                styleClass="app-date-field"
+                panelStyleClass="app-date-field-panel"
+                dateFormat="dd/mm/yy"
+                [minDate]="minDate"
+                [maxDate]="maxDate"
+                [iconDisplay]="'input'"
+                [showIcon]="true"
+                inputId="templatedisplay"
+                formControlName="departureDate"
+                >
+                <!-- CUSTOM CALENDAR ICON -->
+                <ng-template pTemplate="inputicon">
+                  <img
+                    class="app-date-field-icon"
+                    src="icons/calendar.svg"
+                    [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate"
+                    />
+                  </ng-template>
+                </p-datePicker>
+              </div>
+              <!-- ROUND TRIP RETURN -->
+              @if (isRoundTripReturn) {
+                <!-- DEPARTURE DATE -->
+                <div class="form-group-obrs">
+                  <!-- LABEL -->
+                  <label>
+                    {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+                  </label>
+                  <!-- CALENDAR MAIN ELEMENT -->
+                  <p-datePicker
+                    styleClass="app-date-field"
+                    panelStyleClass="app-date-field-panel"
+                    dateFormat="dd/mm/yy"
+                    [minDate]="minDate"
+                    [maxDate]="maxDate"
+                    [iconDisplay]="'input'"
+                    [showIcon]="true"
+                    inputId="templatedisplay"
+                    formControlName="returnDate"
+                    >
+                    <!-- CUSTOM CALENDAR ICON -->
+                    <ng-template pTemplate="inputicon">
+                      <img
+                        class="app-date-field-icon"
+                        src="icons/calendar.svg"
+                        [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate"
+                        />
+                      </ng-template>
+                    </p-datePicker>
+                  </div>
+                }
+              </div>
+              <!-- SEARCH BUTTON -->
+              <div class="d-flex justify-content-end w-100">
+                <button class="btn btn-search" type="button" (click)="onSearch()">
+                  <img src="icons/search.svg" alt="Search Icon" />
+                  {{ "HOME.HOME_BOOKING.SEARCH" | translate }}
+                </button>
+              </div>
+            </div>
+          }
+        </div>
       </div>
-
-      <!-- SEARCH BUTTON -->
-      <div class="d-flex justify-content-end w-100">
-        <button class="btn btn-search" type="button" (click)="onSearch()">
-          <img src="icons/search.svg" alt="Search Icon" />
-          {{ "HOME.HOME_BOOKING.SEARCH" | translate }}
-        </button>
-      </div>
-    </div>
-  </div>
-</div>

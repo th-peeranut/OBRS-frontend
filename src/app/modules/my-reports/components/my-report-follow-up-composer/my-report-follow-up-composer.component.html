@@ -10,9 +10,11 @@
     formControlName="note"
     [placeholder]="'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.NOTE_PLACEHOLDER' | translate"
   ></textarea>
-  <div *ngIf="noteInvalid" class="mr-edit-form__error">
-    {{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.NOTE_REQUIRED' | translate }}
-  </div>
+  @if (noteInvalid) {
+    <div class="mr-edit-form__error">
+      {{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.NOTE_REQUIRED' | translate }}
+    </div>
+  }
 
   <app-usability-report-image-picker
     class="mt-2"
@@ -23,9 +25,9 @@
   <div class="mr-follow-up-composer__actions mt-2">
     <button type="submit" class="mr-btn-secondary" [disabled]="isSubmitting">
       {{
-        isSubmitting
-          ? ('USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.SUBMITTING' | translate)
-          : ('USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.SUBMIT' | translate)
+      isSubmitting
+      ? ('USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.SUBMITTING' | translate)
+      : ('USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.SUBMIT' | translate)
       }}
     </button>
   </div>

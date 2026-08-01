@@ -1,23 +1,25 @@
 <div class="change-seat-map">
   <div class="change-seat-map__grid">
-    <app-passenger-seat-van
-      *ngIf="isVan"
-      [gender]="'SELECTED'"
-      [takenSeats]="takenSeats"
-      [currentSeat]="pickedSeat"
-      [availableSeatNumbers]="availableSeatNumbers"
-      [seatGenders]="seatGenders"
-      (seatClicked)="onSeatClicked($event)"
-    ></app-passenger-seat-van>
+    @if (isVan) {
+      <app-passenger-seat-van
+        [gender]="'SELECTED'"
+        [takenSeats]="takenSeats"
+        [currentSeat]="pickedSeat"
+        [availableSeatNumbers]="availableSeatNumbers"
+        [seatGenders]="seatGenders"
+        (seatClicked)="onSeatClicked($event)"
+      ></app-passenger-seat-van>
+    }
 
-    <app-passenger-seat-bus
-      *ngIf="!isVan"
-      [gender]="'SELECTED'"
-      [takenSeats]="takenSeats"
-      [currentSeat]="pickedSeat"
-      [seatGenders]="seatGenders"
-      (seatClicked)="onSeatClicked($event)"
-    ></app-passenger-seat-bus>
+    @if (!isVan) {
+      <app-passenger-seat-bus
+        [gender]="'SELECTED'"
+        [takenSeats]="takenSeats"
+        [currentSeat]="pickedSeat"
+        [seatGenders]="seatGenders"
+        (seatClicked)="onSeatClicked($event)"
+      ></app-passenger-seat-bus>
+    }
   </div>
 
   <ul class="change-seat-map__legend">

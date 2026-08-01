@@ -1,137 +1,151 @@
-<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop (dismiss)="requestClose()">
-  <div class="admin-modal ccm-modal">
-    <h4 class="admin-modal-title">{{ 'STAFF.CANCEL_BOOKING.MODAL.TITLE' | translate }}</h4>
-
-    <!-- Optimistic booking summary — renders immediately from the row already
-         in hand, independent of the policy-preview fetch below. Because the
-         phone shown on the search result was masked, the operator confirms
-         the right booking by this combination: name + booking number +
-         route/departure + amount. -->
-    <dl class="ccm-summary">
-      <div class="ccm-summary-row">
-        <dt>{{ 'MY_BOOKINGS.BOOKING_NUMBER' | translate }}</dt>
-        <dd>{{ bookingNumber }}</dd>
-      </div>
-      <div class="ccm-summary-row">
-        <dt>{{ 'STAFF.CANCEL_BOOKING.RESULTS.CUSTOMER' | translate }}</dt>
-        <dd>{{ contactName }}</dd>
-      </div>
-      <div class="ccm-summary-row">
-        <dt>{{ 'MY_BOOKINGS.TOTAL' | translate }}</dt>
-        <dd>{{ booking ? formatCurrency(booking.netAmount) : '-' }}</dd>
-      </div>
-    </dl>
-
-    <!-- Policy preview — independent state machine (previewState) -->
-    <div class="ccm-preview" *ngIf="previewState === 'loading'">
-      <p class="admin-hint">{{ 'STAFF.CANCEL_BOOKING.MODAL.CHECKING_POLICY' | translate }}</p>
-    </div>
-
-    <div class="ccm-preview is-blocked" *ngIf="previewState === 'blocked'">
-      <p class="admin-error">{{ 'STAFF.CANCEL_BOOKING.MODAL.WINDOW_CLOSED' | translate }}</p>
-    </div>
-
-    <div class="ccm-preview is-error" *ngIf="previewState === 'error'">
-      <p class="admin-error">{{ 'STAFF.CANCEL_BOOKING.MODAL.FAILED' | translate }}</p>
-      <button type="button" class="admin-btn admin-btn-small" [disabled]="isSubmitting" (click)="retryCheck()">
-        {{ 'STAFF.CANCEL_BOOKING.MODAL.RETRY_CHECK' | translate }}
-      </button>
-    </div>
-
-    <div class="ccm-policy" *ngIf="previewState === 'resolved' && policy">
-      <p class="ccm-policy-line">
-        {{ 'MY_BOOKINGS.CANCEL.REFUND_LINE' | translate: { refund: refundLabel, rate: policy.refundRatePercent } }}
-      </p>
-      <p class="ccm-policy-line">
-        {{ 'MY_BOOKINGS.CANCEL.PENALTY_LINE' | translate: { penalty: penaltyLabel } }}
-      </p>
-      <p class="admin-hint" *ngIf="isManualRefund">
-        {{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE' | translate }}
-      </p>
-    </div>
-
-    <form [formGroup]="form">
-      <!-- CASH (OBRS-844) — two steps, in the order they happen at the
-           counter: ask the owner, then type the code they issue. The password
-           fields that used to live here are gone; nothing on this screen asks
-           anyone to type a password belonging to someone else. -->
-      <div class="ccm-cash-approval" *ngIf="previewState === 'resolved' && isCashRefund">
-        <h5 class="ccm-cash-approval-title">
-          {{ 'STAFF.CANCEL_BOOKING.MODAL.CASH_APPROVAL_TITLE' | translate }}
-        </h5>
-        <p class="ccm-cash-approval-body">
-          {{ 'STAFF.CANCEL_BOOKING.MODAL.CASH_APPROVAL_BODY' | translate }}
-        </p>
-
-        <!-- Step 1 — ask. Stays visible after a successful ask so the
-             salesperson can re-send if the owner never saw the first one. -->
-        <div class="ccm-approval-request">
-          <button
-            type="button"
-            class="admin-btn admin-btn-small"
-            [disabled]="isSubmitting || approvalState === 'requesting'"
-            (click)="requestApproval()"
-          >
-            {{
-              approvalState === 'requesting'
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="requestClose()">
+    <div class="admin-modal ccm-modal">
+      <h4 class="admin-modal-title">{{ 'STAFF.CANCEL_BOOKING.MODAL.TITLE' | translate }}</h4>
+      <!-- Optimistic booking summary — renders immediately from the row already
+      in hand, independent of the policy-preview fetch below. Because the
+      phone shown on the search result was masked, the operator confirms
+      the right booking by this combination: name + booking number +
+      route/departure + amount. -->
+      <dl class="ccm-summary">
+        <div class="ccm-summary-row">
+          <dt>{{ 'MY_BOOKINGS.BOOKING_NUMBER' | translate }}</dt>
+          <dd>{{ bookingNumber }}</dd>
+        </div>
+        <div class="ccm-summary-row">
+          <dt>{{ 'STAFF.CANCEL_BOOKING.RESULTS.CUSTOMER' | translate }}</dt>
+          <dd>{{ contactName }}</dd>
+        </div>
+        <div class="ccm-summary-row">
+          <dt>{{ 'MY_BOOKINGS.TOTAL' | translate }}</dt>
+          <dd>{{ booking ? formatCurrency(booking.netAmount) : '-' }}</dd>
+        </div>
+      </dl>
+      <!-- Policy preview — independent state machine (previewState) -->
+      @if (previewState === 'loading') {
+        <div class="ccm-preview">
+          <p class="admin-hint">{{ 'STAFF.CANCEL_BOOKING.MODAL.CHECKING_POLICY' | translate }}</p>
+        </div>
+      }
+      @if (previewState === 'blocked') {
+        <div class="ccm-preview is-blocked">
+          <p class="admin-error">{{ 'STAFF.CANCEL_BOOKING.MODAL.WINDOW_CLOSED' | translate }}</p>
+        </div>
+      }
+      @if (previewState === 'error') {
+        <div class="ccm-preview is-error">
+          <p class="admin-error">{{ 'STAFF.CANCEL_BOOKING.MODAL.FAILED' | translate }}</p>
+          <button type="button" class="admin-btn admin-btn-small" [disabled]="isSubmitting" (click)="retryCheck()">
+            {{ 'STAFF.CANCEL_BOOKING.MODAL.RETRY_CHECK' | translate }}
+          </button>
+        </div>
+      }
+      @if (previewState === 'resolved' && policy) {
+        <div class="ccm-policy">
+          <p class="ccm-policy-line">
+            {{ 'MY_BOOKINGS.CANCEL.REFUND_LINE' | translate: { refund: refundLabel, rate: policy.refundRatePercent } }}
+          </p>
+          <p class="ccm-policy-line">
+            {{ 'MY_BOOKINGS.CANCEL.PENALTY_LINE' | translate: { penalty: penaltyLabel } }}
+          </p>
+          @if (isManualRefund) {
+            <p class="admin-hint">
+              {{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE' | translate }}
+            </p>
+          }
+        </div>
+      }
+      <form [formGroup]="form">
+        <!-- CASH (OBRS-844) — two steps, in the order they happen at the
+        counter: ask the owner, then type the code they issue. The password
+        fields that used to live here are gone; nothing on this screen asks
+        anyone to type a password belonging to someone else. -->
+        @if (previewState === 'resolved' && isCashRefund) {
+          <div class="ccm-cash-approval">
+            <h5 class="ccm-cash-approval-title">
+              {{ 'STAFF.CANCEL_BOOKING.MODAL.CASH_APPROVAL_TITLE' | translate }}
+            </h5>
+            <p class="ccm-cash-approval-body">
+              {{ 'STAFF.CANCEL_BOOKING.MODAL.CASH_APPROVAL_BODY' | translate }}
+            </p>
+            <!-- Step 1 — ask. Stays visible after a successful ask so the
+            salesperson can re-send if the owner never saw the first one. -->
+            <div class="ccm-approval-request">
+              <button
+                type="button"
+                class="admin-btn admin-btn-small"
+                [disabled]="isSubmitting || approvalState === 'requesting'"
+                (click)="requestApproval()"
+                >
+                {{
+                approvalState === 'requesting'
                 ? ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUESTING' | translate)
                 : approvalState === 'requested'
-                  ? ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUEST_AGAIN' | translate)
-                  : ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUEST' | translate)
-            }}
+                ? ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUEST_AGAIN' | translate)
+                : ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUEST' | translate)
+                }}
+              </button>
+              @if (approvalState === 'requested') {
+                <p class="admin-hint">
+                  {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUESTED_HINT' | translate }}
+                </p>
+              }
+            </div>
+            <!-- Step 2 — type the six digits the owner reads back. -->
+            <div class="admin-form-field">
+              <label class="admin-form-label">
+                {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVAL_CODE' | translate }}
+                <span class="admin-required">*</span>
+              </label>
+              <input
+                class="admin-field ccm-approval-code"
+                type="text"
+                inputmode="numeric"
+                formControlName="approvalCode"
+                autocomplete="one-time-code"
+                [attr.maxlength]="approvalCodeLength"
+                [disabled]="isSubmitting"
+                />
+                @if (isApprovalCodeInvalid) {
+                  <small class="admin-error">
+                    {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVAL_CODE_FORMAT' | translate: { length: approvalCodeLength } }}
+                  </small>
+                }
+              </div>
+              @if (approverErrorMessage) {
+                <small class="admin-error">{{ approverErrorMessage }}</small>
+              }
+            </div>
+          }
+          <!-- MANUAL_REFUND_REQUIRED — byte-identical usage to
+          OverrideCancelModalComponent / CancelRefundDestinationModalComponent. -->
+          @if (previewState === 'resolved' && isManualRefund) {
+            <div class="admin-form-field full">
+              <app-refund-destination-fields
+                [formGroup]="destinationForm"
+                [disabled]="isSubmitting"
+              ></app-refund-destination-fields>
+              @if (destinationErrorMessage) {
+                <small class="admin-error">{{ destinationErrorMessage }}</small>
+              }
+            </div>
+          }
+        </form>
+        @if (errorMessage) {
+          <p class="admin-error ccm-error">{{ errorMessage }}</p>
+        }
+        <div class="admin-modal-actions">
+          <button type="button" class="admin-btn" [disabled]="isSubmitting" (click)="requestClose()">
+            {{ 'MY_BOOKINGS.CANCEL.CANCEL_BUTTON' | translate }}
           </button>
-          <p class="admin-hint" *ngIf="approvalState === 'requested'">
-            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUESTED_HINT' | translate }}
-          </p>
-        </div>
-
-        <!-- Step 2 — type the six digits the owner reads back. -->
-        <div class="admin-form-field">
-          <label class="admin-form-label">
-            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVAL_CODE' | translate }}
-            <span class="admin-required">*</span>
-          </label>
-          <input
-            class="admin-field ccm-approval-code"
-            type="text"
-            inputmode="numeric"
-            formControlName="approvalCode"
-            autocomplete="one-time-code"
-            [attr.maxlength]="approvalCodeLength"
-            [disabled]="isSubmitting"
-          />
-          <small class="admin-error" *ngIf="isApprovalCodeInvalid">
-            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVAL_CODE_FORMAT' | translate: { length: approvalCodeLength } }}
-          </small>
-        </div>
-
-        <small class="admin-error" *ngIf="approverErrorMessage">{{ approverErrorMessage }}</small>
-      </div>
-
-      <!-- MANUAL_REFUND_REQUIRED — byte-identical usage to
-           OverrideCancelModalComponent / CancelRefundDestinationModalComponent. -->
-      <div class="admin-form-field full" *ngIf="previewState === 'resolved' && isManualRefund">
-        <app-refund-destination-fields
-          [formGroup]="destinationForm"
-          [disabled]="isSubmitting"
-        ></app-refund-destination-fields>
-        <small class="admin-error" *ngIf="destinationErrorMessage">{{ destinationErrorMessage }}</small>
-      </div>
-    </form>
-
-    <p class="admin-error ccm-error" *ngIf="errorMessage">{{ errorMessage }}</p>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" [disabled]="isSubmitting" (click)="requestClose()">
-        {{ 'MY_BOOKINGS.CANCEL.CANCEL_BUTTON' | translate }}
-      </button>
-      <button type="button" class="admin-btn admin-btn-danger" [disabled]="!canSubmit" (click)="submit()">
-        {{
-          isSubmitting
+          <button type="button" class="admin-btn admin-btn-danger" [disabled]="!canSubmit" (click)="submit()">
+            {{
+            isSubmitting
             ? ('STAFF.CANCEL_BOOKING.MODAL.SUBMITTING' | translate)
             : ('MY_BOOKINGS.CANCEL.ACTION' | translate)
-        }}
-      </button>
+            }}
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
+  }

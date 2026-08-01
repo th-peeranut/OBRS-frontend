@@ -1,5 +1,5 @@
 <!-- LIVE MAP (only when API loaded + key set + coordinates exist) -->
-<ng-container *ngIf="showMap; else mapPlaceholder">
+@if (showMap) {
   <!-- MAP + OVERLAY CONTROLS -->
   <div class="route-map-wrap">
     <google-map
@@ -7,40 +7,40 @@
       [options]="mapOptions"
       width="100%"
       height="480px"
-    >
+      >
       <!-- PICKUP MARKERS — iterate precomputed stable array; trackBy prevents destruction on reorder -->
-      <map-marker
-        *ngFor="let m of pickupMarkers; trackBy: trackBySlug"
-        [options]="m.options"
-        (mapClick)="onPickupMarkerClick(m.slug)"
-      ></map-marker>
-
+      @for (m of pickupMarkers; track trackBySlug($index, m)) {
+        <map-marker
+          [options]="m.options"
+          (mapClick)="onPickupMarkerClick(m.slug)"
+        ></map-marker>
+      }
       <!-- DROPOFF MARKERS -->
-      <map-marker
-        *ngFor="let m of dropoffMarkers; trackBy: trackBySlug"
-        [options]="m.options"
-        (mapClick)="onDropoffMarkerClick(m.slug)"
-      ></map-marker>
-
+      @for (m of dropoffMarkers; track trackBySlug($index, m)) {
+        <map-marker
+          [options]="m.options"
+          (mapClick)="onDropoffMarkerClick(m.slug)"
+        ></map-marker>
+      }
       <!-- USER LOCATION MARKER -->
-      <map-marker
-        *ngIf="userMarkerOptions"
-        [options]="userMarkerOptions"
-      ></map-marker>
-
+      @if (userMarkerOptions) {
+        <map-marker
+          [options]="userMarkerOptions"
+        ></map-marker>
+      }
       <!-- ROUTE POLYLINE -->
-      <map-polyline
-        *ngIf="polylinePath.length > 1"
-        [path]="polylinePath"
-        [options]="polylineOptions"
-      ></map-polyline>
+      @if (polylinePath.length > 1) {
+        <map-polyline
+          [path]="polylinePath"
+          [options]="polylineOptions"
+        ></map-polyline>
+      }
     </google-map>
-
     <!-- MAP OVERLAY CONTROLS — stacked bottom-right, the convention users know
-         from Google Maps / ride-hailing apps: "locate me" on top, zoom pill below. -->
+    from Google Maps / ride-hailing apps: "locate me" on top, zoom pill below. -->
     <div class="map-overlay-controls">
       <!-- LOCATE-ME CONTROL — crosshair turns blue once the location is
-           active; shows a spinner while resolving. -->
+      active; shows a spinner while resolving. -->
       <button
         type="button"
         class="locate-me-btn"
@@ -49,13 +49,16 @@
         [title]="(locating ? 'HOME.ROUTE_MAP.LOCATING' : 'HOME.ROUTE_MAP.USE_MY_LOCATION') | translate"
         [attr.aria-label]="'HOME.ROUTE_MAP.USE_MY_LOCATION' | translate"
         (click)="useMyLocation()"
-      >
-        <i *ngIf="!locating" class="bi bi-crosshair"></i>
-        <i *ngIf="locating" class="bi bi-arrow-repeat locate-spin"></i>
+        >
+        @if (!locating) {
+          <i class="bi bi-crosshair"></i>
+        }
+        @if (locating) {
+          <i class="bi bi-arrow-repeat locate-spin"></i>
+        }
       </button>
-
       <!-- ZOOM CONTROL — replaces Google's default (un-styleable) zoomControl;
-           wired directly to the GoogleMap instance via zoomIn()/zoomOut(). -->
+      wired directly to the GoogleMap instance via zoomIn()/zoomOut(). -->
       <div class="map-zoom-control">
         <button type="button" class="map-zoom-btn map-zoom-btn--in"
           [attr.aria-label]="'HOME.ROUTE_MAP.ZOOM_IN' | translate"
@@ -71,40 +74,42 @@
       </div>
     </div>
   </div>
-
   <!-- GEOLOCATION ERROR (subtle, below the map) -->
-  <div
-    *ngIf="locationError"
-    class="small text-danger mt-2 d-flex align-items-center gap-1"
-  >
-    <i class="bi bi-exclamation-circle"></i>
-    <span>{{ (locationError === 'denied' ? 'HOME.ROUTE_MAP.LOCATION_DENIED' : 'HOME.ROUTE_MAP.LOCATION_UNAVAILABLE') | translate }}</span>
-  </div>
-
+  @if (locationError) {
+    <div
+      class="small text-danger mt-2 d-flex align-items-center gap-1"
+      >
+      <i class="bi bi-exclamation-circle"></i>
+      <span>{{ (locationError === 'denied' ? 'HOME.ROUTE_MAP.LOCATION_DENIED' : 'HOME.ROUTE_MAP.LOCATION_UNAVAILABLE') | translate }}</span>
+    </div>
+  }
   <!-- LEGEND -->
   <div class="map-legend mt-2 p-2 rounded border d-flex flex-wrap gap-3 align-items-center">
     <span class="fw-semibold small">{{ 'HOME.ROUTE_MAP.LEGEND_TITLE' | translate }}</span>
-    <div class="d-flex align-items-center gap-1" *ngIf="routeMeta">
-      <span class="legend-dot legend-dot--pickup"></span>
-      <span class="small">
-        {{ 'HOME.ROUTE_MAP.LEGEND_PICKUP' | translate: { province: routeMeta.originProvinceLabel, count: pickupStops.length } }}
-      </span>
-    </div>
-    <div class="d-flex align-items-center gap-1" *ngIf="routeMeta">
-      <span class="legend-dot legend-dot--dropoff"></span>
-      <span class="small">
-        {{ 'HOME.ROUTE_MAP.LEGEND_DROPOFF' | translate: { province: routeMeta.destinationProvinceLabel, count: dropoffStops.length } }}
-      </span>
-    </div>
+    @if (routeMeta) {
+      <div class="d-flex align-items-center gap-1">
+        <span class="legend-dot legend-dot--pickup"></span>
+        <span class="small">
+          {{ 'HOME.ROUTE_MAP.LEGEND_PICKUP' | translate: { province: routeMeta.originProvinceLabel, count: pickupStops.length } }}
+        </span>
+      </div>
+    }
+    @if (routeMeta) {
+      <div class="d-flex align-items-center gap-1">
+        <span class="legend-dot legend-dot--dropoff"></span>
+        <span class="small">
+          {{ 'HOME.ROUTE_MAP.LEGEND_DROPOFF' | translate: { province: routeMeta.destinationProvinceLabel, count: dropoffStops.length } }}
+        </span>
+      </div>
+    }
   </div>
-</ng-container>
-
-<!-- PLACEHOLDER (no key, no coords, or API error) -->
-<ng-template #mapPlaceholder>
+} @else {
   <div class="route-map-placeholder d-flex flex-column align-items-center justify-content-center">
     <i class="bi bi-map fs-1 placeholder-icon mb-2"></i>
     <span class="placeholder-text small text-center px-3">
       {{ 'HOME.ROUTE_MAP.MAP_UNAVAILABLE' | translate }}
     </span>
   </div>
-</ng-template>
+}
+
+<!-- PLACEHOLDER (no key, no coords, or API error) -->

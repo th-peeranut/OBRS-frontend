@@ -4,13 +4,13 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="close-account-dialog-title"
-  >
+    >
     <button
       type="button"
       class="close-account-modal__close"
       (click)="close()"
       [attr.aria-label]="'ACCOUNT.CLOSE_CANCEL' | translate"
-    >
+      >
       <i class="bi bi-x-lg"></i>
     </button>
 
@@ -24,7 +24,7 @@
       </p>
 
       <!-- OBRS-632: this list is the honest description of anonymise-in-place. Do not replace it
-           with "all your data will be deleted" — the transaction rows are kept on purpose. -->
+      with "all your data will be deleted" — the transaction rows are kept on purpose. -->
       <ul class="close-account-modal__list">
         <li>{{ "ACCOUNT.CLOSE_EFFECT_IDENTITY" | translate }}</li>
         <li>{{ "ACCOUNT.CLOSE_EFFECT_LOGIN" | translate }}</li>
@@ -47,24 +47,30 @@
           data-testid="close-account-confirmation"
           formControlName="confirmation"
           autocomplete="off"
-        />
+          />
 
-        <div class="close-account-modal__actions">
-          <button type="button" class="btn-secondary" (click)="close()">
-            {{ "ACCOUNT.CLOSE_CANCEL" | translate }}
-          </button>
-          <button
-            type="submit"
-            class="btn-danger"
-            data-testid="close-account-submit"
-            [disabled]="!isPhraseCorrect || isSubmitting"
-          >
-            <span *ngIf="isSubmitting" class="spinner" aria-hidden="true"></span>
-            <ng-container *ngIf="!isSubmitting">{{ "ACCOUNT.CLOSE_SUBMIT" | translate }}</ng-container>
-            <ng-container *ngIf="isSubmitting">{{ "ACCOUNT.CLOSE_SUBMIT_LOADING" | translate }}</ng-container>
-          </button>
-        </div>
-      </form>
+          <div class="close-account-modal__actions">
+            <button type="button" class="btn-secondary" (click)="close()">
+              {{ "ACCOUNT.CLOSE_CANCEL" | translate }}
+            </button>
+            <button
+              type="submit"
+              class="btn-danger"
+              data-testid="close-account-submit"
+              [disabled]="!isPhraseCorrect || isSubmitting"
+              >
+              @if (isSubmitting) {
+                <span class="spinner" aria-hidden="true"></span>
+              }
+              @if (!isSubmitting) {
+                {{ "ACCOUNT.CLOSE_SUBMIT" | translate }}
+              }
+              @if (isSubmitting) {
+                {{ "ACCOUNT.CLOSE_SUBMIT_LOADING" | translate }}
+              }
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
-</div>

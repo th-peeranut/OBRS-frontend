@@ -1,171 +1,186 @@
 <!-- Title + subtitle are shown by the staff layout topbar (design-system §7). -->
 
 <!-- Error, no cache: reuse OBRS-209's full-section empty-state pattern + Retry. -->
-<div class="inspection-empty" *ngIf="!isLoading && itemsErrorMessage">
-  <span class="material-symbols-outlined" aria-hidden="true">error</span>
-  <p class="inspection-empty-title">{{ itemsErrorMessage }}</p>
-  <button type="button" class="admin-btn admin-btn-primary" (click)="itemsStore.refresh()">
-    {{ 'STAFF.INSPECTION.RETRY' | translate }}
-  </button>
-</div>
+@if (!isLoading && itemsErrorMessage) {
+  <div class="inspection-empty">
+    <span class="material-symbols-outlined" aria-hidden="true">error</span>
+    <p class="inspection-empty-title">{{ itemsErrorMessage }}</p>
+    <button type="button" class="admin-btn admin-btn-primary" (click)="itemsStore.refresh()">
+      {{ 'STAFF.INSPECTION.RETRY' | translate }}
+    </button>
+  </div>
+}
 
 <!-- Empty (200 + [], or every item inactive): full-page blocking empty state, Submit hidden. -->
-<div class="inspection-empty" *ngIf="isEmpty">
-  <span class="material-symbols-outlined" aria-hidden="true">checklist</span>
-  <p class="inspection-empty-title">{{ 'STAFF.INSPECTION.EMPTY_TITLE' | translate }}</p>
-  <p class="inspection-empty-body">{{ 'STAFF.INSPECTION.EMPTY_BODY' | translate }}</p>
-</div>
-
-<form
-  class="inspection-form"
-  [formGroup]="form"
-  *ngIf="!itemsErrorMessage && !isEmpty"
-  (ngSubmit)="onSubmit()"
->
-  <!-- Sticky top strip: vehicle + odometer + progress pill. `top` is bound
-       (not left to the SCSS `top: 0` fallback) because the shared shell
-       topbar above is ALSO sticky at top:0 with a higher z-index — see
-       `topOffsetPx`'s doc comment on the component. -->
-  <div class="inspection-top-strip" [style.top.px]="topOffsetPx">
-    <div class="inspection-top-field">
-      <app-admin-dropdown
-        formControlName="vehicleId"
-        [options]="vehicleOptions"
-        valueKey="code"
-        labelKey="label"
-        [placeholder]="'STAFF.INSPECTION.VEHICLE_PLACEHOLDER' | translate"
-      ></app-admin-dropdown>
-    </div>
-    <div class="inspection-top-field">
-      <p-inputNumber
-        formControlName="odometerKm"
-        mode="decimal"
-        [min]="0"
-        [maxFractionDigits]="0"
-        [useGrouping]="true"
-        [placeholder]="'STAFF.INSPECTION.ODOMETER_PLACEHOLDER' | translate"
-        styleClass="w-100"
-        inputStyleClass="admin-field"
-      ></p-inputNumber>
-      <small class="admin-error" *ngIf="odometerServerError">{{ odometerServerError }}</small>
-    </div>
-    <div class="inspection-progress-pill" *ngIf="!isLoading">
-      {{ 'STAFF.INSPECTION.PROGRESS' | translate: { done: completedCount, total: totalCount } }}
-    </div>
+@if (isEmpty) {
+  <div class="inspection-empty">
+    <span class="material-symbols-outlined" aria-hidden="true">checklist</span>
+    <p class="inspection-empty-title">{{ 'STAFF.INSPECTION.EMPTY_TITLE' | translate }}</p>
+    <p class="inspection-empty-body">{{ 'STAFF.INSPECTION.EMPTY_BODY' | translate }}</p>
   </div>
+}
 
-  <!-- Already-inspected-this-week hint: dismissible, non-blocking — the form
-       underneath stays fully usable, nothing is gated on it. -->
-  <div class="inspection-banner" *ngIf="showAlreadyInspectedBanner && !isBannerDismissed">
-    <span class="material-symbols-outlined" aria-hidden="true">info</span>
-    <span class="inspection-banner-text">{{ 'STAFF.INSPECTION.ALREADY_INSPECTED_HINT' | translate }}</span>
-    <button
-      type="button"
-      class="inspection-banner-dismiss"
-      [attr.aria-label]="'COMMON.DISMISS' | translate"
-      (click)="dismissBanner()"
+@if (!itemsErrorMessage && !isEmpty) {
+  <form
+    class="inspection-form"
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
     >
-      <span class="material-symbols-outlined">close</span>
-    </button>
-  </div>
-
-  <!-- Loading: 6 skeleton cards matching the real row's visual weight. -->
-  <ng-container *ngIf="isLoading">
-    <div class="inspection-row inspection-row--skeleton" *ngFor="let skeleton of skeletonRows">
-      <span class="admin-skeleton"></span>
-      <span class="admin-skeleton admin-skeleton--pill"></span>
+    <!-- Sticky top strip: vehicle + odometer + progress pill. `top` is bound
+    (not left to the SCSS `top: 0` fallback) because the shared shell
+    topbar above is ALSO sticky at top:0 with a higher z-index — see
+    `topOffsetPx`'s doc comment on the component. -->
+    <div class="inspection-top-strip" [style.top.px]="topOffsetPx">
+      <div class="inspection-top-field">
+        <app-admin-dropdown
+          formControlName="vehicleId"
+          [options]="vehicleOptions"
+          valueKey="code"
+          labelKey="label"
+          [placeholder]="'STAFF.INSPECTION.VEHICLE_PLACEHOLDER' | translate"
+        ></app-admin-dropdown>
+      </div>
+      <div class="inspection-top-field">
+        <p-inputNumber
+          formControlName="odometerKm"
+          mode="decimal"
+          [min]="0"
+          [maxFractionDigits]="0"
+          [useGrouping]="true"
+          [placeholder]="'STAFF.INSPECTION.ODOMETER_PLACEHOLDER' | translate"
+          styleClass="w-100"
+          inputStyleClass="admin-field"
+        ></p-inputNumber>
+        @if (odometerServerError) {
+          <small class="admin-error">{{ odometerServerError }}</small>
+        }
+      </div>
+      @if (!isLoading) {
+        <div class="inspection-progress-pill">
+          {{ 'STAFF.INSPECTION.PROGRESS' | translate: { done: completedCount, total: totalCount } }}
+        </div>
+      }
     </div>
-  </ng-container>
-
-  <!-- One card row per checklist item, grouped into vehicle-zone sections
-       (OBRS-530) — not a dense table, illegible at phone width. The section
-       header is the scannable anchor for a driver scrolling through 23 items
-       one-handed at dawn: group name + "done/total" so they always know
-       which zone they're in and how much of it is left. -->
-  <div
-    class="inspection-item-list"
-    *ngIf="!isLoading"
-    formArrayName="items"
-  >
-    <ng-container *ngFor="let group of itemGroups; trackBy: trackByCategory">
-      <div class="inspection-group-header" [attr.data-testid]="'inspection-group-header-' + group.category">
-        <span class="inspection-group-title">{{ group.labelKey | translate }}</span>
-        <span class="inspection-group-counter">
-          {{ 'STAFF.INSPECTION.GROUP_PROGRESS' | translate: groupProgress(group) }}
-        </span>
+    <!-- Already-inspected-this-week hint: dismissible, non-blocking — the form
+    underneath stays fully usable, nothing is gated on it. -->
+    @if (showAlreadyInspectedBanner && !isBannerDismissed) {
+      <div class="inspection-banner">
+        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+        <span class="inspection-banner-text">{{ 'STAFF.INSPECTION.ALREADY_INSPECTED_HINT' | translate }}</span>
+        <button
+          type="button"
+          class="inspection-banner-dismiss"
+          [attr.aria-label]="'COMMON.DISMISS' | translate"
+          (click)="dismissBanner()"
+          >
+          <span class="material-symbols-outlined">close</span>
+        </button>
       </div>
-
+    }
+    <!-- Loading: 6 skeleton cards matching the real row's visual weight. -->
+    @if (isLoading) {
+      @for (skeleton of skeletonRows; track skeleton) {
+        <div class="inspection-row inspection-row--skeleton">
+          <span class="admin-skeleton"></span>
+          <span class="admin-skeleton admin-skeleton--pill"></span>
+        </div>
+      }
+    }
+    <!-- One card row per checklist item, grouped into vehicle-zone sections
+    (OBRS-530) — not a dense table, illegible at phone width. The section
+    header is the scannable anchor for a driver scrolling through 23 items
+    one-handed at dawn: group name + "done/total" so they always know
+    which zone they're in and how much of it is left. -->
+    @if (!isLoading) {
       <div
-        class="inspection-row"
-        *ngFor="let entry of group.rows; trackBy: trackByItemId"
-        [attr.data-testid]="'inspection-row-' + entry.row.itemId"
-        [formGroupName]="entry.flatIndex"
-        [id]="'inspection-row-' + entry.row.itemId"
-        [class.is-highlighted]="highlightedItemId === entry.row.itemId"
-        [style.scrollMarginTop.px]="rowScrollMarginTopPx"
-      >
-        <div class="inspection-row-label">{{ entry.row.label }}</div>
-
-        <!-- Plain admin-btn toggle, not PrimeNG's p-selectButton — the shared
-             .admin-btn primitive already has correct light/dark theming (see
-             boarding-list.component.scss's Board/Un-board precedent), so this
-             gets dark mode for free instead of hand-theming PrimeNG's raw
-             .p-button/.p-highlight internals (which also depend on PrimeNG's
-             own DOM order and would break silently on a library upgrade). A tap
-             on the ALREADY-selected segment is a no-op (selectVerdict()), which
-             is what used to be PrimeNG's [allowEmpty]="false" job. -->
-        <div class="inspection-verdict-toggle" role="group" [attr.aria-label]="'STAFF.INSPECTION.VERDICT_GROUP_ARIA' | translate">
-          <button
-            type="button"
-            class="admin-btn inspection-verdict-btn is-ok"
-            [class.is-selected]="verdictAt(entry.flatIndex) === 'ok'"
-            [attr.aria-pressed]="verdictAt(entry.flatIndex) === 'ok'"
-            (click)="selectVerdict(entry.flatIndex, 'ok')"
-          >
-            {{ 'STAFF.INSPECTION.VERDICT_OK' | translate }}
-          </button>
-          <button
-            type="button"
-            class="admin-btn inspection-verdict-btn is-needs-repair"
-            [class.is-selected]="verdictAt(entry.flatIndex) === 'needs_repair'"
-            [attr.aria-pressed]="verdictAt(entry.flatIndex) === 'needs_repair'"
-            (click)="selectVerdict(entry.flatIndex, 'needs_repair')"
-          >
-            {{ 'STAFF.INSPECTION.VERDICT_NEEDS_REPAIR' | translate }}
-          </button>
-        </div>
-
-        <div class="inspection-row-note" *ngIf="verdictAt(entry.flatIndex) === 'needs_repair'">
-          <textarea
-            class="admin-field"
-            formControlName="note"
-            rows="2"
-            [placeholder]="'STAFF.INSPECTION.NOTE_PLACEHOLDER' | translate"
-          ></textarea>
-          <small class="admin-error" *ngIf="isNoteInvalid(entry.flatIndex)">
-            {{ 'STAFF.INSPECTION.VALIDATION_NOTE_REQUIRED' | translate }}
-          </small>
-        </div>
+        class="inspection-item-list"
+        formArrayName="items"
+        >
+        @for (group of itemGroups; track trackByCategory($index, group)) {
+          <div class="inspection-group-header" [attr.data-testid]="'inspection-group-header-' + group.category">
+            <span class="inspection-group-title">{{ group.labelKey | translate }}</span>
+            <span class="inspection-group-counter">
+              {{ 'STAFF.INSPECTION.GROUP_PROGRESS' | translate: groupProgress(group) }}
+            </span>
+          </div>
+          @for (entry of group.rows; track trackByItemId($index, entry)) {
+            <div
+              class="inspection-row"
+              [attr.data-testid]="'inspection-row-' + entry.row.itemId"
+              [formGroupName]="entry.flatIndex"
+              [id]="'inspection-row-' + entry.row.itemId"
+              [class.is-highlighted]="highlightedItemId === entry.row.itemId"
+              [style.scrollMarginTop.px]="rowScrollMarginTopPx"
+              >
+              <div class="inspection-row-label">{{ entry.row.label }}</div>
+              <!-- Plain admin-btn toggle, not PrimeNG's p-selectButton — the shared
+              .admin-btn primitive already has correct light/dark theming (see
+              boarding-list.component.scss's Board/Un-board precedent), so this
+              gets dark mode for free instead of hand-theming PrimeNG's raw
+              .p-button/.p-highlight internals (which also depend on PrimeNG's
+              own DOM order and would break silently on a library upgrade). A tap
+              on the ALREADY-selected segment is a no-op (selectVerdict()), which
+              is what used to be PrimeNG's [allowEmpty]="false" job. -->
+              <div class="inspection-verdict-toggle" role="group" [attr.aria-label]="'STAFF.INSPECTION.VERDICT_GROUP_ARIA' | translate">
+                <button
+                  type="button"
+                  class="admin-btn inspection-verdict-btn is-ok"
+                  [class.is-selected]="verdictAt(entry.flatIndex) === 'ok'"
+                  [attr.aria-pressed]="verdictAt(entry.flatIndex) === 'ok'"
+                  (click)="selectVerdict(entry.flatIndex, 'ok')"
+                  >
+                  {{ 'STAFF.INSPECTION.VERDICT_OK' | translate }}
+                </button>
+                <button
+                  type="button"
+                  class="admin-btn inspection-verdict-btn is-needs-repair"
+                  [class.is-selected]="verdictAt(entry.flatIndex) === 'needs_repair'"
+                  [attr.aria-pressed]="verdictAt(entry.flatIndex) === 'needs_repair'"
+                  (click)="selectVerdict(entry.flatIndex, 'needs_repair')"
+                  >
+                  {{ 'STAFF.INSPECTION.VERDICT_NEEDS_REPAIR' | translate }}
+                </button>
+              </div>
+              @if (verdictAt(entry.flatIndex) === 'needs_repair') {
+                <div class="inspection-row-note">
+                  <textarea
+                    class="admin-field"
+                    formControlName="note"
+                    rows="2"
+                    [placeholder]="'STAFF.INSPECTION.NOTE_PLACEHOLDER' | translate"
+                  ></textarea>
+                  @if (isNoteInvalid(entry.flatIndex)) {
+                    <small class="admin-error">
+                      {{ 'STAFF.INSPECTION.VALIDATION_NOTE_REQUIRED' | translate }}
+                    </small>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
       </div>
-    </ng-container>
-  </div>
-
-  <!-- Optional whole-inspection notes. -->
-  <div class="inspection-general-notes" *ngIf="!isLoading">
-    <label class="admin-form-label">{{ 'STAFF.INSPECTION.GENERAL_NOTES_LABEL' | translate }}</label>
-    <textarea
-      class="admin-field"
-      formControlName="notes"
-      rows="2"
-      [placeholder]="'STAFF.INSPECTION.GENERAL_NOTES_PLACEHOLDER' | translate"
-    ></textarea>
-  </div>
-
-  <!-- Sticky bottom bar: single primary Submit — always reachable. Never
-       disabled for incompleteness, only while actually submitting. -->
-  <div class="inspection-bottom-bar" *ngIf="!isLoading">
-    <button type="submit" class="admin-btn admin-btn-primary inspection-submit-btn" [disabled]="isSubmitting">
-      {{ isSubmitting ? ('STAFF.INSPECTION.SUBMITTING' | translate) : ('STAFF.INSPECTION.SUBMIT' | translate) }}
-    </button>
-  </div>
-</form>
+    }
+    <!-- Optional whole-inspection notes. -->
+    @if (!isLoading) {
+      <div class="inspection-general-notes">
+        <label class="admin-form-label">{{ 'STAFF.INSPECTION.GENERAL_NOTES_LABEL' | translate }}</label>
+        <textarea
+          class="admin-field"
+          formControlName="notes"
+          rows="2"
+          [placeholder]="'STAFF.INSPECTION.GENERAL_NOTES_PLACEHOLDER' | translate"
+        ></textarea>
+      </div>
+    }
+    <!-- Sticky bottom bar: single primary Submit — always reachable. Never
+    disabled for incompleteness, only while actually submitting. -->
+    @if (!isLoading) {
+      <div class="inspection-bottom-bar">
+        <button type="submit" class="admin-btn admin-btn-primary inspection-submit-btn" [disabled]="isSubmitting">
+          {{ isSubmitting ? ('STAFF.INSPECTION.SUBMITTING' | translate) : ('STAFF.INSPECTION.SUBMIT' | translate) }}
+        </button>
+      </div>
+    }
+  </form>
+}

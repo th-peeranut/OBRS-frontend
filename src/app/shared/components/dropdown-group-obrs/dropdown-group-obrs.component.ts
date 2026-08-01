@@ -15,7 +15,7 @@ import {
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, ControlValueAccessor, FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { CommonModule } from '@angular/common';
+
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { localizedDropdownName } from '../../lib/localized-dropdown-name';
@@ -31,7 +31,7 @@ import { localizedDropdownName } from '../../lib/localized-dropdown-name';
             multi: true,
         },
     ],
-    imports: [CommonModule, TranslateModule, FormsModule]
+    imports: [TranslateModule, FormsModule]
 })
 export class DropdownGroupObrsComponent
   implements ControlValueAccessor, OnInit, OnChanges, AfterViewInit, OnDestroy

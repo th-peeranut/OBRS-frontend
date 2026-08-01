@@ -1,7 +1,11 @@
 <section class="admin-page-intro">
   <div>
-    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
-    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    @if (isLoading) {
+      <p class="admin-muted">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    }
+    @if (errorMessage) {
+      <p class="admin-muted">{{ errorMessage }}</p>
+    }
     <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
   </div>
   <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
@@ -33,67 +37,70 @@
       [value]="searchKeyword"
       (input)="onSearchKeywordChange($any($event.target).value)"
       [placeholder]="'ADMIN.LAYOUT.SEARCH_PLACEHOLDER' | translate"
-    />
-  </label>
+      />
+    </label>
 
-  <app-admin-dropdown
-    [value]="selectedStatusFilter"
-    [options]="statusOptions"
-    valueKey="code"
-    labelKey="label"
-    [placeholder]="'ADMIN.ROUTES.FILTER_STATUS' | translate"
-    (valueChange)="onStatusFilterChange($event)"
-  ></app-admin-dropdown>
-</section>
+    <app-admin-dropdown
+      [value]="selectedStatusFilter"
+      [options]="statusOptions"
+      valueKey="code"
+      labelKey="label"
+      [placeholder]="'ADMIN.ROUTES.FILTER_STATUS' | translate"
+      (valueChange)="onStatusFilterChange($event)"
+    ></app-admin-dropdown>
+  </section>
 
-<app-route-list-table
-  [routes]="filteredRoutes"
-  [totalCount]="routes.length"
-  [selectedRouteSlug]="selectedRouteSlug"
-  [isLoading]="isLoading"
-  [hasError]="!!errorMessage"
-  (view)="selectRoute($event)"
-  (edit)="openEditModal($event)"
-  (delete)="openDeleteModal($event)"
-></app-route-list-table>
+  <app-route-list-table
+    [routes]="filteredRoutes"
+    [totalCount]="routes.length"
+    [selectedRouteSlug]="selectedRouteSlug"
+    [isLoading]="isLoading"
+    [hasError]="!!errorMessage"
+    (view)="selectRoute($event)"
+    (edit)="openEditModal($event)"
+    (delete)="openDeleteModal($event)"
+  ></app-route-list-table>
 
-<app-route-detail-panel
-  #routeDetailSection
-  [hasRoute]="!!selectedRoute"
-  [stops]="stops"
-  [allSegments]="allSegments"
-  [isDetailLoading]="isDetailLoading"
-  (editSegment)="openSegmentEditModal($event)"
-></app-route-detail-panel>
+  <app-route-detail-panel
+    #routeDetailSection
+    [hasRoute]="!!selectedRoute"
+    [stops]="stops"
+    [allSegments]="allSegments"
+    [isDetailLoading]="isDetailLoading"
+    (editSegment)="openSegmentEditModal($event)"
+  ></app-route-detail-panel>
 
-<app-route-form-modal
-  [statusOptions]="statusOptions"
-  (saved)="onRouteSaved($event)"
-></app-route-form-modal>
+  <app-route-form-modal
+    [statusOptions]="statusOptions"
+    (saved)="onRouteSaved($event)"
+  ></app-route-form-modal>
 
-<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen" adminModalBackdrop (dismiss)="closeDeleteModal()">
-  <div class="admin-modal admin-modal-confirm">
-    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
-    <p class="admin-modal-subtitle">
-      {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
-      <strong *ngIf="routeForDelete">{{ routeForDelete.slug }}</strong>
-    </p>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="closeDeleteModal()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirmDelete()">
-        {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
-      </button>
+  @if (isDeleteModalOpen) {
+    <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="closeDeleteModal()">
+      <div class="admin-modal admin-modal-confirm">
+        <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
+        <p class="admin-modal-subtitle">
+          {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
+          @if (routeForDelete) {
+            <strong>{{ routeForDelete.slug }}</strong>
+          }
+        </p>
+        <div class="admin-modal-actions">
+          <button type="button" class="admin-btn" (click)="closeDeleteModal()">
+            {{ 'ADMIN.COMMON.CANCEL' | translate }}
+          </button>
+          <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirmDelete()">
+            {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
+  }
 
-<app-segment-edit-modal
-  [stops]="stops"
-  [allSegments]="allSegments"
-  [routeSlug]="selectedRouteSlug"
-  [reloadStructure]="reloadStructureBound"
-  (saved)="onSegmentSaved()"
-></app-segment-edit-modal>
+  <app-segment-edit-modal
+    [stops]="stops"
+    [allSegments]="allSegments"
+    [routeSlug]="selectedRouteSlug"
+    [reloadStructure]="reloadStructureBound"
+    (saved)="onSegmentSaved()"
+  ></app-segment-edit-modal>

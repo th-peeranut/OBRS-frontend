@@ -1,23 +1,26 @@
-<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop (dismiss)="cancel.emit()">
-  <div class="admin-modal admin-modal-confirm">
-    <h4 class="admin-modal-title">{{ 'ADMIN.PROMOTIONS.DEACTIVATE_CONFIRM_TITLE' | translate }}</h4>
-    <p class="admin-modal-subtitle">
-      {{ 'ADMIN.PROMOTIONS.DEACTIVATE_CONFIRM_MESSAGE' | translate }}
-      <strong *ngIf="promotion">{{ promotion.code }}</strong>
-    </p>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="cancel.emit()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button
-        type="button"
-        class="admin-btn admin-btn-primary"
-        [disabled]="isDeactivating"
-        (click)="confirm.emit()"
-      >
-        {{ isDeactivating ? ('ADMIN.PROMOTIONS.DEACTIVATING' | translate) : ('ADMIN.PROMOTIONS.DEACTIVATE' | translate) }}
-      </button>
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="cancel.emit()">
+    <div class="admin-modal admin-modal-confirm">
+      <h4 class="admin-modal-title">{{ 'ADMIN.PROMOTIONS.DEACTIVATE_CONFIRM_TITLE' | translate }}</h4>
+      <p class="admin-modal-subtitle">
+        {{ 'ADMIN.PROMOTIONS.DEACTIVATE_CONFIRM_MESSAGE' | translate }}
+        @if (promotion) {
+          <strong>{{ promotion.code }}</strong>
+        }
+      </p>
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" (click)="cancel.emit()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-primary"
+          [disabled]="isDeactivating"
+          (click)="confirm.emit()"
+          >
+          {{ isDeactivating ? ('ADMIN.PROMOTIONS.DEACTIVATING' | translate) : ('ADMIN.PROMOTIONS.DEACTIVATE' | translate) }}
+        </button>
+      </div>
     </div>
   </div>
-</div>
+}

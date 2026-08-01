@@ -1,6 +1,8 @@
-<section class="admin-page-intro" *ngIf="isRefreshing && !isLoading">
-  <div><app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="false" [loading]="isLoading"></app-admin-refresh-hint></div>
-</section>
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div><app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="false" [loading]="isLoading"></app-admin-refresh-hint></div>
+  </section>
+}
 
 <section class="admin-page-filters mt-3">
   <p-datePicker styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
@@ -15,53 +17,84 @@
   </p-datePicker>
 </section>
 
-<section class="admin-card mt-3 reports-state-card" *ngIf="contentState === 'invalid' || contentState === 'error'">
-  <p class="admin-error" *ngIf="contentState === 'invalid'">{{ rangeError }}</p>
-  <p class="admin-muted" *ngIf="contentState === 'error'">{{ loadError }}</p>
-</section>
+@if (contentState === 'invalid' || contentState === 'error') {
+  <section class="admin-card mt-3 reports-state-card">
+    @if (contentState === 'invalid') {
+      <p class="admin-error">{{ rangeError }}</p>
+    }
+    @if (contentState === 'error') {
+      <p class="admin-muted">{{ loadError }}</p>
+    }
+  </section>
+}
 
-<section class="admin-grid admin-grid--4 mt-3" *ngIf="contentState === 'loading' || contentState === 'data'">
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon"><span class="material-symbols-outlined">group</span></span>
-    <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.CUSTOMERS' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading; else sk">{{ formatCount(data?.distinctCustomers ?? 0) }}</p></div>
-  </article>
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">repeat</span></span>
-    <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.RETURNING' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading; else sk">{{ pctDisplay(data?.returningRatePct ?? 0) }}</p></div>
-  </article>
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
-    <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.BOOKINGS' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading; else sk">{{ formatCount(data?.totalBookings ?? 0) }}</p></div>
-  </article>
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">shopping_cart</span></span>
-    <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.AVG' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading; else sk">{{ formatAvg(data?.avgBookingsPerCustomer ?? 0) }}</p></div>
-  </article>
-</section>
-<ng-template #sk><span class="admin-skeleton admin-skeleton--sm"></span></ng-template>
+@if (contentState === 'loading' || contentState === 'data') {
+  <section class="admin-grid admin-grid--4 mt-3">
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">group</span></span>
+      <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.CUSTOMERS' | translate }}</p>
+      @if (!isLoading) {
+        <p class="admin-big-number">{{ formatCount(data?.distinctCustomers ?? 0) }}</p>
+      } @else {
+        <span class="admin-skeleton admin-skeleton--sm"></span>
+      }</div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">repeat</span></span>
+      <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.RETURNING' | translate }}</p>
+      @if (!isLoading) {
+        <p class="admin-big-number">{{ pctDisplay(data?.returningRatePct ?? 0) }}</p>
+      } @else {
+        <span class="admin-skeleton admin-skeleton--sm"></span>
+      }</div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
+      <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.BOOKINGS' | translate }}</p>
+      @if (!isLoading) {
+        <p class="admin-big-number">{{ formatCount(data?.totalBookings ?? 0) }}</p>
+      } @else {
+        <span class="admin-skeleton admin-skeleton--sm"></span>
+      }</div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">shopping_cart</span></span>
+      <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.AVG' | translate }}</p>
+      @if (!isLoading) {
+        <p class="admin-big-number">{{ formatAvg(data?.avgBookingsPerCustomer ?? 0) }}</p>
+      } @else {
+        <span class="admin-skeleton admin-skeleton--sm"></span>
+      }</div>
+    </article>
+  </section>
+}
 
-<section class="admin-card mt-3" *ngIf="contentState === 'data' && channels.length > 0">
-  <div class="admin-card-head"><h4>{{ 'ADMIN.CUSTOMER_BEHAVIOR.CHANNEL_TITLE' | translate }}</h4></div>
-  <div class="cb-list">
-    <div class="cb-row" *ngFor="let c of channels; trackBy: trackByChannel">
-      <span class="cb-label">{{ 'ADMIN.CUSTOMER_BEHAVIOR.CHANNEL.' + c.channel | translate }}</span>
-      <div class="cb-track"><div class="cb-bar" [style.width.%]="barPct(c.sharePct)"></div></div>
-      <span class="cb-value">{{ formatCount(c.bookingCount) }} · {{ pctDisplay(c.sharePct) }}</span>
+@if (contentState === 'data' && channels.length > 0) {
+  <section class="admin-card mt-3">
+    <div class="admin-card-head"><h4>{{ 'ADMIN.CUSTOMER_BEHAVIOR.CHANNEL_TITLE' | translate }}</h4></div>
+    <div class="cb-list">
+      @for (c of channels; track trackByChannel($index, c)) {
+        <div class="cb-row">
+          <span class="cb-label">{{ 'ADMIN.CUSTOMER_BEHAVIOR.CHANNEL.' + c.channel | translate }}</span>
+          <div class="cb-track"><div class="cb-bar" [style.width.%]="barPct(c.sharePct)"></div></div>
+          <span class="cb-value">{{ formatCount(c.bookingCount) }} · {{ pctDisplay(c.sharePct) }}</span>
+        </div>
+      }
     </div>
-  </div>
-</section>
+  </section>
+}
 
-<section class="admin-card mt-3" *ngIf="contentState === 'data' && repeat.length > 0">
-  <div class="admin-card-head"><h4>{{ 'ADMIN.CUSTOMER_BEHAVIOR.REPEAT_TITLE' | translate }}</h4></div>
-  <div class="cb-list">
-    <div class="cb-row" *ngFor="let b of repeat; trackBy: trackByBucket">
-      <span class="cb-label">{{ repeatLabel(b) }}</span>
-      <div class="cb-track"><div class="cb-bar cb-bar--repeat" [style.width.%]="repeatBarPct(b)"></div></div>
-      <span class="cb-value">{{ formatCount(b.customers) }} · {{ pctDisplay(b.sharePct) }}</span>
+@if (contentState === 'data' && repeat.length > 0) {
+  <section class="admin-card mt-3">
+    <div class="admin-card-head"><h4>{{ 'ADMIN.CUSTOMER_BEHAVIOR.REPEAT_TITLE' | translate }}</h4></div>
+    <div class="cb-list">
+      @for (b of repeat; track trackByBucket($index, b)) {
+        <div class="cb-row">
+          <span class="cb-label">{{ repeatLabel(b) }}</span>
+          <div class="cb-track"><div class="cb-bar cb-bar--repeat" [style.width.%]="repeatBarPct(b)"></div></div>
+          <span class="cb-value">{{ formatCount(b.customers) }} · {{ pctDisplay(b.sharePct) }}</span>
+        </div>
+      }
     </div>
-  </div>
-</section>
+  </section>
+}

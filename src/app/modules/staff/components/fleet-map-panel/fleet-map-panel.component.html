@@ -1,18 +1,19 @@
-<div class="fleet-map-panel" *ngIf="canShowMap; else mapUnavailable">
-  <div #canvas class="fleet-map-canvas"></div>
-  <button
-    type="button"
-    class="admin-btn fleet-map-center-btn"
-    (click)="centerOnFleet()"
-  >
-    <span class="material-symbols-outlined" aria-hidden="true">my_location</span>
-    <span>{{ 'STAFF.FLEET_MAP.CENTER_ON_FLEET' | translate }}</span>
-  </button>
-</div>
-
-<ng-template #mapUnavailable>
+@if (canShowMap) {
+  <div class="fleet-map-panel">
+    <div #canvas class="fleet-map-canvas"></div>
+    <button
+      type="button"
+      class="admin-btn fleet-map-center-btn"
+      (click)="centerOnFleet()"
+      >
+      <span class="material-symbols-outlined" aria-hidden="true">my_location</span>
+      <span>{{ 'STAFF.FLEET_MAP.CENTER_ON_FLEET' | translate }}</span>
+    </button>
+  </div>
+} @else {
   <div class="fleet-map-unavailable">
     <span class="material-symbols-outlined" aria-hidden="true">map</span>
     <p>{{ 'STAFF.FLEET_MAP.MAP_UNAVAILABLE' | translate }}</p>
   </div>
-</ng-template>
+}
+

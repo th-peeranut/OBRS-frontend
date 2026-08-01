@@ -33,7 +33,7 @@
             getForm('phoneNo')?.errors &&
             (getForm('phoneNo')?.touched || getForm('phoneNo')?.dirty)
           "
-        >
+          >
           {{ "LOGIN.PHONE_NO" | translate }}
         </label>
 
@@ -50,42 +50,43 @@
               getForm('phoneNo')?.errors &&
               (getForm('phoneNo')?.touched || getForm('phoneNo')?.dirty)
             "
-          />
-        </div>
+            />
+          </div>
 
-        <div
-          class="text-error"
-          *ngIf="
+          @if (
             getForm('phoneNo')?.errors &&
             (getForm('phoneNo')?.touched || getForm('phoneNo')?.dirty)
-          "
-        >
-          {{ "LOGIN.PHONE_NO_REQUIRED" | translate }}
+            ) {
+            <div
+              class="text-error"
+              >
+              {{ "LOGIN.PHONE_NO_REQUIRED" | translate }}
+            </div>
+          }
         </div>
-      </div>
-      <!-- SENT OTP BUTTON -->
-      <button type="submit" class="login-btn mt-3" (click)="goToOTP()">
-        {{ "LOGIN.SEND_OTP" | translate }}
-      </button>
-      <!-- OR -->
-      <div class="or-section gap-3 mt-3">
-        <hr />
-        <span>
-          {{ "LOGIN.OR" | translate }}
-        </span>
-        <hr />
-      </div>
-      <!-- LOGIN BY USERNAME OR EMAIL -->
-      <button type="button" class="login-by-phone-no-btn mt-3" [routerLink]="'/login'">
-        {{ "LOGIN.LOGIN_USERNAME" | translate }}
-      </button>
-      <!-- REGISTER LINK -->
-      <p class="register-link text-center mt-4">
-        {{ "LOGIN.REGISTERLINK" | translate }}
-        <a class="obrs-link" [routerLink]="'/register'">
-          {{ "LOGIN.REGISTERLINK_CLICK" | translate }}
-        </a>
-      </p>
-    </form>
+        <!-- SENT OTP BUTTON -->
+        <button type="submit" class="login-btn mt-3" (click)="goToOTP()">
+          {{ "LOGIN.SEND_OTP" | translate }}
+        </button>
+        <!-- OR -->
+        <div class="or-section gap-3 mt-3">
+          <hr />
+          <span>
+            {{ "LOGIN.OR" | translate }}
+          </span>
+          <hr />
+        </div>
+        <!-- LOGIN BY USERNAME OR EMAIL -->
+        <button type="button" class="login-by-phone-no-btn mt-3" [routerLink]="'/login'">
+          {{ "LOGIN.LOGIN_USERNAME" | translate }}
+        </button>
+        <!-- REGISTER LINK -->
+        <p class="register-link text-center mt-4">
+          {{ "LOGIN.REGISTERLINK" | translate }}
+          <a class="obrs-link" [routerLink]="'/register'">
+            {{ "LOGIN.REGISTERLINK_CLICK" | translate }}
+          </a>
+        </p>
+      </form>
+    </div>
   </div>
-</div>

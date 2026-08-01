@@ -4,79 +4,87 @@
   [class.disabled]="isDisabled"
   [class.active-owner]="isActiveOwner"
   (click)="setPassengerSeatOuput(label)"
->
+  >
   {{ label }}
 
   <!-- Owner badge (shared seat map, OBRS-242): which passenger this seat
-       belongs to. A corner badge (like Original below) so it never hides
-       the seat label or the centered gender icon. -->
-  <span
-    *ngIf="!isDisabled && ownerLabel"
-    class="seat-owner-badge"
-    aria-hidden="true"
-  >{{ ownerLabel }}</span>
+  belongs to. A corner badge (like Original below) so it never hides
+  the seat label or the centered gender icon. -->
+  @if (!isDisabled && ownerLabel) {
+    <span
+      class="seat-owner-badge"
+      aria-hidden="true"
+    >{{ ownerLabel }}</span>
+  }
 
   <!-- Male -->
-  <img
-    *ngIf="!isDisabled && gender == 'MALE'"
-    class="passenger-male-icon"
-    src="icons/passenger-male.svg"
-    alt="Passenger Male Icon"
-  />
+  @if (!isDisabled && gender == 'MALE') {
+    <img
+      class="passenger-male-icon"
+      src="icons/passenger-male.svg"
+      alt="Passenger Male Icon"
+      />
+  }
 
   <!-- Female -->
-  <img
-    *ngIf="!isDisabled && gender == 'FEMALE'"
-    class="passenger-female-icon"
-    src="icons/passenger-female.svg"
-    alt="Passenger Female Icon"
-  />
+  @if (!isDisabled && gender == 'FEMALE') {
+    <img
+      class="passenger-female-icon"
+      src="icons/passenger-female.svg"
+      alt="Passenger Female Icon"
+      />
+  }
 
   <!-- Monk -->
-  <img
-    *ngIf="!isDisabled && gender == 'MONK'"
-    class="passenger-monk-icon"
-    src="icons/passenger-monk.svg"
-    alt="Passenger Monk Icon"
-  />
+  @if (!isDisabled && gender == 'MONK') {
+    <img
+      class="passenger-monk-icon"
+      src="icons/passenger-monk.svg"
+      alt="Passenger Monk Icon"
+      />
+  }
 
   <!-- Selected (neutral marker — no gender, e.g. the change-seat dialog) -->
-  <span
-    *ngIf="!isDisabled && gender == 'SELECTED'"
-    class="material-symbols-outlined passenger-selected-icon"
-    aria-hidden="true"
-  >check_circle</span>
+  @if (!isDisabled && gender == 'SELECTED') {
+    <span
+      class="material-symbols-outlined passenger-selected-icon"
+      aria-hidden="true"
+    >check_circle</span>
+  }
 
   <!-- Original/current seat (persistent marker, distinct from Selected —
-       the change-seat dialog keeps this visible on the traveler's original
-       seat even after a different seat is picked, OBRS-170). A corner badge
-       rather than a centered overlay so it never hides the seat label. -->
-  <span
-    *ngIf="!isDisabled && gender == 'ORIGINAL'"
-    class="material-symbols-outlined passenger-original-icon"
-    aria-hidden="true"
-  >bookmark</span>
+  the change-seat dialog keeps this visible on the traveler's original
+  seat even after a different seat is picked, OBRS-170). A corner badge
+  rather than a centered overlay so it never hides the seat label. -->
+  @if (!isDisabled && gender == 'ORIGINAL') {
+    <span
+      class="material-symbols-outlined passenger-original-icon"
+      aria-hidden="true"
+    >bookmark</span>
+  }
 
   <!-- Wheelchair-accessible badge (OBRS-362) — bottom-left filled circle.
-       Renders UNCONDITIONALLY, not gated by isDisabled (unlike every marker
-       above): accessibility info is still relevant on an already-taken seat. -->
-  <span
-    *ngIf="hasWheelchairBadge"
-    class="seat-attribute-badge seat-attribute-badge-wheelchair"
-    role="img"
-    [attr.aria-label]="wheelchairBadgeAriaLabel"
-  >
-    <span class="material-symbols-outlined" aria-hidden="true">accessible</span>
-  </span>
+  Renders UNCONDITIONALLY, not gated by isDisabled (unlike every marker
+  above): accessibility info is still relevant on an already-taken seat. -->
+  @if (hasWheelchairBadge) {
+    <span
+      class="seat-attribute-badge seat-attribute-badge-wheelchair"
+      role="img"
+      [attr.aria-label]="wheelchairBadgeAriaLabel"
+      >
+      <span class="material-symbols-outlined" aria-hidden="true">accessible</span>
+    </span>
+  }
 
   <!-- Extra-legroom badge — bottom-right; a seat can carry BOTH badges at
-       once (e.g. front-row A1/B1), so the two never overlap. -->
-  <span
-    *ngIf="hasExtraLegroomBadge"
-    class="seat-attribute-badge seat-attribute-badge-legroom"
-    role="img"
-    [attr.aria-label]="extraLegroomBadgeAriaLabel"
-  >
-    <span class="material-symbols-outlined" aria-hidden="true">airline_seat_legroom_extra</span>
-  </span>
+  once (e.g. front-row A1/B1), so the two never overlap. -->
+  @if (hasExtraLegroomBadge) {
+    <span
+      class="seat-attribute-badge seat-attribute-badge-legroom"
+      role="img"
+      [attr.aria-label]="extraLegroomBadgeAriaLabel"
+      >
+      <span class="material-symbols-outlined" aria-hidden="true">airline_seat_legroom_extra</span>
+    </span>
+  }
 </div>

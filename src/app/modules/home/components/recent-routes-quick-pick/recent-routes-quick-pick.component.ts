@@ -9,7 +9,7 @@ import {
   Output,
   SimpleChanges,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -45,7 +45,7 @@ interface RecentRouteView {
     selector: 'app-recent-routes-quick-pick',
     templateUrl: './recent-routes-quick-pick.component.html',
     styleUrl: './recent-routes-quick-pick.component.scss',
-    imports: [CommonModule, TranslateModule]
+    imports: [TranslateModule]
 })
 export class RecentRoutesQuickPickComponent implements OnInit, OnChanges, OnDestroy {
   @Input() routes: RecentRouteCandidate[] = [];

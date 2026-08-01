@@ -1,12 +1,14 @@
-<section class="admin-page-intro" *ngIf="isRefreshing && !isLoading">
-  <div>
-    <app-admin-refresh-hint
-      [refreshing]="isRefreshing"
-      [failed]="false"
-      [loading]="isLoading"
-    ></app-admin-refresh-hint>
-  </div>
-</section>
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div>
+      <app-admin-refresh-hint
+        [refreshing]="isRefreshing"
+        [failed]="false"
+        [loading]="isLoading"
+      ></app-admin-refresh-hint>
+    </div>
+  </section>
+}
 
 <section class="admin-page-filters mt-3">
   <p-datePicker
@@ -19,7 +21,7 @@
     [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.REPORTS.FILTER_FROM' | translate"
-  >
+    >
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
@@ -35,7 +37,7 @@
     [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.REPORTS.FILTER_TO' | translate"
-  >
+    >
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
@@ -58,110 +60,142 @@
 </section>
 
 <!-- Invalid range (client guard) or fetch error: the message REPLACES the tiles
-     and the daily table — never shown next to stale/zero numbers. -->
-<section class="admin-card mt-3 reports-state-card" *ngIf="contentState === 'invalid' || contentState === 'error'">
-  <p class="admin-error" *ngIf="contentState === 'invalid'">{{ rangeError }}</p>
-  <p class="admin-muted" *ngIf="contentState === 'error'">{{ loadError }}</p>
-</section>
+and the daily table — never shown next to stale/zero numbers. -->
+@if (contentState === 'invalid' || contentState === 'error') {
+  <section class="admin-card mt-3 reports-state-card">
+    @if (contentState === 'invalid') {
+      <p class="admin-error">{{ rangeError }}</p>
+    }
+    @if (contentState === 'error') {
+      <p class="admin-muted">{{ loadError }}</p>
+    }
+  </section>
+}
 
-<section class="admin-grid admin-grid--4 mt-3" *ngIf="contentState === 'loading' || contentState === 'empty' || contentState === 'data'">
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.BOOKINGS' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ tiles?.bookingCount ?? 0 }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
+@if (contentState === 'loading' || contentState === 'empty' || contentState === 'data') {
+  <section class="admin-grid admin-grid--4 mt-3">
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.BOOKINGS' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ tiles?.bookingCount ?? 0 }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">event_seat</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.TICKETS_SOLD' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ tiles?.ticketsSold ?? 0 }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">donut_large</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.OCCUPANCY' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ occupancyDisplay(tiles?.occupancyRatePct ?? 0) }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+      </div>
+    </article>
+    @if (showRevenue) {
+      <article class="admin-card admin-kpi">
+        <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+        <div>
+          <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.REVENUE' | translate }}</p>
+          <p class="admin-big-number">{{ revenueTileDisplay }}</p>
+        </div>
+      </article>
+    }
+  </section>
+}
+
+@if (contentState === 'loading' || contentState === 'empty' || contentState === 'data') {
+  <section class="admin-card mt-3">
+    <div class="admin-card-head">
+      <h4>{{ 'ADMIN.REPORTS.TABLE_TITLE' | translate }}</h4>
     </div>
-  </article>
-
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon"><span class="material-symbols-outlined">event_seat</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.TICKETS_SOLD' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ tiles?.ticketsSold ?? 0 }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-    </div>
-  </article>
-
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">donut_large</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.OCCUPANCY' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ occupancyDisplay(tiles?.occupancyRatePct ?? 0) }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-    </div>
-  </article>
-
-  <article class="admin-card admin-kpi" *ngIf="showRevenue">
-    <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.REVENUE' | translate }}</p>
-      <p class="admin-big-number">{{ revenueTileDisplay }}</p>
-    </div>
-  </article>
-</section>
-
-<section class="admin-card mt-3" *ngIf="contentState === 'loading' || contentState === 'empty' || contentState === 'data'">
-  <div class="admin-card-head">
-    <h4>{{ 'ADMIN.REPORTS.TABLE_TITLE' | translate }}</h4>
-  </div>
-
-  <!-- Valid but empty range: the note REPLACES the table, so a screenful of
-       zero rows never reads as "there is data". Tiles above still show 0. -->
-  <p class="admin-muted reports-empty-note" *ngIf="contentState === 'empty'">
-    {{ 'ADMIN.REPORTS.EMPTY_RANGE' | translate }}
-  </p>
-
-  <div class="admin-table-wrap" *ngIf="contentState !== 'empty'">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>{{ 'ADMIN.REPORTS.COL.DATE' | translate }}</th>
-          <th>
-            {{ 'ADMIN.REPORTS.COL.BOOKINGS' | translate }}
-            <span class="admin-muted reports-basis-caption">{{ 'ADMIN.REPORTS.BASIS.BOOKING_DATE' | translate }}</span>
-          </th>
-          <th>{{ 'ADMIN.REPORTS.COL.SEATS_SOLD' | translate }}</th>
-          <th>
-            {{ 'ADMIN.REPORTS.COL.OCCUPANCY' | translate }}
-            <span class="admin-muted reports-basis-caption">{{ 'ADMIN.REPORTS.BASIS.DEPARTURE_DATE' | translate }}</span>
-          </th>
-          <th *ngIf="showRevenue">
-            {{ 'ADMIN.REPORTS.COL.REVENUE' | translate }}
-            <span class="admin-muted reports-basis-caption">{{ 'ADMIN.REPORTS.BASIS.BOOKING_DATE' | translate }}</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngIf="isLoading">
-          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td *ngIf="showRevenue"><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          </tr>
-        </ng-container>
-
-        <ng-container *ngIf="!isLoading">
-          <tr
-            *ngFor="let row of dailyRows; let i = index; trackBy: trackByDate"
-            [class.zebra]="i % 2 === 1"
-          >
-            <td class="admin-emphasis">{{ row.date }}</td>
-            <td>{{ row.bookingCount }}</td>
-            <td>{{ row.seatsSold }} / {{ row.seatCapacity }}</td>
-            <td>{{ occupancyDisplay(row.occupancyRatePct) }}</td>
-            <td *ngIf="showRevenue">
-              {{ row.revenue ? formatMoney(row.revenue.net, row.revenue.currency) : '-' }}
-            </td>
-          </tr>
-
-          <tr *ngIf="dailyRows.length === 0 && !loadError" class="admin-empty-row">
-            <td [attr.colspan]="showRevenue ? 5 : 4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
-          </tr>
-        </ng-container>
-      </tbody>
-    </table>
-  </div>
-</section>
+    <!-- Valid but empty range: the note REPLACES the table, so a screenful of
+    zero rows never reads as "there is data". Tiles above still show 0. -->
+    @if (contentState === 'empty') {
+      <p class="admin-muted reports-empty-note">
+        {{ 'ADMIN.REPORTS.EMPTY_RANGE' | translate }}
+      </p>
+    }
+    @if (contentState !== 'empty') {
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>{{ 'ADMIN.REPORTS.COL.DATE' | translate }}</th>
+              <th>
+                {{ 'ADMIN.REPORTS.COL.BOOKINGS' | translate }}
+                <span class="admin-muted reports-basis-caption">{{ 'ADMIN.REPORTS.BASIS.BOOKING_DATE' | translate }}</span>
+              </th>
+              <th>{{ 'ADMIN.REPORTS.COL.SEATS_SOLD' | translate }}</th>
+              <th>
+                {{ 'ADMIN.REPORTS.COL.OCCUPANCY' | translate }}
+                <span class="admin-muted reports-basis-caption">{{ 'ADMIN.REPORTS.BASIS.DEPARTURE_DATE' | translate }}</span>
+              </th>
+              @if (showRevenue) {
+                <th>
+                  {{ 'ADMIN.REPORTS.COL.REVENUE' | translate }}
+                  <span class="admin-muted reports-basis-caption">{{ 'ADMIN.REPORTS.BASIS.BOOKING_DATE' | translate }}</span>
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @if (isLoading) {
+              @for (row of skeletonRows; track row) {
+                <tr class="admin-skeleton-row" aria-hidden="true">
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  @if (showRevenue) {
+                    <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  }
+                </tr>
+              }
+            }
+            @if (!isLoading) {
+              @for (row of dailyRows; track trackByDate(i, row); let i = $index) {
+                <tr
+                  [class.zebra]="i % 2 === 1"
+                  >
+                  <td class="admin-emphasis">{{ row.date }}</td>
+                  <td>{{ row.bookingCount }}</td>
+                  <td>{{ row.seatsSold }} / {{ row.seatCapacity }}</td>
+                  <td>{{ occupancyDisplay(row.occupancyRatePct) }}</td>
+                  @if (showRevenue) {
+                    <td>
+                      {{ row.revenue ? formatMoney(row.revenue.net, row.revenue.currency) : '-' }}
+                    </td>
+                  }
+                </tr>
+              }
+              @if (dailyRows.length === 0 && !loadError) {
+                <tr class="admin-empty-row">
+                  <td [attr.colspan]="showRevenue ? 5 : 4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

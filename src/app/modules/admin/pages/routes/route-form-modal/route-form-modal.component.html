@@ -1,76 +1,79 @@
-<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="closeModal()">
-  <div class="admin-modal">
-    <h4 class="admin-modal-title">
-      {{ isEditMode ? ('ADMIN.ROUTES.EDIT_TITLE' | translate) : ('ADMIN.ROUTES.ADD_TITLE' | translate) }}
-    </h4>
-    <p class="admin-modal-subtitle">
-      {{ 'ADMIN.ROUTES.MODAL_HINT' | translate }}
-      <span class="admin-muted" *ngIf="isEditMode && isEditDetailLoading">
-        · {{ 'ADMIN.COMMON.LOADING' | translate }}
-      </span>
-    </p>
-
-    <form [formGroup]="routeForm" class="admin-form-grid" (ngSubmit)="submitRoute()">
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.ROUTES.SLUG' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="slug" />
-        <small class="admin-error" *ngIf="isFieldInvalid('slug')">
-          {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
-        </small>
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="closeModal()">
+    <div class="admin-modal">
+      <h4 class="admin-modal-title">
+        {{ isEditMode ? ('ADMIN.ROUTES.EDIT_TITLE' | translate) : ('ADMIN.ROUTES.ADD_TITLE' | translate) }}
+      </h4>
+      <p class="admin-modal-subtitle">
+        {{ 'ADMIN.ROUTES.MODAL_HINT' | translate }}
+        @if (isEditMode && isEditDetailLoading) {
+          <span class="admin-muted">
+            · {{ 'ADMIN.COMMON.LOADING' | translate }}
+          </span>
+        }
+      </p>
+      <form [formGroup]="routeForm" class="admin-form-grid" (ngSubmit)="submitRoute()">
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.ROUTES.SLUG' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="slug" />
+          @if (isFieldInvalid('slug')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.ROUTES.STATUS' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="status"
+            [options]="statusOptions"
+            valueKey="code"
+            labelKey="label"
+          ></app-admin-dropdown>
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.ROUTES.EN_LABEL' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="enLabel" />
+          @if (isFieldInvalid('enLabel')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.ROUTES.TH_LABEL' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="thLabel" />
+          @if (isFieldInvalid('thLabel')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.ROUTES.EN_DESCRIPTION' | translate }}</label>
+          <textarea class="admin-field" formControlName="enDescription"></textarea>
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.ROUTES.TH_DESCRIPTION' | translate }}</label>
+          <textarea class="admin-field" formControlName="thDescription"></textarea>
+        </div>
+      </form>
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" (click)="closeModal()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitRoute()">
+          {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+        </button>
       </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.ROUTES.STATUS' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="status"
-          [options]="statusOptions"
-          valueKey="code"
-          labelKey="label"
-        ></app-admin-dropdown>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.ROUTES.EN_LABEL' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="enLabel" />
-        <small class="admin-error" *ngIf="isFieldInvalid('enLabel')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.ROUTES.TH_LABEL' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="thLabel" />
-        <small class="admin-error" *ngIf="isFieldInvalid('thLabel')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.ROUTES.EN_DESCRIPTION' | translate }}</label>
-        <textarea class="admin-field" formControlName="enDescription"></textarea>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.ROUTES.TH_DESCRIPTION' | translate }}</label>
-        <textarea class="admin-field" formControlName="thDescription"></textarea>
-      </div>
-    </form>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="closeModal()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitRoute()">
-        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-      </button>
     </div>
   </div>
-</div>
+}

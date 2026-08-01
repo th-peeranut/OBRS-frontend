@@ -8,44 +8,52 @@
     [attr.accept]="allowedMimeTypes.join(',')"
     class="ur-image-picker__file-input"
     (change)="onFilesSelected($event)"
-  />
+    />
 
-  <button
-    type="button"
-    class="ur-image-picker__add-btn"
-    (click)="triggerFileInput(fileInput)"
-    [disabled]="totalCount >= maxFiles"
-  >
-    <span class="material-symbols-outlined">attach_file</span>
-    <span>{{ 'USABILITY_REPORT.IMAGES.ADD' | translate }}</span>
-  </button>
-
-  <div *ngIf="error" class="ur-image-picker__error">{{ error }}</div>
-
-  <div *ngIf="totalCount > 0" class="report-previews mt-2">
-    <div *ngFor="let img of keptImages; let i = index" class="report-preview-item">
-      <img [src]="img.publicUrl" alt="" class="report-preview-thumb" />
-      <span class="report-preview-name">{{ 'USABILITY_REPORT.IMAGES.EXISTING' | translate }}</span>
-      <button
-        type="button"
-        class="report-preview-remove"
-        [attr.aria-label]="'USABILITY_REPORT.IMAGES.REMOVE' | translate"
-        (click)="removeExisting(i)"
+    <button
+      type="button"
+      class="ur-image-picker__add-btn"
+      (click)="triggerFileInput(fileInput)"
+      [disabled]="totalCount >= maxFiles"
       >
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-    <div *ngFor="let file of newFiles; let i = index" class="report-preview-item">
-      <img [src]="thumbnailUrls[i]" [alt]="file.name" class="report-preview-thumb" />
-      <span class="report-preview-name">{{ file.name }}</span>
-      <button
-        type="button"
-        class="report-preview-remove"
-        [attr.aria-label]="'USABILITY_REPORT.IMAGES.REMOVE' | translate"
-        (click)="removeNew(i)"
-      >
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
+      <span class="material-symbols-outlined">attach_file</span>
+      <span>{{ 'USABILITY_REPORT.IMAGES.ADD' | translate }}</span>
+    </button>
+
+    @if (error) {
+      <div class="ur-image-picker__error">{{ error }}</div>
+    }
+
+    @if (totalCount > 0) {
+      <div class="report-previews mt-2">
+        @for (img of keptImages; track img; let i = $index) {
+          <div class="report-preview-item">
+            <img [src]="img.publicUrl" alt="" class="report-preview-thumb" />
+            <span class="report-preview-name">{{ 'USABILITY_REPORT.IMAGES.EXISTING' | translate }}</span>
+            <button
+              type="button"
+              class="report-preview-remove"
+              [attr.aria-label]="'USABILITY_REPORT.IMAGES.REMOVE' | translate"
+              (click)="removeExisting(i)"
+              >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        }
+        @for (file of newFiles; track file; let i = $index) {
+          <div class="report-preview-item">
+            <img [src]="thumbnailUrls[i]" [alt]="file.name" class="report-preview-thumb" />
+            <span class="report-preview-name">{{ file.name }}</span>
+            <button
+              type="button"
+              class="report-preview-remove"
+              [attr.aria-label]="'USABILITY_REPORT.IMAGES.REMOVE' | translate"
+              (click)="removeNew(i)"
+              >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        }
+      </div>
+    }
   </div>
-</div>

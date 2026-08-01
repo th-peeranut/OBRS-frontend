@@ -1,31 +1,32 @@
-<nav
-  class="admin-inline-actions admin-paginator"
-  role="navigation"
-  [attr.aria-label]="'ADMIN.COMMON.PAGINATION_NAV_ARIA' | translate"
-  *ngIf="totalPages > 1"
->
-  <button
-    #prevBtn
-    type="button"
-    class="admin-btn admin-btn-small"
-    [disabled]="currentPage === 1 || disabled"
-    (click)="onPrev()"
-  >
-    {{ 'ADMIN.COMMON.PREVIOUS' | translate }}
-  </button>
-  <span class="admin-muted">{{ currentPage }} / {{ totalPages }}</span>
-  <button
-    #nextBtn
-    type="button"
-    class="admin-btn admin-btn-small"
-    [disabled]="currentPage === totalPages || disabled"
-    (click)="onNext()"
-  >
-    {{ 'ADMIN.COMMON.NEXT' | translate }}
-  </button>
-  <!-- OBRS-466: the single live region for this paginator — a keyboard/AT page
-       change announces "Page X of Y". Kept separate from the visible counter
-       above so there is exactly ONE aria-live node (no double announcement),
-       and visually-hidden so it never affects layout. -->
-  <span class="visually-hidden" role="status" aria-live="polite">{{ pageStatus }}</span>
-</nav>
+@if (totalPages > 1) {
+  <nav
+    class="admin-inline-actions admin-paginator"
+    role="navigation"
+    [attr.aria-label]="'ADMIN.COMMON.PAGINATION_NAV_ARIA' | translate"
+    >
+    <button
+      #prevBtn
+      type="button"
+      class="admin-btn admin-btn-small"
+      [disabled]="currentPage === 1 || disabled"
+      (click)="onPrev()"
+      >
+      {{ 'ADMIN.COMMON.PREVIOUS' | translate }}
+    </button>
+    <span class="admin-muted">{{ currentPage }} / {{ totalPages }}</span>
+    <button
+      #nextBtn
+      type="button"
+      class="admin-btn admin-btn-small"
+      [disabled]="currentPage === totalPages || disabled"
+      (click)="onNext()"
+      >
+      {{ 'ADMIN.COMMON.NEXT' | translate }}
+    </button>
+    <!-- OBRS-466: the single live region for this paginator — a keyboard/AT page
+    change announces "Page X of Y". Kept separate from the visible counter
+    above so there is exactly ONE aria-live node (no double announcement),
+    and visually-hidden so it never affects layout. -->
+    <span class="visually-hidden" role="status" aria-live="polite">{{ pageStatus }}</span>
+  </nav>
+}

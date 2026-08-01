@@ -1,13 +1,19 @@
 <section class="admin-page-intro">
   <div>
-    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
-    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    @if (isLoading) {
+      <p class="admin-muted">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    }
+    @if (errorMessage) {
+      <p class="admin-muted">{{ errorMessage }}</p>
+    }
     <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
   </div>
-  <button *ngIf="activeTab === 'list'" type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
-    <span class="material-symbols-outlined">add</span>
-    <span>{{ 'ADMIN.VEHICLES.ADD' | translate }}</span>
-  </button>
+  @if (activeTab === 'list') {
+    <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
+      <span class="material-symbols-outlined">add</span>
+      <span>{{ 'ADMIN.VEHICLES.ADD' | translate }}</span>
+    </button>
+  }
 </section>
 
 <nav class="schedule-tabs mt-3" role="tablist">
@@ -18,7 +24,7 @@
     [class.is-active]="activeTab === 'list'"
     [attr.aria-selected]="activeTab === 'list'"
     (click)="setActiveTab('list')"
-  >
+    >
     <span class="material-symbols-outlined">directions_bus</span>
     <span>{{ 'ADMIN.VEHICLES.TABLE_TITLE' | translate }}</span>
   </button>
@@ -31,7 +37,7 @@
     [disabled]="!focusedVehicle"
     [attr.title]="!focusedVehicle ? ('ADMIN.VEHICLES.MAINTENANCE.TAB_DISABLED_HINT' | translate) : null"
     (click)="setActiveTab('maintenance')"
-  >
+    >
     <span class="material-symbols-outlined">build</span>
     <span>{{ 'ADMIN.VEHICLES.MAINTENANCE.TAB' | translate }}</span>
   </button>
@@ -44,62 +50,60 @@
     [disabled]="!focusedVehicle"
     [attr.title]="!focusedVehicle ? ('ADMIN.VEHICLES.INSPECTION.TAB_DISABLED_HINT' | translate) : null"
     (click)="setActiveTab('inspections')"
-  >
+    >
     <span class="material-symbols-outlined">checklist</span>
     <span>{{ 'ADMIN.VEHICLES.INSPECTION.TAB' | translate }}</span>
   </button>
 </nav>
 
-<ng-container *ngIf="activeTab === 'list'">
-<section class="admin-grid admin-grid--3 mt-3">
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon"><span class="material-symbols-outlined">directions_bus</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.VEHICLES.TOTAL' | translate }}</p>
-      <p class="admin-big-number">{{ totalVehicles }}</p>
-    </div>
-  </article>
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">check_circle</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.VEHICLES.ACTIVE' | translate }}</p>
-      <p class="admin-big-number">{{ activeVehicles }}</p>
-    </div>
-  </article>
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">pending_actions</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.VEHICLES.PENDING' | translate }}</p>
-      <p class="admin-big-number">{{ pendingVehicles }}</p>
-    </div>
-  </article>
-</section>
+@if (activeTab === 'list') {
+  <section class="admin-grid admin-grid--3 mt-3">
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">directions_bus</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.VEHICLES.TOTAL' | translate }}</p>
+        <p class="admin-big-number">{{ totalVehicles }}</p>
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">check_circle</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.VEHICLES.ACTIVE' | translate }}</p>
+        <p class="admin-big-number">{{ activeVehicles }}</p>
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">pending_actions</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.VEHICLES.PENDING' | translate }}</p>
+        <p class="admin-big-number">{{ pendingVehicles }}</p>
+      </div>
+    </article>
+  </section>
+  <section class="admin-page-filters mt-3">
+    <app-admin-dropdown
+      [value]="selectedStatusFilter"
+      [options]="statusOptions"
+      valueKey="code"
+      labelKey="label"
+      [placeholder]="'ADMIN.VEHICLES.FILTER_STATUS' | translate"
+      (valueChange)="onStatusFilterChange($event)"
+    ></app-admin-dropdown>
+  </section>
+  <app-vehicle-list-table
+    [rows]="filteredVehicles"
+    [isLoading]="isLoading"
+    [skeletonRows]="skeletonRows"
+    [hasError]="!!errorMessage"
+    [totalCount]="vehicles.length"
+    (edit)="openEditModal($event)"
+    (delete)="openDeleteModal($event)"
+    (manageMaintenance)="viewMaintenanceForVehicle($event)"
+    (viewInspections)="viewInspectionsForVehicle($event)"
+  ></app-vehicle-list-table>
+}
 
-<section class="admin-page-filters mt-3">
-  <app-admin-dropdown
-    [value]="selectedStatusFilter"
-    [options]="statusOptions"
-    valueKey="code"
-    labelKey="label"
-    [placeholder]="'ADMIN.VEHICLES.FILTER_STATUS' | translate"
-    (valueChange)="onStatusFilterChange($event)"
-  ></app-admin-dropdown>
-</section>
-
-<app-vehicle-list-table
-  [rows]="filteredVehicles"
-  [isLoading]="isLoading"
-  [skeletonRows]="skeletonRows"
-  [hasError]="!!errorMessage"
-  [totalCount]="vehicles.length"
-  (edit)="openEditModal($event)"
-  (delete)="openDeleteModal($event)"
-  (manageMaintenance)="viewMaintenanceForVehicle($event)"
-  (viewInspections)="viewInspectionsForVehicle($event)"
-></app-vehicle-list-table>
-</ng-container>
-
-<ng-container *ngIf="activeTab === 'maintenance' && focusedVehicle">
+@if (activeTab === 'maintenance' && focusedVehicle) {
   <div class="schedule-focus-banner">
     <span class="material-symbols-outlined">directions_bus</span>
     <span>{{ 'ADMIN.VEHICLES.MAINTENANCE.FOCUSED_BANNER' | translate: { vehicle: focusedVehicle.vehicleNumber } }}</span>
@@ -107,16 +111,15 @@
       {{ 'ADMIN.VEHICLES.MAINTENANCE.FOCUSED_CLEAR' | translate }}
     </button>
   </div>
-
   <app-vehicle-maintenance-panel
     [vehicleId]="focusedVehicle.id"
     [vehicleLabel]="focusedVehicle.vehicleNumber"
     [canWrite]="canWriteMaintenance"
     [statusOptions]="maintenanceStatusOptions"
   ></app-vehicle-maintenance-panel>
-</ng-container>
+}
 
-<ng-container *ngIf="activeTab === 'inspections' && focusedVehicle">
+@if (activeTab === 'inspections' && focusedVehicle) {
   <div class="schedule-focus-banner">
     <span class="material-symbols-outlined">directions_bus</span>
     <span>{{ 'ADMIN.VEHICLES.INSPECTION.FOCUSED_BANNER' | translate: { vehicle: focusedVehicle.vehicleNumber } }}</span>
@@ -124,12 +127,11 @@
       {{ 'ADMIN.VEHICLES.MAINTENANCE.FOCUSED_CLEAR' | translate }}
     </button>
   </div>
-
   <app-vehicle-inspection-panel
     [vehicleId]="focusedVehicle.id"
     [vehicleLabel]="focusedVehicle.vehicleNumber"
   ></app-vehicle-inspection-panel>
-</ng-container>
+}
 
 <app-vehicle-form-modal
   [isOpen]="isFormModalOpen"

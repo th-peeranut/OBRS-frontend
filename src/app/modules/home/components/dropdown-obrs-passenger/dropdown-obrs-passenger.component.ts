@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import {
   Component,
   ElementRef,
@@ -28,7 +28,7 @@ import { MAX_PASSENGERS_PER_BOOKING } from '../../../../shared/constants/passeng
             multi: true,
         },
     ],
-    imports: [CommonModule, TranslateModule]
+    imports: [TranslateModule]
 })
 export class DropdownObrsPassengerComponent
   implements ControlValueAccessor, OnChanges, OnDestroy

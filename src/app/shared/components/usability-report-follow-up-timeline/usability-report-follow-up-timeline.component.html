@@ -1,48 +1,60 @@
 <div class="ur-follow-up-timeline">
-  <p *ngIf="followUps.length === 0 && !pendingEntry" class="ur-follow-up-timeline__empty">
-    {{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.EMPTY' | translate }}
-  </p>
+  @if (followUps.length === 0 && !pendingEntry) {
+    <p class="ur-follow-up-timeline__empty">
+      {{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.EMPTY' | translate }}
+    </p>
+  }
 
-  <ul *ngIf="followUps.length > 0 || pendingEntry" class="ur-follow-up-timeline__list">
-    <li
-      *ngFor="let item of followUps; trackBy: trackById"
-      class="ur-follow-up-timeline__item"
-    >
-      <div class="ur-follow-up-timeline__meta">
-        <span class="ur-follow-up-timeline__author">{{ item.authorName }}</span>
-        <span class="ur-follow-up-timeline__date">{{ displayDateTime(item.createdAt) }}</span>
-      </div>
-      <p class="ur-follow-up-timeline__note">{{ item.note }}</p>
-      <div *ngIf="item.images.length > 0" class="ur-follow-up-timeline__images">
-        <img
-          *ngFor="let img of item.images"
-          [src]="img.publicUrl"
-          alt=""
-          class="ur-follow-up-timeline__thumb"
-        />
-      </div>
-    </li>
-
-    <!-- Optimistic "posting" placeholder — see pendingEntry's doc comment. -->
-    <li *ngIf="pendingEntry" class="ur-follow-up-timeline__item is-pending">
-      <div class="ur-follow-up-timeline__meta">
-        <span class="ur-follow-up-timeline__author">
-          {{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.AUTHOR_YOU' | translate }}
-        </span>
-        <span class="ur-follow-up-timeline__date">
-          <span class="ur-follow-up-timeline__spinner" aria-hidden="true"></span>
-          {{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.SUBMITTING' | translate }}
-        </span>
-      </div>
-      <p class="ur-follow-up-timeline__note">{{ pendingEntry.note }}</p>
-      <div *ngIf="pendingEntry.thumbnailUrls.length > 0" class="ur-follow-up-timeline__images">
-        <img
-          *ngFor="let url of pendingEntry.thumbnailUrls"
-          [src]="url"
-          alt=""
-          class="ur-follow-up-timeline__thumb"
-        />
-      </div>
-    </li>
-  </ul>
+  @if (followUps.length > 0 || pendingEntry) {
+    <ul class="ur-follow-up-timeline__list">
+      @for (item of followUps; track trackById($index, item)) {
+        <li
+          class="ur-follow-up-timeline__item"
+          >
+          <div class="ur-follow-up-timeline__meta">
+            <span class="ur-follow-up-timeline__author">{{ item.authorName }}</span>
+            <span class="ur-follow-up-timeline__date">{{ displayDateTime(item.createdAt) }}</span>
+          </div>
+          <p class="ur-follow-up-timeline__note">{{ item.note }}</p>
+          @if (item.images.length > 0) {
+            <div class="ur-follow-up-timeline__images">
+              @for (img of item.images; track img) {
+                <img
+                  [src]="img.publicUrl"
+                  alt=""
+                  class="ur-follow-up-timeline__thumb"
+                  />
+              }
+            </div>
+          }
+        </li>
+      }
+      <!-- Optimistic "posting" placeholder — see pendingEntry's doc comment. -->
+      @if (pendingEntry) {
+        <li class="ur-follow-up-timeline__item is-pending">
+          <div class="ur-follow-up-timeline__meta">
+            <span class="ur-follow-up-timeline__author">
+              {{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.AUTHOR_YOU' | translate }}
+            </span>
+            <span class="ur-follow-up-timeline__date">
+              <span class="ur-follow-up-timeline__spinner" aria-hidden="true"></span>
+              {{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.SUBMITTING' | translate }}
+            </span>
+          </div>
+          <p class="ur-follow-up-timeline__note">{{ pendingEntry.note }}</p>
+          @if (pendingEntry.thumbnailUrls.length > 0) {
+            <div class="ur-follow-up-timeline__images">
+              @for (url of pendingEntry.thumbnailUrls; track url) {
+                <img
+                  [src]="url"
+                  alt=""
+                  class="ur-follow-up-timeline__thumb"
+                  />
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
 </div>

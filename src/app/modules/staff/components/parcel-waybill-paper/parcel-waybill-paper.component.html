@@ -1,45 +1,46 @@
-<div class="parcel-waybill-paper" *ngIf="waybill as w">
-  <h3 class="fw-bold">{{ 'STAFF.PARCEL_WAYBILL.TITLE' | translate }}</h3>
-  <div class="parcel-waybill-tracking">{{ w.trackingNumber }}</div>
-
-  <div class="row g-3 mt-2">
-    <div class="col-6">
-      <h5 class="fw-bold">{{ 'STAFF.PARCEL_WAYBILL.SENDER' | translate }}</h5>
-      <div>{{ w.sender.name }}</div>
-      <div>{{ w.sender.phone | phoneFormat }}</div>
+@if (waybill; as w) {
+  <div class="parcel-waybill-paper">
+    <h3 class="fw-bold">{{ 'STAFF.PARCEL_WAYBILL.TITLE' | translate }}</h3>
+    <div class="parcel-waybill-tracking">{{ w.trackingNumber }}</div>
+    <div class="row g-3 mt-2">
+      <div class="col-6">
+        <h5 class="fw-bold">{{ 'STAFF.PARCEL_WAYBILL.SENDER' | translate }}</h5>
+        <div>{{ w.sender.name }}</div>
+        <div>{{ w.sender.phone | phoneFormat }}</div>
+      </div>
+      <div class="col-6">
+        <h5 class="fw-bold">{{ 'STAFF.PARCEL_WAYBILL.RECIPIENT' | translate }}</h5>
+        <div>{{ w.recipient.name }}</div>
+        <div>{{ w.recipient.phone | phoneFormat }}</div>
+      </div>
     </div>
-    <div class="col-6">
-      <h5 class="fw-bold">{{ 'STAFF.PARCEL_WAYBILL.RECIPIENT' | translate }}</h5>
-      <div>{{ w.recipient.name }}</div>
-      <div>{{ w.recipient.phone | phoneFormat }}</div>
+    <div class="row g-3 mt-2">
+      <div class="col-6">
+        <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.PICKUP_STOP' | translate }}</div>
+        <div class="fw-semibold">{{ parcelStopLabel(w.pickupStop) }}</div>
+      </div>
+      <div class="col-6">
+        <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.DROPOFF_STOP' | translate }}</div>
+        <div class="fw-semibold">{{ parcelStopLabel(w.dropoffStop) }}</div>
+      </div>
+      <div class="col-6">
+        <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.WEIGHT' | translate }}</div>
+        <div class="fw-semibold">{{ w.weightKg }} kg</div>
+      </div>
+      <div class="col-6">
+        <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.AMOUNT' | translate }}</div>
+        <div class="fw-semibold">{{ w.amount }}</div>
+      </div>
+      <div class="col-12">
+        <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.DEPARTURE' | translate }}</div>
+        <div class="fw-semibold">{{ w.departureAt }}</div>
+      </div>
     </div>
+    @if (qrDataUrl) {
+      <div class="parcel-waybill-qr">
+        <img [src]="qrDataUrl" [attr.alt]="'STAFF.PARCEL_WAYBILL.QR_ALT' | translate" />
+        <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.QR_HINT' | translate }}</div>
+      </div>
+    }
   </div>
-
-  <div class="row g-3 mt-2">
-    <div class="col-6">
-      <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.PICKUP_STOP' | translate }}</div>
-      <div class="fw-semibold">{{ parcelStopLabel(w.pickupStop) }}</div>
-    </div>
-    <div class="col-6">
-      <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.DROPOFF_STOP' | translate }}</div>
-      <div class="fw-semibold">{{ parcelStopLabel(w.dropoffStop) }}</div>
-    </div>
-    <div class="col-6">
-      <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.WEIGHT' | translate }}</div>
-      <div class="fw-semibold">{{ w.weightKg }} kg</div>
-    </div>
-    <div class="col-6">
-      <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.AMOUNT' | translate }}</div>
-      <div class="fw-semibold">{{ w.amount }}</div>
-    </div>
-    <div class="col-12">
-      <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.DEPARTURE' | translate }}</div>
-      <div class="fw-semibold">{{ w.departureAt }}</div>
-    </div>
-  </div>
-
-  <div class="parcel-waybill-qr" *ngIf="qrDataUrl">
-    <img [src]="qrDataUrl" [attr.alt]="'STAFF.PARCEL_WAYBILL.QR_ALT' | translate" />
-    <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.QR_HINT' | translate }}</div>
-  </div>
-</div>
+}

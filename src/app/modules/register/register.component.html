@@ -1,373 +1,367 @@
-<div class="login-container" *ngIf="!registrationEmailSent">
-  <!-- LEFT SECTION -->
-  <div class="left-section">
-    <!-- BACKGROUND IMAGE -->
-    <img class="bg-img" src="images/login.svg" alt="Tickets" />
-  </div>
-  <!-- RIGHT SECTION -->
-  <div class="right-section">
-    <!-- CHANGE LANGUAGE SWITCH + THEME TOGGLE — shared components (same as home navbar) -->
-    <div class="change-language">
-      <app-theme-toggle></app-theme-toggle>
-      <app-lang-switcher></app-lang-switcher>
+@if (!registrationEmailSent) {
+  <div class="login-container">
+    <!-- LEFT SECTION -->
+    <div class="left-section">
+      <!-- BACKGROUND IMAGE -->
+      <img class="bg-img" src="images/login.svg" alt="Tickets" />
     </div>
-    <!-- LOGO WEBSITE -->
-    <div class="logo-section mt-5">
-      <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
-    </div>
-    <!-- HEADER TITLE -->
-    <div class="welcome-text mt-3">
-      {{ "REGISTER.WELCOME" | translate }}
-    </div>
-    <!-- SUB HEADER TITLE -->
-    <div class="hint-text mt-3">
-      {{ "REGISTER.HINT" | translate }}
-    </div>
-    <!-- FORM SECTION -->
-    <form class="login-form mt-3" [formGroup]="registerForm">
-      <div class="row form-row">
-        <!-- Title -->
-        <div class="col-12">
-          <label
-            for="title"
-            [class.label-error]="
-              getForm('title')?.errors &&
-              (getForm('title')?.touched || getForm('title')?.dirty)
-            "
-          >
-            {{ "REGISTER.TITLE" | translate }}
-
-            <span class="form-required">*</span>
-          </label>
-          <app-dropdown-obrs
-            [isBorder]="true"
-            [isLabel]="false"
-            [options]="titleOptions"
-            formControlName="title"
-            id="title"
-          ></app-dropdown-obrs>
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('title')?.errors &&
-              (getForm('title')?.touched || getForm('title')?.dirty)
-            "
-          >
-            {{ "REGISTER.TITLE_REQUIRED" | translate }}
-          </div>
-        </div>
+    <!-- RIGHT SECTION -->
+    <div class="right-section">
+      <!-- CHANGE LANGUAGE SWITCH + THEME TOGGLE — shared components (same as home navbar) -->
+      <div class="change-language">
+        <app-theme-toggle></app-theme-toggle>
+        <app-lang-switcher></app-lang-switcher>
       </div>
-      <div class="row form-row">
-        <div class="col-12 col-md-4">
-          <!-- First name -->
-          <label
-            for="firstName"
-            [class.label-error]="
-              getForm('firstName')?.errors &&
-              (getForm('firstName')?.touched || getForm('firstName')?.dirty)
-            "
-          >
-            {{ "REGISTER.FIRSTNAME" | translate }}
-
-            <span class="form-required">*</span>
-          </label>
-          <input
-            class="form-control mt-1"
-            type="text"
-            id="firstName"
-            formControlName="firstName"
-            [placeholder]="'REGISTER.FIRSTNAME_PLACEHOLDER' | translate"
-            [class.form-error]="
-              getForm('firstName')?.errors &&
-              (getForm('firstName')?.touched || getForm('firstName')?.dirty)
-            "
-          />
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('firstName')?.errors &&
-              (getForm('firstName')?.touched || getForm('firstName')?.dirty)
-            "
-          >
-            {{ "REGISTER.FIRSTNAME_REQUIRED" | translate }}
-          </div>
-        </div>
-
-        <div class="col-12 col-md-4">
-          <!-- Middle name -->
-          <label for="middleName">
-            {{ "REGISTER.MIDDLENAME" | translate }}
-          </label>
-          <input
-            class="form-control mt-1"
-            type="text"
-            id="middleName"
-            formControlName="middleName"
-            [placeholder]="'REGISTER.MIDDLENAME_PLACEHOLDER' | translate"
-          />
-        </div>
-
-        <div class="col-12 col-md-4">
-          <!-- Last name -->
-          <label
-            for="lastName"
-            [class.label-error]="
-              getForm('lastName')?.errors &&
-              (getForm('lastName')?.touched || getForm('lastName')?.dirty)
-            "
-          >
-            {{ "REGISTER.LASTNAME" | translate }}
-
-            <span class="form-required">*</span>
-          </label>
-          <input
-            class="form-control mt-1"
-            type="text"
-            id="lastName"
-            formControlName="lastName"
-            [placeholder]="'REGISTER.LASTNAME_PLACEHOLDER' | translate"
-            [class.form-error]="
-              getForm('lastName')?.errors &&
-              (getForm('lastName')?.touched || getForm('lastName')?.dirty)
-            "
-          />
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('lastName')?.errors &&
-              (getForm('lastName')?.touched || getForm('lastName')?.dirty)
-            "
-          >
-            {{ "REGISTER.LASTNAME_REQUIRED" | translate }}
-          </div>
-        </div>
+      <!-- LOGO WEBSITE -->
+      <div class="logo-section mt-5">
+        <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
       </div>
-      <!--
-        OBRS-713: the "ชื่อผู้ใช้งาน" row stood here. It was a required field with a
-        tooltip declaring rules nothing validated, feeding a column that does not
-        exist — see register.component.ts's createForm() note. Identity is
-        email + phone; there is no third one to collect.
-      -->
-      <div class="row form-row">
-        <div class="col-12 col-md-6">
-          <!-- Email -->
-          <label
-            for="email"
-            [class.label-error]="
-              (getForm('email')?.errors || emailIsExist) &&
-              (getForm('email')?.touched || getForm('email')?.dirty)
-            "
-          >
-            {{ "REGISTER.EMAIL" | translate }}
-
-            <span class="form-required">*</span>
-          </label>
-          <input
-            class="form-control mt-1"
-            type="text"
-            id="email"
-            formControlName="email"
-            [placeholder]="'REGISTER.EMAIL_PLACEHOLDER' | translate"
-            [class.form-error]="
-              (getForm('email')?.errors || emailIsExist) &&
-              (getForm('email')?.touched || getForm('email')?.dirty)
-            "
-          />
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('email')?.errors &&
-              (getForm('email')?.touched || getForm('email')?.dirty)
-            "
-          >
-            {{ "REGISTER.EMAIL_REQUIRED" | translate }}
-
-            <span class="form-required">*</span>
-          </div>
-
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('email')?.value &&
-              emailIsExist &&
-              (getForm('email')?.touched || getForm('email')?.dirty)
-            "
-          >
-            {{ "REGISTER.EMAIL_EXIST" | translate }}
-          </div>
-        </div>
-
-        <div class="col-12 col-md-6">
-          <!-- Phone number -->
-          <label
-            for="phoneNumber"
-            [class.label-error]="
-              (getForm('phoneNumber')?.errors || phoneNumberIsExist) &&
-              (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
-            "
-          >
-            {{ "REGISTER.PHONE_NO" | translate }}
-
-            <span class="form-required">*</span>
-          </label>
-          <input
-            class="form-control mt-1"
-            type="text"
-            id="phoneNumber"
-            formControlName="phoneNumber"
-            (focus)="onPhoneFocus()"
-            (blur)="onPhoneBlur()"
-            [placeholder]="'REGISTER.PHONE_NO_PLACEHOLDER' | translate"
-            [class.form-error]="
-              (getForm('phoneNumber')?.errors || phoneNumberIsExist) &&
-              (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
-            "
-          />
-          <!--
-            OBRS-409: these were one block keyed on `errors` (any error at all) showing
-            PHONE_NO_REQUIRED. Adding the pattern validator to a blanket message would have told a
-            user who typed 0212345678 to "enter a phone number" - which they did. Key each message
-            on its own error instead.
-          -->
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('phoneNumber')?.errors?.['required'] &&
-              (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
-            "
-          >
-            {{ "REGISTER.PHONE_NO_REQUIRED" | translate }}
-          </div>
-
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('phoneNumber')?.errors?.['pattern'] &&
-              (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
-            "
-          >
-            {{ "REGISTER.PHONE_NO_INVALID" | translate }}
-          </div>
-
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('phoneNumber')?.value &&
-              phoneNumberIsExist &&
-              (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
-            "
-          >
-            {{ "REGISTER.PHONE_NO_EXIST" | translate }}
-          </div>
-        </div>
+      <!-- HEADER TITLE -->
+      <div class="welcome-text mt-3">
+        {{ "REGISTER.WELCOME" | translate }}
       </div>
-      <div class="row form-row">
-        <div class="col-12 col-md-6">
-          <div class="label-with-icon">
-            <!-- Password -->
+      <!-- SUB HEADER TITLE -->
+      <div class="hint-text mt-3">
+        {{ "REGISTER.HINT" | translate }}
+      </div>
+      <!-- FORM SECTION -->
+      <form class="login-form mt-3" [formGroup]="registerForm">
+        <div class="row form-row">
+          <!-- Title -->
+          <div class="col-12">
             <label
-              class="mt-3"
-              for="password"
+              for="title"
+            [class.label-error]="
+              getForm('title')?.errors &&
+              (getForm('title')?.touched || getForm('title')?.dirty)
+            "
+              >
+              {{ "REGISTER.TITLE" | translate }}
+              <span class="form-required">*</span>
+            </label>
+            <app-dropdown-obrs
+              [isBorder]="true"
+              [isLabel]="false"
+              [options]="titleOptions"
+              formControlName="title"
+              id="title"
+            ></app-dropdown-obrs>
+            @if (
+              getForm('title')?.errors &&
+              (getForm('title')?.touched || getForm('title')?.dirty)
+              ) {
+              <div
+                class="text-error"
+                >
+                {{ "REGISTER.TITLE_REQUIRED" | translate }}
+              </div>
+            }
+          </div>
+        </div>
+        <div class="row form-row">
+          <div class="col-12 col-md-4">
+            <!-- First name -->
+            <label
+              for="firstName"
+            [class.label-error]="
+              getForm('firstName')?.errors &&
+              (getForm('firstName')?.touched || getForm('firstName')?.dirty)
+            "
+              >
+              {{ "REGISTER.FIRSTNAME" | translate }}
+              <span class="form-required">*</span>
+            </label>
+            <input
+              class="form-control mt-1"
+              type="text"
+              id="firstName"
+              formControlName="firstName"
+              [placeholder]="'REGISTER.FIRSTNAME_PLACEHOLDER' | translate"
+            [class.form-error]="
+              getForm('firstName')?.errors &&
+              (getForm('firstName')?.touched || getForm('firstName')?.dirty)
+            "
+              />
+              @if (
+                getForm('firstName')?.errors &&
+                (getForm('firstName')?.touched || getForm('firstName')?.dirty)
+                ) {
+                <div
+                  class="text-error"
+                  >
+                  {{ "REGISTER.FIRSTNAME_REQUIRED" | translate }}
+                </div>
+              }
+            </div>
+            <div class="col-12 col-md-4">
+              <!-- Middle name -->
+              <label for="middleName">
+                {{ "REGISTER.MIDDLENAME" | translate }}
+              </label>
+              <input
+                class="form-control mt-1"
+                type="text"
+                id="middleName"
+                formControlName="middleName"
+                [placeholder]="'REGISTER.MIDDLENAME_PLACEHOLDER' | translate"
+                />
+              </div>
+              <div class="col-12 col-md-4">
+                <!-- Last name -->
+                <label
+                  for="lastName"
+            [class.label-error]="
+              getForm('lastName')?.errors &&
+              (getForm('lastName')?.touched || getForm('lastName')?.dirty)
+            "
+                  >
+                  {{ "REGISTER.LASTNAME" | translate }}
+                  <span class="form-required">*</span>
+                </label>
+                <input
+                  class="form-control mt-1"
+                  type="text"
+                  id="lastName"
+                  formControlName="lastName"
+                  [placeholder]="'REGISTER.LASTNAME_PLACEHOLDER' | translate"
+            [class.form-error]="
+              getForm('lastName')?.errors &&
+              (getForm('lastName')?.touched || getForm('lastName')?.dirty)
+            "
+                  />
+                  @if (
+                    getForm('lastName')?.errors &&
+                    (getForm('lastName')?.touched || getForm('lastName')?.dirty)
+                    ) {
+                    <div
+                      class="text-error"
+                      >
+                      {{ "REGISTER.LASTNAME_REQUIRED" | translate }}
+                    </div>
+                  }
+                </div>
+              </div>
+              <!--
+              OBRS-713: the "ชื่อผู้ใช้งาน" row stood here. It was a required field with a
+              tooltip declaring rules nothing validated, feeding a column that does not
+              exist — see register.component.ts's createForm() note. Identity is
+              email + phone; there is no third one to collect.
+              -->
+              <div class="row form-row">
+                <div class="col-12 col-md-6">
+                  <!-- Email -->
+                  <label
+                    for="email"
+            [class.label-error]="
+              (getForm('email')?.errors || emailIsExist) &&
+              (getForm('email')?.touched || getForm('email')?.dirty)
+            "
+                    >
+                    {{ "REGISTER.EMAIL" | translate }}
+                    <span class="form-required">*</span>
+                  </label>
+                  <input
+                    class="form-control mt-1"
+                    type="text"
+                    id="email"
+                    formControlName="email"
+                    [placeholder]="'REGISTER.EMAIL_PLACEHOLDER' | translate"
+            [class.form-error]="
+              (getForm('email')?.errors || emailIsExist) &&
+              (getForm('email')?.touched || getForm('email')?.dirty)
+            "
+                    />
+                    @if (
+                      getForm('email')?.errors &&
+                      (getForm('email')?.touched || getForm('email')?.dirty)
+                      ) {
+                      <div
+                        class="text-error"
+                        >
+                        {{ "REGISTER.EMAIL_REQUIRED" | translate }}
+                        <span class="form-required">*</span>
+                      </div>
+                    }
+                    @if (
+                      getForm('email')?.value &&
+                      emailIsExist &&
+                      (getForm('email')?.touched || getForm('email')?.dirty)
+                      ) {
+                      <div
+                        class="text-error"
+                        >
+                        {{ "REGISTER.EMAIL_EXIST" | translate }}
+                      </div>
+                    }
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <!-- Phone number -->
+                    <label
+                      for="phoneNumber"
+            [class.label-error]="
+              (getForm('phoneNumber')?.errors || phoneNumberIsExist) &&
+              (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
+            "
+                      >
+                      {{ "REGISTER.PHONE_NO" | translate }}
+                      <span class="form-required">*</span>
+                    </label>
+                    <input
+                      class="form-control mt-1"
+                      type="text"
+                      id="phoneNumber"
+                      formControlName="phoneNumber"
+                      (focus)="onPhoneFocus()"
+                      (blur)="onPhoneBlur()"
+                      [placeholder]="'REGISTER.PHONE_NO_PLACEHOLDER' | translate"
+            [class.form-error]="
+              (getForm('phoneNumber')?.errors || phoneNumberIsExist) &&
+              (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
+            "
+                      />
+                      <!--
+                      OBRS-409: these were one block keyed on `errors` (any error at all) showing
+                      PHONE_NO_REQUIRED. Adding the pattern validator to a blanket message would have told a
+                      user who typed 0212345678 to "enter a phone number" - which they did. Key each message
+                      on its own error instead.
+                      -->
+                      @if (
+                        getForm('phoneNumber')?.errors?.['required'] &&
+                        (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
+                        ) {
+                        <div
+                          class="text-error"
+                          >
+                          {{ "REGISTER.PHONE_NO_REQUIRED" | translate }}
+                        </div>
+                      }
+                      @if (
+                        getForm('phoneNumber')?.errors?.['pattern'] &&
+                        (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
+                        ) {
+                        <div
+                          class="text-error"
+                          >
+                          {{ "REGISTER.PHONE_NO_INVALID" | translate }}
+                        </div>
+                      }
+                      @if (
+                        getForm('phoneNumber')?.value &&
+                        phoneNumberIsExist &&
+                        (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
+                        ) {
+                        <div
+                          class="text-error"
+                          >
+                          {{ "REGISTER.PHONE_NO_EXIST" | translate }}
+                        </div>
+                      }
+                    </div>
+                  </div>
+                  <div class="row form-row">
+                    <div class="col-12 col-md-6">
+                      <div class="label-with-icon">
+                        <!-- Password -->
+                        <label
+                          class="mt-3"
+                          for="password"
               [class.label-error]="
                 getForm('password')?.errors &&
                 (getForm('password')?.touched || getForm('password')?.dirty)
               "
-            >
-              {{ "REGISTER.PASSWORD" | translate }}
-
-              <span class="form-required">*</span>
-            </label>
-
-            <div class="d-flex justify-content-end">
-              <div class="tooltip-container">
-                <img class="tooltip-icon" src="icons/info.svg" alt="info" />
-                <div class="tooltip-box">
-                  <strong>
-                    {{ "REGISTER.PASSWORD_GUIDELINES_TITLE" | translate }}
-                  </strong>
-                  <br />
-                  {{ "REGISTER.PASSWORD_GUIDELINES_DESCRIPTION" | translate }}
-                  <strong>
-                    <u>
-                      {{ "REGISTER.PASSWORD_MINIMUM_REQUIREMENT" | translate }}
-                    </u>
-                  </strong>
-                  <ul class="mb-0">
-                    <li>{{ "REGISTER.PASSWORD_RULES.RULE_1" | translate }}</li>
-                    <li>{{ "REGISTER.PASSWORD_RULES.RULE_2" | translate }}</li>
-                    <li>{{ "REGISTER.PASSWORD_RULES.RULE_3" | translate }}</li>
-                    <li>{{ "REGISTER.PASSWORD_RULES.RULE_4" | translate }}</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="password-container mt-1">
-            <input
-              class="form-control"
-              [type]="isShowPassword ? 'text' : 'password'"
-              id="password"
-              formControlName="password"
-              [placeholder]="'REGISTER.PASSWORD_PLACEHOLDER' | translate"
+                          >
+                          {{ "REGISTER.PASSWORD" | translate }}
+                          <span class="form-required">*</span>
+                        </label>
+                        <div class="d-flex justify-content-end">
+                          <div class="tooltip-container">
+                            <img class="tooltip-icon" src="icons/info.svg" alt="info" />
+                            <div class="tooltip-box">
+                              <strong>
+                                {{ "REGISTER.PASSWORD_GUIDELINES_TITLE" | translate }}
+                              </strong>
+                              <br />
+                              {{ "REGISTER.PASSWORD_GUIDELINES_DESCRIPTION" | translate }}
+                              <strong>
+                                <u>
+                                  {{ "REGISTER.PASSWORD_MINIMUM_REQUIREMENT" | translate }}
+                                </u>
+                              </strong>
+                              <ul class="mb-0">
+                                <li>{{ "REGISTER.PASSWORD_RULES.RULE_1" | translate }}</li>
+                                <li>{{ "REGISTER.PASSWORD_RULES.RULE_2" | translate }}</li>
+                                <li>{{ "REGISTER.PASSWORD_RULES.RULE_3" | translate }}</li>
+                                <li>{{ "REGISTER.PASSWORD_RULES.RULE_4" | translate }}</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="password-container mt-1">
+                        <input
+                          class="form-control"
+                          [type]="isShowPassword ? 'text' : 'password'"
+                          id="password"
+                          formControlName="password"
+                          [placeholder]="'REGISTER.PASSWORD_PLACEHOLDER' | translate"
               [class.form-error]="
                 getForm('password')?.errors &&
                 (getForm('password')?.touched || getForm('password')?.dirty)
               "
-            />
-            <img
-              *ngIf="isShowPassword"
-              class="icon-eye"
-              src="icons/eyes-close.svg"
-              alt="eyes-close"
-              (click)="toggleShowPassword()"
-            />
-            <img
-              *ngIf="!isShowPassword"
-              class="icon-eye"
-              src="icons/eyes-open.svg"
-              alt="eyes-close"
-              (click)="toggleShowPassword()"
-            />
-          </div>
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('password')?.errors &&
-              (getForm('password')?.touched || getForm('password')?.dirty)
-            "
-          >
-            <ng-container *ngIf="getFormErrors('password', 'required')">
-              {{ "REGISTER.PASSWORD_REQUIRED" | translate }}
-            </ng-container>
-
-            <ng-container *ngIf="!checkSamePassword()">
-              {{ "REGISTER.SAME_PASSWORD_VALIDATE" | translate }}
-            </ng-container>
-          </div>
-        </div>
-
-        <div class="col-12 col-md-6">
-          <!-- Confirm password -->
-          <label
-            class="mt-3"
-            for="confirmPassword"
+                          />
+                          @if (isShowPassword) {
+                            <img
+                              class="icon-eye"
+                              src="icons/eyes-close.svg"
+                              alt="eyes-close"
+                              (click)="toggleShowPassword()"
+                              />
+                          }
+                          @if (!isShowPassword) {
+                            <img
+                              class="icon-eye"
+                              src="icons/eyes-open.svg"
+                              alt="eyes-close"
+                              (click)="toggleShowPassword()"
+                              />
+                          }
+                        </div>
+                        @if (
+                          getForm('password')?.errors &&
+                          (getForm('password')?.touched || getForm('password')?.dirty)
+                          ) {
+                          <div
+                            class="text-error"
+                            >
+                            @if (getFormErrors('password', 'required')) {
+                              {{ "REGISTER.PASSWORD_REQUIRED" | translate }}
+                            }
+                            @if (!checkSamePassword()) {
+                              {{ "REGISTER.SAME_PASSWORD_VALIDATE" | translate }}
+                            }
+                          </div>
+                        }
+                      </div>
+                      <div class="col-12 col-md-6">
+                        <!-- Confirm password -->
+                        <label
+                          class="mt-3"
+                          for="confirmPassword"
             [class.label-error]="
               getForm('confirmPassword')?.errors &&
               (getForm('confirmPassword')?.touched ||
                 getForm('confirmPassword')?.dirty)
             "
-          >
-            {{ "REGISTER.CONFIRM_PASSWORD" | translate }}
-
-            <span class="form-required">*</span>
-          </label>
-          <div class="password-container mt-1">
-            <input
-              class="form-control"
-              [type]="isShowConfirmPassword ? 'text' : 'password'"
-              id="confirmPassword"
-              formControlName="confirmPassword"
+                          >
+                          {{ "REGISTER.CONFIRM_PASSWORD" | translate }}
+                          <span class="form-required">*</span>
+                        </label>
+                        <div class="password-container mt-1">
+                          <input
+                            class="form-control"
+                            [type]="isShowConfirmPassword ? 'text' : 'password'"
+                            id="confirmPassword"
+                            formControlName="confirmPassword"
               [placeholder]="
                 'REGISTER.CONFIRM_PASSWORD_PLACEHOLDER' | translate
               "
@@ -376,118 +370,124 @@
                 (getForm('confirmPassword')?.touched ||
                   getForm('confirmPassword')?.dirty)
               "
-            />
-            <img
-              *ngIf="isShowConfirmPassword"
-              class="icon-eye"
-              src="icons/eyes-close.svg"
-              alt="eyes-close"
-              (click)="toggleShowConfirmPassword()"
-            />
-            <img
-              *ngIf="!isShowConfirmPassword"
-              class="icon-eye"
-              src="icons/eyes-open.svg"
-              alt="eyes-close"
-              (click)="toggleShowConfirmPassword()"
-            />
-          </div>
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('confirmPassword')?.errors &&
-              (getForm('confirmPassword')?.touched ||
-                getForm('confirmPassword')?.dirty)
-            "
-          >
-            <ng-container *ngIf="getFormErrors('confirmPassword', 'required')">
-              {{ "REGISTER.CONFIRM_PASSWORD_REQUIRED" | translate }}
-            </ng-container>
+                            />
+                            @if (isShowConfirmPassword) {
+                              <img
+                                class="icon-eye"
+                                src="icons/eyes-close.svg"
+                                alt="eyes-close"
+                                (click)="toggleShowConfirmPassword()"
+                                />
+                            }
+                            @if (!isShowConfirmPassword) {
+                              <img
+                                class="icon-eye"
+                                src="icons/eyes-open.svg"
+                                alt="eyes-close"
+                                (click)="toggleShowConfirmPassword()"
+                                />
+                            }
+                          </div>
+                          @if (
+                            getForm('confirmPassword')?.errors &&
+                            (getForm('confirmPassword')?.touched ||
+                            getForm('confirmPassword')?.dirty)
+                            ) {
+                            <div
+                              class="text-error"
+                              >
+                              @if (getFormErrors('confirmPassword', 'required')) {
+                                {{ "REGISTER.CONFIRM_PASSWORD_REQUIRED" | translate }}
+                              }
+                              @if (!checkSamePassword()) {
+                                {{ "REGISTER.SAME_PASSWORD_VALIDATE" | translate }}
+                              }
+                            </div>
+                          }
+                        </div>
+                      </div>
+                      <!-- PDPA CONSENT — OBRS-628 AC-1: a consent tick-box has to sit next to a way
+                      to READ what is being consented to; PDPA ม.19 wants the purpose stated
+                      plainly and easy to reach at the moment consent is given, and until now
+                      the only route to /privacy-policy on the whole site was the home footer,
+                      which this page does not render. `target="_blank"` is load-bearing, not
+                      decoration: an in-tab routerLink would tear down this half-filled form. -->
+                      <div class="form-check mt-3">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          id="pdpaConsent"
+                          formControlName="pdpaConsent"
+                          />
+                          <label class="form-check-label ms-2" for="pdpaConsent">
+                            {{ "REGISTER.PDPA_CONSENT" | translate }}
+                          </label>
+                          <a
+                            class="obrs-link ms-1"
+                            data-testid="pdpa-privacy-policy-link"
+                            routerLink="/privacy-policy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            >
+                            {{ "COMMON.READ_PRIVACY_POLICY" | translate }}
+                          </a>
+                          @if (
+                            getForm('pdpaConsent')?.errors &&
+                            (getForm('pdpaConsent')?.touched || getForm('pdpaConsent')?.dirty)
+                            ) {
+                            <div
+                              class="text-error"
+                              >
+                              {{ "REGISTER.PDPA_CONSENT_REQUIRED" | translate }}
+                            </div>
+                          }
+                        </div>
+                        <!-- SUBMIT BUTTON -->
+                        <button
+                          type="submit"
+                          class="login-btn mt-3"
+                          [disabled]="registerForm.invalid"
+                          (click)="register()"
+                          >
+                          {{ "REGISTER.SAVE" | translate }}
+                        </button>
+                        <!--REGISTER LINK -->
+                        <p class="register-link text-center mt-4">
+                          {{ "REGISTER.LOGIN_LINK" | translate }}
+                          <a class="obrs-link" [routerLink]="'/login'">
+                            {{ "REGISTER.LOGIN_LINK_CLICK" | translate }}
+                          </a>
+                        </p>
+                      </form>
+                    </div>
+                  </div>
+                }
 
-            <ng-container *ngIf="!checkSamePassword()">
-              {{ "REGISTER.SAME_PASSWORD_VALIDATE" | translate }}
-            </ng-container>
-          </div>
-        </div>
-      </div>
-      <!-- PDPA CONSENT — OBRS-628 AC-1: a consent tick-box has to sit next to a way
-           to READ what is being consented to; PDPA ม.19 wants the purpose stated
-           plainly and easy to reach at the moment consent is given, and until now
-           the only route to /privacy-policy on the whole site was the home footer,
-           which this page does not render. `target="_blank"` is load-bearing, not
-           decoration: an in-tab routerLink would tear down this half-filled form. -->
-      <div class="form-check mt-3">
-        <input
-          class="form-check-input"
-          type="checkbox"
-          id="pdpaConsent"
-          formControlName="pdpaConsent"
-        />
-        <label class="form-check-label ms-2" for="pdpaConsent">
-          {{ "REGISTER.PDPA_CONSENT" | translate }}
-        </label>
-        <a
-          class="obrs-link ms-1"
-          data-testid="pdpa-privacy-policy-link"
-          routerLink="/privacy-policy"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {{ "COMMON.READ_PRIVACY_POLICY" | translate }}
-        </a>
-        <div
-          class="text-error"
-          *ngIf="
-            getForm('pdpaConsent')?.errors &&
-            (getForm('pdpaConsent')?.touched || getForm('pdpaConsent')?.dirty)
-          "
-        >
-          {{ "REGISTER.PDPA_CONSENT_REQUIRED" | translate }}
-        </div>
-      </div>
-      <!-- SUBMIT BUTTON -->
-      <button
-        type="submit"
-        class="login-btn mt-3"
-        [disabled]="registerForm.invalid"
-        (click)="register()"
-      >
-        {{ "REGISTER.SAVE" | translate }}
-      </button>
-      <!--REGISTER LINK -->
-      <p class="register-link text-center mt-4">
-        {{ "REGISTER.LOGIN_LINK" | translate }}
-        <a class="obrs-link" [routerLink]="'/login'">
-          {{ "REGISTER.LOGIN_LINK_CLICK" | translate }}
-        </a>
-      </p>
-    </form>
-  </div>
-</div>
-
-<!-- OBRS-605: signup succeeded - this panel used to live on the OTP screen. -->
-<div class="login-container" *ngIf="registrationEmailSent">
-  <div class="left-section">
-    <img class="bg-img" src="images/login.svg" alt="Tickets" />
-  </div>
-  <div class="right-section email-verify-panel">
-    <div class="change-language">
-      <app-theme-toggle></app-theme-toggle>
-      <app-lang-switcher></app-lang-switcher>
-    </div>
-    <div class="logo-section mt-5">
-      <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
-    </div>
-    <div class="text-center mt-5">
-      <span class="material-symbols-outlined email-verify-icon">
-        mark_email_read
-      </span>
-      <p class="email-verify-message mt-3">
-        {{ "REGISTER.EMAIL_VERIFY_SENT" | translate }}
-      </p>
-      <a class="btn btn-link" [routerLink]="'/login'">
-        {{ "REGISTER.EMAIL_VERIFY_SIGNIN" | translate }}
-      </a>
-    </div>
-  </div>
-</div>
+                <!-- OBRS-605: signup succeeded - this panel used to live on the OTP screen. -->
+                @if (registrationEmailSent) {
+                  <div class="login-container">
+                    <div class="left-section">
+                      <img class="bg-img" src="images/login.svg" alt="Tickets" />
+                    </div>
+                    <div class="right-section email-verify-panel">
+                      <div class="change-language">
+                        <app-theme-toggle></app-theme-toggle>
+                        <app-lang-switcher></app-lang-switcher>
+                      </div>
+                      <div class="logo-section mt-5">
+                        <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
+                      </div>
+                      <div class="text-center mt-5">
+                        <span class="material-symbols-outlined email-verify-icon">
+                          mark_email_read
+                        </span>
+                        <p class="email-verify-message mt-3">
+                          {{ "REGISTER.EMAIL_VERIFY_SENT" | translate }}
+                        </p>
+                        <a class="btn btn-link" [routerLink]="'/login'">
+                          {{ "REGISTER.EMAIL_VERIFY_SIGNIN" | translate }}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                }

@@ -1,7 +1,11 @@
 <section class="admin-page-intro">
   <div>
-    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
-    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    @if (isLoading) {
+      <p class="admin-muted">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    }
+    @if (errorMessage) {
+      <p class="admin-muted">{{ errorMessage }}</p>
+    }
     <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
   </div>
   <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
@@ -27,10 +31,12 @@
   <article class="admin-card">
     <h4>{{ 'ADMIN.LOOKUP.CATEGORIES' | translate }}</h4>
     <ul class="admin-list">
-      <li *ngFor="let category of categories; trackBy: trackByCategoryName">
-        <span>{{ category.name }}</span>
-        <strong>{{ category.count }}</strong>
-      </li>
+      @for (category of categories; track trackByCategoryName($index, category)) {
+        <li>
+          <span>{{ category.name }}</span>
+          <strong>{{ category.count }}</strong>
+        </li>
+      }
     </ul>
   </article>
 
@@ -49,153 +55,162 @@
           </tr>
         </thead>
         <tbody>
-          <ng-container *ngIf="isLoading">
-            <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-              <td>
-                <div class="admin-cell-stack">
-                  <span class="admin-skeleton"></span>
-                  <span class="admin-skeleton admin-skeleton--sm"></span>
-                </div>
-              </td>
-              <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            </tr>
-          </ng-container>
+          @if (isLoading) {
+            @for (row of skeletonRows; track row) {
+              <tr class="admin-skeleton-row" aria-hidden="true">
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td>
+                  <div class="admin-cell-stack">
+                    <span class="admin-skeleton"></span>
+                    <span class="admin-skeleton admin-skeleton--sm"></span>
+                  </div>
+                </td>
+                <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              </tr>
+            }
+          }
 
-          <ng-container *ngIf="!isLoading">
-            <ng-container *ngFor="let group of groupedEntries">
+          @if (!isLoading) {
+            @for (group of groupedEntries; track group) {
               <tr class="admin-group-row">
                 <td colspan="3">
                   <span class="admin-chip">{{ group.category }}</span>
                   <span class="admin-muted">· {{ group.items.length }}</span>
                 </td>
               </tr>
-              <tr *ngFor="let entry of group.items; let i = index" [class.zebra]="i % 2 === 1">
-                <td><code>{{ entry.slug }}</code></td>
-                <td>
-                  <div class="admin-cell-stack">
-                    <span><strong>EN:</strong> {{ entry.enLabel }}</span>
-                    <span><strong>TH:</strong> {{ entry.thLabel }}</span>
-                  </div>
-                </td>
-                <td class="text-right">
-                  <div class="admin-inline-actions">
-                    <button
-                      type="button"
-                      class="admin-icon-btn"
-                      [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
-                      (click)="openEditModal(entry)"
-                    >
-                      <span class="material-symbols-outlined">edit</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="admin-icon-btn danger"
-                      [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
-                      (click)="openDeleteModal(entry)"
-                    >
-                      <span class="material-symbols-outlined">delete</span>
-                    </button>
-                  </div>
-                </td>
+              @for (entry of group.items; track entry; let i = $index) {
+                <tr [class.zebra]="i % 2 === 1">
+                  <td><code>{{ entry.slug }}</code></td>
+                  <td>
+                    <div class="admin-cell-stack">
+                      <span><strong>EN:</strong> {{ entry.enLabel }}</span>
+                      <span><strong>TH:</strong> {{ entry.thLabel }}</span>
+                    </div>
+                  </td>
+                  <td class="text-right">
+                    <div class="admin-inline-actions">
+                      <button
+                        type="button"
+                        class="admin-icon-btn"
+                        [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                        (click)="openEditModal(entry)"
+                        >
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="admin-icon-btn danger"
+                        [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                        (click)="openDeleteModal(entry)"
+                        >
+                        <span class="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            }
+            @if (entries.length === 0 && !errorMessage) {
+              <tr class="admin-empty-row">
+                <td colspan="3">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
               </tr>
-            </ng-container>
-
-            <tr *ngIf="entries.length === 0 && !errorMessage" class="admin-empty-row">
-              <td colspan="3">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
-            </tr>
-          </ng-container>
+            }
+          }
         </tbody>
       </table>
     </div>
   </article>
 </section>
 
-<div class="admin-modal-backdrop" *ngIf="isFormModalOpen" adminModalBackdrop (dismiss)="closeFormModal()">
-  <div class="admin-modal">
-    <h4 class="admin-modal-title">
-      {{
+@if (isFormModalOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="closeFormModal()">
+    <div class="admin-modal">
+      <h4 class="admin-modal-title">
+        {{
         isEditMode
-          ? ('ADMIN.LOOKUP.EDIT_TITLE' | translate)
-          : ('ADMIN.LOOKUP.ADD_TITLE' | translate)
-      }}
-    </h4>
-    <p class="admin-modal-subtitle">{{ 'ADMIN.LOOKUP.MODAL_HINT' | translate }}</p>
-
-    <form [formGroup]="lookupForm" class="admin-form-grid" (ngSubmit)="submitLookup()">
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.LOOKUP.CATEGORY' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="category" />
-        <small class="admin-error" *ngIf="isFieldInvalid('category')">
-          {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
-        </small>
+        ? ('ADMIN.LOOKUP.EDIT_TITLE' | translate)
+        : ('ADMIN.LOOKUP.ADD_TITLE' | translate)
+        }}
+      </h4>
+      <p class="admin-modal-subtitle">{{ 'ADMIN.LOOKUP.MODAL_HINT' | translate }}</p>
+      <form [formGroup]="lookupForm" class="admin-form-grid" (ngSubmit)="submitLookup()">
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.LOOKUP.CATEGORY' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="category" />
+          @if (isFieldInvalid('category')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.LOOKUP.SLUG' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="slug" />
+          @if (isFieldInvalid('slug')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.LOOKUP.EN_LABEL' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="enLabel" />
+          @if (isFieldInvalid('enLabel')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.LOOKUP.TH_LABEL' | translate }}</label>
+          <input class="admin-field" formControlName="thLabel" />
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.LOOKUP.EN_DESCRIPTION' | translate }}</label>
+          <textarea class="admin-field" formControlName="enDescription"></textarea>
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.LOOKUP.TH_DESCRIPTION' | translate }}</label>
+          <textarea class="admin-field" formControlName="thDescription"></textarea>
+        </div>
+      </form>
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" (click)="closeFormModal()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitLookup()">
+          {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+        </button>
       </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.LOOKUP.SLUG' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="slug" />
-        <small class="admin-error" *ngIf="isFieldInvalid('slug')">
-          {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.LOOKUP.EN_LABEL' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="enLabel" />
-        <small class="admin-error" *ngIf="isFieldInvalid('enLabel')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.LOOKUP.TH_LABEL' | translate }}</label>
-        <input class="admin-field" formControlName="thLabel" />
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.LOOKUP.EN_DESCRIPTION' | translate }}</label>
-        <textarea class="admin-field" formControlName="enDescription"></textarea>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.LOOKUP.TH_DESCRIPTION' | translate }}</label>
-        <textarea class="admin-field" formControlName="thDescription"></textarea>
-      </div>
-    </form>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="closeFormModal()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitLookup()">
-        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-      </button>
     </div>
   </div>
-</div>
+}
 
-<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen" adminModalBackdrop (dismiss)="closeDeleteModal()">
-  <div class="admin-modal admin-modal-confirm">
-    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
-    <p class="admin-modal-subtitle">
-      {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
-      <strong *ngIf="selectedEntry">{{ selectedEntry.slug }}</strong>
-    </p>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="closeDeleteModal()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirmDelete()">
-        {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
-      </button>
+@if (isDeleteModalOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="closeDeleteModal()">
+    <div class="admin-modal admin-modal-confirm">
+      <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
+      <p class="admin-modal-subtitle">
+        {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
+        @if (selectedEntry) {
+          <strong>{{ selectedEntry.slug }}</strong>
+        }
+      </p>
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" (click)="closeDeleteModal()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirmDelete()">
+          {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
+        </button>
+      </div>
     </div>
   </div>
-</div>
+}
 

@@ -5,256 +5,263 @@
       src="images/ticket-slot.svg"
       alt=""
       aria-hidden="true"
-    />
-  </div>
-
-  <article #ticketPaper class="ticket-paper">
-    <div class="ticket-header">
-      <img
-        class="ticket-logo"
-        src="images/logo.svg"
-        width="104"
-        height="45"
-        [attr.alt]="'E_TICKET.LOGO_ALT' | translate"
       />
-      <div class="ticket-subtitle">
-        {{ "E_TICKET.SUBTITLE" | translate }}
-      </div>
     </div>
 
-    <div class="ticket-divider"></div>
+    <article #ticketPaper class="ticket-paper">
+      <div class="ticket-header">
+        <img
+          class="ticket-logo"
+          src="images/logo.svg"
+          width="104"
+          height="45"
+          [attr.alt]="'E_TICKET.LOGO_ALT' | translate"
+          />
+          <div class="ticket-subtitle">
+            {{ "E_TICKET.SUBTITLE" | translate }}
+          </div>
+        </div>
 
-    <div class="ticket-grid ticket-summary-grid">
-      <div class="ticket-item">
-        <span class="label">{{ "E_TICKET.LABEL.BOOKING_REF" | translate }}</span>
-        <span class="value">{{ bookingNumber }}</span>
-      </div>
-      <div class="ticket-item">
-        <span class="label">{{ "E_TICKET.LABEL.TICKET_NO" | translate }}</span>
-        <span class="value">{{ ticketNumber }}</span>
-      </div>
-    </div>
-
-    <ng-container
-      *ngFor="let leg of legs; let i = index; trackBy: trackByIndex"
-    >
-      <ng-container *ngIf="legs.length > 1">
         <div class="ticket-divider"></div>
-        <div class="ticket-leg-heading">
-          {{ (i === 0 ? "E_TICKET.LABEL.LEG_OUTBOUND" : "E_TICKET.LABEL.LEG_RETURN") | translate }}
-        </div>
-      </ng-container>
 
-      <div class="ticket-leg">
-        <div class="ticket-grid">
+        <div class="ticket-grid ticket-summary-grid">
           <div class="ticket-item">
-            <span class="label">{{ "E_TICKET.LABEL.TRAVEL_DATE" | translate }}</span>
-            <span class="value">{{ leg.travelDate }}</span>
+            <span class="label">{{ "E_TICKET.LABEL.BOOKING_REF" | translate }}</span>
+            <span class="value">{{ bookingNumber }}</span>
           </div>
           <div class="ticket-item">
-            <span class="label">{{ "E_TICKET.LABEL.TRAVEL_TIME" | translate }}</span>
-            <span class="value">{{ leg.travelTime }}</span>
+            <span class="label">{{ "E_TICKET.LABEL.TICKET_NO" | translate }}</span>
+            <span class="value">{{ ticketNumber }}</span>
           </div>
         </div>
 
-        <div class="ticket-route">
-          <div class="ticket-item full">
-            <span class="label">{{ "E_TICKET.LABEL.ROUTE" | translate }}</span>
-            <span class="value">{{ leg.route }}</span>
-          </div>
-          <div class="ticket-item full" *ngIf="leg.distanceKm != null">
-            <small class="trip-estimate">
-              ≈ {{ leg.distanceKm }} {{ "E_TICKET.LABEL.ESTIMATE_KM_UNIT" | translate }}
-            </small>
-          </div>
-          <div
-            class="ticket-item full"
-            *ngIf="leg.pickupLatitude != null && leg.pickupLongitude != null"
-          >
-            <button
-              type="button"
-              class="ticket-nav-btn"
-              (click)="navigateToPickup(leg)"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">directions</span>
-              {{ "E_TICKET.BTN_NAVIGATE" | translate }}
-            </button>
-          </div>
-          <div class="ticket-grid">
-            <div class="ticket-item">
-              <span class="label">{{ "E_TICKET.LABEL.ORIGIN" | translate }}</span>
-              <span class="value">{{ leg.origin }}</span>
+        @for (leg of legs; track trackByIndex(i); let i = $index) {
+          @if (legs.length > 1) {
+            <div class="ticket-divider"></div>
+            <div class="ticket-leg-heading">
+              {{ (i === 0 ? "E_TICKET.LABEL.LEG_OUTBOUND" : "E_TICKET.LABEL.LEG_RETURN") | translate }}
             </div>
-            <div class="ticket-item">
-              <span class="label">{{ "E_TICKET.LABEL.DESTINATION" | translate }}</span>
-              <span class="value">{{ leg.destination }}</span>
-            </div>
-            <div class="ticket-item">
-              <span class="label">{{ "E_TICKET.LABEL.VEHICLE_TYPE" | translate }}</span>
-              <span class="value">{{ leg.vehicleType }}</span>
-            </div>
-            <div class="ticket-item">
-              <span class="label">{{ "E_TICKET.LABEL.VEHICLE_PLATE" | translate }}</span>
-              <span class="value">{{ leg.vehiclePlate }}</span>
-            </div>
-            <div class="ticket-item">
-              <span class="label">{{ "E_TICKET.LABEL.SEAT" | translate }}</span>
-              <span class="value">{{
-                leg.isOpenSeating
-                  ? ("E_TICKET.LABEL.SEAT_OPEN" | translate)
-                  : leg.seats
-              }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </ng-container>
-
-    <ng-container *ngIf="booker">
-      <div class="ticket-divider dotted"></div>
-
-      <div class="ticket-passengers">
-        <div class="passenger-list">
-          <div class="passenger-row">
-            <div class="passenger-detail">
-              <div class="passenger-field">
-                <span class="label">
-                  {{ "E_TICKET.LABEL.PASSENGER_PHONE" | translate }}
-                </span>
-                <span class="value">{{ booker.phone | phoneFormat }}</span>
+          }
+          <div class="ticket-leg">
+            <div class="ticket-grid">
+              <div class="ticket-item">
+                <span class="label">{{ "E_TICKET.LABEL.TRAVEL_DATE" | translate }}</span>
+                <span class="value">{{ leg.travelDate }}</span>
+              </div>
+              <div class="ticket-item">
+                <span class="label">{{ "E_TICKET.LABEL.TRAVEL_TIME" | translate }}</span>
+                <span class="value">{{ leg.travelTime }}</span>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </ng-container>
-
-    <div class="ticket-passengers mt-3">
-      <div class="ticket-item full">
-        <span class="label">{{ "E_TICKET.LABEL.PASSENGERS" | translate }}</span>
-      </div>
-
-      <!-- OBRS-873: one list PER LEG. A round trip issues a separate ticket per
-           leg, so its return passengers need their own QRs — and need to be
-           told apart from the outbound ones, hence the same LEG_OUTBOUND /
-           LEG_RETURN heading the leg blocks above use. A one-way booking has a
-           single leg, so the heading is suppressed and this renders exactly the
-           one flat list it rendered before. -->
-      <ng-container
-        *ngFor="let rows of legPassengerRows; let legIndex = index; trackBy: trackByIndex"
-      >
-        <ng-container *ngIf="rows.length">
-        <div class="ticket-leg-heading" *ngIf="hasMultiplePassengerLegs">
-          {{ (legIndex === 0 ? "E_TICKET.LABEL.LEG_OUTBOUND" : "E_TICKET.LABEL.LEG_RETURN") | translate }}
-        </div>
-
-        <div class="passenger-list">
-          <div
-            class="passenger-row"
-            *ngFor="let passenger of rows; let i = index; trackBy: trackByIndex"
-          >
-            <!-- OBRS-866: this passenger's OWN boarding QR, encoding the signed
-                 boarding token for `passenger.ticketId` — what
-                 POST /tickets/boarding-scan actually accepts. (It used to be one
-                 card-level QR of the `ticketNumber` string, which the scanner
-                 rejects with 400 INVALID_TICKET_TOKEN and which could never have
-                 boarded more than one passenger anyway.) A per-ticket fetch
-                 failure — e.g. 409 TICKET_NOT_CONFIRMED on a cancelled leg —
-                 marks THIS row unavailable; every other row still renders.
-                 Spans the whole `auto 1fr` row grid, like .child-fare-note. -->
-            <div class="passenger-qr" *ngIf="passenger.ticketId !== null">
-              <ng-container *ngIf="passenger.qrDataUrl; else qrRowPlaceholder">
-                <img
-                  class="qr-code"
-                  [src]="passenger.qrDataUrl"
-                  [attr.alt]="'E_TICKET.QR_ARIA_LABEL' | translate"
-                />
-              </ng-container>
-              <ng-template #qrRowPlaceholder>
-                <div
-                  class="qr-code qr-code-placeholder"
-                  [class.is-unavailable]="passenger.qrUnavailable"
-                  role="img"
-                  [attr.aria-label]="'E_TICKET.QR_ARIA_LABEL' | translate"
-                >
-                  <span
-                    *ngIf="passenger.qrUnavailable"
-                    class="material-symbols-outlined qr-unavailable-icon"
-                    aria-hidden="true"
-                    >block</span
-                  >
+            <div class="ticket-route">
+              <div class="ticket-item full">
+                <span class="label">{{ "E_TICKET.LABEL.ROUTE" | translate }}</span>
+                <span class="value">{{ leg.route }}</span>
+              </div>
+              @if (leg.distanceKm != null) {
+                <div class="ticket-item full">
+                  <small class="trip-estimate">
+                    ≈ {{ leg.distanceKm }} {{ "E_TICKET.LABEL.ESTIMATE_KM_UNIT" | translate }}
+                  </small>
                 </div>
-              </ng-template>
-              <div class="passenger-ticket-number">{{ passenger.ticketNumber }}</div>
-              <div class="qr-unavailable-text" *ngIf="passenger.qrUnavailable">
-                {{ "E_TICKET.QR_UNAVAILABLE" | translate }}
+              }
+              @if (leg.pickupLatitude != null && leg.pickupLongitude != null) {
+                <div
+                  class="ticket-item full"
+                  >
+                  <button
+                    type="button"
+                    class="ticket-nav-btn"
+                    (click)="navigateToPickup(leg)"
+                    >
+                    <span class="material-symbols-outlined" aria-hidden="true">directions</span>
+                    {{ "E_TICKET.BTN_NAVIGATE" | translate }}
+                  </button>
+                </div>
+              }
+              <div class="ticket-grid">
+                <div class="ticket-item">
+                  <span class="label">{{ "E_TICKET.LABEL.ORIGIN" | translate }}</span>
+                  <span class="value">{{ leg.origin }}</span>
+                </div>
+                <div class="ticket-item">
+                  <span class="label">{{ "E_TICKET.LABEL.DESTINATION" | translate }}</span>
+                  <span class="value">{{ leg.destination }}</span>
+                </div>
+                <div class="ticket-item">
+                  <span class="label">{{ "E_TICKET.LABEL.VEHICLE_TYPE" | translate }}</span>
+                  <span class="value">{{ leg.vehicleType }}</span>
+                </div>
+                <div class="ticket-item">
+                  <span class="label">{{ "E_TICKET.LABEL.VEHICLE_PLATE" | translate }}</span>
+                  <span class="value">{{ leg.vehiclePlate }}</span>
+                </div>
+                <div class="ticket-item">
+                  <span class="label">{{ "E_TICKET.LABEL.SEAT" | translate }}</span>
+                  <span class="value">{{
+                    leg.isOpenSeating
+                    ? ("E_TICKET.LABEL.SEAT_OPEN" | translate)
+                    : leg.seats
+                  }}</span>
+                </div>
               </div>
             </div>
-
-            <div class="passenger-index">{{ i + 1 }}.</div>
-            <div class="passenger-detail">
-              <div class="passenger-field">
-                <span class="label">
-                  {{ "E_TICKET.LABEL.PASSENGER_NAME" | translate }}
-                </span>
-                <span class="value">{{ passenger.name }}</span>
-              </div>
-              <div class="passenger-field" *ngIf="passenger.fareCategory">
-                <span class="label">
-                  {{ "E_TICKET.LABEL.FARE_CATEGORY" | translate }}
-                </span>
-                <span class="value">
-                  {{
-                    (passenger.fareCategory === "adult"
-                      ? "PASSENGER_INFO.BADGE.ADULT"
-                      : "PASSENGER_INFO.BADGE.CHILD"
-                    ) | translate
-                  }}
-                </span>
-              </div>
-            </div>
-            <!-- OBRS-296: boarding-check note for a child-fare passenger —
-                 static token ($text-lightblack via .child-fare-note), matching
-                 the .trip-estimate/.ticket-leg-heading precedent on this
-                 dark-theme-exempt ticket paper. -->
-            <small class="child-fare-note" *ngIf="passenger.fareCategory === 'child'">
-              {{ "E_TICKET.CHILD_FARE_NOTE" | translate }}
-            </small>
           </div>
-        </div>
-        </ng-container>
-      </ng-container>
+        }
 
-      <!-- OBRS-866: the hint moved here from the (now removed) card-level QR
-           footer, so the sentence "scan this before boarding" sits with the
-           QRs it describes rather than under a QR that no longer exists. -->
-      <div class="qr-hint" *ngIf="hasPassengerRows">
-        {{ "E_TICKET.NOTE_LABEL" | translate }}<br />
-        {{ "E_TICKET.QR_HINT" | translate }}
-      </div>
-    </div>
+        @if (booker) {
+          <div class="ticket-divider dotted"></div>
+          <div class="ticket-passengers">
+            <div class="passenger-list">
+              <div class="passenger-row">
+                <div class="passenger-detail">
+                  <div class="passenger-field">
+                    <span class="label">
+                      {{ "E_TICKET.LABEL.PASSENGER_PHONE" | translate }}
+                    </span>
+                    <span class="value">{{ booker.phone | phoneFormat }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
 
-    <div class="ticket-footer">
-      <div class="ticket-item">
-        <span class="label">{{ "E_TICKET.LABEL.PAYMENT_DATE" | translate }}</span>
-        <span class="value">{{ paymentDate }}</span>
-      </div>
-      <div class="ticket-total">
-        <span class="label">{{ "E_TICKET.LABEL.TOTAL" | translate }}</span>
-        <span class="value">
-          {{ totalAmount }} {{ "E_TICKET.LABEL.TOTAL_UNIT" | translate }}
-        </span>
-      </div>
-    </div>
+        <div class="ticket-passengers mt-3">
+          <div class="ticket-item full">
+            <span class="label">{{ "E_TICKET.LABEL.PASSENGERS" | translate }}</span>
+          </div>
 
-    <button
-      type="button"
-      class="download-btn"
-      (click)="downloadTicketImage()"
-      [disabled]="isDownloadingTicket"
-    >
-      <img src="icons/payment-download.svg" alt="" aria-hidden="true" />
-      {{ "E_TICKET.DOWNLOAD" | translate }}
-    </button>
-  </article>
-</div>
+          <!-- OBRS-873: one list PER LEG. A round trip issues a separate ticket per
+          leg, so its return passengers need their own QRs — and need to be
+          told apart from the outbound ones, hence the same LEG_OUTBOUND /
+          LEG_RETURN heading the leg blocks above use. A one-way booking has a
+          single leg, so the heading is suppressed and this renders exactly the
+          one flat list it rendered before. -->
+          @for (rows of legPassengerRows; track trackByIndex(legIndex); let legIndex = $index) {
+            @if (rows.length) {
+              @if (hasMultiplePassengerLegs) {
+                <div class="ticket-leg-heading">
+                  {{ (legIndex === 0 ? "E_TICKET.LABEL.LEG_OUTBOUND" : "E_TICKET.LABEL.LEG_RETURN") | translate }}
+                </div>
+              }
+              <div class="passenger-list">
+                @for (passenger of rows; track trackByIndex(i); let i = $index) {
+                  <div
+                    class="passenger-row"
+                    >
+                    <!-- OBRS-866: this passenger's OWN boarding QR, encoding the signed
+                    boarding token for `passenger.ticketId` — what
+                    POST /tickets/boarding-scan actually accepts. (It used to be one
+                    card-level QR of the `ticketNumber` string, which the scanner
+                    rejects with 400 INVALID_TICKET_TOKEN and which could never have
+                    boarded more than one passenger anyway.) A per-ticket fetch
+                    failure — e.g. 409 TICKET_NOT_CONFIRMED on a cancelled leg —
+                    marks THIS row unavailable; every other row still renders.
+                    Spans the whole `auto 1fr` row grid, like .child-fare-note. -->
+                    @if (passenger.ticketId !== null) {
+                      <div class="passenger-qr">
+                        @if (passenger.qrDataUrl) {
+                          <img
+                            class="qr-code"
+                            [src]="passenger.qrDataUrl"
+                            [attr.alt]="'E_TICKET.QR_ARIA_LABEL' | translate"
+                            />
+                          } @else {
+                            <div
+                              class="qr-code qr-code-placeholder"
+                              [class.is-unavailable]="passenger.qrUnavailable"
+                              role="img"
+                              [attr.aria-label]="'E_TICKET.QR_ARIA_LABEL' | translate"
+                              >
+                              @if (passenger.qrUnavailable) {
+                                <span
+                                  class="material-symbols-outlined qr-unavailable-icon"
+                                  aria-hidden="true"
+                                  >block</span
+                                  >
+                              }
+                            </div>
+                          }
+                          <div class="passenger-ticket-number">{{ passenger.ticketNumber }}</div>
+                          @if (passenger.qrUnavailable) {
+                            <div class="qr-unavailable-text">
+                              {{ "E_TICKET.QR_UNAVAILABLE" | translate }}
+                            </div>
+                          }
+                        </div>
+                      }
+                      <div class="passenger-index">{{ i + 1 }}.</div>
+                      <div class="passenger-detail">
+                        <div class="passenger-field">
+                          <span class="label">
+                            {{ "E_TICKET.LABEL.PASSENGER_NAME" | translate }}
+                          </span>
+                          <span class="value">{{ passenger.name }}</span>
+                        </div>
+                        @if (passenger.fareCategory) {
+                          <div class="passenger-field">
+                            <span class="label">
+                              {{ "E_TICKET.LABEL.FARE_CATEGORY" | translate }}
+                            </span>
+                            <span class="value">
+                              {{
+                              (passenger.fareCategory === "adult"
+                              ? "PASSENGER_INFO.BADGE.ADULT"
+                              : "PASSENGER_INFO.BADGE.CHILD"
+                              ) | translate
+                              }}
+                            </span>
+                          </div>
+                        }
+                      </div>
+                      <!-- OBRS-296: boarding-check note for a child-fare passenger —
+                      static token ($text-lightblack via .child-fare-note), matching
+                      the .trip-estimate/.ticket-leg-heading precedent on this
+                      dark-theme-exempt ticket paper. -->
+                      @if (passenger.fareCategory === 'child') {
+                        <small class="child-fare-note">
+                          {{ "E_TICKET.CHILD_FARE_NOTE" | translate }}
+                        </small>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            }
+
+            <!-- OBRS-866: the hint moved here from the (now removed) card-level QR
+            footer, so the sentence "scan this before boarding" sits with the
+            QRs it describes rather than under a QR that no longer exists. -->
+            @if (hasPassengerRows) {
+              <div class="qr-hint">
+                {{ "E_TICKET.NOTE_LABEL" | translate }}<br />
+                {{ "E_TICKET.QR_HINT" | translate }}
+              </div>
+            }
+          </div>
+
+          <div class="ticket-footer">
+            <div class="ticket-item">
+              <span class="label">{{ "E_TICKET.LABEL.PAYMENT_DATE" | translate }}</span>
+              <span class="value">{{ paymentDate }}</span>
+            </div>
+            <div class="ticket-total">
+              <span class="label">{{ "E_TICKET.LABEL.TOTAL" | translate }}</span>
+              <span class="value">
+                {{ totalAmount }} {{ "E_TICKET.LABEL.TOTAL_UNIT" | translate }}
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="download-btn"
+            (click)="downloadTicketImage()"
+            [disabled]="isDownloadingTicket"
+            >
+            <img src="icons/payment-download.svg" alt="" aria-hidden="true" />
+            {{ "E_TICKET.DOWNLOAD" | translate }}
+          </button>
+        </article>
+      </div>

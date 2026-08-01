@@ -1,76 +1,84 @@
 <section class="trip-track-panel">
   <p class="trip-track-panel__title">{{ "MY_BOOKINGS.TRIP_TRACK.TITLE" | translate }}</p>
 
-  <div class="trip-track-panel__loading" *ngIf="loading && !view">
-    <span class="trip-track-panel__spinner" aria-hidden="true"></span>
-    <p>{{ "MY_BOOKINGS.TRIP_TRACK.LOADING" | translate }}</p>
-  </div>
+  @if (loading && !view) {
+    <div class="trip-track-panel__loading">
+      <span class="trip-track-panel__spinner" aria-hidden="true"></span>
+      <p>{{ "MY_BOOKINGS.TRIP_TRACK.LOADING" | translate }}</p>
+    </div>
+  }
 
-  <div class="trip-track-panel__error" *ngIf="errorText">
-    <span class="material-symbols-outlined" aria-hidden="true">error</span>
-    <p>{{ errorText }}</p>
-  </div>
+  @if (errorText) {
+    <div class="trip-track-panel__error">
+      <span class="material-symbols-outlined" aria-hidden="true">error</span>
+      <p>{{ errorText }}</p>
+    </div>
+  }
 
-  <ng-container *ngIf="!errorText && view as v">
+  @if (!errorText && view; as v) {
     <div class="trip-track-panel__chip-row">
       <span class="admin-status" [ngClass]="chipStatusClass(v.state)">{{ v.chipKey | translate }}</span>
     </div>
-
     <!-- BR-11: the STALE banner sits ABOVE the map, always visible without
-         scrolling — three signals carry it (marker degradation is C2's job;
-         this banner and the chip color are the other two). -->
-    <div class="trip-track-panel__banner trip-track-panel__banner--stale" *ngIf="v.state === 'STALE'">
-      {{ "MY_BOOKINGS.TRIP_TRACK.STATE.STALE_BODY" | translate: { time: v.timeText } }}
-    </div>
-
-    <ng-container *ngIf="v.hasMap; else noMap">
-      <app-trip-track-map
-        *ngIf="canShowMap"
-        [lat]="v.lat"
-        [lon]="v.lon"
-        [stale]="v.markerStyle === 'stale'"
-        [boardingStopLat]="boardingStopLat"
-        [boardingStopLon]="boardingStopLon"
-        [maptilerKey]="maptilerKey"
-      ></app-trip-track-map>
-
-      <div class="trip-track-panel__map-unavailable" *ngIf="!canShowMap">
-        <span class="material-symbols-outlined" aria-hidden="true">map</span>
-        <p>{{ "MY_BOOKINGS.TRIP_TRACK.MAP_UNAVAILABLE" | translate }}</p>
+    scrolling — three signals carry it (marker degradation is C2's job;
+    this banner and the chip color are the other two). -->
+    @if (v.state === 'STALE') {
+      <div class="trip-track-panel__banner trip-track-panel__banner--stale">
+        {{ "MY_BOOKINGS.TRIP_TRACK.STATE.STALE_BODY" | translate: { time: v.timeText } }}
       </div>
-
-      <p class="trip-track-panel__last-update" *ngIf="v.state === 'LIVE' || v.state === 'STALE'">
-        {{ "MY_BOOKINGS.TRIP_TRACK.LAST_UPDATE" | translate: { time: v.timeText } }}
-      </p>
-    </ng-container>
-
-    <ng-template #noMap>
-      <div class="trip-track-panel__state-body" [ngSwitch]="v.state">
-        <ng-container *ngSwitchCase="'NO_SIGNAL'">
-          <p>{{ "MY_BOOKINGS.TRIP_TRACK.STATE.NO_SIGNAL_BODY" | translate }}</p>
-        </ng-container>
-        <ng-container *ngSwitchCase="'UNAVAILABLE'">
-          <p>{{ "MY_BOOKINGS.TRIP_TRACK.STATE.UNAVAILABLE_BODY" | translate }}</p>
-        </ng-container>
-        <ng-container *ngSwitchCase="'NOT_YET_OPEN'">
-          <p>{{ "MY_BOOKINGS.TRIP_TRACK.STATE.NOT_YET_OPEN_BODY" | translate }}</p>
-          <p class="trip-track-panel__at">
-            {{ "MY_BOOKINGS.TRIP_TRACK.STATE.NOT_YET_OPEN_AT" | translate: { time: v.timeText } }}
-          </p>
-        </ng-container>
-        <ng-container *ngSwitchCase="'CLOSED'">
-          <p>{{ "MY_BOOKINGS.TRIP_TRACK.STATE.CLOSED_BODY" | translate }}</p>
-        </ng-container>
-        <ng-container *ngSwitchDefault>
-          <p>{{ "MY_BOOKINGS.TRIP_TRACK.STATE.UNAVAILABLE_BODY" | translate }}</p>
-        </ng-container>
+    }
+    @if (v.hasMap) {
+      @if (canShowMap) {
+        <app-trip-track-map
+          [lat]="v.lat"
+          [lon]="v.lon"
+          [stale]="v.markerStyle === 'stale'"
+          [boardingStopLat]="boardingStopLat"
+          [boardingStopLon]="boardingStopLon"
+          [maptilerKey]="maptilerKey"
+        ></app-trip-track-map>
+      }
+      @if (!canShowMap) {
+        <div class="trip-track-panel__map-unavailable">
+          <span class="material-symbols-outlined" aria-hidden="true">map</span>
+          <p>{{ "MY_BOOKINGS.TRIP_TRACK.MAP_UNAVAILABLE" | translate }}</p>
+        </div>
+      }
+      @if (v.state === 'LIVE' || v.state === 'STALE') {
+        <p class="trip-track-panel__last-update">
+          {{ "MY_BOOKINGS.TRIP_TRACK.LAST_UPDATE" | translate: { time: v.timeText } }}
+        </p>
+      }
+    } @else {
+      <div class="trip-track-panel__state-body">
+        @switch (v.state) {
+          @case ('NO_SIGNAL') {
+            <p>{{ "MY_BOOKINGS.TRIP_TRACK.STATE.NO_SIGNAL_BODY" | translate }}</p>
+          }
+          @case ('UNAVAILABLE') {
+            <p>{{ "MY_BOOKINGS.TRIP_TRACK.STATE.UNAVAILABLE_BODY" | translate }}</p>
+          }
+          @case ('NOT_YET_OPEN') {
+            <p>{{ "MY_BOOKINGS.TRIP_TRACK.STATE.NOT_YET_OPEN_BODY" | translate }}</p>
+            <p class="trip-track-panel__at">
+              {{ "MY_BOOKINGS.TRIP_TRACK.STATE.NOT_YET_OPEN_AT" | translate: { time: v.timeText } }}
+            </p>
+          }
+          @case ('CLOSED') {
+            <p>{{ "MY_BOOKINGS.TRIP_TRACK.STATE.CLOSED_BODY" | translate }}</p>
+          }
+          @default {
+            <p>{{ "MY_BOOKINGS.TRIP_TRACK.STATE.UNAVAILABLE_BODY" | translate }}</p>
+          }
+        }
       </div>
-    </ng-template>
-
+    }
     <!-- BR-20: a transient poll failure never blanks the map/state above —
-         it only adds this strip alongside the last-known render. -->
-    <p class="trip-track-panel__refresh-failed" *ngIf="refreshFailed">
-      {{ "MY_BOOKINGS.TRIP_TRACK.REFRESH_FAILED" | translate: { time: v.timeText } }}
-    </p>
-  </ng-container>
+    it only adds this strip alongside the last-known render. -->
+    @if (refreshFailed) {
+      <p class="trip-track-panel__refresh-failed">
+        {{ "MY_BOOKINGS.TRIP_TRACK.REFRESH_FAILED" | translate: { time: v.timeText } }}
+      </p>
+    }
+  }
 </section>

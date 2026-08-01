@@ -1,139 +1,55 @@
-<ng-container *ngIf="scheduleList | async as schedules">
+@if (scheduleList | async; as schedules) {
   <div class="booking-container">
-    <h3 class="title" *ngIf="!schedules.arrivalSchedules?.length">
-      {{ "SCHEDULE_BOOKING.HEADER" | translate }}
-    </h3>
-
+    @if (!schedules.arrivalSchedules?.length) {
+      <h3 class="title">
+        {{ "SCHEDULE_BOOKING.HEADER" | translate }}
+      </h3>
+    }
     <!-- No results: search completed but no departure schedules matched -->
-    <p class="no-results" *ngIf="!schedules.departureSchedules?.length">
-      {{ "SCHEDULE_BOOKING.NO_RESULTS" | translate }}
-    </p>
-
-    <!-- Outbound leg -->
-    <ng-container *ngIf="schedules.departureSchedules as departureList">
-      <h3 class="title" *ngIf="schedules.arrivalSchedules?.length">
-        {{ "SCHEDULE_BOOKING.SUBHEADER_DEPARTURE" | translate }}
-      </h3>
-
-      <div class="schedule-item mb-3" *ngFor="let departure of departureList; trackBy: trackById">
-        <!-- LEFT -->
-        <div class="left">
-          <div class="icon">
-            <img [src]="'icons/schedule-booking-' + departure.vehicleType + '.svg'" alt="Bus Icon" />
-          </div>
-
-          <div class="time">
-            {{ formatDateTimeToHHMM(departure.departureDateTime) }}
-            {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
-          </div>
-
-          <div class="time-info">
-            <div class="route">
-              {{ getDurationHours(departure.departureDateTime, departure.arrivalDateTime) }}
-              {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }}
-              {{ getDurationMinutes(departure.departureDateTime, departure.arrivalDateTime) }}
-              {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }}
-            </div>
-
-            <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
-
-            <div class="route">
-              {{ departureRouteLabel$ | async }}
-            </div>
-
-            <ng-container *ngIf="departureEstimates[departure.id] as est">
-              <small class="trip-estimate" *ngIf="est.distanceKm != null">
-                ≈ {{ est.distanceKm }} {{ "SCHEDULE_BOOKING.ESTIMATE_KM_UNIT" | translate }}
-              </small>
-            </ng-container>
-          </div>
-
-          <div class="time">
-            {{ formatDateTimeToHHMM(departure.arrivalDateTime) }}
-            {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
-          </div>
-        </div>
-        <!-- RIGHT -->
-        <div class="right">
-          <div class="text-container">
-            <div class="price">
-              {{ getPricePerSeat(departure.pricePerSeat) }}
-              {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}<span class="price-unit">{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
-            </div>
-
-            <div class="availability" *ngIf="isLowSeats(departure.availableSeats)">
-              <span class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ departure.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
-            </div>
-          </div>
-
-          <button
-            *ngIf="!isSelectFirst"
-            class="select-btn"
-            type="button"
-            (click)="selectSchedule(departure, true)"
-          >
-            {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
-          </button>
-
-          <button
-            *ngIf="isSelectFirst"
-            class="change-btn"
-            type="button"
-            (click)="clearSchedule()"
-          >
-            {{ "SCHEDULE_BOOKING.CHANGE" | translate }}
-          </button>
-        </div>
-      </div>
-    </ng-container>
-
-    <!-- Outbound and return legs -->
-    <ng-container *ngIf="schedules.arrivalSchedules as returnList">
-      <!-- Return search found outbound trips but no inbound (return) schedules -->
-      <p class="no-results" *ngIf="schedules.departureSchedules?.length && !returnList.length">
-        {{ "SCHEDULE_BOOKING.NO_RETURN_RESULTS" | translate }}
+    @if (!schedules.departureSchedules?.length) {
+      <p class="no-results">
+        {{ "SCHEDULE_BOOKING.NO_RESULTS" | translate }}
       </p>
-
-      <h3 class="title" *ngIf="isSelectFirst">
-        {{ "SCHEDULE_BOOKING.SUBHEADER_RETURN" | translate }}
-      </h3>
-
-      <ng-container *ngIf="isSelectFirst">
-        <div class="schedule-item mb-3" *ngFor="let return of returnList; trackBy: trackById">
+    }
+    <!-- Outbound leg -->
+    @if (schedules.departureSchedules; as departureList) {
+      @if (schedules.arrivalSchedules?.length) {
+        <h3 class="title">
+          {{ "SCHEDULE_BOOKING.SUBHEADER_DEPARTURE" | translate }}
+        </h3>
+      }
+      @for (departure of departureList; track trackById($index, departure)) {
+        <div class="schedule-item mb-3">
           <!-- LEFT -->
           <div class="left">
             <div class="icon">
-              <img [src]="'icons/schedule-booking-' + return.vehicleType + '.svg'" alt="Bus Icon" />
+              <img [src]="'icons/schedule-booking-' + departure.vehicleType + '.svg'" alt="Bus Icon" />
             </div>
-
             <div class="time">
-              {{ formatDateTimeToHHMM(return.departureDateTime) }}
+              {{ formatDateTimeToHHMM(departure.departureDateTime) }}
               {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
             </div>
-
             <div class="time-info">
               <div class="route">
-                {{ getDurationHours(return.departureDateTime, return.arrivalDateTime) }}
+                {{ getDurationHours(departure.departureDateTime, departure.arrivalDateTime) }}
                 {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }}
-                {{ getDurationMinutes(return.departureDateTime, return.arrivalDateTime) }}
+                {{ getDurationMinutes(departure.departureDateTime, departure.arrivalDateTime) }}
                 {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }}
               </div>
-
               <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
-
               <div class="route">
-                {{ returnRouteLabel$ | async }}
+                {{ departureRouteLabel$ | async }}
               </div>
-
-              <ng-container *ngIf="returnEstimates[return.id] as est">
-                <small class="trip-estimate" *ngIf="est.distanceKm != null">
-                  ≈ {{ est.distanceKm }} {{ "SCHEDULE_BOOKING.ESTIMATE_KM_UNIT" | translate }}
-                </small>
-              </ng-container>
+              @if (departureEstimates[departure.id]; as est) {
+                @if (est.distanceKm != null) {
+                  <small class="trip-estimate">
+                    ≈ {{ est.distanceKm }} {{ "SCHEDULE_BOOKING.ESTIMATE_KM_UNIT" | translate }}
+                  </small>
+                }
+              }
             </div>
-
             <div class="time">
-              {{ formatDateTimeToHHMM(return.arrivalDateTime) }}
+              {{ formatDateTimeToHHMM(departure.arrivalDateTime) }}
               {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
             </div>
           </div>
@@ -141,25 +57,110 @@
           <div class="right">
             <div class="text-container">
               <div class="price">
-                {{ getPricePerSeat(return.pricePerSeat) }}
+                {{ getPricePerSeat(departure.pricePerSeat) }}
                 {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}<span class="price-unit">{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
               </div>
-
-              <div class="availability" *ngIf="isLowSeats(return.availableSeats)">
-                <span class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ return.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
-              </div>
+              @if (isLowSeats(departure.availableSeats)) {
+                <div class="availability">
+                  <span class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ departure.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
+                </div>
+              }
             </div>
-
-            <button
-              class="select-btn"
-              (click)="selectSchedule(return, false)"
-              type="button"
-            >
-              {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
-            </button>
+            @if (!isSelectFirst) {
+              <button
+                class="select-btn"
+                type="button"
+                (click)="selectSchedule(departure, true)"
+                >
+                {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
+              </button>
+            }
+            @if (isSelectFirst) {
+              <button
+                class="change-btn"
+                type="button"
+                (click)="clearSchedule()"
+                >
+                {{ "SCHEDULE_BOOKING.CHANGE" | translate }}
+              </button>
+            }
           </div>
         </div>
-      </ng-container>
-    </ng-container>
+      }
+    }
+    <!-- Outbound and return legs -->
+    @if (schedules.arrivalSchedules; as returnList) {
+      <!-- Return search found outbound trips but no inbound (return) schedules -->
+      @if (schedules.departureSchedules?.length && !returnList.length) {
+        <p class="no-results">
+          {{ "SCHEDULE_BOOKING.NO_RETURN_RESULTS" | translate }}
+        </p>
+      }
+      @if (isSelectFirst) {
+        <h3 class="title">
+          {{ "SCHEDULE_BOOKING.SUBHEADER_RETURN" | translate }}
+        </h3>
+      }
+      @if (isSelectFirst) {
+        @for (return of returnList; track trackById($index, return)) {
+          <div class="schedule-item mb-3">
+            <!-- LEFT -->
+            <div class="left">
+              <div class="icon">
+                <img [src]="'icons/schedule-booking-' + return.vehicleType + '.svg'" alt="Bus Icon" />
+              </div>
+              <div class="time">
+                {{ formatDateTimeToHHMM(return.departureDateTime) }}
+                {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+              </div>
+              <div class="time-info">
+                <div class="route">
+                  {{ getDurationHours(return.departureDateTime, return.arrivalDateTime) }}
+                  {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }}
+                  {{ getDurationMinutes(return.departureDateTime, return.arrivalDateTime) }}
+                  {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }}
+                </div>
+                <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
+                <div class="route">
+                  {{ returnRouteLabel$ | async }}
+                </div>
+                @if (returnEstimates[return.id]; as est) {
+                  @if (est.distanceKm != null) {
+                    <small class="trip-estimate">
+                      ≈ {{ est.distanceKm }} {{ "SCHEDULE_BOOKING.ESTIMATE_KM_UNIT" | translate }}
+                    </small>
+                  }
+                }
+              </div>
+              <div class="time">
+                {{ formatDateTimeToHHMM(return.arrivalDateTime) }}
+                {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+              </div>
+            </div>
+            <!-- RIGHT -->
+            <div class="right">
+              <div class="text-container">
+                <div class="price">
+                  {{ getPricePerSeat(return.pricePerSeat) }}
+                  {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}<span class="price-unit">{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
+                </div>
+                @if (isLowSeats(return.availableSeats)) {
+                  <div class="availability">
+                    <span class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ return.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
+                  </div>
+                }
+              </div>
+              <button
+                class="select-btn"
+                (click)="selectSchedule(return, false)"
+                type="button"
+                >
+                {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
+              </button>
+            </div>
+          </div>
+        }
+      }
+    }
   </div>
-</ng-container>
+}

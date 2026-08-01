@@ -6,74 +6,80 @@
           {{ "HOME.STATION.HEADER" | translate }}
         </div>
 
-        <ng-container *ngIf="stationList$ | async as stations">
-          <div class="route-switch-wrap" *ngIf="stations.length > 0">
-            <div class="route-switch">
-              <button
-                type="button"
-                class="route-chip"
-                [class.active]="currentDirection === 'forward'"
-                (click)="onDirectionClick('forward')"
-              >
-                {{ getRouteTitle(stations, false) }}
-              </button>
-              <button
-                type="button"
-                class="route-chip"
-                [class.active]="currentDirection === 'reverse'"
-                (click)="onDirectionClick('reverse')"
-              >
-                {{ getRouteTitle(stations, true) }}
-              </button>
-            </div>
-          </div>
-
-          <div class="station-map-card">
-            <div class="timeline" *ngIf="getDisplayedStations(stations) as orderedStations">
-              <div
-                class="timeline-row"
-                *ngFor="let station of orderedStations; let i = index; trackBy: trackByStationId"
-              >
-                <div class="side side-left">
-                  <button
-                    type="button"
-                    class="station-pill"
-                    *ngIf="isLeft(i)"
-                    (click)="navMap(station.url)"
+        @if (stationList$ | async; as stations) {
+          @if (stations.length > 0) {
+            <div class="route-switch-wrap">
+              <div class="route-switch">
+                <button
+                  type="button"
+                  class="route-chip"
+                  [class.active]="currentDirection === 'forward'"
+                  (click)="onDirectionClick('forward')"
                   >
-                    {{ getStationName(station) }}
-                  </button>
-                </div>
-
-                <div class="axis-cell">
-                  <span
-                    class="connector connector-left"
-                    *ngIf="isLeft(i)"
-                  ></span>
-                  <span
-                    class="connector connector-right"
-                    *ngIf="!isLeft(i)"
-                  ></span>
-                  <span
-                    class="axis-node"
-                    [class.axis-node-end]="isEndPoint(i, orderedStations.length)"
-                  ></span>
-                </div>
-
-                <div class="side side-right">
-                  <button
-                    type="button"
-                    class="station-pill"
-                    *ngIf="!isLeft(i)"
-                    (click)="navMap(station.url)"
+                  {{ getRouteTitle(stations, false) }}
+                </button>
+                <button
+                  type="button"
+                  class="route-chip"
+                  [class.active]="currentDirection === 'reverse'"
+                  (click)="onDirectionClick('reverse')"
                   >
-                    {{ getStationName(station) }}
-                  </button>
-                </div>
+                  {{ getRouteTitle(stations, true) }}
+                </button>
               </div>
             </div>
+          }
+          <div class="station-map-card">
+            @if (getDisplayedStations(stations); as orderedStations) {
+              <div class="timeline">
+                @for (station of orderedStations; track trackByStationId(i, station); let i = $index) {
+                  <div
+                    class="timeline-row"
+                    >
+                    <div class="side side-left">
+                      @if (isLeft(i)) {
+                        <button
+                          type="button"
+                          class="station-pill"
+                          (click)="navMap(station.url)"
+                          >
+                          {{ getStationName(station) }}
+                        </button>
+                      }
+                    </div>
+                    <div class="axis-cell">
+                      @if (isLeft(i)) {
+                        <span
+                          class="connector connector-left"
+                        ></span>
+                      }
+                      @if (!isLeft(i)) {
+                        <span
+                          class="connector connector-right"
+                        ></span>
+                      }
+                      <span
+                        class="axis-node"
+                        [class.axis-node-end]="isEndPoint(i, orderedStations.length)"
+                      ></span>
+                    </div>
+                    <div class="side side-right">
+                      @if (!isLeft(i)) {
+                        <button
+                          type="button"
+                          class="station-pill"
+                          (click)="navMap(station.url)"
+                          >
+                          {{ getStationName(station) }}
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
           </div>
-        </ng-container>
+        }
       </div>
     </div>
   </div>

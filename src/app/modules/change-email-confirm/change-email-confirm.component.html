@@ -16,7 +16,7 @@
     </div>
 
     <!-- CONFIRMING STATE -->
-    <ng-container *ngIf="confirmState === 'confirming'">
+    @if (confirmState === 'confirming') {
       <div class="state-container mt-5 text-center">
         <p-progressSpinner
           styleClass="confirm-spinner"
@@ -25,10 +25,10 @@
         ></p-progressSpinner>
         <p class="state-text mt-3">{{ "EMAIL_CHANGE_CONFIRM.CONFIRMING" | translate }}</p>
       </div>
-    </ng-container>
+    }
 
     <!-- SUCCESS STATE -->
-    <ng-container *ngIf="confirmState === 'success'">
+    @if (confirmState === 'success') {
       <div class="state-container mt-5 text-center">
         <span class="material-symbols-outlined state-icon success-icon">check_circle</span>
         <h2 class="state-title mt-3">{{ "EMAIL_CHANGE_CONFIRM.SUCCESS_TITLE" | translate }}</h2>
@@ -39,11 +39,11 @@
           {{ "EMAIL_CHANGE_CONFIRM.SUCCESS_SIGNIN" | translate }}
         </button>
       </div>
-    </ng-container>
+    }
 
     <!-- INVALID/EXPIRED STATE — deliberately NEUTRAL, not red: a link the -->
     <!-- user may have already used, or arrived at stale, is not an error. -->
-    <ng-container *ngIf="confirmState === 'invalid'">
+    @if (confirmState === 'invalid') {
       <div class="state-container mt-5 text-center">
         <span class="material-symbols-outlined state-icon neutral-icon">info</span>
         <h2 class="state-title mt-3">{{ "EMAIL_CHANGE_CONFIRM.INVALID_TITLE" | translate }}</h2>
@@ -52,10 +52,10 @@
           {{ "EMAIL_CHANGE_CONFIRM.SUCCESS_SIGNIN" | translate }}
         </button>
       </div>
-    </ng-container>
+    }
 
     <!-- TARGET-TAKEN STATE -->
-    <ng-container *ngIf="confirmState === 'targetTaken'">
+    @if (confirmState === 'targetTaken') {
       <div class="state-container mt-5 text-center">
         <span class="material-symbols-outlined state-icon fail-icon">error</span>
         <h2 class="state-title mt-3">{{ "EMAIL_CHANGE_CONFIRM.TARGET_TAKEN_TITLE" | translate }}</h2>
@@ -64,6 +64,6 @@
           {{ "EMAIL_CHANGE_CONFIRM.SUCCESS_SIGNIN" | translate }}
         </button>
       </div>
-    </ng-container>
+    }
   </div>
 </div>

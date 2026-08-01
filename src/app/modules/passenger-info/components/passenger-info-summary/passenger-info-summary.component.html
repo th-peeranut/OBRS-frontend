@@ -1,472 +1,449 @@
-﻿<div
-  class="card-container"
-  *ngIf="this.scheduleBooking | async as scheduleBooking"
->
-  <ng-container *ngIf="this.scheduleFilter | async as scheduleFilter">
-    <!-- HEADER (Outbound) -->
-    <div class="card-header">
-      <div class="card-header-text">
-        
-        <img [src]="'icons/schedule-booking-' + getScheduleBooking(scheduleBooking?.schedule)[0].vehicleType + '.svg'" alt="Bus Icon" />
-
-        
-        <div class="card-header-text-details">
-          
-          <div
-            class="header-text"
-            *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 1"
-          >
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP" | translate }}
-          </div>
-          
-          <div
-            class="header-text"
-            *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 2"
-          >
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_BEGIN" | translate }}
-          </div>
-
-          <!-- OPEN-seating badge (OBRS-323) — this leg sells with no fixed seat -->
-          <div
-            class="open-seating-badge"
-            *ngIf="getScheduleBooking(scheduleBooking?.schedule)[0].seatingMode === 'OPEN'"
-          >
-            {{ "PASSENGER_INFO.SUMMARY.OPEN_SEATING_BADGE" | translate }}
-          </div>
-
-
-          <div class="subheader-text">
-            <div>
-              {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
-            </div>
-
-            <div>
-              {{
-                formatDateFromDateTime(
-                  getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime
-                )
-              }}
-            </div>
-            
-            <div>|</div>
-
-            
-            <div
-              *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 1"
-            >
-              {{
-                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY" | translate
-              }}
-            </div>
-
-            
-            <div
-              *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 2"
-            >
-              {{
-                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY" | translate
-              }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- BODY (Outbound) -->
-    <div class="card-body">
-      
-      <img
-        src="images/schedule-booking-line-vertical.svg"
-        alt="Bus Line Vertical Icon"
-      />
-      
-      <div class="card-body-detail">
-        <div class="card-body-detail-station">
-          
-          <div class="body-header-text">
-            {{
-              formatDateTimeToHHMM(
-                getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime
-              )
-            }}
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
-          </div>
-          
-          <div
-            class="card-body-detail-station-info"
-            *ngIf="
-              findStationById(scheduleFilter.startStationId)
-                | async as povinceStation
-            "
-          >
-            
-            <div class="body-header-text">
-              {{ getStationName(povinceStation?.station) }}
-            </div>
-
-          </div>
-        </div>
-        
-        <div class="body-subheader-text">
-          {{
-            getDurationHours(
-              getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime,
-              getScheduleBooking(scheduleBooking?.schedule)[0].arrivalDateTime
-            )
-          }}
-          {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
-          {{
-            getDurationMinutes(
-              getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime,
-              getScheduleBooking(scheduleBooking?.schedule)[0].arrivalDateTime
-            )
-          }}
-          {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
-        </div>
-        
-        <div class="card-body-detail-station mt-2">
-          <div class="body-header-text">
-            {{
-              formatDateTimeToHHMM(
-                getScheduleBooking(scheduleBooking?.schedule)[0].arrivalDateTime
-              )
-            }}
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
-          </div>
-          
-          <div
-            class="card-body-detail-station-info"
-            *ngIf="
-              findStationById(scheduleFilter.stopStationId)
-                | async as povinceStation
-            "
-          >
-            
-            <div class="body-header-text">
-              {{ getStationName(povinceStation?.station) }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <hr />
-
-    <!-- Return trip -->
-    <ng-container *ngIf="scheduleBooking?.schedule?.length == 2">
-      
+﻿@if (this.scheduleBooking | async; as scheduleBooking) {
+  <div
+    class="card-container"
+    >
+    @if (this.scheduleFilter | async; as scheduleFilter) {
+      <!-- HEADER (Outbound) -->
       <div class="card-header">
         <div class="card-header-text">
-          
-          <img [src]="'icons/schedule-booking-' + getScheduleBooking(scheduleBooking?.schedule)[1].vehicleType + '.svg'" alt="Bus Icon" />
-
-          
+          <img [src]="'icons/schedule-booking-' + getScheduleBooking(scheduleBooking?.schedule)[0].vehicleType + '.svg'" alt="Bus Icon" />
           <div class="card-header-text-details">
-            
-            <div class="header-text">
-              {{
-                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_RETURN" | translate
-              }}
-            </div>
-
+            @if (getScheduleBooking(scheduleBooking?.schedule).length == 1) {
+              <div
+                class="header-text"
+                >
+                {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP" | translate }}
+              </div>
+            }
+            @if (getScheduleBooking(scheduleBooking?.schedule).length == 2) {
+              <div
+                class="header-text"
+                >
+                {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_BEGIN" | translate }}
+              </div>
+            }
             <!-- OPEN-seating badge (OBRS-323) — this leg sells with no fixed seat -->
-            <div
-              class="open-seating-badge"
-              *ngIf="getScheduleBooking(scheduleBooking?.schedule)[1].seatingMode === 'OPEN'"
-            >
-              {{ "PASSENGER_INFO.SUMMARY.OPEN_SEATING_BADGE" | translate }}
-            </div>
-
+            @if (getScheduleBooking(scheduleBooking?.schedule)[0].seatingMode === 'OPEN') {
+              <div
+                class="open-seating-badge"
+                >
+                {{ "PASSENGER_INFO.SUMMARY.OPEN_SEATING_BADGE" | translate }}
+              </div>
+            }
             <div class="subheader-text">
               <div>
                 {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
               </div>
-
               <div>
                 {{
-                  formatDateFromDateTime(
-                    getScheduleBooking(scheduleBooking?.schedule)[1]
-                      .departureDateTime
-                  )
+                formatDateFromDateTime(
+                getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime
+                )
                 }}
               </div>
-              
               <div>|</div>
-
-              
-              <div>
-                {{
-                  "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY"
-                    | translate
-                }}
-              </div>
+              @if (getScheduleBooking(scheduleBooking?.schedule).length == 1) {
+                <div
+                  >
+                  {{
+                  "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY" | translate
+                  }}
+                </div>
+              }
+              @if (getScheduleBooking(scheduleBooking?.schedule).length == 2) {
+                <div
+                  >
+                  {{
+                  "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY" | translate
+                  }}
+                </div>
+              }
             </div>
           </div>
         </div>
       </div>
-
-      
-      <!-- BODY (Return) -->
+      <!-- BODY (Outbound) -->
       <div class="card-body">
-        
         <img
           src="images/schedule-booking-line-vertical.svg"
           alt="Bus Line Vertical Icon"
-        />
-        
-        <div class="card-body-detail">
-          <div class="card-body-detail-station">
-            
-            <div class="body-header-text">
-              {{
+          />
+          <div class="card-body-detail">
+            <div class="card-body-detail-station">
+              <div class="body-header-text">
+                {{
                 formatDateTimeToHHMM(
-                  getScheduleBooking(scheduleBooking?.schedule)[1].departureDateTime
+                getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime
                 )
-              }}
-              {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
-            </div>
-            
-            <div
-              class="card-body-detail-station-info"
-              *ngIf="
+                }}
+                {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
+              </div>
+              @if (
                 findStationById(scheduleFilter.startStationId)
-                  | async as povinceStation
-              "
-            >
-              
-              <div class="body-header-text">
-                {{ getStationName(povinceStation?.station) }}
-              </div>
+                | async; as povinceStation
+                ) {
+                <div
+                  class="card-body-detail-station-info"
+                  >
+                  <div class="body-header-text">
+                    {{ getStationName(povinceStation?.station) }}
+                  </div>
+                </div>
+              }
             </div>
-          </div>
-          
-          <div class="body-subheader-text">
-            {{
-              getDurationHours(
-                getScheduleBooking(scheduleBooking?.schedule)[1].departureDateTime,
-                getScheduleBooking(scheduleBooking?.schedule)[1].arrivalDateTime
-              )
-            }}
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
-            {{
-              getDurationMinutes(
-                getScheduleBooking(scheduleBooking?.schedule)[1].departureDateTime,
-                getScheduleBooking(scheduleBooking?.schedule)[1].arrivalDateTime
-              )
-            }}
-            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
-          </div>
-          
-          <div class="card-body-detail-station mt-2">
-            <div class="body-header-text">
+            <div class="body-subheader-text">
               {{
-                formatDateTimeToHHMM(
-                  getScheduleBooking(scheduleBooking?.schedule)[1].arrivalDateTime
-                )
+              getDurationHours(
+              getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime,
+              getScheduleBooking(scheduleBooking?.schedule)[0].arrivalDateTime
+              )
               }}
-              {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
+              {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
+              {{
+              getDurationMinutes(
+              getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime,
+              getScheduleBooking(scheduleBooking?.schedule)[0].arrivalDateTime
+              )
+              }}
+              {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
             </div>
-            
-            <div
-              class="card-body-detail-station-info"
-              *ngIf="
-                findStationById(scheduleFilter.stopStationId)
-                  | async as povinceStation
-              "
-            >
-              
+            <div class="card-body-detail-station mt-2">
               <div class="body-header-text">
-                {{ getStationName(povinceStation?.station) }}
+                {{
+                formatDateTimeToHHMM(
+                getScheduleBooking(scheduleBooking?.schedule)[0].arrivalDateTime
+                )
+                }}
+                {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
               </div>
+              @if (
+                findStationById(scheduleFilter.stopStationId)
+                | async; as povinceStation
+                ) {
+                <div
+                  class="card-body-detail-station-info"
+                  >
+                  <div class="body-header-text">
+                    {{ getStationName(povinceStation?.station) }}
+                  </div>
+                </div>
+              }
             </div>
           </div>
         </div>
+        <hr />
+        <!-- Return trip -->
+        @if (scheduleBooking?.schedule?.length == 2) {
+          <div class="card-header">
+            <div class="card-header-text">
+              <img [src]="'icons/schedule-booking-' + getScheduleBooking(scheduleBooking?.schedule)[1].vehicleType + '.svg'" alt="Bus Icon" />
+              <div class="card-header-text-details">
+                <div class="header-text">
+                  {{
+                  "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_RETURN" | translate
+                  }}
+                </div>
+                <!-- OPEN-seating badge (OBRS-323) — this leg sells with no fixed seat -->
+                @if (getScheduleBooking(scheduleBooking?.schedule)[1].seatingMode === 'OPEN') {
+                  <div
+                    class="open-seating-badge"
+                    >
+                    {{ "PASSENGER_INFO.SUMMARY.OPEN_SEATING_BADGE" | translate }}
+                  </div>
+                }
+                <div class="subheader-text">
+                  <div>
+                    {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
+                  </div>
+                  <div>
+                    {{
+                    formatDateFromDateTime(
+                    getScheduleBooking(scheduleBooking?.schedule)[1]
+                    .departureDateTime
+                    )
+                    }}
+                  </div>
+                  <div>|</div>
+                  <div>
+                    {{
+                    "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY"
+                    | translate
+                    }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- BODY (Return) -->
+          <div class="card-body">
+            <img
+              src="images/schedule-booking-line-vertical.svg"
+              alt="Bus Line Vertical Icon"
+              />
+              <div class="card-body-detail">
+                <div class="card-body-detail-station">
+                  <div class="body-header-text">
+                    {{
+                    formatDateTimeToHHMM(
+                    getScheduleBooking(scheduleBooking?.schedule)[1].departureDateTime
+                    )
+                    }}
+                    {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
+                  </div>
+                  @if (
+                    findStationById(scheduleFilter.startStationId)
+                    | async; as povinceStation
+                    ) {
+                    <div
+                      class="card-body-detail-station-info"
+                      >
+                      <div class="body-header-text">
+                        {{ getStationName(povinceStation?.station) }}
+                      </div>
+                    </div>
+                  }
+                </div>
+                <div class="body-subheader-text">
+                  {{
+                  getDurationHours(
+                  getScheduleBooking(scheduleBooking?.schedule)[1].departureDateTime,
+                  getScheduleBooking(scheduleBooking?.schedule)[1].arrivalDateTime
+                  )
+                  }}
+                  {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
+                  {{
+                  getDurationMinutes(
+                  getScheduleBooking(scheduleBooking?.schedule)[1].departureDateTime,
+                  getScheduleBooking(scheduleBooking?.schedule)[1].arrivalDateTime
+                  )
+                  }}
+                  {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
+                </div>
+                <div class="card-body-detail-station mt-2">
+                  <div class="body-header-text">
+                    {{
+                    formatDateTimeToHHMM(
+                    getScheduleBooking(scheduleBooking?.schedule)[1].arrivalDateTime
+                    )
+                    }}
+                    {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
+                  </div>
+                  @if (
+                    findStationById(scheduleFilter.stopStationId)
+                    | async; as povinceStation
+                    ) {
+                    <div
+                      class="card-body-detail-station-info"
+                      >
+                      <div class="body-header-text">
+                        {{ getStationName(povinceStation?.station) }}
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+            <hr />
+          }
+          <!-- Passengers block (OBRS-361) — live same-session reflection of
+          per-passenger seat preference / requirement, sourced from
+          selectPassengerInfo. No backend echo. -->
+          @if (passengerInfo$ | async; as passengers) {
+            @if (passengers.length) {
+              <div class="summary-passengers">
+                <div class="subtitle">{{ "PASSENGER_INFO.SUMMARY.PASSENGERS_TITLE" | translate }}</div>
+                @for (p of passengers; track p; let i = $index) {
+                  <div
+                    class="summary-passenger-row"
+                    >
+                    <span class="summary-passenger-name">
+                      {{
+                      (p.firstName || "").trim() ||
+                      ("PASSENGER_INFO.FORM.SEAT_CHIP_FALLBACK" | translate: { n: i + 1 })
+                      }}
+                    </span>
+                    <span class="summary-passenger-chips">
+                      @if (!p.passengerSeat && !p.passengerSeatReturn) {
+                        <span class="seat-passenger-chip">
+                          {{ "PASSENGER_INFO.SUMMARY.NO_SEAT" | translate }}
+                        </span>
+                      }
+                      @if (p.passengerSeat) {
+                        <span class="seat-passenger-chip">
+                          {{ "PASSENGER_INFO.SUMMARY.SEAT_LABEL" | translate: { seat: p.passengerSeat } }}
+                        </span>
+                      }
+                      @if (p.passengerSeatReturn) {
+                        <span class="seat-passenger-chip">
+                          {{ "PASSENGER_INFO.SUMMARY.SEAT_LABEL" | translate: { seat: p.passengerSeatReturn } }}
+                        </span>
+                      }
+                      @if (p.seatPreference === 'WINDOW') {
+                        <span class="seat-passenger-chip">
+                          {{ "PASSENGER_INFO.FORM.SEAT_PREFERENCE_WINDOW" | translate }}
+                        </span>
+                      }
+                      @if (p.seatPreference === 'AISLE') {
+                        <span class="seat-passenger-chip">
+                          {{ "PASSENGER_INFO.FORM.SEAT_PREFERENCE_AISLE" | translate }}
+                        </span>
+                      }
+                      @if (p.seatRequirement === 'WHEELCHAIR') {
+                        <span class="seat-passenger-chip">
+                          {{ "PASSENGER_INFO.FORM.SEAT_REQUIREMENT_WHEELCHAIR" | translate }}
+                        </span>
+                      }
+                      @if (p.seatRequirement === 'EXTRA_LEGROOM') {
+                        <span class="seat-passenger-chip">
+                          {{ "PASSENGER_INFO.FORM.SEAT_REQUIREMENT_EXTRA_LEGROOM" | translate }}
+                        </span>
+                      }
+                    </span>
+                  </div>
+                }
+              </div>
+            }
+            @if (passengers.length) {
+              <hr class="dotted-line" />
+            }
+          }
+          <div class="card-body-summary">
+            <!-- ADULT -->
+            @if (getAdultCount(scheduleFilter?.passengerInfo) > 0) {
+              <div
+                class="card-body-summary-content"
+                >
+                <span>
+                  {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.ADULT_UNIT" | translate }}
+                </span>
+                <span>
+                  {{ getAdultCount(scheduleFilter?.passengerInfo) }}
+                  {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
+                </span>
+              </div>
+            }
+            <!-- KIDS -->
+            @if (getKidCount(scheduleFilter?.passengerInfo) > 0) {
+              <div
+                class="card-body-summary-content"
+                >
+                <span>
+                  {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.KID_UNIT" | translate }}
+                </span>
+                <span>
+                  {{ getKidCount(scheduleFilter?.passengerInfo) }}
+                  {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
+                </span>
+              </div>
+            }
+            <!-- One-way price -->
+            @if (getScheduleBooking(scheduleBooking?.schedule).length == 1) {
+              <div
+                class="card-body-summary-content"
+                >
+                <span>
+                  {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE" | translate }}
+                </span>
+                <span>
+                  {{ getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) }}
+                  {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
+                </span>
+              </div>
+            }
+            <!-- Round-trip price -->
+            @if (getScheduleBooking(scheduleBooking?.schedule).length == 2) {
+              <div
+                class="card-body-summary-content"
+                >
+                <span>
+                  {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE_RETURN" | translate }}
+                </span>
+                <span>
+                  {{
+                  getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) +
+                  getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[1].pricePerSeat)
+                  }}
+                  {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
+                </span>
+              </div>
+            }
+          </div>
+          <hr class="dotted-line" />
+          <!-- Promo code (OBRS-109 / #37): instant preview against the client-side
+          subtotal above; only a confirmed-applied code is ever sent to the
+          booking-submit call (see PassengerInfoComponent). -->
+          <app-promo-code-field
+            [amount]="sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo)"
+            [disabled]="isNextDisabled"
+            (applied)="onPromoApplied($event)"
+            (removed)="onPromoRemoved()"
+          ></app-promo-code-field>
+          <!-- Total price (no promo applied) -->
+          @if (!appliedPromo) {
+            <div class="card-footer">
+              <span>
+                {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
+              </span>
+              <span>
+                {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+                {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
+              </span>
+            </div>
+          }
+          <!-- Subtotal / Promo discount / Total (promo applied) -->
+          @if (appliedPromo) {
+            <div class="card-footer card-footer--subtle">
+              <span>
+                {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.SUBTOTAL" | translate }}
+              </span>
+              <span>
+                {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+                {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
+              </span>
+            </div>
+            <div class="card-footer card-footer--subtle card-footer--discount">
+              <span>
+                {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PROMO_DISCOUNT" | translate }}
+              </span>
+              <span>
+                -{{ appliedPromo.discountAmount }}
+                {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
+              </span>
+            </div>
+            <div class="card-footer">
+              <span>
+                {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
+              </span>
+              <span>
+                {{ appliedPromo.netAmount }}
+                {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
+              </span>
+            </div>
+          }
+        }
       </div>
+    }
 
-      <hr />
-    </ng-container>
 
-    <!-- Passengers block (OBRS-361) — live same-session reflection of
-         per-passenger seat preference / requirement, sourced from
-         selectPassengerInfo. No backend echo. -->
-    <ng-container *ngIf="passengerInfo$ | async as passengers">
-      <div class="summary-passengers" *ngIf="passengers.length">
-        <div class="subtitle">{{ "PASSENGER_INFO.SUMMARY.PASSENGERS_TITLE" | translate }}</div>
-        <div
-          class="summary-passenger-row"
-          *ngFor="let p of passengers; let i = index"
-        >
-          <span class="summary-passenger-name">
-            {{
-              (p.firstName || "").trim() ||
-                ("PASSENGER_INFO.FORM.SEAT_CHIP_FALLBACK" | translate: { n: i + 1 })
-            }}
-          </span>
-          <span class="summary-passenger-chips">
-            <span class="seat-passenger-chip" *ngIf="!p.passengerSeat && !p.passengerSeatReturn">
-              {{ "PASSENGER_INFO.SUMMARY.NO_SEAT" | translate }}
-            </span>
-            <span class="seat-passenger-chip" *ngIf="p.passengerSeat">
-              {{ "PASSENGER_INFO.SUMMARY.SEAT_LABEL" | translate: { seat: p.passengerSeat } }}
-            </span>
-            <span class="seat-passenger-chip" *ngIf="p.passengerSeatReturn">
-              {{ "PASSENGER_INFO.SUMMARY.SEAT_LABEL" | translate: { seat: p.passengerSeatReturn } }}
-            </span>
-            <span class="seat-passenger-chip" *ngIf="p.seatPreference === 'WINDOW'">
-              {{ "PASSENGER_INFO.FORM.SEAT_PREFERENCE_WINDOW" | translate }}
-            </span>
-            <span class="seat-passenger-chip" *ngIf="p.seatPreference === 'AISLE'">
-              {{ "PASSENGER_INFO.FORM.SEAT_PREFERENCE_AISLE" | translate }}
-            </span>
-            <span class="seat-passenger-chip" *ngIf="p.seatRequirement === 'WHEELCHAIR'">
-              {{ "PASSENGER_INFO.FORM.SEAT_REQUIREMENT_WHEELCHAIR" | translate }}
-            </span>
-            <span class="seat-passenger-chip" *ngIf="p.seatRequirement === 'EXTRA_LEGROOM'">
-              {{ "PASSENGER_INFO.FORM.SEAT_REQUIREMENT_EXTRA_LEGROOM" | translate }}
-            </span>
-          </span>
-        </div>
+    <div class="summary-actions">
+      <!-- Back -->
+      <div class="summary-action-item">
+        <button type="button" class="btn-back" (click)="onBack()">
+          {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.BTN_BACK" | translate }}
+        </button>
       </div>
-      <hr class="dotted-line" *ngIf="passengers.length" />
-    </ng-container>
-
-    <div class="card-body-summary">
-      <!-- ADULT -->
-      <div
-        class="card-body-summary-content"
-        *ngIf="getAdultCount(scheduleFilter?.passengerInfo) > 0"
-      >
-        <span>
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.ADULT_UNIT" | translate }}
-        </span>
-        <span>
-          {{ getAdultCount(scheduleFilter?.passengerInfo) }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
-        </span>
-      </div>
-
-      <!-- KIDS -->
-      <div
-        class="card-body-summary-content"
-        *ngIf="getKidCount(scheduleFilter?.passengerInfo) > 0"
-      >
-        <span>
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.KID_UNIT" | translate }}
-        </span>
-        <span>
-          {{ getKidCount(scheduleFilter?.passengerInfo) }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
-        </span>
-      </div>
-
-      <!-- One-way price -->
-      <div
-        class="card-body-summary-content"
-        *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 1"
-      >
-        <span>
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE" | translate }}
-        </span>
-        <span>
-          {{ getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
-        </span>
-      </div>
-
-      <!-- Round-trip price -->
-      <div
-        class="card-body-summary-content"
-        *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 2"
-      >
-        <span>
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE_RETURN" | translate }}
-        </span>
-        <span>
-          {{
-            getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) +
-              getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[1].pricePerSeat)
-          }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
-        </span>
+      <!-- Next -->
+      <div class="summary-action-item">
+        <button
+          type="button"
+          class="btn-next"
+          [disabled]="isNextDisabled"
+          (click)="onNext()"
+          >
+          {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.BTN_NEXT" | translate }}
+        </button>
       </div>
     </div>
-
-    <hr class="dotted-line" />
-
-    <!-- Promo code (OBRS-109 / #37): instant preview against the client-side
-         subtotal above; only a confirmed-applied code is ever sent to the
-         booking-submit call (see PassengerInfoComponent). -->
-    <app-promo-code-field
-      [amount]="sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo)"
-      [disabled]="isNextDisabled"
-      (applied)="onPromoApplied($event)"
-      (removed)="onPromoRemoved()"
-    ></app-promo-code-field>
-
-    <!-- Total price (no promo applied) -->
-    <div class="card-footer" *ngIf="!appliedPromo">
-      <span>
-        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
-      </span>
-      <span>
-        {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
-        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
-      </span>
-    </div>
-
-    <!-- Subtotal / Promo discount / Total (promo applied) -->
-    <ng-container *ngIf="appliedPromo">
-      <div class="card-footer card-footer--subtle">
-        <span>
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.SUBTOTAL" | translate }}
-        </span>
-        <span>
-          {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
-        </span>
-      </div>
-      <div class="card-footer card-footer--subtle card-footer--discount">
-        <span>
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PROMO_DISCOUNT" | translate }}
-        </span>
-        <span>
-          -{{ appliedPromo.discountAmount }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
-        </span>
-      </div>
-      <div class="card-footer">
-        <span>
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
-        </span>
-        <span>
-          {{ appliedPromo.netAmount }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
-        </span>
-      </div>
-    </ng-container>
-  </ng-container>
-</div>
-
-
-<div class="summary-actions">
-  <!-- Back -->
-  <div class="summary-action-item">
-    <button type="button" class="btn-back" (click)="onBack()">
-      {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.BTN_BACK" | translate }}
-    </button>
-  </div>
-  <!-- Next -->
-  <div class="summary-action-item">
-    <button
-      type="button"
-      class="btn-next"
-      [disabled]="isNextDisabled"
-      (click)="onNext()"
-    >
-      {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.BTN_NEXT" | translate }}
-    </button>
-  </div>
-</div>
 
 
 
