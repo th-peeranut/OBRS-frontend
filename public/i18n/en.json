@@ -1388,6 +1388,12 @@
           "BUSINESS_DATE": "Business date",
           "VEHICLE": "Vehicle",
           "EXPECTED": "Expected amount"
+        },
+        "ENTRY_TYPE": {
+          "ADVANCE": "Advance",
+          "PER_HEAD": "Per-head",
+          "EXPENSE_PAID": "Expense: {{category}}",
+          "RETURN": "Return"
         }
       }
     },

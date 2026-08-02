@@ -55,17 +55,28 @@
               <div class="admin-table-wrap mt-2">
                 <table class="admin-table">
                   <tbody>
-                    @for (entry of detail.entries; track trackByEntry($index)) {
-                      <tr>
+                    @for (entry of detail.entries; track trackByEntry($index, entry)) {
+                      <tr data-testid="driver-cash-entry-row">
                         <td>
-                          {{ entry.label }}
+                          <span data-testid="driver-cash-entry-label">{{ entryTypeLabel(entry) }}</span>
+                          <!-- The salesperson needs to recognise a row they
+                          just entered — headCount on PER_HEAD rows, note
+                          where present. -->
+                          @if (entry.type === 'PER_HEAD' && entry.headCount !== null) {
+                            <span class="admin-muted" data-testid="driver-cash-entry-head-count">
+                              · {{ entry.headCount }} {{ 'STAFF.DRIVER_CASH.PER_HEAD.HEAD_COUNT_LABEL' | translate }}
+                            </span>
+                          }
+                          @if (entry.note) {
+                            <div class="admin-muted" data-testid="driver-cash-entry-note">{{ entry.note }}</div>
+                          }
                           @if (entry.fromUnmappedSalesPoint) {
                             <div class="driver-cash-return-entry-note" data-testid="driver-cash-entry-unmapped-note">
                               {{ 'STAFF.PARCEL_CONSIGN.SALES_POINT_NOT_MAPPED' | translate }}
                             </div>
                           }
                         </td>
-                        <td>{{ entry.amount }}</td>
+                        <td data-testid="driver-cash-entry-amount">{{ entry.amount }}</td>
                       </tr>
                     }
                   </tbody>

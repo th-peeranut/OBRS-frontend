@@ -3,6 +3,7 @@ import { TranslateService } from '@ngx-translate/core';
 import {
   DriverCashDayRespDto,
   DriverCashDaySummaryRespDto,
+  DriverCashEntryRespDto,
 } from '../../../../../shared/interfaces/driver-cash.interface';
 import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
 import { toCents } from '../../../../../shared/lib/money-cents';
@@ -37,6 +38,14 @@ export interface DriverCashDayReturnPayload {
  * `currency` field on the real DTO (driver-cash is THB-only in practice, and
  * the backend's DTOs carry no currency code anywhere in this feature), so
  * money renders as the raw decimal string, not through `Intl.NumberFormat`.
+ *
+ * ⚠️ CORRECTED AGAIN (same day, second reconciliation pass) — each entry has
+ * no `label` field on the wire at all (the first correction pass still
+ * guessed one). The display label is derived HERE, from `entry.type` (+
+ * `expenseCategory` for `EXPENSE_PAID`, reusing the existing
+ * `ADMIN.EXPENSES.CATEGORIES.*` keys rather than minting new ones) — see
+ * `entryTypeLabel()`. `trackByEntry` now keys on `entry.id`, not the array
+ * index.
  */
 @Component({
     selector: 'app-driver-cash-day-return-modal',
@@ -123,8 +132,29 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
     return formatDisplayDate(value, this.translate.currentLang);
   }
 
-  protected trackByEntry(index: number): number {
-    return index;
+  protected trackByEntry(_index: number, entry: DriverCashEntryRespDto): number {
+    return entry.id;
+  }
+
+  /**
+   * There is no display label on the wire — derived from `entry.type` via
+   * i18n. `EXPENSE_PAID` composes with `expenseCategory`, reusing the
+   * EXISTING `ADMIN.EXPENSES.CATEGORIES.*` keys (the same ones the admin
+   * expenses table already uses — `PERMIT_FEE` must read identically in
+   * both places) rather than minting a second copy. `PARCEL_SHARE` is not
+   * branched on: the backend's `ck_driver_cash_entries_type` CHECK
+   * constraint deliberately removed it and it will never appear.
+   */
+  protected entryTypeLabel(entry: DriverCashEntryRespDto): string {
+    if (entry.type === 'EXPENSE_PAID') {
+      const categoryLabel = entry.expenseCategory
+        ? this.translate.instant(`ADMIN.EXPENSES.CATEGORIES.${entry.expenseCategory}`)
+        : this.translate.instant('ADMIN.EXPENSES.CATEGORIES.OTHER');
+      return this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.ENTRY_TYPE.EXPENSE_PAID', {
+        category: categoryLabel,
+      });
+    }
+    return this.translate.instant(`ADMIN.SETTLEMENTS.DRIVER_CASH.ENTRY_TYPE.${entry.type}`);
   }
 
   protected onBackdropDismiss(): void {

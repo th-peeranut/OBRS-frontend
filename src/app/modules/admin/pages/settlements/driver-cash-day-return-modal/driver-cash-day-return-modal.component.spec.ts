@@ -1,22 +1,81 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DriverCashDayReturnModalComponent } from './driver-cash-day-return-modal.component';
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
 import {
   DriverCashDayRespDto,
   DriverCashDaySummaryRespDto,
+  DriverCashEntryRespDto,
 } from '../../../../../shared/interfaces/driver-cash.interface';
 import { AA_NORMAL_TEXT, contrast, effectiveBg, fgOf, mountInChain, toHex } from '../../../../../testing/contrast';
 
-// OBRS-960 — CORRECTED (2026-08-02, backend reconciliation): `[detail]` is
-// the real, flat `DriverCashDayRespDto` (`GET /private/driver-cash/days/{id}`
-// returns it) — the first version of this spec used an invented
-// `DriverCashDayDetailDto` with `expectedAmount`/`currency`/`scheduleId`/
-// `routeLabel`/`departureDateTime` and `status: 'PENDING'`, none of which
-// exist on the real DTO (the real open status is `'OPEN'`, the real
-// expected-amount field is `expectedReturnAmount`).
+// OBRS-960 — CORRECTED (2026-08-02, backend reconciliation, 2nd pass):
+// entries built from the BACKEND's exact field list (`id`, `type`, `amount`,
+// `scheduleId`, `stopId`, `headCount`, `expenseCategory`, `expenseId`,
+// `note`, `fromUnmappedSalesPoint`, `createdAt`) — the first reconciliation
+// pass still invented a `label: string` field that does not exist on the
+// wire, which every entry row would have rendered as the literal string
+// "undefined" (uncaught by TypeScript, because the response was typed by
+// this repo's OWN — wrong — interface, not the server's). A fixture built
+// only against this file's interface can never fail that way; this one is
+// checked against the field names the backend actually sends.
+const ENTRIES: DriverCashEntryRespDto[] = [
+  {
+    id: 101,
+    type: 'ADVANCE',
+    amount: '100.00',
+    scheduleId: null,
+    stopId: null,
+    headCount: null,
+    expenseCategory: null,
+    expenseId: null,
+    note: null,
+    fromUnmappedSalesPoint: false,
+    createdAt: '2026-08-01T07:00:00+07:00',
+  },
+  {
+    id: 102,
+    type: 'PER_HEAD',
+    amount: '60.00',
+    scheduleId: 50,
+    stopId: 3,
+    headCount: 3,
+    expenseCategory: null,
+    expenseId: null,
+    note: null,
+    fromUnmappedSalesPoint: false,
+    createdAt: '2026-08-01T08:00:00+07:00',
+  },
+  {
+    id: 103,
+    type: 'EXPENSE_PAID',
+    amount: '40.00',
+    scheduleId: null,
+    stopId: null,
+    headCount: null,
+    expenseCategory: 'PERMIT_FEE',
+    expenseId: 9,
+    note: 'ใบเวลาสาย 1',
+    fromUnmappedSalesPoint: false,
+    createdAt: '2026-08-01T09:00:00+07:00',
+  },
+  {
+    id: 104,
+    type: 'PER_HEAD',
+    amount: '200.00',
+    scheduleId: 50,
+    stopId: 4,
+    headCount: 10,
+    expenseCategory: null,
+    expenseId: null,
+    note: null,
+    fromUnmappedSalesPoint: true,
+    createdAt: '2026-08-01T10:00:00+07:00',
+  },
+];
+
 const DETAIL: DriverCashDayRespDto = {
   dayId: 1,
   driverId: 5,
@@ -24,14 +83,11 @@ const DETAIL: DriverCashDayRespDto = {
   businessDate: '2026-08-01',
   vehicleId: 100,
   status: 'OPEN',
-  entries: [
-    { label: 'Per-head: origin stop', amount: '300.00', fromUnmappedSalesPoint: false },
-    { label: 'Parcel share', amount: '200.00', fromUnmappedSalesPoint: true },
-  ],
-  advanceTotal: '0.00',
-  perHeadTotal: '300.00',
-  expensePaidTotal: '0.00',
-  parcelRemitTotal: '200.00',
+  entries: ENTRIES,
+  advanceTotal: '100.00',
+  perHeadTotal: '260.00',
+  expensePaidTotal: '40.00',
+  parcelRemitTotal: '0.00',
   expectedReturnAmount: '500.00',
   returnedAmount: null,
   returnedAt: null,
@@ -215,9 +271,90 @@ describe('DriverCashDayReturnModalComponent', () => {
     expect(component['discrepancyReasonInput']).toBe('');
   });
 
-  it('renders the unmapped-sales-point note on the entry line, not a separate section', () => {
+  it('renders the unmapped-sales-point note on the flagged entry line only, not a separate section', () => {
     const notes = fixture.debugElement.queryAll(By.css('[data-testid="driver-cash-entry-unmapped-note"]'));
+    // Exactly one of the 4 fixture entries has fromUnmappedSalesPoint: true.
     expect(notes.length).toBe(1);
+  });
+
+  // ── OBRS-960 (2nd reconciliation pass) — entry row rendering. `label`
+  // never existed on the wire; the display text is DERIVED from `type` (+
+  // `expenseCategory` for EXPENSE_PAID) via i18n. This is the spec the
+  // coordinator asked for: it would have caught the missing-`label` bug,
+  // because a wrong/missing field read here renders literally as
+  // "undefined" in the interpolated i18n key, not silently as blank.
+  describe('entry row rendering derives the label from type, never a "label" field', () => {
+    function rowLabels(): string[] {
+      return Array.from(
+        fixture.nativeElement.querySelectorAll('[data-testid="driver-cash-entry-label"]')
+      ).map((el) => (el as HTMLElement).textContent!.trim());
+    }
+
+    it('renders one row per entry, each with non-empty, non-"undefined" label text', () => {
+      const labels = rowLabels();
+      expect(labels.length).toBe(ENTRIES.length);
+      for (const label of labels) {
+        expect(label).not.toBe('');
+        // The exact failure mode this locks: reading a non-existent field
+        // (the old `entry.label`) interpolates as the literal word
+        // "undefined" rather than throwing — this must never appear.
+        expect(label.toLowerCase()).not.toContain('undefined');
+      }
+    });
+
+    it('an ADVANCE entry resolves the ADVANCE entry-type key', () => {
+      expect(component['entryTypeLabel'](ENTRIES[0])).toBe('ADMIN.SETTLEMENTS.DRIVER_CASH.ENTRY_TYPE.ADVANCE');
+    });
+
+    it('a PER_HEAD entry resolves the PER_HEAD entry-type key AND the row shows headCount', () => {
+      expect(component['entryTypeLabel'](ENTRIES[1])).toBe('ADMIN.SETTLEMENTS.DRIVER_CASH.ENTRY_TYPE.PER_HEAD');
+      const headCountEls = fixture.nativeElement.querySelectorAll('[data-testid="driver-cash-entry-head-count"]');
+      expect(headCountEls.length).toBeGreaterThan(0);
+      expect((headCountEls[0] as HTMLElement).textContent).toContain('3');
+    });
+
+    // Composes with the EXISTING `ADMIN.EXPENSES.CATEGORIES.*` namespace —
+    // proven with a REAL translation loaded (not the untranslated raw-key
+    // fallback), since the point is proving REUSE of that exact key, not
+    // just that some string was rendered.
+    it('an EXPENSE_PAID entry composes the label with the EXISTING ADMIN.EXPENSES.CATEGORIES key (never a new STAFF.* one)', () => {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('en', {
+        ADMIN: {
+          SETTLEMENTS: {
+            DRIVER_CASH: { ENTRY_TYPE: { EXPENSE_PAID: 'Expense: {{category}}' } },
+          },
+          EXPENSES: { CATEGORIES: { PERMIT_FEE: 'Permit fee' } },
+        },
+      });
+      translate.use('en');
+
+      expect(component['entryTypeLabel'](ENTRIES[2])).toBe('Expense: Permit fee');
+    });
+
+    it('shows the note where present', () => {
+      const noteEls = fixture.nativeElement.querySelectorAll('[data-testid="driver-cash-entry-note"]');
+      const texts = Array.from(noteEls).map((el) => (el as HTMLElement).textContent!.trim());
+      expect(texts).toContain('ใบเวลาสาย 1');
+    });
+
+    it('renders NO note element for an entry with note: null', () => {
+      // ENTRIES[0] (ADVANCE) has note: null.
+      const rows = fixture.nativeElement.querySelectorAll('[data-testid="driver-cash-entry-row"]');
+      const firstRowNote = (rows[0] as HTMLElement).querySelector('[data-testid="driver-cash-entry-note"]');
+      expect(firstRowNote).toBeNull();
+    });
+
+    it('a RETURN entry (not in the fixture list, but a valid backend type) resolves its own entry-type key', () => {
+      const returnEntry: DriverCashEntryRespDto = { ...ENTRIES[0], id: 105, type: 'RETURN' };
+      expect(component['entryTypeLabel'](returnEntry)).toBe('ADMIN.SETTLEMENTS.DRIVER_CASH.ENTRY_TYPE.RETURN');
+    });
+
+    it('tracks rows by entry.id, not the array index', () => {
+      // Same index argument (0), different entry -> different track key.
+      expect(component['trackByEntry'](0, ENTRIES[0])).toBe(101);
+      expect(component['trackByEntry'](0, ENTRIES[1])).toBe(102);
+    });
   });
 
   // ── Contrast: the new .driver-cash-return-entry-note colored element ─────

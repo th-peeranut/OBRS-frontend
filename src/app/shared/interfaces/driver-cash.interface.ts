@@ -8,10 +8,12 @@
  * `afb440d4`, `DriverCashController.java` + its DTOs) — the FIRST version of
  * this file guessed a URL segment order and a nested `summary` sub-object
  * that don't exist. Every URL below is now pinned to the real controller;
- * the DTOs below are the real, flat shapes. See `docs/handoff.md` for what
- * is still unverified (`DriverCashEntryRespDto`'s own field shape beyond
- * `fromUnmappedSalesPoint`, which the card names but the backend
- * reconciliation did not spell out further).
+ * the DTOs below — INCLUDING `DriverCashEntryRespDto`, confirmed
+ * field-for-field on a second reconciliation pass after the first pass's
+ * `{label, amount, fromUnmappedSalesPoint}` guess turned out to have no
+ * `label` field at all (would have rendered `undefined` in every entry
+ * row) — are the real, complete shapes. Nothing in this file remains
+ * unverified against source.
  */
 
 /** One route stop's per-head rate, as carried on the schedule's driver-cash
@@ -19,7 +21,8 @@
  * the per-head form BEFORE submit. There is no separate per-action response
  * type — all four driver-cash POSTs return the full, refreshed
  * `DriverCashDayRespDto`, so the "rate actually applied" is read back from
- * THAT response's `perHeadRates[]` entry for the submitted `stopId`. */
+ * THAT response's `perHeadRates[]` entry for the submitted `stopId`.
+ * Confirmed field-for-field against the backend's `PerHeadRateStatusDto`. */
 export interface DriverCashPerHeadRateLineDto {
   stopId: number;
   stopName: string;
@@ -28,17 +31,35 @@ export interface DriverCashPerHeadRateLineDto {
 }
 
 /**
- * One itemized cash entry on a driver-cash day. The backend confirmed the
- * `entries: List<DriverCashEntryRespDto>` field NAME and TYPE on
- * `DriverCashDayRespDto`; the card independently names
- * `fromUnmappedSalesPoint` as a per-entry field. This shape is NOT
- * otherwise confirmed field-for-field against the real `DriverCashEntryRespDto`
- * class — flagged in `docs/handoff.md`.
+ * The four values of the backend's `ck_driver_cash_entries_type` CHECK
+ * constraint. `PARCEL_SHARE` was deliberately removed from that constraint
+ * and will never appear on the wire — do not add a branch for it.
+ */
+export type DriverCashEntryType = 'ADVANCE' | 'PER_HEAD' | 'EXPENSE_PAID' | 'RETURN';
+
+/**
+ * One itemized cash entry on a driver-cash day. Confirmed field-for-field
+ * against the real backend `DriverCashEntryRespDto` class — the FIRST
+ * version of this interface invented a `label: string` field that does not
+ * exist on the wire (every entry row would have rendered the string
+ * `"undefined"`, uncaught by TypeScript because the response was typed by
+ * this file's own — wrong — interface, not the server's). There is no
+ * display label on the wire at all: the frontend derives one from `type`
+ * (+ `expenseCategory` for `EXPENSE_PAID`) via i18n — see
+ * `DriverCashDayReturnModalComponent.entryTypeLabel()`.
  */
 export interface DriverCashEntryRespDto {
-  label: string;
+  id: number;
+  type: DriverCashEntryType;
   amount: string;
+  scheduleId: number | null;
+  stopId: number | null;
+  headCount: number | null;
+  expenseCategory: string | null;
+  expenseId: number | null;
+  note: string | null;
   fromUnmappedSalesPoint: boolean;
+  createdAt: string;
 }
 
 export type DriverCashDayStatus = 'OPEN' | 'RETURNED';

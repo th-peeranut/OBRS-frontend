@@ -120,3 +120,21 @@ tested green. `staff-api.service.spec.ts` / `admin-api.service.spec.ts` now
 carry `HttpTestingController` assertions for the real paths; the next
 service method added to either file should get one too, not just a
 component-level mock.
+
+**Second pass, same day:** `DriverCashEntryRespDto` — confirmed field-for-field
+only in the first pass's URL/DTO check — still had an invented `label: string`
+field that does not exist on the wire (the real fields are `id, type, amount,
+scheduleId, stopId, headCount, expenseCategory, expenseId, note,
+fromUnmappedSalesPoint, createdAt`). Every entry row would have rendered the
+literal string `"undefined"`, uncaught by TypeScript because the response was
+typed by this repo's own interface, not the server's. The generalizable lesson:
+"reconciled against source" is a claim about the fields actually checked, not
+the whole DTO tree reachable from that check — a nested list-item type needs
+its OWN field-by-field pass, not an assumption that the container type being
+right means its children are too. Fixed by deriving the display label from
+`type` (+ `expenseCategory` for `EXPENSE_PAID`, reusing
+`ADMIN.EXPENSES.CATEGORIES.*`) instead of reading a field that was never
+there — see `DriverCashDayReturnModalComponent.entryTypeLabel()` — and locked
+with a spec whose fixture is built from the backend's field names rather than
+this repo's own interface, so a future missing/renamed field renders as
+detectably empty/`"undefined"` instead of silently typing away the bug.

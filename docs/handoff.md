@@ -102,12 +102,26 @@ DTOs. Findings, all fixed in the frontend commit that follows this entry:
    hasUnmappedSalesPointRemit`. All four driver-cash POSTs return this SAME DTO — there is no separate
    per-action response type.
 5. **No `currency` field anywhere in this feature's DTOs.**
+6. **`DriverCashEntryRespDto` (`entries[]` above) had NO `label` field** — the first reconciliation pass
+   (item 4 above) still guessed one. The real fields, confirmed field-for-field against source, are:
+   `id, type, amount, scheduleId, stopId, headCount, expenseCategory, expenseId, note,
+   fromUnmappedSalesPoint, createdAt`. `type` is one of `ADVANCE`/`PER_HEAD`/`EXPENSE_PAID`/`RETURN`
+   (the backend's `ck_driver_cash_entries_type` CHECK constraint — `PARCEL_SHARE` was deliberately
+   removed and never appears). There is no display label on the wire at all: the frontend now derives
+   one from `type` (+ `expenseCategory` for `EXPENSE_PAID`, reusing the existing
+   `ADMIN.EXPENSES.CATEGORIES.*` i18n keys) — see
+   `DriverCashDayReturnModalComponent.entryTypeLabel()`. This field shape is now confirmed and settled;
+   nothing about `DriverCashEntryRespDto` remains open.
 
 Fixed in `src/app/shared/interfaces/driver-cash.interface.ts`, `staff-api.service.ts`,
-`admin-api.service.ts`, and every driver-cash component/store that read the wrong shape. New
-`HttpTestingController`-based specs in `staff-api.service.spec.ts` / `admin-api.service.spec.ts` now
-assert the literal corrected URLs — the original gap was that every driver-cash spec mocked the service
-layer instead of asserting the real HTTP call, so the wrong URLs compiled and tested green.
+`admin-api.service.ts`, `driver-cash-day-return-modal.component.ts/.html`, and every other driver-cash
+component/store that read the wrong shape. New `HttpTestingController`-based specs in
+`staff-api.service.spec.ts` / `admin-api.service.spec.ts` now assert the literal corrected URLs — the
+original gap was that every driver-cash spec mocked the service layer instead of asserting the real HTTP
+call, so the wrong URLs compiled and tested green. A separate new spec block in
+`driver-cash-day-return-modal.component.spec.ts` builds its entry fixture from the backend's own field
+names and asserts the rendered row text, so a future missing/renamed field shows up as empty/`"undefined"`
+rendered output rather than a silently-typed `undefined` a mocked-interface fixture could never catch.
 
 **Also RESOLVED**: the stop-lookup source for `DriverCashRatesPageComponent`'s add-rate dropdown.
 `DriverCashRatesStore` originally filtered `GET /private/lookups` to `category === 'stop'` — confirmed

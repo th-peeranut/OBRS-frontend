@@ -1388,6 +1388,12 @@
           "BUSINESS_DATE": "วันที่ทำการ",
           "VEHICLE": "รถ",
           "EXPECTED": "ยอดที่คาดว่าจะได้รับ"
+        },
+        "ENTRY_TYPE": {
+          "ADVANCE": "เงินทดรอง",
+          "PER_HEAD": "ค่าหัว",
+          "EXPENSE_PAID": "ค่าใช้จ่าย: {{category}}",
+          "RETURN": "คืนเงิน"
         }
       }
     },

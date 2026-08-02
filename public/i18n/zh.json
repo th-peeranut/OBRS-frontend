@@ -1388,6 +1388,12 @@
           "BUSINESS_DATE": "营业日期",
           "VEHICLE": "车辆",
           "EXPECTED": "预期金额"
+        },
+        "ENTRY_TYPE": {
+          "ADVANCE": "预支款",
+          "PER_HEAD": "人头费",
+          "EXPENSE_PAID": "支出：{{category}}",
+          "RETURN": "归还"
         }
       }
     },
