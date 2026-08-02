@@ -487,7 +487,7 @@ describe('MyBookingsEffect (OBRS-286)', () => {
      * Subject, not `of(...)`) so the superseding action can be dispatched
      * while it is still pending.
      */
-    it('a superseding invokeLoadMyBookingsApi (filter switch/Retry/mutation reload) cancels an in-flight Load more before it can append', () => {
+    it('a superseding invokeLoadMyBookingsApi (filter switch/Retry/mutation reload) cancels an in-flight Load more before it can append — and the effect stream survives to serve the NEXT Load more', () => {
       store.overrideSelector(selectMyBookings, {
         ...initialMyBookingsState,
         statusFilter: 'confirmed',
@@ -516,6 +516,25 @@ describe('MyBookingsEffect (OBRS-286)', () => {
 
       // ...but must never reach the reducer: cancelled, not appended.
       expect(emitted).toEqual([]);
+
+      // Scrutinize: `emitted === []` alone can't distinguish "correctly
+      // cancelled request A" from "takeUntil placed on the OUTER stream,
+      // killing loadMoreMyBookings$ permanently after the first supersession"
+      // — both produce an empty array here. Prove the effect is still ALIVE
+      // by driving a completely fresh Load more through it and asserting it
+      // resolves normally.
+      bookingService.getMyBookings.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: { content: [{ id: 1 }], totalElements: 137, totalPages: 7 },
+        } as any)
+      );
+      actionsSubject.next(invokeLoadMoreMyBookingsApi());
+
+      expect(emitted).toEqual([
+        invokeLoadMoreMyBookingsApiSuccess({ bookings: [{ id: 1 } as any], totalElements: 137, totalPages: 7 }),
+      ]);
     });
   });
 

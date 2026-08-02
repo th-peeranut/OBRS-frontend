@@ -220,16 +220,17 @@ describe('myBookingsReducer — OBRS-577 incremental load more', () => {
   });
 
   /**
-   * Scrutinize (AC3 persistent violation): a status-filter switch / Retry /
-   * any of the 6 mutation reloads dispatches `invokeLoadMyBookingsApi` while
-   * a `Load more` may still be in flight from the PREVIOUS filter. Without
-   * this reset, the new filter's list renders with the Load-more button
-   * stuck disabled ("Loading…") because `loadingMore` survives the full
-   * reload untouched, and a stale `pagesLoaded`/`totalPages` (from the old
-   * filter) can let a click during the transition compute a wrong page
-   * number against the new filter's totals.
+   * Scrutinize round 1 (AC3 persistent violation): a status-filter switch /
+   * Retry dispatches `invokeLoadMyBookingsApi` (preserveWindow falsy — a
+   * genuine page-1 reset) while a `Load more` may still be in flight from
+   * the PREVIOUS filter. Without this reset, the new filter's list renders
+   * with the Load-more button stuck disabled ("Loading…") because
+   * `loadingMore` survives the full reload untouched, and a stale
+   * `pagesLoaded`/`totalPages` (from the old filter) can let a click during
+   * the transition compute a wrong page number against the new filter's
+   * totals.
    */
-  it('invokeLoadMyBookingsApi resets the whole load-more lifecycle (loadingMore/pagesLoaded/totalPages), not just loading/error/statusFilter', () => {
+  it('a NON-preserveWindow reload (status switch / Retry / initial load) resets loadingMore AND zeroes pagesLoaded/totalPages — a genuine page-1 reset', () => {
     const staleFromPreviousFilter = {
       ...initialMyBookingsState,
       bookings: [buildBookingDto(1)],
@@ -247,5 +248,40 @@ describe('myBookingsReducer — OBRS-577 incremental load more', () => {
     expect(next.loadingMore).toBeFalse();
     expect(next.pagesLoaded).toBe(0);
     expect(next.totalPages).toBe(0);
+  });
+
+  /**
+   * Scrutinize round 2 (regression in round 1's fix): round 1 zeroed
+   * `pagesLoaded`/`totalPages` UNCONDITIONALLY, including on `preserveWindow:
+   * true` — the exact flag all 6 mutation-reload sites pass. Because NgRx
+   * runs the reducer before effects observe the SAME action,
+   * `loadMyBookings$`'s `withLatestFrom(select(selectMyBookings))` reads the
+   * value THIS case just wrote, not the value before it — so zeroing here
+   * made the effect's `size = Math.max(20, pagesLoaded * 20)` always compute
+   * `20`, collapsing a 5-page (100-row) list to 20 rows on every cancel/
+   * reschedule/change-seat/change-stop. `pagesLoaded`/`totalPages` must
+   * SURVIVE a `preserveWindow: true` dispatch untouched — only `loadingMore`
+   * resets (a superseding full load always supersedes an in-flight Load
+   * more, preserve or not; the effect-side half of that is
+   * `loadMoreMyBookings$`'s `takeUntil`).
+   */
+  it('a preserveWindow:true reload (a mutation-reload site) resets loadingMore but PRESERVES pagesLoaded/totalPages — the effect reads these for the SAME action', () => {
+    const fivePagesLoaded = {
+      ...initialMyBookingsState,
+      bookings: Array.from({ length: 100 }, (_, i) => buildBookingDto(i + 1)),
+      loadingMore: false,
+      pagesLoaded: 5,
+      totalPages: 7,
+      totalElements: 137,
+    };
+
+    const next = myBookingsReducer(
+      fivePagesLoaded,
+      invokeLoadMyBookingsApi({ status: 'confirmed', preserveWindow: true })
+    );
+
+    expect(next.loadingMore).toBeFalse();
+    expect(next.pagesLoaded).toBe(5);
+    expect(next.totalPages).toBe(7);
   });
 });

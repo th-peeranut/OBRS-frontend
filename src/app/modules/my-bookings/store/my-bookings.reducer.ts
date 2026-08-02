@@ -62,23 +62,31 @@ import {
 
 export const myBookingsReducer = createReducer(
   initialMyBookingsState,
-  on(invokeLoadMyBookingsApi, (state, { status }) => ({
+  on(invokeLoadMyBookingsApi, (state, { status, preserveWindow }) => ({
     ...state,
     loading: true,
     error: null,
     statusFilter: status ?? null,
-    // Scrutinize (OBRS-577 AC3 fix): a status-filter switch / Retry / any of
-    // the 6 mutation reloads supersedes whatever load-more window was on
-    // screen. Reset the WHOLE load-more lifecycle here, on dispatch (not
-    // just on success) — `loadingMore: false` so the button doesn't render
-    // stuck on "Loading…" for the new filter, and `pagesLoaded`/`totalPages`
-    // reset to 0 so a click landing during the transition can't compute a
-    // page number against the OLD filter's stale totals. The effect-side
-    // half of this fix (cancelling an in-flight Load more HTTP request) is
-    // `loadMoreMyBookings$`'s `takeUntil` below.
+    // Scrutinize round 2 (regression in the round-1 fix): `loadMyBookings$`
+    // reads `pagesLoaded`/`totalPages` via `withLatestFrom(select(...))` —
+    // and NgRx runs the reducer BEFORE effects observe the very same action
+    // (`this.next(state)` then `scannedActions.next(action)`,
+    // node_modules/@ngrx/store/fesm2022/ngrx-store.mjs), so whatever this
+    // case writes here is what the effect's `size` computation reads for
+    // THIS dispatch — not the value before it. Unconditionally zeroing both
+    // (round 1's fix) made every `preserveWindow: true` mutation reload
+    // request `size=20` instead of the real loaded window, collapsing a
+    // 5-page list to 20 rows on every cancel/reschedule/change-seat/
+    // change-stop. Only zero on the non-preserve path (a genuine page-1
+    // reset: initial load / status-filter switch / Retry) — a
+    // `preserveWindow` reload needs the REAL count to size its single
+    // refetch correctly, so it must survive untouched. `loadingMore` always
+    // resets to false either way: a superseding full load — preserve or not
+    // — always supersedes whatever load-more was in flight (the effect-side
+    // half of that is `loadMoreMyBookings$`'s `takeUntil` below).
     loadingMore: false,
-    pagesLoaded: 0,
-    totalPages: 0,
+    pagesLoaded: preserveWindow ? state.pagesLoaded : 0,
+    totalPages: preserveWindow ? state.totalPages : 0,
   })),
   on(invokeLoadMyBookingsApiSuccess, (state, { bookings, totalElements, totalPages }) => ({
     ...state,
