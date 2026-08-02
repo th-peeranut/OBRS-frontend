@@ -79,6 +79,20 @@
         gap: 2px;
         min-width: 0;
 
+        /* OBRS-634. `schedule-booking-line.svg` declares `width="420"` and
+           carried no CSS size at all, so its INTRINSIC width was this box's
+           min-content contribution — measured at 420px inside a card only
+           326px wide on a 390px phone. Chrome answers an over-wide box by
+           widening the layout viewport (shrink-to-fit), which is why the whole
+           page rendered zoomed out rather than merely scrolling sideways.
+           The rule is a no-op on desktop, where `.time-info` is 420px anyway;
+           it only bites once an ancestor has a definite width, which is what
+           the `align-self: stretch` pair in the media query below establishes. */
+        img {
+          max-width: 100%;
+          height: auto;
+        }
+
         .route {
           font-size: $font-size-sm;
           color: $text-softblack;
@@ -220,15 +234,22 @@
     gap: $space-xs;
   }
 
+  /* OBRS-634. `align-items: flex-start` leaves both boxes shrink-to-fit, so
+     they sized to their widest child (the 420px route-line SVG) and pushed the
+     card wider instead of following it. Stretching them to the cross axis is
+     what makes the card's width the definite one, so the `max-width: 100%`
+     above has something real to resolve against. */
   .booking-container .schedule-item .left {
     flex-direction: column;
     align-items: flex-start;
+    align-self: stretch;
     column-gap: 0;
     row-gap: $space-2xs;
   }
 
   .booking-container .schedule-item .left .time-info {
     align-items: flex-start;
+    align-self: stretch;
   }
 
   .booking-container .schedule-item .left .time-info .route {
