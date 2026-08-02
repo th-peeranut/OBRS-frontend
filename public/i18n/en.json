@@ -128,6 +128,11 @@
     "BOOK_NOW": "Book a trip",
     "VIEW_TICKET": "View e-ticket",
     "LOAD_FAILED": "Unable to load your bookings. Please try again.",
+    "LOAD_MORE": "Load more",
+    "LOADING_MORE": "Loading...",
+    "LOAD_MORE_FAILED": "Unable to load more bookings. Please try again.",
+    "SHOWING_COUNT": "Showing {{shown}} of {{total}} bookings",
+    "SHOWING_ALL_COUNT": "Showing all {{total}} bookings",
     "NOT_CANCELLABLE": "Cannot be cancelled",
     "ACTIONS_MENU": {
       "LABEL": "Actions"

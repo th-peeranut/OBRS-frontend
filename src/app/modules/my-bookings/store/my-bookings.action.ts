@@ -27,16 +27,44 @@ import { RouteMeta, RouteStop } from '../../../shared/interfaces/route-map.inter
 // --- Load my bookings ---
 export const invokeLoadMyBookingsApi = createAction(
   '[MyBookings API] Invoke to load my bookings',
-  props<{ status?: string | null; showLoading?: boolean }>()
+  // OBRS-577: `preserveWindow` (Decision A) — default false keeps the first
+  // load / a status-filter switch resetting to page 0 at MY_BOOKINGS_PAGE_SIZE
+  // (the existing, locked behavior); the 6 post-mutation reload sites pass
+  // `true` so the effect refetches however many pages were already loaded in
+  // ONE request instead of visibly truncating the list back to page 1.
+  props<{ status?: string | null; showLoading?: boolean; preserveWindow?: boolean }>()
 );
 
 export const invokeLoadMyBookingsApiSuccess = createAction(
   '[MyBookings API] Load my bookings success',
-  props<{ bookings: MyBookingDto[] }>()
+  props<{ bookings: MyBookingDto[]; totalElements: number; totalPages: number }>()
 );
 
 export const invokeLoadMyBookingsApiFailure = createAction(
   '[MyBookings API] Load my bookings failure',
+  props<{ error: string }>()
+);
+
+// --- Load more my bookings (OBRS-577 AC2/AC6 — incremental append, never a
+// page-number paginator on the customer shell) ---
+
+/** Dispatched by the "Load more" button. No payload — the effect reads
+ * `statusFilter`/`pagesLoaded` off the current state itself. */
+export const invokeLoadMoreMyBookingsApi = createAction(
+  '[MyBookings API] Invoke to load more my bookings'
+);
+
+export const invokeLoadMoreMyBookingsApiSuccess = createAction(
+  '[MyBookings API] Load more my bookings success',
+  props<{ bookings: MyBookingDto[]; totalElements: number; totalPages: number }>()
+);
+
+/** Deliberately does NOT reuse `invokeLoadMyBookingsApiFailure` — that one's
+ * reducer case sets `state.error`, which would replace the already-visible
+ * list with a full-page error state (spec: "Error (load more ล้มเหลว)" must
+ * stay a toast only, list/count line unchanged). */
+export const invokeLoadMoreMyBookingsApiFailure = createAction(
+  '[MyBookings API] Load more my bookings failure',
   props<{ error: string }>()
 );
 

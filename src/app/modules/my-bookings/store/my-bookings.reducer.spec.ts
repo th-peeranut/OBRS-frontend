@@ -1,12 +1,26 @@
 import { myBookingsReducer } from './my-bookings.reducer';
-import { initialMyBookingsState } from './my-bookings.model';
+import { initialMyBookingsState, MY_BOOKINGS_PAGE_SIZE } from './my-bookings.model';
 import {
   closeCancelRefundDestinationModal,
   confirmChangeStopFailure,
+  invokeLoadMoreMyBookingsApi,
+  invokeLoadMoreMyBookingsApiFailure,
+  invokeLoadMoreMyBookingsApiSuccess,
+  invokeLoadMyBookingsApiSuccess,
   loadChangeStopEstimate,
   requestCancelBooking,
 } from './my-bookings.action';
-import { MyBookingView } from '../../../shared/interfaces/my-booking.interface';
+import { MyBookingDto, MyBookingView } from '../../../shared/interfaces/my-booking.interface';
+
+function buildBookingDto(id: number): MyBookingDto {
+  return {
+    id,
+    bookingNumber: `B-${id}`,
+    totalAmount: '100.00',
+    status: 'confirmed',
+    bookingType: 'one_way',
+  };
+}
 
 function buildBookingView(overrides: Partial<MyBookingView> = {}): MyBookingView {
   return {
@@ -109,5 +123,98 @@ describe('myBookingsReducer — OBRS-942 dismiss must clear cancellingBookingId'
     const afterDismiss = myBookingsReducer(afterRequest, closeCancelRefundDestinationModal());
 
     expect(afterDismiss.cancellingBookingId).toBeNull();
+  });
+});
+
+/**
+ * OBRS-577 AC2/AC6 — incremental "Load more". Locks Decision A's
+ * `pagesLoaded` bookkeeping (derived from row count, not assumed-1, so a
+ * `preserveWindow` refetch that returns several pages in one response
+ * doesn't reset how many pages Load more thinks are already on screen) and
+ * the append-never-replace contract for the row-101+ scenario itself.
+ */
+describe('myBookingsReducer — OBRS-577 incremental load more', () => {
+  it('invokeLoadMyBookingsApiSuccess sets totalElements/totalPages and derives pagesLoaded from the row count', () => {
+    const bookings = Array.from({ length: MY_BOOKINGS_PAGE_SIZE }, (_, i) => buildBookingDto(i + 1));
+
+    const next = myBookingsReducer(
+      initialMyBookingsState,
+      invokeLoadMyBookingsApiSuccess({ bookings, totalElements: 137, totalPages: 7 })
+    );
+
+    expect(next.bookings.length).toBe(MY_BOOKINGS_PAGE_SIZE);
+    expect(next.totalElements).toBe(137);
+    expect(next.totalPages).toBe(7);
+    expect(next.pagesLoaded).toBe(1);
+  });
+
+  it('a preserveWindow refetch (5 pages in one response) sets pagesLoaded to 5, not 1', () => {
+    const bookings = Array.from(
+      { length: MY_BOOKINGS_PAGE_SIZE * 5 },
+      (_, i) => buildBookingDto(i + 1)
+    );
+
+    const next = myBookingsReducer(
+      initialMyBookingsState,
+      invokeLoadMyBookingsApiSuccess({ bookings, totalElements: 137, totalPages: 7 })
+    );
+
+    expect(next.pagesLoaded).toBe(5);
+  });
+
+  it('invokeLoadMoreMyBookingsApi sets loadingMore without touching the existing list', () => {
+    const seeded = {
+      ...initialMyBookingsState,
+      bookings: [buildBookingDto(1)],
+      totalElements: 137,
+      totalPages: 7,
+      pagesLoaded: 1,
+    };
+
+    const next = myBookingsReducer(seeded, invokeLoadMoreMyBookingsApi());
+
+    expect(next.loadingMore).toBeTrue();
+    expect(next.bookings.length).toBe(1);
+  });
+
+  it('invokeLoadMoreMyBookingsApiSuccess APPENDS (never replaces) and increments pagesLoaded by exactly 1 — this is what makes row 101+ reachable', () => {
+    // Seed as if 5 pages (100 rows) were already loaded, mirroring a
+    // traveler who has clicked "Load more" 4 times already.
+    const first100 = Array.from({ length: 100 }, (_, i) => buildBookingDto(i + 1));
+    const seeded = {
+      ...initialMyBookingsState,
+      bookings: first100,
+      totalElements: 137,
+      totalPages: 7,
+      pagesLoaded: 5,
+      loadingMore: true,
+    };
+    const page6 = Array.from({ length: MY_BOOKINGS_PAGE_SIZE }, (_, i) => buildBookingDto(101 + i));
+
+    const next = myBookingsReducer(
+      seeded,
+      invokeLoadMoreMyBookingsApiSuccess({ bookings: page6, totalElements: 137, totalPages: 7 })
+    );
+
+    expect(next.bookings.length).toBe(120);
+    // Row 101 (0-indexed 100) is now reachable — the whole point of AC6.
+    expect(next.bookings[100].id).toBe(101);
+    expect(next.pagesLoaded).toBe(6);
+    expect(next.loadingMore).toBeFalse();
+  });
+
+  it('invokeLoadMoreMyBookingsApiFailure clears loadingMore but leaves the list/error untouched (toast-only, per spec)', () => {
+    const seeded = {
+      ...initialMyBookingsState,
+      bookings: [buildBookingDto(1)],
+      loadingMore: true,
+      error: null,
+    };
+
+    const next = myBookingsReducer(seeded, invokeLoadMoreMyBookingsApiFailure({ error: 'network error' }));
+
+    expect(next.loadingMore).toBeFalse();
+    expect(next.bookings.length).toBe(1);
+    expect(next.error).toBeNull();
   });
 });

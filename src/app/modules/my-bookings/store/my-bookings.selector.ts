@@ -21,6 +21,23 @@ export const selectMyBookingsCancellingId = createSelector(
   (state) => state.cancellingBookingId
 );
 
+// --- Incremental "Load more" (OBRS-577) ---
+
+export const selectMyBookingsTotalElements = createSelector(
+  selectMyBookings,
+  (state) => state.totalElements
+);
+
+export const selectMyBookingsHasMore = createSelector(
+  selectMyBookings,
+  (state) => state.totalPages > 0 && state.pagesLoaded < state.totalPages
+);
+
+export const selectMyBookingsLoadingMore = createSelector(
+  selectMyBookings,
+  (state) => state.loadingMore
+);
+
 // --- Cancel-with-destination modal (OBRS-286 Flow A1) ---
 
 export const selectCancelRefundDestinationModal = createSelector(

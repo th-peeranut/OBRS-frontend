@@ -500,6 +500,22 @@
   }
 }
 
+// OBRS-577 AC2/AC4/AC6 — mirrors my-reports.component.scss:189-193 (the
+// OBRS-433 "Load more" precedent) verbatim; /my-bookings does not respond to
+// dark mode at all (OBRS-768, see the header comment above), so no dark
+// override is needed here either.
+.my-bookings__count {
+  margin: 0 0 $space-xs;
+  font-size: $font-size-sm;
+  color: $text-softblack;
+}
+
+.my-bookings__load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: $space-md;
+}
+
 @media (max-width: 576px) {
   .booking-card__meta {
     grid-template-columns: 1fr 1fr;

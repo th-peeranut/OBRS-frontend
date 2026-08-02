@@ -59,6 +59,23 @@ export interface ChangeStopEstimateParams {
   seats: string[];
 }
 
+/** OBRS-577: `getMyBookings`'s 3 positional params plus the new `page`/`size`
+ * consolidated into one options object (AC2) — the '#37-style null-default
+ * extension' precedent (see the method's own doc) still applies, just
+ * reshaped: every field is optional and defaults to today's behavior except
+ * `size`, whose default intentionally DROPS from 100 to 20 (the headline
+ * behavior change — Decision, my-bookings' first load and status-filter
+ * switches now paginate via "Load more" instead of fetching every row up
+ * front). Callers that must keep requesting 100 in one shot (Home's
+ * recent-route quick-pick) pass `size: 100` explicitly. */
+export interface GetMyBookingsParams {
+  status?: string | null;
+  page?: number;
+  size?: number;
+  showLoadingDialog?: boolean;
+  skipAuthLogout?: boolean;
+}
+
 export interface ConfirmChangeStopPayload {
   newFromStopId: number;
   newToStopId: number;
@@ -164,31 +181,38 @@ export class BookingService {
   }
 
   /**
-   * List the current traveler's own bookings, optionally filtered by status.
-   * Pass `showLoadingDialog` to surface the global loading dialog (e.g. when
-   * switching the status filter); the page renders its own skeletons otherwise.
+   * List the current traveler's own bookings, optionally filtered by status
+   * and paginated (`page`/`size` — OBRS-577 AC2/AC6: `size` defaults to 20,
+   * paired with `/my-bookings`'s own incremental "Load more" button, so a
+   * >100-booking history is reachable instead of silently capped at the old
+   * hardcoded 100). Pass `showLoadingDialog` to surface the global loading
+   * dialog (e.g. when switching the status filter); the page renders its own
+   * skeletons otherwise.
    *
-   * @param skipAuthLogout OBRS-575 (#37-style null-default extension, not a fork):
-   *   the Home page's recent-route quick-pick calls this in the background to read
-   *   booking history for a logged-in user. Without opting out, `auth.interceptor.ts`
-   *   force-logouts on a real 401 regardless of `SKIP_GLOBAL_ERROR_ALERT` (OBRS-187) —
-   *   a background convenience fetch must never throw a logged-in-but-expired user to
-   *   /login. Defaults `false` so `/my-bookings`'s existing call (where force-logout on
-   *   401 is correct) stays byte-identical.
+   * `skipAuthLogout` — OBRS-575 (#37-style null-default extension, not a
+   * fork): the Home page's recent-route quick-pick calls this in the
+   * background to read booking history for a logged-in user. Without opting
+   * out, `auth.interceptor.ts` force-logouts on a real 401 regardless of
+   * `SKIP_GLOBAL_ERROR_ALERT` (OBRS-187) — a background convenience fetch
+   * must never throw a logged-in-but-expired user to /login. Defaults
+   * `false` so `/my-bookings`'s existing call (where force-logout on 401 is
+   * correct) stays byte-identical. That same caller also pins `size: 100`
+   * explicitly (OBRS-923: its array feeds a frequency-ranked quick-pick,
+   * where a smaller sample can silently change which route ranks first) —
+   * the new `size: 20` default only changes `/my-bookings`'s OWN first load.
    */
   getMyBookings(
-    status?: string | null,
-    showLoadingDialog = false,
-    skipAuthLogout = false
+    params: GetMyBookingsParams = {}
   ): Observable<ResponseAPI<PageResponse<MyBookingDto>>> {
-    let params = new HttpParams().set('page', '0').set('size', '100');
+    const { status, page = 0, size = 20, showLoadingDialog = false, skipAuthLogout = false } = params;
+    let httpParams = new HttpParams().set('page', String(page)).set('size', String(size));
     if (status) {
-      params = params.set('status', status);
+      httpParams = httpParams.set('status', status);
     }
 
     return this.http.get<ResponseAPI<PageResponse<MyBookingDto>>>(
       `${environment.apiUrl}/api/private/bookings/me`,
-      { params, context: this.listContext(showLoadingDialog, skipAuthLogout) }
+      { params: httpParams, context: this.listContext(showLoadingDialog, skipAuthLogout) }
     );
   }
 

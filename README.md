@@ -573,6 +573,70 @@ prerequisites (`../OBRS-backend/docs/api/booking.md`, `POST .../reschedule`)
 so the action is never presented as available when the server would reject
 it — the server remains the final authority.
 
+### My Bookings — incremental "Load more" + count line (OBRS-577)
+
+`/my-bookings` no longer fetches the traveler's full history in one shot
+(`GET .../bookings/me?page=0&size=100`, silently capping at 100 rows with no
+way to reach row 101+). `BookingService.getMyBookings()` now takes a single
+options object (`GetMyBookingsParams` — `status`/`page`/`size`/
+`showLoadingDialog`/`skipAuthLogout`, all optional) instead of 3 positional
+params, and defaults `size` to `MY_BOOKINGS_PAGE_SIZE` (20, exported from
+`my-bookings.model.ts`) instead of the old hardcoded 100. The first load and
+a status-filter switch still reset to page 0 at that default; a "Load more"
+button (mirroring the `my-reports` OBRS-433 precedent — centered
+`.btn-secondary` below the list, never a page-number paginator on the
+customer shell) appends the next page via `invokeLoadMoreMyBookingsApi` →
+`MyBookingsEffect.loadMoreMyBookings$`, which reads `statusFilter`/
+`pagesLoaded` off the current NgRx state rather than taking them as a
+payload. **Reuse this default (20) + Load more pairing for the next
+customer-shell list endpoint that used to over-fetch a fixed page in one
+request** — don't reintroduce a hand-picked large `size` as a substitute for
+pagination.
+
+**Not every caller of `getMyBookings()` wanted the new default.** Home's
+recent-route quick-pick (OBRS-575/923, `home-booking.component.ts`) pins
+`size: 100` explicitly — its response array feeds a frequency-ranked sample
+(`extractRecentRoutePairsFromBookings`), where a smaller sample can silently
+change which route ranks first in the quick-pick strip. When widening a
+shared fetch method's default, grep every call site and ask whether each one
+is reading the LIST or using it as a STATISTICAL SAMPLE — only the former is
+safe to leave on the new default.
+
+**Decision A — a mutation must never visibly truncate an already-loaded
+list.** The 6 "reload after a successful mutation" dispatch sites
+(`my-bookings.effect.ts`'s `cancelSuccess$`; `reschedule.effect.ts`'s
+`rescheduleSettled$`/`rescheduleAbandoned$`; `change-seat.effect.ts`'s
+`changeSeatSettled$`; `change-stop.effect.ts`'s `changeStopSettled$`/
+`changeStopAbandoned$`) all pass `invokeLoadMyBookingsApi({ status,
+preserveWindow: true })`. `preserveWindow` makes `loadMyBookings$` request
+`page: 0` at `size: pagesLoaded * MY_BOOKINGS_PAGE_SIZE` — refetching however
+many pages were already on screen in **one** request — instead of resetting
+to page 0/size 20 and making a traveler who loaded 5 pages watch the list
+snap back down to 20 rows after cancelling one booking. **Reuse this "single
+larger refetch, `pagesLoaded`-derived" idiom** for the next paginated list
+that needs to survive a post-mutation reload without truncating; a naive
+reset-to-page-1 reload is a regression shaped exactly like this card's own
+defect.
+
+**Count line (`.my-bookings__count`, AC4 "must not end silently"):** a new
+customer-shell pattern, placed **above** the list (right after the status
+filter pills) rather than beside the Load more button at the bottom — a
+traveler with more than one screen of bookings would otherwise have to
+scroll all the way down before seeing either the count or the button.
+`MY_BOOKINGS.SHOWING_COUNT` ("Showing {{shown}} of {{total}} bookings")
+while more pages remain, `MY_BOOKINGS.SHOWING_ALL_COUNT` ("Showing all
+{{total}} bookings") once the last page has loaded and the button
+disappears — both read straight from the same NgRx state the list itself
+renders from (`vm.items.length`/`vm.totalElements`), so unlike OBRS-403's
+badge-vs-list drift this can't disagree with what's on screen by
+construction. `aria-live="polite"` + `tabindex="-1"` doubles as the focus
+target when the LAST "Load more" click removes the button from the DOM
+(`MyBookingsComponent.maybeShiftFocusAfterLoadMore`, gated on the
+`loadingMore` true→false transition of that specific click, not on `hasMore`
+alone, so an unrelated status-filter switch that also changes `hasMore` can
+never be mistaken for a Load more click that never happened) — otherwise the
+browser would drop focus to `<body>`.
+
 ## E-Ticket — open-seating display (OBRS-325)
 
 Both e-ticket surfaces — the shared `app-e-ticket-card` (used by the My

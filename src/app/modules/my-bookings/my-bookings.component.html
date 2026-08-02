@@ -20,6 +20,20 @@
           </button>
         }
       </nav>
+      <!-- OBRS-577 AC4 "must not end silently" count line — placed above
+      the list (not next to the Load more button at the bottom) so it is
+      visible without scrolling past a full screen of cards. Only rendered
+      once there is a list to describe (mirrors the card-list/load-more
+      guard below). -->
+      @if (!vm.error && vm.items.length > 0) {
+        <p class="my-bookings__count" aria-live="polite" tabindex="-1" #countRegion>
+          {{
+            vm.hasMore
+              ? ("MY_BOOKINGS.SHOWING_COUNT" | translate: { shown: vm.items.length, total: vm.totalElements })
+              : ("MY_BOOKINGS.SHOWING_ALL_COUNT" | translate: { total: vm.totalElements })
+          }}
+        </p>
+      }
       <!-- Loading skeletons (first load only) -->
       @if (vm.loading && !vm.loaded) {
         @for (row of skeletonRows; track row) {
@@ -106,6 +120,21 @@
             </footer>
           </article>
         }
+      }
+      <!-- OBRS-577 AC2/AC6 incremental "Load more" — mirrors
+      my-reports.component.html's OBRS-433 precedent verbatim: centered
+      button below the list, never a page-number paginator. Hides itself
+      once the last page has loaded (the count line above says so instead). -->
+      @if (!vm.error && vm.items.length > 0 && vm.hasMore) {
+        <div class="my-bookings__load-more">
+          <button type="button" class="btn-secondary" [disabled]="vm.loadingMore" (click)="onLoadMore()">
+            {{
+              vm.loadingMore
+                ? ("MY_BOOKINGS.LOADING_MORE" | translate)
+                : ("MY_BOOKINGS.LOAD_MORE" | translate)
+            }}
+          </button>
+        </div>
       }
     </div>
   </section>

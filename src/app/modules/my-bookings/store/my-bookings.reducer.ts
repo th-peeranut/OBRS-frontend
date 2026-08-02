@@ -1,5 +1,5 @@
 import { createReducer, on } from '@ngrx/store';
-import { initialMyBookingsState } from './my-bookings.model';
+import { initialMyBookingsState, MY_BOOKINGS_PAGE_SIZE } from './my-bookings.model';
 import {
   cancelBookingFailure,
   cancelBookingSuccess,
@@ -16,6 +16,9 @@ import {
   confirmReschedule,
   confirmRescheduleFailure,
   confirmRescheduleSuccess,
+  invokeLoadMoreMyBookingsApi,
+  invokeLoadMoreMyBookingsApiFailure,
+  invokeLoadMoreMyBookingsApiSuccess,
   invokeLoadMyBookingsApi,
   invokeLoadMyBookingsApiFailure,
   invokeLoadMyBookingsApiSuccess,
@@ -65,9 +68,16 @@ export const myBookingsReducer = createReducer(
     error: null,
     statusFilter: status ?? null,
   })),
-  on(invokeLoadMyBookingsApiSuccess, (state, { bookings }) => ({
+  on(invokeLoadMyBookingsApiSuccess, (state, { bookings, totalElements, totalPages }) => ({
     ...state,
     bookings,
+    totalElements,
+    totalPages,
+    // A `preserveWindow` refetch returns MORE than one page in a single
+    // response (Decision A) — derive `pagesLoaded` from the returned row
+    // count rather than assuming 1, so a post-mutation reload doesn't reset
+    // how many "pages" Load more thinks are already on screen.
+    pagesLoaded: Math.max(1, Math.ceil(bookings.length / MY_BOOKINGS_PAGE_SIZE)),
     loading: false,
     loaded: true,
     error: null,
@@ -77,6 +87,27 @@ export const myBookingsReducer = createReducer(
     loading: false,
     loaded: true,
     error,
+  })),
+
+  // --- Load more (OBRS-577) ---
+  on(invokeLoadMoreMyBookingsApi, (state) => ({
+    ...state,
+    loadingMore: true,
+  })),
+  on(invokeLoadMoreMyBookingsApiSuccess, (state, { bookings, totalElements, totalPages }) => ({
+    ...state,
+    bookings: [...state.bookings, ...bookings],
+    totalElements,
+    totalPages,
+    pagesLoaded: state.pagesLoaded + 1,
+    loadingMore: false,
+  })),
+  // Deliberately does NOT touch `state.error` — a Load more failure must
+  // stay a toast only (AlertService, see the effect), never replace the
+  // already-visible list with the full-page error state.
+  on(invokeLoadMoreMyBookingsApiFailure, (state) => ({
+    ...state,
+    loadingMore: false,
   })),
   on(requestCancelBooking, (state, { booking }) => ({
     ...state,

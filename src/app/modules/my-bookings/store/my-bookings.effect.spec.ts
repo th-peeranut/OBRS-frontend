@@ -14,11 +14,16 @@ import {
   cancelBookingFailure,
   cancelBookingSuccess,
   confirmCancelWithDestination,
+  invokeLoadMoreMyBookingsApi,
+  invokeLoadMoreMyBookingsApiFailure,
+  invokeLoadMoreMyBookingsApiSuccess,
+  invokeLoadMyBookingsApi,
+  invokeLoadMyBookingsApiSuccess,
   openCancelRefundDestinationModal,
   refundDestinationInvalid,
   requestCancelBooking,
 } from './my-bookings.action';
-import { initialMyBookingsState } from './my-bookings.model';
+import { initialMyBookingsState, MY_BOOKINGS_PAGE_SIZE } from './my-bookings.model';
 import { selectMyBookings } from './my-bookings.selector';
 import { errorCodeFromMessageKey } from '../../../shared/lib/api-error-code';
 
@@ -297,6 +302,205 @@ describe('MyBookingsEffect (OBRS-286)', () => {
       actionsSubject.next(confirmCancelWithDestination({ booking, refundDestination }));
 
       expect(emitted).toEqual([cancelBookingFailure({ error: 'MY_BOOKINGS.CANCEL.FAILED' })]);
+    });
+  });
+
+  // ── OBRS-577 AC2/AC6: incremental "Load more" + Decision A's
+  // preserveWindow refetch ────────────────────────────────────────────────
+  describe('loadMyBookings$ (OBRS-577 preserveWindow sizing)', () => {
+    it('a plain (non-preserveWindow) load requests exactly MY_BOOKINGS_PAGE_SIZE at page 0', () => {
+      bookingService.getMyBookings.and.returnValue(
+        of({ code: 200, message: 'OK', data: { content: [], totalElements: 0, totalPages: 0 } } as any)
+      );
+
+      effect.loadMyBookings$.subscribe();
+      actionsSubject.next(invokeLoadMyBookingsApi({ status: null }));
+
+      expect(bookingService.getMyBookings).toHaveBeenCalledWith({
+        status: null,
+        page: 0,
+        size: MY_BOOKINGS_PAGE_SIZE,
+        showLoadingDialog: undefined,
+      });
+    });
+
+    it('preserveWindow:true requests page 0 at (pagesLoaded * MY_BOOKINGS_PAGE_SIZE) — refetches the whole loaded window in ONE request (Decision A)', () => {
+      store.overrideSelector(selectMyBookings, { ...initialMyBookingsState, pagesLoaded: 5 });
+      store.refreshState();
+      bookingService.getMyBookings.and.returnValue(
+        of({ code: 200, message: 'OK', data: { content: [], totalElements: 0, totalPages: 0 } } as any)
+      );
+
+      effect.loadMyBookings$.subscribe();
+      actionsSubject.next(invokeLoadMyBookingsApi({ status: 'confirmed', preserveWindow: true }));
+
+      expect(bookingService.getMyBookings).toHaveBeenCalledWith({
+        status: 'confirmed',
+        page: 0,
+        size: 5 * MY_BOOKINGS_PAGE_SIZE,
+        showLoadingDialog: undefined,
+      });
+    });
+
+    it('preserveWindow:true with pagesLoaded=0 (first load never sets it) still requests at least one page, never size=0', () => {
+      store.overrideSelector(selectMyBookings, { ...initialMyBookingsState, pagesLoaded: 0 });
+      store.refreshState();
+      bookingService.getMyBookings.and.returnValue(
+        of({ code: 200, message: 'OK', data: { content: [], totalElements: 0, totalPages: 0 } } as any)
+      );
+
+      effect.loadMyBookings$.subscribe();
+      actionsSubject.next(invokeLoadMyBookingsApi({ status: null, preserveWindow: true }));
+
+      expect(bookingService.getMyBookings).toHaveBeenCalledWith(
+        jasmine.objectContaining({ size: MY_BOOKINGS_PAGE_SIZE })
+      );
+    });
+
+    it('maps a successful response to invokeLoadMyBookingsApiSuccess carrying totalElements/totalPages', () => {
+      bookingService.getMyBookings.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: { content: [{ id: 1 }], totalElements: 137, totalPages: 7 },
+        } as any)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadMyBookings$.subscribe((a) => emitted.push(a));
+      actionsSubject.next(invokeLoadMyBookingsApi({ status: null }));
+
+      expect(emitted).toEqual([
+        invokeLoadMyBookingsApiSuccess({ bookings: [{ id: 1 } as any], totalElements: 137, totalPages: 7 }),
+      ]);
+    });
+  });
+
+  describe('loadMoreMyBookings$ (OBRS-577 AC2/AC6)', () => {
+    it('requests the NEXT page (page = pagesLoaded) at MY_BOOKINGS_PAGE_SIZE, using the active status filter, and never surfaces the global loading dialog', () => {
+      store.overrideSelector(selectMyBookings, {
+        ...initialMyBookingsState,
+        statusFilter: 'confirmed',
+        pagesLoaded: 5,
+        totalPages: 7,
+        loadingMore: false,
+      });
+      store.refreshState();
+      bookingService.getMyBookings.and.returnValue(
+        of({ code: 200, message: 'OK', data: { content: [], totalElements: 137, totalPages: 7 } } as any)
+      );
+
+      effect.loadMoreMyBookings$.subscribe();
+      actionsSubject.next(invokeLoadMoreMyBookingsApi());
+
+      expect(bookingService.getMyBookings).toHaveBeenCalledWith({
+        status: 'confirmed',
+        page: 5,
+        size: MY_BOOKINGS_PAGE_SIZE,
+        showLoadingDialog: false,
+      });
+    });
+
+    it('AC6: reaching row 101+ — page 5 (rows 101-120) comes back and is emitted as invokeLoadMoreMyBookingsApiSuccess', () => {
+      store.overrideSelector(selectMyBookings, {
+        ...initialMyBookingsState,
+        pagesLoaded: 5,
+        totalPages: 7,
+      });
+      store.refreshState();
+      const page6 = Array.from({ length: MY_BOOKINGS_PAGE_SIZE }, (_, i) => ({ id: 101 + i }));
+      bookingService.getMyBookings.and.returnValue(
+        of({ code: 200, message: 'OK', data: { content: page6, totalElements: 137, totalPages: 7 } } as any)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadMoreMyBookings$.subscribe((a) => emitted.push(a));
+      actionsSubject.next(invokeLoadMoreMyBookingsApi());
+
+      expect(emitted).toEqual([
+        invokeLoadMoreMyBookingsApiSuccess({ bookings: page6 as any, totalElements: 137, totalPages: 7 }),
+      ]);
+    });
+
+    it('the defensive guard (mirrors MyReportsStore.loadMore()) refuses to fire once pagesLoaded >= totalPages', () => {
+      store.overrideSelector(selectMyBookings, {
+        ...initialMyBookingsState,
+        pagesLoaded: 7,
+        totalPages: 7,
+      });
+      store.refreshState();
+
+      const emitted: Action[] = [];
+      effect.loadMoreMyBookings$.subscribe((a) => emitted.push(a));
+      actionsSubject.next(invokeLoadMoreMyBookingsApi());
+
+      expect(emitted).toEqual([]);
+      expect(bookingService.getMyBookings).not.toHaveBeenCalled();
+    });
+
+    it('the defensive guard also refuses to fire while a load-more is already in flight', () => {
+      store.overrideSelector(selectMyBookings, {
+        ...initialMyBookingsState,
+        pagesLoaded: 2,
+        totalPages: 7,
+        loadingMore: true,
+      });
+      store.refreshState();
+
+      const emitted: Action[] = [];
+      effect.loadMoreMyBookings$.subscribe((a) => emitted.push(a));
+      actionsSubject.next(invokeLoadMoreMyBookingsApi());
+
+      expect(emitted).toEqual([]);
+      expect(bookingService.getMyBookings).not.toHaveBeenCalled();
+    });
+
+    it('a failure dispatches invokeLoadMoreMyBookingsApiFailure and toasts (list/count line stay untouched, per spec)', () => {
+      store.overrideSelector(selectMyBookings, {
+        ...initialMyBookingsState,
+        pagesLoaded: 1,
+        totalPages: 7,
+      });
+      store.refreshState();
+      bookingService.getMyBookings.and.returnValue(throwError(() => new Error('network')));
+
+      const emitted: Action[] = [];
+      effect.loadMoreMyBookings$.subscribe((a) => emitted.push(a));
+      actionsSubject.next(invokeLoadMoreMyBookingsApi());
+
+      expect(emitted.length).toBe(1);
+      expect((emitted[0] as ReturnType<typeof invokeLoadMoreMyBookingsApiFailure>).error).toBeTruthy();
+
+      effect.loadMoreMyBookingsFailureToast$.subscribe();
+      actionsSubject.next(invokeLoadMoreMyBookingsApiFailure({ error: 'oops' }));
+      expect(alertService.error).toHaveBeenCalledWith('oops');
+    });
+  });
+
+  describe('cancelSuccess$ (OBRS-577 Decision A)', () => {
+    it('reloads with preserveWindow:true so a multi-page list does not snap back to page 1 after a successful cancel', () => {
+      bookingService.cancelBooking.and.returnValue(
+        of({
+          code: 200,
+          message: 'ok',
+          data: { bookingId: 5, bookingNumber: 'B-5', status: 'cancelled', refundAmount: 400, refundMethod: 'card' },
+        })
+      );
+      store.overrideSelector(selectMyBookings, { ...initialMyBookingsState, statusFilter: 'confirmed' });
+      store.refreshState();
+
+      const emitted: Action[] = [];
+      effect.cancelSuccess$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(
+        cancelBookingSuccess({
+          result: { bookingId: 5, bookingNumber: 'B-5', status: 'cancelled', refundAmount: 400, refundMethod: 'card' },
+        })
+      );
+
+      expect(emitted).toEqual([
+        invokeLoadMyBookingsApi({ status: 'confirmed', preserveWindow: true }),
+      ]);
     });
   });
 });
