@@ -592,7 +592,7 @@
       "CANCEL_TRIP_BTN": "取消行程",
       "SCHEDULE_CANCELLED": "行程已成功取消。受影响的预订：{{count}} 个。",
       "CANCEL_FAILED": "无法取消行程。",
-      "CANCEL_TRIP_OWNER_ONLY": "只有所有者才能取消已有预订的行程。",
+      "CANCEL_TRIP_OWNER_ONLY": "只有所有者才能取消行程。",
       "LOAD_INSPECTIONS_FAILED": "加载检查历史失败。"
     },
     "LOOKUP": {

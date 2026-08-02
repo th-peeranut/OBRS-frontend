@@ -4091,3 +4091,20 @@ each own a DIFFERENT second field cleared in a DIFFERENT `on(...)` block; deleti
 auditing every field it touched leaves that field's clearer gone while the deletion still
 compiles green and every existing test still passes, because no prior test covered
 dismiss-then-reopen.
+
+---
+
+## OBRS-667 Scrutinize (frontend) — 2026-08-02
+
+Self-fix: `ADMIN.MESSAGES.CANCEL_TRIP_OWNER_ONLY` copy overclaimed. The permission line
+is gated on `mode !== 'delete' && !canCancelSchedule`, which covers BOTH cancel modes —
+`cancel-refund` (confirmedBookingCount > 0) AND `cancel-no-refund` (zero confirmed bookings,
+`resolveScheduleDeleteModalMode` in `schedule-delete-mode.ts`). The original string
+"Only an owner can cancel a trip that has bookings." is FALSE for the no-refund case, where
+a salesperson soft-cancels a trip with no bookings and is told bookings exist. Reworded to
+"Only an owner can cancel a trip." (+ th/zh) — always true for both modes. Lesson: when one
+i18n string is rendered by a gate that fires across two data-distinct modes, it must be true
+in BOTH; don't describe the majority mode. (Same family as FRONTEND-GOTCHAS "an i18n key
+written to be true on one lane can carry a false claim when reused verbatim on a sibling lane".)
+The DOM specs assert the KEY via the translate stub, and test:i18n checks key parity, so the
+value reword touches neither.
