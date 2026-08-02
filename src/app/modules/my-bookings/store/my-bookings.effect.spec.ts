@@ -475,6 +475,48 @@ describe('MyBookingsEffect (OBRS-286)', () => {
       actionsSubject.next(invokeLoadMoreMyBookingsApiFailure({ error: 'oops' }));
       expect(alertService.error).toHaveBeenCalledWith('oops');
     });
+
+    /**
+     * Scrutinize composed-path fix: a status-filter switch (or Retry, or any
+     * of the 6 mutation reloads) dispatches `invokeLoadMyBookingsApi` while a
+     * Load more request is still in flight. Without cancelling that in-flight
+     * request, its eventual response appends onto — and overwrites the
+     * totals of — the list the superseding full load just replaced,
+     * producing a permanently wrong-filter, wrong-count list. A single-action
+     * test cannot reach this: the request must be left UNRESOLVED (a bare
+     * Subject, not `of(...)`) so the superseding action can be dispatched
+     * while it is still pending.
+     */
+    it('a superseding invokeLoadMyBookingsApi (filter switch/Retry/mutation reload) cancels an in-flight Load more before it can append', () => {
+      store.overrideSelector(selectMyBookings, {
+        ...initialMyBookingsState,
+        statusFilter: 'confirmed',
+        pagesLoaded: 3,
+        totalPages: 7,
+      });
+      store.refreshState();
+      const loadMoreResponse$ = new Subject<any>();
+      bookingService.getMyBookings.and.returnValue(loadMoreResponse$);
+
+      const emitted: Action[] = [];
+      effect.loadMoreMyBookings$.subscribe((a) => emitted.push(a));
+
+      // Request A (Load more, page 3) goes in flight...
+      actionsSubject.next(invokeLoadMoreMyBookingsApi());
+      // ...then the user switches filters (or Retry, or a mutation settles)
+      // before A resolves — a superseding full load.
+      actionsSubject.next(invokeLoadMyBookingsApi({ status: null }));
+      // A finally resolves, carrying the OLD filter's page/status...
+      loadMoreResponse$.next({
+        code: 200,
+        message: 'OK',
+        data: { content: [{ id: 999 }], totalElements: 999, totalPages: 99 },
+      } as any);
+      loadMoreResponse$.complete();
+
+      // ...but must never reach the reducer: cancelled, not appended.
+      expect(emitted).toEqual([]);
+    });
   });
 
   describe('cancelSuccess$ (OBRS-577 Decision A)', () => {

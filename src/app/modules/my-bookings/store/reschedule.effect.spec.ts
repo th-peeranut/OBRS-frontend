@@ -13,11 +13,14 @@ import { ResponseAPI } from '../../../shared/interfaces/response.interface';
 import { RescheduleEstimate, RescheduleResult } from '../../../shared/interfaces/reschedule.interface';
 import { BookingTicketsData } from '../../../shared/interfaces/booking-ticket.interface';
 import {
+  closeRescheduleDialog,
   confirmReschedule,
   confirmRescheduleFailure,
   confirmRescheduleSuccess,
+  invokeLoadMyBookingsApi,
   loadRescheduleTicketsSuccess,
   openRescheduleDialog,
+  rescheduleAbandoned,
   rescheduleRequiresPayment,
   rescheduleSettled,
 } from './my-bookings.action';
@@ -303,6 +306,47 @@ describe('RescheduleEffect', () => {
       );
 
       expect(emitted).toEqual([]);
+    });
+  });
+
+  /**
+   * Scrutinize finding 3 — the 6-site preserveWindow sweep (OBRS-577 Decision
+   * A) listed `reschedule.effect.ts:276,288` as changed, but this file never
+   * pinned the reload PAYLOAD, only that `rescheduleSettled`/`abandoned` map
+   * to `rescheduleSettled()`/pending-payment actions above — a regression
+   * dropping `preserveWindow` from these 2 of the 6 sites would ship
+   * silently. `change-seat.effect.spec.ts`/`change-stop.effect.spec.ts`
+   * already pin the other 4; this closes the same gap here.
+   */
+  describe('rescheduleSettled$ / rescheduleAbandoned$ (OBRS-577 Decision A: preserveWindow)', () => {
+    it('rescheduleSettled$ toasts success, closes the dialog, and reloads with preserveWindow:true so a multi-page list does not snap back to page 1', () => {
+      store.overrideSelector(selectMyBookings, { ...initialMyBookingsState, statusFilter: 'confirmed' });
+      store.refreshState();
+
+      const emitted: Action[] = [];
+      effect.rescheduleSettled$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(rescheduleSettled());
+
+      expect(emitted).toEqual([
+        closeRescheduleDialog(),
+        invokeLoadMyBookingsApi({ status: 'confirmed', preserveWindow: true }),
+      ]);
+    });
+
+    it('rescheduleAbandoned$ toasts an info notice, closes the dialog, and reloads with preserveWindow:true', () => {
+      store.overrideSelector(selectMyBookings, { ...initialMyBookingsState, statusFilter: null });
+      store.refreshState();
+
+      const emitted: Action[] = [];
+      effect.rescheduleAbandoned$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(rescheduleAbandoned());
+
+      expect(emitted).toEqual([
+        closeRescheduleDialog(),
+        invokeLoadMyBookingsApi({ status: null, preserveWindow: true }),
+      ]);
     });
   });
 });

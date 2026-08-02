@@ -67,6 +67,18 @@ export const myBookingsReducer = createReducer(
     loading: true,
     error: null,
     statusFilter: status ?? null,
+    // Scrutinize (OBRS-577 AC3 fix): a status-filter switch / Retry / any of
+    // the 6 mutation reloads supersedes whatever load-more window was on
+    // screen. Reset the WHOLE load-more lifecycle here, on dispatch (not
+    // just on success) — `loadingMore: false` so the button doesn't render
+    // stuck on "Loading…" for the new filter, and `pagesLoaded`/`totalPages`
+    // reset to 0 so a click landing during the transition can't compute a
+    // page number against the OLD filter's stale totals. The effect-side
+    // half of this fix (cancelling an in-flight Load more HTTP request) is
+    // `loadMoreMyBookings$`'s `takeUntil` below.
+    loadingMore: false,
+    pagesLoaded: 0,
+    totalPages: 0,
   })),
   on(invokeLoadMyBookingsApiSuccess, (state, { bookings, totalElements, totalPages }) => ({
     ...state,

@@ -6,6 +6,7 @@ import {
   invokeLoadMoreMyBookingsApi,
   invokeLoadMoreMyBookingsApiFailure,
   invokeLoadMoreMyBookingsApiSuccess,
+  invokeLoadMyBookingsApi,
   invokeLoadMyBookingsApiSuccess,
   loadChangeStopEstimate,
   requestCancelBooking,
@@ -216,5 +217,35 @@ describe('myBookingsReducer — OBRS-577 incremental load more', () => {
     expect(next.loadingMore).toBeFalse();
     expect(next.bookings.length).toBe(1);
     expect(next.error).toBeNull();
+  });
+
+  /**
+   * Scrutinize (AC3 persistent violation): a status-filter switch / Retry /
+   * any of the 6 mutation reloads dispatches `invokeLoadMyBookingsApi` while
+   * a `Load more` may still be in flight from the PREVIOUS filter. Without
+   * this reset, the new filter's list renders with the Load-more button
+   * stuck disabled ("Loading…") because `loadingMore` survives the full
+   * reload untouched, and a stale `pagesLoaded`/`totalPages` (from the old
+   * filter) can let a click during the transition compute a wrong page
+   * number against the new filter's totals.
+   */
+  it('invokeLoadMyBookingsApi resets the whole load-more lifecycle (loadingMore/pagesLoaded/totalPages), not just loading/error/statusFilter', () => {
+    const staleFromPreviousFilter = {
+      ...initialMyBookingsState,
+      bookings: [buildBookingDto(1)],
+      loadingMore: true,
+      pagesLoaded: 3,
+      totalPages: 7,
+      totalElements: 137,
+    };
+
+    const next = myBookingsReducer(
+      staleFromPreviousFilter,
+      invokeLoadMyBookingsApi({ status: 'confirmed' })
+    );
+
+    expect(next.loadingMore).toBeFalse();
+    expect(next.pagesLoaded).toBe(0);
+    expect(next.totalPages).toBe(0);
   });
 });

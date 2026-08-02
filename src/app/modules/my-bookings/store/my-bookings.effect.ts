@@ -3,7 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
-import { catchError, filter, map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
+import { catchError, filter, map, switchMap, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
 import { BookingService } from '../../../services/booking/booking.service';
 import { AlertService } from '../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../shared/lib/api-error';
@@ -100,6 +100,20 @@ export class MyBookingsEffect {
   // once `pagesLoaded >= totalPages`, and `showLoadingDialog: false` is
   // explicit (not just the service default) so this never surfaces the
   // global loading dialog even if that default ever changes.
+  //
+  // Scrutinize (OBRS-577 AC3 fix): `switchMap` here only cancels a PRIOR
+  // `invokeLoadMoreMyBookingsApi` — it does nothing when a DIFFERENT action
+  // type supersedes this request, e.g. a status-filter switch, Retry, or any
+  // of the 6 mutation reloads, all of which dispatch `invokeLoadMyBookingsApi`
+  // on a completely separate effect stream. Left alone, a Load more request
+  // still in flight when one of those fires would land after the full reload
+  // already replaced the list — appending onto, and overwriting the totals
+  // of, a list for a DIFFERENT filter/status than the one it was requested
+  // under. `takeUntil` tears the inner HTTP subscription down the instant
+  // `invokeLoadMyBookingsApi` is dispatched, so a stale response can never
+  // reach the reducer. (The reducer's own `invokeLoadMyBookingsApi` case
+  // resets `loadingMore`/`pagesLoaded`/`totalPages` synchronously on
+  // dispatch — this is the effect-side half of the same fix.)
   loadMoreMyBookings$ = createEffect(() =>
     this.actions$.pipe(
       ofType(invokeLoadMoreMyBookingsApi),
@@ -129,7 +143,8 @@ export class MyBookingsEffect {
                     this.translate.instant('MY_BOOKINGS.LOAD_MORE_FAILED'),
                 })
               )
-            )
+            ),
+            takeUntil(this.actions$.pipe(ofType(invokeLoadMyBookingsApi)))
           )
       )
     )
