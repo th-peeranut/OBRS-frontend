@@ -16,12 +16,16 @@
       @if (summary) {
         <div class="settlement-detail-body">
           <div class="settlement-detail-row">
-            <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.ROUTE' | translate }}</span>
-            <span class="admin-emphasis">{{ summary.routeLabel }}</span>
+            <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.DRIVER' | translate }}</span>
+            <span class="admin-emphasis">{{ summary.driverName }}</span>
           </div>
           <div class="settlement-detail-row">
-            <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.DEPARTURE' | translate }}</span>
-            <span>{{ displayDateTime(summary.departureDateTime) }}</span>
+            <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.BUSINESS_DATE' | translate }}</span>
+            <span>{{ displayDate(summary.businessDate) }}</span>
+          </div>
+          <div class="settlement-detail-row">
+            <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.VEHICLE' | translate }}</span>
+            <span>{{ summary.vehiclePlate }}</span>
           </div>
 
           @if (fetchError && !detail) {
@@ -43,7 +47,7 @@
             <div class="settlement-detail-totals">
               <div class="settlement-detail-row">
                 <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.EXPECTED' | translate }}</span>
-                <span class="admin-emphasis">{{ formatMoney(detail.expectedAmount, detail.currency) }}</span>
+                <span class="admin-emphasis">{{ detail.expectedReturnAmount }}</span>
               </div>
             </div>
 
@@ -61,7 +65,7 @@
                             </div>
                           }
                         </td>
-                        <td>{{ formatMoney(entry.amount, detail.currency) }}</td>
+                        <td>{{ entry.amount }}</td>
                       </tr>
                     }
                   </tbody>
@@ -69,7 +73,7 @@
               </div>
             }
 
-            @if (detail.status === 'PENDING') {
+            @if (detail.status === 'OPEN') {
               <div class="mt-3">
                 <p class="settlement-detail-label settlement-signoff-title">
                   {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.SECTION_TITLE' | translate }}
@@ -99,7 +103,7 @@
                   <div class="settlement-detail-row">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.DISCREPANCY' | translate }}</span>
                     <span class="admin-emphasis" [class.settlement-nt-negative]="isNegativeMoney(discrepancyAmount())">
-                      {{ formatMoney(discrepancyAmount(), detail.currency) }}
+                      {{ discrepancyAmount() }}
                     </span>
                   </div>
                 }

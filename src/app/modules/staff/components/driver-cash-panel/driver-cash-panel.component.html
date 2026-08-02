@@ -3,16 +3,19 @@
   MEASURED shell topbar height, never a second hardcoded `top: 0`. -->
   <div class="dcp-context-strip" [style.top.px]="topOffsetPx" data-testid="driver-cash-context-strip">
     @if (day) {
-      <span class="admin-emphasis">{{ day.routeLabel }}</span>
-      <span class="admin-muted">{{ day.departureDateTime }}</span>
-      <span class="dcp-net-pill" data-testid="driver-cash-context-net">{{ day.summary.netCash }}</span>
+      <!-- ⚠️ CORRECTED (backend reconciliation) — DriverCashDayRespDto carries
+      no route/departure fields; the strip shows what the real DTO has
+      (driver + business date) plus the net (expected-return) pill. -->
+      <span class="admin-emphasis">{{ day.driverName }}</span>
+      <span class="admin-muted">{{ day.businessDate }}</span>
+      <span class="dcp-net-pill" data-testid="driver-cash-context-net">{{ day.expectedReturnAmount }}</span>
     }
     @if (!day && isLoading) {
       <span class="admin-muted">{{ 'COMMON.LOADING' | translate }}</span>
     }
   </div>
 
-  <app-driver-cash-day-summary [summary]="day?.summary ?? null" [isLoading]="isLoading"></app-driver-cash-day-summary>
+  <app-driver-cash-day-summary [day]="day" [isLoading]="isLoading"></app-driver-cash-day-summary>
 
   <div class="dcp-actions">
     <button

@@ -1,5 +1,6 @@
 import { of } from 'rxjs';
 import { DriverCashDaysStore } from './driver-cash-days.store';
+import { DriverCashDaySummaryRespDto } from '../../../../shared/interfaces/driver-cash.interface';
 
 function createAdminApiStub(response: unknown): any {
   return { getDriverCashDays: jasmine.createSpy('getDriverCashDays').and.returnValue(of(response)) };
@@ -19,18 +20,44 @@ describe('DriverCashDaysStore', () => {
     expect(spanDays).toBe(6);
   });
 
-  it('fetches with the current range and returns the response data', async () => {
-    const page = { range: { from: '2026-08-01', to: '2026-08-07', timezone: 'Asia/Bangkok' }, items: [] };
-    const adminApi = createAdminApiStub({ code: 200, message: 'OK', data: page });
+  // OBRS-960 — CORRECTED (2026-08-02, backend reconciliation): the real
+  // endpoint returns a FLAT array, not a `{range, items}` page wrapper —
+  // the first version of this store (and this spec) invented that wrapper.
+  it('fetches with the current range and returns the flat response array', async () => {
+    const rows: DriverCashDaySummaryRespDto[] = [
+      {
+        dayId: 1,
+        driverId: 5,
+        driverName: 'Somchai',
+        businessDate: '2026-08-01',
+        vehicleId: 10,
+        vehiclePlate: 'AB-1234',
+        status: 'OPEN',
+        expectedReturnAmount: '250.00',
+        returnedAmount: null,
+        discrepancy: null,
+        hasUnmappedSalesPointRemit: false,
+      },
+    ];
+    const adminApi = createAdminApiStub({ code: 200, message: 'OK', data: rows });
     const store = new DriverCashDaysStore(adminApi, createAuthServiceStub());
 
     await store.refresh();
 
-    expect(store.value).toEqual(page);
+    expect(store.value).toEqual(rows);
+  });
+
+  it('defaults to an empty array when the response has no data', async () => {
+    const adminApi = createAdminApiStub({ code: 200, message: 'OK', data: null });
+    const store = new DriverCashDaysStore(adminApi, createAuthServiceStub());
+
+    await store.refresh();
+
+    expect(store.value).toEqual([]);
   });
 
   it('setRange updates the range and re-fetches', async () => {
-    const adminApi = createAdminApiStub({ code: 200, message: 'OK', data: { range: {}, items: [] } });
+    const adminApi = createAdminApiStub({ code: 200, message: 'OK', data: [] });
     const store = new DriverCashDaysStore(adminApi, createAuthServiceStub());
 
     store.setRange('2026-01-01', '2026-01-31');

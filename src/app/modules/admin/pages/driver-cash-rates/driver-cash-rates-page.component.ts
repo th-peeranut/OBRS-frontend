@@ -2,17 +2,14 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { firstValueFrom, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
-import {
-  AdminApiService,
-  getAdminLookupCode,
-  getAdminLookupLabel,
-} from '../../../../services/admin/admin-api.service';
+import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorCode, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import {
   DRIVER_CASH_RATE_DUPLICATE_ERROR_CODE,
   DriverCashRateRowDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
+import { getStationFallbackLabel } from '../../../../shared/interfaces/station.interface';
 import { DriverCashRatesStore } from './driver-cash-rates.store';
 
 const CREATE_ERROR_KEYS: Record<string, string> = {
@@ -56,12 +53,15 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // ⚠️ CORRECTED (2026-08-02, backend reconciliation) — stops now come
+    // from `StationService.getAll()` (see `DriverCashRatesStore`'s doc
+    // comment for why), not the broken `category === 'stop'` lookup filter.
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       this.rates = data?.rates ?? [];
-      this.stopIdBySlug = new Map((data?.stopLookups ?? []).map((l) => [getAdminLookupCode(l), l.id]));
-      this.stopOptions = (data?.stopLookups ?? []).map((l) => ({
-        value: getAdminLookupCode(l),
-        label: getAdminLookupLabel(l, this.translate.currentLang) || getAdminLookupCode(l),
+      this.stopIdBySlug = new Map((data?.stops ?? []).map((s) => [s.slug, s.id]));
+      this.stopOptions = (data?.stops ?? []).map((s) => ({
+        value: s.slug,
+        label: getStationFallbackLabel(s, this.translate.currentLang),
       }));
     });
     this.store.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((refreshing) => {

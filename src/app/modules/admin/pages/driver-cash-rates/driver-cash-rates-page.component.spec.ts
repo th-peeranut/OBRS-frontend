@@ -27,12 +27,26 @@ function makeComponent(adminApi: Record<string, unknown>, store = makeStoreStub(
 }
 
 describe('DriverCashRatesPageComponent', () => {
-  it('subscribes to store.data$ and builds stop options from stopLookups', () => {
+  // OBRS-960 — CORRECTED (2026-08-02, backend reconciliation): stops now
+  // come from `DriverCashRatesStore.data.stops` (`StationApi[]`, sourced
+  // from `StationService.getAll()`), not the broken `stopLookups`
+  // (`category === 'stop'`) shape the first version of this store used.
+  it('subscribes to store.data$ and builds stop options from stops', () => {
     const { component, store } = makeComponent({});
     component.ngOnInit();
     store.data$.next({
       rates: [],
-      stopLookups: [{ id: 1, category: 'stop', slug: 'bkk', translations: [{ locale: 'th', label: 'กรุงเทพ' }] }],
+      stops: [
+        {
+          id: 1,
+          slug: 'bkk',
+          status: 'active',
+          stopType: 'terminal',
+          createdAt: '',
+          updatedAt: '',
+          translations: [{ locale: 'th', label: 'กรุงเทพ' }],
+        },
+      ],
     });
 
     expect(component['stopOptions'].length).toBe(1);

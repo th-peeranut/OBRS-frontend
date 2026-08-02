@@ -1360,8 +1360,8 @@
         "EMPTY": "此范围内没有司机现金日。",
         "LOAD_FAILED": "无法加载司机现金日。",
         "STATUS": {
-          "PENDING": "待归还",
-          "RETURNED": "已归还"
+          "RETURNED": "已归还",
+          "OPEN": "待归还"
         },
         "DETAIL": {
           "LOAD_FAILED": "无法加载当日详情。"
@@ -1382,6 +1382,12 @@
           "REASON_REQUIRED": "归还金额与预期不符时必须填写原因。",
           "ALREADY_RETURNED": "该日已完成归还。",
           "RETURN_FAILED": "无法记录此次归还。"
+        },
+        "COL": {
+          "DRIVER": "司机",
+          "BUSINESS_DATE": "营业日期",
+          "VEHICLE": "车辆",
+          "EXPECTED": "预期金额"
         }
       }
     },
@@ -3264,7 +3270,8 @@
         "ADVANCE": "预支款",
         "PER_HEAD": "人头费",
         "EXPENSE": "支出",
-        "NET": "现金净额"
+        "NET": "现金净额",
+        "PARCEL_REMIT": "包裹汇款"
       },
       "ADVANCE": {
         "ACTION_LABEL": "现金预支",

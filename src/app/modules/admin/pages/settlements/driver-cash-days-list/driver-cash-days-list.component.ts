@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { DriverCashDayListItemDto } from '../../../../../shared/interfaces/driver-cash.interface';
-import { formatDisplayDateTime } from '../../../../../shared/lib/display-date-time';
+import { DriverCashDaySummaryRespDto } from '../../../../../shared/interfaces/driver-cash.interface';
+import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
 
 export type DriverCashDaysContentState = 'loading' | 'invalid' | 'error' | 'empty' | 'data';
 
@@ -10,6 +10,12 @@ export type DriverCashDaysContentState = 'loading' | 'invalid' | 'error' | 'empt
  * content-state contract, same replace-the-table-not-a-banner rule for
  * invalid/error/empty). Row activation emits `dayId`, not `scheduleId` —
  * a driver-cash "day" is its own resource, not a settlement round.
+ *
+ * ⚠️ CORRECTED (2026-08-02, backend reconciliation) — the row shape is the
+ * real `DriverCashDaySummaryRespDto` (driver/business-date/vehicle-plate),
+ * not the invented `routeLabel`/`departureDateTime`/`netCash`/`currency`
+ * the first version of this component rendered — that data does not exist
+ * on the day resource.
  */
 @Component({
     selector: 'app-driver-cash-days-list',
@@ -18,7 +24,7 @@ export type DriverCashDaysContentState = 'loading' | 'invalid' | 'error' | 'empt
     standalone: false
 })
 export class DriverCashDaysListComponent {
-  @Input() items: DriverCashDayListItemDto[] = [];
+  @Input() items: DriverCashDaySummaryRespDto[] = [];
   @Input() contentState: DriverCashDaysContentState = 'loading';
   @Input() message = '';
   @Output() rowClick = new EventEmitter<number>();
@@ -27,8 +33,8 @@ export class DriverCashDaysListComponent {
 
   constructor(private readonly translate: TranslateService) {}
 
-  protected displayDateTime(value: string): string {
-    return formatDisplayDateTime(value, this.translate.currentLang);
+  protected displayDate(value: string): string {
+    return formatDisplayDate(value, this.translate.currentLang);
   }
 
   protected onRowActivate(dayId: number, event: MouseEvent): void {
@@ -42,7 +48,7 @@ export class DriverCashDaysListComponent {
     this.rowClick.emit(dayId);
   }
 
-  protected trackByDayId(_index: number, item: DriverCashDayListItemDto): number {
+  protected trackByDayId(_index: number, item: DriverCashDaySummaryRespDto): number {
     return item.dayId;
   }
 }

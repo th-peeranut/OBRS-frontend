@@ -4,22 +4,57 @@ import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
 import { DriverCashDayReturnModalComponent } from './driver-cash-day-return-modal.component';
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
-import { DriverCashDayDetailDto } from '../../../../../shared/interfaces/driver-cash.interface';
+import {
+  DriverCashDayRespDto,
+  DriverCashDaySummaryRespDto,
+} from '../../../../../shared/interfaces/driver-cash.interface';
 import { AA_NORMAL_TEXT, contrast, effectiveBg, fgOf, mountInChain, toHex } from '../../../../../testing/contrast';
 
-const DETAIL: DriverCashDayDetailDto = {
+// OBRS-960 — CORRECTED (2026-08-02, backend reconciliation): `[detail]` is
+// the real, flat `DriverCashDayRespDto` (`GET /private/driver-cash/days/{id}`
+// returns it) — the first version of this spec used an invented
+// `DriverCashDayDetailDto` with `expectedAmount`/`currency`/`scheduleId`/
+// `routeLabel`/`departureDateTime` and `status: 'PENDING'`, none of which
+// exist on the real DTO (the real open status is `'OPEN'`, the real
+// expected-amount field is `expectedReturnAmount`).
+const DETAIL: DriverCashDayRespDto = {
   dayId: 1,
-  scheduleId: 100,
-  routeLabel: 'BKK-CNX',
-  departureDateTime: '2026-08-01T08:00:00',
-  currency: 'THB',
-  expectedAmount: '500.00',
+  driverId: 5,
+  driverName: 'Somchai',
+  businessDate: '2026-08-01',
+  vehicleId: 100,
+  status: 'OPEN',
   entries: [
     { label: 'Per-head: origin stop', amount: '300.00', fromUnmappedSalesPoint: false },
     { label: 'Parcel share', amount: '200.00', fromUnmappedSalesPoint: true },
   ],
+  advanceTotal: '0.00',
+  perHeadTotal: '300.00',
+  expensePaidTotal: '0.00',
+  parcelRemitTotal: '200.00',
+  expectedReturnAmount: '500.00',
+  returnedAmount: null,
+  returnedAt: null,
+  returnedByUserId: null,
+  returnedByName: null,
+  discrepancy: null,
+  discrepancyReason: null,
+  perHeadRates: [],
   hasUnmappedSalesPointRemit: true,
-  status: 'PENDING',
+};
+
+const SUMMARY: DriverCashDaySummaryRespDto = {
+  dayId: 1,
+  driverId: 5,
+  driverName: 'Somchai',
+  businessDate: '2026-08-01',
+  vehicleId: 100,
+  vehiclePlate: 'AB-1234',
+  status: 'OPEN',
+  expectedReturnAmount: '500.00',
+  returnedAmount: null,
+  discrepancy: null,
+  hasUnmappedSalesPointRemit: true,
 };
 
 describe('DriverCashDayReturnModalComponent', () => {
@@ -35,16 +70,7 @@ describe('DriverCashDayReturnModalComponent', () => {
     fixture = TestBed.createComponent(DriverCashDayReturnModalComponent);
     component = fixture.componentInstance;
     component.isOpen = true;
-    component.summary = {
-      dayId: 1,
-      scheduleId: 100,
-      routeLabel: 'BKK-CNX',
-      departureDateTime: '2026-08-01T08:00:00',
-      netCash: '500.00',
-      currency: 'THB',
-      status: 'PENDING',
-      hasUnmappedSalesPointRemit: true,
-    };
+    component.summary = { ...SUMMARY };
     component.detail = DETAIL;
     // TestBed.createComponent() with no wrapping host template never fires
     // ngOnChanges from a real binding — call it once here so `formDayId`
@@ -56,10 +82,6 @@ describe('DriverCashDayReturnModalComponent', () => {
 
   function confirmBtn(): HTMLButtonElement {
     return fixture.nativeElement.querySelector('[data-testid="driver-cash-return-confirm"]');
-  }
-
-  function amountInput(): HTMLInputElement {
-    return fixture.nativeElement.querySelector('[data-testid="driver-cash-returned-amount-input"]');
   }
 
   function reasonInput(): HTMLTextAreaElement | null {
@@ -129,12 +151,20 @@ describe('DriverCashDayReturnModalComponent', () => {
       expect(component['returnedCents']).toBeNull();
       expect(component['canConfirm']).toBeFalse();
     });
+
+    it('a RETURNED day (status !== OPEN) blocks confirm even with a valid amount', () => {
+      component.detail = { ...DETAIL, status: 'RETURNED', returnedAmount: '500.00' };
+      component.ngOnChanges({});
+      fixture.detectChanges();
+      setAmount('500.00');
+      expect(component['canConfirm']).toBeFalse();
+    });
   });
 
   // ── OBRS-960: money parsing uses cents, never float arithmetic ───────────
   describe('discrepancy computation uses cents, not floats', () => {
     it('computes an exact discrepancy for a float-unsafe pair (0.1 + 0.2 trap family)', () => {
-      component.detail = { ...DETAIL, expectedAmount: '20.00' };
+      component.detail = { ...DETAIL, expectedReturnAmount: '20.00' };
       fixture.detectChanges();
       setAmount('19.90');
       // Naive float subtraction (20.00 - 19.90) can render as

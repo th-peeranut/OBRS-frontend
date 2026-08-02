@@ -1360,8 +1360,8 @@
         "EMPTY": "No driver cash days in this range.",
         "LOAD_FAILED": "Unable to load driver cash days.",
         "STATUS": {
-          "PENDING": "Pending return",
-          "RETURNED": "Returned"
+          "RETURNED": "Returned",
+          "OPEN": "Pending return"
         },
         "DETAIL": {
           "LOAD_FAILED": "Unable to load this day’s detail."
@@ -1382,6 +1382,12 @@
           "REASON_REQUIRED": "A reason is required when the returned amount does not match.",
           "ALREADY_RETURNED": "This day was already returned.",
           "RETURN_FAILED": "Unable to record this return."
+        },
+        "COL": {
+          "DRIVER": "Driver",
+          "BUSINESS_DATE": "Business date",
+          "VEHICLE": "Vehicle",
+          "EXPECTED": "Expected amount"
         }
       }
     },
@@ -3264,7 +3270,8 @@
         "ADVANCE": "Advance",
         "PER_HEAD": "Per-head",
         "EXPENSE": "Expenses",
-        "NET": "Net cash"
+        "NET": "Net cash",
+        "PARCEL_REMIT": "Parcel remit"
       },
       "ADVANCE": {
         "ACTION_LABEL": "Cash advance",

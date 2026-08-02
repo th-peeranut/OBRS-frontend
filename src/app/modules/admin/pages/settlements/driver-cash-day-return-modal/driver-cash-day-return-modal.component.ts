@@ -1,13 +1,13 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import {
-  DriverCashDayDetailDto,
-  DriverCashDayListItemDto,
+  DriverCashDayRespDto,
+  DriverCashDaySummaryRespDto,
 } from '../../../../../shared/interfaces/driver-cash.interface';
-import { formatDisplayDateTime } from '../../../../../shared/lib/display-date-time';
+import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
 import { toCents } from '../../../../../shared/lib/money-cents';
 
-/** `confirmRequested` payload — `POST .../driver-cash/days/{dayId}/return`. */
+/** `confirmRequested` payload — `POST /api/private/driver-cash/days/{dayId}/return`. */
 export interface DriverCashDayReturnPayload {
   returnedAmount: string;
   discrepancyReason?: string;
@@ -27,6 +27,16 @@ export interface DriverCashDayReturnPayload {
  * Opens optimistically: `[summary]` is seeded from the row already in hand
  * before the detail GET resolves (design-system.md §6) — never gated on
  * `[detail]`.
+ *
+ * ⚠️ CORRECTED (2026-08-02, backend reconciliation) — `[detail]` is now the
+ * SAME flat `DriverCashDayRespDto` the staff panel reads (`GET
+ * /api/private/driver-cash/days/{dayId}` returns it, confirmed against the
+ * backend), not the invented `DriverCashDayDetailDto` with an `expectedAmount`
+ * field and a `PENDING`/`RETURNED` status — the real field is
+ * `expectedReturnAmount` and the real open status is `OPEN`. There is no
+ * `currency` field on the real DTO (driver-cash is THB-only in practice, and
+ * the backend's DTOs carry no currency code anywhere in this feature), so
+ * money renders as the raw decimal string, not through `Intl.NumberFormat`.
  */
 @Component({
     selector: 'app-driver-cash-day-return-modal',
@@ -36,8 +46,8 @@ export interface DriverCashDayReturnPayload {
 })
 export class DriverCashDayReturnModalComponent implements OnChanges {
   @Input() isOpen = false;
-  @Input() summary: DriverCashDayListItemDto | null = null;
-  @Input() detail: DriverCashDayDetailDto | null = null;
+  @Input() summary: DriverCashDaySummaryRespDto | null = null;
+  @Input() detail: DriverCashDayRespDto | null = null;
   @Input() isFetching = false;
   @Input() isConfirming = false;
   @Input() fetchError = '';
@@ -78,7 +88,7 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
     if (returned === null || !this.detail) {
       return null;
     }
-    const expected = toCents(this.detail.expectedAmount) ?? 0;
+    const expected = toCents(this.detail.expectedReturnAmount) ?? 0;
     return returned - expected;
   }
 
@@ -103,23 +113,14 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
     return (
       !this.isConfirming &&
       !!this.detail &&
-      this.detail.status === 'PENDING' &&
+      this.detail.status === 'OPEN' &&
       this.returnedCents !== null &&
       (!this.hasDiscrepancy() || this.discrepancyReasonInput.trim().length > 0)
     );
   }
 
-  protected displayDateTime(value: string | null | undefined): string {
-    return formatDisplayDateTime(value, this.translate.currentLang);
-  }
-
-  protected formatMoney(value: string, currency: string): string {
-    const amount = Number(value);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(amount) ? amount : 0);
+  protected displayDate(value: string | null | undefined): string {
+    return formatDisplayDate(value, this.translate.currentLang);
   }
 
   protected trackByEntry(index: number): number {

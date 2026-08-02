@@ -26,10 +26,11 @@ same rule as app-settlements-list. -->
         <table class="admin-table">
           <thead>
             <tr>
-              <th>{{ 'ADMIN.SETTLEMENTS.COL.ROUTE' | translate }}</th>
-              <th>{{ 'ADMIN.SETTLEMENTS.COL.DEPARTURE' | translate }}</th>
+              <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.DRIVER' | translate }}</th>
+              <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.BUSINESS_DATE' | translate }}</th>
+              <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.VEHICLE' | translate }}</th>
               <th>{{ 'ADMIN.SETTLEMENTS.COL.STATUS' | translate }}</th>
-              <th>{{ 'ADMIN.SETTLEMENTS.COL.AMOUNT' | translate }}</th>
+              <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.EXPECTED' | translate }}</th>
               <th>{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
             </tr>
           </thead>
@@ -37,6 +38,7 @@ same rule as app-settlements-list. -->
             @if (contentState === 'loading') {
               @for (row of skeletonRows; track row) {
                 <tr class="admin-skeleton-row" aria-hidden="true">
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
@@ -53,7 +55,7 @@ same rule as app-settlements-list. -->
                   (click)="onRowActivate(item.dayId, $event)"
                   >
                   <td class="admin-emphasis">
-                    {{ item.routeLabel }}
+                    {{ item.driverName }}
                     @if (item.hasUnmappedSalesPointRemit) {
                       <span
                         class="material-symbols-outlined dcp-row-warning-icon"
@@ -62,16 +64,17 @@ same rule as app-settlements-list. -->
                         >warning</span>
                     }
                   </td>
-                  <td>{{ displayDateTime(item.departureDateTime) }}</td>
+                  <td>{{ displayDate(item.businessDate) }}</td>
+                  <td>{{ item.vehiclePlate }}</td>
                   <td>
-                    @if (item.status === 'PENDING') {
-                      <span class="admin-status is-warning">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.STATUS.PENDING' | translate }}</span>
+                    @if (item.status === 'OPEN') {
+                      <span class="admin-status is-warning">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.STATUS.OPEN' | translate }}</span>
                     }
                     @if (item.status === 'RETURNED') {
                       <span class="admin-status is-success">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.STATUS.RETURNED' | translate }}</span>
                     }
                   </td>
-                  <td>{{ item.netCash }} {{ item.currency }}</td>
+                  <td>{{ item.expectedReturnAmount }}</td>
                   <td>
                     <button
                       type="button"
@@ -85,7 +88,7 @@ same rule as app-settlements-list. -->
               }
               @if (items.length === 0) {
                 <tr class="admin-empty-row">
-                  <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                  <td colspan="6">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
                 </tr>
               }
             }

@@ -21,8 +21,8 @@ import { DriverCashDaysStore } from './driver-cash-days.store';
 import { DriverCashDaysContentState } from './driver-cash-days-list/driver-cash-days-list.component';
 import { DriverCashDayReturnPayload } from './driver-cash-day-return-modal/driver-cash-day-return-modal.component';
 import {
-  DriverCashDayDetailDto,
-  DriverCashDayListItemDto,
+  DriverCashDayRespDto,
+  DriverCashDaySummaryRespDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
 
 const MAX_RANGE_SPAN_DAYS = 366;
@@ -80,20 +80,20 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
   // ── OBRS-960: driver cash — daily-return close (own section, own filter) ──
   // A driver-cash "day" is not a settlement "round" — deliberately a SEPARATE
   // date-range filter/store from the block above, per the card.
-  protected driverCashDays: DriverCashDayListItemDto[] = [];
+  protected driverCashDays: DriverCashDaySummaryRespDto[] = [];
   protected isDriverCashRefreshing = false;
   protected driverCashLoadError = '';
   protected driverCashFromDate: Date | null = null;
   protected driverCashToDate: Date | null = null;
 
   protected openDayId: number | null = null;
-  protected dayModalSummary: DriverCashDayListItemDto | null = null;
-  protected dayModalDetail: DriverCashDayDetailDto | null = null;
+  protected dayModalSummary: DriverCashDaySummaryRespDto | null = null;
+  protected dayModalDetail: DriverCashDayRespDto | null = null;
   protected isDayDetailFetching = false;
   protected isDayConfirming = false;
   protected dayDetailFetchError = '';
 
-  private readonly dayDetailCache = new Map<number, DriverCashDayDetailDto>();
+  private readonly dayDetailCache = new Map<number, DriverCashDayRespDto>();
 
   private readonly destroy$ = new Subject<void>();
 
@@ -130,8 +130,10 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
     this.driverCashFromDate = this.parseDateInputValue(dcRange.from);
     this.driverCashToDate = this.parseDateInputValue(dcRange.to);
 
+    // ⚠️ CORRECTED — the store's data$ is now a flat array (the real
+    // endpoint has no {range, items} wrapper), not `data?.items`.
     this.driverCashDaysStore.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
-      this.driverCashDays = data?.items ?? [];
+      this.driverCashDays = data ?? [];
     });
     this.driverCashDaysStore.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((refreshing) => {
       this.isDriverCashRefreshing = refreshing;
@@ -613,11 +615,12 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const returnedText = this.formatMoney(payload.returnedAmount, detail.currency);
+    // ⚠️ CORRECTED — the real DTO carries no `currency` field; echo the raw
+    // decimal string (same reasoning as the modal's own template).
     const confirmed = await this.alertService.confirm({
       title: this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.CONFIRM_TITLE'),
       text: this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.CONFIRM_TEXT', {
-        amount: returnedText,
+        amount: payload.returnedAmount,
       }),
       confirmButtonText: this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.CONFIRM_BTN'),
       cancelButtonText: this.translate.instant('ADMIN.COMMON.CANCEL'),
@@ -633,16 +636,18 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           this.isDayConfirming = false;
-          const returned: DriverCashDayDetailDto = response.data ?? { ...detail, status: 'RETURNED' };
+          const returned: DriverCashDayRespDto = response.data ?? {
+            ...detail,
+            status: 'RETURNED',
+            returnedAmount: payload.returnedAmount,
+          };
           this.dayDetailCache.set(id, returned);
           if (this.openDayId === id) {
             this.dayModalDetail = returned;
           }
           this.alertService.success(this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.SUCCESS'));
-          this.driverCashDaysStore.mutate((current) => ({
-            ...current,
-            items: current.items.filter((i) => i.dayId !== id),
-          }));
+          // ⚠️ CORRECTED — the store's cached value is now a flat array.
+          this.driverCashDaysStore.mutate((current) => current.filter((i) => i.dayId !== id));
         },
         error: (error: unknown) => {
           this.isDayConfirming = false;

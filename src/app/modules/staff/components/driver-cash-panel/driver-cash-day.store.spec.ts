@@ -1,5 +1,6 @@
 import { of, throwError } from 'rxjs';
 import { DriverCashDayStore } from './driver-cash-day.store';
+import { DriverCashDayRespDto } from '../../../../shared/interfaces/driver-cash.interface';
 
 function createStaffApiStub(response: unknown): any {
   return { getDriverCashDay: jasmine.createSpy('getDriverCashDay').and.returnValue(of(response)) };
@@ -9,13 +10,30 @@ function createAuthServiceStub(): any {
   return { authStatus$: of(true) };
 }
 
-const DAY_RESP = {
-  scheduleId: 42,
-  routeLabel: 'BKK-CNX',
-  departureDateTime: '2026-08-01T08:00:00',
-  currency: 'THB',
-  summary: { advanceTotal: '0.00', perHeadTotal: '0.00', expenseTotal: '0.00', netCash: '0.00' },
+// OBRS-960 — CORRECTED (2026-08-02, backend reconciliation): the real, flat
+// DriverCashDayRespDto (no `scheduleId`/`routeLabel`/`departureDateTime`/
+// `currency`/nested `summary` — none of those exist on the real DTO).
+const DAY_RESP: DriverCashDayRespDto = {
+  dayId: 1,
+  driverId: 5,
+  driverName: 'Somchai',
+  businessDate: '2026-08-01',
+  vehicleId: 42,
+  status: 'OPEN',
+  entries: [],
+  advanceTotal: '0.00',
+  perHeadTotal: '0.00',
+  expensePaidTotal: '0.00',
+  parcelRemitTotal: '0.00',
+  expectedReturnAmount: '0.00',
+  returnedAmount: null,
+  returnedAt: null,
+  returnedByUserId: null,
+  returnedByName: null,
+  discrepancy: null,
+  discrepancyReason: null,
   perHeadRates: [],
+  hasUnmappedSalesPointRemit: false,
 };
 
 describe('DriverCashDayStore', () => {

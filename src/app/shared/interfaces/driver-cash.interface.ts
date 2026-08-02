@@ -4,24 +4,22 @@
  * settlements/system-settings surfaces (`AdminApiService`), per CLAUDE.md §8
  * ("interface shared across modules" -> `shared/interfaces/`).
  *
- * ⚠️ Endpoint paths for the per-round staff panel (surface 1) and the
- * owner settings tabs (surfaces 4/5/7/8) are pinned exactly to the card
- * brief. The owner's **daily-return close** list/detail/return endpoints
- * (surface 3, `/admin/settlements`) were NOT given an explicit path in the
- * brief — those three (`getDriverCashDays`, `getDriverCashDayDetail`,
- * `returnDriverCashDay`) are a best-effort naming under
- * `/api/private/owner/driver-cash/days...`, consistent with the sibling
- * per-head-rates path the brief DID pin
- * (`/api/private/owner/driver-cash/per-head-rates`). Flagged as a Contract
- * Request in `docs/handoff.md` — verify against the real backend route
- * before relying on this in a live smoke test.
+ * ⚠️ CORRECTED against the real backend (OBRS-backend `ao/obrs-960-driver-cash`
+ * `afb440d4`, `DriverCashController.java` + its DTOs) — the FIRST version of
+ * this file guessed a URL segment order and a nested `summary` sub-object
+ * that don't exist. Every URL below is now pinned to the real controller;
+ * the DTOs below are the real, flat shapes. See `docs/handoff.md` for what
+ * is still unverified (`DriverCashEntryRespDto`'s own field shape beyond
+ * `fromUnmappedSalesPoint`, which the card names but the backend
+ * reconciliation did not spell out further).
  */
 
 /** One route stop's per-head rate, as carried on the schedule's driver-cash
  * day response — drives the "rate not configured" pre-emptive warning on
- * the per-head form BEFORE submit (the POST response's own
- * `perHeadRateApplied`/`perHeadRateConfigured` remain the source of truth
- * afterwards, per the card). */
+ * the per-head form BEFORE submit. There is no separate per-action response
+ * type — all four driver-cash POSTs return the full, refreshed
+ * `DriverCashDayRespDto`, so the "rate actually applied" is read back from
+ * THAT response's `perHeadRates[]` entry for the submitted `stopId`. */
 export interface DriverCashPerHeadRateLineDto {
   stopId: number;
   stopName: string;
@@ -29,25 +27,54 @@ export interface DriverCashPerHeadRateLineDto {
   configured: boolean;
 }
 
-/** Running totals for the schedule's driver-cash day, all money as decimal
- * STRINGS (never float-parsed beyond the shared `toCents()` convention). */
-export interface DriverCashDaySummaryDto {
-  advanceTotal: string;
-  perHeadTotal: string;
-  expenseTotal: string;
-  netCash: string;
+/**
+ * One itemized cash entry on a driver-cash day. The backend confirmed the
+ * `entries: List<DriverCashEntryRespDto>` field NAME and TYPE on
+ * `DriverCashDayRespDto`; the card independently names
+ * `fromUnmappedSalesPoint` as a per-entry field. This shape is NOT
+ * otherwise confirmed field-for-field against the real `DriverCashEntryRespDto`
+ * class — flagged in `docs/handoff.md`.
+ */
+export interface DriverCashEntryRespDto {
+  label: string;
+  amount: string;
+  fromUnmappedSalesPoint: boolean;
 }
 
-/** `GET /api/private/schedules/{scheduleId}/driver-cash/day` — component-
- * scoped `DriverCashDayStore`'s payload (mirrors `ParcelCargoAvailabilityStore`'s
- * `data:null` contract when nothing has been fetched yet). */
+export type DriverCashDayStatus = 'OPEN' | 'RETURNED';
+
+/**
+ * `GET /api/private/driver-cash/schedules/{scheduleId}/day`,
+ * `GET /api/private/driver-cash/days/{dayId}`, AND the response of all four
+ * driver-cash POSTs (`advance`, `per-head`, `expense-paid`, `return`) — ONE
+ * flat DTO, confirmed field-for-field against the backend's
+ * `DriverCashDayRespDto`. There is NO nested `summary` object (the first
+ * version of this file invented one) and NO separate per-action response
+ * type (the first version invented `DriverCashPerHeadRespDto` with an extra
+ * `perHeadRateApplied`/`perHeadRateConfigured` pair that does not exist).
+ */
 export interface DriverCashDayRespDto {
-  scheduleId: number;
-  routeLabel: string;
-  departureDateTime: string;
-  currency: string;
-  summary: DriverCashDaySummaryDto;
+  dayId: number;
+  driverId: number;
+  driverName: string;
+  /** `LocalDate` on the wire — `yyyy-MM-dd`. */
+  businessDate: string;
+  vehicleId: number;
+  status: DriverCashDayStatus;
+  entries: DriverCashEntryRespDto[];
+  advanceTotal: string;
+  perHeadTotal: string;
+  expensePaidTotal: string;
+  parcelRemitTotal: string;
+  expectedReturnAmount: string;
+  returnedAmount: string | null;
+  returnedAt: string | null;
+  returnedByUserId: number | null;
+  returnedByName: string | null;
+  discrepancy: string | null;
+  discrepancyReason: string | null;
   perHeadRates: DriverCashPerHeadRateLineDto[];
+  hasUnmappedSalesPointRemit: boolean;
 }
 
 export interface DriverCashAdvanceReqDto {
@@ -59,63 +86,10 @@ export interface DriverCashPerHeadReqDto {
   headCount: number;
 }
 
-/** POST .../driver-cash/per-head response — the day's totals PLUS the rate
- * actually applied to this submission (the post-submit source of truth the
- * card calls out, distinct from the pre-submit `perHeadRates[].configured`
- * hint on the day response). */
-export interface DriverCashPerHeadRespDto extends DriverCashDayRespDto {
-  perHeadRateApplied: string;
-  perHeadRateConfigured: boolean;
-}
-
 export interface DriverCashExpenseReqDto {
   category: string;
   amount: string;
   note?: string;
-}
-
-// ── Owner: daily-return close (`/admin/settlements`, surface 3) ───────────
-
-export type DriverCashDayStatus = 'PENDING' | 'RETURNED';
-
-export interface DriverCashDayListItemDto {
-  dayId: number;
-  scheduleId: number;
-  routeLabel: string;
-  departureDateTime: string;
-  netCash: string;
-  currency: string;
-  status: DriverCashDayStatus;
-  /** True when ANY remit line on this day came from a stop not yet mapped
-   * to a sales point — surfaces the same warning as the parcel-intake one
-   * (card §3), driven by the day's own entries. */
-  hasUnmappedSalesPointRemit: boolean;
-}
-
-export interface DriverCashDayPageDto {
-  range: { from: string; to: string; timezone: string };
-  items: DriverCashDayListItemDto[];
-}
-
-export interface DriverCashDayEntryDto {
-  label: string;
-  amount: string;
-  fromUnmappedSalesPoint: boolean;
-}
-
-export interface DriverCashDayDetailDto {
-  dayId: number;
-  scheduleId: number;
-  routeLabel: string;
-  departureDateTime: string;
-  currency: string;
-  /** The amount the driver is expected to hand back — counted-cash's
-   * "expected" role from `SettlementDetailModalComponent`, renamed per the
-   * card ("copies the sign-off form verbatim ... with the new field names"). */
-  expectedAmount: string;
-  entries: DriverCashDayEntryDto[];
-  hasUnmappedSalesPointRemit: boolean;
-  status: DriverCashDayStatus;
 }
 
 export interface DriverCashDayReturnReqDto {
@@ -123,7 +97,32 @@ export interface DriverCashDayReturnReqDto {
   discrepancyReason?: string;
 }
 
+/**
+ * `GET /api/private/driver-cash/days?from=&to=&status=` — OBRS-960's ONE
+ * genuine contract gap (the SA never specified a list endpoint; the first
+ * version of this file guessed a path/shape and both were wrong). Confirmed
+ * against the backend's `DriverCashDaySummaryRespDto`: a LIST ROW, distinct
+ * from the full `DriverCashDayRespDto` above — no `entries`, no
+ * `perHeadRates`, and money is only the three totals a list needs. The
+ * response is a **flat array**, not a `{range, items}` page wrapper (the
+ * first version of this file invented that wrapper too).
+ */
+export interface DriverCashDaySummaryRespDto {
+  dayId: number;
+  driverId: number;
+  driverName: string;
+  businessDate: string;
+  vehicleId: number;
+  vehiclePlate: string;
+  status: DriverCashDayStatus;
+  expectedReturnAmount: string;
+  returnedAmount: string | null;
+  discrepancy: string | null;
+  hasUnmappedSalesPointRemit: boolean;
+}
+
 // ── Owner settings: driver-cash per-head rates (`/admin/settings`, surface 5) ──
+// Endpoint paths unaffected by the backend reconciliation.
 
 export interface DriverCashRateRowDto {
   id: number;

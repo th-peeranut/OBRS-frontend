@@ -1,6 +1,7 @@
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { ElementRef } from '@angular/core';
 import { DriverCashPanelComponent } from './driver-cash-panel.component';
+import { DriverCashDayRespDto } from '../../../../shared/interfaces/driver-cash.interface';
 
 function createStoreStub(): any {
   return {
@@ -28,13 +29,34 @@ function createTranslateStub(): any {
   return { instant: (key: string) => key, onLangChange: of() };
 }
 
-const DAY_RESP = {
-  scheduleId: 42,
-  routeLabel: 'BKK-CNX',
-  departureDateTime: '2026-08-01T08:00:00',
-  currency: 'THB',
-  summary: { advanceTotal: '0.00', perHeadTotal: '0.00', expenseTotal: '0.00', netCash: '0.00' },
+// OBRS-960 — CORRECTED (2026-08-02, backend reconciliation): the real,
+// flat DriverCashDayRespDto. The original fixture here had `scheduleId` /
+// `routeLabel` / `departureDateTime` / `currency` / a nested `summary` —
+// NONE of which exist on the real DTO, and `staffApi` being loosely typed
+// `any` in this spec is exactly why that never surfaced as a compile
+// error. Kept typed against the real interface now so a future shape drift
+// fails loudly here instead of passing on a fiction.
+const DAY_RESP: DriverCashDayRespDto = {
+  dayId: 1,
+  driverId: 5,
+  driverName: 'Somchai',
+  businessDate: '2026-08-01',
+  vehicleId: 42,
+  status: 'OPEN',
+  entries: [],
+  advanceTotal: '0.00',
+  perHeadTotal: '0.00',
+  expensePaidTotal: '0.00',
+  parcelRemitTotal: '0.00',
+  expectedReturnAmount: '0.00',
+  returnedAmount: null,
+  returnedAt: null,
+  returnedByUserId: null,
+  returnedByName: null,
+  discrepancy: null,
+  discrepancyReason: null,
   perHeadRates: [],
+  hasUnmappedSalesPointRemit: false,
 };
 
 describe('DriverCashPanelComponent', () => {

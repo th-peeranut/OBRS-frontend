@@ -41,9 +41,10 @@ import {
   CashRefundApprovalRequest,
 } from '../../shared/interfaces/my-booking.interface';
 import {
-  DriverCashDayDetailDto,
-  DriverCashDayPageDto,
+  DriverCashDayRespDto,
   DriverCashDayReturnReqDto,
+  DriverCashDayStatus,
+  DriverCashDaySummaryRespDto,
   DriverCashRateReqDto,
   DriverCashRateRowDto,
 } from '../../shared/interfaces/driver-cash.interface';
@@ -1939,29 +1940,41 @@ export class AdminApiService {
   }
 
   // ── OBRS-960: driver cash — daily-return close (/admin/settlements) ──────
-  // ⚠️ Path is a best-effort naming, not pinned by the card brief — see
-  // driver-cash.interface.ts's file-level doc comment / docs/handoff.md.
+  // ⚠️ CORRECTED (2026-08-02, backend reconciliation) — the base is
+  // `/api/private/driver-cash`, NOT `/api/private/owner/driver-cash`; the
+  // day endpoints are OWNER-gated by role, not by URL prefix. The list
+  // endpoint itself was a genuine contract gap the SA never specified — the
+  // backend added it now: `status` is optional (`OPEN`|`RETURNED`, omitted
+  // = both), `from`/`to` are the required business-date range. Verified
+  // against `DriverCashController.java:55,65,74,81`.
 
-  getDriverCashDays(from: string, to: string): Observable<ResponseAPI<DriverCashDayPageDto>> {
-    const params = new HttpParams().set('from', from).set('to', to);
-    return this.getRequest<DriverCashDayPageDto>(
-      `${this.baseUrl}/private/owner/driver-cash/days`,
+  getDriverCashDays(
+    from: string,
+    to: string,
+    status?: DriverCashDayStatus
+  ): Observable<ResponseAPI<DriverCashDaySummaryRespDto[]>> {
+    let params = new HttpParams().set('from', from).set('to', to);
+    if (status) {
+      params = params.set('status', status);
+    }
+    return this.getRequest<DriverCashDaySummaryRespDto[]>(
+      `${this.baseUrl}/private/driver-cash/days`,
       params
     );
   }
 
-  getDriverCashDayDetail(dayId: number): Observable<ResponseAPI<DriverCashDayDetailDto>> {
-    return this.getRequest<DriverCashDayDetailDto>(
-      `${this.baseUrl}/private/owner/driver-cash/days/${dayId}`
+  getDriverCashDayDetail(dayId: number): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.getRequest<DriverCashDayRespDto>(
+      `${this.baseUrl}/private/driver-cash/days/${dayId}`
     );
   }
 
   returnDriverCashDay(
     dayId: number,
     payload: DriverCashDayReturnReqDto
-  ): Observable<ResponseAPI<DriverCashDayDetailDto>> {
-    return this.postRequest<DriverCashDayDetailDto>(
-      `${this.baseUrl}/private/owner/driver-cash/days/${dayId}/return`,
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.postRequest<DriverCashDayRespDto>(
+      `${this.baseUrl}/private/driver-cash/days/${dayId}/return`,
       payload
     );
   }
