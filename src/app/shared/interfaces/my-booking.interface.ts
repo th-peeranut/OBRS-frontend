@@ -43,7 +43,28 @@ export interface MyBookingScheduleDto {
   legType?: string;
   fromStop?: BookingStopLookup;
   toStop?: BookingStopLookup;
+  /**
+   * ALWAYS `null` on this list endpoint — the list projection deliberately does
+   * not load the ticket rows (`BookingScheduleDtoService#toListScheduleDto`).
+   * Present on the type because the same shape is reused by detail responses.
+   *
+   * Never count these to render a passenger figure on a list row: on this
+   * endpoint `tickets?.length ?? 0` is 0 for every booking ever made, which is
+   * exactly the defect OBRS-635 fixed. Use `passengerCount` below.
+   */
   tickets?: MyBookingScheduleTicketDto[];
+  /**
+   * How many passengers this leg is for (OBRS-635). Server-computed and always
+   * present — a `0` here means a leg with genuinely no passenger tickets, not
+   * "not loaded". Excludes carry-on-on-seat parcel tickets and the superseded
+   * ticket generations a reschedule leaves attached to the leg; see
+   * `BookingPassengerCountResolver` for the exact rule.
+   *
+   * The number shown on the card is the booking's passenger count, taken from
+   * the FIRST leg — not the sum across legs. A round trip for 2 people is
+   * "2 passengers", not 4 tickets.
+   */
+  passengerCount?: number;
   /**
    * Slug of the route this leg runs on — resolves `RouteMapService.getPickupDropoff(slug)`
    * for the change-stop dialog's pickup/drop-off pickers (OBRS-110 wave 2).
