@@ -383,7 +383,6 @@ describe('MyBookingsEffect (OBRS-286)', () => {
         statusFilter: 'confirmed',
         pagesLoaded: 5,
         totalPages: 7,
-        loadingMore: false,
       });
       store.refreshState();
       bookingService.getMyBookings.and.returnValue(
@@ -422,28 +421,63 @@ describe('MyBookingsEffect (OBRS-286)', () => {
       ]);
     });
 
-    it('the defensive guard (mirrors MyReportsStore.loadMore()) refuses to fire once pagesLoaded >= totalPages', () => {
-      store.overrideSelector(selectMyBookings, {
-        ...initialMyBookingsState,
-        pagesLoaded: 7,
-        totalPages: 7,
-      });
-      store.refreshState();
-
-      const emitted: Action[] = [];
-      effect.loadMoreMyBookings$.subscribe((a) => emitted.push(a));
-      actionsSubject.next(invokeLoadMoreMyBookingsApi());
-
-      expect(emitted).toEqual([]);
-      expect(bookingService.getMyBookings).not.toHaveBeenCalled();
-    });
-
-    it('the defensive guard also refuses to fire while a load-more is already in flight', () => {
+    /**
+     * Scrutinize round 3 (QA-caught live-browser failure, `c039fd35`): the
+     * PREVIOUS version of this test overrode `selectMyBookings` with
+     * `loadingMore: true` and asserted the filter's `!state.loadingMore`
+     * clause blocked the dispatch — which is exactly the mechanism that made
+     * every real click a no-op: `invokeLoadMoreMyBookingsApi`'s OWN reducer
+     * case sets `loadingMore: true`, and NgRx runs the reducer before any
+     * effect observes that same action, so in production `!state.loadingMore`
+     * was `false` on EVERY dispatch. A statically overridden selector can
+     * fake ANY combination — including one the real reducer→effect ordering
+     * can never actually produce — so that version of this test proved
+     * nothing about double-click protection; it only proved the (buggy)
+     * filter clause existed. This version proves the REAL double-click
+     * protection (`exhaustMap` ignoring a new source emission while its
+     * inner request is still active) using an unresolved request, not a
+     * faked flag.
+     */
+    it('a second Load more click while the first request is still in flight is ignored (exhaustMap), not queued or duplicated', () => {
       store.overrideSelector(selectMyBookings, {
         ...initialMyBookingsState,
         pagesLoaded: 2,
         totalPages: 7,
-        loadingMore: true,
+      });
+      store.refreshState();
+      const firstRequest$ = new Subject<any>();
+      bookingService.getMyBookings.and.returnValue(firstRequest$);
+
+      const emitted: Action[] = [];
+      effect.loadMoreMyBookings$.subscribe((a) => emitted.push(a));
+
+      // First click — request A goes in flight, unresolved.
+      actionsSubject.next(invokeLoadMoreMyBookingsApi());
+      expect(bookingService.getMyBookings).toHaveBeenCalledTimes(1);
+
+      // A second click lands WHILE A is still pending.
+      actionsSubject.next(invokeLoadMoreMyBookingsApi());
+      // exhaustMap ignores it — no second HTTP call, nothing queued.
+      expect(bookingService.getMyBookings).toHaveBeenCalledTimes(1);
+
+      // A finally resolves — exactly one success, from the FIRST click only.
+      firstRequest$.next({
+        code: 200,
+        message: 'OK',
+        data: { content: [{ id: 1 }], totalElements: 137, totalPages: 7 },
+      } as any);
+      firstRequest$.complete();
+
+      expect(emitted).toEqual([
+        invokeLoadMoreMyBookingsApiSuccess({ bookings: [{ id: 1 } as any], totalElements: 137, totalPages: 7 }),
+      ]);
+    });
+
+    it('the remaining guard clause (pagesLoaded < totalPages) is sound — that action never touches either field, so it cannot be defeated by reducer/effect ordering', () => {
+      store.overrideSelector(selectMyBookings, {
+        ...initialMyBookingsState,
+        pagesLoaded: 7,
+        totalPages: 7,
       });
       store.refreshState();
 

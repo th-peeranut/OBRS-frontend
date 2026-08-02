@@ -8,7 +8,11 @@ import { TranslateModule } from '@ngx-translate/core';
 import { MyBookingsEffect } from './my-bookings.effect';
 import { myBookingsReducer } from './my-bookings.reducer';
 import { MY_BOOKINGS_FEATURE_KEY } from './my-bookings.selector';
-import { invokeLoadMyBookingsApi, invokeLoadMyBookingsApiSuccess } from './my-bookings.action';
+import {
+  invokeLoadMoreMyBookingsApi,
+  invokeLoadMyBookingsApi,
+  invokeLoadMyBookingsApiSuccess,
+} from './my-bookings.action';
 import { AlertService } from '../../../shared/services/alert.service';
 
 /**
@@ -89,6 +93,40 @@ describe('MyBookingsEffect + myBookingsReducer — REAL store/effect wiring (OBR
       code: 200,
       message: 'OK',
       data: { content: [], totalElements: 0, totalPages: 0 },
+    });
+  });
+
+  /**
+   * OBRS-577 Scrutinize round 3 — the QA agent verified this exact click
+   * live on SIT and measured `requests during click: []`. Root cause:
+   * `loadMoreMyBookings$`'s `filter` read `!state.loadingMore`, but
+   * `invokeLoadMoreMyBookingsApi`'s OWN reducer case sets `loadingMore: true`
+   * — and NgRx runs the reducer for an action before any effect observes
+   * that SAME action, so the filter always sampled `loadingMore: true` and
+   * rejected every dispatch, forever. Every unit test in
+   * `my-bookings.effect.spec.ts` used `overrideSelector` to hand-set
+   * `loadingMore: false`, which a real reducer→effect dispatch can never
+   * produce for this action — structurally blind to this class of bug. Only
+   * a real store, with no override anywhere, can see it.
+   */
+  it('clicking Load more after a real 1-page load fires page=1&size=20 (the click that measured ZERO requests live on SIT)', () => {
+    // Seed "1 page (20 rows) already loaded (pagesLoaded=1, 0-indexed page
+    // 0), more remain" through the REAL success action + REAL reducer — the
+    // ordinary first-load state a traveler is in the instant the Load-more
+    // button first appears.
+    const bookings = Array.from({ length: 20 }, (_, i) => ({ id: i + 1 }));
+    store.dispatch(invokeLoadMyBookingsApiSuccess({ bookings, totalElements: 137, totalPages: 7 }));
+
+    // The click.
+    store.dispatch(invokeLoadMoreMyBookingsApi());
+
+    const req = httpMock.expectOne((r) => r.url.includes('/api/private/bookings/me'));
+    expect(req.request.params.get('page')).toBe('1');
+    expect(req.request.params.get('size')).toBe('20');
+    req.flush({
+      code: 200,
+      message: 'OK',
+      data: { content: [], totalElements: 137, totalPages: 7 },
     });
   });
 });
