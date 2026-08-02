@@ -103,3 +103,20 @@ follows the normal stale-while-revalidate contract.
   `driver-cash-day-return-modal.component.scss` — the next "counted/returned
   cash sign-off" surface should `@use` this partial rather than
   hand-copying the class block a third time.
+
+## Addendum (2026-08-02) — backend reconciliation
+
+The two decisions above are unaffected, but every URL and DTO shape this
+card guessed for the driver-cash surfaces was wrong once checked against
+the real `DriverCashController` (`OBRS-backend` `ao/obrs-960-driver-cash`
+`afb440d4`): segment order was inverted on all four staff endpoints, the
+owner day endpoints were guessed under `/owner/` (they aren't), and
+`DriverCashDayRespDto` is flat where this card's first pass invented a
+nested `summary` object. See `docs/handoff.md`'s now-RESOLVED Contract
+Request entry for the full list and the fix commit. No spec had asserted
+the literal request URL for any of these calls — every driver-cash spec
+mocked the service layer — which is why the wrong guesses compiled and
+tested green. `staff-api.service.spec.ts` / `admin-api.service.spec.ts` now
+carry `HttpTestingController` assertions for the real paths; the next
+service method added to either file should get one too, not just a
+component-level mock.

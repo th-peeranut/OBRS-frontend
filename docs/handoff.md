@@ -70,33 +70,52 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
-### [Frontend] 2026-08-02 — Driver-cash daily-return close endpoints (OBRS-960): path not pinned by the card brief
+### [Frontend] 2026-08-02 — Driver-cash daily-return close endpoints (OBRS-960): RESOLVED
 
 <!-- contract-request
 card: OBRS-960
-status: open
+status: resolved
+resolved: 2026-08-02 (backend reconciliation against ao/obrs-960-driver-cash afb440d4)
 -->
 
-**Affected endpoints (assumed, NOT confirmed against a live backend)**:
-- `GET /api/private/owner/driver-cash/days?from=&to=`
-- `GET /api/private/owner/driver-cash/days/{dayId}`
-- `POST /api/private/owner/driver-cash/days/{dayId}/return`
+**RESOLVED.** The coordinator reconciled the frontend against the real `DriverCashController` and its
+DTOs. Findings, all fixed in the frontend commit that follows this entry:
 
-**Why this is a contract request and not confirmed FE code**: the OBRS-960 UX brief pinned exact paths for
-every other surface in the card (the per-round staff panel, the owner settings tabs, the parcel-share
-monthly report) but did **not** name a path for the owner's daily-return close list/detail/return
-endpoints (`/admin/settlements`, surface 3). The frontend implemented against a best-effort naming
-consistent with the sibling path the brief DID pin (`/api/private/owner/driver-cash/per-head-rates`) —
-see `src/app/shared/interfaces/driver-cash.interface.ts`'s file-level doc comment and
-`AdminApiService.getDriverCashDays`/`getDriverCashDayDetail`/`returnDriverCashDay`
-(`src/app/services/admin/admin-api.service.ts`). **Do not treat this path as confirmed** — verify against
-the real backend route before relying on it in a live smoke test, and update this entry (or the frontend
-call sites) once the backend's actual path is known.
+1. **Every staff driver-cash URL had the segment order inverted.** The real base is
+   `/api/private/driver-cash` with `schedules/{scheduleId}` as a sub-resource (`GET .../day`,
+   `POST .../advance`, `POST .../per-head`, `POST .../expense-paid` — note `expense-paid`, not
+   `expense`), not `/api/private/schedules/{scheduleId}/driver-cash/...` as first built. Verified
+   against `DriverCashController.java:30,36,45,55`.
+2. **The owner days endpoints were guessed under `/owner/driver-cash/days/...`.** The real base is
+   `/api/private/driver-cash/days/...` — owner-gated by ROLE, not by URL prefix. Verified against
+   `DriverCashController.java:65,74,81`.
+3. **This card's one genuine SA contract gap** — no list endpoint for the owner's daily-return close
+   (surface 3) was ever specified — is now filled: `GET /api/private/driver-cash/days?from=&to=&status=`
+   (OWNER-gated, `from`/`to` required `LocalDate`, `status` optional `OPEN`|`RETURNED`), returning a
+   **flat** `List<DriverCashDaySummaryRespDto>` (`dayId, driverId, driverName, businessDate, vehicleId,
+   vehiclePlate, status, expectedReturnAmount, returnedAmount, discrepancy, hasUnmappedSalesPointRemit`)
+   — a list row, not the full day detail, and NOT wrapped in a `{range, items}` page object.
+4. **`DriverCashDayRespDto` is flat**, not the nested-`summary` shape the frontend invented: `dayId,
+   driverId, driverName, businessDate, vehicleId, status, entries[], advanceTotal, perHeadTotal,
+   expensePaidTotal, parcelRemitTotal, expectedReturnAmount, returnedAmount, returnedAt,
+   returnedByUserId, returnedByName, discrepancy, discrepancyReason, perHeadRates[],
+   hasUnmappedSalesPointRemit`. All four driver-cash POSTs return this SAME DTO — there is no separate
+   per-action response type.
+5. **No `currency` field anywhere in this feature's DTOs.**
 
-**Also unconfirmed**: the stop-lookup source for `DriverCashRatesPageComponent`'s add-rate dropdown
-(`DriverCashRatesStore` reuses `GET /private/lookups` filtered to `category === 'stop'` — the same shape
-`RoutesStore` already uses — rather than inventing a new stops endpoint; verify the `'stop'` category
-slug is real).
+Fixed in `src/app/shared/interfaces/driver-cash.interface.ts`, `staff-api.service.ts`,
+`admin-api.service.ts`, and every driver-cash component/store that read the wrong shape. New
+`HttpTestingController`-based specs in `staff-api.service.spec.ts` / `admin-api.service.spec.ts` now
+assert the literal corrected URLs — the original gap was that every driver-cash spec mocked the service
+layer instead of asserting the real HTTP call, so the wrong URLs compiled and tested green.
+
+**Also RESOLVED**: the stop-lookup source for `DriverCashRatesPageComponent`'s add-rate dropdown.
+`DriverCashRatesStore` originally filtered `GET /private/lookups` to `category === 'stop'` — confirmed
+**wrong**: `LookupCategoryConstant.java` has no `stop` category (only `stop_status`/`stop_type`; stops
+are their own entity, never inserted into the generic Lookup table), so that filter would always have
+resolved to an empty array. Switched to `StationService.getAll()` (`GET /api/stops`, public/no-auth,
+already used by every customer-facing stop picker in this repo) — confirmed via a repo-wide search: no
+admin/owner page had a WORKING flat all-stops mechanism before this fix.
 
 ### [Frontend] 2026-07-24 — Deep revenue analytics endpoint (OBRS-151): new `GET /reports/revenue-analytics`
 
