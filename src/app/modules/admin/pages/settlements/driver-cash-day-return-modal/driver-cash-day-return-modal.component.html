@@ -1,0 +1,145 @@
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="onBackdropDismiss()">
+    <div class="admin-modal driver-cash-return-modal">
+      <div class="admin-modal-header">
+        <h4 class="admin-modal-title">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.TITLE' | translate }}</h4>
+        <button
+          type="button"
+          class="settlement-detail-close"
+          [attr.aria-label]="'ADMIN.COMMON.CLOSE' | translate"
+          (click)="closed.emit()"
+          >
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </div>
+
+      @if (summary) {
+        <div class="settlement-detail-body">
+          <div class="settlement-detail-row">
+            <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.ROUTE' | translate }}</span>
+            <span class="admin-emphasis">{{ summary.routeLabel }}</span>
+          </div>
+          <div class="settlement-detail-row">
+            <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.DEPARTURE' | translate }}</span>
+            <span>{{ displayDateTime(summary.departureDateTime) }}</span>
+          </div>
+
+          @if (fetchError && !detail) {
+            <div class="admin-card settlement-detail-error mt-3">
+              <p class="admin-error">{{ fetchError }}</p>
+              <button type="button" class="admin-btn" (click)="retryFetch.emit()">
+                {{ 'ADMIN.SETTLEMENTS.DETAIL.RETRY' | translate }}
+              </button>
+            </div>
+          }
+
+          @if (isFetching && !detail) {
+            @for (row of skeletonRows; track row) {
+              <div class="admin-skeleton admin-skeleton--sm mb-2"></div>
+            }
+          }
+
+          @if (detail) {
+            <div class="settlement-detail-totals">
+              <div class="settlement-detail-row">
+                <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.EXPECTED' | translate }}</span>
+                <span class="admin-emphasis">{{ formatMoney(detail.expectedAmount, detail.currency) }}</span>
+              </div>
+            </div>
+
+            @if (detail.entries.length > 0) {
+              <div class="admin-table-wrap mt-2">
+                <table class="admin-table">
+                  <tbody>
+                    @for (entry of detail.entries; track trackByEntry($index)) {
+                      <tr>
+                        <td>
+                          {{ entry.label }}
+                          @if (entry.fromUnmappedSalesPoint) {
+                            <div class="driver-cash-return-entry-note" data-testid="driver-cash-entry-unmapped-note">
+                              {{ 'STAFF.PARCEL_CONSIGN.SALES_POINT_NOT_MAPPED' | translate }}
+                            </div>
+                          }
+                        </td>
+                        <td>{{ formatMoney(entry.amount, detail.currency) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+
+            @if (detail.status === 'PENDING') {
+              <div class="mt-3">
+                <p class="settlement-detail-label settlement-signoff-title">
+                  {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.SECTION_TITLE' | translate }}
+                </p>
+
+                <div class="settlement-field">
+                  <label class="settlement-field-label" for="dcp-returned-amount">
+                    {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.RETURNED_LABEL' | translate }}
+                  </label>
+                  <input
+                    id="dcp-returned-amount"
+                    type="text"
+                    inputmode="decimal"
+                    class="admin-input settlement-field-input"
+                    [placeholder]="'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.RETURNED_PLACEHOLDER' | translate"
+                    [(ngModel)]="returnedAmountInput"
+                    data-testid="driver-cash-returned-amount-input"
+                    />
+                  @if (returnedAmountInput.trim().length > 0 && returnedCents === null) {
+                    <p class="admin-error settlement-field-error">
+                      {{ 'ADMIN.SETTLEMENTS.CONFIRM.COUNTED_INVALID' | translate }}
+                    </p>
+                  }
+                </div>
+
+                @if (discrepancyCents !== null) {
+                  <div class="settlement-detail-row">
+                    <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.DISCREPANCY' | translate }}</span>
+                    <span class="admin-emphasis" [class.settlement-nt-negative]="isNegativeMoney(discrepancyAmount())">
+                      {{ formatMoney(discrepancyAmount(), detail.currency) }}
+                    </span>
+                  </div>
+                }
+
+                @if (hasDiscrepancy()) {
+                  <div class="settlement-field">
+                    <label class="settlement-field-label" for="dcp-discrepancy-reason">
+                      {{ 'ADMIN.SETTLEMENTS.CONFIRM.REASON_LABEL' | translate }}
+                    </label>
+                    <textarea
+                      id="dcp-discrepancy-reason"
+                      class="admin-input settlement-field-input"
+                      rows="2"
+                      [placeholder]="'ADMIN.SETTLEMENTS.CONFIRM.REASON_PLACEHOLDER' | translate"
+                      [(ngModel)]="discrepancyReasonInput"
+                      data-testid="driver-cash-discrepancy-reason-input"
+                      ></textarea>
+                  </div>
+                }
+
+                <div class="settlement-detail-actions mt-3">
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-primary"
+                    [disabled]="!canConfirm"
+                    data-testid="driver-cash-return-confirm"
+                    (click)="onConfirmClick()"
+                    >
+                    {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.CONFIRM_BTN' | translate }}
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (detail.status === 'RETURNED') {
+              <p class="admin-muted mt-3">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.ALREADY_RETURNED' | translate }}</p>
+            }
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

@@ -75,6 +75,13 @@ import { CounterCancelSearchFormComponent } from './pages/counter-cancel/counter
 import { CounterCancelResultListComponent } from './pages/counter-cancel/counter-cancel-result-list/counter-cancel-result-list.component';
 import { CounterCancelModalComponent } from './pages/counter-cancel/counter-cancel-modal/counter-cancel-modal.component';
 
+// OBRS-960 — driver cash ledger panel (/staff/boarding/:scheduleId).
+import { DriverCashPanelComponent } from './components/driver-cash-panel/driver-cash-panel.component';
+import { DriverCashDaySummaryComponent } from './components/driver-cash-panel/driver-cash-day-summary/driver-cash-day-summary.component';
+import { DriverCashAdvanceFormComponent } from './components/driver-cash-panel/driver-cash-advance-form/driver-cash-advance-form.component';
+import { DriverCashPerHeadFormComponent } from './components/driver-cash-panel/driver-cash-per-head-form/driver-cash-per-head-form.component';
+import { DriverCashExpenseFormComponent } from './components/driver-cash-panel/driver-cash-expense-form/driver-cash-expense-form.component';
+
 export const staffRoutes: Routes = [
   {
     path: '',
@@ -257,6 +264,11 @@ export const staffRoutes: Routes = [
     CounterCancelSearchFormComponent,
     CounterCancelResultListComponent,
     CounterCancelModalComponent,
+    DriverCashPanelComponent,
+    DriverCashDaySummaryComponent,
+    DriverCashAdvanceFormComponent,
+    DriverCashPerHeadFormComponent,
+    DriverCashExpenseFormComponent,
   ],
   imports: [
     SharedModule,

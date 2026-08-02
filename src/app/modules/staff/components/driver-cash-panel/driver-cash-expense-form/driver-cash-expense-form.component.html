@@ -1,0 +1,59 @@
+<form class="dcp-inline-form" (ngSubmit)="onSubmit()" data-testid="driver-cash-expense-form">
+  <div class="dcp-form-field">
+    <label class="admin-form-label">{{ 'STAFF.DRIVER_CASH.EXPENSE.CATEGORY_LABEL' | translate }}</label>
+    <app-admin-dropdown
+      [options]="categoryOptions"
+      [placeholder]="'STAFF.DRIVER_CASH.EXPENSE.CATEGORY_LABEL' | translate"
+      valueKey="value"
+      labelKey="label"
+      [ngModel]="selectedCategory"
+      (ngModelChange)="onCategoryChange($event)"
+      name="expenseCategory"
+      ></app-admin-dropdown>
+    </div>
+
+    <div class="dcp-form-field">
+      <label class="admin-form-label" for="dcp-expense-amount">
+        {{ 'STAFF.DRIVER_CASH.EXPENSE.AMOUNT_LABEL' | translate }}
+      </label>
+      <input
+        id="dcp-expense-amount"
+        type="text"
+        inputmode="decimal"
+        class="admin-field"
+        [placeholder]="'STAFF.DRIVER_CASH.EXPENSE.AMOUNT_PLACEHOLDER' | translate"
+        [(ngModel)]="amountInput"
+        name="expenseAmount"
+        />
+        @if (amountInput.trim().length > 0 && amountCents === null) {
+          <small class="admin-error">{{ 'STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID' | translate }}</small>
+        }
+      </div>
+
+      <div class="dcp-form-field">
+        <label class="admin-form-label" for="dcp-expense-note">
+          {{ 'STAFF.DRIVER_CASH.EXPENSE.NOTE_LABEL' | translate }}
+        </label>
+        <textarea
+          id="dcp-expense-note"
+          class="admin-field"
+          rows="2"
+          [placeholder]="'STAFF.DRIVER_CASH.EXPENSE.NOTE_PLACEHOLDER' | translate"
+          [(ngModel)]="noteInput"
+          name="expenseNote"
+          ></textarea>
+      </div>
+
+      @if (submitError; as err) {
+        <div class="admin-error">{{ err | translate }}</div>
+      }
+
+      <button
+        type="submit"
+        class="admin-btn admin-btn-primary dcp-action-btn"
+        [disabled]="!canSubmit"
+        data-testid="driver-cash-expense-submit"
+        >
+        {{ (isSubmitting ? 'STAFF.DRIVER_CASH.SUBMITTING' : 'STAFF.DRIVER_CASH.EXPENSE.SUBMIT') | translate }}
+      </button>
+    </form>

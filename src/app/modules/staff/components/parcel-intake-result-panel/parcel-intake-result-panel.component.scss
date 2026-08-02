@@ -90,3 +90,19 @@
 .parcel-intake-result-next-item-btn {
   margin-top: 16px;
 }
+
+// OBRS-960 — same `.parcel-consign-indicator.is-warning` rule as
+// `parcel-consign-form.component.scss`. View encapsulation scopes styles
+// per component, so the class must be re-declared here rather than assumed
+// to bleed in from the sibling form component — both compose the SAME
+// `--admin-warning-fg` token (no new hex), just declared twice because
+// Angular's default encapsulation gives each component its own style scope.
+.parcel-consign-indicator {
+  font-size: 13px;
+  padding: 6px 0;
+
+  &.is-warning {
+    color: var(--admin-warning-fg);
+    font-weight: 600;
+  }
+}

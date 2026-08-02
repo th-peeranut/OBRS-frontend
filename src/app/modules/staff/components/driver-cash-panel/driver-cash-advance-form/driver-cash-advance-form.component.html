@@ -1,0 +1,32 @@
+<form class="dcp-inline-form" (ngSubmit)="onSubmit()" data-testid="driver-cash-advance-form">
+  <div class="dcp-form-field">
+    <label class="admin-form-label" for="dcp-advance-amount">
+      {{ 'STAFF.DRIVER_CASH.ADVANCE.AMOUNT_LABEL' | translate }}
+    </label>
+    <input
+      id="dcp-advance-amount"
+      type="text"
+      inputmode="decimal"
+      class="admin-field"
+      [placeholder]="'STAFF.DRIVER_CASH.ADVANCE.AMOUNT_PLACEHOLDER' | translate"
+      [(ngModel)]="amountInput"
+      name="advanceAmount"
+      />
+      @if (amountInput.trim().length > 0 && amountCents === null) {
+        <small class="admin-error">{{ 'STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID' | translate }}</small>
+      }
+    </div>
+
+    @if (submitError; as err) {
+      <div class="admin-error">{{ err | translate }}</div>
+    }
+
+    <button
+      type="submit"
+      class="admin-btn admin-btn-primary dcp-action-btn"
+      [disabled]="!canSubmit"
+      data-testid="driver-cash-advance-submit"
+      >
+      {{ (isSubmitting ? 'STAFF.DRIVER_CASH.SUBMITTING' : 'STAFF.DRIVER_CASH.ADVANCE.SUBMIT') | translate }}
+    </button>
+  </form>

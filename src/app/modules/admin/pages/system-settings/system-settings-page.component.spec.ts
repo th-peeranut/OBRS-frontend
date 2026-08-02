@@ -68,6 +68,12 @@ const ROLES_BEFORE_OBRS_702: Record<string, readonly string[]> = {
   reminders: ['admin'],
   'jump-seat': ['admin'],
   history: ['admin', 'owner'],
+  // OBRS-960: two NEW tabs, never a standalone route — "before" is simply
+  // their own requiredRoles at creation, same frozen-literal discipline as
+  // the four above (derived from SYSTEM_SETTINGS_TABS would pass no matter
+  // what the roles were changed to).
+  'parcel-share': ['owner'],
+  'driver-cash-rates': ['owner'],
 };
 
 describe('OBRS-702 SystemSettingsPageComponent — tab strip', () => {

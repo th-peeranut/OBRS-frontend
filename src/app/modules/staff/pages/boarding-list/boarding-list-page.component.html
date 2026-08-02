@@ -1,2 +1,5 @@
 <!-- Title + subtitle are shown by the staff layout topbar. -->
+@if (isSalesperson) {
+  <app-driver-cash-panel [scheduleId]="scheduleId"></app-driver-cash-panel>
+}
 <app-boarding-list [scheduleId]="scheduleId"></app-boarding-list>

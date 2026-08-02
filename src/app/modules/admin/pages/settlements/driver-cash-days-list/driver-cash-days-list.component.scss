@@ -1,0 +1,9 @@
+// OBRS-960 — inline warning icon next to a row from an unmapped sales
+// point. `--admin-warning-fg` is the themed surface-role token (design-
+// system.md §2.4.0), never the chip's `-text` half alone.
+.dcp-row-warning-icon {
+  font-size: 18px;
+  vertical-align: text-bottom;
+  margin-left: 4px;
+  color: var(--admin-warning-fg);
+}

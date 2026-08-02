@@ -1,0 +1,20 @@
+// OBRS-960 — reuses the SAME sign-off-form classes as
+// settlement-detail-modal.component.scss, from the shared partial (the
+// card: "copies settlement-detail-modal's OBRS-671 sign-off form verbatim
+// in shape and classes").
+@use '../cash-signoff-form';
+
+.driver-cash-return-modal {
+  max-width: 720px;
+  width: 100%;
+}
+
+// A property of the remit LINE, not a separate section (card §3) —
+// `--admin-warning-fg` is the themed surface-role token, same as every
+// other new warning text in this card.
+.driver-cash-return-entry-note {
+  color: var(--admin-warning-fg);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 2px;
+}

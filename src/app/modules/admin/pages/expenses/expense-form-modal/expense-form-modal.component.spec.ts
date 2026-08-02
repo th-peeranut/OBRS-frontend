@@ -21,6 +21,7 @@ const VEHICLE_ROW: ExpenseRow = {
   receiptNo: 'RC-1',
   paidBy: 'Somchai',
   note: 'note',
+  source: 'MANUAL',
 };
 
 const CENTRAL_ROW: ExpenseRow = {

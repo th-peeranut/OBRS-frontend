@@ -70,6 +70,34 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-08-02 — Driver-cash daily-return close endpoints (OBRS-960): path not pinned by the card brief
+
+<!-- contract-request
+card: OBRS-960
+status: open
+-->
+
+**Affected endpoints (assumed, NOT confirmed against a live backend)**:
+- `GET /api/private/owner/driver-cash/days?from=&to=`
+- `GET /api/private/owner/driver-cash/days/{dayId}`
+- `POST /api/private/owner/driver-cash/days/{dayId}/return`
+
+**Why this is a contract request and not confirmed FE code**: the OBRS-960 UX brief pinned exact paths for
+every other surface in the card (the per-round staff panel, the owner settings tabs, the parcel-share
+monthly report) but did **not** name a path for the owner's daily-return close list/detail/return
+endpoints (`/admin/settlements`, surface 3). The frontend implemented against a best-effort naming
+consistent with the sibling path the brief DID pin (`/api/private/owner/driver-cash/per-head-rates`) —
+see `src/app/shared/interfaces/driver-cash.interface.ts`'s file-level doc comment and
+`AdminApiService.getDriverCashDays`/`getDriverCashDayDetail`/`returnDriverCashDay`
+(`src/app/services/admin/admin-api.service.ts`). **Do not treat this path as confirmed** — verify against
+the real backend route before relying on it in a live smoke test, and update this entry (or the frontend
+call sites) once the backend's actual path is known.
+
+**Also unconfirmed**: the stop-lookup source for `DriverCashRatesPageComponent`'s add-rate dropdown
+(`DriverCashRatesStore` reuses `GET /private/lookups` filtered to `category === 'stop'` — the same shape
+`RoutesStore` already uses — rather than inventing a new stops endpoint; verify the `'stop'` category
+slug is real).
+
 ### [Frontend] 2026-07-24 — Deep revenue analytics endpoint (OBRS-151): new `GET /reports/revenue-analytics`
 
 <!-- contract-request

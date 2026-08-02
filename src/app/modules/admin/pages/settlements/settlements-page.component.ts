@@ -9,6 +9,7 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import {
   SettlementConfirmPayload,
   SettlementHandoverCandidate,
@@ -16,9 +17,21 @@ import {
   SettlementScheduleDetailDto,
 } from '../../../../shared/interfaces/settlement.interface';
 import { SettlementsContentState } from './settlements-list/settlements-list.component';
+import { DriverCashDaysStore } from './driver-cash-days.store';
+import { DriverCashDaysContentState } from './driver-cash-days-list/driver-cash-days-list.component';
+import { DriverCashDayReturnPayload } from './driver-cash-day-return-modal/driver-cash-day-return-modal.component';
+import {
+  DriverCashDayDetailDto,
+  DriverCashDayListItemDto,
+} from '../../../../shared/interfaces/driver-cash.interface';
 
 const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const DRIVER_CASH_RETURN_ERROR_KEYS: Record<string, string> = {
+  DRIVER_CASH_DISCREPANCY_REASON_REQUIRED: 'ADMIN.SETTLEMENTS.DRIVER_CASH.ERROR.REASON_REQUIRED',
+  DRIVER_CASH_DAY_ALREADY_RETURNED: 'ADMIN.SETTLEMENTS.DRIVER_CASH.ERROR.ALREADY_RETURNED',
+};
 
 /**
  * OBRS-196 — per-round revenue settlement + owner cash-handover sign-off.
@@ -64,10 +77,29 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
   // open reflects the authoritative server state.
   private readonly detailCache = new Map<number, SettlementScheduleDetailDto>();
 
+  // ── OBRS-960: driver cash — daily-return close (own section, own filter) ──
+  // A driver-cash "day" is not a settlement "round" — deliberately a SEPARATE
+  // date-range filter/store from the block above, per the card.
+  protected driverCashDays: DriverCashDayListItemDto[] = [];
+  protected isDriverCashRefreshing = false;
+  protected driverCashLoadError = '';
+  protected driverCashFromDate: Date | null = null;
+  protected driverCashToDate: Date | null = null;
+
+  protected openDayId: number | null = null;
+  protected dayModalSummary: DriverCashDayListItemDto | null = null;
+  protected dayModalDetail: DriverCashDayDetailDto | null = null;
+  protected isDayDetailFetching = false;
+  protected isDayConfirming = false;
+  protected dayDetailFetchError = '';
+
+  private readonly dayDetailCache = new Map<number, DriverCashDayDetailDto>();
+
   private readonly destroy$ = new Subject<void>();
 
   constructor(
     private readonly store: SettlementsPendingStore,
+    private readonly driverCashDaysStore: DriverCashDaysStore,
     private readonly adminApiService: AdminApiService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService
@@ -92,6 +124,25 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
 
     void this.store.refresh();
     this.loadHandoverCandidates();
+
+    // OBRS-960 — own section, own range.
+    const dcRange = this.driverCashDaysStore.range;
+    this.driverCashFromDate = this.parseDateInputValue(dcRange.from);
+    this.driverCashToDate = this.parseDateInputValue(dcRange.to);
+
+    this.driverCashDaysStore.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
+      this.driverCashDays = data?.items ?? [];
+    });
+    this.driverCashDaysStore.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((refreshing) => {
+      this.isDriverCashRefreshing = refreshing;
+    });
+    this.driverCashDaysStore.error$.pipe(takeUntil(this.destroy$)).subscribe((failed) => {
+      this.driverCashLoadError =
+        failed && !this.driverCashDaysStore.hasValue
+          ? this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.LOAD_FAILED')
+          : '';
+    });
+    void this.driverCashDaysStore.refresh();
   }
 
   // OBRS-671. The "handed over by" picker lists active salespeople (the staff
@@ -453,5 +504,154 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
       return null;
     }
     return new Date(year, month - 1, day);
+  }
+
+  // ── OBRS-960: driver cash — daily-return close ────────────────────────────
+
+  protected get isDriverCashLoading(): boolean {
+    return this.isDriverCashRefreshing && !this.driverCashDaysStore.hasValue;
+  }
+
+  protected get driverCashContentState(): DriverCashDaysContentState {
+    if (this.isDriverCashLoading) {
+      return 'loading';
+    }
+    if (this.driverCashLoadError) {
+      return 'error';
+    }
+    if (this.driverCashDays.length === 0) {
+      return 'empty';
+    }
+    return 'data';
+  }
+
+  protected onDriverCashFromDateChange(value: Date | null): void {
+    this.driverCashFromDate = value;
+    this.applyDriverCashRange();
+  }
+
+  protected onDriverCashToDateChange(value: Date | null): void {
+    this.driverCashToDate = value;
+    this.applyDriverCashRange();
+  }
+
+  private applyDriverCashRange(): void {
+    if (!this.driverCashFromDate || !this.driverCashToDate) {
+      return;
+    }
+    const from = this.toDateInputValue(this.driverCashFromDate);
+    const to = this.toDateInputValue(this.driverCashToDate);
+    if (from > to) {
+      return;
+    }
+    this.driverCashDaysStore.setRange(from, to);
+  }
+
+  protected openDayDetail(dayId: number): void {
+    this.openDayId = dayId;
+    this.dayDetailFetchError = '';
+    this.isDayConfirming = false;
+
+    const cached = this.dayDetailCache.get(dayId);
+    if (cached) {
+      this.dayModalSummary = this.driverCashDays.find((d) => d.dayId === dayId) ?? null;
+      this.dayModalDetail = cached;
+      this.isDayDetailFetching = false;
+      return;
+    }
+
+    // Open optimistically (design-system.md §6) — populate from the row
+    // already in hand, never gate the modal on the awaited fetch.
+    this.dayModalSummary = this.driverCashDays.find((d) => d.dayId === dayId) ?? null;
+    this.dayModalDetail = null;
+    this.isDayDetailFetching = true;
+
+    this.adminApiService
+      .getDriverCashDayDetail(dayId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const detail = response.data ?? null;
+          if (detail) {
+            this.dayDetailCache.set(dayId, detail);
+          }
+          if (this.openDayId !== dayId) {
+            return;
+          }
+          this.isDayDetailFetching = false;
+          this.dayModalDetail = detail;
+        },
+        error: () => {
+          if (this.openDayId !== dayId) {
+            return;
+          }
+          this.isDayDetailFetching = false;
+          this.dayDetailFetchError = this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.DETAIL.LOAD_FAILED');
+        },
+      });
+  }
+
+  protected closeDayDetail(): void {
+    this.openDayId = null;
+    this.dayModalSummary = null;
+    this.dayModalDetail = null;
+    this.isDayDetailFetching = false;
+    this.isDayConfirming = false;
+    this.dayDetailFetchError = '';
+  }
+
+  protected retryDayFetch(): void {
+    if (this.openDayId !== null) {
+      this.openDayDetail(this.openDayId);
+    }
+  }
+
+  protected async requestDayReturn(payload: DriverCashDayReturnPayload): Promise<void> {
+    const id = this.openDayId;
+    const detail = this.dayModalDetail;
+    if (id === null || !detail) {
+      return;
+    }
+
+    const returnedText = this.formatMoney(payload.returnedAmount, detail.currency);
+    const confirmed = await this.alertService.confirm({
+      title: this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.CONFIRM_TITLE'),
+      text: this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.CONFIRM_TEXT', {
+        amount: returnedText,
+      }),
+      confirmButtonText: this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.CONFIRM_BTN'),
+      cancelButtonText: this.translate.instant('ADMIN.COMMON.CANCEL'),
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.isDayConfirming = true;
+    this.adminApiService
+      .returnDriverCashDay(id, payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.isDayConfirming = false;
+          const returned: DriverCashDayDetailDto = response.data ?? { ...detail, status: 'RETURNED' };
+          this.dayDetailCache.set(id, returned);
+          if (this.openDayId === id) {
+            this.dayModalDetail = returned;
+          }
+          this.alertService.success(this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.SUCCESS'));
+          this.driverCashDaysStore.mutate((current) => ({
+            ...current,
+            items: current.items.filter((i) => i.dayId !== id),
+          }));
+        },
+        error: (error: unknown) => {
+          this.isDayConfirming = false;
+          const code = this.extractErrorCode(error);
+          const message = this.translate.instant(
+            mapApiErrorCode(code, DRIVER_CASH_RETURN_ERROR_KEYS, 'ADMIN.SETTLEMENTS.DRIVER_CASH.ERROR.RETURN_FAILED')
+          );
+          this.alertService.error(message);
+        },
+      });
   }
 }

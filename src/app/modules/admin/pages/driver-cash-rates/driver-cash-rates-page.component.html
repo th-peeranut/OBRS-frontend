@@ -1,0 +1,119 @@
+<section class="admin-page-intro">
+  <div>
+    @if (isLoading) {
+      <p class="admin-muted">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    }
+    @if (errorMessage) {
+      <p class="admin-muted">{{ errorMessage }}</p>
+    }
+    <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
+  </div>
+</section>
+
+<!-- Card 1: add-rate form -->
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.DRIVER_CASH_RATES.ADD_TITLE' | translate }}</h4>
+  </div>
+
+  <div class="admin-form-grid mt-3">
+    <div class="admin-form-field">
+      <label class="admin-form-label">{{ 'ADMIN.DRIVER_CASH_RATES.STOP_LABEL' | translate }}</label>
+      <app-admin-dropdown
+        [options]="stopOptions"
+        [placeholder]="'ADMIN.DRIVER_CASH_RATES.STOP_LABEL' | translate"
+        valueKey="value"
+        labelKey="label"
+        [ngModel]="selectedStopSlug"
+        (ngModelChange)="onStopChange($event)"
+        ></app-admin-dropdown>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.DRIVER_CASH_RATES.EFFECTIVE_FROM_LABEL' | translate }}</label>
+        <p-datePicker
+          styleClass="app-date-field"
+          panelStyleClass="app-date-field-panel"
+          dateFormat="dd/mm/yy"
+          [(ngModel)]="effectiveFromDate"
+          [showIcon]="true"
+          [iconDisplay]="'input'"
+          [showButtonBar]="true"
+          [placeholder]="'ADMIN.DRIVER_CASH_RATES.EFFECTIVE_FROM_LABEL' | translate"
+          >
+          <ng-template pTemplate="inputicon">
+            <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+          </ng-template>
+        </p-datePicker>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label" for="ratePerHead">{{ 'ADMIN.DRIVER_CASH_RATES.RATE_LABEL' | translate }}</label>
+        <input
+          id="ratePerHead"
+          type="text"
+          inputmode="decimal"
+          class="admin-field"
+          [placeholder]="'ADMIN.DRIVER_CASH_RATES.RATE_PLACEHOLDER' | translate"
+          [(ngModel)]="ratePerHeadInput"
+          />
+        </div>
+
+        @if (submitError) {
+          <div class="admin-form-field full">
+            <small class="admin-error" role="alert">{{ submitError }}</small>
+          </div>
+        }
+
+        <div class="admin-form-field full">
+          <button
+            type="button"
+            class="admin-btn admin-btn-primary"
+            [disabled]="!canSubmit"
+            data-testid="driver-cash-rate-add-btn"
+            (click)="submit()"
+            >
+            {{ (isSubmitting ? 'ADMIN.COMMON.SAVING' : 'ADMIN.DRIVER_CASH_RATES.ADD_BTN') | translate }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 2: view-only history -->
+    <section class="admin-card mt-3">
+      <div class="admin-card-head">
+        <h4>{{ 'ADMIN.DRIVER_CASH_RATES.HISTORY_TITLE' | translate }}</h4>
+      </div>
+
+      <div class="admin-table-wrap mt-2">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>{{ 'ADMIN.DRIVER_CASH_RATES.STOP_LABEL' | translate }}</th>
+              <th>{{ 'ADMIN.DRIVER_CASH_RATES.EFFECTIVE_FROM_LABEL' | translate }}</th>
+              <th>{{ 'ADMIN.DRIVER_CASH_RATES.RATE_LABEL' | translate }}</th>
+              <th>{{ 'ADMIN.SETTLEMENTS.COL.STATUS' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rates; track trackById($index, row)) {
+              <tr>
+                <td>{{ row.stopSlug }}</td>
+                <td>{{ row.effectiveFrom }}</td>
+                <td>{{ row.ratePerHead }}</td>
+                <td>
+                  @if (isCurrent(row)) {
+                    <span class="admin-status is-success">{{ 'ADMIN.DRIVER_CASH_RATES.CURRENT' | translate }}</span>
+                  }
+                </td>
+              </tr>
+            }
+            @if (rates.length === 0) {
+              <tr class="admin-empty-row">
+                <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>

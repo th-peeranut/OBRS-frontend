@@ -1,0 +1,73 @@
+<div class="dcp-panel" data-testid="driver-cash-panel">
+  <!-- Sticky context strip — OBRS-312/ADR-0023 pattern: `top` is bound to the
+  MEASURED shell topbar height, never a second hardcoded `top: 0`. -->
+  <div class="dcp-context-strip" [style.top.px]="topOffsetPx" data-testid="driver-cash-context-strip">
+    @if (day) {
+      <span class="admin-emphasis">{{ day.routeLabel }}</span>
+      <span class="admin-muted">{{ day.departureDateTime }}</span>
+      <span class="dcp-net-pill" data-testid="driver-cash-context-net">{{ day.summary.netCash }}</span>
+    }
+    @if (!day && isLoading) {
+      <span class="admin-muted">{{ 'COMMON.LOADING' | translate }}</span>
+    }
+  </div>
+
+  <app-driver-cash-day-summary [summary]="day?.summary ?? null" [isLoading]="isLoading"></app-driver-cash-day-summary>
+
+  <div class="dcp-actions">
+    <button
+      type="button"
+      class="admin-btn dcp-action-btn"
+      [class.admin-btn-primary]="isActionOpen('advance')"
+      (click)="toggleAction('advance')"
+      data-testid="driver-cash-action-advance"
+      >
+      <span>{{ 'STAFF.DRIVER_CASH.ADVANCE.ACTION_LABEL' | translate }}</span>
+      <span class="material-symbols-outlined">{{ isActionOpen('advance') ? 'expand_less' : 'expand_more' }}</span>
+    </button>
+    @if (isActionOpen('advance')) {
+      <app-driver-cash-advance-form
+        [isSubmitting]="isSubmitting"
+        [submitError]="advanceError"
+        (submitAdvance)="onSubmitAdvance($event)"
+      ></app-driver-cash-advance-form>
+    }
+
+    <button
+      type="button"
+      class="admin-btn dcp-action-btn"
+      [class.admin-btn-primary]="isActionOpen('perHead')"
+      (click)="toggleAction('perHead')"
+      data-testid="driver-cash-action-per-head"
+      >
+      <span>{{ 'STAFF.DRIVER_CASH.PER_HEAD.ACTION_LABEL' | translate }}</span>
+      <span class="material-symbols-outlined">{{ isActionOpen('perHead') ? 'expand_less' : 'expand_more' }}</span>
+    </button>
+    @if (isActionOpen('perHead')) {
+      <app-driver-cash-per-head-form
+        [rates]="day?.perHeadRates ?? []"
+        [isSubmitting]="isSubmitting"
+        [submitError]="perHeadError"
+        (submitPerHead)="onSubmitPerHead($event)"
+      ></app-driver-cash-per-head-form>
+    }
+
+    <button
+      type="button"
+      class="admin-btn dcp-action-btn"
+      [class.admin-btn-primary]="isActionOpen('expense')"
+      (click)="toggleAction('expense')"
+      data-testid="driver-cash-action-expense"
+      >
+      <span>{{ 'STAFF.DRIVER_CASH.EXPENSE.ACTION_LABEL' | translate }}</span>
+      <span class="material-symbols-outlined">{{ isActionOpen('expense') ? 'expand_less' : 'expand_more' }}</span>
+    </button>
+    @if (isActionOpen('expense')) {
+      <app-driver-cash-expense-form
+        [isSubmitting]="isSubmitting"
+        [submitError]="expenseError"
+        (submitExpense)="onSubmitExpense($event)"
+      ></app-driver-cash-expense-form>
+    }
+  </div>
+</div>

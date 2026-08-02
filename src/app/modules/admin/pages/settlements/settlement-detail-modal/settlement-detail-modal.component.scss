@@ -1,3 +1,9 @@
+// OBRS-960: `@use` must precede every other rule (including `@import`) —
+// the cash sign-off form classes below (.settlement-signoff-title through
+// .settlement-reconcile, plus .settlement-detail-actions and
+// .settlement-nt-negative) now live in this shared partial so
+// driver-cash-day-return-modal.component.scss can reuse them byte-identical.
+@use "../cash-signoff-form";
 @import "../../../../../../styles/variables.scss";
 
 .settlement-detail-modal {
@@ -9,41 +15,9 @@
   width: 100%;
 }
 
-.settlement-detail-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: inherit;
-}
-
-.settlement-detail-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.35rem 0;
-}
-
-// OBRS-769: these two labels were $text-lightgrey, which is 2.78:1 on the light
-// modal's white panel and 5.77:1 on the dark one's --admin-surface-card (#1d2226)
-// — a token that only worked in the theme nobody filed a bug about. A flat repoint
-// to $text-lightblack would just invert that (4.60:1 light, 3.49:1 dark), so this
-// uses the shell's own themed token: --admin-muted is #55636c light (6.20:1 on
-// white) and #9fb0bb dark (7.18:1 on #1d2226), flipped by `.admin-shell.is-dark`.
-// The $text-lightblack fallback is what applies if this modal is ever rendered
-// outside .admin-shell, where every --admin-* resolves to nothing (styles.scss
-// uses the same idiom). /admin is not in the contrast gate's eight pages, so these
-// are computed from the declared surfaces, not measured live — that sweep is
-// OBRS-812.
-.settlement-detail-label {
-  color: var(--admin-muted, #{$text-lightblack});
-  font-weight: 600;
-}
-
-.settlement-detail-totals {
-  border-top: 1px solid $primary-grey;
-  border-bottom: 1px solid $primary-grey;
-  padding: 0.5rem 0;
-}
+// .settlement-detail-close / -row / -label / -totals / -error moved to the
+// shared `../cash-signoff-form` partial `@use`d above (OBRS-960) — see the
+// OBRS-769 contrast rationale for `.settlement-detail-label` there.
 
 .settlement-method-note {
   font-size: 0.8rem;
@@ -56,15 +30,6 @@
   }
 }
 
-.settlement-detail-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.settlement-detail-error {
-  text-align: center;
-}
-
 // OBRS-670 — cancelled / no-show block.
 .settlement-nt-hint {
   font-size: 0.8rem;
@@ -75,43 +40,8 @@
   font-style: italic;
 }
 
-// AC 5: an over-refunded booking yields a negative retained figure — never
-// clamped server-side, and made to stand out here rather than blend in.
-.settlement-nt-negative {
-  color: var(--admin-danger-fg);
-  font-weight: 700;
-}
-
-// ── OBRS-671: cash sign-off form ─────────────────────────────────────────
-.settlement-signoff-title {
-  margin-bottom: 0.5rem;
-}
-
-.settlement-field {
-  margin-top: 0.75rem;
-}
-
-.settlement-field-label {
-  display: block;
-  color: var(--admin-muted, #{$text-lightblack}); // OBRS-769, see .settlement-detail-label
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.settlement-field-input {
-  width: 100%;
-}
-
-.settlement-field-help {
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-}
-
-.settlement-field-error {
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-}
-
-.settlement-reconcile {
-  margin-top: 0.75rem;
-}
+// .settlement-nt-negative and the OBRS-671 cash sign-off form classes
+// (.settlement-signoff-title .. .settlement-reconcile) moved to the shared
+// `../cash-signoff-form` partial `@use`d above (OBRS-960) — kept here only
+// as a pointer since a reader grepping this file for one of those class
+// names would otherwise find nothing.
