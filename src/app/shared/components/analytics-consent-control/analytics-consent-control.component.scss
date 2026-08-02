@@ -1,0 +1,97 @@
+@import '../../../../styles/variables.scss';
+
+// OBRS-874 — the consent control on the privacy policy page.
+//
+// NO `:host-context(body.is-dark)` BLOCK HERE, DELIBERATELY.
+// The banner has one because it is fixed to the viewport and sits on whatever
+// the theme paints. This control does not: it renders inside `.policy-card`,
+// and `.policy-container` is `$primary-white` with no dark rule anywhere in
+// `src/styles/` (checked 2026-08-01). Adding dark-mode colours here would put
+// pale text on a white panel — a themed foreground over an unthemed background,
+// which is a contrast defect, not a dark-mode feature. If the policy page ever
+// gains a dark background, this file gains its override in the same change.
+
+// OBRS-775: a component that declares no `:host` display renders as
+// `display: inline`, and an inline box may not contain the block-level children
+// below it — the browser splits the host and wraps them in anonymous blocks,
+// after which the host's own border box describes nothing. `host-box-sweep`
+// fails on exactly this, and it caught this file (2026-08-01) before review did.
+:host {
+  display: block;
+}
+
+.consent-control {
+  margin-top: 32px;
+  padding: 20px 24px;
+  border: 1px solid rgba(53, 60, 68, 0.15);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.consent-control__title {
+  margin: 0 0 8px;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  color: $text-black; // 12.6:1 on white
+}
+
+.consent-control__status {
+  margin: 0 0 16px;
+  font-weight: 600;
+  color: $text-softblack; // 7.01:1 on white
+}
+
+.consent-control__actions {
+  display: flex;
+  gap: 12px;
+}
+
+// Same geometry for both directions, for the same reason the banner's two
+// buttons share theirs: leaving is not allowed to be the harder press.
+.consent-control__btn {
+  min-width: 160px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+
+  background: transparent;
+  border: 2px solid $primary-blue;
+  color: $primary-blue; // 5.33:1 on white
+
+  &:hover {
+    border-color: $primary-blue-hover;
+    color: $primary-blue-hover; // 7.21:1 on white
+  }
+}
+
+.consent-control__btn--accept {
+  background: $primary-blue;
+  border-color: $primary-blue;
+  color: $text-white; // white on $primary-blue = 5.33:1
+
+  &:hover {
+    background: $primary-blue-hover;
+    border-color: $primary-blue-hover;
+    color: $text-white; // white on $primary-blue-hover = 7.21:1
+  }
+}
+
+.consent-control__note {
+  margin: 16px 0 0;
+  font-size: $font-size-sm;
+  line-height: $line-height-relaxed;
+  color: $text-softblack; // 7.01:1 on white
+}
+
+@media (max-width: 575.98px) {
+  .consent-control__actions {
+    width: 100%;
+  }
+
+  .consent-control__btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}

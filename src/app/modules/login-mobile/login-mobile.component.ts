@@ -4,9 +4,10 @@ import { Router } from '@angular/router';
 import { formatThaiMobile, stripPhoneSeparators } from '../../shared/constants/thai-msisdn';
 
 @Component({
-  selector: 'app-login-mobile',
-  templateUrl: './login-mobile.component.html',
-  styleUrl: './login-mobile.component.scss',
+    selector: 'app-login-mobile',
+    templateUrl: './login-mobile.component.html',
+    styleUrl: './login-mobile.component.scss',
+    standalone: false
 })
 export class LoginMobileComponent {
   isShowPassword: boolean = false;

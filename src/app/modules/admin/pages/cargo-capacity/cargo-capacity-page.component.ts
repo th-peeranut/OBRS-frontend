@@ -30,9 +30,10 @@ import {
  * pristine-per-row patch below).
  */
 @Component({
-  selector: 'app-cargo-capacity-page',
-  templateUrl: './cargo-capacity-page.component.html',
-  styleUrl: './cargo-capacity-page.component.scss',
+    selector: 'app-cargo-capacity-page',
+    templateUrl: './cargo-capacity-page.component.html',
+    styleUrl: './cargo-capacity-page.component.scss',
+    standalone: false
 })
 export class CargoCapacityPageComponent implements OnInit, OnDestroy {
   protected rows: CargoCapacityRow[] = [];

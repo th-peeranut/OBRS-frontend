@@ -1,11 +1,11 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import { MenuItem } from 'primeng/api';
 import { Menu } from 'primeng/menu';
 import dayjs from 'dayjs';
 import { formatDisplayDateTime } from '../../shared/lib/display-date-time';
-import { Observable, combineLatest, map, startWith } from 'rxjs';
+import { Observable, combineLatest, map, startWith, tap } from 'rxjs';
 import {
   CANCELLABLE_BOOKING_STATUS,
   CancellationPolicy,
@@ -26,6 +26,7 @@ import {
   closeChangeStopDialog,
   closeRescheduleDialog,
   confirmCancelWithDestination,
+  invokeLoadMoreMyBookingsApi,
   invokeLoadMyBookingsApi,
   openChangeSeatDialog,
   openChangeStopDialog,
@@ -46,6 +47,13 @@ interface MyBookingsVm {
   loaded: boolean;
   error: string | null;
   cancellingBookingId: number | null;
+  /** OBRS-577 — total rows for the active filter, for the count line. */
+  totalElements: number;
+  /** OBRS-577 — whether the "Load more" button should render. */
+  hasMore: boolean;
+  /** OBRS-577 — a Load more request is in flight (never the first load / a
+   * filter switch, which use `loading` instead). */
+  loadingMore: boolean;
 }
 
 interface RescheduleEligibility {
@@ -85,9 +93,10 @@ interface StatusFilterOption {
 }
 
 @Component({
-  selector: 'app-my-bookings',
-  templateUrl: './my-bookings.component.html',
-  styleUrl: './my-bookings.component.scss',
+    selector: 'app-my-bookings',
+    templateUrl: './my-bookings.component.html',
+    styleUrl: './my-bookings.component.scss',
+    standalone: false
 })
 export class MyBookingsComponent implements OnInit {
   selectedStatus = '';
@@ -122,6 +131,19 @@ export class MyBookingsComponent implements OnInit {
   actionMenuItems: ActionMenuItem[] = [];
   private lastActionMenuTrigger: HTMLButtonElement | null = null;
 
+  /** OBRS-577 accessibility: the count line's own DOM node (`tabindex="-1"`),
+   * the focus target when the last "Load more" click removes the button
+   * itself from the DOM (see `maybeShiftFocusAfterLoadMore` below). */
+  @ViewChild('countRegion') countRegionRef?: ElementRef<HTMLElement>;
+  /** Set synchronously in `onLoadMore()`; consumed (and cleared) the moment
+   * `loadingMore` next flips back to false — i.e. exactly that click's own
+   * response, success or failure, never a later unrelated state change. Scoped
+   * to the `loadingMore` transition rather than `hasMore` itself so a
+   * status-filter switch (which also changes `hasMore`) can never be
+   * misread as "that load-more click's response". */
+  private awaitingLoadMoreFocusShift = false;
+  private previousLoadingMore = false;
+
   readonly statusFilters: StatusFilterOption[] = [
     { value: '', labelKey: 'MY_BOOKINGS.FILTERS.ALL' },
     { value: 'confirmed', labelKey: 'MY_BOOKINGS.FILTERS.CONFIRMED' },
@@ -150,7 +172,11 @@ export class MyBookingsComponent implements OnInit {
         loaded: state.loaded,
         error: state.error,
         cancellingBookingId: state.cancellingBookingId,
-      }))
+        totalElements: state.totalElements,
+        hasMore: state.totalPages > 0 && state.pagesLoaded < state.totalPages,
+        loadingMore: state.loadingMore,
+      })),
+      tap((vm) => this.maybeShiftFocusAfterLoadMore(vm))
     );
 
     this.rescheduleDialogBookingId$ = this.store.select(selectRescheduleDialogBookingId);
@@ -181,7 +207,7 @@ export class MyBookingsComponent implements OnInit {
 
   onConfirmCancelWithDestination(
     booking: MyBookingView,
-    event: { refundDestination: RefundDestinationReqDto }
+    event: { refundDestination?: RefundDestinationReqDto }
   ): void {
     this.store.dispatch(
       confirmCancelWithDestination({ booking, refundDestination: event.refundDestination })
@@ -190,6 +216,18 @@ export class MyBookingsComponent implements OnInit {
 
   onCancelRefundDestinationModalClosed(): void {
     this.store.dispatch(closeCancelRefundDestinationModal());
+  }
+
+  /**
+   * OBRS-813 — the traveler took the other door offered inside the cancel
+   * modal. Closes the cancel modal and hands them to the SAME reschedule
+   * dialog the card menu opens (`onReschedule`), including its eligibility
+   * guard: one entry point, so a booking the backend would refuse can't get in
+   * through this one. Nothing is cancelled — the cancel was never submitted.
+   */
+  onRescheduleInsteadOfCancel(booking: MyBookingView): void {
+    this.store.dispatch(closeCancelRefundDestinationModal());
+    this.onReschedule(booking);
   }
 
   /**
@@ -323,6 +361,41 @@ export class MyBookingsComponent implements OnInit {
         showLoading: true,
       })
     );
+  }
+
+  /** OBRS-577 AC2/AC6 — dispatches the next page fetch. No status/page
+   * payload: the effect reads `statusFilter`/`pagesLoaded` off the current
+   * state itself (see `MyBookingsEffect.loadMoreMyBookings$`). */
+  onLoadMore(): void {
+    this.awaitingLoadMoreFocusShift = true;
+    this.store.dispatch(invokeLoadMoreMyBookingsApi());
+  }
+
+  /**
+   * OBRS-577 Accessibility — when the "Load more" button's own click turns
+   * out to be the LAST page (`hasMore` becomes false), the button is removed
+   * from the DOM and, left alone, the browser drops focus to `<body>`. Moves
+   * it to the count line's region instead. Gated on the `loadingMore`
+   * true→false transition (that click settling) rather than on `hasMore`
+   * alone, so a status-filter switch — which can also flip `hasMore` — is
+   * never misattributed to a Load more click that never happened.
+   */
+  private maybeShiftFocusAfterLoadMore(vm: MyBookingsVm): void {
+    const loadMoreJustSettled = this.previousLoadingMore && !vm.loadingMore;
+    this.previousLoadingMore = vm.loadingMore;
+
+    if (!loadMoreJustSettled || !this.awaitingLoadMoreFocusShift) {
+      return;
+    }
+    this.awaitingLoadMoreFocusShift = false;
+
+    if (vm.hasMore) {
+      // More pages remain — the button stays put, nothing to shift away from.
+      return;
+    }
+    // Deferred a tick so the button has actually left the DOM (the `@if`
+    // re-render that removes it) before focus is moved off it.
+    setTimeout(() => this.countRegionRef?.nativeElement.focus({ preventScroll: true }));
   }
 
   trackById(_index: number, booking: MyBookingView): number {

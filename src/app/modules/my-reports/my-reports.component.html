@@ -8,78 +8,87 @@
     </header>
 
     <!-- Loading skeletons (first load only). -->
-    <ng-container *ngIf="isInitialLoading">
-      <div class="report-card report-card--skeleton" *ngFor="let row of skeletonRows">
-        <span class="skeleton skeleton--line"></span>
-        <span class="skeleton skeleton--line skeleton--short"></span>
-        <span class="skeleton skeleton--line skeleton--short"></span>
-      </div>
-    </ng-container>
+    @if (isInitialLoading) {
+      @for (row of skeletonRows; track row) {
+        <div class="report-card report-card--skeleton">
+          <span class="skeleton skeleton--line"></span>
+          <span class="skeleton skeleton--line skeleton--short"></span>
+          <span class="skeleton skeleton--line skeleton--short"></span>
+        </div>
+      }
+    }
 
     <!-- Error state (no cache to fall back on). -->
-    <div class="state-card state-card--error" *ngIf="errorMessage && !isInitialLoading">
-      <span class="material-symbols-outlined" aria-hidden="true">error</span>
-      <p>{{ errorMessage }}</p>
-      <button type="button" class="btn-secondary" (click)="onRetry()">
-        {{ 'USABILITY_REPORT.MY_REPORTS.RETRY' | translate }}
-      </button>
-    </div>
+    @if (errorMessage && !isInitialLoading) {
+      <div class="state-card state-card--error">
+        <span class="material-symbols-outlined" aria-hidden="true">error</span>
+        <p>{{ errorMessage }}</p>
+        <button type="button" class="btn-secondary" (click)="onRetry()">
+          {{ 'USABILITY_REPORT.MY_REPORTS.RETRY' | translate }}
+        </button>
+      </div>
+    }
 
     <!-- Empty state. -->
-    <div
-      class="state-card state-card--empty"
-      *ngIf="!isInitialLoading && !errorMessage && reports.length === 0"
-    >
-      <span class="material-symbols-outlined" aria-hidden="true">flag</span>
-      <p class="state-card__title">{{ 'USABILITY_REPORT.MY_REPORTS.EMPTY_TITLE' | translate }}</p>
-      <p>{{ 'USABILITY_REPORT.MY_REPORTS.EMPTY_BODY' | translate }}</p>
-    </div>
+    @if (!isInitialLoading && !errorMessage && reports.length === 0) {
+      <div
+        class="state-card state-card--empty"
+        >
+        <span class="material-symbols-outlined" aria-hidden="true">flag</span>
+        <p class="state-card__title">{{ 'USABILITY_REPORT.MY_REPORTS.EMPTY_TITLE' | translate }}</p>
+        <p>{{ 'USABILITY_REPORT.MY_REPORTS.EMPTY_BODY' | translate }}</p>
+      </div>
+    }
 
     <!-- Report cards. -->
-    <ng-container *ngIf="!isInitialLoading && !errorMessage">
-      <article
-        class="report-card"
-        *ngFor="let report of reports; trackBy: trackById"
-        role="button"
-        tabindex="0"
-        (click)="openDetail(report)"
-        (keydown.enter)="openDetail(report)"
-        (keydown.space)="$event.preventDefault(); openDetail(report)"
-      >
-        <div class="report-card__top">
-          <span class="report-card__category">{{ categoryLabel(report.category) }}</span>
-          <span class="admin-status" [ngClass]="statusClass(report.status)">
-            {{ statusLabel(report.status) }}
-          </span>
-        </div>
-        <p class="report-card__preview">{{ report.descriptionPreview }}</p>
-        <div class="report-card__meta">
-          <span>
-            <span class="material-symbols-outlined" aria-hidden="true">image</span>
-            {{ report.imageCount }}
-          </span>
-          <span>{{ displayDateTime(report.createdAt) }}</span>
-        </div>
-      </article>
-    </ng-container>
+    @if (!isInitialLoading && !errorMessage) {
+      @for (report of reports; track trackById($index, report)) {
+        <article
+          class="report-card"
+          role="button"
+          tabindex="0"
+          (click)="openDetail(report)"
+          (keydown.enter)="openDetail(report)"
+          (keydown.space)="$event.preventDefault(); openDetail(report)"
+          >
+          <div class="report-card__top">
+            <span class="report-card__category">{{ categoryLabel(report.category) }}</span>
+            <span class="admin-status" [ngClass]="statusClass(report.status)">
+              {{ statusLabel(report.status) }}
+            </span>
+          </div>
+          <p class="report-card__preview">{{ report.descriptionPreview }}</p>
+          <div class="report-card__meta">
+            <span>
+              <span class="material-symbols-outlined" aria-hidden="true">image</span>
+              {{ report.imageCount }}
+            </span>
+            <span>{{ displayDateTime(report.createdAt) }}</span>
+          </div>
+        </article>
+      }
+    }
 
     <!-- Load more (OBRS-415 §12.4 incremental-append precedent — never a
-         page-number paginator on the customer shell). -->
-    <div class="my-reports__load-more" *ngIf="showLoadMore">
-      <button type="button" class="btn-secondary" [disabled]="isLoadingMore" (click)="onLoadMore()">
-        {{
+    page-number paginator on the customer shell). -->
+    @if (showLoadMore) {
+      <div class="my-reports__load-more">
+        <button type="button" class="btn-secondary" [disabled]="isLoadingMore" (click)="onLoadMore()">
+          {{
           isLoadingMore
-            ? ('USABILITY_REPORT.MY_REPORTS.LOADING_MORE' | translate)
-            : ('USABILITY_REPORT.MY_REPORTS.LOAD_MORE' | translate)
-        }}
-      </button>
-    </div>
+          ? ('USABILITY_REPORT.MY_REPORTS.LOADING_MORE' | translate)
+          : ('USABILITY_REPORT.MY_REPORTS.LOAD_MORE' | translate)
+          }}
+        </button>
+      </div>
+    }
   </div>
 </section>
 
-<app-my-report-detail-modal
-  *ngIf="selectedReport"
-  [summary]="selectedReport"
-  (closed)="closeDetail()"
-  (reportUpdated)="onReportUpdated($event)"
-></app-my-report-detail-modal>
+@if (selectedReport) {
+  <app-my-report-detail-modal
+    [summary]="selectedReport"
+    (closed)="closeDetail()"
+    (reportUpdated)="onReportUpdated($event)"
+  ></app-my-report-detail-modal>
+}

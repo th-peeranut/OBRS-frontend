@@ -28,10 +28,11 @@ import {
  * `store.setVehicleId()` itself.
  */
 @Component({
-  selector: 'app-vehicle-inspection-panel',
-  templateUrl: './vehicle-inspection-panel.component.html',
-  styleUrl: './vehicle-inspection-panel.component.scss',
-  providers: [VehicleInspectionHistoryStore],
+    selector: 'app-vehicle-inspection-panel',
+    templateUrl: './vehicle-inspection-panel.component.html',
+    styleUrl: './vehicle-inspection-panel.component.scss',
+    providers: [VehicleInspectionHistoryStore],
+    standalone: false
 })
 export class AppVehicleInspectionPanelComponent implements OnChanges, OnInit, OnDestroy {
   @Input() vehicleId!: number;

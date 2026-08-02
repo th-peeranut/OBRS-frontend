@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { PrimeNGConfig } from 'primeng/api';
+import { PrimeNG } from 'primeng/config';
 import { BehaviorSubject } from 'rxjs';
 
 import { StaffLayoutComponent } from './staff-layout.component';
@@ -17,7 +17,10 @@ import { NotificationInboxService } from '../../shared/services/notification-inb
 
 // OBRS-317: stub the bell selector so this layout-chrome spec stays scoped
 // to the layout itself (same approach as admin-layout.component.spec.ts).
-@Component({ selector: 'app-notification-bell', template: '' })
+@Component({
+    selector: 'app-notification-bell', template: '',
+    standalone: false
+})
 class NotificationBellStubComponent {}
 
 // localStorage shim — keeps spec storage isolated
@@ -50,7 +53,7 @@ describe('StaffLayoutComponent', () => {
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
-        { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: PrimeNG, useValue: { setTranslation: () => {} } },
         { provide: LanguageService, useValue: createLanguageServiceStub() },
         { provide: ThemeService, useValue: themeServiceStub },
         {

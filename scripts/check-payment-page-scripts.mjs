@@ -16,8 +16,14 @@
  *   3. Every file that calls document.createElement('script') is a declared loader, and
  *      every declared loader still calls it. This is the rule that catches "a new
  *      third-party widget was added to a page".
- *   4. A declared loader still names the origin the inventory claims for it. Catches
- *      changing the vendor URL underneath a justification that no longer describes it.
+ *   4. A declared loader and its inventory entry name THE SAME SET of https origins,
+ *      in both directions. Declared-but-absent catches changing the vendor URL underneath
+ *      a justification that no longer describes it. Present-but-undeclared catches the
+ *      other half, which OBRS-882 found this rule could not see: `origin` was a single
+ *      string, so a loader that pulled a SECOND vendor from the same file satisfied the
+ *      rule completely while the second vendor appeared in no inventory and no CSP.
+ *      That is the exact shape OBRS-867's analytics loader shipped in (googletagmanager
+ *      AND clarity.ms from one file), and it went undetected here.
  *   5. netlify.toml's CSP matches the declared SIT origin set, has no 'unsafe-inline' in
  *      script-src, and still names a report-uri — without which 11.6.1 detection is zero
  *      while the header looks unchanged from the outside.
@@ -69,6 +75,20 @@ function stripComments(source) {
 }
 
 /**
+ * Every distinct `https://host` a file names in live code. Comments are stripped first,
+ * for the same reason rule 3 strips them: a file is allowed to DISCUSS a vendor it does
+ * not load, and several here do.
+ *
+ * `https` only, deliberately. The one `http://` literal in this repo's loader files is
+ * `http://www.w3.org` — an SVG xmlns, which is an identifier and not a fetchable origin.
+ * Widening this to `https?` would turn that into a finding with nothing behind it, and a
+ * gate people learn to wave through is worse than no gate (OBRS-750).
+ */
+function httpsOriginsIn(source) {
+  return new Set((stripComments(source).match(/https:\/\/[A-Za-z0-9.*-]+/g) ?? []));
+}
+
+/**
  * Every source in a CSP that names a remote host. A "source" is any token containing
  * `://`, which drops directive names, keyword sources ('self', 'none', 'unsafe-inline'),
  * scheme sources (data:, blob:) and a relative report-uri path — none of them third
@@ -100,6 +120,87 @@ function directiveOf(policy, name) {
   return '';
 }
 
+/**
+ * Origins reachable only as the TARGET of a redirect from another allowlisted origin.
+ *
+ * OBRS-888: `c.clarity.ms/c.gif` 302s to `c.bing.com/c.gif`. CSP re-checks every hop of a
+ * redirect, so allowing only the first host still blocks the fetch — measured under a real
+ * enforcing header, not read off the spec. The reason this needs a GATE rather than a
+ * comment is what the violation report says: CSP names the PRE-redirect URL, so a denial
+ * at hop 2 arrives as `img-src <- c.clarity.ms`, naming the host that IS allowed, and is
+ * byte-identical to a denial at hop 1. Anyone tidying this allowlist against the collector
+ * will conclude c.bing.com is unused. It is not unused; it is unreportable.
+ *
+ * Directional on purpose: source implies target, never the reverse, so dropping the vendor
+ * entirely stays a legal edit. Whole-token comparison, so `https://*.clarity.ms` in
+ * connect-src is not mistaken for the named beacon host.
+ */
+const REDIRECT_HOPS = [
+  { directive: 'img-src', from: 'https://c.clarity.ms', to: 'https://c.bing.com' },
+];
+
+function allowsOrigin(directive, origin) {
+  return directive.trim().split(/\s+/).includes(origin);
+}
+
+/**
+ * Sub-resources a third-party SCRIPT injects into our document under a DIFFERENT directive
+ * than the one that allowed the script.
+ *
+ * OBRS-889: `accounts.google.com` was in script-src, connect-src and frame-src, and the
+ * page still failed under an enforcing header — `gsi/client` adds a <link> to
+ * `accounts.google.com/gsi/style`, which is governed by style-src, where the host was
+ * absent. An origin-level allowlist (the `csp-origins` block, `sitCspOrigins` below) is
+ * blind to this by construction: the origin is present and documented, so both inventory
+ * gates stay green while the fetch is denied.
+ *
+ * Directional, like REDIRECT_HOPS: the script host implies the sidecar host, never the
+ * reverse, so removing the vendor outright stays a legal edit. Whole-token comparison, so
+ * `https://*.google.com` in img-src is not read as the named host.
+ */
+const SIDECAR_SUBRESOURCES = [
+  {
+    origin: 'https://accounts.google.com',
+    loadedBy: 'script-src',
+    needs: 'style-src',
+    what: 'gsi/client injects a <link> to accounts.google.com/gsi/style into this document',
+  },
+];
+
+function orphanedSidecarSubresources(policy) {
+  const orphans = [];
+  for (const sidecar of SIDECAR_SUBRESOURCES) {
+    const loader = directiveOf(policy, sidecar.loadedBy);
+    const target = directiveOf(policy, sidecar.needs);
+    if (allowsOrigin(loader, sidecar.origin) && !allowsOrigin(target, sidecar.origin)) {
+      orphans.push(
+        `netlify.toml's ${sidecar.loadedBy} allows ${sidecar.origin} but ${sidecar.needs} does not — ` +
+          `${sidecar.what}. The origin being in the allowlist is not the question; the DIRECTIVE is. ` +
+          'Measured under an enforcing header in OBRS-889: without this the sheet is dropped with ' +
+          'error `csp` and every /login view writes a line into the collector whose documented ' +
+          'steady state (PCI DSS 11.6.1) is zero.'
+      );
+    }
+  }
+  return orphans;
+}
+
+function orphanedRedirectSources(policy) {
+  const orphans = [];
+  for (const hop of REDIRECT_HOPS) {
+    const directive = directiveOf(policy, hop.directive);
+    if (allowsOrigin(directive, hop.from) && !allowsOrigin(directive, hop.to)) {
+      orphans.push(
+        `netlify.toml's ${hop.directive} allows ${hop.from} but not ${hop.to}, which it 302s to. ` +
+          'CSP re-checks every redirect hop, so the fetch fails anyway — and the violation report ' +
+          `names the PRE-redirect URL (${hop.from}), so draining the collector will never name ` +
+          `${hop.to}. Measured under an enforcing header in OBRS-888; do not delete it as unused.`
+      );
+    }
+  }
+  return orphans;
+}
+
 // -----------------------------------------------------------------------------------
 // Self-test — the gate's own must-catch / must-NOT-catch proof, run on every call.
 // -----------------------------------------------------------------------------------
@@ -129,6 +230,44 @@ const SELF_TEST_CASES = [
   // exactly this, so it is pinned here rather than only fixed.
   ['origins', 0, "default-src 'self'; report-uri https://sit-obrs-backend.koyeb.app/api/csp-report"],
   ['origins', 1, "connect-src https://a.example; report-uri https://b.example/api/csp-report"],
+  // ---- rule 4b: the origins a LOADER FILE names. OBRS-882 — the case that shipped is
+  // two vendors from one file, so it is pinned first and by exact set, not by count.
+  ['srcOrigins', 'https://www.clarity.ms,https://www.googletagmanager.com',
+    'a(`https://www.googletagmanager.com/gtag/js?id=${id}`);\nb(`https://www.clarity.ms/tag/${p}`);'],
+  ['srcOrigins', 'https://cdn.omise.co', "s.src = 'https://cdn.omise.co/omise.js';"],
+  // A vendor named only in a COMMENT is discussed, not loaded. Three files here do this.
+  ['srcOrigins', '', "// see https://accounts.google.com/gsi/client, loaded in login.component.ts"],
+  ['srcOrigins', '', '/* frame-src covers https://*.omise.co for the 3DS hop */'],
+  // An SVG xmlns is an identifier, not an origin — and it is why this is https-only.
+  ['srcOrigins', '', 'const NS = "http://www.w3.org/2000/svg";'],
+  // A wildcard host is a legitimate thing to name and must round-trip verbatim.
+  ['srcOrigins', 'https://*.clarity.ms', "const upload = 'https://*.clarity.ms';"],
+  // ---- OBRS-888 redirect pairs. must-catch: the exact edit the gate exists to stop —
+  // someone drains the violation log, sees c.bing.com nowhere in it, removes it as unused.
+  ['redirect', 1, "img-src 'self' https://c.clarity.ms"],
+  // must NOT catch: dropping the vendor outright takes both hosts and is a legal edit;
+  // the target alone is odd but is not this rule's business (source implies target, not
+  // the reverse); and a wildcard sibling must not be read as the named host, or the gate
+  // would demand an image origin inside connect-src, which fetches no images at all.
+  ['redirect', 0, "img-src 'self' https://c.clarity.ms https://c.bing.com"],
+  ['redirect', 0, "img-src 'self' data: blob:"],
+  ['redirect', 0, "img-src 'self' https://c.bing.com"],
+  ['redirect', 0, "connect-src 'self' https://*.clarity.ms"],
+  // ---- OBRS-889 sidecar sub-resources. must-catch: the policy that shipped for two
+  // months — GIS allowed as a script, its stylesheet not allowed as a stylesheet.
+  ['sidecar', 1, "script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"],
+  // A style-src that is missing altogether falls back to default-src, which is 'self' —
+  // still a denial, so still caught rather than skipped for lack of a directive to read.
+  ['sidecar', 1, "default-src 'self'; script-src 'self' https://accounts.google.com"],
+  // must NOT catch: the fixed policy; dropping Google sign-in entirely (both entries go,
+  // and demanding the sidecar back would block that removal); the reverse direction,
+  // which is odd but is not this rule's business; and a wildcard that must not be read as
+  // the named host — `https://*.google.com` is in img-src for Maps imagery and says
+  // nothing about whether the GIS stylesheet may load.
+  ['sidecar', 0, "script-src 'self' https://accounts.google.com; style-src 'self' https://accounts.google.com"],
+  ['sidecar', 0, "script-src 'self' https://cdn.omise.co; style-src 'self' 'unsafe-inline'"],
+  ['sidecar', 0, "script-src 'self'; style-src 'self' https://accounts.google.com"],
+  ['sidecar', 1, "script-src 'self' https://accounts.google.com; style-src 'self' https://*.google.com"],
 ];
 
 function runSelfTest() {
@@ -137,6 +276,9 @@ function runSelfTest() {
     let actual;
     if (kind === 'html') actual = hasScriptTag(input);
     else if (kind === 'ts') actual = loadsScriptDynamically(input);
+    else if (kind === 'srcOrigins') actual = [...httpsOriginsIn(input)].sort().join(',');
+    else if (kind === 'redirect') actual = orphanedRedirectSources(input).length;
+    else if (kind === 'sidecar') actual = orphanedSidecarSubresources(input).length;
     else actual = originsOf(input).size;
 
     if (actual !== expected) {
@@ -208,13 +350,27 @@ for (const file of tsFiles) {
     continue;
   }
   const source = readFileSync(file, 'utf8');
-  const host = entry.origin.replace(/^[a-z]+:\/\//, '');
-  if (!source.includes(host)) {
-    problems.push(
-      `${rel} is inventoried as loading ${entry.origin}, but that host does not appear in the file. ` +
-        'Either the vendor URL changed under a justification that no longer describes it, or the ' +
-        'inventory entry is stale.'
-    );
+  const inSource = httpsOriginsIn(source);
+  const inEntry = new Set(entry.origins);
+
+  for (const origin of [...inEntry].sort()) {
+    if (!inSource.has(origin)) {
+      problems.push(
+        `${rel} is inventoried as loading ${origin}, but that origin does not appear in the file. ` +
+          'Either the vendor URL changed under a justification that no longer describes it, or the ' +
+          'inventory entry is stale.'
+      );
+    }
+  }
+  for (const origin of [...inSource].sort()) {
+    if (!inEntry.has(origin)) {
+      problems.push(
+        `${rel} names ${origin} but the inventory does not list it among that file's origins. ` +
+          'A loader may pull from more than one vendor, and each one needs its own written ' +
+          'justification (PCI DSS 6.4.3(c)) and its own CSP entry — the second vendor is the one ' +
+          'that gets forgotten (OBRS-882).'
+      );
+    }
   }
 }
 for (const [rel] of declared) {
@@ -289,6 +445,12 @@ if (!cspMatch) {
         'needed again, add a BUILD-TIME hash step — a hand-copied hash silently breaks login the next ' +
         'time the block is edited.'
     );
+  }
+  for (const orphan of orphanedRedirectSources(policy)) {
+    problems.push(orphan);
+  }
+  for (const orphan of orphanedSidecarSubresources(policy)) {
+    problems.push(orphan);
   }
   if (!directiveOf(policy, 'report-uri').includes('/api/csp-report')) {
     problems.push(

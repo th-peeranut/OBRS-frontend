@@ -27,16 +27,44 @@ import { RouteMeta, RouteStop } from '../../../shared/interfaces/route-map.inter
 // --- Load my bookings ---
 export const invokeLoadMyBookingsApi = createAction(
   '[MyBookings API] Invoke to load my bookings',
-  props<{ status?: string | null; showLoading?: boolean }>()
+  // OBRS-577: `preserveWindow` (Decision A) — default false keeps the first
+  // load / a status-filter switch resetting to page 0 at MY_BOOKINGS_PAGE_SIZE
+  // (the existing, locked behavior); the 6 post-mutation reload sites pass
+  // `true` so the effect refetches however many pages were already loaded in
+  // ONE request instead of visibly truncating the list back to page 1.
+  props<{ status?: string | null; showLoading?: boolean; preserveWindow?: boolean }>()
 );
 
 export const invokeLoadMyBookingsApiSuccess = createAction(
   '[MyBookings API] Load my bookings success',
-  props<{ bookings: MyBookingDto[] }>()
+  props<{ bookings: MyBookingDto[]; totalElements: number; totalPages: number }>()
 );
 
 export const invokeLoadMyBookingsApiFailure = createAction(
   '[MyBookings API] Load my bookings failure',
+  props<{ error: string }>()
+);
+
+// --- Load more my bookings (OBRS-577 AC2/AC6 — incremental append, never a
+// page-number paginator on the customer shell) ---
+
+/** Dispatched by the "Load more" button. No payload — the effect reads
+ * `statusFilter`/`pagesLoaded` off the current state itself. */
+export const invokeLoadMoreMyBookingsApi = createAction(
+  '[MyBookings API] Invoke to load more my bookings'
+);
+
+export const invokeLoadMoreMyBookingsApiSuccess = createAction(
+  '[MyBookings API] Load more my bookings success',
+  props<{ bookings: MyBookingDto[]; totalElements: number; totalPages: number }>()
+);
+
+/** Deliberately does NOT reuse `invokeLoadMyBookingsApiFailure` — that one's
+ * reducer case sets `state.error`, which would replace the already-visible
+ * list with a full-page error state (spec: "Error (load more ล้มเหลว)" must
+ * stay a toast only, list/count line unchanged). */
+export const invokeLoadMoreMyBookingsApiFailure = createAction(
+  '[MyBookings API] Load more my bookings failure',
   props<{ error: string }>()
 );
 
@@ -57,18 +85,23 @@ export const cancelBookingFailure = createAction(
   props<{ error: string }>()
 );
 
-/** Traveler dismissed the confirmation dialog — clears the in-flight state. */
-export const cancelBookingDismissed = createAction(
-  '[MyBookings API] Cancel booking dismissed'
-);
+// OBRS-942: `cancelBookingDismissed` removed — its sole dispatcher was the
+// Swal-confirm "no" branch in `requestCancel$`, deleted with the second cancel
+// screen. `cancelBookingSuccess`/`cancelBookingFailure` already clear the
+// in-flight `cancellingBookingId`; the modal's own dismiss goes through
+// `closeCancelRefundDestinationModal`, never this action.
 
-// --- Cancel-with-destination modal (OBRS-286 Flow A1) ---
-// Replaces the plain Swal confirm for a cancel that resolves to
-// MANUAL_REFUND_REQUIRED — the traveler must supply a refund destination
-// before the cancel is submitted.
+// --- Cancel modal (OBRS-286 Flow A1, folded into the ONE cancel screen by
+// OBRS-942) ---
+// Originally replaced the plain Swal confirm only for MANUAL_REFUND_REQUIRED;
+// OBRS-942 deleted the Swal lane entirely, so `requestCancel$` now opens this
+// modal for every refund method, and `CancelBookingModalComponent` hides the
+// destination form/note itself when the resolved method isn't manual. Kept
+// under its original `*RefundDestinationModal` names — see the class-level
+// comment on `CancelBookingModalComponent` for why.
 
-/** Opened by `requestCancel$` once the policy resolves to manual — the modal
- * shows the already-fetched policy, no further fetch on open. */
+/** Opened by `requestCancel$` once the policy resolves — the modal shows the
+ * already-fetched policy, no further fetch on open. */
 export const openCancelRefundDestinationModal = createAction(
   '[MyBookings API] Open cancel refund destination modal',
   props<{ booking: MyBookingView; policy: CancellationPolicy }>()
@@ -80,7 +113,9 @@ export const closeCancelRefundDestinationModal = createAction(
 
 export const confirmCancelWithDestination = createAction(
   '[MyBookings API] Confirm cancel with destination',
-  props<{ booking: MyBookingView; refundDestination: RefundDestinationReqDto }>()
+  // OBRS-942: `refundDestination` is optional — this action now also carries
+  // the non-manual lane's Confirm, which never collects a destination.
+  props<{ booking: MyBookingView; refundDestination?: RefundDestinationReqDto }>()
 );
 
 /** A server-side `cancel.error.refund-destination-required` /

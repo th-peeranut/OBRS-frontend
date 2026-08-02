@@ -39,7 +39,7 @@
 // OBRS-341 — the optional explicit-seat-selection checklist. Plain
 // checkboxes (Bootstrap .form-check, already dark-themed globally), not a
 // PrimeNG p-multiSelect: this codebase has no existing dark-mode coverage
-// for PrimeNG's overlay-panel-based pickers outside p-calendar's own
+// for PrimeNG's overlay-panel-based pickers outside `p-datePicker`'s own
 // hand-themed classes, and a small enumerable set (a trip's seat count) has
 // no need for a searchable/overlay control. See design-system.md §12 "New
 // pattern log" for the one-line justification this represents.

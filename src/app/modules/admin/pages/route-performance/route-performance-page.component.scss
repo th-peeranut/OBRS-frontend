@@ -1,0 +1,29 @@
+// OBRS-153 — per-route revenue-share bar in the table.
+.rp-share {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 120px;
+}
+
+.rp-share-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--admin-surface-soft);
+  overflow: hidden;
+}
+
+.rp-share-bar {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--admin-success-text);
+  transition: width 0.2s ease;
+}
+
+.rp-share-pct {
+  font-size: 0.75rem;
+  color: var(--admin-muted);
+  min-width: 42px;
+  text-align: right;
+}

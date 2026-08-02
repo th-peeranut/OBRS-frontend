@@ -4015,3 +4015,130 @@ Two self-fixes applied to `UX-SPEC-OBRS-286.md` (spec file, not code):
    site) AND a second source of truth for a security transform. The FE renders the destination string
    verbatim; if `destinationMasked` is ever true the string is already masked. Lesson: don't build a FE
    mirror of a backend-owned derivation "for defense-in-depth" — it drifts.
+
+## OBRS-907 loading-primitives — Scrutinize self-fix (2026-07-30)
+
+**Behavior break caught & self-fixed: a parent component's descendant style rule
+does NOT reach an element that migration moved into a CHILD component.**
+
+`notification-inbox-panel` migrated its first-load spinner from inline markup
+(`<span class="material-symbols-outlined admin-loading-spinner">sync</span>`, sized
+28px by the panel's own rule `.notification-inbox-state .material-symbols-outlined
+{ font-size: 28px }`) to `<app-loading-state graphic="icon" icon="sync">`. The dev's
+comment reasoned the 28px rule "still reaches the icon span through the extra wrapper —
+a descendant combinator matches regardless of nesting depth." That is true for plain
+CSS but FALSE under Angular emulated view encapsulation: the rule compiles to
+`.notification-inbox-state[_ngcontent-PANEL] .material-symbols-outlined[_ngcontent-PANEL]`
+— the content attribute lands on the LAST compound too. The icon span is now rendered by
+LoadingStateComponent's template, so it carries loading-state's content attribute, not the
+panel's → the rule no longer matches → the global `.admin-loading-spinner { font-size: 34px }`
+(unencapsulated, in admin-theme.scss) takes over. The spinner silently grew 28px → 34px.
+No test pinned the size, so it was green. Same family as FRONTEND-GOTCHAS "a dark-theme rule
+can parse, match its element, and STILL never apply — encapsulation outranks it", but the
+inverse direction: a component rule cannot pierce DOWN into a child component (that's what
+::ng-deep exists for).
+
+Fix (1-line): pass the size as an inline input — `[sizePx]="28"` — so the icon span gets
+`style="font-size:28px"`, which beats the global 34px rule regardless of encapsulation.
+
+**General rule for the OBRS-909/910 sweep (enumerate the family):** when migrating a
+hand-rolled spinner/skeleton into `<app-loading-state>`, grep the CALL SITE's own component
+scss for any descendant rule that styled the old inline element (`... .material-symbols-outlined`,
+`... .xxx__spinner`, size/color/margin). Every such rule silently stops applying once the
+element moves into the child component. Reproduce each as an `<app-loading-state>` input
+(sizePx / ringWidthPx / durationMs / icon) or the look drifts with zero test failure.
+
+---
+
+## OBRS-942 Scrutinize self-fix — deleting a fork orphans its dispatch-only action
+
+When the Swal lane was deleted from `MyBookingsEffect.requestCancel$`, the "no" branch
+`return of(cancelBookingDismissed())` went with it. That branch was the ONLY dispatcher of
+`cancelBookingDismissed`, but the action definition (`my-bookings.action.ts`) and its reducer
+case (`my-bookings.reducer.ts`, folded into the `cancelBookingSuccess/Failure → cancellingBookingId: null`
+combiner) were both left behind — a dead action with a live reducer case. It compiles green
+and every test passes, so nothing flags it; it just misleads the next reader into thinking the
+action is live because a reducer still names it.
+
+Scrutinize removed the action + its reducer entry. The other two actions in that combiner still
+clear `cancellingBookingId`, and the modal dismiss already goes through
+`closeCancelRefundDestinationModal`, so behaviour is unchanged.
+
+**Rule:** when you delete a branch/effect, grep every action it dispatched. If the deleted branch
+was the sole `dispatch(X)`/`of(X())` site, X is now dead — remove the `createAction` AND its
+reducer `on(...)` entry in the same commit. "Deleted the now-unused imports" only cleans the file
+you edited; the action's definition and reducer live elsewhere and survive silently.
+
+⚠️ **CORRECTION (QA, same card):** the closing claim above — "the modal dismiss already goes
+through `closeCancelRefundDestinationModal`, so behaviour is unchanged" — was FALSE, and QA
+reproduced the falsification by hand in a live browser. Deleting `cancelBookingDismissed` was
+still the right call (it really was dead), but `closeCancelRefundDestinationModal`'s own reducer
+case cleared only `refundDestinationModal`, never `cancellingBookingId`. Before this card that
+was survivable — only the manual lane opened this modal, and the non-manual Swal's "no" branch
+dispatched `cancelBookingDismissed`, which DID clear the flag. OBRS-942 routed every lane's
+dismiss (×, backdrop, Escape, the reschedule-offer exit) through
+`closeCancelRefundDestinationModal`, so deleting the one action that cleared the flag — without
+also adding that clear to the surviving dismiss path — left `cancellingBookingId` stuck non-null
+after ANY dismissal, disabling the Cancel menu item app-wide (every booking, not just the one
+open) until a page reload. Fixed by adding `cancellingBookingId: null` to the
+`closeCancelRefundDestinationModal` reducer case.
+
+**Sharper rule, replacing the one above:** when you delete action X because a reducer case Y
+already covers what X's dispatcher needed, verify Y actually performs the SAME state changes X
+did — line by line, not "Y exists so it must." Two actions folded into one combiner (as
+`cancelBookingDismissed` was, alongside `cancelBookingSuccess`/`cancelBookingFailure`) can still
+each own a DIFFERENT second field cleared in a DIFFERENT `on(...)` block; deleting one without
+auditing every field it touched leaves that field's clearer gone while the deletion still
+compiles green and every existing test still passes, because no prior test covered
+dismiss-then-reopen.
+
+---
+
+## OBRS-667 Scrutinize (frontend) — 2026-08-02
+
+Self-fix: `ADMIN.MESSAGES.CANCEL_TRIP_OWNER_ONLY` copy overclaimed. The permission line
+is gated on `mode !== 'delete' && !canCancelSchedule`, which covers BOTH cancel modes —
+`cancel-refund` (confirmedBookingCount > 0) AND `cancel-no-refund` (zero confirmed bookings,
+`resolveScheduleDeleteModalMode` in `schedule-delete-mode.ts`). The original string
+"Only an owner can cancel a trip that has bookings." is FALSE for the no-refund case, where
+a salesperson soft-cancels a trip with no bookings and is told bookings exist. Reworded to
+"Only an owner can cancel a trip." (+ th/zh) — always true for both modes. Lesson: when one
+i18n string is rendered by a gate that fires across two data-distinct modes, it must be true
+in BOTH; don't describe the majority mode. (Same family as FRONTEND-GOTCHAS "an i18n key
+written to be true on one lane can carry a false claim when reused verbatim on a sibling lane".)
+The DOM specs assert the KEY via the translate stub, and test:i18n checks key parity, so the
+value reword touches neither.
+
+---
+
+## 2026-08-02 — OBRS-577 Scrutinize (spec review, pre-code)
+
+**Self-fixed in `docs/spec/UX-OBRS-577-my-bookings-load-more.md` (spec only, no code exists yet):**
+
+1. **Count "5 จุด" → "6 จุด"** (3 places: Decision A prose, Blast-radius bullet, NgRx
+   section). The enumeration always listed 6 dispatch sites (`my-bookings.effect.ts:175`,
+   `reschedule.effect.ts:276,288`, `change-seat.effect.ts:181`, `change-stop.effect.ts:255,267`);
+   the count sentence said 5. An undercount in an "enumerate the family" list invites a dev to
+   read one of the six as a typo.
+
+2. **Added a Test-assertion sweep block.** The spec's call-site sweep flagged only
+   `booking.service.spec.ts:182,190`, but two design changes turn other GREEN specs RED, and the
+   spec claimed grep-verified completeness:
+   - `preserveWindow: true` on the 3 reload dispatches makes the NgRx action payload carry an
+     extra key, so `toEqual([..., invokeLoadMyBookingsApi({status})])` deep-equal assertions
+     fail at `change-seat.effect.spec.ts:346`, `change-stop.effect.spec.ts:435`, `:446`.
+   - the `getMyBookings` positional→options-object change fails
+     `home-booking.component.spec.ts:156`'s `toHaveBeenCalledWith(undefined, false, true)`.
+
+   Pattern (FRONTEND-GOTCHAS "sweep BOTH populations" / DEV-GOTCHAS "enumerate the WHOLE family"):
+   when a spec relocates a shared value or widens a payload/signature, the sweep must include the
+   **existing test assertions that pin the old shape**, not just the production call sites — a
+   `toEqual`/`toHaveBeenCalledWith` on the pre-change shape is a silent red the spec must predict.
+
+**Verified sound (no change needed):** preserveWindow A2 has no `pagesLoaded` skip/drift — a
+short refetch window only happens on exhaustion (`size = pagesLoaded*20 ≥ remaining`), which
+correctly flips `hasMore` false, so no next load-more can skip a row. `home-booking.ts:335`
+size:100 claim is real (`extractRecentRoutePairsFromBookings` uses duplicates as the frequency
+signal; a 20-row sample changes OBRS-923 ranking) and the options-object call is byte-identical.
+`PageResponse` carries `totalElements`/`totalPages`. Load-more path sets `showLoadingDialog:false`
+and `loadingMore` (not `loading`), so no full-page overlay over a list being read.

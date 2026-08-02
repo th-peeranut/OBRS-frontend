@@ -30,9 +30,10 @@ const STALE_ERROR_CODES: ReadonlySet<string> = new Set(['REPORT_NOT_EDITABLE', '
  * duplicates a toast.
  */
 @Component({
-  selector: 'app-my-report-edit-form',
-  templateUrl: './my-report-edit-form.component.html',
-  styleUrl: './my-report-edit-form.component.scss',
+    selector: 'app-my-report-edit-form',
+    templateUrl: './my-report-edit-form.component.html',
+    styleUrl: './my-report-edit-form.component.scss',
+    standalone: false
 })
 export class MyReportEditFormComponent implements OnInit, OnDestroy {
   @Input() detail!: MyUsabilityReportDetail;
@@ -80,7 +81,9 @@ export class MyReportEditFormComponent implements OnInit, OnDestroy {
     // component's own copy is immune to any later parent reseat for the
     // rest of the edit session.
     this.existingImagesSnapshot = [...this.detail.images];
-    this.keepImageIds = this.existingImagesSnapshot.map((img) => Number(img.id));
+    // OBRS-436: UsabilityReportImage.id is now `number` (was OBRS-376's
+    // `string` lie); keepImageIds is number[], so no coercion is needed.
+    this.keepImageIds = this.existingImagesSnapshot.map((img) => img.id);
     this.buildCategoryOptions();
 
     this.translate.onLangChange

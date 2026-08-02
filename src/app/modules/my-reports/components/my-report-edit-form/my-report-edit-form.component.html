@@ -20,9 +20,11 @@
       formControlName="description"
       [placeholder]="'USABILITY_REPORT.DESCRIPTION.PLACEHOLDER' | translate"
     ></textarea>
-    <div *ngIf="descriptionInvalid" class="mr-edit-form__error">
-      {{ 'USABILITY_REPORT.DESCRIPTION.REQUIRED' | translate }}
-    </div>
+    @if (descriptionInvalid) {
+      <div class="mr-edit-form__error">
+        {{ 'USABILITY_REPORT.DESCRIPTION.REQUIRED' | translate }}
+      </div>
+    }
   </div>
 
   <div class="mr-edit-form__field mt-2">
@@ -33,7 +35,9 @@
     ></app-usability-report-image-picker>
   </div>
 
-  <div *ngIf="inlineError" class="mr-edit-form__error mt-2">{{ inlineError }}</div>
+  @if (inlineError) {
+    <div class="mr-edit-form__error mt-2">{{ inlineError }}</div>
+  }
 
   <div class="mr-edit-form__actions mt-3">
     <button type="button" class="mr-btn-secondary" [disabled]="isSaving" (click)="onCancel()">
@@ -41,9 +45,9 @@
     </button>
     <button type="submit" class="mr-btn-primary" [disabled]="isSaving">
       {{
-        isSaving
-          ? ('USABILITY_REPORT.MY_REPORTS.EDIT_FORM.SAVING' | translate)
-          : ('USABILITY_REPORT.MY_REPORTS.EDIT_FORM.SAVE' | translate)
+      isSaving
+      ? ('USABILITY_REPORT.MY_REPORTS.EDIT_FORM.SAVING' | translate)
+      : ('USABILITY_REPORT.MY_REPORTS.EDIT_FORM.SAVE' | translate)
       }}
     </button>
   </div>

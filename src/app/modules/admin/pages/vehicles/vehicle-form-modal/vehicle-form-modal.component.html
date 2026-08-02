@@ -1,141 +1,163 @@
-<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop (dismiss)="requestClose()">
-  <div class="admin-modal admin-modal-lg">
-    <h4 class="admin-modal-title">
-      {{
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="requestClose()">
+    <div class="admin-modal admin-modal-lg">
+      <h4 class="admin-modal-title">
+        {{
         mode === 'edit'
-          ? ('ADMIN.VEHICLES.EDIT_TITLE' | translate)
-          : ('ADMIN.VEHICLES.ADD_TITLE' | translate)
-      }}
-    </h4>
-    <p class="admin-modal-subtitle">
-      {{ 'ADMIN.VEHICLES.MODAL_HINT' | translate }}
-      <span class="admin-muted" *ngIf="mode === 'edit' && isEditDetailLoading">
-        · {{ 'ADMIN.COMMON.LOADING' | translate }}
-      </span>
-    </p>
-    <small class="admin-error" role="alert" *ngIf="mode === 'edit' && isEditDetailError">
-      {{ 'ADMIN.VEHICLES.EDIT_DETAIL_LOAD_FAILED' | translate }}
-    </small>
-
-    <form [formGroup]="vehicleForm" class="admin-form-grid" (ngSubmit)="submitVehicle()">
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.VEHICLE_TYPE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="vehicleType"
-          [options]="vehicleTypeOptions"
-          valueKey="code"
-          labelKey="label"
-        ></app-admin-dropdown>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.STATUS' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="status"
-          [options]="statusOptions"
-          valueKey="code"
-          labelKey="label"
-        ></app-admin-dropdown>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.NUMBER_PLATE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="numberPlate" />
-        <small class="admin-error" *ngIf="isFieldInvalid('numberPlate')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        ? ('ADMIN.VEHICLES.EDIT_TITLE' | translate)
+        : ('ADMIN.VEHICLES.ADD_TITLE' | translate)
+        }}
+      </h4>
+      <p class="admin-modal-subtitle">
+        {{ 'ADMIN.VEHICLES.MODAL_HINT' | translate }}
+        @if (mode === 'edit' && isEditDetailLoading) {
+          <span class="admin-muted">
+            · {{ 'ADMIN.COMMON.LOADING' | translate }}
+          </span>
+        }
+      </p>
+      @if (mode === 'edit' && isEditDetailError) {
+        <small class="admin-error" role="alert">
+          {{ 'ADMIN.VEHICLES.EDIT_DETAIL_LOAD_FAILED' | translate }}
         </small>
+      }
+      <form [formGroup]="vehicleForm" class="admin-form-grid" (ngSubmit)="submitVehicle()">
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.VEHICLES.VEHICLE_TYPE' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="vehicleType"
+            [options]="vehicleTypeOptions"
+            valueKey="code"
+            labelKey="label"
+          ></app-admin-dropdown>
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.VEHICLES.STATUS' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="status"
+            [options]="statusOptions"
+            valueKey="code"
+            labelKey="label"
+          ></app-admin-dropdown>
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.VEHICLES.NUMBER_PLATE' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="numberPlate" maxlength="50" />
+          @if (isFieldInvalid('numberPlate')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.VEHICLES.VEHICLE_NUMBER' | translate }}
+            <!-- OBRS-842: no asterisk for a retired vehicle — it has handed its
+            หมายเลขพาหนะ to its replacement and holds none. -->
+            @if (!isVehicleNumberOptional) {
+              <span class="admin-required">*</span>
+            }
+          </label>
+          <input class="admin-field" formControlName="vehicleNumber" maxlength="50" />
+          @if (isFieldInvalid('vehicleNumber')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VEHICLES.VEHICLE_NUMBER_REQUIRED_UNLESS_RETIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field full">
+          <hr />
+          <h5 class="admin-form-subheading">{{ 'ADMIN.VEHICLES.DETAILS.SECTION_MAKE_MODEL' | translate }}</h5>
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.BRAND' | translate }}</label>
+          <input class="admin-field" formControlName="brand" maxlength="100" />
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.MODEL' | translate }}</label>
+          <input class="admin-field" formControlName="model" maxlength="100" />
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.MANUFACTURE_YEAR' | translate }}</label>
+          <input
+            type="number"
+            class="admin-field"
+            formControlName="manufactureYear"
+            min="1980"
+            max="{{ maxYear }}"
+            />
+            @if (isFieldInvalid('manufactureYear')) {
+              <small class="admin-error">
+                {{ errorKey('manufactureYear') | translate: { min: 1980, max: maxYear } }}
+              </small>
+            }
+          </div>
+          <div class="admin-form-field">
+            <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.COLOUR' | translate }}</label>
+            <input class="admin-field" formControlName="colour" maxlength="50" />
+          </div>
+          <div class="admin-form-field full">
+            <hr />
+            <h5 class="admin-form-subheading">{{ 'ADMIN.VEHICLES.DETAILS.SECTION_TECHNICAL' | translate }}</h5>
+          </div>
+          <div class="admin-form-field">
+            <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.ENGINE_CC' | translate }}</label>
+            <input type="number" class="admin-field" formControlName="engineCc" min="1" />
+            @if (isFieldInvalid('engineCc')) {
+              <small class="admin-error">
+                {{ errorKey('engineCc') | translate }}
+              </small>
+            }
+          </div>
+          <div class="admin-form-field">
+            <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.CHASSIS_NUMBER' | translate }}</label>
+            <input class="admin-field" formControlName="chassisNumber" maxlength="100" />
+          </div>
+          <!-- OBRS-835: before this card gps_imei had no write path at all — swapping a GPS
+          box meant a developer running SQL against prod by hand. -->
+          <div class="admin-form-field">
+            <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.GPS_IMEI' | translate }}</label>
+            <input
+              class="admin-field"
+              formControlName="gpsImei"
+              inputmode="numeric"
+              maxlength="20"
+              [placeholder]="'ADMIN.VEHICLES.DETAILS.GPS_IMEI_PLACEHOLDER' | translate"
+              />
+              @if (isFieldInvalid('gpsImei')) {
+                <small class="admin-error">
+                  {{ errorKey('gpsImei') | translate }}
+                </small>
+              }
+            </div>
+            <div class="admin-form-field full">
+              <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.NOTE' | translate }}</label>
+              <textarea
+                class="admin-field"
+                formControlName="note"
+                [placeholder]="'ADMIN.VEHICLES.DETAILS.NOTE_PLACEHOLDER' | translate"
+              ></textarea>
+            </div>
+          </form>
+          <div class="admin-modal-actions">
+            <button type="button" class="admin-btn" (click)="requestClose()">
+              {{ 'ADMIN.COMMON.CANCEL' | translate }}
+            </button>
+            <button
+              type="button"
+              class="admin-btn admin-btn-primary"
+              [disabled]="isSubmitting || isSaveBlocked"
+              (click)="submitVehicle()"
+              >
+              {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+            </button>
+          </div>
+        </div>
       </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.VEHICLE_NUMBER' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="vehicleNumber" />
-        <small class="admin-error" *ngIf="isFieldInvalid('vehicleNumber')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field full">
-        <hr />
-        <h5 class="admin-form-subheading">{{ 'ADMIN.VEHICLES.DETAILS.SECTION_MAKE_MODEL' | translate }}</h5>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.BRAND' | translate }}</label>
-        <input class="admin-field" formControlName="brand" maxlength="100" />
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.MODEL' | translate }}</label>
-        <input class="admin-field" formControlName="model" maxlength="100" />
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.MANUFACTURE_YEAR' | translate }}</label>
-        <input
-          type="number"
-          class="admin-field"
-          formControlName="manufactureYear"
-          min="1980"
-          max="{{ maxYear }}"
-        />
-        <small class="admin-error" *ngIf="isFieldInvalid('manufactureYear')">
-          {{ errorKey('manufactureYear') | translate: { min: 1980, max: maxYear } }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.COLOUR' | translate }}</label>
-        <input class="admin-field" formControlName="colour" maxlength="50" />
-      </div>
-
-      <div class="admin-form-field full">
-        <hr />
-        <h5 class="admin-form-subheading">{{ 'ADMIN.VEHICLES.DETAILS.SECTION_TECHNICAL' | translate }}</h5>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.ENGINE_CC' | translate }}</label>
-        <input type="number" class="admin-field" formControlName="engineCc" min="1" />
-        <small class="admin-error" *ngIf="isFieldInvalid('engineCc')">
-          {{ errorKey('engineCc') | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.CHASSIS_NUMBER' | translate }}</label>
-        <input class="admin-field" formControlName="chassisNumber" maxlength="100" />
-      </div>
-
-      <div class="admin-form-field full">
-        <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.NOTE' | translate }}</label>
-        <textarea
-          class="admin-field"
-          formControlName="note"
-          [placeholder]="'ADMIN.VEHICLES.DETAILS.NOTE_PLACEHOLDER' | translate"
-        ></textarea>
-      </div>
-    </form>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="requestClose()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button
-        type="button"
-        class="admin-btn admin-btn-primary"
-        [disabled]="isSubmitting || isSaveBlocked"
-        (click)="submitVehicle()"
-      >
-        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-      </button>
-    </div>
-  </div>
-</div>
+    }

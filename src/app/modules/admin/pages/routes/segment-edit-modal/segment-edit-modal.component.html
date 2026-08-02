@@ -1,93 +1,103 @@
-<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="closeModal()">
-  <div class="admin-modal">
-    <h4 class="admin-modal-title">{{ 'ADMIN.ROUTES.EDIT_SEGMENT_TITLE' | translate }}</h4>
-    <p class="admin-modal-subtitle" *ngIf="selectedSegment">
-      {{ selectedSegment.origin }} -> {{ selectedSegment.destination }}
-    </p>
-
-    <form [formGroup]="editSegmentForm" class="admin-form-grid" (ngSubmit)="submitSegmentEdit()">
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.ROUTES.ORIGIN_STOP' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="fromStopSlug"
-          [options]="stops"
-          valueKey="slug"
-          labelKey="name"
-        ></app-admin-dropdown>
-        <small class="admin-error" *ngIf="isFieldInvalid('fromStopSlug')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.ROUTES.DESTINATION_STOP' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="toStopSlug"
-          [options]="stops"
-          valueKey="slug"
-          labelKey="name"
-        ></app-admin-dropdown>
-        <small class="admin-error" *ngIf="hasFieldError('toStopSlug', 'sameStop')">
-          {{ 'ADMIN.ROUTES.SAME_STOP_VALIDATION' | translate }}
-        </small>
-        <small class="admin-error" *ngIf="hasFieldError('toStopSlug', 'stopOrder')">
-          {{ 'ADMIN.ROUTES.STOP_ORDER_VALIDATION' | translate }}
-        </small>
-        <small
-          class="admin-error"
-          *ngIf="
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="closeModal()">
+    <div class="admin-modal">
+      <h4 class="admin-modal-title">{{ 'ADMIN.ROUTES.EDIT_SEGMENT_TITLE' | translate }}</h4>
+      @if (selectedSegment) {
+        <p class="admin-modal-subtitle">
+          {{ selectedSegment.origin }} -> {{ selectedSegment.destination }}
+        </p>
+      }
+      <form [formGroup]="editSegmentForm" class="admin-form-grid" (ngSubmit)="submitSegmentEdit()">
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.ROUTES.ORIGIN_STOP' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="fromStopSlug"
+            [options]="stops"
+            valueKey="slug"
+            labelKey="name"
+          ></app-admin-dropdown>
+          @if (isFieldInvalid('fromStopSlug')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.ROUTES.DESTINATION_STOP' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="toStopSlug"
+            [options]="stops"
+            valueKey="slug"
+            labelKey="name"
+          ></app-admin-dropdown>
+          @if (hasFieldError('toStopSlug', 'sameStop')) {
+            <small class="admin-error">
+              {{ 'ADMIN.ROUTES.SAME_STOP_VALIDATION' | translate }}
+            </small>
+          }
+          @if (hasFieldError('toStopSlug', 'stopOrder')) {
+            <small class="admin-error">
+              {{ 'ADMIN.ROUTES.STOP_ORDER_VALIDATION' | translate }}
+            </small>
+          }
+          @if (
             isFieldInvalid('toStopSlug') &&
             !hasFieldError('toStopSlug', 'sameStop') &&
             !hasFieldError('toStopSlug', 'stopOrder')
-          "
-        >
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
+            ) {
+            <small
+              class="admin-error"
+              >
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.ROUTES.FARE' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="fare" type="number" min="0.01" step="0.01" />
+          @if (isFieldInvalid('fare')) {
+            <small class="admin-error">
+              {{ 'ADMIN.ROUTES.FARE_VALIDATION' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.ROUTES.EST_DURATION' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input
+            class="admin-field"
+            formControlName="estimatedDurationMinutes"
+            type="number"
+            min="1"
+            step="1"
+            />
+            @if (isFieldInvalid('estimatedDurationMinutes')) {
+              <small class="admin-error">
+                {{ 'ADMIN.ROUTES.DURATION_VALIDATION' | translate }}
+              </small>
+            }
+          </div>
+        </form>
+        <div class="admin-modal-actions">
+          <button type="button" class="admin-btn" (click)="closeModal()">
+            {{ 'ADMIN.COMMON.CANCEL' | translate }}
+          </button>
+          <button
+            type="button"
+            class="admin-btn admin-btn-primary"
+            [disabled]="isSavingSegmentEdit"
+            (click)="submitSegmentEdit()"
+            >
+            {{ isSavingSegmentEdit ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+          </button>
+        </div>
       </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.ROUTES.FARE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="fare" type="number" min="0.01" step="0.01" />
-        <small class="admin-error" *ngIf="isFieldInvalid('fare')">
-          {{ 'ADMIN.ROUTES.FARE_VALIDATION' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.ROUTES.EST_DURATION' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input
-          class="admin-field"
-          formControlName="estimatedDurationMinutes"
-          type="number"
-          min="1"
-          step="1"
-        />
-        <small class="admin-error" *ngIf="isFieldInvalid('estimatedDurationMinutes')">
-          {{ 'ADMIN.ROUTES.DURATION_VALIDATION' | translate }}
-        </small>
-      </div>
-    </form>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="closeModal()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button
-        type="button"
-        class="admin-btn admin-btn-primary"
-        [disabled]="isSavingSegmentEdit"
-        (click)="submitSegmentEdit()"
-      >
-        {{ isSavingSegmentEdit ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-      </button>
     </div>
-  </div>
-</div>
+  }

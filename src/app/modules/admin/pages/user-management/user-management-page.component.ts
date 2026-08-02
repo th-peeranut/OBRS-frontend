@@ -16,6 +16,7 @@ import {
   StatusOption,
   UserRow,
   filterUsers,
+  toRoleFilterOptions,
   toRoleOptions,
   toStatusOptions,
   toUserRow,
@@ -34,15 +35,20 @@ import {
  * delete/unlock orchestration state.
  */
 @Component({
-  selector: 'app-user-management-page',
-  templateUrl: './user-management-page.component.html',
-  styleUrl: './user-management-page.component.scss',
+    selector: 'app-user-management-page',
+    templateUrl: './user-management-page.component.html',
+    styleUrl: './user-management-page.component.scss',
+    standalone: false
 })
 export class UserManagementPageComponent implements OnInit, OnDestroy {
   protected users: UserRow[] = [];
   protected filteredUsers: UserRow[] = [];
 
+  // The full role list, as the backend sends it. Feeds the FORM modal, whose
+  // question is "which roles may I assign" — see toRoleFilterOptions for why
+  // the filter dropdown does NOT reuse it.
   protected roleOptions: RoleOption[] = [];
+  protected roleFilterOptions: RoleOption[] = [];
   protected statusOptions: StatusOption[] = [];
   protected selectedRoleFilter = '';
   protected selectedStatusFilter = '';
@@ -180,8 +186,23 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     this.selectedUser = null;
   }
 
+  // A GRANT check ("may act as admin"), which is NOT the question
+  // isPlatformAdmin() below answers ("holds the admin role"). An OWNER passes
+  // this one, because ROLE_GRANTS lists 'admin' among owner's grants.
+  //
+  // Left as-is on purpose (OBRS-847). The unlock endpoint it gates is
+  // @PreAuthorize("hasRole('ADMIN')") and the backend hierarchy does not run
+  // downward, so an OWNER is shown a button that answers 403 — a real defect,
+  // but hiding the button and widening the endpoint are two different product
+  // decisions, so it is carded (OBRS-869) rather than guessed at here.
   protected hasAdminRole(): boolean {
     return this.authService.hasAnyRole(['admin']);
+  }
+
+  // RAW held role, never hasAnyRole(['admin']) — see above. Same precedent as
+  // AdminLayoutComponent.badgeStatus and ExpensesPageComponent.isAdmin.
+  private isPlatformAdmin(): boolean {
+    return this.authService.getRoles().includes('admin');
   }
 
   protected openUnlockModal(user: UserRow): void {
@@ -265,6 +286,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     const currentLocale = this.getCurrentLocale();
 
     this.roleOptions = toRoleOptions(this.rawRoles, currentLocale);
+    this.roleFilterOptions = toRoleFilterOptions(this.roleOptions, this.isPlatformAdmin());
     this.statusOptions = toStatusOptions(this.rawLookups, currentLocale);
     this.users = this.rawUsers.map((user) =>
       toUserRow(user, currentLocale, this.translate.currentLang, (key) =>
@@ -291,7 +313,9 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   private syncFiltersWithAvailableOptions(): void {
     if (
       this.selectedRoleFilter &&
-      !this.roleOptions.some(
+      // roleFilterOptions, not roleOptions: a selection that is no longer
+      // offered must be cleared, and after OBRS-847 the two lists differ.
+      !this.roleFilterOptions.some(
         (option) => option.slug.trim().toLowerCase() === this.selectedRoleFilter
       )
     ) {

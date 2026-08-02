@@ -1,115 +1,142 @@
-<section
-  class="admin-page-intro"
-  *ngIf="(contentState === 'data' || contentState === 'empty') && (isRefreshing || hasFailed)"
->
-  <div>
-    <app-admin-refresh-hint
-      [refreshing]="isRefreshing"
-      [failed]="hasFailed"
-      [loading]="false"
-    ></app-admin-refresh-hint>
-  </div>
-</section>
+@if ((contentState === 'data' || contentState === 'empty') && (isRefreshing || hasFailed)) {
+  <section
+    class="admin-page-intro"
+    >
+    <div>
+      <app-admin-refresh-hint
+        [refreshing]="isRefreshing"
+        [failed]="hasFailed"
+        [loading]="false"
+      ></app-admin-refresh-hint>
+    </div>
+  </section>
+}
 
 <!-- Fetch error with no cache to fall back on: the message REPLACES the
-     tiles and the departures table entirely. -->
-<section class="admin-card mt-3 dashboard-state-card" *ngIf="contentState === 'error'">
-  <p class="admin-muted">{{ loadError }}</p>
-</section>
+tiles and the departures table entirely. -->
+@if (contentState === 'error') {
+  <section class="admin-card mt-3 dashboard-state-card">
+    <p class="admin-muted">{{ loadError }}</p>
+  </section>
+}
 
-<section class="admin-grid admin-grid--4 mt-3" *ngIf="contentState !== 'error'">
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon"><span class="material-symbols-outlined">directions_bus</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.DEPARTURES' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ tiles?.departuresCount ?? 0 }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-      <span class="admin-muted dashboard-basis-caption">{{ 'ADMIN.DASHBOARD.BASIS.DEPARTURE_DATE' | translate }}</span>
+@if (contentState !== 'error') {
+  <section class="admin-grid admin-grid--4 mt-3">
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">directions_bus</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.DEPARTURES' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ tiles?.departuresCount ?? 0 }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+        <span class="admin-muted dashboard-basis-caption">{{ 'ADMIN.DASHBOARD.BASIS.DEPARTURE_DATE' | translate }}</span>
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">donut_large</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.OCCUPANCY' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ occupancyDisplay(tiles?.occupancyRatePct ?? 0) }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+        <span class="admin-muted dashboard-basis-caption">{{ 'ADMIN.DASHBOARD.BASIS.DEPARTURE_DATE' | translate }}</span>
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.BOOKINGS' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ tiles?.bookingCount ?? 0 }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+        <span class="admin-muted dashboard-basis-caption">{{ 'ADMIN.DASHBOARD.BASIS.BOOKING_DATE' | translate }}</span>
+      </div>
+    </article>
+    @if (showRevenue) {
+      <article class="admin-card admin-kpi">
+        <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+        <div>
+          <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.REVENUE' | translate }}</p>
+          @if (!isLoading) {
+            <p class="admin-big-number">{{ revenueTileDisplay }}</p>
+          }
+          @if (isLoading) {
+            <span class="admin-skeleton admin-skeleton--sm"></span>
+          }
+          <span class="admin-muted dashboard-basis-caption">{{ 'ADMIN.DASHBOARD.BASIS.BOOKING_DATE' | translate }}</span>
+        </div>
+      </article>
+    }
+  </section>
+}
+
+@if (contentState !== 'error') {
+  <section class="admin-card mt-3">
+    <div class="admin-card-head">
+      <h4>{{ 'ADMIN.DASHBOARD.DEPARTURES.TITLE' | translate }}</h4>
+      <a class="admin-btn admin-btn-small" routerLink="../reports">
+        {{ 'ADMIN.DASHBOARD.VIEW_FULL_REPORTS' | translate }}
+      </a>
     </div>
-  </article>
-
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">donut_large</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.OCCUPANCY' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ occupancyDisplay(tiles?.occupancyRatePct ?? 0) }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-      <span class="admin-muted dashboard-basis-caption">{{ 'ADMIN.DASHBOARD.BASIS.DEPARTURE_DATE' | translate }}</span>
-    </div>
-  </article>
-
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.BOOKINGS' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ tiles?.bookingCount ?? 0 }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-      <span class="admin-muted dashboard-basis-caption">{{ 'ADMIN.DASHBOARD.BASIS.BOOKING_DATE' | translate }}</span>
-    </div>
-  </article>
-
-  <article class="admin-card admin-kpi" *ngIf="showRevenue">
-    <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.REVENUE' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ revenueTileDisplay }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-      <span class="admin-muted dashboard-basis-caption">{{ 'ADMIN.DASHBOARD.BASIS.BOOKING_DATE' | translate }}</span>
-    </div>
-  </article>
-</section>
-
-<section class="admin-card mt-3" *ngIf="contentState !== 'error'">
-  <div class="admin-card-head">
-    <h4>{{ 'ADMIN.DASHBOARD.DEPARTURES.TITLE' | translate }}</h4>
-    <a class="admin-btn admin-btn-small" routerLink="../reports">
-      {{ 'ADMIN.DASHBOARD.VIEW_FULL_REPORTS' | translate }}
-    </a>
-  </div>
-
-  <!-- Empty day: the note REPLACES the table, so a screenful of zero rows
-       never reads as "there is data". Tiles above still show 0. -->
-  <p class="admin-muted dashboard-empty-note" *ngIf="contentState === 'empty'">
-    {{ 'ADMIN.DASHBOARD.DEPARTURES.EMPTY' | translate }}
-  </p>
-
-  <div class="admin-table-wrap" *ngIf="contentState !== 'empty'">
-    <table class="admin-table">
-      <caption class="visually-hidden">{{ 'ADMIN.DASHBOARD.DEPARTURES.TITLE' | translate }}</caption>
-      <thead>
-        <tr>
-          <th scope="col">{{ 'ADMIN.DASHBOARD.DEPARTURES.COL.ROUTE' | translate }}</th>
-          <th scope="col">{{ 'ADMIN.DASHBOARD.DEPARTURES.COL.DEPARTURE_TIME' | translate }}</th>
-          <th scope="col">{{ 'ADMIN.DASHBOARD.DEPARTURES.COL.SEATS' | translate }}</th>
-          <th scope="col">{{ 'ADMIN.DASHBOARD.DEPARTURES.COL.OCCUPANCY' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngIf="contentState === 'loading'">
-          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          </tr>
-        </ng-container>
-
-        <ng-container *ngIf="contentState !== 'loading'">
-          <tr
-            *ngFor="let row of departures; let i = index; trackBy: trackByScheduleId"
-            [class.zebra]="i % 2 === 1"
-          >
-            <td class="admin-emphasis">{{ row.routeLabel }}</td>
-            <td>{{ displayDeparture(row.departureTime) }}</td>
-            <td>{{ row.seatsSold }} / {{ row.capacity }}</td>
-            <td>{{ occupancyDisplay(row.occupancyRatePct) }}</td>
-          </tr>
-
-          <tr *ngIf="departures.length === 0" class="admin-empty-row">
-            <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
-          </tr>
-        </ng-container>
-      </tbody>
-    </table>
-  </div>
-</section>
+    <!-- Empty day: the note REPLACES the table, so a screenful of zero rows
+    never reads as "there is data". Tiles above still show 0. -->
+    @if (contentState === 'empty') {
+      <p class="admin-muted dashboard-empty-note">
+        {{ 'ADMIN.DASHBOARD.DEPARTURES.EMPTY' | translate }}
+      </p>
+    }
+    @if (contentState !== 'empty') {
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <caption class="visually-hidden">{{ 'ADMIN.DASHBOARD.DEPARTURES.TITLE' | translate }}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'ADMIN.DASHBOARD.DEPARTURES.COL.ROUTE' | translate }}</th>
+              <th scope="col">{{ 'ADMIN.DASHBOARD.DEPARTURES.COL.DEPARTURE_TIME' | translate }}</th>
+              <th scope="col">{{ 'ADMIN.DASHBOARD.DEPARTURES.COL.SEATS' | translate }}</th>
+              <th scope="col">{{ 'ADMIN.DASHBOARD.DEPARTURES.COL.OCCUPANCY' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (contentState === 'loading') {
+              @for (row of skeletonRows; track row) {
+                <tr class="admin-skeleton-row" aria-hidden="true">
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                </tr>
+              }
+            }
+            @if (contentState !== 'loading') {
+              @for (row of departures; track trackByScheduleId(i, row); let i = $index) {
+                <tr
+                  [class.zebra]="i % 2 === 1"
+                  >
+                  <td class="admin-emphasis">{{ row.routeLabel }}</td>
+                  <td>{{ displayDeparture(row.departureTime) }}</td>
+                  <td>{{ row.seatsSold }} / {{ row.capacity }}</td>
+                  <td>{{ occupancyDisplay(row.occupancyRatePct) }}</td>
+                </tr>
+              }
+              @if (departures.length === 0) {
+                <tr class="admin-empty-row">
+                  <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

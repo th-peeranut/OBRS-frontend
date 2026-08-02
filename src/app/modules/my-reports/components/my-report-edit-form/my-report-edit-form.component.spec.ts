@@ -21,7 +21,7 @@ describe('MyReportEditFormComponent', () => {
     status: 'new',
     description: 'Original description',
     routeUrl: '/home',
-    images: [{ id: '5', publicUrl: 'https://x/5.png', contentType: 'image/png', sizeBytes: 10, position: 1 }],
+    images: [{ id: 5, publicUrl: 'https://x/5.png', contentType: 'image/png', sizeBytes: 10, position: 1 }],
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     triageNote: null,
@@ -68,7 +68,7 @@ describe('MyReportEditFormComponent', () => {
     component.detail = {
       ...detail,
       images: [
-        { id: '99', publicUrl: 'https://x/99.png', contentType: 'image/png', sizeBytes: 1, position: 1 },
+        { id: 99, publicUrl: 'https://x/99.png', contentType: 'image/png', sizeBytes: 1, position: 1 },
       ],
     };
     fixture.detectChanges();

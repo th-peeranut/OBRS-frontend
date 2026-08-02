@@ -2,9 +2,9 @@
   <!-- Date picker -->
   <div class="mb-3">
     <!-- OBRS-185: canonical shared date-field look (app-date-field / -panel /
-         -icon, defined globally in src/styles.scss) — in-input calendar.svg
-         icon (iconDisplay='input'), no separate trailing calendar button. -->
-    <p-calendar
+    -icon, defined globally in src/styles.scss) — in-input calendar.svg
+    icon (iconDisplay='input'), no separate trailing calendar button. -->
+    <p-datePicker
       styleClass="app-date-field"
       panelStyleClass="app-date-field-panel"
       [(ngModel)]="selectedDate"
@@ -13,96 +13,116 @@
       [showIcon]="true"
       [iconDisplay]="'input'"
       (ngModelChange)="onDateChange($event)"
-    >
+      >
       <ng-template pTemplate="inputicon"><img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" /></ng-template>
-    </p-calendar>
+    </p-datePicker>
   </div>
 
   <!-- Add schedule button — visible only to schedule managers (canManageSchedules=true) -->
-  <div *ngIf="canManageSchedules" class="mb-2">
-    <button
-      type="button"
-      class="btn btn-outline-primary btn-sm w-100"
-      (click)="onAddSchedule($event)"
-      (keydown.space)="$event.preventDefault(); onAddSchedule($event)">
-      <i class="bi bi-plus-lg me-1"></i>{{ 'STAFF.SCHEDULES.ADD' | translate }}
-    </button>
-  </div>
+  @if (canManageSchedules) {
+    <div class="mb-2">
+      <button
+        type="button"
+        class="btn btn-outline-primary btn-sm w-100"
+        (click)="onAddSchedule($event)"
+        (keydown.space)="$event.preventDefault(); onAddSchedule($event)">
+        <i class="bi bi-plus-lg me-1"></i>{{ 'STAFF.SCHEDULES.ADD' | translate }}
+      </button>
+    </div>
+  }
 
   <!-- Loading state -->
-  <div *ngIf="isLoading" class="d-flex justify-content-center align-items-center flex-grow-1 py-4">
-    <p-progressSpinner styleClass="trip-spinner" [style]="{'width':'40px','height':'40px'}"></p-progressSpinner>
-  </div>
+  @if (isLoading) {
+    <div class="d-flex justify-content-center align-items-center flex-grow-1 py-4">
+      <p-progressSpinner styleClass="trip-spinner" [style]="{'width':'40px','height':'40px'}"></p-progressSpinner>
+    </div>
+  }
 
   <!-- Empty state -->
-  <div *ngIf="!isLoading && sortedGroups.length === 0"
-       class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-muted text-center py-4">
-    <i class="bi bi-calendar-x" style="font-size:2.5rem"></i>
-    <p class="mb-0 mt-2 small">{{ 'STAFF.SELL.TRIPS_EMPTY' | translate }}</p>
-  </div>
+  @if (!isLoading && sortedGroups.length === 0) {
+    <div
+      class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-muted text-center py-4">
+      <i class="bi bi-calendar-x" style="font-size:2.5rem"></i>
+      <p class="mb-0 mt-2 small">{{ 'STAFF.SELL.TRIPS_EMPTY' | translate }}</p>
+    </div>
+  }
 
   <!-- Route groups -->
-  <div *ngIf="!isLoading && sortedGroups.length > 0" class="trip-list overflow-auto flex-grow-1">
-    <ng-container *ngFor="let group of sortedGroups">
-      <!-- Sticky route header -->
-      <div class="route-group-header sticky-top bg-light border-bottom px-2 py-1 small fw-semibold text-muted d-flex align-items-center justify-content-between">
-        <span>{{ group.routeLabel }}</span>
-        <button *ngIf="canManageSchedules"
-          type="button"
-          class="btn btn-link p-0 route-add-btn"
-          [attr.aria-label]="'STAFF.SELL.SCHEDULE_ADD_FOR_ROUTE' | translate: { routeLabel: group.routeLabel }"
-          (click)="onAddForRoute($event, group.routeSlug)"
-          (keydown.space)="$event.preventDefault(); onAddForRoute($event, group.routeSlug)">
-          <i class="bi bi-plus-lg"></i>
-        </button>
-      </div>
-      <!-- Trip rows -->
-      <div *ngFor="let trip of group.trips"
-           class="trip-row d-flex flex-column gap-1 px-2 py-2 border-bottom"
-           [class.trip-row--selected]="trip.scheduleId === selectedTripId"
-           role="button"
-           tabindex="0"
-           (click)="selectTrip(trip, group.routeSlug)"
-           (keydown.enter)="selectTrip(trip, group.routeSlug)"
-           (keydown.space)="$event.preventDefault(); selectTrip(trip, group.routeSlug)">
-
-        <!-- Time + vehicle -->
-        <div class="d-flex justify-content-between align-items-center">
-          <span class="fw-semibold">{{ formatTime(trip.departureDateTime) }}</span>
-          <div class="d-flex align-items-center gap-1">
-            <span class="small text-muted">
-              {{ trip.licensePlate || '&mdash;' }}
-              <span *ngIf="trip.driverName"> &middot; {{ trip.driverName }}</span>
-              <span *ngIf="!trip.driverName"> &middot; &mdash;</span>
-            </span>
-            <button *ngIf="canManageSchedules"
+  @if (!isLoading && sortedGroups.length > 0) {
+    <div class="trip-list overflow-auto flex-grow-1">
+      <!-- OBRS-919: track by routeSlug, NOT by the object. `sortedGroups` is a
+      getter that rebuilds every group object on each read, so identity tracking
+      recreates every view on every change-detection pass — which surfaced as
+      NG0100 the moment the v21 migration turned this *ngFor into @for. -->
+      @for (group of sortedGroups; track group.routeSlug) {
+        <!-- Sticky route header -->
+        <div class="route-group-header sticky-top bg-light border-bottom px-2 py-1 small fw-semibold text-muted d-flex align-items-center justify-content-between">
+          <span>{{ group.routeLabel }}</span>
+          @if (canManageSchedules) {
+            <button
               type="button"
-              class="btn btn-link p-0 trip-actions-btn"
-              [attr.aria-label]="'STAFF.SELL.SCHEDULE_TRIP_ACTIONS' | translate: { time: formatTime(trip.departureDateTime) }"
-              aria-haspopup="true"
-              (click)="openTripMenu($event, trip, group.routeSlug)"
-              (keydown.space)="$event.preventDefault(); openTripMenu($event, trip, group.routeSlug)"
-              (keydown.enter)="$event.preventDefault(); openTripMenu($event, trip, group.routeSlug)">
-              <i class="bi bi-three-dots-vertical"></i>
+              class="btn btn-link p-0 route-add-btn"
+              [attr.aria-label]="'STAFF.SELL.SCHEDULE_ADD_FOR_ROUTE' | translate: { routeLabel: group.routeLabel }"
+              (click)="onAddForRoute($event, group.routeSlug)"
+              (keydown.space)="$event.preventDefault(); onAddForRoute($event, group.routeSlug)">
+              <i class="bi bi-plus-lg"></i>
             </button>
+          }
+        </div>
+        <!-- Trip rows -->
+        @for (trip of group.trips; track trip) {
+          <div
+            class="trip-row d-flex flex-column gap-1 px-2 py-2 border-bottom"
+            [class.trip-row--selected]="trip.scheduleId === selectedTripId"
+            role="button"
+            tabindex="0"
+            (click)="selectTrip(trip, group.routeSlug)"
+            (keydown.enter)="selectTrip(trip, group.routeSlug)"
+            (keydown.space)="$event.preventDefault(); selectTrip(trip, group.routeSlug)">
+            <!-- Time + vehicle -->
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">{{ formatTime(trip.departureDateTime) }}</span>
+              <div class="d-flex align-items-center gap-1">
+                <span class="small text-muted">
+                  {{ trip.licensePlate || '&mdash;' }}
+                  @if (trip.driverName) {
+                    <span> &middot; {{ trip.driverName }}</span>
+                  }
+                  @if (!trip.driverName) {
+                    <span> &middot; &mdash;</span>
+                  }
+                </span>
+                @if (canManageSchedules) {
+                  <button
+                    type="button"
+                    class="btn btn-link p-0 trip-actions-btn"
+                    [attr.aria-label]="'STAFF.SELL.SCHEDULE_TRIP_ACTIONS' | translate: { time: formatTime(trip.departureDateTime) }"
+                    aria-haspopup="true"
+                    (click)="openTripMenu($event, trip, group.routeSlug)"
+                    (keydown.space)="$event.preventDefault(); openTripMenu($event, trip, group.routeSlug)"
+                    (keydown.enter)="$event.preventDefault(); openTripMenu($event, trip, group.routeSlug)">
+                    <i class="bi bi-three-dots-vertical"></i>
+                  </button>
+                }
+              </div>
+            </div>
+            <!-- Availability badges -->
+            <div class="d-flex gap-1 flex-wrap">
+              <span class="badge border border-secondary text-dark bg-white" style="font-weight:normal">
+                {{ trip.availableCount }} {{ 'STAFF.SELL.BADGE_AVAILABLE' | translate }}
+              </span>
+              <span class="badge bg-danger bg-opacity-10 text-danger border border-danger" style="font-weight:normal">
+                {{ trip.reservedUnpaidCount }} {{ 'STAFF.SELL.BADGE_RESERVED' | translate }}
+              </span>
+              <span class="badge bg-success text-white" style="font-weight:normal">
+                {{ trip.soldPaidCount }} {{ 'STAFF.SELL.BADGE_SOLD' | translate }}
+              </span>
+            </div>
           </div>
-        </div>
-
-        <!-- Availability badges -->
-        <div class="d-flex gap-1 flex-wrap">
-          <span class="badge border border-secondary text-dark bg-white" style="font-weight:normal">
-            {{ trip.availableCount }} {{ 'STAFF.SELL.BADGE_AVAILABLE' | translate }}
-          </span>
-          <span class="badge bg-danger bg-opacity-10 text-danger border border-danger" style="font-weight:normal">
-            {{ trip.reservedUnpaidCount }} {{ 'STAFF.SELL.BADGE_RESERVED' | translate }}
-          </span>
-          <span class="badge bg-success text-white" style="font-weight:normal">
-            {{ trip.soldPaidCount }} {{ 'STAFF.SELL.BADGE_SOLD' | translate }}
-          </span>
-        </div>
-      </div>
-    </ng-container>
-  </div>
+        }
+      }
+    </div>
+  }
 
   <!-- Single popup menu for trip actions; appendTo="body" required (parent has overflow-auto) -->
   <p-menu #tripActionMenu [popup]="true" [model]="tripActionMenuItems" appendTo="body" (onHide)="onTripMenuHide()"></p-menu>

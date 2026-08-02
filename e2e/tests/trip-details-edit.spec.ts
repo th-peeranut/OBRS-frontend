@@ -234,7 +234,7 @@ async function openEditForm(page: Page): Promise<void> {
   // Tests that need seat maps (AC-12) or no-seat-maps (AC-13 save, AC-14) register their own mock.
 
   // Navigate to Trip Details tab → the editable form loads directly (no Edit click)
-  await page.locator('.p-tabview-nav').getByText('Trip Details').click();
+  await page.locator('.p-tablist-tab-list').getByText('Trip Details').click();
 
   // Wait for the edit form to appear
   await page.locator('app-trip-details-edit-form').waitFor({ state: 'visible', timeout: 15_000 });
@@ -264,8 +264,8 @@ test.describe('AC-9: Trip Details edit mode — read-only fields vs editable tim
     await expect(dateInput).toHaveCount(0);
 
     // Time: a PrimeNG calendar time-picker renders an input
-    // p-calendar in timeOnly mode renders inside the edit form (scoped to avoid trip-browser calendar)
-    const editFormCalendar = page.locator('app-trip-details-edit-form p-calendar');
+    // p-datepicker in timeOnly mode renders inside the edit form (scoped to avoid trip-browser calendar)
+    const editFormCalendar = page.locator('app-trip-details-edit-form p-datepicker');
     await expect(editFormCalendar).toBeVisible();
 
     // The route text (read from mock: 'Bangkok - Chiang Mai' from route.name)
@@ -414,7 +414,7 @@ test.describe('AC-11: Capacity inline error — inline message, not silent failu
 
     // The time field is pre-filled from the fallback (trip.departureDateTime).
     // Scope to edit form to avoid matching trip-browser calendar.
-    const timeInput = page.locator('app-trip-details-edit-form p-calendar input');
+    const timeInput = page.locator('app-trip-details-edit-form p-datepicker input');
     if (await timeInput.isVisible()) {
       await timeInput.fill('08:00');
     }
@@ -658,8 +658,8 @@ test.describe('AC-14: Save success — read-only view and trip row update withou
     await page.locator('app-trip-details-edit-form .spinner-border').waitFor({ state: 'detached', timeout: 15_000 });
 
     // The form is pre-populated: departureTime from fallback, vehicleType from fallback
-    // Time field is the p-calendar inside the edit form (scoped to avoid trip-browser calendar)
-    const timeInput = page.locator('app-trip-details-edit-form p-calendar input');
+    // Time field is the p-datepicker inside the edit form (scoped to avoid trip-browser calendar)
+    const timeInput = page.locator('app-trip-details-edit-form p-datepicker input');
     if (await timeInput.isVisible()) {
       await timeInput.click();
       await timeInput.fill('09:00');

@@ -19,9 +19,10 @@ import { readParcelBookingAmount } from '../../parcel-booking-amount-session';
  * omits the amount line rather than guessing or erroring.
  */
 @Component({
-  selector: 'app-parcel-booking-success-page',
-  templateUrl: './parcel-booking-success-page.component.html',
-  styleUrl: './parcel-booking-success-page.component.scss',
+    selector: 'app-parcel-booking-success-page',
+    templateUrl: './parcel-booking-success-page.component.html',
+    styleUrl: './parcel-booking-success-page.component.scss',
+    standalone: false
 })
 export class ParcelBookingSuccessPageComponent implements OnInit {
   protected trackingNumber = '';

@@ -1,0 +1,150 @@
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div>
+      <app-admin-refresh-hint
+        [refreshing]="isRefreshing"
+        [failed]="false"
+        [loading]="isLoading"
+      ></app-admin-refresh-hint>
+    </div>
+  </section>
+}
+
+<section class="admin-page-filters mt-3">
+  <p-datePicker
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
+    dateFormat="dd/mm/yy"
+    [ngModel]="fromDate"
+    (ngModelChange)="onFromDateChange($event)"
+    [showIcon]="true"
+    [iconDisplay]="'input'"
+    [showButtonBar]="true"
+    [placeholder]="'ADMIN.REPORTS.FILTER_FROM' | translate"
+    >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-datePicker>
+
+  <p-datePicker
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
+    dateFormat="dd/mm/yy"
+    [ngModel]="toDate"
+    (ngModelChange)="onToDateChange($event)"
+    [showIcon]="true"
+    [iconDisplay]="'input'"
+    [showButtonBar]="true"
+    [placeholder]="'ADMIN.REPORTS.FILTER_TO' | translate"
+    >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-datePicker>
+</section>
+
+<!-- Invalid range (client guard) or fetch error replaces the tiles + chart entirely. -->
+@if (contentState === 'invalid' || contentState === 'error') {
+  <section class="admin-card mt-3 reports-state-card">
+    @if (contentState === 'invalid') {
+      <p class="admin-error">{{ rangeError }}</p>
+    }
+    @if (contentState === 'error') {
+      <p class="admin-muted">{{ loadError }}</p>
+    }
+  </section>
+}
+
+@if (contentState === 'loading' || contentState === 'data') {
+  <section class="admin-grid admin-grid--3 mt-3">
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.REVENUE_ANALYTICS.TILE.NET' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ formatMoney(totals?.net ?? '0', totals?.currency ?? 'THB') }}</p>
+          @if (changePct !== null) {
+            <span
+              class="ra-delta"
+              [class.is-up]="changeDirection === 'up'"
+              [class.is-down]="changeDirection === 'down'"
+              [attr.aria-label]="'ADMIN.REVENUE_ANALYTICS.CHANGE_VS_PREV' | translate: { pct: changePctDisplay(changePct) }"
+              >
+              @if (changeDirection !== 'flat') {
+                <span class="material-symbols-outlined">
+                  {{ changeDirection === 'up' ? 'trending_up' : 'trending_down' }}
+                </span>
+              }
+              {{ changePctDisplay(changePct) }}
+              <span class="ra-delta-caption">{{ 'ADMIN.REVENUE_ANALYTICS.VS_PREV' | translate }}</span>
+            </span>
+          } @else {
+            <span class="ra-delta ra-delta--na">{{ 'ADMIN.REVENUE_ANALYTICS.CHANGE_NA' | translate }}</span>
+          }
+        } @else {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">account_balance_wallet</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.REVENUE_ANALYTICS.TILE.PAID' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ formatMoney(totals?.paid ?? '0', totals?.currency ?? 'THB') }}</p>
+        } @else {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">undo</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.REVENUE_ANALYTICS.TILE.REFUNDED' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ formatMoney(totals?.refunded ?? '0', totals?.currency ?? 'THB') }}</p>
+        } @else {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+      </div>
+    </article>
+  </section>
+}
+
+
+@if (contentState === 'loading' || contentState === 'data') {
+  <section class="admin-card mt-3">
+    <div class="admin-card-head">
+      <h4>{{ 'ADMIN.REVENUE_ANALYTICS.TREND_TITLE' | translate }}</h4>
+      <span class="admin-muted reports-basis-caption">{{ 'ADMIN.REPORTS.BASIS.BOOKING_DATE' | translate }}</span>
+    </div>
+    @if (isLoading) {
+      <div class="ra-chart-skeleton">
+        @for (s of skeletonTiles; track s) {
+          <span class="admin-skeleton"></span>
+        }
+      </div>
+    }
+    @if (!isLoading && trend.length > 0) {
+      <div class="ra-chart" role="img"
+        [attr.aria-label]="'ADMIN.REVENUE_ANALYTICS.TREND_TITLE' | translate">
+        @for (point of trend; track trackByDate($index, point)) {
+          <div class="ra-bar-col">
+            <div class="ra-bar-track">
+              <div
+                class="ra-bar"
+                [style.height.%]="barHeightPct(point)"
+                [attr.title]="shortDate(point.date) + ' · ' + formatMoney(point.net, point.currency)"
+              ></div>
+            </div>
+            <span class="ra-bar-label">{{ shortDate(point.date) }}</span>
+          </div>
+        }
+      </div>
+    }
+    @if (!isLoading && trend.length === 0) {
+      <p class="admin-muted">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</p>
+    }
+  </section>
+}

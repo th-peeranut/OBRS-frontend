@@ -136,7 +136,7 @@ test.describe('OBRS-564 — round trip: 30 -> 45', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const departureCalendarInput = page.locator('p-calendar').first().locator('input');
+    const departureCalendarInput = page.locator('p-datepicker').first().locator('input');
     await departureCalendarInput.click();
     const panel = page.locator('.p-datepicker').first();
     await panel.waitFor({ state: 'visible', timeout: 10_000 });

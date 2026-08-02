@@ -18,7 +18,7 @@ export interface MaintenanceRow {
   id: number;
   vehicleId: number;
   reason: string;
-  /** Raw "YYYY-MM-DD" (or '') — used to seed the edit-modal p-calendar controls. */
+  /** Raw "YYYY-MM-DD" (or '') — used to seed the edit-modal p-datePicker controls. */
   startDate: string;
   endDate: string;
   nextDueDate: string;

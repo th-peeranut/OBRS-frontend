@@ -9,21 +9,27 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let vehicle of vehicles; let i = index; trackBy: trackByVehicleId" [class.zebra]="i % 2 === 1">
-        <td class="admin-emphasis">{{ vehicle.numberPlate }}</td>
-        <td>
-          <span class="admin-status" [ngClass]="chipFor(vehicle).token">
-            {{ chipFor(vehicle).i18nKey | translate }}
-          </span>
-        </td>
-        <td *ngIf="lastUpdateLabelFor(vehicle) as label">
-          {{ label.key | translate: label.params }}
-        </td>
-      </tr>
+      @for (vehicle of vehicles; track trackByVehicleId(i, vehicle); let i = $index) {
+        <tr [class.zebra]="i % 2 === 1">
+          <td class="admin-emphasis">{{ vehicle.numberPlate }}</td>
+          <td>
+            <span class="admin-status" [ngClass]="chipFor(vehicle).token">
+              {{ chipFor(vehicle).i18nKey | translate }}
+            </span>
+          </td>
+          @if (lastUpdateLabelFor(vehicle); as label) {
+            <td>
+              {{ label.key | translate: label.params }}
+            </td>
+          }
+        </tr>
+      }
 
-      <tr *ngIf="vehicles.length === 0" class="admin-empty-row">
-        <td colspan="3">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
-      </tr>
+      @if (vehicles.length === 0) {
+        <tr class="admin-empty-row">
+          <td colspan="3">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+        </tr>
+      }
     </tbody>
   </table>
 </div>

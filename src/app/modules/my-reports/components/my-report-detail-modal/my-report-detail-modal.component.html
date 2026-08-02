@@ -2,7 +2,7 @@
   class="admin-modal-backdrop mr-detail-backdrop"
   adminModalBackdrop
   (dismiss)="close()"
->
+  >
   <div class="mr-detail-modal">
     <div class="mr-detail-modal__header">
       <h4 class="mr-detail-title">{{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.TITLE' | translate }}</h4>
@@ -11,12 +11,12 @@
         class="mr-detail-modal__close"
         [attr.aria-label]="'USABILITY_REPORT.MY_REPORTS.DETAIL.CLOSE' | translate"
         (click)="close()"
-      >
+        >
         <span class="material-symbols-outlined" aria-hidden="true">close</span>
       </button>
     </div>
 
-    <ng-container *ngIf="detail">
+    @if (detail) {
       <div class="mr-detail-modal__body">
         <div class="mr-detail-row">
           <span class="mr-detail-label">{{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.CATEGORY_LABEL' | translate }}</span>
@@ -32,67 +32,70 @@
           <span class="mr-detail-label">{{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.CREATED_AT_LABEL' | translate }}</span>
           <span>{{ displayDateTime(detail.createdAt) }}</span>
         </div>
-
         <!-- Edit form replaces the read-only description/images while editing. -->
-        <ng-container *ngIf="isEditing; else readOnlyBlock">
+        @if (isEditing) {
           <app-my-report-edit-form
             [detail]="detail"
             (saved)="onEditSaved($event)"
             (stale)="onEditStale()"
             (cancelled)="cancelEdit()"
           ></app-my-report-edit-form>
-        </ng-container>
-
-        <ng-template #readOnlyBlock>
+        } @else {
           <div class="mr-detail-description mt-3">
             <p class="mr-detail-label">
               {{ 'USABILITY_REPORT.DESCRIPTION.LABEL' | translate }}
-              <span *ngIf="isDetailFetching" class="mr-inline-updating">
-                {{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.UPDATING' | translate }}
-              </span>
+              @if (isDetailFetching) {
+                <span class="mr-inline-updating">
+                  {{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.UPDATING' | translate }}
+                </span>
+              }
             </p>
             <p class="mr-description-text">{{ detail.description }}</p>
           </div>
-
-          <div class="mt-3" *ngIf="detail.images.length > 0">
-            <p class="mr-detail-label">{{ 'USABILITY_REPORT.IMAGES.LABEL' | translate }}</p>
-            <div class="mr-images-grid">
-              <img
-                *ngFor="let img of detail.images"
-                [src]="img.publicUrl"
-                [alt]="'Image ' + img.position"
-                class="mr-image-thumb"
-              />
+          @if (detail.images.length > 0) {
+            <div class="mt-3">
+              <p class="mr-detail-label">{{ 'USABILITY_REPORT.IMAGES.LABEL' | translate }}</p>
+              <div class="mr-images-grid">
+                @for (img of detail.images; track img) {
+                  <img
+                    [src]="img.publicUrl"
+                    [alt]="'Image ' + img.position"
+                    class="mr-image-thumb"
+                    />
+                }
+              </div>
             </div>
-          </div>
-
+          }
           <!-- Scrutinize fix: visible as soon as the fallback SUGGESTS the
-               report might be editable (so it doesn't pop in late), but
-               disabled/inert until realDetailLoaded — the reporter must
-               never start editing off the fallback's truncated preview,
-               during the fetch OR after a fetch error (realDetailLoaded's
-               own doc comment). startEdit() also re-guards this. -->
-          <button
-            *ngIf="detail.editable"
-            type="button"
-            class="mr-btn-primary mt-3"
-            [disabled]="!realDetailLoaded"
-            [attr.aria-busy]="!realDetailLoaded"
-            (click)="startEdit()"
-          >
-            {{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.EDIT_ACTION' | translate }}
-          </button>
-        </ng-template>
-
+          report might be editable (so it doesn't pop in late), but
+          disabled/inert until realDetailLoaded — the reporter must
+          never start editing off the fallback's truncated preview,
+          during the fetch OR after a fetch error (realDetailLoaded's
+          own doc comment). startEdit() also re-guards this. -->
+          @if (detail.editable) {
+            <button
+              type="button"
+              class="mr-btn-primary mt-3"
+              [disabled]="!realDetailLoaded"
+              [attr.aria-busy]="!realDetailLoaded"
+              (click)="startEdit()"
+              >
+              {{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.EDIT_ACTION' | translate }}
+            </button>
+          }
+        }
         <!-- Admin's triage note — reporter-visible per AC#2. -->
         <div class="mr-detail-description mt-3">
           <p class="mr-detail-label">{{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.TRIAGE_NOTE_LABEL' | translate }}</p>
-          <p *ngIf="detail.triageNote" class="mr-description-text">{{ detail.triageNote }}</p>
-          <p *ngIf="!detail.triageNote" class="mr-detail-muted">
-            {{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.TRIAGE_NOTE_EMPTY' | translate }}
-          </p>
+          @if (detail.triageNote) {
+            <p class="mr-description-text">{{ detail.triageNote }}</p>
+          }
+          @if (!detail.triageNote) {
+            <p class="mr-detail-muted">
+              {{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.TRIAGE_NOTE_EMPTY' | translate }}
+            </p>
+          }
         </div>
-
         <!-- Follow-up timeline (read-only) + composer (any status). -->
         <div class="mt-3">
           <p class="mr-detail-label">{{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.TITLE' | translate }}</p>
@@ -101,7 +104,6 @@
             [pendingEntry]="pendingFollowUp"
           ></app-usability-report-follow-up-timeline>
         </div>
-
         <app-my-report-follow-up-composer
           class="mt-3"
           [reportId]="detail.id"
@@ -110,6 +112,6 @@
           (failed)="onFollowUpFailed()"
         ></app-my-report-follow-up-composer>
       </div>
-    </ng-container>
+    }
   </div>
 </div>

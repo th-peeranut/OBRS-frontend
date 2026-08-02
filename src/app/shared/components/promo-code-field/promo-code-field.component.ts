@@ -37,9 +37,10 @@ const PROMO_ERROR_SUFFIXES = [
  * namespace), not duplicated here.
  */
 @Component({
-  selector: 'app-promo-code-field',
-  templateUrl: './promo-code-field.component.html',
-  styleUrl: './promo-code-field.component.scss',
+    selector: 'app-promo-code-field',
+    templateUrl: './promo-code-field.component.html',
+    styleUrl: './promo-code-field.component.scss',
+    standalone: false
 })
 export class PromoCodeFieldComponent implements OnDestroy {
   @Input() amount = 0;

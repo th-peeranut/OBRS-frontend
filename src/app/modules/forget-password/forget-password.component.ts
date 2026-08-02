@@ -12,9 +12,10 @@ import { AuthService } from '../../auth/auth.service';
  * this form now collects an email and calls it.
  */
 @Component({
-  selector: 'app-forget-password',
-  templateUrl: './forget-password.component.html',
-  styleUrl: './forget-password.component.scss',
+    selector: 'app-forget-password',
+    templateUrl: './forget-password.component.html',
+    styleUrl: './forget-password.component.scss',
+    standalone: false
 })
 export class ForgetPasswordComponent {
   loginForm: FormGroup;

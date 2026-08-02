@@ -1,15 +1,17 @@
 <div class="npref-row" [class.npref-row--critical]="row.critical">
   <div class="npref-row__label">
     <span class="npref-row__type">{{ 'NOTIFICATION_PREFS.TYPE.' + row.type | translate }}</span>
-    <span class="npref-row__hint" *ngIf="row.critical">
-      {{ 'NOTIFICATION_PREFS.CRITICAL_HINT' | translate }}
-    </span>
+    @if (row.critical) {
+      <span class="npref-row__hint">
+        {{ 'NOTIFICATION_PREFS.CRITICAL_HINT' | translate }}
+      </span>
+    }
   </div>
 
   <div class="npref-row__cell">
     <span class="npref-row__cell-label">{{ 'NOTIFICATION_PREFS.CHANNEL_EMAIL' | translate }}</span>
-    <ng-container *ngIf="row.emailSupported; else emailNa">
-      <p-inputSwitch
+    @if (row.emailSupported) {
+      <p-toggleSwitch
         #emailSwitch
         [ngModel]="row.emailEnabled"
         [disabled]="disabled"
@@ -17,21 +19,20 @@
           (('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_EMAIL' | translate))
         "
         (onChange)="onEmailChange($event)"
-      ></p-inputSwitch>
-    </ng-container>
-    <ng-template #emailNa>
+      ></p-toggleSwitch>
+    } @else {
       <span
         class="npref-cell--na"
         [attr.aria-label]="
           (('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_EMAIL' | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_NA' | translate))
         "
       >{{ 'NOTIFICATION_PREFS.CHANNEL_NA' | translate }}</span>
-    </ng-template>
+    }
   </div>
 
   <div class="npref-row__cell">
     <span class="npref-row__cell-label">{{ 'NOTIFICATION_PREFS.CHANNEL_SMS' | translate }}</span>
-    <p-inputSwitch
+    <p-toggleSwitch
       #smsSwitch
       [ngModel]="row.smsEnabled"
       [disabled]="disabled"
@@ -39,15 +40,16 @@
         (('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_SMS' | translate))
       "
       (onChange)="onSmsChange($event)"
-    ></p-inputSwitch>
+    ></p-toggleSwitch>
   </div>
 
-  <p
-    class="npref-row__warning"
-    *ngIf="showWarning"
-    role="alert"
-    aria-live="polite"
-  >
-    {{ 'NOTIFICATION_PREFS.ERROR.CRITICAL_LAST_CHANNEL' | translate }}
-  </p>
+  @if (showWarning) {
+    <p
+      class="npref-row__warning"
+      role="alert"
+      aria-live="polite"
+      >
+      {{ 'NOTIFICATION_PREFS.ERROR.CRITICAL_LAST_CHANNEL' | translate }}
+    </p>
+  }
 </div>

@@ -13,7 +13,21 @@
       }}
     </p>
     <p [innerHTML]="'POLICY.PRIVACY.CONTENT_1' | translate"></p>
-    <p [innerHTML]="'POLICY.PRIVACY.CONTENT_2' | translate"></p>
+    <!-- OBRS-631: a div, not a p. The 2.0 notice is ten numbered sections with
+         headings and lists, and a <ul> inside a <p> is invalid markup — the
+         browser closes the paragraph early and the rules below would style
+         anonymous boxes instead of the content. CONTENT_1 stays a <p>: it is one
+         paragraph and always has been. -->
+    <div
+      class="policy-body"
+      [innerHTML]="'POLICY.PRIVACY.CONTENT_2' | translate"
+    ></div>
+
+    <!-- OBRS-874 AC-1: the withdrawal surface PDPA ม.19 วรรคห้า requires, on the
+         page the consent bar already links to. Its keys live under
+         ANALYTICS_CONSENT.*, NOT POLICY.PRIVACY.* — the latter is fingerprinted
+         by the i18n ledger (gate 4), and this card must not move that hash. -->
+    <app-analytics-consent-control></app-analytics-consent-control>
   </div>
 </section>
 

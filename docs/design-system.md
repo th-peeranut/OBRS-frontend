@@ -326,6 +326,7 @@ do not add a fourth.
 | Date / time | PrimeNG `p-calendar` (date), the existing time control | Keep the **single input shape** (§5). |
 | **Export trigger** (download current view as CSV/Excel) | **`app-export-button`** (`src/app/shared/components/export-button/`) | Presentational, self-sufficient: `[datasetKey]`, `[requiredRole]`, `[params]`. Renders a **secondary** `admin-btn` (never `admin-btn-primary` — exporting is a supporting action) that opens a `p-menu[popup]` with CSV / Excel items, following the trigger-popup pattern already used by `walk-in-trip-browser.component` (not `p-splitButton` — unused in this codebase). **Hidden** (not disabled) when `authService.hasAnyRole([requiredRole])` is false, matching the staff-layout/navbar role-gating precedent. Success is silent (the browser download is the confirmation); errors branch on `ExportError.errorCode` via `AlertService.error()`. See `docs/adr/0001-export-button-component.md`. |
 | **Rich-content popup** (a trigger button opening a stateful, scrollable list — not a flat command menu) | **`p-overlayPanel`** | First used by `app-notification-bell` (OBRS-317) for the owner/staff notification inbox: `p-menu[popup]`'s `MenuItem[]` shape can't carry a row's message/timestamp/read-state/click-handler, so `p-overlayPanel` hosts the dumb `app-notification-inbox-panel` (→ `app-notification-inbox-row`) instead, keeping the same trigger-toggles-a-floating-panel model as the `app-export-button` precedent above (`appendTo="body"`). Use `p-menu[popup]` when the popup is a flat list of commands; reach for `p-overlayPanel` when it's a stateful list. See `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`. |
+| **Loading / busy indicator** (skeleton row, mid-panel spinner, or an in-button spinner) | **`app-loading-state`** (`src/app/shared/components/loading-state/`) | OBRS-907. Inputs: `[variant]` (`'skeleton' \| 'spinner' \| 'inline'`), `[graphic]` (`'ring' \| 'icon'`, spinner/inline only), `[icon]`, `[rows]`/`[skeletonShape]` (skeleton), `[sizePx]`/`[ringWidthPx]`/`[durationMs]` (pixel/ms overrides so a migrated call site can reproduce its exact prior look). `skeleton` reuses the existing global `.admin-skeleton` primitive (`src/styles/_loading.scss`) byte-identical; `graphic="icon"` reuses the existing global `.admin-loading-spinner` (`admin-theme.scss`); `graphic="ring"` (default) is the one NEW visual this card introduced, replacing the ~12 near-identical hand-rolled `.xxx__spinner` + `@keyframes xxx-spin` pairs across customer-shell dialogs — reach for it instead of hand-rolling a 15th. Renders `role="status"` + a translated, visually-hidden status message (`[messageKey]`, default `COMMON.LOADING`) with the graphic itself `aria-hidden="true"`; a visible caption stays owned by the call site. `prefers-reduced-motion: reduce` freezes every graphic this component can render without it disappearing (a static ring/icon remains visible) — locked by `e2e/tests/obrs-907-loading-state-reduced-motion.spec.ts` (GATE lane) rather than a unit test, since Karma's ChromeHeadless has no per-spec way to force the OS reduced-motion preference. Only 1 call site per shell was migrated as proof (`my-booking-ticket-modal` / `notification-inbox-panel`); sweeping the remaining ~28 hand-rolled spinner/skeleton sites onto this component is OBRS-909/910, not a blanket mandate to migrate on sight. |
 
 ### 3.1 Dropdown contract (this is what the Vehicle Type bug violated)
 
@@ -1038,7 +1039,8 @@ enforced rule with a test behind it.
   cross-shell component that is a genuine **input control** rather than a
   read-only status chip (the `ParcelTrackingPageComponent`/`MyReportsComponent`
   precedents above only re-declare chip token *values*). It renders inside
-  both the customer shell (`CancelRefundDestinationModalComponent`, Flow A1)
+  both the customer shell (`CancelBookingModalComponent` — renamed from
+  `CancelRefundDestinationModalComponent` by OBRS-942, Flow A1)
   and the admin shell (`OverrideCancelModalComponent`, Flow A3), so it can't
   lean on `.admin-field` (depends on `--admin-*`, undefined outside
   `.admin-shell`) or the customer shell's `.form-control` (not a pill, §5).
@@ -1057,6 +1059,35 @@ enforced rule with a test behind it.
   customer dark copied values → admin alias → admin-dark specificity net) for
   the next cross-shell **input** component, instead of re-deriving the
   ordering or skipping the specificity-net rule as an apparent duplicate.
+
+- **Search-result highlight: precomputed segments, not `[innerHTML]`, reusing
+  the active-nav token pair** (OBRS-900, `AdminLayoutComponent`'s sidebar menu
+  search): OBRS-290 already matched a query against a menu's translated
+  `descriptionKey` as well as its label, but the template only ever rendered
+  the label — a correct description-only match showed no evidence of *why*
+  it matched, which read as "search is broken" to a real user. Fixed two
+  ways, both worth reusing verbatim for the next highlighted-search-result
+  list: (1) **segments, never a regex/`[innerHTML]` string** — `buildHighlightSegments()`
+  (`shared/lib/nav-search-highlight.ts`) splits label/description into
+  `{ text, match }[]` using plain case-insensitive `String#indexOf`, so a
+  regex-metacharacter-shaped query (`a)|(b`) or an HTML-injection-shaped one
+  (`<img src=x onerror=alert(1)>`) is just literal text that either matches or
+  doesn't — never compiled as a pattern, never bound as markup. The template
+  renders each segment via `{{ }}` interpolation (auto-escaped), `[class.admin-nav-search-highlight]`
+  toggling the highlight class — no `[innerHTML]` anywhere. (2) **No new
+  colour** — `.admin-nav-search-highlight` reuses the exact `--accent-soft`
+  fill / `--accent-text` foreground pair `.admin-nav-link.active`/`:hover`
+  already use, which `admin-shell-chrome-contrast.spec.ts` (OBRS-755) already
+  proves AA in both themes and both accent variants — a new "highlight
+  yellow" would have needed its own dark-mode measurement for no reason, since
+  this shell already has a proven "this is the accented thing" pair. Segments
+  are precomputed once per query/language change inside `applyNavSearch()`
+  and stored on the (stable-field) nav item objects themselves — never a
+  template getter/pipe — per this file's own change-detection-safety rule for
+  `navItems`/`filteredNavItems`/`filteredNavSections`. Reuse `buildHighlightSegments()`
+  and the segment-rendering template shape for the next search box that needs
+  to show *why* a result matched, instead of reaching for `[innerHTML]` +
+  `<mark>` or a hand-rolled regex.
 
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 

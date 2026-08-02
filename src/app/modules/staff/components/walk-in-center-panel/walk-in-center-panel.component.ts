@@ -40,9 +40,10 @@ export interface TripDetailsUpdatedEvent {
 }
 
 @Component({
-  selector: 'app-walk-in-center-panel',
-  templateUrl: './walk-in-center-panel.component.html',
-  styleUrl: './walk-in-center-panel.component.scss',
+    selector: 'app-walk-in-center-panel',
+    templateUrl: './walk-in-center-panel.component.html',
+    styleUrl: './walk-in-center-panel.component.scss',
+    standalone: false
 })
 export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy {
   @Input() selectedTrip: WalkInTripDto | null = null;
@@ -209,7 +210,16 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
    * immediately (no read-only step / Edit button). Leaving the tab tears the
    * form state down so a stale in-flight load can't clobber the next open.
    */
-  protected onTabChange(index: number): void {
+  protected onTabChange(value: string | number | undefined): void {
+    // The parameter is as wide as `Tabs.valueChange` can emit under PrimeNG 20
+    // (`string | number | undefined`), NOT as wide as this component's own tab
+    // values, which are still only 0/1/2. Narrowing happens here rather than in
+    // the template so that a value the panel has no tab for is DROPPED instead
+    // of coerced: `+undefined` is NaN, and NaN reaches neither branch below but
+    // would still have been emitted to the parent as the new active tab.
+    const index = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(index)) return;
+
     this.activeTabChange.emit(index);
 
     if (index === WalkInCenterPanelComponent.TRIP_DETAILS_TAB_INDEX) {

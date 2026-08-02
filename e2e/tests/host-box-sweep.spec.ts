@@ -8,6 +8,7 @@ import {
   MalformedHost,
   PAGE_READY_TIMEOUT_MS,
   PER_SWEEP_PAGE_MS,
+  PRIMENG_TARGETS,
   PUBLIC_SWEEP,
   SWEEP_SETUP_MS,
   SweepPage,
@@ -63,7 +64,7 @@ import {
  * PrimeNG tag the sweep never saw RENDER. Rendering is the bar, not mounting:
  * `app-expense-form-modal` sits in the DOM on every visit to `/admin/expenses`
  * while its whole template is behind `*ngIf="isOpen"`, so treating a present
- * host as coverage would report a `p-calendar` as measured when none had
+ * host as coverage would report a `p-datepicker` as measured when none had
  * rendered. That is the assertion that makes an empty ALLOW mean something.
  *
  * OBRS-782 EMPTIED THE EXCUSE LIST, and doing so was the point. OBRS-776 left
@@ -144,7 +145,7 @@ const census = new Map<string, MalformedHost>();
  * first page it happened on. OBRS-776 reads this to prove the sweep reaches the
  * instances a global rule would land on: a clean malformed-host census cannot
  * tell a page that is fine from a page nobody opened, and a component's host
- * being present cannot tell a rendered `p-calendar` from an `*ngIf` that is
+ * being present cannot tell a rendered `p-datepicker` from an `*ngIf` that is
  * false.
  */
 const rendered = new Map<string, string>();
@@ -314,6 +315,22 @@ test.describe('OBRS-775 malformed host boxes', () => {
     // eslint-disable-next-line no-console
     console.log(`OBRS776 primeng host users=${users.length} ` + JSON.stringify(users, null, 1));
 
+    // OBRS-941. Everything below derives its population from `PRIMENG_TARGETS`,
+    // so a target no template writes any more makes this test pass by measuring
+    // nothing -- the one failure mode a derived population was supposed to be
+    // immune to. It is not hypothetical: OBRS-915 upgrades PrimeNG to 19 on a
+    // branch right now, and its acceptance criteria require
+    // `<p-(calendar|tabView|tabPanel)` to appear ZERO times in `src/` when it
+    // lands. Twenty-seven of the thirty entries above are `p-calendar`, so that
+    // one criterion turns this census into an empty list that reports success.
+    const orphanTargets = PRIMENG_TARGETS.filter((t) => !users.some((u) => u.uses.includes(t)));
+    expect(
+      orphanTargets,
+      'PRIMENG_TARGETS names tag(s) NO template in src/ writes. Either the library renamed them (update ' +
+        'PRIMENG_TARGETS and re-derive the sweep) or they are gone -- until then every assertion below is ' +
+        'measuring a smaller app than the one that ships'
+    ).toEqual([]);
+
     const unswept = users.filter((u) => !rendered.has(u.selector) && !(u.selector in NOT_SWEPT));
     expect(
       unswept.map((u) => `${u.selector} (${u.uses.join(',')}) ${u.file}`),
@@ -382,7 +399,7 @@ test.describe('OBRS-775 malformed host boxes', () => {
   test('the parcel-booking exclusion has not expired', async () => {
     expect(
       featureFlags()['onlineParcelBooking'],
-      'onlineParcelBooking is ON, so /parcel-booking now renders app-parcel-trip-form and its p-calendar. ' +
+      'onlineParcelBooking is ON, so /parcel-booking now renders app-parcel-trip-form and its p-datepicker. ' +
         'Add the page to ADMIN_SWEEP and drop the NOT_SWEPT entry'
     ).toBe(false);
   });

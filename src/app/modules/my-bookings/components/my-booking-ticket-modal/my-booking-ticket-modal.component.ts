@@ -24,9 +24,10 @@ import {
  * the stepper). Loads the ticket from the API on `bookingId` change.
  */
 @Component({
-  selector: 'app-my-booking-ticket-modal',
-  templateUrl: './my-booking-ticket-modal.component.html',
-  styleUrl: './my-booking-ticket-modal.component.scss',
+    selector: 'app-my-booking-ticket-modal',
+    templateUrl: './my-booking-ticket-modal.component.html',
+    styleUrl: './my-booking-ticket-modal.component.scss',
+    standalone: false
 })
 export class MyBookingTicketModalComponent implements OnChanges, OnDestroy {
   @Input() bookingId: number | null = null;

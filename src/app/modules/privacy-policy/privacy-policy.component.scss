@@ -47,6 +47,44 @@
     font-size: $font-size-sm;
     opacity: 0.75;
   }
+
+  // OBRS-631. The 2.0 notice is ten sections rather than two paragraphs, so it
+  // needs headings and lists to be readable at all — a wall of <br /> is what a
+  // reader gives up on, and a notice nobody finishes is not a notice.
+  // ::ng-deep because the markup arrives through [innerHTML] and so carries no
+  // component scoping attribute. Scoped by .policy-body, so it cannot escape.
+  ::ng-deep .policy-body {
+    h2 {
+      margin: 32px 0 12px;
+      font-size: $font-size-lg;
+      font-weight: $font-weight-bold;
+      line-height: $line-height-tight;
+      color: $text-black; // 12.6:1 on $primary-white
+    }
+
+    // The first heading follows CONTENT_1 directly; 32px there would read as a
+    // gap in the middle of the introduction.
+    h2:first-child {
+      margin-top: 24px;
+    }
+
+    ul {
+      margin: 0 0 16px;
+      padding-left: 24px;
+      list-style: disc;
+    }
+
+    li {
+      margin-bottom: 8px;
+      font-size: $font-size-base;
+      line-height: 1.9;
+    }
+
+    strong {
+      font-weight: $font-weight-bold;
+      color: $text-black;
+    }
+  }
 }
 
 @media (max-width: 768px) {

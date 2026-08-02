@@ -32,9 +32,10 @@ import { AlertService } from '../../../../shared/services/alert.service';
  * </ul>
  */
 @Component({
-  selector: 'app-close-account-dialog',
-  templateUrl: './close-account-dialog.component.html',
-  styleUrl: './close-account-dialog.component.scss',
+    selector: 'app-close-account-dialog',
+    templateUrl: './close-account-dialog.component.html',
+    styleUrl: './close-account-dialog.component.scss',
+    standalone: false
 })
 export class CloseAccountDialogComponent implements OnInit, OnDestroy {
   @Output() readonly closed = new EventEmitter<void>();

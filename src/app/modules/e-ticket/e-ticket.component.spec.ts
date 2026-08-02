@@ -183,11 +183,14 @@ describe('ETicketComponent', () => {
     it('maps passengers and seats, matching phone from the store by seat, and threads ticketId/ticketNumber through for the per-ticket QR fetch', () => {
       apply(buildTicketsData());
 
+      // The journey-level seat summary stays outbound-only (OBRS-873 left it
+      // alone deliberately — the per-leg seat breakdown lives on the shared
+      // card, not on this flat page).
       expect(component.seats).toBe('1');
       // The default ticketServiceStub resolves with no boardingToken, so the
       // (synchronous, since the empty-token branch never awaits) QR fetch has
       // already marked this ticket qrUnavailable by the time we assert here.
-      expect(component.passengers).toEqual([
+      expect(component.passengerGroups[0].passengers).toEqual([
         {
           name: 'Mr. Abc Def',
           phone: '0812345678',
@@ -203,6 +206,36 @@ describe('ETicketComponent', () => {
         },
       ]);
       expect(component.seatsOpen).toBeFalse();
+    });
+
+    /**
+     * OBRS-873 — this fixture has ALWAYS been a round trip, and the page only
+     * ever built rows from its outbound journey: ticket 2 (`T-JJTETZNMF2`)
+     * existed in the response and reached no surface at all, so a passenger
+     * flying home had no QR to scan. These pin both legs through.
+     */
+    it('OBRS-873: builds a group per leg, so the RETURN leg\'s ticket gets its own row and QR', () => {
+      apply(buildTicketsData());
+
+      expect(component.passengerGroups.length).toBe(2);
+      expect(component.passengerGroups[0].isReturn).toBeFalse();
+      expect(component.passengerGroups[1].isReturn).toBeTrue();
+      expect(
+        component.passengerGroups.map((g) => g.passengers.map((p) => p.ticketNumber))
+      ).toEqual([['T-Q4QZXTZAFY'], ['T-JJTETZNMF2']]);
+      // …and the flat list the QR fetch walks covers both legs' ticket ids.
+      expect(component.passengers.map((p) => p.ticketId)).toEqual([1, 2]);
+    });
+
+    it('OBRS-873: a one-way booking yields a single unlabelled group', () => {
+      const data = buildTicketsData();
+      data.journeys = [data.journeys![0]];
+
+      apply(data);
+
+      expect(component.passengerGroups.length).toBe(1);
+      expect(component.passengerGroups[0].isReturn).toBeFalse();
+      expect(component.passengers.map((p) => p.ticketId)).toEqual([1]);
     });
 
     it('selects the outbound journey even when legType order changes', () => {
@@ -446,7 +479,11 @@ describe('ETicketComponent', () => {
 
     function twoTicketData(): BookingTicketsData {
       const data = buildTicketsData();
-      data.journeys![0].tickets = [
+      // OBRS-873: one-way on purpose. This fixture is about TWO TICKETS ON ONE
+      // LEG (one of them cancelled); keeping the inbound journey would add a
+      // third ticket and make "the other ticket's QR still renders" ambiguous.
+      data.journeys = [data.journeys![0]];
+      data.journeys[0].tickets = [
         {
           id: 1,
           ticketNumber: 'T-OK',
@@ -470,17 +507,18 @@ describe('ETicketComponent', () => {
       (component as any).applyApiOverrides('en', storePassengers);
     }
 
-    it('fetches one boarding token per ticketId', () => {
+    it('fetches one boarding token per ticketId — across BOTH legs of a round trip (OBRS-873)', () => {
       apply(buildTicketsData());
 
-      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledOnceWith(1);
+      expect(ticketServiceStub.getBoardingToken.calls.allArgs()).toEqual([[1], [2]]);
     });
 
     it('does not re-issue the GET for a ticket already fetched/in-flight (duplicate-fetch guard, e.g. a locale switch)', () => {
       apply(buildTicketsData());
       apply(buildTicketsData());
 
-      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledTimes(1);
+      // Two tickets (one per leg), fetched once each — not four calls.
+      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledTimes(2);
     });
 
     it('isolates one ticket\'s failure via forkJoin + per-inner catchError — the other ticket\'s QR still renders, the page never blanks', async () => {

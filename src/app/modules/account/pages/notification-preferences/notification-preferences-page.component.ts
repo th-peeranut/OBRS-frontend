@@ -26,9 +26,10 @@ const CRITICAL_CHANNEL_ERROR_CODE = 'NOTIFICATION_PREFERENCE_CRITICAL_CHANNEL_RE
  * never the localized message — design-system §9).
  */
 @Component({
-  selector: 'app-notification-preferences-page',
-  templateUrl: './notification-preferences-page.component.html',
-  styleUrl: './notification-preferences-page.component.scss',
+    selector: 'app-notification-preferences-page',
+    templateUrl: './notification-preferences-page.component.html',
+    styleUrl: './notification-preferences-page.component.scss',
+    standalone: false
 })
 export class NotificationPreferencesPageComponent
   implements OnInit, OnDestroy, CanComponentDeactivate

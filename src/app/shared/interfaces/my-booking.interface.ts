@@ -120,9 +120,56 @@ export interface CancellationPolicy {
  * the cancel resolves to `MANUAL_REFUND_REQUIRED`; the FE mirrors that via
  * Flow A1's modal, but the server remains the authority (400
  * `cancel.error.refund-destination-required` / `-invalid`).
+ *
+ * OBRS-766 — additive extension for the counter (staff act-on-behalf) cancel
+ * surface: a SECOND PERSON (the owner) must authorize the cancel IFF it
+ * resolves to `refundMethod === 'CASH'` (OBRS-669's cash second-person
+ * approval). The field is optional on the wire and MUST be omitted (not sent
+ * as an empty string) for every other refund method, so the one existing
+ * caller (`my-bookings.effect.ts`'s customer path, via `booking.service.ts`)
+ * keeps posting the exact same body it always has — this widening is
+ * invisible to it (design-system §10: extend, don't fork).
+ *
+ * OBRS-844 — `approverEmail`/`approverPassword` are GONE, replaced by
+ * `approvalCode`. They carried the owner's reusable account password through
+ * the salesperson's browser in order to authorize one refund; the six digits
+ * that replace them open one booking, once, for two minutes. They were
+ * removed rather than deprecated on purpose: a field that still exists is a
+ * field a client can still send, and the whole value of the change is that
+ * there is no longer anywhere for a password to be typed on this screen.
  */
 export interface CancelBookingReqDto {
   refundDestination?: RefundDestinationReqDto;
+  approvalCode?: string;
+}
+
+/**
+ * OBRS-844 — `CashRefundApprovalRequestRespDto`: one pending cash-refund
+ * authorization. Returned both to the salesperson who asked (so the counter
+ * can say what it is waiting for) and to the owner deciding on it.
+ *
+ * Carries NO code. The six digits exist only in the response to the owner's
+ * approve call (`CashRefundApprovalCode`), once — anything that could re-read
+ * them would let the counter obtain a code without the owner ever acting.
+ */
+export interface CashRefundApprovalRequest {
+  id: number;
+  bookingId: number;
+  bookingNumber: string;
+  refundAmount: number | string;
+  /** Who is asking — shown to the owner so they can refuse a request that should not be coming. */
+  requestedBy: string;
+  status: 'PENDING' | 'APPROVED' | 'CONSUMED' | 'EXPIRED' | 'ABANDONED';
+  requestedAt: string;
+  codeExpiresAt?: string | null;
+}
+
+/** OBRS-844 — the six digits, shown to the approving owner exactly once. */
+export interface CashRefundApprovalCode {
+  requestId: number;
+  code: string;
+  expiresAt: string;
+  ttlMinutes: number;
 }
 
 /** `CancelBookingRespDto` — result of a successful cancellation. */
@@ -174,6 +221,44 @@ export const RESCHEDULE_WINDOW_HOURS = 4;
 
 /** Refund methods that the gateway cannot auto-refund (handled manually). */
 export const MANUAL_REFUND_METHOD = 'MANUAL_REFUND_REQUIRED';
+
+/** The one tender a salesperson hands back out of the counter drawer themselves
+ * (OBRS-669's second-person path). Mirrors `CancellationService.resolveRefundMethod`,
+ * which upper-cases the payment method slug for every non-manual lane. */
+export const CASH_REFUND_METHOD = 'CASH';
+
+/**
+ * OBRS-843: which of the three refund lanes a completed cancellation landed in.
+ * Named after the SUCCESS_* i18n key suffix each screen owns, because what the
+ * lane changes is WHO moves the money next and therefore what the confirmation
+ * has to tell the person reading it:
+ *
+ * - `CASH`   — the salesperson must hand this many baht back from the drawer NOW
+ * - `MANUAL` — nobody moves money at the counter; the owner transfers it later
+ * - `AUTO`   — the gateway is already refunding to the original card/wallet
+ *
+ * Read from the CANCEL RESPONSE (`CancelBookingResult.refundMethod`), never from
+ * the pre-cancel policy preview: the two can disagree (a payment can flip method
+ * between preview and submit) and the response is what actually happened.
+ */
+export type RefundLane = 'CASH' | 'MANUAL' | 'AUTO';
+
+export function refundLane(refundMethod: string | null | undefined): RefundLane {
+  const method = String(refundMethod ?? '').trim().toUpperCase();
+  if (method === CASH_REFUND_METHOD) {
+    return 'CASH';
+  }
+  return method === MANUAL_REFUND_METHOD ? 'MANUAL' : 'AUTO';
+}
+
+/** THB, grouped, 2dp — the one refund-amount format every cancel surface shows. */
+export function formatRefundAmount(value: number | string | null | undefined): string {
+  return new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    maximumFractionDigits: 2,
+  }).format(toAmountNumber(value));
+}
 
 export function normalizeStatusCode(status: string | null | undefined): string {
   return String(status ?? '').trim().toLowerCase();

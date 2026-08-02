@@ -54,10 +54,11 @@ const VERIFY_ERROR_KEYS: Record<string, string> = {
  * `ParcelDeliveryListPageComponent`/`ParcelCollectDialogComponent`.
  */
 @Component({
-  selector: 'app-parcel-verify-list-page',
-  templateUrl: './parcel-verify-list-page.component.html',
-  styleUrl: './parcel-verify-list-page.component.scss',
-  providers: [ParcelVerifyListStore],
+    selector: 'app-parcel-verify-list-page',
+    templateUrl: './parcel-verify-list-page.component.html',
+    styleUrl: './parcel-verify-list-page.component.scss',
+    providers: [ParcelVerifyListStore],
+    standalone: false
 })
 export class ParcelVerifyListPageComponent implements OnInit, OnDestroy {
   protected rows: ParcelDeliveryListItemDto[] = [];

@@ -1,0 +1,115 @@
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div><app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="false" [loading]="isLoading"></app-admin-refresh-hint></div>
+  </section>
+}
+
+<section class="admin-page-filters mt-3">
+  <p-datePicker styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
+    [ngModel]="fromDate" (ngModelChange)="onFromDateChange($event)" [showIcon]="true" [iconDisplay]="'input'" [showButtonBar]="true"
+    [placeholder]="'ADMIN.REPORTS.FILTER_FROM' | translate">
+    <ng-template pTemplate="inputicon"><img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" /></ng-template>
+  </p-datePicker>
+  <p-datePicker styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
+    [ngModel]="toDate" (ngModelChange)="onToDateChange($event)" [showIcon]="true" [iconDisplay]="'input'" [showButtonBar]="true"
+    [placeholder]="'ADMIN.REPORTS.FILTER_TO' | translate">
+    <ng-template pTemplate="inputicon"><img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" /></ng-template>
+  </p-datePicker>
+</section>
+
+@if (contentState === 'invalid' || contentState === 'error') {
+  <section class="admin-card mt-3 reports-state-card">
+    @if (contentState === 'invalid') {
+      <p class="admin-error">{{ rangeError }}</p>
+    }
+    @if (contentState === 'error') {
+      <p class="admin-muted">{{ loadError }}</p>
+    }
+  </section>
+}
+
+@if (contentState === 'loading' || contentState === 'data') {
+  <section class="admin-grid admin-grid--4 mt-3">
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">departure_board</span></span>
+      <div><p class="admin-muted">{{ 'ADMIN.OPS_EFFICIENCY.TILE.DEPARTURES' | translate }}</p>
+      @if (!isLoading) {
+        <p class="admin-big-number">{{ formatCount(departures?.scheduled ?? 0) }}</p>
+      } @else {
+        <span class="admin-skeleton admin-skeleton--sm"></span>
+      }</div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">task_alt</span></span>
+      <div><p class="admin-muted">{{ 'ADMIN.OPS_EFFICIENCY.TILE.COMPLETION' | translate }}</p>
+      @if (!isLoading) {
+        <p class="admin-big-number">{{ pctDisplay(departures?.completionRatePct ?? 0) }}</p>
+      } @else {
+        <span class="admin-skeleton admin-skeleton--sm"></span>
+      }</div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">event_seat</span></span>
+      <div><p class="admin-muted">{{ 'ADMIN.OPS_EFFICIENCY.TILE.FILL' | translate }}</p>
+      @if (!isLoading) {
+        <p class="admin-big-number">{{ pctDisplay(seat?.fillRatePct ?? 0) }}</p>
+      } @else {
+        <span class="admin-skeleton admin-skeleton--sm"></span>
+      }</div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">airline_seat_recline_normal</span></span>
+      <div><p class="admin-muted">{{ 'ADMIN.OPS_EFFICIENCY.TILE.SEATS' | translate }}</p>
+      @if (!isLoading) {
+        <p class="admin-big-number">{{ formatCount(seat?.seatsSold ?? 0) }} / {{ formatCount(seat?.seatCapacity ?? 0) }}</p>
+      } @else {
+        <span class="admin-skeleton admin-skeleton--sm"></span>
+      }</div>
+    </article>
+  </section>
+}
+
+@if (contentState === 'loading' || contentState === 'data') {
+  <section class="admin-card mt-3">
+    <div class="admin-card-head"><h4>{{ 'ADMIN.OPS_EFFICIENCY.TABLE_TITLE' | translate }}</h4>
+    <span class="admin-muted reports-basis-caption">{{ 'ADMIN.OPS_EFFICIENCY.BASIS' | translate }}</span></div>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead><tr>
+          <th>{{ 'ADMIN.OPS_EFFICIENCY.COL.TYPE' | translate }}</th>
+          <th>{{ 'ADMIN.OPS_EFFICIENCY.COL.DEPARTURES' | translate }}</th>
+          <th>{{ 'ADMIN.OPS_EFFICIENCY.COL.SEATS' | translate }}</th>
+          <th>{{ 'ADMIN.OPS_EFFICIENCY.COL.FILL' | translate }}</th>
+        </tr></thead>
+        <tbody>
+          @if (isLoading) {
+            @for (r of skeletonRows; track r) {
+              <tr class="admin-skeleton-row" aria-hidden="true">
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td><td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td><td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              </tr>
+            }
+          }
+          @if (!isLoading) {
+            @for (row of rows; track trackByType(i, row); let i = $index) {
+              <tr [class.zebra]="i % 2 === 1">
+                <td class="admin-emphasis">{{ row.vehicleType }}</td>
+                <td>{{ formatCount(row.departures) }}</td>
+                <td>{{ formatCount(row.seatsSold) }} / {{ formatCount(row.seatCapacity) }}</td>
+                <td>
+                  <div class="oe-fill">
+                    <div class="oe-track"><div class="oe-bar" [style.width.%]="barPct(row.fillRatePct)"></div></div>
+                    <span class="oe-pct">{{ pctDisplay(row.fillRatePct) }}</span>
+                  </div>
+                </td>
+              </tr>
+            }
+            @if (rows.length === 0 && !loadError) {
+              <tr class="admin-empty-row"><td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td></tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}

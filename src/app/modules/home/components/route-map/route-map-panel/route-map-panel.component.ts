@@ -223,9 +223,10 @@ export function clearDirectionsPathCache(): void {
 }
 
 @Component({
-  selector: 'app-route-map-panel',
-  templateUrl: './route-map-panel.component.html',
-  styleUrl: './route-map-panel.component.scss',
+    selector: 'app-route-map-panel',
+    templateUrl: './route-map-panel.component.html',
+    styleUrl: './route-map-panel.component.scss',
+    standalone: false
 })
 export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   @Input() pickupStops: RouteStop[] = [];

@@ -1,0 +1,42 @@
+// OBRS-766 — reuses .admin-btn/.admin-field/.admin-error primitives; only
+// the flex layout and the mode-toggle's selected state need local rules
+// (same shape as override-cancel-modal.component.scss's .override-rate-toggle).
+
+.ccsf-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ccsf-mode-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.ccsf-mode-btn {
+  min-height: 44px; // tap-target minimum
+  border-radius: 999px;
+}
+
+// Selected state — light mode: the same pastel-bg/dark-text token pair
+// `.admin-status.is-info` already uses (design-system §2.4) — this toggle
+// picks a search field, not a rule-breaking choice, so it does not borrow
+// the success/danger pair override-rate-toggle uses. --admin-info-* is not a
+// declared token (design-system §11: "never trust a token's literal name") —
+// the real declared pair for this pastel role is --admin-inreview-*.
+.ccsf-mode-btn.is-selected {
+  background: var(--admin-inreview-bg);
+  border-color: var(--admin-inreview-bg);
+  color: var(--admin-inreview-text);
+}
+
+// Selected state — dark mode: invert the same token pair, same reasoning as
+// override-cancel-modal.component.scss's dark-mode block.
+:host-context(.admin-shell.is-dark) {
+  .ccsf-mode-btn.is-selected {
+    background: var(--admin-inreview-text);
+    border-color: var(--admin-inreview-text);
+    color: var(--admin-inreview-bg);
+  }
+}

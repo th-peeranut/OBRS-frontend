@@ -1,10 +1,12 @@
 <div class="reschedule-step reschedule-estimate">
-  <div class="reschedule-estimate__state" *ngIf="loading">
-    <span class="reschedule-spinner" aria-hidden="true"></span>
-    <p>{{ loadingLabelKey | translate }}</p>
-  </div>
+  @if (loading) {
+    <div class="reschedule-estimate__state">
+      <span class="reschedule-spinner" aria-hidden="true"></span>
+      <p>{{ loadingLabelKey | translate }}</p>
+    </div>
+  }
 
-  <ng-container *ngIf="!loading && estimate as est">
+  @if (!loading && estimate; as est) {
     <dl class="reschedule-estimate__rows">
       <div>
         <dt>{{ oldFareLabelKey | translate }}</dt>
@@ -14,24 +16,27 @@
         <dt>{{ newFareLabelKey | translate }}</dt>
         <dd>{{ formatCurrency(est.newFare) }}</dd>
       </div>
-      <div *ngIf="!hideFee">
-        <dt>{{ feeLabelKey | translate }}</dt>
-        <dd>{{ formatCurrency(est.rescheduleFee) }}</dd>
-      </div>
+      @if (!hideFee) {
+        <div>
+          <dt>{{ feeLabelKey | translate }}</dt>
+          <dd>{{ formatCurrency(est.rescheduleFee) }}</dd>
+        </div>
+      }
     </dl>
-
     <p class="reschedule-estimate__net" [ngClass]="{
       'is-topup': est.paymentDirection === 'TOP_UP',
       'is-refund': est.paymentDirection === 'REFUND'
     }">
       {{ paymentDirectionLabelKey | translate: { amount: netAmountAbsLabel } }}
     </p>
-  </ng-container>
+  }
 
-  <div class="reschedule-estimate__error" *ngIf="!loading && error">
-    <i class="bi bi-exclamation-triangle"></i>
-    <p>{{ error }}</p>
-  </div>
+  @if (!loading && error) {
+    <div class="reschedule-estimate__error">
+      <i class="bi bi-exclamation-triangle"></i>
+      <p>{{ error }}</p>
+    </div>
+  }
 
   <div class="reschedule-step__actions">
     <button type="button" class="btn-secondary" (click)="onBack()">
@@ -42,8 +47,10 @@
       class="btn-primary"
       [disabled]="loading || submitting || !estimate"
       (click)="onConfirm()"
-    >
-      <span *ngIf="submitting" class="spinner" aria-hidden="true"></span>
+      >
+      @if (submitting) {
+        <span class="spinner" aria-hidden="true"></span>
+      }
       {{ confirmButtonLabelKey | translate }}
     </button>
   </div>

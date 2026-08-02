@@ -1,0 +1,80 @@
+// Shared loading-indicator primitives (OBRS-907).
+//
+// This is the ONE place the app's loading-animation keyframes and the
+// admin-skeleton token family are defined. Two things live here:
+//
+//   1. `.admin-skeleton` / `--sm` / `--pill` — moved byte-identical from
+//      `admin-theme.scss` (same selectors, same declarations, same class
+//      names — 30 admin/staff templates reference `.admin-skeleton`
+//      directly and are UNTOUCHED by this move). It used to live inside
+//      `admin-theme.scss`, which reads as admin-only even though the file is
+//      actually loaded globally; moving it here means a customer-shell
+//      component can reuse the skeleton look without importing anything
+//      that reads as "the admin theme".
+//   2. The keyframes named `loading-state-spin` / `loading-state-shimmer`
+//      below — the canonical rotate/shimmer animation for
+//      `shared/components/loading-state`. 14 component stylesheets
+//      currently each declare their own byte-identical rotate animation
+//      under a different name (see docs/design-system.md). Sweeping all of
+//      them onto this one is OBRS-909/910, not this card — this file is
+//      where that replacement lives so each of those can point at ONE
+//      definition instead of redeclaring it, once that sweep happens.
+//
+// Imported once, globally, via `styles.scss` — do NOT also `@import` this
+// from `admin-theme.scss` (would double the compiled CSS) or from a
+// component stylesheet just to use `animation: loading-state-spin ...`:
+// `@keyframes` names and class selectors are not scoped by Angular's
+// emulated view encapsulation, so any component can reference the name
+// directly once this file is compiled into the global bundle once.
+
+// ---- rotation (spinner / inline graphics) ----
+@keyframes loading-state-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ---- shimmer (skeleton) ----
+@keyframes loading-state-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+// Moved from admin-theme.scss (OBRS-907), byte-identical declarations.
+.admin-skeleton {
+  display: block;
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(110, 121, 127, 0.12) 25%,
+    rgba(110, 121, 127, 0.22) 37%,
+    rgba(110, 121, 127, 0.12) 63%
+  );
+  background-size: 400% 100%;
+  animation: loading-state-shimmer 1.4s ease infinite;
+}
+
+.admin-skeleton--sm {
+  width: 60%;
+}
+
+.admin-skeleton--pill {
+  width: 72px;
+  height: 22px;
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-skeleton {
+    animation: none;
+  }
+}

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import {
   Component,
   ElementRef,
@@ -18,18 +18,17 @@ import { DropdownPassenger } from '../../../../shared/interfaces/dropdown.interf
 import { MAX_PASSENGERS_PER_BOOKING } from '../../../../shared/constants/passenger-limits';
 
 @Component({
-  selector: 'app-dropdown-obrs-passenger',
-  templateUrl: './dropdown-obrs-passenger.component.html',
-  styleUrl: './dropdown-obrs-passenger.component.scss',
-  standalone: true,
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => DropdownObrsPassengerComponent),
-      multi: true,
-    },
-  ],
-  imports: [CommonModule, TranslateModule],
+    selector: 'app-dropdown-obrs-passenger',
+    templateUrl: './dropdown-obrs-passenger.component.html',
+    styleUrl: './dropdown-obrs-passenger.component.scss',
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => DropdownObrsPassengerComponent),
+            multi: true,
+        },
+    ],
+    imports: [TranslateModule]
 })
 export class DropdownObrsPassengerComponent
   implements ControlValueAccessor, OnChanges, OnDestroy

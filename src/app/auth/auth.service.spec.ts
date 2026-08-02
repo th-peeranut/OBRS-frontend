@@ -14,6 +14,11 @@ import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
 } from '../shared/interceptors/http-context-tokens';
+import {
+  readBookingContext,
+  rememberBookingSelection,
+} from '../shared/lib/booking-context-storage';
+import { Schedule } from '../shared/interfaces/schedule.interface';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -406,6 +411,205 @@ describe('AuthService', () => {
         { errorCode: 'AUTH_ERROR_RATE_LIMIT_EXCEEDED' },
         { status: 429, statusText: 'Too Many Requests' }
       );
+    });
+  });
+
+  // OBRS-855
+  describe('refresh token storage, refreshSession and logout', () => {
+    const loginBody = (refreshToken?: string, accessToken = 'access-1') => ({
+      code: 200,
+      data: {
+        accessToken,
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        ...(refreshToken ? { refreshToken } : {}),
+        user: {
+          id: 1,
+          fullName: 'R',
+          email: 'rider@example.com',
+          preferredLocale: 'th',
+          status: 'ACTIVE',
+          roles: ['user'],
+        },
+      },
+    });
+
+    it('login stores the refresh token alongside the access token', async () => {
+      const promise = service.login({ email: 'rider@example.com', password: 'pw' });
+
+      httpTesting
+        .expectOne(`${environment.apiUrl}/api/auth/login`)
+        .flush(loginBody('refresh-1'));
+      await promise;
+
+      expect(localStorage.getItem('auth_refresh_token')).toBe('refresh-1');
+    });
+
+    it('a login response with NO refreshToken REMOVES any stored one rather than leaving it', async () => {
+      // The trap this closes: a leftover token belongs to a session the backend has already
+      // replaced, so presenting it later reads as replay — and the backend answers a replay by
+      // revoking every live token the user has. Signing in would be what signs them out.
+      localStorage.setItem('auth_refresh_token', 'token-from-a-previous-session');
+
+      const promise = service.login({ email: 'rider@example.com', password: 'pw' });
+      httpTesting.expectOne(`${environment.apiUrl}/api/auth/login`).flush(loginBody());
+      await promise;
+
+      expect(localStorage.getItem('auth_refresh_token')).toBeNull();
+    });
+
+    it('refreshSession POSTs the stored token and stores the ROTATED one it gets back', (done) => {
+      localStorage.setItem('auth_refresh_token', 'refresh-1');
+
+      service.refreshSession().subscribe((accessToken) => {
+        expect(accessToken).toBe('access-2');
+        expect(localStorage.getItem('auth_token')).toBe('access-2');
+        expect(localStorage.getItem('auth_refresh_token')).toBe('refresh-2');
+        done();
+      });
+
+      const req = httpTesting.expectOne(`${environment.apiUrl}/api/auth/refresh`);
+      expect(req.request.body).toEqual({ refreshToken: 'refresh-1' });
+      // Both are set: the interceptor is already mid-401-handling when this runs, and a second
+      // force-logout or toast fired from inside the recovery would step on its verdict.
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+      expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
+      req.flush(loginBody('refresh-2', 'access-2'));
+    });
+
+    it('refreshSession with no stored token fails WITHOUT issuing a request', (done) => {
+      service.refreshSession().subscribe({
+        next: () => fail('should not emit'),
+        error: () => {
+          httpTesting.expectNone(`${environment.apiUrl}/api/auth/refresh`);
+          done();
+        },
+      });
+    });
+
+    it('logout revokes server-side, and clears local state BEFORE the call so a failed network cannot strand the user', () => {
+      localStorage.setItem('auth_token', 'access-1');
+      localStorage.setItem('auth_refresh_token', 'refresh-1');
+
+      service.logout();
+
+      // Already gone by the time the request is inspected — the ordering is the assertion.
+      expect(localStorage.getItem('auth_token')).toBeNull();
+      expect(localStorage.getItem('auth_refresh_token')).toBeNull();
+
+      const req = httpTesting.expectOne(`${environment.apiUrl}/api/auth/logout`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ refreshToken: 'refresh-1' });
+      req.flush({ code: 200 });
+    });
+
+    it('logout issues no request when there is no refresh token to revoke', () => {
+      localStorage.setItem('auth_token', 'access-1');
+
+      service.logout();
+
+      httpTesting.expectNone(`${environment.apiUrl}/api/auth/logout`);
+      expect(localStorage.getItem('auth_token')).toBeNull();
+    });
+  });
+
+  // OBRS-903. The destination is written by AuthGuard in the tab the customer
+  // was bounced from, and read in the tab the e-mail verification link opened —
+  // a different tab. Every case below is about that boundary, plus the TTL that
+  // stops a cross-tab store from also being a cross-day one.
+  describe('post-login return URL — survives a NEW TAB, expires on its own (OBRS-903)', () => {
+    const RETURN_URL_KEY = 'auth_return_url';
+    const PASSENGER_INFO = '/passenger-info';
+
+    /** Rewrites the stored `savedAt` instead of mocking the clock, so the
+     *  assertion runs against the same envelope production reads. */
+    function ageStoredReturnUrlBy(ms: number): void {
+      const envelope = JSON.parse(
+        localStorage.getItem(RETURN_URL_KEY) as string
+      ) as { savedAt: number };
+      envelope.savedAt -= ms;
+      localStorage.setItem(RETURN_URL_KEY, JSON.stringify(envelope));
+    }
+
+    it('fails-on-old / passes-on-new: the destination is still there in a tab that shares no sessionStorage', () => {
+      service.setPostLoginRedirectUrl(PASSENGER_INFO);
+
+      // The mail link opens a new tab — fresh sessionStorage, same localStorage.
+      // While the value lived in sessionStorage this single line was the whole
+      // bug: the destination was simply absent and login went to the home route.
+      sessionStorage.clear();
+
+      expect(service.consumePostLoginRedirectUrl('/')).toBe(PASSENGER_INFO);
+    });
+
+    it('is consumed exactly once — the next login is not redirected again', () => {
+      service.setPostLoginRedirectUrl(PASSENGER_INFO);
+
+      expect(service.consumePostLoginRedirectUrl('/')).toBe(PASSENGER_INFO);
+      expect(service.consumePostLoginRedirectUrl('/')).toBe('/');
+    });
+
+    it('AC4 in-window: an entry younger than the 30-minute TTL is used', () => {
+      service.setPostLoginRedirectUrl(PASSENGER_INFO);
+      ageStoredReturnUrlBy(29 * 60 * 1000);
+
+      expect(service.consumePostLoginRedirectUrl('/')).toBe(PASSENGER_INFO);
+    });
+
+    it('AC4 out-of-window: an entry past the TTL is ignored AND removed', () => {
+      service.setPostLoginRedirectUrl(PASSENGER_INFO);
+      ageStoredReturnUrlBy(31 * 60 * 1000);
+
+      expect(service.consumePostLoginRedirectUrl('/somewhere')).toBe('/somewhere');
+      expect(localStorage.getItem(RETURN_URL_KEY)).toBeNull();
+    });
+
+    it('must-NOT: an auth page is refused on WRITE — login may not redirect to itself', () => {
+      service.setPostLoginRedirectUrl('/login');
+
+      expect(localStorage.getItem(RETURN_URL_KEY)).toBeNull();
+      expect(service.consumePostLoginRedirectUrl('/')).toBe('/');
+    });
+
+    it('must-NOT: an auth page planted in storage is refused on READ too', () => {
+      // localStorage is user-editable and outlives a deploy, so the read-side
+      // check is what actually stops a spent /reset-password token (OBRS-613)
+      // from being handed back as a destination.
+      localStorage.setItem(
+        RETURN_URL_KEY,
+        JSON.stringify({
+          version: 1,
+          savedAt: Date.now(),
+          value: '/reset-password?token=already-spent',
+        })
+      );
+
+      expect(service.consumePostLoginRedirectUrl('/')).toBe('/');
+    });
+
+    it('AC2 — every sign-in route goes through navigateAfterLogin, so all three come back', async () => {
+      // Password, Google (login.component.ts:242) and phone+OTP
+      // (otp-validate.component.ts:141) all call this one method; none of them
+      // reads storage itself. Pinning it here is what makes "and Google, and
+      // OTP" a fact about the code rather than a hope — neither of those can be
+      // driven headless (a real consent screen, a real SMS).
+      service.setPostLoginRedirectUrl('/passenger-info');
+      const router = TestBed.inject(Router);
+
+      await service.navigateAfterLogin('/');
+
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/passenger-info');
+    });
+
+    it('signing out drops the cross-tab booking context — a shared machine keeps nothing', () => {
+      rememberBookingSelection([
+        { id: 7 } as unknown as Schedule,
+      ]);
+      expect(readBookingContext()?.selection?.length).toBe(1);
+
+      service.logout(); // no refresh token stored, so no HTTP call to verify
+
+      expect(readBookingContext()).toBeNull();
     });
   });
 });

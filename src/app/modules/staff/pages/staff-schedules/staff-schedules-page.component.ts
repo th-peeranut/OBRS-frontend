@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
+import { AuthService } from '../../../../auth/auth.service';
 import {
   AdminApiService,
   AdminLookupDto,
@@ -35,9 +36,10 @@ import {
 } from './staff-schedules-page.mappers';
 
 @Component({
-  selector: 'app-staff-schedules-page',
-  templateUrl: './staff-schedules-page.component.html',
-  styleUrl: './staff-schedules-page.component.scss',
+    selector: 'app-staff-schedules-page',
+    templateUrl: './staff-schedules-page.component.html',
+    styleUrl: './staff-schedules-page.component.scss',
+    standalone: false
 })
 export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
   protected rows: ScheduleRow[] = [];
@@ -66,6 +68,13 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
   protected selectedStatusFilter = '';
 
   protected readonly scheduleItemForm: FormGroup;
+  // OBRS-667: whole-trip cancel (deletable===false path below) issues a
+  // one-click 100% refund to every confirmed booking on the schedule, so the
+  // backend now restricts POST .../cancel to hasRole('OWNER'). Computed once
+  // here (not a template getter — see FRONTEND-GOTCHAS "template expression
+  // that allocates per cycle") and mirrors the backend guard exactly via
+  // hasAnyRole (a permission check), never getRoles().includes(...).
+  protected readonly canCancelSchedule: boolean;
   private readonly subscriptions = new Subscription();
 
   private rawSchedules: AdminScheduleDto[] = [];
@@ -81,7 +90,8 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    readonly store: StaffSchedulesStore
+    readonly store: StaffSchedulesStore,
+    private readonly authService: AuthService
   ) {
     this.scheduleItemForm = this.formBuilder.group({
       departureDate: [null, [Validators.required]],
@@ -91,6 +101,8 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
       vehicleId: [''],
       driverId: [''],
     });
+
+    this.canCancelSchedule = this.authService.hasAnyRole(['owner']);
 
     this.subscriptions.add(
       this.translate.onLangChange.subscribe(() => this.applyLocalization())
@@ -246,6 +258,11 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
     if (!this.selectedRow) return;
     const id = this.selectedRow.id;
     const mode = this.deleteModalMode;
+    // OBRS-667 defence in depth: the confirm button is hidden in cancel-mode
+    // for a non-owner (see the template), but a DOM-forced click must not be
+    // able to fire cancelSchedule() either. Silent no-op — the backend 403
+    // guard is the real security boundary, this is only the UX mirror.
+    if (mode !== 'delete' && !this.canCancelSchedule) return;
     this.isDeleting = true;
     try {
       if (mode !== 'delete') {

@@ -1,165 +1,176 @@
-<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop (dismiss)="requestClose()">
-  <div class="admin-modal">
-    <h4 class="admin-modal-title">
-      {{
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="requestClose()">
+    <div class="admin-modal">
+      <h4 class="admin-modal-title">
+        {{
         mode === 'edit'
-          ? ('ADMIN.EXPENSES.EDIT_TITLE' | translate)
-          : ('ADMIN.EXPENSES.ADD_TITLE' | translate)
-      }}
-    </h4>
-    <p class="admin-modal-subtitle">{{ 'ADMIN.EXPENSES.MODAL_HINT' | translate }}</p>
-
-    <form [formGroup]="expenseForm" class="admin-form-grid" (ngSubmit)="submitExpense()">
-      <!-- OBRS-808: admin-only, create-only. An `owner` never sees this - the
-           server derives their operator from the principal and IGNORES any
-           ownerId they send, so rendering the control for them would be a
-           control that does nothing. -->
-      <div class="admin-form-field" *ngIf="showOwnerPicker" data-testid="expense-owner-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.EXPENSES.OWNER' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="ownerSelection"
-          [options]="ownerOptions"
-          valueKey="code"
-          labelKey="label"
-          [placeholder]="'ADMIN.EXPENSES.OWNER' | translate"
-        ></app-admin-dropdown>
-        <small class="admin-hint">{{ 'ADMIN.EXPENSES.OWNER_HINT' | translate }}</small>
-        <small class="admin-error" *ngIf="ownerRosterUnavailable" data-testid="expense-owner-unavailable">
-          {{ 'ADMIN.EXPENSES.OWNER_UNAVAILABLE' | translate }}
-        </small>
-        <small class="admin-error" *ngIf="isFieldInvalid('ownerSelection')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
+        ? ('ADMIN.EXPENSES.EDIT_TITLE' | translate)
+        : ('ADMIN.EXPENSES.ADD_TITLE' | translate)
+        }}
+      </h4>
+      <p class="admin-modal-subtitle">{{ 'ADMIN.EXPENSES.MODAL_HINT' | translate }}</p>
+      <form [formGroup]="expenseForm" class="admin-form-grid" (ngSubmit)="submitExpense()">
+        <!-- OBRS-808: admin-only, create-only. An `owner` never sees this - the
+        server derives their operator from the principal and IGNORES any
+        ownerId they send, so rendering the control for them would be a
+        control that does nothing. -->
+        @if (showOwnerPicker) {
+          <div class="admin-form-field" data-testid="expense-owner-field">
+            <label class="admin-form-label">
+              {{ 'ADMIN.EXPENSES.OWNER' | translate }} <span class="admin-required">*</span>
+            </label>
+            <app-admin-dropdown
+              formControlName="ownerSelection"
+              [options]="ownerOptions"
+              valueKey="code"
+              labelKey="label"
+              [placeholder]="'ADMIN.EXPENSES.OWNER' | translate"
+            ></app-admin-dropdown>
+            <small class="admin-hint">{{ 'ADMIN.EXPENSES.OWNER_HINT' | translate }}</small>
+            @if (ownerRosterUnavailable) {
+              <small class="admin-error" data-testid="expense-owner-unavailable">
+                {{ 'ADMIN.EXPENSES.OWNER_UNAVAILABLE' | translate }}
+              </small>
+            }
+            @if (isFieldInvalid('ownerSelection')) {
+              <small class="admin-error">
+                {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+              </small>
+            }
+          </div>
+        }
+        <!-- Edit mode shows the operator as TEXT, never a control: the backend
+        ignores ownerId on PUT for every caller, so a dropdown here would
+        offer a move the server discards. -->
+        @if (isAdmin && mode === 'edit' && editingOwnerLabel) {
+          <div
+            class="admin-form-field"
+            data-testid="expense-owner-readonly"
+            >
+            <label class="admin-form-label">{{ 'ADMIN.EXPENSES.OWNER' | translate }}</label>
+            <p class="admin-readonly-value">{{ editingOwnerLabel }}</p>
+            <small class="admin-hint">{{ 'ADMIN.EXPENSES.OWNER_READONLY_HINT' | translate }}</small>
+          </div>
+        }
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.EXPENSES.VEHICLE' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="vehicleSelection"
+            [options]="vehicleOptions"
+            valueKey="code"
+            labelKey="label"
+            [placeholder]="'ADMIN.EXPENSES.VEHICLE' | translate"
+          ></app-admin-dropdown>
+          <small class="admin-hint">{{ 'ADMIN.EXPENSES.VEHICLE_HINT' | translate }}</small>
+          @if (isFieldInvalid('vehicleSelection')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.EXPENSES.CATEGORY' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="category"
+            [options]="categoryOptions"
+            valueKey="code"
+            labelKey="label"
+            [placeholder]="'ADMIN.EXPENSES.CATEGORY' | translate"
+          ></app-admin-dropdown>
+          @if (isFieldInvalid('category')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        @if (showCategoryOtherLabel) {
+          <div class="admin-form-field">
+            <label class="admin-form-label">
+              {{ 'ADMIN.EXPENSES.CATEGORY_OTHER_LABEL' | translate }} <span class="admin-required">*</span>
+            </label>
+            <input class="admin-field" formControlName="categoryOtherLabel" maxlength="100" />
+            @if (isFieldInvalid('categoryOtherLabel')) {
+              <small class="admin-error">
+                {{ 'ADMIN.EXPENSES.CATEGORY_OTHER_REQUIRED' | translate }}
+              </small>
+            }
+          </div>
+        }
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.EXPENSES.AMOUNT' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input type="number" class="admin-field" formControlName="amount" min="0.01" step="0.01" />
+          @if (isFieldInvalid('amount')) {
+            <small class="admin-error">
+              {{ amountErrorKey('amount') | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.EXPENSES.VAT_AMOUNT' | translate }}</label>
+          <input type="number" class="admin-field" formControlName="vatAmount" min="0" step="0.01" />
+          @if (isFieldInvalid('vatAmount')) {
+            <small class="admin-error">
+              {{ amountErrorKey('vatAmount') | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.EXPENSES.EXPENSE_DATE' | translate }} <span class="admin-required">*</span>
+          </label>
+          <p-datePicker
+            formControlName="expenseDate"
+            styleClass="schedule-calendar-filter"
+            inputStyleClass="schedule-calendar-filter-input"
+            panelStyleClass="schedule-calendar-filter-panel"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            [showButtonBar]="true"
+            [placeholder]="'ADMIN.EXPENSES.EXPENSE_DATE' | translate"
+          ></p-datePicker>
+          @if (isFieldInvalid('expenseDate')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.EXPENSES.RECEIPT_NO' | translate }}</label>
+          <input class="admin-field" formControlName="receiptNo" maxlength="100" />
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.EXPENSES.PAID_BY' | translate }}</label>
+          <input class="admin-field" formControlName="paidBy" maxlength="255" />
+        </div>
+        <div class="admin-form-field full">
+          <label class="admin-form-label">{{ 'ADMIN.EXPENSES.NOTE' | translate }}</label>
+          <textarea
+            class="admin-field"
+            formControlName="note"
+            maxlength="500"
+            [placeholder]="'ADMIN.EXPENSES.NOTE_PLACEHOLDER' | translate"
+          ></textarea>
+        </div>
+      </form>
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" (click)="requestClose()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-primary"
+          [disabled]="isSubmitting"
+          (click)="submitExpense()"
+          >
+          {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+        </button>
       </div>
-
-      <!-- Edit mode shows the operator as TEXT, never a control: the backend
-           ignores ownerId on PUT for every caller, so a dropdown here would
-           offer a move the server discards. -->
-      <div
-        class="admin-form-field"
-        *ngIf="isAdmin && mode === 'edit' && editingOwnerLabel"
-        data-testid="expense-owner-readonly"
-      >
-        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.OWNER' | translate }}</label>
-        <p class="admin-readonly-value">{{ editingOwnerLabel }}</p>
-        <small class="admin-hint">{{ 'ADMIN.EXPENSES.OWNER_READONLY_HINT' | translate }}</small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.EXPENSES.VEHICLE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="vehicleSelection"
-          [options]="vehicleOptions"
-          valueKey="code"
-          labelKey="label"
-          [placeholder]="'ADMIN.EXPENSES.VEHICLE' | translate"
-        ></app-admin-dropdown>
-        <small class="admin-hint">{{ 'ADMIN.EXPENSES.VEHICLE_HINT' | translate }}</small>
-        <small class="admin-error" *ngIf="isFieldInvalid('vehicleSelection')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.EXPENSES.CATEGORY' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="category"
-          [options]="categoryOptions"
-          valueKey="code"
-          labelKey="label"
-          [placeholder]="'ADMIN.EXPENSES.CATEGORY' | translate"
-        ></app-admin-dropdown>
-        <small class="admin-error" *ngIf="isFieldInvalid('category')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field" *ngIf="showCategoryOtherLabel">
-        <label class="admin-form-label">
-          {{ 'ADMIN.EXPENSES.CATEGORY_OTHER_LABEL' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="categoryOtherLabel" maxlength="100" />
-        <small class="admin-error" *ngIf="isFieldInvalid('categoryOtherLabel')">
-          {{ 'ADMIN.EXPENSES.CATEGORY_OTHER_REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.EXPENSES.AMOUNT' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input type="number" class="admin-field" formControlName="amount" min="0.01" step="0.01" />
-        <small class="admin-error" *ngIf="isFieldInvalid('amount')">
-          {{ amountErrorKey('amount') | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.VAT_AMOUNT' | translate }}</label>
-        <input type="number" class="admin-field" formControlName="vatAmount" min="0" step="0.01" />
-        <small class="admin-error" *ngIf="isFieldInvalid('vatAmount')">
-          {{ amountErrorKey('vatAmount') | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.EXPENSES.EXPENSE_DATE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <p-calendar
-          formControlName="expenseDate"
-          styleClass="schedule-calendar-filter"
-          inputStyleClass="schedule-calendar-filter-input"
-          panelStyleClass="schedule-calendar-filter-panel"
-          dateFormat="dd/mm/yy"
-          [showIcon]="true"
-          [showButtonBar]="true"
-          [placeholder]="'ADMIN.EXPENSES.EXPENSE_DATE' | translate"
-        ></p-calendar>
-        <small class="admin-error" *ngIf="isFieldInvalid('expenseDate')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.RECEIPT_NO' | translate }}</label>
-        <input class="admin-field" formControlName="receiptNo" maxlength="100" />
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.PAID_BY' | translate }}</label>
-        <input class="admin-field" formControlName="paidBy" maxlength="255" />
-      </div>
-
-      <div class="admin-form-field full">
-        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.NOTE' | translate }}</label>
-        <textarea
-          class="admin-field"
-          formControlName="note"
-          maxlength="500"
-          [placeholder]="'ADMIN.EXPENSES.NOTE_PLACEHOLDER' | translate"
-        ></textarea>
-      </div>
-    </form>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="requestClose()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button
-        type="button"
-        class="admin-btn admin-btn-primary"
-        [disabled]="isSubmitting"
-        (click)="submitExpense()"
-      >
-        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-      </button>
     </div>
   </div>
-</div>
+}

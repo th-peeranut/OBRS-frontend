@@ -1,5 +1,7 @@
 <div class="form-group-obrs">
-  <label *ngIf="isLabel"> {{ label | translate }} : </label>
+  @if (isLabel) {
+    <label> {{ label | translate }} : </label>
+  }
 
   <div class="dropdown">
     <button
@@ -13,79 +15,104 @@
       [class.dropdown-toggle-border]="isBorder"
       [class.disabled]="isDisabled"
       [disabled]="isDisabled"
-    >
-      <div class="value-text">
-        {{ getValue(selectedValue) }}
+      >
+      <!-- Before anything is selected `getValue(null)` returns '', which rendered a
+      completely blank box that reads as an empty text input — the OBRS-901
+      defect. The placeholder branch fills it; `.is-placeholder` is what makes
+      it read as a prompt rather than as an already-chosen value. -->
+      <div class="value-text" [class.is-placeholder]="!selectedValue">
+        @if (selectedValue) {
+          {{ getValue(selectedValue) }}
+        } @else {
+          @if (placeholder) {
+            {{ placeholder | translate }}
+          }
+          @if (!placeholder && label) {
+            {{
+            "SHARED.SELECT_PLACEHOLDER" | translate: { item: label | translate }
+            }}
+          }
+          @if (!placeholder && !label) {
+            {{
+            "SHARED.SELECT_PLACEHOLDER_GENERIC" | translate
+            }}
+          }
+        }
       </div>
       <img
         class="arrow-icon"
         [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
         alt="Arrow Icon"
-      />
-    </button>
-
-    <ul
-      class="dropdown-menu"
-      [class.dropdown-menu-border]="isBorder"
-      [class.disabled]="isDisabled"
-      [attr.aria-disabled]="isDisabled ? 'true' : null"
-      [attr.aria-labelledby]="'dropdownObrs' + label"
-    >
-      <li class="dropdown-search-row" *ngIf="searchable" (click)="$event.stopPropagation()">
-        <span class="material-symbols-outlined dropdown-search-icon" aria-hidden="true">search</span>
-        <input
-          #stationSearchInput
-          type="search"
-          class="dropdown-search-input"
-          [attr.aria-label]="'SHARED.SEARCH_PLACEHOLDER' | translate"
-          [placeholder]="'SHARED.SEARCH_PLACEHOLDER' | translate"
-          [ngModel]="searchQuery"
-          (input)="onSearchInput($event)"
-          autocomplete="off"
         />
-      </li>
+      </button>
 
-      <ng-container *ngIf="isGroupedOptions(); else flatOptions">
-        <!-- UNCHANGED — dead branch with current data (StationApi has no `stations`
-             field, isGroupedOptions() is always false at runtime), left as-is,
-             unfiltered, untested (see UX-OBRS-562 §1). -->
-        <ng-container *ngFor="let group of optionList">
-          <li class="dropdown-header">
-            {{ getValue(group) }}
-          </li>
-          <li class="option-items" *ngFor="let station of getGroupStations(group)">
-            <a
-              class="dropdown-item dropdown-option"
-              [class.disabled]="isDisabled"
-              (click)="!isDisabled && setCurrentValue(station)"
-            >
-              {{ getValue(station) }}
-            </a>
-          </li>
-        </ng-container>
-      </ng-container>
-      <ng-template #flatOptions>
-        <li class="option-items" *ngFor="let option of displayList; trackBy: trackByOptionId">
-          <a
-            class="dropdown-item dropdown-option"
-            [class.disabled]="isDisabled"
-            (click)="!isDisabled && setCurrentValue(option)"
-          >
-            {{ getValue(option) }}
-          </a>
-        </li>
-      </ng-template>
+      <ul
+        class="dropdown-menu"
+        [class.dropdown-menu-border]="isBorder"
+        [class.disabled]="isDisabled"
+        [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.aria-labelledby]="'dropdownObrs' + label"
+        >
+        @if (searchable) {
+          <li class="dropdown-search-row" (click)="$event.stopPropagation()">
+            <span class="material-symbols-outlined dropdown-search-icon" aria-hidden="true">search</span>
+            <input
+              #stationSearchInput
+              type="search"
+              class="dropdown-search-input"
+              [attr.aria-label]="'SHARED.SEARCH_PLACEHOLDER' | translate"
+              [placeholder]="'SHARED.SEARCH_PLACEHOLDER' | translate"
+              [ngModel]="searchQuery"
+              (input)="onSearchInput($event)"
+              autocomplete="off"
+              />
+            </li>
+          }
 
-      <ng-container *ngIf="optionList.length === 0">
-        <li class="px-3">
-          {{ "SHARED.NO_CONTENT" | translate }}
-        </li>
-      </ng-container>
-      <ng-container *ngIf="showNoSearchResults">
-        <li class="px-3">
-          {{ "SHARED.NO_CONTENT" | translate }}
-        </li>
-      </ng-container>
-    </ul>
-  </div>
-</div>
+          @if (isGroupedOptions()) {
+            <!-- UNCHANGED — dead branch with current data (StationApi has no `stations`
+            field, isGroupedOptions() is always false at runtime), left as-is,
+            unfiltered, untested (see UX-OBRS-562 §1). -->
+            @for (group of optionList; track group) {
+              <li class="dropdown-header">
+                {{ getValue(group) }}
+              </li>
+              @for (station of getGroupStations(group); track station) {
+                <li class="option-items">
+                  <a
+                    class="dropdown-item dropdown-option"
+                    [class.disabled]="isDisabled"
+                    (click)="!isDisabled && setCurrentValue(station)"
+                    >
+                    {{ getValue(station) }}
+                  </a>
+                </li>
+              }
+            }
+          } @else {
+            @for (option of displayList; track trackByOptionId($index, option)) {
+              <li class="option-items">
+                <a
+                  class="dropdown-item dropdown-option"
+                  [class.disabled]="isDisabled"
+                  (click)="!isDisabled && setCurrentValue(option)"
+                  >
+                  {{ getValue(option) }}
+                </a>
+              </li>
+            }
+          }
+
+          @if (optionList.length === 0) {
+            <li class="px-3">
+              {{ "SHARED.NO_CONTENT" | translate }}
+            </li>
+          }
+          @if (showNoSearchResults) {
+            <li class="px-3">
+              {{ "SHARED.NO_CONTENT" | translate }}
+            </li>
+          }
+        </ul>
+      </div>
+    </div>

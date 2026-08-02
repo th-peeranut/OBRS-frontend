@@ -114,8 +114,9 @@ element, and unreadable `var()`s. Known-dead declarations live in
 `e2e/support/dark-override-allow.ts` against a card, and an entry that stops matching
 fails the build too — so the register cannot rot into a lie.
 **And the sweep that generalised it.** `host-box-sweep.spec.ts` (OBRS-775) runs that same
-check over all 47 pages this lane can reach — 9 customer, 9 public/auth-entry, 29
-admin/staff; 27 when the spec was written, 42 after OBRS-776 and 47 after OBRS-782 — and
+check over all 52 pages this lane can reach — 9 customer, 9 public/auth-entry, 34
+admin/staff; 27 when the spec was written, 42 after OBRS-776, 47 after OBRS-782 and 52
+after OBRS-941 added the five analytics screens OBRS-151..155 shipped without one — and
 fails on any malformed host not on its `ALLOW` list with a reason. The
 first run found **39**; 37 were ours and are fixed, 4 are PrimeNG's and are OBRS-776. Two
 of those 37 are the argument for having a gate at all: `app-home` and

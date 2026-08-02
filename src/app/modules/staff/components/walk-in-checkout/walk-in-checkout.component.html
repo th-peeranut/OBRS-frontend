@@ -6,12 +6,16 @@
     <div class="mb-2">
       <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.PASSENGER_TITLE' | translate }}</label>
       <select class="form-select form-select-sm"
-              formControlName="title"
-              [class.is-invalid]="isFieldInvalid('title')">
+        formControlName="title"
+        [class.is-invalid]="isFieldInvalid('title')">
         <option value="" disabled>{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
-        <option *ngFor="let t of titleOptions" [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
+        @for (t of titleOptions; track t) {
+          <option [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
+        }
       </select>
-      <div class="invalid-feedback d-block" *ngIf="fieldError('title') as key">{{ key | translate }}</div>
+      @if (fieldError('title'); as key) {
+        <div class="invalid-feedback d-block">{{ key | translate }}</div>
+      }
     </div>
 
     <!-- First + Last Name (side by side to save vertical space) -->
@@ -19,147 +23,163 @@
       <div class="col-6">
         <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.FIRST_NAME' | translate }}</label>
         <input class="form-control form-control-sm"
-               formControlName="firstName"
-               [class.is-invalid]="isFieldInvalid('firstName')" />
-        <div class="invalid-feedback d-block" *ngIf="fieldError('firstName') as key">{{ key | translate }}</div>
-      </div>
-      <div class="col-6">
-        <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.LAST_NAME' | translate }}</label>
-        <input class="form-control form-control-sm"
-               formControlName="lastName"
-               [class.is-invalid]="isFieldInvalid('lastName')" />
-        <div class="invalid-feedback d-block" *ngIf="fieldError('lastName') as key">{{ key | translate }}</div>
-      </div>
-    </div>
+          formControlName="firstName"
+          [class.is-invalid]="isFieldInvalid('firstName')" />
+          @if (fieldError('firstName'); as key) {
+            <div class="invalid-feedback d-block">{{ key | translate }}</div>
+          }
+        </div>
+        <div class="col-6">
+          <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.LAST_NAME' | translate }}</label>
+          <input class="form-control form-control-sm"
+            formControlName="lastName"
+            [class.is-invalid]="isFieldInvalid('lastName')" />
+            @if (fieldError('lastName'); as key) {
+              <div class="invalid-feedback d-block">{{ key | translate }}</div>
+            }
+          </div>
+        </div>
 
-    <!-- Phone -->
-    <div class="mb-2">
-      <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.PHONE' | translate }}</label>
-      <input class="form-control form-control-sm"
-             formControlName="phoneNumber"
-             inputmode="tel"
-             maxlength="12"
-             (focus)="onPhoneFocus()"
-             (blur)="onPhoneBlur()"
-             [class.is-invalid]="isFieldInvalid('phoneNumber')" />
-      <div class="invalid-feedback d-block" *ngIf="fieldError('phoneNumber') as key">{{ key | translate }}</div>
-    </div>
+        <!-- Phone -->
+        <div class="mb-2">
+          <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.PHONE' | translate }}</label>
+          <input class="form-control form-control-sm"
+            formControlName="phoneNumber"
+            inputmode="tel"
+            maxlength="12"
+            (focus)="onPhoneFocus()"
+            (blur)="onPhoneBlur()"
+            [class.is-invalid]="isFieldInvalid('phoneNumber')" />
+            @if (fieldError('phoneNumber'); as key) {
+              <div class="invalid-feedback d-block">{{ key | translate }}</div>
+            }
+          </div>
 
-    <!-- Email (OBRS-197: optional for walk-in — the printed receipt/QR is the
-         proof of purchase, no e-ticket email is required for this channel) -->
-    <div class="mb-2">
-      <label class="form-label small fw-semibold mb-1">
-        {{ 'STAFF.SELL.CONTACT_EMAIL' | translate }}
-        <span class="text-muted fw-normal">{{ 'STAFF.SELL.OPTIONAL' | translate }}</span>
-      </label>
-      <input class="form-control form-control-sm"
-             formControlName="email"
-             type="email"
-             [class.is-invalid]="isFieldInvalid('email')" />
-      <div class="invalid-feedback d-block" *ngIf="fieldError('email') as key">{{ key | translate }}</div>
-    </div>
+          <!-- Email (OBRS-197: optional for walk-in — the printed receipt/QR is the
+          proof of purchase, no e-ticket email is required for this channel) -->
+          <div class="mb-2">
+            <label class="form-label small fw-semibold mb-1">
+              {{ 'STAFF.SELL.CONTACT_EMAIL' | translate }}
+              <span class="text-muted fw-normal">{{ 'STAFF.SELL.OPTIONAL' | translate }}</span>
+            </label>
+            <input class="form-control form-control-sm"
+              formControlName="email"
+              type="email"
+              [class.is-invalid]="isFieldInvalid('email')" />
+              @if (fieldError('email'); as key) {
+                <div class="invalid-feedback d-block">{{ key | translate }}</div>
+              }
+            </div>
 
-    <!-- ID Card (optional) -->
-    <div class="mb-2">
-      <label class="form-label small fw-semibold mb-1">
-        {{ 'STAFF.SELL.ID_CARD' | translate }}
-        <span class="text-muted fw-normal">{{ 'STAFF.SELL.OPTIONAL' | translate }}</span>
-      </label>
-      <!-- no-card-input-ok: Thai national ID card, 13 digits (see maxlength) -- not a
-           payment card. This is the ONLY field in the tree the OBRS-391 card-data gate
-           excuses, and the exemption is deliberately narrow: walk-in checkout takes
-           cash only, and clause 5.5(f) of the Omise agreement bars staff from entering
-           a customer's card details on their behalf at all, so a real card field must
-           never appear on this form. -->
-      <input class="form-control form-control-sm"
-             formControlName="identityCardNumber"
-             inputmode="numeric"
-             maxlength="13"
-             [class.is-invalid]="isFieldInvalid('identityCardNumber')" />
-      <div class="invalid-feedback d-block" *ngIf="fieldError('identityCardNumber') as key">{{ key | translate }}</div>
-    </div>
-  </form>
+            <!-- ID Card (optional) -->
+            <div class="mb-2">
+              <label class="form-label small fw-semibold mb-1">
+                {{ 'STAFF.SELL.ID_CARD' | translate }}
+                <span class="text-muted fw-normal">{{ 'STAFF.SELL.OPTIONAL' | translate }}</span>
+              </label>
+              <!-- no-card-input-ok: Thai national ID card, 13 digits (see maxlength) -- not a
+              payment card. This is the ONLY field in the tree the OBRS-391 card-data gate
+              excuses, and the exemption is deliberately narrow: walk-in checkout takes
+              cash only, and clause 5.5(f) of the Omise agreement bars staff from entering
+              a customer's card details on their behalf at all, so a real card field must
+              never appear on this form. -->
+              <input class="form-control form-control-sm"
+                formControlName="identityCardNumber"
+                inputmode="numeric"
+                maxlength="13"
+                [class.is-invalid]="isFieldInvalid('identityCardNumber')" />
+                @if (fieldError('identityCardNumber'); as key) {
+                  <div class="invalid-feedback d-block">{{ key | translate }}</div>
+                }
+              </div>
+            </form>
 
-  <!-- Payment method tiles -->
-  <div class="d-flex flex-column gap-2">
-    <!-- Cash (active) -->
-    <div class="payment-tile d-flex align-items-center gap-2 p-2 rounded border border-success bg-success bg-opacity-10"
-         role="button"
-         tabindex="0">
-      <i class="bi bi-cash-coin fs-5 text-success"></i>
-      <span class="fw-semibold text-success">{{ 'STAFF.SELL.PAYMENT_CASH' | translate }}</span>
-    </div>
-    <!-- PromptPay (disabled) -->
-    <div class="payment-tile d-flex align-items-center gap-2 p-2 rounded border opacity-50"
-         aria-disabled="true"
-         tabindex="-1"
-         style="pointer-events:none">
-      <i class="bi bi-qr-code fs-5 text-muted"></i>
-      <span class="text-muted">{{ 'STAFF.SELL.PAYMENT_PROMPTPAY' | translate }}</span>
-      <span class="badge bg-secondary ms-auto small">{{ 'STAFF.SELL.COMING_SOON' | translate }}</span>
-    </div>
-    <!-- Credit (disabled) -->
-    <div class="payment-tile d-flex align-items-center gap-2 p-2 rounded border opacity-50"
-         aria-disabled="true"
-         tabindex="-1"
-         style="pointer-events:none">
-      <i class="bi bi-credit-card fs-5 text-muted"></i>
-      <span class="text-muted">{{ 'STAFF.SELL.PAYMENT_CREDIT' | translate }}</span>
-      <span class="badge bg-secondary ms-auto small">{{ 'STAFF.SELL.COMING_SOON' | translate }}</span>
-    </div>
-  </div>
+            <!-- Payment method tiles -->
+            <div class="d-flex flex-column gap-2">
+              <!-- Cash (active) -->
+              <div class="payment-tile d-flex align-items-center gap-2 p-2 rounded border border-success bg-success bg-opacity-10"
+                role="button"
+                tabindex="0">
+                <i class="bi bi-cash-coin fs-5 text-success"></i>
+                <span class="fw-semibold text-success">{{ 'STAFF.SELL.PAYMENT_CASH' | translate }}</span>
+              </div>
+              <!-- PromptPay (disabled) -->
+              <div class="payment-tile d-flex align-items-center gap-2 p-2 rounded border opacity-50"
+                aria-disabled="true"
+                tabindex="-1"
+                style="pointer-events:none">
+                <i class="bi bi-qr-code fs-5 text-muted"></i>
+                <span class="text-muted">{{ 'STAFF.SELL.PAYMENT_PROMPTPAY' | translate }}</span>
+                <span class="badge bg-secondary ms-auto small">{{ 'STAFF.SELL.COMING_SOON' | translate }}</span>
+              </div>
+              <!-- Credit (disabled) -->
+              <div class="payment-tile d-flex align-items-center gap-2 p-2 rounded border opacity-50"
+                aria-disabled="true"
+                tabindex="-1"
+                style="pointer-events:none">
+                <i class="bi bi-credit-card fs-5 text-muted"></i>
+                <span class="text-muted">{{ 'STAFF.SELL.PAYMENT_CREDIT' | translate }}</span>
+                <span class="badge bg-secondary ms-auto small">{{ 'STAFF.SELL.COMING_SOON' | translate }}</span>
+              </div>
+            </div>
 
-  <!-- Action footer: totals + Sell pinned to the bottom of the scrolling card so
-       the Sell button is always reachable without scrolling. -->
-  <div class="checkout-actions d-flex flex-column gap-3">
-    <!-- Totals section -->
-    <div class="border rounded p-3 bg-light">
-      <!-- OBRS-85: dormant today — sell-page.component.ts always sends
-           bookingType:'one_way' for walk-in sales, so discountAmount stays
-           null/0 under current functionality. Kept for parity with the
-           online checkout summary and forward-compat with a future walk-in
-           round-trip flow. -->
-      <div class="d-flex justify-content-between mb-2" *ngIf="discountAmount && discountAmount > 0">
-        <span class="small">{{ 'STAFF.SELL.SUBTOTAL' | translate }}</span>
-        <span class="small">{{ totalAmount | currency:'THB':'symbol' }}</span>
-      </div>
-      <div class="d-flex justify-content-between mb-2" *ngIf="discountAmount && discountAmount > 0">
-        <span class="small">{{ 'STAFF.SELL.DISCOUNT_ROUND_TRIP' | translate }}</span>
-        <span class="small text-danger">-{{ discountAmount | currency:'THB':'symbol' }}</span>
-      </div>
-      <div class="d-flex justify-content-between mb-2">
-        <span class="fw-semibold">{{ 'STAFF.SELL.TOTAL_AMOUNT' | translate }}</span>
-        <span class="fw-bold">{{ netAmount | currency:'THB':'symbol' }}</span>
-      </div>
+            <!-- Action footer: totals + Sell pinned to the bottom of the scrolling card so
+            the Sell button is always reachable without scrolling. -->
+            <div class="checkout-actions d-flex flex-column gap-3">
+              <!-- Totals section -->
+              <div class="border rounded p-3 bg-light">
+                <!-- OBRS-85: dormant today — sell-page.component.ts always sends
+                bookingType:'one_way' for walk-in sales, so discountAmount stays
+                null/0 under current functionality. Kept for parity with the
+                online checkout summary and forward-compat with a future walk-in
+                round-trip flow. -->
+                @if (discountAmount && discountAmount > 0) {
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="small">{{ 'STAFF.SELL.SUBTOTAL' | translate }}</span>
+                    <span class="small">{{ totalAmount | currency:'THB':'symbol' }}</span>
+                  </div>
+                }
+                @if (discountAmount && discountAmount > 0) {
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="small">{{ 'STAFF.SELL.DISCOUNT_ROUND_TRIP' | translate }}</span>
+                    <span class="small text-danger">-{{ discountAmount | currency:'THB':'symbol' }}</span>
+                  </div>
+                }
+                <div class="d-flex justify-content-between mb-2">
+                  <span class="fw-semibold">{{ 'STAFF.SELL.TOTAL_AMOUNT' | translate }}</span>
+                  <span class="fw-bold">{{ netAmount | currency:'THB':'symbol' }}</span>
+                </div>
 
-      <div class="mb-2">
-        <label class="form-label small mb-1">{{ 'STAFF.SELL.CASH_RECEIVED' | translate }}</label>
-        <input type="number"
-               class="form-control form-control-sm"
-               [(ngModel)]="cashReceived"
-               [min]="0"
-               step="1" />
-      </div>
+                <div class="mb-2">
+                  <label class="form-label small mb-1">{{ 'STAFF.SELL.CASH_RECEIVED' | translate }}</label>
+                  <input type="number"
+                    class="form-control form-control-sm"
+                    [(ngModel)]="cashReceived"
+                    [min]="0"
+                    step="1" />
+                  </div>
 
-      <div class="d-flex justify-content-between align-items-center"
-           aria-live="polite">
-        <span class="small">{{ 'STAFF.SELL.CHANGE_DUE' | translate }}</span>
-        <span class="fw-semibold"
-              [class.text-success]="changeDue >= 0"
-              [class.text-danger]="changeDue < 0">
-          {{ changeDue | currency:'THB':'symbol' }}
-        </span>
-      </div>
-    </div>
+                  <div class="d-flex justify-content-between align-items-center"
+                    aria-live="polite">
+                    <span class="small">{{ 'STAFF.SELL.CHANGE_DUE' | translate }}</span>
+                    <span class="fw-semibold"
+                      [class.text-success]="changeDue >= 0"
+                      [class.text-danger]="changeDue < 0">
+                      {{ changeDue | currency:'THB':'symbol' }}
+                    </span>
+                  </div>
+                </div>
 
-    <!-- Sell button -->
-    <button class="btn btn-success btn-lg w-100"
-            [disabled]="!canSell || isSelling"
-            [title]="'STAFF.SELL.SELL_DISABLED_HINT' | translate"
-            (click)="onSell()">
-      <span *ngIf="isSelling" class="spinner-border spinner-border-sm me-1"></span>
-      {{ (isSelling ? 'STAFF.SELL.SELLING' : 'STAFF.SELL.SELL_BTN') | translate }}
-    </button>
-  </div>
+                <!-- Sell button -->
+                <button class="btn btn-success btn-lg w-100"
+                  [disabled]="!canSell || isSelling"
+                  [title]="'STAFF.SELL.SELL_DISABLED_HINT' | translate"
+                  (click)="onSell()">
+                  @if (isSelling) {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                  }
+                  {{ (isSelling ? 'STAFF.SELL.SELLING' : 'STAFF.SELL.SELL_BTN') | translate }}
+                </button>
+              </div>
 
-</div>
+            </div>

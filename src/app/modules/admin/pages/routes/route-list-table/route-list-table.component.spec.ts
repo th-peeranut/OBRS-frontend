@@ -122,6 +122,103 @@ describe('RouteListTableComponent (template)', () => {
     expect(deleteSpy).toHaveBeenCalledWith(route);
   });
 
+  // OBRS-891 whole-row click. The guard cases matter more than the happy path:
+  // the row handler sits on the same element the action buttons bubble through,
+  // so a broken guard means an Edit click also fires `view`, and a text
+  // selection inside a row silently switches the detail panels.
+  describe('whole-row click (OBRS-891)', () => {
+    function setUpRows(selection = ''): { route: RouteRow; viewSpy: jasmine.Spy } {
+      spyOn(window, 'getSelection').and.returnValue({
+        toString: () => selection,
+      } as unknown as Selection);
+
+      component.isLoading = false;
+      const route = makeRoute({ id: 7, slug: 'e-f', label: 'E to F' });
+      component.routes = [route];
+      fixture.detectChanges();
+
+      const viewSpy = jasmine.createSpy('view');
+      component.view.subscribe(viewSpy);
+      return { route, viewSpy };
+    }
+
+    // AC 1
+    it('emits view with the row when a non-interactive cell is clicked', () => {
+      const { route, viewSpy } = setUpRows();
+
+      const cell = fixture.debugElement.query(By.css('tbody tr.route-row td'));
+      cell.nativeElement.click();
+
+      expect(viewSpy).toHaveBeenCalledOnceWith(route);
+    });
+
+    // AC 2 — the View button and the row handler share one bubble path, so a
+    // missing guard shows up as a DOUBLE emit rather than as no emit at all.
+    it('emits view exactly once when the View icon itself is clicked', () => {
+      const { route, viewSpy } = setUpRows();
+
+      const buttons = fixture.debugElement.queryAll(By.css('tbody .admin-icon-btn'));
+      buttons[0].nativeElement.click();
+
+      expect(viewSpy).toHaveBeenCalledOnceWith(route);
+    });
+
+    // AC 2 — clicking the icon glyph, not the button box: `event.target` is the
+    // inner <span>, which only `closest('button')` catches.
+    it('does not emit view when the Edit or Delete glyph inside the button is clicked', () => {
+      const { viewSpy } = setUpRows();
+      const editSpy = jasmine.createSpy('edit');
+      const deleteSpy = jasmine.createSpy('delete');
+      component.edit.subscribe(editSpy);
+      component.delete.subscribe(deleteSpy);
+
+      const glyphs = fixture.debugElement.queryAll(
+        By.css('tbody .admin-icon-btn .material-symbols-outlined'),
+      );
+      glyphs[1].nativeElement.click();
+      glyphs[2].nativeElement.click();
+
+      expect(editSpy).toHaveBeenCalledTimes(1);
+      expect(deleteSpy).toHaveBeenCalledTimes(1);
+      expect(viewSpy).not.toHaveBeenCalled();
+    });
+
+    // AC 3
+    it('does not emit view when the click ends a text selection in the row', () => {
+      const { viewSpy } = setUpRows('E to F');
+
+      const cell = fixture.debugElement.query(By.css('tbody tr.route-row td'));
+      cell.nativeElement.click();
+
+      expect(viewSpy).not.toHaveBeenCalled();
+    });
+
+    // AC 4 — the row is mouse-only (no role/tabindex/keydown), so the button
+    // must stay: it is the keyboard and screen-reader entry point.
+    it('keeps the View button as a focusable button with an accessible label', () => {
+      setUpRows();
+
+      const viewButton = fixture.debugElement.queryAll(By.css('tbody .admin-icon-btn'))[0]
+        .nativeElement as HTMLButtonElement;
+      expect(viewButton.tagName).toBe('BUTTON');
+      expect(viewButton.disabled).toBeFalse();
+      expect(viewButton.getAttribute('aria-label')).toBeTruthy();
+    });
+
+    it('puts the clickable row class on data rows only, not the skeleton or empty row', () => {
+      component.isLoading = true;
+      component.routes = [];
+      fixture.detectChanges();
+      expect(fixture.debugElement.queryAll(By.css('tbody tr.route-row')).length).toBe(0);
+
+      component.isLoading = false;
+      component.hasError = false;
+      fixture.detectChanges();
+      expect(fixture.debugElement.query(By.css('tr.admin-empty-row')).nativeElement.classList)
+        .not.toContain('route-row');
+    });
+  });
+
   it('footer shows "0 - N" when totalCount is 0, otherwise "1 - N" of totalCount', () => {
     component.isLoading = false;
     component.routes = [];

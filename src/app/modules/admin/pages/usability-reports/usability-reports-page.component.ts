@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { EMPTY, Observable, Subject, timer } from 'rxjs';
+import { catchError, map, switchMap, takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../../../environments/environment';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
@@ -26,6 +26,7 @@ import {
   formatBytes as formatBytesPure,
   removeRow,
   seedDecisionStatus,
+  sortForStatus,
   statusClass as statusClassPure,
   statusLabel as statusLabelPure,
   toUsabilityReportDetailFallback,
@@ -33,9 +34,10 @@ import {
 } from './usability-reports-page.mappers';
 
 @Component({
-  selector: 'app-usability-reports-page',
-  templateUrl: './usability-reports-page.component.html',
-  styleUrl: './usability-reports-page.component.scss',
+    selector: 'app-usability-reports-page',
+    templateUrl: './usability-reports-page.component.html',
+    styleUrl: './usability-reports-page.component.scss',
+    standalone: false
 })
 export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // OBRS-378: the list is now server-filtered by status (?status=), so
@@ -56,6 +58,16 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected refreshFailed = false;
   protected errorMessage = '';
   protected readonly skeletonRows = Array.from({ length: 5 });
+
+  // OBRS-373: the admin list does not live-append a freshly-submitted report —
+  // it only refetches on a tab switch / page change / manual reload. So poll
+  // the active filter's server-side total and, when it exceeds the total this
+  // view was last loaded with, surface a "N new" pill the admin clicks to pull
+  // the new rows in. `baselineTotal` is the count the current view reconciled
+  // against (set on every confirmed load); null until the first load lands.
+  protected newReportCount = 0;
+  private baselineTotal: number | null = null;
+  private static readonly LIVE_REFRESH_POLL_MS = 30_000;
 
   // OBRS-378: seeded to a concrete role default in ngOnInit and kept concrete
   // thereafter — the filter dropdown drops its [placeholder] binding
@@ -80,7 +92,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected isAdmin = false;
 
   // Detail modal
-  protected selectedReportId: string | null = null;
+  protected selectedReportId: number | null = null;
   protected detailReport: UsabilityReportDetail | null = null;
   // True only while the full detail (description/images/userAgent) is still
   // being fetched in the background — the modal itself is never gated on this.
@@ -102,7 +114,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected isPickerOpen = false;
   protected pickerCandidates: UsabilityReportSummary[] = [];
   protected isMarkingDuplicate = false;
-  private pickerSourceId: string | null = null;
+  private pickerSourceId: number | null = null;
   // Whether the picker was opened from the detail modal's secondary button
   // (vs. the row's action) — only then does a successful mark also close the
   // detail modal underneath.
@@ -110,7 +122,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
 
   // In-memory cache of full report detail, keyed by report id, so reopening
   // the same report doesn't re-issue the GET. Invalidated on status save.
-  private readonly detailCache = new Map<string, UsabilityReportDetail>();
+  private readonly detailCache = new Map<number, UsabilityReportDetail>();
 
   private readonly destroy$ = new Subject<void>();
 
@@ -130,6 +142,16 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.buildStatusOptions());
 
+    // store-null-ok: OBRS-943 — the guard below is the OBRS-466 exception, not a
+    // missed reset. The rows and the count ARE cleared unconditionally on null
+    // (`allReports` / `totalElements`, OBRS-467, immediately below). What the
+    // `if (data)` deliberately KEEPS across a transient clear() is the paginator's
+    // position — `currentPage`, `totalPages`, `baselineTotal`, `newReportCount`.
+    // Zeroing `totalPages` there would drop it under its `*ngIf="totalPages > 1"`
+    // and unmount the paginator mid-page-change, which is what dropped keyboard
+    // focus to <body> and killed the aria-live region. Honoring null here would
+    // re-break that. This marker exists because the gate could not tell the two
+    // apart and had been failing `dev` behind OBRS-932's gate.
     this.store.data$
       .pipe(takeUntil(this.destroy$))
       .subscribe((data) => {
@@ -146,9 +168,24 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
         // unobservable there — the skeleton covers the cleared→reload window.
         this.allReports = data?.content ?? [];
         this.totalElements = data?.totalElements ?? 0;
-        // Spring's `number` is 0-based; the paginator/footer render 1-based.
-        this.currentPage = (data?.number ?? 0) + 1;
-        this.totalPages = data?.totalPages ?? 0;
+        // OBRS-466 (a11y): keep the last-known page position across a transient
+        // clear() (data === null). The rows + count above still reset to
+        // empty/0 (OBRS-467 — no stale rows/count under the skeleton or error
+        // banner), but the paginator reads currentPage/totalPages, and zeroing
+        // totalPages here would drop it below its `*ngIf="totalPages > 1"`
+        // threshold and unmount it mid-page-change — which is exactly what
+        // dropped keyboard focus to <body> and killed the aria-live region.
+        // Retaining the position keeps the paginator mounted (disabled while
+        // refreshing) so it can restore focus and announce the new page.
+        if (data) {
+          // Spring's `number` is 0-based; the paginator/footer render 1-based.
+          this.currentPage = data.number + 1;
+          this.totalPages = data.totalPages;
+          // OBRS-373: a confirmed load reconciles the view with the server, so
+          // this IS the new baseline and any pending "N new" pill is now stale.
+          this.baselineTotal = data.totalElements;
+          this.newReportCount = 0;
+        }
       });
 
     this.store.refreshing$
@@ -174,6 +211,28 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     // double-fetch on first load.
     this.selectedStatusFilter = this.isAdmin ? 'owner_accepted' : 'new';
     void this.store.setStatus(this.selectedStatusFilter);
+
+    // OBRS-373: poll the active filter's total on an interval and raise the
+    // "N new" pill when the server has grown past this view's baseline. Uses
+    // the admin GET (SKIP_GLOBAL_LOADING/ERROR via createAdminContext), so the
+    // background poll never flashes the global spinner or a toast; a failed
+    // poll is swallowed (EMPTY) and simply retried on the next tick. The
+    // interval starts at LIVE_REFRESH_POLL_MS (not 0) — the first load is
+    // already in flight from setStatus() above.
+    timer(
+      UsabilityReportsPageComponent.LIVE_REFRESH_POLL_MS,
+      UsabilityReportsPageComponent.LIVE_REFRESH_POLL_MS
+    )
+      .pipe(
+        switchMap(() => this.pollActiveFilterTotal()),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((serverTotal) => {
+        this.newReportCount =
+          this.baselineTotal !== null && serverTotal > this.baselineTotal
+            ? serverTotal - this.baselineTotal
+            : 0;
+      });
   }
 
   ngOnDestroy(): void {
@@ -214,6 +273,38 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     void this.store.setPage(page - 1);
   }
 
+  // OBRS-373: fetch just the active filter's total (size=1 envelope — same
+  // trick as getUsabilityReportCountByStatus, but for the CURRENT filter,
+  // including 'all' → omit ?status=). Swallows errors so a transient poll
+  // failure never clears the pill or toasts; the next tick retries.
+  private pollActiveFilterTotal(): Observable<number> {
+    const statusParam =
+      this.selectedStatusFilter !== 'all'
+        ? (this.selectedStatusFilter as UsabilityReportStatus)
+        : undefined;
+    return this.adminApiService
+      .getUsabilityReports(statusParam, sortForStatus(this.selectedStatusFilter), 0, 1)
+      .pipe(
+        map((response) => response.data?.totalElements ?? 0),
+        catchError(() => EMPTY)
+      );
+  }
+
+  // OBRS-373: the "N new" pill action. New reports sort newest-first on every
+  // queue this pill appears on (see sortForStatus — 'new'/'all' are non-FIFO),
+  // so jump to page 1 to bring them into view; if already there, refresh in
+  // place. Either path emits fresh data → baselineTotal resets and the pill
+  // clears via the data$ handler above. Cleared optimistically here too so the
+  // pill dismisses on the very click.
+  protected showNewReports(): void {
+    this.newReportCount = 0;
+    if (this.currentPage !== 1) {
+      this.onPageChange(1);
+    } else {
+      void this.store.refresh();
+    }
+  }
+
   // Mirrors bookings-page.component.ts's getters of the same name, but
   // computed from the server's page number/total rather than a locally-sliced
   // array — the backend already tells us exactly how many rows are on this
@@ -233,7 +324,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // clicks that originate from an interactive control in the row (the View
   // button opens it itself — don't double-fire) and clicks made while the admin
   // is selecting text.
-  protected onRowActivate(id: string, event: MouseEvent): void {
+  protected onRowActivate(id: number, event: MouseEvent): void {
     const target = event.target as HTMLElement | null;
     if (target?.closest('button, a, input, select, textarea')) {
       return;
@@ -244,7 +335,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     this.openDetail(id);
   }
 
-  protected openDetail(id: string): void {
+  protected openDetail(id: number): void {
     this.selectedReportId = id;
     this.lightboxImageUrl = null;
     this.isTriageNoteDirty = false;
@@ -344,7 +435,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // this call). Errors are swallowed, including the expected 400
   // report.invalid-transition when another admin's session already advanced
   // this report between this admin's list fetch and opening it.
-  private autoPromoteToInReview(id: string): void {
+  private autoPromoteToInReview(id: number): void {
     // Apply the promote OPTIMISTICALLY — before the PUT resolves — so the UI
     // reacts instantly instead of waiting on the live round-trip (~2s): flip
     // the table row to in_review (or remove it, if that leaves the active
@@ -383,7 +474,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // must be REMOVED from the client-side cache, not just relabeled in place —
   // otherwise a patched-but-out-of-tab row keeps rendering until the next
   // full refresh.
-  private applyRowStatus(id: string, status: UsabilityReportStatus): void {
+  private applyRowStatus(id: number, status: UsabilityReportStatus): void {
     // OBRS-524: when the active filter is 'all', every status is in view —
     // a status change can never move a row out of the currently-shown set,
     // so it must never be treated as leaving the tab (that would wrongly
@@ -597,7 +688,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // itself and any report already status==='duplicate' — mirroring the
   // backend's own REPORT_CANONICAL_SELF_REFERENCE / REPORT_CANONICAL_ALREADY_DUPLICATE
   // guards so the admin can't even select an invalid target.
-  protected openDuplicatePicker(id: string): void {
+  protected openDuplicatePicker(id: number): void {
     this.pickerSourceId = id;
     this.pickerOpenedFromDetail = this.selectedReportId === id;
     this.pickerCandidates = this.allReports.filter(
@@ -613,24 +704,14 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     this.pickerOpenedFromDetail = false;
   }
 
-  protected onPickerConfirm(candidateId: string): void {
-    if (!this.pickerSourceId || this.isMarkingDuplicate) {
+  protected onPickerConfirm(canonicalId: number): void {
+    if (this.pickerSourceId === null || this.isMarkingDuplicate) {
       return;
     }
-    // QA fix (OBRS-376 type-safety sweep): `candidateId` is typed string per
-    // the picker's `confirm: EventEmitter<string>` contract (locked UX
-    // spec), but its actual runtime value is whatever
-    // `UsabilityReportSummary.id` really is — a JSON number per the live API
-    // (confirmed by QA), despite that field's string type (a separate,
-    // wider follow-up card — not fixed here). `Number()` coerces either
-    // representation correctly; the NaN guard makes this an explicit, safe
-    // conversion for the PATCH body's `canonicalId: number` rather than
-    // something that only "happens to work" because both
-    // `Number(42)`/`Number('42')` resolve to `42`.
-    const canonicalId = Number(candidateId);
-    if (Number.isNaN(canonicalId)) {
-      return;
-    }
+    // OBRS-436: `canonicalId` now arrives already-typed `number` from the
+    // picker's `confirm: EventEmitter<number>`, matching the real API id shape.
+    // The OBRS-376 `Number(candidateId)` coercion + NaN guard that used to sit
+    // here existed only to launder the old `id: string` type lie and is gone.
     const id = this.pickerSourceId;
     const openedFromDetail = this.pickerOpenedFromDetail;
     // OBRS-527: the SOURCE report's status before marking — needed to know
@@ -702,7 +783,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // Un-mark reuses the EXISTING status-update endpoint (status -> 'in_review')
   // rather than a dedicated un-mark endpoint — the backend clears the
   // duplicate link server-side on that transition.
-  protected async unmarkDuplicate(id: string): Promise<void> {
+  protected async unmarkDuplicate(id: number): Promise<void> {
     const confirmed = await this.alertService.confirm({
       title: this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_CONFIRM_TITLE'),
       text: this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_CONFIRM_TEXT'),
@@ -744,27 +825,19 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
       });
   }
 
-  // Display-only helper for the "ซ้ำกับ #X" link — duplicateOfId is a
-  // number (backend PK), openDetail()'s id param is this page's string id
-  // shape; reuses the existing openDetail() rather than a second fetch path.
-  // No role gate here — an owner may click through to the canonical report,
-  // same read-only visibility as the status chip/count badge (§ OWNER
-  // visibility in the UX spec).
+  // Display-only helper for the "ซ้ำกับ #X" link — duplicateOfId and
+  // openDetail()'s id param are both `number` (backend PK); reuses the
+  // existing openDetail() rather than a second fetch path. No role gate here —
+  // an owner may click through to the canonical report, same read-only
+  // visibility as the status chip/count badge (§ OWNER visibility in the UX
+  // spec).
   //
-  // QA fix (OBRS-376 type-safety sweep): openDetail()'s optimistic-open
-  // lookup (`allReports.find(r => r.id === id)`, design-system.md §6) is a
-  // strict `===` against whatever runtime value is passed in. Every OTHER
-  // call site passes `report.id` UNCONVERTED — its real runtime value is a
-  // JSON number (confirmed live by QA), despite `UsabilityReportSummary.id`
-  // being TYPED string (separate, wider follow-up card — not fixed here;
-  // see the picker's filteredCandidates fix, same root cause). Converting
-  // via `String(canonicalId)` would silently break that `===` match
-  // (`42 === "42"` is false), dropping the optimistic pre-fill for exactly
-  // this one entry point — so this deliberately forwards the real number
-  // through, matching every other caller's runtime shape, rather than
-  // "honestly" stringifying it.
+  // OBRS-436: previously `this.openDetail(canonicalId as unknown as string)` —
+  // a cast that only existed because openDetail's id param was mistyped
+  // `string` while every caller passed the real number. With the id type lie
+  // fixed, the number flows straight through and the cast is gone.
   protected openCanonicalReport(canonicalId: number): void {
-    this.openDetail(canonicalId as unknown as string);
+    this.openDetail(canonicalId);
   }
 
   protected categoryLabel(category: string): string {
@@ -779,7 +852,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     return statusClassPure(status);
   }
 
-  protected trackById(_index: number, item: UsabilityReportSummary): string {
+  protected trackById(_index: number, item: UsabilityReportSummary): number {
     return item.id;
   }
 

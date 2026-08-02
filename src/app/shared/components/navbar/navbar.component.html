@@ -9,14 +9,14 @@
     class="menu-font navbar-desktop-only"
     routerLink="/how-to-book"
     routerLinkActive="menu-font-active"
-  >
+    >
     {{ "HOME.NAVBAR.BOOKING" | translate }}
   </a>
   <button
     type="button"
     class="menu-font menu-font-action navbar-desktop-only"
     (click)="scrollToContact()"
-  >
+    >
     {{ "HOME.NAVBAR.CONTACT" | translate }}
   </button>
 
@@ -28,16 +28,16 @@
     <!-- Language globe dropdown — desktop instance -->
     <app-lang-switcher></app-lang-switcher>
 
-    <ng-container *ngIf="!isLogin">
+    @if (!isLogin) {
       <button class="btn btn-signin" type="button" [routerLink]="'/login'">
         {{ "HOME.NAVBAR.SIGNIN" | translate }}
       </button>
       <button class="btn btn-signup" type="button" [routerLink]="'/register'">
         {{ "HOME.NAVBAR.SIGNUP" | translate }}
       </button>
-    </ng-container>
+    }
 
-    <ng-container *ngIf="isLogin">
+    @if (isLogin) {
       <!-- PROFILE AVATAR DROPDOWN -->
       <div class="navbar-profile">
         <button
@@ -48,79 +48,84 @@
           [attr.aria-expanded]="isProfileDropdownOpen"
           aria-haspopup="menu"
           [attr.aria-label]="'HOME.NAVBAR.PROFILE_MENU' | translate"
-        >
+          >
           {{ userInitials }}
         </button>
-        <div class="navbar-profile-menu" *ngIf="isProfileDropdownOpen" role="menu">
-          <a
-            class="navbar-profile-item"
-            role="menuitem"
-            [routerLink]="'/account'"
-            (click)="isProfileDropdownOpen = false"
-          >
-            <span class="material-symbols-outlined">manage_accounts</span>
-            <span>{{ "HOME.NAVBAR.ACCOUNT" | translate }}</span>
-          </a>
-          <a
-            class="navbar-profile-item"
-            role="menuitem"
-            [routerLink]="'/my-bookings'"
-            (click)="isProfileDropdownOpen = false"
-          >
-            <span class="material-symbols-outlined">confirmation_number</span>
-            <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
-          </a>
-          <a
-            *ngIf="isOnlineParcelBookingEnabled"
-            class="navbar-profile-item"
-            role="menuitem"
-            [routerLink]="'/my-parcels'"
-            (click)="isProfileDropdownOpen = false"
-          >
-            <span class="material-symbols-outlined">local_shipping</span>
-            <span>{{ "HOME.NAVBAR.MY_PARCELS" | translate }}</span>
-          </a>
-          <a
-            class="navbar-profile-item"
-            role="menuitem"
-            [routerLink]="'/my-reports'"
-            (click)="isProfileDropdownOpen = false"
-          >
-            <span class="material-symbols-outlined">flag</span>
-            <span>{{ "HOME.NAVBAR.MY_REPORTS" | translate }}</span>
-          </a>
-          <a
-            *ngIf="isAdmin"
-            class="navbar-profile-item"
-            role="menuitem"
-            [routerLink]="'/admin/dashboard'"
-            (click)="isProfileDropdownOpen = false"
-          >
-            <span class="material-symbols-outlined">dashboard</span>
-            <span>{{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}</span>
-          </a>
-          <a
-            *ngIf="isSalesperson || isDriver"
-            class="navbar-profile-item"
-            role="menuitem"
-            [routerLink]="'/staff'"
-            (click)="isProfileDropdownOpen = false"
-          >
-            <span class="material-symbols-outlined">badge</span>
-            <span>{{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}</span>
-          </a>
-          <button
-            type="button"
-            class="navbar-profile-item"
-            role="menuitem"
-            (click)="onLogout()"
-          >
-            <span class="material-symbols-outlined">logout</span>
-            <span>{{ "HOME.NAVBAR.SIGNOUT" | translate }}</span>
-          </button>
-        </div>
+        @if (isProfileDropdownOpen) {
+          <div class="navbar-profile-menu" role="menu">
+            <a
+              class="navbar-profile-item"
+              role="menuitem"
+              [routerLink]="'/account'"
+              (click)="isProfileDropdownOpen = false"
+              >
+              <span class="material-symbols-outlined">manage_accounts</span>
+              <span>{{ "HOME.NAVBAR.ACCOUNT" | translate }}</span>
+            </a>
+            <a
+              class="navbar-profile-item"
+              role="menuitem"
+              [routerLink]="'/my-bookings'"
+              (click)="isProfileDropdownOpen = false"
+              >
+              <span class="material-symbols-outlined">confirmation_number</span>
+              <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
+            </a>
+            @if (isOnlineParcelBookingEnabled) {
+              <a
+                class="navbar-profile-item"
+                role="menuitem"
+                [routerLink]="'/my-parcels'"
+                (click)="isProfileDropdownOpen = false"
+                >
+                <span class="material-symbols-outlined">local_shipping</span>
+                <span>{{ "HOME.NAVBAR.MY_PARCELS" | translate }}</span>
+              </a>
+            }
+            <a
+              class="navbar-profile-item"
+              role="menuitem"
+              [routerLink]="'/my-reports'"
+              (click)="isProfileDropdownOpen = false"
+              >
+              <span class="material-symbols-outlined">flag</span>
+              <span>{{ "HOME.NAVBAR.MY_REPORTS" | translate }}</span>
+            </a>
+            @if (isAdmin) {
+              <a
+                class="navbar-profile-item"
+                role="menuitem"
+                [routerLink]="'/admin/dashboard'"
+                (click)="isProfileDropdownOpen = false"
+                >
+                <span class="material-symbols-outlined">dashboard</span>
+                <span>{{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}</span>
+              </a>
+            }
+            @if (isSalesperson || isDriver) {
+              <a
+                class="navbar-profile-item"
+                role="menuitem"
+                [routerLink]="'/staff'"
+                (click)="isProfileDropdownOpen = false"
+                >
+                <span class="material-symbols-outlined">badge</span>
+                <span>{{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}</span>
+              </a>
+            }
+            <button
+              type="button"
+              class="navbar-profile-item"
+              role="menuitem"
+              (click)="onLogout()"
+              >
+              <span class="material-symbols-outlined">logout</span>
+              <span>{{ "HOME.NAVBAR.SIGNOUT" | translate }}</span>
+            </button>
+          </div>
+        }
       </div>
-    </ng-container>
+    }
   </div>
 
   <!-- Hamburger toggle — visible only at ≤992px -->
@@ -132,7 +137,7 @@
     [attr.aria-expanded]="isMobileMenuOpen"
     aria-controls="navbar-mobile-panel"
     [attr.aria-label]="'HOME.NAVBAR.MENU' | translate"
-  >
+    >
     <span class="material-symbols-outlined">
       {{ isMobileMenuOpen ? 'close' : 'menu' }}
     </span>
@@ -140,113 +145,114 @@
 </div>
 
 <!-- Mobile slide-down panel — visible only at ≤992px when open -->
-<nav
-  id="navbar-mobile-panel"
-  class="navbar-mobile-panel"
-  *ngIf="isMobileMenuOpen"
-  role="navigation"
-  [attr.aria-label]="'HOME.NAVBAR.MENU' | translate"
->
-  <!-- 1. Language switcher + theme toggle at the top (UX requirement) — mobile instance -->
-  <div class="navbar-mobile-section navbar-mobile-lang">
-    <app-lang-switcher menuAlign="left"></app-lang-switcher>
-    <app-theme-toggle ariaLabelKey="HOME.NAVBAR.THEME_TOGGLE"></app-theme-toggle>
-  </div>
-
-  <!-- 2. Nav links -->
-  <div class="navbar-mobile-section">
-    <a
-      class="navbar-mobile-link"
-      routerLink="/how-to-book"
-      routerLinkActive="navbar-mobile-link-active"
-      (click)="closeMobileMenu()"
+@if (isMobileMenuOpen) {
+  <nav
+    id="navbar-mobile-panel"
+    class="navbar-mobile-panel"
+    role="navigation"
+    [attr.aria-label]="'HOME.NAVBAR.MENU' | translate"
     >
-      <span class="material-symbols-outlined">directions_bus</span>
-      <span>{{ "HOME.NAVBAR.BOOKING" | translate }}</span>
-    </a>
-    <button
-      type="button"
-      class="navbar-mobile-link"
-      (click)="mobileScrollToContact()"
-    >
-      <span class="material-symbols-outlined">contact_support</span>
-      <span>{{ "HOME.NAVBAR.CONTACT" | translate }}</span>
-    </button>
-  </div>
-
-  <!-- 3. Auth area -->
-  <div class="navbar-mobile-section">
-    <ng-container *ngIf="!isLogin">
-      <a class="navbar-mobile-link" routerLink="/login" (click)="closeMobileMenu()">
-        <span class="material-symbols-outlined">login</span>
-        <span>{{ "HOME.NAVBAR.SIGNIN" | translate }}</span>
-      </a>
-      <a class="navbar-mobile-link" routerLink="/register" (click)="closeMobileMenu()">
-        <span class="material-symbols-outlined">person_add</span>
-        <span>{{ "HOME.NAVBAR.SIGNUP" | translate }}</span>
-      </a>
-    </ng-container>
-
-    <ng-container *ngIf="isLogin">
+    <!-- 1. Language switcher + theme toggle at the top (UX requirement) — mobile instance -->
+    <div class="navbar-mobile-section navbar-mobile-lang">
+      <app-lang-switcher menuAlign="left"></app-lang-switcher>
+      <app-theme-toggle ariaLabelKey="HOME.NAVBAR.THEME_TOGGLE"></app-theme-toggle>
+    </div>
+    <!-- 2. Nav links -->
+    <div class="navbar-mobile-section">
       <a
         class="navbar-mobile-link"
-        routerLink="/account"
+        routerLink="/how-to-book"
+        routerLinkActive="navbar-mobile-link-active"
         (click)="closeMobileMenu()"
-      >
-        <span class="material-symbols-outlined">manage_accounts</span>
-        <span>{{ "HOME.NAVBAR.ACCOUNT" | translate }}</span>
-      </a>
-      <a
-        class="navbar-mobile-link"
-        routerLink="/my-bookings"
-        (click)="closeMobileMenu()"
-      >
-        <span class="material-symbols-outlined">confirmation_number</span>
-        <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
-      </a>
-      <a
-        *ngIf="isOnlineParcelBookingEnabled"
-        class="navbar-mobile-link"
-        routerLink="/my-parcels"
-        (click)="closeMobileMenu()"
-      >
-        <span class="material-symbols-outlined">local_shipping</span>
-        <span>{{ "HOME.NAVBAR.MY_PARCELS" | translate }}</span>
-      </a>
-      <a
-        class="navbar-mobile-link"
-        routerLink="/my-reports"
-        (click)="closeMobileMenu()"
-      >
-        <span class="material-symbols-outlined">flag</span>
-        <span>{{ "HOME.NAVBAR.MY_REPORTS" | translate }}</span>
-      </a>
-      <a
-        *ngIf="isAdmin"
-        class="navbar-mobile-link"
-        routerLink="/admin/dashboard"
-        (click)="closeMobileMenu()"
-      >
-        <span class="material-symbols-outlined">dashboard</span>
-        <span>{{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}</span>
-      </a>
-      <a
-        *ngIf="isSalesperson || isDriver"
-        class="navbar-mobile-link"
-        routerLink="/staff"
-        (click)="closeMobileMenu()"
-      >
-        <span class="material-symbols-outlined">badge</span>
-        <span>{{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}</span>
+        >
+        <span class="material-symbols-outlined">directions_bus</span>
+        <span>{{ "HOME.NAVBAR.BOOKING" | translate }}</span>
       </a>
       <button
         type="button"
-        class="navbar-mobile-link navbar-mobile-signout"
-        (click)="onLogout()"
-      >
-        <span class="material-symbols-outlined">logout</span>
-        <span>{{ "HOME.NAVBAR.SIGNOUT" | translate }}</span>
+        class="navbar-mobile-link"
+        (click)="mobileScrollToContact()"
+        >
+        <span class="material-symbols-outlined">contact_support</span>
+        <span>{{ "HOME.NAVBAR.CONTACT" | translate }}</span>
       </button>
-    </ng-container>
-  </div>
-</nav>
+    </div>
+    <!-- 3. Auth area -->
+    <div class="navbar-mobile-section">
+      @if (!isLogin) {
+        <a class="navbar-mobile-link" routerLink="/login" (click)="closeMobileMenu()">
+          <span class="material-symbols-outlined">login</span>
+          <span>{{ "HOME.NAVBAR.SIGNIN" | translate }}</span>
+        </a>
+        <a class="navbar-mobile-link" routerLink="/register" (click)="closeMobileMenu()">
+          <span class="material-symbols-outlined">person_add</span>
+          <span>{{ "HOME.NAVBAR.SIGNUP" | translate }}</span>
+        </a>
+      }
+      @if (isLogin) {
+        <a
+          class="navbar-mobile-link"
+          routerLink="/account"
+          (click)="closeMobileMenu()"
+          >
+          <span class="material-symbols-outlined">manage_accounts</span>
+          <span>{{ "HOME.NAVBAR.ACCOUNT" | translate }}</span>
+        </a>
+        <a
+          class="navbar-mobile-link"
+          routerLink="/my-bookings"
+          (click)="closeMobileMenu()"
+          >
+          <span class="material-symbols-outlined">confirmation_number</span>
+          <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
+        </a>
+        @if (isOnlineParcelBookingEnabled) {
+          <a
+            class="navbar-mobile-link"
+            routerLink="/my-parcels"
+            (click)="closeMobileMenu()"
+            >
+            <span class="material-symbols-outlined">local_shipping</span>
+            <span>{{ "HOME.NAVBAR.MY_PARCELS" | translate }}</span>
+          </a>
+        }
+        <a
+          class="navbar-mobile-link"
+          routerLink="/my-reports"
+          (click)="closeMobileMenu()"
+          >
+          <span class="material-symbols-outlined">flag</span>
+          <span>{{ "HOME.NAVBAR.MY_REPORTS" | translate }}</span>
+        </a>
+        @if (isAdmin) {
+          <a
+            class="navbar-mobile-link"
+            routerLink="/admin/dashboard"
+            (click)="closeMobileMenu()"
+            >
+            <span class="material-symbols-outlined">dashboard</span>
+            <span>{{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}</span>
+          </a>
+        }
+        @if (isSalesperson || isDriver) {
+          <a
+            class="navbar-mobile-link"
+            routerLink="/staff"
+            (click)="closeMobileMenu()"
+            >
+            <span class="material-symbols-outlined">badge</span>
+            <span>{{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}</span>
+          </a>
+        }
+        <button
+          type="button"
+          class="navbar-mobile-link navbar-mobile-signout"
+          (click)="onLogout()"
+          >
+          <span class="material-symbols-outlined">logout</span>
+          <span>{{ "HOME.NAVBAR.SIGNOUT" | translate }}</span>
+        </button>
+      }
+    </div>
+  </nav>
+}

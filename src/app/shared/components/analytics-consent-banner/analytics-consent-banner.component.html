@@ -1,0 +1,33 @@
+<!-- OBRS-867: shown only while the PDPA question is unanswered. Both answers
+dismiss it permanently; see the component for why "no" is a real button. -->
+@if (isUndecided$ | async) {
+  <div
+    class="consent-banner"
+    role="region"
+    [attr.aria-label]="'ANALYTICS_CONSENT.ARIA_LABEL' | translate"
+    >
+    <div class="consent-banner__text">
+      <p class="consent-banner__title">{{ 'ANALYTICS_CONSENT.TITLE' | translate }}</p>
+      <p class="consent-banner__body">
+        {{ 'ANALYTICS_CONSENT.BODY' | translate }}
+        <a class="consent-banner__link" routerLink="/privacy-policy">
+          {{ 'ANALYTICS_CONSENT.LEARN_MORE' | translate }}
+        </a>
+      </p>
+    </div>
+    <div class="consent-banner__actions">
+      <!-- Decline first in the DOM, so it is also first in the tab order. The
+      cheaper answer for us must not be the easier one to reach. -->
+      <button type="button" class="consent-banner__btn" (click)="decline()">
+        {{ 'ANALYTICS_CONSENT.DECLINE' | translate }}
+      </button>
+      <button
+        type="button"
+        class="consent-banner__btn consent-banner__btn--accept"
+        (click)="accept()"
+        >
+        {{ 'ANALYTICS_CONSENT.ACCEPT' | translate }}
+      </button>
+    </div>
+  </div>
+}

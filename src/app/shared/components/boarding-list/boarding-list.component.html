@@ -1,86 +1,94 @@
 <div class="container-fluid py-4">
   <!-- OBRS-256: on-screen promotion of the (previously print-only) trip
-       header — route/departure/vehicle meta + the departed/arrived status
-       pill + the forward-transition control. Gated on the WHOLE tripHeader
-       so a null/failed self-fetch hides the whole strip (no mis-tinted
-       flash of a default state). -->
-  <div class="boarding-trip-header" *ngIf="tripHeader">
-    <div class="boarding-trip-header-meta">
-      <div class="boarding-trip-header-field">
-        <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.ROUTE' | translate }}</span>
-        <span class="fw-semibold">{{ tripHeader.routeLabel }}</span>
+  header — route/departure/vehicle meta + the departed/arrived status
+  pill + the forward-transition control. Gated on the WHOLE tripHeader
+  so a null/failed self-fetch hides the whole strip (no mis-tinted
+  flash of a default state). -->
+  @if (tripHeader) {
+    <div class="boarding-trip-header">
+      <div class="boarding-trip-header-meta">
+        <div class="boarding-trip-header-field">
+          <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.ROUTE' | translate }}</span>
+          <span class="fw-semibold">{{ tripHeader.routeLabel }}</span>
+        </div>
+        <div class="boarding-trip-header-field">
+          <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DEPARTURE' | translate }}</span>
+          <span class="fw-semibold">{{ tripHeader.departureDateTime }}</span>
+        </div>
+        <div class="boarding-trip-header-field">
+          <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.VEHICLE' | translate }}</span>
+          <span class="fw-semibold">{{ tripHeader.vehicleLabel }}</span>
+        </div>
+        <div class="boarding-trip-header-field">
+          <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DRIVER' | translate }}</span>
+          <span class="fw-semibold">{{ tripHeader.driverName }}</span>
+        </div>
       </div>
-      <div class="boarding-trip-header-field">
-        <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DEPARTURE' | translate }}</span>
-        <span class="fw-semibold">{{ tripHeader.departureDateTime }}</span>
-      </div>
-      <div class="boarding-trip-header-field">
-        <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.VEHICLE' | translate }}</span>
-        <span class="fw-semibold">{{ tripHeader.vehicleLabel }}</span>
-      </div>
-      <div class="boarding-trip-header-field">
-        <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DRIVER' | translate }}</span>
-        <span class="fw-semibold">{{ tripHeader.driverName }}</span>
+      <div class="boarding-trip-header-status">
+        <div class="boarding-trip-header-status-row">
+          <span class="admin-status admin-status--icon" [ngClass]="scheduleStatusPillClass">
+            <span class="material-symbols-outlined" aria-hidden="true">{{ scheduleStatusPillIcon }}</span>
+            {{ scheduleStatusPillLabelKey | translate }}
+          </span>
+          <!-- OBRS-272: "delayed" is a DERIVED indicator (off delayedDepartureDateTime),
+          never routed through scheduleStatusPillClass/parseAdminStatus — the
+          schedule's own status stays `scheduled`. New --admin-delayed-* token
+          (design-system §2.4/§11): distinct violet, no collision with
+          is-info(departed)/is-success(arrived)/is-neutral(scheduled). -->
+          @if (isScheduleDelayed) {
+            <span class="admin-status is-delayed admin-status--icon">
+              <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+              {{ 'STAFF.SCHEDULE_DELAY.INDICATOR_LABEL' | translate: { eta: formattedDelayedEta } }}
+            </span>
+          }
+          @if (canControlScheduleStatus && canShowScheduleStatusAction && scheduleStatusAction; as action) {
+            <button
+              type="button"
+              class="admin-btn"
+              [disabled]="isUpdatingScheduleStatus"
+              (click)="onScheduleStatusAction()"
+              >
+              <span class="material-symbols-outlined" aria-hidden="true">{{ action.icon }}</span>
+              {{ (isUpdatingScheduleStatus ? 'STAFF.SCHEDULE_STATUS.ACTION.UPDATING' : action.labelKey) | translate }}
+            </button>
+          }
+          <!-- OBRS-272: "Mark delayed"/"Update ETA" pill — next to OBRS-256's
+          departed/arrived control. Renders ONLY while still `scheduled`
+          (hidden once departed/arrived/cancelled, making the 409
+          NOT_SCHEDULED path rare by construction). OBRS-434: no longer the
+          same role gate as the transition button above — delay stays
+          salesperson-only on the backend, so drivers must not see it. -->
+          @if (canDelaySchedule && tripHeader.statusCode === 'scheduled') {
+            <button
+              type="button"
+              class="admin-btn"
+              (click)="openDelayDialog()"
+              >
+              <span class="material-symbols-outlined" aria-hidden="true">update</span>
+              {{ delayPillLabelKey | translate }}
+            </button>
+          }
+        </div>
+        @if (isScheduleDelayed && tripHeader.delayReason) {
+          <div class="boarding-delay-reason text-muted small">
+            {{ 'STAFF.SCHEDULE_DELAY.INDICATOR_REASON' | translate: { reason: tripHeader.delayReason } }}
+          </div>
+        }
       </div>
     </div>
-    <div class="boarding-trip-header-status">
-      <div class="boarding-trip-header-status-row">
-        <span class="admin-status admin-status--icon" [ngClass]="scheduleStatusPillClass">
-          <span class="material-symbols-outlined" aria-hidden="true">{{ scheduleStatusPillIcon }}</span>
-          {{ scheduleStatusPillLabelKey | translate }}
-        </span>
-        <!-- OBRS-272: "delayed" is a DERIVED indicator (off delayedDepartureDateTime),
-             never routed through scheduleStatusPillClass/parseAdminStatus — the
-             schedule's own status stays `scheduled`. New --admin-delayed-* token
-             (design-system §2.4/§11): distinct violet, no collision with
-             is-info(departed)/is-success(arrived)/is-neutral(scheduled). -->
-        <span class="admin-status is-delayed admin-status--icon" *ngIf="isScheduleDelayed">
-          <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
-          {{ 'STAFF.SCHEDULE_DELAY.INDICATOR_LABEL' | translate: { eta: formattedDelayedEta } }}
-        </span>
-        <button
-          *ngIf="canControlScheduleStatus && canShowScheduleStatusAction && scheduleStatusAction as action"
-          type="button"
-          class="admin-btn"
-          [disabled]="isUpdatingScheduleStatus"
-          (click)="onScheduleStatusAction()"
-        >
-          <span class="material-symbols-outlined" aria-hidden="true">{{ action.icon }}</span>
-          {{ (isUpdatingScheduleStatus ? 'STAFF.SCHEDULE_STATUS.ACTION.UPDATING' : action.labelKey) | translate }}
-        </button>
-        <!-- OBRS-272: "Mark delayed"/"Update ETA" pill — next to OBRS-256's
-             departed/arrived control. Renders ONLY while still `scheduled`
-             (hidden once departed/arrived/cancelled, making the 409
-             NOT_SCHEDULED path rare by construction). OBRS-434: no longer the
-             same role gate as the transition button above — delay stays
-             salesperson-only on the backend, so drivers must not see it. -->
-        <button
-          *ngIf="canDelaySchedule && tripHeader.statusCode === 'scheduled'"
-          type="button"
-          class="admin-btn"
-          (click)="openDelayDialog()"
-        >
-          <span class="material-symbols-outlined" aria-hidden="true">update</span>
-          {{ delayPillLabelKey | translate }}
-        </button>
-      </div>
-      <div class="boarding-delay-reason text-muted small" *ngIf="isScheduleDelayed && tripHeader.delayReason">
-        {{ 'STAFF.SCHEDULE_DELAY.INDICATOR_REASON' | translate: { reason: tripHeader.delayReason } }}
-      </div>
-    </div>
-  </div>
+  }
 
   <!-- OBRS-100: export (reuses the canonical app-export-button, ADR 0001)
-       + print (CDK Portal teleport-to-body, docs/adr/0015). Neither is a
-       screen "primary" action (design-system §4) — both stay secondary
-       admin-btn. -->
+  + print (CDK Portal teleport-to-body, docs/adr/0015). Neither is a
+  screen "primary" action (design-system §4) — both stay secondary
+  admin-btn. -->
   <div class="boarding-list-toolbar d-flex justify-content-end gap-2 mb-3">
     <button
       type="button"
       class="admin-btn"
       [disabled]="isLoading"
       (click)="printManifest()"
-    >
+      >
       <span class="material-symbols-outlined" aria-hidden="true">print</span>
       {{ 'STAFF.BOARDING.PRINT_BTN' | translate }}
     </button>
@@ -91,20 +99,24 @@
     ></app-export-button>
   </div>
 
-  <div *ngIf="errorMessage" class="alert alert-danger mb-3">{{ errorMessage }}</div>
+  @if (errorMessage) {
+    <div class="alert alert-danger mb-3">{{ errorMessage }}</div>
+  }
 
   <!-- OBRS-256: count-lock — once the schedule is arrived, boarding writes
-       are frozen (mirrors the backend's BOARDING_ROUND_ARRIVED guard). -->
-  <div class="boarding-lock-banner" *ngIf="isScheduleArrived" role="status">
-    <span class="material-symbols-outlined" aria-hidden="true">lock</span>
-    {{ 'STAFF.SCHEDULE_STATUS.LOCK_BANNER' | translate }}
-  </div>
+  are frozen (mirrors the backend's BOARDING_ROUND_ARRIVED guard). -->
+  @if (isScheduleArrived) {
+    <div class="boarding-lock-banner" role="status">
+      <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+      {{ 'STAFF.SCHEDULE_STATUS.LOCK_BANNER' | translate }}
+    </div>
+  }
 
   <!-- OBRS-96/OBRS-266: manual boarding-scan validation — text-entry token
-       (always usable, the fallback) plus a camera QR-scan mode. New control,
-       so it follows the canonical admin/staff-shell tokens (design-system
-       §3/§4/§11): .admin-field pill input, .admin-btn-primary the one
-       primary action here, .admin-status for the result banner. -->
+  (always usable, the fallback) plus a camera QR-scan mode. New control,
+  so it follows the canonical admin/staff-shell tokens (design-system
+  §3/§4/§11): .admin-field pill input, .admin-btn-primary the one
+  primary action here, .admin-status for the result banner. -->
   <div class="card shadow-sm border-0 mb-3">
     <div class="card-body">
       <div class="boarding-scan-box">
@@ -114,12 +126,12 @@
           </label>
 
           <!-- OBRS-266: segmented text/camera toggle — exactly one button is
-               ever the pressed/.is-active state. -->
+          ever the pressed/.is-active state. -->
           <div
             class="boarding-scan-mode-toggle"
             role="group"
             [attr.aria-label]="'STAFF.BOARDING.SCAN.MODE_TOGGLE_LABEL' | translate"
-          >
+            >
             <button
               type="button"
               class="admin-btn admin-btn-small"
@@ -127,7 +139,7 @@
               [attr.aria-pressed]="scanMode === 'text'"
               [disabled]="isScanning || isUpdatingScheduleStatus || isScheduleArrived"
               (click)="setScanMode('text')"
-            >
+              >
               <span class="material-symbols-outlined" aria-hidden="true">keyboard</span>
               {{ 'STAFF.BOARDING.SCAN.MODE_TEXT' | translate }}
             </button>
@@ -138,7 +150,7 @@
               [attr.aria-pressed]="scanMode === 'camera'"
               [disabled]="isScanning || isUpdatingScheduleStatus || isScheduleArrived"
               (click)="setScanMode('camera')"
-            >
+              >
               <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
               {{ 'STAFF.BOARDING.SCAN.MODE_CAMERA' | translate }}
             </button>
@@ -146,41 +158,51 @@
         </div>
 
         <!-- OBRS-266: camera viewfinder — only rendered in camera mode. -->
-        <div class="boarding-scan-camera" *ngIf="scanMode === 'camera'">
-          <div
-            class="boarding-scan-camera-viewport"
-            *ngIf="cameraStatus === 'requesting' || cameraStatus === 'active'"
-          >
-            <video #scanVideo class="boarding-scan-video" autoplay muted playsinline></video>
-            <div class="boarding-scan-reticle" *ngIf="cameraStatus === 'active'" aria-hidden="true"></div>
-            <span class="boarding-scan-chip" *ngIf="cameraStatus === 'active'">
-              <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
-              {{ 'STAFF.BOARDING.SCAN.CAMERA.SCANNING' | translate }}
-            </span>
-            <div class="boarding-scan-camera-requesting" *ngIf="cameraStatus === 'requesting'">
-              {{ 'STAFF.BOARDING.SCAN.CAMERA.REQUESTING' | translate }}
+        @if (scanMode === 'camera') {
+          <div class="boarding-scan-camera">
+            @if (cameraStatus === 'requesting' || cameraStatus === 'active') {
+              <div
+                class="boarding-scan-camera-viewport"
+                >
+                <video #scanVideo class="boarding-scan-video" autoplay muted playsinline></video>
+                @if (cameraStatus === 'active') {
+                  <div class="boarding-scan-reticle" aria-hidden="true"></div>
+                }
+                @if (cameraStatus === 'active') {
+                  <span class="boarding-scan-chip">
+                    <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
+                    {{ 'STAFF.BOARDING.SCAN.CAMERA.SCANNING' | translate }}
+                  </span>
+                }
+                @if (cameraStatus === 'requesting') {
+                  <div class="boarding-scan-camera-requesting">
+                    {{ 'STAFF.BOARDING.SCAN.CAMERA.REQUESTING' | translate }}
+                  </div>
+                }
+              </div>
+            }
+            <!-- Fallback empty-state (design-system §12 full-section empty-state pattern). -->
+            @if (isCameraFallbackStatus) {
+              <div class="boarding-scan-camera-empty">
+                <span class="material-symbols-outlined" aria-hidden="true">{{ cameraFallbackIcon }}</span>
+                <p class="boarding-scan-camera-empty-title">{{ cameraFallbackMessageKey | translate }}</p>
+                @if (cameraStatus === 'denied' || cameraStatus === 'error') {
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    (click)="retryCamera()"
+                    >
+                    {{ 'STAFF.BOARDING.SCAN.CAMERA.RETRY' | translate }}
+                  </button>
+                }
+              </div>
+            }
+            <div class="boarding-scan-camera-hint text-muted small">
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              {{ 'STAFF.BOARDING.SCAN.CAMERA.HINT' | translate }}
             </div>
           </div>
-
-          <!-- Fallback empty-state (design-system §12 full-section empty-state pattern). -->
-          <div class="boarding-scan-camera-empty" *ngIf="isCameraFallbackStatus">
-            <span class="material-symbols-outlined" aria-hidden="true">{{ cameraFallbackIcon }}</span>
-            <p class="boarding-scan-camera-empty-title">{{ cameraFallbackMessageKey | translate }}</p>
-            <button
-              type="button"
-              class="admin-btn admin-btn-small"
-              *ngIf="cameraStatus === 'denied' || cameraStatus === 'error'"
-              (click)="retryCamera()"
-            >
-              {{ 'STAFF.BOARDING.SCAN.CAMERA.RETRY' | translate }}
-            </button>
-          </div>
-
-          <div class="boarding-scan-camera-hint text-muted small">
-            <span class="material-symbols-outlined" aria-hidden="true">info</span>
-            {{ 'STAFF.BOARDING.SCAN.CAMERA.HINT' | translate }}
-          </div>
-        </div>
+        }
 
         <!-- Text-entry box — the fallback, always present/usable in BOTH modes. -->
         <div class="boarding-scan-input-row">
@@ -194,361 +216,381 @@
             [disabled]="isScanning || isUpdatingScheduleStatus || isScheduleArrived"
             (keydown.enter)="validateScan()"
             autocomplete="off"
-          />
-          <button
-            type="button"
-            class="admin-btn admin-btn-primary boarding-scan-btn"
-            [disabled]="!scanToken.trim() || isScanning || isUpdatingScheduleStatus || isScheduleArrived"
-            (click)="validateScan()"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
-            {{ (isScanning ? 'STAFF.BOARDING.SCAN.VALIDATING' : 'STAFF.BOARDING.SCAN.BUTTON') | translate }}
-          </button>
-        </div>
-
-        <div class="boarding-scan-result" *ngIf="scanResult" role="status">
-          <span class="admin-status is-success admin-status--icon">
-            <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
-            {{ 'STAFF.BOARDING.SCAN.SUCCESS_TITLE' | translate }}
-          </span>
-          <div class="boarding-scan-result-detail">
-            <span>{{ 'STAFF.BOARDING.SCAN.RESULT_NAME' | translate }}: {{ scanResult.passengerName }}</span>
-            <span>{{ 'STAFF.BOARDING.SCAN.RESULT_SEAT' | translate }}: {{ scanResult.seatNumber }}</span>
-            <span>{{ 'STAFF.BOARDING.SCAN.RESULT_BOARDED_AT' | translate }}: {{ scanResult.boardedAt | date: 'HH:mm' }}</span>
+            />
+            <button
+              type="button"
+              class="admin-btn admin-btn-primary boarding-scan-btn"
+              [disabled]="!scanToken.trim() || isScanning || isUpdatingScheduleStatus || isScheduleArrived"
+              (click)="validateScan()"
+              >
+              <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
+              {{ (isScanning ? 'STAFF.BOARDING.SCAN.VALIDATING' : 'STAFF.BOARDING.SCAN.BUTTON') | translate }}
+            </button>
           </div>
-          <button type="button" class="admin-btn admin-btn-small" (click)="dismissScanResult()">
-            {{ 'STAFF.BOARDING.SCAN.DISMISS' | translate }}
-          </button>
-        </div>
 
-        <div class="boarding-scan-result" *ngIf="scanError" role="alert">
-          <span
-            class="admin-status admin-status--icon"
-            [class.is-danger]="scanError.severity === 'danger'"
-            [class.is-warning]="scanError.severity === 'warning'"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">{{ scanError.icon }}</span>
-            {{ scanError.messageKey | translate }}
-          </span>
-          <button type="button" class="admin-btn admin-btn-small" (click)="dismissScanResult()">
-            {{ 'STAFF.BOARDING.SCAN.DISMISS' | translate }}
-          </button>
+          @if (scanResult) {
+            <div class="boarding-scan-result" role="status">
+              <span class="admin-status is-success admin-status--icon">
+                <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                {{ 'STAFF.BOARDING.SCAN.SUCCESS_TITLE' | translate }}
+              </span>
+              <div class="boarding-scan-result-detail">
+                <span>{{ 'STAFF.BOARDING.SCAN.RESULT_NAME' | translate }}: {{ scanResult.passengerName }}</span>
+                <span>{{ 'STAFF.BOARDING.SCAN.RESULT_SEAT' | translate }}: {{ scanResult.seatNumber }}</span>
+                <span>{{ 'STAFF.BOARDING.SCAN.RESULT_BOARDED_AT' | translate }}: {{ scanResult.boardedAt | date: 'HH:mm' }}</span>
+              </div>
+              <button type="button" class="admin-btn admin-btn-small" (click)="dismissScanResult()">
+                {{ 'STAFF.BOARDING.SCAN.DISMISS' | translate }}
+              </button>
+            </div>
+          }
+
+          @if (scanError) {
+            <div class="boarding-scan-result" role="alert">
+              <span
+                class="admin-status admin-status--icon"
+                [class.is-danger]="scanError.severity === 'danger'"
+                [class.is-warning]="scanError.severity === 'warning'"
+                >
+                <span class="material-symbols-outlined" aria-hidden="true">{{ scanError.icon }}</span>
+                {{ scanError.messageKey | translate }}
+              </span>
+              <button type="button" class="admin-btn admin-btn-small" (click)="dismissScanResult()">
+                {{ 'STAFF.BOARDING.SCAN.DISMISS' | translate }}
+              </button>
+            </div>
+          }
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="card shadow-sm border-0">
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>{{ 'STAFF.BOARDING.TICKET_NO' | translate }}</th>
-              <th>{{ 'STAFF.BOARDING.SEAT' | translate }}</th>
-              <th>{{ 'STAFF.BOARDING.PASSENGER' | translate }}</th>
-              <th>{{ 'STAFF.BOARDING.FROM' | translate }}</th>
-              <th>{{ 'STAFF.BOARDING.TO' | translate }}</th>
-              <th>{{ 'STAFF.BOARDING.STATUS' | translate }}</th>
-              <th>{{ 'STAFF.BOARDING.FARE_CATEGORY' | translate }}</th>
-              <th>{{ 'STAFF.BOARDING.BOARDED' | translate }}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <ng-container *ngIf="isLoading">
-              <tr *ngFor="let row of skeletonRows">
-                <td colspan="9"><div class="skeleton-row bg-light rounded" style="height:20px"></div></td>
-              </tr>
-            </ng-container>
-            <ng-container *ngIf="!isLoading && items.length === 0 && !errorMessage">
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
               <tr>
-                <td colspan="9" class="text-center py-5">
-                  <span class="material-symbols-outlined text-muted d-block mb-2" style="font-size:48px">people</span>
-                  <div class="fw-semibold">{{ 'STAFF.BOARDING.EMPTY_TITLE' | translate }}</div>
-                  <div class="text-muted small">{{ 'STAFF.BOARDING.EMPTY_BODY' | translate }}</div>
-                </td>
+                <th>{{ 'STAFF.BOARDING.TICKET_NO' | translate }}</th>
+                <th>{{ 'STAFF.BOARDING.SEAT' | translate }}</th>
+                <th>{{ 'STAFF.BOARDING.PASSENGER' | translate }}</th>
+                <th>{{ 'STAFF.BOARDING.FROM' | translate }}</th>
+                <th>{{ 'STAFF.BOARDING.TO' | translate }}</th>
+                <th>{{ 'STAFF.BOARDING.STATUS' | translate }}</th>
+                <th>{{ 'STAFF.BOARDING.FARE_CATEGORY' | translate }}</th>
+                <th>{{ 'STAFF.BOARDING.BOARDED' | translate }}</th>
+                <th></th>
               </tr>
-            </ng-container>
-            <ng-container *ngIf="!isLoading">
-              <tr *ngFor="let item of items">
-                <td class="fw-semibold">{{ item.ticketNumber }}</td>
-                <td>{{ item.seatNumber }}</td>
-                <td>{{ item.passengerName }}</td>
-                <td>{{ item.fromStop }}</td>
-                <td>{{ item.toStop }}</td>
-                <td>
-                  <span class="badge" [class.bg-success]="item.status.code === 'checked_in'" [class.bg-secondary]="item.status.code !== 'checked_in'">
-                    {{ item.status.label }}
-                  </span>
-                </td>
-                <td>
-                  <ng-container *ngIf="item.fareCategory">
-                    {{ (item.fareCategory === 'adult' ? 'PASSENGER_INFO.BADGE.ADULT' : 'PASSENGER_INFO.BADGE.CHILD') | translate }}
-                  </ng-container>
-                  <ng-container *ngIf="isChildFare(item)">
-                    <span
-                      *ngIf="isFlagged(item)"
-                      class="admin-status is-warning admin-status--icon d-block mt-1"
-                    >
-                      <span class="material-symbols-outlined" aria-hidden="true">flag</span>
-                      {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED' | translate }}
-                    </span>
-                    <div class="text-muted small boarding-audit-line" *ngIf="isFlagged(item)">
-                      {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED_AT' | translate }}: {{ item.childFareFlaggedAt | date: 'HH:mm' }}
-                      <ng-container *ngIf="item.childFareFlaggedByName">
-                        &middot; {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED_BY' | translate }}: {{ item.childFareFlaggedByName }}
-                      </ng-container>
-                    </div>
-                  </ng-container>
-                </td>
-                <td>
-                  <span
-                    class="admin-status admin-status--icon"
-                    [class.is-success]="isBoarded(item)"
-                    [class.is-neutral]="!isBoarded(item)"
-                  >
-                    <span class="material-symbols-outlined" aria-hidden="true">{{ isBoarded(item) ? 'check_circle' : 'radio_button_unchecked' }}</span>
-                    {{ (isBoarded(item) ? 'STAFF.BOARDING.BOARDED' : 'STAFF.BOARDING.NOT_BOARDED') | translate }}
-                  </span>
-                  <div class="text-muted small boarding-audit-line" *ngIf="isBoarded(item)">
-                    {{ 'STAFF.BOARDING.BOARDED_AT' | translate }}: {{ item.boardedAt | date: 'HH:mm' }}
-                    <ng-container *ngIf="item.boardedByName">
-                      &middot; {{ 'STAFF.BOARDING.BOARDED_BY' | translate }}: {{ item.boardedByName }}
-                    </ng-container>
-                  </div>
-                </td>
-                <td class="boarding-actions">
-                  <button
-                    *ngIf="!isBoarded(item)"
-                    type="button"
-                    class="admin-btn admin-btn-small"
-                    [disabled]="isBoarding(item) || isUpdatingScheduleStatus || isScheduleArrived"
-                    (click)="board(item)">
-                    {{ (isBoarding(item) ? 'STAFF.BOARDING.BOARDING_IN_PROGRESS' : 'STAFF.BOARDING.BOARD_BTN') | translate }}
-                  </button>
-                  <button
-                    *ngIf="isBoarded(item) && canUnboard"
-                    type="button"
-                    class="admin-btn admin-btn-small admin-btn-danger"
-                    [disabled]="isUnboarding(item) || isUpdatingScheduleStatus || isScheduleArrived"
-                    (click)="unboard(item)">
-                    {{ (isUnboarding(item) ? 'STAFF.BOARDING.UNBOARD_IN_PROGRESS' : 'STAFF.BOARDING.UNBOARD_BTN') | translate }}
-                  </button>
-                  <!-- OBRS-296: fare-category mismatch flag — a child-fare-only
-                       row action, independent of the boarding controls above
-                       (flag never blocks boarding). Flag has no confirm (like
-                       Board); unflag requires one (like Un-board) and is
-                       salesperson-only. -->
-                  <button
-                    *ngIf="isChildFare(item) && !isFlagged(item)"
-                    type="button"
-                    class="admin-btn admin-btn-small"
-                    [disabled]="isFlagging(item)"
-                    (click)="flagChildFare(item)">
-                    {{ (isFlagging(item) ? 'STAFF.BOARDING.CHILD_FARE_FLAGGING_IN_PROGRESS' : 'STAFF.BOARDING.CHILD_FARE_FLAG_BTN') | translate }}
-                  </button>
-                  <button
-                    *ngIf="isChildFare(item) && isFlagged(item) && canUnflagChildFare"
-                    type="button"
-                    class="admin-btn admin-btn-small admin-btn-danger"
-                    [disabled]="isUnflagging(item)"
-                    (click)="unflagChildFare(item)">
-                    {{ (isUnflagging(item) ? 'STAFF.BOARDING.CHILD_FARE_UNFLAGGING_IN_PROGRESS' : 'STAFF.BOARDING.CHILD_FARE_UNFLAG_BTN') | translate }}
-                  </button>
-                </td>
-              </tr>
-            </ng-container>
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @if (isLoading) {
+                @for (row of skeletonRows; track row) {
+                  <tr>
+                    <td colspan="9"><div class="skeleton-row bg-light rounded" style="height:20px"></div></td>
+                  </tr>
+                }
+              }
+              @if (!isLoading && items.length === 0 && !errorMessage) {
+                <tr>
+                  <td colspan="9" class="text-center py-5">
+                    <span class="material-symbols-outlined text-muted d-block mb-2" style="font-size:48px">people</span>
+                    <div class="fw-semibold">{{ 'STAFF.BOARDING.EMPTY_TITLE' | translate }}</div>
+                    <div class="text-muted small">{{ 'STAFF.BOARDING.EMPTY_BODY' | translate }}</div>
+                  </td>
+                </tr>
+              }
+              @if (!isLoading) {
+                @for (item of items; track item) {
+                  <tr>
+                    <td class="fw-semibold">{{ item.ticketNumber }}</td>
+                    <td>{{ item.seatNumber }}</td>
+                    <td>{{ item.passengerName }}</td>
+                    <td>{{ item.fromStop }}</td>
+                    <td>{{ item.toStop }}</td>
+                    <td>
+                      <span class="badge" [class.bg-success]="item.status.code === 'checked_in'" [class.bg-secondary]="item.status.code !== 'checked_in'">
+                        {{ item.status.label }}
+                      </span>
+                    </td>
+                    <td>
+                      @if (item.fareCategory) {
+                        {{ (item.fareCategory === 'adult' ? 'PASSENGER_INFO.BADGE.ADULT' : 'PASSENGER_INFO.BADGE.CHILD') | translate }}
+                      }
+                      @if (isChildFare(item)) {
+                        @if (isFlagged(item)) {
+                          <span
+                            class="admin-status is-warning admin-status--icon d-block mt-1"
+                            >
+                            <span class="material-symbols-outlined" aria-hidden="true">flag</span>
+                            {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED' | translate }}
+                          </span>
+                        }
+                        @if (isFlagged(item)) {
+                          <div class="text-muted small boarding-audit-line">
+                            {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED_AT' | translate }}: {{ item.childFareFlaggedAt | date: 'HH:mm' }}
+                            @if (item.childFareFlaggedByName) {
+                              &middot; {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED_BY' | translate }}: {{ item.childFareFlaggedByName }}
+                            }
+                          </div>
+                        }
+                      }
+                    </td>
+                    <td>
+                      <span
+                        class="admin-status admin-status--icon"
+                        [class.is-success]="isBoarded(item)"
+                        [class.is-neutral]="!isBoarded(item)"
+                        >
+                        <span class="material-symbols-outlined" aria-hidden="true">{{ isBoarded(item) ? 'check_circle' : 'radio_button_unchecked' }}</span>
+                        {{ (isBoarded(item) ? 'STAFF.BOARDING.BOARDED' : 'STAFF.BOARDING.NOT_BOARDED') | translate }}
+                      </span>
+                      @if (isBoarded(item)) {
+                        <div class="text-muted small boarding-audit-line">
+                          {{ 'STAFF.BOARDING.BOARDED_AT' | translate }}: {{ item.boardedAt | date: 'HH:mm' }}
+                          @if (item.boardedByName) {
+                            &middot; {{ 'STAFF.BOARDING.BOARDED_BY' | translate }}: {{ item.boardedByName }}
+                          }
+                        </div>
+                      }
+                    </td>
+                    <td class="boarding-actions">
+                      @if (!isBoarded(item)) {
+                        <button
+                          type="button"
+                          class="admin-btn admin-btn-small"
+                          [disabled]="isBoarding(item) || isUpdatingScheduleStatus || isScheduleArrived"
+                          (click)="board(item)">
+                          {{ (isBoarding(item) ? 'STAFF.BOARDING.BOARDING_IN_PROGRESS' : 'STAFF.BOARDING.BOARD_BTN') | translate }}
+                        </button>
+                      }
+                      @if (isBoarded(item) && canUnboard) {
+                        <button
+                          type="button"
+                          class="admin-btn admin-btn-small admin-btn-danger"
+                          [disabled]="isUnboarding(item) || isUpdatingScheduleStatus || isScheduleArrived"
+                          (click)="unboard(item)">
+                          {{ (isUnboarding(item) ? 'STAFF.BOARDING.UNBOARD_IN_PROGRESS' : 'STAFF.BOARDING.UNBOARD_BTN') | translate }}
+                        </button>
+                      }
+                      <!-- OBRS-296: fare-category mismatch flag — a child-fare-only
+                      row action, independent of the boarding controls above
+                      (flag never blocks boarding). Flag has no confirm (like
+                      Board); unflag requires one (like Un-board) and is
+                      salesperson-only. -->
+                      @if (isChildFare(item) && !isFlagged(item)) {
+                        <button
+                          type="button"
+                          class="admin-btn admin-btn-small"
+                          [disabled]="isFlagging(item)"
+                          (click)="flagChildFare(item)">
+                          {{ (isFlagging(item) ? 'STAFF.BOARDING.CHILD_FARE_FLAGGING_IN_PROGRESS' : 'STAFF.BOARDING.CHILD_FARE_FLAG_BTN') | translate }}
+                        </button>
+                      }
+                      @if (isChildFare(item) && isFlagged(item) && canUnflagChildFare) {
+                        <button
+                          type="button"
+                          class="admin-btn admin-btn-small admin-btn-danger"
+                          [disabled]="isUnflagging(item)"
+                          (click)="unflagChildFare(item)">
+                          {{ (isUnflagging(item) ? 'STAFF.BOARDING.CHILD_FARE_UNFLAGGING_IN_PROGRESS' : 'STAFF.BOARDING.CHILD_FARE_UNFLAG_BTN') | translate }}
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- OBRS-272: "Mark delayed"/"Update ETA" dialog — inline `*ngIf` block,
-     component-local state (mirrors every other admin-modal-backdrop in this
-     codebase, e.g. schedules-page.component.html — not a separate component).
-     `[adminModalBackdrop]` now resolves from SharedModule (relocated from
-     AdminModule, see docs/adr/0017) since this component lives in shared/. -->
-<div
-  class="admin-modal-backdrop"
-  *ngIf="isDelayFormOpen"
-  adminModalBackdrop
-  [dismissOnBackdrop]="false"
-  (dismiss)="closeDelayDialog()"
->
-  <div class="admin-modal schedule-delay-modal">
-    <h4 class="admin-modal-title">
-      {{
-        (isScheduleDelayed ? 'STAFF.SCHEDULE_DELAY.DIALOG_TITLE_UPDATE' : 'STAFF.SCHEDULE_DELAY.DIALOG_TITLE_MARK')
-          | translate
-      }}
-    </h4>
-
-    <form [formGroup]="delayForm" class="admin-form-grid" (ngSubmit)="submitDelaySchedule()">
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'STAFF.SCHEDULE_DELAY.FIELD.DATE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <p-calendar
-          formControlName="delayedDate"
-          styleClass="app-date-field"
-          panelStyleClass="app-date-field-panel"
-          dateFormat="dd/mm/yy"
-          [showIcon]="true"
-          [iconDisplay]="'input'"
-          [showButtonBar]="true"
-          [placeholder]="'STAFF.SCHEDULE_DELAY.FIELD.DATE' | translate"
-        >
-          <ng-template pTemplate="inputicon">
-            <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-          </ng-template>
-        </p-calendar>
-        <small class="admin-error">
-          {{ isDelayFieldInvalid('delayedDate') ? ('STAFF.SCHEDULE_DELAY.VALIDATION.REQUIRED' | translate) : '' }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'STAFF.SCHEDULE_DELAY.FIELD.TIME' | translate }} <span class="admin-required">*</span>
-        </label>
-        <p-calendar
-          formControlName="delayedTime"
-          styleClass="app-date-field"
-          panelStyleClass="app-date-field-panel"
-          [timeOnly]="true"
-          [hourFormat]="'24'"
-          [showIcon]="true"
-          [iconDisplay]="'input'"
-          [showButtonBar]="true"
-          [placeholder]="'STAFF.SCHEDULE_DELAY.FIELD.TIME' | translate"
-        >
-          <ng-template pTemplate="inputicon">
-            <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-          </ng-template>
-        </p-calendar>
-        <small class="admin-error">
+  <!-- OBRS-272: "Mark delayed"/"Update ETA" dialog — inline `*ngIf` block,
+  component-local state (mirrors every other admin-modal-backdrop in this
+  codebase, e.g. schedules-page.component.html — not a separate component).
+  `[adminModalBackdrop]` now resolves from SharedModule (relocated from
+  AdminModule, see docs/adr/0017) since this component lives in shared/. -->
+  @if (isDelayFormOpen) {
+    <div
+      class="admin-modal-backdrop"
+      adminModalBackdrop
+      [dismissOnBackdrop]="false"
+      (dismiss)="closeDelayDialog()"
+      >
+      <div class="admin-modal schedule-delay-modal">
+        <h4 class="admin-modal-title">
           {{
-            isDelayFieldInvalid('delayedTime')
+          (isScheduleDelayed ? 'STAFF.SCHEDULE_DELAY.DIALOG_TITLE_UPDATE' : 'STAFF.SCHEDULE_DELAY.DIALOG_TITLE_MARK')
+          | translate
+          }}
+        </h4>
+        <form [formGroup]="delayForm" class="admin-form-grid" (ngSubmit)="submitDelaySchedule()">
+          <div class="admin-form-field">
+            <label class="admin-form-label">
+              {{ 'STAFF.SCHEDULE_DELAY.FIELD.DATE' | translate }} <span class="admin-required">*</span>
+            </label>
+            <p-datePicker
+              formControlName="delayedDate"
+              styleClass="app-date-field"
+              panelStyleClass="app-date-field-panel"
+              dateFormat="dd/mm/yy"
+              [showIcon]="true"
+              [iconDisplay]="'input'"
+              [showButtonBar]="true"
+              [placeholder]="'STAFF.SCHEDULE_DELAY.FIELD.DATE' | translate"
+              >
+              <ng-template pTemplate="inputicon">
+                <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+              </ng-template>
+            </p-datePicker>
+            <small class="admin-error">
+              {{ isDelayFieldInvalid('delayedDate') ? ('STAFF.SCHEDULE_DELAY.VALIDATION.REQUIRED' | translate) : '' }}
+            </small>
+          </div>
+          <div class="admin-form-field">
+            <label class="admin-form-label">
+              {{ 'STAFF.SCHEDULE_DELAY.FIELD.TIME' | translate }} <span class="admin-required">*</span>
+            </label>
+            <p-datePicker
+              formControlName="delayedTime"
+              styleClass="app-date-field"
+              panelStyleClass="app-date-field-panel"
+              [timeOnly]="true"
+              [hourFormat]="'24'"
+              [showIcon]="true"
+              [iconDisplay]="'input'"
+              [showButtonBar]="true"
+              [placeholder]="'STAFF.SCHEDULE_DELAY.FIELD.TIME' | translate"
+              >
+              <ng-template pTemplate="inputicon">
+                <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+              </ng-template>
+            </p-datePicker>
+            <small class="admin-error">
+              {{
+              isDelayFieldInvalid('delayedTime')
               ? ('STAFF.SCHEDULE_DELAY.VALIDATION.REQUIRED' | translate)
               : (delayEtaAfterError
-                  ? ('STAFF.SCHEDULE_DELAY.VALIDATION.MUST_BE_AFTER' | translate)
-                  : (delayEtaServerError ? ('STAFF.SCHEDULE_DELAY.ERROR.SCHEDULE_DELAY_ETA_INVALID' | translate) : ''))
-          }}
-        </small>
-      </div>
-
-      <div class="admin-form-field full">
-        <label class="admin-form-label">{{ 'STAFF.SCHEDULE_DELAY.FIELD.REASON' | translate }}</label>
-        <textarea
-          class="admin-field"
-          formControlName="delayReason"
-          [placeholder]="'STAFF.SCHEDULE_DELAY.FIELD.REASON_PLACEHOLDER' | translate"
-          maxlength="500"
-        ></textarea>
-        <small class="admin-error">
-          {{ isDelayFieldInvalid('delayReason') ? ('STAFF.SCHEDULE_DELAY.VALIDATION.REASON_TOO_LONG' | translate) : '' }}
-        </small>
-      </div>
-    </form>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" [disabled]="isSubmittingDelay" (click)="closeDelayDialog()">
-        {{ 'STAFF.SCHEDULE_DELAY.CANCEL' | translate }}
-      </button>
-      <button
-        type="button"
-        class="admin-btn admin-btn-primary"
-        [disabled]="isSubmittingDelay || delayForm.invalid"
-        (click)="submitDelaySchedule()"
-      >
-        {{ (isSubmittingDelay ? 'STAFF.SCHEDULE_DELAY.SUBMITTING' : 'STAFF.SCHEDULE_DELAY.SUBMIT') | translate }}
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- OBRS-100: print-only manifest — NEVER rendered inline. Teleported to a
-     document.body child on printManifest() via a CDK DomPortalOutlet (see
-     the .ts) so it prints in isolation regardless of the sell-tab/p-tabView
-     ancestors either host sits inside. Re-bound to the SAME items/isBoarded()
-     the on-screen table already uses (one data source, two renderings) — the
-     .boarding-manifest-print* classes are scoped in boarding-list.component.scss
-     and keep applying after the teleport (Angular's emulated-encapsulation
-     attribute travels with the DOM node, not its position in the tree). -->
-<ng-template #printTemplate>
-  <div class="boarding-manifest-print p-4">
-    <h2 class="mb-3">{{ 'STAFF.BOARDING.PRINT_HEADER.TITLE' | translate }}</h2>
-
-    <div class="row mb-4 boarding-manifest-print-meta">
-      <div class="col-6 col-md-3">
-        <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.ROUTE' | translate }}</div>
-        <div class="fw-semibold">{{ tripHeader?.routeLabel ?? '-' }}</div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DEPARTURE' | translate }}</div>
-        <div class="fw-semibold">{{ tripHeader?.departureDateTime ?? '-' }}</div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.VEHICLE' | translate }}</div>
-        <div class="fw-semibold">{{ tripHeader?.vehicleLabel ?? '-' }}</div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DRIVER' | translate }}</div>
-        <div class="fw-semibold">{{ tripHeader?.driverName ?? '-' }}</div>
-      </div>
-      <div class="col-6 col-md-3 mt-2">
-        <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.SEATS_SOLD' | translate }}</div>
-        <div class="fw-semibold">{{ items.length }}</div>
-      </div>
-      <div class="col-6 col-md-3 mt-2">
-        <div class="text-muted small">{{ 'STAFF.BOARDING.BOARDED' | translate }}</div>
-        <div class="fw-semibold">{{ boardedCount }}/{{ items.length }}</div>
+              ? ('STAFF.SCHEDULE_DELAY.VALIDATION.MUST_BE_AFTER' | translate)
+              : (delayEtaServerError ? ('STAFF.SCHEDULE_DELAY.ERROR.SCHEDULE_DELAY_ETA_INVALID' | translate) : ''))
+              }}
+            </small>
+          </div>
+          <div class="admin-form-field full">
+            <label class="admin-form-label">{{ 'STAFF.SCHEDULE_DELAY.FIELD.REASON' | translate }}</label>
+            <textarea
+              class="admin-field"
+              formControlName="delayReason"
+              [placeholder]="'STAFF.SCHEDULE_DELAY.FIELD.REASON_PLACEHOLDER' | translate"
+              maxlength="500"
+            ></textarea>
+            <small class="admin-error">
+              {{ isDelayFieldInvalid('delayReason') ? ('STAFF.SCHEDULE_DELAY.VALIDATION.REASON_TOO_LONG' | translate) : '' }}
+            </small>
+          </div>
+        </form>
+        <div class="admin-modal-actions">
+          <button type="button" class="admin-btn" [disabled]="isSubmittingDelay" (click)="closeDelayDialog()">
+            {{ 'STAFF.SCHEDULE_DELAY.CANCEL' | translate }}
+          </button>
+          <button
+            type="button"
+            class="admin-btn admin-btn-primary"
+            [disabled]="isSubmittingDelay || delayForm.invalid"
+            (click)="submitDelaySchedule()"
+            >
+            {{ (isSubmittingDelay ? 'STAFF.SCHEDULE_DELAY.SUBMITTING' : 'STAFF.SCHEDULE_DELAY.SUBMIT') | translate }}
+          </button>
+        </div>
       </div>
     </div>
+  }
 
-    <table class="table table-bordered boarding-manifest-print-table">
-      <thead>
-        <tr>
-          <th>{{ 'STAFF.BOARDING.TICKET_NO' | translate }}</th>
-          <th>{{ 'STAFF.BOARDING.SEAT' | translate }}</th>
-          <th>{{ 'STAFF.BOARDING.PASSENGER' | translate }}</th>
-          <th>{{ 'STAFF.BOARDING.FROM' | translate }}</th>
-          <th>{{ 'STAFF.BOARDING.TO' | translate }}</th>
-          <th>{{ 'STAFF.BOARDING.STATUS' | translate }}</th>
-          <th>{{ 'STAFF.BOARDING.FARE_CATEGORY' | translate }}</th>
-          <th>{{ 'STAFF.BOARDING.BOARDED' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of items">
-          <td>{{ item.ticketNumber }}</td>
-          <td>{{ item.seatNumber }}</td>
-          <td>{{ item.passengerName }}</td>
-          <td>{{ item.fromStop }}</td>
-          <td>{{ item.toStop }}</td>
-          <td>{{ item.status.label }}</td>
-          <td>
-            <ng-container *ngIf="item.fareCategory">
-              {{ (item.fareCategory === 'adult' ? 'PASSENGER_INFO.BADGE.ADULT' : 'PASSENGER_INFO.BADGE.CHILD') | translate }}
-            </ng-container>
-            <ng-container *ngIf="isChildFare(item) && isFlagged(item)">
-              &mdash; {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED' | translate }}
-              {{ item.childFareFlaggedAt | date: 'HH:mm' }}
-              <ng-container *ngIf="item.childFareFlaggedByName">&middot; {{ item.childFareFlaggedByName }}</ng-container>
-            </ng-container>
-          </td>
-          <td>
-            {{ (isBoarded(item) ? 'STAFF.BOARDING.BOARDED' : 'STAFF.BOARDING.NOT_BOARDED') | translate }}
-            <ng-container *ngIf="isBoarded(item)">
-              &mdash; {{ item.boardedAt | date: 'HH:mm' }}
-              <ng-container *ngIf="item.boardedByName">&middot; {{ item.boardedByName }}</ng-container>
-            </ng-container>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</ng-template>
+  <!-- OBRS-100: print-only manifest — NEVER rendered inline. Teleported to a
+  document.body child on printManifest() via a CDK DomPortalOutlet (see
+  the .ts) so it prints in isolation regardless of the sell-tab/p-tabView
+  ancestors either host sits inside. Re-bound to the SAME items/isBoarded()
+  the on-screen table already uses (one data source, two renderings) — the
+  .boarding-manifest-print* classes are scoped in boarding-list.component.scss
+  and keep applying after the teleport (Angular's emulated-encapsulation
+  attribute travels with the DOM node, not its position in the tree). -->
+  <ng-template #printTemplate>
+    <div class="boarding-manifest-print p-4">
+      <h2 class="mb-3">{{ 'STAFF.BOARDING.PRINT_HEADER.TITLE' | translate }}</h2>
+
+      <div class="row mb-4 boarding-manifest-print-meta">
+        <div class="col-6 col-md-3">
+          <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.ROUTE' | translate }}</div>
+          <div class="fw-semibold">{{ tripHeader?.routeLabel ?? '-' }}</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DEPARTURE' | translate }}</div>
+          <div class="fw-semibold">{{ tripHeader?.departureDateTime ?? '-' }}</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.VEHICLE' | translate }}</div>
+          <div class="fw-semibold">{{ tripHeader?.vehicleLabel ?? '-' }}</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DRIVER' | translate }}</div>
+          <div class="fw-semibold">{{ tripHeader?.driverName ?? '-' }}</div>
+        </div>
+        <div class="col-6 col-md-3 mt-2">
+          <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.SEATS_SOLD' | translate }}</div>
+          <div class="fw-semibold">{{ items.length }}</div>
+        </div>
+        <div class="col-6 col-md-3 mt-2">
+          <div class="text-muted small">{{ 'STAFF.BOARDING.BOARDED' | translate }}</div>
+          <div class="fw-semibold">{{ boardedCount }}/{{ items.length }}</div>
+        </div>
+      </div>
+
+      <table class="table table-bordered boarding-manifest-print-table">
+        <thead>
+          <tr>
+            <th>{{ 'STAFF.BOARDING.TICKET_NO' | translate }}</th>
+            <th>{{ 'STAFF.BOARDING.SEAT' | translate }}</th>
+            <th>{{ 'STAFF.BOARDING.PASSENGER' | translate }}</th>
+            <th>{{ 'STAFF.BOARDING.FROM' | translate }}</th>
+            <th>{{ 'STAFF.BOARDING.TO' | translate }}</th>
+            <th>{{ 'STAFF.BOARDING.STATUS' | translate }}</th>
+            <th>{{ 'STAFF.BOARDING.FARE_CATEGORY' | translate }}</th>
+            <th>{{ 'STAFF.BOARDING.BOARDED' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items; track item) {
+            <tr>
+              <td>{{ item.ticketNumber }}</td>
+              <td>{{ item.seatNumber }}</td>
+              <td>{{ item.passengerName }}</td>
+              <td>{{ item.fromStop }}</td>
+              <td>{{ item.toStop }}</td>
+              <td>{{ item.status.label }}</td>
+              <td>
+                @if (item.fareCategory) {
+                  {{ (item.fareCategory === 'adult' ? 'PASSENGER_INFO.BADGE.ADULT' : 'PASSENGER_INFO.BADGE.CHILD') | translate }}
+                }
+                @if (isChildFare(item) && isFlagged(item)) {
+                  &mdash; {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED' | translate }}
+                  {{ item.childFareFlaggedAt | date: 'HH:mm' }}
+                  @if (item.childFareFlaggedByName) {
+                    &middot; {{ item.childFareFlaggedByName }}
+                  }
+                }
+              </td>
+              <td>
+                {{ (isBoarded(item) ? 'STAFF.BOARDING.BOARDED' : 'STAFF.BOARDING.NOT_BOARDED') | translate }}
+                @if (isBoarded(item)) {
+                  &mdash; {{ item.boardedAt | date: 'HH:mm' }}
+                  @if (item.boardedByName) {
+                    &middot; {{ item.boardedByName }}
+                  }
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </ng-template>

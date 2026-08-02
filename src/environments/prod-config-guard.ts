@@ -51,6 +51,29 @@ export class ProdConfigError extends Error {
 // PromptPay QR encodes an account that is not ours — customers pay, we do not get paid.
 const BASE_PROMPTPAY_PLACEHOLDER = '0123456789';
 
+// OBRS-946 — THE SHAPE OMISE ACTUALLY ISSUES, WHICH IS NOT `pkey_live_`.
+//
+// This gate spent its whole life asserting `startsWith('pkey_live_')`, a string Omise
+// has never put on a key. Only the TEST key names its environment; the live key is the
+// prefix and the id, nothing else. Measured 2026-07-31 against the key on the prod VM
+// (`pkey_` + 19 chars, no environment segment) — the same key that took a real 20.00
+// THB charge, `chrg_68iydxbsxsugso4ycv4`, Paid in the LIVE dashboard. The repo's own
+// committed test key agrees from the other side: `pkey_test_` + the same 19-char id.
+// So the old assertion rejected the CORRECT value and admitted only fabricated ones,
+// which is precisely why every test below used to pass.
+//
+// Still an allowlist rather than a `!startsWith('pkey_test_')` denylist, for exactly
+// the reason the original comment gave: a denylist waves through an empty string, an
+// unsubstituted placeholder, and a secret key pasted into the wrong box. This pattern
+// refuses all three, and refuses `pkey_test_…` as well — `_` is outside the character
+// class, so no `pkey_<environment>_<id>` shape can match it, this one or a future one.
+//
+// If Omise ever changes the id length this will reject a correct key again, which is
+// the failure this card exists about. The message therefore states the expected shape
+// verbatim, so the next operator holding a valid key sees the mismatch in one read
+// instead of measuring it the hard way.
+export const OMISE_LIVE_PUBLIC_KEY = /^pkey_[A-Za-z0-9]{19}$/;
+
 /**
  * No-ops for every non-prod build. Call it unconditionally from main.ts; the
  * `production` flag is what selects prod, exactly like Spring's `@Profile("prod")`.
@@ -62,14 +85,13 @@ export function assertProdConfig(env: ProdCheckedConfig): void {
 
   const failures: string[] = [];
 
-  // `startsWith('pkey_live_')` rather than `!startsWith('pkey_test_')` on purpose:
-  // it also rejects an empty string, an unsubstituted placeholder, and a secret key
-  // pasted in by mistake. A denylist only catches the one mistake we thought of.
   const key = String(env.omisePublicKey ?? '').trim();
-  if (!key.startsWith('pkey_live_')) {
+  if (!OMISE_LIVE_PUBLIC_KEY.test(key)) {
     failures.push(
-      `omisePublicKey is not a live Omise public key (got ${describeKey(key)}) — ` +
-        'card payments would tokenize against the test vault and no money would move.',
+      `omisePublicKey is not a live Omise public key (got ${describeKey(key)}, ` +
+        `expected ${OMISE_LIVE_PUBLIC_KEY} — 'pkey_' + 19 chars, with NO 'live' or ` +
+        "'test' segment; only the test key is labelled) — card payments would " +
+        'tokenize against the test vault and no money would move.',
     );
   }
 

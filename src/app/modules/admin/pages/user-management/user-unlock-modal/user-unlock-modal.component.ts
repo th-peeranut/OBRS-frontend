@@ -8,9 +8,10 @@ import { UserRow } from '../user-management.mappers';
 // store.mutate, and the isUnlocking guard on close; this component only
 // renders its inputs and emits intent.
 @Component({
-  selector: 'app-user-unlock-modal',
-  templateUrl: './user-unlock-modal.component.html',
-  styleUrl: './user-unlock-modal.component.scss',
+    selector: 'app-user-unlock-modal',
+    templateUrl: './user-unlock-modal.component.html',
+    styleUrl: './user-unlock-modal.component.scss',
+    standalone: false
 })
 export class UserUnlockModalComponent {
   @Input() isOpen = false;

@@ -8,9 +8,10 @@ import { VehicleRow } from '../vehicles-page.mappers';
 // optimistic store.mutate, and the isDeleting guard on close; this
 // component only renders its inputs and emits intent.
 @Component({
-  selector: 'app-vehicle-delete-modal',
-  templateUrl: './vehicle-delete-modal.component.html',
-  styleUrl: './vehicle-delete-modal.component.scss',
+    selector: 'app-vehicle-delete-modal',
+    templateUrl: './vehicle-delete-modal.component.html',
+    styleUrl: './vehicle-delete-modal.component.scss',
+    standalone: false
 })
 export class VehicleDeleteModalComponent {
   @Input() isOpen = false;

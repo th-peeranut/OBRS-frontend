@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { InputSwitch, InputSwitchChangeEvent } from 'primeng/inputswitch';
+import { ToggleSwitch, ToggleSwitchChangeEvent } from 'primeng/toggleswitch';
 import { NotificationPreferenceRow } from '../../../../shared/interfaces/notification-preference.interface';
 
 export interface NotificationPreferenceRowChange {
@@ -9,11 +9,11 @@ export interface NotificationPreferenceRowChange {
 }
 
 /**
- * Dumb row renderer (OBRS-141). Deliberately binds each `p-inputSwitch` with
+ * Dumb row renderer (OBRS-141). Deliberately binds each `p-toggleSwitch` with
  * one-way `[ngModel]` + `(onChange)` — NOT `[(ngModel)]` — so the parent page
  * can VETO a change (the ≥1-channel rule on critical rows).
  *
- * PrimeNG's `InputSwitch` flips its own internal `checked` state on click
+ * PrimeNG's `ToggleSwitch` flips its own internal `checked` state on click
  * before `(onChange)`/`ngModel` ever run, and `writeValue` is only invoked by
  * Angular forms machinery when the bound `[ngModel]` *value* changes. On a
  * veto, the parent deliberately leaves `row` untouched, so the value never
@@ -27,9 +27,10 @@ export interface NotificationPreferenceRowChange {
  * and flicker the accept case.
  */
 @Component({
-  selector: 'app-notification-preference-row',
-  templateUrl: './notification-preference-row.component.html',
-  styleUrl: './notification-preference-row.component.scss',
+    selector: 'app-notification-preference-row',
+    templateUrl: './notification-preference-row.component.html',
+    styleUrl: './notification-preference-row.component.scss',
+    standalone: false
 })
 export class NotificationPreferenceRowComponent {
   @Input() row!: NotificationPreferenceRow;
@@ -39,15 +40,15 @@ export class NotificationPreferenceRowComponent {
   @Input() showWarning = false;
   @Output() readonly rowChange = new EventEmitter<NotificationPreferenceRowChange>();
 
-  @ViewChild('emailSwitch') private readonly emailSwitch?: InputSwitch;
-  @ViewChild('smsSwitch') private readonly smsSwitch?: InputSwitch;
+  @ViewChild('emailSwitch') private readonly emailSwitch?: ToggleSwitch;
+  @ViewChild('smsSwitch') private readonly smsSwitch?: ToggleSwitch;
 
-  onEmailChange(event: InputSwitchChangeEvent): void {
+  onEmailChange(event: ToggleSwitchChangeEvent): void {
     this.rowChange.emit({ type: this.row.type, channel: 'email', enabled: event.checked });
     this.resyncSwitch(this.emailSwitch, () => this.row.emailEnabled);
   }
 
-  onSmsChange(event: InputSwitchChangeEvent): void {
+  onSmsChange(event: ToggleSwitchChangeEvent): void {
     this.rowChange.emit({ type: this.row.type, channel: 'sms', enabled: event.checked });
     this.resyncSwitch(this.smsSwitch, () => this.row.smsEnabled);
   }
@@ -58,7 +59,7 @@ export class NotificationPreferenceRowComponent {
    * reverts the slider on veto. See class doc for why this must be a
    * macrotask rather than a microtask.
    */
-  private resyncSwitch(switchRef: InputSwitch | undefined, currentValue: () => boolean): void {
+  private resyncSwitch(switchRef: ToggleSwitch | undefined, currentValue: () => boolean): void {
     setTimeout(() => {
       switchRef?.writeValue(currentValue());
     });

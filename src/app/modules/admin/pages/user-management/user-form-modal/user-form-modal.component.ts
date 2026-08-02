@@ -64,9 +64,10 @@ import {
 // alert.warning() — it only marks the form touched and returns. Preserved
 // verbatim (not "fixed" to match the promotions pattern).
 @Component({
-  selector: 'app-user-form-modal',
-  templateUrl: './user-form-modal.component.html',
-  styleUrl: './user-form-modal.component.scss',
+    selector: 'app-user-form-modal',
+    templateUrl: './user-form-modal.component.html',
+    styleUrl: './user-form-modal.component.scss',
+    standalone: false
 })
 export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
   @Input() isOpen = false;

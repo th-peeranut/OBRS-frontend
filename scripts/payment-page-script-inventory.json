@@ -3,24 +3,32 @@
   "_purpose": "PCI DSS 6.4.3(c) requires a written inventory of every script on the payment page, each with a justification. The prose inventory lives beside the prod CSP it describes, at OBRS-backend/deploy/prod/PAYMENT-PAGE-SCRIPT-INVENTORY.md. THIS file is the machine-readable half of it for the surfaces only this repo can change, and scripts/check-payment-page-scripts.mjs enforces it. Edit both together.",
   "_note": "The two repos each gate what they can break: this file vs the frontend's scripts and netlify.toml, and CspAllowlistMatchesInventoryTest vs the prod Caddyfile. Neither can read the other's tree, so the prose document is the seam - keep the origin lists in the two files in step by hand when the policy changes.",
 
+  "_origins_note": "OBRS-882: `origins` is an ARRAY because one file can load from more than one vendor, and the single-string `origin` it replaced could not say so - a loader's SECOND vendor satisfied the old rule 4 while appearing in no inventory and no CSP. check-payment-page-scripts.mjs now compares this list against the https origins the file actually names, IN BOTH DIRECTIONS.",
+
   "scriptLoaders": [
     {
       "file": "src/app/services/payment/omise-token.service.ts",
-      "origin": "https://cdn.omise.co",
+      "origins": ["https://cdn.omise.co"],
       "routes": ["/payment"],
       "why": "Required to take card payments at all. omise.js defines both window.Omise and window.OmiseCard; OmiseCard renders the card fields inside an iframe on cdn.omise.co and posts a token back, which is what keeps the PAN off this origin (OBRS-391). Removing it would mean collecting the PAN ourselves."
     },
     {
       "file": "src/app/modules/login/login.component.ts",
-      "origin": "https://accounts.google.com",
+      "origins": ["https://accounts.google.com"],
       "routes": ["/login"],
       "why": "Google Identity Services - the 'Sign in with Google' button. Loaded from TypeScript rather than index.html specifically so it stays OFF the payment page (OBRS-719 AC 3). The hl locale must be a query param on the script URL; GIS exposes no initialize() option for it (OBRS-90)."
     },
     {
       "file": "src/app/modules/home/components/route-map/route-map-panel/route-map-panel.component.ts",
-      "origin": "https://maps.googleapis.com",
+      "origins": ["https://maps.googleapis.com"],
       "routes": ["/"],
       "why": "Google Maps JS for the home-page route map. NOT a payment-page script - listed because maps.googleapis.com is in the site-wide script-src and a single CSP header cannot be route-scoped."
+    },
+    {
+      "file": "src/app/services/analytics/analytics-tags.service.ts",
+      "origins": ["https://www.googletagmanager.com", "https://www.clarity.ms"],
+      "routes": ["*"],
+      "why": "GA4 (gtag.js) and Microsoft Clarity, added by OBRS-867 to answer where customers drop out of the booking funnel - OBRS-862 and OBRS-872 are both blocked on that. STATE IT PLAINLY: AnalyticsService.init() runs in the app shell and AnalyticsTagsService.load() fires on the consent stream, so once a customer accepts, BOTH tags are on EVERY route INCLUDING /payment. These are payment-page scripts. What makes that acceptable is the same argument as for the rest of this page: card fields live in an iframe on cdn.omise.co, so same-origin policy denies these scripts - and anything injected into them - any access to the PAN (OBRS-391). Two further limits are load-bearing rather than incidental: nothing is injected until AnalyticsConsentService reports 'granted' (a PDPA requirement that doubles as a smaller attack surface), and an empty ID is a total no-op, so CI and every fresh clone run with no third-party script at all. What this does NOT buy is integrity of the bytes those two origins serve - see section 3 of the prose inventory; the residual is accepted on the same terms as Omise's and Google's."
     }
   ],
 
@@ -45,6 +53,18 @@
     "https://api.omise.co",
     "https://vault.omise.co",
     "wss://sit-obrs-backend.koyeb.app",
-    "https://*.omise.co"
-  ]
+    "https://*.omise.co",
+    "https://www.googletagmanager.com",
+    "https://www.clarity.ms",
+    "https://scripts.clarity.ms",
+    "https://c.clarity.ms",
+    "https://c.bing.com",
+    "https://*.google-analytics.com",
+    "https://*.analytics.google.com",
+    "https://*.clarity.ms"
+  ],
+
+  "_obrs888_note": "scripts.clarity.ms, c.clarity.ms and c.bing.com are NOT named by any file in this repo, and that is the point: `origins` above lists what a loader's SOURCE names, which is why rule 4 could never have found these. www.clarity.ms/tag/<id> is a bootstrap that fetches scripts.clarity.ms/<ver>/clarity.js; c.clarity.ms/c.gif 302s to c.bing.com/c.gif. Measured on published SIT, OBRS-888. c.bing.com is load-bearing even though no violation report ever names it — CSP re-checks each redirect hop but reports the PRE-redirect URL, so allowing only c.clarity.ms fails under a real enforcing header while producing a report that points at c.clarity.ms. Verified with an enforcing header and a three-arm control, not read off the spec.",
+
+  "_obrs889_note": "sitCspOrigins is UNCHANGED by OBRS-889 and that is the finding, not an omission. https://accounts.google.com was already listed — it has been in script-src, connect-src and frame-src since OBRS-719 — yet an enforcing header still dropped https://accounts.google.com/gsi/style, the stylesheet gsi/client injects into our document, because style-src did not name the host. This list is ORIGIN-level, so it is structurally blind to a directive-level gap: both inventory comparisons stay green while the fetch is denied. The rule that does see it is SIDECAR_SUBRESOURCES in check-payment-page-scripts.mjs (script-src implies style-src for this host, whole-token, directional). Measured on published SIT under a real Content-Security-Policy header, 1 violation before / 0 after; the sign-in BUTTON is unaffected either way — it renders inside a cross-origin accounts.google.com iframe that frame-src allows — so the cost of the gap was a collector whose PCI DSS 11.6.1 steady state is zero lines, not a broken login."
 }

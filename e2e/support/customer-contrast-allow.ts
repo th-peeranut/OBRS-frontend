@@ -200,8 +200,32 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   'light|input.form-control.mt-1|boundary-on-#ffffff': '1.35:1 -- OBRS-772 form field boundary',
   'dark|input.form-control.mt-1|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 form field boundary',
   'light|input.form-check-input|boundary-on-#ffffff': '1.30:1 -- OBRS-772 checkbox/radio boundary',
-  'light|input.p-inputtext.p-component|boundary-on-#ffffff': '1.35:1 -- OBRS-772 p-calendar field boundary',
-  'dark|input.p-inputtext.p-component|boundary-on-#22263a': '1.36:1 -- OBRS-772 p-calendar field boundary',
+  // OBRS-915 REKEYED, NOT REPAINTED. PrimeNG 19 adds `p-datepicker-input` to the
+  // date field's class list, and the class list is half of this gate's key, so
+  // both entries stopped matching on an upgrade that changed no colour. The
+  // MEASUREMENTS are unchanged and that is the point: 1.35:1 on #ffffff and
+  // 1.36:1 on #22263a are the same numbers OBRS-772 recorded, re-measured after
+  // the upgrade, so the debt these two describe is still exactly the debt they
+  // were written for. Anything else would have needed a new entry, not a rename.
+  //
+  // OBRS-917 REKEYED AGAIN, SAME NUMBERS, AND NOW TWO ENTRIES PER THEME.
+  // PrimeNG 20 did not change these colours either -- #dddee1 on #ffffff and
+  // #383c4e on #22263a still measure 1.35:1 and 1.36:1, which is how we know
+  // this is still OBRS-772's debt rather than a new one. What it changed is the
+  // class list, twice over: the order flipped (`p-datepicker-input` leads now),
+  // and the third class differs by STATE, so one key per theme became two --
+  // `p-filled` on `home`, where the field is pre-populated, and `p-inputtext` on
+  // `schedule-booking`, where it is empty.
+  //
+  // The gate proposed deleting the stale pair. That would have been wrong: the
+  // borders are unchanged and still under the floor, so deleting retires a live
+  // debt and buys silence. Two renames in two consecutive upgrades is the honest
+  // signal that keying on a vendor's class list is fragile -- that deserves its
+  // own card, not a quiet redesign smuggled into an upgrade.
+  'light|input.p-datepicker-input.p-component.p-filled|boundary-on-#ffffff': '1.35:1 -- OBRS-772 p-datepicker field boundary (home, pre-filled)',
+  'light|input.p-datepicker-input.p-component.p-inputtext|boundary-on-#ffffff': '1.35:1 -- OBRS-772 p-datepicker field boundary (schedule-booking, empty)',
+  'dark|input.p-datepicker-input.p-component.p-filled|boundary-on-#22263a': '1.36:1 -- OBRS-772 p-datepicker field boundary (home, pre-filled)',
+  'dark|input.p-datepicker-input.p-component.p-inputtext|boundary-on-#22263a': '1.36:1 -- OBRS-772 p-datepicker field boundary (schedule-booking, empty)',
   'light|button.theme-toggle-btn|boundary-on-#ffffff': '1.36:1 -- OBRS-772 navbar icon button boundary',
   'dark|button.theme-toggle-btn|boundary-on-#1a1d27': '1.60:1 -- OBRS-772 navbar icon button boundary',
   'light|button.navbar-lang-trigger|boundary-on-#ffffff': '1.36:1 -- OBRS-772 navbar language trigger boundary',

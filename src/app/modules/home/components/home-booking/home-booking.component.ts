@@ -39,9 +39,10 @@ import {
 // since OBRS-647), so a failed fetch hid a month of sellable departures.
 
 @Component({
-  selector: 'app-home-booking',
-  templateUrl: './home-booking.component.html',
-  styleUrl: './home-booking.component.scss',
+    selector: 'app-home-booking',
+    templateUrl: './home-booking.component.html',
+    styleUrl: './home-booking.component.scss',
+    standalone: false
 })
 export class HomeBookingComponent implements OnInit, OnDestroy {
   roundTripDropdowns: Dropdown[] = [
@@ -85,8 +86,18 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   /** The current raw (origin,destination) id source — either the logged-in
    *  user's booking history (newest-first) or the anonymous localStorage cache.
    *  Kept so a later station-list emission can re-derive candidates without
-   *  re-fetching. */
-  private rawRecentRoutePairs: RecentRoutePair[] = [];
+   *  re-fetching.
+   *
+   *  `count` is optional because the two sources carry frequency differently:
+   *  the API source expresses it as REPEATED pairs (no count field), the
+   *  localStorage source as one entry with an explicit count. Both are valid
+   *  input to `deriveRecentRouteCandidates`, which tallies either shape
+   *  (OBRS-923). */
+  private rawRecentRoutePairs: (RecentRoutePair & { count?: number })[] = [];
+
+  /** OBRS-928: guards the one-shot prefill of the top-ranked route — see
+   *  `prefillTopRecentRoute()`. */
+  private hasPrefilledRecentRoute = false;
 
   private destroy$ = new Subject<void>();
 
@@ -136,6 +147,10 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
         this.rawRecentRoutePairs = loadRecentRoutesFromLocalStorage().map((entry) => ({
           originId: entry.originId,
           destinationId: entry.destinationId,
+          // Dropping `count` here would silently flatten the anonymous source to
+          // pure recency again — the entries are already deduped, so the count
+          // is the ONLY frequency signal that survives the write path.
+          count: entry.count,
         }));
         this.recomputeRecentRouteCandidates();
       }
@@ -317,7 +332,13 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
    *  interrupt the primary "load Home, search a trip" flow. */
   private loadRecentRoutesFromApi(): void {
     this.bookingService
-      .getMyBookings(undefined, false, true)
+      // OBRS-577: `size: 100` pinned explicitly — the new service default
+      // dropped to 20 for /my-bookings's own load, but this call's array
+      // feeds extractRecentRoutePairsFromBookings, a frequency-ranked sample
+      // for the Home quick-pick (OBRS-923); a smaller sample can silently
+      // change which route ranks first, so this stays byte-identical to the
+      // pre-577 request (page 0, size 100, no status).
+      .getMyBookings({ showLoadingDialog: false, skipAuthLogout: true, size: 100 })
       .pipe(
         catchError(() => of(null)),
         takeUntil(this.destroy$)
@@ -339,6 +360,47 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       this.rawRecentRoutePairs,
       this.allProvinceStationList
     );
+    this.prefillTopRecentRoute();
+  }
+
+  /**
+   * OBRS-928: applies the top-ranked route to the search form on load, instead
+   * of waiting for the user to discover that the quick-pick pills are tappable.
+   * A user who does not poke at web apps never found the strip and went back to
+   * hunting for their stops by hand — a feature nobody discovers is worth what
+   * a feature nobody shipped is worth.
+   *
+   * Safe to do only because OBRS-923 ranks by frequency: prefilling the route a
+   * customer books over and over is a very different risk from prefilling
+   * whatever they happened to book once. The value is also visible and
+   * editable in the fields — unlike a placeholder, which only looks like one.
+   *
+   * Two independent guards, because both the station-list and the auth-status
+   * subscriptions call `recomputeRecentRouteCandidates()` and either can fire
+   * more than once:
+   *   - `hasPrefilledRecentRoute` — at most one prefill per page load;
+   *   - the "both fields still empty" check — never overwrite a choice the user
+   *     has already made, including one made before the candidates resolved.
+   */
+  private prefillTopRecentRoute(): void {
+    if (this.hasPrefilledRecentRoute) return;
+
+    const top = this.recentRouteCandidates[0];
+    if (!top) return;
+
+    const hasUserChoice =
+      !this.isEmptyStationValue(this.getFormValue('startStationId')) ||
+      !this.isEmptyStationValue(this.getFormValue('stopStationId'));
+    if (hasUserChoice) return;
+
+    this.hasPrefilledRecentRoute = true;
+    this.onRecentRouteSelected(top);
+  }
+
+  /** `startStationId`/`stopStationId` are seeded with `''`, so a plain falsy
+   *  check would also read a legitimate station id of 0 as "empty". */
+  private isEmptyStationValue(value: unknown): boolean {
+    return value === null || value === undefined || value === '';
   }
 
   /** OBRS-575 localStorage write gate: only when BOTH ids resolve to a

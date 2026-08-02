@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 import {
   invokeGetScheduleBookingApi,
+  revalidateRestoredScheduleBooking,
 } from '../../shared/stores/schedule-booking/schedule-booking.action';
 import {
   invokeSetScheduleFilterApi,
@@ -37,11 +38,13 @@ import { Observable } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../../shared/services/alert.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { AnalyticsService } from '../../services/analytics/analytics.service';
 
 @Component({
-  selector: 'app-passenger-info',
-  templateUrl: './passenger-info.component.html',
-  styleUrl: './passenger-info.component.scss',
+    selector: 'app-passenger-info',
+    templateUrl: './passenger-info.component.html',
+    styleUrl: './passenger-info.component.scss',
+    standalone: false
 })
 export class PassengerInfoComponent {
   @ViewChild(PassengerInfoFormComponent)
@@ -74,7 +77,8 @@ export class PassengerInfoComponent {
     private router: Router,
     private bookingService: BookingService,
     private translateService: TranslateService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private analytics: AnalyticsService
   ) {
     this.rawProvinceStationList = this.store.pipe(
       select(selectProvinceWithStation)
@@ -82,9 +86,22 @@ export class PassengerInfoComponent {
   }
 
   ngOnInit(): void {
+    // OBRS-867 funnel step 4. This is the step the card names as decisive for
+    // OBRS-872: it is the first screen behind AuthGuard's `requireAuth` path
+    // that a customer meets after choosing a trip, so the gap between
+    // `schedule_selected` and this event is the cost of having no guest
+    // checkout. Deliberately carries no field from either form — this fires
+    // before anything is typed, and must keep doing so.
+    this.analytics.track('passenger_info_reached');
+
     this.store.dispatch(invokeGetAllProvinceWithStationApi());
     this.store.dispatch(invokeGetScheduleBookingApi());
     this.store.dispatch(invokeGetScheduleFilterApi());
+    // OBRS-903: this is where a customer who was forced through registration
+    // lands, and where the seat map is drawn from `Schedule.availableSeatNumbers`
+    // — so a selection restored from the pre-login tab is re-checked here before
+    // any seat is offered (AC3). No-op for a selection made in this tab.
+    this.store.dispatch(revalidateRestoredScheduleBooking());
   }
 
   onPassengerFormValidityChange(isValid: boolean): void {

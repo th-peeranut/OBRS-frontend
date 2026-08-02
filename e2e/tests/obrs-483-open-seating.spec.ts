@@ -98,7 +98,7 @@ async function openActionsMenu(page: Page, card: Locator): Promise<Locator> {
 }
 
 function menuItem(menu: Locator, labelPattern: RegExp): Locator {
-  return menu.locator('li.p-menuitem').filter({
+  return menu.locator('li.p-menu-item').filter({
     has: menu.page().locator('.action-menu-item__label', { hasText: labelPattern }),
   });
 }

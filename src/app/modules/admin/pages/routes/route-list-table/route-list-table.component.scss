@@ -7,3 +7,11 @@
 .admin-table tr.is-selected td {
   background: var(--accent-soft);
 }
+
+// OBRS-891: whole-row click. The hover background already comes from the
+// global `.admin-table tbody tr:hover`, so the row-click affordance costs
+// exactly one declaration — and only on the data rows, never the skeleton
+// or empty row.
+.route-row {
+  cursor: pointer;
+}

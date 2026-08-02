@@ -29,12 +29,13 @@ interface ReceiptTicketRow {
 }
 
 @Component({
-  selector: 'app-sell-receipt-page',
-  templateUrl: './sell-receipt-page.component.html',
-  styleUrl: './sell-receipt-page.component.scss',
-  // Component-scoped so its dedupe/cache state doesn't leak across page
-  // visits — see the class comment on BoardingQrService.
-  providers: [BoardingQrService],
+    selector: 'app-sell-receipt-page',
+    templateUrl: './sell-receipt-page.component.html',
+    styleUrl: './sell-receipt-page.component.scss',
+    // Component-scoped so its dedupe/cache state doesn't leak across page
+    // visits — see the class comment on BoardingQrService.
+    providers: [BoardingQrService],
+    standalone: false
 })
 export class SellReceiptPageComponent implements OnInit, OnDestroy {
   protected isLoading = true;

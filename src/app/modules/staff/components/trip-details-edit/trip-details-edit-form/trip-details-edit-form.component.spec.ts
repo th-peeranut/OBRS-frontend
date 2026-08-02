@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { TripDetailsEditFormComponent } from './trip-details-edit-form.component';
 import { AdminDropdownComponent } from '../../../../../modules/admin/components/admin-dropdown/admin-dropdown.component';
 import { AdminVehicleDto, AdminVehicleTypeDto } from '../../../../../services/admin/admin-api.service';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
@@ -38,7 +38,7 @@ describe('TripDetailsEditFormComponent', () => {
         CommonModule,
         ReactiveFormsModule,
         TranslateModule.forRoot(),
-        CalendarModule,
+        DatePickerModule,
         InputNumberModule,
         NoopAnimationsModule,
       ],

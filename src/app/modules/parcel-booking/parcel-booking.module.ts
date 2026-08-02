@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { SharedModule } from '../../shared/shared.module';
 import { PaymentMethodsModule } from '../../shared/components/payment-methods/payment-methods.module';
 import { DropdownGroupObrsComponent } from '../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
@@ -32,7 +32,7 @@ const routes: Routes = [
   ],
   imports: [
     SharedModule,
-    CalendarModule,
+    DatePickerModule,
     DropdownGroupObrsComponent,
     PaymentMethodsModule,
     RouterModule.forChild(routes),

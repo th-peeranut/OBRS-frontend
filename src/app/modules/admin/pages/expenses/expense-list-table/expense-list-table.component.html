@@ -4,96 +4,122 @@
   </div>
 
   <!-- Error (no cached value): replaces the whole table section, no toast. -->
-  <div class="expense-empty" *ngIf="!isLoading && hasError">
-    <span class="material-symbols-outlined" aria-hidden="true">error</span>
-    <p class="expense-empty-title">{{ errorMessage }}</p>
-  </div>
+  @if (!isLoading && hasError) {
+    <div class="expense-empty">
+      <span class="material-symbols-outlined" aria-hidden="true">error</span>
+      <p class="expense-empty-title">{{ errorMessage }}</p>
+    </div>
+  }
 
   <!-- True empty (200 + [], no filters active): full-section empty state
-       (design-system §12, OBRS-209 pattern). -->
-  <div class="expense-empty" *ngIf="!isLoading && !hasError && isEmpty">
-    <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
-    <p class="expense-empty-title">{{ 'ADMIN.EXPENSES.EMPTY_TITLE' | translate }}</p>
-    <p class="expense-empty-body">{{ 'ADMIN.EXPENSES.EMPTY_BODY' | translate }}</p>
-  </div>
+  (design-system §12, OBRS-209 pattern). -->
+  @if (!isLoading && !hasError && isEmpty) {
+    <div class="expense-empty">
+      <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
+      <p class="expense-empty-title">{{ 'ADMIN.EXPENSES.EMPTY_TITLE' | translate }}</p>
+      <p class="expense-empty-body">{{ 'ADMIN.EXPENSES.EMPTY_BODY' | translate }}</p>
+    </div>
+  }
 
-  <div class="admin-table-wrap mt-3" *ngIf="isLoading || (!hasError && !isEmpty)">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>{{ 'ADMIN.EXPENSES.EXPENSE_DATE' | translate }}</th>
-          <!-- OBRS-808: admin only - an owner's rows are all theirs, so the
-               column would repeat one name down the whole table. -->
-          <th *ngIf="showOwnerColumn">{{ 'ADMIN.EXPENSES.OWNER' | translate }}</th>
-          <th>{{ 'ADMIN.EXPENSES.VEHICLE' | translate }}</th>
-          <th>{{ 'ADMIN.EXPENSES.CATEGORY' | translate }}</th>
-          <th class="expense-money">{{ 'ADMIN.EXPENSES.AMOUNT' | translate }}</th>
-          <th class="expense-money">{{ 'ADMIN.EXPENSES.VAT_AMOUNT' | translate }}</th>
-          <th>{{ 'ADMIN.EXPENSES.RECEIPT_NO' | translate }}</th>
-          <th>{{ 'ADMIN.EXPENSES.PAID_BY' | translate }}</th>
-          <th>{{ 'ADMIN.EXPENSES.NOTE' | translate }}</th>
-          <th class="text-right" *ngIf="canWrite">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngIf="isLoading">
-          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td *ngIf="showOwnerColumn"><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td class="text-right" *ngIf="canWrite"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+  @if (isLoading || (!hasError && !isEmpty)) {
+    <div class="admin-table-wrap mt-3">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'ADMIN.EXPENSES.EXPENSE_DATE' | translate }}</th>
+            <!-- OBRS-808: admin only - an owner's rows are all theirs, so the
+            column would repeat one name down the whole table. -->
+            @if (showOwnerColumn) {
+              <th>{{ 'ADMIN.EXPENSES.OWNER' | translate }}</th>
+            }
+            <th>{{ 'ADMIN.EXPENSES.VEHICLE' | translate }}</th>
+            <th>{{ 'ADMIN.EXPENSES.CATEGORY' | translate }}</th>
+            <th class="expense-money">{{ 'ADMIN.EXPENSES.AMOUNT' | translate }}</th>
+            <th class="expense-money">{{ 'ADMIN.EXPENSES.VAT_AMOUNT' | translate }}</th>
+            <th>{{ 'ADMIN.EXPENSES.RECEIPT_NO' | translate }}</th>
+            <th>{{ 'ADMIN.EXPENSES.PAID_BY' | translate }}</th>
+            <th>{{ 'ADMIN.EXPENSES.NOTE' | translate }}</th>
+            @if (canWrite) {
+              <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+            }
           </tr>
-        </ng-container>
-
-        <ng-container *ngIf="!isLoading && !hasError && !isEmpty">
-          <tr *ngFor="let row of rows; let i = index; trackBy: trackById" [class.zebra]="i % 2 === 1">
-            <td>{{ row.expenseDateDisplay }}</td>
-            <td *ngIf="showOwnerColumn" data-testid="expense-owner-cell">{{ row.ownerLabel || '-' }}</td>
-            <td>
-              <span *ngIf="row.vehicleId !== null">{{ row.vehicleLabel }}</span>
-              <span class="admin-muted" *ngIf="row.vehicleId === null">{{ row.vehicleLabel }}</span>
-            </td>
-            <td>{{ row.categoryDisplay }}</td>
-            <td class="expense-money">{{ row.amount | number: '1.2-2' }}</td>
-            <td class="expense-money">{{ row.vatAmount === null ? '-' : (row.vatAmount | number: '1.2-2') }}</td>
-            <td>{{ row.receiptNo || '-' }}</td>
-            <td>{{ row.paidBy || '-' }}</td>
-            <td [attr.title]="row.note || null">{{ row.note || '-' }}</td>
-            <td class="text-right" *ngIf="canWrite">
-              <div class="admin-inline-actions">
-                <button
-                  type="button"
-                  class="admin-icon-btn"
-                  [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
-                  (click)="edit.emit(row)"
-                >
-                  <span class="material-symbols-outlined">edit_square</span>
-                </button>
-                <button
-                  type="button"
-                  class="admin-icon-btn danger"
-                  [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
-                  (click)="delete.emit(row)"
-                >
-                  <span class="material-symbols-outlined">delete</span>
-                </button>
-              </div>
-            </td>
-          </tr>
-
-          <!-- Filters narrowed a populated list to zero rows — distinct,
-               lighter copy from the true empty state above (§8). -->
-          <tr *ngIf="rows.length === 0" class="admin-empty-row">
-            <td [attr.colspan]="columnCount">{{ 'ADMIN.EXPENSES.NO_MATCH' | translate }}</td>
-          </tr>
-        </ng-container>
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          @if (isLoading) {
+            @for (row of skeletonRows; track row) {
+              <tr class="admin-skeleton-row" aria-hidden="true">
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                @if (showOwnerColumn) {
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                }
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                @if (canWrite) {
+                  <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                }
+              </tr>
+            }
+          }
+          @if (!isLoading && !hasError && !isEmpty) {
+            @for (row of rows; track trackById(i, row); let i = $index) {
+              <tr [class.zebra]="i % 2 === 1">
+                <td>{{ row.expenseDateDisplay }}</td>
+                @if (showOwnerColumn) {
+                  <td data-testid="expense-owner-cell">{{ row.ownerLabel || '-' }}</td>
+                }
+                <td>
+                  @if (row.vehicleId !== null) {
+                    <span>{{ row.vehicleLabel }}</span>
+                  }
+                  @if (row.vehicleId === null) {
+                    <span class="admin-muted">{{ row.vehicleLabel }}</span>
+                  }
+                </td>
+                <td>{{ row.categoryDisplay }}</td>
+                <td class="expense-money">{{ row.amount | number: '1.2-2' }}</td>
+                <td class="expense-money">{{ row.vatAmount === null ? '-' : (row.vatAmount | number: '1.2-2') }}</td>
+                <td>{{ row.receiptNo || '-' }}</td>
+                <td>{{ row.paidBy || '-' }}</td>
+                <td [attr.title]="row.note || null">{{ row.note || '-' }}</td>
+                @if (canWrite) {
+                  <td class="text-right">
+                    <div class="admin-inline-actions">
+                      <button
+                        type="button"
+                        class="admin-icon-btn"
+                        [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                        (click)="edit.emit(row)"
+                        >
+                        <span class="material-symbols-outlined">edit_square</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="admin-icon-btn danger"
+                        [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                        (click)="delete.emit(row)"
+                        >
+                        <span class="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
+                  </td>
+                }
+              </tr>
+            }
+            <!-- Filters narrowed a populated list to zero rows — distinct,
+            lighter copy from the true empty state above (§8). -->
+            @if (rows.length === 0) {
+              <tr class="admin-empty-row">
+                <td [attr.colspan]="columnCount">{{ 'ADMIN.EXPENSES.NO_MATCH' | translate }}</td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </section>

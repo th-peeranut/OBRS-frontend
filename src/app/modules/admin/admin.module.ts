@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { CalendarModule } from 'primeng/calendar';
-import { InputSwitchModule } from 'primeng/inputswitch';
+import { DatePickerModule } from 'primeng/datepicker';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { SharedModule } from '../../shared/shared.module';
 import { AdminSharedModule } from './admin-shared.module';
 import { AdminLayoutComponent } from './admin-layout.component';
@@ -36,6 +36,11 @@ import { PromotionListTableComponent } from './pages/promotions/promotion-list-t
 import { PromotionFormModalComponent } from './pages/promotions/promotion-form-modal/promotion-form-modal.component';
 import { PromotionDeactivateModalComponent } from './pages/promotions/promotion-deactivate-modal/promotion-deactivate-modal.component';
 import { ReportsPageComponent } from './pages/reports/reports-page.component';
+import { RevenueAnalyticsPageComponent } from './pages/revenue-analytics/revenue-analytics-page.component';
+import { BookingTrendPageComponent } from './pages/booking-trend/booking-trend-page.component';
+import { RoutePerformancePageComponent } from './pages/route-performance/route-performance-page.component';
+import { CustomerBehaviorPageComponent } from './pages/customer-behavior/customer-behavior-page.component';
+import { OpsEfficiencyPageComponent } from './pages/ops-efficiency/ops-efficiency-page.component';
 import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-report-page.component';
 import { RefundVoidReportPageComponent } from './pages/refund-void-report/refund-void-report-page.component';
 import { CashOnlineReconciliationReportPageComponent } from './pages/cash-online-reconciliation-report/cash-online-reconciliation-report-page.component';
@@ -61,6 +66,7 @@ import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/e
 import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
 // OBRS-286 — manual refund worklist (AC-2/AC-3), owner-only.
 import { ManualRefundWorklistPageComponent } from './pages/manual-refund-worklist/manual-refund-worklist-page.component';
+import { CashRefundApprovalsPageComponent } from './pages/cash-refund-approvals/cash-refund-approvals-page.component';
 import { MarkRefundedModalComponent } from './pages/manual-refund-worklist/mark-refunded-modal/mark-refunded-modal.component';
 import { AuthGuard } from '../../auth/auth.guard';
 import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
@@ -164,6 +170,56 @@ export const adminRoutes: Routes = [
         data: {
           titleKey: 'ADMIN.PAGES.REPORTS',
           subtitleKey: 'ADMIN.REPORTS.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'revenue-analytics',
+        component: RevenueAnalyticsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.REVENUE_ANALYTICS',
+          subtitleKey: 'ADMIN.REVENUE_ANALYTICS.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'booking-trend',
+        component: BookingTrendPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.BOOKING_TREND',
+          subtitleKey: 'ADMIN.BOOKING_TREND.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'route-performance',
+        component: RoutePerformancePageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.ROUTE_PERFORMANCE',
+          subtitleKey: 'ADMIN.ROUTE_PERFORMANCE.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'customer-behavior',
+        component: CustomerBehaviorPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.CUSTOMER_BEHAVIOR',
+          subtitleKey: 'ADMIN.CUSTOMER_BEHAVIOR.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'ops-efficiency',
+        component: OpsEfficiencyPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.OPS_EFFICIENCY',
+          subtitleKey: 'ADMIN.OPS_EFFICIENCY.SUBTITLE',
           requiredRoles: ['admin'],
         },
       },
@@ -281,6 +337,21 @@ export const adminRoutes: Routes = [
           requiredRoles: ['owner'],
         },
       },
+      {
+        // OBRS-844: the cash-refund step-up worklist — OWNER-only, matching
+        // both backend doors it reads (`hasRole('OWNER')` on
+        // CashRefundApprovalController). Deliberately NOT ['admin','owner']:
+        // an admin owns no fleet, so the list is empty for them by
+        // construction, and offering the page would suggest otherwise.
+        path: 'cash-refund-approvals',
+        component: CashRefundApprovalsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.CASH_REFUND_APPROVALS',
+          subtitleKey: 'ADMIN.CASH_REFUND_APPROVALS.SUBTITLE',
+          requiredRoles: ['owner'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -332,6 +403,11 @@ export const adminRoutes: Routes = [
     PromotionFormModalComponent,
     PromotionDeactivateModalComponent,
     ReportsPageComponent,
+    RevenueAnalyticsPageComponent,
+    BookingTrendPageComponent,
+    RoutePerformancePageComponent,
+    CustomerBehaviorPageComponent,
+    OpsEfficiencyPageComponent,
     EodSalesReportPageComponent,
     RefundVoidReportPageComponent,
     CashOnlineReconciliationReportPageComponent,
@@ -352,13 +428,14 @@ export const adminRoutes: Routes = [
     ExpenseFormModalComponent,
     ExpenseDeleteModalComponent,
     ManualRefundWorklistPageComponent,
+    CashRefundApprovalsPageComponent,
     MarkRefundedModalComponent,
   ],
   imports: [
     SharedModule,
     RouterModule.forChild(adminRoutes),
-    CalendarModule,
-    InputSwitchModule,
+    DatePickerModule,
+    ToggleSwitchModule,
     AdminSharedModule,
     PhoneFormatPipe,
   ],

@@ -1,132 +1,141 @@
 <!-- OBRS-415: amountOverride bypasses the seat-booking-derived breakdown
-     entirely (see the @Input doc comment) — a parcel booking has no
-     passengers/discount snapshot to show, just a single total. -->
-<div class="card-container" [ngClass]="{ inline: variant === 'inline' }" *ngIf="amountOverride != null">
-  <div class="card-footer">
-    <span>{{ "PAYMENT.SUMMARY.TOTAL" | translate }}</span>
-    <span>{{ amountOverride }} {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}</span>
-  </div>
-</div>
-
-<ng-container *ngIf="amountOverride == null">
-<div
-  class="card-container"
-  [ngClass]="{ inline: variant === 'inline' }"
-  *ngIf="this.scheduleBooking | async as scheduleBooking"
->
-  <ng-container *ngIf="this.scheduleFilter | async as scheduleFilter">
-    <div class="card-body">
-      <div class="card-body-header">
-        {{ "PAYMENT.SUMMARY.HEADER" | translate }}
-      </div>
-
-      <div
-        class="card-body-content"
-        *ngIf="getAdultCount(scheduleFilter?.passengerInfo) > 0"
-      >
-        <span>
-          {{ "PAYMENT.SUMMARY.ADULT_LABEL" | translate }}
-        </span>
-        <span>
-          {{ getAdultCount(scheduleFilter?.passengerInfo) }}
-          {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
-        </span>
-      </div>
-
-      <div
-        class="card-body-content"
-        *ngIf="getKidCount(scheduleFilter?.passengerInfo) > 0"
-      >
-        <span>
-          {{ "PAYMENT.SUMMARY.CHILD_LABEL" | translate }}
-        </span>
-        <span>
-          {{ getKidCount(scheduleFilter?.passengerInfo) }}
-          {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
-        </span>
-      </div>
-
-      <div
-        class="card-body-content"
-        *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 1"
-      >
-        <span>
-          {{ "PAYMENT.SUMMARY.TICKET_PRICE_ONEWAY" | translate }}
-        </span>
-        <span>
-          {{ getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) }}
-          {{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
-        </span>
-      </div>
-
-      <div
-        class="card-body-content"
-        *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 2"
-      >
-        <span>
-          {{ "PAYMENT.SUMMARY.TICKET_PRICE_ROUNDTRIP" | translate }}
-        </span>
-        <span>
-          {{
-            getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) +
-              getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[1].pricePerSeat)
-          }}
-          {{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
-        </span>
-      </div>
+entirely (see the @Input doc comment) — a parcel booking has no
+passengers/discount snapshot to show, just a single total. -->
+@if (amountOverride != null) {
+  <div class="card-container" [ngClass]="{ inline: variant === 'inline' }">
+    <div class="card-footer">
+      <span>{{ "PAYMENT.SUMMARY.TOTAL" | translate }}</span>
+      <span>{{ amountOverride }} {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}</span>
     </div>
+  </div>
+}
 
-    <hr class="dotted-line" />
-
-    <ng-container *ngIf="this.booking | async as booking; else totalOnly">
-      <ng-container *ngIf="hasDiscount(booking); else totalOnly">
-        <div class="card-footer card-footer--subtle">
-          <span>
-            {{ "PAYMENT.SUMMARY.SUBTOTAL" | translate }}
-          </span>
-          <span>
-            {{ booking.totalAmount }}
-            {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
-          </span>
+@if (amountOverride == null) {
+  @if (this.scheduleBooking | async; as scheduleBooking) {
+    <div
+      class="card-container"
+      [ngClass]="{ inline: variant === 'inline' }"
+      >
+      @if (this.scheduleFilter | async; as scheduleFilter) {
+        <div class="card-body">
+          <div class="card-body-header">
+            {{ "PAYMENT.SUMMARY.HEADER" | translate }}
+          </div>
+          @if (getAdultCount(scheduleFilter?.passengerInfo) > 0) {
+            <div
+              class="card-body-content"
+              >
+              <span>
+                {{ "PAYMENT.SUMMARY.ADULT_LABEL" | translate }}
+              </span>
+              <span>
+                {{ getAdultCount(scheduleFilter?.passengerInfo) }}
+                {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
+              </span>
+            </div>
+          }
+          @if (getKidCount(scheduleFilter?.passengerInfo) > 0) {
+            <div
+              class="card-body-content"
+              >
+              <span>
+                {{ "PAYMENT.SUMMARY.CHILD_LABEL" | translate }}
+              </span>
+              <span>
+                {{ getKidCount(scheduleFilter?.passengerInfo) }}
+                {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
+              </span>
+            </div>
+          }
+          @if (getScheduleBooking(scheduleBooking?.schedule).length == 1) {
+            <div
+              class="card-body-content"
+              >
+              <span>
+                {{ "PAYMENT.SUMMARY.TICKET_PRICE_ONEWAY" | translate }}
+              </span>
+              <span>
+                {{ getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) }}
+                {{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
+              </span>
+            </div>
+          }
+          @if (getScheduleBooking(scheduleBooking?.schedule).length == 2) {
+            <div
+              class="card-body-content"
+              >
+              <span>
+                {{ "PAYMENT.SUMMARY.TICKET_PRICE_ROUNDTRIP" | translate }}
+              </span>
+              <span>
+                {{
+                getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) +
+                getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[1].pricePerSeat)
+                }}
+                {{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
+              </span>
+            </div>
+          }
         </div>
+        <hr class="dotted-line" />
+        @if (this.booking | async; as booking) {
+          @if (hasDiscount(booking)) {
+            <div class="card-footer card-footer--subtle">
+              <span>
+                {{ "PAYMENT.SUMMARY.SUBTOTAL" | translate }}
+              </span>
+              <span>
+                {{ booking.totalAmount }}
+                {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+              </span>
+            </div>
+            <div class="card-footer card-footer--subtle card-footer--discount">
+              <span>
+                {{ "PAYMENT.SUMMARY.DISCOUNT" | translate }}
+              </span>
+              <span>
+                -{{ booking.discountAmountSnapshot }}
+                {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+              </span>
+            </div>
+            <div class="card-footer">
+              <span>
+                {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
+              </span>
+              <span>
+                {{ booking.netAmount }}
+                {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+              </span>
+            </div>
+          } @else {
+            <div class="card-footer">
+              <span>
+                {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
+              </span>
+              <span>
+                {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+                {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+              </span>
+            </div>
+          }
+        } @else {
+          <div class="card-footer">
+            <span>
+              {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
+            </span>
+            <span>
+              {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+              {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+            </span>
+          </div>
+        }
+      }
+    </div>
+  }
+}
 
-        <div class="card-footer card-footer--subtle card-footer--discount">
-          <span>
-            {{ "PAYMENT.SUMMARY.DISCOUNT" | translate }}
-          </span>
-          <span>
-            -{{ booking.discountAmountSnapshot }}
-            {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
-          </span>
-        </div>
-
-        <div class="card-footer">
-          <span>
-            {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
-          </span>
-          <span>
-            {{ booking.netAmount }}
-            {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
-          </span>
-        </div>
-      </ng-container>
-    </ng-container>
-
-    <ng-template #totalOnly>
-      <div class="card-footer">
-        <span>
-          {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
-        </span>
-        <span>
-          {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
-          {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
-        </span>
-      </div>
-    </ng-template>
-  </ng-container>
-</div>
-</ng-container>
-
-<div class="btn-confirm" *ngIf="variant === 'default'">
-  {{ "PAYMENT.SUMMARY.CONFIRM" | translate }}
-</div>
+@if (variant === 'default') {
+  <div class="btn-confirm">
+    {{ "PAYMENT.SUMMARY.CONFIRM" | translate }}
+  </div>
+}

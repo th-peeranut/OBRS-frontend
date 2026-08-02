@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DropdownGroupObrsComponent } from './dropdown-group-obrs.component';
 import { createTranslateStub } from '../../../testing/test-stubs';
 
@@ -202,6 +202,145 @@ describe('DropdownGroupObrsComponent', () => {
       it('renders the full, unfiltered option list', () => {
         expect(component.displayList.map((o: any) => o.id)).toEqual([1, 2]);
       });
+    });
+  });
+
+  // OBRS-901: before this, the trigger rendered `getValue(null)` === '' — a box
+  // with nothing in it, which reads as an empty TEXT INPUT and sent users typing
+  // into a <button>. Every case here asserts the RENDERED trigger text, because
+  // that is the surface that was broken; a field-only assertion would stay green
+  // if the template binding were dropped again.
+  describe('placeholder shown while nothing is selected', () => {
+    let fixture: ComponentFixture<DropdownGroupObrsComponent>;
+    let translate: TranslateService;
+
+    // Real translations, not the bare key — the defect is what the USER reads,
+    // and `label`-interpolation ("เลือก" + "ต้นทาง") is exactly the part that
+    // an untranslated stub would hide.
+    const TH = {
+      SHARED: {
+        SELECT_PLACEHOLDER: 'เลือก{{item}}',
+        SELECT_PLACEHOLDER_GENERIC: 'เลือก',
+      },
+      HOME: { HOME_BOOKING: { START_STATION: 'ต้นทาง' } },
+      CUSTOM: { PICK_A_STOP: 'ระบุจุดจอด' },
+    };
+    const EN = {
+      SHARED: {
+        SELECT_PLACEHOLDER: 'Select {{item}}',
+        SELECT_PLACEHOLDER_GENERIC: 'Select',
+      },
+      HOME: { HOME_BOOKING: { START_STATION: 'Source' } },
+      CUSTOM: { PICK_A_STOP: 'Pick a stop' },
+    };
+
+    function setup(inputs: Record<string, unknown> = {}): void {
+      TestBed.configureTestingModule({
+        imports: [DropdownGroupObrsComponent, TranslateModule.forRoot()],
+      }).compileComponents();
+
+      translate = TestBed.inject(TranslateService);
+      translate.setTranslation('th', TH);
+      translate.setTranslation('en', EN);
+      translate.use('th');
+
+      fixture = TestBed.createComponent(DropdownGroupObrsComponent);
+      fixture.componentRef.setInput('isBorder', true);
+      fixture.componentRef.setInput('options', STATION_OPTIONS);
+      for (const [key, value] of Object.entries(inputs)) {
+        fixture.componentRef.setInput(key, value);
+      }
+      document.body.appendChild(fixture.nativeElement);
+      fixture.detectChanges();
+    }
+
+    afterEach(() => {
+      fixture.nativeElement.remove();
+    });
+
+    function valueText(): HTMLElement {
+      return fixture.nativeElement.querySelector('.value-text');
+    }
+
+    it('renders the label-derived prompt instead of an empty box (the reported defect)', () => {
+      setup({ label: 'HOME.HOME_BOOKING.START_STATION' });
+
+      expect(valueText().textContent!.trim()).toBe('เลือกต้นทาง');
+      // The old markup produced ''. Assert non-empty explicitly so a future
+      // regression to a blank trigger fails on its own terms, not incidentally.
+      expect(valueText().textContent!.trim().length).toBeGreaterThan(0);
+    });
+
+    it('marks the prompt with .is-placeholder so it is styled as muted, not as a chosen value', () => {
+      setup({ label: 'HOME.HOME_BOOKING.START_STATION' });
+
+      expect(valueText().classList).toContain('is-placeholder');
+    });
+
+    it('CONTROL: once a value is selected it renders the station name and drops .is-placeholder', () => {
+      setup({ label: 'HOME.HOME_BOOKING.START_STATION', value: 1 });
+
+      expect(valueText().textContent!.trim()).toBe('สถานีหมอชิต');
+      expect(valueText().classList).not.toContain('is-placeholder');
+    });
+
+    it('falls back to the generic prompt when the call site passes no label (parcel scheduleId picker)', () => {
+      setup();
+
+      expect(valueText().textContent!.trim()).toBe('เลือก');
+    });
+
+    it('honours an explicit placeholder KEY over the label-derived one', () => {
+      setup({ label: 'HOME.HOME_BOOKING.START_STATION', placeholder: 'CUSTOM.PICK_A_STOP' });
+
+      expect(valueText().textContent!.trim()).toBe('ระบุจุดจอด');
+    });
+
+    it('follows a LIVE language switch with no reload', () => {
+      setup({ label: 'HOME.HOME_BOOKING.START_STATION' });
+      expect(valueText().textContent!.trim()).toBe('เลือกต้นทาง');
+
+      translate.use('en');
+      fixture.detectChanges();
+
+      expect(valueText().textContent!.trim()).toBe('Select Source');
+    });
+
+    // The station lists are NOT available on the first render: home-booking and
+    // parcel-trip-form both bind `[value]` from a form control that can already
+    // hold an id while `[options]` is still the initial `[]` waiting on
+    // `GET /api/stops`. ngOnChanges resolves `selectedValue` by searching
+    // `options` for `value`, so during that window a BOUND value resolves to
+    // null and the trigger takes the placeholder branch. This pins both halves:
+    // the prompt during the window, and that it is replaced (not merely
+    // re-styled) the moment the options land.
+    it('shows the prompt while `value` is bound but `options` have not arrived, then drops it when they do', () => {
+      setup({ label: 'HOME.HOME_BOOKING.START_STATION', options: [], value: 1 });
+
+      expect(valueText().textContent!.trim()).toBe('เลือกต้นทาง');
+      expect(valueText().classList).toContain('is-placeholder');
+
+      fixture.componentRef.setInput('options', STATION_OPTIONS);
+      fixture.detectChanges();
+
+      expect(valueText().textContent!.trim()).toBe('สถานีหมอชิต');
+      expect(valueText().classList).not.toContain('is-placeholder');
+    });
+
+    // The reverse transition. `.is-placeholder` is applied by a binding, not by
+    // an ngIf that recreates the node, so a stale class on a re-used element is
+    // a real failure mode — and the selected -> cleared direction is the one no
+    // other case walks.
+    it('returns to the prompt when the selection is cleared (value -> null)', () => {
+      setup({ label: 'HOME.HOME_BOOKING.START_STATION', value: 1 });
+      expect(valueText().textContent!.trim()).toBe('สถานีหมอชิต');
+      expect(valueText().classList).not.toContain('is-placeholder');
+
+      fixture.componentRef.setInput('value', null);
+      fixture.detectChanges();
+
+      expect(valueText().textContent!.trim()).toBe('เลือกต้นทาง');
+      expect(valueText().classList).toContain('is-placeholder');
     });
   });
 });

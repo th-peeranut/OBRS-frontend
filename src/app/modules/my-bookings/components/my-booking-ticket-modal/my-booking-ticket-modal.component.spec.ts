@@ -7,7 +7,13 @@ import { BookingService } from '../../../../services/booking/booking.service';
 import { BookingTicketsData } from '../../../../shared/interfaces/booking-ticket.interface';
 import { ETicketCardComponent } from '../../../../shared/components/e-ticket-card/e-ticket-card.component';
 import { ETicketCardModule } from '../../../../shared/components/e-ticket-card/e-ticket-card.module';
+import { TicketService } from '../../../../services/ticket/ticket.service';
 import { MyBookingTicketModalComponent } from './my-booking-ticket-modal.component';
+// OBRS-907 scrutinize follow-up: declared (not left to NO_ERRORS_SCHEMA below) so
+// the loading-state render test can measure its REAL computed size — an
+// undeclared custom element under NO_ERRORS_SCHEMA renders as an opaque leaf
+// with no children, which would make the ring span impossible to query at all.
+import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
 
 function buildTicketsData(): BookingTicketsData {
   return {
@@ -85,7 +91,7 @@ describe('MyBookingTicketModalComponent', () => {
     expect(component.card?.bookingNumber).toBe('B-1');
     expect(component.card?.legs.length).toBe(1);
     expect(component.card?.legs[0].route).toBe('Station A - Station B');
-    expect(component.card?.passengers.length).toBe(1);
+    expect(component.card?.legs[0].passengers.length).toBe(1);
     expect(component.card?.booker?.phone).toBe('0812345678');
     // SPEC-OBRS-426 M1: the tracker target is computed alongside the card.
     expect(component.trackTargets.length).toBe(2);
@@ -126,14 +132,27 @@ describe('MyBookingTicketModalComponent', () => {
 describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
   let fixture: ComponentFixture<MyBookingTicketModalComponent>;
   let component: MyBookingTicketModalComponent;
+  let ticketServiceStub: { getBoardingToken: jasmine.Spy };
 
   beforeEach(async () => {
     const bookingServiceStub = {
       getBookingTickets: () => of({ code: 200, message: 'OK', data: buildTicketsData() }),
     } as unknown as BookingService;
+    // OBRS-866: the real ETicketCardComponent now fetches a boarding token per
+    // ticket (its own component-scoped BoardingQrService resolves TicketService
+    // from here), so this suite must supply one or the card can't be built.
+    ticketServiceStub = {
+      getBoardingToken: jasmine.createSpy('getBoardingToken').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: { ticketId: 1, ticketNumber: 'T-1', boardingToken: 'tok-1', expiresAt: '' },
+        })
+      ),
+    };
 
     await TestBed.configureTestingModule({
-      declarations: [MyBookingTicketModalComponent],
+      declarations: [MyBookingTicketModalComponent, LoadingStateComponent],
       // app-trip-track-panel (SPEC-OBRS-426) is a real child component of a
       // sibling module (MyBookingsModule) — not declared here, same NO_ERRORS_SCHEMA
       // pattern as FleetMapPageComponent's own template-wiring spec: this
@@ -141,7 +160,10 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
       // tracker's own behavior (covered by trip-track-panel.component.spec.ts).
       schemas: [NO_ERRORS_SCHEMA],
       imports: [ETicketCardModule, TranslateModule.forRoot()],
-      providers: [{ provide: BookingService, useValue: bookingServiceStub }],
+      providers: [
+        { provide: BookingService, useValue: bookingServiceStub },
+        { provide: TicketService, useValue: ticketServiceStub },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MyBookingTicketModalComponent);
@@ -165,6 +187,31 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
 
     expect(cardInstance.legs.length).toBe(1);
     expect(cardInstance.legs[0].distanceKm).toBe(45);
+  });
+
+  // OBRS-866: the integration point the bug actually lived at — My Bookings is
+  // the only post-payment surface a customer can reach, and the QR it showed
+  // encoded the `ticketNumber` string, which the staff scanner rejects. Pin
+  // that the card reached here asks for THIS booking's ticket's boarding token.
+  it('OBRS-866: the card fetches a real boarding token for the booking\'s ticket', () => {
+    component.bookingId = 5;
+    component.ngOnChanges({
+      bookingId: {
+        currentValue: 5,
+        previousValue: null,
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
+    fixture.detectChanges();
+
+    expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledOnceWith(1, true);
+
+    const cardInstance = fixture.debugElement.query(By.directive(ETicketCardComponent))
+      .componentInstance as ETicketCardComponent;
+    expect(
+      cardInstance.legPassengerRows.map((rows) => rows.map((row) => row.ticketId))
+    ).toEqual([[1]]);
   });
 
   // SPEC-OBRS-426 BR-2: the tracker renders as a SIBLING of app-e-ticket-card,
@@ -199,5 +246,27 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
     );
     expect(cardIndex).toBeGreaterThanOrEqual(0);
     expect(panelIndex).toBeGreaterThan(cardIndex); // below the card, not inside it
+  });
+
+  // OBRS-907 scrutinize follow-up: pin the ACTUAL COMPUTED size, not just presence.
+  // The notification-inbox-panel sibling migration silently grew 28px -> 34px past
+  // 4334 green tests because nothing read getComputedStyle -- this is that class of
+  // regression, closed for the ticket modal's ring graphic too. Karma's `styles`
+  // array already loads src/styles.scss (OBRS-721 lesson), so this sees the REAL
+  // cascade, not a guess about it.
+  it('OBRS-907: pins the ring spinner at its computed 36px size / 4px border width (matching the old .ticket-modal__spinner it replaced)', () => {
+    component.loading = true;
+    fixture.detectChanges();
+    document.body.appendChild(fixture.nativeElement);
+    try {
+      const ring = fixture.debugElement.query(By.css('.loading-state-ring'));
+      expect(ring).withContext('the ring graphic must render while loading is true').not.toBeNull();
+      const style = getComputedStyle(ring.nativeElement);
+      expect(style.width).toBe('36px');
+      expect(style.height).toBe('36px');
+      expect(style.borderWidth).toBe('4px');
+    } finally {
+      fixture.nativeElement.remove();
+    }
   });
 });

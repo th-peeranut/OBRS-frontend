@@ -1,13 +1,16 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
 } from '../shared/interceptors/http-context-tokens';
 import { hasOwnKey } from '../shared/lib/own-key';
+import { clearTtl, readWithTtl, writeWithTtl } from '../shared/lib/ttl-storage';
+import { clearBookingContext } from '../shared/lib/booking-context-storage';
 import {
   EmailChangeConfirmResponse,
   EmailChangeRequestResponse,
@@ -26,9 +29,30 @@ import { PRIVACY_POLICY_VERSION } from '../modules/privacy-policy/privacy-policy
 })
 export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
+  // OBRS-855: the long-lived half of the session. The access token above lives one hour and
+  // cannot be extended; this one buys a replacement for it. Kept in localStorage beside the
+  // access token rather than in a cookie because the backend is a separate origin with CSRF
+  // disabled (WebSecurityConfig) — a cookie would ride along on cross-site requests
+  // automatically, which is exactly what CSRF needs and what a header-carried token cannot do.
+  private readonly REFRESH_TOKEN_KEY = 'auth_refresh_token';
   private readonly USERNAME_KEY = 'auth_username';
   private readonly ROLES_KEY = 'auth_roles';
+  /**
+   * OBRS-187 created this; OBRS-903 moved it out of `sessionStorage`.
+   *
+   * A first-time booker is bounced here from the booking flow, registers, and
+   * then has to open the verification mail — which opens a NEW TAB.
+   * `sessionStorage` is per-tab, so the tab that reads this was never the tab
+   * that wrote it: the value read as absent and `navigateAfterLogin` sent every
+   * one of them to the home route with nothing logged anywhere. localStorage
+   * crosses the tab boundary; the TTL below is what keeps it from also crossing
+   * the day boundary and redirecting someone who never asked.
+   */
   private readonly RETURN_URL_KEY = 'auth_return_url';
+  private static readonly RETURN_URL_VERSION = 1;
+  /** 30 minutes — long enough for the mail-app detour, short enough that a
+   *  forgotten entry does not hijack an unrelated login the next morning. */
+  private static readonly RETURN_URL_TTL_MS = 30 * 60 * 1000;
 
   // Area-based access model (frontend routing only — the backend keeps its own
   // WebSecurityConfig#roleHierarchy, where admin > owner > salesperson >
@@ -101,7 +125,7 @@ export class AuthService {
           const token = response?.data?.accessToken;
           const username = response?.data?.user?.email ?? payload.email;
           const roles = response?.data?.user?.roles;
-          this.storeAuthData(token, username, roles);
+          this.storeAuthData(token, username, roles, response?.data?.refreshToken);
         }
         return response;
       })
@@ -117,10 +141,21 @@ export class AuthService {
   private storeAuthData(
     token: string | null | undefined,
     username: string | null | undefined,
-    roles?: string[] | null | undefined
+    roles?: string[] | null | undefined,
+    refreshToken?: string | null | undefined
   ): void {
     if (!token) return;
     localStorage.setItem(this.TOKEN_KEY, token);
+    // OBRS-855: WRITE-OR-REMOVE, never "keep what was there". A response with no refreshToken
+    // means this session cannot be refreshed, and leaving the previous value in place would have
+    // the interceptor later present a token belonging to a session that has already been
+    // replaced. The backend reads that as replay and answers by revoking EVERY live token the
+    // user holds (RefreshTokenService#rotate) — so signing in would be what signs them out.
+    if (refreshToken) {
+      localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
+    } else {
+      localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+    }
     if (username) {
       localStorage.setItem(this.USERNAME_KEY, username);
     } else {
@@ -139,6 +174,7 @@ export class AuthService {
 
   clearAuthData(): void {
     localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.USERNAME_KEY);
     localStorage.removeItem(this.ROLES_KEY);
     this.authStatusSubject.next(false);
@@ -149,13 +185,20 @@ export class AuthService {
       return;
     }
 
-    sessionStorage.setItem(this.RETURN_URL_KEY, url);
+    writeWithTtl(this.RETURN_URL_KEY, url, AuthService.RETURN_URL_VERSION);
   }
 
   consumePostLoginRedirectUrl(defaultUrl: string = '/'): string {
-    const url = sessionStorage.getItem(this.RETURN_URL_KEY);
-    sessionStorage.removeItem(this.RETURN_URL_KEY);
+    const url = readWithTtl<string>(
+      this.RETURN_URL_KEY,
+      AuthService.RETURN_URL_TTL_MS,
+      AuthService.RETURN_URL_VERSION
+    );
+    clearTtl(this.RETURN_URL_KEY);
 
+    // The auth-page check stays on BOTH sides of storage. A value can be written
+    // by one build and read by the next, and this is the guard that stops a
+    // /login → /login redirect loop (and OBRS-613's spent reset-password token).
     if (!url || this.isAuthPage(url)) {
       return defaultUrl;
     }
@@ -170,6 +213,66 @@ export class AuthService {
 
   getToken(): string | null {
     return localStorage.getItem(this.TOKEN_KEY);
+  }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+  }
+
+  /**
+   * OBRS-855: trades the stored refresh token for a fresh access token, and emits it.
+   *
+   * Returns an Observable rather than following the Promise style of the login methods above
+   * because its one caller is `auth.interceptor.ts`, which has to splice the result back into an
+   * in-flight `HttpHandlerFn` chain. The interceptor also owns the single-flight guard — this
+   * method deliberately has none, so calling it twice really does spend two refresh tokens.
+   *
+   * SKIP_AUTH_LOGOUT and SKIP_GLOBAL_ERROR_ALERT are both set: the interceptor is already
+   * mid-401-handling when this runs, and a second force-logout or a second toast fired from
+   * inside the recovery attempt would step on the one the caller is about to decide on. (The
+   * `/api/auth/` prefix already exempts this call from the force-logout path — the context token
+   * says so explicitly rather than resting on the URL happening to match.)
+   */
+  refreshSession(): Observable<string> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      return throwError(() => new Error('AUTH_NO_REFRESH_TOKEN'));
+    }
+
+    return this.http
+      .post<ResponseAPI<LoginResponseData>>(
+        `${environment.apiUrl}/api/auth/refresh`,
+        { refreshToken },
+        {
+          context: new HttpContext()
+            .set(SKIP_AUTH_LOGOUT, true)
+            .set(SKIP_GLOBAL_ERROR_ALERT, true),
+        }
+      )
+      .pipe(
+        map((response) => {
+          const accessToken = response?.data?.accessToken;
+          // A 200 carrying no accessToken is a failed refresh however friendly it looks, and it
+          // must throw rather than resolve — the interceptor branches on success/failure, and
+          // resolving here would have it retry the original request with the SAME dead token.
+          if (response?.code !== 200 || !accessToken) {
+            throw new Error('AUTH_REFRESH_REJECTED');
+          }
+
+          // The refresh ROTATES: response.data.refreshToken is a different value from the one
+          // just sent, and the one just sent is now dead. storeAuthData's write-or-remove rule
+          // means a response that somehow omits it clears the stored token instead of leaving a
+          // spent one behind for the next refresh to replay.
+          this.storeAuthData(
+            accessToken,
+            response?.data?.user?.email ?? this.getUsername(),
+            response?.data?.user?.roles,
+            response?.data?.refreshToken
+          );
+
+          return accessToken;
+        })
+      );
   }
 
   getUsername(): string | null {
@@ -265,8 +368,42 @@ export class AuthService {
     );
   }
 
+  /**
+   * OBRS-855: signing out now revokes the session server-side as well as locally.
+   *
+   * Clearing localStorage was enough while a session was one unrevokable hour of JWT. With a
+   * refresh token the untouched half would have kept working for a week after the user pressed
+   * "sign out" — on a shared machine that is the whole point of the button, undone.
+   *
+   * Order matters: local state is cleared and the navigation queued BEFORE the request, and the
+   * request is fire-and-forget. A slow or failed network must not leave the user sitting on a
+   * page that still believes they are signed in, and there is nothing useful to tell them about
+   * a logout call that failed — the backend answers 200 for every token it is handed anyway.
+   */
   logout(): void {
+    const refreshToken = this.getRefreshToken();
     this.clearAuthData();
+    // OBRS-903: the cross-tab booking context outlives a tab by design, so
+    // pressing "sign out" on a shared machine has to end it too. Deliberately
+    // here and NOT in `clearAuthData()` — that also runs on the JWT-expired
+    // login retry (`callLogin`) and inside the interceptor's 401 handling, where
+    // wiping the customer's trip selection would recreate this very bug.
+    clearBookingContext();
+
+    if (refreshToken) {
+      this.http
+        .post(
+          `${environment.apiUrl}/api/auth/logout`,
+          { refreshToken },
+          {
+            context: new HttpContext()
+              .set(SKIP_AUTH_LOGOUT, true)
+              .set(SKIP_GLOBAL_ERROR_ALERT, true),
+          }
+        )
+        .subscribe({ error: () => undefined });
+    }
+
     this.router.navigate(['/login']);
   }
 
@@ -323,7 +460,7 @@ export class AuthService {
             const token = response?.data?.accessToken;
             const username = response?.data?.user?.email;
             const roles = response?.data?.user?.roles;
-            this.storeAuthData(token, username, roles);
+            this.storeAuthData(token, username, roles, response?.data?.refreshToken);
           }
           return response;
         })
@@ -354,7 +491,7 @@ export class AuthService {
           const token = response?.data?.accessToken;
           const username = response?.data?.user?.email;
           const roles = response?.data?.user?.roles;
-          this.storeAuthData(token, username, roles);
+          this.storeAuthData(token, username, roles, response?.data?.refreshToken);
         }
         return response;
       });

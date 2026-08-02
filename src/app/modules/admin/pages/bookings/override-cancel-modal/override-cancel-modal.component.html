@@ -1,135 +1,141 @@
-<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop (dismiss)="requestClose()">
-  <div class="admin-modal override-cancel-modal">
-    <h4 class="admin-modal-title">{{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.TITLE' | translate }}</h4>
-    <p class="admin-modal-subtitle">{{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.HINT' | translate }}</p>
-
-    <!-- Booking summary — what is about to be cancelled -->
-    <dl class="override-cancel-summary">
-      <div class="override-cancel-summary-row">
-        <dt>{{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.BOOKING' | translate }}</dt>
-        <dd>{{ bookingNumber }}</dd>
-      </div>
-      <div class="override-cancel-summary-row">
-        <dt>{{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.ROUTE' | translate }}</dt>
-        <dd>{{ routeLabel }}</dd>
-      </div>
-      <div class="override-cancel-summary-row">
-        <dt>{{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.DEPARTURE' | translate }}</dt>
-        <dd>{{ departureLabel }}</dd>
-      </div>
-    </dl>
-
-    <!-- Window banner (AC2 context): out-of-window is one of the two rule-breaks -->
-    <p class="override-cancel-window" [class.is-violation]="outsideWindow">
-      {{
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="requestClose()">
+    <div class="admin-modal override-cancel-modal">
+      <h4 class="admin-modal-title">{{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.TITLE' | translate }}</h4>
+      <p class="admin-modal-subtitle">{{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.HINT' | translate }}</p>
+      <!-- Booking summary — what is about to be cancelled -->
+      <dl class="override-cancel-summary">
+        <div class="override-cancel-summary-row">
+          <dt>{{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.BOOKING' | translate }}</dt>
+          <dd>{{ bookingNumber }}</dd>
+        </div>
+        <div class="override-cancel-summary-row">
+          <dt>{{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.ROUTE' | translate }}</dt>
+          <dd>{{ routeLabel }}</dd>
+        </div>
+        <div class="override-cancel-summary-row">
+          <dt>{{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.DEPARTURE' | translate }}</dt>
+          <dd>{{ departureLabel }}</dd>
+        </div>
+      </dl>
+      <!-- Window banner (AC2 context): out-of-window is one of the two rule-breaks -->
+      <p class="override-cancel-window" [class.is-violation]="outsideWindow">
+        {{
         (outsideWindow
-          ? 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_PAST'
-          : 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_WITHIN'
+        ? 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_PAST'
+        : 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_WITHIN'
         ) | translate
-      }}
-    </p>
-
-    <!-- AC1: refund rate is TWO BUTTONS, never a free numeric input -->
-    <div class="admin-form-field">
-      <label class="admin-form-label">
-        {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_LABEL' | translate }}
-      </label>
-      <div
-        class="override-rate-toggle"
-        role="group"
-        [attr.aria-label]="'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_LABEL' | translate"
-      >
-        <button
-          type="button"
-          class="admin-btn override-rate-btn is-policy"
-          [class.is-selected]="rateChoice === 'POLICY'"
-          [attr.aria-pressed]="rateChoice === 'POLICY'"
-          [disabled]="isSubmitting"
-          (click)="selectRate('POLICY')"
-        >
-          {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_POLICY' | translate }}
+        }}
+      </p>
+      <!-- AC1: refund rate is TWO BUTTONS, never a free numeric input -->
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_LABEL' | translate }}
+        </label>
+        <div
+          class="override-rate-toggle"
+          role="group"
+          [attr.aria-label]="'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_LABEL' | translate"
+          >
+          <button
+            type="button"
+            class="admin-btn override-rate-btn is-policy"
+            [class.is-selected]="rateChoice === 'POLICY'"
+            [attr.aria-pressed]="rateChoice === 'POLICY'"
+            [disabled]="isSubmitting"
+            (click)="selectRate('POLICY')"
+            >
+            {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_POLICY' | translate }}
+          </button>
+          <button
+            type="button"
+            class="admin-btn override-rate-btn is-full"
+            [class.is-selected]="rateChoice === 'FULL'"
+            [attr.aria-pressed]="rateChoice === 'FULL'"
+            [disabled]="isSubmitting"
+            (click)="selectRate('FULL')"
+            >
+            {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_FULL' | translate }}
+          </button>
+        </div>
+        <small class="admin-hint">
+          {{
+          (rateChoice === 'FULL'
+          ? 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_FULL_HINT'
+          : 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_POLICY_HINT'
+          ) | translate
+          }}
+        </small>
+      </div>
+      <!-- AC2: reason appears ONLY when a rule is actually broken -->
+      @if (reasonRequired) {
+        <form [formGroup]="form" class="admin-form-field full">
+          <label class="admin-form-label">
+            {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.REASON_LABEL' | translate }}
+            <span class="admin-required">*</span>
+          </label>
+          <textarea
+            class="admin-field"
+            formControlName="reason"
+            maxlength="500"
+            rows="3"
+            [placeholder]="'ADMIN.BOOKINGS.CANCEL_OVERRIDE.REASON_PLACEHOLDER' | translate"
+          ></textarea>
+          <small class="admin-hint">
+            {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.REASON_HINT' | translate }}
+          </small>
+          @if (isReasonInvalid) {
+            <small class="admin-error">
+              {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.REASON_REQUIRED' | translate }}
+            </small>
+          }
+        </form>
+      }
+      <!-- OBRS-286 Flow A3: refund-destination requirement -->
+      @if (refundMethodState === 'loading') {
+        <div class="admin-form-field full">
+          <small class="admin-hint">{{ 'REFUND_DESTINATION.CHECKING_METHOD' | translate }}</small>
+        </div>
+      }
+      @if (showDestinationFields) {
+        <div class="admin-form-field full">
+          <app-refund-destination-fields
+            [formGroup]="destinationForm"
+            [disabled]="isSubmitting"
+          ></app-refund-destination-fields>
+          @if (refundMethodState === 'error') {
+            <p class="admin-hint override-cancel-destination-advisory">
+              {{ 'REFUND_DESTINATION.CHECK_FAILED' | translate }}
+              <button type="button" class="admin-btn admin-btn-small" [disabled]="isSubmitting" (click)="retryCheck()">
+                {{ 'REFUND_DESTINATION.RETRY_CHECK' | translate }}
+              </button>
+            </p>
+          }
+          @if (destinationErrorMessage) {
+            <small class="admin-error">{{ destinationErrorMessage }}</small>
+          }
+        </div>
+      }
+      @if (errorMessage) {
+        <p class="admin-error override-cancel-error">{{ errorMessage }}</p>
+      }
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" [disabled]="isSubmitting" (click)="requestClose()">
+          {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.KEEP' | translate }}
         </button>
         <button
           type="button"
-          class="admin-btn override-rate-btn is-full"
-          [class.is-selected]="rateChoice === 'FULL'"
-          [attr.aria-pressed]="rateChoice === 'FULL'"
-          [disabled]="isSubmitting"
-          (click)="selectRate('FULL')"
-        >
-          {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_FULL' | translate }}
+          class="admin-btn admin-btn-danger"
+          [disabled]="!canSubmit"
+          (click)="submit()"
+          >
+          {{
+          isSubmitting
+          ? ('ADMIN.BOOKINGS.CANCEL_OVERRIDE.SUBMITTING' | translate)
+          : ('ADMIN.BOOKINGS.CANCEL_OVERRIDE.CONFIRM' | translate)
+          }}
         </button>
       </div>
-      <small class="admin-hint">
-        {{
-          (rateChoice === 'FULL'
-            ? 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_FULL_HINT'
-            : 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_POLICY_HINT'
-          ) | translate
-        }}
-      </small>
-    </div>
-
-    <!-- AC2: reason appears ONLY when a rule is actually broken -->
-    <form [formGroup]="form" class="admin-form-field full" *ngIf="reasonRequired">
-      <label class="admin-form-label">
-        {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.REASON_LABEL' | translate }}
-        <span class="admin-required">*</span>
-      </label>
-      <textarea
-        class="admin-field"
-        formControlName="reason"
-        maxlength="500"
-        rows="3"
-        [placeholder]="'ADMIN.BOOKINGS.CANCEL_OVERRIDE.REASON_PLACEHOLDER' | translate"
-      ></textarea>
-      <small class="admin-hint">
-        {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.REASON_HINT' | translate }}
-      </small>
-      <small class="admin-error" *ngIf="isReasonInvalid">
-        {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.REASON_REQUIRED' | translate }}
-      </small>
-    </form>
-
-    <!-- OBRS-286 Flow A3: refund-destination requirement -->
-    <div class="admin-form-field full" *ngIf="refundMethodState === 'loading'">
-      <small class="admin-hint">{{ 'REFUND_DESTINATION.CHECKING_METHOD' | translate }}</small>
-    </div>
-
-    <div class="admin-form-field full" *ngIf="showDestinationFields">
-      <app-refund-destination-fields
-        [formGroup]="destinationForm"
-        [disabled]="isSubmitting"
-      ></app-refund-destination-fields>
-
-      <p class="admin-hint override-cancel-destination-advisory" *ngIf="refundMethodState === 'error'">
-        {{ 'REFUND_DESTINATION.CHECK_FAILED' | translate }}
-        <button type="button" class="admin-btn admin-btn-small" [disabled]="isSubmitting" (click)="retryCheck()">
-          {{ 'REFUND_DESTINATION.RETRY_CHECK' | translate }}
-        </button>
-      </p>
-
-      <small class="admin-error" *ngIf="destinationErrorMessage">{{ destinationErrorMessage }}</small>
-    </div>
-
-    <p class="admin-error override-cancel-error" *ngIf="errorMessage">{{ errorMessage }}</p>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" [disabled]="isSubmitting" (click)="requestClose()">
-        {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.KEEP' | translate }}
-      </button>
-      <button
-        type="button"
-        class="admin-btn admin-btn-danger"
-        [disabled]="!canSubmit"
-        (click)="submit()"
-      >
-        {{
-          isSubmitting
-            ? ('ADMIN.BOOKINGS.CANCEL_OVERRIDE.SUBMITTING' | translate)
-            : ('ADMIN.BOOKINGS.CANCEL_OVERRIDE.CONFIRM' | translate)
-        }}
-      </button>
     </div>
   </div>
-</div>
+}

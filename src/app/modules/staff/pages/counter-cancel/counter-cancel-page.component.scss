@@ -1,0 +1,6 @@
+// OBRS-766 — reuses .admin-card/.admin-error verbatim; no page-local title
+// (design-system §7: the shell topbar owns titleKey/subtitleKey).
+
+.ccp-search-error {
+  margin: 12px 0 0;
+}

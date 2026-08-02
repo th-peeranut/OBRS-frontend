@@ -1,247 +1,316 @@
 <div class="center-panel d-flex flex-column h-100">
   <!-- Empty state: no trip selected -->
-  <div *ngIf="!selectedTrip"
-       class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-muted text-center py-5">
-    <i class="bi bi-map" style="font-size:2.5rem"></i>
-    <p class="mb-0 mt-2 small">{{ 'STAFF.SELL.CENTER_EMPTY' | translate }}</p>
-  </div>
+  @if (!selectedTrip) {
+    <div
+      class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-muted text-center py-5">
+      <i class="bi bi-map" style="font-size:2.5rem"></i>
+      <p class="mb-0 mt-2 small">{{ 'STAFF.SELL.CENTER_EMPTY' | translate }}</p>
+    </div>
+  }
 
-  <!-- Trip selected: show tabs -->
-  <p-tabView *ngIf="selectedTrip" styleClass="center-tabview" (onChange)="onTabChange($event.index)">
+  <!-- Trip selected: show tabs.
+  OBRS-915: TabView -> Tabs. Three changes that are not cosmetic:
+  - `(onChange)="onTabChange($event.index)"` becomes `(valueChange)`, which
+  emits the tab's `value` directly rather than an event object. The values
+  here are the same 0/1/2 the parent already keys off
+  (TRIP_DETAILS_TAB_INDEX), so onTabChange's contract is unchanged.
+  - `p-tabs` has no `styleClass` input, so `.center-tabview` moves to a
+  plain `class` on the host - same element, same selector.
+  - headers move out of `[header]` on the panel into `<p-tab>` elements.
 
-    <!-- Tab 1: Ticket Sales (seat map) -->
-    <p-tabPanel [header]="'STAFF.SELL.TAB_TICKET_SALES' | translate">
-      <!-- From/to stop selection lists, above passenger type tiles -->
-      <div class="row g-2 mb-3" *ngIf="pickupOptions.length > 0 || isLoadingSegments">
-        <!-- From / pickup -->
-        <div class="col-6">
-          <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.FROM_LABEL' | translate }}</div>
-          <div class="input-group input-group-sm mb-1">
-            <input type="text"
-                   class="form-control form-control-sm"
-                   [(ngModel)]="pickupFilter"
-                   [placeholder]="'STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate"
-                   [attr.aria-label]="('STAFF.SELL.FROM_LABEL' | translate) + ' – ' + ('STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate)"
-                   autocomplete="off" />
-            <button *ngIf="pickupFilter" type="button"
-                    class="btn btn-sm btn-outline-secondary"
-                    (click)="pickupFilter = ''"
-                    [attr.aria-label]="'COMMON.CLEAR' | translate">
-              <i class="bi bi-x" style="font-size:0.85rem"></i>
-            </button>
-          </div>
-          <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
-            <ng-container *ngIf="!isLoadingSegments && filteredPopularPickupOptions.length > 0">
-              <div class="stop-list-header list-group-item py-0 px-2 d-flex align-items-center gap-1 bg-light">
-                <i class="bi bi-pin-fill text-warning" style="font-size:0.6rem" aria-hidden="true"></i>
-                <span class="text-muted" style="font-size:0.65rem">{{ 'STAFF.SELL.POPULAR_LABEL' | translate }}</span>
+  OBRS-917: `$event` now goes through unconverted. PrimeNG 20 widened
+  `Tabs.value` from `ModelSignal<string | number>` to
+  `ModelSignal<string | number | undefined>` - measured, not inferred:
+  primeng@19.1.4 `tabs/tabs.d.ts:18` against primeng@20.4.0
+  `tabs/index.d.ts:306`. That is not in the release notes, and `+$event`
+  stopped type-checking because of it. `+($event ?? 0)` would have compiled
+  and been wrong: it turns "no tab" into tab 0 and silently switches the
+  panel to Ticket Sales. onTabChange() takes the wide type instead and
+  refuses anything that is not a finite number. This is the only `p-tabs`
+  in the app with a valueChange handler - route-map-home has the other
+  `<p-tabs>` and binds nothing, and the remaining 16 `(valueChange)`
+  bindings are on `p-select`, whose type did not move. -->
+  @if (selectedTrip) {
+    <p-tabs class="center-tabview" [value]="0" (valueChange)="onTabChange($event)">
+      <p-tablist>
+        <p-tab [value]="0">{{ 'STAFF.SELL.TAB_TICKET_SALES' | translate }}</p-tab>
+        <p-tab [value]="1">{{ 'STAFF.SELL.TAB_TRIP_DETAILS' | translate }}</p-tab>
+        <p-tab [value]="2">{{ 'STAFF.SELL.TAB_BOARDING' | translate }}</p-tab>
+      </p-tablist>
+      <p-tabpanels>
+        <!-- Tab 1: Ticket Sales (seat map) -->
+        <p-tabpanel [value]="0">
+          <!-- From/to stop selection lists, above passenger type tiles -->
+          @if (pickupOptions.length > 0 || isLoadingSegments) {
+            <div class="row g-2 mb-3">
+              <!-- From / pickup -->
+              <div class="col-6">
+                <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.FROM_LABEL' | translate }}</div>
+                <div class="input-group input-group-sm mb-1">
+                  <input type="text"
+                    class="form-control form-control-sm"
+                    [(ngModel)]="pickupFilter"
+                    [placeholder]="'STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate"
+                    [attr.aria-label]="('STAFF.SELL.FROM_LABEL' | translate) + ' – ' + ('STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate)"
+                    autocomplete="off" />
+                    @if (pickupFilter) {
+                      <button type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        (click)="pickupFilter = ''"
+                        [attr.aria-label]="'COMMON.CLEAR' | translate">
+                        <i class="bi bi-x" style="font-size:0.85rem"></i>
+                      </button>
+                    }
+                  </div>
+                  <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
+                    @if (!isLoadingSegments && filteredPopularPickupOptions.length > 0) {
+                      <div class="stop-list-header list-group-item py-0 px-2 d-flex align-items-center gap-1 bg-light">
+                        <i class="bi bi-pin-fill text-warning" style="font-size:0.6rem" aria-hidden="true"></i>
+                        <span class="text-muted" style="font-size:0.65rem">{{ 'STAFF.SELL.POPULAR_LABEL' | translate }}</span>
+                      </div>
+                      @for (opt of filteredPopularPickupOptions; track opt) {
+                        <button type="button"
+                          class="list-group-item list-group-item-action popular-stop-item py-1 px-2 small d-flex justify-content-between"
+                          [class.active]="opt.slug === pickupSlug" (click)="pickupChange.emit(opt.slug)">
+                          <span>{{ opt.name }}</span>
+                          @if (opt.time) {
+                            <span class="opacity-75 ms-1">{{ opt.time }}</span>
+                          }
+                        </button>
+                      }
+                    }
+                    @if (isLoadingSegments) {
+                      <div class="text-muted small p-2">
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                      </div>
+                    }
+                    @if (!isLoadingSegments && pickupFilter.trim() && filteredPickupOptions.length === 0 && filteredPopularPickupOptions.length === 0) {
+                      <div
+                        class="text-muted small p-2">
+                        {{ 'STAFF.SELL.STOP_NO_MATCH' | translate }}
+                      </div>
+                    }
+                    @if (!isLoadingSegments && filteredPopularPickupOptions.length > 0 && filteredPickupOptions.length > 0) {
+                      <div
+                        class="stop-list-subheader list-group-item py-0 px-2 d-flex align-items-center gap-1">
+                        <i class="bi bi-list-ul text-muted" style="font-size:0.6rem" aria-hidden="true"></i>
+                        <span class="text-muted" style="font-size:0.65rem">{{ 'STAFF.SELL.ALL_STOPS_LABEL' | translate }}</span>
+                      </div>
+                    }
+                    @for (opt of filteredPickupOptions; track opt) {
+                      <button
+                        type="button"
+                        class="list-group-item list-group-item-action py-1 px-2 small d-flex justify-content-between"
+                        [class.active]="opt.slug === pickupSlug"
+                        (click)="pickupChange.emit(opt.slug)">
+                        <span>{{ opt.name }}</span>
+                        @if (opt.time) {
+                          <span class="opacity-75 ms-1">{{ opt.time }}</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                </div>
+                <!-- To / drop-off -->
+                <div class="col-6">
+                  <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.TO_LABEL' | translate }}</div>
+                  <div class="input-group input-group-sm mb-1">
+                    <input type="text"
+                      class="form-control form-control-sm"
+                      [(ngModel)]="dropoffFilter"
+                      [placeholder]="'STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate"
+                      [attr.aria-label]="('STAFF.SELL.TO_LABEL' | translate) + ' – ' + ('STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate)"
+                      autocomplete="off" />
+                      @if (dropoffFilter) {
+                        <button type="button"
+                          class="btn btn-sm btn-outline-secondary"
+                          (click)="dropoffFilter = ''"
+                          [attr.aria-label]="'COMMON.CLEAR' | translate">
+                          <i class="bi bi-x" style="font-size:0.85rem"></i>
+                        </button>
+                      }
+                    </div>
+                    <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
+                      @if (!isLoadingSegments && filteredPopularDropoffOptions.length > 0) {
+                        <div class="stop-list-header list-group-item py-0 px-2 d-flex align-items-center gap-1 bg-light">
+                          <i class="bi bi-pin-fill text-warning" style="font-size:0.6rem" aria-hidden="true"></i>
+                          <span class="text-muted" style="font-size:0.65rem">{{ 'STAFF.SELL.POPULAR_LABEL' | translate }}</span>
+                        </div>
+                        @for (opt of filteredPopularDropoffOptions; track opt) {
+                          <button type="button"
+                            class="list-group-item list-group-item-action popular-stop-item py-1 px-2 small d-flex justify-content-between"
+                            [class.active]="opt.slug === dropoffSlug" (click)="dropoffChange.emit(opt.slug)">
+                            <span>{{ opt.name }}</span>
+                            @if (opt.time) {
+                              <span class="opacity-75 ms-1">{{ opt.time }}</span>
+                            }
+                          </button>
+                        }
+                      }
+                      @if (isLoadingSegments) {
+                        <div class="text-muted small p-2">
+                          <span class="spinner-border spinner-border-sm me-1"></span>
+                        </div>
+                      }
+                      @if (!isLoadingSegments && dropoffFilter.trim() && filteredDropoffOptions.length === 0 && filteredPopularDropoffOptions.length === 0) {
+                        <div
+                          class="text-muted small p-2">
+                          {{ 'STAFF.SELL.STOP_NO_MATCH' | translate }}
+                        </div>
+                      }
+                      @if (!isLoadingSegments && filteredPopularDropoffOptions.length > 0 && filteredDropoffOptions.length > 0) {
+                        <div
+                          class="stop-list-subheader list-group-item py-0 px-2 d-flex align-items-center gap-1">
+                          <i class="bi bi-list-ul text-muted" style="font-size:0.6rem" aria-hidden="true"></i>
+                          <span class="text-muted" style="font-size:0.65rem">{{ 'STAFF.SELL.ALL_STOPS_LABEL' | translate }}</span>
+                        </div>
+                      }
+                      @for (opt of filteredDropoffOptions; track opt) {
+                        <button
+                          type="button"
+                          class="list-group-item list-group-item-action py-1 px-2 small d-flex justify-content-between"
+                          [class.active]="opt.slug === dropoffSlug"
+                          (click)="dropoffChange.emit(opt.slug)">
+                          <span>{{ opt.name }}</span>
+                          @if (opt.time) {
+                            <span class="opacity-75 ms-1">{{ opt.time }}</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+              <!-- Passenger type avatar tiles -->
+              <div class="ptype-row d-flex flex-row gap-2 justify-content-center mb-3">
+                @for (pt of passengerTypeOptions; track pt) {
+                  <div
+                    class="ptype-tile d-flex flex-column align-items-center justify-content-center gap-1 rounded cursor-pointer"
+                    [class.ptype-tile--active]="passengerGender === pt.value"
+                    role="button"
+                    tabindex="0"
+                    [attr.aria-pressed]="passengerGender === pt.value"
+                    (click)="onSelectPassengerType(pt.value)"
+                    (keydown.enter)="onSelectPassengerType(pt.value)"
+                    (keydown.space)="$event.preventDefault(); onSelectPassengerType(pt.value)">
+                    @if (pt.icon) {
+                      <img [src]="pt.icon" [alt]="pt.labelKey | translate" class="ptype-icon" />
+                    }
+                    @if (!pt.icon) {
+                      <i class="bi bi-person ptype-icon-fallback"></i>
+                    }
+                    <span class="ptype-label">{{ pt.labelKey | translate }}</span>
+                  </div>
+                }
               </div>
-              <button *ngFor="let opt of filteredPopularPickupOptions" type="button"
-                      class="list-group-item list-group-item-action popular-stop-item py-1 px-2 small d-flex justify-content-between"
-                      [class.active]="opt.slug === pickupSlug" (click)="pickupChange.emit(opt.slug)">
-                <span>{{ opt.name }}</span>
-                <span *ngIf="opt.time" class="opacity-75 ms-1">{{ opt.time }}</span>
-              </button>
-            </ng-container>
-            <div *ngIf="isLoadingSegments" class="text-muted small p-2">
-              <span class="spinner-border spinner-border-sm me-1"></span>
-            </div>
-            <div *ngIf="!isLoadingSegments && pickupFilter.trim() && filteredPickupOptions.length === 0 && filteredPopularPickupOptions.length === 0"
-                 class="text-muted small p-2">
-              {{ 'STAFF.SELL.STOP_NO_MATCH' | translate }}
-            </div>
-            <div *ngIf="!isLoadingSegments && filteredPopularPickupOptions.length > 0 && filteredPickupOptions.length > 0"
-                 class="stop-list-subheader list-group-item py-0 px-2 d-flex align-items-center gap-1">
-              <i class="bi bi-list-ul text-muted" style="font-size:0.6rem" aria-hidden="true"></i>
-              <span class="text-muted" style="font-size:0.65rem">{{ 'STAFF.SELL.ALL_STOPS_LABEL' | translate }}</span>
-            </div>
-            <button *ngFor="let opt of filteredPickupOptions"
-                    type="button"
-                    class="list-group-item list-group-item-action py-1 px-2 small d-flex justify-content-between"
-                    [class.active]="opt.slug === pickupSlug"
-                    (click)="pickupChange.emit(opt.slug)">
-              <span>{{ opt.name }}</span>
-              <span *ngIf="opt.time" class="opacity-75 ms-1">{{ opt.time }}</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- To / drop-off -->
-        <div class="col-6">
-          <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.TO_LABEL' | translate }}</div>
-          <div class="input-group input-group-sm mb-1">
-            <input type="text"
-                   class="form-control form-control-sm"
-                   [(ngModel)]="dropoffFilter"
-                   [placeholder]="'STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate"
-                   [attr.aria-label]="('STAFF.SELL.TO_LABEL' | translate) + ' – ' + ('STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate)"
-                   autocomplete="off" />
-            <button *ngIf="dropoffFilter" type="button"
-                    class="btn btn-sm btn-outline-secondary"
-                    (click)="dropoffFilter = ''"
-                    [attr.aria-label]="'COMMON.CLEAR' | translate">
-              <i class="bi bi-x" style="font-size:0.85rem"></i>
-            </button>
-          </div>
-          <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
-            <ng-container *ngIf="!isLoadingSegments && filteredPopularDropoffOptions.length > 0">
-              <div class="stop-list-header list-group-item py-0 px-2 d-flex align-items-center gap-1 bg-light">
-                <i class="bi bi-pin-fill text-warning" style="font-size:0.6rem" aria-hidden="true"></i>
-                <span class="text-muted" style="font-size:0.65rem">{{ 'STAFF.SELL.POPULAR_LABEL' | translate }}</span>
-              </div>
-              <button *ngFor="let opt of filteredPopularDropoffOptions" type="button"
-                      class="list-group-item list-group-item-action popular-stop-item py-1 px-2 small d-flex justify-content-between"
-                      [class.active]="opt.slug === dropoffSlug" (click)="dropoffChange.emit(opt.slug)">
-                <span>{{ opt.name }}</span>
-                <span *ngIf="opt.time" class="opacity-75 ms-1">{{ opt.time }}</span>
-              </button>
-            </ng-container>
-            <div *ngIf="isLoadingSegments" class="text-muted small p-2">
-              <span class="spinner-border spinner-border-sm me-1"></span>
-            </div>
-            <div *ngIf="!isLoadingSegments && dropoffFilter.trim() && filteredDropoffOptions.length === 0 && filteredPopularDropoffOptions.length === 0"
-                 class="text-muted small p-2">
-              {{ 'STAFF.SELL.STOP_NO_MATCH' | translate }}
-            </div>
-            <div *ngIf="!isLoadingSegments && filteredPopularDropoffOptions.length > 0 && filteredDropoffOptions.length > 0"
-                 class="stop-list-subheader list-group-item py-0 px-2 d-flex align-items-center gap-1">
-              <i class="bi bi-list-ul text-muted" style="font-size:0.6rem" aria-hidden="true"></i>
-              <span class="text-muted" style="font-size:0.65rem">{{ 'STAFF.SELL.ALL_STOPS_LABEL' | translate }}</span>
-            </div>
-            <button *ngFor="let opt of filteredDropoffOptions"
-                    type="button"
-                    class="list-group-item list-group-item-action py-1 px-2 small d-flex justify-content-between"
-                    [class.active]="opt.slug === dropoffSlug"
-                    (click)="dropoffChange.emit(opt.slug)">
-              <span>{{ opt.name }}</span>
-              <span *ngIf="opt.time" class="opacity-75 ms-1">{{ opt.time }}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Passenger type avatar tiles -->
-      <div class="ptype-row d-flex flex-row gap-2 justify-content-center mb-3">
-        <div *ngFor="let pt of passengerTypeOptions"
-             class="ptype-tile d-flex flex-column align-items-center justify-content-center gap-1 rounded cursor-pointer"
-             [class.ptype-tile--active]="passengerGender === pt.value"
-             role="button"
-             tabindex="0"
-             [attr.aria-pressed]="passengerGender === pt.value"
-             (click)="onSelectPassengerType(pt.value)"
-             (keydown.enter)="onSelectPassengerType(pt.value)"
-             (keydown.space)="$event.preventDefault(); onSelectPassengerType(pt.value)">
-          <img *ngIf="pt.icon" [src]="pt.icon" [alt]="pt.labelKey | translate" class="ptype-icon" />
-          <i *ngIf="!pt.icon" class="bi bi-person ptype-icon-fallback"></i>
-          <span class="ptype-label">{{ pt.labelKey | translate }}</span>
-        </div>
-      </div>
-
-      <!-- OBRS-324: OPEN schedules sell by passenger count only — no seat map/picker. -->
-      <div *ngIf="isOpenSeating" class="open-seating-count d-flex flex-column align-items-center gap-2 py-4">
-        <div class="text-muted small">{{ 'STAFF.SELL.OPEN_SEATING_HINT' | translate }}</div>
-        <div class="d-flex align-items-center gap-3">
-          <button type="button"
-                  class="btn btn-outline-secondary rounded-circle"
-                  [disabled]="passengerCount <= 1"
-                  [attr.aria-label]="'STAFF.SELL.PASSENGER_COUNT_DECREASE' | translate"
-                  (click)="decrementPassengerCount()">
-            <i class="bi bi-dash" aria-hidden="true"></i>
-          </button>
-          <span class="fs-3 fw-semibold text-center" style="min-width:2.5rem" aria-live="polite">{{ passengerCount }}</span>
-          <button type="button"
-                  class="btn btn-outline-secondary rounded-circle"
-                  [disabled]="passengerCount >= maxPassengerCount"
-                  [attr.aria-label]="'STAFF.SELL.PASSENGER_COUNT_INCREASE' | translate"
-                  (click)="incrementPassengerCount()">
-            <i class="bi bi-plus" aria-hidden="true"></i>
-          </button>
-        </div>
-        <div class="text-muted small">{{ 'STAFF.SELL.PASSENGER_COUNT_MAX' | translate: { max: maxPassengerCount } }}</div>
-        <!-- OBRS-358: this sale reaches into the jump seat (walk-in-only,
-             no backrest, sold last) — a staff-facing hint only; the
-             acknowledgment prompt itself fires from sell-page's onSell(). -->
-        <div class="text-warning small text-center" *ngIf="jumpSeatOverflowUnits > 0" role="status">
-          <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ 'STAFF.SELL.JUMP_SEAT_OVERFLOW_HINT' | translate }}
-        </div>
-      </div>
-
-      <ng-container *ngIf="!isOpenSeating">
-        <!-- Selected seat chips -->
-        <div *ngIf="selectedSeats.length > 0" class="d-flex flex-wrap gap-1 mb-2">
-          <span *ngFor="let seat of selectedSeats"
-                class="badge rounded-pill border border-primary text-primary bg-primary bg-opacity-10">
-            {{ seat }}
-          </span>
-        </div>
-
-        <!-- Van seat map -->
-        <!-- OBRS-358 follow-up: ASSIGNED-mode jump-seat (walk-in-only, seat 1)
-             tile styling is DEFERRED this card — no seeded ASSIGNED minibus to
-             exercise it against, and this van template only renders 13 seat
-             boxes (A1-A13) vs. the real 21-seat minibus fleet (separate gap).
-             When both land, add a null-default `restrictedSeats: string[] |
-             null = null` @Input here (same optional-@Input contract as
-             `seatOwners`/`seatGenders`, design-system.md §10) rather than a
-             second seat-map variant. -->
-        <ng-container *ngIf="isVan">
-          <app-passenger-seat-van
-            [gender]="seatGender"
-            [takenSeats]="takenSeats"
-            [currentSeat]="currentSeat"
-            [availableSeatNumbers]="selectedTrip!.availableSeatNumbers"
-            [seatGenders]="seatGendersUpper"
-            (seatClicked)="seatToggled.emit($event)">
-          </app-passenger-seat-van>
-        </ng-container>
-
-        <!-- Bus seat map -->
-        <ng-container *ngIf="!isVan">
-          <app-passenger-seat-bus
-            [gender]="seatGender"
-            [takenSeats]="takenSeats"
-            [currentSeat]="currentSeat"
-            [seatGenders]="seatGendersUpper"
-            (seatClicked)="seatToggled.emit($event)">
-          </app-passenger-seat-bus>
-        </ng-container>
-      </ng-container>
-    </p-tabPanel>
-
-    <!-- Tab 2: Trip Details — fields are directly editable (no read-only gate). -->
-    <p-tabPanel [header]="'STAFF.SELL.TAB_TRIP_DETAILS' | translate">
-
-      <!-- Loading bar while fetching form data -->
-      <div *ngIf="isEditLoading" class="mb-2">
-        <div class="progress" style="height: 3px;">
-          <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
-        </div>
-      </div>
-
-      <app-trip-details-edit-form
-        [trip]="selectedTrip"
-        [routeName]="editFormRouteName"
-        [routeDate]="editFormRouteDate"
-        [isLoading]="isEditLoading"
-        [isSaving]="isSaving"
-        [vehicleTypes]="vehicleTypes"
-        [vehicles]="vehicles"
-        [drivers]="drivers"
-        [capacityInlineError]="capacityInlineError"
-        (save)="onSave($event)"
-        (cancel)="revertChanges()">
-      </app-trip-details-edit-form>
-
-    </p-tabPanel>
-
-    <!-- Tab 3: Boarding (OBRS-130) — the shared boarding-list component is
-         self-sufficient (owns its own store + API calls); this tab only
-         needs to pass the selected trip's scheduleId. The p-tabView is
-         already *ngIf="selectedTrip"-gated by the parent, so no extra
-         empty-state is needed here. -->
-    <p-tabPanel [header]="'STAFF.SELL.TAB_BOARDING' | translate">
-      <app-boarding-list [scheduleId]="selectedTrip!.scheduleId"></app-boarding-list>
-    </p-tabPanel>
-
-  </p-tabView>
-</div>
+              <!-- OBRS-324: OPEN schedules sell by passenger count only — no seat map/picker. -->
+              @if (isOpenSeating) {
+                <div class="open-seating-count d-flex flex-column align-items-center gap-2 py-4">
+                  <div class="text-muted small">{{ 'STAFF.SELL.OPEN_SEATING_HINT' | translate }}</div>
+                  <div class="d-flex align-items-center gap-3">
+                    <button type="button"
+                      class="btn btn-outline-secondary rounded-circle"
+                      [disabled]="passengerCount <= 1"
+                      [attr.aria-label]="'STAFF.SELL.PASSENGER_COUNT_DECREASE' | translate"
+                      (click)="decrementPassengerCount()">
+                      <i class="bi bi-dash" aria-hidden="true"></i>
+                    </button>
+                    <span class="fs-3 fw-semibold text-center" style="min-width:2.5rem" aria-live="polite">{{ passengerCount }}</span>
+                    <button type="button"
+                      class="btn btn-outline-secondary rounded-circle"
+                      [disabled]="passengerCount >= maxPassengerCount"
+                      [attr.aria-label]="'STAFF.SELL.PASSENGER_COUNT_INCREASE' | translate"
+                      (click)="incrementPassengerCount()">
+                      <i class="bi bi-plus" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                  <div class="text-muted small">{{ 'STAFF.SELL.PASSENGER_COUNT_MAX' | translate: { max: maxPassengerCount } }}</div>
+                  <!-- OBRS-358: this sale reaches into the jump seat (walk-in-only,
+                  no backrest, sold last) — a staff-facing hint only; the
+                  acknowledgment prompt itself fires from sell-page's onSell(). -->
+                  @if (jumpSeatOverflowUnits > 0) {
+                    <div class="text-warning small text-center" role="status">
+                      <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ 'STAFF.SELL.JUMP_SEAT_OVERFLOW_HINT' | translate }}
+                    </div>
+                  }
+                </div>
+              }
+              @if (!isOpenSeating) {
+                <!-- Selected seat chips -->
+                @if (selectedSeats.length > 0) {
+                  <div class="d-flex flex-wrap gap-1 mb-2">
+                    @for (seat of selectedSeats; track seat) {
+                      <span
+                        class="badge rounded-pill border border-primary text-primary bg-primary bg-opacity-10">
+                        {{ seat }}
+                      </span>
+                    }
+                  </div>
+                }
+                <!-- Van seat map -->
+                <!-- OBRS-358 follow-up: ASSIGNED-mode jump-seat (walk-in-only, seat 1)
+                tile styling is DEFERRED this card — no seeded ASSIGNED minibus to
+                exercise it against, and this van template only renders 13 seat
+                boxes (A1-A13) vs. the real 21-seat minibus fleet (separate gap).
+                When both land, add a null-default `restrictedSeats: string[] |
+                null = null` @Input here (same optional-@Input contract as
+                `seatOwners`/`seatGenders`, design-system.md §10) rather than a
+                second seat-map variant. -->
+                @if (isVan) {
+                  <app-passenger-seat-van
+                    [gender]="seatGender"
+                    [takenSeats]="takenSeats"
+                    [currentSeat]="currentSeat"
+                    [availableSeatNumbers]="selectedTrip!.availableSeatNumbers"
+                    [seatGenders]="seatGendersUpper"
+                    (seatClicked)="seatToggled.emit($event)">
+                  </app-passenger-seat-van>
+                }
+                <!-- Bus seat map -->
+                @if (!isVan) {
+                  <app-passenger-seat-bus
+                    [gender]="seatGender"
+                    [takenSeats]="takenSeats"
+                    [currentSeat]="currentSeat"
+                    [seatGenders]="seatGendersUpper"
+                    (seatClicked)="seatToggled.emit($event)">
+                  </app-passenger-seat-bus>
+                }
+              }
+            </p-tabpanel>
+            <!-- Tab 2: Trip Details — fields are directly editable (no read-only gate). -->
+            <p-tabpanel [value]="1">
+              <!-- Loading bar while fetching form data -->
+              @if (isEditLoading) {
+                <div class="mb-2">
+                  <div class="progress" style="height: 3px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
+                  </div>
+                </div>
+              }
+              <app-trip-details-edit-form
+                [trip]="selectedTrip"
+                [routeName]="editFormRouteName"
+                [routeDate]="editFormRouteDate"
+                [isLoading]="isEditLoading"
+                [isSaving]="isSaving"
+                [vehicleTypes]="vehicleTypes"
+                [vehicles]="vehicles"
+                [drivers]="drivers"
+                [capacityInlineError]="capacityInlineError"
+                (save)="onSave($event)"
+                (cancel)="revertChanges()">
+              </app-trip-details-edit-form>
+            </p-tabpanel>
+            <!-- Tab 3: Boarding (OBRS-130) — the shared boarding-list component is
+            self-sufficient (owns its own store + API calls); this tab only
+            needs to pass the selected trip's scheduleId. The p-tabs is
+            already *ngIf="selectedTrip"-gated by the parent, so no extra
+            empty-state is needed here. -->
+            <p-tabpanel [value]="2">
+              <app-boarding-list [scheduleId]="selectedTrip!.scheduleId"></app-boarding-list>
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
+      }
+    </div>

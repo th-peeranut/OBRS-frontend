@@ -37,9 +37,10 @@ interface ParcelScheduleRow {
  * and is deliberately left alone.
  */
 @Component({
-  selector: 'app-parcel-schedule-entry-page',
-  templateUrl: './parcel-schedule-entry-page.component.html',
-  styleUrl: './parcel-schedule-entry-page.component.scss',
+    selector: 'app-parcel-schedule-entry-page',
+    templateUrl: './parcel-schedule-entry-page.component.html',
+    styleUrl: './parcel-schedule-entry-page.component.scss',
+    standalone: false
 })
 export class ParcelScheduleEntryPageComponent implements OnInit, OnDestroy {
   protected rows: ParcelScheduleRow[] = [];

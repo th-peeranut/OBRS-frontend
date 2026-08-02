@@ -19,6 +19,7 @@ import fs from 'fs';
 import os from 'os';
 import stationsFixture from '../fixtures/stations.json';
 import schedulesFixture from '../fixtures/schedules.json';
+import { seedAnalyticsConsent } from '../support/analytics-consent';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -201,6 +202,50 @@ async function stubAdminList(page: Page, response: unknown): Promise<void> {
   });
 }
 
+// OBRS-882. File-scope, so it reaches every describe below rather than the four that
+// happened to go red. The FAB lives at `z-index: 900` in the bottom-right corner and
+// OBRS-867's consent banner sits at `z-index: 1000` across the bottom edge — its SCSS
+// says outranking the FAB was the intent, "while the question is unanswered this one is
+// the more urgent". So on a fresh context the FAB is genuinely unclickable, and eleven
+// cases here failed as `locator.click` timeouts naming `.report-fab`. Seeding a settled
+// answer puts these tests back on the layout a returning visitor sees, which is the one
+// they were written against. The banner-up state is covered by
+// analytics-consent-banner.spec.ts instead of being every spec's problem.
+test.beforeEach(async ({ page }) => {
+  await seedAnalyticsConsent(page);
+});
+
+/**
+ * OBRS-942. The two FAB-overlap cases below measure `boundingBox()` on the first
+ * `.select-btn`, and `waitFor({ state: 'visible' })` is not enough to make that
+ * measurement mean anything: /schedule-booking resolves its search behind
+ * `AlertService.showLoading()`, whose `.swal2-container` overlay is up while the
+ * schedule list is still growing underneath it. Measured too early, the first
+ * card sits at the very bottom of the viewport — exactly where the FAB lives —
+ * and the assertion reads a position the traveler never sees.
+ *
+ * This went red on CI for the first time on the OBRS-942 merge (`c0338518`,
+ * run 30700904986): the failure screenshot shows the "Loading..." spinner still
+ * on screen with the Select button half-rendered at y≈690 of a 720px viewport.
+ * Nothing in that card touches this page — it added 7 tests to a 2-worker lane
+ * (149 → 156, 6.2m → 6.6m measured), and the extra contention was enough to lose
+ * a race that had always been there. Same shape as OBRS-767.
+ *
+ * Waits for the precondition rather than sleeping: a `waitForTimeout` tuned on
+ * one runner is the same bug with a longer fuse, and every spec that later joins
+ * this lane would have to re-tune it.
+ *
+ * Proved non-vacuous rather than assumed: `waitFor({ state: 'hidden' })` also
+ * resolves instantly against an element that never existed, so the overlay was
+ * pinned first with a throwaway `state: 'visible'` probe in the same position —
+ * it passed on BOTH cases locally, i.e. the dialog really is up here and this
+ * wait has something to wait for.
+ */
+async function settleScheduleList(page: Page): Promise<void> {
+  await page.locator('.swal2-container').waitFor({ state: 'hidden', timeout: 15_000 });
+  await page.locator('.select-btn').first().waitFor({ state: 'visible', timeout: 15_000 });
+}
+
 // ── Section 1: FAB visibility ─────────────────────────────────────────────────
 
 test.describe('FAB — visibility on all routes', () => {
@@ -276,11 +321,21 @@ test.describe('FAB modal — open, defaults, close', () => {
     await page.locator('.report-fab').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
 
-    // PrimeNG p-selectButton marks the selected item with aria-checked="true"
-    // (not aria-pressed — PrimeNG uses aria-checked for selectbutton role="radio").
-    const bugButton = page.locator('p-selectbutton .p-button', { hasText: 'Bug' });
+    // OBRS-915: `aria-pressed`, not `aria-checked`. The comment this replaces
+    // said PrimeNG marks the selection with `aria-checked` "for selectbutton
+    // role=radio", and both halves are now wrong — v19's SelectButton renders
+    // each option as a `<p-togglebutton>` host with `[attr.aria-pressed]="checked"`
+    // and no `aria-checked` at all (the container's role was `group`, never
+    // `radio`, in v17 as well). Read off the host bindings in
+    // `node_modules/primeng/fesm2022/primeng-togglebutton.mjs`, not the docs.
+    //
+    // The attribute is asserted rather than the `.p-togglebutton-checked` class
+    // beside it because what this test is for is the DEFAULT being announced to
+    // a screen reader; a class is styling and would still "pass" if the state
+    // reached nobody.
+    const bugButton = page.locator('p-selectbutton .p-togglebutton', { hasText: 'Bug' });
     await bugButton.waitFor({ state: 'visible', timeout: 5_000 });
-    await expect(bugButton).toHaveAttribute('aria-checked', 'true');
+    await expect(bugButton).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('close button hides modal and unlocks body scroll', async ({ page }) => {
@@ -798,6 +853,7 @@ test.describe('Regression — FAB z-index / overlap', () => {
     await page.locator('.dropdown-menu.show .dropdown-option', { hasText: 'Bangkok' }).click();
     await page.locator('.btn-search').click();
     await page.waitForURL('**/schedule-booking');
+    await settleScheduleList(page);
 
     // FAB must still be visible but must NOT overlap the schedule list
     const fab = page.locator('.report-fab');
@@ -848,6 +904,7 @@ test.describe('Regression — FAB z-index / overlap', () => {
     await page.locator('.dropdown-menu.show .dropdown-option', { hasText: 'Bangkok' }).click();
     await page.locator('.btn-search').click();
     await page.waitForURL('**/schedule-booking');
+    await settleScheduleList(page);
 
     // FAB must be visible on schedule-booking page
     await expect(page.locator('.report-fab')).toBeVisible();

@@ -70,15 +70,31 @@ interface TicketPassenger {
    *  it from the ticket response. */
   fareCategory: 'adult' | 'child' | null;
 }
+
+/**
+ * OBRS-873: one leg's ticket rows. A round trip issues a separate ticket per
+ * leg, so its QRs have to be grouped and labelled by leg — the page used to
+ * build rows from the outbound journey alone (`buildPassengersFromApi(outbound,
+ * …)`), which left the return leg with no QR to scan at the gate at all.
+ * Groups are only ever created non-empty, so `passengerGroups.length > 1` is
+ * exactly "this booking shows both legs" and drives the heading.
+ */
+interface TicketPassengerGroup {
+  /** `false` for the outbound leg (and for the single group a one-way booking
+   *  or the pre-API store render produces), `true` for the return leg. */
+  isReturn: boolean;
+  passengers: TicketPassenger[];
+}
 type Locale = 'en' | 'th' | 'zh';
 
 @Component({
-  selector: 'app-e-ticket',
-  templateUrl: './e-ticket.component.html',
-  styleUrl: './e-ticket.component.scss',
-  // Component-scoped so its dedupe/cache state doesn't leak across page
-  // visits — see the class comment on BoardingQrService.
-  providers: [BoardingQrService],
+    selector: 'app-e-ticket',
+    templateUrl: './e-ticket.component.html',
+    styleUrl: './e-ticket.component.scss',
+    // Component-scoped so its dedupe/cache state doesn't leak across page
+    // visits — see the class comment on BoardingQrService.
+    providers: [BoardingQrService],
+    standalone: false
 })
 export class ETicketComponent implements OnInit, OnDestroy {
   @ViewChild('ticketPaper') private ticketPaper?: ElementRef<HTMLElement>;
@@ -107,6 +123,12 @@ export class ETicketComponent implements OnInit, OnDestroy {
   originLatitude: number | null = null;
   originLongitude: number | null = null;
 
+  /** OBRS-873: what the template renders — the per-leg groups. */
+  passengerGroups: TicketPassengerGroup[] = [];
+  /** Every group's rows flattened, in leg order. Derived — only ever written
+   *  by `setPassengerGroups`, so it cannot drift from `passengerGroups`. Used
+   *  for the boarding-token fetch (which must cover BOTH legs) and by the
+   *  seat/QR-state helpers. */
   passengers: TicketPassenger[] = [];
   booker: TicketPassenger | null = null;
   private ticketApiData: BookingTicketsData | null = null;
@@ -304,7 +326,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
       capitalizeVehicleType(departureSchedule?.vehicleType) || '-';
     this.vehiclePlate = '-';
     this.seats = this.buildSeatList(ticketPassengers);
-    this.passengers = ticketPassengers;
+    // Pre-API render: the store only knows the booking's passenger form, which
+    // has no leg dimension at all — one unlabelled group, same as a one-way.
+    this.setPassengerGroups([{ isReturn: false, passengers: ticketPassengers }]);
     this.passengerSummary = this.buildPassengerSummary(scheduleFilter?.passengerInfo);
     this.paymentDate = this.formatDateTime(dayjs().toISOString(), locale);
     this.totalAmount = this.calculateTotalAmount(
@@ -674,14 +698,31 @@ export class ETicketComponent implements OnInit, OnDestroy {
       this.vehiclePlate = vehiclePlate;
     }
 
-    const apiPassengers = this.buildPassengersFromApi(outbound, storePassengers);
-    if (apiPassengers.length > 0) {
-      this.passengers = apiPassengers;
-      this.seats = this.buildSeatList(apiPassengers);
+    // OBRS-873: BOTH legs, not just the outbound one. The return leg has its
+    // own tickets and therefore its own boarding QRs; building rows from
+    // `outbound` alone is what left a round-trip passenger with nothing to scan
+    // on the way home. Empty legs are dropped rather than rendered as a headed
+    // but empty list, so `passengerGroups.length > 1` means "both legs are
+    // shown" and is exactly the condition for labelling them.
+    const outboundPassengers = this.buildPassengersFromApi(outbound, storePassengers);
+    const inboundPassengers = this.buildPassengersFromApi(inbound, storePassengers);
+    const apiGroups: TicketPassengerGroup[] = [
+      { isReturn: false, passengers: outboundPassengers },
+      { isReturn: true, passengers: inboundPassengers },
+    ].filter((group) => group.passengers.length > 0);
+
+    if (apiGroups.length > 0) {
+      this.setPassengerGroups(apiGroups);
+      this.fetchBoardingTokensForPassengers();
+    }
+    if (outboundPassengers.length > 0) {
+      // The page's seat/open-seating summary is a single journey-level line and
+      // stays outbound-only, unchanged — the per-leg seat breakdown lives on
+      // the shared card (`TicketLeg.seats`), not on this flat page.
+      this.seats = this.buildSeatList(outboundPassengers);
       // OBRS-325: every ticket on the outbound leg shares one schedule, so
       // either all of them are open-seating or none are.
-      this.seatsOpen = apiPassengers.every((passenger) => passenger.seatOpen);
-      this.fetchBoardingTokensForPassengers();
+      this.seatsOpen = outboundPassengers.every((passenger) => passenger.seatOpen);
     }
 
     this.booker = this.buildBookerFromApi(data);
@@ -893,12 +934,26 @@ export class ETicketComponent implements OnInit, OnDestroy {
   // passenger objects in place, so a stray re-render always reflects the
   // latest resolved state.
   private applyBoardingQrStates(): void {
-    this.passengers = this.passengers.map((passenger) => {
-      if (passenger.ticketId === null) {
-        return passenger;
-      }
-      const qrState = this.boardingQrService.getState(passenger.ticketId);
-      return qrState ? { ...passenger, ...qrState } : passenger;
-    });
+    this.setPassengerGroups(
+      this.passengerGroups.map((group) => ({
+        ...group,
+        passengers: group.passengers.map((passenger) => {
+          if (passenger.ticketId === null) {
+            return passenger;
+          }
+          const qrState = this.boardingQrService.getState(passenger.ticketId);
+          return qrState ? { ...passenger, ...qrState } : passenger;
+        }),
+      }))
+    );
+  }
+
+  /** OBRS-873: the ONE write path for the passenger rows — sets the per-leg
+   *  groups and re-derives the flat `passengers` list from them in the same
+   *  statement, so the two can never disagree about which tickets the page is
+   *  showing. */
+  private setPassengerGroups(groups: TicketPassengerGroup[]): void {
+    this.passengerGroups = groups;
+    this.passengers = groups.flatMap((group) => group.passengers);
   }
 }

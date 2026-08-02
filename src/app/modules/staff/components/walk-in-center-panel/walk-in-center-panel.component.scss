@@ -20,11 +20,11 @@
   height: 100%;
 }
 
-:host ::ng-deep .center-tabview .p-tabview-panels {
+:host ::ng-deep .center-tabview .p-tabpanels {
   padding: 0.75rem 0 0;
 }
 
-:host ::ng-deep .center-tabview .p-tabview-nav {
+:host ::ng-deep .center-tabview .p-tablist-tab-list {
   flex-wrap: wrap;
 }
 
@@ -119,24 +119,37 @@
     color: var(--admin-muted);
   }
 
-  // PrimeNG TabView (styleClass="center-tabview") ships a white nav bar + white
-  // panels that ignore the theme — the big white strip at the top of the POS
-  // centre panel. Make its surfaces transparent so the dark `.card` shows through,
+  // PrimeNG Tabs (class="center-tabview") ships a white nav bar + white panels
+  // that ignore the theme — the big white strip at the top of the POS centre
+  // panel. Make its surfaces transparent so the dark `.card` shows through,
   // and theme the tab labels; the active underline (PrimeNG border) is kept.
+  //
+  // OBRS-915: v19 dropped the <li> wrapper — <p-tab> is the list item and
+  // carries `.p-tab` / `.p-tab-active` itself — and the class moved from
+  // `styleClass` to a plain `class`, which lands on the same host element.
+  //
+  // OBRS-917: `.p-tablist` added. The white strip this block was written to kill
+  // came back, one element higher: PrimeNG 20 paints the tablist HOST, which
+  // neither `.p-tablist-tab-list` nor `.p-tabpanels` covers. The customer shell
+  // hit the identical defect on the route-map tabs and the contrast gate caught
+  // it there (2.53:1 on a dark-mode label sitting on white); this surface is
+  // staff-only and that gate does not sweep it, so it is fixed here from the
+  // same measurement rather than waiting for someone to notice a white strip.
   ::ng-deep .center-tabview {
-    .p-tabview-nav,
-    .p-tabview-nav li .p-tabview-nav-link,
-    .p-tabview-panels {
+    .p-tablist,
+    .p-tablist-tab-list,
+    .p-tablist-tab-list .p-tab,
+    .p-tabpanels {
       background: transparent !important;
       background-color: transparent !important;
     }
-    .p-tabview-nav {
+    .p-tablist-tab-list {
       border-bottom-color: var(--admin-outline) !important;
     }
-    .p-tabview-nav li .p-tabview-nav-link {
+    .p-tablist-tab-list .p-tab {
       color: var(--admin-muted) !important;
     }
-    .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+    .p-tablist-tab-list .p-tab.p-tab-active {
       color: var(--admin-text) !important;
     }
   }

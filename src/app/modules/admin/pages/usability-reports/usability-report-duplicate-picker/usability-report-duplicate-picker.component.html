@@ -2,7 +2,7 @@
   class="admin-modal-backdrop ur-duplicate-picker-backdrop"
   adminModalBackdrop
   (dismiss)="onCancel()"
->
+  >
   <div class="admin-modal ur-duplicate-picker-modal">
     <h4 class="admin-modal-title">
       {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.PICKER_TITLE' | translate }}
@@ -15,53 +15,58 @@
         [ngModel]="searchTerm"
         (ngModelChange)="onSearchTermChange($event)"
         [placeholder]="'ADMIN.USABILITY_REPORTS.DUPLICATE.PICKER_SEARCH_PLACEHOLDER' | translate"
-      />
-    </div>
+        />
+      </div>
 
-    <div class="ur-duplicate-picker-list">
-      <table class="admin-table" *ngIf="filteredCandidates.length > 0">
-        <thead>
-          <tr>
-            <th>{{ 'ADMIN.USABILITY_REPORTS.COL.ID' | translate }}</th>
-            <th>{{ 'ADMIN.USABILITY_REPORTS.COL.DESCRIPTION' | translate }}</th>
-            <th>{{ 'ADMIN.USABILITY_REPORTS.COL.STATUS' | translate }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            *ngFor="let candidate of filteredCandidates; trackBy: trackById"
-            class="ur-duplicate-picker-row"
-            [class.is-selected]="selectedId === candidate.id"
-            (click)="selectCandidate(candidate.id)"
+      <div class="ur-duplicate-picker-list">
+        @if (filteredCandidates.length > 0) {
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>{{ 'ADMIN.USABILITY_REPORTS.COL.ID' | translate }}</th>
+                <th>{{ 'ADMIN.USABILITY_REPORTS.COL.DESCRIPTION' | translate }}</th>
+                <th>{{ 'ADMIN.USABILITY_REPORTS.COL.STATUS' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (candidate of filteredCandidates; track trackById($index, candidate)) {
+                <tr
+                  class="ur-duplicate-picker-row"
+                  [class.is-selected]="selectedId === candidate.id"
+                  (click)="selectCandidate(candidate.id)"
+                  >
+                  <td class="admin-emphasis">{{ candidate.id }}</td>
+                  <td class="ur-description-cell">{{ candidate.descriptionPreview }}</td>
+                  <td>
+                    <span class="admin-status" [ngClass]="statusClass(candidate.status)">
+                      {{ statusKey(candidate.status) | translate }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+
+        @if (filteredCandidates.length === 0) {
+          <p class="admin-empty-row-text admin-muted">
+            {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.PICKER_EMPTY' | translate }}
+          </p>
+        }
+      </div>
+
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" [disabled]="isSaving" (click)="onCancel()">
+          {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.PICKER_CANCEL' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-primary"
+          [disabled]="!selectedId || isSaving"
+          (click)="onConfirm()"
           >
-            <td class="admin-emphasis">{{ candidate.id }}</td>
-            <td class="ur-description-cell">{{ candidate.descriptionPreview }}</td>
-            <td>
-              <span class="admin-status" [ngClass]="statusClass(candidate.status)">
-                {{ statusKey(candidate.status) | translate }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <p *ngIf="filteredCandidates.length === 0" class="admin-empty-row-text admin-muted">
-        {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.PICKER_EMPTY' | translate }}
-      </p>
-    </div>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" [disabled]="isSaving" (click)="onCancel()">
-        {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.PICKER_CANCEL' | translate }}
-      </button>
-      <button
-        type="button"
-        class="admin-btn admin-btn-primary"
-        [disabled]="!selectedId || isSaving"
-        (click)="onConfirm()"
-      >
-        {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.PICKER_CONFIRM' | translate }}
-      </button>
+          {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.PICKER_CONFIRM' | translate }}
+        </button>
+      </div>
     </div>
   </div>
-</div>

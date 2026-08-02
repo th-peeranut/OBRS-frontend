@@ -46,7 +46,7 @@ export function bangkokInstantMs(value: string | null | undefined): number | nul
 /**
  * OBRS-272: splits an offset ISO date-time back into separate `date`
  * (`YYYY-MM-DD`) / `time` (`HH:mm`) strings for a date+time control pair (two
- * `p-calendar`s). A plain string split is safe here — every OBRS timestamp
+ * `p-datePicker`s). A plain string split is safe here — every OBRS timestamp
  * already carries the fixed `+07:00` Bangkok offset (the product is
  * Thailand-only), so there's no timezone math to do, unlike
  * `formatDisplayDateTime()` which converts to Bangkok wall-clock for *display*.
@@ -70,7 +70,7 @@ export function splitApiOffsetDateTime(value: string | null | undefined): { date
   };
 }
 
-/** `YYYY-MM-DD` → a local `Date` (midnight) for a `p-calendar` date control, or
+/** `YYYY-MM-DD` → a local `Date` (midnight) for a `p-datePicker` date control, or
  * `null` for empty/unparseable input. Mirrors `schedules.mappers.ts`'s
  * `toDateControlValue()` — see the `splitApiOffsetDateTime()` doc comment for
  * why this isn't imported from there. */
@@ -86,7 +86,7 @@ export function dateStringToControlValue(dateValue: string | null | undefined): 
 }
 
 /** `HH:mm` → a local `Date` (today's date, that wall-clock time) for a
- * `p-calendar` `[timeOnly]` control, or `null` for empty/unparseable input.
+ * `p-datePicker` `[timeOnly]` control, or `null` for empty/unparseable input.
  * Mirrors `schedules.mappers.ts`'s `toTimeControlValue()`. */
 export function timeStringToControlValue(timeValue: string | null | undefined): Date | null {
   const normalized = String(timeValue ?? '').trim().slice(0, 5);
@@ -108,7 +108,7 @@ export function timeStringToControlValue(timeValue: string | null | undefined): 
   return date;
 }
 
-/** Inverse of `dateStringToControlValue()` — a `p-calendar` date control's
+/** Inverse of `dateStringToControlValue()` — a `p-datePicker` date control's
  * `Date` value back to `YYYY-MM-DD`, or `''` for an empty/invalid `Date`.
  * Mirrors `schedules.mappers.ts`'s `toDateInputValue()`. */
 export function controlValueToDateString(value: Date | null): string {
@@ -123,7 +123,7 @@ export function controlValueToDateString(value: Date | null): string {
   return `${year}-${month}-${day}`;
 }
 
-/** Inverse of `timeStringToControlValue()` — a `p-calendar` `[timeOnly]`
+/** Inverse of `timeStringToControlValue()` — a `p-datePicker` `[timeOnly]`
  * control's `Date` value back to `HH:mm`, or `''` for an empty/invalid `Date`.
  * Mirrors `schedules.mappers.ts`'s `toTimeInputValue()`. */
 export function controlValueToTimeString(value: Date | null): string {

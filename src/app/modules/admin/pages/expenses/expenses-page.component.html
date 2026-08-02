@@ -27,7 +27,7 @@
     (valueChange)="onCategoryFilterChange($event)"
   ></app-admin-dropdown>
 
-  <p-calendar
+  <p-datePicker
     styleClass="app-date-field"
     panelStyleClass="app-date-field-panel"
     dateFormat="dd/mm/yy"
@@ -37,13 +37,13 @@
     [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.EXPENSES.FILTER_DATE_FROM' | translate"
-  >
+    >
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
-  </p-calendar>
+  </p-datePicker>
 
-  <p-calendar
+  <p-datePicker
     styleClass="app-date-field"
     panelStyleClass="app-date-field-panel"
     dateFormat="dd/mm/yy"
@@ -53,21 +53,22 @@
     [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.EXPENSES.FILTER_DATE_TO' | translate"
-  >
+    >
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
-  </p-calendar>
+  </p-datePicker>
 
-  <button
-    *ngIf="canWrite"
-    type="button"
-    class="admin-btn admin-btn-primary ms-auto"
-    (click)="openCreateModal()"
-  >
-    <span class="material-symbols-outlined">add</span>
-    <span>{{ 'ADMIN.EXPENSES.ADD' | translate }}</span>
-  </button>
+  @if (canWrite) {
+    <button
+      type="button"
+      class="admin-btn admin-btn-primary ms-auto"
+      (click)="openCreateModal()"
+      >
+      <span class="material-symbols-outlined">add</span>
+      <span>{{ 'ADMIN.EXPENSES.ADD' | translate }}</span>
+    </button>
+  }
 </section>
 
 <app-expense-list-table

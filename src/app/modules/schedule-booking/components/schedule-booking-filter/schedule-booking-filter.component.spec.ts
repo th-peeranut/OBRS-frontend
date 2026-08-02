@@ -2,7 +2,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { Store } from '@ngrx/store';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -156,7 +156,7 @@ describe('ScheduleBookingFilterComponent', () => {
 // exactly the state this card found (OBRS-564 set the field's counterpart on
 // the home page and this screen's calendars bound only [minDate]). Only a
 // compiled-template render can see that, so this block builds the real
-// component, using the same CalendarModule/ReactiveFormsModule recipe already
+// component, using the same DatePickerModule/ReactiveFormsModule recipe already
 // proven in home-booking.component.spec.ts.
 describe('ScheduleBookingFilterComponent — maxDate bound to BOTH calendars (OBRS-698)', () => {
   let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
@@ -170,7 +170,7 @@ describe('ScheduleBookingFilterComponent — maxDate bound to BOTH calendars (OB
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
-        CalendarModule,
+        DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         DropdownObrsPassengerComponent,
@@ -190,10 +190,10 @@ describe('ScheduleBookingFilterComponent — maxDate bound to BOTH calendars (OB
     component = fixture.componentInstance;
   });
 
-  it('applies the resolved maxDate to BOTH the departure and return p-calendar controls', () => {
+  it('applies the resolved maxDate to BOTH the departure and return p-datePicker controls', () => {
     fixture.detectChanges(); // ngOnInit -> the policy stub resolves synchronously
 
-    // Reveal the return-trip calendar too, so both p-calendar instances exist.
+    // Reveal the return-trip calendar too, so both p-datePicker instances exist.
     // Set AFTER the first change detection on purpose: ngOnInit's saved-filter
     // subscription re-derives this flag from the store, so a value set before
     // it runs is overwritten and only the departure calendar ever renders.
@@ -203,7 +203,7 @@ describe('ScheduleBookingFilterComponent — maxDate bound to BOTH calendars (OB
     const expected = dayjs().add(CONFIGURED_MAX_ADVANCE_DAYS, 'day');
     expect(dayjs(component.maxDate).isSame(expected, 'day')).toBeTrue();
 
-    const calendars = fixture.debugElement.queryAll(By.css('p-calendar'));
+    const calendars = fixture.debugElement.queryAll(By.css('p-datePicker'));
     expect(calendars.length).toBe(2);
 
     for (const calendarDe of calendars) {

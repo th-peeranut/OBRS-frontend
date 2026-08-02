@@ -145,6 +145,16 @@ const PRIVACY_LEDGER = [
     effectiveDate: '2026-07-22',
     fingerprint: '617bea18d7fe1952bf74fb67feead72bb4e22ff40d48a86d014cb13c0e9e1c57',
   },
+  {
+    // OBRS-631. The first rewrite of this notice since the site was built: 1.0
+    // named no data-subject right, no processor, no retention period and no way
+    // to reach us. 2.0 covers PDPA sections 30-36 and 19, the categories of
+    // recipient and the transfers out of Thailand, the measured cookie list, and
+    // retention as dates rather than as "as long as necessary".
+    version: '2.0',
+    effectiveDate: '2026-08-01',
+    fingerprint: 'ca341e732b1d6797680b6ee2000c48b077736a60f5845d90634310d7333c8120',
+  },
 ];
 
 function privacyFingerprint(json) {
@@ -214,6 +224,101 @@ function privacyFingerprint(json) {
   }
 }
 
+// 4b) OBRS-631: the notice must still SAY the things it exists to say.
+//
+//     The ledger above proves the text changed and was published. It cannot
+//     prove the new text is still compliant -- a rewrite that dropped the right
+//     to withdraw, or the contact address, would bump a version and pass. That
+//     is not hypothetical: 1.0 was a real published notice that named no right,
+//     no processor, no retention period and no way to reach us, and it survived
+//     for as long as it did precisely because nothing read its prose.
+//
+//     So this checks the load-bearing elements are present, and nothing about
+//     style. It is deliberately a POSITIVE list: a denylist here would have to
+//     guess the wrong wordings in advance, and the failure mode being guarded is
+//     omission, not a bad phrase.
+//
+//     Any of these disappearing should be a decision someone argues for in a
+//     card, not a diff nobody notices.
+const PRIVACY_REQUIRED_TH = [
+  // Every right the notice grants, by section number. Section 25 is not here:
+  // the third-party notice duty is met by SMS/e-ticket wording, not by this page.
+  ['มาตรา 19', 'the right to withdraw consent'],
+  ['มาตรา 30', 'the right of access / to a copy'],
+  ['มาตรา 31', 'the right to portability'],
+  ['มาตรา 32', 'the right to object'],
+  ['มาตรา 33', 'the right to erasure'],
+  ['มาตรา 34', 'the right to restrict processing'],
+  ['มาตรา 35', 'the right to rectification'],
+  ['มาตรา 73', 'the right to complain to the PDPC'],
+  // A right with no reachable channel is not a right (section 23(6)).
+  ['contact@nj-phuyaipu.com', 'the contact address for exercising rights'],
+  ['09 0562 2019', 'the contact telephone number'],
+  ['0203557004978', 'the legal identity of the controller'],
+  // The response time we bind ourselves to, and its lawful extension.
+  ['30 วัน', 'the response deadline'],
+  // Retention as a date rule, not as "as long as necessary" -- the 1.0 defect.
+  ['วันสิ้นรอบบัญชี', 'the accounting-retention start point'],
+];
+{
+  const th = JSON.parse(readFileSync(join(I18N_DIR, 'th.json'), 'utf8'))?.POLICY?.PRIVACY;
+  const published = `${th?.CONTENT_1 ?? ''}${th?.CONTENT_2 ?? ''}`;
+  for (const [needle, what] of PRIVACY_REQUIRED_TH) {
+    if (!published.includes(needle)) {
+      problems.push(
+        `[th] the published privacy notice no longer contains "${needle}" -- ${what}. Restore it, or change this list in the same commit and say in the card why the notice may stop saying it (OBRS-631)`
+      );
+    }
+  }
+}
+
+// 4c) OBRS-627: the same rule as gate 3, for the refund half of the policy.
+//
+//     /refund-policy stated its terms as prose typed into these files, and the
+//     prose was never true -- it demanded an original paper ticket and an
+//     in-person cash pickup while the app self-cancels and auto-refunds, and it
+//     never named a refund rate at all. The rates, the cancellation window and
+//     the early/late boundary now render from GET /api/cancellation-policy,
+//     which reads the very config keys CancellationService multiplies by.
+//
+//     Positive check, for the reason gate 3 spells out at length: a denylist of
+//     "80%" and "2 hours" would go green the moment someone typed today's
+//     correct numbers as literals, which is the defect, not the fix. What must
+//     be true is that the four values arrive as placeholders.
+//
+//     RATES_ERROR is checked too: it is what a customer sees INSTEAD of a rate
+//     when the config cannot be read, and AC-3 forbids falling back to a
+//     hardcoded number. If that key went missing the page would render a raw
+//     "POLICY.REFUND.RATES_ERROR" where the terms should be.
+const REQUIRED_REFUND_PLACEHOLDERS = [
+  '{{earlyWindowHours}}',
+  '{{cancelWindowHours}}',
+  '{{refundRateEarlyPercent}}',
+  '{{refundRateLatePercent}}',
+];
+for (const lang of LANGS) {
+  const refund = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8'))?.POLICY?.REFUND;
+  const rates = refund?.RATES;
+  if (typeof rates !== 'string') {
+    problems.push(
+      `[${lang}] POLICY.REFUND.RATES is missing or not a string -- the refund policy page renders this key from the live cancellation-policy config and cannot fall back (OBRS-627)`
+    );
+  } else {
+    for (const placeholder of REQUIRED_REFUND_PLACEHOLDERS) {
+      if (!rates.includes(placeholder)) {
+        problems.push(
+          `[${lang}] POLICY.REFUND.RATES is missing the ${placeholder} placeholder -- the refund rates and cancellation windows must interpolate from GET /api/cancellation-policy, never be typed in as literals (OBRS-627)`
+        );
+      }
+    }
+  }
+  if (typeof refund?.RATES_ERROR !== 'string') {
+    problems.push(
+      `[${lang}] POLICY.REFUND.RATES_ERROR is missing or not a string -- it is what the page shows in place of the rates when the config cannot be read, and AC-3 forbids a hardcoded fallback (OBRS-627)`
+    );
+  }
+}
+
 // 5) OBRS-628 AC-9: a translation that exists but stops halfway.
 //
 //    Gate 2 above compares KEY SETS, so a zh value holding the first two
@@ -236,8 +341,28 @@ const LENGTH_FLOOR_BY_LANG = { en: 0.55, th: 0.55, zh: 0.22 };
 // listed so the gate can go green today WITHOUT hiding them. An entry that
 // starts passing is itself a failure -- otherwise this list would quietly
 // outlive the problem and go on excusing a key nobody is watching any more.
+//
+// OBRS-631 changed what the POLICY.PRIVACY entries MEAN. They were opened as
+// debt -- a Chinese rendering that had been cut short, listed so the gate could
+// stay green without hiding it. They are not that any more: the owner decided on
+// 2026-07-23 that the privacy notice is published in Thai and English ONLY,
+// because no native speaker has reviewed a Chinese rendering of a legal text and
+// a half-translated notice is worse than an honest pointer. The zh values are
+// now a deliberate STUB naming the two published languages and the contact
+// route, and they will never pass the length floor by design.
+// POLICY.BUSINESS.CONTENT is still debt and still belongs to OBRS-623/629 --
+// these are two different kinds of entry sharing one list.
 const KNOWN_SHORT_TRANSLATIONS = [
-  { key: 'POLICY.PRIVACY.CONTENT_2', lang: 'zh', owner: 'OBRS-628 AC-8' },
+  {
+    key: 'POLICY.PRIVACY.CONTENT_1',
+    lang: 'zh',
+    owner: 'OBRS-631 (deliberate stub: notice is th/en only, owner 2026-07-23)',
+  },
+  {
+    key: 'POLICY.PRIVACY.CONTENT_2',
+    lang: 'zh',
+    owner: 'OBRS-631 (deliberate stub: notice is th/en only, owner 2026-07-23)',
+  },
   { key: 'POLICY.BUSINESS.CONTENT', lang: 'zh', owner: 'OBRS-623 / OBRS-629' },
 ];
 
@@ -284,7 +409,7 @@ function visibleLength(value) {
       stillShort.add(`${key}|${lang}`);
       if (excused.has(`${key}|${lang}`)) continue;
       problems.push(
-        `[${lang}] "${key}" is ${lengths[lang]} visible chars against ${longest} in ${longestLang} (${ratio.toFixed(2)}, floor ${LENGTH_FLOOR_BY_LANG[lang]}) -- the translation looks truncated, not merely more compact. Finish it, or add it to KNOWN_SHORT_TRANSLATIONS with the card that owns it (OBRS-628)`
+        `[${lang}] "${key}" is ${lengths[lang]} visible chars against ${longest} in ${longestLang} (${ratio.toFixed(2)}, floor ${LENGTH_FLOOR_BY_LANG[lang]}) -- the translation looks truncated, not merely more compact. Finish it, or add it to KNOWN_SHORT_TRANSLATIONS with the card that owns it (gate from OBRS-628; entries owned by OBRS-631 / OBRS-623)`
       );
     }
   }
@@ -292,7 +417,7 @@ function visibleLength(value) {
   for (const entry of KNOWN_SHORT_TRANSLATIONS) {
     if (!stillShort.has(`${entry.key}|${entry.lang}`)) {
       problems.push(
-        `KNOWN_SHORT_TRANSLATIONS still excuses [${entry.lang}] "${entry.key}" (${entry.owner}), but that translation now passes the length floor -- delete the entry so the key is guarded again (OBRS-628)`
+        `KNOWN_SHORT_TRANSLATIONS still excuses [${entry.lang}] "${entry.key}" (${entry.owner}), but that translation now passes the length floor -- delete the entry so the key is guarded again (gate from OBRS-628; entries owned by OBRS-631 / OBRS-623)`
       );
     }
   }

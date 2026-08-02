@@ -1,0 +1,150 @@
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div>
+      <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="false" [loading]="isLoading"></app-admin-refresh-hint>
+    </div>
+  </section>
+}
+
+<section class="admin-page-filters mt-3">
+  <p-datePicker
+    styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
+    [ngModel]="fromDate" (ngModelChange)="onFromDateChange($event)"
+    [showIcon]="true" [iconDisplay]="'input'" [showButtonBar]="true"
+    [placeholder]="'ADMIN.REPORTS.FILTER_FROM' | translate"
+    >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-datePicker>
+
+  <p-datePicker
+    styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
+    [ngModel]="toDate" (ngModelChange)="onToDateChange($event)"
+    [showIcon]="true" [iconDisplay]="'input'" [showButtonBar]="true"
+    [placeholder]="'ADMIN.REPORTS.FILTER_TO' | translate"
+    >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-datePicker>
+</section>
+
+@if (contentState === 'invalid' || contentState === 'error') {
+  <section class="admin-card mt-3 reports-state-card">
+    @if (contentState === 'invalid') {
+      <p class="admin-error">{{ rangeError }}</p>
+    }
+    @if (contentState === 'error') {
+      <p class="admin-muted">{{ loadError }}</p>
+    }
+  </section>
+}
+
+@if (contentState === 'loading' || contentState === 'data') {
+  <section class="admin-grid admin-grid--3 mt-3">
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.BOOKING_TREND.TILE.TOTAL' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ formatCount(totalBookings) }}</p>
+          @if (changePct !== null) {
+            <span
+              class="bt-delta" [class.is-up]="changeDirection === 'up'" [class.is-down]="changeDirection === 'down'"
+              [attr.aria-label]="'ADMIN.BOOKING_TREND.CHANGE_VS_PREV' | translate: { pct: changePctDisplay(changePct) }"
+              >
+              @if (changeDirection !== 'flat') {
+                <span class="material-symbols-outlined">{{ changeDirection === 'up' ? 'trending_up' : 'trending_down' }}</span>
+              }
+              {{ changePctDisplay(changePct) }}
+              <span class="bt-delta-caption">{{ 'ADMIN.BOOKING_TREND.VS_PREV' | translate }}</span>
+            </span>
+          } @else {
+            <span class="bt-delta bt-delta--na">{{ 'ADMIN.BOOKING_TREND.CHANGE_NA' | translate }}</span>
+          }
+        } @else {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">trending_up</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.BOOKING_TREND.TILE.PEAK' | translate }}</p>
+        @if (!isLoading) {
+          @if (peak; as p) {
+            <p class="admin-big-number">{{ formatCount(p.bookingCount) }}</p>
+          } @else {
+            <p class="admin-big-number">—</p>
+          }
+          @if (peak; as p) {
+            <span class="bt-delta-caption">{{ shortDate(p.date) }}</span>
+          }
+        } @else {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">event_seat</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.BOOKING_TREND.TILE.DAYS' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ formatCount(series.length) }}</p>
+        } @else {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+      </div>
+    </article>
+  </section>
+}
+
+
+@if (contentState === 'loading' || contentState === 'data') {
+  <section class="admin-card mt-3">
+    <div class="admin-card-head">
+      <h4>{{ 'ADMIN.BOOKING_TREND.SERIES_TITLE' | translate }}</h4>
+      <span class="admin-muted reports-basis-caption">{{ 'ADMIN.REPORTS.BASIS.BOOKING_DATE' | translate }}</span>
+    </div>
+    @if (isLoading) {
+      <div class="bt-chart-skeleton"><span></span><span></span><span></span></div>
+    }
+    @if (!isLoading && series.length > 0) {
+      <div class="bt-chart" role="img"
+        [attr.aria-label]="'ADMIN.BOOKING_TREND.SERIES_TITLE' | translate">
+        @for (point of series; track trackByDate($index, point)) {
+          <div class="bt-bar-col">
+            <div class="bt-bar-track">
+              <div class="bt-bar" [style.height.%]="barHeightPct(point)"
+              [attr.title]="shortDate(point.date) + ' · ' + formatCount(point.bookingCount)"></div>
+            </div>
+            <span class="bt-bar-label">{{ shortDate(point.date) }}</span>
+          </div>
+        }
+      </div>
+    }
+    @if (!isLoading && series.length === 0) {
+      <p class="admin-muted">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</p>
+    }
+  </section>
+}
+
+@if (contentState === 'data' && totalBookings > 0) {
+  <section class="admin-card mt-3">
+    <div class="admin-card-head">
+      <h4>{{ 'ADMIN.BOOKING_TREND.DOW_TITLE' | translate }}</h4>
+    </div>
+    <div class="bt-chart bt-chart--dow" role="img" [attr.aria-label]="'ADMIN.BOOKING_TREND.DOW_TITLE' | translate">
+      @for (dow of byDayOfWeek; track trackByDow($index, dow)) {
+        <div class="bt-bar-col">
+          <div class="bt-bar-track">
+            <div class="bt-bar bt-bar--dow" [style.height.%]="dowBarHeightPct(dow)"
+            [attr.title]="dowLabel(dow.dow) + ' · ' + formatCount(dow.bookingCount)"></div>
+          </div>
+          <span class="bt-bar-label">{{ dowLabel(dow.dow) }}</span>
+        </div>
+      }
+    </div>
+  </section>
+}

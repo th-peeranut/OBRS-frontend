@@ -30,4 +30,12 @@ export const environment = {
   mapsApiKey: prodEnv.mapsApiKey,
   googleClientId: prodEnv.googleClientId,
   maptilerKey: prodEnv.maptilerKey,
+  // OBRS-867. Deliberately NOT on prod-config-guard.ts's refuse-to-boot list:
+  // that guard exists for values whose absence means the bundle cannot take
+  // real money. A missing measurement ID costs a chart, not a baht — refusing
+  // to boot over it would be a self-inflicted outage.
+  analytics: {
+    ga4MeasurementId: prodEnv.ga4MeasurementId,
+    clarityProjectId: prodEnv.clarityProjectId,
+  },
 };

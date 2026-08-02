@@ -13,10 +13,12 @@
         <dt>{{ "PARCEL_BOOKING.SUCCESS.TRACKING_NUMBER" | translate }}</dt>
         <dd>{{ trackingNumber }}</dd>
       </div>
-      <div *ngIf="amountPaid != null">
-        <dt>{{ "PARCEL_BOOKING.SUCCESS.AMOUNT_PAID" | translate }}</dt>
-        <dd>{{ amountPaid }}</dd>
-      </div>
+      @if (amountPaid != null) {
+        <div>
+          <dt>{{ "PARCEL_BOOKING.SUCCESS.AMOUNT_PAID" | translate }}</dt>
+          <dd>{{ amountPaid }}</dd>
+        </div>
+      }
     </dl>
 
     <p class="parcel-booking-success-card__next-steps">

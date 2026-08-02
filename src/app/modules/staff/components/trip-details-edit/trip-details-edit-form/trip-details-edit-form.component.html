@@ -1,10 +1,12 @@
 <form [formGroup]="form" class="trip-edit-form small">
 
   <!-- Loading indicator -->
-  <div *ngIf="isLoading" class="d-flex align-items-center gap-2 mb-3 text-muted">
-    <span class="spinner-border spinner-border-sm"></span>
-    <span>{{ 'STAFF.SELL.TRIP_DETAIL_EDIT_LOADING' | translate }}</span>
-  </div>
+  @if (isLoading) {
+    <div class="d-flex align-items-center gap-2 mb-3 text-muted">
+      <span class="spinner-border spinner-border-sm"></span>
+      <span>{{ 'STAFF.SELL.TRIP_DETAIL_EDIT_LOADING' | translate }}</span>
+    </div>
+  }
 
   <!-- Route (read-only) -->
   <div class="mb-2">
@@ -24,7 +26,7 @@
       {{ 'STAFF.SELL.TRIP_DETAIL_EDIT_TIME' | translate }}
       <span class="text-danger">*</span>
     </label>
-    <p-calendar
+    <p-datePicker
       formControlName="departureTime"
       [timeOnly]="true"
       [showTime]="true"
@@ -34,14 +36,16 @@
       [iconDisplay]="'input'"
       styleClass="app-date-field"
       panelStyleClass="app-date-field-panel"
-    >
+      >
       <ng-template pTemplate="inputicon">
         <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
       </ng-template>
-    </p-calendar>
-    <div *ngIf="isFieldInvalid('departureTime')" class="text-danger small mt-1">
-      {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-    </div>
+    </p-datePicker>
+    @if (isFieldInvalid('departureTime')) {
+      <div class="text-danger small mt-1">
+        {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+      </div>
+    }
   </div>
 
   <!-- Vehicle Type -->
@@ -57,9 +61,11 @@
       labelKey="label"
       [placeholder]="'STAFF.SELL.TRIP_DETAIL_EDIT_VEHICLE_TYPE_PH' | translate"
     ></app-admin-dropdown>
-    <div *ngIf="isFieldInvalid('vehicleType')" class="text-danger small mt-1">
-      {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-    </div>
+    @if (isFieldInvalid('vehicleType')) {
+      <div class="text-danger small mt-1">
+        {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+      </div>
+    }
   </div>
 
   <!-- Vehicle -->
@@ -87,22 +93,28 @@
       styleClass="w-100"
       inputStyleClass="form-control form-control-sm"
     ></p-inputNumber>
-    <div class="text-muted small mt-1" *ngIf="effectiveTotalSeats != null">
-      {{ 'STAFF.SELL.TRIP_DETAIL_EDIT_CAPACITY_HINT'
-          | translate: { max: effectiveTotalSeats, type: selectedVehicleTypeLabel } }}
-    </div>
+    @if (effectiveTotalSeats != null) {
+      <div class="text-muted small mt-1">
+        {{ 'STAFF.SELL.TRIP_DETAIL_EDIT_CAPACITY_HINT'
+        | translate: { max: effectiveTotalSeats, type: selectedVehicleTypeLabel } }}
+      </div>
+    }
     <!-- Capacity inline errors: backend-mapped or form validator -->
-    <div *ngIf="capacityInlineError" class="text-danger small mt-1">
-      {{ capacityInlineError }}
-    </div>
-    <div *ngIf="!capacityInlineError && isFieldInvalid('seatingCapacity')" class="text-danger small mt-1">
-      <ng-container *ngIf="form.get('seatingCapacity')?.errors?.['capacityMax'] as err">
-        {{ 'STAFF.SELL.TRIP_DETAIL_ERR_CAPACITY_MAX' | translate: { max: err.max } }}
-      </ng-container>
-      <ng-container *ngIf="form.get('seatingCapacity')?.errors?.['min']">
-        {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-      </ng-container>
-    </div>
+    @if (capacityInlineError) {
+      <div class="text-danger small mt-1">
+        {{ capacityInlineError }}
+      </div>
+    }
+    @if (!capacityInlineError && isFieldInvalid('seatingCapacity')) {
+      <div class="text-danger small mt-1">
+        @if (form.get('seatingCapacity')?.errors?.['capacityMax']; as err) {
+          {{ 'STAFF.SELL.TRIP_DETAIL_ERR_CAPACITY_MAX' | translate: { max: err.max } }}
+        }
+        @if (form.get('seatingCapacity')?.errors?.['min']) {
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        }
+      </div>
+    }
   </div>
 
   <!-- Driver -->
@@ -124,7 +136,7 @@
       class="btn btn-sm btn-outline-secondary"
       [disabled]="isSaving"
       (click)="onCancel()"
-    >
+      >
       {{ 'STAFF.SELL.TRIP_DETAIL_CANCEL_BTN' | translate }}
     </button>
     <button
@@ -132,11 +144,13 @@
       class="btn btn-sm btn-primary"
       [disabled]="isSaving"
       (click)="onSave()"
-    >
-      <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+      >
+      @if (isSaving) {
+        <span class="spinner-border spinner-border-sm me-1"></span>
+      }
       {{ isSaving
-          ? ('STAFF.SELL.TRIP_DETAIL_SAVING' | translate)
-          : ('STAFF.SELL.TRIP_DETAIL_SAVE_BTN' | translate) }}
+      ? ('STAFF.SELL.TRIP_DETAIL_SAVING' | translate)
+      : ('STAFF.SELL.TRIP_DETAIL_SAVE_BTN' | translate) }}
     </button>
   </div>
 

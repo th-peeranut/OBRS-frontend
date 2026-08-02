@@ -77,7 +77,7 @@
 
 // OBRS-391 removed this component's card-entry rules along with the fields they
 // styled: .form-control (the PAN/CVV inputs), .calendar-icon and the whole
-// ::ng-deep .payment-card-calendar-panel block (the p-calendar expiry picker,
+// ::ng-deep .payment-card-calendar-panel block (the `p-datePicker` expiry picker,
 // including its 640px width clamp). .text-input and .card-brands went with them —
 // both were already unreferenced by this template before this card.
 .hosted-card-hint {

@@ -36,7 +36,49 @@
       "spec": "b2c-critical-path.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
-      "why": "Anonymous booking path on fixture stations and schedules. OBRS-602 added the GET /api/routes stub that /home's route-map issues."
+      "why": "Booking path on fixture stations and schedules. OBRS-602 added the GET /api/routes stub that /home's route-map issues. OBRS-856 split it in two: the walk is anonymous only as far as the review page (still open to guests on purpose), after which one test seeds a customer session in localStorage and the other asserts the guest is sent to /login. Still hermetic -- the seeded token is never validated by anything, since every API call is intercepted."
+    },
+    {
+      "spec": "obrs-854-account-deeplink.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-854. Walks the counter-QR path end to end at a 390px phone viewport: logged out at /account, bounced through AuthGuard to /login, back to /account, dialog opened, translated confirm phrase typed, and DELETE /api/private/users/me asserted off the wire rather than by a success toast. Hermetic by construction -- it mints no session at all (arriving logged OUT is the scenario under test), one page.route fulfils every /api/** call including the login it performs, and accounts.google.com is aborted so /login's GIS script never leaves the box. It also seeds OBRS-867's obrs_analytics_consent_v1 to an ANSWERED value for most cases, because that bar is fixed to the bottom of the viewport and this page puts the close-account card last on purpose; the unanswered overlap is not hidden but pinned by its own test, which asks document.elementFromPoint what is really on top of the button rather than reasoning about z-index."
+    },
+    {
+      "spec": "obrs-867-analytics-consent-gate.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs867.config.ts",
+      "why": "OBRS-867 AC-1, declared by OBRS-882 -- the card shipped this spec without a lanes.json entry, so it belonged to no lane and ran nowhere but by hand. OWN-DB rather than GATE for the same reason that lane exists: it asserts a state that can only exist by construction. It needs the `analytics-e2e` build configuration, the ONLY one carrying a real measurement ID, because it measures consent on the WIRE -- no request to googletagmanager/clarity/google-analytics before accept, and a MUST-CATCH case proving both really do fire after. Against any other build the IDs are blank, the loader no-ops, and every 'nothing was requested' assertion passes vacuously. It touches no database, but the lane's rule -- provisions the environment its premise needs, never runnable against SIT -- is the one that fits."
+    },
+    {
+      "spec": "obrs-631-privacy-notice.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs631.config.ts",
+      "why": "OBRS-631. The 2.0 privacy notice as rendered, plus the AFTER picture the card needs as evidence. CAPTURE only because of the screenshot -- the four assertions beside it are load-bearing and can each fail for a real reason. They cover the half scripts/check-i18n-parity.mjs structurally cannot see: the notice arrives through [innerHTML], and a <ul> inside a <p> (what 2.0 would have been without the template change to a div) is closed early by the parser, so the markup collapses while every string gate reading the JSON stays green. Hence counting the h2 elements AND asserting they are direct children of .policy-body. Needs no backend, no seed and no third party -- the page renders from public/i18n/*.json and privacy-policy.version.ts alone -- so it runs against the plain development build on its own port."
+    },
+    {
+      "spec": "obrs-874-analytics-cookie-census.spec.ts",
+      "lane": "SIT-LIVE",
+      "config": "playwright.obrs874census.config.ts",
+      "why": "OBRS-874 AC-5. Reads document.cookie / localStorage / sessionStorage before and after accepting on the DEPLOYED SIT site and prints the DIFFERENCE -- the list OBRS-631 AC-5 copies into the notice's cookie section. SIT-LIVE and never a gate: it consents to real GA4 and Clarity tags on a real deployment, which is precisely what makes the answer true; the analytics-e2e build's IDs are invalid on purpose, so its tags 404 and store nothing, and measuring there would produce an empty list that reads like an answer. It asserts a difference rather than a pinned list, because a hardcoded list would have to be edited to stay green -- turning a vendor adding a cookie from a signal into a chore. Two must-catches keep it honest in both directions: no vendor-shaped name may exist BEFORE consent (that would mean the gate is broken), and at least one must appear AFTER (otherwise the empty census is a false statement waiting to be published)."
+    },
+    {
+      "spec": "obrs-874-analytics-consent-withdraw.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs867.config.ts",
+      "why": "OBRS-874 AC-2. Same premise and therefore the same lane as obrs-867-analytics-consent-gate.spec.ts: it can only be true on the `analytics-e2e` build, the one configuration carrying measurement IDs, because it measures a WITHDRAWAL on the wire. It asserts the two halves separately because different mechanisms guarantee them -- without a reload, collection stops at the vendor (`ga-disable-<id>` plus `clarity('stop')`, driven by AnalyticsService's isGranted$ subscription); after a reload, the scripts are never injected at all because load() is only reached while granted. It reaches the policy page by CLICKING the footer link rather than page.goto, because goto is a fresh document and would throw away the very tags whose in-place shutdown is the claim. Carries its own MUST-CATCH accept leg for the same reason the 867 suite does: on a blank-ID build every 'nothing was requested' expectation passes while proving nothing. Touches no database; OWN-DB is the lane for 'provisions the environment its premise needs, never runnable against SIT'."
+    },
+    {
+      "spec": "obrs-867-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs867.config.ts",
+      "why": "OBRS-867 AFTER evidence, declared by OBRS-882 (shipped undeclared alongside the spec above). Screenshots of the consent bar from the same build whose network behaviour the AC-1 suite asserts, plus a MEASURED contrast pair read off the painted pixels rather than out of variables.scss. Its purpose is a picture, so CAPTURE -- but note it is a harder-working capture than most in this lane: the contrast assertion can fail for a real reason."
+    },
+    {
+      "spec": "analytics-consent-banner.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-882. Two stubbed home-page calls (stops, schedules search) and nothing else, so it needs no backend by construction. It exists as the counterpart to e2e/support/analytics-consent.ts: with a settled PDPA answer now seeded lane-wide, this is the ONLY spec that still loads a page with OBRS-867's consent bar UP, and without it the seeding would be a mute rather than a repair. Asks document.elementFromPoint what is really on top of the usability FAB rather than reasoning about z-index -- the overlap is deliberate per the component's own SCSS, so it is pinned, not overturned. obrs-854-account-deeplink.spec.ts asks the same question of a different button at a phone viewport."
     },
     {
       "spec": "focus-retention.spec.ts",
@@ -153,6 +195,24 @@
       "why": "Needs booking OBRS483-OPEN with a null seat from its SQL fixture, and a backend built from the OBRS-483 branch. The frontend alone is not sufficient."
     },
     {
+      "spec": "obrs766-counter-cancel.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs766.config.ts",
+      "why": "OBRS-766. Every case here CONSUMES the booking it acts on -- cancelling is the thing under test -- so each seeds its own walk-in sale through the real API instead of depending on a booking a previous run already spent. Needs states SIT cannot be asked for: a CASH sale (to reach the OBRS-669 second-person step-up), a payment-less booking (to resolve MANUAL_REFUND_REQUIRED), and a booking departing inside the 2h window (produced by rewriting booking_schedules.departure_date_time, since the seeded cluster starts December 2026). Its globalSetup frees seat inventory first: one pass consumes 7+ of the 14 seats per vehicle type, and without the reset the third pass fails at seeding with BOOKING_ERROR_SEATS_INSUFFICIENT -- which reads exactly like a product regression and is not one. Never a gate: it mutates its own database and shells out to psql."
+    },
+    {
+      "spec": "obrs766-primary-flow.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs766.config.ts",
+      "why": "OBRS-766. The card's load-bearing case in one continuous flow: a SALESPERSON logs in, finds a walk-in booking they did NOT sell, sees the refund preview before committing, and cancels it under the second-person cash approval -- the proof that act-on-behalf (OBRS-661) and the cash step-up (OBRS-669) are reachable at all, since neither had a UI before this card. Shares the OWN-DB reasoning and globalSetup above. Also asserts the masked phone never appears raw in the DOM or in any response body, so it doubles as the anti-enumeration guard for GET /api/private/bookings/search."
+    },
+    {
+      "spec": "obrs577-my-bookings-load-more.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs577.config.ts",
+      "why": "OBRS-577. Every claim on this card -- first page is exactly 20, Load more APPENDS rather than replaces, the count line names the FILTERED total, the button hides itself on the last page, and a mutation reload keeps the whole loaded window instead of collapsing back to 20 -- needs one account holding well over 20 bookings in two independently-sized status buckets. No SIT seed account clears 20 (customer@system.local was MEASURED at 37 during this card's live run and used read-only as the baseline), and manufacturing dozens of bookings on shared SIT is not a reasonable ask, so the lane owns its database: obrs577qa, rebuilt every run from schema.sql -> data.sql -> e2e/fixtures/obrs577-load-more-fixture.sql (44 CONFIRMED + 7 CANCELLED = 52 under All). The mutation-reload case is the one that cannot be had any other way: it really cancels one of 40 loaded Confirmed rows and asserts 39, because the two defects that shipped and were caught here -- an effect guard reading a flag its own action's reducer had already set, and a reducer reset zeroing the page window under the effect -- are both invisible to a unit test that stubs state with overrideSelector. Never a gate: it mutates its own database, and its BACKEND port is deliberately :8181, the same one playwright.local.config.ts binds (environment.e2e.ts:26 hardcodes apiUrl and is not build-time-configurable), so the two OWN-DB lanes must run SEQUENTIALLY. Its OBRS_BACKEND_DIR is a throwaway detached backend worktree; recreate it if absent with `git -C ../OBRS-backend worktree add --detach ../OBRS-backend-wt-577qa origin/dev` -- pointing it at the shared ../OBRS-backend clone would build whatever branch that clone happens to be parked on."
+    },
+    {
       "spec": "obrs-433-my-reports.spec.ts",
       "lane": "OWN-DB",
       "config": "playwright.obrs433.config.ts",
@@ -229,6 +289,42 @@
       "lane": "CAPTURE",
       "config": "playwright.obrs769capture.config.ts",
       "why": "OBRS-769 before/after evidence. Two servers started by hand -- :4761 a throwaway detached worktree at origin/dev c1388c27 for the BEFORE shot, :4762 this one -- and run once per phase with OBRS769_PHASE. TWO separate clipped frames per phase rather than one composed sheet, because OBRS-811 composed four dropdown panels into a single image and a reviewer read it as a layout bug. Hermetic otherwise (customer-pages.ts fixtures), but its purpose is a picture, not a verdict."
+    },
+    {
+      "spec": "obrs-907-loading-state-reduced-motion.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-907. Seeds a synthetic admin session (seedGateAdminSession, no live SIT/storageState) and hangs the one call it depends on -- GET .../private/notifications never resolves, via a route handler registered after the shell's own stub so it wins by Playwright's reverse-registration-order matching -- so NotificationInboxService.loading$ stays true and the notification-bell's first-load spinner never races to the empty state. Asserts prefers-reduced-motion via page.emulateMedia against the real compiled admin-theme.scss + loading-state.component.scss cascade, with a positive control (asserts the un-reduced case actually rotates first) before trusting the frozen-but-visible assertion."
+    },
+    {
+      "spec": "obrs-939-admin-shell-responsive.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-939. Asserts that the admin shell still ANSWERS -- a trivial page.evaluate must resolve within 5s, sampled 5s after navigation because the freeze started 2.6-3.8s in and a check that samples immediately passes while broken. It caught a change-detection loop that no unit test could reach (Karma runs one detectChanges() by hand; the loop needs a real zone driving ticks) and that no screenshot could show (the last paint before the freeze stays on screen). Population is the shell, not the page the bug was reported on: /admin/dashboard under abort, 500 and 401, plus all five OBRS-151..155 analytics pages. Hermetic on the same terms as the rest of the lane -- synthetic in-browser session, every /api/private/** call answered by the spec itself, no backend."
+    },
+    {
+      "spec": "obrs-813-cancel-offers-reschedule.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-813. The cancel modal now names the reschedule door, and the card's hard limit is that this costs the traveler no extra click on the way OUT. That is measured with a control arm rather than a constant: the same cancel journey is walked on a reschedule-ELIGIBLE booking (offer rendered) and on an ineligible one (the pre-card layout), in one run, and the two click counts are compared -- a hardcoded number would be one nobody measured before the change. Also pins the two things the offer must never do: cancel anything by itself, and appear on a booking the backend would refuse to reschedule. Hermetic on the same terms as the rest of the lane -- synthetic customer session in localStorage, every /api/** call fulfilled by the spec, no backend."
+    },
+    {
+      "spec": "obrs-942-non-manual-cancel.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-942. The sibling of obrs-813 on the lane 813 never reached: a card/gateway payment, whose cancel used to be a plain SweetAlert that never mentioned reschedule. Walks that journey on a reschedule-ELIGIBLE booking and on an ineligible one and compares click counts against the manual lane, for the same reason 813 does -- the number that matters is the one nobody had measured before the change. Two assertions cannot be made any other way: the cancel request body is read off the wire with request.postDataJSON() and must be exactly {}, because the FE now passes {refundDestination: undefined} and only JSON.stringify dropping undefined keys keeps that byte-identical to the old call; and dismissing the modal must leave Cancel ENABLED on the same booking AND on a different one, which is where the reducer left cancellingBookingId set and disabled Cancel app-wide until reload -- invisible to 4557 unit tests. Hermetic on the same terms as the rest of the lane -- synthetic customer session in localStorage, every /api/** call fulfilled by the spec, no backend."
+    },
+    {
+      "spec": "obrs-627-refund-policy.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-627. /refund-policy is linked from every page's footer and from /payment, so a customer reads it before paying, and until this card it described a refund the system has never performed -- original paper ticket, ID copies, in-person cash pickup, forfeiture after 7 days -- while naming no refund rate at all. The rates now render from GET /api/cancellation-policy. Three things live only in the assembled app and are why this needs a browser rather than more unit tests: whether the shipped page calls that endpoint at all, whether a raw {{refundRateEarlyPercent}} can reach a customer, and whether the retired clauses are gone from the REAL public/i18n/th.json rather than from a TestBed fixture -- all three are what went wrong on the identical claim one page over (OBRS-564). The wire values are 36h/3h/90%/45%, deliberately not the shipped 24/2/80/50, so 'rendered from the wire' cannot be confused with 'rendered from a literal'. Also pins AC-3: a failed config read shows an inline error and states NO rate, never a hardcoded fallback. Hermetic on the same terms as the rest of the lane -- every /api/** call fulfilled by the spec, no backend, no session."
+    },
+    {
+      "spec": "obrs-907-qa-parity-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs907qa.config.ts",
+      "why": "OBRS-907 parity evidence for all three migrated surfaces (ticket modal, notification panel, four admin-skeleton list pages) in both themes. Dumps the COMPUTED styles next to each screenshot -- the numbers are the evidence and the picture only corroborates them, because this card's one real regression (a 28px icon silently becoming 34px once it moved inside a child component) was invisible to 4334 green unit tests and would have been invisible to a screenshot glance too. Run once against a server built from the branch and once from a detached ee6f026d for the BEFORE side, same pattern as obrs-769-capture. Kept rather than deleted: OBRS-909/910 migrate ~28 further call sites and need the same before/after discipline."
     }
   ]
 }

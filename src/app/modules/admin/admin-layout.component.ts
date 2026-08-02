@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { NavigationEnd } from '@angular/router';
+import { IsActiveMatchOptions, NavigationEnd } from '@angular/router';
 import { EMPTY, catchError, filter, merge, switchMap, takeUntil, timer } from 'rxjs';
 import { SidebarLayoutBaseComponent } from '../../shared/sidebar-layout/sidebar-layout-base.component';
 import { AdminApiService } from '../../services/admin/admin-api.service';
@@ -8,6 +8,7 @@ import { BadgeSocketService } from '../../services/admin/badge-socket.service';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 import { UsabilityReportStatus } from '../../shared/interfaces/usability-report.interface';
 import { SYSTEM_SETTINGS_ROLES } from './pages/system-settings/system-settings-tabs';
+import { NavSearchHighlightSegment, buildHighlightSegments } from '../../shared/lib/nav-search-highlight';
 
 interface AdminNavItem {
   path: string;
@@ -18,6 +19,17 @@ interface AdminNavItem {
   // subtitleKey) so the sidebar search can match on what a menu *does*, not
   // just its name — the user often recalls the function but not the label.
   descriptionKey?: string;
+  // OBRS-900: precomputed highlight segments for the CURRENT query, built once
+  // per applyNavSearch() call (query or language change) — never recomputed in
+  // the template, per the same stable-field/no-getter change-detection rule
+  // this file already documents for navItems/filteredNavItems/
+  // filteredNavSections. `undefined` whenever no query is active (or, for
+  // descriptionSegments, whenever the item has no descriptionKey) — the
+  // template treats presence/absence as the single switch between the
+  // plain "today" rendering and the highlighted one, rather than re-checking
+  // navSearchQuery a second time.
+  labelSegments?: NavSearchHighlightSegment[];
+  descriptionSegments?: NavSearchHighlightSegment[];
   // OBRS-289: which nav section this item belongs to (see SECTION_ORDER).
   section: NavSectionKey;
   // OBRS-702: highlight this entry for its whole subtree, not just its exact
@@ -50,6 +62,27 @@ const SECTION_ORDER: { key: NavSectionKey; titleKey: string }[] = [
   { key: 'system', titleKey: 'ADMIN.NAV.SECTION.SYSTEM' },
 ];
 
+// OBRS-939: the two `routerLinkActiveOptions` values, as module-level frozen
+// singletons. Identity is the point, not the values: `RouterLinkActive` reads
+// this as an @Input, so a fresh object per change-detection cycle makes its
+// ngOnChanges fire forever (see navLinkActiveMatch below). There are exactly two
+// shapes because `matchSubtree` is the only thing that varies, so two constants
+// cover every nav item. `Object.freeze` so a future caller cannot mutate the
+// instance every link is sharing.
+const NAV_MATCH_EXACT: IsActiveMatchOptions = Object.freeze({
+  paths: 'exact',
+  queryParams: 'ignored',
+  matrixParams: 'ignored',
+  fragment: 'ignored',
+});
+
+const NAV_MATCH_SUBTREE: IsActiveMatchOptions = Object.freeze({
+  paths: 'subset',
+  queryParams: 'ignored',
+  matrixParams: 'ignored',
+  fragment: 'ignored',
+});
+
 // Cadence for the "Usability Reports" nav badge count. Separate from
 // ADMIN_POLL_INTERVAL_MS (admin-auto-refresh.ts) — that constant tunes the
 // operational list pages (bookings/dashboard); this is a lightweight,
@@ -57,9 +90,10 @@ const SECTION_ORDER: { key: NavSectionKey; titleKey: string }[] = [
 const NEW_REPORT_COUNT_POLL_MS = 60_000;
 
 @Component({
-  selector: 'app-admin-layout',
-  templateUrl: './admin-layout.component.html',
-  styleUrl: './admin-layout.component.scss',
+    selector: 'app-admin-layout',
+    templateUrl: './admin-layout.component.html',
+    styleUrl: './admin-layout.component.scss',
+    standalone: false
 })
 export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   // ── Abstract member implementations ─────────────────────────────────────────
@@ -72,7 +106,49 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // cycle breaks *ngFor + routerLinkActive, causing change detection never to
   // stabilise (hard-locks the browser). Mirrors StaffLayoutComponent's
   // navItems, which is built the same way to role-gate its own entries.
+  //
+  // OBRS-939 widened this rule, because the browser was hard-locked again by
+  // something this wording did not cover: the rule is not about GETTERS, it is
+  // about ALLOCATION. Any template expression that builds a new object or array
+  // per change-detection cycle — a getter, a method call, an inline `{...}`
+  // Angular cannot memoise — and feeds it to a directive @Input is the same
+  // defect, because directive inputs are compared by identity. `[routerLink]`,
+  // `[routerLinkActiveOptions]` and `*ngFor` on these nav links are all such
+  // inputs. Enforced now, not just written down: the unit tripwire below
+  // navLinkActiveMatch and e2e/tests/obrs-939-admin-shell-responsive.spec.ts.
   protected navItems: AdminNavItem[] = [];
+
+  // OBRS-586: sidebar active-state. The nav links previously used the boolean
+  // `[routerLinkActiveOptions]="{ exact: ... }"` form, which expands to
+  // `queryParams: 'exact'` — so the active highlight was LOST the instant the URL
+  // carried any query param, matrix param, or fragment (e.g. an admin page
+  // reflecting a filter/page into the URL). This returns an explicit
+  // IsActiveMatchOptions that still honours each item's `matchSubtree` for PATH
+  // matching (exact for a leaf, subset for a parent that should stay lit on its
+  // children), while ignoring query params / matrix params / fragment so the
+  // highlight tracks the page you are on rather than the exact query string.
+  //
+  // OBRS-939: it must return one of the two SHARED constants above rather than
+  // building the object here. Constructing it per call gave RouterLinkActive a
+  // new object identity on every change-detection cycle, so its ngOnChanges
+  // fired every cycle and its update() scheduled a microtask every cycle;
+  // zone.js therefore never saw an empty microtask queue for long,
+  // onMicrotaskEmpty kept re-running ApplicationRef.tick(), and the loop never
+  // terminated. The whole admin shell stopped answering clicks, timers and
+  // page.evaluate a few seconds after every page load, whether its API calls
+  // succeeded or failed — measured on /admin/dashboard and all five analytics
+  // pages, permanent (no recovery inside 60 s), while /staff/sell stayed at a
+  // 231 ms worst-case gap because StaffLayoutComponent still binds the inline
+  // literal `{ exact: false }`, which Angular memoises into a stable instance.
+  //
+  // The comment on `navItems` above already warned that a GETTER returning a new
+  // array each cycle "hard-locks the browser". This was the same defect wearing
+  // a method call, on the same element, and that warning did not cover it —
+  // hence obrs-939-admin-shell-responsive.spec.ts, which measures the property
+  // this reasoning is about instead of restating it.
+  protected navLinkActiveMatch(item: AdminNavItem): IsActiveMatchOptions {
+    return item.matchSubtree ? NAV_MATCH_SUBTREE : NAV_MATCH_EXACT;
+  }
 
   // OBRS-290: sidebar menu search. `filteredNavItems` is a stable field
   // recomputed only on query/language change — NOT a getter, for the same
@@ -111,6 +187,11 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell', descriptionKey: 'ADMIN.PROMOTIONS.SUBTITLE', section: 'operations' },
       { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true, descriptionKey: 'ADMIN.USABILITY_REPORTS.SUBTITLE', section: 'reports' },
       { path: 'reports', labelKey: 'ADMIN.PAGES.REPORTS', icon: 'bar_chart', descriptionKey: 'ADMIN.REPORTS.SUBTITLE', section: 'reports' },
+      { path: 'revenue-analytics', labelKey: 'ADMIN.PAGES.REVENUE_ANALYTICS', icon: 'monitoring', descriptionKey: 'ADMIN.REVENUE_ANALYTICS.SUBTITLE', section: 'reports' },
+      { path: 'booking-trend', labelKey: 'ADMIN.PAGES.BOOKING_TREND', icon: 'insights', descriptionKey: 'ADMIN.BOOKING_TREND.SUBTITLE', section: 'reports' },
+      { path: 'route-performance', labelKey: 'ADMIN.PAGES.ROUTE_PERFORMANCE', icon: 'alt_route', descriptionKey: 'ADMIN.ROUTE_PERFORMANCE.SUBTITLE', section: 'reports' },
+      { path: 'customer-behavior', labelKey: 'ADMIN.PAGES.CUSTOMER_BEHAVIOR', icon: 'groups', descriptionKey: 'ADMIN.CUSTOMER_BEHAVIOR.SUBTITLE', section: 'reports' },
+      { path: 'ops-efficiency', labelKey: 'ADMIN.PAGES.OPS_EFFICIENCY', icon: 'speed', descriptionKey: 'ADMIN.OPS_EFFICIENCY.SUBTITLE', section: 'reports' },
       // OBRS-231: EOD sales report — admin+owner (route `requiredRoles:
       // ['admin','owner']`), same audience as the base admin nav, so it lives
       // in the always-shown list (not role-gated further like settlements).
@@ -140,6 +221,21 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
         labelKey: 'ADMIN.PAGES.MANUAL_REFUNDS',
         icon: 'account_balance',
         descriptionKey: 'ADMIN.MANUAL_REFUNDS.SUBTITLE',
+        section: 'operations',
+      });
+    }
+
+    // OBRS-844: cash-refund approvals — OWNER-only, same gating shape as the
+    // manual-refund worklist directly above (both backend doors are
+    // hasRole('OWNER')). Sits beside it in 'operations' on purpose: both are
+    // money the owner personally signs off, and this is the one an owner opens
+    // when a salesperson calls to say a customer is waiting at the counter.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({
+        path: 'cash-refund-approvals',
+        labelKey: 'ADMIN.PAGES.CASH_REFUND_APPROVALS',
+        icon: 'how_to_reg',
+        descriptionKey: 'ADMIN.CASH_REFUND_APPROVALS.SUBTITLE',
         section: 'operations',
       });
     }
@@ -308,6 +404,29 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
           return label.includes(q) || description.includes(q);
         })
       : this.navItems;
+
+    // OBRS-900: precompute highlight segments for EVERY item here (query or
+    // language change), never in the template — same CD-safety rule as the
+    // fields above. Segments live on the item objects themselves, which
+    // navItems and filteredNavItems already share by reference, so this is
+    // one assignment site regardless of which list a given item currently
+    // sits in. Cleared to `undefined` when the (trimmed) query is blank —
+    // deliberately the SAME trim this method already applies to `q` above, so
+    // a whitespace-only query behaves identically for highlighting as it
+    // already does for filtering (matches nothing extra, shows everything).
+    const rawQuery = query.trim();
+    this.navItems.forEach((item) => {
+      if (!rawQuery) {
+        item.labelSegments = undefined;
+        item.descriptionSegments = undefined;
+        return;
+      }
+      item.labelSegments = buildHighlightSegments(this.translate.instant(item.labelKey), rawQuery);
+      item.descriptionSegments = item.descriptionKey
+        ? buildHighlightSegments(this.translate.instant(item.descriptionKey), rawQuery)
+        : undefined;
+    });
+
     this.filteredNavSections = this.buildSections(this.filteredNavItems);
   }
 

@@ -1,5 +1,5 @@
 import { NgModule } from '@angular/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { SharedModule } from '../../shared.module';
@@ -29,7 +29,7 @@ import { PaymentSummaryComponent } from './payment-summary/payment-summary.compo
   declarations: [PaymentCreditcardComponent, PaymentQrcodeComponent, PaymentSummaryComponent],
   imports: [
     SharedModule,
-    CalendarModule,
+    DatePickerModule,
     StoreModule.forFeature('scheduleBooking', ScheduleBookingReducer),
     StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
     EffectsModule.forFeature([ScheduleBookingEffect, ScheduleFilterEffect]),

@@ -57,9 +57,10 @@ import {
 export type SeatAttributeMap = Record<string, ('WHEELCHAIR' | 'EXTRA_LEGROOM')[]>;
 
 @Component({
-  selector: 'app-passenger-info-form',
-  templateUrl: './passenger-info-form.component.html',
-  styleUrl: './passenger-info-form.component.scss',
+    selector: 'app-passenger-info-form',
+    templateUrl: './passenger-info-form.component.html',
+    styleUrl: './passenger-info-form.component.scss',
+    standalone: false
 })
 export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   passengerForm: FormGroup;

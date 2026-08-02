@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { DropdownGroupObrsComponent } from '../../../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
 import { ParcelTripFormComponent } from './parcel-trip-form.component';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
@@ -29,7 +29,7 @@ describe('ParcelTripFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ReactiveFormsModule, TranslateModule.forRoot(), CalendarModule, DropdownGroupObrsComponent],
+      imports: [ReactiveFormsModule, TranslateModule.forRoot(), DatePickerModule, DropdownGroupObrsComponent],
       declarations: [ParcelTripFormComponent],
     }).compileComponents();
 

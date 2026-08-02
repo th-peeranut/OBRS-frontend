@@ -2,7 +2,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { SharedModule } from '../../shared/shared.module';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 
 // Components
 import { ScheduleBookingComponent } from './schedule-booking.component';
@@ -50,7 +50,7 @@ const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
     ]),
 
     // Add-ons
-    CalendarModule,
+    DatePickerModule,
 
     // Components
     DropdownObrsComponent,

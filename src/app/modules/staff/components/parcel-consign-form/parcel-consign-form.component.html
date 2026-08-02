@@ -6,7 +6,9 @@
     <div class="col-md-6">
       <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.SENDER_NAME' | translate }}</label>
       <input type="text" class="admin-field" formControlName="senderName" [class.is-invalid]="isFieldInvalid('senderName')" />
-      <small class="admin-error" *ngIf="fieldError('senderName') as err">{{ err | translate }}</small>
+      @if (fieldError('senderName'); as err) {
+        <small class="admin-error">{{ err | translate }}</small>
+      }
     </div>
     <div class="col-md-6">
       <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.SENDER_PHONE' | translate }}</label>
@@ -17,256 +19,312 @@
         (focus)="onPhoneFocus('senderPhone')"
         (blur)="onPhoneBlur('senderPhone')"
         [class.is-invalid]="isFieldInvalid('senderPhone')"
-      />
-      <small class="admin-error" *ngIf="fieldError('senderPhone') as err">{{ err | translate }}</small>
-    </div>
-
-    <!-- OBRS-341: recipient does not exist on the carry-on-on-seat wire
-         contract at all (no delivery leg) — hidden entirely, not just
-         disabled, so nothing here can leak a stray value into that
-         payload. -->
-    <ng-container *ngIf="!isCarryOnMode">
-      <div class="col-12">
-        <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.SECTION.RECIPIENT' | translate }}</h5>
-      </div>
-      <div class="col-md-6">
-        <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.RECIPIENT_NAME' | translate }}</label>
-        <input type="text" class="admin-field" formControlName="recipientName" [class.is-invalid]="isFieldInvalid('recipientName')" />
-        <small class="admin-error" *ngIf="fieldError('recipientName') as err">{{ err | translate }}</small>
-      </div>
-      <div class="col-md-6">
-        <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.RECIPIENT_PHONE' | translate }}</label>
-        <input
-          type="text"
-          class="admin-field"
-          formControlName="recipientPhone"
-          (focus)="onPhoneFocus('recipientPhone')"
-          (blur)="onPhoneBlur('recipientPhone')"
-          [class.is-invalid]="isFieldInvalid('recipientPhone')"
         />
-        <small class="admin-error" *ngIf="fieldError('recipientPhone') as err">{{ err | translate }}</small>
+        @if (fieldError('senderPhone'); as err) {
+          <small class="admin-error">{{ err | translate }}</small>
+        }
       </div>
-    </ng-container>
 
-    <div class="col-12">
-      <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.SECTION.TRIP' | translate }}</h5>
-    </div>
-    <div class="col-md-4">
-      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.SCHEDULE' | translate }}</label>
-      <app-admin-dropdown
-        formControlName="scheduleId"
-        [options]="scheduleOptions"
-        [placeholder]="'STAFF.PARCEL_CONSIGN.FIELD.SCHEDULE' | translate"
-        valueKey="value"
-        labelKey="label"
-      ></app-admin-dropdown>
-    </div>
-    <div class="col-md-4">
-      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.PICKUP_STOP' | translate }}</label>
-      <app-admin-dropdown
-        formControlName="pickupStopId"
-        [options]="pickupOptions"
-        [placeholder]="'STAFF.PARCEL_CONSIGN.FIELD.PICKUP_STOP' | translate"
-        [disabled]="isLoadingStops || pickupOptions.length === 0"
-        valueKey="value"
-        labelKey="label"
-      ></app-admin-dropdown>
-    </div>
-    <div class="col-md-4">
-      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.DROPOFF_STOP' | translate }}</label>
-      <app-admin-dropdown
-        formControlName="dropoffStopId"
-        [options]="dropoffOptions"
-        [placeholder]="'STAFF.PARCEL_CONSIGN.FIELD.DROPOFF_STOP' | translate"
-        [disabled]="isLoadingStops || dropoffOptions.length === 0"
-        valueKey="value"
-        labelKey="label"
-      ></app-admin-dropdown>
-    </div>
-
-    <div class="col-md-4">
-      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.WEIGHT' | translate }}</label>
-      <input type="number" step="0.1" class="admin-field" formControlName="weightKg" [class.is-invalid]="isFieldInvalid('weightKg')" />
-      <small class="admin-error" *ngIf="fieldError('weightKg') as err">{{ err | translate }}</small>
-    </div>
-
-    <!-- Cargo-kg availability indicator is consigned-only (that quota does
-         not apply to a carry-on item at all). -->
-    <div class="col-md-8" *ngIf="!isCarryOnMode">
-      <div class="parcel-consign-indicator" *ngIf="isLoadingCargo">
-        {{ 'STAFF.PARCEL_CONSIGN.CARGO.LOADING' | translate }}
-      </div>
-      <div class="parcel-consign-indicator is-error" *ngIf="!isLoadingCargo && cargoErrorKey as err">
-        {{ err | translate }}
-      </div>
-      <div class="parcel-consign-indicator" *ngIf="!isLoadingCargo && !cargoErrorKey && cargoAvailability as cargo">
-        {{ 'STAFF.PARCEL_CONSIGN.CARGO.REMAINING' | translate: { remaining: cargo.remainingKg, capacity: cargo.cargoCapacityKg } }}
-      </div>
-    </div>
-
-    <div class="col-12">
-      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.DESCRIPTION' | translate }}</label>
-      <textarea class="admin-field" rows="3" formControlName="description" [class.is-invalid]="isFieldInvalid('description')"></textarea>
-      <small class="admin-error" *ngIf="fieldError('description') as err">{{ err | translate }}</small>
-    </div>
-
-    <div class="col-12" [formGroup]="dimensionsGroup">
-      <h5 class="fw-bold">
-        {{ (isCarryOnMode ? 'STAFF.PARCEL_CONSIGN.SECTION.DIMENSIONS_REQUIRED' : 'STAFF.PARCEL_CONSIGN.SECTION.DIMENSIONS') | translate }}
-      </h5>
-      <div class="row g-3">
-        <div class="col-md-4">
-          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.LENGTH_CM' | translate }}</label>
+      <!-- OBRS-341: recipient does not exist on the carry-on-on-seat wire
+      contract at all (no delivery leg) — hidden entirely, not just
+      disabled, so nothing here can leak a stray value into that
+      payload. -->
+      @if (!isCarryOnMode) {
+        <div class="col-12">
+          <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.SECTION.RECIPIENT' | translate }}</h5>
+        </div>
+        <div class="col-md-6">
+          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.RECIPIENT_NAME' | translate }}</label>
+          <input type="text" class="admin-field" formControlName="recipientName" [class.is-invalid]="isFieldInvalid('recipientName')" />
+          @if (fieldError('recipientName'); as err) {
+            <small class="admin-error">{{ err | translate }}</small>
+          }
+        </div>
+        <div class="col-md-6">
+          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.RECIPIENT_PHONE' | translate }}</label>
           <input
-            type="number"
+            type="text"
             class="admin-field"
-            formControlName="lengthCm"
-            [class.is-invalid]="isCarryOnMode && !!dimensionFieldError('lengthCm')"
-          />
-          <small class="admin-error" *ngIf="isCarryOnMode && dimensionFieldError('lengthCm') as err">{{ err | translate }}</small>
-        </div>
-        <div class="col-md-4">
-          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.WIDTH_CM' | translate }}</label>
-          <input
-            type="number"
-            class="admin-field"
-            formControlName="widthCm"
-            [class.is-invalid]="isCarryOnMode && !!dimensionFieldError('widthCm')"
-          />
-          <small class="admin-error" *ngIf="isCarryOnMode && dimensionFieldError('widthCm') as err">{{ err | translate }}</small>
-        </div>
-        <div class="col-md-4">
-          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.HEIGHT_CM' | translate }}</label>
-          <input
-            type="number"
-            class="admin-field"
-            formControlName="heightCm"
-            [class.is-invalid]="isCarryOnMode && !!dimensionFieldError('heightCm')"
-          />
-          <small class="admin-error" *ngIf="isCarryOnMode && dimensionFieldError('heightCm') as err">{{ err | translate }}</small>
-        </div>
-        <div class="col-12" *ngIf="!isCarryOnMode && isDimensionsIncomplete">
-          <small class="admin-error">{{ 'STAFF.PARCEL_CONSIGN.VALIDATION.DIMENSIONS_ALL_OR_NONE' | translate }}</small>
-        </div>
-      </div>
-
-      <!-- OBRS-341: live client-side classification hint, mirroring the
-           server's rule (shared/lib/parcel-carry-on-classification.ts).
-           Shown only once all three dimensions are usable numbers. -->
-      <div class="col-12" *ngIf="isCarryOnMode && carryOnClassification as classification">
-        <div class="parcel-consign-indicator" *ngIf="classification === 'free_aisle'">
-          {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.CLASSIFICATION.FREE_AISLE' | translate }}
-          <div class="parcel-carryon-free-note">{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.CLASSIFICATION.FREE_AISLE_NOTE' | translate }}</div>
-        </div>
-        <div class="parcel-consign-indicator" *ngIf="classification === 'on_seat'">
-          {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.CLASSIFICATION.ON_SEAT' | translate }}
-        </div>
-      </div>
-    </div>
-
-    <!-- OBRS-341: on-seat-only fields — seat count + optional explicit seat
-         selection. Hidden entirely for free-aisle/consigned. -->
-    <ng-container *ngIf="isOnSeat">
-      <div class="col-md-4">
-        <label>{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.FIELD.SEAT_COUNT' | translate }}</label>
-        <input
-          type="number"
-          min="1"
-          step="1"
-          class="admin-field"
-          formControlName="seatCount"
-          [class.is-invalid]="!!seatCountError"
-        />
-        <small class="admin-error" *ngIf="seatCountError as err">{{ err | translate }}</small>
-      </div>
-
-      <div class="col-12">
-        <div class="form-check">
-          <input type="checkbox" class="form-check-input" id="specifySeats" formControlName="specifySeats" />
-          <label class="form-check-label" for="specifySeats">
-            {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.FIELD.SPECIFY_SEATS' | translate }}
-          </label>
-        </div>
-
-        <div class="parcel-carryon-seat-checklist" *ngIf="form.get('specifySeats')?.value">
-          <label class="parcel-carryon-seat-checklist-label">
-            {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.FIELD.SEAT_NUMBERS' | translate }}
-          </label>
-          <div class="parcel-carryon-seat-options">
-            <div class="form-check form-check-inline" *ngFor="let seat of availableSeatNumbers">
-              <input
-                type="checkbox"
-                class="form-check-input"
-                [id]="'carryon-seat-' + seat"
-                [checked]="isSeatNumberSelected(seat)"
-                (change)="toggleSeatNumber(seat)"
-              />
-              <label class="form-check-label" [for]="'carryon-seat-' + seat">{{ seat }}</label>
-            </div>
+            formControlName="recipientPhone"
+            (focus)="onPhoneFocus('recipientPhone')"
+            (blur)="onPhoneBlur('recipientPhone')"
+            [class.is-invalid]="isFieldInvalid('recipientPhone')"
+            />
+            @if (fieldError('recipientPhone'); as err) {
+              <small class="admin-error">{{ err | translate }}</small>
+            }
           </div>
-          <small class="admin-error" *ngIf="seatNumbersMismatch">
-            {{ 'STAFF.VALIDATION.SEAT_COUNT_MISMATCH' | translate }}
-          </small>
+        }
+
+        <div class="col-12">
+          <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.SECTION.TRIP' | translate }}</h5>
         </div>
-      </div>
-    </ng-container>
+        <div class="col-md-4">
+          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.SCHEDULE' | translate }}</label>
+          <app-admin-dropdown
+            formControlName="scheduleId"
+            [options]="scheduleOptions"
+            [placeholder]="'STAFF.PARCEL_CONSIGN.FIELD.SCHEDULE' | translate"
+            valueKey="value"
+            labelKey="label"
+          ></app-admin-dropdown>
+        </div>
+        <div class="col-md-4">
+          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.PICKUP_STOP' | translate }}</label>
+          <app-admin-dropdown
+            formControlName="pickupStopId"
+            [options]="pickupOptions"
+            [placeholder]="'STAFF.PARCEL_CONSIGN.FIELD.PICKUP_STOP' | translate"
+            [disabled]="isLoadingStops || pickupOptions.length === 0"
+            valueKey="value"
+            labelKey="label"
+          ></app-admin-dropdown>
+        </div>
+        <div class="col-md-4">
+          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.DROPOFF_STOP' | translate }}</label>
+          <app-admin-dropdown
+            formControlName="dropoffStopId"
+            [options]="dropoffOptions"
+            [placeholder]="'STAFF.PARCEL_CONSIGN.FIELD.DROPOFF_STOP' | translate"
+            [disabled]="isLoadingStops || dropoffOptions.length === 0"
+            valueKey="value"
+            labelKey="label"
+          ></app-admin-dropdown>
+        </div>
 
-    <div class="col-12">
-      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.PAYMENT_METHOD' | translate }}</label>
-      <div class="parcel-consign-payment-readonly">{{ 'STAFF.PARCEL_CONSIGN.PAYMENT_CASH' | translate }}</div>
-    </div>
+        <div class="col-md-4">
+          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.WEIGHT' | translate }}</label>
+          <input type="number" step="0.1" class="admin-field" formControlName="weightKg" [class.is-invalid]="isFieldInvalid('weightKg')" />
+          @if (fieldError('weightKg'); as err) {
+            <small class="admin-error">{{ err | translate }}</small>
+          }
+        </div>
 
-    <!-- Consigned price preview (unchanged). -->
-    <div class="col-12" *ngIf="!isCarryOnMode">
-      <div class="parcel-consign-indicator" *ngIf="isLoadingQuote">
-        {{ 'STAFF.PARCEL_CONSIGN.QUOTE.LOADING' | translate }}
-      </div>
-      <div class="parcel-consign-indicator is-error" *ngIf="!isLoadingQuote && quoteErrorKey as err">
-        {{ err | translate }}
-      </div>
-      <div class="parcel-consign-quote" *ngIf="!isLoadingQuote && !quoteErrorKey && quote as q">
-        {{ 'STAFF.PARCEL_CONSIGN.QUOTE.AMOUNT' | translate: { amount: q.amount } }}
-      </div>
-    </div>
+        <!-- Cargo-kg availability indicator is consigned-only (that quota does
+        not apply to a carry-on item at all). -->
+        @if (!isCarryOnMode) {
+          <div class="col-md-8">
+            @if (isLoadingCargo) {
+              <div class="parcel-consign-indicator">
+                {{ 'STAFF.PARCEL_CONSIGN.CARGO.LOADING' | translate }}
+              </div>
+            }
+            @if (!isLoadingCargo && cargoErrorKey; as err) {
+              <div class="parcel-consign-indicator is-error">
+                {{ err | translate }}
+              </div>
+            }
+            @if (!isLoadingCargo && !cargoErrorKey && cargoAvailability; as cargo) {
+              <div class="parcel-consign-indicator">
+                {{ 'STAFF.PARCEL_CONSIGN.CARGO.REMAINING' | translate: { remaining: cargo.remainingKg, capacity: cargo.cargoCapacityKg } }}
+              </div>
+            }
+          </div>
+        }
 
-    <!-- OBRS-341: carry-on on-seat price preview — farePerUnit x seatCount,
-         see carryOnDisplayAmount()'s doc comment for why NOT quote.amount.
-         Free-aisle shows no price at all (the classification hint above
-         already states "no charge"). -->
-    <div class="col-12" *ngIf="isOnSeat">
-      <div class="parcel-consign-indicator" *ngIf="isLoadingQuote">
-        {{ 'STAFF.PARCEL_CONSIGN.QUOTE.LOADING' | translate }}
-      </div>
-      <div class="parcel-consign-indicator is-error" *ngIf="!isLoadingQuote && quoteErrorKey as err">
-        {{ err | translate }}
-      </div>
-      <div class="parcel-consign-quote" *ngIf="!isLoadingQuote && !quoteErrorKey && carryOnDisplayAmount as amount">
-        {{ 'STAFF.PARCEL_CONSIGN.QUOTE.AMOUNT' | translate: { amount: amount } }}
-      </div>
-    </div>
+        <div class="col-12">
+          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.DESCRIPTION' | translate }}</label>
+          <textarea class="admin-field" rows="3" formControlName="description" [class.is-invalid]="isFieldInvalid('description')"></textarea>
+          @if (fieldError('description'); as err) {
+            <small class="admin-error">{{ err | translate }}</small>
+          }
+        </div>
 
-    <div class="col-12">
-      <div class="form-check">
-        <input
-          type="checkbox"
-          class="form-check-input"
-          id="prohibitedAcknowledged"
-          formControlName="prohibitedAcknowledged"
-        />
-        <label class="form-check-label" for="prohibitedAcknowledged">
-          {{ 'STAFF.PARCEL_CONSIGN.FIELD.PROHIBITED_ACK' | translate }}
-        </label>
-      </div>
-    </div>
+        <div class="col-12" [formGroup]="dimensionsGroup">
+          <h5 class="fw-bold">
+            {{ (isCarryOnMode ? 'STAFF.PARCEL_CONSIGN.SECTION.DIMENSIONS_REQUIRED' : 'STAFF.PARCEL_CONSIGN.SECTION.DIMENSIONS') | translate }}
+          </h5>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.LENGTH_CM' | translate }}</label>
+              <input
+                type="number"
+                class="admin-field"
+                formControlName="lengthCm"
+                [class.is-invalid]="isCarryOnMode && !!dimensionFieldError('lengthCm')"
+                />
+                @if (isCarryOnMode && dimensionFieldError('lengthCm'); as err) {
+                  <small class="admin-error">{{ err | translate }}</small>
+                }
+              </div>
+              <div class="col-md-4">
+                <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.WIDTH_CM' | translate }}</label>
+                <input
+                  type="number"
+                  class="admin-field"
+                  formControlName="widthCm"
+                  [class.is-invalid]="isCarryOnMode && !!dimensionFieldError('widthCm')"
+                  />
+                  @if (isCarryOnMode && dimensionFieldError('widthCm'); as err) {
+                    <small class="admin-error">{{ err | translate }}</small>
+                  }
+                </div>
+                <div class="col-md-4">
+                  <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.HEIGHT_CM' | translate }}</label>
+                  <input
+                    type="number"
+                    class="admin-field"
+                    formControlName="heightCm"
+                    [class.is-invalid]="isCarryOnMode && !!dimensionFieldError('heightCm')"
+                    />
+                    @if (isCarryOnMode && dimensionFieldError('heightCm'); as err) {
+                      <small class="admin-error">{{ err | translate }}</small>
+                    }
+                  </div>
+                  @if (!isCarryOnMode && isDimensionsIncomplete) {
+                    <div class="col-12">
+                      <small class="admin-error">{{ 'STAFF.PARCEL_CONSIGN.VALIDATION.DIMENSIONS_ALL_OR_NONE' | translate }}</small>
+                    </div>
+                  }
+                </div>
 
-    <div class="col-12" *ngIf="serverErrorKey as err">
-      <div class="admin-error">{{ err | translate }}</div>
-    </div>
+                <!-- OBRS-341: live client-side classification hint, mirroring the
+                server's rule (shared/lib/parcel-carry-on-classification.ts).
+                Shown only once all three dimensions are usable numbers. -->
+                @if (isCarryOnMode && carryOnClassification; as classification) {
+                  <div class="col-12">
+                    @if (classification === 'free_aisle') {
+                      <div class="parcel-consign-indicator">
+                        {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.CLASSIFICATION.FREE_AISLE' | translate }}
+                        <div class="parcel-carryon-free-note">{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.CLASSIFICATION.FREE_AISLE_NOTE' | translate }}</div>
+                      </div>
+                    }
+                    @if (classification === 'on_seat') {
+                      <div class="parcel-consign-indicator">
+                        {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.CLASSIFICATION.ON_SEAT' | translate }}
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
 
-    <div class="col-12">
-      <button type="submit" class="admin-btn admin-btn-primary" [disabled]="!canSubmit">
-        {{ (isSubmitting ? 'STAFF.PARCEL_CONSIGN.SUBMITTING' : submitLabelKey) | translate }}
-      </button>
-    </div>
-  </div>
-</form>
+              <!-- OBRS-341: on-seat-only fields — seat count + optional explicit seat
+              selection. Hidden entirely for free-aisle/consigned. -->
+              @if (isOnSeat) {
+                <div class="col-md-4">
+                  <label>{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.FIELD.SEAT_COUNT' | translate }}</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    class="admin-field"
+                    formControlName="seatCount"
+                    [class.is-invalid]="!!seatCountError"
+                    />
+                    @if (seatCountError; as err) {
+                      <small class="admin-error">{{ err | translate }}</small>
+                    }
+                  </div>
+                  <div class="col-12">
+                    <div class="form-check">
+                      <input type="checkbox" class="form-check-input" id="specifySeats" formControlName="specifySeats" />
+                      <label class="form-check-label" for="specifySeats">
+                        {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.FIELD.SPECIFY_SEATS' | translate }}
+                      </label>
+                    </div>
+                    @if (form.get('specifySeats')?.value) {
+                      <div class="parcel-carryon-seat-checklist">
+                        <label class="parcel-carryon-seat-checklist-label">
+                          {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.FIELD.SEAT_NUMBERS' | translate }}
+                        </label>
+                        <div class="parcel-carryon-seat-options">
+                          @for (seat of availableSeatNumbers; track seat) {
+                            <div class="form-check form-check-inline">
+                              <input
+                                type="checkbox"
+                                class="form-check-input"
+                                [id]="'carryon-seat-' + seat"
+                                [checked]="isSeatNumberSelected(seat)"
+                                (change)="toggleSeatNumber(seat)"
+                                />
+                                <label class="form-check-label" [for]="'carryon-seat-' + seat">{{ seat }}</label>
+                              </div>
+                            }
+                          </div>
+                          @if (seatNumbersMismatch) {
+                            <small class="admin-error">
+                              {{ 'STAFF.VALIDATION.SEAT_COUNT_MISMATCH' | translate }}
+                            </small>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <div class="col-12">
+                    <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.PAYMENT_METHOD' | translate }}</label>
+                    <div class="parcel-consign-payment-readonly">{{ 'STAFF.PARCEL_CONSIGN.PAYMENT_CASH' | translate }}</div>
+                  </div>
+
+                  <!-- Consigned price preview (unchanged). -->
+                  @if (!isCarryOnMode) {
+                    <div class="col-12">
+                      @if (isLoadingQuote) {
+                        <div class="parcel-consign-indicator">
+                          {{ 'STAFF.PARCEL_CONSIGN.QUOTE.LOADING' | translate }}
+                        </div>
+                      }
+                      @if (!isLoadingQuote && quoteErrorKey; as err) {
+                        <div class="parcel-consign-indicator is-error">
+                          {{ err | translate }}
+                        </div>
+                      }
+                      @if (!isLoadingQuote && !quoteErrorKey && quote; as q) {
+                        <div class="parcel-consign-quote">
+                          {{ 'STAFF.PARCEL_CONSIGN.QUOTE.AMOUNT' | translate: { amount: q.amount } }}
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <!-- OBRS-341: carry-on on-seat price preview — farePerUnit x seatCount,
+                  see carryOnDisplayAmount()'s doc comment for why NOT quote.amount.
+                  Free-aisle shows no price at all (the classification hint above
+                  already states "no charge"). -->
+                  @if (isOnSeat) {
+                    <div class="col-12">
+                      @if (isLoadingQuote) {
+                        <div class="parcel-consign-indicator">
+                          {{ 'STAFF.PARCEL_CONSIGN.QUOTE.LOADING' | translate }}
+                        </div>
+                      }
+                      @if (!isLoadingQuote && quoteErrorKey; as err) {
+                        <div class="parcel-consign-indicator is-error">
+                          {{ err | translate }}
+                        </div>
+                      }
+                      @if (!isLoadingQuote && !quoteErrorKey && carryOnDisplayAmount; as amount) {
+                        <div class="parcel-consign-quote">
+                          {{ 'STAFF.PARCEL_CONSIGN.QUOTE.AMOUNT' | translate: { amount: amount } }}
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <div class="col-12">
+                    <div class="form-check">
+                      <input
+                        type="checkbox"
+                        class="form-check-input"
+                        id="prohibitedAcknowledged"
+                        formControlName="prohibitedAcknowledged"
+                        />
+                        <label class="form-check-label" for="prohibitedAcknowledged">
+                          {{ 'STAFF.PARCEL_CONSIGN.FIELD.PROHIBITED_ACK' | translate }}
+                        </label>
+                      </div>
+                    </div>
+
+                    @if (serverErrorKey; as err) {
+                      <div class="col-12">
+                        <div class="admin-error">{{ err | translate }}</div>
+                      </div>
+                    }
+
+                    <div class="col-12">
+                      <button type="submit" class="admin-btn admin-btn-primary" [disabled]="!canSubmit">
+                        {{ (isSubmitting ? 'STAFF.PARCEL_CONSIGN.SUBMITTING' : submitLabelKey) | translate }}
+                      </button>
+                    </div>
+                  </div>
+                </form>

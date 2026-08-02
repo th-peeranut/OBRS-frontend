@@ -18,9 +18,10 @@ export interface BusinessPolicyParams {
 // admin/settings/booking-policy. The rule going forward: these numbers are
 // NEVER hardcoded in i18n again.
 @Component({
-  selector: 'app-business-policy',
-  templateUrl: './business-policy.component.html',
-  styleUrl: './business-policy.component.scss',
+    selector: 'app-business-policy',
+    templateUrl: './business-policy.component.html',
+    styleUrl: './business-policy.component.scss',
+    standalone: false
 })
 export class BusinessPolicyComponent implements OnInit, OnDestroy {
   // Starts null; assigned ONCE when the API resolves (never rebuilt on every

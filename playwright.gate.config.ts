@@ -108,6 +108,51 @@ export default defineConfig({
     // reach hermetically instead of one module, with an ALLOW list carrying a reason per
     // host not yet fixed. Costs this lane page loads only -- it reuses those fixtures.
     '**/host-box-sweep.spec.ts',
+    // OBRS-854. The only spec in this lane that starts with NO session at all, because the
+    // scenario is a customer scanning a counter QR on their own phone: the bounce through
+    // AuthGuard and the trip back to /account are the thing under test, not scenery around it.
+    // It performs its own login against a stubbed POST /api/auth/login and aborts the GIS script
+    // that /login pulls from accounts.google.com, so it still needs nothing but a browser.
+    '**/obrs-854-account-deeplink.spec.ts',
+    // OBRS-882. Admitted as the counterpart to the fix that took the PDPA consent banner
+    // out of every other spec's way: with `seedAnalyticsConsent` seeded lane-wide, this is
+    // the only spec left that loads a page with the banner UP. Without it the fix would be
+    // a mute rather than a repair. Hermetic on the same terms as the rest — two stubbed
+    // home-page calls and nothing else.
+    '**/analytics-consent-banner.spec.ts',
+    // OBRS-907. Seeds a synthetic admin session and hangs the notifications
+    // call so the notification-bell's spinner stays up; asserts
+    // page.emulateMedia({ reducedMotion: 'reduce' }) actually freezes the
+    // real compiled CSS cascade. Hermetic on the same terms as the rest.
+    '**/obrs-907-loading-state-reduced-motion.spec.ts',
+    // OBRS-939. Asks the one question a screenshot cannot: is the renderer still
+    // ANSWERING. A `routerLinkActiveOptions` binding pointed at a method call gave
+    // RouterLinkActive a new object every cycle, so its ngOnChanges scheduled a
+    // microtask every cycle and zone.js never ran out of microtasks — change
+    // detection looped forever and the admin shell stopped responding to
+    // anything, on every /admin page, whether its API calls succeeded or failed.
+    // The last paint stays on screen, so it photographs as a healthy page.
+    // Hermetic on the same terms as the rest: synthetic session, no backend.
+    '**/obrs-939-admin-shell-responsive.spec.ts',
+    // OBRS-813. The cancel modal now offers the reschedule door; the card forbids
+    // that offer costing a single extra click on the way to cancelling. Measured
+    // with a control arm in the same run (eligible booking vs ineligible, whose
+    // modal is the pre-card layout) rather than a constant nobody measured before.
+    '**/obrs-813-cancel-offers-reschedule.spec.ts',
+    // OBRS-942. The non-manual (card/gateway) refund lane's control-arm
+    // counterpart to the spec above — before this card that lane fell through
+    // to a plain SweetAlert and never carried the OBRS-813 offer, and had zero
+    // E2E coverage of its own (every existing cancel spec used
+    // MANUAL_REFUND_REQUIRED). Hermetic on the same terms: it stubs every
+    // /api/** call and reuses the same fixture shapes.
+    '**/obrs-942-non-manual-cancel.spec.ts',
+    // OBRS-627. The published refund terms, asserted against the REAL th.json in
+    // the assembled app: the unit suite can only prove the component
+    // interpolates what it is handed, not that the shipped page calls the
+    // endpoint or that a raw `{{...}}` never reaches a customer — the two things
+    // that went wrong on the equivalent claim one page over (OBRS-564). Hermetic
+    // on the same terms as the rest: every /api/** call is fulfilled in-spec.
+    '**/obrs-627-refund-policy.spec.ts',
   ],
 
   timeout: 60_000,

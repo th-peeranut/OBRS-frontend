@@ -1,15 +1,17 @@
-<section class="admin-page-intro" *ngIf="isRefreshing && !isLoading">
-  <div>
-    <app-admin-refresh-hint
-      [refreshing]="isRefreshing"
-      [failed]="false"
-      [loading]="isLoading"
-    ></app-admin-refresh-hint>
-  </div>
-</section>
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div>
+      <app-admin-refresh-hint
+        [refreshing]="isRefreshing"
+        [failed]="false"
+        [loading]="isLoading"
+      ></app-admin-refresh-hint>
+    </div>
+  </section>
+}
 
 <section class="admin-page-filters mt-3">
-  <p-calendar
+  <p-datePicker
     styleClass="app-date-field"
     panelStyleClass="app-date-field-panel"
     dateFormat="dd/mm/yy"
@@ -19,13 +21,13 @@
     [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.CASH_ONLINE_RECONCILIATION.FILTER_FROM' | translate"
-  >
+    >
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
-  </p-calendar>
+  </p-datePicker>
 
-  <p-calendar
+  <p-datePicker
     styleClass="app-date-field"
     panelStyleClass="app-date-field-panel"
     dateFormat="dd/mm/yy"
@@ -35,200 +37,231 @@
     [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.CASH_ONLINE_RECONCILIATION.FILTER_TO' | translate"
-  >
+    >
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
-  </p-calendar>
+  </p-datePicker>
 </section>
 
 <!-- Mandatory basis note — unlike the state/cards/table sections below, this is NOT
-     gated by contentState: it stays visible even in the invalid-range/error states. -->
+gated by contentState: it stays visible even in the invalid-range/error states. -->
 <p class="admin-muted cor-basis-note mt-2">
   {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.BASIS_NOTE' | translate }}
 </p>
 
 <!-- Invalid range (client guard) or fetch error: the message REPLACES the cards and
-     the daily table — never shown next to stale/zero numbers. -->
-<section class="admin-card mt-3 cor-state-card" *ngIf="contentState === 'invalid' || contentState === 'error'">
-  <p class="admin-error" *ngIf="contentState === 'invalid'">{{ rangeError }}</p>
-  <p class="admin-muted" *ngIf="contentState === 'error'">{{ loadError }}</p>
-</section>
+the daily table — never shown next to stale/zero numbers. -->
+@if (contentState === 'invalid' || contentState === 'error') {
+  <section class="admin-card mt-3 cor-state-card">
+    @if (contentState === 'invalid') {
+      <p class="admin-error">{{ rangeError }}</p>
+    }
+    @if (contentState === 'error') {
+      <p class="admin-muted">{{ loadError }}</p>
+    }
+  </section>
+}
 
-<section class="admin-grid admin-grid--3 mt-3" *ngIf="contentState === 'loading' || contentState === 'empty' || contentState === 'data'">
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.CASH' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ formatMoney(summary?.cash?.collected ?? '0.00', currency) }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-      <ng-container *ngIf="!isLoading">
-        <p class="admin-muted">
-          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ summary?.cash?.count ?? 0 }}
-        </p>
-        <p class="admin-muted cor-sub-line">
-          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}:
-          {{ formatMoney(summary?.cash?.refunded ?? '0.00', currency) }}
-        </p>
-        <p class="admin-emphasis cor-sub-line">
-          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}:
-          {{ formatMoney(summary?.cash?.net ?? '0.00', currency) }}
-        </p>
-      </ng-container>
-    </div>
-  </article>
-
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-info"><span class="material-symbols-outlined">credit_card</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.ONLINE' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ formatMoney(summary?.online?.collected ?? '0.00', currency) }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-      <ng-container *ngIf="!isLoading">
-        <p class="admin-muted">
-          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ summary?.online?.count ?? 0 }}
-        </p>
-        <p class="admin-muted cor-sub-line">
-          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}:
-          {{ formatMoney(summary?.online?.refunded ?? '0.00', currency) }}
-        </p>
-        <p class="admin-emphasis cor-sub-line">
-          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}:
-          {{ formatMoney(summary?.online?.net ?? '0.00', currency) }}
-        </p>
-      </ng-container>
-    </div>
-  </article>
-
-  <article class="admin-card admin-kpi">
-    <span class="admin-kpi-icon is-neutral"><span class="material-symbols-outlined">account_balance</span></span>
-    <div>
-      <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.OTHER' | translate }}</p>
-      <p class="admin-big-number" *ngIf="!isLoading">{{ formatMoney(summary?.other?.collected ?? '0.00', currency) }}</p>
-      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-      <ng-container *ngIf="!isLoading">
-        <p class="admin-muted">
-          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ summary?.other?.count ?? 0 }}
-        </p>
-        <p class="admin-muted cor-sub-line">
-          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}:
-          {{ formatMoney(summary?.other?.refunded ?? '0.00', currency) }}
-        </p>
-        <p class="admin-emphasis cor-sub-line">
-          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}:
-          {{ formatMoney(summary?.other?.net ?? '0.00', currency) }}
-        </p>
-      </ng-container>
-    </div>
-  </article>
-</section>
+@if (contentState === 'loading' || contentState === 'empty' || contentState === 'data') {
+  <section class="admin-grid admin-grid--3 mt-3">
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.CASH' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ formatMoney(summary?.cash?.collected ?? '0.00', currency) }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+        @if (!isLoading) {
+          <p class="admin-muted">
+            {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ summary?.cash?.count ?? 0 }}
+          </p>
+          <p class="admin-muted cor-sub-line">
+            {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}:
+            {{ formatMoney(summary?.cash?.refunded ?? '0.00', currency) }}
+          </p>
+          <p class="admin-emphasis cor-sub-line">
+            {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}:
+            {{ formatMoney(summary?.cash?.net ?? '0.00', currency) }}
+          </p>
+        }
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-info"><span class="material-symbols-outlined">credit_card</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.ONLINE' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ formatMoney(summary?.online?.collected ?? '0.00', currency) }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+        @if (!isLoading) {
+          <p class="admin-muted">
+            {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ summary?.online?.count ?? 0 }}
+          </p>
+          <p class="admin-muted cor-sub-line">
+            {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}:
+            {{ formatMoney(summary?.online?.refunded ?? '0.00', currency) }}
+          </p>
+          <p class="admin-emphasis cor-sub-line">
+            {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}:
+            {{ formatMoney(summary?.online?.net ?? '0.00', currency) }}
+          </p>
+        }
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-neutral"><span class="material-symbols-outlined">account_balance</span></span>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.OTHER' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number">{{ formatMoney(summary?.other?.collected ?? '0.00', currency) }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+        @if (!isLoading) {
+          <p class="admin-muted">
+            {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ summary?.other?.count ?? 0 }}
+          </p>
+          <p class="admin-muted cor-sub-line">
+            {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}:
+            {{ formatMoney(summary?.other?.refunded ?? '0.00', currency) }}
+          </p>
+          <p class="admin-emphasis cor-sub-line">
+            {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}:
+            {{ formatMoney(summary?.other?.net ?? '0.00', currency) }}
+          </p>
+        }
+      </div>
+    </article>
+  </section>
+}
 
 <!-- Total Collected — full-width, no icon circle, centered/larger figure. New pattern
-     (not shared with refund-void-report, which deliberately has NO grand total). -->
-<section class="admin-card cor-total-card mt-3" *ngIf="contentState === 'loading' || contentState === 'empty' || contentState === 'data'">
-  <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.TOTAL_COLLECTED' | translate }}</p>
-  <p class="cor-total-figure" *ngIf="!isLoading">{{ formatMoney(summary?.totalCollected ?? '0.00', currency) }}</p>
-  <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
-</section>
+(not shared with refund-void-report, which deliberately has NO grand total). -->
+@if (contentState === 'loading' || contentState === 'empty' || contentState === 'data') {
+  <section class="admin-card cor-total-card mt-3">
+    <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.TOTAL_COLLECTED' | translate }}</p>
+    @if (!isLoading) {
+      <p class="cor-total-figure">{{ formatMoney(summary?.totalCollected ?? '0.00', currency) }}</p>
+    }
+    @if (isLoading) {
+      <span class="admin-skeleton admin-skeleton--sm"></span>
+    }
+  </section>
+}
 
 <!-- Mandatory partition note — like the basis note above, NOT gated by contentState. -->
 <p class="admin-muted cor-partition-note mt-2">
   {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.PARTITION_NOTE' | translate }}
 </p>
 
-<section class="admin-card mt-3" *ngIf="contentState === 'loading' || contentState === 'empty' || contentState === 'data'">
-  <div class="admin-card-head">
-    <h4>{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.TABLE_TITLE' | translate }}</h4>
-  </div>
-
-  <!-- Valid range with all-zero buckets: the note REPLACES the table, so a
-       screenful of zero rows never reads as "there is data". -->
-  <p class="admin-muted cor-empty-note" *ngIf="contentState === 'empty'">
-    {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.EMPTY' | translate }}
-  </p>
-
-  <div class="admin-table-wrap" *ngIf="contentState !== 'empty'">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th rowspan="2">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.COL.DATE' | translate }}</th>
-          <th colspan="3">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.CASH' | translate }}</th>
-          <th colspan="3">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.ONLINE' | translate }}</th>
-          <th colspan="3">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.OTHER' | translate }}</th>
-        </tr>
-        <tr>
-          <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COLLECTED' | translate }}</th>
-          <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}</th>
-          <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}</th>
-          <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COLLECTED' | translate }}</th>
-          <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}</th>
-          <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}</th>
-          <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COLLECTED' | translate }}</th>
-          <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}</th>
-          <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngIf="isLoading">
-          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-            <td><span class="admin-skeleton"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          </tr>
-        </ng-container>
-
-        <ng-container *ngIf="!isLoading">
-          <ng-container *ngFor="let row of dailyRows; let i = index; trackBy: trackByRow">
-            <tr [class.zebra]="i % 2 === 1">
-              <td>
-                <button
-                  type="button"
-                  class="admin-icon-btn"
-                  (click)="toggleExpand(row)"
-                  [attr.aria-label]="(isExpanded(row) ? 'ADMIN.CASH_ONLINE_RECONCILIATION.COLLAPSE_ARIA' : 'ADMIN.CASH_ONLINE_RECONCILIATION.EXPAND_ARIA') | translate"
-                >
-                  <span class="material-symbols-outlined">{{ isExpanded(row) ? 'expand_less' : 'expand_more' }}</span>
-                </button>
-                <span class="admin-emphasis">{{ row.date }}</span>
-              </td>
-              <td class="cor-money">{{ formatMoney(row.cash.collected, currency) }}</td>
-              <td class="cor-money">{{ formatMoney(row.cash.refunded, currency) }}</td>
-              <td class="cor-money">{{ formatMoney(row.cash.net, currency) }}</td>
-              <td class="cor-money">{{ formatMoney(row.online.collected, currency) }}</td>
-              <td class="cor-money">{{ formatMoney(row.online.refunded, currency) }}</td>
-              <td class="cor-money">{{ formatMoney(row.online.net, currency) }}</td>
-              <td class="cor-money">{{ formatMoney(row.other.collected, currency) }}</td>
-              <td class="cor-money">{{ formatMoney(row.other.refunded, currency) }}</td>
-              <td class="cor-money">{{ formatMoney(row.other.net, currency) }}</td>
+@if (contentState === 'loading' || contentState === 'empty' || contentState === 'data') {
+  <section class="admin-card mt-3">
+    <div class="admin-card-head">
+      <h4>{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.TABLE_TITLE' | translate }}</h4>
+    </div>
+    <!-- Valid range with all-zero buckets: the note REPLACES the table, so a
+    screenful of zero rows never reads as "there is data". -->
+    @if (contentState === 'empty') {
+      <p class="admin-muted cor-empty-note">
+        {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.EMPTY' | translate }}
+      </p>
+    }
+    @if (contentState !== 'empty') {
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th rowspan="2">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.COL.DATE' | translate }}</th>
+              <th colspan="3">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.CASH' | translate }}</th>
+              <th colspan="3">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.ONLINE' | translate }}</th>
+              <th colspan="3">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.OTHER' | translate }}</th>
             </tr>
-            <tr *ngIf="isExpanded(row)" class="cor-detail-row">
-              <td [attr.colspan]="10">
-                <div class="cor-chip-list">
-                  <span class="cor-chip">
-                    {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.CASH' | translate }}
-                    {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ row.cash.count }}
-                  </span>
-                  <span class="cor-chip">
-                    {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.ONLINE' | translate }}
-                    {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ row.online.count }}
-                  </span>
-                  <span class="cor-chip">
-                    {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.OTHER' | translate }}
-                    {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ row.other.count }}
-                  </span>
-                </div>
-              </td>
+            <tr>
+              <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COLLECTED' | translate }}</th>
+              <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}</th>
+              <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}</th>
+              <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COLLECTED' | translate }}</th>
+              <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}</th>
+              <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}</th>
+              <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COLLECTED' | translate }}</th>
+              <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}</th>
+              <th class="cor-money">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}</th>
             </tr>
-          </ng-container>
-        </ng-container>
-      </tbody>
-    </table>
-  </div>
-</section>
+          </thead>
+          <tbody>
+            @if (isLoading) {
+              @for (row of skeletonRows; track row) {
+                <tr class="admin-skeleton-row" aria-hidden="true">
+                  <td><span class="admin-skeleton"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                </tr>
+              }
+            }
+            @if (!isLoading) {
+              @for (row of dailyRows; track trackByRow(i, row); let i = $index) {
+                <tr [class.zebra]="i % 2 === 1">
+                  <td>
+                    <button
+                      type="button"
+                      class="admin-icon-btn"
+                      (click)="toggleExpand(row)"
+                      [attr.aria-label]="(isExpanded(row) ? 'ADMIN.CASH_ONLINE_RECONCILIATION.COLLAPSE_ARIA' : 'ADMIN.CASH_ONLINE_RECONCILIATION.EXPAND_ARIA') | translate"
+                      >
+                      <span class="material-symbols-outlined">{{ isExpanded(row) ? 'expand_less' : 'expand_more' }}</span>
+                    </button>
+                    <span class="admin-emphasis">{{ row.date }}</span>
+                  </td>
+                  <td class="cor-money">{{ formatMoney(row.cash.collected, currency) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.cash.refunded, currency) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.cash.net, currency) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.online.collected, currency) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.online.refunded, currency) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.online.net, currency) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.other.collected, currency) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.other.refunded, currency) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.other.net, currency) }}</td>
+                </tr>
+                @if (isExpanded(row)) {
+                  <tr class="cor-detail-row">
+                    <td [attr.colspan]="10">
+                      <div class="cor-chip-list">
+                        <span class="cor-chip">
+                          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.CASH' | translate }}
+                          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ row.cash.count }}
+                        </span>
+                        <span class="cor-chip">
+                          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.ONLINE' | translate }}
+                          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ row.online.count }}
+                        </span>
+                        <span class="cor-chip">
+                          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.OTHER' | translate }}
+                          {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.COUNT_LABEL' | translate }}: {{ row.other.count }}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

@@ -1,84 +1,84 @@
-<div
-  class="card-container"
-  *ngIf="this.scheduleBooking | async as scheduleBooking"
->
-  <ng-container *ngIf="this.scheduleFilter | async as scheduleFilter">
-    <!-- Price details -->
-    <div class="card-header">
-      {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.HEADER" | translate }}
-    </div>
-
-    <hr />
-
-    <div class="card-body">
-      <!-- ADULT -->
-      <div
-        class="card-body-content"
-        *ngIf="getAdultCount(scheduleFilter?.passengerInfo) > 0"
-      >
-        <span>
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.ADULT_UNIT" | translate }}
-        </span>
-        <span>
-          {{ getAdultCount(scheduleFilter?.passengerInfo) }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
-        </span>
+@if (this.scheduleBooking | async; as scheduleBooking) {
+  <div
+    class="card-container"
+    >
+    @if (this.scheduleFilter | async; as scheduleFilter) {
+      <!-- Price details -->
+      <div class="card-header">
+        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.HEADER" | translate }}
       </div>
-
-      <!-- KIDS -->
-      <div
-        class="card-body-content"
-        *ngIf="getKidCount(scheduleFilter?.passengerInfo) > 0"
-      >
-        <span>
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.KID_UNIT" | translate }}
-        </span>
-        <span>
-          {{ getKidCount(scheduleFilter?.passengerInfo) }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
-        </span>
-      </div>
-
-      <!-- Ticket price -->
-      <div class="card-body-content" *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 1">
-        <span>
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE" | translate }}
-        </span>
-        <span>
-          {{ getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
-        </span>
-      </div>
-
-      <!-- Round-trip ticket price -->
-      <div class="card-body-content" *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 2">
-        <span>
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE_RETURN" | translate }}
-        </span>
-        <span>
-          {{
-            getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) +
+      <hr />
+      <div class="card-body">
+        <!-- ADULT -->
+        @if (getAdultCount(scheduleFilter?.passengerInfo) > 0) {
+          <div
+            class="card-body-content"
+            >
+            <span>
+              {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.ADULT_UNIT" | translate }}
+            </span>
+            <span>
+              {{ getAdultCount(scheduleFilter?.passengerInfo) }}
+              {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
+            </span>
+          </div>
+        }
+        <!-- KIDS -->
+        @if (getKidCount(scheduleFilter?.passengerInfo) > 0) {
+          <div
+            class="card-body-content"
+            >
+            <span>
+              {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.KID_UNIT" | translate }}
+            </span>
+            <span>
+              {{ getKidCount(scheduleFilter?.passengerInfo) }}
+              {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
+            </span>
+          </div>
+        }
+        <!-- Ticket price -->
+        @if (getScheduleBooking(scheduleBooking?.schedule).length == 1) {
+          <div class="card-body-content">
+            <span>
+              {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE" | translate }}
+            </span>
+            <span>
+              {{ getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) }}
+              {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
+            </span>
+          </div>
+        }
+        <!-- Round-trip ticket price -->
+        @if (getScheduleBooking(scheduleBooking?.schedule).length == 2) {
+          <div class="card-body-content">
+            <span>
+              {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE_RETURN" | translate }}
+            </span>
+            <span>
+              {{
+              getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) +
               getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[1].pricePerSeat)
-          }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
+              }}
+              {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
+            </span>
+          </div>
+        }
+      </div>
+      <hr class="dotted-line" />
+      <!-- Total price -->
+      <div class="card-footer">
+        <span>
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
+        </span>
+        <span>
+          {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
         </span>
       </div>
-    </div>
-
-    <hr class="dotted-line" />
-
-    <!-- Total price -->
-    <div class="card-footer">
-      <span>
-        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
-      </span>
-      <span>
-        {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
-        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
-      </span>
-    </div>
-  </ng-container>
-</div>
+    }
+  </div>
+}
 
 <button type="button" class="btn-confirm" (click)="onConfirm()">
   {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.CONFIRM" | translate }}

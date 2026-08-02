@@ -1,13 +1,17 @@
-<section class="admin-page-intro" *ngIf="isLoading || errorMessage || isRefreshing || refreshFailed">
-  <div>
-    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
-    <app-admin-refresh-hint
-      [refreshing]="isRefreshing"
-      [failed]="refreshFailed"
-      [loading]="isLoading"
-    ></app-admin-refresh-hint>
-  </div>
-</section>
+@if (isLoading || errorMessage || isRefreshing || refreshFailed) {
+  <section class="admin-page-intro">
+    <div>
+      @if (errorMessage) {
+        <p class="admin-muted">{{ errorMessage }}</p>
+      }
+      <app-admin-refresh-hint
+        [refreshing]="isRefreshing"
+        [failed]="refreshFailed"
+        [loading]="isLoading"
+      ></app-admin-refresh-hint>
+    </div>
+  </section>
+}
 
 <section class="admin-card mt-3">
   <div class="admin-card-head">
@@ -16,16 +20,16 @@
 
   <div class="admin-page-filters">
     <!-- OBRS-378: no [placeholder] here (design-system.md §3.1 leak) — a
-         placeholder header would render a selectable empty row emitting '',
-         re-entering the retired "show all" mode and sending an undefined
-         status to the server. The dropdown always holds a concrete
-         role-default status, so its label comes from the selected option
-         (the dropdown's own selectedLabel), not a placeholder.
-         OBRS-524: "see everything" is now offered too, but NOT by reverting
-         to that placeholder shape — it's a REAL option (value 'all') in
-         statusFilterOptions below, selectable and de-selectable exactly like
-         'new'/'accepted'/etc. Only usability-reports.store.ts's fetch()
-         treats 'all' specially, by omitting ?status= server-side. -->
+    placeholder header would render a selectable empty row emitting '',
+    re-entering the retired "show all" mode and sending an undefined
+    status to the server. The dropdown always holds a concrete
+    role-default status, so its label comes from the selected option
+    (the dropdown's own selectedLabel), not a placeholder.
+    OBRS-524: "see everything" is now offered too, but NOT by reverting
+    to that placeholder shape — it's a REAL option (value 'all') in
+    statusFilterOptions below, selectable and de-selectable exactly like
+    'new'/'accepted'/etc. Only usability-reports.store.ts's fetch()
+    treats 'all' specially, by omitting ?status= server-side. -->
     <app-admin-dropdown
       [value]="selectedStatusFilter"
       [options]="statusFilterOptions"
@@ -33,6 +37,21 @@
       labelKey="label"
       (valueChange)="onStatusFilterChange($event)"
     ></app-admin-dropdown>
+
+    <!-- OBRS-373: live-refresh pill — appears when the background poll finds
+    the active filter has more rows on the server than this view loaded.
+    aria-live so a screen-reader admin is told new reports arrived; click
+    pulls them in (jump to page 1 + refresh). -->
+    @if (newReportCount > 0) {
+      <button
+        type="button"
+        class="admin-btn admin-btn-small ur-new-reports-pill"
+        aria-live="polite"
+        (click)="showNewReports()"
+        >
+        {{ 'ADMIN.USABILITY_REPORTS.NEW_REPORTS_PILL' | translate: { count: newReportCount } }}
+      </button>
+    }
   </div>
 
   <div class="admin-table-wrap">
@@ -50,417 +69,463 @@
         </tr>
       </thead>
       <tbody>
-        <ng-container *ngIf="isLoading">
-          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          </tr>
-        </ng-container>
+        @if (isLoading) {
+          @for (row of skeletonRows; track row) {
+            <tr class="admin-skeleton-row" aria-hidden="true">
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            </tr>
+          }
+        }
 
-        <ng-container *ngIf="!isLoading">
-          <tr
-            *ngFor="let report of allReports; let i = index; trackBy: trackById"
-            class="ur-report-row"
-            [class.zebra]="i % 2 === 1"
-            (click)="onRowActivate(report.id, $event)"
-          >
-            <td class="admin-emphasis">{{ report.id }}</td>
-            <td>{{ categoryLabel(report.category) }}</td>
-            <td>
-              <span class="admin-status" [ngClass]="statusClass(report.status)">
-                {{ statusLabel(report.status) }}
-              </span>
-              <!-- OBRS-376: read-only for owner too, same visibility as the status chip. -->
-              <a
-                *ngIf="report.duplicateOfId !== null"
-                class="btn btn-link p-0 ur-duplicate-link"
-                [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_ARIA' | translate:{ id: report.duplicateOfId }"
-                (click)="openCanonicalReport(report.duplicateOfId)"
+        @if (!isLoading) {
+          @for (report of allReports; track trackById(i, report); let i = $index) {
+            <tr
+              class="ur-report-row"
+              [class.zebra]="i % 2 === 1"
+              (click)="onRowActivate(report.id, $event)"
               >
-                {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_TEXT' | translate:{ id: report.duplicateOfId } }}
-              </a>
-              <span *ngIf="report.duplicateCount > 0" class="ur-duplicate-count-pill">
-                {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.COUNT_BADGE' | translate:{ count: report.duplicateCount } }}
-              </span>
-            </td>
-            <td>
-              <ng-container *ngIf="report.userId !== null; else anonCell">
-                {{ report.userId }}
-              </ng-container>
-              <ng-template #anonCell>
-                <span class="admin-muted">
-                  {{ 'ADMIN.USABILITY_REPORTS.DETAIL.ANONYMOUS' | translate }}
+              <td class="admin-emphasis">{{ report.id }}</td>
+              <td>{{ categoryLabel(report.category) }}</td>
+              <td>
+                <span class="admin-status" [ngClass]="statusClass(report.status)">
+                  {{ statusLabel(report.status) }}
                 </span>
-              </ng-template>
-            </td>
-            <td class="ur-description-cell">{{ report.descriptionPreview }}</td>
-            <td>{{ report.imageCount }}</td>
-            <td>{{ displayDateTime(report.createdAt) }}</td>
-            <td class="ur-actions-cell">
-              <button
-                type="button"
-                class="admin-btn admin-btn-small"
-                (click)="openDetail(report.id)"
-              >
-                {{ 'ADMIN.USABILITY_REPORTS.VIEW' | translate }}
-              </button>
-              <button
-                *ngIf="canMarkAsDuplicate(report.status)"
-                type="button"
-                class="admin-btn admin-btn-small"
-                (click)="openDuplicatePicker(report.id)"
-              >
-                {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.MARK_ACTION' | translate }}
-              </button>
-              <button
-                *ngIf="canUnmarkDuplicate(report.status)"
-                type="button"
-                class="admin-btn admin-btn-small admin-btn-danger"
-                (click)="unmarkDuplicate(report.id)"
-              >
-                {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_ACTION' | translate }}
-              </button>
-            </td>
-          </tr>
-
-          <tr *ngIf="allReports.length === 0 && !errorMessage" class="admin-empty-row">
-            <td colspan="8">{{ 'ADMIN.USABILITY_REPORTS.EMPTY' | translate }}</td>
-          </tr>
-        </ng-container>
+                <!-- OBRS-376: read-only for owner too, same visibility as the status chip. -->
+                @if (report.duplicateOfId !== null) {
+                  <a
+                    class="btn btn-link p-0 ur-duplicate-link"
+                    [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_ARIA' | translate:{ id: report.duplicateOfId }"
+                    (click)="openCanonicalReport(report.duplicateOfId)"
+                    >
+                    {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_TEXT' | translate:{ id: report.duplicateOfId } }}
+                  </a>
+                }
+                @if (report.duplicateCount > 0) {
+                  <span class="ur-duplicate-count-pill">
+                    {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.COUNT_BADGE' | translate:{ count: report.duplicateCount } }}
+                  </span>
+                }
+              </td>
+              <td>
+                @if (report.userId !== null) {
+                  {{ report.userId }}
+                } @else {
+                  <span class="admin-muted">
+                    {{ 'ADMIN.USABILITY_REPORTS.DETAIL.ANONYMOUS' | translate }}
+                  </span>
+                }
+              </td>
+              <td class="ur-description-cell">{{ report.descriptionPreview }}</td>
+              <td>{{ report.imageCount }}</td>
+              <td>{{ displayDateTime(report.createdAt) }}</td>
+              <td class="ur-actions-cell">
+                <button
+                  type="button"
+                  class="admin-btn admin-btn-small"
+                  (click)="openDetail(report.id)"
+                  >
+                  {{ 'ADMIN.USABILITY_REPORTS.VIEW' | translate }}
+                </button>
+                @if (canMarkAsDuplicate(report.status)) {
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    (click)="openDuplicatePicker(report.id)"
+                    >
+                    {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.MARK_ACTION' | translate }}
+                  </button>
+                }
+                @if (canUnmarkDuplicate(report.status)) {
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-small admin-btn-danger"
+                    (click)="unmarkDuplicate(report.id)"
+                    >
+                    {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_ACTION' | translate }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+          @if (allReports.length === 0 && !errorMessage) {
+            <tr class="admin-empty-row">
+              <td colspan="8">{{ 'ADMIN.USABILITY_REPORTS.EMPTY' | translate }}</td>
+            </tr>
+          }
+        }
       </tbody>
     </table>
   </div>
 
-  <!-- OBRS-403: real server-side paginator. *ngIf="!isLoading" is deliberate
-       — the footer must not show a stale count/page under the skeleton rows
-       (a page change re-triggers isLoading via the store's clear()). -->
-  <div class="admin-table-footer" *ngIf="!isLoading">
-    <span *ngIf="totalElements > 0" aria-live="polite">
-      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ rangeStart }} - {{ rangeEnd }}
-      {{ 'ADMIN.COMMON.OF' | translate }} {{ totalElements }}
-      {{ 'ADMIN.USABILITY_REPORTS.UNITS' | translate }}
-    </span>
-    <app-admin-paginator
-      [currentPage]="currentPage"
-      [totalPages]="totalPages"
-      [disabled]="isRefreshing"
-      (pageChange)="onPageChange($event)"
-    ></app-admin-paginator>
-  </div>
+  <!-- OBRS-403: real server-side paginator.
+  OBRS-466 (a11y): the footer used to be gated wholesale on *ngIf="!isLoading",
+  so a page change (which clear()s the cache → isLoading flips true) unmounted
+  the paginator mid-turn, dropping keyboard focus to <body> and destroying the
+  aria-live region so the page was never announced. The paginator now stays
+  MOUNTED across the loading window (disabled while refreshing) so it can
+  restore focus + announce; only the "Showing X-Y of N" count is still gated
+  on !isLoading so no stale count shows under the skeleton rows. -->
+  @if (!isLoading || totalPages > 1) {
+    <div class="admin-table-footer">
+      @if (!isLoading && totalElements > 0) {
+        <span aria-live="polite">
+          {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ rangeStart }} - {{ rangeEnd }}
+          {{ 'ADMIN.COMMON.OF' | translate }} {{ totalElements }}
+          {{ 'ADMIN.USABILITY_REPORTS.UNITS' | translate }}
+        </span>
+      }
+      <app-admin-paginator
+        [currentPage]="currentPage"
+        [totalPages]="totalPages"
+        [disabled]="isRefreshing"
+        (pageChange)="onPageChange($event)"
+      ></app-admin-paginator>
+    </div>
+  }
 </section>
 
 <!-- Detail Modal -->
-<div
-  class="admin-modal-backdrop"
-  *ngIf="selectedReportId !== null"
-  adminModalBackdrop
-  (dismiss)="onDetailBackdropDismiss()"
->
-  <div class="admin-modal ur-detail-modal">
-    <div class="admin-modal-header">
-      <h4 class="admin-modal-title">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TITLE' | translate }}</h4>
-      <button
-        type="button"
-        class="ur-detail-close"
-        [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DETAIL.CLOSE' | translate"
-        (click)="closeDetail()"
-      >
-        <span class="material-symbols-outlined" aria-hidden="true">close</span>
-      </button>
-    </div>
-
-    <ng-container *ngIf="detailReport">
-      <div class="ur-detail-body">
-        <!-- Meta fields -->
-        <div class="ur-detail-row">
-          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.CATEGORY' | translate }}</span>
-          <span>{{ categoryLabel(detailReport.category) }}</span>
-        </div>
-        <!-- OBRS-376: current status + duplicate meta, read-only for owner too
-             (same visibility as the table row's status chip). -->
-        <div class="ur-detail-row">
-          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.STATUS' | translate }}</span>
-          <span>
-            <span class="admin-status" [ngClass]="statusClass(detailReport.status)">
-              {{ statusLabel(detailReport.status) }}
-            </span>
-            <a
-              *ngIf="detailReport.duplicateOfId !== null"
-              class="btn btn-link p-0 ur-duplicate-link"
-              [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_ARIA' | translate:{ id: detailReport.duplicateOfId }"
-              (click)="openCanonicalReport(detailReport.duplicateOfId)"
-            >
-              {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_TEXT' | translate:{ id: detailReport.duplicateOfId } }}
-            </a>
-            <span *ngIf="detailReport.duplicateCount > 0" class="ur-duplicate-count-pill">
-              {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.COUNT_BADGE' | translate:{ count: detailReport.duplicateCount } }}
-            </span>
-          </span>
-        </div>
-        <div class="ur-duplicate-actions mt-2" *ngIf="canMarkAsDuplicate(detailReport.status) || canUnmarkDuplicate(detailReport.status)">
-          <button
-            *ngIf="canMarkAsDuplicate(detailReport.status)"
-            type="button"
-            class="admin-btn"
-            (click)="openDuplicatePicker(detailReport.id)"
-          >
-            {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.MARK_ACTION' | translate }}
-          </button>
-          <button
-            *ngIf="canUnmarkDuplicate(detailReport.status)"
-            type="button"
-            class="admin-btn admin-btn-danger"
-            (click)="unmarkDuplicate(detailReport.id)"
-          >
-            {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_ACTION' | translate }}
-          </button>
-        </div>
-        <div class="ur-detail-row">
-          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.ROUTE' | translate }}</span>
-          <span class="admin-emphasis">{{ detailReport.routeUrl }}</span>
-        </div>
-        <div class="ur-detail-row">
-          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.USER_ID' | translate }}</span>
-          <span *ngIf="detailReport.userId !== null">{{ detailReport.userId }}</span>
-          <span *ngIf="detailReport.userId === null" class="admin-muted">
-            {{ 'ADMIN.USABILITY_REPORTS.DETAIL.ANONYMOUS' | translate }}
-          </span>
-        </div>
-        <div class="ur-detail-row" *ngIf="detailReport.reporterEmail">
-          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.REPORTER_EMAIL' | translate }}</span>
-          <span>{{ detailReport.reporterEmail }}</span>
-        </div>
-        <div class="ur-detail-row" *ngIf="detailReport.reporterNotifiedAt">
-          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.REPORTER_NOTIFIED' | translate }}</span>
-          <span class="ur-notified-pill">
-            <span class="ur-notified-check" aria-hidden="true">✓</span>
-            {{ displayDateTime(detailReport.reporterNotifiedAt) }}
-          </span>
-        </div>
-        <div class="ur-detail-row">
-          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.CREATED_AT' | translate }}</span>
-          <span>{{ displayDateTime(detailReport.createdAt) }}</span>
-        </div>
-        <div class="ur-detail-row">
-          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.USER_AGENT' | translate }}</span>
-          <span class="ur-user-agent">
-            {{ detailReport.userAgent }}
-            <span *ngIf="isDetailFetching" class="ur-inline-updating">
-              {{ 'ADMIN.COMMON.UPDATING' | translate }}
-            </span>
-          </span>
-        </div>
-
-        <!-- Description -->
-        <div class="ur-detail-description mt-3">
-          <p class="ur-detail-label">
-            {{ 'ADMIN.USABILITY_REPORTS.COL.DESCRIPTION' | translate }}
-            <span *ngIf="isDetailFetching" class="ur-inline-updating">
-              {{ 'ADMIN.COMMON.UPDATING' | translate }}
-            </span>
-          </p>
-          <p class="ur-description-text">{{ detailReport.description }}</p>
-        </div>
-
-        <!-- Images -->
-        <div class="mt-3">
-          <p class="ur-detail-label">
-            {{ 'ADMIN.USABILITY_REPORTS.COL.IMAGES' | translate }}
-            <span *ngIf="isDetailFetching" class="ur-inline-updating">
-              {{ 'ADMIN.COMMON.UPDATING' | translate }}
-            </span>
-          </p>
-          <p *ngIf="!isDetailFetching && detailReport.images.length === 0" class="admin-muted">
-            {{ 'ADMIN.USABILITY_REPORTS.DETAIL.NO_IMAGES' | translate }}
-          </p>
-          <div *ngIf="detailReport.images.length > 0" class="ur-images-grid">
-            <div *ngFor="let img of detailReport.images" class="ur-image-item">
-              <img
-                [src]="img.publicUrl"
-                [alt]="'Image ' + img.position"
-                class="ur-image-thumb"
-                role="button"
-                tabindex="0"
-                [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DETAIL.IMAGE_ENLARGE' | translate:{ position: img.position }"
-                (click)="openLightbox(img.publicUrl)"
-                (keydown)="onThumbnailKeydown($event, img.publicUrl)"
-              />
-              <div class="ur-image-meta">
-                <span>
-                  {{ 'ADMIN.USABILITY_REPORTS.DETAIL.IMAGE_POSITION' | translate }}:
-                  {{ img.position }}
-                </span>
-                <span>
-                  {{ 'ADMIN.USABILITY_REPORTS.DETAIL.IMAGE_SIZE' | translate }}:
-                  {{ formatBytes(img.sizeBytes) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="ur-detail-row" *ngIf="detailReport.triagedBy !== null && detailReport.triagedBy !== undefined">
-          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGED_BY' | translate }}</span>
-          <span>{{ detailReport.triagedByName || detailReport.triagedBy }}</span>
-        </div>
-        <div class="ur-detail-row" *ngIf="detailReport.triagedAt">
-          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGED_AT' | translate }}</span>
-          <span>{{ displayDateTime(detailReport.triagedAt) }}</span>
-        </div>
-        <!-- OBRS-370: the Jira key is ADMIN-only visible — owner is a
-             screen-only tier and the backend never lets a non-admin set it. -->
-        <div class="ur-detail-row" *ngIf="detailReport.jiraIssueKey && isAdmin">
-          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.JIRA_LINK_LABEL' | translate }}</span>
-          <a
-            class="btn btn-link p-0"
-            [href]="jiraIssueUrl(detailReport.jiraIssueKey)"
-            target="_blank"
-            rel="noopener noreferrer"
-            [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DETAIL.JIRA_LINK_ARIA' | translate:{ key: detailReport.jiraIssueKey }"
-          >
-            {{ detailReport.jiraIssueKey }}
-            <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
-          </a>
-        </div>
-
-        <!-- Triage note -->
-        <div class="admin-form-field mt-3">
-          <label class="admin-form-label" for="ur-triage-note">
-            {{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGE_NOTE_LABEL' | translate }}
-          </label>
-          <textarea
-            id="ur-triage-note"
-            class="admin-field"
-            rows="3"
-            [ngModel]="selectedTriageNote"
-            (ngModelChange)="onTriageNoteChange($event)"
-            [placeholder]="'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGE_NOTE_PLACEHOLDER' | translate"
-          ></textarea>
-        </div>
-
-        <!-- OBRS-433: read-only follow-up timeline (reporter + admin notes/
-             images) — same shared component the customer "My Reports" detail
-             modal uses, no composer here (admin never posts a follow-up). -->
-        <div class="mt-3">
-          <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.FOLLOW_UPS_LABEL' | translate }}</p>
-          <app-usability-report-follow-up-timeline
-            [followUps]="detailReport.followUps"
-          ></app-usability-report-follow-up-timeline>
-        </div>
-
-        <!-- Status update: normal (existing dropdown + Save). OBRS-378: hidden
-             once the report is already dismissed — that state renders its own
-             branch below instead (exactly one primary button per state).
-             OBRS-527 AMENDMENT A2: also hidden when detailStatusOptions is
-             empty — that only happens for an OWNER viewing a report the
-             platform already finalized (accepted/resolved/rejected/
-             duplicate); admin's detailStatusOptions is never empty (always
-             DETAIL_STATUS_VALUES), so this ngIf never fires for isAdmin. -->
-        <div
-          class="ur-status-update mt-3"
-          *ngIf="detailReport.status !== 'dismissed' && detailStatusOptions.length"
-        >
-          <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.STATUS.LABEL' | translate }}</p>
-          <div class="ur-status-controls">
-            <app-admin-dropdown
-              [value]="selectedDetailStatus"
-              [options]="detailStatusOptions"
-              valueKey="value"
-              labelKey="label"
-              [placeholder]="'ADMIN.USABILITY_REPORTS.STATUS.LABEL' | translate"
-              (valueChange)="onDetailStatusChange($event)"
-            ></app-admin-dropdown>
-            <button
-              type="button"
-              class="admin-btn admin-btn-primary"
-              [disabled]="isSavingStatus || !selectedDetailStatus"
-              (click)="saveStatus()"
-            >
-              {{ 'ADMIN.USABILITY_REPORTS.STATUS.SAVE' | translate }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Status update: dismissed. OBRS-378 (per UX spec) — admin sees a
-             hint + the single "Pull Back to Review" primary action; owner
-             sees only a muted note, no controls. No generic dropdown+Save
-             renders in this branch. -->
-        <div class="ur-status-update mt-3" *ngIf="detailReport.status === 'dismissed'">
-          <ng-container *ngIf="isAdmin; else ownerDismissedNote">
-            <p class="ur-dismissed-note">
-              {{ 'ADMIN.USABILITY_REPORTS.DETAIL.DISMISSED_ADMIN_HINT' | translate }}
-            </p>
-            <button
-              type="button"
-              class="admin-btn admin-btn-primary"
-              [disabled]="isSavingStatus"
-              (click)="pullBackToReview()"
-            >
-              {{ 'ADMIN.USABILITY_REPORTS.DETAIL.PULL_BACK_TO_REVIEW' | translate }}
-            </button>
-          </ng-container>
-          <ng-template #ownerDismissedNote>
-            <p class="ur-dismissed-note">
-              {{ 'ADMIN.USABILITY_REPORTS.DETAIL.DISMISSED_OWNER_NOTE' | translate }}
-            </p>
-          </ng-template>
-        </div>
-
-        <!-- Status update: owner has no legal move out of this status
-             (OBRS-527 AMENDMENT A2). Owner-only by construction — admin's
-             detailStatusOptions is never empty, so this ngIf never fires for
-             isAdmin. Mirrors the "muted note, no controls" half of the
-             dismissed idiom above; no admin/owner ng-container split is
-             needed since it is already owner-only. Reuses .ur-dismissed-note
-             as-is (design-system §12 new-pattern log / UX spec §2 — a shared
-             style primitive, not renamed despite the name). -->
-        <div
-          class="ur-status-update mt-3"
-          *ngIf="detailReport.status !== 'dismissed' && !detailStatusOptions.length"
-        >
-          <p class="ur-dismissed-note">
-            {{ 'ADMIN.USABILITY_REPORTS.DETAIL.OWNER_NO_ACTION_NOTE' | translate }}
-          </p>
-        </div>
-      </div>
-    </ng-container>
-  </div>
-
-  <!-- Lightbox — a separate overlay layer above the detail modal. -->
+@if (selectedReportId !== null) {
   <div
-    class="admin-modal-backdrop ur-lightbox-backdrop"
-    *ngIf="lightboxImageUrl"
-    (click)="onLightboxBackdropClick($event)"
-  >
-    <button
-      type="button"
-      class="ur-lightbox-close"
-      [attr.aria-label]="'ADMIN.COMMON.CLOSE' | translate"
-      (click)="closeLightbox()"
+    class="admin-modal-backdrop"
+    adminModalBackdrop
+    (dismiss)="onDetailBackdropDismiss()"
     >
-      <span class="material-symbols-outlined" aria-hidden="true">close</span>
-    </button>
-    <img [src]="lightboxImageUrl" alt="" class="ur-lightbox-image" />
-  </div>
-</div>
+    <div class="admin-modal ur-detail-modal">
+      <div class="admin-modal-header">
+        <h4 class="admin-modal-title">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TITLE' | translate }}</h4>
+        <button
+          type="button"
+          class="ur-detail-close"
+          [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DETAIL.CLOSE' | translate"
+          (click)="closeDetail()"
+          >
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </div>
+      @if (detailReport) {
+        <div class="ur-detail-body">
+          <!-- Meta fields -->
+          <div class="ur-detail-row">
+            <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.CATEGORY' | translate }}</span>
+            <span>{{ categoryLabel(detailReport.category) }}</span>
+          </div>
+          <!-- OBRS-376: current status + duplicate meta, read-only for owner too
+          (same visibility as the table row's status chip). -->
+          <div class="ur-detail-row">
+            <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.STATUS' | translate }}</span>
+            <span>
+              <span class="admin-status" [ngClass]="statusClass(detailReport.status)">
+                {{ statusLabel(detailReport.status) }}
+              </span>
+              @if (detailReport.duplicateOfId !== null) {
+                <a
+                  class="btn btn-link p-0 ur-duplicate-link"
+                  [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_ARIA' | translate:{ id: detailReport.duplicateOfId }"
+                  (click)="openCanonicalReport(detailReport.duplicateOfId)"
+                  >
+                  {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_TEXT' | translate:{ id: detailReport.duplicateOfId } }}
+                </a>
+              }
+              @if (detailReport.duplicateCount > 0) {
+                <span class="ur-duplicate-count-pill">
+                  {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.COUNT_BADGE' | translate:{ count: detailReport.duplicateCount } }}
+                </span>
+              }
+            </span>
+          </div>
+          @if (canMarkAsDuplicate(detailReport.status) || canUnmarkDuplicate(detailReport.status)) {
+            <div class="ur-duplicate-actions mt-2">
+              @if (canMarkAsDuplicate(detailReport.status)) {
+                <button
+                  type="button"
+                  class="admin-btn"
+                  (click)="openDuplicatePicker(detailReport.id)"
+                  >
+                  {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.MARK_ACTION' | translate }}
+                </button>
+              }
+              @if (canUnmarkDuplicate(detailReport.status)) {
+                <button
+                  type="button"
+                  class="admin-btn admin-btn-danger"
+                  (click)="unmarkDuplicate(detailReport.id)"
+                  >
+                  {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_ACTION' | translate }}
+                </button>
+              }
+            </div>
+          }
+          <div class="ur-detail-row">
+            <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.ROUTE' | translate }}</span>
+            <span class="admin-emphasis">{{ detailReport.routeUrl }}</span>
+          </div>
+          <div class="ur-detail-row">
+            <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.USER_ID' | translate }}</span>
+            @if (detailReport.userId !== null) {
+              <span>{{ detailReport.userId }}</span>
+            }
+            @if (detailReport.userId === null) {
+              <span class="admin-muted">
+                {{ 'ADMIN.USABILITY_REPORTS.DETAIL.ANONYMOUS' | translate }}
+              </span>
+            }
+          </div>
+          @if (detailReport.reporterEmail) {
+            <div class="ur-detail-row">
+              <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.REPORTER_EMAIL' | translate }}</span>
+              <span>{{ detailReport.reporterEmail }}</span>
+            </div>
+          }
+          @if (detailReport.reporterNotifiedAt) {
+            <div class="ur-detail-row">
+              <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.REPORTER_NOTIFIED' | translate }}</span>
+              <span class="ur-notified-pill">
+                <span class="ur-notified-check" aria-hidden="true">✓</span>
+                {{ displayDateTime(detailReport.reporterNotifiedAt) }}
+              </span>
+            </div>
+          }
+          <div class="ur-detail-row">
+            <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.CREATED_AT' | translate }}</span>
+            <span>{{ displayDateTime(detailReport.createdAt) }}</span>
+          </div>
+          <div class="ur-detail-row">
+            <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.USER_AGENT' | translate }}</span>
+            <span class="ur-user-agent">
+              {{ detailReport.userAgent }}
+              @if (isDetailFetching) {
+                <span class="ur-inline-updating">
+                  {{ 'ADMIN.COMMON.UPDATING' | translate }}
+                </span>
+              }
+            </span>
+          </div>
+          <!-- Description -->
+          <div class="ur-detail-description mt-3">
+            <p class="ur-detail-label">
+              {{ 'ADMIN.USABILITY_REPORTS.COL.DESCRIPTION' | translate }}
+              @if (isDetailFetching) {
+                <span class="ur-inline-updating">
+                  {{ 'ADMIN.COMMON.UPDATING' | translate }}
+                </span>
+              }
+            </p>
+            <p class="ur-description-text">{{ detailReport.description }}</p>
+          </div>
+          <!-- Images -->
+          <div class="mt-3">
+            <p class="ur-detail-label">
+              {{ 'ADMIN.USABILITY_REPORTS.COL.IMAGES' | translate }}
+              @if (isDetailFetching) {
+                <span class="ur-inline-updating">
+                  {{ 'ADMIN.COMMON.UPDATING' | translate }}
+                </span>
+              }
+            </p>
+            @if (!isDetailFetching && detailReport.images.length === 0) {
+              <p class="admin-muted">
+                {{ 'ADMIN.USABILITY_REPORTS.DETAIL.NO_IMAGES' | translate }}
+              </p>
+            }
+            @if (detailReport.images.length > 0) {
+              <div class="ur-images-grid">
+                @for (img of detailReport.images; track img) {
+                  <div class="ur-image-item">
+                    <img
+                      [src]="img.publicUrl"
+                      [alt]="'Image ' + img.position"
+                      class="ur-image-thumb"
+                      role="button"
+                      tabindex="0"
+                      [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DETAIL.IMAGE_ENLARGE' | translate:{ position: img.position }"
+                      (click)="openLightbox(img.publicUrl)"
+                      (keydown)="onThumbnailKeydown($event, img.publicUrl)"
+                      />
+                      <div class="ur-image-meta">
+                        <span>
+                          {{ 'ADMIN.USABILITY_REPORTS.DETAIL.IMAGE_POSITION' | translate }}:
+                          {{ img.position }}
+                        </span>
+                        <span>
+                          {{ 'ADMIN.USABILITY_REPORTS.DETAIL.IMAGE_SIZE' | translate }}:
+                          {{ formatBytes(img.sizeBytes) }}
+                        </span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+            @if (detailReport.triagedBy !== null && detailReport.triagedBy !== undefined) {
+              <div class="ur-detail-row">
+                <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGED_BY' | translate }}</span>
+                <span>{{ detailReport.triagedByName || detailReport.triagedBy }}</span>
+              </div>
+            }
+            @if (detailReport.triagedAt) {
+              <div class="ur-detail-row">
+                <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGED_AT' | translate }}</span>
+                <span>{{ displayDateTime(detailReport.triagedAt) }}</span>
+              </div>
+            }
+            <!-- OBRS-370: the Jira key is ADMIN-only visible — owner is a
+            screen-only tier and the backend never lets a non-admin set it. -->
+            @if (detailReport.jiraIssueKey && isAdmin) {
+              <div class="ur-detail-row">
+                <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.JIRA_LINK_LABEL' | translate }}</span>
+                <a
+                  class="btn btn-link p-0"
+                  [href]="jiraIssueUrl(detailReport.jiraIssueKey)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DETAIL.JIRA_LINK_ARIA' | translate:{ key: detailReport.jiraIssueKey }"
+                  >
+                  {{ detailReport.jiraIssueKey }}
+                  <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+                </a>
+              </div>
+            }
+            <!-- Triage note -->
+            <div class="admin-form-field mt-3">
+              <label class="admin-form-label" for="ur-triage-note">
+                {{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGE_NOTE_LABEL' | translate }}
+              </label>
+              <textarea
+                id="ur-triage-note"
+                class="admin-field"
+                rows="3"
+                [ngModel]="selectedTriageNote"
+                (ngModelChange)="onTriageNoteChange($event)"
+                [placeholder]="'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGE_NOTE_PLACEHOLDER' | translate"
+              ></textarea>
+            </div>
+            <!-- OBRS-433: read-only follow-up timeline (reporter + admin notes/
+            images) — same shared component the customer "My Reports" detail
+            modal uses, no composer here (admin never posts a follow-up). -->
+            <div class="mt-3">
+              <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.FOLLOW_UPS_LABEL' | translate }}</p>
+              <app-usability-report-follow-up-timeline
+                [followUps]="detailReport.followUps"
+              ></app-usability-report-follow-up-timeline>
+            </div>
+            <!-- Status update: normal (existing dropdown + Save). OBRS-378: hidden
+            once the report is already dismissed — that state renders its own
+            branch below instead (exactly one primary button per state).
+            OBRS-527 AMENDMENT A2: also hidden when detailStatusOptions is
+            empty — that only happens for an OWNER viewing a report the
+            platform already finalized (accepted/resolved/rejected/
+            duplicate); admin's detailStatusOptions is never empty (always
+            DETAIL_STATUS_VALUES), so this ngIf never fires for isAdmin. -->
+            @if (detailReport.status !== 'dismissed' && detailStatusOptions.length) {
+              <div
+                class="ur-status-update mt-3"
+                >
+                <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.STATUS.LABEL' | translate }}</p>
+                <div class="ur-status-controls">
+                  <app-admin-dropdown
+                    [value]="selectedDetailStatus"
+                    [options]="detailStatusOptions"
+                    valueKey="value"
+                    labelKey="label"
+                    [placeholder]="'ADMIN.USABILITY_REPORTS.STATUS.LABEL' | translate"
+                    (valueChange)="onDetailStatusChange($event)"
+                  ></app-admin-dropdown>
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-primary"
+                    [disabled]="isSavingStatus || !selectedDetailStatus"
+                    (click)="saveStatus()"
+                    >
+                    {{ 'ADMIN.USABILITY_REPORTS.STATUS.SAVE' | translate }}
+                  </button>
+                </div>
+              </div>
+            }
+            <!-- Status update: dismissed. OBRS-378 (per UX spec) — admin sees a
+            hint + the single "Pull Back to Review" primary action; owner
+            sees only a muted note, no controls. No generic dropdown+Save
+            renders in this branch. -->
+            @if (detailReport.status === 'dismissed') {
+              <div class="ur-status-update mt-3">
+                @if (isAdmin) {
+                  <p class="ur-dismissed-note">
+                    {{ 'ADMIN.USABILITY_REPORTS.DETAIL.DISMISSED_ADMIN_HINT' | translate }}
+                  </p>
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-primary"
+                    [disabled]="isSavingStatus"
+                    (click)="pullBackToReview()"
+                    >
+                    {{ 'ADMIN.USABILITY_REPORTS.DETAIL.PULL_BACK_TO_REVIEW' | translate }}
+                  </button>
+                } @else {
+                  <p class="ur-dismissed-note">
+                    {{ 'ADMIN.USABILITY_REPORTS.DETAIL.DISMISSED_OWNER_NOTE' | translate }}
+                  </p>
+                }
+              </div>
+            }
+            <!-- Status update: owner has no legal move out of this status
+            (OBRS-527 AMENDMENT A2). Owner-only by construction — admin's
+            detailStatusOptions is never empty, so this ngIf never fires for
+            isAdmin. Mirrors the "muted note, no controls" half of the
+            dismissed idiom above; no admin/owner ng-container split is
+            needed since it is already owner-only. Reuses .ur-dismissed-note
+            as-is (design-system §12 new-pattern log / UX spec §2 — a shared
+            style primitive, not renamed despite the name). -->
+            @if (detailReport.status !== 'dismissed' && !detailStatusOptions.length) {
+              <div
+                class="ur-status-update mt-3"
+                >
+                <p class="ur-dismissed-note">
+                  {{ 'ADMIN.USABILITY_REPORTS.DETAIL.OWNER_NO_ACTION_NOTE' | translate }}
+                </p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+      <!-- Lightbox — a separate overlay layer above the detail modal. -->
+      @if (lightboxImageUrl) {
+        <div
+          class="admin-modal-backdrop ur-lightbox-backdrop"
+          (click)="onLightboxBackdropClick($event)"
+          >
+          <button
+            type="button"
+            class="ur-lightbox-close"
+            [attr.aria-label]="'ADMIN.COMMON.CLOSE' | translate"
+            (click)="closeLightbox()"
+            >
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+          <img [src]="lightboxImageUrl" alt="" class="ur-lightbox-image" />
+        </div>
+      }
+    </div>
+  }
 
-<!-- OBRS-376: duplicate-of candidate picker — a modal-over-modal layer like
-     the lightbox above, but rendered OUTSIDE the detail modal's backdrop
-     (top-level, sibling) since it can also be opened standalone from a table
-     row with no detail modal open. See onDetailBackdropDismiss() /
-     UsabilityReportDuplicatePickerComponent's doc comment for how ESC/backdrop
-     routing to the topmost layer still works despite the two not being
-     nested. -->
-<app-usability-report-duplicate-picker
-  *ngIf="isPickerOpen"
-  [candidates]="pickerCandidates"
-  [isSaving]="isMarkingDuplicate"
-  (confirm)="onPickerConfirm($event)"
-  (cancel)="onPickerCancel()"
-></app-usability-report-duplicate-picker>
+  <!-- OBRS-376: duplicate-of candidate picker — a modal-over-modal layer like
+  the lightbox above, but rendered OUTSIDE the detail modal's backdrop
+  (top-level, sibling) since it can also be opened standalone from a table
+  row with no detail modal open. See onDetailBackdropDismiss() /
+  UsabilityReportDuplicatePickerComponent's doc comment for how ESC/backdrop
+  routing to the topmost layer still works despite the two not being
+  nested. -->
+  @if (isPickerOpen) {
+    <app-usability-report-duplicate-picker
+      [candidates]="pickerCandidates"
+      [isSaving]="isMarkingDuplicate"
+      (confirm)="onPickerConfirm($event)"
+      (cancel)="onPickerCancel()"
+    ></app-usability-report-duplicate-picker>
+  }

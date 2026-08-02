@@ -13,8 +13,9 @@ export interface RefundDestinationFormValue {
 
 /**
  * Central factory for the refund-destination form (OBRS-286 UI spec, "Forms —
- * RefundDestinationForm"). Both call sites — `CancelRefundDestinationModalComponent`
- * (customer) and `OverrideCancelModalComponent` (OWNER override) — build their
+ * RefundDestinationForm"). Both call sites — `CancelBookingModalComponent`
+ * (customer, renamed from `CancelRefundDestinationModalComponent` by
+ * OBRS-942) and `OverrideCancelModalComponent` (OWNER override) — build their
  * form through this ONE function so validators/shape can never drift between
  * them (design-system §10: shared logic, not a second copy).
  *
@@ -65,11 +66,14 @@ function applyModeFieldValidators(form: FormGroup): void {
 /**
  * Toggles whether CHOOSING a mode is itself required, without touching the
  * per-field validators above (those already stay inert while `mode` is null).
- * The customer path calls this once with `required=true`. The override-cancel
- * path (UI spec Flow A3) calls it again every time the server-resolved
- * `destinationRequired` changes — including down to `false`/optional on a
- * failed check — mirroring `OverrideCancelModalComponent`'s existing
- * `applyReasonValidators()` shape.
+ * The customer path (`CancelBookingModalComponent.ngOnInit`) calls this once
+ * with `required=isManualRefund` — `true` only when the resolved refund
+ * method is `MANUAL_REFUND_REQUIRED` (OBRS-942: this modal now also opens for
+ * every other refund method, where no destination is ever collected). The
+ * override-cancel path (UI spec Flow A3) calls it again every time the
+ * server-resolved `destinationRequired` changes — including down to
+ * `false`/optional on a failed check — mirroring
+ * `OverrideCancelModalComponent`'s existing `applyReasonValidators()` shape.
  */
 export function applyRefundDestinationRequired(form: FormGroup, required: boolean): void {
   const mode = form.get('mode');

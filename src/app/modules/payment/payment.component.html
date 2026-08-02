@@ -8,18 +8,22 @@
   </div>
 
   <div class="total-container">
-    <app-payment-creditcard
-      *ngIf="activePaymentTab === 'creditcard'"
-      [activeTab]="activePaymentTab"
-      (tabChange)="onPaymentTabChange($event)"
-      (back)="onBack()"
-    ></app-payment-creditcard>
-    <app-payment-qrcode
-      *ngIf="activePaymentTab === 'qrcode'"
-      [activeTab]="activePaymentTab"
-      (tabChange)="onPaymentTabChange($event)"
-      (back)="onBack()"
-    ></app-payment-qrcode>
+    @if (activePaymentTab === 'creditcard') {
+      <app-payment-creditcard
+        [activeTab]="activePaymentTab"
+        (tabChange)="onPaymentTabChange($event)"
+        (back)="onBack()"
+        (paymentCompleted)="onPaymentCompleted()"
+      ></app-payment-creditcard>
+    }
+    @if (activePaymentTab === 'qrcode') {
+      <app-payment-qrcode
+        [activeTab]="activePaymentTab"
+        (tabChange)="onPaymentTabChange($event)"
+        (back)="onBack()"
+        (paymentCompleted)="onPaymentCompleted()"
+      ></app-payment-qrcode>
+    }
   </div>
 </div>
 

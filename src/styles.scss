@@ -2,6 +2,11 @@
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@200..700,0..1&display=swap");
 @import "sweetalert2/dist/sweetalert2.min.css";
 @import "./styles/variables.scss";
+// OBRS-907: shared loading-indicator keyframes/tokens (`.admin-skeleton` +
+// the loading-state ring/shimmer keyframes) — imported directly here, NOT
+// via admin-theme.scss, so the customer shell gets it without importing
+// anything that reads as "the admin theme". See the file's own header.
+@import "./styles/loading.scss";
 @import "./styles/admin-theme.scss";
 @import "./styles/dark-theme.scss";
 // OBRS-776. Imported FIRST among the app's own rules would be wrong and last is
@@ -149,7 +154,7 @@ label {
   }
 }
 
-.p-calendar .p-inputtext {
+.p-datepicker .p-inputtext {
   height: 48px;
   border-radius: 24px;
   padding-left: 50px;
@@ -162,8 +167,8 @@ label {
 // rounded PILL field with the calendar icon inline on the LEFT inside the
 // field (a custom `inputicon` template rendering `.app-date-field-icon`,
 // paired with `[iconDisplay]="'input'"` + `[showIcon]="true"` on the
-// `p-calendar`) — no separate trailing calendar button. Every in-scope
-// `p-calendar` in the app shares three classes:
+// `p-datePicker`) — no separate trailing calendar button. Every in-scope
+// `p-datePicker` in the app shares three classes:
 //   - `app-date-field`       → styleClass (outer field; also carries the
 //                              display:flex/width:100% layout fix previously
 //                              duplicated per-component, e.g. the walk-in
@@ -176,10 +181,10 @@ label {
 // back to the customer palette via `var(--token, fallback)` — one ruleset,
 // themed on every surface. `.p-inputtext` background/border/color in dark
 // mode is already handled globally by dark-theme.scss §13's
-// `body.is-dark .p-calendar .p-inputtext` override (`!important`, still wins
+// `body.is-dark .p-datepicker .p-inputtext` override (`!important`, still wins
 // here — no duplicate dark rule needed).
 // ============================================================================
-.p-calendar.app-date-field {
+.p-datepicker.app-date-field {
   position: relative;
   display: flex;
   width: 100%;
@@ -195,7 +200,7 @@ label {
   pointer-events: none;
 }
 
-.p-calendar.app-date-field .p-inputtext {
+.p-datepicker.app-date-field .p-inputtext {
   flex: 1 1 auto;
   width: 100%;
   min-width: 0;
@@ -209,11 +214,11 @@ label {
   outline: 0;
 }
 
-.p-calendar.app-date-field .p-inputtext::placeholder {
+.p-datepicker.app-date-field .p-inputtext::placeholder {
   color: var(--admin-muted, #{$text-lightblack});
 }
 
-.p-calendar.app-date-field .p-inputtext:focus {
+.p-datepicker.app-date-field .p-inputtext:focus {
   border-color: var(--accent-strong, #{$primary-blue});
   box-shadow: 0 0 0 3px var(--accent-soft, #{rgba($primary-blue, 0.18)});
 }

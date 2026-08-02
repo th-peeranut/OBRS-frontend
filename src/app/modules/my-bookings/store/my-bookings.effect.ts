@@ -2,24 +2,25 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
-import { from, of } from 'rxjs';
-import { catchError, map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
+import { of } from 'rxjs';
+import { catchError, exhaustMap, filter, map, switchMap, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
 import { BookingService } from '../../../services/booking/booking.service';
 import { AlertService } from '../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../shared/lib/api-error';
-import { extractApiErrorCode } from '../../../shared/lib/api-error-code';
+import { errorCodeFromMessageKey, extractApiErrorCode } from '../../../shared/lib/api-error-code';
 import {
   CancelBookingResult,
-  CancellationPolicy,
   MANUAL_REFUND_METHOD,
-  MyBookingView,
-  toAmountNumber,
+  formatRefundAmount,
 } from '../../../shared/interfaces/my-booking.interface';
+import { MY_BOOKINGS_PAGE_SIZE } from './my-bookings.model';
 import {
-  cancelBookingDismissed,
   cancelBookingFailure,
   cancelBookingSuccess,
   confirmCancelWithDestination,
+  invokeLoadMoreMyBookingsApi,
+  invokeLoadMoreMyBookingsApiFailure,
+  invokeLoadMoreMyBookingsApiSuccess,
   invokeLoadMyBookingsApi,
   invokeLoadMyBookingsApiFailure,
   invokeLoadMyBookingsApiSuccess,
@@ -30,10 +31,17 @@ import {
 import { selectMyBookings } from './my-bookings.selector';
 
 /** OBRS-286: the two destination error codes the customer-cancel endpoint can
- * 400 with — SA-SPEC-OBRS-286.md contract #1. */
-const REFUND_DESTINATION_ERROR_CODES = new Set([
-  'cancel.error.refund-destination-required',
-  'cancel.error.refund-destination-invalid',
+ * 400 with — SA-SPEC-OBRS-286.md contract #1.
+ *
+ * OBRS-839: written as the dotted `messageKey` form, compared against the wire
+ * `errorCode`, which is the DERIVED `CANCEL_ERROR_REFUND_DESTINATION_*`. The
+ * comparison could never be true, so `refundDestinationInvalid` never fired and
+ * a rejected bank account / PromptPay number closed the traveler's modal with a
+ * generic toast instead of keeping what they typed and saying which field was
+ * wrong. Derived here rather than hand-typed — see `errorCodeFromMessageKey`. */
+const REFUND_DESTINATION_ERROR_CODES = new Set<string>([
+  errorCodeFromMessageKey('cancel.error.refund-destination-required'),
+  errorCodeFromMessageKey('cancel.error.refund-destination-invalid'),
 ]);
 
 @Injectable()
@@ -44,37 +52,145 @@ export class MyBookingsEffect {
   private alertService = inject(AlertService);
   private translate = inject(TranslateService);
 
+  // OBRS-577 Decision A: `preserveWindow` (set by the 6 post-mutation reload
+  // sites) refetches however many MY_BOOKINGS_PAGE_SIZE pages are already on
+  // screen in ONE request (`withLatestFrom` reads `pagesLoaded` off the
+  // current state), so a cancel/reschedule/change-seat/change-stop success
+  // never visibly truncates a loaded-5-pages list back to page 1. The first
+  // load and every status-filter switch leave it `false` (or unset) and get
+  // the plain AC2 default of MY_BOOKINGS_PAGE_SIZE.
   loadMyBookings$ = createEffect(() =>
     this.actions$.pipe(
       ofType(invokeLoadMyBookingsApi),
-      switchMap(({ status, showLoading }) =>
-        this.service.getMyBookings(status, showLoading).pipe(
-          map((response) =>
-            invokeLoadMyBookingsApiSuccess({
-              bookings: response.data?.content ?? [],
-            })
-          ),
-          catchError((error: unknown) =>
-            of(
-              invokeLoadMyBookingsApiFailure({
-                error:
-                  extractApiErrorMessage(error) ||
-                  this.translate.instant('MY_BOOKINGS.LOAD_FAILED'),
+      withLatestFrom(this.store.pipe(select(selectMyBookings))),
+      switchMap(([{ status, showLoading, preserveWindow }, state]) => {
+        const size = preserveWindow
+          ? Math.max(MY_BOOKINGS_PAGE_SIZE, state.pagesLoaded * MY_BOOKINGS_PAGE_SIZE)
+          : MY_BOOKINGS_PAGE_SIZE;
+
+        return this.service
+          .getMyBookings({ status, page: 0, size, showLoadingDialog: showLoading })
+          .pipe(
+            map((response) =>
+              invokeLoadMyBookingsApiSuccess({
+                bookings: response.data?.content ?? [],
+                totalElements: response.data?.totalElements ?? 0,
+                totalPages: response.data?.totalPages ?? 0,
               })
+            ),
+            catchError((error: unknown) =>
+              of(
+                invokeLoadMyBookingsApiFailure({
+                  error:
+                    extractApiErrorMessage(error) ||
+                    this.translate.instant('MY_BOOKINGS.LOAD_FAILED'),
+                })
+              )
             )
+          );
+      })
+    )
+  );
+
+  // OBRS-577 AC2/AC6: fetches the next MY_BOOKINGS_PAGE_SIZE-row page and the
+  // reducer APPENDS it (never replaces) — the customer-shell incremental
+  // "Load more" idiom (design-system §12, OBRS-433 precedent), not a
+  // page-number paginator. `showLoadingDialog: false` is explicit (not just
+  // the service default) so this never surfaces the global loading dialog
+  // even if that default ever changes.
+  //
+  // Scrutinize round 3 (this effect's OWN guard was structurally
+  // unreachable): a `filter` reading `!state.loadingMore` mirrored
+  // `MyReportsStore.loadMore()`'s guard verbatim — correct THERE because
+  // that is a plain class method that checks the flag before setting it. In
+  // NgRx, `invokeLoadMoreMyBookingsApi`'s OWN reducer case sets
+  // `loadingMore: true`, and NgRx runs the reducer for an action before any
+  // effect observes that same action — so by the time `withLatestFrom`
+  // samples state here, `loadingMore` is ALREADY `true` for every dispatch,
+  // `!state.loadingMore` is always `false`, and the button never fired a
+  // single request in production (measured live: `requests during click:
+  // []`). `overrideSelector`-based unit tests hand-set `loadingMore: false`
+  // on the stub, so they could never see this — the real-store integration
+  // spec below is what pins it. Fix: drop the loadingMore half of the guard
+  // (the remaining `pagesLoaded < totalPages` half IS sound — that action's
+  // own reducer case does not touch either field) and use `exhaustMap`
+  // instead of `switchMap` for the idiomatic NgRx "ignore new emissions
+  // while an inner request is active" — the double-click protection the
+  // dropped flag used to provide.
+  //
+  // Scrutinize round 2 (AC3 fix, unaffected by round 3 — still needed):
+  // `exhaustMap`/`switchMap` alike only cancel/ignore a PRIOR
+  // `invokeLoadMoreMyBookingsApi` — neither does anything when a DIFFERENT
+  // action type supersedes this request, e.g. a status-filter switch, Retry,
+  // or any of the 6 mutation reloads, all of which dispatch
+  // `invokeLoadMyBookingsApi` on a completely separate effect stream. Left
+  // alone, a Load more request still in flight when one of those fires would
+  // land after the full reload already replaced the list — appending onto,
+  // and overwriting the totals of, a list for a DIFFERENT filter/status than
+  // the one it was requested under. `takeUntil` tears the inner HTTP
+  // subscription down the instant `invokeLoadMyBookingsApi` is dispatched,
+  // so a stale response can never reach the reducer — and once torn down,
+  // `exhaustMap` is free again to start the NEXT `invokeLoadMoreMyBookingsApi`
+  // (proved by `my-bookings.effect.spec.ts`'s cancellation test, which
+  // drives a fresh Load more through the same subscription afterward).
+  loadMoreMyBookings$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(invokeLoadMoreMyBookingsApi),
+      withLatestFrom(this.store.pipe(select(selectMyBookings))),
+      filter(([, state]) => state.pagesLoaded < state.totalPages),
+      exhaustMap(([, state]) =>
+        this.service
+          .getMyBookings({
+            status: state.statusFilter,
+            page: state.pagesLoaded,
+            size: MY_BOOKINGS_PAGE_SIZE,
+            showLoadingDialog: false,
+          })
+          .pipe(
+            map((response) =>
+              invokeLoadMoreMyBookingsApiSuccess({
+                bookings: response.data?.content ?? [],
+                totalElements: response.data?.totalElements ?? 0,
+                totalPages: response.data?.totalPages ?? 0,
+              })
+            ),
+            catchError((error: unknown) =>
+              of(
+                invokeLoadMoreMyBookingsApiFailure({
+                  error:
+                    extractApiErrorMessage(error) ||
+                    this.translate.instant('MY_BOOKINGS.LOAD_MORE_FAILED'),
+                })
+              )
+            ),
+            takeUntil(this.actions$.pipe(ofType(invokeLoadMyBookingsApi)))
           )
-        )
       )
     )
   );
 
-  // Preview the refund, confirm with the traveler, then cancel — all in one
-  // exclusive stream so a second click can't race the first.
+  // Load more failures are a toast only (AlertService) — the already-visible
+  // list/count line stay exactly as they were before the click (spec
+  // "States" section), never a full-page error takeover.
+  loadMoreMyBookingsFailureToast$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(invokeLoadMoreMyBookingsApiFailure),
+        tap(({ error }) => this.alertService.error(error))
+      ),
+    { dispatch: false }
+  );
+
+  // Preview the refund, then open the cancel modal — one exclusive stream so
+  // a second click can't race the first.
   //
-  // OBRS-286 Flow A1: when the policy resolves to MANUAL_REFUND_REQUIRED, the
-  // plain Swal confirm is replaced by `openCancelRefundDestinationModal` — the
-  // traveler must supply a refund destination first. Every other path
-  // (non-manual) is byte-identical to before.
+  // OBRS-286 Flow A1 introduced this modal only for MANUAL_REFUND_REQUIRED,
+  // falling through to a plain Swal confirm for every other refund method.
+  // OBRS-942 deleted that fork: the two screens quoted identical numbers and
+  // only the Swal lane never mentioned the OBRS-813 reschedule offer, so a
+  // card payer could lose 20% where a free reschedule would have kept 100%.
+  // Every resolved policy now opens the same modal; `CancelBookingModalComponent`
+  // hides the destination form/note itself when the method isn't manual.
   requestCancel$ = createEffect(() =>
     this.actions$.pipe(
       ofType(requestCancelBooking),
@@ -83,27 +199,19 @@ export class MyBookingsEffect {
           switchMap((response) => {
             const policy = response.data;
             if (!policy) {
+              // OBRS-843: this is a FAILURE path reached on an HTTP 200 whose
+              // `data` came back null, and `response.message` on a 2xx is
+              // `ApiSuccessRespDto`'s reason phrase — the literal "OK". The
+              // traveler was shown an error toast reading "OK". The envelope
+              // message is never user-facing copy; the translated string is.
               return of(
                 cancelBookingFailure({
-                  error:
-                    response.message ||
-                    this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
+                  error: this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
                 })
               );
             }
 
-            if (policy.refundMethod === MANUAL_REFUND_METHOD) {
-              return of(openCancelRefundDestinationModal({ booking, policy }));
-            }
-
-            return from(this.confirmCancellation(booking, policy)).pipe(
-              switchMap((confirmed) => {
-                if (!confirmed) {
-                  return of(cancelBookingDismissed());
-                }
-                return this.cancelConfirmed$(booking);
-              })
-            );
+            return of(openCancelRefundDestinationModal({ booking, policy }));
           }),
           catchError((error: unknown) =>
             of(
@@ -135,10 +243,9 @@ export class MyBookingsEffect {
           map((response) => {
             const result = response.data;
             if (!result) {
+              // OBRS-843 — same "OK"-as-an-error-message defect as above.
               return cancelBookingFailure({
-                error:
-                  response.message ||
-                  this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
+                error: this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
               });
             }
             return cancelBookingSuccess({ result });
@@ -174,7 +281,10 @@ export class MyBookingsEffect {
       tap(({ result }) => this.showCancelSuccess(result)),
       withLatestFrom(this.store.pipe(select(selectMyBookings))),
       map(([, state]) =>
-        invokeLoadMyBookingsApi({ status: state.statusFilter })
+        // OBRS-577 Decision A: preserveWindow so a traveler who has loaded
+        // several pages doesn't see the list snap back to page 1 after a
+        // successful cancel.
+        invokeLoadMyBookingsApi({ status: state.statusFilter, preserveWindow: true })
       )
     )
   );
@@ -187,62 +297,6 @@ export class MyBookingsEffect {
       ),
     { dispatch: false }
   );
-
-  private cancelConfirmed$(booking: MyBookingView) {
-    return this.service.cancelBooking(booking.id).pipe(
-      map((response) => {
-        const result = response.data;
-        if (!result) {
-          return cancelBookingFailure({
-            error:
-              response.message ||
-              this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
-          });
-        }
-        return cancelBookingSuccess({ result });
-      }),
-      catchError((error: unknown) =>
-        of(
-          cancelBookingFailure({
-            error:
-              extractApiErrorMessage(error) ||
-              this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
-          })
-        )
-      )
-    );
-  }
-
-  private confirmCancellation(
-    booking: MyBookingView,
-    policy: CancellationPolicy
-  ): Promise<boolean> {
-    const lines = [
-      this.translate.instant('MY_BOOKINGS.CANCEL.CONFIRM_TEXT', {
-        bookingNumber: booking.bookingNumber,
-        route: booking.route,
-      }),
-      this.translate.instant('MY_BOOKINGS.CANCEL.REFUND_LINE', {
-        refund: this.formatCurrency(policy.refundAmount),
-        rate: policy.refundRatePercent,
-      }),
-      this.translate.instant('MY_BOOKINGS.CANCEL.PENALTY_LINE', {
-        penalty: this.formatCurrency(policy.penaltyAmount),
-      }),
-    ];
-
-    if (policy.refundMethod === MANUAL_REFUND_METHOD) {
-      lines.push(this.translate.instant('MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE'));
-    }
-
-    return this.alertService.confirm({
-      icon: 'warning',
-      title: this.translate.instant('MY_BOOKINGS.CANCEL.CONFIRM_TITLE'),
-      text: lines.join('\n'),
-      confirmButtonText: this.translate.instant('MY_BOOKINGS.CANCEL.CONFIRM_BUTTON'),
-      cancelButtonText: this.translate.instant('MY_BOOKINGS.CANCEL.CANCEL_BUTTON'),
-    });
-  }
 
   private showCancelSuccess(result: CancelBookingResult): void {
     const message =
@@ -257,11 +311,9 @@ export class MyBookingsEffect {
     void this.alertService.success(message);
   }
 
+  // OBRS-843: delegates to the shared formatter the counter and override cancel
+  // dialogs now use, so one refund reads the same on all three surfaces.
   private formatCurrency(value: number | string): string {
-    return new Intl.NumberFormat('th-TH', {
-      style: 'currency',
-      currency: 'THB',
-      maximumFractionDigits: 2,
-    }).format(toAmountNumber(value));
+    return formatRefundAmount(value);
   }
 }

@@ -1,204 +1,228 @@
 <section class="admin-card mt-3">
   <div class="admin-card-head">
     <h4>{{ 'ADMIN.VEHICLES.MAINTENANCE.TABLE_TITLE' | translate }}</h4>
-    <button
-      *ngIf="canWrite"
-      type="button"
-      class="admin-btn admin-btn-primary"
-      (click)="openCreateModal()"
-    >
-      <span class="material-symbols-outlined">add</span>
-      <span>{{ 'ADMIN.VEHICLES.MAINTENANCE.ADD' | translate }}</span>
-    </button>
-  </div>
-
-  <!-- Loading: skeleton rows while refreshing with no cached value. -->
-  <div class="admin-table-wrap mt-3" *ngIf="isLoading">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.REASON' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.START_DATE' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.STATUS' | translate }}</th>
-          <th class="text-right" *ngIf="canWrite">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-          <td><span class="admin-skeleton"></span></td>
-          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
-          <td class="text-right" *ngIf="canWrite"><span class="admin-skeleton admin-skeleton--sm"></span></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Error (no cached value): replaces the table, no toast. -->
-  <div class="vehicle-maintenance-empty" *ngIf="!isLoading && errorMessage">
-    <span class="material-symbols-outlined" aria-hidden="true">error</span>
-    <p class="vehicle-maintenance-empty-title">{{ errorMessage }}</p>
-  </div>
-
-  <!-- Empty (200 + []): replaces the whole table section, not a zero-row table. -->
-  <div class="vehicle-maintenance-empty" *ngIf="isEmpty">
-    <span class="material-symbols-outlined" aria-hidden="true">build</span>
-    <p class="vehicle-maintenance-empty-title">{{ 'ADMIN.VEHICLES.MAINTENANCE.EMPTY_TITLE' | translate }}</p>
-    <p class="vehicle-maintenance-empty-body">{{ 'ADMIN.VEHICLES.MAINTENANCE.EMPTY_BODY' | translate }}</p>
-  </div>
-
-  <!-- Data table. -->
-  <div class="admin-table-wrap mt-3" *ngIf="!isLoading && !errorMessage && rows.length > 0">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.REASON' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.START_DATE' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.STATUS' | translate }}</th>
-          <th class="text-right" *ngIf="canWrite">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let row of rows; let i = index; trackBy: trackById" [class.zebra]="i % 2 === 1">
-          <td class="admin-emphasis">{{ row.reason }}</td>
-          <td>{{ row.startDateDisplay }}</td>
-          <td>{{ row.endDateDisplay || '-' }}</td>
-          <td>{{ row.nextDueDateDisplay || '-' }}</td>
-          <td>{{ row.status }}</td>
-          <td class="text-right" *ngIf="canWrite">
-            <div class="admin-inline-actions">
-              <button
-                type="button"
-                class="admin-icon-btn"
-                [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
-                (click)="openEditModal(row)"
-              >
-                <span class="material-symbols-outlined">edit_square</span>
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<div class="admin-modal-backdrop" *ngIf="isFormModalOpen" adminModalBackdrop (dismiss)="closeFormModal()">
-  <div class="admin-modal">
-    <h4 class="admin-modal-title">
-      {{
-        isEditMode
-          ? ('ADMIN.VEHICLES.MAINTENANCE.EDIT_TITLE' | translate)
-          : ('ADMIN.VEHICLES.MAINTENANCE.ADD_TITLE' | translate)
-      }}
-    </h4>
-    <p class="admin-modal-subtitle">{{ 'ADMIN.VEHICLES.MAINTENANCE.MODAL_HINT' | translate }}</p>
-
-    <form [formGroup]="maintenanceForm" class="admin-form-grid" (ngSubmit)="submitMaintenance()">
-      <div class="admin-form-field full">
-        <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.MAINTENANCE.REASON' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="reason" maxlength="255" />
-        <small class="admin-error" *ngIf="isFieldInvalid('reason')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.MAINTENANCE.START_DATE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <p-calendar
-          formControlName="startDate"
-          styleClass="schedule-calendar-filter"
-          inputStyleClass="schedule-calendar-filter-input"
-          panelStyleClass="schedule-calendar-filter-panel"
-          dateFormat="dd/mm/yy"
-          [showIcon]="true"
-          [showButtonBar]="true"
-          [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.START_DATE' | translate"
-        ></p-calendar>
-        <small class="admin-error" *ngIf="isFieldInvalid('startDate')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate }}</label>
-        <p-calendar
-          formControlName="endDate"
-          styleClass="schedule-calendar-filter"
-          inputStyleClass="schedule-calendar-filter-input"
-          panelStyleClass="schedule-calendar-filter-panel"
-          dateFormat="dd/mm/yy"
-          [showIcon]="true"
-          [showButtonBar]="true"
-          [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate"
-        ></p-calendar>
-        <small class="admin-error" *ngIf="hasDateRangeError()">
-          {{ 'ADMIN.VEHICLES.MAINTENANCE.DATE_RANGE_VALIDATION' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate }}</label>
-        <p-calendar
-          formControlName="nextDueDate"
-          styleClass="schedule-calendar-filter"
-          inputStyleClass="schedule-calendar-filter-input"
-          panelStyleClass="schedule-calendar-filter-panel"
-          dateFormat="dd/mm/yy"
-          [showIcon]="true"
-          [showButtonBar]="true"
-          [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate"
-        ></p-calendar>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.MAINTENANCE.STATUS' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="maintenanceStatus"
-          [options]="statusDropdownOptions"
-          valueKey="code"
-          labelKey="label"
-          [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.STATUS' | translate"
-        ></app-admin-dropdown>
-        <small class="admin-error" *ngIf="isFieldInvalid('maintenanceStatus')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field full">
-        <label class="admin-form-label">{{ 'ADMIN.VEHICLES.MAINTENANCE.NOTES' | translate }}</label>
-        <textarea
-          class="admin-field"
-          formControlName="notes"
-          [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.NOTES_PLACEHOLDER' | translate"
-        ></textarea>
-      </div>
-    </form>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="closeFormModal()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
+    @if (canWrite) {
       <button
         type="button"
         class="admin-btn admin-btn-primary"
-        [disabled]="isSubmitting"
-        (click)="submitMaintenance()"
-      >
-        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+        (click)="openCreateModal()"
+        >
+        <span class="material-symbols-outlined">add</span>
+        <span>{{ 'ADMIN.VEHICLES.MAINTENANCE.ADD' | translate }}</span>
       </button>
+    }
+  </div>
+
+  <!-- Loading: skeleton rows while refreshing with no cached value. -->
+  @if (isLoading) {
+    <div class="admin-table-wrap mt-3">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.REASON' | translate }}</th>
+            <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.START_DATE' | translate }}</th>
+            <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate }}</th>
+            <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate }}</th>
+            <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.STATUS' | translate }}</th>
+            @if (canWrite) {
+              <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of skeletonRows; track row) {
+            <tr class="admin-skeleton-row" aria-hidden="true">
+              <td><span class="admin-skeleton"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+              @if (canWrite) {
+                <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Error (no cached value): replaces the table, no toast. -->
+  @if (!isLoading && errorMessage) {
+    <div class="vehicle-maintenance-empty">
+      <span class="material-symbols-outlined" aria-hidden="true">error</span>
+      <p class="vehicle-maintenance-empty-title">{{ errorMessage }}</p>
+    </div>
+  }
+
+  <!-- Empty (200 + []): replaces the whole table section, not a zero-row table. -->
+  @if (isEmpty) {
+    <div class="vehicle-maintenance-empty">
+      <span class="material-symbols-outlined" aria-hidden="true">build</span>
+      <p class="vehicle-maintenance-empty-title">{{ 'ADMIN.VEHICLES.MAINTENANCE.EMPTY_TITLE' | translate }}</p>
+      <p class="vehicle-maintenance-empty-body">{{ 'ADMIN.VEHICLES.MAINTENANCE.EMPTY_BODY' | translate }}</p>
+    </div>
+  }
+
+  <!-- Data table. -->
+  @if (!isLoading && !errorMessage && rows.length > 0) {
+    <div class="admin-table-wrap mt-3">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.REASON' | translate }}</th>
+            <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.START_DATE' | translate }}</th>
+            <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate }}</th>
+            <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate }}</th>
+            <th>{{ 'ADMIN.VEHICLES.MAINTENANCE.STATUS' | translate }}</th>
+            @if (canWrite) {
+              <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows; track trackById(i, row); let i = $index) {
+            <tr [class.zebra]="i % 2 === 1">
+              <td class="admin-emphasis">{{ row.reason }}</td>
+              <td>{{ row.startDateDisplay }}</td>
+              <td>{{ row.endDateDisplay || '-' }}</td>
+              <td>{{ row.nextDueDateDisplay || '-' }}</td>
+              <td>{{ row.status }}</td>
+              @if (canWrite) {
+                <td class="text-right">
+                  <div class="admin-inline-actions">
+                    <button
+                      type="button"
+                      class="admin-icon-btn"
+                      [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                      (click)="openEditModal(row)"
+                      >
+                      <span class="material-symbols-outlined">edit_square</span>
+                    </button>
+                  </div>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+@if (isFormModalOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="closeFormModal()">
+    <div class="admin-modal">
+      <h4 class="admin-modal-title">
+        {{
+        isEditMode
+        ? ('ADMIN.VEHICLES.MAINTENANCE.EDIT_TITLE' | translate)
+        : ('ADMIN.VEHICLES.MAINTENANCE.ADD_TITLE' | translate)
+        }}
+      </h4>
+      <p class="admin-modal-subtitle">{{ 'ADMIN.VEHICLES.MAINTENANCE.MODAL_HINT' | translate }}</p>
+      <form [formGroup]="maintenanceForm" class="admin-form-grid" (ngSubmit)="submitMaintenance()">
+        <div class="admin-form-field full">
+          <label class="admin-form-label">
+            {{ 'ADMIN.VEHICLES.MAINTENANCE.REASON' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="reason" maxlength="255" />
+          @if (isFieldInvalid('reason')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.VEHICLES.MAINTENANCE.START_DATE' | translate }} <span class="admin-required">*</span>
+          </label>
+          <p-datePicker
+            formControlName="startDate"
+            styleClass="schedule-calendar-filter"
+            inputStyleClass="schedule-calendar-filter-input"
+            panelStyleClass="schedule-calendar-filter-panel"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            [showButtonBar]="true"
+            [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.START_DATE' | translate"
+          ></p-datePicker>
+          @if (isFieldInvalid('startDate')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate }}</label>
+          <p-datePicker
+            formControlName="endDate"
+            styleClass="schedule-calendar-filter"
+            inputStyleClass="schedule-calendar-filter-input"
+            panelStyleClass="schedule-calendar-filter-panel"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            [showButtonBar]="true"
+            [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate"
+          ></p-datePicker>
+          @if (hasDateRangeError()) {
+            <small class="admin-error">
+              {{ 'ADMIN.VEHICLES.MAINTENANCE.DATE_RANGE_VALIDATION' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate }}</label>
+          <p-datePicker
+            formControlName="nextDueDate"
+            styleClass="schedule-calendar-filter"
+            inputStyleClass="schedule-calendar-filter-input"
+            panelStyleClass="schedule-calendar-filter-panel"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            [showButtonBar]="true"
+            [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate"
+          ></p-datePicker>
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.VEHICLES.MAINTENANCE.STATUS' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="maintenanceStatus"
+            [options]="statusDropdownOptions"
+            valueKey="code"
+            labelKey="label"
+            [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.STATUS' | translate"
+          ></app-admin-dropdown>
+          @if (isFieldInvalid('maintenanceStatus')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field full">
+          <label class="admin-form-label">{{ 'ADMIN.VEHICLES.MAINTENANCE.NOTES' | translate }}</label>
+          <textarea
+            class="admin-field"
+            formControlName="notes"
+            [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.NOTES_PLACEHOLDER' | translate"
+          ></textarea>
+        </div>
+      </form>
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" (click)="closeFormModal()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-primary"
+          [disabled]="isSubmitting"
+          (click)="submitMaintenance()"
+          >
+          {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+        </button>
+      </div>
     </div>
   </div>
-</div>
+}

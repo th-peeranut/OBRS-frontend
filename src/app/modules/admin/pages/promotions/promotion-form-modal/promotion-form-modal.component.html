@@ -1,224 +1,222 @@
-<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop (dismiss)="requestClose()">
-  <div class="admin-modal admin-modal-lg">
-    <h4 class="admin-modal-title">
-      {{
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="requestClose()">
+    <div class="admin-modal admin-modal-lg">
+      <h4 class="admin-modal-title">
+        {{
         mode === 'edit'
-          ? ('ADMIN.PROMOTIONS.EDIT_TITLE' | translate)
-          : ('ADMIN.PROMOTIONS.ADD_TITLE' | translate)
-      }}
-    </h4>
-    <p class="admin-modal-subtitle">
-      {{ 'ADMIN.PROMOTIONS.MODAL_HINT' | translate }}
-      <span class="admin-muted" *ngIf="mode === 'edit' && isEditDetailLoading">
-        · {{ 'ADMIN.COMMON.LOADING' | translate }}
-      </span>
-    </p>
-
-    <form [formGroup]="promotionForm" class="admin-form-grid" (ngSubmit)="submitPromotion()">
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.PROMOTIONS.SLUG' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="slug" />
-        <small class="admin-error" *ngIf="isFieldInvalid('slug')">
-          {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.PROMOTIONS.CODE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="code" />
-        <small class="admin-error" *ngIf="isFieldInvalid('code')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.PROMOTIONS.DISCOUNT_TYPE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="discountType"
-          [options]="discountTypeOptions"
-          valueKey="value"
-          labelKey="label"
-          [placeholder]="'ADMIN.PROMOTIONS.DISCOUNT_TYPE' | translate"
-        ></app-admin-dropdown>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.PROMOTIONS.DISCOUNT_AMOUNT' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input
-          class="admin-field"
-          type="number"
-          min="0"
-          step="0.01"
-          formControlName="discountValue"
-        />
-        <small class="admin-error" *ngIf="isFieldInvalid('discountValue')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.MAX_DISCOUNT_AMOUNT' | translate }}</label>
-        <input
-          class="admin-field"
-          type="number"
-          min="0"
-          step="0.01"
-          formControlName="maxDiscountAmount"
-        />
-        <small class="admin-hint">{{ 'ADMIN.PROMOTIONS.MAX_DISCOUNT_HINT' | translate }}</small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.MIN_BOOKING_AMOUNT' | translate }}</label>
-        <input
-          class="admin-field"
-          type="number"
-          min="0"
-          step="0.01"
-          formControlName="minBookingAmount"
-        />
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.PROMOTIONS.START_DATE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <p-calendar
-          formControlName="startDateTime"
-          styleClass="app-date-field"
-          panelStyleClass="app-date-field-panel"
-          dateFormat="dd/mm/yy"
-          [showTime]="true"
-          [hourFormat]="'24'"
-          [showIcon]="true"
-          [iconDisplay]="'input'"
-          [showButtonBar]="true"
-          [placeholder]="'ADMIN.PROMOTIONS.START_DATE' | translate"
-        >
-          <ng-template pTemplate="inputicon">
-            <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-          </ng-template>
-        </p-calendar>
-        <small class="admin-error" *ngIf="isFieldInvalid('startDateTime')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.END_DATE' | translate }}</label>
-        <p-calendar
-          formControlName="endDateTime"
-          styleClass="app-date-field"
-          panelStyleClass="app-date-field-panel"
-          dateFormat="dd/mm/yy"
-          [showTime]="true"
-          [hourFormat]="'24'"
-          [showIcon]="true"
-          [iconDisplay]="'input'"
-          [showButtonBar]="true"
-          [placeholder]="'ADMIN.PROMOTIONS.END_DATE' | translate"
-        >
-          <ng-template pTemplate="inputicon">
-            <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-          </ng-template>
-        </p-calendar>
-        <small class="admin-error" *ngIf="hasDateRangeError()">
-          {{ 'ADMIN.PROMOTIONS.DATE_RANGE_VALIDATION' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.USAGE_LIMIT' | translate }}</label>
-        <input class="admin-field" type="number" min="0" formControlName="usageLimit" />
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.PROMOTIONS.STATUS' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="status"
-          [options]="statusOptions"
-          valueKey="value"
-          labelKey="label"
-          [placeholder]="'ADMIN.PROMOTIONS.STATUS' | translate"
-        ></app-admin-dropdown>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.PROMOTIONS.AUTO_APPLY' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="autoApply"
-          [options]="autoApplyOptions"
-          valueKey="value"
-          labelKey="label"
-          [placeholder]="'ADMIN.PROMOTIONS.AUTO_APPLY' | translate"
-        ></app-admin-dropdown>
-      </div>
-
-      <div class="admin-form-field" *ngIf="mode === 'edit'">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.TIMES_USED' | translate }}</label>
-        <p class="admin-emphasis">{{ selectedPromotion?.currentUsage ?? 0 }}</p>
-      </div>
-
-      <div class="admin-form-field full">
-        <hr />
-        <h5 class="admin-form-subheading">{{ 'ADMIN.PROMOTIONS.TRANSLATIONS_SECTION' | translate }}</h5>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.PROMOTIONS.LABEL_EN' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="enLabel" />
-        <small class="admin-error" *ngIf="isFieldInvalid('enLabel')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.DESCRIPTION_EN' | translate }}</label>
-        <textarea class="admin-field" formControlName="enDescription"></textarea>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.LABEL_TH' | translate }}</label>
-        <input class="admin-field" formControlName="thLabel" />
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.DESCRIPTION_TH' | translate }}</label>
-        <textarea class="admin-field" formControlName="thDescription"></textarea>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.LABEL_ZH' | translate }}</label>
-        <input class="admin-field" formControlName="zhLabel" />
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.DESCRIPTION_ZH' | translate }}</label>
-        <textarea class="admin-field" formControlName="zhDescription"></textarea>
-      </div>
-    </form>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="requestClose()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitPromotion()">
-        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-      </button>
-    </div>
-  </div>
-</div>
+        ? ('ADMIN.PROMOTIONS.EDIT_TITLE' | translate)
+        : ('ADMIN.PROMOTIONS.ADD_TITLE' | translate)
+        }}
+      </h4>
+      <p class="admin-modal-subtitle">
+        {{ 'ADMIN.PROMOTIONS.MODAL_HINT' | translate }}
+        @if (mode === 'edit' && isEditDetailLoading) {
+          <span class="admin-muted">
+            · {{ 'ADMIN.COMMON.LOADING' | translate }}
+          </span>
+        }
+      </p>
+      <form [formGroup]="promotionForm" class="admin-form-grid" (ngSubmit)="submitPromotion()">
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.PROMOTIONS.SLUG' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="slug" />
+          @if (isFieldInvalid('slug')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.PROMOTIONS.CODE' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="code" />
+          @if (isFieldInvalid('code')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.PROMOTIONS.DISCOUNT_TYPE' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="discountType"
+            [options]="discountTypeOptions"
+            valueKey="value"
+            labelKey="label"
+            [placeholder]="'ADMIN.PROMOTIONS.DISCOUNT_TYPE' | translate"
+          ></app-admin-dropdown>
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.PROMOTIONS.DISCOUNT_AMOUNT' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input
+            class="admin-field"
+            type="number"
+            min="0"
+            step="0.01"
+            formControlName="discountValue"
+            />
+            @if (isFieldInvalid('discountValue')) {
+              <small class="admin-error">
+                {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+              </small>
+            }
+          </div>
+          <div class="admin-form-field">
+            <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.MAX_DISCOUNT_AMOUNT' | translate }}</label>
+            <input
+              class="admin-field"
+              type="number"
+              min="0"
+              step="0.01"
+              formControlName="maxDiscountAmount"
+              />
+              <small class="admin-hint">{{ 'ADMIN.PROMOTIONS.MAX_DISCOUNT_HINT' | translate }}</small>
+            </div>
+            <div class="admin-form-field">
+              <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.MIN_BOOKING_AMOUNT' | translate }}</label>
+              <input
+                class="admin-field"
+                type="number"
+                min="0"
+                step="0.01"
+                formControlName="minBookingAmount"
+                />
+              </div>
+              <div class="admin-form-field">
+                <label class="admin-form-label">
+                  {{ 'ADMIN.PROMOTIONS.START_DATE' | translate }} <span class="admin-required">*</span>
+                </label>
+                <p-datePicker
+                  formControlName="startDateTime"
+                  styleClass="app-date-field"
+                  panelStyleClass="app-date-field-panel"
+                  dateFormat="dd/mm/yy"
+                  [showTime]="true"
+                  [hourFormat]="'24'"
+                  [showIcon]="true"
+                  [iconDisplay]="'input'"
+                  [showButtonBar]="true"
+                  [placeholder]="'ADMIN.PROMOTIONS.START_DATE' | translate"
+                  >
+                  <ng-template pTemplate="inputicon">
+                    <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+                  </ng-template>
+                </p-datePicker>
+                @if (isFieldInvalid('startDateTime')) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+                  </small>
+                }
+              </div>
+              <div class="admin-form-field">
+                <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.END_DATE' | translate }}</label>
+                <p-datePicker
+                  formControlName="endDateTime"
+                  styleClass="app-date-field"
+                  panelStyleClass="app-date-field-panel"
+                  dateFormat="dd/mm/yy"
+                  [showTime]="true"
+                  [hourFormat]="'24'"
+                  [showIcon]="true"
+                  [iconDisplay]="'input'"
+                  [showButtonBar]="true"
+                  [placeholder]="'ADMIN.PROMOTIONS.END_DATE' | translate"
+                  >
+                  <ng-template pTemplate="inputicon">
+                    <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+                  </ng-template>
+                </p-datePicker>
+                @if (hasDateRangeError()) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.PROMOTIONS.DATE_RANGE_VALIDATION' | translate }}
+                  </small>
+                }
+              </div>
+              <div class="admin-form-field">
+                <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.USAGE_LIMIT' | translate }}</label>
+                <input class="admin-field" type="number" min="0" formControlName="usageLimit" />
+              </div>
+              <div class="admin-form-field">
+                <label class="admin-form-label">
+                  {{ 'ADMIN.PROMOTIONS.STATUS' | translate }} <span class="admin-required">*</span>
+                </label>
+                <app-admin-dropdown
+                  formControlName="status"
+                  [options]="statusOptions"
+                  valueKey="value"
+                  labelKey="label"
+                  [placeholder]="'ADMIN.PROMOTIONS.STATUS' | translate"
+                ></app-admin-dropdown>
+              </div>
+              <div class="admin-form-field">
+                <label class="admin-form-label">
+                  {{ 'ADMIN.PROMOTIONS.AUTO_APPLY' | translate }} <span class="admin-required">*</span>
+                </label>
+                <app-admin-dropdown
+                  formControlName="autoApply"
+                  [options]="autoApplyOptions"
+                  valueKey="value"
+                  labelKey="label"
+                  [placeholder]="'ADMIN.PROMOTIONS.AUTO_APPLY' | translate"
+                ></app-admin-dropdown>
+              </div>
+              @if (mode === 'edit') {
+                <div class="admin-form-field">
+                  <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.TIMES_USED' | translate }}</label>
+                  <p class="admin-emphasis">{{ selectedPromotion?.currentUsage ?? 0 }}</p>
+                </div>
+              }
+              <div class="admin-form-field full">
+                <hr />
+                <h5 class="admin-form-subheading">{{ 'ADMIN.PROMOTIONS.TRANSLATIONS_SECTION' | translate }}</h5>
+              </div>
+              <div class="admin-form-field">
+                <label class="admin-form-label">
+                  {{ 'ADMIN.PROMOTIONS.LABEL_EN' | translate }} <span class="admin-required">*</span>
+                </label>
+                <input class="admin-field" formControlName="enLabel" />
+                @if (isFieldInvalid('enLabel')) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+                  </small>
+                }
+              </div>
+              <div class="admin-form-field">
+                <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.DESCRIPTION_EN' | translate }}</label>
+                <textarea class="admin-field" formControlName="enDescription"></textarea>
+              </div>
+              <div class="admin-form-field">
+                <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.LABEL_TH' | translate }}</label>
+                <input class="admin-field" formControlName="thLabel" />
+              </div>
+              <div class="admin-form-field">
+                <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.DESCRIPTION_TH' | translate }}</label>
+                <textarea class="admin-field" formControlName="thDescription"></textarea>
+              </div>
+              <div class="admin-form-field">
+                <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.LABEL_ZH' | translate }}</label>
+                <input class="admin-field" formControlName="zhLabel" />
+              </div>
+              <div class="admin-form-field">
+                <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.DESCRIPTION_ZH' | translate }}</label>
+                <textarea class="admin-field" formControlName="zhDescription"></textarea>
+              </div>
+            </form>
+            <div class="admin-modal-actions">
+              <button type="button" class="admin-btn" (click)="requestClose()">
+                {{ 'ADMIN.COMMON.CANCEL' | translate }}
+              </button>
+              <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitPromotion()">
+                {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }

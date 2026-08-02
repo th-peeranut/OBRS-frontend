@@ -79,9 +79,10 @@ function dimensionsAllOrNoneValidator(): ValidatorFn {
  * required, prefilled from the account when present, editable.
  */
 @Component({
-  selector: 'app-parcel-details-form',
-  templateUrl: './parcel-details-form.component.html',
-  styleUrl: './parcel-details-form.component.scss',
+    selector: 'app-parcel-details-form',
+    templateUrl: './parcel-details-form.component.html',
+    styleUrl: './parcel-details-form.component.scss',
+    standalone: false
 })
 export class ParcelDetailsFormComponent implements OnInit, OnChanges, OnDestroy {
   @Input() senderNameDisplay = '';

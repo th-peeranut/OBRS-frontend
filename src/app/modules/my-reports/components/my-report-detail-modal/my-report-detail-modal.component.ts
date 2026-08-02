@@ -35,9 +35,10 @@ export interface MyReportSummaryPatch {
  * and the follow-up timeline) once it lands.
  */
 @Component({
-  selector: 'app-my-report-detail-modal',
-  templateUrl: './my-report-detail-modal.component.html',
-  styleUrl: './my-report-detail-modal.component.scss',
+    selector: 'app-my-report-detail-modal',
+    templateUrl: './my-report-detail-modal.component.html',
+    styleUrl: './my-report-detail-modal.component.scss',
+    standalone: false
 })
 export class MyReportDetailModalComponent implements OnInit, OnDestroy {
   @Input() summary!: MyUsabilityReportSummary;

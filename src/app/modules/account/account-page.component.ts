@@ -51,9 +51,10 @@ export function thaiMobileValidator(control: AbstractControl): ValidationErrors 
  * still renders from the cached username, so that card is not gated on the request.
  */
 @Component({
-  selector: 'app-account-page',
-  templateUrl: './account-page.component.html',
-  styleUrl: './account-page.component.scss',
+    selector: 'app-account-page',
+    templateUrl: './account-page.component.html',
+    styleUrl: './account-page.component.scss',
+    standalone: false
 })
 export class AccountPageComponent implements OnInit {
   currentEmail: string | null = null;

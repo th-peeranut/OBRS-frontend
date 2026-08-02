@@ -67,6 +67,22 @@ describe('vehicles-page.mappers', () => {
       expect(row.vehicleType).toBe('-');
     });
 
+    // OBRS-842: the '-' above is a DISPLAY placeholder. The raw fields must keep
+    // "the server sent nothing" distinguishable from "the server sent a dash",
+    // because everything that edits a vehicle reads them instead.
+    it('keeps the raw server values null when absent, alongside the "-" display values', () => {
+      const sparse: AdminVehicleDto = { id: 5, status: 'active' };
+      const row = toVehicleRow(sparse, 'en');
+      expect(row.rawVehicleNumber).toBeNull();
+      expect(row.rawPlate).toBeNull();
+    });
+
+    it('passes real server values through to the raw fields unchanged', () => {
+      const row = toVehicleRow(base, 'en');
+      expect(row.rawVehicleNumber).toBe('V1');
+      expect(row.rawPlate).toBe('ABC-123');
+    });
+
     it('resolves vehicleTypeSlug from vehicleType.slug', () => {
       expect(toVehicleRow(base, 'en').vehicleTypeSlug).toBe('van');
     });
@@ -92,6 +108,21 @@ describe('vehicles-page.mappers', () => {
     });
   });
 
+  // OBRS-842: a retired vehicle with no หมายเลขพาหนะ, exactly as the table hands it
+  // to the edit modal — display fields already placeholdered, raw fields truthful.
+  const RETIRED_ROW: VehicleRow = {
+    id: 14,
+    vehicleTypeSlug: 'minibus',
+    statusCode: 'retired',
+    vehicleNumber: '-',
+    plate: '16-8829',
+    rawVehicleNumber: null,
+    rawPlate: '16-8829',
+    vehicleType: 'Minibus',
+    route: '-',
+    status: 'RETIRED',
+  };
+
   describe('toVehicleDtoFallback', () => {
     it('maps a VehicleRow back into an AdminVehicleDto shape', () => {
       const row: VehicleRow = {
@@ -100,6 +131,8 @@ describe('vehicles-page.mappers', () => {
         statusCode: 'active',
         vehicleNumber: 'V1',
         plate: 'ABC-123',
+        rawVehicleNumber: 'V1',
+        rawPlate: 'ABC-123',
         vehicleType: 'Van',
         route: '-',
         status: 'ACTIVE',
@@ -113,6 +146,16 @@ describe('vehicles-page.mappers', () => {
         vehicleType: { id: 0, slug: 'van' },
       });
     });
+
+    // OBRS-842 regression: this fallback seeds the edit form on the synchronous
+    // open. Reading the display field here put a literal '-' into the DTO, which
+    // then short-circuited buildVehicleFormValues' `??` chain and reached the
+    // form control — the first link in the corruption path.
+    it('carries the ABSENT vehicle number through as undefined, never the "-" placeholder', () => {
+      const dto = toVehicleDtoFallback(RETIRED_ROW);
+      expect(dto.vehicleNumber).toBeUndefined();
+      expect(dto.numberPlate).toBe('16-8829');
+    });
   });
 
   describe('buildVehicleFormValues', () => {
@@ -122,6 +165,8 @@ describe('vehicles-page.mappers', () => {
       statusCode: 'active',
       vehicleNumber: 'V1',
       plate: 'ABC-123',
+      rawVehicleNumber: 'V1',
+      rawPlate: 'ABC-123',
       vehicleType: 'Van',
       route: '-',
       status: 'ACTIVE',
@@ -197,6 +242,73 @@ describe('vehicles-page.mappers', () => {
       expect(values['chassisNumber']).toBe('');
       expect(values['note']).toBe('');
     });
+
+    // ── OBRS-842: the bug itself ──────────────────────────────────────────────
+    // Both call sites in initEditForm are covered: the synchronous open (row
+    // fallback DTO) and the late GET-detail patch (server DTO with a null
+    // vehicleNumber). Either one leaking '-' is enough to write it to the DB,
+    // because PUT is a full replace and '-' satisfies Validators.required.
+    it('seeds an ABSENT vehicle number as blank, not as the "-" the table displays', () => {
+      const fromRowFallback = buildVehicleFormValues(
+        toVehicleDtoFallback(RETIRED_ROW),
+        RETIRED_ROW,
+        'en'
+      );
+      expect(fromRowFallback['vehicleNumber']).toBe('');
+
+      const fromServerDetail = buildVehicleFormValues(
+        { id: 14, numberPlate: '16-8829', status: 'retired' },
+        RETIRED_ROW,
+        'en'
+      );
+      expect(fromServerDetail['vehicleNumber']).toBe('');
+    });
+
+    // The plate travels the identical `?? row` path one line up. It is currently
+    // unreachable (vehicles.number_plate is NOT NULL, so the server always sends
+    // one) — pinned anyway so the two lines cannot drift apart again.
+    it('seeds an absent plate as blank too, not as "-"', () => {
+      const plateless: VehicleRow = { ...RETIRED_ROW, plate: '-', rawPlate: null };
+      const values = buildVehicleFormValues(
+        toVehicleDtoFallback(plateless),
+        plateless,
+        'en'
+      );
+      expect(values['numberPlate']).toBe('');
+    });
+
+    // Must-NOT-fire side: a vehicle that really does hold a number still gets it.
+    // Without this, "always blank" would pass the two assertions above.
+    it('still seeds a vehicle number the server DID send', () => {
+      const values = buildVehicleFormValues({ id: 1, vehicleNumber: '51-24' }, row, 'en');
+      expect(values['vehicleNumber']).toBe('51-24');
+    });
+
+    // ── OBRS-835: the GPS IMEI ────────────────────────────────────────────────
+    it('seeds the GPS IMEI from the server detail', () => {
+      const values = buildVehicleFormValues(
+        { id: 1, gpsImei: '860470062518406' },
+        row,
+        'en'
+      );
+      expect(values['gpsImei']).toBe('860470062518406');
+    });
+
+    /**
+     * The row fallback has no IMEI to give — the fleet-list projection does not carry
+     * gps_imei at all. It must read blank rather than inventing one, and the modal's
+     * isEditDetailError guard is what stops that blank from ever being submitted as
+     * "detach the box".
+     */
+    it('seeds a blank GPS IMEI from the row fallback, which never carries one', () => {
+      const values = buildVehicleFormValues(toVehicleDtoFallback(row), row, 'en');
+      expect(values['gpsImei']).toBe('');
+    });
+
+    it('seeds a blank GPS IMEI when the vehicle genuinely has no tracker fitted', () => {
+      const values = buildVehicleFormValues({ id: 1, gpsImei: null }, row, 'en');
+      expect(values['gpsImei']).toBe('');
+    });
   });
 
   describe('toVehiclePayload', () => {
@@ -218,8 +330,45 @@ describe('vehicles-page.mappers', () => {
       const payload = toVehiclePayload({});
       expect(payload.vehicleType).toBe('');
       expect(payload.numberPlate).toBe('');
-      expect(payload.vehicleNumber).toBe('');
       expect(payload.status).toBe('');
+    });
+
+    // OBRS-842: vehicleNumber is the one field of the four that must NOT default
+    // to ''. VehicleDtoService#applyTo assigns it unconditionally, so '' would be
+    // stored as a real empty string in a UNIQUE column — the second retired
+    // vehicle saved that way would 409 with nothing on screen to explain it.
+    it('sends a blank vehicle number as null, never as an empty string', () => {
+      expect(toVehiclePayload({}).vehicleNumber).toBeNull();
+      expect(toVehiclePayload({ vehicleNumber: '' }).vehicleNumber).toBeNull();
+      expect(toVehiclePayload({ vehicleNumber: '   ' }).vehicleNumber).toBeNull();
+    });
+
+    // OBRS-835: the GPS IMEI is the second field with the vehicleNumber problem, and a
+    // worse version of it — `vehicles.gps_imei` is UNIQUE too, but a wrong value there
+    // is INVISIBLE: the van simply never appears on the tracking map.
+    describe('gpsImei (OBRS-835)', () => {
+      it('sends a blank IMEI as null, never as an empty string', () => {
+        expect(toVehiclePayload({}).gpsImei).toBeNull();
+        expect(toVehiclePayload({ gpsImei: '' }).gpsImei).toBeNull();
+        expect(toVehiclePayload({ gpsImei: '   ' }).gpsImei).toBeNull();
+      });
+
+      it('trims the IMEI — a stray space is a different key in a unique index', () => {
+        expect(toVehiclePayload({ gpsImei: ' 860470062518406 ' }).gpsImei).toBe(
+          '860470062518406'
+        );
+      });
+
+      /**
+       * The key must always be PRESENT, even when null. The backend reads absence as
+       * "leave the box alone" (VehicleDtoService#applyTo is conditional on this one
+       * field), so a dropped key would make "clear the IMEI" impossible from the form —
+       * the admin would press Save on an emptied field and nothing would change.
+       */
+      it('always serializes the key, so an emptied field really detaches the box', () => {
+        expect('gpsImei' in toVehiclePayload({})).toBe(true);
+        expect('gpsImei' in toVehiclePayload({ gpsImei: '' })).toBe(true);
+      });
     });
 
     // OBRS-316 Gap 1: PUT is a full-replace, so ALL 7 attribute keys must always
@@ -384,8 +533,8 @@ describe('vehicles-page.mappers', () => {
 
   describe('filterVehiclesByStatus', () => {
     const vehicles: VehicleRow[] = [
-      { id: 1, vehicleTypeSlug: 'van', statusCode: 'active', vehicleNumber: 'V1', plate: 'A', vehicleType: 'Van', route: '-', status: 'ACTIVE' },
-      { id: 2, vehicleTypeSlug: 'bus', statusCode: 'pending', vehicleNumber: 'V2', plate: 'B', vehicleType: 'Bus', route: '-', status: 'PENDING' },
+      { id: 1, vehicleTypeSlug: 'van', statusCode: 'active', vehicleNumber: 'V1', plate: 'A', rawVehicleNumber: 'V1', rawPlate: 'A', vehicleType: 'Van', route: '-', status: 'ACTIVE' },
+      { id: 2, vehicleTypeSlug: 'bus', statusCode: 'pending', vehicleNumber: 'V2', plate: 'B', rawVehicleNumber: 'V2', rawPlate: 'B', vehicleType: 'Bus', route: '-', status: 'PENDING' },
     ];
 
     it('returns all vehicles when the filter is empty', () => {

@@ -141,10 +141,11 @@ export type BoardingCameraStatus =
  * double-fetch on mount.
  */
 @Component({
-  selector: 'app-boarding-list',
-  templateUrl: './boarding-list.component.html',
-  styleUrl: './boarding-list.component.scss',
-  providers: [BoardingListStore],
+    selector: 'app-boarding-list',
+    templateUrl: './boarding-list.component.html',
+    styleUrl: './boarding-list.component.scss',
+    providers: [BoardingListStore],
+    standalone: false
 })
 export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
   @Input() scheduleId!: number;

@@ -12,15 +12,27 @@ import { ParcelBookingProgressStep } from '../../components/parcel-booking-progr
 import { ParcelScheduleOption, ParcelTripFormValue } from '../../components/parcel-trip-form/parcel-trip-form.component';
 import { ParcelDetailsFormValue } from '../../components/parcel-details-form/parcel-details-form.component';
 import { stashParcelBookingAmount } from '../../parcel-booking-amount-session';
-import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
+import { errorCodeFromMessageKey, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 
 type ParcelBookingPhase = 'trip' | 'details' | 'payment';
 type PaymentTab = 'creditcard' | 'qrcode';
 
+/**
+ * OBRS-839 (found by this card's census, not reported with it): the two
+ * `*.error.id-not-found` entries were written as dotted `messageKey` strings but
+ * are looked up with the wire `error.error.errorCode`, which
+ * `ResourceNotFoundException` derives to `SCHEDULE_ERROR_ID_NOT_FOUND` /
+ * `STOP_ERROR_ID_NOT_FOUND` (it is thrown with a messageKey and no explicit
+ * errorCode). Neither key could ever be hit, so a customer quoting a parcel
+ * against a schedule or stop that had just been removed got the GENERIC error
+ * instead of "that trip is no longer available". Computed with
+ * `errorCodeFromMessageKey()` — the same fix, and the same reason for not
+ * hand-typing the SCREAMING_SNAKE form, as the two cancel surfaces.
+ */
 const QUOTE_ERROR_KEYS: Record<string, string> = {
   PARCEL_STOP_PAIR_NOT_PRICEABLE: 'PARCEL_BOOKING.ERROR.STOP_PAIR_NOT_PRICEABLE',
-  'schedule.error.id-not-found': 'PARCEL_BOOKING.ERROR.NOT_FOUND',
-  'stop.error.id-not-found': 'PARCEL_BOOKING.ERROR.NOT_FOUND',
+  [errorCodeFromMessageKey('schedule.error.id-not-found')]: 'PARCEL_BOOKING.ERROR.NOT_FOUND',
+  [errorCodeFromMessageKey('stop.error.id-not-found')]: 'PARCEL_BOOKING.ERROR.NOT_FOUND',
 };
 
 const SUBMIT_ERROR_KEYS: Record<string, string> = {
@@ -39,8 +51,11 @@ const SUBMIT_ERROR_KEYS: Record<string, string> = {
   // scrutinize pass) — mapped here rather than falling through to GENERIC,
   // since the guard's whole point is a clean, actionable message.
   PARCEL_SENDER_NAME_UNRESOLVED: 'PARCEL_BOOKING.ERROR.SENDER_NAME_UNRESOLVED',
-  'schedule.error.id-not-found': 'PARCEL_BOOKING.ERROR.NOT_FOUND',
-  'stop.error.id-not-found': 'PARCEL_BOOKING.ERROR.NOT_FOUND',
+  // OBRS-839 — same dead dotted keys as QUOTE_ERROR_KEYS above, on the submit
+  // path this time: the schedule could fill up or be cancelled between quote and
+  // pay, which is exactly when this message needs to be specific.
+  [errorCodeFromMessageKey('schedule.error.id-not-found')]: 'PARCEL_BOOKING.ERROR.NOT_FOUND',
+  [errorCodeFromMessageKey('stop.error.id-not-found')]: 'PARCEL_BOOKING.ERROR.NOT_FOUND',
 };
 
 /**
@@ -66,9 +81,10 @@ const SUBMIT_ERROR_KEYS: Record<string, string> = {
  * seats, so that filter is wrong here.
  */
 @Component({
-  selector: 'app-parcel-booking-page',
-  templateUrl: './parcel-booking-page.component.html',
-  styleUrl: './parcel-booking-page.component.scss',
+    selector: 'app-parcel-booking-page',
+    templateUrl: './parcel-booking-page.component.html',
+    styleUrl: './parcel-booking-page.component.scss',
+    standalone: false
 })
 export class ParcelBookingPageComponent implements OnInit, OnDestroy {
   protected readonly steps: ParcelBookingProgressStep[] = [

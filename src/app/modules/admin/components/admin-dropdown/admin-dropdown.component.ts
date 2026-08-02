@@ -10,16 +10,17 @@ import {
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 @Component({
-  selector: 'app-admin-dropdown',
-  templateUrl: './admin-dropdown.component.html',
-  styleUrl: './admin-dropdown.component.scss',
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => AdminDropdownComponent),
-      multi: true,
-    },
-  ],
+    selector: 'app-admin-dropdown',
+    templateUrl: './admin-dropdown.component.html',
+    styleUrl: './admin-dropdown.component.scss',
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => AdminDropdownComponent),
+            multi: true,
+        },
+    ],
+    standalone: false
 })
 export class AdminDropdownComponent implements ControlValueAccessor {
   @Input() options: unknown[] = [];

@@ -1,0 +1,25 @@
+// OBRS-766 — reuses .admin-table/.admin-status/.admin-skeleton/.admin-btn
+// primitives verbatim; only the empty-state copy block needs local rules.
+
+.ccrl-phone {
+  // A masked phone (••••1234) must still read clearly — monospacing keeps
+  // the bullet run from looking like stray punctuation.
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.ccrl-empty {
+  padding: 24px 12px;
+  text-align: center;
+}
+
+.ccrl-empty-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.ccrl-empty-body {
+  margin: 0;
+  max-width: 480px;
+  margin-inline: auto;
+}

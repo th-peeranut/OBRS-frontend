@@ -31,9 +31,10 @@ import {
 } from '../../../../services/booking-policy/booking-policy.service';
 
 @Component({
-  selector: 'app-schedule-booking-filter',
-  templateUrl: './schedule-booking-filter.component.html',
-  styleUrl: './schedule-booking-filter.component.scss',
+    selector: 'app-schedule-booking-filter',
+    templateUrl: './schedule-booking-filter.component.html',
+    styleUrl: './schedule-booking-filter.component.scss',
+    standalone: false
 })
 export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   @Output() filterData = new EventEmitter<ScheduleFilter>();

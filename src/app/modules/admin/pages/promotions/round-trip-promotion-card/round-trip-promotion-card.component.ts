@@ -28,9 +28,10 @@ interface StatusOption {
 // Status select is explicitly allowed to pre-seed the current value — this is
 // the documented exception, not a violation).
 @Component({
-  selector: 'app-round-trip-promotion-card',
-  templateUrl: './round-trip-promotion-card.component.html',
-  styleUrl: './round-trip-promotion-card.component.scss',
+    selector: 'app-round-trip-promotion-card',
+    templateUrl: './round-trip-promotion-card.component.html',
+    styleUrl: './round-trip-promotion-card.component.scss',
+    standalone: false
 })
 export class RoundTripPromotionCardComponent implements OnInit, OnDestroy {
   protected promotion: PromotionRespDto | null = null;

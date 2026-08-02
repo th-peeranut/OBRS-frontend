@@ -7,11 +7,13 @@ import {
   SimpleChanges,
 } from '@angular/core';
 import { normalizeSeatNumber } from '../../../../shared/lib/seat-label';
+import { DEFAULT_VAN_SEAT_LAYOUT, SeatLayout } from '../../../../shared/lib/seat-layout';
 
 @Component({
-  selector: 'app-passenger-seat-van',
-  templateUrl: './passenger-seat-van.component.html',
-  styleUrl: './passenger-seat-van.component.scss',
+    selector: 'app-passenger-seat-van',
+    templateUrl: './passenger-seat-van.component.html',
+    styleUrl: './passenger-seat-van.component.scss',
+    standalone: false
 })
 export class PassengerSeatVanComponent implements OnChanges {
   @Input() gender: string = '';
@@ -48,11 +50,24 @@ export class PassengerSeatVanComponent implements OnChanges {
   /** Pre-translated aria-labels forwarded to every seat box's badge. */
   @Input() wheelchairBadgeAriaLabel: string = '';
   @Input() extraLegroomBadgeAriaLabel: string = '';
+  /**
+   * OBRS-384: the vehicle's seat floor plan — rows of seat/empty/driver cells.
+   * Null (the default) renders the built-in 13-seat van (DEFAULT_VAN_SEAT_LAYOUT),
+   * identical to the previous hardcoded template, so every existing call site is
+   * unaffected. Supply a layout to render a different vehicle (e.g. a 21-seat
+   * minibus) — the same seat-selection/owner/attribute logic drives every cell.
+   */
+  @Input() seatLayout: SeatLayout | null = null;
 
   @Output() passengerSeatPositionOnChange = new EventEmitter<string>();
   @Output() seatClicked = new EventEmitter<string>();
 
   isSelected: string = '';
+
+  /** OBRS-384: the layout actually rendered — the caller's, or the 13-seat van default. */
+  get rows(): SeatLayout {
+    return this.seatLayout ?? DEFAULT_VAN_SEAT_LAYOUT;
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['currentSeat'] && changes['currentSeat'].currentValue !== undefined) {

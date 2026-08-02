@@ -2,10 +2,10 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { Store } from '@ngrx/store';
 import { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import dayjs from 'dayjs';
 
 import { HomeBookingComponent } from './home-booking.component';
@@ -87,6 +87,18 @@ function createStoreStubWithValue(value: unknown): any {
   };
 }
 
+/** Same shape as `createStoreStubWithValue`, but the caller keeps the subject —
+ *  the only way to make the station-list selector emit a SECOND time, which is
+ *  what re-runs `recomputeRecentRouteCandidates()` (OBRS-928's one-shot guard
+ *  is untestable without it). */
+function createStoreStubWithSubject(subject: BehaviorSubject<unknown>): any {
+  return {
+    pipe: () => subject,
+    select: () => subject,
+    dispatch: () => {},
+  };
+}
+
 const STATION_1 = station(1);
 const STATION_2 = station(2);
 const STATION_3 = station(3);
@@ -141,7 +153,14 @@ describe('HomeBookingComponent', () => {
       component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]), auth: createAuthServiceStub(true), booking: bookingServiceStub });
       component.ngOnInit();
 
-      expect(bookingServiceStub.getMyBookings).toHaveBeenCalledWith(undefined, false, true);
+      // OBRS-577: getMyBookings moved to a single options object (AC2); this
+      // call site still pins size:100 explicitly (see the component's own
+      // comment) so the OBRS-923 frequency-ranked sample doesn't shrink.
+      expect(bookingServiceStub.getMyBookings).toHaveBeenCalledWith({
+        showLoadingDialog: false,
+        skipAuthLogout: true,
+        size: 100,
+      });
     });
 
     it('logged-in user: derives candidates from bookingSchedules[0].fromStop/toStop.id', () => {
@@ -225,6 +244,92 @@ describe('HomeBookingComponent', () => {
     });
   });
 
+  describe('top-route prefill (OBRS-928)', () => {
+    it('AC#4: prefills both station fields with the top-ranked route on load', () => {
+      saveRecentRoute(1, 2);
+
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]) });
+      component.ngOnInit();
+
+      expect(component.getFormValue('startStationId')).toBe(1);
+      expect(component.getFormValue('stopStationId')).toBe(2);
+    });
+
+    it('prefills the route the ranking put FIRST, not the one stored first', () => {
+      // 3->2 is the most recent, so OBRS-923 reserves slot 1 for it even though
+      // 1->2 was searched more often.
+      saveRecentRoute(1, 2);
+      saveRecentRoute(1, 2);
+      saveRecentRoute(3, 2);
+
+      component = makeHomeBooking({
+        store: createStoreStubWithValue([STATION_1, STATION_2, STATION_3]),
+      });
+      component.ngOnInit();
+
+      expect(component.getFormValue('startStationId')).toBe(3);
+    });
+
+    // must-NOT #1 (AC#6): no history, nothing to prefill — the fields stay
+    // exactly as createForm() seeded them.
+    it('does NOT prefill when there is no route history', () => {
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]) });
+      component.ngOnInit();
+
+      expect(component.getFormValue('startStationId')).toBe('');
+      expect(component.getFormValue('stopStationId')).toBe('');
+      expect(component.recentRouteCandidates).toEqual([]);
+    });
+
+    // must-NOT #2 (AC#5): a station the user picked before the candidates
+    // resolved outranks the prefill. Without this, a slow station list would let
+    // the prefill stomp a deliberate choice.
+    it('does NOT overwrite a station the user has already chosen', () => {
+      saveRecentRoute(1, 2);
+
+      component = makeHomeBooking({
+        store: createStoreStubWithValue([STATION_1, STATION_2, STATION_3]),
+      });
+      component.bookingForm.patchValue({ startStationId: 3 });
+      component.ngOnInit();
+
+      expect(component.getFormValue('startStationId')).toBe(3);
+      expect(component.getFormValue('stopStationId')).toBe('');
+    });
+
+    // must-NOT #3 (AC#7): both the station-list and auth-status subscriptions
+    // call recompute, and the station list emits again on any store change. A
+    // second prefill would silently revert the user's switch.
+    it('prefills at most once per page load — a later recompute does not revert the user', () => {
+      saveRecentRoute(1, 2);
+      const stations$ = new BehaviorSubject<unknown>([STATION_1, STATION_2, STATION_3]);
+
+      component = makeHomeBooking({ store: createStoreStubWithSubject(stations$) });
+      component.ngOnInit();
+      expect(component.getFormValue('startStationId')).toBe(1);
+
+      component.onRecentRouteSelected({
+        originStation: STATION_3,
+        destinationStation: STATION_2,
+      });
+      stations$.next([STATION_1, STATION_2, STATION_3]);
+
+      expect(component.getFormValue('startStationId')).toBe(3);
+      expect(component.getFormValue('stopStationId')).toBe(2);
+    });
+
+    it('the prefilled route is the one the strip renders as active', () => {
+      saveRecentRoute(1, 2);
+
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]) });
+      component.ngOnInit();
+
+      const top = component.recentRouteCandidates[0];
+      expect(component.getFormValue('startStationId')).toBe(top.originStation.id);
+      expect(component.getFormValue('stopStationId')).toBe(top.destinationStation.id);
+    });
+  });
+
   // OBRS-698 raised the fallback 30 → 60 and moved it beside the service
   // call. Asserted against the exported constant, not a repeated literal:
   // a second copy of the number in the test is the same drift this card is
@@ -241,7 +346,7 @@ describe('HomeBookingComponent', () => {
 // pick a return date past the real cap and eat a 400 from the server. A
 // unit-level construction test (above) can't see a missing template
 // binding, only a compiled-template render can, so this block renders the
-// real component via TestBed (same CalendarModule/ReactiveFormsModule/
+// real component via TestBed (same DatePickerModule/ReactiveFormsModule/
 // standalone-dropdown-component recipe already proven for a PrimeNG
 // calendar form in parcel-trip-form.component.spec.ts).
 describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', () => {
@@ -265,7 +370,7 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
-        CalendarModule,
+        DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         DropdownObrsPassengerComponent,
@@ -292,8 +397,8 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
     component = fixture.componentInstance;
   });
 
-  it('applies the resolved maxDate to BOTH the departure and return p-calendar controls', () => {
-    // Reveal the return-trip calendar too, so both p-calendar instances exist.
+  it('applies the resolved maxDate to BOTH the departure and return p-datePicker controls', () => {
+    // Reveal the return-trip calendar too, so both p-datePicker instances exist.
     component.isRoundTripReturn = true;
 
     fixture.detectChanges(); // ngOnInit -> bookingPolicyServiceStub resolves synchronously
@@ -301,7 +406,7 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
     const expected = dayjs().add(CONFIGURED_MAX_ADVANCE_DAYS, 'day');
     expect(dayjs(component.maxDate).isSame(expected, 'day')).toBeTrue();
 
-    const calendars = fixture.debugElement.queryAll(By.css('p-calendar'));
+    const calendars = fixture.debugElement.queryAll(By.css('p-datePicker'));
     expect(calendars.length).toBe(2);
 
     for (const calendarDe of calendars) {

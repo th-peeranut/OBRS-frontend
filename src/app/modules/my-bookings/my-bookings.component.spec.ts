@@ -1,4 +1,5 @@
 import { Subject } from 'rxjs';
+import { fakeAsync, tick } from '@angular/core/testing';
 import { Store } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 import dayjs from 'dayjs';
@@ -239,6 +240,41 @@ describe('MyBookingsComponent', () => {
         jasmine.objectContaining({ bookingId: view.id })
       );
     });
+
+    it('OBRS-813: taking the offer inside the cancel modal closes it and opens the reschedule dialog', () => {
+      const dispatchSpy = spyOn(storeStub, 'dispatch');
+      const view = toView(
+        buildBooking({ bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }] })
+      );
+
+      component.onRescheduleInsteadOfCancel(view);
+
+      // NgRx 19 (arrived with the Angular 19 upgrade, OBRS-915) widened `dispatch`
+      // to `Action | (() => Action)`, so the spy's parameter type now resolves to
+      // the function branch and a direct cast to an action shape stopped
+      // overlapping (TS2352). The dispatched value is always the action object —
+      // route through `unknown` to say so, same as the accessor at line 61.
+      const types = dispatchSpy.calls
+        .allArgs()
+        .map(([action]) => (action as unknown as { type: string }).type);
+      expect(types.length).toBe(2);
+      expect(types[0]).toBe('[MyBookings API] Close cancel refund destination modal');
+      expect(dispatchSpy.calls.argsFor(1)[0]).toEqual(
+        jasmine.objectContaining({ bookingId: view.id })
+      );
+    });
+
+    it('OBRS-813: the offer cannot route an INELIGIBLE booking into reschedule (guard is shared with onReschedule)', () => {
+      const dispatchSpy = spyOn(storeStub, 'dispatch');
+      const view = toView(
+        buildBooking({ rescheduleCount: 1, bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }] })
+      );
+
+      component.onRescheduleInsteadOfCancel(view);
+
+      // The modal closes either way — but nothing opens the reschedule dialog.
+      expect(dispatchSpy.calls.count()).toBe(1);
+    });
   });
 
   describe('change seat eligibility (card gating, OBRS-110)', () => {
@@ -382,5 +418,104 @@ describe('MyBookingsComponent', () => {
         jasmine.objectContaining({ bookingId: view.id })
       );
     });
+  });
+
+  describe('OBRS-577 incremental load more', () => {
+    // A fresh, controllable `select()` stream per test — the outer
+    // `storeStub` returns a brand-new Subject on every call (fine for the
+    // tests above, which never call ngOnInit), but vm$'s
+    // combineLatest needs the SAME stream across pushes here.
+    let stateSubject: Subject<unknown>;
+    let localStore: Store;
+    let dispatchSpy: jasmine.Spy;
+    let localComponent: MyBookingsComponent;
+
+    const baseState = {
+      bookings: [] as MyBookingDto[],
+      loading: false,
+      loaded: true,
+      error: null,
+      cancellingBookingId: null,
+      statusFilter: null,
+      totalElements: 0,
+      totalPages: 0,
+      pagesLoaded: 0,
+      loadingMore: false,
+    };
+
+    beforeEach(() => {
+      stateSubject = new Subject();
+      localStore = {
+        select: () => stateSubject,
+        dispatch: () => undefined,
+      } as unknown as Store;
+      dispatchSpy = spyOn(localStore, 'dispatch');
+      localComponent = new MyBookingsComponent(localStore, translateStub);
+      localComponent.ngOnInit();
+    });
+
+    it('maps totalElements/hasMore/loadingMore from state (row count > 1 page, not yet exhausted)', () => {
+      let vm: { totalElements: number; hasMore: boolean; loadingMore: boolean } | undefined;
+      localComponent.vm$.subscribe((v) => (vm = v));
+
+      stateSubject.next({ ...baseState, totalElements: 137, totalPages: 7, pagesLoaded: 1 });
+
+      expect(vm?.totalElements).toBe(137);
+      expect(vm?.hasMore).toBeTrue();
+      expect(vm?.loadingMore).toBeFalse();
+    });
+
+    it('hasMore is false once pagesLoaded reaches totalPages (all 137 loaded)', () => {
+      let vm: { hasMore: boolean } | undefined;
+      localComponent.vm$.subscribe((v) => (vm = v));
+
+      stateSubject.next({ ...baseState, totalElements: 137, totalPages: 7, pagesLoaded: 7 });
+
+      expect(vm?.hasMore).toBeFalse();
+    });
+
+    it('onLoadMore() dispatches invokeLoadMoreMyBookingsApi with no payload', () => {
+      localComponent.onLoadMore();
+
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        jasmine.objectContaining({ type: '[MyBookings API] Invoke to load more my bookings' })
+      );
+    });
+
+    it('accessibility: moves focus to the count region once a Load more click makes hasMore flip to false (last page)', fakeAsync(() => {
+      localComponent.vm$.subscribe();
+      const focusSpy = jasmine.createSpy('focus');
+      (localComponent as unknown as { countRegionRef: { nativeElement: { focus: jasmine.Spy } } }).countRegionRef = {
+        nativeElement: { focus: focusSpy },
+      };
+
+      // Page 1 of 2 on screen, hasMore true.
+      stateSubject.next({ ...baseState, totalElements: 21, totalPages: 2, pagesLoaded: 1 });
+      localComponent.onLoadMore();
+      // Request goes in flight...
+      stateSubject.next({ ...baseState, totalElements: 21, totalPages: 2, pagesLoaded: 1, loadingMore: true });
+      // ...and settles as the last page (row 21, the "+1" past the old
+      // hardcoded 20-row ceiling, confirming AC6 is reachable end-to-end).
+      stateSubject.next({ ...baseState, totalElements: 21, totalPages: 2, pagesLoaded: 2, loadingMore: false });
+      tick();
+
+      expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+    }));
+
+    it('accessibility: does NOT shift focus on a plain state change where loadingMore never went true (no Load more click happened)', fakeAsync(() => {
+      localComponent.vm$.subscribe();
+      const focusSpy = jasmine.createSpy('focus');
+      (localComponent as unknown as { countRegionRef: { nativeElement: { focus: jasmine.Spy } } }).countRegionRef = {
+        nativeElement: { focus: focusSpy },
+      };
+
+      // A status-filter switch can also flip hasMore to false (e.g. a
+      // filter with fewer total rows) without ever touching `loadingMore`.
+      stateSubject.next({ ...baseState, totalElements: 21, totalPages: 2, pagesLoaded: 1 });
+      stateSubject.next({ ...baseState, totalElements: 5, totalPages: 1, pagesLoaded: 1 });
+      tick();
+
+      expect(focusSpy).not.toHaveBeenCalled();
+    }));
   });
 });

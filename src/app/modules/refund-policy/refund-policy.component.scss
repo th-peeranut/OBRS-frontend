@@ -33,6 +33,90 @@
     line-height: 1.9;
     white-space: normal;
   }
+
+  // OBRS-627. The rewritten notice is sections with headings and lists rather
+  // than one <br />-separated block, so it needs the same treatment the privacy
+  // notice got in OBRS-631 — values copied from privacy-policy.component.scss so
+  // the two public policy pages read as one document set. ::ng-deep because the
+  // markup arrives through [innerHTML] and carries no component scoping
+  // attribute; scoped by .policy-body, so it cannot escape this component.
+  ::ng-deep .policy-body {
+    h2 {
+      margin: 32px 0 12px;
+      font-size: $font-size-lg;
+      font-weight: $font-weight-bold;
+      line-height: $line-height-tight;
+      color: $text-black; // 12.6:1 on $primary-white
+    }
+
+    ul {
+      margin: 0 0 16px;
+      padding-left: 24px;
+      list-style: disc;
+    }
+
+    li {
+      margin-bottom: 8px;
+      font-size: $font-size-base;
+      line-height: 1.9;
+    }
+
+    p {
+      margin: 0 0 16px;
+    }
+
+    strong {
+      font-weight: $font-weight-bold;
+      color: $text-black;
+    }
+  }
+}
+
+// OBRS-627: spacing only for the RATES section's loading state. The shimmer
+// itself is <app-loading-state variant="skeleton">, the shared OBRS-907
+// primitive — deliberately NOT the `.policy-skeleton` pair the sibling
+// business-policy page hand-rolled, which is registered debt in
+// check-loading-primitives.mjs's DEBT_REGISTER. That gate rejected a copy of it
+// here, and it was right to: a 15th private shimmer is how the first fourteen
+// happened.
+.policy-skeleton-block {
+  display: block;
+  margin: $space-md 0;
+}
+
+// Failure costs one section of the notice, not the page — the rest still tells
+// the customer they can cancel in the app and how the money comes back. Link
+// role for the retry (design-system.md §4), not a full p-button. flex-wrap so
+// icon + text + button wrap instead of crushing at a 390px viewport.
+.policy-inline-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: $space-md 0;
+  color: $text-red;
+  font-size: $font-size-sm;
+}
+
+.policy-inline-error-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.policy-inline-retry {
+  color: $text-red;
+  text-decoration: underline;
+}
+
+// OBRS-627 AC-5: the pointer to the page that owns the terms this one does not.
+.policy-cross-link {
+  margin-top: 32px;
+  font-size: $font-size-base;
+
+  a {
+    color: $primary-blue;
+    text-decoration: underline;
+  }
 }
 
 @media (max-width: 768px) {

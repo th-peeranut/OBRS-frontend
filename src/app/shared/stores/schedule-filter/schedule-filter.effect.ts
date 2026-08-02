@@ -2,7 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store, select } from '@ngrx/store';
 import { of } from 'rxjs';
-import { mergeMap, switchMap, withLatestFrom } from 'rxjs/operators';
+import { mergeMap, switchMap, tap, withLatestFrom } from 'rxjs/operators';
+import { rememberBookingFilter } from '../../lib/booking-context-storage';
 import { setAPIStatus } from '../app.action';
 import { Appstate } from '../appstate';
 import {
@@ -43,6 +44,11 @@ export class ScheduleFilterEffect {
   setScheduleFilter$ = createEffect(() =>
     this.actions$.pipe(
       ofType(invokeSetScheduleFilterApi),
+      // OBRS-903: keep the cross-tab copy in step, so a customer who comes back
+      // through a mail link lands on a search that is still filled in. See
+      // `booking-context-storage.ts` for the PDPA boundary this stays inside —
+      // the filter is stations, dates and passenger COUNTS, never who they are.
+      tap((action) => rememberBookingFilter(action.schedule_filter ?? null)),
       switchMap((action) => {
         if (action.schedule_filter) {
           return of(

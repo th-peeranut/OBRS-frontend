@@ -1,0 +1,92 @@
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.CASH_REFUND_APPROVALS.SUBTITLE' | translate }}</h4>
+    <button type="button" class="admin-btn admin-btn-small" [disabled]="isLoading" (click)="load()">
+      {{ 'ADMIN.CASH_REFUND_APPROVALS.REFRESH' | translate }}
+    </button>
+  </div>
+
+  @if (contentState === 'error') {
+    <p class="admin-error">{{ errorMessage }}</p>
+  }
+
+  <!-- An empty queue is good news: nobody is standing at a counter waiting. -->
+  @if (contentState === 'empty') {
+    <div class="cra-empty">
+      <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+      <p class="cra-empty-title">{{ 'ADMIN.CASH_REFUND_APPROVALS.EMPTY' | translate }}</p>
+    </div>
+  }
+
+  @if (contentState === 'loading' || contentState === 'data') {
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'ADMIN.CASH_REFUND_APPROVALS.COL.BOOKING' | translate }}</th>
+            <th>{{ 'ADMIN.CASH_REFUND_APPROVALS.COL.AMOUNT' | translate }}</th>
+            <th>{{ 'ADMIN.CASH_REFUND_APPROVALS.COL.REQUESTED_BY' | translate }}</th>
+            <th>{{ 'ADMIN.CASH_REFUND_APPROVALS.COL.REQUESTED_AT' | translate }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (contentState === 'loading') {
+            @for (row of skeletonRows; track row) {
+              <tr class="admin-skeleton-row" aria-hidden="true">
+                <td><span class="admin-skeleton"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              </tr>
+            }
+          }
+          @if (contentState === 'data') {
+            @for (row of rows; track row) {
+              <tr>
+                <td class="cra-booking">{{ row.bookingNumber }}</td>
+                <td class="cra-amount">{{ formatCurrency(row.refundAmount) }}</td>
+                <td>{{ row.requestedBy }}</td>
+                <td>{{ row.requestedAt | date: 'dd MMM yyyy HH:mm' }}</td>
+                <td class="cra-action">
+                  <!-- Before: the ask. After: the six digits, shown here and
+                  nowhere else, ever — the server kept only a hash. -->
+                  @if (!issuedCodeFor(row)) {
+                    <button
+                      type="button"
+                      class="admin-btn admin-btn-primary admin-btn-small"
+                      [disabled]="approvingId !== null"
+                      (click)="approve(row)"
+                      >
+                      {{
+                      approvingId === row.id
+                      ? ('ADMIN.CASH_REFUND_APPROVALS.APPROVING' | translate)
+                      : ('ADMIN.CASH_REFUND_APPROVALS.APPROVE' | translate)
+                      }}
+                    </button>
+                  }
+                  @if (issuedCodeFor(row); as issued) {
+                    <div class="cra-code">
+                      <span class="cra-code-value">{{ issued.code }}</span>
+                      <small class="admin-hint">
+                        {{
+                        'ADMIN.CASH_REFUND_APPROVALS.CODE_HINT'
+                        | translate: { minutes: issued.ttlMinutes }
+                        }}
+                      </small>
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (approveErrorMessage) {
+    <p class="admin-error">{{ approveErrorMessage }}</p>
+  }
+</section>

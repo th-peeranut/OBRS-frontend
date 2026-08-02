@@ -7,6 +7,7 @@ import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { of } from 'rxjs';
 import { ScheduleBookingListComponent } from './schedule-booking-list.component';
 import {
+  createAnalyticsServiceStub,
   createRouteMapServiceStub,
   createRouterStub,
   createStoreStub,
@@ -32,7 +33,8 @@ describe('ScheduleBookingListComponent', () => {
       createRouterStub(),
       createStoreStub(),
       createTranslateStub(),
-      createRouteMapServiceStub()
+      createRouteMapServiceStub(),
+      createAnalyticsServiceStub()
     );
   });
 

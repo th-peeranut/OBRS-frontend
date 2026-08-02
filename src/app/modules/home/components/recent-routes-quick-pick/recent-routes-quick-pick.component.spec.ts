@@ -39,7 +39,7 @@ describe('RecentRoutesQuickPickComponent', () => {
 
     it('trackByRoutePair keys on the origin/destination station id pair', () => {
       const component = new RecentRoutesQuickPickComponent(createTranslateStub());
-      const view = { candidate: ROUTE_A, displayLabel: '', ariaLabel: '' };
+      const view = { candidate: ROUTE_A, displayLabel: '', ariaLabel: '', isActive: false };
       expect(component.trackByRoutePair(0, view)).toBe('1_2');
     });
   });
@@ -98,8 +98,14 @@ describe('RecentRoutesQuickPickComponent', () => {
       );
 
       expect(buttons.length).toBe(2);
-      expect(buttons[0].textContent?.trim()).toBe('Nong Chak → BTS Mo Chit');
-      expect(buttons[1].textContent?.trim()).toBe('Rayong → Chanthaburi');
+      // `.recent-route-label`, not the button's own textContent — the button
+      // also contains the OBRS-928 icon glyph.
+      expect(buttons[0].querySelector('.recent-route-label')?.textContent?.trim()).toBe(
+        'Nong Chak → BTS Mo Chit'
+      );
+      expect(buttons[1].querySelector('.recent-route-label')?.textContent?.trim()).toBe(
+        'Rayong → Chanthaburi'
+      );
     });
 
     it('renders a real <button type="button"> per route — natively focusable, no custom keyboard handling', () => {
@@ -135,16 +141,111 @@ describe('RecentRoutesQuickPickComponent', () => {
     it('rebuilds labels on translate.onLangChange without re-binding [routes]', () => {
       setup([ROUTE_A]);
 
-      expect(fixture.nativeElement.querySelector('.recent-route-btn').textContent.trim()).toBe(
-        'Nong Chak → BTS Mo Chit'
-      );
+      expect(
+        fixture.nativeElement
+          .querySelector('.recent-route-btn .recent-route-label')
+          .textContent.trim()
+      ).toBe('Nong Chak → BTS Mo Chit');
 
       TestBed.inject(TranslateService).use('th');
       fixture.detectChanges();
 
-      expect(fixture.nativeElement.querySelector('.recent-route-btn').textContent.trim()).toBe(
-        'หนองชาก → บีทีเอส หมอชิต'
+      expect(
+        fixture.nativeElement
+          .querySelector('.recent-route-btn .recent-route-label')
+          .textContent.trim()
+      ).toBe('หนองชาก → บีทีเอส หมอชิต');
+    });
+  });
+
+  describe('discoverability affordances (OBRS-928)', () => {
+    let fixture: ComponentFixture<RecentRoutesQuickPickComponent>;
+
+    function setup(
+      routes: RecentRouteCandidate[],
+      active: { originId?: number | null; destinationId?: number | null } = {}
+    ): void {
+      TestBed.configureTestingModule({
+        imports: [RecentRoutesQuickPickComponent, TranslateModule.forRoot()],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(RecentRoutesQuickPickComponent);
+      fixture.componentRef.setInput('routes', routes);
+      fixture.componentRef.setInput('activeOriginId', active.originId ?? null);
+      fixture.componentRef.setInput('activeDestinationId', active.destinationId ?? null);
+      fixture.detectChanges();
+    }
+
+    it('renders a leading icon inside each pill so it reads as a button, not a status tag', () => {
+      setup([ROUTE_A, ROUTE_B]);
+
+      const icons = fixture.nativeElement.querySelectorAll('.recent-route-btn .recent-route-icon');
+      expect(icons.length).toBe(2);
+      // Decorative — the pill already carries the full sentence as aria-label.
+      expect(icons[0].getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('marks the pill matching the current form values as active', () => {
+      setup([ROUTE_A, ROUTE_B], { originId: 1, destinationId: 2 });
+
+      const buttons: HTMLButtonElement[] = Array.from(
+        fixture.nativeElement.querySelectorAll('.recent-route-btn')
       );
+      expect(buttons[0].classList.contains('is-active')).toBe(true);
+      expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
+      expect(buttons[1].classList.contains('is-active')).toBe(false);
+    });
+
+    it('matches a numeric form value against the station id (the form seeds strings)', () => {
+      setup([ROUTE_A], { originId: '1' as unknown as number, destinationId: '2' as unknown as number });
+
+      expect(
+        fixture.nativeElement.querySelector('.recent-route-btn').classList.contains('is-active')
+      ).toBe(true);
+    });
+
+    // must-NOT: a half-match is not a match. Without this, comparing only the
+    // origin would pass every assertion above.
+    it('does NOT mark a pill active when only the origin matches', () => {
+      setup([ROUTE_A], { originId: 1, destinationId: 999 });
+
+      expect(
+        fixture.nativeElement.querySelector('.recent-route-btn').classList.contains('is-active')
+      ).toBe(false);
+    });
+
+    it('marks nothing active while the form is empty', () => {
+      setup([ROUTE_A, ROUTE_B]);
+
+      expect(fixture.nativeElement.querySelectorAll('.recent-route-btn.is-active').length).toBe(0);
+    });
+
+    it('re-evaluates the active pill when the form values change, without re-binding [routes]', () => {
+      setup([ROUTE_A, ROUTE_B], { originId: 1, destinationId: 2 });
+
+      fixture.componentRef.setInput('activeOriginId', 3);
+      fixture.componentRef.setInput('activeDestinationId', 4);
+      fixture.detectChanges();
+
+      const buttons: HTMLButtonElement[] = Array.from(
+        fixture.nativeElement.querySelectorAll('.recent-route-btn')
+      );
+      expect(buttons[0].classList.contains('is-active')).toBe(false);
+      expect(buttons[1].classList.contains('is-active')).toBe(true);
+    });
+
+    it('flags the HOST with .has-routes so the parent can tighten its spacing', () => {
+      setup([ROUTE_A]);
+
+      expect(fixture.nativeElement.classList.contains('has-routes')).toBe(true);
+    });
+
+    // AC#5 again, from the host's side: the spacing hook must be absent when the
+    // strip renders nothing, or an empty strip would still move the layout.
+    it('does NOT flag the host when there are zero routes', () => {
+      setup([]);
+
+      expect(fixture.nativeElement.classList.contains('has-routes')).toBe(false);
     });
   });
 });

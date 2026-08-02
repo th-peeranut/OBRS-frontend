@@ -18,9 +18,10 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
  * `ParcelConsignFormComponent`'s smart/dumb split.
  */
 @Component({
-  selector: 'app-parcel-collect-dialog',
-  templateUrl: './parcel-collect-dialog.component.html',
-  styleUrl: './parcel-collect-dialog.component.scss',
+    selector: 'app-parcel-collect-dialog',
+    templateUrl: './parcel-collect-dialog.component.html',
+    styleUrl: './parcel-collect-dialog.component.scss',
+    standalone: false
 })
 export class ParcelCollectDialogComponent implements OnChanges {
   @Input() isOpen = false;

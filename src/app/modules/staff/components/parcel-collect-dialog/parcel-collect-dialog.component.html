@@ -1,32 +1,33 @@
-<div
-  class="admin-modal-backdrop"
-  *ngIf="isOpen"
-  adminModalBackdrop
-  (dismiss)="onDismiss()"
->
-  <div class="admin-modal">
-    <div class="admin-modal-header">
-      <h5 class="admin-modal-title">{{ 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.TITLE' | translate }}</h5>
-      <button type="button" class="admin-icon-btn" (click)="onDismiss()" [attr.aria-label]="'COMMON.CLOSE' | translate">
-        <span class="material-symbols-outlined">close</span>
-      </button>
+@if (isOpen) {
+  <div
+    class="admin-modal-backdrop"
+    adminModalBackdrop
+    (dismiss)="onDismiss()"
+    >
+    <div class="admin-modal">
+      <div class="admin-modal-header">
+        <h5 class="admin-modal-title">{{ 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.TITLE' | translate }}</h5>
+        <button type="button" class="admin-icon-btn" (click)="onDismiss()" [attr.aria-label]="'COMMON.CLOSE' | translate">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="onConfirm()">
+        <div class="admin-modal-body">
+          <label>{{ 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.CODE_LABEL' | translate }}</label>
+          <input type="text" class="admin-field" formControlName="collectionCode" />
+          @if (serverErrorKey) {
+            <small class="admin-error">{{ serverErrorKey | translate }}</small>
+          }
+        </div>
+        <div class="admin-modal-footer">
+          <button type="button" class="admin-btn" (click)="onDismiss()" [disabled]="isSubmitting">
+            {{ 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.CANCEL' | translate }}
+          </button>
+          <button type="submit" class="admin-btn admin-btn-primary" [disabled]="!canConfirm">
+            {{ (isSubmitting ? 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.SUBMITTING' : 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.CONFIRM') | translate }}
+          </button>
+        </div>
+      </form>
     </div>
-
-    <form [formGroup]="form" (ngSubmit)="onConfirm()">
-      <div class="admin-modal-body">
-        <label>{{ 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.CODE_LABEL' | translate }}</label>
-        <input type="text" class="admin-field" formControlName="collectionCode" />
-        <small class="admin-error" *ngIf="serverErrorKey">{{ serverErrorKey | translate }}</small>
-      </div>
-
-      <div class="admin-modal-footer">
-        <button type="button" class="admin-btn" (click)="onDismiss()" [disabled]="isSubmitting">
-          {{ 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.CANCEL' | translate }}
-        </button>
-        <button type="submit" class="admin-btn admin-btn-primary" [disabled]="!canConfirm">
-          {{ (isSubmitting ? 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.SUBMITTING' : 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.CONFIRM') | translate }}
-        </button>
-      </div>
-    </form>
   </div>
-</div>
+}

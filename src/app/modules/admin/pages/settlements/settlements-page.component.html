@@ -1,15 +1,17 @@
-<section class="admin-page-intro" *ngIf="isRefreshing && !isLoading">
-  <div>
-    <app-admin-refresh-hint
-      [refreshing]="isRefreshing"
-      [failed]="false"
-      [loading]="isLoading"
-    ></app-admin-refresh-hint>
-  </div>
-</section>
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div>
+      <app-admin-refresh-hint
+        [refreshing]="isRefreshing"
+        [failed]="false"
+        [loading]="isLoading"
+      ></app-admin-refresh-hint>
+    </div>
+  </section>
+}
 
 <section class="admin-page-filters mt-3">
-  <p-calendar
+  <p-datePicker
     styleClass="app-date-field"
     panelStyleClass="app-date-field-panel"
     dateFormat="dd/mm/yy"
@@ -19,13 +21,13 @@
     [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.SETTLEMENTS.FILTER_FROM' | translate"
-  >
+    >
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
-  </p-calendar>
+  </p-datePicker>
 
-  <p-calendar
+  <p-datePicker
     styleClass="app-date-field"
     panelStyleClass="app-date-field-panel"
     dateFormat="dd/mm/yy"
@@ -35,11 +37,11 @@
     [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.SETTLEMENTS.FILTER_TO' | translate"
-  >
+    >
     <ng-template pTemplate="inputicon">
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
-  </p-calendar>
+  </p-datePicker>
 </section>
 
 <app-settlements-list

@@ -1,6 +1,7 @@
 import { PassengerInfoComponent } from './passenger-info.component';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 import {
+  createAnalyticsServiceStub,
   createRouterStub,
   createStoreStub,
   createTranslateStub,
@@ -15,7 +16,8 @@ describe('PassengerInfoComponent', () => {
       createRouterStub(),
       {} as never,
       createTranslateStub(),
-      {} as never
+      {} as never,
+      createAnalyticsServiceStub()
     );
   });
 

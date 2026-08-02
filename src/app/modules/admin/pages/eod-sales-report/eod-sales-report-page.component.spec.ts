@@ -4,7 +4,7 @@ import { By } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { MenuModule } from 'primeng/menu';
 import { EodSalesReportPageComponent } from './eod-sales-report-page.component';
 import { EodSalesReportStore } from './eod-sales-report.store';
@@ -355,7 +355,7 @@ describe('EodSalesReportPageComponent (template rendering)', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, MenuModule, AdminSharedModule],
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
       // OBRS-442: the template now also renders <app-export-button>, so it must be declared
       // (with its own DI deps stubbed) or this block 304s on the unknown element.
       declarations: [EodSalesReportPageComponent, ExportButtonComponent],
@@ -426,7 +426,7 @@ describe('EodSalesReportPageComponent (export button, OBRS-442)', () => {
     authServiceSpy.hasAnyRole.and.returnValue(hasRole);
 
     TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, MenuModule, AdminSharedModule],
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
       declarations: [EodSalesReportPageComponent, ExportButtonComponent],
       providers: [
         { provide: EodSalesReportStore, useValue: storeStub },

@@ -39,11 +39,13 @@ import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import { RouteMapService } from '../../../../services/route-map/route-map.service';
 import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
 import { LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
+import { AnalyticsService } from '../../../../services/analytics/analytics.service';
 
 @Component({
-  selector: 'app-schedule-booking-list',
-  templateUrl: './schedule-booking-list.component.html',
-  styleUrl: './schedule-booking-list.component.scss',
+    selector: 'app-schedule-booking-list',
+    templateUrl: './schedule-booking-list.component.html',
+    styleUrl: './schedule-booking-list.component.scss',
+    standalone: false
 })
 export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   scheduleList: Observable<ScheduleList>;
@@ -80,7 +82,8 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     private router: Router,
     private appStore: Store<Appstate>,
     private translateService: TranslateService,
-    private routeMapService: RouteMapService
+    private routeMapService: RouteMapService,
+    private analytics: AnalyticsService
   ) {
     this.scheduleList = this.store.pipe(select(selectScheduleList));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
@@ -129,6 +132,18 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   }
 
   selectSchedule(schedule: Schedule, isFirst: boolean = false): void {
+    // OBRS-867 funnel step 3. Fired here rather than on the store action,
+    // because `invokeSetScheduleBookingApi` is also dispatched to CLEAR the
+    // selection (see `clearSchedule` and the round-trip dropdown handler in
+    // schedule-booking-filter) — an effect keyed on that action would count
+    // every clear as a selection.
+    this.analytics.track('schedule_selected', {
+      schedule_id: schedule.id,
+      leg: isFirst ? 'departure' : 'return',
+      price_per_seat: parsePricePerSeat(schedule.pricePerSeat),
+      seating_mode: schedule.seatingMode ?? '',
+    });
+
     let newSelected: Schedule[] = [];
 
     const isExisting = this.selectedSchedule.some((s) => s.id === schedule.id);

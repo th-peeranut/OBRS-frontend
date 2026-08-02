@@ -5,11 +5,10 @@ import {
 } from 'ngx-otp-input';
 
 @Component({
-  selector: 'app-otp',
-  templateUrl: './otp.component.html',
-  styleUrl: './otp.component.scss',
-  standalone: true,
-  imports: [NgxOtpInputComponent],
+    selector: 'app-otp',
+    templateUrl: './otp.component.html',
+    styleUrl: './otp.component.scss',
+    imports: [NgxOtpInputComponent]
 })
 export class OtpComponent implements OnChanges {
   @Input() disabled: boolean = false;

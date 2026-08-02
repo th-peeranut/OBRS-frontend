@@ -350,7 +350,7 @@
   max-width: 260px; // safety cap so an unexpectedly long label can't blow it out
 }
 
-// PrimeNG's own `<li class="p-menuitem">` wrapper is rendered by the p-menu
+// PrimeNG's own `<li class=.p-menu-item">` wrapper is rendered by the p-menu
 // component itself, not by anything in this component's template, so it
 // never carries this component's view-encapsulation attribute — `:host`
 // can't reach it either, since `appendTo="body"` detaches the whole popup
@@ -363,27 +363,27 @@
 // Enabled items get an explicit `pointer` rather than relying on PrimeNG's
 // default. For disabled items PrimeNG puts `.p-disabled` (with its own
 // `cursor: default`) on the <li> AND `pointer-events: none` on the inner
-// `.p-menuitem-content` it renders — so `not-allowed` needs `!important` to
+// `.p-menu-item-content` it renders — so `not-allowed` needs `!important` to
 // beat PrimeNG's rule, and pointer-events must be re-enabled on BOTH the <li>
 // and the content div (the topmost element under the pointer) for the cursor
 // to actually paint over the whole row (OBRS-170; verified live — the plain
 // rule computed to `default`).
-::ng-deep .my-bookings-action-menu .p-menuitem {
+::ng-deep .my-bookings-action-menu .p-menu-item {
   cursor: pointer;
 
   // Disabled items: PrimeNG's `.p-disabled *` sets `pointer-events: none` on the
-  // inner `.p-menuitem-content` AND on our own `.action-menu-item` (and its
+  // inner `.p-menu-item-content` AND on our own `.action-menu-item` (and its
   // children). Two things break as a result: (1) a cursor set on our row never
   // paints, and (2) the native `title` tooltip — set on `.action-menu-item` —
   // never fires, because hover falls THROUGH the pointer-events:none row down to
-  // `.p-menuitem-content` (which carries no title). Re-enable hit-testing on BOTH
+  // `.p-menu-item-content` (which carries no title). Re-enable hit-testing on BOTH
   // the content and our own row so `.action-menu-item` becomes the topmost hovered
   // target: it can then paint the `not-allowed` cursor and surface its `title`
   // tooltip. The item is still disabled in PrimeNG's model (aria-disabled + no
   // command binding), so re-enabling pointer-events doesn't make it clickable —
   // it only lets hover register (OBRS-170; verified live — itemPE was `none`, so
   // the tooltip never showed until this).
-  &.p-disabled .p-menuitem-content,
+  &.p-disabled .p-menu-item-content,
   &.p-disabled .action-menu-item {
     pointer-events: auto;
   }
@@ -398,8 +398,8 @@
 // is required because the popup is `appendTo="body"` (detached from this
 // component's encapsulation); `.my-bookings-action-menu` keeps it scoped.
 @layer primeng {
-  ::ng-deep .my-bookings-action-menu .p-menuitem.p-disabled .action-menu-item,
-  ::ng-deep .my-bookings-action-menu .p-menuitem.p-disabled .action-menu-item * {
+  ::ng-deep .my-bookings-action-menu .p-menu-item.p-disabled .action-menu-item,
+  ::ng-deep .my-bookings-action-menu .p-menu-item.p-disabled .action-menu-item * {
     cursor: not-allowed !important;
   }
 }
@@ -498,6 +498,22 @@
   100% {
     background-position: 0 50%;
   }
+}
+
+// OBRS-577 AC2/AC4/AC6 — mirrors my-reports.component.scss:189-193 (the
+// OBRS-433 "Load more" precedent) verbatim; /my-bookings does not respond to
+// dark mode at all (OBRS-768, see the header comment above), so no dark
+// override is needed here either.
+.my-bookings__count {
+  margin: 0 0 $space-xs;
+  font-size: $font-size-sm;
+  color: $text-softblack;
+}
+
+.my-bookings__load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: $space-md;
 }
 
 @media (max-width: 576px) {

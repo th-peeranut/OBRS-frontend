@@ -23,8 +23,11 @@ import {
   toVehiclePayload,
 } from '../vehicles-page.mappers';
 import {
+  RETIRED_VEHICLE_STATUS,
+  optionalGpsImeiValidator,
   optionalPositiveIntegerValidator,
   optionalYearRangeValidator,
+  vehicleNumberRequiredUnlessRetiredValidator,
 } from './vehicle-form-modal.validators';
 
 // Smart create/edit form modal, extracted from VehiclesPageComponent
@@ -51,9 +54,10 @@ import {
 // keep their own private copy for the same reason; this component follows
 // that actual precedent.
 @Component({
-  selector: 'app-vehicle-form-modal',
-  templateUrl: './vehicle-form-modal.component.html',
-  styleUrl: './vehicle-form-modal.component.scss',
+    selector: 'app-vehicle-form-modal',
+    templateUrl: './vehicle-form-modal.component.html',
+    styleUrl: './vehicle-form-modal.component.scss',
+    standalone: false
 })
 export class VehicleFormModalComponent implements OnChanges {
   @Input() isOpen = false;
@@ -87,7 +91,15 @@ export class VehicleFormModalComponent implements OnChanges {
     this.vehicleForm = this.formBuilder.group({
       vehicleType: ['', [Validators.required]],
       numberPlate: ['', [Validators.required, Validators.maxLength(50)]],
-      vehicleNumber: ['', [Validators.required, Validators.maxLength(50)]],
+      // OBRS-842: conditionally required, mirroring the backend's
+      // VehicleReqDto#isVehicleNumberValid — required for every status EXCEPT
+      // `retired`. An unconditional Validators.required here is what made a
+      // retired vehicle uneditable in the first place, and the '-' placeholder
+      // that used to satisfy it is what made the corruption silent.
+      vehicleNumber: [
+        '',
+        [vehicleNumberRequiredUnlessRetiredValidator(), Validators.maxLength(50)],
+      ],
       status: ['', [Validators.required]],
       // OBRS-316 Gap 1: all 7 optional (no Validators.required, no asterisk) —
       // design-system §3.1 only requires the no-pre-seeded-default rule for
@@ -100,7 +112,20 @@ export class VehicleFormModalComponent implements OnChanges {
       engineCc: [null, [optionalPositiveIntegerValidator]],
       chassisNumber: ['', [Validators.maxLength(100)]],
       note: [''],
+      // OBRS-835: the Thaistar GPS tracker fitted to this vehicle. Optional (many
+      // vehicles have no box) but format-bound to 15 digits, mirroring the backend's
+      // @Pattern - a typo'd IMEI is not rejected by anything downstream, it just
+      // silently matches no GPS batch and the van never appears on the map.
+      gpsImei: ['', [optionalGpsImeiValidator]],
     });
+
+    // OBRS-842: vehicleNumber's validity depends on a SIBLING control, and Angular
+    // re-runs a control's validators only when that control's own value changes —
+    // so switching the status dropdown to/from `retired` must re-validate it here,
+    // or the field keeps the verdict it got under the previous status.
+    this.vehicleForm
+      .get('status')
+      ?.valueChanges.subscribe(() => this.revalidateVehicleNumber());
   }
 
   // Only `isOpen` transitions drive the form: the parent always sets
@@ -126,6 +151,20 @@ export class VehicleFormModalComponent implements OnChanges {
     }
   }
 
+  // OBRS-842: drives the `*` next to the หมายเลขพาหนะ label. A retired vehicle has
+  // no number to give, so marking the field required there would be a lie the admin
+  // cannot satisfy.
+  protected get isVehicleNumberOptional(): boolean {
+    return (
+      String(this.vehicleForm.get('status')?.value ?? '').trim().toLowerCase() ===
+      RETIRED_VEHICLE_STATUS
+    );
+  }
+
+  private revalidateVehicleNumber(): void {
+    this.vehicleForm.get('vehicleNumber')?.updateValueAndValidity({ emitEvent: false });
+  }
+
   protected isFieldInvalid(fieldName: string): boolean {
     const field = this.vehicleForm.get(fieldName);
     return !!field && field.invalid && (field.dirty || field.touched);
@@ -141,6 +180,12 @@ export class VehicleFormModalComponent implements OnChanges {
     }
     if (field?.hasError('notInteger')) {
       return 'ADMIN.VALIDATION.WHOLE_NUMBER';
+    }
+    // OBRS-835: gpsImei's only failure reason. Kept as its own branch rather than
+    // folded into the POSITIVE_NUMBER fallback - "must be a positive number" would be
+    // wrong advice for a field that wants exactly 15 digits.
+    if (field?.hasError('gpsImeiFormat')) {
+      return 'ADMIN.VEHICLES.DETAILS.GPS_IMEI_FORMAT';
     }
     return 'ADMIN.VALIDATION.POSITIVE_NUMBER';
   }
@@ -217,6 +262,7 @@ export class VehicleFormModalComponent implements OnChanges {
       engineCc: null,
       chassisNumber: '',
       note: '',
+      gpsImei: '',
     });
   }
 
@@ -272,6 +318,12 @@ export class VehicleFormModalComponent implements OnChanges {
 
     if (!onlyPristine) {
       this.vehicleForm.reset(values);
+      // OBRS-842: `reset` validates each control as it walks the group, and
+      // `vehicleNumber` is declared BEFORE `status`, so it would otherwise be
+      // judged against the status the form is being reset AWAY from. Re-run it
+      // once the whole group holds its new values rather than depending on
+      // declaration order.
+      this.revalidateVehicleNumber();
       return;
     }
 
@@ -281,6 +333,8 @@ export class VehicleFormModalComponent implements OnChanges {
         control.setValue(value);
       }
     }
+
+    this.revalidateVehicleNumber();
   }
 
   // NOTE: `||` short-circuit is deliberate — translate.getDefaultLang() must

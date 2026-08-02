@@ -17,7 +17,12 @@ import {
 } from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
-import { extractApiErrorCode } from '../../../../../shared/lib/api-error-code';
+import { errorCodeFromMessageKey, extractApiErrorCode } from '../../../../../shared/lib/api-error-code';
+import {
+  CancelBookingResult,
+  formatRefundAmount,
+  refundLane,
+} from '../../../../../shared/interfaces/my-booking.interface';
 import { trimmedRequiredValidator } from '../../../../../shared/validators/trimmed-required.validator';
 import { formatDisplayDateTime } from '../../../../../shared/lib/display-date-time';
 import {
@@ -27,10 +32,20 @@ import {
 } from '../../../../../shared/lib/refund-destination-form';
 
 /** OBRS-286: the two destination error codes `adminOverrideCancelBooking` can
- * 400 with — SA-SPEC-OBRS-286.md contract #2, same set as the customer path. */
-const REFUND_DESTINATION_ERROR_CODES = new Set([
-  'cancel.error.refund-destination-required',
-  'cancel.error.refund-destination-invalid',
+ * 400 with — SA-SPEC-OBRS-286.md contract #2, same set as the customer path.
+ *
+ * OBRS-839: these were compared as the dotted `messageKey` form, which the wire
+ * `errorCode` field NEVER carries — `CancellationService` throws both without an
+ * explicit errorCode, so `DomainException.getErrorCode()` derives
+ * `CANCEL_ERROR_REFUND_DESTINATION_REQUIRED`. The set could not match, and the
+ * dedicated inline message OBRS-286 AC-1 put next to the destination fields has
+ * never rendered on this screen: every rejection fell through to the generic
+ * banner, which does not say WHICH field to fix. Derived via
+ * `errorCodeFromMessageKey()` rather than hand-typed, so the two forms cannot
+ * drift apart again (see its doc comment). */
+const REFUND_DESTINATION_ERROR_CODES = new Set<string>([
+  errorCodeFromMessageKey('cancel.error.refund-destination-required'),
+  errorCodeFromMessageKey('cancel.error.refund-destination-invalid'),
 ]);
 
 /** OBRS-286 Flow A3 — whether the booking's refund destination requirement
@@ -58,9 +73,10 @@ const CANCEL_WINDOW_HOURS = 2; // mirrors backend CANCEL_WINDOW_HOURS_DEFAULT
 const MS_PER_HOUR = 60 * 60 * 1000;
 
 @Component({
-  selector: 'app-override-cancel-modal',
-  templateUrl: './override-cancel-modal.component.html',
-  styleUrl: './override-cancel-modal.component.scss',
+    selector: 'app-override-cancel-modal',
+    templateUrl: './override-cancel-modal.component.html',
+    styleUrl: './override-cancel-modal.component.scss',
+    standalone: false
 })
 export class OverrideCancelModalComponent implements OnChanges {
   @Input() isOpen = false;
@@ -268,6 +284,35 @@ export class OverrideCancelModalComponent implements OnChanges {
     this.closed.emit();
   }
 
+  /**
+   * OBRS-843: read the outcome from the response BODY, never from
+   * `response.message` — that envelope field is built from
+   * `HttpStatus.OK.getReasonPhrase()` and is the literal "OK" on every 2xx, so
+   * the `||` fallback to the translated string could never fire and this
+   * dialog's own SUCCESS copy was dead code.
+   *
+   * An override cancel is the OWNER breaking policy on purpose, so the amount
+   * they just authorised is the thing worth confirming back to them. OBRS-670
+   * keeps a cash share here as MANUAL (nobody is at a counter to hand it over),
+   * so this surface realistically only ever shows the MANUAL and AUTO lanes —
+   * `refundLane()` still covers CASH rather than assuming, since the lane is
+   * resolved by the backend, not by this screen.
+   */
+  private successMessage(result: CancelBookingResult | null | undefined): string {
+    if (!result) {
+      return this.translate.instant('ADMIN.BOOKINGS.CANCEL_OVERRIDE.SUCCESS');
+    }
+    const refund = formatRefundAmount(result.refundAmount);
+    switch (refundLane(result.refundMethod)) {
+      case 'CASH':
+        return this.translate.instant('ADMIN.BOOKINGS.CANCEL_OVERRIDE.SUCCESS_CASH', { refund });
+      case 'MANUAL':
+        return this.translate.instant('ADMIN.BOOKINGS.CANCEL_OVERRIDE.SUCCESS_MANUAL', { refund });
+      default:
+        return this.translate.instant('ADMIN.BOOKINGS.CANCEL_OVERRIDE.SUCCESS_AUTO', { refund });
+    }
+  }
+
   protected async submit(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -295,10 +340,7 @@ export class OverrideCancelModalComponent implements OnChanges {
       );
       this.cancelled.emit();
       this.closed.emit();
-      await this.alertService.success(
-        response?.message ||
-          this.translate.instant('ADMIN.BOOKINGS.CANCEL_OVERRIDE.SUCCESS')
-      );
+      await this.alertService.success(this.successMessage(response?.data));
     } catch (error) {
       const code = extractApiErrorCode(error, null);
       if (code && REFUND_DESTINATION_ERROR_CODES.has(code)) {

@@ -33,9 +33,10 @@ const SECTION_ORDER: { key: NavSectionKey; titleKey: string }[] = [
 ];
 
 @Component({
-  selector: 'app-staff-layout',
-  templateUrl: './staff-layout.component.html',
-  styleUrl: './staff-layout.component.scss',
+    selector: 'app-staff-layout',
+    templateUrl: './staff-layout.component.html',
+    styleUrl: './staff-layout.component.scss',
+    standalone: false
 })
 export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   // ── Abstract member implementations ─────────────────────────────────────────
@@ -70,6 +71,11 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
     if (isSalesperson) {
       items.push({ path: 'sell', labelKey: 'STAFF.NAV.SELL', icon: 'sell', section: 'sales' });
       items.push({ path: 'schedules', labelKey: 'STAFF.NAV.SCHEDULES', icon: 'calendar_month', section: 'sales' });
+      // OBRS-766: counter act-on-behalf cancel — salesperson-only, sibling of
+      // sell/schedules (no new section header). Both this push and the
+      // route's requiredRoles (staff.module.ts) live inside isSalesperson, so
+      // a driver gets neither the link nor route access.
+      items.push({ path: 'cancel-booking', labelKey: 'STAFF.NAV.CANCEL_BOOKING', icon: 'cancel', section: 'sales' });
       // OBRS-424: fleet-map is salesperson-only (route data.requiredRoles),
       // so the nav link lives ONLY in this branch — a driver, who would 403
       // on the route itself, never sees a link to it (UX-OBRS-424 §1).

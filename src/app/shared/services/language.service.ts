@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { PrimeNGConfig } from 'primeng/api';
+// OBRS-915: `PrimeNGConfig` from 'primeng/api' became `PrimeNG` in
+// 'primeng/config' in v18. Same object, same `setTranslation` - only the name
+// and the entry point moved.
+import { PrimeNG } from 'primeng/config';
 import { firstValueFrom } from 'rxjs';
 
 /** localStorage key the authInterceptor reads to set the Accept-Language header. */
@@ -21,7 +24,7 @@ export const DEFAULT_LANGUAGE = 'th';
 export class LanguageService {
   constructor(
     private readonly translate: TranslateService,
-    private readonly primengConfig: PrimeNGConfig
+    private readonly primengConfig: PrimeNG
   ) {}
 
   /** The persisted language, or the default when none has been stored yet. */

@@ -324,6 +324,18 @@
   gap: $space-sm;
 }
 
+// OBRS-873: labels the outbound/return group of ticket cards on a round-trip
+// booking (suppressed on a one-way, which has a single unlabelled group).
+// Static token ($text-lightblack), same as .child-fare-note below and the
+// identically-named class on the shared e-ticket card — this ticket paper is
+// intentionally exempt from dark theming (dark-theme.scss §15).
+.ticket-leg-heading {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $text-lightblack;
+  margin-bottom: $space-2xs;
+}
+
 .ticket-card {
   display: flex;
   flex-direction: column;

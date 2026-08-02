@@ -1,0 +1,241 @@
+@import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens";
+
+// OBRS-942: `crdm-` (Cancel Refund Destination Modal) is historical — it
+// predates this component's rename to `CancelBookingModalComponent` /
+// `app-cancel-booking-modal`. Kept as-is on purpose: three e2e/capture files
+// (`e2e/tests/obrs-813-cancel-offers-reschedule.spec.ts`,
+// `e2e/tests/obrs766-counter-cancel.spec.ts`, `e2e/scripts/capture-obrs813.js`)
+// select on these classes literally, and `ng test` cannot see that lane at
+// all — renaming the prefix here would silently break a CI job this commit
+// never runs. Same reasoning already applied to leaving the NgRx action/
+// selector/state-slice names untouched (see `my-bookings.action.ts`).
+//
+// Same modal chrome as change-stop-dialog.component.scss / reschedule-dialog
+// (backdrop, floating close button, fade-in) — kept consistent rather than
+// reintroducing a third pattern (design-system §6).
+.crdm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: $space-xl 16px;
+  background: rgba(13, 21, 37, 0.55);
+  overflow-y: auto;
+  animation: crdm-fade 0.15s ease;
+}
+
+.crdm-modal {
+  position: relative;
+  width: min(520px, 100%);
+  margin: auto;
+}
+
+.crdm-modal__close {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: $radius-circle;
+  background: $primary-white;
+  color: $text-black;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: $shadow-md;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.crdm-modal__body {
+  width: 100%;
+  background: $primary-white;
+  border-radius: 18px;
+  padding: $space-lg;
+}
+
+// OBRS-286: unlike its older siblings (reschedule/change-seat/change-stop
+// dialogs, which stay white-carded in dark mode — pre-existing debt out of
+// this card's scope), this NEW modal hosts `AppRefundDestinationFieldsComponent`,
+// which DOES repaint for `body.is-dark` — leaving the panel itself white would
+// put that component's dark-mode text colours on an unchanged white card,
+// the exact one-sided-override defect design-system §2.4 warns about. So the
+// panel repaints too.
+// dark-theme.scss's $dk-* SCSS variables are file-private (not importable
+// without pulling its whole global ruleset into this component's scoped
+// bundle), so these are the SAME values copied verbatim — same idiom as
+// `refund-destination-fields.component.scss`'s customer-dark block.
+// $dk-bg-card / $dk-text / $dk-text-muted — dark-theme.scss lines 19, 24-25.
+:host-context(body.is-dark) {
+  .crdm-modal__close {
+    background: #1a1d27;
+    color: #e8eaf0;
+  }
+
+  .crdm-modal__body {
+    background: #1a1d27;
+  }
+
+  .crdm-modal__title,
+  .crdm-subheading,
+  .crdm-line {
+    color: #e8eaf0;
+  }
+
+  .crdm-note {
+    color: #9aa3b8;
+  }
+
+  // OBRS-813: the offer panel is a tinted card, so it needs its own dark pair
+  // or a pale-blue wash ends up carrying light text. The values above predate
+  // OBRS-767 splitting the palette into the importable `_dark-tokens.scss`
+  // (the "file-private, so copy them" note above is that history, not advice) —
+  // new rules take the tokens by name.
+  .crdm-offer {
+    background: $dk-bg-soft;
+    border-color: $dk-border;
+  }
+
+  .crdm-offer__title,
+  .crdm-offer__points {
+    color: $dk-text;
+  }
+}
+
+.crdm-modal__title {
+  margin: 0 0 $space-md;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $text-black;
+}
+
+.crdm-line {
+  margin: 0 0 $space-xs;
+  font-size: $font-size-sm;
+  color: $text-black;
+}
+
+.crdm-note {
+  margin: $space-sm 0 $space-md;
+  font-size: $font-size-sm;
+  color: $text-lightblack;
+}
+
+// OBRS-813 — the reschedule offer. Tinted panel rather than a second modal or a
+// step: the traveler is mid-decision and a wizard step here would be one more
+// thing between them and the Cancel they came for.
+.crdm-offer {
+  margin: $space-sm 0 $space-md;
+  padding: $space-sm;
+  border: 1px solid $primary-lightblue;
+  border-radius: $radius-md;
+  background: $primary-lightblue;
+}
+
+.crdm-offer__title {
+  margin: 0 0 $space-xs;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $text-black;
+}
+
+.crdm-offer__points {
+  margin: 0;
+  padding-left: 18px;
+  font-size: $font-size-sm;
+  color: $text-black;
+
+  li + li {
+    margin-top: 4px;
+  }
+}
+
+.crdm-offer__cta {
+  margin-top: $space-xs;
+  width: 100%;
+  justify-content: center;
+}
+
+// `.btn-primary` / `.btn-secondary` are NOT global — every sibling dialog
+// (change-seat, change-stop, reschedule) declares them in its own scoped
+// stylesheet, and this modal never did. Measured on `origin/dev` while
+// capturing this card's BEFORE image: its Confirm / Keep-booking pair renders
+// as unstyled native buttons today. Rather than leave that, add the same block
+// the siblings carry: a reschedule CTA that looked like a real button next to a
+// native-grey "Confirm cancellation" would be visual steering, which is exactly
+// what this card forbids. Copied from change-seat-dialog.component.scss, so all
+// four dialogs in this module still read as one surface.
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2xs;
+  padding: 9px 20px;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: $secondary-blue;
+  color: $text-white;
+  border: 1px solid $secondary-blue;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-secondary {
+  background-color: $primary-white;
+  color: $secondary-blue;
+  border: 1px solid $secondary-blue;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Only rendered alongside the offer — without it the refund lines below would
+// read as a continuation of the reschedule panel rather than the other option.
+.crdm-subheading {
+  margin: 0 0 $space-xs;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $text-black;
+}
+
+.crdm-error {
+  margin: $space-sm 0 0;
+  font-size: $font-size-sm;
+  color: $text-red;
+}
+
+.crdm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-sm;
+  margin-top: $space-lg;
+}
+
+@keyframes crdm-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

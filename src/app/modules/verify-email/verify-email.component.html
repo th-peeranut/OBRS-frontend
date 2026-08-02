@@ -16,7 +16,7 @@
     </div>
 
     <!-- VERIFYING STATE -->
-    <ng-container *ngIf="verifyState === 'verifying'">
+    @if (verifyState === 'verifying') {
       <div class="state-container mt-5 text-center">
         <p-progressSpinner
           styleClass="verify-spinner"
@@ -25,10 +25,10 @@
         ></p-progressSpinner>
         <p class="state-text mt-3">{{ "VERIFY_EMAIL.VERIFYING" | translate }}</p>
       </div>
-    </ng-container>
+    }
 
     <!-- SUCCESS STATE -->
-    <ng-container *ngIf="verifyState === 'success'">
+    @if (verifyState === 'success') {
       <div class="state-container mt-5 text-center">
         <span class="material-symbols-outlined state-icon success-icon">
           check_circle
@@ -39,7 +39,7 @@
           type="button"
           class="login-btn mt-4"
           (click)="navigateToLogin()"
-        >
+          >
           {{ "VERIFY_EMAIL.SUCCESS_SIGNIN" | translate }}
         </button>
         <div class="mt-3">
@@ -48,10 +48,10 @@
           </a>
         </div>
       </div>
-    </ng-container>
+    }
 
     <!-- FAILED STATE -->
-    <ng-container *ngIf="verifyState === 'failed'">
+    @if (verifyState === 'failed') {
       <div class="state-container mt-5 text-center">
         <span class="material-symbols-outlined state-icon fail-icon">
           error
@@ -77,41 +77,43 @@
                 getResendControl('email')?.invalid &&
                 getResendControl('email')?.touched
               "
-            />
-            <div
-              class="text-error"
-              *ngIf="
+              />
+              @if (
                 getResendControl('email')?.touched &&
                 getResendControl('email')?.errors?.['required']
-              "
-            >
-              {{ "VERIFY_EMAIL.RESEND_EMAIL_REQUIRED" | translate }}
-            </div>
-            <div
-              class="text-error"
-              *ngIf="
+                ) {
+                <div
+                  class="text-error"
+                  >
+                  {{ "VERIFY_EMAIL.RESEND_EMAIL_REQUIRED" | translate }}
+                </div>
+              }
+              @if (
                 getResendControl('email')?.touched &&
                 getResendControl('email')?.errors?.['email']
-              "
-            >
-              {{ "VERIFY_EMAIL.RESEND_EMAIL_INVALID" | translate }}
+                ) {
+                <div
+                  class="text-error"
+                  >
+                  {{ "VERIFY_EMAIL.RESEND_EMAIL_INVALID" | translate }}
+                </div>
+              }
             </div>
-          </div>
-          <button
-            type="submit"
-            class="login-btn mt-3"
-            [disabled]="isResendLoading"
-          >
-            <ng-container *ngIf="!isResendLoading">
-              {{ "VERIFY_EMAIL.RESEND_BUTTON" | translate }}
-            </ng-container>
-            <ng-container *ngIf="isResendLoading">
-              {{ "VERIFY_EMAIL.RESEND_LOADING" | translate }}
-            </ng-container>
-          </button>
-        </form>
-      </div>
-    </ng-container>
+            <button
+              type="submit"
+              class="login-btn mt-3"
+              [disabled]="isResendLoading"
+              >
+              @if (!isResendLoading) {
+                {{ "VERIFY_EMAIL.RESEND_BUTTON" | translate }}
+              }
+              @if (isResendLoading) {
+                {{ "VERIFY_EMAIL.RESEND_LOADING" | translate }}
+              }
+            </button>
+          </form>
+        </div>
+      }
 
+    </div>
   </div>
-</div>

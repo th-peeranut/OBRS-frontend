@@ -1,234 +1,40 @@
+<!-- OBRS-384: rendered from `rows` (the caller's seatLayout, or the built-in
+13-seat van default) instead of hardcoding A1–A13, so any vehicle size —
+e.g. a 21-seat minibus — can be rendered. The default layout produces the
+exact same DOM the previous hardcoded template did. -->
 <div class="card-container">
-  <!-- ROW 1 -->
-  <div class="seat-row">
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A1'"
-      [gender]="seatGenderFor('A1')"
-      [isDisabled]="isSeatDisabled('A1') && !isSeatActive('A1')"
-      [ownerLabel]="ownerLabelFor('A1')"
-      [isActiveOwner]="isActiveOwnerFor('A1')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A1')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A1')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-
-    <!-- EMPTY -->
-    <div class="empty-box"></div>
-
-    <!-- EMPTY -->
-    <div class="empty-box"></div>
-
-    <!-- DRIVER -->
-    <div class="driver-box">
-      <img src="images/passenger-driver.png" alt="Passenger Driver Image" />
+  @for (row of rows; track row) {
+    <div class="seat-row">
+      @for (cell of row; track cell) {
+        @switch (cell.kind) {
+          <!-- SEAT -->
+          @case ('seat') {
+            <app-passenger-seat-box
+              [label]="cell.label"
+              [gender]="seatGenderFor(cell.label)"
+              [isDisabled]="isSeatDisabled(cell.label) && !isSeatActive(cell.label)"
+              [ownerLabel]="ownerLabelFor(cell.label)"
+              [isActiveOwner]="isActiveOwnerFor(cell.label)"
+              [hasWheelchairBadge]="hasWheelchairBadge(cell.label)"
+              [hasExtraLegroomBadge]="hasExtraLegroomBadge(cell.label)"
+              [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
+              [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
+              (passengerSeatOutput)="setPassengerSeatPosition($event)"
+              >
+            </app-passenger-seat-box>
+          }
+          <!-- DRIVER -->
+          @case ('driver') {
+            <div class="driver-box">
+              <img src="images/passenger-driver.png" alt="Passenger Driver Image" />
+            </div>
+          }
+          <!-- EMPTY -->
+          @default {
+            <div class="empty-box"></div>
+          }
+        }
+      }
     </div>
-  </div>
-
-  <!-- ROW 2 -->
-  <div class="seat-row">
-    <!-- EMPTY -->
-    <div class="empty-box"></div>
-
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A2'"
-      [gender]="seatGenderFor('A2')"
-      [isDisabled]="isSeatDisabled('A2') && !isSeatActive('A2')"
-      [ownerLabel]="ownerLabelFor('A2')"
-      [isActiveOwner]="isActiveOwnerFor('A2')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A2')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A2')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A3'"
-      [gender]="seatGenderFor('A3')"
-      [isDisabled]="isSeatDisabled('A3') && !isSeatActive('A3')"
-      [ownerLabel]="ownerLabelFor('A3')"
-      [isActiveOwner]="isActiveOwnerFor('A3')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A3')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A3')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A4'"
-      [gender]="seatGenderFor('A4')"
-      [isDisabled]="isSeatDisabled('A4') && !isSeatActive('A4')"
-      [ownerLabel]="ownerLabelFor('A4')"
-      [isActiveOwner]="isActiveOwnerFor('A4')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A4')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A4')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-  </div>
-
-  <!-- ROW 3 -->
-  <div class="seat-row">
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A5'"
-      [gender]="seatGenderFor('A5')"
-      [isDisabled]="isSeatDisabled('A5') && !isSeatActive('A5')"
-      [ownerLabel]="ownerLabelFor('A5')"
-      [isActiveOwner]="isActiveOwnerFor('A5')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A5')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A5')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-
-    <!-- EMPTY -->
-    <div class="empty-box"></div>
-
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A6'"
-      [gender]="seatGenderFor('A6')"
-      [isDisabled]="isSeatDisabled('A6') && !isSeatActive('A6')"
-      [ownerLabel]="ownerLabelFor('A6')"
-      [isActiveOwner]="isActiveOwnerFor('A6')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A6')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A6')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A7'"
-      [gender]="seatGenderFor('A7')"
-      [isDisabled]="isSeatDisabled('A7') && !isSeatActive('A7')"
-      [ownerLabel]="ownerLabelFor('A7')"
-      [isActiveOwner]="isActiveOwnerFor('A7')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A7')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A7')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-  </div>
-
-  <!-- ROW 4 -->
-  <div class="seat-row">
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A8'"
-      [gender]="seatGenderFor('A8')"
-      [isDisabled]="isSeatDisabled('A8') && !isSeatActive('A8')"
-      [ownerLabel]="ownerLabelFor('A8')"
-      [isActiveOwner]="isActiveOwnerFor('A8')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A8')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A8')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-
-    <!-- EMPTY -->
-    <div class="empty-box"></div>
-
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A9'"
-      [gender]="seatGenderFor('A9')"
-      [isDisabled]="isSeatDisabled('A9') && !isSeatActive('A9')"
-      [ownerLabel]="ownerLabelFor('A9')"
-      [isActiveOwner]="isActiveOwnerFor('A9')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A9')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A9')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A10'"
-      [gender]="seatGenderFor('A10')"
-      [isDisabled]="isSeatDisabled('A10') && !isSeatActive('A10')"
-      [ownerLabel]="ownerLabelFor('A10')"
-      [isActiveOwner]="isActiveOwnerFor('A10')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A10')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A10')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-  </div>
-
-  <!-- ROW 5 -->
-  <div class="seat-row">
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A11'"
-      [gender]="seatGenderFor('A11')"
-      [isDisabled]="isSeatDisabled('A11') && !isSeatActive('A11')"
-      [ownerLabel]="ownerLabelFor('A11')"
-      [isActiveOwner]="isActiveOwnerFor('A11')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A11')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A11')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-
-    <!-- EMPTY -->
-    <div class="empty-box"></div>
-
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A12'"
-      [gender]="seatGenderFor('A12')"
-      [isDisabled]="isSeatDisabled('A12') && !isSeatActive('A12')"
-      [ownerLabel]="ownerLabelFor('A12')"
-      [isActiveOwner]="isActiveOwnerFor('A12')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A12')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A12')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-
-    <!-- SEAT -->
-    <app-passenger-seat-box
-      [label]="'A13'"
-      [gender]="seatGenderFor('A13')"
-      [isDisabled]="isSeatDisabled('A13') && !isSeatActive('A13')"
-      [ownerLabel]="ownerLabelFor('A13')"
-      [isActiveOwner]="isActiveOwnerFor('A13')"
-      [hasWheelchairBadge]="hasWheelchairBadge('A13')"
-      [hasExtraLegroomBadge]="hasExtraLegroomBadge('A13')"
-      [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"
-      [extraLegroomBadgeAriaLabel]="extraLegroomBadgeAriaLabel"
-      (passengerSeatOutput)="setPassengerSeatPosition($event)"
-    >
-    </app-passenger-seat-box>
-  </div>
+  }
 </div>

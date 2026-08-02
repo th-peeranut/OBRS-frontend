@@ -35,10 +35,11 @@ const ACTION_ERROR_KEYS: Record<string, string> = {
  * child, this page owns the HTTP call.
  */
 @Component({
-  selector: 'app-parcel-delivery-list-page',
-  templateUrl: './parcel-delivery-list-page.component.html',
-  styleUrl: './parcel-delivery-list-page.component.scss',
-  providers: [ParcelDeliveryListStore],
+    selector: 'app-parcel-delivery-list-page',
+    templateUrl: './parcel-delivery-list-page.component.html',
+    styleUrl: './parcel-delivery-list-page.component.scss',
+    providers: [ParcelDeliveryListStore],
+    standalone: false
 })
 export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
   protected rows: ParcelDeliveryListItemDto[] = [];

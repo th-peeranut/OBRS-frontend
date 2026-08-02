@@ -25,9 +25,10 @@ export interface EstimateSummaryEstimate {
  * the default `i18nPrefix` keeps the existing reschedule call site
  * byte-identical. */
 @Component({
-  selector: 'app-reschedule-estimate-summary',
-  templateUrl: './reschedule-estimate-summary.component.html',
-  styleUrl: './reschedule-estimate-summary.component.scss',
+    selector: 'app-reschedule-estimate-summary',
+    templateUrl: './reschedule-estimate-summary.component.html',
+    styleUrl: './reschedule-estimate-summary.component.scss',
+    standalone: false
 })
 export class RescheduleEstimateSummaryComponent {
   @Input() estimate: EstimateSummaryEstimate | null = null;

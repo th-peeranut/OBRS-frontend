@@ -7,20 +7,47 @@ import {
   ViewChild,
 } from '@angular/core';
 import html2canvas from 'html2canvas';
-import QRCode from 'qrcode';
 import { TicketLeg, TicketPassenger } from '../../interfaces/e-ticket.interface';
 import { buildMapsDirectionsUrl } from '../../lib/maps-directions-url';
+import {
+  BoardingQrService,
+  BoardingQrState,
+} from '../../services/boarding-qr.service';
+
+/** One rendered passenger row: the input row plus its resolved boarding-QR
+ *  state. Kept out of `TicketPassenger` itself so the mapper that produces the
+ *  card's inputs (`mapBookingTicketsToCard`) stays pure and free of render
+ *  state — the QR is resolved here, where the fetch lives. */
+export type TicketPassengerRow = TicketPassenger & BoardingQrState;
 
 /**
  * Presentational e-ticket "paper". Renders the same markup/style as the booking
  * flow's e-ticket page but is data-driven via inputs, so it can also be shown in
- * a modal (e.g. from "My Bookings") without the flow's stepper. Owns its own QR
- * rendering (from `ticketNumber`) and PNG download.
+ * a modal (e.g. from "My Bookings") without the flow's stepper.
+ *
+ * OBRS-866 — QR rendering: one QR per PASSENGER, each encoding that ticket's
+ * signed boarding token (`GET /tickets/{id}/boarding-token`), delegated to the
+ * shared `BoardingQrService`. It used to render a single QR of the
+ * human-readable `ticketNumber` string, which the staff scanner rejects
+ * (`POST /tickets/boarding-scan` → 400 `INVALID_TICKET_TOKEN`, since the
+ * payload must be the JWT), and which could not have boarded more than one of
+ * a multi-passenger booking's tickets even if the payload had been right.
+ * Do not reintroduce a card-level QR: a boarding pass is per-ticket.
+ *
+ * OBRS-873 — and per-LEG, not per-booking: the rows come from
+ * `TicketLeg.passengers`, so a round trip renders both legs' tickets. The
+ * booking-level `passengers` input this replaced could only ever hold one
+ * leg's tickets, which left the return leg with no QR at all. Do not
+ * reintroduce a flat passenger input either.
  */
 @Component({
-  selector: 'app-e-ticket-card',
-  templateUrl: './e-ticket-card.component.html',
-  styleUrl: './e-ticket-card.component.scss',
+    selector: 'app-e-ticket-card',
+    templateUrl: './e-ticket-card.component.html',
+    styleUrl: './e-ticket-card.component.scss',
+    // Component-scoped so its resolved (short-lived!) boarding tokens die with
+    // this card instance — see the class comment on BoardingQrService.
+    providers: [BoardingQrService],
+    standalone: false
 })
 export class ETicketCardComponent implements OnChanges {
   @ViewChild('ticketPaper') private ticketPaper?: ElementRef<HTMLElement>;
@@ -30,17 +57,69 @@ export class ETicketCardComponent implements OnChanges {
   @Input() legs: TicketLeg[] = [];
   @Input() paymentDate = '-';
   @Input() totalAmount = '0.00';
-  @Input() passengers: TicketPassenger[] = [];
   @Input() booker: TicketPassenger | null = null;
 
-  qrCodeDataUrl = '';
+  /** OBRS-873: what the template renders — one array of rows PER LEG, index-
+   *  aligned with `legs`, each row being that leg's `TicketPassenger` with its
+   *  resolved QR merged in. Never mutates the `@Input()` arrays. A one-way
+   *  booking has exactly one entry, so it renders the same single list it
+   *  always did. */
+  legPassengerRows: TicketPassengerRow[][] = [];
   isDownloadingTicket = false;
-  private latestQrPayload = '';
+
+  constructor(private readonly boardingQrService: BoardingQrService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['ticketNumber']) {
-      void this.updateQrCode(this.ticketNumber);
+    if (changes['legs']) {
+      // Seed synchronously from whatever the service already resolved, so
+      // rebuilt legs (e.g. the modal re-mapping on a locale switch) don't flash
+      // blank while the dedupe guard skips re-fetching.
+      this.applyBoardingQrStates();
+      this.boardingQrService.fetchBoardingTokens(
+        // Flattened across legs: one fetch pass covers the return leg's tickets
+        // too, and the service dedupes by ticket id anyway.
+        this.legPassengerRows.flatMap((rows) => rows.map((row) => row.ticketId)),
+        () => this.applyBoardingQrStates(),
+        // The modal renders its own state; a global "Loading…" dialog per
+        // ticket on top of an already-rendered ticket is noise. The per-row
+        // placeholder is the loading indicator.
+        true
+      );
     }
+  }
+
+  /** True while any leg has at least one row — drives the QR hint, which must
+   *  not render under an empty passengers block on a booking whose legs carry
+   *  no tickets. */
+  get hasPassengerRows(): boolean {
+    return this.legPassengerRows.some((rows) => rows.length > 0);
+  }
+
+  /** True only when TWO legs actually have ticket rows — the condition for
+   *  labelling the lists outbound/return. Counts non-empty legs, not legs: a
+   *  round trip whose return leg carries no tickets renders one unlabelled
+   *  list, same as a one-way, instead of a stray "Return" heading over
+   *  nothing. */
+  get hasMultiplePassengerLegs(): boolean {
+    return this.legPassengerRows.filter((rows) => rows.length > 0).length > 1;
+  }
+
+  /** Re-derive every row from the service's current state rather than mutating
+   *  rows in place, so a stray re-render always reflects the latest result. */
+  private applyBoardingQrStates(): void {
+    this.legPassengerRows = (this.legs ?? []).map((leg) =>
+      (leg.passengers ?? []).map((passenger) => {
+        const qrState =
+          passenger.ticketId !== null
+            ? this.boardingQrService.getState(passenger.ticketId)
+            : undefined;
+        return {
+          ...passenger,
+          qrDataUrl: qrState?.qrDataUrl ?? '',
+          qrUnavailable: qrState?.qrUnavailable ?? false,
+        };
+      })
+    );
   }
 
   trackByIndex(index: number): number {
@@ -109,31 +188,5 @@ export class ETicketCardComponent implements OnChanges {
       .replace(/[^a-zA-Z0-9_-]/g, '-');
 
     return `e-ticket-${safeReference || 'ticket'}.png`;
-  }
-
-  private async updateQrCode(ticketNumber: string): Promise<void> {
-    const normalizedTicketNumber = ticketNumber?.trim();
-    this.latestQrPayload = normalizedTicketNumber;
-
-    if (!normalizedTicketNumber || normalizedTicketNumber === '-') {
-      this.qrCodeDataUrl = '';
-      return;
-    }
-
-    try {
-      const qrDataUrl = await QRCode.toDataURL(normalizedTicketNumber, {
-        width: 140,
-        margin: 1,
-        errorCorrectionLevel: 'M',
-      });
-
-      if (this.latestQrPayload === normalizedTicketNumber) {
-        this.qrCodeDataUrl = qrDataUrl;
-      }
-    } catch {
-      if (this.latestQrPayload === normalizedTicketNumber) {
-        this.qrCodeDataUrl = '';
-      }
-    }
   }
 }

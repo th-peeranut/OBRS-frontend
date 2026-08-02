@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpContext, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
+import { PageResponse } from '../../shared/interfaces/payment.interface';
 import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
@@ -12,6 +13,13 @@ import {
   BoardingScanRequest,
   BoardingScanResultDto,
 } from '../../shared/interfaces/ticket-boarding.interface';
+import {
+  BookingStopLookup,
+  CancelBookingReqDto,
+  CancelBookingResult,
+  CancellationPolicy,
+  CashRefundApprovalRequest,
+} from '../../shared/interfaces/my-booking.interface';
 import {
   CargoAvailabilityRespDto,
   ParcelCarryOnReqDto,
@@ -409,6 +417,47 @@ export interface FleetPositionRespDto {
   stale: boolean;
   deviceOnline: boolean | null;
   gpsImeiConfigured: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// OBRS-766 — counter (staff act-on-behalf) cancel. Backend contract:
+// GET /api/private/bookings/search, GET /api/private/bookings/{id}/cancel-policy
+// (existing, shared with the customer path — see my-booking.interface.ts),
+// POST /api/private/bookings/{id}/cancel (existing, shared, `CancelBookingReqDto`
+// widened additively above). Neither OBRS-661's ordinary act-on-behalf cancel
+// nor OBRS-669's cash second-person approval has ever had a frontend caller
+// before this card.
+// ---------------------------------------------------------------------------
+
+/** One leg of a `CounterBookingSearchResultDto` row. Reuses `BookingStopLookup`
+ * — the same `{code, display}` lookup shape the customer my-bookings list
+ * already renders via `getStopLabel()` (my-booking.interface.ts) — rather
+ * than inventing a second stop-label shape for this one screen. */
+export interface CounterBookingSearchJourneyDto {
+  fromStop?: BookingStopLookup;
+  toStop?: BookingStopLookup;
+  departureDateTime?: string;
+}
+
+/** `GET /api/private/bookings/search` result row. `contactPhoneMasked` is
+ * ALREADY masked server-side (`••••`+last4) — never re-mask or otherwise
+ * transform it client-side. `status` is the same lowercase status-code
+ * vocabulary as `MyBookingDto.status` (`MY_BOOKINGS.STATUS.*`). */
+export interface CounterBookingSearchResultDto {
+  bookingId: number;
+  bookingNumber: string;
+  contactName: string;
+  contactPhoneMasked: string;
+  status: string;
+  netAmount: number | string;
+  journeys: CounterBookingSearchJourneyDto[];
+}
+
+export interface CounterBookingSearchParams {
+  phone?: string;
+  bookingNumber?: string;
+  page: number;
+  size: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -855,6 +904,91 @@ export class StaffApiService {
     return this.http.get<ResponseAPI<FleetPositionRespDto[]>>(
       `${environment.apiUrl}/api/private/vehicles/positions`,
       { context: this.skipContext }
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // OBRS-766 — counter cancel (act-on-behalf, OBRS-661 / OBRS-669).
+  // ---------------------------------------------------------------------------
+
+  /** Same reasoning as `boardingScanContext`/`parcelActionContext` above: a
+   * domain 4xx on search/policy/cancel (criteria-required, window-closed, an
+   * approver rejection) must never force-logout the operator nor duplicate
+   * the global alert — the counter-cancel page and modal own their own error
+   * UX end to end, branching on `errorCode`. */
+  private readonly cancelActionContext = new HttpContext()
+    .set(SKIP_GLOBAL_ERROR_ALERT, true)
+    .set(SKIP_GLOBAL_LOADING_ALERT, true)
+    .set(SKIP_AUTH_LOGOUT, true);
+
+  /** GET /api/private/bookings/search — exactly one of phone/bookingNumber,
+   * both exact-match, plus page/size. Never 404s (contract): no match,
+   * out-of-fleet, and garbage input all come back an empty 200 page — the
+   * page's own empty-state copy is what stays honest about which of those it
+   * was, not this method. */
+  searchBookings(
+    params: CounterBookingSearchParams
+  ): Observable<ResponseAPI<PageResponse<CounterBookingSearchResultDto>>> {
+    let httpParams = new HttpParams()
+      .set('page', params.page)
+      .set('size', params.size);
+    if (params.phone) {
+      httpParams = httpParams.set('phone', params.phone);
+    }
+    if (params.bookingNumber) {
+      httpParams = httpParams.set('bookingNumber', params.bookingNumber);
+    }
+    return this.http.get<ResponseAPI<PageResponse<CounterBookingSearchResultDto>>>(
+      `${environment.apiUrl}/api/private/bookings/search`,
+      { params: httpParams, context: this.cancelActionContext }
+    );
+  }
+
+  /** GET /api/private/bookings/{id}/cancel-policy — the SAME endpoint and
+   * response shape (`CancellationPolicy`, my-booking.interface.ts) the
+   * customer `my-bookings` flow already calls via
+   * `BookingService.getCancellationPolicy()`; this is the identical refund
+   * preview, just reachable from the counter. */
+  getCancelPolicy(bookingId: number): Observable<ResponseAPI<CancellationPolicy>> {
+    return this.http.get<ResponseAPI<CancellationPolicy>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/cancel-policy`,
+      { context: this.cancelActionContext }
+    );
+  }
+
+  /** POST /api/private/bookings/{id}/cancel — the SAME endpoint
+   * `BookingService.cancelBooking()` posts to for the customer path.
+   * `payload` defaults to `{}` so a non-cash, non-manual-refund counter
+   * cancel posts the byte-identical empty body every existing caller of that
+   * endpoint already sends (FE-1) — `approvalCode`/`refundDestination` are
+   * only ever set by the caller, never defaulted to `''`/`null` here. */
+  cancelCounterBooking(
+    bookingId: number,
+    payload: CancelBookingReqDto = {}
+  ): Observable<ResponseAPI<CancelBookingResult>> {
+    return this.http.post<ResponseAPI<CancelBookingResult>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/cancel`,
+      payload,
+      { context: this.cancelActionContext }
+    );
+  }
+
+  /**
+   * OBRS-844 — POST /api/private/bookings/{id}/cash-refund-approval-request.
+   * Asks the fleet's owners to authorize this cash refund; they see it in the
+   * in-app inbox and issue a code from their own device.
+   *
+   * Idempotent server-side: tapping again while a request is already open
+   * returns the same request instead of notifying the owner twice, so the
+   * button does not need to guard against a double tap to avoid spamming.
+   */
+  requestCashRefundApproval(
+    bookingId: number
+  ): Observable<ResponseAPI<CashRefundApprovalRequest>> {
+    return this.http.post<ResponseAPI<CashRefundApprovalRequest>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/cash-refund-approval-request`,
+      {},
+      { context: this.cancelActionContext }
     );
   }
 }

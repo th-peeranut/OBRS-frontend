@@ -126,16 +126,62 @@ describe('BookingService', () => {
     });
   });
 
+  // OBRS-942 — one cancel screen now opens for every refund method, and the
+  // non-manual lane's Confirm never collects a destination. The risk this
+  // pins: `toHaveBeenCalledWith(id, { refundDestination: undefined })` on a
+  // mocked service would pass just as well if `refundDestination` were `null`
+  // — `JSON.stringify` treats the two very differently (drops an `undefined`
+  // key, keeps a `null` one as `"refundDestination":null`), and only a real
+  // HTTP request shows which one actually ships. Asserted at the
+  // HttpTestingController layer for exactly that reason.
+  describe('cancelBooking (OBRS-942)', () => {
+    it('the non-manual lane never types refundDestination as null — the wire body is {}', () => {
+      service.cancelBooking(5, { refundDestination: undefined }).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings/5/cancel`);
+      expect(req.request.method).toBe('POST');
+      expect(JSON.stringify(req.request.body)).toBe('{}');
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { bookingId: 5, bookingNumber: 'BK5', status: 'cancelled', refundAmount: 500, refundMethod: 'card' },
+      });
+    });
+
+    it('the manual lane still posts a populated refundDestination untouched', () => {
+      const refundDestination = { type: 'promptpay' as const, promptpayPhone: '0812345678' };
+      service.cancelBooking(5, { refundDestination }).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings/5/cancel`);
+      expect(JSON.stringify(req.request.body)).toBe(JSON.stringify({ refundDestination }));
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: {
+          bookingId: 5,
+          bookingNumber: 'BK5',
+          status: 'cancelled',
+          refundAmount: 400,
+          refundMethod: 'MANUAL_REFUND_REQUIRED',
+        },
+      });
+    });
+  });
+
   // OBRS-575 scrutinize: the component spec only asserts the ARGUMENT
-  // (`getMyBookings(undefined, false, true)`) — a proxy, not the effect. If
+  // (`getMyBookings({ skipAuthLogout: true })`) — a proxy, not the effect. If
   // `listContext` ever stopped threading the flag, every suite stays green
   // while Home silently force-logs-out an expired session again (OBRS-187).
   // Pin the real request context, same shape as parcel-tracking.service.spec.ts:51.
+  // OBRS-577: URL updated from size=100 to size=20 — the new AC2 default;
+  // neither call below passes an explicit `size`.
   describe('getMyBookings — SKIP_AUTH_LOGOUT context (OBRS-575 / AC#8)', () => {
-    const url = `${environment.apiUrl}/api/private/bookings/me?page=0&size=100`;
+    const url = `${environment.apiUrl}/api/private/bookings/me?page=0&size=20`;
 
     it('sets SKIP_AUTH_LOGOUT when skipAuthLogout=true (Home background fetch)', () => {
-      service.getMyBookings(undefined, false, true).subscribe();
+      service.getMyBookings({ skipAuthLogout: true }).subscribe();
 
       const req = httpMock.expectOne(url);
       expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
@@ -148,6 +194,28 @@ describe('BookingService', () => {
       const req = httpMock.expectOne(url);
       expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeFalse();
       req.flush({ code: 200, message: 'OK', data: { content: [] } });
+    });
+  });
+
+  // OBRS-577 AC2/AC6 hard gate — written and run RED against unmodified code
+  // (today's getMyBookings() hardcodes page=0&size=100, silently capping a
+  // traveler's own booking history at 100 rows with no way to reach row
+  // 101+). The fix flips the default page size to 20, paired with an
+  // incremental "Load more" button (AC2/AC6) that fetches the rest. Zero-arg
+  // `getMyBookings()` is legal under both the old positional signature and
+  // the new options-object signature, so this test's call site is untouched
+  // by the AC2 signature change — only the assertion (100 -> 20) moves.
+  it('OBRS-577 AC2/AC6: defaults to size=20 (not 100) so a >100-booking history is reachable via Load more', () => {
+    service.getMyBookings().subscribe();
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/api/private/bookings/me?page=0&size=20`
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({
+      code: 200,
+      message: 'OK',
+      data: { content: [], totalElements: 0, totalPages: 0 },
     });
   });
 });

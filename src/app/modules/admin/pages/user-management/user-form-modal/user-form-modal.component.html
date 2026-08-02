@@ -1,203 +1,220 @@
-<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="requestClose()">
-  <div class="user-editor-modal">
-    <div class="user-editor-header">
-      <div>
-        <h4 class="user-editor-title">
-          {{ mode === 'edit' ? ('ADMIN.USERS.EDIT_TITLE' | translate) : ('ADMIN.USERS.ADD_TITLE' | translate) }}
-        </h4>
-        <p class="user-editor-subtitle">
-          {{ 'ADMIN.USERS.MODAL_HINT' | translate }}
-          <span class="admin-muted" *ngIf="mode === 'edit' && isEditDetailLoading">
-            · {{ 'ADMIN.COMMON.LOADING' | translate }}
-          </span>
-        </p>
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="requestClose()">
+    <div class="user-editor-modal">
+      <div class="user-editor-header">
+        <div>
+          <h4 class="user-editor-title">
+            {{ mode === 'edit' ? ('ADMIN.USERS.EDIT_TITLE' | translate) : ('ADMIN.USERS.ADD_TITLE' | translate) }}
+          </h4>
+          <p class="user-editor-subtitle">
+            {{ 'ADMIN.USERS.MODAL_HINT' | translate }}
+            @if (mode === 'edit' && isEditDetailLoading) {
+              <span class="admin-muted">
+                · {{ 'ADMIN.COMMON.LOADING' | translate }}
+              </span>
+            }
+          </p>
+        </div>
+        <button type="button" class="user-editor-close" (click)="requestClose()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
       </div>
-      <button type="button" class="user-editor-close" (click)="requestClose()">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-
-    <div class="user-editor-body">
-      <form [formGroup]="userForm" class="user-editor-form" (ngSubmit)="submitUser()">
-        <section class="user-editor-section">
-          <div class="user-editor-section-title">
-            <span class="material-symbols-outlined">person</span>
-            <h5>Personal Information</h5>
+      <div class="user-editor-body">
+        <form [formGroup]="userForm" class="user-editor-form" (ngSubmit)="submitUser()">
+          <section class="user-editor-section">
+            <div class="user-editor-section-title">
+              <span class="material-symbols-outlined">person</span>
+              <h5>Personal Information</h5>
+            </div>
+            <div class="user-editor-grid">
+              <div class="user-field is-title">
+                <label>
+                  {{ 'ADMIN.USERS.FORM_TITLE' | translate }} <span class="admin-required">*</span>
+                </label>
+                <input class="admin-field user-input" formControlName="title" />
+                @if (isFieldInvalid('title')) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+                  </small>
+                }
+              </div>
+              <div class="user-field is-first-name">
+                <label>
+                  {{ 'ADMIN.USERS.FIRST_NAME' | translate }} <span class="admin-required">*</span>
+                </label>
+                <input class="admin-field user-input" formControlName="firstName" />
+                @if (isFieldInvalid('firstName')) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
+                  </small>
+                }
+              </div>
+              <div class="user-field is-half">
+                <label>{{ 'ADMIN.USERS.MIDDLE_NAME' | translate }}</label>
+                <input class="admin-field user-input" formControlName="middleName" placeholder="-" />
+              </div>
+              <div class="user-field is-half">
+                <label>
+                  {{ 'ADMIN.USERS.LAST_NAME' | translate }} <span class="admin-required">*</span>
+                </label>
+                <input class="admin-field user-input" formControlName="lastName" />
+                @if (isFieldInvalid('lastName')) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
+                  </small>
+                }
+              </div>
+            </div>
+          </section>
+          @if (mode !== 'edit') {
+            <section class="user-editor-section">
+              <div class="user-editor-section-title">
+                <span class="material-symbols-outlined">key</span>
+                <h5>Account Credentials</h5>
+              </div>
+              <div class="user-editor-grid is-two-column">
+                <div class="user-field">
+                  <label>
+                    {{ 'ADMIN.USERS.PASSWORD' | translate }} <span class="admin-required">*</span>
+                  </label>
+                  <input class="admin-field user-input" formControlName="password" type="password" />
+                  @if (isFieldInvalid('password')) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.PASSWORD' | translate }}
+                    </small>
+                  }
+                </div>
+                <div class="user-field">
+                  <label>
+                    {{ 'ADMIN.USERS.CONFIRM_PASSWORD' | translate }} <span class="admin-required">*</span>
+                  </label>
+                  <input class="admin-field user-input" formControlName="confirmPassword" type="password" />
+                  @if (isFieldInvalid('confirmPassword')) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+                    </small>
+                  }
+                  @if (shouldShowConfirmPasswordMismatch()) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.SAME_PASSWORD_VALIDATE' | translate }}
+                    </small>
+                  }
+                </div>
+              </div>
+            </section>
+          }
+          <section class="user-editor-section">
+            <div class="user-editor-section-title">
+              <span class="material-symbols-outlined">contact_mail</span>
+              <h5>Contact &amp; Settings</h5>
+            </div>
+            <div class="user-editor-grid is-two-column">
+              <div class="user-field">
+                <label>
+                  {{ 'ADMIN.USERS.EMAIL' | translate }}
+                  @if (mode !== 'edit') {
+                    <span class="admin-required">*</span>
+                  }
+                </label>
+                <input class="admin-field user-input" formControlName="email" type="email" />
+                <!-- OBRS-725: in edit mode the control is disabled and the server rejects a
+                changed address, so say why rather than leaving a dead-looking input. -->
+                @if (mode === 'edit') {
+                  <small class="admin-hint">
+                    {{ 'ADMIN.USERS.EMAIL_LOCKED_HINT' | translate }}
+                  </small>
+                }
+                @if (isFieldInvalid('email')) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.EMAIL' | translate }}
+                  </small>
+                }
+                @if (shouldShowCredentialValidationError('email')) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.EMAIL_EXIST' | translate }}
+                  </small>
+                }
+              </div>
+              <div class="user-field">
+                <label>
+                  {{ 'ADMIN.USERS.PHONE' | translate }} <span class="admin-required">*</span>
+                </label>
+                <input
+                  class="admin-field user-input"
+                  formControlName="phoneNumber"
+                  type="tel"
+                  (focus)="onPhoneFocus()"
+                  (blur)="onPhoneBlur()"
+                  />
+                  @if (isFieldInvalid('phoneNumber')) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.PHONE' | translate }}
+                    </small>
+                  }
+                  @if (shouldShowCredentialValidationError('phoneNumber')) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.PHONE_NO_EXIST' | translate }}
+                    </small>
+                  }
+                </div>
+                <div class="user-field user-modal-select">
+                  <label>
+                    {{ 'ADMIN.USERS.LOCALE' | translate }} <span class="admin-required">*</span>
+                  </label>
+                  <app-admin-dropdown
+                    formControlName="preferredLocale"
+                    [options]="[{ value: 'th', label: 'th' }, { value: 'en', label: 'en' }]"
+                  ></app-admin-dropdown>
+                </div>
+                <div class="user-field user-modal-select">
+                  <label>
+                    {{ 'ADMIN.USERS.STATUS' | translate }} <span class="admin-required">*</span>
+                  </label>
+                  <app-admin-dropdown
+                    formControlName="status"
+                    [options]="statusOptions"
+                    valueKey="code"
+                    labelKey="label"
+                  ></app-admin-dropdown>
+                </div>
+              </div>
+            </section>
+            <section class="user-editor-section">
+              <div class="user-editor-section-title">
+                <span class="material-symbols-outlined">badge</span>
+                <h5>{{ 'ADMIN.USERS.ROLES' | translate }} <span class="admin-required">*</span></h5>
+              </div>
+              <div class="user-role-list">
+                @for (role of roleOptions; track role) {
+                  <label
+                    class="user-role-chip"
+                    [class.is-selected]="isRoleChecked(role.slug)"
+                    >
+                    <input
+                      type="checkbox"
+                      [checked]="isRoleChecked(role.slug)"
+                      (change)="toggleRoleSelection(role.slug, $any($event.target).checked)"
+                      />
+                      <span>{{ role.label }}</span>
+                    </label>
+                  }
+                </div>
+                @if (isFieldInvalid('roles')) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.ROLE_REQUIRED' | translate }}
+                  </small>
+                }
+              </section>
+            </form>
           </div>
-
-          <div class="user-editor-grid">
-            <div class="user-field is-title">
-              <label>
-                {{ 'ADMIN.USERS.FORM_TITLE' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="title" />
-              <small class="admin-error" *ngIf="isFieldInvalid('title')">
-                {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-              </small>
-            </div>
-
-            <div class="user-field is-first-name">
-              <label>
-                {{ 'ADMIN.USERS.FIRST_NAME' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="firstName" />
-              <small class="admin-error" *ngIf="isFieldInvalid('firstName')">
-                {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
-              </small>
-            </div>
-
-            <div class="user-field is-half">
-              <label>{{ 'ADMIN.USERS.MIDDLE_NAME' | translate }}</label>
-              <input class="admin-field user-input" formControlName="middleName" placeholder="-" />
-            </div>
-
-            <div class="user-field is-half">
-              <label>
-                {{ 'ADMIN.USERS.LAST_NAME' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="lastName" />
-              <small class="admin-error" *ngIf="isFieldInvalid('lastName')">
-                {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
-              </small>
-            </div>
+          <div class="user-editor-footer">
+            <button type="button" class="user-editor-cancel" (click)="requestClose()">
+              {{ 'ADMIN.COMMON.CANCEL' | translate }}
+            </button>
+            <button type="button" class="user-editor-save" [disabled]="isSubmitting" (click)="submitUser()">
+              {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+            </button>
           </div>
-        </section>
-
-        <section class="user-editor-section" *ngIf="mode !== 'edit'">
-          <div class="user-editor-section-title">
-            <span class="material-symbols-outlined">key</span>
-            <h5>Account Credentials</h5>
-          </div>
-
-          <div class="user-editor-grid is-two-column">
-            <div class="user-field">
-              <label>
-                {{ 'ADMIN.USERS.PASSWORD' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="password" type="password" />
-              <small class="admin-error" *ngIf="isFieldInvalid('password')">
-                {{ 'ADMIN.VALIDATION.PASSWORD' | translate }}
-              </small>
-            </div>
-
-            <div class="user-field">
-              <label>
-                {{ 'ADMIN.USERS.CONFIRM_PASSWORD' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="confirmPassword" type="password" />
-              <small class="admin-error" *ngIf="isFieldInvalid('confirmPassword')">
-                {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-              </small>
-              <small class="admin-error" *ngIf="shouldShowConfirmPasswordMismatch()">
-                {{ 'ADMIN.VALIDATION.SAME_PASSWORD_VALIDATE' | translate }}
-              </small>
-            </div>
-          </div>
-        </section>
-
-        <section class="user-editor-section">
-          <div class="user-editor-section-title">
-            <span class="material-symbols-outlined">contact_mail</span>
-            <h5>Contact &amp; Settings</h5>
-          </div>
-
-          <div class="user-editor-grid is-two-column">
-            <div class="user-field">
-              <label>
-                {{ 'ADMIN.USERS.EMAIL' | translate }}
-                <span class="admin-required" *ngIf="mode !== 'edit'">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="email" type="email" />
-              <!-- OBRS-725: in edit mode the control is disabled and the server rejects a
-                   changed address, so say why rather than leaving a dead-looking input. -->
-              <small class="admin-hint" *ngIf="mode === 'edit'">
-                {{ 'ADMIN.USERS.EMAIL_LOCKED_HINT' | translate }}
-              </small>
-              <small class="admin-error" *ngIf="isFieldInvalid('email')">
-                {{ 'ADMIN.VALIDATION.EMAIL' | translate }}
-              </small>
-              <small class="admin-error" *ngIf="shouldShowCredentialValidationError('email')">
-                {{ 'ADMIN.VALIDATION.EMAIL_EXIST' | translate }}
-              </small>
-            </div>
-
-            <div class="user-field">
-              <label>
-                {{ 'ADMIN.USERS.PHONE' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input
-                class="admin-field user-input"
-                formControlName="phoneNumber"
-                type="tel"
-                (focus)="onPhoneFocus()"
-                (blur)="onPhoneBlur()"
-              />
-              <small class="admin-error" *ngIf="isFieldInvalid('phoneNumber')">
-                {{ 'ADMIN.VALIDATION.PHONE' | translate }}
-              </small>
-              <small class="admin-error" *ngIf="shouldShowCredentialValidationError('phoneNumber')">
-                {{ 'ADMIN.VALIDATION.PHONE_NO_EXIST' | translate }}
-              </small>
-            </div>
-
-            <div class="user-field user-modal-select">
-              <label>
-                {{ 'ADMIN.USERS.LOCALE' | translate }} <span class="admin-required">*</span>
-              </label>
-              <app-admin-dropdown
-                formControlName="preferredLocale"
-                [options]="[{ value: 'th', label: 'th' }, { value: 'en', label: 'en' }]"
-              ></app-admin-dropdown>
-            </div>
-
-            <div class="user-field user-modal-select">
-              <label>
-                {{ 'ADMIN.USERS.STATUS' | translate }} <span class="admin-required">*</span>
-              </label>
-              <app-admin-dropdown
-                formControlName="status"
-                [options]="statusOptions"
-                valueKey="code"
-                labelKey="label"
-              ></app-admin-dropdown>
-            </div>
-          </div>
-        </section>
-
-        <section class="user-editor-section">
-          <div class="user-editor-section-title">
-            <span class="material-symbols-outlined">badge</span>
-            <h5>{{ 'ADMIN.USERS.ROLES' | translate }} <span class="admin-required">*</span></h5>
-          </div>
-
-          <div class="user-role-list">
-            <label
-              class="user-role-chip"
-              *ngFor="let role of roleOptions"
-              [class.is-selected]="isRoleChecked(role.slug)"
-            >
-              <input
-                type="checkbox"
-                [checked]="isRoleChecked(role.slug)"
-                (change)="toggleRoleSelection(role.slug, $any($event.target).checked)"
-              />
-              <span>{{ role.label }}</span>
-            </label>
-          </div>
-          <small class="admin-error" *ngIf="isFieldInvalid('roles')">
-            {{ 'ADMIN.VALIDATION.ROLE_REQUIRED' | translate }}
-          </small>
-        </section>
-      </form>
-    </div>
-
-    <div class="user-editor-footer">
-      <button type="button" class="user-editor-cancel" (click)="requestClose()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button type="button" class="user-editor-save" [disabled]="isSubmitting" (click)="submitUser()">
-        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-      </button>
-    </div>
-  </div>
-</div>
+        </div>
+      </div>
+    }

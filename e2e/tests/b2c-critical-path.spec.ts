@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { mockPublicPageApis } from '../fixtures/public-page-mocks';
 
 test.beforeEach(async ({ page }) => {
@@ -8,9 +8,39 @@ test.beforeEach(async ({ page }) => {
   await mockPublicPageApis(page);
 });
 
-test('B2C happy path: search → schedule → review → passenger info ready to pay', async ({
-  page,
-}) => {
+/**
+ * OBRS-856: this file used to be one anonymous walk that ran straight from the
+ * review page into the passenger form. That walk encoded the bug. The frontend
+ * admitted a guest all the way to the payment button while
+ * BookingService.createBooking resolves the caller server-side and 401s them, so
+ * the anonymous path this spec called "the critical path" was one the product
+ * could never actually complete — it just stopped one screen short of where the
+ * customer found out.
+ *
+ * So it is now two walks that share the same opening. The signed-in one keeps
+ * every assertion the old spec had; the guest one pins the new boundary from the
+ * other side. Splitting matters because a single spec can only assert ONE of
+ * "the guest gets in" and "the guest is stopped", and both are requirements: the
+ * search and seat pages are the shop window and must stay open, while the pages
+ * that commit a booking must not take a visitor's effort before telling them.
+ */
+async function seedSignedInCustomer(page: Page): Promise<void> {
+  // Same shape as e2e/support/customer-pages.ts seedCustomerSession: role 'user'
+  // is NOT in AuthService.PORTAL_ONLY_ROLES, so the guard admits it to the
+  // customer area. Seeding 'admin' here would compile and then bounce to /admin.
+  await page.addInitScript(() => {
+    localStorage.setItem('auth_token', 'obrs-856-b2c-gate-token');
+    localStorage.setItem('auth_username', 'customer@system.local');
+    localStorage.setItem('auth_roles', JSON.stringify(['user']));
+  });
+}
+
+/**
+ * Home → search → pick a schedule → confirm on the review page. Everything here
+ * is open to guests by design and stays that way; the two tests below differ
+ * only in whether a session exists when the confirm click lands.
+ */
+async function searchAndConfirmASchedule(page: Page): Promise<void> {
   // ── Step 1: Home page ────────────────────────────────────────────────────
 
   await page.goto('/');
@@ -100,6 +130,13 @@ test('B2C happy path: search → schedule → review → passenger info ready to
   // Do not reintroduce `force` here. It would make this line pass whether or not any of
   // that is true, which is the whole of OBRS-750.
   await confirmBtn.click();
+}
+
+test('B2C happy path: search → schedule → review → passenger info ready to pay', async ({
+  page,
+}) => {
+  await seedSignedInCustomer(page);
+  await searchAndConfirmASchedule(page);
 
   // ── Step 4: Passenger info ───────────────────────────────────────────────
 
@@ -129,4 +166,177 @@ test('B2C happy path: search → schedule → review → passenger info ready to
   // ── Assertion: Next (proceed to payment) button is enabled ───────────────
 
   await expect(page.locator('.btn-next')).not.toBeDisabled();
+});
+
+test('OBRS-856: a guest browses and picks a seat freely, then is asked to sign in at the passenger form — not at the payment button', async ({
+  page,
+}) => {
+  // No seedSignedInCustomer() — this is the visitor who never registered, and
+  // the absence of that call IS the test condition.
+  await searchAndConfirmASchedule(page);
+
+  // The shop window stayed open: reaching the confirm click at all means the
+  // guest cleared /schedule-booking and /review-schedule-booking. If a later
+  // change gates those too, searchAndConfirmASchedule() cannot complete and
+  // this test fails there rather than here — which is the point.
+  await page.waitForURL('**/login');
+  expect(new URL(page.url()).pathname).toBe('/login');
+
+  // Assert the login page RENDERED, not merely that the URL changed. A guard
+  // redirect that landed on a blank shell would satisfy the pathname alone.
+  await expect(page.locator('#email')).toBeVisible();
+  await expect(page.locator('#password')).toBeVisible();
+
+  // The passenger form must not have been reachable at all. Asserting its
+  // absence separately from the URL is what distinguishes "redirected before
+  // the module loaded" from "loaded and then navigated away".
+  await expect(page.locator('#booker-firstName')).toHaveCount(0);
+
+  // And the whole reason the redirect is acceptable: signing in has to bring
+  // them back to where they were, not dump them on the home page. This is the
+  // key AuthService writes in setPostLoginRedirectUrl().
+  //
+  // OBRS-903 moved it from sessionStorage to a TTL'd localStorage envelope: the
+  // email-verification link a first-time booker must click opens a NEW TAB, and
+  // sessionStorage is per-tab, so the old location was empty exactly where it
+  // mattered. Both halves are asserted — the value in its new home, and the old
+  // home staying empty, so a revert cannot pass this test quietly.
+  const stored = await page.evaluate(() => ({
+    envelope: localStorage.getItem('auth_return_url'),
+    perTab: sessionStorage.getItem('auth_return_url'),
+  }));
+  expect(stored.perTab).toBeNull();
+  expect(stored.envelope).not.toBeNull();
+  expect(JSON.parse(stored.envelope as string).value).toBe('/passenger-info');
+});
+
+/**
+ * OBRS-855: the card's story, end to end, on the one call it actually happens on.
+ *
+ * `passenger-info.component.ts#onSubmitPassengerInfo` POSTs /api/private/bookings when the
+ * customer presses Next, and the access JWT it carries lives one hour from SIGN-IN — not from the
+ * start of the booking. Someone who logged in that morning and then spent a while over a group
+ * booking presses that button with a token the backend has already stopped honouring. Before this
+ * card there was nothing to renew it with: the interceptor cleared the session, the component's
+ * own `error.status === 401` branch returned silently, and the effort was gone.
+ *
+ * This test makes that exact 401 happen once and asserts the customer finishes anyway. It also
+ * settles a claim the card made that the code did NOT support — that the entered data is lost.
+ * It is not: everything lives in NgRx feature stores and login navigates with the router, so the
+ * data survives. Rather than write that down and trust it, the assertions below measure it.
+ */
+test('OBRS-855: the access token dies mid-booking — the request is retried on a fresh one and the customer reaches payment, not /login', async ({
+  page,
+}) => {
+  await seedSignedInCustomer(page);
+  await page.addInitScript(() => {
+    // The half that did not exist before this card. Without it the interceptor has nothing to
+    // try and this test would land on /login — which is exactly what the old behaviour was.
+    localStorage.setItem('auth_refresh_token', 'obrs-855-live-refresh-token');
+  });
+
+  let refreshCalls = 0;
+  let bookingAttempts = 0;
+  const bearersSeen: string[] = [];
+
+  await page.route('**/api/auth/refresh', async (route) => {
+    refreshCalls += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: 200,
+        data: {
+          accessToken: 'obrs-855-fresh-access-token',
+          tokenType: 'Bearer',
+          expiresIn: 3600,
+          // Rotated, as the real endpoint does.
+          refreshToken: 'obrs-855-rotated-refresh-token',
+          refreshExpiresIn: 604800,
+          user: {
+            id: 1,
+            fullName: 'John Doe',
+            email: 'customer@system.local',
+            preferredLocale: 'en',
+            status: 'ACTIVE',
+            roles: ['user'],
+          },
+        },
+      }),
+    });
+  });
+
+  await page.route('**/api/private/bookings', async (route) => {
+    bookingAttempts += 1;
+    bearersSeen.push(route.request().headers()['authorization'] ?? '');
+
+    if (bookingAttempts === 1) {
+      // The expired access token, refused. Everything the customer typed is already on screen.
+      await route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 401, message: 'Unauthorized' }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: 200,
+        data: { bookingId: 9001, bookingNumber: 'BK9001' },
+      }),
+    });
+  });
+
+  await searchAndConfirmASchedule(page);
+  await page.waitForURL('**/passenger-info');
+
+  await page.locator('#booker-title .dropdown-btn').click();
+  await page.locator('#booker-title .dropdown-option').first().click();
+  await page.fill('#booker-firstName', 'John');
+  await page.fill('#booker-lastName', 'Doe');
+  await page.fill('#booker-phoneNumber', '0812345678');
+  await page.fill('#booker-email', 'john.doe@example.com');
+  await page.locator('#booker-gender_male').click();
+
+  await page.locator('#title-0 .dropdown-btn').click();
+  await page.locator('#title-0 .dropdown-option').first().click();
+  await page.fill('#firstName-0', 'John');
+  await page.fill('#lastName-0', 'Doe');
+  await page.locator('#gender_male-0').click();
+
+  await page.locator('.btn-next').click();
+
+  // The verdict. Reaching /payment means the booking was created, which means the 401 was
+  // recovered from rather than surfaced — and that the customer never saw a sign-in screen.
+  await page.waitForURL('**/payment');
+  expect(new URL(page.url()).pathname).toBe('/payment');
+
+  // Two attempts on the SAME booking call, and the second one carried the token the refresh
+  // minted. Asserting the bearer is what separates "it retried" from "it happened to succeed".
+  expect(bookingAttempts).toBe(2);
+  expect(bearersSeen[0]).toBe('Bearer obrs-856-b2c-gate-token');
+  expect(bearersSeen[1]).toBe('Bearer obrs-855-fresh-access-token');
+
+  // Exactly one exchange. More than one would mean the single-flight guard is not holding, and
+  // against the real backend each extra one presents an already-rotated token — which is read as
+  // replay and revokes the whole session.
+  expect(refreshCalls).toBe(1);
+
+  // The rotated token replaced the spent one. Keeping the old value is what would make the NEXT
+  // refresh look like a replay.
+  const stored = await page.evaluate(() => ({
+    access: localStorage.getItem('auth_token'),
+    refresh: localStorage.getItem('auth_refresh_token'),
+    // OBRS-903 moved this key to localStorage. Reading sessionStorage here would
+    // still pass and would mean nothing — the key can no longer appear there at
+    // all, so the assertion below would stop being able to fail.
+    returnUrl: localStorage.getItem('auth_return_url'),
+  }));
+  expect(stored.access).toBe('obrs-855-fresh-access-token');
+  expect(stored.refresh).toBe('obrs-855-rotated-refresh-token');
+  // Nothing ever staged a post-login return, because nothing ever decided to send them to login.
+  expect(stored.returnUrl).toBeNull();
 });

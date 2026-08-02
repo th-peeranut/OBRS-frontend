@@ -76,3 +76,4 @@ src/environments/environment.prod.local.ts
 # card would bloat the history for something nobody reads from the repo. The
 # capture SCRIPTS under e2e/scripts/ are committed; their output is not.
 docs/manual-tests/assets/
+e2e/out/

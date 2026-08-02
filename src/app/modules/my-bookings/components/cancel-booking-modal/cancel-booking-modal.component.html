@@ -1,0 +1,86 @@
+<div class="crdm-backdrop" (click)="onBackdropClick($event)">
+  <div class="crdm-modal" role="dialog" aria-modal="true">
+    <button
+      type="button"
+      class="crdm-modal__close"
+      (click)="requestClose()"
+      [attr.aria-label]="'MY_BOOKINGS.TICKET_MODAL.CLOSE' | translate"
+      >
+      <i class="bi bi-x-lg"></i>
+    </button>
+
+    <div class="crdm-modal__body">
+      <!-- OBRS-942: DESTINATION_DIALOG_TITLE keeps its name — it stays literally
+      true because it is only rendered on the manual lane. -->
+      <h2 class="crdm-modal__title">
+        {{ (isManualRefund ? 'MY_BOOKINGS.CANCEL.DESTINATION_DIALOG_TITLE' : 'MY_BOOKINGS.CANCEL.CONFIRM_TITLE') | translate }}
+      </h2>
+
+      <p class="crdm-line">
+        {{ 'MY_BOOKINGS.CANCEL.CONFIRM_TEXT' | translate: { bookingNumber: booking.bookingNumber, route: booking.route } }}
+      </p>
+
+      <!-- OBRS-813: the same screen can hand this traveler 100% of the ticket's
+      value, instantly and with nobody in the loop, and until now it never
+      said so. Additive only — the cancel column below is untouched and the
+      Confirm button is still one click from here (proved by
+      e2e/tests/obrs-813-cancel-offers-reschedule.spec.ts), because the
+      point is to inform the choice, not to steer it. -->
+      @if (canOfferReschedule) {
+        <section class="crdm-offer">
+          <h3 class="crdm-offer__title">{{ 'MY_BOOKINGS.CANCEL.COMPARE.OFFER_TITLE' | translate }}</h3>
+          <ul class="crdm-offer__points">
+            <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.KEEP_FULL' | translate: { amount: originalAmountLabel } }}</li>
+            <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.INSTANT' | translate }}</li>
+            <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.FEE_SHOWN_FIRST' | translate }}</li>
+            <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.WITHIN_DAYS' | translate: { days: rescheduleMaxDaysAhead } }}</li>
+          </ul>
+          <button
+            type="button"
+            class="btn-secondary crdm-offer__cta"
+            [disabled]="submitting"
+            (click)="requestReschedule()"
+            >
+            {{ 'MY_BOOKINGS.CANCEL.COMPARE.RESCHEDULE_BUTTON' | translate }}
+          </button>
+        </section>
+      }
+
+      @if (canOfferReschedule) {
+        <h3 class="crdm-subheading">
+          {{ 'MY_BOOKINGS.CANCEL.COMPARE.CANCEL_HEADING' | translate }}
+        </h3>
+      }
+
+      <p class="crdm-line">
+        {{ 'MY_BOOKINGS.CANCEL.REFUND_LINE' | translate: { refund: refundLabel, rate: policy.refundRatePercent } }}
+      </p>
+      <p class="crdm-line">
+        {{ 'MY_BOOKINGS.CANCEL.PENALTY_LINE' | translate: { penalty: penaltyLabel } }}
+      </p>
+      <!-- OBRS-942: both manual-only — nobody moves money by hand on the other
+      lane, so neither the note nor the destination picker applies there. -->
+      @if (isManualRefund) {
+        <p class="crdm-note">{{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE' | translate }}</p>
+
+        <app-refund-destination-fields [formGroup]="form" [disabled]="submitting"></app-refund-destination-fields>
+      }
+
+      @if (error) {
+        <p class="crdm-error" role="alert">{{ error }}</p>
+      }
+
+      <div class="crdm-actions">
+        <button type="button" class="btn-secondary" [disabled]="submitting" (click)="requestClose()">
+          {{ 'MY_BOOKINGS.CANCEL.CANCEL_BUTTON' | translate }}
+        </button>
+        <button type="button" class="btn-primary" [disabled]="!canSubmit" (click)="submit()">
+          @if (submitting) {
+            <span class="spinner" aria-hidden="true"></span>
+          }
+          {{ 'MY_BOOKINGS.CANCEL.CONFIRM_BUTTON' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

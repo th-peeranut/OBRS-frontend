@@ -3,9 +3,10 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 @Component({
-  selector: 'app-stepper',
-  templateUrl: './stepper.component.html',
-  styleUrl: './stepper.component.scss',
+    selector: 'app-stepper',
+    templateUrl: './stepper.component.html',
+    styleUrl: './stepper.component.scss',
+    standalone: false
 })
 export class StepperComponent implements OnInit, OnDestroy {
   step: number = 1;

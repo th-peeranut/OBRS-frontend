@@ -8,191 +8,205 @@
     </header>
 
     <!-- OBRS-632 (PDPA ม.19): shown when this account's recorded consent version is not the one
-         this build serves. Also covers accounts created before the notice carried a version. -->
-    <div class="account-consent-notice" *ngIf="needsReConsent" data-testid="reconsent-notice">
-      <div>
-        <h2 class="account-consent-notice__title">{{ "ACCOUNT.CONSENT_UPDATED_TITLE" | translate }}</h2>
-        <p class="account-consent-notice__desc">
-          {{ "ACCOUNT.CONSENT_UPDATED_DESC" | translate: { version: currentPolicyVersion } }}
-        </p>
-        <a routerLink="/privacy-policy" target="_blank" rel="noopener">
-          {{ "ACCOUNT.CONSENT_READ_POLICY" | translate }}
-        </a>
+    this build serves. Also covers accounts created before the notice carried a version. -->
+    @if (needsReConsent) {
+      <div class="account-consent-notice" data-testid="reconsent-notice">
+        <div>
+          <h2 class="account-consent-notice__title">{{ "ACCOUNT.CONSENT_UPDATED_TITLE" | translate }}</h2>
+          <p class="account-consent-notice__desc">
+            {{ "ACCOUNT.CONSENT_UPDATED_DESC" | translate: { version: currentPolicyVersion } }}
+          </p>
+          <a routerLink="/privacy-policy" target="_blank" rel="noopener">
+            {{ "ACCOUNT.CONSENT_READ_POLICY" | translate }}
+          </a>
+        </div>
+        <button
+          type="button"
+          class="btn-primary"
+          data-testid="reconsent-accept"
+          [disabled]="isConsentSubmitting"
+          (click)="acceptCurrentPolicy()"
+          >
+          {{ "ACCOUNT.CONSENT_ACCEPT_BUTTON" | translate }}
+        </button>
       </div>
-      <button
-        type="button"
-        class="btn-primary"
-        data-testid="reconsent-accept"
-        [disabled]="isConsentSubmitting"
-        (click)="acceptCurrentPolicy()"
-      >
-        {{ "ACCOUNT.CONSENT_ACCEPT_BUTTON" | translate }}
-      </button>
-    </div>
+    }
 
     <!-- OBRS-632 (PDPA ม.35-36): correcting your own name/phone. `PUT /users/me` has existed since
-         OBRS-80; this is the first thing on the site that calls it. -->
+    OBRS-80; this is the first thing on the site that calls it. -->
     <div class="account-card" data-testid="profile-card">
       <h2 class="account-card__title">{{ "ACCOUNT.PROFILE_SECTION_TITLE" | translate }}</h2>
       <p class="account-card__desc">{{ "ACCOUNT.PROFILE_SECTION_DESC" | translate }}</p>
 
-      <p *ngIf="isProfileLoading" class="account-card__muted">
-        {{ "ACCOUNT.PROFILE_LOADING" | translate }}
-      </p>
+      @if (isProfileLoading) {
+        <p class="account-card__muted">
+          {{ "ACCOUNT.PROFILE_LOADING" | translate }}
+        </p>
+      }
 
-      <div *ngIf="!isProfileLoading && isProfileLoadFailed" class="account-card__error">
-        <p>{{ "ACCOUNT.PROFILE_LOAD_FAILED" | translate }}</p>
-        <button type="button" class="btn-secondary" (click)="loadProfile()">
-          {{ "ACCOUNT.PROFILE_RETRY" | translate }}
-        </button>
-      </div>
+      @if (!isProfileLoading && isProfileLoadFailed) {
+        <div class="account-card__error">
+          <p>{{ "ACCOUNT.PROFILE_LOAD_FAILED" | translate }}</p>
+          <button type="button" class="btn-secondary" (click)="loadProfile()">
+            {{ "ACCOUNT.PROFILE_RETRY" | translate }}
+          </button>
+        </div>
+      }
 
-      <ng-container *ngIf="!isProfileLoading && !isProfileLoadFailed && profile">
+      @if (!isProfileLoading && !isProfileLoadFailed && profile) {
         <!-- READ STATE -->
-        <dl class="account-profile" *ngIf="!isProfileEditing">
-          <div>
-            <dt>{{ "ACCOUNT.PROFILE_NAME_LABEL" | translate }}</dt>
-            <dd data-testid="profile-name">
-              {{ profile.title }} {{ profile.firstName }} {{ profile.middleName }} {{ profile.lastName }}
-            </dd>
-          </div>
-          <div>
-            <dt>{{ "ACCOUNT.PROFILE_PHONE_LABEL" | translate }}</dt>
-            <dd data-testid="profile-phone">{{ formatPhone(profile.phoneNumber) }}</dd>
-          </div>
-        </dl>
-
-        <button
-          type="button"
-          class="btn-primary"
-          *ngIf="!isProfileEditing"
-          data-testid="profile-edit"
-          (click)="startEditingProfile()"
-        >
-          {{ "ACCOUNT.PROFILE_EDIT_BUTTON" | translate }}
-        </button>
-
+        @if (!isProfileEditing) {
+          <dl class="account-profile">
+            <div>
+              <dt>{{ "ACCOUNT.PROFILE_NAME_LABEL" | translate }}</dt>
+              <dd data-testid="profile-name">
+                {{ profile.title }} {{ profile.firstName }} {{ profile.middleName }} {{ profile.lastName }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ "ACCOUNT.PROFILE_PHONE_LABEL" | translate }}</dt>
+              <dd data-testid="profile-phone">{{ formatPhone(profile.phoneNumber) }}</dd>
+            </div>
+          </dl>
+        }
+        @if (!isProfileEditing) {
+          <button
+            type="button"
+            class="btn-primary"
+            data-testid="profile-edit"
+            (click)="startEditingProfile()"
+            >
+            {{ "ACCOUNT.PROFILE_EDIT_BUTTON" | translate }}
+          </button>
+        }
         <!-- EDIT STATE -->
-        <form *ngIf="isProfileEditing" [formGroup]="profileForm" (ngSubmit)="saveProfile()">
-          <div class="mt-2">
-            <label for="account-profile-title">{{ "ACCOUNT.PROFILE_TITLE_LABEL" | translate }}</label>
-            <input
-              class="form-control mt-1"
-              type="text"
-              id="account-profile-title"
-              formControlName="title"
-              [class.form-error]="getForm('title')?.touched && getForm('title')?.errors"
-            />
-            <div class="text-error" *ngIf="getForm('title')?.touched && getForm('title')?.errors">
-              {{ "ACCOUNT.PROFILE_FIELD_REQUIRED" | translate }}
+        @if (isProfileEditing) {
+          <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+            <div class="mt-2">
+              <label for="account-profile-title">{{ "ACCOUNT.PROFILE_TITLE_LABEL" | translate }}</label>
+              <input
+                class="form-control mt-1"
+                type="text"
+                id="account-profile-title"
+                formControlName="title"
+                [class.form-error]="getForm('title')?.touched && getForm('title')?.errors"
+                />
+                @if (getForm('title')?.touched && getForm('title')?.errors) {
+                  <div class="text-error">
+                    {{ "ACCOUNT.PROFILE_FIELD_REQUIRED" | translate }}
+                  </div>
+                }
+              </div>
+              <div class="mt-2">
+                <label for="account-profile-first-name">{{ "ACCOUNT.PROFILE_FIRST_NAME_LABEL" | translate }}</label>
+                <input
+                  class="form-control mt-1"
+                  type="text"
+                  id="account-profile-first-name"
+                  formControlName="firstName"
+                  [class.form-error]="getForm('firstName')?.touched && getForm('firstName')?.errors"
+                  />
+                  @if (getForm('firstName')?.touched && getForm('firstName')?.errors) {
+                    <div class="text-error">
+                      {{ "ACCOUNT.PROFILE_FIELD_REQUIRED" | translate }}
+                    </div>
+                  }
+                </div>
+                <div class="mt-2">
+                  <label for="account-profile-middle-name">{{ "ACCOUNT.PROFILE_MIDDLE_NAME_LABEL" | translate }}</label>
+                  <input
+                    class="form-control mt-1"
+                    type="text"
+                    id="account-profile-middle-name"
+                    formControlName="middleName"
+                    />
+                  </div>
+                  <div class="mt-2">
+                    <label for="account-profile-last-name">{{ "ACCOUNT.PROFILE_LAST_NAME_LABEL" | translate }}</label>
+                    <input
+                      class="form-control mt-1"
+                      type="text"
+                      id="account-profile-last-name"
+                      formControlName="lastName"
+                      [class.form-error]="getForm('lastName')?.touched && getForm('lastName')?.errors"
+                      />
+                      @if (getForm('lastName')?.touched && getForm('lastName')?.errors) {
+                        <div class="text-error">
+                          {{ "ACCOUNT.PROFILE_FIELD_REQUIRED" | translate }}
+                        </div>
+                      }
+                    </div>
+                    <div class="mt-2">
+                      <label for="account-profile-phone">{{ "ACCOUNT.PROFILE_PHONE_LABEL" | translate }}</label>
+                      <input
+                        class="form-control mt-1"
+                        type="tel"
+                        id="account-profile-phone"
+                        formControlName="phoneNumber"
+                        (focus)="onPhoneFocus()"
+                        (blur)="onPhoneBlur()"
+                        [class.form-error]="getForm('phoneNumber')?.touched && getForm('phoneNumber')?.errors"
+                        />
+                        @if (getForm('phoneNumber')?.touched && getForm('phoneNumber')?.errors) {
+                          <div class="text-error">
+                            {{ "ACCOUNT.PROFILE_PHONE_INVALID" | translate }}
+                          </div>
+                        }
+                      </div>
+                      <div class="account-card__actions">
+                        <button type="button" class="btn-secondary" (click)="cancelEditingProfile()">
+                          {{ "ACCOUNT.PROFILE_CANCEL_BUTTON" | translate }}
+                        </button>
+                        <button type="submit" class="btn-primary" data-testid="profile-save" [disabled]="isProfileSaving">
+                          {{ "ACCOUNT.PROFILE_SAVE_BUTTON" | translate }}
+                        </button>
+                      </div>
+                    </form>
+                  }
+                }
+              </div>
+
+              <div class="account-card">
+                <h2 class="account-card__title">{{ "ACCOUNT.EMAIL_SECTION_TITLE" | translate }}</h2>
+                <p class="account-card__email">{{ currentEmail }}</p>
+                <button type="button" class="btn-primary" (click)="openChangeEmailDialog()">
+                  {{ "ACCOUNT.CHANGE_EMAIL_BUTTON" | translate }}
+                </button>
+              </div>
+
+              <div class="account-card">
+                <h2 class="account-card__title">{{ "ACCOUNT.NOTIFICATIONS_SECTION_TITLE" | translate }}</h2>
+                <p class="account-card__email">{{ "ACCOUNT.NOTIFICATIONS_SECTION_DESC" | translate }}</p>
+                <button type="button" class="btn-primary" routerLink="notification-preferences">
+                  {{ "ACCOUNT.MANAGE_NOTIFICATIONS_BUTTON" | translate }}
+                </button>
+              </div>
+
+              <!-- OBRS-632 (PDPA ม.33 + ม.19 วรรคห้า). Last on the page and visually separated: it is the one
+              irreversible action here. -->
+              <div class="account-card account-card--danger" data-testid="close-account-card">
+                <h2 class="account-card__title">{{ "ACCOUNT.CLOSE_SECTION_TITLE" | translate }}</h2>
+                <p class="account-card__desc">{{ "ACCOUNT.CLOSE_SECTION_DESC" | translate }}</p>
+                <button
+                  type="button"
+                  class="btn-danger"
+                  data-testid="close-account-open"
+                  (click)="openCloseAccountDialog()"
+                  >
+                  {{ "ACCOUNT.CLOSE_SECTION_BUTTON" | translate }}
+                </button>
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div class="mt-2">
-            <label for="account-profile-first-name">{{ "ACCOUNT.PROFILE_FIRST_NAME_LABEL" | translate }}</label>
-            <input
-              class="form-control mt-1"
-              type="text"
-              id="account-profile-first-name"
-              formControlName="firstName"
-              [class.form-error]="getForm('firstName')?.touched && getForm('firstName')?.errors"
-            />
-            <div class="text-error" *ngIf="getForm('firstName')?.touched && getForm('firstName')?.errors">
-              {{ "ACCOUNT.PROFILE_FIELD_REQUIRED" | translate }}
-            </div>
-          </div>
+          @if (isChangeEmailDialogOpen) {
+            <app-change-email-dialog
+              (closed)="closeChangeEmailDialog()"
+            ></app-change-email-dialog>
+          }
 
-          <div class="mt-2">
-            <label for="account-profile-middle-name">{{ "ACCOUNT.PROFILE_MIDDLE_NAME_LABEL" | translate }}</label>
-            <input
-              class="form-control mt-1"
-              type="text"
-              id="account-profile-middle-name"
-              formControlName="middleName"
-            />
-          </div>
-
-          <div class="mt-2">
-            <label for="account-profile-last-name">{{ "ACCOUNT.PROFILE_LAST_NAME_LABEL" | translate }}</label>
-            <input
-              class="form-control mt-1"
-              type="text"
-              id="account-profile-last-name"
-              formControlName="lastName"
-              [class.form-error]="getForm('lastName')?.touched && getForm('lastName')?.errors"
-            />
-            <div class="text-error" *ngIf="getForm('lastName')?.touched && getForm('lastName')?.errors">
-              {{ "ACCOUNT.PROFILE_FIELD_REQUIRED" | translate }}
-            </div>
-          </div>
-
-          <div class="mt-2">
-            <label for="account-profile-phone">{{ "ACCOUNT.PROFILE_PHONE_LABEL" | translate }}</label>
-            <input
-              class="form-control mt-1"
-              type="tel"
-              id="account-profile-phone"
-              formControlName="phoneNumber"
-              (focus)="onPhoneFocus()"
-              (blur)="onPhoneBlur()"
-              [class.form-error]="getForm('phoneNumber')?.touched && getForm('phoneNumber')?.errors"
-            />
-            <div class="text-error" *ngIf="getForm('phoneNumber')?.touched && getForm('phoneNumber')?.errors">
-              {{ "ACCOUNT.PROFILE_PHONE_INVALID" | translate }}
-            </div>
-          </div>
-
-          <div class="account-card__actions">
-            <button type="button" class="btn-secondary" (click)="cancelEditingProfile()">
-              {{ "ACCOUNT.PROFILE_CANCEL_BUTTON" | translate }}
-            </button>
-            <button type="submit" class="btn-primary" data-testid="profile-save" [disabled]="isProfileSaving">
-              {{ "ACCOUNT.PROFILE_SAVE_BUTTON" | translate }}
-            </button>
-          </div>
-        </form>
-      </ng-container>
-    </div>
-
-    <div class="account-card">
-      <h2 class="account-card__title">{{ "ACCOUNT.EMAIL_SECTION_TITLE" | translate }}</h2>
-      <p class="account-card__email">{{ currentEmail }}</p>
-      <button type="button" class="btn-primary" (click)="openChangeEmailDialog()">
-        {{ "ACCOUNT.CHANGE_EMAIL_BUTTON" | translate }}
-      </button>
-    </div>
-
-    <div class="account-card">
-      <h2 class="account-card__title">{{ "ACCOUNT.NOTIFICATIONS_SECTION_TITLE" | translate }}</h2>
-      <p class="account-card__email">{{ "ACCOUNT.NOTIFICATIONS_SECTION_DESC" | translate }}</p>
-      <button type="button" class="btn-primary" routerLink="notification-preferences">
-        {{ "ACCOUNT.MANAGE_NOTIFICATIONS_BUTTON" | translate }}
-      </button>
-    </div>
-
-    <!-- OBRS-632 (PDPA ม.33 + ม.19 วรรคห้า). Last on the page and visually separated: it is the one
-         irreversible action here. -->
-    <div class="account-card account-card--danger" data-testid="close-account-card">
-      <h2 class="account-card__title">{{ "ACCOUNT.CLOSE_SECTION_TITLE" | translate }}</h2>
-      <p class="account-card__desc">{{ "ACCOUNT.CLOSE_SECTION_DESC" | translate }}</p>
-      <button
-        type="button"
-        class="btn-danger"
-        data-testid="close-account-open"
-        (click)="openCloseAccountDialog()"
-      >
-        {{ "ACCOUNT.CLOSE_SECTION_BUTTON" | translate }}
-      </button>
-    </div>
-  </div>
-</section>
-
-<app-change-email-dialog
-  *ngIf="isChangeEmailDialogOpen"
-  (closed)="closeChangeEmailDialog()"
-></app-change-email-dialog>
-
-<app-close-account-dialog
-  *ngIf="isCloseAccountDialogOpen"
-  (closed)="closeCloseAccountDialog()"
-></app-close-account-dialog>
+          @if (isCloseAccountDialogOpen) {
+            <app-close-account-dialog
+              (closed)="closeCloseAccountDialog()"
+            ></app-close-account-dialog>
+          }

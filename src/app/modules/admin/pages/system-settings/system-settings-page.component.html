@@ -1,17 +1,19 @@
 <ul class="nav nav-tabs" role="tablist" data-testid="system-settings-tabs">
-  <li class="nav-item" *ngFor="let tab of tabs">
-    <a
-      class="nav-link"
-      role="tab"
-      [routerLink]="tab.path"
-      routerLinkActive="active"
-      #tabLink="routerLinkActive"
-      [attr.aria-selected]="tabLink.isActive"
-      [attr.data-testid]="'system-settings-tab-' + tab.path"
-    >
-      {{ tab.labelKey | translate }}
-    </a>
-  </li>
+  @for (tab of tabs; track tab) {
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        role="tab"
+        [routerLink]="tab.path"
+        routerLinkActive="active"
+        #tabLink="routerLinkActive"
+        [attr.aria-selected]="tabLink.isActive"
+        [attr.data-testid]="'system-settings-tab-' + tab.path"
+        >
+        {{ tab.labelKey | translate }}
+      </a>
+    </li>
+  }
 </ul>
 
 <router-outlet></router-outlet>

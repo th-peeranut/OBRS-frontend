@@ -21,4 +21,8 @@ export const prodEnv = {
   // Unlike the values above, this one is intentionally NOT on
   // inject-prod-env.js's required/failure list.
   maptilerKey: '',
+  // OBRS-867: also optional, also NOT on inject-prod-env.js's required list —
+  // a missing measurement ID costs a chart, not a payment.
+  ga4MeasurementId: '',
+  clarityProjectId: '',
 };

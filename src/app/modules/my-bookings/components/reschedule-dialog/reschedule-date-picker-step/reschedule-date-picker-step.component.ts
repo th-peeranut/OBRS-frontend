@@ -5,9 +5,10 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
  * `YYYY-MM-DD` (the shape `GET .../reschedule-options?date=` expects).
  */
 @Component({
-  selector: 'app-reschedule-date-picker-step',
-  templateUrl: './reschedule-date-picker-step.component.html',
-  styleUrl: './reschedule-date-picker-step.component.scss',
+    selector: 'app-reschedule-date-picker-step',
+    templateUrl: './reschedule-date-picker-step.component.html',
+    styleUrl: './reschedule-date-picker-step.component.scss',
+    standalone: false
 })
 export class RescheduleDatePickerStepComponent {
   @Input() minDate: Date | null = null;

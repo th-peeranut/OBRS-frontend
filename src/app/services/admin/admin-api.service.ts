@@ -19,6 +19,11 @@ import {
   UsabilityReportStatus,
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
+import { RevenueAnalyticsDto } from '../../shared/interfaces/revenue-analytics.interface';
+import { BookingTrendDto } from '../../shared/interfaces/booking-trend.interface';
+import { RoutePerformanceDto } from '../../shared/interfaces/route-performance.interface';
+import { CustomerBehaviorDto } from '../../shared/interfaces/customer-behavior.interface';
+import { OpsEfficiencyDto } from '../../shared/interfaces/ops-efficiency.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
@@ -30,6 +35,11 @@ import {
 } from '../../shared/interfaces/settlement.interface';
 import { ConfigHistoryRow } from '../../shared/interfaces/config-history.interface';
 import { RefundDestinationReqDto } from '../../shared/interfaces/refund-destination.interface';
+import {
+  CancelBookingResult,
+  CashRefundApprovalCode,
+  CashRefundApprovalRequest,
+} from '../../shared/interfaces/my-booking.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -159,6 +169,14 @@ export interface AdminVehicleDto {
   engineCc?: number | null;
   chassisNumber?: string | null;
   note?: string | null;
+  /**
+   * OBRS-835: the vehicle's Thaistar GPS tracker. Present ONLY on the single-vehicle
+   * detail read (`GET /vehicles/{id}`) — the backend's `toDetailDto` deliberately leaves
+   * it off the fleet list and off the copy nested in a schedule, which drivers can read.
+   * So a `VehicleRow` built from the list never carries it, and a form seeded from that
+   * row has nothing to echo back.
+   */
+  gpsImei?: string | null;
 }
 
 /** OBRS-209: a single vehicle-maintenance record (backend OBRS-102).
@@ -753,7 +771,10 @@ export interface UpdateUserPayload {
 export interface CreateVehiclePayload {
   vehicleType: string;
   numberPlate: string;
-  vehicleNumber: string;
+  // OBRS-842: nullable — a `retired` vehicle has handed its หมายเลขพาหนะ to whichever
+  // vehicle replaced it and genuinely holds none (V58 made the column nullable, and
+  // VehicleReqDto#isVehicleNumberValid requires it for every OTHER status).
+  vehicleNumber: string | null;
   status: string;
   brand: string | null;
   model: string | null;
@@ -762,6 +783,14 @@ export interface CreateVehiclePayload {
   engineCc: number | null;
   chassisNumber: string | null;
   note: string | null;
+  /**
+   * OBRS-835: the GPS tracker to fit to this vehicle. `null` DETACHES the box; the key
+   * being ABSENT would mean "leave whatever is there" on the backend
+   * (`VehicleDtoService#applyTo` is conditional on this one field). This form always
+   * sends it, because Save is blocked whenever the detail fetch that supplies its
+   * current value failed — see the modal's `isEditDetailError` guard.
+   */
+  gpsImei: string | null;
 }
 
 /** OBRS-209: create/update payload for a vehicle-maintenance record.
@@ -781,9 +810,11 @@ export interface CreateVehicleMaintenancePayload {
  * `vehicleId` is `null` for a central/not-linked-to-a-vehicle expense — a
  * REAL nullable Long on the wire, distinct from the FE form's own
  * `VEHICLE_CENTRAL_SENTINEL` string, which only exists inside the form
- * control (see `expenses-page.mappers.ts`). `category` is one of the 10
+ * control (see `expenses-page.mappers.ts`). `category` is one of the 14
  * fixed enum codes (FUEL/REPAIR/VEHICLE_TAX/ACT/INSURANCE/INSPECTION/TIRE/
- * GPS/CENTRAL/OTHER). Audit fields are `@JsonUnwrapped` on the backend DTO —
+ * GPS/TOLL/PERMIT_FEE/DRIVER_WAGE/INSTALMENT/CENTRAL/OTHER — the last four
+ * added by OBRS-961; `EXPENSE_CATEGORY_CODES` is the single list to read,
+ * this comment is prose that can rot). Audit fields are `@JsonUnwrapped` on the backend DTO —
  * flattened here, read-only, never sent back by the form (§9 of the UX spec). */
 export interface AdminExpenseDto {
   id: number;
@@ -1439,11 +1470,15 @@ export class AdminApiService {
   // rule is actually broken (out-of-window OR rateChoice=FULL) — it returns
   // 400 `cancel.error.override-reason-required` otherwise; the modal mirrors that
   // gate client-side so the field appears only when it is genuinely needed.
+  // OBRS-843: typed as `CancelBookingResult` (it was `unknown`) — the backend
+  // returns the same `CancelBookingRespDto` as the counter/customer doors, and
+  // the override dialog now reads `refundAmount`/`refundMethod` out of it to
+  // confirm what was actually authorised.
   adminOverrideCancelBooking(
     bookingId: number,
     payload: OverrideCancelReqDto
-  ): Observable<ResponseAPI<unknown>> {
-    return this.postRequest<unknown>(
+  ): Observable<ResponseAPI<CancelBookingResult>> {
+    return this.postRequest<CancelBookingResult>(
       `${this.baseUrl}/private/admin/bookings/${bookingId}/cancel`,
       payload
     );
@@ -1567,6 +1602,53 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-151: deep revenue analytics — totals + daily net-revenue trend +
+  // period-over-period. Same [from, to] contract as getReportsSummary.
+  getRevenueAnalytics(from: string, to: string): Observable<ResponseAPI<RevenueAnalyticsDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<RevenueAnalyticsDto>(
+      `${this.baseUrl}/private/admin/reports/revenue-analytics`,
+      params
+    );
+  }
+
+  // OBRS-152: booking-volume trend — daily series + 7-day moving average +
+  // day-of-week seasonality + period-over-period + peak.
+  getBookingTrend(from: string, to: string): Observable<ResponseAPI<BookingTrendDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<BookingTrendDto>(
+      `${this.baseUrl}/private/admin/reports/booking-trend`,
+      params
+    );
+  }
+
+  // OBRS-153: route performance — per-route departures + tickets + net revenue.
+  getRoutePerformance(from: string, to: string): Observable<ResponseAPI<RoutePerformanceDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<RoutePerformanceDto>(
+      `${this.baseUrl}/private/admin/reports/route-performance`,
+      params
+    );
+  }
+
+  // OBRS-154: customer behavior (aggregate-only).
+  getCustomerBehavior(from: string, to: string): Observable<ResponseAPI<CustomerBehaviorDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<CustomerBehaviorDto>(
+      `${this.baseUrl}/private/admin/reports/customer-behavior`,
+      params
+    );
+  }
+
+  // OBRS-155: operational efficiency (departures + seat fill).
+  getOpsEfficiency(from: string, to: string): Observable<ResponseAPI<OpsEfficiencyDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<OpsEfficiencyDto>(
+      `${this.baseUrl}/private/admin/reports/ops-efficiency`,
+      params
+    );
+  }
+
   getDashboardToday(): Observable<ResponseAPI<DashboardTodayDto>> {
     return this.getRequest<DashboardTodayDto>(`${this.baseUrl}/private/admin/dashboard/today`);
   }
@@ -1659,14 +1741,14 @@ export class AdminApiService {
     ).pipe(map((response) => response.data?.totalElements ?? 0));
   }
 
-  getUsabilityReportById(id: string): Observable<ResponseAPI<UsabilityReportDetail>> {
+  getUsabilityReportById(id: number): Observable<ResponseAPI<UsabilityReportDetail>> {
     return this.getRequest<UsabilityReportDetail>(
       `${this.baseUrl}/private/admin/usability-reports/${id}`
     );
   }
 
   updateUsabilityReportStatus(
-    id: string,
+    id: number,
     status: UsabilityReportStatus,
     triageNote: string | null
   ): Observable<ResponseAPI<unknown>> {
@@ -1681,7 +1763,7 @@ export class AdminApiService {
   // Un-marking is NOT a separate endpoint: it reuses updateUsabilityReportStatus
   // above with status 'in_review' (the backend clears the link server-side).
   markUsabilityReportAsDuplicate(
-    id: string,
+    id: number,
     canonicalId: number
   ): Observable<ResponseAPI<UsabilityReportDetail>> {
     return this.patchRequest<UsabilityReportDetail>(
@@ -1813,5 +1895,29 @@ export class AdminApiService {
    * is 403'd rather than served a filtered list. */
   getOwners(): Observable<ResponseAPI<AdminOwnerDto[]>> {
     return this.getRequest<AdminOwnerDto[]>(`${this.baseUrl}/private/owners`);
+  }
+
+  /**
+   * OBRS-844 — the cash refunds waiting on this owner's authorization. Scoped
+   * server-side to the caller's own fleet; an ADMIN, who owns no fleet, gets an
+   * empty list rather than every operator's counter traffic.
+   */
+  getPendingCashRefundApprovals(): Observable<ResponseAPI<CashRefundApprovalRequest[]>> {
+    return this.getRequest<CashRefundApprovalRequest[]>(
+      `${this.baseUrl}/private/cash-refund-approvals/pending`
+    );
+  }
+
+  /**
+   * OBRS-844 — issues the six digits for one request. The response is the ONLY
+   * place the plaintext ever exists outside the server's hash of it; there is
+   * deliberately no GET that can read it back, because an endpoint that could
+   * would let the counter obtain a code without the owner ever acting.
+   */
+  approveCashRefund(requestId: number): Observable<ResponseAPI<CashRefundApprovalCode>> {
+    return this.postRequest<CashRefundApprovalCode>(
+      `${this.baseUrl}/private/cash-refund-approvals/${requestId}/approve`,
+      {}
+    );
   }
 }

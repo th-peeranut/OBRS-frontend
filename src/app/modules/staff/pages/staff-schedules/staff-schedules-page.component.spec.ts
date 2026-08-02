@@ -1,7 +1,16 @@
-import { FormBuilder } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { BehaviorSubject } from 'rxjs';
 import { StaffSchedulesPageComponent } from './staff-schedules-page.component';
-import { createRouterStub, createTranslateStub } from '../../../../testing/test-stubs';
+import { createAuthServiceStub, createRouterStub, createTranslateStub } from '../../../../testing/test-stubs';
+import { AuthService } from '../../../../auth/auth.service';
+import { AdminApiService } from '../../../../services/admin/admin-api.service';
+import { AlertService } from '../../../../shared/services/alert.service';
+import { StaffSchedulesStore } from './staff-schedules.store';
 import { ScheduleRow } from './staff-schedules-page.mappers';
 
 // OBRS-283: smart delete/cancel branch driven by the row's `deletable` +
@@ -54,7 +63,15 @@ function makeStoreStub() {
   };
 }
 
-function makeComponent(adminApi: Record<string, unknown>, alert = makeAlertStub()) {
+function makeComponent(
+  adminApi: Record<string, unknown>,
+  alert = makeAlertStub(),
+  // OBRS-667: defaults to an owner stub so every pre-existing test here (none
+  // of which exercise the permission gate) keeps testing what it was written
+  // for; the negative case gets its own stub explicitly (see the DOM suite
+  // below).
+  authStub = createAuthServiceStub(false, true)
+) {
   const store = makeStoreStub();
   const component = new StaffSchedulesPageComponent(
     createRouterStub(),
@@ -62,7 +79,8 @@ function makeComponent(adminApi: Record<string, unknown>, alert = makeAlertStub(
     new FormBuilder(),
     alert as any,
     createTranslateStub(),
-    store as any
+    store as any,
+    authStub as any
   );
   return { component, store, alert };
 }
@@ -156,5 +174,114 @@ describe('StaffSchedulesPageComponent — OBRS-283 smart cancel branch', () => {
     expect((component as any).rows)
       .withContext('a null emission must not leave the previous session\'s rows on screen')
       .toEqual([]);
+  });
+});
+
+// OBRS-667: backend now restricts POST .../cancel to hasRole('OWNER') (a
+// whole-trip cancel one-click-refunds every confirmed booking on the
+// schedule). This suite renders the REAL template via TestBed — the two
+// tests above only assert `deleteModalMode`/`confirmDelete()` in isolation,
+// which cannot prove the confirm BUTTON is actually absent from the DOM.
+describe('StaffSchedulesPageComponent — OBRS-667 owner-only cancel gate (DOM)', () => {
+  const CANCEL_ROW: ScheduleRow = { ...ROW, deletable: false, confirmedBookingCount: 5 };
+  const HARD_DELETE_ROW: ScheduleRow = { ...ROW, deletable: true };
+
+  function setupFixture(hasAnyRole: boolean): {
+    fixture: ComponentFixture<StaffSchedulesPageComponent>;
+    component: StaffSchedulesPageComponent;
+    cancelSpy: jasmine.Spy;
+    deleteSpy: jasmine.Spy;
+  } {
+    const cancelSpy = jasmine.createSpy('cancelSchedule').and.returnValue(
+      new BehaviorSubject({
+        code: 200,
+        message: 'OK',
+        data: { scheduleId: 2, status: 'cancelled', affectedBookingCount: 5 },
+      })
+    );
+    const deleteSpy = jasmine
+      .createSpy('deleteSchedule')
+      .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null }));
+
+    TestBed.configureTestingModule({
+      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
+      declarations: [StaffSchedulesPageComponent],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        {
+          provide: AdminApiService,
+          useValue: { cancelSchedule: cancelSpy, deleteSchedule: deleteSpy },
+        },
+        { provide: AlertService, useValue: makeAlertStub() },
+        { provide: StaffSchedulesStore, useValue: makeStoreStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false, hasAnyRole) },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(StaffSchedulesPageComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges(); // ngOnInit
+
+    return { fixture, component, cancelSpy, deleteSpy };
+  }
+
+  it('owner: the confirm button IS rendered in cancel-mode and clicking it calls cancelSchedule()', async () => {
+    const { fixture, component, cancelSpy, deleteSpy } = setupFixture(true);
+    (component as any).openDeleteModal(CANCEL_ROW);
+    fixture.detectChanges();
+
+    const confirmBtn: HTMLButtonElement | null =
+      fixture.nativeElement.querySelector('.modal-footer .btn-danger');
+    expect(confirmBtn).withContext('owner must see the cancel confirm button').not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.modal-footer .text-muted')).toBeNull();
+
+    confirmBtn!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(cancelSpy).toHaveBeenCalledWith(2);
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  it('salesperson: the confirm button is ABSENT in cancel-mode, the permission line renders, and a forced call is a no-op', async () => {
+    const { fixture, component, cancelSpy, deleteSpy } = setupFixture(false);
+    (component as any).openDeleteModal(CANCEL_ROW);
+    fixture.detectChanges();
+
+    const confirmBtn = fixture.nativeElement.querySelector('.modal-footer .btn-danger');
+    expect(confirmBtn).withContext('salesperson must NOT see the cancel confirm button').toBeNull();
+
+    const permissionLine: HTMLElement | null =
+      fixture.nativeElement.querySelector('.modal-footer .text-muted');
+    expect(permissionLine).withContext('the permission line must render in its place').not.toBeNull();
+    expect(permissionLine!.textContent).toContain('ADMIN.MESSAGES.CANCEL_TRIP_OWNER_ONLY');
+
+    // Defence in depth: a DOM-forced click on the handler (no button to click) must no-op.
+    await (component as any).confirmDelete();
+    fixture.detectChanges();
+
+    expect(cancelSpy).not.toHaveBeenCalled();
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  it('salesperson, hard-delete row (deletable:true): the confirm button IS rendered and clicking it calls deleteSchedule() — the gate is scoped to cancel-mode only', async () => {
+    const { fixture, component, cancelSpy, deleteSpy } = setupFixture(false);
+    (component as any).openDeleteModal(HARD_DELETE_ROW);
+    fixture.detectChanges();
+
+    expect((component as any).deleteModalMode).toBe('delete');
+    const confirmBtn: HTMLButtonElement | null =
+      fixture.nativeElement.querySelector('.modal-footer .btn-danger');
+    expect(confirmBtn)
+      .withContext('hard-delete must remain available to counter staff regardless of the owner-only cancel gate')
+      .not.toBeNull();
+
+    confirmBtn!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(deleteSpy).toHaveBeenCalledWith(2);
+    expect(cancelSpy).not.toHaveBeenCalled();
   });
 });

@@ -9,6 +9,7 @@ import { AdminApiService, AdminUserDto } from '../../../../services/admin/admin-
 import { AlertService } from '../../../../shared/services/alert.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { UsersStore } from './users.store';
+import { RoleOption } from './user-management.mappers';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 
 const USER_ROW = {
@@ -58,13 +59,23 @@ function makeStoreStub() {
   };
 }
 
-function makeComponent(adminApi: Record<string, unknown> = {}, store = makeStoreStub()) {
+// OBRS-847: `heldRoles` is the caller's RAW roles, and `hasAnyRole` keeps
+// returning true for every one of them — that is not laziness, it is the real
+// AuthService contract (ROLE_GRANTS gives owner and admin each other's
+// grants). A stub where hasAnyRole tracked the held role would hide the very
+// bug this card is about.
+function makeComponent(
+  adminApi: Record<string, unknown> = {},
+  store = makeStoreStub(),
+  heldRoles: string[] = ['admin']
+) {
   const alert = {
     success: jasmine.createSpy('success').and.resolveTo(undefined),
     error: jasmine.createSpy('error').and.resolveTo(undefined),
   };
   const authService = {
     hasAnyRole: jasmine.createSpy('hasAnyRole').and.returnValue(true),
+    getRoles: jasmine.createSpy('getRoles').and.returnValue(heldRoles),
   };
   const component = new UserManagementPageComponent(
     adminApi as any,
@@ -301,6 +312,87 @@ describe('UserManagementPageComponent', () => {
     });
   });
 
+  // OBRS-847 / ADR-0114. Note what the stub does NOT do: `hasAnyRole` returns
+  // true throughout, exactly as the real AuthService does for an owner
+  // (ROLE_GRANTS lists 'admin' among owner's grants). So a filter gated on
+  // hasAnyRole(['admin']) would pass every "admin" case below and fail every
+  // "owner" one — these tests catch that substitution rather than assuming it
+  // away.
+  describe('role filter options', () => {
+    const ALL_ROLES = [
+      { slug: 'admin', name: 'Admin' },
+      { slug: 'owner', name: 'Owner' },
+      { slug: 'salesperson', name: 'Salesperson' },
+      { slug: 'driver', name: 'Driver' },
+      { slug: 'customer', name: 'Customer' },
+    ];
+
+    function loadRolesAs(heldRoles: string[]) {
+      const store = makeStoreStub();
+      const { component } = makeComponent({}, store, heldRoles);
+      component.ngOnInit();
+      store.data$.next({ users: [], roles: ALL_ROLES, lookups: [] });
+      return component;
+    }
+
+    it('hides customer and admin from an OWNER', () => {
+      const component = loadRolesAs(['owner']);
+
+      const slugs = component.roleFilterOptions.map((option: RoleOption) => option.slug);
+      expect(slugs).not.toContain('customer');
+      expect(slugs).not.toContain('admin');
+    });
+
+    it('still offers an OWNER every staff role their list can contain', () => {
+      const component = loadRolesAs(['owner']);
+
+      expect(component.roleFilterOptions.map((option: RoleOption) => option.slug)).toEqual([
+        'owner',
+        'salesperson',
+        'driver',
+      ]);
+    });
+
+    it('leaves a platform ADMIN the full list', () => {
+      const component = loadRolesAs(['admin']);
+
+      expect(component.roleFilterOptions.map((option: RoleOption) => option.slug)).toEqual([
+        'admin',
+        'owner',
+        'salesperson',
+        'driver',
+        'customer',
+      ]);
+    });
+
+    // AC4: the form modal reads `roleOptions`, whose question is "which roles
+    // may I ASSIGN" — the backend still lets an OWNER create a CUSTOMER
+    // (UserService#validateAssignableRoles). Narrowing the filter must not
+    // quietly narrow that.
+    it('leaves the FORM role list untouched for an OWNER', () => {
+      const component = loadRolesAs(['owner']);
+
+      expect(component.roleOptions.map((option: RoleOption) => option.slug)).toEqual([
+        'admin',
+        'owner',
+        'salesperson',
+        'driver',
+        'customer',
+      ]);
+    });
+
+    it('clears a selected role filter that the narrowed list no longer offers', () => {
+      const store = makeStoreStub();
+      const { component } = makeComponent({}, store, ['owner']);
+      component.ngOnInit();
+      component.selectedRoleFilter = 'customer';
+
+      store.data$.next({ users: [], roles: ALL_ROLES, lookups: [] });
+
+      expect(component.selectedRoleFilter).toBe('');
+    });
+  });
+
   describe('hasAdminRole', () => {
     it('delegates to AuthService.hasAnyRole(["admin"])', () => {
       const { component, authService } = makeComponent();
@@ -321,15 +413,22 @@ describe('UserManagementPageComponent', () => {
 describe('UserManagementPageComponent template wiring to child components', () => {
   let fixture: ComponentFixture<UserManagementPageComponent>;
   let component: UserManagementPageComponent;
+  let store: ReturnType<typeof makeStoreStub>;
 
   beforeEach(async () => {
-    const store = makeStoreStub();
+    store = makeStoreStub();
     const adminApi = {
       deleteUser: jasmine.createSpy('deleteUser'),
       unlockUser: jasmine.createSpy('unlockUser'),
     };
     const alert = { success: jasmine.createSpy('success'), error: jasmine.createSpy('error') };
-    const authService = { hasAnyRole: jasmine.createSpy('hasAnyRole').and.returnValue(true) };
+    // OBRS-847: an OWNER, not an admin — for a platform admin the two role
+    // lists are the same array, so a binding assertion made under an admin
+    // would pass whichever of them the template names.
+    const authService = {
+      hasAnyRole: jasmine.createSpy('hasAnyRole').and.returnValue(true),
+      getRoles: jasmine.createSpy('getRoles').and.returnValue(['owner']),
+    };
 
     await TestBed.configureTestingModule({
       declarations: [UserManagementPageComponent],
@@ -399,6 +498,32 @@ describe('UserManagementPageComponent template wiring to child components', () =
     modal.triggerEventHandler('closed', undefined);
 
     expect((component as any).onFormModalClosed).toHaveBeenCalled();
+  });
+
+  // OBRS-847: what reaches the DOM, not just what the component computed —
+  // the whole card is one binding, and the two lists it chooses between are
+  // both non-empty and both plausible.
+  it('gives the role filter dropdown the narrowed list and the form modal the full one', () => {
+    fixture.detectChanges();
+    store.data$.next({
+      users: [],
+      roles: [{ slug: 'owner' }, { slug: 'driver' }, { slug: 'customer' }, { slug: 'admin' }],
+      lookups: [],
+    });
+    fixture.detectChanges();
+
+    const dropdown = fixture.debugElement.queryAll(By.css('app-admin-dropdown'))[0];
+    const modal = fixture.debugElement.query(By.css('app-user-form-modal'));
+
+    expect(
+      (dropdown.properties['options'] as RoleOption[]).map((option) => option.slug)
+    ).toEqual(['owner', 'driver']);
+    expect((modal.properties['roleOptions'] as RoleOption[]).map((option) => option.slug)).toEqual([
+      'owner',
+      'driver',
+      'customer',
+      'admin',
+    ]);
   });
 
   it('delegates (confirm)/(cancel) from the delete and unlock modals to their handlers', () => {

@@ -29,9 +29,10 @@ export interface WalkInCheckoutPayload {
 }
 
 @Component({
-  selector: 'app-walk-in-checkout',
-  templateUrl: './walk-in-checkout.component.html',
-  styleUrl: './walk-in-checkout.component.scss',
+    selector: 'app-walk-in-checkout',
+    templateUrl: './walk-in-checkout.component.html',
+    styleUrl: './walk-in-checkout.component.scss',
+    standalone: false
 })
 export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
   @Input() selectedTrip: WalkInTripDto | null = null;

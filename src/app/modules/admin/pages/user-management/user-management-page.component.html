@@ -1,7 +1,11 @@
 <section class="admin-page-intro">
   <div>
-    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
-    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    @if (isLoading) {
+      <p class="admin-muted">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    }
+    @if (errorMessage) {
+      <p class="admin-muted">{{ errorMessage }}</p>
+    }
     <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
   </div>
   <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
@@ -25,62 +29,62 @@
       [value]="searchKeyword"
       (input)="onSearchKeywordChange($any($event.target).value)"
       [placeholder]="'ADMIN.LAYOUT.SEARCH_PLACEHOLDER' | translate"
-    />
-  </label>
+      />
+    </label>
 
-  <app-admin-dropdown
-    [value]="selectedRoleFilter"
-    [options]="roleOptions"
-    valueKey="slug"
-    labelKey="label"
-    [placeholder]="'ADMIN.USERS.FILTER_ROLE' | translate"
-    (valueChange)="onRoleFilterChange($event)"
-  ></app-admin-dropdown>
+    <app-admin-dropdown
+      [value]="selectedRoleFilter"
+      [options]="roleFilterOptions"
+      valueKey="slug"
+      labelKey="label"
+      [placeholder]="'ADMIN.USERS.FILTER_ROLE' | translate"
+      (valueChange)="onRoleFilterChange($event)"
+    ></app-admin-dropdown>
 
-  <app-admin-dropdown
-    [value]="selectedStatusFilter"
-    [options]="statusOptions"
-    valueKey="code"
-    labelKey="label"
-    [placeholder]="'ADMIN.USERS.FILTER_STATUS' | translate"
-    (valueChange)="onStatusFilterChange($event)"
-  ></app-admin-dropdown>
-</section>
+    <app-admin-dropdown
+      [value]="selectedStatusFilter"
+      [options]="statusOptions"
+      valueKey="code"
+      labelKey="label"
+      [placeholder]="'ADMIN.USERS.FILTER_STATUS' | translate"
+      (valueChange)="onStatusFilterChange($event)"
+    ></app-admin-dropdown>
+  </section>
 
-<app-user-list-table
-  [rows]="filteredUsers"
-  [isLoading]="isLoading"
-  [skeletonRows]="skeletonRows"
-  [hasError]="!!errorMessage"
-  [canUnlock]="hasAdminRole()"
-  [totalCount]="users.length"
-  (edit)="openEditModal($event)"
-  (delete)="openDeleteModal($event)"
-  (unlock)="openUnlockModal($event)"
-></app-user-list-table>
+  <app-user-list-table
+    [rows]="filteredUsers"
+    [isLoading]="isLoading"
+    [skeletonRows]="skeletonRows"
+    [hasError]="!!errorMessage"
+    [canUnlock]="hasAdminRole()"
+    [totalCount]="users.length"
+    (edit)="openEditModal($event)"
+    (delete)="openDeleteModal($event)"
+    (unlock)="openUnlockModal($event)"
+  ></app-user-list-table>
 
-<app-user-form-modal
-  [isOpen]="isFormModalOpen"
-  [mode]="mode"
-  [selectedUser]="selectedUser"
-  [roleOptions]="roleOptions"
-  [statusOptions]="statusOptions"
-  [reloadStructure]="reloadStructureBound"
-  (closed)="onFormModalClosed()"
-></app-user-form-modal>
+  <app-user-form-modal
+    [isOpen]="isFormModalOpen"
+    [mode]="mode"
+    [selectedUser]="selectedUser"
+    [roleOptions]="roleOptions"
+    [statusOptions]="statusOptions"
+    [reloadStructure]="reloadStructureBound"
+    (closed)="onFormModalClosed()"
+  ></app-user-form-modal>
 
-<app-user-delete-modal
-  [isOpen]="isDeleteModalOpen"
-  [user]="selectedUser"
-  [isDeleting]="isDeleting"
-  (confirm)="confirmDelete()"
-  (cancel)="closeDeleteModal()"
-></app-user-delete-modal>
+  <app-user-delete-modal
+    [isOpen]="isDeleteModalOpen"
+    [user]="selectedUser"
+    [isDeleting]="isDeleting"
+    (confirm)="confirmDelete()"
+    (cancel)="closeDeleteModal()"
+  ></app-user-delete-modal>
 
-<app-user-unlock-modal
-  [isOpen]="isUnlockModalOpen"
-  [user]="selectedUser"
-  [isUnlocking]="isUnlocking"
-  (confirm)="confirmUnlock()"
-  (cancel)="closeUnlockModal()"
-></app-user-unlock-modal>
+  <app-user-unlock-modal
+    [isOpen]="isUnlockModalOpen"
+    [user]="selectedUser"
+    [isUnlocking]="isUnlocking"
+    (confirm)="confirmUnlock()"
+    (cancel)="closeUnlockModal()"
+  ></app-user-unlock-modal>
