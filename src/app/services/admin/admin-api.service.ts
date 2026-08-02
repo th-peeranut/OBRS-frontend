@@ -810,9 +810,11 @@ export interface CreateVehicleMaintenancePayload {
  * `vehicleId` is `null` for a central/not-linked-to-a-vehicle expense — a
  * REAL nullable Long on the wire, distinct from the FE form's own
  * `VEHICLE_CENTRAL_SENTINEL` string, which only exists inside the form
- * control (see `expenses-page.mappers.ts`). `category` is one of the 10
+ * control (see `expenses-page.mappers.ts`). `category` is one of the 14
  * fixed enum codes (FUEL/REPAIR/VEHICLE_TAX/ACT/INSURANCE/INSPECTION/TIRE/
- * GPS/CENTRAL/OTHER). Audit fields are `@JsonUnwrapped` on the backend DTO —
+ * GPS/TOLL/PERMIT_FEE/DRIVER_WAGE/INSTALMENT/CENTRAL/OTHER — the last four
+ * added by OBRS-961; `EXPENSE_CATEGORY_CODES` is the single list to read,
+ * this comment is prose that can rot). Audit fields are `@JsonUnwrapped` on the backend DTO —
  * flattened here, read-only, never sent back by the form (§9 of the UX spec). */
 export interface AdminExpenseDto {
   id: number;

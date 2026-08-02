@@ -1552,6 +1552,10 @@
         "INSPECTION": "Inspection",
         "TIRE": "Tire",
         "GPS": "GPS",
+        "TOLL": "Toll",
+        "PERMIT_FEE": "Time-Sheet Fee (ใบเวลา, ขสมก.)",
+        "DRIVER_WAGE": "Driver Wage",
+        "INSTALMENT": "Vehicle Instalment",
         "CENTRAL": "Central",
         "OTHER": "Other"
       },
