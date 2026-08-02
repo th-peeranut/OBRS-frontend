@@ -116,3 +116,15 @@
   color: $text-red;
   text-decoration: underline;
 }
+
+// OBRS-627 AC-5: the pointer to /refund-policy, which now owns the refund terms
+// this page used to duplicate as item 7.
+.policy-cross-link {
+  margin-top: 32px;
+  font-size: $font-size-base;
+
+  a {
+    color: $primary-blue;
+    text-decoration: underline;
+  }
+}

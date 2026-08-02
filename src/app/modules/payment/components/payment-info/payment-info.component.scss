@@ -109,6 +109,18 @@
       gap: 2px;
       min-width: 0;
 
+      /* OBRS-634 — same defect, same asset as
+         `schedule-booking-list.component.scss`: `schedule-booking-line.svg` is
+         420px wide intrinsically and had no CSS size, so it set this box's
+         min-content width and pushed `/payment` into Chrome's shrink-to-fit
+         (measured `window.innerWidth` 473 on a 390px phone). See that file for
+         the full note; the pair must stay in step because the two templates
+         render the same `<img>`. */
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+
       .route {
         font-size: $font-size-sm;
         color: $text-softblack;
@@ -169,8 +181,12 @@ hr {
     gap: $space-xs;
   }
 
+  /* OBRS-634 — stretches the box to the (definite) width of `.schedule-info`
+     so the capped route-line SVG above resolves against the card instead of
+     against its own intrinsic 420px. */
   .card-body .schedule-info .time-info {
     align-items: flex-start;
+    align-self: stretch;
   }
 
   .card-body .schedule-info .time-info .route {

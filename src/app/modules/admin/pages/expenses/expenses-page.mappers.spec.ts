@@ -45,6 +45,10 @@ const CATEGORY_LABELS = {
   inspection: 'Inspection',
   tire: 'Tire',
   gps: 'GPS',
+  toll: 'Toll',
+  permitFee: 'Time-Sheet Fee',
+  driverWage: 'Driver Wage',
+  instalment: 'Vehicle Instalment',
   central: 'Central',
   other: 'Other',
 };
@@ -101,10 +105,30 @@ describe('expenses-page.mappers', () => {
   });
 
   describe('toExpenseCategoryOptions', () => {
-    it('returns exactly the 10 fixed category codes, in EXPENSE_CATEGORY_CODES order', () => {
+    it('returns exactly the 14 fixed category codes, in EXPENSE_CATEGORY_CODES order', () => {
       const options = categoryOptions();
       expect(options.map((o) => o.code)).toEqual([...EXPENSE_CATEGORY_CODES]);
       expect(options.find((o) => o.code === 'OTHER')?.label).toBe('Other');
+    });
+
+    // OBRS-961: the codes list and the options builder are two hand-maintained lists in one file.
+    // The assertion above compares them to each other, so a code added to BOTH but wired to no
+    // label — the actual defect shape, `labels.toll` left `undefined` — still passes it. This one
+    // does not: it reads the labels, which only the component's translate.instant() can supply.
+    it('gives every code a distinct, non-empty label — no code falls through unwired', () => {
+      const labels = categoryOptions().map((o) => o.label);
+
+      expect(labels.filter((label) => !label).length).toBe(0);
+      expect(new Set(labels).size).toBe(EXPENSE_CATEGORY_CODES.length);
+    });
+
+    // OBRS-961: CENTRAL is the "no vehicle" answer and OTHER is the free-text catch-all; both must
+    // stay at the bottom of the dropdown as more categories arrive. A future widening that appends
+    // after OTHER would push the catch-all above real choices — silently, since no other test reads
+    // position.
+    it('keeps CENTRAL and OTHER as the last two options', () => {
+      const codes = categoryOptions().map((o) => o.code);
+      expect(codes.slice(-2)).toEqual(['CENTRAL', 'OTHER']);
     });
   });
 
