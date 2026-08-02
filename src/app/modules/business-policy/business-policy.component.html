@@ -24,6 +24,15 @@
       }
     }
     <p [innerHTML]="'POLICY.BUSINESS.CONTENT' | translate"></p>
+
+    <!-- OBRS-627 AC-5: item 7 of CONTENT above used to repeat the refund terms
+         verbatim from /refund-policy — one edit away from the two pages
+         contradicting each other, which is how they reached the state that card
+         reports. /refund-policy is now the single source and item 7 is a pointer;
+         this is the clickable half of that pointer. -->
+    <p class="policy-cross-link">
+      <a routerLink="/refund-policy">{{ 'POLICY.BUSINESS.SEE_REFUND_POLICY' | translate }}</a>
+    </p>
   </div>
 </section>
 

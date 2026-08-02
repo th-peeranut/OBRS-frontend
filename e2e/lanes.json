@@ -309,6 +309,12 @@
       "why": "OBRS-942. The sibling of obrs-813 on the lane 813 never reached: a card/gateway payment, whose cancel used to be a plain SweetAlert that never mentioned reschedule. Walks that journey on a reschedule-ELIGIBLE booking and on an ineligible one and compares click counts against the manual lane, for the same reason 813 does -- the number that matters is the one nobody had measured before the change. Two assertions cannot be made any other way: the cancel request body is read off the wire with request.postDataJSON() and must be exactly {}, because the FE now passes {refundDestination: undefined} and only JSON.stringify dropping undefined keys keeps that byte-identical to the old call; and dismissing the modal must leave Cancel ENABLED on the same booking AND on a different one, which is where the reducer left cancellingBookingId set and disabled Cancel app-wide until reload -- invisible to 4557 unit tests. Hermetic on the same terms as the rest of the lane -- synthetic customer session in localStorage, every /api/** call fulfilled by the spec, no backend."
     },
     {
+      "spec": "obrs-627-refund-policy.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-627. /refund-policy is linked from every page's footer and from /payment, so a customer reads it before paying, and until this card it described a refund the system has never performed -- original paper ticket, ID copies, in-person cash pickup, forfeiture after 7 days -- while naming no refund rate at all. The rates now render from GET /api/cancellation-policy. Three things live only in the assembled app and are why this needs a browser rather than more unit tests: whether the shipped page calls that endpoint at all, whether a raw {{refundRateEarlyPercent}} can reach a customer, and whether the retired clauses are gone from the REAL public/i18n/th.json rather than from a TestBed fixture -- all three are what went wrong on the identical claim one page over (OBRS-564). The wire values are 36h/3h/90%/45%, deliberately not the shipped 24/2/80/50, so 'rendered from the wire' cannot be confused with 'rendered from a literal'. Also pins AC-3: a failed config read shows an inline error and states NO rate, never a hardcoded fallback. Hermetic on the same terms as the rest of the lane -- every /api/** call fulfilled by the spec, no backend, no session."
+    },
+    {
       "spec": "obrs-907-qa-parity-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs907qa.config.ts",

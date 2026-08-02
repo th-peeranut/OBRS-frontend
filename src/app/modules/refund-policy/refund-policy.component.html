@@ -1,9 +1,58 @@
-﻿<app-navbar></app-navbar>
+<app-navbar></app-navbar>
 
 <section class="policy-container">
   <div class="policy-card">
     <h1>{{ "POLICY.REFUND.TITLE" | translate }}</h1>
-    <p [innerHTML]="'POLICY.REFUND.CONTENT' | translate"></p>
+
+    <!-- OBRS-627: CONTENT_1 and CONTENT_2 carry NO policy numbers, so they render
+         whether or not the config resolves. Everything numeric lives in RATES
+         below, behind the @if. Splitting it this way is what lets a failed fetch
+         degrade to "the rates are temporarily unavailable" instead of blanking a
+         page a customer may have opened from /payment to decide whether to buy. -->
+    <p [innerHTML]="'POLICY.REFUND.CONTENT_1' | translate"></p>
+
+    <!-- A div, not a p: the rates section is a heading plus a list, and a <ul>
+         inside a <p> is invalid markup -- the browser closes the paragraph early
+         and the styles would apply to anonymous boxes instead. Same reason
+         privacy-policy.component.html gives for its CONTENT_2. -->
+    @if (policyParams) {
+      <div
+        class="policy-body"
+        data-testid="refund-policy-rates"
+        [innerHTML]="'POLICY.REFUND.RATES' | translate: policyParams"
+      ></div>
+    } @else {
+      @if (!policyLoadFailed) {
+        <!-- The shared OBRS-907 primitive, NOT a copy of business-policy's
+             hand-rolled `.policy-skeleton` pair. That one predates
+             <app-loading-state> and is carried in check-loading-primitives.mjs's
+             DEBT_REGISTER; copying it here is precisely the propagation the gate
+             exists to refuse, and it refused this file until it was changed. -->
+        <app-loading-state variant="skeleton" [rows]="2" class="policy-skeleton-block" />
+      }
+      @if (policyLoadFailed) {
+        <div class="policy-inline-error" role="alert" data-testid="refund-policy-rates-error">
+          <span class="material-symbols-outlined policy-inline-error-icon" aria-hidden="true">error</span>
+          <span>{{ 'POLICY.REFUND.RATES_ERROR' | translate }}</span>
+          <button type="button" class="btn btn-link p-0 policy-inline-retry" (click)="retryPolicyParams()">
+            {{ 'POLICY.REFUND.RETRY' | translate }}
+          </button>
+        </div>
+      }
+    }
+
+    <div class="policy-body" [innerHTML]="'POLICY.REFUND.CONTENT_2' | translate"></div>
+
+    <!-- OBRS-627 AC-5: this page is now the single source of the refund terms, so
+         /business-policy's duplicate copy of them was removed and points here. The
+         link back closes the loop for the terms this page does NOT own (reschedule,
+         fees, sales channels). A real routerLink in the template rather than an
+         <a href> inside the [innerHTML] above: an href there would full-reload the
+         app, and no translation file in this repo has ever carried markup with a
+         link in it. -->
+    <p class="policy-cross-link">
+      <a routerLink="/business-policy">{{ 'POLICY.REFUND.SEE_BUSINESS_POLICY' | translate }}</a>
+    </p>
   </div>
 </section>
 

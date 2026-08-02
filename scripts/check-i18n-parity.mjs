@@ -272,6 +272,53 @@ const PRIVACY_REQUIRED_TH = [
   }
 }
 
+// 4c) OBRS-627: the same rule as gate 3, for the refund half of the policy.
+//
+//     /refund-policy stated its terms as prose typed into these files, and the
+//     prose was never true -- it demanded an original paper ticket and an
+//     in-person cash pickup while the app self-cancels and auto-refunds, and it
+//     never named a refund rate at all. The rates, the cancellation window and
+//     the early/late boundary now render from GET /api/cancellation-policy,
+//     which reads the very config keys CancellationService multiplies by.
+//
+//     Positive check, for the reason gate 3 spells out at length: a denylist of
+//     "80%" and "2 hours" would go green the moment someone typed today's
+//     correct numbers as literals, which is the defect, not the fix. What must
+//     be true is that the four values arrive as placeholders.
+//
+//     RATES_ERROR is checked too: it is what a customer sees INSTEAD of a rate
+//     when the config cannot be read, and AC-3 forbids falling back to a
+//     hardcoded number. If that key went missing the page would render a raw
+//     "POLICY.REFUND.RATES_ERROR" where the terms should be.
+const REQUIRED_REFUND_PLACEHOLDERS = [
+  '{{earlyWindowHours}}',
+  '{{cancelWindowHours}}',
+  '{{refundRateEarlyPercent}}',
+  '{{refundRateLatePercent}}',
+];
+for (const lang of LANGS) {
+  const refund = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8'))?.POLICY?.REFUND;
+  const rates = refund?.RATES;
+  if (typeof rates !== 'string') {
+    problems.push(
+      `[${lang}] POLICY.REFUND.RATES is missing or not a string -- the refund policy page renders this key from the live cancellation-policy config and cannot fall back (OBRS-627)`
+    );
+  } else {
+    for (const placeholder of REQUIRED_REFUND_PLACEHOLDERS) {
+      if (!rates.includes(placeholder)) {
+        problems.push(
+          `[${lang}] POLICY.REFUND.RATES is missing the ${placeholder} placeholder -- the refund rates and cancellation windows must interpolate from GET /api/cancellation-policy, never be typed in as literals (OBRS-627)`
+        );
+      }
+    }
+  }
+  if (typeof refund?.RATES_ERROR !== 'string') {
+    problems.push(
+      `[${lang}] POLICY.REFUND.RATES_ERROR is missing or not a string -- it is what the page shows in place of the rates when the config cannot be read, and AC-3 forbids a hardcoded fallback (OBRS-627)`
+    );
+  }
+}
+
 // 5) OBRS-628 AC-9: a translation that exists but stops halfway.
 //
 //    Gate 2 above compares KEY SETS, so a zh value holding the first two
