@@ -47,16 +47,16 @@
   },
   "private": true,
   "dependencies": {
-    "@angular/animations": "~21.2.19",
-    "@angular/cdk": "~21.2.14",
-    "@angular/common": "~21.2.19",
-    "@angular/compiler": "~21.2.19",
-    "@angular/core": "~21.2.19",
-    "@angular/forms": "~21.2.19",
-    "@angular/google-maps": "^21.2.14",
-    "@angular/platform-browser": "~21.2.19",
-    "@angular/platform-browser-dynamic": "~21.2.19",
-    "@angular/router": "~21.2.19",
+    "@angular/animations": "~22.1.0",
+    "@angular/cdk": "~22.1.0",
+    "@angular/common": "~22.1.0",
+    "@angular/compiler": "~22.1.0",
+    "@angular/core": "~22.1.0",
+    "@angular/forms": "~22.1.0",
+    "@angular/google-maps": "^22.1.0",
+    "@angular/platform-browser": "~22.1.0",
+    "@angular/platform-browser-dynamic": "~22.1.0",
+    "@angular/router": "~22.1.0",
     "@ngrx/effects": "~21.1.1",
     "@ngrx/store": "~21.1.1",
     "@ngrx/store-devtools": "~21.1.1",
@@ -73,18 +73,18 @@
     "jquery": "~3.7.1",
     "leaflet": "^1.9.4",
     "ngx-otp-input": "~1.1.2",
-    "primeicons": "~7.0.0",
-    "primeng": "^21.1.9",
+    "primeicons": "~8.0.0",
+    "primeng": "^22.0.0",
     "qrcode": "^1.5.4",
     "rxjs": "~7.8.0",
     "sweetalert2": "^11.26.18",
     "tslib": "~2.3.0",
-    "zone.js": "~0.15.1"
+    "zone.js": "~0.16.2"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "~21.2.19",
-    "@angular/cli": "~21.2.19",
-    "@angular/compiler-cli": "~21.2.19",
+    "@angular/cli": "~22.1.0",
+    "@angular/compiler-cli": "~22.1.0",
     "@playwright/test": "^1.61.0",
     "@types/jasmine": "~5.1.0",
     "@types/leaflet": "^1.9.21",
@@ -95,6 +95,6 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.9.3"
+    "typescript": "~7.0.2"
   }
 }
