@@ -14,6 +14,12 @@ import {
 } from '../../../shared/interfaces/change-stop.interface';
 import { RouteMeta, RouteStop } from '../../../shared/interfaces/route-map.interface';
 
+/** OBRS-577: page size for the first load / a status-filter switch (AC2's
+ * new default, replacing the hardcoded 100) and the increment "Load more"
+ * fetches. Shared between the effect (request `size`/next `page`) and the
+ * reducer (`pagesLoaded` bookkeeping) so the two can never drift apart. */
+export const MY_BOOKINGS_PAGE_SIZE = 20;
+
 export interface MyBookingsState {
   bookings: MyBookingDto[];
   loading: boolean;
@@ -23,6 +29,24 @@ export interface MyBookingsState {
   cancellingBookingId: number | null;
   /** Active status filter, echoed back so a post-cancel reload preserves it. */
   statusFilter: string | null;
+
+  // --- Incremental "Load more" (OBRS-577) ---
+  /** Total rows for the ACTIVE filter, echoed from the last successful
+   * response — drives the `MY_BOOKINGS.SHOWING_COUNT`/`SHOWING_ALL_COUNT`
+   * count line. */
+  totalElements: number;
+  /** How many `MY_BOOKINGS_PAGE_SIZE`-sized server pages exist for the
+   * active filter. */
+  totalPages: number;
+  /** How many `MY_BOOKINGS_PAGE_SIZE`-sized pages make up `bookings` right
+   * now — the next Load more request's `page` param, and (via
+   * `preserveWindow`) how large a single-request refetch must be to restore
+   * the same window after a mutation (Decision A). */
+  pagesLoaded: number;
+  /** True only while a Load more request (never the first load / a filter
+   * switch) is in flight — drives the button's disabled+label swap without
+   * surfacing the global loading dialog. */
+  loadingMore: boolean;
 
   // --- Cancel-with-destination modal (OBRS-286 Flow A1) ---
   /** Non-null while the modal is open. `booking`/`policy` are set once, on
@@ -143,6 +167,11 @@ export const initialMyBookingsState: MyBookingsState = {
   error: null,
   cancellingBookingId: null,
   statusFilter: null,
+
+  totalElements: 0,
+  totalPages: 0,
+  pagesLoaded: 0,
+  loadingMore: false,
 
   refundDestinationModal: null,
 

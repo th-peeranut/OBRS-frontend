@@ -146,6 +146,13 @@ export default defineConfig({
     // MANUAL_REFUND_REQUIRED). Hermetic on the same terms: it stubs every
     // /api/** call and reuses the same fixture shapes.
     '**/obrs-942-non-manual-cancel.spec.ts',
+    // OBRS-627. The published refund terms, asserted against the REAL th.json in
+    // the assembled app: the unit suite can only prove the component
+    // interpolates what it is handed, not that the shipped page calls the
+    // endpoint or that a raw `{{...}}` never reaches a customer — the two things
+    // that went wrong on the equivalent claim one page over (OBRS-564). Hermetic
+    // on the same terms as the rest: every /api/** call is fulfilled in-spec.
+    '**/obrs-627-refund-policy.spec.ts',
   ],
 
   timeout: 60_000,

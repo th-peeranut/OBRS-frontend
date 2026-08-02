@@ -273,7 +273,12 @@ export class RescheduleEffect {
       ofType(rescheduleSettled),
       tap(() => this.alertService.success(this.translate.instant('MY_BOOKINGS.RESCHEDULE.SUCCESS'))),
       withLatestFrom(this.store.pipe(select(selectMyBookings))),
-      mergeMap(([, state]) => [closeRescheduleDialog(), invokeLoadMyBookingsApi({ status: state.statusFilter })])
+      mergeMap(([, state]) => [
+        closeRescheduleDialog(),
+        // OBRS-577 Decision A: preserveWindow — don't snap a multi-page list
+        // back to page 1 after a settled reschedule.
+        invokeLoadMyBookingsApi({ status: state.statusFilter, preserveWindow: true }),
+      ])
     )
   );
 
@@ -285,7 +290,11 @@ export class RescheduleEffect {
       ofType(rescheduleAbandoned),
       tap(() => this.alertService.info(this.translate.instant('MY_BOOKINGS.RESCHEDULE.PAYMENT_ABANDONED'))),
       withLatestFrom(this.store.pipe(select(selectMyBookings))),
-      mergeMap(([, state]) => [closeRescheduleDialog(), invokeLoadMyBookingsApi({ status: state.statusFilter })])
+      mergeMap(([, state]) => [
+        closeRescheduleDialog(),
+        // OBRS-577 Decision A: preserveWindow — same as rescheduleSettled$ above.
+        invokeLoadMyBookingsApi({ status: state.statusFilter, preserveWindow: true }),
+      ])
     )
   );
 

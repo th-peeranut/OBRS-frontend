@@ -1,5 +1,5 @@
 import { createReducer, on } from '@ngrx/store';
-import { initialMyBookingsState } from './my-bookings.model';
+import { initialMyBookingsState, MY_BOOKINGS_PAGE_SIZE } from './my-bookings.model';
 import {
   cancelBookingFailure,
   cancelBookingSuccess,
@@ -16,6 +16,9 @@ import {
   confirmReschedule,
   confirmRescheduleFailure,
   confirmRescheduleSuccess,
+  invokeLoadMoreMyBookingsApi,
+  invokeLoadMoreMyBookingsApiFailure,
+  invokeLoadMoreMyBookingsApiSuccess,
   invokeLoadMyBookingsApi,
   invokeLoadMyBookingsApiFailure,
   invokeLoadMyBookingsApiSuccess,
@@ -59,15 +62,42 @@ import {
 
 export const myBookingsReducer = createReducer(
   initialMyBookingsState,
-  on(invokeLoadMyBookingsApi, (state, { status }) => ({
+  on(invokeLoadMyBookingsApi, (state, { status, preserveWindow }) => ({
     ...state,
     loading: true,
     error: null,
     statusFilter: status ?? null,
+    // Scrutinize round 2 (regression in the round-1 fix): `loadMyBookings$`
+    // reads `pagesLoaded`/`totalPages` via `withLatestFrom(select(...))` —
+    // and NgRx runs the reducer BEFORE effects observe the very same action
+    // (`this.next(state)` then `scannedActions.next(action)`,
+    // node_modules/@ngrx/store/fesm2022/ngrx-store.mjs), so whatever this
+    // case writes here is what the effect's `size` computation reads for
+    // THIS dispatch — not the value before it. Unconditionally zeroing both
+    // (round 1's fix) made every `preserveWindow: true` mutation reload
+    // request `size=20` instead of the real loaded window, collapsing a
+    // 5-page list to 20 rows on every cancel/reschedule/change-seat/
+    // change-stop. Only zero on the non-preserve path (a genuine page-1
+    // reset: initial load / status-filter switch / Retry) — a
+    // `preserveWindow` reload needs the REAL count to size its single
+    // refetch correctly, so it must survive untouched. `loadingMore` always
+    // resets to false either way: a superseding full load — preserve or not
+    // — always supersedes whatever load-more was in flight (the effect-side
+    // half of that is `loadMoreMyBookings$`'s `takeUntil` below).
+    loadingMore: false,
+    pagesLoaded: preserveWindow ? state.pagesLoaded : 0,
+    totalPages: preserveWindow ? state.totalPages : 0,
   })),
-  on(invokeLoadMyBookingsApiSuccess, (state, { bookings }) => ({
+  on(invokeLoadMyBookingsApiSuccess, (state, { bookings, totalElements, totalPages }) => ({
     ...state,
     bookings,
+    totalElements,
+    totalPages,
+    // A `preserveWindow` refetch returns MORE than one page in a single
+    // response (Decision A) — derive `pagesLoaded` from the returned row
+    // count rather than assuming 1, so a post-mutation reload doesn't reset
+    // how many "pages" Load more thinks are already on screen.
+    pagesLoaded: Math.max(1, Math.ceil(bookings.length / MY_BOOKINGS_PAGE_SIZE)),
     loading: false,
     loaded: true,
     error: null,
@@ -77,6 +107,27 @@ export const myBookingsReducer = createReducer(
     loading: false,
     loaded: true,
     error,
+  })),
+
+  // --- Load more (OBRS-577) ---
+  on(invokeLoadMoreMyBookingsApi, (state) => ({
+    ...state,
+    loadingMore: true,
+  })),
+  on(invokeLoadMoreMyBookingsApiSuccess, (state, { bookings, totalElements, totalPages }) => ({
+    ...state,
+    bookings: [...state.bookings, ...bookings],
+    totalElements,
+    totalPages,
+    pagesLoaded: state.pagesLoaded + 1,
+    loadingMore: false,
+  })),
+  // Deliberately does NOT touch `state.error` — a Load more failure must
+  // stay a toast only (AlertService, see the effect), never replace the
+  // already-visible list with the full-page error state.
+  on(invokeLoadMoreMyBookingsApiFailure, (state) => ({
+    ...state,
+    loadingMore: false,
   })),
   on(requestCancelBooking, (state, { booking }) => ({
     ...state,

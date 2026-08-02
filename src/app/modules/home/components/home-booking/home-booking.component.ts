@@ -332,7 +332,13 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
    *  interrupt the primary "load Home, search a trip" flow. */
   private loadRecentRoutesFromApi(): void {
     this.bookingService
-      .getMyBookings(undefined, false, true)
+      // OBRS-577: `size: 100` pinned explicitly — the new service default
+      // dropped to 20 for /my-bookings's own load, but this call's array
+      // feeds extractRecentRoutePairsFromBookings, a frequency-ranked sample
+      // for the Home quick-pick (OBRS-923); a smaller sample can silently
+      // change which route ranks first, so this stays byte-identical to the
+      // pre-577 request (page 0, size 100, no status).
+      .getMyBookings({ showLoadingDialog: false, skipAuthLogout: true, size: 100 })
       .pipe(
         catchError(() => of(null)),
         takeUntil(this.destroy$)

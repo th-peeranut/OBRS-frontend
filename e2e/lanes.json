@@ -207,6 +207,12 @@
       "why": "OBRS-766. The card's load-bearing case in one continuous flow: a SALESPERSON logs in, finds a walk-in booking they did NOT sell, sees the refund preview before committing, and cancels it under the second-person cash approval -- the proof that act-on-behalf (OBRS-661) and the cash step-up (OBRS-669) are reachable at all, since neither had a UI before this card. Shares the OWN-DB reasoning and globalSetup above. Also asserts the masked phone never appears raw in the DOM or in any response body, so it doubles as the anti-enumeration guard for GET /api/private/bookings/search."
     },
     {
+      "spec": "obrs577-my-bookings-load-more.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs577.config.ts",
+      "why": "OBRS-577. Every claim on this card -- first page is exactly 20, Load more APPENDS rather than replaces, the count line names the FILTERED total, the button hides itself on the last page, and a mutation reload keeps the whole loaded window instead of collapsing back to 20 -- needs one account holding well over 20 bookings in two independently-sized status buckets. No SIT seed account clears 20 (customer@system.local was MEASURED at 37 during this card's live run and used read-only as the baseline), and manufacturing dozens of bookings on shared SIT is not a reasonable ask, so the lane owns its database: obrs577qa, rebuilt every run from schema.sql -> data.sql -> e2e/fixtures/obrs577-load-more-fixture.sql (44 CONFIRMED + 7 CANCELLED = 52 under All). The mutation-reload case is the one that cannot be had any other way: it really cancels one of 40 loaded Confirmed rows and asserts 39, because the two defects that shipped and were caught here -- an effect guard reading a flag its own action's reducer had already set, and a reducer reset zeroing the page window under the effect -- are both invisible to a unit test that stubs state with overrideSelector. Never a gate: it mutates its own database, and its BACKEND port is deliberately :8181, the same one playwright.local.config.ts binds (environment.e2e.ts:26 hardcodes apiUrl and is not build-time-configurable), so the two OWN-DB lanes must run SEQUENTIALLY. Its OBRS_BACKEND_DIR is a throwaway detached backend worktree; recreate it if absent with `git -C ../OBRS-backend worktree add --detach ../OBRS-backend-wt-577qa origin/dev` -- pointing it at the shared ../OBRS-backend clone would build whatever branch that clone happens to be parked on."
+    },
+    {
       "spec": "obrs-433-my-reports.spec.ts",
       "lane": "OWN-DB",
       "config": "playwright.obrs433.config.ts",
@@ -307,6 +313,12 @@
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
       "why": "OBRS-942. The sibling of obrs-813 on the lane 813 never reached: a card/gateway payment, whose cancel used to be a plain SweetAlert that never mentioned reschedule. Walks that journey on a reschedule-ELIGIBLE booking and on an ineligible one and compares click counts against the manual lane, for the same reason 813 does -- the number that matters is the one nobody had measured before the change. Two assertions cannot be made any other way: the cancel request body is read off the wire with request.postDataJSON() and must be exactly {}, because the FE now passes {refundDestination: undefined} and only JSON.stringify dropping undefined keys keeps that byte-identical to the old call; and dismissing the modal must leave Cancel ENABLED on the same booking AND on a different one, which is where the reducer left cancellingBookingId set and disabled Cancel app-wide until reload -- invisible to 4557 unit tests. Hermetic on the same terms as the rest of the lane -- synthetic customer session in localStorage, every /api/** call fulfilled by the spec, no backend."
+    },
+    {
+      "spec": "obrs-627-refund-policy.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-627. /refund-policy is linked from every page's footer and from /payment, so a customer reads it before paying, and until this card it described a refund the system has never performed -- original paper ticket, ID copies, in-person cash pickup, forfeiture after 7 days -- while naming no refund rate at all. The rates now render from GET /api/cancellation-policy. Three things live only in the assembled app and are why this needs a browser rather than more unit tests: whether the shipped page calls that endpoint at all, whether a raw {{refundRateEarlyPercent}} can reach a customer, and whether the retired clauses are gone from the REAL public/i18n/th.json rather than from a TestBed fixture -- all three are what went wrong on the identical claim one page over (OBRS-564). The wire values are 36h/3h/90%/45%, deliberately not the shipped 24/2/80/50, so 'rendered from the wire' cannot be confused with 'rendered from a literal'. Also pins AC-3: a failed config read shows an inline error and states NO rate, never a hardcoded fallback. Hermetic on the same terms as the rest of the lane -- every /api/** call fulfilled by the spec, no backend, no session."
     },
     {
       "spec": "obrs-907-qa-parity-capture.spec.ts",
