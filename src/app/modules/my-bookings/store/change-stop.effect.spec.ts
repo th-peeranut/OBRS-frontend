@@ -432,7 +432,12 @@ describe('ChangeStopEffect', () => {
       actionsSubject.next(changeStopSettled());
 
       expect(alertService.success).toHaveBeenCalled();
-      expect(emitted).toEqual([closeChangeStopDialog(), invokeLoadMyBookingsApi({ status: 'confirmed' })]);
+      // OBRS-577 Decision A: preserveWindow:true so a multi-page list
+      // doesn't snap back to page 1 after a settled change-stop.
+      expect(emitted).toEqual([
+        closeChangeStopDialog(),
+        invokeLoadMyBookingsApi({ status: 'confirmed', preserveWindow: true }),
+      ]);
     });
 
     it('changeStopAbandoned$ toasts an info notice (not success), closes the dialog, and reloads the list', () => {
@@ -443,7 +448,11 @@ describe('ChangeStopEffect', () => {
 
       expect(alertService.info).toHaveBeenCalled();
       expect(alertService.success).not.toHaveBeenCalled();
-      expect(emitted).toEqual([closeChangeStopDialog(), invokeLoadMyBookingsApi({ status: null })]);
+      // OBRS-577 Decision A: preserveWindow:true — same as changeStopSettled$ above.
+      expect(emitted).toEqual([
+        closeChangeStopDialog(),
+        invokeLoadMyBookingsApi({ status: null, preserveWindow: true }),
+      ]);
     });
   });
 

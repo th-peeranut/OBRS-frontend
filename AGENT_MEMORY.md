@@ -4091,3 +4091,36 @@ each own a DIFFERENT second field cleared in a DIFFERENT `on(...)` block; deleti
 auditing every field it touched leaves that field's clearer gone while the deletion still
 compiles green and every existing test still passes, because no prior test covered
 dismiss-then-reopen.
+
+
+## 2026-08-02 — OBRS-577 Scrutinize (spec review, pre-code)
+
+**Self-fixed in `docs/spec/UX-OBRS-577-my-bookings-load-more.md` (spec only, no code exists yet):**
+
+1. **Count "5 จุด" → "6 จุด"** (3 places: Decision A prose, Blast-radius bullet, NgRx
+   section). The enumeration always listed 6 dispatch sites (`my-bookings.effect.ts:175`,
+   `reschedule.effect.ts:276,288`, `change-seat.effect.ts:181`, `change-stop.effect.ts:255,267`);
+   the count sentence said 5. An undercount in an "enumerate the family" list invites a dev to
+   read one of the six as a typo.
+
+2. **Added a Test-assertion sweep block.** The spec's call-site sweep flagged only
+   `booking.service.spec.ts:182,190`, but two design changes turn other GREEN specs RED, and the
+   spec claimed grep-verified completeness:
+   - `preserveWindow: true` on the 3 reload dispatches makes the NgRx action payload carry an
+     extra key, so `toEqual([..., invokeLoadMyBookingsApi({status})])` deep-equal assertions
+     fail at `change-seat.effect.spec.ts:346`, `change-stop.effect.spec.ts:435`, `:446`.
+   - the `getMyBookings` positional→options-object change fails
+     `home-booking.component.spec.ts:156`'s `toHaveBeenCalledWith(undefined, false, true)`.
+
+   Pattern (FRONTEND-GOTCHAS "sweep BOTH populations" / DEV-GOTCHAS "enumerate the WHOLE family"):
+   when a spec relocates a shared value or widens a payload/signature, the sweep must include the
+   **existing test assertions that pin the old shape**, not just the production call sites — a
+   `toEqual`/`toHaveBeenCalledWith` on the pre-change shape is a silent red the spec must predict.
+
+**Verified sound (no change needed):** preserveWindow A2 has no `pagesLoaded` skip/drift — a
+short refetch window only happens on exhaustion (`size = pagesLoaded*20 ≥ remaining`), which
+correctly flips `hasMore` false, so no next load-more can skip a row. `home-booking.ts:335`
+size:100 claim is real (`extractRecentRoutePairsFromBookings` uses duplicates as the frequency
+signal; a 20-row sample changes OBRS-923 ranking) and the options-object call is byte-identical.
+`PageResponse` carries `totalElements`/`totalPages`. Load-more path sets `showLoadingDialog:false`
+and `loadingMore` (not `loading`), so no full-page overlay over a list being read.

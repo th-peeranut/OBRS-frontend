@@ -252,7 +252,12 @@ export class ChangeStopEffect {
       ofType(changeStopSettled),
       tap(() => this.alertService.success(this.translate.instant('MY_BOOKINGS.CHANGE_STOP.SUCCESS'))),
       withLatestFrom(this.store.pipe(select(selectMyBookings))),
-      mergeMap(([, state]) => [closeChangeStopDialog(), invokeLoadMyBookingsApi({ status: state.statusFilter })])
+      mergeMap(([, state]) => [
+        closeChangeStopDialog(),
+        // OBRS-577 Decision A: preserveWindow — don't snap a multi-page list
+        // back to page 1 after a settled change-stop.
+        invokeLoadMyBookingsApi({ status: state.statusFilter, preserveWindow: true }),
+      ])
     )
   );
 
@@ -264,7 +269,11 @@ export class ChangeStopEffect {
       ofType(changeStopAbandoned),
       tap(() => this.alertService.info(this.translate.instant('MY_BOOKINGS.CHANGE_STOP.PAYMENT_ABANDONED'))),
       withLatestFrom(this.store.pipe(select(selectMyBookings))),
-      mergeMap(([, state]) => [closeChangeStopDialog(), invokeLoadMyBookingsApi({ status: state.statusFilter })])
+      mergeMap(([, state]) => [
+        closeChangeStopDialog(),
+        // OBRS-577 Decision A: preserveWindow — same as changeStopSettled$ above.
+        invokeLoadMyBookingsApi({ status: state.statusFilter, preserveWindow: true }),
+      ])
     )
   );
 

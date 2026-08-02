@@ -3,7 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
-import { catchError, map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
+import { catchError, exhaustMap, filter, map, switchMap, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
 import { BookingService } from '../../../services/booking/booking.service';
 import { AlertService } from '../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../shared/lib/api-error';
@@ -13,10 +13,14 @@ import {
   MANUAL_REFUND_METHOD,
   formatRefundAmount,
 } from '../../../shared/interfaces/my-booking.interface';
+import { MY_BOOKINGS_PAGE_SIZE } from './my-bookings.model';
 import {
   cancelBookingFailure,
   cancelBookingSuccess,
   confirmCancelWithDestination,
+  invokeLoadMoreMyBookingsApi,
+  invokeLoadMoreMyBookingsApiFailure,
+  invokeLoadMoreMyBookingsApiSuccess,
   invokeLoadMyBookingsApi,
   invokeLoadMyBookingsApiFailure,
   invokeLoadMyBookingsApiSuccess,
@@ -48,28 +52,133 @@ export class MyBookingsEffect {
   private alertService = inject(AlertService);
   private translate = inject(TranslateService);
 
+  // OBRS-577 Decision A: `preserveWindow` (set by the 6 post-mutation reload
+  // sites) refetches however many MY_BOOKINGS_PAGE_SIZE pages are already on
+  // screen in ONE request (`withLatestFrom` reads `pagesLoaded` off the
+  // current state), so a cancel/reschedule/change-seat/change-stop success
+  // never visibly truncates a loaded-5-pages list back to page 1. The first
+  // load and every status-filter switch leave it `false` (or unset) and get
+  // the plain AC2 default of MY_BOOKINGS_PAGE_SIZE.
   loadMyBookings$ = createEffect(() =>
     this.actions$.pipe(
       ofType(invokeLoadMyBookingsApi),
-      switchMap(({ status, showLoading }) =>
-        this.service.getMyBookings(status, showLoading).pipe(
-          map((response) =>
-            invokeLoadMyBookingsApiSuccess({
-              bookings: response.data?.content ?? [],
-            })
-          ),
-          catchError((error: unknown) =>
-            of(
-              invokeLoadMyBookingsApiFailure({
-                error:
-                  extractApiErrorMessage(error) ||
-                  this.translate.instant('MY_BOOKINGS.LOAD_FAILED'),
+      withLatestFrom(this.store.pipe(select(selectMyBookings))),
+      switchMap(([{ status, showLoading, preserveWindow }, state]) => {
+        const size = preserveWindow
+          ? Math.max(MY_BOOKINGS_PAGE_SIZE, state.pagesLoaded * MY_BOOKINGS_PAGE_SIZE)
+          : MY_BOOKINGS_PAGE_SIZE;
+
+        return this.service
+          .getMyBookings({ status, page: 0, size, showLoadingDialog: showLoading })
+          .pipe(
+            map((response) =>
+              invokeLoadMyBookingsApiSuccess({
+                bookings: response.data?.content ?? [],
+                totalElements: response.data?.totalElements ?? 0,
+                totalPages: response.data?.totalPages ?? 0,
               })
+            ),
+            catchError((error: unknown) =>
+              of(
+                invokeLoadMyBookingsApiFailure({
+                  error:
+                    extractApiErrorMessage(error) ||
+                    this.translate.instant('MY_BOOKINGS.LOAD_FAILED'),
+                })
+              )
             )
+          );
+      })
+    )
+  );
+
+  // OBRS-577 AC2/AC6: fetches the next MY_BOOKINGS_PAGE_SIZE-row page and the
+  // reducer APPENDS it (never replaces) — the customer-shell incremental
+  // "Load more" idiom (design-system §12, OBRS-433 precedent), not a
+  // page-number paginator. `showLoadingDialog: false` is explicit (not just
+  // the service default) so this never surfaces the global loading dialog
+  // even if that default ever changes.
+  //
+  // Scrutinize round 3 (this effect's OWN guard was structurally
+  // unreachable): a `filter` reading `!state.loadingMore` mirrored
+  // `MyReportsStore.loadMore()`'s guard verbatim — correct THERE because
+  // that is a plain class method that checks the flag before setting it. In
+  // NgRx, `invokeLoadMoreMyBookingsApi`'s OWN reducer case sets
+  // `loadingMore: true`, and NgRx runs the reducer for an action before any
+  // effect observes that same action — so by the time `withLatestFrom`
+  // samples state here, `loadingMore` is ALREADY `true` for every dispatch,
+  // `!state.loadingMore` is always `false`, and the button never fired a
+  // single request in production (measured live: `requests during click:
+  // []`). `overrideSelector`-based unit tests hand-set `loadingMore: false`
+  // on the stub, so they could never see this — the real-store integration
+  // spec below is what pins it. Fix: drop the loadingMore half of the guard
+  // (the remaining `pagesLoaded < totalPages` half IS sound — that action's
+  // own reducer case does not touch either field) and use `exhaustMap`
+  // instead of `switchMap` for the idiomatic NgRx "ignore new emissions
+  // while an inner request is active" — the double-click protection the
+  // dropped flag used to provide.
+  //
+  // Scrutinize round 2 (AC3 fix, unaffected by round 3 — still needed):
+  // `exhaustMap`/`switchMap` alike only cancel/ignore a PRIOR
+  // `invokeLoadMoreMyBookingsApi` — neither does anything when a DIFFERENT
+  // action type supersedes this request, e.g. a status-filter switch, Retry,
+  // or any of the 6 mutation reloads, all of which dispatch
+  // `invokeLoadMyBookingsApi` on a completely separate effect stream. Left
+  // alone, a Load more request still in flight when one of those fires would
+  // land after the full reload already replaced the list — appending onto,
+  // and overwriting the totals of, a list for a DIFFERENT filter/status than
+  // the one it was requested under. `takeUntil` tears the inner HTTP
+  // subscription down the instant `invokeLoadMyBookingsApi` is dispatched,
+  // so a stale response can never reach the reducer — and once torn down,
+  // `exhaustMap` is free again to start the NEXT `invokeLoadMoreMyBookingsApi`
+  // (proved by `my-bookings.effect.spec.ts`'s cancellation test, which
+  // drives a fresh Load more through the same subscription afterward).
+  loadMoreMyBookings$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(invokeLoadMoreMyBookingsApi),
+      withLatestFrom(this.store.pipe(select(selectMyBookings))),
+      filter(([, state]) => state.pagesLoaded < state.totalPages),
+      exhaustMap(([, state]) =>
+        this.service
+          .getMyBookings({
+            status: state.statusFilter,
+            page: state.pagesLoaded,
+            size: MY_BOOKINGS_PAGE_SIZE,
+            showLoadingDialog: false,
+          })
+          .pipe(
+            map((response) =>
+              invokeLoadMoreMyBookingsApiSuccess({
+                bookings: response.data?.content ?? [],
+                totalElements: response.data?.totalElements ?? 0,
+                totalPages: response.data?.totalPages ?? 0,
+              })
+            ),
+            catchError((error: unknown) =>
+              of(
+                invokeLoadMoreMyBookingsApiFailure({
+                  error:
+                    extractApiErrorMessage(error) ||
+                    this.translate.instant('MY_BOOKINGS.LOAD_MORE_FAILED'),
+                })
+              )
+            ),
+            takeUntil(this.actions$.pipe(ofType(invokeLoadMyBookingsApi)))
           )
-        )
       )
     )
+  );
+
+  // Load more failures are a toast only (AlertService) — the already-visible
+  // list/count line stay exactly as they were before the click (spec
+  // "States" section), never a full-page error takeover.
+  loadMoreMyBookingsFailureToast$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(invokeLoadMoreMyBookingsApiFailure),
+        tap(({ error }) => this.alertService.error(error))
+      ),
+    { dispatch: false }
   );
 
   // Preview the refund, then open the cancel modal — one exclusive stream so
@@ -172,7 +281,10 @@ export class MyBookingsEffect {
       tap(({ result }) => this.showCancelSuccess(result)),
       withLatestFrom(this.store.pipe(select(selectMyBookings))),
       map(([, state]) =>
-        invokeLoadMyBookingsApi({ status: state.statusFilter })
+        // OBRS-577 Decision A: preserveWindow so a traveler who has loaded
+        // several pages doesn't see the list snap back to page 1 after a
+        // successful cancel.
+        invokeLoadMyBookingsApi({ status: state.statusFilter, preserveWindow: true })
       )
     )
   );

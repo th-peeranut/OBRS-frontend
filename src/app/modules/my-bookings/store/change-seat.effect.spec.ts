@@ -341,9 +341,11 @@ describe('ChangeSeatEffect', () => {
       actionsSubject.next(changeSeatSettled());
 
       expect(alertService.success).toHaveBeenCalled();
+      // OBRS-577 Decision A: preserveWindow:true so a multi-page list
+      // doesn't snap back to page 1 after a settled change-seat.
       expect(emitted).toEqual([
         closeChangeSeatDialog(),
-        invokeLoadMyBookingsApi({ status: 'confirmed' }),
+        invokeLoadMyBookingsApi({ status: 'confirmed', preserveWindow: true }),
       ]);
     });
   });

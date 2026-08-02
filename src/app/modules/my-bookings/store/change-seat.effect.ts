@@ -178,7 +178,12 @@ export class ChangeSeatEffect {
       ofType(changeSeatSettled),
       tap(() => this.alertService.success(this.translate.instant('MY_BOOKINGS.CHANGE_SEAT.SUCCESS'))),
       withLatestFrom(this.store.pipe(select(selectMyBookings))),
-      mergeMap(([, state]) => [closeChangeSeatDialog(), invokeLoadMyBookingsApi({ status: state.statusFilter })])
+      mergeMap(([, state]) => [
+        closeChangeSeatDialog(),
+        // OBRS-577 Decision A: preserveWindow — don't snap a multi-page list
+        // back to page 1 after a settled change-seat.
+        invokeLoadMyBookingsApi({ status: state.statusFilter, preserveWindow: true }),
+      ])
     )
   );
 

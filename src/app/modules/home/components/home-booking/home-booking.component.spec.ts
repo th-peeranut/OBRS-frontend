@@ -153,7 +153,14 @@ describe('HomeBookingComponent', () => {
       component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]), auth: createAuthServiceStub(true), booking: bookingServiceStub });
       component.ngOnInit();
 
-      expect(bookingServiceStub.getMyBookings).toHaveBeenCalledWith(undefined, false, true);
+      // OBRS-577: getMyBookings moved to a single options object (AC2); this
+      // call site still pins size:100 explicitly (see the component's own
+      // comment) so the OBRS-923 frequency-ranked sample doesn't shrink.
+      expect(bookingServiceStub.getMyBookings).toHaveBeenCalledWith({
+        showLoadingDialog: false,
+        skipAuthLogout: true,
+        size: 100,
+      });
     });
 
     it('logged-in user: derives candidates from bookingSchedules[0].fromStop/toStop.id', () => {
