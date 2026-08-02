@@ -285,6 +285,10 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
       inspection: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.INSPECTION'),
       tire: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.TIRE'),
       gps: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.GPS'),
+      toll: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.TOLL'),
+      permitFee: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.PERMIT_FEE'),
+      driverWage: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.DRIVER_WAGE'),
+      instalment: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.INSTALMENT'),
       central: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.CENTRAL'),
       other: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.OTHER'),
     });

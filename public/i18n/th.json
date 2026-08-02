@@ -1552,6 +1552,10 @@
         "INSPECTION": "ตรวจสภาพ",
         "TIRE": "ยาง",
         "GPS": "GPS",
+        "TOLL": "ค่าทางด่วน",
+        "PERMIT_FEE": "ค่าใบเวลา (ขสมก.)",
+        "DRIVER_WAGE": "ค่าแรงคนขับ",
+        "INSTALMENT": "ค่างวดรถ",
         "CENTRAL": "ส่วนกลาง",
         "OTHER": "อื่นๆ"
       },
