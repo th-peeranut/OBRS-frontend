@@ -10,6 +10,12 @@ import {
   stripPhoneSeparators,
   THAI_MOBILE_PATTERN,
 } from '../../../../shared/constants/thai-msisdn';
+import { ParcelPolicyService } from '../../../../services/parcel-policy/parcel-policy.service';
+import { configuredMaxWeightValidator } from '../../../../shared/lib/configured-max-weight.validator';
+import {
+  ProhibitedCategoryView,
+  toProhibitedCategoryViews,
+} from '../../../../shared/lib/parcel-prohibited-categories';
 
 export interface ParcelDetailsFormValue {
   senderPhone: string;
@@ -20,24 +26,17 @@ export interface ParcelDetailsFormValue {
   dimensions?: { lengthCm: number; widthCm: number; heightCm: number };
 }
 
-export interface ProhibitedCategory {
-  icon: string;
-  i18nKey: string;
-}
-
-/** The prohibited-categories disclosure list — static/hardcoded (UX-OBRS-415
- * §0-C / §6): there is no GET endpoint for it (OBRS-438 tracks adding one).
- * Matches the DB seed of known categories as of 2026-07-16. Shown in full,
- * unhidden, directly above the acknowledgement checkbox — never behind an
- * accordion/tooltip/second click (a required disclosure hidden behind an
- * extra interaction is the anti-pattern this design explicitly avoids). */
-export const PROHIBITED_CATEGORIES: ProhibitedCategory[] = [
-  { icon: 'local_fire_department', i18nKey: 'PARCEL_BOOKING.PROHIBITED.FLAMMABLE' },
-  { icon: 'warning', i18nKey: 'PARCEL_BOOKING.PROHIBITED.EXPLOSIVE' },
-  { icon: 'gavel', i18nKey: 'PARCEL_BOOKING.PROHIBITED.WEAPON' },
-  { icon: 'medication', i18nKey: 'PARCEL_BOOKING.PROHIBITED.NARCOTIC' },
-  { icon: 'sentiment_very_dissatisfied', i18nKey: 'PARCEL_BOOKING.PROHIBITED.CORPSE' },
-];
+/* OBRS-629 AC-4: the hardcoded five-entry `PROHIBITED_CATEGORIES` list that used
+ * to live here is gone. Its own comment named the defect — "static/hardcoded …
+ * there is no GET endpoint for it (OBRS-438 tracks adding one) … matches the DB
+ * seed of known categories as of 2026-07-16" — and that seed is admin-editable,
+ * so the two could part ways with nothing to notice. The endpoint now exists
+ * (`GET /api/parcel-policy`) and the rows come from `toProhibitedCategoryViews`,
+ * mapped from the same config `ParcelIntakeService#validateNotProhibited` blocks on.
+ *
+ * The UX rule that comment carried still holds and is still implemented in the
+ * template (UX-OBRS-415 §0-C / §6): shown in full, unhidden, directly above the
+ * acknowledgement checkbox — never behind an accordion/tooltip/second click. */
 
 /**
  * OBRS-455 split what used to be one `PHONE_PATTERN` here, because the backend's two rules were
@@ -104,17 +103,38 @@ export class ParcelDetailsFormComponent implements OnInit, OnChanges, OnDestroy 
   @Output() quoteParamsChange = new EventEmitter<ParcelOnlineQuoteParams | null>();
   @Output() submitForm = new EventEmitter<ParcelDetailsFormValue>();
 
-  protected readonly prohibitedCategories = PROHIBITED_CATEGORIES;
+  /* OBRS-629 — server-served parcel limits. Built ONCE per policy load and then
+   * read by the template; never recomputed in a template expression, which would
+   * allocate on every change-detection cycle. */
+  protected prohibitedCategories: ProhibitedCategoryView[] = [];
+  protected prohibitedLoadFailed = false;
+  protected policyLoaded = false;
+  /** Stable object identity for the `{{max}}` interpolation; mutated in place. */
+  protected readonly weightMaxParams: { max: number } = { max: 0 };
+  private maxWeightKg: number | null = null;
+
   protected readonly form: FormGroup;
   private readonly destroy$ = new Subject<void>();
   private prefillApplied = false;
 
-  constructor(private readonly fb: FormBuilder) {
+  constructor(
+    private readonly fb: FormBuilder,
+    private readonly parcelPolicyService: ParcelPolicyService
+  ) {
     this.form = this.fb.group({
       senderPhone: ['', [Validators.required, separatorTolerantPattern(SENDER_PHONE_PATTERN)]],
       recipientName: ['', [Validators.required, Validators.maxLength(100)]],
       recipientPhone: ['', [Validators.required, separatorTolerantPattern(RECIPIENT_PHONE_PATTERN)]],
-      weightKg: [null, [Validators.required, positiveWeightValidator(), Validators.max(100)]],
+      weightKg: [
+        null,
+        [
+          Validators.required,
+          positiveWeightValidator(),
+          // OBRS-629 AC-3: was Validators.max(100) — a literal that could not
+          // move when an admin moved parcel.max_weight_kg.
+          configuredMaxWeightValidator(() => this.maxWeightKg),
+        ],
+      ],
       description: ['', [Validators.required, Validators.maxLength(500)]],
       dimensions: this.fb.group(
         { lengthCm: [null], widthCm: [null], heightCm: [null] },
@@ -125,9 +145,41 @@ export class ParcelDetailsFormComponent implements OnInit, OnChanges, OnDestroy 
   }
 
   ngOnInit(): void {
+    this.loadParcelPolicy();
+
     this.form.valueChanges.pipe(debounceTime(400), takeUntil(this.destroy$)).subscribe(() => {
       this.emitQuoteParams();
     });
+  }
+
+  /* OBRS-629 — the weight cap and the prohibited list, from the config the
+   * intake path enforces. On failure the list renders an explicit "ask staff"
+   * message rather than the five categories this component used to hold: a
+   * stale-but-plausible list in front of an acknowledgement checkbox is the
+   * thing this card exists to remove, and a silent empty list would read as
+   * "nothing is prohibited". The weight cap simply stays uncapped client-side —
+   * validateWeight still rejects at intake. */
+  private loadParcelPolicy(): void {
+    this.parcelPolicyService
+      .getParcelPolicy()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const policy = res?.data;
+          this.policyLoaded = true;
+          this.prohibitedCategories = toProhibitedCategoryViews(policy?.prohibitedCategories);
+          if (typeof policy?.maxWeightKg === 'number') {
+            this.maxWeightKg = policy.maxWeightKg;
+            this.weightMaxParams.max = policy.maxWeightKg;
+            this.form.get('weightKg')?.updateValueAndValidity({ emitEvent: false });
+          }
+        },
+        error: () => {
+          this.policyLoaded = true;
+          this.prohibitedLoadFailed = true;
+          this.prohibitedCategories = [];
+        },
+      });
   }
 
   ngOnChanges(changes: SimpleChanges): void {

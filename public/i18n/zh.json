@@ -2909,7 +2909,7 @@
       "SUBMITTING": "提交中…",
       "VALIDATION": {
         "WEIGHT_POSITIVE": "重量必须大于 0。",
-        "WEIGHT_MAX": "重量不能超过 100 公斤。",
+        "WEIGHT_MAX": "重量不能超过 {{max}} 公斤。",
         "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空。",
         "DIMENSION_POSITIVE": "尺寸必须大于 0。"
       },
@@ -3231,26 +3231,18 @@
       "SUBMIT": "确认包裹信息",
       "SUBMITTING": "正在提交…"
     },
-    "PROHIBITED": {
-      "TITLE": "违禁物品",
-      "FLAMMABLE": "易燃液体/气体",
-      "EXPLOSIVE": "爆炸物或烟花",
-      "WEAPON": "武器或武器零件",
-      "NARCOTIC": "毒品或管制物品",
-      "CORPSE": "尸体或人体部分"
-    },
     "VALIDATION": {
       "REQUIRED": "此字段为必填项",
       "PHONE_INVALID": "请输入10-15位数字",
       "THAI_MOBILE_INVALID": "请输入有效的泰国手机号码（以 06、08 或 09 开头，例如 0812345678），包裹到达通知短信将发送至该号码。",
       "WEIGHT_POSITIVE": "重量必须大于0",
-      "WEIGHT_MAX": "重量不得超过100公斤",
+      "WEIGHT_MAX": "重量不得超过{{max}}公斤",
       "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空",
       "FROM_TO_SAME": "起点站和终点站不能相同"
     },
     "ERROR": {
       "PROHIBITED_NOT_ACK": "请先确认包裹不含违禁物品",
-      "WEIGHT_EXCEEDS_MAX": "包裹重量不得超过100公斤",
+      "WEIGHT_EXCEEDS_MAX": "包裹重量超过规定上限",
       "RECIPIENT_REQUIRED": "请完整填写收件人姓名和电话",
       "RECIPIENT_PHONE_INVALID": "收件人电话无效，请输入泰国手机号码，包裹到达通知短信将发送至该号码。",
       "STOP_ORDER_INVALID": "卸货点必须在同一路线上位于取件点之后，请重新选择",
@@ -3291,6 +3283,21 @@
       "WEIGHT_VALUE": "{{weight}} 公斤",
       "AMOUNT_PAID": "已付金额",
       "AMOUNT_DUE": "应付金额"
+    }
+  },
+  "PARCEL": {
+    "PROHIBITED": {
+      "TITLE": "违禁物品",
+      "ITEM": {
+        "FLAMMABLE": "易燃液体/气体",
+        "EXPLOSIVE": "爆炸物或烟花",
+        "WEAPON": "武器或武器零件",
+        "NARCOTIC": "毒品或管制物品",
+        "CORPSE": "尸体或人体部分"
+      },
+      "UNLISTED": "“{{slug}}”类物品",
+      "EMPTY": "系统目前未设定违禁物品类别，寄件前请先咨询工作人员。",
+      "LOAD_ERROR": "无法加载违禁物品清单，寄件前请先咨询工作人员。"
     }
   }
 }

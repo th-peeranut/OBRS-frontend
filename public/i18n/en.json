@@ -2909,7 +2909,7 @@
       "SUBMITTING": "Submitting…",
       "VALIDATION": {
         "WEIGHT_POSITIVE": "Weight must be greater than 0.",
-        "WEIGHT_MAX": "Weight cannot exceed 100 kg.",
+        "WEIGHT_MAX": "Weight cannot exceed {{max}} kg.",
         "DIMENSIONS_ALL_OR_NONE": "Enter all three dimensions, or leave all three blank.",
         "DIMENSION_POSITIVE": "Dimension must be greater than 0."
       },
@@ -3231,26 +3231,18 @@
       "SUBMIT": "Confirm parcel details",
       "SUBMITTING": "Submitting…"
     },
-    "PROHIBITED": {
-      "TITLE": "Prohibited items",
-      "FLAMMABLE": "Flammable liquids/gas",
-      "EXPLOSIVE": "Explosives or fireworks",
-      "WEAPON": "Weapons or weapon parts",
-      "NARCOTIC": "Narcotics or controlled substances",
-      "CORPSE": "Human remains"
-    },
     "VALIDATION": {
       "REQUIRED": "This field is required.",
       "PHONE_INVALID": "Enter 10-15 digits.",
       "THAI_MOBILE_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678). The arrival notice is sent to it by SMS.",
       "WEIGHT_POSITIVE": "Weight must be greater than 0.",
-      "WEIGHT_MAX": "Weight cannot exceed 100 kg.",
+      "WEIGHT_MAX": "Weight cannot exceed {{max}} kg.",
       "DIMENSIONS_ALL_OR_NONE": "Enter all three dimensions, or leave all three blank.",
       "FROM_TO_SAME": "Origin and destination stops cannot be the same."
     },
     "ERROR": {
       "PROHIBITED_NOT_ACK": "Please confirm your parcel has no prohibited items before continuing.",
-      "WEIGHT_EXCEEDS_MAX": "Parcel weight must not exceed 100 kg.",
+      "WEIGHT_EXCEEDS_MAX": "Parcel weight exceeds the configured limit.",
       "RECIPIENT_REQUIRED": "Please complete the recipient's name and phone.",
       "RECIPIENT_PHONE_INVALID": "Recipient phone is invalid. Enter a Thai mobile number — the arrival notice is sent to it by SMS.",
       "STOP_ORDER_INVALID": "Dropoff must be after pickup on the same route. Please choose again.",
@@ -3291,6 +3283,21 @@
       "WEIGHT_VALUE": "{{weight}} kg",
       "AMOUNT_PAID": "Amount paid",
       "AMOUNT_DUE": "Amount due"
+    }
+  },
+  "PARCEL": {
+    "PROHIBITED": {
+      "TITLE": "Prohibited items",
+      "ITEM": {
+        "FLAMMABLE": "Flammable liquids/gas",
+        "EXPLOSIVE": "Explosives or fireworks",
+        "WEAPON": "Weapons or weapon parts",
+        "NARCOTIC": "Narcotics or controlled substances",
+        "CORPSE": "Human remains"
+      },
+      "UNLISTED": "Items in the \"{{slug}}\" category",
+      "EMPTY": "No prohibited categories are configured right now. Please ask staff before consigning.",
+      "LOAD_ERROR": "The prohibited-item list could not be loaded. Please ask staff before consigning."
     }
   }
 }
