@@ -79,11 +79,23 @@ export function createScheduleServiceStub(): any {
 }
 
 /** AuthService: `authStatus$` is a real BehaviorSubject so a test can `.next()`
- *  auth-state transitions; defaults anonymous (false). */
-export function createAuthServiceStub(isAuthenticated = false): any {
+ *  auth-state transitions; defaults anonymous (false).
+ *
+ *  OBRS-667: `hasAnyRole` is an optional 2nd param, default `false`, so every
+ *  existing single-arg call site (`createAuthServiceStub(true)`) stays
+ *  byte-identical. Pass `true` for an owner/admin-equivalent stub, `false`
+ *  for salesperson/driver, or a predicate `(roles) => boolean` for a case
+ *  that cares which roles were asked for. */
+export function createAuthServiceStub(
+  isAuthenticated = false,
+  hasAnyRole: boolean | ((roles: string[]) => boolean) = false
+): any {
   return {
     authStatus$: new BehaviorSubject<boolean>(isAuthenticated),
     isAuthenticated: () => isAuthenticated,
+    hasAnyRole: jasmine.createSpy('hasAnyRole').and.callFake(
+      typeof hasAnyRole === 'function' ? hasAnyRole : () => hasAnyRole
+    ),
   };
 }
 

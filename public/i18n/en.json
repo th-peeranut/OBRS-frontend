@@ -592,6 +592,7 @@
       "CANCEL_TRIP_BTN": "Cancel Trip",
       "SCHEDULE_CANCELLED": "Trip cancelled successfully. {{count}} booking(s) affected.",
       "CANCEL_FAILED": "Unable to cancel the trip.",
+      "CANCEL_TRIP_OWNER_ONLY": "Only an owner can cancel a trip that has bookings.",
       "LOAD_INSPECTIONS_FAILED": "Failed to load inspection history."
     },
     "LOOKUP": {

@@ -1,8 +1,21 @@
 import { BehaviorSubject, of, throwError, Subject } from 'rxjs';
-import { FormBuilder } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { SellPageComponent } from './sell-page.component';
-import { WalkInTripDto, WalkInRouteGroupDto } from '../../../../services/staff/staff-api.service';
-import { createRouterStub, createTranslateStub } from '../../../../testing/test-stubs';
+import {
+  StaffApiService,
+  WalkInTripDto,
+  WalkInRouteGroupDto,
+} from '../../../../services/staff/staff-api.service';
+import { createAuthServiceStub, createRouterStub, createTranslateStub } from '../../../../testing/test-stubs';
+import { AuthService } from '../../../../auth/auth.service';
+import { AdminApiService } from '../../../../services/admin/admin-api.service';
+import { AlertService } from '../../../../shared/services/alert.service';
+import { StaffSchedulesStore } from '../staff-schedules/staff-schedules.store';
 import { WalkInCheckoutPayload } from '../../components/walk-in-checkout/walk-in-checkout.component';
 
 function makeTrip(overrides: Partial<WalkInTripDto> = {}): WalkInTripDto {
@@ -110,7 +123,12 @@ function makeComponent(
   alertService = createAlertStub(),
   adminApi = createAdminApiStub(),
   scheduleStore = createScheduleStoreStub(),
-  router = createRouterStub()
+  router = createRouterStub(),
+  // OBRS-667: defaults to an owner stub so every pre-existing test here (none
+  // of which exercise the permission gate) keeps testing what it was written
+  // for; the negative case gets its own stub explicitly (see the DOM suite
+  // below).
+  authStub = createAuthServiceStub(false, true)
 ): SellPageComponent {
   return new SellPageComponent(
     staffApi,
@@ -119,7 +137,8 @@ function makeComponent(
     new FormBuilder(),
     adminApi,
     scheduleStore,
-    router
+    router,
+    authStub
   );
 }
 
@@ -811,7 +830,8 @@ describe('SellPageComponent', () => {
         new FormBuilder(),
         createAdminApiStub(),
         createScheduleStoreStub(),
-        createRouterStub()
+        createRouterStub(),
+        createAuthServiceStub(false, true)
       );
       return { comp, translate };
     }
@@ -984,7 +1004,8 @@ describe('SellPageComponent', () => {
         new FormBuilder(),
         createAdminApiStub(),
         createScheduleStoreStub(),
-        createRouterStub()
+        createRouterStub(),
+        createAuthServiceStub(false, true)
       );
       return { comp, api, translate };
     }
@@ -1048,7 +1069,8 @@ describe('SellPageComponent', () => {
       });
       const comp = new SellPageComponent(
         api, createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), createScheduleStoreStub(), createRouterStub()
+        createAdminApiStub(), createScheduleStoreStub(), createRouterStub(),
+        createAuthServiceStub(false, true)
       );
       comp.ngOnInit();
       (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
@@ -1212,7 +1234,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store, createRouterStub()
+        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true)
       );
       comp.ngOnInit();
 
@@ -1239,7 +1261,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store, createRouterStub()
+        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true)
       );
       comp.ngOnInit();
 
@@ -1265,7 +1287,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store, createRouterStub()
+        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true)
       );
       comp.ngOnInit();
 
@@ -1289,7 +1311,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store, createRouterStub()
+        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true)
       );
       comp.ngOnInit();
 
@@ -1317,7 +1339,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store, createRouterStub()
+        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true)
       );
       comp.ngOnInit();
 
@@ -1661,5 +1683,113 @@ describe('SellPageComponent', () => {
       expect(api.createWalkInBooking).toHaveBeenCalledTimes(1);
       expect(alert.error).toHaveBeenCalledWith('STAFF.SELL.ERR_JUMPSEAT_ACK_REQUIRED');
     });
+  });
+});
+
+// OBRS-667: backend now restricts POST .../cancel to hasRole('OWNER') (a
+// whole-trip cancel one-click-refunds every confirmed booking on the
+// schedule). This suite renders the REAL template via TestBed — the specs
+// above only assert `scheduleDeleteModalMode`/`confirmDeleteSchedule()` in
+// isolation, which cannot prove the confirm BUTTON is actually absent from
+// the DOM.
+describe('SellPageComponent — OBRS-667 owner-only cancel gate (DOM)', () => {
+  const CANCEL_TRIP = makeTrip({ scheduleId: 10, deletable: false, confirmedBookingCount: 5 });
+  const HARD_DELETE_TRIP = makeTrip({ scheduleId: 10, deletable: true });
+
+  function setupFixture(hasAnyRole: boolean): {
+    fixture: ComponentFixture<SellPageComponent>;
+    component: SellPageComponent;
+    cancelSpy: jasmine.Spy;
+    deleteSpy: jasmine.Spy;
+  } {
+    const cancelSpy = jasmine.createSpy('cancelSchedule').and.returnValue(
+      of({ data: { scheduleId: 10, status: 'cancelled', affectedBookingCount: 5 } })
+    );
+    const deleteSpy = jasmine.createSpy('deleteSchedule').and.returnValue(of({ data: null }));
+
+    TestBed.configureTestingModule({
+      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
+      declarations: [SellPageComponent],
+      providers: [
+        { provide: StaffApiService, useValue: createStaffApiStub() },
+        { provide: AlertService, useValue: createAlertStub() },
+        {
+          provide: AdminApiService,
+          useValue: { ...createAdminApiStub(), cancelSchedule: cancelSpy, deleteSchedule: deleteSpy },
+        },
+        { provide: StaffSchedulesStore, useValue: createScheduleStoreStub() },
+        { provide: Router, useValue: createRouterStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false, hasAnyRole) },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(SellPageComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges(); // ngOnInit
+
+    return { fixture, component, cancelSpy, deleteSpy };
+  }
+
+  it('owner: the confirm button IS rendered in cancel-mode and clicking it calls cancelSchedule()', async () => {
+    const { fixture, component, cancelSpy, deleteSpy } = setupFixture(true);
+    (component as any).routeGroups = [makeRouteGroup('r1', [CANCEL_TRIP])];
+    (component as any).onDeleteScheduleClicked({ trip: CANCEL_TRIP, routeSlug: 'r1' });
+    fixture.detectChanges();
+
+    const confirmBtn: HTMLButtonElement | null =
+      fixture.nativeElement.querySelector('.modal-footer .btn-danger');
+    expect(confirmBtn).withContext('owner must see the cancel confirm button').not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.modal-footer .text-muted')).toBeNull();
+
+    confirmBtn!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(cancelSpy).toHaveBeenCalledWith(10);
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  it('salesperson: the confirm button is ABSENT in cancel-mode, the permission line renders, and a forced call is a no-op', async () => {
+    const { fixture, component, cancelSpy, deleteSpy } = setupFixture(false);
+    (component as any).routeGroups = [makeRouteGroup('r1', [CANCEL_TRIP])];
+    (component as any).onDeleteScheduleClicked({ trip: CANCEL_TRIP, routeSlug: 'r1' });
+    fixture.detectChanges();
+
+    const confirmBtn = fixture.nativeElement.querySelector('.modal-footer .btn-danger');
+    expect(confirmBtn).withContext('salesperson must NOT see the cancel confirm button').toBeNull();
+
+    const permissionLine: HTMLElement | null =
+      fixture.nativeElement.querySelector('.modal-footer .text-muted');
+    expect(permissionLine).withContext('the permission line must render in its place').not.toBeNull();
+    expect(permissionLine!.textContent).toContain('ADMIN.MESSAGES.CANCEL_TRIP_OWNER_ONLY');
+
+    // Defence in depth: a DOM-forced call on the handler (no button to click) must no-op.
+    await (component as any).confirmDeleteSchedule();
+    fixture.detectChanges();
+
+    expect(cancelSpy).not.toHaveBeenCalled();
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  it('salesperson, hard-delete trip (deletable:true): the confirm button IS rendered and clicking it calls deleteSchedule() — the gate is scoped to cancel-mode only', async () => {
+    const { fixture, component, cancelSpy, deleteSpy } = setupFixture(false);
+    (component as any).routeGroups = [makeRouteGroup('r1', [HARD_DELETE_TRIP])];
+    (component as any).onDeleteScheduleClicked({ trip: HARD_DELETE_TRIP, routeSlug: 'r1' });
+    fixture.detectChanges();
+
+    expect((component as any).scheduleDeleteModalMode).toBe('delete');
+    const confirmBtn: HTMLButtonElement | null =
+      fixture.nativeElement.querySelector('.modal-footer .btn-danger');
+    expect(confirmBtn)
+      .withContext('hard-delete must remain available to counter staff regardless of the owner-only cancel gate')
+      .not.toBeNull();
+
+    confirmBtn!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(deleteSpy).toHaveBeenCalledWith(10);
+    expect(cancelSpy).not.toHaveBeenCalled();
   });
 });

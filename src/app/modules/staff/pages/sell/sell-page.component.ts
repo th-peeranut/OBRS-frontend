@@ -5,6 +5,7 @@ import { Observable, Subject, firstValueFrom, forkJoin, of, take } from 'rxjs';
 import { catchError, map, shareReplay, takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import dayjs from 'dayjs';
+import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
@@ -159,6 +160,13 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected scheduleVehicleTypeOptions: { code: string; label: string }[] = [];
   protected scheduleVehicleOptions: { code: string; label: string }[] = [];
   protected scheduleDriverOptions: { code: string; label: string }[] = [];
+  // OBRS-667: whole-trip cancel (mode !== 'delete' below) issues a one-click
+  // 100% refund to every confirmed booking on the schedule, so the backend
+  // now restricts POST .../cancel to hasRole('OWNER'). Computed once here
+  // (not a template getter — see FRONTEND-GOTCHAS "template expression that
+  // allocates per cycle") and mirrors the backend guard exactly via
+  // hasAnyRole (a permission check), never getRoles().includes(...).
+  protected readonly canCancelSchedule: boolean;
 
   constructor(
     private readonly staffApiService: StaffApiService,
@@ -167,7 +175,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
     private readonly formBuilder: FormBuilder,
     private readonly adminApiService: AdminApiService,
     readonly scheduleStore: StaffSchedulesStore,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly authService: AuthService
   ) {
     this.scheduleItemForm = this.formBuilder.group({
       departureDate: [null, [Validators.required]],
@@ -177,6 +186,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
       vehicleId: [''],
       driverId: [''],
     });
+
+    this.canCancelSchedule = this.authService.hasAnyRole(['owner']);
   }
 
   ngOnInit(): void {
@@ -928,6 +939,12 @@ export class SellPageComponent implements OnInit, OnDestroy {
     const trip = this.deletingTrip;
     const scheduleId = trip.scheduleId;
     const mode = this.scheduleDeleteModalMode;
+    // OBRS-667 defence in depth: the confirm button is hidden in cancel-mode
+    // for a non-owner (see the template), but a DOM-forced click must not be
+    // able to fire cancelSchedule() either. Silent no-op, and BEFORE the
+    // optimistic routeGroups mutation below — the backend 403 guard is the
+    // real security boundary, this is only the UX mirror.
+    if (mode !== 'delete' && !this.canCancelSchedule) return;
 
     // OPTIMISTIC: remove from routeGroups immediately (new arrays — parent-owned).
     // A cancelled trip is no longer sellable either, so this is safe for both
