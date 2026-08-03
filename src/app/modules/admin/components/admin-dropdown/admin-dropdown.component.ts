@@ -114,8 +114,17 @@ export class AdminDropdownComponent implements ControlValueAccessor {
 
   // Arrow-function field: NgForOf invokes trackBy as a free function, so a
   // regular method would lose `this` and `this.getOptionValue` would be undefined.
-  trackByOption = (_index: number, option: unknown): string => {
-    return this.getOptionValue(option);
+  //
+  // OBRS-967: `getOptionValue` collapses every option that lacks `valueKey` (or
+  // holds an empty one) to the SAME '' key, so two such options in one list would
+  // hand @for duplicate keys and Angular would log NG0955. No call site in the app
+  // produces that today (measured: 56 <app-admin-dropdown> uses, 55 pass valueKey,
+  // and the one that does not supplies options carrying the default key `value`),
+  // so this is hardening against a data shape, not a live defect. A real value is
+  // still returned unchanged -- only the empty case is namespaced on the index.
+  trackByOption = (index: number, option: unknown): string => {
+    const value = this.getOptionValue(option);
+    return value === '' ? `__empty_${index}__` : value;
   };
 
   private isRecord(value: unknown): value is Record<string, unknown> {

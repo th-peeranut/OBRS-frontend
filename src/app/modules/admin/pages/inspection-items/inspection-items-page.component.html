@@ -42,7 +42,7 @@
       </thead>
       <tbody>
         @if (isLoading) {
-          @for (skeletonRow of skeletonRows; track skeletonRow) {
+          @for (skeletonRow of skeletonRows; track $index) {
             <tr class="admin-skeleton-row" aria-hidden="true">
               <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
               <!-- OBRS-529: one skeleton line, matching the single label line the real

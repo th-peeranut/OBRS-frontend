@@ -121,7 +121,7 @@
     </div>
     @if (isLoading) {
       <div class="ra-chart-skeleton">
-        @for (s of skeletonTiles; track s) {
+        @for (s of skeletonTiles; track $index) {
           <span class="admin-skeleton"></span>
         }
       </div>

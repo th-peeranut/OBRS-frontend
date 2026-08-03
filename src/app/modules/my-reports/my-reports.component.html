@@ -9,7 +9,7 @@
 
     <!-- Loading skeletons (first load only). -->
     @if (isInitialLoading) {
-      @for (row of skeletonRows; track row) {
+      @for (row of skeletonRows; track $index) {
         <div class="report-card report-card--skeleton">
           <span class="skeleton skeleton--line"></span>
           <span class="skeleton skeleton--line skeleton--short"></span>

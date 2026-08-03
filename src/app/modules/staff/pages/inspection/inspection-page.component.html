@@ -79,7 +79,7 @@
     }
     <!-- Loading: 6 skeleton cards matching the real row's visual weight. -->
     @if (isLoading) {
-      @for (skeleton of skeletonRows; track skeleton) {
+      @for (skeleton of skeletonRows; track $index) {
         <div class="inspection-row inspection-row--skeleton">
           <span class="admin-skeleton"></span>
           <span class="admin-skeleton admin-skeleton--pill"></span>
