@@ -65,8 +65,15 @@ function adminChildren(): Route[] {
  */
 const ROLES_BEFORE_OBRS_702: Record<string, readonly string[]> = {
   'booking-policy': ['admin', 'owner'],
-  reminders: ['admin'],
-  'jump-seat': ['admin'],
+  // OBRS-1016 moved these two off ['admin'] ON PURPOSE, so the pin moves with
+  // them — the alternative, leaving the pin behind, turns a deliberate product
+  // decision (ADR-0120: the owner operates the reminder timings and the
+  // jump-seat switch, backend guards flipped to hasRole('OWNER')) into a red
+  // suite that the next session "fixes" by reverting the decision. Access is
+  // unchanged in practice: ROLE_GRANTS already admitted owner to both, which is
+  // precisely how the 403 reached a real user.
+  reminders: ['admin', 'owner'],
+  'jump-seat': ['admin', 'owner'],
   history: ['admin', 'owner'],
   // OBRS-960: two NEW tabs, never a standalone route — "before" is simply
   // their own requiredRoles at creation, same frozen-literal discipline as
