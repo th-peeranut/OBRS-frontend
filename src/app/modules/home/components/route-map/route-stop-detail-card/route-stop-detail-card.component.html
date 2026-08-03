@@ -29,13 +29,35 @@
       </div>
     </div>
     <!-- PHOTO -->
-    @if (stop.primaryPhotoUrl) {
+    <!-- OBRS-1022: `showPhoto` is not just `stop.primaryPhotoUrl` — it also drops to the empty
+         state when the URL is set but the image FAILS to load. One seeded Google photo returns
+         403 today, and a broken-image glyph beside a Thai alt text is exactly what the owner
+         reported as "the photo is missing"; a designed empty state says the same thing on
+         purpose, in words, in the customer's language. -->
+    @if (showPhoto) {
       <img
         [src]="stop.primaryPhotoUrl"
         class="detail-photo w-100 rounded mb-2"
         [alt]="stop.name"
         loading="lazy"
+        (error)="onPhotoError()"
         />
+    } @else {
+      <div class="detail-photo-empty d-flex flex-column align-items-center justify-content-center mb-2">
+        <i class="bi bi-image fs-4 mb-1"></i>
+        <span class="small">{{ 'HOME.ROUTE_MAP.DETAIL_NO_PHOTO' | translate }}</span>
+      </div>
+    }
+    <!-- LANDMARK NOTE -->
+    <!-- The answer to "รายละเอียดจุดรับ (ชลบุรี)" telling the customer nothing: this is the one
+         line on the card an owner writes themselves, and the only one that can say something a
+         map cannot ("อยู่ติดกับร้านขายโทรศัพท์มือถือ"). Absent until an owner writes it. -->
+    @if (landmark) {
+      <div class="detail-landmark mb-2 small">
+        <i class="bi bi-signpost-split me-1"></i>
+        <span class="detail-landmark-label">{{ 'HOME.ROUTE_MAP.DETAIL_LANDMARK_LABEL' | translate }}:</span>
+        {{ landmark }}
+      </div>
     }
     <!-- APPROX TIME -->
     <div class="mb-2 small">

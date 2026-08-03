@@ -19,6 +19,12 @@ export interface RouteStop {
   longitude: number | null;
   primaryPhotoUrl: string | null;
   googleMapsUrl: string | null;
+  /** OBRS-1022: the owner-written landmark note for this stop ("opposite the mobile
+   *  phone shop") — `stop_translations.description` in the request locale, with an
+   *  `en` fallback. Optional AND nullable on purpose: the backend omits null keys, so
+   *  a stop with no note written yet arrives with the property ABSENT, not null, and
+   *  that is the default state of every stop today — not an error to report. */
+  description?: string | null;
 }
 
 /** Authoritative pickup→dropoff span, derived from two `RouteStop` offsets
