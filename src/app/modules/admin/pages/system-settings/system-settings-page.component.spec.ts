@@ -67,7 +67,7 @@ const ROLES_BEFORE_OBRS_702: Record<string, readonly string[]> = {
   'booking-policy': ['admin', 'owner'],
   // OBRS-1016 moved these two off ['admin'] ON PURPOSE, so the pin moves with
   // them — the alternative, leaving the pin behind, turns a deliberate product
-  // decision (ADR-0119: the owner operates the reminder timings and the
+  // decision (ADR-0120: the owner operates the reminder timings and the
   // jump-seat switch, backend guards flipped to hasRole('OWNER')) into a red
   // suite that the next session "fixes" by reverting the decision. Access is
   // unchanged in practice: ROLE_GRANTS already admitted owner to both, which is

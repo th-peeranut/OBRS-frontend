@@ -77,7 +77,7 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     // GET/PUT /private/admin/configs/reminders moved from hasRole('ADMIN') to
     // hasRole('OWNER') — an owner who reached this tab used to get a 403 and an
     // empty card. Per the doc above, the literal must say which side it means
-    // for the day owner-scoping makes it bite; after ADR-0119 that side is owner.
+    // for the day owner-scoping makes it bite; after ADR-0120 that side is owner.
     requiredRoles: ['admin', 'owner'],
     component: ReminderConfigPageComponent,
   },
@@ -86,7 +86,7 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     legacyPath: 'jump-seat-config',
     labelKey: 'ADMIN.PAGES.JUMP_SEAT_CONFIG',
     subtitleKey: 'ADMIN.JUMP_SEAT_CONFIG.SUBTITLE',
-    // OBRS-1016 / ADR-0119: same move as the reminders tab above — the backend
+    // OBRS-1016 / ADR-0120: same move as the reminders tab above — the backend
     // GET/PUT /private/admin/configs/jump-seat is hasRole('OWNER') now.
     requiredRoles: ['admin', 'owner'],
     component: JumpSeatConfigPageComponent,
