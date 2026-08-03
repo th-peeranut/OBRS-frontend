@@ -4,7 +4,17 @@ import {
   APP_LANGUAGE_KEY,
   DEFAULT_LANGUAGE,
   LanguageService,
+  withShortDayName,
 } from './language.service';
+
+/** The `CALENDAR.dateFormat` each shipped locale actually declares, read out of
+ *  `public/i18n/*.json` — NOT invented here. If one of those files changes, this
+ *  table is what makes the spec notice. */
+const SHIPPED_DATE_FORMATS: ReadonlyArray<[string, string, string]> = [
+  ['th', 'dd/mm/yy', 'D, dd/mm/yy'],
+  ['en', 'mm/dd/yy', 'D, mm/dd/yy'],
+  ['zh', 'yy/mm/dd', 'D, yy/mm/dd'],
+];
 
 describe('LanguageService', () => {
   let translate: any;
@@ -54,5 +64,73 @@ describe('LanguageService', () => {
 
   it('getStoredLanguage falls back to the default when nothing is stored', () => {
     expect(service.getStoredLanguage()).toBe(DEFAULT_LANGUAGE);
+  });
+
+  // OBRS-1023 ------------------------------------------------------------
+  describe('calendarDateFormat', () => {
+    it('starts undefined so PrimeNG keeps its own dateFormat fallback', () => {
+      // Not cosmetic: `getDateFormat()` is `this.dateFormat ||
+      // getTranslation('dateFormat')`, so publishing a placeholder here would
+      // SHADOW that fallback during the window before the i18n file lands —
+      // exactly the bug this card is fixing, one layer down.
+      expect(service.calendarDateFormat()).toBeUndefined();
+    });
+
+    SHIPPED_DATE_FORMATS.forEach(([lang, shipped, expected]) => {
+      it(`publishes "${expected}" for ${lang}`, async () => {
+        translate.get.and.returnValue(of({ dateFormat: shipped }));
+
+        await service.switch(lang);
+
+        expect(service.calendarDateFormat()).toBe(expected);
+      });
+    });
+
+    it('publishes the format only AFTER the day names reach PrimeNG', async () => {
+      // The format carries `D`, which `formatDate` resolves against
+      // `dayNamesShort` from the PrimeNG config. If the signal were set first,
+      // a re-render triggered by it would read the new format against the old
+      // day names. Ordering is the whole guarantee, so assert the ordering.
+      let formatWhenTranslationLanded: string | undefined = 'NOT_SET';
+      primeng.setTranslation.and.callFake(() => {
+        formatWhenTranslationLanded = service.calendarDateFormat();
+      });
+      translate.get.and.returnValue(of({ dateFormat: 'mm/dd/yy' }));
+
+      await service.switch('en');
+
+      expect(formatWhenTranslationLanded).toBeUndefined();
+      expect(service.calendarDateFormat()).toBe('D, mm/dd/yy');
+    });
+
+    it('stays undefined when the locale ships no dateFormat', async () => {
+      translate.get.and.returnValue(of({ dayNames: [] }));
+
+      await service.switch('en');
+
+      expect(service.calendarDateFormat()).toBeUndefined();
+    });
+  });
+
+  describe('withShortDayName', () => {
+    it('prefixes the short-day-name token', () => {
+      expect(withShortDayName('dd/mm/yy')).toBe('D, dd/mm/yy');
+    });
+
+    it('is idempotent — a second switch to the same language cannot stack prefixes', () => {
+      expect(withShortDayName('D, dd/mm/yy')).toBe('D, dd/mm/yy');
+    });
+
+    it('leaves a locale that places the day name itself alone', () => {
+      expect(withShortDayName('yy/mm/dd D')).toBe('yy/mm/dd D');
+    });
+
+    it('returns undefined for a missing format rather than a bare "D, "', () => {
+      // `'D, ' + undefined` would be the string "D, undefined", which PrimeNG
+      // would happily render into the customer's input box.
+      expect(withShortDayName(undefined)).toBeUndefined();
+      expect(withShortDayName(null)).toBeUndefined();
+      expect(withShortDayName('')).toBeUndefined();
+    });
   });
 });
