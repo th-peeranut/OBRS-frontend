@@ -76,6 +76,15 @@ describe('StaffLayoutComponent', () => {
   it('renders a link back to the public home page', () => {
     // Regression for #16: the staff shell must always provide a UI path to the
     // home page (/). Per #20 that path is the brand logo itself.
+    //
+    // OBRS-1001: this assertion passed for the entire life of the bug while the
+    // link it pins was unusable. The href really was rendered; AuthGuard then
+    // bounced every click, because salesperson/driver are the only roles that
+    // ever see this shell and were the only roles forbidden on `/`. A rendered
+    // href is not a reachable destination, and no unit test here could tell the
+    // difference. What makes this case mean something now is its companion in
+    // auth.guard.spec.ts ('lets a signed-in salesperson onto the public home
+    // page'), which drives the real guard with real localStorage roles.
     const homeLink = fixture.debugElement.query(By.css('a[href="/"]'));
     expect(homeLink).withContext('home link should exist').toBeTruthy();
   });

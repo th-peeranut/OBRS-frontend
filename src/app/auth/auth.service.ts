@@ -89,11 +89,16 @@ export class AuthService {
     customer: ['customer'],
   };
 
-  // Roles that are confined to a non-public portal. A logged-in user holding
-  // only these (and not owner/customer) must be bounced out of customer
-  // pages. Admin is deliberately NOT in this list (OBRS-176): admin now has
-  // cross-area access and may reach the customer area, mirroring owner.
-  private static readonly PORTAL_ONLY_ROLES = ['salesperson', 'driver'];
+  // OBRS-1001 deleted PORTAL_ONLY_ROLES and canAccessCustomerArea() from this
+  // file. They confined salesperson/driver to the staff portal, which made the
+  // staff shell's own brand link (routerLink="/", aria-label "หน้าแรก") a
+  // guaranteed no-op for the only two roles that ever see that shell: the guard
+  // bounced them straight back to getHomeRoute(). OBRS-176 had already reversed
+  // the same confinement for admin; this finishes it. See
+  // docs/adr/0037-no-frontend-portal-confinement.md — in particular that the
+  // backend's role hierarchy (ROLE_SALESPERSON > ROLE_DRIVER > ROLE_USER) has
+  // always authorized these roles on customer endpoints, so the frontend list
+  // was a UX confinement and never a security boundary.
 
   // Observable to track authentication status
   private authStatusSubject = new BehaviorSubject<boolean>(
@@ -348,24 +353,6 @@ export class AuthService {
       return '/staff';
     }
     return '/';
-  }
-
-  // Whether the current identity may sit on public/customer pages. Guests and
-  // customers/owners/admins belong there; a user with no recognised portal
-  // role fails open to the public site. Only users confined to a staff
-  // portal (salesperson/driver and not also owner/customer/admin) are
-  // excluded — the guard bounces them home.
-  canAccessCustomerArea(): boolean {
-    const roles = this.getRoles();
-    if (roles.length === 0) {
-      return true;
-    }
-    if (roles.includes('owner') || roles.includes('customer')) {
-      return true;
-    }
-    return !roles.some((role) =>
-      AuthService.PORTAL_ONLY_ROLES.includes(role)
-    );
   }
 
   /**

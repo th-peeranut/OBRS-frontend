@@ -98,10 +98,14 @@ export const staffRoutes: Routes = [
       },
       {
         // OBRS-195/OBRS-188: a staff-owned, printable proof of a walk-in sale.
-        // Deliberately NOT `data: { customerArea: true }` — that would route
-        // through AuthGuard's public/customer branch and bounce staff off a
-        // portal-confined account the same way the old `/e-ticket` redirect
-        // did (OBRS-188). This is a normal staff-portal route instead.
+        // Deliberately NOT `data: { customerArea: true }` — this is a staff
+        // page and only a salesperson should reach it, which `requiredRoles`
+        // says and `customerArea` does not.
+        // OBRS-1001 retired the ORIGINAL reason given here: `customerArea`
+        // used to bounce staff outright (the `/e-ticket` failure OBRS-188 was
+        // named for), and no longer does. The route is unchanged — but the
+        // rationale above is the one that still holds, so it is written down
+        // rather than left pointing at a hazard that has been deleted.
         path: 'sell/receipt/:bookingId',
         component: SellReceiptPageComponent,
         canActivate: [AuthGuard],
