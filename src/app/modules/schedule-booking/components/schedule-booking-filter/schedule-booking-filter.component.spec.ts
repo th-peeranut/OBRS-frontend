@@ -287,3 +287,95 @@ describe('ScheduleBookingFilterComponent — date labels distinguish outbound fr
     expect(dateFieldLabels()).toEqual(['HOME.HOME_BOOKING.DEPARTURE_DATE']);
   });
 });
+
+/**
+ * OBRS-1028, second render site — see the long note on the matching block in
+ * home-booking.component.spec.ts for what the defect is.
+ *
+ * It gets its own tests for the reason OBRS-1021 proved the hard way: these two
+ * forms are copies of each other in markup, so the ONE thing that will not
+ * propagate a fix between them is markup. Nothing here would turn red if a
+ * later edit restored `inputId="templatedisplay"` in this file alone.
+ */
+describe('ScheduleBookingFilterComponent — each date field owns a unique input id its label points at (OBRS-1028)', () => {
+  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
+  let component: ScheduleBookingFilterComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingFilterComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        DropdownObrsPassengerComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: AlertService, useValue: { warning: () => {} } },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub(45) },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
+    component = fixture.componentInstance;
+  });
+
+  /** See the twin helper in home-booking.component.spec.ts: label and input are
+   *  read from the SAME `p-datePicker`, so a pair can never be mismatched the
+   *  way two separately-gathered lists can. */
+  function dateFieldWiring(): { labelFor: string | null; inputId: string | null }[] {
+    return fixture.debugElement.queryAll(By.css('p-datePicker')).map((picker) => ({
+      labelFor:
+        picker.parent?.query(By.css('label'))?.nativeElement.getAttribute('for') ?? null,
+      inputId: picker.query(By.css('input'))?.nativeElement.getAttribute('id') ?? null,
+    }));
+  }
+
+  it('gives the two round-trip calendars DIFFERENT input ids — they share a document', () => {
+    fixture.detectChanges();
+
+    // AFTER the first change detection: ngOnInit's saved-filter subscription
+    // re-derives this flag (the same trap the maxDate block above documents).
+    component.isRoundTripReturn = true;
+    fixture.detectChanges();
+
+    const ids = dateFieldWiring().map((w) => w.inputId);
+
+    expect(ids.length).toBe(2);
+    expect(ids).not.toContain(null);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('points each label at the id of its own input, so the label names that field', () => {
+    fixture.detectChanges();
+
+    component.isRoundTripReturn = true;
+    fixture.detectChanges();
+
+    const wiring = dateFieldWiring();
+
+    // Guards the vacuous pass: an empty list satisfies any per-item assertion.
+    expect(wiring.length).toBe(2);
+    for (const { labelFor, inputId } of wiring) {
+      expect(labelFor).not.toBeNull();
+      expect(labelFor).toBe(inputId);
+    }
+  });
+
+  it('still wires the single calendar in one-way mode', () => {
+    fixture.detectChanges();
+
+    component.isRoundTripReturn = false;
+    fixture.detectChanges();
+
+    const wiring = dateFieldWiring();
+
+    expect(wiring.length).toBe(1);
+    expect(wiring[0].labelFor).not.toBeNull();
+    expect(wiring[0].labelFor).toBe(wiring[0].inputId);
+  });
+});

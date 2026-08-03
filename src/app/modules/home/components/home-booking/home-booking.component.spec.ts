@@ -495,3 +495,105 @@ describe('HomeBookingComponent — date labels distinguish outbound from return 
     expect(dateFieldLabels()).toEqual(['HOME.HOME_BOOKING.DEPARTURE_DATE']);
   });
 });
+
+/**
+ * OBRS-1028, the defect sitting on the same lines OBRS-1021 just edited.
+ *
+ * Every date field in this form carried `inputId="templatedisplay"` — the same
+ * literal at all four date fields in the app (measured: it is the ONLY repeated
+ * `inputId` value in `src/`; the other three are unique) — and no `<label>`
+ * named the input it sat above. Two consequences, and the tests below are split
+ * to match them because a fix for one does not imply the other:
+ *
+ *  1. round-trip mode renders both calendars at once, so two `<input>` elements
+ *     claim `id="templatedisplay"` in one document. Invalid HTML, and
+ *     `getElementById` silently resolves to whichever came first.
+ *  2. the label was never associated, so a screen reader announces an unnamed
+ *     text field and a click on the words does nothing — which OBRS-1021 makes
+ *     *more* visible, not less: the two labels now differ in wording, and a
+ *     listener still cannot tell the fields apart.
+ *
+ * Both assertions read the RENDERED DOM. A template-source grep, or a check
+ * that `<label>` merely exists, passes against the bug — the elements were all
+ * present, only the wiring between them was missing.
+ */
+describe('HomeBookingComponent — each date field owns a unique input id its label points at (OBRS-1028)', () => {
+  let fixture: ComponentFixture<HomeBookingComponent>;
+  let component: HomeBookingComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        DropdownObrsPassengerComponent,
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(HomeBookingComponent);
+    component = fixture.componentInstance;
+  });
+
+  /** For each date field in DOM order: what its label points at, and what its
+   *  input actually calls itself. Read from the same `p-datePicker` so the pair
+   *  is guaranteed to belong together — comparing a list of `for=` values
+   *  against a list of `id=` values gathered separately would go green on two
+   *  labels that both point at the FIRST input. */
+  function dateFieldWiring(): { labelFor: string | null; inputId: string | null }[] {
+    return fixture.debugElement.queryAll(By.css('p-datePicker')).map((picker) => ({
+      labelFor:
+        picker.parent?.query(By.css('label'))?.nativeElement.getAttribute('for') ?? null,
+      inputId: picker.query(By.css('input'))?.nativeElement.getAttribute('id') ?? null,
+    }));
+  }
+
+  it('gives the two round-trip calendars DIFFERENT input ids — they share a document', () => {
+    component.isRoundTripReturn = true;
+    fixture.detectChanges();
+
+    const ids = dateFieldWiring().map((w) => w.inputId);
+
+    expect(ids.length).toBe(2);
+    expect(ids).not.toContain(null);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('points each label at the id of its own input, so the label names that field', () => {
+    component.isRoundTripReturn = true;
+    fixture.detectChanges();
+
+    const wiring = dateFieldWiring();
+
+    // Guards the vacuous pass: an empty list satisfies any per-item assertion,
+    // and that is exactly the state a broken slice (NG0304, a swallowed throw)
+    // leaves behind.
+    expect(wiring.length).toBe(2);
+    for (const { labelFor, inputId } of wiring) {
+      expect(labelFor).not.toBeNull();
+      expect(labelFor).toBe(inputId);
+    }
+  });
+
+  it('still wires the single calendar in one-way mode', () => {
+    component.isRoundTripReturn = false;
+    fixture.detectChanges();
+
+    const wiring = dateFieldWiring();
+
+    expect(wiring.length).toBe(1);
+    expect(wiring[0].labelFor).not.toBeNull();
+    expect(wiring[0].labelFor).toBe(wiring[0].inputId);
+  });
+});

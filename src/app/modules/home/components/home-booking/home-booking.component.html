@@ -73,8 +73,16 @@
               (all three locales) since before this screen shipped — the two
               keys had zero call sites, which is why nothing was ever mistranslated
               and nothing was ever right either. One-way keeps DEPARTURE_DATE:
-              with a single date field there is no "outbound" to contrast with. -->
-              <label>
+              with a single date field there is no "outbound" to contrast with.
+
+              OBRS-1028: `for`/`inputId` name THIS field. Both calendars used to
+              carry `inputId="templatedisplay"`, so round-trip mode put two
+              elements with the same id in one document, and neither label was
+              associated with anything — OBRS-1021 gave the two fields different
+              words, but a screen reader still announced two unnamed text boxes.
+              Pattern copied from reschedule-date-picker-step.component.html,
+              which has paired them correctly since it shipped. -->
+              <label for="home-departure-date">
                 {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }} :
               </label>
               <!-- CALENDAR MAIN ELEMENT -->
@@ -86,7 +94,7 @@
                 [maxDate]="maxDate"
                 [iconDisplay]="'input'"
                 [showIcon]="true"
-                inputId="templatedisplay"
+                inputId="home-departure-date"
                 formControlName="departureDate"
                 >
                 <!-- CUSTOM CALENDAR ICON -->
@@ -106,8 +114,10 @@
                 two fields rendered the same words and only their order told a
                 customer which was which (OBRS-1021). -->
                 <div class="form-group-obrs">
-                  <!-- LABEL -->
-                  <label>
+                  <!-- LABEL (OBRS-1028: its own id — this block only renders
+                  alongside the departure one, so a shared id was always a
+                  duplicate, never a merely-unhelpful name). -->
+                  <label for="home-return-date">
                     {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }} :
                   </label>
                   <!-- CALENDAR MAIN ELEMENT -->
@@ -119,7 +129,7 @@
                     [maxDate]="maxDate"
                     [iconDisplay]="'input'"
                     [showIcon]="true"
-                    inputId="templatedisplay"
+                    inputId="home-return-date"
                     formControlName="returnDate"
                     >
                     <!-- CUSTOM CALENDAR ICON -->
