@@ -3,9 +3,15 @@
 e.g. a 21-seat minibus — can be rendered. The default layout produces the
 exact same DOM the previous hardcoded template did. -->
 <div class="card-container">
-  @for (row of rows; track row) {
+  <!-- OBRS-967: tracked by $index, NOT by the row/cell object. A SeatLayout is built
+  from SHARED cell constants (`EMPTY`/`DRIVER` in shared/lib/seat-layout.ts), so the
+  default van's first row holds the very same EMPTY reference at index 1 and index 2 —
+  identity tracking handed @for two equal keys and Angular logged NG0955 on every
+  render. A layout is positional and never reorders in place, so $index IS the
+  identity here. -->
+  @for (row of rows; track $index) {
     <div class="seat-row">
-      @for (cell of row; track cell) {
+      @for (cell of row; track $index) {
         @switch (cell.kind) {
           <!-- SEAT -->
           @case ('seat') {

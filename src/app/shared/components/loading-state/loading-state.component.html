@@ -1,6 +1,6 @@
 <span class="loading-state loading-state--{{ variant }}" role="status" aria-live="polite" aria-busy="true">
   @if (variant === 'skeleton') {
-    @for (row of skeletonRowIndexes; track row) {
+    @for (row of skeletonRowIndexes; track $index) {
       <span
         class="admin-skeleton"
         [class.admin-skeleton--sm]="skeletonShape === 'sm'"
