@@ -36,7 +36,7 @@ same rule as app-settlements-list. -->
           </thead>
           <tbody>
             @if (contentState === 'loading') {
-              @for (row of skeletonRows; track row) {
+              @for (row of skeletonRows; track $index) {
                 <tr class="admin-skeleton-row" aria-hidden="true">
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>

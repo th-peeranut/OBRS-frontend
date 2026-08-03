@@ -38,7 +38,7 @@
           }
 
           @if (isFetching && !detail) {
-            @for (row of skeletonRows; track row) {
+            @for (row of skeletonRows; track $index) {
               <div class="admin-skeleton admin-skeleton--sm mb-2"></div>
             }
           }
