@@ -1,5 +1,12 @@
 @use 'driver-cash-form' as *;
 
+// OBRS-775 host-box rule: an Angular host defaults to `display: inline`, so
+// wrapping an in-flow block child makes the host box malformed. Every routed
+// host in this repo declares its own display.
+:host {
+  display: block;
+}
+
 // OBRS-960 — sticky context strip, ADR-0023 pattern: `--admin-surface-card`
 // (the CARD token, not the page-bg token — a page-bg strip would blend into
 // the background instead of reading as chrome, same reasoning ADR-0023

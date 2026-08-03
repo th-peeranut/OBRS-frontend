@@ -4,6 +4,13 @@
 // in shape and classes").
 @use '../cash-signoff-form';
 
+// OBRS-775 host-box rule: an Angular host defaults to `display: inline`, so
+// wrapping an in-flow block child makes the host box malformed. Must sit
+// AFTER the @use above — Sass rejects any rule before an @use.
+:host {
+  display: block;
+}
+
 .driver-cash-return-modal {
   max-width: 720px;
   width: 100%;

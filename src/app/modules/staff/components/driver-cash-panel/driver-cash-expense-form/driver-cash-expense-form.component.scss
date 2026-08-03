@@ -1,1 +1,8 @@
 @use '../driver-cash-form' as *;
+
+// OBRS-775 host-box rule: an Angular host defaults to `display: inline`, so
+// wrapping an in-flow block child makes the host box malformed.
+:host {
+  display: block;
+}
+
