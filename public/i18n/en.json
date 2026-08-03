@@ -3283,6 +3283,7 @@
         "ACTION_LABEL": "Cash advance",
         "AMOUNT_LABEL": "Amount",
         "AMOUNT_PLACEHOLDER": "0.00",
+        "HINT": "Cash the driver carries to pay for fuel/tolls along the way — not a spent expense; the end-of-day close-out reclaims whatever is left.",
         "SUBMIT": "Record advance"
       },
       "PER_HEAD": {

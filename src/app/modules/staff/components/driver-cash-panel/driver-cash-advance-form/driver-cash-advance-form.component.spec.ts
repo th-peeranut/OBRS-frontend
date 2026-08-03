@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DriverCashAdvanceFormComponent } from './driver-cash-advance-form.component';
 
 describe('DriverCashAdvanceFormComponent', () => {
@@ -19,6 +19,30 @@ describe('DriverCashAdvanceFormComponent', () => {
   function submitBtn(): HTMLButtonElement {
     return fixture.nativeElement.querySelector('[data-testid="driver-cash-advance-submit"]');
   }
+
+  // OBRS-1015 AC3. Asserts the RENDERED, TRANSLATED string — mounting the
+  // component proves nothing here, and a `translate` pipe with no loaded
+  // translation happily emits the raw key, which is exactly the user-visible
+  // defect this hint exists to avoid. So the test loads a translation and
+  // then requires the key itself to be absent from the DOM.
+  it('renders the ADVANCE hint as translated text, not as the raw key', () => {
+    const hintText =
+      'เงินที่ให้คนขับถือไปจ่ายค่าน้ำมัน/ทางด่วนระหว่างทาง — ตอนปิดยอดสิ้นวันระบบจะเรียกคืนส่วนที่เหลือ';
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('th', {
+      STAFF: { DRIVER_CASH: { ADVANCE: { HINT: hintText } } },
+    });
+    translate.use('th');
+
+    fixture.detectChanges();
+
+    const hint: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="driver-cash-advance-hint"]',
+    );
+    expect(hint).withContext('the hint element is not in the DOM at all').toBeTruthy();
+    expect(hint.textContent?.trim()).toBe(hintText);
+    expect(fixture.nativeElement.textContent).not.toContain('STAFF.DRIVER_CASH.ADVANCE.HINT');
+  });
 
   it('blocks submit on an invalid amount', () => {
     component['amountInput'] = 'abc';

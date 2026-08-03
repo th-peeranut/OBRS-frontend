@@ -3283,6 +3283,7 @@
         "ACTION_LABEL": "现金预支",
         "AMOUNT_LABEL": "金额",
         "AMOUNT_PLACEHOLDER": "0.00",
+        "HINT": "交给司机在途中支付油费/过路费的现金——这不是已花掉的支出，日终结算时系统会收回剩余部分。",
         "SUBMIT": "记录预支款"
       },
       "PER_HEAD": {
