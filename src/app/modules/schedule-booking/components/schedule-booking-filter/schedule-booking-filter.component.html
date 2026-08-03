@@ -49,9 +49,14 @@
             }
             <!-- DEPARTURE DATE -->
             <div class="form-group-obrs">
-              <!-- LABEL -->
+              <!-- LABEL. OBRS-1021 — see the identical block in
+              home-booking.component.html. This filter bar is a copy of that
+              form and carried the same two-identical-labels bug; fixing only
+              the Home screen would have left it live on the results page,
+              where a customer refining a round trip is even more likely to be
+              changing exactly one of the two dates. -->
               <label>
-                {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+                {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }} :
               </label>
               <!-- CALENDAR MAIN ELEMENT -->
               <p-datePicker
@@ -77,11 +82,12 @@
               </div>
               <!-- ROUND TRIP RETURN -->
               @if (isRoundTripReturn) {
-                <!-- DEPARTURE DATE -->
+                <!-- RETURN DATE (OBRS-1021 — was labelled DEPARTURE DATE, in
+                the comment and on screen, because the block is a copy). -->
                 <div class="form-group-obrs">
                   <!-- LABEL -->
                   <label>
-                    {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+                    {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }} :
                   </label>
                   <!-- CALENDAR MAIN ELEMENT -->
                   <p-datePicker

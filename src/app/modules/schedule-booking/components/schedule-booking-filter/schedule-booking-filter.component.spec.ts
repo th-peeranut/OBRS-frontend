@@ -212,3 +212,78 @@ describe('ScheduleBookingFilterComponent — maxDate bound to BOTH calendars (OB
     }
   });
 });
+
+/**
+ * OBRS-1021, second render site. This filter bar is a copy of the Home search
+ * form, so it inherited the copy that caused the bug: the return-date block
+ * carried the departure block's `<label>`, and round-trip mode showed the same
+ * words twice.
+ *
+ * It gets its own test rather than trusting the Home one because a shared
+ * defect fixed at one site is only fixed at that site — the two templates share
+ * i18n keys, not markup, and nothing would turn red here if a later edit
+ * reverted this file alone.
+ */
+describe('ScheduleBookingFilterComponent — date labels distinguish outbound from return (OBRS-1021)', () => {
+  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
+  let component: ScheduleBookingFilterComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingFilterComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        DropdownObrsPassengerComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: AlertService, useValue: { warning: () => {} } },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub(45) },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
+    component = fixture.componentInstance;
+  });
+
+  /** Each date field's OWN label — reached from its `p-datePicker` outward, not
+   *  by class: `.form-group-obrs` is also the internal root of the station
+   *  dropdowns rendered in this same slice. `TranslateModule.forRoot()` has no
+   *  loader here, so `| translate` echoes the key, which is what we pin. */
+  function dateFieldLabels(): string[] {
+    return fixture.debugElement
+      .queryAll(By.css('p-datePicker'))
+      .map((picker) => picker.parent?.query(By.css('label')))
+      .map((label) => (label?.nativeElement.textContent ?? '').replace(/\s|:/g, ''));
+  }
+
+  it('labels the two round-trip date fields with DIFFERENT keys — outbound then return', () => {
+    fixture.detectChanges();
+
+    // AFTER the first change detection, for the same reason the maxDate test
+    // above documents: ngOnInit's saved-filter subscription re-derives this
+    // flag, so a value set earlier is overwritten and the return calendar never
+    // renders — the test would then pass on a one-element array.
+    component.isRoundTripReturn = true;
+    fixture.detectChanges();
+
+    expect(dateFieldLabels()).toEqual([
+      'HOME.HOME_BOOKING.ROUND_DEPARTURE',
+      'HOME.HOME_BOOKING.ROUND_RETURN',
+    ]);
+  });
+
+  it('keeps the plain DEPARTURE_DATE label in one-way mode, where there is no return to contrast with', () => {
+    fixture.detectChanges();
+
+    component.isRoundTripReturn = false;
+    fixture.detectChanges();
+
+    expect(dateFieldLabels()).toEqual(['HOME.HOME_BOOKING.DEPARTURE_DATE']);
+  });
+});

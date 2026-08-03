@@ -415,3 +415,83 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
     }
   });
 });
+
+/**
+ * OBRS-1021. The return-date block was copied from the departure block with its
+ * `<label>` intact, so round-trip mode rendered the SAME words twice and only
+ * field order told a customer which date was which.
+ *
+ * These tests read the RENDERED label text, not the template source: a
+ * `queryAll('label').length === 2` would have passed against the bug, and so
+ * would asserting on `formControlName` — the controls were always correct, it
+ * was only ever the words above them that lied.
+ *
+ * `TranslateModule.forRoot()` here has no loader, so `| translate` echoes the
+ * key back. That is deliberately what we assert against: it pins WHICH key each
+ * field reaches for and cannot drift the way a copy of the Thai string would
+ * (a test carrying its own copy of "รอบวันกลับ" stays green after somebody
+ * rewords the real one).
+ */
+describe('HomeBookingComponent — date labels distinguish outbound from return (OBRS-1021)', () => {
+  let fixture: ComponentFixture<HomeBookingComponent>;
+  let component: HomeBookingComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        DropdownObrsPassengerComponent,
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(HomeBookingComponent);
+    component = fixture.componentInstance;
+  });
+
+  /** Each date field's OWN label, in DOM order, whitespace- and colon-stripped
+   *  (the template renders `{{ ... }} :`).
+   *
+   *  Walks out from every `p-datePicker` to its wrapper rather than querying
+   *  `.form-group-obrs label` directly: that class is also the internal root of
+   *  `dropdown-obrs` and `dropdown-group-obrs`, both of which are real
+   *  components in this slice and render labels of their own (ต้นทาง /
+   *  ปลายทาง). Selecting by class would have silently mixed the station labels
+   *  into the assertion, and the pairing we care about — THIS label belongs to
+   *  THAT calendar — would not have been tested at all. */
+  function dateFieldLabels(): string[] {
+    return fixture.debugElement
+      .queryAll(By.css('p-datePicker'))
+      .map((picker) => picker.parent?.query(By.css('label')))
+      .map((label) => (label?.nativeElement.textContent ?? '').replace(/\s|:/g, ''));
+  }
+
+  it('labels the two round-trip date fields with DIFFERENT keys — outbound then return', () => {
+    component.isRoundTripReturn = true;
+    fixture.detectChanges();
+
+    expect(dateFieldLabels()).toEqual([
+      'HOME.HOME_BOOKING.ROUND_DEPARTURE',
+      'HOME.HOME_BOOKING.ROUND_RETURN',
+    ]);
+  });
+
+  it('keeps the plain DEPARTURE_DATE label in one-way mode, where there is no return to contrast with', () => {
+    component.isRoundTripReturn = false;
+    fixture.detectChanges();
+
+    expect(dateFieldLabels()).toEqual(['HOME.HOME_BOOKING.DEPARTURE_DATE']);
+  });
+});
