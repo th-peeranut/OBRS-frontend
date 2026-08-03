@@ -966,12 +966,37 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     await gotoSellPage(page);
     // OBRS-185 canonical shared date field: in-input calendar icon (.app-date-field-icon)
     // rendered inside the p-datepicker (styleClass="app-date-field"), iconDisplay='input'.
-    await expect(page.locator('app-walk-in-trip-browser .app-date-field-icon')).toBeVisible();
+    const icon = page.locator('app-walk-in-trip-browser .app-date-field-icon');
+    await expect(icon).toBeVisible();
     // The date input fills its container (not crushed into a sliver).
     const input = page.locator('app-walk-in-trip-browser .app-date-field input.p-inputtext');
     await expect(input).toBeVisible();
     const box = await input.boundingBox();
     expect(box!.width, 'calendar input should fill its container, not be crushed').toBeGreaterThan(120);
+
+    // OBRS-1003. Everything above this line passed while the icon was painted 4px
+    // PAST the input's right edge on all 45 `.app-date-field-icon` sites: `toBeVisible()`
+    // is true anywhere in the viewport, so a test whose name says "in-input" was
+    // asserting only "somewhere on the page". The regression came from PrimeNG >= 20
+    // wrapping the `inputicon` template in an absolutely positioned
+    // `.p-datepicker-input-icon-container`, which stole the <img>'s offsetParent — no
+    // stylesheet parser can see that, and neither could a screenshot diff nobody ran.
+    // Assert the GEOMETRY, which only the browser's cascade knows.
+    const iconBox = (await icon.boundingBox())!;
+    expect(iconBox.x, 'icon must start inside the field, not past its left edge').toBeGreaterThanOrEqual(box!.x);
+    expect(
+      iconBox.x + iconBox.width,
+      'icon must end inside the field -- it sat 4px past the right edge before OBRS-1003'
+    ).toBeLessThanOrEqual(box!.x + box!.width);
+    // ...and vertically centred in the field, within a 1px rounding allowance. Before
+    // the fix the icon's centre sat 8px high, because it was centred on a zero-height
+    // wrapper rather than on the 48px field.
+    const iconCentre = iconBox.y + iconBox.height / 2;
+    const fieldCentre = box!.y + box!.height / 2;
+    expect(
+      Math.abs(iconCentre - fieldCentre),
+      'icon must be vertically centred in the field'
+    ).toBeLessThanOrEqual(1);
   });
 
   // ── Sell button reachable without scrolling the checkout card (sticky footer) ─
