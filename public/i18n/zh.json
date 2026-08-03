@@ -484,7 +484,9 @@
       "BOOKING_TREND": "预订趋势",
       "ROUTE_PERFORMANCE": "路线绩效",
       "CUSTOMER_BEHAVIOR": "客户行为",
-      "OPS_EFFICIENCY": "运营效率"
+      "OPS_EFFICIENCY": "运营效率",
+      "PARCEL_SHARE_CONFIG": "包裹收益分成",
+      "DRIVER_CASH_RATES": "司机现金费率"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -1229,6 +1231,15 @@
       "ERROR": {
         "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
         "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。"
+      },
+      "PARCEL_SHARE_MONTHLY": {
+        "TITLE": "包裹收益分成——月度合计",
+        "YEAR_LABEL": "年份",
+        "MONTH_LABEL": "月份",
+        "COL": {
+          "PAYEE": "销售人员",
+          "TOTAL": "合计"
+        }
       }
     },
     "SETTLEMENTS": {
@@ -1343,6 +1354,47 @@
         "WALK_IN": "现场柜台",
         "AGENT": "代理渠道",
         "KIOSK": "自助终端"
+      },
+      "DRIVER_CASH": {
+        "TABLE_TITLE": "司机现金日",
+        "EMPTY": "此范围内没有司机现金日。",
+        "LOAD_FAILED": "无法加载司机现金日。",
+        "STATUS": {
+          "RETURNED": "已归还",
+          "OPEN": "待归还"
+        },
+        "DETAIL": {
+          "LOAD_FAILED": "无法加载当日详情。"
+        },
+        "RETURN": {
+          "TITLE": "司机现金日归还",
+          "SECTION_TITLE": "签署归还确认",
+          "EXPECTED": "预期金额",
+          "RETURNED_LABEL": "归还金额",
+          "RETURNED_PLACEHOLDER": "0.00",
+          "CONFIRM_BTN": "确认归还",
+          "CONFIRM_TITLE": "确认司机现金归还？",
+          "CONFIRM_TEXT": "将记录归还金额为 {{amount}}，此操作无法撤销。",
+          "SUCCESS": "司机现金日已标记为已归还。",
+          "ALREADY_RETURNED": "该日已完成归还。"
+        },
+        "ERROR": {
+          "REASON_REQUIRED": "归还金额与预期不符时必须填写原因。",
+          "ALREADY_RETURNED": "该日已完成归还。",
+          "RETURN_FAILED": "无法记录此次归还。"
+        },
+        "COL": {
+          "DRIVER": "司机",
+          "BUSINESS_DATE": "营业日期",
+          "VEHICLE": "车辆",
+          "EXPECTED": "预期金额"
+        },
+        "ENTRY_TYPE": {
+          "ADVANCE": "预支款",
+          "PER_HEAD": "人头费",
+          "EXPENSE_PAID": "支出：{{category}}",
+          "RETURN": "归还"
+        }
       }
     },
     "EOD_REPORT": {
@@ -1579,7 +1631,10 @@
       "FILTER_DATE_TO": "截止日期",
       "EMPTY_TITLE": "暂无费用记录",
       "EMPTY_BODY": "点击\"添加费用\"开始记录车辆或中央支出",
-      "NO_MATCH": "没有符合当前筛选条件的费用"
+      "NO_MATCH": "没有符合当前筛选条件的费用",
+      "SOURCE": "来源",
+      "SOURCE_FIELD": "系统自动生成（来自司机）",
+      "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。"
     },
     "MANUAL_REFUNDS": {
       "SUBTITLE": "等待人工退款转账的付款",
@@ -1707,6 +1762,44 @@
         "DEPARTURES": "发车数",
         "SEATS": "售座 / 容量",
         "FILL": "使用率"
+      }
+    },
+    "PARCEL_SHARE_CONFIG": {
+      "SUBTITLE": "设置包裹收益在司机与销售人员之间的分成比例。",
+      "NOT_CONFIGURED": "尚未设置包裹收益分成——在您设置之前将记为0%。",
+      "LOAD_FAILED": "无法加载包裹收益分成设置。",
+      "DRIVER_PCT_LABEL": "司机分成 (%)",
+      "SALESPERSON_PCT_LABEL": "销售人员分成 (%)",
+      "SUM_EXCEEDS_100": "司机分成与销售人员分成之和不能超过100%。",
+      "REPAIR": {
+        "TITLE": "修复未配置的分成",
+        "BODY": "将当前费率重新应用于在分成未配置期间（记为0%）已受理的包裹。",
+        "RUN_BTN": "运行修复",
+        "RUNNING": "正在运行...",
+        "CONFIRM_TITLE": "确认修复包裹收益分成？",
+        "CONFIRM_TEXT": "这将把当前的司机/销售人员百分比重新应用于所有受影响的包裹，且无法撤销。",
+        "CONFIRM_BTN": "修复",
+        "FAILED": "无法完成修复。",
+        "PARCELS_REPAIRED": "已修复包裹数",
+        "ENTRIES_REPAIRED": "已修复条目数",
+        "DRIVER_PCT_APPLIED": "已应用的司机比例",
+        "SALESPERSON_PCT_APPLIED": "已应用的销售人员比例"
+      }
+    },
+    "DRIVER_CASH_RATES": {
+      "SUBTITLE": "按站点管理人头费率。",
+      "LOAD_FAILED": "无法加载司机现金费率。",
+      "ADD_TITLE": "新增费率",
+      "STOP_LABEL": "站点",
+      "EFFECTIVE_FROM_LABEL": "生效日期",
+      "RATE_LABEL": "每人头费率",
+      "RATE_PLACEHOLDER": "0.00",
+      "ADD_BTN": "新增费率",
+      "HISTORY_TITLE": "费率历史",
+      "CURRENT": "当前",
+      "ERROR": {
+        "DUPLICATE": "该站点已存在同一生效日期的费率。",
+        "CREATE_FAILED": "无法新增此费率。"
       }
     }
   },
@@ -2974,7 +3067,9 @@
           "PAYING": "正在记录付款…",
           "PAID": "已付款 — 已收取现金 ฿{{amount}}"
         }
-      }
+      },
+      "SHARE_NOT_CONFIGURED": "尚未设置包裹收益分成——在业主设置之前将记为0%。",
+      "SALES_POINT_NOT_MAPPED": "此站点尚未与售票点关联——业主的分成款项将计入司机名下。"
     },
     "PARCEL_WAYBILL": {
       "SUBTITLE": "此包裹的可打印运单。",
@@ -3174,6 +3269,45 @@
         "SPEED": "速度：{{value}} 公里/小时",
         "ENGINE_ON": "引擎运转中",
         "ENGINE_OFF": "引擎已关闭"
+      }
+    },
+    "DRIVER_CASH": {
+      "SUMMARY": {
+        "ADVANCE": "预支款",
+        "PER_HEAD": "人头费",
+        "EXPENSE": "支出",
+        "NET": "现金净额",
+        "PARCEL_REMIT": "包裹汇款"
+      },
+      "ADVANCE": {
+        "ACTION_LABEL": "现金预支",
+        "AMOUNT_LABEL": "金额",
+        "AMOUNT_PLACEHOLDER": "0.00",
+        "SUBMIT": "记录预支款"
+      },
+      "PER_HEAD": {
+        "ACTION_LABEL": "记录人头费",
+        "STOP_LABEL": "站点",
+        "HEAD_COUNT_LABEL": "人数",
+        "HEAD_COUNT_PLACEHOLDER": "乘客人数",
+        "SUBMIT": "记录人头费",
+        "RATE_NOT_CONFIGURED": "该站点尚未设置人头费率——在设置之前将记为0泰铢"
+      },
+      "EXPENSE": {
+        "ACTION_LABEL": "现场支出",
+        "CATEGORY_LABEL": "类别",
+        "AMOUNT_LABEL": "金额",
+        "AMOUNT_PLACEHOLDER": "0.00",
+        "NOTE_LABEL": "备注（选填）",
+        "NOTE_PLACEHOLDER": "例如收据编号",
+        "SUBMIT": "记录支出"
+      },
+      "SUBMITTING": "提交中...",
+      "VALIDATION": {
+        "AMOUNT_INVALID": "请输入有效金额（最多两位小数）。"
+      },
+      "ERROR": {
+        "GENERIC": "无法记录此项目，请重试。"
       }
     }
   },

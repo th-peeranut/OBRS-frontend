@@ -77,3 +77,4 @@ src/environments/environment.prod.local.ts
 # capture SCRIPTS under e2e/scripts/ are committed; their output is not.
 docs/manual-tests/assets/
 e2e/out/
+docs/prod/evidence/

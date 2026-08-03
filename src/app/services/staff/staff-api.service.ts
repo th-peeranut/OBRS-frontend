@@ -33,10 +33,17 @@ import {
   ParcelArrivedRespDto,
   ParcelQuoteReqParams,
   ParcelQuoteRespDto,
+  ParcelShareConfigDto,
   ParcelVerifyReqDto,
   ParcelVerifyRespDto,
   WaybillRespDto,
 } from '../../shared/interfaces/parcel.interface';
+import {
+  DriverCashAdvanceReqDto,
+  DriverCashDayRespDto,
+  DriverCashExpenseReqDto,
+  DriverCashPerHeadReqDto,
+} from '../../shared/interfaces/driver-cash.interface';
 import { AdminUserDto, DriverDto } from '../admin/admin-api.service';
 // OBRS-100: type-only — BoardingListComponent (shared/) reuses the response
 // SHAPE for its supplementary print/export trip header, but must not take a
@@ -989,6 +996,76 @@ export class StaffApiService {
       `${environment.apiUrl}/api/private/bookings/${bookingId}/cash-refund-approval-request`,
       {},
       { context: this.cancelActionContext }
+    );
+  }
+
+  // ── OBRS-960: driver cash ledger (per-round panel, /staff/boarding/:scheduleId) ──
+
+  /** Same defensive treatment as `parcelActionContext` above — a domain 409
+   * (e.g. a stale per-head rate) on this retryable salesperson action must
+   * never force-logout nor duplicate a global alert. */
+  private readonly driverCashActionContext = new HttpContext()
+    .set(SKIP_GLOBAL_ERROR_ALERT, true)
+    .set(SKIP_GLOBAL_LOADING_ALERT, true)
+    .set(SKIP_AUTH_LOGOUT, true);
+
+  // ⚠️ CORRECTED (2026-08-02, backend reconciliation) — the base is
+  // `/api/private/driver-cash` with `schedules/{scheduleId}` as a
+  // sub-resource. The first version of every method below had the segment
+  // order inverted (`/schedules/{id}/driver-cash/...`), which would 404
+  // against the real `DriverCashController`. Verified against
+  // `DriverCashController.java:30,36,45,55` (`EndpointConstant.PRIVATE_DRIVER_CASH`).
+  // All four responses are the SAME flat `DriverCashDayRespDto` — there is
+  // no separate per-action response type.
+
+  getDriverCashDay(scheduleId: number): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.http.get<ResponseAPI<DriverCashDayRespDto>>(
+      `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/day`,
+      { context: this.skipContext }
+    );
+  }
+
+  postDriverCashAdvance(
+    scheduleId: number,
+    payload: DriverCashAdvanceReqDto
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
+      `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/advance`,
+      payload,
+      { context: this.driverCashActionContext }
+    );
+  }
+
+  postDriverCashPerHead(
+    scheduleId: number,
+    payload: DriverCashPerHeadReqDto
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
+      `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/per-head`,
+      payload,
+      { context: this.driverCashActionContext }
+    );
+  }
+
+  /** ⚠️ CORRECTED — the segment is `expense-paid`, not `expense`. */
+  postDriverCashExpense(
+    scheduleId: number,
+    payload: DriverCashExpenseReqDto
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
+      `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/expense-paid`,
+      payload,
+      { context: this.driverCashActionContext }
+    );
+  }
+
+  /** OBRS-960 — read by the staff parcel-consign page's "share not
+   * configured" banner (fail-safe: the caller treats ANY error, including
+   * this 200's absence, as "not configured" — see `ParcelShareConfigStore`). */
+  getParcelShareConfig(): Observable<ResponseAPI<ParcelShareConfigDto>> {
+    return this.http.get<ResponseAPI<ParcelShareConfigDto>>(
+      `${environment.apiUrl}/api/private/parcels/share-config`,
+      { context: this.skipContext }
     );
   }
 }

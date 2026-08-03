@@ -205,6 +205,12 @@ export interface ExpenseRow {
   receiptNo: string;
   paidBy: string;
   note: string;
+  /** OBRS-960: `'FIELD'` (backend auto-created from a driver's cash-panel
+   * expense entry) vs `'MANUAL'` (admin/owner-entered) — passed through
+   * from `AdminExpenseDto.source`, defaulting an absent field (a
+   * pre-OBRS-960 cached response) to `'MANUAL'` so it reads as the
+   * pre-existing, unremarkable row shape. */
+  source: 'FIELD' | 'MANUAL';
 }
 
 /**
@@ -251,6 +257,7 @@ export function toExpenseRow(
     receiptNo: dto.receiptNo ?? '',
     paidBy: dto.paidBy ?? '',
     note: dto.note ?? '',
+    source: dto.source ?? 'MANUAL',
   };
 }
 

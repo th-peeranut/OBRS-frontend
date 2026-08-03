@@ -40,6 +40,14 @@ import {
   CashRefundApprovalCode,
   CashRefundApprovalRequest,
 } from '../../shared/interfaces/my-booking.interface';
+import {
+  DriverCashDayRespDto,
+  DriverCashDayReturnReqDto,
+  DriverCashDayStatus,
+  DriverCashDaySummaryRespDto,
+  DriverCashRateReqDto,
+  DriverCashRateRowDto,
+} from '../../shared/interfaces/driver-cash.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -840,6 +848,16 @@ export interface AdminExpenseDto {
   createdAt?: string;
   updatedByName?: string;
   updatedAt?: string;
+  /**
+   * OBRS-960: `'FIELD'` for a row the backend auto-created from a driver's
+   * cash-panel expense entry (immutable here — edit/delete are disabled with
+   * a reason, design-system §12 "disabled with a reason, not absent");
+   * `'MANUAL'` for an admin/owner-entered row (unchanged behavior). Optional
+   * so a cached pre-OBRS-960 response (field absent) renders as the existing
+   * MANUAL row — same absence-reads-as-normal convention the Vehicle "-"
+   * rendering already uses, per the card.
+   */
+  source?: 'FIELD' | 'MANUAL';
 }
 
 /** OBRS-685: `ExpenseReqDto` — sent verbatim by the create/edit form
@@ -1920,4 +1938,141 @@ export class AdminApiService {
       {}
     );
   }
+
+  // ── OBRS-960: driver cash — daily-return close (/admin/settlements) ──────
+  // ⚠️ CORRECTED (2026-08-02, backend reconciliation) — the base is
+  // `/api/private/driver-cash`, NOT `/api/private/owner/driver-cash`; the
+  // day endpoints are OWNER-gated by role, not by URL prefix. The list
+  // endpoint itself was a genuine contract gap the SA never specified — the
+  // backend added it now: `status` is optional (`OPEN`|`RETURNED`, omitted
+  // = both), `from`/`to` are the required business-date range. Verified
+  // against `DriverCashController.java:55,65,74,81`.
+
+  getDriverCashDays(
+    from: string,
+    to: string,
+    status?: DriverCashDayStatus
+  ): Observable<ResponseAPI<DriverCashDaySummaryRespDto[]>> {
+    let params = new HttpParams().set('from', from).set('to', to);
+    if (status) {
+      params = params.set('status', status);
+    }
+    return this.getRequest<DriverCashDaySummaryRespDto[]>(
+      `${this.baseUrl}/private/driver-cash/days`,
+      params
+    );
+  }
+
+  getDriverCashDayDetail(dayId: number): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.getRequest<DriverCashDayRespDto>(
+      `${this.baseUrl}/private/driver-cash/days/${dayId}`
+    );
+  }
+
+  returnDriverCashDay(
+    dayId: number,
+    payload: DriverCashDayReturnReqDto
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.postRequest<DriverCashDayRespDto>(
+      `${this.baseUrl}/private/driver-cash/days/${dayId}/return`,
+      payload
+    );
+  }
+
+  // ── OBRS-960: owner settings — driver-cash per-head rates ────────────────
+
+  getDriverCashRates(): Observable<ResponseAPI<DriverCashRateRowDto[]>> {
+    return this.getRequest<DriverCashRateRowDto[]>(
+      `${this.baseUrl}/private/owner/driver-cash/per-head-rates`
+    );
+  }
+
+  createDriverCashRate(
+    payload: DriverCashRateReqDto
+  ): Observable<ResponseAPI<DriverCashRateRowDto>> {
+    return this.postRequest<DriverCashRateRowDto>(
+      `${this.baseUrl}/private/owner/driver-cash/per-head-rates`,
+      payload
+    );
+  }
+
+  // ── OBRS-960: owner settings — parcel revenue-share config ───────────────
+
+  getParcelShareOwnerConfig(): Observable<ResponseAPI<ParcelShareOwnerConfigDto>> {
+    return this.getRequest<ParcelShareOwnerConfigDto>(
+      `${this.baseUrl}/private/owner/configs/parcel-share`
+    );
+  }
+
+  updateParcelShareOwnerConfig(
+    payload: ParcelShareOwnerConfigReqDto
+  ): Observable<ResponseAPI<ParcelShareOwnerConfigDto>> {
+    return this.putRequest<ParcelShareOwnerConfigDto>(
+      `${this.baseUrl}/private/owner/configs/parcel-share`,
+      payload
+    );
+  }
+
+  repairParcelShare(
+    payload: ParcelShareRepairReqDto
+  ): Observable<ResponseAPI<ParcelShareRepairRespDto>> {
+    return this.postRequest<ParcelShareRepairRespDto>(
+      `${this.baseUrl}/private/owner/parcel-share/repair`,
+      payload
+    );
+  }
+
+  // ── OBRS-960: parcel-share monthly totals (/admin/reports) ───────────────
+
+  getParcelShareMonthly(
+    year: number,
+    month: number,
+    role: 'SALESPERSON'
+  ): Observable<ResponseAPI<ParcelShareMonthlyRowDto[]>> {
+    const params = new HttpParams()
+      .set('year', String(year))
+      .set('month', String(month))
+      .set('role', role);
+    return this.getRequest<ParcelShareMonthlyRowDto[]>(
+      `${this.baseUrl}/private/owner/parcel-share/monthly`,
+      params
+    );
+  }
+}
+
+/** `GET`/`PUT /api/private/owner/configs/parcel-share` — OBRS-960. Distinct
+ * from the staff-facing `ParcelShareConfigDto` (`parcel.interface.ts`): this
+ * shape splits `configured` per field (`driverPctConfigured`/
+ * `salespersonPctConfigured`) because the owner's edit FORM needs to know
+ * which side is still at its 0% default, not just "is either one set". */
+export interface ParcelShareOwnerConfigDto {
+  driverPct: number;
+  driverPctConfigured: boolean;
+  salespersonPct: number;
+  salespersonPctConfigured: boolean;
+}
+
+export type ParcelShareOwnerConfigReqDto = Pick<
+  ParcelShareOwnerConfigDto,
+  'driverPct' | 'salespersonPct'
+>;
+
+/** `source` is a FIXED literal audit note, not user-selectable (card §4/5/7:
+ * "not a dispatch key; do not build a picker"). */
+export interface ParcelShareRepairReqDto {
+  source: 'OWNER_SETTINGS_PARCEL_SHARE';
+}
+
+export interface ParcelShareRepairRespDto {
+  parcelsRepaired: number;
+  entriesRepaired: number;
+  driverPctApplied: number;
+  salespersonPctApplied: number;
+}
+
+/** One row of `GET /api/private/owner/parcel-share/monthly` — OBRS-960. */
+export interface ParcelShareMonthlyRowDto {
+  payeeUserId: number;
+  payeeName: string;
+  total: string;
 }

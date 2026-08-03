@@ -68,6 +68,11 @@ import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-mod
 import { ManualRefundWorklistPageComponent } from './pages/manual-refund-worklist/manual-refund-worklist-page.component';
 import { CashRefundApprovalsPageComponent } from './pages/cash-refund-approvals/cash-refund-approvals-page.component';
 import { MarkRefundedModalComponent } from './pages/manual-refund-worklist/mark-refunded-modal/mark-refunded-modal.component';
+// OBRS-960 — driver cash ledger + parcel revenue share.
+import { DriverCashDaysListComponent } from './pages/settlements/driver-cash-days-list/driver-cash-days-list.component';
+import { DriverCashDayReturnModalComponent } from './pages/settlements/driver-cash-day-return-modal/driver-cash-day-return-modal.component';
+import { ParcelShareConfigPageComponent } from './pages/parcel-share-config/parcel-share-config-page.component';
+import { DriverCashRatesPageComponent } from './pages/driver-cash-rates/driver-cash-rates-page.component';
 import { AuthGuard } from '../../auth/auth.guard';
 import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
 import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
@@ -430,6 +435,10 @@ export const adminRoutes: Routes = [
     ManualRefundWorklistPageComponent,
     CashRefundApprovalsPageComponent,
     MarkRefundedModalComponent,
+    DriverCashDaysListComponent,
+    DriverCashDayReturnModalComponent,
+    ParcelShareConfigPageComponent,
+    DriverCashRatesPageComponent,
   ],
   imports: [
     SharedModule,

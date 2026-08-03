@@ -3,6 +3,8 @@ import { BookingPolicyConfigPageComponent } from '../booking-policy-config/booki
 import { ConfigChangeHistoryPageComponent } from '../config-change-history/config-change-history-page.component';
 import { JumpSeatConfigPageComponent } from '../jump-seat-config/jump-seat-config-page.component';
 import { ReminderConfigPageComponent } from '../reminder-config/reminder-config-page.component';
+import { ParcelShareConfigPageComponent } from '../parcel-share-config/parcel-share-config-page.component';
+import { DriverCashRatesPageComponent } from '../driver-cash-rates/driver-cash-rates-page.component';
 
 /** One tab of `/admin/settings` — see {@link SYSTEM_SETTINGS_TABS}. */
 export interface SystemSettingsTab {
@@ -80,6 +82,25 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     subtitleKey: 'ADMIN.JUMP_SEAT_CONFIG.SUBTITLE',
     requiredRoles: ['admin'],
     component: JumpSeatConfigPageComponent,
+  },
+  {
+    // OBRS-960: owner-only, new. Placed after the pre-existing four tabs and
+    // before the "meta" history tab (which stays last, per its own comment).
+    path: 'parcel-share',
+    legacyPath: 'parcel-share-config',
+    labelKey: 'ADMIN.PAGES.PARCEL_SHARE_CONFIG',
+    subtitleKey: 'ADMIN.PARCEL_SHARE_CONFIG.SUBTITLE',
+    requiredRoles: ['owner'],
+    component: ParcelShareConfigPageComponent,
+  },
+  {
+    // OBRS-960: owner-only, new.
+    path: 'driver-cash-rates',
+    legacyPath: 'driver-cash-rates',
+    labelKey: 'ADMIN.PAGES.DRIVER_CASH_RATES',
+    subtitleKey: 'ADMIN.DRIVER_CASH_RATES.SUBTITLE',
+    requiredRoles: ['owner'],
+    component: DriverCashRatesPageComponent,
   },
   {
     // Last: the "meta" view over every other tab, same placement it held as the

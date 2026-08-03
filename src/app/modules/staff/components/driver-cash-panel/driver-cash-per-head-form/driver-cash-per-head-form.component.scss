@@ -1,0 +1,15 @@
+@use '../driver-cash-form' as *;
+
+// OBRS-960: pre-emptive "rate not configured" banner. Uses the EXISTING
+// `.is-warning` chip pair (bg+text together, same self-contained-chip usage
+// as `.admin-status.is-warning` — design-system.md §2.4/§2.4.0, never the
+// text half alone as a standalone foreground) rather than inventing a new
+// hex or token.
+.dcp-per-head-warning {
+  margin: 0 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
+  font-size: 0.875rem;
+}

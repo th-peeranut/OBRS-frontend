@@ -1,0 +1,27 @@
+// OBRS-960 — shared partial for the 3 inline action forms
+// (driver-cash-advance-form / -per-head-form / -expense-form). `@use`d by
+// each form's own scoped stylesheet rather than duplicated verbatim three
+// times, and by the panel's own stylesheet for the 3 top-level action
+// buttons. No new colors — every rule composes existing `--admin-*` tokens
+// (design-system.md §2.2).
+
+.dcp-inline-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.dcp-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+// Card: "Full-width .admin-btn at >=48px height for the 3 action buttons
+// and each submit — undersized controls at a departure platform are a
+// functional failure, not a cosmetic one."
+.dcp-action-btn {
+  width: 100%;
+  min-height: 48px;
+}
