@@ -1,3 +1,9 @@
+// OBRS-775 host-box rule: an Angular host defaults to `display: inline`, so
+// wrapping an in-flow block child makes the host box malformed.
+:host {
+  display: block;
+}
+
 // OBRS-960: running-totals row, always visible directly under the sticky
 // context strip. `--admin-surface-soft` is the same "structural, not data"
 // surface already used for `.admin-table thead` / the OBRS-231 expandable
