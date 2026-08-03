@@ -67,9 +67,15 @@
             }
             <!-- DEPARTURE DATE -->
             <div class="form-group-obrs">
-              <!-- LABEL -->
+              <!-- LABEL. OBRS-1021: in round-trip mode this field stops being
+              "the date" and becomes "the OUTBOUND date", so it switches to the
+              ROUND_DEPARTURE/ROUND_RETURN pair the i18n files have carried
+              (all three locales) since before this screen shipped — the two
+              keys had zero call sites, which is why nothing was ever mistranslated
+              and nothing was ever right either. One-way keeps DEPARTURE_DATE:
+              with a single date field there is no "outbound" to contrast with. -->
               <label>
-                {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+                {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }} :
               </label>
               <!-- CALENDAR MAIN ELEMENT -->
               <p-datePicker
@@ -95,11 +101,14 @@
               </div>
               <!-- ROUND TRIP RETURN -->
               @if (isRoundTripReturn) {
-                <!-- DEPARTURE DATE -->
+                <!-- RETURN DATE. The comment said DEPARTURE DATE because this
+                whole block was copied from the one above, label included — the
+                two fields rendered the same words and only their order told a
+                customer which was which (OBRS-1021). -->
                 <div class="form-group-obrs">
                   <!-- LABEL -->
                   <label>
-                    {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+                    {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }} :
                   </label>
                   <!-- CALENDAR MAIN ELEMENT -->
                   <p-datePicker
