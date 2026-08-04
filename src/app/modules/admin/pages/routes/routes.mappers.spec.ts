@@ -13,6 +13,8 @@ import {
   toRoutePayload,
   toRouteRow,
   toRouteStatusOptions,
+  toSegmentGroups,
+  toSegmentPivotRows,
   toSegmentUpdatePayload,
   toSegments,
   toStopName,
@@ -492,6 +494,152 @@ describe('routes.mappers', () => {
       expect(edited.estimatedDurationMinutes).toBe(1); // clamped
       expect(untouched.fare).toBe(15);
       expect(untouched.estimatedDurationMinutes).toBeUndefined();
+    });
+  });
+
+  // ── OBRS-1027: vehicle-type pivot + origin grouping ─────────────────────
+  describe('toSegmentPivotRows / toSegmentGroups', () => {
+    const VEHICLE_TYPES = [
+      { slug: 'van', name: 'Van' },
+      { slug: 'minibus', name: 'Minibus' },
+    ];
+
+    function pivotSegment(overrides: Partial<SegmentRow> = {}): SegmentRow {
+      return {
+        id: 1,
+        origin: 'Alpha',
+        destination: 'Beta',
+        fare: 100,
+        duration: '20 mins',
+        estimatedDurationMinutes: 20,
+        fromStopSlug: 'alpha',
+        toStopSlug: 'beta',
+        vehicleTypeSlug: 'van',
+        vehicleTypeName: 'Van',
+        ...overrides,
+      };
+    }
+
+    it('collapses the two vehicle types of one stop pair into a SINGLE row with one cell each', () => {
+      const rows = toSegmentPivotRows(
+        [
+          pivotSegment({ id: 1, vehicleTypeSlug: 'van', fare: 100 }),
+          // Same pair, other type. The ids differ because the backend
+          // regenerates them on every save, so they must not key the pair.
+          pivotSegment({
+            id: 99,
+            vehicleTypeSlug: 'minibus',
+            vehicleTypeName: 'Minibus',
+            fare: 140,
+          }),
+        ],
+        VEHICLE_TYPES
+      );
+
+      expect(rows.length).toBe(1);
+      expect(rows[0].fares.map((cell) => cell.segment?.fare)).toEqual([100, 140]);
+    });
+
+    it('leaves the cell null (NOT a zero fare) for a vehicle type with no row for the pair', () => {
+      const rows = toSegmentPivotRows(
+        [pivotSegment({ vehicleTypeSlug: 'van', fare: 100 })],
+        VEHICLE_TYPES
+      );
+
+      expect(rows[0].fares[0].segment?.fare).toBe(100);
+      expect(rows[0].fares[1].segment)
+        .withContext('a missing vehicle type must be null so the view can say "not set"')
+        .toBeNull();
+    });
+
+    it('keeps two pairs that share a destination NAME apart when their slugs differ', () => {
+      const rows = toSegmentPivotRows(
+        [
+          pivotSegment({ id: 1, fromStopSlug: 'alpha', toStopSlug: 'beta-1', destination: 'Beta' }),
+          pivotSegment({ id: 2, fromStopSlug: 'alpha', toStopSlug: 'beta-2', destination: 'Beta' }),
+        ],
+        VEHICLE_TYPES
+      );
+
+      expect(rows.length).toBe(2);
+    });
+
+    it('takes the duration from the first vehicle type that actually carries one', () => {
+      const rows = toSegmentPivotRows(
+        [
+          // formatDuration renders a null duration as '-'; the other type's real
+          // value must win rather than whichever segment arrived first.
+          pivotSegment({ id: 1, vehicleTypeSlug: 'van', duration: '-' }),
+          pivotSegment({
+            id: 2,
+            vehicleTypeSlug: 'minibus',
+            vehicleTypeName: 'Minibus',
+            duration: '45 mins',
+          }),
+        ],
+        VEHICLE_TYPES
+      );
+
+      expect(rows[0].duration).toBe('45 mins');
+    });
+
+    it('groups rows under their origin slug in first-seen order', () => {
+      const rows = toSegmentPivotRows(
+        [
+          pivotSegment({ id: 1, fromStopSlug: 'alpha', origin: 'Alpha', toStopSlug: 'beta' }),
+          pivotSegment({ id: 2, fromStopSlug: 'gamma', origin: 'Gamma', toStopSlug: 'delta' }),
+          pivotSegment({ id: 3, fromStopSlug: 'alpha', origin: 'Alpha', toStopSlug: 'delta' }),
+        ],
+        VEHICLE_TYPES
+      );
+
+      const groups = toSegmentGroups(rows, VEHICLE_TYPES);
+
+      expect(groups.map((group) => group.originSlug)).toEqual(['alpha', 'gamma']);
+      expect(groups[0].rows.length).toBe(2);
+      expect(groups[1].rows.length).toBe(1);
+    });
+
+    it('summarises a per-vehicle-type fare range per group, ignoring the absent type', () => {
+      const rows = toSegmentPivotRows(
+        [
+          pivotSegment({ id: 1, toStopSlug: 'beta', fare: 100, vehicleTypeSlug: 'van' }),
+          pivotSegment({ id: 2, toStopSlug: 'delta', fare: 260, vehicleTypeSlug: 'van' }),
+          pivotSegment({
+            id: 3,
+            toStopSlug: 'beta',
+            fare: 140,
+            vehicleTypeSlug: 'minibus',
+            vehicleTypeName: 'Minibus',
+          }),
+        ],
+        VEHICLE_TYPES
+      );
+
+      const [group] = toSegmentGroups(rows, VEHICLE_TYPES);
+
+      expect(group.fareRanges[0]).toEqual(
+        jasmine.objectContaining({ vehicleTypeSlug: 'van', min: 100, max: 260 })
+      );
+      // Only ONE minibus fare exists in the group, so min === max — and the
+      // van-only pair must not drag the minibus range to 0.
+      expect(group.fareRanges[1]).toEqual(
+        jasmine.objectContaining({ vehicleTypeSlug: 'minibus', min: 140, max: 140 })
+      );
+    });
+
+    it('reports a null range (not 0) for a vehicle type with no fare in the group', () => {
+      const rows = toSegmentPivotRows([pivotSegment({ vehicleTypeSlug: 'van' })], VEHICLE_TYPES);
+
+      const [group] = toSegmentGroups(rows, VEHICLE_TYPES);
+
+      expect(group.fareRanges[1].min).toBeNull();
+      expect(group.fareRanges[1].max).toBeNull();
+    });
+
+    it('returns no rows and no groups for an empty segment list', () => {
+      expect(toSegmentPivotRows([], VEHICLE_TYPES)).toEqual([]);
+      expect(toSegmentGroups([], VEHICLE_TYPES)).toEqual([]);
     });
   });
 });
