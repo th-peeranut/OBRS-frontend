@@ -499,3 +499,110 @@ describe('ScheduleBookingFilterComponent — date format follows the chosen lang
     expect(boundFormats()).toEqual(['D, dd/mm/yy']);
   });
 });
+
+/**
+ * OBRS-1036, second render site — see the long note on the matching block in
+ * home-booking.component.spec.ts for the mechanism and for what these
+ * assertions can and cannot prove.
+ *
+ * Duplicated here for the fourth time on these same four lines, and for the
+ * same reason each time (OBRS-1021, OBRS-1028, OBRS-1023): the two forms are
+ * markup copies, so markup is precisely what does NOT carry a fix between
+ * them. Nothing in the Home block would turn red if a later edit dropped
+ * `[readonlyInput]` from this file alone.
+ */
+describe('ScheduleBookingFilterComponent — a date can only be chosen from the calendar (OBRS-1036)', () => {
+  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
+  let component: ScheduleBookingFilterComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingFilterComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        DropdownObrsPassengerComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: AlertService, useValue: { warning: () => {} } },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub(45) },
+        {
+          provide: LanguageService,
+          useValue: createLanguageServiceStub('D, dd/mm/yy'),
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
+    component = fixture.componentInstance;
+  });
+
+  /** Both round-trip calendars rendered, as native `<input>` elements.
+   *  `isRoundTripReturn` is set AFTER the first change detection — ngOnInit's
+   *  saved-filter subscription re-derives it, so a value set earlier never
+   *  reaches the template (the same trap the OBRS-1023 block above documents). */
+  function dateInputs(): HTMLInputElement[] {
+    fixture.detectChanges();
+    component.isRoundTripReturn = true;
+    fixture.detectChanges();
+    return fixture.debugElement
+      .queryAll(By.css('p-datePicker input'))
+      .map((input) => input.nativeElement as HTMLInputElement);
+  }
+
+  it('marks BOTH date inputs readonly, so the browser never raises the input event that wipes them', () => {
+    const inputs = dateInputs();
+
+    // Vacuous-pass guard — an empty list satisfies every assertion below.
+    expect(inputs.length).toBe(2);
+    for (const input of inputs) {
+      expect(input.readOnly).toBeTrue();
+      expect(input.hasAttribute('readonly')).toBeTrue();
+    }
+  });
+
+  it('must-NOT go disabled — a disabled input cannot open the calendar it is now the only way into', () => {
+    const inputs = dateInputs();
+
+    expect(inputs.length).toBe(2);
+    for (const input of inputs) {
+      expect(input.disabled).toBeFalse();
+      expect(input.hasAttribute('disabled')).toBeFalse();
+      expect(input.tabIndex).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('still opens the calendar from the keyboard alone', () => {
+    const inputs = dateInputs();
+    const picker = fixture.debugElement.query(By.css('p-datePicker')).componentInstance;
+
+    expect(picker.overlayVisible).toBeFalsy();
+    inputs[0].dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+
+    expect(picker.overlayVisible).toBeTrue();
+  });
+
+  it('positive control: the wipe this guards against is real and one attribute away', () => {
+    // A dispatched event reaches the handler regardless of `readonly` — that is
+    // the point. If this stops clearing, the assertions above have become
+    // decoration and the guard needs re-deriving rather than trusting.
+    const inputs = dateInputs();
+    const control = component.bookingForm.get('departureDate');
+    control?.setValue(new Date());
+    fixture.detectChanges();
+    expect(control?.value).toBeTruthy();
+
+    inputs[0].value = '03/08/2026';
+    inputs[0].dispatchEvent(new KeyboardEvent('keydown', { key: '6' }));
+    inputs[0].dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(control?.value).toBeNull();
+  });
+});

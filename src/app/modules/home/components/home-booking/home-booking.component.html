@@ -96,11 +96,21 @@
               commit to a ticket, and `03/08/2026` is equally readable as
               8 March. The `D, ` prefix comes from the same signal (see
               LanguageService) and resolves through `dayNamesShort`: a bus
-              timetable is not the same on a Saturday as on a Tuesday. -->
+              timetable is not the same on a Saturday as on a Tuesday.
+
+              OBRS-1036: `readonlyInput` is the price of that `D`, paid on
+              purpose. `getDateFormat()` serves render AND parse, so the token
+              that prints `Mon, ` is the one `parseDate` walks on the way back
+              in — `case 'D'` calls `getName`, which throws on text with no day
+              name, and `onUserInput` answers a throw by writing `null` into the
+              model. A customer typing `03/08/2026` watched the box empty
+              itself. `readonly`, never `disabled`: the input must still focus
+              and still open the calendar it is now the only way into. -->
               <p-datePicker
                 styleClass="app-date-field"
                 panelStyleClass="app-date-field-panel"
                 [dateFormat]="calendarDateFormat()"
+                [readonlyInput]="true"
                 [minDate]="minDate"
                 [maxDate]="maxDate"
                 [iconDisplay]="'input'"
@@ -133,11 +143,15 @@
                   </label>
                   <!-- CALENDAR MAIN ELEMENT (OBRS-1023: same bound format as the
                   departure field above — a return date shown in a different
-                  order from the outbound one would be worse than either). -->
+                  order from the outbound one would be worse than either.
+                  OBRS-1036: and the same `readonlyInput`, for the same reason —
+                  two date fields side by side where only one refuses typing
+                  would read as a broken one, not as a rule.) -->
                   <p-datePicker
                     styleClass="app-date-field"
                     panelStyleClass="app-date-field-panel"
                     [dateFormat]="calendarDateFormat()"
+                    [readonlyInput]="true"
                     [minDate]="minDate"
                     [maxDate]="maxDate"
                     [iconDisplay]="'input'"

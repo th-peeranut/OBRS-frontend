@@ -69,11 +69,20 @@
               also brought `dateFormat="dd/mm/yy"`, which SHADOWS the
               `CALENDAR.dateFormat` we translate three ways (PrimeNG resolves it
               as `this.dateFormat || getTranslation('dateFormat')`). See the twin
-              block in home-booking.component.html for the full note. -->
+              block in home-booking.component.html for the full note.
+
+              OBRS-1036 — fourth defect on these same lines, and the cost of the
+              third: the `D` that OBRS-1023 put in the format is also what
+              `parseDate` walks on the way back in, where it throws and
+              `onUserInput` clears the field. `readonlyInput` makes the calendar
+              the only way in. Applied here as well as on the Home form because
+              markup is exactly what does NOT propagate between two copies —
+              the whole lesson of OBRS-1021/1028/1023 on these four lines. -->
               <p-datePicker
                 styleClass="app-date-field"
                 panelStyleClass="app-date-field-panel"
                 [dateFormat]="calendarDateFormat()"
+                [readonlyInput]="true"
                 [minDate]="minDate"
                 [maxDate]="maxDate"
                 [iconDisplay]="'input'"
@@ -100,11 +109,12 @@
                   <label for="filter-return-date">
                     {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }} :
                   </label>
-                  <!-- CALENDAR MAIN ELEMENT (OBRS-1023) -->
+                  <!-- CALENDAR MAIN ELEMENT (OBRS-1023, OBRS-1036) -->
                   <p-datePicker
                     styleClass="app-date-field"
                     panelStyleClass="app-date-field-panel"
                     [dateFormat]="calendarDateFormat()"
+                    [readonlyInput]="true"
                     [minDate]="minDate"
                     [maxDate]="maxDate"
                     [iconDisplay]="'input'"
