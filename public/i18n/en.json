@@ -944,6 +944,7 @@
       "DESTINATION_STOP": "Destination Stop",
       "FARE": "Fare (THB)",
       "EST_DURATION": "Est. Duration",
+      "DURATION_AFFECTS_OTHER_PAIRS": "Saving this duration rewrites the arrival time of {{stop}}, which {{count}} other stop pair(s) on this route are calculated from - and the arrival times customers and Walk-in Sell see.",
       "SEGMENTS": "segments",
       "EXPAND_ALL": "Expand all",
       "COLLAPSE_ALL": "Collapse all",

@@ -24,6 +24,25 @@ export class SegmentEditModalComponent {
   protected isSavingSegmentEdit = false;
   protected selectedSegment: SegmentRow | null = null;
 
+  /**
+   * OBRS-1031: how many OTHER stop pairs on this route read the arrival minute this edit is about
+   * to overwrite. The backend does not store a per-segment duration - it stores the destination
+   * stop's `offset_minutes_from_origin` and derives every pair's duration from it - so editing one
+   * row silently moves every pair that shares that stop, plus the arrival times customers and the
+   * Walk-in Sell screen see. The number is announced before saving; it used to change in silence.
+   *
+   * Counted across ALL vehicle types on purpose: `route_stops` is per ROUTE, so a minibus edit
+   * moves the van rows too, even though the PUT payload only carries the edited vehicle type.
+   *
+   * Recomputed on open and whenever the destination stop changes, NOT in a template getter - a
+   * getter would re-filter `allSegments` on every change-detection cycle for a number that only
+   * moves on those two events.
+   */
+  protected affectedPairCount = 0;
+
+  /** Display name of the stop whose arrival minute gets overwritten - set alongside the count. */
+  protected affectedDestinationName = '';
+
   protected readonly editSegmentForm: FormGroup;
 
   constructor(
@@ -52,6 +71,10 @@ export class SegmentEditModalComponent {
         ],
       ],
     });
+
+    this.editSegmentForm
+      .get('toStopSlug')
+      ?.valueChanges.subscribe(() => this.recountAffectedPairs());
   }
 
   /** Called by the parent page when a segment row's Edit action is triggered. */
@@ -63,7 +86,30 @@ export class SegmentEditModalComponent {
       fare: segment.fare.toFixed(2),
       estimatedDurationMinutes: segment.estimatedDurationMinutes ?? '',
     });
+    this.recountAffectedPairs();
     this.isOpen = true;
+  }
+
+  /** See {@link affectedPairCount}. */
+  private recountAffectedPairs(): void {
+    const destinationSlug = String(
+      this.editSegmentForm.get('toStopSlug')?.value ?? ''
+    ).trim();
+
+    if (!this.selectedSegment || !destinationSlug) {
+      this.affectedPairCount = 0;
+      this.affectedDestinationName = '';
+      return;
+    }
+
+    this.affectedDestinationName =
+      this.getStopPointBySlug(destinationSlug)?.name ?? destinationSlug;
+    this.affectedPairCount = this.allSegments.filter(
+      (segment) =>
+        segment.id !== this.selectedSegment?.id &&
+        (segment.fromStopSlug === destinationSlug ||
+          segment.toStopSlug === destinationSlug)
+    ).length;
   }
 
   protected closeModal(): void {

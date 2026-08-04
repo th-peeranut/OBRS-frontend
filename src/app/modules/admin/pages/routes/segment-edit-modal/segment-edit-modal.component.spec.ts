@@ -82,6 +82,70 @@ describe('SegmentEditModalComponent', () => {
     });
   });
 
+  // OBRS-1031: the backend keeps ONE arrival minute per stop and derives every pair's duration
+  // from it, so this edit moves rows the owner did not open. The count must be announced.
+  describe('blast radius of a duration edit', () => {
+    /** Same route as SEGMENT, all reading stop-b's arrival minute, across two vehicle types. */
+    const SHARES_STOP_B_AS_ORIGIN: SegmentRow = {
+      ...SEGMENT,
+      id: 6,
+      fromStopSlug: 'stop-b',
+      toStopSlug: 'stop-c',
+    };
+    const SHARES_STOP_B_OTHER_VEHICLE_TYPE: SegmentRow = {
+      ...SEGMENT,
+      id: 7,
+      fromStopSlug: 'stop-a',
+      toStopSlug: 'stop-b',
+      vehicleTypeSlug: 'minibus',
+      vehicleTypeName: 'Minibus',
+    };
+    const UNRELATED_PAIR: SegmentRow = {
+      ...SEGMENT,
+      id: 8,
+      fromStopSlug: 'stop-a',
+      toStopSlug: 'stop-c',
+    };
+
+    it('counts every other pair reading the destination stop, across vehicle types', () => {
+      const { component } = makeComponent();
+      component.allSegments = [
+        SEGMENT,
+        SHARES_STOP_B_AS_ORIGIN,
+        SHARES_STOP_B_OTHER_VEHICLE_TYPE,
+        UNRELATED_PAIR,
+      ];
+
+      component.open({ ...SEGMENT });
+
+      // route_stops is per ROUTE, so the minibus row moves too even though the PUT payload only
+      // carries the van rows. The edited row itself and the a->c pair are not counted.
+      expect((component as any).affectedPairCount).toBe(2);
+      expect((component as any).affectedDestinationName).toBe('Stop B');
+    });
+
+    it('recounts when the owner picks a different destination stop', () => {
+      const { component } = makeComponent();
+      component.allSegments = [SEGMENT, SHARES_STOP_B_AS_ORIGIN, UNRELATED_PAIR];
+      component.open({ ...SEGMENT });
+
+      (component as any).editSegmentForm.get('toStopSlug').setValue('stop-c');
+
+      // stop-c is read by b->c and a->c - two rows, neither of them the edited one.
+      expect((component as any).affectedPairCount).toBe(2);
+      expect((component as any).affectedDestinationName).toBe('Stop C');
+    });
+
+    it('reports 0 when nothing else on the route reads that stop, so the notice stays hidden', () => {
+      const { component } = makeComponent();
+      component.allSegments = [SEGMENT, UNRELATED_PAIR];
+
+      component.open({ ...SEGMENT });
+
+      expect((component as any).affectedPairCount).toBe(0);
+    });
+  });
+
   describe('field helpers', () => {
     it('isFieldInvalid is false until touched/dirty', () => {
       const { component } = makeComponent();

@@ -85,6 +85,16 @@
             }
           </div>
         </form>
+        <!-- OBRS-1031: the backend stores this stop's arrival minute, not a per-pair duration, so
+             saving here also moves every other pair derived from it. Announced, never silent. -->
+        @if (affectedPairCount > 0) {
+          <p class="admin-modal-subtitle" data-testid="segment-blast-radius">
+            {{
+              'ADMIN.ROUTES.DURATION_AFFECTS_OTHER_PAIRS'
+                | translate: { stop: affectedDestinationName, count: affectedPairCount }
+            }}
+          </p>
+        }
         <div class="admin-modal-actions">
           <button type="button" class="admin-btn" (click)="closeModal()">
             {{ 'ADMIN.COMMON.CANCEL' | translate }}

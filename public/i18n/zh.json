@@ -944,6 +944,7 @@
       "DESTINATION_STOP": "目的地站",
       "FARE": "票价（泰铢）",
       "EST_DURATION": "预计时长",
+      "DURATION_AFFECTS_OTHER_PAIRS": "保存此时长会改写 {{stop}} 的到达时间，本线路另有 {{count}} 组站点对由该值推算，乘客与柜台售票所见的到达时间也会随之变动。",
       "SEGMENTS": "个区间",
       "EXPAND_ALL": "全部展开",
       "COLLAPSE_ALL": "全部收起",
