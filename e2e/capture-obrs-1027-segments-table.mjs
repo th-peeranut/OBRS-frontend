@@ -80,8 +80,10 @@ async function describeTable(page, when) {
   // Measured, not eyeballed: the per-vehicle-type edit buttons wrapping onto a
   // second line doubles the height of every data row, which is the opposite of
   // what this card is for. Same `top` for both = one line.
-  if (dataRows > 0) {
-    const actions = card.locator('tbody tr:not(.group-row)').first().locator('.edit-fare-btn');
+  // Guarded on the button count so the same script can run against the BEFORE
+  // tree, where neither `.edit-fare-btn` nor the group rows exist at all.
+  const actions = card.locator('tbody tr:not(.group-row)').first().locator('.edit-fare-btn');
+  if (dataRows > 0 && (await actions.count()) > 0) {
     const tops = await actions.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
     const wrap = await card
       .locator('tbody tr:not(.group-row)')
