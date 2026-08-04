@@ -85,11 +85,22 @@
               <label for="home-departure-date">
                 {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }} :
               </label>
-              <!-- CALENDAR MAIN ELEMENT -->
+              <!-- CALENDAR MAIN ELEMENT
+
+              OBRS-1023: `dateFormat` is BOUND, not a literal. `dd/mm/yy` sat
+              here, and PrimeNG resolves the format as `this.dateFormat ||
+              getTranslation('dateFormat')` — so the literal did not duplicate
+              the translated value, it SHADOWED it, and the CALENDAR.dateFormat
+              we ship in three locales had never once reached a picker. An
+              English visitor read Thai field order on the screen where they
+              commit to a ticket, and `03/08/2026` is equally readable as
+              8 March. The `D, ` prefix comes from the same signal (see
+              LanguageService) and resolves through `dayNamesShort`: a bus
+              timetable is not the same on a Saturday as on a Tuesday. -->
               <p-datePicker
                 styleClass="app-date-field"
                 panelStyleClass="app-date-field-panel"
-                dateFormat="dd/mm/yy"
+                [dateFormat]="calendarDateFormat()"
                 [minDate]="minDate"
                 [maxDate]="maxDate"
                 [iconDisplay]="'input'"
@@ -120,11 +131,13 @@
                   <label for="home-return-date">
                     {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }} :
                   </label>
-                  <!-- CALENDAR MAIN ELEMENT -->
+                  <!-- CALENDAR MAIN ELEMENT (OBRS-1023: same bound format as the
+                  departure field above — a return date shown in a different
+                  order from the outbound one would be worse than either). -->
                   <p-datePicker
                     styleClass="app-date-field"
                     panelStyleClass="app-date-field-panel"
-                    dateFormat="dd/mm/yy"
+                    [dateFormat]="calendarDateFormat()"
                     [minDate]="minDate"
                     [maxDate]="maxDate"
                     [iconDisplay]="'input'"

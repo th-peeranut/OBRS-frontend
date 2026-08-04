@@ -1,7 +1,7 @@
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Store } from '@ngrx/store';
 import { Router } from '@angular/router';
@@ -22,9 +22,11 @@ import { RecentRoutesQuickPickComponent } from '../recent-routes-quick-pick/rece
 import {
   createAuthServiceStub,
   createBookingServiceStub,
+  createLanguageServiceStub,
   createRouterStub,
   createStoreStub,
 } from '../../../../testing/test-stubs';
+import { LanguageService } from '../../../../shared/services/language.service';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
 import { RECENT_ROUTES_CACHE_KEY, saveRecentRoute } from '../../../../shared/lib/recent-routes';
 
@@ -60,7 +62,8 @@ function makeHomeBooking(
     (overrides.appStore ?? createStoreStub()) as never,
     (overrides.auth ?? createAuthServiceStub(false)) as never,
     (overrides.booking ?? createBookingServiceStub()) as never,
-    (overrides.policy ?? createBookingPolicyServiceStub()) as never
+    (overrides.policy ?? createBookingPolicyServiceStub()) as never,
+    createLanguageServiceStub() as never
   );
 }
 
@@ -595,5 +598,201 @@ describe('HomeBookingComponent — each date field owns a unique input id its la
     expect(wiring.length).toBe(1);
     expect(wiring[0].labelFor).not.toBeNull();
     expect(wiring[0].labelFor).toBe(wiring[0].inputId);
+  });
+});
+
+/**
+ * OBRS-1023, the third defect on these same four lines.
+ *
+ * `dateFormat="dd/mm/yy"` was hardcoded in the template. PrimeNG resolves the
+ * format as `this.dateFormat || getTranslation('dateFormat')`, so the literal
+ * did not merely *duplicate* the translated value — it SHADOWED it, and
+ * `CALENDAR.dateFormat` (translated three ways since the calendars shipped)
+ * had never once reached a picker. An English visitor read `03/08/2026` in
+ * Thai field order on the screen where they commit to a ticket, and that
+ * string is equally readable as 8 March.
+ *
+ * These tests run the REAL LanguageService against a REAL TranslateService
+ * seeded with the shipped CALENDAR blocks. A stubbed service would test that
+ * the component forwards whatever it is handed — the defect was upstream of
+ * that, in whether anything was handed over at all.
+ *
+ * They also assert the rendered `<input>` value, not only the bound property.
+ * That distinction is the whole of AC#3: PrimeNG's translation subscription
+ * reacts to `setTranslation` by re-running `createWeekDays()` alone, so the
+ * text already in the box does NOT follow a language switch on its own. Only
+ * re-binding `dateFormat` repaints it, and only an assertion on the input can
+ * tell those two apart.
+ */
+describe('HomeBookingComponent — date format follows the chosen language (OBRS-1023)', () => {
+  let fixture: ComponentFixture<HomeBookingComponent>;
+  let component: HomeBookingComponent;
+  let languageService: LanguageService;
+
+  /** The three shipped `CALENDAR` blocks, trimmed to what a date format needs.
+   *  `dateFormat` values are the ones in `public/i18n/*.json`; `dayNamesShort`
+   *  is what PrimeNG's `D` token resolves against. Indices are day-of-week
+   *  starting Sunday, matching `Date.getDay()`. */
+  const CALENDARS: Record<string, { dateFormat: string; dayNamesShort: string[] }> = {
+    th: {
+      dateFormat: 'dd/mm/yy',
+      dayNamesShort: ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'],
+    },
+    en: {
+      dateFormat: 'mm/dd/yy',
+      dayNamesShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    },
+  };
+
+  /** The next Monday strictly after today — a weekday the assertions can name,
+   *  inside the picker's own [minDate, maxDate] window.
+   *
+   *  Computed, not a calendar literal: `formatDateTime` blanks the input
+   *  entirely for a date outside that window (`formattedValue = isDateValid ?
+   *  formattedValue : ''`), and `minDate` is `new Date()` — i.e. NOW, not
+   *  midnight. A hardcoded date therefore renders as `''`, which reads exactly
+   *  like a formatting bug and would have sent the next reader hunting in the
+   *  wrong file. */
+  const MONDAY = (() => {
+    let d = dayjs().add(1, 'day').startOf('day');
+    while (d.day() !== 1) {
+      d = d.add(1, 'day');
+    }
+    return d;
+  })();
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        DropdownObrsPassengerComponent,
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+      ],
+    }).compileComponents();
+
+    const translate = TestBed.inject(TranslateService);
+    Object.entries(CALENDARS).forEach(([lang, calendar]) =>
+      translate.setTranslation(lang, { CALENDAR: calendar })
+    );
+    languageService = TestBed.inject(LanguageService);
+
+    fixture = TestBed.createComponent(HomeBookingComponent);
+    component = fixture.componentInstance;
+  });
+
+  /** The format each rendered calendar is actually running on — read off the
+   *  DatePicker instance, not the template source. A source grep would go green
+   *  the moment the literal moved into a constant. */
+  function boundFormats(): (string | undefined)[] {
+    return fixture.debugElement
+      .queryAll(By.css('p-datePicker'))
+      .map((picker) => picker.componentInstance.dateFormat);
+  }
+
+  /** What the customer can actually read in the box. */
+  function renderedInputValues(): string[] {
+    return fixture.debugElement
+      .queryAll(By.css('p-datePicker input'))
+      .map((input) => input.nativeElement.value as string);
+  }
+
+  it('binds BOTH round-trip calendars to the format of the chosen language, not a literal', async () => {
+    component.isRoundTripReturn = true;
+    await languageService.switch('en');
+    fixture.detectChanges();
+
+    const formats = boundFormats();
+
+    // Vacuous-pass guard: an empty list satisfies every per-item assertion
+    // below, and that is exactly what a broken slice leaves behind.
+    expect(formats.length).toBe(2);
+    for (const format of formats) {
+      // The bug, stated directly: the Thai field order reaching an en visitor.
+      expect(format).not.toBe('dd/mm/yy');
+      // AC#2 — the weekday is the part of a bus date a passenger decides on.
+      expect(format).toContain('D');
+      expect(format).toBe('D, mm/dd/yy');
+    }
+  });
+
+  it('renders a date the customer can read unambiguously — weekday first, en field order', async () => {
+    await languageService.switch('en');
+    fixture.detectChanges();
+    component.bookingForm.get('departureDate')?.setValue(MONDAY.toDate());
+    fixture.detectChanges();
+
+    // `D` resolves through dayNamesShort, which setTranslation pushed into the
+    // same PrimeNG config — asserting the text proves that path is live, not
+    // just that a format string was assigned. The digits come from dayjs, an
+    // independent formatter, so this pins the ORDER without re-implementing
+    // PrimeNG's jQuery-derived one.
+    expect(renderedInputValues()).toEqual([`Mon, ${MONDAY.format('MM/DD/YYYY')}`]);
+  });
+
+  it('repaints a date already in the box when the language changes mid-page (AC#3)', async () => {
+    await languageService.switch('en');
+    fixture.detectChanges();
+    component.bookingForm.get('departureDate')?.setValue(MONDAY.toDate());
+    fixture.detectChanges();
+    expect(renderedInputValues()).toEqual([`Mon, ${MONDAY.format('MM/DD/YYYY')}`]);
+
+    await languageService.switch('th');
+    fixture.detectChanges();
+
+    // Both halves must move: the FIELD ORDER (from CALENDAR.dateFormat) and the
+    // DAY NAME (from dayNamesShort). PrimeNG's own translation subscription
+    // moves neither for text already rendered, so a fix that only re-pushed
+    // translations would leave the English rendering sitting here.
+    expect(renderedInputValues()).toEqual([`จ., ${MONDAY.format('DD/MM/YYYY')}`]);
+    expect(boundFormats()).toEqual(['D, dd/mm/yy']);
+  });
+
+  it('can still PARSE back exactly what it displays — typing is not broken by the day name', async () => {
+    // The one real cost of AC#2, pinned rather than left to be discovered in
+    // production. These inputs are not `readonlyInput`, so a customer can type
+    // — and PrimeNG parses with the SAME format it renders with
+    // (`getDateFormat()` serves both), where `D` is not decorative: `parseDate`
+    // resolves it via `getName`, which THROWS on a string with no day name, and
+    // `onUserInput` answers a throw by clearing the field.
+    //
+    // So: what the box shows still round-trips (asserted here), but bare digits
+    // in the old `dd/mm/yy` shape no longer do. That is self-consistent — the
+    // field teaches its own format — and it is the trade AC#2 asks for.
+    await languageService.switch('en');
+    fixture.detectChanges();
+    component.bookingForm.get('departureDate')?.setValue(MONDAY.toDate());
+    fixture.detectChanges();
+
+    const picker = fixture.debugElement.query(By.css('p-datePicker')).componentInstance;
+    const displayed = fixture.debugElement.query(By.css('p-datePicker input'))
+      .nativeElement.value as string;
+
+    // Guards the vacuous pass: an empty box round-trips through nothing.
+    expect(displayed).toContain('Mon');
+
+    let parsed: Date | undefined;
+    expect(() => (parsed = picker.parseValueFromString(displayed))).not.toThrow();
+    expect(dayjs(parsed).isSame(MONDAY, 'day')).toBeTrue();
+  });
+
+  it('leaves the picker on PrimeNG\'s own fallback before any language resolves', () => {
+    // Not a nicety: publishing a placeholder format here would shadow
+    // `getTranslation('dateFormat')` exactly the way the hardcoded literal did.
+    fixture.detectChanges();
+
+    expect(component.calendarDateFormat()).toBeUndefined();
+    expect(boundFormats()).toEqual([undefined]);
   });
 });

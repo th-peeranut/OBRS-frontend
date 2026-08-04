@@ -1,7 +1,7 @@
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Store } from '@ngrx/store';
 import { Router } from '@angular/router';
@@ -18,10 +18,12 @@ import {
   BookingPolicyService,
 } from '../../../../services/booking-policy/booking-policy.service';
 import {
+  createLanguageServiceStub,
   createRouterStub,
   createStoreStub,
   createTranslateStub,
 } from '../../../../testing/test-stubs';
+import { LanguageService } from '../../../../shared/services/language.service';
 
 /** OBRS-698: resolves the real, owner-editable advance-sale cap. */
 function createBookingPolicyServiceStub(
@@ -56,7 +58,8 @@ describe('ScheduleBookingFilterComponent', () => {
       createStoreStub(),
       createTranslateStub(),
       alertService,
-      createBookingPolicyServiceStub()
+      createBookingPolicyServiceStub(),
+      createLanguageServiceStub()
     );
   });
 
@@ -113,7 +116,8 @@ describe('ScheduleBookingFilterComponent', () => {
       createStoreStub(),
       createTranslateStub(),
       alertService,
-      createBookingPolicyServiceStub(configured)
+      createBookingPolicyServiceStub(configured),
+      createLanguageServiceStub()
     );
 
     // Distinct from the fallback, so a component that ignored the response
@@ -137,7 +141,8 @@ describe('ScheduleBookingFilterComponent', () => {
       alertService,
       {
         getBookingPolicy: () => throwError(() => new Error('offline')),
-      } as unknown as BookingPolicyService
+      } as unknown as BookingPolicyService,
+      createLanguageServiceStub()
     );
 
     expect(() => component.ngOnInit()).not.toThrow();
@@ -377,5 +382,120 @@ describe('ScheduleBookingFilterComponent — each date field owns a unique input
     expect(wiring.length).toBe(1);
     expect(wiring[0].labelFor).not.toBeNull();
     expect(wiring[0].labelFor).toBe(wiring[0].inputId);
+  });
+});
+
+/**
+ * OBRS-1023, second render site — see the long note on the matching block in
+ * home-booking.component.spec.ts for what the defect is and why the assertions
+ * read the rendered input rather than the bound property alone.
+ *
+ * Duplicated here for the reason OBRS-1021 and OBRS-1028 both proved: these two
+ * forms are markup copies of each other, so markup is precisely what does NOT
+ * propagate a fix between them. Nothing in the home-page block would turn red
+ * if a later edit put `dateFormat="dd/mm/yy"` back in this file alone.
+ */
+describe('ScheduleBookingFilterComponent — date format follows the chosen language (OBRS-1023)', () => {
+  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
+  let component: ScheduleBookingFilterComponent;
+  let languageService: LanguageService;
+
+  const CALENDARS: Record<string, { dateFormat: string; dayNamesShort: string[] }> = {
+    th: {
+      dateFormat: 'dd/mm/yy',
+      dayNamesShort: ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'],
+    },
+    en: {
+      dateFormat: 'mm/dd/yy',
+      dayNamesShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    },
+  };
+
+  /** The next Monday after today, inside the picker's [minDate, maxDate].
+   *  See the twin note in home-booking.component.spec.ts: PrimeNG blanks the
+   *  input for a date outside that window, which reads like a formatting bug. */
+  const MONDAY = (() => {
+    let d = dayjs().add(1, 'day').startOf('day');
+    while (d.day() !== 1) {
+      d = d.add(1, 'day');
+    }
+    return d;
+  })();
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingFilterComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        DropdownObrsPassengerComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: AlertService, useValue: { warning: () => {} } },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub(45) },
+      ],
+    }).compileComponents();
+
+    const translate = TestBed.inject(TranslateService);
+    Object.entries(CALENDARS).forEach(([lang, calendar]) =>
+      translate.setTranslation(lang, { CALENDAR: calendar })
+    );
+    languageService = TestBed.inject(LanguageService);
+
+    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
+    component = fixture.componentInstance;
+  });
+
+  function boundFormats(): (string | undefined)[] {
+    return fixture.debugElement
+      .queryAll(By.css('p-datePicker'))
+      .map((picker) => picker.componentInstance.dateFormat);
+  }
+
+  function renderedInputValues(): string[] {
+    return fixture.debugElement
+      .queryAll(By.css('p-datePicker input'))
+      .map((input) => input.nativeElement.value as string);
+  }
+
+  it('binds BOTH round-trip calendars to the format of the chosen language, not a literal', async () => {
+    fixture.detectChanges();
+
+    // AFTER the first change detection: ngOnInit's saved-filter subscription
+    // re-derives this flag, so a value set earlier never reaches the template.
+    component.isRoundTripReturn = true;
+    await languageService.switch('en');
+    fixture.detectChanges();
+
+    const formats = boundFormats();
+
+    // Vacuous-pass guard — an empty list satisfies every assertion below.
+    expect(formats.length).toBe(2);
+    for (const format of formats) {
+      expect(format).not.toBe('dd/mm/yy');
+      expect(format).toContain('D');
+      expect(format).toBe('D, mm/dd/yy');
+    }
+  });
+
+  it('repaints a date already in the box when the language changes mid-page (AC#3)', async () => {
+    fixture.detectChanges();
+    await languageService.switch('en');
+    component.bookingForm.get('departureDate')?.setValue(MONDAY.toDate());
+    fixture.detectChanges();
+    expect(renderedInputValues()).toEqual([`Mon, ${MONDAY.format('MM/DD/YYYY')}`]);
+
+    await languageService.switch('th');
+    fixture.detectChanges();
+
+    // Field order AND day name must both move. PrimeNG's own translation
+    // subscription moves neither for text already rendered.
+    expect(renderedInputValues()).toEqual([`จ., ${MONDAY.format('DD/MM/YYYY')}`]);
+    expect(boundFormats()).toEqual(['D, dd/mm/yy']);
   });
 });

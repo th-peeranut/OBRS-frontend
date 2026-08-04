@@ -4,6 +4,7 @@ import {
   OnDestroy,
   OnInit,
   Output,
+  Signal,
 } from '@angular/core';
 import { FormGroup, FormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -29,6 +30,7 @@ import {
   BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK,
   BookingPolicyService,
 } from '../../../../services/booking-policy/booking-policy.service';
+import { LanguageService } from '../../../../shared/services/language.service';
 
 @Component({
     selector: 'app-schedule-booking-filter',
@@ -64,7 +66,12 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   // corrected in ngOnInit. Bound to BOTH the departure AND return calendars —
   // binding only departure leaves the same hole one field to the right.
   maxDate: Date;
-  calendarLocale: string;
+  /** OBRS-1023: the `dateFormat` both calendars bind to — see the twin field on
+   *  HomeBookingComponent. Same derivation, same source, deliberately not a
+   *  second copy of the rule: this screen and the home form are the two places
+   *  a customer picks a travel date, and a format that agreed on one and not
+   *  the other would be worse than the hardcode it replaces. */
+  readonly calendarDateFormat: Signal<string | undefined>;
 
   bookingForm: FormGroup;
 
@@ -89,12 +96,14 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     private appStore: Store<Appstate>,
     private translate: TranslateService,
     private alertService: AlertService,
-    private bookingPolicyService: BookingPolicyService
+    private bookingPolicyService: BookingPolicyService,
+    languageService: LanguageService
   ) {
     this.minDate = new Date();
     this.maxDate = dayjs(this.minDate)
       .add(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK, 'day')
       .toDate();
+    this.calendarDateFormat = languageService.calendarDateFormat;
 
     this.rawProvinceStationList = this.store.pipe(
       select(selectProvinceWithStation)
