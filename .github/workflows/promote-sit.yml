@@ -1,0 +1,137 @@
+name: Promote dev to sit (night window)
+
+# OBRS-1042. The frontend is the half of SIT that actually breaks in a live user's face. The sit
+# build uses `outputHashing: "all"` with no service worker, and `src/` contains ZERO
+# ChunkLoadError handlers across 26 lazy routes - so the moment a new deploy is published, an
+# already-open tab 404s on its next lazy chunk and shows nothing a non-IT user could act on. SIT's
+# users are staff and the owner, none of them IT. Hence a night window rather than "whenever".
+#
+# Netlify publishes AUTOMATICALLY from `sit` ("Deploys from sit are published automatically",
+# confirmed 2026-08-04), completing in ~40 s. There is no build-then-publish split to hide behind:
+# pushing this ref IS publishing to the people using it.
+#
+# WHY THIS FILE LIVES ON `main`: GitHub fires `schedule` and `workflow_dispatch` only from the
+# workflow file on the DEFAULT branch. It pins no versions and builds nothing, so unlike ci.yml it
+# has nothing that can rot out of sync with dev.
+
+on:
+  # 17:00 UTC Mon/Wed = 00:00 ICT Tue/Thu. ICT is UTC+7 with NO daylight saving.
+  # Two nights a week, not seven: Netlify bills a measured 15 credits per deploy, and nightly
+  # promotes would exhaust the remaining balance more than a week before it refills.
+  schedule:
+    - cron: '0 17 * * 1,3'
+  workflow_dispatch:
+    inputs:
+      ignore_window:
+        description: 'Bypass the ICT night-window guard (rehearsal only - will publish NOW)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write  # push origin/dev -> sit
+  actions: read    # read dev's CI verdict
+
+concurrency:
+  group: promote-sit
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Promote dev to sit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # See the twin step in OBRS-backend for the full reasoning. Short version: the cron says
+      # when to start, this says whether we are still inside the window. GitHub's cron is
+      # best-effort and has been measured 49-83 minutes late on this account. `10#` forces base 10
+      # so that "08"/"09" are not parsed as invalid octal.
+      - name: Refuse to promote outside the ICT night window
+        if: ${{ !inputs.ignore_window }}
+        run: |
+          set -euo pipefail
+          utc_hour=$(date -u +%H)
+          ict_hour=$(( (10#${utc_hour} + 7) % 24 ))
+          echo "UTC hour ${utc_hour} + 7 (ICT, no DST) = ICT hour ${ict_hour}"
+          if [ "${ict_hour}" -gt 3 ]; then
+            echo "::error::ICT hour is ${ict_hour}:xx - outside the 00:00-03:59 night window. Refusing to promote: Netlify publishes this ref automatically and SIT has live human users during the day. Re-run manually with ignore_window=true to override."
+            exit 1
+          fi
+          echo "Inside the night window."
+
+      - name: Fetch dev and sit
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin \
+            "+refs/heads/dev:refs/remotes/origin/dev" \
+            "+refs/heads/sit:refs/remotes/origin/sit"
+
+      - name: Decide whether there is anything to promote
+        id: gap
+        run: |
+          set -euo pipefail
+          ahead=$(git rev-list --count refs/remotes/origin/sit..refs/remotes/origin/dev)
+          sha=$(git rev-parse refs/remotes/origin/dev)
+          echo "ahead=${ahead}" >> "$GITHUB_OUTPUT"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "sit..dev = ${ahead} commit(s); dev is at ${sha}"
+          if [ "${ahead}" -eq 0 ]; then
+            echo "### Nothing to promote - sit already matches dev" >> "$GITHUB_STEP_SUMMARY"
+          else
+            git log --oneline "refs/remotes/origin/sit..refs/remotes/origin/dev" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # The backend gets its verdict for free: promoting there dispatches ci.yml on sit, and the
+      # Koyeb deploy job only runs if the whole matrix went green first. Netlify grants no such
+      # favour - it watches the git ref and publishes whatever lands there, so on this side the
+      # ONLY thing standing between a broken dev and the owner's screen is this step.
+      #
+      # ci.yml here runs on `push: [dev]`, so the tip of dev always has a verdict of its own. This
+      # asserts that verdict belongs to the exact commit being promoted: a run whose headSha is an
+      # older commit is evidence about a tree nobody is shipping. Absent, queued, in-progress and
+      # failed all refuse - the safe answer to "no evidence" is "do not publish".
+      - name: Refuse to promote unless dev's own CI is green
+        if: steps.gap.outputs.ahead != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROMOTED_SHA: ${{ steps.gap.outputs.sha }}
+        run: |
+          set -euo pipefail
+          verdict=$(gh run list --workflow=ci.yml --branch=dev --limit 20 \
+            --json databaseId,headSha,status,conclusion \
+            --jq "map(select(.headSha == \"${PROMOTED_SHA}\")) | .[0] // empty")
+          if [ -z "${verdict}" ]; then
+            echo "::error::No ci.yml run found on dev for ${PROMOTED_SHA}. Netlify would publish this commit to real users with nothing having tested it. Refusing."
+            exit 1
+          fi
+          status=$(printf '%s' "${verdict}" | jq -r '.status')
+          conclusion=$(printf '%s' "${verdict}" | jq -r '.conclusion')
+          run_id=$(printf '%s' "${verdict}" | jq -r '.databaseId')
+          echo "dev CI run ${run_id}: status=${status} conclusion=${conclusion}"
+          if [ "${status}" != "completed" ] || [ "${conclusion}" != "success" ]; then
+            echo "::error::dev CI run ${run_id} for ${PROMOTED_SHA} is status=${status} conclusion=${conclusion}, not a completed success. Refusing to publish."
+            exit 1
+          fi
+          echo "dev is green at ${PROMOTED_SHA} (run ${run_id})."
+
+      # Plain, non-forced. A diverged sit fails loudly here instead of being rewritten; sit is what
+      # SIT is serving and force-pushing it is banned.
+      #
+      # This push is made with GITHUB_TOKEN, so per GitHub's loop prevention it triggers no
+      # workflow - which is fine and in fact wanted here: the gate above has already read dev's
+      # verdict for this exact tree, and re-running the same suite on the same commit would only
+      # spend runner minutes. Netlify is not subject to that prevention; it watches the ref and
+      # builds and publishes on its own, in ~40 s.
+      - name: Push dev to sit
+        if: steps.gap.outputs.ahead != '0'
+        run: |
+          set -euo pipefail
+          git push origin "refs/remotes/origin/dev:refs/heads/sit"
+          {
+            echo ""
+            echo "Pushed \`${{ steps.gap.outputs.sha }}\` to sit. Netlify builds and publishes automatically (~40 s)."
+          } >> "$GITHUB_STEP_SUMMARY"
