@@ -8,7 +8,7 @@
         <p>{{ "PARCEL_BOOKING.MY_PARCELS.SUBTITLE" | translate }}</p>
       </header>
       @if (vm.loading && !vm.loaded) {
-        @for (row of skeletonRows; track row) {
+        @for (row of skeletonRows; track $index) {
           <div class="booking-card booking-card--skeleton">
             <span class="skeleton skeleton--line"></span>
             <span class="skeleton skeleton--line skeleton--short"></span>

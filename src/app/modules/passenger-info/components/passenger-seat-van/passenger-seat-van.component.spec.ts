@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { PassengerSeatVanComponent } from './passenger-seat-van.component';
 import { PassengerSeatModule } from '../../passenger-seat.module';
+import { captureDuplicateTrackKeyWarnings } from '../../../../testing/track-key-warnings';
 
 describe('PassengerSeatVanComponent', () => {
   let component: PassengerSeatVanComponent;
@@ -307,5 +308,45 @@ describe('PassengerSeatVanComponent — data-driven seat layout (OBRS-384)', () 
     a20?.componentInstance.passengerSeatOutput.emit('A20');
 
     expect(emitted).toEqual(['A20']);
+  });
+});
+
+// OBRS-967 must-catch. A SeatLayout is assembled from SHARED cell constants, so
+// DEFAULT_VAN_SEAT_LAYOUT's first row is `[seat('A1'), EMPTY, EMPTY, DRIVER]` --
+// the SAME EMPTY object at index 1 and index 2. The template used to track cells
+// by identity, so Angular logged NG0955 ('key "[object Object]" at index "1" and
+// "2"') on every render of the default van, including inside PassengerInfoForm.
+// Reverting the template to `track cell` turns this red. Every other spec in this
+// file stayed green through the whole defect -- a duplicate key does not fail a
+// render, it only warns.
+describe('PassengerSeatVanComponent — duplicate track keys (OBRS-967)', () => {
+  let fixture: ComponentFixture<PassengerSeatVanComponent>;
+  let readWarnings: () => string[];
+
+  beforeEach(async () => {
+    readWarnings = captureDuplicateTrackKeyWarnings();
+    await TestBed.configureTestingModule({
+      imports: [PassengerSeatModule],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PassengerSeatVanComponent);
+  });
+
+  it('renders the built-in 13-seat van without NG0955 (shared EMPTY cell appears twice in row 1)', () => {
+    fixture.detectChanges();
+
+    expect(readWarnings())
+      .withContext('the seat grid must track by $index — EMPTY/DRIVER are shared object constants')
+      .toEqual([]);
+  });
+
+  it('renders a caller-supplied layout that REUSES one cell constant without NG0955', () => {
+    const spacer = { kind: 'empty' as const, label: '' };
+    fixture.componentInstance.seatLayout = [
+      [{ kind: 'seat', label: 'B1' }, spacer, spacer, { kind: 'seat', label: 'B2' }],
+    ];
+    fixture.detectChanges();
+
+    expect(readWarnings()).toEqual([]);
   });
 });

@@ -11,7 +11,8 @@ import { environment } from '../../../environments/environment';
  * a single value change — no branch to revert, no code to restore.
  *
  * Deliberately a SEPARATE guard from AuthGuard/the area-based access model
- * (ROLE_GRANTS, canAccessCustomerArea, getHomeRoute in auth.service.ts) — this
+ * (ROLE_GRANTS, getHomeRoute in auth.service.ts; `canAccessCustomerArea` was
+ * deleted by OBRS-1001) — this
  * gates whether a feature is live at all, not who may use it. Always placed
  * AFTER AuthGuard in a route's canActivate array so auth still runs first.
  *

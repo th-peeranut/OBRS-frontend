@@ -49,20 +49,45 @@
             }
             <!-- DEPARTURE DATE -->
             <div class="form-group-obrs">
-              <!-- LABEL -->
-              <label>
-                {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+              <!-- LABEL. OBRS-1021 — see the identical block in
+              home-booking.component.html. This filter bar is a copy of that
+              form and carried the same two-identical-labels bug; fixing only
+              the Home screen would have left it live on the results page,
+              where a customer refining a round trip is even more likely to be
+              changing exactly one of the two dates.
+
+              OBRS-1028 — same story one layer down: the copy also brought
+              `inputId="templatedisplay"` and a label bound to nothing. The ids
+              are prefixed `filter-` rather than reusing the Home ones so that
+              the pair stays unique even if the two forms ever share a page. -->
+              <label for="filter-departure-date">
+                {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }} :
               </label>
-              <!-- CALENDAR MAIN ELEMENT -->
+              <!-- CALENDAR MAIN ELEMENT
+
+              OBRS-1023 — third defect on these same lines, same cause: the copy
+              also brought `dateFormat="dd/mm/yy"`, which SHADOWS the
+              `CALENDAR.dateFormat` we translate three ways (PrimeNG resolves it
+              as `this.dateFormat || getTranslation('dateFormat')`). See the twin
+              block in home-booking.component.html for the full note.
+
+              OBRS-1036 — fourth defect on these same lines, and the cost of the
+              third: the `D` that OBRS-1023 put in the format is also what
+              `parseDate` walks on the way back in, where it throws and
+              `onUserInput` clears the field. `readonlyInput` makes the calendar
+              the only way in. Applied here as well as on the Home form because
+              markup is exactly what does NOT propagate between two copies —
+              the whole lesson of OBRS-1021/1028/1023 on these four lines. -->
               <p-datePicker
                 styleClass="app-date-field"
                 panelStyleClass="app-date-field-panel"
-                dateFormat="dd/mm/yy"
+                [dateFormat]="calendarDateFormat()"
+                [readonlyInput]="true"
                 [minDate]="minDate"
                 [maxDate]="maxDate"
                 [iconDisplay]="'input'"
                 [showIcon]="true"
-                inputId="templatedisplay"
+                inputId="filter-departure-date"
                 formControlName="departureDate"
                 >
                 <!-- CUSTOM CALENDAR ICON -->
@@ -77,22 +102,24 @@
               </div>
               <!-- ROUND TRIP RETURN -->
               @if (isRoundTripReturn) {
-                <!-- DEPARTURE DATE -->
+                <!-- RETURN DATE (OBRS-1021 — was labelled DEPARTURE DATE, in
+                the comment and on screen, because the block is a copy). -->
                 <div class="form-group-obrs">
-                  <!-- LABEL -->
-                  <label>
-                    {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+                  <!-- LABEL (OBRS-1028) -->
+                  <label for="filter-return-date">
+                    {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }} :
                   </label>
-                  <!-- CALENDAR MAIN ELEMENT -->
+                  <!-- CALENDAR MAIN ELEMENT (OBRS-1023, OBRS-1036) -->
                   <p-datePicker
                     styleClass="app-date-field"
                     panelStyleClass="app-date-field-panel"
-                    dateFormat="dd/mm/yy"
+                    [dateFormat]="calendarDateFormat()"
+                    [readonlyInput]="true"
                     [minDate]="minDate"
                     [maxDate]="maxDate"
                     [iconDisplay]="'input'"
                     [showIcon]="true"
-                    inputId="templatedisplay"
+                    inputId="filter-return-date"
                     formControlName="returnDate"
                     >
                     <!-- CUSTOM CALENDAR ICON -->

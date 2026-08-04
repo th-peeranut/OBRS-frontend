@@ -317,31 +317,32 @@ describe('AuthService', () => {
     });
   });
 
-  describe('canAccessCustomerArea', () => {
-    const setRoles = (roles: string[]) =>
-      localStorage.setItem('auth_roles', JSON.stringify(roles));
-
-    it('allows guests, customers, owners and admins on public pages', () => {
-      expect(service.canAccessCustomerArea()).toBe(true); // guest
-      setRoles(['customer']);
-      expect(service.canAccessCustomerArea()).toBe(true);
-      setRoles(['owner']);
-      expect(service.canAccessCustomerArea()).toBe(true);
-      // OBRS-176: admin is no longer confined to the admin portal.
-      setRoles(['admin']);
-      expect(service.canAccessCustomerArea()).toBe(true);
+  // OBRS-1001 deleted `canAccessCustomerArea()` and `PORTAL_ONLY_ROLES` — the
+  // suite that used to live here pinned salesperson/driver as confined, which
+  // is the rule the fix removes. Rewriting those cases as `toBe(true)` against
+  // a method that no longer exists would have been a suite that compiles and
+  // proves nothing; the replacement asserts the SURFACE is gone, and the real
+  // behavioural pin lives in auth.guard.spec.ts, where the guard is driven with
+  // the real service and real localStorage roles.
+  describe('portal confinement is gone (OBRS-1001)', () => {
+    it('exposes no customer-area role predicate on the service any more', () => {
+      expect(
+        (service as unknown as Record<string, unknown>)['canAccessCustomerArea']
+      )
+        .withContext(
+          'restoring this method must go through an ADR — see docs/adr/0037-no-frontend-portal-confinement.md'
+        )
+        .toBeUndefined();
     });
 
-    it('bounces portal-confined staff (salesperson/driver) off public pages', () => {
-      setRoles(['salesperson']);
-      expect(service.canAccessCustomerArea()).toBe(false);
-      setRoles(['driver']);
-      expect(service.canAccessCustomerArea()).toBe(false);
-    });
-
-    it('lets a user who is also a customer stay on public pages', () => {
-      setRoles(['salesperson', 'customer']);
-      expect(service.canAccessCustomerArea()).toBe(true);
+    // getHomeRoute() is NOT part of what was removed: staff still LAND in their
+    // portal after signing in. What changed is that the public area no longer
+    // pushes them back there.
+    it('still lands staff in their own portal after login', () => {
+      localStorage.setItem('auth_roles', JSON.stringify(['salesperson']));
+      expect(service.getHomeRoute()).toBe('/staff');
+      localStorage.setItem('auth_roles', JSON.stringify(['driver']));
+      expect(service.getHomeRoute()).toBe('/staff');
     });
   });
 

@@ -158,6 +158,20 @@ jobs:
       - name: loading-primitive duplication gate
         run: npm run test:loading-primitives
 
+      # OBRS-967. A duplicated `@for ... track` key fails nothing: Angular logs NG0955
+      # to console.warn, paints every row anyway, and the suite reports success. 39
+      # placeholder loops were broken on dev while `ng test` printed "4612 of 4612
+      # SUCCESS" -- 33 of those specs were emitting the warning the entire time, and a
+      # row-count assertion (`expect(skeletonRows.length).toBe(5)`) stayed green through
+      # all of it. The cause is that `Array.from({ length: 5 })` is five copies of
+      # `undefined`, so tracking by the loop variable hands @for one key five times.
+      # This gate flags a @for over an array-of-undefined field (found by pairing the
+      # template with its own component .ts) or over a `skeleton*`/`placeholder*` named
+      # collection, unless it tracks by $index. Self-tests its own must-catch/
+      # must-NOT-catch fixtures first. Pure file reads -- costs no extra runner minutes.
+      - name: duplicate @for track key gate
+        run: npm run test:track-keys
+
       # OBRS-602. The Playwright suite had grown to 223 cases nobody had ever seen pass
       # together, because playwright.config.ts swept the whole e2e/ directory while nine
       # specs were written for environments it does not provide. Lane membership is now

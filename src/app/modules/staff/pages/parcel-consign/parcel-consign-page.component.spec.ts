@@ -123,15 +123,28 @@ function createCargoStoreStub(): any {
   };
 }
 
+// OBRS-960 — a bare BehaviorSubject-backed stub of ParcelShareConfigStore's
+// public surface (data$/error$/refresh()), same shape as createCargoStoreStub
+// above. Tests drive fail-safe behavior by pushing onto these subjects directly.
+function createShareConfigStoreStub(): any {
+  return {
+    data$: new BehaviorSubject<{ driverPct: number; salespersonPct: number; configured: boolean } | null>(null),
+    error$: new BehaviorSubject(false),
+    refresh: jasmine.createSpy('refresh').and.returnValue(Promise.resolve()),
+  };
+}
+
 describe('ParcelConsignPageComponent', () => {
   let staffApi: any;
   let cargoStore: any;
+  let shareConfigStore: any;
   let component: ParcelConsignPageComponent;
 
   beforeEach(() => {
     staffApi = createStaffApiStub();
     cargoStore = createCargoStoreStub();
-    component = new ParcelConsignPageComponent(staffApi, cargoStore);
+    shareConfigStore = createShareConfigStoreStub();
+    component = new ParcelConsignPageComponent(staffApi, cargoStore, shareConfigStore);
   });
 
   afterEach(() => {
@@ -705,6 +718,37 @@ describe('ParcelConsignPageComponent', () => {
       const secondKey = staffApi.payWalkIn.calls.mostRecent().args[1];
 
       expect(secondKey).not.toBe(firstKey);
+    });
+  });
+
+  // OBRS-960 — the card's central fail-safe requirement: an error on the
+  // share-config GET must still SHOW the warning, never hide it (the amount
+  // freezes at whatever % was in effect at intake, so hiding the warning on
+  // a transient failure would let parcels silently freeze at 0%).
+  describe('OBRS-960 — parcel share "not configured" banner (fail-safe)', () => {
+    it('defaults shareNotConfigured to true before any fetch resolves', () => {
+      expect(component['shareNotConfigured']).toBeTrue();
+    });
+
+    it('clears the warning only on a successful fetch reporting configured:true', () => {
+      component.ngOnInit();
+      shareConfigStore.data$.next({ driverPct: 10, salespersonPct: 5, configured: true });
+      expect(component['shareNotConfigured']).toBeFalse();
+    });
+
+    it('keeps the warning when a successful fetch reports configured:false', () => {
+      component.ngOnInit();
+      shareConfigStore.data$.next({ driverPct: 0, salespersonPct: 0, configured: false });
+      expect(component['shareNotConfigured']).toBeTrue();
+    });
+
+    it('re-shows the warning when the GET fails, even after a prior configured:true fetch', () => {
+      component.ngOnInit();
+      shareConfigStore.data$.next({ driverPct: 10, salespersonPct: 5, configured: true });
+      expect(component['shareNotConfigured']).toBeFalse();
+
+      shareConfigStore.error$.next(true);
+      expect(component['shareNotConfigured']).toBeTrue();
     });
   });
 });

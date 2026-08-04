@@ -67,20 +67,55 @@
             }
             <!-- DEPARTURE DATE -->
             <div class="form-group-obrs">
-              <!-- LABEL -->
-              <label>
-                {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+              <!-- LABEL. OBRS-1021: in round-trip mode this field stops being
+              "the date" and becomes "the OUTBOUND date", so it switches to the
+              ROUND_DEPARTURE/ROUND_RETURN pair the i18n files have carried
+              (all three locales) since before this screen shipped — the two
+              keys had zero call sites, which is why nothing was ever mistranslated
+              and nothing was ever right either. One-way keeps DEPARTURE_DATE:
+              with a single date field there is no "outbound" to contrast with.
+
+              OBRS-1028: `for`/`inputId` name THIS field. Both calendars used to
+              carry `inputId="templatedisplay"`, so round-trip mode put two
+              elements with the same id in one document, and neither label was
+              associated with anything — OBRS-1021 gave the two fields different
+              words, but a screen reader still announced two unnamed text boxes.
+              Pattern copied from reschedule-date-picker-step.component.html,
+              which has paired them correctly since it shipped. -->
+              <label for="home-departure-date">
+                {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }} :
               </label>
-              <!-- CALENDAR MAIN ELEMENT -->
+              <!-- CALENDAR MAIN ELEMENT
+
+              OBRS-1023: `dateFormat` is BOUND, not a literal. `dd/mm/yy` sat
+              here, and PrimeNG resolves the format as `this.dateFormat ||
+              getTranslation('dateFormat')` — so the literal did not duplicate
+              the translated value, it SHADOWED it, and the CALENDAR.dateFormat
+              we ship in three locales had never once reached a picker. An
+              English visitor read Thai field order on the screen where they
+              commit to a ticket, and `03/08/2026` is equally readable as
+              8 March. The `D, ` prefix comes from the same signal (see
+              LanguageService) and resolves through `dayNamesShort`: a bus
+              timetable is not the same on a Saturday as on a Tuesday.
+
+              OBRS-1036: `readonlyInput` is the price of that `D`, paid on
+              purpose. `getDateFormat()` serves render AND parse, so the token
+              that prints `Mon, ` is the one `parseDate` walks on the way back
+              in — `case 'D'` calls `getName`, which throws on text with no day
+              name, and `onUserInput` answers a throw by writing `null` into the
+              model. A customer typing `03/08/2026` watched the box empty
+              itself. `readonly`, never `disabled`: the input must still focus
+              and still open the calendar it is now the only way into. -->
               <p-datePicker
                 styleClass="app-date-field"
                 panelStyleClass="app-date-field-panel"
-                dateFormat="dd/mm/yy"
+                [dateFormat]="calendarDateFormat()"
+                [readonlyInput]="true"
                 [minDate]="minDate"
                 [maxDate]="maxDate"
                 [iconDisplay]="'input'"
                 [showIcon]="true"
-                inputId="templatedisplay"
+                inputId="home-departure-date"
                 formControlName="departureDate"
                 >
                 <!-- CUSTOM CALENDAR ICON -->
@@ -95,22 +130,33 @@
               </div>
               <!-- ROUND TRIP RETURN -->
               @if (isRoundTripReturn) {
-                <!-- DEPARTURE DATE -->
+                <!-- RETURN DATE. The comment said DEPARTURE DATE because this
+                whole block was copied from the one above, label included — the
+                two fields rendered the same words and only their order told a
+                customer which was which (OBRS-1021). -->
                 <div class="form-group-obrs">
-                  <!-- LABEL -->
-                  <label>
-                    {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+                  <!-- LABEL (OBRS-1028: its own id — this block only renders
+                  alongside the departure one, so a shared id was always a
+                  duplicate, never a merely-unhelpful name). -->
+                  <label for="home-return-date">
+                    {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }} :
                   </label>
-                  <!-- CALENDAR MAIN ELEMENT -->
+                  <!-- CALENDAR MAIN ELEMENT (OBRS-1023: same bound format as the
+                  departure field above — a return date shown in a different
+                  order from the outbound one would be worse than either.
+                  OBRS-1036: and the same `readonlyInput`, for the same reason —
+                  two date fields side by side where only one refuses typing
+                  would read as a broken one, not as a rule.) -->
                   <p-datePicker
                     styleClass="app-date-field"
                     panelStyleClass="app-date-field-panel"
-                    dateFormat="dd/mm/yy"
+                    [dateFormat]="calendarDateFormat()"
+                    [readonlyInput]="true"
                     [minDate]="minDate"
                     [maxDate]="maxDate"
                     [iconDisplay]="'input'"
                     [showIcon]="true"
-                    inputId="templatedisplay"
+                    inputId="home-return-date"
                     formControlName="returnDate"
                     >
                     <!-- CUSTOM CALENDAR ICON -->

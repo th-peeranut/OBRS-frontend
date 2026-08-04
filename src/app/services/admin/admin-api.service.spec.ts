@@ -553,4 +553,104 @@ describe('AdminApiService', () => {
       expect(result).toEqual(detail);
     });
   });
+
+  // OBRS-960 — driver cash daily-return close. The first version of these
+  // three URLs guessed `/private/owner/driver-cash/days...`; the real base
+  // is `/private/driver-cash/days...` (owner-gated by ROLE, not by URL
+  // prefix). No spec asserted the literal URL before this, which is exactly
+  // how the wrong guess stayed green.
+  describe('OBRS-960 driver cash days — correct URL (not under /owner/)', () => {
+    it('getDriverCashDays() GETs /private/driver-cash/days with from/to params', () => {
+      service.getDriverCashDays('2026-08-01', '2026-08-07').subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url === `${environment.apiUrl}/api/private/driver-cash/days` &&
+          request.params.get('from') === '2026-08-01' &&
+          request.params.get('to') === '2026-08-07' &&
+          request.params.get('status') === null
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush({ code: 200, message: 'OK', data: [] });
+    });
+
+    it('getDriverCashDays() adds an optional status param when supplied', () => {
+      service.getDriverCashDays('2026-08-01', '2026-08-07', 'OPEN').subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url === `${environment.apiUrl}/api/private/driver-cash/days` &&
+          request.params.get('status') === 'OPEN'
+      );
+      req.flush({ code: 200, message: 'OK', data: [] });
+    });
+
+    it('getDriverCashDayDetail() GETs /private/driver-cash/days/{dayId}', () => {
+      service.getDriverCashDayDetail(7).subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/driver-cash/days/7`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+
+    it('returnDriverCashDay() POSTs to /private/driver-cash/days/{dayId}/return', () => {
+      service
+        .returnDriverCashDay(7, { returnedAmount: '250.00' })
+        .subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/driver-cash/days/7/return`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ returnedAmount: '250.00' });
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+  });
+
+  // OBRS-960 — these five paths were confirmed CORRECT by the backend
+  // reconciliation (unlike the driver-cash/days ones above) — locked here so
+  // that stays true.
+  describe('OBRS-960 owner settings + reports — confirmed-correct URLs', () => {
+    it('getDriverCashRates() GETs /private/owner/driver-cash/per-head-rates', () => {
+      service.getDriverCashRates().subscribe((res) => expect(res).toBeTruthy());
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/owner/driver-cash/per-head-rates`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ code: 200, message: 'OK', data: [] });
+    });
+
+    it('getParcelShareOwnerConfig() GETs /private/owner/configs/parcel-share', () => {
+      service.getParcelShareOwnerConfig().subscribe((res) => expect(res).toBeTruthy());
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/owner/configs/parcel-share`);
+      expect(req.request.method).toBe('GET');
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { driverPct: 0, driverPctConfigured: false, salespersonPct: 0, salespersonPctConfigured: false },
+      });
+    });
+
+    it('repairParcelShare() POSTs to /private/owner/parcel-share/repair', () => {
+      service
+        .repairParcelShare({ source: 'OWNER_SETTINGS_PARCEL_SHARE' })
+        .subscribe((res) => expect(res).toBeTruthy());
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/owner/parcel-share/repair`);
+      expect(req.request.method).toBe('POST');
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { parcelsRepaired: 0, entriesRepaired: 0, driverPctApplied: 0, salespersonPctApplied: 0 },
+      });
+    });
+
+    it('getParcelShareMonthly() GETs /private/owner/parcel-share/monthly with year/month/role params', () => {
+      service.getParcelShareMonthly(2026, 3, 'SALESPERSON').subscribe((res) => expect(res).toBeTruthy());
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url === `${environment.apiUrl}/api/private/owner/parcel-share/monthly` &&
+          request.params.get('year') === '2026' &&
+          request.params.get('month') === '3' &&
+          request.params.get('role') === 'SALESPERSON'
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush({ code: 200, message: 'OK', data: [] });
+    });
+  });
 });

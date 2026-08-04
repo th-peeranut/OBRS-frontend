@@ -171,6 +171,13 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
   @Input() serverErrorKey: string | null = null;
   @Input() isSubmitting = false;
 
+  /** OBRS-960 — "ยังไม่ได้ตั้งอัตราส่วนแบ่งพัสดุ": a banner above the submit
+   * button whenever the owner has no rate override for parcel revenue
+   * share. Owned by the smart page (`ParcelConsignPageComponent`, reading
+   * `ParcelShareConfigStore`) — this dumb form only renders what it's told,
+   * fail-safe-to-showing is the STORE's contract, not this component's. */
+  @Input() shareNotConfigured = false;
+
   @Output() scheduleChange = new EventEmitter<string>();
   @Output() pickupChange = new EventEmitter<string>();
   @Output() dropoffChange = new EventEmitter<string>();

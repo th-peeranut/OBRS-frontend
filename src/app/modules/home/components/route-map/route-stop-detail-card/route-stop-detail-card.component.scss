@@ -53,6 +53,37 @@
   color: $text-lightblack;
 }
 
+// OBRS-1022: the deliberate empty state for a stop with no photo. Every stop on prod is in
+// this state today, so it is the DEFAULT rendering of this card, not an edge case.
+//
+// $text-softblack, NOT the $text-lightblack that .detail-empty above uses: the moment this box
+// takes a $secondary-lightgrey fill, $text-lightblack on it measures 4.29:1 — sub-AA, and named
+// as one of that token's only two failing pairs in variables.scss:63-68, repointed to
+// $text-softblack for exactly this reason. Same height as .detail-photo so swapping between a
+// stop with a photo and one without does not make the card jump.
+.detail-photo-empty {
+  height: 140px;
+  color: $text-softblack;
+  background-color: $secondary-lightgrey;
+  border: 1px dashed $secondary-light-blue;
+  border-radius: $radius-lg;
+}
+
+// The one line on this card an owner writes themselves. Given a left accent rather than a
+// background wash so its foreground keeps the card's own white surface, where $text-softblack is
+// measured at 7.01:1 (variables.scss:69) — a tinted fill would put it on a surface nobody has
+// measured, to make one line slightly more colourful.
+.detail-landmark {
+  color: $text-softblack;
+  border-left: 3px solid $primary-blue;
+  padding-left: 0.5rem;
+}
+
+.detail-landmark-label {
+  color: $secondary-blue;
+  font-weight: $font-weight-semibold;
+}
+
 :host ::ng-deep .route-stop-detail-card.p-card {
   border-radius: $radius-xl;
   border: 1px solid $secondary-light-blue;

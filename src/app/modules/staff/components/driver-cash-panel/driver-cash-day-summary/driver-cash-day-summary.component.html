@@ -1,0 +1,27 @@
+<div class="dcp-summary" data-testid="driver-cash-summary">
+  @if (isLoading && !day) {
+    <div class="admin-skeleton admin-skeleton--sm dcp-summary-skeleton"></div>
+  }
+  @if (day) {
+    <div class="dcp-summary-pill">
+      <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.SUMMARY.ADVANCE' | translate }}</span>
+      <span class="admin-emphasis">{{ day.advanceTotal }}</span>
+    </div>
+    <div class="dcp-summary-pill">
+      <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.SUMMARY.PER_HEAD' | translate }}</span>
+      <span class="admin-emphasis">{{ day.perHeadTotal }}</span>
+    </div>
+    <div class="dcp-summary-pill">
+      <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.SUMMARY.EXPENSE' | translate }}</span>
+      <span class="admin-emphasis">{{ day.expensePaidTotal }}</span>
+    </div>
+    <div class="dcp-summary-pill">
+      <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.SUMMARY.PARCEL_REMIT' | translate }}</span>
+      <span class="admin-emphasis">{{ day.parcelRemitTotal }}</span>
+    </div>
+    <div class="dcp-summary-pill dcp-summary-pill-net" data-testid="driver-cash-net">
+      <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.SUMMARY.NET' | translate }}</span>
+      <span class="admin-emphasis">{{ day.expectedReturnAmount }}</span>
+    </div>
+  }
+</div>

@@ -3,6 +3,8 @@ import { BookingPolicyConfigPageComponent } from '../booking-policy-config/booki
 import { ConfigChangeHistoryPageComponent } from '../config-change-history/config-change-history-page.component';
 import { JumpSeatConfigPageComponent } from '../jump-seat-config/jump-seat-config-page.component';
 import { ReminderConfigPageComponent } from '../reminder-config/reminder-config-page.component';
+import { ParcelShareConfigPageComponent } from '../parcel-share-config/parcel-share-config-page.component';
+import { DriverCashRatesPageComponent } from '../driver-cash-rates/driver-cash-rates-page.component';
 
 /** One tab of `/admin/settings` — see {@link SYSTEM_SETTINGS_TABS}. */
 export interface SystemSettingsTab {
@@ -70,7 +72,13 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     legacyPath: 'reminder-config',
     labelKey: 'ADMIN.PAGES.REMINDER_CONFIG',
     subtitleKey: 'ADMIN.REMINDER_CONFIG.SUBTITLE',
-    requiredRoles: ['admin'],
+    // OBRS-1016: was ['admin']. Inert either way (ROLE_GRANTS makes all three
+    // spellings one predicate today), but the backend guard on
+    // GET/PUT /private/admin/configs/reminders moved from hasRole('ADMIN') to
+    // hasRole('OWNER') — an owner who reached this tab used to get a 403 and an
+    // empty card. Per the doc above, the literal must say which side it means
+    // for the day owner-scoping makes it bite; after ADR-0120 that side is owner.
+    requiredRoles: ['admin', 'owner'],
     component: ReminderConfigPageComponent,
   },
   {
@@ -78,8 +86,29 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     legacyPath: 'jump-seat-config',
     labelKey: 'ADMIN.PAGES.JUMP_SEAT_CONFIG',
     subtitleKey: 'ADMIN.JUMP_SEAT_CONFIG.SUBTITLE',
-    requiredRoles: ['admin'],
+    // OBRS-1016 / ADR-0120: same move as the reminders tab above — the backend
+    // GET/PUT /private/admin/configs/jump-seat is hasRole('OWNER') now.
+    requiredRoles: ['admin', 'owner'],
     component: JumpSeatConfigPageComponent,
+  },
+  {
+    // OBRS-960: owner-only, new. Placed after the pre-existing four tabs and
+    // before the "meta" history tab (which stays last, per its own comment).
+    path: 'parcel-share',
+    legacyPath: 'parcel-share-config',
+    labelKey: 'ADMIN.PAGES.PARCEL_SHARE_CONFIG',
+    subtitleKey: 'ADMIN.PARCEL_SHARE_CONFIG.SUBTITLE',
+    requiredRoles: ['owner'],
+    component: ParcelShareConfigPageComponent,
+  },
+  {
+    // OBRS-960: owner-only, new.
+    path: 'driver-cash-rates',
+    legacyPath: 'driver-cash-rates',
+    labelKey: 'ADMIN.PAGES.DRIVER_CASH_RATES',
+    subtitleKey: 'ADMIN.DRIVER_CASH_RATES.SUBTITLE',
+    requiredRoles: ['owner'],
+    component: DriverCashRatesPageComponent,
   },
   {
     // Last: the "meta" view over every other tab, same placement it held as the

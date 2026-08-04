@@ -179,6 +179,9 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       { path: 'users', labelKey: 'ADMIN.PAGES.USER_MANAGEMENT', icon: 'group', descriptionKey: 'ADMIN.USERS.SUBTITLE', section: 'master' },
       { path: 'vehicles', labelKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT', icon: 'directions_bus', descriptionKey: 'ADMIN.VEHICLES.SUBTITLE', section: 'master' },
       { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route', descriptionKey: 'ADMIN.ROUTES.SUBTITLE', section: 'master' },
+      // OBRS-1022. Master data, next to `routes` — a route is composed of stops, and until
+      // this card a stop could only be edited by hand-crafting a PUT.
+      { path: 'stops', labelKey: 'ADMIN.PAGES.STOPS', icon: 'place', descriptionKey: 'ADMIN.STOPS.SUBTITLE', section: 'master' },
       { path: 'schedules', labelKey: 'ADMIN.PAGES.SCHEDULES', icon: 'calendar_month', descriptionKey: 'ADMIN.SCHEDULES.SUBTITLE', section: 'master' },
       // OBRS-508: pushed conditionally below (owner-only), same gating shape
       // as settlements/reminder-config/jump-seat-config — kept out of this

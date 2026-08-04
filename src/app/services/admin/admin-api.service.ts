@@ -40,6 +40,14 @@ import {
   CashRefundApprovalCode,
   CashRefundApprovalRequest,
 } from '../../shared/interfaces/my-booking.interface';
+import {
+  DriverCashDayRespDto,
+  DriverCashDayReturnReqDto,
+  DriverCashDayStatus,
+  DriverCashDaySummaryRespDto,
+  DriverCashRateReqDto,
+  DriverCashRateRowDto,
+} from '../../shared/interfaces/driver-cash.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -319,6 +327,65 @@ export interface AdminStopDto {
   code?: string;
   display?: AdminTranslationCollection;
   translations?: AdminTranslationCollection;
+}
+
+// ── OBRS-1022: the owner-facing stop management shapes ────────────────────────
+// Distinct from AdminStopDto above, which is the thin nested shape a route-stop
+// row carries. These mirror StopSummaryResponse / StopDetailResponse, the two
+// payloads the stop endpoints actually return.
+
+/** A lookup as the stop endpoints return it: slug + per-locale label/description. */
+export interface AdminStopLookupDto {
+  id?: number;
+  slug?: string;
+  translations?: AdminTranslationCollection;
+}
+
+export interface AdminStopSummaryDto {
+  id: number;
+  slug: string;
+  status?: AdminStopLookupDto;
+  stopType?: AdminStopLookupDto;
+  translations?: AdminTranslationCollection;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminStopDetailDto {
+  id: number;
+  slug: string;
+  status?: AdminStopLookupDto;
+  stopType?: AdminStopLookupDto;
+  province?: AdminStopLookupDto;
+  translations?: AdminTranslationCollection;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  primaryPhotoUrl?: string | null;
+  /** locale -> address; a locale with no address is absent, not null. */
+  addresses?: Record<string, string> | null;
+}
+
+/**
+ * The body of `PUT /api/private/stops/{id}`.
+ *
+ * <p>`primaryPhotoUrl` is deliberately ABSENT from this type — not optional,
+ * absent. The server preserves the stored photo exactly when the key does not
+ * appear, so making the field un-sendable is what stops a form save from ever
+ * wiping an uploaded photo (OBRS-580). The photo has its own two endpoints.
+ */
+export interface AdminStopUpdatePayload {
+  slug: string;
+  province: string;
+  status: string;
+  stopType: string;
+  latitude: number | null;
+  longitude: number | null;
+  addresses: Record<string, string>;
+  translations: AdminTranslationReqDto[];
+}
+
+export interface AdminStopPhotoDto {
+  primaryPhotoUrl: string;
 }
 
 export interface AdminStopOrderDto {
@@ -840,6 +907,16 @@ export interface AdminExpenseDto {
   createdAt?: string;
   updatedByName?: string;
   updatedAt?: string;
+  /**
+   * OBRS-960: `'FIELD'` for a row the backend auto-created from a driver's
+   * cash-panel expense entry (immutable here — edit/delete are disabled with
+   * a reason, design-system §12 "disabled with a reason, not absent");
+   * `'MANUAL'` for an admin/owner-entered row (unchanged behavior). Optional
+   * so a cached pre-OBRS-960 response (field absent) renders as the existing
+   * MANUAL row — same absence-reads-as-normal convention the Vehicle "-"
+   * rendering already uses, per the card.
+   */
+  source?: 'FIELD' | 'MANUAL';
 }
 
 /** OBRS-685: `ExpenseReqDto` — sent verbatim by the create/edit form
@@ -1345,6 +1422,60 @@ export class AdminApiService {
     return this.getRequest<AdminRouteStopDto>(
       `${this.baseUrl}/private/route-stops/${routeSlug}`
     );
+  }
+
+  // ── Stops (OBRS-1022) ──────────────────────────────────────────────────────
+  // The owner-facing stop management surface. `GET /api/stops` is the PUBLIC
+  // reference-data list (unauthenticated, cached) — reused deliberately rather
+  // than adding a private twin, since the list carries nothing an owner may see
+  // and a customer may not. Everything that WRITES is under /private and
+  // OWNER-gated on the server.
+
+  getStopsForAdmin(): Observable<ResponseAPI<AdminStopSummaryDto[]>> {
+    return this.getRequest<AdminStopSummaryDto[]>(`${this.baseUrl}/stops`);
+  }
+
+  getStopDetail(id: number): Observable<ResponseAPI<AdminStopDetailDto>> {
+    return this.getRequest<AdminStopDetailDto>(`${this.baseUrl}/stops/${id}`);
+  }
+
+  /** Province options for the stop form. `PUT /private/stops/{id}` takes a province
+   *  SLUG and 400s on an unknown one, so the form must pick from this list rather
+   *  than echo back whatever the detail payload happened to carry. */
+  getProvincesForAdmin(): Observable<ResponseAPI<AdminStopLookupDto[]>> {
+    return this.getRequest<AdminStopLookupDto[]>(`${this.baseUrl}/provinces`);
+  }
+
+  /**
+   * ⚠️ Full-replace PUT. Anything the payload omits is CLEARED on the server —
+   * with one deliberate exception: `primaryPhotoUrl`, which the backend preserves
+   * when the KEY is absent (OBRS-1022/OBRS-580, `StopReqDto#primaryPhotoUrlPresent`).
+   * So the stop form must simply NOT send that key: the photo is owned by the two
+   * multipart calls below, and a form save must never be able to undo an upload.
+   */
+  updateStop(id: number, payload: AdminStopUpdatePayload): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/stops/${id}`, payload);
+  }
+
+  /**
+   * Uploads the stop's photo. The body is a bare `FormData` and the request is sent
+   * WITHOUT an explicit Content-Type: the browser has to set `multipart/form-data`
+   * together with the boundary it generated, and naming the header by hand omits the
+   * boundary and produces a request the server cannot parse. Same reason
+   * `UsabilityReportService` documents it.
+   */
+  uploadStopPhoto(id: number, file: File): Observable<ResponseAPI<AdminStopPhotoDto>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ResponseAPI<AdminStopPhotoDto>>(
+      `${this.baseUrl}/private/stops/${id}/photo`,
+      formData,
+      this.toRequestOptions()
+    );
+  }
+
+  deleteStopPhoto(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/stops/${id}/photo`);
   }
 
   getSegments(routeSlug: string): Observable<ResponseAPI<AdminSegmentDto>> {
@@ -1920,4 +2051,141 @@ export class AdminApiService {
       {}
     );
   }
+
+  // ── OBRS-960: driver cash — daily-return close (/admin/settlements) ──────
+  // ⚠️ CORRECTED (2026-08-02, backend reconciliation) — the base is
+  // `/api/private/driver-cash`, NOT `/api/private/owner/driver-cash`; the
+  // day endpoints are OWNER-gated by role, not by URL prefix. The list
+  // endpoint itself was a genuine contract gap the SA never specified — the
+  // backend added it now: `status` is optional (`OPEN`|`RETURNED`, omitted
+  // = both), `from`/`to` are the required business-date range. Verified
+  // against `DriverCashController.java:55,65,74,81`.
+
+  getDriverCashDays(
+    from: string,
+    to: string,
+    status?: DriverCashDayStatus
+  ): Observable<ResponseAPI<DriverCashDaySummaryRespDto[]>> {
+    let params = new HttpParams().set('from', from).set('to', to);
+    if (status) {
+      params = params.set('status', status);
+    }
+    return this.getRequest<DriverCashDaySummaryRespDto[]>(
+      `${this.baseUrl}/private/driver-cash/days`,
+      params
+    );
+  }
+
+  getDriverCashDayDetail(dayId: number): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.getRequest<DriverCashDayRespDto>(
+      `${this.baseUrl}/private/driver-cash/days/${dayId}`
+    );
+  }
+
+  returnDriverCashDay(
+    dayId: number,
+    payload: DriverCashDayReturnReqDto
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.postRequest<DriverCashDayRespDto>(
+      `${this.baseUrl}/private/driver-cash/days/${dayId}/return`,
+      payload
+    );
+  }
+
+  // ── OBRS-960: owner settings — driver-cash per-head rates ────────────────
+
+  getDriverCashRates(): Observable<ResponseAPI<DriverCashRateRowDto[]>> {
+    return this.getRequest<DriverCashRateRowDto[]>(
+      `${this.baseUrl}/private/owner/driver-cash/per-head-rates`
+    );
+  }
+
+  createDriverCashRate(
+    payload: DriverCashRateReqDto
+  ): Observable<ResponseAPI<DriverCashRateRowDto>> {
+    return this.postRequest<DriverCashRateRowDto>(
+      `${this.baseUrl}/private/owner/driver-cash/per-head-rates`,
+      payload
+    );
+  }
+
+  // ── OBRS-960: owner settings — parcel revenue-share config ───────────────
+
+  getParcelShareOwnerConfig(): Observable<ResponseAPI<ParcelShareOwnerConfigDto>> {
+    return this.getRequest<ParcelShareOwnerConfigDto>(
+      `${this.baseUrl}/private/owner/configs/parcel-share`
+    );
+  }
+
+  updateParcelShareOwnerConfig(
+    payload: ParcelShareOwnerConfigReqDto
+  ): Observable<ResponseAPI<ParcelShareOwnerConfigDto>> {
+    return this.putRequest<ParcelShareOwnerConfigDto>(
+      `${this.baseUrl}/private/owner/configs/parcel-share`,
+      payload
+    );
+  }
+
+  repairParcelShare(
+    payload: ParcelShareRepairReqDto
+  ): Observable<ResponseAPI<ParcelShareRepairRespDto>> {
+    return this.postRequest<ParcelShareRepairRespDto>(
+      `${this.baseUrl}/private/owner/parcel-share/repair`,
+      payload
+    );
+  }
+
+  // ── OBRS-960: parcel-share monthly totals (/admin/reports) ───────────────
+
+  getParcelShareMonthly(
+    year: number,
+    month: number,
+    role: 'SALESPERSON'
+  ): Observable<ResponseAPI<ParcelShareMonthlyRowDto[]>> {
+    const params = new HttpParams()
+      .set('year', String(year))
+      .set('month', String(month))
+      .set('role', role);
+    return this.getRequest<ParcelShareMonthlyRowDto[]>(
+      `${this.baseUrl}/private/owner/parcel-share/monthly`,
+      params
+    );
+  }
+}
+
+/** `GET`/`PUT /api/private/owner/configs/parcel-share` — OBRS-960. Distinct
+ * from the staff-facing `ParcelShareConfigDto` (`parcel.interface.ts`): this
+ * shape splits `configured` per field (`driverPctConfigured`/
+ * `salespersonPctConfigured`) because the owner's edit FORM needs to know
+ * which side is still at its 0% default, not just "is either one set". */
+export interface ParcelShareOwnerConfigDto {
+  driverPct: number;
+  driverPctConfigured: boolean;
+  salespersonPct: number;
+  salespersonPctConfigured: boolean;
+}
+
+export type ParcelShareOwnerConfigReqDto = Pick<
+  ParcelShareOwnerConfigDto,
+  'driverPct' | 'salespersonPct'
+>;
+
+/** `source` is a FIXED literal audit note, not user-selectable (card §4/5/7:
+ * "not a dispatch key; do not build a picker"). */
+export interface ParcelShareRepairReqDto {
+  source: 'OWNER_SETTINGS_PARCEL_SHARE';
+}
+
+export interface ParcelShareRepairRespDto {
+  parcelsRepaired: number;
+  entriesRepaired: number;
+  driverPctApplied: number;
+  salespersonPctApplied: number;
+}
+
+/** One row of `GET /api/private/owner/parcel-share/monthly` — OBRS-960. */
+export interface ParcelShareMonthlyRowDto {
+  payeeUserId: number;
+  payeeName: string;
+  total: string;
 }

@@ -61,6 +61,16 @@ export interface ParcelConsignedRespDto {
   collectionCode: string | null;
   recipientName?: string;
   waybillUrl: string | null;
+  /**
+   * OBRS-960: a property of the RESULT, not the input — whether the pickup
+   * stop this parcel was intaken at is mapped to a sales point. `false`
+   * means the owner's revenue share for this parcel posts as the DRIVER's
+   * cash instead (no sales point to attribute it to), so the result panel
+   * must warn at intake, not in an end-of-day summary. Optional so a
+   * pre-OBRS-960 backend response (field absent) renders no warning rather
+   * than a false positive — see the parcel-intake-result-panel spec.
+   */
+  salesPointMapped?: boolean;
 }
 
 export interface ParcelQuoteReqParams {
@@ -130,6 +140,23 @@ export interface ParcelCarryOnRespDto {
   seatNumbers: string[] | null;
   amount: number;
   bookingNetAmount: number;
+  /** OBRS-960 — same meaning/optionality as `ParcelConsignedRespDto.salesPointMapped`. */
+  salesPointMapped?: boolean;
+}
+
+/**
+ * OBRS-960 — `GET /api/private/parcels/share-config`, read by the staff
+ * parcel-consign page to show the "share not configured" warning BEFORE
+ * intake. Deliberately a flatter shape than the owner-settings
+ * `ParcelShareOwnerConfigDto` (`admin-api.service.ts`) — this endpoint
+ * exposes only what the warning needs (one `configured` flag), not the
+ * per-field `driverPctConfigured`/`salespersonPctConfigured` split the
+ * owner's edit form needs.
+ */
+export interface ParcelShareConfigDto {
+  driverPct: number;
+  salespersonPct: number;
+  configured: boolean;
 }
 
 export interface ParcelQuoteRespDto {

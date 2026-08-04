@@ -32,6 +32,7 @@
             @if (showOwnerColumn) {
               <th>{{ 'ADMIN.EXPENSES.OWNER' | translate }}</th>
             }
+            <th>{{ 'ADMIN.EXPENSES.SOURCE' | translate }}</th>
             <th>{{ 'ADMIN.EXPENSES.VEHICLE' | translate }}</th>
             <th>{{ 'ADMIN.EXPENSES.CATEGORY' | translate }}</th>
             <th class="expense-money">{{ 'ADMIN.EXPENSES.AMOUNT' | translate }}</th>
@@ -46,12 +47,13 @@
         </thead>
         <tbody>
           @if (isLoading) {
-            @for (row of skeletonRows; track row) {
+            @for (row of skeletonRows; track $index) {
               <tr class="admin-skeleton-row" aria-hidden="true">
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 @if (showOwnerColumn) {
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 }
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
@@ -72,6 +74,15 @@
                 @if (showOwnerColumn) {
                   <td data-testid="expense-owner-cell">{{ row.ownerLabel || '-' }}</td>
                 }
+                <td data-testid="expense-source-cell">
+                  <!-- Absence reads as normal/MANUAL (Vehicle's own "-"
+                  precedent) — the chip renders ONLY for a FIELD row, never a
+                  weaker/always-present badge (the card: "the whole
+                  mitigation fails if the badge is weak"). -->
+                  @if (row.source === 'FIELD') {
+                    <span class="admin-status is-neutral">{{ 'ADMIN.EXPENSES.SOURCE_FIELD' | translate }}</span>
+                  }
+                </td>
                 <td>
                   @if (row.vehicleId !== null) {
                     <span>{{ row.vehicleLabel }}</span>
@@ -89,10 +100,16 @@
                 @if (canWrite) {
                   <td class="text-right">
                     <div class="admin-inline-actions">
+                      <!-- OBRS-960: disabled WITH a reason for a FIELD row —
+                      never absent (that reads as "no permission", a
+                      different message) and never erroring on click (the
+                      [disabled] binding makes the click a no-op). -->
                       <button
                         type="button"
                         class="admin-icon-btn"
+                        [disabled]="row.source === 'FIELD'"
                         [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                        [attr.title]="row.source === 'FIELD' ? ('ADMIN.EXPENSES.FIELD_ROW_IMMUTABLE' | translate) : null"
                         (click)="edit.emit(row)"
                         >
                         <span class="material-symbols-outlined">edit_square</span>
@@ -100,7 +117,9 @@
                       <button
                         type="button"
                         class="admin-icon-btn danger"
+                        [disabled]="row.source === 'FIELD'"
                         [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                        [attr.title]="row.source === 'FIELD' ? ('ADMIN.EXPENSES.FIELD_ROW_IMMUTABLE' | translate) : null"
                         (click)="delete.emit(row)"
                         >
                         <span class="material-symbols-outlined">delete</span>

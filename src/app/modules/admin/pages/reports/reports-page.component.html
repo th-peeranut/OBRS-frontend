@@ -159,7 +159,7 @@ and the daily table — never shown next to stale/zero numbers. -->
           </thead>
           <tbody>
             @if (isLoading) {
-              @for (row of skeletonRows; track row) {
+              @for (row of skeletonRows; track $index) {
                 <tr class="admin-skeleton-row" aria-hidden="true">
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
@@ -199,3 +199,65 @@ and the daily table — never shown next to stale/zero numbers. -->
     }
   </section>
 }
+
+<!-- OBRS-960: parcel-share monthly totals — a NEW admin-card section below
+the daily table, its OWN Year/Month filter (role fixed to SALESPERSON, no
+role selector — deliberately deferred: no chart, no export). -->
+<section class="admin-card mt-3" data-testid="parcel-share-monthly-section">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.REPORTS.PARCEL_SHARE_MONTHLY.TITLE' | translate }}</h4>
+  </div>
+
+  <div class="admin-page-filters mt-2">
+    <app-admin-dropdown
+      [options]="yearOptions"
+      [placeholder]="'ADMIN.REPORTS.PARCEL_SHARE_MONTHLY.YEAR_LABEL' | translate"
+      valueKey="value"
+      labelKey="label"
+      [ngModel]="selectedYearStr"
+      (ngModelChange)="onYearChange($event)"
+      ></app-admin-dropdown>
+    <app-admin-dropdown
+      [options]="monthOptions"
+      [placeholder]="'ADMIN.REPORTS.PARCEL_SHARE_MONTHLY.MONTH_LABEL' | translate"
+      valueKey="value"
+      labelKey="label"
+      [ngModel]="selectedMonthStr"
+      (ngModelChange)="onMonthChange($event)"
+      ></app-admin-dropdown>
+  </div>
+
+  <div class="admin-table-wrap mt-2">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.REPORTS.PARCEL_SHARE_MONTHLY.COL.PAYEE' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PARCEL_SHARE_MONTHLY.COL.TOTAL' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isParcelShareMonthlyLoading) {
+          @for (row of [1, 2, 3]; track row) {
+            <tr class="admin-skeleton-row" aria-hidden="true">
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            </tr>
+          }
+        }
+        @if (!isParcelShareMonthlyLoading) {
+          @for (row of parcelShareMonthlyRows; track trackByPayeeId($index, row)) {
+            <tr>
+              <td>{{ row.payeeName }}</td>
+              <td>{{ row.total }}</td>
+            </tr>
+          }
+          @if (parcelShareMonthlyRows.length === 0) {
+            <tr class="admin-empty-row">
+              <td colspan="2">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

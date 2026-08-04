@@ -83,7 +83,7 @@
         </tr></thead>
         <tbody>
           @if (isLoading) {
-            @for (r of skeletonRows; track r) {
+            @for (r of skeletonRows; track $index) {
               <tr class="admin-skeleton-row" aria-hidden="true">
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td><td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td><td><span class="admin-skeleton admin-skeleton--sm"></span></td>

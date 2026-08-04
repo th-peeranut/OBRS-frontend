@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Signal, signal } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 // OBRS-915: `PrimeNGConfig` from 'primeng/api' became `PrimeNG` in
 // 'primeng/config' in v18. Same object, same `setTranslation` - only the name
@@ -12,16 +12,72 @@ export const APP_LANGUAGE_KEY = 'app_language';
 export const DEFAULT_LANGUAGE = 'th';
 
 /**
- * Single source of truth for switching the app language. Owns the three things
- * that must always happen together: change ngx-translate, persist the choice
+ * OBRS-1023: the display format a customer-facing `p-datePicker` binds to,
+ * derived from the locale's own `CALENDAR.dateFormat` and prefixed with
+ * PrimeNG's short-day-name token `D`.
+ *
+ * `D` costs no new i18n key: `formatDate` resolves it through `dayNamesShort`,
+ * which all three locales already ship and which `setTranslation` below
+ * already pushes into PrimeNG (measured in primeng 21.1.9,
+ * `primeng-datepicker.mjs` `formatDate`, `case 'D'`). A bus timetable differs
+ * on a Saturday from a Tuesday, so the weekday is the part of the date a
+ * passenger actually decides on — `03/08/2026` makes them convert it in their
+ * head, and for a non-Thai reader it does not even say which number is the
+ * month.
+ *
+ * Exported so the spec can pin the rule where it lives instead of re-deriving
+ * it. Idempotent on purpose: a locale that already asks for the day name keeps
+ * its own placement, and switching twice to the same language must never stack
+ * prefixes.
+ */
+export function withShortDayName(
+  dateFormat: string | null | undefined
+): string | undefined {
+  if (!dateFormat) {
+    return undefined;
+  }
+  return dateFormat.includes('D') ? dateFormat : `D, ${dateFormat}`;
+}
+
+/**
+ * Single source of truth for switching the app language. Owns the things that
+ * must always happen together: change ngx-translate, persist the choice
  * (so the authInterceptor sends a matching Accept-Language header and backend
- * error messages follow the selected language — see OBRS-frontend #22), and
- * refresh the PrimeNG calendar translations. Components keep only their own UI
+ * error messages follow the selected language — see OBRS-frontend #22),
+ * refresh the PrimeNG calendar translations, and (OBRS-1023) publish the
+ * matching date-picker format. Components keep only their own UI
  * state (dropdown open/closed, the label they display) and delegate the rest
  * here, so the persistence can never drift per-component again.
  */
 @Injectable({ providedIn: 'root' })
 export class LanguageService {
+  private readonly calendarDateFormatSource = signal<string | undefined>(
+    undefined
+  );
+
+  /**
+   * OBRS-1023: the `dateFormat` the customer-facing pickers bind to, for the
+   * language currently applied.
+   *
+   * It has to be a live BINDING, not a value read once at startup. PrimeNG's
+   * own translation subscription reacts to `setTranslation` by re-running
+   * `createWeekDays()` + `markForCheck()` only — it never re-renders the text
+   * already sitting in the input (primeng 21.1.9, `primeng-datepicker.mjs`
+   * `onInit`). The `dateFormat` setter is the one that calls
+   * `updateInputfield()` once `initialized`, so re-binding a changed value is
+   * the only thing that repaints a date the user already picked when they
+   * switch language mid-page.
+   *
+   * `undefined` until the first `switch()` resolves, and deliberately so: an
+   * unset `dateFormat` input makes PrimeNG fall back to
+   * `getTranslation('dateFormat')` by itself (`getDateFormat()` is
+   * `this.dateFormat || this.getTranslation('dateFormat')`), so the window
+   * before the i18n file lands degrades to PrimeNG's own lookup rather than to
+   * a hardcoded guess at which language the visitor chose.
+   */
+  readonly calendarDateFormat: Signal<string | undefined> =
+    this.calendarDateFormatSource.asReadonly();
+
   constructor(
     private readonly translate: TranslateService,
     private readonly primengConfig: PrimeNG
@@ -44,5 +100,10 @@ export class LanguageService {
     this.translate.use(lang);
     const calendar = await firstValueFrom(this.translate.get('CALENDAR'));
     this.primengConfig.setTranslation(calendar);
+    // AFTER `setTranslation`, never before: the format string carries `D`, and
+    // `formatDate` resolves that through `dayNamesShort` on this same config.
+    // Publishing first would let a re-render read the new format against the
+    // OLD day names and print e.g. "Mon, 03/08/2026" in Thai.
+    this.calendarDateFormatSource.set(withShortDayName(calendar?.dateFormat));
   }
 }

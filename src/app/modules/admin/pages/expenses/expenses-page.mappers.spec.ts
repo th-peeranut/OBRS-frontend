@@ -74,6 +74,7 @@ function makeRow(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     receiptNo: '',
     paidBy: '',
     note: '',
+    source: 'MANUAL',
     ...overrides,
   };
 }
@@ -165,6 +166,17 @@ describe('expenses-page.mappers', () => {
       const row = toExpenseRow(dto, [VAN, BUS], categoryOptions(), 'Central', 'th');
       expect(row.vehicleLabel).toBe('V1 / ABC-123');
       expect(row.categoryDisplay).toBe('Other (ล้างรถ)');
+    });
+
+    // OBRS-960
+    it('passes through source:FIELD from the DTO', () => {
+      const row = toExpenseRow({ ...dto, source: 'FIELD' }, [VAN], categoryOptions(), 'Central', 'th');
+      expect(row.source).toBe('FIELD');
+    });
+
+    it('defaults source to MANUAL when the DTO omits the field (pre-OBRS-960 cached response)', () => {
+      const row = toExpenseRow(dto, [VAN], categoryOptions(), 'Central', 'th');
+      expect(row.source).toBe('MANUAL');
     });
 
     it('renders the muted central label when vehicleId is null — never blank', () => {

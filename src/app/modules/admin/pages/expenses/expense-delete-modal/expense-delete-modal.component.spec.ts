@@ -22,6 +22,7 @@ const ROW: ExpenseRow = {
   receiptNo: '',
   paidBy: '',
   note: '',
+  source: 'MANUAL',
 };
 
 describe('ExpenseDeleteModalComponent', () => {

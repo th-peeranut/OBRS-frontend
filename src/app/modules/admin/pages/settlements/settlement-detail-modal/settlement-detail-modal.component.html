@@ -50,7 +50,7 @@
           <!-- Breakdown skeleton while the detail GET is still in flight. -->
           @if (isFetching && !detail) {
             <div class="mt-3">
-              @for (row of skeletonRows; track row) {
+              @for (row of skeletonRows; track $index) {
                 <span class="admin-skeleton admin-skeleton--sm"></span>
               }
             </div>

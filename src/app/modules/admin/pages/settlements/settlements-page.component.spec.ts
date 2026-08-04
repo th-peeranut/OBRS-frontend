@@ -9,6 +9,22 @@ import {
 import { AdminUserDto } from '../../../../services/admin/admin-api.service';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 
+// OBRS-960 — SettlementsPageComponent now also injects DriverCashDaysStore
+// (the second, independent stacked section). This minimal stub satisfies
+// the constructor for every pre-existing test below, none of which
+// exercise the new section — see settlements-page.component.spec.ts's own
+// OBRS-960 describe block (if present) for the section's own coverage.
+const driverCashDaysStoreStub = {
+  data$: new BehaviorSubject<unknown>(null),
+  refreshing$: new BehaviorSubject<boolean>(false),
+  error$: new BehaviorSubject<boolean>(false),
+  range: { from: '2026-07-01', to: '2026-07-07' },
+  hasValue: false,
+  refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+  setRange: jasmine.createSpy('setRange'),
+  mutate: jasmine.createSpy('mutate'),
+};
+
 function makeItem(overrides: Partial<SettlementPendingItemDto> = {}): SettlementPendingItemDto {
   return {
     scheduleId: 1,
@@ -148,6 +164,7 @@ describe('SettlementsPageComponent', () => {
     const store = makeStoreStub(null);
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       makeAdminApiStub() as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -159,6 +176,7 @@ describe('SettlementsPageComponent', () => {
     const store = makeStoreStub(null, { from: '2026-06-01', to: '2026-06-07' });
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       makeAdminApiStub() as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -178,6 +196,7 @@ describe('SettlementsPageComponent', () => {
     const adminApi = makeAdminApiStub();
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       adminApi as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -199,6 +218,7 @@ describe('SettlementsPageComponent', () => {
     });
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       adminApi as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -213,6 +233,7 @@ describe('SettlementsPageComponent', () => {
     const store = makeStoreStub(makePage());
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       makeAdminApiStub() as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -225,6 +246,7 @@ describe('SettlementsPageComponent', () => {
     const store = makeStoreStub(makePage([]));
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       makeAdminApiStub() as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -237,6 +259,7 @@ describe('SettlementsPageComponent', () => {
     const store = makeStoreStub(makePage());
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       makeAdminApiStub() as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -255,6 +278,7 @@ describe('SettlementsPageComponent', () => {
     store.lastErrorCode = 'SOMETHING_ELSE';
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       makeAdminApiStub() as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -275,6 +299,7 @@ describe('SettlementsPageComponent', () => {
     });
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       adminApi as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -299,6 +324,7 @@ describe('SettlementsPageComponent', () => {
     const adminApi = makeAdminApiStub();
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       adminApi as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -320,6 +346,7 @@ describe('SettlementsPageComponent', () => {
     });
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       adminApi as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -338,6 +365,7 @@ describe('SettlementsPageComponent', () => {
     const store = makeStoreStub(makePage());
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       makeAdminApiStub() as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -362,6 +390,7 @@ describe('SettlementsPageComponent', () => {
     });
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       adminApi as any,
       makeAlertStub() as any,
       createTranslateStub()
@@ -382,6 +411,7 @@ describe('SettlementsPageComponent', () => {
     const alert = makeAlertStub();
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       makeAdminApiStub() as any,
       alert as any,
       createTranslateStub()
@@ -398,7 +428,7 @@ describe('SettlementsPageComponent', () => {
     const adminApi = makeAdminApiStub();
     const alert = makeAlertStub();
     alert.confirm.and.resolveTo(false);
-    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
@@ -413,7 +443,7 @@ describe('SettlementsPageComponent', () => {
       confirmSettlement: jasmine.createSpy('confirmSettlement').and.returnValue(of(ok(makeSettledDetail()))),
     });
     const alert = makeAlertStub();
-    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
@@ -436,7 +466,7 @@ describe('SettlementsPageComponent', () => {
     const adminApi = makeAdminApiStub({
       confirmSettlement: jasmine.createSpy('confirmSettlement').and.returnValue(of(ok(makeSettledDetail()))),
     });
-    const component = new SettlementsPageComponent(store as any, adminApi as any, makeAlertStub() as any, createTranslateStub());
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, makeAlertStub() as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
@@ -454,7 +484,7 @@ describe('SettlementsPageComponent', () => {
         .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_ALREADY_SETTLED' } }))),
     });
     const alert = makeAlertStub();
-    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
@@ -476,7 +506,7 @@ describe('SettlementsPageComponent', () => {
         .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_HANDER_NOT_FOUND' } }))),
     });
     const alert = makeAlertStub();
-    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
@@ -498,7 +528,7 @@ describe('SettlementsPageComponent', () => {
         .and.returnValue(throwError(() => ({ error: { errorCode: 'VALIDATION_FAILED' } }))),
     });
     const alert = makeAlertStub();
-    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
@@ -516,7 +546,7 @@ describe('SettlementsPageComponent', () => {
         .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_SCOPE_FORBIDDEN' } }))),
     });
     const alert = makeAlertStub();
-    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
@@ -535,7 +565,7 @@ describe('SettlementsPageComponent', () => {
         .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_ROUND_NOT_DEPARTED' } }))),
     });
     const alert = makeAlertStub();
-    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
@@ -553,7 +583,7 @@ describe('SettlementsPageComponent', () => {
         .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_SCHEDULE_NOT_FOUND' } }))),
     });
     const alert = makeAlertStub();
-    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
@@ -572,7 +602,7 @@ describe('SettlementsPageComponent', () => {
         .and.returnValue(throwError(() => ({ error: { errorCode: 'SOMETHING_ELSE' } }))),
     });
     const alert = makeAlertStub();
-    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
@@ -586,6 +616,7 @@ describe('SettlementsPageComponent', () => {
     const store = makeStoreStub(makePage());
     const component = new SettlementsPageComponent(
       store as any,
+      driverCashDaysStoreStub as any,
       makeAdminApiStub() as any,
       makeAlertStub() as any,
       createTranslateStub()

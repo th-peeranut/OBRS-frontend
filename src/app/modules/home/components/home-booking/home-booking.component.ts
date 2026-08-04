@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, Signal } from '@angular/core';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import dayjs from 'dayjs';
@@ -25,6 +25,7 @@ import {
   BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK,
   BookingPolicyService,
 } from '../../../../services/booking-policy/booking-policy.service';
+import { LanguageService } from '../../../../shared/services/language.service';
 
 // OBRS-564: date-picker cap fallback, used only until the real public
 // booking-policy config resolves (see ngOnInit below). A briefly-wrong value
@@ -70,7 +71,18 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   // departure would let the user pick a return date past the cap and then
   // eat a 400 from the server's own validation.
   maxDate: Date;
-  calendarLocale: string;
+  /** OBRS-1023: the `dateFormat` both calendars bind to, owned by
+   *  LanguageService so the derivation lives once and both customer-facing
+   *  forms cannot drift apart. Replaces the `calendarLocale: string` that had
+   *  been declared here and in schedule-booking-filter since the calendars
+   *  shipped and was never assigned nor read — this card is the work it was
+   *  standing in for.
+   *
+   *  Bound, not read once: `dd/mm/yy` was hardcoded in the template, which
+   *  SHADOWED the `CALENDAR.dateFormat` we already translate three ways, so an
+   *  English visitor read `03/08/2026` in Thai field order — ambiguous with
+   *  8 March on the screen where they commit to a ticket. */
+  readonly calendarDateFormat: Signal<string | undefined>;
 
   bookingForm: FormGroup;
 
@@ -112,12 +124,14 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     private appStore: Store<Appstate>,
     private authService: AuthService,
     private bookingService: BookingService,
-    private bookingPolicyService: BookingPolicyService
+    private bookingPolicyService: BookingPolicyService,
+    languageService: LanguageService
   ) {
     this.minDate = new Date();
     this.maxDate = dayjs(this.minDate)
       .add(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK, 'day')
       .toDate();
+    this.calendarDateFormat = languageService.calendarDateFormat;
 
     this.rawProvinceStationList = this.store.pipe(
       select(selectProvinceWithStation)
