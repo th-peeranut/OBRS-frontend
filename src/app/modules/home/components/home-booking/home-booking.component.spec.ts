@@ -759,17 +759,22 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
     expect(boundFormats()).toEqual(['D, dd/mm/yy']);
   });
 
-  it('can still PARSE back exactly what it displays — typing is not broken by the day name', async () => {
+  it('can still PARSE back exactly what it displays — the day name does not break the round trip', async () => {
     // The one real cost of AC#2, pinned rather than left to be discovered in
-    // production. These inputs are not `readonlyInput`, so a customer can type
-    // — and PrimeNG parses with the SAME format it renders with
+    // production. PrimeNG parses with the SAME format it renders with
     // (`getDateFormat()` serves both), where `D` is not decorative: `parseDate`
     // resolves it via `getName`, which THROWS on a string with no day name, and
     // `onUserInput` answers a throw by clearing the field.
     //
     // So: what the box shows still round-trips (asserted here), but bare digits
-    // in the old `dd/mm/yy` shape no longer do. That is self-consistent — the
-    // field teaches its own format — and it is the trade AC#2 asks for.
+    // in the old `dd/mm/yy` shape no longer do.
+    //
+    // This comment used to end "these inputs are not `readonlyInput`, so a
+    // customer can type" and called that trade self-consistent. It was not —
+    // a customer typing digits watched the field empty itself, and OBRS-1036
+    // closed the typing route entirely. The assertion below is unchanged and
+    // still the right one: it pins that PARSING agrees with RENDERING, which is
+    // what keeps a value the calendar wrote from being destroyed on blur.
     await languageService.switch('en');
     fixture.detectChanges();
     component.bookingForm.get('departureDate')?.setValue(MONDAY.toDate());
@@ -794,5 +799,129 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
 
     expect(component.calendarDateFormat()).toBeUndefined();
     expect(boundFormats()).toEqual([undefined]);
+  });
+});
+
+/**
+ * OBRS-1036 — the cost OBRS-1023's AC#2 asked for, paid explicitly.
+ *
+ * `D` is not decorative in a PrimeNG format string. `getDateFormat()` serves
+ * BOTH render and parse, so the token that prints `Mon, ` is also the token
+ * `parseDate` walks on the way back in — `case 'D'` calls `getName`, which
+ * THROWS on text with no day name, and `onUserInput` answers a throw by
+ * writing `null` into the model (measured in primeng 21.1.9,
+ * `primeng-datepicker.mjs`: `parseDate` `getName` → `throw`, `onUserInput`
+ * `catch` → `updateModel(this.keepInvalid ? val : null)`).
+ *
+ * A customer typing `03/08/2026` therefore watched the box empty itself on the
+ * screen where they commit to a ticket. The chosen fix is `readonlyInput` —
+ * the calendar becomes the only way in, which is what every reference site the
+ * owner cited does (Traveloka / Skyscanner / Airpaz / Thai Airways).
+ *
+ * What these tests can and cannot prove, stated plainly so nobody strengthens
+ * the wrong one later: `readonly` stops the BROWSER from raising `input`, it
+ * does not unbind the handler. `dispatchEvent` still reaches `onUserInput` and
+ * still clears — so "type and assert the value survives" would go red WITH the
+ * fix, not without it. The assertion that actually tracks the fix is the
+ * attribute itself; the destructive path is pinned separately as a positive
+ * control, so a future reader can see the guard is guarding something real.
+ */
+describe('HomeBookingComponent — a date can only be chosen from the calendar (OBRS-1036)', () => {
+  let fixture: ComponentFixture<HomeBookingComponent>;
+  let component: HomeBookingComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        DropdownObrsPassengerComponent,
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+        {
+          provide: LanguageService,
+          useValue: createLanguageServiceStub('D, dd/mm/yy'),
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(HomeBookingComponent);
+    component = fixture.componentInstance;
+  });
+
+  /** Both round-trip calendars rendered, as native `<input>` elements. */
+  function dateInputs(): HTMLInputElement[] {
+    component.isRoundTripReturn = true;
+    fixture.detectChanges();
+    return fixture.debugElement
+      .queryAll(By.css('p-datePicker input'))
+      .map((input) => input.nativeElement as HTMLInputElement);
+  }
+
+  it('marks BOTH date inputs readonly, so the browser never raises the input event that wipes them', () => {
+    const inputs = dateInputs();
+
+    // Vacuous-pass guard: zero inputs satisfies every per-item assertion below,
+    // and that is exactly what a broken template slice leaves behind.
+    expect(inputs.length).toBe(2);
+    for (const input of inputs) {
+      expect(input.readOnly).toBeTrue();
+      expect(input.hasAttribute('readonly')).toBeTrue();
+    }
+  });
+
+  it('must-NOT go disabled — a disabled input cannot open the calendar it is now the only way into', () => {
+    const inputs = dateInputs();
+
+    expect(inputs.length).toBe(2);
+    for (const input of inputs) {
+      expect(input.disabled).toBeFalse();
+      expect(input.hasAttribute('disabled')).toBeFalse();
+      // Still in the tab order. `readonly` leaves focusability alone;
+      // `disabled` would not, and the two are one attribute apart.
+      expect(input.tabIndex).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('still opens the calendar from the keyboard alone', () => {
+    const inputs = dateInputs();
+    const picker = fixture.debugElement.query(By.css('p-datePicker')).componentInstance;
+
+    expect(picker.overlayVisible).toBeFalsy();
+    inputs[0].dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+
+    // `showOnFocus` defaults to true and `onInputFocus` does not consult
+    // `readonlyInput` (primeng 21.1.9) — so focus is a complete route in.
+    expect(picker.overlayVisible).toBeTrue();
+  });
+
+  it('positive control: the wipe this guards against is real and one attribute away', () => {
+    // Deliberately bypasses the browser the way `readonly` cannot: a dispatched
+    // event reaches the handler regardless. If this ever stops clearing, the
+    // readonly assertions above have become decoration and should be re-derived
+    // rather than trusted.
+    const inputs = dateInputs();
+    const control = component.bookingForm.get('departureDate');
+    control?.setValue(new Date());
+    fixture.detectChanges();
+    expect(control?.value).toBeTruthy();
+
+    inputs[0].value = '03/08/2026';
+    inputs[0].dispatchEvent(new KeyboardEvent('keydown', { key: '6' }));
+    inputs[0].dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(control?.value).toBeNull();
   });
 });
