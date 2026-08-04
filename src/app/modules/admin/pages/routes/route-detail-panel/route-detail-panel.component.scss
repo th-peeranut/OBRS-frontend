@@ -1,3 +1,203 @@
 :host {
   display: block;
 }
+
+/* OBRS-1027 — the grouped/pivoted segments table.
+   Every colour here comes from an existing admin-theme token, so the three
+   accent variants (admin / staff / default) and both themes are covered by the
+   tokens rather than by a per-variant rule of its own. */
+
+/* The shared `.admin-card-head` / `.admin-inline-actions` are flex WITHOUT
+   flex-wrap. The segments card head used to hold one dropdown plus the search
+   box; it now holds two labelled buttons plus the search box, which overflows a
+   narrow card instead of wrapping. Scoped to this component so no other card
+   head changes behaviour. */
+.admin-card-head {
+  flex-wrap: wrap;
+}
+
+.admin-card-head .admin-inline-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* ── group header row ── */
+.segments-table tbody tr.group-row > td {
+  background: var(--accent-soft);
+  padding: 9px 14px;
+}
+
+/* The shared `.admin-table tbody tr:hover` paints --accent-soft; without this
+   the header row would flash a second tint over an identical one on hover. */
+.segments-table tbody tr.group-row:hover > td {
+  background: var(--accent-soft);
+}
+
+.group-btn {
+  font: inherit;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  padding: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.group-btn:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Disabled while a search is live. Deliberately NOT dimmed: the origin name and
+   its fare-range chips are still the row's content and must stay readable —
+   only the collapse affordance is off. */
+.group-btn:disabled {
+  cursor: default;
+}
+
+.group-btn:disabled .caret {
+  opacity: 0.35;
+}
+
+.group-btn .caret {
+  font-size: 18px;
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+
+/* Collapsed groups point right. Driven off the button's own aria-expanded so
+   the glyph can never disagree with what a screen reader is told. */
+.group-btn[aria-expanded='false'] .caret {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group-btn .caret {
+    transition: none;
+  }
+}
+
+.group-btn .group-origin {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.group-btn .cont {
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.group-btn .spacer {
+  flex: 1;
+}
+
+.group-btn .chip {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--admin-muted);
+  border: 1px solid var(--admin-outline);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── destination rows ── */
+/* The origin column is gone, so the destination needs an indent + rail to read
+   as "belonging to the header above" rather than as a top-level row. */
+.segments-table td.dest {
+  padding-left: 30px;
+  position: relative;
+}
+
+.segments-table td.dest::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-soft);
+}
+
+/* ── fare columns ── */
+/* Two columns whose header text is identical apart from this badge — without
+   it the only thing telling them apart is column order. */
+.th-type {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 7px;
+  border: 1px solid var(--admin-outline);
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: none;
+  color: var(--accent-text);
+}
+
+/* "Not set" must not read like a number. It is not 0.00 — that would say
+   "free" — and it is not blank, which would read as a rendering bug. */
+.fare-empty {
+  color: var(--admin-muted);
+  font-style: italic;
+}
+
+.segments-table .admin-emphasis {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── row actions ── */
+/* Measured on SIT (1536x864 @125%, 19 origins / 114 pairs): letting these wrap
+   put the second button on its own line and doubled the height of EVERY data
+   row — the opposite of what this card is for. They stay on one line and the
+   table widens instead; `.admin-table-wrap` already scrolls horizontally, so
+   the overflow is contained in the table rather than in the page. */
+.admin-inline-actions.is-end {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.segments-table td.text-right {
+  white-space: nowrap;
+}
+
+/* One button per vehicle type that actually has a fare for the pair. The label
+   is the type name because a bare pencil next to a second bare pencil says
+   nothing about which price it opens. */
+.edit-fare-btn {
+  gap: 5px;
+  padding: 4px 9px;
+  font-size: 11px;
+}
+
+.edit-fare-btn .material-symbols-outlined {
+  font-size: 16px;
+}
+
+/* ── footer ── */
+.page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.page-indicator {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.footer-note {
+  &::before {
+    content: '·';
+    margin: 0 6px;
+  }
+}

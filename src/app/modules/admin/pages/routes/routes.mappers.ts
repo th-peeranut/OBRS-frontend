@@ -333,6 +333,153 @@ export function toVehicleTypeOptions(segments: SegmentRow[]): VehicleTypeOption[
   return [...options.values()];
 }
 
+// ── OBRS-1027: vehicle-type pivot + origin grouping ────────────────────────
+// The segments table used to show ONE vehicle type at a time (a dropdown) with
+// the origin re-printed on every row. Both are dissolved here: a stop pair is
+// one row carrying one fare cell per vehicle type, and rows are bucketed under
+// a group header keyed by the origin stop.
+
+/** One vehicle type's fare for a stop pair. `segment` is null when that type
+ *  has no row for this pair at all — the API writes fares one vehicle type at
+ *  a time, so a pair present for `van` can be genuinely absent for `minibus`.
+ *  The view must render that as "not set", never as 0.00 (which reads "free"). */
+export interface SegmentFareCell {
+  vehicleTypeSlug: string;
+  vehicleTypeName: string;
+  segment: SegmentRow | null;
+}
+
+export interface SegmentPivotRow {
+  /** Stable across saves — see the keying note in `toSegmentPivotRows`. */
+  key: string;
+  originSlug: string;
+  origin: string;
+  destination: string;
+  /** Shared by every vehicle type: the backend derives it from
+   *  `route_stops.offset_minutes_from_origin`, which belongs to the route, not
+   *  to a vehicle type. Splitting it per column would be a fabricated number. */
+  duration: string;
+  /** Index-aligned with the `vehicleTypeOptions` passed in, so the cells line
+   *  up with the `<th>`s rendered from that same array. */
+  fares: SegmentFareCell[];
+}
+
+export interface SegmentGroupFareRange {
+  vehicleTypeSlug: string;
+  vehicleTypeName: string;
+  /** Both null when this group has no fare at all for the vehicle type. */
+  min: number | null;
+  max: number | null;
+}
+
+export interface SegmentGroup {
+  originSlug: string;
+  origin: string;
+  rows: SegmentPivotRow[];
+  fareRanges: SegmentGroupFareRange[];
+}
+
+export function toSegmentPivotRows(
+  segments: SegmentRow[],
+  vehicleTypeOptions: VehicleTypeOption[]
+): SegmentPivotRow[] {
+  // Keyed on the stop SLUGS, not on `id` and not on the display names: the
+  // backend regenerates every segment id on each save (delete-then-insert per
+  // route+vehicleType in SegmentService.updateSegmentByRouteSlug), so an id
+  // cannot identify "the same pair" across the two vehicle types, and two
+  // different stops are free to share a translated name.
+  const order: string[] = [];
+  const byPair = new Map<string, SegmentPivotRow>();
+
+  for (const segment of segments) {
+    const key = `${segment.fromStopSlug}\u0000${segment.toStopSlug}`;
+    let row = byPair.get(key);
+
+    if (!row) {
+      row = {
+        key,
+        originSlug: segment.fromStopSlug,
+        origin: segment.origin,
+        destination: segment.destination,
+        duration: segment.duration,
+        fares: vehicleTypeOptions.map((option) => ({
+          vehicleTypeSlug: option.slug,
+          vehicleTypeName: option.name,
+          segment: null,
+        })),
+      };
+      byPair.set(key, row);
+      order.push(key);
+    }
+
+    // `formatDuration` renders a missing duration as '-', so the first type
+    // that actually carries one wins rather than whichever type came first.
+    if ((row.duration === '-' || !row.duration) && segment.duration && segment.duration !== '-') {
+      row.duration = segment.duration;
+    }
+
+    const cellIndex = row.fares.findIndex(
+      (cell) =>
+        normalizeVehicleTypeKey(cell.vehicleTypeSlug) ===
+        normalizeVehicleTypeKey(segment.vehicleTypeSlug)
+    );
+
+    if (cellIndex >= 0) {
+      row.fares[cellIndex] = { ...row.fares[cellIndex], segment };
+    }
+  }
+
+  return order.map((key) => byPair.get(key) as SegmentPivotRow);
+}
+
+export function toSegmentGroups(
+  rows: SegmentPivotRow[],
+  vehicleTypeOptions: VehicleTypeOption[]
+): SegmentGroup[] {
+  const order: string[] = [];
+  const byOrigin = new Map<string, SegmentGroup>();
+
+  for (const row of rows) {
+    let group = byOrigin.get(row.originSlug);
+
+    if (!group) {
+      group = {
+        originSlug: row.originSlug,
+        origin: row.origin,
+        rows: [],
+        fareRanges: vehicleTypeOptions.map((option) => ({
+          vehicleTypeSlug: option.slug,
+          vehicleTypeName: option.name,
+          min: null,
+          max: null,
+        })),
+      };
+      byOrigin.set(row.originSlug, group);
+      order.push(row.originSlug);
+    }
+
+    group.rows.push(row);
+
+    for (const range of group.fareRanges) {
+      const cell = row.fares.find(
+        (fareCell) =>
+          normalizeVehicleTypeKey(fareCell.vehicleTypeSlug) ===
+          normalizeVehicleTypeKey(range.vehicleTypeSlug)
+      );
+
+      if (!cell?.segment) {
+        continue;
+      }
+
+      const fare = cell.segment.fare;
+      range.min = range.min === null ? fare : Math.min(range.min, fare);
+      range.max = range.max === null ? fare : Math.max(range.max, fare);
+    }
+  }
+
+  return order.map((originSlug) => byOrigin.get(originSlug) as SegmentGroup);
+}
+
 export function toRoutePayload(rawFormValue: Record<string, unknown>): CreateRoutePayload {
   const translations: AdminTranslationReqDto[] = [
     {
