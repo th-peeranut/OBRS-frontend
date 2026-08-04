@@ -329,6 +329,65 @@ export interface AdminStopDto {
   translations?: AdminTranslationCollection;
 }
 
+// ── OBRS-1022: the owner-facing stop management shapes ────────────────────────
+// Distinct from AdminStopDto above, which is the thin nested shape a route-stop
+// row carries. These mirror StopSummaryResponse / StopDetailResponse, the two
+// payloads the stop endpoints actually return.
+
+/** A lookup as the stop endpoints return it: slug + per-locale label/description. */
+export interface AdminStopLookupDto {
+  id?: number;
+  slug?: string;
+  translations?: AdminTranslationCollection;
+}
+
+export interface AdminStopSummaryDto {
+  id: number;
+  slug: string;
+  status?: AdminStopLookupDto;
+  stopType?: AdminStopLookupDto;
+  translations?: AdminTranslationCollection;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminStopDetailDto {
+  id: number;
+  slug: string;
+  status?: AdminStopLookupDto;
+  stopType?: AdminStopLookupDto;
+  province?: AdminStopLookupDto;
+  translations?: AdminTranslationCollection;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  primaryPhotoUrl?: string | null;
+  /** locale -> address; a locale with no address is absent, not null. */
+  addresses?: Record<string, string> | null;
+}
+
+/**
+ * The body of `PUT /api/private/stops/{id}`.
+ *
+ * <p>`primaryPhotoUrl` is deliberately ABSENT from this type — not optional,
+ * absent. The server preserves the stored photo exactly when the key does not
+ * appear, so making the field un-sendable is what stops a form save from ever
+ * wiping an uploaded photo (OBRS-580). The photo has its own two endpoints.
+ */
+export interface AdminStopUpdatePayload {
+  slug: string;
+  province: string;
+  status: string;
+  stopType: string;
+  latitude: number | null;
+  longitude: number | null;
+  addresses: Record<string, string>;
+  translations: AdminTranslationReqDto[];
+}
+
+export interface AdminStopPhotoDto {
+  primaryPhotoUrl: string;
+}
+
 export interface AdminStopOrderDto {
   stopOrder: number;
   distanceKmFromOrigin?: number | string;
@@ -1363,6 +1422,60 @@ export class AdminApiService {
     return this.getRequest<AdminRouteStopDto>(
       `${this.baseUrl}/private/route-stops/${routeSlug}`
     );
+  }
+
+  // ── Stops (OBRS-1022) ──────────────────────────────────────────────────────
+  // The owner-facing stop management surface. `GET /api/stops` is the PUBLIC
+  // reference-data list (unauthenticated, cached) — reused deliberately rather
+  // than adding a private twin, since the list carries nothing an owner may see
+  // and a customer may not. Everything that WRITES is under /private and
+  // OWNER-gated on the server.
+
+  getStopsForAdmin(): Observable<ResponseAPI<AdminStopSummaryDto[]>> {
+    return this.getRequest<AdminStopSummaryDto[]>(`${this.baseUrl}/stops`);
+  }
+
+  getStopDetail(id: number): Observable<ResponseAPI<AdminStopDetailDto>> {
+    return this.getRequest<AdminStopDetailDto>(`${this.baseUrl}/stops/${id}`);
+  }
+
+  /** Province options for the stop form. `PUT /private/stops/{id}` takes a province
+   *  SLUG and 400s on an unknown one, so the form must pick from this list rather
+   *  than echo back whatever the detail payload happened to carry. */
+  getProvincesForAdmin(): Observable<ResponseAPI<AdminStopLookupDto[]>> {
+    return this.getRequest<AdminStopLookupDto[]>(`${this.baseUrl}/provinces`);
+  }
+
+  /**
+   * ⚠️ Full-replace PUT. Anything the payload omits is CLEARED on the server —
+   * with one deliberate exception: `primaryPhotoUrl`, which the backend preserves
+   * when the KEY is absent (OBRS-1022/OBRS-580, `StopReqDto#primaryPhotoUrlPresent`).
+   * So the stop form must simply NOT send that key: the photo is owned by the two
+   * multipart calls below, and a form save must never be able to undo an upload.
+   */
+  updateStop(id: number, payload: AdminStopUpdatePayload): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/stops/${id}`, payload);
+  }
+
+  /**
+   * Uploads the stop's photo. The body is a bare `FormData` and the request is sent
+   * WITHOUT an explicit Content-Type: the browser has to set `multipart/form-data`
+   * together with the boundary it generated, and naming the header by hand omits the
+   * boundary and produces a request the server cannot parse. Same reason
+   * `UsabilityReportService` documents it.
+   */
+  uploadStopPhoto(id: number, file: File): Observable<ResponseAPI<AdminStopPhotoDto>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ResponseAPI<AdminStopPhotoDto>>(
+      `${this.baseUrl}/private/stops/${id}/photo`,
+      formData,
+      this.toRequestOptions()
+    );
+  }
+
+  deleteStopPhoto(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/stops/${id}/photo`);
   }
 
   getSegments(routeSlug: string): Observable<ResponseAPI<AdminSegmentDto>> {

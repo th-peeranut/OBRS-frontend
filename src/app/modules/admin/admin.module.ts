@@ -25,6 +25,7 @@ import { RouteFormModalComponent } from './pages/routes/route-form-modal/route-f
 import { SegmentEditModalComponent } from './pages/routes/segment-edit-modal/segment-edit-modal.component';
 import { RouteDetailPanelComponent } from './pages/routes/route-detail-panel/route-detail-panel.component';
 import { RouteListTableComponent } from './pages/routes/route-list-table/route-list-table.component';
+import { StopsPageComponent } from './pages/stops/stops-page.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
 import { OverrideCancelModalComponent } from './pages/bookings/override-cancel-modal/override-cancel-modal.component';
@@ -116,6 +117,13 @@ export const adminRoutes: Routes = [
         path: 'routes',
         component: RoutesPageComponent,
         data: { titleKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', subtitleKey: 'ADMIN.ROUTES.SUBTITLE' },
+      },
+      {
+        // OBRS-1022: the first stop management screen this product has had. Sits next to
+        // `routes` because a stop is master data a route composes, not a schedule concern.
+        path: 'stops',
+        component: StopsPageComponent,
+        data: { titleKey: 'ADMIN.PAGES.STOPS', subtitleKey: 'ADMIN.STOPS.SUBTITLE' },
       },
       {
         path: 'schedules',
@@ -393,6 +401,7 @@ export const adminRoutes: Routes = [
     VehicleFormModalComponent,
     VehicleDeleteModalComponent,
     RoutesPageComponent,
+    StopsPageComponent,
     RouteFormModalComponent,
     SegmentEditModalComponent,
     RouteDetailPanelComponent,
