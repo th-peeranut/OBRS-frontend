@@ -69,6 +69,11 @@ export default defineConfig({
   // nothing but a browser", and that claim should be made one file at a time by
   // someone who checked. A glob would re-create the sweep this config exists to undo.
   testMatch: [
+    // OBRS-1038. The station bar's ROW layout has no other automated home: the
+    // three component specs that measure it run in an 800px Karma window, and the
+    // 992px stack switch is a viewport query, so they only ever take the stacked
+    // branch there. This lane pins 1280x720 (rule 3 above), which is the point.
+    '**/obrs-1038-station-seam.spec.ts',
     '**/route-smoke.spec.ts',
     '**/confirm-guidance-flow.spec.ts',
     '**/report-usability-issue.spec.ts',

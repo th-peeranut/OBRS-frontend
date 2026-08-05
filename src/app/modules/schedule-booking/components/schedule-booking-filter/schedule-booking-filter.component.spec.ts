@@ -723,7 +723,9 @@ describe('ScheduleBookingFilterComponent — origin/destination swap (OBRS-1035)
   // See the twin in home-booking.component.spec.ts. This filter bar imports
   // home-booking's stylesheet wholesale, so it inherited the same one-breakpoint
   // `margin-top: 30px` and needs the same pin.
-  it('sits on the station FIELD centre line, not the label+field centre', () => {
+  // OBRS-1038 rewrote both twins the same way — see home-booking's copy for why
+  // branching on the viewport is not optional here.
+  it('centres on the join between the two fields, level with the fields themselves', () => {
     const root = fixture.nativeElement as HTMLElement;
     root.style.display = 'block';
     root.style.width = '1200px';
@@ -736,14 +738,27 @@ describe('ScheduleBookingFilterComponent — origin/destination swap (OBRS-1035)
     ).slice(0, 2) as HTMLElement[];
     expect(fields.length).toBe(2);
 
-    const centreY = (el: HTMLElement) => {
-      const box = el.getBoundingClientRect();
-      return box.top + box.height / 2;
-    };
-    expect(fields[0].getBoundingClientRect().top).toBe(fields[1].getBoundingClientRect().top);
+    const box = (el: HTMLElement) => el.getBoundingClientRect();
+    const centreX = (el: HTMLElement) => box(el).left + box(el).width / 2;
+    const centreY = (el: HTMLElement) => box(el).top + box(el).height / 2;
 
-    for (const field of fields) {
-      expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
+    if (window.matchMedia('(max-width: 992px)').matches) {
+      // No seam exists here: the lower field's LABEL sits between the two
+      // boxes. The button straddles the upper field's bottom edge instead, at
+      // the right end, where that left-aligned label has no text.
+      expect(box(fields[0]).left).toBe(box(fields[1]).left);
+
+      expect(Math.abs(centreY(host) - box(fields[0]).bottom)).toBeLessThanOrEqual(1);
+      expect(centreX(host)).toBeGreaterThan(centreX(fields[0]));
+      expect(box(host).right).toBeLessThanOrEqual(box(fields[0]).right);
+    } else {
+      expect(box(fields[0]).top).toBe(box(fields[1]).top);
+      const seamX = (box(fields[0]).right + box(fields[1]).left) / 2;
+
+      expect(Math.abs(centreX(host) - seamX)).toBeLessThanOrEqual(1);
+      for (const field of fields) {
+        expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
+      }
     }
   });
 });

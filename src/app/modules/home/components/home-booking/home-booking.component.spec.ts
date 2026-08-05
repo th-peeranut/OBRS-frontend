@@ -1080,7 +1080,29 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
   // `margin-top: 30px`, correct at exactly one breakpoint. The rule now lives in
   // `app-station-swap-button`; this pins the observable consequence, so a call
   // site that re-adds a vertical nudge fails here rather than on someone's eye.
-  it('sits on the station FIELD centre line, not the label+field centre', () => {
+  //
+  // OBRS-1038 REWROTE IT, and why is worth stating because it decides what the
+  // test can prove. The bar now stacks below 992px, and that is a VIEWPORT
+  // query: Karma's headless window is 800px wide, so setting the fixture to
+  // 1200px does not put this test in the row branch. The original assertion
+  // (`fields[0].top === fields[1].top`) started failing here for exactly that
+  // reason, on a layout that is correct.
+  //
+  // So it now asserts the invariant in whichever mode the runner is really in.
+  // The two modes are NOT the same claim, because the layouts are not: in a row
+  // the button's centre is on the SEAM of the merged bar and level with the
+  // FIELDS (never with the taller label+field group — that was the OBRS-1035
+  // defect); stacked, there is no seam to sit on, because the lower field's
+  // label sits between the two boxes, so it straddles the upper field's bottom
+  // edge at the right end. Both are checked against the field boxes, which is
+  // what makes either of them fail when a call site re-adds a nudge.
+  //
+  // The row branch therefore does not run in CI. Its coverage is
+  // e2e/tests/obrs-1038-station-seam.spec.ts, which sets a real 1280px viewport.
+  // This keeps both branches anyway: a local `ng test` on a wide window takes
+  // the row one, and the column one is all the parcel screen can ever have (no
+  // e2e lane reaches it — `features.onlineParcelBooking` is off everywhere).
+  it('centres on the join between the two fields, level with the fields themselves', () => {
     // Fixed container width so the row cannot wrap — "same centre line" is
     // meaningless once the button is on a flex line of its own.
     const root = fixture.nativeElement as HTMLElement;
@@ -1096,14 +1118,29 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
     // A typo'd selector must fail here, not sail through an empty loop.
     expect(fields.length).toBe(2);
 
-    const centreY = (el: HTMLElement) => {
-      const box = el.getBoundingClientRect();
-      return box.top + box.height / 2;
-    };
-    expect(fields[0].getBoundingClientRect().top).toBe(fields[1].getBoundingClientRect().top);
+    const box = (el: HTMLElement) => el.getBoundingClientRect();
+    const centreX = (el: HTMLElement) => box(el).left + box(el).width / 2;
+    const centreY = (el: HTMLElement) => box(el).top + box(el).height / 2;
 
-    for (const field of fields) {
-      expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
+    if (window.matchMedia('(max-width: 992px)').matches) {
+      // Stacked: one column, the seam is horizontal.
+      // No seam exists here: the lower field's LABEL sits between the two
+      // boxes. The button straddles the upper field's bottom edge instead, at
+      // the right end, where that left-aligned label has no text.
+      expect(box(fields[0]).left).toBe(box(fields[1]).left);
+
+      expect(Math.abs(centreY(host) - box(fields[0]).bottom)).toBeLessThanOrEqual(1);
+      expect(centreX(host)).toBeGreaterThan(centreX(fields[0]));
+      expect(box(host).right).toBeLessThanOrEqual(box(fields[0]).right);
+    } else {
+      // Row: one bar, the seam is vertical.
+      expect(box(fields[0]).top).toBe(box(fields[1]).top);
+      const seamX = (box(fields[0]).right + box(fields[1]).left) / 2;
+
+      expect(Math.abs(centreX(host) - seamX)).toBeLessThanOrEqual(1);
+      for (const field of fields) {
+        expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
+      }
     }
   });
 });
