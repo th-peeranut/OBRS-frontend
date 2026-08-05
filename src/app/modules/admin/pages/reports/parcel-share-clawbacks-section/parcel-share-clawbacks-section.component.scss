@@ -3,6 +3,15 @@
    table is squeezed. No colours here: every visible token is inherited from
    the shared `admin-*` classes so a theme switch needs no change in this file
    (design-system.md §2). */
+/* OBRS-775's host-box gate (e2e/tests/host-box-sweep.spec.ts) — an Angular
+   component host is `display: inline` by default, and this one wraps an
+   in-flow block child (`section.admin-card`). Its ALLOW list is EMPTY on
+   purpose, so the rule has no exception: every host that wraps a block
+   declares one. Caught by the hermetic E2E gate, not by any unit lane. */
+:host {
+  display: block;
+}
+
 .psc-subtitle {
   margin: 0.25rem 0 0;
 }
