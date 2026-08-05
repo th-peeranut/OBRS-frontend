@@ -1,14 +1,35 @@
 import { FormBuilder } from '@angular/forms';
 import { fakeAsync, tick } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
 import { ParcelConsignFormComponent } from './parcel-consign-form.component';
+import { ParcelPolicyDto, ParcelPolicyService } from '../../../../services/parcel-policy/parcel-policy.service';
+import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
+
+// OBRS-629: the one injected dependency this component now has. The comment
+// below used to say it had none — the parcel limits it renders come from the
+// server now, not from literals typed into the form and into i18n.
+const DEFAULT_POLICY: ParcelPolicyDto = {
+  maxWeightKg: 100,
+  carryOnFreeSizeMaxInch: 28,
+  carryOnFreeAisleMaxPerTrip: 10,
+  prohibitedCategories: ['flammable', 'explosive', 'weapon', 'narcotic', 'corpse'],
+};
+
+function policyServiceStub(policy: ParcelPolicyDto | 'error'): ParcelPolicyService {
+  return {
+    getParcelPolicy: () =>
+      policy === 'error'
+        ? throwError(() => new Error('parcel-policy unavailable'))
+        : of({ code: 200, message: 'OK', data: policy } as ResponseAPI<ParcelPolicyDto>),
+  } as ParcelPolicyService;
+}
 
 // Constructed directly (no TestBed/fixture) — same precedent as
 // WalkInCheckoutComponent's spec: a dumb reactive-form component's TS logic
-// doesn't need template compilation, and this component has no TranslateService
-// or other injected dependency to stub.
-function makeComponent(): ParcelConsignFormComponent {
+// doesn't need template compilation.
+function makeComponent(policy: ParcelPolicyDto | 'error' = DEFAULT_POLICY): ParcelConsignFormComponent {
   const fb = new FormBuilder();
-  const component = new ParcelConsignFormComponent(fb);
+  const component = new ParcelConsignFormComponent(fb, policyServiceStub(policy));
   component.ngOnInit();
   return component;
 }
@@ -380,6 +401,50 @@ describe('ParcelConsignFormComponent', () => {
       component['onSubmit']();
 
       expect(spy).toHaveBeenCalledWith(jasmine.objectContaining({ seatNumbers: ['A1'] }));
+    });
+  });
+
+  // OBRS-629 AC-1/AC-3/AC-4. This form matters more than the customer wizard right now: OBRS-622
+  // gated the online channel, so at go-live this IS the parcel counter, and until this card it
+  // asked the sender to attest to a prohibited list it never showed them.
+  describe('OBRS-629 — limits come from GET /api/parcel-policy, not from literals', () => {
+    it('exposes one row per served category so the attestation has something to attest to', () => {
+      const c = makeComponent({
+        maxWeightKg: 100,
+        carryOnFreeSizeMaxInch: 28,
+        carryOnFreeAisleMaxPerTrip: 10,
+        prohibitedCategories: ['flammable', 'livestock'],
+      });
+
+      expect(c['prohibitedCategories'].map((v) => v.slug)).toEqual(['flammable', 'livestock']);
+      expect(c['prohibitedCategories'][0].i18nKey).toBe('PARCEL.PROHIBITED.ITEM.FLAMMABLE');
+      // No copy shipped for 'livestock' - shown by its slug rather than dropped, because intake
+      // will still reject on it.
+      expect(c['prohibitedCategories'][1].i18nKey).toBe('PARCEL.PROHIBITED.UNLISTED');
+      expect(c['prohibitedCategories'][1].params).toEqual({ slug: 'livestock' });
+      c.ngOnDestroy();
+    });
+
+    it('rejects a weight above the SERVED cap, not above a hardcoded 100', () => {
+      const c = makeComponent({ ...DEFAULT_POLICY, maxWeightKg: 50 });
+      const ctrl = c['form'].get('weightKg');
+
+      ctrl?.setValue(60);
+      ctrl?.markAsTouched();
+      // Validators.max(100) - what this line used to be - passes 60 silently, and the sender
+      // finds out from a 409 after the salesperson has taken the parcel.
+      expect(c['fieldError']('weightKg')).toBe('STAFF.PARCEL_CONSIGN.VALIDATION.WEIGHT_MAX');
+      expect(c['weightMaxParams'].max).toBe(50);
+      c.ngOnDestroy();
+    });
+
+    it('flags a failed read instead of falling back to a plausible-but-stale list', () => {
+      const c = makeComponent('error');
+
+      expect(c['policyLoaded']).toBeTrue();
+      expect(c['prohibitedLoadFailed']).toBeTrue();
+      expect(c['prohibitedCategories']).toEqual([]);
+      c.ngOnDestroy();
     });
   });
 });

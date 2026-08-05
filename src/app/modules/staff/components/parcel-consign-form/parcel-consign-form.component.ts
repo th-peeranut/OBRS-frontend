@@ -23,6 +23,12 @@ import {
   THAI_LOCAL_PHONE_PATTERN,
   THAI_MOBILE_PATTERN,
 } from '../../../../shared/constants/thai-msisdn';
+import { ParcelPolicyService } from '../../../../services/parcel-policy/parcel-policy.service';
+import { configuredMaxWeightValidator } from '../../../../shared/lib/configured-max-weight.validator';
+import {
+  ProhibitedCategoryView,
+  toProhibitedCategoryViews,
+} from '../../../../shared/lib/parcel-prohibited-categories';
 
 export interface ParcelDropdownOption {
   value: string;
@@ -192,9 +198,25 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
    * of the form on a mode switch (`resetForMode()`). */
   protected selectedSeatNumbers: string[] = [];
 
+  /* OBRS-629 — server-served parcel limits. This form is the ONLY parcel sales
+   * channel open at go-live (OBRS-622 gated the online wizard), and until this
+   * card it asked the sender to attest their parcel held nothing prohibited
+   * while showing them NO list at all. Built once per policy load and then read
+   * by the template; never recomputed in a template expression, which would
+   * allocate on every change-detection cycle. */
+  protected prohibitedCategories: ProhibitedCategoryView[] = [];
+  protected prohibitedLoadFailed = false;
+  protected policyLoaded = false;
+  /** Stable object identity for the `{{max}}` interpolation; mutated in place. */
+  protected readonly weightMaxParams: { max: number } = { max: 0 };
+  private maxWeightKg: number | null = null;
+
   private readonly destroy$ = new Subject<void>();
 
-  constructor(private readonly fb: FormBuilder) {
+  constructor(
+    private readonly fb: FormBuilder,
+    private readonly parcelPolicyService: ParcelPolicyService
+  ) {
     this.form = this.fb.group({
       senderName: ['', [Validators.required, Validators.maxLength(100)]],
       senderPhone: ['', [Validators.required, separatorTolerantPattern(SENDER_PHONE_PATTERN)]],
@@ -203,7 +225,12 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
       scheduleId: ['', [Validators.required]],
       pickupStopId: ['', [Validators.required]],
       dropoffStopId: ['', [Validators.required]],
-      weightKg: [null, [Validators.required, positiveWeightValidator(), Validators.max(100)]],
+      // OBRS-629 AC-3: was Validators.max(100) — a literal that could not move
+      // when an admin moved parcel.max_weight_kg, on the channel that sells.
+      weightKg: [
+        null,
+        [Validators.required, positiveWeightValidator(), configuredMaxWeightValidator(() => this.maxWeightKg)],
+      ],
       description: ['', [Validators.required, Validators.maxLength(500)]],
       dimensions: this.fb.group(
         {
@@ -225,6 +252,7 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
 
   ngOnInit(): void {
     this.applyModeValidators();
+    this.loadParcelPolicy();
 
     this.form
       .get('scheduleId')
@@ -247,6 +275,36 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
     this.form.valueChanges
       .pipe(debounceTime(400), takeUntil(this.destroy$))
       .subscribe(() => this.emitQuoteParams());
+  }
+
+  /* OBRS-629 — the weight cap and the prohibited list, from the config
+   * ParcelIntakeService enforces. On failure the list renders an explicit "ask
+   * staff" message rather than a hardcoded fallback: the salesperson is about to
+   * tick an attestation on the sender's behalf, so a plausible-but-stale list is
+   * worse than an honest "we could not load it", and a silent empty list would
+   * read as "nothing is prohibited". The weight cap simply stays uncapped
+   * client-side — validateWeight still rejects at intake. */
+  private loadParcelPolicy(): void {
+    this.parcelPolicyService
+      .getParcelPolicy()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const policy = res?.data;
+          this.policyLoaded = true;
+          this.prohibitedCategories = toProhibitedCategoryViews(policy?.prohibitedCategories);
+          if (typeof policy?.maxWeightKg === 'number') {
+            this.maxWeightKg = policy.maxWeightKg;
+            this.weightMaxParams.max = policy.maxWeightKg;
+            this.form.get('weightKg')?.updateValueAndValidity({ emitEvent: false });
+          }
+        },
+        error: () => {
+          this.policyLoaded = true;
+          this.prohibitedLoadFailed = true;
+          this.prohibitedCategories = [];
+        },
+      });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
