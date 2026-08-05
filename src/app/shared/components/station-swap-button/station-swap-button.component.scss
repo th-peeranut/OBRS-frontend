@@ -1,0 +1,94 @@
+@import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
+
+// VERTICAL POSITION — owned here, not by the call sites.
+//
+// Every station row is `display: flex; align-items: center`, and its flex items
+// are the two `app-dropdown-group-obrs` (label **+** field) and this button. So
+// "centre" means the centre of the LABEL+FIELD box, which sits well above the
+// centre of the field itself — the button floats in the gap between a label and
+// the box it belongs to. Each call site patched that with its own hand-tuned
+// nudge, and measured 2026-08-05 exactly one of the five resulting
+// configurations was right (delta = button centre-y − field centre-y):
+//
+//   home/filter ≥993px   `margin-top: 30px`     →  −0.5px   (correct)
+//   home/filter ≤992px   `margin: 12px auto 0`  →  −9.5px
+//   parcel, every width   no rule at all        → −15.5px   ← the reported one
+//
+// So stop nudging and state the constraint instead: align to the row's cross
+// END — the bottom of the field, which is the last box inside the group — then
+// lift by half the leftover. That puts the button's centre line on the field's
+// centre line at every width, and unlike a magic top margin it does not drift
+// when the label wraps, changes language, or changes font size.
+//
+// 48px is `dropdown-group-obrs`'s `.dropdown-toggle-border { height: 48px }` —
+// the one number here that belongs to somebody else, hence the overridable
+// `--station-swap-field-height` for a row whose field is a different height.
+:host {
+  display: inline-flex;
+  align-self: flex-end;
+  margin-bottom: calc(
+    (var(--station-swap-field-height, 48px) - var(--station-swap-icon-size, 32px)) / 2
+  );
+}
+
+.station-swap-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  // A button's UA styles would otherwise inflate the icon's slot: the old
+  // `<img>` had no padding, border or background, and this must occupy the same
+  // box so no layout shifts on any of the three screens.
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+
+  border-radius: 50%;
+  cursor: pointer;
+
+  transition: transform $duration-fast $easing-standard;
+
+  &:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+
+  // OBRS-1035 AC#5/#7: the reported bug was an element that LOOKS actionable and
+  // is not. A disabled swap must therefore say so with the pointer as well —
+  // `cursor: auto` on a clickable-looking circle is exactly what produced the
+  // report.
+  &:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  // AC#4: a focus ring that is actually visible, in both themes. `outline` (not
+  // a box-shadow) so the ring is readable off computed style in a test rather
+  // than by eye.
+  &:focus-visible {
+    outline: 2px solid $brand-customer-strong;
+    outline-offset: 2px;
+  }
+}
+
+// $brand-customer-strong (#3b61a9) against the dark card ($dk-bg-soft #22263a)
+// is the same 2.79:1 failure OBRS-575 hit on the quick-pick pills — below the
+// 3:1 non-text minimum. $dk-accent (#4bc2f7) measures 7.4:1 there.
+// This lives in the component's own stylesheet, NOT dark-theme.scss: a global
+// `body.is-dark .x` rule (3 in the class column) cannot out-specify an
+// encapsulated component rule carrying [_ngcontent] (4) — it would parse, ship,
+// and paint nothing (OBRS-767).
+:host-context(body.is-dark) .station-swap-button:focus-visible {
+  outline-color: $dk-accent;
+}
+
+.station-swap-button__icon {
+  display: block;
+
+  // Default = the SVG's own 32×32. A call site that needs another size sets
+  // `--station-swap-icon-size` on the host from its own stylesheet; custom
+  // properties inherit through emulated encapsulation, plain rules do not.
+  width: var(--station-swap-icon-size, 32px);
+  height: var(--station-swap-icon-size, 32px);
+}

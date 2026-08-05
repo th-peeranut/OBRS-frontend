@@ -64,9 +64,11 @@
     flex-wrap: wrap;
     gap: $space-xs;
 
-    .station-icon {
-      margin-top: 30px;
-    }
+    // `.station-icon { margin-top: 30px }` used to live here — a nudge that
+    // happened to land the swap slot on the field's centre line at this width
+    // and nowhere else (it read −9.5px below 993px, and the parcel copy, which
+    // never got the line, read −15.5px). `app-station-swap-button` positions
+    // itself against the field now; see its stylesheet.
 
     .station-datepicker {
       margin-top: 30px;
@@ -154,8 +156,14 @@ app-recent-routes-quick-pick.has-routes + .station-section {
     width: 100%;
     justify-content: space-between;
 
+    // Horizontal only. The auto side margins are what keep the swap slot
+    // centred between the two full-width fields; the vertical half of the old
+    // `margin: $space-xs auto 0` shorthand is gone deliberately — it zeroed the
+    // button's own bottom offset and left it 9.5px above the field's centre
+    // line at every width ≤992px.
     .station-icon {
-      margin: $space-xs auto 0;
+      margin-left: auto;
+      margin-right: auto;
     }
   }
 

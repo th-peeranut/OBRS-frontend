@@ -1,0 +1,16 @@
+<button
+  type="button"
+  class="station-swap-button"
+  [disabled]="disabled"
+  [attr.aria-label]="ariaLabelKey | translate"
+  (click)="swap.emit()"
+>
+  <!-- `alt=""` + `aria-hidden`: the button already carries the accessible name,
+  so a described image would make a screen reader announce the control twice. -->
+  <img
+    class="station-swap-button__icon"
+    src="icons/passenger-station-gap.svg"
+    alt=""
+    aria-hidden="true"
+  />
+</button>

@@ -26,6 +26,7 @@ import {
   BookingPolicyService,
 } from '../../../../services/booking-policy/booking-policy.service';
 import { LanguageService } from '../../../../shared/services/language.service';
+import { canSwapStationPair, isEmptyStationValue } from '../../../../shared/lib/station-swap';
 
 // OBRS-564: date-picker cap fallback, used only until the real public
 // booking-policy config resolves (see ngOnInit below). A briefly-wrong value
@@ -316,6 +317,43 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     this.syncStationOptions(this.getFormValue('startStationId'), station.id);
   }
 
+  /** OBRS-1035 AC#7 — see `canSwapStations()`. Read straight off the controls
+   *  (no allocation) because this is a template binding evaluated every CD
+   *  tick. */
+  get canSwapStations(): boolean {
+    return canSwapStationPair(
+      this.getFormValue('startStationId'),
+      this.getFormValue('stopStationId')
+    );
+  }
+
+  /**
+   * OBRS-1035: swap origin ⇄ destination.
+   *
+   * Deliberately NOT routed through `onStartStationChange`/`onEndStationChange`:
+   * those take a `StationApi` object and would have to look each station back up
+   * by id, and calling them in sequence would run `syncStationOptions()` twice
+   * against a half-swapped pair. Writing both ids in one `patchValue` and
+   * syncing once against the final pair is both fewer steps and the only order
+   * with no intermediate state.
+   *
+   * AC#6: no search is fired here. On the results page a customer is reading a
+   * list; swapping the fields must not throw that list away before they ask.
+   */
+  onSwapStations(): void {
+    if (!this.canSwapStations) return;
+
+    const previousStart = this.getFormValue('startStationId');
+    const previousStop = this.getFormValue('stopStationId');
+
+    this.bookingForm.patchValue({
+      startStationId: previousStop,
+      stopStationId: previousStart,
+    });
+
+    this.syncStationOptions(previousStop, previousStart);
+  }
+
   getFormValue(controlName: string) {
     return this.bookingForm.get(controlName)?.value;
   }
@@ -403,18 +441,12 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     if (!top) return;
 
     const hasUserChoice =
-      !this.isEmptyStationValue(this.getFormValue('startStationId')) ||
-      !this.isEmptyStationValue(this.getFormValue('stopStationId'));
+      !isEmptyStationValue(this.getFormValue('startStationId')) ||
+      !isEmptyStationValue(this.getFormValue('stopStationId'));
     if (hasUserChoice) return;
 
     this.hasPrefilledRecentRoute = true;
     this.onRecentRouteSelected(top);
-  }
-
-  /** `startStationId`/`stopStationId` are seeded with `''`, so a plain falsy
-   *  check would also read a legitimate station id of 0 as "empty". */
-  private isEmptyStationValue(value: unknown): boolean {
-    return value === null || value === undefined || value === '';
   }
 
   /** OBRS-575 localStorage write gate: only when BOTH ids resolve to a
