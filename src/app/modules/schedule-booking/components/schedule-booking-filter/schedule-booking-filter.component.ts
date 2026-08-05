@@ -17,6 +17,7 @@ import {
 } from '../../../../shared/interfaces/schedule.interface';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { canSwapStationPair } from '../../../../shared/lib/station-swap';
 
 import { select, Store } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
@@ -341,6 +342,38 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
   getFormValue(controlName: string) {
     return this.bookingForm.get(controlName)?.value;
+  }
+
+  /** OBRS-1035 AC#7 — see `canSwapStationPair()`. */
+  get canSwapStations(): boolean {
+    return canSwapStationPair(
+      this.getFormValue('startStationId'),
+      this.getFormValue('stopStationId')
+    );
+  }
+
+  /**
+   * OBRS-1035: swap origin ⇄ destination — same shape as
+   * `home-booking.component.ts`, one `patchValue` then one option-sync against
+   * the final pair.
+   *
+   * AC#6 matters most here: this bar sits above a rendered result list, and
+   * firing `invokeGetScheduleListApi` on swap would replace what the customer is
+   * reading. Nothing in this method dispatches; the existing Search button is
+   * still the only trigger.
+   */
+  onSwapStations(): void {
+    if (!this.canSwapStations) return;
+
+    const previousStart = this.getFormValue('startStationId');
+    const previousStop = this.getFormValue('stopStationId');
+
+    this.bookingForm.patchValue({
+      startStationId: previousStop,
+      stopStationId: previousStart,
+    });
+
+    this.syncStationOptions(previousStop, previousStart);
   }
 
   getIsRoundTripReturn() {

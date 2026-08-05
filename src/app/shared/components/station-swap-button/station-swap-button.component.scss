@@ -1,0 +1,72 @@
+@import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
+
+// The host replaces a bare `<img>` in every call site, and each of those parent
+// stylesheets positions that slot itself (`.station-icon { margin-top: 30px }`,
+// `.parcel-trip-form__gap-icon`). So :host carries NO box styling of its own
+// beyond the display mode — the call sites' existing rules keep applying to the
+// host element unchanged, and the geometry does not move.
+:host {
+  display: inline-flex;
+}
+
+.station-swap-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  // A button's UA styles would otherwise inflate the icon's slot: the old
+  // `<img>` had no padding, border or background, and this must occupy the same
+  // box so no layout shifts on any of the three screens.
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+
+  border-radius: 50%;
+  cursor: pointer;
+
+  transition: transform $duration-fast $easing-standard;
+
+  &:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+
+  // OBRS-1035 AC#5/#7: the reported bug was an element that LOOKS actionable and
+  // is not. A disabled swap must therefore say so with the pointer as well —
+  // `cursor: auto` on a clickable-looking circle is exactly what produced the
+  // report.
+  &:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  // AC#4: a focus ring that is actually visible, in both themes. `outline` (not
+  // a box-shadow) so the ring is readable off computed style in a test rather
+  // than by eye.
+  &:focus-visible {
+    outline: 2px solid $brand-customer-strong;
+    outline-offset: 2px;
+  }
+}
+
+// $brand-customer-strong (#3b61a9) against the dark card ($dk-bg-soft #22263a)
+// is the same 2.79:1 failure OBRS-575 hit on the quick-pick pills — below the
+// 3:1 non-text minimum. $dk-accent (#4bc2f7) measures 7.4:1 there.
+// This lives in the component's own stylesheet, NOT dark-theme.scss: a global
+// `body.is-dark .x` rule (3 in the class column) cannot out-specify an
+// encapsulated component rule carrying [_ngcontent] (4) — it would parse, ship,
+// and paint nothing (OBRS-767).
+:host-context(body.is-dark) .station-swap-button:focus-visible {
+  outline-color: $dk-accent;
+}
+
+.station-swap-button__icon {
+  display: block;
+
+  // Default = the SVG's own 32×32. A call site that needs another size sets
+  // `--station-swap-icon-size` on the host from its own stylesheet; custom
+  // properties inherit through emulated encapsulation, plain rules do not.
+  width: var(--station-swap-icon-size, 32px);
+  height: var(--station-swap-icon-size, 32px);
+}

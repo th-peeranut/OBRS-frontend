@@ -10,12 +10,15 @@
       (currentValue)="onFromStationSelect($event)"
     ></app-dropdown-group-obrs>
 
-    <img
+    <!-- SWAP ORIGIN/DESTINATION. OBRS-1035 — the third copy of the dead icon.
+    A parcel sender swaps as often as a passenger does (the same shop sends to
+    Bangkok on Monday and receives from it on Friday), so this one is wired
+    exactly like the two booking forms. -->
+    <app-station-swap-button
       class="parcel-trip-form__gap-icon"
-      src="icons/passenger-station-gap.svg"
-      alt=""
-      aria-hidden="true"
-      />
+      [disabled]="!canSwapStations"
+      (swap)="onSwapStations()"
+    ></app-station-swap-button>
 
       <app-dropdown-group-obrs
         [isBorder]="true"

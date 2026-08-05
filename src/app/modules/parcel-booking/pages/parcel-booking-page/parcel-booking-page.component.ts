@@ -9,7 +9,11 @@ import { BookingService } from '../../../../services/booking/booking.service';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
 import { ParcelOnlineQuoteParams, ParcelOnlineReqDto, ParcelQuoteRespDto } from '../../../../shared/interfaces/parcel.interface';
 import { ParcelBookingProgressStep } from '../../components/parcel-booking-progress/parcel-booking-progress.component';
-import { ParcelScheduleOption, ParcelTripFormValue } from '../../components/parcel-trip-form/parcel-trip-form.component';
+import {
+  ParcelScheduleOption,
+  ParcelStationSwap,
+  ParcelTripFormValue,
+} from '../../components/parcel-trip-form/parcel-trip-form.component';
 import { ParcelDetailsFormValue } from '../../components/parcel-details-form/parcel-details-form.component';
 import { stashParcelBookingAmount } from '../../parcel-booking-amount-session';
 import { errorCodeFromMessageKey, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
@@ -165,6 +169,16 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
 
   protected onToStationChange(stationId: number): void {
     this.toStationId = stationId;
+    this.syncStationOptions();
+    this.searchSchedules();
+  }
+
+  /** OBRS-1035: both ids land in one call, so the option lists resync once and
+   *  exactly one schedule lookup goes out — for the swapped route, never for the
+   *  transient same-station pair a two-event swap would have produced. */
+  protected onStationsSwap(pair: ParcelStationSwap): void {
+    this.fromStationId = pair.fromStationId;
+    this.toStationId = pair.toStationId;
     this.syncStationOptions();
     this.searchSchedules();
   }

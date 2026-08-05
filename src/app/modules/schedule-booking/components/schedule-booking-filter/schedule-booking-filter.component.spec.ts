@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import { ScheduleBookingFilterComponent } from './schedule-booking-filter.component';
 import { DropdownObrsComponent } from '../../../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownGroupObrsComponent } from '../../../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
+import { StationSwapButtonComponent } from '../../../../shared/components/station-swap-button/station-swap-button.component';
 import { DropdownObrsPassengerComponent } from '../../../home/components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { AlertService } from '../../../../shared/services/alert.service';
 import {
@@ -178,6 +179,7 @@ describe('ScheduleBookingFilterComponent — maxDate bound to BOTH calendars (OB
         DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
         DropdownObrsPassengerComponent,
       ],
       providers: [
@@ -242,6 +244,7 @@ describe('ScheduleBookingFilterComponent — date labels distinguish outbound fr
         DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
         DropdownObrsPassengerComponent,
       ],
       providers: [
@@ -315,6 +318,7 @@ describe('ScheduleBookingFilterComponent — each date field owns a unique input
         DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
         DropdownObrsPassengerComponent,
       ],
       providers: [
@@ -431,6 +435,7 @@ describe('ScheduleBookingFilterComponent — date format follows the chosen lang
         DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
         DropdownObrsPassengerComponent,
       ],
       providers: [
@@ -524,6 +529,7 @@ describe('ScheduleBookingFilterComponent — a date can only be chosen from the 
         DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
         DropdownObrsPassengerComponent,
       ],
       providers: [
@@ -604,5 +610,113 @@ describe('ScheduleBookingFilterComponent — a date can only be chosen from the 
     fixture.detectChanges();
 
     expect(control?.value).toBeNull();
+  });
+});
+
+/**
+ * OBRS-1035. Same dead swap icon as `home-booking` — this filter bar is a copy
+ * of that form, which is how OBRS-1021 / OBRS-1023 / OBRS-1028 all landed on
+ * both files. Fixing only Home would have left the bug live on the results
+ * page, so this suite is the propagation gate: it fails if the second call site
+ * is ever reverted to the decorative `<img>`.
+ *
+ * The must-NOT here is stronger than on Home. This bar sits above a rendered
+ * result list, so a swap that auto-searched would throw away what the customer
+ * is reading.
+ */
+describe('ScheduleBookingFilterComponent — origin/destination swap (OBRS-1035)', () => {
+  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
+  let component: ScheduleBookingFilterComponent;
+  let store: any;
+
+  const STATION_A: any = { id: 1, slug: 'station-a', status: 'active', stopType: 'station' };
+  const STATION_B: any = { id: 2, slug: 'station-b', status: 'active', stopType: 'station' };
+  const STATION_C: any = { id: 3, slug: 'station-c', status: 'active', stopType: 'station' };
+
+  beforeEach(async () => {
+    // One stub serves both `select()` calls in the constructor — the station
+    // roster AND the saved schedule filter. An array is a legitimate "no saved
+    // filter" shape for the latter (every field reads `undefined`), so this
+    // renders the station block without also seeding a filter that would
+    // auto-search on init.
+    store = {
+      pipe: () => of([STATION_A, STATION_B, STATION_C]),
+      select: () => of([STATION_A, STATION_B, STATION_C]),
+      dispatch: () => {},
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingFilterComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        DropdownObrsPassengerComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: store },
+        // Deliberately NOT overriding TranslateService here: the stub's `get()`
+        // resolves to an object, so `| translate` renders "[object Object]" and
+        // the aria-label assertion below would be measuring the stub rather than
+        // the template. The real service from TranslateModule.forRoot() echoes
+        // the key back, which is what AC#1 needs proven.
+        { provide: AlertService, useValue: { warning: () => {}, error: () => {}, success: () => {} } },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  function swapButton(): HTMLButtonElement | null {
+    const de = fixture.debugElement.query(By.css('app-station-swap-button button'));
+    return de ? (de.nativeElement as HTMLButtonElement) : null;
+  }
+
+  it('renders a real <button> with a translated accessible name', () => {
+    const button = swapButton();
+
+    expect(button).not.toBeNull();
+    expect(button!.getAttribute('type')).toBe('button');
+    expect(button!.getAttribute('aria-label')).toBe('COMMON.SWAP_STATIONS');
+  });
+
+  it('AC#2/#3: clicking swaps the two ids and re-syncs both option lists', () => {
+    component.onStartStationChange(STATION_A);
+    component.onEndStationChange(STATION_B);
+    fixture.detectChanges();
+
+    swapButton()!.click();
+    fixture.detectChanges();
+
+    expect(component.getFormValue('startStationId')).toBe(STATION_B.id);
+    expect(component.getFormValue('stopStationId')).toBe(STATION_A.id);
+    expect(component.startProvinceStationList.map((s) => s.id)).not.toContain(STATION_A.id);
+    expect(component.endProvinceStationList.map((s) => s.id)).not.toContain(STATION_B.id);
+  });
+
+  it('AC#7 must-NOT: disabled while both fields are empty', () => {
+    expect(component.canSwapStations).toBeFalse();
+    expect(swapButton()!.disabled).toBeTrue();
+  });
+
+  it('AC#6 must-NOT: swapping never dispatches a search — the visible results stay', () => {
+    component.onStartStationChange(STATION_A);
+    component.onEndStationChange(STATION_B);
+    fixture.detectChanges();
+
+    const dispatch = spyOn(store, 'dispatch');
+
+    swapButton()!.click();
+    fixture.detectChanges();
+
+    expect(dispatch).not.toHaveBeenCalled();
   });
 });

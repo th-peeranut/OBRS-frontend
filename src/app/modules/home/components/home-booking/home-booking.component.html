@@ -47,12 +47,16 @@
                 [searchable]="true"
                 (currentValue)="onStartStationChange($event)"
               ></app-dropdown-group-obrs>
-              <!-- STATION ICON -->
-              <img
+              <!-- SWAP ORIGIN/DESTINATION. OBRS-1035: this used to be a bare
+              decorative <img> that every user read as a swap button — the one
+              slot on the form where that icon can only mean one thing. It is a
+              real button now; `station-icon` is kept so the existing layout
+              rules in the scss still position this slot. -->
+              <app-station-swap-button
                 class="station-icon"
-                src="icons/passenger-station-gap.svg"
-                alt="Passenger ProvinceStation Gap Icon"
-                />
+                [disabled]="!canSwapStations"
+                (swap)="onSwapStations()"
+              ></app-station-swap-button>
                 <!-- DROPDOWN STOP STATION -->
                 <app-dropdown-group-obrs
                   [isBorder]="true"

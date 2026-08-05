@@ -29,8 +29,12 @@
 }
 
 .parcel-trip-form__gap-icon {
-  width: 24px;
-  height: 24px;
+  // OBRS-1035: the slot holds `app-station-swap-button` now, whose icon reads
+  // its size from this custom property. A plain `width`/`height` here would size
+  // the host box while the encapsulated <img> inside kept its natural 32px — a
+  // component's inner elements are unreachable from a parent stylesheet, but
+  // custom properties inherit straight through that boundary.
+  --station-swap-icon-size: 24px;
 }
 
 .parcel-trip-form__error {
