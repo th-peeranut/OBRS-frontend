@@ -65,14 +65,16 @@ export class ChangeStopEffect {
   // gated on an awaited fetch). The stops-lookup cache (stop slug → numeric
   // id) is shared with reschedule/change-seat; each dialog's effect class
   // guards it with the same empty-cache check rather than coupling to
-  // RescheduleEffect's own trigger.
+  // RescheduleEffect's own trigger. Same reason it opts out of the global
+  // loading popup (OBRS-1056): raised over an open dialog that popup swallows
+  // the dialog's Escape key, which is the opposite of "opens optimistically".
   loadStopsLookupOnOpen$ = createEffect(() =>
     this.actions$.pipe(
       ofType(openChangeStopDialog),
       withLatestFrom(this.store.pipe(select(selectStopsLookup))),
       filter(([, stopsLookup]) => Object.keys(stopsLookup).length === 0),
       switchMap(() =>
-        this.stationService.getAll().pipe(
+        this.stationService.getAll(true).pipe(
           map((response) => loadStopsLookupSuccess({ stopsLookup: this.toStopsLookup(response.data) })),
           // No domain errorCode exists for this endpoint — with no backend
           // message either, branch the generic copy on HTTP status (OBRS-170)
