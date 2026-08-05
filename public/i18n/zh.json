@@ -2967,6 +2967,7 @@
       "STOP_NO_MATCH": "没有匹配的站点",
       "POPULAR_LABEL": "热门",
       "ALL_STOPS_LABEL": "全部",
+      "ROUTE_GROUP_TOGGLE": "展开或收起 {{routeLabel}} 的班次",
       "SCHEDULE_ADD_FOR_ROUTE": "为 {{routeLabel}} 添加班次",
       "SCHEDULE_TRIP_ACTIONS": "{{time}} 班次操作",
       "SCHEDULE_EDIT_ITEM": "编辑班次",

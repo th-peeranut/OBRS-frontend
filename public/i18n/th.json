@@ -2967,6 +2967,7 @@
       "STOP_NO_MATCH": "ไม่พบจุดจอดที่ตรงกัน",
       "POPULAR_LABEL": "นิยม",
       "ALL_STOPS_LABEL": "ทั้งหมด",
+      "ROUTE_GROUP_TOGGLE": "ยุบหรือขยายรอบรถของ {{routeLabel}}",
       "SCHEDULE_ADD_FOR_ROUTE": "เพิ่มตารางสำหรับ {{routeLabel}}",
       "SCHEDULE_TRIP_ACTIONS": "จัดการตารางเที่ยว {{time}}",
       "SCHEDULE_EDIT_ITEM": "แก้ไขตาราง",

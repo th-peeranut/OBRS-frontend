@@ -12,6 +12,11 @@ export interface WalkInTripSelection {
   routeSlug: string;
 }
 
+/** OBRS-1050: route groups the seller has collapsed, remembered across reloads.
+ *  Versioned like the other obrs.* keys so a future shape change can be ignored
+ *  rather than mis-read. */
+export const SELL_COLLAPSED_ROUTE_GROUPS_KEY = 'obrs.staff.sellCollapsedRouteGroups.v1';
+
 @Component({
     selector: 'app-walk-in-trip-browser',
     templateUrl: './walk-in-trip-browser.component.html',
@@ -39,7 +44,32 @@ export class WalkInTripBrowserComponent {
   protected selectedDate: Date = new Date();
   protected readonly today: Date = new Date();
 
+  /** OBRS-1050: route slugs whose trip rows are hidden. Keyed by SLUG, never by the
+   *  group object — `sortedGroups` below rebuilds every group object on each read
+   *  (see the OBRS-919 note in the template), so an object key would be a new object
+   *  every change-detection pass and match nothing. */
+  private collapsedSlugs: Set<string> = readCollapsedRouteGroups();
+
   constructor(private readonly translate: TranslateService) {}
+
+  protected isCollapsed(routeSlug: string): boolean {
+    return this.collapsedSlugs.has(routeSlug);
+  }
+
+  /**
+   * Collapsing is purely what the seller last asked for — a group holding the selected
+   * trip is NOT force-expanded. That override was considered and dropped: a header that
+   * silently springs back open reads as a broken click, and the selected trip's details
+   * stay on screen in the centre panel either way, so nothing is actually lost from view.
+   */
+  protected toggleGroup(routeSlug: string): void {
+    if (this.collapsedSlugs.has(routeSlug)) {
+      this.collapsedSlugs.delete(routeSlug);
+    } else {
+      this.collapsedSlugs.add(routeSlug);
+    }
+    writeCollapsedRouteGroups(this.collapsedSlugs);
+  }
 
   protected onDateChange(value: Date | null): void {
     if (value) {
@@ -94,5 +124,28 @@ export class WalkInTripBrowserComponent {
   protected onTripMenuHide(): void {
     this.lastTripMenuTrigger?.focus();
     this.lastTripMenuTrigger = null;
+  }
+}
+
+/** Read the remembered collapsed slugs. Any unreadable/wrong-shaped value is treated as
+ *  "nothing collapsed" — the state is a convenience, never worth failing the panel over. */
+function readCollapsedRouteGroups(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SELL_COLLAPSED_ROUTE_GROUPS_KEY);
+    if (!raw) return new Set<string>();
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set<string>();
+    return new Set(parsed.filter((s): s is string => typeof s === 'string'));
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function writeCollapsedRouteGroups(slugs: Set<string>): void {
+  try {
+    localStorage.setItem(SELL_COLLAPSED_ROUTE_GROUPS_KEY, JSON.stringify([...slugs]));
+  } catch {
+    // localStorage unavailable/full (private mode, quota) — this session still holds the
+    // state in memory; only the "remembered after reload" part is lost.
   }
 }
