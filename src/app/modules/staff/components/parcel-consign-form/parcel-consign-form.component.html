@@ -347,6 +347,14 @@
                       </div>
                     </div>
 
+                    @if (shareNotConfigured) {
+                      <div class="col-12">
+                        <div class="parcel-consign-indicator is-warning" data-testid="parcel-share-not-configured-banner">
+                          {{ 'STAFF.PARCEL_CONSIGN.SHARE_NOT_CONFIGURED' | translate }}
+                        </div>
+                      </div>
+                    }
+
                     @if (serverErrorKey; as err) {
                       <div class="col-12">
                         <div class="admin-error">{{ err | translate }}</div>

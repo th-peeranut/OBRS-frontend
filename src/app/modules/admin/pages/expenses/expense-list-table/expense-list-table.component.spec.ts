@@ -22,6 +22,7 @@ function row(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     receiptNo: 'RC-1',
     paidBy: 'Somchai',
     note: 'note',
+    source: 'MANUAL',
     ...overrides,
   };
 }
@@ -167,6 +168,79 @@ describe('ExpenseListTableComponent', () => {
       const headerCount = fixture.debugElement.queryAll(By.css('thead th')).length;
       const skeletonCells = fixture.debugElement.queryAll(By.css('.admin-skeleton-row:first-of-type td')).length;
       expect(skeletonCells).toBe(headerCount);
+    });
+  });
+
+  // OBRS-960 — a FIELD row (backend auto-created from a driver's cash-panel
+  // expense entry) renders the "ที่มา" chip and has BOTH edit/delete disabled
+  // WITH a title (never absent, never erroring on click); a MANUAL row does
+  // neither.
+  describe('Source column (OBRS-960)', () => {
+    function sourceCell(): HTMLElement {
+      return fixture.debugElement.query(By.css('[data-testid="expense-source-cell"]')).nativeElement;
+    }
+
+    it('renders the FIELD chip for a source:FIELD row', () => {
+      component.isLoading = false;
+      component.rows = [row({ source: 'FIELD' })];
+      fixture.detectChanges();
+
+      const chip = sourceCell().querySelector('.admin-status.is-neutral');
+      expect(chip).not.toBeNull();
+    });
+
+    it('renders NO chip for a source:MANUAL row', () => {
+      component.isLoading = false;
+      component.rows = [row({ source: 'MANUAL' })];
+      fixture.detectChanges();
+
+      expect(sourceCell().querySelector('.admin-status.is-neutral')).toBeNull();
+    });
+
+    it('disables edit/delete WITH a title reason on a FIELD row', () => {
+      component.isLoading = false;
+      component.canWrite = true;
+      component.rows = [row({ source: 'FIELD' })];
+      fixture.detectChanges();
+
+      const buttons = fixture.debugElement.queryAll(By.css('.admin-inline-actions button'));
+      expect(buttons.length).toBe(2);
+      for (const btn of buttons) {
+        expect(btn.nativeElement.disabled).toBeTrue();
+        expect(btn.nativeElement.getAttribute('title')).toBeTruthy();
+      }
+    });
+
+    it('a click on a disabled FIELD-row button does not emit edit/delete (no-op, not an error)', () => {
+      component.isLoading = false;
+      component.canWrite = true;
+      component.rows = [row({ source: 'FIELD' })];
+      fixture.detectChanges();
+
+      const editSpy = jasmine.createSpy('edit');
+      const deleteSpy = jasmine.createSpy('delete');
+      component.edit.subscribe(editSpy);
+      component.delete.subscribe(deleteSpy);
+
+      const buttons = fixture.debugElement.queryAll(By.css('.admin-inline-actions button'));
+      buttons[0].nativeElement.click();
+      buttons[1].nativeElement.click();
+
+      expect(editSpy).not.toHaveBeenCalled();
+      expect(deleteSpy).not.toHaveBeenCalled();
+    });
+
+    it('leaves edit/delete enabled with NO title on a MANUAL row', () => {
+      component.isLoading = false;
+      component.canWrite = true;
+      component.rows = [row({ source: 'MANUAL' })];
+      fixture.detectChanges();
+
+      const buttons = fixture.debugElement.queryAll(By.css('.admin-inline-actions button'));
+      for (const btn of buttons) {
+        expect(btn.nativeElement.disabled).toBeFalse();
+        expect(btn.nativeElement.getAttribute('title')).toBeNull();
+      }
     });
   });
 });

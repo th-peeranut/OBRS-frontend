@@ -190,6 +190,22 @@ label {
   width: 100%;
 }
 
+// OBRS-1003 — keep the wrapper OUT of the positioning chain.
+// PrimeNG >= 20 wraps the `inputicon` template in a
+// `<span class="p-datepicker-input-icon-container">`, and @primeuix/styles pins
+// that span with `position: absolute; inset-inline-end: <form.field.padding.x>`
+// — i.e. hard against the field's RIGHT edge, at zero size. That span then
+// becomes the `<img>`'s offsetParent, so the `left: 16px` below counted 16px
+// from a point just inside the right edge and painted the icon OUTSIDE the
+// field on all 45 `.app-date-field-icon` sites (measured: +4px past the input's
+// right edge on 10/10 pickers). `position: static` drops the span out of the
+// chain so the icon resolves against `.p-datepicker.app-date-field` again,
+// exactly as it did when OBRS-185 wrote the rule.
+// ⚠️ Do NOT delete this on the next PrimeNG bump — the rule below depends on it.
+.p-datepicker.app-date-field .p-datepicker-input-icon-container {
+  position: static;
+}
+
 .app-date-field-icon {
   width: 20px;
   height: 20px;

@@ -25,9 +25,13 @@ test.beforeEach(async ({ page }) => {
  * that commit a booking must not take a visitor's effort before telling them.
  */
 async function seedSignedInCustomer(page: Page): Promise<void> {
-  // Same shape as e2e/support/customer-pages.ts seedCustomerSession: role 'user'
-  // is NOT in AuthService.PORTAL_ONLY_ROLES, so the guard admits it to the
-  // customer area. Seeding 'admin' here would compile and then bounce to /admin.
+  // Same shape as e2e/support/customer-pages.ts seedCustomerSession. Role 'user'
+  // is the customer persona these specs are about.
+  // OBRS-1001: this comment used to justify the role as "'user' is NOT in
+  // AuthService.PORTAL_ONLY_ROLES, so the guard admits it". That list is gone —
+  // the guard now admits EVERY signed-in role to the customer area — so the role
+  // here is chosen to match the persona under test, not to dodge a bounce that
+  // no longer exists.
   await page.addInitScript(() => {
     localStorage.setItem('auth_token', 'obrs-856-b2c-gate-token');
     localStorage.setItem('auth_username', 'customer@system.local');

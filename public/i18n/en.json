@@ -411,6 +411,7 @@
     "THEME_TOGGLE": "Toggle dark mode",
     "CLEAR": "Clear",
     "CALENDAR_ICON_ALT": "Calendar Icon",
+    "SWAP_STATIONS": "Swap origin and destination",
     "CLOSE": "Close",
     "LOADING": "Loading…",
     "READ_PRIVACY_POLICY": "Read the Privacy Policy",
@@ -463,6 +464,7 @@
       "CARGO_CAPACITY": "Cargo Capacity",
       "INSPECTION_ITEMS": "Inspection Checklist Items",
       "ROUTE_MANAGEMENT": "Routes",
+      "STOPS": "Stops",
       "SCHEDULES": "Schedules",
       "BOOKINGS_MANAGEMENT": "Bookings",
       "PROMOTIONS": "Promotions",
@@ -484,7 +486,9 @@
       "BOOKING_TREND": "Booking Trend",
       "ROUTE_PERFORMANCE": "Route Performance",
       "CUSTOMER_BEHAVIOR": "Customer Behavior",
-      "OPS_EFFICIENCY": "Ops Efficiency"
+      "OPS_EFFICIENCY": "Ops Efficiency",
+      "PARCEL_SHARE_CONFIG": "Parcel Revenue Share",
+      "DRIVER_CASH_RATES": "Driver Cash Rates"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -525,6 +529,7 @@
       "NO_DATA": "No data to display.",
       "UPDATING": "Updating…",
       "REFRESH_FAILED": "Showing saved data — couldn't refresh.",
+      "REFRESH": "Refresh",
       "LANGUAGE_LOADING": "Refreshing content for the selected language...",
       "ACTIONS": "Actions",
       "EDIT": "Edit",
@@ -537,6 +542,7 @@
       "PAGINATION_NAV_ARIA": "Pagination",
       "PAGINATION_STATUS_ARIA": "Page {{current}} of {{total}}",
       "ENTRIES": "entries",
+      "ALL": "All",
       "SHOWING": "Showing",
       "OF": "of",
       "CANCEL": "Cancel",
@@ -882,6 +888,38 @@
         "GENERIC": "Something went wrong. Please try again."
       }
     },
+    "STOPS": {
+      "SUBTITLE": "Upload a real photo of each stop and write the landmark that helps a passenger find it.",
+      "HELPER": "Photos and landmark notes are content only the owner can produce — nothing generates them.",
+      "SEARCH_PLACEHOLDER": "Search by name or slug",
+      "LOAD_FAILED": "Could not load stops.",
+      "COL_SLUG": "Slug",
+      "COL_NAME": "Stop name",
+      "COL_TYPE": "Type",
+      "COL_STATUS": "Status",
+      "EDIT_TITLE": "Edit stop: {{slug}}",
+      "PROVINCE": "Province",
+      "LATITUDE": "Latitude",
+      "LONGITUDE": "Longitude",
+      "NAME": "Display name",
+      "LANDMARK": "Landmark",
+      "LANDMARK_PLACEHOLDER": "e.g. next to the mobile phone shop",
+      "ADDRESS": "Address",
+      "LOCALE_TH": "ภาษาไทย",
+      "LOCALE_EN": "English",
+      "LOCALE_ZH": "中文",
+      "PHOTO_TITLE": "Stop photo",
+      "PHOTO_HELPER": "Shoot from the angle a passenger walks in from, not a flattering shopfront. JPEG, PNG or WebP, up to 5 MB.",
+      "PHOTO_NONE": "No photo yet",
+      "PHOTO_UPLOAD": "Upload photo",
+      "PHOTO_REPLACE": "Replace photo",
+      "PHOTO_REMOVE": "Remove photo",
+      "PHOTO_REMOVE_TITLE": "Remove stop photo",
+      "PHOTO_REMOVE_CONFIRM": "Remove this photo from the stop? The route map will go back to showing no photo.",
+      "PHOTO_REMOVE_FAILED": "Could not remove the photo.",
+      "PHOTO_UPLOADED": "Photo uploaded.",
+      "PHOTO_UPLOAD_FAILED": "Could not upload the photo."
+    },
     "ROUTES": {
       "TITLE": "Route Management",
       "SUBTITLE": "Manage route records, statuses, stop sequences, and fare segments.",
@@ -907,7 +945,17 @@
       "DESTINATION_STOP": "Destination Stop",
       "FARE": "Fare (THB)",
       "EST_DURATION": "Est. Duration",
+      "DURATION_AFFECTS_OTHER_PAIRS": "Saving this duration rewrites the arrival time of {{stop}}, which {{count}} other stop pair(s) on this route are calculated from - and the arrival times customers and Walk-in Sell see.",
       "SEGMENTS": "segments",
+      "EXPAND_ALL": "Expand all",
+      "COLLAPSE_ALL": "Collapse all",
+      "GROUP_CONTINUED": "(cont.)",
+      "DESTINATIONS": "destinations",
+      "FARE_UNSET": "Not set",
+      "ROWS_PER_PAGE": "Rows per page",
+      "SHOWING_PAIRS": "Showing {{shown}} of {{total}} stop pairs · {{groups}} origins",
+      "COLLAPSED_NOTE": "{{count}} groups collapsed",
+      "SEARCH_EXPANDS_NOTE": "Searching - all groups temporarily expanded",
       "ADD_TITLE": "Create Route",
       "EDIT_TITLE": "Edit Route",
       "MODAL_HINT": "Set route identity, translations, and operating status.",
@@ -1229,6 +1277,59 @@
       "ERROR": {
         "RANGE_INVALID": "The From date must be on or before the To date.",
         "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
+      },
+      "PARCEL_SHARE_MONTHLY": {
+        "TITLE": "Parcel revenue share — monthly totals",
+        "YEAR_LABEL": "Year",
+        "MONTH_LABEL": "Month",
+        "COL": {
+          "PAYEE": "Salesperson",
+          "TOTAL": "Total"
+        }
+      },
+      "PARCEL_SHARE_CLAWBACKS": {
+        "TITLE": "Parcel share clawbacks",
+        "SUBTITLE": "Shares the driver and salesperson must return after a parcel was cancelled and the customer fully refunded — the driver's is taken automatically with his daily cash return, the salesperson's has to be collected by hand.",
+        "FILTER_LABEL": "Status",
+        "FILTER": {
+          "OUTSTANDING": "Outstanding",
+          "COLLECTED": "Collected",
+          "ALL": "All"
+        },
+        "COL": {
+          "ROLE": "Role",
+          "PAYEE": "Payee",
+          "DATE": "Date",
+          "AMOUNT": "Amount",
+          "STATUS": "Status",
+          "CHANNEL": "Collected via",
+          "ACTION": "Action"
+        },
+        "ROLE": {
+          "DRIVER": "Driver",
+          "SALESPERSON": "Salesperson"
+        },
+        "STATUS": {
+          "OUTSTANDING": "Outstanding",
+          "COLLECTED": "Collected"
+        },
+        "CHANNEL": {
+          "DRIVER_DAILY_RETURN": "Daily cash return",
+          "MANUAL": "Collected by hand"
+        },
+        "PAYEE_UNKNOWN": "Unknown",
+        "NOTE_PLACEHOLDER": "Note (optional)",
+        "COLLECT_BTN": "Mark collected",
+        "CONFIRM_TITLE": "Confirm the share was handed back?",
+        "CONFIRM_TEXT": "This records that {{payee}} returned {{amount}}, and cannot be undone.",
+        "SUCCESS": "Clawback marked as collected.",
+        "EMPTY": "No parcel-share clawbacks.",
+        "LOAD_FAILED": "Unable to load parcel-share clawbacks. Please try again.",
+        "ERROR": {
+          "ALREADY_COLLECTED": "This clawback has already been collected.",
+          "NOT_FOUND": "That clawback no longer exists.",
+          "COLLECT_FAILED": "Unable to record the collection. Please try again."
+        }
       }
     },
     "SETTLEMENTS": {
@@ -1343,6 +1444,48 @@
         "WALK_IN": "Walk-in",
         "AGENT": "Agent",
         "KIOSK": "Kiosk"
+      },
+      "DRIVER_CASH": {
+        "TABLE_TITLE": "Driver cash days",
+        "EMPTY": "No driver cash days in this range.",
+        "LOAD_FAILED": "Unable to load driver cash days.",
+        "STATUS": {
+          "RETURNED": "Returned",
+          "OPEN": "Pending return"
+        },
+        "DETAIL": {
+          "LOAD_FAILED": "Unable to load this day’s detail."
+        },
+        "RETURN": {
+          "TITLE": "Driver cash day return",
+          "SECTION_TITLE": "Sign off the return",
+          "EXPECTED": "Expected amount",
+          "RETURNED_LABEL": "Amount returned",
+          "RETURNED_PLACEHOLDER": "0.00",
+          "CONFIRM_BTN": "Confirm return",
+          "CONFIRM_TITLE": "Confirm driver cash return?",
+          "CONFIRM_TEXT": "Recording {{amount}} as returned. This cannot be undone.",
+          "SUCCESS": "Driver cash day marked as returned.",
+          "ALREADY_RETURNED": "This day has already been returned.",
+          "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)"
+        },
+        "ERROR": {
+          "REASON_REQUIRED": "A reason is required when the returned amount does not match.",
+          "ALREADY_RETURNED": "This day was already returned.",
+          "RETURN_FAILED": "Unable to record this return."
+        },
+        "COL": {
+          "DRIVER": "Driver",
+          "BUSINESS_DATE": "Business date",
+          "VEHICLE": "Vehicle",
+          "EXPECTED": "Expected amount"
+        },
+        "ENTRY_TYPE": {
+          "ADVANCE": "Advance",
+          "PER_HEAD": "Per-head",
+          "EXPENSE_PAID": "Expense: {{category}}",
+          "RETURN": "Return"
+        }
       }
     },
     "EOD_REPORT": {
@@ -1579,7 +1722,10 @@
       "FILTER_DATE_TO": "To Date",
       "EMPTY_TITLE": "No expenses recorded yet",
       "EMPTY_BODY": "Start logging vehicle or central expenses with the \"Add Expense\" button",
-      "NO_MATCH": "No expenses match the current filters"
+      "NO_MATCH": "No expenses match the current filters",
+      "SOURCE": "Source",
+      "SOURCE_FIELD": "Auto-generated (from driver)",
+      "FIELD_ROW_IMMUTABLE": "This row was recorded automatically from a driver’s cash entry. It cannot be edited or deleted here."
     },
     "MANUAL_REFUNDS": {
       "SUBTITLE": "Payments awaiting manual refund transfer",
@@ -1707,6 +1853,44 @@
         "DEPARTURES": "Departures",
         "SEATS": "Seats sold / cap",
         "FILL": "Fill rate"
+      }
+    },
+    "PARCEL_SHARE_CONFIG": {
+      "SUBTITLE": "Set the driver/salesperson revenue share for parcel intake.",
+      "NOT_CONFIGURED": "Parcel revenue share is not configured — it will be recorded at 0% until you set it up.",
+      "LOAD_FAILED": "Unable to load the parcel revenue share configuration.",
+      "DRIVER_PCT_LABEL": "Driver share (%)",
+      "SALESPERSON_PCT_LABEL": "Salesperson share (%)",
+      "SUM_EXCEEDS_100": "Driver share + salesperson share cannot exceed 100%.",
+      "REPAIR": {
+        "TITLE": "Repair unconfigured shares",
+        "BODY": "Re-applies the current rates to parcels that were accepted while the share was unconfigured (frozen at 0%).",
+        "RUN_BTN": "Run repair",
+        "RUNNING": "Running...",
+        "CONFIRM_TITLE": "Repair parcel revenue shares?",
+        "CONFIRM_TEXT": "This will re-apply the current driver/salesperson percentages to every affected parcel and cannot be undone.",
+        "CONFIRM_BTN": "Repair",
+        "FAILED": "The repair could not be completed.",
+        "PARCELS_REPAIRED": "Parcels repaired",
+        "ENTRIES_REPAIRED": "Entries repaired",
+        "DRIVER_PCT_APPLIED": "Driver % applied",
+        "SALESPERSON_PCT_APPLIED": "Salesperson % applied"
+      }
+    },
+    "DRIVER_CASH_RATES": {
+      "SUBTITLE": "Manage per-head rates by stop.",
+      "LOAD_FAILED": "Unable to load driver cash rates.",
+      "ADD_TITLE": "Add a rate",
+      "STOP_LABEL": "Stop",
+      "EFFECTIVE_FROM_LABEL": "Effective from",
+      "RATE_LABEL": "Rate per head",
+      "RATE_PLACEHOLDER": "0.00",
+      "ADD_BTN": "Add rate",
+      "HISTORY_TITLE": "Rate history",
+      "CURRENT": "Current",
+      "ERROR": {
+        "DUPLICATE": "A rate for this stop already starts on that date.",
+        "CREATE_FAILED": "Unable to add this rate."
       }
     }
   },
@@ -2102,6 +2286,8 @@
       "DETAIL_PICKUP_TITLE": "Pickup detail ({{province}})",
       "DETAIL_DROPOFF_TITLE": "Drop-off detail ({{province}})",
       "DETAIL_TIME": "Approx. {{time}}",
+      "DETAIL_LANDMARK_LABEL": "Landmark",
+      "DETAIL_NO_PHOTO": "No photo of this stop yet",
       "BTN_OPEN_MAPS": "Open in Google Maps",
       "BTN_NAVIGATE": "Navigate",
       "VALIDATION_SELECT_BOTH": "Please select both a pickup and a drop-off point before confirming",
@@ -2974,7 +3160,9 @@
           "PAYING": "Recording payment…",
           "PAID": "Paid — ฿{{amount}} collected"
         }
-      }
+      },
+      "SHARE_NOT_CONFIGURED": "Parcel revenue share is not configured — it will be recorded at 0% until the owner sets it up.",
+      "SALES_POINT_NOT_MAPPED": "This stop is not yet linked to a sales point — the owner’s share will be recorded as the driver’s cash."
     },
     "PARCEL_WAYBILL": {
       "SUBTITLE": "Printable waybill for this parcel.",
@@ -3174,6 +3362,47 @@
         "SPEED": "Speed: {{value}} km/h",
         "ENGINE_ON": "Engine on",
         "ENGINE_OFF": "Engine off"
+      }
+    },
+    "DRIVER_CASH": {
+      "SUMMARY": {
+        "ADVANCE": "Advance",
+        "PER_HEAD": "Per-head",
+        "EXPENSE": "Expenses",
+        "NET": "Net cash",
+        "PARCEL_REMIT": "Parcel remit",
+        "PARCEL_CLAWBACK": "Parcel clawback"
+      },
+      "ADVANCE": {
+        "ACTION_LABEL": "Cash advance",
+        "AMOUNT_LABEL": "Amount",
+        "AMOUNT_PLACEHOLDER": "0.00",
+        "HINT": "Cash the driver carries to pay for fuel/tolls along the way — not a spent expense; the end-of-day close-out reclaims whatever is left.",
+        "SUBMIT": "Record advance"
+      },
+      "PER_HEAD": {
+        "ACTION_LABEL": "Per-head count",
+        "STOP_LABEL": "Stop",
+        "HEAD_COUNT_LABEL": "Head count",
+        "HEAD_COUNT_PLACEHOLDER": "Number of passengers",
+        "SUBMIT": "Record per-head",
+        "RATE_NOT_CONFIGURED": "Per-head rate not set for this stop — will be recorded as 0 THB until configured"
+      },
+      "EXPENSE": {
+        "ACTION_LABEL": "Field expense",
+        "CATEGORY_LABEL": "Category",
+        "AMOUNT_LABEL": "Amount",
+        "AMOUNT_PLACEHOLDER": "0.00",
+        "NOTE_LABEL": "Note (optional)",
+        "NOTE_PLACEHOLDER": "e.g. receipt number",
+        "SUBMIT": "Record expense"
+      },
+      "SUBMITTING": "Submitting...",
+      "VALIDATION": {
+        "AMOUNT_INVALID": "Enter a valid amount (up to 2 decimal places)."
+      },
+      "ERROR": {
+        "GENERIC": "Unable to record this entry. Please try again."
       }
     }
   },

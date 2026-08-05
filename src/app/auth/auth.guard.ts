@@ -25,18 +25,24 @@ export class AuthGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): boolean | UrlTree {
-    // Customer/public area: guests may browse freely, but a logged-in user who
-    // is confined to a portal (admin/staff) is bounced back to their own area.
-    // `requireAuth` (e.g. My Bookings) additionally forces guests to log in.
+    // Customer/public area: open to everyone — guests and every logged-in role
+    // alike. `requireAuth` (e.g. My Bookings) is the only thing that narrows it,
+    // and it narrows by AUTHENTICATION, never by role: it forces a guest to log
+    // in and lets every signed-in user straight through.
+    //
+    // OBRS-1001 removed the role half of this branch. It used to bounce a
+    // logged-in user whom `canAccessCustomerArea()` reported as portal-confined
+    // back to `getHomeRoute()` — and with salesperson/driver the only members of
+    // that list, that meant the staff shell's own "หน้าแรก" brand link could
+    // never work for the only two roles that see it. The list is gone (see
+    // auth.service.ts and docs/adr/0037-no-frontend-portal-confinement.md), so
+    // nothing is left for the rejection to catch; keeping it would leave an
+    // unreachable predicate that still reads like an enforced rule.
     if (route.data['customerArea'] === true) {
-      if (this.authService.isAuthenticated()) {
-        if (!this.authService.canAccessCustomerArea()) {
-          return this.router.parseUrl(this.authService.getHomeRoute());
-        }
-        return true;
-      }
-
-      if (route.data['requireAuth'] === true) {
+      if (
+        !this.authService.isAuthenticated() &&
+        route.data['requireAuth'] === true
+      ) {
         this.authService.setPostLoginRedirectUrl(state.url);
         return this.router.parseUrl('/login');
       }

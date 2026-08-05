@@ -75,6 +75,13 @@ import { CounterCancelSearchFormComponent } from './pages/counter-cancel/counter
 import { CounterCancelResultListComponent } from './pages/counter-cancel/counter-cancel-result-list/counter-cancel-result-list.component';
 import { CounterCancelModalComponent } from './pages/counter-cancel/counter-cancel-modal/counter-cancel-modal.component';
 
+// OBRS-960 — driver cash ledger panel (/staff/boarding/:scheduleId).
+import { DriverCashPanelComponent } from './components/driver-cash-panel/driver-cash-panel.component';
+import { DriverCashDaySummaryComponent } from './components/driver-cash-panel/driver-cash-day-summary/driver-cash-day-summary.component';
+import { DriverCashAdvanceFormComponent } from './components/driver-cash-panel/driver-cash-advance-form/driver-cash-advance-form.component';
+import { DriverCashPerHeadFormComponent } from './components/driver-cash-panel/driver-cash-per-head-form/driver-cash-per-head-form.component';
+import { DriverCashExpenseFormComponent } from './components/driver-cash-panel/driver-cash-expense-form/driver-cash-expense-form.component';
+
 export const staffRoutes: Routes = [
   {
     path: '',
@@ -98,10 +105,14 @@ export const staffRoutes: Routes = [
       },
       {
         // OBRS-195/OBRS-188: a staff-owned, printable proof of a walk-in sale.
-        // Deliberately NOT `data: { customerArea: true }` — that would route
-        // through AuthGuard's public/customer branch and bounce staff off a
-        // portal-confined account the same way the old `/e-ticket` redirect
-        // did (OBRS-188). This is a normal staff-portal route instead.
+        // Deliberately NOT `data: { customerArea: true }` — this is a staff
+        // page and only a salesperson should reach it, which `requiredRoles`
+        // says and `customerArea` does not.
+        // OBRS-1001 retired the ORIGINAL reason given here: `customerArea`
+        // used to bounce staff outright (the `/e-ticket` failure OBRS-188 was
+        // named for), and no longer does. The route is unchanged — but the
+        // rationale above is the one that still holds, so it is written down
+        // rather than left pointing at a hazard that has been deleted.
         path: 'sell/receipt/:bookingId',
         component: SellReceiptPageComponent,
         canActivate: [AuthGuard],
@@ -257,6 +268,11 @@ export const staffRoutes: Routes = [
     CounterCancelSearchFormComponent,
     CounterCancelResultListComponent,
     CounterCancelModalComponent,
+    DriverCashPanelComponent,
+    DriverCashDaySummaryComponent,
+    DriverCashAdvanceFormComponent,
+    DriverCashPerHeadFormComponent,
+    DriverCashExpenseFormComponent,
   ],
   imports: [
     SharedModule,

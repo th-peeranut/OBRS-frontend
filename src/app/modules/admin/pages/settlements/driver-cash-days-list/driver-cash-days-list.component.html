@@ -1,0 +1,100 @@
+<!-- Invalid range / fetch error: replaces the table (design-system.md §6),
+same rule as app-settlements-list. -->
+@if (contentState === 'invalid' || contentState === 'error') {
+  <section class="admin-card mt-3 settlements-state-card">
+    @if (contentState === 'invalid') {
+      <p class="admin-error">{{ message }}</p>
+    }
+    @if (contentState === 'error') {
+      <p class="admin-muted">{{ message }}</p>
+    }
+  </section>
+}
+
+@if (contentState === 'loading' || contentState === 'empty' || contentState === 'data') {
+  <section class="admin-card mt-3">
+    <div class="admin-card-head">
+      <h4>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.TABLE_TITLE' | translate }}</h4>
+    </div>
+    @if (contentState === 'empty') {
+      <p class="admin-muted settlements-empty-note">
+        {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.EMPTY' | translate }}
+      </p>
+    }
+    @if (contentState !== 'empty') {
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.DRIVER' | translate }}</th>
+              <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.BUSINESS_DATE' | translate }}</th>
+              <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.VEHICLE' | translate }}</th>
+              <th>{{ 'ADMIN.SETTLEMENTS.COL.STATUS' | translate }}</th>
+              <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.EXPECTED' | translate }}</th>
+              <th>{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (contentState === 'loading') {
+              @for (row of skeletonRows; track $index) {
+                <tr class="admin-skeleton-row" aria-hidden="true">
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                </tr>
+              }
+            }
+            @if (contentState === 'data') {
+              @for (item of items; track trackByDayId(i, item); let i = $index) {
+                <tr
+                  class="settlements-row"
+                  [class.zebra]="i % 2 === 1"
+                  (click)="onRowActivate(item.dayId, $event)"
+                  >
+                  <td class="admin-emphasis">
+                    {{ item.driverName }}
+                    @if (item.hasUnmappedSalesPointRemit) {
+                      <span
+                        class="material-symbols-outlined dcp-row-warning-icon"
+                        [attr.title]="'STAFF.PARCEL_CONSIGN.SALES_POINT_NOT_MAPPED' | translate"
+                        data-testid="driver-cash-day-unmapped-icon"
+                        >warning</span>
+                    }
+                  </td>
+                  <td>{{ displayDate(item.businessDate) }}</td>
+                  <td>{{ item.vehiclePlate }}</td>
+                  <td>
+                    @if (item.status === 'OPEN') {
+                      <span class="admin-status is-warning">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.STATUS.OPEN' | translate }}</span>
+                    }
+                    @if (item.status === 'RETURNED') {
+                      <span class="admin-status is-success">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.STATUS.RETURNED' | translate }}</span>
+                    }
+                  </td>
+                  <td>{{ item.expectedReturnAmount }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="admin-btn admin-btn-small"
+                      (click)="rowClick.emit(item.dayId)"
+                      >
+                      {{ 'ADMIN.COMMON.VIEW' | translate }}
+                    </button>
+                  </td>
+                </tr>
+              }
+              @if (items.length === 0) {
+                <tr class="admin-empty-row">
+                  <td colspan="6">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

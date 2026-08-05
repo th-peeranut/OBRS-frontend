@@ -14,6 +14,7 @@ import {
   SettlementScheduleDetailDto,
 } from '../../../../../shared/interfaces/settlement.interface';
 import { formatDisplayDateTime } from '../../../../../shared/lib/display-date-time';
+import { toCents } from '../../../../../shared/lib/money-cents';
 
 /**
  * Dumb (presentational) settlement detail modal. Owns no server state and makes
@@ -227,11 +228,12 @@ export class SettlementDetailModalComponent implements OnChanges {
   // A money string is valid iff it's a non-negative decimal with at most two
   // fraction digits. Cents (integer) avoid binary-float drift in the
   // reconcile-against-expected comparison.
+  // OBRS-960: delegates to the shared `shared/lib/money-cents.ts` helper
+  // (lifted out of here so the new driver-cash forms/return-modal share ONE
+  // implementation instead of forking a second copy of this regex) — this
+  // wrapper is kept, unchanged in signature, so every existing call site
+  // above stays byte-identical.
   private static toCents(value: string): number | null {
-    const trimmed = value.trim();
-    if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
-      return null;
-    }
-    return Math.round(Number(trimmed) * 100);
+    return toCents(value);
   }
 }

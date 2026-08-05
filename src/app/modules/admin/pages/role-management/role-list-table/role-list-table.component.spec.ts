@@ -4,6 +4,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
 import { RoleListTableComponent } from './role-list-table.component';
 import { RoleRow } from '../role-management.mappers';
+import { captureDuplicateTrackKeyWarnings } from '../../../../../testing/track-key-warnings';
 
 function makeRow(overrides: Partial<RoleRow> = {}): RoleRow {
   return {
@@ -65,6 +66,23 @@ describe('RoleListTableComponent (template)', () => {
 
     const skeletonRows = fixture.debugElement.queryAll(By.css('tr.admin-skeleton-row'));
     expect(skeletonRows.length).toBe(5);
+  });
+
+  // OBRS-967 must-catch, standing in for all 39 placeholder loops swept in that
+  // card. `skeletonRows` is `Array.from({ length: 5 })` -- five copies of
+  // `undefined` -- so the previous `track row` gave @for the same key five times
+  // and Angular logged NG0955 on every skeleton render. Reverting the template to
+  // `track row` turns this spec red; the row COUNT above stays green either way,
+  // which is exactly why it never caught this.
+  it('renders the skeleton without a duplicate track key (NG0955)', () => {
+    const readWarnings = captureDuplicateTrackKeyWarnings();
+    component.isLoading = true;
+    component.rows = [];
+    fixture.detectChanges();
+
+    expect(readWarnings())
+      .withContext('the placeholder loop must track by $index, not by the undefined row object')
+      .toEqual([]);
   });
 
   it('renders one row per role, with the EN/TH labels', () => {

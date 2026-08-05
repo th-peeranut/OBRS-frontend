@@ -671,6 +671,38 @@ export const ADMIN_SWEEP: SweepPage[] = [
 ];
 
 /**
+ * OBRS-960. The two `/admin/settings` tabs whose `requiredRoles` is `['owner']`.
+ *
+ * They are a separate list rather than two more `ADMIN_SWEEP` rows because the
+ * role lives in the SESSION, not in the page: `seedStaffSession` seeds
+ * `['admin']`, and every other swept screen was measured under exactly that.
+ * Widening it to `['admin','owner']` would silently re-measure all 40+ of them
+ * under a role they have never been swept with — a much larger claim than "two
+ * new tabs are reachable", and one nobody asked for.
+ *
+ * Excusing them in `NOT_SWEPT` was the other option and it fails that list's own
+ * bar: an entry there has to be a component that "genuinely cannot be reached
+ * without data this lane has no way to produce", and an owner role is one
+ * `localStorage` key this lane already writes. `app-driver-cash-rates-page`
+ * renders a `<p-datepicker>`, so an excuse would have been a real hole in the
+ * evidence for a rule that lands app-wide.
+ */
+export const OWNER_SWEEP: SweepPage[] = [
+  {
+    key: 'admin-settings-driver-cash-rates',
+    url: '/admin/settings/driver-cash-rates',
+    landsOn: /\/admin\/settings\/driver-cash-rates$/,
+    requires: 'app-driver-cash-rates-page',
+  },
+  {
+    key: 'admin-settings-parcel-share',
+    url: '/admin/settings/parcel-share',
+    landsOn: /\/admin\/settings\/parcel-share$/,
+    requires: 'app-parcel-share-config-page',
+  },
+];
+
+/**
  * OBRS-782. Customer screens that need a click, swept after `CUSTOMER_SWEEP`
  * with the same session and the same fixtures.
  *
@@ -960,6 +992,23 @@ export async function seedStaffSession(page: Page): Promise<void> {
     localStorage.setItem('auth_token', 'obrs-775-host-box-sweep-token');
     localStorage.setItem('auth_username', 'admin@system.local');
     localStorage.setItem('auth_roles', JSON.stringify(['admin']));
+    localStorage.setItem('active_booking_id', '123');
+  });
+  await mockEmptyBackend(page);
+}
+
+/**
+ * OBRS-960. Same shell as `seedStaffSession`, one role different — the only
+ * thing that decides whether an `['owner']` tab of `/admin/settings` mounts.
+ * Used by `OWNER_SWEEP`; kept separate so the admin sweep keeps measuring the
+ * role it has always measured.
+ */
+export async function seedOwnerSession(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    localStorage.setItem('app_language', 'en');
+    localStorage.setItem('auth_token', 'obrs-775-host-box-sweep-token');
+    localStorage.setItem('auth_username', 'owner@system.local');
+    localStorage.setItem('auth_roles', JSON.stringify(['owner']));
     localStorage.setItem('active_booking_id', '123');
   });
   await mockEmptyBackend(page);

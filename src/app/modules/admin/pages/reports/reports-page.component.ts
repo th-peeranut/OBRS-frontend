@@ -8,6 +8,8 @@ import {
   ReportsSummaryDto,
   ReportsTilesDto,
 } from '../../../../shared/interfaces/reports-summary.interface';
+import { ParcelShareMonthlyStore } from './parcel-share-monthly.store';
+import { ParcelShareMonthlyRowDto } from '../../../../services/admin/admin-api.service';
 
 const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -29,12 +31,32 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
 
   protected readonly skeletonRows = Array.from({ length: 7 });
 
+  // ── OBRS-960: parcel-share monthly totals (own section, below the daily table) ──
+  protected parcelShareMonthlyRows: ParcelShareMonthlyRowDto[] = [];
+  protected isParcelShareMonthlyLoading = false;
+  protected selectedYear: number;
+  protected selectedMonth: number;
+  protected readonly yearOptions: { value: string; label: string }[];
+  protected readonly monthOptions: { value: string; label: string }[] = Array.from(
+    { length: 12 },
+    (_, i) => ({ value: String(i + 1), label: String(i + 1) })
+  );
+
   private readonly destroy$ = new Subject<void>();
 
   constructor(
     protected readonly store: ReportsStore,
+    private readonly parcelShareMonthlyStore: ParcelShareMonthlyStore,
     private readonly translate: TranslateService
-  ) {}
+  ) {
+    const period = this.parcelShareMonthlyStore.period;
+    this.selectedYear = period.year;
+    this.selectedMonth = period.month;
+    this.yearOptions = Array.from({ length: 5 }, (_, i) => {
+      const year = period.year - 2 + i;
+      return { value: String(year), label: String(year) };
+    });
+  }
 
   ngOnInit(): void {
     const range = this.store.range;
@@ -54,6 +76,14 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     });
 
     void this.store.refresh();
+
+    this.parcelShareMonthlyStore.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
+      this.parcelShareMonthlyRows = data ?? [];
+    });
+    this.parcelShareMonthlyStore.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((refreshing) => {
+      this.isParcelShareMonthlyLoading = refreshing;
+    });
+    void this.parcelShareMonthlyStore.refresh();
   }
 
   ngOnDestroy(): void {
@@ -208,5 +238,29 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
       return null;
     }
     return new Date(year, month - 1, day);
+  }
+
+  // ── OBRS-960: parcel-share monthly totals ────────────────────────────────
+
+  protected onYearChange(value: string): void {
+    this.selectedYear = Number(value);
+    this.parcelShareMonthlyStore.setPeriod(this.selectedYear, this.selectedMonth);
+  }
+
+  protected onMonthChange(value: string): void {
+    this.selectedMonth = Number(value);
+    this.parcelShareMonthlyStore.setPeriod(this.selectedYear, this.selectedMonth);
+  }
+
+  protected trackByPayeeId(_index: number, row: ParcelShareMonthlyRowDto): number {
+    return row.payeeUserId;
+  }
+
+  protected get selectedYearStr(): string {
+    return String(this.selectedYear);
+  }
+
+  protected get selectedMonthStr(): string {
+    return String(this.selectedMonth);
   }
 }

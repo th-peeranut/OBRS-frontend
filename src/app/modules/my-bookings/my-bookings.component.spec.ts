@@ -37,7 +37,13 @@ function buildBooking(overrides: Partial<MyBookingDto> = {}): MyBookingDto {
             th: { label: 'บีทีเอส หมอชิต' },
           },
         },
-        tickets: [{}, {}],
+        // OBRS-635: `tickets` is null on GET /bookings/me — the list projection
+        // never loads them. The old fixture said `[{}, {}]`, which is why a
+        // component reading `tickets.length` looked correct in tests while
+        // printing "0 passengers" to every real customer. The count is its own
+        // server-computed field.
+        tickets: undefined,
+        passengerCount: 2,
       },
     ],
     ...overrides,
@@ -106,6 +112,67 @@ describe('MyBookingsComponent', () => {
     expect(view.totalAmount).toBe(1290);
     expect(view.totalAmountLabel).toContain('1,290');
     expect(view.passengerCount).toBe(2);
+  });
+
+  describe('passenger count (OBRS-635)', () => {
+    // The reported defect verbatim: every card said "0 passengers". The response
+    // shape below is the real one — `tickets` absent, `passengerCount` present.
+    it('reads the server-computed count even though tickets is absent', () => {
+      const view = toView(
+        buildBooking({
+          bookingSchedules: [
+            { id: 1, departureDateTime: '2026-12-20T08:00:00+07:00', tickets: undefined, passengerCount: 3 },
+          ],
+        })
+      );
+
+      expect(view.passengerCount).toBe(3);
+    });
+
+    // The guard against regressing to `tickets?.length ?? 0`: the two disagree
+    // on purpose, so a mapping that reads `tickets` cannot pass this.
+    it('follows passengerCount, not tickets.length, when the two disagree', () => {
+      const view = toView(
+        buildBooking({
+          bookingSchedules: [
+            {
+              id: 1,
+              departureDateTime: '2026-12-20T08:00:00+07:00',
+              tickets: [{}, {}, {}, {}],
+              passengerCount: 2,
+            },
+          ],
+        })
+      );
+
+      expect(view.passengerCount).toBe(2);
+    });
+
+    // A multi-leg booking's card shows the BOOKING's passengers, taken from the
+    // first leg — not the sum over legs. 2 people round-tripping is "2", not 4.
+    it('reports the first leg only for a round trip, never the sum across legs', () => {
+      const view = toView(
+        buildBooking({
+          bookingType: 'round_trip',
+          bookingSchedules: [
+            { id: 1, departureDateTime: '2026-12-20T08:00:00+07:00', passengerCount: 2 },
+            { id: 2, departureDateTime: '2026-12-27T08:00:00+07:00', passengerCount: 2 },
+          ],
+        })
+      );
+
+      expect(view.passengerCount).toBe(2);
+    });
+
+    it('degrades to 0 when the leg carries no count at all', () => {
+      const view = toView(
+        buildBooking({
+          bookingSchedules: [{ id: 1, departureDateTime: '2026-12-20T08:00:00+07:00' }],
+        })
+      );
+
+      expect(view.passengerCount).toBe(0);
+    });
   });
 
   it('falls back to a generated reference when bookingNumber is missing', () => {

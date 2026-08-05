@@ -1,0 +1,87 @@
+// OBRS-671 (originally `settlement-detail-modal.component.scss`) / OBRS-960:
+// the cash sign-off form's shared classes, lifted into a partial so
+// `driver-cash-day-return-modal.component.scss` can `@use` the SAME rules
+// instead of forking a byte-for-byte copy (the card: "copies
+// settlement-detail-modal's OBRS-671 sign-off form verbatim in shape and
+// classes"). `@use`d by BOTH modals' own scoped stylesheets — Angular view
+// encapsulation means each still needs its own `@use` line, but the SOURCE
+// of the rules is one file.
+@import "../../../../../styles/variables.scss";
+
+.settlement-detail-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+}
+
+.settlement-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+}
+
+// OBRS-769: see settlement-detail-modal.component.scss's original comment
+// (still present there) for the full contrast rationale.
+.settlement-detail-label {
+  color: var(--admin-muted, #{$text-lightblack});
+  font-weight: 600;
+}
+
+.settlement-detail-totals {
+  border-top: 1px solid $primary-grey;
+  border-bottom: 1px solid $primary-grey;
+  padding: 0.5rem 0;
+}
+
+.settlement-detail-error {
+  text-align: center;
+}
+
+.settlement-signoff-title {
+  margin-bottom: 0.5rem;
+}
+
+.settlement-field {
+  margin-top: 0.75rem;
+}
+
+// OBRS-769: see the sibling `.settlement-detail-label` rule (still declared
+// locally in settlement-detail-modal.component.scss) for the full contrast
+// rationale — same themed `--admin-muted` token, same fallback.
+.settlement-field-label {
+  display: block;
+  color: var(--admin-muted, #{$text-lightblack});
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.settlement-field-input {
+  width: 100%;
+}
+
+.settlement-field-help {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.settlement-field-error {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.settlement-reconcile {
+  margin-top: 0.75rem;
+}
+
+.settlement-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+// AC 5 (OBRS-670) — a discrepancy standing out rather than blending in.
+.settlement-nt-negative {
+  color: var(--admin-danger-fg);
+  font-weight: 700;
+}

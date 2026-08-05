@@ -405,4 +405,74 @@ describe('ParcelIntakeResultPanelComponent', () => {
         .not.toBe(toHex(chipHalf));
     });
   });
+
+  // OBRS-960 — "จุดนี้ยังไม่ได้ผูกกับจุดขายตั๋ว" warning: a property of the
+  // RESULT (`salesPointMapped`), not the input, and must render regardless
+  // of which branch (consigned/carry-on) the result belongs to.
+  describe('salesPointMapped === false — unmapped sales point warning (OBRS-960)', () => {
+    let fixture: ComponentFixture<ParcelIntakeResultPanelComponent>;
+
+    beforeEach(async () => {
+      await TestBed.configureTestingModule({
+        imports: [TranslateModule.forRoot(), RouterTestingModule],
+        declarations: [ParcelIntakeResultPanelComponent],
+      }).compileComponents();
+      fixture = TestBed.createComponent(ParcelIntakeResultPanelComponent);
+    });
+
+    function warningEl(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('[data-testid="parcel-sales-point-not-mapped-warning"]');
+    }
+
+    it('renders the warning when salesPointMapped is explicitly false (consigned result)', () => {
+      fixture.componentInstance.result = { ...consignedResult, salesPointMapped: false };
+      fixture.detectChanges();
+      expect(warningEl()).not.toBeNull();
+    });
+
+    it('renders the warning when salesPointMapped is false on a carry-on result', () => {
+      fixture.componentInstance.result = { ...onSeatResult, salesPointMapped: false };
+      fixture.detectChanges();
+      expect(warningEl()).not.toBeNull();
+    });
+
+    it('does NOT render the warning when salesPointMapped is true', () => {
+      fixture.componentInstance.result = { ...consignedResult, salesPointMapped: true };
+      fixture.detectChanges();
+      expect(warningEl()).toBeNull();
+    });
+
+    it('does NOT render the warning when salesPointMapped is absent (pre-OBRS-960 backend response)', () => {
+      fixture.componentInstance.result = consignedResult;
+      fixture.detectChanges();
+      expect(warningEl()).toBeNull();
+    });
+
+    // Contrast: the new `.is-warning` colored element, measured on the same
+    // real page chain the OBRS-747 block above uses (src/app/testing/contrast.ts).
+    const PAGE_CHAIN = ['admin-shell theme-staff', 'container-fluid py-4', 'card shadow-sm border-0 p-4'];
+    let teardown: (() => void) | null = null;
+
+    afterEach(() => {
+      teardown?.();
+      teardown = null;
+    });
+
+    for (const dark of [false, true]) {
+      const mode = dark ? 'dark' : 'light';
+      it(`${mode}: the warning text meets AA on the surface actually painted`, () => {
+        fixture.componentInstance.result = { ...consignedResult, salesPointMapped: false };
+        teardown = mountInChain(fixture.nativeElement, PAGE_CHAIN, dark);
+        fixture.detectChanges();
+
+        const el = warningEl();
+        expect(el).not.toBeNull();
+        if (!el) return;
+        const ratio = contrast(fgOf(el), effectiveBg(el));
+        expect(ratio)
+          .withContext(`${mode}: ${toHex(fgOf(el))} on ${toHex(effectiveBg(el))} = ${ratio.toFixed(2)}:1`)
+          .toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      });
+    }
+  });
 });

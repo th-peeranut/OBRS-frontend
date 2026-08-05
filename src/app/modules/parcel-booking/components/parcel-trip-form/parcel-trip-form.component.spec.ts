@@ -1,8 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DropdownGroupObrsComponent } from '../../../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
+import { StationSwapButtonComponent } from '../../../../shared/components/station-swap-button/station-swap-button.component';
 import { ParcelTripFormComponent } from './parcel-trip-form.component';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
 
@@ -29,7 +31,13 @@ describe('ParcelTripFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ReactiveFormsModule, TranslateModule.forRoot(), DatePickerModule, DropdownGroupObrsComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+      ],
       declarations: [ParcelTripFormComponent],
     }).compileComponents();
 
@@ -97,4 +105,103 @@ describe('ParcelTripFormComponent', () => {
     expect(from).toEqual([1]);
     expect(to).toEqual([2]);
   });
+
+  // OBRS-1035 -- the third copy of the dead swap icon.
+  describe('origin/destination swap (OBRS-1035)', () => {
+    function swapButton(): HTMLButtonElement | null {
+      const de = fixture.debugElement.query(By.css('app-station-swap-button button'));
+      return de ? (de.nativeElement as HTMLButtonElement) : null;
+    }
+
+    it('renders a real <button> with a translated accessible name', () => {
+      const button = swapButton();
+
+      expect(button).not.toBeNull();
+      expect(button!.getAttribute('type')).toBe('button');
+      expect(button!.getAttribute('aria-label')).toBe('COMMON.SWAP_STATIONS');
+    });
+
+    it('AC#2: clicking swaps fromStationId and toStationId', () => {
+      (component as any).onFromStationSelect(stationA);
+      (component as any).onToStationSelect(stationB);
+      fixture.detectChanges();
+
+      swapButton()!.click();
+      fixture.detectChanges();
+
+      expect(component['form'].get('fromStationId')?.value).toBe(stationB.id);
+      expect(component['form'].get('toStationId')?.value).toBe(stationA.id);
+    });
+
+    it('emits ONE stationsSwap carrying the final pair, and no per-field change', () => {
+      (component as any).onFromStationSelect(stationA);
+      (component as any).onToStationSelect(stationB);
+      fixture.detectChanges();
+
+      const swaps: unknown[] = [];
+      const perField: unknown[] = [];
+      component.stationsSwap.subscribe((v) => swaps.push(v));
+      component.fromStationChange.subscribe((v) => perField.push(v));
+      component.toStationChange.subscribe((v) => perField.push(v));
+
+      swapButton()!.click();
+      fixture.detectChanges();
+
+      expect(swaps).toEqual([{ fromStationId: stationB.id, toStationId: stationA.id }]);
+      // The per-field outputs would hand the page a half-swapped (B, B) pair,
+      // whose schedule lookup can resolve AFTER the real one and overwrite it.
+      expect(perField).toEqual([]);
+    });
+
+    it('AC#7 must-NOT: disabled while both fields are empty', () => {
+      expect((component as any).canSwapStations).toBeFalse();
+      expect(swapButton()!.disabled).toBeTrue();
+    });
+
+    it('one side filled still swaps, and reports the empty side as null', () => {
+      (component as any).onFromStationSelect(stationA);
+      fixture.detectChanges();
+
+      const swaps: any[] = [];
+      component.stationsSwap.subscribe((v) => swaps.push(v));
+
+      expect(swapButton()!.disabled).toBeFalse();
+      swapButton()!.click();
+      fixture.detectChanges();
+
+      expect(component['form'].get('fromStationId')?.value).toBe('');
+      expect(component['form'].get('toStationId')?.value).toBe(stationA.id);
+      expect(swaps).toEqual([{ fromStationId: null, toStationId: stationA.id }]);
+    });
+
+    // This is the screen the misalignment was REPORTED on, and the only one of
+    // the three an e2e test cannot reach — `/parcel-booking` is gated off by
+    // `features.onlineParcelBooking` in every built configuration (OBRS-622).
+    // Its icon is 24px rather than 32px, so it also proves the offset tracks
+    // `--station-swap-icon-size` instead of being one hard-coded number.
+    it('sits on the station FIELD centre line, not the label+field centre', () => {
+      const root = fixture.nativeElement as HTMLElement;
+      root.style.display = 'block';
+      root.style.width = '1200px';
+      fixture.detectChanges();
+
+      const host = fixture.debugElement.query(By.css('app-station-swap-button'))
+        .nativeElement as HTMLElement;
+      const fields = Array.from(
+        root.querySelectorAll('app-dropdown-group-obrs button.dropdown-btn')
+      ).slice(0, 2) as HTMLElement[];
+      expect(fields.length).toBe(2);
+
+      const centreY = (el: HTMLElement) => {
+        const box = el.getBoundingClientRect();
+        return box.top + box.height / 2;
+      };
+      expect(fields[0].getBoundingClientRect().top).toBe(fields[1].getBoundingClientRect().top);
+
+      for (const field of fields) {
+        expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
+      }
+    });
+  });
+
 });

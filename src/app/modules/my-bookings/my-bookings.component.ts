@@ -439,7 +439,10 @@ export class MyBookingsComponent implements OnInit {
       bookingType: normalizeStatusCode(booking.bookingType) || 'one_way',
       route,
       departureLabel: formatDisplayDateTime(firstLeg?.departureDateTime, locale),
-      passengerCount: firstLeg?.tickets?.length ?? 0,
+      // OBRS-635: read the server-computed count, NEVER firstLeg.tickets.length —
+      // this endpoint leaves `tickets` null by design, so counting it printed
+      // "0 passengers" on every card. See MyBookingScheduleDto.passengerCount.
+      passengerCount: firstLeg?.passengerCount ?? 0,
       totalAmount,
       totalAmountLabel: this.formatCurrency(totalAmount),
       createdLabel: formatDisplayDateTime(booking.createdAt, locale),
