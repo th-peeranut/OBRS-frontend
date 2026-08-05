@@ -87,13 +87,26 @@
     // never got the line, read −15.5px). `app-station-swap-button` positions
     // itself against the field now, on BOTH axes; see its stylesheet.
 
+    // The disc sits ON the seam, so each half must hold its content back by half
+    // a disc plus the normal inner padding — measured on the first build without
+    // it, the button covered the left half's chevron and the first characters of
+    // the right half's value. Derived from the button's own size so the two
+    // cannot drift apart.
+    --station-swap-clearance: calc(
+      var(--station-swap-icon-size, 32px) / 2 + #{$space-xs}
+    );
+
     app-dropdown-group-obrs {
       &:first-of-type {
         --dropdown-toggle-radius: #{$radius-xl} 0 0 #{$radius-xl};
+        --dropdown-toggle-padding: #{$space-xs} var(--station-swap-clearance)
+          #{$space-xs} #{$space-xs};
       }
 
       &:last-of-type {
         --dropdown-toggle-radius: 0 #{$radius-xl} #{$radius-xl} 0;
+        --dropdown-toggle-padding: #{$space-xs} #{$space-xs} #{$space-xs}
+          var(--station-swap-clearance);
         margin-left: -1px;
       }
     }
@@ -210,9 +223,12 @@ app-recent-routes-quick-pick.has-routes + .station-section {
       // own rule already forces 100%).
       --dropdown-toggle-width: 100%;
 
+      // Reset the row-mode joins: full radius on both halves again, normal
+      // padding (nothing sits between them here to clear), no pull-back.
       &:first-of-type,
       &:last-of-type {
         --dropdown-toggle-radius: #{$radius-xl};
+        --dropdown-toggle-padding: #{$space-xs};
       }
 
       &:last-of-type {

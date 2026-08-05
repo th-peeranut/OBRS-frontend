@@ -13,9 +13,11 @@
     <!-- SWAP ORIGIN/DESTINATION. OBRS-1035 — the third copy of the dead icon.
     A parcel sender swaps as often as a passenger does (the same shop sends to
     Bangkok on Monday and receives from it on Friday), so this one is wired
-    exactly like the two booking forms. -->
+    exactly like the two booking forms.
+
+    OBRS-1038: no positioning class — its size comes from the bar's own
+    `--station-swap-icon-size`, and both its axes come from its own stylesheet. -->
     <app-station-swap-button
-      class="parcel-trip-form__swap"
       [disabled]="!canSwapStations"
       (swap)="onSwapStations()"
     ></app-station-swap-button>

@@ -34,30 +34,39 @@
   flex-wrap: nowrap;
   gap: 0;
 
+  // OBRS-1035: the button reads its size from this custom property — a plain
+  // `width`/`height` on the host would size the host box while the encapsulated
+  // icon inside kept its natural size; a component's inner elements are
+  // unreachable from a parent stylesheet, but custom properties inherit straight
+  // through that boundary.
+  //
+  // 24px, not the 32px the two passenger screens use: this form sits in the
+  // narrower parcel wizard card. It also keeps a second, differently-sized call
+  // site in the tree, which is what proves the button's offsets are derived from
+  // this property rather than hard-coded (parcel spec, OBRS-1035).
+  //
+  // OBRS-1038 declares it on the BAR rather than on the button, so the seam
+  // clearance below is derived from the same single number instead of a second
+  // one drifting beside it.
+  --station-swap-icon-size: 24px;
+  --station-swap-clearance: calc(
+    var(--station-swap-icon-size, 32px) / 2 + #{$space-xs}
+  );
+
   app-dropdown-group-obrs {
     &:first-of-type {
       --dropdown-toggle-radius: #{$radius-xl} 0 0 #{$radius-xl};
+      --dropdown-toggle-padding: #{$space-xs} var(--station-swap-clearance)
+        #{$space-xs} #{$space-xs};
     }
 
     &:last-of-type {
       --dropdown-toggle-radius: 0 #{$radius-xl} #{$radius-xl} 0;
+      --dropdown-toggle-padding: #{$space-xs} #{$space-xs} #{$space-xs}
+        var(--station-swap-clearance);
       margin-left: -1px;
     }
   }
-}
-
-.parcel-trip-form__swap {
-  // OBRS-1035: the slot holds `app-station-swap-button`, which reads its size
-  // from this custom property. A plain `width`/`height` here would size the host
-  // box while the encapsulated icon inside kept its natural size — a component's
-  // inner elements are unreachable from a parent stylesheet, but custom
-  // properties inherit straight through that boundary.
-  //
-  // 24px, not the 32px the two passenger screens use: this form sits in the
-  // narrower parcel wizard card. It also keeps a second, differently-sized call
-  // site in the tree, which is what proves the button's own offsets are derived
-  // from this property rather than hard-coded (parcel spec, OBRS-1035).
-  --station-swap-icon-size: 24px;
 }
 
 // AC#3 — stacks at the same 992px as the two passenger bars, which is the
@@ -76,6 +85,7 @@
       &:first-of-type,
       &:last-of-type {
         --dropdown-toggle-radius: #{$radius-xl};
+        --dropdown-toggle-padding: #{$space-xs};
       }
 
       &:last-of-type {

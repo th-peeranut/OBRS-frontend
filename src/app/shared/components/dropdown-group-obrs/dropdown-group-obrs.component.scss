@@ -11,9 +11,10 @@
 
   background-color: transparent;
 
-  // OBRS-1038: `border-radius` and `width` are custom properties, not fixed
-  // values, so a caller can JOIN two of these into one bar (flatten the corners
-  // that meet, let each half fill its column when they stack). Custom properties
+  // OBRS-1038: `border-radius`, `width` and `padding` are custom properties, not
+  // fixed values, so a caller can JOIN two of these into one bar — flatten the
+  // corners that meet, hold the content clear of whatever sits on the seam, let
+  // each half fill its column when they stack. Custom properties
   // inherit *through* Angular's emulated encapsulation; a parent stylesheet
   // rule cannot reach `.dropdown-toggle-border` at all, because Angular appends
   // the parent's own `[_ngcontent-…]` to it and this element does not carry it.
@@ -26,7 +27,9 @@
     width: var(--dropdown-toggle-width, auto);
     min-width: 250px;
     height: 48px;
-    padding: $space-xs !important;
+    // `!important` stays — it is what beats Bootstrap's `.p-0` on the button —
+    // and a `var()` inside an `!important` declaration resolves identically.
+    padding: var(--dropdown-toggle-padding, #{$space-xs}) !important;
   }
 
   .value-text {
