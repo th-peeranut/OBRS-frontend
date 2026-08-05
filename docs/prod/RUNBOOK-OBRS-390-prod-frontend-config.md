@@ -192,6 +192,30 @@ the gates encoded, so the suite proved the guard agreed with the fixture and not
 more. **If you change a value rule in one of these files, gate 3 is what tells you the
 other one exists.**
 
+### ⚠️ Gate 3 can only see this repo — and OBRS-987 is what that costs
+
+A **fourth** place asserts something about `PROD_OMISE_PUBLIC_KEY`, and it is in
+OBRS-backend: `deploy/prod/publish-frontend.ps1`, the script that builds and uploads the
+prod bundle. It also demanded `pkey_live_`, and **OBRS-946 fixed gates 1 and 2 without
+touching it** — because gate 3 reads two files in this repo and cannot reach across a
+repo boundary. The census of "what decides this" came back 2 when the answer was 3, and
+the first person to find out would have been whoever ran the publish on go-live day.
+
+Fixed in **OBRS-987**, and fixed by *removing* the duplicated rule rather than adding a
+fourth copy for gate 3 to police: the publish script no longer knows the key's shape. It
+asserts two things neither gate above can, because neither ever sees `dist/` —
+
+- the **value** you exported is inside the artifact about to be uploaded (same treatment
+  as `PROD_API_URL` and the three optional vars), and
+- that value is not a `pkey_test_…` one. That check reads the **variable, never the
+  bundle**: `environment.base.ts` ships `pkey_test_` + the same id, so a test key is
+  present in every *correct* prod bundle and a bundle-side denylist would fail every
+  deploy. (The reverse is safe — `pkey_` + id is not a substring of `pkey_test_` + id.)
+
+So the rule to keep is: **the shape lives in gate 1 + gate 2, pinned by gate 3, and
+nowhere else.** Anything outside this repo that needs to reason about the key should
+check the exported value, not re-derive what a valid key looks like.
+
 The guard only fires when `production === true`. That flag cannot be lost: it is a
 committed literal in `environment.prod.ts`, alongside `useMockPayments: false` and
 `useDevApiEndpoints: false`. Only values that genuinely vary per deploy come from the

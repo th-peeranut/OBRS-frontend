@@ -283,7 +283,7 @@
             </thead>
             <tbody>
               @if (isLoading) {
-                @for (row of skeletonRows; track row) {
+                @for (row of skeletonRows; track $index) {
                   <tr>
                     <td colspan="9"><div class="skeleton-row bg-light rounded" style="height:20px"></div></td>
                   </tr>
