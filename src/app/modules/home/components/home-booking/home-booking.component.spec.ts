@@ -1072,4 +1072,38 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
     expect(dispatch).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
   });
+
+  // Reported on review, 2026-08-05: the button reads as floating above the two
+  // fields. `.station-group` is `align-items: center`, and its flex items are
+  // the label+field GROUPS — so an unpositioned button centres on the group,
+  // well above the field's own centre line. Home used to hide that with
+  // `margin-top: 30px`, correct at exactly one breakpoint. The rule now lives in
+  // `app-station-swap-button`; this pins the observable consequence, so a call
+  // site that re-adds a vertical nudge fails here rather than on someone's eye.
+  it('sits on the station FIELD centre line, not the label+field centre', () => {
+    // Fixed container width so the row cannot wrap — "same centre line" is
+    // meaningless once the button is on a flex line of its own.
+    const root = fixture.nativeElement as HTMLElement;
+    root.style.display = 'block';
+    root.style.width = '1200px';
+    fixture.detectChanges();
+
+    const host = fixture.debugElement.query(By.css('app-station-swap-button'))
+      .nativeElement as HTMLElement;
+    const fields = Array.from(
+      root.querySelectorAll('app-dropdown-group-obrs button.dropdown-btn')
+    ).slice(0, 2) as HTMLElement[];
+    // A typo'd selector must fail here, not sail through an empty loop.
+    expect(fields.length).toBe(2);
+
+    const centreY = (el: HTMLElement) => {
+      const box = el.getBoundingClientRect();
+      return box.top + box.height / 2;
+    };
+    expect(fields[0].getBoundingClientRect().top).toBe(fields[1].getBoundingClientRect().top);
+
+    for (const field of fields) {
+      expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
+    }
+  });
 });

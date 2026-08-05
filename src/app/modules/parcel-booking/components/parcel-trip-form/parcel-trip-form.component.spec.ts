@@ -173,6 +173,35 @@ describe('ParcelTripFormComponent', () => {
       expect(component['form'].get('toStationId')?.value).toBe(stationA.id);
       expect(swaps).toEqual([{ fromStationId: null, toStationId: stationA.id }]);
     });
+
+    // This is the screen the misalignment was REPORTED on, and the only one of
+    // the three an e2e test cannot reach — `/parcel-booking` is gated off by
+    // `features.onlineParcelBooking` in every built configuration (OBRS-622).
+    // Its icon is 24px rather than 32px, so it also proves the offset tracks
+    // `--station-swap-icon-size` instead of being one hard-coded number.
+    it('sits on the station FIELD centre line, not the label+field centre', () => {
+      const root = fixture.nativeElement as HTMLElement;
+      root.style.display = 'block';
+      root.style.width = '1200px';
+      fixture.detectChanges();
+
+      const host = fixture.debugElement.query(By.css('app-station-swap-button'))
+        .nativeElement as HTMLElement;
+      const fields = Array.from(
+        root.querySelectorAll('app-dropdown-group-obrs button.dropdown-btn')
+      ).slice(0, 2) as HTMLElement[];
+      expect(fields.length).toBe(2);
+
+      const centreY = (el: HTMLElement) => {
+        const box = el.getBoundingClientRect();
+        return box.top + box.height / 2;
+      };
+      expect(fields[0].getBoundingClientRect().top).toBe(fields[1].getBoundingClientRect().top);
+
+      for (const field of fields) {
+        expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
+      }
+    });
   });
 
 });

@@ -719,4 +719,31 @@ describe('ScheduleBookingFilterComponent — origin/destination swap (OBRS-1035)
 
     expect(dispatch).not.toHaveBeenCalled();
   });
+
+  // See the twin in home-booking.component.spec.ts. This filter bar imports
+  // home-booking's stylesheet wholesale, so it inherited the same one-breakpoint
+  // `margin-top: 30px` and needs the same pin.
+  it('sits on the station FIELD centre line, not the label+field centre', () => {
+    const root = fixture.nativeElement as HTMLElement;
+    root.style.display = 'block';
+    root.style.width = '1200px';
+    fixture.detectChanges();
+
+    const host = fixture.debugElement.query(By.css('app-station-swap-button'))
+      .nativeElement as HTMLElement;
+    const fields = Array.from(
+      root.querySelectorAll('app-dropdown-group-obrs button.dropdown-btn')
+    ).slice(0, 2) as HTMLElement[];
+    expect(fields.length).toBe(2);
+
+    const centreY = (el: HTMLElement) => {
+      const box = el.getBoundingClientRect();
+      return box.top + box.height / 2;
+    };
+    expect(fields[0].getBoundingClientRect().top).toBe(fields[1].getBoundingClientRect().top);
+
+    for (const field of fields) {
+      expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
+    }
+  });
 });
