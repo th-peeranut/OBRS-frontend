@@ -1286,6 +1286,50 @@
           "PAYEE": "Salesperson",
           "TOTAL": "Total"
         }
+      },
+      "PARCEL_SHARE_CLAWBACKS": {
+        "TITLE": "Parcel share clawbacks",
+        "SUBTITLE": "Shares the driver and salesperson must return after a parcel was cancelled and the customer fully refunded — the driver's is taken automatically with his daily cash return, the salesperson's has to be collected by hand.",
+        "FILTER_LABEL": "Status",
+        "FILTER": {
+          "OUTSTANDING": "Outstanding",
+          "COLLECTED": "Collected",
+          "ALL": "All"
+        },
+        "COL": {
+          "ROLE": "Role",
+          "PAYEE": "Payee",
+          "DATE": "Date",
+          "AMOUNT": "Amount",
+          "STATUS": "Status",
+          "CHANNEL": "Collected via",
+          "ACTION": "Action"
+        },
+        "ROLE": {
+          "DRIVER": "Driver",
+          "SALESPERSON": "Salesperson"
+        },
+        "STATUS": {
+          "OUTSTANDING": "Outstanding",
+          "COLLECTED": "Collected"
+        },
+        "CHANNEL": {
+          "DRIVER_DAILY_RETURN": "Daily cash return",
+          "MANUAL": "Collected by hand"
+        },
+        "PAYEE_UNKNOWN": "Unknown",
+        "NOTE_PLACEHOLDER": "Note (optional)",
+        "COLLECT_BTN": "Mark collected",
+        "CONFIRM_TITLE": "Confirm the share was handed back?",
+        "CONFIRM_TEXT": "This records that {{payee}} returned {{amount}}, and cannot be undone.",
+        "SUCCESS": "Clawback marked as collected.",
+        "EMPTY": "No parcel-share clawbacks.",
+        "LOAD_FAILED": "Unable to load parcel-share clawbacks. Please try again.",
+        "ERROR": {
+          "ALREADY_COLLECTED": "This clawback has already been collected.",
+          "NOT_FOUND": "That clawback no longer exists.",
+          "COLLECT_FAILED": "Unable to record the collection. Please try again."
+        }
       }
     },
     "SETTLEMENTS": {
@@ -1422,7 +1466,8 @@
           "CONFIRM_TITLE": "Confirm driver cash return?",
           "CONFIRM_TEXT": "Recording {{amount}} as returned. This cannot be undone.",
           "SUCCESS": "Driver cash day marked as returned.",
-          "ALREADY_RETURNED": "This day has already been returned."
+          "ALREADY_RETURNED": "This day has already been returned.",
+          "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)"
         },
         "ERROR": {
           "REASON_REQUIRED": "A reason is required when the returned amount does not match.",
@@ -3325,7 +3370,8 @@
         "PER_HEAD": "Per-head",
         "EXPENSE": "Expenses",
         "NET": "Net cash",
-        "PARCEL_REMIT": "Parcel remit"
+        "PARCEL_REMIT": "Parcel remit",
+        "PARCEL_CLAWBACK": "Parcel clawback"
       },
       "ADVANCE": {
         "ACTION_LABEL": "Cash advance",

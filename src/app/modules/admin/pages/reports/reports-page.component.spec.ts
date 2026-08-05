@@ -16,6 +16,9 @@ import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { ExportService } from '../../../../services/export/export.service';
 import { ParcelShareMonthlyStore } from './parcel-share-monthly.store';
+import { ParcelShareClawbacksStore } from './parcel-share-clawbacks.store';
+import { ParcelShareClawbacksSectionComponent } from './parcel-share-clawbacks-section/parcel-share-clawbacks-section.component';
+import { AdminApiService } from '../../../../services/admin/admin-api.service';
 
 function makeSummary(overrides: Partial<ReportsSummaryDto> = {}): ReportsSummaryDto {
   return {
@@ -68,6 +71,19 @@ const parcelShareMonthlyStoreStub = {
   period: { year: 2026, month: 1 },
   refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
   setPeriod: jasmine.createSpy('setPeriod'),
+};
+
+// OBRS-1053 — the clawback section renders inside this page's template. Its
+// own behaviour is covered by its own spec; here it only has to construct.
+const parcelShareClawbacksStoreStub = {
+  data$: new BehaviorSubject<unknown>([]),
+  refreshing$: new BehaviorSubject<boolean>(false),
+  error$: new BehaviorSubject<boolean>(false),
+  filter: 'OUTSTANDING',
+  hasValue: true,
+  refresh: jasmine.createSpy('clawbacksRefresh').and.resolveTo(undefined),
+  setFilter: jasmine.createSpy('setFilter'),
+  mutate: jasmine.createSpy('mutate'),
 };
 
 describe('ReportsPageComponent', () => {
@@ -324,7 +340,7 @@ describe('ReportsPageComponent (export button, OBRS-442)', () => {
 
     TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
-      declarations: [ReportsPageComponent, ExportButtonComponent],
+      declarations: [ReportsPageComponent, ExportButtonComponent, ParcelShareClawbacksSectionComponent],
       providers: [
         { provide: ReportsStore, useValue: storeStub },
         // OBRS-960: ReportsPageComponent now also injects ParcelShareMonthlyStore
@@ -332,8 +348,14 @@ describe('ReportsPageComponent (export button, OBRS-442)', () => {
         // ReportsStore above, so DI doesn't construct a REAL store needing a
         // real AuthService/AdminApiService.
         { provide: ParcelShareMonthlyStore, useValue: parcelShareMonthlyStoreStub },
+        // OBRS-1053: the clawback section is a CHILD component of this page,
+        // so its dependencies must resolve here too — otherwise DI builds the
+        // real store and the real AdminApiService (needing HttpClient) just to
+        // render a page whose tests never touch that section.
+        { provide: ParcelShareClawbacksStore, useValue: parcelShareClawbacksStoreStub },
+        { provide: AdminApiService, useValue: jasmine.createSpyObj('AdminApiService', ['collectParcelShareClawback']) },
         { provide: AuthService, useValue: authServiceSpy },
-        { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['error']) },
+        { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['error', 'success', 'confirm']) },
         { provide: ExportService, useValue: jasmine.createSpyObj('ExportService', ['export']) },
       ],
     }).compileComponents();

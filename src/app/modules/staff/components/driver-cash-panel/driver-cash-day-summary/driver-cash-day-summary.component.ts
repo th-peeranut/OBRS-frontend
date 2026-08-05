@@ -21,4 +21,16 @@ import { DriverCashDayRespDto } from '../../../../../shared/interfaces/driver-ca
 export class DriverCashDaySummaryComponent {
   @Input() day: DriverCashDayRespDto | null = null;
   @Input() isLoading = false;
+
+  /**
+   * OBRS-1053 — the clawback pill appears ONLY when there is something to
+   * explain. It is zero on every day that had no cancelled consigned parcel,
+   * which today is every day on prod (both share percentages are still at
+   * their `0` default, so OBRS-992 writes no clawback rows at all); a sixth
+   * permanently-`0.00` pill in a five-pill row would be pure noise on the
+   * one screen whose whole point is a driver reading his numbers fast.
+   */
+  protected get hasParcelClawback(): boolean {
+    return Number(this.day?.parcelClawbackTotal ?? 0) > 0;
+  }
 }

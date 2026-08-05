@@ -87,6 +87,13 @@ export interface DriverCashDayRespDto {
   perHeadTotal: string;
   expensePaidTotal: string;
   parcelRemitTotal: string;
+  /**
+   * OBRS-992 — shares this driver owes back on parcels that were cancelled
+   * and refunded. Already INSIDE `expectedReturnAmount`, so it must never be
+   * added to it again: it is shown (OBRS-1053) only so the amount being
+   * collected today can explain why it is higher than the day's own takings.
+   */
+  parcelClawbackTotal: string;
   expectedReturnAmount: string;
   returnedAmount: string | null;
   returnedAt: string | null;

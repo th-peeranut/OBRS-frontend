@@ -1286,6 +1286,50 @@
           "PAYEE": "销售人员",
           "TOTAL": "合计"
         }
+      },
+      "PARCEL_SHARE_CLAWBACKS": {
+        "TITLE": "包裹分成追回",
+        "SUBTITLE": "包裹取消并向客户全额退款后，司机和销售人员必须退回的分成 — 司机的部分在每日现金结算中自动扣回，销售人员的部分需人工收回。",
+        "FILTER_LABEL": "状态",
+        "FILTER": {
+          "OUTSTANDING": "待收回",
+          "COLLECTED": "已收回",
+          "ALL": "全部"
+        },
+        "COL": {
+          "ROLE": "角色",
+          "PAYEE": "收款人",
+          "DATE": "日期",
+          "AMOUNT": "金额",
+          "STATUS": "状态",
+          "CHANNEL": "收回方式",
+          "ACTION": "操作"
+        },
+        "ROLE": {
+          "DRIVER": "司机",
+          "SALESPERSON": "销售人员"
+        },
+        "STATUS": {
+          "OUTSTANDING": "待收回",
+          "COLLECTED": "已收回"
+        },
+        "CHANNEL": {
+          "DRIVER_DAILY_RETURN": "每日现金结算扣回",
+          "MANUAL": "人工收回"
+        },
+        "PAYEE_UNKNOWN": "未知",
+        "NOTE_PLACEHOLDER": "备注（选填）",
+        "COLLECT_BTN": "标记为已收回",
+        "CONFIRM_TITLE": "确认分成已退回？",
+        "CONFIRM_TEXT": "将记录 {{payee}} 已退回 {{amount}}，且无法撤销。",
+        "SUCCESS": "已记录分成收回。",
+        "EMPTY": "暂无包裹分成追回记录。",
+        "LOAD_FAILED": "无法加载包裹分成追回记录，请重试。",
+        "ERROR": {
+          "ALREADY_COLLECTED": "该追回记录已被收回。",
+          "NOT_FOUND": "找不到该追回记录。",
+          "COLLECT_FAILED": "无法记录收回，请重试。"
+        }
       }
     },
     "SETTLEMENTS": {
@@ -1422,7 +1466,8 @@
           "CONFIRM_TITLE": "确认司机现金归还？",
           "CONFIRM_TEXT": "将记录归还金额为 {{amount}}，此操作无法撤销。",
           "SUCCESS": "司机现金日已标记为已归还。",
-          "ALREADY_RETURNED": "该日已完成归还。"
+          "ALREADY_RETURNED": "该日已完成归还。",
+          "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）"
         },
         "ERROR": {
           "REASON_REQUIRED": "归还金额与预期不符时必须填写原因。",
@@ -3325,7 +3370,8 @@
         "PER_HEAD": "人头费",
         "EXPENSE": "支出",
         "NET": "现金净额",
-        "PARCEL_REMIT": "包裹汇款"
+        "PARCEL_REMIT": "包裹汇款",
+        "PARCEL_CLAWBACK": "包裹分成追回"
       },
       "ADVANCE": {
         "ACTION_LABEL": "现金预支",

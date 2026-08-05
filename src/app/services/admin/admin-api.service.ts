@@ -2151,6 +2151,34 @@ export class AdminApiService {
       params
     );
   }
+
+  // ── OBRS-1053: parcel-share clawbacks (/admin/reports) ───────────────────
+
+  /** `status` is OPTIONAL on the wire — omitting it returns COLLECTED rows
+   * alongside OUTSTANDING ones (backend `ParcelShareController.clawbacks`
+   * documents exactly that). */
+  getParcelShareClawbacks(
+    status?: ParcelShareClawbackStatus
+  ): Observable<ResponseAPI<ParcelShareClawbackRowDto[]>> {
+    const params = status ? new HttpParams().set('status', status) : undefined;
+    return this.getRequest<ParcelShareClawbackRowDto[]>(
+      `${this.baseUrl}/private/owner/parcel-share/clawbacks`,
+      params
+    );
+  }
+
+  /** The backend declares the body `@RequestBody(required = false)`, but an
+   * empty object is always valid — one code path here instead of two. */
+  collectParcelShareClawback(
+    clawbackId: number,
+    note?: string
+  ): Observable<ResponseAPI<ParcelShareClawbackRowDto>> {
+    const payload: ParcelShareClawbackCollectReqDto = note ? { note } : {};
+    return this.postRequest<ParcelShareClawbackRowDto>(
+      `${this.baseUrl}/private/owner/parcel-share/clawbacks/${clawbackId}/collect`,
+      payload
+    );
+  }
 }
 
 /** `GET`/`PUT /api/private/owner/configs/parcel-share` — OBRS-960. Distinct
@@ -2188,4 +2216,42 @@ export interface ParcelShareMonthlyRowDto {
   payeeUserId: number;
   payeeName: string;
   total: string;
+}
+
+/** `parcel_share_clawbacks.status` — OBRS-992's `EParcelShareClawbackStatus`.
+ * There is deliberately no `WAIVED`: the locked policy is "คืนทั้งคนขับและ
+ * นายท่า", so forgiving a share is not a state this UI may offer. */
+export type ParcelShareClawbackStatus = 'OUTSTANDING' | 'COLLECTED';
+
+/** `parcel_share_clawbacks.collected_via` — OBRS-992's
+ * `EParcelShareClawbackChannel`. `DRIVER_DAILY_RETURN` happens automatically
+ * inside the driver's daily sign-off; `MANUAL` is the salesperson's ONLY
+ * recovery channel (they have no daily cash lifecycle) and the driver's
+ * fallback. Null until the row is collected. */
+export type ParcelShareClawbackChannel = 'DRIVER_DAILY_RETURN' | 'MANUAL';
+
+/** One row of `GET /api/private/owner/parcel-share/clawbacks` — OBRS-992,
+ * field-for-field against the backend's `ParcelShareClawbackRespDto`. Money
+ * is a decimal STRING (`amount`), as everywhere else in parcel-share/
+ * driver-cash; `payeeName` is null when the payee has no profile row. */
+export interface ParcelShareClawbackRowDto {
+  clawbackId: number;
+  parcelId: number;
+  scheduleId: number | null;
+  payeeRole: 'DRIVER' | 'SALESPERSON';
+  payeeUserId: number | null;
+  payeeName: string | null;
+  /** `LocalDate` on the wire — `yyyy-MM-dd`. */
+  businessDate: string;
+  amount: string;
+  status: ParcelShareClawbackStatus;
+  reason: string | null;
+  /** `OffsetDateTime` on the wire; null while OUTSTANDING. */
+  collectedAt: string | null;
+  collectedVia: ParcelShareClawbackChannel | null;
+  note: string | null;
+}
+
+export interface ParcelShareClawbackCollectReqDto {
+  note?: string;
 }

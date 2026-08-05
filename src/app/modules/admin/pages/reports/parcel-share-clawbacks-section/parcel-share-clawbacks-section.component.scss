@@ -1,0 +1,22 @@
+/* OBRS-1053 — the note input and its button share one row so the action cell
+   stays one line on a desktop table, and wrap rather than overflow when the
+   table is squeezed. No colours here: every visible token is inherited from
+   the shared `admin-*` classes so a theme switch needs no change in this file
+   (design-system.md §2). */
+.psc-subtitle {
+  margin: 0.25rem 0 0;
+}
+
+.psc-collect-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.psc-note-input {
+  /* flex-shrink would otherwise take the declared width away entirely in a
+     narrow cell and leave an unusable sliver (OBRS-636). */
+  flex: 1 1 8rem;
+  min-width: 6rem;
+}

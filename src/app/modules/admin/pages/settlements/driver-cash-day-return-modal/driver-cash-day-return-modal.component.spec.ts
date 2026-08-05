@@ -88,6 +88,8 @@ const DETAIL: DriverCashDayRespDto = {
   perHeadTotal: '260.00',
   expensePaidTotal: '40.00',
   parcelRemitTotal: '0.00',
+  // OBRS-992/OBRS-1053: already INSIDE expectedReturnAmount, never an addend.
+  parcelClawbackTotal: '0.00',
   expectedReturnAmount: '500.00',
   returnedAmount: null,
   returnedAt: null,
@@ -383,5 +385,46 @@ describe('DriverCashDayReturnModalComponent', () => {
           .toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
       });
     }
+  });
+
+  // ── OBRS-1053: parcel-share clawback breakdown line ──────────────────────
+  describe('parcel-share clawback breakdown', () => {
+    it('is hidden at 0.00 — nothing to explain', () => {
+      component.detail = { ...DETAIL, parcelClawbackTotal: '0.00' };
+      fixture.detectChanges();
+
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="driver-cash-return-parcel-clawback"]')
+      ).toBeNull();
+    });
+
+    it('explains a higher expected amount when the driver owes shares back', () => {
+      component.detail = {
+        ...DETAIL,
+        parcelClawbackTotal: '15.00',
+        expectedReturnAmount: '515.00',
+      };
+      fixture.detectChanges();
+
+      const line = fixture.nativeElement.querySelector(
+        '[data-testid="driver-cash-return-parcel-clawback"]'
+      );
+      expect(line).not.toBeNull();
+      expect(line.textContent).toContain('15.00');
+    });
+
+    /** A breakdown line, never an addend: the sign-off must still measure the
+     * discrepancy against the server's `expectedReturnAmount` alone. */
+    it('does not shift the discrepancy computation', () => {
+      component.detail = {
+        ...DETAIL,
+        parcelClawbackTotal: '15.00',
+        expectedReturnAmount: '515.00',
+      };
+      fixture.detectChanges();
+      setAmount('515.00');
+
+      expect(component['hasDiscrepancy']()).toBeFalse();
+    });
   });
 });
