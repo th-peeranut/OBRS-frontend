@@ -10,6 +10,7 @@ import { BookingService } from '../../../services/booking/booking.service';
 import { StationService } from '../../../services/station/station.service';
 import { AlertService } from '../../../shared/services/alert.service';
 import { ResponseAPI } from '../../../shared/interfaces/response.interface';
+import { StationApi } from '../../../shared/interfaces/station.interface';
 import { RescheduleEstimate, RescheduleResult } from '../../../shared/interfaces/reschedule.interface';
 import { BookingTicketsData } from '../../../shared/interfaces/booking-ticket.interface';
 import {
@@ -82,6 +83,23 @@ describe('RescheduleEffect', () => {
     // `overrideSelector` pins the shared selector singleton's memoized result
     // and leaks into other spec files in the same Karma bundle unless released.
     store.resetSelectors();
+  });
+
+  // OBRS-1056: pins the ARGUMENT at this call site. StationService's own spec
+  // proves `getAll(true)` sets SKIP_GLOBAL_LOADING_ALERT; only this assertion
+  // catches someone dropping the `true` here and bringing back the blocking
+  // popup that covered this dialog and swallowed its Escape key. Its sibling
+  // `getBookingTickets(bookingId, true)` has always been silent — this is the
+  // half of the pair that was not.
+  it('loadStopsLookup$ loads the stops lookup without the global loading popup', () => {
+    const stationService = TestBed.inject(StationService) as jasmine.SpyObj<StationService>;
+    stationService.getAll.and.returnValue(of({ code: 200, message: 'OK', data: [] } as ResponseAPI<StationApi[]>));
+
+    effect.loadStopsLookup$.subscribe();
+
+    actionsSubject.next(openRescheduleDialog({ bookingId: 5 }));
+
+    expect(stationService.getAll).toHaveBeenCalledWith(true);
   });
 
   describe('loadRescheduleTickets$ (OBRS-483: OPEN-seating no longer silently no-ops)', () => {

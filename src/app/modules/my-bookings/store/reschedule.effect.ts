@@ -58,14 +58,17 @@ export class RescheduleEffect {
 
   // Opening the dialog kicks off both background lookups in parallel and
   // non-blocking — the date step is interactive immediately (design-system §6:
-  // modals open optimistically, never gated on an awaited fetch).
+  // modals open optimistically, never gated on an awaited fetch). Both must
+  // therefore opt out of the global loading popup (OBRS-1056): the tickets call
+  // always did, the stops lookup did not, and the popup it raised covered this
+  // dialog and ate its Escape key.
   loadStopsLookup$ = createEffect(() =>
     this.actions$.pipe(
       ofType(openRescheduleDialog),
       withLatestFrom(this.store.pipe(select(selectStopsLookup))),
       filter(([, stopsLookup]) => Object.keys(stopsLookup).length === 0),
       switchMap(() =>
-        this.stationService.getAll().pipe(
+        this.stationService.getAll(true).pipe(
           map((response) => loadStopsLookupSuccess({ stopsLookup: this.toStopsLookup(response.data) })),
           catchError((error: unknown) =>
             of(
