@@ -179,7 +179,11 @@ describe('ParcelTripFormComponent', () => {
     // `features.onlineParcelBooking` in every built configuration (OBRS-622).
     // Its icon is 24px rather than 32px, so it also proves the offset tracks
     // `--station-swap-icon-size` instead of being one hard-coded number.
-    it('sits on the station FIELD centre line, not the label+field centre', () => {
+    // OBRS-1038 rewrote all three twins the same way — see home-booking's copy
+    // for why branching on the viewport is not optional. On THIS screen the
+    // branch matters most: no e2e lane can reach `/parcel-booking`, so whichever
+    // branch Karma takes is the only automated proof this bar has.
+    it('centres on the join between the two fields, level with the fields themselves', () => {
       const root = fixture.nativeElement as HTMLElement;
       root.style.display = 'block';
       root.style.width = '1200px';
@@ -192,14 +196,27 @@ describe('ParcelTripFormComponent', () => {
       ).slice(0, 2) as HTMLElement[];
       expect(fields.length).toBe(2);
 
-      const centreY = (el: HTMLElement) => {
-        const box = el.getBoundingClientRect();
-        return box.top + box.height / 2;
-      };
-      expect(fields[0].getBoundingClientRect().top).toBe(fields[1].getBoundingClientRect().top);
+      const box = (el: HTMLElement) => el.getBoundingClientRect();
+      const centreX = (el: HTMLElement) => box(el).left + box(el).width / 2;
+      const centreY = (el: HTMLElement) => box(el).top + box(el).height / 2;
 
-      for (const field of fields) {
-        expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
+      if (window.matchMedia('(max-width: 992px)').matches) {
+        // No seam exists here: the lower field's LABEL sits between the two
+        // boxes. The button straddles the upper field's bottom edge instead, at
+        // the right end, where that left-aligned label has no text.
+        expect(box(fields[0]).left).toBe(box(fields[1]).left);
+
+        expect(Math.abs(centreY(host) - box(fields[0]).bottom)).toBeLessThanOrEqual(1);
+        expect(centreX(host)).toBeGreaterThan(centreX(fields[0]));
+        expect(box(host).right).toBeLessThanOrEqual(box(fields[0]).right);
+      } else {
+        expect(box(fields[0]).top).toBe(box(fields[1]).top);
+        const seamX = (box(fields[0]).right + box(fields[1]).left) / 2;
+
+        expect(Math.abs(centreX(host) - seamX)).toBeLessThanOrEqual(1);
+        for (const field of fields) {
+          expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
+        }
       }
     });
   });

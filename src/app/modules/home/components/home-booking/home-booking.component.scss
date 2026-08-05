@@ -58,17 +58,45 @@
   // below has to be able to win.
   margin-top: $space-lg;
 
+  // ONE BAR, not two boxes with a button loose in the gap (OBRS-1038). All four
+  // reference booking sites do this, and the reason is that a button floating
+  // between two separate boxes cannot say WHAT it swaps — a button sitting on
+  // the seam of a single box says it by its shape.
+  //
+  // The seam is the two field borders overlapping by exactly 1px, not a divider
+  // element of its own: `.dropdown-toggle-border` carries `border: … !important`
+  // inside `app-dropdown-group-obrs`, so no rule here can remove one side of it.
+  // Flattening the two corners that meet (through the component's
+  // `--dropdown-toggle-radius`) and pulling the second half back 1px collapses
+  // the doubled border into a single line.
+  //
+  // `flex-wrap: nowrap` is deliberate and not inherited from `.station-section`:
+  // a bar that wraps at its own seam is two boxes again, in a worse position.
   .station-group {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: $space-xs;
+    // Bottom-aligned, not centred: the two halves have to present one
+    // continuous border even if one label wraps to two lines in another
+    // language, and a centred row would step the seam.
+    align-items: flex-end;
+    flex-wrap: nowrap;
+    gap: 0;
 
     // `.station-icon { margin-top: 30px }` used to live here — a nudge that
     // happened to land the swap slot on the field's centre line at this width
     // and nowhere else (it read −9.5px below 993px, and the parcel copy, which
     // never got the line, read −15.5px). `app-station-swap-button` positions
-    // itself against the field now; see its stylesheet.
+    // itself against the field now, on BOTH axes; see its stylesheet.
+
+    app-dropdown-group-obrs {
+      &:first-of-type {
+        --dropdown-toggle-radius: #{$radius-xl} 0 0 #{$radius-xl};
+      }
+
+      &:last-of-type {
+        --dropdown-toggle-radius: 0 #{$radius-xl} #{$radius-xl} 0;
+        margin-left: -1px;
+      }
+    }
 
     .station-datepicker {
       margin-top: 30px;
@@ -152,18 +180,44 @@ app-recent-routes-quick-pick.has-routes + .station-section {
     align-items: stretch;
   }
 
+  // AC#3: the bar stacks, it does not wrap and it does not shrink two 250px
+  // fields into a 375px screen.
+  //
+  // IT DOES NOT STAY MERGED, and that is forced by this card's own scope cut,
+  // not a shortcut. Stacked, the DOM order is labelA · fieldA · labelB · fieldB
+  // — the lower field's label sits *between* the two boxes, so there is no
+  // continuous bar to seam and no seam for the button to straddle. Measured:
+  // the midpoint between the two field boxes lands 15px below the upper one,
+  // inside the label's text row. Merging would mean moving the labels into the
+  // frames, which the owner cut from this card on 2026-08-05.
+  //
+  // So each half keeps its own full radius here (the row-mode overrides are
+  // reset, not flattened), and the button — positioned entirely by its own
+  // stylesheet's matching @media — hangs at the right on the upper field's
+  // bottom edge. Nothing about the button is nudged from here;
+  // `.station-icon { margin: … auto }` used to be, and that hand-tuned pair is
+  // exactly the class of rule OBRS-1035 removed.
   .station-section .station-group {
     width: 100%;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
 
-    // Horizontal only. The auto side margins are what keep the swap slot
-    // centred between the two full-width fields; the vertical half of the old
-    // `margin: $space-xs auto 0` shorthand is gone deliberately — it zeroed the
-    // button's own bottom offset and left it 9.5px above the field's centre
-    // line at every width ≤992px.
-    .station-icon {
-      margin-left: auto;
-      margin-right: auto;
+    app-dropdown-group-obrs {
+      width: 100%;
+      // The half must FILL the column. Its inner toggle is `min-width: 250px`
+      // with no width of its own, so without this it stays 250px wide inside a
+      // full-width column between 577px and 992px (below 577px the component's
+      // own rule already forces 100%).
+      --dropdown-toggle-width: 100%;
+
+      &:first-of-type,
+      &:last-of-type {
+        --dropdown-toggle-radius: #{$radius-xl};
+      }
+
+      &:last-of-type {
+        margin-left: 0;
+      }
     }
   }
 

@@ -52,10 +52,20 @@ describe('StationSwapButtonComponent (OBRS-1035)', () => {
   });
 
   it('AC#1: the icon is decorative — the button carries the only accessible name', () => {
-    const img = fixture.debugElement.query(By.css('img')).nativeElement as HTMLImageElement;
+    const icon = fixture.debugElement.query(By.css('.station-swap-button__icon'))
+      .nativeElement as HTMLElement;
 
-    expect(img.getAttribute('alt')).toBe('');
-    expect(img.getAttribute('aria-hidden')).toBe('true');
+    expect(icon.getAttribute('aria-hidden')).toBe('true');
+    // OBRS-1038 replaced the `<img>` with a glyph, so `alt=""` no longer exists
+    // to carry the "decorative" claim. `aria-hidden` above is what carries it
+    // now, and this asserts the element it is on is genuinely the only other
+    // text in the control — a glyph that leaked its ligature text into the
+    // accessibility tree would make the button announce "swap_horiz".
+    expect(icon.textContent?.trim()).toBe('swap_horiz');
+  });
+
+  it('OBRS-1038: the icon is arrows only — no vehicle asset is loaded', () => {
+    expect(fixture.debugElement.query(By.css('img'))).toBeNull();
   });
 
   it('AC#4: it is reachable by keyboard — a <button> is focusable and Enter/Space activate it', () => {

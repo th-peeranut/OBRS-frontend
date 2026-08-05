@@ -11,9 +11,19 @@
 
   background-color: transparent;
 
+  // OBRS-1038: `border-radius` and `width` are custom properties, not fixed
+  // values, so a caller can JOIN two of these into one bar (flatten the corners
+  // that meet, let each half fill its column when they stack). Custom properties
+  // inherit *through* Angular's emulated encapsulation; a parent stylesheet
+  // rule cannot reach `.dropdown-toggle-border` at all, because Angular appends
+  // the parent's own `[_ngcontent-…]` to it and this element does not carry it.
+  // Same mechanism `--station-swap-icon-size` already uses (OBRS-1035).
+  // Defaults reproduce the previous values exactly, so every other call site is
+  // byte-identical.
   &-border {
     border: 1px solid $primary-lightgrey !important;
-    border-radius: $radius-xl;
+    border-radius: var(--dropdown-toggle-radius, #{$radius-xl});
+    width: var(--dropdown-toggle-width, auto);
     min-width: 250px;
     height: 48px;
     padding: $space-xs !important;
