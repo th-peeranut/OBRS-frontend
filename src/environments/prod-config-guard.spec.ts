@@ -24,6 +24,13 @@ import { assertProdConfig, ProdCheckedConfig, ProdConfigError } from './prod-con
 const LIVE_KEY = 'pkey_1a2b3c4d5e6f7g8h9i0';
 /** Verbatim from environment.base.ts. */
 const TEST_KEY = 'pkey_test_5rd059u8cgynfe12lds';
+/**
+ * A well-formed PromptPay id that belongs to nobody — the fixture only has to be
+ * "not the environment.base.ts placeholder" for the guard to accept it.
+ * OBRS-1094: this used to be a team developer's real mobile number, in a PUBLIC
+ * repo. A fixture never needs a real one.
+ */
+const FIXTURE_PROMPTPAY_ID = '0800000000';
 
 function validProdConfig(overrides: Partial<ProdCheckedConfig> = {}): ProdCheckedConfig {
   return {
@@ -32,7 +39,7 @@ function validProdConfig(overrides: Partial<ProdCheckedConfig> = {}): ProdChecke
     omisePublicKey: LIVE_KEY,
     useMockPayments: false,
     useDevApiEndpoints: false,
-    promptpay: { id: '0850951898' },
+    promptpay: { id: FIXTURE_PROMPTPAY_ID },
     ...overrides,
   };
 }

@@ -5,10 +5,23 @@ import { localEnv } from './environment.local';
 export const environment = {
   ...environmentBase,
   apiUrl: 'https://sit-obrs-backend.koyeb.app',
-  promptpay: {
-    ...environmentBase.promptpay,
-    id: '0850951898',
-  },
+  // OBRS-1094: there is deliberately NO `promptpay` override here, so SIT
+  // inherits the `0123456789` placeholder from environment.base.ts.
+  //
+  // ⛔ Do not put a real PromptPay id back. This value used to be a team
+  // developer's personal mobile number, and because `OBRS-frontend` is a PUBLIC
+  // repo it was published twice over: in git history (since 2026-01-15) and,
+  // compiled, in the SIT bundle that anyone could download unauthenticated.
+  //
+  // Nothing renders it. Measured 2026-08-06: the only readers of
+  // `environment.promptpay.id` anywhere in `src/` are environment.prod.ts (which
+  // takes it from the gitignored environment.prod.local.ts) and
+  // prod-config-guard.ts — both prod-only. The QR a passenger actually scans is
+  // issued by Omise via the backend, not from this field. So an id here buys
+  // nothing and can only leak.
+  //
+  // The real prod id stays where OBRS-390 put it: injected at build time from
+  // PROD_PROMPTPAY_ID into environment.prod.local.ts, which is gitignored.
   useDevApiEndpoints: false,
   // OBRS-831: re-enable the staff fleet live map on SIT ONLY, and deliberately
   // NOT by flipping `environmentBase.features.fleetMap` — that value is shared
