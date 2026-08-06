@@ -22,6 +22,7 @@ function clearSidebarStorage(): void {
   try { localStorage.removeItem('obrs-sidebar-collapsed'); } catch { /* ignore */ }
 }
 
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { AdminLayoutComponent } from './admin-layout.component';
 import { LangSwitcherComponent } from '../../shared/components/lang-switcher/lang-switcher.component';
 import { AuthService } from '../../auth/auth.service';
@@ -32,6 +33,7 @@ import { createLanguageServiceStub } from '../../testing/test-stubs';
 import { AdminApiService } from '../../services/admin/admin-api.service';
 import { UsabilityReportBadgeRefreshService } from '../../shared/services/usability-report-badge-refresh.service';
 import { BadgeSocketService } from '../../services/admin/badge-socket.service';
+import { environment } from '../../../environments/environment';
 
 // OBRS-147: fake WebSocket badge push — a plain Subject the test drives
 // directly, so specs don't need a real STOMP connection (mirrored per test
@@ -1150,4 +1152,166 @@ describe('AdminLayoutComponent — usability report badge (admin badgeStatus)', 
       .withContext('admin badgeStatus="owner_accepted" must use ACCEPTED_BADGE_ARIA, not NEW_BADGE_ARIA')
       .toBe('4 usability reports awaiting action');
   }));
+});
+
+// ── OBRS-1071: personal ("ตัวฉัน") menu links in the profile menu ──────────────
+// Admin-shell counterpart of the StaffLayoutComponent describe of the same
+// name. Separate top-level describe (own TestBed module per test) since My
+// Parcels' visibility is driven by environment.features.onlineParcelBooking,
+// a field-initialiser read at component-construction time — it must be set
+// BEFORE TestBed.createComponent, same requirement as the staff-shell specs.
+describe('AdminLayoutComponent — personal menu (OBRS-1071)', () => {
+  let originalOnlineParcelBooking: boolean;
+
+  // ⚠️ hasAnyRole() === false is a state the REAL AuthService cannot produce for
+  // anyone standing on this shell: ROLE_GRANTS expands both 'admin' and 'owner'
+  // to include salesperson/driver (auth.service.ts:84-90), and /admin admits
+  // only those two roles (app-routing.module.ts:12-14) — so isStaffUser is TRUE
+  // for every real identity here, exactly as admin-layout.component.ts:337 says.
+  // This stub therefore pins the `@if (isStaffUser)` WIRING (delete the guard
+  // and the count goes 0 → 1), NOT a reachable role. The production rule is
+  // asserted separately, against the real grant expansion, in the last spec of
+  // this describe.
+  const authStub = {
+    getUsername: () => 'admin@obrs.test',
+    hasAnyRole: (_roles: string[]) => false,
+    getRoles: () => ['admin'],
+    logout: jasmine.createSpy('logout'),
+  };
+
+  const themeMode$ = new BehaviorSubject<ThemeMode>('light');
+  const themeServiceStub: Partial<ThemeService> = {
+    getStoredMode: () => 'light',
+    setMode: jasmine.createSpy('setMode'),
+    toggle: jasmine.createSpy('toggle'),
+    mode$: themeMode$.asObservable(),
+  };
+
+  beforeEach(() => {
+    clearSidebarStorage();
+    originalOnlineParcelBooking = environment.features.onlineParcelBooking;
+  });
+
+  afterEach(() => {
+    environment.features.onlineParcelBooking = originalOnlineParcelBooking;
+    clearSidebarStorage();
+  });
+
+  async function createAdminLayout(): Promise<ComponentFixture<AdminLayoutComponent>> {
+    await TestBed.configureTestingModule({
+      declarations: [AdminLayoutComponent, LangSwitcherComponent, NotificationBellStubComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: authStub },
+        { provide: AlertService, useValue: { success: () => {} } },
+        { provide: PrimeNG, useValue: { setTranslation: () => {} } },
+        { provide: ThemeService, useValue: themeServiceStub },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
+        { provide: AdminApiService, useValue: { getUsabilityReportCountByStatus: () => of(0) } },
+        { provide: BadgeSocketService, useValue: createBadgeSocketServiceStub() },
+        {
+          provide: NotificationInboxService,
+          useValue: { startPolling: () => {}, stopPolling: jasmine.createSpy('stopPolling') },
+        },
+      ],
+    }).compileComponents();
+    const f = TestBed.createComponent(AdminLayoutComponent);
+    f.detectChanges();
+    return f;
+  }
+
+  function openProfileMenu(f: ComponentFixture<AdminLayoutComponent>): void {
+    const comp = f.componentInstance as AdminLayoutComponent & { toggleProfileMenu: () => void };
+    comp.toggleProfileMenu();
+    f.detectChanges();
+  }
+
+  it('shows /account, /my-bookings and /my-reports to an admin — asserting real rendered hrefs (AC2)', async () => {
+    environment.features.onlineParcelBooking = false;
+    const f = await createAdminLayout();
+    openProfileMenu(f);
+
+    (['/account', '/my-bookings', '/my-reports'] as const).forEach((path) => {
+      const link = f.debugElement.query(By.css(`.admin-profile-menu a[href="${path}"]`));
+      expect(link).withContext(`admin should see a personal-menu link to ${path}`).toBeTruthy();
+    });
+  });
+
+  it('renders 0 My Parcels links when environment.features.onlineParcelBooking is false (AC3)', async () => {
+    environment.features.onlineParcelBooking = false;
+    const f = await createAdminLayout();
+    openProfileMenu(f);
+
+    const parcelLinks = f.debugElement.queryAll(By.css('.admin-profile-menu a[href="/my-parcels"]'));
+    expect(parcelLinks.length)
+      .withContext('My Parcels must be absent from the personal menu while the flag is off')
+      .toBe(0);
+  });
+
+  it('renders exactly 1 My Parcels link when environment.features.onlineParcelBooking is true (AC3)', async () => {
+    environment.features.onlineParcelBooking = true;
+    const f = await createAdminLayout();
+    openProfileMenu(f);
+
+    const parcelLinks = f.debugElement.queryAll(By.css('.admin-profile-menu a[href="/my-parcels"]'));
+    expect(parcelLinks.length)
+      .withContext('My Parcels must render exactly once in the personal menu once the flag is on')
+      .toBe(1);
+  });
+
+  it('keeps the Staff Area shortcut behind @if (isStaffUser) — 0 links when that predicate is false (AC5 admin-shell counterpart)', async () => {
+    environment.features.onlineParcelBooking = false;
+    const f = await createAdminLayout();
+    openProfileMenu(f);
+
+    const staffLinks = f.debugElement.queryAll(By.css('.admin-profile-menu a[href="/staff"]'));
+    expect(staffLinks.length)
+      .withContext('with isStaffUser false the Staff Area shortcut must not render — deleting the @if turns this 0 into 1')
+      .toBe(0);
+
+    // Sanity: the personal items ARE present in this same open menu, so the
+    // 0 above genuinely means "gated by the predicate" and not "menu never opened".
+    const accountLink = f.debugElement.query(By.css('.admin-profile-menu a[href="/account"]'));
+    expect(accountLink).withContext('sanity: personal items must still render for this admin').toBeTruthy();
+  });
+
+  // The same rule from the other side, and the one that has real instances:
+  // an admin reaching this shell DOES hold the salesperson/driver grant, so the
+  // shortcut must still be there after the personal items were added above it.
+  // Uses the REAL AuthService with only the JWT's role list spied — the same
+  // construction nav-reachability.spec.ts uses — so ROLE_GRANTS expansion is the
+  // production implementation and not a stub of the thing under test.
+  it('an admin built from the REAL ROLE_GRANTS still sees exactly 1 Staff Area link alongside the new personal items (AC5)', async () => {
+    environment.features.onlineParcelBooking = false;
+    await TestBed.configureTestingModule({
+      declarations: [AdminLayoutComponent, LangSwitcherComponent, NotificationBellStubComponent],
+      imports: [HttpClientTestingModule, RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AlertService, useValue: { success: () => {} } },
+        { provide: PrimeNG, useValue: { setTranslation: () => {} } },
+        { provide: ThemeService, useValue: themeServiceStub },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
+        { provide: AdminApiService, useValue: { getUsabilityReportCountByStatus: () => of(0) } },
+        { provide: BadgeSocketService, useValue: createBadgeSocketServiceStub() },
+        {
+          provide: NotificationInboxService,
+          useValue: { startPolling: () => {}, stopPolling: jasmine.createSpy('stopPolling') },
+        },
+      ],
+    }).compileComponents();
+    spyOn(TestBed.inject(AuthService), 'getRoles').and.returnValue(['admin']);
+
+    const f = TestBed.createComponent(AdminLayoutComponent);
+    f.detectChanges();
+    openProfileMenu(f);
+
+    expect(f.debugElement.queryAll(By.css('.admin-profile-menu a[href="/staff"]')).length)
+      .withContext('a real admin holds the salesperson/driver grant, so Staff Area must survive the personal items')
+      .toBe(1);
+    (['/account', '/my-bookings', '/my-reports'] as const).forEach((path) => {
+      expect(f.debugElement.queryAll(By.css(`.admin-profile-menu a[href="${path}"]`)).length)
+        .withContext(`${path} must render exactly once for a real admin identity`)
+        .toBe(1);
+    });
+  });
 });
