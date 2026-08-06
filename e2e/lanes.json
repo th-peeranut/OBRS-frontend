@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-857-find-booking.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "Fulfils every /api/** call from its own fixture and seeds NO session at all -- signed-out is the assertion, not a shortcut, since the whole card is about a customer with no account. Proves what neither end can: that the navbar link on / actually resolves to the page, and that the phone number rides in the POST body rather than the URL."
+    },
+    {
       "spec": "obrs-1038-station-seam.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",

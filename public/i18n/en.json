@@ -2193,6 +2193,7 @@
   },
   "HOME": {
     "NAVBAR": {
+      "FIND_BOOKING": "Find booking",
       "HOME": "Home",
       "SCHEDULE": "Train Schedule",
       "BOOKING": "How to book and pay",
@@ -2527,6 +2528,8 @@
     }
   },
   "E_TICKET": {
+    "RETRIEVAL_NOTE": "Keep your booking reference {{bookingNumber}}. You can open this ticket again without signing in — just enter it together with the phone number you booked with:",
+    "RETRIEVAL_LINK": "Find your booking",
     "TITLE": "E-Ticket",
     "SUBTITLE": "NJ Phuyaipu online travel ticket",
     "BTN_NAVIGATE": "Navigate",
@@ -3424,6 +3427,32 @@
       "ERROR": {
         "GENERIC": "Unable to record this entry. Please try again."
       }
+    }
+  },
+  "FIND_BOOKING": {
+    "TITLE": "Find your booking",
+    "LEAD": "Enter your booking reference and the phone number you booked with. No sign-in needed.",
+    "BOOKING_NUMBER": "Booking reference",
+    "BOOKING_NUMBER_PLACEHOLDER": "e.g. B-ABC234",
+    "PHONE": "Phone number used to book",
+    "PHONE_PLACEHOLDER": "e.g. 0812345678",
+    "PHONE_INVALID": "Enter 10-15 digits.",
+    "SUBMIT": "Find booking",
+    "NOT_FOUND": "We couldn't find a booking matching those details. Please check the reference and the phone number, then try again.",
+    "THROTTLED": "Too many attempts. Please wait a few minutes and try again.",
+    "STATUS_UNKNOWN": "Unknown status",
+    "RESULT": {
+      "BOOKING_NUMBER": "Booking reference",
+      "STATUS": "Status",
+      "CONTACT_NAME": "Booked by",
+      "CONTACT_PHONE": "Phone number",
+      "BOOKED_AT": "Booked on",
+      "NET_AMOUNT": "Amount paid (THB)",
+      "PASSENGER": "Passenger",
+      "ROUTE": "Route",
+      "DEPARTURE": "Departure",
+      "SEAT": "Seat",
+      "PLATE": "Vehicle plate"
     }
   },
   "PARCEL_TRACKING": {

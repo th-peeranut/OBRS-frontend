@@ -221,6 +221,27 @@ export const appRoutes: Routes = [
   },
 
   {
+    // OBRS-857: the PUBLIC booking lookup — booking number + the phone the booking
+    // was made with, no account. `customerArea: true` and NO `requireAuth`, the same
+    // shape as track-parcel below, and it must stay that way: a guest is precisely
+    // who this page is for, so a `requireAuth` here would not tighten the page, it
+    // would delete it.
+    //
+    // This is the precondition for ever making email optional at checkout (OBRS-858).
+    // SMS is off and there is no LINE channel, so once the tab closes a guest's only
+    // remaining copy of the ticket is the booking number — ADR-0123 Decision 5 settles
+    // that the answer is RETRIEVAL, not delivery, and this route is that answer.
+    // Pinned in both directions by app-routing.module.spec.ts.
+    path: 'find-booking',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
+    loadChildren: () =>
+      import('./modules/find-booking/find-booking.module').then(
+        (m) => m.FindBookingModule
+      ),
+  },
+
+  {
     // OBRS-305: public parcel tracking — same permitAll-style precedent as
     // refund-policy (customerArea, no requireAuth). No access-model change.
     path: 'track-parcel',

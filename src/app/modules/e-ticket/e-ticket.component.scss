@@ -436,9 +436,42 @@
   }
 }
 
+// OBRS-857: the "you can get this back" note under the ticket paper. It lives OUTSIDE
+// `.ticket-paper` — html2canvas captures that element and nothing else — so it does not inherit
+// the ticket's deliberate dark-theme exemption and needs its own surface.
+.ticket-retrieval-note {
+  width: min(420px, 100%);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px auto 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  color: $text-lightblack;
+  font-size: 14px;
+  line-height: 1.5;
+
+  a {
+    text-decoration: underline;
+  }
+
+  // $text-lightblack measures 3.25:1 on the dark surfaces and fails AA there.
+  :host-context(body.is-dark) & {
+    background: rgba(255, 255, 255, 0.06);
+    color: #9aa3b8;
+  }
+}
+
 @media print {
   .ticket-logo {
     width: min(104px, 38%);
     height: auto;
+  }
+
+  // A hyperlink prints as inert text, and the booking number it points at is already on the
+  // ticket paper above.
+  .ticket-retrieval-note {
+    display: none;
   }
 }

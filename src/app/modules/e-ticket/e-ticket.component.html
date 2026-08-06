@@ -273,6 +273,23 @@
                 {{ "E_TICKET.DOWNLOAD" | translate }}
               </button>
             </article>
+
+            <!-- OBRS-857 / ADR-0123 Decision 5: the answer to "how does a customer get their
+                 ticket back" is RETRIEVAL, not delivery — SMS is off and there is no LINE
+                 channel, so this screen is the last place the booking number is guaranteed to
+                 be in front of them. Telling them the number is retrievable is what turns it
+                 from a receipt into a key.
+
+                 Placed OUTSIDE `<article #ticketPaper>` deliberately: html2canvas captures that
+                 element and only that element (see downloadTicketImage), and a hyperlink is dead
+                 in a PNG. The booking number itself IS inside the captured area already. -->
+            <aside class="ticket-retrieval-note">
+              <span class="material-symbols-outlined" aria-hidden="true">bookmark</span>
+              <span class="ticket-retrieval-text">
+                {{ "E_TICKET.RETRIEVAL_NOTE" | translate: { bookingNumber: bookingNumber } }}
+                <a routerLink="/find-booking">{{ "E_TICKET.RETRIEVAL_LINK" | translate }}</a>
+              </span>
+            </aside>
           </div>
         </div>
       </section>

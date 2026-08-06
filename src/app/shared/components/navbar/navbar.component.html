@@ -12,6 +12,17 @@
     >
     {{ "HOME.NAVBAR.BOOKING" | translate }}
   </a>
+  <!-- OBRS-857: the public booking lookup. Shown to EVERYONE, signed in or not — a customer who
+       booked as a guest has no account to sign into, which is the whole reason the page exists.
+       It sits with the nav links rather than in the profile menu for that same reason: the
+       profile menu only opens for someone who already has an account. -->
+  <a
+    class="menu-font navbar-desktop-only"
+    routerLink="/find-booking"
+    routerLinkActive="menu-font-active"
+    >
+    {{ "HOME.NAVBAR.FIND_BOOKING" | translate }}
+  </a>
   <button
     type="button"
     class="menu-font menu-font-action navbar-desktop-only"
@@ -157,6 +168,19 @@
         >
         <span class="material-symbols-outlined">directions_bus</span>
         <span>{{ "HOME.NAVBAR.BOOKING" | translate }}</span>
+      </a>
+      <!-- OBRS-857: the mobile twin of the desktop link above. It is NOT optional — the
+           `.navbar-desktop-only` class hides that one outright at ≤992px, which is where most
+           of this traffic is, and OBRS-1069 already shipped once with a nav element that
+           existed only above the breakpoint. -->
+      <a
+        class="navbar-mobile-link"
+        routerLink="/find-booking"
+        routerLinkActive="navbar-mobile-link-active"
+        (click)="closeMobileMenu()"
+        >
+        <span class="material-symbols-outlined">confirmation_number</span>
+        <span>{{ "HOME.NAVBAR.FIND_BOOKING" | translate }}</span>
       </a>
       <button
         type="button"

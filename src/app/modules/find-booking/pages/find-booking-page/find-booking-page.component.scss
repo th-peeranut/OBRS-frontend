@@ -1,0 +1,158 @@
+@import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens";
+
+// OBRS-857. The status chip reuses the SAME `.admin-status.is-*` classes as my-bookings and the
+// staff lists — no forked chip look, no new hex. Those classes read `var(--admin-success-bg)` etc.,
+// which admin-theme.scss only DEFINES inside `.admin-shell`, and this is a customer-shell page.
+// Re-scoping the identical token VALUES onto this host is the pattern `/track-parcel` established
+// under OBRS-305; copying its block verbatim is the point, not laziness.
+:host {
+  --admin-success-bg: #d4e3ff;
+  --admin-success-text: #154c85;
+  --admin-warning-bg: #ffdcbe;
+  --admin-warning-text: #673a00;
+  --admin-danger-bg: #ffdad6;
+  --admin-danger-text: #93000a;
+  --admin-accepted-bg: #b7f3c0;
+  --admin-accepted-text: #0a3d1d;
+  --admin-inreview-bg: #e2e5ea;
+  --admin-inreview-text: #3a4250;
+  --admin-neutral-bg: #e4e4e7;
+  --admin-neutral-text: #3f3f46;
+  --admin-delayed-bg: #ede9fe;
+  --admin-delayed-text: #4c1d95;
+}
+
+:host-context(body.is-dark) {
+  --admin-neutral-bg: #333b42;
+  --admin-neutral-text: #cdd8df;
+  --admin-inreview-bg: #29323d;
+  --admin-inreview-text: #c7d3de;
+}
+
+.find-booking-page {
+  max-width: 720px;
+  margin: 48px auto;
+  padding: 0 16px;
+}
+
+.find-booking-card {
+  background: $primary-white;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+
+  // Written HERE rather than in dark-theme.scss on purpose. Angular's emulated encapsulation
+  // rewrites this rule to (0,2,0) once nested, and a global `body.is-dark .find-booking-card`
+  // scores (0,2,1) — it would win today and lose the moment this block nests one level deeper.
+  // `:host-context` sidesteps that arithmetic entirely (see styles/_dark-tokens.scss).
+  :host-context(body.is-dark) & {
+    background: $dk-bg-card;
+    color: $dk-text;
+    box-shadow: none;
+    border: 1px solid $dk-border;
+  }
+}
+
+.find-booking-lead {
+  color: $text-lightblack;
+  margin-bottom: 24px;
+
+  :host-context(body.is-dark) & {
+    // $text-lightblack measures 3.25:1 on the dark card surfaces and fails AA; $dk-text-muted is
+    // the token that exists for exactly this substitution.
+    color: $dk-text-muted;
+  }
+}
+
+.find-booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.find-booking-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.find-booking-label {
+  font-weight: 600;
+}
+
+.find-booking-error {
+  color: $text-red;
+
+  :host-context(body.is-dark) & {
+    color: $dk-danger;
+  }
+}
+
+.find-booking-empty {
+  text-align: center;
+  padding: 24px 0;
+  color: $text-lightblack;
+
+  :host-context(body.is-dark) & {
+    color: $dk-text-muted;
+  }
+}
+
+.find-booking-summary-row,
+.find-booking-ticket-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid $primary-grey;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  :host-context(body.is-dark) & {
+    border-bottom-color: $dk-border-muted;
+  }
+
+  .label {
+    color: $text-lightblack;
+
+    :host-context(body.is-dark) & {
+      color: $dk-text-muted;
+    }
+  }
+}
+
+.find-booking-tickets {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.find-booking-ticket {
+  border: 1px solid $primary-grey;
+  border-radius: 12px;
+  padding: 16px;
+
+  :host-context(body.is-dark) & {
+    border-color: $dk-border;
+    background: $dk-bg-soft;
+  }
+}
+
+.find-booking-ticket-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.find-booking-ticket-number {
+  font-weight: 700;
+}

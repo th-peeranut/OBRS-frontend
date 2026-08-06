@@ -1,0 +1,152 @@
+<app-navbar></app-navbar>
+
+<section class="find-booking-page">
+  <div class="find-booking-card">
+    <h1>{{ 'FIND_BOOKING.TITLE' | translate }}</h1>
+    <p class="find-booking-lead">{{ 'FIND_BOOKING.LEAD' | translate }}</p>
+
+    <form
+      [formGroup]="form"
+      (ngSubmit)="onSubmit()"
+      class="find-booking-form"
+      data-testid="find-booking-form">
+      <label class="find-booking-field">
+        <span class="find-booking-label">{{ 'FIND_BOOKING.BOOKING_NUMBER' | translate }}</span>
+        <input
+          type="text"
+          class="form-control"
+          autocomplete="off"
+          [placeholder]="'FIND_BOOKING.BOOKING_NUMBER_PLACEHOLDER' | translate"
+          formControlName="bookingNumber"
+          data-testid="find-booking-number"
+          />
+      </label>
+
+      <label class="find-booking-field">
+        <span class="find-booking-label">{{ 'FIND_BOOKING.PHONE' | translate }}</span>
+        <input
+          type="tel"
+          inputmode="numeric"
+          class="form-control"
+          autocomplete="tel"
+          [placeholder]="'FIND_BOOKING.PHONE_PLACEHOLDER' | translate"
+          formControlName="phoneNumber"
+          data-testid="find-booking-phone"
+          />
+        @if (form.controls['phoneNumber'].touched && form.controls['phoneNumber'].invalid) {
+          <small class="find-booking-error">{{ 'FIND_BOOKING.PHONE_INVALID' | translate }}</small>
+        }
+      </label>
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+        data-testid="find-booking-submit"
+        [disabled]="contentState === 'loading'">
+        {{ 'FIND_BOOKING.SUBMIT' | translate }}
+      </button>
+    </form>
+
+    <div class="find-booking-content" aria-live="polite">
+      @if (contentState === 'loading') {
+        <div class="text-center py-4">
+          <span class="material-symbols-outlined">hourglass_empty</span>
+        </div>
+      }
+
+      <!-- ONE refusal for every wrong pair. It must not say which half was wrong: the backend
+           answers "no such booking", "wrong phone" and "that is a parcel booking" with a single
+           byte-identical 404 precisely so this endpoint cannot confirm which booking numbers
+           exist, and a more helpful message here would give that back. -->
+      @if (contentState === 'not-found') {
+        <div class="find-booking-empty" data-testid="find-booking-not-found">{{ 'FIND_BOOKING.NOT_FOUND' | translate }}</div>
+      }
+
+      @if (contentState === 'throttled') {
+        <div class="find-booking-empty is-throttled" data-testid="find-booking-throttled">{{ 'FIND_BOOKING.THROTTLED' | translate }}</div>
+      }
+
+      @if (contentState === 'found' && result; as booking) {
+        <div class="find-booking-result" data-testid="find-booking-result">
+          <header class="find-booking-summary">
+            <div class="find-booking-summary-row">
+              <span class="label">{{ 'FIND_BOOKING.RESULT.BOOKING_NUMBER' | translate }}</span>
+              <span class="value fw-semibold">{{ booking.bookingNumber }}</span>
+            </div>
+            <div class="find-booking-summary-row">
+              <span class="label">{{ 'FIND_BOOKING.RESULT.STATUS' | translate }}</span>
+              <span class="admin-status" [ngClass]="statusTone(booking.status)">
+                {{ statusKey(booking.status) | translate }}
+              </span>
+            </div>
+            <div class="find-booking-summary-row">
+              <span class="label">{{ 'FIND_BOOKING.RESULT.CONTACT_NAME' | translate }}</span>
+              <span class="value">{{ booking.contactName }}</span>
+            </div>
+            <div class="find-booking-summary-row">
+              <span class="label">{{ 'FIND_BOOKING.RESULT.CONTACT_PHONE' | translate }}</span>
+              <!-- Masked by the backend: the caller typed the full number to get here, so this
+                   confirms the match rather than reading the number back. -->
+              <span class="value">{{ booking.contactPhoneMasked }}</span>
+            </div>
+            @if (booking.bookedAt) {
+              <div class="find-booking-summary-row">
+                <span class="label">{{ 'FIND_BOOKING.RESULT.BOOKED_AT' | translate }}</span>
+                <span class="value">{{ displayDateTime(booking.bookedAt) }}</span>
+              </div>
+            }
+            <div class="find-booking-summary-row">
+              <span class="label">{{ 'FIND_BOOKING.RESULT.NET_AMOUNT' | translate }}</span>
+              <span class="value fw-semibold">{{ booking.netAmount }}</span>
+            </div>
+          </header>
+
+          @if (hasTickets) {
+            <ul class="find-booking-tickets">
+              @for (ticket of booking.tickets; track ticket.ticketNumber) {
+                <li class="find-booking-ticket">
+                  <div class="find-booking-ticket-head">
+                    <span class="find-booking-ticket-number">{{ ticket.ticketNumber }}</span>
+                    <span class="admin-status" [ngClass]="statusTone(ticket.status)">
+                      {{ statusKey(ticket.status) | translate }}
+                    </span>
+                  </div>
+                  <div class="find-booking-ticket-row">
+                    <span class="label">{{ 'FIND_BOOKING.RESULT.PASSENGER' | translate }}</span>
+                    <span class="value">{{ ticket.passengerName }}</span>
+                  </div>
+                  <div class="find-booking-ticket-row">
+                    <span class="label">{{ 'FIND_BOOKING.RESULT.ROUTE' | translate }}</span>
+                    <span class="value">
+                      {{ stopFor(ticket.fromStop) }} → {{ stopFor(ticket.toStop) }}
+                    </span>
+                  </div>
+                  <div class="find-booking-ticket-row">
+                    <span class="label">{{ 'FIND_BOOKING.RESULT.DEPARTURE' | translate }}</span>
+                    <span class="value">{{ displayDateTime(ticket.departureDateTime) }}</span>
+                  </div>
+                  <!-- `null` on an OPEN-seating schedule, where the backend normalizes every
+                       seat away (OBRS-321/483) — showing "Seat: -" would read as a defect. -->
+                  @if (ticket.seatNumber) {
+                    <div class="find-booking-ticket-row">
+                      <span class="label">{{ 'FIND_BOOKING.RESULT.SEAT' | translate }}</span>
+                      <span class="value">{{ ticket.seatNumber }}</span>
+                    </div>
+                  }
+                  @if (ticket.vehicle?.numberPlate) {
+                    <div class="find-booking-ticket-row">
+                      <span class="label">{{ 'FIND_BOOKING.RESULT.PLATE' | translate }}</span>
+                      <span class="value">{{ ticket.vehicle?.numberPlate }}</span>
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<app-footer></app-footer>

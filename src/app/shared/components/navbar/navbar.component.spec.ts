@@ -596,6 +596,30 @@ describe('NavbarComponent hamburger menu', () => {
     expect(link).withContext('how-to-book link should be in the panel').toBeTruthy();
   });
 
+  // OBRS-857 AC: "หน้า FE เข้าถึงได้จากหน้าแรกโดยไม่ต้องล็อกอิน". Both breakpoints are asserted,
+  // and the mobile one is not a duplicate: `.navbar-desktop-only` hides the desktop link outright
+  // at ≤992px, which is where most of this traffic is, and OBRS-1069 already shipped once with a
+  // navbar element that existed only above the breakpoint.
+  it('the booking-lookup link is in the DESKTOP bar for a signed-out visitor', () => {
+    component.isLogin = false;
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('a.navbar-desktop-only[href="/find-booking"]')))
+      .withContext('a guest has no account to sign into — this link is their only way in')
+      .toBeTruthy();
+  });
+
+  it('the booking-lookup link is in the MOBILE panel for a signed-out visitor', () => {
+    component.isLogin = false;
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const mobilePanel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    expect(mobilePanel.query(By.css('a.navbar-mobile-link[href="/find-booking"]')))
+      .withContext('the desktop link is display:none at ≤992px — this is not a duplicate')
+      .toBeTruthy();
+  });
+
   it('mobile panel contains sign-in and register links when logged out', () => {
     component.isMobileMenuOpen = true;
     fixture.detectChanges();

@@ -2193,6 +2193,7 @@
   },
   "HOME": {
     "NAVBAR": {
+      "FIND_BOOKING": "查询订单",
       "HOME": "首页",
       "SCHEDULE": "班次时刻表",
       "BOOKING": "如何预订和付款",
@@ -2527,6 +2528,8 @@
     }
   },
   "E_TICKET": {
+    "RETRIEVAL_NOTE": "请保存订单编号 {{bookingNumber}}。无需登录即可再次查看此车票，只需输入编号和预订手机号码：",
+    "RETRIEVAL_LINK": "查询订单",
     "TITLE": "电子票",
     "SUBTITLE": "NJ Phuyaipu 在线旅行票",
     "BTN_NAVIGATE": "导航",
@@ -3424,6 +3427,32 @@
       "ERROR": {
         "GENERIC": "无法记录此项目，请重试。"
       }
+    }
+  },
+  "FIND_BOOKING": {
+    "TITLE": "查询您的订单",
+    "LEAD": "输入订单编号和预订时使用的手机号码即可查看车票，无需登录。",
+    "BOOKING_NUMBER": "订单编号",
+    "BOOKING_NUMBER_PLACEHOLDER": "例如 B-ABC234",
+    "PHONE": "预订时使用的手机号码",
+    "PHONE_PLACEHOLDER": "例如 0812345678",
+    "PHONE_INVALID": "请输入 10-15 位数字。",
+    "SUBMIT": "查询订单",
+    "NOT_FOUND": "找不到符合这些信息的订单。请核对订单编号和手机号码后重试。",
+    "THROTTLED": "查询次数过多，请稍候几分钟后再试。",
+    "STATUS_UNKNOWN": "未知状态",
+    "RESULT": {
+      "BOOKING_NUMBER": "订单编号",
+      "STATUS": "状态",
+      "CONTACT_NAME": "预订人",
+      "CONTACT_PHONE": "预订手机号码",
+      "BOOKED_AT": "预订时间",
+      "NET_AMOUNT": "支付金额（泰铢）",
+      "PASSENGER": "乘客",
+      "ROUTE": "路线",
+      "DEPARTURE": "发车时间",
+      "SEAT": "座位",
+      "PLATE": "车牌号"
     }
   },
   "PARCEL_TRACKING": {
