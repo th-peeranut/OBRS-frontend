@@ -1,0 +1,42 @@
+<form class="dcp-inline-form" (ngSubmit)="onSubmit()" data-testid="driver-cash-advance-form">
+  <div class="dcp-form-field">
+    <label class="admin-form-label" for="dcp-advance-amount">
+      {{ 'STAFF.DRIVER_CASH.ADVANCE.AMOUNT_LABEL' | translate }}
+    </label>
+    <input
+      id="dcp-advance-amount"
+      type="text"
+      inputmode="decimal"
+      class="admin-field"
+      [placeholder]="'STAFF.DRIVER_CASH.ADVANCE.AMOUNT_PLACEHOLDER' | translate"
+      [(ngModel)]="amountInput"
+      name="advanceAmount"
+      />
+      <!-- OBRS-1015: ADVANCE is the only one of the 3 panels whose amount is
+      RECLAIMED at close-out (`expected_return = Σ ADVANCE + Σ PER_HEAD −
+      Σ EXPENSE_PAID`, DriverCashService javadoc), and no validation can catch
+      an amount typed into the wrong panel. Uses the global
+      `.admin-modal-subtitle` (admin-theme.scss, dark rule included) rather
+      than `.admin-hint`, which has no global definition — only 3 per-component
+      copies — so it would render unstyled here. -->
+      <p class="admin-modal-subtitle" data-testid="driver-cash-advance-hint">
+        {{ 'STAFF.DRIVER_CASH.ADVANCE.HINT' | translate }}
+      </p>
+      @if (amountInput.trim().length > 0 && amountCents === null) {
+        <small class="admin-error">{{ 'STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID' | translate }}</small>
+      }
+    </div>
+
+    @if (submitError; as err) {
+      <div class="admin-error">{{ err | translate }}</div>
+    }
+
+    <button
+      type="submit"
+      class="admin-btn admin-btn-primary dcp-action-btn"
+      [disabled]="!canSubmit"
+      data-testid="driver-cash-advance-submit"
+      >
+      {{ (isSubmitting ? 'STAFF.DRIVER_CASH.SUBMITTING' : 'STAFF.DRIVER_CASH.ADVANCE.SUBMIT') | translate }}
+    </button>
+  </form>

@@ -1,0 +1,33 @@
+// OBRS-775 host-box rule: an Angular host defaults to `display: inline`, so
+// wrapping an in-flow block child makes the host box malformed.
+:host {
+  display: block;
+}
+
+// OBRS-960 — "not configured" banner. Same chip-pair-as-a-block usage as
+// the driver-cash per-head form's warning (bg+text together, not the text
+// half alone as a standalone foreground — design-system.md §2.4/§2.4.0).
+.parcel-share-config-warning {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
+  font-size: 0.875rem;
+}
+
+.parcel-share-repair-result-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  max-width: 360px;
+
+  dt {
+    color: var(--admin-muted);
+  }
+
+  dd {
+    font-weight: 700;
+    color: var(--admin-text);
+  }
+}

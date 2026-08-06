@@ -1,0 +1,9 @@
+// OBRS-775 host-box rule: an Angular host defaults to `display: inline`, so
+// wrapping an in-flow block child makes the host box malformed.
+:host {
+  display: block;
+}
+
+// OBRS-960 — no new visual rules; every element composes existing
+// admin-theme.scss primitives (.admin-card, .admin-form-grid, .admin-table,
+// .admin-status.is-success). Intentionally empty.

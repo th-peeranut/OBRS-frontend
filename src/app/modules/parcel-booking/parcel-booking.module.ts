@@ -4,6 +4,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { SharedModule } from '../../shared/shared.module';
 import { PaymentMethodsModule } from '../../shared/components/payment-methods/payment-methods.module';
 import { DropdownGroupObrsComponent } from '../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
+import { StationSwapButtonComponent } from '../../shared/components/station-swap-button/station-swap-button.component';
 import { ParcelBookingPageComponent } from './pages/parcel-booking-page/parcel-booking-page.component';
 import { ParcelBookingSuccessPageComponent } from './pages/parcel-booking-success-page/parcel-booking-success-page.component';
 import { ParcelTripFormComponent } from './components/parcel-trip-form/parcel-trip-form.component';
@@ -34,6 +35,7 @@ const routes: Routes = [
     SharedModule,
     DatePickerModule,
     DropdownGroupObrsComponent,
+    StationSwapButtonComponent,
     PaymentMethodsModule,
     RouterModule.forChild(routes),
   ],

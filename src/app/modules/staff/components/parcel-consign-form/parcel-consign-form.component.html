@@ -95,8 +95,10 @@
         <div class="col-md-4">
           <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.WEIGHT' | translate }}</label>
           <input type="number" step="0.1" class="admin-field" formControlName="weightKg" [class.is-invalid]="isFieldInvalid('weightKg')" />
+          <!-- OBRS-629 AC-3: weightMaxParams carries the server's parcel.max_weight_kg;
+               the message used to read "100 kg" from i18n regardless of the config. -->
           @if (fieldError('weightKg'); as err) {
-            <small class="admin-error">{{ err | translate }}</small>
+            <small class="admin-error">{{ err | translate: weightMaxParams }}</small>
           }
         </div>
 
@@ -301,6 +303,36 @@
                     </div>
                   }
 
+                  <!-- OBRS-629 AC-1/AC-4: until this card the sender was asked to attest that
+                       their parcel held no prohibited item with NOTHING on screen saying what
+                       those were - there was no STAFF.PARCEL_CONSIGN.PROHIBITED.* key in any
+                       locale, and this is the only parcel channel open at go-live. Rows come
+                       from GET /api/parcel-policy, i.e. the same parcel.prohibited_categories
+                       config ParcelIntakeService blocks on, so the counter cannot show one list
+                       while intake enforces another. Shown in full above the checkbox, never
+                       behind a second click - same disclosure rule as the customer wizard
+                       (UX-OBRS-415 §0-C/§6). -->
+                  <div class="col-12">
+                    <section class="parcel-consign-form__prohibited" aria-labelledby="consign-prohibited-title">
+                      <h6 id="consign-prohibited-title" class="fw-bold">
+                        {{ 'PARCEL.PROHIBITED.TITLE' | translate }}
+                      </h6>
+                      <ul class="parcel-consign-form__prohibited-list">
+                        @for (category of prohibitedCategories; track category.slug) {
+                          <li>
+                            <span class="material-symbols-outlined" aria-hidden="true">{{ category.icon }}</span>
+                            <span>{{ category.i18nKey | translate: category.params }}</span>
+                          </li>
+                        }
+                      </ul>
+                      @if (policyLoaded && !prohibitedCategories.length) {
+                        <small class="admin-error">
+                          {{ (prohibitedLoadFailed ? 'PARCEL.PROHIBITED.LOAD_ERROR' : 'PARCEL.PROHIBITED.EMPTY') | translate }}
+                        </small>
+                      }
+                    </section>
+                  </div>
+
                   <div class="col-12">
                     <div class="form-check">
                       <input
@@ -314,6 +346,14 @@
                         </label>
                       </div>
                     </div>
+
+                    @if (shareNotConfigured) {
+                      <div class="col-12">
+                        <div class="parcel-consign-indicator is-warning" data-testid="parcel-share-not-configured-banner">
+                          {{ 'STAFF.PARCEL_CONSIGN.SHARE_NOT_CONFIGURED' | translate }}
+                        </div>
+                      </div>
+                    }
 
                     @if (serverErrorKey; as err) {
                       <div class="col-12">

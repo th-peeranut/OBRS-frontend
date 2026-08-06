@@ -10,6 +10,16 @@
   &.is-error {
     color: var(--admin-danger-fg);
   }
+
+  // OBRS-960: the parcel-revenue-share "not configured" banner. Same
+  // surface-role reasoning as `.is-error` above (standalone text on the
+  // shell, not chip text) — `--admin-warning-fg` is the themed FOREGROUND
+  // token (design-system.md §2.4.0), never the chip's `--admin-warning-text`
+  // half alone.
+  &.is-warning {
+    color: var(--admin-warning-fg);
+    font-weight: 600;
+  }
 }
 
 .parcel-consign-quote {
@@ -56,4 +66,32 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
+}
+
+// OBRS-629 — the prohibited-item disclosure the counter never had. Same visual
+// treatment as the customer wizard's (a bordered block directly above the
+// acknowledgement checkbox, never behind a second click) but built from
+// --admin-* tokens, since this surface lives inside the admin shell and has to
+// survive dark mode (scripts/check-admin-theme-tokens.mjs).
+.parcel-consign-form__prohibited {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid var(--admin-outline);
+  border-radius: 12px;
+  background: var(--admin-surface-soft);
+  color: var(--admin-text);
+}
+
+.parcel-consign-form__prohibited-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    color: var(--admin-text);
+  }
 }

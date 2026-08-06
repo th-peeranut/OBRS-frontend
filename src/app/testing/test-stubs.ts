@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { BehaviorSubject, of, Subject } from 'rxjs';
 
 // Lightweight dependency stubs for component "should create" smoke tests.
@@ -46,11 +47,18 @@ export function createPrimeNgConfigStub(): any {
   return { setTranslation: () => {} };
 }
 
-/** LanguageService: `switch` resolves; `getStoredLanguage` returns a default. */
-export function createLanguageServiceStub(): any {
+/** LanguageService: `switch` resolves; `getStoredLanguage` returns a default.
+ *
+ *  OBRS-1023: `calendarDateFormat` is a real writable signal, not a constant.
+ *  A construction-only test never reads it, but a stub handing back a bare
+ *  string would compile here and then behave unlike the service at every
+ *  template call site. Defaults to `undefined` — what the real service
+ *  publishes before the first `switch()` resolves. */
+export function createLanguageServiceStub(dateFormat?: string): any {
   return {
     switch: () => Promise.resolve(),
     getStoredLanguage: () => 'th',
+    calendarDateFormat: signal<string | undefined>(dateFormat),
   };
 }
 

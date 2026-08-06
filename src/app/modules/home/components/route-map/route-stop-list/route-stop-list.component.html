@@ -34,7 +34,14 @@
         <!-- INFO -->
         <div class="flex-grow-1 overflow-hidden">
           <div class="stop-name text-truncate">{{ stop.name }}</div>
-          <div class="stop-address text-truncate">{{ stop.address }}</div>
+          <!-- OBRS-636: guard the address the way route-stop-detail-card already
+               does. An unguarded binding renders an empty .stop-address div for
+               every stop whose address is null - which is what prod served, since
+               prod_seed.sql never set one. The name/time/distance line must close
+               up when there is no address, not leave a blank row under each stop. -->
+          @if (stop.address) {
+            <div class="stop-address text-truncate">{{ stop.address }}</div>
+          }
         </div>
         <!-- DISTANCE FROM USER (after "Use my location") -->
         @if (distanceLabel(stop); as dist) {

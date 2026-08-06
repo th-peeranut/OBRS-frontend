@@ -1,16 +1,39 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
+import { of, throwError } from 'rxjs';
 import { ParcelDetailsFormComponent } from './parcel-details-form.component';
+import { ParcelPolicyDto, ParcelPolicyService } from '../../../../services/parcel-policy/parcel-policy.service';
+import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
+
+// OBRS-629: the weight cap and the prohibited list are served by
+// GET /api/parcel-policy now, not typed into this component and into i18n.
+const DEFAULT_POLICY: ParcelPolicyDto = {
+  maxWeightKg: 100,
+  carryOnFreeSizeMaxInch: 28,
+  carryOnFreeAisleMaxPerTrip: 10,
+  prohibitedCategories: ['flammable', 'explosive', 'weapon', 'narcotic', 'corpse'],
+};
+
+function policyServiceStub(policy: ParcelPolicyDto | 'error'): ParcelPolicyService {
+  return {
+    getParcelPolicy: () =>
+      policy === 'error'
+        ? throwError(() => new Error('parcel-policy unavailable'))
+        : of({ code: 200, message: 'OK', data: policy } as ResponseAPI<ParcelPolicyDto>),
+  } as ParcelPolicyService;
+}
 
 describe('ParcelDetailsFormComponent', () => {
   let component: ParcelDetailsFormComponent;
   let fixture: ComponentFixture<ParcelDetailsFormComponent>;
 
-  beforeEach(async () => {
+  async function setUp(policy: ParcelPolicyDto | 'error' = DEFAULT_POLICY): Promise<void> {
+    TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [ReactiveFormsModule, TranslateModule.forRoot()],
       declarations: [ParcelDetailsFormComponent],
+      providers: [{ provide: ParcelPolicyService, useValue: policyServiceStub(policy) }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ParcelDetailsFormComponent);
@@ -19,6 +42,10 @@ describe('ParcelDetailsFormComponent', () => {
     component.pickupStopId = 2;
     component.dropoffStopId = 3;
     fixture.detectChanges();
+  }
+
+  beforeEach(async () => {
+    await setUp();
   });
 
   it('creates', () => {
@@ -144,5 +171,66 @@ describe('ParcelDetailsFormComponent', () => {
     group.get('widthCm')?.setValue(10);
     group.get('heightCm')?.setValue(10);
     expect(group.valid).toBeTrue();
+  });
+
+  // OBRS-629 AC-3/AC-4 — these assert the RENDERED list and the ACTUAL validity, not that a
+  // service was called: the defect being closed was a screen that stayed on 100 kg and five
+  // categories no matter what the config said, and only what reaches the DOM can prove otherwise.
+  describe('OBRS-629 — limits come from GET /api/parcel-policy, not from literals', () => {
+    function renderedProhibitedItems(): HTMLElement[] {
+      return Array.from(
+        fixture.nativeElement.querySelectorAll('.parcel-details-form__prohibited-list li')
+      );
+    }
+
+    it('renders one row per served category, not the five it used to hardcode', async () => {
+      await setUp({ ...DEFAULT_POLICY, prohibitedCategories: ['livestock', 'battery'] });
+
+      const items = renderedProhibitedItems();
+      expect(items.length).toBe(2);
+      // Neither slug ships copy, so both fall back to the parameterised UNLISTED key rather
+      // than vanishing - a category the sender cannot see is one intake will still reject on.
+      expect(component['prohibitedCategories'].map((c) => c.slug)).toEqual(['livestock', 'battery']);
+      expect(component['prohibitedCategories'].every((c) => c.i18nKey === 'PARCEL.PROHIBITED.UNLISTED')).toBeTrue();
+    });
+
+    it('accepts a weight the served cap allows and rejects one above it', async () => {
+      await setUp({ ...DEFAULT_POLICY, maxWeightKg: 50 });
+
+      const ctrl = component['form'].get('weightKg');
+      ctrl?.setValue(50);
+      expect(ctrl?.hasError('max')).withContext('50 is at the served cap').toBeFalse();
+      ctrl?.setValue(60);
+      expect(ctrl?.hasError('max')).withContext('60 exceeds the served cap of 50').toBeTrue();
+      // The old Validators.max(100) would have passed 60 - this is the whole defect.
+      expect(component['weightMaxParams'].max).toBe(50);
+    });
+
+    it('shows an ask-staff message instead of a stale list when the read fails', async () => {
+      await setUp('error');
+
+      expect(renderedProhibitedItems().length).toBe(0);
+      expect(component['prohibitedLoadFailed']).toBeTrue();
+      expect(fixture.nativeElement.textContent).toContain('PARCEL.PROHIBITED.LOAD_ERROR');
+    });
+
+    it('leaves the weight uncapped client-side when the read fails - intake still rejects', async () => {
+      await setUp('error');
+
+      const ctrl = component['form'].get('weightKg');
+      ctrl?.setValue(9999);
+      // Inventing a fallback cap here would put a number in front of the sender that nothing
+      // configured; validateWeight is what actually holds the line.
+      expect(ctrl?.hasError('max')).toBeFalse();
+    });
+
+    it('renders the empty-list message when the admin has configured no categories', async () => {
+      await setUp({ ...DEFAULT_POLICY, prohibitedCategories: [] });
+
+      expect(renderedProhibitedItems().length).toBe(0);
+      expect(component['prohibitedLoadFailed']).toBeFalse();
+      // getStringListConfig has no fallback, so an unset config really does block nothing.
+      expect(fixture.nativeElement.textContent).toContain('PARCEL.PROHIBITED.EMPTY');
+    });
   });
 });

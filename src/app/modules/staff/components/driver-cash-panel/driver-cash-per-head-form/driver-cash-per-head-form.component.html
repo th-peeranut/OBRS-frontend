@@ -1,0 +1,50 @@
+<form class="dcp-inline-form" (ngSubmit)="onSubmit()" data-testid="driver-cash-per-head-form">
+  <div class="dcp-form-field">
+    <label class="admin-form-label">{{ 'STAFF.DRIVER_CASH.PER_HEAD.STOP_LABEL' | translate }}</label>
+    <app-admin-dropdown
+      [options]="stopOptions"
+      [placeholder]="'STAFF.DRIVER_CASH.PER_HEAD.STOP_LABEL' | translate"
+      valueKey="value"
+      labelKey="label"
+      [ngModel]="selectedStopId"
+      (ngModelChange)="onStopChange($event)"
+      name="perHeadStop"
+      ></app-admin-dropdown>
+    </div>
+
+    @if (showRateNotConfiguredWarning) {
+      <div class="dcp-per-head-warning" data-testid="driver-cash-rate-not-configured">
+        {{ 'STAFF.DRIVER_CASH.PER_HEAD.RATE_NOT_CONFIGURED' | translate }}
+      </div>
+    }
+
+    <div class="dcp-form-field">
+      <label class="admin-form-label" for="dcp-head-count">
+        {{ 'STAFF.DRIVER_CASH.PER_HEAD.HEAD_COUNT_LABEL' | translate }}
+      </label>
+      <input
+        id="dcp-head-count"
+        type="number"
+        inputmode="numeric"
+        min="1"
+        step="1"
+        class="admin-field"
+        [placeholder]="'STAFF.DRIVER_CASH.PER_HEAD.HEAD_COUNT_PLACEHOLDER' | translate"
+        [(ngModel)]="headCountInput"
+        name="headCount"
+        />
+      </div>
+
+      @if (submitError; as err) {
+        <div class="admin-error">{{ err | translate }}</div>
+      }
+
+      <button
+        type="submit"
+        class="admin-btn admin-btn-primary dcp-action-btn"
+        [disabled]="!canSubmit"
+        data-testid="driver-cash-per-head-submit"
+        >
+        {{ (isSubmitting ? 'STAFF.DRIVER_CASH.SUBMITTING' : 'STAFF.DRIVER_CASH.PER_HEAD.SUBMIT') | translate }}
+      </button>
+    </form>

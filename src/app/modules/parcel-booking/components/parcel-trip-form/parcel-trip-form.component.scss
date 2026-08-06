@@ -21,16 +21,78 @@
   }
 }
 
+// ONE BAR — the same construction as `.station-group` in
+// home-booking.component.scss, which the schedule filter also shares. See that
+// file for why the seam is two overlapping borders rather than a divider
+// element. Third copy of the pattern, third screen, by design: OBRS-1038 §4
+// requires all three to read alike, and the parts that are genuinely shared
+// (the button's own geometry, the toggle's radius knob) live in the two shared
+// components, not here.
 .parcel-trip-form__stations {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  align-items: flex-end;
+  flex-wrap: nowrap;
+  gap: 0;
+
+  // OBRS-1035: the button reads its size from this custom property — a plain
+  // `width`/`height` on the host would size the host box while the encapsulated
+  // icon inside kept its natural size; a component's inner elements are
+  // unreachable from a parent stylesheet, but custom properties inherit straight
+  // through that boundary.
+  //
+  // 24px, not the 32px the two passenger screens use: this form sits in the
+  // narrower parcel wizard card. It also keeps a second, differently-sized call
+  // site in the tree, which is what proves the button's offsets are derived from
+  // this property rather than hard-coded (parcel spec, OBRS-1035).
+  //
+  // OBRS-1038 declares it on the BAR rather than on the button, so the seam
+  // clearance below is derived from the same single number instead of a second
+  // one drifting beside it.
+  --station-swap-icon-size: 24px;
+  --station-swap-clearance: calc(
+    var(--station-swap-icon-size, 32px) / 2 + #{$space-xs}
+  );
+
+  app-dropdown-group-obrs {
+    &:first-of-type {
+      --dropdown-toggle-radius: #{$radius-xl} 0 0 #{$radius-xl};
+      --dropdown-toggle-padding: #{$space-xs} var(--station-swap-clearance)
+        #{$space-xs} #{$space-xs};
+    }
+
+    &:last-of-type {
+      --dropdown-toggle-radius: 0 #{$radius-xl} #{$radius-xl} 0;
+      --dropdown-toggle-padding: #{$space-xs} #{$space-xs} #{$space-xs}
+        var(--station-swap-clearance);
+      margin-left: -1px;
+    }
+  }
 }
 
-.parcel-trip-form__gap-icon {
-  width: 24px;
-  height: 24px;
+// AC#3 — stacks at the same 992px as the two passenger bars, which is the
+// breakpoint `app-station-swap-button`'s own @media turns at. It un-merges when
+// it stacks, for the reason spelled out in home-booking.component.scss: the
+// lower field's label lands between the two boxes, so there is no seam.
+@media (max-width: 992px) {
+  .parcel-trip-form__stations {
+    flex-direction: column;
+    align-items: stretch;
+
+    app-dropdown-group-obrs {
+      width: 100%;
+      --dropdown-toggle-width: 100%;
+
+      &:first-of-type,
+      &:last-of-type {
+        --dropdown-toggle-radius: #{$radius-xl};
+        --dropdown-toggle-padding: #{$space-xs};
+      }
+
+      &:last-of-type {
+        margin-left: 0;
+      }
+    }
+  }
 }
 
 .parcel-trip-form__error {

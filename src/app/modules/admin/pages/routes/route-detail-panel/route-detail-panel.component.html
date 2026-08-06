@@ -35,13 +35,27 @@
       <div class="admin-card-head">
         <h4>{{ 'ADMIN.ROUTES.SEGMENTS_TITLE' | translate }}</h4>
         <div class="admin-inline-actions">
-          <app-admin-dropdown
-            [value]="selectedVehicleTypeSlug"
-            (valueChange)="onVehicleTypeChange($event)"
-            [options]="vehicleTypeOptions"
-            valueKey="slug"
-            labelKey="name"
-          ></app-admin-dropdown>
+          <!-- Two buttons, not one toggle: a single toggle cannot express
+               "some groups are collapsed", and disabling each button is what
+               makes the current state readable without clicking anything. -->
+          <button
+            type="button"
+            class="admin-btn admin-btn-small"
+            [disabled]="!canExpandAll"
+            (click)="expandAll()"
+            >
+            <span class="material-symbols-outlined">unfold_more</span>
+            {{ 'ADMIN.ROUTES.EXPAND_ALL' | translate }}
+          </button>
+          <button
+            type="button"
+            class="admin-btn admin-btn-small"
+            [disabled]="!canCollapseAll"
+            (click)="collapseAll()"
+            >
+            <span class="material-symbols-outlined">unfold_less</span>
+            {{ 'ADMIN.ROUTES.COLLAPSE_ALL' | translate }}
+          </button>
           <label class="admin-search">
             <span class="material-symbols-outlined">search</span>
             <input
@@ -54,38 +68,101 @@
           </div>
         </div>
         <div class="admin-table-wrap">
-          <table class="admin-table">
+          <table class="admin-table segments-table">
             <thead>
               <tr>
-                <th>{{ 'ADMIN.ROUTES.ORIGIN_STOP' | translate }}</th>
-                <th>{{ 'ADMIN.ROUTES.DESTINATION_STOP' | translate }}</th>
-                <th>{{ 'ADMIN.ROUTES.FARE' | translate }}</th>
-                <th>{{ 'ADMIN.ROUTES.EST_DURATION' | translate }}</th>
-                <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+                <th scope="col">{{ 'ADMIN.ROUTES.DESTINATION_STOP' | translate }}</th>
+                <!-- One fare column per vehicle type. The system ships exactly
+                     two (van / minibus), so this cannot fan out. -->
+                @for (option of vehicleTypeOptions; track option.slug) {
+                  <th scope="col">
+                    {{ 'ADMIN.ROUTES.FARE' | translate }}
+                    <span class="th-type">{{ option.name }}</span>
+                  </th>
+                }
+                <!-- Deliberately NOT per vehicle type: the backend derives the
+                     duration from route_stops.offset_minutes_from_origin, which
+                     belongs to the route. A per-type column would be fiction. -->
+                <th scope="col">{{ 'ADMIN.ROUTES.EST_DURATION' | translate }}</th>
+                <th scope="col" class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
               </tr>
             </thead>
             <tbody>
-              @for (segment of pagedSegments; track segment; let i = $index) {
-                <tr [class.zebra]="i % 2 === 1">
-                  <td>{{ segment.origin }}</td>
-                  <td>{{ segment.destination }}</td>
-                  <td class="admin-emphasis">{{ formatFare(segment.fare) }}</td>
-                  <td>{{ segment.duration }}</td>
-                  <td class="text-right">
-                    <button
-                      type="button"
-                      class="admin-icon-btn"
-                      [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
-                      (click)="editSegment.emit(segment)"
-                      >
-                      <span class="material-symbols-outlined">edit_square</span>
-                    </button>
-                  </td>
-                </tr>
+              @for (line of pagedLines; track trackByDisplayLine($index, line)) {
+                @if (line.kind === 'group') {
+                  <tr class="group-row">
+                    <td [attr.colspan]="columnCount">
+                      <button
+                        type="button"
+                        class="group-btn"
+                        [attr.aria-expanded]="!isGroupCollapsed(line.group.originSlug)"
+                        [disabled]="isSearching"
+                        (click)="toggleGroup(line.group.originSlug)"
+                        >
+                        <span class="material-symbols-outlined caret">expand_more</span>
+                        <span class="group-origin">{{ line.group.origin }}</span>
+                        @if (line.continued) {
+                          <span class="cont">{{ 'ADMIN.ROUTES.GROUP_CONTINUED' | translate }}</span>
+                        }
+                        <span class="spacer"></span>
+                        <span class="chip">
+                          {{ line.group.rows.length }}
+                          {{ 'ADMIN.ROUTES.DESTINATIONS' | translate }}
+                        </span>
+                        @for (range of line.group.fareRanges; track range.vehicleTypeSlug) {
+                          <span class="chip">
+                            {{ range.vehicleTypeName }} {{ formatFareRange(range) }}
+                          </span>
+                        }
+                      </button>
+                    </td>
+                  </tr>
+                } @else {
+                  <tr [class.zebra]="line.zebra">
+                    <td class="dest">{{ line.row.destination }}</td>
+                    @for (cell of line.row.fares; track cell.vehicleTypeSlug) {
+                      <td [class]="cell.segment ? 'admin-emphasis' : 'fare-empty'">
+                        @if (cell.segment) {
+                          {{ formatFare(cell.segment.fare) }}
+                        } @else {
+                          <!-- Never 0.00 here: a price of zero reads as "free",
+                               not as "this vehicle type has no row for the pair". -->
+                          {{ 'ADMIN.ROUTES.FARE_UNSET' | translate }}
+                        }
+                      </td>
+                    }
+                    <td class="nowrap">{{ line.row.duration }}</td>
+                    <td class="text-right">
+                      <div class="admin-inline-actions is-end">
+                        @for (cell of line.row.fares; track cell.vehicleTypeSlug) {
+                          @if (cell.segment) {
+                            <button
+                              type="button"
+                              class="admin-btn admin-btn-small edit-fare-btn"
+                              [attr.aria-label]="
+                                ('ADMIN.COMMON.EDIT' | translate) + ' - ' + cell.vehicleTypeName
+                              "
+                              (click)="editSegment.emit(cell.segment)"
+                              >
+                              <span class="material-symbols-outlined">edit_square</span>
+                              {{ cell.vehicleTypeName }}
+                            </button>
+                          }
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
               }
-              @if (allSegments.length === 0 && !isDetailLoading) {
+              @if (pagedLines.length === 0 && !isDetailLoading) {
                 <tr class="admin-empty-row">
-                  <td colspan="5">{{ 'ADMIN.ROUTES.SEGMENTS_EMPTY' | translate }}</td>
+                  <td [attr.colspan]="columnCount">
+                    @if (allSegments.length === 0) {
+                      {{ 'ADMIN.ROUTES.SEGMENTS_EMPTY' | translate }}
+                    } @else {
+                      {{ 'ADMIN.COMMON.NO_DATA' | translate }}
+                    }
+                  </td>
                 </tr>
               }
             </tbody>
@@ -93,10 +170,32 @@
         </div>
         <div class="admin-table-footer">
           <span>
-            {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ showingFrom }} - {{ showingTo }}
-            {{ 'ADMIN.COMMON.OF' | translate }} {{ totalSegments }} {{ 'ADMIN.ROUTES.SEGMENTS' | translate }}
+            {{
+              'ADMIN.ROUTES.SHOWING_PAIRS'
+                | translate: { shown: shownPairs, total: totalPairs, groups: groups.length }
+            }}
+            @if (collapsedGroupCount > 0) {
+              <span class="footer-note">
+                {{ 'ADMIN.ROUTES.COLLAPSED_NOTE' | translate: { count: collapsedGroupCount } }}
+              </span>
+            }
+            @if (isSearching) {
+              <span class="footer-note">
+                {{ 'ADMIN.ROUTES.SEARCH_EXPANDS_NOTE' | translate }}
+              </span>
+            }
           </span>
           <div class="admin-inline-actions">
+            <label class="page-size">
+              <span>{{ 'ADMIN.ROUTES.ROWS_PER_PAGE' | translate }}</span>
+              <app-admin-dropdown
+                [value]="pageSizeValue"
+                (valueChange)="onPageSizeChange($event)"
+                [options]="pageSizeOptions"
+                valueKey="code"
+                labelKey="label"
+              ></app-admin-dropdown>
+            </label>
             <button
               type="button"
               class="admin-icon-btn"
@@ -106,6 +205,12 @@
               >
               <span class="material-symbols-outlined">chevron_left</span>
             </button>
+            <span class="page-indicator">
+              {{
+                'ADMIN.COMMON.PAGINATION_STATUS_ARIA'
+                  | translate: { current: currentPage, total: totalPages }
+              }}
+            </span>
             <button
               type="button"
               class="admin-icon-btn"

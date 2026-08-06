@@ -6,6 +6,7 @@ import {
   CUSTOMER_HOST,
   CUSTOMER_SWEEP,
   MalformedHost,
+  OWNER_SWEEP,
   PAGE_READY_TIMEOUT_MS,
   PER_SWEEP_PAGE_MS,
   PRIMENG_TARGETS,
@@ -18,6 +19,7 @@ import {
   scanMalformedHosts,
   scanPrimengCoverage,
   seedAnonymousSession,
+  seedOwnerSession,
   seedStaffSession,
   sweepBudgetMs,
   visit,
@@ -279,6 +281,24 @@ test.describe('OBRS-775 malformed host boxes', () => {
     const page = await newSweepPage(browser);
     await seedStaffSession(page);
     await sweep(page, ADMIN_SWEEP);
+    await page.context().close();
+  });
+
+  /**
+   * OBRS-960. The `/admin/settings` tabs gated on `requiredRoles: ['owner']`.
+   *
+   * Its own session, not two more rows in the sweep above: the role that decides
+   * whether these tabs mount lives in the session, so reaching them from the
+   * admin sweep would mean re-measuring all 40+ of its pages under a role none
+   * of them has ever been swept with. One of the two renders a `<p-datepicker>`,
+   * so leaving them unswept is not free -- `primeng host users are all swept`
+   * fails on it, which is how this test came to exist.
+   */
+  test('owner-only settings tabs', async ({ browser }) => {
+    test.setTimeout(sweepBudgetMs(OWNER_SWEEP));
+    const page = await newSweepPage(browser);
+    await seedOwnerSession(page);
+    await sweep(page, OWNER_SWEEP);
     await page.context().close();
   });
 

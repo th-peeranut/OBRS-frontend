@@ -1,0 +1,137 @@
+<section class="admin-page-intro">
+  <div>
+    @if (isLoading) {
+      <p class="admin-muted">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    }
+    @if (errorMessage) {
+      <p class="admin-muted">{{ errorMessage }}</p>
+    }
+    <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
+  </div>
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.PAGES.PARCEL_SHARE_CONFIG' | translate }}</h4>
+  </div>
+
+  @if (isLoading) {
+    @for (row of [1, 2]; track row) {
+      <div class="admin-skeleton admin-skeleton--sm mb-2"></div>
+    }
+  }
+
+  @if (!isLoading && config) {
+    <!-- OBRS-960 §4: "not configured" banner whenever EITHER field is
+    still at its 0% default. --admin-warning-fg — same surface-role token
+    every other new warning text in this card composes. -->
+    @if (isNotConfigured) {
+      <div class="parcel-share-config-warning" data-testid="parcel-share-config-not-configured">
+        {{ 'ADMIN.PARCEL_SHARE_CONFIG.NOT_CONFIGURED' | translate }}
+      </div>
+    }
+
+    <form [formGroup]="form" class="admin-form-grid mt-3" (ngSubmit)="save()">
+      <div class="admin-form-field">
+        <label class="admin-form-label" for="driverPct">
+          {{ 'ADMIN.PARCEL_SHARE_CONFIG.DRIVER_PCT_LABEL' | translate }}
+          <span class="admin-required">*</span>
+        </label>
+        <input
+          #driverPctInput
+          id="driverPct"
+          class="admin-field"
+          type="number"
+          min="0"
+          max="100"
+          step="1"
+          required
+          formControlName="driverPct"
+          [attr.aria-invalid]="isFieldInvalid('driverPct') ? true : null"
+          />
+        @if (isFieldInvalid('driverPct')) {
+          <small class="admin-error" role="alert">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
+        }
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label" for="salespersonPct">
+          {{ 'ADMIN.PARCEL_SHARE_CONFIG.SALESPERSON_PCT_LABEL' | translate }}
+          <span class="admin-required">*</span>
+        </label>
+        <input
+          #salespersonPctInput
+          id="salespersonPct"
+          class="admin-field"
+          type="number"
+          min="0"
+          max="100"
+          step="1"
+          required
+          formControlName="salespersonPct"
+          [attr.aria-invalid]="isFieldInvalid('salespersonPct') ? true : null"
+          />
+        @if (isFieldInvalid('salespersonPct')) {
+          <small class="admin-error" role="alert">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
+        }
+      </div>
+
+      @if (sumExceeds100) {
+        <div class="admin-form-field full">
+          <small class="admin-error" role="alert" data-testid="parcel-share-config-sum-error">
+            {{ 'ADMIN.PARCEL_SHARE_CONFIG.SUM_EXCEEDS_100' | translate }}
+          </small>
+        </div>
+      }
+
+      <div class="admin-form-field full">
+        <button
+          type="submit"
+          class="admin-btn admin-btn-primary"
+          [disabled]="isSaving || form.invalid || form.pristine || sumExceeds100"
+          >
+          {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+        </button>
+      </div>
+    </form>
+  }
+</section>
+
+<!-- Card 2 (repair) -->
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.PARCEL_SHARE_CONFIG.REPAIR.TITLE' | translate }}</h4>
+  </div>
+  <p class="admin-muted">{{ 'ADMIN.PARCEL_SHARE_CONFIG.REPAIR.BODY' | translate }}</p>
+
+  <button
+    type="button"
+    class="admin-btn admin-btn-primary mt-2"
+    [disabled]="isRepairing"
+    data-testid="parcel-share-repair-btn"
+    (click)="runRepair()"
+    >
+    {{ (isRepairing ? 'ADMIN.PARCEL_SHARE_CONFIG.REPAIR.RUNNING' : 'ADMIN.PARCEL_SHARE_CONFIG.REPAIR.RUN_BTN') | translate }}
+  </button>
+
+  @if (repairErrorMessage) {
+    <p class="admin-error mt-2">{{ repairErrorMessage }}</p>
+  }
+
+  <!-- Persistent inline result card, not just a toast (parcel-consign-page's
+  result-panel idiom, per the card). -->
+  @if (repairResult; as r) {
+    <div class="admin-card mt-3 parcel-share-repair-result" data-testid="parcel-share-repair-result">
+      <dl class="parcel-share-repair-result-list">
+        <dt>{{ 'ADMIN.PARCEL_SHARE_CONFIG.REPAIR.PARCELS_REPAIRED' | translate }}</dt>
+        <dd>{{ r.parcelsRepaired }}</dd>
+        <dt>{{ 'ADMIN.PARCEL_SHARE_CONFIG.REPAIR.ENTRIES_REPAIRED' | translate }}</dt>
+        <dd>{{ r.entriesRepaired }}</dd>
+        <dt>{{ 'ADMIN.PARCEL_SHARE_CONFIG.REPAIR.DRIVER_PCT_APPLIED' | translate }}</dt>
+        <dd>{{ r.driverPctApplied }}%</dd>
+        <dt>{{ 'ADMIN.PARCEL_SHARE_CONFIG.REPAIR.SALESPERSON_PCT_APPLIED' | translate }}</dt>
+        <dd>{{ r.salespersonPctApplied }}%</dd>
+      </dl>
+    </div>
+  }
+</section>

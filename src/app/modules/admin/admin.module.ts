@@ -25,6 +25,7 @@ import { RouteFormModalComponent } from './pages/routes/route-form-modal/route-f
 import { SegmentEditModalComponent } from './pages/routes/segment-edit-modal/segment-edit-modal.component';
 import { RouteDetailPanelComponent } from './pages/routes/route-detail-panel/route-detail-panel.component';
 import { RouteListTableComponent } from './pages/routes/route-list-table/route-list-table.component';
+import { StopsPageComponent } from './pages/stops/stops-page.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
 import { OverrideCancelModalComponent } from './pages/bookings/override-cancel-modal/override-cancel-modal.component';
@@ -36,6 +37,7 @@ import { PromotionListTableComponent } from './pages/promotions/promotion-list-t
 import { PromotionFormModalComponent } from './pages/promotions/promotion-form-modal/promotion-form-modal.component';
 import { PromotionDeactivateModalComponent } from './pages/promotions/promotion-deactivate-modal/promotion-deactivate-modal.component';
 import { ReportsPageComponent } from './pages/reports/reports-page.component';
+import { ParcelShareClawbacksSectionComponent } from './pages/reports/parcel-share-clawbacks-section/parcel-share-clawbacks-section.component';
 import { RevenueAnalyticsPageComponent } from './pages/revenue-analytics/revenue-analytics-page.component';
 import { BookingTrendPageComponent } from './pages/booking-trend/booking-trend-page.component';
 import { RoutePerformancePageComponent } from './pages/route-performance/route-performance-page.component';
@@ -68,6 +70,11 @@ import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-mod
 import { ManualRefundWorklistPageComponent } from './pages/manual-refund-worklist/manual-refund-worklist-page.component';
 import { CashRefundApprovalsPageComponent } from './pages/cash-refund-approvals/cash-refund-approvals-page.component';
 import { MarkRefundedModalComponent } from './pages/manual-refund-worklist/mark-refunded-modal/mark-refunded-modal.component';
+// OBRS-960 — driver cash ledger + parcel revenue share.
+import { DriverCashDaysListComponent } from './pages/settlements/driver-cash-days-list/driver-cash-days-list.component';
+import { DriverCashDayReturnModalComponent } from './pages/settlements/driver-cash-day-return-modal/driver-cash-day-return-modal.component';
+import { ParcelShareConfigPageComponent } from './pages/parcel-share-config/parcel-share-config-page.component';
+import { DriverCashRatesPageComponent } from './pages/driver-cash-rates/driver-cash-rates-page.component';
 import { AuthGuard } from '../../auth/auth.guard';
 import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
 import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
@@ -111,6 +118,13 @@ export const adminRoutes: Routes = [
         path: 'routes',
         component: RoutesPageComponent,
         data: { titleKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', subtitleKey: 'ADMIN.ROUTES.SUBTITLE' },
+      },
+      {
+        // OBRS-1022: the first stop management screen this product has had. Sits next to
+        // `routes` because a stop is master data a route composes, not a schedule concern.
+        path: 'stops',
+        component: StopsPageComponent,
+        data: { titleKey: 'ADMIN.PAGES.STOPS', subtitleKey: 'ADMIN.STOPS.SUBTITLE' },
       },
       {
         path: 'schedules',
@@ -388,6 +402,7 @@ export const adminRoutes: Routes = [
     VehicleFormModalComponent,
     VehicleDeleteModalComponent,
     RoutesPageComponent,
+    StopsPageComponent,
     RouteFormModalComponent,
     SegmentEditModalComponent,
     RouteDetailPanelComponent,
@@ -403,6 +418,7 @@ export const adminRoutes: Routes = [
     PromotionFormModalComponent,
     PromotionDeactivateModalComponent,
     ReportsPageComponent,
+    ParcelShareClawbacksSectionComponent,
     RevenueAnalyticsPageComponent,
     BookingTrendPageComponent,
     RoutePerformancePageComponent,
@@ -430,6 +446,10 @@ export const adminRoutes: Routes = [
     ManualRefundWorklistPageComponent,
     CashRefundApprovalsPageComponent,
     MarkRefundedModalComponent,
+    DriverCashDaysListComponent,
+    DriverCashDayReturnModalComponent,
+    ParcelShareConfigPageComponent,
+    DriverCashRatesPageComponent,
   ],
   imports: [
     SharedModule,

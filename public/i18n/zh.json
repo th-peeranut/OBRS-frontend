@@ -411,6 +411,7 @@
     "THEME_TOGGLE": "切换深色模式",
     "CLEAR": "清除",
     "CALENDAR_ICON_ALT": "日历图标",
+    "SWAP_STATIONS": "交换出发地和目的地",
     "CLOSE": "关闭",
     "LOADING": "加载中…",
     "READ_PRIVACY_POLICY": "阅读隐私政策",
@@ -463,6 +464,7 @@
       "CARGO_CAPACITY": "货物承载量",
       "INSPECTION_ITEMS": "车辆检查项目",
       "ROUTE_MANAGEMENT": "路线",
+      "STOPS": "站点",
       "SCHEDULES": "班次",
       "BOOKINGS_MANAGEMENT": "预订",
       "PROMOTIONS": "促销活动",
@@ -484,7 +486,9 @@
       "BOOKING_TREND": "预订趋势",
       "ROUTE_PERFORMANCE": "路线绩效",
       "CUSTOMER_BEHAVIOR": "客户行为",
-      "OPS_EFFICIENCY": "运营效率"
+      "OPS_EFFICIENCY": "运营效率",
+      "PARCEL_SHARE_CONFIG": "包裹收益分成",
+      "DRIVER_CASH_RATES": "司机现金费率"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -525,6 +529,7 @@
       "NO_DATA": "没有可显示的数据。",
       "UPDATING": "正在更新…",
       "REFRESH_FAILED": "正在显示已保存的数据 — 无法刷新。",
+      "REFRESH": "刷新",
       "LANGUAGE_LOADING": "正在刷新所选语言的内容...",
       "ACTIONS": "操作",
       "EDIT": "编辑",
@@ -537,6 +542,7 @@
       "PAGINATION_NAV_ARIA": "分页",
       "PAGINATION_STATUS_ARIA": "第 {{current}} 页，共 {{total}} 页",
       "ENTRIES": "条",
+      "ALL": "全部",
       "SHOWING": "显示",
       "OF": "/",
       "CANCEL": "取消",
@@ -882,6 +888,38 @@
         "GENERIC": "出现问题,请重试。"
       }
     },
+    "STOPS": {
+      "SUBTITLE": "上传每个站点的真实照片，并写下帮助乘客找到位置的标志物。",
+      "HELPER": "照片和标志物说明只有车主本人能提供，系统无法自动生成。",
+      "SEARCH_PLACEHOLDER": "按名称或 slug 搜索",
+      "LOAD_FAILED": "无法加载站点数据。",
+      "COL_SLUG": "Slug",
+      "COL_NAME": "站点名称",
+      "COL_TYPE": "类型",
+      "COL_STATUS": "状态",
+      "EDIT_TITLE": "编辑站点：{{slug}}",
+      "PROVINCE": "府/省",
+      "LATITUDE": "纬度",
+      "LONGITUDE": "经度",
+      "NAME": "显示名称",
+      "LANDMARK": "标志物",
+      "LANDMARK_PLACEHOLDER": "例如：在手机店旁边",
+      "ADDRESS": "地址",
+      "LOCALE_TH": "ภาษาไทย",
+      "LOCALE_EN": "English",
+      "LOCALE_ZH": "中文",
+      "PHOTO_TITLE": "站点照片",
+      "PHOTO_HELPER": "请从乘客走来的角度拍摄，而不是漂亮的店面照。支持 JPEG、PNG、WebP，不超过 5 MB。",
+      "PHOTO_NONE": "尚无照片",
+      "PHOTO_UPLOAD": "上传照片",
+      "PHOTO_REPLACE": "更换照片",
+      "PHOTO_REMOVE": "删除照片",
+      "PHOTO_REMOVE_TITLE": "删除站点照片",
+      "PHOTO_REMOVE_CONFIRM": "要从该站点删除这张照片吗？路线图将恢复为无照片状态。",
+      "PHOTO_REMOVE_FAILED": "删除照片失败。",
+      "PHOTO_UPLOADED": "照片已上传。",
+      "PHOTO_UPLOAD_FAILED": "上传照片失败。"
+    },
     "ROUTES": {
       "TITLE": "路线管理",
       "SUBTITLE": "管理路线记录、状态、停靠点顺序和票价区间。",
@@ -907,7 +945,17 @@
       "DESTINATION_STOP": "目的地站",
       "FARE": "票价（泰铢）",
       "EST_DURATION": "预计时长",
+      "DURATION_AFFECTS_OTHER_PAIRS": "保存此时长会改写 {{stop}} 的到达时间，本线路另有 {{count}} 组站点对由该值推算，乘客与柜台售票所见的到达时间也会随之变动。",
       "SEGMENTS": "个区间",
+      "EXPAND_ALL": "全部展开",
+      "COLLAPSE_ALL": "全部收起",
+      "GROUP_CONTINUED": "（续）",
+      "DESTINATIONS": "个终点",
+      "FARE_UNSET": "未设定",
+      "ROWS_PER_PAGE": "每页行数",
+      "SHOWING_PAIRS": "显示 {{shown}} / {{total}} 个站点组合 · {{groups}} 个起点",
+      "COLLAPSED_NOTE": "已收起 {{count}} 组",
+      "SEARCH_EXPANDS_NOTE": "搜索中 - 所有分组暂时展开",
       "ADD_TITLE": "创建路线",
       "EDIT_TITLE": "编辑路线",
       "MODAL_HINT": "设置路线标识、翻译和运营状态。",
@@ -1229,6 +1277,59 @@
       "ERROR": {
         "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
         "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。"
+      },
+      "PARCEL_SHARE_MONTHLY": {
+        "TITLE": "包裹收益分成——月度合计",
+        "YEAR_LABEL": "年份",
+        "MONTH_LABEL": "月份",
+        "COL": {
+          "PAYEE": "销售人员",
+          "TOTAL": "合计"
+        }
+      },
+      "PARCEL_SHARE_CLAWBACKS": {
+        "TITLE": "包裹分成追回",
+        "SUBTITLE": "包裹取消并向客户全额退款后，司机和销售人员必须退回的分成 — 司机的部分在每日现金结算中自动扣回，销售人员的部分需人工收回。",
+        "FILTER_LABEL": "状态",
+        "FILTER": {
+          "OUTSTANDING": "待收回",
+          "COLLECTED": "已收回",
+          "ALL": "全部"
+        },
+        "COL": {
+          "ROLE": "角色",
+          "PAYEE": "收款人",
+          "DATE": "日期",
+          "AMOUNT": "金额",
+          "STATUS": "状态",
+          "CHANNEL": "收回方式",
+          "ACTION": "操作"
+        },
+        "ROLE": {
+          "DRIVER": "司机",
+          "SALESPERSON": "销售人员"
+        },
+        "STATUS": {
+          "OUTSTANDING": "待收回",
+          "COLLECTED": "已收回"
+        },
+        "CHANNEL": {
+          "DRIVER_DAILY_RETURN": "每日现金结算扣回",
+          "MANUAL": "人工收回"
+        },
+        "PAYEE_UNKNOWN": "未知",
+        "NOTE_PLACEHOLDER": "备注（选填）",
+        "COLLECT_BTN": "标记为已收回",
+        "CONFIRM_TITLE": "确认分成已退回？",
+        "CONFIRM_TEXT": "将记录 {{payee}} 已退回 {{amount}}，且无法撤销。",
+        "SUCCESS": "已记录分成收回。",
+        "EMPTY": "暂无包裹分成追回记录。",
+        "LOAD_FAILED": "无法加载包裹分成追回记录，请重试。",
+        "ERROR": {
+          "ALREADY_COLLECTED": "该追回记录已被收回。",
+          "NOT_FOUND": "找不到该追回记录。",
+          "COLLECT_FAILED": "无法记录收回，请重试。"
+        }
       }
     },
     "SETTLEMENTS": {
@@ -1343,6 +1444,48 @@
         "WALK_IN": "现场柜台",
         "AGENT": "代理渠道",
         "KIOSK": "自助终端"
+      },
+      "DRIVER_CASH": {
+        "TABLE_TITLE": "司机现金日",
+        "EMPTY": "此范围内没有司机现金日。",
+        "LOAD_FAILED": "无法加载司机现金日。",
+        "STATUS": {
+          "RETURNED": "已归还",
+          "OPEN": "待归还"
+        },
+        "DETAIL": {
+          "LOAD_FAILED": "无法加载当日详情。"
+        },
+        "RETURN": {
+          "TITLE": "司机现金日归还",
+          "SECTION_TITLE": "签署归还确认",
+          "EXPECTED": "预期金额",
+          "RETURNED_LABEL": "归还金额",
+          "RETURNED_PLACEHOLDER": "0.00",
+          "CONFIRM_BTN": "确认归还",
+          "CONFIRM_TITLE": "确认司机现金归还？",
+          "CONFIRM_TEXT": "将记录归还金额为 {{amount}}，此操作无法撤销。",
+          "SUCCESS": "司机现金日已标记为已归还。",
+          "ALREADY_RETURNED": "该日已完成归还。",
+          "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）"
+        },
+        "ERROR": {
+          "REASON_REQUIRED": "归还金额与预期不符时必须填写原因。",
+          "ALREADY_RETURNED": "该日已完成归还。",
+          "RETURN_FAILED": "无法记录此次归还。"
+        },
+        "COL": {
+          "DRIVER": "司机",
+          "BUSINESS_DATE": "营业日期",
+          "VEHICLE": "车辆",
+          "EXPECTED": "预期金额"
+        },
+        "ENTRY_TYPE": {
+          "ADVANCE": "预支款",
+          "PER_HEAD": "人头费",
+          "EXPENSE_PAID": "支出：{{category}}",
+          "RETURN": "归还"
+        }
       }
     },
     "EOD_REPORT": {
@@ -1579,7 +1722,10 @@
       "FILTER_DATE_TO": "截止日期",
       "EMPTY_TITLE": "暂无费用记录",
       "EMPTY_BODY": "点击\"添加费用\"开始记录车辆或中央支出",
-      "NO_MATCH": "没有符合当前筛选条件的费用"
+      "NO_MATCH": "没有符合当前筛选条件的费用",
+      "SOURCE": "来源",
+      "SOURCE_FIELD": "系统自动生成（来自司机）",
+      "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。"
     },
     "MANUAL_REFUNDS": {
       "SUBTITLE": "等待人工退款转账的付款",
@@ -1707,6 +1853,44 @@
         "DEPARTURES": "发车数",
         "SEATS": "售座 / 容量",
         "FILL": "使用率"
+      }
+    },
+    "PARCEL_SHARE_CONFIG": {
+      "SUBTITLE": "设置包裹收益在司机与销售人员之间的分成比例。",
+      "NOT_CONFIGURED": "尚未设置包裹收益分成——在您设置之前将记为0%。",
+      "LOAD_FAILED": "无法加载包裹收益分成设置。",
+      "DRIVER_PCT_LABEL": "司机分成 (%)",
+      "SALESPERSON_PCT_LABEL": "销售人员分成 (%)",
+      "SUM_EXCEEDS_100": "司机分成与销售人员分成之和不能超过100%。",
+      "REPAIR": {
+        "TITLE": "修复未配置的分成",
+        "BODY": "将当前费率重新应用于在分成未配置期间（记为0%）已受理的包裹。",
+        "RUN_BTN": "运行修复",
+        "RUNNING": "正在运行...",
+        "CONFIRM_TITLE": "确认修复包裹收益分成？",
+        "CONFIRM_TEXT": "这将把当前的司机/销售人员百分比重新应用于所有受影响的包裹，且无法撤销。",
+        "CONFIRM_BTN": "修复",
+        "FAILED": "无法完成修复。",
+        "PARCELS_REPAIRED": "已修复包裹数",
+        "ENTRIES_REPAIRED": "已修复条目数",
+        "DRIVER_PCT_APPLIED": "已应用的司机比例",
+        "SALESPERSON_PCT_APPLIED": "已应用的销售人员比例"
+      }
+    },
+    "DRIVER_CASH_RATES": {
+      "SUBTITLE": "按站点管理人头费率。",
+      "LOAD_FAILED": "无法加载司机现金费率。",
+      "ADD_TITLE": "新增费率",
+      "STOP_LABEL": "站点",
+      "EFFECTIVE_FROM_LABEL": "生效日期",
+      "RATE_LABEL": "每人头费率",
+      "RATE_PLACEHOLDER": "0.00",
+      "ADD_BTN": "新增费率",
+      "HISTORY_TITLE": "费率历史",
+      "CURRENT": "当前",
+      "ERROR": {
+        "DUPLICATE": "该站点已存在同一生效日期的费率。",
+        "CREATE_FAILED": "无法新增此费率。"
       }
     }
   },
@@ -2102,6 +2286,8 @@
       "DETAIL_PICKUP_TITLE": "上车点详情 ({{province}})",
       "DETAIL_DROPOFF_TITLE": "下车点详情 ({{province}})",
       "DETAIL_TIME": "预计时间 {{time}}",
+      "DETAIL_LANDMARK_LABEL": "标志物",
+      "DETAIL_NO_PHOTO": "尚无该站点的照片",
       "BTN_OPEN_MAPS": "在 Google 地图中打开",
       "BTN_NAVIGATE": "导航",
       "VALIDATION_SELECT_BOTH": "请先选择上车点和下车点再确认",
@@ -2909,7 +3095,7 @@
       "SUBMITTING": "提交中…",
       "VALIDATION": {
         "WEIGHT_POSITIVE": "重量必须大于 0。",
-        "WEIGHT_MAX": "重量不能超过 100 公斤。",
+        "WEIGHT_MAX": "重量不能超过 {{max}} 公斤。",
         "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空。",
         "DIMENSION_POSITIVE": "尺寸必须大于 0。"
       },
@@ -2974,7 +3160,9 @@
           "PAYING": "正在记录付款…",
           "PAID": "已付款 — 已收取现金 ฿{{amount}}"
         }
-      }
+      },
+      "SHARE_NOT_CONFIGURED": "尚未设置包裹收益分成——在业主设置之前将记为0%。",
+      "SALES_POINT_NOT_MAPPED": "此站点尚未与售票点关联——业主的分成款项将计入司机名下。"
     },
     "PARCEL_WAYBILL": {
       "SUBTITLE": "此包裹的可打印运单。",
@@ -3175,6 +3363,47 @@
         "ENGINE_ON": "引擎运转中",
         "ENGINE_OFF": "引擎已关闭"
       }
+    },
+    "DRIVER_CASH": {
+      "SUMMARY": {
+        "ADVANCE": "预支款",
+        "PER_HEAD": "人头费",
+        "EXPENSE": "支出",
+        "NET": "现金净额",
+        "PARCEL_REMIT": "包裹汇款",
+        "PARCEL_CLAWBACK": "包裹分成追回"
+      },
+      "ADVANCE": {
+        "ACTION_LABEL": "现金预支",
+        "AMOUNT_LABEL": "金额",
+        "AMOUNT_PLACEHOLDER": "0.00",
+        "HINT": "交给司机在途中支付油费/过路费的现金——这不是已花掉的支出，日终结算时系统会收回剩余部分。",
+        "SUBMIT": "记录预支款"
+      },
+      "PER_HEAD": {
+        "ACTION_LABEL": "记录人头费",
+        "STOP_LABEL": "站点",
+        "HEAD_COUNT_LABEL": "人数",
+        "HEAD_COUNT_PLACEHOLDER": "乘客人数",
+        "SUBMIT": "记录人头费",
+        "RATE_NOT_CONFIGURED": "该站点尚未设置人头费率——在设置之前将记为0泰铢"
+      },
+      "EXPENSE": {
+        "ACTION_LABEL": "现场支出",
+        "CATEGORY_LABEL": "类别",
+        "AMOUNT_LABEL": "金额",
+        "AMOUNT_PLACEHOLDER": "0.00",
+        "NOTE_LABEL": "备注（选填）",
+        "NOTE_PLACEHOLDER": "例如收据编号",
+        "SUBMIT": "记录支出"
+      },
+      "SUBMITTING": "提交中...",
+      "VALIDATION": {
+        "AMOUNT_INVALID": "请输入有效金额（最多两位小数）。"
+      },
+      "ERROR": {
+        "GENERIC": "无法记录此项目，请重试。"
+      }
     }
   },
   "PARCEL_TRACKING": {
@@ -3231,26 +3460,18 @@
       "SUBMIT": "确认包裹信息",
       "SUBMITTING": "正在提交…"
     },
-    "PROHIBITED": {
-      "TITLE": "违禁物品",
-      "FLAMMABLE": "易燃液体/气体",
-      "EXPLOSIVE": "爆炸物或烟花",
-      "WEAPON": "武器或武器零件",
-      "NARCOTIC": "毒品或管制物品",
-      "CORPSE": "尸体或人体部分"
-    },
     "VALIDATION": {
       "REQUIRED": "此字段为必填项",
       "PHONE_INVALID": "请输入10-15位数字",
       "THAI_MOBILE_INVALID": "请输入有效的泰国手机号码（以 06、08 或 09 开头，例如 0812345678），包裹到达通知短信将发送至该号码。",
       "WEIGHT_POSITIVE": "重量必须大于0",
-      "WEIGHT_MAX": "重量不得超过100公斤",
+      "WEIGHT_MAX": "重量不得超过{{max}}公斤",
       "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空",
       "FROM_TO_SAME": "起点站和终点站不能相同"
     },
     "ERROR": {
       "PROHIBITED_NOT_ACK": "请先确认包裹不含违禁物品",
-      "WEIGHT_EXCEEDS_MAX": "包裹重量不得超过100公斤",
+      "WEIGHT_EXCEEDS_MAX": "包裹重量超过规定上限",
       "RECIPIENT_REQUIRED": "请完整填写收件人姓名和电话",
       "RECIPIENT_PHONE_INVALID": "收件人电话无效，请输入泰国手机号码，包裹到达通知短信将发送至该号码。",
       "STOP_ORDER_INVALID": "卸货点必须在同一路线上位于取件点之后，请重新选择",
@@ -3291,6 +3512,21 @@
       "WEIGHT_VALUE": "{{weight}} 公斤",
       "AMOUNT_PAID": "已付金额",
       "AMOUNT_DUE": "应付金额"
+    }
+  },
+  "PARCEL": {
+    "PROHIBITED": {
+      "TITLE": "违禁物品",
+      "ITEM": {
+        "FLAMMABLE": "易燃液体/气体",
+        "EXPLOSIVE": "爆炸物或烟花",
+        "WEAPON": "武器或武器零件",
+        "NARCOTIC": "毒品或管制物品",
+        "CORPSE": "尸体或人体部分"
+      },
+      "UNLISTED": "“{{slug}}”类物品",
+      "EMPTY": "系统目前未设定违禁物品类别，寄件前请先咨询工作人员。",
+      "LOAD_ERROR": "无法加载违禁物品清单，寄件前请先咨询工作人员。"
     }
   }
 }

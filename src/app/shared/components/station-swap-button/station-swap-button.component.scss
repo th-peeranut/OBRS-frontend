@@ -1,0 +1,174 @@
+@import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
+
+// VERTICAL POSITION — owned here, not by the call sites.
+//
+// Every station row is `display: flex; align-items: center`, and its flex items
+// are the two `app-dropdown-group-obrs` (label **+** field) and this button. So
+// "centre" means the centre of the LABEL+FIELD box, which sits well above the
+// centre of the field itself — the button floats in the gap between a label and
+// the box it belongs to. Each call site patched that with its own hand-tuned
+// nudge, and measured 2026-08-05 exactly one of the five resulting
+// configurations was right (delta = button centre-y − field centre-y):
+//
+//   home/filter ≥993px   `margin-top: 30px`     →  −0.5px   (correct)
+//   home/filter ≤992px   `margin: 12px auto 0`  →  −9.5px
+//   parcel, every width   no rule at all        → −15.5px   ← the reported one
+//
+// So stop nudging and state the constraint instead: align to the row's cross
+// END — the bottom of the field, which is the last box inside the group — then
+// lift by half the leftover. That puts the button's centre line on the field's
+// centre line at every width, and unlike a magic top margin it does not drift
+// when the label wraps, changes language, or changes font size.
+//
+// 48px is `dropdown-group-obrs`'s `.dropdown-toggle-border { height: 48px }` —
+// the one number here that belongs to somebody else, hence the overridable
+// `--station-swap-field-height` for a row whose field is a different height.
+// HORIZONTAL POSITION — also owned here (OBRS-1038).
+//
+// The two pickers are now one bar with a 1px seam, and this button straddles
+// that seam instead of floating in a gap. Symmetric negative side margins of
+// half its own width make its contribution to the row exactly 0px wide, so the
+// seam lands on its centre line whatever the fields measure — no call site has
+// to know the button's size, which is what let the OBRS-1035 nudges drift
+// apart in the first place.
+:host {
+  display: inline-flex;
+  align-self: flex-end;
+  margin-bottom: calc(
+    (var(--station-swap-field-height, 48px) - var(--station-swap-icon-size, 32px)) / 2
+  );
+  margin-left: calc(var(--station-swap-icon-size, 32px) / -2);
+  margin-right: calc(var(--station-swap-icon-size, 32px) / -2);
+
+  // Paint over the two field borders that meet underneath, rather than being
+  // painted over by whichever happens to come later in the DOM.
+  position: relative;
+  z-index: 1;
+}
+
+// STACKED (AC#3). Below 992px the two halves are a COLUMN, so the button turns
+// with them — the requirement is that it moves, not that it disappears. The
+// switch lives in this stylesheet, next to the rule it overrides, for the same
+// reason the vertical offset does: a per-call-site copy is how the three
+// screens drifted apart in the first place.
+//
+// WHAT IT STRADDLES HERE IS THE UPPER FIELD'S BOTTOM EDGE, not a seam — and
+// that is a consequence of this card's own scope cut, not an oversight.
+// Measured 2026-08-05 (`ng test`, Karma's 800px window, all three screens):
+// with the labels left ABOVE their fields, the gap between the two stacked
+// FIELD boxes is filled by the lower field's LABEL, and the midpoint of that
+// gap sits 15px below the upper field — inside the label's own text row. There
+// is no continuous bar to seam, so the button centres on the boundary line that
+// does exist and moves to the RIGHT end, where the left-aligned label has no
+// text. That is also where the same four reference sites put it on a phone.
+@media (max-width: 992px) {
+  :host {
+    // Cross axis is horizontal in a column: flex-end is the right edge.
+    align-self: flex-end;
+    // Vertical: half the button above the boundary, half below. Horizontal: an
+    // inset off the right edge so the disc is not welded into the corner
+    // radius. Shorthand on purpose — it also clears the row-mode straddle.
+    margin: calc(var(--station-swap-icon-size, 32px) / -2) $space-md;
+    transform: rotate(90deg);
+  }
+}
+
+.station-swap-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+  border: 0;
+  line-height: 0;
+
+  // OBRS-1038: an opaque disc, not a transparent slot. It is what breaks the
+  // seam line visually — that interruption is the whole reason the reference
+  // sites' button reads as "swap THESE TWO", and a see-through icon sitting on
+  // an unbroken border would not.
+  //
+  // $brand-customer (#0772a2), not the old file's #4bc2f7: that cyan disc
+  // measures 2.07:1 against the white card (derived, WCAG 1.4.11 formula on the
+  // two token values), under the 3:1 a graphical control boundary needs. It has
+  // been below the floor since before this card — the icon simply was not a
+  // control then, so no gate looked at it.
+  width: var(--station-swap-icon-size, 32px);
+  height: var(--station-swap-icon-size, 32px);
+  border-radius: $radius-circle;
+  background: $brand-customer;
+  color: $text-white;
+  cursor: pointer;
+
+  // Darker on hover, never lighter — the direction
+  // scripts/check-brand-fill-contrast.mjs enforces (invariant 2).
+  &:hover:not(:disabled) {
+    background: $primary-blue-hover;
+  }
+
+  transition: transform $duration-fast $easing-standard;
+
+  &:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+
+  // OBRS-1035 AC#5/#7: the reported bug was an element that LOOKS actionable and
+  // is not. A disabled swap must therefore say so with the pointer as well —
+  // `cursor: auto` on a clickable-looking circle is exactly what produced the
+  // report.
+  &:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  // AC#4: a focus ring that is actually visible, in both themes. `outline` (not
+  // a box-shadow) so the ring is readable off computed style in a test rather
+  // than by eye.
+  &:focus-visible {
+    outline: 2px solid $brand-customer-strong;
+    outline-offset: 2px;
+  }
+}
+
+// $brand-customer-strong (#3b61a9) against the dark card ($dk-bg-soft #22263a)
+// is the same 2.79:1 failure OBRS-575 hit on the quick-pick pills — below the
+// 3:1 non-text minimum. $dk-accent (#4bc2f7) measures 7.4:1 there.
+// This lives in the component's own stylesheet, NOT dark-theme.scss: a global
+// `body.is-dark .x` rule (3 in the class column) cannot out-specify an
+// encapsulated component rule carrying [_ngcontent] (4) — it would parse, ship,
+// and paint nothing (OBRS-767).
+:host-context(body.is-dark) {
+  .station-swap-button:focus-visible {
+    outline-color: $dk-accent;
+  }
+
+  // The light disc is $brand-customer on a white card; on $dk-bg-soft that same
+  // deep blue is the OBRS-752 problem in reverse. $dk-accent is the token this
+  // component already trusts for the focus ring, and the glyph flips to the
+  // darkest surface token so the arrows stay readable ON the disc.
+  .station-swap-button {
+    background: $dk-accent;
+    color: $dk-bg;
+
+    &:hover:not(:disabled) {
+      background: $dk-accent-hover;
+    }
+  }
+}
+
+.station-swap-button__icon {
+  display: block;
+
+  // The glyph inside the disc, at 62.5% of it — 20px in a 32px button, 15px in
+  // parcel's 24px one. Deriving it keeps ONE size knob on this component:
+  // `--station-swap-icon-size` still names the button's box, which is what the
+  // vertical-offset formula at the top of this file measures against.
+  font-size: calc(var(--station-swap-icon-size, 32px) * 0.625);
+
+  // The Material Symbols glyph box is sized by `font-size`; `line-height: 1`
+  // stops the inherited 1.5 from making the box taller than the disc and
+  // pushing the arrows off centre.
+  line-height: 1;
+  width: auto;
+  height: auto;
+}

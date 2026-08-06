@@ -3,6 +3,14 @@ import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn,
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
+import { canSwapStationPair, isEmptyStationValue } from '../../../../shared/lib/station-swap';
+
+/** OBRS-1035: the origin/destination pair after a swap. `null` = that side is
+ *  still empty (only one field was filled when the user swapped). */
+export interface ParcelStationSwap {
+  fromStationId: number | null;
+  toStationId: number | null;
+}
 
 export interface ParcelScheduleOption {
   id: number;
@@ -53,6 +61,12 @@ export class ParcelTripFormComponent implements OnInit, OnDestroy {
 
   @Output() fromStationChange = new EventEmitter<number>();
   @Output() toStationChange = new EventEmitter<number>();
+  /** OBRS-1035. A swap is emitted as ONE event carrying the final pair, rather
+   *  than letting the two control writes go out through `fromStationChange` +
+   *  `toStationChange`: those fire one at a time, so the parent would see the
+   *  intermediate `(B, B)` state and `searchSchedules()` would issue a doomed
+   *  B→B lookup whose response can land *after* the real one and overwrite it. */
+  @Output() stationsSwap = new EventEmitter<ParcelStationSwap>();
   @Output() dateChange = new EventEmitter<Date>();
   @Output() scheduleChange = new EventEmitter<number>();
   @Output() next = new EventEmitter<ParcelTripFormValue>();
@@ -105,6 +119,43 @@ export class ParcelTripFormComponent implements OnInit, OnDestroy {
 
   protected onToStationSelect(station: StationApi): void {
     this.form.get('toStationId')?.setValue(station.id);
+  }
+
+  /** OBRS-1035 AC#7 — see `canSwapStationPair()`. */
+  protected get canSwapStations(): boolean {
+    return canSwapStationPair(
+      this.form.get('fromStationId')?.value,
+      this.form.get('toStationId')?.value
+    );
+  }
+
+  /**
+   * OBRS-1035: swap origin ⇄ destination.
+   *
+   * `{ emitEvent: false }` is load-bearing, not an optimization: it suppresses
+   * the two per-control outputs so the parent never sees the half-swapped pair
+   * (see `stationsSwap`). The parent is told once, with the final pair.
+   */
+  protected onSwapStations(): void {
+    if (!this.canSwapStations) return;
+
+    const previousFrom = this.form.get('fromStationId')?.value;
+    const previousTo = this.form.get('toStationId')?.value;
+
+    this.form.patchValue(
+      { fromStationId: previousTo, toStationId: previousFrom },
+      { emitEvent: false }
+    );
+
+    this.stationsSwap.emit({
+      fromStationId: this.toStationIdOrNull(previousTo),
+      toStationId: this.toStationIdOrNull(previousFrom),
+    });
+  }
+
+  /** The controls are seeded with `''`; the parent's ids are `number | null`. */
+  private toStationIdOrNull(value: unknown): number | null {
+    return isEmptyStationValue(value) ? null : Number(value);
   }
 
   protected onScheduleSelect(option: ParcelScheduleOption): void {

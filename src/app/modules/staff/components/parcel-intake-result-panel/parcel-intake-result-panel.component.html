@@ -1,6 +1,18 @@
 @if (result; as r) {
   <div class="parcel-intake-result">
     <span class="material-symbols-outlined parcel-intake-result-icon">check_circle</span>
+
+    <!-- OBRS-960: a property of the RESULT (not the input) — the pickup
+    stop this parcel was intaken at is not mapped to a sales point, so the
+    owner's revenue share posts as the DRIVER's cash instead. Must appear at
+    intake, not an end-of-day summary (getting this wrong bills a driver
+    for money they never touched). -->
+    @if (r.salesPointMapped === false) {
+      <div class="parcel-consign-indicator is-warning" data-testid="parcel-sales-point-not-mapped-warning">
+        {{ 'STAFF.PARCEL_CONSIGN.SALES_POINT_NOT_MAPPED' | translate }}
+      </div>
+    }
+
     <!-- Consigned (unchanged markup/behavior). -->
     @if (!isCarryOnResult(r)) {
       <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.RESULT.TITLE' | translate }}</h5>

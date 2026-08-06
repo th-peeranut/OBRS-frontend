@@ -26,6 +26,7 @@ import {
   ParcelQuoteParams,
 } from '../../components/parcel-consign-form/parcel-consign-form.component';
 import { ParcelCargoAvailabilityStore } from './parcel-cargo-availability.store';
+import { ParcelShareConfigStore } from './parcel-share-config.store';
 import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 
@@ -123,6 +124,15 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
   protected cargoErrorKey: string | null = null;
   protected cargoValue: CargoAvailabilityRespDto | null = null;
 
+  /**
+   * OBRS-960 — fail-SAFE default: `true` (banner SHOWN) until a fetch
+   * proves `configured: true`. Any fetch error (including one with a
+   * previously-cached `configured: true` value now stale) is read as
+   * "treat unknown as unconfigured" per the card — never silently hidden.
+   * See `parcel-consign-page.component.spec.ts`'s fail-safe assertion.
+   */
+  protected shareNotConfigured = true;
+
   protected isSubmitting = false;
   protected serverErrorKey: string | null = null;
   protected result: ParcelConsignedRespDto | null = null;
@@ -175,7 +185,8 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly staffApiService: StaffApiService,
-    private readonly cargoStore: ParcelCargoAvailabilityStore
+    private readonly cargoStore: ParcelCargoAvailabilityStore,
+    private readonly shareConfigStore: ParcelShareConfigStore
   ) {}
 
   ngOnInit(): void {
@@ -190,6 +201,33 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
     this.cargoStore.error$.pipe(takeUntil(this.destroy$)).subscribe((hasError) => {
       this.cargoErrorKey = hasError ? 'STAFF.PARCEL_CONSIGN.ERROR.CARGO_FAILED' : null;
     });
+
+    // OBRS-960 — fail-safe: a successful fetch is the ONLY thing allowed to
+    // clear the warning; an error (even over a previously-good cached value)
+    // re-asserts it. Order matters: error$ is subscribed AFTER data$ so a
+    // failure emitted after a success still wins (last subscription writes
+    // last is not guaranteed by RxJS ordering alone, but each handler here
+    // only ever WRITES its own outcome, so the most-recently-EMITTED event
+    // — not subscription order — decides the value, which is what "fail
+    // safe on the LATEST fetch's outcome" requires).
+    this.shareConfigStore.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
+      if (data) {
+        this.shareNotConfigured = !data.configured;
+      } else {
+        // OBRS-506: honor a null emission (AdminCollectionStore.clear(), e.g.
+        // logout) — and here that's not just gate compliance, it's the SAME
+        // fail-safe rule as the error$ branch below: no known-good config
+        // means "treat unknown as unconfigured", never silently keep
+        // whatever the warning happened to say before the clear.
+        this.shareNotConfigured = true;
+      }
+    });
+    this.shareConfigStore.error$.pipe(takeUntil(this.destroy$)).subscribe((failed) => {
+      if (failed) {
+        this.shareNotConfigured = true;
+      }
+    });
+    void this.shareConfigStore.refresh();
   }
 
   ngOnDestroy(): void {

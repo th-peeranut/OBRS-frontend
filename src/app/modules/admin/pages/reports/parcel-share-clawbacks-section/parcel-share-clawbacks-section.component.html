@@ -1,0 +1,100 @@
+<!-- OBRS-1053: the owner-facing clawback ledger for OBRS-992. Its own
+admin-card section under the parcel-share monthly totals, with its own
+status filter. -->
+<section class="admin-card mt-3" data-testid="parcel-share-clawbacks-section">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.TITLE' | translate }}</h4>
+  </div>
+  <p class="admin-muted psc-subtitle">
+    {{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.SUBTITLE' | translate }}
+  </p>
+
+  <div class="admin-page-filters mt-2">
+    <app-admin-dropdown
+      [options]="translatedFilterOptions"
+      [placeholder]="'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.FILTER_LABEL' | translate"
+      valueKey="value"
+      labelKey="label"
+      [ngModel]="selectedFilter"
+      (ngModelChange)="onFilterChange($event)"
+      ></app-admin-dropdown>
+  </div>
+
+  @if (loadFailed) {
+    <p class="admin-error mt-2" data-testid="parcel-share-clawbacks-error">
+      {{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.LOAD_FAILED' | translate }}
+    </p>
+  }
+
+  <div class="admin-table-wrap mt-2">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.COL.ROLE' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.COL.PAYEE' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.COL.DATE' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.COL.AMOUNT' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.COL.STATUS' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.COL.CHANNEL' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.COL.ACTION' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading && rows.length === 0) {
+          @for (row of skeletonRows; track $index) {
+            <tr class="admin-skeleton-row" aria-hidden="true">
+              <td colspan="7"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            </tr>
+          }
+        }
+        @if (!(isLoading && rows.length === 0)) {
+          @for (row of rows; track trackByClawbackId($index, row)) {
+            <tr data-testid="parcel-share-clawback-row">
+              <td data-testid="parcel-share-clawback-role">{{ roleLabel(row) }}</td>
+              <td>{{ payeeLabel(row) }}</td>
+              <td>{{ displayDate(row.businessDate) }}</td>
+              <td class="admin-emphasis" data-testid="parcel-share-clawback-amount">{{ row.amount }}</td>
+              <td data-testid="parcel-share-clawback-status">{{ statusLabel(row) }}</td>
+              <td data-testid="parcel-share-clawback-channel">{{ channelLabel(row) }}</td>
+              <td>
+                @if (row.status === 'OUTSTANDING') {
+                  <div class="psc-collect-cell">
+                    <input
+                      type="text"
+                      class="admin-input psc-note-input"
+                      data-testid="parcel-share-clawback-note"
+                      maxlength="500"
+                      [placeholder]="'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.NOTE_PLACEHOLDER' | translate"
+                      [ngModel]="noteDraft(row)"
+                      (ngModelChange)="onNoteChange(row, $event)"
+                      [ngModelOptions]="{ standalone: true }" />
+                    <button
+                      type="button"
+                      class="admin-btn admin-btn-primary admin-btn-small"
+                      data-testid="parcel-share-clawback-collect"
+                      [disabled]="!canCollect(row)"
+                      (click)="collect(row)">
+                      {{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.COLLECT_BTN' | translate }}
+                    </button>
+                  </div>
+                }
+                <!-- A collected row keeps its note visible: it is the only
+                record of HOW the money came back face-to-face. -->
+                @if (row.status === 'COLLECTED' && row.note) {
+                  <span class="admin-muted" data-testid="parcel-share-clawback-collected-note">{{ row.note }}</span>
+                }
+              </td>
+            </tr>
+          }
+          @if (rows.length === 0) {
+            <tr class="admin-empty-row">
+              <td colspan="7" data-testid="parcel-share-clawbacks-empty">
+                {{ 'ADMIN.REPORTS.PARCEL_SHARE_CLAWBACKS.EMPTY' | translate }}
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

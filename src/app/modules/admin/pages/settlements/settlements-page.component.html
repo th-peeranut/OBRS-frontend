@@ -63,3 +63,44 @@
   (confirmRequested)="requestConfirm($event)"
   (retryFetch)="retryFetch()"
 ></app-settlement-detail-modal>
+
+<!-- OBRS-960: second, independent stacked section — a driver-cash "day" is
+not a settlement "round" (different semantics), so its own date-range
+filter, own store, own list. Not a new tab/route — mirrors how
+ReportsPageComponent/ExpensesPageComponent already stack independent
+sections on one page. -->
+<section class="admin-page-filters mt-4" data-testid="driver-cash-days-filter">
+  <p-datePicker styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
+    [ngModel]="driverCashFromDate" (ngModelChange)="onDriverCashFromDateChange($event)" [showIcon]="true" [iconDisplay]="'input'"
+    [showButtonBar]="true" [placeholder]="'ADMIN.SETTLEMENTS.FILTER_FROM' | translate">
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-datePicker>
+  <p-datePicker styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
+    [ngModel]="driverCashToDate" (ngModelChange)="onDriverCashToDateChange($event)" [showIcon]="true" [iconDisplay]="'input'"
+    [showButtonBar]="true" [placeholder]="'ADMIN.SETTLEMENTS.FILTER_TO' | translate">
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-datePicker>
+</section>
+
+<app-driver-cash-days-list
+  [items]="driverCashDays"
+  [contentState]="driverCashContentState"
+  [message]="driverCashLoadError"
+  (rowClick)="openDayDetail($event)"
+></app-driver-cash-days-list>
+
+<app-driver-cash-day-return-modal
+  [isOpen]="openDayId !== null"
+  [summary]="dayModalSummary"
+  [detail]="dayModalDetail"
+  [isFetching]="isDayDetailFetching"
+  [isConfirming]="isDayConfirming"
+  [fetchError]="dayDetailFetchError"
+  (closed)="closeDayDetail()"
+  (confirmRequested)="requestDayReturn($event)"
+  (retryFetch)="retryDayFetch()"
+></app-driver-cash-day-return-modal>

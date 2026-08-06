@@ -1,0 +1,50 @@
+@import "../../../../../styles/variables.scss";
+
+// OBRS-1022. Deliberately small: everything else on this page uses the shared
+// `.admin-*` classes, which already carry the shell's light/dark treatment. Only the
+// photo block needs anything of its own, and it needs as little as possible — a
+// hand-rolled surface here would be a surface the admin dark theme has never measured.
+
+.stop-photo-block {
+  margin-top: 0.5rem;
+}
+
+.stop-photo-preview {
+  width: 100%;
+  max-width: 360px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: $radius-lg;
+  display: block;
+}
+
+// The empty state is a real box with a real border rather than a blank gap: on this
+// screen "no photo" is the state of every stop today, so it is what an owner sees first
+// and it has to read as "nothing uploaded yet", not as a broken layout.
+.stop-photo-preview--empty {
+  border: 1px dashed $secondary-light-blue;
+  background-color: $secondary-lightgrey;
+}
+
+.stop-locale-block {
+  border: 1px solid $secondary-light-blue;
+  border-radius: $radius-md;
+  padding: 0.75rem 1rem 1rem;
+  margin-bottom: 0.75rem;
+
+  legend {
+    float: none;
+    width: auto;
+    padding: 0 0.35rem;
+    font-size: 0.9rem;
+  }
+}
+
+// A <label> wrapping a file input is the only way to style the browser's file picker,
+// but a disabled <input type="file"> does not stop a click on its LABEL — the label is
+// still clickable and the picker still opens. `pointer-events: none` is what actually
+// makes the disabled state disabled while an upload is in flight.
+.admin-btn.disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}

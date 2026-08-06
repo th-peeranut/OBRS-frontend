@@ -1,0 +1,23 @@
+<button
+  type="button"
+  class="station-swap-button"
+  [disabled]="disabled"
+  [attr.aria-label]="ariaLabelKey | translate"
+  (click)="swap.emit()"
+>
+  <!-- OBRS-1038: two counter-facing arrows and nothing else — the vehicle in the
+  old `passenger-station-gap.svg` said nothing on a page that is entirely about
+  vehicles, and all four reference booking sites use arrows alone.
+
+  A glyph from the Material Symbols family already loaded app-wide (133 files),
+  NOT a new `<img>`: an `<img src="…svg">` cannot inherit `color`, so a
+  fixed-fill file would need a second file (or a `filter` hack) for dark mode —
+  two assets to keep in sync for one icon. `currentColor` makes the theme
+  switch one CSS declaration, and lets a test READ the colour off the element.
+
+  `aria-hidden`: the button already carries the accessible name, so a described
+  icon would make a screen reader announce the control twice. -->
+  <span class="station-swap-button__icon material-symbols-outlined" aria-hidden="true"
+    >swap_horiz</span
+  >
+</button>
