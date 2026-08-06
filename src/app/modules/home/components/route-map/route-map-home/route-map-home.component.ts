@@ -42,6 +42,20 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
   loadState: LoadState = 'loading';
   routeMeta: RouteMeta | null = null;
   pickupStops: RouteStop[] = [];
+  /**
+   * The drop-offs OFFERED for the currently selected pickup — not the raw API list.
+   *
+   * OBRS-1052: `pickup` and `dropoff` stopped being disjoint. A stop whose `boarding_type` is
+   * `BOTH` (จุดพักรถลาดกระบัง 1 ขาออก on bangkok_chonburi) is returned in both arrays, so binding
+   * this straight to `data.dropoff` would offer the user the stop they are already boarding at,
+   * plus any stop the van passes BEFORE it. Neither pair exists in `segments`, and the backend
+   * answers a non-existent pair with a 404 from SegmentService rather than a zero fare — so the
+   * failure would land at the moment of booking, not at selection.
+   *
+   * Recomputed on route load and on pickup change (see `refreshDropoffOptions`) and NOT exposed as
+   * a getter: it is an `@Input` to route-map-panel, whose `ngOnChanges` re-fits the map bounds, and
+   * a getter allocating a fresh array every change-detection pass would re-fire that forever.
+   */
   dropoffStops: RouteStop[] = [];
 
   selectedPickupSlug: string | null = null;
@@ -63,6 +77,13 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
    * route changes since the pickup set is then different.
    */
   pickupDistancesKm: Record<string, number> | null = null;
+
+  /**
+   * Every drop-off the route offers, exactly as the API returned it. `dropoffStops` is this list
+   * narrowed to what is reachable from the chosen pickup; the empty-state check reads THIS one, so
+   * "this route has no drop-offs" stays distinguishable from "the stop you picked is the last one".
+   */
+  private allDropoffStops: RouteStop[] = [];
 
   private errorRetryTarget: ErrorRetryTarget = 'directions';
   private activeRoutes: RouteListItem[] = [];
@@ -185,6 +206,7 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
     this.routeMeta = null;
     this.pickupStops = [];
     this.dropoffStops = [];
+    this.allDropoffStops = [];
     // Distances belong to the previous route's pickup set — clear them; the
     // panel re-emits fresh distances if the user has already located.
     this.pickupDistancesKm = null;
@@ -223,18 +245,51 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
   private applyRouteData(data: RoutePickupDropoffData): void {
     this.routeMeta = data.route;
     this.pickupStops = data.pickup ?? [];
-    this.dropoffStops = data.dropoff ?? [];
+    this.allDropoffStops = data.dropoff ?? [];
+    this.refreshDropoffOptions();
 
-    if (this.pickupStops.length === 0 && this.dropoffStops.length === 0) {
+    if (this.pickupStops.length === 0 && this.allDropoffStops.length === 0) {
       this.loadState = 'empty';
     } else {
       this.loadState = 'loaded';
     }
   }
 
+  /**
+   * Narrows `allDropoffStops` to the stops the van reaches AFTER the chosen pickup, and drops a
+   * selection that the new pickup has just invalidated.
+   *
+   * <p>With no pickup chosen yet the full list is offered — that is the pre-OBRS-1052 behaviour and
+   * the only sensible one, since "after the pickup" has no meaning without a pickup.
+   *
+   * <p>The comparison is on `order` (the stop's position along the route), not on array index:
+   * `pickup` and `dropoff` are two independently-ordered lists, so an index means nothing across
+   * them, and `order` is the field the API already carries for exactly this.
+   */
+  private refreshDropoffOptions(): void {
+    const pickupOrder = this.selectedPickupStop?.order ?? null;
+
+    this.dropoffStops =
+      pickupOrder === null
+        ? this.allDropoffStops
+        : this.allDropoffStops.filter((s) => s.order > pickupOrder);
+
+    // A drop-off chosen before the pickup moved can now be upstream of it (or be the pickup
+    // itself). Leaving it selected would submit exactly the pair this method exists to prevent —
+    // the list on screen would no longer contain it, so nothing would show the user why.
+    if (
+      this.selectedDropoffSlug &&
+      !this.dropoffStops.some((s) => s.slug === this.selectedDropoffSlug)
+    ) {
+      this.selectedDropoffSlug = null;
+      this.selectedDropoffStop = null;
+    }
+  }
+
   onPickupStopSelected(stop: RouteStop): void {
     this.selectedPickupSlug = stop.slug;
     this.selectedPickupStop = stop;
+    this.refreshDropoffOptions();
   }
 
   /**
@@ -252,6 +307,10 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
       if (nearest) {
         this.selectedPickupSlug = nearest.slug;
         this.selectedPickupStop = nearest;
+        // Auto-selecting the nearest pickup moves the pickup just as a tap does, so the drop-off
+        // list has to follow. Missing this is how "use my location" would leave an upstream
+        // drop-off selected and offered.
+        this.refreshDropoffOptions();
       }
     }
   }
