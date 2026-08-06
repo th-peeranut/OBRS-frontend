@@ -113,6 +113,14 @@ check('  /my-parcels links (flag off — must-NOT, AC3)', count(hrefs, '/my-parc
 check('  /admin/dashboard links (driver — must-NOT, AC5)', count(hrefs, '/admin/dashboard'), 0);
 await shoot(page, 'staff-shell-driver-menu-light');
 
+// The new items must read exactly like the Sign out item that was always there
+// — one distinct colour across the whole menu, measured, not eyeballed.
+const lightColours = await page
+  .locator('.admin-profile-menu a, .admin-profile-menu button')
+  .evaluateAll((els) => els.map((e) => getComputedStyle(e).color));
+console.log(`    light item colours: ${JSON.stringify(lightColours)}`);
+check('  distinct text colours in light menu', new Set(lightColours).size, 1);
+
 // dark theme: the new items must follow the same rule as the existing ones
 await page.locator('.admin-topbar-actions .admin-icon-btn').first().click();
 await page.waitForTimeout(400);
@@ -160,6 +168,21 @@ for (const p of PERSONAL) check(`  ${p} links`, count(hrefs, p), 1);
 check('  /my-parcels links (flag off — must-NOT, AC3)', count(hrefs, '/my-parcels'), 0);
 check('  /staff links (owner holds the staff grant — unchanged)', count(hrefs, '/staff'), 1);
 await shoot(page, 'admin-shell-owner-menu-light');
+
+// AC6 on the OTHER shell — a rendered href is not proof of arrival, and the
+// admin shell has its own routing that could in principle shadow these.
+for (const p of PERSONAL) {
+  await page.goto(`${BASE}/admin/dashboard`, { waitUntil: 'domcontentloaded' });
+  await openShellMenu(page);
+  const link = page.locator(`.admin-profile-menu a[href="${p}"]`);
+  if ((await link.count()) === 0) {
+    check(`  owner clicks ${p} → landed pathname`, 'NO SUCH LINK IN MENU', p);
+    continue;
+  }
+  await link.click();
+  await page.waitForTimeout(1200);
+  check(`  owner clicks ${p} → landed pathname`, new URL(page.url()).pathname, p);
+}
 
 // ── 4. public navbar — control that the shared-model refactor changed nothing ─
 await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
