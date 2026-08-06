@@ -8,7 +8,7 @@ import { throwError } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../services/alert.service';
-import { extractApiErrorMessage, statusAlertMessageKey } from '../lib/api-error';
+import { resolveApiAlertMessage } from '../lib/api-error';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
@@ -53,21 +53,17 @@ export const errorInterceptor: HttpInterceptorFn = (
         // can act on (0 / 429 / 502 / 503 / 504 — OBRS-216, OBRS-567); every
         // other status keeps the backend-provided text, which is written for
         // the user and must not be blanketed over.
-        const statusKey = statusAlertMessageKey(error);
-        // Skip the body entirely once a status key applies: on those statuses
-        // the body is a ProgressEvent or the gateway's HTML, never our message.
         // Note for whoever throttles /external/otp (OBRS-136): if the backend
         // starts sending a useful 429 body ("try again in 5 minutes"), this
         // rule would suppress it — make 429 prefer the body then.
-        const backendMessage = statusKey ? '' : extractApiErrorMessage(error);
+        // OBRS-1072: the rule itself now lives in resolveApiAlertMessage, so a
+        // page that opts out of this alert for one error code shows the same
+        // text as this interceptor for every other one.
         // translate is non-null here in practice (shouldShowError implies
         // isApiRequest implies it was injected), but the type says otherwise.
-        const message =
-          backendMessage ||
-          (translate
-            ? translate.instant(statusKey ?? 'COMMON.ERROR.REQUEST_FAILED')
-            : 'Request failed.');
-        alertService.error(message);
+        alertService.error(
+          resolveApiAlertMessage(error, translate ? (k) => translate.instant(k) : null)
+        );
       }
       return throwError(() => error);
     }),

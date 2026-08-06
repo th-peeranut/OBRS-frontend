@@ -104,3 +104,46 @@ export function statusAlertMessageKey(error: unknown): string | null {
 
   return null;
 }
+
+/**
+ * The exact message the global error interceptor would have shown for `error`.
+ *
+ * Extracted (OBRS-1072) because a page that opts out of the global alert to
+ * handle ONE error code still has to reproduce the alert for every other error —
+ * and reproducing it by hand is how the two drift. The interceptor now calls
+ * this too, so there is one implementation of the rule rather than a copy per
+ * opted-out page.
+ *
+ * `translate` is a plain `(key) => string` rather than TranslateService so this
+ * file stays free of Angular DI (the interceptor documents an NG0200 cycle it
+ * must not re-enter). Pass `null` where no translator is available; the caller
+ * then gets the untranslated key, exactly as before.
+ */
+export function resolveApiAlertMessage(
+  error: unknown,
+  translate: ((key: string) => string) | null
+): string {
+  const statusKey = statusAlertMessageKey(error);
+  // Skip the body entirely once a status key applies: on those statuses the
+  // body is a ProgressEvent or the gateway's HTML, never our message.
+  const backendMessage = statusKey ? '' : extractApiErrorMessage(error);
+  return (
+    backendMessage ||
+    (translate
+      ? translate(statusKey ?? 'COMMON.ERROR.REQUEST_FAILED')
+      : 'Request failed.')
+  );
+}
+
+/**
+ * The stable, locale-independent code the backend puts on an error body
+ * (`ApiErrorRespDto.errorCode`, derived from the message key — e.g.
+ * `otp.send.phone-not-registered` -> `OTP_SEND_PHONE_NOT_REGISTERED`). Branch on
+ * this, never on the message text, which is translated and rewritten freely.
+ */
+export function apiErrorCode(error: unknown): string | null {
+  if (error instanceof HttpErrorResponse && typeof error.error?.errorCode === 'string') {
+    return error.error.errorCode;
+  }
+  return null;
+}

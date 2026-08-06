@@ -2149,7 +2149,11 @@
     "LOGIN_SUCCESS": "Login successful",
     "OTP_REQUEST_FAILED": "Failed to send OTP. Please try again.",
     "OTP_VERIFY_FAILED": "OTP verification failed. Please check the code and try again.",
-    "ROUTE_ERROR": "Invalid request. Please go back and try again."
+    "ROUTE_ERROR": "Invalid request. Please go back and try again.",
+    "NOT_REGISTERED_TITLE": "No account uses this number",
+    "NOT_REGISTERED_HINT": "So no SMS was sent to",
+    "NOT_REGISTERED_SIGNUP": "Sign up",
+    "NOT_REGISTERED_EDIT_PHONE": "Edit phone number"
   },
   "FORGET_PASSWORD": {
     "WELCOME": "Forgot your password?",

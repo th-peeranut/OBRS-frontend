@@ -11,6 +11,7 @@ import {
   OtpVerify,
 } from '../../shared/interfaces/otp.interface';
 import { AlertService } from '../../shared/services/alert.service';
+import { apiErrorCode, resolveApiAlertMessage } from '../../shared/lib/api-error';
 
 @Component({
     selector: 'app-otp-validate',
@@ -26,6 +27,14 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   phoneNo: string | undefined = '';
   otpCode: string = '';
   token: string = '';
+
+  /**
+   * OBRS-1072: the backend refused to text this number because no account uses
+   * it. Swaps the PIN form for the two exits this screen never had — sign up, or
+   * fix the number — instead of leaving the passenger on a code entry for a code
+   * that was deliberately never sent.
+   */
+  phoneNotRegistered: boolean = false;
 
   remainingTime: number = 5 * 60;
   displayTime: string = '05:00';
@@ -98,6 +107,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
   async sendOtp() {
     this.token = '';
+    this.phoneNotRegistered = false;
 
     const payload: OtpRequest = { msisdn: this.phoneNo ?? '' };
 
@@ -112,9 +122,33 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
           this.translate.instant('LOGIN_BY_PHONE_NO.OTP_REQUEST_FAILED')
         );
       }
-    } catch {
-      // Error alert is handled by the global interceptor.
+    } catch (error: unknown) {
+      // OBRS-1072: this one request opts out of the global error toast (see
+      // OtpService.requestOTP), so the two arms below are what the user sees.
+      if (apiErrorCode(error) === 'OTP_SEND_PHONE_NOT_REGISTERED') {
+        this.phoneNotRegistered = true;
+        return;
+      }
+      // Every other failure keeps the interceptor's exact wording, resolved by
+      // the interceptor's own helper rather than a second copy of the rule.
+      this.alertService.error(
+        resolveApiAlertMessage(error, (key) => this.translate.instant(key))
+      );
     }
+  }
+
+  /** OBRS-1072 exit 1: the number has no account, so offer the thing that creates one. */
+  goToRegister() {
+    this.router.navigateByUrl('/register');
+  }
+
+  /**
+   * OBRS-1072 exit 2: back to the number entry. Deliberately NOT history.back() —
+   * this screen is routinely arrived at by a fresh URL (and the rejection replaces
+   * a page that already navigated), so "back" is not reliably the phone form.
+   */
+  goToEditPhoneNumber() {
+    this.router.navigateByUrl('/login-mobile');
   }
 
   async verifyOtp() {

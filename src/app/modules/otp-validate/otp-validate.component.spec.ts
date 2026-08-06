@@ -1,4 +1,5 @@
 import { FormBuilder } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 
 import { OtpValidateComponent } from './otp-validate.component';
 import {
@@ -171,6 +172,106 @@ describe('OtpValidateComponent', () => {
         expect(router.navigateByUrl).not.toHaveBeenCalled();
         expect(requestOTP).toHaveBeenCalled();
       }
+    });
+  });
+
+  /**
+   * OBRS-1072. The backend now refuses to text a number with no account, and this screen is
+   * where that refusal lands. Before this card it landed as a toast on a PIN form waiting for
+   * an SMS that was never sent — the dead end OBRS-714 names.
+   *
+   * The assertions are on `phoneNotRegistered` and on the alert spy rather than on rendered
+   * markup because this suite constructs the component directly (no TestBed); the template
+   * binding it drives is covered by the manual test plan's DOM check.
+   */
+  describe('a number with no account gets exits, not a dead end (OBRS-1072)', () => {
+    function buildWithRejection(error: unknown) {
+      const alertService = jasmine.createSpyObj('AlertService', [
+        'error',
+        'success',
+      ]);
+      const router = jasmine.createSpyObj('Router', ['navigateByUrl']);
+      router.navigateByUrl.and.resolveTo(true);
+      const target = new OtpValidateComponent(
+        createTranslateStub(),
+        new FormBuilder(),
+        alertService as never,
+        router as never,
+        {} as never,
+        { requestOTP: () => Promise.reject(error) } as never,
+        {} as never
+      );
+      return { target, alertService, router };
+    }
+
+    /** Shaped like the real body: GlobalExceptionHandler derives errorCode from the message key. */
+    function notRegisteredResponse(): HttpErrorResponse {
+      return new HttpErrorResponse({
+        status: 404,
+        error: {
+          status: 404,
+          message: 'No account is registered with this phone number.',
+          errorCode: 'OTP_SEND_PHONE_NOT_REGISTERED',
+        },
+      });
+    }
+
+    it('switches to the no-account state and shows NO toast behind it', async () => {
+      const { target, alertService } = buildWithRejection(notRegisteredResponse());
+
+      await target.sendOtp();
+
+      expect(target.phoneNotRegistered).toBeTrue();
+      // The panel already says this; a toast repeating it is the noise the
+      // SKIP_GLOBAL_ERROR_ALERT opt-out exists to remove.
+      expect(alertService.error).not.toHaveBeenCalled();
+    });
+
+    it('offers both exits: sign up, and correct the number', () => {
+      const { target, router } = buildWithRejection(notRegisteredResponse());
+
+      target.goToRegister();
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/register');
+
+      target.goToEditPhoneNumber();
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/login-mobile');
+    });
+
+    // must-NOT: the opt-out from the global toast must not swallow the OTHER failures of this
+    // request. A guard that silences everything looks identical to a working one on the happy
+    // path and loses every rate-limit message.
+    it('still alerts on an unrelated failure, with the interceptor wording', async () => {
+      const { target, alertService } = buildWithRejection(
+        new HttpErrorResponse({ status: 429, error: { errorCode: 'OTP_SEND_RATE_LIMITED_IP' } })
+      );
+
+      await target.sendOtp();
+
+      expect(target.phoneNotRegistered).toBeFalse();
+      expect(alertService.error).toHaveBeenCalledWith(
+        'COMMON.ERROR.TOO_MANY_REQUESTS'
+      );
+    });
+
+    // must-NOT: a registered number is unaffected — the state never latches on.
+    it('leaves a successful send in the normal PIN-entry state', async () => {
+      const alertService = jasmine.createSpyObj('AlertService', ['error', 'success']);
+      const target = new OtpValidateComponent(
+        createTranslateStub(),
+        new FormBuilder(),
+        alertService as never,
+        createRouterStub(),
+        {} as never,
+        { requestOTP: () => Promise.resolve({ code: 200, data: { token: 't' } }) } as never,
+        {} as never
+      );
+      target.phoneNotRegistered = true; // stale state from a previous attempt
+
+      await target.sendOtp();
+
+      expect(target.phoneNotRegistered).toBeFalse();
+      expect(target.token).toBe('t');
+      expect(alertService.error).not.toHaveBeenCalled();
     });
   });
 });
