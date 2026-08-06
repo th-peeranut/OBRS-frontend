@@ -30,6 +30,7 @@ on:
 permissions:
   contents: write  # push origin/dev -> sit
   actions: read    # read dev's CI verdict
+  issues: write    # OBRS-1067: file a refusal where a person will see it
 
 concurrency:
   group: promote-sit
@@ -40,6 +41,11 @@ jobs:
     name: Promote dev to sit
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # OBRS-1067. Declared once at job level on purpose: the reporting step and the clearing step
+    # find each other by EXACT title, so if the two literals ever drifted by one character the
+    # clear would stop matching and every failure would open a fresh issue forever.
+    env:
+      REPORT_TITLE: 'promote-sit: the scheduled SIT promote did not complete'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -135,3 +141,74 @@ jobs:
             echo ""
             echo "Pushed \`${{ steps.gap.outputs.sha }}\` to sit. Netlify builds and publishes automatically (~40 s)."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # OBRS-1067. Every refusal above ends in `exit 1`, which turns the run red and stops there -
+      # and a red run nobody opens is indistinguishable from a promote that was never needed. The
+      # case that motivated this is the window guard itself: GitHub's cron is best-effort and fired
+      # 76 min late on the first unattended run (18:15:56Z measured, against a 17:00Z schedule), and
+      # the guard refuses above ICT hour 3, so the last instant it still permits is 03:59:59 ICT -
+      # 2 h 44 min of further lateness away. Exhausting that margin is SAFE, because nothing gets
+      # published in daylight, and INVISIBLE, because SIT simply keeps serving last week's build
+      # and nothing anywhere says so. This step makes it visible WITHOUT moving the window: the
+      # ceiling, the cron and the two-nights-a-week cadence are all untouched by this card.
+      #
+      # A GitHub issue rather than mail, SMS or a Jira comment because it needs NO new credential -
+      # GITHUB_TOKEN plus `issues: write` is the entire dependency, so there is nothing to store,
+      # scope or rotate. The @-mention is what carries it: it notifies under GitHub's DEFAULT
+      # "Participating and @mentions" setting, so the alert does not quietly depend on anyone
+      # having the repo on "All Activity".
+      #
+      # Matched by reading the open list and comparing titles EXACTLY, not via `gh issue list
+      # --search`: that index is eventually consistent, and a failure that repeats promptly would
+      # be handed an empty result and open a duplicate.
+      - name: Report a failed promote where a person will see it
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          utc_hour=$(date -u +%H)
+          ict_hour=$(( (10#${utc_hour} + 7) % 24 ))
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          body=$(printf '%s\n' \
+            "@${GITHUB_REPOSITORY_OWNER} the ${GITHUB_EVENT_NAME} promote of dev to sit did not complete." \
+            "" \
+            "- run: ${run_url}" \
+            "- this attempt ran at ${utc_hour}:xx UTC = ICT hour ${ict_hour}; the night window closes after ICT hour 3" \
+            "" \
+            "If the night-window guard refused, nothing was published and nothing is broken: this week's promote was skipped and sit is still serving the previous build. If a step after the push failed, open the run - sit may already have moved." \
+            "" \
+            "The next promote that completes closes this issue automatically.")
+          existing=$(gh issue list --state open --limit 100 --json number,title \
+            --jq "map(select(.title == \"${REPORT_TITLE}\")) | .[0].number // empty")
+          if [ -n "${existing}" ]; then
+            gh issue comment "${existing}" --body "${body}"
+            echo "Added a comment to the open report #${existing}."
+          else
+            gh issue create --title "${REPORT_TITLE}" --body "${body}"
+          fi
+
+      # The report is a FLAG, not a log. Left open after the next promote succeeds it would train
+      # the reader to ignore it, so a promote that completes clears it and records which run did.
+      #
+      # `continue-on-error` deliberately: by the time this runs the push has already happened and
+      # Netlify is already publishing. If this bookkeeping call failed and took the job down with
+      # it, the run would read red for a promote that actually succeeded, and the reader would go
+      # hunting for a breakage that does not exist. An annotation is the correct severity here.
+      - name: Clear the failure report after a promote that completed
+        if: success()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          existing=$(gh issue list --state open --limit 100 --json number,title \
+            --jq "map(select(.title == \"${REPORT_TITLE}\")) | .[0].number // empty")
+          if [ -z "${existing}" ]; then
+            echo "No open failure report to clear."
+            exit 0
+          fi
+          gh issue comment "${existing}" --body "Closed by a promote that completed: ${run_url}"
+          gh issue close "${existing}"
+          echo "Closed the report #${existing}."
