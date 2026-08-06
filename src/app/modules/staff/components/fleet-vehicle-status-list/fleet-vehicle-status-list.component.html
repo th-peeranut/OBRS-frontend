@@ -5,6 +5,7 @@
       <tr>
         <th scope="col">{{ 'STAFF.FLEET_MAP.COL.PLATE' | translate }}</th>
         <th scope="col">{{ 'STAFF.FLEET_MAP.COL.STATUS' | translate }}</th>
+        <th scope="col">{{ 'STAFF.FLEET_MAP.COL.SPEED' | translate }}</th>
         <th scope="col">{{ 'STAFF.FLEET_MAP.COL.LAST_UPDATE' | translate }}</th>
       </tr>
     </thead>
@@ -17,6 +18,7 @@
               {{ chipFor(vehicle).i18nKey | translate }}
             </span>
           </td>
+          <td class="fleet-speed-cell">{{ speedTextFor(vehicle) }}</td>
           @if (lastUpdateLabelFor(vehicle); as label) {
             <td>
               {{ label.key | translate: label.params }}
@@ -27,7 +29,7 @@
 
       @if (vehicles.length === 0) {
         <tr class="admin-empty-row">
-          <td colspan="3">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+          <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
         </tr>
       }
     </tbody>

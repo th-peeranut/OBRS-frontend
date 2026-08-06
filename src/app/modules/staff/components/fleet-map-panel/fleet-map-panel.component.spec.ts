@@ -1,8 +1,37 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import * as L from 'leaflet';
 import { FleetMapPanelComponent } from './fleet-map-panel.component';
 import { FleetPositionRespDto } from '../../../../services/staff/staff-api.service';
+
+// OBRS-1070 AC5 asks the spec to read the TEXT THAT ACTUALLY RENDERED and
+// prove two consecutive ticks differ. With no translations loaded ngx-translate
+// echoes the key back, so every tick would render the identical constant
+// 'STAFF.FLEET_MAP.SPEED_VALUE' and the assertion would pass while proving
+// nothing. These are the real en.json strings for the keys this component uses.
+const FLEET_MAP_EN = {
+  STAFF: {
+    FLEET_MAP: {
+      SPEED_VALUE: '{{value}} km/h',
+      UPDATED_JUST_NOW: 'Updated just now',
+      UPDATED_MINUTES_AGO: 'Updated {{count}} min ago',
+      UPDATED_HOURS_AGO: 'Updated {{count}} h ago',
+      NO_SIGNAL_LABEL: 'No signal',
+      STATUS: {
+        LIVE: 'Live',
+        GPS_LOST: 'GPS signal lost',
+        OFFLINE: 'Device offline',
+        AWAITING_SIGNAL: 'Awaiting first signal',
+        NOT_TRACKED: 'Not tracked',
+      },
+      POPUP: {
+        SPEED: 'Speed: {{value}} km/h',
+        ENGINE_ON: 'Engine on',
+        ENGINE_OFF: 'Engine off',
+      },
+    },
+  },
+};
 
 function makeRow(overrides: Partial<FleetPositionRespDto> = {}): FleetPositionRespDto {
   return {
@@ -34,9 +63,23 @@ describe('FleetMapPanelComponent', () => {
       declarations: [FleetMapPanelComponent],
     }).compileComponents();
 
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', FLEET_MAP_EN, true);
+    translate.use('en');
+
     fixture = TestBed.createComponent(FleetMapPanelComponent);
     component = fixture.componentInstance;
   });
+
+  /** The marker-keyed permanent label layer (OBRS-1070 AC3) — private field,
+   * read the same way the existing tests read `markers`/`map`. */
+  function labelsOf(): Map<number, L.Tooltip> {
+    return (component as unknown as { labels: Map<number, L.Tooltip> }).labels;
+  }
+
+  function markersOf(): Map<number, L.Marker> {
+    return (component as unknown as { markers: Map<number, L.Marker> }).markers;
+  }
 
   afterEach(() => {
     fixture.destroy();
@@ -201,6 +244,185 @@ describe('FleetMapPanelComponent', () => {
       });
       expect(attributionHtml).toContain('MapTiler');
       expect(attributionHtml).toContain('OpenStreetMap');
+    });
+  });
+
+  describe('OBRS-1070 — details without a click', () => {
+    function firstSync(vehicles: FleetPositionRespDto[]): void {
+      component.maptilerKey = 'test-key';
+      component.vehicles = vehicles;
+      component.ngOnChanges();
+      fixture.detectChanges();
+    }
+
+    it('AC1+AC2: the marker carries BOTH a hover tooltip and a click popup, holding the SAME full detail', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40, engineStatus: 1 })]);
+
+      const marker = markersOf().get(1) as L.Marker;
+      const tooltipHtml = marker.getTooltip()?.getContent() as string;
+      const popupHtml = marker.getPopup()?.getContent() as string;
+
+      expect(tooltipHtml).withContext('AC1: hover must have content of its own').toBeTruthy();
+      expect(popupHtml).withContext('AC2: the click popup must still exist').toBeTruthy();
+      expect(tooltipHtml).toBe(popupHtml);
+
+      // The four things the owner asked to see, in the text that renders.
+      expect(tooltipHtml).toContain('40-1234'); // plate
+      expect(tooltipHtml).toContain('Live'); // status
+      expect(tooltipHtml).toContain('Speed: 40 km/h'); // speed
+      expect(tooltipHtml).toContain('Updated just now'); // relative time
+    });
+
+    it('AC1: the hover tooltip is NOT permanent — it is the one that opens on mouseover', () => {
+      firstSync([makeRow({ vehicleId: 1 })]);
+
+      const tooltip = markersOf().get(1)?.getTooltip() as L.Tooltip;
+      expect(tooltip.options.permanent).toBeFalsy();
+    });
+
+    it('AC3: every marker gets a permanent, non-interactive label rendering plate + speed with no hover', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40 }), makeRow({ vehicleId: 2, lat: 13.4, lon: 101.0, speed: 7 })]);
+
+      const labels = labelsOf();
+      expect(labels.size).toBe(2);
+
+      const label = labels.get(1) as L.Tooltip;
+      expect(label.options.permanent).toBeTrue();
+      // An interactive tooltip sits in the pointer path and would eat the
+      // mouseover AC1 needs and the click AC2 needs.
+      expect(label.options.interactive).toBeFalse();
+
+      // Read what actually rendered, not the content we handed Leaflet.
+      const rendered = (label.getElement() as HTMLElement).textContent as string;
+      expect(rendered).toContain('40-1234');
+      expect(rendered).toContain('40 km/h');
+      // Compact by construction: the label must NOT carry the full detail, or
+      // a depot full of parked vans is unreadable.
+      expect(rendered).not.toContain('Engine on');
+      expect(rendered).not.toContain('Updated just now');
+    });
+
+    it('AC4: speed === null drops the speed token entirely — never a unit with no number', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: null })]);
+
+      const label = labelsOf().get(1) as L.Tooltip;
+      const rendered = (label.getElement() as HTMLElement).textContent as string;
+      expect(rendered).toContain('40-1234');
+      expect(rendered).not.toContain('km/h');
+      expect((label.getContent() as string)).not.toContain('fleet-marker-label-speed');
+
+      // and the full detail drops its speed row the same way
+      const detail = markersOf().get(1)?.getTooltip()?.getContent() as string;
+      expect(detail).not.toContain('km/h');
+    });
+
+    it('AC5: a poll tick that changes speed/recordedAt changes the RENDERED text of both the label and the hover tooltip', () => {
+      // Relative to Date.now(), not a wall-clock literal: `fleetRelativeTime`
+      // is called with the real `new Date()`, so a fixed ISO string would make
+      // the expected phrasing drift with the calendar.
+      const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      firstSync([makeRow({ vehicleId: 1, speed: 40, recordedAt: threeHoursAgo.toISOString() })]);
+
+      const marker = markersOf().get(1) as L.Marker;
+      const label = labelsOf().get(1) as L.Tooltip;
+
+      // Open the hover tooltip so there is a rendered element to read, exactly
+      // as a mouseover would.
+      marker.openTooltip();
+      const labelBefore = (label.getElement() as HTMLElement).textContent as string;
+      const detailBefore = ((marker.getTooltip() as L.Tooltip).getElement() as HTMLElement).textContent as string;
+
+      // Next tick: the van sped up, and its fix is now 5 minutes old.
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      component.vehicles = [makeRow({ vehicleId: 1, speed: 62, recordedAt: fiveMinutesAgo.toISOString() })];
+      component.ngOnChanges();
+
+      const labelAfter = (label.getElement() as HTMLElement).textContent as string;
+      const detailAfter = ((marker.getTooltip() as L.Tooltip).getElement() as HTMLElement).textContent as string;
+
+      expect(labelAfter).not.toBe(labelBefore);
+      expect(detailAfter).not.toBe(detailBefore);
+
+      expect(labelBefore).toContain('40 km/h');
+      expect(labelAfter).toContain('62 km/h');
+      expect(labelAfter).not.toContain('40 km/h');
+
+      expect(detailAfter).toContain('Speed: 62 km/h');
+      expect(detailAfter).toContain('Updated 5 min ago');
+    });
+
+    it('AC6: a speed/time-only tick never calls setIcon and never replaces the marker or the label layer', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40 })]);
+
+      const markerBefore = markersOf().get(1) as L.Marker;
+      const labelBefore = labelsOf().get(1) as L.Tooltip;
+
+      // Spy only AFTER the first sync: creation legitimately builds an icon.
+      const setIconSpy = spyOn(L.Marker.prototype, 'setIcon').and.callThrough();
+      const markerCtorSpy = spyOn(L, 'marker').and.callThrough();
+      const tooltipCtorSpy = spyOn(L, 'tooltip').and.callThrough();
+
+      component.vehicles = [makeRow({ vehicleId: 1, speed: 62, recordedAt: new Date(Date.now() - 60_000).toISOString() })];
+      component.ngOnChanges();
+
+      expect(setIconSpy).withContext('the DivIcon must not be rebuilt for a speed change').not.toHaveBeenCalled();
+      expect(markerCtorSpy).not.toHaveBeenCalled();
+      expect(tooltipCtorSpy).not.toHaveBeenCalled();
+      expect(markersOf().get(1)).toBe(markerBefore);
+      expect(labelsOf().get(1)).toBe(labelBefore);
+    });
+
+    it('a status change still rebuilds the icon — AC6 pins the optimization, it does not disable it', () => {
+      firstSync([makeRow({ vehicleId: 1 })]); // LIVE
+
+      const setIconSpy = spyOn(L.Marker.prototype, 'setIcon').and.callThrough();
+
+      component.vehicles = [makeRow({ vehicleId: 1, deviceOnline: false, stale: true })]; // OFFLINE
+      component.ngOnChanges();
+
+      expect(setIconSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('touch guard: a click closes the hover tooltip, so a tap never stacks tooltip + popup', () => {
+      firstSync([makeRow({ vehicleId: 1 })]);
+
+      const marker = markersOf().get(1) as L.Marker;
+      marker.openTooltip();
+      expect(marker.isTooltipOpen()).toBeTrue();
+
+      marker.fire('click');
+
+      expect(marker.isTooltipOpen())
+        .withContext('L.Browser.touch wires click -> openTooltip; the guard must undo it')
+        .toBeFalse();
+    });
+
+    it('a vehicle that loses marker eligibility takes its permanent label off the map with it', () => {
+      firstSync([makeRow({ vehicleId: 5 })]);
+      expect(labelsOf().size).toBe(1);
+      const label = labelsOf().get(5) as L.Tooltip;
+      const map = (component as unknown as { map: L.Map }).map;
+
+      component.vehicles = [
+        makeRow({ vehicleId: 5, gpsImeiConfigured: false, positionKnown: true, deviceOnline: null, stale: true }),
+      ];
+      component.ngOnChanges();
+
+      expect(labelsOf().size).toBe(0);
+      expect(map.hasLayer(label)).withContext('no orphaned label layer left behind').toBeFalse();
+    });
+
+    it('a vehicle that drops out of the response entirely takes its label with it too', () => {
+      firstSync([makeRow({ vehicleId: 5 }), makeRow({ vehicleId: 6, lat: 13.4, lon: 101.0 })]);
+      expect(labelsOf().size).toBe(2);
+      const label = labelsOf().get(6) as L.Tooltip;
+      const map = (component as unknown as { map: L.Map }).map;
+
+      component.vehicles = [makeRow({ vehicleId: 5 })];
+      component.ngOnChanges();
+
+      expect(labelsOf().size).toBe(1);
+      expect(map.hasLayer(label)).toBeFalse();
     });
   });
 });
