@@ -2149,7 +2149,11 @@
     "LOGIN_SUCCESS": "登录成功",
     "OTP_REQUEST_FAILED": "发送OTP失败，请重试。",
     "OTP_VERIFY_FAILED": "OTP验证失败，请检查验证码后重试。",
-    "ROUTE_ERROR": "请求无效，请返回后重试。"
+    "ROUTE_ERROR": "请求无效，请返回后重试。",
+    "NOT_REGISTERED_TITLE": "该号码尚未注册账户",
+    "NOT_REGISTERED_HINT": "因此我们没有向该号码发送短信：",
+    "NOT_REGISTERED_SIGNUP": "注册账户",
+    "NOT_REGISTERED_EDIT_PHONE": "修改手机号码"
   },
   "FORGET_PASSWORD": {
     "WELCOME": "忘记密码？",

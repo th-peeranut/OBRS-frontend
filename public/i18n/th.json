@@ -2149,7 +2149,11 @@
     "LOGIN_SUCCESS": "เข้าสู่ระบบสำเร็จ",
     "OTP_REQUEST_FAILED": "ส่ง OTP ล้มเหลว กรุณาลองใหม่อีกครั้ง",
     "OTP_VERIFY_FAILED": "การยืนยัน OTP ล้มเหลว กรุณาตรวจสอบรหัสและลองใหม่",
-    "ROUTE_ERROR": "คำขอไม่ถูกต้อง กรุณากลับไปและลองใหม่อีกครั้ง"
+    "ROUTE_ERROR": "คำขอไม่ถูกต้อง กรุณากลับไปและลองใหม่อีกครั้ง",
+    "NOT_REGISTERED_TITLE": "ยังไม่มีบัญชีสำหรับหมายเลขนี้",
+    "NOT_REGISTERED_HINT": "เราจึงไม่ได้ส่ง SMS ไปยังหมายเลข",
+    "NOT_REGISTERED_SIGNUP": "สมัครสมาชิก",
+    "NOT_REGISTERED_EDIT_PHONE": "แก้ไขหมายเลขโทรศัพท์"
   },
   "FORGET_PASSWORD": {
     "WELCOME": "ลืมรหัสผ่าน",
