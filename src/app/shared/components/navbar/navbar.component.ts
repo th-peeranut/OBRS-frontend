@@ -70,6 +70,18 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.unlistenMobileMenu?.();
   }
 
+  // OBRS-1069: below 992px the whole `.button-container.navbar-desktop-only`
+  // block is display:none, which takes the avatar — the only thing on the
+  // public navbar that said which account you were on — with it. The mobile
+  // panel shows this in full rather than as initials: two accounts whose
+  // initials collide (`th.peeranut` / `tanya.pong` → both `TP`) are otherwise
+  // indistinguishable. `getUsername()` is the email today (account-page
+  // renders it as one); showing a real display name would need a new API call
+  // and is a separate card.
+  get userEmail(): string {
+    return this.authService.getUsername() ?? '';
+  }
+
   get userInitials(): string {
     const username = this.authService.getUsername() ?? '';
     const namePart = username.split('@')[0] ?? '';
