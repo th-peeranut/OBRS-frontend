@@ -3353,9 +3353,11 @@
       "EMPTY_FLEET_BANNER_BODY": "Positions will appear here once a tracker is installed and configured for a vehicle.",
       "REFRESH_FAILED_BANNER": "Unable to refresh — showing data from {{time}}",
       "LOAD_FAILED": "Unable to load fleet positions.",
+      "SPEED_VALUE": "{{value}} km/h",
       "COL": {
         "PLATE": "Plate",
         "STATUS": "Status",
+        "SPEED": "Speed",
         "LAST_UPDATE": "Last update"
       },
       "POPUP": {

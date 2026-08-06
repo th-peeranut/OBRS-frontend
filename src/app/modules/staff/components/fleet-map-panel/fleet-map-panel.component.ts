@@ -57,6 +57,12 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
 
   private map: L.Map | null = null;
   private readonly markers = new Map<number, L.Marker>();
+  // OBRS-1070 — the always-on compact label (plate + speed). It is a STANDALONE
+  // L.Tooltip layer, not `marker.bindTooltip(..., {permanent: true})`, because a
+  // Leaflet layer holds exactly ONE bound tooltip and the marker's is already
+  // spent on the hover detail below. Keyed by vehicleId in lockstep with
+  // `markers` — every add/remove path must touch both.
+  private readonly labels = new Map<number, L.Tooltip>();
   private readonly markerStatuses = new Map<number, FleetVehicleStatus>();
   private hasFitOnce = false;
   private latestVehicles: FleetPositionRespDto[] = [];
@@ -92,6 +98,7 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
     this.map?.remove();
     this.map = null;
     this.markers.clear();
+    this.labels.clear();
     this.markerStatuses.clear();
   }
 
@@ -120,6 +127,7 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
         if (existing) {
           map.removeLayer(existing);
           this.markers.delete(vehicle.vehicleId);
+          this.removeLabel(map, vehicle.vehicleId);
           this.markerStatuses.delete(vehicle.vehicleId);
         }
         continue;
@@ -133,6 +141,16 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
       if (!marker) {
         marker = L.marker(latLng, { icon: this.buildIcon(status), opacity: this.opacityFor(status) }).addTo(map);
         marker.bindPopup('');
+        // OBRS-1070 AC1 — hover shows the SAME full detail the popup shows.
+        // Leaflet opens a non-permanent tooltip on `mouseover` by itself; no
+        // handler of ours is involved on the pointer path.
+        marker.bindTooltip('', { direction: 'top', offset: [0, -18], className: 'fleet-marker-detail' });
+        // ...but `bindTooltip` ALSO wires `click` -> `_openTooltip` whenever
+        // `L.Browser.touch` is true (Layer.Tooltip.js `_initTooltipInteractions`),
+        // and staff work this screen on a tablet. Without this, one tap opens
+        // the popup AND the tooltip — two boxes with identical content stacked
+        // on the same marker. Registered AFTER bindTooltip so it runs last.
+        marker.on('click', () => marker?.closeTooltip());
         this.markers.set(vehicle.vehicleId, marker);
       } else {
         // The SAME L.Marker instance persists across every poll tick — this
@@ -148,8 +166,14 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
 
       // .setPopupContent() ALWAYS — this is what keeps an open popup's
       // "last update" text from freezing between polls (§9.6: no separate
-      // label-refresh timer).
-      marker.setPopupContent(this.buildPopupHtml(vehicle, status));
+      // label-refresh timer). OBRS-1070 extends the same rule to the hover
+      // tooltip and the permanent label: CONTENT is mutated every tick,
+      // the layer object never is (the .setIcon() condition above is
+      // untouched — a speed/time change must not rebuild the DivIcon).
+      const detailHtml = this.buildDetailHtml(vehicle, status);
+      marker.setPopupContent(detailHtml);
+      marker.setTooltipContent(detailHtml);
+      this.syncLabel(map, vehicle, latLng);
       this.markerStatuses.set(vehicle.vehicleId, status);
     }
 
@@ -160,6 +184,7 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
       if (!seenIds.has(vehicleId)) {
         map.removeLayer(marker);
         this.markers.delete(vehicleId);
+        this.removeLabel(map, vehicleId);
         this.markerStatuses.delete(vehicleId);
       }
     }
@@ -215,7 +240,64 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
     });
   }
 
-  private buildPopupHtml(vehicle: FleetPositionRespDto, status: FleetVehicleStatus): string {
+  /** OBRS-1070 AC3 — creates the permanent label on first sight, then mutates
+   * the SAME L.Tooltip on every later tick (position + content). Nothing here
+   * ever constructs a second layer for a vehicle that already has one. */
+  private syncLabel(map: L.Map, vehicle: FleetPositionRespDto, latLng: L.LatLngExpression): void {
+    let label = this.labels.get(vehicle.vehicleId);
+    if (!label) {
+      label = L.tooltip({
+        permanent: true,
+        // Non-interactive on purpose: an interactive tooltip sits in the
+        // pointer path and would swallow the `mouseover` that AC1's hover
+        // detail depends on, and the click that opens the popup (AC2).
+        interactive: false,
+        direction: 'bottom',
+        offset: [0, 16],
+        className: 'fleet-marker-label',
+      })
+        .setLatLng(latLng)
+        .setContent('');
+      label.addTo(map);
+      this.labels.set(vehicle.vehicleId, label);
+    } else {
+      label.setLatLng(latLng);
+    }
+    label.setContent(this.buildLabelHtml(vehicle));
+  }
+
+  private removeLabel(map: L.Map, vehicleId: number): void {
+    const label = this.labels.get(vehicleId);
+    if (label) {
+      map.removeLayer(label);
+      this.labels.delete(vehicleId);
+    }
+  }
+
+  /** The always-on compact label: plate, plus speed only when there IS one.
+   * Deliberately NOT the full detail — with the fleet parked at the depot the
+   * labels sit on top of each other, so anything beyond two short tokens is
+   * unreadable exactly when it matters (AC3). Full detail lives on
+   * hover/click. AC4: a null speed drops the whole token rather than
+   * rendering a unit with no number. */
+  private buildLabelHtml(vehicle: FleetPositionRespDto): string {
+    const speedText =
+      vehicle.speed !== null
+        ? this.translate.instant('STAFF.FLEET_MAP.SPEED_VALUE', { value: vehicle.speed })
+        : '';
+
+    const parts = [
+      `<span class="fleet-marker-label-plate">${escapeHtml(vehicle.numberPlate)}</span>`,
+      speedText ? `<span class="fleet-marker-label-speed">${escapeHtml(speedText)}</span>` : '',
+    ].filter((part) => part.length > 0);
+
+    return parts.join('');
+  }
+
+  /** The full detail block, shared verbatim by the click popup (AC2) and the
+   * hover tooltip (AC1) — one builder so the two surfaces can never drift
+   * into phrasing the same fix differently. */
+  private buildDetailHtml(vehicle: FleetPositionRespDto, status: FleetVehicleStatus): string {
     const chip = fleetVehicleStatusChip(status);
     const statusLabel = this.translate.instant(chip.i18nKey);
     const speedLabel =

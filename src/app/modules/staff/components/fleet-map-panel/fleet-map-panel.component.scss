@@ -116,4 +116,41 @@
     color: var(--admin-muted);
     font-size: 0.85em;
   }
+
+  // OBRS-1070 AC3 — the always-on compact label hanging under each dot.
+  // Sized DOWN from Leaflet's default tooltip on purpose: the depot parks the
+  // whole fleet in one spot, so these overlap exactly when the screen is
+  // busiest. Two short tokens only; full detail is on hover/click.
+  //
+  // background/colour are deliberately NOT set here — Leaflet's own
+  // `.leaflet-tooltip` default (white surface, dark text) is already correct
+  // against the tiles, which stay light in BOTH themes (ADR 0024). An
+  // --admin-* token would invert to dark and erase the label in dark mode,
+  // the same trap the .fleet-marker-dot ring comment above warns about.
+  .fleet-marker-label {
+    padding: 1px 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+
+    // No callout arrow: this label hangs off its own dot, which is already the
+    // pointer. Leaflet draws the arrow via .leaflet-tooltip-bottom:before.
+    &::before {
+      display: none;
+    }
+  }
+
+  .fleet-marker-label-speed {
+    margin-left: 6px;
+    font-weight: 400;
+    opacity: 0.75;
+  }
+
+  // OBRS-1070 AC1 — the hover tooltip carries the SAME markup as the popup, so
+  // it only needs what is tooltip-specific: Leaflet tooltips are nowrap by
+  // default, which would run a long status string off the canvas edge.
+  .fleet-marker-detail {
+    white-space: normal;
+    max-width: 220px;
+  }
 }

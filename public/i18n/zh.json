@@ -3353,9 +3353,11 @@
       "EMPTY_FLEET_BANNER_BODY": "一旦为车辆安装并配置追踪器，位置将显示在此处",
       "REFRESH_FAILED_BANNER": "无法刷新 — 显示 {{time}} 的数据",
       "LOAD_FAILED": "无法加载车辆位置",
+      "SPEED_VALUE": "{{value}} 公里/小时",
       "COL": {
         "PLATE": "车牌",
         "STATUS": "状态",
+        "SPEED": "速度",
         "LAST_UPDATE": "最后更新"
       },
       "POPUP": {
