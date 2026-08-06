@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import { HomeBookingComponent } from './home-booking.component';
 import { DropdownObrsComponent } from '../../../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownGroupObrsComponent } from '../../../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
+import { StationSwapButtonComponent } from '../../../../shared/components/station-swap-button/station-swap-button.component';
 import { DropdownObrsPassengerComponent } from '../dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import {
   BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK,
@@ -376,6 +377,7 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
         DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
         DropdownObrsPassengerComponent,
         // OBRS-575's standalone child now appears in this template; without it
         // the slice fails with NG0304 'not a known element'.
@@ -448,6 +450,7 @@ describe('HomeBookingComponent — date labels distinguish outbound from return 
         DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
         DropdownObrsPassengerComponent,
         RecentRoutesQuickPickComponent,
       ],
@@ -533,6 +536,7 @@ describe('HomeBookingComponent — each date field owns a unique input id its la
         DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
         DropdownObrsPassengerComponent,
         RecentRoutesQuickPickComponent,
       ],
@@ -670,6 +674,7 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
         DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
         DropdownObrsPassengerComponent,
         RecentRoutesQuickPickComponent,
       ],
@@ -839,6 +844,7 @@ describe('HomeBookingComponent — a date can only be chosen from the calendar (
         DatePickerModule,
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
         DropdownObrsPassengerComponent,
         RecentRoutesQuickPickComponent,
       ],
@@ -923,5 +929,218 @@ describe('HomeBookingComponent — a date can only be chosen from the calendar (
     fixture.detectChanges();
 
     expect(control?.value).toBeNull();
+  });
+});
+
+/**
+ * OBRS-1035. The circular icon between the two station pickers was a bare
+ * `<img>` — no role, no tabindex, `cursor: auto` — and no swap feature existed
+ * anywhere in the codebase. The owner reported it as "I press the swap button
+ * and nothing happens", which is exactly right: it looked like a control and
+ * was not one.
+ *
+ * These tests drive the RENDERED button and read the form controls afterwards.
+ * A `queryAll('app-station-swap-button').length === 1` would pass against a
+ * button wired to nothing, and asserting on `onSwapStations()` alone would pass
+ * against a template that still ships the old `<img>` — both were live failure
+ * modes on this exact block (OBRS-1021 / OBRS-1023 / OBRS-1028).
+ */
+describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
+  let fixture: ComponentFixture<HomeBookingComponent>;
+  let component: HomeBookingComponent;
+  let store: any;
+
+  beforeEach(async () => {
+    store = createStoreStubWithValue([STATION_1, STATION_2, STATION_3]);
+
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        DropdownObrsPassengerComponent,
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: store },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(HomeBookingComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  /** The rendered control, not the component instance. Returns null when the
+   *  template still ships a non-interactive element — which is the bug. */
+  function swapButton(): HTMLButtonElement | null {
+    const de = fixture.debugElement.query(By.css('app-station-swap-button button'));
+    return de ? (de.nativeElement as HTMLButtonElement) : null;
+  }
+
+  it('renders a real <button>, not a decorative <img>', () => {
+    const button = swapButton();
+
+    expect(button).not.toBeNull();
+    expect(button!.tagName).toBe('BUTTON');
+    // `type` must be explicit: a bare <button> inside a form submits it.
+    expect(button!.getAttribute('type')).toBe('button');
+    // The accessible name is a translated KEY, never a literal in the template.
+    expect(button!.getAttribute('aria-label')).toBe('COMMON.SWAP_STATIONS');
+  });
+
+  it('AC#2: clicking it swaps startStationId and stopStationId', () => {
+    component.onStartStationChange(STATION_1);
+    component.onEndStationChange(STATION_2);
+    fixture.detectChanges();
+
+    swapButton()!.click();
+    fixture.detectChanges();
+
+    expect(component.getFormValue('startStationId')).toBe(STATION_2.id);
+    expect(component.getFormValue('stopStationId')).toBe(STATION_1.id);
+  });
+
+  it('AC#3: the option lists follow the swap — each side drops the other side', () => {
+    component.onStartStationChange(STATION_1);
+    component.onEndStationChange(STATION_2);
+    fixture.detectChanges();
+
+    swapButton()!.click();
+    fixture.detectChanges();
+
+    expect(component.startProvinceStationList.map((s) => s.id)).not.toContain(STATION_1.id);
+    expect(component.startProvinceStationList.map((s) => s.id)).toContain(STATION_2.id);
+    expect(component.endProvinceStationList.map((s) => s.id)).not.toContain(STATION_2.id);
+    expect(component.endProvinceStationList.map((s) => s.id)).toContain(STATION_1.id);
+  });
+
+  it('AC#2: the pickers render the swapped station, not just the model', () => {
+    component.onStartStationChange(STATION_1);
+    component.onEndStationChange(STATION_2);
+    fixture.detectChanges();
+
+    swapButton()!.click();
+    fixture.detectChanges();
+
+    const pickers = fixture.debugElement.queryAll(By.css('app-dropdown-group-obrs'));
+    // [0] = origin, [1] = destination — the two inside `.station-group`.
+    expect(pickers[0].componentInstance.value).toBe(STATION_2.id);
+    expect(pickers[1].componentInstance.value).toBe(STATION_1.id);
+  });
+
+  it('AC#7 must-NOT: disabled while BOTH fields are empty', () => {
+    expect(component.getFormValue('startStationId')).toBe('');
+    expect(component.getFormValue('stopStationId')).toBe('');
+
+    expect(component.canSwapStations).toBeFalse();
+    expect(swapButton()!.disabled).toBeTrue();
+  });
+
+  it('one side filled is still swappable — it moves that station across', () => {
+    component.onStartStationChange(STATION_1);
+    fixture.detectChanges();
+
+    expect(swapButton()!.disabled).toBeFalse();
+
+    swapButton()!.click();
+    fixture.detectChanges();
+
+    expect(component.getFormValue('startStationId')).toBe('');
+    expect(component.getFormValue('stopStationId')).toBe(STATION_1.id);
+  });
+
+  it('AC#6 must-NOT: swapping does not fire a search', () => {
+    component.onStartStationChange(STATION_1);
+    component.onEndStationChange(STATION_2);
+    fixture.detectChanges();
+
+    const dispatch = spyOn(store, 'dispatch');
+    const navigate = spyOn(TestBed.inject(Router), 'navigate');
+
+    swapButton()!.click();
+    fixture.detectChanges();
+
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  // Reported on review, 2026-08-05: the button reads as floating above the two
+  // fields. `.station-group` is `align-items: center`, and its flex items are
+  // the label+field GROUPS — so an unpositioned button centres on the group,
+  // well above the field's own centre line. Home used to hide that with
+  // `margin-top: 30px`, correct at exactly one breakpoint. The rule now lives in
+  // `app-station-swap-button`; this pins the observable consequence, so a call
+  // site that re-adds a vertical nudge fails here rather than on someone's eye.
+  //
+  // OBRS-1038 REWROTE IT, and why is worth stating because it decides what the
+  // test can prove. The bar now stacks below 992px, and that is a VIEWPORT
+  // query: Karma's headless window is 800px wide, so setting the fixture to
+  // 1200px does not put this test in the row branch. The original assertion
+  // (`fields[0].top === fields[1].top`) started failing here for exactly that
+  // reason, on a layout that is correct.
+  //
+  // So it now asserts the invariant in whichever mode the runner is really in.
+  // The two modes are NOT the same claim, because the layouts are not: in a row
+  // the button's centre is on the SEAM of the merged bar and level with the
+  // FIELDS (never with the taller label+field group — that was the OBRS-1035
+  // defect); stacked, there is no seam to sit on, because the lower field's
+  // label sits between the two boxes, so it straddles the upper field's bottom
+  // edge at the right end. Both are checked against the field boxes, which is
+  // what makes either of them fail when a call site re-adds a nudge.
+  //
+  // The row branch therefore does not run in CI. Its coverage is
+  // e2e/tests/obrs-1038-station-seam.spec.ts, which sets a real 1280px viewport.
+  // This keeps both branches anyway: a local `ng test` on a wide window takes
+  // the row one, and the column one is all the parcel screen can ever have (no
+  // e2e lane reaches it — `features.onlineParcelBooking` is off everywhere).
+  it('centres on the join between the two fields, level with the fields themselves', () => {
+    // Fixed container width so the row cannot wrap — "same centre line" is
+    // meaningless once the button is on a flex line of its own.
+    const root = fixture.nativeElement as HTMLElement;
+    root.style.display = 'block';
+    root.style.width = '1200px';
+    fixture.detectChanges();
+
+    const host = fixture.debugElement.query(By.css('app-station-swap-button'))
+      .nativeElement as HTMLElement;
+    const fields = Array.from(
+      root.querySelectorAll('app-dropdown-group-obrs button.dropdown-btn')
+    ).slice(0, 2) as HTMLElement[];
+    // A typo'd selector must fail here, not sail through an empty loop.
+    expect(fields.length).toBe(2);
+
+    const box = (el: HTMLElement) => el.getBoundingClientRect();
+    const centreX = (el: HTMLElement) => box(el).left + box(el).width / 2;
+    const centreY = (el: HTMLElement) => box(el).top + box(el).height / 2;
+
+    if (window.matchMedia('(max-width: 992px)').matches) {
+      // Stacked: one column, the seam is horizontal.
+      // No seam exists here: the lower field's LABEL sits between the two
+      // boxes. The button straddles the upper field's bottom edge instead, at
+      // the right end, where that left-aligned label has no text.
+      expect(box(fields[0]).left).toBe(box(fields[1]).left);
+
+      expect(Math.abs(centreY(host) - box(fields[0]).bottom)).toBeLessThanOrEqual(1);
+      expect(centreX(host)).toBeGreaterThan(centreX(fields[0]));
+      expect(box(host).right).toBeLessThanOrEqual(box(fields[0]).right);
+    } else {
+      // Row: one bar, the seam is vertical.
+      expect(box(fields[0]).top).toBe(box(fields[1]).top);
+      const seamX = (box(fields[0]).right + box(fields[1]).left) / 2;
+
+      expect(Math.abs(centreX(host) - seamX)).toBeLessThanOrEqual(1);
+      for (const field of fields) {
+        expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
+      }
+    }
   });
 });

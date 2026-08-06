@@ -90,6 +90,37 @@
     border: 2px solid #fff;
   }
 
+  // OBRS-905 — the direction arrow. Additive to the halo/dot pair above
+  // (design-system §12 new-pattern-log entry), never replaces them. Sized to
+  // the SAME 36×36 box as the halo (`inset: 0`) so its own centre is the
+  // marker's centre and rotating the SPAN (not a pseudo-element, not the
+  // marker root — see the two Trap comments on syncHeading()/buildIcon()
+  // above in the .ts) swings the triangle drawn at its top edge around that
+  // centre with zero extra math. Colour comes from the same status token the
+  // dot already uses (`--fleet-heading-fill`, set inline per status in
+  // buildIcon()) — no new hex, and this component stays deliberately
+  // un-dark-themed for the same "tiles stay light" reason as the dot/halo
+  // above (no dark override exists for the success/warning/danger *-text
+  // tokens at chip scale — see design-system.md §2.4).
+  .fleet-marker-heading {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 8px solid var(--fleet-heading-fill, var(--admin-success-text));
+    }
+  }
+
   .fleet-marker-overlay {
     position: absolute;
     top: -4px;
@@ -115,5 +146,50 @@
   .fleet-marker-popup-time {
     color: var(--admin-muted);
     font-size: 0.85em;
+  }
+
+  // OBRS-1070 AC3 — the always-on compact label hanging under each dot.
+  // Sized DOWN from Leaflet's default tooltip on purpose: the depot parks the
+  // whole fleet in one spot, so these overlap exactly when the screen is
+  // busiest. Two short tokens only; full detail is on hover/click.
+  //
+  // background/colour are deliberately NOT set here — Leaflet's own
+  // `.leaflet-tooltip` default (white surface, dark text) is already correct
+  // against the tiles, which stay light in BOTH themes (ADR 0024). An
+  // --admin-* token would invert to dark and erase the label in dark mode,
+  // the same trap the .fleet-marker-dot ring comment above warns about.
+  .fleet-marker-label {
+    padding: 1px 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+
+    // No callout arrow: this label hangs off its own dot, which is already the
+    // pointer. Leaflet draws the arrow via .leaflet-tooltip-bottom:before.
+    &::before {
+      display: none;
+    }
+  }
+
+  .fleet-marker-label-speed {
+    margin-left: 6px;
+    font-weight: 400;
+    opacity: 0.75;
+  }
+
+  // OBRS-1070 AC1 — the hover tooltip carries the SAME markup as the popup and
+  // deliberately sets no width rules of its own.
+  //
+  // It briefly had `white-space: normal; max-width: 220px`, on the theory that
+  // Leaflet's default nowrap would run a long status off the canvas edge.
+  // Captured on SIT, the opposite happened: the content is one <p> per fact, so
+  // under `normal` the shrink-to-fit box collapsed to ~65px and wrapped every
+  // Thai line mid-phrase ("ความเร็ว: 45 กม./ ชม."). Leaflet's own nowrap puts
+  // each fact on one short line and sizes the box to the longest — which is
+  // exactly how the click popup already reads. Do not re-touch the wrapping
+  // here without capturing the result: the longest string in this box is a
+  // status-chip label, not prose.
+  .fleet-marker-detail {
+    font-size: 0.8rem;
   }
 }

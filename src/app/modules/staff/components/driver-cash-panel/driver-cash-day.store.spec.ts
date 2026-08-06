@@ -25,6 +25,8 @@ const DAY_RESP: DriverCashDayRespDto = {
   perHeadTotal: '0.00',
   expensePaidTotal: '0.00',
   parcelRemitTotal: '0.00',
+  // OBRS-992/OBRS-1053: already INSIDE expectedReturnAmount, never an addend.
+  parcelClawbackTotal: '0.00',
   expectedReturnAmount: '0.00',
   returnedAmount: null,
   returnedAt: null,

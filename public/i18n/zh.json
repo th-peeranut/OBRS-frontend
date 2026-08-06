@@ -411,6 +411,7 @@
     "THEME_TOGGLE": "切换深色模式",
     "CLEAR": "清除",
     "CALENDAR_ICON_ALT": "日历图标",
+    "SWAP_STATIONS": "交换出发地和目的地",
     "CLOSE": "关闭",
     "LOADING": "加载中…",
     "READ_PRIVACY_POLICY": "阅读隐私政策",
@@ -1285,6 +1286,50 @@
           "PAYEE": "销售人员",
           "TOTAL": "合计"
         }
+      },
+      "PARCEL_SHARE_CLAWBACKS": {
+        "TITLE": "包裹分成追回",
+        "SUBTITLE": "包裹取消并向客户全额退款后，司机和销售人员必须退回的分成 — 司机的部分在每日现金结算中自动扣回，销售人员的部分需人工收回。",
+        "FILTER_LABEL": "状态",
+        "FILTER": {
+          "OUTSTANDING": "待收回",
+          "COLLECTED": "已收回",
+          "ALL": "全部"
+        },
+        "COL": {
+          "ROLE": "角色",
+          "PAYEE": "收款人",
+          "DATE": "日期",
+          "AMOUNT": "金额",
+          "STATUS": "状态",
+          "CHANNEL": "收回方式",
+          "ACTION": "操作"
+        },
+        "ROLE": {
+          "DRIVER": "司机",
+          "SALESPERSON": "销售人员"
+        },
+        "STATUS": {
+          "OUTSTANDING": "待收回",
+          "COLLECTED": "已收回"
+        },
+        "CHANNEL": {
+          "DRIVER_DAILY_RETURN": "每日现金结算扣回",
+          "MANUAL": "人工收回"
+        },
+        "PAYEE_UNKNOWN": "未知",
+        "NOTE_PLACEHOLDER": "备注（选填）",
+        "COLLECT_BTN": "标记为已收回",
+        "CONFIRM_TITLE": "确认分成已退回？",
+        "CONFIRM_TEXT": "将记录 {{payee}} 已退回 {{amount}}，且无法撤销。",
+        "SUCCESS": "已记录分成收回。",
+        "EMPTY": "暂无包裹分成追回记录。",
+        "LOAD_FAILED": "无法加载包裹分成追回记录，请重试。",
+        "ERROR": {
+          "ALREADY_COLLECTED": "该追回记录已被收回。",
+          "NOT_FOUND": "找不到该追回记录。",
+          "COLLECT_FAILED": "无法记录收回，请重试。"
+        }
       }
     },
     "SETTLEMENTS": {
@@ -1421,7 +1466,8 @@
           "CONFIRM_TITLE": "确认司机现金归还？",
           "CONFIRM_TEXT": "将记录归还金额为 {{amount}}，此操作无法撤销。",
           "SUCCESS": "司机现金日已标记为已归还。",
-          "ALREADY_RETURNED": "该日已完成归还。"
+          "ALREADY_RETURNED": "该日已完成归还。",
+          "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）"
         },
         "ERROR": {
           "REASON_REQUIRED": "归还金额与预期不符时必须填写原因。",
@@ -2164,7 +2210,8 @@
       "MY_BOOKINGS": "我的预订",
       "MY_PARCELS": "我的包裹",
       "ACCOUNT": "我的账户",
-      "MY_REPORTS": "我的报告"
+      "MY_REPORTS": "我的报告",
+      "SIGNED_IN_AS": "当前登录账号"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "单程",
@@ -3050,7 +3097,7 @@
       "SUBMITTING": "提交中…",
       "VALIDATION": {
         "WEIGHT_POSITIVE": "重量必须大于 0。",
-        "WEIGHT_MAX": "重量不能超过 100 公斤。",
+        "WEIGHT_MAX": "重量不能超过 {{max}} 公斤。",
         "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空。",
         "DIMENSION_POSITIVE": "尺寸必须大于 0。"
       },
@@ -3290,7 +3337,7 @@
     },
     "FLEET_MAP": {
       "SUBTITLE": "在同一页面查看所有车辆的实时位置",
-      "CENTER_ON_FLEET": "居中显示车队",
+      "CENTER_ON_FLEET": "显示所有车辆",
       "VEHICLE_LIST_TITLE": "车辆列表",
       "MAP_UNAVAILABLE": "地图暂不可用 — 下方车辆状态仍为实时数据",
       "STATUS": {
@@ -3308,15 +3355,29 @@
       "EMPTY_FLEET_BANNER_BODY": "一旦为车辆安装并配置追踪器，位置将显示在此处",
       "REFRESH_FAILED_BANNER": "无法刷新 — 显示 {{time}} 的数据",
       "LOAD_FAILED": "无法加载车辆位置",
+      "SPEED_VALUE": "{{value}} 公里/小时",
       "COL": {
         "PLATE": "车牌",
         "STATUS": "状态",
+        "SPEED": "速度",
         "LAST_UPDATE": "最后更新"
       },
       "POPUP": {
         "SPEED": "速度：{{value}} 公里/小时",
         "ENGINE_ON": "引擎运转中",
-        "ENGINE_OFF": "引擎已关闭"
+        "ENGINE_OFF": "引擎已关闭",
+        "DIRECTION": "朝{{direction}}行驶",
+        "DIRECTION_LAST_KNOWN": "最后已知方向：{{direction}}"
+      },
+      "COMPASS": {
+        "N": "北",
+        "NE": "东北",
+        "E": "东",
+        "SE": "东南",
+        "S": "南",
+        "SW": "西南",
+        "W": "西",
+        "NW": "西北"
       }
     },
     "DRIVER_CASH": {
@@ -3325,7 +3386,8 @@
         "PER_HEAD": "人头费",
         "EXPENSE": "支出",
         "NET": "现金净额",
-        "PARCEL_REMIT": "包裹汇款"
+        "PARCEL_REMIT": "包裹汇款",
+        "PARCEL_CLAWBACK": "包裹分成追回"
       },
       "ADVANCE": {
         "ACTION_LABEL": "现金预支",
@@ -3414,26 +3476,18 @@
       "SUBMIT": "确认包裹信息",
       "SUBMITTING": "正在提交…"
     },
-    "PROHIBITED": {
-      "TITLE": "违禁物品",
-      "FLAMMABLE": "易燃液体/气体",
-      "EXPLOSIVE": "爆炸物或烟花",
-      "WEAPON": "武器或武器零件",
-      "NARCOTIC": "毒品或管制物品",
-      "CORPSE": "尸体或人体部分"
-    },
     "VALIDATION": {
       "REQUIRED": "此字段为必填项",
       "PHONE_INVALID": "请输入10-15位数字",
       "THAI_MOBILE_INVALID": "请输入有效的泰国手机号码（以 06、08 或 09 开头，例如 0812345678），包裹到达通知短信将发送至该号码。",
       "WEIGHT_POSITIVE": "重量必须大于0",
-      "WEIGHT_MAX": "重量不得超过100公斤",
+      "WEIGHT_MAX": "重量不得超过{{max}}公斤",
       "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空",
       "FROM_TO_SAME": "起点站和终点站不能相同"
     },
     "ERROR": {
       "PROHIBITED_NOT_ACK": "请先确认包裹不含违禁物品",
-      "WEIGHT_EXCEEDS_MAX": "包裹重量不得超过100公斤",
+      "WEIGHT_EXCEEDS_MAX": "包裹重量超过规定上限",
       "RECIPIENT_REQUIRED": "请完整填写收件人姓名和电话",
       "RECIPIENT_PHONE_INVALID": "收件人电话无效，请输入泰国手机号码，包裹到达通知短信将发送至该号码。",
       "STOP_ORDER_INVALID": "卸货点必须在同一路线上位于取件点之后，请重新选择",
@@ -3474,6 +3528,21 @@
       "WEIGHT_VALUE": "{{weight}} 公斤",
       "AMOUNT_PAID": "已付金额",
       "AMOUNT_DUE": "应付金额"
+    }
+  },
+  "PARCEL": {
+    "PROHIBITED": {
+      "TITLE": "违禁物品",
+      "ITEM": {
+        "FLAMMABLE": "易燃液体/气体",
+        "EXPLOSIVE": "爆炸物或烟花",
+        "WEAPON": "武器或武器零件",
+        "NARCOTIC": "毒品或管制物品",
+        "CORPSE": "尸体或人体部分"
+      },
+      "UNLISTED": "“{{slug}}”类物品",
+      "EMPTY": "系统目前未设定违禁物品类别，寄件前请先咨询工作人员。",
+      "LOAD_ERROR": "无法加载违禁物品清单，寄件前请先咨询工作人员。"
     }
   }
 }

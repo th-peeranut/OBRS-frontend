@@ -92,6 +92,16 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
     return toCents(this.returnedAmountInput);
   }
 
+  /**
+   * OBRS-1053 — same rule as the staff summary pill: a `0.00` breakdown line
+   * explains nothing, and every day on prod is `0.00` today (both parcel-share
+   * percentages are still at their `0` default, so OBRS-992 never writes a
+   * clawback row). Shown only when there is something to explain.
+   */
+  protected get hasParcelClawback(): boolean {
+    return Number(this.detail?.parcelClawbackTotal ?? 0) > 0;
+  }
+
   protected get discrepancyCents(): number | null {
     const returned = this.returnedCents;
     if (returned === null || !this.detail) {

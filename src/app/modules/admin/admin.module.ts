@@ -37,6 +37,7 @@ import { PromotionListTableComponent } from './pages/promotions/promotion-list-t
 import { PromotionFormModalComponent } from './pages/promotions/promotion-form-modal/promotion-form-modal.component';
 import { PromotionDeactivateModalComponent } from './pages/promotions/promotion-deactivate-modal/promotion-deactivate-modal.component';
 import { ReportsPageComponent } from './pages/reports/reports-page.component';
+import { ParcelShareClawbacksSectionComponent } from './pages/reports/parcel-share-clawbacks-section/parcel-share-clawbacks-section.component';
 import { RevenueAnalyticsPageComponent } from './pages/revenue-analytics/revenue-analytics-page.component';
 import { BookingTrendPageComponent } from './pages/booking-trend/booking-trend-page.component';
 import { RoutePerformancePageComponent } from './pages/route-performance/route-performance-page.component';
@@ -417,6 +418,7 @@ export const adminRoutes: Routes = [
     PromotionFormModalComponent,
     PromotionDeactivateModalComponent,
     ReportsPageComponent,
+    ParcelShareClawbacksSectionComponent,
     RevenueAnalyticsPageComponent,
     BookingTrendPageComponent,
     RoutePerformancePageComponent,

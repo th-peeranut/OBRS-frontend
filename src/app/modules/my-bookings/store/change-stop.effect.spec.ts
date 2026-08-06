@@ -12,6 +12,7 @@ import { StationService } from '../../../services/station/station.service';
 import { RouteMapService } from '../../../services/route-map/route-map.service';
 import { AlertService } from '../../../shared/services/alert.service';
 import { ResponseAPI } from '../../../shared/interfaces/response.interface';
+import { StationApi } from '../../../shared/interfaces/station.interface';
 import { ChangeStopResult } from '../../../shared/interfaces/change-stop.interface';
 import { MyBookingDto } from '../../../shared/interfaces/my-booking.interface';
 import { BookingTicketsData } from '../../../shared/interfaces/booking-ticket.interface';
@@ -214,6 +215,21 @@ describe('ChangeStopEffect', () => {
         loadChangeStopTicketsSuccess({ tickets: [{ ticketId: 15, seatNumber: '4' }] }),
       ]);
     });
+  });
+
+  // OBRS-1056: pins the ARGUMENT at this call site. StationService's own spec
+  // proves `getAll(true)` sets SKIP_GLOBAL_LOADING_ALERT; only this assertion
+  // catches someone dropping the `true` here and bringing back the blocking
+  // popup that covered this dialog and swallowed its Escape key.
+  it('loadStopsLookupOnOpen$ loads the stops lookup without the global loading popup', () => {
+    const stationService = TestBed.inject(StationService) as jasmine.SpyObj<StationService>;
+    stationService.getAll.and.returnValue(of({ code: 200, message: 'OK', data: [] } as ResponseAPI<StationApi[]>));
+
+    effect.loadStopsLookupOnOpen$.subscribe();
+
+    actionsSubject.next(openChangeStopDialog({ bookingId: 5 }));
+
+    expect(stationService.getAll).toHaveBeenCalledWith(true);
   });
 
   describe('code-less failure branching (OBRS-170)', () => {

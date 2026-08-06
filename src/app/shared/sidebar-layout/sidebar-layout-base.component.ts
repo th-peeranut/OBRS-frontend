@@ -5,6 +5,7 @@ import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { TranslateService } from '@ngx-translate/core';
+import { PersonalMenuItem, buildPersonalMenuItems } from '../lib/personal-menu-items';
 
 /**
  * Abstract base for the shared sidebar-shell chrome (AdminLayoutComponent
@@ -68,6 +69,25 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   protected readonly translate = inject(TranslateService);
   protected readonly themeService = inject(ThemeService);
   protected readonly elementRef = inject(ElementRef<HTMLElement>);
+
+  // ── Profile menu: personal ("ตัวฉัน") links ─────────────────────────────────
+  // The SAME model the public navbar renders (shared/lib/personal-menu-items.ts)
+  // — a signed-in driver/salesperson/owner/admin never sees that navbar
+  // (getHomeRoute sends them straight to /staff or /admin), so without this the
+  // shells offered no path at all to pages the router already lets them open.
+  // Missing WIRING, not a permission gap.
+  //
+  // Called ONCE here, into a stable field — NEVER from the template. A fresh
+  // array per change-detection cycle bound to a loop containing router
+  // directives never lets change detection stabilise and hard-locks the browser
+  // (the same failure class StaffLayoutComponent.navItems and
+  // AdminLayoutComponent.navItems/navLinkActiveMatch already guard against).
+  //
+  // Declared BELOW the inject() block on purpose: field initialisers run top to
+  // bottom, so anything above it sees `this.authService` as undefined. The
+  // builder only reads `environment` today, but the day this menu becomes
+  // role-aware the dependency has to already be in scope.
+  protected readonly personalMenuItems: PersonalMenuItem[] = buildPersonalMenuItems();
 
   protected get userInitials(): string {
     const username = this.authService.getUsername() ?? '';

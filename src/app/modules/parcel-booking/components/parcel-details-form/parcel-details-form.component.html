@@ -32,8 +32,10 @@
           step="0.1"
           formControlName="weightKg"
           />
+          <!-- OBRS-629 AC-3: weightMaxParams carries the server's parcel.max_weight_kg;
+               the message used to read "100 kg" from i18n regardless of the config. -->
           @if (fieldError('weightKg'); as err) {
-            <div class="text-error">{{ err | translate }}</div>
+            <div class="text-error">{{ err | translate: weightMaxParams }}</div>
           }
         </div>
 
@@ -104,15 +106,24 @@
         </div>
 
         <section class="parcel-details-form__prohibited" aria-labelledby="prohibited-title">
-          <h2 id="prohibited-title">{{ "PARCEL_BOOKING.PROHIBITED.TITLE" | translate }}</h2>
+          <h2 id="prohibited-title">{{ "PARCEL.PROHIBITED.TITLE" | translate }}</h2>
+          <!-- OBRS-629 AC-4: rows come from GET /api/parcel-policy, i.e. from the same
+               parcel.prohibited_categories config ParcelIntakeService blocks on. When the
+               read fails or the config is empty we say so instead of showing a list —
+               an acknowledgement checkbox above a plausible-but-stale list is the defect. -->
           <ul class="parcel-details-form__prohibited-list">
-            @for (category of prohibitedCategories; track category) {
+            @for (category of prohibitedCategories; track category.slug) {
               <li>
                 <span class="material-symbols-outlined" aria-hidden="true">{{ category.icon }}</span>
-                <span>{{ category.i18nKey | translate }}</span>
+                <span>{{ category.i18nKey | translate: category.params }}</span>
               </li>
             }
           </ul>
+          @if (policyLoaded && !prohibitedCategories.length) {
+            <p class="text-error">
+              {{ (prohibitedLoadFailed ? "PARCEL.PROHIBITED.LOAD_ERROR" : "PARCEL.PROHIBITED.EMPTY") | translate }}
+            </p>
+          }
 
           <div class="form-check">
             <input

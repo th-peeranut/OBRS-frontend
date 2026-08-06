@@ -9,6 +9,7 @@ import {
   resolveFleetVehicleStatus,
 } from '../../../../shared/lib/fleet-vehicle-status';
 import { fleetRelativeTime, fleetRelativeTimeLabel } from '../../../../shared/lib/fleet-relative-time';
+import { compassPointFromCourse, normalizeCourse } from '../../../../shared/lib/fleet-heading';
 import {
   FLEET_MAP_DEFAULT_CENTER,
   FLEET_MAP_DEFAULT_ZOOM,
@@ -17,7 +18,7 @@ import {
   FLEET_MAP_TILE_ATTRIBUTION,
   fleetMapTileUrl,
 } from '../../pages/fleet-map/fleet-map.constants';
-import { FLEET_MARKER_COLORS, FLEET_MARKER_OPACITY } from './fleet-map-panel.constants';
+import { FLEET_HEADING_MIN_SPEED_KMH, FLEET_MARKER_COLORS, FLEET_MARKER_OPACITY } from './fleet-map-panel.constants';
 
 /** Minimal HTML-escape for values interpolated into a Leaflet popup's raw
  * HTML string (Popup.setContent treats a string as markup). Backend plate
@@ -57,6 +58,12 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
 
   private map: L.Map | null = null;
   private readonly markers = new Map<number, L.Marker>();
+  // OBRS-1070 — the always-on compact label (plate + speed). It is a STANDALONE
+  // L.Tooltip layer, not `marker.bindTooltip(..., {permanent: true})`, because a
+  // Leaflet layer holds exactly ONE bound tooltip and the marker's is already
+  // spent on the hover detail below. Keyed by vehicleId in lockstep with
+  // `markers` — every add/remove path must touch both.
+  private readonly labels = new Map<number, L.Tooltip>();
   private readonly markerStatuses = new Map<number, FleetVehicleStatus>();
   private hasFitOnce = false;
   private latestVehicles: FleetPositionRespDto[] = [];
@@ -92,6 +99,7 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
     this.map?.remove();
     this.map = null;
     this.markers.clear();
+    this.labels.clear();
     this.markerStatuses.clear();
   }
 
@@ -120,6 +128,7 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
         if (existing) {
           map.removeLayer(existing);
           this.markers.delete(vehicle.vehicleId);
+          this.removeLabel(map, vehicle.vehicleId);
           this.markerStatuses.delete(vehicle.vehicleId);
         }
         continue;
@@ -133,6 +142,20 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
       if (!marker) {
         marker = L.marker(latLng, { icon: this.buildIcon(status), opacity: this.opacityFor(status) }).addTo(map);
         marker.bindPopup('');
+        // OBRS-1070 AC1 — hover shows the SAME full detail the popup shows.
+        // Leaflet opens a non-permanent tooltip on `mouseover` by itself; no
+        // handler of ours is involved on the pointer path.
+        // `direction: 'auto'` (left/right by which half of the map the marker
+        // sits in), NOT 'top': Leaflet never flips a tooltip that would leave
+        // the canvas, and a vehicle near the top edge — measured on SIT, plate
+        // 16-8368 — had its detail box clipped by the panel edge.
+        marker.bindTooltip('', { direction: 'auto', className: 'fleet-marker-detail' });
+        // ...but `bindTooltip` ALSO wires `click` -> `_openTooltip` whenever
+        // `L.Browser.touch` is true (Layer.Tooltip.js `_initTooltipInteractions`),
+        // and staff work this screen on a tablet. Without this, one tap opens
+        // the popup AND the tooltip — two boxes with identical content stacked
+        // on the same marker. Registered AFTER bindTooltip so it runs last.
+        marker.on('click', () => marker?.closeTooltip());
         this.markers.set(vehicle.vehicleId, marker);
       } else {
         // The SAME L.Marker instance persists across every poll tick — this
@@ -146,10 +169,23 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
         }
       }
 
+      // OBRS-905 — mutates the heading SPAN's inline style directly, every
+      // tick, exactly like the content sync below and for the identical
+      // reason: `course`/`speed` change every poll while `status` mostly
+      // doesn't, so baking a rotation into buildIcon() would freeze it at
+      // the first-seen value (the setIcon() condition above is untouched).
+      this.syncHeading(marker, vehicle, status);
+
       // .setPopupContent() ALWAYS — this is what keeps an open popup's
       // "last update" text from freezing between polls (§9.6: no separate
-      // label-refresh timer).
-      marker.setPopupContent(this.buildPopupHtml(vehicle, status));
+      // label-refresh timer). OBRS-1070 extends the same rule to the hover
+      // tooltip and the permanent label: CONTENT is mutated every tick,
+      // the layer object never is (the .setIcon() condition above is
+      // untouched — a speed/time change must not rebuild the DivIcon).
+      const detailHtml = this.buildDetailHtml(vehicle, status);
+      marker.setPopupContent(detailHtml);
+      marker.setTooltipContent(detailHtml);
+      this.syncLabel(map, vehicle, latLng);
       this.markerStatuses.set(vehicle.vehicleId, status);
     }
 
@@ -160,6 +196,7 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
       if (!seenIds.has(vehicleId)) {
         map.removeLayer(marker);
         this.markers.delete(vehicleId);
+        this.removeLabel(map, vehicleId);
         this.markerStatuses.delete(vehicleId);
       }
     }
@@ -199,10 +236,23 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
     const overlay = spec?.overlayIcon
       ? `<span class="material-symbols-outlined fleet-marker-overlay" aria-hidden="true">${spec.overlayIcon}</span>`
       : '';
+    // OBRS-905 — the heading arrow is additive, LIVE-only (Trap 3/AC4: a
+    // stale OFFLINE/GPS_LOST fix must never imply direction), so this span
+    // only exists in the DOM at all for LIVE — not merely hidden for the
+    // other statuses. Starts hidden (`display: none`); syncHeading() below
+    // decides per-tick, off `speed`, whether to reveal + rotate it. This is
+    // called from buildIcon() (status-gated, rebuilt only on status change)
+    // deliberately — only WHETHER the slot exists depends on status; the
+    // rotation itself never goes through here (Trap 2).
+    const heading =
+      status === 'LIVE'
+        ? `<span class="fleet-marker-heading" style="--fleet-heading-fill: var(${fillVar}); display: none"></span>`
+        : '';
 
     const html = `
       <span class="fleet-marker-halo" style="background: var(${haloVar})"></span>
       <span class="fleet-marker-dot" style="background: var(${fillVar})"></span>
+      ${heading}
       ${overlay}
     `;
 
@@ -215,7 +265,88 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
     });
   }
 
-  private buildPopupHtml(vehicle: FleetPositionRespDto, status: FleetVehicleStatus): string {
+  /** OBRS-905 (Trap 2) — mutates the heading span's inline style directly on
+   * the marker's live DOM element (`marker.getElement()`), never touches the
+   * marker's ROOT element (Trap 1: Leaflet owns that element's `transform`
+   * for pan/zoom `translate3d`, and a `rotate()` there would fight it) and
+   * never rebuilds the DivIcon (Trap 2: that only happens on status change).
+   * No-op when the current status never got a heading slot from buildIcon()
+   * (OFFLINE/GPS_LOST) — the querySelector simply finds nothing. */
+  private syncHeading(marker: L.Marker, vehicle: FleetPositionRespDto, status: FleetVehicleStatus): void {
+    const heading = marker.getElement()?.querySelector<HTMLElement>('.fleet-marker-heading');
+    if (!heading) {
+      return;
+    }
+    const course = normalizeCourse(vehicle.course);
+    const speed = vehicle.speed ?? 0;
+    const showArrow = status === 'LIVE' && speed > FLEET_HEADING_MIN_SPEED_KMH && course !== null;
+    heading.style.display = showArrow ? '' : 'none';
+    if (showArrow) {
+      heading.style.transform = `rotate(${course}deg)`;
+    }
+  }
+
+  /** OBRS-1070 AC3 — creates the permanent label on first sight, then mutates
+   * the SAME L.Tooltip on every later tick (position + content). Nothing here
+   * ever constructs a second layer for a vehicle that already has one. */
+  private syncLabel(map: L.Map, vehicle: FleetPositionRespDto, latLng: L.LatLngExpression): void {
+    let label = this.labels.get(vehicle.vehicleId);
+    if (!label) {
+      label = L.tooltip({
+        permanent: true,
+        // Non-interactive on purpose: an interactive tooltip sits in the
+        // pointer path and would swallow the `mouseover` that AC1's hover
+        // detail depends on, and the click that opens the popup (AC2).
+        interactive: false,
+        direction: 'bottom',
+        offset: [0, 16],
+        className: 'fleet-marker-label',
+      })
+        .setLatLng(latLng)
+        .setContent('');
+      label.addTo(map);
+      this.labels.set(vehicle.vehicleId, label);
+    } else {
+      label.setLatLng(latLng);
+    }
+    label.setContent(this.buildLabelHtml(vehicle));
+  }
+
+  private removeLabel(map: L.Map, vehicleId: number): void {
+    const label = this.labels.get(vehicleId);
+    if (label) {
+      map.removeLayer(label);
+      this.labels.delete(vehicleId);
+    }
+  }
+
+  /** The always-on compact label: plate, plus speed only when there IS one.
+   * Deliberately NOT the full detail — with the fleet parked at the depot the
+   * labels sit on top of each other, so anything beyond two short tokens is
+   * unreadable exactly when it matters (AC3). Full detail lives on
+   * hover/click. AC4: a null speed drops the whole token rather than
+   * rendering a unit with no number. */
+  private buildLabelHtml(vehicle: FleetPositionRespDto): string {
+    const speedText =
+      vehicle.speed !== null
+        ? this.translate.instant('STAFF.FLEET_MAP.SPEED_VALUE', { value: vehicle.speed })
+        : '';
+
+    const parts = [
+      `<span class="fleet-marker-label-plate">${escapeHtml(vehicle.numberPlate)}</span>`,
+      speedText ? `<span class="fleet-marker-label-speed">${escapeHtml(speedText)}</span>` : '',
+    ].filter((part) => part.length > 0);
+
+    // Joined with a real space, not just the CSS margin: `margin-left` puts a
+    // visible gap on screen but leaves the two tokens fused in textContent, so
+    // a screen reader (and any copy-paste) reads "16-836868 km/h".
+    return parts.join(' ');
+  }
+
+  /** The full detail block, shared verbatim by the click popup (AC2) and the
+   * hover tooltip (AC1) — one builder so the two surfaces can never drift
+   * into phrasing the same fix differently. */
+  private buildDetailHtml(vehicle: FleetPositionRespDto, status: FleetVehicleStatus): string {
     const chip = fleetVehicleStatusChip(status);
     const statusLabel = this.translate.instant(chip.i18nKey);
     const speedLabel =
@@ -230,15 +361,40 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
           : '';
     const timeLabel = fleetRelativeTimeLabel(fleetRelativeTime(vehicle.recordedAt, new Date()));
     const timeText = this.translate.instant(timeLabel.key, timeLabel.params);
+    const directionText = this.buildDirectionText(vehicle, status);
 
     const rows = [
       `<p class="fleet-marker-popup-plate">${escapeHtml(vehicle.numberPlate)}</p>`,
       `<p class="fleet-marker-popup-status">${escapeHtml(statusLabel)}</p>`,
       speedLabel ? `<p>${escapeHtml(speedLabel)}</p>` : '',
+      directionText ? `<p>${escapeHtml(directionText)}</p>` : '',
       engineLabel ? `<p>${escapeHtml(engineLabel)}</p>` : '',
       `<p class="fleet-marker-popup-time">${escapeHtml(timeText)}</p>`,
     ].filter((row) => row.length > 0);
 
     return `<div class="fleet-marker-popup">${rows.join('')}</div>`;
+  }
+
+  /** OBRS-905 AC6 — direction as TEXT, decoupled from the arrow graphic on
+   * purpose: gated on `speed` (Trap 3, same GPS-noise reasoning as the arrow)
+   * but NOT on `status === 'LIVE'`, so a `GPS_LOST`/`OFFLINE` vehicle that
+   * was moving at its last fix still reports a direction — phrased as
+   * last-known rather than present-tense so it doesn't imply the position is
+   * still fresh. `buildDetailHtml` is only ever invoked for marker-eligible
+   * statuses (OFFLINE/GPS_LOST/LIVE — see FLEET_STATUS_HAS_MARKER), so no
+   * further status gating is needed here. */
+  private buildDirectionText(vehicle: FleetPositionRespDto, status: FleetVehicleStatus): string {
+    const speed = vehicle.speed ?? 0;
+    if (speed <= FLEET_HEADING_MIN_SPEED_KMH) {
+      return '';
+    }
+    const compassPoint = compassPointFromCourse(vehicle.course);
+    if (!compassPoint) {
+      return '';
+    }
+    const direction = this.translate.instant(`STAFF.FLEET_MAP.COMPASS.${compassPoint}`);
+    return status === 'LIVE'
+      ? this.translate.instant('STAFF.FLEET_MAP.POPUP.DIRECTION', { direction })
+      : this.translate.instant('STAFF.FLEET_MAP.POPUP.DIRECTION_LAST_KNOWN', { direction });
   }
 }

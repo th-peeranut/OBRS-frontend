@@ -29,12 +29,17 @@
                 [searchable]="true"
                 (currentValue)="onStartStationChange($event)"
               ></app-dropdown-group-obrs>
-              <!-- STATION ICON -->
-              <img
-                class="station-icon"
-                src="icons/passenger-station-gap.svg"
-                alt="Passenger Station Gap Icon"
-                />
+              <!-- SWAP ORIGIN/DESTINATION. OBRS-1035 — see the identical block
+              in home-booking.component.html. This filter bar is a copy of that
+              form and carried the same dead icon; fixing only Home would have
+              left it live on the results page, where a customer checking the
+              return leg is the likeliest person in the app to want a swap.
+              AC#6: swapping does NOT re-run the search — the results the user
+              is reading stay on screen until they press Search themselves. -->
+              <app-station-swap-button
+                [disabled]="!canSwapStations"
+                (swap)="onSwapStations()"
+              ></app-station-swap-button>
                 <!-- DROPDOWN STOP STATION -->
                 <app-dropdown-group-obrs
                   [isBorder]="true"

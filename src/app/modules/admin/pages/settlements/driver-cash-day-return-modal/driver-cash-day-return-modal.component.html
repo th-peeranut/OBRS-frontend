@@ -49,6 +49,16 @@
                 <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.EXPECTED' | translate }}</span>
                 <span class="admin-emphasis">{{ detail.expectedReturnAmount }}</span>
               </div>
+              <!-- OBRS-1053: the owner is about to collect an amount that is
+              higher than this day's own takings, and until now nothing on
+              this screen said why. Already INSIDE the expected amount above —
+              a breakdown line, never an addend. Hidden at zero. -->
+              @if (hasParcelClawback) {
+                <div class="settlement-detail-row" data-testid="driver-cash-return-parcel-clawback">
+                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.PARCEL_CLAWBACK' | translate }}</span>
+                  <span>{{ detail.parcelClawbackTotal }}</span>
+                </div>
+              }
             </div>
 
             @if (detail.entries.length > 0) {

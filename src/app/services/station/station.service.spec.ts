@@ -1,20 +1,55 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 
 import { StationService } from './station.service';
+import { SKIP_GLOBAL_LOADING_ALERT } from '../../shared/interceptors/http-context-tokens';
 
 describe('StationService', () => {
   let service: StationService;
+  let httpMock: HttpTestingController;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(StationService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
   });
 
   it('should be created', () => {
     expect(service).toBeTruthy();
+  });
+
+  // OBRS-1056. Asserts the token ON THE REQUEST, not the argument we passed:
+  // the defect was that no context object reached `HttpClient` at all, so the
+  // token fell back to its `() => false` default and `error.interceptor.ts`
+  // raised the blocking SweetAlert2 loading popup over an already-open dialog.
+  // Reading `req.request.context` is the only thing that distinguishes "opted
+  // out" from "never set".
+  it('opts the request out of the global loading alert when asked', () => {
+    service.getAll(true).subscribe();
+
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/stops'));
+    expect(req.request.context.get(SKIP_GLOBAL_LOADING_ALERT)).toBeTrue();
+    req.flush({ code: 200, message: 'OK', data: [] });
+  });
+
+  // The three non-modal callers (ProvinceEffect, DriverCashRatesStore,
+  // ParcelBookingPageComponent) still want the spinner, so the default must
+  // stay the interceptor's default.
+  it('leaves the global loading alert on by default', () => {
+    service.getAll().subscribe();
+
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/stops'));
+    expect(req.request.context.get(SKIP_GLOBAL_LOADING_ALERT)).toBeFalse();
+    req.flush({ code: 200, message: 'OK', data: [] });
   });
 });

@@ -411,6 +411,7 @@
     "THEME_TOGGLE": "Toggle dark mode",
     "CLEAR": "Clear",
     "CALENDAR_ICON_ALT": "Calendar Icon",
+    "SWAP_STATIONS": "Swap origin and destination",
     "CLOSE": "Close",
     "LOADING": "Loading…",
     "READ_PRIVACY_POLICY": "Read the Privacy Policy",
@@ -1285,6 +1286,50 @@
           "PAYEE": "Salesperson",
           "TOTAL": "Total"
         }
+      },
+      "PARCEL_SHARE_CLAWBACKS": {
+        "TITLE": "Parcel share clawbacks",
+        "SUBTITLE": "Shares the driver and salesperson must return after a parcel was cancelled and the customer fully refunded — the driver's is taken automatically with his daily cash return, the salesperson's has to be collected by hand.",
+        "FILTER_LABEL": "Status",
+        "FILTER": {
+          "OUTSTANDING": "Outstanding",
+          "COLLECTED": "Collected",
+          "ALL": "All"
+        },
+        "COL": {
+          "ROLE": "Role",
+          "PAYEE": "Payee",
+          "DATE": "Date",
+          "AMOUNT": "Amount",
+          "STATUS": "Status",
+          "CHANNEL": "Collected via",
+          "ACTION": "Action"
+        },
+        "ROLE": {
+          "DRIVER": "Driver",
+          "SALESPERSON": "Salesperson"
+        },
+        "STATUS": {
+          "OUTSTANDING": "Outstanding",
+          "COLLECTED": "Collected"
+        },
+        "CHANNEL": {
+          "DRIVER_DAILY_RETURN": "Daily cash return",
+          "MANUAL": "Collected by hand"
+        },
+        "PAYEE_UNKNOWN": "Unknown",
+        "NOTE_PLACEHOLDER": "Note (optional)",
+        "COLLECT_BTN": "Mark collected",
+        "CONFIRM_TITLE": "Confirm the share was handed back?",
+        "CONFIRM_TEXT": "This records that {{payee}} returned {{amount}}, and cannot be undone.",
+        "SUCCESS": "Clawback marked as collected.",
+        "EMPTY": "No parcel-share clawbacks.",
+        "LOAD_FAILED": "Unable to load parcel-share clawbacks. Please try again.",
+        "ERROR": {
+          "ALREADY_COLLECTED": "This clawback has already been collected.",
+          "NOT_FOUND": "That clawback no longer exists.",
+          "COLLECT_FAILED": "Unable to record the collection. Please try again."
+        }
       }
     },
     "SETTLEMENTS": {
@@ -1421,7 +1466,8 @@
           "CONFIRM_TITLE": "Confirm driver cash return?",
           "CONFIRM_TEXT": "Recording {{amount}} as returned. This cannot be undone.",
           "SUCCESS": "Driver cash day marked as returned.",
-          "ALREADY_RETURNED": "This day has already been returned."
+          "ALREADY_RETURNED": "This day has already been returned.",
+          "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)"
         },
         "ERROR": {
           "REASON_REQUIRED": "A reason is required when the returned amount does not match.",
@@ -2164,7 +2210,8 @@
       "MY_BOOKINGS": "My Bookings",
       "MY_PARCELS": "My Parcels",
       "ACCOUNT": "Account",
-      "MY_REPORTS": "My Reports"
+      "MY_REPORTS": "My Reports",
+      "SIGNED_IN_AS": "Signed in as"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "One-way",
@@ -3050,7 +3097,7 @@
       "SUBMITTING": "Submitting…",
       "VALIDATION": {
         "WEIGHT_POSITIVE": "Weight must be greater than 0.",
-        "WEIGHT_MAX": "Weight cannot exceed 100 kg.",
+        "WEIGHT_MAX": "Weight cannot exceed {{max}} kg.",
         "DIMENSIONS_ALL_OR_NONE": "Enter all three dimensions, or leave all three blank.",
         "DIMENSION_POSITIVE": "Dimension must be greater than 0."
       },
@@ -3290,7 +3337,7 @@
     },
     "FLEET_MAP": {
       "SUBTITLE": "See every vehicle's live position in one place",
-      "CENTER_ON_FLEET": "Center on fleet",
+      "CENTER_ON_FLEET": "Show all vehicles",
       "VEHICLE_LIST_TITLE": "Vehicles",
       "MAP_UNAVAILABLE": "Map unavailable — vehicle status below is still live.",
       "STATUS": {
@@ -3308,15 +3355,29 @@
       "EMPTY_FLEET_BANNER_BODY": "Positions will appear here once a tracker is installed and configured for a vehicle.",
       "REFRESH_FAILED_BANNER": "Unable to refresh — showing data from {{time}}",
       "LOAD_FAILED": "Unable to load fleet positions.",
+      "SPEED_VALUE": "{{value}} km/h",
       "COL": {
         "PLATE": "Plate",
         "STATUS": "Status",
+        "SPEED": "Speed",
         "LAST_UPDATE": "Last update"
       },
       "POPUP": {
         "SPEED": "Speed: {{value}} km/h",
         "ENGINE_ON": "Engine on",
-        "ENGINE_OFF": "Engine off"
+        "ENGINE_OFF": "Engine off",
+        "DIRECTION": "Heading {{direction}}",
+        "DIRECTION_LAST_KNOWN": "Last known direction: {{direction}}"
+      },
+      "COMPASS": {
+        "N": "north",
+        "NE": "northeast",
+        "E": "east",
+        "SE": "southeast",
+        "S": "south",
+        "SW": "southwest",
+        "W": "west",
+        "NW": "northwest"
       }
     },
     "DRIVER_CASH": {
@@ -3325,7 +3386,8 @@
         "PER_HEAD": "Per-head",
         "EXPENSE": "Expenses",
         "NET": "Net cash",
-        "PARCEL_REMIT": "Parcel remit"
+        "PARCEL_REMIT": "Parcel remit",
+        "PARCEL_CLAWBACK": "Parcel clawback"
       },
       "ADVANCE": {
         "ACTION_LABEL": "Cash advance",
@@ -3414,26 +3476,18 @@
       "SUBMIT": "Confirm parcel details",
       "SUBMITTING": "Submitting…"
     },
-    "PROHIBITED": {
-      "TITLE": "Prohibited items",
-      "FLAMMABLE": "Flammable liquids/gas",
-      "EXPLOSIVE": "Explosives or fireworks",
-      "WEAPON": "Weapons or weapon parts",
-      "NARCOTIC": "Narcotics or controlled substances",
-      "CORPSE": "Human remains"
-    },
     "VALIDATION": {
       "REQUIRED": "This field is required.",
       "PHONE_INVALID": "Enter 10-15 digits.",
       "THAI_MOBILE_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678). The arrival notice is sent to it by SMS.",
       "WEIGHT_POSITIVE": "Weight must be greater than 0.",
-      "WEIGHT_MAX": "Weight cannot exceed 100 kg.",
+      "WEIGHT_MAX": "Weight cannot exceed {{max}} kg.",
       "DIMENSIONS_ALL_OR_NONE": "Enter all three dimensions, or leave all three blank.",
       "FROM_TO_SAME": "Origin and destination stops cannot be the same."
     },
     "ERROR": {
       "PROHIBITED_NOT_ACK": "Please confirm your parcel has no prohibited items before continuing.",
-      "WEIGHT_EXCEEDS_MAX": "Parcel weight must not exceed 100 kg.",
+      "WEIGHT_EXCEEDS_MAX": "Parcel weight exceeds the configured limit.",
       "RECIPIENT_REQUIRED": "Please complete the recipient's name and phone.",
       "RECIPIENT_PHONE_INVALID": "Recipient phone is invalid. Enter a Thai mobile number — the arrival notice is sent to it by SMS.",
       "STOP_ORDER_INVALID": "Dropoff must be after pickup on the same route. Please choose again.",
@@ -3474,6 +3528,21 @@
       "WEIGHT_VALUE": "{{weight}} kg",
       "AMOUNT_PAID": "Amount paid",
       "AMOUNT_DUE": "Amount due"
+    }
+  },
+  "PARCEL": {
+    "PROHIBITED": {
+      "TITLE": "Prohibited items",
+      "ITEM": {
+        "FLAMMABLE": "Flammable liquids/gas",
+        "EXPLOSIVE": "Explosives or fireworks",
+        "WEAPON": "Weapons or weapon parts",
+        "NARCOTIC": "Narcotics or controlled substances",
+        "CORPSE": "Human remains"
+      },
+      "UNLISTED": "Items in the \"{{slug}}\" category",
+      "EMPTY": "No prohibited categories are configured right now. Please ask staff before consigning.",
+      "LOAD_ERROR": "The prohibited-item list could not be loaded. Please ask staff before consigning."
     }
   }
 }

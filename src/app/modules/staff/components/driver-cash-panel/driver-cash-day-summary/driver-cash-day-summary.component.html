@@ -19,6 +19,14 @@
       <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.SUMMARY.PARCEL_REMIT' | translate }}</span>
       <span class="admin-emphasis">{{ day.parcelRemitTotal }}</span>
     </div>
+    <!-- OBRS-1053: only when non-zero — see `hasParcelClawback`. Already
+    counted inside NET below; this pill explains it, it does not add to it. -->
+    @if (hasParcelClawback) {
+      <div class="dcp-summary-pill" data-testid="driver-cash-parcel-clawback">
+        <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.SUMMARY.PARCEL_CLAWBACK' | translate }}</span>
+        <span class="admin-emphasis">{{ day.parcelClawbackTotal }}</span>
+      </div>
+    }
     <div class="dcp-summary-pill dcp-summary-pill-net" data-testid="driver-cash-net">
       <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.SUMMARY.NET' | translate }}</span>
       <span class="admin-emphasis">{{ day.expectedReturnAmount }}</span>
