@@ -45,6 +45,46 @@ const FLEET_MAP_EN = {
   },
 };
 
+// OBRS-1082 — the SAME keys in Thai, copied from public/i18n/th.json. A
+// language-switch test needs a second real dictionary: with only one loaded,
+// ngx-translate falls back to the current lang's strings (or the key) and the
+// "it changed language" assertion would pass while nothing changed.
+const FLEET_MAP_TH = {
+  STAFF: {
+    FLEET_MAP: {
+      SPEED_VALUE: '{{value}} กม./ชม.',
+      UPDATED_JUST_NOW: 'อัปเดตเมื่อสักครู่',
+      UPDATED_MINUTES_AGO: 'อัปเดตเมื่อ {{count}} นาทีที่แล้ว',
+      UPDATED_HOURS_AGO: 'อัปเดตเมื่อ {{count}} ชั่วโมงที่แล้ว',
+      NO_SIGNAL_LABEL: 'ไม่มีสัญญาณ',
+      STATUS: {
+        LIVE: 'สัญญาณสด',
+        GPS_LOST: 'สัญญาณ GPS ขาดหาย',
+        OFFLINE: 'อุปกรณ์ออฟไลน์',
+        AWAITING_SIGNAL: 'รอสัญญาณครั้งแรก',
+        NOT_TRACKED: 'ไม่มีอุปกรณ์ติดตาม',
+      },
+      POPUP: {
+        SPEED: 'ความเร็ว: {{value}} กม./ชม.',
+        ENGINE_ON: 'เครื่องยนต์ทำงาน',
+        ENGINE_OFF: 'เครื่องยนต์ดับ',
+        DIRECTION: 'มุ่งหน้าทิศ{{direction}}',
+        DIRECTION_LAST_KNOWN: 'ทิศทางล่าสุด: {{direction}}',
+      },
+      COMPASS: {
+        N: 'เหนือ',
+        NE: 'ตะวันออกเฉียงเหนือ',
+        E: 'ตะวันออก',
+        SE: 'ตะวันออกเฉียงใต้',
+        S: 'ใต้',
+        SW: 'ตะวันตกเฉียงใต้',
+        W: 'ตะวันตก',
+        NW: 'ตะวันตกเฉียงเหนือ',
+      },
+    },
+  },
+};
+
 function makeRow(overrides: Partial<FleetPositionRespDto> = {}): FleetPositionRespDto {
   return {
     vehicleId: 1,
@@ -536,6 +576,142 @@ describe('FleetMapPanelComponent', () => {
 
       const detail = markersOf().get(1)?.getTooltip()?.getContent() as string;
       expect(detail).not.toContain('Heading');
+    });
+  });
+
+  // ── OBRS-1082 — an in-app language switch must retranslate what is already
+  // ON the markers, in the same tick, without a poll and without a re-fetch.
+  //
+  // Every test below fires the language change the way the topbar does — on the
+  // SAME component instance, with NO re-construction and NO second ngOnChanges()
+  // — because that is the only version of the event that can catch this bug: a
+  // rebuilt component would translate correctly no matter what the code does
+  // (AC6, mirroring inspection-items-page.component.spec.ts:117-129).
+  describe('OBRS-1082 — language switch retranslates the markers', () => {
+    let translate: TranslateService;
+
+    beforeEach(() => {
+      translate = TestBed.inject(TranslateService);
+      translate.setTranslation('th', FLEET_MAP_TH, true);
+    });
+
+    function firstSync(vehicles: FleetPositionRespDto[]): void {
+      component.maptilerKey = 'test-key';
+      component.vehicles = vehicles;
+      component.ngOnChanges();
+      fixture.detectChanges();
+    }
+
+    it('AC1: popup, permanent label and hover tooltip all switch language in the same tick — no poll tick needed', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 62, course: 45, engineStatus: 1 })]);
+
+      const marker = markersOf().get(1) as L.Marker;
+      const label = labelsOf().get(1) as L.Tooltip;
+      marker.openTooltip();
+      marker.openPopup();
+
+      const labelBefore = (label.getElement() as HTMLElement).textContent as string;
+      const popupBefore = ((marker.getPopup() as L.Popup).getElement() as HTMLElement).textContent as string;
+      expect(labelBefore).toContain('62 km/h');
+      expect(popupBefore).toContain('Live');
+      expect(popupBefore).toContain('Speed: 62 km/h');
+      expect(popupBefore).toContain('Heading northeast'); // the OBRS-905 line
+
+      // The switch itself. NOTE: no component.ngOnChanges(), no new vehicles
+      // array, no fixture re-creation — only the language changed.
+      translate.use('th');
+
+      const labelAfter = (label.getElement() as HTMLElement).textContent as string;
+      const popupAfter = ((marker.getPopup() as L.Popup).getElement() as HTMLElement).textContent as string;
+      const tooltipAfter = ((marker.getTooltip() as L.Tooltip).getElement() as HTMLElement).textContent as string;
+
+      expect(labelAfter).toContain('62 กม./ชม.');
+      expect(labelAfter).not.toContain('km/h');
+      // All three lines that were reported stale, each from a different card:
+      // status (OBRS-424), speed (OBRS-1070), direction (OBRS-905).
+      expect(popupAfter).toContain('สัญญาณสด');
+      expect(popupAfter).toContain('ความเร็ว: 62 กม./ชม.');
+      expect(popupAfter).toContain('มุ่งหน้าทิศตะวันออกเฉียงเหนือ');
+      expect(popupAfter).not.toContain('Speed:');
+      expect(tooltipAfter).toContain('สัญญาณสด');
+    });
+
+    it('AC2: a popup that is OPEN during the switch stays open, and the marker does not move', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 62 })]);
+
+      const marker = markersOf().get(1) as L.Marker;
+      marker.openPopup();
+      const popupEl = (marker.getPopup() as L.Popup).getElement() as HTMLElement;
+      const latLngBefore = marker.getLatLng();
+
+      translate.use('th');
+
+      expect(marker.isPopupOpen()).withContext('the popup must not close itself to retranslate').toBeTrue();
+      // The SAME popup DOM element, mutated in place — not a torn-down and
+      // reopened popup that happens to look open.
+      expect((marker.getPopup() as L.Popup).getElement()).toBe(popupEl);
+      expect(marker.getLatLng()).toEqual(latLngBefore);
+      expect((popupEl.textContent as string)).toContain('ความเร็ว: 62 กม./ชม.');
+    });
+
+    it('AC4: the switch never rebuilds an icon, a marker or a tooltip layer — OBRS-1070 AC6 stays green', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40 }), makeRow({ vehicleId: 2, lat: 13.4, lon: 101.0, speed: 7 })]);
+
+      const markerBefore = markersOf().get(1) as L.Marker;
+      const labelBefore = labelsOf().get(1) as L.Tooltip;
+
+      // Spy only AFTER the first sync: creation legitimately builds layers.
+      const setIconSpy = spyOn(L.Marker.prototype, 'setIcon').and.callThrough();
+      const setLatLngSpy = spyOn(L.Marker.prototype, 'setLatLng').and.callThrough();
+      const markerCtorSpy = spyOn(L, 'marker').and.callThrough();
+      const tooltipCtorSpy = spyOn(L, 'tooltip').and.callThrough();
+
+      translate.use('th');
+
+      expect(setIconSpy).withContext('a language change is not a status change').not.toHaveBeenCalled();
+      expect(setLatLngSpy).withContext('AC2: content only — nothing on the map may move').not.toHaveBeenCalled();
+      expect(markerCtorSpy).not.toHaveBeenCalled();
+      expect(tooltipCtorSpy).not.toHaveBeenCalled();
+      expect(markersOf().get(1)).toBe(markerBefore);
+      expect(labelsOf().get(1)).toBe(labelBefore);
+      expect(markersOf().size).toBe(2);
+      // ...and the retranslation DID happen. Without this line the whole test
+      // would also pass on a build where the language change reaches nothing at
+      // all — which is precisely the bug (measured: it passes unchanged against
+      // the pre-fix component).
+      expect((labelBefore.getElement() as HTMLElement).textContent as string).toContain('40 กม./ชม.');
+    });
+
+    it('AC5: ngOnDestroy tears the subscription down — a later language change reaches nothing', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40 })]);
+      const refreshSpy = spyOn(component as unknown as { refreshMarkerText: () => void }, 'refreshMarkerText').and.callThrough();
+
+      translate.use('th');
+      expect(refreshSpy).toHaveBeenCalledTimes(1);
+
+      component.ngOnDestroy();
+      translate.use('en');
+
+      expect(refreshSpy).withContext('a destroyed panel must not still be listening').toHaveBeenCalledTimes(1);
+    });
+
+    it('a NOT_TRACKED vehicle (no marker at all) is skipped instead of throwing', () => {
+      firstSync([
+        makeRow({ vehicleId: 1, speed: 40 }),
+        makeRow({ vehicleId: 2, gpsImeiConfigured: false, positionKnown: false, deviceOnline: null, stale: true, lat: null, lon: null }),
+      ]);
+      expect(markersOf().has(2)).toBeFalse();
+
+      expect(() => translate.use('th')).not.toThrow();
+      expect(((markersOf().get(1) as L.Marker).getPopup()?.getContent() as string)).toContain('สัญญาณสด');
+    });
+
+    it('a language change before any data has arrived is a no-op, not a crash', () => {
+      component.maptilerKey = 'test-key';
+      fixture.detectChanges(); // map exists, zero vehicles
+
+      expect(() => translate.use('th')).not.toThrow();
+      expect(markersOf().size).toBe(0);
     });
   });
 });

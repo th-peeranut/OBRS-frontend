@@ -118,6 +118,29 @@ describe('FleetMapPageComponent', () => {
     expect((component as any).refreshFailedTimeDisplay.length).toBeGreaterThan(0);
   });
 
+  // OBRS-1082 AC3. The fix for the stale marker strings re-renders from the
+  // vehicles already in hand; the obvious wrong fix — "just poll again on a
+  // language change" — would be invisible in the panel's own spec (the panel
+  // has no service at all) while handing the backend an extra
+  // GET /api/private/vehicles/positions per switch, from every staff tab open
+  // on this screen. This page owns the only call site, so the count belongs here.
+  it('AC3: a language change triggers ZERO extra store.refresh() calls — no re-fetch, ever', () => {
+    const store = makeStoreStub([makeRow()]);
+    const translate = createTranslateStub();
+    const component = new FleetMapPageComponent(store as unknown as FleetMapStore, translate);
+    component.ngOnInit();
+
+    expect(store.refresh).toHaveBeenCalledTimes(1); // the initial load, and nothing else
+
+    translate.currentLang = 'th';
+    translate.onLangChange.next({ lang: 'th', translations: {} });
+    translate.onLangChange.next({ lang: 'en', translations: {} });
+
+    expect(store.refresh).withContext('re-render from data in hand; never re-fetch').toHaveBeenCalledTimes(1);
+
+    component.ngOnDestroy();
+  });
+
   it('error with no cache -> contentState is error and loadError is set', () => {
     const store = makeStoreStub(null);
     const component = new FleetMapPageComponent(store as unknown as FleetMapStore, createTranslateStub());

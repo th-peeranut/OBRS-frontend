@@ -1,5 +1,7 @@
 import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, ViewChild } from '@angular/core';
 import * as L from 'leaflet';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { FleetPositionRespDto } from '../../../../services/staff/staff-api.service';
 import {
@@ -67,8 +69,20 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
   private readonly markerStatuses = new Map<number, FleetVehicleStatus>();
   private hasFitOnce = false;
   private latestVehicles: FleetPositionRespDto[] = [];
+  private readonly destroy$ = new Subject<void>();
 
-  constructor(private readonly translate: TranslateService) {}
+  constructor(private readonly translate: TranslateService) {
+    // OBRS-1082 — every string on a marker is produced by `translate.instant()`
+    // and written into a Leaflet layer as raw HTML, so there is no template
+    // binding for Angular to re-render when the language changes. Without this
+    // subscription the popup / permanent label / hover tooltip stay in the OLD
+    // language until the next poll tick overwrites them — measured at up to 60 s
+    // (FLEET_MAP_POLL_INTERVAL_MS), while the page's own buttons switch at once.
+    // Subscribing in the constructor (the pattern this codebase already uses in
+    // 8+ components, e.g. inspection-items-page.component.ts:132) is safe before
+    // the map exists: refreshMarkerText() finds no markers and does nothing.
+    this.translate.onLangChange.pipe(takeUntil(this.destroy$)).subscribe(() => this.refreshMarkerText());
+  }
 
   get canShowMap(): boolean {
     return !!this.maptilerKey;
@@ -96,6 +110,8 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
     // AC#4's "no leaked interval" widened to "no leaked map" — this app has no
     // RouteReuseStrategy, so every route entry builds a fresh map and the old
     // one leaks (resize listeners/rAF/DOM handlers) without this.
+    this.destroy$.next();
+    this.destroy$.complete();
     this.map?.remove();
     this.map = null;
     this.markers.clear();
@@ -310,6 +326,36 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
       label.setLatLng(latLng);
     }
     label.setContent(this.buildLabelHtml(vehicle));
+  }
+
+  /** OBRS-1082 — the language-change path, and deliberately NOT a call to
+   * `syncMarkers()`. It re-runs the two content builders over the vehicles
+   * ALREADY in hand (`latestVehicles`) and nothing else:
+   *   - no `setLatLng()` ⇒ no marker moves (AC2), and an open popup stays open
+   *     because `setPopupContent()` on a live popup swaps the DOM in place —
+   *     the very same call the poll tick already makes every 60 s;
+   *   - no `L.marker` / `L.tooltip` construction and no `setIcon()` ⇒ OBRS-1070
+   *     AC6's guard spec stays green (AC4);
+   *   - no store/service access of any kind ⇒ switching language costs zero
+   *     `GET /api/private/vehicles/positions` calls (AC3).
+   * A vehicle with no marker (not marker-eligible per FLEET_STATUS_HAS_MARKER)
+   * has nothing on screen to retranslate, so it is skipped. */
+  private refreshMarkerText(): void {
+    for (const vehicle of this.latestVehicles) {
+      const marker = this.markers.get(vehicle.vehicleId);
+      // The status is READ from the last sync, never re-resolved here:
+      // `resolveFleetVehicleStatus` is time-dependent, and a language switch
+      // carries no new position data — re-deriving it could silently flip a
+      // vehicle's status chip on an event that is purely about wording.
+      const status = this.markerStatuses.get(vehicle.vehicleId);
+      if (!marker || status === undefined) {
+        continue;
+      }
+      const detailHtml = this.buildDetailHtml(vehicle, status);
+      marker.setPopupContent(detailHtml);
+      marker.setTooltipContent(detailHtml);
+      this.labels.get(vehicle.vehicleId)?.setContent(this.buildLabelHtml(vehicle));
+    }
   }
 
   private removeLabel(map: L.Map, vehicleId: number): void {
