@@ -1,2 +1,36 @@
 // OBRS-424: no bespoke styling needed — reuses .admin-table/.admin-status
 // (admin-theme.scss) verbatim, no new tokens.
+//
+// OBRS-1070 adds the one exception. `.admin-table` carries a global
+// `min-width: 720px` (admin-theme.scss:1577) sized for a full-width admin page,
+// but this table lives in the fleet map's narrow side panel. Measured against
+// live SIT on 2026-08-06 (`.admin-table-wrap` → clientWidth 341 vs scrollWidth
+// 720, only 1 of 3 columns fully inside the box): that floor has been forcing a
+// horizontal scroll since OBRS-424 shipped, which is why "อัปเดตล่าสุด" was
+// never visible without dragging the table sideways. Adding the speed column
+// would have turned a 3-column overflow into a 4-column one — and a column
+// nobody can see does not satisfy "show me the speed".
+//
+// Overridden HERE ONLY. `.admin-table` is used across the whole admin surface
+// and the 720px floor is correct on those full-width pages; this component's
+// own emulated-encapsulation attribute keeps the override off every one of
+// them.
+.admin-table {
+  min-width: 0;
+}
+
+// With the floor gone the columns have to earn their width inside ~341px.
+// Trimming the shared 14px horizontal cell padding buys back ~48px across four
+// columns, which is the difference between four visible columns and a scrollbar.
+.admin-table thead th,
+.admin-table tbody td {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+// The plate and the speed are single tokens — wrapping them mid-value is worse
+// than a slightly narrower status chip, which wraps on its own.
+.admin-emphasis,
+.fleet-speed-cell {
+  white-space: nowrap;
+}

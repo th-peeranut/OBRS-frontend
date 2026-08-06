@@ -144,7 +144,11 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
         // OBRS-1070 AC1 — hover shows the SAME full detail the popup shows.
         // Leaflet opens a non-permanent tooltip on `mouseover` by itself; no
         // handler of ours is involved on the pointer path.
-        marker.bindTooltip('', { direction: 'top', offset: [0, -18], className: 'fleet-marker-detail' });
+        // `direction: 'auto'` (left/right by which half of the map the marker
+        // sits in), NOT 'top': Leaflet never flips a tooltip that would leave
+        // the canvas, and a vehicle near the top edge — measured on SIT, plate
+        // 16-8368 — had its detail box clipped by the panel edge.
+        marker.bindTooltip('', { direction: 'auto', className: 'fleet-marker-detail' });
         // ...but `bindTooltip` ALSO wires `click` -> `_openTooltip` whenever
         // `L.Browser.touch` is true (Layer.Tooltip.js `_initTooltipInteractions`),
         // and staff work this screen on a tablet. Without this, one tap opens
@@ -291,7 +295,10 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
       speedText ? `<span class="fleet-marker-label-speed">${escapeHtml(speedText)}</span>` : '',
     ].filter((part) => part.length > 0);
 
-    return parts.join('');
+    // Joined with a real space, not just the CSS margin: `margin-left` puts a
+    // visible gap on screen but leaves the two tokens fused in textContent, so
+    // a screen reader (and any copy-paste) reads "16-836868 km/h".
+    return parts.join(' ');
   }
 
   /** The full detail block, shared verbatim by the click popup (AC2) and the
