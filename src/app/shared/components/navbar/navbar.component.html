@@ -53,44 +53,17 @@
         </button>
         @if (isProfileDropdownOpen) {
           <div class="navbar-profile-menu" role="menu">
-            <a
-              class="navbar-profile-item"
-              role="menuitem"
-              [routerLink]="'/account'"
-              (click)="isProfileDropdownOpen = false"
-              >
-              <span class="material-symbols-outlined">manage_accounts</span>
-              <span>{{ "HOME.NAVBAR.ACCOUNT" | translate }}</span>
-            </a>
-            <a
-              class="navbar-profile-item"
-              role="menuitem"
-              [routerLink]="'/my-bookings'"
-              (click)="isProfileDropdownOpen = false"
-              >
-              <span class="material-symbols-outlined">confirmation_number</span>
-              <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
-            </a>
-            @if (isOnlineParcelBookingEnabled) {
+            @for (item of personalMenuItems; track item.path) {
               <a
                 class="navbar-profile-item"
                 role="menuitem"
-                [routerLink]="'/my-parcels'"
+                [routerLink]="item.path"
                 (click)="isProfileDropdownOpen = false"
                 >
-                <span class="material-symbols-outlined">local_shipping</span>
-                <span>{{ "HOME.NAVBAR.MY_PARCELS" | translate }}</span>
+                <span class="material-symbols-outlined">{{ item.icon }}</span>
+                <span>{{ item.labelKey | translate }}</span>
               </a>
             }
-            <a
-              class="navbar-profile-item"
-              role="menuitem"
-              [routerLink]="'/my-reports'"
-              (click)="isProfileDropdownOpen = false"
-              >
-              <span class="material-symbols-outlined">flag</span>
-              <span>{{ "HOME.NAVBAR.MY_REPORTS" | translate }}</span>
-            </a>
             @if (isAdmin) {
               <a
                 class="navbar-profile-item"
@@ -207,40 +180,16 @@
         </a>
       }
       @if (isLogin) {
-        <a
-          class="navbar-mobile-link"
-          routerLink="/account"
-          (click)="closeMobileMenu()"
-          >
-          <span class="material-symbols-outlined">manage_accounts</span>
-          <span>{{ "HOME.NAVBAR.ACCOUNT" | translate }}</span>
-        </a>
-        <a
-          class="navbar-mobile-link"
-          routerLink="/my-bookings"
-          (click)="closeMobileMenu()"
-          >
-          <span class="material-symbols-outlined">confirmation_number</span>
-          <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
-        </a>
-        @if (isOnlineParcelBookingEnabled) {
+        @for (item of personalMenuItems; track item.path) {
           <a
             class="navbar-mobile-link"
-            routerLink="/my-parcels"
+            [routerLink]="item.path"
             (click)="closeMobileMenu()"
             >
-            <span class="material-symbols-outlined">local_shipping</span>
-            <span>{{ "HOME.NAVBAR.MY_PARCELS" | translate }}</span>
+            <span class="material-symbols-outlined">{{ item.icon }}</span>
+            <span>{{ item.labelKey | translate }}</span>
           </a>
         }
-        <a
-          class="navbar-mobile-link"
-          routerLink="/my-reports"
-          (click)="closeMobileMenu()"
-          >
-          <span class="material-symbols-outlined">flag</span>
-          <span>{{ "HOME.NAVBAR.MY_REPORTS" | translate }}</span>
-        </a>
         @if (isAdmin) {
           <a
             class="navbar-mobile-link"

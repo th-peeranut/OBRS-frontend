@@ -12,7 +12,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 import { Router } from '@angular/router';
 import { AlertService } from '../../services/alert.service';
-import { environment } from '../../../../environments/environment';
+import { PersonalMenuItem, buildPersonalMenuItems } from '../../lib/personal-menu-items';
 
 @Component({
     selector: 'app-navbar',
@@ -34,11 +34,17 @@ export class NavbarComponent implements OnInit, OnDestroy {
   isSalesperson: boolean = false;
   isDriver: boolean = false;
 
-  // OBRS-622 go-live scope cut: hides both My Parcels links (desktop profile
-  // dropdown + mobile menu) while online consigned-parcel booking is gated
-  // off. Single source of truth is environment.features.onlineParcelBooking
-  // (environment.base.ts) — flip that one value to re-enable.
-  isOnlineParcelBookingEnabled = environment.features.onlineParcelBooking;
+  // OBRS-1071: /account, /my-bookings, /my-parcels, /my-reports — rendered by
+  // BOTH the desktop profile dropdown and the ≤992px mobile panel below, and by
+  // the staff and admin shells (SidebarLayoutBaseComponent), all from this one
+  // model. It carries its own OBRS-622 My Parcels gate, so the flag is still
+  // read from exactly one place (environment.features.onlineParcelBooking).
+  //
+  // A stable field, evaluated once at construction — never call
+  // buildPersonalMenuItems() from the template: a fresh array per
+  // change-detection cycle fed to a @for containing routerLink is the
+  // browser-hard-lock defect documented on shared/lib/personal-menu-items.ts.
+  personalMenuItems: PersonalMenuItem[] = buildPersonalMenuItems();
 
   authSubscription$: Subscription;
   private unlistenProfileDropdown?: () => void;
