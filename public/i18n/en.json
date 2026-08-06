@@ -3336,7 +3336,7 @@
     },
     "FLEET_MAP": {
       "SUBTITLE": "See every vehicle's live position in one place",
-      "CENTER_ON_FLEET": "Center on fleet",
+      "CENTER_ON_FLEET": "Show all vehicles",
       "VEHICLE_LIST_TITLE": "Vehicles",
       "MAP_UNAVAILABLE": "Map unavailable — vehicle status below is still live.",
       "STATUS": {
@@ -3364,7 +3364,19 @@
       "POPUP": {
         "SPEED": "Speed: {{value}} km/h",
         "ENGINE_ON": "Engine on",
-        "ENGINE_OFF": "Engine off"
+        "ENGINE_OFF": "Engine off",
+        "DIRECTION": "Heading {{direction}}",
+        "DIRECTION_LAST_KNOWN": "Last known direction: {{direction}}"
+      },
+      "COMPASS": {
+        "N": "north",
+        "NE": "northeast",
+        "E": "east",
+        "SE": "southeast",
+        "S": "south",
+        "SW": "southwest",
+        "W": "west",
+        "NW": "northwest"
       }
     },
     "DRIVER_CASH": {

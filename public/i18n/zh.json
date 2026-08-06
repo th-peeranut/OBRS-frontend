@@ -3336,7 +3336,7 @@
     },
     "FLEET_MAP": {
       "SUBTITLE": "在同一页面查看所有车辆的实时位置",
-      "CENTER_ON_FLEET": "居中显示车队",
+      "CENTER_ON_FLEET": "显示所有车辆",
       "VEHICLE_LIST_TITLE": "车辆列表",
       "MAP_UNAVAILABLE": "地图暂不可用 — 下方车辆状态仍为实时数据",
       "STATUS": {
@@ -3364,7 +3364,19 @@
       "POPUP": {
         "SPEED": "速度：{{value}} 公里/小时",
         "ENGINE_ON": "引擎运转中",
-        "ENGINE_OFF": "引擎已关闭"
+        "ENGINE_OFF": "引擎已关闭",
+        "DIRECTION": "朝{{direction}}行驶",
+        "DIRECTION_LAST_KNOWN": "最后已知方向：{{direction}}"
+      },
+      "COMPASS": {
+        "N": "北",
+        "NE": "东北",
+        "E": "东",
+        "SE": "东南",
+        "S": "南",
+        "SW": "西南",
+        "W": "西",
+        "NW": "西北"
       }
     },
     "DRIVER_CASH": {
