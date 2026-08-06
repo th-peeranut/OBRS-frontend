@@ -2210,7 +2210,8 @@
       "MY_BOOKINGS": "我的预订",
       "MY_PARCELS": "我的包裹",
       "ACCOUNT": "我的账户",
-      "MY_REPORTS": "我的报告"
+      "MY_REPORTS": "我的报告",
+      "SIGNED_IN_AS": "当前登录账号"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "单程",

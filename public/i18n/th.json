@@ -2210,7 +2210,8 @@
       "MY_BOOKINGS": "การจองของฉัน",
       "MY_PARCELS": "พัสดุของฉัน",
       "ACCOUNT": "บัญชีของฉัน",
-      "MY_REPORTS": "รายงานของฉัน"
+      "MY_REPORTS": "รายงานของฉัน",
+      "SIGNED_IN_AS": "เข้าสู่ระบบในชื่อ"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "เที่ยวเดียว",
