@@ -14,6 +14,7 @@ import { ThemeService, ThemeMode } from '../../shared/services/theme.service';
 import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
+import { environment } from '../../../environments/environment';
 
 // OBRS-317: stub the bell selector so this layout-chrome spec stays scoped
 // to the layout itself (same approach as admin-layout.component.spec.ts).
@@ -267,5 +268,120 @@ describe('StaffLayoutComponent', () => {
   it('the .admin-collapse-toggle button is absent (replaced by sidebar-pin toggle)', () => {
     const collapseBtn = fixture.debugElement.query(By.css('.admin-collapse-toggle'));
     expect(collapseBtn).withContext('old collapse toggle must not exist').toBeNull();
+  });
+});
+
+// ── OBRS-1071: personal ("ตัวฉัน") menu links in the profile menu ──────────────
+// The staff shell had no path to /account, /my-bookings, /my-parcels or
+// /my-reports even though app-routing.module.ts's customerArea routes carry
+// no requiredRoles and auth.guard.ts's customerArea branch checks
+// authentication only — every staff role can already reach these pages, they
+// were simply never linked from this shell. Separate top-level describe (own
+// TestBed module per test, mirroring navbar.component.spec.ts's
+// OBRS-622 describe) since My Parcels' visibility is driven by
+// environment.features.onlineParcelBooking, a field-initialiser read at
+// component-construction time — it must be set BEFORE TestBed.createComponent.
+describe('StaffLayoutComponent — personal menu (OBRS-1071)', () => {
+  let originalOnlineParcelBooking: boolean;
+
+  // A single, non-admin role (e.g. driver) — hasAnyRole always false, same
+  // shape as the default authStub above used by "hides the Admin Dashboard
+  // link from non-admin staff".
+  const authStub = {
+    getUsername: () => 'driver@obrs.test',
+    hasAnyRole: () => false,
+    logout: jasmine.createSpy('logout'),
+  };
+
+  const themeMode$ = new BehaviorSubject<ThemeMode>('light');
+  const themeServiceStub: Partial<ThemeService> = {
+    getStoredMode: () => 'light',
+    setMode: jasmine.createSpy('setMode'),
+    toggle: jasmine.createSpy('toggle'),
+    mode$: themeMode$.asObservable(),
+  };
+
+  beforeEach(() => {
+    clearSidebarStorage();
+    originalOnlineParcelBooking = environment.features.onlineParcelBooking;
+  });
+
+  afterEach(() => {
+    environment.features.onlineParcelBooking = originalOnlineParcelBooking;
+    clearSidebarStorage();
+  });
+
+  async function createStaffLayout(): Promise<ComponentFixture<StaffLayoutComponent>> {
+    await TestBed.configureTestingModule({
+      declarations: [StaffLayoutComponent, LangSwitcherComponent, NotificationBellStubComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: authStub },
+        { provide: AlertService, useValue: { success: () => {} } },
+        { provide: PrimeNG, useValue: { setTranslation: () => {} } },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
+        { provide: ThemeService, useValue: themeServiceStub },
+        {
+          provide: NotificationInboxService,
+          useValue: { startPolling: () => {}, stopPolling: jasmine.createSpy('stopPolling') },
+        },
+      ],
+    }).compileComponents();
+    const f = TestBed.createComponent(StaffLayoutComponent);
+    f.detectChanges();
+    return f;
+  }
+
+  it('shows /account, /my-bookings and /my-reports to a driver — asserting real rendered hrefs (AC4)', async () => {
+    environment.features.onlineParcelBooking = false;
+    const f = await createStaffLayout();
+    f.debugElement.query(By.css('.admin-avatar')).nativeElement.click();
+    f.detectChanges();
+
+    (['/account', '/my-bookings', '/my-reports'] as const).forEach((path) => {
+      const link = f.debugElement.query(By.css(`.admin-profile-menu a[href="${path}"]`));
+      expect(link).withContext(`driver should see a personal-menu link to ${path}`).toBeTruthy();
+    });
+  });
+
+  it('renders 0 My Parcels links when environment.features.onlineParcelBooking is false (AC3)', async () => {
+    environment.features.onlineParcelBooking = false;
+    const f = await createStaffLayout();
+    f.debugElement.query(By.css('.admin-avatar')).nativeElement.click();
+    f.detectChanges();
+
+    const parcelLinks = f.debugElement.queryAll(By.css('.admin-profile-menu a[href="/my-parcels"]'));
+    expect(parcelLinks.length)
+      .withContext('My Parcels must be absent from the personal menu while the flag is off')
+      .toBe(0);
+  });
+
+  it('renders exactly 1 My Parcels link when environment.features.onlineParcelBooking is true (AC3)', async () => {
+    environment.features.onlineParcelBooking = true;
+    const f = await createStaffLayout();
+    f.debugElement.query(By.css('.admin-avatar')).nativeElement.click();
+    f.detectChanges();
+
+    const parcelLinks = f.debugElement.queryAll(By.css('.admin-profile-menu a[href="/my-parcels"]'));
+    expect(parcelLinks.length)
+      .withContext('My Parcels must render exactly once in the personal menu once the flag is on')
+      .toBe(1);
+  });
+
+  it('shows 0 Admin Dashboard links for a driver (single role, not admin) — a count, not just presence of the other items (AC5)', async () => {
+    environment.features.onlineParcelBooking = false;
+    const f = await createStaffLayout();
+    f.debugElement.query(By.css('.admin-avatar')).nativeElement.click();
+    f.detectChanges();
+
+    const adminLinks = f.debugElement.queryAll(By.css('.admin-profile-menu a[href="/admin/dashboard"]'));
+    expect(adminLinks.length)
+      .withContext('a driver (not an admin) must see exactly 0 Admin Dashboard links')
+      .toBe(0);
+
+    // Sanity: the personal items ARE present in this same open menu, so the
+    // 0 above genuinely means "gated for this role" and not "menu never opened".
+    const accountLink = f.debugElement.query(By.css('.admin-profile-menu a[href="/account"]'));
+    expect(accountLink).withContext('sanity: personal items must still render for this driver').toBeTruthy();
   });
 });

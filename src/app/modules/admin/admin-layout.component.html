@@ -188,6 +188,17 @@
               </button>
               @if (isProfileMenuOpen) {
                 <div class="admin-profile-menu" role="menu">
+                  @for (item of personalMenuItems; track item.path) {
+                    <a
+                      [routerLink]="item.path"
+                      class="admin-profile-item"
+                      role="menuitem"
+                      (click)="closeProfileMenu()"
+                      >
+                      <span class="material-symbols-outlined">{{ item.icon }}</span>
+                      <span>{{ item.labelKey | translate }}</span>
+                    </a>
+                  }
                   @if (isStaffUser) {
                     <a
                       class="admin-profile-item"
