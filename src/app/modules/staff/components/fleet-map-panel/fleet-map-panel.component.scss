@@ -90,6 +90,37 @@
     border: 2px solid #fff;
   }
 
+  // OBRS-905 — the direction arrow. Additive to the halo/dot pair above
+  // (design-system §12 new-pattern-log entry), never replaces them. Sized to
+  // the SAME 36×36 box as the halo (`inset: 0`) so its own centre is the
+  // marker's centre and rotating the SPAN (not a pseudo-element, not the
+  // marker root — see the two Trap comments on syncHeading()/buildIcon()
+  // above in the .ts) swings the triangle drawn at its top edge around that
+  // centre with zero extra math. Colour comes from the same status token the
+  // dot already uses (`--fleet-heading-fill`, set inline per status in
+  // buildIcon()) — no new hex, and this component stays deliberately
+  // un-dark-themed for the same "tiles stay light" reason as the dot/halo
+  // above (no dark override exists for the success/warning/danger *-text
+  // tokens at chip scale — see design-system.md §2.4).
+  .fleet-marker-heading {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 8px solid var(--fleet-heading-fill, var(--admin-success-text));
+    }
+  }
+
   .fleet-marker-overlay {
     position: absolute;
     top: -4px;

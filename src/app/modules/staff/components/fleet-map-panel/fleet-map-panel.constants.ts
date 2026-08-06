@@ -24,3 +24,10 @@ export const FLEET_MARKER_COLORS: Partial<Record<FleetVehicleStatus, FleetMarker
   GPS_LOST: { fillVar: '--admin-warning-text', haloVar: '--admin-warning-bg' },
   LIVE: { fillVar: '--admin-success-text', haloVar: '--admin-success-bg' },
 };
+
+/** OBRS-905 — km/h floor below which a GPS `course` reading is treated as
+ * noise rather than a real heading. A vehicle sitting still still reports
+ * SOME `course` value (whatever it last had while moving, or GPS jitter), so
+ * gating on `speed` (not on `course != null`) is what keeps a parked van from
+ * showing a direction arrow/text that implies it's driving somewhere. */
+export const FLEET_HEADING_MIN_SPEED_KMH = 5;

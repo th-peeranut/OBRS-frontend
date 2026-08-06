@@ -28,6 +28,18 @@ const FLEET_MAP_EN = {
         SPEED: 'Speed: {{value}} km/h',
         ENGINE_ON: 'Engine on',
         ENGINE_OFF: 'Engine off',
+        DIRECTION: 'Heading {{direction}}',
+        DIRECTION_LAST_KNOWN: 'Last known direction: {{direction}}',
+      },
+      COMPASS: {
+        N: 'north',
+        NE: 'northeast',
+        E: 'east',
+        SE: 'southeast',
+        S: 'south',
+        SW: 'southwest',
+        W: 'west',
+        NW: 'northwest',
       },
     },
   },
@@ -423,6 +435,107 @@ describe('FleetMapPanelComponent', () => {
 
       expect(labelsOf().size).toBe(1);
       expect(map.hasLayer(label)).toBeFalse();
+    });
+  });
+
+  describe('OBRS-905 — direction arrow + text', () => {
+    function firstSync(vehicles: FleetPositionRespDto[]): void {
+      component.maptilerKey = 'test-key';
+      component.vehicles = vehicles;
+      component.ngOnChanges();
+      fixture.detectChanges();
+    }
+
+    function headingEl(vehicleId: number): HTMLElement | null {
+      return (markersOf().get(vehicleId) as L.Marker).getElement()?.querySelector('.fleet-marker-heading') ?? null;
+    }
+
+    it('AC1: LIVE but parked (speed below the threshold) shows no arrow; LIVE and moving does', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 3, course: 90 })]); // below FLEET_HEADING_MIN_SPEED_KMH (5)
+
+      let heading = headingEl(1);
+      expect(heading).withContext('LIVE always gets the slot from buildIcon() — it starts hidden').not.toBeNull();
+      expect((heading as HTMLElement).style.display).toBe('none');
+
+      component.vehicles = [makeRow({ vehicleId: 1, speed: 40, course: 90 })];
+      component.ngOnChanges();
+
+      heading = headingEl(1);
+      expect((heading as HTMLElement).style.display).not.toBe('none');
+    });
+
+    it('AC2 (trap-2 catcher): two ticks that change ONLY course, status staying LIVE, rotate the RENDERED heading span differently each time', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40, course: 10 })]);
+
+      const transformTick1 = (headingEl(1) as HTMLElement).style.transform;
+      expect(transformTick1).toContain('10deg');
+
+      component.vehicles = [makeRow({ vehicleId: 1, speed: 40, course: 200 })];
+      component.ngOnChanges();
+
+      const transformTick2 = (headingEl(1) as HTMLElement).style.transform;
+      expect(transformTick2).toContain('200deg');
+      expect(transformTick2).not.toBe(transformTick1);
+    });
+
+    it('AC3: a course-only change does not call setIcon and the marker instance is not rebuilt', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40, course: 10 })]);
+      const markerBefore = markersOf().get(1) as L.Marker;
+
+      const setIconSpy = spyOn(L.Marker.prototype, 'setIcon').and.callThrough();
+      const markerCtorSpy = spyOn(L, 'marker').and.callThrough();
+
+      component.vehicles = [makeRow({ vehicleId: 1, speed: 40, course: 200 })];
+      component.ngOnChanges();
+
+      expect(setIconSpy).not.toHaveBeenCalled();
+      expect(markerCtorSpy).not.toHaveBeenCalled();
+      expect(markersOf().get(1)).toBe(markerBefore);
+    });
+
+    it('AC4 (must-NOT): OFFLINE and GPS_LOST never render a .fleet-marker-heading element, even with course + speed set', () => {
+      firstSync([
+        makeRow({ vehicleId: 1, deviceOnline: false, stale: true, speed: 40, course: 90 }), // OFFLINE
+        makeRow({ vehicleId: 2, lat: 13.4, lon: 101.0, stale: true, speed: 40, course: 90 }), // GPS_LOST
+      ]);
+
+      expect(headingEl(1)).withContext('OFFLINE must not even have the element in the DOM').toBeNull();
+      expect(headingEl(2)).withContext('GPS_LOST must not even have the element in the DOM').toBeNull();
+    });
+
+    it('AC5: the marker ROOT element still carries Leaflet\'s own translate3d transform — never overwritten by a rotate', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40, course: 90 })]);
+
+      const root = (markersOf().get(1) as L.Marker).getElement() as HTMLElement;
+      expect(root.style.transform).toContain('translate3d');
+      expect(root.style.transform).not.toContain('rotate');
+    });
+
+    it('AC6: the detail HTML carries direction text — present tense for LIVE, last-known for a non-LIVE status, none when parked', () => {
+      firstSync([
+        makeRow({ vehicleId: 1, speed: 40, course: 90 }), // LIVE, moving, east
+        makeRow({ vehicleId: 2, lat: 13.4, lon: 101.0, stale: true, speed: 40, course: 90 }), // GPS_LOST, moving
+        makeRow({ vehicleId: 3, lat: 13.5, lon: 101.2, speed: 2, course: 90 }), // LIVE, parked
+      ]);
+
+      const liveDetail = markersOf().get(1)?.getTooltip()?.getContent() as string;
+      const gpsLostDetail = markersOf().get(2)?.getTooltip()?.getContent() as string;
+      const parkedDetail = markersOf().get(3)?.getTooltip()?.getContent() as string;
+
+      expect(liveDetail).toContain('Heading east');
+      expect(gpsLostDetail).toContain('Last known direction: east');
+      expect(parkedDetail).not.toContain('Heading');
+      expect(parkedDetail).not.toContain('Last known direction');
+    });
+
+    it('a moving vehicle with no course value (null) gets neither the arrow nor direction text', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40, course: null })]);
+
+      const heading = headingEl(1);
+      expect((heading as HTMLElement).style.display).toBe('none');
+
+      const detail = markersOf().get(1)?.getTooltip()?.getContent() as string;
+      expect(detail).not.toContain('Heading');
     });
   });
 });

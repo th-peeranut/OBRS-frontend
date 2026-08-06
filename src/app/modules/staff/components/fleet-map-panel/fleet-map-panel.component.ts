@@ -9,6 +9,7 @@ import {
   resolveFleetVehicleStatus,
 } from '../../../../shared/lib/fleet-vehicle-status';
 import { fleetRelativeTime, fleetRelativeTimeLabel } from '../../../../shared/lib/fleet-relative-time';
+import { compassPointFromCourse, normalizeCourse } from '../../../../shared/lib/fleet-heading';
 import {
   FLEET_MAP_DEFAULT_CENTER,
   FLEET_MAP_DEFAULT_ZOOM,
@@ -17,7 +18,7 @@ import {
   FLEET_MAP_TILE_ATTRIBUTION,
   fleetMapTileUrl,
 } from '../../pages/fleet-map/fleet-map.constants';
-import { FLEET_MARKER_COLORS, FLEET_MARKER_OPACITY } from './fleet-map-panel.constants';
+import { FLEET_HEADING_MIN_SPEED_KMH, FLEET_MARKER_COLORS, FLEET_MARKER_OPACITY } from './fleet-map-panel.constants';
 
 /** Minimal HTML-escape for values interpolated into a Leaflet popup's raw
  * HTML string (Popup.setContent treats a string as markup). Backend plate
@@ -168,6 +169,13 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
         }
       }
 
+      // OBRS-905 — mutates the heading SPAN's inline style directly, every
+      // tick, exactly like the content sync below and for the identical
+      // reason: `course`/`speed` change every poll while `status` mostly
+      // doesn't, so baking a rotation into buildIcon() would freeze it at
+      // the first-seen value (the setIcon() condition above is untouched).
+      this.syncHeading(marker, vehicle, status);
+
       // .setPopupContent() ALWAYS — this is what keeps an open popup's
       // "last update" text from freezing between polls (§9.6: no separate
       // label-refresh timer). OBRS-1070 extends the same rule to the hover
@@ -228,10 +236,23 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
     const overlay = spec?.overlayIcon
       ? `<span class="material-symbols-outlined fleet-marker-overlay" aria-hidden="true">${spec.overlayIcon}</span>`
       : '';
+    // OBRS-905 — the heading arrow is additive, LIVE-only (Trap 3/AC4: a
+    // stale OFFLINE/GPS_LOST fix must never imply direction), so this span
+    // only exists in the DOM at all for LIVE — not merely hidden for the
+    // other statuses. Starts hidden (`display: none`); syncHeading() below
+    // decides per-tick, off `speed`, whether to reveal + rotate it. This is
+    // called from buildIcon() (status-gated, rebuilt only on status change)
+    // deliberately — only WHETHER the slot exists depends on status; the
+    // rotation itself never goes through here (Trap 2).
+    const heading =
+      status === 'LIVE'
+        ? `<span class="fleet-marker-heading" style="--fleet-heading-fill: var(${fillVar}); display: none"></span>`
+        : '';
 
     const html = `
       <span class="fleet-marker-halo" style="background: var(${haloVar})"></span>
       <span class="fleet-marker-dot" style="background: var(${fillVar})"></span>
+      ${heading}
       ${overlay}
     `;
 
@@ -242,6 +263,27 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
       iconAnchor: [18, 18],
       popupAnchor: [0, -18],
     });
+  }
+
+  /** OBRS-905 (Trap 2) — mutates the heading span's inline style directly on
+   * the marker's live DOM element (`marker.getElement()`), never touches the
+   * marker's ROOT element (Trap 1: Leaflet owns that element's `transform`
+   * for pan/zoom `translate3d`, and a `rotate()` there would fight it) and
+   * never rebuilds the DivIcon (Trap 2: that only happens on status change).
+   * No-op when the current status never got a heading slot from buildIcon()
+   * (OFFLINE/GPS_LOST) — the querySelector simply finds nothing. */
+  private syncHeading(marker: L.Marker, vehicle: FleetPositionRespDto, status: FleetVehicleStatus): void {
+    const heading = marker.getElement()?.querySelector<HTMLElement>('.fleet-marker-heading');
+    if (!heading) {
+      return;
+    }
+    const course = normalizeCourse(vehicle.course);
+    const speed = vehicle.speed ?? 0;
+    const showArrow = status === 'LIVE' && speed > FLEET_HEADING_MIN_SPEED_KMH && course !== null;
+    heading.style.display = showArrow ? '' : 'none';
+    if (showArrow) {
+      heading.style.transform = `rotate(${course}deg)`;
+    }
   }
 
   /** OBRS-1070 AC3 — creates the permanent label on first sight, then mutates
@@ -319,15 +361,40 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
           : '';
     const timeLabel = fleetRelativeTimeLabel(fleetRelativeTime(vehicle.recordedAt, new Date()));
     const timeText = this.translate.instant(timeLabel.key, timeLabel.params);
+    const directionText = this.buildDirectionText(vehicle, status);
 
     const rows = [
       `<p class="fleet-marker-popup-plate">${escapeHtml(vehicle.numberPlate)}</p>`,
       `<p class="fleet-marker-popup-status">${escapeHtml(statusLabel)}</p>`,
       speedLabel ? `<p>${escapeHtml(speedLabel)}</p>` : '',
+      directionText ? `<p>${escapeHtml(directionText)}</p>` : '',
       engineLabel ? `<p>${escapeHtml(engineLabel)}</p>` : '',
       `<p class="fleet-marker-popup-time">${escapeHtml(timeText)}</p>`,
     ].filter((row) => row.length > 0);
 
     return `<div class="fleet-marker-popup">${rows.join('')}</div>`;
+  }
+
+  /** OBRS-905 AC6 — direction as TEXT, decoupled from the arrow graphic on
+   * purpose: gated on `speed` (Trap 3, same GPS-noise reasoning as the arrow)
+   * but NOT on `status === 'LIVE'`, so a `GPS_LOST`/`OFFLINE` vehicle that
+   * was moving at its last fix still reports a direction — phrased as
+   * last-known rather than present-tense so it doesn't imply the position is
+   * still fresh. `buildDetailHtml` is only ever invoked for marker-eligible
+   * statuses (OFFLINE/GPS_LOST/LIVE — see FLEET_STATUS_HAS_MARKER), so no
+   * further status gating is needed here. */
+  private buildDirectionText(vehicle: FleetPositionRespDto, status: FleetVehicleStatus): string {
+    const speed = vehicle.speed ?? 0;
+    if (speed <= FLEET_HEADING_MIN_SPEED_KMH) {
+      return '';
+    }
+    const compassPoint = compassPointFromCourse(vehicle.course);
+    if (!compassPoint) {
+      return '';
+    }
+    const direction = this.translate.instant(`STAFF.FLEET_MAP.COMPASS.${compassPoint}`);
+    return status === 'LIVE'
+      ? this.translate.instant('STAFF.FLEET_MAP.POPUP.DIRECTION', { direction })
+      : this.translate.instant('STAFF.FLEET_MAP.POPUP.DIRECTION_LAST_KNOWN', { direction });
   }
 }

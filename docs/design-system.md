@@ -1089,6 +1089,49 @@ enforced rule with a test behind it.
   to show *why* a result matched, instead of reaching for `[innerHTML]` +
   `<mark>` or a hand-rolled regex.
 
+- **Direction arrow: a rotated inner `<span>` with a CSS border-triangle, not
+  a Material Symbols glyph, additive to the existing halo/dot pair** (OBRS-905,
+  `FleetMapPanelComponent`'s heading arrow on `LIVE`-and-moving markers): the
+  OBRS-424 marker is a Leaflet `L.DivIcon` whose ROOT element Leaflet itself
+  rewrites (`transform: translate3d(...)`) on every pan/zoom, so the rotation
+  has to live on a dedicated child span (`.fleet-marker-heading`, `inset: 0`
+  over the same 36×36 icon box the halo already uses — its own centre is
+  therefore the marker centre "for free"), never the root. Drawn with the
+  3-line CSS border trick (`border-left/right: transparent; border-bottom:
+  solid <fill>`) rather than an icon-font glyph — a glyph would add a
+  load-order failure mode (font not yet loaded when the marker first paints)
+  for a shape three CSS lines already draw exactly. Colour is the SAME status
+  token the dot uses (`--admin-success-text` for `LIVE`, passed through as a
+  custom property, `--fleet-heading-fill`, so the pseudo-element inherits it)
+  — no new hex, no new dark-mode surface (this marker stays deliberately
+  un-dark-themed, same tiles-stay-light reasoning as the halo/dot). Existence
+  in the DOM is status-gated inside `buildIcon()` (only `LIVE` ever emits the
+  span at all — `OFFLINE`/`GPS_LOST` get no slot, not just a hidden one, so a
+  stale position can never even look like it has a heading); the rotation
+  angle and show/hide are mutated on the span's inline style every poll tick
+  from a separate `syncHeading()` call sitting alongside the existing
+  content-mutation calls, never from inside `buildIcon()` itself — `course`
+  changes every tick while `status` mostly doesn't, and `buildIcon()` is only
+  invoked on a status change (the pre-existing `route-map-panel` rebuild-every-tick
+  lockup this component was already built to avoid). Direction is ALSO
+  surfaced as translated text in the shared popup/tooltip detail builder,
+  decoupled from the arrow: the arrow requires `status === 'LIVE'`, the text
+  only requires `speed` above `FLEET_HEADING_MIN_SPEED_KMH` — a `GPS_LOST`/`OFFLINE`
+  vehicle that was moving at its last fix still reports "last known
+  direction", phrased to not imply the fix is fresh. Both gate on `speed`,
+  never on `course != null` alone — a parked vehicle still emits a `course`
+  value (GPS noise), so speed is what actually means "this reading describes
+  real movement". The 0–360° raw value is bucketed into one of 8 compass
+  points (not 16 — the upstream GPS fix rate is ~1/min, so 22.5° precision is
+  precision the data doesn't have) by a pure helper, `shared/lib/fleet-heading.ts`
+  (`normalizeCourse`/`compassPointFromCourse`), kept dependency-free from
+  Angular/Leaflet so it's unit-testable at the exact sector boundaries
+  independent of the marker/DOM machinery. Reuse this shape — status-gated
+  DOM presence from `buildIcon()`, per-tick style mutation from a sibling
+  sync method, a status-token custom property for colour, and a
+  speed-not-presence gate on any "this GPS reading implies movement" derived
+  fact — for the next per-tick-changing visual property a marker needs.
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that
