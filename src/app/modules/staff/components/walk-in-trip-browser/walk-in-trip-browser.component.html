@@ -55,9 +55,22 @@
       recreates every view on every change-detection pass — which surfaced as
       NG0100 the moment the v21 migration turned this *ngFor into @for. -->
       @for (group of sortedGroups; track group.routeSlug) {
-        <!-- Sticky route header -->
-        <div class="route-group-header sticky-top bg-light border-bottom px-2 py-1 small fw-semibold text-muted d-flex align-items-center justify-content-between">
-          <span>{{ group.routeLabel }}</span>
+        <!-- Sticky route header. OBRS-1050: the whole bar toggles its own group. The "+"
+        button inside it already calls stopPropagation(), so adding a schedule for the
+        route does not also collapse the rows the new schedule is about to appear in. -->
+        <div
+          class="route-group-header sticky-top bg-light border-bottom px-2 py-1 small fw-semibold text-muted d-flex align-items-center justify-content-between"
+          role="button"
+          tabindex="0"
+          [attr.aria-expanded]="!isCollapsed(group.routeSlug)"
+          [attr.aria-label]="'STAFF.SELL.ROUTE_GROUP_TOGGLE' | translate: { routeLabel: group.routeLabel }"
+          (click)="toggleGroup(group.routeSlug)"
+          (keydown.enter)="toggleGroup(group.routeSlug)"
+          (keydown.space)="$event.preventDefault(); toggleGroup(group.routeSlug)">
+          <span class="d-flex align-items-center gap-1">
+            <i class="bi" [class.bi-chevron-down]="!isCollapsed(group.routeSlug)" [class.bi-chevron-right]="isCollapsed(group.routeSlug)"></i>
+            {{ group.routeLabel }}
+          </span>
           @if (canManageSchedules) {
             <button
               type="button"
@@ -69,7 +82,10 @@
             </button>
           }
         </div>
-        <!-- Trip rows -->
+        <!-- Trip rows. OBRS-1050 gates the whole loop with @if rather than feeding @for an
+        empty array when collapsed: a `cond ? [] : trips` expression allocates a fresh array
+        on every change-detection pass, which is the OBRS-919 family of bug, not a fix. -->
+        @if (!isCollapsed(group.routeSlug)) {
         @for (trip of group.trips; track trip) {
           <div
             class="trip-row d-flex flex-column gap-1 px-2 py-2 border-bottom"
@@ -119,6 +135,7 @@
               </span>
             </div>
           </div>
+        }
         }
       }
     </div>

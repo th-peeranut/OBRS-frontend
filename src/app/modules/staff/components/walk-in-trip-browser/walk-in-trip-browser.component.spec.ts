@@ -2,7 +2,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { WalkInTripBrowserComponent } from './walk-in-trip-browser.component';
+import {
+  SELL_COLLAPSED_ROUTE_GROUPS_KEY,
+  WalkInTripBrowserComponent,
+} from './walk-in-trip-browser.component';
 import { WalkInTripDto, WalkInRouteGroupDto } from '../../../../services/staff/staff-api.service';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 
@@ -304,6 +307,103 @@ describe('WalkInTripBrowserComponent', () => {
       comp.tripSelected.subscribe((ev: unknown) => selected.push(ev));
       dispatchKey('Enter');
       expect(selected.length).toBe(0);
+    });
+  });
+
+  // OBRS-1050: clicking a route header hides that route's trip rows so the seller does
+  // not scroll past a route they are not selling right now.
+  describe('route-group collapse/expand', () => {
+    beforeEach(() => localStorage.removeItem(SELL_COLLAPSED_ROUTE_GROUPS_KEY));
+    afterEach(() => localStorage.removeItem(SELL_COLLAPSED_ROUTE_GROUPS_KEY));
+
+    it('starts expanded and toggles on each call', () => {
+      const comp = makeComponent();
+      expect((comp as any).isCollapsed('r1')).toBeFalse();
+      (comp as any).toggleGroup('r1');
+      expect((comp as any).isCollapsed('r1')).toBeTrue();
+      (comp as any).toggleGroup('r1');
+      expect((comp as any).isCollapsed('r1')).toBeFalse();
+    });
+
+    it('collapses only the group that was clicked', () => {
+      const comp = makeComponent();
+      (comp as any).toggleGroup('r1');
+      expect((comp as any).isCollapsed('r1')).toBeTrue();
+      expect((comp as any).isCollapsed('r2')).toBeFalse();
+    });
+
+    it('a fresh instance restores what the previous one collapsed', () => {
+      (makeComponent() as any).toggleGroup('r1');
+      expect((makeComponent() as any).isCollapsed('r1')).toBeTrue();
+    });
+
+    it('treats a corrupt stored value as nothing collapsed rather than throwing', () => {
+      localStorage.setItem(SELL_COLLAPSED_ROUTE_GROUPS_KEY, '{not json');
+      expect(() => makeComponent()).not.toThrow();
+      expect((makeComponent() as any).isCollapsed('r1')).toBeFalse();
+    });
+  });
+
+  describe('route-group collapse — rendered rows (template binding)', () => {
+    let fixture: ComponentFixture<WalkInTripBrowserComponent>;
+
+    beforeEach(async () => {
+      localStorage.removeItem(SELL_COLLAPSED_ROUTE_GROUPS_KEY);
+      await TestBed.configureTestingModule({
+        declarations: [WalkInTripBrowserComponent],
+        imports: [CommonModule, TranslateModule.forRoot()],
+        providers: [TranslateService],
+        schemas: [NO_ERRORS_SCHEMA],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(WalkInTripBrowserComponent);
+      const comp = fixture.componentInstance;
+      (comp as any).isLoading = false;
+      (comp as any).canManageSchedules = true;
+      (comp as any).routeGroups = [
+        makeGroup('r1', [makeTrip({ scheduleId: 1 }), makeTrip({ scheduleId: 2 })]),
+        makeGroup('r2', [makeTrip({ scheduleId: 3 })]),
+      ];
+      fixture.detectChanges();
+    });
+
+    afterEach(() => localStorage.removeItem(SELL_COLLAPSED_ROUTE_GROUPS_KEY));
+
+    function rowCount(): number {
+      return fixture.nativeElement.querySelectorAll('.trip-row').length;
+    }
+
+    function header(index: number): HTMLElement {
+      return fixture.nativeElement.querySelectorAll('.route-group-header')[index] as HTMLElement;
+    }
+
+    it('clicking a header hides that group\'s rows and leaves the other group alone', () => {
+      expect(rowCount()).toBe(3);
+      header(0).click();
+      fixture.detectChanges();
+      expect(rowCount()).toBe(1);
+      header(0).click();
+      fixture.detectChanges();
+      expect(rowCount()).toBe(3);
+    });
+
+    it('reports collapsed state through aria-expanded', () => {
+      expect(header(0).getAttribute('aria-expanded')).toBe('true');
+      header(0).click();
+      fixture.detectChanges();
+      expect(header(0).getAttribute('aria-expanded')).toBe('false');
+    });
+
+    // The "+" button lives INSIDE the header, which is now itself the toggle. Without
+    // stopPropagation the click would bubble and collapse the very group the new
+    // schedule is about to be added to.
+    it('clicking "+" inside the header does not collapse the group', () => {
+      const addBtn = header(0).querySelector('.route-add-btn') as HTMLButtonElement;
+      expect(addBtn).withContext('"+" button should render').toBeTruthy();
+      addBtn.click();
+      fixture.detectChanges();
+      expect(rowCount()).toBe(3);
+      expect(header(0).getAttribute('aria-expanded')).toBe('true');
     });
   });
 });

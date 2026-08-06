@@ -3014,6 +3014,7 @@
       "STOP_NO_MATCH": "No stops match",
       "POPULAR_LABEL": "Popular",
       "ALL_STOPS_LABEL": "All stops",
+      "ROUTE_GROUP_TOGGLE": "Show or hide the trips on {{routeLabel}}",
       "SCHEDULE_ADD_FOR_ROUTE": "Add schedule for {{routeLabel}}",
       "SCHEDULE_TRIP_ACTIONS": "Schedule actions for {{time}}",
       "SCHEDULE_EDIT_ITEM": "Edit schedule",
