@@ -116,4 +116,49 @@
     color: var(--admin-muted);
     font-size: 0.85em;
   }
+
+  // OBRS-1070 AC3 — the always-on compact label hanging under each dot.
+  // Sized DOWN from Leaflet's default tooltip on purpose: the depot parks the
+  // whole fleet in one spot, so these overlap exactly when the screen is
+  // busiest. Two short tokens only; full detail is on hover/click.
+  //
+  // background/colour are deliberately NOT set here — Leaflet's own
+  // `.leaflet-tooltip` default (white surface, dark text) is already correct
+  // against the tiles, which stay light in BOTH themes (ADR 0024). An
+  // --admin-* token would invert to dark and erase the label in dark mode,
+  // the same trap the .fleet-marker-dot ring comment above warns about.
+  .fleet-marker-label {
+    padding: 1px 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+
+    // No callout arrow: this label hangs off its own dot, which is already the
+    // pointer. Leaflet draws the arrow via .leaflet-tooltip-bottom:before.
+    &::before {
+      display: none;
+    }
+  }
+
+  .fleet-marker-label-speed {
+    margin-left: 6px;
+    font-weight: 400;
+    opacity: 0.75;
+  }
+
+  // OBRS-1070 AC1 — the hover tooltip carries the SAME markup as the popup and
+  // deliberately sets no width rules of its own.
+  //
+  // It briefly had `white-space: normal; max-width: 220px`, on the theory that
+  // Leaflet's default nowrap would run a long status off the canvas edge.
+  // Captured on SIT, the opposite happened: the content is one <p> per fact, so
+  // under `normal` the shrink-to-fit box collapsed to ~65px and wrapped every
+  // Thai line mid-phrase ("ความเร็ว: 45 กม./ ชม."). Leaflet's own nowrap puts
+  // each fact on one short line and sizes the box to the longest — which is
+  // exactly how the click popup already reads. Do not re-touch the wrapping
+  // here without capturing the result: the longest string in this box is a
+  // status-chip label, not prose.
+  .fleet-marker-detail {
+    font-size: 0.8rem;
+  }
 }

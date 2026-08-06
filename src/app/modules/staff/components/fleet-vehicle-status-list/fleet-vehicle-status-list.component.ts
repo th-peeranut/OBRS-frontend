@@ -1,4 +1,5 @@
 import { Component, Input } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import {
   FleetStatusChip,
   fleetVehicleStatusChip,
@@ -22,6 +23,21 @@ import { FleetPositionRespDto } from '../../../../services/staff/staff-api.servi
 })
 export class FleetVehicleStatusListComponent {
   @Input() vehicles: FleetPositionRespDto[] = [];
+
+  constructor(private readonly translate: TranslateService) {}
+
+  /** OBRS-1070 AC7 — the speed cell. `SPEED_VALUE` is the bare number + unit;
+   * the popup's own `POPUP.SPEED` is NOT reusable here because it carries a
+   * "Speed:" prefix, which under a column already headed "Speed" reads as
+   * "Speed: 62 km/h". A vehicle with no speed reading gets the em dash this
+   * repo already uses for an empty cell (parcel-share-clawbacks-section
+   * .component.ts:124), never a stranded unit. */
+  protected speedTextFor(vehicle: FleetPositionRespDto): string {
+    if (vehicle.speed === null) {
+      return '—';
+    }
+    return this.translate.instant('STAFF.FLEET_MAP.SPEED_VALUE', { value: vehicle.speed });
+  }
 
   protected chipFor(vehicle: FleetPositionRespDto): FleetStatusChip {
     return fleetVehicleStatusChip(resolveFleetVehicleStatus(vehicle));
