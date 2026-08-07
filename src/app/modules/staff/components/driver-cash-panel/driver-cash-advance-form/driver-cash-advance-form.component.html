@@ -13,9 +13,13 @@
       name="advanceAmount"
       />
       <!-- OBRS-1015: ADVANCE is the only one of the 3 panels whose amount is
-      RECLAIMED at close-out (`expected_return = Σ ADVANCE + Σ PER_HEAD −
-      Σ EXPENSE_PAID`, DriverCashService javadoc), and no validation can catch
-      an amount typed into the wrong panel. Uses the global
+      RECLAIMED at close-out, and no validation can catch an amount typed into
+      the wrong panel.
+      ⚠️ OBRS-1073 corrected the formula this used to quote (`Σ ADVANCE +
+      Σ PER_HEAD − Σ EXPENSE_PAID`): the per-head fee is the SALESPERSON's pay,
+      so it is now SUBTRACTED, and it does not land on the driver's day at all.
+      Do not re-copy the formula here — `DriverCashService`'s javadoc owns it,
+      and a second copy is exactly what went stale. Uses the global
       `.admin-modal-subtitle` (admin-theme.scss, dark rule included) rather
       than `.admin-hint`, which has no global definition — only 3 per-component
       copies — so it would render unstyled here. -->

@@ -15,6 +15,10 @@ function createStoreStub(): any {
 
 function createStaffApiStub(): any {
   return {
+    // OBRS-1073: ngOnInit calls this unconditionally now, so it must return an
+    // observable in EVERY test, not only the ones that assert on it.
+    getDriverCashMyDay: jasmine.createSpy('getDriverCashMyDay')
+      .and.returnValue(of({ code: 200, message: 'OK', data: null })),
     postDriverCashAdvance: jasmine.createSpy('postDriverCashAdvance'),
     postDriverCashPerHead: jasmine.createSpy('postDriverCashPerHead'),
     postDriverCashExpense: jasmine.createSpy('postDriverCashExpense'),
@@ -89,6 +93,41 @@ describe('DriverCashPanelComponent', () => {
     component.ngOnInit();
     expect(store.setScheduleId).toHaveBeenCalledWith(42);
     expect(store.refresh).toHaveBeenCalled();
+  });
+
+  // ── OBRS-1073: the salesperson's own box must SURVIVE a reload ───────────
+  // It did not. `myDay` was written only by the per-head POST handler, so the
+  // block existed solely inside the tab that recorded a head — reload, open a
+  // second round, or come back after lunch and the money the salesperson owes
+  // tonight was invisible, while the row itself was sitting in the database.
+  // Found by looking at the AFTER capture, not by any test: `GET /my-day`,
+  // which this same card added, had no caller anywhere in the frontend.
+  describe('loadMyDay — the caller\'s own box is fetched, not only pushed', () => {
+    it('fetches my-day on init for TODAY and renders what comes back', () => {
+      const MINE = { ...DAY_RESP, dayId: 7, holderRole: 'SALESPERSON' as const, perHeadTotal: '140.00' };
+      staffApi.getDriverCashMyDay.and.returnValue(of({ code: 200, message: 'OK', data: MINE }));
+
+      component.ngOnInit();
+
+      const now = new Date();
+      const expected = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      expect(staffApi.getDriverCashMyDay).toHaveBeenCalledWith(expected);
+      expect(component['myDay']).toBe(MINE);
+    });
+
+    it('renders nothing and raises nothing when the caller has no box open', () => {
+      staffApi.getDriverCashMyDay.and.returnValue(of({ code: 200, message: 'OK', data: null }));
+      component.ngOnInit();
+      expect(component['myDay']).toBeNull();
+      expect(alertService.error).not.toHaveBeenCalled();
+    });
+
+    it('stays silent on failure — a boarding list must not be covered by a banner', () => {
+      staffApi.getDriverCashMyDay.and.returnValue(throwError(() => new Error('boom')));
+      component.ngOnInit();
+      expect(component['myDay']).toBeNull();
+      expect(alertService.error).not.toHaveBeenCalled();
+    });
   });
 
   // ── accordion: one open at a time ─────────────────────────────────────

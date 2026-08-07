@@ -1025,6 +1025,24 @@ export class StaffApiService {
     );
   }
 
+  /**
+   * OBRS-1073 — the CALLER's own cash box for a business date, which since that
+   * card is a DIFFERENT row from `getDriverCashDay()`: that one answers about
+   * the DRIVER of the round, and the per-head fee is the salesperson's pay.
+   *
+   * Takes no user id by design (the backend resolves the holder from the token),
+   * and answers `data: null` rather than 404 when the caller has no box open
+   * that day — so the caller renders nothing and must NOT treat it as an error.
+   * `skipContext` for the same reason: a salesperson who has taken no heads yet
+   * is the normal case, not an incident to alert about.
+   */
+  getDriverCashMyDay(businessDate: string): Observable<ResponseAPI<DriverCashDayRespDto | null>> {
+    return this.http.get<ResponseAPI<DriverCashDayRespDto | null>>(
+      `${environment.apiUrl}/api/private/driver-cash/my-day`,
+      { params: { businessDate }, context: this.skipContext }
+    );
+  }
+
   postDriverCashAdvance(
     scheduleId: number,
     payload: DriverCashAdvanceReqDto
