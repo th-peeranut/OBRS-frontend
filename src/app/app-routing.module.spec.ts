@@ -29,7 +29,12 @@ describe('appRoutes — booking-flow auth boundary (OBRS-856)', () => {
   };
 
   const GATED = ['passenger-info', 'payment'];
-  const OPEN_TO_GUESTS = ['schedule-booking', 'review-schedule-booking'];
+  // OBRS-857 adds `find-booking` to this list, and it belongs to the STRONGER half of it: for
+  // schedule-booking a login wall would merely cost traffic, but the booking lookup exists so a
+  // customer WITHOUT an account can reach their own ticket. `requireAuth` there does not tighten
+  // the page, it deletes the feature — and it is exactly the kind of flag a "harden the customer
+  // area" sweep adds without reading the card.
+  const OPEN_TO_GUESTS = ['schedule-booking', 'review-schedule-booking', 'find-booking'];
 
   describe('must-catch: the steps that commit a booking require a signed-in user', () => {
     GATED.forEach((path) => {

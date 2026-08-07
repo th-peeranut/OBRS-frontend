@@ -73,6 +73,7 @@ export default defineConfig({
     // three component specs that measure it run in an 800px Karma window, and the
     // 992px stack switch is a viewport query, so they only ever take the stacked
     // branch there. This lane pins 1280x720 (rule 3 above), which is the point.
+    '**/obrs-857-find-booking.spec.ts',
     '**/obrs-1038-station-seam.spec.ts',
     '**/route-smoke.spec.ts',
     '**/confirm-guidance-flow.spec.ts',
