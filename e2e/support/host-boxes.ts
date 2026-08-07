@@ -202,7 +202,7 @@ export interface SweepPage {
  * The routed component each customer page must actually mount, keyed by
  * `CUSTOMER_PAGES[].key`.
  *
- * Not derived from `CustomerPage.mustRender`: three of the eight declare none
+ * Not derived from `CustomerPage.mustRender`: three of the nine declare none
  * (they exist for the contrast gate, which needs a CONTROL to measure, and those
  * pages have none worth naming), and the generic fallback this replaced --
  * `app-root > *` -- resolved to the `<router-outlet>` element itself, which
@@ -223,6 +223,9 @@ export const CUSTOMER_HOST: Record<string, string> = {
   'passenger-info': 'app-passenger-info',
   payment: 'app-payment',
   'e-ticket': 'app-e-ticket',
+  // OBRS-857. Registering it here is what made its missing `:host { display: block }` visible:
+  // the page shipped as an inline host and nothing had ever swept it.
+  'find-booking': 'app-find-booking-page',
 };
 
 /** `CUSTOMER_PAGES` restated in this module's shape. */

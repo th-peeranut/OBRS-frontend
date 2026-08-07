@@ -7,6 +7,11 @@
 // Re-scoping the identical token VALUES onto this host is the pattern `/track-parcel` established
 // under OBRS-305; copying its block verbatim is the point, not laziness.
 :host {
+  // OBRS-775: a component that declares no `:host` display renders as `display: inline`, and an
+  // inline box may not contain the block children below it — the browser splits it, wraps them in
+  // anonymous blocks, and the host's own border box then describes nothing. This page shipped
+  // without it because nothing swept the page; the OBRS-775 host-box sweep now does.
+  display: block;
   --admin-success-bg: #d4e3ff;
   --admin-success-text: #154c85;
   --admin-warning-bg: #ffdcbe;
@@ -70,6 +75,29 @@
   flex-direction: column;
   gap: 16px;
   margin-bottom: 24px;
+
+  // The submit button was left as bare Bootstrap. In dark mode that is fine at rest (#0d6efd is
+  // 3.74:1 on the card) and BREAKS on hover/focus, where Bootstrap darkens the fill to #0b5ed7 —
+  // 2.88:1, under WCAG 1.4.11's 3:1 floor for identifying a control. The OBRS-584 gate caught it
+  // only in the two interactive states, which is why it measures them at all.
+  //
+  // The fix is the inversion dark-theme.scss:333 already established for .recent-route-btn: fill
+  // with $dk-accent and put $dk-bg on it, NOT $text-white ($text-white on $dk-accent is 2.03:1).
+  // Measured on this card's #1a1d27: rest 8.29:1 boundary / 9.31:1 label,
+  // hover+focus 6.81:1 / 7.65:1.
+  :host-context(body.is-dark) & .btn-primary {
+    background-color: $dk-accent;
+    border-color: $dk-accent;
+    color: $dk-bg;
+
+    &:hover,
+    &:focus,
+    &:focus-visible {
+      background-color: $dk-accent-hover;
+      border-color: $dk-accent-hover;
+      color: $dk-bg;
+    }
+  }
 }
 
 .find-booking-field {

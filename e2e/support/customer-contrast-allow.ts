@@ -199,6 +199,13 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   // -------------------------------------------------------------------------
   'light|input.form-control.mt-1|boundary-on-#ffffff': '1.35:1 -- OBRS-772 form field boundary',
   'dark|input.form-control.mt-1|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 form field boundary',
+  // OBRS-857 put /find-booking into the sweep and its two fields carry no `.mt-1`, so the same
+  // defect arrived under a new key. Same mechanism ($primary-lightgrey #dddee1 from
+  // styles.scss:72), same measured 1.35:1, same two surfaces -- registered against OBRS-772
+  // rather than repainted here, because a page-local border would leave the other nineteen
+  // controls untouched and make OBRS-772's twenty look like nineteen.
+  'light|input.form-control|boundary-on-#ffffff': '1.35:1 -- OBRS-772 form field boundary (find-booking)',
+  'dark|input.form-control|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 form field boundary (find-booking)',
   'light|input.form-check-input|boundary-on-#ffffff': '1.30:1 -- OBRS-772 checkbox/radio boundary',
   // OBRS-915 REKEYED, NOT REPAINTED. PrimeNG 19 adds `p-datepicker-input` to the
   // date field's class list, and the class list is half of this gate's key, so
