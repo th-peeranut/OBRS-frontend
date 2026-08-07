@@ -26,38 +26,39 @@ function makeComponent(adminApi: Record<string, unknown>, store = makeStoreStub(
   return { component: component as any, store, alert };
 }
 
+function rateRow(id: number, salesPointId: number, effectiveFrom: string, ratePerHead: string) {
+  return {
+    id,
+    salesPointId,
+    salesPointCode: salesPointId === 11 ? 'BAN_BUENG' : 'MO_CHIT',
+    salesPointName: salesPointId === 11 ? 'บ้านบึง' : 'หมอชิต',
+    effectiveFrom,
+    ratePerHead,
+  };
+}
+
 describe('DriverCashRatesPageComponent', () => {
-  // OBRS-960 — CORRECTED (2026-08-02, backend reconciliation): stops now
-  // come from `DriverCashRatesStore.data.stops` (`StationApi[]`, sourced
-  // from `StationService.getAll()`), not the broken `stopLookups`
-  // (`category === 'stop'`) shape the first version of this store used.
-  it('subscribes to store.data$ and builds stop options from stops', () => {
+  // OBRS-1073 — the picker lists SALES POINTS, not stops. Its label is the
+  // sales point's own `name` (a place name the owner wrote), deliberately not
+  // run through the station-label translator the stop version used.
+  it('subscribes to store.data$ and builds the picker from sales points', () => {
     const { component, store } = makeComponent({});
     component.ngOnInit();
     store.data$.next({
       rates: [],
-      stops: [
-        {
-          id: 1,
-          slug: 'bkk',
-          status: 'active',
-          stopType: 'terminal',
-          createdAt: '',
-          updatedAt: '',
-          translations: [{ locale: 'th', label: 'กรุงเทพ' }],
-        },
-      ],
+      salesPoints: [{ id: 11, code: 'BAN_BUENG', name: 'บ้านบึง' }],
     });
 
-    expect(component['stopOptions'].length).toBe(1);
-    expect(component['stopOptions'][0].value).toBe('bkk');
+    expect(component['salesPointOptions'].length).toBe(1);
+    expect(component['salesPointOptions'][0].value).toBe('BAN_BUENG');
+    expect(component['salesPointOptions'][0].label).toBe('บ้านบึง');
   });
 
-  // "the latest row per stop with effectiveFrom <= today gets a current chip"
+  // "the latest row per SALES POINT with effectiveFrom <= today gets a current chip"
   describe('isCurrent', () => {
-    it('is true for the single row of a stop whose effectiveFrom is in the past', () => {
+    it('is true for the single row of a sales point whose effectiveFrom is in the past', () => {
       const { component } = makeComponent({});
-      component['rates'] = [{ id: 1, stopId: 1, stopSlug: 'bkk', effectiveFrom: '2020-01-01', ratePerHead: '20.00' }];
+      component['rates'] = [rateRow(1, 11, '2020-01-01', '20.00')];
       expect(component['isCurrent'](component['rates'][0])).toBeTrue();
     });
 
@@ -66,18 +67,43 @@ describe('DriverCashRatesPageComponent', () => {
       const future = new Date();
       future.setFullYear(future.getFullYear() + 1);
       const futureStr = future.toISOString().slice(0, 10);
-      component['rates'] = [{ id: 1, stopId: 1, stopSlug: 'bkk', effectiveFrom: futureStr, ratePerHead: '20.00' }];
+      component['rates'] = [rateRow(1, 11, futureStr, '20.00')];
       expect(component['isCurrent'](component['rates'][0])).toBeFalse();
     });
 
-    it('is true only for the LATEST of two past-dated rows for the same stop', () => {
+    it('is true only for the LATEST of two past-dated rows for the same sales point', () => {
       const { component } = makeComponent({});
-      component['rates'] = [
-        { id: 1, stopId: 1, stopSlug: 'bkk', effectiveFrom: '2020-01-01', ratePerHead: '10.00' },
-        { id: 2, stopId: 1, stopSlug: 'bkk', effectiveFrom: '2021-01-01', ratePerHead: '20.00' },
-      ];
+      component['rates'] = [rateRow(1, 11, '2020-01-01', '10.00'), rateRow(2, 11, '2021-01-01', '20.00')];
       expect(component['isCurrent'](component['rates'][0])).toBeFalse();
       expect(component['isCurrent'](component['rates'][1])).toBeTrue();
+    });
+
+    it('OBRS-1073: two sales points never shadow each other - each keeps its own current row', () => {
+      const { component } = makeComponent({});
+      component['rates'] = [rateRow(1, 11, '2020-01-01', '20.00'), rateRow(2, 12, '2019-01-01', '35.00')];
+      // Grouping by the wrong key (or not grouping at all) would leave only the
+      // globally-latest row current and silently mark หมอชิต's rate as historic.
+      expect(component['isCurrent'](component['rates'][0])).toBeTrue();
+      expect(component['isCurrent'](component['rates'][1])).toBeTrue();
+    });
+  });
+
+  it('submits salesPointId, resolved from the selected code', async () => {
+    const createSpy = jasmine
+      .createSpy('createDriverCashRate')
+      .and.returnValue(of({ code: 201, message: 'Created', data: null }));
+    const { component } = makeComponent({ createDriverCashRate: createSpy });
+    component['selectedSalesPointCode'] = 'BAN_BUENG';
+    component['salesPointIdByCode'] = new Map([['BAN_BUENG', 11]]);
+    component['effectiveFromDate'] = new Date(2026, 0, 1);
+    component['ratePerHeadInput'] = '20.00';
+
+    await component['submit']();
+
+    expect(createSpy).toHaveBeenCalledWith({
+      salesPointId: 11,
+      effectiveFrom: '2026-01-01',
+      ratePerHead: '20.00',
     });
   });
 
@@ -94,8 +120,8 @@ describe('DriverCashRatesPageComponent', () => {
       )
     );
     const { component } = makeComponent({ createDriverCashRate: createSpy });
-    component['selectedStopSlug'] = 'bkk';
-    component['stopIdBySlug'] = new Map([['bkk', 1]]);
+    component['selectedSalesPointCode'] = 'BAN_BUENG';
+    component['salesPointIdByCode'] = new Map([['BAN_BUENG', 11]]);
     component['effectiveFromDate'] = new Date('2026-01-01');
     component['ratePerHeadInput'] = '20.00';
 

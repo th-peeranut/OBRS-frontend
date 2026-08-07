@@ -1467,7 +1467,10 @@
           "CONFIRM_TEXT": "将记录归还金额为 {{amount}}，此操作无法撤销。",
           "SUCCESS": "司机现金日已标记为已归还。",
           "ALREADY_RETURNED": "该日已完成归还。",
-          "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）"
+          "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）",
+          "FARE_COLLECTED": "收取的现金票款",
+          "CASH_REFUNDED": "柜台退还的现金",
+          "PER_HEAD_PAY": "人头费（售票员报酬）"
         },
         "ERROR": {
           "REASON_REQUIRED": "归还金额与预期不符时必须填写原因。",
@@ -1475,7 +1478,7 @@
           "RETURN_FAILED": "无法记录此次归还。"
         },
         "COL": {
-          "DRIVER": "司机",
+          "HOLDER": "持现金人",
           "BUSINESS_DATE": "营业日期",
           "VEHICLE": "车辆",
           "EXPECTED": "预期金额"
@@ -1485,7 +1488,12 @@
           "PER_HEAD": "人头费",
           "EXPENSE_PAID": "支出：{{category}}",
           "RETURN": "归还"
-        }
+        },
+        "HOLDER_ROLE": {
+          "DRIVER": "司机",
+          "SALESPERSON": "售票员"
+        },
+        "OVERDUE_OPEN_HINT": "过往日期仍未结清——售票员须当日交回现金。"
       }
     },
     "EOD_REPORT": {
@@ -1878,10 +1886,10 @@
       }
     },
     "DRIVER_CASH_RATES": {
-      "SUBTITLE": "按站点管理人头费率。",
+      "SUBTITLE": "按售票点管理人头费率。",
       "LOAD_FAILED": "无法加载司机现金费率。",
       "ADD_TITLE": "新增费率",
-      "STOP_LABEL": "站点",
+      "SALES_POINT_LABEL": "售票点",
       "EFFECTIVE_FROM_LABEL": "生效日期",
       "RATE_LABEL": "每人头费率",
       "RATE_PLACEHOLDER": "0.00",
@@ -1889,7 +1897,7 @@
       "HISTORY_TITLE": "费率历史",
       "CURRENT": "当前",
       "ERROR": {
-        "DUPLICATE": "该站点已存在同一生效日期的费率。",
+        "DUPLICATE": "该售票点在该生效日期已有费率。",
         "CREATE_FAILED": "无法新增此费率。"
       }
     }
@@ -3423,6 +3431,11 @@
       },
       "ERROR": {
         "GENERIC": "无法记录此项目，请重试。"
+      },
+      "MY_DAY": {
+        "TITLE": "我今日的现金",
+        "PER_HEAD_EARNED": "所得人头费",
+        "TO_RETURN": "应交回金额"
       }
     }
   },

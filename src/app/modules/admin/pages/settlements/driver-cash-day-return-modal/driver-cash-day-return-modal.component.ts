@@ -98,6 +98,31 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
    * percentages are still at their `0` default, so OBRS-992 never writes a
    * clawback row). Shown only when there is something to explain.
    */
+  /**
+   * OBRS-1073 — the per-head fee is the salesperson's PAY, so it is
+   * SUBTRACTED from the expected amount. Shown with an explicit minus sign in
+   * the template because the wire value is a positive magnitude: rendering it
+   * bare next to lines that add would read as an addend, which is exactly the
+   * belief this card overturned.
+   */
+  protected get hasPerHead(): boolean {
+    return this.isNonZero(this.detail?.perHeadTotal);
+  }
+
+  /** OBRS-1073 — cash fares taken in that day, derived from `payments`. */
+  protected get hasFareCollected(): boolean {
+    return this.isNonZero(this.detail?.fareCollectedTotal);
+  }
+
+  /** OBRS-1073 — cash handed back over the counter that day. Subtracted. */
+  protected get hasCashRefunded(): boolean {
+    return this.isNonZero(this.detail?.cashRefundedTotal);
+  }
+
+  private isNonZero(value: string | null | undefined): boolean {
+    return value !== null && value !== undefined && Number(value) !== 0;
+  }
+
   protected get hasParcelClawback(): boolean {
     return Number(this.detail?.parcelClawbackTotal ?? 0) > 0;
   }

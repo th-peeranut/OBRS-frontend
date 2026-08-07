@@ -55,6 +55,15 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
   @Input() scheduleId!: number;
 
   protected day: DriverCashDayRespDto | null = null;
+  /**
+   * OBRS-1073 — the CALLER's own cash day, which since that card is a
+   * DIFFERENT row from `day`: the per-head fee is the salesperson's pay and
+   * lands on their box, while `day` is the DRIVER's (advance, field costs).
+   * Held separately and never merged, because `store.mutate()`-ing the
+   * per-head response over `day` would have swapped one person's running
+   * totals for another's on the strip the salesperson reads at the vehicle.
+   */
+  protected myDay: DriverCashDayRespDto | null = null;
   protected isLoading = false;
 
   protected activeAction: DriverCashAction = null;
@@ -138,6 +147,21 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
     return this.activeAction === action;
   }
 
+  /**
+   * The per-head form's stop list comes off a day response's `perHeadRates`.
+   * `day` (the driver's) stays the primary source so nothing changes for a
+   * round that already has an advance on it; `myDay` is the fallback for the
+   * case OBRS-1073 created, where the salesperson has recorded heads but this
+   * round has no driver-side entry yet.
+   *
+   * ⚠️ Pre-existing and untouched by this card: when NEITHER day exists yet
+   * the list is empty, because the only source of stops on this screen is a
+   * day response that does not exist until the first entry.
+   */
+  protected get perHeadRates() {
+    return this.day?.perHeadRates ?? this.myDay?.perHeadRates ?? [];
+  }
+
   // ── Submit handlers — never reset the form on failure (card) ─────────────
 
   protected onSubmitAdvance(payload: { amount: string }): void {
@@ -164,7 +188,9 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
       .postDriverCashPerHead(this.scheduleId, payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (resp) => this.onActionSuccess(resp?.data ?? null),
+        // NOT onActionSuccess: this response is the CALLER's day, not the
+        // driver's, so it must not overwrite `day`. See `myDay`.
+        next: (resp) => this.onPerHeadSuccess(resp?.data ?? null),
         error: (err: unknown) => {
           this.isSubmitting = false;
           this.perHeadError = this.mapError(err, PER_HEAD_ERROR_KEYS);
@@ -186,6 +212,20 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
           this.expenseError = this.mapError(err, EXPENSE_ERROR_KEYS);
         },
       });
+  }
+
+  /**
+   * OBRS-1073 — the per-head POST answers about the caller's OWN day. The
+   * driver's day is genuinely unchanged by it (his ledger no longer carries
+   * this fee at all), so there is nothing to refetch — the panel simply gains
+   * a second, clearly-labelled figure.
+   */
+  private onPerHeadSuccess(data: DriverCashDayRespDto | null): void {
+    this.isSubmitting = false;
+    if (data) {
+      this.myDay = data;
+    }
+    this.activeAction = null;
   }
 
   private onActionSuccess(data: DriverCashDayRespDto | null): void {

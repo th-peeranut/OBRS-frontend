@@ -40,12 +40,15 @@ const DAY_RESP: DriverCashDayRespDto = {
   dayId: 1,
   driverId: 5,
   driverName: 'Somchai',
+  holderRole: 'DRIVER',
   businessDate: '2026-08-01',
   vehicleId: 42,
   status: 'OPEN',
   entries: [],
   advanceTotal: '0.00',
   perHeadTotal: '0.00',
+  fareCollectedTotal: '0.00',
+  cashRefundedTotal: '0.00',
   expensePaidTotal: '0.00',
   parcelRemitTotal: '0.00',
   // OBRS-992/OBRS-1053: already INSIDE expectedReturnAmount, never an addend.
@@ -106,6 +109,68 @@ describe('DriverCashPanelComponent', () => {
       component['toggleAction']('perHead');
       expect(component['isActionOpen']('advance')).toBeFalse();
       expect(component['isActionOpen']('perHead')).toBeTrue();
+    });
+  });
+
+  // ── OBRS-1073: the per-head response is a DIFFERENT person's day ────────
+  describe('onSubmitPerHead — the caller\'s own day, never the driver\'s', () => {
+    // The per-head fee is the salesperson's pay, so the POST answers about
+    // THEIR box. Before this card the handler ran the same onActionSuccess as
+    // advance/expense, which store.mutate()-ed that response over the driver's
+    // day — swapping one person's running totals for another's on the strip
+    // the salesperson reads standing at the vehicle.
+    const MY_DAY = {
+      ...DAY_RESP,
+      dayId: 99,
+      driverId: 77,
+      driverName: 'Salesperson',
+      holderRole: 'SALESPERSON' as const,
+      perHeadTotal: '60.00',
+      expectedReturnAmount: '-60.00',
+    };
+
+    it('does NOT mutate the driver-day store', () => {
+      staffApi.postDriverCashPerHead.and.returnValue(of({ code: 201, message: 'Created', data: MY_DAY }));
+      component['toggleAction']('perHead');
+
+      component['onSubmitPerHead']({ stopId: 1, headCount: 3 });
+
+      expect(store.mutate).not.toHaveBeenCalled();
+    });
+
+    it('holds the response as myDay and collapses the accordion', () => {
+      staffApi.postDriverCashPerHead.and.returnValue(of({ code: 201, message: 'Created', data: MY_DAY }));
+      component['toggleAction']('perHead');
+
+      component['onSubmitPerHead']({ stopId: 1, headCount: 3 });
+
+      expect(component['myDay']).toEqual(MY_DAY);
+      expect(component['isActionOpen']('perHead')).toBeFalse();
+      expect(component.isSubmitting).toBeFalse();
+    });
+
+    it('falls back to myDay for the stop list when the driver has no day yet', () => {
+      const rates = [
+        { stopId: 1, stopName: 'Origin', salesPointId: 11, salesPointName: 'บ้านบึง', ratePerHead: '20.00', configured: true },
+      ];
+      staffApi.postDriverCashPerHead.and.returnValue(
+        of({ code: 201, message: 'Created', data: { ...MY_DAY, perHeadRates: rates } })
+      );
+      component['day'] = null;
+
+      component['onSubmitPerHead']({ stopId: 1, headCount: 3 });
+
+      expect(component['perHeadRates']).toEqual(rates);
+    });
+
+    it('prefers the DRIVER day for the stop list when both exist', () => {
+      const driverRates = [
+        { stopId: 2, stopName: 'Midway', salesPointId: null, salesPointName: null, ratePerHead: '0.00', configured: false },
+      ];
+      component['day'] = { ...DAY_RESP, perHeadRates: driverRates };
+      component['myDay'] = { ...MY_DAY, perHeadRates: [] };
+
+      expect(component['perHeadRates']).toEqual(driverRates);
     });
   });
 
