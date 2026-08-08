@@ -71,7 +71,6 @@
     "bootstrap-icons": "~1.11.3",
     "dayjs": "~1.11.13",
     "html2canvas": "^1.4.1",
-    "jquery": "~4.0.0",
     "leaflet": "^1.9.4",
     "ngx-otp-input": "~1.1.2",
     "primeicons": "~7.0.0",
