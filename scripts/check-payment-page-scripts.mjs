@@ -31,6 +31,16 @@
  * Prod's Caddyfile lives in the other repo and is gated there by
  * CspAllowlistMatchesInventoryTest. Neither gate can see the other's tree; the prose
  * inventory beside the Caddyfile is the seam between them.
+ *
+ * Rule 6 is NOT a 6.4.3 rule and is deliberately not phrased as one (OBRS-1150).
+ * Karma is not a payment page, so its scripts are not compared against the inventory —
+ * that would blur what this file is for. What it does compare is angular.json's two
+ * scripts[] arrays against EACH OTHER. Rule 3b below reads architect.build.options,
+ * because that is what ships; architect.test.options is a second, separate array that
+ * until now nothing read at all. OBRS-1135 is the measured case: removing jQuery from
+ * `build` alone would have left every job in CI green while Karma went on loading it
+ * forever. The suite would then have been asserting against a dependency set the user
+ * never receives, which makes a green run a statement about a build nobody ships.
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -86,6 +96,22 @@ function stripComments(source) {
  */
 function httpsOriginsIn(source) {
   return new Set((stripComments(source).match(/https:\/\/[A-Za-z0-9.*-]+/g) ?? []));
+}
+
+/**
+ * Do angular.json's two scripts[] arrays say the same thing? (OBRS-1150)
+ *
+ * ORDER IS PART OF THE ANSWER, not an accident of how this is written. These arrays are
+ * a load order: popper defines what bootstrap reads at evaluation time, so the same two
+ * entries in the other order is a different program. A rule that sorted before comparing
+ * would call that pair equal and would have nothing to say about the one failure mode
+ * order can cause.
+ *
+ * A missing key reads as [], which is the honest reading: `architect.test.options` with
+ * no scripts loads no scripts. It is not "unknown", so it is not skipped.
+ */
+function scriptListsMatch(buildScripts, testScripts) {
+  return JSON.stringify(buildScripts ?? []) === JSON.stringify(testScripts ?? []);
 }
 
 /**
@@ -268,6 +294,22 @@ const SELF_TEST_CASES = [
   ['sidecar', 0, "script-src 'self' https://cdn.omise.co; style-src 'self' 'unsafe-inline'"],
   ['sidecar', 0, "script-src 'self'; style-src 'self' https://accounts.google.com"],
   ['sidecar', 1, "script-src 'self' https://accounts.google.com; style-src 'self' https://*.google.com"],
+  // ---- rule 6: angular.json's two scripts[] arrays (OBRS-1150). Input is [build, test].
+  // must NOT catch: the pair as it stands, and the honest empty case.
+  ['scriptsPair', true, [['a.js', 'b.js'], ['a.js', 'b.js']]],
+  ['scriptsPair', true, [[], []]],
+  ['scriptsPair', true, [[], undefined]],
+  // must catch: BOTH halves of the OBRS-1135 near-miss. Removing from build only leaves
+  // the extra entry in test; removing from test only leaves it in build. Neither array is
+  // privileged here — the rule is that they agree, not that one follows the other.
+  ['scriptsPair', false, [['a.js', 'b.js'], ['a.js', 'b.js', 'jquery.min.js']]],
+  ['scriptsPair', false, [['a.js', 'b.js', 'jquery.min.js'], ['a.js', 'b.js']]],
+  // must catch: same entries, wrong load order. popper before bootstrap is not a style
+  // choice, so a rule that sorted first would be blind to the one thing order can break.
+  ['scriptsPair', false, [['popper.js', 'bootstrap.js'], ['bootstrap.js', 'popper.js']]],
+  // must catch: the whole key deleted while build still ships two scripts. Absent is [],
+  // not "unknown" — a skip here would be a green answer to a question never asked.
+  ['scriptsPair', false, [['a.js'], undefined]],
 ];
 
 function runSelfTest() {
@@ -279,6 +321,7 @@ function runSelfTest() {
     else if (kind === 'srcOrigins') actual = [...httpsOriginsIn(input)].sort().join(',');
     else if (kind === 'redirect') actual = orphanedRedirectSources(input).length;
     else if (kind === 'sidecar') actual = orphanedSidecarSubresources(input).length;
+    else if (kind === 'scriptsPair') actual = scriptListsMatch(input[0], input[1]);
     else actual = originsOf(input).size;
 
     if (actual !== expected) {
@@ -411,6 +454,29 @@ if (JSON.stringify(bundled) !== JSON.stringify(bundledExpected)) {
       `      angular.json: ${JSON.stringify(bundled)}\n` +
       `      inventory:    ${JSON.stringify(bundledExpected)}\n` +
       '      Every entry here is injected into EVERY page, payment included.'
+  );
+}
+
+// --- 6. angular.json's SECOND scripts[] — the one Karma loads (OBRS-1150).
+// Not a PCI rule: Karma is not a payment page, so this compares the two arrays to each
+// OTHER rather than either of them to the inventory. Everything above reads
+// architect.build.options, which is what ships; nothing read architect.test.options at
+// all until this rule, and `architect` appeared exactly once in this repo's own code as
+// a result. Equality is the invariant that actually holds today, so it is the one worth
+// asserting — a test-only script would be a deliberate act, and this is where the
+// exception would be written down rather than discovered later by someone reading a diff.
+const testScripts = angularJson.projects.OBRS.architect.test?.options?.scripts ?? [];
+if (!scriptListsMatch(bundled, testScripts)) {
+  problems.push(
+    "angular.json's test scripts[] does not match its build scripts[].\n" +
+      `      architect.build.options.scripts: ${JSON.stringify(bundled)}\n` +
+      `      architect.test.options.scripts:  ${JSON.stringify(testScripts)}\n` +
+      '      These are two separate arrays and editing one does not touch the other, so a\n' +
+      '      half-finished edit leaves Karma running against a dependency set the user never\n' +
+      '      receives — a green suite then describes a build nobody ships. OBRS-1135 is the\n' +
+      '      real case: dropping jQuery from build alone kept every CI job green while Karma\n' +
+      '      would have loaded it forever. If Karma genuinely needs a script the app does not,\n' +
+      '      change this rule and say why here; do not silently let the arrays diverge.'
   );
 }
 
