@@ -341,8 +341,8 @@ describe('ParcelBookingPageComponent', () => {
   const onTimeRow = {
     id: 7,
     vehicleType: 'Van',
-    departureDateTime: '2026-08-01T08:00:00+07:00',
-    arrivalDateTime: '2026-08-01T10:00:00+07:00',
+    departureDateTime: '2026-08-01T08:00:00',
+    arrivalDateTime: '2026-08-01T10:00:00',
     pricePerSeat: 100,
     availableSeats: 10,
     availableSeatNumbers: [],
@@ -360,9 +360,9 @@ describe('ParcelBookingPageComponent', () => {
       {
         ...onTimeRow,
         id: 8,
-        departureDateTime: '2026-08-01T10:00:00+07:00',
-        arrivalDateTime: '2026-08-01T12:00:00+07:00',
-        scheduledDepartureDateTime: '2026-08-01T08:00:00+07:00',
+        departureDateTime: '2026-08-01T10:00:00',
+        arrivalDateTime: '2026-08-01T12:00:00',
+        scheduledDepartureDateTime: '2026-08-01T08:00:00',
       },
     ]);
 
@@ -379,9 +379,9 @@ describe('ParcelBookingPageComponent', () => {
       {
         ...onTimeRow,
         id: 9,
-        departureDateTime: '2026-08-02T00:30:00+07:00',
-        arrivalDateTime: '2026-08-02T02:30:00+07:00',
-        scheduledDepartureDateTime: '2026-08-01T23:30:00+07:00',
+        departureDateTime: '2026-08-02T00:30:00',
+        arrivalDateTime: '2026-08-02T02:30:00',
+        scheduledDepartureDateTime: '2026-08-01T23:30:00',
       },
     ]);
 

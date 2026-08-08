@@ -381,8 +381,8 @@ describe('ScheduleBookingListComponent (announced-delay disclosure, OBRS-1141)',
   const onTime: Schedule = {
     id: 31,
     vehicleType: 'van',
-    departureDateTime: '2030-06-17T08:00:00+07:00',
-    arrivalDateTime: '2030-06-17T09:58:00+07:00',
+    departureDateTime: '2030-06-17T08:00:00',
+    arrivalDateTime: '2030-06-17T09:58:00',
     pricePerSeat: '200',
     availableSeats: 10,
     availableSeatNumbers: ['1A'],
@@ -394,9 +394,9 @@ describe('ScheduleBookingListComponent (announced-delay disclosure, OBRS-1141)',
   const delayed: Schedule = {
     ...onTime,
     id: 32,
-    departureDateTime: '2030-06-17T10:00:00+07:00',
-    arrivalDateTime: '2030-06-17T11:58:00+07:00',
-    scheduledDepartureDateTime: '2030-06-17T08:00:00+07:00',
+    departureDateTime: '2030-06-17T10:00:00',
+    arrivalDateTime: '2030-06-17T11:58:00',
+    scheduledDepartureDateTime: '2030-06-17T08:00:00',
   };
 
   function render(departures: Schedule[], returns: Schedule[] | null = null): void {
@@ -475,9 +475,9 @@ describe('ScheduleBookingListComponent (announced-delay disclosure, OBRS-1141)',
       // 23:30 announced an hour late leaves at 00:30 the NEXT day, and stays in
       // the searched day's results because the sale window and the day bucket
       // are both computed from the planned time (OBRS-1099 AC1/AC9).
-      departureDateTime: '2030-06-18T00:30:00+07:00',
-      arrivalDateTime: '2030-06-18T02:28:00+07:00',
-      scheduledDepartureDateTime: '2030-06-17T23:30:00+07:00',
+      departureDateTime: '2030-06-18T00:30:00',
+      arrivalDateTime: '2030-06-18T02:28:00',
+      scheduledDepartureDateTime: '2030-06-17T23:30:00',
     };
     render([overnight]);
 

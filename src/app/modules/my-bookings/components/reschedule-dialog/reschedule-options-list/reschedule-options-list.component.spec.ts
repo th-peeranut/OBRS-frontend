@@ -114,8 +114,8 @@ describe('RescheduleOptionsListComponent (announced-delay disclosure, OBRS-1141)
   const onTime: RescheduleOption = {
     scheduleId: 201,
     vehicleTypeName: 'Van',
-    departureDateTime: '2026-12-21T09:00:00+07:00',
-    arrivalDateTime: '2026-12-21T11:00:00+07:00',
+    departureDateTime: '2026-12-21T09:00:00',
+    arrivalDateTime: '2026-12-21T11:00:00',
     pricePerSeat: '220.00',
     availableSeats: 5,
   };
@@ -123,9 +123,9 @@ describe('RescheduleOptionsListComponent (announced-delay disclosure, OBRS-1141)
   const delayed: RescheduleOption = {
     ...onTime,
     scheduleId: 202,
-    departureDateTime: '2026-12-21T11:00:00+07:00',
-    arrivalDateTime: '2026-12-21T13:00:00+07:00',
-    scheduledDepartureDateTime: '2026-12-21T09:00:00+07:00',
+    departureDateTime: '2026-12-21T11:00:00',
+    arrivalDateTime: '2026-12-21T13:00:00',
+    scheduledDepartureDateTime: '2026-12-21T09:00:00',
   };
 
   beforeEach(async () => {

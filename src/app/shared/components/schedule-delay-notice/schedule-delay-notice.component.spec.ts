@@ -25,7 +25,7 @@ describe('ScheduleDelayNoticeComponent (OBRS-1141)', () => {
   }
 
   it('renders NOTHING for a round with no announced delay — the host stays empty (AC2)', () => {
-    render('2026-08-08T07:00:00+07:00', null);
+    render('2026-08-08T07:00:00', null);
 
     expect(fixture.debugElement.query(By.css('[data-testid="schedule-delay-notice"]'))).toBeNull();
     // `:host(:empty) { display: none }` is what keeps this from costing a flex/grid
@@ -36,7 +36,7 @@ describe('ScheduleDelayNoticeComponent (OBRS-1141)', () => {
   });
 
   it('shows a delayed badge and the planned time when the round is delayed (AC1)', () => {
-    render('2026-08-08T09:00:00+07:00', '2026-08-08T07:00:00+07:00');
+    render('2026-08-08T09:00:00', '2026-08-08T07:00:00');
 
     const notice = fixture.debugElement.query(By.css('[data-testid="schedule-delay-notice"]'));
     expect(notice).not.toBeNull();
@@ -47,7 +47,7 @@ describe('ScheduleDelayNoticeComponent (OBRS-1141)', () => {
   });
 
   it('routes every string through i18n — nothing user-visible is hardcoded (AC1)', () => {
-    render('2026-08-09T00:30:00+07:00', '2026-08-08T23:30:00+07:00');
+    render('2026-08-09T00:30:00', '2026-08-08T23:30:00');
 
     const notice = fixture.debugElement.query(By.css('[data-testid="schedule-delay-notice"]'));
     // With TranslateModule.forRoot() and no loaded dictionary, every resolved
@@ -61,17 +61,17 @@ describe('ScheduleDelayNoticeComponent (OBRS-1141)', () => {
   });
 
   it('adds the departure DATE only when the delay crosses midnight (AC5)', () => {
-    render('2026-08-09T00:30:00+07:00', '2026-08-08T23:30:00+07:00');
+    render('2026-08-09T00:30:00', '2026-08-08T23:30:00');
     expect(
       fixture.debugElement.query(By.css('[data-testid="schedule-delay-date"]'))
     ).not.toBeNull();
 
-    render('2026-08-08T09:00:00+07:00', '2026-08-08T07:00:00+07:00');
+    render('2026-08-08T09:00:00', '2026-08-08T07:00:00');
     expect(fixture.debugElement.query(By.css('[data-testid="schedule-delay-date"]'))).toBeNull();
   });
 
   it('carries an aria-label naming both times, so the badge is not the only cue', () => {
-    render('2026-08-08T09:00:00+07:00', '2026-08-08T07:00:00+07:00');
+    render('2026-08-08T09:00:00', '2026-08-08T07:00:00');
 
     const notice = fixture.debugElement.query(By.css('[data-testid="schedule-delay-notice"]'));
     expect(notice.nativeElement.getAttribute('aria-label')).toContain(
@@ -80,7 +80,7 @@ describe('ScheduleDelayNoticeComponent (OBRS-1141)', () => {
   });
 
   it('renders nothing when the planned time is not before the effective one', () => {
-    render('2026-08-08T07:00:00+07:00', '2026-08-08T07:00:00+07:00');
+    render('2026-08-08T07:00:00', '2026-08-08T07:00:00');
     expect(fixture.nativeElement.children.length).toBe(0);
   });
 });
