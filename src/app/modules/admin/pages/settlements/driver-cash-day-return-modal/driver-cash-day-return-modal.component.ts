@@ -6,7 +6,7 @@ import {
   DriverCashEntryRespDto,
 } from '../../../../../shared/interfaces/driver-cash.interface';
 import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
-import { toCents } from '../../../../../shared/lib/money-cents';
+import { centsToDecimalString, toSignedCents } from '../../../../../shared/lib/money-cents';
 
 /** `confirmRequested` payload — `POST /api/private/driver-cash/days/{dayId}/return`. */
 export interface DriverCashDayReturnPayload {
@@ -38,6 +38,12 @@ export interface DriverCashDayReturnPayload {
  * `currency` field on the real DTO (driver-cash is THB-only in practice, and
  * the backend's DTOs carry no currency code anywhere in this feature), so
  * money renders as the raw decimal string, not through `Intl.NumberFormat`.
+ *
+ * OBRS-1144 — the sign-off form no longer starts empty and no longer refuses
+ * a minus sign. It parses with `toSignedCents`, NOT the shared `toCents` that
+ * `SettlementDetailModalComponent` uses: that one guards a physical cash
+ * count and must keep rejecting negatives. The two forms stopped being the
+ * same form the moment OBRS-1073 made this one a two-sided balance.
  *
  * ⚠️ CORRECTED AGAIN (same day, second reconciliation pass) — each entry has
  * no `label` field on the wire at all (the first correction pass still
@@ -72,6 +78,7 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
   protected discrepancyReasonInput = '';
 
   private formDayId: number | null = null;
+  private prefilledDayId: number | null = null;
 
   constructor(private readonly translate: TranslateService) {}
 
@@ -81,15 +88,46 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
       this.formDayId = dayId;
       this.resetForm();
     }
+    this.prefillFromExpectedOnce(dayId);
+  }
+
+  /**
+   * OBRS-1144 — the owner's own words: *"แค่ส่งเรื่องต่อให้ owner กดรับก็น่าจะโอเค"*.
+   * The field stays (it is the only thing that can ever say the cash did NOT
+   * add up — see `driver_cash_days.discrepancy`), but the ordinary day, where
+   * the cash matches, is now one click: the expectation is already in the box
+   * and `canConfirm` is true on arrival.
+   *
+   * Fires ONCE per day, and only after `[detail]` resolves — the modal opens
+   * optimistically on `[summary]` alone (design-system.md §6), which carries
+   * no expectation to seed with. `prefilledDayId` is what makes it once: the
+   * smart page re-emits `[detail]` on every store tick, and refilling on each
+   * one would silently undo an owner mid-correction. Never touches a day that
+   * is already `RETURNED` — that form is not rendered at all.
+   */
+  private prefillFromExpectedOnce(dayId: number | null): void {
+    if (dayId === null || this.prefilledDayId === dayId) {
+      return;
+    }
+    if (!this.detail || this.detail.status !== 'OPEN') {
+      return;
+    }
+    const expected = toSignedCents(this.detail.expectedReturnAmount);
+    if (expected === null) {
+      return; // unparseable wire value — leave the box empty rather than lie
+    }
+    this.prefilledDayId = dayId;
+    this.returnedAmountInput = centsToDecimalString(expected);
   }
 
   private resetForm(): void {
     this.returnedAmountInput = '';
     this.discrepancyReasonInput = '';
+    this.prefilledDayId = null;
   }
 
   protected get returnedCents(): number | null {
-    return toCents(this.returnedAmountInput);
+    return toSignedCents(this.returnedAmountInput);
   }
 
   /**
@@ -132,7 +170,10 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
     if (returned === null || !this.detail) {
       return null;
     }
-    const expected = toCents(this.detail.expectedReturnAmount) ?? 0;
+    // OBRS-1144 — this used to be `toCents(...) ?? 0`, which returned null on
+    // a NEGATIVE expectation and then silently compared against zero: a day
+    // expecting -20.00 reported a 20.00 discrepancy whatever was entered.
+    const expected = toSignedCents(this.detail.expectedReturnAmount) ?? 0;
     return returned - expected;
   }
 

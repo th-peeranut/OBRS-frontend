@@ -162,6 +162,28 @@ describe('SettlementDetailModalComponent', () => {
     expect(component['canConfirm']).toBeFalse();
   });
 
+  // ── OBRS-1144 — the driver-cash return sign-off (this form's twin in shape)
+  // gained a signed parser and an expected-amount prefill. This form must
+  // inherit NEITHER: it counts physical notes in a hand. A negative count is
+  // not a balance, it is a typo posting a silent credit; and a pre-filled
+  // count is a count nobody made. Asserted, not merely left untouched.
+  it('still rejects a NEGATIVE counted-cash amount (the signed parser must not leak here)', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeDetail();
+    component['handedOverById'] = 7;
+    component['countedCashInput'] = '-600.00';
+    expect(component['countedCents']).toBeNull();
+    expect(component['canConfirm']).toBeFalse();
+  });
+
+  it('never prefills the counted cash from the expected amount — the box stays empty on open', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeDetail(); // expected cash 600.00
+    component.ngOnChanges({});
+    expect(component['countedCashInput']).toBe('');
+    expect(component['canConfirm']).toBeFalse();
+  });
+
   // ── OBRS-671 expected cash / discrepancy ─────────────────────────────────
   it('expectedCashAmount reads the cash method bucket (never the round total)', () => {
     const component = new SettlementDetailModalComponent(createTranslateStub());

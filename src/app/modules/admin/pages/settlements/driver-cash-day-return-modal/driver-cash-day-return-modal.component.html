@@ -149,8 +149,13 @@
                   }
                 </div>
 
-                @if (discrepancyCents !== null) {
-                  <div class="settlement-detail-row">
+                <!-- OBRS-1144: hidden at zero, the same rule the breakdown
+                lines above already follow (OBRS-1053/1073) — and now load-
+                bearing rather than cosmetic, because the box arrives PREFILLED
+                and every ordinary day would otherwise open showing a
+                "ส่วนต่าง 0.00" line that explains nothing. -->
+                @if (hasDiscrepancy()) {
+                  <div class="settlement-detail-row" data-testid="driver-cash-return-discrepancy">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.DISCREPANCY' | translate }}</span>
                     <span class="admin-emphasis" [class.settlement-nt-negative]="isNegativeMoney(discrepancyAmount())">
                       {{ discrepancyAmount() }}

@@ -21,6 +21,30 @@ export function toCents(value: string): number | null {
   return Math.round(Number(trimmed) * 100);
 }
 
+/**
+ * OBRS-1144: the same parser, but a leading minus is legal.
+ *
+ * Kept as a SEPARATE export rather than an `allowNegative` flag on
+ * {@link toCents}, because the two are not two settings of one rule — they
+ * are two different facts. `toCents` guards a physical cash COUNT (settlement
+ * sign-off, OBRS-671): a stack of notes in someone's hand cannot be negative,
+ * and the day that validator starts accepting `-` is the day a typo becomes a
+ * silent credit. This one guards a BALANCE, which OBRS-1073 made genuinely
+ * two-sided on the backend — a salesperson whose per-head pay exceeds the
+ * cash they took in is owed money, so the day closes at a negative amount and
+ * `DriverCashReturnReqDto` dropped its `@DecimalMin("0.0")` floor to say so.
+ * The frontend was still refusing to let anyone type it.
+ *
+ * Same integer-cents contract as {@link toCents}, same float-drift reasoning.
+ */
+export function toSignedCents(value: string): number | null {
+  const trimmed = value.trim();
+  if (!/^-?\d+(\.\d{1,2})?$/.test(trimmed)) {
+    return null;
+  }
+  return Math.round(Number(trimmed) * 100);
+}
+
 /** Inverse of {@link toCents} — integer cents back to a 2-decimal string. */
 export function centsToDecimalString(cents: number): string {
   return (cents / 100).toFixed(2);
