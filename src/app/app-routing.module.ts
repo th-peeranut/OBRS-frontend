@@ -69,8 +69,10 @@ export const appRoutes: Routes = [
   // asymmetry that produced a false "session expired" at the payment button.
   // Both spellings are pinned by app-routing.module.spec.ts, in both directions.
   //
-  // When real guest checkout lands (OBRS-858) `requireAuth` comes back OUT of the
-  // two routes below; it is a short-term alignment, not the destination.
+  // OBRS-858 landed and did exactly that: `requireAuth` is gone from /passenger-info
+  // and /payment below. The paragraph above is kept because it records WHY those two
+  // routes were ever guarded - to mirror the backend, not to protect anything of their
+  // own - which is the reason removing the guard is safe rather than a loosening.
   {
     path: 'schedule-booking',
     canActivate: [AuthGuard],
@@ -89,10 +91,17 @@ export const appRoutes: Routes = [
         (m) => m.ReviewScheduleBookingModule
       ),
   },
+  // OBRS-858: `requireAuth` is OUT of both routes below, which is the removal OBRS-856
+  // announced above. It was never a rule of its own - it existed only to mirror what
+  // POST /api/private/bookings enforced, so that the sign-in prompt arrived before the
+  // form rather than at the payment button. Guest checkout moves that endpoint
+  // (POST /api/bookings, ADR-0123 Decision 1) and there is no longer anything server-side
+  // for the guard to mirror; leaving it would be the frontend refusing a request the
+  // backend now accepts. Pinned in both directions by app-routing.module.spec.ts.
   {
     path: 'passenger-info',
     canActivate: [AuthGuard],
-    data: { customerArea: true, requireAuth: true },
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/passenger-info/passenger-info.module').then(
         (m) => m.PassengerInfoModule
@@ -101,7 +110,7 @@ export const appRoutes: Routes = [
   {
     path: 'payment',
     canActivate: [AuthGuard],
-    data: { customerArea: true, requireAuth: true },
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/payment/payment.module').then(
         (m) => m.PaymentModule

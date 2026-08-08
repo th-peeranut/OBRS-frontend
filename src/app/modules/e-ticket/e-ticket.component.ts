@@ -14,6 +14,7 @@ import dayjs from 'dayjs';
 import { capitalizeVehicleType, parsePricePerSeat } from '../../shared/lib/trip-format';
 import { buildMapsDirectionsUrl } from '../../shared/lib/maps-directions-url';
 import html2canvas from 'html2canvas';
+import { AuthService } from '../../auth/auth.service';
 import { BookingService } from '../../services/booking/booking.service';
 import { BoardingQrService } from '../../shared/services/boarding-qr.service';
 import { BookingState } from '../../shared/interfaces/booking.interface';
@@ -159,7 +160,10 @@ export class ETicketComponent implements OnInit, OnDestroy {
     private store: Store,
     private bookingService: BookingService,
     private boardingQrService: BoardingQrService,
-    private translateService: TranslateService
+    private translateService: TranslateService,
+    // OBRS-858: read ONLY to decide whether the private ticket API can be called at all;
+    // see loadTicketFromApi. Nothing on this page derives authorization from it.
+    private authService: AuthService
   ) {
     this.scheduleBooking$ = this.store.pipe(
       select(selectScheduleBooking)
@@ -607,6 +611,22 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
   private async loadTicketFromApi(bookingId: number | null): Promise<void> {
     if (!bookingId) {
+      return;
+    }
+
+    // OBRS-858: a guest holds no token and this endpoint is under /api/private/**, so the
+    // call could only ever 401. NOT calling it is the fix, not catching it: the interceptor
+    // turns a token-less 401 into a "Please sign in to continue" toast (OBRS-856) — exactly
+    // the wall guest checkout exists to remove, shown at the moment the customer has just
+    // paid.
+    //
+    // What a guest gives up by skipping this is the per-ticket QR and the real ticket
+    // numbers, which this page OVERLAYS on top of a render already built from the store;
+    // booking number, route, date, seats and total all come from the store and are
+    // unaffected. The guest's authoritative copy is /find-booking (OBRS-857), which the
+    // retrieval note further down this page points at — ADR-0123 Decision 5's "retrievable,
+    // not merely delivered". That is why this returns quietly instead of erroring.
+    if (!this.authService.isAuthenticated()) {
       return;
     }
 

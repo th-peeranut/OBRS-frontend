@@ -111,7 +111,11 @@ describe('BookerInfoFormComponent', () => {
       expect(result?.title).toBe(2);
     });
 
-    it('returns null when email is missing', () => {
+    // OBRS-858 (ADR-0123 Decision 5): this used to expect null. Inverted rather than deleted —
+    // it is now THE assertion guest checkout stands on, because a guest may have no mailbox and
+    // a form that still refused a blank address would make the whole feature unreachable behind
+    // a validation error no backend change could clear.
+    it('returns the booker when email is missing — email is optional', () => {
       component.bookerForm.patchValue({
         title: 1,
         firstName: 'Somchai',
@@ -121,9 +125,13 @@ describe('BookerInfoFormComponent', () => {
         email: '',
       });
 
-      expect(component.validateAndGetBooker()).toBeNull();
+      const result = component.validateAndGetBooker();
+      expect(result).not.toBeNull();
+      expect(result?.email).toBe('');
     });
 
+    // Optional does not mean unvalidated. Kept unchanged and deliberately adjacent to the test
+    // above: together they say "absent is fine, nonsense is not".
     it('returns null when email format is invalid', () => {
       component.bookerForm.patchValue({
         title: 1,

@@ -2457,8 +2457,7 @@
       "PHONE_NUMBER_INVALID": "กรุณากรอกหมายเลขโทรศัพท์ 10 หลักให้ถูกต้อง",
       "PHONE_NUMBER_MOBILE_INVALID": "กรุณากรอกเบอร์มือถือให้ถูกต้อง (ขึ้นต้นด้วย 06, 08 หรือ 09 เช่น 0812345678) เพราะระบบจะส่ง SMS แจ้งข้อมูลการจองไปที่เบอร์นี้",
       "EMAIL": "อีเมล",
-      "EMAIL_PLACEHOLDER": "กรุณากรอกอีเมลของคุณ",
-      "EMAIL_REQUIRED": "กรุณากรอกอีเมลของคุณ",
+      "EMAIL_PLACEHOLDER": "อีเมลสำหรับรับ e-ticket (ไม่บังคับ)",
       "EMAIL_INVALID": "กรุณากรอกอีเมลให้ถูกต้อง",
       "GENDER_STATUS": "เพศ/สถานะสภาพ",
       "GENDER_STATUS_REQUIRED": "กรุณากรอกเพศ/สถานะสภาพ",
@@ -2480,7 +2479,8 @@
       "SEAT_REQUIREMENT_LABEL": "ความต้องการพิเศษ (ไม่บังคับ)",
       "SEAT_REQUIREMENT_GROUP_ARIA": "เลือกความต้องการที่นั่งพิเศษ",
       "SEAT_REQUIREMENT_WHEELCHAIR": "รองรับรถเข็น",
-      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "พื้นที่วางขาเพิ่ม"
+      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "พื้นที่วางขาเพิ่ม",
+      "EMAIL_OPTIONAL_HINT": "(ไม่บังคับ — ใช้ส่ง e-ticket ให้คุณ)"
     },
     "SEAT_MAP": {
       "WHEELCHAIR_BADGE_ARIA": "ที่นั่งรองรับรถเข็น",

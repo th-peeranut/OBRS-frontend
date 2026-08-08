@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
+import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import {
   BookingPayload,
@@ -91,15 +92,34 @@ export interface ConfirmChangeStopPayload {
 })
 export class BookingService {
   private readonly BOOKING_ID_KEY = 'active_booking_id';
+  // OBRS-858 (ADR-0123 Decision 6). Deliberately NOT named *_token in a way that resembles
+  // `auth_token`: it is a capability for one booking, not a session, and a reader skimming
+  // localStorage should not mistake one for the other.
+  private readonly GUEST_PAYMENT_TOKEN_KEY = 'active_booking_payment_grant';
 
-  constructor(private http: HttpClient) {}
+  // OBRS-858: read ONLY to pick between the private and public booking-create endpoints
+  // in createBooking. Nothing here derives authorization from it - the server does that.
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) {}
 
   /**
    * Create a booking and reserve seats. This is the single seam that resolves the
    * booking-intake response: the raw payload is normalized to the canonical
    * `CreateBookingResponse` ({ bookingId, bookingNumber }) here, so callers never
-   * guess at field names or coerce types. Contract: POST /api/private/bookings →
-   * 201, data = CreateBookingResponse (see OBRS-backend/docs/api/booking.md).
+   * guess at field names or coerce types.
+   *
+   * <p>OBRS-858: TWO contracts now, chosen by whether the caller holds a token.
+   * A signed-in customer keeps POST /api/private/bookings exactly as before; a guest
+   * goes to POST /api/bookings (ADR-0123 Decision 1), which resolves a phone-keyed
+   * shadow actor and is rate-limited per IP. Both return 201 with the same
+   * CreateBookingResponse (see OBRS-backend/docs/api/booking.md).
+   *
+   * <p>Deliberately NOT "always use the public endpoint". The public one is throttled
+   * per IP because it must be; sending signed-in customers through it would put an
+   * office or a campus behind one address on a shared quota that exists for callers
+   * the server cannot identify - and it can identify these.
    *
    * @param suppressGlobalErrorAlert OBRS-109 (#37): pass `true` only when
    *   `payload.promotionCode` is set — the caller then owns rendering a
@@ -111,9 +131,13 @@ export class BookingService {
     payload: BookingPayload,
     suppressGlobalErrorAlert = false
   ): Observable<ResponseAPI<CreateBookingResponse>> {
+    const url = this.authService.isAuthenticated()
+      ? `${environment.apiUrl}/api/private/bookings`
+      : `${environment.apiUrl}/api/bookings`;
+
     return this.http
       .post<ResponseAPI<CreateBookingResponse>>(
-        `${environment.apiUrl}/api/private/bookings`,
+        url,
         payload,
         suppressGlobalErrorAlert ? { context: this.silentErrorContext() } : {}
       )
@@ -165,6 +189,16 @@ export class BookingService {
     const netAmount = Number(data?.netAmount);
     if (Number.isFinite(netAmount)) {
       result.netAmount = netAmount;
+    }
+
+    // OBRS-858 (ADR-0123 Decision 6): only the PUBLIC create returns this, so an absent value is
+    // the normal authenticated case rather than a missing field. Stored here, at the one seam that
+    // already normalizes this response, so no component has to remember to do it — and stored
+    // rather than merely returned, because the payment screen is a navigation away.
+    const guestPaymentToken = String(data?.guestPaymentToken ?? '').trim();
+    if (guestPaymentToken) {
+      result.guestPaymentToken = guestPaymentToken;
+      this.setGuestPaymentToken(guestPaymentToken);
     }
 
     return result;
@@ -390,5 +424,30 @@ export class BookingService {
 
   clearActiveBookingId(): void {
     localStorage.removeItem(this.BOOKING_ID_KEY);
+    // OBRS-858: the token belongs to the booking it names, so it dies with it. Leaving it behind
+    // would mean the next booking's payment could be attempted with the previous booking's token,
+    // which the server refuses (GuestPaymentService compares the two ids) — as a confusing error
+    // rather than the obvious "no token" the flow should have produced.
+    localStorage.removeItem(this.GUEST_PAYMENT_TOKEN_KEY);
+  }
+
+  /**
+   * OBRS-858 (ADR-0123 Decision 6): the booking-scoped token returned by the PUBLIC create call,
+   * which is how a customer with no account pays for what they just booked.
+   *
+   * <p>Stored next to the active booking id and cleared with it, because it has exactly the same
+   * lifetime and the same meaning: "the booking this browser is in the middle of". It is a
+   * capability for ONE booking with a 60-minute server-side TTL, not a session — nothing else in
+   * the app may read it, and the interceptor never attaches it to anything.
+   */
+  setGuestPaymentToken(token: string | null | undefined): void {
+    if (!token) {
+      return;
+    }
+    localStorage.setItem(this.GUEST_PAYMENT_TOKEN_KEY, token);
+  }
+
+  getGuestPaymentToken(): string | null {
+    return localStorage.getItem(this.GUEST_PAYMENT_TOKEN_KEY);
   }
 }

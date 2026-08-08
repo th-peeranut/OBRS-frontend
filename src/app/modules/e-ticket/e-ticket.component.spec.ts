@@ -3,6 +3,7 @@ import { Store } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 
 import { ETicketComponent } from './e-ticket.component';
+import { AuthService } from '../../auth/auth.service';
 import { BookingService } from '../../services/booking/booking.service';
 import { TicketService } from '../../services/ticket/ticket.service';
 import { BoardingQrService } from '../../shared/services/boarding-qr.service';
@@ -97,6 +98,10 @@ describe('ETicketComponent', () => {
 
   let ticketServiceStub: jasmine.SpyObj<TicketService>;
   let boardingQrService: BoardingQrService;
+  // OBRS-858: loadTicketFromApi skips the private ticket call entirely for a guest. Defaults to
+  // TRUE so every pre-existing assertion in this file keeps exercising the authenticated path
+  // it was written for; the guest case flips it explicitly.
+  let authStub: { isAuthenticated: () => boolean };
 
   const translateStub = {
     onLangChange: new Subject(),
@@ -116,17 +121,44 @@ describe('ETicketComponent', () => {
     // existing assertions on `ticketServiceStub.getBoardingToken` calls stay
     // meaningful (OBRS-221 extraction).
     boardingQrService = new BoardingQrService(ticketServiceStub);
+    authStub = { isAuthenticated: () => true };
 
     component = new ETicketComponent(
       storeStub,
       bookingServiceStub,
       boardingQrService,
-      translateStub
+      translateStub,
+      authStub as unknown as AuthService
     );
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  // OBRS-858: the private ticket endpoint could only 401 for a guest, and a token-less 401 is
+  // turned by the interceptor into a "Please sign in to continue" toast (OBRS-856) - shown right
+  // after the customer paid. Not calling it is the fix; this is what pins that.
+  it('does NOT call the private ticket endpoint when the visitor holds no token', async () => {
+    authStub.isAuthenticated = () => false;
+    const spy = spyOn(bookingServiceStub, 'getBookingTickets').and.callThrough();
+
+    await (component as unknown as {
+      loadTicketFromApi: (id: number | null) => Promise<void>;
+    }).loadTicketFromApi(1);
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('DOES call it for a signed-in customer - the skip is about the token, not the page', async () => {
+    authStub.isAuthenticated = () => true;
+    const spy = spyOn(bookingServiceStub, 'getBookingTickets').and.callThrough();
+
+    await (component as unknown as {
+      loadTicketFromApi: (id: number | null) => Promise<void>;
+    }).loadTicketFromApi(1);
+
+    expect(spy).toHaveBeenCalledWith(1);
   });
 
   describe('applyApiOverrides', () => {
