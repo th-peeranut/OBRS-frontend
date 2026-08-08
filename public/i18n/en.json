@@ -1747,6 +1747,8 @@
       },
       "DESTINATION_MISSING": "Contact customer for account details",
       "AGE_DAYS": "{{days}} days",
+      "OVERDUE": "Overdue",
+      "DUE_ON": "Due {{date}}",
       "EMPTY": "No refunds pending",
       "ACTION": {
         "MARK_REFUNDED": "Mark refunded"

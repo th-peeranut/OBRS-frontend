@@ -1747,6 +1747,8 @@
       },
       "DESTINATION_MISSING": "需联系客户获取账户信息",
       "AGE_DAYS": "{{days}} 天",
+      "OVERDUE": "已逾期",
+      "DUE_ON": "应于 {{date}} 前完成",
       "EMPTY": "没有待处理的退款",
       "ACTION": {
         "MARK_REFUNDED": "标记为已退款"
