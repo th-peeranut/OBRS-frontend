@@ -2435,8 +2435,7 @@
       "PHONE_NUMBER_INVALID": "请输入有效的10位手机号码",
       "PHONE_NUMBER_MOBILE_INVALID": "请输入有效的泰国手机号码（以 06、08 或 09 开头，例如 0812345678），预订通知短信将发送至该号码。",
       "EMAIL": "电子邮箱",
-      "EMAIL_PLACEHOLDER": "请输入您的电子邮箱",
-      "EMAIL_REQUIRED": "请输入您的电子邮箱",
+      "EMAIL_PLACEHOLDER": "接收电子票的邮箱（选填）",
       "EMAIL_INVALID": "请输入有效的电子邮箱地址",
       "GENDER_STATUS": "性别/状态",
       "GENDER_STATUS_REQUIRED": "请选择性别/状态",
@@ -2458,7 +2457,8 @@
       "SEAT_REQUIREMENT_LABEL": "特殊需求（可选）",
       "SEAT_REQUIREMENT_GROUP_ARIA": "选择特殊座位需求",
       "SEAT_REQUIREMENT_WHEELCHAIR": "轮椅通道",
-      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "加大腿部空间"
+      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "加大腿部空间",
+      "EMAIL_OPTIONAL_HINT": "（选填 — 用于向您发送电子票）"
     },
     "SEAT_MAP": {
       "WHEELCHAIR_BADGE_ARIA": "轮椅无障碍座位",

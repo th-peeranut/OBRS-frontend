@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
+import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import {
   BookingPayload,
@@ -92,14 +93,29 @@ export interface ConfirmChangeStopPayload {
 export class BookingService {
   private readonly BOOKING_ID_KEY = 'active_booking_id';
 
-  constructor(private http: HttpClient) {}
+  // OBRS-858: read ONLY to pick between the private and public booking-create endpoints
+  // in createBooking. Nothing here derives authorization from it - the server does that.
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) {}
 
   /**
    * Create a booking and reserve seats. This is the single seam that resolves the
    * booking-intake response: the raw payload is normalized to the canonical
    * `CreateBookingResponse` ({ bookingId, bookingNumber }) here, so callers never
-   * guess at field names or coerce types. Contract: POST /api/private/bookings →
-   * 201, data = CreateBookingResponse (see OBRS-backend/docs/api/booking.md).
+   * guess at field names or coerce types.
+   *
+   * <p>OBRS-858: TWO contracts now, chosen by whether the caller holds a token.
+   * A signed-in customer keeps POST /api/private/bookings exactly as before; a guest
+   * goes to POST /api/bookings (ADR-0123 Decision 1), which resolves a phone-keyed
+   * shadow actor and is rate-limited per IP. Both return 201 with the same
+   * CreateBookingResponse (see OBRS-backend/docs/api/booking.md).
+   *
+   * <p>Deliberately NOT "always use the public endpoint". The public one is throttled
+   * per IP because it must be; sending signed-in customers through it would put an
+   * office or a campus behind one address on a shared quota that exists for callers
+   * the server cannot identify - and it can identify these.
    *
    * @param suppressGlobalErrorAlert OBRS-109 (#37): pass `true` only when
    *   `payload.promotionCode` is set — the caller then owns rendering a
@@ -111,9 +127,13 @@ export class BookingService {
     payload: BookingPayload,
     suppressGlobalErrorAlert = false
   ): Observable<ResponseAPI<CreateBookingResponse>> {
+    const url = this.authService.isAuthenticated()
+      ? `${environment.apiUrl}/api/private/bookings`
+      : `${environment.apiUrl}/api/bookings`;
+
     return this.http
       .post<ResponseAPI<CreateBookingResponse>>(
-        `${environment.apiUrl}/api/private/bookings`,
+        url,
         payload,
         suppressGlobalErrorAlert ? { context: this.silentErrorContext() } : {}
       )

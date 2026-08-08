@@ -39,6 +39,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../../shared/services/alert.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AnalyticsService } from '../../services/analytics/analytics.service';
+import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
 
 @Component({
     selector: 'app-passenger-info',
@@ -289,6 +290,12 @@ export class PassengerInfoComponent {
       // Only a code confirmed via the summary sidebar's instant preview is
       // ever sent — never a typed-but-unconfirmed value.
       promotionCode: this.appliedPromoCode ?? null,
+      // OBRS-858 (ADR-0123 Decision 4): the SAME constant the register form and the
+      // re-consent banner send (PRIVACY_POLICY_VERSION), so one privacy-notice bump moves
+      // every consent record together. Sent unconditionally rather than only when logged
+      // out: the client does not get to decide whose consent this is, and the backend
+      // ignores it for an authenticated caller.
+      pdpaConsentVersion: PRIVACY_POLICY_VERSION,
     };
 
     if (arrivalPassengers.length && arrivalSchedule) {

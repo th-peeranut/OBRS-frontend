@@ -2435,8 +2435,7 @@
       "PHONE_NUMBER_INVALID": "Please enter a valid 10-digit phone number",
       "PHONE_NUMBER_MOBILE_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678). Booking updates are sent to it by SMS.",
       "EMAIL": "Email",
-      "EMAIL_PLACEHOLDER": "Please enter your email",
-      "EMAIL_REQUIRED": "Please enter your email",
+      "EMAIL_PLACEHOLDER": "Email for your e-ticket (optional)",
       "EMAIL_INVALID": "Please enter a valid email address",
       "GENDER_STATUS": "Gender/Status",
       "GENDER_STATUS_REQUIRED": "Please select a gender/status",
@@ -2458,7 +2457,8 @@
       "SEAT_REQUIREMENT_LABEL": "Special requirement (optional)",
       "SEAT_REQUIREMENT_GROUP_ARIA": "Select special seat requirement",
       "SEAT_REQUIREMENT_WHEELCHAIR": "Wheelchair accessible",
-      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "Extra legroom"
+      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "Extra legroom",
+      "EMAIL_OPTIONAL_HINT": "(optional — we will send your e-ticket here)"
     },
     "SEAT_MAP": {
       "WHEELCHAIR_BADGE_ARIA": "Wheelchair accessible seat",
