@@ -220,4 +220,76 @@ export interface SalesPointOptionDto {
 /** OBRS-1073 — whose cash box a `driver_cash_days` row is. */
 export type DriverCashHolderRole = 'DRIVER' | 'SALESPERSON';
 
+// ── OBRS-1147: per-head EARNINGS (the person's pay, not the owner's revenue) ──
+
+/**
+ * How the earnings rows are bucketed. There is deliberately no `WEEK` — the
+ * owner asked for "ต่อวัน/เดือน/ปี" and nothing else, and the backend rejects any
+ * other value with a 400 rather than falling back to DAY.
+ */
+export type PerHeadEarningsGranularity = 'DAY' | 'MONTH' | 'YEAR';
+
+/** One day / month / year of ค่าหัว. Money is a string decimal, as everywhere. */
+export interface PerHeadEarningBucketDto {
+  /** `2026-08-08` | `2026-08` | `2026` — stable row identity, already sortable. */
+  bucketKey: string;
+  /** First business date in the bucket. Format from THIS, never by parsing `bucketKey`. */
+  bucketStart: string;
+  headCount: number;
+  amount: string;
+  /**
+   * `amount / headCount`, or `null` when no heads were counted.
+   *
+   * ⚠️ It is the RATE only when every line in the bucket used one rate (the
+   * ordinary case — a salesperson works one counter). Across two counters, or
+   * across a rate change mid-month, it is a weighted AVERAGE, which is why the
+   * UI labels it "เฉลี่ย" rather than "เรต". The per-line rates stay on the day
+   * detail (`GET /driver-cash/days/{dayId}`).
+   */
+  effectiveRate: string | null;
+}
+
+/** OBRS-1147 AC-2 — one person's total across the whole range (owner view only). */
+export interface PerHeadEarningHolderDto {
+  holderId: number;
+  /** `null` when the user has no profile name; the UI falls back to the id. */
+  holderName: string | null;
+  /**
+   * AC-4 — read off `driver_cash_days.holder_role`, not the person's current
+   * roles. One person who sold on one day and drove on another is TWO rows here,
+   * because the role is stamped per day and collapsing them would print one and
+   * be wrong about the other.
+   */
+  holderRole: DriverCashHolderRole;
+  headCount: number;
+  amount: string;
+  effectiveRate: string | null;
+}
+
+/**
+ * `GET /api/private/driver-cash/my-earnings?from=&to=&granularity=` (the caller's
+ * own) and `GET /api/private/driver-cash/earnings?...&holderId=` (owner, every
+ * person).
+ *
+ * ⛔ There is no "paid / unpaid" split and that is a DECISION, not a gap: since
+ * OBRS-1145 the fee is netted at the round — the seller keeps it out of the cash
+ * they hand over — so a recorded `PER_HEAD` line is money already in their hand
+ * and a receivable column would always read zero. Do not add one.
+ *
+ * ⛔ Never compare these numbers with `/admin/reports/eod-salesperson`: that is
+ * the OWNER's revenue attributed to whoever sold it. Same person on the screen,
+ * opposite direction of money.
+ */
+export interface PerHeadEarningsRespDto {
+  granularity: PerHeadEarningsGranularity;
+  from: string;
+  to: string;
+  totalHeadCount: number;
+  totalAmount: string;
+  /** Most recent bucket first. */
+  buckets: PerHeadEarningBucketDto[];
+  /** `null` on `/my-earnings` — a one-row breakdown of yourself is noise. */
+  holders: PerHeadEarningHolderDto[] | null;
+}
+
 export const DRIVER_CASH_RATE_DUPLICATE_ERROR_CODE = 'PER_HEAD_RATE_DUPLICATE';

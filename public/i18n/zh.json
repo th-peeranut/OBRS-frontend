@@ -1330,6 +1330,28 @@
           "NOT_FOUND": "找不到该追回记录。",
           "COLLECT_FAILED": "无法记录收回，请重试。"
         }
+      },
+      "PER_HEAD_EARNINGS": {
+        "TITLE": "按人员统计的人头费（员工报酬）",
+        "NETTED_NOTE": "这是员工报酬，不是公司收入——与售票员日结销售报表是两个不同的数字。人头费已在班次结算时冲抵，因此没有“待付”列。",
+        "TOTAL": "合计",
+        "GRANULARITY": {
+          "LABEL": "分组方式",
+          "DAY": "按日",
+          "MONTH": "按月",
+          "YEAR": "按年"
+        },
+        "COL": {
+          "HOLDER": "员工",
+          "ROLE": "角色",
+          "HEADS": "人头数",
+          "AMOUNT": "金额（泰铢）",
+          "PERIOD": "期间"
+        },
+        "ROLE": {
+          "DRIVER": "司机",
+          "SALESPERSON": "售票员"
+        }
       }
     },
     "SETTLEMENTS": {
@@ -2639,7 +2661,8 @@
       "PARCEL_SCHEDULE": "班次包裹作业",
       "INSPECTION": "车辆检查",
       "FLEET_MAP": "车队实时地图",
-      "CANCEL_BOOKING": "取消订票"
+      "CANCEL_BOOKING": "取消订票",
+      "MY_EARNINGS": "我的人头费收入"
     },
     "LAYOUT": {
       "BRAND": "OBRS 员工",
@@ -2673,7 +2696,8 @@
         "SALES": "售票",
         "OPERATIONS": "运营",
         "PARCELS": "包裹"
-      }
+      },
+      "MY_EARNINGS": "我的收入"
     },
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "无法加载登车名单。",
@@ -3444,6 +3468,35 @@
         "TITLE": "我今日的现金",
         "PER_HEAD_EARNED": "所得人头费",
         "TO_RETURN": "应交回金额"
+      }
+    },
+    "MY_EARNINGS": {
+      "SUBTITLE": "按日、月或年查看您获得的人头费",
+      "FILTER_FROM": "起始日期",
+      "FILTER_TO": "结束日期",
+      "TABLE_TITLE": "各期间人头费",
+      "NETTED_NOTE": "人头费已在班次结算时冲抵——下表金额均为您已留存的现金，没有待领部分。",
+      "EMPTY_RANGE": "所选期间没有人头费记录。",
+      "LOAD_FAILED": "无法加载您的人头费收入。",
+      "GRANULARITY": {
+        "LABEL": "分组方式",
+        "DAY": "按日",
+        "MONTH": "按月",
+        "YEAR": "按年"
+      },
+      "TILE": {
+        "TOTAL": "人头费合计（泰铢）",
+        "HEADS": "人头合计"
+      },
+      "COL": {
+        "PERIOD": "期间",
+        "HEADS": "人头数",
+        "RATE": "每人费率",
+        "RATE_CAPTION": "该期间使用多个费率时为加权平均值",
+        "AMOUNT": "金额（泰铢）"
+      },
+      "ERROR": {
+        "RANGE_INVALID": "开始日期不得晚于结束日期。"
       }
     }
   },

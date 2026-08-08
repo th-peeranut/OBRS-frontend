@@ -82,6 +82,9 @@ import { DriverCashAdvanceFormComponent } from './components/driver-cash-panel/d
 import { DriverCashPerHeadFormComponent } from './components/driver-cash-panel/driver-cash-per-head-form/driver-cash-per-head-form.component';
 import { DriverCashExpenseFormComponent } from './components/driver-cash-panel/driver-cash-expense-form/driver-cash-expense-form.component';
 
+// OBRS-1147 — the holder's own per-head earnings (/staff/my-earnings).
+import { MyEarningsPageComponent } from './pages/my-earnings/my-earnings-page.component';
+
 export const staffRoutes: Routes = [
   {
     path: '',
@@ -232,6 +235,21 @@ export const staffRoutes: Routes = [
           subtitleKey: 'STAFF.CANCEL_BOOKING.SUBTITLE',
         },
       },
+      {
+        // OBRS-1147: the person's own ค่าหัว per day/month/year. Both roles, and
+        // that is AC-4 rather than an oversight — only a salesperson's day can
+        // carry a PER_HEAD line today (OBRS-1073), so a driver sees zero, which
+        // is true. Gating this on 'salesperson' would put that rule in a second
+        // place and turn it into a 403 the day the owner changes it.
+        path: 'my-earnings',
+        component: MyEarningsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          requiredRoles: ['salesperson', 'driver'],
+          titleKey: 'STAFF.PAGES.MY_EARNINGS',
+          subtitleKey: 'STAFF.MY_EARNINGS.SUBTITLE',
+        },
+      },
     ],
   },
 ];
@@ -273,6 +291,7 @@ export const staffRoutes: Routes = [
     DriverCashAdvanceFormComponent,
     DriverCashPerHeadFormComponent,
     DriverCashExpenseFormComponent,
+    MyEarningsPageComponent,
   ],
   imports: [
     SharedModule,
