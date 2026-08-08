@@ -74,6 +74,11 @@ export interface CreateBookingResponse {
   totalAmount?: number;
   discountAmountSnapshot?: number;
   netAmount?: number;
+  // OBRS-858 (ADR-0123 Decision 6): returned ONLY by the public create endpoint, so its absence
+  // is the normal signed-in case and not a missing field. A capability for this one booking with
+  // a 60-minute server-side TTL — never a session, and never sent anywhere but
+  // POST /api/payments.
+  guestPaymentToken?: string;
 }
 
 export interface BookingState {
