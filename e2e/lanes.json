@@ -81,6 +81,12 @@
       "why": "OBRS-874 AC-2. Same premise and therefore the same lane as obrs-867-analytics-consent-gate.spec.ts: it can only be true on the `analytics-e2e` build, the one configuration carrying measurement IDs, because it measures a WITHDRAWAL on the wire. It asserts the two halves separately because different mechanisms guarantee them -- without a reload, collection stops at the vendor (`ga-disable-<id>` plus `clarity('stop')`, driven by AnalyticsService's isGranted$ subscription); after a reload, the scripts are never injected at all because load() is only reached while granted. It reaches the policy page by CLICKING the footer link rather than page.goto, because goto is a fresh document and would throw away the very tags whose in-place shutdown is the claim. Carries its own MUST-CATCH accept leg for the same reason the 867 suite does: on a blank-ID build every 'nothing was requested' expectation passes while proving nothing. Touches no database; OWN-DB is the lane for 'provisions the environment its premise needs, never runnable against SIT'."
     },
     {
+      "spec": "obrs-1141-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1141.config.ts",
+      "why": "OBRS-1141 BEFORE/AFTER evidence for the announced-delay disclosure on search results. Hermetic on the gate lane's terms (it reuses e2e/support/customer-pages.ts, which fulfils every /api/** call and aborts Maps), but its purpose is the pictures in the card, so CAPTURE. Like obrs-867-capture it is a harder-working capture than most: the on-time row must carry NO disclosure (AC2) and the badge's contrast is MEASURED off the painted pixels in BOTH themes, which is the only way to know the component rule outranked `body.is-dark .schedule-item * { color: !important }` (OBRS-767)."
+    },
+    {
       "spec": "obrs-867-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs867.config.ts",

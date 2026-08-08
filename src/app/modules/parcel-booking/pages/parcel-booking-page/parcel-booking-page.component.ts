@@ -17,6 +17,9 @@ import {
 import { ParcelDetailsFormValue } from '../../components/parcel-details-form/parcel-details-form.component';
 import { stashParcelBookingAmount } from '../../parcel-booking-amount-session';
 import { errorCodeFromMessageKey, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
+import { TranslateService } from '@ngx-translate/core';
+import { delayDisclosureOf } from '../../../../shared/lib/schedule-delay-disclosure';
+import { Schedule } from '../../../../shared/interfaces/schedule.interface';
 
 type ParcelBookingPhase = 'trip' | 'details' | 'payment';
 type PaymentTab = 'creditcard' | 'qrcode';
@@ -134,7 +137,11 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
   constructor(
     private readonly stationService: StationService,
     private readonly parcelBookingService: ParcelBookingService,
-    private readonly bookingService: BookingService
+    private readonly bookingService: BookingService,
+    // OBRS-1141: the delay disclosure on this surface is text inside a dropdown
+    // LABEL, not markup, so it cannot go through `app-schedule-delay-notice`
+    // and the strings have to be resolved here instead of by the pipe.
+    private readonly translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -227,7 +234,7 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
           const schedules = resp?.data ?? [];
           this.scheduleOptions = schedules.map((s) => ({
             id: s.id,
-            label: `${dayjs(s.departureDateTime).format('DD/MM/YYYY HH:mm')} - ${dayjs(s.arrivalDateTime).format('HH:mm')}${s.vehicleType ? ' · ' + s.vehicleType : ''}`,
+            label: `${dayjs(s.departureDateTime).format('DD/MM/YYYY HH:mm')} - ${dayjs(s.arrivalDateTime).format('HH:mm')}${s.vehicleType ? ' · ' + s.vehicleType : ''}${this.delaySuffix(s)}`,
           }));
           this.isLoadingSchedules = false;
           this.noSchedulesFound = this.scheduleOptions.length === 0;
@@ -238,6 +245,35 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
           this.noSchedulesFound = true;
         },
       });
+  }
+
+  /**
+   * OBRS-1141 AC3 — this dropdown is the parcel flow's schedule search result,
+   * and it runs the very same `searchSchedulesWithAvailability` query as the
+   * passenger search (`ScheduleService#searchSchedulesForParcel` delegates to
+   * it, ADR-0087), so its rows carry announced delays too.
+   *
+   * Text rather than the shared `app-schedule-delay-notice` component: a
+   * `ParcelScheduleOption` is `{id, label}` and the label is rendered by a
+   * PrimeNG dropdown, which has nowhere to put markup without changing the
+   * option contract and the trip-form template. The label already prints the
+   * full `DD/MM/YYYY` departure, so the cross-midnight case AC5 is about is
+   * legible here without a separate date note.
+   *
+   * Returns `''` — no suffix, unchanged label — for every ordinary round (AC2).
+   */
+  private delaySuffix(schedule: Schedule): string {
+    const disclosure = delayDisclosureOf(
+      schedule.departureDateTime,
+      schedule.scheduledDepartureDateTime
+    );
+    if (!disclosure) return '';
+
+    const badge = this.translate.instant('SCHEDULE_DELAY_NOTICE.BADGE');
+    const planned = this.translate.instant('SCHEDULE_DELAY_NOTICE.PLANNED', {
+      time: disclosure.plannedTime,
+    });
+    return ` · ${badge} (${planned})`;
   }
 
   private slugForStationId(stationId: number | null): string | null {

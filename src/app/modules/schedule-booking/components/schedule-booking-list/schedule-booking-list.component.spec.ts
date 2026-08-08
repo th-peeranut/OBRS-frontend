@@ -23,6 +23,9 @@ import {
   RouteStop,
 } from '../../../../shared/interfaces/route-map.interface';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
+// OBRS-1141: declared alongside the component under test because the row
+// template now hosts it; without it every render logs an unknown-element error.
+import { ScheduleDelayNoticeComponent } from '../../../../shared/components/schedule-delay-notice/schedule-delay-notice.component';
 
 describe('ScheduleBookingListComponent', () => {
   let component: ScheduleBookingListComponent;
@@ -76,7 +79,7 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingListComponent],
+      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         provideMockStore(),
@@ -215,7 +218,7 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingListComponent],
+      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         provideMockStore(),
@@ -314,7 +317,7 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingListComponent],
+      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         provideMockStore(),
@@ -364,5 +367,146 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
     const items = fixture.debugElement.queryAll(By.css('.schedule-item'));
     expect(items[1].query(By.css('.availability'))).toBeFalsy();
     expect(items[1].query(By.css('.seat-status--low'))).toBeFalsy();
+  });
+});
+
+// OBRS-1141 — the disclosure of an announced delay on the customer search
+// results. OBRS-1099 made the time in these rows CORRECT; this asserts a
+// customer can also tell that it moved, on BOTH legs of a round trip (AC3).
+describe('ScheduleBookingListComponent (announced-delay disclosure, OBRS-1141)', () => {
+  let fixture: ComponentFixture<ScheduleBookingListComponent>;
+  let component: ScheduleBookingListComponent;
+  let store: MockStore;
+
+  const onTime: Schedule = {
+    id: 31,
+    vehicleType: 'van',
+    departureDateTime: '2030-06-17T08:00:00+07:00',
+    arrivalDateTime: '2030-06-17T09:58:00+07:00',
+    pricePerSeat: '200',
+    availableSeats: 10,
+    availableSeatNumbers: ['1A'],
+    routeSlug: 'chonburi-bangkok',
+  };
+
+  // What the backend sends for a round announced 2 hours late: departureDateTime
+  // is ALREADY the effective 10:00, and the planned 08:00 arrives beside it.
+  const delayed: Schedule = {
+    ...onTime,
+    id: 32,
+    departureDateTime: '2030-06-17T10:00:00+07:00',
+    arrivalDateTime: '2030-06-17T11:58:00+07:00',
+    scheduledDepartureDateTime: '2030-06-17T08:00:00+07:00',
+  };
+
+  function render(departures: Schedule[], returns: Schedule[] | null = null): void {
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: departures,
+      arrivalSchedules: returns,
+    } as ScheduleList);
+    store.overrideSelector(selectScheduleFilter, null as any);
+    store.overrideSelector(selectProvinceWithStation, [] as any);
+
+    fixture = TestBed.createComponent(ScheduleBookingListComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    // The return leg only renders once an outbound trip has been picked.
+    component.isSelectFirst = returns !== null;
+    fixture.detectChanges();
+  }
+
+  function noticesIn(itemIndex: number) {
+    const items = fixture.debugElement.queryAll(By.css('.schedule-item'));
+    return items[itemIndex].queryAll(By.css('[data-testid="schedule-delay-notice"]'));
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        provideMockStore(),
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+      ],
+    }).compileComponents();
+    store = TestBed.inject(MockStore);
+  });
+
+  it('AC2 — an ordinary row renders no delay markup at all, and its time text is unchanged', () => {
+    render([onTime]);
+
+    expect(noticesIn(0).length).toBe(0);
+    const time = fixture.debugElement.queryAll(By.css('.schedule-item .time'))[0];
+    expect((time.nativeElement.textContent || '').replace(/\s+/g, ' ').trim()).toBe(
+      '08:00 SCHEDULE_BOOKING.TIME_UNIT'
+    );
+  });
+
+  it('AC1 — a delayed outbound row shows the EFFECTIVE time plus a badge and the planned time', () => {
+    render([delayed]);
+
+    const time = fixture.debugElement.queryAll(By.css('.schedule-item .time'))[0];
+    const text = (time.nativeElement.textContent || '').replace(/\s+/g, ' ').trim();
+    // The headline time is the one the bus actually leaves at (OBRS-1099)...
+    expect(text).toContain('10:00');
+    // ...and the row now also says that this is not the time it was planned for.
+    expect(text).toContain('SCHEDULE_DELAY_NOTICE.BADGE');
+    expect(text).toContain('SCHEDULE_DELAY_NOTICE.PLANNED');
+    expect(noticesIn(0).length).toBe(1);
+  });
+
+  it('AC3 — the RETURN leg discloses its own delay, and an on-time return leg does not', () => {
+    render([onTime], [delayed]);
+
+    const items = fixture.debugElement.queryAll(By.css('.schedule-item'));
+    expect(items.length).toBe(2);
+    expect(noticesIn(0).length).toBe(0);
+    expect(noticesIn(1).length).toBe(1);
+
+    render([delayed], [onTime]);
+    expect(noticesIn(0).length).toBe(1);
+    expect(noticesIn(1).length).toBe(0);
+  });
+
+  it('AC5 — a delay that crosses midnight also names the departure DATE', () => {
+    const overnight: Schedule = {
+      ...onTime,
+      id: 33,
+      // 23:30 announced an hour late leaves at 00:30 the NEXT day, and stays in
+      // the searched day's results because the sale window and the day bucket
+      // are both computed from the planned time (OBRS-1099 AC1/AC9).
+      departureDateTime: '2030-06-18T00:30:00+07:00',
+      arrivalDateTime: '2030-06-18T02:28:00+07:00',
+      scheduledDepartureDateTime: '2030-06-17T23:30:00+07:00',
+    };
+    render([overnight]);
+
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="schedule-delay-date"]'))
+    ).not.toBeNull();
+
+    // ...and an ordinary same-day delay must NOT carry that date, or the cue
+    // stops meaning anything.
+    render([delayed]);
+    expect(fixture.debugElement.query(By.css('[data-testid="schedule-delay-date"]'))).toBeNull();
+  });
+
+  it('AC4 — the disclosure says nothing about the sale window; the seat/price cells are untouched', () => {
+    render([delayed]);
+
+    const notice = fixture.debugElement.query(By.css('[data-testid="schedule-delay-notice"]'));
+    const text: string = notice.nativeElement.textContent.replace(/\s+/g, ' ').trim();
+    // Every token is an i18n KEY under the notice's own namespace (no dictionary
+    // is loaded in these specs), so no copy — reassuring or otherwise — can be
+    // smuggled in as a literal. Online sale still closes at the PLANNED time
+    // minus booking_offset_minutes, so any "there is still time" wording would
+    // be a lie the backend contradicts.
+    expect(
+      text.split(' ').filter((t) => t && !t.startsWith('SCHEDULE_DELAY_NOTICE.'))
+    ).toEqual([]);
+
+    // The select button is still the plain one — a delayed round is bought the
+    // same way, at the same price.
+    expect(fixture.debugElement.query(By.css('.schedule-item .select-btn'))).toBeTruthy();
   });
 });

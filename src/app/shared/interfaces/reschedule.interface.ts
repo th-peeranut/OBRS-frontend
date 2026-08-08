@@ -11,6 +11,14 @@ export interface RescheduleOption {
   vehicleTypeName?: string;
   departureDateTime: string;
   arrivalDateTime: string;
+  /** OBRS-1099/OBRS-1141: the originally planned departure, present ONLY when
+   *  this candidate round has an announced delay. `getRescheduleOptions` runs
+   *  the same `searchSchedulesWithAvailability` query as customer search and
+   *  returns the projection straight out of `BookingController`, so this field
+   *  arrives here for free — and it matters most here, because OBRS-666 lets a
+   *  45-minute delay unlock a free reschedule and a passenger must not land on
+   *  another delayed round without being told. */
+  scheduledDepartureDateTime?: string | null;
   pricePerSeat: number | string;
   availableSeats: number;
   occupiedSeatNumbers?: string[];
