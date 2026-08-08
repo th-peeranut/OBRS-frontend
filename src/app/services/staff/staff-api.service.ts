@@ -43,6 +43,8 @@ import {
   DriverCashDayRespDto,
   DriverCashExpenseReqDto,
   DriverCashPerHeadReqDto,
+  PerHeadEarningsGranularity,
+  PerHeadEarningsRespDto,
 } from '../../shared/interfaces/driver-cash.interface';
 import { AdminUserDto, DriverDto } from '../admin/admin-api.service';
 // OBRS-100: type-only — BoardingListComponent (shared/) reuses the response
@@ -1040,6 +1042,26 @@ export class StaffApiService {
     return this.http.get<ResponseAPI<DriverCashDayRespDto | null>>(
       `${environment.apiUrl}/api/private/driver-cash/my-day`,
       { params: { businessDate }, context: this.skipContext }
+    );
+  }
+
+  /**
+   * OBRS-1147 — what the CALLER earned in ค่าหัว over a range, bucketed by day /
+   * month / year. Like `getDriverCashMyDay()` it takes no user id: the holder is
+   * the token's owner, so there is no parameter through which one staff member
+   * could read another's pay.
+   *
+   * NOT `skipContext`: unlike "no cash box open today", a failure here means the
+   * person cannot see their own pay at all, which is worth surfacing.
+   */
+  getDriverCashMyEarnings(
+    from: string,
+    to: string,
+    granularity: PerHeadEarningsGranularity
+  ): Observable<ResponseAPI<PerHeadEarningsRespDto>> {
+    return this.http.get<ResponseAPI<PerHeadEarningsRespDto>>(
+      `${environment.apiUrl}/api/private/driver-cash/my-earnings`,
+      { params: { from, to, granularity } }
     );
   }
 

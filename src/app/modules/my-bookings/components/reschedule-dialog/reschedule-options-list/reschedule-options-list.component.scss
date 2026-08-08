@@ -109,4 +109,14 @@
     color: $text-lightblack;
     text-align: right;
   }
+
+  /* OBRS-1141. Every other item above pins its own column, so this one lands on
+     a fresh third row; spanning both columns keeps it from being squeezed into
+     the 1fr while the auto column sits empty beside it. Nothing renders here at
+     all for a round with no announced delay — the component's own
+     `:host(:empty) { display: none }` removes the grid item entirely rather
+     than leaving a zero-height row that would still cost one `gap` (AC2). */
+  app-schedule-delay-notice {
+    grid-column: 1 / -1;
+  }
 }

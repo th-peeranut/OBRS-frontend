@@ -1,0 +1,48 @@
+/* OBRS-1147 — page-local only. Everything structural (admin-card, admin-table,
+   admin-kpi, admin-page-filters) comes from the shared admin surface classes the
+   rest of the staff portal already uses; nothing is restyled here. */
+
+/* Two tiles side by side. admin-theme.scss defines --3 and --4 and nothing else, so this
+   is declared here rather than adding a --2 modifier to the shared theme for one page. */
+.me-kpi-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.me-granularity {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--app-border-color, #d0d5dd);
+  border-radius: 0.5rem;
+}
+
+.me-granularity-btn {
+  border: 0;
+  background: transparent;
+  border-radius: 0.375rem;
+  padding: 0.35rem 0.85rem;
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+
+  &:hover {
+    background: var(--app-surface-hover, rgba(0, 0, 0, 0.04));
+  }
+
+  /* The selected grouping must be readable at a glance from across a counter,
+     so it carries a filled background rather than only a border. */
+  &.is-active {
+    background: var(--app-primary-color, #1d4ed8);
+    color: #fff;
+  }
+}
+
+.me-net-note {
+  margin-bottom: 0.75rem;
+}
+
+.me-basis-caption {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+}

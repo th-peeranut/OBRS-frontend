@@ -40,6 +40,11 @@ import { AnalyticsConsentBannerComponent } from './components/analytics-consent-
 import { AnalyticsConsentControlComponent } from './components/analytics-consent-control/analytics-consent-control.component';
 // OBRS-907: the one shared loading indicator (skeleton / spinner / inline).
 import { LoadingStateComponent } from './components/loading-state/loading-state.component';
+// OBRS-1141: the "this round was announced as delayed" disclosure. Shared
+// because three surfaces render rows built from the SAME backend query
+// (customer search — both legs, and the reschedule-options list), and the
+// defect OBRS-1099 was filed for was exactly N readers each deciding alone.
+import { ScheduleDelayNoticeComponent } from './components/schedule-delay-notice/schedule-delay-notice.component';
 
 // Directives
 // OBRS-272: relocated here from `modules/admin/components/` — see the
@@ -66,6 +71,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     AnalyticsConsentBannerComponent,
     AnalyticsConsentControlComponent,
     LoadingStateComponent,
+    ScheduleDelayNoticeComponent,
     AdminModalBackdropDirective,
   ],
   imports: [
@@ -106,6 +112,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     AnalyticsConsentBannerComponent,
     AnalyticsConsentControlComponent,
     LoadingStateComponent,
+    ScheduleDelayNoticeComponent,
 
     // Directives
     AdminModalBackdropDirective,

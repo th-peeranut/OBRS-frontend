@@ -1330,6 +1330,28 @@
           "NOT_FOUND": "That clawback no longer exists.",
           "COLLECT_FAILED": "Unable to record the collection. Please try again."
         }
+      },
+      "PER_HEAD_EARNINGS": {
+        "TITLE": "Per-head earnings by person (staff pay)",
+        "NETTED_NOTE": "This is staff PAY, not the business’s revenue — a different number from the EOD sales-by-salesperson report. The fee is netted at the round, so there is no \"outstanding\" column.",
+        "TOTAL": "Total",
+        "GRANULARITY": {
+          "LABEL": "Group by",
+          "DAY": "Daily",
+          "MONTH": "Monthly",
+          "YEAR": "Yearly"
+        },
+        "COL": {
+          "HOLDER": "Staff member",
+          "ROLE": "Role",
+          "HEADS": "Heads",
+          "AMOUNT": "Amount (THB)",
+          "PERIOD": "Period"
+        },
+        "ROLE": {
+          "DRIVER": "Driver",
+          "SALESPERSON": "Salesperson"
+        }
       }
     },
     "SETTLEMENTS": {
@@ -2336,6 +2358,12 @@
     "STEP_3": "Personal information",
     "STEP_4": "Pay"
   },
+  "SCHEDULE_DELAY_NOTICE": {
+    "BADGE": "Delayed",
+    "PLANNED": "Scheduled {{time}}",
+    "DEPARTS_ON": "Departs {{date}}",
+    "A11Y": "This trip has been announced as delayed. It was scheduled to depart at {{planned}} and now departs at {{effective}}."
+  },
   "SCHEDULE_BOOKING": {
     "HEADER": "Trip type",
     "SUBHEADER_DEPARTURE": "Travel itinerary: Outbound",
@@ -2635,7 +2663,8 @@
       "PARCEL_SCHEDULE": "Parcel Handling",
       "INSPECTION": "Vehicle Inspection",
       "FLEET_MAP": "Fleet Live Map",
-      "CANCEL_BOOKING": "Cancel Booking"
+      "CANCEL_BOOKING": "Cancel Booking",
+      "MY_EARNINGS": "My Per-Head Earnings"
     },
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
@@ -2669,7 +2698,8 @@
         "SALES": "Sales",
         "OPERATIONS": "Operations",
         "PARCELS": "Parcels"
-      }
+      },
+      "MY_EARNINGS": "My Earnings"
     },
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "Unable to load boarding list.",
@@ -3440,6 +3470,35 @@
         "TITLE": "My cash box today",
         "PER_HEAD_EARNED": "Per-head earned",
         "TO_RETURN": "To hand back"
+      }
+    },
+    "MY_EARNINGS": {
+      "SUBTITLE": "The per-head fee you earned, by day, month or year",
+      "FILTER_FROM": "From",
+      "FILTER_TO": "To",
+      "TABLE_TITLE": "Per-head earnings by period",
+      "NETTED_NOTE": "The fee is netted at the round — everything below is money you have already kept. Nothing here is outstanding.",
+      "EMPTY_RANGE": "No per-head fee was recorded in this period.",
+      "LOAD_FAILED": "Unable to load your per-head earnings.",
+      "GRANULARITY": {
+        "LABEL": "Group by",
+        "DAY": "Daily",
+        "MONTH": "Monthly",
+        "YEAR": "Yearly"
+      },
+      "TILE": {
+        "TOTAL": "Total earned (THB)",
+        "HEADS": "Total heads"
+      },
+      "COL": {
+        "PERIOD": "Period",
+        "HEADS": "Heads",
+        "RATE": "Rate per head",
+        "RATE_CAPTION": "An average when the period used more than one rate",
+        "AMOUNT": "Amount (THB)"
+      },
+      "ERROR": {
+        "RANGE_INVALID": "The start date must not be later than the end date."
       }
     }
   },

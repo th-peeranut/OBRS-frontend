@@ -29,8 +29,18 @@ export interface ScheduleFilterPayload {
 export interface Schedule {
   id: number;
   vehicleType: string | null;
+  /** OBRS-1099: the EFFECTIVE departure/arrival — the planned time plus any
+   *  announced delay. Equal to the planned time when the round is on schedule,
+   *  which is why a client that ignores the field below stays correct. */
   departureDateTime: string;
   arrivalDateTime: string;
+  /** OBRS-1099/OBRS-1141: the ORIGINALLY PLANNED departure, sent by the backend
+   *  ONLY when this round carries an announced delay and absent otherwise — so
+   *  its presence is itself the delay flag, with no second field and no extra
+   *  request. Same verified passthrough as `routeSlug` below: the schedule-list
+   *  NgRx store keeps `data` as-is with no manual field mapper. Read it through
+   *  `delayDisclosureOf` (shared/lib/schedule-delay-disclosure), not by hand. */
+  scheduledDepartureDateTime?: string | null;
   pricePerSeat: string | number;
   availableSeats: number;
   availableSeatNumbers: string[];

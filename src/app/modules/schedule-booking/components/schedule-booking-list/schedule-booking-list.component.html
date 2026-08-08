@@ -28,6 +28,14 @@
             <div class="time">
               {{ formatDateTimeToHHMM(departure.departureDateTime) }}
               {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+              <!-- OBRS-1141. Renders nothing at all unless this round carries an
+              announced delay, so an ordinary row keeps its exact markup (AC2).
+              The time above is already the EFFECTIVE one (OBRS-1099); what was
+              missing was any way to know it had moved. -->
+              <app-schedule-delay-notice
+                [departureDateTime]="departure.departureDateTime"
+                [scheduledDepartureDateTime]="departure.scheduledDepartureDateTime"
+              ></app-schedule-delay-notice>
             </div>
             <div class="time-info">
               <div class="route">
@@ -112,6 +120,14 @@
               <div class="time">
                 {{ formatDateTimeToHHMM(return.departureDateTime) }}
                 {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+                <!-- OBRS-1141 AC3: the return leg is a separate render of the
+                same query and is just as capable of being delayed — the
+                outbound-only version of this fix would have shipped the bug
+                back into half the round-trip flow. -->
+                <app-schedule-delay-notice
+                  [departureDateTime]="return.departureDateTime"
+                  [scheduledDepartureDateTime]="return.scheduledDepartureDateTime"
+                ></app-schedule-delay-notice>
               </div>
               <div class="time-info">
                 <div class="route">
