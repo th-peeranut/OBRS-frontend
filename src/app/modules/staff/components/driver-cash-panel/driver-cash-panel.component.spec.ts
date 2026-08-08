@@ -51,8 +51,6 @@ const DAY_RESP: DriverCashDayRespDto = {
   entries: [],
   advanceTotal: '0.00',
   perHeadTotal: '0.00',
-  fareCollectedTotal: '0.00',
-  cashRefundedTotal: '0.00',
   expensePaidTotal: '0.00',
   parcelRemitTotal: '0.00',
   // OBRS-992/OBRS-1053: already INSIDE expectedReturnAmount, never an addend.

@@ -101,17 +101,16 @@ export interface DriverCashDayRespDto {
   entries: DriverCashEntryRespDto[];
   advanceTotal: string;
   /**
-   * OBRS-1073 — the per-head fee is the SALESPERSON's pay and is therefore
-   * SUBTRACTED from `expectedReturnAmount`. This figure stays a positive
-   * magnitude ("what they earned"); the sign lives in the backend formula, so
-   * never add it to the expectation in the UI.
+   * The per-head fee this holder EARNED that day, as a positive magnitude.
+   *
+   * ⛔ OBRS-1145 — it is NOT inside `expectedReturnAmount` and must not be
+   * rendered with a minus sign. The owner nets ค่าหัว at the counter: the
+   * round's settlement expects `ticket cash − ค่าหัว` and the seller keeps the
+   * fee, so deducting it here as well would credit the same fee twice. Show it
+   * as a record of earnings, never as a term of what is still owed.
    */
   perHeadTotal: string;
   expensePaidTotal: string;
-  /** OBRS-1073 — cash fares this holder took in that day, derived from `payments`. Already INSIDE `expectedReturnAmount`. */
-  fareCollectedTotal: string;
-  /** OBRS-1073 — cash handed back over the counter that day. Already SUBTRACTED inside `expectedReturnAmount`. */
-  cashRefundedTotal: string;
   parcelRemitTotal: string;
   /**
    * OBRS-992 — shares this driver owes back on parcels that were cancelled

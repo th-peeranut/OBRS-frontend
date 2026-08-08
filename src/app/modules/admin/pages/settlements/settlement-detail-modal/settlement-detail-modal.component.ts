@@ -98,12 +98,32 @@ export class SettlementDetailModalComponent implements OnChanges {
     this.discrepancyReasonInput = '';
   }
 
-  // The round's expected CASH — the `cash` method bucket only (OBRS-670:
-  // card/gateway money never lands in the drawer). Zero when the round took no
-  // cash. This is what the counted amount is reconciled against.
+  // The round's expected CASH, taken verbatim from the server
+  // (`live.expectedCashAmount`) — the SAME figure `confirm` reconciles the
+  // counted amount against.
+  //
+  // ⛔ OBRS-1145: do not compute this here again. This method used to return
+  // "the `cash` method bucket", which was right in OBRS-670 and silently wrong
+  // from OBRS-960 §4 onwards: the server had folded consigned-parcel cash and
+  // drawer-funded shares into its expectation, so on any round with parcel
+  // activity the screen showed one number, the server reconciled against
+  // another, and the person counting saw a discrepancy that did not exist.
+  // The per-head deduction (this card) would have been the third such drift.
   protected expectedCashAmount(): string {
-    const cash = this.detail?.live.byMethod.find((b) => b.method === 'cash');
-    return cash?.amount ?? '0.00';
+    return this.detail?.live.expectedCashAmount ?? '0.00';
+  }
+
+  // OBRS-1145: ค่าหัว already netted out of the expectation above, as a
+  // positive magnitude. Shown so the person signing can see the deduction they
+  // are being credited with — and so a 0.00 on a round that should carry one is
+  // visible BEFORE signing: heads recorded after sign-off cannot reduce an
+  // expectation that is already frozen.
+  protected get perHeadDeducted(): string {
+    return this.detail?.live.perHeadDeducted ?? '0.00';
+  }
+
+  protected get hasPerHeadDeducted(): boolean {
+    return Number(this.perHeadDeducted) !== 0;
   }
 
   // Cents of the counted input, or null when it isn't a valid money string.

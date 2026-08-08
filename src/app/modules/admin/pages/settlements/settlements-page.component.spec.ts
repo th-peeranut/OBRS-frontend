@@ -66,6 +66,8 @@ function makeDetail(overrides: Partial<SettlementScheduleDetailDto> = {}): Settl
         byMethod: [],
         byStatus: [],
       },
+      expectedCashAmount: '600.00',
+      perHeadDeducted: '0.00',
     },
     settled: null,
     discrepancy: null,
