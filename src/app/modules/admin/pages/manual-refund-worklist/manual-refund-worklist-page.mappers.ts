@@ -28,14 +28,23 @@ export function queueAgeDays(
 /**
  * OBRS-1136 AC-4: red means PAST DUE, and only the server can say so.
  *
- * Until this card the danger step was a local `days > 7` — a calendar-day count
- * against a threshold the UI spec itself flagged as "a UX default with no
- * PM/owner sign-off". It has now been signed off, as **7 BUSINESS days** from
- * `manual_refund_requests.created_at`, which is a different number: a row queued
- * on a Friday is 9 calendar days old on the day it first becomes late. Keeping
- * the local threshold would have painted rows red early, on a rule nobody
- * agreed, in a place no config edit could reach — so `overdue` is read from the
- * response and the count lives in `manual_refund_due_business_days` (AC-2).
+ * Until this card the danger step was a local `days > 7` — a threshold the UI
+ * spec itself flagged as "a UX default with no PM/owner sign-off". It has now
+ * been signed off as **7 calendar days** from `manual_refund_requests.created_at`,
+ * so the number survived. What did not survive is where it was computed:
+ *
+ * * `queueAgeDays` measures ELAPSED HOURS and floors them. A row queued at 23:00
+ *   is 7.5 days old on the morning of its eighth day, floors to 7, and stayed
+ *   amber while the published deadline had already passed. The old rule was
+ *   therefore late, by up to a day, on every row queued in the evening.
+ * * It floored against `new Date()` — the VIEWER's clock and timezone. Whether a
+ *   refund is late is a fact about the Bangkok date, and an owner opening the
+ *   worklist from another timezone got a different answer to the same question.
+ * * It was a literal in a bundle. The count now lives in `manual_refund_due_days`
+ *   (AC-2), where moving it is a config edit rather than a three-language deploy,
+ *   and where `/refund-policy` reads the SAME key it is announced from.
+ *
+ * So `overdue` is read from the response and never recomputed here.
  *
  * `days` still drives the two non-red steps: how long a row has been waiting is
  * the operator's own triage signal and needs no policy behind it.
