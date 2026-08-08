@@ -29,6 +29,7 @@ describe('DriverCashDaysStore', () => {
         dayId: 1,
         driverId: 5,
         driverName: 'Somchai',
+        holderRole: 'DRIVER',
         businessDate: '2026-08-01',
         vehicleId: 10,
         vehiclePlate: 'AB-1234',
@@ -36,6 +37,7 @@ describe('DriverCashDaysStore', () => {
         expectedReturnAmount: '250.00',
         returnedAmount: null,
         discrepancy: null,
+        overdueOpen: false,
         hasUnmappedSalesPointRemit: false,
       },
     ];

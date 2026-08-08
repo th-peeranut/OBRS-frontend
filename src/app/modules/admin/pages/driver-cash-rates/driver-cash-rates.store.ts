@@ -1,35 +1,29 @@
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
-import { StationService } from '../../../../services/station/station.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { AdminCollectionStore } from '../../shared/admin-collection-store';
-import { DriverCashRateRowDto } from '../../../../shared/interfaces/driver-cash.interface';
-import { StationApi } from '../../../../shared/interfaces/station.interface';
+import {
+  DriverCashRateRowDto,
+  SalesPointOptionDto,
+} from '../../../../shared/interfaces/driver-cash.interface';
 
 /**
- * ⚠️ CORRECTED (2026-08-02, backend reconciliation) — the first version of
- * this store fetched `AdminApiService.getLookups()` filtered to
- * `category === 'stop'`. That category does not exist on the real backend
- * (`LookupCategoryConstant.java` only has `stop_status`/`stop_type` — stops
- * are their own entity, never inserted into the generic Lookup table), so
- * the filter would always have resolved to an empty array and the add-rate
- * dropdown would have silently shown no options.
+ * OBRS-1073 — the picker source is now `GET /owner/driver-cash/sales-points`,
+ * not the PUBLIC all-stops endpoint this store used to borrow.
  *
- * Nothing in `src/app/modules/admin/` or `src/app/modules/staff/` already
- * has a WORKING flat all-stops fetch (confirmed by search — the only other
- * stop source in this codebase, `AdminApiService.getRouteStops(routeSlug)`,
- * is per-route). The one genuinely working flat-stops endpoint is the
- * PUBLIC `GET /api/stops` (`../OBRS-backend/docs/api/catalog.md`), already
- * wrapped by `StationService.getAll()` and used by every customer-facing
- * stop picker (`station.effect.ts`, `parcel-booking-page.component.ts`,
- * the my-bookings reschedule/change-stop effects). Reused here rather than
- * inventing a second wrapper — being public/no-auth, calling it from an
- * owner-only admin page raises no permission mismatch.
+ * That borrowing was a reasonable answer to the wrong question: when a rate
+ * was keyed by stop, `StationService.getAll()` was the only flat stop list in
+ * the codebase (the two earlier attempts — a `category === 'stop'` lookup
+ * filter, and per-route `getRouteStops`) could not produce one. Now that a
+ * rate belongs to a COUNTER, that list is both wrong and far too long: 91 of
+ * the 101 seeded stops belong to no sales point at all, so most of what the
+ * owner could pick had no counter to pay. The owner-only endpoint returns
+ * exactly the three real ones.
  */
 export interface DriverCashRatesData {
   rates: DriverCashRateRowDto[];
-  stops: StationApi[];
+  salesPoints: SalesPointOptionDto[];
 }
 
 /** OBRS-960 — SWR store backing `DriverCashRatesPageComponent`'s view-only
@@ -41,20 +35,19 @@ export interface DriverCashRatesData {
 export class DriverCashRatesStore extends AdminCollectionStore<DriverCashRatesData> {
   constructor(
     private readonly adminApiService: AdminApiService,
-    private readonly stationService: StationService,
     authService: AuthService
   ) {
     super(authService);
   }
 
   protected async fetch(): Promise<DriverCashRatesData> {
-    const [rates, stops] = await Promise.all([
+    const [rates, salesPoints] = await Promise.all([
       firstValueFrom(this.adminApiService.getDriverCashRates()),
-      firstValueFrom(this.stationService.getAll()),
+      firstValueFrom(this.adminApiService.getDriverCashSalesPoints()),
     ]);
     return {
       rates: rates?.data ?? [],
-      stops: stops?.data ?? [],
+      salesPoints: salesPoints?.data ?? [],
     };
   }
 }

@@ -18,14 +18,14 @@
 
   <div class="admin-form-grid mt-3">
     <div class="admin-form-field">
-      <label class="admin-form-label">{{ 'ADMIN.DRIVER_CASH_RATES.STOP_LABEL' | translate }}</label>
+      <label class="admin-form-label">{{ 'ADMIN.DRIVER_CASH_RATES.SALES_POINT_LABEL' | translate }}</label>
       <app-admin-dropdown
-        [options]="stopOptions"
-        [placeholder]="'ADMIN.DRIVER_CASH_RATES.STOP_LABEL' | translate"
+        [options]="salesPointOptions"
+        [placeholder]="'ADMIN.DRIVER_CASH_RATES.SALES_POINT_LABEL' | translate"
         valueKey="value"
         labelKey="label"
-        [ngModel]="selectedStopSlug"
-        (ngModelChange)="onStopChange($event)"
+        [ngModel]="selectedSalesPointCode"
+        (ngModelChange)="onSalesPointChange($event)"
         ></app-admin-dropdown>
       </div>
 
@@ -89,7 +89,7 @@
         <table class="admin-table">
           <thead>
             <tr>
-              <th>{{ 'ADMIN.DRIVER_CASH_RATES.STOP_LABEL' | translate }}</th>
+              <th>{{ 'ADMIN.DRIVER_CASH_RATES.SALES_POINT_LABEL' | translate }}</th>
               <th>{{ 'ADMIN.DRIVER_CASH_RATES.EFFECTIVE_FROM_LABEL' | translate }}</th>
               <th>{{ 'ADMIN.DRIVER_CASH_RATES.RATE_LABEL' | translate }}</th>
               <th>{{ 'ADMIN.SETTLEMENTS.COL.STATUS' | translate }}</th>
@@ -98,7 +98,7 @@
           <tbody>
             @for (row of rates; track trackById($index, row)) {
               <tr>
-                <td>{{ row.stopSlug }}</td>
+                <td>{{ row.salesPointName }}</td>
                 <td>{{ row.effectiveFrom }}</td>
                 <td>{{ row.ratePerHead }}</td>
                 <td>

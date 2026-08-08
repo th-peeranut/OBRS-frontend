@@ -80,12 +80,15 @@ const DETAIL: DriverCashDayRespDto = {
   dayId: 1,
   driverId: 5,
   driverName: 'Somchai',
+  holderRole: 'DRIVER',
   businessDate: '2026-08-01',
   vehicleId: 100,
   status: 'OPEN',
   entries: ENTRIES,
   advanceTotal: '100.00',
   perHeadTotal: '260.00',
+  fareCollectedTotal: '0.00',
+  cashRefundedTotal: '0.00',
   expensePaidTotal: '40.00',
   parcelRemitTotal: '0.00',
   // OBRS-992/OBRS-1053: already INSIDE expectedReturnAmount, never an addend.
@@ -105,6 +108,7 @@ const SUMMARY: DriverCashDaySummaryRespDto = {
   dayId: 1,
   driverId: 5,
   driverName: 'Somchai',
+  holderRole: 'DRIVER',
   businessDate: '2026-08-01',
   vehicleId: 100,
   vehiclePlate: 'AB-1234',
@@ -112,6 +116,7 @@ const SUMMARY: DriverCashDaySummaryRespDto = {
   expectedReturnAmount: '500.00',
   returnedAmount: null,
   discrepancy: null,
+  overdueOpen: false,
   hasUnmappedSalesPointRemit: true,
 };
 

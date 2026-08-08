@@ -46,6 +46,7 @@ import {
   DriverCashDayStatus,
   DriverCashDaySummaryRespDto,
   DriverCashRateReqDto,
+  SalesPointOptionDto,
   DriverCashRateRowDto,
 } from '../../shared/interfaces/driver-cash.interface';
 
@@ -2106,6 +2107,19 @@ export class AdminApiService {
     return this.postRequest<DriverCashRateRowDto>(
       `${this.baseUrl}/private/owner/driver-cash/per-head-rates`,
       payload
+    );
+  }
+
+  /**
+   * OBRS-1073 — the counters a rate can hang off. This page used to populate
+   * its picker from the PUBLIC all-stops endpoint (`StationService.getAll()`),
+   * which was the only flat stop list in the codebase. Now that a rate belongs
+   * to a counter, that list is both wrong (91 of 101 stops are not counters)
+   * and far too long; this returns exactly the three that are.
+   */
+  getDriverCashSalesPoints(): Observable<ResponseAPI<SalesPointOptionDto[]>> {
+    return this.getRequest<SalesPointOptionDto[]>(
+      `${this.baseUrl}/private/owner/driver-cash/sales-points`
     );
   }
 

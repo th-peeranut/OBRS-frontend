@@ -22,12 +22,36 @@
   border-bottom: 1px solid var(--admin-outline-soft);
 }
 
+// OBRS-1073 — the salesperson's OWN box, directly under the driver's strip.
+// It MUST carry its own layout: the markup is a row of bare <span>s, and a span
+// is inline, so without `display: flex` the four labels render as one run of
+// unbroken text ("เงินในมือของฉันวันนี้ค่าหัวที่ได้140.00ยอดที่ต้องส่งคืน" —
+// measured in the AFTER capture) and `.dcp-net-pill`'s `margin-left: auto`
+// silently does nothing outside a flex container.
+// Same shape as `.dcp-context-strip` above but deliberately NOT sticky and on
+// the soft surface: two stacked strips that both read as chrome would blur
+// whose money is whose, which is the one thing this block exists to separate.
+.dcp-my-day {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--admin-surface-soft);
+  border-bottom: 1px solid var(--admin-outline-soft);
+}
+
 .dcp-net-pill {
   margin-left: auto;
   padding: 4px 12px;
   border-radius: 999px;
   background: var(--admin-surface-soft);
   font-weight: 600;
+}
+
+// Inside the soft-surface my-day row the pill needs the CARD token, or it is
+// the same colour as the strip it sits on and stops reading as a pill.
+.dcp-my-day .dcp-net-pill {
+  background: var(--admin-surface-card);
 }
 
 .dcp-actions {

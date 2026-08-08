@@ -1467,7 +1467,10 @@
           "CONFIRM_TEXT": "Recording {{amount}} as returned. This cannot be undone.",
           "SUCCESS": "Driver cash day marked as returned.",
           "ALREADY_RETURNED": "This day has already been returned.",
-          "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)"
+          "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)",
+          "FARE_COLLECTED": "Cash fares collected",
+          "CASH_REFUNDED": "Cash refunded at the counter",
+          "PER_HEAD_PAY": "Per-head pay (salesperson)"
         },
         "ERROR": {
           "REASON_REQUIRED": "A reason is required when the returned amount does not match.",
@@ -1475,7 +1478,7 @@
           "RETURN_FAILED": "Unable to record this return."
         },
         "COL": {
-          "DRIVER": "Driver",
+          "HOLDER": "Cash holder",
           "BUSINESS_DATE": "Business date",
           "VEHICLE": "Vehicle",
           "EXPECTED": "Expected amount"
@@ -1485,7 +1488,12 @@
           "PER_HEAD": "Per-head",
           "EXPENSE_PAID": "Expense: {{category}}",
           "RETURN": "Return"
-        }
+        },
+        "HOLDER_ROLE": {
+          "DRIVER": "Driver",
+          "SALESPERSON": "Salesperson"
+        },
+        "OVERDUE_OPEN_HINT": "Still open from a past day — a salesperson must hand the cash back the same day."
       }
     },
     "EOD_REPORT": {
@@ -1878,10 +1886,10 @@
       }
     },
     "DRIVER_CASH_RATES": {
-      "SUBTITLE": "Manage per-head rates by stop.",
+      "SUBTITLE": "Manage per-head rates by sales point.",
       "LOAD_FAILED": "Unable to load driver cash rates.",
       "ADD_TITLE": "Add a rate",
-      "STOP_LABEL": "Stop",
+      "SALES_POINT_LABEL": "Sales point",
       "EFFECTIVE_FROM_LABEL": "Effective from",
       "RATE_LABEL": "Rate per head",
       "RATE_PLACEHOLDER": "0.00",
@@ -1889,7 +1897,7 @@
       "HISTORY_TITLE": "Rate history",
       "CURRENT": "Current",
       "ERROR": {
-        "DUPLICATE": "A rate for this stop already starts on that date.",
+        "DUPLICATE": "A rate for this sales point already starts on that date.",
         "CREATE_FAILED": "Unable to add this rate."
       }
     }
@@ -3426,6 +3434,11 @@
       },
       "ERROR": {
         "GENERIC": "Unable to record this entry. Please try again."
+      },
+      "MY_DAY": {
+        "TITLE": "My cash box today",
+        "PER_HEAD_EARNED": "Per-head earned",
+        "TO_RETURN": "To hand back"
       }
     }
   },

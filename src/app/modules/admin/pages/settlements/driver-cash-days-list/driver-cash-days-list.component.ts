@@ -16,6 +16,12 @@ export type DriverCashDaysContentState = 'loading' | 'invalid' | 'error' | 'empt
  * not the invented `routeLabel`/`departureDateTime`/`netCash`/`currency`
  * the first version of this component rendered — that data does not exist
  * on the day resource.
+ *
+ * OBRS-1073 — a row may now belong to a SALESPERSON, so the first column
+ * carries `holderRole` and the `overdueOpen` clock icon. The icon is the only
+ * place the owner's "no salesperson holds cash overnight" rule becomes
+ * visible when it is broken; without it the backend flag would have no
+ * surface, which is the same shape as never having enforced the rule.
  */
 @Component({
     selector: 'app-driver-cash-days-list',

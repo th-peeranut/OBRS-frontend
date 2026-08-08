@@ -26,6 +26,16 @@
 export interface DriverCashPerHeadRateLineDto {
   stopId: number;
   stopName: string;
+  /**
+   * OBRS-1073 — the counter this stop belongs to, or `null` when it belongs
+   * to none. Read this BEFORE reacting to `configured: false`: only 10 of the
+   * 101 seeded stops sit at a counter, so `configured === false` on its own
+   * would raise "rate not set" on almost every stop of every route. A null
+   * `salesPointId` means "no counter here, 0 is the right answer"; a non-null
+   * one with `configured: false` is the real warning.
+   */
+  salesPointId: number | null;
+  salesPointName: string | null;
   ratePerHead: string;
   configured: boolean;
 }
@@ -76,16 +86,32 @@ export type DriverCashDayStatus = 'OPEN' | 'RETURNED';
  */
 export interface DriverCashDayRespDto {
   dayId: number;
+  /**
+   * OBRS-1073 — the CASH HOLDER, who may be a salesperson. The `driver*`
+   * names are a knowingly accepted misnomer (the rename is OBRS-1080); read
+   * `holderRole` before labelling this person a driver in the UI.
+   */
   driverId: number;
   driverName: string;
+  holderRole: DriverCashHolderRole;
   /** `LocalDate` on the wire — `yyyy-MM-dd`. */
   businessDate: string;
   vehicleId: number;
   status: DriverCashDayStatus;
   entries: DriverCashEntryRespDto[];
   advanceTotal: string;
+  /**
+   * OBRS-1073 — the per-head fee is the SALESPERSON's pay and is therefore
+   * SUBTRACTED from `expectedReturnAmount`. This figure stays a positive
+   * magnitude ("what they earned"); the sign lives in the backend formula, so
+   * never add it to the expectation in the UI.
+   */
   perHeadTotal: string;
   expensePaidTotal: string;
+  /** OBRS-1073 — cash fares this holder took in that day, derived from `payments`. Already INSIDE `expectedReturnAmount`. */
+  fareCollectedTotal: string;
+  /** OBRS-1073 — cash handed back over the counter that day. Already SUBTRACTED inside `expectedReturnAmount`. */
+  cashRefundedTotal: string;
   parcelRemitTotal: string;
   /**
    * OBRS-992 — shares this driver owes back on parcels that were cancelled
@@ -109,6 +135,11 @@ export interface DriverCashAdvanceReqDto {
   amount: string;
 }
 
+/**
+ * The request still names the STOP — that is what the person at the counter
+ * can see. OBRS-1073 resolves its sales point server-side, so this shape did
+ * not change even though the rate is no longer keyed by stop.
+ */
 export interface DriverCashPerHeadReqDto {
   stopId: number;
   headCount: number;
@@ -139,6 +170,7 @@ export interface DriverCashDaySummaryRespDto {
   dayId: number;
   driverId: number;
   driverName: string;
+  holderRole: DriverCashHolderRole;
   businessDate: string;
   vehicleId: number;
   vehiclePlate: string;
@@ -147,23 +179,46 @@ export interface DriverCashDaySummaryRespDto {
   returnedAmount: string | null;
   discrepancy: string | null;
   hasUnmappedSalesPointRemit: boolean;
+  /**
+   * OBRS-1073 — a SALESPERSON row still OPEN on a business date that has
+   * already passed. The owner's rule is that a salesperson never holds cash
+   * overnight, so this is a broken rule, not a slow day. Never true for a
+   * DRIVER row: his sign-off is the NEXT morning by design.
+   */
+  overdueOpen: boolean;
 }
 
 // ── Owner settings: driver-cash per-head rates (`/admin/settings`, surface 5) ──
 // Endpoint paths unaffected by the backend reconciliation.
 
+/**
+ * OBRS-1073 — a rate belongs to a SALES POINT (the counter), not to a bus
+ * stop. บ้านบึง alone covers 7 stops, so the old per-stop key meant 10
+ * hand-keyed rows that all had to agree; this is 3.
+ */
 export interface DriverCashRateRowDto {
   id: number;
-  stopId: number;
-  stopSlug: string;
+  salesPointId: number;
+  salesPointCode: string;
+  salesPointName: string;
   effectiveFrom: string;
   ratePerHead: string;
 }
 
 export interface DriverCashRateReqDto {
-  stopId: number;
+  salesPointId: number;
   effectiveFrom: string;
   ratePerHead: string;
 }
+
+/** OBRS-1073 — `GET /api/private/owner/driver-cash/sales-points`, the picker source. */
+export interface SalesPointOptionDto {
+  id: number;
+  code: string;
+  name: string;
+}
+
+/** OBRS-1073 — whose cash box a `driver_cash_days` row is. */
+export type DriverCashHolderRole = 'DRIVER' | 'SALESPERSON';
 
 export const DRIVER_CASH_RATE_DUPLICATE_ERROR_CODE = 'PER_HEAD_RATE_DUPLICATE';

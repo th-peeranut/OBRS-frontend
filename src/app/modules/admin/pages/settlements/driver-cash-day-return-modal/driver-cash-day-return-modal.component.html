@@ -16,8 +16,13 @@
       @if (summary) {
         <div class="settlement-detail-body">
           <div class="settlement-detail-row">
-            <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.DRIVER' | translate }}</span>
-            <span class="admin-emphasis">{{ summary.driverName }}</span>
+            <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.HOLDER' | translate }}</span>
+            <span class="admin-emphasis">
+              {{ summary.driverName }}
+              <span class="admin-status is-muted">
+                {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.HOLDER_ROLE.' + summary.holderRole | translate }}
+              </span>
+            </span>
           </div>
           <div class="settlement-detail-row">
             <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.BUSINESS_DATE' | translate }}</span>
@@ -57,6 +62,30 @@
                 <div class="settlement-detail-row" data-testid="driver-cash-return-parcel-clawback">
                   <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.PARCEL_CLAWBACK' | translate }}</span>
                   <span>{{ detail.parcelClawbackTotal }}</span>
+                </div>
+              }
+              <!-- OBRS-1073: the two terms that make a salesperson's expected
+              amount readable. Cash IN is derived from `payments`, not from a
+              ledger entry, so without these lines the entries table below can
+              never explain the figure above it. Same rule as the clawback
+              line: already INSIDE the expected amount, never an addend, and
+              hidden at zero so a driver's day looks exactly as it did. -->
+              @if (hasFareCollected) {
+                <div class="settlement-detail-row" data-testid="driver-cash-return-fare-collected">
+                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.FARE_COLLECTED' | translate }}</span>
+                  <span>{{ detail.fareCollectedTotal }}</span>
+                </div>
+              }
+              @if (hasCashRefunded) {
+                <div class="settlement-detail-row" data-testid="driver-cash-return-cash-refunded">
+                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.CASH_REFUNDED' | translate }}</span>
+                  <span>-{{ detail.cashRefundedTotal }}</span>
+                </div>
+              }
+              @if (hasPerHead) {
+                <div class="settlement-detail-row" data-testid="driver-cash-return-per-head-pay">
+                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.PER_HEAD_PAY' | translate }}</span>
+                  <span>-{{ detail.perHeadTotal }}</span>
                 </div>
               }
             </div>

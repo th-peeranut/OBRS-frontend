@@ -41,9 +41,16 @@ export class DriverCashPerHeadFormComponent implements OnChanges {
 
   /** Pre-emptive "rate not configured" — the card's central requirement:
    * shown BEFORE the salesperson submits, not only after the POST echoes
-   * `perHeadRateConfigured: false`. */
+   * `perHeadRateConfigured: false`.
+   *
+   * OBRS-1073 added the `salesPointId` guard, and without it this warning
+   * became noise the moment the rate moved onto the counter: a rate belongs to
+   * a SALES POINT now, and only 10 of the 101 seeded stops belong to one, so
+   * `!configured` alone would fire on almost every stop of every route for
+   * money nobody was ever owed. A stop with no sales point has no counter —
+   * 0 is the correct answer there, not a missing setting. */
   protected get showRateNotConfiguredWarning(): boolean {
-    return this.selectedRate !== null && !this.selectedRate.configured;
+    return this.selectedRate !== null && this.selectedRate.salesPointId !== null && !this.selectedRate.configured;
   }
 
   protected get canSubmit(): boolean {

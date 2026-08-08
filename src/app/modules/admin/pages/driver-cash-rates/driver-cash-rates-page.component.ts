@@ -9,7 +9,6 @@ import {
   DRIVER_CASH_RATE_DUPLICATE_ERROR_CODE,
   DriverCashRateRowDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
-import { getStationFallbackLabel } from '../../../../shared/interfaces/station.interface';
 import { DriverCashRatesStore } from './driver-cash-rates.store';
 
 const CREATE_ERROR_KEYS: Record<string, string> = {
@@ -18,9 +17,15 @@ const CREATE_ERROR_KEYS: Record<string, string> = {
 
 /**
  * OBRS-960 — `/admin/settings` "driver-cash-rates" tab (owner-only). Card 1:
- * add-rate form (`app-admin-dropdown` for stop + `p-datePicker` +
+ * add-rate form (`app-admin-dropdown` for the SALES POINT + `p-datePicker` +
  * `input.admin-field` + one `admin-btn-primary`). Card 2: view-only history
  * table — the API is GET/POST only, so nothing here is editable in place.
+ *
+ * OBRS-1073 moved the key from stop to sales point. What that buys the owner
+ * is arithmetic, not tidiness: บ้านบึง covers 7 stops and หมอชิต 2, so setting
+ * the three real rates used to be 10 hand-keyed rows that all had to agree,
+ * and a stop added to บ้านบึง later earned 0 silently. It is 3 rows now, and a
+ * new stop inherits its counter's rate.
  */
 @Component({
     selector: 'app-driver-cash-rates-page',
@@ -30,14 +35,14 @@ const CREATE_ERROR_KEYS: Record<string, string> = {
 })
 export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
   protected rates: DriverCashRateRowDto[] = [];
-  protected stopOptions: { value: string; label: string }[] = [];
-  private stopIdBySlug = new Map<string, number>();
+  protected salesPointOptions: { value: string; label: string }[] = [];
+  private salesPointIdByCode = new Map<string, number>();
 
   protected isRefreshing = false;
   protected refreshFailed = false;
   protected errorMessage = '';
 
-  protected selectedStopSlug = '';
+  protected selectedSalesPointCode = '';
   protected effectiveFromDate: Date | null = null;
   protected ratePerHeadInput = '';
   protected isSubmitting = false;
@@ -53,15 +58,16 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // ⚠️ CORRECTED (2026-08-02, backend reconciliation) — stops now come
-    // from `StationService.getAll()` (see `DriverCashRatesStore`'s doc
-    // comment for why), not the broken `category === 'stop'` lookup filter.
+    // OBRS-1073 — the picker lists SALES POINTS from the owner-only endpoint;
+    // see `DriverCashRatesStore`'s doc comment for why it no longer borrows the
+    // public all-stops list. `name` is the owner's own wording ("บ้านบึง") and
+    // is not translated: there are three of them and they are place names.
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       this.rates = data?.rates ?? [];
-      this.stopIdBySlug = new Map((data?.stops ?? []).map((s) => [s.slug, s.id]));
-      this.stopOptions = (data?.stops ?? []).map((s) => ({
-        value: s.slug,
-        label: getStationFallbackLabel(s, this.translate.currentLang),
+      this.salesPointIdByCode = new Map((data?.salesPoints ?? []).map((sp) => [sp.code, sp.id]));
+      this.salesPointOptions = (data?.salesPoints ?? []).map((sp) => ({
+        value: sp.code,
+        label: sp.name,
       }));
     });
     this.store.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((refreshing) => {
@@ -84,14 +90,14 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
     return this.isRefreshing && !this.store.hasValue;
   }
 
-  protected onStopChange(value: string): void {
-    this.selectedStopSlug = value;
+  protected onSalesPointChange(value: string): void {
+    this.selectedSalesPointCode = value;
   }
 
   protected get canSubmit(): boolean {
     return (
       !this.isSubmitting &&
-      this.selectedStopSlug !== '' &&
+      this.selectedSalesPointCode !== '' &&
       this.effectiveFromDate !== null &&
       Number(this.ratePerHeadInput) > 0
     );
@@ -99,21 +105,21 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
 
   protected async submit(): Promise<void> {
     if (!this.canSubmit || !this.effectiveFromDate) return;
-    const stopId = this.stopIdBySlug.get(this.selectedStopSlug);
-    if (!stopId) return;
+    const salesPointId = this.salesPointIdByCode.get(this.selectedSalesPointCode);
+    if (!salesPointId) return;
 
     this.isSubmitting = true;
     this.submitError = '';
     try {
       await firstValueFrom(
         this.adminApiService.createDriverCashRate({
-          stopId,
+          salesPointId,
           effectiveFrom: this.toDateInputValue(this.effectiveFromDate),
           ratePerHead: this.ratePerHeadInput.trim(),
         })
       );
       this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
-      this.selectedStopSlug = '';
+      this.selectedSalesPointCode = '';
       this.effectiveFromDate = null;
       this.ratePerHeadInput = '';
       await this.store.refresh();
@@ -127,16 +133,16 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** "current" chip: the LATEST row per stop with `effectiveFrom <= today`. */
+  /** "current" chip: the LATEST row per SALES POINT with `effectiveFrom <= today`. */
   protected isCurrent(row: DriverCashRateRowDto): boolean {
     const today = this.toDateInputValue(new Date());
     if (row.effectiveFrom > today) {
       return false;
     }
-    const latestForStop = this.rates
-      .filter((r) => r.stopId === row.stopId && r.effectiveFrom <= today)
+    const latestForSalesPoint = this.rates
+      .filter((r) => r.salesPointId === row.salesPointId && r.effectiveFrom <= today)
       .sort((a, b) => (a.effectiveFrom < b.effectiveFrom ? 1 : -1))[0];
-    return latestForStop?.id === row.id;
+    return latestForSalesPoint?.id === row.id;
   }
 
   protected trackById(_index: number, row: DriverCashRateRowDto): number {
