@@ -47,6 +47,10 @@ function makeDetail(overrides: Partial<SettlementScheduleDetailDto> = {}): Settl
         byMethod: [],
         byStatus: [],
       },
+      // OBRS-1145: served by the backend, never recomputed here. 600.00 of cash
+      // tickets with no fee recorded yet.
+      expectedCashAmount: '600.00',
+      perHeadDeducted: '0.00',
     },
     settled: null,
     discrepancy: null,
@@ -116,6 +120,8 @@ describe('SettlementDetailModalComponent', () => {
         totalAmount: '0.00',
         onSiteTotal: '0.00',
         agencyTotal: '0.00',
+        expectedCashAmount: '0.00',
+        perHeadDeducted: '0.00',
         passengerCount: 0,
         ticketCount: 0,
         byMethod: [],
@@ -185,19 +191,25 @@ describe('SettlementDetailModalComponent', () => {
   });
 
   // ── OBRS-671 expected cash / discrepancy ─────────────────────────────────
-  it('expectedCashAmount reads the cash method bucket (never the round total)', () => {
+  // OBRS-1145 must-catch: the screen takes the server's figure verbatim. The
+  // old implementation returned the `cash` method bucket, so this fixture —
+  // 1000.00 of cash tickets with 120.00 of ค่าหัว kept by the seller — made it
+  // answer 1000.00 and told the person counting they were 120.00 short of a
+  // hand-over that was exactly right.
+  it('expectedCashAmount is the server figure, not the cash method bucket', () => {
     const component = new SettlementDetailModalComponent(createTranslateStub());
     component.detail = makeDetail({
       live: {
         ...makeDetail().live,
         totalAmount: '1000.00',
-        byMethod: [
-          { method: 'cash', amount: '500.00', ticketCount: 1 },
-          { method: 'card', amount: '500.00', ticketCount: 1 },
-        ],
+        byMethod: [{ method: 'cash', amount: '1000.00', ticketCount: 2 }],
+        expectedCashAmount: '880.00',
+        perHeadDeducted: '120.00',
       },
     });
-    expect(component['expectedCashAmount']()).toBe('500.00');
+    expect(component['expectedCashAmount']()).toBe('880.00');
+    expect(component['perHeadDeducted']).toBe('120.00');
+    expect(component['hasPerHeadDeducted']).toBeTrue();
   });
 
   it('expectedCashAmount is 0.00 when the round took no cash', () => {
@@ -206,9 +218,27 @@ describe('SettlementDetailModalComponent', () => {
       live: {
         ...makeDetail().live,
         byMethod: [{ method: 'card', amount: '400.00', ticketCount: 1 }],
+        expectedCashAmount: '0.00',
       },
     });
     expect(component['expectedCashAmount']()).toBe('0.00');
+  });
+
+  // The discrepancy the person signs against must follow the served figure too:
+  // counted 880.00 on a round whose server expectation is 880.00 is NOT short.
+  it('discrepancy is measured against the served expectation, fee included', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeDetail({
+      live: {
+        ...makeDetail().live,
+        byMethod: [{ method: 'cash', amount: '1000.00', ticketCount: 2 }],
+        expectedCashAmount: '880.00',
+        perHeadDeducted: '120.00',
+      },
+    });
+    component['countedCashInput'] = '880.00';
+    expect(component['hasDiscrepancy']()).toBeFalse();
+    expect(component['discrepancyAmount']()).toBe('0.00');
   });
 
   it('discrepancy is counted − expected cash, negative when the drawer is short', () => {
@@ -416,6 +446,8 @@ describe('SettlementDetailModalComponent', () => {
         totalAmount: '1000.00',
         onSiteTotal: '600.00',
         agencyTotal: '400.00',
+        expectedCashAmount: '600.00',
+        perHeadDeducted: '0.00',
         passengerCount: 4,
         ticketCount: 4,
         byMethod: [{ method: 'cash', amount: '600.00', ticketCount: 2 }],

@@ -87,8 +87,6 @@ const DETAIL: DriverCashDayRespDto = {
   entries: ENTRIES,
   advanceTotal: '100.00',
   perHeadTotal: '260.00',
-  fareCollectedTotal: '0.00',
-  cashRefundedTotal: '0.00',
   expensePaidTotal: '40.00',
   parcelRemitTotal: '0.00',
   // OBRS-992/OBRS-1053: already INSIDE expectedReturnAmount, never an addend.

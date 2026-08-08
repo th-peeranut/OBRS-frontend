@@ -137,24 +137,14 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
    * clawback row). Shown only when there is something to explain.
    */
   /**
-   * OBRS-1073 — the per-head fee is the salesperson's PAY, so it is
-   * SUBTRACTED from the expected amount. Shown with an explicit minus sign in
-   * the template because the wire value is a positive magnitude: rendering it
-   * bare next to lines that add would read as an addend, which is exactly the
-   * belief this card overturned.
+   * OBRS-1145 — the per-head fee is the holder's EARNINGS for the day and is
+   * NOT a term of the expected amount: it was already netted out of the cash
+   * they handed the round. Rendered without a sign, under a label that says
+   * "already netted at the round", so it can be read as neither an addend nor
+   * a deduction of this figure.
    */
   protected get hasPerHead(): boolean {
     return this.isNonZero(this.detail?.perHeadTotal);
-  }
-
-  /** OBRS-1073 — cash fares taken in that day, derived from `payments`. */
-  protected get hasFareCollected(): boolean {
-    return this.isNonZero(this.detail?.fareCollectedTotal);
-  }
-
-  /** OBRS-1073 — cash handed back over the counter that day. Subtracted. */
-  protected get hasCashRefunded(): boolean {
-    return this.isNonZero(this.detail?.cashRefundedTotal);
   }
 
   private isNonZero(value: string | null | undefined): boolean {

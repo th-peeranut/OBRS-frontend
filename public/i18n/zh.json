@@ -1421,6 +1421,7 @@
         "COUNTED_HELPER": "您清点的实际现金，而非班次总额。不含银行卡和线上支付。",
         "COUNTED_PLACEHOLDER": "0.00",
         "COUNTED_INVALID": "请输入有效金额，例如 480.00。",
+        "PER_HEAD_DEDUCTED": "减去售票员留存的人头费",
         "EXPECTED_CASH": "应收现金",
         "DISCREPANCY": "差异",
         "HANDER_LABEL": "交接人",
@@ -1468,9 +1469,7 @@
           "SUCCESS": "司机现金日已标记为已归还。",
           "ALREADY_RETURNED": "该日已完成归还。",
           "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）",
-          "FARE_COLLECTED": "收取的现金票款",
-          "CASH_REFUNDED": "柜台退还的现金",
-          "PER_HEAD_PAY": "人头费（售票员报酬）"
+          "PER_HEAD_PAY": "今日所得人头费（已在班次结算中扣除，不计入上方金额）"
         },
         "ERROR": {
           "REASON_REQUIRED": "归还金额与预期不符时必须填写原因。",

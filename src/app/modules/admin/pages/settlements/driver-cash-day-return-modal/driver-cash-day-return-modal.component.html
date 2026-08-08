@@ -64,28 +64,16 @@
                   <span>{{ detail.parcelClawbackTotal }}</span>
                 </div>
               }
-              <!-- OBRS-1073: the two terms that make a salesperson's expected
-              amount readable. Cash IN is derived from `payments`, not from a
-              ledger entry, so without these lines the entries table below can
-              never explain the figure above it. Same rule as the clawback
-              line: already INSIDE the expected amount, never an addend, and
-              hidden at zero so a driver's day looks exactly as it did. -->
-              @if (hasFareCollected) {
-                <div class="settlement-detail-row" data-testid="driver-cash-return-fare-collected">
-                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.FARE_COLLECTED' | translate }}</span>
-                  <span>{{ detail.fareCollectedTotal }}</span>
-                </div>
-              }
-              @if (hasCashRefunded) {
-                <div class="settlement-detail-row" data-testid="driver-cash-return-cash-refunded">
-                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.CASH_REFUNDED' | translate }}</span>
-                  <span>-{{ detail.cashRefundedTotal }}</span>
-                </div>
-              }
+              <!-- OBRS-1145: ค่าหัว is what this person EARNED, not a term of
+              the amount above it — the round's settlement already netted it
+              out of the cash they handed over. No sign, and a label that says
+              so, because the previous version rendered it as "-150" and that
+              is the reading this card removes. Hidden at zero, so a driver's
+              day looks exactly as it did. -->
               @if (hasPerHead) {
                 <div class="settlement-detail-row" data-testid="driver-cash-return-per-head-pay">
                   <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.PER_HEAD_PAY' | translate }}</span>
-                  <span>-{{ detail.perHeadTotal }}</span>
+                  <span>{{ detail.perHeadTotal }}</span>
                 </div>
               }
             </div>

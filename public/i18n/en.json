@@ -1421,6 +1421,7 @@
         "COUNTED_HELPER": "The physical cash you counted — not the round total. Card and online payments are excluded.",
         "COUNTED_PLACEHOLDER": "0.00",
         "COUNTED_INVALID": "Enter a valid amount, e.g. 480.00.",
+        "PER_HEAD_DEDUCTED": "Less per-head fee kept by the seller",
         "EXPECTED_CASH": "Expected cash",
         "DISCREPANCY": "Discrepancy",
         "HANDER_LABEL": "Handed over by",
@@ -1468,9 +1469,7 @@
           "SUCCESS": "Driver cash day marked as returned.",
           "ALREADY_RETURNED": "This day has already been returned.",
           "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)",
-          "FARE_COLLECTED": "Cash fares collected",
-          "CASH_REFUNDED": "Cash refunded at the counter",
-          "PER_HEAD_PAY": "Per-head pay (salesperson)"
+          "PER_HEAD_PAY": "Per-head pay earned today (already netted at the round, not in the amount above)"
         },
         "ERROR": {
           "REASON_REQUIRED": "A reason is required when the returned amount does not match.",

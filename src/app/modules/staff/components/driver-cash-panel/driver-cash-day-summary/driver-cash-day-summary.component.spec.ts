@@ -16,8 +16,6 @@ function makeDay(overrides: Partial<DriverCashDayRespDto> = {}): DriverCashDayRe
     entries: [],
     advanceTotal: '100.00',
     perHeadTotal: '200.00',
-    fareCollectedTotal: '0.00',
-    cashRefundedTotal: '0.00',
     expensePaidTotal: '50.00',
     parcelRemitTotal: '30.00',
     // OBRS-992/OBRS-1053: already INSIDE expectedReturnAmount, never an addend.

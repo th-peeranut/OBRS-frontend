@@ -102,6 +102,21 @@ export interface SettlementLiveDto {
   onSiteTotal: string;
   agencyTotal: string;
   notTravelled: SettlementLiveNotTravelledDto;
+
+  /**
+   * OBRS-1145 — the cash the drawer should hold for this round, computed by
+   * the server and reconciled against by `confirm`.
+   *
+   * ⛔ Never recompute this on the client. The confirm screen used to derive
+   * its own expectation from the `cash` method bucket, which stopped matching
+   * the server when OBRS-960 §4 folded consigned-parcel cash and drawer-funded
+   * shares into it — the screen showed one number while the server reconciled
+   * against another.
+   */
+  expectedCashAmount: string;
+
+  /** OBRS-1145 — ค่าหัว already netted out of `expectedCashAmount`, positive magnitude. */
+  perHeadDeducted: string;
 }
 
 /**
