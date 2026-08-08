@@ -427,6 +427,28 @@ export const ADMIN_SWEEP: SweepPage[] = [
   { key: 'admin-schedules', url: '/admin/schedules', landsOn: /\/admin\/schedules$/, requires: 'app-schedules-page' },
   { key: 'admin-reports', url: '/admin/reports', landsOn: /\/admin\/reports$/, requires: 'app-reports-page' },
 
+  // --- OBRS-1147 ------------------------------------------------------------
+  // The staff per-head earnings page carries the same two `p-datepicker`s as
+  // the filter rows above, so the coverage gate named it on the first run after
+  // it landed -- the gate working, not a flake.
+  //
+  // Reached with this sweep's ['admin'] session for the same reason
+  // `/staff/sell` is: admin holds cross-portal access (OBRS-176), so the route's
+  // own requiredRoles: ['salesperson','driver'] does not bounce it.
+  //
+  // `requires` names the p-datepicker rather than only the page selector,
+  // because the filter row renders unconditionally ABOVE every contentState
+  // branch -- so this lane's empty backend still RENDERS the host being
+  // measured. A bare `app-my-earnings-page` would pass on a page whose PrimeNG
+  // tag never rendered, which is the false coverage OBRS-776 added this half of
+  // the gate to prevent.
+  {
+    key: 'staff-my-earnings',
+    url: '/staff/my-earnings',
+    landsOn: /\/staff\/my-earnings$/,
+    requires: 'app-my-earnings-page p-datepicker',
+  },
+
   // --- OBRS-941 -------------------------------------------------------------
   // The five analytics pages OBRS-151..155 added under the same `reports`
   // section of the admin nav, each with the identical
