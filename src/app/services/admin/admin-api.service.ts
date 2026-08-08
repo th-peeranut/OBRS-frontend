@@ -48,6 +48,8 @@ import {
   DriverCashRateReqDto,
   SalesPointOptionDto,
   DriverCashRateRowDto,
+  PerHeadEarningsGranularity,
+  PerHeadEarningsRespDto,
 } from '../../shared/interfaces/driver-cash.interface';
 
 export interface AdminTranslationDto {
@@ -2080,6 +2082,29 @@ export class AdminApiService {
   getDriverCashDayDetail(dayId: number): Observable<ResponseAPI<DriverCashDayRespDto>> {
     return this.getRequest<DriverCashDayRespDto>(
       `${this.baseUrl}/private/driver-cash/days/${dayId}`
+    );
+  }
+
+  /**
+   * OBRS-1147 AC-2 — every person's ค่าหัว under this owner for the range, with
+   * an optional `holderId` to narrow to one. Owner scope comes from the token,
+   * never from a parameter (same as `getDriverCashDays()` above); a `holderId`
+   * outside this owner's staff answers an EMPTY report, not a distinguishable
+   * error, so it cannot be walked as an existence oracle.
+   */
+  getDriverCashEarnings(
+    from: string,
+    to: string,
+    granularity: PerHeadEarningsGranularity,
+    holderId?: number
+  ): Observable<ResponseAPI<PerHeadEarningsRespDto>> {
+    let params = new HttpParams().set('from', from).set('to', to).set('granularity', granularity);
+    if (holderId != null) {
+      params = params.set('holderId', String(holderId));
+    }
+    return this.getRequest<PerHeadEarningsRespDto>(
+      `${this.baseUrl}/private/driver-cash/earnings`,
+      params
     );
   }
 

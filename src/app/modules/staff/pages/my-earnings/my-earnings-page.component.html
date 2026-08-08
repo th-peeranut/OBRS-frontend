@@ -1,0 +1,153 @@
+<!-- No in-body title (design-system §7): the shell topbar already renders the
+route's titleKey/subtitleKey (STAFF.PAGES.MY_EARNINGS / STAFF.MY_EARNINGS.SUBTITLE). -->
+
+<section class="admin-page-filters mt-3">
+  <p-datePicker
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
+    dateFormat="dd/mm/yy"
+    [ngModel]="fromDate"
+    (ngModelChange)="onFromDateChange($event)"
+    [showIcon]="true"
+    [iconDisplay]="'input'"
+    [showButtonBar]="true"
+    [placeholder]="'STAFF.MY_EARNINGS.FILTER_FROM' | translate"
+    >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-datePicker>
+
+  <p-datePicker
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
+    dateFormat="dd/mm/yy"
+    [ngModel]="toDate"
+    (ngModelChange)="onToDateChange($event)"
+    [showIcon]="true"
+    [iconDisplay]="'input'"
+    [showButtonBar]="true"
+    [placeholder]="'STAFF.MY_EARNINGS.FILTER_TO' | translate"
+    >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-datePicker>
+
+  <!-- Three buttons rather than a dropdown: this is the one control the person
+  actually touches on this screen, and it has exactly three values. -->
+  <div class="me-granularity" role="group" [attr.aria-label]="'STAFF.MY_EARNINGS.GRANULARITY.LABEL' | translate">
+    @for (option of granularityOptions; track option.value) {
+      <button
+        type="button"
+        class="me-granularity-btn"
+        [class.is-active]="granularity === option.value"
+        [attr.aria-pressed]="granularity === option.value"
+        [attr.data-testid]="'granularity-' + option.value"
+        (click)="onGranularityChange(option.value)"
+      >
+        {{ option.labelKey | translate }}
+      </button>
+    }
+  </div>
+</section>
+
+<!-- An invalid range or a fetch error REPLACES the totals and the table — never
+shown beside stale numbers, which would read as "this is your pay". -->
+@if (contentState === 'invalid' || contentState === 'error') {
+  <section class="admin-card mt-3">
+    @if (contentState === 'invalid') {
+      <p class="admin-error">{{ rangeError }}</p>
+    }
+    @if (contentState === 'error') {
+      <p class="admin-muted">{{ loadError }}</p>
+    }
+  </section>
+}
+
+@if (contentState === 'loading' || contentState === 'empty' || contentState === 'data') {
+  <!-- `admin-grid` gives the gap; the column count is page-local because the shared
+  theme ships --3 and --4 only, and a bare .admin-grid renders one full-width tile per
+  row (measured on the first AFTER capture). -->
+  <section class="admin-grid me-kpi-grid mt-3">
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+      <div>
+        <p class="admin-muted">{{ 'STAFF.MY_EARNINGS.TILE.TOTAL' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number" data-testid="my-earnings-total">{{ formatMoney(earnings?.totalAmount ?? '0.00') }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+      </div>
+    </article>
+    <article class="admin-card admin-kpi">
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined">groups</span></span>
+      <div>
+        <p class="admin-muted">{{ 'STAFF.MY_EARNINGS.TILE.HEADS' | translate }}</p>
+        @if (!isLoading) {
+          <p class="admin-big-number" data-testid="my-earnings-heads">{{ earnings?.totalHeadCount ?? 0 }}</p>
+        }
+        @if (isLoading) {
+          <span class="admin-skeleton admin-skeleton--sm"></span>
+        }
+      </div>
+    </article>
+  </section>
+
+  <section class="admin-card mt-3" data-testid="my-earnings-section">
+    <div class="admin-card-head">
+      <h4>{{ 'STAFF.MY_EARNINGS.TABLE_TITLE' | translate }}</h4>
+    </div>
+
+    <!-- OBRS-1145: the fee is netted at the round, so everything listed here is
+    money already kept. Said on the screen, because "how much am I still owed?"
+    is the first question this table invites. -->
+    <p class="admin-muted me-net-note">{{ 'STAFF.MY_EARNINGS.NETTED_NOTE' | translate }}</p>
+
+    @if (contentState === 'empty') {
+      <p class="admin-muted">{{ 'STAFF.MY_EARNINGS.EMPTY_RANGE' | translate }}</p>
+    }
+
+    @if (contentState !== 'empty') {
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>{{ 'STAFF.MY_EARNINGS.COL.PERIOD' | translate }}</th>
+              <th>{{ 'STAFF.MY_EARNINGS.COL.HEADS' | translate }}</th>
+              <th>
+                {{ 'STAFF.MY_EARNINGS.COL.RATE' | translate }}
+                <span class="admin-muted me-basis-caption">{{ 'STAFF.MY_EARNINGS.COL.RATE_CAPTION' | translate }}</span>
+              </th>
+              <th>{{ 'STAFF.MY_EARNINGS.COL.AMOUNT' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (isLoading) {
+              @for (row of [1, 2, 3]; track row) {
+                <tr class="admin-skeleton-row" aria-hidden="true">
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                </tr>
+              }
+            }
+            @if (!isLoading) {
+              @for (bucket of buckets; track trackByBucketKey($index, bucket)) {
+                <tr [attr.data-testid]="'bucket-' + bucket.bucketKey">
+                  <td>{{ bucketLabel(bucket) }}</td>
+                  <td>{{ bucket.headCount }}</td>
+                  <td>{{ formatMoney(bucket.effectiveRate) }}</td>
+                  <td>{{ formatMoney(bucket.amount) }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

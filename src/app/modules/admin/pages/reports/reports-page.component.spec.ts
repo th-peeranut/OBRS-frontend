@@ -16,6 +16,7 @@ import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { ExportService } from '../../../../services/export/export.service';
 import { ParcelShareMonthlyStore } from './parcel-share-monthly.store';
+import { PerHeadEarningsStore } from './per-head-earnings.store';
 import { ParcelShareClawbacksStore } from './parcel-share-clawbacks.store';
 import { ParcelShareClawbacksSectionComponent } from './parcel-share-clawbacks-section/parcel-share-clawbacks-section.component';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
@@ -86,16 +87,28 @@ const parcelShareClawbacksStoreStub = {
   mutate: jasmine.createSpy('mutate'),
 };
 
+// OBRS-1147 — the per-head EARNINGS section (staff pay) injects its own store.
+// Minimal stub: the pre-existing tests below do not exercise that section, and
+// its own behaviour is pinned in the backend service tests plus the staff page's
+// spec. `data$` starts null so the section renders its empty state.
+const perHeadEarningsStoreStub = {
+  data$: new BehaviorSubject<unknown>(null),
+  refreshing$: new BehaviorSubject<boolean>(false),
+  query: { from: '2026-01-01', to: '2026-08-08', granularity: 'MONTH' },
+  refresh: jasmine.createSpy('perHeadRefresh').and.resolveTo(undefined),
+  setQuery: jasmine.createSpy('setQuery'),
+};
+
 describe('ReportsPageComponent', () => {
   it('should create', () => {
     const store = makeStoreStub(null);
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     expect(component).toBeTruthy();
   });
 
   it('seeds the two date pickers from the store range on init', () => {
     const store = makeStoreStub(null, { from: '2026-06-01', to: '2026-06-07' });
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
 
     component.ngOnInit();
 
@@ -110,7 +123,7 @@ describe('ReportsPageComponent', () => {
     const store = makeStoreStub(null);
     store.refreshing$.next(true);
     store.hasValue = false;
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
 
     component.ngOnInit();
 
@@ -119,7 +132,7 @@ describe('ReportsPageComponent', () => {
 
   it('renders cached data immediately via the tiles/dailyRows getters', () => {
     const store = makeStoreStub(makeSummary());
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
 
     component.ngOnInit();
 
@@ -131,14 +144,14 @@ describe('ReportsPageComponent', () => {
   // client-side role check — forward-compatible with OBRS-129.
   it('showRevenue reflects the presence of tiles.revenue, not a role check', () => {
     const withRevenue = makeStoreStub(makeSummary());
-    const componentWith = new ReportsPageComponent(withRevenue as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const componentWith = new ReportsPageComponent(withRevenue as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     componentWith.ngOnInit();
     expect((componentWith as any).showRevenue).toBeTrue();
 
     const summaryNoRevenue = makeSummary();
     delete (summaryNoRevenue.tiles as any).revenue;
     const withoutRevenue = makeStoreStub(summaryNoRevenue);
-    const componentWithout = new ReportsPageComponent(withoutRevenue as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const componentWithout = new ReportsPageComponent(withoutRevenue as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     componentWithout.ngOnInit();
     expect((componentWithout as any).showRevenue).toBeFalse();
   });
@@ -152,7 +165,7 @@ describe('ReportsPageComponent', () => {
         ],
       })
     );
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
 
     component.ngOnInit();
 
@@ -170,7 +183,7 @@ describe('ReportsPageComponent', () => {
         ],
       })
     );
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
 
     component.ngOnInit();
 
@@ -181,7 +194,7 @@ describe('ReportsPageComponent', () => {
   // table. Priority: invalid > loading > error > empty > data.
   it('contentState is "data" for a non-zero summary', () => {
     const store = makeStoreStub(makeSummary());
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
     expect((component as any).contentState).toBe('data');
   });
@@ -193,14 +206,14 @@ describe('ReportsPageComponent', () => {
         daily: [{ date: '2026-07-01', bookingCount: 0, ticketsSold: 0, occupancyRatePct: 0, seatsSold: 0, seatCapacity: 12 }],
       })
     );
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
     expect((component as any).contentState).toBe('empty');
   });
 
   it('contentState is "invalid" (over cached data) when the range guard trips', () => {
     const store = makeStoreStub(makeSummary());
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
     component['onFromDateChange'](new Date(2026, 6, 10));
@@ -212,7 +225,7 @@ describe('ReportsPageComponent', () => {
   it('contentState is "error" when a fetch fails with no cached value', () => {
     const store = makeStoreStub(null);
     store.lastErrorCode = 'SOMETHING_ELSE';
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
     store.error$.next(true);
@@ -223,7 +236,7 @@ describe('ReportsPageComponent', () => {
   // Client guard: from > to must show the inline warning and must NOT dispatch.
   it('shows RANGE_INVALID and does not call store.setRange when from > to', () => {
     const store = makeStoreStub(makeSummary());
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
     component['onFromDateChange'](new Date(2026, 6, 10));
@@ -237,7 +250,7 @@ describe('ReportsPageComponent', () => {
   // NOT dispatch.
   it('shows RANGE_TOO_LARGE and does not call store.setRange when the span exceeds 366 days', () => {
     const store = makeStoreStub(makeSummary());
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
     component['onFromDateChange'](new Date(2020, 0, 1));
@@ -249,7 +262,7 @@ describe('ReportsPageComponent', () => {
 
   it('dispatches store.setRange with yyyy-MM-dd strings for a valid range', () => {
     const store = makeStoreStub(makeSummary());
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
     component['onFromDateChange'](new Date(2026, 5, 1));
@@ -263,7 +276,7 @@ describe('ReportsPageComponent', () => {
   it('shows the range-specific message when error$ fires with a matching errorCode and no cache', () => {
     const store = makeStoreStub(null);
     store.lastErrorCode = 'REPORT_RANGE_TOO_LARGE';
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
     store.error$.next(true);
@@ -274,7 +287,7 @@ describe('ReportsPageComponent', () => {
   it('falls back to the generic LOAD_FAILED message for an unrecognized errorCode', () => {
     const store = makeStoreStub(null);
     store.lastErrorCode = 'SOMETHING_ELSE';
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
     store.error$.next(true);
@@ -285,7 +298,7 @@ describe('ReportsPageComponent', () => {
   it('keeps loadError empty when a background revalidate fails but cached data remains (hasValue true)', () => {
     const store = makeStoreStub(makeSummary());
     store.hasValue = true;
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
     store.error$.next(true);
@@ -295,7 +308,7 @@ describe('ReportsPageComponent', () => {
 
   it('unsubscribes on destroy', () => {
     const store = makeStoreStub(makeSummary());
-    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, createTranslateStub());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
     component.ngOnDestroy();
@@ -348,6 +361,10 @@ describe('ReportsPageComponent (export button, OBRS-442)', () => {
         // ReportsStore above, so DI doesn't construct a REAL store needing a
         // real AuthService/AdminApiService.
         { provide: ParcelShareMonthlyStore, useValue: parcelShareMonthlyStoreStub },
+        // OBRS-1147: PerHeadEarningsStore is providedIn:'root', so without this override
+        // Angular builds the real one, whose AdminCollectionStore base subscribes to
+        // AuthService.authStatus$ — which this block's AuthService spy does not have.
+        { provide: PerHeadEarningsStore, useValue: perHeadEarningsStoreStub },
         // OBRS-1053: the clawback section is a CHILD component of this page,
         // so its dependencies must resolve here too — otherwise DI builds the
         // real store and the real AdminApiService (needing HttpClient) just to
