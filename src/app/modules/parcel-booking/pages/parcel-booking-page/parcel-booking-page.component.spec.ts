@@ -4,6 +4,11 @@ import { StationService } from '../../../../services/station/station.service';
 import { ParcelBookingService } from '../../../../services/parcel-booking/parcel-booking.service';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { ParcelBookingPageComponent } from './parcel-booking-page.component';
+// OBRS-1141: the component resolves the delay-disclosure strings itself,
+// because a PrimeNG dropdown option is a plain `{id,label}` and cannot host
+// the shared component. With no dictionary loaded, `instant()` returns the
+// KEY, which is what the assertions below match on.
+import { TranslateModule } from '@ngx-translate/core';
 
 describe('ParcelBookingPageComponent', () => {
   let component: ParcelBookingPageComponent;
@@ -34,6 +39,7 @@ describe('ParcelBookingPageComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [ParcelBookingPageComponent],
+      imports: [TranslateModule.forRoot()],
       providers: [
         { provide: StationService, useValue: stationService },
         { provide: ParcelBookingService, useValue: parcelBookingService },
@@ -316,5 +322,71 @@ describe('ParcelBookingPageComponent', () => {
   it('onPaymentCompleted clears the active booking id as a safety net', () => {
     (component as any).onPaymentCompleted();
     expect(bookingService.clearActiveBookingId).toHaveBeenCalled();
+  });
+
+  // OBRS-1141 AC3. This dropdown is the parcel flow's schedule search result and
+  // runs the SAME searchSchedulesWithAvailability query as the passenger search
+  // (searchSchedulesForParcel delegates to it), so its rows can carry an
+  // announced delay. The disclosure has to live in the label text here, because
+  // a ParcelScheduleOption is {id,label} with nowhere to put markup.
+  function searchWith(rows: any[]): void {
+    parcelBookingService.searchParcelSchedules.and.returnValue(
+      of({ code: 200, message: 'OK', data: rows })
+    );
+    (component as any).onFromStationChange(1);
+    (component as any).onToStationChange(2);
+    (component as any).onDateChange(new Date('2026-08-01'));
+  }
+
+  const onTimeRow = {
+    id: 7,
+    vehicleType: 'Van',
+    departureDateTime: '2026-08-01T08:00:00',
+    arrivalDateTime: '2026-08-01T10:00:00',
+    pricePerSeat: 100,
+    availableSeats: 10,
+    availableSeatNumbers: [],
+  };
+
+  it('AC2 — an on-time schedule keeps its label exactly as before', () => {
+    searchWith([onTimeRow]);
+
+    const label = (component as any).scheduleOptions[0].label as string;
+    expect(label).toBe('01/08/2026 08:00 - 10:00 · Van');
+  });
+
+  it('AC1/AC3 — a delayed schedule says so in the label, with the time it was planned for', () => {
+    searchWith([
+      {
+        ...onTimeRow,
+        id: 8,
+        departureDateTime: '2026-08-01T10:00:00',
+        arrivalDateTime: '2026-08-01T12:00:00',
+        scheduledDepartureDateTime: '2026-08-01T08:00:00',
+      },
+    ]);
+
+    const label = (component as any).scheduleOptions[0].label as string;
+    // The headline is still the EFFECTIVE departure (OBRS-1099)...
+    expect(label).toContain('01/08/2026 10:00');
+    // ...plus the disclosure, both strings resolved through i18n, never literal.
+    expect(label).toContain('SCHEDULE_DELAY_NOTICE.BADGE');
+    expect(label).toContain('SCHEDULE_DELAY_NOTICE.PLANNED');
+  });
+
+  it('AC5 — a delay across midnight is legible because the label already carries the DATE', () => {
+    searchWith([
+      {
+        ...onTimeRow,
+        id: 9,
+        departureDateTime: '2026-08-02T00:30:00',
+        arrivalDateTime: '2026-08-02T02:30:00',
+        scheduledDepartureDateTime: '2026-08-01T23:30:00',
+      },
+    ]);
+
+    const label = (component as any).scheduleOptions[0].label as string;
+    expect(label).toContain('02/08/2026 00:30');
+    expect(label).toContain('SCHEDULE_DELAY_NOTICE.BADGE');
   });
 });

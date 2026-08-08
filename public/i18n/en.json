@@ -2334,6 +2334,12 @@
     "STEP_3": "Personal information",
     "STEP_4": "Pay"
   },
+  "SCHEDULE_DELAY_NOTICE": {
+    "BADGE": "Delayed",
+    "PLANNED": "Scheduled {{time}}",
+    "DEPARTS_ON": "Departs {{date}}",
+    "A11Y": "This trip has been announced as delayed. It was scheduled to depart at {{planned}} and now departs at {{effective}}."
+  },
   "SCHEDULE_BOOKING": {
     "HEADER": "Trip type",
     "SUBHEADER_DEPARTURE": "Travel itinerary: Outbound",

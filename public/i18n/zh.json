@@ -2334,6 +2334,12 @@
     "STEP_3": "个人信息",
     "STEP_4": "付款"
   },
+  "SCHEDULE_DELAY_NOTICE": {
+    "BADGE": "延误",
+    "PLANNED": "原定 {{time}}",
+    "DEPARTS_ON": "{{date}} 发车",
+    "A11Y": "此班次已公告延误。原定 {{planned}} 发车，现改为 {{effective}} 发车。"
+  },
   "SCHEDULE_BOOKING": {
     "HEADER": "行程类型",
     "SUBHEADER_DEPARTURE": "行程安排：去程",

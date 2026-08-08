@@ -49,6 +49,18 @@
             <span class="reschedule-option-card__seats">
               {{ "MY_BOOKINGS.RESCHEDULE.SEATS" | translate }}: {{ option.availableSeats }}
             </span>
+            <!-- OBRS-1141 AC3. `getRescheduleOptions` runs the same
+            `searchSchedulesWithAvailability` query as customer search, so a
+            candidate round here can be delayed exactly like a search result —
+            and it matters more here, because OBRS-666 lets a 45-minute delay
+            unlock a free reschedule and the passenger must not be moved onto
+            another announced-delayed round without being told. Placed LAST and
+            spanning both grid columns so the card's existing 2x2 auto-placement
+            is untouched when nothing renders (AC2). -->
+            <app-schedule-delay-notice
+              [departureDateTime]="option.departureDateTime"
+              [scheduledDepartureDateTime]="option.scheduledDepartureDateTime"
+            ></app-schedule-delay-notice>
           </button>
         </li>
       }

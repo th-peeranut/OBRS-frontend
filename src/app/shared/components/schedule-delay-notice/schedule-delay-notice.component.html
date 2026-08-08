@@ -1,0 +1,23 @@
+@if (disclosure; as delay) {
+  <span
+    class="schedule-delay-notice"
+    data-testid="schedule-delay-notice"
+    [attr.aria-label]="
+      'SCHEDULE_DELAY_NOTICE.A11Y'
+        | translate: { planned: delay.plannedTime, effective: delay.effectiveTime }
+    "
+    >
+    <span class="schedule-delay-notice__badge">
+      <i class="bi bi-clock-history" aria-hidden="true"></i>
+      {{ "SCHEDULE_DELAY_NOTICE.BADGE" | translate }}
+    </span>
+    <span class="schedule-delay-notice__planned" data-testid="schedule-delay-planned">
+      {{ "SCHEDULE_DELAY_NOTICE.PLANNED" | translate: { time: delay.plannedTime } }}
+    </span>
+    @if (delay.effectiveDate) {
+      <span class="schedule-delay-notice__date" data-testid="schedule-delay-date">
+        {{ "SCHEDULE_DELAY_NOTICE.DEPARTS_ON" | translate: { date: delay.effectiveDate } }}
+      </span>
+    }
+  </span>
+}
