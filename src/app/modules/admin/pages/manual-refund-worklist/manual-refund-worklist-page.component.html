@@ -90,8 +90,19 @@
                 <td>
                   @if (queueAgeDays(row) !== null) {
                     <span class="admin-status" [ngClass]="queueAgeSeverity(row)">
+                      @if (isOverdue(row)) {
+                        {{ 'ADMIN.MANUAL_REFUNDS.OVERDUE' | translate }}
+                      }
                       {{ 'ADMIN.MANUAL_REFUNDS.AGE_DAYS' | translate: { days: queueAgeDays(row) } }}
                     </span>
+                    <!-- OBRS-1136 AC-4: the deadline the badge is judged against, spelled out —
+                         a red chip whose date the owner cannot see is not auditable. Absent for a
+                         legacy row that has no queue row to count from. -->
+                    @if (row.dueDate) {
+                      <div class="mrw-due-date">
+                        {{ 'ADMIN.MANUAL_REFUNDS.DUE_ON' | translate: { date: (row.dueDate | date: 'dd/MM/yyyy') } }}
+                      </div>
+                    }
                   } @else {
                     -
                   }

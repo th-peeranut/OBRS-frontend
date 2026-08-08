@@ -105,7 +105,13 @@ export class ManualRefundWorklistPageComponent implements OnInit, OnDestroy {
   }
 
   protected queueAgeSeverity(row: PendingRefund): string {
-    return queueAgeSeverity(this.queueAgeDays(row));
+    return queueAgeSeverity(this.queueAgeDays(row), row.overdue);
+  }
+
+  /** OBRS-1136 AC-4: the server's verdict, read as given — see `PendingRefund`'s
+   * own comment for why the browser must not decide this for itself. */
+  protected isOverdue(row: PendingRefund): boolean {
+    return row.overdue === true;
   }
 
   protected formatMoney(value: number | string | undefined): string {
