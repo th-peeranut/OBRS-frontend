@@ -58,8 +58,14 @@ DELETE FROM schedules WHERE departure_date_time =
 -- '+07' is explicit: a bare '10:00' timestamptz literal resolves in the SEEDING
 -- SESSION's timezone, so the same file would seed a different instant depending on
 -- who ran it.
-INSERT INTO schedules (route_id, vehicle_id, vehicle_type_id, status_id, departure_date_time)
-SELECT r.id, v.id, vt.id, l.id,
+--
+-- OBRS-1166: owner_id comes from the route (r.owner_id). schedules.owner_id has been NOT NULL
+-- since OBRS-756 (f22d32b9, 2026-07-27) and this INSERT never followed, so the lane died at the
+-- seed step long before `ng serve` or the backend ever ran. Same derivation as
+-- reschedule-fixture.sql - see the longer note there for why the route, and not a second
+-- owners.slug literal, is the thing to read it from.
+INSERT INTO schedules (owner_id, route_id, vehicle_id, vehicle_type_id, status_id, departure_date_time)
+SELECT r.owner_id, r.id, v.id, vt.id, l.id,
        (((timezone('Asia/Bangkok', now()))::date + 20)::text || ' 10:00:00+07')::timestamptz
 FROM routes r
 CROSS JOIN (SELECT id FROM vehicles WHERE number_plate = 'กข 1234') v
