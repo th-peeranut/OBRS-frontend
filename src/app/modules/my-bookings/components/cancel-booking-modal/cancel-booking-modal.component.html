@@ -61,7 +61,17 @@
       <!-- OBRS-942: both manual-only — nobody moves money by hand on the other
       lane, so neither the note nor the destination picker applies there. -->
       @if (isManualRefund) {
-        <p class="crdm-note">{{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE' | translate }}</p>
+        <!-- OBRS-1136 AC-3: the note says WHEN as well as WHO, with the number the server
+        published. The @else keeps the old, timing-free sentence for the window in which a
+        deployed frontend is talking to a backend that predates AC-3 — better to promise
+        nothing than to promise a blank. -->
+        @if (manualRefundDueDays !== null) {
+          <p class="crdm-note">
+            {{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE_DUE' | translate: { days: manualRefundDueDays } }}
+          </p>
+        } @else {
+          <p class="crdm-note">{{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE' | translate }}</p>
+        }
 
         <app-refund-destination-fields [formGroup]="form" [disabled]="submitting"></app-refund-destination-fields>
       }

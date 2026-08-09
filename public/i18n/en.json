@@ -196,6 +196,7 @@
       "REFUND_LINE": "Refund: {{refund}} ({{rate}})",
       "PENALTY_LINE": "Cancellation fee: {{penalty}}",
       "MANUAL_REFUND_NOTE": "This payment method does not support automatic refunds — our staff will transfer your refund to your bank account.",
+      "MANUAL_REFUND_NOTE_DUE": "This payment method does not support automatic refunds — our staff will transfer your refund to your bank account within {{days}} days of your cancellation.",
       "COMPARE": {
         "OFFER_TITLE": "This booking can still be moved to another date — and you keep its full value",
         "KEEP_FULL": "Keep the full {{amount}} (100%) instead of a partial refund",
@@ -210,6 +211,7 @@
       "CANCEL_BUTTON": "Keep booking",
       "SUCCESS": "Your booking has been cancelled. A refund of {{refund}} is being processed.",
       "SUCCESS_MANUAL": "Your booking has been cancelled. A refund of {{refund}} will be transferred to you by our staff.",
+      "SUCCESS_MANUAL_DUE": "Your booking has been cancelled. A refund of {{refund}} will be transferred to you by our staff within {{days}} days of your cancellation.",
       "FAILED": "Unable to cancel the booking. Please try again."
     },
     "RESCHEDULE": {
@@ -2609,7 +2611,9 @@
       "RATES": "<h2>Refund rates when you cancel</h2>\n<ul>\n<li>Cancelled <strong>more than {{earlyWindowHours}} hours</strong> before departure — <strong>{{refundRateEarlyPercent}}%</strong> refunded</li>\n<li>Cancelled <strong>between {{cancelWindowHours}} and {{earlyWindowHours}} hours</strong> before departure — <strong>{{refundRateLatePercent}}%</strong> refunded</li>\n<li><strong>Less than {{cancelWindowHours}} hours</strong> before departure — <strong>cancellation is closed</strong> and no refund is given</li>\n</ul>\n<p>The part not refunded is the cancellation fee. The rates above apply to the amount still refundable on that booking, which may be less than what you originally paid if part of the booking has already been refunded.</p>",
       "RATES_ERROR": "The refund rates cannot be shown right now.",
       "RETRY": "Try again",
-      "CONTENT_2": "<h2>Where the money goes back</h2>\n<p>It depends on how you paid, and the system tells you before you confirm the cancellation.</p>\n<ul>\n<li><strong>Credit/debit cards and wallets</strong> — refunded automatically to the same method. How soon it appears depends on your card issuer or wallet provider.</li>\n<li><strong>PromptPay (QR), bank transfer and cash</strong> — these cannot be refunded automatically. During cancellation the system asks you for a bank account or PromptPay number, and our staff transfer the refund to it.</li>\n<li>If a single booking was paid by more than one method, it is handled as a staff-processed refund as well.</li>\n</ul>\n<p>We have no cash refund that you must travel to collect in person, and there is no deadline after which your right to the refund expires.</p>\n<h2>When we cancel a trip</h2>\n<p>If we cancel a trip, that trip is refunded in full with no fee deducted. You do not have to cancel it yourself, and we notify you.</p>\n<p>If only one leg of a round trip is cancelled, only that leg is refunded, the other leg remains valid for travel, and the booking's payment status shows it as partially refunded.</p>\n<h2>No-show</h2>\n<p>If you neither cancel within the times above nor board the trip you booked, the travel right is forfeited and no refund is given.</p>",
+      "CONTENT_2": "<h2>Where the money goes back</h2>\n<p>It depends on how you paid, and the system tells you before you confirm the cancellation.</p>\n<ul>\n<li><strong>Credit/debit cards and wallets</strong> — refunded automatically to the same method. How soon it appears depends on your card issuer or wallet provider.</li>\n<li><strong>PromptPay (QR), bank transfer and cash</strong> — these cannot be refunded automatically. During cancellation the system asks you for a bank account or PromptPay number, and our staff transfer the refund to it.</li>\n<li>If a single booking was paid by more than one method, it is handled as a staff-processed refund as well.</li>\n</ul>\n<p>We have no cash refund that you must travel to collect in person, and there is no deadline after which your right to the refund expires.</p>",
+      "MANUAL_TIMING": "<p>A refund our staff has to process by hand reaches you within {{manualRefundDueDays}} days of your cancellation. These are calendar days — weekends and public holidays included — because our counters operate every day.</p>",
+      "CONTENT_3": "<h2>When we cancel a trip</h2>\n<p>If we cancel a trip, that trip is refunded in full with no fee deducted. You do not have to cancel it yourself, and we notify you.</p>\n<p>If only one leg of a round trip is cancelled, only that leg is refunded, the other leg remains valid for travel, and the booking's payment status shows it as partially refunded.</p>\n<h2>No-show</h2>\n<p>If you neither cancel within the times above nor board the trip you booked, the travel right is forfeited and no refund is given.</p>",
       "SEE_BUSINESS_POLICY": "Rescheduling and other terms of service"
     },
     "PRIVACY": {

@@ -4,14 +4,23 @@ import { takeUntil } from 'rxjs/operators';
 import { CancellationPolicyService } from '../../services/cancellation-policy/cancellation-policy.service';
 
 /**
- * The four values POLICY.REFUND.RATES interpolates. Percentages, not the 0.0-1.0
- * rates the API serves -- see toPercent below for why the conversion lives here.
+ * The values POLICY.REFUND.RATES and POLICY.REFUND.MANUAL_TIMING interpolate.
+ * Percentages, not the 0.0-1.0 rates the API serves -- see toPercent below for
+ * why the conversion lives here.
  */
 export interface RefundPolicyParams {
   cancelWindowHours: number;
   earlyWindowHours: number;
   refundRateEarlyPercent: string;
   refundRateLatePercent: string;
+  /**
+   * OBRS-1136 AC-1 -- the wait for a refund nobody can automate, in calendar days.
+   * Null when the server did not send it; MANUAL_TIMING is gated on that, because the
+   * OBRS-627 rule this whole file exists to enforce cuts both ways: a number a customer
+   * relies on before paying must come from the server, and if the server did not say it,
+   * the page says nothing rather than a default somebody typed here.
+   */
+  manualRefundDueDays: number | null;
 }
 
 // OBRS-627: /refund-policy described a refund this system has never performed. It
@@ -78,6 +87,10 @@ export class RefundPolicyComponent implements OnInit, OnDestroy {
               earlyWindowHours: data.earlyWindowHours,
               refundRateEarlyPercent: RefundPolicyComponent.toPercent(data.refundRateEarly),
               refundRateLatePercent: RefundPolicyComponent.toPercent(data.refundRateLate),
+              manualRefundDueDays:
+                typeof data.manualRefundDueDays === 'number' && data.manualRefundDueDays > 0
+                  ? data.manualRefundDueDays
+                  : null,
             };
           } else {
             this.policyLoadFailed = true;

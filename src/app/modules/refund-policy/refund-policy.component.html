@@ -4,7 +4,7 @@
   <div class="policy-card">
     <h1>{{ "POLICY.REFUND.TITLE" | translate }}</h1>
 
-    <!-- OBRS-627: CONTENT_1 and CONTENT_2 carry NO policy numbers, so they render
+    <!-- OBRS-627: CONTENT_1, CONTENT_2 and CONTENT_3 carry NO policy numbers, so they render
          whether or not the config resolves. Everything numeric lives in RATES
          below, behind the @if. Splitting it this way is what lets a failed fetch
          degrade to "the rates are temporarily unavailable" instead of blanking a
@@ -41,7 +41,24 @@
       }
     }
 
+    <!-- OBRS-1136 AC-1: CONTENT_2 used to be one block covering all three sections. It was split
+         so the manual-refund WAIT can sit where it belongs — at the end of "where the money goes
+         back", right after the bullet that says a staff member transfers it — instead of being
+         stranded after the no-show section. The sentence between them is gated on the server
+         having sent the number, for the same reason the RATES block above is: a timing promise a
+         customer reads before paying is never a literal typed into i18n (OBRS-564/OBRS-627), and
+         a failed or older backend must degrade to silence, never to a guess. -->
     <div class="policy-body" [innerHTML]="'POLICY.REFUND.CONTENT_2' | translate"></div>
+
+    @if (policyParams?.manualRefundDueDays) {
+      <div
+        class="policy-body"
+        data-testid="refund-policy-manual-timing"
+        [innerHTML]="'POLICY.REFUND.MANUAL_TIMING' | translate: policyParams"
+      ></div>
+    }
+
+    <div class="policy-body" [innerHTML]="'POLICY.REFUND.CONTENT_3' | translate"></div>
 
     <!-- OBRS-627 AC-5: this page is now the single source of the refund terms, so
          /business-policy's duplicate copy of them was removed and points here. The
