@@ -173,6 +173,26 @@ const PRIVACY_LEDGER = [
     effectiveDate: '2026-08-06',
     fingerprint: 'f0972cfb0f91ec852fced0806f3f7cd81232cdf326a1297adb005d8ad7da0e2e',
   },
+  {
+    // OBRS-1140 AC#3. One bullet added to section 6: the export-audit trail.
+    //
+    // 2.1 listed retention for every category of personal data the notice knew
+    // about, and that list was complete for the data a customer gives us. It was
+    // silent about a record we keep ABOUT that data -- export_audit_log, which
+    // stores which member of staff exported which dataset, when, and the search
+    // filters they used. The filters are personal data (a phone number typed in
+    // to find one booking is a phone number), and until this card nothing deleted
+    // any of it. Section 6 now states both periods: the filters are erased after
+    // 90 days, the rest of the audit row after a year.
+    //
+    // A new version rather than a correction: the notice's retention section is
+    // the promise a data subject reads to learn how long we hold what, and it now
+    // names a category it did not name before. Nothing was removed and no right,
+    // recipient, purpose or transfer changed.
+    version: '2.2',
+    effectiveDate: '2026-08-09',
+    fingerprint: 'f501c8d66bf52ac63e488cb1f979c78d6521b4639d06e93b5e4a275543b70f66',
+  },
 ];
 
 function privacyFingerprint(json) {
