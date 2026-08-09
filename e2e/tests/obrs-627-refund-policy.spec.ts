@@ -39,6 +39,10 @@ const WIRE = {
   earlyWindowHours: 36,
   refundRateEarly: 0.9,
   refundRateLate: 0.45,
+  // OBRS-1136 AC-1, and 11 for exactly the reason above: 7 is the shipped default, so a page
+  // that had gone back to typing the wait into i18n would still read 7 and this spec could not
+  // tell the difference.
+  manualRefundDueDays: 11,
 };
 
 /**
@@ -105,6 +109,34 @@ test('states the rates that came off the wire, and none of the retired paper-tic
   for (const retired of RETIRED_TH) {
     expect(text, `retired clause still published: ${retired}`).not.toContain(retired);
   }
+
+  // OBRS-1136 AC-1: the manual-refund wait is published here too, and from the same wire.
+  // Note it is CALENDAR days — '3 วันทำการ' above is a retired clause, and the new sentence
+  // must not reintroduce the business-day unit the clock does not count in.
+  await expect(page.getByTestId('refund-policy-manual-timing')).toBeVisible();
+  expect(text).toContain('11');
+  expect(text).not.toContain('วันทำการ');
+});
+
+/**
+ * OBRS-1136 AC-1's other half. The frontend (Netlify) and the backend (Koyeb) deploy
+ * separately, so for a few minutes on every release a build is live against a backend that
+ * does not send this field. The page must then say NOTHING about timing — never a default
+ * somebody typed here — while the rates it DID receive still render.
+ */
+test('a policy response without the manual-refund wait: no timing sentence, rates unaffected', async ({
+  page,
+}) => {
+  const { manualRefundDueDays: _omitted, ...withoutWait } = WIRE;
+  await stubPolicy(page, ok(withoutWait));
+  await page.goto('/refund-policy');
+
+  await expect(page.getByTestId('refund-policy-rates')).toBeVisible();
+  await expect(page.getByTestId('refund-policy-manual-timing')).toHaveCount(0);
+
+  const text = (await page.locator('.policy-card').innerText()).replace(/\s+/g, ' ');
+  expect(text).toContain('90%');
+  expect(text).not.toContain('{{');
 });
 
 /**
