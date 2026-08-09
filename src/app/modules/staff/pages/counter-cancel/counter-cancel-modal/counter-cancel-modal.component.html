@@ -49,8 +49,14 @@
             {{ 'MY_BOOKINGS.CANCEL.PENALTY_LINE' | translate: { penalty: penaltyLabel } }}
           </p>
           @if (isManualRefund) {
+            <!-- OBRS-1136 AC-3: see the customer modal — same key, same parameter, same
+            timing-free fallback when the backend has not shipped the number yet. -->
             <p class="admin-hint">
-              {{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE' | translate }}
+              @if (manualRefundDueDays !== null) {
+                {{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE_DUE' | translate: { days: manualRefundDueDays } }}
+              } @else {
+                {{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE' | translate }}
+              }
             </p>
           }
         </div>

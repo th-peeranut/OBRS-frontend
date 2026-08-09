@@ -115,6 +115,22 @@ export class CancelBookingModalComponent implements OnInit, OnChanges {
     return this.policy?.refundMethod === MANUAL_REFUND_METHOD;
   }
 
+  /**
+   * OBRS-1136 AC-3 — the published wait for a manual refund, in calendar days, straight off the
+   * policy the server just quoted. AC-2's rule applies: the number is NEVER typed into i18n, it
+   * renders from the same `manual_refund_due_days` config the owner's overdue badge counts with
+   * (AC-4), so the promise on this screen and the measurement on the worklist cannot drift.
+   *
+   * Null when the server did not send it — the FE (Netlify) and the backend (Koyeb) deploy
+   * separately, so a frontend can be live against a backend that predates AC-3 for a few minutes.
+   * The template answers that by rendering the OLD note, which makes no timing promise at all,
+   * rather than a sentence with a blank where the number should be.
+   */
+  protected get manualRefundDueDays(): number | null {
+    const days = this.policy?.manualRefundDueDays;
+    return typeof days === 'number' && days > 0 ? days : null;
+  }
+
   protected get canSubmit(): boolean {
     return !this.submitting && this.form.valid;
   }

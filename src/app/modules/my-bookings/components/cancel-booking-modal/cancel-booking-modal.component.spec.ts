@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
 import { CancelBookingModalComponent } from './cancel-booking-modal.component';
 import { AppRefundDestinationFieldsComponent } from '../../../../shared/components/refund-destination-fields/refund-destination-fields.component';
@@ -259,6 +259,49 @@ describe('CancelBookingModalComponent (OBRS-286, one screen since OBRS-942)', ()
 
       const eligible = createNonManual({ rescheduleEligible: true });
       expect(eligible.fixture.debugElement.query(By.css('.crdm-offer'))).not.toBeNull();
+    });
+  });
+
+  // OBRS-1136 AC-3: the note under the refund lines now says WHEN a staff-processed refund
+  // lands, with the number the /cancel-policy quote carried. Real translations here, not the
+  // bare-key rendering the rest of this suite relies on, because the defect being guarded is a
+  // sentence with a blank where the number should be — only interpolation can show that.
+  describe('the manual-refund wait (OBRS-1136 AC-3)', () => {
+    function renderWith(manualRefundDueDays?: number): ComponentFixture<CancelBookingModalComponent> {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation(
+        'en',
+        {
+          MY_BOOKINGS: {
+            CANCEL: {
+              MANUAL_REFUND_NOTE: 'Our staff will transfer your refund.',
+              MANUAL_REFUND_NOTE_DUE: 'Our staff will transfer your refund within {{days}} days.',
+            },
+          },
+        },
+        true
+      );
+      translate.use('en');
+
+      const f = TestBed.createComponent(CancelBookingModalComponent);
+      f.componentInstance.booking = buildBooking();
+      f.componentInstance.policy = { ...buildPolicy(), manualRefundDueDays };
+      f.detectChanges();
+      return f;
+    }
+
+    it('states the wait the server quoted — 11, never a number typed into i18n', () => {
+      const note = renderWith(11).debugElement.query(By.css('.crdm-note'));
+
+      expect(note.nativeElement.textContent).toContain('within 11 days');
+      expect(note.nativeElement.textContent).not.toContain('{{');
+    });
+
+    it('falls back to the timing-free note when the backend did not send the number', () => {
+      const note = renderWith(undefined).debugElement.query(By.css('.crdm-note'));
+
+      expect(note.nativeElement.textContent.trim()).toBe('Our staff will transfer your refund.');
+      expect(note.nativeElement.textContent).not.toContain('within');
     });
   });
 });

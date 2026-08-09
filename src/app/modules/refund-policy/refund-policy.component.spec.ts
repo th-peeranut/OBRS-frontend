@@ -28,7 +28,9 @@ const EN_TRANSLATIONS = {
       RATES: PLACEHOLDER_RATES,
       RATES_ERROR: 'The refund rates cannot be shown right now.',
       RETRY: 'Try again',
-      CONTENT_2: 'Where the money goes back. No-show forfeits the fare.',
+      CONTENT_2: 'Where the money goes back.',
+      MANUAL_TIMING: 'Staff-processed refunds reach you within {{manualRefundDueDays}} days.',
+      CONTENT_3: 'No-show forfeits the fare.',
       SEE_BUSINESS_POLICY: 'Rescheduling and other terms of service',
     },
   },
@@ -45,7 +47,9 @@ const TH_TRANSLATIONS = {
         'น้อยกว่า {{cancelWindowHours}} ชั่วโมง: ยกเลิกไม่ได้',
       RATES_ERROR: 'ขณะนี้ไม่สามารถแสดงอัตราคืนเงินได้',
       RETRY: 'ลองใหม่',
-      CONTENT_2: 'เงินคืนกลับทางไหน กรณีไม่มาขึ้นรถถือว่าสละสิทธิ์',
+      CONTENT_2: 'เงินคืนกลับทางไหน',
+      MANUAL_TIMING: 'เจ้าหน้าที่จะคืนเงินภายใน {{manualRefundDueDays}} วัน',
+      CONTENT_3: 'กรณีไม่มาขึ้นรถถือว่าสละสิทธิ์',
       SEE_BUSINESS_POLICY: 'เงื่อนไขการเลื่อนวันเดินทาง',
     },
   },
@@ -59,6 +63,10 @@ const WIRE: CancellationPolicyDto = {
   earlyWindowHours: 36,
   refundRateEarly: 0.9,
   refundRateLate: 0.45,
+  // OBRS-1136 AC-1: 11, for the same reason as the four above — 7 is the shipped default, so a
+  // page that had gone back to typing the number into i18n would still read "7" and this suite
+  // could not tell the difference.
+  manualRefundDueDays: 11,
 };
 
 describe('RefundPolicyComponent (OBRS-627)', () => {
@@ -218,6 +226,59 @@ describe('RefundPolicyComponent (OBRS-627)', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('90%');
     expect(text).not.toContain('cannot be shown');
+  });
+
+  // -- OBRS-1136 AC-1: the manual-refund wait ---------------------------------
+  //
+  // Same contract as the rates above, one sentence over: the number comes off the wire or the
+  // sentence does not appear. The page cannot promise a wait nothing measures — the same
+  // manual_refund_due_days config drives the owner-side overdue badge (AC-4).
+
+  it('AC-1: states the manual-refund wait that came off the wire', () => {
+    fixture.detectChanges();
+    flushPolicy();
+    fixture.detectChanges();
+
+    const timing = fixture.nativeElement.querySelector('[data-testid="refund-policy-manual-timing"]');
+    expect(timing).not.toBeNull();
+    const text = timing.textContent as string;
+    expect(text).not.toContain('{{');
+    expect(text).toContain('11');
+  });
+
+  it('AC-1: a backend that does not send the wait yet gets silence, not a default', () => {
+    fixture.detectChanges();
+    // The exact body an older backend returns: every OBRS-627 field, no manualRefundDueDays.
+    flushPolicy({
+      cancelWindowHours: 3,
+      earlyWindowHours: 36,
+      refundRateEarly: 0.9,
+      refundRateLate: 0.45,
+    });
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="refund-policy-manual-timing"]')
+    ).toBeNull();
+    const text = fixture.nativeElement.textContent as string;
+    // The rates still render — one missing field must not take the rest of the page with it.
+    expect(text).toContain('90%');
+    expect(text).not.toContain('{{');
+    expect(text).not.toContain('7 days');
+  });
+
+  it('AC-1: survives a language switch — the wait stays correct in the new language', () => {
+    fixture.detectChanges();
+    flushPolicy();
+    fixture.detectChanges();
+
+    translate.use('th');
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.querySelector('[data-testid="refund-policy-manual-timing"]')
+      .textContent as string;
+    expect(text).toContain('เจ้าหน้าที่จะคืนเงินภายใน');
+    expect(text).toContain('11');
   });
 
   // AC-5: this page is the single source of the refund terms, and the link back to
