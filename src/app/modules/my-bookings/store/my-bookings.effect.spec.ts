@@ -2,14 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Actions } from '@ngrx/effects';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subject, of, throwError } from 'rxjs';
 import { Action } from '@ngrx/store';
 
 import { MyBookingsEffect } from './my-bookings.effect';
 import { BookingService } from '../../../services/booking/booking.service';
 import { AlertService } from '../../../shared/services/alert.service';
-import { MyBookingView } from '../../../shared/interfaces/my-booking.interface';
+import { CancelBookingResult, MyBookingView } from '../../../shared/interfaces/my-booking.interface';
 import {
   cancelBookingFailure,
   cancelBookingSuccess,
@@ -596,6 +596,71 @@ describe('MyBookingsEffect (OBRS-286)', () => {
       expect(emitted).toEqual([
         invokeLoadMyBookingsApi({ status: 'confirmed', preserveWindow: true }),
       ]);
+    });
+  });
+
+  // OBRS-1136 AC-3: the success toast on the manual lane now says WHEN, with the number the
+  // cancel response carried — the same manual_refund_due_days the owner's overdue badge counts
+  // with (AC-4). Asserted on the rendered STRING, not on the key, because the whole failure this
+  // guards is a sentence that reads "within  days" or that quietly hardcodes one.
+  describe('cancelSuccess$ toast (OBRS-1136 AC-3)', () => {
+    function fireCancelSuccess(result: Partial<CancelBookingResult>): void {
+      effect.cancelSuccess$.subscribe();
+      actionsSubject.next(
+        cancelBookingSuccess({
+          result: {
+            bookingId: 5,
+            bookingNumber: 'B-5',
+            status: 'cancelled',
+            refundAmount: 400,
+            ...result,
+          } as CancelBookingResult,
+        })
+      );
+    }
+
+    beforeEach(() => {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation(
+        'en',
+        {
+          MY_BOOKINGS: {
+            CANCEL: {
+              SUCCESS: 'Cancelled. Refund {{refund}} is being processed.',
+              SUCCESS_MANUAL: 'Cancelled. Staff will transfer {{refund}} to you.',
+              SUCCESS_MANUAL_DUE:
+                'Cancelled. Staff will transfer {{refund}} to you within {{days}} days.',
+            },
+          },
+        },
+        true
+      );
+      translate.use('en');
+    });
+
+    it('manual lane with the wait: renders the _DUE sentence with the wire number', () => {
+      fireCancelSuccess({ refundMethod: 'MANUAL_REFUND_REQUIRED', manualRefundDueDays: 11 });
+
+      const message = alertService.success.calls.mostRecent().args[0] as string;
+      expect(message).toContain('within 11 days');
+      expect(message).not.toContain('{{');
+    });
+
+    it('manual lane WITHOUT the wait (older backend): falls back to the sentence that promises no date', () => {
+      fireCancelSuccess({ refundMethod: 'MANUAL_REFUND_REQUIRED' });
+
+      const message = alertService.success.calls.mostRecent().args[0] as string;
+      expect(message).toBe('Cancelled. Staff will transfer ฿400.00 to you.');
+      expect(message).not.toContain('within');
+      expect(message).not.toContain('{{');
+    });
+
+    it('the automatic lane never grows a wait, even when the field is present', () => {
+      fireCancelSuccess({ refundMethod: 'card', manualRefundDueDays: 11 });
+
+      const message = alertService.success.calls.mostRecent().args[0] as string;
+      expect(message).toContain('is being processed');
+      expect(message).not.toContain('11');
     });
   });
 });

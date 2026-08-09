@@ -200,6 +200,110 @@ and the daily table — never shown next to stale/zero numbers. -->
   </section>
 }
 
+<!-- OBRS-1147 AC-2: what each PERSON earned in ค่าหัว over the range selected at
+the top of this page.
+⛔ This is staff PAY. The EOD-by-salesperson figures are the OWNER's revenue
+attributed to whoever sold it — opposite direction of money, never to be
+reconciled against these numbers.
+⛔ No "outstanding" column, by decision (OBRS-1145): the fee is netted at the
+round, so every line here is money the person already kept. -->
+<section class="admin-card mt-3" data-testid="per-head-earnings-section">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.REPORTS.PER_HEAD_EARNINGS.TITLE' | translate }}</h4>
+  </div>
+
+  <p class="admin-muted">{{ 'ADMIN.REPORTS.PER_HEAD_EARNINGS.NETTED_NOTE' | translate }}</p>
+
+  <div class="admin-page-filters mt-2">
+    <app-admin-dropdown
+      [options]="perHeadGranularityOptions"
+      [placeholder]="'ADMIN.REPORTS.PER_HEAD_EARNINGS.GRANULARITY.LABEL' | translate"
+      valueKey="value"
+      labelKey="label"
+      [ngModel]="perHeadGranularity"
+      (ngModelChange)="onPerHeadGranularityChange($event)"
+      ></app-admin-dropdown>
+  </div>
+
+  <div class="admin-table-wrap mt-2">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.REPORTS.PER_HEAD_EARNINGS.COL.HOLDER' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PER_HEAD_EARNINGS.COL.ROLE' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PER_HEAD_EARNINGS.COL.HEADS' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PER_HEAD_EARNINGS.COL.AMOUNT' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isPerHeadEarningsLoading) {
+          @for (row of [1, 2, 3]; track row) {
+            <tr class="admin-skeleton-row" aria-hidden="true">
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            </tr>
+          }
+        }
+        @if (!isPerHeadEarningsLoading) {
+          @for (row of perHeadHolders; track trackByHolder($index, row)) {
+            <tr [attr.data-testid]="'per-head-holder-' + row.holderId">
+              <td>{{ holderDisplayName(row) }}</td>
+              <td>{{ 'ADMIN.REPORTS.PER_HEAD_EARNINGS.ROLE.' + row.holderRole | translate }}</td>
+              <td>{{ row.headCount }}</td>
+              <td>{{ row.amount }}</td>
+            </tr>
+          }
+          @if (perHeadHolders.length === 0) {
+            <tr class="admin-empty-row">
+              <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+            </tr>
+          }
+          @if (perHeadHolders.length > 0) {
+            <tr data-testid="per-head-total-row">
+              <td colspan="2"><strong>{{ 'ADMIN.REPORTS.PER_HEAD_EARNINGS.TOTAL' | translate }}</strong></td>
+              <td><strong>{{ perHeadEarnings?.totalHeadCount ?? 0 }}</strong></td>
+              <td><strong>{{ perHeadEarnings?.totalAmount ?? '0.00' }}</strong></td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- The over-time buckets for the whole team, at the grouping chosen above.
+  Kept beside the per-person table rather than on its own page: "who earned it"
+  and "when was it earned" are the same question asked twice. -->
+  <div class="admin-table-wrap mt-3">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.REPORTS.PER_HEAD_EARNINGS.COL.PERIOD' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PER_HEAD_EARNINGS.COL.HEADS' | translate }}</th>
+          <th>{{ 'ADMIN.REPORTS.PER_HEAD_EARNINGS.COL.AMOUNT' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (!isPerHeadEarningsLoading) {
+          @for (bucket of perHeadEarnings?.buckets ?? []; track bucket.bucketKey) {
+            <tr [attr.data-testid]="'per-head-bucket-' + bucket.bucketKey">
+              <td>{{ bucket.bucketKey }}</td>
+              <td>{{ bucket.headCount }}</td>
+              <td>{{ bucket.amount }}</td>
+            </tr>
+          }
+          @if ((perHeadEarnings?.buckets ?? []).length === 0) {
+            <tr class="admin-empty-row">
+              <td colspan="3">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
 <!-- OBRS-960: parcel-share monthly totals — a NEW admin-card section below
 the daily table, its OWN Year/Month filter (role fixed to SALESPERSON, no
 role selector — deliberately deferred: no chart, no export). -->

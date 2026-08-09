@@ -112,6 +112,24 @@ export interface PendingRefund {
   /** `mrr.created_at`, Bangkok-offset ISO string — the queue date (AC-2).
    * `null`-safe: some producers (batch/legacy rows) may carry no queue row. */
   queuedAt?: string | null;
+  /**
+   * OBRS-1136 AC-4 — the payout clock, both halves derived SERVER-side.
+   * `dueDate` is `queuedAt`'s Bangkok date plus `manual_refund_due_days` CALENDAR
+   * days, as a bare `YYYY-MM-DD`; `overdue` is whether today in Bangkok is already
+   * past it. Calendar days, not business days: the PO decision of 2026-08-08 is
+   * that the bus queue trades every day, so there is no day the transfer cannot
+   * be made and no weekend to skip.
+   *
+   * Read them; never re-derive them. The frontend must not carry its own copy of
+   * the day count (AC-2: a policy number renders from the API, per the
+   * OBRS-564/698/865 precedent), and it could not answer "overdue" honestly in
+   * any case — that answer depends on the Bangkok date, not on the browser's
+   * clock or timezone. Both are absent for a legacy row with no queue row: no
+   * `queuedAt` means no date to count from, and the backend omits `dueDate`
+   * rather than invent a deadline the row never had.
+   */
+  dueDate?: string | null;
+  overdue?: boolean;
 }
 
 export interface PageResponse<T> {

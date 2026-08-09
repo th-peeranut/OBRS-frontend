@@ -478,6 +478,28 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     mustRender: [],
     hoverTargets: ['.ticket-nav-btn', '.download-btn'],
   },
+  {
+    // OBRS-857 added a customer-facing page and did NOT add it here, so the gate went on
+    // reporting "8 pages swept" while a ninth shipped unmeasured. A page list that only grows
+    // when someone remembers is a gate that quietly narrows.
+    //
+    // What this entry measures is the page AT REST: the lead, the form and its submit button.
+    // Everything downstream of a lookup response -- .find-booking-result, .find-booking-ticket,
+    // the .admin-status chip re-scoped onto :host, and both .find-booking-empty states -- needs
+    // a response the sweep cannot drive, so it is NOT covered here. Said out loud rather than
+    // implied by a green run. (mustRender first claimed .find-booking-empty; it renders only in
+    // the not-found/throttled states and the gate's own zero-times check caught the lie.)
+    key: 'find-booking',
+    url: '/find-booking',
+    landsOn: '/find-booking',
+    minText: 8,
+    minControls: 1,
+    // Both fields carry one. Placeholders are the OBRS-797 defect class (1.10:1 in dark), and
+    // this page is public, so its two are the first a signed-out visitor ever sees.
+    minPlaceholders: 2,
+    mustRender: ['.find-booking-form', '.find-booking-lead', '.btn-primary'],
+    hoverTargets: ['.btn-primary'],
+  },
 ];
 
 /**

@@ -26,7 +26,7 @@ same rule as app-settlements-list. -->
         <table class="admin-table">
           <thead>
             <tr>
-              <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.DRIVER' | translate }}</th>
+              <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.HOLDER' | translate }}</th>
               <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.BUSINESS_DATE' | translate }}</th>
               <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.VEHICLE' | translate }}</th>
               <th>{{ 'ADMIN.SETTLEMENTS.COL.STATUS' | translate }}</th>
@@ -56,6 +56,19 @@ same rule as app-settlements-list. -->
                   >
                   <td class="admin-emphasis">
                     {{ item.driverName }}
+                    <span class="admin-status is-muted dcp-holder-role">
+                      {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.HOLDER_ROLE.' + item.holderRole | translate }}
+                    </span>
+                    <!-- OBRS-1073: the owner's rule is that a salesperson never holds cash
+                         overnight. A rule nobody sees broken is not a rule, so the violation is
+                         rendered on the worklist the owner already opens, not left as a field. -->
+                    @if (item.overdueOpen) {
+                      <span
+                        class="material-symbols-outlined dcp-row-warning-icon"
+                        [attr.title]="'ADMIN.SETTLEMENTS.DRIVER_CASH.OVERDUE_OPEN_HINT' | translate"
+                        data-testid="driver-cash-day-overdue-icon"
+                        >schedule</span>
+                    }
                     @if (item.hasUnmappedSalesPointRemit) {
                       <span
                         class="material-symbols-outlined dcp-row-warning-icon"

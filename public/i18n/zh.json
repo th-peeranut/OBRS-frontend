@@ -196,6 +196,7 @@
       "REFUND_LINE": "退款：{{refund}}（{{rate}}）",
       "PENALTY_LINE": "取消手续费：{{penalty}}",
       "MANUAL_REFUND_NOTE": "此支付方式不支持自动退款，我们的工作人员将通过银行转账为您办理退款。",
+      "MANUAL_REFUND_NOTE_DUE": "此支付方式不支持自动退款，我们的工作人员将在您取消后 {{days}} 天内通过银行转账为您办理退款。",
       "COMPARE": {
         "OFFER_TITLE": "此预订仍可改期——并保留车票的全部价值",
         "KEEP_FULL": "保留全额 {{amount}}（100%），而不是只拿回部分退款",
@@ -210,6 +211,7 @@
       "CANCEL_BUTTON": "保留预订",
       "SUCCESS": "您的预订已取消，正在处理 {{refund}} 的退款。",
       "SUCCESS_MANUAL": "您的预订已取消，工作人员将为您转账退款 {{refund}}。",
+      "SUCCESS_MANUAL_DUE": "您的预订已取消，工作人员将在您取消后 {{days}} 天内为您转账退款 {{refund}}。",
       "FAILED": "无法取消预订，请重试。"
     },
     "RESCHEDULE": {
@@ -1330,6 +1332,28 @@
           "NOT_FOUND": "找不到该追回记录。",
           "COLLECT_FAILED": "无法记录收回，请重试。"
         }
+      },
+      "PER_HEAD_EARNINGS": {
+        "TITLE": "按人员统计的人头费（员工报酬）",
+        "NETTED_NOTE": "这是员工报酬，不是公司收入——与售票员日结销售报表是两个不同的数字。人头费已在班次结算时冲抵，因此没有“待付”列。",
+        "TOTAL": "合计",
+        "GRANULARITY": {
+          "LABEL": "分组方式",
+          "DAY": "按日",
+          "MONTH": "按月",
+          "YEAR": "按年"
+        },
+        "COL": {
+          "HOLDER": "员工",
+          "ROLE": "角色",
+          "HEADS": "人头数",
+          "AMOUNT": "金额（泰铢）",
+          "PERIOD": "期间"
+        },
+        "ROLE": {
+          "DRIVER": "司机",
+          "SALESPERSON": "售票员"
+        }
       }
     },
     "SETTLEMENTS": {
@@ -1421,6 +1445,7 @@
         "COUNTED_HELPER": "您清点的实际现金，而非班次总额。不含银行卡和线上支付。",
         "COUNTED_PLACEHOLDER": "0.00",
         "COUNTED_INVALID": "请输入有效金额，例如 480.00。",
+        "PER_HEAD_DEDUCTED": "减去售票员留存的人头费",
         "EXPECTED_CASH": "应收现金",
         "DISCREPANCY": "差异",
         "HANDER_LABEL": "交接人",
@@ -1467,7 +1492,8 @@
           "CONFIRM_TEXT": "将记录归还金额为 {{amount}}，此操作无法撤销。",
           "SUCCESS": "司机现金日已标记为已归还。",
           "ALREADY_RETURNED": "该日已完成归还。",
-          "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）"
+          "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）",
+          "PER_HEAD_PAY": "今日所得人头费（已在班次结算中扣除，不计入上方金额）"
         },
         "ERROR": {
           "REASON_REQUIRED": "归还金额与预期不符时必须填写原因。",
@@ -1475,7 +1501,7 @@
           "RETURN_FAILED": "无法记录此次归还。"
         },
         "COL": {
-          "DRIVER": "司机",
+          "HOLDER": "持现金人",
           "BUSINESS_DATE": "营业日期",
           "VEHICLE": "车辆",
           "EXPECTED": "预期金额"
@@ -1485,7 +1511,12 @@
           "PER_HEAD": "人头费",
           "EXPENSE_PAID": "支出：{{category}}",
           "RETURN": "归还"
-        }
+        },
+        "HOLDER_ROLE": {
+          "DRIVER": "司机",
+          "SALESPERSON": "售票员"
+        },
+        "OVERDUE_OPEN_HINT": "过往日期仍未结清——售票员须当日交回现金。"
       }
     },
     "EOD_REPORT": {
@@ -1740,6 +1771,8 @@
       },
       "DESTINATION_MISSING": "需联系客户获取账户信息",
       "AGE_DAYS": "{{days}} 天",
+      "OVERDUE": "已逾期",
+      "DUE_ON": "应于 {{date}} 前完成",
       "EMPTY": "没有待处理的退款",
       "ACTION": {
         "MARK_REFUNDED": "标记为已退款"
@@ -1878,10 +1911,10 @@
       }
     },
     "DRIVER_CASH_RATES": {
-      "SUBTITLE": "按站点管理人头费率。",
+      "SUBTITLE": "按售票点管理人头费率。",
       "LOAD_FAILED": "无法加载司机现金费率。",
       "ADD_TITLE": "新增费率",
-      "STOP_LABEL": "站点",
+      "SALES_POINT_LABEL": "售票点",
       "EFFECTIVE_FROM_LABEL": "生效日期",
       "RATE_LABEL": "每人头费率",
       "RATE_PLACEHOLDER": "0.00",
@@ -1889,7 +1922,7 @@
       "HISTORY_TITLE": "费率历史",
       "CURRENT": "当前",
       "ERROR": {
-        "DUPLICATE": "该站点已存在同一生效日期的费率。",
+        "DUPLICATE": "该售票点在该生效日期已有费率。",
         "CREATE_FAILED": "无法新增此费率。"
       }
     }
@@ -2149,7 +2182,11 @@
     "LOGIN_SUCCESS": "登录成功",
     "OTP_REQUEST_FAILED": "发送OTP失败，请重试。",
     "OTP_VERIFY_FAILED": "OTP验证失败，请检查验证码后重试。",
-    "ROUTE_ERROR": "请求无效，请返回后重试。"
+    "ROUTE_ERROR": "请求无效，请返回后重试。",
+    "NOT_REGISTERED_TITLE": "该号码尚未注册账户",
+    "NOT_REGISTERED_HINT": "因此我们没有向该号码发送短信：",
+    "NOT_REGISTERED_SIGNUP": "注册账户",
+    "NOT_REGISTERED_EDIT_PHONE": "修改手机号码"
   },
   "FORGET_PASSWORD": {
     "WELCOME": "忘记密码？",
@@ -2189,6 +2226,7 @@
   },
   "HOME": {
     "NAVBAR": {
+      "FIND_BOOKING": "查询订单",
       "HOME": "首页",
       "SCHEDULE": "班次时刻表",
       "BOOKING": "如何预订和付款",
@@ -2210,7 +2248,8 @@
       "MY_BOOKINGS": "我的预订",
       "MY_PARCELS": "我的包裹",
       "ACCOUNT": "我的账户",
-      "MY_REPORTS": "我的报告"
+      "MY_REPORTS": "我的报告",
+      "SIGNED_IN_AS": "当前登录账号"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "单程",
@@ -2321,6 +2360,12 @@
     "STEP_3": "个人信息",
     "STEP_4": "付款"
   },
+  "SCHEDULE_DELAY_NOTICE": {
+    "BADGE": "延误",
+    "PLANNED": "原定 {{time}}",
+    "DEPARTS_ON": "{{date}} 发车",
+    "A11Y": "此班次已公告延误。原定 {{planned}} 发车，现改为 {{effective}} 发车。"
+  },
   "SCHEDULE_BOOKING": {
     "HEADER": "行程类型",
     "SUBHEADER_DEPARTURE": "行程安排：去程",
@@ -2416,8 +2461,7 @@
       "PHONE_NUMBER_INVALID": "请输入有效的10位手机号码",
       "PHONE_NUMBER_MOBILE_INVALID": "请输入有效的泰国手机号码（以 06、08 或 09 开头，例如 0812345678），预订通知短信将发送至该号码。",
       "EMAIL": "电子邮箱",
-      "EMAIL_PLACEHOLDER": "请输入您的电子邮箱",
-      "EMAIL_REQUIRED": "请输入您的电子邮箱",
+      "EMAIL_PLACEHOLDER": "接收电子票的邮箱（选填）",
       "EMAIL_INVALID": "请输入有效的电子邮箱地址",
       "GENDER_STATUS": "性别/状态",
       "GENDER_STATUS_REQUIRED": "请选择性别/状态",
@@ -2439,7 +2483,8 @@
       "SEAT_REQUIREMENT_LABEL": "特殊需求（可选）",
       "SEAT_REQUIREMENT_GROUP_ARIA": "选择特殊座位需求",
       "SEAT_REQUIREMENT_WHEELCHAIR": "轮椅通道",
-      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "加大腿部空间"
+      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "加大腿部空间",
+      "EMAIL_OPTIONAL_HINT": "（选填 — 用于向您发送电子票）"
     },
     "SEAT_MAP": {
       "WHEELCHAIR_BADGE_ARIA": "轮椅无障碍座位",
@@ -2522,6 +2567,8 @@
     }
   },
   "E_TICKET": {
+    "RETRIEVAL_NOTE": "请保存订单编号 {{bookingNumber}}。无需登录即可再次查看此车票，只需输入编号和预订手机号码：",
+    "RETRIEVAL_LINK": "查询订单",
     "TITLE": "电子票",
     "SUBTITLE": "NJ Phuyaipu 在线旅行票",
     "BTN_NAVIGATE": "导航",
@@ -2564,14 +2611,16 @@
       "RATES": "<h2>您自行取消时的退款比例</h2>\n<ul>\n<li>在发车前 <strong>超过 {{earlyWindowHours}} 小时</strong> 取消 — 退还 <strong>{{refundRateEarlyPercent}}%</strong></li>\n<li>在发车前 <strong>{{cancelWindowHours}} 至 {{earlyWindowHours}} 小时</strong> 之间取消 — 退还 <strong>{{refundRateLatePercent}}%</strong></li>\n<li>距发车 <strong>不足 {{cancelWindowHours}} 小时</strong> 时 — <strong>无法取消</strong>，也不予退款</li>\n</ul>\n<p>未退还的部分为取消手续费。上述比例按该订单仍可退还的金额计算，如该订单此前已有部分退款，该金额可能少于您最初支付的金额。</p>",
       "RATES_ERROR": "目前无法显示退款比例。",
       "RETRY": "重试",
-      "CONTENT_2": "<h2>退款退回何处</h2>\n<p>取决于您的付款方式，系统会在您确认取消之前告知。</p>\n<ul>\n<li><strong>信用卡／借记卡及电子钱包</strong> — 系统自动原路退回。到账时间取决于您的发卡机构或钱包服务商。</li>\n<li><strong>PromptPay（二维码）、银行转账及现金</strong> — 这些方式无法自动退款。系统会在取消流程中请您填写收款银行账户或 PromptPay 号码，再由工作人员转账退还。</li>\n<li>若同一订单混合使用多种付款方式，同样由工作人员处理退款。</li>\n</ul>\n<p>我们没有需要您亲自前往领取的现金退款，也没有会令您的退款权利失效的期限。</p>\n<h2>本公司取消班次时</h2>\n<p>若班次由本公司取消，该班次全额退款，不扣除任何手续费。您无需自行取消，我们会通知您。</p>\n<p>若往返订单中仅一程被取消，则只退还该程，另一程仍可正常乘车，订单的付款状态会显示为部分退款。</p>\n<h2>未乘车</h2>\n<p>若您既未在上述时限内取消，也未按所订班次乘车，视为放弃乘车权利，不予退款。</p>",
+      "CONTENT_2": "<h2>退款退回何处</h2>\n<p>取决于您的付款方式，系统会在您确认取消之前告知。</p>\n<ul>\n<li><strong>信用卡／借记卡及电子钱包</strong> — 系统自动原路退回。到账时间取决于您的发卡机构或钱包服务商。</li>\n<li><strong>PromptPay（二维码）、银行转账及现金</strong> — 这些方式无法自动退款。系统会在取消流程中请您填写收款银行账户或 PromptPay 号码，再由工作人员转账退还。</li>\n<li>若同一订单混合使用多种付款方式，同样由工作人员处理退款。</li>\n</ul>\n<p>我们没有需要您亲自前往领取的现金退款，也没有会令您的退款权利失效的期限。</p>",
+      "MANUAL_TIMING": "<p>需由工作人员手动处理的退款，将在您取消后 {{manualRefundDueDays}} 天内退还给您。此处按日历日计算，包含周末和法定节假日，因为我们的售票点全年无休。</p>",
+      "CONTENT_3": "<h2>本公司取消班次时</h2>\n<p>若班次由本公司取消，该班次全额退款，不扣除任何手续费。您无需自行取消，我们会通知您。</p>\n<p>若往返订单中仅一程被取消，则只退还该程，另一程仍可正常乘车，订单的付款状态会显示为部分退款。</p>\n<h2>未乘车</h2>\n<p>若您既未在上述时限内取消，也未按所订班次乘车，视为放弃乘车权利，不予退款。</p>",
       "SEE_BUSINESS_POLICY": "改期及其他服务条款"
     },
     "PRIVACY": {
       "TITLE": "隐私政策",
       "VERSION_LINE": "版本 {{version}} · 自 {{effectiveDate}} 起施行",
       "CONTENT_1": "&emsp;&emsp;&emsp;本隐私政策目前仅提供泰文与英文版本，并以<strong>泰文版</strong>为准。请使用页面顶部的语言选择切换至泰文或英文阅读完整内容。",
-      "CONTENT_2": "<p>如需以中文咨询个人资料相关事宜或行使您的权利，请联系 N.J. Travel and Transport Limited Partnership：电子邮件 <strong>contact@nj-phuyaipu.com</strong>，电话 <strong>09 0562 2019</strong>。我们会在收到完整申请后 30 日内处理。</p>"
+      "CONTENT_2": "<p>如需以中文咨询个人资料相关事宜或行使您的权利，请联系 N.J. Travel and Transport Limited Partnership：电子邮件 <strong>contact@nj-phuyaipu.com</strong>，电话 <strong>08 1428 4492</strong>。我们会在收到完整申请后 30 日内处理。</p>"
     },
     "BUSINESS": {
       "TITLE": "服务条款",
@@ -2618,7 +2667,8 @@
       "PARCEL_SCHEDULE": "班次包裹作业",
       "INSPECTION": "车辆检查",
       "FLEET_MAP": "车队实时地图",
-      "CANCEL_BOOKING": "取消订票"
+      "CANCEL_BOOKING": "取消订票",
+      "MY_EARNINGS": "我的人头费收入"
     },
     "LAYOUT": {
       "BRAND": "OBRS 员工",
@@ -2652,7 +2702,8 @@
         "SALES": "售票",
         "OPERATIONS": "运营",
         "PARCELS": "包裹"
-      }
+      },
+      "MY_EARNINGS": "我的收入"
     },
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "无法加载登车名单。",
@@ -3013,6 +3064,7 @@
       "STOP_NO_MATCH": "没有匹配的站点",
       "POPULAR_LABEL": "热门",
       "ALL_STOPS_LABEL": "全部",
+      "ROUTE_GROUP_TOGGLE": "展开或收起 {{routeLabel}} 的班次",
       "SCHEDULE_ADD_FOR_ROUTE": "为 {{routeLabel}} 添加班次",
       "SCHEDULE_TRIP_ACTIONS": "{{time}} 班次操作",
       "SCHEDULE_EDIT_ITEM": "编辑班次",
@@ -3335,7 +3387,7 @@
     },
     "FLEET_MAP": {
       "SUBTITLE": "在同一页面查看所有车辆的实时位置",
-      "CENTER_ON_FLEET": "居中显示车队",
+      "CENTER_ON_FLEET": "显示所有车辆",
       "VEHICLE_LIST_TITLE": "车辆列表",
       "MAP_UNAVAILABLE": "地图暂不可用 — 下方车辆状态仍为实时数据",
       "STATUS": {
@@ -3353,15 +3405,29 @@
       "EMPTY_FLEET_BANNER_BODY": "一旦为车辆安装并配置追踪器，位置将显示在此处",
       "REFRESH_FAILED_BANNER": "无法刷新 — 显示 {{time}} 的数据",
       "LOAD_FAILED": "无法加载车辆位置",
+      "SPEED_VALUE": "{{value}} 公里/小时",
       "COL": {
         "PLATE": "车牌",
         "STATUS": "状态",
+        "SPEED": "速度",
         "LAST_UPDATE": "最后更新"
       },
       "POPUP": {
         "SPEED": "速度：{{value}} 公里/小时",
         "ENGINE_ON": "引擎运转中",
-        "ENGINE_OFF": "引擎已关闭"
+        "ENGINE_OFF": "引擎已关闭",
+        "DIRECTION": "朝{{direction}}行驶",
+        "DIRECTION_LAST_KNOWN": "最后已知方向：{{direction}}"
+      },
+      "COMPASS": {
+        "N": "北",
+        "NE": "东北",
+        "E": "东",
+        "SE": "东南",
+        "S": "南",
+        "SW": "西南",
+        "W": "西",
+        "NW": "西北"
       }
     },
     "DRIVER_CASH": {
@@ -3403,7 +3469,67 @@
       },
       "ERROR": {
         "GENERIC": "无法记录此项目，请重试。"
+      },
+      "MY_DAY": {
+        "TITLE": "我今日的现金",
+        "PER_HEAD_EARNED": "所得人头费",
+        "TO_RETURN": "应交回金额"
       }
+    },
+    "MY_EARNINGS": {
+      "SUBTITLE": "按日、月或年查看您获得的人头费",
+      "FILTER_FROM": "起始日期",
+      "FILTER_TO": "结束日期",
+      "TABLE_TITLE": "各期间人头费",
+      "NETTED_NOTE": "人头费已在班次结算时冲抵——下表金额均为您已留存的现金，没有待领部分。",
+      "EMPTY_RANGE": "所选期间没有人头费记录。",
+      "LOAD_FAILED": "无法加载您的人头费收入。",
+      "GRANULARITY": {
+        "LABEL": "分组方式",
+        "DAY": "按日",
+        "MONTH": "按月",
+        "YEAR": "按年"
+      },
+      "TILE": {
+        "TOTAL": "人头费合计（泰铢）",
+        "HEADS": "人头合计"
+      },
+      "COL": {
+        "PERIOD": "期间",
+        "HEADS": "人头数",
+        "RATE": "每人费率",
+        "RATE_CAPTION": "该期间使用多个费率时为加权平均值",
+        "AMOUNT": "金额（泰铢）"
+      },
+      "ERROR": {
+        "RANGE_INVALID": "开始日期不得晚于结束日期。"
+      }
+    }
+  },
+  "FIND_BOOKING": {
+    "TITLE": "查询您的订单",
+    "LEAD": "输入订单编号和预订时使用的手机号码即可查看车票，无需登录。",
+    "BOOKING_NUMBER": "订单编号",
+    "BOOKING_NUMBER_PLACEHOLDER": "例如 B-ABC234",
+    "PHONE": "预订时使用的手机号码",
+    "PHONE_PLACEHOLDER": "例如 0812345678",
+    "PHONE_INVALID": "请输入 10-15 位数字。",
+    "SUBMIT": "查询订单",
+    "NOT_FOUND": "找不到符合这些信息的订单。请核对订单编号和手机号码后重试。",
+    "THROTTLED": "查询次数过多，请稍候几分钟后再试。",
+    "STATUS_UNKNOWN": "未知状态",
+    "RESULT": {
+      "BOOKING_NUMBER": "订单编号",
+      "STATUS": "状态",
+      "CONTACT_NAME": "预订人",
+      "CONTACT_PHONE": "预订手机号码",
+      "BOOKED_AT": "预订时间",
+      "NET_AMOUNT": "支付金额（泰铢）",
+      "PASSENGER": "乘客",
+      "ROUTE": "路线",
+      "DEPARTURE": "发车时间",
+      "SEAT": "座位",
+      "PLATE": "车牌号"
     }
   },
   "PARCEL_TRACKING": {

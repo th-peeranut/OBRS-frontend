@@ -274,9 +274,19 @@
                   }
                 </div>
                 <div class="settlement-detail-totals settlement-reconcile">
+                  <!-- OBRS-1145: the fee the seller keeps out of this round's
+                  takings, already subtracted from the expectation below. Shown
+                  even at 0.00 on purpose — "nobody recorded any heads yet" and
+                  "no heads boarded" are indistinguishable in the data, so the
+                  only warning that can exist is the number itself, in front of
+                  the person about to sign. -->
+                  <div class="settlement-detail-row" data-testid="settlement-per-head-deducted">
+                    <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.PER_HEAD_DEDUCTED' | translate }}</span>
+                    <span>-{{ formatMoney(perHeadDeducted, detail.currency) }}</span>
+                  </div>
                   <div class="settlement-detail-row">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.EXPECTED_CASH' | translate }}</span>
-                    <span>{{ formatMoney(expectedCashAmount(), detail.currency) }}</span>
+                    <span data-testid="settlement-expected-cash">{{ formatMoney(expectedCashAmount(), detail.currency) }}</span>
                   </div>
                   @if (discrepancyCents !== null) {
                     <div class="settlement-detail-row">

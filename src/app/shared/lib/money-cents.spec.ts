@@ -1,4 +1,4 @@
-import { centsToDecimalString, toCents } from './money-cents';
+import { centsToDecimalString, toCents, toSignedCents } from './money-cents';
 
 describe('money-cents', () => {
   describe('toCents', () => {
@@ -61,6 +61,61 @@ describe('money-cents', () => {
     });
   });
 
+  // OBRS-1144 — a BALANCE, not a cash count. The two parsers are deliberately
+  // separate; the pair of suites below is what keeps them from converging.
+  describe('toSignedCents', () => {
+    it('parses a negative amount', () => {
+      expect(toSignedCents('-20.00')).toBe(-2000);
+    });
+
+    it('parses the smallest negative amount', () => {
+      expect(toSignedCents('-0.01')).toBe(-1);
+    });
+
+    it('still parses every positive form toCents accepts', () => {
+      expect(toSignedCents('100')).toBe(10000);
+      expect(toSignedCents('99.99')).toBe(9999);
+      expect(toSignedCents('0.00')).toBe(0);
+      expect(toSignedCents('  42.50  ')).toBe(4250);
+    });
+
+    it('rejects a bare minus sign', () => {
+      expect(toSignedCents('-')).toBeNull();
+    });
+
+    it('rejects a doubled minus sign', () => {
+      expect(toSignedCents('--5')).toBeNull();
+    });
+
+    it('rejects a minus with no integer part', () => {
+      expect(toSignedCents('-.5')).toBeNull();
+    });
+
+    it('rejects a trailing minus sign', () => {
+      expect(toSignedCents('5-')).toBeNull();
+    });
+
+    it('rejects more than 2 fraction digits, same as toCents', () => {
+      expect(toSignedCents('-1.234')).toBeNull();
+    });
+
+    it('holds the exact integer on the negative side of the float trap too', () => {
+      const expected = toSignedCents('-19.90') as number;
+      const returned = toSignedCents('-20.00') as number;
+      expect(expected).toBe(-1990);
+      expect(returned - expected).toBe(-10); // exactly -0.10, never -9 or -11
+    });
+
+    // The guard that keeps decision (ข) honest: relaxing the SHARED parser
+    // instead of adding this one would have let a minus sign into the
+    // settlement cash count (OBRS-671), where a stack of notes cannot be
+    // negative and a stray `-` would post a silent credit.
+    it('toCents is NOT relaxed by the existence of this function', () => {
+      expect(toCents('-20.00')).toBeNull();
+      expect(toCents('-0.01')).toBeNull();
+    });
+  });
+
   describe('centsToDecimalString', () => {
     it('formats cents back to a 2-decimal string', () => {
       expect(centsToDecimalString(9999)).toBe('99.99');
@@ -69,6 +124,14 @@ describe('money-cents', () => {
     it('round-trips through toCents', () => {
       const cents = toCents('123.45') as number;
       expect(centsToDecimalString(cents)).toBe('123.45');
+    });
+
+    // OBRS-1144 — this is the value that goes back INTO the input box as the
+    // prefill, so the minus has to survive the round trip or the seeded day
+    // would read as a 40.00 discrepancy on a -20.00 expectation.
+    it('round-trips a negative amount through toSignedCents, keeping the sign', () => {
+      const cents = toSignedCents('-20.00') as number;
+      expect(centsToDecimalString(cents)).toBe('-20.00');
     });
   });
 });

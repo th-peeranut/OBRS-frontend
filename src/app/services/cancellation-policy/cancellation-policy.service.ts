@@ -29,6 +29,15 @@ export interface CancellationPolicyDto {
   refundRateEarly: number;
   /** Refund rate as a 0.0-1.0 fraction, NOT a percentage. */
   refundRateLate: number;
+  /**
+   * OBRS-1136 AC-1 -- how long a refund that cannot be automated takes, in CALENDAR days from the
+   * cancellation. Optional on the wire for one reason only: this frontend (Netlify) and the
+   * backend (Koyeb) deploy separately, so a build can be live for a few minutes against a backend
+   * that predates AC-1. The page answers that by not printing the sentence at all -- see
+   * refund-policy.component.html. Once both sides are out the server always sends it
+   * (SystemConfigService.getIntConfig falls through to a code default, so there is no "unset").
+   */
+  manualRefundDueDays?: number;
 }
 
 @Injectable({

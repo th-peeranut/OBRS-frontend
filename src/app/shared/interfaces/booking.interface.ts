@@ -58,6 +58,12 @@ export interface BookingPayload {
   // preview (PromoCodeFieldComponent) is ever sent — never precomputed or
   // guessed client-side.
   promotionCode?: string | null;
+  // OBRS-858 (ADR-0123 Decision 4): the privacy-notice version on screen when the booker
+  // ticked consent at checkout. Recorded on the users row — the data subject — never on the
+  // booking, so PDPA erasure stays the one mechanism OBRS-632 already built. The backend
+  // IGNORES it for a signed-in caller (their consent already lives on their own row); it can
+  // only ever land on a guest's shadow row.
+  pdpaConsentVersion?: string | null;
 }
 
 export interface CreateBookingResponse {
@@ -68,6 +74,11 @@ export interface CreateBookingResponse {
   totalAmount?: number;
   discountAmountSnapshot?: number;
   netAmount?: number;
+  // OBRS-858 (ADR-0123 Decision 6): returned ONLY by the public create endpoint, so its absence
+  // is the normal signed-in case and not a missing field. A capability for this one booking with
+  // a 60-minute server-side TTL — never a session, and never sent anywhere but
+  // POST /api/payments.
+  guestPaymentToken?: string;
 }
 
 export interface BookingState {

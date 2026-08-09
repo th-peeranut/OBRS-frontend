@@ -80,6 +80,7 @@ const DETAIL: DriverCashDayRespDto = {
   dayId: 1,
   driverId: 5,
   driverName: 'Somchai',
+  holderRole: 'DRIVER',
   businessDate: '2026-08-01',
   vehicleId: 100,
   status: 'OPEN',
@@ -105,6 +106,7 @@ const SUMMARY: DriverCashDaySummaryRespDto = {
   dayId: 1,
   driverId: 5,
   driverName: 'Somchai',
+  holderRole: 'DRIVER',
   businessDate: '2026-08-01',
   vehicleId: 100,
   vehiclePlate: 'AB-1234',
@@ -112,6 +114,7 @@ const SUMMARY: DriverCashDaySummaryRespDto = {
   expectedReturnAmount: '500.00',
   returnedAmount: null,
   discrepancy: null,
+  overdueOpen: false,
   hasUnmappedSalesPointRemit: true,
 };
 
@@ -265,12 +268,107 @@ describe('DriverCashDayReturnModalComponent', () => {
     component.ngOnChanges({});
     expect(component['returnedAmountInput']).toBe('480.00');
 
-    // A different day starts clean.
+    // A different day starts from ITS OWN expectation (OBRS-1144), not from
+    // the previous day's typing and not from an empty box.
     component.summary = { ...component.summary!, dayId: 2 };
-    component.detail = { ...DETAIL, dayId: 2 };
+    component.detail = { ...DETAIL, dayId: 2, expectedReturnAmount: '310.00' };
     component.ngOnChanges({});
-    expect(component['returnedAmountInput']).toBe('');
+    expect(component['returnedAmountInput']).toBe('310.00');
     expect(component['discrepancyReasonInput']).toBe('');
+  });
+
+  // ── OBRS-1144 — the owner asked whether the field was needed at all
+  // ("แค่ส่งเรื่องต่อให้ owner กดรับก็น่าจะโอเค"). Decision (ข): keep it, because it is
+  // the only thing that can ever record that the cash did NOT add up — but
+  // seed it, so the ordinary matching day is one click.
+  describe('OBRS-1144 — the expected amount is prefilled and the negative case is typable', () => {
+    /** Rebuild the open-modal handshake the smart page performs: summary
+     * first (optimistic open), then the resolved detail. */
+    function openDay(dayId: number, expected: string, status: 'OPEN' | 'RETURNED' = 'OPEN'): void {
+      component.summary = { ...SUMMARY, dayId, expectedReturnAmount: expected, status };
+      component.detail = { ...DETAIL, dayId, expectedReturnAmount: expected, status };
+      component.ngOnChanges({});
+      fixture.detectChanges();
+    }
+
+    function discrepancyRow(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('[data-testid="driver-cash-return-discrepancy"]');
+    }
+
+    it('seeds the input with the expected amount and confirm is enabled on arrival — no typing', () => {
+      openDay(7, '500.00');
+      expect(component['returnedAmountInput']).toBe('500.00');
+      expect(component['hasDiscrepancy']()).toBeFalse();
+      expect(component['canConfirm']).toBeTrue();
+      expect(confirmBtn().disabled).toBeFalse();
+      expect(reasonInput()).toBeNull();
+    });
+
+    // A prefilled box means every ordinary day would otherwise open showing
+    // "discrepancy 0.00" — the same nothing-line the breakdown rows above are
+    // already hidden for. It must appear the moment the figure is edited.
+    it('hides the discrepancy row at zero and shows it as soon as the amount is edited', () => {
+      openDay(7, '500.00');
+      expect(discrepancyRow()).toBeNull();
+
+      setAmount('480.00');
+      expect(discrepancyRow()).not.toBeNull();
+      expect(discrepancyRow()!.textContent).toContain('-20.00');
+    });
+
+    // The exact screen the owner was looking at: a salesperson whose per-head
+    // pay outran the cash they took in. The backend dropped its @DecimalMin
+    // floor for this in OBRS-1073; the frontend was still refusing to type it.
+    it('a NEGATIVE expectation is seeded, confirmable, and needs no fabricated reason', () => {
+      openDay(8, '-20.00');
+      expect(component['returnedAmountInput']).toBe('-20.00');
+      expect(component['returnedCents']).toBe(-2000);
+      expect(component['discrepancyCents']).toBe(0);
+      expect(component['hasDiscrepancy']()).toBeFalse();
+      expect(confirmBtn().disabled).toBeFalse();
+      expect(reasonInput()).toBeNull();
+    });
+
+    it('emits the negative amount on the wire as a signed decimal string', () => {
+      openDay(8, '-20.00');
+      const spy = spyOn(component.confirmRequested, 'emit');
+      component['onConfirmClick']();
+      expect(spy).toHaveBeenCalledWith({ returnedAmount: '-20.00', discrepancyReason: undefined });
+    });
+
+    // Before this card the null from toCents() fell through `?? 0`, so a
+    // negative expectation was compared against ZERO and every entry looked
+    // like a discrepancy. Locks the sign of the comparison in both directions.
+    it('computes the discrepancy against a negative expectation, with the right sign', () => {
+      openDay(8, '-20.00');
+      setAmount('-25.00'); // paid the salesperson 5 MORE than the day owed them
+      expect(component['discrepancyCents']).toBe(-500);
+      expect(component['discrepancyAmount']()).toBe('-5.00');
+      expect(component['hasDiscrepancy']()).toBeTrue();
+      expect(component['canConfirm']).toBeFalse(); // reason still mandatory
+      setReason('จ่ายเกินไป 5 บาท');
+      expect(component['canConfirm']).toBeTrue();
+    });
+
+    it('does NOT overwrite what the owner typed when the same day re-emits its detail', () => {
+      openDay(9, '500.00');
+      setAmount('480.00');
+      component.detail = { ...DETAIL, dayId: 9, expectedReturnAmount: '500.00' };
+      component.ngOnChanges({});
+      expect(component['returnedAmountInput']).toBe('480.00');
+    });
+
+    it('does not prefill from a summary alone — it waits for the detail that carries the expectation', () => {
+      component.summary = { ...SUMMARY, dayId: 11, expectedReturnAmount: '500.00' };
+      component.detail = null;
+      component.ngOnChanges({});
+      expect(component['returnedAmountInput']).toBe('');
+    });
+
+    it('does not prefill a day that is already RETURNED', () => {
+      openDay(12, '500.00', 'RETURNED');
+      expect(component['returnedAmountInput']).toBe('');
+    });
   });
 
   it('renders the unmapped-sales-point note on the flagged entry line only, not a separate section', () => {

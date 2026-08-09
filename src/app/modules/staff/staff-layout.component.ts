@@ -93,6 +93,13 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
 
     if (isSalesperson || isDriver) {
       items.push({ path: 'boarding', labelKey: 'STAFF.NAV.BOARDING', icon: 'how_to_reg', section: 'operations' });
+      // OBRS-1147: the holder's own ค่าหัว. Both roles, matching the route's own
+      // requiredRoles exactly — nav-reachability.spec.ts enforces that pairing,
+      // and AC-4 is the reason the driver is included (a driver simply has no
+      // PER_HEAD lines today and sees zero, which is the truthful answer).
+      // Filed under 'operations' rather than a new one-item section: it is the
+      // only nav entry both roles share besides boarding.
+      items.push({ path: 'my-earnings', labelKey: 'STAFF.NAV.MY_EARNINGS', icon: 'payments', section: 'operations' });
     }
 
     // OBRS-312: weekly vehicle inspection checklist — driver-only.

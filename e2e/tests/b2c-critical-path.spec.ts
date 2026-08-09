@@ -172,7 +172,20 @@ test('B2C happy path: search → schedule → review → passenger info ready to
   await expect(page.locator('.btn-next')).not.toBeDisabled();
 });
 
-test('OBRS-856: a guest browses and picks a seat freely, then is asked to sign in at the passenger form — not at the payment button', async ({
+/**
+ * OBRS-858 SUPERSEDES OBRS-856 HERE, and this test is the same assertion turned around.
+ *
+ * OBRS-856 put the login wall at /passenger-info because BookingService.createBooking had no
+ * way to resolve an anonymous caller — the backend 401'd, so admitting a guest to the form only
+ * moved the disappointment one screen later. This test pinned that wall from the guest's side.
+ *
+ * OBRS-858 removed the reason. A guest now creates a booking against a phone-keyed shadow user
+ * (ADR-0123) and pays with a booking-scoped signed token (Decision 6), so the flow completes
+ * without an account and the wall became the bug. The old assertions are not deleted — every one
+ * of them is inverted below, so this test still fails if the wall comes back, which is exactly
+ * what OBRS-856 wanted it to do, in the direction the product now runs.
+ */
+test('OBRS-858: a guest walks past the passenger form with no login redirect, and reaches the pay button without giving an email', async ({
   page,
 }) => {
   // No seedSignedInCustomer() — this is the visitor who never registered, and
@@ -183,35 +196,49 @@ test('OBRS-856: a guest browses and picks a seat freely, then is asked to sign i
   // guest cleared /schedule-booking and /review-schedule-booking. If a later
   // change gates those too, searchAndConfirmASchedule() cannot complete and
   // this test fails there rather than here — which is the point.
-  await page.waitForURL('**/login');
-  expect(new URL(page.url()).pathname).toBe('/login');
+  await page.waitForURL('**/passenger-info');
+  expect(new URL(page.url()).pathname).toBe('/passenger-info');
 
-  // Assert the login page RENDERED, not merely that the URL changed. A guard
-  // redirect that landed on a blank shell would satisfy the pathname alone.
-  await expect(page.locator('#email')).toBeVisible();
-  await expect(page.locator('#password')).toBeVisible();
+  // Assert the form RENDERED, not merely that the URL is right — the inverse of
+  // OBRS-856's "landed on a blank shell would satisfy the pathname alone".
+  await expect(page.locator('#booker-firstName')).toBeVisible();
 
-  // The passenger form must not have been reachable at all. Asserting its
-  // absence separately from the URL is what distinguishes "redirected before
-  // the module loaded" from "loaded and then navigated away".
-  await expect(page.locator('#booker-firstName')).toHaveCount(0);
+  // Same fills as the signed-in walk above, with ONE deliberate omission: the
+  // booker email. OBRS-238 had made it required for ONLINE bookings; OBRS-858
+  // made it optional (a guest who has no account is not always going to have an
+  // inbox to hand, and the e-ticket is retrievable, not merely mailed). Leaving
+  // it empty here is what proves the field is optional in the shipped bundle,
+  // not just in the reactive-form unit test.
+  await page.locator('#booker-title .dropdown-btn').click();
+  await page.locator('#booker-title .dropdown-option').first().click();
+  await page.fill('#booker-firstName', 'Guest');
+  await page.fill('#booker-lastName', 'Walker');
+  await page.fill('#booker-phoneNumber', '0812345678');
+  await page.locator('#booker-gender_male').click();
 
-  // And the whole reason the redirect is acceptable: signing in has to bring
-  // them back to where they were, not dump them on the home page. This is the
-  // key AuthService writes in setPostLoginRedirectUrl().
-  //
-  // OBRS-903 moved it from sessionStorage to a TTL'd localStorage envelope: the
-  // email-verification link a first-time booker must click opens a NEW TAB, and
-  // sessionStorage is per-tab, so the old location was empty exactly where it
-  // mattered. Both halves are asserted — the value in its new home, and the old
-  // home staying empty, so a revert cannot pass this test quietly.
+  await page.locator('#title-0 .dropdown-btn').click();
+  await page.locator('#title-0 .dropdown-option').first().click();
+  await page.fill('#firstName-0', 'Guest');
+  await page.fill('#lastName-0', 'Walker');
+  await page.locator('#gender_male-0').click();
+
+  // Assert the omission is real before drawing a conclusion from it: a stray
+  // autofill or a prefill from a previous step would make the next assertion
+  // pass while proving nothing about whether email is optional.
+  await expect(page.locator('#booker-email')).toHaveValue('');
+  await expect(page.locator('.btn-next')).not.toBeDisabled();
+
+  // No guard fired. OBRS-856 asserted that AuthService.setPostLoginRedirectUrl()
+  // had recorded '/passenger-info' so signing in would return the guest to their
+  // effort; with no redirect there is nothing to return to, and BOTH homes must
+  // stay empty. OBRS-903's TTL'd localStorage envelope and the pre-903 per-tab
+  // key are both checked, so restoring the wall through either one goes red.
   const stored = await page.evaluate(() => ({
     envelope: localStorage.getItem('auth_return_url'),
     perTab: sessionStorage.getItem('auth_return_url'),
   }));
   expect(stored.perTab).toBeNull();
-  expect(stored.envelope).not.toBeNull();
-  expect(JSON.parse(stored.envelope as string).value).toBe('/passenger-info');
+  expect(stored.envelope).toBeNull();
 });
 
 /**

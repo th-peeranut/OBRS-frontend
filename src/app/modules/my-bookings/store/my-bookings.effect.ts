@@ -299,11 +299,25 @@ export class MyBookingsEffect {
   );
 
   private showCancelSuccess(result: CancelBookingResult): void {
+    // OBRS-1136 AC-3: the manual lane's toast now says WHEN, using the number the cancel
+    // response carried — the same `manual_refund_due_days` config the owner's overdue badge
+    // counts with (AC-4), never a literal typed into i18n (AC-2's rule).
+    //
+    // `_DUE` vs the plain key is not a style choice: the frontend and the backend deploy
+    // separately, so a browser can hold a build that expects the field from a backend that does
+    // not yet send it. The plain key is the honest sentence for that window — it promises staff
+    // action without promising a date nothing measured.
+    const days = result.manualRefundDueDays;
+    const hasDueDays = typeof days === 'number' && days > 0;
     const message =
       result.refundMethod === MANUAL_REFUND_METHOD
-        ? this.translate.instant('MY_BOOKINGS.CANCEL.SUCCESS_MANUAL', {
-            refund: this.formatCurrency(result.refundAmount),
-          })
+        ? this.translate.instant(
+            hasDueDays ? 'MY_BOOKINGS.CANCEL.SUCCESS_MANUAL_DUE' : 'MY_BOOKINGS.CANCEL.SUCCESS_MANUAL',
+            {
+              refund: this.formatCurrency(result.refundAmount),
+              days,
+            }
+          )
         : this.translate.instant('MY_BOOKINGS.CANCEL.SUCCESS', {
             refund: this.formatCurrency(result.refundAmount),
           });

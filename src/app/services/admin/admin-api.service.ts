@@ -46,7 +46,10 @@ import {
   DriverCashDayStatus,
   DriverCashDaySummaryRespDto,
   DriverCashRateReqDto,
+  SalesPointOptionDto,
   DriverCashRateRowDto,
+  PerHeadEarningsGranularity,
+  PerHeadEarningsRespDto,
 } from '../../shared/interfaces/driver-cash.interface';
 
 export interface AdminTranslationDto {
@@ -2082,6 +2085,29 @@ export class AdminApiService {
     );
   }
 
+  /**
+   * OBRS-1147 AC-2 — every person's ค่าหัว under this owner for the range, with
+   * an optional `holderId` to narrow to one. Owner scope comes from the token,
+   * never from a parameter (same as `getDriverCashDays()` above); a `holderId`
+   * outside this owner's staff answers an EMPTY report, not a distinguishable
+   * error, so it cannot be walked as an existence oracle.
+   */
+  getDriverCashEarnings(
+    from: string,
+    to: string,
+    granularity: PerHeadEarningsGranularity,
+    holderId?: number
+  ): Observable<ResponseAPI<PerHeadEarningsRespDto>> {
+    let params = new HttpParams().set('from', from).set('to', to).set('granularity', granularity);
+    if (holderId != null) {
+      params = params.set('holderId', String(holderId));
+    }
+    return this.getRequest<PerHeadEarningsRespDto>(
+      `${this.baseUrl}/private/driver-cash/earnings`,
+      params
+    );
+  }
+
   returnDriverCashDay(
     dayId: number,
     payload: DriverCashDayReturnReqDto
@@ -2106,6 +2132,19 @@ export class AdminApiService {
     return this.postRequest<DriverCashRateRowDto>(
       `${this.baseUrl}/private/owner/driver-cash/per-head-rates`,
       payload
+    );
+  }
+
+  /**
+   * OBRS-1073 — the counters a rate can hang off. This page used to populate
+   * its picker from the PUBLIC all-stops endpoint (`StationService.getAll()`),
+   * which was the only flat stop list in the codebase. Now that a rate belongs
+   * to a counter, that list is both wrong (91 of 101 stops are not counters)
+   * and far too long; this returns exactly the three that are.
+   */
+  getDriverCashSalesPoints(): Observable<ResponseAPI<SalesPointOptionDto[]>> {
+    return this.getRequest<SalesPointOptionDto[]>(
+      `${this.baseUrl}/private/owner/driver-cash/sales-points`
     );
   }
 

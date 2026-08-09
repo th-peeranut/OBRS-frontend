@@ -5,8 +5,11 @@ import { DriverCashPerHeadFormComponent } from './driver-cash-per-head-form.comp
 import { AdminDropdownComponent } from '../../../../admin/components/admin-dropdown/admin-dropdown.component';
 
 const RATES = [
-  { stopId: 1, stopName: 'Origin', ratePerHead: '20.00', configured: true },
-  { stopId: 2, stopName: 'Midway', ratePerHead: '0.00', configured: false },
+  { stopId: 1, stopName: 'Origin', salesPointId: 11, salesPointName: 'บ้านบึง', ratePerHead: '20.00', configured: true },
+  { stopId: 2, stopName: 'Midway', salesPointId: 11, salesPointName: 'บ้านบึง', ratePerHead: '0.00', configured: false },
+  // OBRS-1073 — a stop at NO counter. `configured: false` here is not a
+  // warning: there is nothing to configure, and 0.00 is the right answer.
+  { stopId: 3, stopName: 'Roadside', salesPointId: null, salesPointName: null, ratePerHead: '0.00', configured: false },
 ];
 
 describe('DriverCashPerHeadFormComponent', () => {
@@ -47,6 +50,16 @@ describe('DriverCashPerHeadFormComponent', () => {
 
   it('shows no warning when the selected stop IS configured', () => {
     component['onStopChange']('1');
+    fixture.detectChanges();
+    expect(warning()).toBeNull();
+  });
+
+  // OBRS-1073 must-catch. Before the salesPointId guard this stop had exactly
+  // the same shape as the unconfigured one above (`configured: false`) and got
+  // exactly the same warning - on 91 of the 101 seeded stops, for money nobody
+  // was ever owed. A warning that fires everywhere is one nobody reads.
+  it('shows NO warning for a stop that belongs to no sales point - there is no counter to configure', () => {
+    component['onStopChange']('3');
     fixture.detectChanges();
     expect(warning()).toBeNull();
   });

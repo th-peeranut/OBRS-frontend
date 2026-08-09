@@ -124,6 +124,18 @@ body.is-dark {
     & + & { border-top-color: $dk-border-muted; }
   }
 
+  // Signed-in identity row (OBRS-1069). The initials disc keeps its own
+  // gradient — it already carries white text and reads the same on either
+  // surface, so overriding it here would be a declaration that changes nothing
+  // (the trap dark-override-effective.spec.ts exists to catch).
+  .navbar-mobile-identity-label {
+    color: $dk-text-muted;
+  }
+
+  .navbar-mobile-identity-email {
+    color: $dk-text;
+  }
+
   .navbar-mobile-link {
     color: $dk-text;
     .material-symbols-outlined { color: $dk-text-muted; }

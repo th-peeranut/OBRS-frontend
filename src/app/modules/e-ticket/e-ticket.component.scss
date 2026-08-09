@@ -1,4 +1,7 @@
 @import "../../../styles/variables.scss";
+// OBRS-857: the retrieval note needs $dk-accent / $dk-text-muted. The ticket paper itself is
+// deliberately theme-exempt, which is why this file never needed them before.
+@import "../../../styles/dark-tokens";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -436,9 +439,53 @@
   }
 }
 
+// OBRS-857: the "you can get this back" note under the ticket paper. It lives OUTSIDE
+// `.ticket-paper` — html2canvas captures that element and nothing else — so it does not inherit
+// the ticket's deliberate dark-theme exemption and needs its own surface.
+.ticket-retrieval-note {
+  width: min(420px, 100%);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px auto 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  // NOT $text-lightblack. Its 4.60:1 is measured on WHITE, and this note is a tint over
+  // .ticket-stage, which composites to #e4eff4 — there it drops to 3.93:1 and the OBRS-584 gate
+  // caught it. $text-softblack is 5.99:1 on that same surface, and repointing a tint-borne
+  // $text-lightblack site to it is exactly the trade OBRS-769 made for its two.
+  color: $text-softblack;
+  font-size: 14px;
+  line-height: 1.5;
+
+  a {
+    text-decoration: underline;
+    // An <a> with no colour of its own inherits Bootstrap's #0d6efd, which is 3.85:1 here and
+    // 3.66:1 in dark — the same "brand blue over no fill of its own" defect admin-theme.scss:587
+    // already records. $secondary-blue-hover is 5.80:1 on #e4eff4 and still reads as a link.
+    color: $secondary-blue-hover;
+  }
+
+  // $text-lightblack measures 3.25:1 on the dark surfaces and fails AA there.
+  :host-context(body.is-dark) & {
+    background: rgba(255, 255, 255, 0.06);
+    color: $dk-text-muted; // #9aa3b8 — 6.51:1 on #1d1f25
+    a {
+      color: $dk-accent; // 8.12:1 on #1d1f25, and the token dark mode already uses for links
+    }
+  }
+}
+
 @media print {
   .ticket-logo {
     width: min(104px, 38%);
     height: auto;
+  }
+
+  // A hyperlink prints as inert text, and the booking number it points at is already on the
+  // ticket paper above.
+  .ticket-retrieval-note {
+    display: none;
   }
 }

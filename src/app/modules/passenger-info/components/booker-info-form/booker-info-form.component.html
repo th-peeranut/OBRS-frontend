@@ -193,7 +193,13 @@
               "
                       >
                       {{ "PASSENGER_INFO.FORM.EMAIL" | translate }}
-                      <span class="form-required">*</span>
+                      <!-- OBRS-858: the asterisk is gone because the rule is gone. A hint
+                           replaces it: silently dropping the marker would leave the field
+                           looking merely forgotten, and a customer who has an address
+                           should still be told what filling it in buys them. -->
+                      <span class="text-muted small ms-1">{{
+                        "PASSENGER_INFO.FORM.EMAIL_OPTIONAL_HINT" | translate
+                      }}</span>
                     </label>
                     <input
                       class="form-control mt-1"
@@ -207,16 +213,10 @@
                 (bookerForm.get('email')?.touched || bookerForm.get('email')?.dirty)
               "
                       />
-                      @if (
-                        bookerForm.get('email')?.hasError('required') &&
-                        (bookerForm.get('email')?.touched || bookerForm.get('email')?.dirty)
-                        ) {
-                        <div
-                          class="text-error"
-                          >
-                          {{ "PASSENGER_INFO.FORM.EMAIL_REQUIRED" | translate }}
-                        </div>
-                      }
+                      <!-- OBRS-858: the EMAIL_REQUIRED branch is deleted, not left
+                           unreachable. The control no longer carries Validators.required,
+                           so `hasError('required')` can never be true; a dead branch here
+                           would read to the next person as a rule still in force. -->
                       @if (
                         bookerForm.get('email')?.hasError('email') &&
                         (bookerForm.get('email')?.touched || bookerForm.get('email')?.dirty)

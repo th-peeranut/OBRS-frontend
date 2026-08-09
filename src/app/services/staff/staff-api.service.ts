@@ -43,6 +43,8 @@ import {
   DriverCashDayRespDto,
   DriverCashExpenseReqDto,
   DriverCashPerHeadReqDto,
+  PerHeadEarningsGranularity,
+  PerHeadEarningsRespDto,
 } from '../../shared/interfaces/driver-cash.interface';
 import { AdminUserDto, DriverDto } from '../admin/admin-api.service';
 // OBRS-100: type-only — BoardingListComponent (shared/) reuses the response
@@ -1022,6 +1024,44 @@ export class StaffApiService {
     return this.http.get<ResponseAPI<DriverCashDayRespDto>>(
       `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/day`,
       { context: this.skipContext }
+    );
+  }
+
+  /**
+   * OBRS-1073 — the CALLER's own cash box for a business date, which since that
+   * card is a DIFFERENT row from `getDriverCashDay()`: that one answers about
+   * the DRIVER of the round, and the per-head fee is the salesperson's pay.
+   *
+   * Takes no user id by design (the backend resolves the holder from the token),
+   * and answers `data: null` rather than 404 when the caller has no box open
+   * that day — so the caller renders nothing and must NOT treat it as an error.
+   * `skipContext` for the same reason: a salesperson who has taken no heads yet
+   * is the normal case, not an incident to alert about.
+   */
+  getDriverCashMyDay(businessDate: string): Observable<ResponseAPI<DriverCashDayRespDto | null>> {
+    return this.http.get<ResponseAPI<DriverCashDayRespDto | null>>(
+      `${environment.apiUrl}/api/private/driver-cash/my-day`,
+      { params: { businessDate }, context: this.skipContext }
+    );
+  }
+
+  /**
+   * OBRS-1147 — what the CALLER earned in ค่าหัว over a range, bucketed by day /
+   * month / year. Like `getDriverCashMyDay()` it takes no user id: the holder is
+   * the token's owner, so there is no parameter through which one staff member
+   * could read another's pay.
+   *
+   * NOT `skipContext`: unlike "no cash box open today", a failure here means the
+   * person cannot see their own pay at all, which is worth surfacing.
+   */
+  getDriverCashMyEarnings(
+    from: string,
+    to: string,
+    granularity: PerHeadEarningsGranularity
+  ): Observable<ResponseAPI<PerHeadEarningsRespDto>> {
+    return this.http.get<ResponseAPI<PerHeadEarningsRespDto>>(
+      `${environment.apiUrl}/api/private/driver-cash/my-earnings`,
+      { params: { from, to, granularity } }
     );
   }
 

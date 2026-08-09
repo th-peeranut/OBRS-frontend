@@ -4,6 +4,7 @@ import { BookingService } from './booking.service';
 import { BookingPayload } from '../../shared/interfaces/booking.interface';
 import { environment } from '../../../environments/environment';
 import { SKIP_AUTH_LOGOUT } from '../../shared/interceptors/http-context-tokens';
+import { AuthService } from '../../auth/auth.service';
 
 const PAYLOAD: BookingPayload = {
   bookingType: 'one_way',
@@ -30,11 +31,18 @@ const PAYLOAD: BookingPayload = {
 describe('BookingService', () => {
   let service: BookingService;
   let httpMock: HttpTestingController;
+  // OBRS-858: createBooking picks its endpoint from this. Stubbed rather than mocked with a
+  // spy so each test can simply flip the flag and assert the URL that follows.
+  let authStub: { isAuthenticated: () => boolean };
 
   beforeEach(() => {
+    authStub = { isAuthenticated: () => true };
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [BookingService],
+      providers: [
+        BookingService,
+        { provide: AuthService, useValue: authStub },
+      ],
     });
     service = TestBed.inject(BookingService);
     httpMock = TestBed.inject(HttpTestingController);
@@ -45,6 +53,30 @@ describe('BookingService', () => {
   });
 
   describe('createBooking', () => {
+    // OBRS-858 (ADR-0123 Decision 1): the endpoint is chosen by whether a token is held.
+    // Both directions are asserted. Only the guest half would pass if someone "simplified"
+    // this to always use the public URL — and that would silently put every signed-in
+    // customer onto the per-IP throttle the public door needs and the private one does not.
+    it('sends a GUEST booking to the PUBLIC endpoint', () => {
+      authStub.isAuthenticated = () => false;
+
+      service.createBooking(PAYLOAD).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/bookings`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
+    it('sends a SIGNED-IN booking to the private endpoint, unchanged', () => {
+      authStub.isAuthenticated = () => true;
+
+      service.createBooking(PAYLOAD).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
     it('does not suppress the global error alert by default (unrelated to a promo code)', () => {
       service.createBooking(PAYLOAD).subscribe();
 

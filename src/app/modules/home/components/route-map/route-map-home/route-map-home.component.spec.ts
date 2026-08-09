@@ -477,4 +477,138 @@ describe('RouteMapHomeComponent', () => {
     expect(comp.loadState).toBe('error');
     expect((comp as AnyStub).errorRetryTarget).toBe('pickupDropoff');
   });
+
+  // ── OBRS-1052: a stop can now be a pickup AND a dropoff on the same route ──
+  //
+  // boarding_type gained a third value, BOTH, so GET /routes/{slug}/pickup-dropoff returns
+  // จุดพักรถลาดกระบัง 1 ขาออก in `pickup` and in `dropoff`. The two arrays are no longer disjoint,
+  // and the component used to bind `dropoff` straight through — which offers the user the stop
+  // they are boarding at, and every stop the van passes before it. No such pair exists in
+  // `segments`, and the backend answers a missing pair with a 404 rather than a fare, so the
+  // failure surfaces at booking time rather than at selection.
+  describe('drop-off list narrowing (OBRS-1052)', () => {
+    const bothRouteResponse: RoutePickupDropoffResponse = {
+      status: 'success',
+      message: 'ok',
+      data: {
+        route: {
+          slug: 'bangkok_chonburi',
+          titleLocalized: { en: 'Bangkok-Ban Bueng-Nong Chak', th: 'กรุงเทพฯ-บ้านบึง-หนองชาก', zh: '' },
+          totalDistanceKm: 127.6,
+          durationMinMinutes: 90,
+          durationMaxMinutes: 150,
+          originProvinceLabel: 'Bangkok',
+          destinationProvinceLabel: 'Chonburi',
+        },
+        // Mirrors the real route: four Bangkok pickups, ลาดกระบัง at order 5 in BOTH arrays,
+        // Chonburi dropoffs after it.
+        pickup: [
+          stopAt(1, 'mo_chit_2_bus_terminal'),
+          stopAt(5, 'lat_krabang_rest_stop_1'),
+        ],
+        dropoff: [
+          stopAt(5, 'lat_krabang_rest_stop_1'),
+          stopAt(6, 'ban_bueng_wisitchai_market'),
+        ],
+      },
+    };
+
+    function componentOnBothRoute(): RouteMapHomeComponent {
+      const serviceStub = createRouteMapServiceStub({
+        getPickupDropoff: () => of(bothRouteResponse),
+      });
+      const comp = makeComponent(
+        serviceStub,
+        alertServiceStub,
+        translateServiceStub,
+        createBreakpointObserverStub()
+      );
+      comp.ngOnInit();
+      return comp;
+    }
+
+    it('offers every drop-off while no pickup is chosen', () => {
+      const comp = componentOnBothRoute();
+
+      expect(comp.dropoffStops.map((s) => s.slug)).toEqual([
+        'lat_krabang_rest_stop_1',
+        'ban_bueng_wisitchai_market',
+      ]);
+    });
+
+    it('removes the BOTH stop from the drop-offs once it is the chosen pickup', () => {
+      const comp = componentOnBothRoute();
+
+      comp.onPickupStopSelected(stopAt(5, 'lat_krabang_rest_stop_1'));
+
+      expect(comp.dropoffStops.map((s) => s.slug)).toEqual([
+        'ban_bueng_wisitchai_market',
+      ]);
+    });
+
+    it('keeps the BOTH stop as a drop-off for a pickup upstream of it', () => {
+      const comp = componentOnBothRoute();
+
+      comp.onPickupStopSelected(stopAt(1, 'mo_chit_2_bus_terminal'));
+
+      expect(comp.dropoffStops.map((s) => s.slug)).toContain(
+        'lat_krabang_rest_stop_1'
+      );
+    });
+
+    // The narrowing has to reach a selection that was already made, not just the list. Without
+    // this, choosing ลาดกระบัง as the drop-off and THEN moving the pickup onto it leaves the
+    // 404-producing pair selected while the list on screen no longer shows it.
+    it('clears an already-selected drop-off that the new pickup invalidates', () => {
+      const comp = componentOnBothRoute();
+      comp.onDropoffStopSelected(stopAt(5, 'lat_krabang_rest_stop_1'));
+      expect(comp.selectedDropoffSlug).toBe('lat_krabang_rest_stop_1');
+
+      comp.onPickupStopSelected(stopAt(5, 'lat_krabang_rest_stop_1'));
+
+      expect(comp.selectedDropoffSlug).toBeNull();
+      expect(comp.selectedDropoffStop).toBeNull();
+    });
+
+    // "Use my location" auto-selects the nearest pickup, which moves the pickup without any tap
+    // on the pickup list. It has to narrow the drop-offs by the same rule or the whole guard is
+    // bypassed by the one path most users take on a phone.
+    it('narrows the drop-offs when the nearest pickup is auto-selected by geolocation', () => {
+      const comp = componentOnBothRoute();
+
+      comp.onUserLocated({
+        distancesKm: { lat_krabang_rest_stop_1: 0.4 },
+        nearestPickupSlug: 'lat_krabang_rest_stop_1',
+      });
+
+      expect(comp.dropoffStops.map((s) => s.slug)).toEqual([
+        'ban_bueng_wisitchai_market',
+      ]);
+    });
+
+    // The empty state must keep meaning "this route has no stops", not "the stop you picked is the
+    // last one" -- it reads the unfiltered list for exactly that reason.
+    it('does not fall into the empty state when the filter leaves no drop-offs', () => {
+      const comp = componentOnBothRoute();
+
+      comp.onPickupStopSelected(stopAt(9, 'nong_chak'));
+
+      expect(comp.dropoffStops).toEqual([]);
+      expect(comp.loadState).toBe('loaded');
+    });
+  });
 });
+
+function stopAt(order: number, slug: string): RouteStop {
+  return {
+    order,
+    slug,
+    name: slug,
+    address: 'Addr',
+    approxTime: '08:00',
+    latitude: null,
+    longitude: null,
+    primaryPhotoUrl: null,
+    googleMapsUrl: null,
+  };
+}

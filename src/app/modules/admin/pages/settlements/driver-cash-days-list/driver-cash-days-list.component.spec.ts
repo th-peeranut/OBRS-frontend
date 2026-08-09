@@ -13,6 +13,7 @@ function makeRow(overrides: Partial<DriverCashDaySummaryRespDto> = {}): DriverCa
     dayId: 1,
     driverId: 5,
     driverName: 'Somchai',
+    holderRole: 'DRIVER',
     businessDate: '2026-08-01',
     vehicleId: 10,
     vehiclePlate: 'AB-1234',
@@ -20,6 +21,7 @@ function makeRow(overrides: Partial<DriverCashDaySummaryRespDto> = {}): DriverCa
     expectedReturnAmount: '500.00',
     returnedAmount: null,
     discrepancy: null,
+    overdueOpen: false,
     hasUnmappedSalesPointRemit: false,
     ...overrides,
   };

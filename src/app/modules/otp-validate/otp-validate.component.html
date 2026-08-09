@@ -17,14 +17,38 @@
     </div>
     <!-- HEADER TITLE -->
     <div class="welcome-text mt-3">
-      {{ "LOGIN_BY_PHONE_NO.WELCOME" | translate }}
+      {{
+        (phoneNotRegistered
+          ? "LOGIN_BY_PHONE_NO.NOT_REGISTERED_TITLE"
+          : "LOGIN_BY_PHONE_NO.WELCOME"
+        ) | translate
+      }}
     </div>
     <!-- SUB HEADER TITLE -->
     <div class="hint-text mt-3">
-      {{ "LOGIN_BY_PHONE_NO.HINT" | translate }} {{ phoneNo | phoneFormat }}
+      {{
+        (phoneNotRegistered
+          ? "LOGIN_BY_PHONE_NO.NOT_REGISTERED_HINT"
+          : "LOGIN_BY_PHONE_NO.HINT"
+        ) | translate
+      }}
+      {{ phoneNo | phoneFormat }}
+    </div>
+    <!-- OBRS-1072: NO ACCOUNT FOR THIS NUMBER — the two exits this screen never had.
+         Replaces the PIN form rather than sitting under it: no code was sent, so a
+         code entry here is an invitation to wait for an SMS that will never arrive. -->
+    <div class="login-form mt-3" *ngIf="phoneNotRegistered">
+      <button type="button" class="login-btn mt-3" (click)="goToRegister()">
+        {{ "LOGIN_BY_PHONE_NO.NOT_REGISTERED_SIGNUP" | translate }}
+      </button>
+      <p class="register-link text-center mt-4">
+        <a class="obrs-link" (click)="goToEditPhoneNumber()">
+          {{ "LOGIN_BY_PHONE_NO.NOT_REGISTERED_EDIT_PHONE" | translate }}
+        </a>
+      </p>
     </div>
     <!-- FORM SECTION -->
-    <form class="login-form mt-3">
+    <form class="login-form mt-3" *ngIf="!phoneNotRegistered">
       <!-- OTP REMAINING TIMES -->
       <p class="text-center otp-time">
         {{ "LOGIN_BY_PHONE_NO.OTP_TIME" | translate }} {{ displayTime }})

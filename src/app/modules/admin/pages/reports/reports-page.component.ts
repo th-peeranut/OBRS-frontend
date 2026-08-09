@@ -10,6 +10,12 @@ import {
 } from '../../../../shared/interfaces/reports-summary.interface';
 import { ParcelShareMonthlyStore } from './parcel-share-monthly.store';
 import { ParcelShareMonthlyRowDto } from '../../../../services/admin/admin-api.service';
+import { PerHeadEarningsStore } from './per-head-earnings.store';
+import {
+  PerHeadEarningHolderDto,
+  PerHeadEarningsGranularity,
+  PerHeadEarningsRespDto,
+} from '../../../../shared/interfaces/driver-cash.interface';
 
 const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -42,11 +48,21 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     (_, i) => ({ value: String(i + 1), label: String(i + 1) })
   );
 
+  // ── OBRS-1147: per-head EARNINGS by person (own section) ──────────────────
+  // ⛔ This is staff PAY, not the owner's revenue. The EOD-by-salesperson report
+  // on this same page is the owner's takings attributed to whoever sold them —
+  // the two travel in opposite directions and must never be reconciled.
+  protected perHeadEarnings: PerHeadEarningsRespDto | null = null;
+  protected isPerHeadEarningsLoading = false;
+  protected perHeadGranularity: PerHeadEarningsGranularity = 'MONTH';
+  protected readonly perHeadGranularityOptions: { value: string; label: string }[] = [];
+
   private readonly destroy$ = new Subject<void>();
 
   constructor(
     protected readonly store: ReportsStore,
     private readonly parcelShareMonthlyStore: ParcelShareMonthlyStore,
+    private readonly perHeadEarningsStore: PerHeadEarningsStore,
     private readonly translate: TranslateService
   ) {
     const period = this.parcelShareMonthlyStore.period;
@@ -56,6 +72,10 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
       const year = period.year - 2 + i;
       return { value: String(year), label: String(year) };
     });
+    this.perHeadGranularityOptions = (['DAY', 'MONTH', 'YEAR'] as const).map((value) => ({
+      value,
+      label: this.translate.instant(`ADMIN.REPORTS.PER_HEAD_EARNINGS.GRANULARITY.${value}`),
+    }));
   }
 
   ngOnInit(): void {
@@ -84,6 +104,17 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
       this.isParcelShareMonthlyLoading = refreshing;
     });
     void this.parcelShareMonthlyStore.refresh();
+
+    this.perHeadEarningsStore.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
+      this.perHeadEarnings = data;
+    });
+    this.perHeadEarningsStore.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((refreshing) => {
+      this.isPerHeadEarningsLoading = refreshing;
+    });
+    // Driven by the page's own from/to pickers rather than a third set of date
+    // fields — the owner asked "who earned what over THIS period", and two
+    // ranges on one page is two answers to that question.
+    this.applyPerHeadRange();
   }
 
   ngOnDestroy(): void {
@@ -204,6 +235,40 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     }
 
     this.store.setRange(from, to);
+    this.applyPerHeadRange();
+  }
+
+  // ── OBRS-1147: per-head earnings by person ───────────────────────────────
+
+  protected onPerHeadGranularityChange(value: string): void {
+    this.perHeadGranularity = value as PerHeadEarningsGranularity;
+    this.applyPerHeadRange();
+  }
+
+  protected get perHeadHolders(): PerHeadEarningHolderDto[] {
+    return this.perHeadEarnings?.holders ?? [];
+  }
+
+  protected trackByHolder(_index: number, row: PerHeadEarningHolderDto): string {
+    // The role is part of the key for the same reason it is part of the
+    // backend's grouping: one person can appear twice, once per role.
+    return `${row.holderId}|${row.holderRole}`;
+  }
+
+  protected holderDisplayName(row: PerHeadEarningHolderDto): string {
+    return row.holderName ?? `#${row.holderId}`;
+  }
+
+  private applyPerHeadRange(): void {
+    if (!this.fromDate || !this.toDate) {
+      return;
+    }
+    const from = this.toDateInputValue(this.fromDate);
+    const to = this.toDateInputValue(this.toDate);
+    if (from > to) {
+      return;
+    }
+    this.perHeadEarningsStore.setQuery(from, to, this.perHeadGranularity);
   }
 
   // Server 400 backstop — branches on the stable errorCode, never the

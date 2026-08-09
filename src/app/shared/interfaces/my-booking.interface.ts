@@ -133,6 +133,13 @@ export interface CancellationPolicy {
   policyWindow: string;
   cancellationDeadline?: string;
   earliestDepartureDateTime?: string;
+  /**
+   * OBRS-1136 AC-3 — how long a refund that cannot be automated takes, in CALENDAR days from
+   * the cancellation. Rendered into `MANUAL_REFUND_NOTE`, never typed into i18n: the same
+   * `manual_refund_due_days` config drives the owner's overdue badge (AC-4), so a hardcoded
+   * sentence here would promise a wait nobody is measuring.
+   */
+  manualRefundDueDays?: number;
 }
 
 /**
@@ -200,6 +207,8 @@ export interface CancelBookingResult {
   status: string;
   refundAmount: number | string;
   refundMethod: string;
+  /** OBRS-1136 AC-3 — the same published wait as {@link CancellationPolicy}, for the success toast. */
+  manualRefundDueDays?: number;
 }
 
 /** Flattened, presentation-ready row rendered by the my-bookings page. */

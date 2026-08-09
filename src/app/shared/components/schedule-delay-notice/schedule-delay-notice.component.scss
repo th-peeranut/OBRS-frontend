@@ -1,0 +1,94 @@
+@import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
+
+/* OBRS-775: a host that declares no `display` renders as `inline`, and the
+   sweep in e2e/tests/host-box-sweep.spec.ts fails any inline host with
+   block-level children. This one is `block` so the notice takes its own line
+   under the departure time it annotates. */
+:host {
+  display: block;
+}
+
+/* AC2 — a round with no announced delay must render EXACTLY as it did before
+   this card, to the pixel. The template emits nothing at all in that case, but
+   an empty block host is still a box: inside a flex/grid parent with `gap` (the
+   reschedule option card is one) it would widen the row by one gap even at zero
+   height. `:empty` ignores comment nodes, and an inactive `@if` leaves only a
+   comment, so this matches exactly the not-delayed case. */
+:host(:empty) {
+  display: none;
+}
+
+.schedule-delay-notice {
+  /* inline-flex, not flex: see the :host note above — `flex` here would make
+     this a block-level child and, if the host ever loses its `display: block`,
+     re-create the OBRS-775 shape. inline-flex is not block-level. */
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-3xs $space-2xs;
+
+  margin-top: $space-3xs;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-tight;
+}
+
+/* The violet "delayed" pair, taken deliberately from the staff shell's
+   --admin-delayed-bg/--admin-delayed-text (admin-theme.scss) rather than a new
+   colour: the same event already has a chip there, and OBRS-520 measured this
+   exact pair. Light #ede9fe/#4c1d95; the dark override below reuses OBRS-520's
+   measured dark pair (#3b2f5c/#ddd6fe ~= 8.7:1). Hard-coded here because the
+   admin CSS custom properties are scoped to `.admin-shell` and this component
+   renders in the customer shell. */
+.schedule-delay-notice__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-3xs;
+
+  padding: 2px $space-2xs;
+  border-radius: $radius-pill;
+  background: #ede9fe;
+  color: #4c1d95;
+  font-weight: $font-weight-semibold;
+  white-space: nowrap;
+}
+
+.schedule-delay-notice__planned {
+  color: $text-lightblack;
+  white-space: nowrap;
+  /* The planned time is struck through because it is the time that no longer
+     applies. The badge beside it carries the meaning for anyone who cannot see
+     the line — this is decoration, not the only signal. */
+  text-decoration: line-through;
+}
+
+/* AC5 — only rendered when the delay pushes departure onto another calendar
+   day, which is the 23:30 -> 00:30 case that legitimately stays under the
+   searched date. Not muted: it is the part a reader would otherwise mistake
+   for a bug. */
+.schedule-delay-notice__date {
+  color: $text-softblack;
+  font-weight: $font-weight-semibold;
+  white-space: nowrap;
+}
+
+/* Dark mode lives here, not in dark-theme.scss: that file's own header records
+   why (OBRS-767) and, more sharply, `body.is-dark .schedule-item *` sets
+   `color: $dk-text !important` on every descendant of a result row — a global
+   rule for this badge would have to outrank it and could not. A component rule
+   scores higher in the class column, so this one wins. */
+:host-context(body.is-dark) {
+  .schedule-delay-notice__badge {
+    background: #3b2f5c !important;
+    color: #ddd6fe !important;
+  }
+
+  .schedule-delay-notice__planned {
+    color: $dk-text-muted !important;
+  }
+
+  .schedule-delay-notice__date {
+    color: $dk-text !important;
+  }
+}

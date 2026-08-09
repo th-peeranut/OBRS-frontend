@@ -44,9 +44,12 @@ test.describe('OBRS-631 — the published notice reaches the reader', () => {
 
     const stamp = page.getByTestId('privacy-policy-version');
     await expect(stamp).toBeVisible();
-    // 2.0 renders from privacy-policy.version.ts, which the i18n ledger pins to
-    // the fingerprint of this exact text.
-    await expect(stamp).toContainText('2.0');
+    // 2.1 renders from privacy-policy.version.ts, which the i18n ledger pins to
+    // the fingerprint of this exact text. Kept as a literal on purpose: reading
+    // the constant here would make this assertion follow any bump instead of
+    // catching one, and the ledger in check-i18n-parity.mjs is what decides
+    // which version this text is allowed to call itself.
+    await expect(stamp).toContainText('2.1');
   });
 
   test('carries a reachable channel for exercising rights', async ({ page }) => {
@@ -56,7 +59,10 @@ test.describe('OBRS-631 — the published notice reaches the reader', () => {
     // the rendered-page half of the gate's string check.
     const body = (await page.locator('.policy-body').innerText()).replace(/\s+/g, ' ');
     expect(body).toContain('contact@nj-phuyaipu.com');
-    expect(body).toContain('09 0562 2019');
+    // OBRS-1095: the managing partner's line, not the Nong Chak ticket counter
+    // (09 0562 2019) this used to name. Reachable is not enough — it has to
+    // reach someone who can actually answer a section 30-36 request.
+    expect(body).toContain('08 1428 4492');
   });
 
   test('offers the withdrawal control the notice promises (OBRS-874)', async ({
@@ -73,7 +79,9 @@ test.describe('OBRS-631 — the published notice reaches the reader', () => {
   test('AFTER evidence: the notice as a reader sees it', async ({ page }) => {
     await openPolicy(page);
     await page.screenshot({
-      path: 'e2e-evidence/obrs-631-privacy-notice-2-0.png',
+      // The version is in the filename so one run's evidence cannot be mistaken
+      // for another's. OBRS-1095 published 2.1, so this is no longer the 2.0 shot.
+      path: 'e2e-evidence/obrs-631-privacy-notice-2-1.png',
       fullPage: true,
     });
   });

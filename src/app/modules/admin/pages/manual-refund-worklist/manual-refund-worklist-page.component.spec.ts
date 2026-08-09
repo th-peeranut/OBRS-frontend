@@ -95,6 +95,32 @@ describe('ManualRefundWorklistPageComponent (OBRS-286)', () => {
     expect((component as any).queueAgeDays(buildRow({ queuedAt: null }))).toBeNull();
   });
 
+  // OBRS-1136 AC-4 — the badge is the server's verdict, not the browser's arithmetic.
+  describe('the payout clock (OBRS-1136)', () => {
+    function componentUnderTest() {
+      return new ManualRefundWorklistPageComponent(makeStoreStub(null) as any, createTranslateStub());
+    }
+
+    it('isOverdue reads the response flag and defaults to false when it is absent', () => {
+      const component = componentUnderTest();
+
+      expect((component as any).isOverdue(buildRow({ overdue: true }))).toBeTrue();
+      expect((component as any).isOverdue(buildRow({ overdue: false }))).toBeFalse();
+      expect((component as any).isOverdue(buildRow({}))).toBeFalse();
+    });
+
+    it('paints a row red only when the server says overdue — a 30-day-old row it calls on time stays amber', () => {
+      const component = componentUnderTest();
+      // queuedAt far in the past: the pre-card `days > 7` rule would have made this danger on
+      // age alone. The server's verdict now overrides that, in both directions.
+      const oldButOnTime = buildRow({ queuedAt: '2020-01-01T10:00:00+07:00', overdue: false });
+      const freshButLate = buildRow({ queuedAt: new Date().toISOString(), overdue: true });
+
+      expect((component as any).queueAgeSeverity(oldButOnTime)).toBe('is-warning');
+      expect((component as any).queueAgeSeverity(freshButLate)).toBe('is-danger');
+    });
+  });
+
   it('formatMoney renders 0.00 for an undefined/unparseable value rather than throwing', () => {
     const store = makeStoreStub(null);
     const component = new ManualRefundWorklistPageComponent(store as any, createTranslateStub());

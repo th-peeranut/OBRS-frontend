@@ -196,6 +196,7 @@
       "REFUND_LINE": "Refund: {{refund}} ({{rate}})",
       "PENALTY_LINE": "Cancellation fee: {{penalty}}",
       "MANUAL_REFUND_NOTE": "This payment method does not support automatic refunds — our staff will transfer your refund to your bank account.",
+      "MANUAL_REFUND_NOTE_DUE": "This payment method does not support automatic refunds — our staff will transfer your refund to your bank account within {{days}} days of your cancellation.",
       "COMPARE": {
         "OFFER_TITLE": "This booking can still be moved to another date — and you keep its full value",
         "KEEP_FULL": "Keep the full {{amount}} (100%) instead of a partial refund",
@@ -210,6 +211,7 @@
       "CANCEL_BUTTON": "Keep booking",
       "SUCCESS": "Your booking has been cancelled. A refund of {{refund}} is being processed.",
       "SUCCESS_MANUAL": "Your booking has been cancelled. A refund of {{refund}} will be transferred to you by our staff.",
+      "SUCCESS_MANUAL_DUE": "Your booking has been cancelled. A refund of {{refund}} will be transferred to you by our staff within {{days}} days of your cancellation.",
       "FAILED": "Unable to cancel the booking. Please try again."
     },
     "RESCHEDULE": {
@@ -1330,6 +1332,28 @@
           "NOT_FOUND": "That clawback no longer exists.",
           "COLLECT_FAILED": "Unable to record the collection. Please try again."
         }
+      },
+      "PER_HEAD_EARNINGS": {
+        "TITLE": "Per-head earnings by person (staff pay)",
+        "NETTED_NOTE": "This is staff PAY, not the business’s revenue — a different number from the EOD sales-by-salesperson report. The fee is netted at the round, so there is no \"outstanding\" column.",
+        "TOTAL": "Total",
+        "GRANULARITY": {
+          "LABEL": "Group by",
+          "DAY": "Daily",
+          "MONTH": "Monthly",
+          "YEAR": "Yearly"
+        },
+        "COL": {
+          "HOLDER": "Staff member",
+          "ROLE": "Role",
+          "HEADS": "Heads",
+          "AMOUNT": "Amount (THB)",
+          "PERIOD": "Period"
+        },
+        "ROLE": {
+          "DRIVER": "Driver",
+          "SALESPERSON": "Salesperson"
+        }
       }
     },
     "SETTLEMENTS": {
@@ -1421,6 +1445,7 @@
         "COUNTED_HELPER": "The physical cash you counted — not the round total. Card and online payments are excluded.",
         "COUNTED_PLACEHOLDER": "0.00",
         "COUNTED_INVALID": "Enter a valid amount, e.g. 480.00.",
+        "PER_HEAD_DEDUCTED": "Less per-head fee kept by the seller",
         "EXPECTED_CASH": "Expected cash",
         "DISCREPANCY": "Discrepancy",
         "HANDER_LABEL": "Handed over by",
@@ -1467,7 +1492,8 @@
           "CONFIRM_TEXT": "Recording {{amount}} as returned. This cannot be undone.",
           "SUCCESS": "Driver cash day marked as returned.",
           "ALREADY_RETURNED": "This day has already been returned.",
-          "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)"
+          "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)",
+          "PER_HEAD_PAY": "Per-head pay earned today (already netted at the round, not in the amount above)"
         },
         "ERROR": {
           "REASON_REQUIRED": "A reason is required when the returned amount does not match.",
@@ -1475,7 +1501,7 @@
           "RETURN_FAILED": "Unable to record this return."
         },
         "COL": {
-          "DRIVER": "Driver",
+          "HOLDER": "Cash holder",
           "BUSINESS_DATE": "Business date",
           "VEHICLE": "Vehicle",
           "EXPECTED": "Expected amount"
@@ -1485,7 +1511,12 @@
           "PER_HEAD": "Per-head",
           "EXPENSE_PAID": "Expense: {{category}}",
           "RETURN": "Return"
-        }
+        },
+        "HOLDER_ROLE": {
+          "DRIVER": "Driver",
+          "SALESPERSON": "Salesperson"
+        },
+        "OVERDUE_OPEN_HINT": "Still open from a past day — a salesperson must hand the cash back the same day."
       }
     },
     "EOD_REPORT": {
@@ -1740,6 +1771,8 @@
       },
       "DESTINATION_MISSING": "Contact customer for account details",
       "AGE_DAYS": "{{days}} days",
+      "OVERDUE": "Overdue",
+      "DUE_ON": "Due {{date}}",
       "EMPTY": "No refunds pending",
       "ACTION": {
         "MARK_REFUNDED": "Mark refunded"
@@ -1878,10 +1911,10 @@
       }
     },
     "DRIVER_CASH_RATES": {
-      "SUBTITLE": "Manage per-head rates by stop.",
+      "SUBTITLE": "Manage per-head rates by sales point.",
       "LOAD_FAILED": "Unable to load driver cash rates.",
       "ADD_TITLE": "Add a rate",
-      "STOP_LABEL": "Stop",
+      "SALES_POINT_LABEL": "Sales point",
       "EFFECTIVE_FROM_LABEL": "Effective from",
       "RATE_LABEL": "Rate per head",
       "RATE_PLACEHOLDER": "0.00",
@@ -1889,7 +1922,7 @@
       "HISTORY_TITLE": "Rate history",
       "CURRENT": "Current",
       "ERROR": {
-        "DUPLICATE": "A rate for this stop already starts on that date.",
+        "DUPLICATE": "A rate for this sales point already starts on that date.",
         "CREATE_FAILED": "Unable to add this rate."
       }
     }
@@ -2149,7 +2182,11 @@
     "LOGIN_SUCCESS": "Login successful",
     "OTP_REQUEST_FAILED": "Failed to send OTP. Please try again.",
     "OTP_VERIFY_FAILED": "OTP verification failed. Please check the code and try again.",
-    "ROUTE_ERROR": "Invalid request. Please go back and try again."
+    "ROUTE_ERROR": "Invalid request. Please go back and try again.",
+    "NOT_REGISTERED_TITLE": "No account uses this number",
+    "NOT_REGISTERED_HINT": "So no SMS was sent to",
+    "NOT_REGISTERED_SIGNUP": "Sign up",
+    "NOT_REGISTERED_EDIT_PHONE": "Edit phone number"
   },
   "FORGET_PASSWORD": {
     "WELCOME": "Forgot your password?",
@@ -2189,6 +2226,7 @@
   },
   "HOME": {
     "NAVBAR": {
+      "FIND_BOOKING": "Find booking",
       "HOME": "Home",
       "SCHEDULE": "Train Schedule",
       "BOOKING": "How to book and pay",
@@ -2210,7 +2248,8 @@
       "MY_BOOKINGS": "My Bookings",
       "MY_PARCELS": "My Parcels",
       "ACCOUNT": "Account",
-      "MY_REPORTS": "My Reports"
+      "MY_REPORTS": "My Reports",
+      "SIGNED_IN_AS": "Signed in as"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "One-way",
@@ -2321,6 +2360,12 @@
     "STEP_3": "Personal information",
     "STEP_4": "Pay"
   },
+  "SCHEDULE_DELAY_NOTICE": {
+    "BADGE": "Delayed",
+    "PLANNED": "Scheduled {{time}}",
+    "DEPARTS_ON": "Departs {{date}}",
+    "A11Y": "This trip has been announced as delayed. It was scheduled to depart at {{planned}} and now departs at {{effective}}."
+  },
   "SCHEDULE_BOOKING": {
     "HEADER": "Trip type",
     "SUBHEADER_DEPARTURE": "Travel itinerary: Outbound",
@@ -2416,8 +2461,7 @@
       "PHONE_NUMBER_INVALID": "Please enter a valid 10-digit phone number",
       "PHONE_NUMBER_MOBILE_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678). Booking updates are sent to it by SMS.",
       "EMAIL": "Email",
-      "EMAIL_PLACEHOLDER": "Please enter your email",
-      "EMAIL_REQUIRED": "Please enter your email",
+      "EMAIL_PLACEHOLDER": "Email for your e-ticket (optional)",
       "EMAIL_INVALID": "Please enter a valid email address",
       "GENDER_STATUS": "Gender/Status",
       "GENDER_STATUS_REQUIRED": "Please select a gender/status",
@@ -2439,7 +2483,8 @@
       "SEAT_REQUIREMENT_LABEL": "Special requirement (optional)",
       "SEAT_REQUIREMENT_GROUP_ARIA": "Select special seat requirement",
       "SEAT_REQUIREMENT_WHEELCHAIR": "Wheelchair accessible",
-      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "Extra legroom"
+      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "Extra legroom",
+      "EMAIL_OPTIONAL_HINT": "(optional — we will send your e-ticket here)"
     },
     "SEAT_MAP": {
       "WHEELCHAIR_BADGE_ARIA": "Wheelchair accessible seat",
@@ -2522,6 +2567,8 @@
     }
   },
   "E_TICKET": {
+    "RETRIEVAL_NOTE": "Keep your booking reference {{bookingNumber}}. You can open this ticket again without signing in — just enter it together with the phone number you booked with:",
+    "RETRIEVAL_LINK": "Find your booking",
     "TITLE": "E-Ticket",
     "SUBTITLE": "NJ Phuyaipu online travel ticket",
     "BTN_NAVIGATE": "Navigate",
@@ -2564,14 +2611,16 @@
       "RATES": "<h2>Refund rates when you cancel</h2>\n<ul>\n<li>Cancelled <strong>more than {{earlyWindowHours}} hours</strong> before departure — <strong>{{refundRateEarlyPercent}}%</strong> refunded</li>\n<li>Cancelled <strong>between {{cancelWindowHours}} and {{earlyWindowHours}} hours</strong> before departure — <strong>{{refundRateLatePercent}}%</strong> refunded</li>\n<li><strong>Less than {{cancelWindowHours}} hours</strong> before departure — <strong>cancellation is closed</strong> and no refund is given</li>\n</ul>\n<p>The part not refunded is the cancellation fee. The rates above apply to the amount still refundable on that booking, which may be less than what you originally paid if part of the booking has already been refunded.</p>",
       "RATES_ERROR": "The refund rates cannot be shown right now.",
       "RETRY": "Try again",
-      "CONTENT_2": "<h2>Where the money goes back</h2>\n<p>It depends on how you paid, and the system tells you before you confirm the cancellation.</p>\n<ul>\n<li><strong>Credit/debit cards and wallets</strong> — refunded automatically to the same method. How soon it appears depends on your card issuer or wallet provider.</li>\n<li><strong>PromptPay (QR), bank transfer and cash</strong> — these cannot be refunded automatically. During cancellation the system asks you for a bank account or PromptPay number, and our staff transfer the refund to it.</li>\n<li>If a single booking was paid by more than one method, it is handled as a staff-processed refund as well.</li>\n</ul>\n<p>We have no cash refund that you must travel to collect in person, and there is no deadline after which your right to the refund expires.</p>\n<h2>When we cancel a trip</h2>\n<p>If we cancel a trip, that trip is refunded in full with no fee deducted. You do not have to cancel it yourself, and we notify you.</p>\n<p>If only one leg of a round trip is cancelled, only that leg is refunded, the other leg remains valid for travel, and the booking's payment status shows it as partially refunded.</p>\n<h2>No-show</h2>\n<p>If you neither cancel within the times above nor board the trip you booked, the travel right is forfeited and no refund is given.</p>",
+      "CONTENT_2": "<h2>Where the money goes back</h2>\n<p>It depends on how you paid, and the system tells you before you confirm the cancellation.</p>\n<ul>\n<li><strong>Credit/debit cards and wallets</strong> — refunded automatically to the same method. How soon it appears depends on your card issuer or wallet provider.</li>\n<li><strong>PromptPay (QR), bank transfer and cash</strong> — these cannot be refunded automatically. During cancellation the system asks you for a bank account or PromptPay number, and our staff transfer the refund to it.</li>\n<li>If a single booking was paid by more than one method, it is handled as a staff-processed refund as well.</li>\n</ul>\n<p>We have no cash refund that you must travel to collect in person, and there is no deadline after which your right to the refund expires.</p>",
+      "MANUAL_TIMING": "<p>A refund our staff has to process by hand reaches you within {{manualRefundDueDays}} days of your cancellation. These are calendar days — weekends and public holidays included — because our counters operate every day.</p>",
+      "CONTENT_3": "<h2>When we cancel a trip</h2>\n<p>If we cancel a trip, that trip is refunded in full with no fee deducted. You do not have to cancel it yourself, and we notify you.</p>\n<p>If only one leg of a round trip is cancelled, only that leg is refunded, the other leg remains valid for travel, and the booking's payment status shows it as partially refunded.</p>\n<h2>No-show</h2>\n<p>If you neither cancel within the times above nor board the trip you booked, the travel right is forfeited and no refund is given.</p>",
       "SEE_BUSINESS_POLICY": "Rescheduling and other terms of service"
     },
     "PRIVACY": {
       "TITLE": "Privacy Policy",
       "VERSION_LINE": "Version {{version}} · In force from {{effectiveDate}}",
       "CONTENT_1": "&emsp;&emsp;&emsp;This notice explains how we collect, use, disclose and protect your personal data when you use our website, book a seat, send a parcel, contact us or travel with us, and it explains the rights you have under the Personal Data Protection Act B.E. 2562 (2019) and how to exercise them. <br /><br />&emsp;&emsp;&emsp;This notice is published in Thai and English. Where the two versions differ, the Thai version prevails.",
-      "CONTENT_2": "<h2>1. Who we are, and how to reach us</h2>\n<p>The data controller is <strong>N.J. Travel and Transport Limited Partnership</strong>, registration number 0203557004978, registered office at 3/5 Moo 3, Nong Chak Subdistrict, Ban Bueng District, Chon Buri 20170, Thailand.</p>\n<p>For anything about your personal data or your rights, contact the <strong>managing partner</strong> by email at <strong>contact@nj-phuyaipu.com</strong>, by telephone on <strong>09 0562 2019</strong>, or in person at the office above.</p>\n\n<h2>2. What we collect</h2>\n<ul>\n  <li><strong>Account details</strong> — your name, surname, email address, telephone number, password (stored as a one-way hash that cannot be turned back into your password) and a profile picture if you add one. If you sign in with Google, we receive your name and email address from Google.</li>\n  <li><strong>Travel details</strong> — route, date and time, boarding and drop-off points, seat number, and <strong>passenger type</strong> (male passenger, female passenger or monk), which we use to arrange seating and to apply the correct fare. It appears on your ticket and in your confirmation email.</li>\n  <li><strong>Payment details</strong> — amount, method, status and the reference issued by our payment provider. <strong>We do not store your card number in our systems.</strong> When you pay by card, the card details are entered on our page and sent directly to the payment provider.</li>\n  <li><strong>Parcel details</strong> — the names and telephone numbers of the sender and the recipient, what is being sent, and the origin and destination.</li>\n  <li><strong>What you tell us</strong> — the issues you report, your messages, and any images you attach.</li>\n  <li><strong>Usage records</strong> — sign-in times, successful and failed sign-in attempts, and the actions taken in your account, kept for account security and for later investigation.</li>\n  <li><strong>Data stored in your browser</strong> — see section 7.</li>\n  <li><strong>Location</strong> — the site asks your browser for your position <strong>only when you press the button to find the nearest boarding point</strong>. That value is used on your own device to choose a stop; we do not send it to our systems and we do not store it. The coordinates our systems do store are the <strong>latest position of the vehicle</strong>, to show service status — not your position.</li>\n</ul>\n\n<h2>3. What we use it for, and on what legal basis</h2>\n<ul>\n  <li>Providing the booking and parcel service, issuing tickets, taking payment, making refunds and contacting you about your own journey — <strong>performance of a contract</strong> (section 24(3)).</li>\n  <li>Verifying identity, sending one-time passcodes, preventing account takeover and keeping the system secure — <strong>legitimate interest</strong> (section 24(5)).</li>\n  <li>Producing accounting and tax records and meeting our obligations as a licensed transport operator — <strong>legal obligation</strong> (section 24(6)).</li>\n  <li>Tracking vehicle position for operational safety and to show service status to passengers — <strong>legitimate interest</strong> (section 24(5)).</li>\n  <li>Measuring how the website is used, and recording screen activity (mouse movement, clicks and scrolling) for later replay, so we can find which steps are hard to use and fix the right ones — <strong>your consent only</strong> (section 19). You may decline, and declining does not affect searching, booking or payment in any way.</li>\n</ul>\n<p><strong>We do not use your data for marketing and we do not send advertising messages.</strong> Everything we send you is about your own transaction — one-time passcodes, booking confirmations, schedule changes and receipts. If we ever begin sending promotional messages, we will ask for your consent separately first.</p>\n\n<h2>4. Other people's data you give us, and data we receive about you</h2>\n<p>When you book for someone else or send a parcel to someone else, you must have that person's permission before giving us their details, and the permission of a parent or guardian if they are under 16.</p>\n<p>Conversely, if your details reached us because someone else booked a seat or sent a parcel for you, we received them from that person. We use them only as needed to deliver the service that was booked and for safety during the journey, on the basis of contract and legitimate interest — and you have the same rights under section 8 as a customer who contacted us directly.</p>\n\n<h2>5. Who we share it with, and whether it leaves Thailand</h2>\n<p><strong>We do not sell your personal data.</strong> We disclose only what is necessary to the following categories of service provider, who process it on our instructions:</p>\n<ul>\n  <li>Payment service provider (in Thailand)</li>\n  <li>SMS delivery provider (in Thailand)</li>\n  <li>Email delivery provider (outside Thailand)</li>\n  <li>Vehicle tracking provider (in Thailand)</li>\n  <li>Cloud infrastructure and database providers (outside Thailand)</li>\n  <li>Sign-in and mapping provider, only when you use those features (outside Thailand)</li>\n  <li><strong>Website analytics and screen-recording providers (outside Thailand) — only if you consent</strong></li>\n</ul>\n<p>Some of these providers are outside Thailand. Those transfers rely on the necessity of performing the contract you have with us, under section 28(3), and we send only what that service requires. You may ask us for the current list of providers in each category through the contact details in section 1.</p>\n<p>We may also disclose data where the law requires it, where a competent authority orders it, or where it is necessary to establish or defend a legal claim.</p>\n<p><strong>We do not send passenger or parcel-recipient data to our accountants.</strong> What they receive is daily income and expenditure per vehicle, which carries no name, telephone number or journey detail of any individual.</p>\n\n<h2>6. How long we keep it</h2>\n<ul>\n  <li><strong>Your account</strong> — until you close it, and for 90 days afterwards.</li>\n  <li><strong>Bookings, tickets, receipts and accounting records</strong> — 5 years from the <strong>end of the accounting year</strong> in which the transaction occurred. Our accounting year ends on 31 December (so a 2026 transaction is kept until 31 December 2031), as required by the Accounting Act B.E. 2543 and the Revenue Code.</li>\n  <li><strong>Usage records</strong> — 90 days.</li>\n  <li><strong>Vehicle position</strong> — our systems keep only the latest position of each vehicle, overwriting the previous one, so no route history exists in our systems.</li>\n  <li><strong>Website usage statistics</strong> — held by the analytics providers for the periods they set. You may withdraw your consent at any time under section 8.</li>\n</ul>\n<p>When you ask us to delete your data we act in two stages. First, we immediately delete or blank the details that identify you, such as name, email address and telephone number. Second, once the accounting retention period above has passed, we sever the link between the accounting records and the individual. <strong>Between those two stages the accounting records can still be traced back to you, as the law requires, so we do not describe the data in that period as anonymised.</strong></p>\n\n<h2>7. Cookies and data stored in your browser</h2>\n<p><strong>We set no cookies of our own.</strong> What our site keeps in your browser is:</p>\n<ul>\n  <li>Your sign-in state — token, username and role — until you sign out.</li>\n  <li>Display preferences such as language and theme, and the routes you searched most recently — until you clear site data.</li>\n  <li>Temporary values during a booking or payment — discarded when you close the tab.</li>\n  <li>Your answer about usage statistics — stored so we do not ask again, whether you accepted or declined.</li>\n</ul>\n<p>If you consent to usage statistics, the analytics providers set additional cookies on your device: <strong>_ga</strong> and <strong>_ga_</strong> followed by the measurement id (Google Analytics), <strong>_clck</strong> and <strong>_clsk</strong> (Microsoft Clarity), plus <strong>_cltk</strong> in the tab's temporary storage. That list comes from measuring the live page on 1 August 2026. <strong>Before you press accept, not one of them is on your device.</strong></p>\n<p>You can clear all of it from your browser settings, and you can withdraw consent for usage statistics with the button at the end of this page.</p>\n\n<h2>8. Your rights, and how to use them</h2>\n<p>As a data subject you have the right to:</p>\n<ul>\n  <li><strong>Access your data and obtain a copy</strong>, including being told where we obtained it (section 30).</li>\n  <li><strong>Have your data transferred</strong> to another controller (section 31).</li>\n  <li><strong>Object</strong> to the collection, use or disclosure of your data (section 32).</li>\n  <li><strong>Have your data erased or destroyed</strong> (section 33). You can close your account yourself on the My Account page, which removes the details that identify you; booking history and receipts are retained as accounting law requires — see section 6.</li>\n  <li><strong>Have processing suspended</strong> (section 34).</li>\n  <li><strong>Have your data corrected and kept up to date</strong> (sections 35 and 36). You can change your name, surname, telephone number and email address yourself on the My Account page.</li>\n  <li><strong>Withdraw consent</strong> (section 19, paragraph five). For usage statistics, use the withdraw button at the end of this page. It takes effect immediately with no need to reload, and on your next visit the analytics scripts are not loaded at all. <strong>Withdrawing stops collection from that point on; it cannot recall data already sent</strong>, and it does not affect the lawfulness of processing carried out before it.</li>\n  <li><strong>Lodge a complaint</strong> with the Personal Data Protection Committee's office if you believe we are not complying with the law (section 73).</li>\n</ul>\n<p>Use the contact details in section 1. <strong>We will act within 30 days of receiving a complete request.</strong> Where a request is complex or involves a large volume of data we may extend that by up to a further 30 days, telling you and giving our reasons before the original deadline expires.</p>\n<p>For security we may ask you to confirm your identity first, and to protect other people we may have to redact third-party details from the copy we send you. An electronic copy is free of charge.</p>\n\n<h2>9. How we protect your data</h2>\n<p>We maintain reasonable and appropriate measures, including storing passwords as one-way hashes, temporarily locking an account after repeated failed sign-ins, transmitting data over an encrypted connection (HTTPS), not storing payment card numbers in our systems, and limiting access to those who need it for their work.</p>\n\n<h2>10. Changes to this notice</h2>\n<p>This notice carries a version number and effective date at the top of the page. When we change it in substance we publish a new version with its effective date, and the next time you use the service you will be shown the change and asked to confirm your consent to the new version.</p>\n<p>This notice does not yet cover in-vehicle camera recording. That section is being prepared and will be added in a future version.</p>"
+      "CONTENT_2": "<h2>1. Who we are, and how to reach us</h2>\n<p>The data controller is <strong>N.J. Travel and Transport Limited Partnership</strong>, registration number 0203557004978, registered office at 3/5 Moo 3, Nong Chak Subdistrict, Ban Bueng District, Chon Buri 20170, Thailand.</p>\n<p>For anything about your personal data or your rights, contact the <strong>managing partner</strong> by email at <strong>contact@nj-phuyaipu.com</strong>, by telephone on <strong>08 1428 4492</strong>, or in person at the office above.</p>\n\n<h2>2. What we collect</h2>\n<ul>\n  <li><strong>Account details</strong> — your name, surname, email address, telephone number, password (stored as a one-way hash that cannot be turned back into your password) and a profile picture if you add one. If you sign in with Google, we receive your name and email address from Google.</li>\n  <li><strong>Travel details</strong> — route, date and time, boarding and drop-off points, seat number, and <strong>passenger type</strong> (male passenger, female passenger or monk), which we use to arrange seating and to apply the correct fare. It appears on your ticket and in your confirmation email.</li>\n  <li><strong>Payment details</strong> — amount, method, status and the reference issued by our payment provider. <strong>We do not store your card number in our systems.</strong> When you pay by card, the card details are entered on our page and sent directly to the payment provider.</li>\n  <li><strong>Parcel details</strong> — the names and telephone numbers of the sender and the recipient, what is being sent, and the origin and destination.</li>\n  <li><strong>What you tell us</strong> — the issues you report, your messages, and any images you attach.</li>\n  <li><strong>Usage records</strong> — sign-in times, successful and failed sign-in attempts, and the actions taken in your account, kept for account security and for later investigation.</li>\n  <li><strong>Data stored in your browser</strong> — see section 7.</li>\n  <li><strong>Location</strong> — the site asks your browser for your position <strong>only when you press the button to find the nearest boarding point</strong>. That value is used on your own device to choose a stop; we do not send it to our systems and we do not store it. The coordinates our systems do store are the <strong>latest position of the vehicle</strong>, to show service status — not your position.</li>\n</ul>\n\n<h2>3. What we use it for, and on what legal basis</h2>\n<ul>\n  <li>Providing the booking and parcel service, issuing tickets, taking payment, making refunds and contacting you about your own journey — <strong>performance of a contract</strong> (section 24(3)).</li>\n  <li>Verifying identity, sending one-time passcodes, preventing account takeover and keeping the system secure — <strong>legitimate interest</strong> (section 24(5)).</li>\n  <li>Producing accounting and tax records and meeting our obligations as a licensed transport operator — <strong>legal obligation</strong> (section 24(6)).</li>\n  <li>Tracking vehicle position for operational safety and to show service status to passengers — <strong>legitimate interest</strong> (section 24(5)).</li>\n  <li>Measuring how the website is used, and recording screen activity (mouse movement, clicks and scrolling) for later replay, so we can find which steps are hard to use and fix the right ones — <strong>your consent only</strong> (section 19). You may decline, and declining does not affect searching, booking or payment in any way.</li>\n</ul>\n<p><strong>We do not use your data for marketing and we do not send advertising messages.</strong> Everything we send you is about your own transaction — one-time passcodes, booking confirmations, schedule changes and receipts. If we ever begin sending promotional messages, we will ask for your consent separately first.</p>\n\n<h2>4. Other people's data you give us, and data we receive about you</h2>\n<p>When you book for someone else or send a parcel to someone else, you must have that person's permission before giving us their details, and the permission of a parent or guardian if they are under 16.</p>\n<p>Conversely, if your details reached us because someone else booked a seat or sent a parcel for you, we received them from that person. We use them only as needed to deliver the service that was booked and for safety during the journey, on the basis of contract and legitimate interest — and you have the same rights under section 8 as a customer who contacted us directly.</p>\n\n<h2>5. Who we share it with, and whether it leaves Thailand</h2>\n<p><strong>We do not sell your personal data.</strong> We disclose only what is necessary to the following categories of service provider, who process it on our instructions:</p>\n<ul>\n  <li>Payment service provider (in Thailand)</li>\n  <li>SMS delivery provider (in Thailand)</li>\n  <li>Email delivery provider (outside Thailand)</li>\n  <li>Vehicle tracking provider (in Thailand)</li>\n  <li>Cloud infrastructure and database providers (outside Thailand)</li>\n  <li>Sign-in and mapping provider, only when you use those features (outside Thailand)</li>\n  <li><strong>Website analytics and screen-recording providers (outside Thailand) — only if you consent</strong></li>\n</ul>\n<p>Some of these providers are outside Thailand. Those transfers rely on the necessity of performing the contract you have with us, under section 28(3), and we send only what that service requires. You may ask us for the current list of providers in each category through the contact details in section 1.</p>\n<p>We may also disclose data where the law requires it, where a competent authority orders it, or where it is necessary to establish or defend a legal claim.</p>\n<p><strong>We do not send passenger or parcel-recipient data to our accountants.</strong> What they receive is daily income and expenditure per vehicle, which carries no name, telephone number or journey detail of any individual.</p>\n\n<h2>6. How long we keep it</h2>\n<ul>\n  <li><strong>Your account</strong> — until you close it, and for 90 days afterwards.</li>\n  <li><strong>Bookings, tickets, receipts and accounting records</strong> — 5 years from the <strong>end of the accounting year</strong> in which the transaction occurred. Our accounting year ends on 31 December (so a 2026 transaction is kept until 31 December 2031), as required by the Accounting Act B.E. 2543 and the Revenue Code.</li>\n  <li><strong>Usage records</strong> — 90 days.</li>\n  <li><strong>Data-export audit records</strong> — 1 year. We record which member of staff exported which dataset and when, so that improper access to personal data can be traced after the fact. The search filters used for the export are erased after 90 days.</li>\n  <li><strong>Vehicle position</strong> — our systems keep only the latest position of each vehicle, overwriting the previous one, so no route history exists in our systems.</li>\n  <li><strong>Website usage statistics</strong> — held by the analytics providers for the periods they set. You may withdraw your consent at any time under section 8.</li>\n</ul>\n<p>When you ask us to delete your data we act in two stages. First, we immediately delete or blank the details that identify you, such as name, email address and telephone number. Second, once the accounting retention period above has passed, we sever the link between the accounting records and the individual. <strong>Between those two stages the accounting records can still be traced back to you, as the law requires, so we do not describe the data in that period as anonymised.</strong></p>\n\n<h2>7. Cookies and data stored in your browser</h2>\n<p><strong>We set no cookies of our own.</strong> What our site keeps in your browser is:</p>\n<ul>\n  <li>Your sign-in state — token, username and role — until you sign out.</li>\n  <li>Display preferences such as language and theme, and the routes you searched most recently — until you clear site data.</li>\n  <li>Temporary values during a booking or payment — discarded when you close the tab.</li>\n  <li>Your answer about usage statistics — stored so we do not ask again, whether you accepted or declined.</li>\n</ul>\n<p>If you consent to usage statistics, the analytics providers set additional cookies on your device: <strong>_ga</strong> and <strong>_ga_</strong> followed by the measurement id (Google Analytics), <strong>_clck</strong> and <strong>_clsk</strong> (Microsoft Clarity), plus <strong>_cltk</strong> in the tab's temporary storage. That list comes from measuring the live page on 1 August 2026. <strong>Before you press accept, not one of them is on your device.</strong></p>\n<p>You can clear all of it from your browser settings, and you can withdraw consent for usage statistics with the button at the end of this page.</p>\n\n<h2>8. Your rights, and how to use them</h2>\n<p>As a data subject you have the right to:</p>\n<ul>\n  <li><strong>Access your data and obtain a copy</strong>, including being told where we obtained it (section 30).</li>\n  <li><strong>Have your data transferred</strong> to another controller (section 31).</li>\n  <li><strong>Object</strong> to the collection, use or disclosure of your data (section 32).</li>\n  <li><strong>Have your data erased or destroyed</strong> (section 33). You can close your account yourself on the My Account page, which removes the details that identify you; booking history and receipts are retained as accounting law requires — see section 6.</li>\n  <li><strong>Have processing suspended</strong> (section 34).</li>\n  <li><strong>Have your data corrected and kept up to date</strong> (sections 35 and 36). You can change your name, surname, telephone number and email address yourself on the My Account page.</li>\n  <li><strong>Withdraw consent</strong> (section 19, paragraph five). For usage statistics, use the withdraw button at the end of this page. It takes effect immediately with no need to reload, and on your next visit the analytics scripts are not loaded at all. <strong>Withdrawing stops collection from that point on; it cannot recall data already sent</strong>, and it does not affect the lawfulness of processing carried out before it.</li>\n  <li><strong>Lodge a complaint</strong> with the Personal Data Protection Committee's office if you believe we are not complying with the law (section 73).</li>\n</ul>\n<p>Use the contact details in section 1. <strong>We will act within 30 days of receiving a complete request.</strong> Where a request is complex or involves a large volume of data we may extend that by up to a further 30 days, telling you and giving our reasons before the original deadline expires.</p>\n<p>For security we may ask you to confirm your identity first, and to protect other people we may have to redact third-party details from the copy we send you. An electronic copy is free of charge.</p>\n\n<h2>9. How we protect your data</h2>\n<p>We maintain reasonable and appropriate measures, including storing passwords as one-way hashes, temporarily locking an account after repeated failed sign-ins, transmitting data over an encrypted connection (HTTPS), not storing payment card numbers in our systems, and limiting access to those who need it for their work.</p>\n\n<h2>10. Changes to this notice</h2>\n<p>This notice carries a version number and effective date at the top of the page. When we change it in substance we publish a new version with its effective date, and the next time you use the service you will be shown the change and asked to confirm your consent to the new version.</p>\n<p>This notice does not yet cover in-vehicle camera recording. That section is being prepared and will be added in a future version.</p>"
     },
     "BUSINESS": {
       "TITLE": "Terms and Conditions of Service",
@@ -2618,7 +2667,8 @@
       "PARCEL_SCHEDULE": "Parcel Handling",
       "INSPECTION": "Vehicle Inspection",
       "FLEET_MAP": "Fleet Live Map",
-      "CANCEL_BOOKING": "Cancel Booking"
+      "CANCEL_BOOKING": "Cancel Booking",
+      "MY_EARNINGS": "My Per-Head Earnings"
     },
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
@@ -2652,7 +2702,8 @@
         "SALES": "Sales",
         "OPERATIONS": "Operations",
         "PARCELS": "Parcels"
-      }
+      },
+      "MY_EARNINGS": "My Earnings"
     },
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "Unable to load boarding list.",
@@ -3013,6 +3064,7 @@
       "STOP_NO_MATCH": "No stops match",
       "POPULAR_LABEL": "Popular",
       "ALL_STOPS_LABEL": "All stops",
+      "ROUTE_GROUP_TOGGLE": "Show or hide the trips on {{routeLabel}}",
       "SCHEDULE_ADD_FOR_ROUTE": "Add schedule for {{routeLabel}}",
       "SCHEDULE_TRIP_ACTIONS": "Schedule actions for {{time}}",
       "SCHEDULE_EDIT_ITEM": "Edit schedule",
@@ -3335,7 +3387,7 @@
     },
     "FLEET_MAP": {
       "SUBTITLE": "See every vehicle's live position in one place",
-      "CENTER_ON_FLEET": "Center on fleet",
+      "CENTER_ON_FLEET": "Show all vehicles",
       "VEHICLE_LIST_TITLE": "Vehicles",
       "MAP_UNAVAILABLE": "Map unavailable — vehicle status below is still live.",
       "STATUS": {
@@ -3353,15 +3405,29 @@
       "EMPTY_FLEET_BANNER_BODY": "Positions will appear here once a tracker is installed and configured for a vehicle.",
       "REFRESH_FAILED_BANNER": "Unable to refresh — showing data from {{time}}",
       "LOAD_FAILED": "Unable to load fleet positions.",
+      "SPEED_VALUE": "{{value}} km/h",
       "COL": {
         "PLATE": "Plate",
         "STATUS": "Status",
+        "SPEED": "Speed",
         "LAST_UPDATE": "Last update"
       },
       "POPUP": {
         "SPEED": "Speed: {{value}} km/h",
         "ENGINE_ON": "Engine on",
-        "ENGINE_OFF": "Engine off"
+        "ENGINE_OFF": "Engine off",
+        "DIRECTION": "Heading {{direction}}",
+        "DIRECTION_LAST_KNOWN": "Last known direction: {{direction}}"
+      },
+      "COMPASS": {
+        "N": "north",
+        "NE": "northeast",
+        "E": "east",
+        "SE": "southeast",
+        "S": "south",
+        "SW": "southwest",
+        "W": "west",
+        "NW": "northwest"
       }
     },
     "DRIVER_CASH": {
@@ -3403,7 +3469,67 @@
       },
       "ERROR": {
         "GENERIC": "Unable to record this entry. Please try again."
+      },
+      "MY_DAY": {
+        "TITLE": "My cash box today",
+        "PER_HEAD_EARNED": "Per-head earned",
+        "TO_RETURN": "To hand back"
       }
+    },
+    "MY_EARNINGS": {
+      "SUBTITLE": "The per-head fee you earned, by day, month or year",
+      "FILTER_FROM": "From",
+      "FILTER_TO": "To",
+      "TABLE_TITLE": "Per-head earnings by period",
+      "NETTED_NOTE": "The fee is netted at the round — everything below is money you have already kept. Nothing here is outstanding.",
+      "EMPTY_RANGE": "No per-head fee was recorded in this period.",
+      "LOAD_FAILED": "Unable to load your per-head earnings.",
+      "GRANULARITY": {
+        "LABEL": "Group by",
+        "DAY": "Daily",
+        "MONTH": "Monthly",
+        "YEAR": "Yearly"
+      },
+      "TILE": {
+        "TOTAL": "Total earned (THB)",
+        "HEADS": "Total heads"
+      },
+      "COL": {
+        "PERIOD": "Period",
+        "HEADS": "Heads",
+        "RATE": "Rate per head",
+        "RATE_CAPTION": "An average when the period used more than one rate",
+        "AMOUNT": "Amount (THB)"
+      },
+      "ERROR": {
+        "RANGE_INVALID": "The start date must not be later than the end date."
+      }
+    }
+  },
+  "FIND_BOOKING": {
+    "TITLE": "Find your booking",
+    "LEAD": "Enter your booking reference and the phone number you booked with. No sign-in needed.",
+    "BOOKING_NUMBER": "Booking reference",
+    "BOOKING_NUMBER_PLACEHOLDER": "e.g. B-ABC234",
+    "PHONE": "Phone number used to book",
+    "PHONE_PLACEHOLDER": "e.g. 0812345678",
+    "PHONE_INVALID": "Enter 10-15 digits.",
+    "SUBMIT": "Find booking",
+    "NOT_FOUND": "We couldn't find a booking matching those details. Please check the reference and the phone number, then try again.",
+    "THROTTLED": "Too many attempts. Please wait a few minutes and try again.",
+    "STATUS_UNKNOWN": "Unknown status",
+    "RESULT": {
+      "BOOKING_NUMBER": "Booking reference",
+      "STATUS": "Status",
+      "CONTACT_NAME": "Booked by",
+      "CONTACT_PHONE": "Phone number",
+      "BOOKED_AT": "Booked on",
+      "NET_AMOUNT": "Amount paid (THB)",
+      "PASSENGER": "Passenger",
+      "ROUTE": "Route",
+      "DEPARTURE": "Departure",
+      "SEAT": "Seat",
+      "PLATE": "Vehicle plate"
     }
   },
   "PARCEL_TRACKING": {

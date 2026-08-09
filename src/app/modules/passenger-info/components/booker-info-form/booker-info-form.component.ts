@@ -71,10 +71,15 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
       // backend for "gender", found nothing, and concluded the radios were dead
       // and should be deleted under PDPA data minimisation - they are not.
       gender: ['', Validators.required],
-      // OBRS-238: ONLINE bookings require a contact email (e-ticket delivery +
-      // BookingReqDtoValidator 400s without one) — required + format-checked,
-      // unlike the staff walk-in contact form where it stays optional (OBRS-197).
-      email: ['', [Validators.required, Validators.email]],
+      // OBRS-858 (ADR-0123 Decision 5): OPTIONAL, but still format-checked when filled.
+      // OBRS-238 made it required because emailing the e-ticket was the only way a
+      // customer ever saw it again — no address meant no ticket. OBRS-857 made the ticket
+      // RETRIEVABLE (/find-booking, booking number + the phone above), so the address is
+      // now a convenience rather than the only copy, and requiring it would force a guest
+      // with no mailbox to invent one. `Validators.required` is gone from here and from
+      // BookingReqDtoValidator in the same card — a field the form lets through and the
+      // server 400s is the worst of both.
+      email: ['', [Validators.email]],
     });
   }
 

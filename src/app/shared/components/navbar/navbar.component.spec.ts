@@ -596,6 +596,30 @@ describe('NavbarComponent hamburger menu', () => {
     expect(link).withContext('how-to-book link should be in the panel').toBeTruthy();
   });
 
+  // OBRS-857 AC: "หน้า FE เข้าถึงได้จากหน้าแรกโดยไม่ต้องล็อกอิน". Both breakpoints are asserted,
+  // and the mobile one is not a duplicate: `.navbar-desktop-only` hides the desktop link outright
+  // at ≤992px, which is where most of this traffic is, and OBRS-1069 already shipped once with a
+  // navbar element that existed only above the breakpoint.
+  it('the booking-lookup link is in the DESKTOP bar for a signed-out visitor', () => {
+    component.isLogin = false;
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('a.navbar-desktop-only[href="/find-booking"]')))
+      .withContext('a guest has no account to sign into — this link is their only way in')
+      .toBeTruthy();
+  });
+
+  it('the booking-lookup link is in the MOBILE panel for a signed-out visitor', () => {
+    component.isLogin = false;
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const mobilePanel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    expect(mobilePanel.query(By.css('a.navbar-mobile-link[href="/find-booking"]')))
+      .withContext('the desktop link is display:none at ≤992px — this is not a duplicate')
+      .toBeTruthy();
+  });
+
   it('mobile panel contains sign-in and register links when logged out', () => {
     component.isMobileMenuOpen = true;
     fixture.detectChanges();
@@ -643,5 +667,114 @@ describe('NavbarComponent hamburger menu', () => {
 
     // The switcher manages its own state; the parent panel stays open.
     expect(component.isMobileMenuOpen).toBe(true);
+  });
+});
+
+// OBRS-1069 — below 992px the whole `.button-container.navbar-desktop-only`
+// block is display:none, and it held the avatar, which was the only thing on
+// the public navbar that said which account you were on. These pin the
+// replacement: the mobile panel names the account IN FULL, and only when there
+// is one.
+describe('OBRS-1069 — signed-in identity in the ≤992px mobile panel', () => {
+  const EMAIL = 'customer@system.local';
+
+  async function createNavbar(
+    loggedIn: boolean,
+    username: string | null = EMAIL,
+  ): Promise<ComponentFixture<NavbarComponent>> {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      declarations: [NavbarComponent, LangSwitcherComponent, ThemeToggleComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        {
+          provide: AuthService,
+          useValue: {
+            authStatus$: new BehaviorSubject<boolean>(loggedIn),
+            getUsername: () => username,
+            hasAnyRole: () => false,
+          },
+        },
+        { provide: AlertService, useValue: { success: () => {} } },
+        { provide: PrimeNG, useValue: { setTranslation: () => {} } },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
+        { provide: ThemeService, useValue: createThemeServiceStub() },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NavbarComponent);
+    fixture.componentInstance.isMobileMenuOpen = true;
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('shows the FULL email — not the initials — in the mobile panel when logged in', async () => {
+    const fixture = await createNavbar(true);
+
+    const panel = fixture.debugElement.query(By.css('#navbar-mobile-panel'));
+    const emailEl = panel.query(By.css('.navbar-mobile-identity-email'));
+
+    // Assert the effect (the address a user can read), not the proxy (an
+    // element exists): an empty span would satisfy a presence-only check while
+    // leaving the bug exactly as reported.
+    expect(emailEl).withContext('identity email element should render').toBeTruthy();
+    expect(emailEl.nativeElement.textContent.trim()).toBe(EMAIL);
+    expect(panel.nativeElement.textContent).toContain(EMAIL);
+  });
+
+  it('renders the identity block ABOVE the menu links', async () => {
+    const fixture = await createNavbar(true);
+
+    const panel: HTMLElement = fixture.debugElement.query(By.css('#navbar-mobile-panel')).nativeElement;
+    const identity = panel.querySelector('.navbar-mobile-identity')!;
+    const firstLink = panel.querySelector('.navbar-mobile-link')!;
+
+    expect(identity).withContext('identity block should render').toBeTruthy();
+    expect(identity.compareDocumentPosition(firstLink) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .withContext('the identity block must precede the first menu link in the panel')
+      .toBeTruthy();
+  });
+
+  it('labels the address with the translated HOME.NAVBAR.SIGNED_IN_AS key', async () => {
+    const fixture = await createNavbar(true);
+
+    const label = fixture.debugElement.query(By.css('.navbar-mobile-identity-label'));
+    expect(label).withContext('identity label should render').toBeTruthy();
+    // TranslateModule.forRoot() ships no dictionary here, so the pipe echoes
+    // the key — which is exactly what proves the template is wired to the key
+    // rather than to a hardcoded Thai string.
+    expect(label.nativeElement.textContent.trim()).toBe('HOME.NAVBAR.SIGNED_IN_AS');
+  });
+
+  it('shows NO identity block when logged out, and keeps sign-in/register', async () => {
+    const fixture = await createNavbar(false);
+
+    const panel = fixture.debugElement.query(By.css('#navbar-mobile-panel'));
+    expect(panel.query(By.css('.navbar-mobile-identity')))
+      .withContext('a logged-out visitor has no account to name')
+      .toBeNull();
+    expect(panel.nativeElement.textContent).not.toContain('@');
+    expect(panel.query(By.css('a.navbar-mobile-link[href="/login"]'))).toBeTruthy();
+    expect(panel.query(By.css('a.navbar-mobile-link[href="/register"]'))).toBeTruthy();
+  });
+
+  it('shows NO identity block when logged in but the username is unavailable', async () => {
+    const fixture = await createNavbar(true, null);
+
+    const panel = fixture.debugElement.query(By.css('#navbar-mobile-panel'));
+    expect(panel.query(By.css('.navbar-mobile-identity')))
+      .withContext('an empty identity row is worse than none — it says nothing and takes space')
+      .toBeNull();
+  });
+
+  it('leaves the desktop avatar in place, still inside .navbar-desktop-only', async () => {
+    const fixture = await createNavbar(true);
+
+    const avatar: HTMLElement | null = fixture.nativeElement.querySelector('.navbar-avatar');
+    expect(avatar).withContext('desktop avatar must survive this fix').toBeTruthy();
+    expect(avatar!.textContent!.trim()).toBe('CU');
+    expect(avatar!.closest('.navbar-desktop-only'))
+      .withContext('the avatar must stay inside the desktop-only block — this fix does not touch >992px')
+      .toBeTruthy();
   });
 });

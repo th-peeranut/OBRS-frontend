@@ -225,6 +225,19 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
     return this.policy?.refundMethod === MANUAL_REFUND_METHOD;
   }
 
+  /**
+   * OBRS-1136 AC-3 — same published wait as the customer's own cancel dialog, off the same
+   * `/cancel-policy` quote. This screen reuses `MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE`, so it has
+   * to supply the same parameter; the salesperson is about to say this out loud to the person
+   * standing at the counter, and them hearing a different number from the one the customer's own
+   * screen shows is exactly the drift AC-2's rule exists to prevent. Null-guarded for the same
+   * split-deploy reason as the customer modal.
+   */
+  protected get manualRefundDueDays(): number | null {
+    const days = this.policy?.manualRefundDueDays;
+    return typeof days === 'number' && days > 0 ? days : null;
+  }
+
   // ── Cash step-up: ask the owner, then type the code they issue ────────────
 
   private applyApproverValidators(required: boolean): void {

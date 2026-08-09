@@ -69,8 +69,10 @@ export const appRoutes: Routes = [
   // asymmetry that produced a false "session expired" at the payment button.
   // Both spellings are pinned by app-routing.module.spec.ts, in both directions.
   //
-  // When real guest checkout lands (OBRS-858) `requireAuth` comes back OUT of the
-  // two routes below; it is a short-term alignment, not the destination.
+  // OBRS-858 landed and did exactly that: `requireAuth` is gone from /passenger-info
+  // and /payment below. The paragraph above is kept because it records WHY those two
+  // routes were ever guarded - to mirror the backend, not to protect anything of their
+  // own - which is the reason removing the guard is safe rather than a loosening.
   {
     path: 'schedule-booking',
     canActivate: [AuthGuard],
@@ -89,10 +91,17 @@ export const appRoutes: Routes = [
         (m) => m.ReviewScheduleBookingModule
       ),
   },
+  // OBRS-858: `requireAuth` is OUT of both routes below, which is the removal OBRS-856
+  // announced above. It was never a rule of its own - it existed only to mirror what
+  // POST /api/private/bookings enforced, so that the sign-in prompt arrived before the
+  // form rather than at the payment button. Guest checkout moves that endpoint
+  // (POST /api/bookings, ADR-0123 Decision 1) and there is no longer anything server-side
+  // for the guard to mirror; leaving it would be the frontend refusing a request the
+  // backend now accepts. Pinned in both directions by app-routing.module.spec.ts.
   {
     path: 'passenger-info',
     canActivate: [AuthGuard],
-    data: { customerArea: true, requireAuth: true },
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/passenger-info/passenger-info.module').then(
         (m) => m.PassengerInfoModule
@@ -101,7 +110,7 @@ export const appRoutes: Routes = [
   {
     path: 'payment',
     canActivate: [AuthGuard],
-    data: { customerArea: true, requireAuth: true },
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/payment/payment.module').then(
         (m) => m.PaymentModule
@@ -218,6 +227,27 @@ export const appRoutes: Routes = [
     data: { requiredRoles: ['driver', 'salesperson'] },
     loadChildren: () =>
       import('./modules/staff/staff.module').then((m) => m.StaffModule),
+  },
+
+  {
+    // OBRS-857: the PUBLIC booking lookup — booking number + the phone the booking
+    // was made with, no account. `customerArea: true` and NO `requireAuth`, the same
+    // shape as track-parcel below, and it must stay that way: a guest is precisely
+    // who this page is for, so a `requireAuth` here would not tighten the page, it
+    // would delete it.
+    //
+    // This is the precondition for ever making email optional at checkout (OBRS-858).
+    // SMS is off and there is no LINE channel, so once the tab closes a guest's only
+    // remaining copy of the ticket is the booking number — ADR-0123 Decision 5 settles
+    // that the answer is RETRIEVAL, not delivery, and this route is that answer.
+    // Pinned in both directions by app-routing.module.spec.ts.
+    path: 'find-booking',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
+    loadChildren: () =>
+      import('./modules/find-booking/find-booking.module').then(
+        (m) => m.FindBookingModule
+      ),
   },
 
   {

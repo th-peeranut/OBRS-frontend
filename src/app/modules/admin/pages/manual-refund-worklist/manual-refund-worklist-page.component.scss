@@ -28,6 +28,17 @@
   font-variant-numeric: tabular-nums;
 }
 
+// OBRS-1136 AC-4: the due date under the age chip. Muted and small on purpose —
+// it is the chip's justification, not a second signal competing with it. Same
+// `--admin-muted` token + 12px step as `.mrw-contact-links` below, so no new
+// type scale or colour enters the design system for this.
+.mrw-due-date {
+  margin-top: 2px;
+  color: var(--admin-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .mrw-contact-links {
   display: flex;
   flex-direction: column;

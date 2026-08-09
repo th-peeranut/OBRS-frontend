@@ -33,10 +33,11 @@
   ],
 
   "bundledScripts": [
-    "node_modules/jquery/dist/jquery.min.js",
     "node_modules/@popperjs/core/dist/umd/popper.min.js",
     "node_modules/bootstrap/dist/js/bootstrap.min.js"
   ],
+
+  "_obrs1135_note": "jquery.min.js was removed from this list, from BOTH scripts[] arrays in angular.json, and from package.json (OBRS-1135). It had zero call sites: one grep hit in src/ and it is a comment, no `$(`, no `import from 'jquery'`, and npm ls showed nothing depended on it. The prose inventory justified it as 'Bootstrap 5's JS still expects it in this app's setup' - that was measurably false. bootstrap.min.js does name jQuery 16 times, but only through getjQuery(), which returns null when window.jQuery is absent and skips registering the jQuery plugin bridge; bootstrap@5.3.3 peerDependencies lists @popperjs/core alone. Measured: initial bundle 1,851,483 -> 1,771,928 B. NOTE FOR WHOEVER EDITS scripts[] NEXT: this used to warn that check-payment-page-scripts.mjs read architect.build.options ONLY, leaving the architect.test.options copy ungated and kept in step by hand. It is gated now - rule 6 of that file compares the two arrays to each other, load order included (OBRS-1150), driven by self-test cases covering both directions of the OBRS-1135 near-miss. Rewritten rather than deleted: a note still describing a hand-kept discipline would send the next reader looking for one that no longer exists.",
 
   "sitCspOrigins": [
     "https://accounts.google.com",

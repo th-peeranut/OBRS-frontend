@@ -202,7 +202,7 @@ export interface SweepPage {
  * The routed component each customer page must actually mount, keyed by
  * `CUSTOMER_PAGES[].key`.
  *
- * Not derived from `CustomerPage.mustRender`: three of the eight declare none
+ * Not derived from `CustomerPage.mustRender`: three of the nine declare none
  * (they exist for the contrast gate, which needs a CONTROL to measure, and those
  * pages have none worth naming), and the generic fallback this replaced --
  * `app-root > *` -- resolved to the `<router-outlet>` element itself, which
@@ -223,6 +223,9 @@ export const CUSTOMER_HOST: Record<string, string> = {
   'passenger-info': 'app-passenger-info',
   payment: 'app-payment',
   'e-ticket': 'app-e-ticket',
+  // OBRS-857. Registering it here is what made its missing `:host { display: block }` visible:
+  // the page shipped as an inline host and nothing had ever swept it.
+  'find-booking': 'app-find-booking-page',
 };
 
 /** `CUSTOMER_PAGES` restated in this module's shape. */
@@ -423,6 +426,28 @@ export const ADMIN_SWEEP: SweepPage[] = [
   // sweeping whichever page it redirected to.
   { key: 'admin-schedules', url: '/admin/schedules', landsOn: /\/admin\/schedules$/, requires: 'app-schedules-page' },
   { key: 'admin-reports', url: '/admin/reports', landsOn: /\/admin\/reports$/, requires: 'app-reports-page' },
+
+  // --- OBRS-1147 ------------------------------------------------------------
+  // The staff per-head earnings page carries the same two `p-datepicker`s as
+  // the filter rows above, so the coverage gate named it on the first run after
+  // it landed -- the gate working, not a flake.
+  //
+  // Reached with this sweep's ['admin'] session for the same reason
+  // `/staff/sell` is: admin holds cross-portal access (OBRS-176), so the route's
+  // own requiredRoles: ['salesperson','driver'] does not bounce it.
+  //
+  // `requires` names the p-datepicker rather than only the page selector,
+  // because the filter row renders unconditionally ABOVE every contentState
+  // branch -- so this lane's empty backend still RENDERS the host being
+  // measured. A bare `app-my-earnings-page` would pass on a page whose PrimeNG
+  // tag never rendered, which is the false coverage OBRS-776 added this half of
+  // the gate to prevent.
+  {
+    key: 'staff-my-earnings',
+    url: '/staff/my-earnings',
+    landsOn: /\/staff\/my-earnings$/,
+    requires: 'app-my-earnings-page p-datepicker',
+  },
 
   // --- OBRS-941 -------------------------------------------------------------
   // The five analytics pages OBRS-151..155 added under the same `reports`

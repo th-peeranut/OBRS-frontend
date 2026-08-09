@@ -17,6 +17,20 @@
 
   <app-driver-cash-day-summary [day]="day" [isLoading]="isLoading"></app-driver-cash-day-summary>
 
+  <!-- OBRS-1073: the salesperson's OWN box. Separate from the driver's day
+  above on purpose - the per-head fee is their pay, and the amount they hand
+  back tonight is theirs, not his. Appears only once they have recorded
+  something, so a round where nobody took a head looks exactly as before. -->
+  @if (myDay) {
+    <div class="dcp-my-day" data-testid="driver-cash-my-day">
+      <span class="admin-emphasis">{{ 'STAFF.DRIVER_CASH.MY_DAY.TITLE' | translate }}</span>
+      <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.MY_DAY.PER_HEAD_EARNED' | translate }}</span>
+      <span data-testid="driver-cash-my-day-per-head">{{ myDay.perHeadTotal }}</span>
+      <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.MY_DAY.TO_RETURN' | translate }}</span>
+      <span class="dcp-net-pill" data-testid="driver-cash-my-day-net">{{ myDay.expectedReturnAmount }}</span>
+    </div>
+  }
+
   <div class="dcp-actions">
     <button
       type="button"
@@ -48,7 +62,7 @@
     </button>
     @if (isActionOpen('perHead')) {
       <app-driver-cash-per-head-form
-        [rates]="day?.perHeadRates ?? []"
+        [rates]="perHeadRates"
         [isSubmitting]="isSubmitting"
         [submitError]="perHeadError"
         (submitPerHead)="onSubmitPerHead($event)"

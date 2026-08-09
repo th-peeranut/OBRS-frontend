@@ -155,6 +155,44 @@ const PRIVACY_LEDGER = [
     effectiveDate: '2026-08-01',
     fingerprint: 'ca341e732b1d6797680b6ee2000c48b077736a60f5845d90634310d7333c8120',
   },
+  {
+    // OBRS-1095. One sentence changed: the telephone number in section 1. 2.0
+    // told a data subject to call 09 0562 2019 to reach the managing partner
+    // about a section 30-36 request; the owner confirmed that number is the Nong
+    // Chak ticket counter. A counter clerk can neither grant nor refuse such a
+    // request, so the only telephone channel the notice offered could not
+    // deliver the 30-day answer the same notice promises. 08 1428 4492 reaches
+    // the managing partner.
+    //
+    // Nothing else moved: no right, purpose, recipient, retention period or
+    // transfer changed, and no new category of data is collected. It is still a
+    // new version because a version identifies one text forever — and because
+    // the channel for exercising a right is a term of the notice, not a
+    // typographical detail (section 23(6)).
+    version: '2.1',
+    effectiveDate: '2026-08-06',
+    fingerprint: 'f0972cfb0f91ec852fced0806f3f7cd81232cdf326a1297adb005d8ad7da0e2e',
+  },
+  {
+    // OBRS-1140 AC#3. One bullet added to section 6: the export-audit trail.
+    //
+    // 2.1 listed retention for every category of personal data the notice knew
+    // about, and that list was complete for the data a customer gives us. It was
+    // silent about a record we keep ABOUT that data -- export_audit_log, which
+    // stores which member of staff exported which dataset, when, and the search
+    // filters they used. The filters are personal data (a phone number typed in
+    // to find one booking is a phone number), and until this card nothing deleted
+    // any of it. Section 6 now states both periods: the filters are erased after
+    // 90 days, the rest of the audit row after a year.
+    //
+    // A new version rather than a correction: the notice's retention section is
+    // the promise a data subject reads to learn how long we hold what, and it now
+    // names a category it did not name before. Nothing was removed and no right,
+    // recipient, purpose or transfer changed.
+    version: '2.2',
+    effectiveDate: '2026-08-09',
+    fingerprint: 'f501c8d66bf52ac63e488cb1f979c78d6521b4639d06e93b5e4a275543b70f66',
+  },
 ];
 
 function privacyFingerprint(json) {
@@ -253,7 +291,15 @@ const PRIVACY_REQUIRED_TH = [
   ['มาตรา 73', 'the right to complain to the PDPC'],
   // A right with no reachable channel is not a right (section 23(6)).
   ['contact@nj-phuyaipu.com', 'the contact address for exercising rights'],
-  ['09 0562 2019', 'the contact telephone number'],
+  // OBRS-1095 changed this number, and the change is the point rather than a
+  // rewording. It used to be 09 0562 2019, which the owner confirmed is the
+  // Nong Chak TICKET COUNTER. A counter clerk can neither grant nor refuse a
+  // section 30-36 request, so the channel this notice named could not deliver
+  // the 30-day answer the same notice promises. 08 1428 4492 reaches the
+  // managing partner, who is the person the sentence has always claimed it
+  // reaches. The footer still lists the counter number and should — that is the
+  // general "contact us" line, and the counter is the right destination for it.
+  ['08 1428 4492', 'the contact telephone number'],
   ['0203557004978', 'the legal identity of the controller'],
   // The response time we bind ourselves to, and its lawful extension.
   ['30 วัน', 'the response deadline'],

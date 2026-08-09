@@ -17,6 +17,7 @@ const DAY_RESP: DriverCashDayRespDto = {
   dayId: 1,
   driverId: 5,
   driverName: 'Somchai',
+  holderRole: 'DRIVER',
   businessDate: '2026-08-01',
   vehicleId: 42,
   status: 'OPEN',

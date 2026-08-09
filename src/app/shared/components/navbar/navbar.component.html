@@ -12,6 +12,17 @@
     >
     {{ "HOME.NAVBAR.BOOKING" | translate }}
   </a>
+  <!-- OBRS-857: the public booking lookup. Shown to EVERYONE, signed in or not — a customer who
+       booked as a guest has no account to sign into, which is the whole reason the page exists.
+       It sits with the nav links rather than in the profile menu for that same reason: the
+       profile menu only opens for someone who already has an account. -->
+  <a
+    class="menu-font navbar-desktop-only"
+    routerLink="/find-booking"
+    routerLinkActive="menu-font-active"
+    >
+    {{ "HOME.NAVBAR.FIND_BOOKING" | translate }}
+  </a>
   <button
     type="button"
     class="menu-font menu-font-action navbar-desktop-only"
@@ -53,44 +64,17 @@
         </button>
         @if (isProfileDropdownOpen) {
           <div class="navbar-profile-menu" role="menu">
-            <a
-              class="navbar-profile-item"
-              role="menuitem"
-              [routerLink]="'/account'"
-              (click)="isProfileDropdownOpen = false"
-              >
-              <span class="material-symbols-outlined">manage_accounts</span>
-              <span>{{ "HOME.NAVBAR.ACCOUNT" | translate }}</span>
-            </a>
-            <a
-              class="navbar-profile-item"
-              role="menuitem"
-              [routerLink]="'/my-bookings'"
-              (click)="isProfileDropdownOpen = false"
-              >
-              <span class="material-symbols-outlined">confirmation_number</span>
-              <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
-            </a>
-            @if (isOnlineParcelBookingEnabled) {
+            @for (item of personalMenuItems; track item.path) {
               <a
                 class="navbar-profile-item"
                 role="menuitem"
-                [routerLink]="'/my-parcels'"
+                [routerLink]="item.path"
                 (click)="isProfileDropdownOpen = false"
                 >
-                <span class="material-symbols-outlined">local_shipping</span>
-                <span>{{ "HOME.NAVBAR.MY_PARCELS" | translate }}</span>
+                <span class="material-symbols-outlined">{{ item.icon }}</span>
+                <span>{{ item.labelKey | translate }}</span>
               </a>
             }
-            <a
-              class="navbar-profile-item"
-              role="menuitem"
-              [routerLink]="'/my-reports'"
-              (click)="isProfileDropdownOpen = false"
-              >
-              <span class="material-symbols-outlined">flag</span>
-              <span>{{ "HOME.NAVBAR.MY_REPORTS" | translate }}</span>
-            </a>
             @if (isAdmin) {
               <a
                 class="navbar-profile-item"
@@ -157,7 +141,24 @@
       <app-lang-switcher menuAlign="left"></app-lang-switcher>
       <app-theme-toggle ariaLabelKey="HOME.NAVBAR.THEME_TOGGLE"></app-theme-toggle>
     </div>
-    <!-- 2. Nav links -->
+    <!-- 2. Signed-in identity (OBRS-1069) — the ≤992px answer to "which account
+         am I on?". The avatar that answers it above 992px lives inside
+         `.button-container.navbar-desktop-only`, which this breakpoint hides
+         outright, so the panel had no user indicator of any kind. Sits above
+         the menu links, below the language/theme row that the mobile UX spec
+         pins to the top. -->
+    @if (isLogin && userEmail) {
+      <div class="navbar-mobile-section navbar-mobile-identity">
+        <span class="navbar-mobile-identity-avatar" aria-hidden="true">{{ userInitials }}</span>
+        <span class="navbar-mobile-identity-text">
+          <span class="navbar-mobile-identity-label">
+            {{ "HOME.NAVBAR.SIGNED_IN_AS" | translate }}
+          </span>
+          <span class="navbar-mobile-identity-email">{{ userEmail }}</span>
+        </span>
+      </div>
+    }
+    <!-- 3. Nav links -->
     <div class="navbar-mobile-section">
       <a
         class="navbar-mobile-link"
@@ -168,6 +169,19 @@
         <span class="material-symbols-outlined">directions_bus</span>
         <span>{{ "HOME.NAVBAR.BOOKING" | translate }}</span>
       </a>
+      <!-- OBRS-857: the mobile twin of the desktop link above. It is NOT optional — the
+           `.navbar-desktop-only` class hides that one outright at ≤992px, which is where most
+           of this traffic is, and OBRS-1069 already shipped once with a nav element that
+           existed only above the breakpoint. -->
+      <a
+        class="navbar-mobile-link"
+        routerLink="/find-booking"
+        routerLinkActive="navbar-mobile-link-active"
+        (click)="closeMobileMenu()"
+        >
+        <span class="material-symbols-outlined">confirmation_number</span>
+        <span>{{ "HOME.NAVBAR.FIND_BOOKING" | translate }}</span>
+      </a>
       <button
         type="button"
         class="navbar-mobile-link"
@@ -177,7 +191,7 @@
         <span>{{ "HOME.NAVBAR.CONTACT" | translate }}</span>
       </button>
     </div>
-    <!-- 3. Auth area -->
+    <!-- 4. Auth area -->
     <div class="navbar-mobile-section">
       @if (!isLogin) {
         <a class="navbar-mobile-link" routerLink="/login" (click)="closeMobileMenu()">
@@ -190,40 +204,16 @@
         </a>
       }
       @if (isLogin) {
-        <a
-          class="navbar-mobile-link"
-          routerLink="/account"
-          (click)="closeMobileMenu()"
-          >
-          <span class="material-symbols-outlined">manage_accounts</span>
-          <span>{{ "HOME.NAVBAR.ACCOUNT" | translate }}</span>
-        </a>
-        <a
-          class="navbar-mobile-link"
-          routerLink="/my-bookings"
-          (click)="closeMobileMenu()"
-          >
-          <span class="material-symbols-outlined">confirmation_number</span>
-          <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
-        </a>
-        @if (isOnlineParcelBookingEnabled) {
+        @for (item of personalMenuItems; track item.path) {
           <a
             class="navbar-mobile-link"
-            routerLink="/my-parcels"
+            [routerLink]="item.path"
             (click)="closeMobileMenu()"
             >
-            <span class="material-symbols-outlined">local_shipping</span>
-            <span>{{ "HOME.NAVBAR.MY_PARCELS" | translate }}</span>
+            <span class="material-symbols-outlined">{{ item.icon }}</span>
+            <span>{{ item.labelKey | translate }}</span>
           </a>
         }
-        <a
-          class="navbar-mobile-link"
-          routerLink="/my-reports"
-          (click)="closeMobileMenu()"
-          >
-          <span class="material-symbols-outlined">flag</span>
-          <span>{{ "HOME.NAVBAR.MY_REPORTS" | translate }}</span>
-        </a>
         @if (isAdmin) {
           <a
             class="navbar-mobile-link"
