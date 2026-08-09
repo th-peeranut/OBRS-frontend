@@ -1069,7 +1069,7 @@
         "CONFIRM": "确认越权",
         "SUBMITTING": "正在取消…",
         "SUCCESS": "预订已取消。",
-        "SUCCESS_CASH": "预订已取消。需退还现金 {{refund}} 给客户。",
+        "SUCCESS_CASH": "预订已取消。{{refund}} 尚未退还，已进入人工退款队列。请联系客户索取银行账户或 PromptPay 号码，然后转账退还。",
         "SUCCESS_MANUAL": "预订已取消。退款 {{refund}} 尚未支付，需由您转账给客户。",
         "SUCCESS_AUTO": "预订已取消。{{refund}} 正在退回客户付款时使用的渠道。",
         "FAILED": "无法取消此预订，请重试。"
@@ -2611,7 +2611,7 @@
       "RATES": "<h2>您自行取消时的退款比例</h2>\n<ul>\n<li>在发车前 <strong>超过 {{earlyWindowHours}} 小时</strong> 取消 — 退还 <strong>{{refundRateEarlyPercent}}%</strong></li>\n<li>在发车前 <strong>{{cancelWindowHours}} 至 {{earlyWindowHours}} 小时</strong> 之间取消 — 退还 <strong>{{refundRateLatePercent}}%</strong></li>\n<li>距发车 <strong>不足 {{cancelWindowHours}} 小时</strong> 时 — <strong>无法取消</strong>，也不予退款</li>\n</ul>\n<p>未退还的部分为取消手续费。上述比例按该订单仍可退还的金额计算，如该订单此前已有部分退款，该金额可能少于您最初支付的金额。</p>",
       "RATES_ERROR": "目前无法显示退款比例。",
       "RETRY": "重试",
-      "CONTENT_2": "<h2>退款退回何处</h2>\n<p>取决于您的付款方式，系统会在您确认取消之前告知。</p>\n<ul>\n<li><strong>信用卡／借记卡及电子钱包</strong> — 系统自动原路退回。到账时间取决于您的发卡机构或钱包服务商。</li>\n<li><strong>PromptPay（二维码）、银行转账及现金</strong> — 这些方式无法自动退款。系统会在取消流程中请您填写收款银行账户或 PromptPay 号码，再由工作人员转账退还。</li>\n<li>若同一订单混合使用多种付款方式，同样由工作人员处理退款。</li>\n</ul>\n<p>我们没有需要您亲自前往领取的现金退款，也没有会令您的退款权利失效的期限。</p>",
+      "CONTENT_2": "<h2>退款退回何处</h2>\n<p>取决于您的付款方式，系统会在您确认取消之前告知。</p>\n<ul>\n<li><strong>信用卡／借记卡及电子钱包</strong> — 系统自动原路退回。到账时间取决于您的发卡机构或钱包服务商。</li>\n<li><strong>PromptPay（二维码）及银行转账</strong> — 这些方式无法自动退款。系统会在取消流程中请您填写收款银行账户或 PromptPay 号码，再由工作人员转账退还。</li>\n<li><strong>现金</strong> — 若在售票的柜台办理取消，工作人员会当场把现金退还给您。若改由我们从办公室为您取消订票，该笔款项仍欠您：工作人员会联系您索取银行账户或 PromptPay 号码，再转账退还。</li>\n<li>若同一订单混合使用多种付款方式，同样由工作人员处理退款。</li>\n</ul>\n<p>我们没有需要您亲自前往领取的现金退款，也没有会令您的退款权利失效的期限。</p>",
       "MANUAL_TIMING": "<p>需由工作人员手动处理的退款，将在您取消后 {{manualRefundDueDays}} 天内退还给您。此处按日历日计算，包含周末和法定节假日，因为我们的售票点全年无休。</p>",
       "CONTENT_3": "<h2>本公司取消班次时</h2>\n<p>若班次由本公司取消，该班次全额退款，不扣除任何手续费。您无需自行取消，我们会通知您。</p>\n<p>若往返订单中仅一程被取消，则只退还该程，另一程仍可正常乘车，订单的付款状态会显示为部分退款。</p>\n<h2>未乘车</h2>\n<p>若您既未在上述时限内取消，也未按所订班次乘车，视为放弃乘车权利，不予退款。</p>",
       "SEE_BUSINESS_POLICY": "改期及其他服务条款"
