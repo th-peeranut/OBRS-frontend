@@ -95,7 +95,7 @@ describe('collectBookableDestinationSlugs', () => {
 
     const slugs = collectBookableDestinationSlugs([route], 'midway');
 
-    expect([...slugs]).toEqual(['late']);
+    expect([...slugs]).toEqual(jasmine.arrayWithExactContents(['late']));
   });
 
   it('excludes a drop-off sharing the origin stop’s own order', () => {
@@ -104,9 +104,9 @@ describe('collectBookableDestinationSlugs', () => {
       dropoff: [stop(3, 'same-stop'), stop(4, 'onward')],
     };
 
-    expect([...collectBookableDestinationSlugs([route], 'same-stop')]).toEqual([
-      'onward',
-    ]);
+    expect([...collectBookableDestinationSlugs([route], 'same-stop')]).toEqual(
+      jasmine.arrayWithExactContents(['onward'])
+    );
   });
 
   it('unions what BOTH routes can reach when the origin is served by both', () => {
@@ -143,13 +143,13 @@ describe('filterStationsBySlugs', () => {
   it('keeps only the stations whose slug is in the set', () => {
     const kept = filterStationsBySlugs(roster, new Set(['nong-chak', 'mo-chit']));
 
-    expect(kept.map((s) => s.id)).toEqual([2, 3]);
+    expect(kept.map((s) => s.id)).toEqual(jasmine.arrayWithExactContents([2, 3]));
   });
 
   it('returns the roster untouched for a null set (AC#6 degrade path)', () => {
-    expect(filterStationsBySlugs(roster, null).map((s) => s.id)).toEqual([
-      1, 2, 3, 4,
-    ]);
+    expect(filterStationsBySlugs(roster, null).map((s) => s.id)).toEqual(
+      jasmine.arrayWithExactContents([1, 2, 3, 4])
+    );
   });
 
   it('honours an EMPTY set as "nothing qualifies", unlike null', () => {

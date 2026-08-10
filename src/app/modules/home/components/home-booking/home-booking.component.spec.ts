@@ -72,10 +72,9 @@ function makeHomeBooking(
   );
 }
 
-/** OBRS-1213: a RouteMapService stub that answers with real route segments.
- *  One route, `station-1 → station-2 → station-3` as pickups and
- *  `station-3 → station-4` as drop-offs, so `station-4` is dropoff-only (the
- *  prod shape: a Bangkok stop nobody can depart from) and `station-3` is both. */
+/** OBRS-1213: a RouteMapService stub that answers with real route segments —
+ *  `[{slug, segments: {pickup, dropoff}}]`. See ROUTES below for the shape the
+ *  tests use and why. */
 function createRouteMapServiceStubWithRoutes(routes: unknown[]): any {
   const bySlug = new Map<string, unknown>(
     routes.map((r: any) => [r.slug, r.segments])
@@ -1249,7 +1248,7 @@ describe('HomeBookingComponent — the dropdowns offer only stops that can produ
   it('AC#1: the origin dropdown drops every stop that is nobody’s pickup', () => {
     const component = build(createRouteMapServiceStubWithRoutes(ROUTES));
 
-    expect(originIds(component)).toEqual([1, 2, 3]);
+    expect(originIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2, 3]));
     // 4 is a drop-off on both routes and a pickup on neither (the four Bangkok
     // stops on prod); 5 is on no route at all. Both were selectable before this
     // card and neither could ever produce a trip.
@@ -1260,7 +1259,7 @@ describe('HomeBookingComponent — the dropdowns offer only stops that can produ
   it('AC#2: the destination dropdown drops every stop that is nobody’s drop-off', () => {
     const component = build(createRouteMapServiceStubWithRoutes(ROUTES));
 
-    expect(destinationIds(component)).toEqual([1, 3, 4]);
+    expect(destinationIds(component)).toEqual(jasmine.arrayWithExactContents([1, 3, 4]));
     // `station-2` is a pickup on the outbound route and a drop-off nowhere.
     expect(destinationIds(component)).not.toContain(2);
     expect(destinationIds(component)).not.toContain(5);
@@ -1275,7 +1274,7 @@ describe('HomeBookingComponent — the dropdowns offer only stops that can produ
     // the van by then and only the order-7 one remains. The inbound route
     // contributes nothing — `station-2` is not a pickup on it, so its own
     // `station-1` drop-off must not leak in.
-    expect(destinationIds(component)).toEqual([4]);
+    expect(destinationIds(component)).toEqual(jasmine.arrayWithExactContents([4]));
   });
 
   it('AC#3: each origin gets its OWN route’s downstream stops, not a shared list', () => {
@@ -1285,7 +1284,7 @@ describe('HomeBookingComponent — the dropdowns offer only stops that can produ
 
     // `station-3` is a pickup only on the inbound route, whose single drop-off
     // is `station-1`.
-    expect(destinationIds(component)).toEqual([1]);
+    expect(destinationIds(component)).toEqual(jasmine.arrayWithExactContents([1]));
   });
 
   it('AC#3: a destination the new origin has just invalidated is CLEARED, not left selected', () => {
@@ -1324,14 +1323,14 @@ describe('HomeBookingComponent — the dropdowns offer only stops that can produ
       getFirstActiveRouteSlug: () => of(null),
     });
 
-    expect(originIds(component)).toEqual([1, 2, 3, 4, 5]);
-    expect(destinationIds(component)).toEqual([1, 2, 3, 4, 5]);
+    expect(originIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2, 3, 4, 5]));
+    expect(destinationIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2, 3, 4, 5]));
   });
 
   it('AC#6: an empty active-route list degrades the same way — it is not a claim that nothing is bookable', () => {
     const component = build(createRouteMapServiceStubWithRoutes([]));
 
-    expect(originIds(component)).toEqual([1, 2, 3, 4, 5]);
+    expect(originIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2, 3, 4, 5]));
   });
 
   it('AC#6: a route whose pickup-dropoff call fails is skipped, not treated as empty', () => {
@@ -1343,7 +1342,7 @@ describe('HomeBookingComponent — the dropdowns offer only stops that can produ
       getFirstActiveRouteSlug: () => of(null),
     });
 
-    expect(originIds(component)).toEqual([1, 2]);
+    expect(originIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2]));
   });
 
   it('composes with the pre-existing rule that neither side offers the stop chosen on the other', () => {
@@ -1356,6 +1355,6 @@ describe('HomeBookingComponent — the dropdowns offer only stops that can produ
     component.onEndStationChange(station(3));
 
     expect(component.getFormValue('stopStationId')).toBe(3);
-    expect(originIds(component)).toEqual([1, 2]);
+    expect(originIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2]));
   });
 });

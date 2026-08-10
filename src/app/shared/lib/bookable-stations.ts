@@ -88,7 +88,14 @@ export function collectBookableDestinationSlugs(
 }
 
 /**
- * Narrows a station roster to the given slugs.
+ * Narrows a station roster to the given slugs, in the order the roster came in.
+ *
+ * <p>That order is `GET /api/stops`'s, which is NOT the route's — id 17 and 18
+ * are swapped against `stop_order` on `chonburi_bangkok` alone
+ * (`V66__reorder_chonburi_bangkok_pickup.sql`). Ordering the dropdown is
+ * OBRS-1212's job and deliberately not attempted here; this function only
+ * removes, and its callers' specs assert MEMBERSHIP rather than sequence
+ * (AC#8) so that reordering does not redden them.
  *
  * <p>`null` means "the route data is not available" and returns the roster
  * untouched — AC#6: a failed `/api/routes` degrades to offering everything, the
