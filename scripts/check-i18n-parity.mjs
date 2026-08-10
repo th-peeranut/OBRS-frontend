@@ -193,6 +193,33 @@ const PRIVACY_LEDGER = [
     effectiveDate: '2026-08-09',
     fingerprint: 'f501c8d66bf52ac63e488cb1f979c78d6521b4639d06e93b5e4a275543b70f66',
   },
+  {
+    // OBRS-1140 AC#4, same day as 2.2 and for the mirror-image reason. 2.2 added
+    // the record we keep ABOUT a customer's data; this adds the one category the
+    // customer supplies directly that section 6 had never covered at all.
+    //
+    // Section 2 has always said we collect "ภาพที่ท่านแนบมา" -- the screenshots a
+    // member of the public attaches to a usability report, which is anonymous and
+    // needs no account. Section 6 listed six categories and this was not one of
+    // them, so the notice declared the collection and declared no limit on it,
+    // while the code deleted an attachment only as compensation for a failed
+    // upload. Section 6 now says: kept until the report is closed, then 90 days,
+    // with a two-year backstop for a report nobody ever triaged.
+    //
+    // A new version rather than an amendment to 2.2 even though it is the same
+    // day: 2.2 was published in its own commit and a version identifier that
+    // covers two different texts is the one thing this ledger exists to prevent.
+    //
+    // Dated the 10th and not the 9th because this gate requires the dates to
+    // increase strictly, and it is right to: two versions sharing a date cannot be
+    // ordered by the only field a data subject can see. So the 10th is the first
+    // date on which 2.3 can be in force, which is what an effective date means.
+    // Nobody loses anything by the day: prod serves no site yet (it answers 404),
+    // and the scheduled dev->sit promote does not run until Monday night.
+    version: '2.3',
+    effectiveDate: '2026-08-10',
+    fingerprint: '3e3ae981343e8237641c11b49535e2ded6f9e1e51c85ea30c217eac1f2335c73',
+  },
 ];
 
 function privacyFingerprint(json) {

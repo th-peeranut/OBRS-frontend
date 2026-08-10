@@ -77,18 +77,51 @@ const CANCEL_POLICY_PREVIEW = ok({
   manualRefundDueDays: MANUAL_REFUND_DUE_DAYS,
 });
 
-async function newPage(browser, { authed }) {
+// OBRS-1136 AC-3 reaches a SECOND surface: the salesperson's own cancel dialog at
+// /staff/cancel-booking, which reuses MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE_DUE off the same
+// /cancel-policy quote. It is the number the counter says OUT LOUD to the person standing there,
+// so it gets its own frame rather than riding on the customer one — a shared i18n key is exactly
+// the thing that can be correct on one screen and unreachable on the other.
+const COUNTER_SEARCH_PHONE = '0812345678';
+
+const COUNTER_SEARCH_RESULTS = ok({
+  content: [
+    {
+      bookingId: 1136,
+      bookingNumber: 'BK-1136',
+      contactName: 'สมชาย ใจดี',
+      contactPhoneMasked: '••••5678',
+      status: 'confirmed',
+      netAmount: 500,
+      journeys: [
+        {
+          fromStop: { id: 1, slug: 'nong_chak', translations: [] },
+          toStop: { id: 2, slug: 'mo_chit', translations: [] },
+          departureDateTime: '2026-09-20T08:00:00+07:00',
+        },
+      ],
+    },
+  ],
+  totalElements: 1,
+  totalPages: 1,
+  number: 0,
+  size: 20,
+});
+
+async function newPage(browser, { authed, staff }) {
   const page = await browser.newPage({ viewport: { width: 1100, height: 1400 } });
   await page.addInitScript(
-    ([isAuthed]) => {
+    ([isAuthed, isStaff]) => {
       localStorage.setItem('app_language', 'th');
       if (isAuthed) {
         localStorage.setItem('auth_token', 'fake-customer-token-for-capture');
-        localStorage.setItem('auth_username', 'somchai@example.com');
-        localStorage.setItem('auth_roles', JSON.stringify(['user']));
+        localStorage.setItem('auth_username', isStaff ? 'sales@obrs.test' : 'somchai@example.com');
+        // AuthGuard reads roles from this key, not from the token — nothing in src/app decodes a
+        // JWT (the OBRS-618 finding), so 'salesperson' here is all /staff/cancel-booking needs.
+        localStorage.setItem('auth_roles', JSON.stringify(isStaff ? ['salesperson'] : ['user']));
       }
     },
-    [!!authed],
+    [!!authed, !!staff],
   );
 
   // Catch-all FIRST — last-registered wins in Playwright, so the specific routes below override it.
@@ -98,6 +131,8 @@ async function newPage(browser, { authed }) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(CANCELLATION_POLICY) }));
   await page.route('**/api/private/bookings/me**', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MY_BOOKINGS) }));
+  await page.route('**/api/private/bookings/search**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(COUNTER_SEARCH_RESULTS) }));
   await page.route('**/api/private/bookings/*/cancel-policy', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(CANCEL_POLICY_PREVIEW) }));
   return page;
@@ -143,14 +178,45 @@ async function shotCancelModal(browser, baseUrl, name) {
   await page.close();
 }
 
+/**
+ * The counter's own dialog. Reached the way a salesperson reaches it — search by the phone the
+ * customer reads out, then open the row — rather than by deep-linking a component, because the
+ * thing worth photographing is that the sentence is on the screen a real salesperson lands on.
+ */
+async function shotCounterCancelModal(browser, baseUrl, name) {
+  const page = await newPage(browser, { authed: true, staff: true });
+  await page.goto(`${baseUrl}/staff/cancel-booking`, { waitUntil: 'networkidle' });
+
+  const phone = page.locator('input[formControlName="phone"]');
+  await phone.waitFor({ state: 'visible', timeout: 30000 });
+  await phone.fill(COUNTER_SEARCH_PHONE);
+  await page.locator('form.ccsf-form button[type="submit"]').click();
+
+  const openBtn = page.locator('.ccrl-row .admin-btn-small').first();
+  await openBtn.waitFor({ state: 'visible', timeout: 15000 });
+  await openBtn.click();
+
+  const modal = page.locator('.ccm-modal');
+  await modal.waitFor({ state: 'visible', timeout: 15000 });
+  // The note only exists once the policy fetch resolves; without this the frame can catch the
+  // 'loading' state, which photographs as a modal that simply does not say the number.
+  await page.locator('.ccm-policy').waitFor({ state: 'visible', timeout: 15000 });
+  await assertNoErrorOverlay(page);
+  await modal.screenshot({ path: path.join(ASSETS_DIR, name) });
+  console.log('captured', name);
+  await page.close();
+}
+
 async function main() {
   const browser = await chromium.launch();
 
   await shotRefundPolicy(browser, 'http://localhost:4200', 'OBRS-1136-AFTER-6-refund-policy-th.png');
   await shotCancelModal(browser, 'http://localhost:4200', 'OBRS-1136-AFTER-7-cancel-modal-th.png');
+  await shotCounterCancelModal(browser, 'http://localhost:4200', 'OBRS-1136-AFTER-8-counter-cancel-modal-th.png');
 
   await shotRefundPolicy(browser, 'http://localhost:4205', 'OBRS-1136-BEFORE-2-refund-policy-th.png');
   await shotCancelModal(browser, 'http://localhost:4205', 'OBRS-1136-BEFORE-3-cancel-modal-th.png');
+  await shotCounterCancelModal(browser, 'http://localhost:4205', 'OBRS-1136-BEFORE-4-counter-cancel-modal-th.png');
 
   await browser.close();
   console.log('DONE');

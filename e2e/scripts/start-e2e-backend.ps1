@@ -44,7 +44,8 @@ $DbUser      = if ($env:E2E_DB_USER)        { $env:E2E_DB_USER }        else { '
 $DbPassword  = if ($env:E2E_DB_PASSWORD)    { $env:E2E_DB_PASSWORD }    else { 'P@ssw0rd' }
 $BackendPort = if ($env:E2E_BACKEND_PORT)   { $env:E2E_BACKEND_PORT }   else { '8181' }
 $FrontendUrl = if ($env:E2E_FRONTEND_URL)   { $env:E2E_FRONTEND_URL }   else { 'http://localhost:4210' }
-$JavaHome    = if ($env:JAVA_HOME)          { $env:JAVA_HOME }          else { 'C:\Program Files\Java\jdk-21.0.11' }
+# JAVA_HOME is deliberately NOT a configuration line any more (OBRS-1162) - it is derived
+# from OBRS-backend's own <java.version> below, once $BackendDir has been validated.
 
 # OBRS-732: which fixture this lane seeds is now overridable, because a second lane
 # (the real 3-D Secure journey) needs a PAYABLE booking and the reschedule fixture
@@ -66,6 +67,96 @@ if (-not (Test-Path $BackendDir)) { Fail "OBRS-backend not found at '$BackendDir
 if (-not (Test-Path $FixtureSql)) { Fail "required SQL file missing: $FixtureSql" }
 if (-not (Test-Path $NewLocalDb)) {
     Fail "OBRS-backend/scripts/new-local-db.ps1 not found (OBRS-292). Update '$BackendDir' to a dev that has it."
+}
+
+# ── JDK (OBRS-1162) ────────────────────────────────────────────────────────────
+# This used to be a one-line default in the configuration block above:
+#
+#     $JavaHome = if ($env:JAVA_HOME) { $env:JAVA_HOME } else { 'C:\Program Files\Java\jdk-21.0.11' }
+#
+# It went stale the day OBRS-921 moved OBRS-backend to <java.version>25</java.version>,
+# and stale in the worst available way: jdk-21.0.11 IS installed on this machine, so the
+# lane did not stop with "JDK not found" - it handed the backend a Java 21 toolchain for a
+# pom asking for 25 and the failure surfaced as a compiler error about source code that
+# was not the problem. playwright.obrs577.config.ts had already hit this and worked around
+# it by writing a SECOND absolute path (jdk-25.0.3 - a PATCH-level pin), which is how one
+# stale default became two pins rotting on different clocks.
+#
+# Derived from the pom of the repo this script BOOTS ($BackendDir), never from this one:
+# OBRS-frontend has no pom and no opinion about Java. Same shape as OBRS-backend's
+# scripts/seed-hash.ps1 (OBRS-1158); that duplication is deliberate for the reason its
+# header gives - the two live in different repositories with no shared module path, and a
+# helper hoisted into a third home would have an owner that neither repo builds or tests.
+function Get-PomJavaMajor {
+    param([Parameter(Mandatory)][string]$Repo)
+    $pom = Join-Path $Repo 'pom.xml'
+    if (-not (Test-Path -LiteralPath $pom)) {
+        Fail "no pom.xml at '$pom' - cannot tell which Java version the backend wants."
+    }
+    # Read with a regex, not [xml]/XPath: pom.xml carries a default namespace, so an XPath
+    # needs namespace plumbing to fetch one integer and breaks silently if it changes.
+    $m = [regex]::Match((Get-Content -LiteralPath $pom -Raw),
+                        '<java\.version>\s*(\d+)\s*</java\.version>')
+    if (-not $m.Success) { Fail "'$pom' has no <java.version> - refusing to guess a JDK." }
+    return [int]$m.Groups[1].Value
+}
+
+function Resolve-JdkHome {
+    param([Parameter(Mandatory)][int]$Major)
+    $javaRoot = 'C:\Program Files\Java'
+
+    # A directory is only a candidate if it carries a COMPILER: spring-boot:run compiles
+    # before it runs, so a JRE (or a half-removed install) has the right name and still
+    # cannot start the backend.
+    $installed = @()
+    if (Test-Path -LiteralPath $javaRoot) {
+        $installed = @(Get-ChildItem -LiteralPath $javaRoot -Directory -ErrorAction SilentlyContinue |
+            ForEach-Object {
+                $v = [regex]::Match($_.Name, '^jdk-(\d+)')
+                if ($v.Success) {
+                    [pscustomobject]@{ Path = $_.FullName; Major = [int]$v.Groups[1].Value; Name = $_.Name }
+                }
+            } | Where-Object { Test-Path -LiteralPath (Join-Path $_.Path 'bin\javac.exe') })
+    }
+
+    # Newest patch level of the REQUESTED major, ordered numerically - a string sort puts
+    # jdk-25.0.3 above jdk-25.0.10.
+    $match = $installed | Where-Object { $_.Major -eq $Major } | Sort-Object {
+        $parts = @(($_.Name -replace '^jdk-', '') -split '[^\d]+' | Where-Object { $_ } | Select-Object -First 4)
+        while ($parts.Count -lt 4) { $parts += '0' }
+        [version]($parts -join '.')
+    } -Descending | Select-Object -First 1
+    if ($match) { return $match.Path }
+
+    # Fail closed, naming the major that is missing. Never fall back to another major -
+    # that is precisely what turned a one-line "install JDK N" into the compiler error
+    # this card exists to stop.
+    $have = if ($installed) { ($installed.Name | Sort-Object) -join ', ' } else { '(none)' }
+    Fail "OBRS-backend's pom.xml asks for Java $Major, but no JDK $Major with bin\javac.exe is installed under '$javaRoot'. Found: $have"
+}
+
+$JavaMajor = Get-PomJavaMajor -Repo $BackendDir
+if ($env:JAVA_HOME) {
+    # An ambient JAVA_HOME is still honoured - a JDK outside C:\Program Files\Java has to
+    # remain reachable - but it is CHECKED first. Honouring it blindly would reopen this
+    # card by a shorter route: a shell that exports JDK 17 would compile against 17 for a
+    # pom asking for $JavaMajor, and the error would once again point at the source code.
+    $javacExe = Join-Path $env:JAVA_HOME 'bin\javac.exe'
+    if (-not (Test-Path -LiteralPath $javacExe)) {
+        Fail "JAVA_HOME='$env:JAVA_HOME' has no bin\javac.exe. Unset JAVA_HOME and this script derives the JDK from OBRS-backend's pom.xml (which wants Java $JavaMajor)."
+    }
+    $ambient = [regex]::Match((& $javacExe -version 2>&1 | Out-String), 'javac\s+(\d+)')
+    if (-not $ambient.Success) {
+        Fail "could not read a version out of '$javacExe'. Unset JAVA_HOME and this script derives the JDK from OBRS-backend's pom.xml (which wants Java $JavaMajor)."
+    }
+    if ([int]$ambient.Groups[1].Value -ne $JavaMajor) {
+        Fail "JAVA_HOME='$env:JAVA_HOME' is Java $($ambient.Groups[1].Value), but OBRS-backend's pom.xml asks for Java $JavaMajor. Unset JAVA_HOME (this script finds the right JDK by itself) or point it at a JDK $JavaMajor."
+    }
+    $JavaHome = $env:JAVA_HOME
+    Write-Host "[e2e] JAVA_HOME from environment: $JavaHome (javac $JavaMajor, matches pom)" -ForegroundColor DarkGray
+} else {
+    $JavaHome = Resolve-JdkHome -Major $JavaMajor
+    Write-Host "[e2e] JDK derived from <java.version>$JavaMajor in $BackendDir\pom.xml -> $JavaHome" -ForegroundColor DarkGray
 }
 
 # We boot with the `local` profile, which is where every secret placeholder in
