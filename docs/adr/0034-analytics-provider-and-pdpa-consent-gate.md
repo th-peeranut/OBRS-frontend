@@ -276,6 +276,48 @@ the first-visit state moved into the spec above rather than disappearing. AC-1 o
 forbids fixing this by editing the failing tests, and this is why the seeding is not that:
 the tests were not taught to accept a wrong layout, the layout was asserted somewhere else.
 
+### 10. Withdrawal stops collection, not the last few seconds of transmission — and that is accepted (OBRS-1206 — qualifies §8)
+
+§8 gave withdrawal a surface and asserted it "takes effect immediately". That is true of
+what it was written about — **collection** — and it is not a statement about the wire, which
+is how the next reader takes it.
+
+Measured 2026-08-10 on the `analytics-e2e` build, withdrawing on `/privacy-policy`:
+
+| what | measured |
+| --- | --- |
+| a page opened AFTER the withdrawal (`/how-to-book`) | never collected — 0 hits, 3 of 3 runs |
+| the `page_view` for the page the visitor was ALREADY on | one `POST` to `/g/collect`, **4,906 ms and 4,909 ms after the withdraw click** |
+
+gtag batches. `ga-disable-<id>` stops it *making* events; it does not empty what it has
+already queued. The escaping hit was generated while consent was valid, so nothing collected
+without permission leaves — but it leaves about five seconds late.
+
+**The decision: this is accepted.** PDPA ม.19 วรรคห้า makes withdrawal prospective — it does
+not undo processing already carried out lawfully — and the event in question was collected
+lawfully. The alternative was measured, not assumed, and it is what makes this a decision
+rather than a shrug:
+
+- `gtag('consent','update',{analytics_storage:'denied'})`, the vendor's own switch, **does
+  not drop it** — the hit still left at 4,909 ms.
+- `location.reload()` at the withdrawal is **worse, not better**: the unload path FLUSHES the
+  queue, and the same hit went out **21 ms** after the click instead of 4,906 ms. The obvious
+  fix accelerates the thing it was reached for.
+- The only mechanism that stopped it was patching `window.fetch` **and**
+  `navigator.sendBeacon` (gtag used both — a patch covering one leaks). That buys ~5 seconds
+  of an already-lawful event at the price of intercepting every HTTP request the app makes,
+  for every visitor, forever, while telling a third-party script a send succeeded when it did
+  not. Refused as disproportionate.
+
+Two consequences worth keeping visible:
+
+- `AnalyticsTagsService.setSuspended()` used to justify the flag with "it is read at send
+  time". That sentence was false and it is why nobody looked for five seconds of leakage; it
+  is corrected in place rather than deleted, so the correction survives the next reader.
+- The visitor-facing note still divides the world by "data already **sent** before you
+  withdrew", which this measurement leaves short by exactly one event. Rewording it is
+  **OBRS-1210** — a PDPA-page sentence is the owner's to write, not this ADR's to assume.
+
 ---
 
 ## Consequences

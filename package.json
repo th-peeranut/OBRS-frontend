@@ -37,6 +37,7 @@
     "test:omise-key": "node scripts/check-omise-key-format.mjs",
     "test:index-lang": "node scripts/check-index-html-lang.mjs",
     "test:fab-yield-selector": "node scripts/check-fab-yield-selector.mjs",
+    "test:netlify-ignore": "node scripts/check-netlify-ignore.mjs",
     "pree2e": "node scripts/check-local-env.mjs --require-local",
     "e2e": "playwright test",
     "pree2e:gate": "node scripts/check-local-env.mjs",

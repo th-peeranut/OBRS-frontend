@@ -442,6 +442,7 @@
     "SWAP_STATIONS": "Swap origin and destination",
     "CLOSE": "Close",
     "LOADING": "Loading…",
+    "LOADING_SLOW": "This is taking longer than usual. You can close this and keep using the page.",
     "READ_PRIVACY_POLICY": "Read the Privacy Policy",
     "ERROR": {
       "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later.",
