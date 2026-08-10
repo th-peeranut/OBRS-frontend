@@ -229,4 +229,128 @@ describe('ReportUsabilityFabComponent', () => {
       .withContext('Missing errorCode should fall back to GENERIC; must NOT read from err.message')
       .toBe('USABILITY_REPORT.ERROR.GENERIC');
   });
+
+  // ── OBRS-1207: yield the click when something clickable is underneath ──────
+  //
+  // The E2E gate (`e2e/tests/obrs-1207-fab-occlusion.spec.ts`) is what proves
+  // this works in a real cascade at a real scroll offset; these cover what it
+  // cannot see, because they are about the DECISION rather than the outcome:
+  // which elements count as a reason to yield, and that the decision does not
+  // depend on the FAB appearing in the hit-test — which it does not, once
+  // `pointer-events: none` has taken it out of the stack.
+  describe('yield behaviour', () => {
+    let fab: HTMLButtonElement;
+
+    /** The FAB's stubbed box below; a victim centred here is one it covers. */
+    const FAB_BOX = { left: 100, right: 200, top: 100, bottom: 148 };
+
+    const boxAround = (cx: number, cy: number): DOMRect =>
+      ({
+        left: cx - 20, right: cx + 20, top: cy - 10, bottom: cy + 10,
+        width: 40, height: 20, x: cx - 20, y: cy - 10,
+      }) as DOMRect;
+
+    /** Centred inside the FAB — the click point is taken. */
+    const covered = (el: Element): Element => {
+      spyOn(el, 'getBoundingClientRect').and.returnValue(boxAround(150, 124));
+      return el;
+    };
+
+    /** Overlaps the FAB's edge but its centre is well clear of it. */
+    const edgeOnly = (el: Element): Element => {
+      spyOn(el, 'getBoundingClientRect').and.returnValue(boxAround(60, 124));
+      return el;
+    };
+
+    /**
+     * Drives `isClickableUnderFab` with a stubbed `elementsFromPoint`. Faking
+     * the hit-test rather than the layout is deliberate: Karma's host has no
+     * scrollable page to position anything under, so a "real" version of this
+     * would be asserting against a layout that does not exist.
+     */
+    const withStack = (stack: Element[]): boolean => {
+      const original = document.elementsFromPoint;
+      document.elementsFromPoint = () => stack;
+      try {
+        return component['isClickableUnderFab'](fab);
+      } finally {
+        document.elementsFromPoint = original;
+      }
+    };
+
+    beforeEach(() => {
+      fab = fixture.nativeElement.querySelector('.report-fab') as HTMLButtonElement;
+      // The method bails on a zero-sized box, and Karma's container gives it
+      // one. The numbers are arbitrary; only non-zero matters.
+      spyOn(fab, 'getBoundingClientRect').and.returnValue({
+        ...FAB_BOX, width: 100, height: 48, x: FAB_BOX.left, y: FAB_BOX.top,
+      } as DOMRect);
+    });
+
+    it('yields when it covers a clickable element\'s click point', () => {
+      expect(withStack([covered(document.createElement('button'))])).toBeTrue();
+    });
+
+    it('does NOT yield when it only clips an edge and the click point is clear', () => {
+      // Measured on 2026-08-10: yielding on any overlap left the FAB inert at
+      // 54% of reachable offsets on /schedule-booking and 37% on /, because the
+      // pill clips something clickable most of the way down a dense page. A
+      // centre that is clear is still clickable at that centre, which is where
+      // users and Playwright both aim — and is exactly what the E2E gate asserts.
+      expect(withStack([edgeOnly(document.createElement('button'))])).toBeFalse();
+    });
+
+    it('does not yield for plain content underneath', () => {
+      expect(
+        withStack([covered(document.createElement('div')), covered(document.createElement('p'))])
+      ).toBeFalse();
+    });
+
+    it('does not count ITSELF, its own children or its ancestors as a reason to yield', () => {
+      // The failure mode this guards: once yielded, the FAB has
+      // `pointer-events: none` and drops out of the hit-test entirely. A check
+      // written as "anything below the FAB in the stack" would then find
+      // nothing, clear the class, and re-detect on the next frame — forever.
+      const icon = fab.querySelector('.material-symbols-outlined')!;
+      const host = fab.parentElement!;
+      expect(withStack([fab, covered(icon), covered(host), document.body])).toBeFalse();
+    });
+
+    it('yields for a role="button" that is not a <button>', () => {
+      const div = document.createElement('div');
+      div.setAttribute('role', 'button');
+      expect(withStack([covered(div)])).toBeTrue();
+    });
+
+    it('ignores tabindex="-1", which is focusable by script but not by the user', () => {
+      const div = document.createElement('div');
+      div.setAttribute('tabindex', '-1');
+      expect(withStack([covered(div)])).toBeFalse();
+    });
+
+    it('never yields while the modal is open — nothing underneath is reachable anyway', () => {
+      const original = document.elementsFromPoint;
+      document.elementsFromPoint = () => [covered(document.createElement('button'))];
+      try {
+        component['isModalOpen'] = true;
+        component['applyYieldState']();
+        expect(fab.classList.contains('report-fab--yield')).toBeFalse();
+
+        component['isModalOpen'] = false;
+        component['applyYieldState']();
+        expect(fab.classList.contains('report-fab--yield')).toBeTrue();
+      } finally {
+        document.elementsFromPoint = original;
+      }
+    });
+
+    it('tears down its listeners and any pending frame on destroy', () => {
+      const removeSpy = spyOn(window, 'removeEventListener').and.callThrough();
+      component['yieldRafId'] = requestAnimationFrame(() => undefined);
+      fixture.destroy();
+      expect(component['yieldRafId']).toBeNull();
+      expect(removeSpy).toHaveBeenCalledWith('scroll', jasmine.any(Function), jasmine.anything());
+      expect(component['yieldTeardown'].length).toBe(0);
+    });
+  });
 });
