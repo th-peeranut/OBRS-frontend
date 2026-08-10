@@ -252,7 +252,15 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     this.roundTripOnChange$ = this.bookingForm.controls[
       'roundTrip'
     ].valueChanges.subscribe((value) => {
-      this.isRoundTripReturn = value?.id === 2;
+      // OBRS-1025: `app-trip-type-toggle` writes back a full Dropdown object,
+      // so `value?.id` is what carries the id here — but read it the SAME way
+      // the schedule-booking-filter twin does (`typeof value === 'object'`),
+      // so the two copies of this form cannot drift on this exact line the way
+      // OBRS-1021/1028/1023/1036 already did. A bare number can only reach
+      // here via a future programmatic patch; handling it costs nothing and
+      // keeps the twins byte-identical.
+      const roundTripId = typeof value === 'object' ? value?.id : value;
+      this.isRoundTripReturn = roundTripId === 2;
     });
 
     // OBRS-1185 AC#4: moving departureDate past returnDate must carry
