@@ -1,25 +1,8 @@
 <!doctype html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <!--
-    OBRS-1194: `lang` above and `title` below are LITERALS on purpose, and that is the
-    whole point of the card. OBRS-870 warns "do not ship this piecemeal" — correctly,
-    but that warning is about tags written through Angular's `Meta` service, which land
-    in the DOM only after JS runs and so are invisible to the LINE/Facebook crawlers
-    that never run it. These two sit in the raw HTML Netlify serves, so they reach a
-    browser tab AND a crawler with no prerender involved — which is why this half could
-    ship alone while the rest of 870 waits.
-
-    `title` was `OBRS` — the internal project key — on every route of a live customer
-    site. The wording matches the home page H1 (`จองตั๋ว คิวรถ NJ ผู้ใหญ่ปู ออนไลน์`) and the
-    brand query OBRS-498 wants back (`คิวรถ NJ ผู้ใหญ่ปู`).
-
-    `lang` PINS the app default; it does not follow the switcher. Still OBRS-870's and
-    still open: per-route titles (needs Angular `Title`), `lang` that tracks the chosen
-    language, og:*, meta description, robots.txt, sitemap.xml, prerender.
-  -->
-  <title>จองตั๋วออนไลน์ คิวรถ NJ ผู้ใหญ่ปู</title>
+  <title>OBRS</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/svg+xml" href="images/logo.svg?v=2" sizes="any">
