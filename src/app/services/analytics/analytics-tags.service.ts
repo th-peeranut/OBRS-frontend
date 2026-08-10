@@ -77,9 +77,25 @@ export class AnalyticsTagsService {
    *
    * Both switches are best-effort and neither is a substitute for `load()` not
    * having run:
-   * - `window['ga-disable-<id>']` is gtag's own documented kill switch; it is
-   *   read at send time, so setting it before the script arrives works too.
-   *   Written unconditionally whenever an ID is configured, for that reason.
+   * - `window['ga-disable-<id>']` is gtag's own documented kill switch. Written
+   *   unconditionally whenever an ID is configured, so it is already in place
+   *   for a script that has not arrived yet.
+   *
+   *   ⚠️ It stops gtag COLLECTING, not gtag SENDING — OBRS-1206 measured the
+   *   gap. Nothing NEW is collected once the flag is true: a router navigation
+   *   to `/how-to-book` after a withdrawal produced no hit in 3 of 3 runs. But
+   *   gtag batches, so an event queued while consent was still valid goes out
+   *   anyway — a POST to `/g/collect` carrying `en=page_view` for the page the
+   *   visitor was already on, measured **4,906 and 4,909 ms after the withdraw
+   *   click** on the `analytics-e2e` build. This docstring used to say the flag
+   *   is "read at send time", which is the sentence that stopped anyone looking;
+   *   it is not true for anything already queued. Neither is the vendor's own
+   *   `gtag('consent','update',{analytics_storage:'denied'})`, measured on the
+   *   same queued hit: it left at 4,909 ms regardless.
+   *
+   *   That five-second tail is ACCEPTED, and the reasoning — including why a
+   *   reload makes it worse and why a transport patch was refused — is
+   *   ADR-0034 §10. Do not "fix" it here without overturning that section.
    * - `clarity('stop')` / `clarity('start')` is Clarity's documented pair.
    *   Wrapped in a try/catch and probed for existence because it is a third
    *   party's global: a vendor that renames it must degrade to "we still never

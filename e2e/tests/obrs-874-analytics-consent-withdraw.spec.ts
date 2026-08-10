@@ -203,10 +203,16 @@ test.describe('OBRS-874 AC-1/2 — a granted consent can be withdrawn', () => {
     // reads.
     //
     // ⚠️ That the hit crosses the withdrawal boundary at all is a real finding
-    // and NOT what this drain is papering over — `setSuspended()` believes
-    // `ga-disable-<id>` is "read at send time", and a hit sent ~7 s after the
-    // flag went true says it is not read at send time for something already
-    // queued. That belongs to OBRS-1206, not here.
+    // and NOT what this drain is papering over. OBRS-1206 measured it directly
+    // — 4,906 ms after the withdraw click — and it is now an ACCEPTED behaviour
+    // recorded in ADR-0034 §10, not an open question: `ga-disable-<id>` stops
+    // gtag collecting, never gtag sending, and no mechanism short of patching
+    // `fetch` + `sendBeacon` changes that (a reload makes it 21 ms instead).
+    //
+    // So this drain stays, and it stays a DRAIN rather than a filter: the hit
+    // is one the granted session legitimately produced, and waiting for it to
+    // leave is what lets the assertion at the end of this test keep asserting
+    // exactly what it says.
     await expect
       .poll(pageViewsSent, {
         timeout: HIT_TIMEOUT_MS,
@@ -219,7 +225,10 @@ test.describe('OBRS-874 AC-1/2 — a granted consent can be withdrawn', () => {
     const hitsAfterWithdrawal = watchTagRequests(page);
     await page.getByTestId('analytics-consent-withdraw').click();
 
-    // gtag's own documented kill switch, read at send time.
+    // gtag's own documented kill switch. It stops collection, not transmission
+    // — OBRS-1206 measured a queued hit leaving 4,906 ms after this click — so
+    // this assertion is about the switch being thrown, and the drain above is
+    // what makes the silence below mean something.
     expect(
       await page.evaluate(
         (id) => (window as never as Record<string, unknown>)[`ga-disable-${id}`],
