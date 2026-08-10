@@ -63,6 +63,12 @@
       "why": "OBRS-867 AC-1, declared by OBRS-882 -- the card shipped this spec without a lanes.json entry, so it belonged to no lane and ran nowhere but by hand. OWN-DB rather than GATE for the same reason that lane exists: it asserts a state that can only exist by construction. It needs the `analytics-e2e` build configuration, the ONLY one carrying a real measurement ID, because it measures consent on the WIRE -- no request to googletagmanager/clarity/google-analytics before accept, and a MUST-CATCH case proving both really do fire after. Against any other build the IDs are blank, the loader no-ops, and every 'nothing was requested' assertion passes vacuously. It touches no database, but the lane's rule -- provisions the environment its premise needs, never runnable against SIT -- is the one that fits."
     },
     {
+      "spec": "obrs-1195-first-visit-page-view.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs867.config.ts",
+      "why": "OBRS-1195 AC-5. Same lane and same build as obrs-867-analytics-consent-gate.spec.ts, for the same reason -- the `analytics-e2e` configuration is the only one carrying a measurement ID, and on a blank-ID build every count here would be zero and every expectation would pass while proving nothing. What it adds is the layer further out: the 867/874 suites count requests for the TAG, this one counts the `page_view` hits the tag then sends to /g/collect. That distinction is the card: `sendEvent` was being called and the wire was silent, and between them sit `suspended`, `ga-disable-<id>`, gtag's queue and `send_page_view: false`. Its first case is a CONTROL, not a courtesy -- 'exactly one page_view' is an absence claim about the second one, which a broken parser and a healthy app report identically. AC-3 (accepting on a staff route sends nothing) is NOT here on purpose: the consent banner is hidden on a restricted route, so no browser can click it; that arm is pinned in analytics.service.spec.ts, and the negative arm a browser CAN prove -- declining sends nothing at all -- is here instead."
+    },
+    {
       "spec": "obrs-631-privacy-notice.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs631.config.ts",

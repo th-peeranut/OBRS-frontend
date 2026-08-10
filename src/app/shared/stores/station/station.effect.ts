@@ -55,7 +55,11 @@ export class ProvinceEffect {
         mergeMap(() => {
           if (sessionRevalidated) return EMPTY;
 
-          return this.service.getAll().pipe(
+          // OBRS-642: `true` = no global blocking overlay. This is a page-load lookup on
+          // the customer's first screen, and the overlay it used to raise covered the
+          // booking form it exists to fill, with no way off it while the request was in
+          // flight. Failure handling is unchanged — the global ERROR alert still fires.
+          return this.service.getAll(true).pipe(
             map((response) => this.extractStations(response)),
             tap((stations) => this.persistToCache(stations)),
             map((stations) => invokeGetAllProvinceWithStationApiSuccess({ stations }))

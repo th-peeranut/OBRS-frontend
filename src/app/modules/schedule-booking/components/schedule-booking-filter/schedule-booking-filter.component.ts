@@ -32,6 +32,7 @@ import {
   BookingPolicyService,
 } from '../../../../services/booking-policy/booking-policy.service';
 import { LanguageService } from '../../../../shared/services/language.service';
+import { carryReturnDate, defaultReturnDate } from '../../../../shared/lib/return-date';
 
 @Component({
     selector: 'app-schedule-booking-filter',
@@ -42,17 +43,21 @@ import { LanguageService } from '../../../../shared/services/language.service';
 export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   @Output() filterData = new EventEmitter<ScheduleFilter>();
 
+  // OBRS-1025: passed to `app-trip-type-toggle` as `[options]` — same array
+  // shape `app-dropdown-obrs` read, only the renderer changed.
+  // OBRS-1185: `isDefault` moved to id 2 (round-trip) — one of three places
+  // that must move together, see `createForm()`.
   roundTripDropdowns: Dropdown[] = [
     {
       id: 1,
       nameThai: 'เที่ยวเดียว',
       nameEnglish: 'One-way',
-      isDefault: true,
     },
     {
       id: 2,
       nameThai: 'ไป-กลับ',
       nameEnglish: 'Round-trip',
+      isDefault: true,
     },
   ];
 
@@ -88,7 +93,13 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
   roundTripOnChange$: Subscription;
 
-  isRoundTripReturn: boolean = false;
+  /** OBRS-1185 AC#4: re-derives `returnDate` whenever `departureDate` moves
+   *  past it. See `createForm()`. */
+  departureDateOnChange$: Subscription;
+
+  // OBRS-1185: literal default flipped to round-trip, matching `createForm()`'s
+  // `roundTrip: [2]` seed — see the identical note in home-booking.component.ts.
+  isRoundTripReturn: boolean = true;
 
   constructor(
     private fb: FormBuilder,
@@ -153,7 +164,14 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
           ? scheduleFilter?.roundTrip?.id
           : scheduleFilter?.roundTrip;
 
-        this.isRoundTripReturn = roundTripId === 2;
+        // OBRS-1185: same `?? 2` fallback as the `roundTrip` patch below —
+        // reading this as `roundTripId === 2` would silently default to
+        // ONE-WAY (`undefined === 2` is false) the moment there is no saved
+        // filter, e.g. a direct visit to this route with nothing restored
+        // from cross-tab storage (`initialState` in schedule-filter.reducer.ts
+        // is `null` in that case). The two reads must agree, or this flag and
+        // the form control it mirrors disagree in the very first frame.
+        this.isRoundTripReturn = (roundTripId ?? 2) === 2;
 
         const passengerInfo = Array.isArray(scheduleFilter?.passengerInfo)
           ? scheduleFilter.passengerInfo
@@ -170,16 +188,25 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
           departureDate = this.minDate;
         }
 
+        // OBRS-1185: default derived FROM departureDate (never a bare
+        // `minDate`/today — that was the bug: a saved filter with no
+        // returnDate, or a stale one from before departureDate got clamped
+        // above, could render "today for both" or even a return BEFORE the
+        // departure it was just clamped against). Same rule as
+        // `createForm()`'s literal seed, applied here for the store-driven
+        // path — see `shared/lib/return-date.ts`.
         let returnDate = scheduleFilter?.returnDate
           ? new Date(scheduleFilter?.returnDate)
-          : this.minDate;
+          : defaultReturnDate(departureDate, this.maxDate);
 
-        if (returnDate < this.minDate) {
-          returnDate = this.minDate;
+        if (returnDate < departureDate) {
+          returnDate = defaultReturnDate(departureDate, this.maxDate);
         }
 
         this.bookingForm.patchValue({
-          roundTrip: roundTripId ?? 1,
+          // OBRS-1185: fallback flipped to round-trip (id 2) — one of three
+          // places that must move together, see `createForm()`'s own note.
+          roundTrip: roundTripId ?? 2,
           passengerInfo,
 
           startStationId: scheduleFilter?.startStationId ?? '',
@@ -211,11 +238,16 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
 
     this.roundTripOnChange$?.unsubscribe();
+    this.departureDateOnChange$?.unsubscribe();
   }
 
   createForm() {
     this.bookingForm = this.fb.group({
-      roundTrip: [1],
+      // OBRS-1185: default flipped to round-trip (id 2) — see the identical
+      // note in home-booking.component.ts's createForm(); this screen's own
+      // `scheduleFilter` store subscription above carries the matching `?? 2`
+      // fallback for when there is nothing saved to restore.
+      roundTrip: [2],
       passengerInfo: [null],
 
       startStationId: [''],
@@ -224,7 +256,9 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
       startReturnStationId: [''],
       stopReturnStationId: [''],
-      returnDate: [this.minDate],
+      // OBRS-1185: derived FROM departureDate, capped at maxDate — see the
+      // identical note in home-booking.component.ts and shared/lib/return-date.ts.
+      returnDate: [defaultReturnDate(this.minDate, this.maxDate)],
     });
 
     this.roundTripOnChange$ = this.bookingForm.controls[
@@ -240,6 +274,22 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
           },
         })
       );
+    });
+
+    // OBRS-1185 AC#4: moving departureDate past returnDate must carry
+    // returnDate forward with it — same rule and same `emitEvent: false`
+    // reasoning as home-booking.component.ts's twin subscription. The
+    // scheduleFilter store subscription above already computes the correct
+    // pair for its OWN (store-driven, `emitEvent:false`) writes, so this only
+    // fires for a departureDate the user changes by hand on this screen.
+    this.departureDateOnChange$ = this.bookingForm.controls[
+      'departureDate'
+    ].valueChanges.subscribe((date: Date) => {
+      const currentReturn = this.getFormValue('returnDate');
+      const carried = carryReturnDate(date, currentReturn, this.maxDate);
+      if (carried !== currentReturn) {
+        this.bookingForm.patchValue({ returnDate: carried }, { emitEvent: false });
+      }
     });
   }
 

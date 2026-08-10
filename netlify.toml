@@ -1,6 +1,26 @@
+# OBRS-911. `sit` is this site's PRODUCTION branch, and Netlify bills the successful
+# production deploy — measured 2026-08-10 on the Usage & billing page, 195 credits for 13
+# deploys, i.e. 15.0 each, matching the 105/7 measured in a different billing period on
+# 2026-07-30. The price of a push is therefore the same whether it moved a bundle byte or a
+# paragraph of prose, and promotes in this repo's history have moved nothing but `e2e/`,
+# `docs/` and `*.spec.ts`.
+#
+# `ignore` is Netlify's own hook for exactly that, and its polarity is the opposite of a
+# test: exit 0 CANCELS the build, non-zero builds. The decision lives in a script rather
+# than a shell one-liner here because it has to be provable — scripts/check-netlify-
+# ignore.mjs runs it against fixed path lists on every CI run. A wrong skip is silent: no
+# build log, no failed check, nothing red, and `sit` keeps serving the previous bundle
+# while the push reads as deployed.
+#
+# ⚠️ `command` must stay byte-identical. The value in the Netlify UI is a DIFFERENT string
+# (`npm run build:sit`) that never runs scripts/inject-sit-env.js, so the gitignored
+# environment.local.ts is never generated and `prebuild:sit --require-local` fails. Drop
+# this key and the site falls back to that one — failing on the NEXT build, not on the edit
+# that caused it. check-netlify-ignore.mjs asserts this exact line.
 [build]
   command = "node scripts/inject-sit-env.js && npm run build -- --configuration sit"
   publish = "dist/obrs/browser"
+  ignore = "node scripts/netlify-ignore.mjs"
 
 [[redirects]]
   from = "/*"

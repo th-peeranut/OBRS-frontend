@@ -39,16 +39,79 @@ function watchTagRequests(page: Page): string[] {
   return hits;
 }
 
+/**
+ * One 2,500 ms `settle()` used to serve two jobs that need different numbers,
+ * and separating them is the whole of OBRS-1199.
+ *
+ * Setup: long enough for the tags an accept just injected to load. It asserts
+ * nothing, so it is allowed to stay tight.
+ */
+const TAG_LOAD_MS = 2_500;
+
+/**
+ * Assertion: how long "nothing was sent" has to hold before it means anything.
+ *
+ * Measured 2026-08-10: a `page_view` triggered by a router navigation reaches
+ * `/g/collect` at **3,404 ms** in a standalone probe and at **4,985–5,038 ms**
+ * across four lane runs, because gtag batches before it sends — and the spread
+ * between those figures is itself the argument, since a fixed window has to
+ * survive the slow end, not the fast one. A window that closes at 2,500 ms
+ * cannot be broken by a hit that cannot arrive before 3.4 s, so silence inside
+ * it was not evidence of anything.
+ *
+ * Worth being precise about where that actually bit, because it is one place,
+ * not four: AC-6 below is the only case here whose *sole* possible evidence is
+ * a batched `/g/collect` hit — the tag scripts are already in the document by
+ * then, so there is nothing else left to observe. The other negative legs watch
+ * a document in which a leak would have to begin by FETCHING a script, and that
+ * request goes out immediately; they were never vacuous. Same reasoning leaves
+ * `obrs-867-analytics-consent-gate.spec.ts` alone: every negative there is
+ * guarded by a script fetch, not by a batched hit.
+ */
+const SILENCE_WINDOW_MS = 8_000;
+
+/**
+ * Ceiling for waiting on a hit we EXPECT. Event-driven, so a fast hit pays none
+ * of it — which is why it can afford to be far above any plausible latency.
+ */
+const HIT_TIMEOUT_MS = 20_000;
+
 /** A window in which a request COULD have happened, so silence means something. */
 async function settle(page: Page): Promise<void> {
-  await page.waitForTimeout(2500);
+  await page.waitForTimeout(SILENCE_WINDOW_MS);
+}
+
+/** Waits for the accepted tags to load. A precondition, not a check. */
+async function tagsLoad(page: Page): Promise<void> {
+  await page.waitForTimeout(TAG_LOAD_MS);
+}
+
+/**
+ * Counts the `page_view` events that have actually reached `/g/collect`.
+ *
+ * Reads the POST body as well as the query string on purpose. gtag sends one
+ * event per GET normally, but under load it batches several into a single POST
+ * whose body carries one `en=`-bearing line per event — so a counter that reads
+ * only the URL scores a batch as **zero** and then reports "nothing was sent".
+ * That false negative is documented from OBRS-1195; it costs an hour to
+ * rediscover and it fails in the direction that looks like good news.
+ */
+function watchPageViewCount(page: Page): () => number {
+  const payloads: string[] = [];
+  page.on('request', (request: Request) => {
+    const url = request.url();
+    if (url.includes('google-analytics.com/g/collect')) {
+      payloads.push(`${url}\n${request.postData() ?? ''}`);
+    }
+  });
+  return () => payloads.join('\n').split('en=page_view').length - 1;
 }
 
 async function acceptOnHome(page: Page): Promise<void> {
   await page.goto('/');
   await page.locator('.consent-banner__btn--accept').click();
   await expect(page.locator('.consent-banner')).toHaveCount(0);
-  await settle(page);
+  await tagsLoad(page);
 }
 
 /**
@@ -112,6 +175,7 @@ test.describe('OBRS-874 AC-1/2 — a granted consent can be withdrawn', () => {
   test('AC-6: collection stops at the vendor immediately, with no reload', async ({
     page,
   }) => {
+    const pageViewsSent = watchPageViewCount(page);
     await acceptOnHome(page);
     await walkToPolicyPage(page);
 
@@ -124,10 +188,47 @@ test.describe('OBRS-874 AC-1/2 — a granted consent can be withdrawn', () => {
       }))
     ).toEqual({ gtag: 'function', clarity: 'function' });
 
+    // Drain what the GRANTED session already queued, before the watcher below
+    // starts — and drain it by waiting for the hits, not by hoping they have
+    // gone. Two `page_view`s exist by now: `/`, replayed when consent was given
+    // (OBRS-1195), and `/privacy-policy` from the router navigation just above.
+    //
+    // Measured 2026-08-10 (3/3 runs): gtag holds the second one and puts it on
+    // the wire ~9.6 s after the document loaded — i.e. AFTER the withdrawal
+    // below. It was generated while consent was granted, so counting it as
+    // evidence about what happens afterwards is the same false red this file
+    // already avoids for the unload beacon in the next test. Draining removes
+    // the confound at its source instead of widening a filter around it, which
+    // is what lets the assertion at the end of this test stay as strict as it
+    // reads.
+    //
+    // ⚠️ That the hit crosses the withdrawal boundary at all is a real finding
+    // and NOT what this drain is papering over. OBRS-1206 measured it directly
+    // — 4,906 ms after the withdraw click — and it is now an ACCEPTED behaviour
+    // recorded in ADR-0034 §10, not an open question: `ga-disable-<id>` stops
+    // gtag collecting, never gtag sending, and no mechanism short of patching
+    // `fetch` + `sendBeacon` changes that (a reload makes it 21 ms instead).
+    //
+    // So this drain stays, and it stays a DRAIN rather than a filter: the hit
+    // is one the granted session legitimately produced, and waiting for it to
+    // leave is what lets the assertion at the end of this test keep asserting
+    // exactly what it says.
+    await expect
+      .poll(pageViewsSent, {
+        timeout: HIT_TIMEOUT_MS,
+        message:
+          'the granted session never put both of its page_views on the wire — ' +
+          'this lane can no longer tell a drained hit from an absent one',
+      })
+      .toBeGreaterThanOrEqual(2);
+
     const hitsAfterWithdrawal = watchTagRequests(page);
     await page.getByTestId('analytics-consent-withdraw').click();
 
-    // gtag's own documented kill switch, read at send time.
+    // gtag's own documented kill switch. It stops collection, not transmission
+    // — OBRS-1206 measured a queued hit leaving 4,906 ms after this click — so
+    // this assertion is about the switch being thrown, and the drain above is
+    // what makes the silence below mean something.
     expect(
       await page.evaluate(
         (id) => (window as never as Record<string, unknown>)[`ga-disable-${id}`],
@@ -200,9 +301,31 @@ test.describe('OBRS-874 AC-1/2 — a granted consent can be withdrawn', () => {
     // should not — `load()` is idempotent and both tags are still in this
     // document. Collection resumes at the next event, so a navigation is what
     // puts traffic back on the wire.
+    const navigatedAt = Date.now();
     await page.locator('app-footer a[routerLink="/how-to-book"]').first().click();
-    await settle(page);
 
-    expect(hitsAfterRegrant.length).toBeGreaterThan(0);
+    // Wait for the EVENT, not for a duration. This hit lands at ~3.4 s — past
+    // the 2,500 ms this used to allow — and that latency is gtag's batching
+    // plus whatever the machine is doing, so any fixed figure here is a red
+    // waiting to happen on a slower box.
+    //
+    // Polling the same array the assertion reads, rather than
+    // `page.waitForRequest`, is deliberate: `waitForRequest` only sees requests
+    // issued after it is armed, so between the grant click and here it could
+    // time out on a hit the watcher had already recorded. This way the wait
+    // condition and the assertion are one sentence, and cannot drift apart.
+    await expect
+      .poll(() => hitsAfterRegrant.length, {
+        timeout: HIT_TIMEOUT_MS,
+        message: `re-granting put nothing back on the wire within ${HIT_TIMEOUT_MS} ms — collection did not resume`,
+      })
+      .toBeGreaterThan(0);
+
+    // Printed every run on purpose: the next time this goes red, the arrival
+    // time is already in the log instead of costing another 20-second probe to
+    // rediscover. That probe is how OBRS-1199 was diagnosed at all.
+    console.log(
+      `[OBRS-1199] re-granted hit arrived ${Date.now() - navigatedAt} ms after the navigation`
+    );
   });
 });

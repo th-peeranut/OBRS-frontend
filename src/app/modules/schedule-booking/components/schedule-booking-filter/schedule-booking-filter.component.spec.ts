@@ -12,6 +12,7 @@ import { ScheduleBookingFilterComponent } from './schedule-booking-filter.compon
 import { DropdownObrsComponent } from '../../../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownGroupObrsComponent } from '../../../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
 import { StationSwapButtonComponent } from '../../../../shared/components/station-swap-button/station-swap-button.component';
+import { TripTypeToggleComponent } from '../../../../shared/components/trip-type-toggle/trip-type-toggle.component';
 import { DropdownObrsPassengerComponent } from '../../../home/components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { AlertService } from '../../../../shared/services/alert.service';
 import {
@@ -180,6 +181,7 @@ describe('ScheduleBookingFilterComponent — maxDate bound to BOTH calendars (OB
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
       ],
       providers: [
@@ -245,6 +247,7 @@ describe('ScheduleBookingFilterComponent — date labels distinguish outbound fr
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
       ],
       providers: [
@@ -319,6 +322,7 @@ describe('ScheduleBookingFilterComponent — each date field owns a unique input
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
       ],
       providers: [
@@ -436,6 +440,7 @@ describe('ScheduleBookingFilterComponent — date format follows the chosen lang
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
       ],
       providers: [
@@ -490,6 +495,11 @@ describe('ScheduleBookingFilterComponent — date format follows the chosen lang
 
   it('repaints a date already in the box when the language changes mid-page (AC#3)', async () => {
     fixture.detectChanges();
+    // OBRS-1185: AFTER the first change detection — ngOnInit's saved-filter
+    // subscription re-derives this flag (the same trap the maxDate block
+    // above documents), and this test is about ONE calendar's rendered
+    // format, not round-trip, so force one-way.
+    component.isRoundTripReturn = false;
     await languageService.switch('en');
     component.bookingForm.get('departureDate')?.setValue(MONDAY.toDate());
     fixture.detectChanges();
@@ -530,6 +540,7 @@ describe('ScheduleBookingFilterComponent — a date can only be chosen from the 
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
       ],
       providers: [
@@ -654,6 +665,7 @@ describe('ScheduleBookingFilterComponent — origin/destination swap (OBRS-1035)
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
       ],
       providers: [
@@ -760,5 +772,284 @@ describe('ScheduleBookingFilterComponent — origin/destination swap (OBRS-1035)
         expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
       }
     }
+  });
+});
+
+/**
+ * OBRS-1185 + OBRS-1025, second render site — see the long note on the
+ * matching block in home-booking.component.spec.ts. Unit-level assertions
+ * here use a PLAIN construction (no TestBed, no `ngOnInit()`) so they pin
+ * what `createForm()`'s own literal seeds guarantee on their own — the same
+ * reasoning as the home-booking twin.
+ */
+describe('ScheduleBookingFilterComponent — round-trip is the default, and the return date is defensible (OBRS-1185)', () => {
+  let filterComponent: ScheduleBookingFilterComponent;
+
+  beforeEach(() => {
+    const alertServiceStub: any = { warning: () => {}, error: () => {}, success: () => {} };
+    filterComponent = new ScheduleBookingFilterComponent(
+      new FormBuilder(),
+      createRouterStub(),
+      createStoreStub(),
+      createStoreStub(),
+      createTranslateStub(),
+      alertServiceStub,
+      createBookingPolicyServiceStub(),
+      createLanguageServiceStub()
+    );
+  });
+
+  it('AC#1/AC#8: defaults the search form to round-trip', () => {
+    const roundTrip = filterComponent.bookingForm.get('roundTrip')?.value;
+    const roundTripId = typeof roundTrip === 'object' ? roundTrip?.id : roundTrip;
+
+    expect(roundTripId).toBe(2);
+    expect(filterComponent.isRoundTripReturn).toBeTrue();
+  });
+
+  it('AC#2: defaults returnDate to a day AFTER departureDate, never the same day', () => {
+    const departureDate = filterComponent.getFormValue('departureDate');
+    const returnDate = filterComponent.getFormValue('returnDate');
+
+    expect(dayjs(returnDate).isSame(dayjs(departureDate), 'day')).toBeFalse();
+    expect(dayjs(returnDate).isBefore(dayjs(departureDate), 'day')).toBeFalse();
+  });
+
+  it('AC#4/AC#8: moving departureDate past returnDate carries returnDate forward with it', () => {
+    const originalReturn = filterComponent.getFormValue('returnDate');
+    const newDeparture = dayjs(originalReturn).add(5, 'day').toDate();
+
+    filterComponent.bookingForm.get('departureDate')?.setValue(newDeparture);
+
+    const carriedReturn = filterComponent.getFormValue('returnDate');
+    expect(dayjs(carriedReturn).isBefore(dayjs(newDeparture), 'day')).toBeFalse();
+    expect(dayjs(carriedReturn).isSame(dayjs(originalReturn), 'day')).toBeFalse();
+  });
+
+  it('AC#6/AC#8: getPayload() drops returnDate when switching to one-way', () => {
+    (filterComponent as any).allProvinceStationList = [
+      { id: 1, slug: 'station-a' },
+      { id: 2, slug: 'station-b' },
+    ];
+    filterComponent.bookingForm.patchValue({
+      startStationId: 1,
+      stopStationId: 2,
+      roundTrip: 1,
+    });
+
+    const payload = filterComponent.getPayload();
+
+    expect(payload.bookingType).toBe('one_way');
+    expect(payload.returnDate).toBeUndefined();
+  });
+
+  it('AC#6/AC#8 must-NOT: getPayload() KEEPS returnDate for the default round-trip state', () => {
+    (filterComponent as any).allProvinceStationList = [
+      { id: 1, slug: 'station-a' },
+      { id: 2, slug: 'station-b' },
+    ];
+    filterComponent.bookingForm.patchValue({
+      startStationId: 1,
+      stopStationId: 2,
+    });
+
+    const payload = filterComponent.getPayload();
+
+    expect(payload.bookingType).toBe('return');
+    expect(payload.returnDate).toBeTruthy();
+    expect(payload.returnDate).not.toBe(payload.departureDate);
+  });
+
+  it('AC#6: switching the roundTrip control to one-way flips isRoundTripReturn off, and back to round-trip flips it back on', () => {
+    filterComponent.bookingForm.get('roundTrip')?.setValue(1);
+    expect(filterComponent.isRoundTripReturn).toBeFalse();
+
+    filterComponent.bookingForm.get('roundTrip')?.setValue(2);
+    expect(filterComponent.isRoundTripReturn).toBeTrue();
+  });
+});
+
+/**
+ * DOM-level half — renders the real template (real `app-trip-type-toggle`,
+ * real `p-datePicker`s, real `ngOnInit()` with no saved filter to restore),
+ * same reasoning as the OBRS-698 maxDate block earlier in this file.
+ */
+describe('ScheduleBookingFilterComponent — trip-type pills and the return date field render correctly (OBRS-1025/OBRS-1185)', () => {
+  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
+  let component: ScheduleBookingFilterComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingFilterComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        // No saved filter to restore — `select()` resolves `null`, exactly the
+        // "direct visit to this route" case OBRS-1185's fix to the
+        // `scheduleFilter` subscription's `?? 2` fallback covers.
+        { provide: Store, useValue: createStoreStub() },
+        { provide: AlertService, useValue: { warning: () => {} } },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('AC#1 (1185) + AC#1 (1025): both trip-type pills AND the return date field are in the DOM on first render — no manual flag flip, no saved filter needed', () => {
+    fixture.detectChanges(); // ngOnInit -> scheduleFilter resolves null -> the `?? 2` fallback applies
+
+    const pills = fixture.debugElement.queryAll(By.css('app-trip-type-toggle button'));
+    expect(pills.length).toBe(2);
+
+    const calendars = fixture.debugElement.queryAll(By.css('p-datePicker'));
+    expect(calendars.length).toBe(2);
+  });
+
+  it("AC#3 (1185): the return calendar's minDate is the CURRENT departureDate, not the shared minDate", () => {
+    fixture.detectChanges();
+
+    const newDeparture = dayjs(component.minDate).add(10, 'day').toDate();
+    component.bookingForm.get('departureDate')?.setValue(newDeparture);
+    fixture.detectChanges();
+
+    const calendars = fixture.debugElement.queryAll(By.css('p-datePicker'));
+    expect(calendars.length).toBe(2);
+
+    const returnPickerMinDate = calendars[1].componentInstance.minDate as Date;
+    expect(dayjs(returnPickerMinDate).isSame(dayjs(newDeparture), 'day')).toBeTrue();
+    const departurePickerMinDate = calendars[0].componentInstance.minDate as Date;
+    expect(dayjs(departurePickerMinDate).isSame(dayjs(component.minDate), 'day')).toBeTrue();
+  });
+
+  it('AC#6 (1185) + AC#1 (1025): tapping the one-way pill removes the return date field; tapping back restores it', () => {
+    fixture.detectChanges();
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(2);
+
+    const pills = fixture.debugElement.queryAll(By.css('app-trip-type-toggle button'));
+    pills[0].nativeElement.click(); // "one-way" is rendered first (id 1)
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(1);
+    expect(component.isRoundTripReturn).toBeFalse();
+
+    const pillsAfter = fixture.debugElement.queryAll(By.css('app-trip-type-toggle button'));
+    pillsAfter[1].nativeElement.click(); // "round-trip" is rendered second (id 2)
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(2);
+    expect(component.isRoundTripReturn).toBeTrue();
+  });
+
+  it('AC#2 (1025): each pill exposes aria-pressed matching the selected state', () => {
+    fixture.detectChanges();
+
+    const pills = fixture.debugElement.queryAll(By.css('app-trip-type-toggle button'));
+    expect(pills[0].nativeElement.getAttribute('aria-pressed')).toBe('false'); // one-way
+    expect(pills[1].nativeElement.getAttribute('aria-pressed')).toBe('true'); // round-trip (default)
+  });
+});
+
+/**
+ * OBRS-1185 — the case the default flip is most likely to break, and the one the block
+ * above CANNOT reach: a returning customer whose saved filter says ONE-WAY.
+ *
+ * Every other spec here runs with no saved filter, where `roundTripId ?? 2` and the
+ * `isRoundTripReturn = true` field initializer agree by construction. They only disagree
+ * when a real one-way filter arrives, and then the question is one of ORDERING: the
+ * initializer runs at construction, the store correction runs in ngOnInit. If the store
+ * emission were ever async, the field initializer would win the first frame and a one-way
+ * customer would be shown a return-date field for a trip they did not ask for.
+ *
+ * Scrutinize traced that ordering by hand and found it safe. Hand-tracing is not a gate —
+ * this is. It goes red if `(roundTripId ?? 2) === 2` is written back as `roundTripId === 2`
+ * (the pre-OBRS-1185 shape), or if the correction ever moves off the synchronous path.
+ */
+describe('ScheduleBookingFilterComponent — a saved ONE-WAY filter survives the round-trip default (OBRS-1185)', () => {
+  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
+  let component: ScheduleBookingFilterComponent;
+
+  const STATIONS: any = [
+    { id: 1, slug: 'station-a', status: 'active', stopType: 'station' },
+    { id: 2, slug: 'station-b', status: 'active', stopType: 'station' },
+  ];
+
+  /**
+   * `this.store.pipe(...)` is called exactly twice in the constructor, in this order:
+   * line 120 `rawProvinceStationList`, then line 123 `scheduleFilter`. Keying the stub on
+   * call order is what lets ONE `Store` provider hand back two different shapes — passing
+   * the filter object to both would feed a non-array to the station subscription.
+   */
+  function createOrderedStoreStub(savedFilter: any): any {
+    let call = 0;
+    const next = () => (++call === 1 ? of(STATIONS) : of(savedFilter));
+    return { pipe: () => next(), select: () => next(), dispatch: () => {} };
+  }
+
+  async function renderWith(savedFilter: any) {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingFilterComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createOrderedStoreStub(savedFilter) },
+        { provide: AlertService, useValue: { warning: () => {}, error: () => {}, success: () => {} } },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub(45) },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges(); // FIRST change detection - no second pass, no manual nudge
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('renders ONE calendar, not two, on the very first change detection', async () => {
+    await renderWith({ roundTrip: { id: 1, nameThai: 'เที่ยวเดียว', nameEnglish: 'One-way' } });
+
+    expect(component.isRoundTripReturn).toBeFalse();
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(1);
+  });
+
+  it('also honours the bare-number shape the store can hold', async () => {
+    await renderWith({ roundTrip: 1 });
+
+    expect(component.isRoundTripReturn).toBeFalse();
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(1);
+  });
+
+  it('must-NOT-catch: a saved ROUND-TRIP filter still shows both calendars', async () => {
+    await renderWith({ roundTrip: { id: 2, nameThai: 'ไป-กลับ', nameEnglish: 'Round-trip' } });
+
+    expect(component.isRoundTripReturn).toBeTrue();
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(2);
+  });
+
+  it('no saved filter at all falls back to round-trip, not to one-way', async () => {
+    await renderWith(null);
+
+    expect(component.isRoundTripReturn).toBeTrue();
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(2);
   });
 });

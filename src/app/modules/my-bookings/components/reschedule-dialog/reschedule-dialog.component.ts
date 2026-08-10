@@ -20,6 +20,7 @@ import {
   toAmountNumber,
 } from '../../../../shared/interfaces/my-booking.interface';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { AuthService } from '../../../../auth/auth.service';
 import {
   RESCHEDULE_MAX_DAYS_AHEAD,
   RescheduleEstimate,
@@ -115,13 +116,68 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
   private pendingOptionSelection: RescheduleOption | null = null;
   private selectedDateIso: string | null = null;
 
+  /**
+   * OBRS-1167 (AC-5): the counter's cash lane.
+   *
+   * `isCounterStaff` is read ONCE, in the constructor, from the token's own roles — not re-read
+   * per render, so a role that changed mid-dialog cannot make the panel appear under an operator
+   * already halfway through a flow. `['salesperson']` alone is the right predicate rather than the
+   * three roles the server names: `AuthService.ROLE_GRANTS` expands owner and admin to satisfy
+   * salesperson as well, so this matches the backend's `hasAnyRole(SALESPERSON, OWNER, ADMIN)`
+   * exactly, while a driver or a customer still fails it.
+   *
+   * It is a UX gate and nothing more. What decides whether cash may actually be booked is the
+   * server's own staff check plus the second-person approval — see `RescheduleService`.
+   */
+  private readonly isCounterStaff: boolean;
+  private cashHandedOverNow = false;
+  private cashApprovalCode = '';
+  private cashRefundEligible = false;
+
   private readonly destroy$ = new Subject<void>();
 
   constructor(
     private readonly store: Store,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly authService: AuthService
   ) {
     this.rescheduleEstimate$ = this.store.pipe(select(selectRescheduleEstimate));
+    this.isCounterStaff = this.authService.hasAnyRole(['salesperson']);
+  }
+
+  /** The panel appears only when BOTH are true — staff, and a move that really refunds cash. */
+  get showCashHandover(): boolean {
+    return this.isCounterStaff && this.cashRefundEligible;
+  }
+
+  /**
+   * The estimate query the approval must be asked against — the same four values the confirm will
+   * send. The owner has to authorize the amount THIS candidate produces; the backend binds the
+   * approval to it (AC-3), so asking against anything else would produce a code that cannot be
+   * spent.
+   */
+  get cashHandoverEstimateQuery(): {
+    newScheduleId: number;
+    newFromStopId: number;
+    newToStopId: number;
+    seats: string[];
+  } | null {
+    const fromStopId = this.resolveStopId(this.fromStopCode());
+    const toStopId = this.resolveStopId(this.toStopCode());
+    if (!this.selectedOption || !fromStopId || !toStopId || this.ticketsLoading) {
+      return null;
+    }
+    return {
+      newScheduleId: this.selectedOption.scheduleId,
+      newFromStopId: fromStopId,
+      newToStopId: toStopId,
+      seats: this.tickets.map((t) => t.seatNumber ?? ''),
+    };
+  }
+
+  onCashHandoverStateChange(state: { cashHandedOverNow: boolean; approvalCode: string }): void {
+    this.cashHandedOverNow = state.cashHandedOverNow;
+    this.cashApprovalCode = state.approvalCode;
   }
 
   /**
@@ -198,6 +254,17 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
 
     this.rescheduleEstimate$.pipe(takeUntil(this.destroy$)).subscribe((estimate) => {
       this.currentEstimateNetAmount = estimate ? toAmountNumber(estimate.netAmount) : null;
+      // OBRS-1167: `=== true`, so an older backend (field absent → undefined) resolves to false
+      // and the panel stays hidden rather than offering a lane that server cannot honour.
+      const eligible = estimate?.cashRefundEligible === true;
+      if (!eligible && this.cashRefundEligible) {
+        // The candidate changed to one that refunds nothing, or nothing in cash. Drop the claim
+        // AND the code with it: leaving them set would carry an assertion about a payout that no
+        // longer exists into the next confirm.
+        this.cashHandedOverNow = false;
+        this.cashApprovalCode = '';
+      }
+      this.cashRefundEligible = eligible;
       this.paymentAmountLabel = estimate
         ? new Intl.NumberFormat('th-TH', {
             style: 'currency',
@@ -322,6 +389,12 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
         newToStopId: toStopId,
         seatAssignments,
         clientNetAmount: this.currentEstimateNetAmount,
+        // OBRS-1167: only ever sent when the panel was shown AND ticked. `showCashHandover` is
+        // re-read here rather than trusting `cashHandedOverNow` alone, so a claim that was made
+        // and then invalidated (candidate changed, role somehow gone) cannot survive to the wire.
+        ...(this.showCashHandover && this.cashHandedOverNow
+          ? { cashHandedOverNow: true, approvalCode: this.cashApprovalCode }
+          : {}),
       })
     );
   }

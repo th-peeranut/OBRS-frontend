@@ -215,6 +215,14 @@ export const confirmReschedule = createAction(
     /** `null` under `OPEN` seating (OBRS-483). */
     seatAssignments: Record<number, string | null>;
     clientNetAmount: number;
+    /**
+     * OBRS-1167 (AC-2): the counter's explicit claim that the cash left the drawer, plus the
+     * OWNER's six digits authorizing it. Both optional and both absent on the customer path —
+     * the effect omits them from the request body entirely rather than sending `false`, so a
+     * body that says nothing keeps getting the safe answer server-side.
+     */
+    cashHandedOverNow?: boolean;
+    approvalCode?: string;
   }>()
 );
 

@@ -160,7 +160,8 @@ export class RescheduleEffect {
   confirmReschedule$ = createEffect(() =>
     this.actions$.pipe(
       ofType(confirmReschedule),
-      switchMap(({ bookingId, newScheduleId, newFromStopId, newToStopId, seatAssignments, clientNetAmount }) =>
+      switchMap(({ bookingId, newScheduleId, newFromStopId, newToStopId, seatAssignments,
+        clientNetAmount, cashHandedOverNow, approvalCode }) =>
         this.service
           .getRescheduleEstimate(bookingId, {
             newScheduleId,
@@ -206,6 +207,12 @@ export class RescheduleEffect {
                   newToStopId,
                   seatAssignments,
                   clientNetAmount: freshNetAmount,
+                  // OBRS-1167 (AC-2): spread-only-if-claimed. A customer's confirm sends a body
+                  // with neither key, which is what makes the safe outcome the DEFAULT rather
+                  // than something the server has to be careful about. Sending
+                  // `cashHandedOverNow: false` would be equivalent server-side today, but it
+                  // asserts a fact about a drawer nobody was standing at.
+                  ...(cashHandedOverNow ? { cashHandedOverNow: true, approvalCode } : {}),
                 })
                 .pipe(
                   map((response) => {
