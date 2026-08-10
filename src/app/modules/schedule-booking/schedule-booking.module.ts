@@ -12,6 +12,7 @@ import { DropdownObrsPassengerComponent } from '../home/components/dropdown-obrs
 import { ScheduleBookingListComponent } from './components/schedule-booking-list/schedule-booking-list.component';
 import { DropdownGroupObrsComponent } from '../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
 import { StationSwapButtonComponent } from '../../shared/components/station-swap-button/station-swap-button.component';
+import { TripTypeToggleComponent } from '../../shared/components/trip-type-toggle/trip-type-toggle.component';
 
 // Store
 import { EffectsModule } from '@ngrx/effects';
@@ -57,6 +58,7 @@ const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
     DropdownObrsComponent,
     DropdownGroupObrsComponent,
     StationSwapButtonComponent,
+    TripTypeToggleComponent,
     DropdownObrsPassengerComponent,
   ],
 })

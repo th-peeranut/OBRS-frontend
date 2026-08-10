@@ -3,14 +3,15 @@
     @if (bookingForm) {
       <div class="booking-card" [formGroup]="bookingForm">
         <div class="d-flex gap-5">
-          <!-- DROPDOWN ROUNDTRIP TYPE -->
-          <app-dropdown-obrs
-            [isBorder]="false"
-            [isLabel]="false"
-            [label]="'roundTrip'"
+          <!-- TRIP TYPE PILLS (OBRS-1025) — see the identical block in
+          home-booking.component.html. This filter bar is a copy of that form;
+          fixing only Home would have left the dropdown live on the results
+          page, where a customer switching back to one-way is just as likely
+          to hit it. -->
+          <app-trip-type-toggle
             [options]="roundTripDropdowns"
             formControlName="roundTrip"
-          ></app-dropdown-obrs>
+          ></app-trip-type-toggle>
           <!-- DROPDOWN PASSENGER COUNT -->
           <app-dropdown-obrs-passenger
             formControlName="passengerInfo"
@@ -114,13 +115,20 @@
                   <label for="filter-return-date">
                     {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }} :
                   </label>
-                  <!-- CALENDAR MAIN ELEMENT (OBRS-1023, OBRS-1036) -->
+                  <!-- CALENDAR MAIN ELEMENT (OBRS-1023, OBRS-1036 — see the
+                  twin block in home-booking.component.html.
+
+                  OBRS-1185: `[minDate]` is the CURRENT departureDate, same
+                  reasoning as the Home twin — a return date before the chosen
+                  outbound date must be unpickable here too, not just on Home,
+                  or a customer refining a round trip on this results page
+                  hits the exact server 400 OBRS-1185 exists to prevent.) -->
                   <p-datePicker
                     styleClass="app-date-field"
                     panelStyleClass="app-date-field-panel"
                     [dateFormat]="calendarDateFormat()"
                     [readonlyInput]="true"
-                    [minDate]="minDate"
+                    [minDate]="getFormValue('departureDate')"
                     [maxDate]="maxDate"
                     [iconDisplay]="'input'"
                     [showIcon]="true"
