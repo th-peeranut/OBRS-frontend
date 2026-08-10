@@ -1,8 +1,23 @@
 <!doctype html>
-<html lang="en">
+<!--
+  OBRS-1194: `lang` is not decoration - it is the only thing on this page that tells a
+  browser what language the text already is, and getting it wrong is what garbled prod.
+
+  Measured 2026-08-10 against https://nj-phuyaipu.com: the served i18n bundle and the
+  /api/stops payload both hold the CORRECT Thai ("หนองชาก", "ผู้ใหญ่", "รายงานปัญหา") and
+  none of the garbage the owner photographed ("ชุชาก", "โดยทั่วไป", "ธง"). So nothing on
+  the server produced it. The mangling happens in the visitor's browser: this file
+  declared `en`, the app renders `th`, and a browser that believes the declaration runs
+  its English->Thai translator over Thai text. Material Symbols made it visible - those
+  icons are LIGATURES whose element text is the literal English word, so translating the
+  page turned `menu` into the word "เมนู" and `flag` into the word "ธง" where the icon
+  should be. A page that declares the language it is actually written in is never offered
+  that translation.
+-->
+<html lang="th">
 <head>
   <meta charset="utf-8">
-  <title>OBRS</title>
+  <title>จองตั๋วออนไลน์ คิวรถ NJ ผู้ใหญ่ปู</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/svg+xml" href="images/logo.svg?v=2" sizes="any">
