@@ -248,6 +248,19 @@ jobs:
       - name: Omise prod public-key rule gate
         run: npm run test:omise-key
 
+      # Tenth pure-node gate (OBRS-1194). `<html lang>` is invisible to every test the
+      # team can run: nothing throws, no unit test can observe it, and the app looks
+      # identical in the browsers we develop in. It is only wrong on a VISITOR's device
+      # -- and there it is wrong for the whole page at once. Prod declared `lang="en"`
+      # while rendering Thai, so a phone with "always translate English" ran a machine
+      # translation over text that was already Thai: หนองชาก became "ชุชาก", ผู้ใหญ่
+      # became "โดยทั่วไป", and the Material Symbols LIGATURES -- whose element text is
+      # the literal English icon name -- turned into the words "เมนู" and "ธง" where the
+      # icons belong. Measured against prod's own i18n bundle and /api/stops, which both
+      # held the correct Thai, so no server-side check could ever have caught it.
+      - name: index.html lang/title gate
+        run: npm run test:index-lang
+
       - name: Install dependencies
         run: npm ci
 
