@@ -86,8 +86,20 @@ DELETE FROM schedules WHERE departure_date_time IN (
 -- be resolved in the SEEDING SESSION's timezone, so the same file would produce a
 -- different instant depending on who ran it — that is a real defect in data.sql's
 -- demo rows today (they land at 15:00 Bangkok when seeded from a UTC host).
-INSERT INTO schedules (route_id, vehicle_id, vehicle_type_id, status_id, departure_date_time)
-SELECT r.id, v.id, vt.id, l.id,
+--
+-- OBRS-1166: owner_id is read off the ROUTE this schedule already joins (r.owner_id), not
+-- looked up from a second literal. OBRS-756 (f22d32b9, 2026-07-27) gave schedules a NOT NULL
+-- owner_id and this INSERT was never updated, so every run of this lane died at the seed step
+-- with `null value in column "owner_id" of relation "schedules" violates not-null constraint`
+-- before the backend was even started. obrs577-load-more-fixture.sql solves it the other way,
+-- with CROSS JOIN (SELECT id FROM owners WHERE slug = 'nj-travel'); that works today because
+-- data.sql seeds exactly one operator, but it is a SECOND fact that can disagree with the
+-- first the day data.sql seeds a second one - it would seed a departure sold by an operator
+-- that does not hold the line's licence, which is the exact invariant schema.sql's comment on
+-- schedules.owner_id says the column exists to carry. routes.owner_id is itself NOT NULL, so
+-- deriving from it cannot reintroduce the NULL this line is fixing.
+INSERT INTO schedules (owner_id, route_id, vehicle_id, vehicle_type_id, status_id, departure_date_time)
+SELECT r.owner_id, r.id, v.id, vt.id, l.id,
        (((timezone('Asia/Bangkok', now()))::date + slot.offset_days)::text || ' ' || slot.tod)::timestamptz
 FROM (VALUES
     (10, '09:00:00+07'),

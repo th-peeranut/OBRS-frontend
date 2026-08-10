@@ -50,5 +50,24 @@
 // nightly job enforces them, so the sentence is a description rather than an
 // intention. The re-consent consequence above applies again, at the same price:
 // the site is still not on sale.
-export const PRIVACY_POLICY_VERSION = '2.2';
-export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026-08-09';
+// 2.3 (OBRS-1140 AC#4) adds the bullet 2.2's own reasoning implies. 2.2 covered the
+// record we keep ABOUT a customer's data; this covers the data a customer hands us
+// most directly and section 6 had simply never mentioned: the screenshots and text
+// attached to a usability report. Section 2 has declared that collection since 2.0
+// ("ภาพที่ท่านแนบมา"), submission is anonymous and needs no account, and nothing in
+// the code had ever deleted one — deleteQuietly is compensation for a failed upload,
+// not retention. Section 6 now states the window the owner decided on 2026-08-09:
+// kept while the report is open, 90 days after it closes, and a two-year backstop for
+// a report nobody ever triaged. Enforced nightly by UsabilityReportRetentionScheduler,
+// so this is a description and not an intention.
+//
+// Same day as 2.2 and still a separate version: 2.2 shipped in its own commit, and one
+// version identifier covering two different texts is exactly what the ledger exists to
+// prevent. The re-consent consequence above applies again, at the same price — the site
+// is still not on sale.
+// The date is the 10th, not the 9th, and that is the ledger's rule rather than a typo:
+// two versions sharing an effective date cannot be ordered by the only field a data
+// subject can see. Nobody loses a day by it — prod serves no site yet (it answers 404)
+// and the scheduled dev->sit promote does not run until Monday night.
+export const PRIVACY_POLICY_VERSION = '2.3';
+export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026-08-10';

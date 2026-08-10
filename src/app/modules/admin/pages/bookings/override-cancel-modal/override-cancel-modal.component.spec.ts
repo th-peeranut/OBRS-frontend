@@ -13,6 +13,9 @@ import { AdminApiService, AdminBookingDetailDto } from '../../../../../services/
 import { AppRefundDestinationFieldsComponent } from '../../../../../shared/components/refund-destination-fields/refund-destination-fields.component';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { AA_NORMAL_TEXT, contrast, effectiveBg, fgOf } from '../../../../../testing/contrast';
+// OBRS-1152: the SHIPPED bundle, not a hand-typed mirror of it — see the
+// success-message describe block below for why the mirror had to go.
+import enI18n from '../../../../../../../public/i18n/en.json';
 
 // Far future → inside the cancellation window; far past → out-of-window. Using
 // fixed sentinel dates keeps the window check deterministic without faking the
@@ -176,27 +179,63 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
   // dialog said "OK" and this suite's `toHaveBeenCalled()` could not tell.
   describe('success message (OBRS-843)', () => {
     beforeEach(() => {
-      // Mirrors public/i18n/en.json; the parity gate keeps en/th/zh in step.
+      /**
+       * OBRS-1152: loads the REAL `public/i18n/en.json` subtree. It used to be
+       * a hand-typed object commented "Mirrors public/i18n/en.json" — and a
+       * mirror is not the thing. The parity gate keeps en/th/zh carrying the
+       * same KEYS; nothing was checking that the copy this suite asserts on
+       * was the copy the owner reads. So the CASH lane could be reworded (or
+       * reverted) in the bundle with every assertion below still green, which
+       * is the same shape of hole OBRS-1136 shipped through.
+       *
+       * Pointing at the bundle makes these assertions a gate on the shipped
+       * string. Interpolation still has to happen for them to pass, so the
+       * `{{refund}}` placeholder is covered too.
+       */
       const translate = TestBed.inject(TranslateService);
       translate.setTranslation(
         'en',
-        {
-          ADMIN: {
-            BOOKINGS: {
-              CANCEL_OVERRIDE: {
-                SUCCESS: 'Booking cancelled.',
-                SUCCESS_CASH: 'Booking cancelled. {{refund}} must be handed back to the customer in cash.',
-                SUCCESS_MANUAL:
-                  'Booking cancelled. The {{refund}} refund has not been paid yet — you need to transfer it to the customer.',
-                SUCCESS_AUTO:
-                  'Booking cancelled. {{refund}} is being refunded to the method the customer paid with.',
-              },
-            },
-          },
-        },
+        { ADMIN: { BOOKINGS: { CANCEL_OVERRIDE: (enI18n as any).ADMIN.BOOKINGS.CANCEL_OVERRIDE } } },
         true
       );
       translate.use('en');
+    });
+
+    /**
+     * OBRS-1152 (item 1). This lane had NO test before this card — MANUAL and
+     * AUTO below were covered, CASH was not, and that is how the screen shipped
+     * saying the opposite of what the door does. `resolveRefundMethod` returns
+     * the same literal "CASH" for both cancel doors
+     * (`CancellationService.java:271` and `:427`); the ONLY thing separating
+     * them is `cashHandedOverNow`, which this door passes as FALSE. So a cash
+     * share here is money the owner still OWES — no drawer opens, the row sits
+     * in the manual-refund worklist with a NULL destination, and the customer's
+     * cancellation email (OBRS-1125 `cash_owed`) has told them since
+     * 2026-08-09 that staff will phone for a bank account or PromptPay number.
+     *
+     * The two assertions that must not be relaxed:
+     *  - it does NOT tell the owner to hand cash over (the shipped defect), and
+     *  - it names the destination the email promises to ask for, so the owner
+     *    and the customer are reading the same instruction.
+     *
+     * The counter door's own SUCCESS_CASH (`STAFF.CANCEL_BOOKING.MODAL`) is the
+     * opposite case and deliberately still says "hand it back in cash" — see
+     * counter-cancel-modal.component.spec.ts. Do not "fix" the two to match.
+     */
+    it('CASH: says the money is NOT handed over and to collect a transfer destination', async () => {
+      api.adminOverrideCancelBooking.and.returnValue(overrideCancelResponse('CASH'));
+      open(IN_WINDOW);
+
+      await (component as any).submit();
+
+      const message = alert.success.calls.mostRecent().args[0] as string;
+      expect(message).toContain('400.00');
+      expect(message).toContain('NOT been handed over');
+      expect(message).toContain('PromptPay');
+      expect(message).not.toContain('in cash');
+      expect(message).not.toContain('OK');
+      // and not the untranslated key either
+      expect(message).not.toContain('ADMIN.BOOKINGS.CANCEL_OVERRIDE');
     });
 
     it('MANUAL: names the amount the owner still owes and says it is unpaid', async () => {

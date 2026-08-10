@@ -78,8 +78,14 @@ DELETE FROM schedules WHERE departure_date_time IN (
 -- Offsets are deliberately disjoint from reschedule-fixture.sql's (10/12/14/16) so
 -- both fixtures could in principle share a database without colliding — they
 -- don't here (separate obrs483qa DB), but there is no reason to tempt it.
-INSERT INTO schedules (route_id, vehicle_id, vehicle_type_id, status_id, departure_date_time, seating_mode)
-SELECT r.id, v.id, vt.id, l.id,
+--
+-- OBRS-1166: owner_id comes from the route (r.owner_id). schedules.owner_id has been NOT NULL
+-- since OBRS-756 (f22d32b9, 2026-07-27) and this INSERT never followed, so the lane died at the
+-- seed step long before `ng serve` or the backend ever ran. Same derivation as
+-- reschedule-fixture.sql - see the longer note there for why the route, and not a second
+-- owners.slug literal, is the thing to read it from.
+INSERT INTO schedules (owner_id, route_id, vehicle_id, vehicle_type_id, status_id, departure_date_time, seating_mode)
+SELECT r.owner_id, r.id, v.id, vt.id, l.id,
        (((timezone('Asia/Bangkok', now()))::date + slot.offset_days)::text || ' ' || slot.tod)::timestamptz,
        'OPEN'
 FROM (VALUES

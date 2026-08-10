@@ -547,6 +547,73 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
       });
     }
   });
+
+  // ── OBRS-1136 AC-3, staff side ────────────────────────────────────────────
+  //
+  // The customer's own cancel dialog got this pinned when the card shipped; this
+  // screen got the code and no assertion, so `policyWith()` never carried
+  // `manualRefundDueDays` and every one of the cases above rendered the
+  // timing-FREE fallback while passing. A green suite therefore said nothing
+  // about the branch the card exists for.
+  //
+  // Real translations here rather than the bare-key rendering the rest of this
+  // file relies on, for the same reason the customer suite does it: the defect
+  // being guarded is a sentence with a HOLE where the number should be, and only
+  // interpolation can show that.
+  describe('the manual-refund wait (OBRS-1136 AC-3)', () => {
+    function renderWith(refundMethod: string, manualRefundDueDays?: number): void {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation(
+        'en',
+        {
+          MY_BOOKINGS: {
+            CANCEL: {
+              MANUAL_REFUND_NOTE: 'Our staff will transfer your refund.',
+              MANUAL_REFUND_NOTE_DUE: 'Our staff will transfer your refund within {{days}} days.',
+            },
+          },
+        },
+        true
+      );
+      translate.use('en');
+
+      api.getCancelPolicy.and.returnValue(
+        of({ code: 200, message: 'ok', data: { ...policyWith(refundMethod), manualRefundDueDays } })
+      );
+      open();
+    }
+
+    const note = () => fixture.debugElement.query(By.css('.ccm-policy .admin-hint'));
+
+    // 11, never 7: 7 is the shipped default of MANUAL_REFUND_DUE_DAYS, so a screen that
+    // had gone back to typing the wait into i18n would still read 7 and this test could
+    // not tell the difference.
+    it('states the wait the /cancel-policy quote carried — 11, not a number typed into i18n', () => {
+      renderWith('MANUAL_REFUND_REQUIRED', 11);
+
+      expect(note().nativeElement.textContent).toContain('within 11 days');
+      expect(note().nativeElement.textContent).not.toContain('{{');
+    });
+
+    // Netlify and Koyeb deploy separately, so for minutes on every release this build is
+    // live against a backend that does not send the field. The salesperson must then read
+    // the honest timing-free sentence out loud, never "within  days".
+    it('falls back to the timing-free note when the backend did not send the number', () => {
+      renderWith('MANUAL_REFUND_REQUIRED', undefined);
+
+      expect(note().nativeElement.textContent.trim()).toBe('Our staff will transfer your refund.');
+      expect(note().nativeElement.textContent).not.toContain('within');
+    });
+
+    // The lane semantics the backend pins on the notification side: this key measures the
+    // wait on money still OWED. Cash handed across the counter is already settled, so a
+    // wait quoted here would be a promise about money the customer is walking out with.
+    it('says nothing about a wait on the CASH lane, even when the quote carries the number', () => {
+      renderWith('CASH', 11);
+
+      expect(note()).toBeNull();
+    });
+  });
 });
 
 // ── FE-1/2/3: request-body byte-identity, asserted at the HTTP layer ───────

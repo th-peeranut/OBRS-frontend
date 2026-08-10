@@ -77,11 +77,19 @@ export default defineConfig({
         // clone -- that clone is on an unrelated branch with staged changes mid-session.
         // See the QA run notes for OBRS-577.
         OBRS_BACKEND_DIR: 'C:\\Users\\thpee\\Desktop\\workshop\\OBRS-backend-wt-577qa',
-        // start-e2e-backend.ps1's own JAVA_HOME default (jdk-21.0.11) is stale: origin/dev's
-        // pom.xml now targets <java.version>25</java.version> (post OBRS-921/964 JDK bump,
-        // after playwright.local.config.ts's header comment was written). Override here
-        // rather than editing the shared script for one lane.
-        JAVA_HOME: 'C:\\Program Files\\Java\\jdk-25.0.3',
+        // OBRS-1162: the JAVA_HOME override that used to sit here is GONE. It read
+        //
+        //     JAVA_HOME: 'C:\\Program Files\\Java\\jdk-25.0.3',
+        //
+        // and its comment said plainly that start-e2e-backend.ps1's own default
+        // (jdk-21.0.11) was stale after OBRS-921 moved the pom to <java.version>25</...>,
+        // and that overriding here was cheaper than editing a script shared by two lanes.
+        // That trade bought one working lane and left the repository with TWO written-down
+        // JDK paths instead of one - and this one pinned the PATCH level, so installing
+        // 25.0.4 and removing 25.0.3 would kill it while <java.version> never moved.
+        // start-e2e-backend.ps1 now derives the JDK from OBRS-backend's own pom.xml, so
+        // there is nothing left for this line to correct. Do not reintroduce it: setting
+        // JAVA_HOME here again would put this lane back on a number nobody updates.
       },
     },
     {
