@@ -19,6 +19,7 @@ import { DropdownObrsPassengerComponent } from './components/dropdown-obrs-passe
 import { StationHomeComponent } from './components/station-home/station-home.component';
 import { DropdownGroupObrsComponent } from '../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
 import { StationSwapButtonComponent } from '../../shared/components/station-swap-button/station-swap-button.component';
+import { TripTypeToggleComponent } from '../../shared/components/trip-type-toggle/trip-type-toggle.component';
 import { RecentRoutesQuickPickComponent } from './components/recent-routes-quick-pick/recent-routes-quick-pick.component';
 
 // Route-Map Components
@@ -75,6 +76,7 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
     DropdownObrsComponent,
     DropdownGroupObrsComponent,
     StationSwapButtonComponent,
+    TripTypeToggleComponent,
     DropdownObrsPassengerComponent,
     RecentRoutesQuickPickComponent,
     RouteStopListModule,

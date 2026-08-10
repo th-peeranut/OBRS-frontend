@@ -4,6 +4,7 @@ import { TranslateService } from '@ngx-translate/core';
 import dayjs from 'dayjs';
 
 import { RescheduleDialogComponent } from './reschedule-dialog.component';
+import { AuthService } from '../../../../auth/auth.service';
 import { MyBookingsState, initialMyBookingsState } from '../../store/my-bookings.model';
 import { MyBookingDto } from '../../../../shared/interfaces/my-booking.interface';
 import { RescheduleOption } from '../../../../shared/interfaces/reschedule.interface';
@@ -63,10 +64,20 @@ const sampleOption: RescheduleOption = {
 };
 
 describe('RescheduleDialogComponent', () => {
-  function create(state: MyBookingsState): { component: RescheduleDialogComponent; store: FakeStore } {
+  /**
+   * OBRS-1167: `isCounterStaff` is a real `AuthService.hasAnyRole(['salesperson'])` call, so the
+   * fake answers that one question and nothing else. It defaults to FALSE — a customer — because
+   * that is the path every pre-existing test in this file exercises, and this card rests on that
+   * path being unchanged.
+   */
+  function create(
+    state: MyBookingsState,
+    isCounterStaff = false
+  ): { component: RescheduleDialogComponent; store: FakeStore } {
     const store = new FakeStore({ myBookings: state });
     const translate = { currentLang: 'th' } as unknown as TranslateService;
-    const component = new RescheduleDialogComponent(store as unknown as Store, translate);
+    const auth = { hasAnyRole: () => isCounterStaff } as unknown as AuthService;
+    const component = new RescheduleDialogComponent(store as unknown as Store, translate, auth);
     component.bookingId = 5;
     return { component, store };
   }
@@ -159,6 +170,154 @@ describe('RescheduleDialogComponent', () => {
         newToStopId: 20,
         seatAssignments: { 11: '1' },
         clientNetAmount: 50,
+      })
+    );
+  });
+
+  // ── OBRS-1167 (AC-5): the counter's cash hand-over lane ────────────────────
+  //
+  // The state below is the one case where it applies: a move that refunds money
+  // (`netAmount` negative) on a booking the server has told us was paid in cash.
+
+  function cashRefundState() {
+    return buildState({
+      bookings: [buildBooking()],
+      rescheduleDialogBookingId: 5,
+      stopsLookup: { a: 10, b: 20 },
+      rescheduleTickets: [{ ticketId: 11, seatNumber: '1' }],
+      rescheduleEstimate: {
+        oldFare: '100',
+        newFare: '80',
+        fareDiff: '-20',
+        rescheduleFee: '0',
+        netAmount: '-20.00',
+        paymentDirection: 'REFUND',
+        cashRefundEligible: true,
+      },
+    });
+  }
+
+  it('AC-5: a CUSTOMER never sees the cash hand-over panel, even on a cash refund the counter could book', () => {
+    const { component } = create(cashRefundState(), false);
+    component.ngOnInit();
+
+    expect(component.showCashHandover).toBeFalse();
+  });
+
+  it('AC-5: STAFF see it — but only when the server says this move actually refunds cash', () => {
+    const { component } = create(cashRefundState(), true);
+    component.ngOnInit();
+    expect(component.showCashHandover).toBeTrue();
+
+    // Same staff member, a candidate that charges MORE instead: the panel goes away, because
+    // there is no cash to hand over and offering the control would invite a false claim.
+    const { component: topUp } = create(
+      buildState({
+        bookings: [buildBooking()],
+        rescheduleDialogBookingId: 5,
+        stopsLookup: { a: 10, b: 20 },
+        rescheduleTickets: [{ ticketId: 11, seatNumber: '1' }],
+        rescheduleEstimate: {
+          oldFare: '100',
+          newFare: '120',
+          fareDiff: '20',
+          rescheduleFee: '0',
+          netAmount: '20.00',
+          paymentDirection: 'TOP_UP',
+          cashRefundEligible: false,
+        },
+      }),
+      true
+    );
+    topUp.ngOnInit();
+    expect(topUp.showCashHandover).toBeFalse();
+  });
+
+  it('AC-5/AC-6: the confirm payload carries NO cash keys at all unless the panel was shown and ticked', () => {
+    const { component, store } = create(cashRefundState(), false);
+    component.ngOnInit();
+    component.selectedOption = sampleOption;
+
+    component.onConfirm();
+
+    // Absent, not `false`. The customer's request body says nothing about a drawer, which is what
+    // makes the safe outcome the server's default rather than something it has to be careful about.
+    expect(store.dispatch).toHaveBeenCalledWith(
+      confirmReschedule({
+        bookingId: 5,
+        newScheduleId: sampleOption.scheduleId,
+        newFromStopId: 10,
+        newToStopId: 20,
+        seatAssignments: { 11: '1' },
+        clientNetAmount: -20,
+      })
+    );
+  });
+
+  it('AC-5: a staff member who ticks the panel sends the claim AND the owner code together', () => {
+    const { component, store } = create(cashRefundState(), true);
+    component.ngOnInit();
+    component.selectedOption = sampleOption;
+    component.onCashHandoverStateChange({ cashHandedOverNow: true, approvalCode: '246813' });
+
+    component.onConfirm();
+
+    expect(store.dispatch).toHaveBeenCalledWith(
+      confirmReschedule({
+        bookingId: 5,
+        newScheduleId: sampleOption.scheduleId,
+        newFromStopId: 10,
+        newToStopId: 20,
+        seatAssignments: { 11: '1' },
+        clientNetAmount: -20,
+        cashHandedOverNow: true,
+        approvalCode: '246813',
+      })
+    );
+  });
+
+  it('AC-5: a claim made and then invalidated by a new estimate does not survive to the confirm', () => {
+    const store = new FakeStore({ myBookings: cashRefundState() });
+    const translate = { currentLang: 'th' } as unknown as TranslateService;
+    const auth = { hasAnyRole: () => true } as unknown as AuthService;
+    const component = new RescheduleDialogComponent(store as unknown as Store, translate, auth);
+    component.bookingId = 5;
+    component.ngOnInit();
+    component.selectedOption = sampleOption;
+    component.onCashHandoverStateChange({ cashHandedOverNow: true, approvalCode: '246813' });
+
+    // The operator goes back and picks a round that costs MORE. The estimate that arrives is no
+    // longer cash-refunding, so the earlier claim — about a payout that no longer exists — is
+    // dropped along with the code.
+    store.next({
+      myBookings: buildState({
+        bookings: [buildBooking()],
+        rescheduleDialogBookingId: 5,
+        stopsLookup: { a: 10, b: 20 },
+        rescheduleTickets: [{ ticketId: 11, seatNumber: '1' }],
+        rescheduleEstimate: {
+          oldFare: '100',
+          newFare: '120',
+          fareDiff: '20',
+          rescheduleFee: '0',
+          netAmount: '20.00',
+          paymentDirection: 'TOP_UP',
+          cashRefundEligible: false,
+        },
+      }),
+    });
+    store.dispatch.calls.reset();
+
+    component.onConfirm();
+
+    expect(store.dispatch).toHaveBeenCalledWith(
+      confirmReschedule({
+        bookingId: 5,
+        newScheduleId: sampleOption.scheduleId,
+        newFromStopId: 10,
+        newToStopId: 20,
+        seatAssignments: { 11: '1' },
+        clientNetAmount: 20,
       })
     );
   });

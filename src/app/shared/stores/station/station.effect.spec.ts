@@ -94,6 +94,12 @@ describe('ProvinceEffect', () => {
       actionsSubject.next(invokeGetAllProvinceWithStationApi());
 
       expect(service.getAll).toHaveBeenCalledTimes(1);
+      // OBRS-642: `true` = skip the global blocking loading overlay. This is the
+      // customer's first screen and the overlay covered the booking form it exists to
+      // fill, with no way off it while the request was in flight — measured on prod
+      // 2026-08-10 at over a minute. Asserted on the argument, because dropping it is a
+      // one-character regression that nothing else in this suite would notice.
+      expect(service.getAll).toHaveBeenCalledWith(true);
       expect(results.length).toBe(1);
       expect(results[0]).toEqual(
         invokeGetAllProvinceWithStationApiSuccess({ stations: [MOCK_STATION] })

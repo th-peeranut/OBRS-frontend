@@ -32,6 +32,11 @@ export default defineConfig({
     // build for the same reason — a blank-ID build cannot tell "collection
     // stopped" apart from "nothing was ever collected".
     'obrs-874-analytics-consent-withdraw.spec.ts',
+    // OBRS-1195: same build, one layer further out. The two suites above count
+    // requests for the TAG; this one counts the `page_view` hits the tag then
+    // sends, which is where "the landing page of a first visit is never
+    // counted" was measured and is the only place it can be disproven.
+    'obrs-1195-first-visit-page-view.spec.ts',
     // AFTER evidence + the measured contrast/geometry checks, taken from the
     // very build whose network behaviour the gate suite just asserted.
     'obrs-867-capture.spec.ts',

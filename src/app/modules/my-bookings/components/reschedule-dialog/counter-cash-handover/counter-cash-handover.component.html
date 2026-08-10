@@ -1,0 +1,81 @@
+<!-- OBRS-1167 (AC-5): rendered ONLY when the viewer holds a staff role and the server said this
+     move refunds cash. A customer never sees this block; see the component's own doc comment for
+     why the role check here is a UX gate and the real one is on the server. -->
+<section class="counter-cash" data-testid="counter-cash-handover">
+  <h5 class="counter-cash__title">
+    {{ 'MY_BOOKINGS.RESCHEDULE.CASH_HANDOVER.TITLE' | translate }}
+  </h5>
+  <p class="counter-cash__body">
+    {{ 'MY_BOOKINGS.RESCHEDULE.CASH_HANDOVER.BODY' | translate: { amount: amountLabel } }}
+  </p>
+
+  <!-- The claim itself. Unticked is the default and the safe answer: the confirm then sends
+       nothing about cash and the money stays owed in the manual-refund queue, exactly as it does
+       for a customer rescheduling from home. -->
+  <label class="counter-cash__check">
+    <input
+      type="checkbox"
+      [checked]="handedOver"
+      [disabled]="disabled"
+      (change)="onHandedOverToggle($any($event.target).checked)"
+      data-testid="counter-cash-handed-over"
+      />
+    <span>{{ 'MY_BOOKINGS.RESCHEDULE.CASH_HANDOVER.CONFIRM_LABEL' | translate: { amount: amountLabel } }}</span>
+  </label>
+
+  @if (handedOver) {
+    <div class="counter-cash__approval">
+      <p class="counter-cash__approval-hint">
+        {{ 'MY_BOOKINGS.RESCHEDULE.CASH_HANDOVER.APPROVAL_BODY' | translate }}
+      </p>
+
+      <!-- Step 1 — ask. Stays visible after a successful ask so the counter can re-send if the
+           owner never saw the first one. -->
+      <button
+        type="button"
+        class="counter-cash__ask"
+        [disabled]="disabled || approvalState === 'requesting'"
+        (click)="requestApproval()"
+        data-testid="counter-cash-ask-owner"
+        >
+        {{
+        approvalState === 'requesting'
+        ? ('MY_BOOKINGS.RESCHEDULE.CASH_HANDOVER.REQUESTING' | translate)
+        : approvalState === 'requested'
+        ? ('MY_BOOKINGS.RESCHEDULE.CASH_HANDOVER.REQUEST_AGAIN' | translate)
+        : ('MY_BOOKINGS.RESCHEDULE.CASH_HANDOVER.REQUEST' | translate)
+        }}
+      </button>
+      @if (approvalState === 'requested') {
+        <p class="counter-cash__hint">
+          {{ 'MY_BOOKINGS.RESCHEDULE.CASH_HANDOVER.REQUESTED_HINT' | translate }}
+        </p>
+      }
+
+      <!-- Step 2 — the six digits the owner reads back. -->
+      <label class="counter-cash__label" for="counter-cash-code">
+        {{ 'MY_BOOKINGS.RESCHEDULE.CASH_HANDOVER.CODE_LABEL' | translate }}
+      </label>
+      <input
+        id="counter-cash-code"
+        class="counter-cash__code"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        [attr.maxlength]="approvalCodeLength"
+        [value]="approvalCode"
+        [disabled]="disabled"
+        (input)="onCodeInput($any($event.target).value)"
+        data-testid="counter-cash-code"
+        />
+      @if (showCodeError) {
+        <small class="counter-cash__error">
+          {{ 'MY_BOOKINGS.RESCHEDULE.CASH_HANDOVER.CODE_FORMAT' | translate: { length: approvalCodeLength } }}
+        </small>
+      }
+      @if (approvalError) {
+        <small class="counter-cash__error">{{ approvalError }}</small>
+      }
+    </div>
+  }
+</section>

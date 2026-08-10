@@ -5,11 +5,20 @@ import dayjs from 'dayjs';
 import { Router } from '@angular/router';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { select, Store } from '@ngrx/store';
-import { catchError, Observable, of, Subject, Subscription, take, takeUntil } from 'rxjs';
+import {
+  catchError,
+  forkJoin,
+  Observable,
+  of,
+  Subject,
+  Subscription,
+  switchMap,
+  take,
+  takeUntil,
+} from 'rxjs';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
-import { ScheduleFilterPayload } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
-import { StationApi } from '../../../../shared/interfaces/station.interface';
+import { getStationSlugById, StationApi } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { AuthService } from '../../../../auth/auth.service';
 import { BookingService } from '../../../../services/booking/booking.service';
@@ -27,6 +36,14 @@ import {
 } from '../../../../services/booking-policy/booking-policy.service';
 import { LanguageService } from '../../../../shared/services/language.service';
 import { canSwapStationPair, isEmptyStationValue } from '../../../../shared/lib/station-swap';
+import { RouteMapService } from '../../../../services/route-map/route-map.service';
+import {
+  collectBookableDestinationSlugs,
+  collectBookableOriginSlugs,
+  filterStationsBySlugs,
+  RouteSegments,
+} from '../../../../shared/lib/bookable-stations';
+import { carryReturnDate, defaultReturnDate } from '../../../../shared/lib/return-date';
 
 // OBRS-564: date-picker cap fallback, used only until the real public
 // booking-policy config resolves (see ngOnInit below). A briefly-wrong value
@@ -47,17 +64,22 @@ import { canSwapStationPair, isEmptyStationValue } from '../../../../shared/lib/
     standalone: false
 })
 export class HomeBookingComponent implements OnInit, OnDestroy {
+  // OBRS-1025: still passed to `app-trip-type-toggle` as `[options]` — the
+  // pill component reads `id`/`isDefault` the same way `app-dropdown-obrs`
+  // did, so this array's shape doesn't change, only what renders it.
+  // OBRS-1185: `isDefault` moved to id 2 (round-trip) — one of three places
+  // that must move together, see `createForm()`.
   roundTripDropdowns: Dropdown[] = [
     {
       id: 1,
       nameThai: 'เที่ยวเดียว',
       nameEnglish: 'One-way',
-      isDefault: true,
     },
     {
       id: 2,
       nameThai: 'ไป-กลับ',
       nameEnglish: 'Round-trip',
+      isDefault: true,
     },
   ];
 
@@ -92,6 +114,16 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   startProvinceStationList: StationApi[] = [];
   endProvinceStationList: StationApi[] = [];
 
+  /** OBRS-1213: the pickup/dropoff halves of every active route, used to keep
+   *  the two dropdowns to stops that can actually produce a trip.
+   *
+   *  `null` is load-bearing and means "route data unavailable" — before it
+   *  resolves, and permanently if the request fails or no active route comes
+   *  back. Every consumer below reads that as "offer everything", which is
+   *  exactly today's behaviour (AC#6): a customer who cannot reach
+   *  `/api/routes` still gets a usable form, never an empty dropdown. */
+  private routeSegments: RouteSegments[] | null = null;
+
   /** OBRS-575: up to 3 already-id-resolved, deduped, active-station-filtered
    *  recent-route candidates for the quick-pick strip. Plain field, never a
    *  template getter — recomputed only from `recomputeRecentRouteCandidates()`. */
@@ -116,7 +148,17 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
 
   roundTripOnChange$: Subscription;
 
-  isRoundTripReturn: boolean = false;
+  /** OBRS-1185 AC#4: re-derives `returnDate` whenever `departureDate` moves
+   *  past it. See `createForm()`. */
+  departureDateOnChange$: Subscription;
+
+  // OBRS-1185: literal default flipped to round-trip, matching `createForm()`'s
+  // `roundTrip: [2]` seed — a plain `new HomeBookingComponent(...)` (no
+  // `app-trip-type-toggle` rendered, e.g. most specs in this file) never runs
+  // the child that would otherwise correct this, so the two literals have to
+  // agree on their own for the return-date field to be in the DOM from the
+  // very first frame (AC#1).
+  isRoundTripReturn: boolean = true;
 
   constructor(
     private fb: FormBuilder,
@@ -126,6 +168,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private bookingService: BookingService,
     private bookingPolicyService: BookingPolicyService,
+    private routeMapService: RouteMapService,
     languageService: LanguageService
   ) {
     this.minDate = new Date();
@@ -151,6 +194,8 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       // never resolves ids against an empty list and drops every route.
       this.recomputeRecentRouteCandidates();
     });
+
+    this.loadRouteSegments();
 
     // Switches the raw-pair SOURCE between the logged-in API and the
     // anonymous localStorage cache. Never issues the API call for an
@@ -196,14 +241,26 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
 
     this.roundTripOnChange$?.unsubscribe();
+    this.departureDateOnChange$?.unsubscribe();
   }
 
   createForm() {
     this.bookingForm = this.fb.group({
-      roundTrip: [1],
+      // OBRS-1185: default flipped to round-trip (id 2) — owner decision
+      // 2026-08-10, comparing prod against Skyscanner/Traveloka/Airpaz (all
+      // three default round-trip). Three places move together or the first
+      // frame disagrees with itself: this seed, `roundTripDropdowns`'
+      // `isDefault` flag (below), and `isRoundTripReturn`'s own literal
+      // default (this class's field initializer) — `app-trip-type-toggle`
+      // deliberately does NOT re-derive a default of its own (see that
+      // component's header comment), so this is the ONE place the value
+      // actually comes from.
+      roundTrip: [2],
       // Default to 1 adult so a fresh search is immediately valid; the user can
       // still adjust via the passenger dropdown. Types/casing match
-      // DropdownObrsPassengerComponent ('ADULT'/'KIDS') and getPayload().
+      // DropdownObrsPassengerComponent ('ADULT'/'KIDS') and
+      // ScheduleBookingFilterComponent.getPayload() (the surviving payload
+      // builder — OBRS-1190 deleted this component's own copy as dead code).
       passengerInfo: [
         [
           { type: 'ADULT', count: 1 },
@@ -215,13 +272,39 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       stopStationId: [''],
       departureDate: [this.minDate],
 
-      returnDate: [this.minDate],
+      // OBRS-1185: derived FROM departureDate (never `new Date()`/`minDate`
+      // directly) and capped at `maxDate` — a same-day round trip is not what
+      // "round trip" defaults to on any reference site the owner cited. See
+      // `shared/lib/return-date.ts`.
+      returnDate: [defaultReturnDate(this.minDate, this.maxDate)],
     });
 
     this.roundTripOnChange$ = this.bookingForm.controls[
       'roundTrip'
     ].valueChanges.subscribe((value) => {
-      this.isRoundTripReturn = value?.id === 2;
+      // OBRS-1025: `app-trip-type-toggle` writes back a full Dropdown object,
+      // so `value?.id` is what carries the id here — but read it the SAME way
+      // the schedule-booking-filter twin does (`typeof value === 'object'`),
+      // so the two copies of this form cannot drift on this exact line the way
+      // OBRS-1021/1028/1023/1036 already did. A bare number can only reach
+      // here via a future programmatic patch; handling it costs nothing and
+      // keeps the twins byte-identical.
+      const roundTripId = typeof value === 'object' ? value?.id : value;
+      this.isRoundTripReturn = roundTripId === 2;
+    });
+
+    // OBRS-1185 AC#4: moving departureDate past returnDate must carry
+    // returnDate forward with it — never leave a pair in the form the backend
+    // would reject. `emitEvent: false` — this is a derived correction, not a
+    // user edit, and nothing downstream needs to react to it a second time.
+    this.departureDateOnChange$ = this.bookingForm.controls[
+      'departureDate'
+    ].valueChanges.subscribe((date: Date) => {
+      const currentReturn = this.getFormValue('returnDate');
+      const carried = carryReturnDate(date, currentReturn, this.maxDate);
+      if (carried !== currentReturn) {
+        this.bookingForm.patchValue({ returnDate: carried }, { emitEvent: false });
+      }
     });
   }
 
@@ -254,51 +337,6 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   onRecentRouteSelected(candidate: RecentRouteCandidate): void {
     this.onStartStationChange(candidate.originStation);
     this.onEndStationChange(candidate.destinationStation);
-  }
-
-  getPayload() {
-    const formValue = { ...this.bookingForm.getRawValue() };
-
-    const passengerInfo = Array.isArray(formValue.passengerInfo)
-      ? formValue.passengerInfo
-      : [];
-    const getPassengerCount = (type: string) =>
-      passengerInfo.find((item: any) => item.type === type)?.count || 0;
-
-    formValue.adultCount = getPassengerCount('ADULT');
-    formValue.kidsCount = getPassengerCount('KIDS');
-
-    const roundTripId =
-      typeof formValue.roundTrip === 'object' ? formValue.roundTrip?.id : formValue.roundTrip;
-
-    const payload: ScheduleFilterPayload = {
-      bookingType: roundTripId === 1 ? 'One way' : 'Return',
-      numberOfPassengers: formValue.adultCount + formValue.kidsCount,
-      fromStop: this.getStationCodeById(formValue.startStationId),
-      toStop: this.getStationCodeById(formValue.stopStationId),
-      departureDate: formValue.departureDate
-        ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
-        : '',
-      ...(roundTripId === 1
-        ? {}
-        : {
-            returnDate: formValue.returnDate
-              ? dayjs(formValue.returnDate).format('YYYY-MM-DD')
-              : null,
-          }),
-    };
-
-    return payload;
-  }
-
-  private getStationCodeById(stationId: string | number | null | undefined): string | null {
-    if (stationId === null || stationId === undefined || stationId === '') {
-      return null;
-    }
-
-    const id = Number(stationId);
-    const match = this.allProvinceStationList.find((station) => station.id === id);
-    return match?.slug || null;
   }
 
   onStartStationChange(station: StationApi) {
@@ -358,21 +396,105 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     return this.bookingForm.get(controlName)?.value;
   }
 
+  /**
+   * OBRS-1213: loads the pickup/dropoff lists of every active route so the two
+   * dropdowns can be held to stops that can actually produce a trip.
+   *
+   * <p>No new endpoint and no new page-load request per route beyond the ones
+   * `/home` already issues: both `getActiveRoutes()` and `getPickupDropoffCached()`
+   * are deduped per URL in `RouteMapService` (see `shared()` there), so the map
+   * component sharing this page reuses the very same responses.
+   *
+   * <p>Failure is not reported anywhere: `catchError` leaves `routeSegments`
+   * null, which every consumer reads as "offer every stop" — the pre-fix
+   * behaviour. This is a REFINEMENT of the form, not a precondition for using
+   * it, so it must never block or alert (AC#6).
+   */
+  private loadRouteSegments(): void {
+    this.routeMapService
+      .getActiveRoutes()
+      .pipe(
+        switchMap((routes) =>
+          routes.length === 0
+            ? of<(RouteSegments | null)[]>([])
+            : forkJoin(
+                routes.map((route) =>
+                  this.routeMapService.getPickupDropoffCached(route.slug).pipe(take(1))
+                )
+              )
+        ),
+        catchError(() => of<(RouteSegments | null)[]>([])),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((segments) => {
+        const usable = segments.filter((s): s is RouteSegments => !!s);
+        // An empty result stays null rather than becoming an empty array: an
+        // empty array is a claim that NO stop is bookable, and would blank both
+        // dropdowns on the strength of a request that simply did not answer.
+        this.routeSegments = usable.length > 0 ? usable : null;
+        this.syncStationOptions();
+      });
+  }
+
+  /**
+   * Rebuilds both dropdown option lists for the currently selected pair.
+   *
+   * <p>Three filters compose here, in this order:
+   *   1. OBRS-1213 — origins are the stops that are a `pickup` somewhere, and
+   *      destinations the stops reachable AFTER the chosen origin. Skipped
+   *      wholesale while `routeSegments` is null (see the field's comment).
+   *   2. the pre-existing "you cannot pick the same stop on both sides".
+   *   3. a destination the new origin has just invalidated is CLEARED, not
+   *      merely hidden — leaving it selected would submit exactly the
+   *      impossible pair this method exists to prevent, and the list on screen
+   *      would no longer contain it, so nothing would show the customer why.
+   *      Same reasoning, same trigger as `RouteMapHomeComponent.refreshDropoffOptions()`.
+   */
   private syncStationOptions(
     selectedStartId?: string | number | null,
     selectedStopId?: string | number | null
   ): void {
     const currentStartId =
       selectedStartId ?? this.bookingForm.get('startStationId')?.value;
-    const currentStopId =
+    let currentStopId =
       selectedStopId ?? this.bookingForm.get('stopStationId')?.value;
 
-    this.startProvinceStationList = this.allProvinceStationList.filter(
-      (item) => item.id !== Number(currentStopId)
-    );
-    this.endProvinceStationList = this.allProvinceStationList.filter(
-      (item) => item.id !== Number(currentStartId)
-    );
+    const originSlugs = this.routeSegments
+      ? collectBookableOriginSlugs(this.routeSegments)
+      : null;
+
+    // A start that is not a bookable origin at all — a stale prefill from
+    // booking history, a stop retired since — narrows nothing instead of
+    // narrowing to nothing. The alternative is a destination dropdown that is
+    // simply empty, with nothing on screen saying why.
+    const startSlug = getStationSlugById(currentStartId, this.allProvinceStationList);
+    const narrowFrom = originSlugs?.has(startSlug) ? startSlug : '';
+
+    const destinationSlugs = this.routeSegments
+      ? collectBookableDestinationSlugs(this.routeSegments, narrowFrom)
+      : null;
+
+    if (destinationSlugs && !isEmptyStationValue(currentStopId)) {
+      const stopSlug = getStationSlugById(currentStopId, this.allProvinceStationList);
+      if (!destinationSlugs.has(stopSlug)) {
+        this.bookingForm.patchValue({ stopStationId: '' });
+        // Cleared BEFORE the lists are built, not after: the origin list
+        // excludes whatever the destination currently is, so recomputing off
+        // the stale id would keep the just-released stop hidden from the
+        // origin dropdown until some later sync happened to run.
+        currentStopId = '';
+      }
+    }
+
+    this.startProvinceStationList = filterStationsBySlugs(
+      this.allProvinceStationList,
+      originSlugs
+    ).filter((item) => item.id !== Number(currentStopId));
+
+    this.endProvinceStationList = filterStationsBySlugs(
+      this.allProvinceStationList,
+      destinationSlugs
+    ).filter((item) => item.id !== Number(currentStartId));
   }
 
   /** OBRS-575: fetches the logged-in user's booking history for the

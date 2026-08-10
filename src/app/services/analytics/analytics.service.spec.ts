@@ -453,6 +453,139 @@ describe('AnalyticsService', () => {
     });
   });
 
+  /**
+   * OBRS-1195. The banner cannot be answered before the page it sits on has
+   * rendered, so on a first visit `NavigationEnd` has ALWAYS passed by the time
+   * consent arrives — and the `page_view` it produced was dropped. Measured on
+   * prod 2026-08-10: a first visit sent zero `page_view`, so the entry page of
+   * every new visitor was missing from the funnel it exists to feed.
+   *
+   * Both directions are pinned, because the obvious fix ("send one when consent
+   * arrives") double-counts every visitor who already consented — the case that
+   * measured 1 before this change and must still measure 1.
+   */
+  describe('OBRS-1195 — the page consent was given on is counted, exactly once', () => {
+    const STAFF = { path: 'staff', data: { requiredRoles: ['driver', 'salesperson'] } };
+
+    it('replays the landing page when consent arrives after NavigationEnd', () => {
+      routeSnapshotRoot = snapshotChain();
+      service.init();
+      navigate('/');
+      expect(tags.sendEvent).not.toHaveBeenCalled(); // the drop this card is about
+
+      consent.grant();
+
+      expect(tags.sendEvent).toHaveBeenCalledTimes(1);
+      expect(tags.sendEvent).toHaveBeenCalledWith('page_view', {
+        page_path: '/',
+        page_language: 'th',
+      });
+    });
+
+    it('replays after a DENIED answer is changed to granted', () => {
+      // `deny()` is an answer, so the banner is gone — the visitor reaches this
+      // state through the consent control on /privacy-policy, and the page they
+      // are standing on is just as uncounted as an undecided one.
+      routeSnapshotRoot = snapshotChain('privacy-policy');
+      service.init();
+      consent.deny();
+      navigate('/privacy-policy');
+      expect(tags.sendEvent).not.toHaveBeenCalled();
+
+      consent.grant();
+
+      expect(tags.sendEvent).toHaveBeenCalledTimes(1);
+      expect(tags.sendEvent).toHaveBeenCalledWith(
+        'page_view',
+        jasmine.objectContaining({ page_path: '/privacy-policy' })
+      );
+    });
+
+    it('MUST NOT double-count: a returning visitor still gets exactly one', () => {
+      // The regression AC-2 names. This case measured 1 on prod BEFORE the fix;
+      // a replay that fired on every consent emission would make it 2, and
+      // nothing else in this suite would have noticed.
+      routeSnapshotRoot = snapshotChain();
+      consent.grant();
+
+      service.init();
+      navigate('/');
+
+      expect(tags.sendEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it('MUST NOT double-count: a route change is not a consent arrival', () => {
+      // `AnalyticsRouteScopeService` is constructed before this service, so it
+      // is notified of NavigationEnd first — the consent subscriber therefore
+      // runs BEFORE this service's own page_view for the same navigation. A
+      // replay keyed on the emission alone would send that page twice.
+      routeSnapshotRoot = snapshotChain();
+      service.init();
+      navigate('/');
+      consent.grant();
+      tags.sendEvent.calls.reset();
+
+      routeSnapshotRoot = snapshotChain('how-to-book');
+      navigate('/how-to-book');
+
+      expect(tags.sendEvent).toHaveBeenCalledTimes(1);
+      expect(tags.sendEvent).toHaveBeenCalledWith(
+        'page_view',
+        jasmine.objectContaining({ page_path: '/how-to-book' })
+      );
+    });
+
+    it('MUST NOT double-count: withdrawing and re-granting on a counted page', () => {
+      // The page was already measured, so nothing is owed. Without the "was it
+      // suppressed?" half of the guard, every withdraw/re-grant cycle would add
+      // a page_view for a page the report already has.
+      routeSnapshotRoot = snapshotChain();
+      service.init();
+      navigate('/');
+      consent.grant();
+      expect(tags.sendEvent).toHaveBeenCalledTimes(1);
+
+      consent.reset();
+      consent.grant();
+
+      expect(tags.sendEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it('AC-3 — accepting on a staff page sends nothing (OBRS-887 still holds)', () => {
+      // The other arm of AC-4: one arm alone proves nothing. A staff route is
+      // exactly where a suppressed page_view is NOT owed a replay — it was
+      // dropped for a reason consent cannot lift.
+      routeSnapshotRoot = snapshotChain(STAFF, 'sell');
+      service.init();
+      navigate('/staff/sell');
+
+      consent.grant();
+
+      expect(tags.sendEvent).not.toHaveBeenCalled();
+      expect(tags.load).not.toHaveBeenCalled();
+    });
+
+    it('a staff page suppressed earlier is not replayed on the next customer page', () => {
+      // Walking off /staff/sell must produce ONE page_view — the customer page
+      // the visitor is now on — and never a late one for the staff route whose
+      // pattern OBRS-887 forbids sending at all.
+      routeSnapshotRoot = snapshotChain(STAFF, 'sell');
+      service.init();
+      navigate('/staff/sell');
+      consent.grant();
+      expect(tags.sendEvent).not.toHaveBeenCalled();
+
+      routeSnapshotRoot = snapshotChain('my-bookings');
+      navigate('/my-bookings');
+
+      expect(tags.sendEvent).toHaveBeenCalledTimes(1);
+      expect(tags.sendEvent).toHaveBeenCalledWith(
+        'page_view',
+        jasmine.objectContaining({ page_path: '/my-bookings' })
+      );
+    });
+  });
+
   it('init() is idempotent — a second call does not double every event', () => {
     service.init();
     service.init();
