@@ -38,6 +38,54 @@
     color: $text-lightblack;
   }
 
+  /* OBRS-1217 — the empty state for "today's rounds have all departed".
+     No dark-mode override is needed and adding one would be wrong: the dark
+     theme repaints this panel via `.booking-container:has(.schedule-item)`
+     (dark-theme.scss:636), and an empty list has no `.schedule-item`, so the
+     panel keeps its light #f6fcff in BOTH themes. Every colour below is
+     therefore derived against a light surface — same as `.no-results` above. */
+  .sold-out-today {
+    margin: $space-2xs 0;
+    padding: $space-lg 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-2xs;
+    text-align: center;
+
+    &__title {
+      margin: 0;
+      font-size: $font-size-md;
+      font-weight: bold;
+      color: $text-black;
+    }
+
+    &__hint {
+      margin: 0;
+      font-size: 15px;
+      color: $text-lightblack;
+    }
+
+    &__action {
+      margin-top: $space-2xs;
+      background: $primary-blue; /* white on it = 5.33:1 */
+      color: $text-white;
+      border: none;
+      border-radius: 26px;
+      padding: 12px $space-lg;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s ease;
+      /* The label carries a full date, so it must wrap rather than push the
+         panel wider than the phone (OBRS-634 territory). */
+      max-width: 100%;
+
+      &:hover {
+        background: $primary-blue-hover; /* white on it = 7.21:1 */
+      }
+    }
+  }
+
   .schedule-item {
     background: $primary-white;
     border-radius: 10px;
