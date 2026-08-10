@@ -35,6 +35,12 @@ import { AnalyticsTagsService } from './analytics-tags.service';
  *   console warning. The one thing deliberately NOT swallowed is a PII
  *   violation on a non-production build, because that is a defect in our code
  *   and should stop the developer, not the customer.
+ * - **A dropped `page_view` is remembered, not forgotten (OBRS-1195).** The
+ *   banner is answered *after* the page it sits on has loaded, so the
+ *   `NavigationEnd` that would have counted the visitor's entry page has always
+ *   already passed. That one screened-out `page_view` is replayed when consent
+ *   arrives — and only then, never on a route change, or every navigation would
+ *   be counted twice.
  * - **Consent is necessary but not sufficient (OBRS-887).** On `/staff/**` and
  *   `/admin/**` the screen shows *customers'* personal data, and the person
  *   holding the keyboard cannot consent on their behalf. So the route gate sits
@@ -45,6 +51,25 @@ import { AnalyticsTagsService } from './analytics-tags.service';
 export class AnalyticsService {
   private readonly destroy$ = new Subject<void>();
   private initialised = false;
+
+  /**
+   * OBRS-1195. `true` when the most recent navigation's `page_view` was screened
+   * out by {@link track} instead of sent — i.e. the visitor is sitting on a page
+   * that measurement never saw.
+   *
+   * Written from `track()`'s own verdict rather than from a second copy of the
+   * gate conditions kept here. Two copies drift, and this one would be the copy
+   * nobody re-reads the day a third gate is added beside consent and scope.
+   */
+  private pageViewSuppressed = false;
+
+  /**
+   * The previous value of `isGranted$`, so the loader can tell "consent just
+   * arrived" from "consent was already granted and something else changed".
+   * Both reach the same `combineLatest` subscriber and only the first of them
+   * may replay a `page_view` — see {@link init}.
+   */
+  private consentWasGranted = false;
 
   constructor(
     private readonly consent: AnalyticsConsentService,
@@ -77,9 +102,41 @@ export class AnalyticsService {
     combineLatest([this.consent.isGranted$, this.scope.isMeasurable$])
       .pipe(takeUntil(this.destroy$))
       .subscribe(([granted, measurable]) => {
+        const consentJustArrived = granted && !this.consentWasGranted;
+        this.consentWasGranted = granted;
+
         if (granted && measurable) {
           this.tags.setSuspended(false);
           this.tags.load();
+
+          // OBRS-1195 — the landing page of a first visit, replayed.
+          //
+          // `NavigationEnd` for the page the visitor arrived on has already
+          // passed by the time they answer the banner (the banner cannot be
+          // clicked before the page it sits on has rendered), and `track()`
+          // dropped that `page_view` because consent was not granted yet.
+          // Nothing replayed it, `send_page_view: false` means gtag sends
+          // nothing on its own, and the result was measured on prod: a first
+          // visit produced ZERO `page_view` — the entry page of every new
+          // visitor was missing from the funnel it exists to feed.
+          //
+          // TWO conditions, and dropping either one double-counts:
+          //
+          // - `consentJustArrived` — this subscriber also fires when only the
+          //   ROUTE changed, and it fires BEFORE this service's own
+          //   `NavigationEnd` handler does (`AnalyticsRouteScopeService` is
+          //   constructed first, so it is notified first). Replaying on a
+          //   route change would therefore send the new page's `page_view`
+          //   here and again a moment later. Consent arrives from a click on
+          //   the banner, never mid-navigation, so this flag is what keeps the
+          //   replay off the navigation path entirely.
+          // - `pageViewSuppressed` — a returning visitor who already consented
+          //   has nothing to replay: their `NavigationEnd` will send the one
+          //   and only `page_view`. Measured as 1 before this change, and
+          //   staying 1 is the regression AC-2 names.
+          if (consentJustArrived && this.pageViewSuppressed) {
+            this.trackPageView();
+          }
           return;
         }
 
@@ -107,10 +164,18 @@ export class AnalyticsService {
   /**
    * Screens, then (if allowed) sends one event.
    *
+   * @returns whether the event got past the gates and was handed to the tag
+   *   layer. Every existing call site ignores it; `trackPageView` does not,
+   *   because "this navigation was never measured" is the fact OBRS-1195's
+   *   replay is keyed on, and inferring it by re-testing consent and scope in
+   *   the caller would be a second copy of this method's own rules.
+   *   `false` means a gate said no — not that the network call failed. A
+   *   swallowed transport error still counts as sent, deliberately: retrying
+   *   into a blocked tag would replay forever.
    * @throws AnalyticsPiiError on a non-production build when `params` carries
    *   personal data. Never throws in production — see the class comment.
    */
-  track(name: AnalyticsEventName, params: AnalyticsParams = {}): void {
+  track(name: AnalyticsEventName, params: AnalyticsParams = {}): boolean {
     const { params: safeParams, violations } = sanitizeAnalyticsParams(params);
 
     if (violations.length > 0) {
@@ -122,7 +187,7 @@ export class AnalyticsService {
     }
 
     if (!this.consent.isGranted) {
-      return;
+      return false;
     }
 
     // OBRS-887. Read live from the router rather than from a cached flag: this
@@ -135,7 +200,7 @@ export class AnalyticsService {
     // description of how a named employee spends their shift, and we have no
     // basis to hand that to Google either.
     if (this.scope.isRestricted) {
-      return;
+      return false;
     }
 
     try {
@@ -144,6 +209,8 @@ export class AnalyticsService {
       // A measurement failure is never worth a broken checkout.
       console.warn('Analytics event could not be sent', error);
     }
+
+    return true;
   }
 
   /**
@@ -158,7 +225,10 @@ export class AnalyticsService {
    * URLs never would.
    */
   private trackPageView(): void {
-    this.track('page_view', {
+    // OBRS-1195: remember the verdict. A `false` here is the only record that
+    // the page on screen was never counted, and it is what the consent
+    // subscriber above reads when the visitor finally answers the banner.
+    this.pageViewSuppressed = !this.track('page_view', {
       page_path: this.currentRoutePattern(),
       page_language: this.translate.currentLang || this.translate.defaultLang || '',
     });
