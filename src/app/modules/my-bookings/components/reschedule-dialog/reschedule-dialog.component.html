@@ -52,6 +52,18 @@
       }
 
       @if (step === 'estimate') {
+        <!-- OBRS-1167 (AC-5): the counter's cash hand-over sits ABOVE Confirm, because it changes
+             what Confirm means. Rendered only for a staff viewer on a move the server has said
+             refunds cash — a customer's dialog is byte-identical to what it was. -->
+        @if (showCashHandover) {
+          <app-counter-cash-handover
+            [bookingId]="bookingId"
+            [estimateQuery]="cashHandoverEstimateQuery"
+            [amountLabel]="paymentAmountLabel"
+            [disabled]="submitting"
+            (stateChange)="onCashHandoverStateChange($event)"
+          ></app-counter-cash-handover>
+        }
         <app-reschedule-estimate-summary
           [estimate]="rescheduleEstimate$ | async"
           [loading]="estimateLoading"

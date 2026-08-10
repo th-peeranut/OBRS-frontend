@@ -13,6 +13,10 @@ import { RescheduleDialogComponent } from './components/reschedule-dialog/resche
 import { RescheduleDatePickerStepComponent } from './components/reschedule-dialog/reschedule-date-picker-step/reschedule-date-picker-step.component';
 import { RescheduleOptionsListComponent } from './components/reschedule-dialog/reschedule-options-list/reschedule-options-list.component';
 import { RescheduleEstimateSummaryComponent } from './components/reschedule-dialog/reschedule-estimate-summary/reschedule-estimate-summary.component';
+// OBRS-1167: the counter's cash hand-over panel. Deliberately NOT folded into
+// RescheduleEstimateSummaryComponent, which the change-stop dialog also renders — that dialog has
+// no cash lane, and an input it always passes false for is a second thing to keep true.
+import { CounterCashHandoverComponent } from './components/reschedule-dialog/counter-cash-handover/counter-cash-handover.component';
 import { ChangeSeatDialogComponent } from './components/change-seat-dialog/change-seat-dialog.component';
 import { ChangeSeatMapComponent } from './components/change-seat-dialog/change-seat-map/change-seat-map.component';
 import { ChangeStopDialogComponent } from './components/change-stop-dialog/change-stop-dialog.component';
@@ -40,6 +44,7 @@ const routes: Routes = [{ path: '', component: MyBookingsComponent }];
     RescheduleDatePickerStepComponent,
     RescheduleOptionsListComponent,
     RescheduleEstimateSummaryComponent,
+    CounterCashHandoverComponent,
     ChangeSeatDialogComponent,
     ChangeSeatMapComponent,
     ChangeStopDialogComponent,

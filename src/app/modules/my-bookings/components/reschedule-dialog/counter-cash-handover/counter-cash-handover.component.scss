@@ -1,0 +1,95 @@
+@import "../../../../../../styles/variables.scss";
+
+// OBRS-1167: visually set apart from the estimate rows above it, because it is the one control on
+// this dialog that asserts something about the physical world rather than describing the booking.
+.counter-cash {
+  box-sizing: border-box;
+  margin-top: $space-md;
+  padding: $space-md;
+  border: 1px dashed $primary-lightgrey;
+  border-radius: $radius-md;
+  background: $primary-white;
+
+  &__title {
+    margin: 0 0 $space-xs;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    color: $text-black;
+  }
+
+  &__body,
+  &__approval-hint,
+  &__hint {
+    margin: 0 0 $space-xs;
+    font-size: $font-size-xs;
+    color: $text-lightblack;
+  }
+
+  &__check {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-xs;
+    font-size: $font-size-sm;
+    color: $text-black;
+    cursor: pointer;
+
+    // styles.scss sets a bare `label, input { width: 100% }`. On a checkbox that makes the box eat
+    // the whole row and pushes its own text outside the panel — measured, in the first capture run.
+    // Both overrides are needed: `width: auto` undoes the global, `flex: 0 0 auto` stops flex from
+    // handing the leftover space back to it.
+    input[type="checkbox"] {
+      width: auto;
+      margin-top: 2px;
+      flex: 0 0 auto;
+    }
+
+    span {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  }
+
+  &__approval {
+    margin-top: $space-sm;
+    padding-top: $space-sm;
+    border-top: 1px solid $primary-lightgrey;
+  }
+
+  &__ask {
+    padding: $space-xs $space-sm;
+    font-size: $font-size-xs;
+    border: 1px solid $primary-blue;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $primary-blue;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__label {
+    display: block;
+    margin: $space-sm 0 $space-xs;
+    font-size: $font-size-xs;
+    color: $text-lightblack;
+  }
+
+  &__code {
+    width: 8rem;
+    padding: $space-xs $space-sm;
+    font-size: $font-size-sm;
+    letter-spacing: 0.25em;
+    border: 1px solid $primary-lightgrey;
+    border-radius: $radius-sm;
+  }
+
+  &__error {
+    display: block;
+    margin-top: $space-xs;
+    font-size: $font-size-xs;
+    color: $text-red;
+  }
+}

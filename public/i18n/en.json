@@ -244,6 +244,19 @@
       "PAYMENT_REQUIRED_NOTE": "Complete a payment of {{amount}} to finish rescheduling your booking.",
       "PAYMENT_ABANDONED": "Reschedule not complete — your original booking is unchanged until payment is completed.",
       "PRICE_CHANGED": "The price has changed since you last checked. Please review the updated fare and confirm again.",
+      "CASH_HANDOVER": {
+        "TITLE": "Counter cash refund",
+        "BODY": "This move gives {{amount}} back to the customer in cash. Tick this only if the notes are leaving the drawer right now — otherwise the amount stays recorded as owed.",
+        "CONFIRM_LABEL": "I am handing {{amount}} back to the customer in cash now",
+        "APPROVAL_BODY": "A cash refund needs a second person. Ask an owner to authorize it; they will read six digits back to you.",
+        "REQUEST": "Ask the owner to authorize",
+        "REQUESTING": "Asking...",
+        "REQUEST_AGAIN": "Ask again",
+        "REQUESTED_HINT": "The owners have been notified. Enter the six digits they give you.",
+        "REQUEST_FAILED": "Could not send the request. Please try again.",
+        "CODE_LABEL": "Approval code",
+        "CODE_FORMAT": "The approval code is {{length}} digits."
+      },
       "ERROR": {
         "NOT_CONFIRMED": "This booking can no longer be rescheduled (not confirmed).",
         "MAX_COUNT": "This booking has already been rescheduled once and can't be rescheduled again.",
@@ -282,6 +295,19 @@
       "CONFIRM_BUTTON": "Confirm",
       "BACK_BUTTON": "Back",
       "SUCCESS": "Your seat has been changed.",
+      "CASH_HANDOVER": {
+        "TITLE": "Counter cash refund",
+        "BODY": "This move gives {{amount}} back to the customer in cash. Tick this only if the notes are leaving the drawer right now — otherwise the amount stays recorded as owed.",
+        "CONFIRM_LABEL": "I am handing {{amount}} back to the customer in cash now",
+        "APPROVAL_BODY": "A cash refund needs a second person. Ask an owner to authorize it; they will read six digits back to you.",
+        "REQUEST": "Ask the owner to authorize",
+        "REQUESTING": "Asking...",
+        "REQUEST_AGAIN": "Ask again",
+        "REQUESTED_HINT": "The owners have been notified. Enter the six digits they give you.",
+        "REQUEST_FAILED": "Could not send the request. Please try again.",
+        "CODE_LABEL": "Approval code",
+        "CODE_FORMAT": "The approval code is {{length}} digits."
+      },
       "ERROR": {
         "NOT_CONFIRMED": "This booking can no longer have its seat changed (not confirmed).",
         "MAX_COUNT": "This booking has already had its seat changed once and can't be changed again.",

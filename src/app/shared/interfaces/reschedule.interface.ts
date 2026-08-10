@@ -35,6 +35,17 @@ export interface RescheduleEstimate {
   rescheduleFee: number | string;
   netAmount: number | string;
   paymentDirection: PaymentDirection;
+  /**
+   * OBRS-1167 (AC-5): "would this reschedule pay the customer back, IN CASH?" — the single
+   * question that decides whether the counter's cash hand-over affordance appears at all. True
+   * only when `netAmount` is negative AND the booking's PAID tender is cash, computed server-side
+   * by the very predicate the second-person gate uses, so the screen can never offer a lane the
+   * confirm would then refuse.
+   *
+   * Optional so this build against an older backend degrades to `undefined` → falsy → exactly
+   * today's behaviour (no affordance, no ledger row) rather than throwing.
+   */
+  cashRefundEligible?: boolean;
 }
 
 /** An existing ticket's seat, carried over as-is to the new schedule.
