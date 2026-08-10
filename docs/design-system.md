@@ -1132,6 +1132,34 @@ enforced rule with a test behind it.
   speed-not-presence gate on any "this GPS reading implies movement" derived
   fact — for the next per-tick-changing visual property a marker needs.
 
+- **Customer-shell 2-option segmented pill toggle, `app-trip-type-toggle`**
+  (OBRS-1025, `home-booking`/`schedule-booking-filter`'s `roundTrip` control):
+  the first multi-option segmented control in the customer shell — no
+  `app-admin-dropdown`/`app-dropdown-obrs` reuse was possible because the
+  whole point was to stop hiding the second option behind a dropdown click.
+  Not PrimeNG's `p-selectButton` (FRONTEND-GOTCHAS: defaults `allowEmpty:
+  true`, and its unselected segments have no dark-mode base styling anywhere
+  in this app) and not the admin shell's OBRS-312 `.admin-btn`-based toggle
+  (composes `--admin-*` custom properties that only resolve inside
+  `.admin-shell`). Built from scratch as a small `ControlValueAccessor`:
+  pill-shaped track (`$secondary-lightgrey`, `$radius-pill`) holding two
+  `$radius-pill` buttons; the selected one fills `$primary-blue` with white
+  text AND a checkmark glyph (state never relies on color alone),
+  `aria-pressed` on each button, `role="group"` on the track. Dark mode is
+  component-owned `:host-context(body.is-dark)` (OBRS-767 — a global
+  `dark-theme.scss` rule cannot outrank this component's own encapsulated
+  selectors), inverting the selected pair (`$dk-bg` text on `$dk-accent`
+  fill) rather than reusing a chip-scale token standalone, same reasoning as
+  OBRS-312's own inverted-pair precedent. Deliberately does NOT reproduce
+  `DropdownObrsComponent.ngOnChanges()`'s "always overwrite on every
+  `[options]` change" default mechanism — that is the exact "fights the
+  FormControl's own seed" risk OBRS-1185 called out; `isDefault` is consulted
+  only inside `writeValue()`, only when the control hands back no value at
+  all. See `trip-type-toggle.component.ts`'s own header comment for the full
+  reasoning. Reuse this component for the next 2-option customer-shell choice
+  that needs both options visible at once, rather than reaching for
+  `app-dropdown-obrs` or a raw PrimeNG button primitive.
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that

@@ -1,0 +1,103 @@
+@import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
+
+// OBRS-775 (see the sibling shared components — dropdown-obrs,
+// station-swap-button): a component that declares no `:host` display renders
+// inline, and an inline box may not contain the block-level children below
+// it cleanly.
+:host {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+// OBRS-1025 — new pattern (design-system §12), see the component's own header
+// comment for why no existing control (admin's `.admin-btn` toggle,
+// PrimeNG's p-selectButton) is reused here. Track background reuses
+// `$secondary-lightgrey`, already the page-level background token in this
+// same booking card family (home-booking.component.scss) — not a new hex.
+.trip-type-toggle {
+  display: inline-flex;
+  max-width: 100%;
+  gap: $space-3xs;
+
+  padding: $space-3xs;
+
+  background-color: $secondary-lightgrey;
+  border-radius: $radius-pill;
+}
+
+.trip-type-toggle__btn {
+  display: flex;
+  align-items: center;
+  gap: $space-3xs;
+
+  padding: $space-2xs $space-sm;
+  border: none;
+  border-radius: $radius-pill;
+
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  font-family: inherit;
+  color: $text-black;
+
+  background-color: transparent;
+  cursor: pointer;
+  transition:
+    background-color $duration-fast $easing-standard,
+    color $duration-fast $easing-standard;
+
+  &:hover:not(.is-selected) {
+    color: $primary-blue;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: $shadow-focus;
+  }
+
+  &.is-selected {
+    color: $text-white;
+    background-color: $primary-blue;
+  }
+}
+
+.trip-type-toggle__check {
+  font-size: $font-size-base;
+  line-height: 1;
+}
+
+@media (max-width: 576px) {
+  .trip-type-toggle__btn {
+    padding: $space-2xs $space-xs;
+    font-size: $font-size-sm;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Dark mode — component-owned :host-context, same mechanism as the sibling
+// dropdown-obrs.component.scss (OBRS-767: a global dark-theme.scss rule
+// cannot outrank this component's own emulated-encapsulation selectors, so
+// dark styling for anything inside it has to live here).
+// ─────────────────────────────────────────────────────────────────────────
+:host-context(body.is-dark) {
+  .trip-type-toggle {
+    background-color: $dk-bg-soft;
+  }
+
+  .trip-type-toggle__btn {
+    color: $dk-text;
+
+    &:hover:not(.is-selected) {
+      color: $dk-accent;
+    }
+
+    &.is-selected {
+      // Inverted, not the light pair straight: $dk-bg on $dk-accent keeps a
+      // dark glyph on the bright fill, mirroring the design-system §12
+      // OBRS-312 precedent for a full-width selected segment (invert the
+      // bg/text pair rather than reusing a chip-scale token standalone).
+      color: $dk-bg;
+      background-color: $dk-accent;
+    }
+  }
+}

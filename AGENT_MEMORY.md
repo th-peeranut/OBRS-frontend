@@ -4142,3 +4142,15 @@ size:100 claim is real (`extractRecentRoutePairsFromBookings` uses duplicates as
 signal; a 20-row sample changes OBRS-923 ranking) and the options-object call is byte-identical.
 `PageResponse` carries `totalElements`/`totalPages`. Load-more path sets `showLoadingDialog:false`
 and `loadingMore` (not `loading`), so no full-page overlay over a list being read.
+
+## OBRS-1185/1025 Scrutinize self-fix (2026-08-10) — twin-form asymmetry on the isRoundTripReturn derivation
+`home-booking.component.ts` roundTripOnChange$ read `value?.id === 2`; the twin
+`schedule-booking-filter.component.ts` read `typeof value === 'object' ? value?.id : value` then
+`=== 2`. Both correct TODAY (app-trip-type-toggle only ever emits a full Dropdown object via
+onChange, and the filter's store-restore patch of a bare number uses emitEvent:false so
+roundTripOnChange$ never sees it), so this was a benign PRE-EXISTING asymmetry, not a regression from
+this commit. Aligned home to the filter's shape because these two files are the exact pair that has
+leaked one-page-only fixes 4× (OBRS-1021/1028/1023/1036) and the card asked for byte-identical twins.
+Pattern for the developer: when you touch one of the two booking-filter twins, diff the same line in
+the other and make them identical even if both "work" — a gratuitous difference is where the next
+drift hides. Verified: home-booking.component.spec.ts 49/49 green after the change.

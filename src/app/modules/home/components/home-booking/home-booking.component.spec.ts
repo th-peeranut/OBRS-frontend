@@ -12,6 +12,7 @@ import { HomeBookingComponent } from './home-booking.component';
 import { DropdownObrsComponent } from '../../../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownGroupObrsComponent } from '../../../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
 import { StationSwapButtonComponent } from '../../../../shared/components/station-swap-button/station-swap-button.component';
+import { TripTypeToggleComponent } from '../../../../shared/components/trip-type-toggle/trip-type-toggle.component';
 import { DropdownObrsPassengerComponent } from '../dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import {
   BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK,
@@ -378,6 +379,7 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
         // OBRS-575's standalone child now appears in this template; without it
         // the slice fails with NG0304 'not a known element'.
@@ -451,6 +453,7 @@ describe('HomeBookingComponent — date labels distinguish outbound from return 
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
         RecentRoutesQuickPickComponent,
       ],
@@ -537,6 +540,7 @@ describe('HomeBookingComponent — each date field owns a unique input id its la
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
         RecentRoutesQuickPickComponent,
       ],
@@ -675,6 +679,7 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
         RecentRoutesQuickPickComponent,
       ],
@@ -733,6 +738,10 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
   });
 
   it('renders a date the customer can read unambiguously — weekday first, en field order', async () => {
+    // OBRS-1185: this test is about ONE calendar's rendered format, not about
+    // round-trip — force one-way so only the departure p-datePicker renders,
+    // same reasoning as every other single-calendar assertion in this file.
+    component.isRoundTripReturn = false;
     await languageService.switch('en');
     fixture.detectChanges();
     component.bookingForm.get('departureDate')?.setValue(MONDAY.toDate());
@@ -747,6 +756,9 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
   });
 
   it('repaints a date already in the box when the language changes mid-page (AC#3)', async () => {
+    // OBRS-1185: same reasoning as the previous test — force one-way so this
+    // stays a single-calendar assertion.
+    component.isRoundTripReturn = false;
     await languageService.switch('en');
     fixture.detectChanges();
     component.bookingForm.get('departureDate')?.setValue(MONDAY.toDate());
@@ -800,6 +812,9 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
   it('leaves the picker on PrimeNG\'s own fallback before any language resolves', () => {
     // Not a nicety: publishing a placeholder format here would shadow
     // `getTranslation('dateFormat')` exactly the way the hardcoded literal did.
+    // OBRS-1185: force one-way so only the departure p-datePicker renders —
+    // this test is about ONE calendar's fallback format, not round-trip.
+    component.isRoundTripReturn = false;
     fixture.detectChanges();
 
     expect(component.calendarDateFormat()).toBeUndefined();
@@ -845,6 +860,7 @@ describe('HomeBookingComponent — a date can only be chosen from the calendar (
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
         RecentRoutesQuickPickComponent,
       ],
@@ -962,6 +978,7 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
         DropdownObrsComponent,
         DropdownGroupObrsComponent,
         StationSwapButtonComponent,
+        TripTypeToggleComponent,
         DropdownObrsPassengerComponent,
         RecentRoutesQuickPickComponent,
       ],
@@ -1142,5 +1159,162 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
         expect(Math.abs(centreY(host) - centreY(field))).toBeLessThanOrEqual(1);
       }
     }
+  });
+});
+
+/**
+ * OBRS-1185 + OBRS-1025, done together per the owner's own sequencing note on
+ * both cards: shipping the default flip alone would hide the one-way route
+ * back behind the very dropdown OBRS-1025 replaces.
+ *
+ * Unit-level assertions (no TestBed) pin what a plain `new HomeBookingComponent`
+ * has to be true on its own, WITHOUT `app-trip-type-toggle` ever rendering to
+ * correct it — the same reasoning `createForm()`'s own comment gives for why
+ * `roundTrip`, `roundTripDropdowns.isDefault` and `isRoundTripReturn`'s literal
+ * default all have to agree independently.
+ */
+describe('HomeBookingComponent — round-trip is the default, and the return date is defensible (OBRS-1185)', () => {
+  let component: HomeBookingComponent;
+
+  beforeEach(() => {
+    component = makeHomeBooking();
+  });
+
+  it('AC#1/AC#8: defaults the search form to round-trip', () => {
+    const roundTrip = component.bookingForm.get('roundTrip')?.value;
+    const roundTripId = typeof roundTrip === 'object' ? roundTrip?.id : roundTrip;
+
+    expect(roundTripId).toBe(2);
+    expect(component.isRoundTripReturn).toBeTrue();
+  });
+
+  it('AC#2: defaults returnDate to a day AFTER departureDate, never the same day', () => {
+    const departureDate = component.getFormValue('departureDate');
+    const returnDate = component.getFormValue('returnDate');
+
+    expect(dayjs(returnDate).isSame(dayjs(departureDate), 'day')).toBeFalse();
+    expect(dayjs(returnDate).isBefore(dayjs(departureDate), 'day')).toBeFalse();
+  });
+
+  it('AC#4/AC#8: moving departureDate past returnDate carries returnDate forward with it', () => {
+    const originalReturn = component.getFormValue('returnDate');
+    const newDeparture = dayjs(originalReturn).add(5, 'day').toDate();
+
+    component.bookingForm.get('departureDate')?.setValue(newDeparture);
+
+    const carriedReturn = component.getFormValue('returnDate');
+    expect(dayjs(carriedReturn).isBefore(dayjs(newDeparture), 'day')).toBeFalse();
+    expect(dayjs(carriedReturn).isSame(dayjs(originalReturn), 'day')).toBeFalse();
+  });
+
+  it('AC#6/AC#8: moving departureDate EARLIER, still before the old returnDate, leaves returnDate untouched', () => {
+    const originalReturn = component.getFormValue('returnDate');
+    const earlierDeparture = component.getFormValue('departureDate'); // unchanged is a valid "earlier than return" case too
+
+    component.bookingForm.get('departureDate')?.setValue(earlierDeparture);
+
+    expect(component.getFormValue('returnDate')).toBe(originalReturn);
+  });
+
+  it('AC#6: switching the roundTrip control to one-way flips isRoundTripReturn off, and back to round-trip flips it back on', () => {
+    component.bookingForm.get('roundTrip')?.setValue({ id: 1, nameThai: 'เที่ยวเดียว', nameEnglish: 'One-way' });
+    expect(component.isRoundTripReturn).toBeFalse();
+
+    component.bookingForm.get('roundTrip')?.setValue({ id: 2, nameThai: 'ไป-กลับ', nameEnglish: 'Round-trip' });
+    expect(component.isRoundTripReturn).toBeTrue();
+  });
+});
+
+/**
+ * DOM-level half of OBRS-1185/OBRS-1025: renders the real template (real
+ * `app-trip-type-toggle`, real `p-datePicker`s) — the class-level assertions
+ * above cannot see a missing template binding, only a compiled-template
+ * render can, same reasoning as the OBRS-564 maxDate block earlier in this
+ * file.
+ */
+describe('HomeBookingComponent — trip-type pills and the return date field render correctly (OBRS-1025/OBRS-1185)', () => {
+  let fixture: ComponentFixture<HomeBookingComponent>;
+  let component: HomeBookingComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(HomeBookingComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('AC#1 (1185) + AC#1 (1025): both trip-type pills AND the return date field are in the DOM on first render — no manual flag flip', () => {
+    fixture.detectChanges();
+
+    const pills = fixture.debugElement.queryAll(By.css('app-trip-type-toggle button'));
+    expect(pills.length).toBe(2);
+
+    const calendars = fixture.debugElement.queryAll(By.css('p-datePicker'));
+    expect(calendars.length).toBe(2);
+  });
+
+  it('AC#3 (1185): the return calendar\'s minDate is the CURRENT departureDate, not the shared minDate', () => {
+    fixture.detectChanges();
+
+    const newDeparture = dayjs(component.minDate).add(10, 'day').toDate();
+    component.bookingForm.get('departureDate')?.setValue(newDeparture);
+    fixture.detectChanges();
+
+    const calendars = fixture.debugElement.queryAll(By.css('p-datePicker'));
+    expect(calendars.length).toBe(2);
+
+    const returnPickerMinDate = calendars[1].componentInstance.minDate as Date;
+    expect(dayjs(returnPickerMinDate).isSame(dayjs(newDeparture), 'day')).toBeTrue();
+    // The departure calendar's own minDate must stay pinned to "today" — only
+    // the RETURN calendar tracks departureDate.
+    const departurePickerMinDate = calendars[0].componentInstance.minDate as Date;
+    expect(dayjs(departurePickerMinDate).isSame(dayjs(component.minDate), 'day')).toBeTrue();
+  });
+
+  it('AC#6 (1185) + AC#1 (1025): tapping the one-way pill removes the return date field; tapping back restores it', () => {
+    fixture.detectChanges();
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(2);
+
+    const pills = fixture.debugElement.queryAll(By.css('app-trip-type-toggle button'));
+    pills[0].nativeElement.click(); // "one-way" is rendered first (id 1)
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(1);
+    expect(component.isRoundTripReturn).toBeFalse();
+
+    const pillsAfter = fixture.debugElement.queryAll(By.css('app-trip-type-toggle button'));
+    pillsAfter[1].nativeElement.click(); // "round-trip" is rendered second (id 2)
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(2);
+    expect(component.isRoundTripReturn).toBeTrue();
+  });
+
+  it('AC#2 (1025): each pill exposes aria-pressed matching the selected state', () => {
+    fixture.detectChanges();
+
+    const pills = fixture.debugElement.queryAll(By.css('app-trip-type-toggle button'));
+    expect(pills[0].nativeElement.getAttribute('aria-pressed')).toBe('false'); // one-way
+    expect(pills[1].nativeElement.getAttribute('aria-pressed')).toBe('true'); // round-trip (default)
   });
 });

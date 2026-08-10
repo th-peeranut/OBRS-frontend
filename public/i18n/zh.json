@@ -2278,6 +2278,7 @@
       "SIGNED_IN_AS": "当前登录账号"
     },
     "HOME_BOOKING": {
+      "TRIP_TYPE": "行程类型",
       "ROUNDTRIP_1": "单程",
       "ROUNDTRIP_2": "往返",
       "PASSENGER_COUNT": "乘客",
