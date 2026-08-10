@@ -1,18 +1,49 @@
 import { inject } from '@angular/core';
 import {
+  HttpErrorResponse,
   HttpHandlerFn,
   HttpInterceptorFn,
   HttpRequest,
 } from '@angular/common/http';
 import { throwError } from 'rxjs';
-import { catchError, finalize } from 'rxjs/operators';
+import { catchError, finalize, timeout } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../services/alert.service';
 import { resolveApiAlertMessage } from '../lib/api-error';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
+  SKIP_REQUEST_TIMEOUT,
 } from './http-context-tokens';
+
+/**
+ * Ceiling on how long a request may stay pending before the app gives up on it
+ * (OBRS-642). Nothing in this app had one: `grep -rn 'timeout(' src/app` returned 0
+ * hits, so a request that never answered stayed pending until the browser itself gave
+ * up — minutes — holding the global loading overlay over the page the whole time.
+ *
+ * ⚠️ APPLIED TO GET/HEAD ONLY, AND THAT ASYMMETRY IS THE POINT. Those are idempotent:
+ * abandoning one has no effect on the server, so the worst case is an error the customer
+ * can retry. A mutation is the opposite — a POST /payments aborted here would still have
+ * been charged, and we would show "failed" for a booking that exists. Mutations are
+ * covered by AlertService's LOADING_ESCAPE_AFTER_MS instead, which frees the SCREEN
+ * without abandoning the REQUEST. Do not "simplify" this into a blanket timeout.
+ *
+ * 30s against a measured prod baseline of 0.15-0.26s TTFB for `GET /api/stops` (curl,
+ * 3 runs, 2026-08-10) is ~115x headroom: it can only fire on a request that is dead.
+ *
+ * ⚠️ AND THAT MEASUREMENT COVERS ONE ENDPOINT, NOT THE FAMILY. Two exclusions exist
+ * because the reasoning above does NOT transfer to them, both caught in review:
+ *   - non-`/api/` requests — above all `GET /i18n/{lang}.json`. Cancelling the
+ *     translation bundle at 30s leaves the app rendering raw i18n keys, which is worse
+ *     than a slow load and is the OBRS-352/OBRS-930 failure mode all over again.
+ *   - anything carrying `SKIP_REQUEST_TIMEOUT` — a GET whose latency IS the work, i.e.
+ *     `ExportService.export()`, where the server is generating a report before it can
+ *     answer. `timeout({each})` only resets per emitted HttpEvent, so with
+ *     `reportProgress` off it is a time-to-first-byte limit and would abort a healthy
+ *     long export.
+ */
+export const IDEMPOTENT_REQUEST_TIMEOUT_MS = 30_000;
 
 export const errorInterceptor: HttpInterceptorFn = (
   req: HttpRequest<any>,
@@ -42,11 +73,40 @@ export const errorInterceptor: HttpInterceptorFn = (
     // TranslateService, whose HTTP loader would otherwise re-enter this very
     // interceptor (the NG0200 cycle documented above).
     alertService.showLoading(
-      translate ? translate.instant('COMMON.LOADING') : undefined
+      translate ? translate.instant('COMMON.LOADING') : undefined,
+      translate ? translate.instant('COMMON.LOADING_SLOW') : undefined,
+      translate ? translate.instant('COMMON.CLOSE') : undefined
     );
   }
 
-  return next(req).pipe(
+  // OBRS-642: idempotent requests get a hard ceiling; mutations deliberately do not.
+  // The reasoning is on IDEMPOTENT_REQUEST_TIMEOUT_MS above. The timeout raises the
+  // same `status: 0` HttpErrorResponse the transport already raises for a dead
+  // connection, rather than RxJS's own TimeoutError, so every downstream `catchError`
+  // in the app keeps receiving the one error type it was written against — and
+  // `resolveApiAlertMessage` maps it to the translated SERVICE_UNAVAILABLE/OFFLINE
+  // text instead of leaking the English string "Timeout has occurred" to a customer.
+  const isIdempotent = req.method === 'GET' || req.method === 'HEAD';
+  const shouldTimeOut =
+    isApiRequest && isIdempotent && !req.context.get(SKIP_REQUEST_TIMEOUT);
+  const response$ = shouldTimeOut
+    ? next(req).pipe(
+        timeout({
+          each: IDEMPOTENT_REQUEST_TIMEOUT_MS,
+          with: () =>
+            throwError(
+              () =>
+                new HttpErrorResponse({
+                  status: 0,
+                  statusText: 'Request timed out',
+                  url: req.url,
+                })
+            ),
+        })
+      )
+    : next(req);
+
+  return response$.pipe(
     catchError((error: unknown) => {
       if (shouldShowError) {
         // A dedicated message for the statuses whose body says nothing a user

@@ -28,10 +28,19 @@ export class StationService {
    * the global error toast here would leave a failed stop-list load with no
    * visible symptom at all.
    *
-   * Default `false` keeps the three non-modal callers (`ProvinceEffect`,
-   * `DriverCashRatesStore`, `ParcelBookingPageComponent`) showing the spinner
-   * they show today — this endpoint is their page's primary fetch, not a
-   * background one.
+   * ⚠️ CORRECTED BY OBRS-642. This used to add: "Default `false` keeps the three
+   * non-modal callers (`ProvinceEffect`, `DriverCashRatesStore`,
+   * `ParcelBookingPageComponent`) showing the spinner they show today — this endpoint
+   * is their page's primary fetch, not a background one." Being the page's primary
+   * fetch is an argument for showing progress, not for a modal that covers the page and
+   * cannot be dismissed: `ProvinceEffect` is the HOME page's station lookup, and a
+   * customer whose `/api/stops` stalls is locked out of the booking form entirely
+   * (measured: 2/10 public customer routes blocked on page load, `/` and
+   * `/schedule-booking`, both from this call). `ProvinceEffect` now passes `true`.
+   *
+   * Default `false` remains for the other two, which are admin/parcel surfaces this card
+   * did not measure — flip them when someone measures them, not on the strength of this
+   * sentence.
    */
   getAll(skipLoadingAlert = false): Observable<ResponseAPI<StationApi[]>> {
     return this.http.get<ResponseAPI<StationApi[]>>(

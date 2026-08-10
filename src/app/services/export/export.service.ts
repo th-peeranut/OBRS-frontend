@@ -9,7 +9,10 @@ import {
 import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, mergeMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { SKIP_GLOBAL_ERROR_ALERT } from '../../shared/interceptors/http-context-tokens';
+import {
+  SKIP_GLOBAL_ERROR_ALERT,
+  SKIP_REQUEST_TIMEOUT,
+} from '../../shared/interceptors/http-context-tokens';
 
 export type ExportFormat = 'csv' | 'xlsx';
 
@@ -52,7 +55,12 @@ export class ExportService {
         params: httpParams,
         responseType: 'blob',
         observe: 'response',
-        context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true),
+        context: new HttpContext()
+          .set(SKIP_GLOBAL_ERROR_ALERT, true)
+          // OBRS-642: exempt from the 30s idempotent-GET ceiling. The wait here is the
+          // backend BUILDING the file, so the ceiling would cancel a healthy long
+          // export and surface it as EXPORT_ERROR_GENERIC. See SKIP_REQUEST_TIMEOUT.
+          .set(SKIP_REQUEST_TIMEOUT, true),
       })
       .pipe(
         // catchError sits directly on the raw HTTP source so it only ever
