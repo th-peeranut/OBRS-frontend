@@ -959,3 +959,97 @@ describe('ScheduleBookingFilterComponent — trip-type pills and the return date
     expect(pills[1].nativeElement.getAttribute('aria-pressed')).toBe('true'); // round-trip (default)
   });
 });
+
+/**
+ * OBRS-1185 — the case the default flip is most likely to break, and the one the block
+ * above CANNOT reach: a returning customer whose saved filter says ONE-WAY.
+ *
+ * Every other spec here runs with no saved filter, where `roundTripId ?? 2` and the
+ * `isRoundTripReturn = true` field initializer agree by construction. They only disagree
+ * when a real one-way filter arrives, and then the question is one of ORDERING: the
+ * initializer runs at construction, the store correction runs in ngOnInit. If the store
+ * emission were ever async, the field initializer would win the first frame and a one-way
+ * customer would be shown a return-date field for a trip they did not ask for.
+ *
+ * Scrutinize traced that ordering by hand and found it safe. Hand-tracing is not a gate —
+ * this is. It goes red if `(roundTripId ?? 2) === 2` is written back as `roundTripId === 2`
+ * (the pre-OBRS-1185 shape), or if the correction ever moves off the synchronous path.
+ */
+describe('ScheduleBookingFilterComponent — a saved ONE-WAY filter survives the round-trip default (OBRS-1185)', () => {
+  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
+  let component: ScheduleBookingFilterComponent;
+
+  const STATIONS: any = [
+    { id: 1, slug: 'station-a', status: 'active', stopType: 'station' },
+    { id: 2, slug: 'station-b', status: 'active', stopType: 'station' },
+  ];
+
+  /**
+   * `this.store.pipe(...)` is called exactly twice in the constructor, in this order:
+   * line 120 `rawProvinceStationList`, then line 123 `scheduleFilter`. Keying the stub on
+   * call order is what lets ONE `Store` provider hand back two different shapes — passing
+   * the filter object to both would feed a non-array to the station subscription.
+   */
+  function createOrderedStoreStub(savedFilter: any): any {
+    let call = 0;
+    const next = () => (++call === 1 ? of(STATIONS) : of(savedFilter));
+    return { pipe: () => next(), select: () => next(), dispatch: () => {} };
+  }
+
+  async function renderWith(savedFilter: any) {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingFilterComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createOrderedStoreStub(savedFilter) },
+        { provide: AlertService, useValue: { warning: () => {}, error: () => {}, success: () => {} } },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub(45) },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges(); // FIRST change detection - no second pass, no manual nudge
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('renders ONE calendar, not two, on the very first change detection', async () => {
+    await renderWith({ roundTrip: { id: 1, nameThai: 'เที่ยวเดียว', nameEnglish: 'One-way' } });
+
+    expect(component.isRoundTripReturn).toBeFalse();
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(1);
+  });
+
+  it('also honours the bare-number shape the store can hold', async () => {
+    await renderWith({ roundTrip: 1 });
+
+    expect(component.isRoundTripReturn).toBeFalse();
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(1);
+  });
+
+  it('must-NOT-catch: a saved ROUND-TRIP filter still shows both calendars', async () => {
+    await renderWith({ roundTrip: { id: 2, nameThai: 'ไป-กลับ', nameEnglish: 'Round-trip' } });
+
+    expect(component.isRoundTripReturn).toBeTrue();
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(2);
+  });
+
+  it('no saved filter at all falls back to round-trip, not to one-way', async () => {
+    await renderWith(null);
+
+    expect(component.isRoundTripReturn).toBeTrue();
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(2);
+  });
+});
