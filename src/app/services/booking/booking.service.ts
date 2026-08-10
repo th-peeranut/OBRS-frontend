@@ -52,6 +52,15 @@ export interface ConfirmReschedulePayload {
    * that. */
   seatAssignments: Record<number, string | null>;
   clientNetAmount?: number;
+  /**
+   * OBRS-1167 (AC-2): the counter stating that the notes left the drawer in this transaction.
+   * Both fields are OMITTED entirely on the customer path rather than sent as `false`/`''` — a
+   * body that says nothing gets the safe answer server-side (no ledger row; the cash stays owed
+   * in the manual-refund queue), and that is the property the whole card rests on. `approvalCode`
+   * is the OWNER's six digits authorizing the hand-over; never logged.
+   */
+  cashHandedOverNow?: boolean;
+  approvalCode?: string;
 }
 
 export interface ChangeStopEstimateParams {
@@ -306,6 +315,35 @@ export class BookingService {
 
     return this.http.get<ResponseAPI<RescheduleEstimate>>(
       `${environment.apiUrl}/api/private/bookings/${bookingId}/reschedule-estimate`,
+      { params, context: this.silentContext() }
+    );
+  }
+
+  /**
+   * OBRS-1167 (AC-5): ask the fleet's owners to authorize handing this reschedule's cash
+   * difference back across the counter. Takes the same four parameters as the estimate on
+   * purpose — the amount the owner is shown has to be the amount THIS move produces, and the
+   * backend binds the approval to it, so an owner who authorizes ฿20 cannot have it spent on ฿60.
+   *
+   * The response carries no code: the owner issues that from their own device and reads it to the
+   * counter. Same deliberate absence of a live channel as the counter cancel — see
+   * `CounterCancelModalComponent`'s javadoc for the measurement behind that choice.
+   */
+  requestRescheduleCashRefundApproval(
+    bookingId: number,
+    query: RescheduleEstimateParams
+  ): Observable<ResponseAPI<unknown>> {
+    let params = new HttpParams()
+      .set('newScheduleId', query.newScheduleId)
+      .set('newFromStopId', query.newFromStopId)
+      .set('newToStopId', query.newToStopId);
+    for (const seat of query.seats) {
+      params = params.append('seats', seat);
+    }
+
+    return this.http.post<ResponseAPI<unknown>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/reschedule-cash-refund-approval-request`,
+      null,
       { params, context: this.silentContext() }
     );
   }

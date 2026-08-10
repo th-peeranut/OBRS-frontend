@@ -244,6 +244,19 @@
       "PAYMENT_REQUIRED_NOTE": "请支付 {{amount}} 以完成改签。",
       "PAYMENT_ABANDONED": "改签尚未完成——在支付完成之前，您原来的预订不会改变。",
       "PRICE_CHANGED": "自您上次查看以来价格已发生变化，请查看最新票价并重新确认。",
+      "CASH_HANDOVER": {
+        "TITLE": "柜台现金退款",
+        "BODY": "此次改签需向顾客退还现金 {{amount}}。只有在现钞确实此刻交出时才勾选，否则系统会记为仍欠付。",
+        "CONFIRM_LABEL": "现已向顾客退还现金 {{amount}}",
+        "APPROVAL_BODY": "现金退款需要第二个人授权。请求店主授权后，他们会告知六位数字。",
+        "REQUEST": "请求店主授权",
+        "REQUESTING": "请求中...",
+        "REQUEST_AGAIN": "再次请求",
+        "REQUESTED_HINT": "已通知店主，请输入他们提供的六位数字。",
+        "REQUEST_FAILED": "请求发送失败，请重试。",
+        "CODE_LABEL": "授权码",
+        "CODE_FORMAT": "授权码为 {{length}} 位数字。"
+      },
       "ERROR": {
         "NOT_CONFIRMED": "此预订已无法改签（状态不是已确认）。",
         "MAX_COUNT": "此预订已改签过一次，无法再次改签。",
@@ -282,6 +295,19 @@
       "CONFIRM_BUTTON": "确认",
       "BACK_BUTTON": "返回",
       "SUCCESS": "座位已更改。",
+      "CASH_HANDOVER": {
+        "TITLE": "柜台现金退款",
+        "BODY": "此次改签需向顾客退还现金 {{amount}}。只有在现钞确实此刻交出时才勾选，否则系统会记为仍欠付。",
+        "CONFIRM_LABEL": "现已向顾客退还现金 {{amount}}",
+        "APPROVAL_BODY": "现金退款需要第二个人授权。请求店主授权后，他们会告知六位数字。",
+        "REQUEST": "请求店主授权",
+        "REQUESTING": "请求中...",
+        "REQUEST_AGAIN": "再次请求",
+        "REQUESTED_HINT": "已通知店主，请输入他们提供的六位数字。",
+        "REQUEST_FAILED": "请求发送失败，请重试。",
+        "CODE_LABEL": "授权码",
+        "CODE_FORMAT": "授权码为 {{length}} 位数字。"
+      },
       "ERROR": {
         "NOT_CONFIRMED": "此预订已无法更改座位（状态不是已确认）。",
         "MAX_COUNT": "此预订已更改过一次座位，无法再次更改。",
