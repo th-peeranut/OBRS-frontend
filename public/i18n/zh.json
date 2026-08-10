@@ -442,6 +442,7 @@
     "SWAP_STATIONS": "交换出发地和目的地",
     "CLOSE": "关闭",
     "LOADING": "加载中…",
+    "LOADING_SLOW": "当前加载时间比平常长，您可以关闭此窗口继续使用本页面。",
     "READ_PRIVACY_POLICY": "阅读隐私政策",
     "ERROR": {
       "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后再试。",
