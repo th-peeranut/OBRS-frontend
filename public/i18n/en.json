@@ -2278,6 +2278,7 @@
       "SIGNED_IN_AS": "Signed in as"
     },
     "HOME_BOOKING": {
+      "TRIP_TYPE": "Trip type",
       "ROUNDTRIP_1": "One-way",
       "ROUNDTRIP_2": "Round-trip",
       "PASSENGER_COUNT": "Passenger",

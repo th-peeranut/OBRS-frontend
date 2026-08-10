@@ -6,14 +6,14 @@
     @if (bookingForm) {
       <div class="booking-card" [formGroup]="bookingForm">
         <div class="d-flex gap-5">
-          <!-- DROPDOWN ROUNDTRIP TYPE -->
-          <app-dropdown-obrs
-            [isBorder]="false"
-            [isLabel]="false"
-            [label]="'roundTrip'"
+          <!-- TRIP TYPE PILLS (OBRS-1025). Replaces app-dropdown-obrs: with
+          round-trip now the default (OBRS-1185), the one-way route back must
+          not be hidden behind a dropdown click — both options are visible and
+          reachable in one tap from either state. -->
+          <app-trip-type-toggle
             [options]="roundTripDropdowns"
             formControlName="roundTrip"
-          ></app-dropdown-obrs>
+          ></app-trip-type-toggle>
           <!-- DROPDOWN PASSENGER COUNT -->
           <app-dropdown-obrs-passenger
             formControlName="passengerInfo"
@@ -152,13 +152,22 @@
                   order from the outbound one would be worse than either.
                   OBRS-1036: and the same `readonlyInput`, for the same reason —
                   two date fields side by side where only one refuses typing
-                  would read as a broken one, not as a rule.) -->
+                  would read as a broken one, not as a rule.
+
+                  OBRS-1185: `[minDate]` is the CURRENT departureDate, not the
+                  shared `minDate` (today) — a return date before the chosen
+                  outbound date must be unpickable in the calendar itself,
+                  rather than a 400 the server rejects it with later. Reads
+                  straight off the form control (already the pattern this
+                  template uses for the station pickers' `[value]`) so it
+                  tracks every departureDate change with no extra field to
+                  keep in sync.) -->
                   <p-datePicker
                     styleClass="app-date-field"
                     panelStyleClass="app-date-field-panel"
                     [dateFormat]="calendarDateFormat()"
                     [readonlyInput]="true"
-                    [minDate]="minDate"
+                    [minDate]="getFormValue('departureDate')"
                     [maxDate]="maxDate"
                     [iconDisplay]="'input'"
                     [showIcon]="true"

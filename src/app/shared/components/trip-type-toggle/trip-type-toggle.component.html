@@ -1,0 +1,29 @@
+<!-- OBRS-1025: both trip-type options are visible and reachable in ONE tap
+from either state — this is what replaces the app-dropdown-obrs dropdown,
+which hid the second option behind a click. -->
+<div
+  class="trip-type-toggle"
+  role="group"
+  [attr.aria-label]="'HOME.HOME_BOOKING.TRIP_TYPE' | translate"
+>
+  @for (option of optionList; track option.id) {
+    <!-- Selected state does NOT rely on color alone: aria-pressed carries it
+    to assistive tech, and a checkmark icon carries it visually (OBRS-1028's
+    lesson — this control must not ship with no accessible name/state,
+    identical to the swap-button bug that card fixed). -->
+    <button
+      type="button"
+      class="trip-type-toggle__btn"
+      [class.is-selected]="isSelected(option)"
+      [attr.aria-pressed]="isSelected(option)"
+      (click)="select(option)"
+    >
+      @if (isSelected(option)) {
+        <span class="material-symbols-outlined trip-type-toggle__check" aria-hidden="true"
+          >check</span
+        >
+      }
+      <span>{{ labelKey(option) | translate }}</span>
+    </button>
+  }
+</div>

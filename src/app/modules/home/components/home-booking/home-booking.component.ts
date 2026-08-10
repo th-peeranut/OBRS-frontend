@@ -7,7 +7,6 @@ import { Appstate } from '../../../../shared/stores/appstate';
 import { select, Store } from '@ngrx/store';
 import { catchError, Observable, of, Subject, Subscription, take, takeUntil } from 'rxjs';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
-import { ScheduleFilterPayload } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
@@ -27,6 +26,7 @@ import {
 } from '../../../../services/booking-policy/booking-policy.service';
 import { LanguageService } from '../../../../shared/services/language.service';
 import { canSwapStationPair, isEmptyStationValue } from '../../../../shared/lib/station-swap';
+import { carryReturnDate, defaultReturnDate } from '../../../../shared/lib/return-date';
 
 // OBRS-564: date-picker cap fallback, used only until the real public
 // booking-policy config resolves (see ngOnInit below). A briefly-wrong value
@@ -47,17 +47,22 @@ import { canSwapStationPair, isEmptyStationValue } from '../../../../shared/lib/
     standalone: false
 })
 export class HomeBookingComponent implements OnInit, OnDestroy {
+  // OBRS-1025: still passed to `app-trip-type-toggle` as `[options]` — the
+  // pill component reads `id`/`isDefault` the same way `app-dropdown-obrs`
+  // did, so this array's shape doesn't change, only what renders it.
+  // OBRS-1185: `isDefault` moved to id 2 (round-trip) — one of three places
+  // that must move together, see `createForm()`.
   roundTripDropdowns: Dropdown[] = [
     {
       id: 1,
       nameThai: 'เที่ยวเดียว',
       nameEnglish: 'One-way',
-      isDefault: true,
     },
     {
       id: 2,
       nameThai: 'ไป-กลับ',
       nameEnglish: 'Round-trip',
+      isDefault: true,
     },
   ];
 
@@ -116,7 +121,17 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
 
   roundTripOnChange$: Subscription;
 
-  isRoundTripReturn: boolean = false;
+  /** OBRS-1185 AC#4: re-derives `returnDate` whenever `departureDate` moves
+   *  past it. See `createForm()`. */
+  departureDateOnChange$: Subscription;
+
+  // OBRS-1185: literal default flipped to round-trip, matching `createForm()`'s
+  // `roundTrip: [2]` seed — a plain `new HomeBookingComponent(...)` (no
+  // `app-trip-type-toggle` rendered, e.g. most specs in this file) never runs
+  // the child that would otherwise correct this, so the two literals have to
+  // agree on their own for the return-date field to be in the DOM from the
+  // very first frame (AC#1).
+  isRoundTripReturn: boolean = true;
 
   constructor(
     private fb: FormBuilder,
@@ -196,14 +211,26 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
 
     this.roundTripOnChange$?.unsubscribe();
+    this.departureDateOnChange$?.unsubscribe();
   }
 
   createForm() {
     this.bookingForm = this.fb.group({
-      roundTrip: [1],
+      // OBRS-1185: default flipped to round-trip (id 2) — owner decision
+      // 2026-08-10, comparing prod against Skyscanner/Traveloka/Airpaz (all
+      // three default round-trip). Three places move together or the first
+      // frame disagrees with itself: this seed, `roundTripDropdowns`'
+      // `isDefault` flag (below), and `isRoundTripReturn`'s own literal
+      // default (this class's field initializer) — `app-trip-type-toggle`
+      // deliberately does NOT re-derive a default of its own (see that
+      // component's header comment), so this is the ONE place the value
+      // actually comes from.
+      roundTrip: [2],
       // Default to 1 adult so a fresh search is immediately valid; the user can
       // still adjust via the passenger dropdown. Types/casing match
-      // DropdownObrsPassengerComponent ('ADULT'/'KIDS') and getPayload().
+      // DropdownObrsPassengerComponent ('ADULT'/'KIDS') and
+      // ScheduleBookingFilterComponent.getPayload() (the surviving payload
+      // builder — OBRS-1190 deleted this component's own copy as dead code).
       passengerInfo: [
         [
           { type: 'ADULT', count: 1 },
@@ -215,13 +242,31 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       stopStationId: [''],
       departureDate: [this.minDate],
 
-      returnDate: [this.minDate],
+      // OBRS-1185: derived FROM departureDate (never `new Date()`/`minDate`
+      // directly) and capped at `maxDate` — a same-day round trip is not what
+      // "round trip" defaults to on any reference site the owner cited. See
+      // `shared/lib/return-date.ts`.
+      returnDate: [defaultReturnDate(this.minDate, this.maxDate)],
     });
 
     this.roundTripOnChange$ = this.bookingForm.controls[
       'roundTrip'
     ].valueChanges.subscribe((value) => {
       this.isRoundTripReturn = value?.id === 2;
+    });
+
+    // OBRS-1185 AC#4: moving departureDate past returnDate must carry
+    // returnDate forward with it — never leave a pair in the form the backend
+    // would reject. `emitEvent: false` — this is a derived correction, not a
+    // user edit, and nothing downstream needs to react to it a second time.
+    this.departureDateOnChange$ = this.bookingForm.controls[
+      'departureDate'
+    ].valueChanges.subscribe((date: Date) => {
+      const currentReturn = this.getFormValue('returnDate');
+      const carried = carryReturnDate(date, currentReturn, this.maxDate);
+      if (carried !== currentReturn) {
+        this.bookingForm.patchValue({ returnDate: carried }, { emitEvent: false });
+      }
     });
   }
 
@@ -254,51 +299,6 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   onRecentRouteSelected(candidate: RecentRouteCandidate): void {
     this.onStartStationChange(candidate.originStation);
     this.onEndStationChange(candidate.destinationStation);
-  }
-
-  getPayload() {
-    const formValue = { ...this.bookingForm.getRawValue() };
-
-    const passengerInfo = Array.isArray(formValue.passengerInfo)
-      ? formValue.passengerInfo
-      : [];
-    const getPassengerCount = (type: string) =>
-      passengerInfo.find((item: any) => item.type === type)?.count || 0;
-
-    formValue.adultCount = getPassengerCount('ADULT');
-    formValue.kidsCount = getPassengerCount('KIDS');
-
-    const roundTripId =
-      typeof formValue.roundTrip === 'object' ? formValue.roundTrip?.id : formValue.roundTrip;
-
-    const payload: ScheduleFilterPayload = {
-      bookingType: roundTripId === 1 ? 'One way' : 'Return',
-      numberOfPassengers: formValue.adultCount + formValue.kidsCount,
-      fromStop: this.getStationCodeById(formValue.startStationId),
-      toStop: this.getStationCodeById(formValue.stopStationId),
-      departureDate: formValue.departureDate
-        ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
-        : '',
-      ...(roundTripId === 1
-        ? {}
-        : {
-            returnDate: formValue.returnDate
-              ? dayjs(formValue.returnDate).format('YYYY-MM-DD')
-              : null,
-          }),
-    };
-
-    return payload;
-  }
-
-  private getStationCodeById(stationId: string | number | null | undefined): string | null {
-    if (stationId === null || stationId === undefined || stationId === '') {
-      return null;
-    }
-
-    const id = Number(stationId);
-    const match = this.allProvinceStationList.find((station) => station.id === id);
-    return match?.slug || null;
   }
 
   onStartStationChange(station: StationApi) {
