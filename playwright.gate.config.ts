@@ -163,6 +163,14 @@ export default defineConfig({
     // that went wrong on the equivalent claim one page over (OBRS-564). Hermetic
     // on the same terms as the rest: every /api/** call is fulfilled in-spec.
     '**/obrs-627-refund-policy.spec.ts',
+    // OBRS-1207. Replaces the two FAB-overlap cases in report-usability-issue.spec.ts,
+    // which compared a `position: fixed` box against a scrolling one and never pinned
+    // the scroll — so their verdict was a function of where the page came to rest. The
+    // same tree passed on PR #167, went red on the `dev` merge `8c43dcec`, and passed
+    // 6/6 locally. This one SOLVES for the scroll offsets that collide instead of
+    // sampling them, and asks `document.elementFromPoint()` rather than comparing
+    // rectangles. Hermetic on the same terms as the rest — it reuses those fixtures.
+    '**/obrs-1207-fab-occlusion.spec.ts',
   ],
 
   timeout: 60_000,
