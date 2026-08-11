@@ -83,6 +83,16 @@
   &:hover {
     color: $primary-blue;
   }
+
+  // OBRS-1224: the keyboard's counterpart to :hover — where ArrowUp/ArrowDown
+  // currently are, and what Enter would take. It carries a BACKGROUND as well as
+  // the hover colour because a keyboard user has no pointer to corroborate it:
+  // colour alone on one row of 24 is not a position, it is a guess.
+  // $primary-blue on $primary-lightblue is 4.63:1 (variables.scss:25).
+  &.is-active-option {
+    color: $primary-blue;
+    background-color: $primary-lightblue;
+  }
 }
 
 .dropdown-menu-border {
@@ -104,45 +114,59 @@
   overflow-y: auto;
 }
 
-.dropdown-search-row {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: $space-3xs;
-  padding: $space-2xs $space-xs;
-  background-color: inherit; // inherits .dropdown-menu's bg, light or (future) dark alike
-  border-bottom: 1px solid $primary-grey;
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// OBRS-1224 — the trigger IS the search box (searchable call sites only).
+//
+// What used to be here: `.dropdown-search-row`, a sticky row at the TOP of the
+// panel. It was measured on prod opening 525-585 px ABOVE the field on desktop,
+// because 24+ options overflow `max-height: 60vh` and Popper flips the panel
+// upward — so the row pinned nearest the panel's top edge was pinned FURTHEST
+// from the field. Those rules (and their dark-mode counterparts at the bottom of
+// this file) are deleted rather than left behind: an element the template no
+// longer renders takes its stylesheet with it, or the next reader finds two
+// search boxes' worth of CSS and one search box.
+//
+// The input re-uses `.btn.dropdown-toggle*` above, so the field's geometry is
+// still one declaration shared with the button branch — OBRS-568 owns that
+// geometry and this card does not restate it.
+// ─────────────────────────────────────────────────────────────────────────────
+input.btn.dropdown-combo-input {
+  // Bootstrap's `.btn` centres its label; a field being typed into must not.
+  text-align: left;
 
-// Was $text-lightgrey (#989ba4), 2.78:1 on the white panel — sub-AA in LIGHT mode,
-// not only dark, and this icon is the search affordance rather than decoration.
-// Repointed to $text-lightblack (#717581, 4.60:1) by OBRS-811, which repointed only
-// the sites it rendered and left the other ~49 to a token-wide decision.
-// OBRS-769 made that decision: $text-lightgrey is gone from variables.scss entirely
-// (no legible value exists for it — see the note there), so this is now the token
-// every muted foreground in the light theme uses.
-.dropdown-search-icon {
-  flex: 0 0 auto;
+  // Both restate `.value-text` above rather than inheriting: the input is not
+  // inside `.value-text`, and Bootstrap's `.btn` would otherwise supply its own
+  // `--bs-btn-color` and font size, changing how the SAME field looks depending
+  // on which branch rendered it.
   font-size: $font-size-md;
-  color: $text-lightblack;
-}
+  color: $text-black;
 
-.dropdown-search-input {
-  flex: 1 1 auto;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: $font-size-base;
-  color: inherit; // inherits whatever text color the panel resolves to
+  // The arrow cannot be a flex child of an `<input>`, so it is layered ON the
+  // field — and the text has to stop before it, or a long station name runs
+  // underneath the icon. `!important` + the extra `input` tag selector is what
+  // it takes to out-rank `.btn.dropdown-toggle-border`'s own `!important`
+  // `padding` shorthand, which exists to beat Bootstrap's `.p-0` (OBRS-1038).
+  padding-right: $space-lg + 10px !important;
 
-  // Same repoint as .dropdown-search-icon above: 2.78:1 -> 4.60:1 on white.
-  // This one is AC3 — it was failing in LIGHT mode too, so it is a pre-existing
-  // regression rather than anything dark mode introduced.
+  text-overflow: ellipsis;
+
+  // Same muted token as `.value-text.is-placeholder` on the button branch
+  // ($text-lightblack, 4.60:1 on white — $text-lightgrey was deleted by
+  // OBRS-769 for being 2.78:1). `opacity: 1` because UA stylesheets fade
+  // placeholders, which would put the colour back under the floor.
   &::placeholder {
     color: $text-lightblack;
+    opacity: 1;
   }
+}
+
+.combo-arrow-icon {
+  position: absolute; // `.dropdown` is `position: relative` (Bootstrap)
+  top: 50%;
+  right: $space-xs;
+  transform: translateY(-50%);
+  margin-left: 0; // `.arrow-icon`'s flex-row margin means nothing once positioned
+  pointer-events: none; // clicks belong to the input underneath — it is the toggle
 }
 
 li.option-items {
@@ -156,7 +180,12 @@ li.option-items {
   }
 }
 
+// `input.dropdown-btn:disabled` is the combobox half of the same rule: OBRS-916 R5
+// made `setDisabledState()` non-optional precisely because a disabled control that
+// still takes input is a lie, and a disabled `<input>` accepts no keystrokes but
+// would still take a click through to Bootstrap's toggle without this.
 button.disabled,
+input.dropdown-btn:disabled,
 .dropdown-menu.disabled .dropdown-item {
   pointer-events: none;
   opacity: 0.6;
@@ -180,6 +209,11 @@ button.disabled,
     .value-text {
       font-size: $font-size-base;
     }
+  }
+
+  // The combobox half of the same step-down (OBRS-1224).
+  input.btn.dropdown-combo-input {
+    font-size: $font-size-base;
   }
 
   // The panel must NOT be sized from the toggle. `.dropdown` sits inside
@@ -301,6 +335,13 @@ button.disabled,
       color: $dk-accent;
       background-color: $dk-border-muted;
     }
+
+    // OBRS-1224. Same pair as :hover on purpose — the light theme's
+    // $primary-lightblue would be a white band on a dark panel.
+    &.is-active-option {
+      color: $dk-accent;
+      background-color: $dk-border-muted;
+    }
   }
 
   li.option-items {
@@ -311,17 +352,13 @@ button.disabled,
     }
   }
 
-  // `background-color: inherit` on the light rule already carries the panel's
-  // new dark surface up into the sticky row; only the divider needs restating.
-  .dropdown-search-row {
-    border-bottom-color: $dk-border;
-  }
-
-  .dropdown-search-icon {
-    color: $dk-text-muted;
-  }
-
-  .dropdown-search-input {
+  // OBRS-1224 replaced `.dropdown-search-row` / `-icon` / `-input` (whose dark
+  // rules stood here) with the combobox trigger. The trigger is not inside the
+  // panel, so it does not inherit the panel's dark surface the way that sticky
+  // row did — it needs its own foreground, and $dk-text-muted for the prompt is
+  // the same token `.value-text.is-placeholder` uses above, so a station picker
+  // reads identically whichever branch rendered it.
+  input.dropdown-combo-input {
     color: $dk-text;
 
     &::placeholder {

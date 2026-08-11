@@ -4,117 +4,173 @@
   }
 
   <div class="dropdown">
-    <button
-      #dropdownButton
-      class="btn dropdown-btn dropdown-toggle p-0"
-      type="button"
-      [id]="'dropdownObrs' + label"
-      data-bs-toggle="dropdown"
-      aria-expanded="false"
-      [class.active]="isDropdownOpen"
-      [class.dropdown-toggle-border]="isBorder"
-      [class.disabled]="isDisabled"
-      [disabled]="isDisabled"
-      >
-      <!-- Before anything is selected `getValue(null)` returns '', which rendered a
-      completely blank box that reads as an empty text input — the OBRS-901
-      defect. The placeholder branch fills it; `.is-placeholder` is what makes
-      it read as a prompt rather than as an already-chosen value. -->
-      <div class="value-text" [class.is-placeholder]="!selectedValue">
-        @if (selectedValue) {
-          {{ getValue(selectedValue) }}
-        } @else {
-          @if (placeholder) {
-            {{ placeholder | translate }}
-          }
-          @if (!placeholder && label) {
-            {{
-            "SHARED.SELECT_PLACEHOLDER" | translate: { item: label | translate }
-            }}
-          }
-          @if (!placeholder && !label) {
-            {{
-            "SHARED.SELECT_PLACEHOLDER_GENERIC" | translate
-            }}
-          }
-        }
-      </div>
+    @if (searchable) {
+      <!-- No `data-bs-toggle="dropdown"` on this branch, deliberately, and it is the
+      one line that cannot be restored without reintroducing the defect: Bootstrap
+      registers its data-api handlers with `addEventListener(type, fn, isDelegated)`
+      — the third argument is CAPTURE — so its toggle runs on `document` BEFORE any
+      listener on this element. Measured: with the attribute, a click into an open
+      field reached `Dropdown.toggle()` first and closed the panel, and no amount of
+      `stopPropagation()` here could get in front of it. So this component opens and
+      closes the panel through the Dropdown INSTANCE instead (Popper, the flip, the
+      shown/hidden events and `aria-expanded` all still come from Bootstrap), and
+      owns the two behaviours the data-api was providing: outside-click and Escape.
+
+      OBRS-1224: the trigger IS the search box.
+      The panel-mounted `.dropdown-search-row` this replaces was measured on prod
+      opening 525-585 px ABOVE the field on desktop, because 24+ options overflow
+      `max-height: 60vh` and Popper flips the panel upward — so the one control
+      that had to be near the field became the furthest thing from it. Typing here
+      instead makes that distance zero by construction, at every placement, which
+      is why this is a template change and not a CSS one.
+
+      It stays a `<button>` when `searchable` is false: those call sites pick from
+      a short list where there is nothing to type, and leaving that branch
+      untouched keeps the OBRS-916 CVA contract exercised exactly as it was. -->
+      <input
+        #dropdownButton
+        class="btn dropdown-btn dropdown-toggle dropdown-combo-input p-0"
+        type="text"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded="false"
+        autocomplete="off"
+        [id]="'dropdownObrs' + label"
+        [attr.aria-controls]="menuId"
+        [attr.aria-activedescendant]="activeOptionId"
+        [attr.aria-label]="triggerAriaLabel"
+        [class.active]="isDropdownOpen"
+        [class.dropdown-toggle-border]="isBorder"
+        [class.disabled]="isDisabled"
+        [disabled]="isDisabled"
+        [value]="triggerText"
+        [attr.placeholder]="triggerPlaceholder"
+        (click)="onTriggerClick()"
+        (input)="onSearchInput($event)"
+        (keydown)="onTriggerKeydown($event)"
+        />
+      <!-- `pointer-events: none` in the stylesheet: the icon sits ON the input, and a
+      click that lands on it must reach the input underneath — that input is the
+      Bootstrap toggle, so anything that swallows the click swallows the open. -->
       <img
-        class="arrow-icon"
+        class="arrow-icon combo-arrow-icon"
         [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
         alt="Arrow Icon"
+        aria-hidden="true"
         />
-      </button>
+    } @else {
+      <button
+        #dropdownButton
+        class="btn dropdown-btn dropdown-toggle p-0"
+        type="button"
+        [id]="'dropdownObrs' + label"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        [class.active]="isDropdownOpen"
+        [class.dropdown-toggle-border]="isBorder"
+        [class.disabled]="isDisabled"
+        [disabled]="isDisabled"
+        >
+        <!-- Before anything is selected `getValue(null)` returns '', which rendered a
+        completely blank box that reads as an empty text input — the OBRS-901
+        defect. The placeholder branch fills it; `.is-placeholder` is what makes
+        it read as a prompt rather than as an already-chosen value. -->
+        <div class="value-text" [class.is-placeholder]="!selectedValue">
+          @if (selectedValue) {
+            {{ getValue(selectedValue) }}
+          } @else {
+            @if (placeholder) {
+              {{ placeholder | translate }}
+            }
+            @if (!placeholder && label) {
+              {{
+              "SHARED.SELECT_PLACEHOLDER" | translate: { item: label | translate }
+              }}
+            }
+            @if (!placeholder && !label) {
+              {{
+              "SHARED.SELECT_PLACEHOLDER_GENERIC" | translate
+              }}
+            }
+          }
+        </div>
+        <img
+          class="arrow-icon"
+          [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
+          alt="Arrow Icon"
+          />
+        </button>
+      }
 
       <ul
         class="dropdown-menu"
         [class.dropdown-menu-border]="isBorder"
         [class.disabled]="isDisabled"
+        [id]="menuId"
+        [attr.role]="searchable ? 'listbox' : null"
         [attr.aria-disabled]="isDisabled ? 'true' : null"
         [attr.aria-labelledby]="'dropdownObrs' + label"
         >
-        @if (searchable) {
-          <li class="dropdown-search-row" (click)="$event.stopPropagation()">
-            <span class="material-symbols-outlined dropdown-search-icon" aria-hidden="true">search</span>
-            <input
-              #stationSearchInput
-              type="search"
-              class="dropdown-search-input"
-              [attr.aria-label]="'SHARED.SEARCH_PLACEHOLDER' | translate"
-              [placeholder]="'SHARED.SEARCH_PLACEHOLDER' | translate"
-              [ngModel]="searchQuery"
-              (input)="onSearchInput($event)"
-              autocomplete="off"
-              />
+        @if (isGroupedOptions()) {
+          <!-- OBRS-1212: iterates `displayGroups` (filtered), NOT `optionList`
+          (raw). The raw list is what this branch read for as long as it was
+          unreachable, which is exactly how supplying grouped data would have
+          stopped the search box filtering without any test going red — see
+          `displayGroups` in the component (AC#2). -->
+          @for (entry of displayGroups; track entry.group) {
+            <!-- `presentation`, not `group`: inside a listbox every child must be an
+            option or a labelled group, and a group would have to CONTAIN its
+            options — this list is flat (header li, then sibling option lis), so
+            claiming `group` here would be a lie a screen reader acts on. The
+            province name is still read as the option's visual context; making it
+            a programmatic group is OBRS-568/1189 territory, not this card's. -->
+            <li class="dropdown-header" [attr.role]="searchable ? 'presentation' : null">
+              {{ getValue(entry.group) }}
             </li>
-          }
-
-          @if (isGroupedOptions()) {
-            <!-- OBRS-1212: iterates `displayGroups` (filtered), NOT `optionList`
-            (raw). The raw list is what this branch read for as long as it was
-            unreachable, which is exactly how supplying grouped data would have
-            stopped the search box filtering without any test going red — see
-            `displayGroups` in the component (AC#2). -->
-            @for (entry of displayGroups; track entry.group) {
-              <li class="dropdown-header">
-                {{ getValue(entry.group) }}
-              </li>
-              @for (station of entry.stations; track trackByOptionId($index, station)) {
-                <li class="option-items">
-                  <a
-                    class="dropdown-item dropdown-option"
-                    [class.disabled]="isDisabled"
-                    (click)="!isDisabled && setCurrentValue(station)"
-                    >
-                    {{ getValue(station) }}
-                  </a>
-                </li>
-              }
-            }
-          } @else {
-            @for (option of displayList; track trackByOptionId($index, option)) {
-              <li class="option-items">
+            @for (station of entry.stations; track trackByOptionId($index, station)) {
+              <li class="option-items" [attr.role]="searchable ? 'presentation' : null">
                 <a
                   class="dropdown-item dropdown-option"
                   [class.disabled]="isDisabled"
-                  (click)="!isDisabled && setCurrentValue(option)"
+                  [class.is-active-option]="searchable && optionIndex(station) === activeIndex"
+                  [attr.role]="searchable ? 'option' : null"
+                  [attr.id]="searchable ? optionDomId(optionIndex(station)) : null"
+                  [attr.aria-selected]="searchable ? station === selectedValue : null"
+                  (click)="!isDisabled && setCurrentValue(station)"
                   >
-                  {{ getValue(option) }}
+                  {{ getValue(station) }}
                 </a>
               </li>
             }
           }
+        } @else {
+          @for (option of displayList; track trackByOptionId($index, option)) {
+            <li class="option-items" [attr.role]="searchable ? 'presentation' : null">
+              <a
+                class="dropdown-item dropdown-option"
+                [class.disabled]="isDisabled"
+                [class.is-active-option]="searchable && optionIndex(option) === activeIndex"
+                [attr.role]="searchable ? 'option' : null"
+                [attr.id]="searchable ? optionDomId(optionIndex(option)) : null"
+                [attr.aria-selected]="searchable ? option === selectedValue : null"
+                (click)="!isDisabled && setCurrentValue(option)"
+                >
+                {{ getValue(option) }}
+              </a>
+            </li>
+          }
+        }
 
-          @if (optionList.length === 0) {
-            <li class="px-3">
-              {{ "SHARED.NO_CONTENT" | translate }}
-            </li>
-          }
-          @if (showNoSearchResults) {
-            <li class="px-3">
-              {{ "SHARED.NO_CONTENT" | translate }}
-            </li>
-          }
-        </ul>
-      </div>
+        @if (optionList.length === 0) {
+          <li class="px-3">
+            {{ "SHARED.NO_CONTENT" | translate }}
+          </li>
+        }
+        @if (showNoSearchResults) {
+          <li class="px-3">
+            {{ "SHARED.NO_CONTENT" | translate }}
+          </li>
+        }
+      </ul>
     </div>
+  </div>
