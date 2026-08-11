@@ -745,6 +745,7 @@
       "NEVER_LOGGED_IN": "ยังไม่เคยเข้าสู่ระบบ",
       "EMAIL_PHONE": "อีเมลและเบอร์โทร",
       "ROLES": "บทบาท",
+      "GUEST_UNREGISTERED": "ยังไม่ลงทะเบียน",
       "ROLE_NAMES": {
         "admin": "ผู้ดูแลระบบ",
         "owner": "เจ้าของกิจการ",

@@ -8,6 +8,10 @@ import { UserRow } from '../user-management.mappers';
 import { ResponseAPI } from '../../../../../shared/interfaces/response.interface';
 import { createTranslateStub } from '../../../../../testing/test-stubs';
 
+// OBRS-1230: real (not parsed/guessed) name parts, same as toUserRow now
+// carries from the list endpoint's AdminUserDto — this fixture is built by
+// hand rather than through toUserRow, so it has to state them explicitly to
+// stay representative of what a real (non-guest) row looks like.
 const JOHN_ROW: UserRow = {
   id: 1,
   fullName: 'Mr John Doe',
@@ -20,6 +24,11 @@ const JOHN_ROW: UserRow = {
   lastLogin: '-',
   hasLoggedIn: false,
   locked: false,
+  title: 'Mr',
+  firstName: 'John',
+  middleName: '',
+  lastName: 'Doe',
+  guest: false,
 };
 
 function detailResponse(overrides: Partial<AdminUserDto> = {}): ResponseAPI<AdminUserDto> {

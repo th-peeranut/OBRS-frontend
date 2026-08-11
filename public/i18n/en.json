@@ -745,6 +745,7 @@
       "NEVER_LOGGED_IN": "Never signed in",
       "EMAIL_PHONE": "Email & Phone",
       "ROLES": "Roles",
+      "GUEST_UNREGISTERED": "Not yet registered",
       "ROLE_NAMES": {
         "admin": "Admin",
         "owner": "Owner",
