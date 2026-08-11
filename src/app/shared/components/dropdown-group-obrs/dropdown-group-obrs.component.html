@@ -49,15 +49,19 @@
         (input)="onSearchInput($event)"
         (keydown)="onTriggerKeydown($event)"
         />
-      <!-- `pointer-events: none` in the stylesheet: the icon sits ON the input, and a
-      click that lands on it must reach the input underneath — that input is the
-      Bootstrap toggle, so anything that swallows the click swallows the open. -->
-      <img
-        class="arrow-icon combo-arrow-icon"
-        [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
-        alt="Arrow Icon"
-        aria-hidden="true"
-        />
+      <!-- The icon cannot be a flex child of an `<input>`, so it is layered over the
+      field by a slot that carries the SAME padding declaration the field does —
+      which is how it still lands clear of the swap button on the joined station
+      bar, where OBRS-1038's call site widens the seam-side padding. Both the slot
+      and the icon are `pointer-events: none`: a click that lands on the icon has
+      to reach the field underneath, or it would not open the panel. -->
+      <span class="combo-arrow-slot" aria-hidden="true">
+        <img
+          class="arrow-icon combo-arrow-icon"
+          [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
+          alt="Arrow Icon"
+          />
+      </span>
     } @else {
       <button
         #dropdownButton

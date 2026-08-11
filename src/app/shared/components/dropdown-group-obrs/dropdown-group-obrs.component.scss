@@ -160,13 +160,23 @@ input.btn.dropdown-combo-input {
   }
 }
 
+// Spans the field (`.dropdown` is `position: relative` — Bootstrap) and re-uses
+// the field's OWN padding custom property, so the icon sits exactly where the
+// button branch's flex layout put it. On the joined station bar the origin field's
+// seam-side padding is `var(--station-swap-clearance)` (OBRS-1038 owns that), and
+// a hard-coded inset here would park the arrow under the swap button instead.
+.combo-arrow-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: var(--dropdown-toggle-padding, #{$space-xs});
+  pointer-events: none; // clicks belong to the field underneath — it is the toggle
+}
+
 .combo-arrow-icon {
-  position: absolute; // `.dropdown` is `position: relative` (Bootstrap)
-  top: 50%;
-  right: $space-xs;
-  transform: translateY(-50%);
-  margin-left: 0; // `.arrow-icon`'s flex-row margin means nothing once positioned
-  pointer-events: none; // clicks belong to the input underneath — it is the toggle
+  margin-left: 0; // `.arrow-icon`'s flex-row margin means nothing in this slot
 }
 
 li.option-items {
