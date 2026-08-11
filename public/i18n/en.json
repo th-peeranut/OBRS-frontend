@@ -745,6 +745,7 @@
       "NEVER_LOGGED_IN": "Never signed in",
       "EMAIL_PHONE": "Email & Phone",
       "ROLES": "Roles",
+      "GUEST_UNREGISTERED": "Not yet registered",
       "ROLE_NAMES": {
         "admin": "Admin",
         "owner": "Owner",
@@ -2607,6 +2608,8 @@
   "E_TICKET": {
     "RETRIEVAL_NOTE": "Keep your booking reference {{bookingNumber}}. You can open this ticket again without signing in — just enter it together with the phone number you booked with:",
     "RETRIEVAL_LINK": "Find your booking",
+    "INCOMPLETE_TITLE": "This is not your full ticket",
+    "INCOMPLETE_BODY": "This link can only show the trip details — it has no booking reference, no seat and no boarding QR code. Retrieve the real ticket with your booking reference and the phone number you booked with:",
     "TITLE": "E-Ticket",
     "SUBTITLE": "NJ Phuyaipu online travel ticket",
     "BTN_NAVIGATE": "Navigate",

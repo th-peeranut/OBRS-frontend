@@ -173,6 +173,38 @@ describe('UserListTableComponent (template)', () => {
     expect(chips[0].nativeElement.textContent.trim()).toBe('เจ้าของกิจการ');
   });
 
+  // OBRS-1230 AC5: a guest shadow user (ADR-0123) genuinely has zero roles by
+  // design, which used to render the same "-" chip as a non-guest user with
+  // no roles - indistinguishable from missing data. The guest flag renders a
+  // real explanation instead.
+  it('renders the guest-unregistered chip instead of "-" for a guest row', () => {
+    component.isLoading = false;
+    component.rows = [makeRow({ id: 1, roleSlugs: [], roles: ['-'], guest: true })];
+    fixture.detectChanges();
+
+    const guestChip = fixture.debugElement.query(By.css('.admin-status.is-neutral'));
+    expect(guestChip).withContext('guest chip should render').toBeTruthy();
+    expect(guestChip.nativeElement.textContent).toContain('ADMIN.USERS.GUEST_UNREGISTERED');
+
+    const roleChips = fixture.debugElement.queryAll(By.css('.admin-tags .admin-chip'));
+    expect(roleChips.length).toBe(0);
+  });
+
+  // Control case: a non-guest user with zero roles keeps the plain "-" chip
+  // unchanged - only the guest flag switches the rendering.
+  it('keeps the plain "-" chip for a non-guest user with zero roles', () => {
+    component.isLoading = false;
+    component.rows = [makeRow({ id: 1, roleSlugs: [], roles: ['-'], guest: false })];
+    fixture.detectChanges();
+
+    const guestChip = fixture.debugElement.query(By.css('.admin-status.is-neutral'));
+    expect(guestChip).withContext('no guest chip for a non-guest row').toBeNull();
+
+    const roleChips = fixture.debugElement.queryAll(By.css('.admin-tags .admin-chip'));
+    expect(roleChips.length).toBe(1);
+    expect(roleChips[0].nativeElement.textContent.trim()).toBe('-');
+  });
+
   it('renders the totalCount and filtered rows.length in the footer', () => {
     component.isLoading = false;
     component.rows = [makeRow({ id: 1 })];

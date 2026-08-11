@@ -6,7 +6,6 @@ import {
   extractRoleLabels,
   extractRoleSlugs,
   filterUsers,
-  parseNameFromFullName,
   parseStatus,
   prettifyRoleSlug,
   roleRequiredValidator,
@@ -190,6 +189,10 @@ describe('user-management.mappers', () => {
   describe('toUserRow', () => {
     const baseUser: AdminUserDto = {
       id: 1,
+      title: 'Mr',
+      firstName: 'John',
+      middleName: '',
+      lastName: 'Doe',
       fullName: 'Mr John Doe',
       email: 'john@example.com',
       phoneNumber: '0812345678',
@@ -207,6 +210,51 @@ describe('user-management.mappers', () => {
       expect(row.statusCode).toBe('active');
       expect(row.status).toBe('ACTIVE');
       expect(row.locked).toBeFalse();
+    });
+
+    // OBRS-1230: the list endpoint (AdminUserDto) now sends the real name
+    // parts and the guest flag directly - no more parsing/guessing from
+    // fullName. toUserRow just carries them through, trimmed.
+    it('carries the real title/firstName/middleName/lastName and guest flag through, trimmed', () => {
+      const row = toUserRow(
+        { ...baseUser, title: ' Mr ', middleName: ' ', guest: false },
+        'en',
+        'en'
+      );
+      expect(row.title).toBe('Mr');
+      expect(row.firstName).toBe('John');
+      expect(row.middleName).toBe('');
+      expect(row.lastName).toBe('Doe');
+      expect(row.guest).toBeFalse();
+    });
+
+    // OBRS-1230 / ADR-0123: the guest-shadow-user shape - title/middleName/
+    // lastName are null, firstName holds the whole composed name (a backend
+    // bug being fixed separately; the frontend's job here is only to carry
+    // the parts through as-is, never to invent the missing ones).
+    it('carries a guest-shaped row through with empty parts, never inventing a title/lastName', () => {
+      const guestUser: AdminUserDto = {
+        id: 9,
+        title: undefined,
+        firstName: 'Miss กุลธิดา นาใจคง',
+        middleName: undefined,
+        lastName: undefined,
+        fullName: 'Miss กุลธิดา นาใจคง',
+        status: 'active',
+        roles: [],
+        guest: true,
+      };
+      const row = toUserRow(guestUser, 'en', 'en');
+      expect(row.title).toBe('');
+      expect(row.firstName).toBe('Miss กุลธิดา นาใจคง');
+      expect(row.lastName).toBe('');
+      expect(row.guest).toBeTrue();
+      expect(row.roles).toEqual(['-']);
+    });
+
+    it('defaults guest to false when the backend omits the field', () => {
+      const row = toUserRow(baseUser, 'en', 'en');
+      expect(row.guest).toBeFalse();
     });
 
     it('CRITICAL: uses dateLang (raw translate.currentLang), not the normalized locale, for the date format', () => {
@@ -296,7 +344,7 @@ describe('user-management.mappers', () => {
   });
 
   describe('toUserDtoFallback', () => {
-    it('maps a UserRow back into an AdminUserDto shape', () => {
+    it('maps a UserRow back into an AdminUserDto shape, carrying the real name parts and guest flag through (no invented values)', () => {
       const row: UserRow = {
         id: 1,
         fullName: 'Jane Doe',
@@ -309,6 +357,11 @@ describe('user-management.mappers', () => {
         lastLogin: '-',
         hasLoggedIn: false,
         locked: false,
+        title: '',
+        firstName: 'Jane',
+        middleName: '',
+        lastName: 'Doe',
+        guest: false,
       };
 
       expect(toUserDtoFallback(row)).toEqual({
@@ -318,60 +371,43 @@ describe('user-management.mappers', () => {
         phoneNumber: '0899999999',
         status: 'active',
         roles: ['admin', 'staff'],
-      });
-    });
-  });
-
-  describe('parseNameFromFullName', () => {
-    it('splits a title + first + last name', () => {
-      expect(parseNameFromFullName('Mr John Doe')).toEqual({
-        title: 'Mr',
-        firstName: 'John',
-        middleName: '',
-        lastName: 'Doe',
-      });
-    });
-
-    it('splits a title + first + middle + last name', () => {
-      expect(parseNameFromFullName('Mrs Jane Middle Doe')).toEqual({
-        title: 'Mrs',
+        title: '',
         firstName: 'Jane',
-        middleName: 'Middle',
-        lastName: 'Doe',
-      });
-    });
-
-    it('handles no title token (first token is not a recognized title)', () => {
-      expect(parseNameFromFullName('John Doe')).toEqual({
-        title: '',
-        firstName: 'John',
         middleName: '',
         lastName: 'Doe',
+        guest: false,
       });
     });
 
-    it('handles a single-name input (no last name)', () => {
-      expect(parseNameFromFullName('John')).toEqual({
+    // OBRS-1230: this is the pre-detail-fetch paint path - proves a
+    // detail-fetch failure (which keeps whatever this produced) can never
+    // leave a GUESSED name part behind for a guest row, only the real
+    // (possibly empty) ones already on the row.
+    it('carries a guest row through with empty title/lastName - no parseNameFromFullName guess reintroduced', () => {
+      const guestRow: UserRow = {
+        id: 9,
+        fullName: 'Miss กุลธิดา นาใจคง',
+        email: '-',
+        phone: '-',
+        roleSlugs: [],
+        roles: ['-'],
+        status: '-',
+        statusCode: 'unknown',
+        lastLogin: '-',
+        hasLoggedIn: false,
+        locked: false,
         title: '',
-        firstName: 'John',
+        firstName: 'Miss กุลธิดา นาใจคง',
         middleName: '',
         lastName: '',
-      });
-    });
+        guest: true,
+      };
 
-    it('handles empty/undefined input', () => {
-      expect(parseNameFromFullName('')).toEqual({
-        title: '',
-        firstName: '',
-        middleName: '',
-        lastName: '',
-      });
-      expect(parseNameFromFullName(undefined)).toEqual({
-        title: '',
-        firstName: '',
-        middleName: '',
-        lastName: '',
-      });
+      const fallback = toUserDtoFallback(guestRow);
+      expect(fallback.title).toBe('');
+      expect(fallback.firstName).toBe('Miss กุลธิดา นาใจคง');
+      expect(fallback.lastName).toBe('');
+      expect(fallback.guest).toBeTrue();
     });
   });
 
@@ -388,9 +424,16 @@ describe('user-management.mappers', () => {
       lastLogin: '-',
       hasLoggedIn: false,
       locked: false,
+      title: 'Mr',
+      firstName: 'John',
+      middleName: '',
+      lastName: 'Doe',
+      guest: false,
     };
 
-    it('prefers the detail DTO fields, falling back to the row and parsed name', () => {
+    // Control case (AC3.3): a normal user with a real title/first/last is
+    // unaffected by the guest-name-fields change.
+    it('prefers the detail DTO fields, falling back to the row', () => {
       const detail: AdminUserDto = {
         id: 1,
         title: 'Mr',
@@ -415,7 +458,12 @@ describe('user-management.mappers', () => {
       expect(values['isPhoneNumberVerify']).toBe(true);
     });
 
-    it('falls back to the parsed full name and row values when detail fields are missing', () => {
+    // OBRS-1230: this used to assert a `parseNameFromFullName('Mr John Doe')` guess
+    // recovered firstName/lastName when the detail omitted them. That guess is gone -
+    // it now falls back to the ROW's own real name parts (populated by toUserRow from
+    // the list endpoint), which happen to be the same values here because they were
+    // never wrong to begin with.
+    it('falls back to the row values (not a parsed guess) when detail fields are missing', () => {
       const sparseDetail: AdminUserDto = { id: 1, roles: [] };
       const values = buildUserFormValues(sparseDetail, user, 'en');
       expect(values['firstName']).toBe('John');
@@ -429,11 +477,89 @@ describe('user-management.mappers', () => {
     // record opened the form already holding 'Mr'. Nothing downstream needed a value,
     // so the default only ever wrote a gender the person had not given, and a Save that
     // changed nothing else persisted it. The inverted assertion is the regression guard.
-    it('leaves title blank when neither the detail nor the parsed name provide one', () => {
+    it('leaves title blank when neither the detail nor the row provide one', () => {
       const sparseDetail: AdminUserDto = { id: 1, roles: [] };
-      const bareUser: UserRow = { ...user, fullName: 'John' };
+      const bareUser: UserRow = { ...user, fullName: 'John', title: '' };
       const values = buildUserFormValues(sparseDetail, bareUser, 'en');
       expect(values['title']).toBe('');
+    });
+
+    // OBRS-1230 AC3.1 - the exact production defect: a guest-shaped detail
+    // (title/middleName/lastName NULL, firstName holding the whole composed
+    // name) plus a row whose fullName is the same composed string. Before
+    // this fix, parseNameFromFullName('Miss กุลธิดา นาใจคง') invented
+    // title='Miss' and lastName='นาใจคง' (splitting the composed name on
+    // whitespace) purely because the real fields came back null - nothing
+    // the admin ever entered. Now nothing is invented: a missing part stays
+    // empty, and firstName is left exactly as the backend sent it (the
+    // composed-name bug itself is the backend's fix, not this one's).
+    it('OBRS-1230: does not invent title/lastName for a guest-shaped detail - firstName is left as the composed value, unsplit', () => {
+      const guestDetail: AdminUserDto = {
+        id: 42,
+        // title/middleName/lastName omitted - the wire value is `null`, and
+        // AdminUserDto's `?: string` fields already collapse that the same
+        // way every other optional field on this DTO does (see toUserRow's
+        // `?? ''` handling above); the point under test is that nothing
+        // fills the gap with a guess.
+        firstName: 'Miss กุลธิดา นาใจคง',
+        roles: [],
+        guest: true,
+      };
+      const guestRow: UserRow = {
+        ...user,
+        id: 42,
+        fullName: 'Miss กุลธิดา นาใจคง',
+        title: '',
+        firstName: 'Miss กุลธิดา นาใจคง',
+        middleName: '',
+        lastName: '',
+        roleSlugs: [],
+        roles: ['-'],
+        guest: true,
+      };
+
+      const values = buildUserFormValues(guestDetail, guestRow, 'en');
+      expect(values['title']).toBe('');
+      expect(values['lastName']).toBe('');
+      expect(values['firstName']).toBe('Miss กุลธิดา นาใจคง');
+
+      // The payload toUpdateUserPayload would build from these values must
+      // recompose to a name IDENTICAL to the original - no duplication. The
+      // old bug produced title=Miss + firstName='Miss กุลธิดา นาใจคง' +
+      // lastName='นาใจคง', which the backend recomposed into
+      // "Mr Miss กุลธิดา นาใจคง นาใจคง". Recomposing the SAME way here
+      // (join every non-empty part with a space) must equal the original.
+      const payload = toUpdateUserPayload(values);
+      const recomposed = [payload.title, payload.firstName, payload.middleName, payload.lastName]
+        .filter((part): part is string => Boolean(part && part.length > 0))
+        .join(' ');
+      expect(recomposed).toBe('Miss กุลธิดา นาใจคง');
+    });
+
+    // OBRS-1230 AC3.2 - the pre-detail paint path. Before the real detail
+    // response arrives (or if the fetch fails - see initEditForm's catch
+    // block, which deliberately KEEPS whatever this produced), the modal
+    // paints from toUserDtoFallback(row). That fallback DTO must carry the
+    // SAME real (non-guessed) parts through, so a detail-fetch failure can
+    // never leave an invented title/lastName behind for a guest row.
+    it('OBRS-1230: the pre-detail fallback path (toUserDtoFallback) never invents a value for a guest row either', () => {
+      const guestRow: UserRow = {
+        ...user,
+        id: 42,
+        fullName: 'Miss กุลธิดา นาใจคง',
+        title: '',
+        firstName: 'Miss กุลธิดา นาใจคง',
+        middleName: '',
+        lastName: '',
+        roleSlugs: [],
+        roles: ['-'],
+        guest: true,
+      };
+
+      const values = buildUserFormValues(toUserDtoFallback(guestRow), guestRow, 'en');
+      expect(values['title']).toBe('');
+      expect(values['lastName']).toBe('');
+      expect(values['firstName']).toBe('Miss กุลธิดา นาใจคง');
     });
   });
 

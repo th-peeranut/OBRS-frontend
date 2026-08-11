@@ -31,6 +31,18 @@ export interface UserRow {
   lastLogin: string;
   hasLoggedIn: boolean;
   locked: boolean;
+  // OBRS-1230: real (not composed/guessed) name parts, now sent by the list
+  // endpoint (AdminUserDto) as well as the detail one. Optional so a UserRow
+  // built before this field existed still type-checks — toUserRow always
+  // fills these concretely (never leaves them undefined).
+  title?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  // OBRS-1230 / ADR-0123: true for a guest shadow user — zero roles by
+  // design (a row that can never authenticate carries no authority), so the
+  // Roles column can render an explanatory chip instead of "-".
+  guest?: boolean;
 }
 
 export interface RoleOption {
@@ -218,6 +230,11 @@ export function toUserRow(
     lastLogin: formatDisplayDateTime(user.lastLoginAt, dateLang),
     hasLoggedIn: Boolean(user.lastLoginAt),
     locked: user.locked ?? false,
+    title: String(user.title ?? '').trim(),
+    firstName: String(user.firstName ?? '').trim(),
+    middleName: String(user.middleName ?? '').trim(),
+    lastName: String(user.lastName ?? '').trim(),
+    guest: user.guest ?? false,
   };
 }
 
@@ -229,50 +246,33 @@ export function toUserDtoFallback(user: UserRow): AdminUserDto {
     phoneNumber: user.phone,
     status: user.statusCode,
     roles: [...user.roleSlugs],
+    title: user.title,
+    firstName: user.firstName,
+    middleName: user.middleName,
+    lastName: user.lastName,
+    guest: user.guest,
   };
-}
-
-export function parseNameFromFullName(fullName: string | null | undefined): {
-  title: string;
-  firstName: string;
-  middleName: string;
-  lastName: string;
-} {
-  const parts = String(fullName ?? '')
-    .trim()
-    .split(/\s+/)
-    .filter((part) => part.length > 0);
-
-  if (parts.length === 0) {
-    return { title: '', firstName: '', middleName: '', lastName: '' };
-  }
-
-  const titleTokens = new Set(['mr', 'mr.', 'mrs', 'mrs.', 'ms', 'ms.', 'miss', 'dr', 'dr.']);
-  let title = '';
-  if (titleTokens.has(parts[0].toLowerCase())) {
-    title = parts.shift() ?? '';
-  }
-
-  const firstName = parts.shift() ?? '';
-  if (parts.length === 0) {
-    return { title, firstName, middleName: '', lastName: '' };
-  }
-
-  const lastName = parts.pop() ?? '';
-  const middleName = parts.join(' ');
-  return { title, firstName, middleName, lastName };
 }
 
 // The pure value-derivation half of the original applyUserFormValues: builds
 // the form `values` record from the fetched detail (falling back to the
 // already-known row). The onlyPristine-vs-reset branching stays in the
 // component since it mutates the live FormGroup.
+//
+// OBRS-1230: this used to fall back to a `parseNameFromFullName(fullName)`
+// guess (now deleted - it had no other caller) whenever the detail's
+// title/lastName came back null, which is exactly the guest-shadow-user
+// shape (ADR-0123: `first_name` holds the whole composed name, `title`/
+// `last_name` are NULL). The guess invented values nobody actually entered
+// - same failure mode as OBRS-1231's invented `'Mr'` default one card
+// earlier. Both the detail DTO and the row (`user`, via toUserRow) now carry
+// the REAL parts from the backend, so a missing part renders empty instead
+// of guessed.
 export function buildUserFormValues(
   userDetail: AdminUserDto,
   user: UserRow,
   locale: string
 ): Record<string, unknown> {
-  const parsedName = parseNameFromFullName(userDetail.fullName ?? user.fullName);
   const roles = extractRoleSlugs(userDetail.roles);
   const status = parseStatus(userDetail.status ?? user.statusCode, locale);
 
@@ -280,10 +280,10 @@ export function buildUserFormValues(
     // OBRS-1231: no `|| 'Mr'`. A user with no title used to open this form already
     // holding one, and a Save that changed nothing else wrote that invented title to
     // their row - the admin was never told they had asserted anything.
-    title: String(userDetail.title ?? parsedName.title ?? '').trim(),
-    firstName: String(userDetail.firstName ?? parsedName.firstName ?? '').trim(),
-    middleName: String(userDetail.middleName ?? parsedName.middleName ?? '').trim(),
-    lastName: String(userDetail.lastName ?? parsedName.lastName ?? '').trim(),
+    title: String(userDetail.title ?? user.title ?? '').trim(),
+    firstName: String(userDetail.firstName ?? user.firstName ?? '').trim(),
+    middleName: String(userDetail.middleName ?? user.middleName ?? '').trim(),
+    lastName: String(userDetail.lastName ?? user.lastName ?? '').trim(),
     email: userDetail.email ?? user.email,
     // OBRS-691: form field displays grouped (3-3-4), same as account-page's
     // patchFormFromProfile — formatThaiMobile already strips non-digits before

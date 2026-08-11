@@ -57,8 +57,18 @@
               </td>
               <td>
                 <div class="admin-tags">
-                  @for (role of user.roles; track role) {
-                    <span class="admin-chip">{{ role }}</span>
+                  @if (user.guest) {
+                    <!-- OBRS-1230 / ADR-0123: a guest shadow user genuinely has zero
+                         roles by design (can never authenticate), which otherwise
+                         renders as "-" and reads as missing data. The guest flag
+                         lets this say what it actually is instead. A non-guest
+                         user with zero roles still falls through to the "-" chip
+                         below, unchanged. -->
+                    <span class="admin-status is-neutral">{{ 'ADMIN.USERS.GUEST_UNREGISTERED' | translate }}</span>
+                  } @else {
+                    @for (role of user.roles; track role) {
+                      <span class="admin-chip">{{ role }}</span>
+                    }
                   }
                 </div>
               </td>

@@ -28,6 +28,7 @@
     "test:alert-i18n": "node scripts/check-alert-i18n.mjs",
     "test:theme-tokens": "node scripts/check-admin-theme-tokens.mjs",
     "test:store-null": "node scripts/check-store-null-handling.mjs",
+    "test:store-feature-registration": "node scripts/check-store-feature-registration.mjs",
     "test:proto-key": "node scripts/check-prototype-key-lookup.mjs",
     "test:no-card-inputs": "node scripts/check-no-card-data-inputs.mjs",
     "test:payment-scripts": "node scripts/check-payment-page-scripts.mjs",

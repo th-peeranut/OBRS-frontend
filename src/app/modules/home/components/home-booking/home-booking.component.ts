@@ -18,6 +18,12 @@ import {
   takeUntil,
 } from 'rxjs';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
+// ngrx-feature-registration-ok: OBRS-1257 owns this one. `home.module.ts` does not register
+// `scheduleList` (only schedule-booking.module does), so the `select` in onSearch() reads
+// `undefined` — which is exactly why the navigation fires immediately and the page has always
+// worked. Registering the slice here to silence the gate would turn "navigate now" into "wait
+// for the slice's first value" and could hang the Home search button, so the fix is a behaviour
+// change that needs its own card and its own before/after, not a line added under this one.
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
 import { getStationSlugById, StationApi } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
