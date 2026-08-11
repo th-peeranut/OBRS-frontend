@@ -2413,6 +2413,9 @@
     "CHANGE": "修改数据",
     "NO_RESULTS": "未找到符合条件的班次。请尝试更改日期、路线或减少乘客人数。",
     "NO_RETURN_RESULTS": "未找到符合条件的返程班次。请尝试更改返程日期或减少乘客人数。",
+    "SOLD_OUT_TODAY_TITLE": "今天的班次均已发车",
+    "SOLD_OUT_TODAY_HINT": "请查看次日的班次。",
+    "SOLD_OUT_TODAY_ACTION": "查看{{date}}的班次",
     "ESTIMATE_KM_UNIT": "公里",
     "RESTORED_UNAVAILABLE": "您之前选择的班次已无空位，请重新选择。"
   },

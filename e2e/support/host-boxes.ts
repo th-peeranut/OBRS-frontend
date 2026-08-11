@@ -219,6 +219,13 @@ export const CUSTOMER_HOST: Record<string, string> = {
   login: 'app-login',
   'my-bookings': 'app-my-bookings',
   'schedule-booking': 'app-schedule-booking',
+  // OBRS-1228 added two more CUSTOMER_PAGES entries for the SAME route in its
+  // two empty states, and this map is keyed by ENTRY, not by URL -- so both
+  // need a row here or the completeness check above fails by name, which is
+  // exactly what it did. Same host: the page is identical and only the seeded
+  // store differs, and a host box is a property of the route.
+  'schedule-booking-empty': 'app-schedule-booking',
+  'schedule-booking-no-results': 'app-schedule-booking',
   'review-schedule-booking': 'app-review-schedule-booking',
   'passenger-info': 'app-passenger-info',
   payment: 'app-payment',
