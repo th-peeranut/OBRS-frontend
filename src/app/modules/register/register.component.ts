@@ -63,7 +63,7 @@ export class RegisterComponent implements OnDestroy {
 
   createForm() {
     this.registerForm = this.fb.group({
-      title: [null, Validators.required],
+      title: [null],
       firstName: ['', Validators.required],
       middleName: [''],
       lastName: ['', Validators.required],

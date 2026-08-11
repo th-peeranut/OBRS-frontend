@@ -34,6 +34,13 @@
 
     font-size: $font-size-md;
     color: $text-black;
+
+    // OBRS-1231: the "no value chosen" wording is a hint, not an answer the user gave -
+    // it has to read differently from a real selection or "ไม่ระบุ" looks like one.
+    // $text-lightblack, not a lighter grey: 4.60:1 on white, so the hint still clears AA.
+    &.is-placeholder {
+      color: $text-lightblack;
+    }
   }
 
   .arrow-icon {
@@ -139,8 +146,36 @@ li {
       border-color: $dk-text-muted !important;
     }
 
-    .value-text {
+    // Two mutually-exclusive selectors, NOT a base rule plus a more-specific
+    // override — the same shape dropdown-group-obrs.component.scss already uses,
+    // for the same measured reason. OBRS-767's dead-declaration gate judges the
+    // page AT REST, and at rest every `.value-text` that lane can reach (/register,
+    // /passenger-info) carries `.is-placeholder`, so a plain `.value-text { color:
+    // $dk-text }` is shadowed on every element the census sees and is reported
+    // dead. `:not()` makes the selected-state rule match nothing at rest (counted
+    // unmatched, which the census does not judge) and paint normally the moment a
+    // title is chosen.
+    .value-text:not(.is-placeholder) {
       color: $dk-text;
+    }
+
+    // OBRS-1231: dark needs its own placeholder colour for the same reason the
+    // block above exists - $text-lightblack on $dk-bg-card is the 1.34:1 failure
+    // this component was already burned by once.
+    //
+    // `!important` because without it this rule loses OUTRIGHT, and only on the
+    // booking flow. Measured on /passenger-info in dark: the placeholder painted
+    // rgb(232, 234, 240), not the rgb(154, 163, 184) declared here. Section 14 of
+    // dark-theme.scss lifts every text node inside a booking card with
+    // `.card-container:not(.admin-shell .card-container) * { color: $dk-text
+    // !important }`, and no amount of specificity beats an `!important` — so
+    // "Not specified" rendered in exactly the tone of a real answer, which is the
+    // one thing a placeholder exists not to do. That file already re-asserts
+    // `.text-error` and `.seat-status--low` against the same blanket; this is the
+    // same move, kept HERE rather than there because the rule is view-encapsulated
+    // (OBRS-767) and /register has no `.card-container` around it at all.
+    .value-text.is-placeholder {
+      color: $dk-text-muted !important;
     }
   }
 
