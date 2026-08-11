@@ -10,7 +10,7 @@ import { TicketService } from '../../services/ticket/ticket.service';
 import { BoardingQrService } from '../../shared/services/boarding-qr.service';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
-import { Schedule } from '../../shared/interfaces/schedule.interface';
+import { Schedule, ScheduleFilter } from '../../shared/interfaces/schedule.interface';
 import { StationApi } from '../../shared/interfaces/station.interface';
 
 function buildTicketsData(): BookingTicketsData {
@@ -767,6 +767,118 @@ describe('ETicketComponent', () => {
         expect(afterFirstPaint).toBe('Nong Chak-Ban Bueng-Bangkok');
         expect(component.route).toBe(afterFirstPaint);
       });
+    });
+  });
+
+  /**
+   * OBRS-1246. OBRS-1222 stopped the global modal for `GET /api/stops` and put an
+   * inline surface in its place on two pages. This page was not one of them, and
+   * `getStationLabelById` returns `''` on a miss, so a roster failure with an
+   * empty localStorage cache produced a ticket whose origin and destination were
+   * `-` with nothing on screen saying why.
+   *
+   * The flag, not the `-`, is what the template reads: `-` is this page's generic
+   * "no data yet" placeholder and cannot be told apart from a real failure.
+   */
+  describe('OBRS-1246: stationLabelsUnresolved', () => {
+    function station(id: number, slug: string, label: string): StationApi {
+      return {
+        id,
+        slug,
+        status: 'active',
+        stopType: 'station',
+        createdAt: '',
+        updatedAt: '',
+        translations: [{ locale: 'en', label }],
+      };
+    }
+
+    const filter = {
+      roundTrip: { name: 'One way', code: 'one_way' },
+      passengerInfo: [{ type: 'adult', count: 1 }],
+      startStationId: 11,
+      stopStationId: 22,
+      departureDate: '2026-12-20',
+    } as unknown as ScheduleFilter;
+
+    function mapFromStore(stationList: StationApi[]): void {
+      (component as unknown as {
+        mapTicketFields: (
+          a: null,
+          b: null,
+          c: ScheduleFilter,
+          d: null,
+          e: StationApi[],
+          f: 'en'
+        ) => void;
+      }).mapTicketFields(null, null, filter, null, stationList, 'en');
+    }
+
+    it('flags the ticket when the roster is empty - the case a failed /api/stops leaves behind', () => {
+      mapFromStore([]);
+
+      expect(component.origin).toBe('-');
+      expect(component.destination).toBe('-');
+      expect(component.stationLabelsUnresolved).toBeTrue();
+    });
+
+    it('flags it when only ONE of the two ids resolves - half a route is still unreadable at the gate', () => {
+      mapFromStore([station(11, 'nong_chak', 'Nong chak')]);
+
+      expect(component.origin).toBe('Nong chak');
+      expect(component.destination).toBe('-');
+      expect(component.stationLabelsUnresolved).toBeTrue();
+    });
+
+    it('does NOT flag it when the roster resolves both - no notice on the ordinary path', () => {
+      mapFromStore([
+        station(11, 'nong_chak', 'Nong chak'),
+        station(22, 'bts_mo_chit', 'Bts mo chit'),
+      ]);
+
+      expect(component.origin).toBe('Nong chak');
+      expect(component.destination).toBe('Bts mo chit');
+      expect(component.stationLabelsUnresolved).toBeFalse();
+    });
+
+    /**
+     * The reason this page cannot just drop `<app-station-load-error>` in bare the
+     * way `home-booking` does: for a SIGNED-IN customer the tickets API supplies
+     * the names the roster could not, so the ticket is complete and a notice would
+     * be an interruption for someone with nothing wrong.
+     */
+    it('clears the flag when the tickets API supplies both names', () => {
+      mapFromStore([]);
+      expect(component.stationLabelsUnresolved).toBeTrue();
+
+      (component as unknown as { ticketApiData: BookingTicketsData }).ticketApiData =
+        buildTicketsData();
+      (component as unknown as {
+        applyApiOverrides: (locale: 'en', passengers: null) => void;
+      }).applyApiOverrides('en', null);
+
+      expect(component.origin).toBe('Nong chak');
+      expect(component.destination).toBe('Bts mo chit');
+      expect(component.stationLabelsUnresolved).toBeFalse();
+    });
+
+    it('keeps the flag when the API supplies only one name - BOTH is the condition', () => {
+      mapFromStore([]);
+      const data = buildTicketsData();
+      (data.journeys ?? [])[0].toStop = {
+        code: '',
+        label: '',
+        province: { code: '', label: '' },
+      };
+
+      (component as unknown as { ticketApiData: BookingTicketsData }).ticketApiData = data;
+      (component as unknown as {
+        applyApiOverrides: (locale: 'en', passengers: null) => void;
+      }).applyApiOverrides('en', null);
+
+      expect(component.origin).toBe('Nong chak');
+      expect(component.destination).toBe('-');
+      expect(component.stationLabelsUnresolved).toBeTrue();
     });
   });
 });

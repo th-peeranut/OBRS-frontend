@@ -20,6 +20,19 @@
   box-sizing: border-box;
 }
 
+/* OBRS-1246. The station-load notice sits ABOVE `.content-container` rather than
+   inside it - that one is a flex row, see the template comment - so it has to
+   carry the same horizontal padding to line up with the cards below. The value
+   is copied from the rule directly above this one, in this same file, so drift
+   between the two is visible in one screen rather than across files. No margin:
+   StationLoadErrorComponent renders nothing at all on the ordinary path
+   (`:host(:empty) { display: none }`), so the slot must cost zero height. */
+.station-load-error-slot {
+  padding: 0 clamp(16px, 8vw, 360px);
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .title {
   margin-top: 32px;
   margin-bottom: 32px;

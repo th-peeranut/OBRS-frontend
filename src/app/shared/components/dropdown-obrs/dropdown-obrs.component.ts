@@ -36,6 +36,10 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges, O
   @Input() options: any = [];
   @Input() isBorder: boolean = false;
   @Input() value: any = null;
+  // OBRS-1231: i18n key rendered when nothing is selected. Defaults to '' so every
+  // existing caller keeps today's blank button; only a dropdown that can legitimately
+  // hold no value (title) passes one, and without it that state reads as a broken control.
+  @Input() placeholder: string = '';
 
   @Output() currentValue = new EventEmitter<any>();
 

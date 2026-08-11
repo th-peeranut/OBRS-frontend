@@ -749,7 +749,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     return this.fb.group({
       useBookerInfo: [false],
       isAdult: [isAdult],
-      title: [null, Validators.required],
+      title: [null],
       firstName: ['', Validators.required],
       middleName: [''],
       lastName: ['', Validators.required],

@@ -26,6 +26,21 @@
   margin-top: 0;
 }
 
+/* OBRS-1246. Mirrors `.ticket-stage`'s padding + centring so the notice lines up
+   with the ticket rather than the viewport edge, and carries NO margin of its
+   own: StationLoadErrorComponent renders nothing at all on the ordinary path
+   (`:host(:empty) { display: none }`), so an empty slot must cost zero height
+   above the ticket instead of a permanent gap. */
+.station-load-error-slot {
+  display: flex;
+  justify-content: center;
+  padding: 0 24px;
+}
+
+.station-load-error-slot app-station-load-error {
+  width: min(420px, 100%);
+}
+
 .ticket-shell {
   width: min(420px, 100%);
   display: flex;

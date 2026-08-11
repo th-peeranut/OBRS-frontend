@@ -86,7 +86,7 @@ export class AccountPageComponent implements OnInit {
     // this shape (OBRS-409) and is a strict subset of what the server accepts, so nothing the server
     // would have taken is rejected here.
     this.profileForm = this.fb.group({
-      title: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
+      title: ['', [Validators.minLength(2), Validators.maxLength(50)]],
       firstName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
       middleName: ['', [Validators.maxLength(50)]],
       lastName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],

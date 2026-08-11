@@ -136,6 +136,29 @@ export class ETicketComponent implements OnInit, OnDestroy {
   paymentDate = '-';
   totalAmount = '0.00';
   isDownloadingTicket = false;
+  /**
+   * OBRS-1246: true when this ticket's origin AND/OR destination could not be
+   * resolved to a real station name — neither from the roster
+   * (`selectProvinceWithStation`, which OBRS-1222 now leaves empty and SILENT
+   * when `GET /api/stops` fails) nor from the tickets API, which only a
+   * signed-in customer gets at all (`loadTicketFromApi` returns early for a
+   * guest — OBRS-858).
+   *
+   * The template ANDs this with `<app-station-load-error>`'s own condition
+   * (`hasFailed && !stations.length`) rather than dropping that component in
+   * bare. Bare is right on `home-booking`, where the roster IS the page, and
+   * wrong here: a signed-in customer whose roster fetch died still receives a
+   * COMPLETE ticket, because `applyApiOverrides` overwrites the blank labels
+   * from the API. Telling them the station list failed would be precisely the
+   * "interruption for someone with nothing wrong" that OBRS-1222's own class
+   * comment on StationLoadErrorComponent argues against.
+   *
+   * Starts `false`, not `true`: `combineLatest` in `ngOnInit` emits
+   * synchronously (every one of its store selectors has an initial value), so
+   * the first `mapTicketFields` sets the real value before this can be
+   * painted, and `false` avoids a red flash on the ordinary path.
+   */
+  stationLabelsUnresolved = false;
   /** OBRS-269: outbound pickup-stop coords, threaded through from the tickets
    *  API's `fromStop.latitude`/`longitude` in `applyApiOverrides()`. `null` until
    *  the API response lands (store-only pre-API render) — the Navigate button
@@ -381,6 +404,12 @@ export class ETicketComponent implements OnInit, OnDestroy {
     this.loadRouteNames([departureSchedule, returnSchedule]);
     this.origin = fromName || '-';
     this.destination = toName || '-';
+    // OBRS-1246: recorded from the STORE-only render, then cleared further down
+    // by `applyApiOverrides` when the API supplies what the roster could not.
+    // `-` is this page's generic "no data yet" placeholder, so it cannot be read
+    // back as "the lookup failed" — the failure has to be captured here, at the
+    // one place that knows the lookup returned nothing.
+    this.stationLabelsUnresolved = !fromName || !toName;
     this.vehicleType =
       capitalizeVehicleType(departureSchedule?.vehicleType) || '-';
     this.vehiclePlate = '-';
@@ -859,6 +888,13 @@ export class ETicketComponent implements OnInit, OnDestroy {
         inboundRouteName: inbound?.routeLabel ?? null,
       };
       this.refreshRouteLine();
+    }
+    if (fromName && toName) {
+      // OBRS-1246: the API is authoritative and has just supplied both names, so
+      // the roster's failure has no visible consequence on THIS ticket and the
+      // notice must not appear. BOTH is the condition, not either: one real name
+      // beside a `-` is still a ticket the gate staff cannot read.
+      this.stationLabelsUnresolved = false;
     }
     this.originLatitude = outbound?.fromStop?.latitude ?? null;
     this.originLongitude = outbound?.fromStop?.longitude ?? null;
