@@ -16,6 +16,7 @@ import { buildMapsDirectionsUrl } from '../../shared/lib/maps-directions-url';
 import html2canvas from 'html2canvas';
 import { AuthService } from '../../auth/auth.service';
 import { BookingService } from '../../services/booking/booking.service';
+import { RouteMapService } from '../../services/route-map/route-map.service';
 import { BoardingQrService } from '../../shared/services/boarding-qr.service';
 import { BookingState } from '../../shared/interfaces/booking.interface';
 import {
@@ -88,6 +89,24 @@ interface TicketPassengerGroup {
 }
 type Locale = 'en' | 'th' | 'zh';
 
+/**
+ * OBRS-1249: the inputs of the "route" line, snapshotted by whichever render
+ * pass ran last. `*RouteName` is the authoritative name when the tickets API
+ * has answered (it resolves the locale ladder server-side — OBRS-1219);
+ * `*Slug` is the fallback route into the public lookup, which is the only one
+ * a guest ever gets.
+ */
+interface RouteLineContext {
+  fromName: string;
+  toName: string;
+  hasReturn: boolean;
+  locale: Locale;
+  outboundSlug?: string;
+  inboundSlug?: string;
+  outboundRouteName: string | null;
+  inboundRouteName: string | null;
+}
+
 @Component({
     selector: 'app-e-ticket',
     templateUrl: './e-ticket.component.html',
@@ -137,6 +156,22 @@ export class ETicketComponent implements OnInit, OnDestroy {
   private latestStorePassengers: PassengerInfo[] | null = null;
   private lastTicketRequestBookingId: number | null = null;
 
+  /**
+   * OBRS-1249: everything the route line is built from, kept in one place so
+   * BOTH render passes (the store-only first paint and the tickets-API overlay)
+   * go through `refreshRouteLine()` and cannot end up disagreeing — which is
+   * the whole defect this card exists for.
+   */
+  private routeLineContext: RouteLineContext | null = null;
+  /**
+   * `routeSlug` → the route's own name per locale, from the PUBLIC
+   * `/api/routes/{slug}/pickup-dropoff`. Keyed by slug rather than by leg
+   * because an out-and-back on the same physical route asks twice for one
+   * answer. An entry present with an empty object means "asked, nothing there"
+   * — that is what stops `loadRouteNames` from re-firing forever.
+   */
+  private readonly routeTitlesBySlug = new Map<string, Partial<Record<Locale, string>>>();
+
   private readonly destroy$ = new Subject<void>();
   private readonly titleMap: Record<number, { en: string; th: string; zh: string }> = {
     1: { en: 'Mr.', th: 'นาย', zh: '先生' },
@@ -163,7 +198,10 @@ export class ETicketComponent implements OnInit, OnDestroy {
     private translateService: TranslateService,
     // OBRS-858: read ONLY to decide whether the private ticket API can be called at all;
     // see loadTicketFromApi. Nothing on this page derives authorization from it.
-    private authService: AuthService
+    private authService: AuthService,
+    // OBRS-1249: the route's own name for the pre-API render. Its endpoint is
+    // public, which is the point — a guest never reaches the tickets API.
+    private routeMapService: RouteMapService
   ) {
     this.scheduleBooking$ = this.store.pipe(
       select(selectScheduleBooking)
@@ -323,7 +361,24 @@ export class ETicketComponent implements OnInit, OnDestroy {
       locale
     );
     this.travelTime = this.buildTravelTime(departureSchedule, returnSchedule);
-    this.route = this.buildRouteLabel(fromName, toName, !!returnSchedule);
+    // OBRS-1249: this pass knows the stations the customer searched with, never
+    // the route's name — the store keeps `routeSlug` and nothing else about the
+    // route (schedule.interface.ts). So it paints the station pair now and
+    // upgrades the same line in place once the public lookup answers. This is
+    // the ONLY pass a guest gets: `loadTicketFromApi` returns early without a
+    // token (OBRS-858), and `/e-ticket` has no `requireAuth`.
+    this.routeLineContext = {
+      fromName,
+      toName,
+      hasReturn: !!returnSchedule,
+      locale,
+      outboundSlug: departureSchedule?.routeSlug?.trim() || undefined,
+      inboundSlug: returnSchedule?.routeSlug?.trim() || undefined,
+      outboundRouteName: null,
+      inboundRouteName: null,
+    };
+    this.refreshRouteLine();
+    this.loadRouteNames([departureSchedule, returnSchedule]);
     this.origin = fromName || '-';
     this.destination = toName || '-';
     this.vehicleType =
@@ -423,17 +478,119 @@ export class ETicketComponent implements OnInit, OnDestroy {
     return startTime || endTime || '';
   }
 
-  private buildRouteLabel(fromName: string, toName: string, hasReturn: boolean): string {
-    const departureRoute = fromName && toName ? `${fromName} - ${toName}` : fromName || toName;
-    if (!departureRoute) {
+  /**
+   * OBRS-1249: the route's own name wins over the endpoint pair, PER LEG.
+   *
+   * Per leg rather than all-or-nothing because a route seeded on the way out
+   * but not on the way back is a real state (`route_translations` is written
+   * per route, and the two directions are two routes) — falling back to the
+   * pair for both would hide a name the owner did write. `'-'` stays the last
+   * resort, and the slug is never a candidate here: it is not passed in at all
+   * (OBRS-1216).
+   */
+  private buildRouteLabel(
+    fromName: string,
+    toName: string,
+    hasReturn: boolean,
+    outboundRouteName: string | null = null,
+    inboundRouteName: string | null = null
+  ): string {
+    const departurePair = fromName && toName ? `${fromName} - ${toName}` : fromName || toName;
+    const outbound = outboundRouteName?.trim() || departurePair;
+    if (!outbound) {
       return '-';
     }
 
-    if (!hasReturn || !fromName || !toName) {
-      return departureRoute;
+    if (!hasReturn) {
+      return outbound;
     }
 
-    return `${departureRoute} / ${toName} - ${fromName}`;
+    // Without both endpoints there is no pair to reverse, so a return leg with
+    // no name of its own contributes nothing rather than repeating one station
+    // back at itself — the pre-OBRS-1249 behaviour, kept byte-for-byte.
+    const returnPair = fromName && toName ? `${toName} - ${fromName}` : '';
+    const inbound = inboundRouteName?.trim() || returnPair;
+
+    return inbound ? `${outbound} / ${inbound}` : outbound;
+  }
+
+  /**
+   * OBRS-1249: re-renders the route line from whatever has landed so far. Every
+   * writer of `routeLineContext` calls this instead of assigning `this.route`,
+   * so the store pass, the API overlay and the late-arriving public lookup all
+   * produce the line the same way.
+   */
+  private refreshRouteLine(): void {
+    const context = this.routeLineContext;
+    if (!context) {
+      return;
+    }
+
+    this.route = this.buildRouteLabel(
+      context.fromName,
+      context.toName,
+      context.hasReturn,
+      context.outboundRouteName ?? this.routeNameForSlug(context.outboundSlug, context.locale),
+      context.inboundRouteName ?? this.routeNameForSlug(context.inboundSlug, context.locale)
+    );
+  }
+
+  /**
+   * The route name for one leg, cached per slug. Same ladder as OBRS-1219's
+   * server-side `RouteLabelResolver` (requested locale → th → en → nothing), so
+   * this page and the my-bookings modal land on the same string for the same
+   * booking even when the requested language is unseeded.
+   */
+  private routeNameForSlug(slug: string | undefined, locale: Locale): string | null {
+    if (!slug) {
+      return null;
+    }
+
+    const titles = this.routeTitlesBySlug.get(slug);
+    if (!titles) {
+      return null;
+    }
+
+    return titles[locale]?.trim() || titles.th?.trim() || titles.en?.trim() || null;
+  }
+
+  /**
+   * Fetches the route names for the legs on screen. Shared with the home page's
+   * map through `RouteMapService`, so on a booking made in this same tab the
+   * answer is usually already deduped there rather than a fresh round trip; the
+   * backend `@Cacheable`s it besides.
+   *
+   * Errors are already swallowed to `null` by `getPickupDropoffCached` and that
+   * is deliberate here: a route lookup failing must leave the ticket on its
+   * station pair, never put an error in front of a customer who has just paid.
+   */
+  private loadRouteNames(schedules: (Schedule | null)[]): void {
+    for (const schedule of schedules) {
+      const slug = schedule?.routeSlug?.trim();
+      if (!slug || this.routeTitlesBySlug.has(slug)) {
+        continue;
+      }
+
+      // Claim the slug before the request resolves, so the re-render this
+      // subscription triggers cannot start a second request for it.
+      this.routeTitlesBySlug.set(slug, {});
+      this.routeMapService
+        .getPickupDropoffCached(slug)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((data) => {
+          // `RouteMeta.titleLocalized` is TYPED with all three locales
+          // required, but the backend only puts the locales that are actually
+          // seeded into the map (`RouteDtoService.toTitleLocalizedMap`) — `zh`
+          // is seeded on no route today (OBRS-1046). Reading it as the type
+          // claims would render `undefined`; `routeNameForSlug` treats it as
+          // partial, which is what it is.
+          this.routeTitlesBySlug.set(
+            slug,
+            (data?.route?.titleLocalized ?? {}) as Partial<Record<Locale, string>>
+          );
+          this.refreshRouteLine();
+        });
+    }
   }
 
   private buildSeatList(passengers: TicketPassenger[]): string {
@@ -686,7 +843,22 @@ export class ETicketComponent implements OnInit, OnDestroy {
       this.destination = toName;
     }
     if (fromName || toName) {
-      this.route = this.buildRouteLabel(fromName, toName, !!inbound);
+      // OBRS-1249: same line, better inputs. `routeLabel` is the name OBRS-1219
+      // resolved server-side; when it is null (route unseeded) the slug lookup
+      // the first pass started still applies underneath, and only if that is
+      // empty too does the stop pair show. Slugs are carried over rather than
+      // re-derived — this response has no route slug in it.
+      this.routeLineContext = {
+        fromName,
+        toName,
+        hasReturn: !!inbound,
+        locale,
+        outboundSlug: this.routeLineContext?.outboundSlug,
+        inboundSlug: this.routeLineContext?.inboundSlug,
+        outboundRouteName: outbound?.routeLabel ?? null,
+        inboundRouteName: inbound?.routeLabel ?? null,
+      };
+      this.refreshRouteLine();
     }
     this.originLatitude = outbound?.fromStop?.latitude ?? null;
     this.originLongitude = outbound?.fromStop?.longitude ?? null;
