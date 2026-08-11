@@ -40,7 +40,7 @@
       data-testid="driver-cash-action-advance"
       >
       <span>{{ 'STAFF.DRIVER_CASH.ADVANCE.ACTION_LABEL' | translate }}</span>
-      <span class="material-symbols-outlined">{{ isActionOpen('advance') ? 'expand_less' : 'expand_more' }}</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isActionOpen('advance') ? 'expand_less' : 'expand_more' }}</span>
     </button>
     @if (isActionOpen('advance')) {
       <app-driver-cash-advance-form
@@ -58,7 +58,7 @@
       data-testid="driver-cash-action-per-head"
       >
       <span>{{ 'STAFF.DRIVER_CASH.PER_HEAD.ACTION_LABEL' | translate }}</span>
-      <span class="material-symbols-outlined">{{ isActionOpen('perHead') ? 'expand_less' : 'expand_more' }}</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isActionOpen('perHead') ? 'expand_less' : 'expand_more' }}</span>
     </button>
     @if (isActionOpen('perHead')) {
       <app-driver-cash-per-head-form
@@ -77,7 +77,7 @@
       data-testid="driver-cash-action-expense"
       >
       <span>{{ 'STAFF.DRIVER_CASH.EXPENSE.ACTION_LABEL' | translate }}</span>
-      <span class="material-symbols-outlined">{{ isActionOpen('expense') ? 'expand_less' : 'expand_more' }}</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isActionOpen('expense') ? 'expand_less' : 'expand_more' }}</span>
     </button>
     @if (isActionOpen('expense')) {
       <app-driver-cash-expense-form

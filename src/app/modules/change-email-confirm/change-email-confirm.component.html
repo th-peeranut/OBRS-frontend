@@ -30,7 +30,7 @@
     <!-- SUCCESS STATE -->
     @if (confirmState === 'success') {
       <div class="state-container mt-5 text-center">
-        <span class="material-symbols-outlined state-icon success-icon">check_circle</span>
+        <span class="material-symbols-outlined state-icon success-icon" [attr.translate]="'no'">check_circle</span>
         <h2 class="state-title mt-3">{{ "EMAIL_CHANGE_CONFIRM.SUCCESS_TITLE" | translate }}</h2>
         <p class="state-text mt-2">
           {{ "EMAIL_CHANGE_CONFIRM.SUCCESS_MESSAGE" | translate: { email: newEmail } }}
@@ -45,7 +45,7 @@
     <!-- user may have already used, or arrived at stale, is not an error. -->
     @if (confirmState === 'invalid') {
       <div class="state-container mt-5 text-center">
-        <span class="material-symbols-outlined state-icon neutral-icon">info</span>
+        <span class="material-symbols-outlined state-icon neutral-icon" [attr.translate]="'no'">info</span>
         <h2 class="state-title mt-3">{{ "EMAIL_CHANGE_CONFIRM.INVALID_TITLE" | translate }}</h2>
         <p class="state-text mt-2">{{ "EMAIL_CHANGE_CONFIRM.INVALID_MESSAGE" | translate }}</p>
         <button type="button" class="login-btn mt-4" (click)="navigateToLogin()">
@@ -57,7 +57,7 @@
     <!-- TARGET-TAKEN STATE -->
     @if (confirmState === 'targetTaken') {
       <div class="state-container mt-5 text-center">
-        <span class="material-symbols-outlined state-icon fail-icon">error</span>
+        <span class="material-symbols-outlined state-icon fail-icon" [attr.translate]="'no'">error</span>
         <h2 class="state-title mt-3">{{ "EMAIL_CHANGE_CONFIRM.TARGET_TAKEN_TITLE" | translate }}</h2>
         <p class="state-text mt-2">{{ "EMAIL_CHANGE_CONFIRM.TARGET_TAKEN_MESSAGE" | translate }}</p>
         <button type="button" class="login-btn mt-4" (click)="navigateToLogin()">

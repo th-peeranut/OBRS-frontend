@@ -47,7 +47,7 @@
   <!-- Selected (neutral marker — no gender, e.g. the change-seat dialog) -->
   @if (!isDisabled && gender == 'SELECTED') {
     <span
-      class="material-symbols-outlined passenger-selected-icon"
+      class="material-symbols-outlined passenger-selected-icon" [attr.translate]="'no'"
       aria-hidden="true"
     >check_circle</span>
   }
@@ -58,7 +58,7 @@
   rather than a centered overlay so it never hides the seat label. -->
   @if (!isDisabled && gender == 'ORIGINAL') {
     <span
-      class="material-symbols-outlined passenger-original-icon"
+      class="material-symbols-outlined passenger-original-icon" [attr.translate]="'no'"
       aria-hidden="true"
     >bookmark</span>
   }
@@ -72,7 +72,7 @@
       role="img"
       [attr.aria-label]="wheelchairBadgeAriaLabel"
       >
-      <span class="material-symbols-outlined" aria-hidden="true">accessible</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">accessible</span>
     </span>
   }
 
@@ -84,7 +84,7 @@
       role="img"
       [attr.aria-label]="extraLegroomBadgeAriaLabel"
       >
-      <span class="material-symbols-outlined" aria-hidden="true">airline_seat_legroom_extra</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">airline_seat_legroom_extra</span>
     </span>
   }
 </div>

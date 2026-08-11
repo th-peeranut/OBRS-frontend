@@ -3,7 +3,7 @@
 <!-- Error, no cache: reuse OBRS-209's full-section empty-state pattern + Retry. -->
 @if (!isLoading && itemsErrorMessage) {
   <div class="inspection-empty">
-    <span class="material-symbols-outlined" aria-hidden="true">error</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">error</span>
     <p class="inspection-empty-title">{{ itemsErrorMessage }}</p>
     <button type="button" class="admin-btn admin-btn-primary" (click)="itemsStore.refresh()">
       {{ 'STAFF.INSPECTION.RETRY' | translate }}
@@ -14,7 +14,7 @@
 <!-- Empty (200 + [], or every item inactive): full-page blocking empty state, Submit hidden. -->
 @if (isEmpty) {
   <div class="inspection-empty">
-    <span class="material-symbols-outlined" aria-hidden="true">checklist</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">checklist</span>
     <p class="inspection-empty-title">{{ 'STAFF.INSPECTION.EMPTY_TITLE' | translate }}</p>
     <p class="inspection-empty-body">{{ 'STAFF.INSPECTION.EMPTY_BODY' | translate }}</p>
   </div>
@@ -65,7 +65,7 @@
     underneath stays fully usable, nothing is gated on it. -->
     @if (showAlreadyInspectedBanner && !isBannerDismissed) {
       <div class="inspection-banner">
-        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">info</span>
         <span class="inspection-banner-text">{{ 'STAFF.INSPECTION.ALREADY_INSPECTED_HINT' | translate }}</span>
         <button
           type="button"
@@ -73,7 +73,7 @@
           [attr.aria-label]="'COMMON.DISMISS' | translate"
           (click)="dismissBanner()"
           >
-          <span class="material-symbols-outlined">close</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
         </button>
       </div>
     }

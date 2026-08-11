@@ -18,7 +18,7 @@
       }
       @if (vm.error && !vm.loading) {
         <div class="state-card state-card--error">
-          <span class="material-symbols-outlined">error</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">error</span>
           <p>{{ vm.error }}</p>
           <button type="button" class="btn-secondary" (click)="onRetry()">
             {{ "PARCEL_BOOKING.MY_PARCELS.RETRY" | translate }}
@@ -29,7 +29,7 @@
         <div
           class="state-card state-card--empty"
           >
-          <span class="material-symbols-outlined">local_shipping</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">local_shipping</span>
           <p>{{ "PARCEL_BOOKING.MY_PARCELS.EMPTY" | translate }}</p>
           <a class="parcel-btn-primary" routerLink="/parcel-booking">
             {{ "PARCEL_BOOKING.MY_PARCELS.BOOK_NOW" | translate }}
@@ -48,7 +48,7 @@
                   [attr.aria-label]="'PARCEL_BOOKING.MY_PARCELS.COPY_TRACKING_NUMBER' | translate"
                   (click)="copyTrackingNumber(row.trackingNumber)"
                   >
-                  <span class="material-symbols-outlined">content_copy</span>
+                  <span class="material-symbols-outlined" [attr.translate]="'no'">content_copy</span>
                 </button>
               </div>
               <span class="admin-status" [ngClass]="chipToken(row.deliveryStatus)">

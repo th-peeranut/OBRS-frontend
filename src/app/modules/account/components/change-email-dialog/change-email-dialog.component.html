@@ -151,7 +151,7 @@
           <!-- SENT STATE -->
           @if (dialogState === 'sent') {
             <div class="change-email-sent">
-              <span class="material-symbols-outlined change-email-sent__icon">mark_email_read</span>
+              <span class="material-symbols-outlined change-email-sent__icon" [attr.translate]="'no'">mark_email_read</span>
               <h3>{{ "EMAIL_CHANGE.SENT_TITLE" | translate }}</h3>
               <p>{{ "EMAIL_CHANGE.SENT_MESSAGE" | translate: { email: sentToEmail } }}</p>
               <p class="change-email-sent__note">{{ "EMAIL_CHANGE.SENT_NOTE" | translate }}</p>

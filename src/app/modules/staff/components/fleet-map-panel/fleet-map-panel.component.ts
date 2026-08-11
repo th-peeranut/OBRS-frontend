@@ -249,8 +249,12 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
     const spec = FLEET_MARKER_COLORS[status];
     const fillVar = spec?.fillVar ?? '--admin-neutral-text';
     const haloVar = spec?.haloVar ?? '--admin-neutral-bg';
+    // OBRS-1202: `translate="no"` in its plain HTML form here, not the
+    // `[attr.translate]` binding the templates use — Leaflet injects this string
+    // into the DOM itself, so Angular (and with it ngx-translate's
+    // `[translate]` directive) never sees it.
     const overlay = spec?.overlayIcon
-      ? `<span class="material-symbols-outlined fleet-marker-overlay" aria-hidden="true">${spec.overlayIcon}</span>`
+      ? `<span class="material-symbols-outlined fleet-marker-overlay" translate="no" aria-hidden="true">${spec.overlayIcon}</span>`
       : '';
     // OBRS-905 — the heading arrow is additive, LIVE-only (Trap 3/AC4: a
     // stale OFFLINE/GPS_LOST fix must never imply direction), so this span

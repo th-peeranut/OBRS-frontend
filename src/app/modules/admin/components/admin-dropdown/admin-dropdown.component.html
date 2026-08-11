@@ -8,11 +8,11 @@
     >
     <span class="admin-dropdown-value">
       @if (icon) {
-        <span class="material-symbols-outlined admin-dropdown-leading">{{ icon }}</span>
+        <span class="material-symbols-outlined admin-dropdown-leading" [attr.translate]="'no'">{{ icon }}</span>
       }
       <span [class.is-placeholder]="!selectedLabel">{{ selectedLabel || placeholder }}</span>
     </span>
-    <span class="material-symbols-outlined admin-dropdown-arrow">expand_more</span>
+    <span class="material-symbols-outlined admin-dropdown-arrow" [attr.translate]="'no'">expand_more</span>
   </button>
 
   @if (isOpen) {
@@ -26,7 +26,7 @@
           >
           <span>{{ placeholder }}</span>
           @if (hasEmptySelection) {
-            <span class="material-symbols-outlined admin-dropdown-check">
+            <span class="material-symbols-outlined admin-dropdown-check" [attr.translate]="'no'">
               check_circle
             </span>
           }
@@ -41,7 +41,7 @@
           >
           <span>{{ getOptionLabel(option) }}</span>
           @if (isSelected(option)) {
-            <span class="material-symbols-outlined admin-dropdown-check">
+            <span class="material-symbols-outlined admin-dropdown-check" [attr.translate]="'no'">
               check_circle
             </span>
           }

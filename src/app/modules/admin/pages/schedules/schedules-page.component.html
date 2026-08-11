@@ -15,7 +15,7 @@
         class="admin-btn admin-btn-primary"
         (click)="openCreateModal()"
         >
-        <span class="material-symbols-outlined">add</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'">add</span>
         <span>{{ 'ADMIN.SCHEDULES.ADD' | translate }}</span>
       </button>
     }
@@ -25,7 +25,7 @@
         class="admin-btn admin-btn-primary"
         (click)="openCreateScheduleModal()"
         >
-        <span class="material-symbols-outlined">add_circle</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'">add_circle</span>
         <span>{{ 'ADMIN.SCHEDULES.ADD_TRIP' | translate }}</span>
       </button>
     }
@@ -41,7 +41,7 @@
     [attr.aria-selected]="activeTab === 'set'"
     (click)="setActiveTab('set')"
     >
-    <span class="material-symbols-outlined">event_repeat</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'">event_repeat</span>
     <span>{{ 'ADMIN.SCHEDULES.TAB_SETS' | translate }}</span>
     <span class="schedule-tab-count">{{ scheduleSetTotal }}</span>
   </button>
@@ -53,7 +53,7 @@
     [attr.aria-selected]="activeTab === 'schedule'"
     (click)="setActiveTab('schedule')"
     >
-    <span class="material-symbols-outlined">calendar_month</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'">calendar_month</span>
     <span>{{ 'ADMIN.SCHEDULES.TAB_TRIPS' | translate }}</span>
     <span class="schedule-tab-count">{{ scheduleTripTotal }}</span>
   </button>
@@ -61,7 +61,7 @@
 
 <section class="admin-page-filters mt-3">
   <label class="admin-search">
-    <span class="material-symbols-outlined">search</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'">search</span>
     <input
       type="text"
       [placeholder]="(activeTab === 'set' ? 'ADMIN.SCHEDULES.SEARCH_PLACEHOLDER' : 'ADMIN.SCHEDULES.TRIPS_SEARCH_PLACEHOLDER') | translate"
@@ -181,7 +181,7 @@
                         (click)="viewSchedulesForSet(schedule)"
                         [attr.aria-label]="'ADMIN.SCHEDULES.VIEW_SCHEDULES' | translate"
                         >
-                        <span class="material-symbols-outlined">format_list_bulleted</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">format_list_bulleted</span>
                       </button>
                       <button
                         type="button"
@@ -190,7 +190,7 @@
                         (click)="generateSchedules(schedule)"
                         [attr.aria-label]="'ADMIN.SCHEDULES.GENERATE' | translate"
                         >
-                        <span class="material-symbols-outlined">bolt</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">bolt</span>
                       </button>
                       <button
                         type="button"
@@ -198,7 +198,7 @@
                         [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
                         (click)="openEditModal(schedule)"
                         >
-                        <span class="material-symbols-outlined">edit_square</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
                       </button>
                       <button
                         type="button"
@@ -206,7 +206,7 @@
                         [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
                         (click)="openDeleteModal(schedule)"
                         >
-                        <span class="material-symbols-outlined">delete</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">delete</span>
                       </button>
                     </div>
                   </td>
@@ -237,7 +237,7 @@
       </div>
       @if (focusedSet) {
         <div class="schedule-focus-banner">
-          <span class="material-symbols-outlined">filter_alt</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">filter_alt</span>
           <span>{{ 'ADMIN.SCHEDULES.FOCUSED_BANNER' | translate:{ set: focusedSet.tripId } }}</span>
           <button type="button" class="schedule-focus-clear" (click)="clearFocusedSet()">
             {{ 'ADMIN.SCHEDULES.FOCUSED_CLEAR' | translate }}
@@ -314,7 +314,7 @@
                         [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
                         (click)="openScheduleEditModal(schedule)"
                         >
-                        <span class="material-symbols-outlined">edit_square</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
                       </button>
                       <button
                         type="button"
@@ -322,7 +322,7 @@
                         [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
                         (click)="openDeleteModal(schedule)"
                         >
-                        <span class="material-symbols-outlined">delete</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">delete</span>
                       </button>
                     </div>
                   </td>
@@ -508,7 +508,7 @@
             (click)="closeScheduleFormModal()"
             [attr.aria-label]="'ADMIN.COMMON.CANCEL' | translate"
             >
-            <span class="material-symbols-outlined">close</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
           </button>
         </div>
         <form [formGroup]="scheduleItemForm" class="schedule-form-shell" (ngSubmit)="submitSchedule()">

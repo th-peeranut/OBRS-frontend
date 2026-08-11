@@ -21,7 +21,7 @@
     <!-- Error state (no cache to fall back on). -->
     @if (errorMessage && !isInitialLoading) {
       <div class="state-card state-card--error">
-        <span class="material-symbols-outlined" aria-hidden="true">error</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">error</span>
         <p>{{ errorMessage }}</p>
         <button type="button" class="btn-secondary" (click)="onRetry()">
           {{ 'USABILITY_REPORT.MY_REPORTS.RETRY' | translate }}
@@ -34,7 +34,7 @@
       <div
         class="state-card state-card--empty"
         >
-        <span class="material-symbols-outlined" aria-hidden="true">flag</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">flag</span>
         <p class="state-card__title">{{ 'USABILITY_REPORT.MY_REPORTS.EMPTY_TITLE' | translate }}</p>
         <p>{{ 'USABILITY_REPORT.MY_REPORTS.EMPTY_BODY' | translate }}</p>
       </div>
@@ -60,7 +60,7 @@
           <p class="report-card__preview">{{ report.descriptionPreview }}</p>
           <div class="report-card__meta">
             <span>
-              <span class="material-symbols-outlined" aria-hidden="true">image</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">image</span>
               {{ report.imageCount }}
             </span>
             <span>{{ displayDateTime(report.createdAt) }}</span>

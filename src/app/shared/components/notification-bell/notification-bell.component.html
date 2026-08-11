@@ -7,7 +7,7 @@
     [attr.aria-expanded]="overlayPanel?.overlayVisible ?? false"
     [attr.aria-label]="'NOTIFICATIONS.BELL_ARIA' | translate: { count: (unreadCount$ | async) ?? 0 }"
     >
-    <span class="material-symbols-outlined">notifications</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'">notifications</span>
     @if (unreadCount$ | async; as unreadCount) {
       <span
         class="admin-nav-badge notification-bell-badge"

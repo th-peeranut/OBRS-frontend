@@ -20,7 +20,7 @@
     <!-- EMAIL-CHANGED BANNER (OBRS-84) -->
     @if (showEmailChangedBanner) {
       <div class="email-changed-banner mt-2" role="status">
-        <span class="material-symbols-outlined">check_circle</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'">check_circle</span>
         <span>{{ "LOGIN.EMAIL_CHANGED_BANNER" | translate }}</span>
       </div>
     }

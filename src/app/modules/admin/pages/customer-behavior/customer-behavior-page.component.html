@@ -31,7 +31,7 @@
 @if (contentState === 'loading' || contentState === 'data') {
   <section class="admin-grid admin-grid--4 mt-3">
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">group</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">group</span></span>
       <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.CUSTOMERS' | translate }}</p>
       @if (!isLoading) {
         <p class="admin-big-number">{{ formatCount(data?.distinctCustomers ?? 0) }}</p>
@@ -40,7 +40,7 @@
       }</div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">repeat</span></span>
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined" [attr.translate]="'no'">repeat</span></span>
       <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.RETURNING' | translate }}</p>
       @if (!isLoading) {
         <p class="admin-big-number">{{ pctDisplay(data?.returningRatePct ?? 0) }}</p>
@@ -49,7 +49,7 @@
       }</div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">confirmation_number</span></span>
       <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.BOOKINGS' | translate }}</p>
       @if (!isLoading) {
         <p class="admin-big-number">{{ formatCount(data?.totalBookings ?? 0) }}</p>
@@ -58,7 +58,7 @@
       }</div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">shopping_cart</span></span>
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined" [attr.translate]="'no'">shopping_cart</span></span>
       <div><p class="admin-muted">{{ 'ADMIN.CUSTOMER_BEHAVIOR.TILE.AVG' | translate }}</p>
       @if (!isLoading) {
         <p class="admin-big-number">{{ formatAvg(data?.avgBookingsPerCustomer ?? 0) }}</p>

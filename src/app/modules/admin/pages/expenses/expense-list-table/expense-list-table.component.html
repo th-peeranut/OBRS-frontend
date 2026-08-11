@@ -6,7 +6,7 @@
   <!-- Error (no cached value): replaces the whole table section, no toast. -->
   @if (!isLoading && hasError) {
     <div class="expense-empty">
-      <span class="material-symbols-outlined" aria-hidden="true">error</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">error</span>
       <p class="expense-empty-title">{{ errorMessage }}</p>
     </div>
   }
@@ -15,7 +15,7 @@
   (design-system §12, OBRS-209 pattern). -->
   @if (!isLoading && !hasError && isEmpty) {
     <div class="expense-empty">
-      <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">receipt_long</span>
       <p class="expense-empty-title">{{ 'ADMIN.EXPENSES.EMPTY_TITLE' | translate }}</p>
       <p class="expense-empty-body">{{ 'ADMIN.EXPENSES.EMPTY_BODY' | translate }}</p>
     </div>
@@ -112,7 +112,7 @@
                         [attr.title]="row.source === 'FIELD' ? ('ADMIN.EXPENSES.FIELD_ROW_IMMUTABLE' | translate) : null"
                         (click)="edit.emit(row)"
                         >
-                        <span class="material-symbols-outlined">edit_square</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
                       </button>
                       <button
                         type="button"
@@ -122,7 +122,7 @@
                         [attr.title]="row.source === 'FIELD' ? ('ADMIN.EXPENSES.FIELD_ROW_IMMUTABLE' | translate) : null"
                         (click)="delete.emit(row)"
                         >
-                        <span class="material-symbols-outlined">delete</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">delete</span>
                       </button>
                     </div>
                   </td>

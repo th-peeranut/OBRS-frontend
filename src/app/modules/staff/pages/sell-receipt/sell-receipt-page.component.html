@@ -3,7 +3,7 @@
   <!-- On-screen only: actions toolbar. Hidden entirely on print. -->
   <div class="no-print d-flex justify-content-between align-items-center mb-3">
     <button type="button" class="btn btn-outline-secondary" (click)="backToSell()">
-      <span class="material-symbols-outlined align-middle">arrow_back</span>
+      <span class="material-symbols-outlined align-middle" [attr.translate]="'no'">arrow_back</span>
       {{ 'STAFF.SELL_RECEIPT.BACK_TO_SELL' | translate }}
     </button>
     <button
@@ -12,7 +12,7 @@
       [disabled]="isLoading || loadError"
       (click)="print()"
       >
-      <span class="material-symbols-outlined align-middle">print</span>
+      <span class="material-symbols-outlined align-middle" [attr.translate]="'no'">print</span>
       {{ 'STAFF.SELL.PRINT_TICKET' | translate }}
     </button>
   </div>
@@ -29,7 +29,7 @@
   <!-- Error state -->
   @if (!isLoading && loadError) {
     <div class="no-print text-center py-5">
-      <span class="material-symbols-outlined text-muted d-block mb-2" style="font-size:64px">error_outline</span>
+      <span class="material-symbols-outlined text-muted d-block mb-2" [attr.translate]="'no'" style="font-size:64px">error_outline</span>
       <div class="fw-semibold fs-5">{{ 'STAFF.SELL_RECEIPT.LOAD_ERROR' | translate }}</div>
       <button type="button" class="btn btn-outline-secondary mt-3" (click)="reload()">
         {{ 'STAFF.SELL_RECEIPT.RETRY' | translate }}
@@ -119,7 +119,7 @@
                           >
                           @if (ticket.qrUnavailable) {
                             <span
-                              class="material-symbols-outlined qr-unavailable-icon"
+                              class="material-symbols-outlined qr-unavailable-icon" [attr.translate]="'no'"
                               aria-hidden="true"
                               >block</span
                               >

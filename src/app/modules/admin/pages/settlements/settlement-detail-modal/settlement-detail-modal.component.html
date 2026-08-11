@@ -13,7 +13,7 @@
           [attr.aria-label]="'ADMIN.COMMON.CLOSE' | translate"
           (click)="closed.emit()"
           >
-          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">close</span>
         </button>
       </div>
       @if (summary) {

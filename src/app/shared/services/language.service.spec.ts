@@ -66,6 +66,50 @@ describe('LanguageService', () => {
     expect(service.getStoredLanguage()).toBe(DEFAULT_LANGUAGE);
   });
 
+  // OBRS-1202 ------------------------------------------------------------
+  describe('document language declaration', () => {
+    const originalLang = document.documentElement.lang;
+
+    afterEach(() => {
+      document.documentElement.lang = originalLang;
+    });
+
+    ['th', 'en', 'zh'].forEach((lang) => {
+      it(`sets <html lang="${lang}"> when switching to ${lang}`, async () => {
+        document.documentElement.lang = 'xx';
+
+        await service.switch(lang);
+
+        expect(document.documentElement.lang).toBe(lang);
+      });
+    });
+
+    it('declares the new language BEFORE translate.use runs', async () => {
+      // Same reason the persistence above is ordered: `use()` emits
+      // onLangChange synchronously for an already-loaded language, so anything
+      // reacting to that emission must not read the previous declaration.
+      document.documentElement.lang = 'xx';
+      let langAtUseTime = 'NOT_SET';
+      translate.use.and.callFake(() => {
+        langAtUseTime = document.documentElement.lang;
+      });
+
+      await service.switch('en');
+
+      expect(langAtUseTime).toBe('en');
+    });
+
+    it('re-declares on every switch, so a second language change cannot leave a stale value', async () => {
+      // The bug this closes is not "the first render is wrong" — index.html
+      // already ships DEFAULT_LANGUAGE (OBRS-1194). It is the visitor who
+      // switches: from then on the declaration is only ever as true as this.
+      await service.switch('en');
+      await service.switch('zh');
+
+      expect(document.documentElement.lang).toBe('zh');
+    });
+  });
+
   // OBRS-1023 ------------------------------------------------------------
   describe('calendarDateFormat', () => {
     it('starts undefined so PrimeNG keeps its own dateFormat fallback', () => {

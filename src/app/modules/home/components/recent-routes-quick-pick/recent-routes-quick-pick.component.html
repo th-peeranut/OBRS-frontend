@@ -17,7 +17,7 @@ no caption, no reserved margin/padding. The *ngIf guards the entire root. -->
           [attr.aria-label]="view.ariaLabel"
           (click)="onSelect(view)"
           >
-          <span class="material-symbols-outlined recent-route-icon" aria-hidden="true">history</span>
+          <span class="material-symbols-outlined recent-route-icon" [attr.translate]="'no'" aria-hidden="true">history</span>
           <!-- The label is wrapped rather than left as a bare text node so it stays
           addressable now that the button also contains an icon glyph — a
           `textContent` assertion on the button would otherwise read

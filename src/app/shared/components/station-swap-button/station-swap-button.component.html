@@ -17,7 +17,7 @@
 
   `aria-hidden`: the button already carries the accessible name, so a described
   icon would make a screen reader announce the control twice. -->
-  <span class="station-swap-button__icon material-symbols-outlined" aria-hidden="true"
+  <span class="station-swap-button__icon material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true"
     >swap_horiz</span
   >
 </button>

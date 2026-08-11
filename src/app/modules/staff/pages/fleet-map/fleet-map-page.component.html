@@ -11,7 +11,7 @@ map+list; deliberately not the OBRS-209 full-section-empty-state, the map
 and list stay rendered underneath. -->
 @if (showEmptyFleetBanner) {
   <div class="admin-card fleet-map-empty-banner mt-3">
-    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">info</span>
     <div>
       <p class="admin-emphasis">{{ 'STAFF.FLEET_MAP.EMPTY_FLEET_BANNER_TITLE' | translate }}</p>
       <p class="admin-muted">{{ 'STAFF.FLEET_MAP.EMPTY_FLEET_BANNER_BODY' | translate }}</p>

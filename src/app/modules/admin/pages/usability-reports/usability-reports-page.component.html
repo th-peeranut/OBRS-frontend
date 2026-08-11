@@ -207,7 +207,7 @@
           [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DETAIL.CLOSE' | translate"
           (click)="closeDetail()"
           >
-          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">close</span>
         </button>
       </div>
       @if (detailReport) {
@@ -389,7 +389,7 @@
                   [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DETAIL.JIRA_LINK_ARIA' | translate:{ key: detailReport.jiraIssueKey }"
                   >
                   {{ detailReport.jiraIssueKey }}
-                  <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+                  <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">open_in_new</span>
                 </a>
               </div>
             }
@@ -506,7 +506,7 @@
             [attr.aria-label]="'ADMIN.COMMON.CLOSE' | translate"
             (click)="closeLightbox()"
             >
-            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">close</span>
           </button>
           <img [src]="lightboxImageUrl" alt="" class="ur-lightbox-image" />
         </div>

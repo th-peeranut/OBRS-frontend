@@ -5,5 +5,5 @@
   [attr.aria-pressed]="isDarkMode"
   [attr.aria-label]="ariaLabelKey | translate"
 >
-  <span class="material-symbols-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
+  <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
 </button>

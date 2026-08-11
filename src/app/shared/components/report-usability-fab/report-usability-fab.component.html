@@ -6,7 +6,7 @@
   [attr.aria-label]="'USABILITY_REPORT.FAB.ARIA_LABEL' | translate"
   (click)="openModal()"
   >
-  <span class="material-symbols-outlined">flag</span>
+  <span class="material-symbols-outlined" [attr.translate]="'no'">flag</span>
   <span class="report-fab__label">{{ 'USABILITY_REPORT.FAB.LABEL' | translate }}</span>
 </button>
 
@@ -32,7 +32,7 @@
           [attr.aria-label]="'USABILITY_REPORT.MODAL.CLOSE' | translate"
           (click)="closeModal()"
           >
-          <span class="material-symbols-outlined">close</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
         </button>
       </div>
       <!-- Body -->
@@ -108,7 +108,7 @@
                   (click)="triggerFileInput(fileInput)"
                   [disabled]="attachedFiles.length >= MAX_FILES"
                   >
-                  <span class="material-symbols-outlined">attach_file</span>
+                  <span class="material-symbols-outlined" [attr.translate]="'no'">attach_file</span>
                   <span>{{ 'USABILITY_REPORT.IMAGES.ADD' | translate }}</span>
                 </button>
                 @if (imageError) {
@@ -133,7 +133,7 @@
                             [attr.aria-label]="'USABILITY_REPORT.IMAGES.REMOVE' | translate"
                             (click)="removeFile(i)"
                             >
-                            <span class="material-symbols-outlined">close</span>
+                            <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
                           </button>
                         </div>
                       }

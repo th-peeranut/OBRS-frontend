@@ -8,16 +8,16 @@
     (click)="menu.toggle($event)"
     >
     @if (!loading) {
-      <span class="material-symbols-outlined">download</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'">download</span>
     }
     @if (loading) {
       <span
-        class="material-symbols-outlined admin-loading-spinner export-button-spinner"
+        class="material-symbols-outlined admin-loading-spinner export-button-spinner" [attr.translate]="'no'"
         aria-hidden="true"
       >sync</span>
     }
     <span>{{ (loading ? 'COMMON.EXPORT.IN_PROGRESS' : (label || 'COMMON.EXPORT.BUTTON_LABEL')) | translate }}</span>
-    <span class="material-symbols-outlined">expand_more</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'">expand_more</span>
   </button>
   <p-menu #menu [popup]="true" [model]="menuItems" appendTo="body"></p-menu>
 }

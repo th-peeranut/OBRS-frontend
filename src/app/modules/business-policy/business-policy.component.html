@@ -15,7 +15,7 @@
       }
       @if (policyLoadFailed) {
         <div class="policy-inline-error" role="alert">
-          <span class="material-symbols-outlined policy-inline-error-icon" aria-hidden="true">error</span>
+          <span class="material-symbols-outlined policy-inline-error-icon" [attr.translate]="'no'" aria-hidden="true">error</span>
           <span>{{ 'POLICY.BUSINESS.SALES_CHANNELS_ERROR' | translate }}</span>
           <button type="button" class="btn btn-link p-0 policy-inline-retry" (click)="retryPolicyParams()">
             {{ 'POLICY.BUSINESS.RETRY' | translate }}

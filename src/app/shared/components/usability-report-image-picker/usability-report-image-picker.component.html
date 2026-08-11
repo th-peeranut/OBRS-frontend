@@ -16,7 +16,7 @@
       (click)="triggerFileInput(fileInput)"
       [disabled]="totalCount >= maxFiles"
       >
-      <span class="material-symbols-outlined">attach_file</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'">attach_file</span>
       <span>{{ 'USABILITY_REPORT.IMAGES.ADD' | translate }}</span>
     </button>
 
@@ -36,7 +36,7 @@
               [attr.aria-label]="'USABILITY_REPORT.IMAGES.REMOVE' | translate"
               (click)="removeExisting(i)"
               >
-              <span class="material-symbols-outlined">close</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
             </button>
           </div>
         }
@@ -50,7 +50,7 @@
               [attr.aria-label]="'USABILITY_REPORT.IMAGES.REMOVE' | translate"
               (click)="removeNew(i)"
               >
-              <span class="material-symbols-outlined">close</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
             </button>
           </div>
         }

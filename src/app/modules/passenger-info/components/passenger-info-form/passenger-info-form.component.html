@@ -316,7 +316,7 @@
                                                   [allowEmpty]="true"
                                                   >
                                                   <ng-template let-item pTemplate="item">
-                                                    <span class="material-symbols-outlined seat-pref-option-icon" aria-hidden="true">{{ item.icon }}</span>
+                                                    <span class="material-symbols-outlined seat-pref-option-icon" [attr.translate]="'no'" aria-hidden="true">{{ item.icon }}</span>
                                                     <span class="seat-pref-option-label">{{ item.labelKey | translate }}</span>
                                                   </ng-template>
                                                 </p-selectButton>
@@ -337,7 +337,7 @@
                                                   [allowEmpty]="true"
                                                   >
                                                   <ng-template let-item pTemplate="item">
-                                                    <span class="material-symbols-outlined seat-pref-option-icon" aria-hidden="true">{{ item.icon }}</span>
+                                                    <span class="material-symbols-outlined seat-pref-option-icon" [attr.translate]="'no'" aria-hidden="true">{{ item.icon }}</span>
                                                     <span class="seat-pref-option-label">{{ item.labelKey | translate }}</span>
                                                   </ng-template>
                                                 </p-selectButton>
@@ -509,13 +509,13 @@
                                                 <span class="seat-map-legend-title">{{ "PASSENGER_INFO.SEAT_MAP.LEGEND_TITLE" | translate }}</span>
                                                 <span class="seat-map-legend-item">
                                                   <span class="seat-attribute-badge seat-attribute-badge-wheelchair" aria-hidden="true">
-                                                    <span class="material-symbols-outlined">accessible</span>
+                                                    <span class="material-symbols-outlined" [attr.translate]="'no'">accessible</span>
                                                   </span>
                                                   {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_WHEELCHAIR" | translate }}
                                                 </span>
                                                 <span class="seat-map-legend-item">
                                                   <span class="seat-attribute-badge seat-attribute-badge-legroom" aria-hidden="true">
-                                                    <span class="material-symbols-outlined">airline_seat_legroom_extra</span>
+                                                    <span class="material-symbols-outlined" [attr.translate]="'no'">airline_seat_legroom_extra</span>
                                                   </span>
                                                   {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_EXTRA_LEGROOM" | translate }}
                                                 </span>
@@ -624,13 +624,13 @@
                                                 <span class="seat-map-legend-title">{{ "PASSENGER_INFO.SEAT_MAP.LEGEND_TITLE" | translate }}</span>
                                                 <span class="seat-map-legend-item">
                                                   <span class="seat-attribute-badge seat-attribute-badge-wheelchair" aria-hidden="true">
-                                                    <span class="material-symbols-outlined">accessible</span>
+                                                    <span class="material-symbols-outlined" [attr.translate]="'no'">accessible</span>
                                                   </span>
                                                   {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_WHEELCHAIR" | translate }}
                                                 </span>
                                                 <span class="seat-map-legend-item">
                                                   <span class="seat-attribute-badge seat-attribute-badge-legroom" aria-hidden="true">
-                                                    <span class="material-symbols-outlined">airline_seat_legroom_extra</span>
+                                                    <span class="material-symbols-outlined" [attr.translate]="'no'">airline_seat_legroom_extra</span>
                                                   </span>
                                                   {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_EXTRA_LEGROOM" | translate }}
                                                 </span>

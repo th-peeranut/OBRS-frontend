@@ -25,7 +25,7 @@
       }
     } @else {
       <div class="promo-code-chip">
-        <span class="material-symbols-outlined promo-code-chip-icon">local_offer</span>
+        <span class="material-symbols-outlined promo-code-chip-icon" [attr.translate]="'no'">local_offer</span>
         <span class="promo-code-chip-code">{{ appliedResult?.code }}</span>
         <button
           type="button"
@@ -33,7 +33,7 @@
           [attr.aria-label]="'PROMO_CODE.REMOVE' | translate"
           (click)="remove()"
           >
-          <span class="material-symbols-outlined">close</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
         </button>
       </div>
     }

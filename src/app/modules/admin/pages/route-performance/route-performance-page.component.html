@@ -39,7 +39,7 @@
 @if (contentState === 'loading' || contentState === 'data') {
   <section class="admin-grid admin-grid--3 mt-3">
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined" [attr.translate]="'no'">payments</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.ROUTE_PERFORMANCE.TILE.REVENUE' | translate }}</p>
         @if (!isLoading) {
@@ -50,7 +50,7 @@
       </div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">confirmation_number</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.ROUTE_PERFORMANCE.TILE.TICKETS' | translate }}</p>
         @if (!isLoading) {
@@ -61,7 +61,7 @@
       </div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">alt_route</span></span>
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined" [attr.translate]="'no'">alt_route</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.ROUTE_PERFORMANCE.TILE.ROUTES' | translate }}</p>
         @if (!isLoading) {

@@ -44,7 +44,7 @@
             [disabled]="!canExpandAll"
             (click)="expandAll()"
             >
-            <span class="material-symbols-outlined">unfold_more</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'">unfold_more</span>
             {{ 'ADMIN.ROUTES.EXPAND_ALL' | translate }}
           </button>
           <button
@@ -53,11 +53,11 @@
             [disabled]="!canCollapseAll"
             (click)="collapseAll()"
             >
-            <span class="material-symbols-outlined">unfold_less</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'">unfold_less</span>
             {{ 'ADMIN.ROUTES.COLLAPSE_ALL' | translate }}
           </button>
           <label class="admin-search">
-            <span class="material-symbols-outlined">search</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'">search</span>
             <input
               type="text"
               [placeholder]="'ADMIN.ROUTES.SEARCH_SEGMENTS' | translate"
@@ -99,7 +99,7 @@
                         [disabled]="isSearching"
                         (click)="toggleGroup(line.group.originSlug)"
                         >
-                        <span class="material-symbols-outlined caret">expand_more</span>
+                        <span class="material-symbols-outlined caret" [attr.translate]="'no'">expand_more</span>
                         <span class="group-origin">{{ line.group.origin }}</span>
                         @if (line.continued) {
                           <span class="cont">{{ 'ADMIN.ROUTES.GROUP_CONTINUED' | translate }}</span>
@@ -144,7 +144,7 @@
                               "
                               (click)="editSegment.emit(cell.segment)"
                               >
-                              <span class="material-symbols-outlined">edit_square</span>
+                              <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
                               {{ cell.vehicleTypeName }}
                             </button>
                           }
@@ -203,7 +203,7 @@
               [disabled]="!canPreviousPage"
               (click)="goToPreviousPage()"
               >
-              <span class="material-symbols-outlined">chevron_left</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'">chevron_left</span>
             </button>
             <span class="page-indicator">
               {{
@@ -218,7 +218,7 @@
               [disabled]="!canNextPage"
               (click)="goToNextPage()"
               >
-              <span class="material-symbols-outlined">chevron_right</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'">chevron_right</span>
             </button>
           </div>
         </div>

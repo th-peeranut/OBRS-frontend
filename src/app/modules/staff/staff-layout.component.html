@@ -38,7 +38,7 @@
           [attr.aria-label]="(isSidebarPinned ? 'STAFF.LAYOUT.COLLAPSE_MENU' : 'STAFF.LAYOUT.EXPAND_MENU') | translate"
           [attr.title]="(isSidebarPinned ? 'STAFF.LAYOUT.COLLAPSE_MENU' : 'STAFF.LAYOUT.EXPAND_MENU') | translate"
           >
-          <span class="material-symbols-outlined">{{ toggleIconName }}</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">{{ toggleIconName }}</span>
         </button>
 
         <!-- OBRS-543: routerLink takes the STRING form, not ['/staff', item.path].
@@ -66,7 +66,7 @@
                 class="admin-nav-link"
                 (click)="onNavLinkClick()"
                 >
-                <span class="material-symbols-outlined">{{ item.icon }}</span>
+                <span class="material-symbols-outlined" [attr.translate]="'no'">{{ item.icon }}</span>
                 <span>{{ item.labelKey | translate }}</span>
               </a>
             }
@@ -75,7 +75,7 @@
 
         <div class="admin-sidebar-footer">
           <button class="admin-nav-link admin-nav-btn" type="button" (click)="onLogout()">
-            <span class="material-symbols-outlined">logout</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'">logout</span>
             <span>{{ 'STAFF.LAYOUT.SIGN_OUT' | translate }}</span>
           </button>
         </div>
@@ -91,7 +91,7 @@
           [attr.aria-expanded]="isSidebarOpen"
           [attr.aria-label]="(isSidebarOpen ? 'STAFF.LAYOUT.CLOSE_MENU' : 'STAFF.LAYOUT.OPEN_MENU') | translate"
           >
-          <span class="material-symbols-outlined">{{ isSidebarOpen ? 'close' : 'menu' }}</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isSidebarOpen ? 'close' : 'menu' }}</span>
         </button>
 
         <div class="admin-title-block">
@@ -107,7 +107,7 @@
             [attr.aria-pressed]="isDarkMode"
             [attr.aria-label]="'STAFF.LAYOUT.THEME_TOGGLE' | translate"
             >
-            <span class="material-symbols-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
           </button>
 
           <app-notification-bell shellVariant="staff"></app-notification-bell>
@@ -134,7 +134,7 @@
                     role="menuitem"
                     (click)="closeProfileMenu()"
                     >
-                    <span class="material-symbols-outlined">{{ item.icon }}</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">{{ item.icon }}</span>
                     <span>{{ item.labelKey | translate }}</span>
                   </a>
                 }
@@ -145,12 +145,12 @@
                     role="menuitem"
                     (click)="closeProfileMenu()"
                     >
-                    <span class="material-symbols-outlined">admin_panel_settings</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">admin_panel_settings</span>
                     <span>{{ 'STAFF.LAYOUT.ADMIN_DASHBOARD' | translate }}</span>
                   </a>
                 }
                 <button type="button" class="admin-profile-item" role="menuitem" (click)="onLogout()">
-                  <span class="material-symbols-outlined">logout</span>
+                  <span class="material-symbols-outlined" [attr.translate]="'no'">logout</span>
                   <span>{{ 'STAFF.LAYOUT.SIGN_OUT' | translate }}</span>
                 </button>
               </div>

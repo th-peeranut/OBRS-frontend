@@ -9,7 +9,7 @@
         <div class="admin-modal-header">
           <h5 class="admin-modal-title">{{ 'STAFF.PARCEL_VERIFY.DIALOG.TITLE' | translate }}</h5>
           <button type="button" class="admin-icon-btn" (click)="onDismiss()" [attr.aria-label]="'COMMON.CLOSE' | translate">
-            <span class="material-symbols-outlined">close</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
           </button>
         </div>
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
@@ -29,7 +29,7 @@
                 />
                 @if (isMismatch('actualWeightKg')) {
                   <small class="pv-mismatch-hint">
-                    <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">sync_problem</span>
                     {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
                   </small>
                 }
@@ -49,7 +49,7 @@
                   />
                   @if (isMismatch('actualLengthCm')) {
                     <small class="pv-mismatch-hint">
-                      <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
+                      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">sync_problem</span>
                       {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
                     </small>
                   }
@@ -69,7 +69,7 @@
                     />
                     @if (isMismatch('actualWidthCm')) {
                       <small class="pv-mismatch-hint">
-                        <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">sync_problem</span>
                         {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
                       </small>
                     }
@@ -89,7 +89,7 @@
                       />
                       @if (isMismatch('actualHeightCm')) {
                         <small class="pv-mismatch-hint">
-                          <span class="material-symbols-outlined" aria-hidden="true">sync_problem</span>
+                          <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">sync_problem</span>
                           {{ 'STAFF.PARCEL_VERIFY.MISMATCH_HINT' | translate }}
                         </small>
                       }
@@ -114,7 +114,7 @@
                         [disabled]="isSubmitting"
                         (click)="selectOutcome('accept')"
                         >
-                        <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">check_circle</span>
                         {{ 'STAFF.PARCEL_VERIFY.OUTCOME.ACCEPT' | translate }}
                       </button>
                       <button
@@ -125,7 +125,7 @@
                         [disabled]="isSubmitting"
                         (click)="selectOutcome('reject')"
                         >
-                        <span class="material-symbols-outlined" aria-hidden="true">cancel</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">cancel</span>
                         {{ 'STAFF.PARCEL_VERIFY.OUTCOME.REJECT' | translate }}
                       </button>
                     </div>

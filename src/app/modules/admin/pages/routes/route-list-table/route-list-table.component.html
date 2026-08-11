@@ -59,7 +59,7 @@
                     [attr.aria-label]="'ADMIN.COMMON.VIEW' | translate"
                     (click)="view.emit(route)"
                     >
-                    <span class="material-symbols-outlined">visibility</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">visibility</span>
                   </button>
                   <button
                     type="button"
@@ -67,7 +67,7 @@
                     [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
                     (click)="edit.emit(route)"
                     >
-                    <span class="material-symbols-outlined">edit_square</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
                   </button>
                   <button
                     type="button"
@@ -75,7 +75,7 @@
                     [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
                     (click)="delete.emit(route)"
                     >
-                    <span class="material-symbols-outlined">delete</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">delete</span>
                   </button>
                 </div>
               </td>

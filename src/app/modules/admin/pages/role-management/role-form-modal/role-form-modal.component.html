@@ -22,7 +22,7 @@
           (click)="requestClose()"
           [attr.aria-label]="'ADMIN.COMMON.CANCEL' | translate"
           >
-          <span class="material-symbols-outlined">close</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
         </button>
       </div>
       <form [formGroup]="roleForm" class="role-form-shell" (ngSubmit)="submitRole()">
