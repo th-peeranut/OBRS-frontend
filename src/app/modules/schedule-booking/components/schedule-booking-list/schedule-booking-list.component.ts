@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import dayjs from 'dayjs';
 import {
   Schedule,
   ScheduleFilter,
@@ -29,6 +30,7 @@ import {
   tripEstimateFromStops,
 } from '../../../../shared/lib/trip-format';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
+import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import {
   getStationFallbackLabel,
@@ -40,6 +42,20 @@ import { RouteMapService } from '../../../../services/route-map/route-map.servic
 import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
 import { LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
 import { AnalyticsService } from '../../../../services/analytics/analytics.service';
+
+/**
+ * OBRS-1217: what the empty result list means when the customer searched TODAY.
+ * `null` everywhere else — including "searched another day and found nothing",
+ * which keeps its existing `NO_RESULTS` copy.
+ */
+export interface SoldOutTodayState {
+  /** The next day, already localized for the button ("วันอังคาร 11 ส.ค."). */
+  nextDayLabel: string;
+  /** Round-trip legs get the message with NO button: moving the outbound to
+   *  tomorrow can leave the return date BEFORE it, and this screen has no say
+   *  over the return leg. Owner's call, 2026-08-10. */
+  canJumpToNextDay: boolean;
+}
 
 @Component({
     selector: 'app-schedule-booking-list',
@@ -54,6 +70,14 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   currentLocale$: Observable<'en' | 'th'>;
   departureRouteLabel$: Observable<string>;
   returnRouteLabel$: Observable<string>;
+  /** OBRS-1217. Non-null only while the customer is looking at an empty result
+   *  list for TODAY — the state that is reachable every single evening once the
+   *  last bus has left, because the calendar defaults to today and the search
+   *  filters departed rounds out in SQL (`ScheduleRepository:151`). */
+  soldOutToday$: Observable<SoldOutTodayState | null>;
+  /** The raw active language ('th' | 'en' | 'zh') — unlike `currentLocale$`,
+   *  which deliberately narrows to the two locales station labels exist in. */
+  private currentLang$: Observable<string>;
 
   selectedSchedule: Schedule[] = [];
 
@@ -92,6 +116,10 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       map((event: LangChangeEvent) => this.normalizeLocale(event.lang)),
       startWith(this.normalizeLocale(this.translateService.currentLang))
     );
+    this.currentLang$ = this.translateService.onLangChange.pipe(
+      map((event: LangChangeEvent) => event.lang),
+      startWith(this.translateService.currentLang)
+    );
     this.departureRouteLabel$ = combineLatest([
       this.scheduleFilter,
       this.rawProvinceStationList,
@@ -108,6 +136,22 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     ]).pipe(
       map(([scheduleFilter, stationList, locale]) =>
         this.getRouteFromFilter(scheduleFilter, stationList, locale, true)
+      )
+    );
+
+    // OBRS-1217 AC#5: "today" is resolved HERE, on every emission — i.e. when a
+    // result comes back — never captured once at construction. A tab left open
+    // at 23:50 and searched at 00:05 must not be told its own search date is
+    // today. `currentLang$` rather than `currentLocale$` on purpose: the latter
+    // folds zh into 'en' (it exists for station labels, which have no zh copy),
+    // and a zh customer must not get an English date on the button.
+    this.soldOutToday$ = combineLatest([
+      this.scheduleList,
+      this.scheduleFilter,
+      this.currentLang$,
+    ]).pipe(
+      map(([scheduleList, scheduleFilter, lang]) =>
+        this.resolveSoldOutToday(scheduleList, scheduleFilter, lang)
       )
     );
   }
@@ -209,6 +253,103 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   isLowSeats(availableSeats: number | null | undefined): boolean {
     return isLowSeatCount(availableSeats, this.LOW_SEAT_THRESHOLD);
+  }
+
+  /**
+   * OBRS-1217. Returns non-null only for the one state this card is about:
+   * the search RAN (a null `scheduleList` means it never did), came back with
+   * no outbound rounds, and the date searched is today.
+   *
+   * Deliberately says nothing about whether the next day HAS rounds — nothing
+   * on this screen has searched it yet, so the copy invites and never promises.
+   */
+  private resolveSoldOutToday(
+    scheduleList: ScheduleList | null | undefined,
+    scheduleFilter: ScheduleFilter | null | undefined,
+    lang: string
+  ): SoldOutTodayState | null {
+    const departures = scheduleList?.departureSchedules;
+    if (!Array.isArray(departures) || departures.length > 0) {
+      return null;
+    }
+
+    const searchedDate = dayjs(scheduleFilter?.departureDate);
+    if (!scheduleFilter?.departureDate || !searchedDate.isValid()) {
+      return null;
+    }
+    if (!searchedDate.isSame(dayjs(), 'day')) {
+      return null;
+    }
+
+    return {
+      nextDayLabel: this.formatDayLabel(searchedDate.add(1, 'day').toDate(), lang),
+      canJumpToNextDay: !this.isRoundTrip(scheduleFilter),
+    };
+  }
+
+  /**
+   * OBRS-1217 button action: move the search one day forward. Dispatching the
+   * FILTER (not a search) is the whole trick — `ScheduleBookingFilterComponent`
+   * already patches its own date control and re-dispatches
+   * `invokeGetScheduleListApi` on every filter change (see its `ngOnInit`), so
+   * one action both re-runs the search and stops the form above from showing
+   * yesterday's date. Composing a search payload here would need the station
+   * slugs and would leave that form stale.
+   */
+  showNextDay(): void {
+    this.scheduleFilter.pipe(take(1)).subscribe((scheduleFilter) => {
+      if (!scheduleFilter?.departureDate || this.isRoundTrip(scheduleFilter)) {
+        return;
+      }
+
+      const nextDay = dayjs(scheduleFilter.departureDate).add(1, 'day');
+      if (!nextDay.isValid()) {
+        return;
+      }
+
+      this.store.dispatch(
+        invokeSetScheduleFilterApi({
+          schedule_filter: {
+            ...scheduleFilter,
+            departureDate: nextDay.format('YYYY-MM-DD'),
+          },
+        })
+      );
+    });
+  }
+
+  /** `roundTrip` reaches the store as either the Dropdown or its bare id,
+   *  depending on whether the customer touched the control — same defensive
+   *  read the filter component does. */
+  private isRoundTrip(scheduleFilter: ScheduleFilter | null | undefined): boolean {
+    const roundTrip = scheduleFilter?.roundTrip as { id?: number } | number | undefined;
+    const roundTripId = typeof roundTrip === 'object' ? roundTrip?.id : roundTrip;
+    return roundTripId === 2;
+  }
+
+  /** Weekday + day + short month in the ACTIVE language, via the platform's
+   *  own calendar data — no locale bundle to register and no fourth date
+   *  format to keep in sync. The year is left out on purpose: `th-TH` renders
+   *  it as a Buddhist-era year, which is right but noisy inside a button. */
+  private formatDayLabel(date: Date, lang: string): string {
+    const bcp47 = this.toBcp47(lang);
+    try {
+      return new Intl.DateTimeFormat(bcp47, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+      }).format(date);
+    } catch {
+      // A locale the runtime rejects must not blank the button out.
+      return dayjs(date).format('D MMM');
+    }
+  }
+
+  private toBcp47(lang: string | null | undefined): string {
+    const normalized = (lang || '').toLowerCase();
+    if (normalized.startsWith('th')) return 'th-TH';
+    if (normalized.startsWith('zh')) return 'zh-CN';
+    return 'en-GB';
   }
 
   private getRouteFromFilter(

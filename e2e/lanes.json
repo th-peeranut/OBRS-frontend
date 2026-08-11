@@ -21,6 +21,18 @@
       "why": "Fulfils every /api/** call from its own fixture and seeds no session at all. Measures the station bar's geometry at this lane's pinned 1280px viewport -- the ROW layout the three Karma specs cannot reach, because their window is 800px and the 992px stack switch is a viewport query."
     },
     {
+      "spec": "obrs-1222-station-load-error.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "Fulfils every /api/** call from its own fixture and makes /api/stops fail on purpose (route.abort, i.e. the same status 0 the OBRS-642 timeout raises); seeds no session. Proves the claim no component spec can: that NO SweetAlert2 modal reaches the page, which the HTTP interceptor raises into document.body outside every Karma fixture. The two populations are the two tests -- localStorage roster seeded (silent) versus cleared (inline message plus retry)."
+    },
+    {
+      "spec": "obrs-1222-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1222.config.ts",
+      "why": "Screenshots only, no assertions -- and that is the requirement, not a shortcut: it has to run unchanged against BOTH the pre-card and post-card runtimes so the BEFORE image is the real previous behaviour rather than a reconstruction. Stage comes from OBRS_CAPTURE_STAGE; the BEFORE pass is taken with `git stash push -- src/` applied while ng serve rebuilds. Every assertion for this card lives in obrs-1222-station-load-error.spec.ts on the GATE lane."
+    },
+    {
       "spec": "route-smoke.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
@@ -345,10 +357,22 @@
       "why": "OBRS-627. /refund-policy is linked from every page's footer and from /payment, so a customer reads it before paying, and until this card it described a refund the system has never performed -- original paper ticket, ID copies, in-person cash pickup, forfeiture after 7 days -- while naming no refund rate at all. The rates now render from GET /api/cancellation-policy. Three things live only in the assembled app and are why this needs a browser rather than more unit tests: whether the shipped page calls that endpoint at all, whether a raw {{refundRateEarlyPercent}} can reach a customer, and whether the retired clauses are gone from the REAL public/i18n/th.json rather than from a TestBed fixture -- all three are what went wrong on the identical claim one page over (OBRS-564). The wire values are 36h/3h/90%/45%, deliberately not the shipped 24/2/80/50, so 'rendered from the wire' cannot be confused with 'rendered from a literal'. Also pins AC-3: a failed config read shows an inline error and states NO rate, never a hardcoded fallback. Hermetic on the same terms as the rest of the lane -- every /api/** call fulfilled by the spec, no backend, no session."
     },
     {
+      "spec": "obrs-1207-fab-occlusion.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-1207. Replaces the two FAB-overlap cases in report-usability-issue.spec.ts, which compared the `position: fixed` FAB's viewport box against `.select-btn`'s and never pinned the scroll -- so the verdict was a function of where the page came to rest, not of the code. Proven, not argued: the byte-identical tree 098022f8 passed on PR #167, went red on the dev merge 8c43dcec, and passed 6/6 locally, having been green for months while the defect was present. This spec SOLVES for the scroll offsets at which an element's click point falls inside the FAB band -- a closed interval per element, so no offset can slip between samples -- then scrolls there and asks document.elementFromPoint(), the only oracle that accounts for z-index, stacking contexts, pointer-events and transforms at once. Hermetic on the same terms as the rest of the lane: it reuses report-usability-issue's stations/schedules fixtures and stubs every /api/** call it makes."
+    },
+    {
       "spec": "obrs-907-qa-parity-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs907qa.config.ts",
       "why": "OBRS-907 parity evidence for all three migrated surfaces (ticket modal, notification panel, four admin-skeleton list pages) in both themes. Dumps the COMPUTED styles next to each screenshot -- the numbers are the evidence and the picture only corroborates them, because this card's one real regression (a 28px icon silently becoming 34px once it moved inside a child component) was invisible to 4334 green unit tests and would have been invisible to a screenshot glance too. Run once against a server built from the branch and once from a detached ee6f026d for the BEFORE side, same pattern as obrs-769-capture. Kept rather than deleted: OBRS-909/910 migrate ~28 further call sites and need the same before/after discipline."
+    },
+    {
+      "spec": "obrs-1207-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1207capture.config.ts",
+      "why": "OBRS-1207 card evidence for the three sites the occlusion gate names -- .btn-search on /, .select-btn on /schedule-booking, and Add Promotion Code on /admin/promotions -- photographed at the exact scroll offsets the gate reports them at, which is the whole point: a screenshot of this defect taken at an unspecified offset shows nothing, because the FAB only covers the button at a specific one. Run once in a detached worktree at 8ce85269 with OBRS1207_TAG=BEFORE and once on the branch for AFTER. Carries a control-arm frame at scrollY=0 as well, so the AFTER set can distinguish 'yields when it must' from 'permanently faded', which would be a different bug in the same pixels. Hermetic on the same terms as the gate lane its config is copied from -- default (local) serve, pinned 1280x720, no globalSetup -- so the pictures are of the same thing the gate measured."
     }
   ]
 }

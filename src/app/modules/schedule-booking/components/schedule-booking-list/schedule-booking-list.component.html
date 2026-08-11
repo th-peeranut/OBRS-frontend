@@ -5,11 +5,33 @@
         {{ "SCHEDULE_BOOKING.HEADER" | translate }}
       </h3>
     }
-    <!-- No results: search completed but no departure schedules matched -->
+    <!-- No results: search completed but no departure schedules matched.
+         OBRS-1217 splits the two reasons a customer lands here, because the
+         way out is different: today's rounds have all departed (offer the next
+         day) vs. the chosen day genuinely has none (the original copy). -->
     @if (!schedules.departureSchedules?.length) {
-      <p class="no-results">
-        {{ "SCHEDULE_BOOKING.NO_RESULTS" | translate }}
-      </p>
+      @if (soldOutToday$ | async; as soldOutToday) {
+        <div class="sold-out-today">
+          <p class="sold-out-today__title">
+            {{ "SCHEDULE_BOOKING.SOLD_OUT_TODAY_TITLE" | translate }}
+          </p>
+          <p class="sold-out-today__hint">
+            {{ "SCHEDULE_BOOKING.SOLD_OUT_TODAY_HINT" | translate }}
+          </p>
+          @if (soldOutToday.canJumpToNextDay) {
+            <button type="button" class="sold-out-today__action" (click)="showNextDay()">
+              {{
+                "SCHEDULE_BOOKING.SOLD_OUT_TODAY_ACTION"
+                  | translate: { date: soldOutToday.nextDayLabel }
+              }}
+            </button>
+          }
+        </div>
+      } @else {
+        <p class="no-results">
+          {{ "SCHEDULE_BOOKING.NO_RESULTS" | translate }}
+        </p>
+      }
     }
     <!-- Outbound leg -->
     @if (schedules.departureSchedules; as departureList) {

@@ -2396,6 +2396,10 @@
     "DEPARTS_ON": "Departs {{date}}",
     "A11Y": "This trip has been announced as delayed. It was scheduled to depart at {{planned}} and now departs at {{effective}}."
   },
+  "STATION_LOAD_ERROR": {
+    "MESSAGE": "We couldn't load the station list, so the stops below are empty.",
+    "RETRY": "Try again"
+  },
   "SCHEDULE_BOOKING": {
     "HEADER": "Trip type",
     "SUBHEADER_DEPARTURE": "Travel itinerary: Outbound",
@@ -2411,6 +2415,9 @@
     "CHANGE": "change data",
     "NO_RESULTS": "No schedules found for your search. Try a different date, route, or fewer passengers.",
     "NO_RETURN_RESULTS": "No return schedules found for your search. Try a different return date or fewer passengers.",
+    "SOLD_OUT_TODAY_TITLE": "Today's trips have all departed",
+    "SOLD_OUT_TODAY_HINT": "Try the next day.",
+    "SOLD_OUT_TODAY_ACTION": "Show trips on {{date}}",
     "ESTIMATE_KM_UNIT": "km",
     "RESTORED_UNAVAILABLE": "The trip you picked earlier is no longer available. Please choose another one."
   },

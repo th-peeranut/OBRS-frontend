@@ -20,6 +20,21 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { localizedDropdownName } from '../../lib/localized-dropdown-name';
 
+/**
+ * One rendered group: the group object the header is drawn from, plus the
+ * children that survived the current search.
+ *
+ * <p>The children are a SEPARATE array rather than a clone of the group with a
+ * narrowed `stations` field, so the object the template tracks stays identical
+ * across keystrokes — cloning would rebuild every header's DOM on each input
+ * event, and `getValue()` (the expensive part, see UX-OBRS-562 §4) would rerun
+ * for each one.
+ */
+export interface DropdownGroupView {
+  group: any;
+  stations: any[];
+}
+
 @Component({
     selector: 'app-dropdown-group-obrs',
     templateUrl: './dropdown-group-obrs.component.html',
@@ -64,6 +79,15 @@ export class DropdownGroupObrsComponent
    *  never a template getter (getValue()'s localization fallback chain is too
    *  expensive to re-run every CD tick — see UX-OBRS-562 §4). */
   displayList: any[] = [];
+  /** Grouped-branch render list — the exact counterpart of `displayList`.
+   *
+   *  OBRS-1212: the grouped branch used to iterate `optionList`, the RAW input,
+   *  while only the flat branch iterated the filtered `displayList`. That was
+   *  invisible for as long as `isGroupedOptions()` stayed false at runtime, and
+   *  would have surfaced as "the search box silently stops filtering" on the
+   *  very commit that first supplied grouped data (AC#2). Both branches now
+   *  render from a filtered field and neither reads the raw list. */
+  displayGroups: DropdownGroupView[] = [];
   /** True when a search query is active and matched nothing (distinct from
    *  "no options at all"). */
   showNoSearchResults = false;
@@ -263,14 +287,23 @@ export class DropdownGroupObrsComponent
     return Array.isArray(this.options) ? this.options : [];
   }
 
-  /** Precompute a lowercased searchKey per flat option ONCE — matched against
-   *  the same localized string getValue()/the template renders, never a raw
-   *  field, so a query never matches text the user can't see. Left unused for
-   *  the (currently unreachable) grouped branch — harmless, since that branch
-   *  never reads displayList/searchKeyMap. */
+  /** Precompute a lowercased searchKey per SELECTABLE option ONCE — matched
+   *  against the same localized string getValue()/the template renders, never a
+   *  raw field, so a query never matches text the user can't see.
+   *
+   *  OBRS-1212: grouped input is keyed on the STATIONS, not on the groups. A
+   *  group header is a heading, not something the customer can pick — keying it
+   *  too would let "ชลบุรี" match a heading and leave the list under it empty. */
   private rebuildSearchKeys(): void {
     this.searchKeyMap = new Map<any, string>();
+    const grouped = this.isGroupedOptions();
     for (const option of this.getOptions()) {
+      if (grouped) {
+        for (const station of this.getGroupStations(option)) {
+          this.searchKeyMap.set(station, this.normalize(this.getValue(station)));
+        }
+        continue;
+      }
       this.searchKeyMap.set(option, this.normalize(this.getValue(option)));
     }
   }
@@ -281,16 +314,45 @@ export class DropdownGroupObrsComponent
   private applyFilter(): void {
     const options = this.getOptions();
     const q = this.normalize(this.searchQuery);
+    const grouped = this.isGroupedOptions();
 
     if (!this.searchable || !q) {
-      this.displayList = options;
+      this.displayList = grouped ? [] : options;
+      this.displayGroups = grouped
+        ? options.map((group) => ({ group, stations: this.getGroupStations(group) }))
+        : [];
       this.showNoSearchResults = false;
+      return;
+    }
+
+    if (grouped) {
+      const views: DropdownGroupView[] = [];
+      let total = 0;
+      for (const group of options) {
+        const stations = this.getGroupStations(group);
+        total += stations.length;
+        const matched = stations.filter(
+          (station) => (this.searchKeyMap.get(station) ?? '').includes(q)
+        );
+        // A group whose every child was filtered out is DROPPED, not rendered
+        // empty: a province heading with nothing under it reads as "no stops
+        // here match", which is a different — and false — statement from "this
+        // province has no stops at all" (AC#2).
+        if (matched.length > 0) {
+          views.push({ group, stations: matched });
+        }
+      }
+
+      this.displayList = [];
+      this.displayGroups = views;
+      this.showNoSearchResults = total > 0 && views.length === 0;
       return;
     }
 
     const filtered = options.filter((option) => (this.searchKeyMap.get(option) ?? '').includes(q));
 
     this.displayList = filtered;
+    this.displayGroups = [];
     this.showNoSearchResults = options.length > 0 && filtered.length === 0;
   }
 

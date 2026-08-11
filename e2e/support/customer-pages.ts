@@ -383,6 +383,23 @@ export interface CustomerPage {
    * scales with the size of the DOM is a gate people stop running.
    */
   hoverTargets: string[];
+  /**
+   * Shallow patch applied over STORE_SEED before it is dispatched (OBRS-1228).
+   *
+   * A function rather than a literal because the only override so far has to be
+   * computed at run time: "the customer searched TODAY and nothing came back"
+   * is a claim about the clock, and a hard-coded date turns into "searched some
+   * day in the past" the morning after it is written -- which renders the
+   * generic `.no-results` copy and quietly measures a different screen than the
+   * entry's name promises. `mustRender` is what turns that into a failure.
+   */
+  storeOverride?: () => Record<string, unknown>;
+}
+
+/** Local YYYY-MM-DD. `toISOString()` is UTC and is the wrong day here for 7 hours a night. */
+function todayLocal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export const CUSTOMER_PAGES: CustomerPage[] = [
@@ -432,6 +449,63 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     minControls: 2,
     mustRender: ['.select-btn'],
     hoverTargets: ['.select-btn'],
+  },
+  {
+    // OBRS-1228. The entry above seeds two trips, so /schedule-booking has been
+    // swept for eleven months in exactly ONE of its two states -- and the state
+    // it never entered is the one that was broken. The results panel is themed
+    // by `.booking-container:has(.schedule-item)`; with no trip row that
+    // selector does not match, the panel stayed light #f6fcff on the dark page,
+    // and `.title` (already $dk-text) read 1.05:1. Nine pages swept, "0 below
+    // AA", and a heading nobody could read -- because the population was
+    // complete and the STATES were not.
+    //
+    // Same URL, opposite store. Two entries rather than a flag on one: every
+    // floor and every mustRender below describes the empty screen, and folding
+    // them into the populated entry would mean neither set could be asserted.
+    key: 'schedule-booking-empty',
+    url: '/schedule-booking',
+    landsOn: '/schedule-booking',
+    seed: true,
+    storeOverride: () => ({
+      filter: { ...STORE_SEED.filter, departureDate: todayLocal() },
+      list: { departureSchedules: [], arrivalSchedules: null },
+    }),
+    minText: 25,
+    minControls: 2,
+    // `.sold-out-today__title` is the 1.05:1 site itself. `__action` is the
+    // filled pill, which is the only control the panel contributes and the one
+    // whose boundary against the newly-dark surface has to be scored.
+    //
+    // The pair also pins the STATE, not just the page: if `todayLocal()` ever
+    // drifts off the component's own idea of today, the branch falls through to
+    // `.no-results` and both of these render zero times -- a red run naming the
+    // reason, rather than a green sweep over the wrong empty state.
+    mustRender: ['.sold-out-today__title', '.sold-out-today__action'],
+    hoverTargets: ['.sold-out-today__action'],
+  },
+  {
+    // The OTHER empty state, and the older one: search a day that is not today,
+    // get nothing, and the panel renders `.no-results` instead of the OBRS-1217
+    // copy. Same blind spot, longer-standing -- `.no-results` predates both
+    // cards and had never once been measured, which is how it shipped at 4.45:1
+    // on the #f6fcff tint in LIGHT mode. Not a dark-mode bug and not new; just
+    // never rendered under a gate.
+    //
+    // The date is STORE_SEED's own 2030-06-17 rather than an override, and that
+    // is what puts this entry on the other side of the branch from the one
+    // above: `soldOutToday$` emits null for any day that is not today.
+    key: 'schedule-booking-no-results',
+    url: '/schedule-booking',
+    landsOn: '/schedule-booking',
+    seed: true,
+    storeOverride: () => ({ list: { departureSchedules: [], arrivalSchedules: null } }),
+    minText: 25,
+    minControls: 2,
+    mustRender: ['.no-results'],
+    // The panel contributes no control in this state -- the filter form's are
+    // covered by the two entries above.
+    hoverTargets: [],
   },
   {
     key: 'review-schedule-booking',
@@ -555,7 +629,7 @@ export async function seedCustomerSession(page: Page, dark: boolean): Promise<vo
  * on the component, which is a compile-time idea -- the field is there at
  * runtime, and `window.ng` exists because this lane serves a development build.
  */
-export async function seedStore(page: Page): Promise<void> {
+export async function seedStore(page: Page, overrides: Record<string, unknown> = {}): Promise<void> {
   // OBRS-767: this used to be the `page.evaluate` below and nothing else, so it
   // threw the instant no component exposed a Store. That is a RACE, not a check --
   // `review-total-host-box.spec.ts` calls it on the line after `page.goto()`, with
@@ -603,5 +677,5 @@ export async function seedStore(page: Page): Promise<void> {
     store.dispatch({ type: '[ScheduleBooking API] Set Schedule Booking Success', schedule_booking: seed.booking });
     store.dispatch({ type: '[PassengerInfo API] Set Passenger Info Success', passengerInfo: seed.passengers });
     store.dispatch({ type: '[Booking API] Set Booking Success', booking: seed.bookingResult });
-  }, STORE_SEED);
+  }, { ...STORE_SEED, ...overrides } as typeof STORE_SEED);
 }

@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import stationsFixture from './stations.json';
 import schedulesFixture from './schedules.json';
 import routesFixture from './routes.json';
+import provincesWithStopsFixture from './provinces-with-stops.json';
 
 /**
  * OBRS-602 — every call the anonymous public pages issue, in one place.
@@ -24,6 +25,14 @@ import routesFixture from './routes.json';
  *                                      except to confirm-guidance-flow's AC8, which
  *                                      asserts zero console errors and duly failed on
  *                                      ERR_CONNECTION_REFUSED.
+ *   GET /api/provinces/stops         — the dropdown's province headings (OBRS-1212).
+ *                                      The FOURTH instance of the exact failure this
+ *                                      docstring already described: the component
+ *                                      degrades to an ungrouped dropdown and raises no
+ *                                      alert, so the app looked fine and only the
+ *                                      zero-console-errors assertion went red. Adding a
+ *                                      public call to /home means adding it HERE, in the
+ *                                      same commit — nothing else fails loudly enough.
  *
  * Keeping the list here rather than in each spec is the point: a fourth spec that
  * renders `/` inherits the complete set instead of rediscovering it one timeout at a
@@ -44,6 +53,15 @@ export async function mockPublicPageApis(page: Page): Promise<void> {
   );
 
   await page.route('**/api/routes', (route) => route.fulfill({ json: routesFixture }));
+
+  // The `stops[].code` values here are the `slug`s in stations.json, because that
+  // equality is the join the grouping depends on (measured against prod: the two
+  // sets match exactly). A fixture that drifts from stations.json would put every
+  // stop in the trailing unnamed group and still render a working dropdown, which
+  // is precisely the kind of silent pass this stub exists to avoid.
+  await page.route('**/api/provinces/stops', (route) =>
+    route.fulfill({ json: provincesWithStopsFixture })
+  );
 
   await page.route('**/api/booking-policy', (route) =>
     route.fulfill({

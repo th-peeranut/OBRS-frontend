@@ -17,6 +17,13 @@
             formControlName="passengerInfo"
           ></app-dropdown-obrs-passenger>
         </div>
+        <!-- STATION LOAD FAILURE (OBRS-1222). The twin of the block in
+        home-booking.component.html, and here for a reason the card's ACs do not
+        name but OBRS-642's measurement does: `/` and `/schedule-booking` were
+        BOTH blocked by this one call, and `ProvinceEffect` is the same effect on
+        both. Since that effect now opts out of the global error modal, dropping
+        this element would leave this page failing with no signal whatsoever. -->
+        <app-station-load-error></app-station-load-error>
         <div class="station-section mt-4">
           @if (rawProvinceStationList | async) {
             <div class="station-group">

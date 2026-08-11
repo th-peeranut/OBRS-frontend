@@ -75,6 +75,10 @@ export default defineConfig({
     // branch there. This lane pins 1280x720 (rule 3 above), which is the point.
     '**/obrs-857-find-booking.spec.ts',
     '**/obrs-1038-station-seam.spec.ts',
+    // OBRS-1222. The HTTP interceptor raises SweetAlert2 into document.body,
+    // outside every Karma fixture, so "no modal reaches the page" is a claim
+    // only a real app can settle -- and that seam is where OBRS-642 shipped.
+    '**/obrs-1222-station-load-error.spec.ts',
     '**/route-smoke.spec.ts',
     '**/confirm-guidance-flow.spec.ts',
     '**/report-usability-issue.spec.ts',
@@ -159,6 +163,14 @@ export default defineConfig({
     // that went wrong on the equivalent claim one page over (OBRS-564). Hermetic
     // on the same terms as the rest: every /api/** call is fulfilled in-spec.
     '**/obrs-627-refund-policy.spec.ts',
+    // OBRS-1207. Replaces the two FAB-overlap cases in report-usability-issue.spec.ts,
+    // which compared a `position: fixed` box against a scrolling one and never pinned
+    // the scroll — so their verdict was a function of where the page came to rest. The
+    // same tree passed on PR #167, went red on the `dev` merge `8c43dcec`, and passed
+    // 6/6 locally. This one SOLVES for the scroll offsets that collide instead of
+    // sampling them, and asks `document.elementFromPoint()` rather than comparing
+    // rectangles. Hermetic on the same terms as the rest — it reuses those fixtures.
+    '**/obrs-1207-fab-occlusion.spec.ts',
   ],
 
   timeout: 60_000,

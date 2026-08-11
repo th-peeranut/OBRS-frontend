@@ -631,10 +631,64 @@ body.is-dark {
     color: #ffffff !important;
   }
 
-  // Schedule-results outer panel (.booking-container, light #f6fcff). Scope via
-  // :has(.schedule-item) so the home page's own .booking-container is untouched.
-  .booking-container:has(.schedule-item) {
+  // Schedule-results outer panel (.booking-container, light #f6fcff).
+  //
+  // OBRS-1228. This was scoped `:has(.schedule-item)`, to keep the home page's
+  // own `.booking-container` (home-booking.component.html:1) and the filter
+  // form's (schedule-booking-filter.component.html:1) out of it. But "contains
+  // a trip row" is only a PROXY for "is the results panel", and the proxy is
+  // false in exactly one state -- the empty one. There the panel kept #f6fcff
+  // on the dark page while section 7 above had already lifted `.title` to
+  // $dk-text (#e8eaf0): 1.05:1, a heading nobody can read on a white slab.
+  //
+  // Latent since the panel was themed, and reachable every evening after the
+  // last round departs once OBRS-1217 gave that state a screen worth looking
+  // at. Scope by the component tag instead: it says what the proxy was reaching
+  // for, and it stays true whether or not any trips came back.
+  app-schedule-booking-list .booking-container {
     background-color: $dk-bg !important;
+  }
+
+  // ...and everything the panel contains, which until now had only ever been
+  // drawn on a light surface. Measured by the contrast gate on $dk-bg:
+  // `.sold-out-today__title` 1.69:1, `__hint` / `.no-results` 4.10:1. The
+  // replacements are 17.70:1 and 7.46:1.
+  //
+  // `!important` on all of it, and it is load-bearing rather than a shrug.
+  // These are component styles, so Angular emits
+  // `.booking-container[_ngcontent-x] .sold-out-today__title[_ngcontent-x]` =
+  // (0,4,0), and the selector below is (0,2,2). Written without `!important`
+  // this rule parses, matches, and paints NOTHING -- the exact OBRS-767 shape
+  // the dark-override gate exists to catch. It was written that way first and
+  // the contrast gate reported all three still at their light-theme values.
+  app-schedule-booking-list {
+    .no-results,
+    .sold-out-today__hint {
+      color: $dk-text-muted !important;
+    }
+
+    .sold-out-today__title {
+      color: $dk-text !important;
+    }
+
+    // The next-day pill. It is not enough that white-on-fill is legible: WCAG
+    // 1.4.11 also wants the control's own edge to be findable against the page,
+    // and $primary-blue on $dk-bg is 3.54:1 at rest but $primary-blue-hover is
+    // 2.62:1 -- so it DIMS below the floor at the moment a pointer lands on it.
+    // Measured, both by the gate. Same inversion `.recent-route-btn` uses in
+    // section 6: $dk-accent fill (9.31:1 vs the page) carrying $dk-bg as the
+    // label (9.31:1 against its own fill), hover $dk-accent-hover (7.65:1).
+    // $text-white on $dk-accent would be 2.03:1, which is why the label flips
+    // dark rather than staying white.
+    .sold-out-today__action {
+      background: $dk-accent !important;
+      color: $dk-bg !important;
+
+      &:hover,
+      &:focus-visible {
+        background: $dk-accent-hover !important;
+      }
+    }
   }
 }
 
