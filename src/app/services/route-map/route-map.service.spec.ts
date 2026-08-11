@@ -1,4 +1,4 @@
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { RouteMapService } from './route-map.service';
 
 function createHttpStub(responseData: unknown): any {
@@ -107,6 +107,108 @@ describe('RouteMapService', () => {
         'test_market',
       ]);
       done();
+    });
+  });
+
+  // OBRS-1213 moved the dedup DOWN, from `getPickupDropoffCached`'s mapped
+  // result to the raw GET, because /home now has two independent consumers of
+  // the same route data: the map (which needs the error to propagate so its
+  // retry button means something) and the booking form's origin/destination
+  // filter (which degrades to null).
+  describe('one GET per URL, replayed (OBRS-1213)', () => {
+    /** Counts calls and lets the test decide what each one answers. */
+    function createCountingHttpStub(answers: () => any): any {
+      const stub: any = {
+        calls: [] as string[],
+        get: (url: string) => {
+          stub.calls.push(url);
+          return answers();
+        },
+      };
+      return stub;
+    }
+
+    it('issues ONE request no matter how many callers ask for the same route', () => {
+      const http = createCountingHttpStub(() => of({ data: { pickup: [], dropoff: [] } }));
+      const service = new RouteMapService(http);
+
+      service.getPickupDropoff('corridor').subscribe();
+      service.getPickupDropoffCached('corridor').subscribe();
+      service.getPickupDropoffCached('corridor').subscribe();
+
+      expect(http.calls.length).toBe(1);
+    });
+
+    it('still issues one request PER route — the dedup keys on the URL, not the endpoint', () => {
+      const http = createCountingHttpStub(() => of({ data: { pickup: [], dropoff: [] } }));
+      const service = new RouteMapService(http);
+
+      service.getPickupDropoffCached('outbound').subscribe();
+      service.getPickupDropoffCached('inbound').subscribe();
+
+      expect(http.calls.length).toBe(2);
+    });
+
+    it('replays the response to a caller that subscribes after the first one finished', (done) => {
+      const http = createCountingHttpStub(() => of({ data: { pickup: [], dropoff: [] } }));
+      const service = new RouteMapService(http);
+
+      service.getPickupDropoffCached('corridor').subscribe();
+      service.getPickupDropoffCached('corridor').subscribe((data) => {
+        expect(data).toEqual({ pickup: [], dropoff: [] } as any);
+        expect(http.calls.length).toBe(1);
+        done();
+      });
+    });
+
+    it('dedupes /api/routes too, so the map and the booking form share one call', () => {
+      const http = createCountingHttpStub(() => of({ data: [] }));
+      const service = new RouteMapService(http);
+
+      service.getActiveRoutes().subscribe();
+      service.getActiveRoutes().subscribe();
+      service.getFirstActiveRouteSlug().subscribe();
+
+      expect(http.calls.length).toBe(1);
+    });
+
+    // This is the reason `shared()` is hand-written instead of a bare
+    // `shareReplay`: shareReplay caches the ERROR notification too, so without
+    // the eviction the map's retry button would re-subscribe to a dead
+    // observable and "fail" forever with no request leaving the browser.
+    it('a FAILED request is not cached — the next caller really refetches', () => {
+      let shouldFail = true;
+      const http = createCountingHttpStub(() =>
+        shouldFail
+          ? throwError(() => new Error('network down'))
+          : of({ data: { pickup: [], dropoff: [] } })
+      );
+      const service = new RouteMapService(http);
+
+      let firstError: unknown = null;
+      service.getPickupDropoff('corridor').subscribe({ error: (e) => (firstError = e) });
+      expect(firstError).toBeTruthy();
+      expect(http.calls.length).toBe(1);
+
+      shouldFail = false;
+      let recovered: unknown = null;
+      service.getPickupDropoff('corridor').subscribe((res) => (recovered = res));
+
+      expect(http.calls.length).toBe(2);
+      expect(recovered).toBeTruthy();
+    });
+
+    it('propagates the failure to the raw caller; only the cached variant swallows it', () => {
+      const http = createCountingHttpStub(() => throwError(() => new Error('network down')));
+      const service = new RouteMapService(http);
+
+      let raised = false;
+      service.getPickupDropoff('corridor').subscribe({ error: () => (raised = true) });
+      expect(raised).toBeTrue();
+
+      let swallowed: unknown = 'untouched';
+      service.getPickupDropoffCached('corridor').subscribe((data) => (swallowed = data));
+      expect(swallowed).toBeNull();
     });
   });
 });

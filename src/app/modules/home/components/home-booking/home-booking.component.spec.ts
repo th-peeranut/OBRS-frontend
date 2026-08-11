@@ -25,12 +25,19 @@ import {
   createAuthServiceStub,
   createBookingServiceStub,
   createLanguageServiceStub,
+  createRouteMapServiceStub,
   createRouterStub,
   createStoreStub,
 } from '../../../../testing/test-stubs';
+import { RouteMapService } from '../../../../services/route-map/route-map.service';
 import { LanguageService } from '../../../../shared/services/language.service';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
 import { RECENT_ROUTES_CACHE_KEY, saveRecentRoute } from '../../../../shared/lib/recent-routes';
+// OBRS-1222: this template now renders `app-station-load-error`. Declared here
+// rather than schema-suppressed so the slices keep failing on a REAL unknown
+// element. With `createStoreStub()` its two selectors both read null, so it
+// renders nothing and no assertion in this file changes.
+import { StationLoadErrorComponent } from '../../../../shared/components/station-load-error/station-load-error.component';
 
 /** OBRS-564's `BookingPolicyService` resolves the real date-picker cap. */
 function createBookingPolicyServiceStub(): BookingPolicyService {
@@ -55,6 +62,8 @@ function makeHomeBooking(
     auth?: unknown;
     booking?: unknown;
     policy?: unknown;
+    routeMap?: unknown;
+    station?: unknown;
   } = {}
 ): HomeBookingComponent {
   return new HomeBookingComponent(
@@ -65,8 +74,54 @@ function makeHomeBooking(
     (overrides.auth ?? createAuthServiceStub(false)) as never,
     (overrides.booking ?? createBookingServiceStub()) as never,
     (overrides.policy ?? createBookingPolicyServiceStub()) as never,
+    (overrides.routeMap ?? createRouteMapServiceStub()) as never,
+    (overrides.station ?? createStationServiceStub()) as never,
     createLanguageServiceStub() as never
   );
+}
+
+/** OBRS-1212: `StationService` answering with NO province data — the ungrouped
+ *  path. It is the default so that every pre-existing spec keeps asserting the
+ *  flat shape it was written against; a spec that wants headings passes
+ *  `createStationServiceStub(PROVINCES)` explicitly. */
+function createStationServiceStub(provinces: unknown[] | null = null): any {
+  return {
+    getProvincesWithStops: () => of({ code: 200, message: 'OK', data: provinces }),
+  };
+}
+
+/**
+ * OBRS-1212: the selectable stations of a dropdown binding, whichever shape it
+ * is in.
+ *
+ * The two lists hold `StationApi[]` when there is no province data and
+ * `StationGroup[]` when there is. Assertions about WHICH stations are offered
+ * are true of both, so they go through here rather than being duplicated per
+ * shape — and a spec written before grouping existed keeps meaning what it
+ * meant.
+ */
+function offeredStations(list: readonly any[]): any[] {
+  return list.flatMap((entry) => (Array.isArray(entry?.stations) ? entry.stations : [entry]));
+}
+
+/** OBRS-1213: a RouteMapService stub that answers with real route segments —
+ *  `[{slug, segments: {pickup, dropoff}}]`. See ROUTES below for the shape the
+ *  tests use and why. */
+function createRouteMapServiceStubWithRoutes(routes: unknown[]): any {
+  const bySlug = new Map<string, unknown>(
+    routes.map((r: any) => [r.slug, r.segments])
+  );
+  return {
+    getActiveRoutes: () => of(routes.map((r: any) => ({ slug: r.slug }))),
+    getPickupDropoffCached: (slug: string) => of(bySlug.get(slug) ?? null),
+    getPickupDropoff: () => of(null),
+    getFirstActiveRouteSlug: () => of(null),
+  };
+}
+
+/** A `RouteStop` with only the fields the OBRS-1213 derivation reads. */
+function routeStop(order: number, slug: string): any {
+  return { order, slug, name: slug, address: '', approxTime: '' };
 }
 
 function station(id: number): StationApi {
@@ -221,8 +276,8 @@ describe('HomeBookingComponent', () => {
       expect(component.getFormValue('stopStationId')).toBe(2);
       // syncStationOptions() ran: the chosen destination is excluded from the
       // origin picker's own options and vice versa.
-      expect(component.startProvinceStationList.some((s) => s.id === 2)).toBeFalse();
-      expect(component.endProvinceStationList.some((s) => s.id === 1)).toBeFalse();
+      expect(offeredStations(component.startProvinceStationList).some((s) => s.id === 2)).toBeFalse();
+      expect(offeredStations(component.endProvinceStationList).some((s) => s.id === 1)).toBeFalse();
     });
 
     it('onSearch(): writes the searched route to localStorage only when both stations resolve', () => {
@@ -371,7 +426,7 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
     };
 
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -397,6 +452,11 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
         // this test stays about maxDate and nothing else.
         { provide: AuthService, useValue: createAuthServiceStub(false) },
         { provide: BookingService, useValue: createBookingServiceStub() },
+        // OBRS-1213: RouteMapService pulls HttpClient transitively, exactly as
+        // AuthService does above. The stub answers "no active routes", which is
+        // the degrade path — every slice below keeps seeing the unfiltered
+        // roster it was written against.
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
       ],
     }).compileComponents();
 
@@ -445,7 +505,7 @@ describe('HomeBookingComponent — date labels distinguish outbound from return 
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -463,6 +523,11 @@ describe('HomeBookingComponent — date labels distinguish outbound from return 
         { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub(false) },
         { provide: BookingService, useValue: createBookingServiceStub() },
+        // OBRS-1213: RouteMapService pulls HttpClient transitively, exactly as
+        // AuthService does above. The stub answers "no active routes", which is
+        // the degrade path — every slice below keeps seeing the unfiltered
+        // roster it was written against.
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
       ],
     }).compileComponents();
 
@@ -532,7 +597,7 @@ describe('HomeBookingComponent — each date field owns a unique input id its la
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -550,6 +615,11 @@ describe('HomeBookingComponent — each date field owns a unique input id its la
         { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub(false) },
         { provide: BookingService, useValue: createBookingServiceStub() },
+        // OBRS-1213: RouteMapService pulls HttpClient transitively, exactly as
+        // AuthService does above. The stub answers "no active routes", which is
+        // the degrade path — every slice below keeps seeing the unfiltered
+        // roster it was written against.
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
       ],
     }).compileComponents();
 
@@ -671,7 +741,7 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -689,6 +759,11 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
         { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub(false) },
         { provide: BookingService, useValue: createBookingServiceStub() },
+        // OBRS-1213: RouteMapService pulls HttpClient transitively, exactly as
+        // AuthService does above. The stub answers "no active routes", which is
+        // the degrade path — every slice below keeps seeing the unfiltered
+        // roster it was written against.
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
       ],
     }).compileComponents();
 
@@ -852,7 +927,7 @@ describe('HomeBookingComponent — a date can only be chosen from the calendar (
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -870,6 +945,11 @@ describe('HomeBookingComponent — a date can only be chosen from the calendar (
         { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub(false) },
         { provide: BookingService, useValue: createBookingServiceStub() },
+        // OBRS-1213: RouteMapService pulls HttpClient transitively, exactly as
+        // AuthService does above. The stub answers "no active routes", which is
+        // the degrade path — every slice below keeps seeing the unfiltered
+        // roster it was written against.
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
         {
           provide: LanguageService,
           useValue: createLanguageServiceStub('D, dd/mm/yy'),
@@ -970,7 +1050,7 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
     store = createStoreStubWithValue([STATION_1, STATION_2, STATION_3]);
 
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -988,6 +1068,11 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
         { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub(false) },
         { provide: BookingService, useValue: createBookingServiceStub() },
+        // OBRS-1213: RouteMapService pulls HttpClient transitively, exactly as
+        // AuthService does above. The stub answers "no active routes", which is
+        // the degrade path — every slice below keeps seeing the unfiltered
+        // roster it was written against.
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
       ],
     }).compileComponents();
 
@@ -1034,10 +1119,10 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
     swapButton()!.click();
     fixture.detectChanges();
 
-    expect(component.startProvinceStationList.map((s) => s.id)).not.toContain(STATION_1.id);
-    expect(component.startProvinceStationList.map((s) => s.id)).toContain(STATION_2.id);
-    expect(component.endProvinceStationList.map((s) => s.id)).not.toContain(STATION_2.id);
-    expect(component.endProvinceStationList.map((s) => s.id)).toContain(STATION_1.id);
+    expect(offeredStations(component.startProvinceStationList).map((s) => s.id)).not.toContain(STATION_1.id);
+    expect(offeredStations(component.startProvinceStationList).map((s) => s.id)).toContain(STATION_2.id);
+    expect(offeredStations(component.endProvinceStationList).map((s) => s.id)).not.toContain(STATION_2.id);
+    expect(offeredStations(component.endProvinceStationList).map((s) => s.id)).toContain(STATION_1.id);
   });
 
   it('AC#2: the pickers render the swapped station, not just the model', () => {
@@ -1162,6 +1247,166 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
   });
 });
 
+describe('HomeBookingComponent — the dropdowns offer only stops that can produce a trip (OBRS-1213)', () => {
+  // The prod shape in miniature (measured 2026-08-10): two routes that are the
+  // two directions of ONE corridor. `station-4` is a drop-off on both and a
+  // pickup on neither — the four Bangkok stops this card was opened for.
+  // `station-5` is on the roster but on no route at all. `station-3` is a
+  // drop-off outbound and a pickup inbound, so it belongs on both dropdowns,
+  // which is what keeps the composition tests below from being vacuous.
+  //
+  // The outbound pickup at order 5 sits BETWEEN its two drop-offs on purpose:
+  // that is what makes "downstream" a real test rather than a list-membership
+  // one, and it is the case an index-based comparison gets wrong (OBRS-1052).
+  const ROUTES = [
+    {
+      slug: 'outbound',
+      segments: {
+        pickup: [routeStop(1, 'station-1'), routeStop(5, 'station-2')],
+        dropoff: [routeStop(3, 'station-3'), routeStop(7, 'station-4')],
+      },
+    },
+    {
+      slug: 'inbound',
+      segments: {
+        pickup: [routeStop(1, 'station-3')],
+        dropoff: [routeStop(9, 'station-1')],
+      },
+    },
+  ];
+  const ROSTER = [station(1), station(2), station(3), station(4), station(5)];
+
+  function build(routeMap: unknown): HomeBookingComponent {
+    const component = makeHomeBooking({
+      store: createStoreStubWithValue(ROSTER),
+      routeMap,
+    });
+    component.ngOnInit();
+    return component;
+  }
+
+  function originIds(component: HomeBookingComponent): number[] {
+    return offeredStations(component.startProvinceStationList).map((s) => s.id);
+  }
+
+  function destinationIds(component: HomeBookingComponent): number[] {
+    return offeredStations(component.endProvinceStationList).map((s) => s.id);
+  }
+
+  it('AC#1: the origin dropdown drops every stop that is nobody’s pickup', () => {
+    const component = build(createRouteMapServiceStubWithRoutes(ROUTES));
+
+    expect(originIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2, 3]));
+    // 4 is a drop-off on both routes and a pickup on neither (the four Bangkok
+    // stops on prod); 5 is on no route at all. Both were selectable before this
+    // card and neither could ever produce a trip.
+    expect(originIds(component)).not.toContain(4);
+    expect(originIds(component)).not.toContain(5);
+  });
+
+  it('AC#2: the destination dropdown drops every stop that is nobody’s drop-off', () => {
+    const component = build(createRouteMapServiceStubWithRoutes(ROUTES));
+
+    expect(destinationIds(component)).toEqual(jasmine.arrayWithExactContents([1, 3, 4]));
+    // `station-2` is a pickup on the outbound route and a drop-off nowhere.
+    expect(destinationIds(component)).not.toContain(2);
+    expect(destinationIds(component)).not.toContain(5);
+  });
+
+  it('AC#3: choosing an origin narrows the destinations to what is downstream of it', () => {
+    const component = build(createRouteMapServiceStubWithRoutes(ROUTES));
+
+    component.onStartStationChange(station(2));
+
+    // `station-2` boards at outbound order 5, so the order-3 drop-off is behind
+    // the van by then and only the order-7 one remains. The inbound route
+    // contributes nothing — `station-2` is not a pickup on it, so its own
+    // `station-1` drop-off must not leak in.
+    expect(destinationIds(component)).toEqual(jasmine.arrayWithExactContents([4]));
+  });
+
+  it('AC#3: each origin gets its OWN route’s downstream stops, not a shared list', () => {
+    const component = build(createRouteMapServiceStubWithRoutes(ROUTES));
+
+    component.onStartStationChange(station(3));
+
+    // `station-3` is a pickup only on the inbound route, whose single drop-off
+    // is `station-1`.
+    expect(destinationIds(component)).toEqual(jasmine.arrayWithExactContents([1]));
+  });
+
+  it('AC#3: a destination the new origin has just invalidated is CLEARED, not left selected', () => {
+    const component = build(createRouteMapServiceStubWithRoutes(ROUTES));
+
+    component.onEndStationChange(station(3));
+    expect(component.getFormValue('stopStationId')).toBe(3);
+
+    component.onStartStationChange(station(2));
+
+    // Hiding it from the list while leaving it in the form is how the
+    // impossible pair would still reach the search.
+    expect(component.getFormValue('stopStationId')).toBe('');
+    expect(destinationIds(component)).not.toContain(3);
+  });
+
+  it('releasing the destination puts that stop back in the origin list in the SAME pass', () => {
+    const component = build(createRouteMapServiceStubWithRoutes(ROUTES));
+
+    component.onEndStationChange(station(3));
+    expect(originIds(component)).not.toContain(3);
+
+    // Choosing station-2 invalidates station-3 as a destination, which frees it
+    // as an origin immediately — not at whatever later sync happens to run.
+    component.onStartStationChange(station(2));
+
+    expect(component.getFormValue('stopStationId')).toBe('');
+    expect(originIds(component)).toContain(3);
+  });
+
+  it('AC#6: a failed /api/routes degrades to offering every stop, never to an empty dropdown', () => {
+    const component = build({
+      getActiveRoutes: () => throwError(() => new Error('network down')),
+      getPickupDropoffCached: () => of(null),
+      getPickupDropoff: () => of(null),
+      getFirstActiveRouteSlug: () => of(null),
+    });
+
+    expect(originIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2, 3, 4, 5]));
+    expect(destinationIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2, 3, 4, 5]));
+  });
+
+  it('AC#6: an empty active-route list degrades the same way — it is not a claim that nothing is bookable', () => {
+    const component = build(createRouteMapServiceStubWithRoutes([]));
+
+    expect(originIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2, 3, 4, 5]));
+  });
+
+  it('AC#6: a route whose pickup-dropoff call fails is skipped, not treated as empty', () => {
+    const component = build({
+      getActiveRoutes: () => of([{ slug: 'outbound' }, { slug: 'dead' }]),
+      getPickupDropoffCached: (slug: string) =>
+        of(slug === 'outbound' ? ROUTES[0].segments : null),
+      getPickupDropoff: () => of(null),
+      getFirstActiveRouteSlug: () => of(null),
+    });
+
+    expect(originIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2]));
+  });
+
+  it('composes with the pre-existing rule that neither side offers the stop chosen on the other', () => {
+    const component = build(createRouteMapServiceStubWithRoutes(ROUTES));
+
+    // `station-3` is legitimately on BOTH dropdowns, so this rule is observable
+    // here at all — the new filter must narrow the lists, not replace that one.
+    expect(originIds(component)).toContain(3);
+
+    component.onEndStationChange(station(3));
+
+    expect(component.getFormValue('stopStationId')).toBe(3);
+    expect(originIds(component)).toEqual(jasmine.arrayWithExactContents([1, 2]));
+  });
+});
+
 /**
  * OBRS-1185 + OBRS-1025, done together per the owner's own sequencing note on
  * both cards: shipping the default flip alone would hide the one-way route
@@ -1238,7 +1483,7 @@ describe('HomeBookingComponent — trip-type pills and the return date field ren
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -1256,6 +1501,10 @@ describe('HomeBookingComponent — trip-type pills and the return date field ren
         { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub(false) },
         { provide: BookingService, useValue: createBookingServiceStub() },
+        // OBRS-1213: RouteMapService pulls HttpClient transitively, exactly as
+        // the six TestBeds above do. Added when this card merged `origin/dev`,
+        // which brought this seventh block in with OBRS-1185.
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
       ],
     }).compileComponents();
 
@@ -1316,5 +1565,141 @@ describe('HomeBookingComponent — trip-type pills and the return date field ren
     const pills = fixture.debugElement.queryAll(By.css('app-trip-type-toggle button'));
     expect(pills[0].nativeElement.getAttribute('aria-pressed')).toBe('false'); // one-way
     expect(pills[1].nativeElement.getAttribute('aria-pressed')).toBe('true'); // round-trip (default)
+  });
+});
+
+describe('HomeBookingComponent — the dropdowns group by province and follow the route order (OBRS-1212)', () => {
+  // The same corridor shape as the OBRS-1213 block above, with the route ORDER
+  // deliberately at odds with the id order: station-3 is pickup #1 and
+  // station-1 is pickup #2, so a list that comes out [1, 3] proves it fell back
+  // to `/api/stops`' id order, and [3, 1] proves it read `order` (AC#8). This is
+  // the real defect V66__reorder_chonburi_bangkok_pickup.sql left on prod.
+  const ROUTES = [
+    {
+      slug: 'outbound',
+      segments: {
+        pickup: [routeStop(2, 'station-1'), routeStop(1, 'station-3')],
+        dropoff: [routeStop(21, 'station-4'), routeStop(20, 'station-2')],
+      },
+    },
+  ];
+  const ROSTER = [station(1), station(2), station(3), station(4)];
+
+  /** station-1 and station-3 in one province, station-2 and station-4 in the
+   *  other — so a group is never a synonym for "one route half". */
+  const PROVINCES = [
+    {
+      slug: 'chonburi',
+      translations: { th: { label: 'ชลบุรี' }, en: { label: 'Chonburi' }, zh: { label: '春武里' } },
+      stops: [{ code: 'station-1' }, { code: 'station-3' }],
+    },
+    {
+      slug: 'bangkok',
+      translations: { th: { label: 'กรุงเทพมหานคร' }, en: { label: 'Bangkok' } },
+      stops: [{ code: 'station-2' }, { code: 'station-4' }],
+    },
+  ];
+
+  function build(provinces: unknown[] | null): HomeBookingComponent {
+    const component = makeHomeBooking({
+      store: createStoreStubWithValue(ROSTER),
+      routeMap: createRouteMapServiceStubWithRoutes(ROUTES),
+      station: createStationServiceStub(provinces),
+    });
+    component.ngOnInit();
+    return component;
+  }
+
+  it('AC#1: the origin dropdown comes out as province groups, each holding its own stops', () => {
+    const groups = build(PROVINCES).startProvinceStationList as any[];
+
+    expect(groups.map((g) => g.slug)).toEqual(['chonburi']);
+    // station-2 is a pickup on no route, so Bangkok contributes no origin and
+    // its heading must not appear at all.
+    expect(groups[0].stations.map((s: any) => s.slug)).toEqual(['station-3', 'station-1']);
+  });
+
+  it('AC#8: orders stops by their position along the route, NOT by id', () => {
+    const groups = build(PROVINCES).startProvinceStationList as any[];
+
+    // station-3 is `order` 1 with id 3; station-1 is `order` 2 with id 1. An id
+    // sort produces the exact reverse, which is what prod does today.
+    expect(groups[0].stations.map((s: any) => s.id)).toEqual([3, 1]);
+  });
+
+  it('AC#8: the destination dropdown is ordered too, by its own dropoff order', () => {
+    const groups = build(PROVINCES).endProvinceStationList as any[];
+
+    // station-2 is dropoff order 20 (id 2), station-4 is 21 (id 4) — here the
+    // route order and the id order agree, so this asserts the destination side
+    // reads the DROPOFF half rather than reusing the pickup map.
+    expect(groups[0].slug).toBe('bangkok');
+    expect(groups[0].stations.map((s: any) => s.slug)).toEqual(['station-2', 'station-4']);
+  });
+
+  it('AC#5: each group carries th, en and zh labels for the dropdown to localize', () => {
+    const groups = build(PROVINCES).startProvinceStationList as any[];
+
+    expect(groups[0].nameThai).toBe('ชลบุรี');
+    expect(groups[0].nameEnglish).toBe('Chonburi');
+    expect(groups[0].nameChinese).toBe('春武里');
+  });
+
+  it('AC#6: a failed province lookup renders the dropdown FLAT and complete, never empty', () => {
+    const flat = build(null).startProvinceStationList as any[];
+
+    expect(flat.every((entry) => entry.stations === undefined)).toBeTrue();
+    expect(flat.map((s) => s.slug)).toEqual(['station-3', 'station-1']);
+  });
+
+  it('AC#6: losing the province lookup costs the headings, not the ORDER', () => {
+    const grouped = build(PROVINCES).startProvinceStationList as any[];
+    const flat = build(null).startProvinceStationList as any[];
+
+    // The two screens must not disagree about the sequence — that would make
+    // the fallback a second, differently-sorted dropdown rather than the same
+    // one without headings.
+    expect(flat.map((s) => s.id)).toEqual(
+      grouped.flatMap((g) => g.stations).map((s: any) => s.id)
+    );
+  });
+
+  it('AC#4: swapping origin and destination re-groups both sides instead of leaving one flat', () => {
+    const component = build(PROVINCES);
+    component.onStartStationChange(station(3));
+    component.onEndStationChange(station(2));
+
+    component.onSwapStations();
+
+    const origins = component.startProvinceStationList as any[];
+    const destinations = component.endProvinceStationList as any[];
+    expect(origins.every((g) => Array.isArray(g.stations))).toBeTrue();
+    expect(destinations.every((g) => Array.isArray(g.stations))).toBeTrue();
+  });
+
+  it('AC#9: no group and no station label carries a leading sequence number', () => {
+    const groups = build(PROVINCES).startProvinceStationList as any[];
+
+    for (const group of groups) {
+      expect(group.nameThai).not.toMatch(/^\s*\d+[.)\s]/);
+      for (const station of group.stations) {
+        expect(String(station.slug)).not.toMatch(/^\s*\d+[.)\s]/);
+      }
+    }
+  });
+
+  it('AC#10: rebuilding the lists produces the identical sequence — the order cannot drift between renders', () => {
+    const component = build(PROVINCES);
+    const first = (component.startProvinceStationList as any[]).flatMap((g) =>
+      g.stations.map((s: any) => s.id)
+    );
+
+    component.onStartStationChange(station(3));
+    component.onStartStationChange(station(1));
+
+    const again = (component.startProvinceStationList as any[]).flatMap((g) =>
+      g.stations.map((s: any) => s.id)
+    );
+    expect(again).toEqual(first);
   });
 });

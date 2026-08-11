@@ -45,6 +45,7 @@ import { LoadingStateComponent } from './components/loading-state/loading-state.
 // (customer search — both legs, and the reschedule-options list), and the
 // defect OBRS-1099 was filed for was exactly N readers each deciding alone.
 import { ScheduleDelayNoticeComponent } from './components/schedule-delay-notice/schedule-delay-notice.component';
+import { StationLoadErrorComponent } from './components/station-load-error/station-load-error.component';
 
 // Directives
 // OBRS-272: relocated here from `modules/admin/components/` — see the
@@ -72,6 +73,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     AnalyticsConsentControlComponent,
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,
+    StationLoadErrorComponent,
     AdminModalBackdropDirective,
   ],
   imports: [
@@ -113,6 +115,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     AnalyticsConsentControlComponent,
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,
+    StationLoadErrorComponent,
 
     // Directives
     AdminModalBackdropDirective,

@@ -68,7 +68,7 @@ export class RescheduleEffect {
       withLatestFrom(this.store.pipe(select(selectStopsLookup))),
       filter(([, stopsLookup]) => Object.keys(stopsLookup).length === 0),
       switchMap(() =>
-        this.stationService.getAll(true).pipe(
+        this.stationService.getAll({ skipLoadingAlert: true }).pipe(
           map((response) => loadStopsLookupSuccess({ stopsLookup: this.toStopsLookup(response.data) })),
           catchError((error: unknown) =>
             of(

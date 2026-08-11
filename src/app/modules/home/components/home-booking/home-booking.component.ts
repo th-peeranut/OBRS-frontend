@@ -5,10 +5,21 @@ import dayjs from 'dayjs';
 import { Router } from '@angular/router';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { select, Store } from '@ngrx/store';
-import { catchError, Observable, of, Subject, Subscription, take, takeUntil } from 'rxjs';
+import {
+  catchError,
+  forkJoin,
+  map,
+  Observable,
+  of,
+  Subject,
+  Subscription,
+  switchMap,
+  take,
+  takeUntil,
+} from 'rxjs';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
-import { StationApi } from '../../../../shared/interfaces/station.interface';
+import { getStationSlugById, StationApi } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { AuthService } from '../../../../auth/auth.service';
 import { BookingService } from '../../../../services/booking/booking.service';
@@ -26,6 +37,22 @@ import {
 } from '../../../../services/booking-policy/booking-policy.service';
 import { LanguageService } from '../../../../shared/services/language.service';
 import { canSwapStationPair, isEmptyStationValue } from '../../../../shared/lib/station-swap';
+import { RouteMapService } from '../../../../services/route-map/route-map.service';
+import {
+  collectBookableDestinationSlugs,
+  collectBookableOriginSlugs,
+  filterStationsBySlugs,
+  RouteSegments,
+} from '../../../../shared/lib/bookable-stations';
+import {
+  buildStopOrderMap,
+  groupStationsByProvince,
+  ProvinceStopsApi,
+  RouteSide,
+  sortStationsByStopOrder,
+  StationGroup,
+} from '../../../../shared/lib/station-groups';
+import { StationService } from '../../../../services/station/station.service';
 import { carryReturnDate, defaultReturnDate } from '../../../../shared/lib/return-date';
 
 // OBRS-564: date-picker cap fallback, used only until the real public
@@ -94,8 +121,34 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
 
   rawProvinceStationList: Observable<StationApi[]>;
   allProvinceStationList: StationApi[] = [];
-  startProvinceStationList: StationApi[] = [];
-  endProvinceStationList: StationApi[] = [];
+  /** What the two `app-dropdown-group-obrs` instances are bound to.
+   *
+   *  OBRS-1212 widened the type: these hold PROVINCE GROUPS once
+   *  `/api/provinces/stops` has answered, and the flat `StationApi[]` before
+   *  that and forever after a failure. The dropdown switches branch on the
+   *  shape alone (`isGroupedOptions()` = `Array.isArray(options[0]?.stations)`),
+   *  so one binding covers both without the template knowing which it holds. */
+  startProvinceStationList: StationApi[] | StationGroup[] = [];
+  endProvinceStationList: StationApi[] | StationGroup[] = [];
+
+  /** OBRS-1212: province membership + the province's translated name, from
+   *  `GET /api/provinces/stops`.
+   *
+   *  `null` is load-bearing in exactly the way `routeSegments` is: it means
+   *  "province data unavailable", and every consumer reads it as "render the
+   *  dropdown flat" — the screen customers have today. A failed lookup must
+   *  cost the grouping, never the booking form (AC#6's rule, inherited). */
+  private provinceStops: ProvinceStopsApi[] | null = null;
+
+  /** OBRS-1213: the pickup/dropoff halves of every active route, used to keep
+   *  the two dropdowns to stops that can actually produce a trip.
+   *
+   *  `null` is load-bearing and means "route data unavailable" — before it
+   *  resolves, and permanently if the request fails or no active route comes
+   *  back. Every consumer below reads that as "offer everything", which is
+   *  exactly today's behaviour (AC#6): a customer who cannot reach
+   *  `/api/routes` still gets a usable form, never an empty dropdown. */
+  private routeSegments: RouteSegments[] | null = null;
 
   /** OBRS-575: up to 3 already-id-resolved, deduped, active-station-filtered
    *  recent-route candidates for the quick-pick strip. Plain field, never a
@@ -141,6 +194,8 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private bookingService: BookingService,
     private bookingPolicyService: BookingPolicyService,
+    private routeMapService: RouteMapService,
+    private stationService: StationService,
     languageService: LanguageService
   ) {
     this.minDate = new Date();
@@ -166,6 +221,9 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       // never resolves ids against an empty list and drops every route.
       this.recomputeRecentRouteCandidates();
     });
+
+    this.loadRouteSegments();
+    this.loadProvinceStops();
 
     // Switches the raw-pair SOURCE between the logged-in API and the
     // anonymous localStorage cache. Never issues the API call for an
@@ -366,21 +424,168 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     return this.bookingForm.get(controlName)?.value;
   }
 
+  /**
+   * OBRS-1213: loads the pickup/dropoff lists of every active route so the two
+   * dropdowns can be held to stops that can actually produce a trip.
+   *
+   * <p>No new endpoint and no new page-load request per route beyond the ones
+   * `/home` already issues: both `getActiveRoutes()` and `getPickupDropoffCached()`
+   * are deduped per URL in `RouteMapService` (see `shared()` there), so the map
+   * component sharing this page reuses the very same responses.
+   *
+   * <p>Failure is not reported anywhere: `catchError` leaves `routeSegments`
+   * null, which every consumer reads as "offer every stop" — the pre-fix
+   * behaviour. This is a REFINEMENT of the form, not a precondition for using
+   * it, so it must never block or alert (AC#6).
+   */
+  private loadRouteSegments(): void {
+    this.routeMapService
+      .getActiveRoutes()
+      .pipe(
+        switchMap((routes) =>
+          routes.length === 0
+            ? of<(RouteSegments | null)[]>([])
+            : forkJoin(
+                routes.map((route) =>
+                  this.routeMapService.getPickupDropoffCached(route.slug).pipe(take(1))
+                )
+              )
+        ),
+        catchError(() => of<(RouteSegments | null)[]>([])),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((segments) => {
+        const usable = segments.filter((s): s is RouteSegments => !!s);
+        // An empty result stays null rather than becoming an empty array: an
+        // empty array is a claim that NO stop is bookable, and would blank both
+        // dropdowns on the strength of a request that simply did not answer.
+        this.routeSegments = usable.length > 0 ? usable : null;
+        this.syncStationOptions();
+      });
+  }
+
+  /**
+   * OBRS-1212: loads which province every stop belongs to, so the two dropdowns
+   * can carry province headings.
+   *
+   * <p>This is the ONE request the card adds to `/home`, and it is deduped for
+   * the whole session inside `StationService` — the origin and the destination
+   * dropdown are built from a single response, not one each.
+   *
+   * <p>Failure leaves `provinceStops` null, which `syncStationOptions()` reads
+   * as "render flat". Nothing is alerted and nothing is retried: grouping is a
+   * refinement of a form that works without it, so a customer whose province
+   * lookup fails must still see every stop OBRS-1213 left them.
+   */
+  private loadProvinceStops(): void {
+    this.stationService
+      .getProvincesWithStops()
+      .pipe(
+        map((response) => response?.data ?? null),
+        catchError(() => of<ProvinceStopsApi[] | null>(null)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((provinces) => {
+        // An empty array stays null for the same reason `routeSegments` does:
+        // "the backend knows of no provinces" would silently strip every
+        // heading, and is indistinguishable here from a request that answered
+        // with nothing useful.
+        this.provinceStops = provinces?.length ? provinces : null;
+        this.syncStationOptions();
+      });
+  }
+
+  /**
+   * Rebuilds both dropdown option lists for the currently selected pair.
+   *
+   * <p>Three filters compose here, in this order:
+   *   1. OBRS-1213 — origins are the stops that are a `pickup` somewhere, and
+   *      destinations the stops reachable AFTER the chosen origin. Skipped
+   *      wholesale while `routeSegments` is null (see the field's comment).
+   *   2. the pre-existing "you cannot pick the same stop on both sides".
+   *   3. a destination the new origin has just invalidated is CLEARED, not
+   *      merely hidden — leaving it selected would submit exactly the
+   *      impossible pair this method exists to prevent, and the list on screen
+   *      would no longer contain it, so nothing would show the customer why.
+   *      Same reasoning, same trigger as `RouteMapHomeComponent.refreshDropoffOptions()`.
+   */
   private syncStationOptions(
     selectedStartId?: string | number | null,
     selectedStopId?: string | number | null
   ): void {
     const currentStartId =
       selectedStartId ?? this.bookingForm.get('startStationId')?.value;
-    const currentStopId =
+    let currentStopId =
       selectedStopId ?? this.bookingForm.get('stopStationId')?.value;
 
-    this.startProvinceStationList = this.allProvinceStationList.filter(
+    const originSlugs = this.routeSegments
+      ? collectBookableOriginSlugs(this.routeSegments)
+      : null;
+
+    // A start that is not a bookable origin at all — a stale prefill from
+    // booking history, a stop retired since — narrows nothing instead of
+    // narrowing to nothing. The alternative is a destination dropdown that is
+    // simply empty, with nothing on screen saying why.
+    const startSlug = getStationSlugById(currentStartId, this.allProvinceStationList);
+    const narrowFrom = originSlugs?.has(startSlug) ? startSlug : '';
+
+    const destinationSlugs = this.routeSegments
+      ? collectBookableDestinationSlugs(this.routeSegments, narrowFrom)
+      : null;
+
+    if (destinationSlugs && !isEmptyStationValue(currentStopId)) {
+      const stopSlug = getStationSlugById(currentStopId, this.allProvinceStationList);
+      if (!destinationSlugs.has(stopSlug)) {
+        this.bookingForm.patchValue({ stopStationId: '' });
+        // Cleared BEFORE the lists are built, not after: the origin list
+        // excludes whatever the destination currently is, so recomputing off
+        // the stale id would keep the just-released stop hidden from the
+        // origin dropdown until some later sync happened to run.
+        currentStopId = '';
+      }
+    }
+
+    const origins = filterStationsBySlugs(this.allProvinceStationList, originSlugs).filter(
       (item) => item.id !== Number(currentStopId)
     );
-    this.endProvinceStationList = this.allProvinceStationList.filter(
-      (item) => item.id !== Number(currentStartId)
+    const destinations = filterStationsBySlugs(
+      this.allProvinceStationList,
+      destinationSlugs
+    ).filter((item) => item.id !== Number(currentStartId));
+
+    this.startProvinceStationList = this.toDropdownOptions(origins, 'pickup');
+    this.endProvinceStationList = this.toDropdownOptions(destinations, 'dropoff');
+  }
+
+  /**
+   * OBRS-1212: turns a filtered station list into what the dropdown renders —
+   * ordered by position along the route, then bucketed by province.
+   *
+   * <p>Order comes from the ROUTE (`pickup`/`dropoff` `order`), never from
+   * `/api/stops`' id order and never from the order `/api/provinces/stops`
+   * happens to return: `Province.stops` is a bare `@OneToMany` with no
+   * `@OrderBy`, so its order is whatever Postgres returns and moves whenever a
+   * row is updated. Measured 2026-08-10 it already puts "ตลาดเนื่องจำนงค์"
+   * last in Chonburi, where the live dropdown shows it second (AC#8, AC#10).
+   *
+   * <p>Sort BEFORE grouping, not after: the buckets keep insertion order, so
+   * one sort of the flat list orders every group at once — and it means the
+   * ungrouped fallback below is ordered identically to the grouped one, rather
+   * than being a second, differently-sorted screen.
+   *
+   * <p>Falls back to the flat list whenever province data is unavailable
+   * (`groupStationsByProvince` returns null). Ordering survives that fallback:
+   * losing the province lookup costs the headings, not the sequence.
+   */
+  private toDropdownOptions(
+    stations: StationApi[],
+    side: RouteSide
+  ): StationApi[] | StationGroup[] {
+    const ordered = sortStationsByStopOrder(
+      stations,
+      buildStopOrderMap(this.routeSegments, side)
     );
+    return groupStationsByProvince(ordered, this.provinceStops) ?? ordered;
   }
 
   /** OBRS-575: fetches the logged-in user's booking history for the

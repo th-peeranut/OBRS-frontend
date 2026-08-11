@@ -1,6 +1,6 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
@@ -26,64 +26,91 @@ interface RouteListResponse {
 })
 export class RouteMapService {
   /**
-   * Session-scoped in-memory request-dedup cache for `getPickupDropoffCached`,
-   * keyed by route slug. Intentionally lighter than the map's two-tier
-   * Directions cache (localStorage + TTL) — this is purely a dedup so N rows
-   * referencing the same route on one page fire a single HTTP call; the
-   * server already `@Cacheable`s `getPickupDropoff` itself. Not persisted
-   * across page loads/reloads.
+   * Session-scoped in-memory request-dedup cache, keyed by request URL.
+   * Intentionally lighter than the map's two-tier Directions cache
+   * (localStorage + TTL) — this is purely a dedup so N callers asking for the
+   * same route on one page fire a single HTTP call; the server already
+   * `@Cacheable`s these endpoints itself. Not persisted across page loads.
+   *
+   * OBRS-1213 moved it DOWN one level, from `getPickupDropoffCached`'s mapped
+   * result to the raw GET, and widened it to `/api/routes`. The reason is that
+   * /home now has two independent consumers of the same route data — the map
+   * (`getPickupDropoff`, which needs the error to propagate so its "ลองใหม่"
+   * button means something) and the booking form's origin/destination filter
+   * (`getPickupDropoffCached`, which degrades to null). Deduping only the
+   * error-swallowing variant would have left those two issuing separate GETs
+   * for byte-identical data.
    */
-  private pickupDropoffCache = new Map<
-    string,
-    Observable<RoutePickupDropoffData | null>
-  >();
+  private sharedRequests = new Map<string, Observable<unknown>>();
 
   constructor(private http: HttpClient) {}
 
   getPickupDropoff(slug: string): Observable<RoutePickupDropoffResponse> {
-    return this.http.get<RoutePickupDropoffResponse>(
-      `${environment.apiUrl}/api/routes/${slug}/pickup-dropoff`,
-      { context: this.selfHandledContext() }
+    const url = `${environment.apiUrl}/api/routes/${slug}/pickup-dropoff`;
+    return this.shared(url, () =>
+      this.http.get<RoutePickupDropoffResponse>(url, {
+        context: this.selfHandledContext(),
+      })
     );
   }
 
   /**
-   * Same data as `getPickupDropoff`, memoized per slug for the life of the
-   * browser session (page load) and swallowing errors to `null` instead of
-   * propagating — callers (per-row trip-estimate chips) treat a failure the
-   * same as "not yet resolved": the chip simply stays absent, no AlertService
-   * involved. `shareReplay({ refCount: false })` keeps the single in-flight/
-   * completed request alive and replayed to every subscriber (each schedule
-   * row on the same route), regardless of how many unsubscribe.
+   * Same data as `getPickupDropoff` (and the same single HTTP call — see
+   * `shared()`), swallowing errors to `null` instead of propagating: callers
+   * (per-row trip-estimate chips, the origin/destination filter) treat a
+   * failure the same as "not yet resolved" — the chip stays absent, the
+   * dropdown keeps offering every stop — with no AlertService involved.
    */
   getPickupDropoffCached(slug: string): Observable<RoutePickupDropoffData | null> {
-    const cached = this.pickupDropoffCache.get(slug);
-    if (cached) {
-      return cached;
-    }
-
-    const request$ = this.getPickupDropoff(slug).pipe(
+    return this.getPickupDropoff(slug).pipe(
       map((response) => response?.data ?? null),
-      catchError(() => of<RoutePickupDropoffData | null>(null)),
-      shareReplay({ bufferSize: 1, refCount: false })
+      catchError(() => of<RoutePickupDropoffData | null>(null))
     );
-    this.pickupDropoffCache.set(slug, request$);
-    return request$;
   }
 
   getActiveRoutes(): Observable<RouteListItem[]> {
-    return this.http
-      .get<RouteListResponse>(`${environment.apiUrl}/api/routes`, {
+    const url = `${environment.apiUrl}/api/routes`;
+    return this.shared(url, () =>
+      this.http.get<RouteListResponse>(url, {
         context: this.selfHandledContext(),
       })
-      .pipe(
-        map((response) => {
-          const routes = response?.data ?? [];
-          return routes.filter(
-            (r) => this.isActiveStatus(r.status) && !this.isTestRoute(r.slug)
-          );
-        })
-      );
+    ).pipe(
+      map((response) => {
+        const routes = response?.data ?? [];
+        return routes.filter(
+          (r) => this.isActiveStatus(r.status) && !this.isTestRoute(r.slug)
+        );
+      })
+    );
+  }
+
+  /**
+   * Memoizes one GET per key for the life of the page, replaying its single
+   * response to every subscriber (`refCount: false` keeps it alive across
+   * unsubscribes), and re-raising a failure to each of them unchanged.
+   *
+   * <p>The eviction is the whole point of writing this by hand instead of a
+   * bare `shareReplay`: `shareReplay` also replays the ERROR notification, so a
+   * cached failure would be permanent — the map's retry button would re-subscribe
+   * to the same dead observable and "fail" forever without a request ever leaving
+   * the browser. Dropping the key inside `catchError` means the next caller
+   * builds a fresh request, which is exactly what a retry is.
+   */
+  private shared<T>(key: string, factory: () => Observable<T>): Observable<T> {
+    const hit = this.sharedRequests.get(key) as Observable<T> | undefined;
+    if (hit) {
+      return hit;
+    }
+
+    const request$ = factory().pipe(
+      catchError((error) => {
+        this.sharedRequests.delete(key);
+        return throwError(() => error);
+      }),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+    this.sharedRequests.set(key, request$);
+    return request$;
   }
 
   getFirstActiveRouteSlug(): Observable<string | null> {

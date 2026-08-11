@@ -68,6 +68,15 @@ import { appReducer } from './shared/stores/app.reducer';
 // dispatched from the home page and from the results page, and `forFeature`
 // would only see the one whose module happened to be loaded.
 import { AnalyticsEffect } from './shared/stores/analytics/analytics.effect';
+// OBRS-1222: root for the same reason. `ProvinceEffect` is registered via
+// `forFeature` in six lazy modules and can fail under any of them, while
+// `app-station-load-error` renders under two — a `forFeature` registration
+// would drop the failure action wherever the reducer was not loaded, and a
+// dropped failure is indistinguishable from a successful load.
+import {
+  STATION_LOAD_STATUS_FEATURE_KEY,
+  StationLoadStatusReducer,
+} from './shared/stores/station/station-load-status.reducer';
 
 import { AppComponent } from './app.component';
 import { SharedModule } from './shared/shared.module';
@@ -96,7 +105,10 @@ export function HttpLoaderFactory(http: HttpClient) {
     
     // STORE IMPORT
     EffectsModule.forRoot([AnalyticsEffect]),
-    StoreModule.forRoot({ appState: appReducer }),
+    StoreModule.forRoot({
+      appState: appReducer,
+      [STATION_LOAD_STATUS_FEATURE_KEY]: StationLoadStatusReducer,
+    }),
     StoreDevtoolsModule.instrument({ maxAge: 25, logOnly: environment.production }),
 
     SharedModule,

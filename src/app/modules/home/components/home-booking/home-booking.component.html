@@ -31,6 +31,15 @@
           [activeDestinationId]="getFormValue('stopStationId')"
           (routeSelected)="onRecentRouteSelected($event)"
         ></app-recent-routes-quick-pick>
+        <!-- STATION LOAD FAILURE (OBRS-1222). Renders nothing at all unless the
+        roster load failed AND the localStorage cache left the roster empty —
+        the condition lives in the component, not here, because the identical
+        block sits in schedule-booking-filter and the twin booking forms have
+        already drifted on a duplicated line four times (OBRS-1021/1023/1028/1036).
+        Sits OUTSIDE `.station-section` for the same reason the quick-pick strip
+        does: that element is a flex ROW, so a child would land beside the
+        dropdowns instead of above them. -->
+        <app-station-load-error></app-station-load-error>
         <!-- `mt-4` moved into the scss (OBRS-928): the utility carries
         `!important`, which would out-rank the tighter `.has-routes +` spacing
         rule that pulls the fields up against the strip. -->

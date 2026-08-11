@@ -343,4 +343,167 @@ describe('DropdownGroupObrsComponent', () => {
       expect(valueText().classList).toContain('is-placeholder');
     });
   });
+
+  /**
+   * OBRS-1212: the grouped branch. It shipped with the component and had never
+   * once executed — `isGroupedOptions()` is `Array.isArray(options[0]?.stations)`
+   * and `/api/stops` has no such field — so everything below is a first
+   * assertion, not a regression net.
+   */
+  describe('grouped options (OBRS-1212)', () => {
+    let fixture: ComponentFixture<DropdownGroupObrsComponent>;
+    let component: DropdownGroupObrsComponent;
+
+    /** The shape `home-booking` now binds: province groups whose `stations` are
+     *  the same StationApi objects the flat branch used to receive. */
+    const GROUPED_OPTIONS = [
+      {
+        slug: 'chonburi',
+        nameThai: 'ชลบุรี',
+        nameEnglish: 'Chonburi',
+        nameChinese: '春武里',
+        stations: [STATION_OPTIONS[1]],
+      },
+      {
+        slug: 'bangkok',
+        nameThai: 'กรุงเทพมหานคร',
+        nameEnglish: 'Bangkok',
+        stations: [STATION_OPTIONS[0]],
+      },
+    ];
+
+    function setupGrouped(options: unknown[] = GROUPED_OPTIONS): void {
+      TestBed.configureTestingModule({
+        imports: [DropdownGroupObrsComponent, TranslateModule.forRoot()],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(DropdownGroupObrsComponent);
+      component = fixture.componentInstance;
+      // `currentLang` is unset by default, and every label resolution in this
+      // component keys off `=== 'th'` — leaving it unset renders the ENGLISH
+      // labels, which is a real behaviour but not the one a Thai customer
+      // sees, and it makes a Thai search term match nothing.
+      TestBed.inject(TranslateService).use('th');
+      fixture.componentRef.setInput('label', 'START_STATION');
+      fixture.componentRef.setInput('searchable', true);
+      fixture.componentRef.setInput('options', options);
+      document.body.appendChild(fixture.nativeElement);
+      fixture.detectChanges();
+    }
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    function headers(): string[] {
+      return Array.from(
+        fixture.nativeElement.querySelectorAll('.dropdown-header') as NodeListOf<HTMLElement>
+      ).map((el) => el.textContent!.trim());
+    }
+
+    function items(): string[] {
+      return Array.from(
+        fixture.nativeElement.querySelectorAll('.dropdown-option') as NodeListOf<HTMLElement>
+      ).map((el) => el.textContent!.trim());
+    }
+
+    function typeQuery(value: string): void {
+      const input: HTMLInputElement =
+        fixture.nativeElement.querySelector('.dropdown-search-input');
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    }
+
+    it('takes the grouped branch and renders a header per group', () => {
+      setupGrouped();
+
+      expect(component.isGroupedOptions()).toBeTrue();
+      expect(headers()).toEqual(['ชลบุรี', 'กรุงเทพมหานคร']);
+      expect(items()).toEqual(['สถานีเชียงใหม่อาเขต', 'สถานีหมอชิต']);
+    });
+
+    it('AC#2: the search box still filters — this is the branch that used to iterate the RAW list', () => {
+      setupGrouped();
+
+      typeQuery('เชียงใหม่');
+
+      expect(items()).toEqual(['สถานีเชียงใหม่อาเขต']);
+    });
+
+    it('AC#2: a group whose every station was filtered out disappears WITH its header', () => {
+      setupGrouped();
+
+      typeQuery('เชียงใหม่');
+
+      // The Bangkok heading must go too — a heading with nothing under it says
+      // "this province has no stops", which is false.
+      expect(headers()).toEqual(['ชลบุรี']);
+    });
+
+    it('AC#2: filters ACROSS groups, matching stations in more than one province at once', () => {
+      setupGrouped();
+
+      typeQuery('สถานี');
+
+      expect(headers()).toEqual(['ชลบุรี', 'กรุงเทพมหานคร']);
+      expect(items().length).toBe(2);
+    });
+
+    it('AC#2: a query matching only a GROUP NAME shows nothing — a heading is not selectable', () => {
+      setupGrouped();
+
+      typeQuery('ชลบุรี');
+
+      expect(items()).toEqual([]);
+      expect(component.showNoSearchResults).toBeTrue();
+    });
+
+    it('AC#2: clearing the query restores every group and every station', () => {
+      setupGrouped();
+      typeQuery('เชียงใหม่');
+      typeQuery('');
+
+      expect(headers()).toEqual(['ชลบุรี', 'กรุงเทพมหานคร']);
+      expect(items().length).toBe(2);
+    });
+
+    it('AC#3: resolves a bound value to the station INSIDE a group — the grouped branch of resolveSelectedValue() that had never run', () => {
+      setupGrouped();
+
+      fixture.componentRef.setInput('value', STATION_OPTIONS[0].id);
+      fixture.detectChanges();
+
+      expect(component.selectedValue).toBe(STATION_OPTIONS[0]);
+      expect(
+        (fixture.nativeElement.querySelector('.value-text') as HTMLElement).textContent!.trim()
+      ).toBe('สถานีหมอชิต');
+    });
+
+    it('AC#3: picking a station emits the station, not its group', () => {
+      setupGrouped();
+      const emitted: unknown[] = [];
+      component.currentValue.subscribe((v) => emitted.push(v));
+
+      (
+        fixture.nativeElement.querySelectorAll('.dropdown-option')[0] as HTMLElement
+      ).click();
+
+      expect(emitted).toEqual([STATION_OPTIONS[1]]);
+    });
+
+    it('AC#9: renders the station label as-is, with no sequence number in front', () => {
+      setupGrouped();
+
+      for (const text of items()) {
+        expect(text).not.toMatch(/^\s*\d+[.)\s]/);
+      }
+    });
+
+    it('falls back to the flat branch when the options are plain stations, so a failed province lookup costs the headings and nothing else', () => {
+      setupGrouped(STATION_OPTIONS);
+
+      expect(component.isGroupedOptions()).toBeFalse();
+      expect(headers()).toEqual([]);
+      expect(items().length).toBe(2);
+    });
+  });
 });

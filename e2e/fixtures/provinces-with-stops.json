@@ -1,0 +1,26 @@
+{
+  "code": 200,
+  "message": "OK",
+  "data": [
+    {
+      "id": 1,
+      "slug": "chonburi",
+      "translations": {
+        "th": { "label": "ชลบุรี", "description": null },
+        "en": { "label": "Chonburi", "description": null },
+        "zh": { "label": "春武里", "description": null }
+      },
+      "stops": [{ "id": 1, "code": "nong-sak" }]
+    },
+    {
+      "id": 2,
+      "slug": "bangkok",
+      "translations": {
+        "th": { "label": "กรุงเทพมหานคร", "description": null },
+        "en": { "label": "Bangkok", "description": null },
+        "zh": { "label": "曼谷", "description": null }
+      },
+      "stops": [{ "id": 2, "code": "bangkok" }]
+    }
+  ]
+}

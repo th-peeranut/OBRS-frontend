@@ -47,7 +47,18 @@ const STOPS = [1, 2, 3].map((id) => ({
 async function mockApi(page: Page): Promise<void> {
   await page.route('**/api/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname;
-    const body = pathname.endsWith('/stops') ? ok(STOPS) : ok(null);
+    // `/api/provinces/stops` (OBRS-1212) ALSO ends in `/stops`, so the suffix
+    // test alone hands the province lookup a list of stops. The dropdown then
+    // finds no province for any of them and renders ungrouped, which is what
+    // this spec measures anyway — but silently, off a fixture that means
+    // something else. Answered explicitly instead: this spec is about the
+    // station bar's seam, not about grouping.
+    const body =
+      pathname.endsWith('/provinces/stops')
+        ? ok([])
+        : pathname.endsWith('/stops')
+          ? ok(STOPS)
+          : ok(null);
 
     await route.fulfill({
       status: 200,

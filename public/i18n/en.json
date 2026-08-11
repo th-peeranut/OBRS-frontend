@@ -12,7 +12,7 @@
     "CONTROL_STATUS_UNSET": "Current setting: undecided, so we are not measuring your visit.",
     "CONTROL_WITHDRAW": "Withdraw consent",
     "CONTROL_GRANT": "Give consent",
-    "CONTROL_NOTE": "Withdrawing takes effect immediately, with no need to reload the page, and on your next visit the analytics scripts are not loaded at all. Data already sent before you withdrew cannot be recalled from the providers. Either choice leaves searching, booking and payment working exactly the same."
+    "CONTROL_NOTE": "Withdrawing takes effect immediately, with no need to reload the page, and on your next visit the analytics scripts are not loaded at all. Withdrawing stops collection from that point on; data collected before you withdrew cannot be recalled from the providers, and an item already queued may still be sent in the seconds after you withdraw. Either choice leaves searching, booking and payment working exactly the same."
   },
   "USABILITY_REPORT": {
     "FAB": {
@@ -2393,6 +2393,10 @@
     "PLANNED": "Scheduled {{time}}",
     "DEPARTS_ON": "Departs {{date}}",
     "A11Y": "This trip has been announced as delayed. It was scheduled to depart at {{planned}} and now departs at {{effective}}."
+  },
+  "STATION_LOAD_ERROR": {
+    "MESSAGE": "We couldn't load the station list, so the stops below are empty.",
+    "RETRY": "Try again"
   },
   "SCHEDULE_BOOKING": {
     "HEADER": "Trip type",

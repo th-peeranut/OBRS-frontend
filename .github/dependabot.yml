@@ -1,0 +1,73 @@
+# OBRS-922 — the watchdog that makes OBRS-914 a one-time cost instead of a recurring
+# cliff. Before this file, `ls -a .github/` in this repo had no dependabot.yml and no
+# renovate.json, so Angular went past FOUR majors (18 -> 21) without anything making a
+# sound, and the catch-up cost a full theming migration plus ~54 component renames.
+#
+# WHY THIS FILE IS ON `main` WHEN EVERY OTHER CHANGE IN THIS REPO LANDS ON `dev`:
+# GitHub reads .github/dependabot.yml from the repository's DEFAULT branch, and this
+# repo's default branch is `main` (measured 2026-08-02:
+#   gh api repos/th-peeranut/OBRS-frontend --jq .default_branch  ->  main
+# while `dev` was 158 commits ahead of it). A copy that existed only on `dev` risks
+# never being read at all. This is the same class of GitHub constraint OBRS-507 hit
+# with `schedule`/`workflow_dispatch`, which also fire only from the default branch —
+# see docs/IMPLEMENTATION_CHECKLIST_DONE.md in obrs-agent-office.
+# `target-branch: dev` below is what puts the work back where it belongs: the bot reads
+# the manifests from `dev` and opens its PRs against `dev`, not against `main`.
+
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+
+    # Read manifests from, and open PRs against, the integration branch.
+    # NOTE: GitHub documents that several PR-shaping options (labels, assignees,
+    # commit-message) do NOT carry over to *security* update PRs "except where
+    # target-branch is used". Dependabot security updates are a separate repo setting
+    # and are deliberately NOT part of this change — see OBRS-922.
+    target-branch: "dev"
+
+    schedule:
+      # Monthly, not daily. The goal is "never silently miss four majors again", not a
+      # PR every morning. A daily cadence produces noise that gets muted, and a muted
+      # bot is the same as no bot — which is the state this card exists to end.
+      interval: "monthly"
+
+    # 1 grouped Angular-stack PR + at most 4 singles per cycle. Kept deliberately low:
+    # PRs nobody has time to review are indistinguishable from no automation at all.
+    open-pull-requests-limit: 5
+
+    labels:
+      - "dependencies"
+
+    commit-message:
+      prefix: "chore(deps)"
+
+    groups:
+      # ONE PR for the whole Angular stack. These packages peer-depend on each other,
+      # so a per-package PR is guaranteed un-mergeable: primeng@21.1.9 peers
+      # @angular/core ^21.0.7, @ngrx/store@21.1.1 peers @angular/core ^21.0.0, and
+      # @angular/compiler-cli pins an exact typescript range (^22 requires
+      # ">=6.0 <6.1"). Splitting them yields a dozen red PRs and zero upgrades.
+      # Groups include MAJOR updates by default, which is exactly what we want here —
+      # the major is the signal, not the noise.
+      angular-stack:
+        patterns:
+          # Every count below was produced by matching the pattern against the 47
+          # names in origin/dev:package.json on 2026-08-02, not counted by eye.
+          - "@angular/*"        # 12 (animations, cdk, common, compiler, core, forms,
+                                #     google-maps, platform-browser[-dynamic], router,
+                                #     cli, compiler-cli)
+          - "@angular-devkit/*" # 1  (build-angular)
+          - "@ngrx/*"           # 3  (effects, store, store-devtools)
+          - "primeng"           # 1
+          - "@primeng/*"        # 1  (@primeng/themes)
+          - "primeicons"        # 1
+          - "rxjs"              # 1  peer of @angular/core
+          - "zone.js"           # 1  peer of @angular/core
+          - "typescript"        # 1  range pinned by @angular/compiler-cli
+          # Matches NOTHING today, on purpose: PrimeNG v22 relocates the theming
+          # packages to the @primeuix scope (measured on OBRS-920 —
+          # @primeng/themes stops at 21.0.4 and has no 22.x line). Without this
+          # pattern the first v22 attempt would split themes out of the stack PR.
+          - "@primeuix/*"       # 0 today

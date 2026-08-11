@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Action } from '@ngrx/store';
-import { EMPTY, Observable } from 'rxjs';
-import { map, mergeMap, tap } from 'rxjs/operators';
+import { EMPTY, Observable, of } from 'rxjs';
+import { catchError, map, mergeMap, tap } from 'rxjs/operators';
 import {
   invokeGetAllProvinceWithStationApi,
+  invokeGetAllProvinceWithStationApiFailure,
   invokeGetAllProvinceWithStationApiSuccess,
 } from './station.action';
 import { StationService } from '../../../services/station/station.service';
@@ -55,14 +56,31 @@ export class ProvinceEffect {
         mergeMap(() => {
           if (sessionRevalidated) return EMPTY;
 
-          // OBRS-642: `true` = no global blocking overlay. This is a page-load lookup on
-          // the customer's first screen, and the overlay it used to raise covered the
-          // booking form it exists to fill, with no way off it while the request was in
-          // flight. Failure handling is unchanged — the global ERROR alert still fires.
-          return this.service.getAll(true).pipe(
+          // OBRS-642: `skipLoadingAlert` = no global blocking overlay. This is a
+          // page-load lookup on the customer's first screen, and the overlay it used to
+          // raise covered the booking form it exists to fill, with no way off it while
+          // the request was in flight.
+          //
+          // OBRS-1222: `skipErrorAlert` too — but ONLY because this effect now ships a
+          // replacement. `station.reducer.ts` hydrates the roster from localStorage
+          // SYNCHRONOUSLY, so a returning visitor whose `/api/stops` dies still has a
+          // fully working booking form from the first paint; a modal over that form
+          // interrupts someone for whom nothing is wrong. A first-time visitor has an
+          // empty roster and genuinely cannot book — for them the failure surfaces
+          // inline, in the form, via `app-station-load-error` reading
+          // `selectStationLoadFailed` below. Deleting either half of that pair
+          // re-creates a lie: the flag without the surface is silence, the surface
+          // without the flag is a modal on top of it.
+          return this.service.getAll({ skipLoadingAlert: true, skipErrorAlert: true }).pipe(
             map((response) => this.extractStations(response)),
             tap((stations) => this.persistToCache(stations)),
-            map((stations) => invokeGetAllProvinceWithStationApiSuccess({ stations }))
+            map((stations) => invokeGetAllProvinceWithStationApiSuccess({ stations })),
+            // Swallowing the error here (rather than rethrowing) is deliberate and is
+            // what keeps the retry alive: `sessionRevalidated` is set inside
+            // `persistToCache`, i.e. on SUCCESS only, so a failed attempt leaves the
+            // guard false and the next `invokeGetAllProvinceWithStationApi` — from the
+            // retry button or from entering any other booking module — fetches again.
+            catchError(() => of(invokeGetAllProvinceWithStationApiFailure()))
           );
         })
       )
