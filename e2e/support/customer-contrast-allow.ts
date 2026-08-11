@@ -186,6 +186,17 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   'light|button.btn.dropdown-btn.dropdown-toggle|boundary-on-#ffffff':
     '1.35:1 -- OBRS-772 control boundary (was filed under OBRS-563, closed by OBRS-811)',
 
+  // Two keys, ONE defect: the same #dddee1 border on white, on the same control,
+  // under two tag names. OBRS-1224 made the STATION pickers a typeable
+  // `<input role="combobox">` (the search box had to become the field), while every
+  // other dropdown-group-obrs / dropdown-obrs call site is still a `<button>` --
+  // which is why the row above still hits and this one appeared beside it rather
+  // than replacing it. Nothing about the colour changed, so this stays OBRS-772's
+  // twenty-control policy question and is not a debt this card created.
+  // Measured on this run: 1.35:1, x4 sightings across /home and /schedule-booking.
+  'light|input.btn.dropdown-btn.dropdown-toggle|boundary-on-#ffffff':
+    '1.35:1 -- OBRS-772 control boundary, combobox half of the row above (OBRS-1224)',
+
   // -------------------------------------------------------------------------
   // OBRS-772 -- WCAG 1.4.11 control boundaries below 3:1.
   //

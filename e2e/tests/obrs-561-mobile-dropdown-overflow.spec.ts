@@ -25,7 +25,7 @@ for (const route of ROUTES) {
   test(`${route}: every station option stays inside the dropdown panel on mobile`, async ({ page }) => {
     await page.goto(route, { waitUntil: 'networkidle' });
 
-    const toggles = page.locator('app-dropdown-group-obrs button.dropdown-toggle');
+    const toggles = page.locator('app-dropdown-group-obrs .dropdown-toggle');
     await toggles.first().waitFor({ state: 'visible', timeout: 20_000 });
     const toggleCount = await toggles.count();
     expect(toggleCount, 'origin + destination pickers should both render').toBeGreaterThanOrEqual(2);

@@ -1475,6 +1475,7 @@
         "COUNTED_PLACEHOLDER": "0.00",
         "COUNTED_INVALID": "กรุณากรอกจำนวนเงินที่ถูกต้อง เช่น 480.00",
         "PER_HEAD_DEDUCTED": "หักค่าหัวที่พนักงานเก็บไว้",
+        "DEFERRED_TICKET_CASH": "หักค่าตั๋วที่ส่ง owner ตอนจบวัน",
         "EXPECTED_CASH": "เงินสดที่คาดว่าจะได้",
         "DISCREPANCY": "ส่วนต่าง",
         "HANDER_LABEL": "ผู้ส่งมอบเงิน",

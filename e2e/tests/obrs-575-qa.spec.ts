@@ -42,9 +42,15 @@ test.describe('OBRS-575 recent-route quick pick (QA)', () => {
     // text now reflect the pill's origin/destination (production build has
     // no ngDevMode `window.ng`, so this reads the DOM the user actually sees
     // rather than Angular component internals).
-    const dropdownValues = await page
-      .locator('.station-group app-dropdown-group-obrs .value-text')
-      .allTextContents();
+    // OBRS-1224 made the station trigger a typeable `<input role="combobox">`, so
+    // "the DOM the user actually sees" is the input's value rather than
+    // `.value-text`'s text. The trigger keeps its `.dropdown-btn` class in both
+    // shapes, which is why the selector reads that and not a tag.
+    const triggers = page.locator('.station-group app-dropdown-group-obrs .dropdown-btn');
+    const dropdownValues: string[] = [];
+    for (let i = 0; i < (await triggers.count()); i++) {
+      dropdownValues.push(await triggers.nth(i).inputValue());
+    }
     console.log('DROPDOWN_VALUES=' + JSON.stringify(dropdownValues.map((v) => v.trim())));
     expect(dropdownValues.length).toBe(2);
     expect(dropdownValues[0].trim()).toContain('หนองชาก');

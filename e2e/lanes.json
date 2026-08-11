@@ -363,6 +363,12 @@
       "why": "OBRS-1207. Replaces the two FAB-overlap cases in report-usability-issue.spec.ts, which compared the `position: fixed` FAB's viewport box against `.select-btn`'s and never pinned the scroll -- so the verdict was a function of where the page came to rest, not of the code. Proven, not argued: the byte-identical tree 098022f8 passed on PR #167, went red on the dev merge 8c43dcec, and passed 6/6 locally, having been green for months while the defect was present. This spec SOLVES for the scroll offsets at which an element's click point falls inside the FAB band -- a closed interval per element, so no offset can slip between samples -- then scrolls there and asks document.elementFromPoint(), the only oracle that accounts for z-index, stacking contexts, pointer-events and transforms at once. Hermetic on the same terms as the rest of the lane: it reuses report-usability-issue's stations/schedules fixtures and stubs every /api/** call it makes."
     },
     {
+      "spec": "obrs-1224-origin-combobox.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-1224. The claim is a DISTANCE in px between the box the customer types a station into and the field they clicked, with the panel flipped upward by Popper -- so it needs a real layout engine, a real 60vh and a real viewport height, none of which Karma has (its window is 800px and fixed, and the three component specs that measure this bar therefore never take the flipped branch). Measured on prod before the fix: 496 px at 1440x900 and 556 px at 1907x1000, against a 48 px field. The spec asserts the AC threshold (no further than one field-height), that the distance is 0 because the typing box IS the field, and that there is exactly ONE typeable box in the group -- a fix that filtered correctly from a second box in the panel would be the bug wearing the fix's clothes. It also asserts data-popper-placement still starts with 'top', because option C on the card was 'stop the panel flipping' and was rejected; without that line a build taking the forbidden route would pass everything else here. Hermetic on the same terms as the rest of the lane: it reuses mockPublicPageApis and then sharpens the stop list to 24, because the shared fixture's 2 stops never overflow 60vh, never flip, and would measure the one geometry that was never broken."
+    },
+    {
       "spec": "obrs-907-qa-parity-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs907qa.config.ts",

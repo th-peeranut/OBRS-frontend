@@ -1215,7 +1215,7 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
     const host = fixture.debugElement.query(By.css('app-station-swap-button'))
       .nativeElement as HTMLElement;
     const fields = Array.from(
-      root.querySelectorAll('app-dropdown-group-obrs button.dropdown-btn')
+      root.querySelectorAll('app-dropdown-group-obrs .dropdown-btn')
     ).slice(0, 2) as HTMLElement[];
     // A typo'd selector must fail here, not sail through an empty loop.
     expect(fields.length).toBe(2);
