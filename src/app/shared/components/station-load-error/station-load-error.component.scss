@@ -1,0 +1,88 @@
+@import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
+
+/* OBRS-775: an undeclared host renders `inline`, and
+   e2e/tests/host-box-sweep.spec.ts fails any inline host with block children.
+   This one takes its own line above the station fields it is about. */
+:host {
+  display: block;
+}
+
+/* The condition in the component is false on every ordinary page load, so the
+   `@if` leaves only a comment node. `:empty` ignores comments — this matches
+   exactly the not-failed case and keeps the host from costing a `gap` inside
+   `.booking-card`, which is a flex column. */
+:host(:empty) {
+  display: none;
+}
+
+.station-load-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-2xs;
+
+  margin-bottom: $space-2xs;
+  padding: $space-2xs $space-sm;
+  border: 1px solid $text-red;
+  border-radius: $radius-md;
+  /* The same #fde7e7 error wash $text-red was re-measured against in
+     variables.scss (4.62:1) — not a new colour, and not a colour whose
+     contrast against this background is unknown. */
+  background: #fde7e7;
+  color: $text-red;
+  font-size: $font-size-sm;
+  line-height: $line-height-base;
+}
+
+.station-load-error__icon {
+  flex-shrink: 0;
+}
+
+.station-load-error__text {
+  /* Takes the remaining width so the retry button keeps its own line on a
+     narrow phone instead of being pushed off the wash. */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* A real <button>, not a link: it performs an action on this page and never
+   navigates. Underlined as well as coloured — the wash is already red, so
+   colour alone would not separate the control from the sentence. */
+.station-load-error__retry {
+  flex-shrink: 0;
+
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $text-red;
+  font-size: inherit;
+  font-weight: $font-weight-semibold;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.station-load-error__retry:focus-visible {
+  outline: 2px solid $text-red;
+  outline-offset: 2px;
+}
+
+/* Dark mode lives here rather than dark-theme.scss for the reason that file's
+   own header records (OBRS-767). $dk-danger is the measured dark danger token;
+   the wash is a low-alpha tint of it rather than a second hard-coded hex, so
+   it cannot drift away from the border and text beside it. */
+:host-context(body.is-dark) {
+  .station-load-error {
+    border-color: $dk-danger;
+    background: rgba($dk-danger, 0.16);
+    color: $dk-text;
+  }
+
+  .station-load-error__retry {
+    color: $dk-danger;
+  }
+
+  .station-load-error__retry:focus-visible {
+    outline-color: $dk-danger;
+  }
+}

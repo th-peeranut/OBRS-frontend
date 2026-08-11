@@ -2394,6 +2394,10 @@
     "DEPARTS_ON": "Departs {{date}}",
     "A11Y": "This trip has been announced as delayed. It was scheduled to depart at {{planned}} and now departs at {{effective}}."
   },
+  "STATION_LOAD_ERROR": {
+    "MESSAGE": "We couldn't load the station list, so the stops below are empty.",
+    "RETRY": "Try again"
+  },
   "SCHEDULE_BOOKING": {
     "HEADER": "Trip type",
     "SUBHEADER_DEPARTURE": "Travel itinerary: Outbound",

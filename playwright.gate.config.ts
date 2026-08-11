@@ -75,6 +75,10 @@ export default defineConfig({
     // branch there. This lane pins 1280x720 (rule 3 above), which is the point.
     '**/obrs-857-find-booking.spec.ts',
     '**/obrs-1038-station-seam.spec.ts',
+    // OBRS-1222. The HTTP interceptor raises SweetAlert2 into document.body,
+    // outside every Karma fixture, so "no modal reaches the page" is a claim
+    // only a real app can settle -- and that seam is where OBRS-642 shipped.
+    '**/obrs-1222-station-load-error.spec.ts',
     '**/route-smoke.spec.ts',
     '**/confirm-guidance-flow.spec.ts',
     '**/report-usability-issue.spec.ts',

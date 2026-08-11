@@ -2394,6 +2394,10 @@
     "DEPARTS_ON": "{{date}} 发车",
     "A11Y": "此班次已公告延误。原定 {{planned}} 发车，现改为 {{effective}} 发车。"
   },
+  "STATION_LOAD_ERROR": {
+    "MESSAGE": "站点列表加载失败，下方的上下车点目前为空。",
+    "RETRY": "重试"
+  },
   "SCHEDULE_BOOKING": {
     "HEADER": "行程类型",
     "SUBHEADER_DEPARTURE": "行程安排：去程",
