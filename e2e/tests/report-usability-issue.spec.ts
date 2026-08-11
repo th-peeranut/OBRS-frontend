@@ -820,30 +820,59 @@ test.describe('Regression — FAB z-index / overlap', () => {
     await page.route('**/api/schedules/search', (route) => route.fulfill({ json: schedulesFixture }));
   });
 
-  test('FAB (z-900) does not obstruct the lang switcher on home (desktop)', async ({ page }) => {
+  /**
+   * OBRS-1207 — THE OCCLUSION CLAIM HAS LEFT THIS FILE.
+   *
+   * Three cases used to live here asserting the FAB "does not obstruct" some
+   * element, and all three did it by comparing the FAB's `boundingBox()` with
+   * the victim's while never pinning the scroll position. The FAB is
+   * `position: fixed` and every victim scrolls, so the comparison's result was a
+   * function of where the page happened to come to rest, not of the code.
+   *
+   * Not an argument — measured. The byte-identical tree `098022f8` PASSED on
+   * PR #167, went RED on the `dev` merge `8c43dcec`, and passed 6/6 locally;
+   * and the pair had been green for months while `.select-btn` really was
+   * losing its click. The resting offset itself was traced to Bootstrap's
+   * `:root { scroll-behavior: smooth }` plus `home.component.ts:65`'s
+   * `scrollIntoView({ behavior: 'smooth' })`: the search click navigates away
+   * mid-animation, so /schedule-booking inherits whatever offset the animation
+   * reached — 17, 18 and 19 on three consecutive runs of one tree.
+   *
+   * `e2e/tests/obrs-1207-fab-occlusion.spec.ts` owns the claim now. It solves
+   * for the offsets at which an element's click point falls inside the FAB band
+   * rather than sampling them, asks `document.elementFromPoint()` instead of
+   * comparing rectangles, and sweeps every route this lane can reach at two
+   * viewports. Deleting these rather than keeping both was AC4 of that card: a
+   * gate that reds at random teaches people to re-run until it is green.
+   *
+   * What is NOT covered there and so stays here: that the FAB is present at all
+   * through the funnel, and that it sits in the bottom-right corner at both
+   * viewports. Those are position claims, not occlusion claims, and neither
+   * depends on the scroll offset.
+   */
+  test('FAB sits in the bottom-right corner on home (desktop)', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
     await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
 
-    // Lang switcher should be clickable — verify it exists and is not hidden behind FAB
-    const langSwitcher = page.locator('[id*="lang"], .lang-switcher, button[aria-label*="language"], button[aria-label*="Language"]').first();
-    // If no explicit lang switcher selector exists, check FAB bounding box is bottom-right
     const fabBox = await page.locator('.report-fab').boundingBox();
     expect(fabBox).not.toBeNull();
-    // FAB must be in the bottom-right quadrant of the viewport
-    if (fabBox) {
-      expect(fabBox.x).toBeGreaterThan(1280 / 2);
-      expect(fabBox.y).toBeGreaterThan(800 / 2);
-    }
+    expect(fabBox!.x).toBeGreaterThan(1280 / 2);
+    expect(fabBox!.y).toBeGreaterThan(800 / 2);
   });
 
-  test('FAB does not obstruct seat picker (mobile viewport 375×667)', async ({ page }) => {
+  test('B2C booking search → schedule-booking: FAB present throughout, and a 48px corner target on mobile', async ({
+    page,
+  }) => {
+    // The FAB is present through the stub-based portion of the B2C funnel. (The
+    // full booking flow including review/passenger-info is covered by
+    // e2e/tests/b2c-critical-path.spec.ts.)
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
-    await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
-
-    // Navigate to schedule-booking
     await page.locator('[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]').waitFor();
+
+    await expect(page.locator('.report-fab')).toBeVisible();
+
     await page.locator('#dropdownObrsPassenger').click();
     await page.getByAltText('Passenger Add Icon').first().click();
     await page.locator('body').click({ position: { x: 5, y: 5 } });
@@ -855,79 +884,14 @@ test.describe('Regression — FAB z-index / overlap', () => {
     await page.waitForURL('**/schedule-booking');
     await settleScheduleList(page);
 
-    // FAB must still be visible but must NOT overlap the schedule list
     const fab = page.locator('.report-fab');
     await expect(fab).toBeVisible();
 
-    // On mobile the FAB collapses to a 48×48 circle at bottom-right
+    // On mobile it collapses to a 48×48 circle pinned to the bottom-right.
     const fabBox = await fab.boundingBox();
-    if (fabBox) {
-      // Must be in bottom-right corner
-      expect(fabBox.x + fabBox.width).toBeGreaterThan(375 - 80);
-      expect(fabBox.y + fabBox.height).toBeGreaterThan(667 - 120);
-    }
-
-    // The schedule list's "Select" button must still be clickable
-    const selectBtn = page.locator('.select-btn').first();
-    await selectBtn.waitFor({ state: 'visible', timeout: 10_000 });
-    // Check the select button is NOT obscured by the FAB
-    if (fabBox) {
-      const selectBtnBox = await selectBtn.boundingBox();
-      if (selectBtnBox) {
-        const xOverlap = fabBox.x < selectBtnBox.x + selectBtnBox.width &&
-                         fabBox.x + fabBox.width > selectBtnBox.x;
-        const yOverlap = fabBox.y < selectBtnBox.y + selectBtnBox.height &&
-                         fabBox.y + fabBox.height > selectBtnBox.y;
-        // They should NOT both overlap (either x or y should not overlap)
-        expect(xOverlap && yOverlap).toBe(false);
-      }
-    }
-  });
-
-  test('B2C booking search → schedule-booking: FAB present and does not block schedule selection', async ({ page }) => {
-    // Verify that the FAB is present throughout the stub-based portion of the B2C funnel
-    // and does not block the schedule-booking page's "Select" button.
-    // (The full end-to-end booking flow including review/passenger-info is already covered
-    // by e2e/tests/b2c-critical-path.spec.ts which passed in the regression suite.)
-    await page.goto('/');
-    await page.locator('[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]').waitFor();
-
-    // FAB must be present on home
-    await expect(page.locator('.report-fab')).toBeVisible();
-
-    await page.locator('#dropdownObrsPassenger').click();
-    await page.getByAltText('Passenger Add Icon').first().click();
-    await page.locator('body').click({ position: { x: 10, y: 10 } });
-    await page.locator('[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]').click();
-    await page.locator('.dropdown-menu.show .dropdown-option', { hasText: 'Nong Sak' }).click();
-    await page.locator('[id="dropdownObrsHOME.HOME_BOOKING.END_STATION"]').click();
-    await page.locator('.dropdown-menu.show .dropdown-option', { hasText: 'Bangkok' }).click();
-    await page.locator('.btn-search').click();
-    await page.waitForURL('**/schedule-booking');
-    await settleScheduleList(page);
-
-    // FAB must be visible on schedule-booking page
-    await expect(page.locator('.report-fab')).toBeVisible();
-
-    // The Select button on the schedule list must be clickable — not obstructed by the FAB
-    const selectBtn = page.locator('.select-btn').first();
-    await selectBtn.waitFor({ state: 'visible', timeout: 10_000 });
-
-    const fabBox = await page.locator('.report-fab').boundingBox();
-    const selectBtnBox = await selectBtn.boundingBox();
-    if (fabBox && selectBtnBox) {
-      // Use center-point overlap check: the FAB must NOT cover the center of the
-      // Select button, because Playwright (and real users) click at the element center.
-      // A bounding-box edge overlap is acceptable as long as the click target is clear.
-      const selectCenterX = selectBtnBox.x + selectBtnBox.width / 2;
-      const selectCenterY = selectBtnBox.y + selectBtnBox.height / 2;
-      const fabCoversCenter =
-        selectCenterX >= fabBox.x &&
-        selectCenterX <= fabBox.x + fabBox.width &&
-        selectCenterY >= fabBox.y &&
-        selectCenterY <= fabBox.y + fabBox.height;
-      expect(fabCoversCenter).toBe(false);
-    }
+    expect(fabBox).not.toBeNull();
+    expect(fabBox!.x + fabBox!.width).toBeGreaterThan(375 - 80);
+    expect(fabBox!.y + fabBox!.height).toBeGreaterThan(667 - 120);
   });
 
   test('admin shell renders FAB + new "Usability Reports" nav item without breakage', async ({ page }) => {

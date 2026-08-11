@@ -207,6 +207,15 @@ jobs:
       - name: E2E lane membership gate
         run: npm run test:e2e-lanes
 
+      # OBRS-1207. The report FAB steps aside for anything clickable underneath it, and
+      # `obrs-1207-fab-occlusion.spec.ts` is the gate that proves it does. Both sides need
+      # the same list of what "clickable" means, and they live in two compilation roots
+      # that cannot import from each other -- so the copies are CHECKED rather than hoped
+      # for. Drift is green-and-worthless in both directions: the gate testing a rule the
+      # app has dropped, or the app yielding for something the gate never looks for.
+      - name: FAB yield selector parity gate
+        run: npm run test:fab-yield-selector
+
       # Ninth pure-node gate (OBRS-536). `environment.sit.ts` and `environment.prod.ts` read
       # their keys from two GITIGNORED files, so the committed side of that contract moves with
       # every commit while the other side cannot. OBRS-424 added `maptilerKey` and updated both
