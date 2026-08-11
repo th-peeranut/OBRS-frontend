@@ -16,8 +16,11 @@
       (click)="toggleDropdown()"
       >
       <!-- CURRENT VALUE -->
-      <div class="value-text">
-        {{ getValue(selectedValue) }}
+      <!-- OBRS-1231: an unselected dropdown used to render an empty button. That was
+      invisible while every such dropdown auto-selected a default; now that title can
+      legitimately hold nothing, the empty state needs to say so. -->
+      <div class="value-text" [class.is-placeholder]="!selectedValue && placeholder">
+        {{ selectedValue ? getValue(selectedValue) : (placeholder ? (placeholder | translate) : '') }}
       </div>
 
       <!-- ARROW ICON -->

@@ -309,6 +309,56 @@ describe('WalkInCheckoutComponent', () => {
       expect(emitted!.contact.identityCardNumber).toBe('1234567890123');
       expect(emitted!.cashReceived).toBe(300);
     });
+
+    /**
+     * OBRS-1231. Dropping Validators.required off the title made the blank option
+     * SELECTABLE, and that is where this went wrong: the emitted payload still carried
+     * `String(v.title ?? '')`, i.e. `''`. Measured against a real local backend — a counter
+     * sale with the title left blank came back
+     *   400 VALIDATION_FAILED, contact.title rejectedValue "" ("ต้องมีความยาวระหว่าง 2 ถึง 50 ตัวอักษร")
+     *   and the same on departureSchedule.passengers[0].title
+     * because `@Size(min = 2)` skips null but not the empty string. So "optional" would
+     * have shipped as "the counter can no longer sell a ticket without a title" — a worse
+     * bug than the one the card set out to fix, on the busiest till in the product.
+     *
+     * The non-blank case is asserted right next to it on purpose: normalising too eagerly
+     * (e.g. `|| null` on a falsy-but-meaningful value, or trimming into oblivion) would
+     * silently stop sending a title the staff member did choose.
+     */
+    it('emits contact.title as null - not "" - when the counter leaves it blank', () => {
+      const comp = makeComponent();
+      comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
+      comp['cashReceived'] = 300;
+      comp['contactForm'].setValue({
+        title: '', firstName: 'Somchai', lastName: 'Rakdee',
+        phoneNumber: '0812345678', identityCardNumber: '', email: '',
+      });
+
+      let emitted: Parameters<typeof comp['sell']['emit']>[0] | undefined;
+      comp.sell.subscribe((p) => { emitted = p; });
+      (comp as any).onSell();
+
+      expect(emitted).toBeDefined();
+      expect(emitted!.contact.title).toBeNull();
+    });
+
+    it('still emits the chosen title unchanged when one is picked', () => {
+      const comp = makeComponent();
+      comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
+      comp['cashReceived'] = 300;
+      comp['contactForm'].setValue({
+        title: 'Mr.', firstName: 'Somchai', lastName: 'Rakdee',
+        phoneNumber: '0812345678', identityCardNumber: '', email: '',
+      });
+
+      let emitted: Parameters<typeof comp['sell']['emit']>[0] | undefined;
+      comp.sell.subscribe((p) => { emitted = p; });
+      (comp as any).onSell();
+
+      expect(emitted!.contact.title).toBe('Mr.');
+    });
   });
 
   // Note: passenger type selection was moved to walk-in-center-panel (Change 1 / issue #50).

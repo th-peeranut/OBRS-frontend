@@ -464,17 +464,21 @@ export class PassengerInfoComponent {
     return digits.length > 0 ? digits : null;
   }
 
-  private normalizeTitle(title: number | string | null | undefined): string {
+  // OBRS-1231: no title is a legitimate answer, so this returns null rather than
+  // inventing one. The three 'Mr.' fallbacks it used to have were not defaults in any
+  // useful sense - nothing downstream needed a value (the backend joins the name parts
+  // with a null-filter), so they only ever asserted a gender the traveller never gave.
+  private normalizeTitle(title: number | string | null | undefined): string | null {
     if (typeof title === 'string') {
       const normalized = title.trim();
-      return normalized.length > 0 ? normalized : 'Mr.';
+      return normalized.length > 0 ? normalized : null;
     }
 
     if (typeof title === 'number') {
-      return this.titleMap[title] || 'Mr.';
+      return this.titleMap[title] ?? null;
     }
 
-    return 'Mr.';
+    return null;
   }
 
   private normalizePhoneNumber(phoneNumber: string): string {
