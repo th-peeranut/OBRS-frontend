@@ -344,11 +344,11 @@ test.describe('Route Map – Success State', () => {
 
     // Hero search bar source field should now show the picked pickup station ("Nong Sak")
     const sourceDropdown = page.locator('[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]');
-    await expect(sourceDropdown.locator('.value-text')).toContainText('Nong Sak');
+    await expect(sourceDropdown).toHaveValue(new RegExp('Nong Sak'));
 
     // Hero search bar destination field should now show the picked dropoff station ("Bangkok")
     const destDropdown = page.locator('[id="dropdownObrsHOME.HOME_BOOKING.END_STATION"]');
-    await expect(destDropdown.locator('.value-text')).toContainText('Bangkok');
+    await expect(destDropdown).toHaveValue(new RegExp('Bangkok'));
 
     // No SweetAlert modal/blocking popup should appear
     await expect(page.locator('.swal2-backdrop-show')).toHaveCount(0);

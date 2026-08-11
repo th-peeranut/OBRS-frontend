@@ -94,7 +94,7 @@ async function read(page: Page): Promise<Reading> {
   return page.evaluate(() => {
     const bar = document.querySelector('.station-group') as HTMLElement;
     const fields = Array.from(
-      bar.querySelectorAll('app-dropdown-group-obrs button.dropdown-btn')
+      bar.querySelectorAll('app-dropdown-group-obrs .dropdown-btn')
     ).slice(0, 2) as HTMLElement[];
     const host = bar.querySelector('app-station-swap-button') as HTMLElement;
     const icon = host.querySelector('.station-swap-button__icon') as HTMLElement;
@@ -131,7 +131,7 @@ test.beforeEach(async ({ page }) => {
   // The bar renders only once the stop list resolves; a bare `goto` would let the
   // first assertion read an element that is not there yet and fail as a timeout
   // rather than as a measurement.
-  await page.waitForSelector('.station-group app-dropdown-group-obrs button.dropdown-btn');
+  await page.waitForSelector('.station-group app-dropdown-group-obrs .dropdown-btn');
 });
 
 test('at 1280 the two halves are ONE bar and the button sits on its seam', async ({ page }) => {

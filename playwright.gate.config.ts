@@ -171,6 +171,15 @@ export default defineConfig({
     // sampling them, and asks `document.elementFromPoint()` rather than comparing
     // rectangles. Hermetic on the same terms as the rest — it reuses those fixtures.
     '**/obrs-1207-fab-occlusion.spec.ts',
+    // OBRS-1224. The claim is a DISTANCE in px between the box you type into and
+    // the field you clicked, with the panel flipped upward by Popper — so it needs
+    // a real layout engine, a real 60vh and a real viewport height. Karma has none
+    // of those: its window is 800px and fixed, and the three component specs that
+    // measure this bar never take the flipped branch there. Hermetic on this lane's
+    // terms: it reuses `mockPublicPageApis` and then sharpens the stop list to 24,
+    // because the shared fixture's 2 stops never overflow 60vh, never flip, and
+    // would therefore measure the one geometry that was never broken.
+    '**/obrs-1224-origin-combobox.spec.ts',
   ],
 
   timeout: 60_000,
