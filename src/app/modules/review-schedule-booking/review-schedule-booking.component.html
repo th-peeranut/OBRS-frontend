@@ -2,6 +2,24 @@
 
 <app-stepper></app-stepper>
 
+<!-- OBRS-1246 - decision for THIS page: (a) show the surface.
+  Option (b), "prove the page is unreachable while the roster is empty", was
+  tested and FAILS here: app-routing.module.ts:85-93 gives
+  /review-schedule-booking the identical route entry to /e-ticket -
+  `canActivate: [AuthGuard]` + `data: { customerArea: true }`, no `requireAuth`,
+  no resolver - and review-schedule-booking.module.ts declares
+  `{ path: '', component: ... }` with no child guard. A direct link lands here
+  without passing through /home.
+  The summary on this page reads the roster directly
+  (review-schedule-booking-summary.component.ts) and has no API fallback, so the
+  component's own condition (load failed AND roster empty) is exactly right.
+  Placed OUTSIDE `.content-container` because that element is a flex ROW: a
+  child would sit BESIDE the summary instead of above it, the same trap
+  home-booking.component.html records. -->
+<div class="station-load-error-slot">
+  <app-station-load-error></app-station-load-error>
+</div>
+
 <div class="content-container">
   <div class="summary-container">
     <app-review-schedule-booking-summary></app-review-schedule-booking-summary>

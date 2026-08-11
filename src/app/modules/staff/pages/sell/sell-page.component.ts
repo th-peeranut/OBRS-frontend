@@ -64,7 +64,8 @@ interface WalkInBookingPayloadDraft {
     passengers: {
       passengerType: string;
       seatNumber: string;
-      title: string;
+      // OBRS-1231: nullable on both halves — see WalkInCheckoutPayload.contact.title.
+      title: string | null;
       firstName: string;
       lastName: string;
       phoneNumber: string;
@@ -72,7 +73,7 @@ interface WalkInBookingPayloadDraft {
     }[];
   };
   contact: {
-    title: string;
+    title: string | null;
     firstName: string;
     lastName: string;
     phoneNumber: string;
@@ -443,7 +444,9 @@ export class SellPageComponent implements OnInit, OnDestroy {
       const p: {
         passengerType: string;
         seatNumber: string;
-        title: string;
+        // OBRS-1231: nullable, and it arrives already normalised to null by
+        // WalkInCheckoutComponent.onSell — this page must not turn it back into ''.
+        title: string | null;
         firstName: string;
         lastName: string;
         phoneNumber: string;

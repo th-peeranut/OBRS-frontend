@@ -19,33 +19,20 @@
           </div>
           <!-- Title -->
           <div class="col-12 col-md-6">
-            <label
-              for="booker-title"
-              [class.label-error]="
-                bookerForm.get('title')?.errors &&
-                (bookerForm.get('title')?.touched || bookerForm.get('title')?.dirty)
-              "
-              >
+            <!-- OBRS-1231: optional. The system holds no gender/marital field to
+            validate a title against, so a title is a self-chosen display prefix and
+            leaving it blank is a legitimate answer, not an incomplete form. -->
+            <label for="booker-title">
               {{ "PASSENGER_INFO.FORM.TITLE" | translate }}
-              <span class="form-required">*</span>
             </label>
             <app-dropdown-obrs
               [isBorder]="true"
               [isLabel]="false"
               [options]="titleOptions"
               formControlName="title"
+              placeholder="COMMON.NOT_SPECIFIED"
               id="booker-title"
             ></app-dropdown-obrs>
-            @if (
-              bookerForm.get('title')?.errors &&
-              (bookerForm.get('title')?.touched || bookerForm.get('title')?.dirty)
-              ) {
-              <div
-                class="text-error"
-                >
-                {{ "PASSENGER_INFO.FORM.TITLE_REQUIRED" | translate }}
-              </div>
-            }
           </div>
           <!-- First name -->
           <div class="col-12 col-md-6">

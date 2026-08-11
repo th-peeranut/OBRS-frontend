@@ -180,4 +180,27 @@ describe('BookerInfoFormComponent', () => {
       expect(component.bookerForm.get('phoneNumber')?.valid).toBeTrue();
     });
   });
+
+  /**
+   * OBRS-1231. The DropdownObrsComponent unit test proves the isDefault branch calls
+   * onChange() — but that is the component in isolation. What decides whether a title
+   * reaches the payload is the real binding order against a reactive control, which is
+   * what this mounts.
+   *
+   * Measured on /register in a browser: the PRE-FIX control came out null as well,
+   * because writeValue(null) runs after ngOnChanges and clears what it wrote. So the
+   * isDefault flag was a latent trap, not a live defect on that page — worth removing,
+   * but this test is a boundary pin rather than a proof of an old bug. It goes red the
+   * moment anything (an isDefault flag, a patchValue, a future "sensible default")
+   * starts putting a title in this control unasked.
+   */
+  describe('OBRS-1231 — the title control after a real bind', () => {
+    it('holds nothing until the booker chooses', () => {
+      expect(component.bookerForm.get('title')?.value).toBeNull();
+    });
+
+    it('is valid while empty — nothing about this form requires a title', () => {
+      expect(component.bookerForm.get('title')?.valid).toBeTrue();
+    });
+  });
 });

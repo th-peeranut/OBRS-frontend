@@ -8,7 +8,9 @@
       <select class="form-select form-select-sm"
         formControlName="title"
         [class.is-invalid]="isFieldInvalid('title')">
-        <option value="" disabled>{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
+        <!-- OBRS-1231: selectable, not disabled - blank is a valid answer now, so the
+        counter staff must be able to get back to it after picking one by mistake. -->
+        <option value="">{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
         @for (t of titleOptions; track t) {
           <option [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
         }

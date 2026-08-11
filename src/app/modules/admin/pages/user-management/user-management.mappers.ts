@@ -277,7 +277,10 @@ export function buildUserFormValues(
   const status = parseStatus(userDetail.status ?? user.statusCode, locale);
 
   return {
-    title: String((userDetail.title ?? parsedName.title) || 'Mr').trim(),
+    // OBRS-1231: no `|| 'Mr'`. A user with no title used to open this form already
+    // holding one, and a Save that changed nothing else wrote that invented title to
+    // their row - the admin was never told they had asserted anything.
+    title: String(userDetail.title ?? parsedName.title ?? '').trim(),
     firstName: String(userDetail.firstName ?? parsedName.firstName ?? '').trim(),
     middleName: String(userDetail.middleName ?? parsedName.middleName ?? '').trim(),
     lastName: String(userDetail.lastName ?? parsedName.lastName ?? '').trim(),
@@ -295,7 +298,9 @@ export function buildUserFormValues(
 
 export function toCreateUserPayload(raw: Record<string, unknown>): CreateUserPayload {
   return {
-    title: String(raw['title'] ?? '').trim(),
+    // OBRS-1231: `|| undefined` so a blank title is OMITTED, not sent as "". The same
+    // shape middleName has used here all along, and the one @Size(min = 2) accepts.
+    title: String(raw['title'] ?? '').trim() || undefined,
     firstName: String(raw['firstName'] ?? '').trim(),
     middleName: String(raw['middleName'] ?? '').trim() || undefined,
     lastName: String(raw['lastName'] ?? '').trim(),
@@ -315,7 +320,9 @@ export function toCreateUserPayload(raw: Record<string, unknown>): CreateUserPay
 
 export function toUpdateUserPayload(raw: Record<string, unknown>): UpdateUserPayload {
   return {
-    title: String(raw['title'] ?? '').trim(),
+    // OBRS-1231: `|| undefined` so a blank title is OMITTED, not sent as "". The same
+    // shape middleName has used here all along, and the one @Size(min = 2) accepts.
+    title: String(raw['title'] ?? '').trim() || undefined,
     firstName: String(raw['firstName'] ?? '').trim(),
     middleName: String(raw['middleName'] ?? '').trim() || undefined,
     lastName: String(raw['lastName'] ?? '').trim(),

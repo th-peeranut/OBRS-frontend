@@ -1,7 +1,9 @@
 export interface BookingPassenger {
   passengerType: string;
   seatNumber: string | null;
-  title: string;
+  // OBRS-1231: optional. `tickets.title_snapshot` has been nullable since V14, and
+  // Ticket.getPassengerName() already filters empty parts out of the joined name.
+  title: string | null;
   firstName: string;
   middleName: string | null;
   lastName: string;
@@ -28,7 +30,8 @@ export interface BookingPassenger {
 }
 
 export interface BookingContact {
-  title: string;
+  // OBRS-1231: optional - see BookingPassenger.title.
+  title: string | null;
   firstName: string;
   middleName: string | null;
   lastName: string;

@@ -100,7 +100,7 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
     private readonly translate: TranslateService
   ) {
     this.userForm = this.formBuilder.group({
-      title: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
+      title: ['', [Validators.minLength(2), Validators.maxLength(50)]],
       firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
       middleName: ['', [Validators.minLength(2), Validators.maxLength(50)]],
       lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],

@@ -284,6 +284,21 @@ jobs:
       - name: netlify ignore-command gate
         run: npm run test:netlify-ignore
 
+      # Twelfth pure-node gate (OBRS-1246). OBRS-1222 switched the station roster's
+      # error reporting from the global modal to an inline surface, and the surface
+      # reached 2 of the 6 pages that dispatch the fetch. The other 4 did not get
+      # quieter, they went SILENT -- origin and destination render as `-` with nothing
+      # saying why, and on /e-ticket that is the ticket the customer hands over at the
+      # door. Nothing removed those surfaces; they were never added, because the "2 of
+      # 6" count was done BY HAND. The 7th page will be added by someone who has never
+      # read this card, so the count runs here on every push instead, in both
+      # directions: a dispatcher with no surface fails, and so does dropping
+      # `skipErrorAlert: true` from station.effect.ts, which would put the OBRS-642
+      # modal back on top of every surface. Self-tests its own matcher first, so it
+      # cannot decay into a green no-op the way the hand count did.
+      - name: station-load failure surface gate
+        run: npm run test:station-surface
+
       - name: Install dependencies
         run: npm ci
 
