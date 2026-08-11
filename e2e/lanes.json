@@ -21,6 +21,18 @@
       "why": "Fulfils every /api/** call from its own fixture and seeds no session at all. Measures the station bar's geometry at this lane's pinned 1280px viewport -- the ROW layout the three Karma specs cannot reach, because their window is 800px and the 992px stack switch is a viewport query."
     },
     {
+      "spec": "obrs-1222-station-load-error.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "Fulfils every /api/** call from its own fixture and makes /api/stops fail on purpose (route.abort, i.e. the same status 0 the OBRS-642 timeout raises); seeds no session. Proves the claim no component spec can: that NO SweetAlert2 modal reaches the page, which the HTTP interceptor raises into document.body outside every Karma fixture. The two populations are the two tests -- localStorage roster seeded (silent) versus cleared (inline message plus retry)."
+    },
+    {
+      "spec": "obrs-1222-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1222.config.ts",
+      "why": "Screenshots only, no assertions -- and that is the requirement, not a shortcut: it has to run unchanged against BOTH the pre-card and post-card runtimes so the BEFORE image is the real previous behaviour rather than a reconstruction. Stage comes from OBRS_CAPTURE_STAGE; the BEFORE pass is taken with `git stash push -- src/` applied while ng serve rebuilds. Every assertion for this card lives in obrs-1222-station-load-error.spec.ts on the GATE lane."
+    },
+    {
       "spec": "route-smoke.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",

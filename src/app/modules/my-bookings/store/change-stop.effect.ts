@@ -74,7 +74,7 @@ export class ChangeStopEffect {
       withLatestFrom(this.store.pipe(select(selectStopsLookup))),
       filter(([, stopsLookup]) => Object.keys(stopsLookup).length === 0),
       switchMap(() =>
-        this.stationService.getAll(true).pipe(
+        this.stationService.getAll({ skipLoadingAlert: true }).pipe(
           map((response) => loadStopsLookupSuccess({ stopsLookup: this.toStopsLookup(response.data) })),
           // No domain errorCode exists for this endpoint — with no backend
           // message either, branch the generic copy on HTTP status (OBRS-170)

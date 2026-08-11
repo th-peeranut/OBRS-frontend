@@ -31,6 +31,11 @@ import {
 import { LanguageService } from '../../../../shared/services/language.service';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
 import { RECENT_ROUTES_CACHE_KEY, saveRecentRoute } from '../../../../shared/lib/recent-routes';
+// OBRS-1222: this template now renders `app-station-load-error`. Declared here
+// rather than schema-suppressed so the slices keep failing on a REAL unknown
+// element. With `createStoreStub()` its two selectors both read null, so it
+// renders nothing and no assertion in this file changes.
+import { StationLoadErrorComponent } from '../../../../shared/components/station-load-error/station-load-error.component';
 
 /** OBRS-564's `BookingPolicyService` resolves the real date-picker cap. */
 function createBookingPolicyServiceStub(): BookingPolicyService {
@@ -371,7 +376,7 @@ describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', 
     };
 
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -445,7 +450,7 @@ describe('HomeBookingComponent — date labels distinguish outbound from return 
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -532,7 +537,7 @@ describe('HomeBookingComponent — each date field owns a unique input id its la
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -671,7 +676,7 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -852,7 +857,7 @@ describe('HomeBookingComponent — a date can only be chosen from the calendar (
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -970,7 +975,7 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
     store = createStoreStubWithValue([STATION_1, STATION_2, STATION_3]);
 
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -1238,7 +1243,7 @@ describe('HomeBookingComponent — trip-type pills and the return date field ren
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HomeBookingComponent],
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),

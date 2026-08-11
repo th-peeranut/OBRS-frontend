@@ -1,0 +1,16 @@
+@if (showError$ | async) {
+  <div class="station-load-error" data-testid="station-load-error" role="alert">
+    <i class="bi bi-wifi-off station-load-error__icon" aria-hidden="true"></i>
+    <span class="station-load-error__text">
+      {{ "STATION_LOAD_ERROR.MESSAGE" | translate }}
+    </span>
+    <button
+      type="button"
+      class="station-load-error__retry"
+      data-testid="station-load-error-retry"
+      (click)="onRetry()"
+      >
+      {{ "STATION_LOAD_ERROR.RETRY" | translate }}
+    </button>
+  </div>
+}

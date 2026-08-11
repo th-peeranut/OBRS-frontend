@@ -26,6 +26,11 @@ import {
   createTranslateStub,
 } from '../../../../testing/test-stubs';
 import { LanguageService } from '../../../../shared/services/language.service';
+// OBRS-1222: this template now renders `app-station-load-error`. Declared here
+// rather than schema-suppressed so the slices keep failing on a REAL unknown
+// element. With `createStoreStub()` its two selectors both read null, so it
+// renders nothing and no assertion in this file changes.
+import { StationLoadErrorComponent } from '../../../../shared/components/station-load-error/station-load-error.component';
 
 /** OBRS-698: resolves the real, owner-editable advance-sale cap. */
 function createBookingPolicyServiceStub(
@@ -173,7 +178,7 @@ describe('ScheduleBookingFilterComponent — maxDate bound to BOTH calendars (OB
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingFilterComponent],
+      declarations: [ScheduleBookingFilterComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -239,7 +244,7 @@ describe('ScheduleBookingFilterComponent — date labels distinguish outbound fr
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingFilterComponent],
+      declarations: [ScheduleBookingFilterComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -314,7 +319,7 @@ describe('ScheduleBookingFilterComponent — each date field owns a unique input
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingFilterComponent],
+      declarations: [ScheduleBookingFilterComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -432,7 +437,7 @@ describe('ScheduleBookingFilterComponent — date format follows the chosen lang
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingFilterComponent],
+      declarations: [ScheduleBookingFilterComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -532,7 +537,7 @@ describe('ScheduleBookingFilterComponent — a date can only be chosen from the 
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingFilterComponent],
+      declarations: [ScheduleBookingFilterComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -657,7 +662,7 @@ describe('ScheduleBookingFilterComponent — origin/destination swap (OBRS-1035)
     };
 
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingFilterComponent],
+      declarations: [ScheduleBookingFilterComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -880,7 +885,7 @@ describe('ScheduleBookingFilterComponent — trip-type pills and the return date
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingFilterComponent],
+      declarations: [ScheduleBookingFilterComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
@@ -998,7 +1003,7 @@ describe('ScheduleBookingFilterComponent — a saved ONE-WAY filter survives the
 
   async function renderWith(savedFilter: any) {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingFilterComponent],
+      declarations: [ScheduleBookingFilterComponent, StationLoadErrorComponent],
       imports: [
         ReactiveFormsModule,
         TranslateModule.forRoot(),
