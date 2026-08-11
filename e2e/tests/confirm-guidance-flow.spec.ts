@@ -285,17 +285,20 @@ test.describe('OBRS-73 – Prefill and stay on /home', () => {
     expect(new URL(page.url()).pathname).toBe('/');
     expect(page.url()).not.toContain('schedule-booking');
 
-    // AC5: hero search bar "Source" field is prefilled with the picked pickup station
+    // AC5: hero search bar "Source" field is prefilled with the picked pickup station.
+    // `toHaveValue`, not `.value-text`'s text: OBRS-1224 made the station trigger a
+    // typeable `<input role="combobox">`, so the text the customer reads in that field
+    // is the input's VALUE. The id resolves to the trigger itself in both shapes.
     const sourceDropdown = page.locator(
       '[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]'
     );
-    await expect(sourceDropdown.locator('.value-text')).toContainText('Nong Sak');
+    await expect(sourceDropdown).toHaveValue(new RegExp('Nong Sak'));
 
     // AC5: hero search bar "Destination" field is prefilled with the picked dropoff station
     const destDropdown = page.locator(
       '[id="dropdownObrsHOME.HOME_BOOKING.END_STATION"]'
     );
-    await expect(destDropdown.locator('.value-text')).toContainText('Bangkok');
+    await expect(destDropdown).toHaveValue(new RegExp('Bangkok'));
 
     // AC5: departure-date and passenger-count fields remain at their defaults
     // (NOT auto-submitted, NOT cleared)
@@ -342,12 +345,12 @@ test.describe('OBRS-73 – Prefill and stay on /home', () => {
     const sourceDropdown = page.locator(
       '[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]'
     );
-    await expect(sourceDropdown.locator('.value-text')).toContainText('Nong Sak');
+    await expect(sourceDropdown).toHaveValue(new RegExp('Nong Sak'));
 
     const destDropdown = page.locator(
       '[id="dropdownObrsHOME.HOME_BOOKING.END_STATION"]'
     );
-    await expect(destDropdown.locator('.value-text')).toContainText('Bangkok');
+    await expect(destDropdown).toHaveValue(new RegExp('Bangkok'));
   });
 
   // ── AC6 ───────────────────────────────────────────────────────────────────
@@ -377,7 +380,7 @@ test.describe('OBRS-73 – Prefill and stay on /home', () => {
     const sourceDropdown = page.locator(
       '[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]'
     );
-    await expect(sourceDropdown.locator('.value-text')).toContainText('Nong Sak');
+    await expect(sourceDropdown).toHaveValue(new RegExp('Nong Sak'));
 
     // The form defaults to 1 adult passenger, so Search is valid immediately.
     // Click the hero search bar's own Search button.

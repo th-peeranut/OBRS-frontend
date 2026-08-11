@@ -594,6 +594,6 @@ test.describe('AC9: Regression — existing pickup/dropoff confirm path', () => 
     const sourceDropdown = page.locator(
       '[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]'
     );
-    await expect(sourceDropdown.locator('.value-text')).not.toContainText('Source');
+    await expect(sourceDropdown).not.toHaveValue(new RegExp('Source'));
   });
 });

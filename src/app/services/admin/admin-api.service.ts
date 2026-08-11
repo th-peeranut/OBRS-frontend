@@ -123,6 +123,10 @@ export interface AdminUserDto {
   // walk-in sell page to default the pickup selection. Null/absent = no assigned
   // sales point (falls back to route origin, same as before this field existed).
   salesPointStop?: string | null;
+  // OBRS-1230 / ADR-0123: true for a guest shadow user (created from a
+  // walk-in/offline booking, never authenticates, carries zero roles by
+  // design). Both GET /private/users and GET /private/users/{id} send this.
+  guest?: boolean;
 }
 
 /** A single seat on a vehicle type's seat map, as the backend actually returns it

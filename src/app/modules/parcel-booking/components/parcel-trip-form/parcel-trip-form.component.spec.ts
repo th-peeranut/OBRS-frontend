@@ -192,7 +192,7 @@ describe('ParcelTripFormComponent', () => {
       const host = fixture.debugElement.query(By.css('app-station-swap-button'))
         .nativeElement as HTMLElement;
       const fields = Array.from(
-        root.querySelectorAll('app-dropdown-group-obrs button.dropdown-btn')
+        root.querySelectorAll('app-dropdown-group-obrs .dropdown-btn')
       ).slice(0, 2) as HTMLElement[];
       expect(fields.length).toBe(2);
 
