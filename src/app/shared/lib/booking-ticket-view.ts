@@ -40,7 +40,16 @@ export function mapBookingTicketsToCard(
       travelDate: formatDate(journey.departureDateTime, locale) || '-',
       travelTime:
         formatTimeRange(journey.departureDateTime, journey.arrivalDateTime) || '-',
-      route: buildSingleLegRoute(journey.fromStop, journey.toStop),
+      // OBRS-1219: the route's own name when the backend could resolve one, and
+      // OBRS-264's province pair when it could not (an unseeded locale — `zh` is
+      // seeded in none today, OBRS-1046). Both halves are load-bearing: the owner
+      // asked for the route name on 2026-08-10, and 264's pair is the only thing
+      // left to print when there is no name to print.
+      route:
+        journey.routeLabel?.trim() ||
+        buildSingleLegRoute(journey.fromStop, journey.toStop),
+      // AC-2: the stop-level detail rows are NOT touched by the line above — they
+      // keep the specific stop labels, which is OBRS-264's own AC-3.
       origin: journey.fromStop?.label?.trim() || '-',
       destination: journey.toStop?.label?.trim() || '-',
       vehicleType: formatVehicleType(journey.vehicle?.vehicleType?.label) || '-',

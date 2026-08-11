@@ -531,6 +531,144 @@ describe('mapBookingTicketsToCard — province-level route heading (OBRS-264)', 
   });
 });
 
+// OBRS-1219 — the owner reversed OBRS-264 for this one line on 2026-08-10: the route line is the
+// ROUTE's name now, and the province pair survives as the fallback for a route with no seeded
+// name. The block above is deliberately left intact — it still describes what happens when
+// `routeLabel` is absent, which is a live state, not a legacy one (`zh`, OBRS-1046).
+describe('mapBookingTicketsToCard — route name on the route line (OBRS-1219)', () => {
+  it('prefers the route name over the province pair, and leaves the stop detail rows alone', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          routeLabel: 'หนองชาก-บ้านบึง-กรุงเทพฯ',
+          fromStop: {
+            code: 'a',
+            label: 'หนองชาก',
+            province: { code: 'chonburi', label: 'ชลบุรี' },
+          },
+          toStop: {
+            code: 'b',
+            label: 'หมอชิต 2',
+            province: { code: 'bangkok', label: 'กรุงเทพมหานคร' },
+          },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'th');
+
+    // The province pair this same fixture produces under OBRS-264 alone is named explicitly:
+    // this asserts the route name WON, not merely that the line is non-empty.
+    expect(card.legs[0].route).toBe('หนองชาก-บ้านบึง-กรุงเทพฯ');
+    expect(card.legs[0].route).not.toBe('ชลบุรี - กรุงเทพมหานคร');
+    // AC-2 (= OBRS-264's AC-3): the stop-level rows keep their own stop labels.
+    expect(card.legs[0].origin).toBe('หนองชาก');
+    expect(card.legs[0].destination).toBe('หมอชิต 2');
+  });
+
+  it('AC-3: each leg of a round trip carries its own route name', () => {
+    const data = buildRoundTripData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          routeLabel: 'หนองชาก-บ้านบึง-กรุงเทพฯ',
+          fromStop: { code: 'a', label: 'หนองชาก' },
+          toStop: { code: 'b', label: 'หมอชิต 2' },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+        {
+          legType: { code: 'inbound', label: 'Inbound' },
+          routeLabel: 'กรุงเทพฯ-บ้านบึง-หนองชาก',
+          fromStop: { code: 'b', label: 'หมอชิต 2' },
+          toStop: { code: 'a', label: 'หนองชาก' },
+          departureDateTime: '2026-12-25T08:00:00',
+          arrivalDateTime: '2026-12-25T09:00:00',
+          tickets: [
+            { id: 2, ticketNumber: 'T-2', seatNumber: '2', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'th');
+
+    expect(card.legs[0].route).toBe('หนองชาก-บ้านบึง-กรุงเทพฯ');
+    expect(card.legs[1].route).toBe('กรุงเทพฯ-บ้านบึง-หนองชาก');
+  });
+
+  it('AC-4: no route name falls back to the province pair, not to a dash', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          // What the backend sends for a route with no seeded translation in any locale of the
+          // ladder: RouteLabelResolver answers null rather than '-' precisely so this runs.
+          routeLabel: null,
+          fromStop: {
+            code: 'a',
+            label: 'Nong Chak',
+            province: { code: 'chonburi', label: 'Chonburi' },
+          },
+          toStop: {
+            code: 'b',
+            label: 'Mo Chit',
+            province: { code: 'bangkok', label: 'Bangkok' },
+          },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].route).toBe('Chonburi - Bangkok');
+  });
+
+  it('AC-4: a blank route name is not an answer either — the pair still wins', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          routeLabel: '   ',
+          fromStop: {
+            code: 'a',
+            label: 'Nong Chak',
+            province: { code: 'chonburi', label: 'Chonburi' },
+          },
+          toStop: {
+            code: 'b',
+            label: 'Mo Chit',
+            province: { code: 'bangkok', label: 'Bangkok' },
+          },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].route).toBe('Chonburi - Bangkok');
+  });
+});
+
 // SPEC-OBRS-426 M1 — mapBookingTicketsToTrackTargets (BR-4a/BR-5/BR-6).
 describe('mapBookingTicketsToTrackTargets', () => {
   it('U8: carries the real ticket id through — TicketLeg drops it entirely (BR-5)', () => {

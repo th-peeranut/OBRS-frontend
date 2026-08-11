@@ -52,6 +52,18 @@ export interface BookingTicketItem {
 
 export interface BookingTicketJourney {
   legType?: CodeLabel;
+  /**
+   * OBRS-1219: the route's own name for the requested language, straight from
+   * `route_translations` (`หนองชาก-บ้านบึง-กรุงเทพฯ`). The e-ticket's "route"
+   * line renders this, by the owner's 2026-08-10 decision reversing OBRS-264's
+   * province pair for that one line.
+   *
+   * Absent/null when no locale of the route is seeded (`zh` is seeded in none
+   * today — OBRS-1046), and optional besides so older fixtures stay valid; the
+   * mapper falls back to OBRS-264's province pair in that case. The backend
+   * never sends the slug here on purpose — see OBRS-1216.
+   */
+  routeLabel?: string | null;
   fromStop?: BookingTicketStop;
   toStop?: BookingTicketStop;
   departureDateTime?: string;
