@@ -70,6 +70,14 @@ async function settleHome(page: Page): Promise<void> {
   // to finish rendering. On the BEFORE tree that is a SweetAlert2 popup, whose
   // open animation is 300ms.
   await page.waitForTimeout(2500);
+
+  // Bring the booking card up so the STATION FIELDS are in frame, not just the
+  // hero image. Whether those dropdowns have options is half of what these
+  // pictures are comparing. Best-effort: SweetAlert2 sets `overflow: hidden` on
+  // <body> while a popup is open, so on the BEFORE tree this may not move --
+  // which is itself the point of that image.
+  await page.locator('.booking-card').scrollIntoViewIfNeeded().catch(() => undefined);
+  await page.waitForTimeout(400);
 }
 
 test.describe(`OBRS-1222 capture (${STAGE})`, () => {
