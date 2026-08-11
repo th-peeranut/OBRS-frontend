@@ -51,6 +51,7 @@ function makeDetail(overrides: Partial<SettlementScheduleDetailDto> = {}): Settl
       // tickets with no fee recorded yet.
       expectedCashAmount: '600.00',
       perHeadDeducted: '0.00',
+      deferredTicketCash: '0.00',
     },
     settled: null,
     discrepancy: null,
@@ -122,6 +123,7 @@ describe('SettlementDetailModalComponent', () => {
         agencyTotal: '0.00',
         expectedCashAmount: '0.00',
         perHeadDeducted: '0.00',
+        deferredTicketCash: '0.00',
         passengerCount: 0,
         ticketCount: 0,
         byMethod: [],
@@ -205,11 +207,48 @@ describe('SettlementDetailModalComponent', () => {
         byMethod: [{ method: 'cash', amount: '1000.00', ticketCount: 2 }],
         expectedCashAmount: '880.00',
         perHeadDeducted: '120.00',
+        deferredTicketCash: '0.00',
       },
     });
     expect(component['expectedCashAmount']()).toBe('880.00');
     expect(component['perHeadDeducted']).toBe('120.00');
     expect(component['hasPerHeadDeducted']).toBeTrue();
+  });
+
+  // ── OBRS-1242 deferred ticket cash ───────────────────────────────────────
+  // Must-catch, the same shape as the ค่าหัว case above one card later: a round
+  // that took 1000.00 in cash of which 700.00 was sold at a counter that
+  // transfers to the owner at close of day expects 300.00 at hand-over. A
+  // screen deriving its own figure from the cash bucket says 1000.00 and calls
+  // an exactly-correct hand-over 700.00 short — and the reason box gets filled
+  // in, every round, until nobody reads it any more.
+  it('deferredTicketCash is the served figure and the expectation is already net of it', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeDetail({
+      live: {
+        ...makeDetail().live,
+        totalAmount: '1000.00',
+        byMethod: [{ method: 'cash', amount: '1000.00', ticketCount: 3 }],
+        expectedCashAmount: '300.00',
+        perHeadDeducted: '0.00',
+        deferredTicketCash: '700.00',
+      },
+    });
+    expect(component['deferredTicketCash']).toBe('700.00');
+    expect(component['expectedCashAmount']()).toBe('300.00');
+
+    component['countedCashInput'] = '300.00';
+    expect(component['hasDiscrepancy']()).toBeFalse();
+  });
+
+  // AC8: served and rendered even at zero. A getter falling back to '' — or a
+  // template that hid the row at 0.00 — would make "this round has none" and
+  // "the server stopped sending it" look identical on the one screen where the
+  // difference is money.
+  it('deferredTicketCash reads 0.00 — never blank — on a round that has none', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeDetail();
+    expect(component['deferredTicketCash']).toBe('0.00');
   });
 
   it('expectedCashAmount is 0.00 when the round took no cash', () => {
@@ -234,6 +273,7 @@ describe('SettlementDetailModalComponent', () => {
         byMethod: [{ method: 'cash', amount: '1000.00', ticketCount: 2 }],
         expectedCashAmount: '880.00',
         perHeadDeducted: '120.00',
+        deferredTicketCash: '0.00',
       },
     });
     component['countedCashInput'] = '880.00';
@@ -448,6 +488,7 @@ describe('SettlementDetailModalComponent', () => {
         agencyTotal: '400.00',
         expectedCashAmount: '600.00',
         perHeadDeducted: '0.00',
+        deferredTicketCash: '0.00',
         passengerCount: 4,
         ticketCount: 4,
         byMethod: [{ method: 'cash', amount: '600.00', ticketCount: 2 }],

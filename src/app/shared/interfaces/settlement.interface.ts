@@ -117,6 +117,20 @@ export interface SettlementLiveDto {
 
   /** OBRS-1145 — ค่าหัว already netted out of `expectedCashAmount`, positive magnitude. */
   perHeadDeducted: string;
+
+  /**
+   * OBRS-1242 — ticket cash already netted out of `expectedCashAmount` because
+   * the counter that took it transfers to the owner at CLOSE OF DAY rather than
+   * at this round (`sales_points.ticket_cash_remit_cadence = 'DAY'`, or a
+   * `ROUND` counter selling a round that departs from somewhere else). Positive
+   * magnitude.
+   *
+   * The owner stands at หนองชาก, so only that counter hands ticket cash over
+   * round by round; บ้านบึง and หมอชิต transfer the day's takings to the
+   * owner's bank account. Their sales were demanded at the round anyway, which
+   * made every honest hand-over look short by exactly that amount.
+   */
+  deferredTicketCash: string;
 }
 
 /**
