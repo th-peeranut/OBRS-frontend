@@ -41,6 +41,53 @@
   width: min(420px, 100%);
 }
 
+/* OBRS-1252. Same padding + centring as `.ticket-stage` and the slot above it, so the banner
+   lines up with the ticket rather than the viewport edge, and no margin of its own on the slot:
+   the `@if` leaves an empty div on every ordinary render and an empty slot must cost zero
+   height above the ticket. */
+.ticket-incomplete-slot {
+  display: flex;
+  justify-content: center;
+  padding: 0 24px;
+}
+
+/* Colours are the retrieval note's, not a new palette: those were measured against THIS page's
+   composited surface (#e4eff4) for OBRS-584/769 and pass there, and this banner sits on the same
+   surface a few pixels higher. The left accent is the only addition, and it is the link colour
+   already proven legible here rather than a fourth blue. */
+.ticket-incomplete {
+  width: min(420px, 100%);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 auto 16px;
+  padding: 12px 16px;
+  border-left: 4px solid $secondary-blue-hover;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  color: $text-softblack;
+  font-size: 14px;
+  line-height: 1.5;
+
+  strong {
+    display: block;
+  }
+
+  a {
+    text-decoration: underline;
+    color: $secondary-blue-hover;
+  }
+
+  :host-context(body.is-dark) & {
+    border-left-color: $dk-accent;
+    background: rgba(255, 255, 255, 0.06);
+    color: $dk-text-muted;
+    a {
+      color: $dk-accent;
+    }
+  }
+}
+
 .ticket-shell {
   width: min(420px, 100%);
   display: flex;
