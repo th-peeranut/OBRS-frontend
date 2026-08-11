@@ -213,6 +213,16 @@ describe('station-groups (OBRS-1212)', () => {
       expect(groups[1].stations.map((s) => s.slug)).toEqual(['stop_with_no_province']);
     });
 
+    it('falls back to flat when NOTHING joined — one nameless heading over the whole list is a grouping that was never established', () => {
+      // The province payload describes stops this roster has never heard of.
+      const groups = groupStationsByProvince(
+        [station(9, 'stop_from_another_system')],
+        PROVINCES
+      );
+
+      expect(groups).toBeNull();
+    });
+
     it('AC#9: never writes a sequence number into any label it produces', () => {
       const groups = groupStationsByProvince(
         [station(1, 'nong_chak'), station(3, 'utcc')],

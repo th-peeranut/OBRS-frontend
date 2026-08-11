@@ -185,6 +185,16 @@ export function groupStationsByProvince(
     }
   }
 
+  // Nothing joined at all — the province payload and the roster do not describe
+  // the same stops. Falling back to flat is the honest answer: the alternative
+  // is ONE nameless heading above the entire list, which claims a grouping that
+  // was never established and renders as a blank row. Found while wiring the
+  // hermetic E2E lane, whose catch-all answers `/api/provinces/stops` with the
+  // STOP list because both paths end in `/stops`.
+  if (groups.length === 0) {
+    return null;
+  }
+
   if (ungrouped.length) {
     groups.push({
       slug: '',
