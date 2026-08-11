@@ -182,9 +182,13 @@ export class TripTrackMapComponent implements OnChanges, AfterViewInit, OnDestro
   }
 
   private buildBoardingIcon(): L.DivIcon {
+    // OBRS-1202: `translate="no"` in its plain HTML form here, not the
+    // `[attr.translate]` binding the templates use — Leaflet injects this string
+    // into the DOM itself, so Angular (and with it ngx-translate's
+    // `[translate]` directive) never sees it.
     const html = `
       <span class="trip-track-boarding-pin" style="background: var(--trip-track-marker-boarding-fill)">
-        <span class="material-symbols-outlined trip-track-boarding-pin-icon" aria-hidden="true">flag</span>
+        <span class="material-symbols-outlined trip-track-boarding-pin-icon" translate="no" aria-hidden="true">flag</span>
       </span>
     `;
     return L.divIcon({

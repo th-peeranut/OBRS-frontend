@@ -19,7 +19,7 @@ which hid the second option behind a click. -->
       (click)="select(option)"
     >
       @if (isSelected(option)) {
-        <span class="material-symbols-outlined trip-type-toggle__check" aria-hidden="true"
+        <span class="material-symbols-outlined trip-type-toggle__check" [attr.translate]="'no'" aria-hidden="true"
           >check</span
         >
       }

@@ -10,7 +10,7 @@
 
   @if (errorText) {
     <div class="trip-track-panel__error">
-      <span class="material-symbols-outlined" aria-hidden="true">error</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">error</span>
       <p>{{ errorText }}</p>
     </div>
   }
@@ -40,7 +40,7 @@
       }
       @if (!canShowMap) {
         <div class="trip-track-panel__map-unavailable">
-          <span class="material-symbols-outlined" aria-hidden="true">map</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">map</span>
           <p>{{ "MY_BOOKINGS.TRIP_TRACK.MAP_UNAVAILABLE" | translate }}</p>
         </div>
       }

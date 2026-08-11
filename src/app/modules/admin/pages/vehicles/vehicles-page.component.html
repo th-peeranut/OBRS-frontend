@@ -10,7 +10,7 @@
   </div>
   @if (activeTab === 'list') {
     <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
-      <span class="material-symbols-outlined">add</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'">add</span>
       <span>{{ 'ADMIN.VEHICLES.ADD' | translate }}</span>
     </button>
   }
@@ -25,7 +25,7 @@
     [attr.aria-selected]="activeTab === 'list'"
     (click)="setActiveTab('list')"
     >
-    <span class="material-symbols-outlined">directions_bus</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'">directions_bus</span>
     <span>{{ 'ADMIN.VEHICLES.TABLE_TITLE' | translate }}</span>
   </button>
   <button
@@ -38,7 +38,7 @@
     [attr.title]="!focusedVehicle ? ('ADMIN.VEHICLES.MAINTENANCE.TAB_DISABLED_HINT' | translate) : null"
     (click)="setActiveTab('maintenance')"
     >
-    <span class="material-symbols-outlined">build</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'">build</span>
     <span>{{ 'ADMIN.VEHICLES.MAINTENANCE.TAB' | translate }}</span>
   </button>
   <button
@@ -51,7 +51,7 @@
     [attr.title]="!focusedVehicle ? ('ADMIN.VEHICLES.INSPECTION.TAB_DISABLED_HINT' | translate) : null"
     (click)="setActiveTab('inspections')"
     >
-    <span class="material-symbols-outlined">checklist</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'">checklist</span>
     <span>{{ 'ADMIN.VEHICLES.INSPECTION.TAB' | translate }}</span>
   </button>
 </nav>
@@ -59,21 +59,21 @@
 @if (activeTab === 'list') {
   <section class="admin-grid admin-grid--3 mt-3">
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">directions_bus</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">directions_bus</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.VEHICLES.TOTAL' | translate }}</p>
         <p class="admin-big-number">{{ totalVehicles }}</p>
       </div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">check_circle</span></span>
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined" [attr.translate]="'no'">check_circle</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.VEHICLES.ACTIVE' | translate }}</p>
         <p class="admin-big-number">{{ activeVehicles }}</p>
       </div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">pending_actions</span></span>
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined" [attr.translate]="'no'">pending_actions</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.VEHICLES.PENDING' | translate }}</p>
         <p class="admin-big-number">{{ pendingVehicles }}</p>
@@ -105,7 +105,7 @@
 
 @if (activeTab === 'maintenance' && focusedVehicle) {
   <div class="schedule-focus-banner">
-    <span class="material-symbols-outlined">directions_bus</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'">directions_bus</span>
     <span>{{ 'ADMIN.VEHICLES.MAINTENANCE.FOCUSED_BANNER' | translate: { vehicle: focusedVehicle.vehicleNumber } }}</span>
     <button type="button" class="schedule-focus-clear" (click)="clearFocusedVehicle()">
       {{ 'ADMIN.VEHICLES.MAINTENANCE.FOCUSED_CLEAR' | translate }}
@@ -121,7 +121,7 @@
 
 @if (activeTab === 'inspections' && focusedVehicle) {
   <div class="schedule-focus-banner">
-    <span class="material-symbols-outlined">directions_bus</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'">directions_bus</span>
     <span>{{ 'ADMIN.VEHICLES.INSPECTION.FOCUSED_BANNER' | translate: { vehicle: focusedVehicle.vehicleNumber } }}</span>
     <button type="button" class="schedule-focus-clear" (click)="clearFocusedVehicle()">
       {{ 'ADMIN.VEHICLES.MAINTENANCE.FOCUSED_CLEAR' | translate }}

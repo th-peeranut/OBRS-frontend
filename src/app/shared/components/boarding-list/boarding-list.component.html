@@ -27,7 +27,7 @@
       <div class="boarding-trip-header-status">
         <div class="boarding-trip-header-status-row">
           <span class="admin-status admin-status--icon" [ngClass]="scheduleStatusPillClass">
-            <span class="material-symbols-outlined" aria-hidden="true">{{ scheduleStatusPillIcon }}</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">{{ scheduleStatusPillIcon }}</span>
             {{ scheduleStatusPillLabelKey | translate }}
           </span>
           <!-- OBRS-272: "delayed" is a DERIVED indicator (off delayedDepartureDateTime),
@@ -37,7 +37,7 @@
           is-info(departed)/is-success(arrived)/is-neutral(scheduled). -->
           @if (isScheduleDelayed) {
             <span class="admin-status is-delayed admin-status--icon">
-              <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">schedule</span>
               {{ 'STAFF.SCHEDULE_DELAY.INDICATOR_LABEL' | translate: { eta: formattedDelayedEta } }}
             </span>
           }
@@ -48,7 +48,7 @@
               [disabled]="isUpdatingScheduleStatus"
               (click)="onScheduleStatusAction()"
               >
-              <span class="material-symbols-outlined" aria-hidden="true">{{ action.icon }}</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">{{ action.icon }}</span>
               {{ (isUpdatingScheduleStatus ? 'STAFF.SCHEDULE_STATUS.ACTION.UPDATING' : action.labelKey) | translate }}
             </button>
           }
@@ -64,7 +64,7 @@
               class="admin-btn"
               (click)="openDelayDialog()"
               >
-              <span class="material-symbols-outlined" aria-hidden="true">update</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">update</span>
               {{ delayPillLabelKey | translate }}
             </button>
           }
@@ -89,7 +89,7 @@
       [disabled]="isLoading"
       (click)="printManifest()"
       >
-      <span class="material-symbols-outlined" aria-hidden="true">print</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">print</span>
       {{ 'STAFF.BOARDING.PRINT_BTN' | translate }}
     </button>
     <app-export-button
@@ -107,7 +107,7 @@
   are frozen (mirrors the backend's BOARDING_ROUND_ARRIVED guard). -->
   @if (isScheduleArrived) {
     <div class="boarding-lock-banner" role="status">
-      <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">lock</span>
       {{ 'STAFF.SCHEDULE_STATUS.LOCK_BANNER' | translate }}
     </div>
   }
@@ -140,7 +140,7 @@
               [disabled]="isScanning || isUpdatingScheduleStatus || isScheduleArrived"
               (click)="setScanMode('text')"
               >
-              <span class="material-symbols-outlined" aria-hidden="true">keyboard</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">keyboard</span>
               {{ 'STAFF.BOARDING.SCAN.MODE_TEXT' | translate }}
             </button>
             <button
@@ -151,7 +151,7 @@
               [disabled]="isScanning || isUpdatingScheduleStatus || isScheduleArrived"
               (click)="setScanMode('camera')"
               >
-              <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">photo_camera</span>
               {{ 'STAFF.BOARDING.SCAN.MODE_CAMERA' | translate }}
             </button>
           </div>
@@ -170,7 +170,7 @@
                 }
                 @if (cameraStatus === 'active') {
                   <span class="boarding-scan-chip">
-                    <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">qr_code_scanner</span>
                     {{ 'STAFF.BOARDING.SCAN.CAMERA.SCANNING' | translate }}
                   </span>
                 }
@@ -184,7 +184,7 @@
             <!-- Fallback empty-state (design-system §12 full-section empty-state pattern). -->
             @if (isCameraFallbackStatus) {
               <div class="boarding-scan-camera-empty">
-                <span class="material-symbols-outlined" aria-hidden="true">{{ cameraFallbackIcon }}</span>
+                <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">{{ cameraFallbackIcon }}</span>
                 <p class="boarding-scan-camera-empty-title">{{ cameraFallbackMessageKey | translate }}</p>
                 @if (cameraStatus === 'denied' || cameraStatus === 'error') {
                   <button
@@ -198,7 +198,7 @@
               </div>
             }
             <div class="boarding-scan-camera-hint text-muted small">
-              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">info</span>
               {{ 'STAFF.BOARDING.SCAN.CAMERA.HINT' | translate }}
             </div>
           </div>
@@ -223,7 +223,7 @@
               [disabled]="!scanToken.trim() || isScanning || isUpdatingScheduleStatus || isScheduleArrived"
               (click)="validateScan()"
               >
-              <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">qr_code_scanner</span>
               {{ (isScanning ? 'STAFF.BOARDING.SCAN.VALIDATING' : 'STAFF.BOARDING.SCAN.BUTTON') | translate }}
             </button>
           </div>
@@ -231,7 +231,7 @@
           @if (scanResult) {
             <div class="boarding-scan-result" role="status">
               <span class="admin-status is-success admin-status--icon">
-                <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">check_circle</span>
                 {{ 'STAFF.BOARDING.SCAN.SUCCESS_TITLE' | translate }}
               </span>
               <div class="boarding-scan-result-detail">
@@ -252,7 +252,7 @@
                 [class.is-danger]="scanError.severity === 'danger'"
                 [class.is-warning]="scanError.severity === 'warning'"
                 >
-                <span class="material-symbols-outlined" aria-hidden="true">{{ scanError.icon }}</span>
+                <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">{{ scanError.icon }}</span>
                 {{ scanError.messageKey | translate }}
               </span>
               <button type="button" class="admin-btn admin-btn-small" (click)="dismissScanResult()">
@@ -292,7 +292,7 @@
               @if (!isLoading && items.length === 0 && !errorMessage) {
                 <tr>
                   <td colspan="9" class="text-center py-5">
-                    <span class="material-symbols-outlined text-muted d-block mb-2" style="font-size:48px">people</span>
+                    <span class="material-symbols-outlined text-muted d-block mb-2" [attr.translate]="'no'" style="font-size:48px">people</span>
                     <div class="fw-semibold">{{ 'STAFF.BOARDING.EMPTY_TITLE' | translate }}</div>
                     <div class="text-muted small">{{ 'STAFF.BOARDING.EMPTY_BODY' | translate }}</div>
                   </td>
@@ -320,7 +320,7 @@
                           <span
                             class="admin-status is-warning admin-status--icon d-block mt-1"
                             >
-                            <span class="material-symbols-outlined" aria-hidden="true">flag</span>
+                            <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">flag</span>
                             {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED' | translate }}
                           </span>
                         }
@@ -340,7 +340,7 @@
                         [class.is-success]="isBoarded(item)"
                         [class.is-neutral]="!isBoarded(item)"
                         >
-                        <span class="material-symbols-outlined" aria-hidden="true">{{ isBoarded(item) ? 'check_circle' : 'radio_button_unchecked' }}</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">{{ isBoarded(item) ? 'check_circle' : 'radio_button_unchecked' }}</span>
                         {{ (isBoarded(item) ? 'STAFF.BOARDING.BOARDED' : 'STAFF.BOARDING.NOT_BOARDED') | translate }}
                       </span>
                       @if (isBoarded(item)) {

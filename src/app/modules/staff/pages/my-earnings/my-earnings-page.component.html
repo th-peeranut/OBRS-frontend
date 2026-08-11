@@ -71,7 +71,7 @@ shown beside stale numbers, which would read as "this is your pay". -->
   row (measured on the first AFTER capture). -->
   <section class="admin-grid me-kpi-grid mt-3">
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined" [attr.translate]="'no'">payments</span></span>
       <div>
         <p class="admin-muted">{{ 'STAFF.MY_EARNINGS.TILE.TOTAL' | translate }}</p>
         @if (!isLoading) {
@@ -83,7 +83,7 @@ shown beside stale numbers, which would read as "this is your pay". -->
       </div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">groups</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">groups</span></span>
       <div>
         <p class="admin-muted">{{ 'STAFF.MY_EARNINGS.TILE.HEADS' | translate }}</p>
         @if (!isLoading) {

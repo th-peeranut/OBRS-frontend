@@ -31,7 +31,7 @@
 @if (contentState === 'loading' || contentState === 'data') {
   <section class="admin-grid admin-grid--4 mt-3">
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">departure_board</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">departure_board</span></span>
       <div><p class="admin-muted">{{ 'ADMIN.OPS_EFFICIENCY.TILE.DEPARTURES' | translate }}</p>
       @if (!isLoading) {
         <p class="admin-big-number">{{ formatCount(departures?.scheduled ?? 0) }}</p>
@@ -40,7 +40,7 @@
       }</div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">task_alt</span></span>
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined" [attr.translate]="'no'">task_alt</span></span>
       <div><p class="admin-muted">{{ 'ADMIN.OPS_EFFICIENCY.TILE.COMPLETION' | translate }}</p>
       @if (!isLoading) {
         <p class="admin-big-number">{{ pctDisplay(departures?.completionRatePct ?? 0) }}</p>
@@ -49,7 +49,7 @@
       }</div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">event_seat</span></span>
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined" [attr.translate]="'no'">event_seat</span></span>
       <div><p class="admin-muted">{{ 'ADMIN.OPS_EFFICIENCY.TILE.FILL' | translate }}</p>
       @if (!isLoading) {
         <p class="admin-big-number">{{ pctDisplay(seat?.fillRatePct ?? 0) }}</p>
@@ -58,7 +58,7 @@
       }</div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">airline_seat_recline_normal</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">airline_seat_recline_normal</span></span>
       <div><p class="admin-muted">{{ 'ADMIN.OPS_EFFICIENCY.TILE.SEATS' | translate }}</p>
       @if (!isLoading) {
         <p class="admin-big-number">{{ formatCount(seat?.seatsSold ?? 0) }} / {{ formatCount(seat?.seatCapacity ?? 0) }}</p>

@@ -30,7 +30,7 @@
     <!-- SUCCESS STATE -->
     @if (verifyState === 'success') {
       <div class="state-container mt-5 text-center">
-        <span class="material-symbols-outlined state-icon success-icon">
+        <span class="material-symbols-outlined state-icon success-icon" [attr.translate]="'no'">
           check_circle
         </span>
         <h2 class="state-title mt-3">{{ "VERIFY_EMAIL.SUCCESS_TITLE" | translate }}</h2>
@@ -53,7 +53,7 @@
     <!-- FAILED STATE -->
     @if (verifyState === 'failed') {
       <div class="state-container mt-5 text-center">
-        <span class="material-symbols-outlined state-icon fail-icon">
+        <span class="material-symbols-outlined state-icon fail-icon" [attr.translate]="'no'">
           error
         </span>
         <h2 class="state-title mt-3">{{ "VERIFY_EMAIL.FAIL_TITLE" | translate }}</h2>

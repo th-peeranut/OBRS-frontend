@@ -13,7 +13,7 @@
   <!-- An empty queue is good news: nobody is standing at a counter waiting. -->
   @if (contentState === 'empty') {
     <div class="cra-empty">
-      <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">task_alt</span>
       <p class="cra-empty-title">{{ 'ADMIN.CASH_REFUND_APPROVALS.EMPTY' | translate }}</p>
     </div>
   }

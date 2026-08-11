@@ -32,7 +32,7 @@
 
     @if (showError) {
       <div class="notification-inbox-state">
-        <span class="material-symbols-outlined" aria-hidden="true">error_outline</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">error_outline</span>
         <p>{{ 'NOTIFICATIONS.LOAD_ERROR' | translate }}</p>
         <button type="button" class="admin-btn admin-btn-small" (click)="retry.emit()">
           {{ 'NOTIFICATIONS.RETRY' | translate }}
@@ -42,7 +42,7 @@
 
     @if (showEmpty) {
       <div class="notification-inbox-state">
-        <span class="material-symbols-outlined" aria-hidden="true">notifications_none</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">notifications_none</span>
         <p>{{ 'NOTIFICATIONS.EMPTY_TITLE' | translate }}</p>
       </div>
     }

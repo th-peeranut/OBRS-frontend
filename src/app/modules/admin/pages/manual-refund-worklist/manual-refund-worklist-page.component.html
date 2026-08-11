@@ -23,7 +23,7 @@
   queue is good news, not an error. -->
   @if (contentState === 'empty') {
     <div class="mrw-empty">
-      <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">task_alt</span>
       <p class="mrw-empty-title">{{ 'ADMIN.MANUAL_REFUNDS.EMPTY' | translate }}</p>
     </div>
   }

@@ -64,14 +64,14 @@ same rule as app-settlements-list. -->
                          rendered on the worklist the owner already opens, not left as a field. -->
                     @if (item.overdueOpen) {
                       <span
-                        class="material-symbols-outlined dcp-row-warning-icon"
+                        class="material-symbols-outlined dcp-row-warning-icon" [attr.translate]="'no'"
                         [attr.title]="'ADMIN.SETTLEMENTS.DRIVER_CASH.OVERDUE_OPEN_HINT' | translate"
                         data-testid="driver-cash-day-overdue-icon"
                         >schedule</span>
                     }
                     @if (item.hasUnmappedSalesPointRemit) {
                       <span
-                        class="material-symbols-outlined dcp-row-warning-icon"
+                        class="material-symbols-outlined dcp-row-warning-icon" [attr.translate]="'no'"
                         [attr.title]="'STAFF.PARCEL_CONSIGN.SALES_POINT_NOT_MAPPED' | translate"
                         data-testid="driver-cash-day-unmapped-icon"
                         >warning</span>

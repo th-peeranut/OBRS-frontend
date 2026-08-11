@@ -8,7 +8,7 @@
       [attr.aria-pressed]="showAll"
       (click)="toggleShowAll()"
       >
-      <span class="material-symbols-outlined">filter_alt</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'">filter_alt</span>
       <span>{{ (showAll ? 'ADMIN.VEHICLES.INSPECTION.FILTER_SHOWING_ALL' : 'ADMIN.VEHICLES.INSPECTION.FILTER_SHOW_ALL') | translate }}</span>
     </button>
   </div>
@@ -44,7 +44,7 @@
   <!-- Error (no cached value): replaces the table, no toast. -->
   @if (!isLoading && errorMessage) {
     <div class="vehicle-inspection-empty">
-      <span class="material-symbols-outlined" aria-hidden="true">error</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">error</span>
       <p class="vehicle-inspection-empty-title">{{ errorMessage }}</p>
     </div>
   }
@@ -53,7 +53,7 @@
   whole table section, not a zero-row table under a banner. -->
   @if (isEmpty) {
     <div class="vehicle-inspection-empty">
-      <span class="material-symbols-outlined" aria-hidden="true">checklist</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">checklist</span>
       <p class="vehicle-inspection-empty-title">{{ 'ADMIN.VEHICLES.INSPECTION.EMPTY_TITLE' | translate }}</p>
       <p class="vehicle-inspection-empty-body">{{ 'ADMIN.VEHICLES.INSPECTION.EMPTY_BODY' | translate }}</p>
     </div>
@@ -139,7 +139,7 @@ fields already in hand; a spinner covers only the items list. -->
         </dl>
         @if (isDetailLoading) {
           <div class="vehicle-inspection-detail-loading">
-            <span class="material-symbols-outlined spin" aria-hidden="true">progress_activity</span>
+            <span class="material-symbols-outlined spin" [attr.translate]="'no'" aria-hidden="true">progress_activity</span>
             <span>{{ 'ADMIN.COMMON.LOADING' | translate }}</span>
           </div>
         }

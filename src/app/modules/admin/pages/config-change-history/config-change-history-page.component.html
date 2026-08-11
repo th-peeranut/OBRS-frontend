@@ -137,7 +137,7 @@
                 </td>
                 <td class="cch-change-cell">
                   <span [class.admin-muted]="row.operation === 'DELETE'">{{ formatValue(row, 'old') }}</span>
-                  <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+                  <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">arrow_forward</span>
                   <span [class.admin-muted]="row.operation === 'DELETE'" [class.admin-emphasis]="row.operation !== 'DELETE'">
                     {{ formatValue(row, 'new') }}
                   </span>

@@ -97,6 +97,17 @@ export class LanguageService {
     // Accept-Language header, so it must already hold the new language or the
     // re-fetch goes out with the old locale and the server data stays stale.
     localStorage.setItem(APP_LANGUAGE_KEY, lang);
+    // OBRS-1202: keep the document's declared language on the language the page
+    // is actually rendering. `src/index.html` can only ship ONE value (OBRS-1194
+    // set it to DEFAULT_LANGUAGE), so from the first switch onwards this is the
+    // only thing that keeps the declaration true. It is not cosmetic: a browser
+    // that believes a stale `lang` runs its machine translator over text that is
+    // already in the reader's language — measured on prod 2026-08-10, that is
+    // what turned หนองชาก into "ชุชาก" and the Material Symbols ligatures into
+    // the words "เมนู"/"ธง". Set BEFORE `translate.use()`, which emits
+    // `onLangChange` synchronously for an already-loaded language: subscribers
+    // that re-read the document must not see the previous language.
+    document.documentElement.lang = lang;
     this.translate.use(lang);
     const calendar = await firstValueFrom(this.translate.get('CALENDAR'));
     this.primengConfig.setTranslation(calendar);

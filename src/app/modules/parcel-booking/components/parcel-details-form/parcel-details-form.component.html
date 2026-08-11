@@ -114,7 +114,7 @@
           <ul class="parcel-details-form__prohibited-list">
             @for (category of prohibitedCategories; track category.slug) {
               <li>
-                <span class="material-symbols-outlined" aria-hidden="true">{{ category.icon }}</span>
+                <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">{{ category.icon }}</span>
                 <span>{{ category.i18nKey | translate: category.params }}</span>
               </li>
             }

@@ -7,7 +7,7 @@
         class="admin-btn admin-btn-primary"
         (click)="openCreateModal()"
         >
-        <span class="material-symbols-outlined">add</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'">add</span>
         <span>{{ 'ADMIN.VEHICLES.MAINTENANCE.ADD' | translate }}</span>
       </button>
     }
@@ -50,7 +50,7 @@
   <!-- Error (no cached value): replaces the table, no toast. -->
   @if (!isLoading && errorMessage) {
     <div class="vehicle-maintenance-empty">
-      <span class="material-symbols-outlined" aria-hidden="true">error</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">error</span>
       <p class="vehicle-maintenance-empty-title">{{ errorMessage }}</p>
     </div>
   }
@@ -58,7 +58,7 @@
   <!-- Empty (200 + []): replaces the whole table section, not a zero-row table. -->
   @if (isEmpty) {
     <div class="vehicle-maintenance-empty">
-      <span class="material-symbols-outlined" aria-hidden="true">build</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">build</span>
       <p class="vehicle-maintenance-empty-title">{{ 'ADMIN.VEHICLES.MAINTENANCE.EMPTY_TITLE' | translate }}</p>
       <p class="vehicle-maintenance-empty-body">{{ 'ADMIN.VEHICLES.MAINTENANCE.EMPTY_BODY' | translate }}</p>
     </div>
@@ -97,7 +97,7 @@
                       [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
                       (click)="openEditModal(row)"
                       >
-                      <span class="material-symbols-outlined">edit_square</span>
+                      <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
                     </button>
                   </div>
                 </td>

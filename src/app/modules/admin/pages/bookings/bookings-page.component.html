@@ -9,7 +9,7 @@
       things and must not look the same. -->
       @if (isForbidden) {
         <p class="bk-forbidden" role="status">
-          <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">lock</span>
           <span>{{ errorMessage }}</span>
         </p>
       }
@@ -32,7 +32,7 @@ longer entitled to see, plus filter/export controls acting on them. -->
     </div>
     <div class="admin-page-filters">
       <label class="admin-search">
-        <span class="material-symbols-outlined">search</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'">search</span>
         <input
           #searchInput
           type="text"
@@ -55,7 +55,7 @@ longer entitled to see, plus filter/export controls acting on them. -->
           (click)="exportCsv()"
           [disabled]="filteredBookings.length === 0"
           >
-          <span class="material-symbols-outlined">download</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">download</span>
           <span>{{ 'ADMIN.COMMON.EXPORT' | translate }}</span>
         </button>
       </div>
@@ -170,7 +170,7 @@ longer entitled to see, plus filter/export controls acting on them. -->
             [attr.aria-label]="'ADMIN.BOOKINGS.DETAIL.CLOSE' | translate"
             (click)="closeDetail()"
             >
-            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">close</span>
           </button>
         </div>
         @if (detailBooking) {

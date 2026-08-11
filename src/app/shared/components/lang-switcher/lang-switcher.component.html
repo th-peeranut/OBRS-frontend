@@ -7,9 +7,9 @@
     aria-haspopup="menu"
     [attr.aria-label]="'HOME.NAVBAR.LANGUAGE_SWITCH' | translate"
     >
-    <span class="material-symbols-outlined navbar-lang-globe">language</span>
+    <span class="material-symbols-outlined navbar-lang-globe" [attr.translate]="'no'">language</span>
     <span class="navbar-lang-label">{{ currentEndonym }}</span>
-    <span class="material-symbols-outlined navbar-lang-chevron">expand_more</span>
+    <span class="material-symbols-outlined navbar-lang-chevron" [attr.translate]="'no'">expand_more</span>
   </button>
 
   @if (isLangDropdownOpen) {
@@ -30,7 +30,7 @@
           (click)="selectLanguage(lang.code)"
           >
           <span
-            class="material-symbols-outlined navbar-lang-check"
+            class="material-symbols-outlined navbar-lang-check" [attr.translate]="'no'"
             [class.visible]="currentLanguage === lang.code"
             aria-hidden="true"
           >check</span>

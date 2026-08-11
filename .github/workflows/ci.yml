@@ -270,6 +270,21 @@ jobs:
       - name: index.html lang/title gate
         run: npm run test:index-lang
 
+      # Thirteenth pure-node gate (OBRS-1202). The other half of the same prod
+      # incident, and the half `<html lang>` cannot cover: the owner decided NOT to
+      # switch browser translation off (passengers on this route read Burmese and
+      # Khmer, which the app's own th/en/zh switcher does not offer), so a
+      # translated page is a SUPPORTED state -- and in that state every Material
+      # Symbols ligature is a genuine English word the translator will happily
+      # replace, turning the hamburger into the word "เมนู". No test can see it:
+      # the text is already the icon name, and the font hides it on every machine
+      # we develop on. So the guard is counted here instead, in both directions --
+      # an unguarded icon fails, and so does the STATIC `translate="no"`, which
+      # ngx-translate's `[translate]` directive claims as a translation key and
+      # renders as the word "nono" (measured, karma probe 2026-08-11).
+      - name: Material Symbols translate gate
+        run: npm run test:icon-translate
+
       # Eleventh pure-node gate (OBRS-911). netlify.toml now carries an `ignore` command,
       # and its polarity is the opposite of everything else in this file: exit 0 CANCELS
       # the Netlify build. That makes a mistake in it INVISIBLE by construction - a wrong

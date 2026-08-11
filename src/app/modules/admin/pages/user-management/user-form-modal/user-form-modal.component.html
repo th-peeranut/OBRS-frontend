@@ -16,14 +16,14 @@
           </p>
         </div>
         <button type="button" class="user-editor-close" (click)="requestClose()">
-          <span class="material-symbols-outlined">close</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
         </button>
       </div>
       <div class="user-editor-body">
         <form [formGroup]="userForm" class="user-editor-form" (ngSubmit)="submitUser()">
           <section class="user-editor-section">
             <div class="user-editor-section-title">
-              <span class="material-symbols-outlined">person</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'">person</span>
               <h5>Personal Information</h5>
             </div>
             <div class="user-editor-grid">
@@ -72,7 +72,7 @@
           @if (mode !== 'edit') {
             <section class="user-editor-section">
               <div class="user-editor-section-title">
-                <span class="material-symbols-outlined">key</span>
+                <span class="material-symbols-outlined" [attr.translate]="'no'">key</span>
                 <h5>Account Credentials</h5>
               </div>
               <div class="user-editor-grid is-two-column">
@@ -108,7 +108,7 @@
           }
           <section class="user-editor-section">
             <div class="user-editor-section-title">
-              <span class="material-symbols-outlined">contact_mail</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'">contact_mail</span>
               <h5>Contact &amp; Settings</h5>
             </div>
             <div class="user-editor-grid is-two-column">
@@ -184,7 +184,7 @@
             </section>
             <section class="user-editor-section">
               <div class="user-editor-section-title">
-                <span class="material-symbols-outlined">badge</span>
+                <span class="material-symbols-outlined" [attr.translate]="'no'">badge</span>
                 <h5>{{ 'ADMIN.USERS.ROLES' | translate }} <span class="admin-required">*</span></h5>
               </div>
               <div class="user-role-list">

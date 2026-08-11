@@ -11,7 +11,7 @@
   } @else {
     @if (graphic === 'icon') {
       <span
-        class="material-symbols-outlined admin-loading-spinner loading-state-icon"
+        class="material-symbols-outlined admin-loading-spinner loading-state-icon" [attr.translate]="'no'"
         [style.fontSize.px]="sizePx"
         [style.animationDuration.ms]="durationMs"
         aria-hidden="true"

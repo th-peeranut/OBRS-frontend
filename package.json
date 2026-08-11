@@ -36,6 +36,7 @@
     "test:e2e-lanes": "node scripts/check-e2e-lanes.mjs",
     "test:omise-key": "node scripts/check-omise-key-format.mjs",
     "test:index-lang": "node scripts/check-index-html-lang.mjs",
+    "test:icon-translate": "node scripts/check-icon-translate.mjs",
     "test:fab-yield-selector": "node scripts/check-fab-yield-selector.mjs",
     "test:netlify-ignore": "node scripts/check-netlify-ignore.mjs",
     "test:station-surface": "node scripts/check-station-load-surface.mjs",

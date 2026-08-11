@@ -71,7 +71,7 @@
                 [routerLink]="item.path"
                 (click)="isProfileDropdownOpen = false"
                 >
-                <span class="material-symbols-outlined">{{ item.icon }}</span>
+                <span class="material-symbols-outlined" [attr.translate]="'no'">{{ item.icon }}</span>
                 <span>{{ item.labelKey | translate }}</span>
               </a>
             }
@@ -82,7 +82,7 @@
                 [routerLink]="'/admin/dashboard'"
                 (click)="isProfileDropdownOpen = false"
                 >
-                <span class="material-symbols-outlined">dashboard</span>
+                <span class="material-symbols-outlined" [attr.translate]="'no'">dashboard</span>
                 <span>{{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}</span>
               </a>
             }
@@ -93,7 +93,7 @@
                 [routerLink]="'/staff'"
                 (click)="isProfileDropdownOpen = false"
                 >
-                <span class="material-symbols-outlined">badge</span>
+                <span class="material-symbols-outlined" [attr.translate]="'no'">badge</span>
                 <span>{{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}</span>
               </a>
             }
@@ -103,7 +103,7 @@
               role="menuitem"
               (click)="onLogout()"
               >
-              <span class="material-symbols-outlined">logout</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'">logout</span>
               <span>{{ "HOME.NAVBAR.SIGNOUT" | translate }}</span>
             </button>
           </div>
@@ -122,7 +122,7 @@
     aria-controls="navbar-mobile-panel"
     [attr.aria-label]="'HOME.NAVBAR.MENU' | translate"
     >
-    <span class="material-symbols-outlined">
+    <span class="material-symbols-outlined" [attr.translate]="'no'">
       {{ isMobileMenuOpen ? 'close' : 'menu' }}
     </span>
   </button>
@@ -166,7 +166,7 @@
         routerLinkActive="navbar-mobile-link-active"
         (click)="closeMobileMenu()"
         >
-        <span class="material-symbols-outlined">directions_bus</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'">directions_bus</span>
         <span>{{ "HOME.NAVBAR.BOOKING" | translate }}</span>
       </a>
       <!-- OBRS-857: the mobile twin of the desktop link above. It is NOT optional — the
@@ -179,7 +179,7 @@
         routerLinkActive="navbar-mobile-link-active"
         (click)="closeMobileMenu()"
         >
-        <span class="material-symbols-outlined">confirmation_number</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'">confirmation_number</span>
         <span>{{ "HOME.NAVBAR.FIND_BOOKING" | translate }}</span>
       </a>
       <button
@@ -187,7 +187,7 @@
         class="navbar-mobile-link"
         (click)="mobileScrollToContact()"
         >
-        <span class="material-symbols-outlined">contact_support</span>
+        <span class="material-symbols-outlined" [attr.translate]="'no'">contact_support</span>
         <span>{{ "HOME.NAVBAR.CONTACT" | translate }}</span>
       </button>
     </div>
@@ -195,11 +195,11 @@
     <div class="navbar-mobile-section">
       @if (!isLogin) {
         <a class="navbar-mobile-link" routerLink="/login" (click)="closeMobileMenu()">
-          <span class="material-symbols-outlined">login</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">login</span>
           <span>{{ "HOME.NAVBAR.SIGNIN" | translate }}</span>
         </a>
         <a class="navbar-mobile-link" routerLink="/register" (click)="closeMobileMenu()">
-          <span class="material-symbols-outlined">person_add</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">person_add</span>
           <span>{{ "HOME.NAVBAR.SIGNUP" | translate }}</span>
         </a>
       }
@@ -210,7 +210,7 @@
             [routerLink]="item.path"
             (click)="closeMobileMenu()"
             >
-            <span class="material-symbols-outlined">{{ item.icon }}</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'">{{ item.icon }}</span>
             <span>{{ item.labelKey | translate }}</span>
           </a>
         }
@@ -220,7 +220,7 @@
             routerLink="/admin/dashboard"
             (click)="closeMobileMenu()"
             >
-            <span class="material-symbols-outlined">dashboard</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'">dashboard</span>
             <span>{{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}</span>
           </a>
         }
@@ -230,7 +230,7 @@
             routerLink="/staff"
             (click)="closeMobileMenu()"
             >
-            <span class="material-symbols-outlined">badge</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'">badge</span>
             <span>{{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}</span>
           </a>
         }
@@ -239,7 +239,7 @@
           class="navbar-mobile-link navbar-mobile-signout"
           (click)="onLogout()"
           >
-          <span class="material-symbols-outlined">logout</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">logout</span>
           <span>{{ "HOME.NAVBAR.SIGNOUT" | translate }}</span>
         </button>
       }

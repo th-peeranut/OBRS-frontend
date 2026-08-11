@@ -59,7 +59,7 @@
 @if (contentState === 'loading' || contentState === 'data') {
   <section class="admin-grid admin-grid--3 mt-3">
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+      <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined" [attr.translate]="'no'">payments</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.REVENUE_ANALYTICS.TILE.NET' | translate }}</p>
         @if (!isLoading) {
@@ -72,7 +72,7 @@
               [attr.aria-label]="'ADMIN.REVENUE_ANALYTICS.CHANGE_VS_PREV' | translate: { pct: changePctDisplay(changePct) }"
               >
               @if (changeDirection !== 'flat') {
-                <span class="material-symbols-outlined">
+                <span class="material-symbols-outlined" [attr.translate]="'no'">
                   {{ changeDirection === 'up' ? 'trending_up' : 'trending_down' }}
                 </span>
               }
@@ -88,7 +88,7 @@
       </div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">account_balance_wallet</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">account_balance_wallet</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.REVENUE_ANALYTICS.TILE.PAID' | translate }}</p>
         @if (!isLoading) {
@@ -99,7 +99,7 @@
       </div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">undo</span></span>
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined" [attr.translate]="'no'">undo</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.REVENUE_ANALYTICS.TILE.REFUNDED' | translate }}</p>
         @if (!isLoading) {

@@ -9,7 +9,7 @@
     <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
   </div>
   <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
-    <span class="material-symbols-outlined">add</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'">add</span>
     <span>{{ 'ADMIN.LOOKUP.ADD' | translate }}</span>
   </button>
 </section>
@@ -95,7 +95,7 @@
                         [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
                         (click)="openEditModal(entry)"
                         >
-                        <span class="material-symbols-outlined">edit</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">edit</span>
                       </button>
                       <button
                         type="button"
@@ -103,7 +103,7 @@
                         [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
                         (click)="openDeleteModal(entry)"
                         >
-                        <span class="material-symbols-outlined">delete</span>
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">delete</span>
                       </button>
                     </div>
                   </td>

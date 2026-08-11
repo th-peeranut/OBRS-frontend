@@ -90,7 +90,7 @@
                       (click)="toggleExpand(row)"
                       [attr.aria-label]="(isExpanded(row) ? 'ADMIN.EOD_REPORT.COLLAPSE_ARIA' : 'ADMIN.EOD_REPORT.EXPAND_ARIA') | translate"
                       >
-                      <span class="material-symbols-outlined">{{ isExpanded(row) ? 'expand_less' : 'expand_more' }}</span>
+                      <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isExpanded(row) ? 'expand_less' : 'expand_more' }}</span>
                     </button>
                     <div class="admin-cell-stack eod-report-salesperson-cell">
                       <span class="admin-emphasis">{{ row.salespersonName }}</span>

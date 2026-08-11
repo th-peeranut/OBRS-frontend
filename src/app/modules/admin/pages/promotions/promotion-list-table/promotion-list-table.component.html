@@ -61,7 +61,7 @@
                       [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
                       (click)="edit.emit(row)"
                       >
-                      <span class="material-symbols-outlined">edit_square</span>
+                      <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
                     </button>
                     <button
                       type="button"
@@ -69,7 +69,7 @@
                       [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
                       (click)="deactivate.emit(row)"
                       >
-                      <span class="material-symbols-outlined">delete</span>
+                      <span class="material-symbols-outlined" [attr.translate]="'no'">delete</span>
                     </button>
                   </div>
                 }

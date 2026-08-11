@@ -74,7 +74,7 @@
                     class="ticket-nav-btn"
                     (click)="navigateToPickup(leg)"
                     >
-                    <span class="material-symbols-outlined" aria-hidden="true">directions</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">directions</span>
                     {{ "E_TICKET.BTN_NAVIGATE" | translate }}
                   </button>
                 </div>
@@ -176,7 +176,7 @@
                               >
                               @if (passenger.qrUnavailable) {
                                 <span
-                                  class="material-symbols-outlined qr-unavailable-icon"
+                                  class="material-symbols-outlined qr-unavailable-icon" [attr.translate]="'no'"
                                   aria-hidden="true"
                                   >block</span
                                   >

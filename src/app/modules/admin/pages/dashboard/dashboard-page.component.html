@@ -23,7 +23,7 @@ tiles and the departures table entirely. -->
 @if (contentState !== 'error') {
   <section class="admin-grid admin-grid--4 mt-3">
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">directions_bus</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">directions_bus</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.DEPARTURES' | translate }}</p>
         @if (!isLoading) {
@@ -36,7 +36,7 @@ tiles and the departures table entirely. -->
       </div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">donut_large</span></span>
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined" [attr.translate]="'no'">donut_large</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.OCCUPANCY' | translate }}</p>
         @if (!isLoading) {
@@ -49,7 +49,7 @@ tiles and the departures table entirely. -->
       </div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">confirmation_number</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.BOOKINGS' | translate }}</p>
         @if (!isLoading) {
@@ -63,7 +63,7 @@ tiles and the departures table entirely. -->
     </article>
     @if (showRevenue) {
       <article class="admin-card admin-kpi">
-        <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+        <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined" [attr.translate]="'no'">payments</span></span>
         <div>
           <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TILE.REVENUE' | translate }}</p>
           @if (!isLoading) {

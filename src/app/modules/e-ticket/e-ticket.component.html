@@ -114,7 +114,7 @@
                     class="ticket-nav-btn"
                     (click)="navigateToPickup()"
                     >
-                    <span class="material-symbols-outlined" aria-hidden="true">directions</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">directions</span>
                     {{ "E_TICKET.BTN_NAVIGATE" | translate }}
                   </button>
                 </div>
@@ -204,7 +204,7 @@
                                   >
                                   @if (passenger.qrUnavailable) {
                                     <span
-                                      class="material-symbols-outlined qr-unavailable-icon"
+                                      class="material-symbols-outlined qr-unavailable-icon" [attr.translate]="'no'"
                                       aria-hidden="true"
                                       >block</span
                                       >
@@ -297,7 +297,7 @@
                  element and only that element (see downloadTicketImage), and a hyperlink is dead
                  in a PNG. The booking number itself IS inside the captured area already. -->
             <aside class="ticket-retrieval-note">
-              <span class="material-symbols-outlined" aria-hidden="true">bookmark</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">bookmark</span>
               <span class="ticket-retrieval-text">
                 {{ "E_TICKET.RETRIEVAL_NOTE" | translate: { bookingNumber: bookingNumber } }}
                 <a routerLink="/find-booking">{{ "E_TICKET.RETRIEVAL_LINK" | translate }}</a>

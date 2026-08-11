@@ -38,12 +38,12 @@
           [attr.aria-label]="(isSidebarPinned ? 'ADMIN.LAYOUT.COLLAPSE_MENU' : 'ADMIN.LAYOUT.EXPAND_MENU') | translate"
           [attr.title]="(isSidebarPinned ? 'ADMIN.LAYOUT.COLLAPSE_MENU' : 'ADMIN.LAYOUT.EXPAND_MENU') | translate"
           >
-          <span class="material-symbols-outlined">{{ toggleIconName }}</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">{{ toggleIconName }}</span>
         </button>
 
         <!-- OBRS-290: sidebar menu search — filters by menu name + description -->
         <div class="admin-nav-search">
-          <span class="material-symbols-outlined admin-nav-search-icon" aria-hidden="true">search</span>
+          <span class="material-symbols-outlined admin-nav-search-icon" [attr.translate]="'no'" aria-hidden="true">search</span>
           <input
             #navSearchInput
             type="text"
@@ -62,7 +62,7 @@
                 (click)="clearNavSearch(); navSearchInput.value = ''"
                 [attr.aria-label]="'ADMIN.NAV.SEARCH_CLEAR_ARIA' | translate"
                 >
-                <span class="material-symbols-outlined">close</span>
+                <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
               </button>
             }
           </div>
@@ -84,7 +84,7 @@
                   class="admin-nav-link"
                   (click)="onNavLinkClick(); clearNavSearch()"
                   >
-                  <span class="material-symbols-outlined">{{ item.icon }}</span>
+                  <span class="material-symbols-outlined" [attr.translate]="'no'">{{ item.icon }}</span>
                   <!-- OBRS-900: label + (query-active only) matched description,
                   with the query substring highlighted in both. Segments are
                   precomputed in applyNavSearch() (see AdminNavItem comment) —
@@ -132,11 +132,11 @@
 
           <div class="admin-sidebar-footer">
             <button class="admin-nav-link admin-nav-btn" type="button">
-              <span class="material-symbols-outlined">help_outline</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'">help_outline</span>
               <span>{{ 'ADMIN.LAYOUT.SUPPORT' | translate }}</span>
             </button>
             <button class="admin-nav-link admin-nav-btn" type="button" (click)="onLogout()">
-              <span class="material-symbols-outlined">logout</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'">logout</span>
               <span>{{ 'ADMIN.LAYOUT.SIGN_OUT' | translate }}</span>
             </button>
           </div>
@@ -152,7 +152,7 @@
             [attr.aria-expanded]="isSidebarOpen"
             [attr.aria-label]="(isSidebarOpen ? 'ADMIN.LAYOUT.CLOSE_MENU' : 'ADMIN.LAYOUT.OPEN_MENU') | translate"
             >
-            <span class="material-symbols-outlined">{{ isSidebarOpen ? 'close' : 'menu' }}</span>
+            <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isSidebarOpen ? 'close' : 'menu' }}</span>
           </button>
 
           <div class="admin-title-block">
@@ -168,7 +168,7 @@
               [attr.aria-pressed]="isDarkMode"
               [attr.aria-label]="'ADMIN.LAYOUT.THEME_TOGGLE' | translate"
               >
-              <span class="material-symbols-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
+              <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
             </button>
 
             <app-notification-bell shellVariant="admin"></app-notification-bell>
@@ -195,7 +195,7 @@
                       role="menuitem"
                       (click)="closeProfileMenu()"
                       >
-                      <span class="material-symbols-outlined">{{ item.icon }}</span>
+                      <span class="material-symbols-outlined" [attr.translate]="'no'">{{ item.icon }}</span>
                       <span>{{ item.labelKey | translate }}</span>
                     </a>
                   }
@@ -206,12 +206,12 @@
                       [routerLink]="'/staff'"
                       (click)="closeProfileMenu()"
                       >
-                      <span class="material-symbols-outlined">badge</span>
+                      <span class="material-symbols-outlined" [attr.translate]="'no'">badge</span>
                       <span>{{ 'ADMIN.LAYOUT.STAFF_AREA' | translate }}</span>
                     </a>
                   }
                   <button type="button" class="admin-profile-item" role="menuitem" (click)="onLogout()">
-                    <span class="material-symbols-outlined">logout</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">logout</span>
                     <span>{{ 'ADMIN.LAYOUT.SIGN_OUT' | translate }}</span>
                   </button>
                 </div>

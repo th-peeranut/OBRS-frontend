@@ -67,7 +67,7 @@
                   <span class="admin-status" [ngClass]="statusClass(user.statusCode)">{{ user.status }}</span>
                   @if (user.locked) {
                     <span class="admin-status is-warning admin-status--icon">
-                      <span class="material-symbols-outlined">lock</span>
+                      <span class="material-symbols-outlined" [attr.translate]="'no'">lock</span>
                       {{ 'ADMIN.USERS.LOCKED_BADGE' | translate }}
                     </span>
                   }
@@ -82,7 +82,7 @@
                       [attr.aria-label]="'ADMIN.USERS.UNLOCK_ACTION' | translate"
                       (click)="unlock.emit(user)"
                       >
-                      <span class="material-symbols-outlined">lock_open</span>
+                      <span class="material-symbols-outlined" [attr.translate]="'no'">lock_open</span>
                     </button>
                   }
                   <button
@@ -91,7 +91,7 @@
                     [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
                     (click)="edit.emit(user)"
                     >
-                    <span class="material-symbols-outlined">edit_square</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
                   </button>
                   <button
                     type="button"
@@ -99,7 +99,7 @@
                     [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
                     (click)="delete.emit(user)"
                     >
-                    <span class="material-symbols-outlined">delete</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">delete</span>
                   </button>
                 </div>
               </td>

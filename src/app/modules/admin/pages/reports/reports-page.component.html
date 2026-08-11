@@ -75,7 +75,7 @@ and the daily table — never shown next to stale/zero numbers. -->
 @if (contentState === 'loading' || contentState === 'empty' || contentState === 'data') {
   <section class="admin-grid admin-grid--4 mt-3">
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">confirmation_number</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.BOOKINGS' | translate }}</p>
         @if (!isLoading) {
@@ -87,7 +87,7 @@ and the daily table — never shown next to stale/zero numbers. -->
       </div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon"><span class="material-symbols-outlined">event_seat</span></span>
+      <span class="admin-kpi-icon"><span class="material-symbols-outlined" [attr.translate]="'no'">event_seat</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.TICKETS_SOLD' | translate }}</p>
         @if (!isLoading) {
@@ -99,7 +99,7 @@ and the daily table — never shown next to stale/zero numbers. -->
       </div>
     </article>
     <article class="admin-card admin-kpi">
-      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">donut_large</span></span>
+      <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined" [attr.translate]="'no'">donut_large</span></span>
       <div>
         <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.OCCUPANCY' | translate }}</p>
         @if (!isLoading) {
@@ -112,7 +112,7 @@ and the daily table — never shown next to stale/zero numbers. -->
     </article>
     @if (showRevenue) {
       <article class="admin-card admin-kpi">
-        <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+        <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined" [attr.translate]="'no'">payments</span></span>
         <div>
           <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.REVENUE' | translate }}</p>
           <p class="admin-big-number">{{ revenueTileDisplay }}</p>

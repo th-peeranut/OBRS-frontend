@@ -8,7 +8,7 @@
       <div class="admin-modal-header">
         <h5 class="admin-modal-title">{{ 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.TITLE' | translate }}</h5>
         <button type="button" class="admin-icon-btn" (click)="onDismiss()" [attr.aria-label]="'COMMON.CLOSE' | translate">
-          <span class="material-symbols-outlined">close</span>
+          <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
         </button>
       </div>
       <form [formGroup]="form" (ngSubmit)="onConfirm()">

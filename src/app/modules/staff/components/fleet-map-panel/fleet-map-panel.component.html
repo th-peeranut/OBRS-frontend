@@ -6,13 +6,13 @@
       class="admin-btn fleet-map-center-btn"
       (click)="centerOnFleet()"
       >
-      <span class="material-symbols-outlined" aria-hidden="true">my_location</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">my_location</span>
       <span>{{ 'STAFF.FLEET_MAP.CENTER_ON_FLEET' | translate }}</span>
     </button>
   </div>
 } @else {
   <div class="fleet-map-unavailable">
-    <span class="material-symbols-outlined" aria-hidden="true">map</span>
+    <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">map</span>
     <p>{{ 'STAFF.FLEET_MAP.MAP_UNAVAILABLE' | translate }}</p>
   </div>
 }
