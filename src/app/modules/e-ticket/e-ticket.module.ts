@@ -27,7 +27,7 @@ const routes: Routes = [{ path: '', component: ETicketComponent }];
  * <p><b>What it was before.</b> Only `booking` was registered, while the component reads five
  * feature selectors. `createFeatureSelector` returns `undefined` for an unregistered key -
  * silently, with no throw and no type error - so every field fed by the other four rendered the
- * class default `-`, and `ngOnInit`'s `invokeGetAllProvinceWithStationApi()` was dispatched into
+ * class default `-`, and `ngOnInit`'s roster-fetch action was dispatched into
  * a store with no `ProvinceEffect` to answer it. Measured on a guest hard-load of `/e-ticket`
  * before this change: <b>9 fields showing `-` and zero `/api/` requests</b>. The same build
  * reached through the app (search -> select -> ... -> e-ticket) rendered the ticket fine, which
@@ -63,7 +63,7 @@ const routes: Routes = [{ path: '', component: ETicketComponent }];
     StoreModule.forFeature('provinceWithStationList', ProvinceReducer),
 
     // Effects - one entry per action ngOnInit dispatches, so none of them is dropped on the
-    // floor. `ProvinceEffect` is the one that turns `invokeGetAllProvinceWithStationApi()` into
+    // floor. `ProvinceEffect` is the one that turns the roster-fetch action into
     // the `/api/stops` request this page needs to name its own stops.
     EffectsModule.forFeature([
       BookingEffect,
