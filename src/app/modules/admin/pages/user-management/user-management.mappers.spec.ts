@@ -425,11 +425,15 @@ describe('user-management.mappers', () => {
       expect(values['preferredLocale']).toBe('th');
     });
 
-    it('defaults title to "Mr" when neither the detail nor the parsed name provide one', () => {
+    // OBRS-1231: this test used to assert the opposite - that a user with no title on
+    // record opened the form already holding 'Mr'. Nothing downstream needed a value,
+    // so the default only ever wrote a gender the person had not given, and a Save that
+    // changed nothing else persisted it. The inverted assertion is the regression guard.
+    it('leaves title blank when neither the detail nor the parsed name provide one', () => {
       const sparseDetail: AdminUserDto = { id: 1, roles: [] };
       const bareUser: UserRow = { ...user, fullName: 'John' };
       const values = buildUserFormValues(sparseDetail, bareUser, 'en');
-      expect(values['title']).toBe('Mr');
+      expect(values['title']).toBe('');
     });
   });
 
@@ -467,6 +471,14 @@ describe('user-management.mappers', () => {
       const payload = toCreateUserPayload({ middleName: ' Middle ' });
       expect(payload.middleName).toBe('Middle');
     });
+
+    // OBRS-1231: the DTO's @Size(min = 2) skips a null but NOT an empty string, so
+    // sending '' for "no title" 400s even now that @NotBlank is gone. Omitting the key
+    // is the only shape the backend reads as absent.
+    it('omits title entirely when it is blank', () => {
+      const payload = toCreateUserPayload({ title: '   ', firstName: 'John' });
+      expect(payload.title).toBeUndefined();
+    });
   });
 
   describe('toUpdateUserPayload', () => {
@@ -502,6 +514,13 @@ describe('user-management.mappers', () => {
       const payload = toUpdateUserPayload({ roles: [] }) as unknown as Record<string, unknown>;
       expect(payload['password']).toBeUndefined();
       expect(payload['pdpaConsent']).toBeUndefined();
+    });
+
+    // OBRS-1231: the surface the owner actually hit - editing an existing user who has
+    // no title. See the toCreateUserPayload twin for why '' is not an option.
+    it('omits title entirely when it is blank', () => {
+      const payload = toUpdateUserPayload({ title: '', firstName: 'John', roles: [] });
+      expect(payload.title).toBeUndefined();
     });
   });
 

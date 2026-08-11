@@ -75,33 +75,18 @@
                     }
                     <!-- Title -->
                     <div class="col-12 col-md-6">
-                      <label
-                        for="title-{{ i }}"
-                [class.label-error]="
-                  group.get('title')?.errors &&
-                  (group.get('title')?.touched || group.get('title')?.dirty)
-                "
-                        >
+                      <!-- OBRS-1231: optional — see booker-info-form for the rationale. -->
+                      <label for="title-{{ i }}">
                         {{ "PASSENGER_INFO.FORM.TITLE" | translate }}
-                        <span class="form-required">*</span>
                       </label>
                       <app-dropdown-obrs
                         [isBorder]="true"
                         [isLabel]="false"
                         [options]="titleOptions"
                         formControlName="title"
+                        placeholder="COMMON.NOT_SPECIFIED"
                         id="title-{{ i }}"
                       ></app-dropdown-obrs>
-                      @if (
-                        group.get('title')?.errors &&
-                        (group.get('title')?.touched || group.get('title')?.dirty)
-                        ) {
-                        <div
-                          class="text-error"
-                          >
-                          {{ "PASSENGER_INFO.FORM.TITLE_REQUIRED" | translate }}
-                        </div>
-                      }
                     </div>
                     <!-- First name -->
                     <div class="col-12 col-md-6">

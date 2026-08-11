@@ -436,6 +436,7 @@
     "ERROR_GENERAL": "An error occurred. Please try again."
   },
   "COMMON": {
+    "NOT_SPECIFIED": "Not specified",
     "THEME_TOGGLE": "Toggle dark mode",
     "CLEAR": "Clear",
     "CALENDAR_ICON_ALT": "Calendar Icon",
@@ -2091,6 +2092,7 @@
     "PROFILE_SAVE_BUTTON": "Save",
     "PROFILE_CANCEL_BUTTON": "Cancel",
     "PROFILE_FIELD_REQUIRED": "This field is required (2-50 characters).",
+    "PROFILE_FIELD_LENGTH": "If filled in, this must be 2-50 characters.",
     "PROFILE_PHONE_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678)",
     "PROFILE_SAVE_SUCCESS": "Your personal details have been saved.",
     "PROFILE_SAVE_ERROR_PHONE_CONFLICT": "That phone number is already used by another account.",

@@ -72,7 +72,7 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
     private readonly translate: TranslateService
   ) {
     this.contactForm = this.fb.group({
-      title: ['', [Validators.required]],
+      title: [''],
       firstName: ['', [Validators.required, Validators.maxLength(100)]],
       lastName: ['', [Validators.required, Validators.maxLength(100)]],
       phoneNumber: ['', [Validators.required, separatorTolerantPattern(this.phonePattern)]],

@@ -55,7 +55,7 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
 
   createForm() {
     this.bookerForm = this.fb.group({
-      title: [null, Validators.required],
+      title: [null],
       firstName: ['', Validators.required],
       middleName: [''],
       lastName: ['', Validators.required],

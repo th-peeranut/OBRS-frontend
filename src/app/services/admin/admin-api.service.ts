@@ -809,7 +809,9 @@ export interface CreateRolePayload {
 }
 
 export interface CreateUserPayload {
-  title: string;
+  // OBRS-1231: omitted when blank. `@Size(min = 2)` on the DTO skips a null but NOT an
+  // empty string, so sending "" for "no title" would 400 even with @NotBlank gone.
+  title?: string;
   firstName: string;
   middleName?: string;
   lastName: string;
@@ -823,7 +825,8 @@ export interface CreateUserPayload {
 }
 
 export interface UpdateUserPayload {
-  title: string;
+  // OBRS-1231: omitted when blank - see CreateUserPayload.title.
+  title?: string;
   firstName: string;
   middleName?: string;
   lastName: string;

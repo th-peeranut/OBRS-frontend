@@ -34,6 +34,13 @@
 
     font-size: $font-size-md;
     color: $text-black;
+
+    // OBRS-1231: the "no value chosen" wording is a hint, not an answer the user gave -
+    // it has to read differently from a real selection or "ไม่ระบุ" looks like one.
+    // $text-lightblack, not a lighter grey: 4.60:1 on white, so the hint still clears AA.
+    &.is-placeholder {
+      color: $text-lightblack;
+    }
   }
 
   .arrow-icon {
@@ -141,6 +148,13 @@ li {
 
     .value-text {
       color: $dk-text;
+
+      // OBRS-1231: dark needs its own placeholder colour for the same reason the
+      // block above exists - $text-lightblack on $dk-bg-card is the 1.34:1 failure
+      // this component was already burned by once.
+      &.is-placeholder {
+        color: $dk-text-muted;
+      }
     }
   }
 
