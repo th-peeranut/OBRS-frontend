@@ -3,6 +3,19 @@
 <app-stepper></app-stepper>
 
 <section class="ticket-page">
+  <!-- OBRS-1246. The surface OBRS-1222 built, gated a second time by
+  `stationLabelsUnresolved` so it speaks only when THIS ticket is actually
+  missing its stations — see the field's comment for why bare is wrong here.
+  Sits OUTSIDE `#ticketPaper`: `downloadTicketImage()` rasterises that element,
+  so a notice placed inside it would be baked into the PNG the customer keeps.
+  Its own slot rather than a child of `.ticket-stage`, which is a flex ROW and
+  would put the notice BESIDE the ticket (the trap home-booking records). -->
+  <div class="station-load-error-slot">
+    @if (stationLabelsUnresolved) {
+      <app-station-load-error></app-station-load-error>
+    }
+  </div>
+
   <div class="ticket-stage">
     <div class="ticket-shell">
       <div class="ticket-slot" aria-hidden="true">
