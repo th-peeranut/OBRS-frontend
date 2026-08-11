@@ -2607,6 +2607,8 @@
   "E_TICKET": {
     "RETRIEVAL_NOTE": "请保存订单编号 {{bookingNumber}}。无需登录即可再次查看此车票，只需输入编号和预订手机号码：",
     "RETRIEVAL_LINK": "查询订单",
+    "INCOMPLETE_TITLE": "这不是完整的车票",
+    "INCOMPLETE_BODY": "此链接只能显示行程信息，没有订单编号、座位和乘车二维码。请使用订单编号和预订手机号码查询真正的车票：",
     "TITLE": "电子票",
     "SUBTITLE": "NJ Phuyaipu 在线旅行票",
     "BTN_NAVIGATE": "导航",

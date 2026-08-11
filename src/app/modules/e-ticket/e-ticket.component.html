@@ -16,6 +16,31 @@
     }
   </div>
 
+  <!-- OBRS-1252. A hard load of this URL by a guest restores the TRIP and
+  provably cannot restore the TICKET: `booking-context-storage.ts` admits trip
+  identifiers only (PDPA), so the booking reference, the seat and the passenger
+  rows are gone while the schedule, the stations and the total come back. Before
+  this card that produced a page reading "Total 400.00 baht" over a booking
+  reference of `-`, with nobody's name on it and nothing on screen saying why.
+
+  Placed in its own slot OUTSIDE `<article #ticketPaper>` for the same two
+  reasons the notice above it is: `downloadTicketImage()` rasterises that element
+  alone, so a notice inside would be baked into the PNG the customer keeps and
+  its link would be dead there; and `.ticket-stage` is a flex ROW, which would
+  put the banner BESIDE the ticket instead of over it. -->
+  <div class="ticket-incomplete-slot">
+    @if (ticketIncomplete) {
+      <aside class="ticket-incomplete" role="status" data-testid="eticket-unavailable">
+        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+        <span class="ticket-incomplete-text">
+          <strong>{{ "E_TICKET.INCOMPLETE_TITLE" | translate }}</strong>
+          {{ "E_TICKET.INCOMPLETE_BODY" | translate }}
+          <a routerLink="/find-booking">{{ "E_TICKET.RETRIEVAL_LINK" | translate }}</a>
+        </span>
+      </aside>
+    }
+  </div>
+
   <div class="ticket-stage">
     <div class="ticket-shell">
       <div class="ticket-slot" aria-hidden="true">
@@ -295,14 +320,21 @@
 
                  Placed OUTSIDE `<article #ticketPaper>` deliberately: html2canvas captures that
                  element and only that element (see downloadTicketImage), and a hyperlink is dead
-                 in a PNG. The booking number itself IS inside the captured area already. -->
-            <aside class="ticket-retrieval-note">
-              <span class="material-symbols-outlined" aria-hidden="true">bookmark</span>
-              <span class="ticket-retrieval-text">
-                {{ "E_TICKET.RETRIEVAL_NOTE" | translate: { bookingNumber: bookingNumber } }}
-                <a routerLink="/find-booking">{{ "E_TICKET.RETRIEVAL_LINK" | translate }}</a>
-              </span>
-            </aside>
+                 in a PNG. The booking number itself IS inside the captured area already.
+
+                 OBRS-1252 gates it on `!ticketIncomplete`: this note interpolates the booking
+                 number, so on the one render where there ISN'T one it read "Keep your booking
+                 reference -". The banner at the top of the page carries the same /find-booking
+                 link for exactly that case, so nothing is lost by staying quiet here. -->
+            @if (!ticketIncomplete) {
+              <aside class="ticket-retrieval-note">
+                <span class="material-symbols-outlined" aria-hidden="true">bookmark</span>
+                <span class="ticket-retrieval-text">
+                  {{ "E_TICKET.RETRIEVAL_NOTE" | translate: { bookingNumber: bookingNumber } }}
+                  <a routerLink="/find-booking">{{ "E_TICKET.RETRIEVAL_LINK" | translate }}</a>
+                </span>
+              </aside>
+            }
           </div>
         </div>
       </section>

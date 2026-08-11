@@ -881,4 +881,97 @@ describe('ETicketComponent', () => {
       expect(component.stationLabelsUnresolved).toBeTrue();
     });
   });
+
+  /**
+   * OBRS-1252. The banner exists for one population: a hard load of /e-ticket that restored the
+   * TRIP and provably cannot restore the TICKET, because `booking-context-storage.ts` admits trip
+   * identifiers only (PDPA) and the only ticket API needs a token.
+   *
+   * Each case below is a separate assertion because the ways this can be wrong are not the same
+   * failure: firing when a signed-in customer is mid-fetch is a banner that flashes at someone
+   * with nothing wrong; not firing on the guest hard load is the bug still shipping.
+   */
+  describe('OBRS-1252: ticketIncomplete', () => {
+    const filter = {
+      roundTrip: { name: 'One way', code: 'one_way' },
+      passengerInfo: [{ type: 'adult', count: 1 }],
+      startStationId: 11,
+      stopStationId: 22,
+      departureDate: '2026-12-20',
+    } as unknown as ScheduleFilter;
+
+    function mapFromStore(booking: { bookingId: number; bookingNumber: string } | null): void {
+      (component as unknown as {
+        mapTicketFields: (
+          a: null,
+          b: unknown,
+          c: ScheduleFilter,
+          d: null,
+          e: StationApi[],
+          f: 'en'
+        ) => void;
+      }).mapTicketFields(null, booking, filter, null, [], 'en');
+    }
+
+    it('flags the guest hard load - no booking reference in the store and no token to fetch one', () => {
+      authStub.isAuthenticated = () => false;
+
+      mapFromStore(null);
+
+      expect(component.bookingNumber).toBe('-');
+      expect(component.ticketIncomplete).toBeTrue();
+    });
+
+    /**
+     * The banner must not appear for a signed-in customer who hard-loads the same URL: they hold
+     * a token and an `active_booking_id`, so `loadTicketFromApi` is about to fill the ticket in.
+     * A banner shown in that gap is a lie that corrects itself a moment later, which is worse
+     * than one that never appeared.
+     */
+    it('does NOT flag it for a signed-in customer with a booking id - the API pass is coming', () => {
+      authStub.isAuthenticated = () => true;
+
+      mapFromStore(null);
+
+      expect(component.bookingNumber).toBe('-');
+      expect(component.ticketIncomplete).toBeFalse();
+    });
+
+    it('does NOT flag it when the store still holds the booking - the in-session arrival from checkout', () => {
+      authStub.isAuthenticated = () => false;
+
+      mapFromStore({ bookingId: 1, bookingNumber: 'B-29RGZW' });
+
+      expect(component.bookingNumber).toBe('B-29RGZW');
+      expect(component.ticketIncomplete).toBeFalse();
+    });
+
+    /**
+     * Both halves of the condition are load-bearing, so each is failed on its own. Here the
+     * visitor IS signed in and there is still nothing to fetch with.
+     */
+    it('flags it for a signed-in customer with no booking id at all', () => {
+      authStub.isAuthenticated = () => true;
+      spyOn(bookingServiceStub, 'getActiveBookingId').and.returnValue(null);
+
+      mapFromStore(null);
+
+      expect(component.ticketIncomplete).toBeTrue();
+    });
+
+    it('clears the flag the moment the tickets API supplies a booking number', () => {
+      authStub.isAuthenticated = () => false;
+      mapFromStore(null);
+      expect(component.ticketIncomplete).toBeTrue();
+
+      (component as unknown as { ticketApiData: BookingTicketsData }).ticketApiData =
+        buildTicketsData();
+      (component as unknown as {
+        applyApiOverrides: (locale: 'en', passengers: null) => void;
+      }).applyApiOverrides('en', null);
+
+      expect(component.bookingNumber).toBe('B-29RGZW');
+      expect(component.ticketIncomplete).toBeFalse();
+    });
+  });
 });

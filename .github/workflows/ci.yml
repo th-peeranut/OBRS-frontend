@@ -97,6 +97,19 @@ jobs:
       - name: store null-handling gate
         run: npm run test:store-null
 
+      # Companion gate to the one above (OBRS-1252), for the store failure NgRx has
+      # no signal at all for. `createFeatureSelector('key')` returns `undefined`
+      # when nothing registered `'key'` -- no throw, no console warning, and the
+      # selector's TYPE is unchanged, so every consumer downstream type-checks
+      # while receiving undefined at runtime. e-ticket.module registered one of the
+      # five slices ETicketComponent reads, and a guest opening /e-ticket by direct
+      # link got a ticket with 9 fields showing `-` and ZERO /api/ requests. It hid
+      # for months because every in-app route to that page walks through a module
+      # that registers those same slices into the same store. Costs no extra
+      # runner minutes.
+      - name: ngrx feature-registration gate
+        run: npm run test:store-feature-registration
+
       # Sixth pure-node gate (OBRS-608, enforcing ADR-0028). Every object literal
       # inherits from Object.prototype, so `MAP[key] ?? f`, `(key && MAP[key]) || f`
       # and `key in MAP` all resolve a key of 'constructor'/'__proto__' to the Object

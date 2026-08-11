@@ -159,6 +159,38 @@ export class ETicketComponent implements OnInit, OnDestroy {
    * painted, and `false` avoids a red flash on the ordinary path.
    */
   stationLabelsUnresolved = false;
+  /**
+   * OBRS-1252: true when this render is the trip summary and NOT the ticket —
+   * no booking reference, no seat, no passenger row, no QR — and nothing is
+   * coming that would fill them in.
+   *
+   * <p><b>Why the page can be in that state at all.</b> Everything a guest's
+   * browser keeps between page loads is in `booking-context-storage.ts`, whose
+   * PDPA boundary admits trip identifiers ONLY — never a name, a phone number or
+   * a booking reference. The `booking` and `passengerInfo` slices start at
+   * `null` and are written in-session by `passenger-info.component.ts`. So a
+   * hard load — a direct link, a bookmark, a restored tab, a refresh — restores
+   * the trip and provably cannot restore the ticket. Measured on this branch:
+   * the schedule, the stations, the vehicle type and the total all come back;
+   * the booking reference, the seat and the passenger rows do not.
+   *
+   * <p><b>Why a banner rather than a blank page.</b> The restored half is real
+   * and useful (the customer is usually checking their departure time), and
+   * `/find-booking` (OBRS-857) is the one place a guest can get the authoritative
+   * copy — ADR-0123 Decision 5's "retrievable, not merely delivered". What the
+   * ticket must never do is imply it is the whole thing: before this card it
+   * showed a total of 400.00 baht over a booking reference of `-` with nobody's
+   * name on it, and said nothing.
+   *
+   * <p><b>The condition is deliberately not "some field is a dash".</b> It is
+   * "no booking reference AND no API pass is coming", i.e. the two facts that
+   * decide whether this render can still improve. A signed-in customer hard-
+   * loading the same URL holds a token and an `active_booking_id`, so
+   * `loadTicketFromApi` fills the ticket in a moment — the banner must not flash
+   * at them on the way. A customer arriving in-session from checkout has the
+   * booking reference in the store already, so it never fires there either.
+   */
+  ticketIncomplete = false;
   /** OBRS-269: outbound pickup-stop coords, threaded through from the tickets
    *  API's `fromStop.latitude`/`longitude` in `applyApiOverrides()`. `null` until
    *  the API response lands (store-only pre-API render) — the Navigate button
@@ -374,6 +406,13 @@ export class ETicketComponent implements OnInit, OnDestroy {
     );
 
     this.bookingNumber = bookingNumber || '-';
+    // OBRS-1252. Two facts, and between them they decide whether this render can
+    // still get better: is the booking reference here, and is an API pass coming?
+    // `loadTicketFromApi` below returns early on exactly this pair of conditions
+    // (no id, or no token — OBRS-858), so reading them here is reading its answer
+    // in advance rather than guessing at it.
+    const ticketApiPassExpected = !!bookingId && this.authService.isAuthenticated();
+    this.ticketIncomplete = this.bookingNumber === '-' && !ticketApiPassExpected;
     this.ticketNumber =
       this.bookingNumber !== '-'
         ? this.bookingNumber
@@ -856,6 +895,13 @@ export class ETicketComponent implements OnInit, OnDestroy {
     const bookingNumber = data.bookingNumber?.trim();
     if (bookingNumber) {
       this.bookingNumber = bookingNumber;
+      // OBRS-1252: the authoritative copy has landed, so this IS the full ticket
+      // and the banner must go. Cleared here rather than left to the next
+      // `mapTicketFields` pass — that pass would agree (it recomputes the flag
+      // from `this.bookingNumber`, which the line above has just filled in), but
+      // a `combineLatest` emission is not guaranteed to follow an API response,
+      // and a banner that outlives its reason is worse than one that never came.
+      this.ticketIncomplete = false;
     }
 
     const ticketNumber = this.collectTicketNumbers(journeys);
