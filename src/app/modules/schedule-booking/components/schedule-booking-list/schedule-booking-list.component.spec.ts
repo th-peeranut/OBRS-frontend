@@ -522,8 +522,23 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
   let component: ScheduleBookingListComponent;
   let store: MockStore;
 
-  /** 2026-08-10 20:58 ICT — the exact wall-clock of the prod report. */
-  const TONIGHT = new Date('2026-08-10T20:58:00+07:00');
+  /**
+   * 2026-08-10, 20:58 — the wall-clock of the prod report.
+   *
+   * NO `+07:00`. It carried one until CI went red on the midnight test below,
+   * and the offset was the bug: what the component compares is `dayjs(date)`
+   * against `dayjs()`, and both resolve in the RUNNER's zone. Pinning an
+   * instant in ICT and then asking a UTC runner what day it is gives a
+   * different answer than it gives here — 2026-08-11T00:05+07:00 is still
+   * 10 August in UTC, so "midnight passed" never happened and the sold-out
+   * panel was still on screen.
+   *
+   * A bare literal is parsed as LOCAL time, so these say "20:58 on the day
+   * being searched" in whatever zone the machine is in, which is the claim
+   * the tests are actually making. This suite passed on a UTC+7 laptop and
+   * failed in CI for a week (measured: run 31452623314).
+   */
+  const TONIGHT = new Date('2026-08-10T20:58:00');
 
   function filterFor(departureDate: string, roundTripId: number = 1): any {
     return {
@@ -639,12 +654,15 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
   // once at construction and a tab opened at 23:50 tells the customer at 00:05
   // that yesterday's exhausted search is today's.
   it('re-evaluates "today" when the result arrives, not when the page loaded', () => {
-    jasmine.clock().mockDate(new Date('2026-08-10T23:50:00+07:00'));
+    // Local literals, no offset -- see TONIGHT above for what an offset here
+    // costs: in UTC these two instants are the same calendar day and the test
+    // asserts a rollover that never occurred.
+    jasmine.clock().mockDate(new Date('2026-08-10T23:50:00'));
     render({ departureSchedules: [], arrivalSchedules: null }, filterFor('2026-08-10'));
     expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeTruthy();
 
     // Midnight passes with the tab open, then the same search is re-run.
-    jasmine.clock().mockDate(new Date('2026-08-11T00:05:00+07:00'));
+    jasmine.clock().mockDate(new Date('2026-08-11T00:05:00'));
     store.overrideSelector(selectScheduleList, {
       departureSchedules: [],
       arrivalSchedules: null,
