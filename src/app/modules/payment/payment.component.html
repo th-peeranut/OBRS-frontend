@@ -2,6 +2,23 @@
 
 <app-stepper></app-stepper>
 
+<!-- OBRS-1246 - decision for THIS page: (a) show the surface.
+  Option (b), "prove the page is unreachable while the roster is empty", was
+  tested and FAILS here: app-routing.module.ts:110-118 gives /payment the
+  identical route entry to /e-ticket - `canActivate: [AuthGuard]` +
+  `data: { customerArea: true }`, no `requireAuth` (OBRS-858 removed it), no
+  resolver - and payment.module.ts declares `{ path: '', component: ... }` with
+  no child guard. A direct link lands here without passing through /home.
+  This page shows the route the customer is about to PAY for
+  (payment-info.component.ts:206-241, which returns `''` per station on a miss),
+  so a blank one is the worst possible moment for silence.
+  Placed OUTSIDE `.content-container` because that element is a flex ROW: a
+  child would sit BESIDE the summary instead of above it, the same trap
+  home-booking.component.html records. -->
+<div class="station-load-error-slot">
+  <app-station-load-error></app-station-load-error>
+</div>
+
 <div class="content-container">
   <div class="summary-container">
     <app-payment-info></app-payment-info>
