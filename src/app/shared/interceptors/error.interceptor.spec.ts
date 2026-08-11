@@ -13,6 +13,7 @@ import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../services/alert.service';
 import { errorInterceptor, IDEMPOTENT_REQUEST_TIMEOUT_MS } from './error.interceptor';
+import { ApiLatencyTelemetryService } from '../../services/analytics/api-latency-telemetry.service';
 import { SKIP_REQUEST_TIMEOUT } from './http-context-tokens';
 
 // Regression guard for OBRS-352: errorInterceptor injected TranslateService
@@ -330,5 +331,165 @@ describe('errorInterceptor', () => {
       expect(body).toEqual({ rows: 1 });
       httpMock.verify();
     }));
+  });
+
+  /**
+   * OBRS-1223. What is measured, and — more load-bearing — what is NOT.
+   *
+   * `performance.now` is stubbed rather than advanced with `tick`: fakeAsync moves
+   * the RxJS scheduler, not the wall clock, so a timed-out request would otherwise
+   * be recorded as having taken 0ms and every duration assertion here would pass
+   * for the wrong reason.
+   */
+  describe('client-observed latency (OBRS-1223)', () => {
+    let telemetry: jasmine.SpyObj<ApiLatencyTelemetryService>;
+
+    const translateStub = () => {
+      const translate = jasmine.createSpyObj<TranslateService>('TranslateService', [
+        'instant',
+      ]);
+      translate.instant.and.callFake((key: string | string[]) => key as string);
+      return translate;
+    };
+
+    function configureWithTelemetry(providers: unknown[] = []): void {
+      telemetry = jasmine.createSpyObj<ApiLatencyTelemetryService>(
+        'ApiLatencyTelemetryService',
+        ['record']
+      );
+      configure([
+        { provide: ApiLatencyTelemetryService, useValue: telemetry },
+        ...(providers as never[]),
+      ]);
+    }
+
+    /** Pins the clock so a request "takes" exactly `durationMs`. */
+    function stubClock(durationMs: number): void {
+      let call = 0;
+      spyOn(performance, 'now').and.callFake(() => (call++ === 0 ? 0 : durationMs));
+    }
+
+    it('records a healthy idempotent /api/ GET with its real duration and outcome', () => {
+      stubClock(7_400);
+      configureWithTelemetry([{ provide: TranslateService, useValue: translateStub() }]);
+      const http = TestBed.inject(HttpClient);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      http.get('/api/stops').subscribe({ next: () => {}, error: () => {} });
+      httpMock.expectOne('/api/stops').flush({ data: [] });
+
+      expect(telemetry.record).toHaveBeenCalledTimes(1);
+      expect(telemetry.record.calls.mostRecent().args[0]).toEqual({
+        url: '/api/stops',
+        method: 'GET',
+        durationMs: 7_400,
+        outcome: 'ok',
+      });
+      httpMock.verify();
+    });
+
+    it('AC4 — a request the 30s ceiling killed is recorded as timed_out, not as a plain error', fakeAsync(() => {
+      // The two are indistinguishable downstream ON PURPOSE: the ceiling raises the
+      // same `status: 0` HttpErrorResponse the transport raises for a dead
+      // connection, so every catchError in the app keeps seeing one error type.
+      // Which is exactly why this has to be flagged where the timeout fires rather
+      // than inferred from the error afterwards.
+      stubClock(IDEMPOTENT_REQUEST_TIMEOUT_MS);
+      configureWithTelemetry([{ provide: TranslateService, useValue: translateStub() }]);
+      const http = TestBed.inject(HttpClient);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      http.get('/api/stops').subscribe({ next: () => {}, error: () => {} });
+      httpMock.expectOne('/api/stops');
+
+      tick(IDEMPOTENT_REQUEST_TIMEOUT_MS);
+
+      expect(telemetry.record.calls.mostRecent().args[0].outcome).toBe('timed_out');
+    }));
+
+    it('records a server error as error', () => {
+      stubClock(6_000);
+      configureWithTelemetry([{ provide: TranslateService, useValue: translateStub() }]);
+      const http = TestBed.inject(HttpClient);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      http.get('/api/stops').subscribe({ next: () => {}, error: () => {} });
+      httpMock
+        .expectOne('/api/stops')
+        .flush({}, { status: 503, statusText: 'Service Unavailable' });
+
+      expect(telemetry.record.calls.mostRecent().args[0].outcome).toBe('error');
+      httpMock.verify();
+    });
+
+    it('records an abandoned request as cancelled, never as ok', () => {
+      // `finalize` runs on unsubscribe too — a component destroyed mid-flight.
+      // Defaulting the outcome to 'ok' would relabel every abandoned request as a
+      // healthy one and quietly inflate the good half of the denominator.
+      stubClock(8_000);
+      configureWithTelemetry([{ provide: TranslateService, useValue: translateStub() }]);
+      const http = TestBed.inject(HttpClient);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      const sub = http.get('/api/stops').subscribe({ next: () => {}, error: () => {} });
+      httpMock.expectOne('/api/stops');
+      sub.unsubscribe();
+
+      expect(telemetry.record.calls.mostRecent().args[0].outcome).toBe('cancelled');
+    });
+
+    describe('the measured population is exactly the population the ceiling applies to', () => {
+      it('does NOT measure a request carrying SKIP_REQUEST_TIMEOUT', () => {
+        // ExportService waits while the server builds a file, so 45s there is the
+        // feature working. Counting it would pad the tail with samples that say
+        // nothing about whether 30s is right for the requests 30s can actually
+        // kill — and that tail is the entire deliverable of this card.
+        stubClock(45_000);
+        configureWithTelemetry([{ provide: TranslateService, useValue: translateStub() }]);
+        const http = TestBed.inject(HttpClient);
+        const httpMock = TestBed.inject(HttpTestingController);
+
+        http
+          .get('/api/private/exports/bookings', {
+            context: new HttpContext().set(SKIP_REQUEST_TIMEOUT, true),
+          })
+          .subscribe({ next: () => {}, error: () => {} });
+        httpMock.expectOne('/api/private/exports/bookings').flush({ rows: 1 });
+
+        expect(telemetry.record).not.toHaveBeenCalled();
+        httpMock.verify();
+      });
+
+      it('does NOT measure a mutation — the ceiling deliberately does not apply to one', () => {
+        stubClock(45_000);
+        configureWithTelemetry([{ provide: TranslateService, useValue: translateStub() }]);
+        const http = TestBed.inject(HttpClient);
+        const httpMock = TestBed.inject(HttpTestingController);
+
+        http.post('/api/private/payments', {}).subscribe({ next: () => {}, error: () => {} });
+        httpMock.expectOne('/api/private/payments').flush({ ok: true });
+
+        expect(telemetry.record).not.toHaveBeenCalled();
+        httpMock.verify();
+      });
+
+      it('does NOT measure the i18n bundle, and resolves nothing analytics-shaped for it', () => {
+        // The same NG0200 boundary this whole file guards: no TranslateService is
+        // provided here, so if the interceptor resolved anything on the analytics
+        // side for a non-/api/ request, this would die with NullInjectorError.
+        stubClock(45_000);
+        configureWithTelemetry();
+        const http = TestBed.inject(HttpClient);
+        const httpMock = TestBed.inject(HttpTestingController);
+
+        let ok = false;
+        http.get('/i18n/th.json').subscribe({ next: () => (ok = true) });
+        httpMock.expectOne('/i18n/th.json').flush({ COMMON: {} });
+
+        expect(ok).toBeTrue();
+        expect(telemetry.record).not.toHaveBeenCalled();
+        httpMock.verify();
+      });
+    });
   });
 });

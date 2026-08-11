@@ -35,7 +35,30 @@ export type AnalyticsEventName =
   /** The customer switched payment tab (card <-> PromptPay QR). */
   | 'payment_method_selected'
   /** Payment settled and the ticket was issued. The bottom of the funnel. */
-  | 'booking_completed';
+  | 'booking_completed'
+  /**
+   * OBRS-1223 — one idempotent `/api/` request that took longer than
+   * `SLOW_REQUEST_THRESHOLD_MS`. NOT one event per request: that floor exists so
+   * this stays a tail measurement rather than an APM bill.
+   *
+   * The only member of this union that is not about the customer's journey. It
+   * is here because `IDEMPOTENT_REQUEST_TIMEOUT_MS` (30s, OBRS-642) CANCELS a
+   * real request, and it was set from one measured endpoint plus judgement —
+   * defensible as "unlikely to kill anything", not as "why 30 and not 15".
+   */
+  | 'slow_api_request'
+  /**
+   * OBRS-1223 — the denominator, emitted once per `CENSUS_WINDOW_SIZE`
+   * completed idempotent `/api/` requests.
+   *
+   * Without it `slow_api_request` is a count with nothing to divide by, and a
+   * bare count cannot answer "is 30s too tight" — 200 slow requests is
+   * reassuring against 2,000,000 and alarming against 2,000. Emitting the
+   * window's total and its slow count TOGETHER is also what keeps the ratio
+   * unbiased when a session ends mid-window: the unflushed partial window loses
+   * both halves, not one.
+   */
+  | 'api_request_census';
 
 /**
  * Value types a provider can carry. GA4 accepts string / number / boolean;

@@ -1,15 +1,20 @@
 import { inject } from '@angular/core';
 import {
   HttpErrorResponse,
+  HttpEventType,
   HttpHandlerFn,
   HttpInterceptorFn,
   HttpRequest,
 } from '@angular/common/http';
 import { throwError } from 'rxjs';
-import { catchError, finalize, timeout } from 'rxjs/operators';
+import { catchError, finalize, tap, timeout } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../services/alert.service';
 import { resolveApiAlertMessage } from '../lib/api-error';
+import {
+  ApiLatencyTelemetryService,
+  ApiRequestOutcome,
+} from '../../services/analytics/api-latency-telemetry.service';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
@@ -42,6 +47,15 @@ import {
  *     answer. `timeout({each})` only resets per emitted HttpEvent, so with
  *     `reportProgress` off it is a time-to-first-byte limit and would abort a healthy
  *     long export.
+ *
+ * ⚠️ THIS NUMBER IS STILL A JUDGEMENT CALL, AND OBRS-1223 IS THE CARD THAT ENDS THAT.
+ * The baseline above is one endpoint measured from a wired desktop; the ceiling has to
+ * cover a customer's phone on mobile data, which nobody has measured. So it defends
+ * "unlikely to kill anything" and does NOT defend "why 30 and not 15 or 60".
+ * `ApiLatencyTelemetryService` now counts what customers actually wait, and
+ * `docs/api-latency-telemetry.md` is how to read it. WHEN THAT DATA EXISTS, REPLACE
+ * THIS PARAGRAPH AND THE ONE ABOVE with a citation of it — including if the answer
+ * turns out to be 30s, because then it will be a measurement rather than this.
  */
 export const IDEMPOTENT_REQUEST_TIMEOUT_MS = 30_000;
 
@@ -89,25 +103,61 @@ export const errorInterceptor: HttpInterceptorFn = (
   const isIdempotent = req.method === 'GET' || req.method === 'HEAD';
   const shouldTimeOut =
     isApiRequest && isIdempotent && !req.context.get(SKIP_REQUEST_TIMEOUT);
+
+  // OBRS-1223: measure exactly the population the ceiling APPLIES to, which is
+  // `shouldTimeOut` and not a condition of its own. Anything carrying
+  // SKIP_REQUEST_TIMEOUT is excluded for the reason it is exempt in the first
+  // place — `ExportService.export()` waits while the server builds a file, so a
+  // 40s reading there is the feature working, and counting it would pad the tail
+  // with samples that say nothing about whether 30s is right for the requests
+  // 30s can actually kill. Two conditions that must move together, so they are
+  // one condition.
+  const telemetry = shouldTimeOut ? inject(ApiLatencyTelemetryService) : null;
+  const startedAt = telemetry ? performance.now() : 0;
+  // Starts as 'cancelled' on purpose: `finalize` also runs when the caller
+  // unsubscribes (a component destroyed mid-flight), and that is neither a
+  // success nor a failure. Defaulting to 'ok' would quietly relabel every
+  // abandoned request as a healthy one.
+  let outcome: ApiRequestOutcome = 'cancelled';
+  let timedOut = false;
+
   const response$ = shouldTimeOut
     ? next(req).pipe(
         timeout({
           each: IDEMPOTENT_REQUEST_TIMEOUT_MS,
-          with: () =>
-            throwError(
+          with: () => {
+            // OBRS-1223 AC4: recorded HERE rather than sniffed out of
+            // `statusText` downstream. The error below is deliberately shaped
+            // like the transport's own dead-connection error so no `catchError`
+            // in the app can tell them apart -- which means nothing downstream
+            // CAN tell them apart either, including this counter.
+            timedOut = true;
+            return throwError(
               () =>
                 new HttpErrorResponse({
                   status: 0,
                   statusText: 'Request timed out',
                   url: req.url,
                 })
-            ),
+            );
+          },
         })
       )
     : next(req);
 
   return response$.pipe(
+    // OBRS-1223. `tap` and not `map`: this must not touch the stream. The
+    // Response event is the only one that means the request finished on its own
+    // terms -- Sent and the DownloadProgress events also flow through here.
+    tap((event) => {
+      if (telemetry && event.type === HttpEventType.Response) {
+        outcome = 'ok';
+      }
+    }),
     catchError((error: unknown) => {
+      if (telemetry) {
+        outcome = timedOut ? 'timed_out' : 'error';
+      }
       if (shouldShowError) {
         // A dedicated message for the statuses whose body says nothing a user
         // can act on (0 / 429 / 502 / 503 / 504 — OBRS-216, OBRS-567); every
@@ -131,6 +181,21 @@ export const errorInterceptor: HttpInterceptorFn = (
       if (shouldShowLoading) {
         alertService.hideLoading();
       }
+
+      // OBRS-1223. In `finalize` because it is the ONE place that runs on every
+      // ending -- response, error, and unsubscribe. A `tap({ complete })` would
+      // miss the abandoned request, which is a reading we specifically want to
+      // be able to tell apart from a healthy one.
+      //
+      // `record` swallows its own failures (AC5). That is its contract, not an
+      // assumption made here: this callback runs on the success path too, so a
+      // throw would turn a request that worked into one that reported an error.
+      telemetry?.record({
+        url: req.url,
+        method: req.method,
+        durationMs: performance.now() - startedAt,
+        outcome,
+      });
     })
   );
 };
