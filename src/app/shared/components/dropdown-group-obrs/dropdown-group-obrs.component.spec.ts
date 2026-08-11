@@ -360,6 +360,24 @@ describe('DropdownGroupObrsComponent', () => {
         expect(component.isDropdownOpen).toBeTrue();
       });
 
+      it('opens on FOCUS, so a Tab-arrival types a query and not a suffix', () => {
+        // Closed, the box holds the chosen station. Without this, someone who
+        // reaches the field with Tab and types appends to that name and filters
+        // on "Bangkok Mo Chit Stationก" — nothing matches, in a list they cannot
+        // see. Opening empties the box first (the shown handler), so the first
+        // keystroke is the first character of the query however they arrived.
+        component.setCurrentValue(STATION_OPTIONS[0]);
+        fixture.detectChanges();
+        expect(component.isDropdownOpen).toBeFalse();
+
+        searchInput()!.dispatchEvent(new FocusEvent('focus'));
+        fixture.detectChanges();
+
+        expect(component.isDropdownOpen).toBeTrue();
+        expect(searchInput()!.value).toBe('');
+        expect(searchInput()!.getAttribute('placeholder')).toBe('Bangkok Mo Chit Station');
+      });
+
       it('STAYS open when the field is clicked again — a customer clicking into their own query', () => {
         searchInput()!.click();
         fixture.detectChanges();

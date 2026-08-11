@@ -46,6 +46,7 @@
         [value]="triggerText"
         [attr.placeholder]="triggerPlaceholder"
         (click)="onTriggerClick()"
+        (focus)="onTriggerFocus()"
         (input)="onSearchInput($event)"
         (keydown)="onTriggerKeydown($event)"
         />

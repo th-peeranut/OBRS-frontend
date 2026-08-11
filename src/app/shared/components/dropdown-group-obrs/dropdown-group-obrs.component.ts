@@ -271,6 +271,20 @@ export class DropdownGroupObrsComponent
   }
 
   /**
+   * Focus opens the panel too, and it is not a nicety: while the panel is CLOSED
+   * the box holds the chosen station, so someone who arrives by Tab and starts
+   * typing would append to that station's name and filter on "Bangkokx" — a
+   * query matching nothing, in a list they cannot see. Opening on focus empties
+   * the box first (the shown handler does that), so the first keystroke is the
+   * first character of the query no matter how the customer got here.
+   */
+  onTriggerFocus(): void {
+    if (this.searchable && !this.isDropdownOpen && !this.isDisabled) {
+      this.bootstrapDropdown()?.show();
+    }
+  }
+
+  /**
    * The outside-click close Bootstrap's `clearMenus` would have given us if this
    * trigger carried `data-bs-toggle`. Registered only while the panel is open.
    *
