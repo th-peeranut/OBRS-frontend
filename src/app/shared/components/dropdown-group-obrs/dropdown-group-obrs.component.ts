@@ -271,16 +271,24 @@ export class DropdownGroupObrsComponent
   }
 
   /**
-   * Focus opens the panel too, and it is not a nicety: while the panel is CLOSED
-   * the box holds the chosen station, so someone who arrives by Tab and starts
-   * typing would append to that station's name and filter on "Bangkokx" — a
-   * query matching nothing, in a list they cannot see. Opening on focus empties
-   * the box first (the shown handler does that), so the first keystroke is the
-   * first character of the query no matter how the customer got here.
+   * Selects the text on focus — the fix for a Tab arrival, which is the one path
+   * that reaches this field without going through a click.
+   *
+   * While the panel is CLOSED the box holds the chosen station, so a keystroke
+   * would otherwise APPEND to it: the query became "Bangkok Mo Chit Stationก",
+   * matching nothing, in a list not yet open. Selecting means the first keystroke
+   * replaces the value instead, and `onSearchInput` opens the panel on that same
+   * keystroke.
+   *
+   * Opening the panel here was the first attempt and is deliberately not what
+   * shipped: focus is also what a Tab passing THROUGH the form produces, and a
+   * 540 px panel springing open on the way past costs more than the one keystroke
+   * of delay this version costs.
    */
   onTriggerFocus(): void {
-    if (this.searchable && !this.isDropdownOpen && !this.isDisabled) {
-      this.bootstrapDropdown()?.show();
+    const trigger = this.dropdownButton?.nativeElement;
+    if (this.searchable && !this.isDisabled && trigger instanceof HTMLInputElement) {
+      trigger.select();
     }
   }
 
