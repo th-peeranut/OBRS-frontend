@@ -1474,6 +1474,7 @@
         "COUNTED_PLACEHOLDER": "0.00",
         "COUNTED_INVALID": "请输入有效金额，例如 480.00。",
         "PER_HEAD_DEDUCTED": "减去售票员留存的人头费",
+        "DEFERRED_TICKET_CASH": "减去日终统一转交车主的票款",
         "EXPECTED_CASH": "应收现金",
         "DISCREPANCY": "差异",
         "HANDER_LABEL": "交接人",
