@@ -35,13 +35,17 @@ import { DARK_OVERRIDE_ALLOW } from '../support/dark-override-allow';
  * a third of the file is unreachable and the census would report a clean sweep
  * over rules it never visited.
  */
-const EXTRA_PAGES = [
+const EXTRA_PAGES: { key: string; url: string; seed: boolean; storeOverride?: () => Record<string, unknown> }[] = [
   { key: 'register', url: '/register', seed: false },
   { key: 'how-to-book', url: '/how-to-book', seed: false },
 ];
 
+// `storeOverride` is carried through (OBRS-1228): the empty-results entry exists
+// precisely because that state renders elements no other target does, and a
+// census that seeded it with two trips would visit the URL twice and judge the
+// same DOM both times -- more wall clock, no more coverage.
 const TARGETS = [
-  ...CUSTOMER_PAGES.map((p) => ({ key: p.key, url: p.url, seed: !!p.seed })),
+  ...CUSTOMER_PAGES.map((p) => ({ key: p.key, url: p.url, seed: !!p.seed, storeOverride: p.storeOverride })),
   ...EXTRA_PAGES,
 ];
 
@@ -238,7 +242,7 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
 
     for (const t of TARGETS) {
       await seedCustomerSession(page, true);
-      if (t.seed) await seedStore(page);
+      if (t.seed) await seedStore(page, t.storeOverride?.());
       await page.goto(t.url, { waitUntil: 'domcontentloaded' });
       await page.waitForTimeout(1500);
 

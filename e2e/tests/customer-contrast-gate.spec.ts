@@ -267,7 +267,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
           await sheet.goto(target.url, { waitUntil: 'domcontentloaded' });
           await sheet.waitForTimeout(2500);
           if (target.seed) {
-            await seedStore(sheet);
+            await seedStore(sheet, target.storeOverride?.());
             await sheet.waitForTimeout(1200);
           }
 
