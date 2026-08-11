@@ -85,6 +85,35 @@
   }
 }
 
+// OBRS-1207 -- the FAB yields while something clickable is underneath it.
+//
+// `pointer-events: none` is the part that fixes the defect: the click passes
+// through to the button the user aimed at instead of opening a bug-report
+// dialog they never asked for. The fade is what stops that from being a lie --
+// a button that looks pressable and silently is not would be a worse bug than
+// the one being fixed, because nothing on screen would explain it.
+//
+// 0.35 keeps the pill's shape and colour legible as a "still here" marker while
+// reading unmistakably as inactive. It is deliberately NOT a contrast-carrying
+// state -- the label is not meant to be read at this opacity, and WCAG 1.4.3
+// exempts inactive controls -- so this does not reopen what OBRS-740/741/746
+// settled about the colour pair at rest.
+//
+// The class is added and removed by the component's own hit-test, not by a
+// media query or a scroll threshold; see `isClickableUnderFab`. Keyboard users
+// are unaffected: `pointer-events` does not gate Enter/Space and the button
+// stays in the tab order at every scroll offset.
+//
+// `transition` is inherited from `.report-fab` above and does not list
+// `opacity`, so the change is instantaneous by construction -- a fade-in here
+// would put a window of milliseconds where the button is half-transparent and
+// still swallowing clicks, which is the defect wearing a nicer coat.
+.report-fab.report-fab--yield {
+  opacity: 0.35;
+  pointer-events: none;
+  box-shadow: none;
+}
+
 // Mobile: icon-only pill collapses to 48 × 48 touch target
 @media (max-width: 576px) {
   .report-fab {
