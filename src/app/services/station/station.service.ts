@@ -3,13 +3,21 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { StationApi } from '../../shared/interfaces/station.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
-import { SKIP_GLOBAL_LOADING_ALERT } from '../../shared/interceptors/http-context-tokens';
+import {
+  SKIP_GLOBAL_ERROR_ALERT,
+  SKIP_GLOBAL_LOADING_ALERT,
+} from '../../shared/interceptors/http-context-tokens';
 import { Observable } from 'rxjs';
+import { shareReplay } from 'rxjs/operators';
+import { ProvinceStopsApi } from '../../shared/lib/station-groups';
 
 @Injectable({
   providedIn: 'root',
 })
 export class StationService {
+  /** Session-scoped dedup for `getProvincesWithStops()` — see that method. */
+  private provincesWithStops$?: Observable<ResponseAPI<ProvinceStopsApi[]>>;
+
   constructor(private http: HttpClient) {}
 
   /**
@@ -49,5 +57,35 @@ export class StationService {
         ? { context: new HttpContext().set(SKIP_GLOBAL_LOADING_ALERT, true) }
         : {}
     );
+  }
+
+  /**
+   * OBRS-1212: which province each stop belongs to, plus the province's own
+   * translated name — the only thing `/api/stops` cannot answer (`StationApi`
+   * carries no province, route or region field).
+   *
+   * <p>Deduped per session in `provincesWithStops$`, not per call: `/home`
+   * builds the origin and the destination dropdown from one roster, and the
+   * grouping is the same for both.
+   *
+   * <p>Both global alerts are suppressed, and this is the one endpoint here
+   * where suppressing the ERROR alert is right: the caller degrades a failure to
+   * "render the dropdown ungrouped", which is exactly today's screen. Letting
+   * `error.interceptor.ts` raise a modal over a booking form that is about to
+   * work perfectly well would report a fault the customer does not have — the
+   * same reasoning `RouteMapService.selfHandledContext()` applies to the route
+   * lookups this page already makes.
+   */
+  getProvincesWithStops(): Observable<ResponseAPI<ProvinceStopsApi[]>> {
+    if (!this.provincesWithStops$) {
+      this.provincesWithStops$ = this.http
+        .get<ResponseAPI<ProvinceStopsApi[]>>(`${environment.apiUrl}/api/provinces/stops`, {
+          context: new HttpContext()
+            .set(SKIP_GLOBAL_LOADING_ALERT, true)
+            .set(SKIP_GLOBAL_ERROR_ALERT, true),
+        })
+        .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    }
+    return this.provincesWithStops$;
   }
 }

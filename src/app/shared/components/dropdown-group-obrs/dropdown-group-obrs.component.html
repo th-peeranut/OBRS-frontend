@@ -70,14 +70,16 @@
           }
 
           @if (isGroupedOptions()) {
-            <!-- UNCHANGED — dead branch with current data (StationApi has no `stations`
-            field, isGroupedOptions() is always false at runtime), left as-is,
-            unfiltered, untested (see UX-OBRS-562 §1). -->
-            @for (group of optionList; track group) {
+            <!-- OBRS-1212: iterates `displayGroups` (filtered), NOT `optionList`
+            (raw). The raw list is what this branch read for as long as it was
+            unreachable, which is exactly how supplying grouped data would have
+            stopped the search box filtering without any test going red — see
+            `displayGroups` in the component (AC#2). -->
+            @for (entry of displayGroups; track entry.group) {
               <li class="dropdown-header">
-                {{ getValue(group) }}
+                {{ getValue(entry.group) }}
               </li>
-              @for (station of getGroupStations(group); track station) {
+              @for (station of entry.stations; track trackByOptionId($index, station)) {
                 <li class="option-items">
                   <a
                     class="dropdown-item dropdown-option"
