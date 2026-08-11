@@ -28,13 +28,16 @@
             </div>
             <div class="user-editor-grid">
               <div class="user-field is-title">
+                <!-- OBRS-1231: optional. Only the length rule survives, so the message
+                is the length one - a "required" message on a field nothing requires is
+                how the old copy read even after the validator was gone. -->
                 <label>
-                  {{ 'ADMIN.USERS.FORM_TITLE' | translate }} <span class="admin-required">*</span>
+                  {{ 'ADMIN.USERS.FORM_TITLE' | translate }}
                 </label>
                 <input class="admin-field user-input" formControlName="title" />
                 @if (isFieldInvalid('title')) {
                   <small class="admin-error">
-                    {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+                    {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
                   </small>
                 }
               </div>

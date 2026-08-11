@@ -510,3 +510,168 @@ describe('ScheduleBookingListComponent (announced-delay disclosure, OBRS-1141)',
     expect(fixture.debugElement.query(By.css('.schedule-item .select-btn'))).toBeTruthy();
   });
 });
+
+// OBRS-1217 — the empty list a customer gets every evening once the last bus
+// has left. `ScheduleRepository:151` filters departed rounds out in SQL, so a
+// route that runs daily still answers `[]` after ~17:30 while tomorrow morning
+// is fully bookable. The point of these tests is that the two reasons for an
+// empty list stay TOLD APART: today-is-over gets the new copy plus a way out,
+// every other empty day keeps `NO_RESULTS`.
+describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', () => {
+  let fixture: ComponentFixture<ScheduleBookingListComponent>;
+  let component: ScheduleBookingListComponent;
+  let store: MockStore;
+
+  /**
+   * 2026-08-10, 20:58 — the wall-clock of the prod report.
+   *
+   * NO `+07:00`. It carried one until CI went red on the midnight test below,
+   * and the offset was the bug: what the component compares is `dayjs(date)`
+   * against `dayjs()`, and both resolve in the RUNNER's zone. Pinning an
+   * instant in ICT and then asking a UTC runner what day it is gives a
+   * different answer than it gives here — 2026-08-11T00:05+07:00 is still
+   * 10 August in UTC, so "midnight passed" never happened and the sold-out
+   * panel was still on screen.
+   *
+   * A bare literal is parsed as LOCAL time, so these say "20:58 on the day
+   * being searched" in whatever zone the machine is in, which is the claim
+   * the tests are actually making. This suite passed on a UTC+7 laptop and
+   * failed in CI for a week (measured: run 31452623314).
+   */
+  const TONIGHT = new Date('2026-08-10T20:58:00');
+
+  function filterFor(departureDate: string, roundTripId: number = 1): any {
+    return {
+      roundTrip: { id: roundTripId },
+      passengerInfo: [{ type: 'ADULT', count: 1 }],
+      startStationId: 1,
+      stopStationId: 24,
+      departureDate,
+    };
+  }
+
+  function render(scheduleList: ScheduleList | null, scheduleFilter: any) {
+    store.overrideSelector(selectScheduleList, scheduleList as ScheduleList);
+    store.overrideSelector(selectScheduleFilter, scheduleFilter);
+    store.overrideSelector(selectProvinceWithStation, [] as any);
+    fixture = TestBed.createComponent(ScheduleBookingListComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
+  function textOf(selector: string): string[] {
+    return fixture.debugElement
+      .queryAll(By.css(selector))
+      .map((el) => (el.nativeElement.textContent || '').trim());
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        provideMockStore(),
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+      ],
+    }).compileComponents();
+    store = TestBed.inject(MockStore);
+    jasmine.clock().install();
+    jasmine.clock().mockDate(TONIGHT);
+  });
+
+  afterEach(() => {
+    jasmine.clock().uninstall();
+  });
+
+  it('replaces NO_RESULTS with the sold-out-today copy and a next-day button when the searched date IS today', () => {
+    render({ departureSchedules: [], arrivalSchedules: null }, filterFor('2026-08-10'));
+
+    expect(textOf('.sold-out-today__title')).toEqual([
+      'SCHEDULE_BOOKING.SOLD_OUT_TODAY_TITLE',
+    ]);
+    // The old copy tells the customer to change ROUTE, which is wrong advice
+    // here — the route is fine and sells out tomorrow morning.
+    expect(textOf('.no-results')).not.toContain('SCHEDULE_BOOKING.NO_RESULTS');
+    expect(fixture.debugElement.query(By.css('.sold-out-today__action'))).toBeTruthy();
+  });
+
+  it('keeps the original NO_RESULTS copy when the empty day is NOT today', () => {
+    render({ departureSchedules: [], arrivalSchedules: null }, filterFor('2026-08-15'));
+
+    expect(textOf('.no-results')).toContain('SCHEDULE_BOOKING.NO_RESULTS');
+    expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeNull();
+  });
+
+  it('shows the message but NO button for a round trip — moving the outbound could put it after the return', () => {
+    render({ departureSchedules: [], arrivalSchedules: null }, filterFor('2026-08-10', 2));
+
+    expect(textOf('.sold-out-today__title')).toEqual([
+      'SCHEDULE_BOOKING.SOLD_OUT_TODAY_TITLE',
+    ]);
+    expect(fixture.debugElement.query(By.css('.sold-out-today__action'))).toBeNull();
+  });
+
+  it('renders nothing at all before a search has run (null schedule list)', () => {
+    render(null, filterFor('2026-08-10'));
+
+    expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('.no-results'))).toBeNull();
+  });
+
+  it('carries the NEXT day, localized, in the button label', (done) => {
+    render({ departureSchedules: [], arrivalSchedules: null }, filterFor('2026-08-10'));
+
+    component.soldOutToday$.subscribe((state) => {
+      // 2026-08-11 is a Tuesday. Asserted through Intl rather than a literal so
+      // this does not become a test of one runtime's ICU data.
+      const expected = new Intl.DateTimeFormat('en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+      }).format(new Date('2026-08-11T00:00:00'));
+      expect(state?.nextDayLabel).toBe(expected);
+      done();
+    });
+  });
+
+  it('dispatches ONE filter change on click — the filter form re-runs the search and re-labels its own date control', () => {
+    render({ departureSchedules: [], arrivalSchedules: null }, filterFor('2026-08-10'));
+    const dispatch = spyOn(store, 'dispatch');
+
+    fixture.debugElement
+      .query(By.css('.sold-out-today__action'))
+      .triggerEventHandler('click', null);
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    const action = dispatch.calls.mostRecent().args[0] as any;
+    expect(action.schedule_filter.departureDate).toBe('2026-08-11');
+    // Everything else about the search must survive the jump.
+    expect(action.schedule_filter.startStationId).toBe(1);
+    expect(action.schedule_filter.stopStationId).toBe(24);
+  });
+
+  // AC#5. The bug this guards is invisible in every other test: resolve "today"
+  // once at construction and a tab opened at 23:50 tells the customer at 00:05
+  // that yesterday's exhausted search is today's.
+  it('re-evaluates "today" when the result arrives, not when the page loaded', () => {
+    // Local literals, no offset -- see TONIGHT above for what an offset here
+    // costs: in UTC these two instants are the same calendar day and the test
+    // asserts a rollover that never occurred.
+    jasmine.clock().mockDate(new Date('2026-08-10T23:50:00'));
+    render({ departureSchedules: [], arrivalSchedules: null }, filterFor('2026-08-10'));
+    expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeTruthy();
+
+    // Midnight passes with the tab open, then the same search is re-run.
+    jasmine.clock().mockDate(new Date('2026-08-11T00:05:00'));
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: [],
+      arrivalSchedules: null,
+    } as ScheduleList);
+    store.refreshState();
+    fixture.detectChanges();
+
+    // 2026-08-10 is now YESTERDAY: it is no longer "today's rounds have left".
+    expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeNull();
+    expect(textOf('.no-results')).toContain('SCHEDULE_BOOKING.NO_RESULTS');
+  });
+});

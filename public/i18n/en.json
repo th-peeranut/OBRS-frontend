@@ -436,6 +436,7 @@
     "ERROR_GENERAL": "An error occurred. Please try again."
   },
   "COMMON": {
+    "NOT_SPECIFIED": "Not specified",
     "THEME_TOGGLE": "Toggle dark mode",
     "CLEAR": "Clear",
     "CALENDAR_ICON_ALT": "Calendar Icon",
@@ -1473,6 +1474,7 @@
         "COUNTED_PLACEHOLDER": "0.00",
         "COUNTED_INVALID": "Enter a valid amount, e.g. 480.00.",
         "PER_HEAD_DEDUCTED": "Less per-head fee kept by the seller",
+        "DEFERRED_TICKET_CASH": "Less ticket cash transferred at end of day",
         "EXPECTED_CASH": "Expected cash",
         "DISCREPANCY": "Discrepancy",
         "HANDER_LABEL": "Handed over by",
@@ -2091,6 +2093,7 @@
     "PROFILE_SAVE_BUTTON": "Save",
     "PROFILE_CANCEL_BUTTON": "Cancel",
     "PROFILE_FIELD_REQUIRED": "This field is required (2-50 characters).",
+    "PROFILE_FIELD_LENGTH": "If filled in, this must be 2-50 characters.",
     "PROFILE_PHONE_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678)",
     "PROFILE_SAVE_SUCCESS": "Your personal details have been saved.",
     "PROFILE_SAVE_ERROR_PHONE_CONFLICT": "That phone number is already used by another account.",
@@ -2413,6 +2416,9 @@
     "CHANGE": "change data",
     "NO_RESULTS": "No schedules found for your search. Try a different date, route, or fewer passengers.",
     "NO_RETURN_RESULTS": "No return schedules found for your search. Try a different return date or fewer passengers.",
+    "SOLD_OUT_TODAY_TITLE": "Today's trips have all departed",
+    "SOLD_OUT_TODAY_HINT": "Try the next day.",
+    "SOLD_OUT_TODAY_ACTION": "Show trips on {{date}}",
     "ESTIMATE_KM_UNIT": "km",
     "RESTORED_UNAVAILABLE": "The trip you picked earlier is no longer available. Please choose another one."
   },

@@ -91,9 +91,11 @@
                 formControlName="title"
                 [class.form-error]="getForm('title')?.touched && getForm('title')?.errors"
                 />
+                <!-- OBRS-1231: title is optional here; only the length rule can fire,
+                so the message must not read as "you left this blank". -->
                 @if (getForm('title')?.touched && getForm('title')?.errors) {
                   <div class="text-error">
-                    {{ "ACCOUNT.PROFILE_FIELD_REQUIRED" | translate }}
+                    {{ "ACCOUNT.PROFILE_FIELD_LENGTH" | translate }}
                   </div>
                 }
               </div>

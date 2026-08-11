@@ -152,8 +152,15 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
 
     const fromLabel = journey?.fromStop?.label?.trim() ?? '';
     const toLabel = journey?.toStop?.label?.trim() ?? '';
+    // OBRS-1249: the route's own name first — this is the same response, and
+    // the same field, the customer's e-ticket reads (OBRS-1219). A walk-in
+    // buyer holding this slip and the e-ticket of the trip they were just sold
+    // should not find the two naming the trip differently. Falls back to the
+    // stop pair for a route with no name seeded, exactly as before.
+    const routeName = journey?.routeLabel?.trim();
     this.routeLabel =
-      fromLabel && toLabel ? `${fromLabel} - ${toLabel}` : fromLabel || toLabel || '-';
+      routeName ||
+      (fromLabel && toLabel ? `${fromLabel} - ${toLabel}` : fromLabel || toLabel || '-');
 
     this.departureDisplay = formatDisplayDateTime(journey?.departureDateTime, locale);
     this.arrivalDisplay = formatDisplayDateTime(journey?.arrivalDateTime, locale);

@@ -138,6 +138,40 @@ describe('SellReceiptPageComponent', () => {
       expect((component as any).loadError).toBeFalse();
     });
 
+    /**
+     * OBRS-1249 — the receipt names the route the same way the customer's
+     * e-ticket does. `routeLabel` rides on this very response (OBRS-1219 put it
+     * there); a walk-in buyer holding the printed slip and the e-ticket of the
+     * trip they were just sold must not find the two disagreeing about which
+     * trip it was. The assertion above is the other half: with no name seeded
+     * the slip keeps its stop pair, unchanged.
+     */
+    it('OBRS-1249: prints the route own name when the response carries one', () => {
+      const data = buildTicketsData();
+      data.journeys![0].routeLabel = 'หนองชาก-บ้านบึง-กรุงเทพฯ';
+      bookingServiceStub.getBookingTickets.and.returnValue(
+        of({ code: 200, message: 'OK', data })
+      );
+
+      const component = createComponent();
+      component.ngOnInit();
+
+      expect((component as any).routeLabel).toBe('หนองชาก-บ้านบึง-กรุงเทพฯ');
+    });
+
+    it('OBRS-1249: a blank route name does not blank the line', () => {
+      const data = buildTicketsData();
+      data.journeys![0].routeLabel = '   ';
+      bookingServiceStub.getBookingTickets.and.returnValue(
+        of({ code: 200, message: 'OK', data })
+      );
+
+      const component = createComponent();
+      component.ngOnInit();
+
+      expect((component as any).routeLabel).toBe('Nong chak - Bts mo chit');
+    });
+
     it('builds one ticket row per passenger with seat + name + ticket number', () => {
       const component = createComponent();
       component.ngOnInit();

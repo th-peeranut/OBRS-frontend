@@ -284,6 +284,16 @@
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.PER_HEAD_DEDUCTED' | translate }}</span>
                     <span>-{{ formatMoney(perHeadDeducted, detail.currency) }}</span>
                   </div>
+                  <!-- OBRS-1242: ticket cash this round is not asking for, because
+                  the counter that took it transfers to the owner at close of day.
+                  Unconditional for the same reason as the row above: without a
+                  line naming it, the expectation simply reads lower than the cash
+                  total and the only available explanation is "the system is short
+                  again" — which is how a real shortage stops being visible. -->
+                  <div class="settlement-detail-row" data-testid="settlement-deferred-ticket-cash">
+                    <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.DEFERRED_TICKET_CASH' | translate }}</span>
+                    <span>-{{ formatMoney(deferredTicketCash, detail.currency) }}</span>
+                  </div>
                   <div class="settlement-detail-row">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.EXPECTED_CASH' | translate }}</span>
                     <span data-testid="settlement-expected-cash">{{ formatMoney(expectedCashAmount(), detail.currency) }}</span>

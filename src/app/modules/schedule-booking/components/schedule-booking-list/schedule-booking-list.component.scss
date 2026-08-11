@@ -30,12 +30,73 @@
     font-weight: bold;
   }
 
+  /* OBRS-1228: $text-lightblack -> $text-softblack. This panel is a TINT
+     (#f6fcff), not white, and $text-lightblack only clears AA on white -- it
+     measures 4.45:1 here against a 4.5 floor. Same trade OBRS-769 made for the
+     two other tints ($secondary-lightgrey 4.29:1, $secondary-grey 4.39:1);
+     $text-softblack is 6.88:1 on this one. It went eleven months unmeasured
+     because the contrast gate seeded /schedule-booking with two trips, so this
+     element never rendered under it -- see the schedule-booking-no-results
+     entry in e2e/support/customer-pages.ts, which is what renders it now. */
   .no-results {
     margin: $space-2xs 0;
     padding: $space-lg 16px;
     text-align: center;
     font-size: 15px;
-    color: $text-lightblack;
+    color: $text-softblack;
+  }
+
+  /* OBRS-1217 — the empty state for "today's rounds have all departed".
+     Every colour below is the LIGHT theme and is derived against #f6fcff, same
+     as `.no-results` above. Dark mode repaints the panel AND both text lines in
+     dark-theme.scss section 14 — which it did not do until OBRS-1228, because
+     that repaint was scoped `:has(.schedule-item)` and an empty list has none.
+     Do not add a `body.is-dark` rule here: view encapsulation makes a component
+     rule out-specific the global one, which is the OBRS-767 defect shape. */
+  .sold-out-today {
+    margin: $space-2xs 0;
+    padding: $space-lg 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-2xs;
+    text-align: center;
+
+    &__title {
+      margin: 0;
+      font-size: $font-size-md;
+      font-weight: bold;
+      color: $text-black;
+    }
+
+    /* $text-softblack, not $text-lightblack, for the reason spelled out on
+       .no-results above: on this #f6fcff tint that token is 4.45:1. It shipped
+       at 4.45:1 in OBRS-1217 and the gate could not see it, because nothing in
+       the sweep ever rendered an empty result. */
+    &__hint {
+      margin: 0;
+      font-size: 15px;
+      color: $text-softblack;
+    }
+
+    &__action {
+      margin-top: $space-2xs;
+      background: $primary-blue; /* white on it = 5.33:1 */
+      color: $text-white;
+      border: none;
+      border-radius: 26px;
+      padding: 12px $space-lg;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s ease;
+      /* The label carries a full date, so it must wrap rather than push the
+         panel wider than the phone (OBRS-634 territory). */
+      max-width: 100%;
+
+      &:hover {
+        background: $primary-blue-hover; /* white on it = 7.21:1 */
+      }
+    }
   }
 
   .schedule-item {

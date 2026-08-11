@@ -126,6 +126,21 @@ export class SettlementDetailModalComponent implements OnChanges {
     return Number(this.perHeadDeducted) !== 0;
   }
 
+  // OBRS-1242: ticket cash this round is NOT asking for, because the counter
+  // that took it transfers to the owner at close of day. Also already netted
+  // out of the expectation above, also a positive magnitude, and — like the fee
+  // — rendered even at 0.00.
+  //
+  // ⛔ Do not add a `@if` around its row. A round that legitimately has none is
+  // the common case, and a line that only appears when non-zero teaches the
+  // reader that its absence means "not applicable" — at which point a genuine
+  // 0.00 and a server that stopped computing the figure look identical on the
+  // one screen where the difference is money. The same reasoning is why the
+  // per-head row above is unconditional.
+  protected get deferredTicketCash(): string {
+    return this.detail?.live.deferredTicketCash ?? '0.00';
+  }
+
   // Cents of the counted input, or null when it isn't a valid money string.
   protected get countedCents(): number | null {
     return SettlementDetailModalComponent.toCents(this.countedCashInput);

@@ -18,7 +18,12 @@ import {
 
 export interface WalkInCheckoutPayload {
   contact: {
-    title: string;
+    // OBRS-1231: null, never ''. The control is optional now, and `@Size(min = 2)` on the
+    // backend skips null but REJECTS an empty string — measured on a real counter sale with
+    // the title left blank: 400 VALIDATION_FAILED on BOTH contact.title and
+    // departureSchedule.passengers[0].title, rejectedValue "". Dropping the validator
+    // without changing this type would have shipped a counter that cannot sell.
+    title: string | null;
     firstName: string;
     lastName: string;
     phoneNumber: string;
@@ -72,7 +77,7 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
     private readonly translate: TranslateService
   ) {
     this.contactForm = this.fb.group({
-      title: ['', [Validators.required]],
+      title: [''],
       firstName: ['', [Validators.required, Validators.maxLength(100)]],
       lastName: ['', [Validators.required, Validators.maxLength(100)]],
       phoneNumber: ['', [Validators.required, separatorTolerantPattern(this.phonePattern)]],
@@ -171,9 +176,13 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
       email: string;
     };
 
+    // OBRS-1231: a blank select becomes null, not ''. Trimmed first because the option
+    // values come from TITLE_OPTIONS' nameEnglish and a future edit could pad one.
+    const title = String(v.title ?? '').trim();
+
     const payload: WalkInCheckoutPayload = {
       contact: {
-        title: String(v.title ?? ''),
+        title: title.length > 0 ? title : null,
         firstName: String(v.firstName ?? ''),
         lastName: String(v.lastName ?? ''),
         // OBRS-691: the control may carry display dashes (regrouped on blur) —
