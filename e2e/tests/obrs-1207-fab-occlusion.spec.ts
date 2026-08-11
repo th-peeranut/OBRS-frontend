@@ -1,6 +1,7 @@
 import { expect, test, Browser, Page } from '@playwright/test';
 import stationsFixture from '../fixtures/stations.json';
 import schedulesFixture from '../fixtures/schedules.json';
+import provincesWithStopsFixture from '../fixtures/provinces-with-stops.json';
 import { seedAnalyticsConsent } from '../support/analytics-consent';
 import { findOcclusions, formatOcclusions, Occlusion } from '../support/fab-occlusion';
 import { seedCustomerSession, seedStore } from '../support/customer-pages';
@@ -45,6 +46,16 @@ async function stubBookingBackend(page: Page): Promise<void> {
   await seedAnalyticsConsent(page);
   await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
   await page.route('**/api/schedules/search', (route) => route.fulfill({ json: schedulesFixture }));
+  // `/api/provinces/stops` does NOT match the `**/api/stops` glob above -- the
+  // glob pins the whole path, and this one has a segment in between. Without
+  // this line the call escapes to a backend this lane does not run, and the
+  // origin dropdown quietly degrades to its ungrouped fallback: the spec still
+  // passes, but it measures a layout that is not the one shipping. That is the
+  // failure mode rule 1 of playwright.gate.config.ts exists to prevent, and
+  // OBRS-1212 is the fourth time a new public call on `/home` has found it.
+  await page.route('**/api/provinces/stops', (route) =>
+    route.fulfill({ json: provincesWithStopsFixture })
+  );
 }
 
 /**

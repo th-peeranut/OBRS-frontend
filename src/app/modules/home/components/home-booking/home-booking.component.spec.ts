@@ -63,6 +63,7 @@ function makeHomeBooking(
     booking?: unknown;
     policy?: unknown;
     routeMap?: unknown;
+    station?: unknown;
   } = {}
 ): HomeBookingComponent {
   return new HomeBookingComponent(
@@ -74,8 +75,33 @@ function makeHomeBooking(
     (overrides.booking ?? createBookingServiceStub()) as never,
     (overrides.policy ?? createBookingPolicyServiceStub()) as never,
     (overrides.routeMap ?? createRouteMapServiceStub()) as never,
+    (overrides.station ?? createStationServiceStub()) as never,
     createLanguageServiceStub() as never
   );
+}
+
+/** OBRS-1212: `StationService` answering with NO province data — the ungrouped
+ *  path. It is the default so that every pre-existing spec keeps asserting the
+ *  flat shape it was written against; a spec that wants headings passes
+ *  `createStationServiceStub(PROVINCES)` explicitly. */
+function createStationServiceStub(provinces: unknown[] | null = null): any {
+  return {
+    getProvincesWithStops: () => of({ code: 200, message: 'OK', data: provinces }),
+  };
+}
+
+/**
+ * OBRS-1212: the selectable stations of a dropdown binding, whichever shape it
+ * is in.
+ *
+ * The two lists hold `StationApi[]` when there is no province data and
+ * `StationGroup[]` when there is. Assertions about WHICH stations are offered
+ * are true of both, so they go through here rather than being duplicated per
+ * shape — and a spec written before grouping existed keeps meaning what it
+ * meant.
+ */
+function offeredStations(list: readonly any[]): any[] {
+  return list.flatMap((entry) => (Array.isArray(entry?.stations) ? entry.stations : [entry]));
 }
 
 /** OBRS-1213: a RouteMapService stub that answers with real route segments —
@@ -250,8 +276,8 @@ describe('HomeBookingComponent', () => {
       expect(component.getFormValue('stopStationId')).toBe(2);
       // syncStationOptions() ran: the chosen destination is excluded from the
       // origin picker's own options and vice versa.
-      expect(component.startProvinceStationList.some((s) => s.id === 2)).toBeFalse();
-      expect(component.endProvinceStationList.some((s) => s.id === 1)).toBeFalse();
+      expect(offeredStations(component.startProvinceStationList).some((s) => s.id === 2)).toBeFalse();
+      expect(offeredStations(component.endProvinceStationList).some((s) => s.id === 1)).toBeFalse();
     });
 
     it('onSearch(): writes the searched route to localStorage only when both stations resolve', () => {
@@ -1093,10 +1119,10 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
     swapButton()!.click();
     fixture.detectChanges();
 
-    expect(component.startProvinceStationList.map((s) => s.id)).not.toContain(STATION_1.id);
-    expect(component.startProvinceStationList.map((s) => s.id)).toContain(STATION_2.id);
-    expect(component.endProvinceStationList.map((s) => s.id)).not.toContain(STATION_2.id);
-    expect(component.endProvinceStationList.map((s) => s.id)).toContain(STATION_1.id);
+    expect(offeredStations(component.startProvinceStationList).map((s) => s.id)).not.toContain(STATION_1.id);
+    expect(offeredStations(component.startProvinceStationList).map((s) => s.id)).toContain(STATION_2.id);
+    expect(offeredStations(component.endProvinceStationList).map((s) => s.id)).not.toContain(STATION_2.id);
+    expect(offeredStations(component.endProvinceStationList).map((s) => s.id)).toContain(STATION_1.id);
   });
 
   it('AC#2: the pickers render the swapped station, not just the model', () => {
@@ -1260,11 +1286,11 @@ describe('HomeBookingComponent — the dropdowns offer only stops that can produ
   }
 
   function originIds(component: HomeBookingComponent): number[] {
-    return component.startProvinceStationList.map((s) => s.id);
+    return offeredStations(component.startProvinceStationList).map((s) => s.id);
   }
 
   function destinationIds(component: HomeBookingComponent): number[] {
-    return component.endProvinceStationList.map((s) => s.id);
+    return offeredStations(component.endProvinceStationList).map((s) => s.id);
   }
 
   it('AC#1: the origin dropdown drops every stop that is nobody’s pickup', () => {
@@ -1539,5 +1565,141 @@ describe('HomeBookingComponent — trip-type pills and the return date field ren
     const pills = fixture.debugElement.queryAll(By.css('app-trip-type-toggle button'));
     expect(pills[0].nativeElement.getAttribute('aria-pressed')).toBe('false'); // one-way
     expect(pills[1].nativeElement.getAttribute('aria-pressed')).toBe('true'); // round-trip (default)
+  });
+});
+
+describe('HomeBookingComponent — the dropdowns group by province and follow the route order (OBRS-1212)', () => {
+  // The same corridor shape as the OBRS-1213 block above, with the route ORDER
+  // deliberately at odds with the id order: station-3 is pickup #1 and
+  // station-1 is pickup #2, so a list that comes out [1, 3] proves it fell back
+  // to `/api/stops`' id order, and [3, 1] proves it read `order` (AC#8). This is
+  // the real defect V66__reorder_chonburi_bangkok_pickup.sql left on prod.
+  const ROUTES = [
+    {
+      slug: 'outbound',
+      segments: {
+        pickup: [routeStop(2, 'station-1'), routeStop(1, 'station-3')],
+        dropoff: [routeStop(21, 'station-4'), routeStop(20, 'station-2')],
+      },
+    },
+  ];
+  const ROSTER = [station(1), station(2), station(3), station(4)];
+
+  /** station-1 and station-3 in one province, station-2 and station-4 in the
+   *  other — so a group is never a synonym for "one route half". */
+  const PROVINCES = [
+    {
+      slug: 'chonburi',
+      translations: { th: { label: 'ชลบุรี' }, en: { label: 'Chonburi' }, zh: { label: '春武里' } },
+      stops: [{ code: 'station-1' }, { code: 'station-3' }],
+    },
+    {
+      slug: 'bangkok',
+      translations: { th: { label: 'กรุงเทพมหานคร' }, en: { label: 'Bangkok' } },
+      stops: [{ code: 'station-2' }, { code: 'station-4' }],
+    },
+  ];
+
+  function build(provinces: unknown[] | null): HomeBookingComponent {
+    const component = makeHomeBooking({
+      store: createStoreStubWithValue(ROSTER),
+      routeMap: createRouteMapServiceStubWithRoutes(ROUTES),
+      station: createStationServiceStub(provinces),
+    });
+    component.ngOnInit();
+    return component;
+  }
+
+  it('AC#1: the origin dropdown comes out as province groups, each holding its own stops', () => {
+    const groups = build(PROVINCES).startProvinceStationList as any[];
+
+    expect(groups.map((g) => g.slug)).toEqual(['chonburi']);
+    // station-2 is a pickup on no route, so Bangkok contributes no origin and
+    // its heading must not appear at all.
+    expect(groups[0].stations.map((s: any) => s.slug)).toEqual(['station-3', 'station-1']);
+  });
+
+  it('AC#8: orders stops by their position along the route, NOT by id', () => {
+    const groups = build(PROVINCES).startProvinceStationList as any[];
+
+    // station-3 is `order` 1 with id 3; station-1 is `order` 2 with id 1. An id
+    // sort produces the exact reverse, which is what prod does today.
+    expect(groups[0].stations.map((s: any) => s.id)).toEqual([3, 1]);
+  });
+
+  it('AC#8: the destination dropdown is ordered too, by its own dropoff order', () => {
+    const groups = build(PROVINCES).endProvinceStationList as any[];
+
+    // station-2 is dropoff order 20 (id 2), station-4 is 21 (id 4) — here the
+    // route order and the id order agree, so this asserts the destination side
+    // reads the DROPOFF half rather than reusing the pickup map.
+    expect(groups[0].slug).toBe('bangkok');
+    expect(groups[0].stations.map((s: any) => s.slug)).toEqual(['station-2', 'station-4']);
+  });
+
+  it('AC#5: each group carries th, en and zh labels for the dropdown to localize', () => {
+    const groups = build(PROVINCES).startProvinceStationList as any[];
+
+    expect(groups[0].nameThai).toBe('ชลบุรี');
+    expect(groups[0].nameEnglish).toBe('Chonburi');
+    expect(groups[0].nameChinese).toBe('春武里');
+  });
+
+  it('AC#6: a failed province lookup renders the dropdown FLAT and complete, never empty', () => {
+    const flat = build(null).startProvinceStationList as any[];
+
+    expect(flat.every((entry) => entry.stations === undefined)).toBeTrue();
+    expect(flat.map((s) => s.slug)).toEqual(['station-3', 'station-1']);
+  });
+
+  it('AC#6: losing the province lookup costs the headings, not the ORDER', () => {
+    const grouped = build(PROVINCES).startProvinceStationList as any[];
+    const flat = build(null).startProvinceStationList as any[];
+
+    // The two screens must not disagree about the sequence — that would make
+    // the fallback a second, differently-sorted dropdown rather than the same
+    // one without headings.
+    expect(flat.map((s) => s.id)).toEqual(
+      grouped.flatMap((g) => g.stations).map((s: any) => s.id)
+    );
+  });
+
+  it('AC#4: swapping origin and destination re-groups both sides instead of leaving one flat', () => {
+    const component = build(PROVINCES);
+    component.onStartStationChange(station(3));
+    component.onEndStationChange(station(2));
+
+    component.onSwapStations();
+
+    const origins = component.startProvinceStationList as any[];
+    const destinations = component.endProvinceStationList as any[];
+    expect(origins.every((g) => Array.isArray(g.stations))).toBeTrue();
+    expect(destinations.every((g) => Array.isArray(g.stations))).toBeTrue();
+  });
+
+  it('AC#9: no group and no station label carries a leading sequence number', () => {
+    const groups = build(PROVINCES).startProvinceStationList as any[];
+
+    for (const group of groups) {
+      expect(group.nameThai).not.toMatch(/^\s*\d+[.)\s]/);
+      for (const station of group.stations) {
+        expect(String(station.slug)).not.toMatch(/^\s*\d+[.)\s]/);
+      }
+    }
+  });
+
+  it('AC#10: rebuilding the lists produces the identical sequence — the order cannot drift between renders', () => {
+    const component = build(PROVINCES);
+    const first = (component.startProvinceStationList as any[]).flatMap((g) =>
+      g.stations.map((s: any) => s.id)
+    );
+
+    component.onStartStationChange(station(3));
+    component.onStartStationChange(station(1));
+
+    const again = (component.startProvinceStationList as any[]).flatMap((g) =>
+      g.stations.map((s: any) => s.id)
+    );
+    expect(again).toEqual(first);
   });
 });
