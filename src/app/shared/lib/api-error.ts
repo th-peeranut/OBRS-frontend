@@ -135,6 +135,48 @@ export function resolveApiAlertMessage(
   );
 }
 
+/** One entry of `ApiErrorRespDto.errors[]` — the backend's per-field rejection. */
+export interface ApiFieldError {
+  field: string;
+  rejectedValue: unknown;
+  reason: string;
+}
+
+/**
+ * The per-field rejections on a `VALIDATION_FAILED` body, keyed by field name (OBRS-1255).
+ *
+ * `ApiErrorRespDto` has carried an `errors[]` array since the first validation handler, and every
+ * caller ignored it in favour of the one generic `message` — so a 400 naming a specific field
+ * ("email: must be valid") reached the user as "ข้อมูลไม่ผ่านการตรวจสอบ" with nothing on screen
+ * pointing at the field, and on a DISABLED field the user could not even see the value that was
+ * refused. Returns `{}` for any error that is not a field-level validation failure, so a caller
+ * can branch on emptiness rather than on the shape of the body.
+ *
+ * Later entries win on a duplicated field, which only matters if the backend ever reports two
+ * violations for one field; showing the last is arbitrary but stable.
+ */
+export function apiFieldErrors(error: unknown): Record<string, string> {
+  if (!(error instanceof HttpErrorResponse)) {
+    return {};
+  }
+
+  const raw = (error.error as { errors?: unknown })?.errors;
+  if (!Array.isArray(raw)) {
+    return {};
+  }
+
+  const byField: Record<string, string> = {};
+  for (const entry of raw as ApiFieldError[]) {
+    const field = String(entry?.field ?? '').trim();
+    const reason = String(entry?.reason ?? '').trim();
+    if (field.length > 0 && reason.length > 0) {
+      byField[field] = reason;
+    }
+  }
+
+  return byField;
+}
+
 /**
  * The stable, locale-independent code the backend puts on an error body
  * (`ApiErrorRespDto.errorCode`, derived from the message key — e.g.

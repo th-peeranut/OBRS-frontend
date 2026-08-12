@@ -21,7 +21,7 @@ import {
 } from 'rxjs';
 import { AdminApiService, AdminUserDto } from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
-import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
+import { apiFieldErrors, extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import {
   RoleOption,
@@ -82,6 +82,9 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
   protected isEditDetailLoading = false;
   protected emailIsExist = false;
   protected phoneNumberIsExist = false;
+  // OBRS-1255 AC3: field name -> the backend's own reason, from ApiErrorRespDto.errors[]. Rendered
+  // under the control the server named instead of collapsing into one modal-wide message.
+  protected serverFieldErrors: Record<string, string> = {};
 
   protected readonly userForm: FormGroup;
   private emailCheckSubscription?: Subscription;
@@ -145,13 +148,26 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
     } else {
       this.isEditDetailLoading = false;
       this.userForm.reset();
-      this.resetDuplicateFlags();
+      this.resetFieldErrorState();
     }
   }
 
   ngOnDestroy(): void {
     this.emailCheckSubscription?.unsubscribe();
     this.phoneNumberCheckSubscription?.unsubscribe();
+  }
+
+  /**
+   * OBRS-1255 / AC2: this row is a guest shadow user (ADR-0123) being edited.
+   *
+   * Read off `selectedUser.guest`, which the LIST endpoint derives from `auth_provider = 'GUEST'`
+   * on the stored row. Not off the detail DTO — `UserDetailResponse` has no such field, so
+   * `userDetail.guest` is always undefined and every guest row would revert to looking normal the
+   * moment the late detail patch arrived. Not off "the row has no roles" either: that is the
+   * SYMPTOM this card is about, and a real account can be mid-edit with none.
+   */
+  protected get isGuestRowEdit(): boolean {
+    return this.mode === 'edit' && Boolean(this.selectedUser?.guest);
   }
 
   protected isFieldInvalid(fieldName: string): boolean {
@@ -263,9 +279,10 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     this.isSubmitting = true;
+    this.serverFieldErrors = {};
     try {
       if (this.mode === 'edit' && this.selectedUser) {
-        const payload = toUpdateUserPayload(this.userForm.getRawValue());
+        const payload = toUpdateUserPayload(this.userForm.getRawValue(), this.isGuestRowEdit);
         await firstValueFrom(this.adminApiService.updateUser(this.selectedUser.id, payload));
         this.isSubmitting = false;
         this.closed.emit();
@@ -281,6 +298,18 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
       await this.reloadStructure();
     } catch (error) {
       this.isSubmitting = false;
+
+      // OBRS-1255 AC3: a 400 that names fields stays IN the modal, pinned to those fields. The
+      // old branch closed the modal first and then showed one generic alert, so the operator lost
+      // both the form and any way to tell which value was refused - and for `email`, which is
+      // disabled in edit mode, they could not even see the value on the way past.
+      const fieldErrors = apiFieldErrors(error);
+      if (Object.keys(fieldErrors).length > 0) {
+        this.serverFieldErrors = fieldErrors;
+        this.userForm.markAllAsTouched();
+        return;
+      }
+
       this.closed.emit();
       const message =
         extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
@@ -297,7 +326,7 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
   // split; not "fixed" per the no-behavior-change invariant).
   private initCreateForm(): void {
     this.isEditDetailLoading = false;
-    this.resetDuplicateFlags();
+    this.resetFieldErrorState();
     this.userForm.reset({
       title: '',
       firstName: '',
@@ -320,7 +349,7 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
   // PromotionFormModalComponent.initEditForm / the pre-split openEditModal.
   private async initEditForm(user: UserRow): Promise<void> {
     this.isEditDetailLoading = true;
-    this.resetDuplicateFlags();
+    this.resetFieldErrorState();
     this.applyUserFormValues(toUserDtoFallback(user), user);
     this.setCredentialFieldsForEditMode();
 
@@ -379,6 +408,11 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
 
     passwordControl?.updateValueAndValidity();
     confirmPasswordControl?.updateValueAndValidity();
+
+    // OBRS-1255: re-enables anything a previous GUEST edit switched off. Create mode is never a
+    // guest row, so this is always the "enable everything" branch - spelled as the same call
+    // rather than three enable()s so the two paths cannot drift on which controls are involved.
+    this.applyGuestRowRestrictions();
   }
 
   private setCredentialFieldsForEditMode(): void {
@@ -402,11 +436,52 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
 
     passwordControl?.updateValueAndValidity();
     confirmPasswordControl?.updateValueAndValidity();
+
+    this.applyGuestRowRestrictions();
   }
 
-  private resetDuplicateFlags(): void {
+  /**
+   * OBRS-1255 / AC2 (owner's option C): on a guest shadow row the form offers the NAME fields and
+   * the status, and nothing else.
+   *
+   * `disable()`, not a template-only hide, and that is the load-bearing half. Angular excludes a
+   * disabled control from the group's validity, which is what makes the row submittable at all: a
+   * guest holds zero roles, `roleRequiredValidator` therefore reported the form invalid, and
+   * `submitUser` returned before reaching the API. The reporter of this card only got as far as a
+   * 400 because they ticked a role first — which is precisely the action AC2 forbids.
+   *
+   * `phoneNumber` and `preferredLocale` are disabled rather than hidden: they carry real values a
+   * reader needs (the phone is the ONLY thing identifying a guest), they are still sent because
+   * `getRawValue()` reads disabled controls, and the number in particular is the key
+   * `GuestUserService#claimByRegistration` later matches on — editing it here would silently
+   * re-point a future registration at someone else's record.
+   *
+   * Idempotent and always applied on an edit open, so re-opening the modal on a NORMAL row after a
+   * guest one re-enables what the guest row switched off.
+   */
+  private applyGuestRowRestrictions(): void {
+    const isGuest = this.isGuestRowEdit;
+
+    // `email` is absent from this list on purpose: setCredentialFieldsForEditMode already disables
+    // it for EVERY edit (OBRS-725), and re-enabling it here on a normal row would undo that.
+    for (const name of ['phoneNumber', 'preferredLocale', 'roles']) {
+      const control = this.userForm.get(name);
+      if (isGuest) {
+        control?.disable();
+      } else {
+        control?.enable();
+      }
+    }
+  }
+
+  // Everything on the form that is an ERROR rather than a value, cleared together: the two
+  // duplicate-credential flags and (OBRS-1255) the server's per-field rejections. They share every
+  // call site — open, re-open, close — because a stale one of either is the same bug: a message
+  // about a value that is no longer on screen.
+  private resetFieldErrorState(): void {
     this.emailIsExist = false;
     this.phoneNumberIsExist = false;
+    this.serverFieldErrors = {};
   }
 
   private setupDuplicateCheckSubscriptions(): void {

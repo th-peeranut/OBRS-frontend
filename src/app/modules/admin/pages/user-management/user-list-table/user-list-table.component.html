@@ -50,9 +50,12 @@
                 </div>
               </td>
               <td>
+                <!-- OBRS-1255: the '-' for "no value" is written HERE, in the view. It used to be
+                written into UserRow by toUserRow, from where the edit modal seeded its form and
+                sent it back up as the email - so every guest row answered 400 on save. -->
                 <div class="admin-cell-stack">
-                  <span>{{ user.email }}</span>
-                  <span>{{ user.phone | phoneFormat }}</span>
+                  <span>{{ user.email ?? '-' }}</span>
+                  <span>{{ user.phone ? (user.phone | phoneFormat) : '-' }}</span>
                 </div>
               </td>
               <td>
