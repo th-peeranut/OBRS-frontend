@@ -40,6 +40,11 @@
                     {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
                   </small>
                 }
+                @if (serverFieldErrors['title']) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['title'] } }}
+                  </small>
+                }
               </div>
               <div class="user-field is-first-name">
                 <label>
@@ -51,10 +56,20 @@
                     {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
                   </small>
                 }
+                @if (serverFieldErrors['firstName']) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['firstName'] } }}
+                  </small>
+                }
               </div>
               <div class="user-field is-half">
                 <label>{{ 'ADMIN.USERS.MIDDLE_NAME' | translate }}</label>
                 <input class="admin-field user-input" formControlName="middleName" placeholder="-" />
+                @if (serverFieldErrors['middleName']) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['middleName'] } }}
+                  </small>
+                }
               </div>
               <div class="user-field is-half">
                 <label>
@@ -64,6 +79,11 @@
                 @if (isFieldInvalid('lastName')) {
                   <small class="admin-error">
                     {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
+                  </small>
+                }
+                @if (serverFieldErrors['lastName']) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['lastName'] } }}
                   </small>
                 }
               </div>
@@ -112,32 +132,44 @@
               <h5>Contact &amp; Settings</h5>
             </div>
             <div class="user-editor-grid is-two-column">
-              <div class="user-field">
-                <label>
-                  {{ 'ADMIN.USERS.EMAIL' | translate }}
-                  @if (mode !== 'edit') {
-                    <span class="admin-required">*</span>
+              <!-- OBRS-1255 / AC2: a guest shadow row (ADR-0123) has no login address by
+              construction, so the field is removed rather than shown empty and disabled - and
+              toUpdateUserPayload drops the key from the payload to match. -->
+              @if (!isGuestRowEdit) {
+                <div class="user-field">
+                  <label>
+                    {{ 'ADMIN.USERS.EMAIL' | translate }}
+                    @if (mode !== 'edit') {
+                      <span class="admin-required">*</span>
+                    }
+                  </label>
+                  <input class="admin-field user-input" formControlName="email" type="email" />
+                  <!-- OBRS-725: in edit mode the control is disabled and the server rejects a
+                  changed address, so say why rather than leaving a dead-looking input. -->
+                  @if (mode === 'edit') {
+                    <small class="admin-hint">
+                      {{ 'ADMIN.USERS.EMAIL_LOCKED_HINT' | translate }}
+                    </small>
                   }
-                </label>
-                <input class="admin-field user-input" formControlName="email" type="email" />
-                <!-- OBRS-725: in edit mode the control is disabled and the server rejects a
-                changed address, so say why rather than leaving a dead-looking input. -->
-                @if (mode === 'edit') {
-                  <small class="admin-hint">
-                    {{ 'ADMIN.USERS.EMAIL_LOCKED_HINT' | translate }}
-                  </small>
-                }
-                @if (isFieldInvalid('email')) {
-                  <small class="admin-error">
-                    {{ 'ADMIN.VALIDATION.EMAIL' | translate }}
-                  </small>
-                }
-                @if (shouldShowCredentialValidationError('email')) {
-                  <small class="admin-error">
-                    {{ 'ADMIN.VALIDATION.EMAIL_EXIST' | translate }}
-                  </small>
-                }
-              </div>
+                  @if (isFieldInvalid('email')) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.EMAIL' | translate }}
+                    </small>
+                  }
+                  @if (shouldShowCredentialValidationError('email')) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.EMAIL_EXIST' | translate }}
+                    </small>
+                  }
+                  <!-- OBRS-1255 / AC3: the server named this field; say so here instead of in one
+                  modal-wide message that never mentions which value was refused. -->
+                  @if (serverFieldErrors['email']) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['email'] } }}
+                    </small>
+                  }
+                </div>
+              }
               <div class="user-field">
                 <label>
                   {{ 'ADMIN.USERS.PHONE' | translate }} <span class="admin-required">*</span>
@@ -157,6 +189,19 @@
                   @if (shouldShowCredentialValidationError('phoneNumber')) {
                     <small class="admin-error">
                       {{ 'ADMIN.VALIDATION.PHONE_NO_EXIST' | translate }}
+                    </small>
+                  }
+                  @if (serverFieldErrors['phoneNumber']) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['phoneNumber'] } }}
+                    </small>
+                  }
+                  <!-- OBRS-1255 / AC2: the number is disabled, not hidden - it is the only thing
+                  identifying a guest on screen, and it is the key claimByRegistration matches a
+                  later registration on, so changing it here would re-point that silently. -->
+                  @if (isGuestRowEdit) {
+                    <small class="admin-hint">
+                      {{ 'ADMIN.USERS.GUEST_ROW_LOCKED_HINT' | translate }}
                     </small>
                   }
                 </div>
@@ -179,35 +224,60 @@
                     valueKey="code"
                     labelKey="label"
                   ></app-admin-dropdown>
+                  @if (serverFieldErrors['status']) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['status'] } }}
+                    </small>
+                  }
                 </div>
               </div>
             </section>
-            <section class="user-editor-section">
-              <div class="user-editor-section-title">
-                <span class="material-symbols-outlined" [attr.translate]="'no'">badge</span>
-                <h5>{{ 'ADMIN.USERS.ROLES' | translate }} <span class="admin-required">*</span></h5>
-              </div>
-              <div class="user-role-list">
-                @for (role of roleOptions; track role) {
-                  <label
-                    class="user-role-chip"
-                    [class.is-selected]="isRoleChecked(role.slug)"
-                    >
-                    <input
-                      type="checkbox"
-                      [checked]="isRoleChecked(role.slug)"
-                      (change)="toggleRoleSelection(role.slug, $any($event.target).checked)"
-                      />
-                      <span>{{ role.label }}</span>
-                    </label>
-                  }
+            <!-- OBRS-1255 / AC2: no role picker on a guest shadow row, and the reason is not
+            cosmetic. GuestUserService#claimByRegistration ADDS `customer` to whatever the row
+            already holds and never clears it, so a role ticked here today becomes real authority
+            for whoever registers with that phone number tomorrow, with nobody approving it a
+            second time. The chip below says what the row IS instead. -->
+            @if (isGuestRowEdit) {
+              <section class="user-editor-section">
+                <div class="user-editor-section-title">
+                  <span class="material-symbols-outlined" [attr.translate]="'no'">badge</span>
+                  <h5>{{ 'ADMIN.USERS.ROLES' | translate }}</h5>
                 </div>
-                @if (isFieldInvalid('roles')) {
-                  <small class="admin-error">
-                    {{ 'ADMIN.VALIDATION.ROLE_REQUIRED' | translate }}
-                  </small>
-                }
+                <p class="admin-muted">{{ 'ADMIN.USERS.GUEST_NO_ROLES_HINT' | translate }}</p>
               </section>
+            } @else {
+              <section class="user-editor-section">
+                <div class="user-editor-section-title">
+                  <span class="material-symbols-outlined" [attr.translate]="'no'">badge</span>
+                  <h5>{{ 'ADMIN.USERS.ROLES' | translate }} <span class="admin-required">*</span></h5>
+                </div>
+                <div class="user-role-list">
+                  @for (role of roleOptions; track role) {
+                    <label
+                      class="user-role-chip"
+                      [class.is-selected]="isRoleChecked(role.slug)"
+                      >
+                      <input
+                        type="checkbox"
+                        [checked]="isRoleChecked(role.slug)"
+                        (change)="toggleRoleSelection(role.slug, $any($event.target).checked)"
+                        />
+                        <span>{{ role.label }}</span>
+                      </label>
+                    }
+                  </div>
+                  @if (isFieldInvalid('roles')) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.ROLE_REQUIRED' | translate }}
+                    </small>
+                  }
+                  @if (serverFieldErrors['roles']) {
+                    <small class="admin-error">
+                      {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['roles'] } }}
+                    </small>
+                  }
+                </section>
+              }
             </form>
           </div>
           <div class="user-editor-footer">

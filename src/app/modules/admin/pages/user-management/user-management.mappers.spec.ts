@@ -271,12 +271,17 @@ describe('user-management.mappers', () => {
       expect(rowThDate.lastLogin).not.toBe(rowEnDate.lastLogin);
     });
 
-    it('defaults missing fields to "-" and empty roles to ["-"]', () => {
+    // OBRS-1255: email/phone deliberately DO NOT get the '-' the other two keep. Those two are
+    // read back into the edit payload (buildUserFormValues -> getRawValue -> toUpdateUserPayload),
+    // so a dash in the model was a value on the wire: `"email":"-"` 400'd every guest save. The
+    // dash for them is now written by the list template. fullName and roles are display-only and
+    // keep theirs.
+    it('leaves a missing email/phone NULL, and still defaults fullName to "-" and empty roles to ["-"]', () => {
       const sparse: AdminUserDto = { id: 2, status: 'suspended', roles: [] };
       const row = toUserRow(sparse, 'en', 'en');
       expect(row.fullName).toBe('-');
-      expect(row.email).toBe('-');
-      expect(row.phone).toBe('-');
+      expect(row.email).toBeNull();
+      expect(row.phone).toBeNull();
       expect(row.roles).toEqual(['-']);
       expect(row.locked).toBeFalse();
     });
@@ -387,8 +392,10 @@ describe('user-management.mappers', () => {
       const guestRow: UserRow = {
         id: 9,
         fullName: 'Miss กุลธิดา นาใจคง',
-        email: '-',
-        phone: '-',
+        // OBRS-1255: these two were '-' when this test was written, because that is what toUserRow
+        // produced. They are null now - a placeholder belongs to the view, not the row.
+        email: null,
+        phone: null,
         roleSlugs: [],
         roles: ['-'],
         status: '-',
@@ -408,6 +415,10 @@ describe('user-management.mappers', () => {
       expect(fallback.firstName).toBe('Miss กุลธิดา นาใจคง');
       expect(fallback.lastName).toBe('');
       expect(fallback.guest).toBeTrue();
+      // OBRS-1255: `undefined`, not ''. This DTO stands in for one the server has not answered
+      // with yet, and on the wire an absent email is absent.
+      expect(fallback.email).toBeUndefined();
+      expect(fallback.phoneNumber).toBeUndefined();
     });
   });
 
@@ -561,6 +572,30 @@ describe('user-management.mappers', () => {
       expect(values['lastName']).toBe('');
       expect(values['firstName']).toBe('Miss กุลธิดา นาใจคง');
     });
+
+    // OBRS-1255 AC1 - the defect itself, one layer below the payload. The email control is
+    // DISABLED in edit mode, so nothing on screen showed the value, but getRawValue() reads
+    // disabled controls and shipped it: `{"email":"-"}` -> 400 VALIDATION_FAILED, every time,
+    // for every guest row.
+    it('OBRS-1255: seeds an absent email/phone as "" - never as the list\'s "-" placeholder', () => {
+      const guestRow: UserRow = {
+        ...user,
+        id: 42,
+        email: null,
+        phone: null,
+        roleSlugs: [],
+        roles: ['-'],
+        guest: true,
+      };
+      const guestDetail: AdminUserDto = { id: 42, firstName: 'Miss กุลธิดา นาใจคง', roles: [] };
+
+      const values = buildUserFormValues(guestDetail, guestRow, 'en');
+
+      expect(values['email']).toBe('');
+      expect(values['phoneNumber']).toBe('');
+      expect(values['email']).not.toBe('-');
+      expect(values['phoneNumber']).not.toBe('-');
+    });
   });
 
   describe('toCreateUserPayload', () => {
@@ -647,6 +682,104 @@ describe('user-management.mappers', () => {
     it('omits title entirely when it is blank', () => {
       const payload = toUpdateUserPayload({ title: '', firstName: 'John', roles: [] });
       expect(payload.title).toBeUndefined();
+    });
+
+    // ── OBRS-1255 ────────────────────────────────────────────────────────────────────────────
+    // AC2 (owner's option C) and AC4. `isGuestRow` comes from UserRow.guest, which the backend
+    // derives from auth_provider='GUEST' on the stored row.
+
+    it('OBRS-1255 AC2: a guest row sends the name, phone, locale and status - and NO email, roles or isPhoneNumberVerify KEY', () => {
+      const payload = toUpdateUserPayload(
+        {
+          title: 'Miss',
+          firstName: 'กุลธิดา',
+          lastName: 'นาใจคง',
+          // Everything below is what getRawValue() hands over for a guest row: the disabled email
+          // control still yields its (empty) value, and isPhoneNumberVerify is hard-coded true by
+          // buildUserFormValues. Both must be dropped, not merely blanked.
+          email: '',
+          phoneNumber: '081-234-5678',
+          isPhoneNumberVerify: true,
+          preferredLocale: 'th',
+          status: 'active',
+          roles: ['admin'],
+        },
+        true
+      );
+
+      // `in`, not `=== undefined`: an explicit `email: undefined` still serializes as an absent
+      // key in JSON but is a different object, and the point of AC2 is that the KEY never leaves.
+      expect('email' in payload).toBeFalse();
+      expect('roles' in payload).toBeFalse();
+      expect('isPhoneNumberVerify' in payload).toBeFalse();
+
+      expect(payload.title).toBe('Miss');
+      expect(payload.firstName).toBe('กุลธิดา');
+      expect(payload.lastName).toBe('นาใจคง');
+      expect(payload.phoneNumber).toBe('0812345678');
+      expect(payload.status).toBe('active');
+    });
+
+    // AC4, stated the way the defect was: the produced payload must not contain the character the
+    // list uses to mean "nothing here".
+    it('OBRS-1255 AC4: the payload for a user with no email contains no "-" placeholder anywhere', () => {
+      // The shape toUserRow produces for a real guest shadow row: no email, zero roles, and the
+      // whole composed name still sitting in firstName (ADR-0123 / OBRS-1230).
+      const guestRow: UserRow = {
+        id: 7,
+        fullName: 'Miss กุลธิดา นาใจคง',
+        email: null,
+        phone: '0812345678',
+        roleSlugs: [],
+        roles: ['-'],
+        status: 'ACTIVE',
+        statusCode: 'active',
+        lastLogin: '-',
+        hasLoggedIn: false,
+        locked: false,
+        title: '',
+        firstName: 'Miss กุลธิดา นาใจคง',
+        middleName: '',
+        lastName: '',
+        guest: true,
+      };
+      const values = buildUserFormValues(toUserDtoFallback(guestRow), guestRow, 'en');
+
+      const payload = toUpdateUserPayload(values, true);
+
+      expect(JSON.stringify(payload)).not.toContain('-');
+    });
+
+    it('OBRS-1255: must NOT catch - an ordinary row still sends all three, unchanged', () => {
+      const payload = toUpdateUserPayload(
+        {
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john@example.com',
+          phoneNumber: '0812345678',
+          isPhoneNumberVerify: true,
+          preferredLocale: 'en',
+          status: 'active',
+          roles: ['admin'],
+        },
+        false
+      );
+
+      expect(payload.email).toBe('john@example.com');
+      expect(payload.isPhoneNumberVerify).toBeTrue();
+      expect(payload.roles).toEqual(['admin']);
+    });
+
+    it('OBRS-1255: defaults to the ordinary shape when the guest flag is not passed at all', () => {
+      const payload = toUpdateUserPayload({
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        roles: ['admin'],
+      });
+
+      expect('email' in payload).toBeTrue();
+      expect('roles' in payload).toBeTrue();
     });
   });
 

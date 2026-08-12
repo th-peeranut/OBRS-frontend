@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { SimpleChange } from '@angular/core';
 import { fakeAsync, tick } from '@angular/core/testing';
 import { FormBuilder } from '@angular/forms';
@@ -30,6 +31,38 @@ const JOHN_ROW: UserRow = {
   lastName: 'Doe',
   guest: false,
 };
+
+// OBRS-1255 / ADR-0123: what toUserRow produces for a guest shadow row. Every field here is a
+// consequence of GuestUserService#newShadowUser, not a convenient fixture: NULL email (so the row
+// carries `null`, not the list's '-'), zero roles, and the whole composed name still in firstName
+// because title/last_name were never populated (the defect OBRS-1230 fixed going forward).
+const GUEST_ROW: UserRow = {
+  id: 7,
+  fullName: 'Miss กุลธิดา นาใจคง',
+  email: null,
+  phone: '0812345678',
+  roleSlugs: [],
+  roles: ['-'],
+  status: 'Active',
+  statusCode: 'active',
+  lastLogin: '-',
+  hasLoggedIn: false,
+  locked: false,
+  title: '',
+  firstName: 'Miss กุลธิดา นาใจคง',
+  middleName: '',
+  lastName: '',
+  guest: true,
+};
+
+/** The name split an admin types in to repair a guest row — the whole reason the row must save. */
+function fillGuestName(component: UserFormModalComponent): void {
+  (component as any).userForm.patchValue({
+    title: 'Miss',
+    firstName: 'กุลธิดา',
+    lastName: 'นาใจคง',
+  });
+}
 
 function detailResponse(overrides: Partial<AdminUserDto> = {}): ResponseAPI<AdminUserDto> {
   return {
@@ -549,6 +582,145 @@ describe('UserFormModalComponent', () => {
       expect(alert.error).toHaveBeenCalledWith('boom');
       expect(closedSpy).toHaveBeenCalled();
       expect(component.reloadStructure).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── OBRS-1255 ───────────────────────────────────────────────────────────────────────────────
+  describe('guest shadow row (ADR-0123)', () => {
+    it('AC2: the form is VALID with zero roles, because the roles control is disabled - the old form could not submit at all', async () => {
+      const { component, adminApi } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+
+      openEdit(component, GUEST_ROW);
+      fillGuestName(component);
+
+      // The reporter of this card had to tick a role to make the form valid — which is exactly the
+      // action AC2 forbids — and only then reached the 400. Disabling the control (not just hiding
+      // the chips) is what removes roleRequiredValidator from the group's validity.
+      expect((component as any).userForm.get('roles').value).toEqual([]);
+      expect((component as any).userForm.get('roles').disabled).toBeTrue();
+      expect((component as any).userForm.valid).toBeTrue();
+
+      await (component as any).submitUser();
+
+      expect(adminApi.updateUser).toHaveBeenCalled();
+    });
+
+    it('AC2: the payload carries no email, roles or isPhoneNumberVerify key, and no "-" anywhere', async () => {
+      const { component, adminApi } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+      openEdit(component, GUEST_ROW);
+      fillGuestName(component);
+
+      await (component as any).submitUser();
+
+      const payload = adminApi.updateUser.calls.mostRecent().args[1];
+      expect('email' in payload).toBeFalse();
+      expect('roles' in payload).toBeFalse();
+      expect('isPhoneNumberVerify' in payload).toBeFalse();
+      expect(JSON.stringify(payload)).not.toContain('-');
+    });
+
+    it('AC2: phone and locale are disabled but still SENT - they hold real values, and the number is the key a later registration is matched on', async () => {
+      const { component, adminApi } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+      openEdit(component, GUEST_ROW);
+      fillGuestName(component);
+
+      expect((component as any).userForm.get('phoneNumber').disabled).toBeTrue();
+      expect((component as any).userForm.get('preferredLocale').disabled).toBeTrue();
+
+      await (component as any).submitUser();
+
+      expect(adminApi.updateUser.calls.mostRecent().args[1].phoneNumber).toBe('0812345678');
+    });
+
+    it('must NOT catch: re-opening on an ordinary row after a guest one re-enables everything', () => {
+      const { component } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+
+      openEdit(component, GUEST_ROW);
+      (component as any).isOpen = false;
+      component.ngOnChanges({ isOpen: new SimpleChange(true, false, false) });
+      openEdit(component, { ...JOHN_ROW });
+
+      const form = (component as any).userForm;
+      expect(form.get('roles').disabled).toBeFalse();
+      expect(form.get('phoneNumber').disabled).toBeFalse();
+      expect(form.get('preferredLocale').disabled).toBeFalse();
+    });
+
+    it('reads the guest flag off the ROW, not off "this row happens to have no roles"', () => {
+      const { component } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+
+      // A real account mid-cleanup can hold zero roles; it is still not a shadow row, and the
+      // server would (correctly) still refuse a payload with no roles for it.
+      openEdit(component, { ...JOHN_ROW, roleSlugs: [], roles: ['-'], guest: false });
+
+      expect((component as any).isGuestRowEdit).toBeFalse();
+      expect((component as any).userForm.get('roles').disabled).toBeFalse();
+    });
+  });
+
+  describe('field-bound 400 (OBRS-1255 AC3)', () => {
+    function componentWithUpdateError(body: unknown) {
+      const { component, adminApi, alert } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+      adminApi.updateUser.and.returnValue(
+        throwError(() => new HttpErrorResponse({ status: 400, error: body }))
+      );
+      return { component, adminApi, alert };
+    }
+
+    it('keeps the modal OPEN and pins the reason to the field the server named', async () => {
+      const { component, alert } = componentWithUpdateError({
+        errorCode: 'VALIDATION_FAILED',
+        message: 'Validation Failed',
+        errors: [{ field: 'email', rejectedValue: '-', reason: 'must be valid' }],
+      });
+      openEdit(component, { ...JOHN_ROW });
+      fillValidCreateForm(component);
+
+      const closedSpy = jasmine.createSpy('closed');
+      component.closed.subscribe(closedSpy);
+
+      await (component as any).submitUser();
+
+      // The old branch closed the modal and showed one generic "ข้อมูลไม่ผ่านการตรวจสอบ" — the
+      // operator lost the form AND was never told which value was refused. For `email`, which is
+      // disabled in edit mode, they could not even see it on the way past.
+      expect(closedSpy).not.toHaveBeenCalled();
+      expect(alert.error).not.toHaveBeenCalled();
+      expect((component as any).serverFieldErrors['email']).toBe('must be valid');
+    });
+
+    it('must NOT catch: an error with no errors[] still closes and alerts, exactly as before', async () => {
+      const { component, alert } = componentWithUpdateError({
+        errorCode: 'USER_ERROR_UNAUTHORIZED',
+        message: 'You are not authorized to manage this account',
+      });
+      openEdit(component, { ...JOHN_ROW });
+      fillValidCreateForm(component);
+
+      const closedSpy = jasmine.createSpy('closed');
+      component.closed.subscribe(closedSpy);
+
+      await (component as any).submitUser();
+
+      expect(closedSpy).toHaveBeenCalled();
+      expect(alert.error).toHaveBeenCalledWith('You are not authorized to manage this account');
+      expect((component as any).serverFieldErrors).toEqual({});
+    });
+
+    it('clears a previous rejection when the modal is re-opened, so it never labels a value that is gone', async () => {
+      const { component } = componentWithUpdateError({
+        errorCode: 'VALIDATION_FAILED',
+        errors: [{ field: 'email', rejectedValue: '-', reason: 'must be valid' }],
+      });
+      openEdit(component, { ...JOHN_ROW });
+      fillValidCreateForm(component);
+      await (component as any).submitUser();
+      expect((component as any).serverFieldErrors['email']).toBeDefined();
+
+      (component as any).isOpen = false;
+      component.ngOnChanges({ isOpen: new SimpleChange(true, false, false) });
+
+      expect((component as any).serverFieldErrors).toEqual({});
     });
   });
 });

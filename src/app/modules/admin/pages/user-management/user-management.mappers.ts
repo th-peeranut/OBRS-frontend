@@ -19,11 +19,18 @@ import { formatThaiMobile, stripPhoneSeparators } from '../../../../shared/const
 // methods pulled off `this` is now an explicit parameter, so these stay
 // unit-testable in isolation.
 
+// OBRS-1255: the fields that can genuinely be absent are `string | null`, and the `-` a reader
+// sees is written by the TEMPLATE. They used to be `string` with toUserRow substituting `'-'`, and
+// that dash was not display-only for long: buildUserFormValues seeded the form from the row, the
+// email control is disabled in edit mode but getRawValue() reads disabled controls anyway, and so
+// `"email":"-"` went up in the payload of every guest save and came back 400 VALIDATION_FAILED.
+// A placeholder that lives in the model is a value; only one that lives in the view is a
+// placeholder.
 export interface UserRow {
   id: number;
   fullName: string;
-  email: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
   roleSlugs: string[];
   roles: string[];
   status: string;
@@ -207,9 +214,12 @@ export function toUserRow(
 
   return {
     id: user.id,
+    // `fullName` and `roles` below keep their '-' fallback: neither is ever read back into a
+    // payload (the form is built from the four name PARTS and from roleSlugs), so for those two
+    // the dash really is display-only. `email`/`phone` are the pair that round-trips (OBRS-1255).
     fullName: user.fullName ?? '-',
-    email: user.email ?? '-',
-    phone: user.phoneNumber ?? '-',
+    email: user.email ?? null,
+    phone: user.phoneNumber ?? null,
     roleSlugs,
     roles: roleLabels.length > 0 ? roleLabels : ['-'],
     // OBRS-353: FE i18n takeover for the Status chip (see translateStatusCode
@@ -242,8 +252,10 @@ export function toUserDtoFallback(user: UserRow): AdminUserDto {
   return {
     id: user.id,
     fullName: user.fullName,
-    email: user.email,
-    phoneNumber: user.phone,
+    // OBRS-1255: `?? undefined` rather than `?? ''` — this stands in for a DTO the server has not
+    // answered with yet, and on the wire an absent email is absent, not empty.
+    email: user.email ?? undefined,
+    phoneNumber: user.phone ?? undefined,
     status: user.statusCode,
     roles: [...user.roleSlugs],
     title: user.title,
@@ -284,11 +296,14 @@ export function buildUserFormValues(
     firstName: String(userDetail.firstName ?? user.firstName ?? '').trim(),
     middleName: String(userDetail.middleName ?? user.middleName ?? '').trim(),
     lastName: String(userDetail.lastName ?? user.lastName ?? '').trim(),
-    email: userDetail.email ?? user.email,
+    // OBRS-1255: `?? ''`, never `?? '-'`. An empty control is what "this account has no address"
+    // looks like to a reader AND the only thing safe to hand to toUpdateUserPayload, which cannot
+    // tell a placeholder from a value.
+    email: userDetail.email ?? user.email ?? '',
     // OBRS-691: form field displays grouped (3-3-4), same as account-page's
     // patchFormFromProfile — formatThaiMobile already strips non-digits before
     // testing/grouping, so this replaces the old bare `.replace(/\D/g, '')`.
-    phoneNumber: formatThaiMobile(String(userDetail.phoneNumber ?? user.phone)),
+    phoneNumber: formatThaiMobile(String(userDetail.phoneNumber ?? user.phone ?? '')),
     preferredLocale: userDetail.preferredLocale ?? 'th',
     status: status.code,
     roles: roles.length > 0 ? roles : [...user.roleSlugs],
@@ -318,20 +333,49 @@ export function toCreateUserPayload(raw: Record<string, unknown>): CreateUserPay
   };
 }
 
-export function toUpdateUserPayload(raw: Record<string, unknown>): UpdateUserPayload {
-  return {
+/**
+ * OBRS-1255 / AC2 (owner's option C): a guest shadow row sends its NAME and its status, and
+ * nothing else.
+ *
+ * `isGuestRow` must come from `UserRow.guest`, which the backend derives from
+ * `auth_provider = 'GUEST'` on the stored row — never from "the form happens to have no roles".
+ * The server re-decides the same way and refuses these three keys on a shadow row, so this
+ * omission is the client half of one rule, not the rule itself.
+ *
+ * The three that drop out, and why each one is a defect and not just noise:
+ * - `email` — a shadow row has none. It is the field the `-` placeholder rode up on.
+ * - `roles` — `GuestUserService#claimByRegistration` ADDS `customer` to the existing set and never
+ *   clears it, so a role ticked onto a guest row today becomes real authority for whoever later
+ *   registers with that phone number.
+ * - `isPhoneNumberVerify` — the form hard-codes `true`, and a guest's number is the contact number
+ *   for one booking that nobody has verified (ADR-0123 Decision 3). Sending it turned "an admin
+ *   opened this row and pressed Save" into a verification claim.
+ */
+export function toUpdateUserPayload(
+  raw: Record<string, unknown>,
+  isGuestRow = false
+): UpdateUserPayload {
+  const payload: UpdateUserPayload = {
     // OBRS-1231: `|| undefined` so a blank title is OMITTED, not sent as "". The same
     // shape middleName has used here all along, and the one @Size(min = 2) accepts.
     title: String(raw['title'] ?? '').trim() || undefined,
     firstName: String(raw['firstName'] ?? '').trim(),
     middleName: String(raw['middleName'] ?? '').trim() || undefined,
     lastName: String(raw['lastName'] ?? '').trim(),
-    email: String(raw['email'] ?? '').trim(),
     // OBRS-691: same rationale as toCreateUserPayload above.
     phoneNumber: stripPhoneSeparators(String(raw['phoneNumber'] ?? '')),
-    isPhoneNumberVerify: Boolean(raw['isPhoneNumberVerify']),
     preferredLocale: String(raw['preferredLocale'] ?? 'th').trim(),
     status: String(raw['status'] ?? '').trim().toLowerCase(),
+  };
+
+  if (isGuestRow) {
+    return payload;
+  }
+
+  return {
+    ...payload,
+    email: String(raw['email'] ?? '').trim(),
+    isPhoneNumberVerify: Boolean(raw['isPhoneNumberVerify']),
     roles: [...((raw['roles'] as string[] | null | undefined) ?? [])],
   };
 }

@@ -125,7 +125,12 @@ export interface AdminUserDto {
   salesPointStop?: string | null;
   // OBRS-1230 / ADR-0123: true for a guest shadow user (created from a
   // walk-in/offline booking, never authenticates, carries zero roles by
-  // design). Both GET /private/users and GET /private/users/{id} send this.
+  // design). Sent by GET /private/users (UserSummaryResponse) — NOT by
+  // GET /private/users/{id}, whose UserDetailResponse has no such field.
+  // Corrected OBRS-1255, having read both records: the modal must therefore
+  // read `UserRow.guest` (the list row), never `userDetail.guest`, which is
+  // always undefined and would have made every guest row look like a normal
+  // one the moment the detail patch landed.
   guest?: boolean;
 }
 
@@ -834,12 +839,17 @@ export interface UpdateUserPayload {
   firstName: string;
   middleName?: string;
   lastName: string;
-  email: string;
+  // OBRS-1255: the three keys a guest shadow row omits entirely (AC2 / owner's option C). Optional
+  // in the TYPE so omitting them is a legal shape rather than a cast — and optional on the server
+  // only under `UserUpdateReqDto.FullAccount`, a validation group it runs after loading the row.
+  // Any row that is not `auth_provider = 'GUEST'` still requires all three; the decision is made
+  // from the stored row, never from which keys arrived. See toUpdateUserPayload.
+  email?: string;
   phoneNumber: string;
-  isPhoneNumberVerify: boolean;
+  isPhoneNumberVerify?: boolean;
   preferredLocale: string;
   status: string;
-  roles: string[];
+  roles?: string[];
 }
 
 // OBRS-316 Gap 1: PUT /api/private/vehicles/{id} is a full-replace, so the form
