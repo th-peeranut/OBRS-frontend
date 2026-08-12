@@ -67,6 +67,12 @@ export interface BookingPayload {
   // IGNORES it for a signed-in caller (their consent already lives on their own row); it can
   // only ever land on a guest's shadow row.
   pdpaConsentVersion?: string | null;
+  // OBRS-658 (ADR-0125): the booking-terms version /business-policy displayed when this sale was
+  // made. Unlike pdpaConsentVersion above it lands on the BOOKING, because these are the terms of
+  // THIS sale — a customer who buys twice either side of a policy change bought under two different
+  // sets of them. Recorded only: fees and windows are still computed live from config, so this
+  // answers a later dispute rather than changing what the customer is charged.
+  bookingPolicyVersion?: string | null;
 }
 
 export interface CreateBookingResponse {

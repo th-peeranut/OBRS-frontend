@@ -3,6 +3,18 @@
 <section class="policy-container">
   <div class="policy-card">
     <h1>{{ "POLICY.BUSINESS.TITLE" | translate }}</h1>
+
+    <!-- OBRS-658 AC 2 (ADR-0125): both values interpolate from business-policy.version.ts, never
+         from the translation file — the file owns the sentence around them, not the facts inside
+         it. Deliberately OUTSIDE the policyParams gate below: this states which WORDING the reader
+         is looking at, which is true even when the live config fetch fails. -->
+    <p class="policy-version" data-testid="business-policy-version">
+      {{
+        "POLICY.BUSINESS.VERSION_LINE"
+          | translate: { version: version, effectiveDate: effectiveDate }
+      }}
+    </p>
+
     @if (policyParams) {
       <p
       [innerHTML]="'POLICY.BUSINESS.SALES_CHANNELS' | translate: policyParams"></p>

@@ -23,6 +23,7 @@ import {
   WalkInTripDto,
   isOpenSeatingTrip,
 } from '../../../../services/staff/staff-api.service';
+import { BUSINESS_POLICY_VERSION } from '../../../business-policy/business-policy.version';
 import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
 import {
   AdminApiService,
@@ -55,6 +56,12 @@ interface WalkInBookingPayloadDraft {
   totalAmount: number;
   bookingChannel: 'walk_in';
   jumpSeatAcknowledged?: boolean;
+  // OBRS-658 (ADR-0125): the counter sale records the same published terms version the online
+  // sale does. The version identifies which wording was IN FORCE, and under (ค) that is one
+  // answer for everyone at a given moment — so a walk-in ticket sold this minute was sold under
+  // exactly the terms /business-policy is stating this minute, whether or not the customer at
+  // the counter read the page. Leaving it off here would make NULL mean two different things.
+  bookingPolicyVersion?: string | null;
   departureSchedule: {
     scheduleId: number;
     fromStop: string;
@@ -488,6 +495,9 @@ export class SellPageComponent implements OnInit, OnDestroy {
       bookingType: 'one_way',
       totalAmount,
       bookingChannel: 'walk_in',
+      // OBRS-658 AC 3: the SAME constant /business-policy renders and the online checkout sends,
+      // so one version bump moves every channel's record together.
+      bookingPolicyVersion: BUSINESS_POLICY_VERSION,
       departureSchedule: {
         scheduleId: trip.scheduleId,
         fromStop: this.pickupSlug,

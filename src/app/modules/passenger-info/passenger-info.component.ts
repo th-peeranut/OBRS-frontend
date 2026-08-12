@@ -40,6 +40,7 @@ import { AlertService } from '../../shared/services/alert.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AnalyticsService } from '../../services/analytics/analytics.service';
 import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
+import { BUSINESS_POLICY_VERSION } from '../business-policy/business-policy.version';
 
 @Component({
     selector: 'app-passenger-info',
@@ -296,6 +297,12 @@ export class PassengerInfoComponent {
       // out: the client does not get to decide whose consent this is, and the backend
       // ignores it for an authenticated caller.
       pdpaConsentVersion: PRIVACY_POLICY_VERSION,
+      // OBRS-658 AC 3 (ADR-0125): the SAME constant /business-policy renders, so the string
+      // recorded against the sale is the one the customer could actually have read — not the
+      // backend's idea of "current", which is what a server-side stamp would have made it. Sent on
+      // every sale regardless of channel or sign-in state: the question this answers ("which terms
+      // was this ticket sold under?") is asked of the booking, not of the person.
+      bookingPolicyVersion: BUSINESS_POLICY_VERSION,
     };
 
     if (arrivalPassengers.length && arrivalSchedule) {

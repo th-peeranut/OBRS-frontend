@@ -33,6 +33,18 @@
     line-height: 1.9;
     white-space: normal;
   }
+
+  // OBRS-658 AC 2: the version/date stamp sits under the title as metadata, not as another
+  // paragraph of the terms — de-emphasised so it is never read as part of the policy text itself.
+  // Same values as privacy-policy.component.scss's `.policy-version`, kept as a copy rather than
+  // lifted to a shared partial: two component-scoped rules of five lines are cheaper to read than
+  // a third file, and neither page imports the other's styles.
+  p.policy-version {
+    margin-top: -12px;
+    margin-bottom: 20px;
+    font-size: $font-size-sm;
+    opacity: 0.75;
+  }
 }
 
 @media (max-width: 768px) {

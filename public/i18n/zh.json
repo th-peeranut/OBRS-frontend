@@ -2668,6 +2668,7 @@
     },
     "BUSINESS": {
       "TITLE": "服务条款",
+      "VERSION_LINE": "版本 {{version}} · 自 {{effectiveDate}} 起施行",
       "SALES_CHANNELS": "&emsp;&emsp;1. 票务销售分为两种类型：\n      <br />&emsp;&emsp;&emsp;&emsp;• 普通票务销售：出发前 {{cutoffMinutes}} 分钟内购票，直至车辆到达该站\n      <br />&emsp;&emsp;&emsp;&emsp;• 预售票务：出发前 {{cutoffMinutes}} 分钟以上购票，最多可提前 {{maxAdvanceDays}} 天预订",
       "SALES_CHANNELS_ERROR": "无法加载当前的提前预订政策。以下其他条款仍会显示。",
       "RETRY": "重试",
