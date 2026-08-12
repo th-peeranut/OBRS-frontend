@@ -18,13 +18,6 @@ import {
   takeUntil,
 } from 'rxjs';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
-// ngrx-feature-registration-ok: OBRS-1257 owns this one. `home.module.ts` does not register
-// `scheduleList` (only schedule-booking.module does), so the `select` in onSearch() reads
-// `undefined` — which is exactly why the navigation fires immediately and the page has always
-// worked. Registering the slice here to silence the gate would turn "navigate now" into "wait
-// for the slice's first value" and could hang the Home search button, so the fix is a behaviour
-// change that needs its own card and its own before/after, not a line added under this one.
-import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
 import { getStationSlugById, StationApi } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { AuthService } from '../../../../auth/auth.service';
@@ -345,11 +338,10 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   onSearch() {
     const formValue = { ...this.bookingForm.getRawValue() };
 
-    // OBRS-575: `selectScheduleList` below emits the CURRENT store value
-    // synchronously on every subscribe — it fires on every submit regardless
-    // of what the search actually returns, and onSearch() itself performs no
-    // validation. Gate the write explicitly (same id resolution the
-    // derivation uses) so an empty-form tap never stores '' / NaN pairs.
+    // OBRS-575: this method runs on every submit regardless of what the search
+    // actually returns, and onSearch() itself performs no validation. Gate the
+    // write explicitly (same id resolution the derivation uses) so an
+    // empty-form tap never stores '' / NaN pairs.
     this.saveRecentRouteIfValid(formValue.startStationId, formValue.stopStationId);
 
     this.store.dispatch(
@@ -358,9 +350,23 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       })
     );
 
-    this.store.pipe(select(selectScheduleList), take(1)).subscribe(() => {
-      this.router.navigate(['/schedule-booking']);
-    });
+    // OBRS-1257: navigate outright, and say so. This used to read
+    // `this.store.pipe(select(selectScheduleList), take(1)).subscribe(...)`,
+    // which looked like "wait for the search results" and was not: `home.module`
+    // never registers the `scheduleList` slice (only `schedule-booking.module`
+    // does), so the selector returned `undefined`, the store emitted it
+    // synchronously on subscribe, `take(1)` completed, and the navigation fired
+    // at once. The old line's only effect was to hide that.
+    //
+    // ⛔ Do NOT "fix" this by registering `scheduleList` here and restoring the
+    // subscribe. That would turn an immediate navigation into one that waits for
+    // the slice's first value, and nothing on THIS page ever produces one: the
+    // only `invokeGetScheduleListApi` dispatch lives in
+    // `schedule-booking-filter.component.ts`, which is declared by the
+    // destination module and so cannot have run while we are still standing on
+    // Home. The search button would simply stop working. The results list
+    // belongs to the destination page and stays there.
+    this.router.navigate(['/schedule-booking']);
   }
 
   /** OBRS-575: tapping a quick-pick route reuses the exact prefill call

@@ -5,7 +5,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Store } from '@ngrx/store';
 import { Router } from '@angular/router';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, NEVER, of, throwError } from 'rxjs';
 import dayjs from 'dayjs';
 
 import { HomeBookingComponent } from './home-booking.component';
@@ -64,11 +64,12 @@ function makeHomeBooking(
     policy?: unknown;
     routeMap?: unknown;
     station?: unknown;
+    router?: unknown;
   } = {}
 ): HomeBookingComponent {
   return new HomeBookingComponent(
     new FormBuilder(),
-    createRouterStub(),
+    (overrides.router ?? createRouterStub()) as never,
     (overrides.store ?? createStoreStub()) as never,
     (overrides.appStore ?? createStoreStub()) as never,
     (overrides.auth ?? createAuthServiceStub(false)) as never,
@@ -137,8 +138,8 @@ function station(id: number): StationApi {
 
 /** A Store stub whose `pipe()`/`select()` both resolve synchronously to
  *  `value` — matches `createStoreStub()`'s shape but lets a test control what
- *  the station-list selector (and, incidentally, `selectScheduleList` in
- *  `onSearch()`) emits. */
+ *  the station-list selector emits. (It used to control `onSearch()`'s
+ *  `selectScheduleList` too; OBRS-1257 removed that read.) */
 function createStoreStubWithValue(value: unknown): any {
   return {
     pipe: () => of(value),
@@ -301,6 +302,29 @@ describe('HomeBookingComponent', () => {
       component.onSearch();
 
       expect(localStorage.getItem(RECENT_ROUTES_CACHE_KEY)).toBeNull();
+    });
+
+    // OBRS-1257. The store here NEVER emits — the one condition the old code
+    // could not survive. It navigated from inside
+    // `store.pipe(select(selectScheduleList), take(1)).subscribe(...)`, which
+    // only ever fired because `home.module` does not register `scheduleList`,
+    // so the selector read `undefined` and the store handed it over
+    // synchronously. Register that slice (or hand the component a store that
+    // waits) and the customer stays on Home with a dead search button. This
+    // spec fails on the old line and passes on the direct navigate, so it is
+    // what stops the "fix" the card forbids from being re-applied later.
+    it('onSearch(): navigates even when the store never emits (OBRS-1257)', () => {
+      const router = createRouterStub();
+      const navigate = spyOn(router, 'navigate').and.returnValue(Promise.resolve(true));
+      const silentStore = { pipe: () => NEVER, select: () => NEVER, dispatch: () => {} };
+
+      // No ngOnInit(): `createForm()` runs in the constructor, and ngOnInit's
+      // subscriptions would just hang on a store that never emits — which is
+      // the point of the stub, not a limitation of the test.
+      component = makeHomeBooking({ store: silentStore, router });
+      component.onSearch();
+
+      expect(navigate).toHaveBeenCalledWith(['/schedule-booking']);
     });
   });
 
