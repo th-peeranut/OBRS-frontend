@@ -2595,7 +2595,11 @@
       "BACK": "返回",
       "PAY_NOW": "立即付款",
       "MERCHANT_NAME": "商家名称",
-      "MERCHANT_REF": "参考："
+      "MERCHANT_REF": "参考：",
+      "SHARE_TITLE": "PromptPay 付款二维码",
+      "PREVIEW_TITLE": "保存二维码",
+      "SAVE_HINT": "长按二维码，然后选择「存储图片」。",
+      "PREVIEW_CLOSE": "关闭"
     },
     "ALERT": {
       "BOOKING_NOT_FOUND": "未找到此预订。请检查您收到的链接，或联系工作人员。",

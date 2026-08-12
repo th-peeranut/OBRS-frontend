@@ -2595,7 +2595,11 @@
       "BACK": "Back",
       "PAY_NOW": "Pay now",
       "MERCHANT_NAME": "Merchant name",
-      "MERCHANT_REF": "Reference:"
+      "MERCHANT_REF": "Reference:",
+      "SHARE_TITLE": "PromptPay QR code",
+      "PREVIEW_TITLE": "Save the QR code",
+      "SAVE_HINT": "Press and hold the QR code, then choose \"Save Image\".",
+      "PREVIEW_CLOSE": "Close"
     },
     "ALERT": {
       "BOOKING_NOT_FOUND": "We couldn't find this booking. Please check the link you were given, or contact our staff.",
