@@ -1,6 +1,7 @@
 import {
   Component,
   EventEmitter,
+  HostListener,
   Input,
   OnDestroy,
   OnInit,
@@ -72,6 +73,13 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   qrPaymentUrl = '';
   referenceNo = '';
   countdown = '15 : 00';
+  /**
+   * OBRS-1203 — the iOS fallback. Shows the QR full-screen with a
+   * "press and hold to save" hint, because on iOS that gesture is the only way
+   * left to get an image into the photo library when the share sheet is
+   * unavailable.
+   */
+  isQrPreviewOpen = false;
   isSubmittingPayment = false;
   isWaitingForConfirmation = false;
   private hasRequestedQrCode = false;
@@ -116,6 +124,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   }
 
   onQrError(): void {
+    // The preview renders the same `qrImageUrl`; leaving it open would show an
+    // empty full-screen dialog over the payment page (OBRS-1203).
+    this.isQrPreviewOpen = false;
     this.qrImageUrl = '';
     this.qrPaymentUrl = '';
     this.hasRequestedQrCode = false;
@@ -208,12 +219,180 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * OBRS-1203. Every route out of this method used to end at `<a download>`,
+   * which iOS ignores — so on an iPhone the button did nothing at all, with no
+   * exception to `catch` and therefore no way for the old code to know it had
+   * failed. It sits on the payment path with a 15-minute timer running, so
+   * "nothing happened" is the one outcome that must be impossible (AC 1).
+   *
+   * MEASURED FIRST, 2026-08-12 against SIT (real charge
+   * `chrg_test_68nlh59vtk9ciwns3ud`): `POST /api/payments` answers with
+   * `authorizeUri` and **no** `transactions` array, so `getQrImageSource()`
+   * finds nothing and `qrImageUrl` is always the locally generated
+   * `data:image/png;base64,…` (5,894 chars) — never an https URL on Omise's
+   * origin. That settles the question the card left open: the cross-origin row,
+   * where `download` is ignored by *every* browser, is not reachable on this
+   * path, so this is an iOS/WKWebView bug and not a pan-platform one. The https
+   * branch below is kept anyway, because `getQrImageSource()` would return one
+   * the day the backend starts forwarding Omise's `scannable_code`.
+   *
+   * Order (owner's decision of 2026-08-10, option 3 — feature-detect):
+   *   1. iOS + Web Share with files → the share sheet, the only route on iOS
+   *      that reaches "Save Image".
+   *   2. iOS without it (older Safari, some in-app WebViews) → the QR
+   *      full-screen with "press and hold to save". One manual step, but
+   *      visible, which is the whole point.
+   *   3. Everything else → the original `<a download>`, byte-identical, so
+   *      desktop and Android keep the behaviour they already have (AC 2).
+   */
   async downloadQrCode(): Promise<void> {
     if (!this.qrImageUrl) {
       return;
     }
 
     const filename = this.getQrCodeDownloadFilename(this.qrImageUrl);
+
+    if (this.isIosLike()) {
+      const file = await this.buildQrFile(filename);
+
+      if (file && this.canShareQrFile(file)) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: this.translate.instant('PAYMENT.QR.SHARE_TITLE'),
+          });
+          return;
+        } catch (error) {
+          // Dismissing the share sheet is a decision, not a failure — an error
+          // toast here would punish the user for changing their mind (AC 4).
+          if (this.isShareAbort(error)) {
+            return;
+          }
+          console.warn('QR share failed, falling back to the full-screen preview', error);
+        }
+      }
+
+      this.openQrPreview();
+      return;
+    }
+
+    await this.downloadQrViaAnchor(filename);
+  }
+
+  openQrPreview(): void {
+    this.isQrPreviewOpen = true;
+  }
+
+  /** Escape closes it, as a dialog must. */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.isQrPreviewOpen) {
+      this.closeQrPreview();
+    }
+  }
+
+  closeQrPreview(): void {
+    this.isQrPreviewOpen = false;
+  }
+
+  /**
+   * iOS is the platform, not the browser: every browser on it (Safari, Chrome,
+   * and the LINE / Facebook in-app WebViews) runs WKWebView, so the user agent
+   * is the only signal there is. iPadOS 13+ reports itself as `MacIntel`, which
+   * is what the touch-point check is for — without it an iPad silently takes
+   * the desktop branch and the bug survives on it.
+   */
+  private isIosLike(): boolean {
+    if (typeof navigator === 'undefined') {
+      return false;
+    }
+
+    const userAgent = navigator.userAgent ?? '';
+    const isIPadOs =
+      navigator.platform === 'MacIntel' && (navigator.maxTouchPoints ?? 0) > 1;
+    return /iPad|iPhone|iPod/.test(userAgent) || isIPadOs;
+  }
+
+  private async buildQrFile(filename: string): Promise<File | null> {
+    if (typeof File !== 'function') {
+      return null;
+    }
+
+    // SYNCHRONOUS on the path that production actually takes, and that is the
+    // point rather than an optimisation: Safari requires navigator.share() to
+    // run inside the click's transient activation, and an `await` before it can
+    // spend that activation and earn a NotAllowedError instead of a share sheet.
+    // The measurement on 2026-08-12 showed `qrImageUrl` is always a data: URL
+    // here, so on the only route a customer takes, the tap and the share are
+    // separated by a microtask and nothing else — no network round-trip, which
+    // is the part that actually spends the activation.
+    const decoded = this.decodeDataUrl(this.qrImageUrl, filename);
+    if (decoded) {
+      return decoded;
+    }
+
+    if (typeof fetch !== 'function') {
+      return null;
+    }
+
+    try {
+      const response = await fetch(this.qrImageUrl);
+      if (!response.ok) {
+        throw new Error(`QR image request failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      return new File([blob], filename, { type: blob.type || 'image/png' });
+    } catch (error) {
+      // Deliberately not user-facing on its own: the caller still opens the
+      // full-screen preview, so the QR stays saveable even when this fails.
+      console.warn('Could not turn the QR into a shareable file', error);
+      return null;
+    }
+  }
+
+  /** `data:<mime>;base64,<payload>` → File, with no await anywhere. */
+  private decodeDataUrl(source: string, filename: string): File | null {
+    const match = /^data:([^;,]*)(;base64)?,(.*)$/s.exec(source);
+    if (!match || !match[2]) {
+      return null;
+    }
+
+    try {
+      const binary = atob(match[3]);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new File([bytes], filename, { type: match[1] || 'image/png' });
+    } catch (error) {
+      console.warn('Could not decode the QR data URL', error);
+      return null;
+    }
+  }
+
+  private canShareQrFile(file: File): boolean {
+    const nav = navigator as Navigator & {
+      canShare?: (data: ShareData) => boolean;
+    };
+
+    if (typeof nav.share !== 'function' || typeof nav.canShare !== 'function') {
+      return false;
+    }
+
+    try {
+      return nav.canShare({ files: [file] });
+    } catch {
+      return false;
+    }
+  }
+
+  private isShareAbort(error: unknown): boolean {
+    return (error as { name?: string } | null)?.name === 'AbortError';
+  }
+
+  private async downloadQrViaAnchor(filename: string): Promise<void> {
     if (this.qrImageUrl.startsWith('data:') || this.qrImageUrl.startsWith('blob:')) {
       this.triggerQrCodeDownload(this.qrImageUrl, filename);
       return;

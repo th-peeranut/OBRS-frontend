@@ -268,3 +268,282 @@ describe('PaymentQrcodeComponent - gateway ceiling refusal (OBRS-736)', () => {
     expect(alertService.error).toHaveBeenCalledWith('PAYMENT.ALERT.FAILED');
   });
 });
+
+/**
+ * OBRS-1203 — "Download QR" must never be a no-op.
+ *
+ * The bug was silent by construction: every branch ended at `<a download>`,
+ * which iOS ignores WITHOUT throwing, so there was nothing for a `catch` to see
+ * and nothing a test could have asserted about the old code beyond "it called
+ * the anchor". These specs therefore assert the ROUTING — which of the three
+ * exits a click takes — because that is the whole of the fix.
+ *
+ * `qrImageUrl` is a real (tiny) data: URL rather than a stub, so `buildQrFile()`
+ * runs its actual `fetch` → `blob()` → `new File()` path. That matches what was
+ * MEASURED on SIT on 2026-08-12: `POST /api/payments` returns no `transactions`
+ * array, so `qrImageUrl` is always the locally generated `data:image/png` and
+ * never an https URL on Omise's origin.
+ */
+describe('PaymentQrcodeComponent - saving the QR on iOS (OBRS-1203)', () => {
+  /** 1x1 transparent PNG. Small enough to inline, real enough to fetch(). */
+  const DATA_URL =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+  const IPHONE_UA =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+  const DESKTOP_UA =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+
+  let component: PaymentQrcodeComponent;
+  let alertService: jasmine.SpyObj<AlertService>;
+  let anchorDownload: jasmine.Spy;
+
+  /** Restores every navigator patch this file makes, in reverse order. */
+  const undo: Array<() => void> = [];
+
+  const patchNavigator = (key: string, value: unknown): void => {
+    const target = window.navigator as unknown as Record<string, unknown>;
+    const existing = Object.getOwnPropertyDescriptor(target, key);
+    Object.defineProperty(target, key, { value, configurable: true, writable: true });
+    undo.push(() => {
+      if (existing) {
+        Object.defineProperty(target, key, existing);
+      } else {
+        delete target[key];
+      }
+    });
+  };
+
+  const useUserAgent = (ua: string): void => patchNavigator('userAgent', ua);
+
+  /** The iOS 15+ shape: both `share` and `canShare`, canShare true for files. */
+  const withWorkingShareSheet = (share: jasmine.Spy): void => {
+    patchNavigator('canShare', () => true);
+    patchNavigator('share', share);
+  };
+
+  /**
+   * The WKWebView that has neither — removed EXPLICITLY rather than left alone,
+   * because the Chrome that runs this suite ships both. "Just don't patch them"
+   * would exercise the real share sheet, fail on the missing user gesture, and
+   * land on the preview anyway: green for entirely the wrong reason.
+   */
+  const withoutShareSheet = (): void => {
+    patchNavigator('canShare', undefined);
+    patchNavigator('share', undefined);
+  };
+
+  beforeEach(() => {
+    const store = jasmine.createSpyObj<Store>('Store', ['pipe', 'select']);
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+    ]);
+    const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+      'createMockPayment',
+    ]);
+    alertService = jasmine.createSpyObj<AlertService>('AlertService', [
+      'success',
+      'error',
+      'info',
+      'confirm',
+    ]);
+    const translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
+    translate.instant.and.callFake((key: string) => key);
+
+    component = new PaymentQrcodeComponent(
+      store,
+      router,
+      bookingService,
+      paymentService,
+      alertService,
+      translate
+    );
+    component.qrImageUrl = DATA_URL;
+
+    // The anchor is the one exit whose EFFECT is invisible from here (that is
+    // the bug), so it is spied rather than executed.
+    anchorDownload = spyOn(
+      component as unknown as { triggerQrCodeDownload: (u: string, f: string) => void },
+      'triggerQrCodeDownload'
+    );
+  });
+
+  afterEach(() => {
+    while (undo.length) {
+      undo.pop()!();
+    }
+    component.ngOnDestroy();
+  });
+
+  it('AC 1 + 4: on iOS with a working share sheet, the QR is handed to navigator.share as a FILE — not to <a download>', async () => {
+    useUserAgent(IPHONE_UA);
+    const share = jasmine.createSpy('share').and.resolveTo(undefined);
+    withWorkingShareSheet(share);
+
+    await component.downloadQrCode();
+
+    expect(share).toHaveBeenCalledTimes(1);
+    const shared = share.calls.mostRecent().args[0] as { files: File[] };
+    expect(shared.files.length).toBe(1);
+    expect(shared.files[0] instanceof File).toBeTrue();
+    expect(shared.files[0].name).toMatch(/^promptpay-qr-.*\.png$/);
+    expect(anchorDownload).not.toHaveBeenCalled();
+    expect(component.isQrPreviewOpen).toBeFalse();
+    expect(alertService.error).not.toHaveBeenCalled();
+  });
+
+  it('AC 1 + 4: on iOS with NO canShare (older Safari / in-app WebView) the full-screen preview opens, so the click is never silent', async () => {
+    useUserAgent(IPHONE_UA);
+    withoutShareSheet();
+
+    await component.downloadQrCode();
+
+    expect(component.isQrPreviewOpen).toBeTrue();
+    expect(anchorDownload).not.toHaveBeenCalled();
+  });
+
+  it('AC 4: cancelling the share sheet is not an error — nothing is shown, and the preview does NOT open behind it', async () => {
+    useUserAgent(IPHONE_UA);
+    const abort = new Error('user cancelled');
+    abort.name = 'AbortError';
+    withWorkingShareSheet(jasmine.createSpy('share').and.rejectWith(abort));
+
+    await component.downloadQrCode();
+
+    expect(alertService.error).not.toHaveBeenCalled();
+    expect(component.isQrPreviewOpen).toBeFalse();
+    expect(anchorDownload).not.toHaveBeenCalled();
+  });
+
+  it('AC 1: a share that fails for a REAL reason still leaves the user with a saveable QR', async () => {
+    useUserAgent(IPHONE_UA);
+    withWorkingShareSheet(
+      jasmine.createSpy('share').and.rejectWith(new Error('NotAllowedError: no user gesture'))
+    );
+
+    await component.downloadQrCode();
+
+    expect(component.isQrPreviewOpen).toBeTrue();
+  });
+
+  it('AC 2 (the control): desktop keeps the original <a download> behaviour, and no preview appears', async () => {
+    useUserAgent(DESKTOP_UA);
+    // Desktop Chrome on Windows DOES implement canShare for files; the point of
+    // this case is that iOS-gating means it is never consulted here.
+    withWorkingShareSheet(jasmine.createSpy('share').and.resolveTo(undefined));
+
+    await component.downloadQrCode();
+
+    expect(anchorDownload).toHaveBeenCalledTimes(1);
+    expect(anchorDownload.calls.mostRecent().args[0]).toBe(DATA_URL);
+    expect(component.isQrPreviewOpen).toBeFalse();
+  });
+
+  it('an iPad on iPadOS 13+ is iOS too — it reports MacIntel, and taking the desktop branch there is how this bug survives an "iOS is fixed" claim', async () => {
+    useUserAgent(DESKTOP_UA.replace('Windows NT 10.0; Win64; x64', 'Macintosh; Intel Mac OS X 10_15_7'));
+    patchNavigator('platform', 'MacIntel');
+    patchNavigator('maxTouchPoints', 5);
+    withoutShareSheet();
+
+    await component.downloadQrCode();
+
+    expect(component.isQrPreviewOpen).toBeTrue();
+    expect(anchorDownload).not.toHaveBeenCalled();
+  });
+
+  it('a broken QR image closes the preview instead of leaving an empty dialog over the payment page', () => {
+    component.isQrPreviewOpen = true;
+
+    component.onQrError();
+
+    expect(component.isQrPreviewOpen).toBeFalse();
+    expect(component.qrImageUrl).toBe('');
+  });
+});
+
+/**
+ * OBRS-1203 — the two things the first cut of the fix got wrong, pinned so they
+ * cannot come back.
+ */
+describe('PaymentQrcodeComponent - the QR preview dialog (OBRS-1203)', () => {
+  const DATA_URL =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+  let component: PaymentQrcodeComponent;
+
+  beforeEach(() => {
+    const store = jasmine.createSpyObj<Store>('Store', ['pipe', 'select']);
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+    ]);
+    const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+      'createMockPayment',
+    ]);
+    const alertService = jasmine.createSpyObj<AlertService>('AlertService', [
+      'success',
+      'error',
+      'info',
+      'confirm',
+    ]);
+    const translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
+    translate.instant.and.callFake((key: string) => key);
+
+    component = new PaymentQrcodeComponent(
+      store,
+      router,
+      bookingService,
+      paymentService,
+      alertService,
+      translate
+    );
+    component.qrImageUrl = DATA_URL;
+  });
+
+  afterEach(() => {
+    component.ngOnDestroy();
+  });
+
+  it('decodes the data: URL with NO await, so navigator.share() still runs inside the click that opened it — Safari answers a spent user gesture with NotAllowedError, not a share sheet', () => {
+    const file = (
+      component as unknown as {
+        decodeDataUrl: (source: string, filename: string) => File | null;
+      }
+    ).decodeDataUrl(DATA_URL, 'promptpay-qr-test.png');
+
+    // Synchronous by construction: no promise is returned and there is nothing
+    // to await. If this ever becomes a Promise, the share sheet is at risk.
+    expect(file instanceof File).toBeTrue();
+    expect(file!.type).toBe('image/png');
+    expect(file!.size).toBeGreaterThan(0);
+    expect(file!.name).toBe('promptpay-qr-test.png');
+  });
+
+  it('returns null for a non-data: source, so the http branch still falls through to fetch()', () => {
+    const file = (
+      component as unknown as {
+        decodeDataUrl: (source: string, filename: string) => File | null;
+      }
+    ).decodeDataUrl('https://api.omise.co/qr.png', 'promptpay-qr-test.png');
+
+    expect(file).toBeNull();
+  });
+
+  it('Escape closes the preview — it is a dialog, and a dialog that traps the customer on the payment page is worse than the bug', () => {
+    component.openQrPreview();
+
+    component.onEscape();
+
+    expect(component.isQrPreviewOpen).toBeFalse();
+  });
+
+  it('Escape does nothing when the preview is not open', () => {
+    component.onEscape();
+
+    expect(component.isQrPreviewOpen).toBeFalse();
+  });
+});

@@ -366,3 +366,67 @@
     justify-content: flex-start;
   }
 }
+
+/* OBRS-1203 — the iOS save-the-QR preview.
+   Deliberately NOT a SweetAlert: the whole point is that the user can press and
+   hold the IMAGE ITSELF, and a swal wrapper adds a layer between the gesture and
+   the <img> for no gain. Tokens only, per design-system §11. */
+.qr-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100; /* above the payment card; SweetAlert sits at 1060+ and this
+                    deliberately covers it — nothing else is on screen while the
+                    customer is saving the QR */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-lg;
+  background: rgba(13, 21, 37, 0.82); /* $primary-black at 82% */
+}
+
+.qr-preview-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-sm;
+  width: 100%;
+  max-width: 360px;
+  padding: $space-lg;
+  border-radius: $radius-lg;
+  background: $primary-white;
+  box-sizing: border-box;
+}
+
+.qr-preview-image {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  border-radius: $radius-sm;
+  /* The gesture this whole dialog exists for: iOS only offers "Save Image" on a
+     long press, and `user-select: none` / `-webkit-touch-callout: none` would
+     suppress exactly that menu. Stated so nobody adds them later. */
+  -webkit-touch-callout: default;
+}
+
+.qr-preview-hint {
+  margin: 0;
+  text-align: center;
+  color: $text-softblack;
+  font-size: $font-size-base;
+}
+
+.qr-preview-close {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: $radius-xl;
+  background: $primary-blue;
+  color: $text-white;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+
+  &:hover {
+    background: $primary-blue-hover;
+  }
+}

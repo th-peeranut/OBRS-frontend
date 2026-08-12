@@ -78,6 +78,29 @@
     </div>
   </div>
 
+  <!-- OBRS-1203: the iOS route of last resort. `<a download>` is ignored by
+  WKWebView, so when the share sheet is unavailable this is what makes the
+  button do something the user can SEE — the QR, full screen, with the
+  press-and-hold gesture that saves it on iOS. Rendered only when opened, so
+  nothing about the desktop/Android page changes. -->
+  @if (isQrPreviewOpen) {
+    <div
+      class="qr-preview-backdrop"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'PAYMENT.QR.PREVIEW_TITLE' | translate"
+      (click)="closeQrPreview()"
+      >
+      <div class="qr-preview-panel" (click)="$event.stopPropagation()">
+        <img [src]="qrImageUrl" [alt]="qrImageAlt" class="qr-preview-image" />
+        <p class="qr-preview-hint">{{ "PAYMENT.QR.SAVE_HINT" | translate }}</p>
+        <button type="button" class="qr-preview-close" (click)="closeQrPreview()">
+          {{ "PAYMENT.QR.PREVIEW_CLOSE" | translate }}
+        </button>
+      </div>
+    </div>
+  }
+
   <div class="payment-actions">
     <div class="payment-action-item">
       <button class="back-btn" type="button" (click)="onBack()">
