@@ -233,6 +233,11 @@ export interface WalkInBookingReqDto {
   // row lock regardless; this flag is the audit-trail record of staff
   // consent, not the authorization boundary.
   jumpSeatAcknowledged?: boolean;
+  // OBRS-658 (ADR-0125): the published booking-terms version this sale was made under. Same
+  // endpoint and same backend BookingReqDto as the online flow (`POST /api/private/bookings`), so
+  // one nullable column on `bookings` covers both channels and NULL keeps its single meaning:
+  // "no version was stated at this sale".
+  bookingPolicyVersion?: string | null;
   departureSchedule: WalkInBookingScheduleReqDto;
   arrivalSchedule?: WalkInBookingScheduleReqDto;
   contact: WalkInContactReqDto;

@@ -2672,6 +2672,7 @@
     },
     "BUSINESS": {
       "TITLE": "Terms and Conditions of Service",
+      "VERSION_LINE": "Version {{version}} · In force from {{effectiveDate}}",
       "SALES_CHANNELS": "&emsp;&emsp;1. Ticket sales are divided into 2 types:\n      <br />&emsp;&emsp;&emsp;&emsp;• Regular ticket sales: purchasing tickets up to {{cutoffMinutes}} minutes before departure time from origin and until the vehicle arrives at that station\n      <br />&emsp;&emsp;&emsp;&emsp;• Advance ticket sales: purchasing tickets more than {{cutoffMinutes}} minutes before departure time from origin, and advance booking is available up to {{maxAdvanceDays}} days",
       "SALES_CHANNELS_ERROR": "Unable to load the current advance-booking policy. The rest of the terms are shown below.",
       "RETRY": "Retry",

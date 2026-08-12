@@ -114,6 +114,135 @@ for (const lang of LANGS) {
   }
 }
 
+// 3b) OBRS-658 AC 2 + AC 6 (ADR-0125): the booking terms must stay tied to a published version,
+//     and a change that makes them WORSE must be announced before it bites.
+//
+//     Gate 3 above keeps two numbers honest. This keeps the wording itself honest. The text on
+//     /business-policy is a contract with a consumer: it carried no version and no date, so nothing
+//     on the site could say which wording a ticket was sold under, and because the prose is under no
+//     test that reads it, it could be reworded with no trace. Same failure the privacy notice had in
+//     OBRS-628, so this is deliberately the same machine (gate 4), not a second design.
+//
+//     The AC 6 half is the `worsensTerms` flag, and it exists because OBRS-656 is about to need it:
+//     that card starts charging the reschedule fee on every change, which is worse for someone
+//     already holding a ticket, and ADR-0125 decided enforcement stays live-from-config with the
+//     announced effective date as the ONLY protection for that customer. An announcement that lands
+//     the same day the change bites is not an announcement. So an entry flagged worsensTerms must
+//     have publishedOn strictly BEFORE effectiveDate. How many days' notice is the owner's call and
+//     belongs on OBRS-656; what this refuses is zero.
+//
+//     To publish new wording: append an entry with a new version, the date it goes on the site
+//     (publishedOn), the date it takes effect (effectiveDate), an honest worsensTerms, and the hash
+//     this gate prints -- then set the same version/effectiveDate in business-policy.version.ts.
+const BUSINESS_POLICY_VERSION_FILE = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'src',
+  'app',
+  'modules',
+  'business-policy',
+  'business-policy.version.ts'
+);
+const BUSINESS_POLICY_LEDGER = [
+  {
+    // OBRS-658. The wording as it stood on this date, published for the first time under an
+    // identifier. Nothing about the terms changed, so there is nothing to give notice OF and
+    // publishedOn == effectiveDate is correct here -- which is exactly why worsensTerms is false
+    // and why the next entry will not have that luxury.
+    version: '1.0',
+    publishedOn: '2026-08-12',
+    effectiveDate: '2026-08-12',
+    worsensTerms: false,
+    fingerprint: '6d21ca462ceb4be9e5a1cfe78816f1abb087b254c3ddc5872412e9d15e690903',
+  },
+];
+
+function businessPolicyFingerprint(json) {
+  const b = json?.POLICY?.BUSINESS;
+  if (
+    !b ||
+    typeof b.TITLE !== 'string' ||
+    typeof b.SALES_CHANNELS !== 'string' ||
+    typeof b.CONTENT !== 'string'
+  ) {
+    return null;
+  }
+  return createHash('sha256')
+    .update(JSON.stringify([b.TITLE, b.SALES_CHANNELS, b.CONTENT]), 'utf8')
+    .digest('hex');
+}
+
+{
+  // The ledger is history, so it has to be self-consistent before it can judge anything.
+  const seenVersions = new Set();
+  const seenFingerprints = new Set();
+  let previousDate = '';
+  for (const entry of BUSINESS_POLICY_LEDGER) {
+    if (seenVersions.has(entry.version)) {
+      problems.push(`business-policy ledger lists version ${entry.version} twice -- a version number identifies one text forever (OBRS-658)`);
+    }
+    if (seenFingerprints.has(entry.fingerprint)) {
+      problems.push(`business-policy ledger lists the same fingerprint under two versions -- unchanged text must not be re-published as a new version (OBRS-658)`);
+    }
+    if (entry.effectiveDate <= previousDate) {
+      problems.push(`business-policy ledger entry ${entry.version} has effectiveDate ${entry.effectiveDate}, which does not come after the previous entry's ${previousDate} (OBRS-658)`);
+    }
+    if (typeof entry.worsensTerms !== 'boolean') {
+      problems.push(`business-policy ledger entry ${entry.version} has no worsensTerms boolean -- whether a change makes an existing ticket holder worse off is the fact AC 6 turns on, and it cannot be left unstated (OBRS-658)`);
+    }
+    if (entry.publishedOn > entry.effectiveDate) {
+      problems.push(`business-policy ledger entry ${entry.version} is published on ${entry.publishedOn} but effective from ${entry.effectiveDate} -- terms cannot take effect before the page states them (OBRS-658)`);
+    }
+    // AC 6, the load-bearing check: enforcement reads live config (ADR-0125), so the announced
+    // effective date is the ONLY thing standing between a worse rule and a ticket already sold.
+    if (entry.worsensTerms === true && !(entry.publishedOn < entry.effectiveDate)) {
+      problems.push(
+        `business-policy ledger entry ${entry.version} worsens the terms but is published on ${entry.publishedOn} and effective ${entry.effectiveDate} -- a change that makes an existing ticket holder worse off must be announced BEFORE it takes effect (OBRS-658 AC 6, ADR-0125)`
+      );
+    }
+    seenVersions.add(entry.version);
+    seenFingerprints.add(entry.fingerprint);
+    previousDate = entry.effectiveDate;
+  }
+
+  const published = BUSINESS_POLICY_LEDGER[BUSINESS_POLICY_LEDGER.length - 1];
+  const declared = readFileSync(BUSINESS_POLICY_VERSION_FILE, 'utf8');
+  const declaredVersion = /BUSINESS_POLICY_VERSION\s*=\s*'([^']*)'/.exec(declared)?.[1];
+  const declaredDate = /BUSINESS_POLICY_EFFECTIVE_DATE\s*=\s*'([^']*)'/.exec(declared)?.[1];
+  if (declaredVersion !== published.version || declaredDate !== published.effectiveDate) {
+    problems.push(
+      `business-policy.version.ts declares ${declaredVersion} / ${declaredDate} but the newest ledger entry is ${published.version} / ${published.effectiveDate} -- the page renders the .ts values, so they are what customers see (OBRS-658)`
+    );
+  }
+
+  // Same rule as gate 3 and gate 4, same reason: the version and date render from
+  // business-policy.version.ts, so the sentence around them must interpolate. A translator who
+  // drops a placeholder produces a version line that silently omits the very thing it states.
+  for (const lang of LANGS) {
+    const line = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8'))?.POLICY?.BUSINESS?.VERSION_LINE;
+    if (typeof line !== 'string') {
+      problems.push(`[${lang}] POLICY.BUSINESS.VERSION_LINE is missing or not a string -- the booking-terms page states its version through this key (OBRS-658)`);
+      continue;
+    }
+    for (const placeholder of ['{{version}}', '{{effectiveDate}}']) {
+      if (!line.includes(placeholder)) {
+        problems.push(`[${lang}] POLICY.BUSINESS.VERSION_LINE is missing the ${placeholder} placeholder -- both values come from business-policy.version.ts and must never be typed into a translation file (OBRS-658)`);
+      }
+    }
+  }
+
+  // Thai is the source language for these terms (en/zh are translations of it), so it is the one
+  // that defines the version -- same call gate 4 makes for the privacy notice.
+  const actual = businessPolicyFingerprint(JSON.parse(readFileSync(join(I18N_DIR, 'th.json'), 'utf8')));
+  if (actual === null) {
+    problems.push(`[th] POLICY.BUSINESS.{TITLE,SALES_CHANNELS,CONTENT} is missing or not a string -- the booking terms cannot be versioned if their text is not there (OBRS-658)`);
+  } else if (actual !== published.fingerprint) {
+    problems.push(
+      `[th] POLICY.BUSINESS text no longer matches published version ${published.version}. Its fingerprint is now ${actual}. Publish it: append {version, publishedOn, effectiveDate, worsensTerms, fingerprint} to BUSINESS_POLICY_LEDGER in this file and set the same version/effectiveDate in business-policy.version.ts (OBRS-658)`
+    );
+  }
+}
+
 // 4) OBRS-628 AC-3: the privacy notice must stay tied to a published version.
 //
 //    Consent is only meaningful against a specific text, and this page carried
@@ -502,7 +631,7 @@ if (problems.length > 0) {
   console.error(`i18n parity gate FAILED (${counts}):`);
   for (const p of problems) console.error(`  - ${p}`);
   // GitHub Actions surfaces ::error:: lines in the PR checks summary.
-  console.error(`::error::i18n gate: ${problems.length} problem(s) in public/i18n/{en,th,zh}.json -- key-set drift (OBRS-469), hardcoded booking-policy numbers (OBRS-564), or an unpublished/truncated privacy notice (OBRS-628). Each line above says which.`);
+  console.error(`::error::i18n gate: ${problems.length} problem(s) in public/i18n/{en,th,zh}.json -- key-set drift (OBRS-469), hardcoded booking-policy numbers (OBRS-564), unpublished booking terms (OBRS-658), or an unpublished/truncated privacy notice (OBRS-628). Each line above says which.`);
   process.exit(1);
 }
 

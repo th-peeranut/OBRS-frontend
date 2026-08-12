@@ -2,6 +2,10 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { BookingPolicyService } from '../../services/booking-policy/booking-policy.service';
+import {
+  BUSINESS_POLICY_EFFECTIVE_DATE,
+  BUSINESS_POLICY_VERSION,
+} from './business-policy.version';
 
 export interface BusinessPolicyParams {
   maxAdvanceDays: number;
@@ -36,6 +40,15 @@ export class BusinessPolicyComponent implements OnInit, OnDestroy {
   // hardcoded number; it shows an inline error + retry instead (see html).
   protected policyParams: BusinessPolicyParams | null = null;
   protected policyLoadFailed = false;
+
+  // OBRS-658 AC 2 (ADR-0125): read from the version module, never re-typed into i18n — a date
+  // living in three translation files drifts into three different dates (the same rule
+  // privacy-policy.component follows). Rendered unconditionally, NOT inside the policyParams
+  // gate above: the version identifies the WORDING, which is on the page whether or not the live
+  // config fetch succeeded, and a customer reading the terms during an outage still needs to know
+  // which terms they are reading.
+  protected readonly version = BUSINESS_POLICY_VERSION;
+  protected readonly effectiveDate = BUSINESS_POLICY_EFFECTIVE_DATE;
 
   private readonly destroy$ = new Subject<void>();
 
