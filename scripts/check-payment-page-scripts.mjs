@@ -231,6 +231,90 @@ function orphanedRedirectSources(policy) {
 // Self-test — the gate's own must-catch / must-NOT-catch proof, run on every call.
 // -----------------------------------------------------------------------------------
 
+// --- OBRS-1311: an image whose URL this repo never spells still needs an img-src origin.
+//
+// Every rule above compares a file's own https literals against the inventory. That is
+// structurally blind to the way usability-report screenshots are rendered: the API returns an
+// absolute `https://<project-ref>.supabase.co/storage/v1/object/public/…` URL and four
+// templates bind it straight into `<img [src]>`. No file here contains the string, so no
+// amount of grepping this repo could have produced the origin — and neither policy carried
+// it. Report-Only hid that on both environments until OBRS-719 AC 5 made prod's header
+// enforcing, and every one of those thumbnails became a broken-image icon the same day.
+//
+// So this rule derives the requirement from what the templates DO rather than from what they
+// say: while a template binds a `publicUrl` into an image, img-src must name a Supabase host
+// — a named one, because `https://*.supabase.co` would trust every Supabase project on the
+// internet while the app only ever loads from ours.
+const REMOTE_IMAGE_BINDING = /\[src\]\s*=\s*"[^"]*publicUrl/;
+
+// prod's project ref, spelled here ONLY so this gate can reject it. SIT and prod are separate
+// Supabase projects, and the ground truth for SIT's ref lives in application-sit.yml, in the
+// OTHER repo — which this gate cannot read. So the one cross-environment mistake it CAN catch is
+// the one that looks most like a fix: pasting prod's ref into SIT's policy. Without this the
+// rule below would wave that through, because prod's ref is a perfectly well-formed named
+// Supabase host. Keep it in step with deploy/prod/Caddyfile if prod ever rotates.
+const PROD_SUPABASE_ORIGIN = 'https://suacqfatxqedgntpsrfr.supabase.co';
+
+// Built on originsOf() rather than re-tokenising: that helper already drops keyword and scheme
+// sources, and a single directive is just a short policy.
+function supabaseOriginsIn(directive) {
+  return [...originsOf(directive)].filter((origin) => origin.endsWith('.supabase.co'));
+}
+
+function remoteImageOriginProblems(policy, bindingTemplateCount) {
+  const found = supabaseOriginsIn(directiveOf(policy, 'img-src'));
+
+  // Zero binding templates is not automatically "the feature was deleted" — renaming the
+  // `publicUrl` field (src/app/shared/interfaces/usability-report.interface.ts) produces the
+  // identical signal while all four surfaces still render remote images, and a silent rule would
+  // then permit deleting the origin they depend on. So the count dropping to zero is LOUD, and
+  // clearing it is a deliberate edit: delete this rule and its inventory entry in the same change.
+  if (bindingTemplateCount === 0) {
+    return found.length === 0
+      ? [
+          'No template binds a publicUrl into <img [src]> any more. If those surfaces really were ' +
+            'removed, delete this rule (REMOTE_IMAGE_BINDING / remoteImageOriginProblems) and the ' +
+            'Supabase entry in netlify.toml + the inventory in the SAME change. If instead the field ' +
+            'was RENAMED, update REMOTE_IMAGE_BINDING — the rule has stopped protecting anything ' +
+            'and would let the origin be deleted while the images still need it (OBRS-1311).',
+        ]
+      : [
+          `img-src names ${found.join(', ')} but no template binds a publicUrl into <img [src]> any ` +
+            'more. Either the origin is now unused and should go, or REMOTE_IMAGE_BINDING has ' +
+            'stopped matching a field that was renamed. Do not leave it ambiguous (OBRS-1311).',
+        ];
+  }
+
+  if (found.length === 0) {
+    return [
+      `${bindingTemplateCount} template(s) bind a Supabase publicUrl into <img [src]>, but img-src ` +
+        'names no *.supabase.co origin. Under an enforcing header that is a broken image, not a ' +
+        'violation report — and none of those surfaces is on the journey anyone walks before ' +
+        'flipping the header (OBRS-1311). Note img-src, NOT connect-src: these are <img> loads, so ' +
+        'an origin parked in connect-src widens the policy and still blocks every thumbnail.',
+    ];
+  }
+
+  const wildcards = found.filter((origin) => origin.includes('*'));
+  if (wildcards.length > 0) {
+    return [
+      `img-src names ${wildcards.join(', ')} — a wildcard that trusts every Supabase project on the ` +
+        'internet. Name this deployment\'s project ref instead; the app only ever loads from one.',
+    ];
+  }
+
+  if (found.includes(PROD_SUPABASE_ORIGIN)) {
+    return [
+      `netlify.toml's img-src names ${PROD_SUPABASE_ORIGIN}, which is PROD's Supabase project. SIT ` +
+        'runs a different project, so this allowlists an origin SIT never loads while still blocking ' +
+        "the one it does — and it fails silently, because Report-Only blocks nothing. SIT's ref is " +
+        'the pooler username in OBRS-backend/src/main/resources/application-sit.yml (OBRS-1311).',
+    ];
+  }
+
+  return [];
+}
+
 const SELF_TEST_CASES = [
   // ---- must catch: exactly what OBRS-719 removed, and the ways it could come back.
   ['html', true, '<script>\n  var s = document.createElement("script");\n</script>'],
@@ -310,6 +394,27 @@ const SELF_TEST_CASES = [
   // must catch: the whole key deleted while build still ships two scripts. Absent is [],
   // not "unknown" — a skip here would be a green answer to a question never asked.
   ['scriptsPair', false, [['a.js'], undefined]],
+  // ---- OBRS-1311 remote images. `remoteImage` = templates DO bind a publicUrl (the tree as
+  // it stands); `remoteImageNoBinding` = they do not. must catch: the img-src prod actually
+  // served on the day the screenshots broke, and a wildcard standing in for the project ref.
+  ['remoteImage', 1, "img-src 'self' data: blob: https://api.maptiler.com https://c.bing.com"],
+  ['remoteImage', 1, "img-src 'self' https://*.supabase.co"],
+  // must catch: PROD's ref pasted into SIT's policy. A perfectly well-formed named Supabase
+  // host, so every other check here waves it through — and Report-Only means SIT shows no
+  // symptom either. This is the one cross-environment error a single-repo gate can still see.
+  ['remoteImage', 1, "img-src 'self' https://suacqfatxqedgntpsrfr.supabase.co"],
+  // must catch BOTH ways round: zero binding templates is NOT self-evidently "feature deleted".
+  // Renaming the publicUrl field gives the identical signal while all four surfaces still render
+  // remote images, so the rule goes loud instead of silently permitting the origin's removal.
+  ['remoteImageNoBinding', 1, "img-src 'self' data: blob:"],
+  ['remoteImageNoBinding', 1, "img-src 'self' https://abcdefghijklmnopqrst.supabase.co"],
+  // must NOT catch: the fixed policy, and the origin present alongside an unrelated wildcard
+  // (the wildcard check is about *.supabase.co, not about wildcards in general).
+  ['remoteImage', 0, "img-src 'self' data: https://abcdefghijklmnopqrst.supabase.co"],
+  ['remoteImage', 0, "img-src 'self' https://*.gstatic.com https://abcdefghijklmnopqrst.supabase.co"],
+  // An origin parked in connect-src is the tempting non-fix: it widens the policy and still
+  // blocks every thumbnail, so the rule must stay directive-level and keep firing.
+  ['remoteImage', 1, "img-src 'self' data:; connect-src 'self' https://abcdefghijklmnopqrst.supabase.co"],
 ];
 
 function runSelfTest() {
@@ -322,6 +427,8 @@ function runSelfTest() {
     else if (kind === 'redirect') actual = orphanedRedirectSources(input).length;
     else if (kind === 'sidecar') actual = orphanedSidecarSubresources(input).length;
     else if (kind === 'scriptsPair') actual = scriptListsMatch(input[0], input[1]);
+    else if (kind === 'remoteImage') actual = remoteImageOriginProblems(input, 1).length;
+    else if (kind === 'remoteImageNoBinding') actual = remoteImageOriginProblems(input, 0).length;
     else actual = originsOf(input).size;
 
     if (actual !== expected) {
@@ -485,9 +592,10 @@ const netlify = readFileSync(NETLIFY_TOML, 'utf8');
 const cspMatch = netlify.match(/Content-Security-Policy-Report-Only\s*=\s*"([^"]*)"/);
 if (!cspMatch) {
   problems.push(
-    'netlify.toml no longer serves a Content-Security-Policy-Report-Only header. SIT is the only ' +
-      'place this policy is exercised by a real browser today — prod carries the header but the app ' +
-      'is not published there yet (OBRS-205).'
+    'netlify.toml no longer serves a Content-Security-Policy-Report-Only header. SIT is where this ' +
+      'policy can be exercised without blocking anyone — prod publishes the twin of it as an ' +
+      'ENFORCING header (OBRS-719 AC 5, 2026-08-13), so a gap that is a console line here is a ' +
+      'blocked subresource there. OBRS-1311 is what that difference cost the first time.'
   );
 } else {
   const policy = cspMatch[1];
@@ -517,6 +625,10 @@ if (!cspMatch) {
   }
   for (const orphan of orphanedSidecarSubresources(policy)) {
     problems.push(orphan);
+  }
+  const remoteImageTemplates = templates.filter((f) => REMOTE_IMAGE_BINDING.test(readFileSync(f, 'utf8')));
+  for (const problem of remoteImageOriginProblems(policy, remoteImageTemplates.length)) {
+    problems.push(`${problem} Binding template(s): ${remoteImageTemplates.map((f) => posix(f.slice(ROOT.length + 1))).join(', ')}`);
   }
   if (!directiveOf(policy, 'report-uri').includes('/api/csp-report')) {
     problems.push(
