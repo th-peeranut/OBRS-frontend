@@ -375,6 +375,18 @@
       "why": "OBRS-907 parity evidence for all three migrated surfaces (ticket modal, notification panel, four admin-skeleton list pages) in both themes. Dumps the COMPUTED styles next to each screenshot -- the numbers are the evidence and the picture only corroborates them, because this card's one real regression (a 28px icon silently becoming 34px once it moved inside a child component) was invisible to 4334 green unit tests and would have been invisible to a screenshot glance too. Run once against a server built from the branch and once from a detached ee6f026d for the BEFORE side, same pattern as obrs-769-capture. Kept rather than deleted: OBRS-909/910 migrate ~28 further call sites and need the same before/after discipline."
     },
     {
+      "spec": "obrs-1308-notification-message-override-qa.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs1308.config.ts",
+      "why": "OBRS-1308 QA. Its premise can be neither mocked nor borrowed: an owner proposes text, a DIFFERENT person approves it, and only then does the live message change -- so it needs a real backend, a real notification_message_override table, and two seeded accounts whose roles the approval gate actually distinguishes. Against SIT it would be destructive twice over, because an APPROVED override is platform-wide (the table has no owner_id) and the messages it rewrites are SMS, which cannot be recalled once sent; the local stack points the provider at a capture server so nothing leaves the machine. The AC2 arm is why this is kept rather than deleted after the run: it detects the SILENT failure -- API refuses the save, screen shows nothing -- by counting visible error elements after a refused submit, which is exactly the shape that shipped past two green suites."
+    },
+    {
+      "spec": "obrs-1308-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1308.config.ts",
+      "why": "OBRS-1308 card evidence: the settings tab strip, the owner edit screen with a live {n} violation, the admin inbox and review diff, the post-approval result, and the SMS credit counter showing a raised count with Save still ENABLED -- that last frame is the AC12 decision photographed, since 'display-only, never a gate' is a claim a picture can actually settle. Also carries the AC2 re-run arm: four violation shapes, one AFTER frame each, with the unmatched brace as the primary evidence because it is the one that used to render nothing at all. The BEFORE tab-strip frame is RECONSTRUCTED by removing the new tab from the DOM rather than building origin/dev, and is labeled as reconstructed in the file, on the card and here -- it is not a live BEFORE render and must not be quoted as one."
+    },
+    {
       "spec": "obrs-1207-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1207capture.config.ts",

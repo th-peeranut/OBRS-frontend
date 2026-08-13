@@ -26,7 +26,10 @@ const API_BASE = 'http://localhost:8080';
 const MESSAGE_CODE = 'notification.sms.schedule.delayed';
 const LOCALE = 'en';
 const SCHEDULE_ID = 1;
-const CAPTURE_LOG = 'C:\\Users\\thpee\\AppData\\Local\\Temp\\claude\\obrs1308-sms-capture.log';
+// Where the local SMS capture server writes what the provider WOULD have received. Relative and
+// gitignored by default so this spec is reproducible on any checkout; point the env var at the same
+// file the capture server was started with if you run it from elsewhere.
+const CAPTURE_LOG = process.env['OBRS1308_SMS_CAPTURE_LOG'] ?? 'e2e-evidence/obrs1308-sms-capture.log';
 
 async function login(page: Page, email: string): Promise<void> {
   await page.addInitScript(() => {

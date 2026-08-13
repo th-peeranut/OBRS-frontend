@@ -2,9 +2,11 @@ import { test, expect, Page } from '@playwright/test';
 
 /**
  * OBRS-1308 evidence capture — AC8. Runs against the same local stack as
- * obrs-1308-notification-message-override-qa.spec.ts. Screenshots land in
- * ../obrs-agent-office/.claude/agent-office/scripts/captures/obrs-1308/ (this repo's QA
- * convention). Not part of the committed regression suite.
+ * obrs-1308-notification-message-override-qa.spec.ts. Screenshots land in e2e-evidence/
+ * (gitignored) — where every other spec in this repo writes evidence — and are uploaded to the
+ * Jira card from there, then deleted. A spec must never write into ANOTHER repository's working
+ * tree, and a relative '../..' escape reaches the same place while looking portable; the e2e lane
+ * gate refuses both. Not part of the committed regression suite.
  */
 
 const OWNER_EMAIL = 'owner@system.local';
@@ -12,7 +14,6 @@ const ADMIN_EMAIL = 'admin@system.local';
 const PASSWORD = 'P@ssw0rd';
 const MESSAGE_CODE = 'notification.sms.schedule.delayed';
 const LOCALE = 'en';
-const OUT_DIR = 'C:\\Users\\thpee\\Desktop\\workshop\\obrs-agent-office\\.claude\\agent-office\\scripts\\captures\\obrs-1308';
 
 async function login(page: Page, email: string): Promise<void> {
   await page.addInitScript(() => localStorage.setItem('app_language', 'en'));
@@ -44,12 +45,12 @@ test('OBRS-1308 evidence capture', async ({ page, browser }) => {
   await page.evaluate(() => {
     document.querySelector('[data-testid="system-settings-tab-notification-messages"]')?.closest('li')?.remove();
   });
-  await page.screenshot({ path: `${OUT_DIR}/OBRS-1308-BEFORE-settings-tabs-reconstructed.png` });
+  await page.screenshot({ path: `e2e-evidence/obrs-1308/OBRS-1308-BEFORE-settings-tabs-reconstructed.png` });
 
   // Real AFTER tab strip (all 7 tabs including Notification Messages).
   await page.goto('/admin/settings');
   await expect(page.locator('[data-testid="system-settings-tab-notification-messages"]')).toBeVisible({ timeout: 15_000 });
-  await page.screenshot({ path: `${OUT_DIR}/OBRS-1308-AFTER-settings-tabs.png` });
+  await page.screenshot({ path: `e2e-evidence/obrs-1308/OBRS-1308-AFTER-settings-tabs.png` });
 
   // ── AFTER 1: owner edit screen with a LIVE {n} validation error ──────────────────────────
   await page.goto(`/admin/settings/notification-messages/edit/${MESSAGE_CODE}/${LOCALE}`);
@@ -57,7 +58,7 @@ test('OBRS-1308 evidence capture', async ({ page, browser }) => {
   await page.locator('[data-testid="notification-message-body"]').fill('Trip delayed: {0} only — the {1} eta is gone.'.replace('{1}', '')); // drop {1}
   await page.locator('[data-testid="notification-message-save"]').click();
   await expect(page.locator('small.admin-error[role="alert"]').first()).toBeVisible({ timeout: 10_000 });
-  await page.screenshot({ path: `${OUT_DIR}/OBRS-1308-AFTER-owner-edit-validation-error.png`, fullPage: true });
+  await page.screenshot({ path: `e2e-evidence/obrs-1308/OBRS-1308-AFTER-owner-edit-validation-error.png`, fullPage: true });
 
   // Submit a REAL valid proposal so the rest of the evidence chain has something to show.
   const marker = `EVID${Date.now()}`;
@@ -75,19 +76,19 @@ test('OBRS-1308 evidence capture', async ({ page, browser }) => {
   await adminPage.locator('.notification-bell-trigger').click();
   const inboxRow = adminPage.locator('.notification-row', { hasText: MESSAGE_CODE });
   await expect(inboxRow.first()).toBeVisible({ timeout: 15_000 });
-  await adminPage.screenshot({ path: `${OUT_DIR}/OBRS-1308-AFTER-admin-inbox-pending.png` });
+  await adminPage.screenshot({ path: `e2e-evidence/obrs-1308/OBRS-1308-AFTER-admin-inbox-pending.png` });
 
   // ── AFTER 3: admin review screen showing the old <-> new diff ────────────────────────────
   await inboxRow.first().click();
   await adminPage.waitForURL((url) => /\/notification-messages\/reviews\/\d+/.test(url.pathname), { timeout: 15_000 });
   await expect(adminPage.locator('[data-testid="notification-message-review-approve"]')).toBeVisible({ timeout: 15_000 });
-  await adminPage.screenshot({ path: `${OUT_DIR}/OBRS-1308-AFTER-review-diff.png`, fullPage: true });
+  await adminPage.screenshot({ path: `e2e-evidence/obrs-1308/OBRS-1308-AFTER-review-diff.png`, fullPage: true });
 
   // ── AFTER 4: result after approval (new text in effect) ──────────────────────────────────
   await adminPage.locator('[data-testid="notification-message-review-approve"]').click();
   await dismissAlert(adminPage);
   await expect(adminPage.locator('[data-testid="notification-message-review-approve"]')).toHaveCount(0, { timeout: 10_000 });
-  await adminPage.screenshot({ path: `${OUT_DIR}/OBRS-1308-AFTER-approved-result.png` });
+  await adminPage.screenshot({ path: `e2e-evidence/obrs-1308/OBRS-1308-AFTER-approved-result.png` });
   await adminCtx.close();
 
   // ── AFTER 5: SMS credit delta with a raised count and Save still enabled ─────────────────
@@ -97,7 +98,7 @@ test('OBRS-1308 evidence capture', async ({ page, browser }) => {
   await page.locator('[data-testid="notification-message-body"]').fill(longBody);
   await page.waitForTimeout(700);
   await expect(page.locator('[data-testid="notification-message-save"]')).toBeEnabled();
-  await page.screenshot({ path: `${OUT_DIR}/OBRS-1308-AFTER-sms-credit-delta.png`, fullPage: true });
+  await page.screenshot({ path: `e2e-evidence/obrs-1308/OBRS-1308-AFTER-sms-credit-delta.png`, fullPage: true });
 });
 
 /**
@@ -127,7 +128,7 @@ test('OBRS-1308 re-run - AC2 four violation shapes each show a visible error (un
     await page.locator('[data-testid="notification-message-body"]').fill(c.body);
     await page.locator('[data-testid="notification-message-save"]').click();
     await expect(page.locator('small.admin-error[role="alert"]').first()).toBeVisible({ timeout: 10_000 });
-    await page.screenshot({ path: `${OUT_DIR}/${c.file}`, fullPage: true });
+    await page.screenshot({ path: `e2e-evidence/obrs-1308/${c.file}`, fullPage: true });
     // Clear for the next case (avoid stale text carrying between screenshots).
     await page.locator('[data-testid="notification-message-body"]').fill('');
   }
