@@ -43,8 +43,15 @@
           </tr>
         </thead>
         <tbody>
+          <!-- OBRS-1298: whole row opens the detail modal (onRowActivate guards out
+               clicks on the "แก้ไข" button / a text selection) so an owner no longer has
+               to reach the far-right edge of the screen just to open a stop. -->
           @for (row of filteredRows; track row.id) {
-            <tr>
+            <tr
+              class="stop-row"
+              [class.is-selected]="row.id === selectedStopId"
+              (click)="onRowActivate(row, $event)"
+            >
               <td><code>{{ row.slug }}</code></td>
               <td>{{ row.name }}</td>
               <td>{{ row.stopType }}</td>
@@ -67,146 +74,17 @@
   }
 </section>
 
-@if (selected) {
-  <section class="admin-card mt-3">
-    <div class="admin-card-head">
-      <h4>{{ 'ADMIN.STOPS.EDIT_TITLE' | translate: { slug: selected.slug } }}</h4>
-      <button type="button" class="admin-btn admin-btn-sm" (click)="closeDetail()">
-        {{ 'ADMIN.COMMON.CLOSE' | translate }}
-      </button>
-    </div>
-
-    @if (isDetailLoading) {
-      <div class="admin-skeleton admin-skeleton--sm mb-2"></div>
-    }
-
-    @if (!isDetailLoading) {
-      <!-- PHOTO — its own block, NOT a form field.
-           The photo is written by two dedicated endpoints and preserved by the PUT when the
-           key is absent, so it deliberately has no input in the form below: a form save must
-           never be able to undo an upload (OBRS-580). -->
-      <div class="stop-photo-block">
-        <h5 class="admin-form-label">{{ 'ADMIN.STOPS.PHOTO_TITLE' | translate }}</h5>
-        <p class="admin-muted small">{{ 'ADMIN.STOPS.PHOTO_HELPER' | translate }}</p>
-
-        @if (selected.primaryPhotoUrl) {
-          <img
-            [src]="selected.primaryPhotoUrl"
-            class="stop-photo-preview mb-2"
-            [alt]="selected.slug"
-          />
-        } @else {
-          <div class="stop-photo-preview stop-photo-preview--empty mb-2 d-flex align-items-center justify-content-center">
-            <span class="admin-muted small">{{ 'ADMIN.STOPS.PHOTO_NONE' | translate }}</span>
-          </div>
-        }
-
-        <div class="admin-inline-actions">
-          <label class="admin-btn admin-btn-primary mb-0" [class.disabled]="isPhotoBusy">
-            {{ selected.primaryPhotoUrl
-                ? ('ADMIN.STOPS.PHOTO_REPLACE' | translate)
-                : ('ADMIN.STOPS.PHOTO_UPLOAD' | translate) }}
-            <input
-              type="file"
-              class="visually-hidden"
-              accept="image/jpeg,image/png,image/webp"
-              [disabled]="isPhotoBusy"
-              (change)="onPhotoSelected($event)"
-            />
-          </label>
-          @if (selected.primaryPhotoUrl) {
-            <button
-              type="button"
-              class="admin-btn"
-              [disabled]="isPhotoBusy"
-              (click)="removePhoto()"
-            >
-              {{ 'ADMIN.STOPS.PHOTO_REMOVE' | translate }}
-            </button>
-          }
-        </div>
-      </div>
-
-      <form class="admin-form-grid mt-3" (ngSubmit)="save()">
-        <div class="admin-form-field">
-          <label class="admin-form-label" for="stopProvince">
-            {{ 'ADMIN.STOPS.PROVINCE' | translate }}
-          </label>
-          <select id="stopProvince" class="admin-input" [(ngModel)]="selected.provinceCode" name="provinceCode">
-            @for (option of provinceOptions; track option.code) {
-              <option [value]="option.code">{{ option.label }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="admin-form-field">
-          <label class="admin-form-label" for="stopStatus">
-            {{ 'ADMIN.STOPS.COL_STATUS' | translate }}
-          </label>
-          <select id="stopStatus" class="admin-input" [(ngModel)]="selected.statusCode" name="statusCode">
-            @for (option of statusOptions; track option.code) {
-              <option [value]="option.code">{{ option.label }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="admin-form-field">
-          <label class="admin-form-label" for="stopType">
-            {{ 'ADMIN.STOPS.COL_TYPE' | translate }}
-          </label>
-          <select id="stopType" class="admin-input" [(ngModel)]="selected.stopTypeCode" name="stopTypeCode">
-            @for (option of stopTypeOptions; track option.code) {
-              <option [value]="option.code">{{ option.label }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="admin-form-field">
-          <label class="admin-form-label" for="stopLat">{{ 'ADMIN.STOPS.LATITUDE' | translate }}</label>
-          <input id="stopLat" type="number" step="any" class="admin-input"
-                 [(ngModel)]="selected.latitude" name="latitude" />
-        </div>
-
-        <div class="admin-form-field">
-          <label class="admin-form-label" for="stopLng">{{ 'ADMIN.STOPS.LONGITUDE' | translate }}</label>
-          <input id="stopLng" type="number" step="any" class="admin-input"
-                 [(ngModel)]="selected.longitude" name="longitude" />
-        </div>
-
-        <!-- PER-LOCALE CONTENT — all three locales always rendered, including the ones with
-             nothing in them yet. A form that showed only the locales already filled would hide
-             exactly the boxes an owner opened this screen to fill. -->
-        @for (t of selected.translations; track t.locale) {
-          <fieldset class="admin-form-field full stop-locale-block">
-            <legend class="admin-form-label">{{ 'ADMIN.STOPS.LOCALE_' + (t.locale | uppercase) | translate }}</legend>
-
-            <label class="admin-form-label" [attr.for]="'stopLabel-' + t.locale">
-              {{ 'ADMIN.STOPS.NAME' | translate }}
-            </label>
-            <input [id]="'stopLabel-' + t.locale" type="text" class="admin-input"
-                   [(ngModel)]="t.label" [name]="'label-' + t.locale" />
-
-            <label class="admin-form-label mt-2" [attr.for]="'stopLandmark-' + t.locale">
-              {{ 'ADMIN.STOPS.LANDMARK' | translate }}
-            </label>
-            <input [id]="'stopLandmark-' + t.locale" type="text" class="admin-input"
-                   [placeholder]="'ADMIN.STOPS.LANDMARK_PLACEHOLDER' | translate"
-                   [(ngModel)]="t.description" [name]="'description-' + t.locale" />
-
-            <label class="admin-form-label mt-2" [attr.for]="'stopAddress-' + t.locale">
-              {{ 'ADMIN.STOPS.ADDRESS' | translate }}
-            </label>
-            <input [id]="'stopAddress-' + t.locale" type="text" class="admin-input"
-                   [(ngModel)]="t.address" [name]="'address-' + t.locale" />
-          </fieldset>
-        }
-
-        <div class="admin-form-field full">
-          <button type="submit" class="admin-btn admin-btn-primary" [disabled]="isSaving">
-            {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-          </button>
-        </div>
-      </form>
-    }
-  </section>
-}
+<app-stop-form-modal
+  [isOpen]="isFormModalOpen"
+  [selected]="selected"
+  [isDetailLoading]="isDetailLoading"
+  [isSaving]="isSaving"
+  [isPhotoBusy]="isPhotoBusy"
+  [provinceOptions]="provinceOptions"
+  [statusOptions]="statusOptions"
+  [stopTypeOptions]="stopTypeOptions"
+  (closed)="closeDetail()"
+  (save)="save()"
+  (photoSelected)="onPhotoSelected($event)"
+  (photoRemove)="removePhoto()"
+></app-stop-form-modal>
