@@ -518,7 +518,8 @@
       "CUSTOMER_BEHAVIOR": "Customer Behavior",
       "OPS_EFFICIENCY": "Ops Efficiency",
       "PARCEL_SHARE_CONFIG": "Parcel Revenue Share",
-      "DRIVER_CASH_RATES": "Driver Cash Rates"
+      "DRIVER_CASH_RATES": "Driver Cash Rates",
+      "NOTIFICATION_MESSAGES": "Notification Messages"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -1957,6 +1958,90 @@
       "ERROR": {
         "DUPLICATE": "A rate for this sales point already starts on that date.",
         "CREATE_FAILED": "Unable to add this rate."
+      }
+    },
+    "NOTIFICATION_MESSAGES": {
+      "SUBTITLE": "Customize SMS/email/in-app notification text — changes take effect only after admin approval",
+      "TAB_MESSAGES": "Messages",
+      "TAB_REVIEWS": "Pending review",
+      "LIST": {
+        "COL_KEY": "Message key",
+        "COL_TYPE": "Notification type",
+        "COL_CHANNELS": "Channels",
+        "COL_LOCALE_TH": "Thai",
+        "COL_LOCALE_EN": "English",
+        "COL_LOCALE_ZH": "Chinese",
+        "EDIT_ARIA": "Edit {{locale}} text",
+        "EMPTY": "No overridable messages",
+        "LOAD_FAILED": "Failed to load messages"
+      },
+      "STATUS": {
+        "PENDING": "Pending",
+        "APPROVED": "Live",
+        "REJECTED": "Rejected",
+        "NONE": "Default"
+      },
+      "CHANNEL": {
+        "SMS": "SMS",
+        "EMAIL": "Email",
+        "IN_APP": "In-app"
+      },
+      "EDIT": {
+        "TITLE": "Edit message",
+        "CURRENT_LIVE_LABEL": "Currently live text",
+        "BODY_LABEL": "New text",
+        "PLACEHOLDER_HINT": "Placeholders found: {{indices}}",
+        "PREVIEW_LABEL": "Preview",
+        "SAVE": "Save and submit for approval",
+        "CANCEL": "Cancel",
+        "PENDING_BANNER": "Saved, but not yet live — waiting for admin approval",
+        "REJECTED_BANNER": "Your previous proposal was rejected",
+        "REJECT_REASON_LABEL": "Reject reason",
+        "RE_EDIT_CTA": "Edit again",
+        "SUBMIT_SUCCESS_TOAST": "Submitted for approval"
+      },
+      "ERROR": {
+        "PLACEHOLDER_MISSING": "Missing placeholders: {{indices}}",
+        "PLACEHOLDER_EXTRA": "Unexpected placeholders: {{indices}}",
+        "FORMAT_ERROR": "Invalid message format: {{detail}}",
+        "SAVE_FAILED": "Failed to save"
+      },
+      "CREDIT": {
+        "LABEL": "{{credits}} credit (was {{baseline}}, {{delta}})",
+        "DELTA_ZERO": "no change",
+        "HINT": "A single special character or emoji can multiply the SMS credit cost",
+        "NOT_BLOCKING_NOTE": "Shown for information only — does not block saving"
+      },
+      "REVIEWS": {
+        "COL_KEY": "Message key",
+        "COL_LOCALE": "Locale",
+        "COL_PROPOSED_BY": "Proposed by",
+        "COL_PROPOSED_AT": "Proposed at",
+        "EMPTY": "No pending reviews",
+        "LOAD_FAILED": "Failed to load review queue",
+        "OPEN": "Review"
+      },
+      "REVIEW_DETAIL": {
+        "TITLE": "Review message",
+        "OLD_LABEL": "Current text",
+        "NEW_LABEL": "Proposed text",
+        "APPROVE": "Approve",
+        "REJECT": "Reject",
+        "REJECT_DIALOG_TITLE": "Reject this proposal",
+        "REJECT_REASON_LABEL": "Reason",
+        "REJECT_REASON_PLACEHOLDER": "State a reason",
+        "REJECT_REASON_REQUIRED": "A reason is required",
+        "REJECT_CONFIRM": "Confirm reject",
+        "REJECT_CANCEL": "Cancel",
+        "APPROVE_SUCCESS_TOAST": "Approved — takes effect on the next notification",
+        "REJECT_SUCCESS_TOAST": "Rejected",
+        "ALREADY_HANDLED": "This item was already handled by someone else",
+        "LOAD_FAILED": "Failed to load detail",
+        "BACK": "Back"
+      },
+      "ACCESS_DENIED": {
+        "TITLE": "Access denied",
+        "BODY": "This page is for admins only"
       }
     }
   },

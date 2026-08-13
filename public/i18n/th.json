@@ -518,7 +518,8 @@
       "CUSTOMER_BEHAVIOR": "พฤติกรรมลูกค้า",
       "OPS_EFFICIENCY": "ประสิทธิภาพการเดินรถ",
       "PARCEL_SHARE_CONFIG": "ส่วนแบ่งรายได้พัสดุ",
-      "DRIVER_CASH_RATES": "อัตราค่าหัวคนขับ"
+      "DRIVER_CASH_RATES": "อัตราค่าหัวคนขับ",
+      "NOTIFICATION_MESSAGES": "ข้อความแจ้งเตือน"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "ค้นหาเมนู...",
@@ -1957,6 +1958,90 @@
       "ERROR": {
         "DUPLICATE": "อัตราค่าหัวของจุดขายตั๋วนี้ที่เริ่มมีผลวันดังกล่าวมีอยู่แล้ว",
         "CREATE_FAILED": "ไม่สามารถเพิ่มอัตรานี้ได้"
+      }
+    },
+    "NOTIFICATION_MESSAGES": {
+      "SUBTITLE": "ปรับแต่งข้อความ SMS/อีเมล/แจ้งเตือนในแอป — ต้องได้รับอนุมัติก่อนมีผล",
+      "TAB_MESSAGES": "ข้อความ",
+      "TAB_REVIEWS": "รออนุมัติ",
+      "LIST": {
+        "COL_KEY": "ข้อความ (key)",
+        "COL_TYPE": "ประเภทการแจ้งเตือน",
+        "COL_CHANNELS": "ช่องทาง",
+        "COL_LOCALE_TH": "ไทย",
+        "COL_LOCALE_EN": "อังกฤษ",
+        "COL_LOCALE_ZH": "จีน",
+        "EDIT_ARIA": "แก้ไขข้อความภาษา{{locale}}",
+        "EMPTY": "ไม่มีข้อความที่ปรับแต่งได้",
+        "LOAD_FAILED": "โหลดรายการข้อความไม่สำเร็จ"
+      },
+      "STATUS": {
+        "PENDING": "รออนุมัติ",
+        "APPROVED": "ใช้งานอยู่",
+        "REJECTED": "ถูกปฏิเสธ",
+        "NONE": "ค่าเริ่มต้น"
+      },
+      "CHANNEL": {
+        "SMS": "SMS",
+        "EMAIL": "อีเมล",
+        "IN_APP": "แจ้งเตือนในแอป"
+      },
+      "EDIT": {
+        "TITLE": "แก้ไขข้อความ",
+        "CURRENT_LIVE_LABEL": "ข้อความที่ใช้งานอยู่ตอนนี้",
+        "BODY_LABEL": "ข้อความใหม่",
+        "PLACEHOLDER_HINT": "ตัวแปรที่พบ: {{indices}}",
+        "PREVIEW_LABEL": "ตัวอย่างข้อความ",
+        "SAVE": "บันทึกและส่งขออนุมัติ",
+        "CANCEL": "ยกเลิก",
+        "PENDING_BANNER": "บันทึกแล้ว แต่ยังไม่มีผล — รออนุมัติจากแอดมิน",
+        "REJECTED_BANNER": "ข้อเสนอก่อนหน้าถูกปฏิเสธ",
+        "REJECT_REASON_LABEL": "เหตุผลที่ปฏิเสธ",
+        "RE_EDIT_CTA": "แก้ไขใหม่อีกครั้ง",
+        "SUBMIT_SUCCESS_TOAST": "ส่งข้อความขออนุมัติแล้ว"
+      },
+      "ERROR": {
+        "PLACEHOLDER_MISSING": "ขาดตัวแปร: {{indices}}",
+        "PLACEHOLDER_EXTRA": "มีตัวแปรเกิน: {{indices}}",
+        "FORMAT_ERROR": "รูปแบบข้อความไม่ถูกต้อง: {{detail}}",
+        "SAVE_FAILED": "บันทึกไม่สำเร็จ"
+      },
+      "CREDIT": {
+        "LABEL": "{{credits}} credit (เดิม {{baseline}}, {{delta}})",
+        "DELTA_ZERO": "ไม่เปลี่ยนแปลง",
+        "HINT": "อักขระพิเศษหรืออีโมจิเพียงตัวเดียวอาจทำให้ SMS ใช้ credit เพิ่มขึ้นหลายเท่า",
+        "NOT_BLOCKING_NOTE": "ตัวเลขนี้แสดงเพื่อประกอบการตัดสินใจเท่านั้น ไม่ปิดกั้นการบันทึก"
+      },
+      "REVIEWS": {
+        "COL_KEY": "ข้อความ (key)",
+        "COL_LOCALE": "ภาษา",
+        "COL_PROPOSED_BY": "เสนอโดย",
+        "COL_PROPOSED_AT": "เมื่อ",
+        "EMPTY": "ไม่มีรายการรออนุมัติ",
+        "LOAD_FAILED": "โหลดคิวอนุมัติไม่สำเร็จ",
+        "OPEN": "ตรวจสอบ"
+      },
+      "REVIEW_DETAIL": {
+        "TITLE": "ตรวจสอบข้อความ",
+        "OLD_LABEL": "ข้อความเดิม",
+        "NEW_LABEL": "ข้อความใหม่ที่เสนอ",
+        "APPROVE": "อนุมัติ",
+        "REJECT": "ปฏิเสธ",
+        "REJECT_DIALOG_TITLE": "ปฏิเสธข้อเสนอนี้",
+        "REJECT_REASON_LABEL": "เหตุผล",
+        "REJECT_REASON_PLACEHOLDER": "ระบุเหตุผล",
+        "REJECT_REASON_REQUIRED": "กรุณาระบุเหตุผล",
+        "REJECT_CONFIRM": "ยืนยันการปฏิเสธ",
+        "REJECT_CANCEL": "ยกเลิก",
+        "APPROVE_SUCCESS_TOAST": "อนุมัติแล้ว มีผลกับการแจ้งเตือนครั้งถัดไปทันที",
+        "REJECT_SUCCESS_TOAST": "ปฏิเสธแล้ว",
+        "ALREADY_HANDLED": "รายการนี้ถูกดำเนินการไปแล้วโดยคนอื่น",
+        "LOAD_FAILED": "โหลดรายละเอียดไม่สำเร็จ",
+        "BACK": "กลับ"
+      },
+      "ACCESS_DENIED": {
+        "TITLE": "ไม่มีสิทธิ์เข้าถึง",
+        "BODY": "หน้านี้สำหรับแอดมินเท่านั้น"
       }
     }
   },
