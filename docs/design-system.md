@@ -528,7 +528,43 @@ Run this against any UI diff (and during the live-verify screenshot glance):
       resolves is **pristine-guarded** (dirty-flag reset at the top of open, seeded on the
       cache-hit branch, gated by the stale-response guard) so a late response can't clobber
       an in-progress edit. (§6; CORE.md — recurred 3× on the usability-report detail modal.)
+- [ ] **Motion:** a new transition/animation runs 150–300 ms, animates only `transform`
+      and `opacity` (never `width`/`height`/`top`/`left`), and freezes under
+      `@media (prefers-reduced-motion: reduce)` — the same contract `app-loading-state`
+      already ships (§3, OBRS-907). Continuous motion is for busy indicators only.
+- [ ] **Icon-only controls** carry both an accessible name and a sighted-user tooltip —
+      `[attr.aria-label]` **and** native `[title]` (the `.refund-void-info-btn`
+      precedent below). Backfilling the existing sites is OBRS-892; new code must not
+      grow that debt.
+- [ ] **Async triggers self-disable:** a control that fires a request is `[disabled]`
+      while in flight and shows `app-loading-state variant="inline"` — no window in
+      which a second click sends a second request.
+- [ ] **State is never hue alone:** a status/selection/error also carries a glyph or
+      text (the lang-switcher toggle's checkmark + `aria-pressed`, below), so it
+      survives dark mode, colour-blindness and a greyscale print.
+- [ ] **Tap targets on customer surfaces** are ≥ 44×44 CSS px with ≥ 8 px between
+      neighbours. The admin desktop primitives are the deliberate exception
+      (`.admin-icon-btn` 36 px, `.refund-void-info-btn` 22 px) — don't shrink a
+      customer-facing control to match them.
+- [ ] **No layout jump:** anything arriving async reserves its space first — images and
+      map tiles get explicit dimensions or `aspect-ratio`, and a list that will become
+      rows renders the `skeleton` variant rather than collapsing to zero height.
+- [ ] **Mobile keyboards:** numeric/phone/email inputs set the matching `type` **and**
+      `inputmode` (`inputmode="numeric"` for seat/ticket counts, `type="tel"` for a
+      phone number) — customers book on phones.
+- [ ] **Wide tables scroll, they don't overflow:** a table that can exceed the viewport
+      sits in an `overflow-x: auto` wrapper; the shell itself never scrolls sideways.
+      §6's `max-height: 60vh; overflow-y: auto` is the vertical half of the same rule.
 - [ ] **New pattern?** justified in the UX spec and locked with a spec test (§12).
+
+> **Where the eight rules above came from (OBRS-1327):** harvested once from the
+> MIT-licensed `ui-ux-pro-max-skill` UX checklist (99 rows), keeping only what this
+> document did not already state and rewriting it for Bootstrap 5 + PrimeNG 17 — its own
+> examples are Tailwind. Deliberately **not** adopted: its "every input needs a visible
+> label, never placeholder-only" rule, which contradicts §3.1's placeholder-header
+> contract — that is a decision here, not an oversight. The generator half of that skill
+> (style/palette/font pickers) is not adopted at all: §2 owns those, and a second opinion
+> on them is a second source of truth.
 
 ---
 
