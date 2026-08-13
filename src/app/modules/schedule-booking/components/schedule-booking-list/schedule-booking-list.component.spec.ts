@@ -29,6 +29,9 @@ import { ScheduleDelayNoticeComponent } from '../../../../shared/components/sche
 // OBRS-1302: the flag and the fallback channel the two arms assert against.
 import { environment } from '../../../../../environments/environment';
 import { NJ_FACEBOOK_PAGE_URL } from '../../../../shared/lib/online-booking-channel';
+// The component's own time formatter — see the AC-2 assertion for why the expected
+// value is computed and not written down.
+import { formatTimeHHMM } from '../../../../shared/lib/trip-format';
 
 describe('ScheduleBookingListComponent', () => {
   let component: ScheduleBookingListComponent;
@@ -761,9 +764,22 @@ describe('ScheduleBookingListComponent (OBRS-1302 — online booking closed)', (
       const text = (fixture.nativeElement.textContent || '') as string;
 
       expect(text).toContain('200');
-      expect(text).toContain('08:00');
       expect(fixture.debugElement.query(By.css('.price'))).not.toBeNull();
       expect(fixture.debugElement.queryAll(By.css('.schedule-item')).length).toBe(1);
+
+      // The time, asserted against the app's OWN formatter rather than a literal.
+      // `formatTimeHHMM` is `dayjs(iso).format('HH:mm')`, i.e. the RUNNER's local
+      // zone — so a hard-coded '08:00' passes in Asia/Bangkok and fails on a UTC
+      // CI runner with '01:00', which is exactly how this line was first written
+      // and exactly how CI caught it (run 31688562452). What AC-2 needs proved is
+      // that the time row still renders at all; that HH:mm is the right rendering
+      // of the ISO string is `trip-format.spec.ts`'s job, not this spec's.
+      const timeEl = fixture.debugElement.query(By.css('.schedule-item .time'));
+      expect(timeEl).not.toBeNull();
+      expect((timeEl.nativeElement.textContent || '').trim()).toContain(
+        formatTimeHHMM(trip.departureDateTime)
+      );
+      expect(formatTimeHHMM(trip.departureDateTime)).toMatch(/^\d{2}:\d{2}$/);
     });
   });
 
