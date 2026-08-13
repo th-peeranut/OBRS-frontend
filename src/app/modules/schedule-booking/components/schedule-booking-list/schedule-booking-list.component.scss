@@ -248,6 +248,26 @@
             background: $primary-lightgrey;
           }
         }
+
+        /* OBRS-1302: the same button, as an <a> to the Facebook page, while
+           online booking is closed. It keeps the exact geometry above so the row
+           does not reflow between the two flag states — only the label and the
+           destination change. The anchor needs the three properties a <button>
+           got for free: no underline, centred text, and flex centring for the
+           vertical axis (a fixed-height <a> does not centre its own line box). */
+        &--closed {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          text-decoration: none;
+          line-height: $line-height-tight;
+          color: white;
+
+          &:hover {
+            color: white;
+          }
+        }
       }
 
       .change-btn {

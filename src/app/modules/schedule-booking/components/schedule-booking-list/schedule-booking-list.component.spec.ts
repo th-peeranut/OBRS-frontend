@@ -26,6 +26,12 @@ import { StationApi } from '../../../../shared/interfaces/station.interface';
 // OBRS-1141: declared alongside the component under test because the row
 // template now hosts it; without it every render logs an unknown-element error.
 import { ScheduleDelayNoticeComponent } from '../../../../shared/components/schedule-delay-notice/schedule-delay-notice.component';
+// OBRS-1302: the flag and the fallback channel the two arms assert against.
+import { environment } from '../../../../../environments/environment';
+import { NJ_FACEBOOK_PAGE_URL } from '../../../../shared/lib/online-booking-channel';
+// The component's own time formatter — see the AC-2 assertion for why the expected
+// value is computed and not written down.
+import { formatTimeHHMM } from '../../../../shared/lib/trip-format';
 
 describe('ScheduleBookingListComponent', () => {
   let component: ScheduleBookingListComponent;
@@ -673,5 +679,197 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
     // 2026-08-10 is now YESTERDAY: it is no longer "today's rounds have left".
     expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeNull();
     expect(textOf('.no-results')).toContain('SCHEDULE_BOOKING.NO_RESULTS');
+  });
+});
+
+/**
+ * OBRS-1302 — the trip list while online booking is closed.
+ *
+ * The list is deliberately the ONE customer surface that keeps working: rounds,
+ * times, fares and remaining seats are what earns the site's Google position and
+ * what a customer reads before messaging the page. So the closed arm asserts not
+ * only that the booking button is gone but that the fare is still on screen —
+ * the regression AC-2 exists to prevent, and the one a "close the booking flow"
+ * edit is most likely to cause by gating the whole route.
+ *
+ * Both arms, per AC-8. The open arm is the owner's reopen path.
+ */
+describe('ScheduleBookingListComponent (OBRS-1302 — online booking closed)', () => {
+  let fixture: ComponentFixture<ScheduleBookingListComponent>;
+  let store: MockStore;
+  let originalOnlineTicketBooking: boolean;
+
+  const trip: Schedule = {
+    id: 77,
+    vehicleType: 'van',
+    departureDateTime: '2030-06-17T08:00:00+07:00',
+    arrivalDateTime: '2030-06-17T09:58:00+07:00',
+    pricePerSeat: '200',
+    availableSeats: 10,
+    availableSeatNumbers: ['1A'],
+    routeSlug: 'chonburi-bangkok',
+  };
+
+  function render(): void {
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: [trip],
+      arrivalSchedules: null,
+    } as ScheduleList);
+    store.overrideSelector(selectScheduleFilter, null as any);
+    store.overrideSelector(selectProvinceWithStation, [] as any);
+    fixture = TestBed.createComponent(ScheduleBookingListComponent);
+    fixture.detectChanges();
+  }
+
+  beforeEach(async () => {
+    originalOnlineTicketBooking = environment.features.onlineTicketBooking;
+
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        provideMockStore(),
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+      ],
+    }).compileComponents();
+    store = TestBed.inject(MockStore);
+  });
+
+  afterEach(() => {
+    environment.features.onlineTicketBooking = originalOnlineTicketBooking;
+  });
+
+  describe('flag OFF', () => {
+    beforeEach(() => {
+      environment.features.onlineTicketBooking = false;
+      render();
+    });
+
+    it('offers no button that would start a booking', () => {
+      expect(fixture.debugElement.query(By.css('button.select-btn'))).toBeNull();
+    });
+
+    it('offers the Facebook page instead, in a new tab and with rel=noopener', () => {
+      const anchor = fixture.debugElement.query(By.css('a.select-btn--closed'));
+
+      expect(anchor).not.toBeNull();
+      const el = anchor.nativeElement as HTMLAnchorElement;
+      expect(el.href).toBe(NJ_FACEBOOK_PAGE_URL);
+      expect(el.target).toBe('_blank');
+      expect(el.rel).toContain('noopener');
+      expect((el.textContent || '').trim()).toBe('SCHEDULE_BOOKING.CLOSED_CHOOSE');
+    });
+
+    it('still shows the round, its time and its fare — AC-2, the thing that must NOT regress', () => {
+      const text = (fixture.nativeElement.textContent || '') as string;
+
+      expect(text).toContain('200');
+      expect(fixture.debugElement.query(By.css('.price'))).not.toBeNull();
+      expect(fixture.debugElement.queryAll(By.css('.schedule-item')).length).toBe(1);
+
+      // The time, asserted against the app's OWN formatter rather than a literal.
+      // `formatTimeHHMM` is `dayjs(iso).format('HH:mm')`, i.e. the RUNNER's local
+      // zone — so a hard-coded '08:00' passes in Asia/Bangkok and fails on a UTC
+      // CI runner with '01:00', which is exactly how this line was first written
+      // and exactly how CI caught it (run 31688562452). What AC-2 needs proved is
+      // that the time row still renders at all; that HH:mm is the right rendering
+      // of the ISO string is `trip-format.spec.ts`'s job, not this spec's.
+      const timeEl = fixture.debugElement.query(By.css('.schedule-item .time'));
+      expect(timeEl).not.toBeNull();
+      expect((timeEl.nativeElement.textContent || '').trim()).toContain(
+        formatTimeHHMM(trip.departureDateTime)
+      );
+      expect(formatTimeHHMM(trip.departureDateTime)).toMatch(/^\d{2}:\d{2}$/);
+    });
+  });
+
+  describe('flag ON — nothing about today changes', () => {
+    beforeEach(() => {
+      environment.features.onlineTicketBooking = true;
+      render();
+    });
+
+    it('offers the booking button again', () => {
+      expect(fixture.debugElement.query(By.css('button.select-btn'))).not.toBeNull();
+    });
+
+    it('offers no Facebook fallback — a reopened site carries no trace of the close', () => {
+      expect(fixture.debugElement.query(By.css('a.select-btn--closed'))).toBeNull();
+    });
+  });
+});
+
+/**
+ * OBRS-1302 — `selectSchedule` is inert while booking is closed.
+ *
+ * The template and the route guard both already stop this being reached, and
+ * both fail OPEN into side effects if they are ever wrong: a `schedule_selected`
+ * analytics event that pollutes the funnel with intent nobody could act on, and
+ * a store write that leaves a customer mid-flow before the guard gets a say.
+ * That is the whole reason the early return exists, so it is asserted directly
+ * rather than through the rendered button.
+ */
+describe('ScheduleBookingListComponent (OBRS-1302 — selectSchedule side effects)', () => {
+  let originalOnlineTicketBooking: boolean;
+  let router: any;
+  let analytics: any;
+  let store: any;
+
+  const trip: Schedule = {
+    id: 78,
+    vehicleType: 'van',
+    departureDateTime: '2030-06-17T08:00:00+07:00',
+    arrivalDateTime: '2030-06-17T09:58:00+07:00',
+    pricePerSeat: '200',
+    availableSeats: 10,
+    availableSeatNumbers: ['1A'],
+    routeSlug: 'chonburi-bangkok',
+  };
+
+  function build(): ScheduleBookingListComponent {
+    store = createStoreStub();
+    router = createRouterStub();
+    analytics = createAnalyticsServiceStub();
+    spyOn(store, 'dispatch').and.callThrough();
+    spyOn(router, 'navigate').and.callThrough();
+    spyOn(analytics, 'track').and.callThrough();
+
+    return new ScheduleBookingListComponent(
+      store,
+      router,
+      createStoreStub(),
+      createTranslateStub(),
+      createRouteMapServiceStub(),
+      analytics
+    );
+  }
+
+  beforeEach(() => {
+    originalOnlineTicketBooking = environment.features.onlineTicketBooking;
+  });
+
+  afterEach(() => {
+    environment.features.onlineTicketBooking = originalOnlineTicketBooking;
+  });
+
+  it('fires no analytics, writes nothing to the store and navigates nowhere when closed', () => {
+    environment.features.onlineTicketBooking = false;
+    const component = build();
+
+    component.selectSchedule(trip, true);
+
+    expect(analytics.track).not.toHaveBeenCalled();
+    expect(store.dispatch).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('still tracks and still writes to the store when open', () => {
+    environment.features.onlineTicketBooking = true;
+    const component = build();
+
+    component.selectSchedule(trip, true);
+
+    expect(analytics.track).toHaveBeenCalled();
+    expect(store.dispatch).toHaveBeenCalled();
   });
 });

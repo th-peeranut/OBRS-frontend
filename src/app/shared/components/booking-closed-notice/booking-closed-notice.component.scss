@@ -1,0 +1,95 @@
+@import '../../../../styles/variables.scss';
+@import '../../../../styles/dark-tokens.scss';
+
+// OBRS-1302 — the "online booking is closed, message the page" strip.
+//
+// Dark mode lives here rather than in dark-theme.scss for the reason
+// _dark-tokens.scss spells out: this component is encapsulated, so its own
+// selectors outscore a global `body.is-dark .a .b` rule and the global one
+// would lose silently.
+
+// NO `position: fixed`, deliberately — see the component's doc comment. The
+// strip sits in normal flow above the router outlet, so it cannot cover a
+// button, cannot fight the consent bar's z-index, and needs no z-index of its
+// own.
+.booking-closed {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-xs;
+  padding: $space-xs $space-sm;
+
+  // An amber wash, not the error red. Nothing is broken; a channel is closed.
+  background: #fff4e0;
+  border-bottom: 1px solid #e8b465;
+}
+
+.booking-closed__icon {
+  flex: 0 0 auto;
+  font-size: $font-size-md;
+  line-height: $line-height-base;
+}
+
+.booking-closed__text {
+  margin: 0;
+  min-width: 0;
+  font-size: $font-size-sm;
+  line-height: $line-height-base;
+}
+
+.booking-closed__title {
+  display: block;
+  font-weight: $font-weight-semibold;
+  color: $text-black; // 10.24:1 on #fff4e0
+}
+
+.booking-closed__body {
+  display: block;
+  color: $text-softblack; // 6.43:1 on #fff4e0
+}
+
+.booking-closed__link {
+  color: $primary-blue; // 4.89:1 on #fff4e0
+  font-weight: $font-weight-semibold;
+  text-decoration: underline;
+
+  &:hover {
+    color: $primary-blue-hover; // 6.62:1 on #fff4e0
+  }
+}
+
+@media (max-width: 575.98px) {
+  .booking-closed {
+    padding: $space-2xs $space-xs;
+    gap: $space-2xs;
+  }
+
+  .booking-closed__text {
+    font-size: $font-size-xs;
+  }
+}
+
+:host-context(body.is-dark) {
+  .booking-closed {
+    background: #2e2312;
+    border-bottom-color: rgba(232, 180, 101, 0.35);
+  }
+
+  .booking-closed__title {
+    color: $dk-text;
+  }
+
+  .booking-closed__body {
+    color: $dk-text-muted;
+  }
+
+  .booking-closed__link {
+    // $primary-blue fails on a dark wash (2.88:1 on #2e2312); the amber the strip
+    // is already built from carries over as the link colour instead — 9.17:1,
+    // and it keeps the strip one colour family in both themes.
+    color: #f0c078;
+
+    &:hover {
+      color: #f7d7a4;
+    }
+  }
+}

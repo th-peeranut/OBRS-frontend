@@ -1,0 +1,27 @@
+<!-- OBRS-1302: rendered only on a resolved customer-side route while
+`features.onlineTicketBooking` is off. Flag on ⇒ no element at all, not
+`display: none` — see the component for why that distinction is tested. -->
+@if (isVisible$ | async) {
+  <div
+    class="booking-closed"
+    role="region"
+    [attr.aria-label]="'BOOKING_CLOSED_NOTICE.ARIA_LABEL' | translate"
+    >
+    <!-- Decorative only. A screen reader announcing "construction sign" adds
+    nothing to a sentence that already says the site is not taking bookings. -->
+    <span class="booking-closed__icon" aria-hidden="true">🚧</span>
+    <p class="booking-closed__text">
+      <span class="booking-closed__title">{{ 'BOOKING_CLOSED_NOTICE.TITLE' | translate }}</span>
+      <span class="booking-closed__body">
+        {{ 'BOOKING_CLOSED_NOTICE.BODY' | translate }}
+        <a
+          class="booking-closed__link"
+          [href]="facebookUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          >{{ 'BOOKING_CLOSED_NOTICE.CHANNEL' | translate }}</a
+        >
+      </span>
+    </p>
+  </div>
+}

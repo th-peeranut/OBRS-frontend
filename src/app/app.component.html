@@ -1,3 +1,8 @@
+<!-- OBRS-1302: ABOVE the outlet on purpose. In normal flow it can never cover a
+control, and being first in the DOM it is also first for a screen reader — the
+closure is the first thing announced on a customer page, not the last. Renders
+nothing at all on staff/admin pages or once the flag is flipped back on. -->
+<app-booking-closed-notice></app-booking-closed-notice>
 <router-outlet></router-outlet>
 <app-report-usability-fab></app-report-usability-fab>
 <!-- OBRS-867: renders only while the PDPA question is unanswered. -->

@@ -1,6 +1,9 @@
-import { Route } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
+import { CanActivateFn, Route, Router, UrlTree } from '@angular/router';
+import { RouterTestingModule } from '@angular/router/testing';
 
 import { appRoutes } from './app-routing.module';
+import { environment } from '../environments/environment';
 
 /**
  * OBRS-856 — pins WHERE the login wall sits in the booking flow.
@@ -75,6 +78,95 @@ describe('appRoutes — booking-flow auth boundary (OBRS-856)', () => {
         const route = routeFor(path);
         expect(route.data?.['customerArea']).withContext(path).toBeTrue();
         expect(route.data?.['requireAuth']).withContext(path).toBeUndefined();
+      });
+    });
+  });
+});
+
+/**
+ * OBRS-1302 — pins WHERE the online-booking close is drawn.
+ *
+ * A different boundary from the one above, on the same routes, and the two pull
+ * in opposite directions: OBRS-856/858 are about keeping the flow open to people
+ * without an account, this one is about the whole flow being shut while nobody
+ * can serve it. Both must hold at once, so both are pinned in the same file.
+ *
+ * Asserted BEHAVIOURALLY — each route's functional guards are actually run —
+ * rather than by looking for a named guard in `canActivate`. `featureEnabledGuard`
+ * returns a closure, so identity comparison is impossible, and matching on
+ * `Function.name` or source text would pass for a guard that had been wired to
+ * the wrong flag. Running it is the only check that distinguishes those.
+ *
+ * The must-NOT half is the one that earns its keep: a later "close the booking
+ * flow properly" edit that also gates /schedule-booking would delete the
+ * timetable — the only part of the online channel still worth having while the
+ * counter is unstaffed, and the reason the site keeps its Google position.
+ */
+describe('appRoutes — online-booking flag boundary (OBRS-1302)', () => {
+  const CLOSED_BY_FLAG = ['review-schedule-booking', 'passenger-info', 'payment'];
+  const OPEN_REGARDLESS = ['schedule-booking', 'find-booking', 'e-ticket', 'my-bookings'];
+
+  let originalOnlineTicketBooking: boolean;
+
+  beforeEach(async () => {
+    originalOnlineTicketBooking = environment.features.onlineTicketBooking;
+    await TestBed.configureTestingModule({ imports: [RouterTestingModule] }).compileComponents();
+  });
+
+  afterEach(() => {
+    environment.features.onlineTicketBooking = originalOnlineTicketBooking;
+  });
+
+  /**
+   * Runs every FUNCTIONAL guard on a route and reports whether any of them
+   * redirected to '/'. Class guards (AuthGuard) are skipped: they are not
+   * callable this way and are covered by the boundary spec above.
+   */
+  function redirectsHome(path: string): boolean {
+    const route = appRoutes.find((r) => r.path === path);
+    if (!route) {
+      throw new Error(
+        `route '${path}' is missing from appRoutes — this spec's premise is gone, ` +
+          `not merely failing. Re-derive the boundary before editing the expectation.`
+      );
+    }
+
+    const home = TestBed.inject(Router).parseUrl('/').toString();
+    const fnGuards = (route.canActivate ?? []).filter(
+      (g): g is CanActivateFn => typeof g === 'function' && !('prototype' in g && g.prototype?.canActivate)
+    );
+
+    return fnGuards.some((guard) => {
+      const result = TestBed.runInInjectionContext(() =>
+        guard({} as never, {} as never)
+      ) as boolean | UrlTree;
+      return result !== true && (result as UrlTree)?.toString?.() === home;
+    });
+  }
+
+  describe('must-catch: with the flag off, no deep link reaches a seat or the payment form', () => {
+    CLOSED_BY_FLAG.forEach((path) => {
+      it(`/${path} redirects to home`, () => {
+        environment.features.onlineTicketBooking = false;
+        expect(redirectsHome(path)).withContext(path).toBeTrue();
+      });
+    });
+  });
+
+  describe('must-catch: flipping the one flag back reopens all three, with no code change', () => {
+    CLOSED_BY_FLAG.forEach((path) => {
+      it(`/${path} activates again`, () => {
+        environment.features.onlineTicketBooking = true;
+        expect(redirectsHome(path)).withContext(path).toBeFalse();
+      });
+    });
+  });
+
+  describe('must-NOT: the shop window and the ticket-retrieval routes are never flag-gated', () => {
+    OPEN_REGARDLESS.forEach((path) => {
+      it(`/${path} stays reachable even with the flag off`, () => {
+        environment.features.onlineTicketBooking = false;
+        expect(redirectsHome(path)).withContext(path).toBeFalse();
       });
     });
   });

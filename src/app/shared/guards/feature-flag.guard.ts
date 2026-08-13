@@ -21,7 +21,16 @@ import { environment } from '../../../environments/environment';
  * `docs/adr/…-home-route-moved-to-root` precedent), not a 404, so a flagged-off
  * route reads as "not here" rather than "broken".
  */
-export function featureEnabledGuard(feature: 'onlineParcelBooking' | 'fleetMap'): CanActivateFn {
+/**
+ * Every key of the `features` block, read off the object itself rather than
+ * retyped here (OBRS-1302). The hand-written union this replaced had to be
+ * edited in lockstep with `environment.base.ts`, and a flag added without that
+ * edit is not a compile error at the flag — it is a compile error at the call
+ * site, far from the change, or no error at all if nobody guards on it yet.
+ */
+export type FeatureFlag = keyof typeof environment.features;
+
+export function featureEnabledGuard(feature: FeatureFlag): CanActivateFn {
   return (): boolean | UrlTree => {
     if (environment.features[feature]) {
       return true;
