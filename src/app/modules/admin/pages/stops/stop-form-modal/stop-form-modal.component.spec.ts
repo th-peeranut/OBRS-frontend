@@ -50,6 +50,36 @@ describe('StopFormModalComponent (OBRS-1298)', () => {
     component = fixture.componentInstance;
   });
 
+  // OBRS-1298: this modal is the first admin form modal that stays OPEN across an awaited
+  // alert — `StopsPageComponent.save()` awaits `AlertService.success()` (a `Swal.fire` with no
+  // `timer`, so it settles only on a user dismissal) before clearing `isSaving`, and the photo
+  // actions await a confirm mid-edit. If the alert ever renders under `.admin-modal-backdrop`
+  // it cannot be dismissed, the promise never settles, and the Save button stays disabled for
+  // good. `src/styles.scss` already lifts `.swal2-container` to 1400 for exactly that reason
+  // (SweetAlert2's own default is 1060, under the backdrop's 1200) — this pins the ordering so
+  // the next person to renumber an overlay layer finds out here instead of in production.
+  // Measured, not copied: karma loads `src/styles.scss`, so these are the real cascade values
+  // (1200 / 1400 at the time of writing).
+  it('keeps SweetAlert above the modal backdrop, so an awaited alert can still be dismissed', () => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'admin-modal-backdrop';
+    const alertContainer = document.createElement('div');
+    alertContainer.className = 'swal2-container';
+    document.body.append(backdrop, alertContainer);
+
+    try {
+      const backdropZ = Number(getComputedStyle(backdrop).zIndex);
+      const alertZ = Number(getComputedStyle(alertContainer).zIndex);
+
+      expect(Number.isNaN(backdropZ)).toBe(false);
+      expect(Number.isNaN(alertZ)).toBe(false);
+      expect(alertZ).toBeGreaterThan(backdropZ);
+    } finally {
+      backdrop.remove();
+      alertContainer.remove();
+    }
+  });
+
   it('renders nothing when isOpen is false', () => {
     component.isOpen = false;
     component.selected = SELECTED;
