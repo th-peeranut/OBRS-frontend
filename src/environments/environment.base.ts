@@ -50,5 +50,24 @@ export const environmentBase = {
   features: {
     onlineParcelBooking: false, // gates /parcel-booking + /my-parcels routes + navbar My Parcels link
     fleetMap: false,            // gates the staff fleet-map route + its nav link
+    // OBRS-1302: the customer-side ONLINE SEAT BOOKING path — /review-schedule-booking,
+    // /passenger-info, /payment, and the "choose this trip" button that leads into them.
+    //
+    // Off is not a scope cut like the two above; it is a deliberate close of a path
+    // that already works. On 2026-08-13 prod was measured selling for real (6 trips /
+    // 20 free seats tomorrow, a LIVE Omise key in the shipped bundle) while ranking
+    // #4 on Google — and there is nobody at the other end: prod has no SALESPERSON
+    // account at all (OBRS-1218) and neither counter nor driver staff have been
+    // trained. A customer who paid would reach a bus where no one can check them in.
+    //
+    // Deliberately does NOT gate /schedule-booking, /find-booking, /e-ticket or
+    // /my-bookings: the timetable+fare list IS the shop window that earns the Google
+    // position (and is why a customer would message the page at all), and the other
+    // two are how an already-issued ticket is retrieved.
+    //
+    // Flip to `true` to reopen everywhere. Two conditions, neither dated yet:
+    // (a) a SALESPERSON account exists and staff are trained (OBRS-850 AC-2 /
+    // OBRS-1218), (b) OBRS-832 closes so booking SMS stops failing silently.
+    onlineTicketBooking: false,
   },
 };

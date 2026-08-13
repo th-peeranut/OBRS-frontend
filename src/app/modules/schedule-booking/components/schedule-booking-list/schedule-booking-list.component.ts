@@ -42,6 +42,10 @@ import { RouteMapService } from '../../../../services/route-map/route-map.servic
 import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
 import { LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
 import { AnalyticsService } from '../../../../services/analytics/analytics.service';
+import {
+  isOnlineTicketBookingOpen,
+  NJ_FACEBOOK_PAGE_URL,
+} from '../../../../shared/lib/online-booking-channel';
 
 /**
  * OBRS-1217: what the empty result list means when the customer searched TODAY.
@@ -64,6 +68,24 @@ export interface SoldOutTodayState {
     standalone: false
 })
 export class ScheduleBookingListComponent implements OnInit, OnDestroy {
+  /**
+   * OBRS-1302. A getter, not a field — `isOnlineTicketBookingOpen()` must be
+   * re-read on every change-detection pass so a spec that flips the flag
+   * between its two arms sees the second value. A field initialiser would
+   * freeze the first arm's answer into the component and let the closed-arm
+   * assertion pass on a component that was never actually closed.
+   *
+   * This does NOT gate the list itself: rounds, times, fares and remaining
+   * seats render exactly as before. Only the button that commits to a seat is
+   * swapped for the way a customer can actually reach us today.
+   */
+  protected get isOnlineBookingOpen(): boolean {
+    return isOnlineTicketBookingOpen();
+  }
+
+  /** Bound into the template so the page URL is spelled in exactly one place. */
+  protected readonly facebookUrl = NJ_FACEBOOK_PAGE_URL;
+
   scheduleList: Observable<ScheduleList>;
   scheduleFilter: Observable<ScheduleFilter | null>;
   rawProvinceStationList: Observable<StationApi[]>;
@@ -176,6 +198,16 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   }
 
   selectSchedule(schedule: Schedule, isFirst: boolean = false): void {
+    // OBRS-1302. Belt as well as braces: while booking is closed the template
+    // renders a link to the Facebook page instead of this button, and the route
+    // this method ends by navigating to is guarded anyway. The early return is
+    // here because the two protections above both fail OPEN into side effects —
+    // a `schedule_selected` analytics event and a store write that puts the
+    // customer mid-flow — and those would happen before the guard ever ran.
+    if (!this.isOnlineBookingOpen) {
+      return;
+    }
+
     // OBRS-867 funnel step 3. Fired here rather than on the store action,
     // because `invokeSetScheduleBookingApi` is also dispatched to CLEAR the
     // selection (see `clearSchedule` and the round-trip dropdown handler in

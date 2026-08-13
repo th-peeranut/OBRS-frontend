@@ -38,6 +38,11 @@ import { AnalyticsConsentBannerComponent } from './components/analytics-consent-
 // shared/ rather than in the privacy-policy module because it is a consent
 // surface, and it belongs beside the bar that links to it.
 import { AnalyticsConsentControlComponent } from './components/analytics-consent-control/analytics-consent-control.component';
+// OBRS-1302: the "online booking is closed, message the page" strip. Mounted
+// once in app.component.html, ABOVE <router-outlet> — same survives-navigation
+// reasoning as the consent bar, opposite end of the page so the two cannot
+// collide.
+import { BookingClosedNoticeComponent } from './components/booking-closed-notice/booking-closed-notice.component';
 // OBRS-907: the one shared loading indicator (skeleton / spinner / inline).
 import { LoadingStateComponent } from './components/loading-state/loading-state.component';
 // OBRS-1141: the "this round was announced as delayed" disclosure. Shared
@@ -71,6 +76,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     AppRefundDestinationFieldsComponent,
     AnalyticsConsentBannerComponent,
     AnalyticsConsentControlComponent,
+    BookingClosedNoticeComponent,
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,
     StationLoadErrorComponent,
@@ -113,6 +119,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     AppRefundDestinationFieldsComponent,
     AnalyticsConsentBannerComponent,
     AnalyticsConsentControlComponent,
+    BookingClosedNoticeComponent,
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,
     StationLoadErrorComponent,
