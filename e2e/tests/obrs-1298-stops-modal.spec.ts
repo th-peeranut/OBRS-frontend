@@ -2,12 +2,15 @@
  * QA verification for OBRS-1298 — /admin/stops: the edit form moved into a modal, and the
  * table row is now clickable.
  *
- * NOT wired into any lane in e2e/lanes.json and NOT run via the standard playwright.config.ts
- * (that config's testMatch is derived from lanes.json, so an unregistered spec here is invisible
- * to it by design). Run directly against a manually-started dev server with an explicit config,
- * e.g.:
+ * LANE: OWN-DB, declared in e2e/lanes.json, run by playwright.obrs1298qa.config.ts. An earlier
+ * revision of this header claimed the spec was deliberately wired into no lane at all; that was
+ * wrong and CI said so — scripts/check-e2e-lanes.mjs rejects an undeclared spec outright ("a spec
+ * that belongs to no lane runs in no lane"), and it is right to: staying out of the registry does
+ * not keep a spec out of the merge gate, it only keeps the next reader from knowing what this
+ * file needs in order to be true. It is still not in the GATE lane and still not run by
+ * playwright.config.ts (whose testMatch is an explicit SIT_SPECS list). Run it with:
  *
- *   npx playwright test e2e/tests/obrs-1298-stops-modal.spec.ts --config=e2e/playwright.qa-1298.config.ts
+ *   npx playwright test --config=playwright.obrs1298qa.config.ts
  *
  * LANE: LOCAL backend, not SIT (coordinator redirect, live SIT login outage OBRS-1307 —
  * reproduced independently by this session and the coordinator: every seeded account's
