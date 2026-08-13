@@ -61,6 +61,18 @@ describe('NotificationMessageEditFormComponent', () => {
       expect(component['body']).toBe('live text');
     });
 
+    it('seeds from rejectedBody (not liveBody) when the last attempt was REJECTED', () => {
+      component.detail = { baseline: 'b', liveBody: 'live text', status: 'REJECTED', rejectReason: 'no good', rejectedBody: 'what the owner proposed', placeholderIndices: [], creditEstimate: null };
+      component.ngOnChanges({ detail: {} as any });
+      expect(component['body']).toBe('what the owner proposed');
+    });
+
+    it('falls back to liveBody for a REJECTED payload with no rejectedBody (pre-field wire)', () => {
+      component.detail = { baseline: 'b', liveBody: 'live text', status: 'REJECTED', rejectReason: 'no good', placeholderIndices: [], creditEstimate: null };
+      component.ngOnChanges({ detail: {} as any });
+      expect(component['body']).toBe('live text');
+    });
+
     it('does NOT overwrite the body once the user has typed, even if detail changes again', () => {
       component.detail = { baseline: 'b', liveBody: 'live text', status: 'NONE', rejectReason: null, placeholderIndices: [], creditEstimate: null };
       component.ngOnChanges({ detail: {} as any });
@@ -139,6 +151,64 @@ describe('NotificationMessageEditFormComponent', () => {
       component.cancel.subscribe(cancelSpy);
       component['onCancel']();
       expect(cancelSpy).toHaveBeenCalled();
+    });
+  });
+
+  // AC2, the frontend half of the BE/FE seam. Nothing here rendered the 400 before: the specs
+  // asserted that `validationError` did not gate Save, never that setting it put anything on the
+  // screen. So when the backend answered an unmatched brace with reason=PLACEHOLDER_MISMATCH and two
+  // empty index lists, the template took the mismatch branch, found nothing to list and drew NO
+  // error element — the save was refused and the owner saw a silent no-op (found by QA).
+  // The reason values below are the ones pinned on the wire by
+  // NotificationMessagePlaceholderErrorContractIT; if either side drifts, one of the two goes red.
+  describe('validation error rendering (AC2)', () => {
+    const errorTexts = (): string[] =>
+      Array.from(fixture.nativeElement.querySelectorAll('.admin-error') as NodeListOf<HTMLElement>)
+        .map((el) => el.textContent?.trim() ?? '');
+
+    it('renders nothing while there is no validation error', () => {
+      component.validationError = null;
+      fixture.detectChanges();
+      expect(errorTexts().length).toBe(0);
+    });
+
+    it('PLACEHOLDER_MISMATCH renders one alert per non-empty index list', () => {
+      component.validationError = {
+        reason: 'PLACEHOLDER_MISMATCH',
+        missingIndices: [1],
+        extraIndices: [2],
+        formatError: null,
+      };
+      fixture.detectChanges();
+      expect(errorTexts().length).toBe(2);
+    });
+
+    it('MESSAGE_FORMAT_INVALID renders the format-error alert, NOT an empty mismatch block', () => {
+      component.validationError = {
+        reason: 'MESSAGE_FORMAT_INVALID',
+        missingIndices: [],
+        extraIndices: [],
+        formatError: 'Unmatched braces in the pattern.',
+      };
+      fixture.detectChanges();
+      const texts = errorTexts();
+      expect(texts.length).toBe(1);
+      // TranslateModule.forRoot() with no bundle loaded echoes the key back, so the key IS the
+      // assertion: it proves the format branch rendered rather than the mismatch one.
+      expect(texts[0]).toContain('ERROR.FORMAT_ERROR');
+    });
+
+    it('an unmatched brace is never silent: a refusal with both index lists empty still shows an alert', () => {
+      // The exact QA repro, one assertion away from the defect: whatever the backend calls this
+      // violation, a 400 the owner cannot see is the bug.
+      component.validationError = {
+        reason: 'MESSAGE_FORMAT_INVALID',
+        missingIndices: [],
+        extraIndices: [],
+        formatError: 'Unmatched braces in the pattern.',
+      };
+      fixture.detectChanges();
+      expect(errorTexts().length).toBeGreaterThan(0);
     });
   });
 });

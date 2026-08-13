@@ -107,16 +107,16 @@ export class NotificationMessageEditFormComponent implements OnChanges, OnDestro
   }
 
   /**
-   * The locked GET contract carries `baseline`/`liveBody`/`status`/
-   * `rejectReason` per locale — there is no field distinct from `liveBody`
-   * for "the exact body of a REJECTED attempt" (only `rejectReason`, which
-   * is WHY it was rejected, not WHAT was submitted). `liveBody` (the current
-   * live text) is therefore the closest available starting point in every
-   * status, REJECTED included — flagged for QA/Scrutinize as a contract gap
-   * worth resolving with the backend team if a literal "last proposed body"
-   * turns out to matter more than "what's live today".
+   * On a `REJECTED` attempt the owner should re-edit from WHAT they actually
+   * proposed, not from the current live text — the owner GET DTO now carries
+   * `rejectedBody` for exactly that (OBRS-1308, added 2026-08-13). Every other
+   * status (and a REJECTED payload predating the field, where `rejectedBody`
+   * is absent) still seeds from `liveBody`, the current live text.
    */
   private initialBody(): string {
+    if (this.detail?.status === 'REJECTED' && this.detail.rejectedBody != null) {
+      return this.detail.rejectedBody;
+    }
     return this.detail?.liveBody ?? '';
   }
 }

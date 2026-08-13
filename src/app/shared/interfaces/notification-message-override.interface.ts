@@ -34,6 +34,14 @@ export interface NotificationMessageLocaleStatusDto {
   liveBody: string;
   status: NotificationMessageOverrideStatus;
   rejectReason: string | null;
+  /** OBRS-1308: the exact body the owner submitted on a `REJECTED` attempt —
+   * distinct from `rejectReason` (the WHY) and from `liveBody` (the currently
+   * live text). Added to the owner GET DTO 2026-08-13 so a re-edit after a
+   * rejection starts from what was actually rejected, not from live text.
+   * Optional/nullable so a payload predating this field (or a non-REJECTED
+   * locale) still type-checks without a per-fixture edit — same discipline as
+   * `NotificationItem.relatedEntityId`. */
+  rejectedBody?: string | null;
   placeholderIndices: number[];
   /** Present only when the key's `channels` includes `SMS`. */
   creditEstimate: SmsCreditEstimateDto | null;
@@ -66,9 +74,12 @@ export interface SubmitNotificationMessageRespDto {
 }
 
 /**
- * The `data` payload of a `POST /notification-messages` 400 —
- * `reason: 'PLACEHOLDER_MISMATCH'` carries `missingIndices`/`extraIndices`;
- * a `MessageFormat` compile failure instead sets `formatError` non-null.
+ * The `data` payload of a `POST /notification-messages` 400. `reason` has exactly two values and is
+ * what the edit screen branches on: `'PLACEHOLDER_MISMATCH'` carries
+ * `missingIndices`/`extraIndices` with a null `formatError`, while `'MESSAGE_FORMAT_INVALID'`
+ * carries a non-null `formatError` with BOTH index lists empty. Branching on `formatError` alone is
+ * not enough — an unmatched `{` reaches here with two empty lists, so a screen that reads only the
+ * mismatch branch renders nothing and the refusal is invisible (OBRS-1308 QA, AC2).
  * Rendered verbatim under the textarea — the frontend never re-derives this,
  * the backend 400 is the tested authority (system spec, Business rule 3).
  */
