@@ -1,0 +1,33 @@
+<ul class="nav nav-tabs" role="tablist" data-testid="notification-messages-subnav">
+  <li class="nav-item">
+    <a
+      class="nav-link"
+      role="tab"
+      routerLink="."
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      #messagesLink="routerLinkActive"
+      [attr.aria-selected]="messagesLink.isActive"
+      data-testid="notification-messages-subnav-messages"
+      >
+      {{ 'ADMIN.NOTIFICATION_MESSAGES.TAB_MESSAGES' | translate }}
+    </a>
+  </li>
+  @if (showReviewsTab) {
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        role="tab"
+        routerLink="reviews"
+        routerLinkActive="active"
+        #reviewsLink="routerLinkActive"
+        [attr.aria-selected]="reviewsLink.isActive"
+        data-testid="notification-messages-subnav-reviews"
+        >
+        {{ 'ADMIN.NOTIFICATION_MESSAGES.TAB_REVIEWS' | translate }}
+      </a>
+    </li>
+  }
+</ul>
+
+<router-outlet></router-outlet>
