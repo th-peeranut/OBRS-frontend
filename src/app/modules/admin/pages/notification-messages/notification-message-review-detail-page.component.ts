@@ -73,6 +73,10 @@ export class NotificationMessageReviewDetailPageComponent implements OnInit, OnD
         return;
       }
       this.id = id;
+      // A genuinely NEW id — reset alreadyHandled here, not inside load().
+      // load() is also called to RE-fetch after a 409 (see handleActionError),
+      // and that reload must not wipe the very flag it was called to react to.
+      this.alreadyHandled = false;
       this.load(id);
     });
   }
@@ -148,7 +152,6 @@ export class NotificationMessageReviewDetailPageComponent implements OnInit, OnD
 
   private load(id: number): void {
     this.loadFailed = false;
-    this.alreadyHandled = false;
     this.adminApiService
       .getNotificationMessageReviewById(id)
       .pipe(takeUntil(this.destroy$))
