@@ -408,6 +408,22 @@ One color = one meaning. Never pick a button color for looks.
   `Swal.mixin()` or `Swal.fire()` directly.
 - One primary button (§4); close affordance top-right (`×`) **and** a secondary
   Back/Cancel.
+- **Admin edit forms render as an `.admin-modal-backdrop` / `.admin-modal` dialog**,
+  reusing `[adminModalBackdrop]` (`shared/directives/`) for backdrop-click/Escape/
+  focus-trap/scroll-lock — never re-implemented per component. `[isOpen]` input +
+  `(closed)` output is the house wiring; a form modal that also owns its own API
+  calls (create/edit CRUD) is a **smart** child, one that only renders data the
+  parent already fetched (e.g. `StopFormModalComponent`, OBRS-1298) is a
+  **presentational** one — pick based on whether the parent already owns the
+  fetch/save logic, don't duplicate it into the modal either way.
+- **A list row that opens a detail view should be whole-row-clickable**, not force
+  the mouse to a button at the row's far edge (`grep -rn onRowActivate src/app` —
+  6 admin pages as of OBRS-1298, first introduced OBRS-891). Guard shape: ignore
+  clicks whose target is inside `button, a, input, select, textarea`, and ignore a
+  click that ends a text selection (`window.getSelection()?.toString()`). The row
+  itself carries no `role`/keyboard handler — an existing button/link in the row
+  stays the keyboard/AT entry point. Selected-row highlight is `.is-selected` /
+  `--accent-soft` (§13), not a raw Bootstrap blue.
 
 ---
 
