@@ -1,0 +1,9 @@
+@if (accessDenied) {
+  <app-notification-message-access-denied></app-notification-message-access-denied>
+} @else {
+  <app-notification-message-review-queue-table
+    [rows]="rows"
+    [loading]="isLoading"
+    (openReview)="onOpenReview($event)"
+  ></app-notification-message-review-queue-table>
+}

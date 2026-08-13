@@ -1,0 +1,13 @@
+.nm-diff-body {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: var(--admin-surface-soft);
+  color: var(--admin-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.nm-diff-body--new {
+  border: 1px solid var(--accent);
+}

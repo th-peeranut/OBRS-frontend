@@ -1,0 +1,45 @@
+@if (visible) {
+  <div
+    class="admin-modal-backdrop"
+    adminModalBackdrop
+    [dismissOnBackdrop]="false"
+    (dismiss)="onCancel()"
+    >
+    <div class="admin-modal">
+      <h4 class="admin-modal-title">{{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.REJECT_DIALOG_TITLE' | translate }}</h4>
+
+      <div class="admin-form-field full">
+        <label class="admin-form-label">
+          {{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.REJECT_REASON_LABEL' | translate }}
+          <span class="admin-required">*</span>
+        </label>
+        <textarea
+          class="admin-field"
+          data-testid="notification-message-reject-reason"
+          [placeholder]="'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.REJECT_REASON_PLACEHOLDER' | translate"
+          [(ngModel)]="reason"
+        ></textarea>
+        @if (touched && isBlank) {
+          <small class="admin-error" role="alert">
+            {{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.REJECT_REASON_REQUIRED' | translate }}
+          </small>
+        }
+      </div>
+
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" [disabled]="submitting" (click)="onCancel()">
+          {{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.REJECT_CANCEL' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-primary"
+          data-testid="notification-message-reject-confirm"
+          [disabled]="submitting || isBlank"
+          (click)="onConfirm()"
+          >
+          {{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.REJECT_CONFIRM' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

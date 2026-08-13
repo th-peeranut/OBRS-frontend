@@ -1,0 +1,57 @@
+@if (accessDenied) {
+  <app-notification-message-access-denied></app-notification-message-access-denied>
+} @else {
+  @if (loadFailed) {
+    <p class="admin-error">{{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.LOAD_FAILED' | translate }}</p>
+  }
+
+  @if (detail) {
+    <app-notification-message-review-diff
+      [oldBody]="detail.oldBody"
+      [newBody]="detail.newBody"
+      [locale]="detail.locale"
+      [placeholderIndices]="detail.placeholderIndices"
+    ></app-notification-message-review-diff>
+
+    @if (detail.creditEstimate) {
+      <app-notification-message-credit-panel
+        [credits]="detail.creditEstimate.credits"
+        [baselineCredits]="detail.creditEstimate.baselineCredits"
+        [encoding]="detail.creditEstimate.encoding"
+      ></app-notification-message-credit-panel>
+    }
+
+    <div class="admin-form-field full nm-actions">
+      <button type="button" class="admin-btn" [disabled]="approving || rejecting" (click)="onBack()">
+        {{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.BACK' | translate }}
+      </button>
+      @if (showActions) {
+        <button
+          type="button"
+          class="admin-btn"
+          data-testid="notification-message-review-reject"
+          [disabled]="approving || rejecting"
+          (click)="onOpenRejectDialog()"
+          >
+          {{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.REJECT' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-primary"
+          data-testid="notification-message-review-approve"
+          [disabled]="approving || rejecting"
+          (click)="onApprove()"
+          >
+          {{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.APPROVE' | translate }}
+        </button>
+      }
+    </div>
+
+    <app-notification-message-reject-dialog
+      [visible]="rejectDialogVisible"
+      [submitting]="rejecting"
+      (confirm)="onConfirmReject($event)"
+      (cancel)="onCancelReject()"
+    ></app-notification-message-reject-dialog>
+  }
+}

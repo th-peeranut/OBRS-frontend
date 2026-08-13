@@ -1,0 +1,30 @@
+// OBRS-1308 AC12: colour-by-delta-direction composes already-declared
+// --admin-*-fg SURFACE tokens (design-system §2.4.0) — never a chip -text
+// half used standalone, never a new hex/token.
+.nm-credit-panel {
+  margin-top: 0.75rem;
+}
+
+.nm-credit-line {
+  margin: 0;
+  font-weight: 600;
+
+  &.is-warning {
+    color: var(--admin-warning-fg);
+  }
+
+  &.is-success {
+    color: var(--admin-success-fg);
+  }
+
+  &.is-muted {
+    color: var(--admin-muted);
+  }
+}
+
+.nm-credit-hint,
+.nm-credit-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--admin-muted);
+}

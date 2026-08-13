@@ -24,6 +24,13 @@ export class NotificationInboxPanelComponent {
   @Output() markOne = new EventEmitter<number>();
   @Output() markAllRead = new EventEmitter<void>();
   @Output() retry = new EventEmitter<void>();
+  /** OBRS-1308: emitted when the opened row is a deep-linkable notification
+   * (currently only `NOTIF_MSG_OVERRIDE_PENDING`). The row itself still only
+   * ever emits an `id` (its own pinned contract — see
+   * notification-inbox-row.component.spec.ts; do not change that); this
+   * panel resolves the full item from its own `@Input() items` to decide
+   * whether a navigation applies. */
+  @Output() navigate = new EventEmitter<{ type: string; id: number }>();
 
   // First-load spinner only — a background refresh with cached items must
   // NOT re-show it (stale-while-revalidate).
@@ -44,6 +51,12 @@ export class NotificationInboxPanelComponent {
   }
 
   protected onRowOpen(id: number): void {
+    // Existing mark-read behaviour, unchanged.
     this.markOne.emit(id);
+
+    const item = this.items.find((i) => i.id === id);
+    if (item?.notificationType === 'NOTIF_MSG_OVERRIDE_PENDING' && item.relatedEntityId != null) {
+      this.navigate.emit({ type: item.notificationType, id: item.relatedEntityId });
+    }
   }
 }

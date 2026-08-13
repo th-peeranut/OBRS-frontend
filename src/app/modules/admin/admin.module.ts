@@ -88,6 +88,7 @@ import { NotificationMessageReviewQueueTableComponent } from './pages/notificati
 import { NotificationMessageReviewDetailPageComponent } from './pages/notification-messages/notification-message-review-detail-page.component';
 import { NotificationMessageReviewDiffComponent } from './pages/notification-messages/notification-message-review-diff/notification-message-review-diff.component';
 import { NotificationMessageRejectDialogComponent } from './pages/notification-messages/notification-message-reject-dialog/notification-message-reject-dialog.component';
+import { NotificationMessageAccessDeniedComponent } from './pages/notification-messages/notification-message-access-denied/notification-message-access-denied.component';
 import { AuthGuard } from '../../auth/auth.guard';
 import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
 import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
@@ -493,6 +494,7 @@ export const adminRoutes: Routes = [
     NotificationMessageReviewDetailPageComponent,
     NotificationMessageReviewDiffComponent,
     NotificationMessageRejectDialogComponent,
+    NotificationMessageAccessDeniedComponent,
   ],
   imports: [
     SharedModule,
