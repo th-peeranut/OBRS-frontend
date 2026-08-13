@@ -60,6 +60,34 @@
 # looks — this is the surface where violations are actually collected, so leaving it out
 # would fill the collector with false positives from every tile and bury the real ones.
 #
+# `img-src https://hkupaujkdvdrqmtifgsm.supabase.co` is SIT's Supabase Storage project,
+# where the screenshots customers attach to usability reports live. The backend returns
+# an absolute `https://<project-ref>.supabase.co/storage/v1/object/public/…` URL and four
+# surfaces bind it straight into `<img [src]>`: the admin report detail modal and its
+# lightbox, the customer "My reports" modal, the shared follow-up timeline, and the edit
+# form's preview of already-uploaded images. `img-src`, not `connect-src` — nothing
+# fetches these over XHR — and a named host, not `https://*.supabase.co`, which would
+# trust every Supabase project on the internet.
+#   ⚠️ This ref is SIT's and differs from prod's, so the two policies do NOT carry the
+#   same string here. Copying prod's ref over would allowlist an origin SIT never loads
+#   while still blocking the one it does — and Report-Only means SIT would show no symptom
+#   at all, which is why check-payment-page-scripts.mjs rejects prod's ref by name.
+#   What the value rests on, in order of weight: it was MEASURED to exist —
+#   `GET https://<ref>.supabase.co/storage/v1/bucket` answers 400, i.e. storage-api
+#   replying, while an invented ref does not resolve at all — and it was read off
+#   `application-sit.yml`'s pooler username (`postgres.hkupaujkdvdrqmtifgsm`), the same
+#   route OBRS-206 took for prod before confirming it on the VM.
+#   ⛔ Only the REF travels that way, never the whole host. `application-prod.yml` says in
+#   its own comment (OBRS-401/429) that the pooler HOSTNAME was copied verbatim from the
+#   dashboard and must not be derived, because Supabase assigns the region prefix per
+#   project. Storage is `<ref>.supabase.co` — no region in it — which is why the ref alone
+#   is enough here and is not a licence to guess the database host.
+#   This entry exists because prod shipped without it. Report-Only hid the gap on both
+#   environments until OBRS-719 AC 5 made prod's header enforcing, and every one of those
+#   thumbnails became a broken-image icon the same day (OBRS-1311). None of the four
+#   surfaces is on the booking→payment journey, so no amount of draining that journey's
+#   violations would have found it.
+#
 # The analytics origins (OBRS-882, for the tags OBRS-867 added) are here for that exact
 # reason, restated because it is the one that got missed: OBRS-867 shipped two script
 # loaders and touched no CSP, on the strength of a comment in
@@ -130,7 +158,7 @@
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://accounts.google.com https://maps.googleapis.com https://cdn.omise.co https://*.gstatic.com https://www.googletagmanager.com https://www.clarity.ms https://scripts.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://api.maptiler.com https://*.google-analytics.com https://c.clarity.ms https://c.bing.com; connect-src 'self' https://sit-obrs-backend.koyeb.app https://api.omise.co https://vault.omise.co https://maps.googleapis.com https://accounts.google.com wss://sit-obrs-backend.koyeb.app https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms; frame-src https://accounts.google.com https://*.omise.co; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; report-uri https://sit-obrs-backend.koyeb.app/api/csp-report"
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://accounts.google.com https://maps.googleapis.com https://cdn.omise.co https://*.gstatic.com https://www.googletagmanager.com https://www.clarity.ms https://scripts.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://api.maptiler.com https://*.google-analytics.com https://c.clarity.ms https://c.bing.com https://hkupaujkdvdrqmtifgsm.supabase.co; connect-src 'self' https://sit-obrs-backend.koyeb.app https://api.omise.co https://vault.omise.co https://maps.googleapis.com https://accounts.google.com wss://sit-obrs-backend.koyeb.app https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms; frame-src https://accounts.google.com https://*.omise.co; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; report-uri https://sit-obrs-backend.koyeb.app/api/csp-report"
 
 # Strict-Transport-Security is deliberately NOT set here. SIT is a *.netlify.app
 # subdomain and an HSTS header from us binds that host for a year; prod sets it in the
