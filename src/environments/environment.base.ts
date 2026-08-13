@@ -68,6 +68,12 @@ export const environmentBase = {
     // Flip to `true` to reopen everywhere. Two conditions, neither dated yet:
     // (a) a SALESPERSON account exists and staff are trained (OBRS-850 AC-2 /
     // OBRS-1218), (b) OBRS-832 closes so booking SMS stops failing silently.
+    //
+    // ONE config overrides this back to `true`: `environment.ts`, which is what
+    // `ng test`, `npm run build` and the e2e gate lane build against. The reason
+    // is written there and it is not a loophole — prod and SIT both inherit the
+    // `false` below. Unlike the two flags above, this one is a fact about the
+    // business, so a test lane has no business inheriting it.
     onlineTicketBooking: false,
   },
 };
