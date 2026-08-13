@@ -99,3 +99,36 @@ test('OBRS-1308 evidence capture', async ({ page, browser }) => {
   await expect(page.locator('[data-testid="notification-message-save"]')).toBeEnabled();
   await page.screenshot({ path: `${OUT_DIR}/OBRS-1308-AFTER-sms-credit-delta.png`, fullPage: true });
 });
+
+/**
+ * OBRS-1308 QA RE-RUN (Scope 1) - dedicated evidence for the AC2 defect that was reported and
+ * then fixed: NotificationMessagePlaceholderException.getReason() returned the constant
+ * "PLACEHOLDER_MISMATCH" for BOTH constructors, so an unbalanced-brace body (which clears the
+ * missing/extra gate and fails only the MessageFormat compile, arriving with both index arrays
+ * empty) hit the template's PLACEHOLDER_MISMATCH branch, had nothing to list, and rendered ZERO
+ * visible error - the owner saw Save silently do nothing. Captures a real AFTER screenshot for
+ * each of the four violation shapes, with the unmatched-brace case as the primary evidence
+ * (it is the one that was broken). Assertions are NOT weakened versions of the QA spec's own
+ * checks - same locator, same requirement that visible error text appears.
+ */
+test('OBRS-1308 re-run - AC2 four violation shapes each show a visible error (unmatched brace was the defect)', async ({ page }) => {
+  await login(page, OWNER_EMAIL);
+  await page.goto(`/admin/settings/notification-messages/edit/${MESSAGE_CODE}/${LOCALE}`);
+  await expect(page.locator('[data-testid="notification-message-body"]')).toBeVisible({ timeout: 15_000 });
+
+  const cases: Array<{ name: string; body: string; file: string }> = [
+    { name: 'missing placeholder', body: 'Trip delayed: {0} check your ticket.', file: 'OBRS-1308-AFTER-ac2-missing-index.png' },
+    { name: 'extra placeholder', body: 'Trip delayed: {0} new eta {1} extra {2}.', file: 'OBRS-1308-AFTER-ac2-extra-index.png' },
+    { name: 'renumbered placeholder', body: 'Trip delayed: {0} new eta {2}.', file: 'OBRS-1308-AFTER-ac2-renumbered-index.png' },
+    { name: 'unbalanced brace (THE DEFECT)', body: 'Trip delayed: {0} new eta {1}. Unbalanced trailing brace: {', file: 'OBRS-1308-AFTER-ac2-unbalanced-brace.png' },
+  ];
+
+  for (const c of cases) {
+    await page.locator('[data-testid="notification-message-body"]').fill(c.body);
+    await page.locator('[data-testid="notification-message-save"]').click();
+    await expect(page.locator('small.admin-error[role="alert"]').first()).toBeVisible({ timeout: 10_000 });
+    await page.screenshot({ path: `${OUT_DIR}/${c.file}`, fullPage: true });
+    // Clear for the next case (avoid stale text carrying between screenshots).
+    await page.locator('[data-testid="notification-message-body"]').fill('');
+  }
+});
