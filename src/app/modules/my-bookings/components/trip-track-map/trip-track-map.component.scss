@@ -23,8 +23,15 @@
 // this component's own host, just needed because the injected DOM carries no
 // _ngcontent attribute.
 :host ::ng-deep {
+  // OBRS-1335 — `absolute`, never `relative`; the measurement is on the
+  // same-named block in fleet-map-panel.component.scss. Short version: this
+  // ::ng-deep rule outweighs Leaflet's own `.leaflet-marker-icon { position:
+  // absolute }`, and a `relative` marker rejoins the marker pane's normal flow,
+  // so every marker added after the first is pushed down by the ones before it.
+  // Both markers on this page share that one pane. `absolute` also gives
+  // `.trip-track-marker-halo/-dot` the containing block `relative` was for.
   .trip-track-marker {
-    position: relative;
+    position: absolute;
     display: block;
   }
 
@@ -62,8 +69,11 @@
     }
   }
 
+  // OBRS-1335 — same rule, same reason as `.trip-track-marker` above. This is
+  // the marker that was actually landing in the wrong place: it is added to the
+  // pane after the vehicle marker, so it inherited the whole displacement.
   .trip-track-boarding-marker {
-    position: relative;
+    position: absolute;
     display: block;
   }
 
