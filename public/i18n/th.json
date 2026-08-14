@@ -2809,7 +2809,7 @@
       "PARCEL_WAYBILL": "ใบนำส่งพัสดุ",
       "PARCEL_SCHEDULE": "งานพัสดุประจำรอบ",
       "INSPECTION": "ตรวจสภาพรถ",
-      "FLEET_MAP": "แผนที่ยานพาหนะสด",
+      "FLEET_MAP": "ตำแหน่งรถสด",
       "CANCEL_BOOKING": "ยกเลิกการจอง",
       "MY_EARNINGS": "รายได้ค่าหัวของฉัน"
     },
@@ -2839,7 +2839,7 @@
       "PARCEL_CONSIGN": "ฝากส่งพัสดุ",
       "PARCEL_SCHEDULE": "ตรวจรับ/ส่งมอบพัสดุ",
       "INSPECTION": "ตรวจสภาพรถ",
-      "FLEET_MAP": "แผนที่ยานพาหนะ",
+      "FLEET_MAP": "ตำแหน่งรถ",
       "CANCEL_BOOKING": "ยกเลิกการจอง",
       "SECTION": {
         "SALES": "งานขาย",
