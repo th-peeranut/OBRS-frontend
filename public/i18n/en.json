@@ -2809,7 +2809,7 @@
       "PARCEL_WAYBILL": "Waybill",
       "PARCEL_SCHEDULE": "Parcel Handling",
       "INSPECTION": "Vehicle Inspection",
-      "FLEET_MAP": "Fleet Live Map",
+      "FLEET_MAP": "Live Vehicle Locations",
       "CANCEL_BOOKING": "Cancel Booking",
       "MY_EARNINGS": "My Per-Head Earnings"
     },
@@ -2839,7 +2839,7 @@
       "PARCEL_CONSIGN": "Consign Parcel",
       "PARCEL_SCHEDULE": "Verify & Handover",
       "INSPECTION": "Inspection",
-      "FLEET_MAP": "Fleet Map",
+      "FLEET_MAP": "Vehicle Locations",
       "CANCEL_BOOKING": "Cancel Booking",
       "SECTION": {
         "SALES": "Sales",

@@ -2809,7 +2809,7 @@
       "PARCEL_WAYBILL": "运单",
       "PARCEL_SCHEDULE": "班次包裹作业",
       "INSPECTION": "车辆检查",
-      "FLEET_MAP": "车队实时地图",
+      "FLEET_MAP": "车辆实时位置",
       "CANCEL_BOOKING": "取消订票",
       "MY_EARNINGS": "我的人头费收入"
     },
@@ -2839,7 +2839,7 @@
       "PARCEL_CONSIGN": "寄送包裹",
       "PARCEL_SCHEDULE": "验收 / 交接",
       "INSPECTION": "车辆检查",
-      "FLEET_MAP": "车队地图",
+      "FLEET_MAP": "车辆位置",
       "CANCEL_BOOKING": "取消订票",
       "SECTION": {
         "SALES": "售票",
