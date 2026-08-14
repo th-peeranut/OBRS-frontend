@@ -194,6 +194,12 @@
             min="1"
             formControlName="intervalKm"
             />
+          <!-- Cross-field error, rendered under BOTH interval fields. -->
+          @if (hasIntervalError() && planForm.touched) {
+            <small class="admin-error">
+              {{ 'ADMIN.VEHICLES.MAINTENANCE_PLAN.INTERVAL_REQUIRED_VALIDATION' | translate }}
+            </small>
+          }
         </div>
         <div class="admin-form-field">
           <label class="admin-form-label">{{ 'ADMIN.VEHICLES.MAINTENANCE_PLAN.INTERVAL_DAYS' | translate }}</label>
