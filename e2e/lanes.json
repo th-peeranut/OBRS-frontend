@@ -387,6 +387,12 @@
       "why": "OBRS-1308 card evidence: the settings tab strip, the owner edit screen with a live {n} violation, the admin inbox and review diff, the post-approval result, and the SMS credit counter showing a raised count with Save still ENABLED -- that last frame is the AC12 decision photographed, since 'display-only, never a gate' is a claim a picture can actually settle. Also carries the AC2 re-run arm: four violation shapes, one AFTER frame each, with the unmatched brace as the primary evidence because it is the one that used to render nothing at all. The BEFORE tab-strip frame is RECONSTRUCTED by removing the new tab from the DOM rather than building origin/dev, and is labeled as reconstructed in the file, on the card and here -- it is not a live BEFORE render and must not be quoted as one."
     },
     {
+      "spec": "obrs-1331-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1331.config.ts",
+      "why": "OBRS-1331 card evidence: /admin/settings at 1280x720 -- the width the owner reported -- in en/th and light/dark, plus a 1600px pair where the strip does NOT wrap. Two hand-started `ng serve` instances and no backend, the same shape OBRS-702 used for this same page: the strip is built entirely from SYSTEM_SETTINGS_TABS on the frontend, so only the Booking Policy read needs stubbing. The BEFORE frames are NOT reconstructed -- they are served live from the OBRS-1308 worktree, which is `dev` carrying the seventh tab and not this card's one declaration, i.e. exactly the state that was screenshotted. Every shot measures rows/gap/baseline first and FAILS if the strip did not actually wrap, because a picture of a strip that happened to fit would look like proof of a fix that was never exercised. Kept rather than deleted after the run, for the next card that adds a tab (OBRS-703, OBRS-705)."
+    },
+    {
       "spec": "obrs-1207-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1207capture.config.ts",
