@@ -24,6 +24,7 @@ const LABELS: MaintenancePartLabels = {
   battery: 'Battery',
   coolant: 'Coolant',
   transmissionFluid: 'Transmission fluid',
+  timingBelt: 'Timing belt',
 };
 
 const PART_OPTIONS: Option[] = toPartOptions(LABELS);
@@ -33,6 +34,16 @@ describe('vehicle-maintenance-plan.mappers', () => {
     it('returns exactly the fixed part codes, in MAINTENANCE_PART_CODES order (mirrors EXPENSE_CATEGORY_CODES parity)', () => {
       expect(PART_OPTIONS.map((o) => o.code)).toEqual([...MAINTENANCE_PART_CODES]);
       expect(PART_OPTIONS.find((o) => o.code === 'BRAKE_PADS')?.label).toBe('Brake pads');
+    });
+
+    // OBRS-1333 owner decision (2026-08-14): 13 codes total — SPARK_PLUGS
+    // stays (fuel type isn't tracked anywhere in the schema) and TIMING_BELT
+    // was added, pinned LAST (after TRANSMISSION_FLUID) to match the backend
+    // enum's append order.
+    it('is exactly 13 codes, with TIMING_BELT last', () => {
+      expect(MAINTENANCE_PART_CODES.length).toBe(13);
+      expect(MAINTENANCE_PART_CODES[MAINTENANCE_PART_CODES.length - 1]).toBe('TIMING_BELT');
+      expect(PART_OPTIONS[PART_OPTIONS.length - 1]).toEqual({ code: 'TIMING_BELT', label: 'Timing belt' });
     });
 
     // Mirrors expenses-page.mappers.spec.ts's "no code falls through unwired"

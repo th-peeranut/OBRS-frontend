@@ -26,6 +26,14 @@ export interface Option {
  * catalogue. Order and values must stay byte-identical to the backend enum's
  * declaration order (confirmed 2026-08-14 against
  * `com.example.demo.enums.EMaintenancePart`).
+ *
+ * OBRS-1333 owner decision (2026-08-14): `SPARK_PLUGS` stays — the fleet may
+ * mix petrol/diesel and fuel type is not tracked anywhere in the schema
+ * (`V8__seed_real_minibus_fleet.sql` notes model/year are still absent per
+ * OBRS-316) — and `TIMING_BELT` was added, appended LAST (after
+ * `TRANSMISSION_FLUID`) because the backend enum appends it last too, and
+ * there is no cross-repo gate that catches an order mismatch (this file's
+ * own gate only pins internal FE consistency).
  */
 export const MAINTENANCE_PART_CODES = [
   'ENGINE_OIL',
@@ -40,6 +48,7 @@ export const MAINTENANCE_PART_CODES = [
   'BATTERY',
   'COOLANT',
   'TRANSMISSION_FLUID',
+  'TIMING_BELT',
 ] as const;
 
 export type MaintenancePartCode = (typeof MAINTENANCE_PART_CODES)[number];
@@ -61,6 +70,7 @@ export interface MaintenancePartLabels {
   battery: string;
   coolant: string;
   transmissionFluid: string;
+  timingBelt: string;
 }
 
 export function toPartOptions(labels: MaintenancePartLabels): Option[] {
@@ -77,6 +87,7 @@ export function toPartOptions(labels: MaintenancePartLabels): Option[] {
     { code: 'BATTERY', label: labels.battery },
     { code: 'COOLANT', label: labels.coolant },
     { code: 'TRANSMISSION_FLUID', label: labels.transmissionFluid },
+    { code: 'TIMING_BELT', label: labels.timingBelt },
   ];
 }
 

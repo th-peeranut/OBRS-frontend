@@ -43,6 +43,7 @@ const PART_OPTIONS: Option[] = toPartOptions({
   battery: 'Battery',
   coolant: 'Coolant',
   transmissionFluid: 'Transmission fluid',
+  timingBelt: 'Timing belt',
 });
 
 function buildRecord(overrides: Partial<AdminVehicleMaintenancePlanDto> = {}): AdminVehicleMaintenancePlanDto {

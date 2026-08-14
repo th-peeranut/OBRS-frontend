@@ -918,7 +918,8 @@
           "TIRES": "ยางรถ",
           "BATTERY": "แบตเตอรี่",
           "COOLANT": "น้ำหล่อเย็น",
-          "TRANSMISSION_FLUID": "น้ำมันเกียร์"
+          "TRANSMISSION_FLUID": "น้ำมันเกียร์",
+          "TIMING_BELT": "สายพานราวลิ้น"
         }
       }
     },

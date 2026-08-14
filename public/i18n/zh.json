@@ -918,7 +918,8 @@
           "TIRES": "轮胎",
           "BATTERY": "电瓶",
           "COOLANT": "冷却液",
-          "TRANSMISSION_FLUID": "变速箱油"
+          "TRANSMISSION_FLUID": "变速箱油",
+          "TIMING_BELT": "正时皮带"
         }
       }
     },

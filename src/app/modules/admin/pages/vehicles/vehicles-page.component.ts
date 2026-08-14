@@ -328,6 +328,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
       battery: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.BATTERY'),
       coolant: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.COOLANT'),
       transmissionFluid: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.TRANSMISSION_FLUID'),
+      timingBelt: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.TIMING_BELT'),
     };
   }
 

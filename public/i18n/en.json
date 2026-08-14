@@ -918,7 +918,8 @@
           "TIRES": "Tires",
           "BATTERY": "Battery",
           "COOLANT": "Coolant",
-          "TRANSMISSION_FLUID": "Transmission fluid"
+          "TRANSMISSION_FLUID": "Transmission fluid",
+          "TIMING_BELT": "Timing belt"
         }
       }
     },
