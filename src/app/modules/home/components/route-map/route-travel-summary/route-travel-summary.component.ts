@@ -61,13 +61,20 @@ export class RouteTravelSummaryComponent {
 
   /** Distance shown in the summary: the authoritative selected-segment delta
    *  when available, else the whole-route total. Rounded to a whole km
-   *  (min 1 for a real segment). */
+   *  (min 1 for a real segment).
+   *
+   *  OBRS-1341: the whole-route total is rounded on the same line as the segment.
+   *  It used to be returned raw, which was invisible only because the seeded total
+   *  was the whole number 80 — against a measured 133.57 the same panel would have
+   *  read "133.57 km" unselected and "134 km" for first-stop→last-stop, which is the
+   *  two-numbers-for-one-journey bug this card exists to remove, reintroduced by
+   *  rounding instead of by data. */
   get displayDistanceKm(): number {
     const segment = this.segmentDistanceKm;
     if (segment != null) {
       return Math.max(1, Math.round(segment));
     }
-    return this.routeMeta?.totalDistanceKm ?? 0;
+    return Math.round(this.routeMeta?.totalDistanceKm ?? 0);
   }
 
   /** Duration shown in the summary when a segment is resolved: the
