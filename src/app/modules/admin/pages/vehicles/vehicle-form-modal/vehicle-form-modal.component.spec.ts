@@ -62,6 +62,10 @@ function makeComponent(getVehicleById$: Subject<ResponseAPI<AdminVehicleDto>>) {
     updateVehicle: jasmine
       .createSpy('updateVehicle')
       .and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    // OBRS-1332: the assigned-driver picker's source.
+    getDrivers: jasmine
+      .createSpy('getDrivers')
+      .and.returnValue(of({ code: 200, message: 'OK', data: [{ id: 55, name: 'สมชาย' }] })),
   };
   const alert = {
     success: jasmine.createSpy('success').and.resolveTo(undefined),
@@ -382,6 +386,9 @@ describe('VehicleFormModalComponent', () => {
         // is also what stops a future field being added to the payload without someone
         // deciding what create should send for it.
         gpsImei: null,
+        // OBRS-1332: present-and-null too — a new vehicle has no regular driver until
+        // somebody picks one, and the key has to be there to say so.
+        assignedDriverId: null,
       });
     });
 
@@ -581,6 +588,94 @@ describe('VehicleFormModalComponent', () => {
       openCreate(component);
       expect((component as any).vehicleForm.get('vehicleNumber').valid).toBeFalse();
       expect((component as any).isVehicleNumberOptional).toBeFalse();
+    });
+  });
+
+  // ── OBRS-1332: the regular driver — set it, change it, take it off ────────────
+  describe('assigned driver (OBRS-1332)', () => {
+    it('loads the current regular driver from the vehicle detail into the form', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse({ assignedDriverId: 55 }));
+      getVehicleById$.complete();
+      await promise;
+
+      expect((component as any).vehicleForm.get('assignedDriverId').value).toBe('55');
+    });
+
+    // Drives ngOnChanges rather than openEditAwait's direct initEditForm call — opening
+    // the modal is what triggers the roster fetch, so a test that skips that boundary
+    // would be green with the fetch wired to nothing.
+    it('fills the picker from the driver roster when the modal opens', async () => {
+      const { component } = makeComponent(new Subject<ResponseAPI<AdminVehicleDto>>());
+
+      openCreate(component);
+      // The roster load is deliberately NOT awaited by the open path — the modal must
+      // not wait on it to become usable — so flush the queue before reading it.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect((component as any).driverOptions).toEqual([{ code: '55', label: 'สมชาย' }]);
+    });
+
+    it('sends the chosen driver on save', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse());
+      getVehicleById$.complete();
+      await promise;
+
+      (component as any).vehicleForm.patchValue({ assignedDriverId: '55' });
+      await (component as any).submitVehicle();
+
+      expect(adminApi.updateVehicle.calls.mostRecent().args[1].assignedDriverId).toBe(55);
+    });
+
+    /**
+     * Taking a driver off a van has to be expressible, or the column is write-once from
+     * the UI and a driver who leaves stays attached to their van forever — still
+     * receiving that van's maintenance reminders.
+     */
+    it('sends null when the owner clears the picker', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse({ assignedDriverId: 55 }));
+      getVehicleById$.complete();
+      await promise;
+
+      (component as any).vehicleForm.patchValue({ assignedDriverId: '' });
+      await (component as any).submitVehicle();
+
+      expect(adminApi.updateVehicle.calls.mostRecent().args[1].assignedDriverId).toBeNull();
+    });
+
+    /**
+     * A failed driver-roster fetch must NOT behave like a failed detail fetch. The value
+     * being saved comes from the detail-loaded control, not from this list, so an empty
+     * picker cannot wipe an assignment — and blocking Save over it would make an
+     * unrelated outage stop every vehicle edit.
+     */
+    it('keeps the loaded assignment when the driver roster fails to load', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+      adminApi.getDrivers.and.returnValue(throwError(() => new Error('boom')));
+
+      openEdit(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse({ assignedDriverId: 55 }));
+      getVehicleById$.complete();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(adminApi.getDrivers).toHaveBeenCalled();
+      expect((component as any).driverOptions).toEqual([]);
+      expect((component as any).isEditDetailError).toBeFalse();
+
+      await (component as any).submitVehicle();
+      expect(adminApi.updateVehicle.calls.mostRecent().args[1].assignedDriverId).toBe(55);
     });
   });
 

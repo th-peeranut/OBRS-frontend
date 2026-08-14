@@ -4,6 +4,7 @@ import {
   countCompletedRows,
   countGroupCompleted,
   findFirstIncompleteRowIndex,
+  findAssignedVehicleCode,
   findFirstMissingNoteRowIndex,
   groupRowsByCategory,
   InspectionItemRow,
@@ -33,9 +34,39 @@ function makeRow(overrides: Partial<InspectionItemRow> = {}): InspectionItemRow 
 describe('inspection-page.mappers', () => {
   describe('toVehicleOptions', () => {
     it('maps to {code, label} with no pre-seeded selection concern (§3.1)', () => {
-      expect(toVehicleOptions([{ id: 5, label: 'Van 05' }])).toEqual([
+      expect(toVehicleOptions([{ id: 5, label: 'Van 05', assignedToMe: false }])).toEqual([
         { code: '5', label: 'Van 05' },
       ]);
+    });
+  });
+
+  // OBRS-1332: the DEFAULT selection. Note what is NOT asserted anywhere here — that the
+  // list is filtered. It is not: the whole fleet stays selectable (ADR-0091), and this
+  // function only says which row the form should start on.
+  describe('findAssignedVehicleCode', () => {
+    it('returns the code of the van this driver is the regular driver of', () => {
+      expect(
+        findAssignedVehicleCode([
+          { id: 5, label: 'Van 05', assignedToMe: false },
+          { id: 9, label: 'Van 09', assignedToMe: true },
+        ])
+      ).toBe('9');
+    });
+
+    it('returns null when the driver has no regular van, leaving the picker empty (§3.1)', () => {
+      expect(
+        findAssignedVehicleCode([{ id: 5, label: 'Van 05', assignedToMe: false }])
+      ).toBeNull();
+      expect(findAssignedVehicleCode([])).toBeNull();
+    });
+
+    it('picks the first when a driver is the regular driver of several vans', () => {
+      expect(
+        findAssignedVehicleCode([
+          { id: 5, label: 'Van 05', assignedToMe: true },
+          { id: 9, label: 'Van 09', assignedToMe: true },
+        ])
+      ).toBe('5');
     });
   });
 

@@ -197,6 +197,13 @@ export interface AdminVehicleDto {
    * row has nothing to echo back.
    */
   gpsImei?: string | null;
+  /**
+   * OBRS-1332: the driver who normally drives this vehicle, `null` for none. Rides the
+   * same detail-only narrowing as `gpsImei` above — the fleet list does not carry it and
+   * neither does the copy nested in a schedule, so a form seeded from a row has nothing
+   * to echo back until the detail fetch lands.
+   */
+  assignedDriverId?: number | null;
 }
 
 /** OBRS-209: a single vehicle-maintenance record (backend OBRS-102).
@@ -878,6 +885,12 @@ export interface CreateVehiclePayload {
    * current value failed — see the modal's `isEditDetailError` guard.
    */
   gpsImei: string | null;
+  /**
+   * OBRS-1332: the vehicle's regular driver. `null` UNASSIGNS; an absent key would mean
+   * "leave whoever is there" (`applyTo` is conditional on this field too — it is the
+   * fourth of that shape). Always sent, for the same reason as `gpsImei` above.
+   */
+  assignedDriverId: number | null;
 }
 
 /** OBRS-209: create/update payload for a vehicle-maintenance record.
@@ -1272,6 +1285,16 @@ export class AdminApiService {
 
   getVehicleById(id: number): Observable<ResponseAPI<AdminVehicleDto>> {
     return this.getRequest<AdminVehicleDto>(`${this.baseUrl}/private/vehicles/${id}`);
+  }
+
+  /** OBRS-1332: the assigned-driver picker's source — the same
+   * `/private/users/drivers` list the staff schedule page uses. It is
+   * SALESPERSON-readable, so an OWNER reaches it through the role hierarchy, and the
+   * backend has already confined it to the `driver` role and this operator's payroll
+   * (OBRS-824). Declared here rather than reaching into `StaffApiService`: no admin
+   * module depends on that service today and this card is not the reason to start. */
+  getDrivers(): Observable<ResponseAPI<DriverDto[]>> {
+    return this.getRequest<DriverDto[]>(`${this.baseUrl}/private/users/drivers`);
   }
 
   createVehicle(payload: CreateVehiclePayload): Observable<ResponseAPI<unknown>> {

@@ -371,6 +371,21 @@ describe('vehicles-page.mappers', () => {
       });
     });
 
+    // OBRS-1332: the third field of that shape — `assigned_driver_id`, which is also
+    // conditional on the backend, so the same always-present rule applies. Wrong here,
+    // and clearing the picker silently leaves the old driver attached.
+    describe('assignedDriverId (OBRS-1332)', () => {
+      it('sends a cleared picker as null, and always serializes the key', () => {
+        expect(toVehiclePayload({}).assignedDriverId).toBeNull();
+        expect(toVehiclePayload({ assignedDriverId: '' }).assignedDriverId).toBeNull();
+        expect('assignedDriverId' in toVehiclePayload({})).toBe(true);
+      });
+
+      it('sends a NUMBER, not the select\'s string code', () => {
+        expect(toVehiclePayload({ assignedDriverId: '55' }).assignedDriverId).toBe(55);
+      });
+    });
+
     // OBRS-316 Gap 1: PUT is a full-replace, so ALL 7 attribute keys must always
     // be serialized (create AND edit) — this is the "echo all 7, no null-drop"
     // contract the R1 guard exists to protect.

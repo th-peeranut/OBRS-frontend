@@ -371,6 +371,10 @@ export interface VehicleInspectionItemDto {
 export interface InspectableVehicleDto {
   id: number;
   label: string;
+  /** OBRS-1332: true for the van this driver is the regular driver of — the
+   * form's DEFAULT selection, not a permission. Every other row stays
+   * selectable whatever this says; the list is still the whole fleet. */
+  assignedToMe: boolean;
 }
 
 export type InspectionVerdict = 'ok' | 'needs_repair';
