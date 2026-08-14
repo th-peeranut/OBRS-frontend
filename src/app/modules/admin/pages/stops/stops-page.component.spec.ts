@@ -1,4 +1,4 @@
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { StopsPageComponent } from './stops-page.component';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 
@@ -210,5 +210,132 @@ describe('StopsPageComponent (OBRS-1022)', () => {
 
     component.onSearchKeywordChange('nong');
     expect(component.filteredRows.length).toBe(1);
+  });
+
+  describe('OBRS-1298: row-click opens the modal', () => {
+    it('onRowActivate opens the row for a plain click and marks it selected', async () => {
+      const { component } = makeComponent();
+      await component.load();
+      spyOn(window, 'getSelection').and.returnValue({ toString: () => '' } as unknown as Selection);
+
+      // openStop flips these flags SYNCHRONOUSLY (optimistic open — see the describe block
+      // below), so they are already set the instant onRowActivate returns, well before the
+      // fire-and-forget detail fetch it kicks off has resolved.
+      component.onRowActivate(component.filteredRows[0], { target: document.createElement('td') } as unknown as MouseEvent);
+
+      expect(component.isFormModalOpen).toBeTrue();
+      expect(component.selectedStopId).toBe(7);
+    });
+
+    it('the guard blocks a click whose target is inside the "แก้ไข" button, so openStop is not double-invoked', async () => {
+      // The button's OWN (click)="openStop(row.id)" handler is what opens the row from a
+      // button click; the bubbled click also reaches the <tr>'s onRowActivate, which must
+      // ignore it so openStop never fires a second time for the same interaction.
+      const { component } = makeComponent();
+      await component.load();
+      spyOn(component, 'openStop').and.callThrough();
+
+      const buttonTarget = document.createElement('button');
+      buttonTarget.type = 'button';
+      component.onRowActivate(component.filteredRows[0], { target: buttonTarget } as unknown as MouseEvent);
+
+      expect(component.openStop).not.toHaveBeenCalled();
+    });
+
+    it('the guard blocks a click that ends a text selection', async () => {
+      const { component } = makeComponent();
+      await component.load();
+      spyOn(component, 'openStop').and.callThrough();
+      spyOn(window, 'getSelection').and.returnValue({ toString: () => 'nong chak' } as unknown as Selection);
+
+      const cellTarget = document.createElement('td');
+      component.onRowActivate(component.filteredRows[0], { target: cellTarget } as unknown as MouseEvent);
+
+      expect(component.openStop).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('OBRS-1298: the modal opens optimistically', () => {
+    it('flips isFormModalOpen/isDetailLoading synchronously, before the detail fetch resolves', () => {
+      const { component } = makeComponent({
+        getStopDetail: jasmine.createSpy().and.returnValue(new Subject().asObservable()),
+      });
+
+      void component.openStop(7);
+
+      expect(component.isFormModalOpen).toBeTrue();
+      expect(component.isDetailLoading).toBeTrue();
+      expect(component.selectedStopId).toBe(7);
+      // The detail hasn't arrived yet — the modal is open on the skeleton, not on data.
+      expect(component.selected).toBeNull();
+    });
+
+    it('drops a stale response when a second row opens before the first one resolves', async () => {
+      const first$ = new Subject<{ data: typeof STOP_DETAIL }>();
+      const second$ = new Subject<{ data: typeof STOP_DETAIL }>();
+      const { component, adminApi } = makeComponent({
+        getStopDetail: jasmine
+          .createSpy()
+          .and.returnValues(first$.asObservable(), second$.asObservable()),
+      });
+
+      const firstOpen = component.openStop(7);
+      const secondOpen = component.openStop(8);
+      expect(component.selectedStopId).toBe(8);
+
+      // Row 7's (now stale) response arrives late — it must not clobber row 8's modal.
+      first$.next({ data: { ...STOP_DETAIL, id: 7, slug: 'row-a' } });
+      first$.complete();
+      await firstOpen;
+      expect(component.selected).toBeNull();
+      expect(component.selectedStopId).toBe(8);
+
+      second$.next({ data: { ...STOP_DETAIL, id: 8, slug: 'row-b' } });
+      second$.complete();
+      await secondOpen;
+      expect(component.selected?.slug).toBe('row-b');
+      expect(adminApi.getStopDetail).toHaveBeenCalledTimes(2);
+    });
+
+    it('closes the modal on a fetch failure instead of leaving an empty dialog open', async () => {
+      const { component, alert } = makeComponent({
+        getStopDetail: jasmine.createSpy().and.returnValue(throwError(() => new Error('500'))),
+      });
+
+      await component.openStop(7);
+
+      expect(component.isFormModalOpen).toBeFalse();
+      expect(component.selected).toBeNull();
+      expect(component.selectedStopId).toBeNull();
+      expect(alert.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('OBRS-1298: closeDetail() and onLangChange', () => {
+    it('closeDetail() resets the modal open flag along with the selected stop', async () => {
+      const { component } = makeComponent();
+      await component.load();
+      await component.openStop(7);
+
+      component.closeDetail();
+
+      expect(component.isFormModalOpen).toBeFalse();
+      expect(component.selected).toBeNull();
+      expect(component.selectedStopId).toBeNull();
+    });
+
+    it('re-fetches the open stop on language change without closing the modal', async () => {
+      const { component, adminApi, translate } = makeComponent();
+      await component.load();
+      await component.openStop(7);
+      adminApi.getStopDetail.calls.reset();
+
+      translate.onLangChange.next({ lang: 'en' });
+
+      // The re-fetch (openStop) runs synchronously up to its first await, same as the
+      // optimistic-open path — the modal must stay open, not flicker shut, while it reloads.
+      expect(component.isFormModalOpen).toBeTrue();
+      expect(adminApi.getStopDetail).toHaveBeenCalledWith(7);
+    });
   });
 });

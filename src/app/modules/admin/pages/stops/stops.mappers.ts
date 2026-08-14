@@ -21,6 +21,15 @@ import { hasOwnKey } from '../../../../shared/lib/own-key';
 export const STOP_LOCALES = ['th', 'en', 'zh'] as const;
 export type StopLocale = (typeof STOP_LOCALES)[number];
 
+/** A dropdown option shown on the stop form (province / status / stop type).
+ *  OBRS-1298: shared by StopsPageComponent (which owns the option lists) and
+ *  StopFormModalComponent (which only renders them) — one interface, not a
+ *  duplicate declared in each file. */
+export interface Option {
+  code: string;
+  label: string;
+}
+
 export interface StopRow {
   id: number;
   slug: string;

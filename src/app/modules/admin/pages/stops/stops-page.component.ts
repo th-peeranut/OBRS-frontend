@@ -12,6 +12,7 @@ import {
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import {
+  Option,
   StopDetailForm,
   StopRow,
   filterStopRows,
@@ -19,11 +20,6 @@ import {
   toStopRow,
   toStopUpdatePayload,
 } from './stops.mappers';
-
-interface Option {
-  code: string;
-  label: string;
-}
 
 /**
  * OBRS-1022: the owner's stop management screen — the first one this product has ever had.
@@ -41,8 +37,14 @@ interface Option {
  * (`StopReqDto#primaryPhotoUrlPresent`) and `AdminStopUpdatePayload` has no field for it at all,
  * so neither is expressible here. Upload/remove act immediately and refresh the detail.
  *
- * <p>One smart page component, no dumb children — same scale and shape as
- * `JumpSeatConfigPageComponent` / `CargoCapacityPageComponent`.
+ * <p>OBRS-1298: the detail form used to render inline below the table (forcing a scroll
+ * to the bottom of the page every time an owner clicked edit) and the edit affordance was
+ * a button at the far right of the row. Both are fixed the same way: {@code
+ * StopFormModalComponent} is a presentational child (no store, no HTTP, no Alert — see its
+ * own doc comment) driven by `isFormModalOpen` / `selected`, and the whole row is clickable
+ * via {@link #onRowActivate}. This page still owns every behaviour — the fetch, the
+ * optimistic open + staleness guard, save, the photo actions, and the `onLangChange`
+ * re-fetch — the modal only renders what this page hands it.
  */
 @Component({
   selector: 'app-stops-page',
@@ -59,6 +61,15 @@ export class StopsPageComponent implements OnInit, OnDestroy {
   protected errorMessage = '';
 
   protected selected: StopDetailForm | null = null;
+  // OBRS-1298: separate from `selected` so the modal can open OPTIMISTICALLY —
+  // flipped synchronously in openStop(), before the detail fetch's first await,
+  // so the modal paints (with its own skeleton) immediately on click rather than
+  // waiting on the ~2-3s admin GET (office memory: modals must never gate
+  // visibility on an awaited fetch).
+  protected isFormModalOpen = false;
+  // Drives the selected-row highlight (design-system §13, `.is-selected`) while
+  // the modal for that row is open.
+  protected selectedStopId: number | null = null;
   protected isDetailLoading = false;
   protected isSaving = false;
   protected isPhotoBusy = false;
@@ -71,6 +82,10 @@ export class StopsPageComponent implements OnInit, OnDestroy {
   private rawProvinces: AdminStopLookupDto[] = [];
   private rawLookups: AdminLookupDto[] = [];
   private readonly subscriptions = new Subscription();
+  // Staleness guard: the id the modal is CURRENTLY showing/fetching for. A fast
+  // double-click opening row B while row A's GET is still in flight must not let
+  // A's late response paint into B's modal (or reset B's isDetailLoading).
+  private pendingStopId: number | null = null;
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -126,8 +141,34 @@ export class StopsPageComponent implements OnInit, OnDestroy {
     this.filteredRows = filterStopRows(this.rows, this.searchKeyword);
   }
 
+  // OBRS-1298: whole-row click is a MOUSE convenience for opening the detail modal — same
+  // guard idiom as 5 existing sites (grepped at write time, one more than the brief's count
+  // of 4 — see the frontend report for that discrepancy): BookingsPageComponent,
+  // RouteListTableComponent, UsabilityReportsPageComponent, SettlementsListComponent and
+  // DriverCashDaysListComponent (all `onRowActivate`). The row carries no role/keyboard
+  // handler — the "แก้ไข" button remains the keyboard/AT entry point (OBRS-891) — so ignore
+  // clicks on an interactive control in the row and clicks that end a text selection.
+  // Extracting this into a shared directive would mean touching all 5 existing sites in the
+  // same card just to avoid a 6th near-identical copy, which is exactly the scope AC-6 locks
+  // this card out of (diff confined to stops files + admin.module.ts) — so it stays a copy.
+  protected onRowActivate(row: StopRow, event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, a, input, select, textarea')) {
+      return;
+    }
+    if (window.getSelection()?.toString()) {
+      return;
+    }
+    void this.openStop(row.id);
+  }
+
   protected async openStop(id: number): Promise<void> {
+    // Optimistic open (office memory, 6 archived occurrences): flip the flags BEFORE the
+    // first await so the modal + skeleton paint immediately, not after the ~2-3s admin GET.
+    this.isFormModalOpen = true;
+    this.selectedStopId = id;
     this.isDetailLoading = true;
+    this.pendingStopId = id;
     try {
       const response = await firstValueFrom(this.adminApiService.getStopDetail(id));
       if (!response.data) {
@@ -135,18 +176,32 @@ export class StopsPageComponent implements OnInit, OnDestroy {
         // undefined, and its first save would PUT to /private/stops/undefined.
         throw new Error('stop detail response carried no data');
       }
-      this.selected = toStopDetailForm(response.data);
+      // Staleness guard: only paint this response if the modal is still open AND still
+      // waiting on THIS id — a fast double-click on two different rows must not let the
+      // first (now stale) response overwrite the second row's modal.
+      if (this.isFormModalOpen && this.pendingStopId === id) {
+        this.selected = toStopDetailForm(response.data);
+      }
     } catch (error) {
+      // Under the old inline layout, a failed fetch left `selected` null with just an
+      // alert. Under a modal that would leave an empty dialog open — close it instead.
+      if (this.pendingStopId === id) {
+        this.closeDetail();
+      }
       await this.alertService.error(
         extractApiErrorMessage(error) || this.translate.instant('ADMIN.STOPS.LOAD_FAILED')
       );
     } finally {
-      this.isDetailLoading = false;
+      if (this.pendingStopId === id) {
+        this.isDetailLoading = false;
+      }
     }
   }
 
   protected closeDetail(): void {
+    this.isFormModalOpen = false;
     this.selected = null;
+    this.selectedStopId = null;
   }
 
   protected async save(): Promise<void> {

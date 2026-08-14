@@ -96,14 +96,29 @@
                 </div>
               }
             </div>
+            <!-- OBRS-1302: the round, its time, its fare and its seat count above
+            are untouched; only this button changes. While booking is closed the
+            customer gets a next step from the row they are actually looking at —
+            the half the top-of-page strip cannot do once it has scrolled away. -->
             @if (!isSelectFirst) {
-              <button
-                class="select-btn"
-                type="button"
-                (click)="selectSchedule(departure, true)"
-                >
-                {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
-              </button>
+              @if (isOnlineBookingOpen) {
+                <button
+                  class="select-btn"
+                  type="button"
+                  (click)="selectSchedule(departure, true)"
+                  >
+                  {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
+                </button>
+              } @else {
+                <a
+                  class="select-btn select-btn--closed"
+                  [href]="facebookUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >
+                  {{ "SCHEDULE_BOOKING.CLOSED_CHOOSE" | translate }}
+                </a>
+              }
             }
             @if (isSelectFirst) {
               <button
@@ -188,13 +203,30 @@
                   </div>
                 }
               </div>
-              <button
-                class="select-btn"
-                (click)="selectSchedule(return, false)"
-                type="button"
-                >
-                {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
-              </button>
+              <!-- OBRS-1302: this whole return-leg block only renders once an
+              outbound leg has been picked, which cannot happen while booking is
+              closed — so the branch below is unreachable today. It is written
+              anyway because "unreachable" is a property of the OTHER guard, and
+              a return leg is exactly the kind of second render that got missed
+              when the delay notice shipped outbound-only (OBRS-1141 AC3). -->
+              @if (isOnlineBookingOpen) {
+                <button
+                  class="select-btn"
+                  (click)="selectSchedule(return, false)"
+                  type="button"
+                  >
+                  {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
+                </button>
+              } @else {
+                <a
+                  class="select-btn select-btn--closed"
+                  [href]="facebookUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >
+                  {{ "SCHEDULE_BOOKING.CLOSED_CHOOSE" | translate }}
+                </a>
+              }
             </div>
           </div>
         }

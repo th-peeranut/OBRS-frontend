@@ -26,6 +26,7 @@ import { SegmentEditModalComponent } from './pages/routes/segment-edit-modal/seg
 import { RouteDetailPanelComponent } from './pages/routes/route-detail-panel/route-detail-panel.component';
 import { RouteListTableComponent } from './pages/routes/route-list-table/route-list-table.component';
 import { StopsPageComponent } from './pages/stops/stops-page.component';
+import { StopFormModalComponent } from './pages/stops/stop-form-modal/stop-form-modal.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
 import { OverrideCancelModalComponent } from './pages/bookings/override-cancel-modal/override-cancel-modal.component';
@@ -435,6 +436,7 @@ export const adminRoutes: Routes = [
     VehicleDeleteModalComponent,
     RoutesPageComponent,
     StopsPageComponent,
+    StopFormModalComponent,
     RouteFormModalComponent,
     SegmentEditModalComponent,
     RouteDetailPanelComponent,

@@ -14,6 +14,12 @@
     "CONTROL_GRANT": "给予同意",
     "CONTROL_NOTE": "撤回立即生效，无需重新加载页面；下次访问时分析脚本将完全不会加载。撤回后即停止收集数据；撤回之前已收集的数据无法从服务商处收回，并且已进入队列的个别数据可能在撤回后的数秒内仍被发送。无论作何选择，搜索、订票和支付均不受任何影响。"
   },
+  "BOOKING_CLOSED_NOTICE": {
+    "ARIA_LABEL": "公告：暂未开放在线订票",
+    "TITLE": "目前暂未开放在线订票 — 我们仍在筹备中",
+    "BODY": "请通过 Facebook 专页联系我们订票：",
+    "CHANNEL": "NJ Phuyaipu"
+  },
   "USABILITY_REPORT": {
     "FAB": {
       "LABEL": "报告问题",
@@ -2502,6 +2508,7 @@
     "SEAT_UNIT": "个座位",
     "SEAT_PER_PASSENGER": "/座位",
     "CHOOSE": "选择",
+    "CLOSED_CHOOSE": "私信预订",
     "CHANGE": "修改数据",
     "NO_RESULTS": "未找到符合条件的班次。请尝试更改日期、路线或减少乘客人数。",
     "NO_RETURN_RESULTS": "未找到符合条件的返程班次。请尝试更改返程日期或减少乘客人数。",

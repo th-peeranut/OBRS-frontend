@@ -391,6 +391,12 @@
       "lane": "CAPTURE",
       "config": "playwright.obrs1207capture.config.ts",
       "why": "OBRS-1207 card evidence for the three sites the occlusion gate names -- .btn-search on /, .select-btn on /schedule-booking, and Add Promotion Code on /admin/promotions -- photographed at the exact scroll offsets the gate reports them at, which is the whole point: a screenshot of this defect taken at an unspecified offset shows nothing, because the FAB only covers the button at a specific one. Run once in a detached worktree at 8ce85269 with OBRS1207_TAG=BEFORE and once on the branch for AFTER. Carries a control-arm frame at scrollY=0 as well, so the AFTER set can distinguish 'yields when it must' from 'permanently faded', which would be a different bug in the same pixels. Hermetic on the same terms as the gate lane its config is copied from -- default (local) serve, pinned 1280x720, no globalSetup -- so the pictures are of the same thing the gate measured."
+    },
+    {
+      "spec": "obrs-1298-stops-modal.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs1298qa.config.ts",
+      "why": "OBRS-1298 AC2-AC7 -- /admin/stops moved its edit form into a modal and made the table row clickable. OWN-DB because it MUTATES stop rows it did not create (AC5a saves a text field on a stop that already has a photo, to prove the save does not clobber primaryPhotoUrl; AC5b saves padded whitespace and reads the trimmed value back, which only proves anything if the value came back from the server) and it carries NO e2e/support/sit-sweep.ts teardown -- on the shared SIT database those edits would simply stay. Not GATE: intercepting the save would leave only the modal markup, which stop-form-modal.component.spec.ts already covers in unit-test time, and it dismisses SweetAlert with click({force:true}), which that lane forbids for good reason (OBRS-750). It was authored against SIT and redirected to a hand-started local backend mid-run when SIT login started returning 500 for every seeded account (OBRS-1307); that private database is also what makes the mutating cases safe to keep. Three cases are REAL FINDINGS pinned as-is rather than fixed, all in shared code outside this card scope: focus does not enter the dialog on optimistic open, and the 1200 backdrop physically covers the topbar language switcher (z-index 35-40)."
     }
   ]
 }

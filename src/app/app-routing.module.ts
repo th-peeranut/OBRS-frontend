@@ -73,6 +73,14 @@ export const appRoutes: Routes = [
   // and /payment below. The paragraph above is kept because it records WHY those two
   // routes were ever guarded - to mirror the backend, not to protect anything of their
   // own - which is the reason removing the guard is safe rather than a loosening.
+  //
+  // OBRS-1302 draws the line for `features.onlineTicketBooking` in exactly the same
+  // place, and for the same reason. /schedule-booking is the timetable-and-fare list
+  // — the shop window. The three routes after it are the ones that take a seat and
+  // then money, and those are the ones the flag closes. Gating the list instead would
+  // delete the only part of the online channel still worth having while the counter
+  // is unstaffed: it is what earns the #4 Google position and what a customer reads
+  // before messaging the Facebook page.
   {
     path: 'schedule-booking',
     canActivate: [AuthGuard],
@@ -83,8 +91,11 @@ export const appRoutes: Routes = [
       ),
   },
   {
+    // OBRS-1302: first step that commits to a seat — flag-gated. `featureEnabledGuard`
+    // runs AFTER AuthGuard, same order as the parcel routes below, so auth still
+    // decides first and a closed flag redirects to '/' rather than 404ing.
     path: 'review-schedule-booking',
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, featureEnabledGuard('onlineTicketBooking')],
     data: { customerArea: true },
     loadChildren: () =>
       import('./modules/review-schedule-booking/review-schedule-booking.module').then(
@@ -99,8 +110,9 @@ export const appRoutes: Routes = [
   // for the guard to mirror; leaving it would be the frontend refusing a request the
   // backend now accepts. Pinned in both directions by app-routing.module.spec.ts.
   {
+    // OBRS-1302: flag-gated — see /review-schedule-booking above.
     path: 'passenger-info',
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, featureEnabledGuard('onlineTicketBooking')],
     data: { customerArea: true },
     loadChildren: () =>
       import('./modules/passenger-info/passenger-info.module').then(
@@ -108,8 +120,10 @@ export const appRoutes: Routes = [
       ),
   },
   {
+    // OBRS-1302: flag-gated — the route that reaches the LIVE Omise form, so this
+    // is the one a deep link from a search engine must not be able to open.
     path: 'payment',
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, featureEnabledGuard('onlineTicketBooking')],
     data: { customerArea: true },
     loadChildren: () =>
       import('./modules/payment/payment.module').then(

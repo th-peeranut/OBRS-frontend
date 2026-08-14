@@ -408,6 +408,22 @@ One color = one meaning. Never pick a button color for looks.
   `Swal.mixin()` or `Swal.fire()` directly.
 - One primary button (§4); close affordance top-right (`×`) **and** a secondary
   Back/Cancel.
+- **Admin edit forms render as an `.admin-modal-backdrop` / `.admin-modal` dialog**,
+  reusing `[adminModalBackdrop]` (`shared/directives/`) for backdrop-click/Escape/
+  focus-trap/scroll-lock — never re-implemented per component. `[isOpen]` input +
+  `(closed)` output is the house wiring; a form modal that also owns its own API
+  calls (create/edit CRUD) is a **smart** child, one that only renders data the
+  parent already fetched (e.g. `StopFormModalComponent`, OBRS-1298) is a
+  **presentational** one — pick based on whether the parent already owns the
+  fetch/save logic, don't duplicate it into the modal either way.
+- **A list row that opens a detail view should be whole-row-clickable**, not force
+  the mouse to a button at the row's far edge (`grep -rn onRowActivate src/app` —
+  6 admin pages as of OBRS-1298, first introduced OBRS-891). Guard shape: ignore
+  clicks whose target is inside `button, a, input, select, textarea`, and ignore a
+  click that ends a text selection (`window.getSelection()?.toString()`). The row
+  itself carries no `role`/keyboard handler — an existing button/link in the row
+  stays the keyboard/AT entry point. Selected-row highlight is `.is-selected` /
+  `--accent-soft` (§13), not a raw Bootstrap blue.
 
 ---
 
@@ -512,7 +528,43 @@ Run this against any UI diff (and during the live-verify screenshot glance):
       resolves is **pristine-guarded** (dirty-flag reset at the top of open, seeded on the
       cache-hit branch, gated by the stale-response guard) so a late response can't clobber
       an in-progress edit. (§6; CORE.md — recurred 3× on the usability-report detail modal.)
+- [ ] **Motion:** a new transition/animation runs 150–300 ms, animates only `transform`
+      and `opacity` (never `width`/`height`/`top`/`left`), and freezes under
+      `@media (prefers-reduced-motion: reduce)` — the same contract `app-loading-state`
+      already ships (§3, OBRS-907). Continuous motion is for busy indicators only.
+- [ ] **Icon-only controls** carry both an accessible name and a sighted-user tooltip —
+      `[attr.aria-label]` **and** native `[title]` (the `.refund-void-info-btn`
+      precedent below). Backfilling the existing sites is OBRS-892; new code must not
+      grow that debt.
+- [ ] **Async triggers self-disable:** a control that fires a request is `[disabled]`
+      while in flight and shows `app-loading-state variant="inline"` — no window in
+      which a second click sends a second request.
+- [ ] **State is never hue alone:** a status/selection/error also carries a glyph or
+      text (the lang-switcher toggle's checkmark + `aria-pressed`, below), so it
+      survives dark mode, colour-blindness and a greyscale print.
+- [ ] **Tap targets on customer surfaces** are ≥ 44×44 CSS px with ≥ 8 px between
+      neighbours. The admin desktop primitives are the deliberate exception
+      (`.admin-icon-btn` 36 px, `.refund-void-info-btn` 22 px) — don't shrink a
+      customer-facing control to match them.
+- [ ] **No layout jump:** anything arriving async reserves its space first — images and
+      map tiles get explicit dimensions or `aspect-ratio`, and a list that will become
+      rows renders the `skeleton` variant rather than collapsing to zero height.
+- [ ] **Mobile keyboards:** numeric/phone/email inputs set the matching `type` **and**
+      `inputmode` (`inputmode="numeric"` for seat/ticket counts, `type="tel"` for a
+      phone number) — customers book on phones.
+- [ ] **Wide tables scroll, they don't overflow:** a table that can exceed the viewport
+      sits in an `overflow-x: auto` wrapper; the shell itself never scrolls sideways.
+      §6's `max-height: 60vh; overflow-y: auto` is the vertical half of the same rule.
 - [ ] **New pattern?** justified in the UX spec and locked with a spec test (§12).
+
+> **Where the eight rules above came from (OBRS-1327):** harvested once from the
+> MIT-licensed `ui-ux-pro-max-skill` UX checklist (99 rows), keeping only what this
+> document did not already state and rewriting it for Bootstrap 5 + PrimeNG 17 — its own
+> examples are Tailwind. Deliberately **not** adopted: its "every input needs a visible
+> label, never placeholder-only" rule, which contradicts §3.1's placeholder-header
+> contract — that is a decision here, not an oversight. The generator half of that skill
+> (style/palette/font pickers) is not adopted at all: §2 owns those, and a second opinion
+> on them is a second source of truth.
 
 ---
 

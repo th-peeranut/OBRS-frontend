@@ -14,6 +14,12 @@
     "CONTROL_GRANT": "Give consent",
     "CONTROL_NOTE": "Withdrawing takes effect immediately, with no need to reload the page, and on your next visit the analytics scripts are not loaded at all. Withdrawing stops collection from that point on; data collected before you withdrew cannot be recalled from the providers, and an item already queued may still be sent in the seconds after you withdraw. Either choice leaves searching, booking and payment working exactly the same."
   },
+  "BOOKING_CLOSED_NOTICE": {
+    "ARIA_LABEL": "Notice: online booking is closed",
+    "TITLE": "Online ticket booking is not open yet — we are still getting ready",
+    "BODY": "Please message us on our Facebook page:",
+    "CHANNEL": "NJ Phuyaipu"
+  },
   "USABILITY_REPORT": {
     "FAB": {
       "LABEL": "Report Issue",
@@ -2502,6 +2508,7 @@
     "SEAT_UNIT": "seats",
     "SEAT_PER_PASSENGER": "/seat",
     "CHOOSE": "select",
+    "CLOSED_CHOOSE": "message us to book",
     "CHANGE": "change data",
     "NO_RESULTS": "No schedules found for your search. Try a different date, route, or fewer passengers.",
     "NO_RETURN_RESULTS": "No return schedules found for your search. Try a different return date or fewer passengers.",
