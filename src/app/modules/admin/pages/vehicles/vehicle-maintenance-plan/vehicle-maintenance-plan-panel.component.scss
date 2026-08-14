@@ -1,0 +1,58 @@
+:host {
+  display: block;
+}
+
+/* design-system §11 empty-state pattern: replaces the whole table section
+ * (not a zero-row table under a banner), themed via the admin shell's
+ * --admin-muted/--admin-text CSS vars only — no raw hex, themes for free in
+ * dark mode. Mirrors vehicle-maintenance-panel.component.scss's
+ * .vehicle-maintenance-empty verbatim. */
+.vehicle-maintenance-plan-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--admin-muted);
+}
+
+.vehicle-maintenance-plan-empty .material-symbols-outlined {
+  font-size: 40px;
+  color: var(--admin-muted);
+}
+
+.vehicle-maintenance-plan-empty-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.vehicle-maintenance-plan-empty-body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--admin-muted);
+}
+
+/* Advisory hint under intervalDays — non-blocking, always visible. Reuses
+ * the existing `.admin-hint` recipe (promotion-form-modal.component.scss /
+ * expense-form-modal.component.scss) with an inline icon, --admin-muted
+ * only, no raw hex. */
+.admin-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--admin-muted);
+  font-size: 11px;
+}
+
+.admin-hint .material-symbols-outlined {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.maintenance-plan-next-due {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--admin-muted);
+}

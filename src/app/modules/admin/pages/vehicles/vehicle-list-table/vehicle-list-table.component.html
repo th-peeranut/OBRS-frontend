@@ -49,6 +49,14 @@
                   <button
                     type="button"
                     class="admin-icon-btn"
+                    [attr.aria-label]="'ADMIN.VEHICLES.MAINTENANCE_PLAN.MANAGE_ACTION' | translate"
+                    (click)="managePlans.emit(vehicle)"
+                    >
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">event_repeat</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="admin-icon-btn"
                     [attr.aria-label]="'ADMIN.VEHICLES.INSPECTION.VIEW_ACTION' | translate"
                     (click)="viewInspections.emit(vehicle)"
                     >
