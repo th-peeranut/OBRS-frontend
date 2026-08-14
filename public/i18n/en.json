@@ -2562,6 +2562,12 @@
     "CHANGE": "change data",
     "NO_RESULTS": "No schedules found for your search. Try a different date, route, or fewer passengers.",
     "NO_RETURN_RESULTS": "No return schedules found for your search. Try a different return date or fewer passengers.",
+    "NO_RETURN_CONFIRM": {
+      "TITLE": "This route has no return trip",
+      "BODY": "You searched for a round trip, but there are no return schedules for the route and dates you chose. If you continue you will buy a one-way ticket (outbound only) and will need to arrange your own way back.",
+      "CONTINUE": "Continue one-way",
+      "EDIT_SEARCH": "Edit search"
+    },
     "SOLD_OUT_TODAY_TITLE": "Today's trips have all departed",
     "SOLD_OUT_TODAY_HINT": "Try the next day.",
     "SOLD_OUT_TODAY_ACTION": "Show trips on {{date}}",
