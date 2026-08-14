@@ -37,6 +37,9 @@ const LOADING_POPUP_CLASS = 'swal-global-loading';
 export class AlertService {
   private loadingCount = 0;
   private isLoadingVisible = false;
+  /** Bumped per overlay opened, so a `didClose` can tell whether it is still the
+   *  current one — see the note in `showLoading()` (OBRS-1336). */
+  private loadingGeneration = 0;
   private escapeTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly themeService = inject(ThemeService);
@@ -166,6 +169,13 @@ export class AlertService {
     }
 
     this.isLoadingVisible = true;
+    // OBRS-1336: which overlay this `didClose` belongs to. `Swal.close()` starts an
+    // animation and sweetalert2 runs `didClose` when it ENDS, while `hideLoading()`
+    // resets this service synchronously — so a request starting inside that window
+    // opens overlay N+1, and N's late `didClose` used to reset N+1's state out from
+    // under it. `isLoadingVisible` false with an overlay on screen is unrecoverable:
+    // every later `hideLoading()` returns at its own guard and nothing closes it.
+    const generation = ++this.loadingGeneration;
     void Swal.fire({
       title,
       allowOutsideClick: false,
@@ -191,6 +201,9 @@ export class AlertService {
         // trade is deliberate. Making it exact needs per-request tracking rather than a
         // count; do that if a case ever shows up where the early close actually costs
         // something.
+        if (generation !== this.loadingGeneration) {
+          return;
+        }
         this.resetLoadingState();
       },
     });
