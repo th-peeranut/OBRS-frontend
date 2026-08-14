@@ -3392,7 +3392,9 @@
       "ACTION": {
         "LOAD": "装车",
         "MARK_ARRIVED": "标记已到达",
-        "COLLECT": "取件"
+        "COLLECT": "取件",
+        "LEAVE_AT_STOP": "放置在站点并拍照",
+        "VIEW_DROP_OFF_PHOTO": "查看放置照片"
       },
       "COLLECT_DIALOG": {
         "TITLE": "取件",
@@ -3405,7 +3407,11 @@
         "CODE_MISMATCH": "取件码不匹配。",
         "ALREADY_COLLECTED": "此包裹已被取走。",
         "WRONG_STATE": "此包裹状态与预期不符，列表已刷新。",
-        "BOOKING_NOT_CONFIRMED": "此包裹尚未付款。交付前请先在预订上收款。"
+        "BOOKING_NOT_CONFIRMED": "此包裹尚未付款。交付前请先在预订上收款。",
+        "ALREADY_LEFT_AT_STOP": "此包裹已被记录为放置在站点。",
+        "PHOTO_TOO_LARGE": "照片超过 10 MB，请重新拍摄。",
+        "PHOTO_UNSUPPORTED": "不支持的照片格式，请使用 JPEG、PNG 或 WebP。",
+        "PHOTO_FAILED": "照片上传失败，尚未记录放置，请重试。"
       },
       "PAYMENT": {
         "PENDING": "待付款",
@@ -3772,6 +3778,8 @@
       "EXPIRES_AT": "请于{{time}}前完成付款",
       "RESUME_PAYMENT": "继续付款",
       "CREATED_ACTION_HINT": "已付款 — 等待工作人员查验。请按预约时间将包裹送至起点站，尚无取件码，需工作人员查验并接收后才会发放",
+      "DROP_OFF_PHOTO_ALT": "司机将包裹放置在站点时拍摄的照片",
+      "DROP_OFF_PHOTO_AT": "司机于 {{time}} 将包裹放置在站点，并拍照留证。",
       "EMPTY": "您尚未预订任何包裹",
       "BOOK_NOW": "预订寄件",
       "LOAD_MORE": "加载更多",

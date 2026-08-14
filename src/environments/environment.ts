@@ -32,5 +32,22 @@ export const environment = {
     // production. Staff training happens on /staff/sell, which this flag does not
     // touch, so a closed SIT costs nothing.
     onlineTicketBooking: true,
+    // OBRS-1345, second override, same argument as the first one above.
+    //
+    // `/my-parcels` is the ONLY channel a member sender has for the drop-off photo
+    // this card adds, and it is the whole of AC-3 — but `onlineParcelBooking` is
+    // `false` in environment.base.ts, so on `ng test` and on the capture lane the
+    // guard sent every visit home and the page could not be exercised at all.
+    // Measured on the first real AFTER run of this branch: the capture landed on
+    // the homepage with the customer logged in.
+    //
+    // ⚠️ Read this as what it is: the parcel page is not broken, it is switched OFF
+    // in front of customers, and turning it on HERE changes nothing about that.
+    // This file is local-backend-only (`npm run start:local`); SIT and prod inherit
+    // the closed base flag deliberately, so a member sender cannot reach the photo
+    // on a deployed environment today either. Until that flag opens, BOTH sender
+    // channels are shut — members by this flag, walk-ins by OBRS-1174 — and the
+    // parcel terms must say so rather than promise a photo nobody receives.
+    onlineParcelBooking: true,
   },
 };

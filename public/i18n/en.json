@@ -3392,7 +3392,9 @@
       "ACTION": {
         "LOAD": "Load",
         "MARK_ARRIVED": "Mark arrived",
-        "COLLECT": "Collect"
+        "COLLECT": "Collect",
+        "LEAVE_AT_STOP": "Leave at stop + photo",
+        "VIEW_DROP_OFF_PHOTO": "View drop-off photo"
       },
       "COLLECT_DIALOG": {
         "TITLE": "Collect parcel",
@@ -3405,7 +3407,11 @@
         "CODE_MISMATCH": "This collection code does not match.",
         "ALREADY_COLLECTED": "This parcel has already been collected.",
         "WRONG_STATE": "This parcel is not in the expected state. The list has been refreshed.",
-        "BOOKING_NOT_CONFIRMED": "This parcel is not paid for. Take payment on the booking before handing it over."
+        "BOOKING_NOT_CONFIRMED": "This parcel is not paid for. Take payment on the booking before handing it over.",
+        "ALREADY_LEFT_AT_STOP": "This parcel is already recorded as left at the stop.",
+        "PHOTO_TOO_LARGE": "The photo is larger than 10 MB. Please take it again.",
+        "PHOTO_UNSUPPORTED": "Unsupported photo type. Use JPEG, PNG or WebP.",
+        "PHOTO_FAILED": "The photo did not upload. The drop-off was NOT recorded — please try again."
       },
       "PAYMENT": {
         "PENDING": "Awaiting payment",
@@ -3772,6 +3778,8 @@
       "EXPIRES_AT": "Complete payment by {{time}}",
       "RESUME_PAYMENT": "Continue to payment",
       "CREATED_ACTION_HINT": "Paid — awaiting staff inspection. Bring the parcel to the origin stop at the scheduled time. There's no collection code yet — you'll get one after staff inspects and accepts it.",
+      "DROP_OFF_PHOTO_ALT": "Photo of the parcel where the driver left it at the stop",
+      "DROP_OFF_PHOTO_AT": "The driver left this parcel at the stop at {{time}} and photographed it as proof.",
       "EMPTY": "You haven't booked any parcels yet.",
       "BOOK_NOW": "Book a parcel",
       "LOAD_MORE": "Load more",

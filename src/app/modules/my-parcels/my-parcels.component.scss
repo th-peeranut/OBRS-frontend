@@ -150,6 +150,18 @@
   color: $text-softblack;
 }
 
+// OBRS-1345: the drop-off proof. Capped rather than full-bleed - a phone camera
+// photo is far taller than this card and an uncapped one would push the card's
+// own information off the screen; the link around it opens the full size.
+.parcel-card__drop-off-photo {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: $radius-md;
+  margin-bottom: 8px;
+}
+
 .parcel-card__actions {
   display: flex;
   justify-content: flex-end;

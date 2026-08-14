@@ -82,6 +82,36 @@
                         >
                         {{ 'STAFF.PARCEL_DELIVERY.ACTION.COLLECT' | translate }}
                       </button>
+                      <!-- OBRS-1345: nobody came. The label opens the camera via the
+                           hidden input it wraps, so the photo IS the action - there is
+                           no proof-less way to record this drop-off. -->
+                      <label
+                        class="admin-btn admin-btn-small ms-1"
+                        [class.disabled]="isRowBusy(row.parcelId) || isRowBlocked(row)"
+                        [title]="isRowBlocked(row) ? ('STAFF.PARCEL_DELIVERY.ERROR.BOOKING_NOT_CONFIRMED' | translate) : ''"
+                        [attr.data-testid]="'leave-at-stop-' + row.parcelId"
+                        >
+                        {{ 'STAFF.PARCEL_DELIVERY.ACTION.LEAVE_AT_STOP' | translate }}
+                        <input
+                          type="file"
+                          class="d-none"
+                          accept="image/jpeg,image/png,image/webp"
+                          capture="environment"
+                          [disabled]="isRowBusy(row.parcelId) || isRowBlocked(row)"
+                          (change)="onLeaveAtStopPhotoChosen(row, $event)"
+                          />
+                      </label>
+                    }
+                    @if (row.deliveryStatus === 'left_at_stop' && row.leftAtStopPhotoUrl) {
+                      <a
+                        class="admin-btn admin-btn-small"
+                        [href]="row.leftAtStopPhotoUrl"
+                        target="_blank"
+                        rel="noopener"
+                        [attr.data-testid]="'left-at-stop-photo-' + row.parcelId"
+                        >
+                        {{ 'STAFF.PARCEL_DELIVERY.ACTION.VIEW_DROP_OFF_PHOTO' | translate }}
+                      </a>
                     }
                   </td>
                 </tr>
