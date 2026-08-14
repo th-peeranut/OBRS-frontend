@@ -8,6 +8,10 @@ import { parcelStopLabel } from '../../../../shared/lib/parcel-stop-label';
  * (`ParcelWaybillPageComponent`), so there is exactly one waybill "paper"
  * look rather than two markup copies. The QR (encoding `collectionToken`)
  * appears on this surface ONLY — never on the public tracking response/page.
+ *
+ * ⛔ OBRS-1353 puts a SECOND QR on the same paper, and the two must never swap:
+ * `qrDataUrl` encodes the recipient's `collectionToken` (a secret), while
+ * `trackQrDataUrl` encodes a public tracking URL meant for the sender to keep.
  */
 @Component({
     selector: 'app-parcel-waybill-paper',
@@ -18,6 +22,7 @@ import { parcelStopLabel } from '../../../../shared/lib/parcel-stop-label';
 export class ParcelWaybillPaperComponent {
   @Input() waybill: WaybillRespDto | null = null;
   @Input() qrDataUrl = '';
+  @Input() trackQrDataUrl = '';
 
   protected readonly parcelStopLabel = parcelStopLabel;
 }

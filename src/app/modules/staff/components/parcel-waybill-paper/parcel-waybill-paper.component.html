@@ -38,8 +38,16 @@
     </div>
     @if (qrDataUrl) {
       <div class="parcel-waybill-qr">
+        <div class="parcel-waybill-qr-for">{{ 'STAFF.PARCEL_WAYBILL.QR_FOR_RECIPIENT' | translate }}</div>
         <img [src]="qrDataUrl" [attr.alt]="'STAFF.PARCEL_WAYBILL.QR_ALT' | translate" />
         <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.QR_HINT' | translate }}</div>
+      </div>
+    }
+    @if (trackQrDataUrl) {
+      <div class="parcel-waybill-qr">
+        <div class="parcel-waybill-qr-for">{{ 'STAFF.PARCEL_WAYBILL.TRACK_QR_FOR_SENDER' | translate }}</div>
+        <img [src]="trackQrDataUrl" [attr.alt]="'STAFF.PARCEL_WAYBILL.TRACK_QR_ALT' | translate" />
+        <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.TRACK_QR_HINT' | translate }}</div>
       </div>
     }
   </div>

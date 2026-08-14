@@ -62,6 +62,28 @@ describe('ParcelWaybillPageComponent (constructed directly — load/QR logic)', 
     expect(component['qrDataUrl']).toContain('data:image');
   });
 
+  // OBRS-1353: the sender's channel. A cash walk-in has no account and no LINE
+  // userId, so this QR on their own waybill is the only thing that reaches them.
+  it('renders a SECOND QR holding the public tracking URL, distinct from the collection-token QR', async () => {
+    const qrSpy = spyOn(QRCode, 'toDataURL').and.callThrough() as unknown as jasmine.Spy;
+    const staffApi = {
+      getWaybill: () => of({ code: 200, message: 'OK', data: SAMPLE_WAYBILL }),
+    } as unknown as StaffApiService;
+    const component = new ParcelWaybillPageComponent(makeRouteStub('1'), staffApi, {} as never);
+
+    component.ngOnInit();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(qrSpy).toHaveBeenCalledWith(
+      `${window.location.origin}/track-parcel/PCL-1`,
+      jasmine.objectContaining({ width: 140, margin: 1, errorCorrectionLevel: 'M' })
+    );
+    expect(component['trackQrDataUrl']).toContain('data:image');
+    // The whole risk of putting two QRs on one sheet: swap them and the
+    // recipient's collection token becomes the public link.
+    expect(component['trackQrDataUrl']).not.toEqual(component['qrDataUrl']);
+  });
+
   it('sets hasError on a failed fetch', () => {
     const staffApi = { getWaybill: () => throwError(() => new Error('boom')) } as unknown as StaffApiService;
     const component = new ParcelWaybillPageComponent(makeRouteStub('1'), staffApi, {} as never);

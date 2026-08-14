@@ -5,10 +5,11 @@ describe('ParcelWaybillPaperComponent', () => {
     expect(new ParcelWaybillPaperComponent()).toBeTruthy();
   });
 
-  it('defaults waybill to null and qrDataUrl to empty', () => {
+  it('defaults waybill to null and both QR inputs to empty', () => {
     const component = new ParcelWaybillPaperComponent();
     expect(component.waybill).toBeNull();
     expect(component.qrDataUrl).toBe('');
+    expect(component.trackQrDataUrl).toBe('');
   });
 
   it('resolves a stop label via parcelStopLabel for string and object shapes', () => {

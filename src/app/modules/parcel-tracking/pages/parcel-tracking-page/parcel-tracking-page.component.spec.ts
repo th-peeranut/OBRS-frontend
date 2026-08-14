@@ -1,4 +1,8 @@
-import { FormBuilder } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { convertToParamMap, ActivatedRoute } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ParcelTrackingPageComponent } from './parcel-tracking-page.component';
@@ -91,5 +95,52 @@ describe('ParcelTrackingPageComponent', () => {
   it('cleans up on destroy without throwing', () => {
     const component = makeComponent({ track: () => of({ code: 200, message: 'OK', data: {} as never }) });
     expect(() => component.ngOnDestroy()).not.toThrow();
+  });
+});
+
+// OBRS-1353: the drop-off proof reaches the sender HERE or nowhere — this is the
+// only surface a cash walk-in can open. Rendered through TestBed because both
+// claims are about the DOM: the photo shows when there is one, and nothing shows
+// (no empty frame, no broken alt) when there is not.
+describe('ParcelTrackingPageComponent — drop-off proof (OBRS-1353)', () => {
+  const PHOTO = 'https://supabase.example/storage/v1/object/public/parcels/1/proof.jpg';
+
+  function renderWith(data: Record<string, unknown>): HTMLElement {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
+      declarations: [ParcelTrackingPageComponent],
+      providers: [
+        { provide: ActivatedRoute, useValue: makeRouteStub('PCL-1') },
+        {
+          provide: ParcelTrackingService,
+          useValue: { track: () => of({ code: 200, message: 'OK', data }) },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    const fixture = TestBed.createComponent(ParcelTrackingPageComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  const found = {
+    trackingNumber: 'PCL-1',
+    deliveryStatus: 'left_at_stop',
+    recipientNameMasked: 'S***i',
+  };
+
+  it('renders the photo and the left-at-stop time once the parcel has been left', () => {
+    const el = renderWith({ ...found, leftAtStopPhotoUrl: PHOTO, leftAtStopAt: '2026-08-14T10:15:30+07:00' });
+
+    const img = el.querySelector('.parcel-tracking-proof img') as HTMLImageElement | null;
+    expect(img).withContext('the proof photo should be rendered').toBeTruthy();
+    expect(img?.getAttribute('src')).toBe(PHOTO);
+  });
+
+  it('renders no proof figure at all when the parcel has not been left at a stop', () => {
+    const el = renderWith(found);
+
+    expect(el.querySelector('.parcel-tracking-proof')).toBeNull();
   });
 });

@@ -3417,8 +3417,12 @@
       "WEIGHT": "Weight",
       "AMOUNT": "Amount",
       "DEPARTURE": "Departure",
+      "QR_FOR_RECIPIENT": "For the recipient",
       "QR_ALT": "Collection QR code",
       "QR_HINT": "Present this QR code, or the collection code, on delivery.",
+      "TRACK_QR_FOR_SENDER": "For the sender",
+      "TRACK_QR_ALT": "Parcel tracking QR code",
+      "TRACK_QR_HINT": "Scan to follow this parcel and to see the photo taken if it is left at the stop.",
       "PRINT": "Print",
       "LOAD_FAILED": "Unable to load this waybill."
     },
@@ -3738,7 +3742,10 @@
     "DROPOFF_STOP": "Drop-off stop",
     "ARRIVED_NOTIFIED_AT": "Arrived at destination",
     "COLLECTED_AT": "Collected",
+    "LEFT_AT_STOP_AT": "Left at the stop",
     "RECIPIENT": "Recipient",
+    "PROOF_ALT": "Photo taken when the parcel was left at the stop",
+    "PROOF_CAPTION": "Photo taken by the driver at the moment the parcel was left at the stop.",
     "STATUS": {
       "CREATED": "Declared — awaiting drop-off",
       "ACCEPTED": "Accepted",

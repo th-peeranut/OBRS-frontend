@@ -246,6 +246,13 @@ export interface ParcelTrackRespDto {
   arrivedNotifiedAt?: string;
   collectedAt?: string;
   recipientNameMasked: string;
+  /**
+   * OBRS-1353: the drop-off proof, public on purpose — a cash walk-in sender has
+   * no account, so the tracking number on their waybill is the only key that
+   * reaches them. Both absent until the parcel is actually left at a stop.
+   */
+  leftAtStopPhotoUrl?: string;
+  leftAtStopAt?: string;
 }
 
 /**
