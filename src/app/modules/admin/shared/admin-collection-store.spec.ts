@@ -378,4 +378,39 @@ describe('AdminCollectionStore', () => {
       expect(store.errorStatus).toBeNull();
     });
   });
+
+  // OBRS-1346: 9 of the 54 subclasses are listed in a component's own
+  // `providers: []`, so a new instance is built on every mount and dropped on
+  // destroy. These count the subscribers on authStatus$ itself — asserting that
+  // ngOnDestroy was *called* would still pass with the unsubscribe deleted.
+  describe('teardown', () => {
+    it('leaves no subscriber on authStatus$ after destroy', () => {
+      const authStatus$ = new BehaviorSubject<boolean>(true);
+      expect(authStatus$.observers.length).toBe(0);
+
+      const store = new TestStore(authStatus$);
+      expect(authStatus$.observers.length)
+        .withContext('the constructor subscribes')
+        .toBe(1);
+
+      store.ngOnDestroy();
+
+      expect(authStatus$.observers.length)
+        .withContext('destroying the store must return that subscription')
+        .toBe(0);
+    });
+
+    it('does not accumulate subscribers as a component-scoped store is recreated', () => {
+      const authStatus$ = new BehaviorSubject<boolean>(true);
+
+      for (let open = 0; open < 5; open += 1) {
+        const store = new TestStore(authStatus$);
+        store.ngOnDestroy();
+      }
+
+      expect(authStatus$.observers.length)
+        .withContext('5 panel opens must not leave 5 live subscriptions')
+        .toBe(0);
+    });
+  });
 });

@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { OnDestroy } from '@angular/core';
+import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 
 /**
@@ -13,8 +14,15 @@ import { AuthService } from '../../../auth/auth.service';
  * revalidates in the background and the component updates when fresh data lands.
  *
  * Generalised from the original `AdminDashboardStore`.
+ *
+ * OBRS-1346: `providedIn: 'root'` is the DEFAULT, not a guarantee — a component
+ * listing a subclass in its own `providers: []` gets a fresh instance per mount
+ * (9 subclasses of 54 do this). Those instances are dropped on destroy, so the
+ * logout subscription below must be returned in `ngOnDestroy` or one leaks per
+ * panel open. Angular calls `ngOnDestroy` on a provider when its injector dies,
+ * which covers both scopes.
  */
-export abstract class AdminCollectionStore<T> {
+export abstract class AdminCollectionStore<T> implements OnDestroy {
   private readonly dataSubject = new BehaviorSubject<T | null>(null);
   private readonly refreshingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<boolean>(false);
@@ -52,16 +60,24 @@ export abstract class AdminCollectionStore<T> {
   private rerunRequested = false;
   /** The in-flight refresh cycle, shared by concurrent callers so they await it. */
   private inFlight: Promise<void> | null = null;
+  /** The logout subscription, returned in ngOnDestroy (OBRS-1346). */
+  private readonly authStatusSubscription: Subscription;
 
   protected constructor(authService: AuthService) {
-    // The cache is root-scoped and outlives the session. Drop it on logout (or
-    // token expiry) so a different admin can't briefly see the previous
-    // session's data before the next background refresh lands.
-    authService.authStatus$.subscribe((isAuthenticated) => {
-      if (!isAuthenticated) {
-        this.clear();
+    // The cache outlives the session. Drop it on logout (or token expiry) so a
+    // different admin can't briefly see the previous session's data before the
+    // next background refresh lands.
+    this.authStatusSubscription = authService.authStatus$.subscribe(
+      (isAuthenticated) => {
+        if (!isAuthenticated) {
+          this.clear();
+        }
       }
-    });
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.authStatusSubscription.unsubscribe();
   }
 
   get value(): T | null {
