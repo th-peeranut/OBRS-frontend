@@ -60,8 +60,19 @@
 // sits on a light tile surface; don't add a dark rule here without adding
 // those token overrides FIRST.
 :host ::ng-deep {
+  // OBRS-1335 — MUST stay `absolute`, which is also what Leaflet itself sets on
+  // `.leaflet-marker-icon`. This block used to say `relative`, and because
+  // ::ng-deep compiles to `[_nghost-x] .fleet-marker` (0,2,0) it outweighed
+  // Leaflet's own single-class rule (0,1,0) and won. A `relative` marker is
+  // back in the marker pane's normal flow, so Leaflet's `translate3d()` offsets
+  // it from where FLOW put it instead of from the pane origin: measured on SIT,
+  // pin N landed 18px × N too low (36px tall + the -18px `iconAnchor` margin),
+  // which at a fleet-wide zoom is tens of km — the pins appeared out at sea.
+  // `absolute` is not merely the fix, it is also all `.fleet-marker-halo/-dot/
+  // -heading` ever needed from `relative`: it establishes the same containing
+  // block for them.
   .fleet-marker {
-    position: relative;
+    position: absolute;
     display: block;
   }
 
