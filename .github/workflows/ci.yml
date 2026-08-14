@@ -327,6 +327,17 @@ jobs:
       - name: station-load failure surface gate
         run: npm run test:station-surface
 
+      # A Leaflet marker is positioned by a transform on an element Leaflet has
+      # already made `absolute`. A component stylesheet that re-declares that
+      # `position` through ::ng-deep outweighs Leaflet and wins, and `relative`
+      # drops the marker back into the pane's flow: every pin after the first is
+      # drawn 18px * N too low, which at a fleet-wide zoom is tens of kilometres.
+      # That shipped and the owner found it by seeing buses in the sea. No unit
+      # test can see it -- the specs assert marker CONTENT, and layout is never
+      # exercised at a real size -- so the check has to read the stylesheets.
+      - name: Leaflet marker position gate
+        run: npm run test:marker-position
+
       - name: Install dependencies
         run: npm ci
 
