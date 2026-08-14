@@ -4154,3 +4154,28 @@ leaked one-page-only fixes 4× (OBRS-1021/1028/1023/1036) and the card asked for
 Pattern for the developer: when you touch one of the two booking-filter twins, diff the same line in
 the other and make them identical even if both "work" — a gratuitous difference is where the next
 drift hides. Verified: home-booking.component.spec.ts 49/49 green after the change.
+
+---
+
+## OBRS-1308 Scrutinize self-fix (2026-08-13) — REJECTED edit seeded from `liveBody`, not the rejected body
+
+`NotificationMessageEditFormComponent.initialBody()` seeded the textarea from `detail.liveBody`
+in EVERY status including REJECTED. The dev's own comment flagged it honestly as a contract gap
+(the owner GET DTO had `rejectReason` — the WHY — but no field for the rejected BODY). The
+orchestrator has since added `rejectedBody: string | null` to the owner GET DTO in the system
+spec and told the backend to implement it, so the gap is now fixable, not a wontfix. An owner
+re-editing after a rejection was being shown the current live text, not what they actually
+proposed — the opposite of "re-edit starts from what was rejected" (UX spec flow step 3).
+
+Fix (< 30 lines, no new file): added optional `rejectedBody?: string | null` to
+`NotificationMessageLocaleStatusDto` (optional/nullable, same discipline as
+`NotificationItem.relatedEntityId`, so no fixture breaks) and gated `initialBody()` to return
+`rejectedBody` when `status === 'REJECTED' && rejectedBody != null`, else fall back to `liveBody`.
+Added two locking tests to the edit-form spec (rejectedBody wins on REJECTED; falls back to
+liveBody for a pre-field wire). tsc --noEmit clean (app + spec); focused karma 15/15 green.
+
+Pattern for the developer: when you write a comment that says "this is the closest available field
+because the contract lacks X", that is a finding to RAISE, not a decision to bake in — a locked
+contract can be extended, and this one was. Don't silently ship the workaround under a candid
+comment; the candid comment is exactly what makes it a Scrutinize/QA finding rather than a
+buried one.

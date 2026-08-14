@@ -1,4 +1,5 @@
 import { Component, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Router } from '@angular/router';
 import { Popover } from 'primeng/popover';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -53,7 +54,8 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly notificationInboxService: NotificationInboxService,
-    private readonly themeService: ThemeService
+    private readonly themeService: ThemeService,
+    private readonly router: Router
   ) {
     this.unreadCount$ = notificationInboxService.unreadCount$;
     this.items$ = notificationInboxService.items$;
@@ -101,5 +103,19 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
 
   protected onRetry(): void {
     this.notificationInboxService.refreshOnOpen();
+  }
+
+  /**
+   * OBRS-1308 — the inbox panel's new `navigate` output (currently only
+   * fires for a `NOTIF_MSG_OVERRIDE_PENDING` row). Mounted in BOTH
+   * admin-layout and staff-layout, but the mapping stays shared rather than
+   * gated on `shellVariant`: business rule 8 only inserts this notification
+   * type for `ROLE_ADMIN` users, so a salesperson/driver session never
+   * receives one and this handler is simply never invoked there — a future
+   * admin-only type reuses this same mapping for free.
+   */
+  protected onNavigate(event: { type: string; id: number }): void {
+    this.overlayPanel?.hide();
+    void this.router.navigate(['/admin/settings/notification-messages/reviews', event.id]);
   }
 }

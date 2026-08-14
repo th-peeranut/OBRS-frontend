@@ -51,6 +51,17 @@ import {
   PerHeadEarningsGranularity,
   PerHeadEarningsRespDto,
 } from '../../shared/interfaces/driver-cash.interface';
+import {
+  CreditPreviewReqDto,
+  NotificationMessageLocale,
+  NotificationMessageReviewDetailDto,
+  OverridableMessageKeyDto,
+  PendingReviewRowDto,
+  RejectNotificationMessageReviewPayload,
+  SmsCreditEstimateDto,
+  SubmitNotificationMessagePayload,
+  SubmitNotificationMessageRespDto,
+} from '../../shared/interfaces/notification-message-override.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -2232,6 +2243,92 @@ export class AdminApiService {
     const payload: ParcelShareClawbackCollectReqDto = note ? { note } : {};
     return this.postRequest<ParcelShareClawbackRowDto>(
       `${this.baseUrl}/private/owner/parcel-share/clawbacks/${clawbackId}/collect`,
+      payload
+    );
+  }
+
+  // ── OBRS-1308: notification message overrides ────────────────────────────
+  // Owner-facing (`NotificationMessageOverrideController`, hasRole('OWNER')) and
+  // admin-facing review (`NotificationMessageOverrideReviewController`, the
+  // literal hasRole('ADMIN')) split across two controllers on the backend, both
+  // under `/private/admin/notification-messages` — see the system spec's API
+  // contracts section. The frontend never gates on this split; the review
+  // methods are only ever called from a component that has already passed the
+  // component-level `authService.getRoles().includes('admin')` check (AC5).
+
+  getNotificationMessages(): Observable<ResponseAPI<OverridableMessageKeyDto[]>> {
+    return this.getRequest<OverridableMessageKeyDto[]>(
+      `${this.baseUrl}/private/admin/notification-messages`
+    );
+  }
+
+  getNotificationMessageByCode(
+    messageCode: string
+  ): Observable<ResponseAPI<OverridableMessageKeyDto>> {
+    return this.getRequest<OverridableMessageKeyDto>(
+      `${this.baseUrl}/private/admin/notification-messages/${encodeURIComponent(messageCode)}`
+    );
+  }
+
+  /**
+   * AC12 — side-effect-free preview of the SMS credit cost of a DRAFT body
+   * (not yet saved). Added to the contract 2026-08-13 after UX found the
+   * locked GET endpoints only describe already-stored text (live vs baseline,
+   * or old vs submitted-new) — see the UI spec's "Contract gap" callout.
+   */
+  previewNotificationMessageCredit(
+    messageCode: string,
+    locale: NotificationMessageLocale,
+    body: string
+  ): Observable<ResponseAPI<SmsCreditEstimateDto>> {
+    const payload: CreditPreviewReqDto = { body };
+    return this.postRequest<SmsCreditEstimateDto>(
+      `${this.baseUrl}/private/admin/notification-messages/${encodeURIComponent(messageCode)}/${locale}/credit-preview`,
+      payload
+    );
+  }
+
+  submitNotificationMessage(
+    payload: SubmitNotificationMessagePayload
+  ): Observable<ResponseAPI<SubmitNotificationMessageRespDto>> {
+    return this.postRequest<SubmitNotificationMessageRespDto>(
+      `${this.baseUrl}/private/admin/notification-messages`,
+      payload
+    );
+  }
+
+  /** Only ever called from a component that already passed the exact-role
+   * `getRoles().includes('admin')` check — see `NotificationMessageReviewQueuePageComponent`. */
+  getNotificationMessageReviewsPending(): Observable<ResponseAPI<PendingReviewRowDto[]>> {
+    return this.getRequest<PendingReviewRowDto[]>(
+      `${this.baseUrl}/private/admin/notification-messages/reviews/pending`
+    );
+  }
+
+  /** Only ever called from a component that already passed the exact-role
+   * `getRoles().includes('admin')` check — see `NotificationMessageReviewDetailPageComponent`. */
+  getNotificationMessageReviewById(
+    id: number
+  ): Observable<ResponseAPI<NotificationMessageReviewDetailDto>> {
+    return this.getRequest<NotificationMessageReviewDetailDto>(
+      `${this.baseUrl}/private/admin/notification-messages/reviews/${id}`
+    );
+  }
+
+  approveNotificationMessageReview(id: number): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(
+      `${this.baseUrl}/private/admin/notification-messages/reviews/${id}/approve`,
+      {}
+    );
+  }
+
+  rejectNotificationMessageReview(
+    id: number,
+    reason: string
+  ): Observable<ResponseAPI<unknown>> {
+    const payload: RejectNotificationMessageReviewPayload = { reason };
+    return this.postRequest<unknown>(
+      `${this.baseUrl}/private/admin/notification-messages/reviews/${id}/reject`,
       payload
     );
   }

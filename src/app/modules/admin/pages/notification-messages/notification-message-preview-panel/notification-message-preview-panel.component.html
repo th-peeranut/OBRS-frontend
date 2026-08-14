@@ -1,0 +1,14 @@
+<div class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.NOTIFICATION_MESSAGES.EDIT.PREVIEW_LABEL' | translate }}</h4>
+  </div>
+  <p class="nm-preview-body" data-testid="notification-message-preview">
+    @for (segment of segments; track $index) {
+      @if (segment.highlighted) {
+        <mark class="nm-preview-placeholder">{{ segment.text }}</mark>
+      } @else {
+        <span>{{ segment.text }}</span>
+      }
+    }
+  </p>
+</div>

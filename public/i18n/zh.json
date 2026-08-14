@@ -524,7 +524,8 @@
       "CUSTOMER_BEHAVIOR": "客户行为",
       "OPS_EFFICIENCY": "运营效率",
       "PARCEL_SHARE_CONFIG": "包裹收益分成",
-      "DRIVER_CASH_RATES": "司机现金费率"
+      "DRIVER_CASH_RATES": "司机现金费率",
+      "NOTIFICATION_MESSAGES": "通知消息"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -1963,6 +1964,90 @@
       "ERROR": {
         "DUPLICATE": "该售票点在该生效日期已有费率。",
         "CREATE_FAILED": "无法新增此费率。"
+      }
+    },
+    "NOTIFICATION_MESSAGES": {
+      "SUBTITLE": "自定义短信/邮件/应用内通知文案——需管理员审批后才生效",
+      "TAB_MESSAGES": "消息",
+      "TAB_REVIEWS": "待审批",
+      "LIST": {
+        "COL_KEY": "消息键",
+        "COL_TYPE": "通知类型",
+        "COL_CHANNELS": "渠道",
+        "COL_LOCALE_TH": "泰语",
+        "COL_LOCALE_EN": "英语",
+        "COL_LOCALE_ZH": "中文",
+        "EDIT_ARIA": "编辑{{locale}}文案",
+        "EMPTY": "没有可自定义的消息",
+        "LOAD_FAILED": "加载消息列表失败"
+      },
+      "STATUS": {
+        "PENDING": "待审批",
+        "APPROVED": "已生效",
+        "REJECTED": "已拒绝",
+        "NONE": "默认"
+      },
+      "CHANNEL": {
+        "SMS": "短信",
+        "EMAIL": "邮件",
+        "IN_APP": "应用内通知"
+      },
+      "EDIT": {
+        "TITLE": "编辑消息",
+        "CURRENT_LIVE_LABEL": "当前生效文案",
+        "BODY_LABEL": "新文案",
+        "PLACEHOLDER_HINT": "检测到的占位符：{{indices}}",
+        "PREVIEW_LABEL": "预览",
+        "SAVE": "保存并提交审批",
+        "CANCEL": "取消",
+        "PENDING_BANNER": "已保存，但尚未生效——等待管理员审批",
+        "REJECTED_BANNER": "您之前的提案已被拒绝",
+        "REJECT_REASON_LABEL": "拒绝原因",
+        "RE_EDIT_CTA": "重新编辑",
+        "SUBMIT_SUCCESS_TOAST": "已提交审批"
+      },
+      "ERROR": {
+        "PLACEHOLDER_MISSING": "缺少占位符：{{indices}}",
+        "PLACEHOLDER_EXTRA": "多余的占位符：{{indices}}",
+        "FORMAT_ERROR": "消息格式无效：{{detail}}",
+        "SAVE_FAILED": "保存失败"
+      },
+      "CREDIT": {
+        "LABEL": "{{credits}} 条短信额度（原 {{baseline}}，{{delta}}）",
+        "DELTA_ZERO": "无变化",
+        "HINT": "一个特殊字符或表情符号即可使短信额度成倍增加",
+        "NOT_BLOCKING_NOTE": "仅供参考，不会阻止保存"
+      },
+      "REVIEWS": {
+        "COL_KEY": "消息键",
+        "COL_LOCALE": "语言",
+        "COL_PROPOSED_BY": "提交人",
+        "COL_PROPOSED_AT": "提交时间",
+        "EMPTY": "没有待审批项",
+        "LOAD_FAILED": "加载审批队列失败",
+        "OPEN": "审批"
+      },
+      "REVIEW_DETAIL": {
+        "TITLE": "审批消息",
+        "OLD_LABEL": "当前文案",
+        "NEW_LABEL": "提议文案",
+        "APPROVE": "批准",
+        "REJECT": "拒绝",
+        "REJECT_DIALOG_TITLE": "拒绝此提案",
+        "REJECT_REASON_LABEL": "原因",
+        "REJECT_REASON_PLACEHOLDER": "请说明原因",
+        "REJECT_REASON_REQUIRED": "请填写原因",
+        "REJECT_CONFIRM": "确认拒绝",
+        "REJECT_CANCEL": "取消",
+        "APPROVE_SUCCESS_TOAST": "已批准——下一次通知即生效",
+        "REJECT_SUCCESS_TOAST": "已拒绝",
+        "ALREADY_HANDLED": "该项已被他人处理",
+        "LOAD_FAILED": "加载详情失败",
+        "BACK": "返回"
+      },
+      "ACCESS_DENIED": {
+        "TITLE": "无权访问",
+        "BODY": "此页面仅限管理员访问"
       }
     }
   },

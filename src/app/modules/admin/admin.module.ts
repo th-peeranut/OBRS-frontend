@@ -76,6 +76,20 @@ import { DriverCashDaysListComponent } from './pages/settlements/driver-cash-day
 import { DriverCashDayReturnModalComponent } from './pages/settlements/driver-cash-day-return-modal/driver-cash-day-return-modal.component';
 import { ParcelShareConfigPageComponent } from './pages/parcel-share-config/parcel-share-config-page.component';
 import { DriverCashRatesPageComponent } from './pages/driver-cash-rates/driver-cash-rates-page.component';
+// OBRS-1308 — owner-editable notification message overrides + admin approval.
+import { NotificationMessagesTabPageComponent } from './pages/notification-messages/notification-messages-tab-page.component';
+import { NotificationMessageListPageComponent } from './pages/notification-messages/notification-message-list-page.component';
+import { NotificationMessageListTableComponent } from './pages/notification-messages/notification-message-list-table/notification-message-list-table.component';
+import { NotificationMessageEditPageComponent } from './pages/notification-messages/notification-message-edit-page.component';
+import { NotificationMessageEditFormComponent } from './pages/notification-messages/notification-message-edit-form/notification-message-edit-form.component';
+import { NotificationMessagePreviewPanelComponent } from './pages/notification-messages/notification-message-preview-panel/notification-message-preview-panel.component';
+import { NotificationMessageCreditPanelComponent } from './pages/notification-messages/notification-message-credit-panel/notification-message-credit-panel.component';
+import { NotificationMessageReviewQueuePageComponent } from './pages/notification-messages/notification-message-review-queue-page.component';
+import { NotificationMessageReviewQueueTableComponent } from './pages/notification-messages/notification-message-review-queue-table/notification-message-review-queue-table.component';
+import { NotificationMessageReviewDetailPageComponent } from './pages/notification-messages/notification-message-review-detail-page.component';
+import { NotificationMessageReviewDiffComponent } from './pages/notification-messages/notification-message-review-diff/notification-message-review-diff.component';
+import { NotificationMessageRejectDialogComponent } from './pages/notification-messages/notification-message-reject-dialog/notification-message-reject-dialog.component';
+import { NotificationMessageAccessDeniedComponent } from './pages/notification-messages/notification-message-access-denied/notification-message-access-denied.component';
 import { AuthGuard } from '../../auth/auth.guard';
 import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
 import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
@@ -287,22 +301,40 @@ export const adminRoutes: Routes = [
           // Safe for every visitor the shell admits: the first tab's roles are
           // the shell's own union (asserted in system-settings-page.component.spec.ts).
           { path: '', redirectTo: SYSTEM_SETTINGS_TABS[0].path, pathMatch: 'full' },
-          ...SYSTEM_SETTINGS_TABS.map((tab) => ({
-            path: tab.path,
-            component: tab.component,
-            canActivate: [AuthGuard],
-            // Prompts before dropping an edit the user never saved. Inert on a
-            // tab whose component implements no canDeactivate() (the read-only
-            // history), by CanDeactivateGuard's own contract.
-            canDeactivate: [CanDeactivateGuard],
-            data: {
-              // Same page title on every tab — the tab strip already says which
-              // one is open, and getDeepestRoute() reads the CHILD's data.
+          ...SYSTEM_SETTINGS_TABS.map((tab) => {
+            // Same page title on every tab — the tab strip already says which
+            // one is open, and getDeepestRoute() reads the DEEPEST activated
+            // route's data. For a leaf tab that deepest route IS this one; for
+            // notification-messages (the first tab with children — OBRS-1308)
+            // it is instead the active CHILD, so that child's `data` must carry
+            // this same object or getDeepestRoute() falls back to the generic
+            // ADMIN.PAGES.DEFAULT header. See SystemSettingsTab.children's doc.
+            const data = {
               titleKey: 'ADMIN.PAGES.SYSTEM_SETTINGS',
               subtitleKey: tab.subtitleKey,
               requiredRoles: tab.requiredRoles,
-            },
-          })),
+            };
+            return {
+              path: tab.path,
+              component: tab.component,
+              canActivate: [AuthGuard],
+              // Prompts before dropping an edit the user never saved. Inert on a
+              // tab whose component implements no canDeactivate() (the read-only
+              // history), by CanDeactivateGuard's own contract.
+              canDeactivate: [CanDeactivateGuard],
+              data,
+              // OBRS-1308: every existing tab has no `children`, so this spread
+              // is a no-op for them — byte-identical route to before (AC9, no
+              // hand-added route). `tab.children` are inline route entries with
+              // no `data` of their own (see system-settings-tabs.ts); each gets
+              // this tab's `data` injected here, in ONE place, rather than
+              // hand-written per child, so a future child can't drift from its
+              // parent's title/subtitle/roles.
+              ...(tab.children
+                ? { children: tab.children.map((child) => ({ ...child, data: { ...data, ...child.data } })) }
+                : {}),
+            };
+          }),
         ],
       },
       {
@@ -452,6 +484,19 @@ export const adminRoutes: Routes = [
     DriverCashDayReturnModalComponent,
     ParcelShareConfigPageComponent,
     DriverCashRatesPageComponent,
+    NotificationMessagesTabPageComponent,
+    NotificationMessageListPageComponent,
+    NotificationMessageListTableComponent,
+    NotificationMessageEditPageComponent,
+    NotificationMessageEditFormComponent,
+    NotificationMessagePreviewPanelComponent,
+    NotificationMessageCreditPanelComponent,
+    NotificationMessageReviewQueuePageComponent,
+    NotificationMessageReviewQueueTableComponent,
+    NotificationMessageReviewDetailPageComponent,
+    NotificationMessageReviewDiffComponent,
+    NotificationMessageRejectDialogComponent,
+    NotificationMessageAccessDeniedComponent,
   ],
   imports: [
     SharedModule,

@@ -1,0 +1,16 @@
+<section class="admin-card mt-3">
+  <div class="admin-form-field full">
+    <label class="admin-form-label">{{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.OLD_LABEL' | translate }}</label>
+    <p class="nm-diff-body" data-testid="notification-message-review-old">{{ oldBody }}</p>
+  </div>
+  <div class="admin-form-field full mt-2">
+    <label class="admin-form-label">{{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEW_DETAIL.NEW_LABEL' | translate }}</label>
+    <p class="nm-diff-body nm-diff-body--new" data-testid="notification-message-review-new">{{ newBody }}</p>
+  </div>
+
+  @if (placeholderIndices.length > 0) {
+    <small class="admin-hint">
+      {{ 'ADMIN.NOTIFICATION_MESSAGES.EDIT.PLACEHOLDER_HINT' | translate: { indices: placeholderIndices.join(', ') } }}
+    </small>
+  }
+</section>
