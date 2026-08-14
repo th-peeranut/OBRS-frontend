@@ -18,7 +18,7 @@
       </button>
     </div>
     <div class="card shadow-sm border-0">
-      <app-parcel-waybill-paper [waybill]="waybill" [qrDataUrl]="qrDataUrl"></app-parcel-waybill-paper>
+      <app-parcel-waybill-paper [waybill]="waybill" [qrDataUrl]="qrDataUrl" [trackQrDataUrl]="trackQrDataUrl"></app-parcel-waybill-paper>
     </div>
   }
 </div>
@@ -28,5 +28,5 @@ via DomPortalOutlet (docs/adr/0015-boarding-manifest-print-isolation.md
 idiom). Reuses the SAME dumb paper component/inputs as the on-screen card
 above — one "paper" look, not a second markup copy. -->
 <ng-template #printTemplate>
-  <app-parcel-waybill-paper [waybill]="waybill" [qrDataUrl]="qrDataUrl"></app-parcel-waybill-paper>
+  <app-parcel-waybill-paper [waybill]="waybill" [qrDataUrl]="qrDataUrl" [trackQrDataUrl]="trackQrDataUrl"></app-parcel-waybill-paper>
 </ng-template>

@@ -13,9 +13,22 @@
 .parcel-waybill-qr {
   margin-top: 24px;
   text-align: center;
+  // OBRS-1353: two QRs now share this row (recipient's collection code, sender's
+  // tracking link). Side by side so both fit one printed page, and so the reader
+  // sees they are two different things rather than one repeated.
+  display: inline-block;
+  vertical-align: top;
+  width: 48%;
 
   img {
     width: 140px;
     height: 140px;
   }
+}
+
+// Which QR belongs to whom. Printed black-on-white, above the code itself: mixing
+// the two up would hand the recipient's collection token out as a public link.
+.parcel-waybill-qr-for {
+  font-weight: 700;
+  margin-bottom: 4px;
 }

@@ -38,6 +38,7 @@ export class ParcelWaybillPageComponent implements OnInit, OnDestroy {
 
   protected waybill: WaybillRespDto | null = null;
   protected qrDataUrl = '';
+  protected trackQrDataUrl = '';
   protected isLoading = true;
   protected hasError = false;
 
@@ -69,7 +70,14 @@ export class ParcelWaybillPageComponent implements OnInit, OnDestroy {
           this.isLoading = false;
           this.hasError = !this.waybill;
           if (this.waybill?.collectionToken) {
-            void this.renderQr(this.waybill.collectionToken);
+            void this.renderQr(this.waybill.collectionToken).then((url) => {
+              this.qrDataUrl = url;
+            });
+          }
+          if (this.waybill?.trackingNumber) {
+            void this.renderQr(this.trackUrl(this.waybill.trackingNumber)).then((url) => {
+              this.trackQrDataUrl = url;
+            });
           }
         },
         error: () => {
@@ -85,15 +93,25 @@ export class ParcelWaybillPageComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private async renderQr(collectionToken: string): Promise<void> {
+  /**
+   * OBRS-1353: the sender's tracking link. `window.location.origin` rather than a
+   * configured app origin — there is no such config (`environment.base.ts` carries
+   * `apiUrl` only), and the waybill is served from the very origin the sender would
+   * visit, so the running page already knows the answer.
+   */
+  private trackUrl(trackingNumber: string): string {
+    return `${window.location.origin}/track-parcel/${encodeURIComponent(trackingNumber)}`;
+  }
+
+  private async renderQr(text: string): Promise<string> {
     try {
-      this.qrDataUrl = await QRCode.toDataURL(collectionToken, {
+      return await QRCode.toDataURL(text, {
         width: 140,
         margin: 1,
         errorCorrectionLevel: 'M',
       });
     } catch {
-      this.qrDataUrl = '';
+      return '';
     }
   }
 

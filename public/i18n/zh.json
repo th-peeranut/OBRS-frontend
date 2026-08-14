@@ -3369,8 +3369,12 @@
       "WEIGHT": "重量",
       "AMOUNT": "金额",
       "DEPARTURE": "出发时间",
+      "QR_FOR_RECIPIENT": "收件人专用",
       "QR_ALT": "取件二维码",
       "QR_HINT": "取件时请出示此二维码或取件码。",
+      "TRACK_QR_FOR_SENDER": "寄件人专用",
+      "TRACK_QR_ALT": "包裹追踪二维码",
+      "TRACK_QR_HINT": "扫码追踪此包裹，并查看放置在站点时拍摄的照片。",
       "PRINT": "打印",
       "LOAD_FAILED": "无法加载此运单。"
     },
@@ -3690,7 +3694,10 @@
     "DROPOFF_STOP": "送达站点",
     "ARRIVED_NOTIFIED_AT": "已到达目的地",
     "COLLECTED_AT": "取件时间",
+    "LEFT_AT_STOP_AT": "放置在站点的时间",
     "RECIPIENT": "收件人",
+    "PROOF_ALT": "包裹放置在站点时拍摄的照片",
+    "PROOF_CAPTION": "司机在将包裹放置在站点的那一刻拍摄的照片。",
     "STATUS": {
       "CREATED": "已申报 — 等待到站寄件",
       "ACCEPTED": "已受理",

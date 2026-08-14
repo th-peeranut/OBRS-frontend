@@ -56,11 +56,23 @@
                 <span class="fw-semibold">{{ displayDateTime(r.collectedAt) }}</span>
               </div>
             }
+            @if (r.leftAtStopAt) {
+              <div class="parcel-tracking-timeline-row">
+                <span class="text-muted">{{ 'PARCEL_TRACKING.LEFT_AT_STOP_AT' | translate }}</span>
+                <span class="fw-semibold">{{ displayDateTime(r.leftAtStopAt) }}</span>
+              </div>
+            }
             <div class="parcel-tracking-timeline-row">
               <span class="text-muted">{{ 'PARCEL_TRACKING.RECIPIENT' | translate }}</span>
               <span class="fw-semibold">{{ r.recipientNameMasked }}</span>
             </div>
           </div>
+          @if (r.leftAtStopPhotoUrl) {
+            <figure class="parcel-tracking-proof">
+              <img [src]="r.leftAtStopPhotoUrl" [attr.alt]="'PARCEL_TRACKING.PROOF_ALT' | translate" />
+              <figcaption class="text-muted small">{{ 'PARCEL_TRACKING.PROOF_CAPTION' | translate }}</figcaption>
+            </figure>
+          }
         </div>
       }
     </div>
