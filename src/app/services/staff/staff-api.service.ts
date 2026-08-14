@@ -29,6 +29,7 @@ import {
   ParcelConsignedReqDto,
   ParcelConsignedRespDto,
   ParcelDeliveryListItemDto,
+  ParcelLeaveAtStopRespDto,
   ParcelLoadRespDto,
   ParcelArrivedRespDto,
   ParcelQuoteReqParams,
@@ -840,6 +841,32 @@ export class StaffApiService {
     return this.http.post<ResponseAPI<ParcelCollectRespDto>>(
       `${environment.apiUrl}/api/private/parcels/${parcelId}/collect`,
       payload,
+      { context: this.parcelActionContext }
+    );
+  }
+
+  /**
+   * POST /api/private/parcels/{id}/leave-at-stop — arrived_notified →
+   * left_at_stop (CAS). OBRS-1345.
+   *
+   * Multipart with a single `file` part, and no JSON alternative exists: the
+   * photo IS the request. The owner's OBRS-629 Q5 policy is that a parcel
+   * nobody collected is left at the stop and photographed, so the backend
+   * refuses the transition without one — sending an empty body here 400s
+   * rather than quietly recording a proof-less drop-off.
+   *
+   * No explicit Content-Type header: the browser must set the multipart
+   * boundary itself.
+   */
+  leaveParcelAtStop(
+    parcelId: number,
+    photo: File
+  ): Observable<ResponseAPI<ParcelLeaveAtStopRespDto>> {
+    const formData = new FormData();
+    formData.append('file', photo);
+    return this.http.post<ResponseAPI<ParcelLeaveAtStopRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/leave-at-stop`,
+      formData,
       { context: this.parcelActionContext }
     );
   }

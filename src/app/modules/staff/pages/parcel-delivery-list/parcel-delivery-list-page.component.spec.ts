@@ -236,6 +236,101 @@ describe('ParcelDeliveryListPageComponent', () => {
     });
   });
 
+  // OBRS-1345: leave-at-stop. The photo IS the transition, so the tests worth
+  // having are the ones that prove the row never claims a drop-off the server
+  // did not record, and that the driver is always told when it did not.
+  describe('leave at stop (OBRS-1345)', () => {
+    function fileChangeEvent(file: File | null): Event {
+      const input = { files: file ? [file] : [], value: 'C:\\fakepath\\drop.jpg' } as unknown as HTMLInputElement;
+      return { target: input } as unknown as Event;
+    }
+
+    const photo = new File(['x'], 'drop.jpg', { type: 'image/jpeg' });
+
+    function componentWith(rows: ParcelDeliveryListItemDto[], staffApi: any) {
+      const component = new ParcelDeliveryListPageComponent(
+        makeRouteStub('42'), staffApi, makeAlertStub(), createTranslateStub(), makeStoreStub(rows)
+      );
+      component.ngOnInit();
+      return component;
+    }
+
+    it('sends the chosen photo and writes back the SERVER status, time and url', () => {
+      const row = makeRow({ parcelId: 7, deliveryStatus: 'arrived_notified' });
+      const store = makeStoreStub([row]);
+      const staffApi = {
+        leaveParcelAtStop: jasmine.createSpy().and.returnValue(
+          of({
+            data: {
+              deliveryStatus: 'left_at_stop',
+              leftAtStopAt: '2026-08-14T10:00:00Z',
+              leftAtStopBy: 3,
+              photoUrl: 'https://sb.example/p.jpg',
+            },
+          })
+        ),
+      } as any;
+      const component = new ParcelDeliveryListPageComponent(
+        makeRouteStub('42'), staffApi, makeAlertStub(), createTranslateStub(), store
+      );
+      component.ngOnInit();
+
+      component['onLeaveAtStopPhotoChosen'](row, fileChangeEvent(photo));
+
+      expect(staffApi.leaveParcelAtStop).toHaveBeenCalledWith(7, photo);
+      const updated = (store.data$.value as ParcelDeliveryListItemDto[])[0];
+      expect(updated.deliveryStatus).toBe('left_at_stop');
+      // The claim window starts at the SERVER's stamp (OBRS-629 Q8) - the page
+      // must never substitute a locally computed time here.
+      expect(updated.leftAtStopAt).toBe('2026-08-14T10:00:00Z');
+      expect(updated.leftAtStopPhotoUrl).toBe('https://sb.example/p.jpg');
+    });
+
+    it('a failed upload leaves the row untouched and TELLS the driver - it must never look delivered', () => {
+      const row = makeRow({ parcelId: 7, deliveryStatus: 'arrived_notified' });
+      const store = makeStoreStub([row]);
+      const alertService = makeAlertStub();
+      const staffApi = {
+        leaveParcelAtStop: jasmine.createSpy().and.returnValue(
+          throwError(() => ({ error: { errorCode: 'PARCEL_PHOTO_TOO_LARGE' } }))
+        ),
+      } as any;
+      const component = new ParcelDeliveryListPageComponent(
+        makeRouteStub('42'), staffApi, alertService, createTranslateStub(), store
+      );
+      component.ngOnInit();
+
+      component['onLeaveAtStopPhotoChosen'](row, fileChangeEvent(photo));
+
+      expect(alertService.toast).toHaveBeenCalledWith('STAFF.PARCEL_DELIVERY.ERROR.PHOTO_TOO_LARGE', 'error');
+      expect((store.data$.value as ParcelDeliveryListItemDto[])[0].deliveryStatus).toBe('arrived_notified');
+      expect(component['isRowBusy'](7)).toBeFalse();
+    });
+
+    it('a dismissed camera (no file) calls nothing', () => {
+      const row = makeRow({ parcelId: 7, deliveryStatus: 'arrived_notified' });
+      const staffApi = { leaveParcelAtStop: jasmine.createSpy() } as any;
+      const component = componentWith([row], staffApi);
+
+      component['onLeaveAtStopPhotoChosen'](row, fileChangeEvent(null));
+
+      expect(staffApi.leaveParcelAtStop).not.toHaveBeenCalled();
+    });
+
+    it('clears the input value so retaking the SAME filename after a failure still fires', () => {
+      const row = makeRow({ parcelId: 7, deliveryStatus: 'arrived_notified' });
+      const staffApi = {
+        leaveParcelAtStop: jasmine.createSpy().and.returnValue(of({ data: { deliveryStatus: 'left_at_stop' } })),
+      } as any;
+      const component = componentWith([row], staffApi);
+      const event = fileChangeEvent(photo);
+
+      component['onLeaveAtStopPhotoChosen'](row, event);
+
+      expect((event.target as HTMLInputElement).value).toBe('');
+    });
+  });
+
   it('cleans up on destroy without throwing', () => {
     const store = makeStoreStub();
     const component = new ParcelDeliveryListPageComponent(makeRouteStub('42'), {} as any, makeAlertStub(), createTranslateStub(), store);

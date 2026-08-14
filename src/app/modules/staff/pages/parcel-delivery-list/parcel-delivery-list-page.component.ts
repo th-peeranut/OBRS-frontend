@@ -6,7 +6,10 @@ import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { StaffApiService } from '../../../../services/staff/staff-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
-import { ParcelDeliveryListItemDto } from '../../../../shared/interfaces/parcel.interface';
+import {
+  ParcelDeliveryListItemDto,
+  ParcelLeaveAtStopRespDto,
+} from '../../../../shared/interfaces/parcel.interface';
 import { parcelDeliveryStatusChip, ParcelStatusChip } from '../../../../shared/lib/parcel-delivery-status';
 import {
   isParcelBookingBlocking,
@@ -21,6 +24,15 @@ const ACTION_ERROR_KEYS: Record<string, string> = {
   PARCEL_COLLECT_CODE_MISMATCH: 'STAFF.PARCEL_DELIVERY.ERROR.CODE_MISMATCH',
   PARCEL_ALREADY_COLLECTED: 'STAFF.PARCEL_DELIVERY.ERROR.ALREADY_COLLECTED',
   PARCEL_BOOKING_NOT_CONFIRMED: 'STAFF.PARCEL_DELIVERY.ERROR.BOOKING_NOT_CONFIRMED',
+  // OBRS-1345. The photo failures get their OWN messages rather than falling
+  // through to WRONG_STATE: a driver standing at a roadside stop needs to know
+  // whether to retake the photo or stop trying, and "the parcel is in the wrong
+  // state" answers neither. AC-10 — this path must never fail quietly.
+  PARCEL_ALREADY_LEFT_AT_STOP: 'STAFF.PARCEL_DELIVERY.ERROR.ALREADY_LEFT_AT_STOP',
+  PARCEL_PHOTO_TOO_LARGE: 'STAFF.PARCEL_DELIVERY.ERROR.PHOTO_TOO_LARGE',
+  PARCEL_PHOTO_UNSUPPORTED: 'STAFF.PARCEL_DELIVERY.ERROR.PHOTO_UNSUPPORTED',
+  PARCEL_PHOTO_MISSING: 'STAFF.PARCEL_DELIVERY.ERROR.PHOTO_FAILED',
+  PARCEL_PHOTO_UNREADABLE: 'STAFF.PARCEL_DELIVERY.ERROR.PHOTO_FAILED',
 };
 
 /**
@@ -157,6 +169,61 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
           this.collectErrorKey = this.mapErrorCode(err);
         },
       });
+  }
+
+  /**
+   * OBRS-1345: the driver found nobody at the stop. The button behind this
+   * opens the phone camera (`capture="environment"` on a hidden file input),
+   * and the photo it returns is the request — there is no way from this screen
+   * to record a drop-off without one, because the backend has no endpoint that
+   * would accept it.
+   *
+   * On failure the row is deliberately left where it was and the store is
+   * re-synced: the parcel is still `arrived_notified` server-side, so showing
+   * anything else would tell the driver the goods are recorded as delivered
+   * when the only evidence of that never arrived (AC-10, OBRS-832's lesson).
+   */
+  protected onLeaveAtStopPhotoChosen(row: ParcelDeliveryListItemDto, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const photo = input.files?.[0];
+    // Reset immediately so retaking the SAME file after a failure still fires
+    // a change event — without this a retry on an unchanged filename is silent.
+    input.value = '';
+    if (!photo) return;
+
+    this.loadingParcelIds.add(row.parcelId);
+    this.staffApiService
+      .leaveParcelAtStop(row.parcelId, photo)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp) => {
+          this.loadingParcelIds.delete(row.parcelId);
+          this.applyLeftAtStop(row.parcelId, resp?.data);
+        },
+        error: (err: unknown) => {
+          this.loadingParcelIds.delete(row.parcelId);
+          this.alertService.toast(this.translate.instant(this.mapErrorCode(err)), 'error');
+          void this.store.refresh();
+        },
+      });
+  }
+
+  /** Writes back the SERVER's status, timestamp and URL together — the proof
+   * and the claim-window start (OBRS-629 Q8) are never reconstructed locally. */
+  private applyLeftAtStop(parcelId: number, data: ParcelLeaveAtStopRespDto | undefined): void {
+    if (!data?.deliveryStatus) return;
+    this.store.mutate((rows) =>
+      rows.map((r) =>
+        r.parcelId === parcelId
+          ? {
+              ...r,
+              deliveryStatus: data.deliveryStatus,
+              leftAtStopAt: data.leftAtStopAt,
+              leftAtStopPhotoUrl: data.photoUrl,
+            }
+          : r
+      )
+    );
   }
 
   /** Shared runner for the simple (no-dialog) load/arrived transitions —

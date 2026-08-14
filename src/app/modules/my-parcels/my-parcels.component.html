@@ -97,6 +97,28 @@
                 {{ "PARCEL_BOOKING.MY_PARCELS.CREATED_ACTION_HINT" | translate }}
               </p>
             }
+            <!-- OBRS-1345 (AC-3): nobody was at the stop, so the driver left the
+                 parcel and photographed it. The stamped time is shown next to the
+                 photo on purpose - it is when the 1-day claim window starts
+                 (OBRS-629 Q8), so the sender must be able to read it here. -->
+            @if (row.leftAtStopPhotoUrl) {
+              <div class="parcel-card__drop-off" data-testid="drop-off-proof">
+                <a [href]="row.leftAtStopPhotoUrl" target="_blank" rel="noopener">
+                  <img
+                    class="parcel-card__drop-off-photo"
+                    [src]="row.leftAtStopPhotoUrl"
+                    [alt]="'PARCEL_BOOKING.MY_PARCELS.DROP_OFF_PHOTO_ALT' | translate"
+                    loading="lazy"
+                    />
+                </a>
+                <p class="parcel-card__hint">
+                  {{
+                  "PARCEL_BOOKING.MY_PARCELS.DROP_OFF_PHOTO_AT"
+                  | translate: { time: displayDateTime(row.leftAtStopAt) }
+                  }}
+                </p>
+              </div>
+            }
             <div class="parcel-card__actions">
               <button type="button" class="btn-link" (click)="copyTrackingLink(row.trackingNumber)">
                 {{ "PARCEL_BOOKING.MY_PARCELS.COPY_TRACKING_LINK" | translate }}

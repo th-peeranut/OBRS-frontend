@@ -206,4 +206,31 @@ describe('MyParcelsComponent (DOM rendering)', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('PCL0000001');
     expect(alertService.toast).toHaveBeenCalled();
   });
+
+  // OBRS-1345 AC-3. This block is the ONLY channel a member sender has for the
+  // drop-off photo today, so "it renders" is the acceptance criterion itself.
+  it('renders the drop-off photo and its server-stamped time for a left_at_stop parcel', () => {
+    renderWithState({
+      items: [
+        buildRow({
+          deliveryStatus: 'left_at_stop',
+          leftAtStopAt: '2026-08-14T10:00:00+07:00',
+          leftAtStopPhotoUrl: 'https://sb.example/storage/v1/object/public/bucket/parcels/1/x.jpg',
+        }),
+      ],
+      loaded: true,
+    });
+
+    const img = fixture.debugElement.query(By.css('.parcel-card__drop-off-photo'))
+      .nativeElement as HTMLImageElement;
+    expect(img.getAttribute('src')).toBe('https://sb.example/storage/v1/object/public/bucket/parcels/1/x.jpg');
+    // The stamped time is what starts the 1-day claim window (OBRS-629 Q8), so
+    // it has to be on screen next to the photo, not only in the API response.
+    expect(cardText()).toContain('PARCEL_BOOKING.MY_PARCELS.DROP_OFF_PHOTO_AT');
+  });
+
+  it('renders no drop-off block at all for a parcel that was collected normally', () => {
+    renderWithState({ items: [buildRow({ deliveryStatus: 'collected' })], loaded: true });
+    expect(fixture.debugElement.query(By.css('[data-testid="drop-off-proof"]'))).toBeNull();
+  });
 });

@@ -193,6 +193,22 @@ export interface ParcelCollectRespDto {
 }
 
 /**
+ * `POST /api/private/parcels/{id}/leave-at-stop` 200 body — OBRS-1345, the
+ * other terminal exit from `arrived_notified`.
+ *
+ * `leftAtStopAt` is the DATABASE's stamp, echoed back deliberately: it starts
+ * the customer's 1-day claim window (OBRS-629 Q8) and the device that just
+ * took the photo has the least trustworthy clock in the system, so the driver
+ * must be shown the time the server recorded, never a locally computed one.
+ */
+export interface ParcelLeaveAtStopRespDto {
+  deliveryStatus: string;
+  leftAtStopAt: string;
+  leftAtStopBy: number;
+  photoUrl: string;
+}
+
+/**
  * The API doc names `pickupStop`/`dropoffStop` on the tracking + waybill
  * responses without spelling out their shape beyond the field name. Modeled
  * resilient to either shape already used elsewhere in this codebase for a
@@ -293,6 +309,16 @@ export interface ParcelDeliveryListItemDto {
    * OBRS-396 already established) or on a pre-OBRS-416 backend.
    */
   amount?: number | null;
+  /**
+   * OBRS-1345: the drop-off proof. Non-null only once the driver has left this
+   * parcel at its stop — the terminal outcome the owner's OBRS-629 Q5 policy
+   * describes (nobody waiting, so the parcel is left and photographed).
+   * `leftAtStopAt` is the SERVER's stamp, not the phone's, because it starts
+   * the customer's 1-day claim window (OBRS-629 Q8). Optional/absent on a
+   * backend older than this card.
+   */
+  leftAtStopAt?: string | null;
+  leftAtStopPhotoUrl?: string | null;
 }
 
 /**
@@ -448,4 +474,15 @@ export interface ParcelMeDto {
   /** Only meaningful while `bookingStatus === 'pending'` — the reservation
    * hold's expiry, after which `BookingExpirationScheduler` sweeps it. */
   expiresAt?: string | null;
+  /**
+   * OBRS-1345 (AC-3): the photo the driver took when leaving this parcel at
+   * its drop-off stop, and the server-stamped moment they did.
+   *
+   * This page is the ONLY channel a member sender has for that photo today. A
+   * walk-in (non-member) sender never sees this screen at all — their channel
+   * is LINE OA and it is still blocked on OBRS-1174, which is why the terms
+   * have to say plainly that no LINE means no photo (OBRS-629 Q5).
+   */
+  leftAtStopAt?: string | null;
+  leftAtStopPhotoUrl?: string | null;
 }
