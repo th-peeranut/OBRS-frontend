@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 
@@ -21,7 +21,13 @@ import { AuthService } from '../../../auth/auth.service';
  * logout subscription below must be returned in `ngOnDestroy` or one leaks per
  * panel open. Angular calls `ngOnDestroy` on a provider when its injector dies,
  * which covers both scopes.
+ *
+ * The bare `@Injectable()` is what lets an abstract base declare a lifecycle
+ * hook: AOT rejects an undecorated class that uses an Angular feature (NG2007),
+ * and karma runs JIT so only the build catches it. No `providedIn` — each
+ * subclass still declares its own scope.
  */
+@Injectable()
 export abstract class AdminCollectionStore<T> implements OnDestroy {
   private readonly dataSubject = new BehaviorSubject<T | null>(null);
   private readonly refreshingSubject = new BehaviorSubject<boolean>(false);
