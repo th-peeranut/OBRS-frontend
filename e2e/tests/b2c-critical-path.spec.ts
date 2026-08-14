@@ -97,6 +97,15 @@ async function searchAndConfirmASchedule(page: Page): Promise<void> {
   // Select the first available schedule
   await selectBtn.click();
 
+  // OBRS-1336: schedules.json carries a departure leg and `arrivalSchedules: null`,
+  // and the home form has defaulted to ROUND TRIP since OBRS-1185 — so this walk
+  // has always been a round-trip search that ends in a one-way ticket. The click
+  // above used to navigate straight on, which is the bug that card fixes; the
+  // confirm now stands here and accepting it is exactly what the line above did
+  // silently. Not a detour bolted onto this spec: it is this spec's own path,
+  // stated out loud.
+  await page.locator('.nrc-modal .btn-primary').click();
+
   // ── Step 3: Review page ──────────────────────────────────────────────────
 
   await page.waitForURL('**/review-schedule-booking');
