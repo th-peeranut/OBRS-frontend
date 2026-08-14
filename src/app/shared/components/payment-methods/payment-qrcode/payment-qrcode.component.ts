@@ -231,11 +231,17 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
    * `authorizeUri` and **no** `transactions` array, so `getQrImageSource()`
    * finds nothing and `qrImageUrl` is always the locally generated
    * `data:image/png;base64,…` (5,894 chars) — never an https URL on Omise's
-   * origin. That settles the question the card left open: the cross-origin row,
-   * where `download` is ignored by *every* browser, is not reachable on this
-   * path, so this is an iOS/WKWebView bug and not a pan-platform one. The https
-   * branch below is kept anyway, because `getQrImageSource()` would return one
-   * the day the backend starts forwarding Omise's `scannable_code`.
+   * origin. That settled the question the card left open at the time: the
+   * cross-origin row, where `download` is ignored by *every* browser, was not
+   * reachable on this path, so this is an iOS/WKWebView bug and not a
+   * pan-platform one.
+   *
+   * SUPERSEDED 2026-08-14 (OBRS-1351): the backend now forwards Omise's
+   * `source.scannable_code.image.download_uri`, so on PromptPay `qrImageUrl` IS
+   * an https URL on `api.omise.co` and the cross-origin row is reachable after
+   * all. It is already handled — `downloadQrViaAnchor()` fetches the image and
+   * hands `<a download>` a same-origin `blob:` instead. Left standing rather
+   * than deleted because the iOS branch above still rests on the measurement.
    *
    * Order (owner's decision of 2026-08-10, option 3 — feature-detect):
    *   1. iOS + Web Share with files → the share sheet, the only route on iOS
@@ -640,6 +646,13 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   ): string | undefined {
     if (!payment) {
       return undefined;
+    }
+
+    // OBRS-1351: the create-payment response carries Omise's own QR here — it has no
+    // `transactions` array, so before this branch existed the loop below could never see
+    // one and every PromptPay QR was drawn locally from the authorize URL.
+    if ('qrImageUrl' in payment && payment.qrImageUrl) {
+      return payment.qrImageUrl;
     }
 
     if ('transactions' in payment) {
