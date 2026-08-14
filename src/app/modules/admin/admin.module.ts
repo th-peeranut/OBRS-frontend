@@ -49,6 +49,7 @@ import { RefundVoidReportPageComponent } from './pages/refund-void-report/refund
 import { CashOnlineReconciliationReportPageComponent } from './pages/cash-online-reconciliation-report/cash-online-reconciliation-report-page.component';
 import { AppVehicleMaintenancePanelComponent } from './pages/vehicles/vehicle-maintenance/vehicle-maintenance-panel.component';
 import { AppVehicleInspectionPanelComponent } from './pages/vehicles/vehicle-inspection/vehicle-inspection-panel.component';
+import { AppVehicleMaintenancePlanPanelComponent } from './pages/vehicles/vehicle-maintenance-plan/vehicle-maintenance-plan-panel.component';
 import { SettlementsPageComponent } from './pages/settlements/settlements-page.component';
 import { SettlementsListComponent } from './pages/settlements/settlements-list/settlements-list.component';
 import { SettlementDetailModalComponent } from './pages/settlements/settlement-detail-modal/settlement-detail-modal.component';
@@ -463,6 +464,7 @@ export const adminRoutes: Routes = [
     CashOnlineReconciliationReportPageComponent,
     AppVehicleMaintenancePanelComponent,
     AppVehicleInspectionPanelComponent,
+    AppVehicleMaintenancePlanPanelComponent,
     SettlementsPageComponent,
     SettlementsListComponent,
     SettlementDetailModalComponent,

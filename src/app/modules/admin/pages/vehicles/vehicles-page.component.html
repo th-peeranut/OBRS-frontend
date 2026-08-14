@@ -54,6 +54,19 @@
     <span class="material-symbols-outlined" [attr.translate]="'no'">checklist</span>
     <span>{{ 'ADMIN.VEHICLES.INSPECTION.TAB' | translate }}</span>
   </button>
+  <button
+    type="button"
+    class="schedule-tab"
+    role="tab"
+    [class.is-active]="activeTab === 'plans'"
+    [attr.aria-selected]="activeTab === 'plans'"
+    [disabled]="!focusedVehicle"
+    [attr.title]="!focusedVehicle ? ('ADMIN.VEHICLES.MAINTENANCE_PLAN.TAB_DISABLED_HINT' | translate) : null"
+    (click)="setActiveTab('plans')"
+    >
+    <span class="material-symbols-outlined" [attr.translate]="'no'">event_repeat</span>
+    <span>{{ 'ADMIN.VEHICLES.MAINTENANCE_PLAN.TAB' | translate }}</span>
+  </button>
 </nav>
 
 @if (activeTab === 'list') {
@@ -100,6 +113,7 @@
     (delete)="openDeleteModal($event)"
     (manageMaintenance)="viewMaintenanceForVehicle($event)"
     (viewInspections)="viewInspectionsForVehicle($event)"
+    (managePlans)="viewPlansForVehicle($event)"
   ></app-vehicle-list-table>
 }
 
@@ -131,6 +145,22 @@
     [vehicleId]="focusedVehicle.id"
     [vehicleLabel]="focusedVehicle.vehicleNumber"
   ></app-vehicle-inspection-panel>
+}
+
+@if (activeTab === 'plans' && focusedVehicle) {
+  <div class="schedule-focus-banner">
+    <span class="material-symbols-outlined" [attr.translate]="'no'">directions_bus</span>
+    <span>{{ 'ADMIN.VEHICLES.MAINTENANCE_PLAN.FOCUSED_BANNER' | translate: { vehicle: focusedVehicle.vehicleNumber } }}</span>
+    <button type="button" class="schedule-focus-clear" (click)="clearFocusedVehicle()">
+      {{ 'ADMIN.VEHICLES.MAINTENANCE.FOCUSED_CLEAR' | translate }}
+    </button>
+  </div>
+  <app-vehicle-maintenance-plan-panel
+    [vehicleId]="focusedVehicle.id"
+    [vehicleLabel]="focusedVehicle.vehicleNumber"
+    [canWrite]="canWriteMaintenance"
+    [partOptions]="partOptions"
+  ></app-vehicle-maintenance-plan-panel>
 }
 
 <app-vehicle-form-modal
