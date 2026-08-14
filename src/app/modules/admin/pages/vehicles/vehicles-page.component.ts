@@ -22,6 +22,10 @@ import {
   toVehicleStatusOptions,
   toVehicleTypeOptions,
 } from './vehicles-page.mappers';
+import {
+  MaintenancePartLabels,
+  toPartOptions,
+} from './vehicle-maintenance-plan/vehicle-maintenance-plan.mappers';
 
 /**
  * Vehicle management list + CRUD + maintenance focus (OBRS-91 / OBRS-209).
@@ -65,13 +69,22 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   // vehicle row's "Manage maintenance" action focuses one.
   // OBRS-312: "Inspections" is a third tab reusing the SAME focusedVehicle
   // mechanic — both non-'list' tabs stay disabled until a vehicle is focused.
-  protected activeTab: 'list' | 'maintenance' | 'inspections' = 'list';
+  // OBRS-1333: "Plans" (maintenance PLANS — recurring reminder rules, distinct
+  // from the "Maintenance" tab's work-order log) is a fourth tab, same mechanic.
+  protected activeTab: 'list' | 'maintenance' | 'inspections' | 'plans' = 'list';
   protected focusedVehicle: VehicleRow | null = null;
   protected maintenanceStatusOptions: AdminLookupDto[] = [];
+  // OBRS-1333: unlike maintenanceStatusOptions above (a fetched Lookup
+  // category), `part` is a static backend enum (`MAINTENANCE_PART_CODES`) —
+  // there is nothing to fetch, so this page resolves the localized labels
+  // itself via translate.instant() and passes the finished Option[] down,
+  // mirroring expenses-page.component.ts's categoryOptions.
+  protected partOptions: Option[] = [];
   // Write affordances on the maintenance panel (Add + modal Save) are
   // owner/admin only; the per-row "Manage maintenance" action itself is
   // available to every reader. Computed once — single source of truth
-  // passed down to the panel as an @Input().
+  // passed down to the panel as an @Input(). Reused verbatim (identical
+  // hasAnyRole(['owner']) gate) as the maintenance-plans panel's canWrite.
   protected readonly canWriteMaintenance: boolean;
 
   // Bound reloader passed to the form modal so it can refresh the list after
@@ -167,9 +180,9 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     this.applyVehicleFilter();
   }
 
-  protected setActiveTab(tab: 'list' | 'maintenance' | 'inspections'): void {
-    // Maintenance/Inspections are disabled (visible, not hidden) until a
-    // vehicle is focused via a per-row action.
+  protected setActiveTab(tab: 'list' | 'maintenance' | 'inspections' | 'plans'): void {
+    // Maintenance/Inspections/Plans are disabled (visible, not hidden) until
+    // a vehicle is focused via a per-row action.
     if (tab !== 'list' && !this.focusedVehicle) {
       return;
     }
@@ -188,6 +201,13 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected viewInspectionsForVehicle(vehicle: VehicleRow): void {
     this.focusedVehicle = vehicle;
     this.activeTab = 'inspections';
+  }
+
+  // OBRS-1333: per-row "Manage maintenance plans" action, reusing the same
+  // focusedVehicle mechanic as viewMaintenanceForVehicle above.
+  protected viewPlansForVehicle(vehicle: VehicleRow): void {
+    this.focusedVehicle = vehicle;
+    this.activeTab = 'plans';
   }
 
   protected clearFocusedVehicle(): void {
@@ -268,6 +288,11 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     // page derives statusOptions above.
     this.maintenanceStatusOptions = filterMaintenanceStatusLookups(this.rawLookups);
 
+    // OBRS-1333: unlike maintenanceStatusOptions above, `part` has no Lookup
+    // fetch to filter — build the finished Option[] here (mirrors
+    // expenses-page.component.ts calling toExpenseCategoryOptions(labels)).
+    this.partOptions = toPartOptions(this.buildPartLabels());
+
     this.vehicles = this.rawVehicles.map((vehicle) => toVehicleRow(vehicle, currentLocale));
     this.syncStatusFilterWithAvailableOptions();
     this.applyVehicleFilter();
@@ -284,6 +309,27 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     ).toLowerCase();
 
     return rawLocale.startsWith('en') ? 'en' : 'th';
+  }
+
+  // OBRS-1333: resolves the 12 fixed part codes' labels via translate.instant() —
+  // kept as a plain object builder, mirroring expenses-page.component.ts's
+  // own (unextracted, page-local) categoryOptions labels construction.
+  private buildPartLabels(): MaintenancePartLabels {
+    return {
+      engineOil: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.ENGINE_OIL'),
+      oilFilter: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.OIL_FILTER'),
+      airFilter: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.AIR_FILTER'),
+      cabinAirFilter: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.CABIN_AIR_FILTER'),
+      fuelFilter: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.FUEL_FILTER'),
+      sparkPlugs: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.SPARK_PLUGS'),
+      brakePads: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.BRAKE_PADS'),
+      brakeFluid: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.BRAKE_FLUID'),
+      tires: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.TIRES'),
+      battery: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.BATTERY'),
+      coolant: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.COOLANT'),
+      transmissionFluid: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.TRANSMISSION_FLUID'),
+      timingBelt: this.translate.instant('ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.TIMING_BELT'),
+    };
   }
 
   private applyVehicleFilter(): void {

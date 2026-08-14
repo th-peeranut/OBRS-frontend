@@ -700,6 +700,34 @@ export const ADMIN_SWEEP: SweepPage[] = [
       await expect(page.locator('app-vehicle-maintenance-panel .admin-modal')).toBeVisible({ timeout: 10_000 });
     },
   },
+  {
+    // OBRS-1333. `app-vehicle-maintenance-plan-panel` renders under
+    // `activeTab === 'plans' && focusedVehicle` -- the 4th vehicles-page tab,
+    // distinct from `admin-vehicles-maintenance` above (a work-order log; this
+    // one is a recurring reminder-rule PLAN, own panel, own row action). Its
+    // `<p-datePicker>` (the "last service date" field) is one further click
+    // inside the panel's own Add modal, same three-assertion shape as
+    // `admin-vehicles-maintenance` so a click that silently did nothing is
+    // reported rather than swept under a clean screen.
+    key: 'admin-vehicles-maintenance-plans',
+    url: '/admin/vehicles',
+    landsOn: /\/admin\/vehicles$/,
+    requires: 'app-vehicles-page',
+    fixture: [
+      { match: /\/vehicles$/, body: ONE_VEHICLE },
+      { match: /\/vehicles\/\d+\/maintenance-plans$/, body: ok([]) },
+    ],
+    act: async (page) => {
+      await page
+        .locator('app-vehicle-list-table button.admin-icon-btn')
+        .filter({ has: page.locator('span.material-symbols-outlined', { hasText: /^event_repeat$/ }) })
+        .first()
+        .click();
+      await expect(page.locator('app-vehicle-maintenance-plan-panel')).toBeVisible({ timeout: 10_000 });
+      await page.locator('app-vehicle-maintenance-plan-panel button.admin-btn-primary').first().click();
+      await expect(page.locator('app-vehicle-maintenance-plan-panel .admin-modal')).toBeVisible({ timeout: 10_000 });
+    },
+  },
 ];
 
 /**

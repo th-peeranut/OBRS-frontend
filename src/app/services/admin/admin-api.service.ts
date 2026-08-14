@@ -917,6 +917,46 @@ export interface CreateVehicleMaintenancePayload {
   notes?: string | null;
 }
 
+/**
+ * OBRS-1333: one row of a vehicle's preventive-maintenance plan —
+ * `GET/POST/PUT /api/private/vehicles/{vehicleId}/maintenance-plans`.
+ * `part` is one of the closed `EMaintenancePart` enum codes (a static
+ * FE-side list, `MAINTENANCE_PART_CODES` in `vehicle-maintenance-plan.mappers.ts`
+ * — NOT a `lookups` category, unlike `AdminVehicleMaintenanceDto.maintenanceStatus`
+ * above). `nextDueKm`/`nextDueDate` are backend-derived and read-only — the FE
+ * never recomputes them, it only displays whatever the server sent. */
+export interface AdminVehicleMaintenancePlanDto {
+  id: number;
+  vehicleId: number;
+  part: string;
+  intervalKm?: number | null;
+  intervalDays?: number | null;
+  lastDoneKm?: number | null;
+  lastDoneDate?: string | null;
+  active: boolean;
+  nextDueKm?: number | null;
+  nextDueDate?: string | null;
+  createdByName?: string;
+  createdAt?: string;
+  updatedByName?: string;
+  updatedAt?: string;
+}
+
+/** OBRS-1333: create/update payload for a vehicle-maintenance-plan record —
+ * identical shape for POST and PUT, mirroring `CreateVehicleMaintenancePayload`. */
+export interface CreateVehicleMaintenancePlanPayload {
+  part: string;
+  intervalKm: number | null;
+  intervalDays: number | null;
+  lastDoneKm: number | null;
+  lastDoneDate: string | null;
+}
+
+/** OBRS-1333: `POST /maintenance-plans` 201 response body. */
+export interface CreateVehicleMaintenancePlanRespDto {
+  planId: number;
+}
+
 /** OBRS-685: `GET /api/private/expenses` / `GET /{id}` response row.
  * `vehicleId` is `null` for a central/not-linked-to-a-vehicle expense — a
  * REAL nullable Long on the wire, distinct from the FE form's own
@@ -1356,6 +1396,51 @@ export class AdminApiService {
     return this.putRequest<unknown>(
       `${this.baseUrl}/private/vehicles/${vehicleId}/maintenance/${id}`,
       payload
+    );
+  }
+
+  // OBRS-1333: vehicle maintenance PLANS — distinct from getVehicleMaintenance()
+  // above (a log of past/scheduled maintenance work orders). A plan is a
+  // recurring reminder rule (part + interval); it has no hard delete, only
+  // active/inactive via the dedicated PATCH below (mirrors OBRS-509's
+  // retire/restore, never a DELETE control).
+  getVehicleMaintenancePlans(
+    vehicleId: number
+  ): Observable<ResponseAPI<AdminVehicleMaintenancePlanDto[]>> {
+    return this.getRequest<AdminVehicleMaintenancePlanDto[]>(
+      `${this.baseUrl}/private/vehicles/${vehicleId}/maintenance-plans`
+    );
+  }
+
+  createVehicleMaintenancePlan(
+    vehicleId: number,
+    payload: CreateVehicleMaintenancePlanPayload
+  ): Observable<ResponseAPI<CreateVehicleMaintenancePlanRespDto>> {
+    return this.postRequest<CreateVehicleMaintenancePlanRespDto>(
+      `${this.baseUrl}/private/vehicles/${vehicleId}/maintenance-plans`,
+      payload
+    );
+  }
+
+  updateVehicleMaintenancePlan(
+    vehicleId: number,
+    planId: number,
+    payload: CreateVehicleMaintenancePlanPayload
+  ): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(
+      `${this.baseUrl}/private/vehicles/${vehicleId}/maintenance-plans/${planId}`,
+      payload
+    );
+  }
+
+  setVehicleMaintenancePlanActive(
+    vehicleId: number,
+    planId: number,
+    active: boolean
+  ): Observable<ResponseAPI<unknown>> {
+    return this.patchRequest<unknown>(
+      `${this.baseUrl}/private/vehicles/${vehicleId}/maintenance-plans/${planId}/active`,
+      { active }
     );
   }
 
