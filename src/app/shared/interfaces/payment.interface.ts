@@ -49,6 +49,13 @@ export interface PaymentResponse {
   transactionId?: string;
   failureReason?: string;
   authorizeUri?: string;
+  /**
+   * OBRS-1351. Omise's OWN PromptPay QR image, forwarded from
+   * `charge.source.scannable_code.image.download_uri`. Present only for `qr_promptpay`.
+   * Without it the component draws a QR of `authorizeUri`, and a QR of a URL is not an
+   * EMVCo payload, so no banking app can pay it.
+   */
+  qrImageUrl?: string;
   paidAt?: string;
   createdAt?: string;
 }

@@ -6,7 +6,10 @@ import { TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
 import { AlertService } from '../../../../shared/services/alert.service';
-import { PaymentByBookingIdResponse } from '../../../../shared/interfaces/payment.interface';
+import {
+  PaymentByBookingIdResponse,
+  PaymentResponse,
+} from '../../../../shared/interfaces/payment.interface';
 import { PaymentQrcodeComponent } from './payment-qrcode.component';
 
 /**
@@ -254,6 +257,21 @@ describe('PaymentQrcodeComponent - gateway ceiling refusal (OBRS-736)', () => {
 
   it('stays silent when the backend refuses the amount as above the gateway ceiling', async () => {
     rejectWith('PAYMENT_AMOUNT_EXCEEDS_GATEWAY_LIMIT');
+
+    await requestQr();
+
+    expect(alertService.error).not.toHaveBeenCalled();
+  });
+
+  /**
+   * OBRS-1352. Measured on prod, booking 3 of 13 Aug 2026: the charge Omise accepted at
+   * 11:43:12 sat `pending` with `failure_code` null until the hold expired at 11:57:34,
+   * and the passenger filed two usability reports in between. They quoted this toast back
+   * — "ชำระเงินไม่สำเร็จ กรุณาตรวจสอบข้อมูลบัตรหรือยอดเงินคงเหลือ" — for a refusal the
+   * gateway never made, prescribing a retry the guard rejects for the full 15 minutes.
+   */
+  it('stays silent when the backend refuses a retry because the first charge is still pending', async () => {
+    rejectWith('PAYMENT_IN_PROGRESS');
 
     await requestQr();
 
@@ -545,5 +563,95 @@ describe('PaymentQrcodeComponent - the QR preview dialog (OBRS-1203)', () => {
     component.onEscape();
 
     expect(component.isQrPreviewOpen).toBeFalse();
+  });
+});
+
+/**
+ * OBRS-1351. The QR customers were shown on prod encoded
+ * `https://pay.omise.co/payments/pay2_.../authorize` — a URL, decoded out of the live
+ * page with @zxing on 2026-08-14 — because the backend never forwarded Omise's own
+ * `scannable_code` and this component fell back to drawing `authorizeUri` itself. A QR of
+ * a URL is not an EMVCo payload, so no banking app could pay it: 0 of 4 PromptPay charges
+ * on prod ever reached `paid`.
+ *
+ * The two cases below are the fix and the path it must not break. The first pins that a
+ * forwarded `qrImageUrl` is rendered AS GIVEN — an assertion on the exact string, because
+ * "some QR appeared" is precisely the bug: the old code also produced one.
+ */
+describe('PaymentQrcodeComponent - Omise forwards its own PromptPay QR (OBRS-1351)', () => {
+  let component: PaymentQrcodeComponent;
+  let alertService: jasmine.SpyObj<AlertService>;
+
+  beforeEach(() => {
+    const store = jasmine.createSpyObj<Store>('Store', ['pipe', 'select']);
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+    ]);
+    const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+      'createMockPayment',
+    ]);
+    alertService = jasmine.createSpyObj<AlertService>('AlertService', [
+      'success',
+      'error',
+      'info',
+      'confirm',
+    ]);
+    const translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
+    translate.instant.and.callFake((key: string) => key);
+
+    component = new PaymentQrcodeComponent(
+      store,
+      router,
+      bookingService,
+      paymentService,
+      alertService,
+      translate
+    );
+  });
+
+  afterEach(() => {
+    component.ngOnDestroy();
+  });
+
+  const invoke = (payment: PaymentResponse): Promise<void> =>
+    (
+      component as unknown as {
+        handlePromptPayResponse: (p: PaymentResponse) => Promise<void>;
+      }
+    ).handlePromptPayResponse(payment);
+
+  const pendingPromptPay = (extra: Partial<PaymentResponse>): PaymentResponse => ({
+    id: 1,
+    bookingId: 3,
+    status: 'pending',
+    paymentMethod: 'qr_promptpay',
+    amount: '200.00',
+    currency: 'THB',
+    transactionId: 'chrg_test_obrs1351',
+    authorizeUri: 'https://pay.omise.co/payments/pay2_test/authorize',
+    ...extra,
+  });
+
+  it("renders Omise's own QR image URL untouched — not a locally drawn QR of the authorize URL", async () => {
+    const downloadUri =
+      'https://api.omise.co/charges/chrg_test_obrs1351/documents/docu_test/downloads/47B72F81';
+
+    await invoke(pendingPromptPay({ qrImageUrl: downloadUri }));
+
+    expect(component.qrImageUrl).toBe(downloadUri);
+    expect(component.qrImageUrl.startsWith('data:')).toBeFalse();
+    // The authorize URL is still kept: it is where "I have paid" navigates to.
+    expect(component.qrPaymentUrl).toBe('https://pay.omise.co/payments/pay2_test/authorize');
+    expect(alertService.error).not.toHaveBeenCalled();
+  });
+
+  it('still falls back to a locally drawn QR when no qrImageUrl is forwarded, so card 3DS and the redirect wallets keep working', async () => {
+    await invoke(pendingPromptPay({}));
+
+    expect(component.qrImageUrl.startsWith('data:image')).toBeTrue();
+    expect(alertService.error).not.toHaveBeenCalled();
   });
 });
