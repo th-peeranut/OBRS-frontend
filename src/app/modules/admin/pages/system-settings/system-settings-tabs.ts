@@ -1,10 +1,16 @@
 import { Type } from '@angular/core';
+import { Route } from '@angular/router';
 import { BookingPolicyConfigPageComponent } from '../booking-policy-config/booking-policy-config-page.component';
 import { ConfigChangeHistoryPageComponent } from '../config-change-history/config-change-history-page.component';
 import { JumpSeatConfigPageComponent } from '../jump-seat-config/jump-seat-config-page.component';
 import { ReminderConfigPageComponent } from '../reminder-config/reminder-config-page.component';
 import { ParcelShareConfigPageComponent } from '../parcel-share-config/parcel-share-config-page.component';
 import { DriverCashRatesPageComponent } from '../driver-cash-rates/driver-cash-rates-page.component';
+import { NotificationMessagesTabPageComponent } from '../notification-messages/notification-messages-tab-page.component';
+import { NotificationMessageListPageComponent } from '../notification-messages/notification-message-list-page.component';
+import { NotificationMessageEditPageComponent } from '../notification-messages/notification-message-edit-page.component';
+import { NotificationMessageReviewQueuePageComponent } from '../notification-messages/notification-message-review-queue-page.component';
+import { NotificationMessageReviewDetailPageComponent } from '../notification-messages/notification-message-review-detail-page.component';
 
 /** One tab of `/admin/settings` — see {@link SYSTEM_SETTINGS_TABS}. */
 export interface SystemSettingsTab {
@@ -44,6 +50,27 @@ export interface SystemSettingsTab {
    */
   readonly requiredRoles: readonly string[];
   readonly component: Type<unknown>;
+  /**
+   * OBRS-1308: optional deep-linkable sub-routes under this tab's own path.
+   * `undefined` for every tab but `notification-messages` — the first tab
+   * that needs a real child route reachable from a SECOND surface (the
+   * notification-bell inbox navigating straight into a review detail), not
+   * just internal `*ngSwitch` state a query param could express.
+   *
+   * <p>The generator in `admin.module.ts` spreads
+   * `...(tab.children ? { children: … } : {})` so every tab without this
+   * field produces a byte-identical route to before — no hand-added
+   * route/redirect/tab-strip entry (AC9) — and it INJECTS this tab's own
+   * `data` (titleKey/subtitleKey/requiredRoles) into each child's `data`
+   * rather than leaving the child to declare its own. Without that
+   * injection, `SidebarLayoutBaseComponent.getDeepestRoute()` descends into
+   * a child with no `data` and falls back to the generic
+   * `ADMIN.PAGES.DEFAULT` header — invisible to
+   * `system-settings-page.component.spec.ts`, which never activates a child.
+   * See `system-settings-notification-messages-routes.spec.ts`, which
+   * deep-links a child and asserts the resolved header.
+   */
+  readonly children?: Route[];
 }
 
 /**
@@ -109,6 +136,29 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     subtitleKey: 'ADMIN.DRIVER_CASH_RATES.SUBTITLE',
     requiredRoles: ['owner'],
     component: DriverCashRatesPageComponent,
+  },
+  {
+    // OBRS-1308: owner-editable notification message overrides + admin
+    // approval queue. Placed after driver-cash-rates and before the "meta"
+    // history tab (which stays last, per its own comment). requiredRoles
+    // matches the backend owner controller (hasRole('OWNER') admits ADMIN via
+    // ROLE_GRANTS) — the SEPARATE admin-only review queue/detail underneath
+    // this tab is gated at the component level (getRoles().includes('admin')),
+    // never by requiredRoles/hasAnyRole (AC5 — see the doc above and
+    // auth.service.ts:287-339: hasAnyRole is ROLE_GRANTS-expanded and
+    // symmetric, so it cannot express "admin, not owner").
+    path: 'notification-messages',
+    legacyPath: 'notification-messages', // no prior standalone page; kept for interface parity
+    labelKey: 'ADMIN.PAGES.NOTIFICATION_MESSAGES',
+    subtitleKey: 'ADMIN.NOTIFICATION_MESSAGES.SUBTITLE',
+    requiredRoles: ['admin', 'owner'],
+    component: NotificationMessagesTabPageComponent,
+    children: [
+      { path: '', component: NotificationMessageListPageComponent },
+      { path: 'edit/:messageCode/:locale', component: NotificationMessageEditPageComponent },
+      { path: 'reviews', component: NotificationMessageReviewQueuePageComponent },
+      { path: 'reviews/:id', component: NotificationMessageReviewDetailPageComponent },
+    ],
   },
   {
     // Last: the "meta" view over every other tab, same placement it held as the

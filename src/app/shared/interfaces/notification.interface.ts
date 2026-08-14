@@ -16,6 +16,16 @@ export interface NotificationItem {
   sentAt: string;
   readAt: string | null;
   read: boolean;
+  /**
+   * OBRS-1308: same shape as `bookingScheduleId` above — the id of the entity
+   * this notification is about, resolved by the panel to build a deep link
+   * (currently only `NOTIF_MSG_OVERRIDE_PENDING` → the override review row).
+   * Optional/nullable so a payload predating this field (and every existing
+   * fixture literal in notification-inbox-panel/-row/-inbox.service specs)
+   * still type-checks without a per-fixture edit — a client that never reads
+   * it sees no behavior change.
+   */
+  relatedEntityId?: number | null;
 }
 
 /** `GET /api/private/notifications/unread-count` response `data`. */

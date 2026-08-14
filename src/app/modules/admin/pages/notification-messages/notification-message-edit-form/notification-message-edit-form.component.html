@@ -1,0 +1,89 @@
+<section class="admin-card mt-3">
+  @if (detail?.status === 'PENDING') {
+    <div class="admin-status is-warning nm-status-banner" data-testid="notification-message-pending-banner">
+      {{ 'ADMIN.NOTIFICATION_MESSAGES.EDIT.PENDING_BANNER' | translate }}
+    </div>
+  }
+
+  @if (detail?.status === 'REJECTED') {
+    <div class="admin-status is-danger nm-status-banner" data-testid="notification-message-rejected-banner">
+      {{ 'ADMIN.NOTIFICATION_MESSAGES.EDIT.REJECTED_BANNER' | translate }}
+    </div>
+    <div class="admin-form-field full mt-2">
+      <label class="admin-form-label">{{ 'ADMIN.NOTIFICATION_MESSAGES.EDIT.REJECT_REASON_LABEL' | translate }}</label>
+      <p class="nm-reject-reason">{{ detail?.rejectReason }}</p>
+      <small class="admin-hint">{{ 'ADMIN.NOTIFICATION_MESSAGES.EDIT.RE_EDIT_CTA' | translate }}</small>
+    </div>
+  }
+
+  <div class="admin-form-field full mt-2">
+    <label class="admin-form-label">{{ 'ADMIN.NOTIFICATION_MESSAGES.EDIT.CURRENT_LIVE_LABEL' | translate }}</label>
+    <p class="nm-live-body" data-testid="notification-message-current-live">{{ detail?.liveBody }}</p>
+  </div>
+
+  <div class="admin-form-field full">
+    <label class="admin-form-label" for="nmBody">{{ 'ADMIN.NOTIFICATION_MESSAGES.EDIT.BODY_LABEL' | translate }}</label>
+    <textarea
+      id="nmBody"
+      class="admin-field"
+      rows="4"
+      data-testid="notification-message-body"
+      [ngModel]="body"
+      (ngModelChange)="onInput($event)"
+    ></textarea>
+
+    @if (placeholderIndices.length > 0) {
+      <small class="admin-hint" data-testid="notification-message-placeholder-hint">
+        {{ 'ADMIN.NOTIFICATION_MESSAGES.EDIT.PLACEHOLDER_HINT' | translate: { indices: placeholderIndices.join(', ') } }}
+      </small>
+    }
+
+    @if (validationError) {
+      @if (validationError.reason === 'PLACEHOLDER_MISMATCH') {
+        @if (validationError.missingIndices.length > 0) {
+          <small class="admin-error" role="alert">
+            {{
+              'ADMIN.NOTIFICATION_MESSAGES.ERROR.PLACEHOLDER_MISSING'
+              | translate: { indices: validationError.missingIndices.join(', ') }
+            }}
+          </small>
+        }
+        @if (validationError.extraIndices.length > 0) {
+          <small class="admin-error" role="alert">
+            {{
+              'ADMIN.NOTIFICATION_MESSAGES.ERROR.PLACEHOLDER_EXTRA'
+              | translate: { indices: validationError.extraIndices.join(', ') }
+            }}
+          </small>
+        }
+      } @else if (validationError.formatError != null) {
+        <small class="admin-error" role="alert">
+          {{
+            'ADMIN.NOTIFICATION_MESSAGES.ERROR.FORMAT_ERROR'
+            | translate: { detail: validationError.formatError }
+          }}
+        </small>
+      }
+    }
+  </div>
+
+  <app-notification-message-preview-panel
+    [text]="body"
+    [sampleArgs]="sampleArgs"
+  ></app-notification-message-preview-panel>
+
+  <div class="admin-form-field full nm-actions">
+    <button type="button" class="admin-btn" [disabled]="submitting" (click)="onCancel()">
+      {{ 'ADMIN.NOTIFICATION_MESSAGES.EDIT.CANCEL' | translate }}
+    </button>
+    <button
+      type="button"
+      class="admin-btn admin-btn-primary"
+      data-testid="notification-message-save"
+      [disabled]="!canSave"
+      (click)="onSave()"
+      >
+      {{ 'ADMIN.NOTIFICATION_MESSAGES.EDIT.SAVE' | translate }}
+    </button>
+  </div>
+</section>

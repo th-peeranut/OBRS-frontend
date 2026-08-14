@@ -1,0 +1,10 @@
+<div class="nm-credit-panel" data-testid="notification-message-credit-panel">
+  <p class="nm-credit-line" [ngClass]="deltaClass">
+    {{
+      'ADMIN.NOTIFICATION_MESSAGES.CREDIT.LABEL'
+      | translate: { credits: credits, baseline: baselineCredits, delta: deltaDisplay }
+    }}
+  </p>
+  <p class="nm-credit-hint">{{ 'ADMIN.NOTIFICATION_MESSAGES.CREDIT.HINT' | translate }}</p>
+  <p class="nm-credit-note">{{ 'ADMIN.NOTIFICATION_MESSAGES.CREDIT.NOT_BLOCKING_NOTE' | translate }}</p>
+</div>

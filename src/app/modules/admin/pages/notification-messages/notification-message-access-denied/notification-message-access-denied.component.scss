@@ -1,0 +1,28 @@
+// OBRS-1308: OBRS-209's full-section empty-state shape, reused verbatim for
+// the access-denied block (design-system §12 new-pattern log) — styled only
+// with var(--admin-muted) / var(--admin-text), no new token.
+.nm-access-denied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.nm-access-denied .material-symbols-outlined {
+  font-size: 40px;
+  color: var(--admin-muted);
+}
+
+.nm-access-denied-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.nm-access-denied-body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--admin-muted);
+}

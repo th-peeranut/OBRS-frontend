@@ -671,6 +671,22 @@
     color: var(--admin-primary-fg);
     background-color: transparent;
     border-color: transparent;
+    /* OBRS-1331: the baseline a tab "opens" into belongs to the TAB, not to the <ul>.
+       Bootstrap draws it once on the <ul> (`border-bottom`, bootstrap.css:3869) and lets
+       the active tab erase its own 1px of it via `margin-bottom: -1px` (:3872). Both only
+       ever reach the LAST row, and `.nav` is `flex-wrap: wrap` — so the moment a strip
+       wraps, the active tab on an upper row erases nothing and the line that says "this
+       panel belongs to that tab" runs under tabs nobody selected. Measured on
+       /admin/settings when OBRS-1308 made it 7 tabs: the active tab's bottom edge sat
+       39.4px ABOVE the line, a full row away.
+
+       Giving every tab its own bottom border gives every ROW a baseline. On a strip that
+       does not wrap this changes nothing visible: `margin-bottom: -1px` lands this border
+       exactly on the <ul>'s, same token, same pixel — which is why parcel-schedule-tabs
+       and parcel-consign (2-4 tabs, never wrapping) are untouched by it. `.active` below
+       overrides this to the card colour and keeps opening into its panel, now on whatever
+       row it is actually on. */
+    border-bottom-color: var(--admin-outline);
   }
 
   .nav-tabs .nav-link:hover:not(.active):not(:disabled) {

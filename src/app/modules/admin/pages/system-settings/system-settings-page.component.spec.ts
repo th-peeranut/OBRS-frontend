@@ -81,6 +81,13 @@ const ROLES_BEFORE_OBRS_702: Record<string, readonly string[]> = {
   // what the roles were changed to).
   'parcel-share': ['owner'],
   'driver-cash-rates': ['owner'],
+  // OBRS-1308: another NEW tab, never a standalone route — same discipline.
+  // Matches the backend owner controller (hasRole('OWNER'), ROLE_GRANTS
+  // admits ADMIN). The separate admin-only review queue/detail underneath
+  // this tab is gated at the COMPONENT level, not by this route guard — see
+  // system-settings-notification-messages-routes.spec.ts and the
+  // review-queue/detail page components' own AC5 doc comments.
+  'notification-messages': ['admin', 'owner'],
 };
 
 describe('OBRS-702 SystemSettingsPageComponent — tab strip', () => {

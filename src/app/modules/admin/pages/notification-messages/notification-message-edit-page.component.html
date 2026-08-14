@@ -1,0 +1,22 @@
+@if (loadFailed) {
+  <p class="admin-error">{{ 'ADMIN.NOTIFICATION_MESSAGES.LIST.LOAD_FAILED' | translate }}</p>
+}
+
+<app-notification-message-edit-form
+  [detail]="detail"
+  [locale]="locale"
+  [sampleArgs]="key?.sampleArgs ?? []"
+  [submitting]="submitting"
+  [validationError]="validationError"
+  (bodyChange)="onBodyChange($event)"
+  (save)="onSave($event)"
+  (cancel)="onCancel()"
+></app-notification-message-edit-form>
+
+@if (showCreditPanel) {
+  <app-notification-message-credit-panel
+    [credits]="creditEstimate?.credits ?? null"
+    [baselineCredits]="creditEstimate?.baselineCredits ?? null"
+    [encoding]="creditEstimate?.encoding ?? null"
+  ></app-notification-message-credit-panel>
+}

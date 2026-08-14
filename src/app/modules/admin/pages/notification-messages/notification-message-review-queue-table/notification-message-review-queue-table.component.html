@@ -1,0 +1,52 @@
+<div class="admin-table-wrap">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>{{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEWS.COL_KEY' | translate }}</th>
+        <th>{{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEWS.COL_LOCALE' | translate }}</th>
+        <th>{{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEWS.COL_PROPOSED_BY' | translate }}</th>
+        <th>{{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEWS.COL_PROPOSED_AT' | translate }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (loading) {
+        @for (row of skeletonRows; track $index) {
+          <tr class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          </tr>
+        }
+      }
+
+      @if (!loading) {
+        @for (row of rows; track trackById($index, row); let i = $index) {
+          <tr [class.zebra]="i % 2 === 1">
+            <td class="admin-emphasis"><code>{{ row.messageCode }}</code></td>
+            <td>{{ row.locale }}</td>
+            <td>{{ row.proposedBy }}</td>
+            <td>{{ row.proposedAt | date: 'dd MMM yyyy HH:mm' }}</td>
+            <td class="text-right">
+              <button
+                type="button"
+                class="admin-btn admin-btn-small"
+                data-testid="notification-message-review-open"
+                (click)="openReview.emit(row.id)"
+                >
+                {{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEWS.OPEN' | translate }}
+              </button>
+            </td>
+          </tr>
+        }
+        @if (rows.length === 0) {
+          <tr class="admin-empty-row">
+            <td colspan="5">{{ 'ADMIN.NOTIFICATION_MESSAGES.REVIEWS.EMPTY' | translate }}</td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>

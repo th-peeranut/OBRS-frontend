@@ -162,4 +162,59 @@ describe('NotificationInboxPanelComponent', () => {
     component['onRowOpen'](9);
     expect(component.markOne.emit).toHaveBeenCalledWith(9);
   });
+
+  // OBRS-1308: the row still only ever emits an id (its own pinned
+  // contract); the panel resolves the item from its own @Input() items to
+  // decide whether a navigation applies.
+  describe('onRowOpen navigate resolution (OBRS-1308)', () => {
+    it('emits navigate when the opened item is NOTIF_MSG_OVERRIDE_PENDING with a relatedEntityId', () => {
+      component.items = [{ ...makeItem(9), notificationType: 'NOTIF_MSG_OVERRIDE_PENDING', relatedEntityId: 77 }];
+      spyOn(component.navigate, 'emit');
+
+      component['onRowOpen'](9);
+
+      expect(component.navigate.emit).toHaveBeenCalledWith({
+        type: 'NOTIF_MSG_OVERRIDE_PENDING',
+        id: 77,
+      });
+    });
+
+    it('does NOT emit navigate for an ordinary notification type', () => {
+      component.items = [makeItem(9)];
+      spyOn(component.navigate, 'emit');
+
+      component['onRowOpen'](9);
+
+      expect(component.navigate.emit).not.toHaveBeenCalled();
+    });
+
+    it('does NOT emit navigate when relatedEntityId is null, even for the deep-linkable type', () => {
+      component.items = [{ ...makeItem(9), notificationType: 'NOTIF_MSG_OVERRIDE_PENDING', relatedEntityId: null }];
+      spyOn(component.navigate, 'emit');
+
+      component['onRowOpen'](9);
+
+      expect(component.navigate.emit).not.toHaveBeenCalled();
+    });
+
+    it('does NOT emit navigate when the id matches no known item', () => {
+      component.items = [makeItem(1)];
+      spyOn(component.navigate, 'emit');
+
+      component['onRowOpen'](999);
+
+      expect(component.navigate.emit).not.toHaveBeenCalled();
+    });
+
+    it('still emits markOne alongside navigate — mark-read behaviour is unchanged', () => {
+      component.items = [{ ...makeItem(9), notificationType: 'NOTIF_MSG_OVERRIDE_PENDING', relatedEntityId: 77 }];
+      spyOn(component.markOne, 'emit');
+      spyOn(component.navigate, 'emit');
+
+      component['onRowOpen'](9);
+
+      expect(component.markOne.emit).toHaveBeenCalledWith(9);
+      expect(component.navigate.emit).toHaveBeenCalled();
+    });
+  });
 });

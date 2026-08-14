@@ -186,6 +186,73 @@ and `docs/design-system.md` §3/§12 for why this extends the existing
 `ControlValueAccessor` rather than migrating to PrimeNG `p-dropdown [filter]`
 (already used, with a different binding contract, by `/staff/sell`).
 
+### Notification message overrides (`/admin/settings` → Notification Messages, OBRS-1308)
+
+Owner-editable SMS/email/in-app notification text, with mandatory admin
+approval before anything goes live. The FIRST `/admin/settings` tab with its
+own sub-routes (`SystemSettingsTab.children?: Route[]`, see
+`docs/adr/0038-system-settings-tab-children-route-extension.md`) — a plain
+internal tab strip (`NotificationMessagesTabPageComponent`, "Messages" /
+"Pending review") over four real child routes rather than one page's
+`*ngSwitch`, because the admin review-detail screen is also the notification
+bell's direct click-through target
+(`/admin/settings/notification-messages/reviews/:id`) from a completely
+different part of the shell.
+
+**Access model — two audiences, one route, gated differently.** The tab
+itself carries `requiredRoles: ['admin', 'owner']` like every other tab
+(matches the backend owner controller, `hasRole('OWNER')`, which
+`ROLE_GRANTS` admits `ADMIN` into). The `reviews`/`reviews/:id` children
+carry **no route-level guard** narrower than that — an owner's session
+legitimately reaches those URLs through the parent `AuthGuard`. The
+admin-only approve/reject surface is instead gated at the **component**
+level: `NotificationMessageReviewQueuePageComponent` and
+`NotificationMessageReviewDetailPageComponent` both check
+`authService.getRoles().includes('admin')` — the RAW, un-expanded role read,
+never `hasAnyRole()`/this tab's `requiredRoles` (both `ROLE_GRANTS`-expanded
+and therefore symmetric: owner grants admin, admin grants owner, so neither
+can express "admin, not owner") — as the literal first line of `ngOnInit`,
+returning before any store or API call. An owner who deep-links
+`reviews/:id` (from the address bar, or in principle a leaked bell
+notification the backend never actually sends them) sees the shared
+`NotificationMessageAccessDeniedComponent` block and fires zero network
+requests. The internal sub-nav additionally hides the "Pending review" link
+from a non-admin session (UX only — not the security boundary, since a
+direct deep-link bypasses it entirely).
+
+**State management** follows `driver-cash-rates`'/`config-change-history`'s
+convention, not NgRx: `NotificationMessagesStore`/
+`NotificationMessageReviewQueueStore` (`AdminCollectionStore` SWR, root-scoped,
+cleared on logout) back the two list screens; the edit and review-detail
+screens use plain one-off `AdminApiService` calls with no store at all — a
+cached value would be actively wrong on a screen whose whole point is that
+the owner must never see a stale status after their own submit.
+
+**SMS credit preview (AC12) is display-only and never blocks Save** — an
+explicit product decision. `NotificationMessageEditFormComponent.canSave` is
+exactly `body.trim().length > 0 && !submitting`; the debounced (500ms)
+`POST .../credit-preview` call and its `NotificationMessageCreditPanelComponent`
+render are entirely independent of that gate. The `{n}` placeholder hint and
+live preview (`buildPreviewSegments`/`extractPlaceholderIndices`,
+`shared/lib/notification-message-placeholder.ts`) are a plain regex scan for
+display only — the backend's `MessageFormat` compile + set-equality
+validator is the tested authority; a 400's exact violation
+(`{ data: { reason, missingIndices, extraIndices, formatError } }`, read by
+`extractPlaceholderError()` in `shared/lib/notification-message-errors.ts`)
+is rendered verbatim, never re-derived client-side.
+
+**Notification-bell click-through.** `NotificationItem` gained an optional
+`relatedEntityId: number | null` field. The inbox ROW still only ever emits
+an `id` (its pinned contract, unchanged); the PANEL
+(`NotificationInboxPanelComponent.onRowOpen`) resolves the full item from its
+own `@Input() items` and, for a `NOTIF_MSG_OVERRIDE_PENDING` row with a
+non-null `relatedEntityId`, emits a new `navigate` output. `NotificationBellComponent`
+handles it by closing the popover and navigating to the review detail route —
+wired identically in both `admin-layout` and `staff-layout`, even though a
+salesperson/driver never actually receives this notification type (the
+backend only inserts it for `ROLE_ADMIN` users), so a future admin-only
+notification type reuses the same mapping for free.
+
 ### Reports (`/admin/reports`)
 
 The MVP reporting page (OBRS-40) consumes one endpoint,
