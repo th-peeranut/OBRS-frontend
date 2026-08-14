@@ -66,6 +66,7 @@ import { CargoCapacityPageComponent } from './pages/cargo-capacity/cargo-capacit
 import { InspectionItemsPageComponent } from './pages/inspection-items/inspection-items-page.component';
 import { ExpensesPageComponent } from './pages/expenses/expenses-page.component';
 import { ExpenseListTableComponent } from './pages/expenses/expense-list-table/expense-list-table.component';
+import { ExpenseApprovalLaneComponent } from './pages/expenses/expense-approval-lane/expense-approval-lane.component';
 import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/expense-form-modal.component';
 import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
 // OBRS-286 — manual refund worklist (AC-2/AC-3), owner-only.
@@ -477,6 +478,7 @@ export const adminRoutes: Routes = [
     InspectionItemsPageComponent,
     ExpensesPageComponent,
     ExpenseListTableComponent,
+    ExpenseApprovalLaneComponent,
     ExpenseFormModalComponent,
     ExpenseDeleteModalComponent,
     ManualRefundWorklistPageComponent,

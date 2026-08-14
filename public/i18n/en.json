@@ -1798,7 +1798,18 @@
     },
     "EXPENSES": {
       "SUBTITLE": "Log vehicle and central expenses",
+      "PAGE_PURPOSE": "This is the cost book for each vehicle and for central costs — it feeds the per-vehicle profit report and your tax evidence. Costs paid in the field (fuel/gas, permit fee, driver wage, repairs) are recorded by the salesperson from \"My cash box\" and wait here for the owner to approve.",
       "TABLE_TITLE": "Expense List",
+      "APPROVAL": {
+        "TITLE": "Awaiting approval",
+        "HINT": "Recorded in the field by a salesperson. Not counted in the per-vehicle profit report until you approve it.",
+        "APPROVE": "Approve",
+        "REJECT": "Reject",
+        "REJECT_CONFIRM": "Confirm rejection",
+        "REASON_LABEL": "Reason for rejecting",
+        "REASON_PLACEHOLDER": "e.g. the receipt is for a different vehicle",
+        "FAILED": "Unable to record this verdict. Please try again."
+      },
       "ADD": "Add Expense",
       "ADD_TITLE": "Record New Expense",
       "EDIT_TITLE": "Edit Expense",
@@ -2014,6 +2025,14 @@
       "ERROR": {
         "DUPLICATE": "A rate for this sales point already starts on that date.",
         "CREATE_FAILED": "Unable to add this rate."
+      },
+      "WAGE": {
+        "TITLE": "Driver wage per leg",
+        "HINT": "1 leg = 1 run (up to Bangkok is one leg, back to Nong Chak is another). When a salesperson records a wage, it is priced from the rate in effect on that day.",
+        "RATE_LABEL": "Wage per leg",
+        "ERROR": {
+          "DUPLICATE": "A wage rate effective from that date already exists."
+        }
       }
     },
     "NOTIFICATION_MESSAGES": {
@@ -3662,14 +3681,16 @@
         "AMOUNT_PLACEHOLDER": "0.00",
         "NOTE_LABEL": "Note (optional)",
         "NOTE_PLACEHOLDER": "e.g. receipt number",
-        "SUBMIT": "Record expense"
+        "SUBMIT": "Record expense",
+        "WAGE_PRICED_BY_OWNER": "The wage is priced from the owner's rate per leg (1 leg = 1 run), so there is no amount to enter."
       },
       "SUBMITTING": "Submitting...",
       "VALIDATION": {
         "AMOUNT_INVALID": "Enter a valid amount (up to 2 decimal places)."
       },
       "ERROR": {
-        "GENERIC": "Unable to record this entry. Please try again."
+        "GENERIC": "Unable to record this entry. Please try again.",
+        "WAGE_RATE_NOT_CONFIGURED": "No wage per leg has been set yet. Ask the owner to set it on the driver wage rate page first."
       },
       "MY_DAY": {
         "TITLE": "My cash box today",
