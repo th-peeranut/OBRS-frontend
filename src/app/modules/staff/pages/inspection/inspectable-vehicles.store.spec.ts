@@ -19,7 +19,7 @@ describe('InspectableVehiclesStore', () => {
   });
 
   it('refresh() fetches via StaffApiService.getInspectableVehicles() and caches the result', async () => {
-    const vehicles = [{ id: 1, label: 'Van 01 - ABC-123' }];
+    const vehicles = [{ id: 1, label: 'Van 01 - ABC-123', assignedToMe: false }];
     const staffApiStub = {
       getInspectableVehicles: jasmine
         .createSpy('getInspectableVehicles')

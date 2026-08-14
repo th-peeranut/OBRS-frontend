@@ -3,6 +3,7 @@ import {
   AdminVehicleDto,
   AdminVehicleTypeDto,
   CreateVehiclePayload,
+  DriverDto,
   getAdminLookupLabel,
   getAdminTranslationLabel,
   parseAdminStatus,
@@ -140,6 +141,10 @@ export function buildVehicleFormValues(
     // (isEditDetailError), which is what stops a blank here from going back to the
     // server as "detach the box".
     gpsImei: vehicleDetail.gpsImei ?? '',
+    // OBRS-1332: detail-only and without a row fallback, for the same reason as gpsImei
+    // above. '' rather than null so the select shows its placeholder — the payload mapper
+    // turns it back into null, which is what UNASSIGN means on the wire.
+    assignedDriverId: vehicleDetail.assignedDriverId != null ? String(vehicleDetail.assignedDriverId) : '',
   };
 }
 
@@ -171,6 +176,10 @@ export function toVehiclePayload(rawFormValue: Record<string, unknown>): CreateV
     // backend an absent key means "leave the box alone", which is the right default for
     // a curl or a fixture but the wrong one for a form the admin just emptied on purpose.
     gpsImei: nullableTrimmedString(rawFormValue['gpsImei']),
+    // OBRS-1332: always PRESENT, and `null` when the owner cleared the select — on the
+    // backend an absent key means "leave the assignment alone", which is right for a curl
+    // and wrong for a form the owner just emptied on purpose.
+    assignedDriverId: nullableNumber(rawFormValue['assignedDriverId']),
   };
 }
 
@@ -186,6 +195,17 @@ function nullableNumber(rawValue: unknown): number | null {
 
   const numericValue = Number(rawValue);
   return Number.isNaN(numericValue) ? null : numericValue;
+}
+
+/** OBRS-1332: the assigned-driver picker's options. `/private/users/drivers` is already
+ * confined to the `driver` role by the backend, so there is nothing to filter here — same
+ * shape and same reasoning as `staff-schedules-page.mappers.ts`'s `toDriverOptions`, kept
+ * separate only because these two modules share no mapper file. */
+export function toDriverOptions(drivers: DriverDto[]): Option[] {
+  return drivers.map((driver) => ({
+    code: String(driver.id),
+    label: driver.name?.trim() || `#${driver.id}`,
+  }));
 }
 
 export function toVehicleTypeOptions(

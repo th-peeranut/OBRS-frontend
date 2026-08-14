@@ -44,9 +44,9 @@ function makeComponent(options: {
   const itemsStore = makeCollectionStoreStub<VehicleInspectionItemDto[]>(
     options.items === undefined ? ITEMS : options.items
   );
-  const vehiclesStore = makeCollectionStoreStub<{ id: number; label: string }[]>([
-    { id: 9, label: 'Van 09' },
-  ]);
+  const vehiclesStore = makeCollectionStoreStub<
+    { id: number; label: string; assignedToMe: boolean }[]
+  >([{ id: 9, label: 'Van 09', assignedToMe: false }]);
   const myInspectionsStore = makeCollectionStoreStub<{ id: number; inspectedAt: string }[]>([]);
 
   const staffApiService = {
@@ -81,6 +81,45 @@ describe('InspectionPageComponent', () => {
   it('should create', () => {
     const { component } = makeComponent();
     expect(component).toBeTruthy();
+  });
+
+  // OBRS-1332 AC-3. The three cases are one rule: the assignment is a DEFAULT.
+  describe('assigned-vehicle prefill', () => {
+    it('pre-selects the driver\'s regular van without narrowing the picker', () => {
+      const { component, vehiclesStore } = makeComponent();
+      vehiclesStore.data$.next([
+        { id: 9, label: 'Van 09', assignedToMe: false },
+        { id: 4, label: 'Van 04', assignedToMe: true },
+      ]);
+      component.ngOnInit();
+
+      expect((component as any).form.get('vehicleId').value).toBe('4');
+      // ...and every other van is still there to pick — this is the half that keeps
+      // ADR-0091 true, so it is asserted in the same test as the prefill.
+      expect((component as any).vehicleOptions.map((o: any) => o.code)).toEqual(['9', '4']);
+    });
+
+    it('leaves the picker empty for a driver with no regular van (§3.1)', () => {
+      const { component } = makeComponent();
+      component.ngOnInit();
+
+      expect((component as any).form.get('vehicleId').value).toBeNull();
+    });
+
+    it('never overwrites a van the driver has already chosen for themselves', () => {
+      const { component, vehiclesStore } = makeComponent();
+      component.ngOnInit();
+      // Covering somebody else's van today.
+      (component as any).form.get('vehicleId').setValue('9');
+
+      // A background store re-emit must not drag the selection back to their own van.
+      vehiclesStore.data$.next([
+        { id: 9, label: 'Van 09', assignedToMe: false },
+        { id: 4, label: 'Van 04', assignedToMe: true },
+      ]);
+
+      expect((component as any).form.get('vehicleId').value).toBe('9');
+    });
   });
 
   it('builds one row per active item, ordered by displayOrder, on ngOnInit', () => {

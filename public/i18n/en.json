@@ -827,6 +827,8 @@
         "GPS_IMEI": "GPS Tracker IMEI",
         "GPS_IMEI_PLACEHOLDER": "15 digits, leave blank if no tracker is fitted",
         "GPS_IMEI_FORMAT": "GPS IMEI must be exactly 15 digits.",
+        "ASSIGNED_DRIVER": "Regular driver",
+        "ASSIGNED_DRIVER_NONE": "No regular driver",
         "NOTE": "Note",
         "NOTE_PLACEHOLDER": "Add any additional notes about this vehicle (optional)"
       },

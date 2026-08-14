@@ -19,6 +19,7 @@ import {
   Option,
   VehicleRow,
   buildVehicleFormValues,
+  toDriverOptions,
   toVehicleDtoFallback,
   toVehiclePayload,
 } from '../vehicles-page.mappers';
@@ -80,6 +81,14 @@ export class VehicleFormModalComponent implements OnChanges {
 
   protected readonly maxYear = new Date().getFullYear() + 1;
 
+  // OBRS-1332: the assigned-driver picker's options, fetched once per modal lifetime
+  // (the driver roster does not change while a form is open). A failed fetch leaves the
+  // list empty and is NOT treated like isEditDetailError: the assignment being saved
+  // comes from the vehicle detail control, not from this list, so an empty picker cannot
+  // wipe it — every other field still saves normally.
+  protected driverOptions: Option[] = [];
+  private areDriversLoaded = false;
+
   protected readonly vehicleForm: FormGroup;
 
   constructor(
@@ -117,6 +126,10 @@ export class VehicleFormModalComponent implements OnChanges {
       // @Pattern - a typo'd IMEI is not rejected by anything downstream, it just
       // silently matches no GPS batch and the van never appears on the map.
       gpsImei: ['', [optionalGpsImeiValidator]],
+      // OBRS-1332: the driver who normally drives this van. Optional — a van with no
+      // regular driver is the state every row starts in, and clearing this is how an
+      // owner takes a driver off a van.
+      assignedDriverId: [''],
     });
 
     // OBRS-842: vehicleNumber's validity depends on a SIBLING control, and Angular
@@ -139,6 +152,7 @@ export class VehicleFormModalComponent implements OnChanges {
     }
 
     if (this.isOpen) {
+      void this.loadDriverOptions();
       if (this.mode === 'edit' && this.selectedVehicle) {
         this.initEditForm(this.selectedVehicle);
       } else {
@@ -263,7 +277,21 @@ export class VehicleFormModalComponent implements OnChanges {
       chassisNumber: '',
       note: '',
       gpsImei: '',
+      assignedDriverId: '',
     });
+  }
+
+  private async loadDriverOptions(): Promise<void> {
+    if (this.areDriversLoaded) {
+      return;
+    }
+    try {
+      const response = await firstValueFrom(this.adminApiService.getDrivers());
+      this.driverOptions = toDriverOptions(response?.data ?? []);
+      this.areDriversLoaded = true;
+    } catch {
+      this.driverOptions = [];
+    }
   }
 
   // Open immediately with the row data already in hand, then patch in the

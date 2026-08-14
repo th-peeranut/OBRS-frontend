@@ -86,6 +86,21 @@ export function toVehicleOptions(vehicles: InspectableVehicleDto[]): Option[] {
   return vehicles.map((vehicle) => ({ code: String(vehicle.id), label: vehicle.label }));
 }
 
+/** OBRS-1332: the picker's DEFAULT — the code of the van this driver is the
+ * regular driver of, or `null` for a driver who has none (which is every
+ * driver until an owner says otherwise, and must leave the form exactly as
+ * OBRS-312 left it: nothing pre-seeded).
+ *
+ * Returns the FIRST match rather than asserting there is only one. The schema
+ * allows a driver to be the regular driver of several vans (one column on
+ * `vehicles`, no unique constraint on the driver), and a default has to pick
+ * something; guessing wrong costs the driver one tap, because the dropdown
+ * still holds the whole fleet. */
+export function findAssignedVehicleCode(vehicles: InspectableVehicleDto[]): string | null {
+  const assigned = vehicles.find((vehicle) => vehicle.assignedToMe);
+  return assigned ? String(assigned.id) : null;
+}
+
 /** Active checklist rows ordered by `(categoryOrder, displayOrder, itemId)`
  * (OBRS-530 SPEC D2 — group order first, then displayOrder within the group)
  * — inactive items (retired mid-week, or simply not yet enabled) never appear

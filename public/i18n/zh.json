@@ -827,6 +827,8 @@
         "GPS_IMEI": "GPS 定位器 IMEI",
         "GPS_IMEI_PLACEHOLDER": "15 位数字，未安装定位器请留空",
         "GPS_IMEI_FORMAT": "GPS IMEI 必须为 15 位数字。",
+        "ASSIGNED_DRIVER": "固定司机",
+        "ASSIGNED_DRIVER_NONE": "无固定司机",
         "NOTE": "备注",
         "NOTE_PLACEHOLDER": "添加关于此车辆的其他备注（可选）"
       },

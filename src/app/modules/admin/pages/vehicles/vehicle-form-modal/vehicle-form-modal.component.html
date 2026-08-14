@@ -136,6 +136,20 @@
                 </small>
               }
             </div>
+            <!-- OBRS-1332: a DEFAULT, not a lock. This is the van the driver's weekly
+            inspection form pre-selects, and who that van's maintenance reminders reach
+            alongside the owners; it does not restrict which van anyone may inspect. The
+            placeholder doubles as the clear option — picking it means "no regular driver". -->
+            <div class="admin-form-field">
+              <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.ASSIGNED_DRIVER' | translate }}</label>
+              <app-admin-dropdown
+                formControlName="assignedDriverId"
+                [options]="driverOptions"
+                valueKey="code"
+                labelKey="label"
+                [placeholder]="'ADMIN.VEHICLES.DETAILS.ASSIGNED_DRIVER_NONE' | translate"
+              ></app-admin-dropdown>
+            </div>
             <div class="admin-form-field full">
               <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.NOTE' | translate }}</label>
               <textarea

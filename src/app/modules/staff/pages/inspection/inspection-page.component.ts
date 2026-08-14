@@ -33,6 +33,7 @@ import {
   groupRowsByCategory,
   mergeRowValues,
   toActiveItemRows,
+  findAssignedVehicleCode,
   toVehicleOptions,
 } from './inspection-page.mappers';
 
@@ -56,6 +57,8 @@ export class InspectionPageComponent implements OnInit, AfterViewInit, OnDestroy
    * (SPEC D2/D3), recomputed alongside `itemRows` — never independently. */
   protected itemGroups: InspectionGroup[] = [];
   protected vehicleOptions: Option[] = [];
+  /** OBRS-1332: the driver's regular van, or null when they have none. */
+  private assignedVehicleCode: string | null = null;
 
   protected isItemsRefreshing = false;
   protected itemsErrorMessage = '';
@@ -149,6 +152,8 @@ export class InspectionPageComponent implements OnInit, AfterViewInit, OnDestroy
 
     this.vehiclesStore.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       this.vehicleOptions = toVehicleOptions(data ?? []);
+      this.assignedVehicleCode = findAssignedVehicleCode(data ?? []);
+      this.prefillAssignedVehicle();
     });
 
     this.myInspectionsStore.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
@@ -377,8 +382,22 @@ export class InspectionPageComponent implements OnInit, AfterViewInit, OnDestroy
     this.applyRowsToFormArray(merged);
   }
 
+  /** OBRS-1332: pre-select the driver's regular van, and ONLY while the picker
+   * is still untouched — the store is root-scoped and re-emits, and a driver
+   * covering someone else's van must never have their choice overwritten
+   * underneath them by a refresh. A driver with no regular van is left with the
+   * empty picker OBRS-312 gave them. */
+  private prefillAssignedVehicle(): void {
+    const control = this.form.get('vehicleId')!;
+    if (this.assignedVehicleCode && control.value === null) {
+      control.setValue(this.assignedVehicleCode);
+    }
+  }
+
   private resetToFreshForm(): void {
     this.form.reset({ vehicleId: null, odometerKm: null, notes: '' });
+    // The default is the default again after a submit, not only on first load.
+    this.prefillAssignedVehicle();
     this.odometerServerError = '';
     const fresh = mergeRowValues(this.rawItems, new Map());
     this.applyRowsToFormArray(fresh);
