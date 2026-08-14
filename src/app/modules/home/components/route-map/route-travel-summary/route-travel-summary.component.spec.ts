@@ -108,4 +108,16 @@ describe('RouteTravelSummaryComponent', () => {
     expect(component.isSegment).toBe(false);
     expect(component.displayDistanceKm).toBe(120);
   });
+
+  // OBRS-1341: whole-route and first-stop→last-stop describe the same journey, so they must
+  // print the same number. Every fixture above uses a whole-number total, which is why the raw
+  // fallback went unnoticed; the measured route totals are not whole numbers.
+  it('rounds the whole-route total the same way a segment is rounded', () => {
+    component.routeMeta = { ...mockMeta, totalDistanceKm: 133.13 };
+    expect(component.displayDistanceKm).toBe(133);
+
+    component.selectedPickupStop = makeStop(0);
+    component.selectedDropoffStop = makeStop(133.13);
+    expect(component.displayDistanceKm).toBe(133);
+  });
 });
