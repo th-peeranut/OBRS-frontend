@@ -2,6 +2,7 @@
 dismiss it permanently; see the component for why "no" is a real button. -->
 @if (isUndecided$ | async) {
   <div
+    #banner
     class="consent-banner"
     role="region"
     [attr.aria-label]="'ANALYTICS_CONSENT.ARIA_LABEL' | translate"

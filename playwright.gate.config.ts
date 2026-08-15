@@ -194,6 +194,14 @@ export default defineConfig({
     // because the shared fixture's 2 stops never overflow 60vh, never flip, and
     // would therefore measure the one geometry that was never broken.
     '**/obrs-1224-origin-combobox.spec.ts',
+    // OBRS-1372. The other half of the spec above: that one pins the bar's overlap
+    // with the FAB as deliberate, this one sweeps the customer shell at a phone
+    // viewport and fails if a control in the page's own flow cannot be scrolled clear
+    // of the bar at all. The bar is `position: fixed` and nothing reserved room for
+    // it, so the bottom 37% of every page was unreachable while the question was
+    // unanswered — on prod, for eleven months. Hermetic: it reuses the contrast
+    // gate's fixtures.
+    '**/obrs-1372-consent-banner-reachability.spec.ts',
     // OBRS-1370. The lane's own hermeticity, asserted instead of declared: it sweeps the
     // customer pages and fails naming any host that is not this dev server. Rule 2 above
     // claimed that property for six months while `styles.scss` fetched Google Fonts on

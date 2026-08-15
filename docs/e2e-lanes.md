@@ -5,7 +5,7 @@
 ## The short version
 
 ```bash
-npm run e2e:gate       # 124 cases, ~6.3 min, no backend. THIS is the merge gate (runs in CI).
+npm run e2e:gate       # 191 cases, 10.5 min (measured 2026-08-15), no backend. THIS is the merge gate (runs in CI).
 npm run test:e2e-lanes # asserts every spec declares a lane (runs in CI, costs nothing)
 
 npm run e2e            # SIT health check. Not a gate. Expect some red.
@@ -134,6 +134,24 @@ these the next bad box. A checklist of "components someone checked" would have s
 fresh instances of the defect it was written to remove; the sweep caught them on the run
 straight after the batch landed. `ALLOW` cannot rot either: a separate case fails on any
 entry the sweep no longer sees malformed.
+
+**And "can the visitor reach it at all" is a lane member too.**
+`obrs-1372-consent-banner-reachability.spec.ts` sweeps the same eleven customer pages at
+the iPhone 14's 390×664 in Thai, with the PDPA question deliberately UNanswered, and
+fails if any in-flow control cannot be scrolled clear of the consent bar. It is not the
+FAB question one file over: the bar is full-width and opaque **on purpose**, so "does it
+cover anything" is answered yes by design and could only be satisfied by shrinking the
+ask. What was false is reachability — the bar is `position: fixed` and nothing reserved
+room for it, so the document ended where it always had and the last 246px of every page
+was gone until the question was answered. Measured on the pre-fix tree: **14 controls
+across 11 of 11 pages**, including the whole lower half of `/login` (the
+sign-in-by-phone button, the PDPA checkbox, the privacy-policy link and the register
+link — a signed-out visitor's first screen) and the footer phone number on every page.
+The spec carries its own must-catch/must-not-catch fixture first, and that fixture's
+`<!DOCTYPE html>` is load-bearing: without it `setContent` renders in quirks mode, where
+`documentElement.clientHeight` is the document's height rather than the viewport's, the
+solver computes `maxScroll = 0` and the sweep reports a clean page. That was the first
+run's actual result.
 
 **`force: true` is banned in this lane, and the ban is enforced** (OBRS-775 AC5, rule 5 in
 `scripts/check-e2e-lanes.mjs`). `force` does not aim the event — it skips the
