@@ -88,7 +88,7 @@ function describe(el: Element): string {
  * whatever offset the animation had reached. Measured across three runs of the
  * same tree: 17, 18, 19.
  */
-async function scrollToInstantly(page: Page, y: number): Promise<void> {
+export async function scrollToInstantly(page: Page, y: number): Promise<void> {
   await page.evaluate((top) => {
     window.scrollTo({ top, left: 0, behavior: 'instant' as ScrollBehavior });
   }, y);
@@ -127,7 +127,7 @@ async function scrollToInstantly(page: Page, y: number): Promise<void> {
  * reachable offsets is a property of the document's height, not of how the
  * browser animates its way between them.
  */
-async function stabilizeScrolling(page: Page): Promise<void> {
+export async function stabilizeScrolling(page: Page): Promise<void> {
   await page.addStyleTag({
     content: `*, *::before, *::after, :root { scroll-behavior: auto !important; }`,
   });
