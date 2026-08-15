@@ -95,6 +95,10 @@ function loadGoogleMapsApi(apiKey: string): Promise<void> {
   return googleMapsLoad;
 }
 
+/** `slug@lat,lng` identity of a stop, shared by the Directions and camera keys. */
+const stopToken = (s: RouteStop): string =>
+  `${s.slug}@${(s.latitude as number).toFixed(5)},${(s.longitude as number).toFixed(5)}`;
+
 /** Maximum number of points per Directions API request (origin + N-2 waypoints + destination). */
 const DIRECTIONS_CHUNK_SIZE = 25;
 
@@ -322,6 +326,12 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
    * Prevents re-querying for the same set of stops (dedupe).
    */
   private lastDirReqKey = '';
+
+  /**
+   * Key of the stop set the camera was last framed for. Null until the first
+   * framing, so the initial fit always happens (OBRS-1362).
+   */
+  private lastCameraKey: string | null = null;
 
   /**
    * The `dirReqSeq` value for which a Directions request has actually been
@@ -608,16 +618,28 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
               stopsWithCoords.length,
           };
 
-    this.mapCenter = center;
-    this.mapOptions = {
-      zoom: 10,
-      center,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-      cameraControl: false,
-      zoomControl: false,
-    };
+    // OBRS-1362: re-frame the camera only when the ROUTE changes. A new object
+    // here is a new `[options]` reference, and GoogleMap.ngOnChanges answers it
+    // with setOptions({zoom: 10, center}) — which throws away whatever zoom/pan
+    // the user had just set. recomputeMapData() re-fires on every pickup click
+    // (route-map-home.refreshDropoffOptions rebuilds `dropoffStops` with
+    // `.filter()`), so rebuilding the options unconditionally snapped the map
+    // back to zoom 10 mid-interaction. The pickup set is assigned once per route
+    // load and is never narrowed by a selection, so it is what says "new route".
+    const cameraKey = this.buildCameraKey();
+    if (cameraKey !== this.lastCameraKey) {
+      this.lastCameraKey = cameraKey;
+      this.mapCenter = center;
+      this.mapOptions = {
+        zoom: 10,
+        center,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        cameraControl: false,
+        zoomControl: false,
+      };
+    }
 
     const pickupCoords = this.pickupStops
       .filter((s) => s.latitude !== null && s.longitude !== null)
@@ -756,17 +778,30 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
    * version prefix lets us bust all keys when the format changes.
    */
   private buildRequestKey(): string {
-    const token = (s: RouteStop): string =>
-      `${s.slug}@${(s.latitude as number).toFixed(5)},${(s.longitude as number).toFixed(5)}`;
     const pickupTokens = this.pickupStops
       .filter((s) => s.latitude !== null && s.longitude !== null)
       .sort((a, b) => a.order - b.order)
-      .map(token);
+      .map(stopToken);
     const dropoffTokens = this.dropoffStops
       .filter((s) => s.latitude !== null && s.longitude !== null)
       .sort((a, b) => a.order - b.order)
-      .map(token);
+      .map(stopToken);
     return `v${DIR_CACHE_VERSION}|${[...pickupTokens, ...dropoffTokens].join('|')}`;
+  }
+
+  /**
+   * Key identifying what the camera is framed on. Deliberately built from the
+   * PICKUP stops only: `dropoffStops` is narrowed on every pickup click, so a
+   * key that included it would move mid-interaction and re-frame the map on the
+   * user (OBRS-1362). Coordinates are part of the token, so an admin moving a
+   * stop still re-centres.
+   */
+  private buildCameraKey(): string {
+    return this.pickupStops
+      .filter((s) => s.latitude !== null && s.longitude !== null)
+      .sort((a, b) => a.order - b.order)
+      .map(stopToken)
+      .join('|');
   }
 
   /**
