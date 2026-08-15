@@ -47,10 +47,37 @@ jobs:
     env:
       REPORT_TITLE: 'promote-sit: the scheduled SIT promote did not complete'
     steps:
+      # OBRS-1359. `fetch-depth: 0` is LOAD-BEARING - do not "tidy" it back to the default.
+      #
+      # The default is `fetch-depth: 1`, which runs `git fetch --depth=1 origin refs/heads/main*`
+      # and writes main's tip into `.git/shallow`, where git treats it as a commit WITH NO PARENTS.
+      # The `Fetch dev and sit` step below inherits that boundary, so any history lying under
+      # main's tip is never downloaded - and on THIS repo `sit` lies under it: measured 2026-08-15,
+      # `main..sit = 0` and `sit..main = 108`, i.e. main fully contains sit and is 108 commits past
+      # it. So `sit` is invisible on the runner, git cannot see it on dev's ancestry, and the push
+      # is refused CLIENT-SIDE with `non-fast-forward` - without GitHub ever being asked. That is
+      # why the API answers `ahead_by:167, behind_by:0` for the same two refs in the same minute.
+      #
+      # It also silently corrupted the gap count: run 31824419279 printed `sit..dev = 60` when the
+      # true value was 167 (= `main..dev` 59, plus the grafted main tip itself). A wrong count is
+      # worse than a red run - had it truncated to 0, `Decide whether there is anything to promote`
+      # would have reported "nothing to promote" and the run would have gone GREEN while sit stayed
+      # 167 commits behind.
+      #
+      # OBRS-backend's twin file is byte-identical here and pushed fine the same night, which is
+      # what makes this look like it cannot be the checkout. It is: over there `main..sit = 75`, so
+      # the graft sits BELOW sit and cuts nothing on dev's path. The variable is the main/sit
+      # topology, not the workflow and not the size of the gap.
+      #
+      # Proven off-runner on 2026-08-15 at a 202-commit gap, one variable changed, no `--force`:
+      # depth 1 -> `ahead = 95`, `! [rejected] (non-fast-forward)`; depth 0 -> `ahead = 202`,
+      # `51c561c0..c3274005  origin/dev -> sit` accepted. `adr-access-model-gate.yml` in this same
+      # repo already pins `fetch-depth: 0` for the same class of reason.
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
 
       # See the twin step in OBRS-backend for the full reasoning. Short version: the cron says
       # when to start, this says whether we are still inside the window. GitHub's cron is
