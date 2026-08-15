@@ -34,7 +34,6 @@ export default defineConfig({
   timeout: 120_000,
   use: {
     baseURL: `http://localhost:${PORT}`,
-    viewport: { width: 390, height: 664 },
     trace: 'retain-on-failure',
   },
   webServer: {
@@ -43,5 +42,11 @@ export default defineConfig({
     reuseExistingServer: true,
     timeout: 300_000,
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // The viewport belongs HERE, after the device spread, not in the top-level `use`:
+  // a project's `use` wins, so `devices['Desktop Chrome']` puts its own 1280x720 back
+  // and the first run of this config shot the desktop layout -- where the Thai copy
+  // fits two lines and the bar is a third of the height that makes this a defect.
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 664 } } },
+  ],
 });
