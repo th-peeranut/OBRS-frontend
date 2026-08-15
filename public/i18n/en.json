@@ -2618,6 +2618,7 @@
   },
   "PASSENGER_INFO": {
     "PAGE": {
+      "BOOKING_TITLE": "Booking information",
       "FORM_TITLE": "Passenger information",
       "SUMMARY_TITLE": "Passenger summary"
     },
@@ -2629,8 +2630,10 @@
       "SECTION_TITLE": "Booker information",
       "BADGE": "Booker"
     },
+    "PASSENGER": {
+      "SECTION_TITLE": "Passenger {{n}} information"
+    },
     "FORM": {
-      "SECTION_TITLE": "Personal information",
       "USE_BOOKER_AS_THIS_PASSENGER": "Use the booker's info for this passenger",
       "TITLE": "Title",
       "TITLE_REQUIRED": "Please enter a title",

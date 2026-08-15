@@ -48,10 +48,14 @@
                       {{ "PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT" | translate }}
                     </div>
                   </div>
-                  <!-- Personal information -->
+                  <!-- OBRS-1239: numbered here, not a bare "passenger information",
+                  because this block repeats once per passenger. -->
                   <div class="col-12 my-3">
                     <div class="subtitle">
-                      {{ "PASSENGER_INFO.FORM.SECTION_TITLE" | translate }}
+                      {{
+                      "PASSENGER_INFO.PASSENGER.SECTION_TITLE"
+                      | translate: { n: i + 1 }
+                      }}
                     </div>
                   </div>
                   <!-- Use the booker's information for this passenger; shown only for the first passenger -->
