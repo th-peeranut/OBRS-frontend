@@ -1,4 +1,5 @@
 import { BehaviorSubject, of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ElementRef } from '@angular/core';
 import { DriverCashPanelComponent } from './driver-cash-panel.component';
 import { DriverCashDayRespDto } from '../../../../shared/interfaces/driver-cash.interface';
@@ -242,6 +243,31 @@ describe('DriverCashPanelComponent', () => {
       expect(alertService.error).toHaveBeenCalled();
       expect(component['advanceError']).toBeTruthy();
       expect(component.isSubmitting).toBeFalse();
+    });
+  });
+
+  // OBRS-1361 — the backend's sales-point 403 is PERMANENT for this round, so the
+  // GENERIC "please try again" is advice that cannot work. Measured in the AFTER
+  // capture before the map entry existed: the salesperson saw exactly that.
+  describe('onSubmitExpense — the sales-point refusal', () => {
+    it('names the refusal instead of falling back to the generic retry message', () => {
+      // A real HttpErrorResponse, not an object literal: extractApiErrorCode gates on
+      // `instanceof HttpErrorResponse` (api-error-code.ts:26), so a literal falls through
+      // to the fallback and the assertion would pass for the wrong reason.
+      staffApi.postDriverCashExpense.and.returnValue(
+        throwError(() => new HttpErrorResponse({
+          status: 403,
+          error: { errorCode: 'DRIVER_CASH_SALES_POINT_FORBIDDEN' },
+        }))
+      );
+      component['toggleAction']('expense');
+
+      component['onSubmitExpense']({ category: 'FUEL', amount: '300.00' });
+
+      // The stub's instant() echoes the key, so this asserts the KEY that was chosen.
+      expect(component['expenseError']).toBe('STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN');
+      expect(alertService.error).toHaveBeenCalledWith('STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN');
+      expect(store.mutate).not.toHaveBeenCalled();
     });
   });
 
