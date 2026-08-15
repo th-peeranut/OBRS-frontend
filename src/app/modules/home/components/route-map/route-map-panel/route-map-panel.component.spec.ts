@@ -672,6 +672,42 @@ describe('RouteMapPanelComponent', () => {
       expect(second.polylinePath[0].lat).toBeCloseTo(14.0, 3);
     });
 
+    // OBRS-1340 — the dedupe branch used to run AFTER `polylinePath` had already
+    // been reset to the straight path, so any re-fire with an unchanged stop set
+    // discarded the road-snapped line and returned before the code that restores
+    // it. On /home that re-fire is a pickup click: `refreshDropoffOptions()`
+    // rebuilds `dropoffStops` with `.filter()`, a new array reference even when
+    // every member is identical, and the map went diagonal until a reload.
+    it('[OBRS-1340] a re-fire with the SAME stop set keeps the road path and issues no second Directions call', async () => {
+      const roadResult = mockDirectionsResult([
+        { lat: 14.0, lng: 101.0 },
+        { lat: 14.5, lng: 101.5 },
+      ]);
+      const spy = installMockWithDirections(roadResult);
+
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.dropoffStops = [makeStop(3, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      const roadPath = component.polylinePath;
+      expect(roadPath[0].lat).toBeCloseTo(14.0, 3);
+
+      // Selecting a pickup: same members, brand-new array reference.
+      component.dropoffStops = [...component.dropoffStops];
+      component.ngOnChanges(
+        changes('dropoffStops', component.dropoffStops, component.dropoffStops)
+      );
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      // AC-1: still the road path, down to the same reference (nothing rebuilt).
+      expect(component.polylinePath).toBe(roadPath);
+      expect(component.polylinePath[0].lat).toBeCloseTo(14.0, 3);
+      // AC-2: no extra billable request.
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
     it('a changed stop coordinate invalidates the cache and re-queries Directions', async () => {
       const roadResult = mockDirectionsResult([
         { lat: 14.0, lng: 101.0 },
