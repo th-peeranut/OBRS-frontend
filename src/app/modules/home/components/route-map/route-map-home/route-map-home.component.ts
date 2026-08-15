@@ -10,7 +10,6 @@ import { TranslateService } from '@ngx-translate/core';
 import { catchError, forkJoin, Observable, of, Subject, takeUntil } from 'rxjs';
 import { environment } from '../../../../../../environments/environment';
 import { RouteMapService } from '../../../../../services/route-map/route-map.service';
-import { AlertService } from '../../../../../shared/services/alert.service';
 import {
   PickupDropoffConfirmedEvent,
   RouteListItem,
@@ -91,7 +90,6 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
 
   constructor(
     private routeMapService: RouteMapService,
-    private alertService: AlertService,
     private translateService: TranslateService,
     private breakpointObserver: BreakpointObserver
   ) {}
@@ -293,6 +291,36 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * OBRS-1358: a tap in the stop LIST also carries the user to the side they have not
+   * chosen yet, so the pair completes without a per-side "confirm" button in between.
+   *
+   * <p>Bound only to the list. The map panel keeps the plain handler above: it emits the
+   * same event when a pin is tapped, and moving the tab strip out from under someone who
+   * is reading the map is the surprise this card exists to remove, not add.
+   */
+  onPickupPickedFromList(stop: RouteStop): void {
+    this.onPickupStopSelected(stop);
+    // Do not advance once the pair is already complete - that would fight a user who is
+    // changing their mind - and do not advance onto an empty tab: refreshDropoffOptions
+    // legitimately leaves the list empty when the chosen pickup is the last stop served.
+    if (!this.selectedDropoffSlug && this.dropoffStops.length > 0) {
+      this.activeTabIndex = this.isDesktop ? 1 : 2;
+    }
+  }
+
+  onDropoffPickedFromList(stop: RouteStop): void {
+    this.onDropoffStopSelected(stop);
+    if (!this.selectedPickupSlug) {
+      this.activeTabIndex = 0;
+    }
+  }
+
+  /** Both sides chosen - the only state in which confirming means anything. */
+  get canConfirm(): boolean {
+    return !!this.selectedPickupSlug && !!this.selectedDropoffSlug;
+  }
+
+  /**
    * The map panel resolved the user's location: store the per-stop distances
    * for the pickup list badges and auto-select the nearest pickup so the user
    * immediately sees which one is closest.
@@ -320,38 +348,15 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
     this.selectedDropoffStop = stop;
   }
 
-  onConfirmPickup(): void {
-    this.onConfirm();
-  }
-
-  onConfirmDropoff(): void {
-    this.onConfirm();
-  }
-
-  private onConfirm(): void {
-    if (!this.selectedPickupSlug && !this.selectedDropoffSlug) {
-      const msg = this.translateService.instant(
-        'HOME.ROUTE_MAP.VALIDATION_SELECT_BOTH'
-      );
-      this.alertService.toast(msg, 'warning');
-      return;
-    }
-
-    if (!this.selectedPickupSlug) {
-      const msg = this.translateService.instant(
-        'HOME.ROUTE_MAP.VALIDATION_SELECT_PICKUP'
-      );
-      this.alertService.toast(msg, 'warning');
-      this.activeTabIndex = 0;
-      return;
-    }
-
-    if (!this.selectedDropoffSlug) {
-      const msg = this.translateService.instant(
-        'HOME.ROUTE_MAP.VALIDATION_SELECT_DROPOFF'
-      );
-      this.alertService.toast(msg, 'warning');
-      this.activeTabIndex = this.isDesktop ? 1 : 2;
+  /**
+   * OBRS-1358: the three "you are missing a side" branches this used to open with are gone.
+   * They were unreachable-by-design already (the button is disabled until `canConfirm`), and
+   * reaching them was the reported symptom: a toast is a poor place to explain a button that
+   * should not have been pressable, and on mobile the PDPA banner can cover it (OBRS-1372).
+   * The guard that remains is the type narrowing, not a user-facing case.
+   */
+  onConfirm(): void {
+    if (!this.selectedPickupSlug || !this.selectedDropoffSlug) {
       return;
     }
 
@@ -359,16 +364,5 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
       pickupSlug: this.selectedPickupSlug,
       dropoffSlug: this.selectedDropoffSlug,
     });
-  }
-
-  getRouteTitle(): string {
-    const lang = this.translateService.currentLang ?? 'th';
-    if (!this.routeMeta) {
-      return '';
-    }
-    return (
-      this.routeMeta.titleLocalized[lang as 'en' | 'th' | 'zh'] ??
-      this.routeMeta.titleLocalized['th']
-    );
   }
 }

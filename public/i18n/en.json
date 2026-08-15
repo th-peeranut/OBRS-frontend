@@ -2494,7 +2494,6 @@
       "COPYRIGHT_TEXT": "© NJ Phuyaipu 2026. All rights reserved."
     },
     "ROUTE_MAP": {
-      "SUBTITLE": "Select pickup / drop-off",
       "TAB_PICKUP_LABEL": "Pickup",
       "TAB_DROPOFF_LABEL": "Drop-off",
       "PICKUP_LIST_HEADER": "Pickup points in {{province}} ({{count}})",
@@ -2502,6 +2501,7 @@
       "VIEW_MAP": "View map",
       "CONFIRM_PICKUP": "Confirm pickup",
       "CONFIRM_DROPOFF": "Confirm drop-off",
+      "CONFIRM_PICKUP_DROPOFF": "Confirm pickup & drop-off",
       "TIME_APPROX_NOTE": "Times shown are approximate",
       "MAP_TITLE": "Route and stop map",
       "ROUTE_DISTANCE": "Approx. {{distance}} km | Travel time approx. {{min}} - {{max}} min",
@@ -2524,9 +2524,6 @@
       "DETAIL_NO_PHOTO": "No photo of this stop yet",
       "BTN_OPEN_MAPS": "Open in Google Maps",
       "BTN_NAVIGATE": "Navigate",
-      "VALIDATION_SELECT_BOTH": "Please select both a pickup and a drop-off point before confirming",
-      "VALIDATION_SELECT_PICKUP": "Please select a pickup point before confirming",
-      "VALIDATION_SELECT_DROPOFF": "Please select a drop-off point before confirming",
       "MAP_UNAVAILABLE": "Map unavailable",
       "EMPTY_STATE": "No stops configured for this route",
       "LOADING": "Loading route data...",

@@ -6,7 +6,6 @@ import {
   RouteStop,
 } from '../../../../../shared/interfaces/route-map.interface';
 import { RouteMapService } from '../../../../../services/route-map/route-map.service';
-import { AlertService } from '../../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
 
@@ -95,14 +94,6 @@ function createRouteMapServiceStub(overrides?: {
   };
 }
 
-function createAlertServiceStub(): AnyStub {
-  return {
-    warning: jasmine.createSpy('warning'),
-    error: jasmine.createSpy('error'),
-    toast: jasmine.createSpy('toast'),
-  };
-}
-
 function createTranslateServiceStub(): AnyStub {
   return {
     currentLang: 'th',
@@ -119,13 +110,11 @@ function createBreakpointObserverStub(): AnyStub {
 
 function makeComponent(
   serviceStub: AnyStub,
-  alertStub: AnyStub,
   translateStub: AnyStub,
   breakpointStub: AnyStub
 ): RouteMapHomeComponent {
   return new RouteMapHomeComponent(
     serviceStub as RouteMapService,
-    alertStub as AlertService,
     translateStub as TranslateService,
     breakpointStub as BreakpointObserver
   );
@@ -133,17 +122,14 @@ function makeComponent(
 
 describe('RouteMapHomeComponent', () => {
   let component: RouteMapHomeComponent;
-  let alertServiceStub: AnyStub;
   let routeMapServiceStub: AnyStub;
   let translateServiceStub: AnyStub;
 
   beforeEach(() => {
-    alertServiceStub = createAlertServiceStub();
     translateServiceStub = createTranslateServiceStub();
     routeMapServiceStub = createRouteMapServiceStub();
     component = makeComponent(
       routeMapServiceStub,
-      alertServiceStub,
       translateServiceStub,
       createBreakpointObserverStub()
     );
@@ -195,7 +181,6 @@ describe('RouteMapHomeComponent', () => {
     ];
     const comp = makeComponent(
       createRouteMapServiceStub({ getActiveRoutes: () => of(reorderedRoutes) }),
-      alertServiceStub,
       translateServiceStub,
       createBreakpointObserverStub()
     );
@@ -253,9 +238,7 @@ describe('RouteMapHomeComponent', () => {
     ];
     const translateStub = { ...createTranslateServiceStub(), currentLang: 'zh' };
     const comp = makeComponent(
-      createRouteMapServiceStub({ getActiveRoutes: () => of(routesWithoutZh) }),
-      alertServiceStub,
-      translateStub,
+      createRouteMapServiceStub({ getActiveRoutes: () => of(routesWithoutZh) }),      translateStub,
       createBreakpointObserverStub()
     );
     comp.ngOnInit();
@@ -273,7 +256,6 @@ describe('RouteMapHomeComponent', () => {
     ];
     const comp = makeComponent(
       createRouteMapServiceStub({ getActiveRoutes: () => of(routesNoLabel) }),
-      alertServiceStub,
       translateServiceStub,
       createBreakpointObserverStub()
     );
@@ -298,70 +280,92 @@ describe('RouteMapHomeComponent', () => {
     expect(loadPickupDropoffSpy).toHaveBeenCalledWith('chonburi_bangkok');
   });
 
-  // ── Existing tests (preserved) ───────────────────────────────────────────
-  it('shows warning when confirming without selection', () => {
+  // ── OBRS-1358: one confirm action; the tab advances on SELECTION ─────────
+  //
+  // Replaces the OBRS-73 guidance tests. Those asserted that pressing a per-side
+  // "Confirm pickup" with only a pickup chosen toasted a warning and swapped the tab.
+  // That is the behaviour usability report #6 reported as confusing: the button said it
+  // confirmed one side and the handler behind it always demanded both.
+
+  it('canConfirm stays false until BOTH sides are chosen', () => {
     component.ngOnInit();
-    component.selectedPickupSlug = null;
-    component.selectedDropoffSlug = null;
-    component.onConfirmPickup();
-    expect(alertServiceStub.toast).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_BOTH', 'warning');
+    expect(component.canConfirm).toBeFalse();
+
+    component.selectedPickupSlug = 'pickup-1';
+    expect(component.canConfirm).toBeFalse();
+
+    component.selectedDropoffSlug = 'dropoff-1';
+    expect(component.canConfirm).toBeTrue();
   });
 
-  // ── Differentiated validation messages ──────────────────────────────────
-  it('warns with VALIDATION_SELECT_DROPOFF and does not emit when only pickup is selected', () => {
+  it('onConfirm emits nothing while a side is missing (and warns nobody)', () => {
     component.ngOnInit();
-    component.selectedPickupSlug = 'pickup-1';
-    component.selectedDropoffSlug = null;
-
     const emitSpy = jasmine.createSpy('pickupDropoffConfirmed');
     component.pickupDropoffConfirmed.subscribe(emitSpy);
 
-    component.onConfirmPickup();
+    component.selectedPickupSlug = 'pickup-1';
+    component.selectedDropoffSlug = null;
+    component.onConfirm();
 
-    expect(alertServiceStub.toast).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_DROPOFF', 'warning');
-    expect(emitSpy).not.toHaveBeenCalled();
-  });
-
-  it('warns with VALIDATION_SELECT_PICKUP and does not emit when only drop-off is selected', () => {
-    component.ngOnInit();
     component.selectedPickupSlug = null;
     component.selectedDropoffSlug = 'dropoff-1';
+    component.onConfirm();
 
-    const emitSpy = jasmine.createSpy('pickupDropoffConfirmed');
-    component.pickupDropoffConfirmed.subscribe(emitSpy);
-
-    component.onConfirmDropoff();
-
-    expect(alertServiceStub.toast).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_PICKUP', 'warning');
     expect(emitSpy).not.toHaveBeenCalled();
   });
 
-  it('switches activeTabIndex to the drop-off tab index when only pickup is selected (desktop)', () => {
-    // breakpointObserverStub returns matches: true → isDesktop = true → dropoff tab index = 1
+  it('picking a pickup in the LIST carries the user to the drop-off tab (desktop index 1)', () => {
     component.ngOnInit();
-    component.selectedPickupSlug = 'pickup-1';
-    component.selectedDropoffSlug = null;
-
-    component.onConfirmPickup();
-
+    component.onPickupPickedFromList(stopAt(0, 'pickup-1'));
     expect(component.activeTabIndex).toBe(1);
   });
 
-  it('switches activeTabIndex to the drop-off tab index when only pickup is selected (mobile)', () => {
-    // mobile breakpoint stub: matches: false → isDesktop = false → dropoff tab index = 2
+  it('picking a pickup in the LIST carries the user to the drop-off tab (mobile index 2)', () => {
     const mobileComponent = makeComponent(
       routeMapServiceStub,
-      alertServiceStub,
       translateServiceStub,
       { observe: () => of({ matches: false }) }
     );
     mobileComponent.ngOnInit();
-    mobileComponent.selectedPickupSlug = 'pickup-1';
-    mobileComponent.selectedDropoffSlug = null;
-
-    mobileComponent.onConfirmPickup();
-
+    mobileComponent.onPickupPickedFromList(stopAt(0, 'pickup-1'));
     expect(mobileComponent.activeTabIndex).toBe(2);
+  });
+
+  it('picking the drop-off first carries the user back to the pickup tab', () => {
+    component.ngOnInit();
+    component.activeTabIndex = 1;
+    component.onDropoffPickedFromList(stopAt(1, 'dropoff-1'));
+    expect(component.activeTabIndex).toBe(0);
+  });
+
+  it('does NOT move the tab once the pair is already complete', () => {
+    component.ngOnInit();
+    component.onDropoffStopSelected(stopAt(1, 'dropoff-1'));
+    component.activeTabIndex = 0;
+
+    component.onPickupPickedFromList(stopAt(0, 'pickup-1'));
+
+    expect(component.selectedDropoffSlug).toBe('dropoff-1');
+    expect(component.activeTabIndex).toBe(0);
+  });
+
+  it('does NOT move the tab onto an empty drop-off list', () => {
+    component.ngOnInit();
+    component.activeTabIndex = 0;
+
+    // order 1 equals the only drop-off's order, so refreshDropoffOptions empties the list -
+    // the real case of a pickup that is the last stop the van serves.
+    component.onPickupPickedFromList(stopAt(1, 'pickup-1'));
+
+    expect(component.dropoffStops.length).toBe(0);
+    expect(component.activeTabIndex).toBe(0);
+  });
+
+  it('a pickup chosen on the MAP does not move the tab', () => {
+    component.ngOnInit();
+    component.activeTabIndex = 1;
+    component.onPickupStopSelected(stopAt(0, 'pickup-1'));
+    expect(component.activeTabIndex).toBe(1);
   });
 
   it('emits pickupDropoffConfirmed when both slugs are selected', () => {
@@ -372,7 +376,7 @@ describe('RouteMapHomeComponent', () => {
     const emitSpy = jasmine.createSpy('pickupDropoffConfirmed');
     component.pickupDropoffConfirmed.subscribe(emitSpy);
 
-    component.onConfirmDropoff();
+    component.onConfirm();
 
     expect(emitSpy).toHaveBeenCalledWith({
       pickupSlug: 'pickup-1',
@@ -413,12 +417,6 @@ describe('RouteMapHomeComponent', () => {
     expect(component.selectedDropoffSlug).toBe('d1');
   });
 
-  it('getRouteTitle returns the localized title', () => {
-    component.ngOnInit();
-    const title = component.getRouteTitle();
-    expect(title).toBe('ชลบุรี-กรุงเทพ');
-  });
-
   it('ngOnDestroy completes the destroy$ stream', () => {
     const spy = spyOn(component['destroy$'], 'complete');
     component.ngOnDestroy();
@@ -449,7 +447,7 @@ describe('RouteMapHomeComponent', () => {
     const serviceStub = createRouteMapServiceStub({
       getActiveRoutes: () => of(routesWithoutHome),
     });
-    const comp = makeComponent(serviceStub, alertServiceStub, translateServiceStub, createBreakpointObserverStub());
+    const comp = makeComponent(serviceStub, translateServiceStub, createBreakpointObserverStub());
     comp.ngOnInit();
     // First call: parallel pre-fetch for homeRouteSlug ('chonburi_bangkok').
     // Second call: fallback fetch for the actual default ('bangkok_chonburi').
@@ -462,7 +460,7 @@ describe('RouteMapHomeComponent', () => {
     const serviceStub = createRouteMapServiceStub({
       getActiveRoutes: () => throwError(() => new Error('Network error')),
     });
-    const comp = makeComponent(serviceStub, alertServiceStub, translateServiceStub, createBreakpointObserverStub());
+    const comp = makeComponent(serviceStub, translateServiceStub, createBreakpointObserverStub());
     comp.ngOnInit();
     expect(comp.loadState).toBe('error');
     expect((comp as AnyStub).errorRetryTarget).toBe('directions');
@@ -472,7 +470,7 @@ describe('RouteMapHomeComponent', () => {
     const serviceStub = createRouteMapServiceStub({
       getPickupDropoff: () => throwError(() => new Error('Network error')),
     });
-    const comp = makeComponent(serviceStub, alertServiceStub, translateServiceStub, createBreakpointObserverStub());
+    const comp = makeComponent(serviceStub, translateServiceStub, createBreakpointObserverStub());
     comp.ngOnInit();
     expect(comp.loadState).toBe('error');
     expect((comp as AnyStub).errorRetryTarget).toBe('pickupDropoff');
@@ -519,7 +517,6 @@ describe('RouteMapHomeComponent', () => {
       });
       const comp = makeComponent(
         serviceStub,
-        alertServiceStub,
         translateServiceStub,
         createBreakpointObserverStub()
       );

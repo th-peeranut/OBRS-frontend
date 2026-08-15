@@ -59,24 +59,19 @@
   </div>
 
   <!-- CONFIRM BUTTON -->
+  <!-- OBRS-1358: one button, whose label and guard follow `confirmMode`. On the home page
+       ('pair') this used to be a per-side button while the handler behind it validated BOTH
+       sides - so pressing "Confirm pickup" with only a pickup chosen confirmed nothing and
+       said why in a toast the PDPA banner can sit on top of (OBRS-1372). There, the disabled
+       state is now the whole message. The change-stop dialog ('per-side', the default) is a
+       real two-step wizard and keeps the old per-side label and guard. -->
   <div class="mt-3 px-2">
-    @if (type === 'pickup') {
-      <p-button
-        styleClass="w-100"
-        severity="info"
-        (onClick)="onConfirm()"
-        [label]="'HOME.ROUTE_MAP.CONFIRM_PICKUP' | translate"
-        [disabled]="!selectedSlug"
-      ></p-button>
-    }
-    @if (type === 'dropoff') {
-      <p-button
-        styleClass="w-100"
-        severity="danger"
-        (onClick)="onConfirm()"
-        [label]="'HOME.ROUTE_MAP.CONFIRM_DROPOFF' | translate"
-        [disabled]="!selectedSlug"
-      ></p-button>
-    }
+    <p-button
+      styleClass="w-100"
+      [severity]="type === 'pickup' ? 'info' : 'danger'"
+      (onClick)="onConfirm()"
+      [label]="confirmLabelKey | translate"
+      [disabled]="confirmDisabled"
+    ></p-button>
   </div>
 </div>

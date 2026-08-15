@@ -570,17 +570,16 @@ test.describe('AC9: Regression — existing pickup/dropoff confirm path', () => 
     await pickupRow.click();
     await expect(pickupRow).toHaveClass(/stop-row--selected/);
 
-    // Switch to dropoff tab and select first dropoff stop
-    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
+    // OBRS-1358: picking the pickup above already carried us to the Drop-off tab
     const dropoffRow = page.locator('.stop-row--dropoff').first();
     await dropoffRow.waitFor({ state: 'visible' });
     await dropoffRow.click();
     await expect(dropoffRow).toHaveClass(/stop-row--selected/);
 
-    // Click "Confirm drop-off"
-    const confirmDropoffBtn = page.locator('button', { hasText: 'Confirm drop-off' }).first();
-    await confirmDropoffBtn.waitFor({ state: 'visible' });
-    await confirmDropoffBtn.click();
+    // Click the single confirm button, now that the pair is complete
+    const confirmBtn = page.locator('button', { hasText: 'Confirm pickup & drop-off' }).locator('visible=true').first();
+    await confirmBtn.waitFor({ state: 'visible' });
+    await confirmBtn.click();
 
     // OBRS-73: both stops confirmed → prefill hero bar + scroll up, NO navigation, NO modal
     await page.waitForTimeout(600);

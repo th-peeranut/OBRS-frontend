@@ -733,7 +733,6 @@ body.is-dark app-route-map-home {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
   }
 
-  .panel-header { border-bottom-color: $dk-border !important; }
 
   // Map placeholder (shown before the map loads / on a map error)
   .route-map-placeholder {
@@ -757,7 +756,6 @@ body.is-dark app-route-map-home {
   }
 
   // Headings / primary copy -> light
-  .panel-title,
   .map-title,
   .list-header,
   .stop-name,
