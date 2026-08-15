@@ -369,6 +369,12 @@
       "why": "OBRS-1224. The claim is a DISTANCE in px between the box the customer types a station into and the field they clicked, with the panel flipped upward by Popper -- so it needs a real layout engine, a real 60vh and a real viewport height, none of which Karma has (its window is 800px and fixed, and the three component specs that measure this bar therefore never take the flipped branch). Measured on prod before the fix: 496 px at 1440x900 and 556 px at 1907x1000, against a 48 px field. The spec asserts the AC threshold (no further than one field-height), that the distance is 0 because the typing box IS the field, and that there is exactly ONE typeable box in the group -- a fix that filtered correctly from a second box in the panel would be the bug wearing the fix's clothes. It also asserts data-popper-placement still starts with 'top', because option C on the card was 'stop the panel flipping' and was rejected; without that line a build taking the forbidden route would pass everything else here. Hermetic on the same terms as the rest of the lane: it reuses mockPublicPageApis and then sharpens the stop list to 24, because the shared fixture's 2 stops never overflow 60vh, never flip, and would measure the one geometry that was never broken."
     },
     {
+      "spec": "obrs-1370-lane-offline.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-1370. The lane's own hermeticity, asserted rather than declared. Rule 2 of playwright.gate.config.ts argued this lane was provably hermetic because an unintercepted request hits a dead localhost:8080 -- true only of traffic that travels through `apiUrl`. An absolute third-party URL inside a stylesheet or a fixture never goes near it, so the lane was measured reaching five external hosts on an ordinary sweep (fonts.googleapis.com, fonts.gstatic.com, accounts.google.com, ssl.gstatic.com, and placehold.co from two specs' fixtures), and a transient gstatic 404 on one of them turned the dev merge red on a tree that had just passed on the PR (OBRS-1369). This spec sweeps the customer pages and fails naming any host outside this machine, with an allow list that costs a sentence per entry. Hermetic by definition: it is the thing that measures it."
+    },
+    {
       "spec": "obrs-907-qa-parity-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs907qa.config.ts",

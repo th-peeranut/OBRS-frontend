@@ -57,6 +57,11 @@ test.describe('OBRS-1370 - the gate lane stays inside this machine', () => {
   test('no page in the customer sweep requests a host outside this machine', async ({
     browser,
   }) => {
+    // A page load per customer page, plus a settle so late requests are counted. It ran in
+    // 49s alone and timed out at the config's 60s when the contrast gate had the other
+    // worker -- a sweep must not be a race against whatever else the lane is doing.
+    test.setTimeout(300_000);
+
     /** host -> one example URL, so a failure names WHAT leaked and not just where from. */
     const leaks = new Map<string, string>();
 
