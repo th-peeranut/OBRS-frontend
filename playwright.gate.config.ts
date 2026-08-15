@@ -37,12 +37,26 @@ import { defineConfig, devices } from '@playwright/test';
  *    silently apply to nothing the day `E2E_GATE_PORT` changed. `addInitScript` has no
  *    such coupling; the shared helper is `e2e/support/gate-admin-session.ts`.)
  *
- * 2. The frontend is served with the DEFAULT (local) configuration, not `sit`, so
- *    `apiUrl` points at `http://localhost:8080` — where nothing is listening. This is
- *    deliberate and is the enforcement mechanism: a request this lane failed to
- *    intercept gets ECONNREFUSED instead of quietly succeeding against SIT. A spec
- *    that passes here is *provably* hermetic rather than asserted to be. It is also
- *    why adding a spec to `testMatch` is a real check and not a bookkeeping step.
+ * 2. The frontend is served with the `gate` configuration, which is the DEFAULT (local)
+ *    environment — `apiUrl` still points at `http://localhost:8080`, where nothing is
+ *    listening — plus one file replacement: `src/styles/webfonts.scss` becomes
+ *    `webfonts.gate.scss`, so the app's two web fonts are served out of
+ *    `e2e/fixtures/fonts/` rather than fetched from Google's CDN.
+ *
+ *    The dead `apiUrl` is the enforcement mechanism for everything that travels through
+ *    it: a call this lane failed to intercept gets ECONNREFUSED instead of quietly
+ *    succeeding against SIT.
+ *
+ *    OBRS-1370 CORRECTION. This paragraph used to conclude that a spec passing here was
+ *    therefore *provably* hermetic. It was claiming more than the mechanism could deliver.
+ *    An absolute third-party URL inside a stylesheet or a fixture never goes near `apiUrl`,
+ *    so `styles.scss` fetched two Google Fonts stylesheets and their woff2 on EVERY page
+ *    load in this lane — and a transient gstatic 404 turned the `dev` merge red on a tree
+ *    that had just passed on the PR (OBRS-1369). What is enforced now rather than asserted:
+ *    the fonts are local (above); `--host-resolver-rules` in `use.launchOptions` leaves
+ *    Chromium unable to resolve any hostname but localhost; and
+ *    `obrs-1370-lane-offline.spec.ts` goes red naming any host that is not this dev server.
+ *    Adding a spec to `testMatch` is still a real check — it is no longer the only one.
  *
  * 3. Explicit `viewport`. `devices['Desktop Chrome']` happens to be 1280×720 today,
  *    but two specs in this repo were authored against a viewport their comment names
@@ -180,6 +194,11 @@ export default defineConfig({
     // because the shared fixture's 2 stops never overflow 60vh, never flip, and
     // would therefore measure the one geometry that was never broken.
     '**/obrs-1224-origin-combobox.spec.ts',
+    // OBRS-1370. The lane's own hermeticity, asserted instead of declared: it sweeps the
+    // customer pages and fails naming any host that is not this dev server. Rule 2 above
+    // claimed that property for six months while `styles.scss` fetched Google Fonts on
+    // every page load, because nothing was looking.
+    '**/obrs-1370-lane-offline.spec.ts',
   ],
 
   timeout: 60_000,
@@ -220,14 +239,25 @@ export default defineConfig({
     viewport: { width: 1280, height: 720 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+
+    // OBRS-1370. Chromium resolves nothing but localhost here, so a request this lane
+    // failed to intercept CANNOT reach the internet: it fails at DNS in milliseconds
+    // instead of borrowing a stranger's uptime and lending this gate their outages. This
+    // is the lane-level half of rule 2 — it covers every spec in `testMatch`, including
+    // the next one somebody adds. `obrs-1370-lane-offline.spec.ts` is the half that says
+    // out loud what tried to leave.
+    launchOptions: {
+      args: ['--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE localhost'],
+    },
   },
 
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 
   webServer: {
-    // Default configuration on purpose -- see rule 2 above. `--no-live-reload` because
-    // a rebuild mid-run would reload the page out from under an assertion.
-    command: `npx ng serve --port ${PORT} --no-live-reload`,
+    // The `gate` configuration: the default (local) environment plus locally served web
+    // fonts -- see rule 2 above. `--no-live-reload` because a rebuild mid-run would
+    // reload the page out from under an assertion.
+    command: `npx ng serve --configuration gate --port ${PORT} --no-live-reload`,
     url: `http://localhost:${PORT}`,
     timeout: 300_000,
     reuseExistingServer: !process.env['CI'],
