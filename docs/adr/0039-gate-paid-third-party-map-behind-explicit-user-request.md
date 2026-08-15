@@ -88,6 +88,12 @@ fires on tab arrival rather than on the user's own action. Any change that
 makes Maps JS request-count go from 0 to >0 on a fresh `/home` load with no
 click undoes this card and must not ship.
 
+That rule is no longer prose only. `e2e/tests/route-map.spec.ts` Criterion 6
+now asserts `.route-map-placeholder` has count **0** before any click and only
+then clicks `.map-placeholder-cta` — the panel, and with it the sole Maps JS
+call site, must be absent on arrival. A card that mounts the panel on load
+turns that count assertion red in the gate lane rather than shipping quietly.
+
 ## Consequences
 
 - `/home`'s first paint no longer contacts `maps.googleapis.com` — reduces

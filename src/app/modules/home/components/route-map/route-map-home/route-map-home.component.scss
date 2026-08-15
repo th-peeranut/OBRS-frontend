@@ -1,4 +1,5 @@
 @import "../../../../../../styles/variables.scss";
+@import "../../../../../../styles/dark-tokens.scss";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -92,6 +93,22 @@
 
 .map-placeholder-text {
   color: $text-softblack;
+}
+
+// Dark mode for the two rules above. `:host-context` rather than
+// dark-theme.scss for the usual reason (OBRS-767): the component's own rule
+// outranks any `body.is-dark .a .b`. Measured on the dark card ($dk-bg-card):
+// $text-softblack is 2.40:1 there (the contrast gate's own number) and
+// $primary-blue 1.53:1 — the icon was effectively unpainted. $dk-text-muted is
+// 6.65:1 and $dk-accent 8.29:1.
+:host-context(body.is-dark) {
+  .map-placeholder-icon {
+    color: $dk-accent;
+  }
+
+  .map-placeholder-text {
+    color: $dk-text-muted;
+  }
 }
 
 .map-placeholder-cta {

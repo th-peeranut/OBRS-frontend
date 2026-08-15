@@ -356,6 +356,14 @@ test.describe('Route Map – Success State', () => {
     await page.goto('/');
     await waitForRouteMapLoaded(page);
 
+    // OBRS-1211: <app-route-map-panel> — and with it the MAP_UNAVAILABLE
+    // placeholder this criterion is about — is no longer rendered until the
+    // visitor asks for the map, so the panel is absent here by design. The
+    // count assertion is the gate itself: if a later card reintroduces an
+    // on-load panel (and with it the paid Maps JS request), this fails.
+    await expect(page.locator('.route-map-placeholder')).toHaveCount(0);
+    await page.locator('.map-placeholder-cta').click();
+
     // The map placeholder should be visible (mapsApiKey is '' in environment.sit.ts)
     const placeholder = page.locator('.route-map-placeholder');
     await expect(placeholder).toBeVisible();
