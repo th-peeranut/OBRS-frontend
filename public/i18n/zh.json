@@ -2494,7 +2494,6 @@
       "COPYRIGHT_TEXT": "© NJ Phuyaipu 2026。保留所有权利。"
     },
     "ROUTE_MAP": {
-      "SUBTITLE": "选择上下车地点",
       "TAB_PICKUP_LABEL": "上车",
       "TAB_DROPOFF_LABEL": "下车",
       "PICKUP_LIST_HEADER": "{{province}}上车点 ({{count}} 站)",
@@ -2502,6 +2501,7 @@
       "VIEW_MAP": "查看地图",
       "CONFIRM_PICKUP": "确认上车点",
       "CONFIRM_DROPOFF": "确认下车点",
+      "CONFIRM_PICKUP_DROPOFF": "确认上下车点",
       "TIME_APPROX_NOTE": "显示时间为预计时间",
       "MAP_TITLE": "路线及上下车点地图",
       "ROUTE_DISTANCE": "约 {{distance}} 公里 | 行程约 {{min}} - {{max}} 分钟",
@@ -2524,9 +2524,6 @@
       "DETAIL_NO_PHOTO": "尚无该站点的照片",
       "BTN_OPEN_MAPS": "在 Google 地图中打开",
       "BTN_NAVIGATE": "导航",
-      "VALIDATION_SELECT_BOTH": "请先选择上车点和下车点再确认",
-      "VALIDATION_SELECT_PICKUP": "请先选择上车点再确认",
-      "VALIDATION_SELECT_DROPOFF": "请先选择下车点再确认",
       "MAP_UNAVAILABLE": "地图暂时无法显示",
       "EMPTY_STATE": "此路线暂无上下车点",
       "LOADING": "正在加载路线数据...",

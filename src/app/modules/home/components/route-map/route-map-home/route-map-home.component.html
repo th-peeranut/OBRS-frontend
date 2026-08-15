@@ -59,11 +59,10 @@
           <!-- LEFT PANEL: Pickup list -->
           <div class="col-xl-3">
             <div class="panel-card h-100">
-              <!-- PANEL HEADER -->
-              <div class="panel-header d-flex align-items-center gap-2 mb-3">
-                <span class="panel-title">{{ getRouteTitle() }}</span>
-                <span class="panel-meta ms-auto">{{ 'HOME.ROUTE_MAP.SUBTITLE' | translate }}</span>
-              </div>
+              <!-- OBRS-1358: the panel header that sat here (route title + "select
+                   pickup/drop-off") is gone by owner decision. It rendered on desktop
+                   only, and the direction p-selectButton a few rows above already names
+                   the route the user is looking at. -->
               <!-- OBRS-915: TabView -> Tabs. The header moved out of the panel
               (it was a pTemplate="header") into its own <p-tab> inside a
               <p-tablist>, and tab/panel are now paired by an explicit
@@ -94,8 +93,10 @@
                         [selectedSlug]="selectedPickupSlug"
                         [province]="routeMeta.originProvinceLabel"
                         [distancesKm]="pickupDistancesKm"
-                        (stopSelected)="onPickupStopSelected($event)"
-                        (confirmClicked)="onConfirmPickup()"
+                        confirmMode="pair"
+                  [canConfirm]="canConfirm"
+                        (stopSelected)="onPickupPickedFromList($event)"
+                        (confirmClicked)="onConfirm()"
                       ></app-route-stop-list>
                     </p-tabpanel>
                     <!-- TAB: DROPOFF -->
@@ -105,8 +106,10 @@
                         type="dropoff"
                         [selectedSlug]="selectedDropoffSlug"
                         [province]="routeMeta.destinationProvinceLabel"
-                        (stopSelected)="onDropoffStopSelected($event)"
-                        (confirmClicked)="onConfirmDropoff()"
+                        confirmMode="pair"
+                  [canConfirm]="canConfirm"
+                        (stopSelected)="onDropoffPickedFromList($event)"
+                        (confirmClicked)="onConfirm()"
                       ></app-route-stop-list>
                     </p-tabpanel>
                   </p-tabpanels>
@@ -194,8 +197,10 @@
                   [selectedSlug]="selectedPickupSlug"
                   [province]="routeMeta.originProvinceLabel"
                   [distancesKm]="pickupDistancesKm"
-                  (stopSelected)="onPickupStopSelected($event)"
-                  (confirmClicked)="onConfirmPickup()"
+                  confirmMode="pair"
+                  [canConfirm]="canConfirm"
+                  (stopSelected)="onPickupPickedFromList($event)"
+                  (confirmClicked)="onConfirm()"
                 ></app-route-stop-list>
                 <div class="mt-3">
                   <app-route-stop-detail-card
@@ -238,8 +243,10 @@
                   type="dropoff"
                   [selectedSlug]="selectedDropoffSlug"
                   [province]="routeMeta.destinationProvinceLabel"
-                  (stopSelected)="onDropoffStopSelected($event)"
-                  (confirmClicked)="onConfirmDropoff()"
+                  confirmMode="pair"
+                  [canConfirm]="canConfirm"
+                  (stopSelected)="onDropoffPickedFromList($event)"
+                  (confirmClicked)="onConfirm()"
                 ></app-route-stop-list>
                 <div class="mt-3">
                   <app-route-stop-detail-card

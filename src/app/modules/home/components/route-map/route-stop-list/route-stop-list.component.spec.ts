@@ -44,6 +44,33 @@ describe('RouteStopListComponent', () => {
     expect(called).toBeTrue();
   });
 
+  /**
+   * OBRS-1358. Two callers share this list. The home page moved to one shared label armed
+   * only by `canConfirm`; the change-stop dialog is a real two-step wizard and must keep the
+   * per-side label and the per-side guard. The dialog binds NEITHER new input, so the default
+   * is the whole of its protection - if it ever flipped, its confirm button would be dead.
+   */
+  it('defaults to the per-side label and guard (the change-stop dialog binds neither input)', () => {
+    component.type = 'dropoff';
+    component.selectedSlug = 'bts_mo_chit';
+
+    expect(component.confirmMode).toBe('per-side');
+    expect(component.confirmLabelKey).toBe('HOME.ROUTE_MAP.CONFIRM_DROPOFF');
+    expect(component.confirmDisabled).toBeFalse();
+  });
+
+  it('in pair mode the label is shared and the guard reads canConfirm, not selectedSlug', () => {
+    component.confirmMode = 'pair';
+    component.type = 'pickup';
+    component.selectedSlug = 'nong_chak';
+
+    expect(component.confirmLabelKey).toBe('HOME.ROUTE_MAP.CONFIRM_PICKUP_DROPOFF');
+    expect(component.confirmDisabled).toBeTrue();
+
+    component.canConfirm = true;
+    expect(component.confirmDisabled).toBeFalse();
+  });
+
   it('trackBySlug returns stop slug', () => {
     const stop = makeStop(1, 'abc');
     expect(component.trackBySlug(0, stop)).toBe('abc');
@@ -94,6 +121,24 @@ describe('RouteStopListComponent rendering', () => {
     // Not "renders an empty one" — the row must close up, leaving no blank line
     // under the stop name.
     expect(addressElements().length).toBe(0);
+  });
+
+  /**
+   * OBRS-1358. There used to be two confirm buttons - one per `type` - labelled as if each
+   * confirmed its own side while the handler behind both demanded the pair. Counting the
+   * elements is what tells a single shared button from a re-split pair; a label assertion
+   * would still pass if the other one came back under a different key.
+   */
+  it('renders exactly one confirm button, on either type of list', () => {
+    for (const type of ['pickup', 'dropoff'] as const) {
+      fixture.componentInstance.type = type;
+      fixture.componentInstance.stops = [makeStop(1, 'nong_chak')];
+      fixture.detectChanges();
+
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('p-button').length,
+      ).toBe(1);
+    }
   });
 
   it('renders an address only for the stops that have one', () => {

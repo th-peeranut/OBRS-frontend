@@ -9,7 +9,8 @@
  * Acceptance criteria covered:
  *   1. Tabs show pickup/dropoff with count badges; numbered lists render in order.
  *   2. Selecting a row updates the two bottom detail cards; selection is emphasized.
- *   3. CONFIRM GUARD: confirm with only one side selected shows VALIDATION_SELECT_BOTH.
+ *   3. CONFIRM GUARD (rewritten by OBRS-1358): the single confirm button stays disabled
+ *      until BOTH sides are chosen, and the tab advances on selection, not on a press.
  *   4. A1 BLOCKER: 0 passengers → SEARCH_VALIDATION; set >= 1 → navigate to /schedule-booking.
  *   5. Empty-state (empty arrays → EMPTY_STATE); error-state (500 → LOAD_FAILED + retry).
  *   6. DEGRADED MAP: blank mapsApiKey → MAP_UNAVAILABLE placeholder, no Google Maps console errors.
@@ -122,16 +123,6 @@ async function dismissSweetAlert(page: Page): Promise<void> {
   await page.locator('.swal2-container').waitFor({ state: 'hidden', timeout: 5_000 });
 }
 
-/**
- * Wait for a SweetAlert2 toast to appear (non-blocking, no confirm button).
- * Toasts render at .swal2-top-end with .swal2-toast on the popup element.
- */
-async function waitForToast(page: Page): Promise<void> {
-  await page
-    .locator('.swal2-container.swal2-top-end .swal2-popup.swal2-toast')
-    .waitFor({ state: 'visible', timeout: 5_000 });
-}
-
 // ---------------------------------------------------------------------------
 // Test suite: SUCCESS state
 // ---------------------------------------------------------------------------
@@ -232,47 +223,47 @@ test.describe('Route Map – Success State', () => {
 
   // ── Criterion 3 ──────────────────────────────────────────────────────────
 
-  test('Criterion 3: confirm guard — only pickup selected → non-blocking toast, tab switches to Drop-off immediately', async ({
+  // OBRS-1358 rewrote criterion 3. The guard is no longer "press confirm and be told
+  // what is missing" — it is "the button cannot be pressed until nothing is missing",
+  // and the tab advances on SELECTION so the pair completes without a button in between.
+
+  test('Criterion 3: confirm guard — the single confirm button stays disabled while only the pickup is chosen, and the tab advances by itself', async ({
     page,
   }) => {
     await page.goto('/');
     await waitForRouteMapLoaded(page);
 
+    const confirmBtn = page.locator('button', { hasText: 'Confirm pickup & drop-off' }).locator('visible=true').first();
+    await confirmBtn.waitFor({ state: 'visible' });
+    await expect(confirmBtn).toBeDisabled();
+
     // Select only pickup (do NOT switch to dropoff tab or select dropoff)
     const pickupRow = page.locator('.stop-row').first();
     await pickupRow.click();
 
-    // Click "Confirm pickup"
-    const confirmPickupBtn = page.locator('button', { hasText: 'Confirm pickup' }).first();
-    await confirmPickupBtn.waitFor({ state: 'visible' });
-    await confirmPickupBtn.click();
+    // Still disabled — one side is not a confirmable pair
+    await expect(confirmBtn).toBeDisabled();
 
-    // Non-blocking toast (not a modal) should appear at top-end position
-    await waitForToast(page);
-    const toast = page.locator('.swal2-container.swal2-top-end .swal2-popup.swal2-toast');
-    await expect(toast.locator('.swal2-title')).toContainText(
-      'Please select a drop-off point before confirming'
-    );
-
-    // Toast must NOT have an OK/confirm button
-    await expect(toast.locator('.swal2-confirm')).toHaveCount(0);
+    // Nothing was pressed, so nothing had to be explained in a toast
+    await expect(page.locator('.swal2-container')).toHaveCount(0);
 
     // Must NOT navigate away from /home
     expect(new URL(page.url()).pathname).toBe('/');
 
-    // The active tab should have ALREADY switched to Drop-off (no dismiss needed)
+    // The active tab advanced to Drop-off on the selection itself
     const dropoffTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first();
     await expect(dropoffTab).toHaveClass(/p-tab-active/);
 
-    // Toast interaction does NOT block the page — we can click the dropoff list immediately
     const dropoffRow = page.locator('.stop-row--dropoff').first();
     await dropoffRow.waitFor({ state: 'visible' });
-    // Clicking the dropoff row should succeed without dismissing anything first
     await dropoffRow.click();
     await expect(dropoffRow).toHaveClass(/stop-row--selected/);
+
+    // Pair complete — now, and only now, the button is armed
+    await expect(confirmBtn).toBeEnabled();
   });
 
-  test('Criterion 3b: confirm guard — only dropoff selected → non-blocking toast, tab switches to Pickup immediately', async ({
+  test('Criterion 3b: confirm guard — choosing the drop-off first advances back to Pickup and leaves the button disabled', async ({
     page,
   }) => {
     await page.goto('/');
@@ -284,31 +275,22 @@ test.describe('Route Map – Success State', () => {
     await dropoffRow.waitFor({ state: 'visible' });
     await dropoffRow.click();
 
-    const confirmDropoffBtn = page.locator('button', { hasText: 'Confirm drop-off' }).first();
-    await confirmDropoffBtn.waitFor({ state: 'visible' });
-    await confirmDropoffBtn.click();
-
-    // Non-blocking toast (not a modal) should appear at top-end position
-    await waitForToast(page);
-    const toast = page.locator('.swal2-container.swal2-top-end .swal2-popup.swal2-toast');
-    await expect(toast.locator('.swal2-title')).toContainText(
-      'Please select a pickup point before confirming'
-    );
-
-    // Toast must NOT have an OK/confirm button
-    await expect(toast.locator('.swal2-confirm')).toHaveCount(0);
-
-    expect(new URL(page.url()).pathname).toBe('/');
-
-    // The active tab should have ALREADY switched back to Pickup (no dismiss needed)
+    // The active tab moved back to Pickup on the selection, with nothing to dismiss
     const pickupTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Pickup' }).first();
     await expect(pickupTab).toHaveClass(/p-tab-active/);
 
-    // Page is not blocked — can click pickup row immediately
+    const confirmBtn = page.locator('button', { hasText: 'Confirm pickup & drop-off' }).locator('visible=true').first();
+    await confirmBtn.waitFor({ state: 'visible' });
+    await expect(confirmBtn).toBeDisabled();
+
+    await expect(page.locator('.swal2-container')).toHaveCount(0);
+    expect(new URL(page.url()).pathname).toBe('/');
+
     const pickupRow = page.locator('.stop-row--pickup').first();
     await pickupRow.waitFor({ state: 'visible' });
     await pickupRow.click();
     await expect(pickupRow).toHaveClass(/stop-row--selected/);
+    await expect(confirmBtn).toBeEnabled();
   });
 
   // ── Criterion 4 (prefill-and-stay) ─────────────────────────────────────────
@@ -322,20 +304,18 @@ test.describe('Route Map – Success State', () => {
     await page.goto('/');
     await waitForRouteMapLoaded(page);
 
-    // Select pickup stop
+    // Select pickup stop — this advances to the drop-off tab on its own (OBRS-1358)
     const pickupRow = page.locator('.stop-row').first();
     await pickupRow.click();
 
-    // Switch to dropoff tab and select dropoff stop
-    await page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Drop-off' }).first().click();
     const dropoffRow = page.locator('.stop-row--dropoff').first();
     await dropoffRow.waitFor({ state: 'visible' });
     await dropoffRow.click();
 
-    // Click "Confirm drop-off" with both stops selected
-    const confirmDropoffBtn = page.locator('button', { hasText: 'Confirm drop-off' }).first();
-    await confirmDropoffBtn.waitFor({ state: 'visible' });
-    await confirmDropoffBtn.click();
+    // Click the single confirm button with both stops selected
+    const confirmBtn = page.locator('button', { hasText: 'Confirm pickup & drop-off' }).locator('visible=true').first();
+    await confirmBtn.waitFor({ state: 'visible' });
+    await confirmBtn.click();
 
     // Must NOT navigate — page stays on /home
     await page.waitForTimeout(500);
@@ -406,8 +386,8 @@ test.describe('Route Map – Success State', () => {
     const pickupTabTh = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'จุดรับ' }).first();
     await expect(pickupTabTh).toBeVisible();
 
-    // Confirm button in Thai
-    await expect(page.locator('button', { hasText: 'ยืนยันจุดรับ' }).first()).toBeVisible();
+    // Confirm button in Thai (OBRS-1358: one shared label, not the per-side pair)
+    await expect(page.locator('button', { hasText: 'ยืนยันจุดรับ-ส่ง' }).locator('visible=true').first()).toBeVisible();
 
     // No raw i18n key leak
     const pageText = await page.locator('app-route-map-home').innerText();
@@ -423,8 +403,10 @@ test.describe('Route Map – Success State', () => {
     const pickupTabZh = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: '上车' }).first();
     await expect(pickupTabZh).toBeVisible();
 
-    // Confirm button in Chinese
-    await expect(page.locator('button', { hasText: '确认上车点' }).first()).toBeVisible();
+    // Confirm button in Chinese (OBRS-1358: one shared label, not the per-side pair)
+    await expect(
+      page.locator('button', { hasText: '确认上下车点' }).locator('visible=true').first()
+    ).toBeVisible();
 
     // No raw i18n key leak
     const pageTextZh = await page.locator('app-route-map-home').innerText();
