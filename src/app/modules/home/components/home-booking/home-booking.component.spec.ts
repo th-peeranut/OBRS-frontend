@@ -1727,3 +1727,62 @@ describe('HomeBookingComponent — the dropdowns group by province and follow th
     expect(again).toEqual(first);
   });
 });
+
+/**
+ * OBRS-1211. `<app-route-map-panel>` — the sole call site in the repo that
+ * loads Google Maps JS — is gated behind an explicit user request. This is the
+ * request's ORIGIN on the booking card: the "not sure where to board?" link
+ * next to the station fields. Renders the real template (same recipe as the
+ * OBRS-1025/1185 pill block above) so the assertion covers the actual
+ * `data-testid="show-route-map"` selector the capture script targets, not just
+ * the handler.
+ */
+describe('HomeBookingComponent — "show route map" CTA (OBRS-1211)', () => {
+  let fixture: ComponentFixture<HomeBookingComponent>;
+  let component: HomeBookingComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        // The CTA sits inside the `rawProvinceStationList | async` gate — a
+        // stub that resolves null (createStoreStub()'s default) would leave
+        // the whole block, button included, unrendered.
+        { provide: Store, useValue: createStoreStubWithValue([STATION_1, STATION_2]) },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(HomeBookingComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('clicking [data-testid="show-route-map"] emits mapHintRequested exactly once', () => {
+    fixture.detectChanges();
+
+    const emitSpy = jasmine.createSpy('mapHintRequested');
+    component.mapHintRequested.subscribe(emitSpy);
+
+    const button = fixture.debugElement.query(By.css('[data-testid="show-route-map"]'));
+    expect(button).withContext('the CTA must be in the DOM once stations resolve').not.toBeNull();
+
+    button.nativeElement.click();
+
+    expect(emitSpy).toHaveBeenCalledTimes(1);
+  });
+});

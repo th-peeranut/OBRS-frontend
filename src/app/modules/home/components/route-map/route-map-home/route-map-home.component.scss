@@ -1,4 +1,5 @@
 @import "../../../../../../styles/variables.scss";
+@import "../../../../../../styles/dark-tokens.scss";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -76,6 +77,54 @@
 
 .route-empty-icon {
   color: $primary-blue;
+}
+
+// ---- Map placeholder (OBRS-1211) — shown until the user asks to reveal the
+// gated <app-route-map-panel>, which is the sole call site that loads the
+// paid Google Maps JS SDK. ----
+.map-placeholder {
+  color: $text-lightblack;
+}
+
+.map-placeholder-icon {
+  color: $primary-blue;
+  font-size: 2.5rem;
+}
+
+.map-placeholder-text {
+  color: $text-softblack;
+}
+
+// Dark mode for the two rules above. `:host-context` rather than
+// dark-theme.scss for the usual reason (OBRS-767): the component's own rule
+// outranks any `body.is-dark .a .b`. Measured on the dark card ($dk-bg-card):
+// $text-softblack is 2.40:1 there (the contrast gate's own number) and
+// $primary-blue 1.53:1 — the icon was effectively unpainted. $dk-text-muted is
+// 6.65:1 and $dk-accent 8.29:1.
+:host-context(body.is-dark) {
+  .map-placeholder-icon {
+    color: $dk-accent;
+  }
+
+  .map-placeholder-text {
+    color: $dk-text-muted;
+  }
+}
+
+.map-placeholder-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.6rem 1.4rem;
+  background: $primary-blue;
+  color: $text-white;
+  border: none;
+  border-radius: $radius-lg;
+  font-weight: $font-weight-semibold;
+
+  &:hover, &:focus-visible {
+    background: $primary-blue-hover;
+  }
 }
 
 // ---- Spinner -> brand cyan (overrides PrimeNG color-cycle keyframe) ----

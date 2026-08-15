@@ -2500,6 +2500,8 @@
       "PICKUP_LIST_HEADER": "{{province}}上车点 ({{count}} 站)",
       "DROPOFF_LIST_HEADER": "{{province}}下车点 ({{count}} 站)",
       "VIEW_MAP": "查看地图",
+      "MAP_HINT_CTA": "不确定在哪里上车？查看上下车点地图",
+      "MAP_PLACEHOLDER_TEXT": "地图尚未显示。点击下方按钮查看上下车点位置。",
       "CONFIRM_PICKUP": "确认上车点",
       "CONFIRM_DROPOFF": "确认下车点",
       "CONFIRM_PICKUP_DROPOFF": "确认上下车点",

@@ -1,4 +1,5 @@
 @import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens.scss";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -136,6 +137,32 @@ app-recent-routes-quick-pick.has-routes + .station-section {
 // `.app-date-field` / `.app-date-field-panel` / `.app-date-field-icon`
 // classes in src/styles.scss (this component is the canonical reference for
 // that look) — no component-scoped override needed here anymore.
+
+// OBRS-1211: the "not sure where to board?" link that reveals the gated map
+// panel. min-height is the §11 tap target; color overrides .btn-link's
+// default #0d6efd so it reads as a design-system token, not Bootstrap blue.
+.map-hint-btn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: $text-primary;
+  font-weight: $font-weight-medium;
+
+  &:hover, &:focus-visible {
+    color: $primary-blue-hover;
+  }
+}
+
+// $text-primary is 2.47:1 on the booking card's $dk-bg-soft (the contrast
+// gate's own number); $dk-accent is 7.37:1 and $dk-accent-hover 6.05:1.
+// `:host-context` per OBRS-767 — a component rule outranks `body.is-dark .a .b`.
+:host-context(body.is-dark) .map-hint-btn {
+  color: $dk-accent;
+
+  &:hover, &:focus-visible {
+    color: $dk-accent-hover;
+  }
+}
 
 .btn-search {
   height: 52px;
