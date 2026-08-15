@@ -2643,6 +2643,7 @@
   },
   "PASSENGER_INFO": {
     "PAGE": {
+      "BOOKING_TITLE": "ข้อมูลการจอง",
       "FORM_TITLE": "ข้อมูลผู้โดยสาร",
       "SUMMARY_TITLE": "สรุปข้อมูลผู้โดยสาร"
     },
@@ -2651,12 +2652,14 @@
       "CHILD": "เด็ก"
     },
     "BOOKER": {
-      "SECTION_TITLE": "ข้อมูลคนที่จอง",
-      "BADGE": "คนที่จอง"
+      "SECTION_TITLE": "ข้อมูลผู้จอง",
+      "BADGE": "ผู้จอง"
+    },
+    "PASSENGER": {
+      "SECTION_TITLE": "ข้อมูลผู้โดยสารคนที่ {{n}}"
     },
     "FORM": {
-      "SECTION_TITLE": "ข้อมูลส่วนตัว",
-      "USE_BOOKER_AS_THIS_PASSENGER": "ใช้ข้อมูลคนที่จองเป็นผู้โดยสารคนนี้",
+      "USE_BOOKER_AS_THIS_PASSENGER": "ใช้ข้อมูลผู้จองเป็นผู้โดยสารคนนี้",
       "TITLE": "คำนำหน้า",
       "TITLE_REQUIRED": "กรุณากรอกคำนำหน้า",
       "FIRST_NAME": "ชื่อจริง",
@@ -2800,9 +2803,9 @@
       "SEAT": "ที่นั่ง",
       "SEAT_OPEN": "ขึ้นนั่งตามที่ว่าง",
       "PASSENGERS": "ผู้โดยสาร",
-      "BOOKER": "คนที่จอง",
+      "BOOKER": "ผู้จอง",
       "PASSENGER_NAME": "ชื่อ-นามสกุล",
-      "PASSENGER_PHONE": "หมายเลขโทรศัพท์คนที่จอง",
+      "PASSENGER_PHONE": "หมายเลขโทรศัพท์ผู้จอง",
       "PAYMENT_DATE": "วันเวลาที่ชำระ",
       "TOTAL": "รวมทั้งสิ้น",
       "TOTAL_UNIT": "บาท",

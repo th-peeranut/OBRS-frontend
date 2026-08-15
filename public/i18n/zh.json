@@ -2643,6 +2643,7 @@
   },
   "PASSENGER_INFO": {
     "PAGE": {
+      "BOOKING_TITLE": "预订信息",
       "FORM_TITLE": "乘客信息",
       "SUMMARY_TITLE": "乘客摘要"
     },
@@ -2654,8 +2655,10 @@
       "SECTION_TITLE": "预订人信息",
       "BADGE": "预订人"
     },
+    "PASSENGER": {
+      "SECTION_TITLE": "第 {{n}} 位乘客信息"
+    },
     "FORM": {
-      "SECTION_TITLE": "个人信息",
       "USE_BOOKER_AS_THIS_PASSENGER": "将此乘客设为预订人",
       "TITLE": "称谓",
       "TITLE_REQUIRED": "请输入称谓",

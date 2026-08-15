@@ -26,7 +26,11 @@
 <div class="content-container">
   <div class="form-container">
     <h3 class="title">
-      {{ "PASSENGER_INFO.PAGE.FORM_TITLE" | translate }}
+      <!-- OBRS-1239: BOOKING_TITLE, not FORM_TITLE ("passenger information") -
+      this one heading spans the booker card too, and the booker need not be a
+      passenger. FORM_TITLE stays as it is because payment-info.component.html
+      still heads a list of actual passengers with it. -->
+      {{ "PASSENGER_INFO.PAGE.BOOKING_TITLE" | translate }}
     </h3>
 
     <app-booker-info-form
