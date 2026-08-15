@@ -1837,6 +1837,7 @@
         "PERMIT_FEE": "Time-Sheet Fee (ใบเวลา, ขสมก.)",
         "DRIVER_WAGE": "Driver Wage",
         "INSTALMENT": "Vehicle Instalment",
+        "PARKING_FEE": "Parking Fee",
         "CENTRAL": "Central",
         "OTHER": "Other"
       },

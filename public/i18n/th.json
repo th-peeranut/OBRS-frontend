@@ -1837,6 +1837,7 @@
         "PERMIT_FEE": "ค่าใบเวลา (ขสมก.)",
         "DRIVER_WAGE": "ค่าแรงคนขับ",
         "INSTALMENT": "ค่างวดรถ",
+        "PARKING_FEE": "ค่าจอดรถ",
         "CENTRAL": "ส่วนกลาง",
         "OTHER": "อื่นๆ"
       },

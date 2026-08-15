@@ -29,7 +29,15 @@ describe('DriverCashExpenseFormComponent', () => {
   // green beside a new one would keep both readings alive in the suite.
   it('builds category options from the existing ADMIN.EXPENSES.CATEGORIES i18n namespace', () => {
     const codes = component['categoryOptions'].map((o) => o.value);
-    expect(codes).toEqual(['FUEL', 'TOLL', 'PERMIT_FEE', 'DRIVER_WAGE', 'REPAIR', 'OTHER']);
+    expect(codes).toEqual([
+      'FUEL',
+      'TOLL',
+      'PERMIT_FEE',
+      'DRIVER_WAGE',
+      'REPAIR',
+      'PARKING_FEE',
+      'OTHER',
+    ]);
   });
 
   // OBRS-1356 — the wage is priced server-side from the owner's rate per leg.
@@ -92,6 +100,66 @@ describe('DriverCashExpenseFormComponent', () => {
     submitBtn().click();
 
     expect(spy).toHaveBeenCalledWith({ category: 'TOLL', amount: '50.00', note: 'receipt #123' });
+  });
+
+  // OBRS-1363 — the four below are the whole of the card's FE half. The first is
+  // the bug itself: OTHER was offered from day one and 400'd on every submit,
+  // because the backend never accepted it and nothing on screen said so.
+  it('blocks submit on OTHER until the free-text label is filled', () => {
+    component['onCategoryChange']('OTHER');
+    component['amountInput'] = '80.00';
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="driver-cash-expense-other-label"]')).not.toBeNull();
+    expect(submitBtn().disabled).toBeTrue();
+
+    component['otherLabelInput'] = '  ค่าล้างรถ  ';
+    fixture.detectChanges();
+    expect(submitBtn().disabled).toBeFalse();
+  });
+
+  it('emits OTHER with a trimmed categoryOtherLabel', () => {
+    component['onCategoryChange']('OTHER');
+    component['amountInput'] = '80.00';
+    component['otherLabelInput'] = '  ค่าล้างรถ  ';
+    fixture.detectChanges();
+    const spy = spyOn(component.submitExpense, 'emit');
+
+    submitBtn().click();
+
+    expect(spy).toHaveBeenCalledWith({
+      category: 'OTHER',
+      amount: '80.00',
+      categoryOtherLabel: 'ค่าล้างรถ',
+    });
+  });
+
+  // The backend refuses a label sent with a non-OTHER category, so a stale one
+  // left behind after switching away would 400 a submit the user believes is fine.
+  it('drops a label typed before the category was switched away from OTHER', () => {
+    component['onCategoryChange']('OTHER');
+    component['otherLabelInput'] = 'ค่าล้างรถ';
+    component['onCategoryChange']('PARKING_FEE');
+    component['amountInput'] = '50.00';
+    fixture.detectChanges();
+    const spy = spyOn(component.submitExpense, 'emit');
+
+    expect(fixture.nativeElement.querySelector('[data-testid="driver-cash-expense-other-label"]')).toBeNull();
+    submitBtn().click();
+
+    expect(spy).toHaveBeenCalledWith({ category: 'PARKING_FEE', amount: '50.00' });
+  });
+
+  it('submits PARKING_FEE as an ordinary priced category, no label field', () => {
+    component['onCategoryChange']('PARKING_FEE');
+    component['amountInput'] = '50.00';
+    fixture.detectChanges();
+    const spy = spyOn(component.submitExpense, 'emit');
+
+    expect(fixture.nativeElement.querySelector('#dcp-expense-amount')).not.toBeNull();
+    submitBtn().click();
+
+    expect(spy).toHaveBeenCalledWith({ category: 'PARKING_FEE', amount: '50.00' });
   });
 
   it('never resets the form on a submit failure', () => {

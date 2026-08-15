@@ -216,7 +216,12 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
       });
   }
 
-  protected onSubmitExpense(payload: { category: string; amount?: string; note?: string }): void {
+  protected onSubmitExpense(payload: {
+    category: string;
+    amount?: string;
+    note?: string;
+    categoryOtherLabel?: string;
+  }): void {
     if (this.isSubmitting) return;
     this.isSubmitting = true;
     this.expenseError = null;

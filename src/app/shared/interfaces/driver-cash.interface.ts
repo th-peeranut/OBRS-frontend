@@ -153,6 +153,13 @@ export interface DriverCashExpenseReqDto {
    */
   amount?: string;
   note?: string;
+  /**
+   * OBRS-1363 — required when `category` is `OTHER` and refused otherwise, the
+   * same `isOther == hasLabel` rule the admin `ExpenseReqDto` has always had.
+   * It is not a second `note`: the OBRS-841 P&L groups on category, so an
+   * unlabelled OTHER row is a bar nobody can read.
+   */
+  categoryOtherLabel?: string;
 }
 
 export interface DriverCashDayReturnReqDto {
