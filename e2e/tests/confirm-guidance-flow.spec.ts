@@ -26,6 +26,13 @@ import { mockPublicPageApis } from '../fixtures/public-page-mocks';
 // Mock payloads — same as route-map.spec.ts
 // ---------------------------------------------------------------------------
 
+/**
+ * OBRS-1370. These fixtures used to name `placehold.co`, so a stub payload reached out to a
+ * real CDN on every run of this spec. Same 640x360 intrinsic box, no network.
+ */
+const STUB_PHOTO =
+  'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22640%22%20height=%22360%22/%3E';
+
 const successPayload = {
   code: 200,
   message: 'OK',
@@ -48,7 +55,7 @@ const successPayload = {
         approxTime: '05:00',
         latitude: 13.0,
         longitude: 101.0,
-        primaryPhotoUrl: 'https://placehold.co/640x360?text=nong-sak',
+        primaryPhotoUrl: STUB_PHOTO,
         googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=13.0,101.0',
         distanceKmFromOrigin: 0,
       },
@@ -62,7 +69,7 @@ const successPayload = {
         approxTime: '06:30',
         latitude: 13.76,
         longitude: 100.5,
-        primaryPhotoUrl: 'https://placehold.co/640x360?text=bangkok',
+        primaryPhotoUrl: STUB_PHOTO,
         googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=13.76,100.5',
         distanceKmFromOrigin: 80,
       },

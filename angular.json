@@ -46,6 +46,7 @@
               }
             ],
             "styles": [
+              "src/styles/webfonts.scss",
               "node_modules/bootstrap/dist/css/bootstrap.min.css",
               "node_modules/bootstrap-icons/font/bootstrap-icons.css",
               "node_modules/leaflet/dist/leaflet.css",
@@ -149,6 +150,30 @@
                   "with": "src/environments/environment.analytics-e2e.ts"
                 }
               ]
+            },
+            "gate": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "styles": [
+                "src/styles/webfonts.gate.scss",
+                "node_modules/bootstrap/dist/css/bootstrap.min.css",
+                "node_modules/bootstrap-icons/font/bootstrap-icons.css",
+                "node_modules/leaflet/dist/leaflet.css",
+                "src/styles/variables.scss",
+                "src/styles.scss"
+              ],
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public"
+                },
+                {
+                  "glob": "*.woff2",
+                  "input": "e2e/fixtures/fonts",
+                  "output": "fonts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "ci-smoke"
@@ -170,6 +195,9 @@
             },
             "analytics-e2e": {
               "buildTarget": "OBRS:build:analytics-e2e"
+            },
+            "gate": {
+              "buildTarget": "OBRS:build:gate"
             }
           },
           "defaultConfiguration": "development"
@@ -193,6 +221,7 @@
               }
             ],
             "styles": [
+              "src/styles/webfonts.scss",
               "node_modules/bootstrap/dist/css/bootstrap.min.css",
               "node_modules/bootstrap-icons/font/bootstrap-icons.css",
               "node_modules/leaflet/dist/leaflet.css",
