@@ -1,0 +1,84 @@
+@if (rows.length > 0) {
+  <section class="admin-card mt-3" data-testid="expense-approval-lane">
+    <div class="admin-card-head">
+      <h4>{{ 'ADMIN.EXPENSES.APPROVAL.TITLE' | translate }} ({{ rows.length }})</h4>
+    </div>
+    <p class="admin-muted mt-2">{{ 'ADMIN.EXPENSES.APPROVAL.HINT' | translate }}</p>
+
+    <div class="admin-table-wrap mt-3">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'ADMIN.EXPENSES.EXPENSE_DATE' | translate }}</th>
+            <th>{{ 'ADMIN.EXPENSES.VEHICLE' | translate }}</th>
+            <th>{{ 'ADMIN.EXPENSES.CATEGORY' | translate }}</th>
+            <th class="expense-money">{{ 'ADMIN.EXPENSES.AMOUNT' | translate }}</th>
+            <th>{{ 'ADMIN.EXPENSES.NOTE' | translate }}</th>
+            <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows; track trackById($index, row)) {
+            <tr>
+              <td>{{ row.expenseDateDisplay }}</td>
+              <td>{{ row.vehicleLabel }}</td>
+              <td>{{ row.categoryDisplay }}</td>
+              <td class="expense-money">{{ row.amount | number: '1.2-2' }}</td>
+              <td>{{ row.note }}</td>
+              <td class="text-right">
+                <button
+                  type="button"
+                  class="admin-btn admin-btn-primary admin-btn-sm"
+                  [disabled]="busyId === row.id"
+                  [attr.data-testid]="'expense-approve-' + row.id"
+                  (click)="approve.emit(row.id)"
+                  >
+                  {{ 'ADMIN.EXPENSES.APPROVAL.APPROVE' | translate }}
+                </button>
+                <button
+                  type="button"
+                  class="admin-btn admin-btn-sm ms-2"
+                  [disabled]="busyId === row.id"
+                  [attr.data-testid]="'expense-reject-' + row.id"
+                  (click)="startReject(row.id)"
+                  >
+                  {{ 'ADMIN.EXPENSES.APPROVAL.REJECT' | translate }}
+                </button>
+              </td>
+            </tr>
+            @if (rejectingId === row.id) {
+              <tr class="expense-reject-row">
+                <td colspan="6">
+                  <label class="admin-form-label" [attr.for]="'expense-reject-reason-' + row.id">
+                    {{ 'ADMIN.EXPENSES.APPROVAL.REASON_LABEL' | translate }}
+                  </label>
+                  <input
+                    [id]="'expense-reject-reason-' + row.id"
+                    type="text"
+                    class="admin-field"
+                    [placeholder]="'ADMIN.EXPENSES.APPROVAL.REASON_PLACEHOLDER' | translate"
+                    [(ngModel)]="rejectionReason"
+                    />
+                  <div class="mt-2">
+                    <button
+                      type="button"
+                      class="admin-btn admin-btn-primary admin-btn-sm"
+                      [disabled]="!canConfirmReject || busyId === row.id"
+                      [attr.data-testid]="'expense-reject-confirm-' + row.id"
+                      (click)="confirmReject(row.id)"
+                      >
+                      {{ 'ADMIN.EXPENSES.APPROVAL.REJECT_CONFIRM' | translate }}
+                    </button>
+                    <button type="button" class="admin-btn admin-btn-sm ms-2" (click)="cancelReject()">
+                      {{ 'ADMIN.COMMON.CANCEL' | translate }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}

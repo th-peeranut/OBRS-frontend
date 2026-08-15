@@ -23,9 +23,39 @@ describe('DriverCashExpenseFormComponent', () => {
   }
 
   // Card: reuse ADMIN.EXPENSES.CATEGORIES.* — no STAFF.* duplicate keys.
+  // OBRS-1356 CHANGED this expectation rather than adding a second one:
+  // DRIVER_WAGE used to be excluded as "a cost a driver never pays roadside",
+  // and the owner overturned exactly that on 2026-08-14. Leaving the old list
+  // green beside a new one would keep both readings alive in the suite.
   it('builds category options from the existing ADMIN.EXPENSES.CATEGORIES i18n namespace', () => {
     const codes = component['categoryOptions'].map((o) => o.value);
-    expect(codes).toEqual(['FUEL', 'TOLL', 'PERMIT_FEE', 'REPAIR', 'OTHER']);
+    expect(codes).toEqual(['FUEL', 'TOLL', 'PERMIT_FEE', 'DRIVER_WAGE', 'REPAIR', 'OTHER']);
+  });
+
+  // OBRS-1356 — the wage is priced server-side from the owner's rate per leg.
+  it('submits DRIVER_WAGE with NO amount, and takes no amount from the user', () => {
+    component['onCategoryChange']('DRIVER_WAGE');
+    fixture.detectChanges();
+    const spy = spyOn(component.submitExpense, 'emit');
+
+    expect(fixture.nativeElement.querySelector('#dcp-expense-amount')).toBeNull();
+    expect(submitBtn().disabled).toBeFalse();
+
+    submitBtn().click();
+
+    expect(spy).toHaveBeenCalledWith({ category: 'DRIVER_WAGE' });
+  });
+
+  it('drops an amount typed before DRIVER_WAGE was chosen', () => {
+    component['onCategoryChange']('FUEL');
+    component['amountInput'] = '250.00';
+    component['onCategoryChange']('DRIVER_WAGE');
+    fixture.detectChanges();
+    const spy = spyOn(component.submitExpense, 'emit');
+
+    submitBtn().click();
+
+    expect(spy).toHaveBeenCalledWith({ category: 'DRIVER_WAGE' });
   });
 
   it('blocks submit with no category selected', () => {

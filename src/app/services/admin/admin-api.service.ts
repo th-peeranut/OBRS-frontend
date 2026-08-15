@@ -48,6 +48,8 @@ import {
   DriverCashRateReqDto,
   SalesPointOptionDto,
   DriverCashRateRowDto,
+  DriverWageRateReqDto,
+  DriverWageRateRowDto,
   PerHeadEarningsGranularity,
   PerHeadEarningsRespDto,
 } from '../../shared/interfaces/driver-cash.interface';
@@ -1001,6 +1003,14 @@ export interface AdminExpenseDto {
    * rendering already uses, per the card.
    */
   source?: 'FIELD' | 'MANUAL';
+  /**
+   * OBRS-1356: the owner's review verdict. Only a `FIELD` row is ever
+   * `'PENDING'`; an owner-keyed row is `'APPROVED'` the moment it exists, and
+   * so is every row written before this card. Optional for the same
+   * absence-reads-as-normal reason as `source` above.
+   */
+  approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  rejectionReason?: string | null;
 }
 
 /** OBRS-685: `ExpenseReqDto` — sent verbatim by the create/edit form
@@ -2160,6 +2170,23 @@ export class AdminApiService {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/expenses/${id}`);
   }
 
+  // ── OBRS-1356: the owner's review of what a salesperson recorded in the field ──
+
+  getPendingExpenses(): Observable<ResponseAPI<AdminExpenseDto[]>> {
+    return this.getRequest<AdminExpenseDto[]>(`${this.baseUrl}/private/expenses/pending`);
+  }
+
+  approveExpense(id: number): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/expenses/${id}/approve`, {});
+  }
+
+  /** The reason is required by the backend — a bounced row must say why. */
+  rejectExpense(id: number, rejectionReason: string): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/expenses/${id}/reject`, {
+      rejectionReason,
+    });
+  }
+
   /** OBRS-809: the operator roster, for the admin-only operator picker.
    * ADMIN-only on the backend — see `AdminOwnerDto` for why an `owner` caller
    * is 403'd rather than served a filtered list. */
@@ -2267,6 +2294,22 @@ export class AdminApiService {
   ): Observable<ResponseAPI<DriverCashRateRowDto>> {
     return this.postRequest<DriverCashRateRowDto>(
       `${this.baseUrl}/private/owner/driver-cash/per-head-rates`,
+      payload
+    );
+  }
+
+  /** OBRS-1356 — the wage per LEG, the figure that prices a DRIVER_WAGE field expense. */
+  getDriverWageRates(): Observable<ResponseAPI<DriverWageRateRowDto[]>> {
+    return this.getRequest<DriverWageRateRowDto[]>(
+      `${this.baseUrl}/private/owner/driver-cash/wage-rates`
+    );
+  }
+
+  createDriverWageRate(
+    payload: DriverWageRateReqDto
+  ): Observable<ResponseAPI<DriverWageRateRowDto>> {
+    return this.postRequest<DriverWageRateRowDto>(
+      `${this.baseUrl}/private/owner/driver-cash/wage-rates`,
       payload
     );
   }

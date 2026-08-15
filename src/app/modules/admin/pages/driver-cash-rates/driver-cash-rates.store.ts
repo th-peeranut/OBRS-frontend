@@ -5,6 +5,7 @@ import { AuthService } from '../../../../auth/auth.service';
 import { AdminCollectionStore } from '../../shared/admin-collection-store';
 import {
   DriverCashRateRowDto,
+  DriverWageRateRowDto,
   SalesPointOptionDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
 
@@ -24,6 +25,8 @@ import {
 export interface DriverCashRatesData {
   rates: DriverCashRateRowDto[];
   salesPoints: SalesPointOptionDto[];
+  /** OBRS-1356 — the wage-per-leg table, card 3 on the same page. */
+  wageRates: DriverWageRateRowDto[];
 }
 
 /** OBRS-960 — SWR store backing `DriverCashRatesPageComponent`'s view-only
@@ -41,13 +44,15 @@ export class DriverCashRatesStore extends AdminCollectionStore<DriverCashRatesDa
   }
 
   protected async fetch(): Promise<DriverCashRatesData> {
-    const [rates, salesPoints] = await Promise.all([
+    const [rates, salesPoints, wageRates] = await Promise.all([
       firstValueFrom(this.adminApiService.getDriverCashRates()),
       firstValueFrom(this.adminApiService.getDriverCashSalesPoints()),
+      firstValueFrom(this.adminApiService.getDriverWageRates()),
     ]);
     return {
       rates: rates?.data ?? [],
       salesPoints: salesPoints?.data ?? [],
+      wageRates: wageRates?.data ?? [],
     };
   }
 }

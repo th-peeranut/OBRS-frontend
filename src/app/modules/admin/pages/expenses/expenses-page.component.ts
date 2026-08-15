@@ -67,6 +67,13 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
+  // OBRS-1356 — the owner's review queue. Its own fetch, not a slice of the
+  // main list: the list is vehicle-filtered server-side, and a worklist that
+  // empties when you filter by vehicle would look finished when it is not.
+  protected pendingExpenses: ExpenseRow[] = [];
+  protected approvalBusyId: number | null = null;
+  private rawPendingExpenses: AdminExpenseDto[] = [];
+
   protected isFormModalOpen = false;
   protected isDeleteModalOpen = false;
   protected isDeleting = false;
@@ -144,6 +151,60 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
     void this.store.refresh();
     void this.vehiclesStore.refresh();
     void this.loadOwners();
+    void this.loadPending();
+  }
+
+  /**
+   * OBRS-1356. A failure here is NOT alerted and NOT surfaced as a page error:
+   * the expense log itself is unaffected, and the lane renders nothing when it
+   * has no rows — the same reasoning `loadOwners` above already applies to the
+   * operator roster.
+   */
+  private async loadPending(): Promise<void> {
+    if (!this.canWrite) {
+      return;
+    }
+    try {
+      const response = await firstValueFrom(this.adminApiService.getPendingExpenses());
+      this.rawPendingExpenses = response?.data ?? [];
+    } catch {
+      this.rawPendingExpenses = [];
+    }
+    this.applyLocalization();
+  }
+
+  protected async onApproveExpense(id: number): Promise<void> {
+    await this.ruleOnExpense(id, () => firstValueFrom(this.adminApiService.approveExpense(id)));
+  }
+
+  protected async onRejectExpense(event: { id: number; rejectionReason: string }): Promise<void> {
+    await this.ruleOnExpense(event.id, () =>
+      firstValueFrom(this.adminApiService.rejectExpense(event.id, event.rejectionReason))
+    );
+  }
+
+  /**
+   * Both verdicts refresh the expense LIST as well as the queue: an approved
+   * row changes what the P&L counts, and leaving the list stale would show the
+   * owner the state they just left.
+   */
+  private async ruleOnExpense(id: number, call: () => Promise<unknown>): Promise<void> {
+    if (this.approvalBusyId !== null) return;
+    this.approvalBusyId = id;
+    try {
+      await call();
+      this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+      await this.loadPending();
+      await this.store.refresh();
+    } catch (error) {
+      // The backend's own message when it sent one (EXPENSE_NOT_PENDING names
+      // the status it is already in), the generic line when it did not.
+      this.alertService.error(
+        extractApiErrorMessage(error) || this.translate.instant('ADMIN.EXPENSES.APPROVAL.FAILED')
+      );
+    } finally {
+      this.approvalBusyId = null;
+    }
   }
 
   /**
@@ -308,6 +369,19 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
     this.ownerOptions = toOwnerOptions(this.rawOwners);
 
     this.expenses = this.rawExpenses.map((dto) =>
+      toExpenseRow(
+        dto,
+        this.rawVehicles,
+        this.categoryOptions,
+        centralLabel,
+        this.translate.currentLang,
+        this.rawOwners
+      )
+    );
+    // OBRS-1356: the review queue is mapped through the SAME toExpenseRow, so
+    // a vehicle/category label can never read one way in the lane and another
+    // way in the log below it.
+    this.pendingExpenses = this.rawPendingExpenses.map((dto) =>
       toExpenseRow(
         dto,
         this.rawVehicles,

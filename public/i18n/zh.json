@@ -1798,7 +1798,18 @@
     },
     "EXPENSES": {
       "SUBTITLE": "记录车辆及中央费用",
+      "PAGE_PURPOSE": "本页是每辆车及中央费用的账本，用于计算每车利润和作为税务凭证。现场支付的费用（燃气/燃油、通行证费、司机工资、维修）由售票员在「我的现金箱」中记录，并在此等待车主审批。",
       "TABLE_TITLE": "费用列表",
+      "APPROVAL": {
+        "TITLE": "待审批",
+        "HINT": "由售票员在现场记录。审批通过后才计入每车利润报表。",
+        "APPROVE": "批准",
+        "REJECT": "退回",
+        "REJECT_CONFIRM": "确认退回",
+        "REASON_LABEL": "退回原因",
+        "REASON_PLACEHOLDER": "例如：收据不属于这辆车",
+        "FAILED": "无法记录此审批结果，请重试。"
+      },
       "ADD": "添加费用",
       "ADD_TITLE": "记录新费用",
       "EDIT_TITLE": "编辑费用",
@@ -2014,6 +2025,14 @@
       "ERROR": {
         "DUPLICATE": "该售票点在该生效日期已有费率。",
         "CREATE_FAILED": "无法新增此费率。"
+      },
+      "WAGE": {
+        "TITLE": "司机每趟工资",
+        "HINT": "1 趟 = 1 个班次（开往曼谷算一趟，返回农乍算另一趟）。售票员记录工资时，系统按当天生效的费率自动计算。",
+        "RATE_LABEL": "每趟工资",
+        "ERROR": {
+          "DUPLICATE": "该生效日期的工资费率已存在。"
+        }
       }
     },
     "NOTIFICATION_MESSAGES": {
@@ -3668,14 +3687,16 @@
         "AMOUNT_PLACEHOLDER": "0.00",
         "NOTE_LABEL": "备注（选填）",
         "NOTE_PLACEHOLDER": "例如收据编号",
-        "SUBMIT": "记录支出"
+        "SUBMIT": "记录支出",
+        "WAGE_PRICED_BY_OWNER": "工资按车主设定的每趟费率计算（1 趟 = 1 个班次），无需填写金额。"
       },
       "SUBMITTING": "提交中...",
       "VALIDATION": {
         "AMOUNT_INVALID": "请输入有效金额（最多两位小数）。"
       },
       "ERROR": {
-        "GENERIC": "无法记录此项目，请重试。"
+        "GENERIC": "无法记录此项目，请重试。",
+        "WAGE_RATE_NOT_CONFIGURED": "尚未设置每趟工资费率。请先让车主在司机工资费率页面设置。"
       },
       "MY_DAY": {
         "TITLE": "我今日的现金",

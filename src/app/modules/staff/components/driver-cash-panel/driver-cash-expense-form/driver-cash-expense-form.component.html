@@ -12,23 +12,29 @@
       ></app-admin-dropdown>
     </div>
 
-    <div class="dcp-form-field">
-      <label class="admin-form-label" for="dcp-expense-amount">
-        {{ 'STAFF.DRIVER_CASH.EXPENSE.AMOUNT_LABEL' | translate }}
-      </label>
-      <input
-        id="dcp-expense-amount"
-        type="text"
-        inputmode="decimal"
-        class="admin-field"
-        [placeholder]="'STAFF.DRIVER_CASH.EXPENSE.AMOUNT_PLACEHOLDER' | translate"
-        [(ngModel)]="amountInput"
-        name="expenseAmount"
-        />
-        @if (amountInput.trim().length > 0 && amountCents === null) {
-          <small class="admin-error">{{ 'STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID' | translate }}</small>
-        }
+    @if (isWageCategory) {
+      <div class="dcp-form-field" data-testid="driver-cash-expense-wage-hint">
+        <p class="dcp-wage-hint">{{ 'STAFF.DRIVER_CASH.EXPENSE.WAGE_PRICED_BY_OWNER' | translate }}</p>
       </div>
+    } @else {
+      <div class="dcp-form-field">
+        <label class="admin-form-label" for="dcp-expense-amount">
+          {{ 'STAFF.DRIVER_CASH.EXPENSE.AMOUNT_LABEL' | translate }}
+        </label>
+        <input
+          id="dcp-expense-amount"
+          type="text"
+          inputmode="decimal"
+          class="admin-field"
+          [placeholder]="'STAFF.DRIVER_CASH.EXPENSE.AMOUNT_PLACEHOLDER' | translate"
+          [(ngModel)]="amountInput"
+          name="expenseAmount"
+          />
+          @if (amountInput.trim().length > 0 && amountCents === null) {
+            <small class="admin-error">{{ 'STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID' | translate }}</small>
+          }
+        </div>
+    }
 
       <div class="dcp-form-field">
         <label class="admin-form-label" for="dcp-expense-note">

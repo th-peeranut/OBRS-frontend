@@ -33,7 +33,12 @@ function todayBusinessDate(): string {
 
 const ADVANCE_ERROR_KEYS: Record<string, string> = {};
 const PER_HEAD_ERROR_KEYS: Record<string, string> = {};
-const EXPENSE_ERROR_KEYS: Record<string, string> = {};
+// OBRS-1356 — the ONE expense code worth naming: the generic message would
+// leave a salesperson retrying a wage entry that cannot succeed until the
+// owner sets the rate, and only this text says who has to do what.
+const EXPENSE_ERROR_KEYS: Record<string, string> = {
+  DRIVER_WAGE_RATE_NOT_CONFIGURED: 'STAFF.DRIVER_CASH.ERROR.WAGE_RATE_NOT_CONFIGURED',
+};
 
 /**
  * OBRS-960 — smart: `/staff/boarding/:scheduleId`'s per-round cash panel.
@@ -211,7 +216,7 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
       });
   }
 
-  protected onSubmitExpense(payload: { category: string; amount: string; note?: string }): void {
+  protected onSubmitExpense(payload: { category: string; amount?: string; note?: string }): void {
     if (this.isSubmitting) return;
     this.isSubmitting = true;
     this.expenseError = null;

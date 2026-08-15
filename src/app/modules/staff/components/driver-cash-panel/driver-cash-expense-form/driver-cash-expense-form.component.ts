@@ -10,16 +10,25 @@ import { toCents } from '../../../../../shared/lib/money-cents';
  * (the card: "`PERMIT_FEE` ... reuse the existing key ... do not mint a
  * `STAFF.*` duplicate") rather than a second category list. Deliberately a
  * subset of the full admin category list — `VEHICLE_TAX`/`INSURANCE`/
- * `INSTALMENT`/`CENTRAL`/`DRIVER_WAGE` are back-office categories a driver
- * never pays roadside.
+ * `INSTALMENT`/`CENTRAL` are back-office categories a driver never pays
+ * roadside.
+ *
+ * OBRS-1356 — `DRIVER_WAGE` was in that excluded list and is now IN, on the
+ * owner's ruling (2026-08-14): the wage per leg is one of the four costs a
+ * salesperson settles with the driver at the counter. It is the one entry
+ * with no amount box — see `isWageCategory` below.
  */
 export const DRIVER_CASH_EXPENSE_CATEGORIES: readonly string[] = [
   'FUEL',
   'TOLL',
   'PERMIT_FEE',
+  'DRIVER_WAGE',
   'REPAIR',
   'OTHER',
 ];
+
+/** OBRS-1356 — the one category the SERVER prices, from the owner's rate. */
+const WAGE_CATEGORY = 'DRIVER_WAGE';
 
 /** OBRS-960 — dumb: the field-expense action's inline form. */
 @Component({
@@ -31,7 +40,7 @@ export const DRIVER_CASH_EXPENSE_CATEGORIES: readonly string[] = [
 export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
   @Input() isSubmitting = false;
   @Input() submitError: string | null = null;
-  @Output() submitExpense = new EventEmitter<{ category: string; amount: string; note?: string }>();
+  @Output() submitExpense = new EventEmitter<{ category: string; amount?: string; note?: string }>();
 
   // app-admin-dropdown renders `option[labelKey]` verbatim, with no
   // translate pipe of its own (admin-dropdown.component.html) — so this
@@ -82,12 +91,24 @@ export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
     return toCents(this.amountInput);
   }
 
+  /** OBRS-1356 — the wage is priced by the owner's rate, so there is no amount to type. */
+  protected get isWageCategory(): boolean {
+    return this.selectedCategory === WAGE_CATEGORY;
+  }
+
   protected get canSubmit(): boolean {
-    return !this.isSubmitting && this.selectedCategory !== '' && this.amountCents !== null && this.amountCents > 0;
+    if (this.isSubmitting || this.selectedCategory === '') return false;
+    if (this.isWageCategory) return true;
+    return this.amountCents !== null && this.amountCents > 0;
   }
 
   protected onCategoryChange(value: string): void {
     this.selectedCategory = value;
+    if (this.isWageCategory) {
+      // Clearing rather than hiding-and-keeping: a stale number left behind the
+      // hidden field would be sent the moment the user switched back.
+      this.amountInput = '';
+    }
   }
 
   protected onSubmit(): void {
@@ -95,7 +116,7 @@ export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
     const note = this.noteInput.trim();
     this.submitExpense.emit({
       category: this.selectedCategory,
-      amount: this.amountInput.trim(),
+      ...(this.isWageCategory ? {} : { amount: this.amountInput.trim() }),
       ...(note ? { note } : {}),
     });
   }
