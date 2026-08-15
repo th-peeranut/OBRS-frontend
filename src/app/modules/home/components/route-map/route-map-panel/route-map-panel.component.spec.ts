@@ -265,6 +265,42 @@ describe('RouteMapPanelComponent', () => {
       expect(ref2).toBe(ref1); // Same reference — @angular/google-maps will not call setOptions
     });
 
+    it('[OBRS-1362] a re-fire with the SAME stop set keeps the mapOptions reference (camera not reset)', () => {
+      // The /home repro: clicking the first pickup makes route-map-home rebuild
+      // `dropoffStops` with `.filter()` — identical members, brand-new array — so
+      // ngOnChanges re-fires. Rebuilding mapOptions there is a new [options]
+      // reference, and GoogleMap answers it with setOptions({zoom: 10, center}),
+      // discarding the zoom/pan the user had just set.
+      const pickups = [makeStop(1, true)];
+      const dropoffs = [makeStop(2, true), makeStop(3, true)];
+      component.pickupStops = pickups;
+      component.dropoffStops = dropoffs;
+      component.ngOnChanges(changes('pickupStops', pickups, []));
+      const ref1 = component.mapOptions;
+
+      component.dropoffStops = [...dropoffs];
+      component.ngOnChanges(changes('dropoffStops', component.dropoffStops, dropoffs));
+
+      expect(component.mapOptions).toBe(ref1);
+    });
+
+    it('[OBRS-1362] narrowing the drop-off list keeps the mapOptions reference (later pickups too)', () => {
+      // Choosing a pickup that is NOT the first drops the drop-offs behind it, so
+      // the stop set genuinely changes — but the route has not, and the camera
+      // must still stay where the user put it.
+      const pickups = [makeStop(1, true), makeStop(2, true)];
+      const dropoffs = [makeStop(3, true), makeStop(4, true)];
+      component.pickupStops = pickups;
+      component.dropoffStops = dropoffs;
+      component.ngOnChanges(changes('pickupStops', pickups, []));
+      const ref1 = component.mapOptions;
+
+      component.dropoffStops = [makeStop(4, true)];
+      component.ngOnChanges(changes('dropoffStops', component.dropoffStops, dropoffs));
+
+      expect(component.mapOptions).toBe(ref1);
+    });
+
   });
 
   // -------------------------------------------------------------------------
