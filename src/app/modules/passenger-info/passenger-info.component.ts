@@ -492,7 +492,15 @@ export class PassengerInfoComponent {
     return (phoneNumber || '').replace(/\D+/g, '').slice(0, 15);
   }
 
-  private normalizePassengerType(gender?: string | null): string {
+  /**
+   * OBRS-1357: returns null when nothing was chosen, where it used to fall back to `'male'`.
+   * That fallback was invisible: the form made the field required, so the branch only ever ran on
+   * a path the UI could not reach — until the field became optional, at which point it would have
+   * silently recorded every silent customer as male and then printed "(ชาย)" back at them in the
+   * confirmation email. `PassengerReqDto.passengerType` dropped its `@NotBlank` in the same change
+   * and `tickets.passenger_type_id` has been nullable since ADR-0061, so null survives end to end.
+   */
+  private normalizePassengerType(gender?: string | null): string | null {
     const normalized = (gender ?? '').toString().trim().toLowerCase();
     if (
       normalized === 'male' ||
@@ -503,7 +511,7 @@ export class PassengerInfoComponent {
       return normalized;
     }
 
-    return normalized || 'male';
+    return normalized || null;
   }
 
   private setBookingStore(

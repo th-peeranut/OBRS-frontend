@@ -50,7 +50,6 @@ import { createLanguageServiceStub } from '../testing/test-stubs';
 import { NotificationInboxService } from '../shared/services/notification-inbox.service';
 import { AdminApiService } from '../services/admin/admin-api.service';
 import { BadgeSocketService } from '../services/admin/badge-socket.service';
-import { environment } from '../../environments/environment';
 
 @Component({
     selector: 'app-notification-bell', template: '',
@@ -84,18 +83,6 @@ const STAFF_LINKED_FROM: Record<string, string> = {
 
 /** Admin has no detail-page routes today; kept for symmetry and future ones. */
 const ADMIN_LINKED_FROM: Record<string, string> = {};
-
-/**
- * OBRS-622 go-live scope cut: 'fleet-map' stays a real routed page (guarded by
- * AuthGuard + featureEnabledGuard('fleetMap')), but StaffLayoutComponent's
- * buildNavItems() deliberately does not push its nav entry while
- * environment.features.fleetMap is false — that is the gate working as
- * designed, not an orphaned page nobody wired up. Exempt it from the
- * reachability sweep ONLY while the flag reads false; the moment it flips
- * back to true the nav entry reappears (staff-layout.component.ts) and this
- * list is empty, so a genuine future orphan is still caught.
- */
-const STAFF_FEATURE_FLAGGED_UNREACHABLE: string[] = environment.features.fleetMap ? [] : ['fleet-map'];
 
 /**
  * Leaf pages of a shell's route tree. Redirects (the bare-path default and the
@@ -326,7 +313,6 @@ describeShell(
   STAFF_ROLES,
   STAFF_LINKED_FROM,
   { minRoutes: 8, minNav: 5 },
-  STAFF_FEATURE_FLAGGED_UNREACHABLE,
 );
 
 describeShell('admin', AdminLayoutComponent, adminRoutes, 'admin', ADMIN_ROLES, ADMIN_LINKED_FROM, {
