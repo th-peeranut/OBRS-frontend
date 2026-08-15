@@ -1837,6 +1837,7 @@
         "PERMIT_FEE": "行车时刻单费(ขสมก.)",
         "DRIVER_WAGE": "司机工资",
         "INSTALMENT": "车辆分期付款",
+        "PARKING_FEE": "停车费",
         "CENTRAL": "中央",
         "OTHER": "其他"
       },

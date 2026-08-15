@@ -49,6 +49,7 @@ const CATEGORY_LABELS = {
   permitFee: 'Time-Sheet Fee',
   driverWage: 'Driver Wage',
   instalment: 'Vehicle Instalment',
+  parkingFee: 'Parking Fee',
   central: 'Central',
   other: 'Other',
 };
@@ -106,7 +107,7 @@ describe('expenses-page.mappers', () => {
   });
 
   describe('toExpenseCategoryOptions', () => {
-    it('returns exactly the 14 fixed category codes, in EXPENSE_CATEGORY_CODES order', () => {
+    it('returns exactly the 15 fixed category codes, in EXPENSE_CATEGORY_CODES order', () => {
       const options = categoryOptions();
       expect(options.map((o) => o.code)).toEqual([...EXPENSE_CATEGORY_CODES]);
       expect(options.find((o) => o.code === 'OTHER')?.label).toBe('Other');

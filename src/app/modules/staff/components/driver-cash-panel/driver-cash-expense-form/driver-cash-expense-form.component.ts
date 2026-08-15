@@ -17,6 +17,14 @@ import { toCents } from '../../../../../shared/lib/money-cents';
  * owner's ruling (2026-08-14): the wage per leg is one of the four costs a
  * salesperson settles with the driver at the counter. It is the one entry
  * with no amount box — see `isWageCategory` below.
+ *
+ * OBRS-1363 — `OTHER` was in this list from the start and the backend refused
+ * it, so picking it 400'd with nothing on screen to warn you. The owner's
+ * ruling (2026-08-15) keeps it AND adds `PARKING_FEE` (the overnight park
+ * before the first round). This list must stay a subset of the backend's
+ * `DriverCashExpensePaidReqDto.ALLOWED_CATEGORIES`; nothing in either build
+ * can see both, so `verify-field-expense-categories.ps1` in the office reads
+ * the two files at `origin/dev` and is what fails on a one-sided edit.
  */
 export const DRIVER_CASH_EXPENSE_CATEGORIES: readonly string[] = [
   'FUEL',
@@ -24,11 +32,15 @@ export const DRIVER_CASH_EXPENSE_CATEGORIES: readonly string[] = [
   'PERMIT_FEE',
   'DRIVER_WAGE',
   'REPAIR',
+  'PARKING_FEE',
   'OTHER',
 ];
 
 /** OBRS-1356 — the one category the SERVER prices, from the owner's rate. */
 const WAGE_CATEGORY = 'DRIVER_WAGE';
+
+/** OBRS-1363 — the one category that carries a free-text label of its own. */
+const OTHER_CATEGORY = 'OTHER';
 
 /** OBRS-960 — dumb: the field-expense action's inline form. */
 @Component({
@@ -40,7 +52,12 @@ const WAGE_CATEGORY = 'DRIVER_WAGE';
 export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
   @Input() isSubmitting = false;
   @Input() submitError: string | null = null;
-  @Output() submitExpense = new EventEmitter<{ category: string; amount?: string; note?: string }>();
+  @Output() submitExpense = new EventEmitter<{
+    category: string;
+    amount?: string;
+    note?: string;
+    categoryOtherLabel?: string;
+  }>();
 
   // app-admin-dropdown renders `option[labelKey]` verbatim, with no
   // translate pipe of its own (admin-dropdown.component.html) — so this
@@ -52,6 +69,7 @@ export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
   protected selectedCategory = '';
   protected amountInput = '';
   protected noteInput = '';
+  protected otherLabelInput = '';
 
   private readonly destroy$ = new Subject<void>();
 
@@ -84,6 +102,7 @@ export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
       this.selectedCategory = '';
       this.amountInput = '';
       this.noteInput = '';
+      this.otherLabelInput = '';
     }
   }
 
@@ -96,8 +115,17 @@ export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
     return this.selectedCategory === WAGE_CATEGORY;
   }
 
+  /** OBRS-1363 — the one category that has to say what it actually was. */
+  protected get isOtherCategory(): boolean {
+    return this.selectedCategory === OTHER_CATEGORY;
+  }
+
   protected get canSubmit(): boolean {
     if (this.isSubmitting || this.selectedCategory === '') return false;
+    // OBRS-1363: the backend refuses OTHER with no label (same rule the admin
+    // entry point has always had), so submitting without one is a guaranteed
+    // 400 — the button says so instead of the server saying it afterwards.
+    if (this.isOtherCategory && this.otherLabelInput.trim() === '') return false;
     if (this.isWageCategory) return true;
     return this.amountCents !== null && this.amountCents > 0;
   }
@@ -109,6 +137,11 @@ export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
       // hidden field would be sent the moment the user switched back.
       this.amountInput = '';
     }
+    if (!this.isOtherCategory) {
+      // Same reasoning, and here the backend enforces it too: a label sent with
+      // a non-OTHER category is itself a 400.
+      this.otherLabelInput = '';
+    }
   }
 
   protected onSubmit(): void {
@@ -118,6 +151,7 @@ export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
       category: this.selectedCategory,
       ...(this.isWageCategory ? {} : { amount: this.amountInput.trim() }),
       ...(note ? { note } : {}),
+      ...(this.isOtherCategory ? { categoryOtherLabel: this.otherLabelInput.trim() } : {}),
     });
   }
 }

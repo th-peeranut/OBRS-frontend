@@ -36,6 +36,26 @@
         </div>
     }
 
+      @if (isOtherCategory) {
+        <div class="dcp-form-field">
+          <label class="admin-form-label" for="dcp-expense-other-label">
+            {{ 'ADMIN.EXPENSES.CATEGORY_OTHER_LABEL' | translate }}
+          </label>
+          <input
+            id="dcp-expense-other-label"
+            type="text"
+            class="admin-field"
+            maxlength="100"
+            [(ngModel)]="otherLabelInput"
+            name="expenseOtherLabel"
+            data-testid="driver-cash-expense-other-label"
+            />
+            @if (otherLabelInput.trim().length === 0) {
+              <small class="admin-error">{{ 'ADMIN.EXPENSES.CATEGORY_OTHER_REQUIRED' | translate }}</small>
+            }
+          </div>
+      }
+
       <div class="dcp-form-field">
         <label class="admin-form-label" for="dcp-expense-note">
           {{ 'STAFF.DRIVER_CASH.EXPENSE.NOTE_LABEL' | translate }}
