@@ -105,6 +105,20 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   isSelectFirst: boolean = false;
 
+  /**
+   * OBRS-1336. True while the customer who searched ROUND-TRIP has picked an
+   * outbound for which this search returned no return leg at all. Until this
+   * flag existed the same condition navigated straight to review, which decided
+   * on the customer's behalf that a round trip had become a one-way ticket —
+   * and said so nowhere: `review-schedule-booking-summary` picks its trip-type
+   * label off `schedule.length`, so a single leg simply reads "เที่ยวเดียว".
+   *
+   * Not an edge case since OBRS-1185 made round-trip the search form's default:
+   * of the 19x6 stop pairs sellable outbound on `chonburi_bangkok`, only 3x2
+   * have a return leg to sell back (measured on the prod route API, 2026-08-14).
+   */
+  showNoReturnConfirm = false;
+
   /** At or below this remaining-seat count, the exact number is surfaced as
    *  a scarcity cue (OBRS-229); above it, no seat text shows at all — see
    *  `isLowSeatCount`. Shared single source (OBRS-323) with the OPEN-seating
@@ -242,12 +256,67 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     );
 
     if (this.scheduleList$) this.scheduleList$.unsubscribe();
-    this.scheduleList$ = this.scheduleList.pipe(take(1)).subscribe((schedules) => {
-      const hasArrivalSchedules = (schedules?.arrivalSchedules?.length ?? 0) > 0;
-      if (!hasArrivalSchedules || !isFirst) {
-        this.router.navigate(['/review-schedule-booking']);
-      }
+    this.scheduleList$ = combineLatest([this.scheduleList, this.scheduleFilter])
+      .pipe(take(1))
+      .subscribe(([schedules, scheduleFilter]) => {
+        const hasArrivalSchedules = (schedules?.arrivalSchedules?.length ?? 0) > 0;
+
+        // OBRS-1336 AC 1: the one state that must not navigate silently — the
+        // customer asked for a round trip and there is nothing to sell them for
+        // the way back. `isFirst` scopes this to picking the OUTBOUND: choosing
+        // a return leg (`!isFirst`) is the completed round trip and still goes
+        // straight through, and a genuine one-way search (AC 4) never reaches
+        // here because `isRoundTrip` is false.
+        if (isFirst && !hasArrivalSchedules && this.isRoundTrip(scheduleFilter)) {
+          this.showNoReturnConfirm = true;
+          return;
+        }
+
+        if (!hasArrivalSchedules || !isFirst) {
+          this.router.navigate(['/review-schedule-booking']);
+        }
+      });
+  }
+
+  /**
+   * OBRS-1336 AC 2. Accepting the one-way ticket rewrites the SEARCH FILTER, not
+   * just this screen: `passenger-info.component.ts:243` derives the booking it
+   * POSTs from `scheduleFilter.roundTrip` and nothing else, so before this the
+   * booking left here as `bookingType: 'return'` carrying only a departure leg —
+   * a record that contradicted the "เที่ยวเดียว" the same customer had just been
+   * shown. One dispatch fixes the form, the review label and the payload,
+   * because all three read this one value.
+   *
+   * The money was never wrong: the missing leg's price goes through
+   * `parsePricePerSeat(undefined)`, which returns 0 (`trip-format.ts:56`).
+   */
+  continueAsOneWay(): void {
+    this.showNoReturnConfirm = false;
+    this.scheduleFilter.pipe(take(1)).subscribe((scheduleFilter) => {
+      this.store.dispatch(
+        invokeSetScheduleFilterApi({
+          schedule_filter: {
+            ...scheduleFilter,
+            // Mirrors `roundTripDropdowns[0]` in schedule-booking-filter.component.ts.
+            // Only `id` is ever read back (that component patches its form with the
+            // bare id), but the labels are carried so the stored value is not a
+            // half-built Dropdown for whoever reads it next.
+            roundTrip: { id: 1, nameThai: 'เที่ยวเดียว', nameEnglish: 'One-way' },
+          } as ScheduleFilter,
+        })
+      );
+      this.router.navigate(['/review-schedule-booking']);
     });
+  }
+
+  /**
+   * OBRS-1336 AC 1, the other door. Clears the outbound that was already stored
+   * before the check ran, so going back to the search form does not leave a leg
+   * selected against a search the customer is about to change.
+   */
+  cancelNoReturnConfirm(): void {
+    this.showNoReturnConfirm = false;
+    this.clearSchedule();
   }
 
   clearSchedule() {

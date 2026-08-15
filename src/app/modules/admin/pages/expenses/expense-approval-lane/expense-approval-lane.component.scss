@@ -1,0 +1,16 @@
+// OBRS-775 host-box rule: an Angular host defaults to `display: inline`, so
+// wrapping an in-flow block child makes the host box malformed.
+:host {
+  display: block;
+}
+
+.expense-money {
+  text-align: right;
+  white-space: nowrap;
+}
+
+// The inline reason row is a continuation of the row above it, not a record of
+// its own — the tinted background is what says so without a second heading.
+.expense-reject-row > td {
+  background: var(--admin-surface-soft);
+}

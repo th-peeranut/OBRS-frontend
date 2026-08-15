@@ -1,4 +1,6 @@
 @import "../../../../../styles/variables.scss";
+// OBRS-1336: needed by the `.nrc-*` dark block at the end of this file.
+@import "../../../../../styles/dark-tokens";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -373,5 +375,98 @@
 
   .booking-container .schedule-item .right {
     column-gap: $space-2xs;
+  }
+}
+
+// OBRS-1336. `nrc-` = No Return Confirm. Chrome copied from
+// cancel-booking-modal.component.scss (design-system section 6 keeps the three
+// customer dialogs on one pattern); the two buttons take their geometry and
+// colour from `.select-btn` / `.change-btn` above so this dialog does not
+// introduce a second button language on the same screen.
+.nrc-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-xl 16px;
+  background: rgba(13, 21, 37, 0.55);
+  overflow-y: auto;
+}
+
+.nrc-modal {
+  width: min(480px, 100%);
+  margin: auto;
+  background: white;
+  border-radius: 16px;
+  padding: $space-xl;
+
+  &__title {
+    font-weight: $font-weight-semibold;
+    color: $text-black;
+    margin-bottom: $space-xs;
+  }
+
+  &__body {
+    color: $text-black;
+    line-height: $line-height-base;
+    margin-bottom: $space-lg;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space-xs;
+    flex-wrap: wrap;
+  }
+}
+
+// Same shape as `.select-btn` / `.change-btn`, which are nested under
+// `.booking-container .schedule-item .right` and so cannot be reused by name.
+.nrc-modal .btn-primary,
+.nrc-modal .btn-secondary {
+  border-radius: 26px;
+  padding: 6px 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s ease;
+  min-width: 136px;
+  height: 52px;
+}
+
+.nrc-modal .btn-primary {
+  background: $primary-blue;
+  color: white;
+  border: none;
+
+  &:hover {
+    background: $primary-blue-hover;
+  }
+}
+
+.nrc-modal .btn-secondary {
+  background: white;
+  color: $text-black;
+  border: 1px solid $text-black;
+}
+
+// Tokens by name, per the note in _dark-tokens.scss. `:host-context` rather
+// than a rule in dark-theme.scss because this markup is inside an encapsulated
+// component and a global override would lose the specificity race silently.
+:host-context(body.is-dark) {
+  .nrc-modal {
+    background: $dk-bg-card;
+  }
+
+  .nrc-modal__title,
+  .nrc-modal__body {
+    color: $dk-text;
+  }
+
+  .nrc-modal .btn-secondary {
+    background: $dk-bg-card;
+    color: $dk-text;
+    border-color: $dk-border;
   }
 }

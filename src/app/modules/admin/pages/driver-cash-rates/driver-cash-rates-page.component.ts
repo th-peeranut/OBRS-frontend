@@ -7,12 +7,18 @@ import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorCode, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import {
   DRIVER_CASH_RATE_DUPLICATE_ERROR_CODE,
+  DRIVER_WAGE_RATE_DUPLICATE_ERROR_CODE,
   DriverCashRateRowDto,
+  DriverWageRateRowDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
 import { DriverCashRatesStore } from './driver-cash-rates.store';
 
 const CREATE_ERROR_KEYS: Record<string, string> = {
   [DRIVER_CASH_RATE_DUPLICATE_ERROR_CODE]: 'ADMIN.DRIVER_CASH_RATES.ERROR.DUPLICATE',
+};
+
+const WAGE_CREATE_ERROR_KEYS: Record<string, string> = {
+  [DRIVER_WAGE_RATE_DUPLICATE_ERROR_CODE]: 'ADMIN.DRIVER_CASH_RATES.WAGE.ERROR.DUPLICATE',
 };
 
 /**
@@ -48,6 +54,14 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected submitError = '';
 
+  // OBRS-1356 — card 3. Its own submit state, not a shared one: the two forms
+  // are on screen together and a spinner on both would misreport which saved.
+  protected wageRates: DriverWageRateRowDto[] = [];
+  protected wageEffectiveFromDate: Date | null = null;
+  protected ratePerLegInput = '';
+  protected isSubmittingWage = false;
+  protected wageSubmitError = '';
+
   private readonly destroy$ = new Subject<void>();
 
   constructor(
@@ -64,6 +78,7 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
     // is not translated: there are three of them and they are place names.
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       this.rates = data?.rates ?? [];
+      this.wageRates = data?.wageRates ?? [];
       this.salesPointIdByCode = new Map((data?.salesPoints ?? []).map((sp) => [sp.code, sp.id]));
       this.salesPointOptions = (data?.salesPoints ?? []).map((sp) => ({
         value: sp.code,
@@ -131,6 +146,53 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
     } finally {
       this.isSubmitting = false;
     }
+  }
+
+  /** OBRS-1356 — card 3's twin of `canSubmit`; no sales point, so one field fewer. */
+  protected get canSubmitWage(): boolean {
+    return !this.isSubmittingWage && this.wageEffectiveFromDate !== null && Number(this.ratePerLegInput) > 0;
+  }
+
+  protected async submitWage(): Promise<void> {
+    if (!this.canSubmitWage || !this.wageEffectiveFromDate) return;
+
+    this.isSubmittingWage = true;
+    this.wageSubmitError = '';
+    try {
+      await firstValueFrom(
+        this.adminApiService.createDriverWageRate({
+          effectiveFrom: this.toDateInputValue(this.wageEffectiveFromDate),
+          ratePerLeg: this.ratePerLegInput.trim(),
+        })
+      );
+      this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+      this.wageEffectiveFromDate = null;
+      this.ratePerLegInput = '';
+      await this.store.refresh();
+    } catch (error) {
+      const code = extractApiErrorCode(error, null);
+      this.wageSubmitError = this.translate.instant(
+        mapApiErrorCode(code, WAGE_CREATE_ERROR_KEYS, 'ADMIN.DRIVER_CASH_RATES.ERROR.CREATE_FAILED')
+      );
+    } finally {
+      this.isSubmittingWage = false;
+    }
+  }
+
+  /** The wage table has ONE series, so "current" is just the latest already-effective row. */
+  protected isCurrentWage(row: DriverWageRateRowDto): boolean {
+    const today = this.toDateInputValue(new Date());
+    if (row.effectiveFrom > today) {
+      return false;
+    }
+    const latest = this.wageRates
+      .filter((r) => r.effectiveFrom <= today)
+      .sort((a, b) => (a.effectiveFrom < b.effectiveFrom ? 1 : -1))[0];
+    return latest?.id === row.id;
+  }
+
+  protected trackWageById(_index: number, row: DriverWageRateRowDto): number {
+    return row.id;
   }
 
   /** "current" chip: the LATEST row per SALES POINT with `effectiveFrom <= today`. */

@@ -44,17 +44,10 @@
                 formatVehicleType(departureSchedule.vehicleType)
                 }}
                 |
-                <!-- One-way -->
-                @if (getScheduleBooking(bookingData?.schedule).length == 1) {
-                  {{
-                  "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY" | translate
-                  }}
-                }
-                <!-- Round trip -->
-                @if (getScheduleBooking(bookingData?.schedule).length == 2) {
-                  {{
-                  "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY" | translate
-                  }}
+                <!-- OBRS-1336 AC 5: the trip type the customer agreed to buy,
+                not a count of the legs that happened to be selectable. -->
+                @if (tripTypeLabelKey$ | async; as tripTypeLabelKey) {
+                  {{ tripTypeLabelKey | translate }}
                 }
               </div>
             </div>

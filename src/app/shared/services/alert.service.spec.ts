@@ -257,5 +257,38 @@ describe('AlertService', () => {
 
       expect(close).toHaveBeenCalledTimes(1);
     });
+
+    /**
+     * OBRS-1336. `Swal.close()` starts an animation and sweetalert2 runs `didClose`
+     * when it ENDS, so between the two there is a window in which this service has
+     * already reset itself (hideLoading does it synchronously) and a request that
+     * starts inside it opens a second overlay. The late `didClose` then belonged to
+     * a popup that is gone, and resetting on it cleared the LIVE overlay's state:
+     * `isLoadingVisible` false with an overlay on screen means every subsequent
+     * `hideLoading()` returns at its own guard and nothing ever closes it again.
+     *
+     * Found by the E2E gate lane, not by inspection — OBRS-1336 made
+     * `continueAsOneWay()` re-run the search on the way out, which narrowed the gap
+     * between one response and the next request from ~2.4s to ~380ms and turned a
+     * rare window into a 1-in-3 red. The 8s escape hatch above is what keeps this
+     * survivable for a customer; it does nothing for a page that must stay usable.
+     */
+    it('does not let a closing overlay clear the state of the one that replaced it', () => {
+      spyOn(Swal, 'getPopup').and.returnValue(popupWith('swal-global-loading'));
+      const close = spyOn(Swal, 'close');
+
+      service.showLoading('a');
+      const didCloseA = fire.calls.mostRecent().args[0]?.['didClose'] as () => void;
+      service.hideLoading();
+      expect(close).toHaveBeenCalledTimes(1);
+
+      // B starts while A's close is still animating.
+      service.showLoading('b');
+      // ...and only now does A's animation finish.
+      didCloseA();
+
+      service.hideLoading();
+      expect(close).toHaveBeenCalledTimes(2);
+    });
   });
 });

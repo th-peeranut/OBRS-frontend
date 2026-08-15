@@ -6,3 +6,12 @@
   display: block;
 }
 
+// OBRS-1356: replaces the amount box for DRIVER_WAGE, so it has to read as an
+// explanation rather than as a disabled field the user should try to fill in.
+.dcp-wage-hint {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--admin-muted);
+}
+

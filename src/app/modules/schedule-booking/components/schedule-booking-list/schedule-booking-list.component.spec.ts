@@ -873,3 +873,128 @@ describe('ScheduleBookingListComponent (OBRS-1302 — selectSchedule side effect
     expect(store.dispatch).toHaveBeenCalled();
   });
 });
+
+/**
+ * OBRS-1336. A round-trip search whose return list came back empty used to
+ * navigate straight to review on the outbound pick, turning the trip into a
+ * one-way ticket with nothing said and `bookingType: 'return'` still on the
+ * payload. These assert the fork directly rather than through the rendered
+ * button: the decision is made inside `selectSchedule`'s subscription, and a
+ * DOM-level test would pass on a component that navigated for the wrong reason.
+ */
+describe('ScheduleBookingListComponent (OBRS-1336 — round trip with no return leg)', () => {
+  let originalOnlineTicketBooking: boolean;
+  let router: any;
+  let store: any;
+
+  const trip: Schedule = {
+    id: 78,
+    vehicleType: 'van',
+    departureDateTime: '2030-06-17T08:00:00+07:00',
+    arrivalDateTime: '2030-06-17T09:58:00+07:00',
+    pricePerSeat: '200',
+    availableSeats: 10,
+    availableSeatNumbers: ['1A'],
+    routeSlug: 'chonburi-bangkok',
+  };
+
+  /** `roundTripId` 2 = the round-trip option, 1 = one-way — the ids the search
+   *  form's `roundTripDropdowns` uses. */
+  function build(
+    roundTripId: number,
+    arrivalSchedules: Schedule[] | null
+  ): ScheduleBookingListComponent {
+    store = createStoreStub();
+    router = createRouterStub();
+    spyOn(store, 'dispatch').and.callThrough();
+    spyOn(router, 'navigate').and.callThrough();
+
+    const component = new ScheduleBookingListComponent(
+      store,
+      router,
+      createStoreStub(),
+      createTranslateStub(),
+      createRouteMapServiceStub(),
+      createAnalyticsServiceStub()
+    );
+    component.scheduleList = of({
+      departureSchedules: [trip],
+      arrivalSchedules,
+    } as ScheduleList);
+    component.scheduleFilter = of({ roundTrip: { id: roundTripId } } as any);
+    return component;
+  }
+
+  beforeEach(() => {
+    originalOnlineTicketBooking = environment.features.onlineTicketBooking;
+    environment.features.onlineTicketBooking = true;
+  });
+
+  afterEach(() => {
+    environment.features.onlineTicketBooking = originalOnlineTicketBooking;
+  });
+
+  it('AC1: asks instead of navigating when a round-trip search has no return leg', () => {
+    const component = build(2, []);
+
+    component.selectSchedule(trip, true);
+
+    expect(component.showNoReturnConfirm).toBeTrue();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('AC3: leaves the normal round trip alone — return legs exist, so no dialog and no jump', () => {
+    const component = build(2, [trip]);
+
+    component.selectSchedule(trip, true);
+
+    expect(component.showNoReturnConfirm).toBeFalse();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('AC3: picking the RETURN leg still goes straight to review', () => {
+    const component = build(2, [trip]);
+
+    component.selectSchedule(trip, false);
+
+    expect(component.showNoReturnConfirm).toBeFalse();
+    expect(router.navigate).toHaveBeenCalledWith(['/review-schedule-booking']);
+  });
+
+  it('AC4: a genuine one-way search is never interrupted', () => {
+    const component = build(1, null);
+
+    component.selectSchedule(trip, true);
+
+    expect(component.showNoReturnConfirm).toBeFalse();
+    expect(router.navigate).toHaveBeenCalledWith(['/review-schedule-booking']);
+  });
+
+  it('AC2: accepting one-way rewrites the search filter to one-way before navigating', () => {
+    const component = build(2, []);
+    component.selectSchedule(trip, true);
+    (store.dispatch as jasmine.Spy).calls.reset();
+
+    component.continueAsOneWay();
+
+    const filterAction = (store.dispatch as jasmine.Spy).calls
+      .allArgs()
+      .map((args) => args[0])
+      .find((action) => action?.schedule_filter);
+    expect(filterAction.schedule_filter.roundTrip.id).toBe(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/review-schedule-booking']);
+    expect(component.showNoReturnConfirm).toBeFalse();
+  });
+
+  it('AC1: editing the search instead clears the outbound that was already stored', () => {
+    const component = build(2, []);
+    component.selectSchedule(trip, true);
+
+    component.cancelNoReturnConfirm();
+
+    expect(component.showNoReturnConfirm).toBeFalse();
+    expect(component.selectedSchedule).toEqual([]);
+    expect(component.isSelectFirst).toBeFalse();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+});
