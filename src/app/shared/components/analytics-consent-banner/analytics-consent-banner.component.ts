@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { Component, ElementRef, Inject, OnDestroy, Renderer2, ViewChild } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { combineLatest, Observable } from 'rxjs';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -44,6 +45,24 @@ import { isConsentControlRoute } from '../../lib/analytics-consent-control';
  * page they withdrew from. Unlike the staff/admin rule this is purely about not
  * asking twice: the page is still measurable and the tags still load there.
  *
+ * **It reserves the room it occupies (OBRS-1372).** `position: fixed` takes the
+ * bar out of the flow, so for eleven months everything in the bottom band of the
+ * page was behind it — measured on prod at an iPhone 14 viewport, the Thai copy
+ * wraps to seven lines, the bar is 246px = 37.1% of a 664px viewport, and four of
+ * the nine pickup rows plus the "ยืนยันจุดรับ" button lost their tap to
+ * `p.consent-banner__body`. Nothing could scroll clear of it because the document
+ * ended where it always had. The bar keeps its size and its wording — both belong
+ * to the notice it mirrors (OBRS-631 AC-17), and shrinking a consent ask to make
+ * room is the ask becoming a formality — so the DOCUMENT grows instead: the same
+ * number of pixels the bar covers are added to the bottom of `<body>`, and every
+ * control can be scrolled out from under it. Measured with a `ResizeObserver`, not
+ * a constant, because the height is a function of the language and the viewport
+ * width; the four locales and every phone size would each need their own number.
+ *
+ * The one thing NOT given room back is the usability FAB, which is `fixed` too and
+ * so cannot be scrolled anywhere. That overlap is deliberate and stays pinned by
+ * `e2e/tests/analytics-consent-banner.spec.ts`; see the z-index note in the SCSS.
+ *
  * The component holds no state of its own: `AnalyticsConsentService` is the
  * single source of truth, consumed through the async pipe so there is nothing
  * to unsubscribe.
@@ -54,17 +73,45 @@ import { isConsentControlRoute } from '../../lib/analytics-consent-control';
     styleUrl: './analytics-consent-banner.component.scss',
     standalone: false
 })
-export class AnalyticsConsentBannerComponent {
+export class AnalyticsConsentBannerComponent implements OnDestroy {
   /**
    * True only while the visitor has not answered AND this is a page we would
    * actually measure — i.e. exactly while the bar should be on screen.
    */
   protected readonly isUndecided$: Observable<boolean>;
 
+  private observer?: ResizeObserver;
+  private reserved = 0;
+
+  /**
+   * OBRS-1372. A setter rather than `ngAfterViewInit` because the element is
+   * inside the `@if`: Angular calls this with the element when the bar appears
+   * and with `undefined` the moment either answer removes it, which is exactly
+   * when the room has to be given back. There is no other hook that fires on
+   * both edges.
+   */
+  @ViewChild('banner')
+  protected set banner(ref: ElementRef<HTMLElement> | undefined) {
+    this.observer?.disconnect();
+    this.observer = undefined;
+
+    if (!ref) {
+      this.reserve(0);
+      return;
+    }
+
+    const element = ref.nativeElement;
+    // Fires once on observe(), so the first measurement is this call too.
+    this.observer = new ResizeObserver(() => this.reserve(element.offsetHeight));
+    this.observer.observe(element);
+  }
+
   constructor(
     private readonly consent: AnalyticsConsentService,
     private readonly scope: AnalyticsRouteScopeService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly renderer: Renderer2,
+    @Inject(DOCUMENT) private readonly document: Document
   ) {
     // The URL is read from the navigation event rather than from `router.url`
     // after the fact: both this and `AnalyticsRouteScopeService` subscribe to
@@ -89,11 +136,37 @@ export class AnalyticsConsentBannerComponent {
     );
   }
 
+  ngOnDestroy(): void {
+    this.observer?.disconnect();
+    this.reserve(0);
+  }
+
   protected accept(): void {
     this.consent.grant();
   }
 
   protected decline(): void {
     this.consent.deny();
+  }
+
+  /**
+   * Hold `heightPx` of the page's bottom edge clear of the bar. Zero removes the
+   * declaration rather than writing `0px`, so a page with no bar left is a page
+   * this component never touched.
+   */
+  private reserve(heightPx: number): void {
+    // Same number, no write. On a desktop width the padding can be what makes the
+    // page long enough to need a scrollbar, which narrows the viewport, which
+    // re-wraps the bar — writing unconditionally puts that exchange in a loop the
+    // browser reports as an undelivered-notification error rather than as a hang.
+    if (heightPx === this.reserved) return;
+    this.reserved = heightPx;
+
+    const body = this.document.body;
+    if (heightPx > 0) {
+      this.renderer.setStyle(body, 'padding-bottom', `${Math.ceil(heightPx)}px`);
+    } else {
+      this.renderer.removeStyle(body, 'padding-bottom');
+    }
   }
 }

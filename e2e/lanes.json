@@ -117,6 +117,18 @@
       "why": "OBRS-882. Two stubbed home-page calls (stops, schedules search) and nothing else, so it needs no backend by construction. It exists as the counterpart to e2e/support/analytics-consent.ts: with a settled PDPA answer now seeded lane-wide, this is the ONLY spec that still loads a page with OBRS-867's consent bar UP, and without it the seeding would be a mute rather than a repair. Asks document.elementFromPoint what is really on top of the usability FAB rather than reasoning about z-index -- the overlap is deliberate per the component's own SCSS, so it is pinned, not overturned. obrs-854-account-deeplink.spec.ts asks the same question of a different button at a phone viewport."
     },
     {
+      "spec": "obrs-1372-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1372capture.config.ts",
+      "why": "OBRS-1372 BEFORE/AFTER evidence. Screenshots only, no assertions -- and that is the requirement, not a shortcut: it has to run unchanged against BOTH runtimes so the BEFORE frame is the real previous behaviour. Shoots four customer pages at the iPhone 14's 390x664 scrolled as far down as the document allows, which is the defect in one frame. Stage comes from OBRS_CAPTURE_STAGE; the BEFORE pass is taken with `git stash push -- src/` applied. Every assertion for this card lives in obrs-1372-consent-banner-reachability.spec.ts on the GATE lane."
+    },
+    {
+      "spec": "obrs-1372-consent-banner-reachability.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-1372. Reuses the contrast gate's customer-page fixtures (every /api/** call stubbed, Maps aborted), so it needs nothing but a browser. The spec above pins the bar's overlap with the FAB as deliberate; this one asks the question that overlap does not answer -- with the bar `position: fixed; bottom: 0` and no room reserved for it, the last 246px of every customer page could not be scrolled clear at all, measured on prod at an iPhone 14 viewport. Sweeps all of CUSTOMER_PAGES at 390x664 in Thai (the tall wrap is the defect's precondition) and asks document.elementFromPoint at each control's BEST reachable offset. Deliberately seeds no consent decision -- findUnreachable throws if the bar is absent, so a spec that measured the answered state cannot pass quietly. Carries its own must-catch/must-not-catch fixture first."
+    },
+    {
       "spec": "focus-retention.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
