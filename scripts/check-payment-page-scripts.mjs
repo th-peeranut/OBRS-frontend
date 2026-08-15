@@ -163,6 +163,15 @@ function directiveOf(policy, name) {
  */
 const REDIRECT_HOPS = [
   { directive: 'img-src', from: 'https://c.clarity.ms', to: 'https://c.bing.com' },
+  // OBRS-1351: the PromptPay QR. `api.omise.co/charges/<id>/documents/<id>/downloads/<tok>`
+  // 302s to a presigned object on Omise's S3 bucket. Measured 2026-08-15 against a real
+  // charge under the prod header: with api.omise.co alone Chromium refused the <img>
+  // (naturalWidth 0) and named api.omise.co in the violation — the host that was allowed.
+  {
+    directive: 'img-src',
+    from: 'https://api.omise.co',
+    to: 'https://omise-gateway-production.s3.ap-southeast-1.amazonaws.com',
+  },
 ];
 
 function allowsOrigin(directive, origin) {
@@ -363,6 +372,13 @@ const SELF_TEST_CASES = [
   ['redirect', 0, "img-src 'self' data: blob:"],
   ['redirect', 0, "img-src 'self' https://c.bing.com"],
   ['redirect', 0, "connect-src 'self' https://*.clarity.ms"],
+  // ---- OBRS-1351 QR hop. must-catch: the policy that actually shipped on 2026-08-14 —
+  // api.omise.co alone, which refuses the QR at hop 2 and reports hop 1.
+  ['redirect', 1, "img-src 'self' data: blob: https://api.omise.co"],
+  // must NOT catch: the fixed policy, and api.omise.co in connect-src, where the XHRs it
+  // carries never redirect to S3 (and where a fetch of the document dies on CORS anyway).
+  ['redirect', 0, "img-src 'self' data: blob: https://api.omise.co https://omise-gateway-production.s3.ap-southeast-1.amazonaws.com"],
+  ['redirect', 0, "connect-src 'self' https://api.omise.co https://vault.omise.co"],
   // ---- OBRS-889 sidecar sub-resources. must-catch: the policy that shipped for two
   // months — GIS allowed as a script, its stylesheet not allowed as a stylesheet.
   ['sidecar', 1, "script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"],
