@@ -49,7 +49,13 @@ export const environmentBase = {
   // (single-point-per-feature; no code revert needed).
   features: {
     onlineParcelBooking: false, // gates /parcel-booking + /my-parcels routes + navbar My Parcels link
-    fleetMap: false,            // gates the staff fleet-map route + its nav link
+    // OBRS-933: flipped back on post-go-live, which is the one-liner OBRS-622
+    // AC6 always described. The SIT-only override this replaces (OBRS-831) is
+    // removed in the same commit — it existed only because this value read
+    // false. `PROD_MAPTILER_API_KEY` must be exported at `npm run build:prod`
+    // or the prod bundle inherits `maptilerKey: ''` and degrades to the
+    // MAP_UNAVAILABLE placeholder without erroring at build or boot time.
+    fleetMap: true,             // gates the staff fleet-map route + its nav link
     // OBRS-1302: the customer-side ONLINE SEAT BOOKING path — /review-schedule-booking,
     // /passenger-info, /payment, and the "choose this trip" button that leads into them.
     //

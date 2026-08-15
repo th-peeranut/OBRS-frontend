@@ -66,6 +66,28 @@ describe('PassengerInfoComponent', () => {
       expect(payload[0].fareCategory).toBe('child');
       expect(payload[0].passengerType).toBe('female');
     });
+
+    // OBRS-1357: RED on the old code, which returned 'male' for anything falsy. That default was
+    // unreachable while the form required the field, so making the field optional would have turned
+    // it into a silent lie — every customer who declined to answer recorded as male, and told so in
+    // their own confirmation email. "Not stated" has to survive the payload boundary as null.
+    it('emits passengerType: null when the passenger stated no gender/status — never a "male" default', () => {
+      const passengers = [buildPassenger({ gender: '' })];
+
+      const payload = (component as any).buildPassengersPayload(passengers, 'outbound');
+
+      expect(payload[0].passengerType).toBeNull();
+    });
+
+    it('emits passengerType: null when gender is null or undefined too', () => {
+      const payload = (component as any).buildPassengersPayload(
+        [buildPassenger({ gender: null as never }), buildPassenger({ gender: undefined as never })],
+        'outbound'
+      );
+
+      expect(payload[0].passengerType).toBeNull();
+      expect(payload[1].passengerType).toBeNull();
+    });
   });
 
   // AC-361.5 (scrutinize blocker): a leg whose schedule is OPEN seating must

@@ -2677,7 +2677,6 @@
       "EMAIL_PLACEHOLDER": "接收电子票的邮箱（选填）",
       "EMAIL_INVALID": "请输入有效的电子邮箱地址",
       "GENDER_STATUS": "性别/状态",
-      "GENDER_STATUS_REQUIRED": "请选择性别/状态",
       "SEAT_SECTION_TITLE": "座位选择",
       "SEAT_SECTION_HINT": "请选择您的座位 — 若跳过，系统将自动为您分配座位。",
       "SEAT_LEG_OUTBOUND": "去程座位",
@@ -3700,7 +3699,8 @@
       },
       "ERROR": {
         "GENERIC": "无法记录此项目，请重试。",
-        "WAGE_RATE_NOT_CONFIGURED": "尚未设置每趟工资费率。请先让车主在司机工资费率页面设置。"
+        "WAGE_RATE_NOT_CONFIGURED": "尚未设置每趟工资费率。请先让车主在司机工资费率页面设置。",
+        "SALES_POINT_FORBIDDEN": "您只能为从自己售票点发车的班次记录现场费用。此班次不属于您。"
       },
       "MY_DAY": {
         "TITLE": "我今日的现金",

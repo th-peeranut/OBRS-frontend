@@ -2677,7 +2677,6 @@
       "EMAIL_PLACEHOLDER": "Email for your e-ticket (optional)",
       "EMAIL_INVALID": "Please enter a valid email address",
       "GENDER_STATUS": "Gender/Status",
-      "GENDER_STATUS_REQUIRED": "Please select a gender/status",
       "SEAT_SECTION_TITLE": "Seat selection",
       "SEAT_SECTION_HINT": "Choose your seat — if you skip it, one is assigned automatically.",
       "SEAT_LEG_OUTBOUND": "Departure seat",
@@ -3700,7 +3699,8 @@
       },
       "ERROR": {
         "GENERIC": "Unable to record this entry. Please try again.",
-        "WAGE_RATE_NOT_CONFIGURED": "No wage per leg has been set yet. Ask the owner to set it on the driver wage rate page first."
+        "WAGE_RATE_NOT_CONFIGURED": "No wage per leg has been set yet. Ask the owner to set it on the driver wage rate page first.",
+        "SALES_POINT_FORBIDDEN": "You can only record field costs for rounds departing from your own sales point. This round is not yours."
       },
       "MY_DAY": {
         "TITLE": "My cash box today",

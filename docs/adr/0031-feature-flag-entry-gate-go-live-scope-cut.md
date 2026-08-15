@@ -168,11 +168,34 @@ means:
         a population; naming the population you actually searched is what makes it
         checkable, and "nowhere in the repo" was a statement about a repo that was
         never going to be the one holding a hosting value.
+  - ✅ **Closed by OBRS-933, 2026-08-15 — the divergence is history, not current
+    state.** `features.fleetMap` is `true` in `environment.base.ts` and the
+    `environment.sit.ts` override is deleted, so this flag has a single point of
+    truth again. Both reasons the override existed are gone: the prod MapTiler
+    key was provisioned (OBRS-926), and prod does serve the SPA — the `GET /` =
+    404 measured on 2026-07-30 expired when the bundle was published to
+    `/opt/obrs/site` (measured 2026-08-14: the served JS contains `fleetMap:!1`
+    and `api.maptiler.com/maps/streets-v2`).
+    - ⚠️ **A base flip is necessary but never sufficient for prod.** The value is
+      baked at build time, so prod changes only once a build carrying it is
+      published, and `scripts/inject-prod-env.js:80` reads
+      `process.env.PROD_MAPTILER_API_KEY || ''` — forgetting to export it yields
+      a green build, a clean boot and a blank map. A flipped flag is therefore
+      never evidence that prod renders tiles; only a live browser measurement on
+      `nj-phuyaipu.com` is (OBRS-933 AC-3).
 - `nav-reachability.spec.ts`'s orphan sweep needed one documented exemption:
   while `environment.features.fleetMap` is `false`, the `fleet-map` route is
   *intentionally* unreachable from the nav (that's the gate working), so it's
   excluded from the "every routed page must be reachable" assertion only for
   that state — the exemption clears itself the moment the flag flips back on.
+  - ✅ **OBRS-933 removed it.** With the flag `true` the exemption list was
+    permanently empty, so `fleet-map` is now swept like any other page and has
+    to earn its reachability through the nav entry
+    `StaffLayoutComponent.buildNavItems()` pushes. `describeShell`'s optional
+    `featureFlaggedUnreachable` parameter is deliberately **kept** — it is the
+    generic mechanism this ADR describes, and `features.onlineParcelBooking` and
+    `features.onlineTicketBooking` still read `false`. Only the `fleet-map`
+    entry and the `environment` import it was the sole reader of were removed.
 - No i18n keys were added: both gates are silent (a redirect, an absent nav
   link) rather than user-facing copy.
 - `/track-parcel` and the staff walk-in parcel intake routes

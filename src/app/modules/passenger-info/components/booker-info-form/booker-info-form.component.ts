@@ -70,7 +70,14 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
       // the e-ticket and the confirmation email. An OBRS-628 audit grepped the
       // backend for "gender", found nothing, and concluded the radios were dead
       // and should be deleted under PDPA data minimisation - they are not.
-      gender: ['', Validators.required],
+      //
+      // OBRS-1357: still not dead, but no longer REQUIRED. What the OBRS-628 audit got wrong was
+      // that the field is unused; what it got right is that nothing in the system reads the value
+      // to decide anything - measured again on the shipped code, it drives no price, no seat
+      // allocation, no manifest, no report. A value that is only ever printed back at the person
+      // who typed it cannot carry a compulsory `*` under PDPA section 22, so leaving it blank is
+      // a legitimate answer and travels to the wire as null (see normalizePassengerType).
+      gender: [''],
       // OBRS-858 (ADR-0123 Decision 5): OPTIONAL, but still format-checked when filled.
       // OBRS-238 made it required because emailing the e-ticket was the only way a
       // customer ever saw it again — no address meant no ticket. OBRS-857 made the ticket
