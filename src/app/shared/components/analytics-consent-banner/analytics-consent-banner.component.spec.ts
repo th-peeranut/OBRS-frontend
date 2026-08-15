@@ -75,6 +75,55 @@ describe('AnalyticsConsentBannerComponent', () => {
     expect(banner()).toBeNull();
   });
 
+  /**
+   * OBRS-1372 — the bar is `position: fixed`, so the page has to be told to end
+   * further down. Measured here rather than asserted from the stylesheet: the
+   * defect was that the number did not exist at all, and a constant would be
+   * wrong in three of the four locales.
+   *
+   * The E2E half (`e2e/tests/obrs-1372-consent-banner-reachability.spec.ts`) is
+   * the one that proves a real control becomes reachable; these three prove the
+   * mechanism that gets it there, including the edges an E2E sweep cannot see.
+   */
+  describe('the room the bar occupies', () => {
+    /** ResizeObserver delivers before paint, so a frame or two — polled, not assumed. */
+    async function paddingSettlesAt(px: () => number): Promise<number> {
+      for (let i = 0; i < 30; i += 1) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const now = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
+        if (now === px()) return now;
+      }
+      return parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
+    }
+
+    it('reserves exactly what the bar covers, taken from the bar itself', async () => {
+      const height = banner()!.offsetHeight;
+
+      expect(height).toBeGreaterThan(0);
+      expect(await paddingSettlesAt(() => height)).toBe(height);
+    });
+
+    it('follows the bar when it changes height — a wrap, a rotation, a longer language', async () => {
+      const el = banner()!;
+      const before = await paddingSettlesAt(() => el.offsetHeight);
+
+      el.style.minHeight = `${before + 120}px`;
+
+      expect(await paddingSettlesAt(() => el.offsetHeight)).toBe(before + 120);
+    });
+
+    it('gives the room back the moment the question is answered', async () => {
+      await paddingSettlesAt(() => banner()!.offsetHeight);
+
+      consent.deny();
+      fixture.detectChanges();
+
+      // Removed, not zeroed: a page with no bar is a page this component never
+      // touched.
+      expect(document.body.style.paddingBottom).toBe('');
+    });
+  });
+
   describe('the ask must not be a dark pattern', () => {
     it('offers exactly two buttons — no hidden "manage preferences" detour', () => {
       expect(buttons().length).toBe(2);
