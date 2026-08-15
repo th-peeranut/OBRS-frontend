@@ -36,8 +36,13 @@ const PER_HEAD_ERROR_KEYS: Record<string, string> = {};
 // OBRS-1356 — the ONE expense code worth naming: the generic message would
 // leave a salesperson retrying a wage entry that cannot succeed until the
 // owner sets the rate, and only this text says who has to do what.
+// OBRS-1361 — the same argument, one refusal later. The sales-point 403 is
+// PERMANENT for this round, and GENERIC's "please try again" is advice that
+// cannot work: measured in the AFTER capture before this line existed, the
+// backend's own Thai message never reached the screen.
 const EXPENSE_ERROR_KEYS: Record<string, string> = {
   DRIVER_WAGE_RATE_NOT_CONFIGURED: 'STAFF.DRIVER_CASH.ERROR.WAGE_RATE_NOT_CONFIGURED',
+  DRIVER_CASH_SALES_POINT_FORBIDDEN: 'STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN',
 };
 
 /**

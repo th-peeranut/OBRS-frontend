@@ -3698,7 +3698,8 @@
       },
       "ERROR": {
         "GENERIC": "无法记录此项目，请重试。",
-        "WAGE_RATE_NOT_CONFIGURED": "尚未设置每趟工资费率。请先让车主在司机工资费率页面设置。"
+        "WAGE_RATE_NOT_CONFIGURED": "尚未设置每趟工资费率。请先让车主在司机工资费率页面设置。",
+        "SALES_POINT_FORBIDDEN": "您只能为从自己售票点发车的班次记录现场费用。此班次不属于您。"
       },
       "MY_DAY": {
         "TITLE": "我今日的现金",

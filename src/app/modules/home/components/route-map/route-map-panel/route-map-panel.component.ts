@@ -629,17 +629,26 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       .sort((a, b) => a.order - b.order)
       .map((s) => ({ lat: s.latitude as number, lng: s.longitude as number }));
 
-    // Set the straight path immediately — the map line renders at once without
-    // waiting for the Directions API response.
     this.straightPath = [...pickupCoords, ...dropoffCoords];
-    this.polylinePath = this.straightPath;
 
     // Dedupe: skip re-querying Directions when the stops haven't changed.
     const reqKey = this.buildRequestKey();
     if (reqKey === this.lastDirReqKey) {
+      // OBRS-1340: and leave `polylinePath` ALONE on that path. This branch is
+      // reached whenever something else re-fires ngOnChanges with the same stop
+      // set — selecting a pickup rebuilds `dropoffStops` through `.filter()`,
+      // which is a new array reference every time even when every member is
+      // identical. The straight-path reset used to run above this return, so it
+      // threw the road-snapped line away and the only code that puts it back
+      // (the cache read below) sits under the return: the map fell back to
+      // diagonal straight lines and stayed there until a full reload.
       return;
     }
     this.lastDirReqKey = reqKey;
+
+    // Set the straight path immediately — the map line renders at once without
+    // waiting for the Directions API response.
+    this.polylinePath = this.straightPath;
     this.dirReqSeq++;
     const seqId = this.dirReqSeq;
 
