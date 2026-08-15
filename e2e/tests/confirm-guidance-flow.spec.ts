@@ -15,7 +15,8 @@
  *        still navigates to /schedule-booking (Search button unaffected).
  *   AC7  Station-not-found error (alertService.error) verified by code review
  *        (cannot be triggered via normal UI); noted as code-reviewed, not live.
- *   AC8  No new console errors during any of the above flows.
+ *   AC8  No new console errors during any of the above flows. OBRS-1369 narrowed
+ *        this to errors THIS FLOW owns — see `flowOwnedErrors`.
  */
 
 import { test, expect, Page } from '@playwright/test';
@@ -90,6 +91,61 @@ async function waitForRouteMapLoaded(page: Page): Promise<void> {
   await page.locator('.stop-row').first().waitFor({ state: 'visible', timeout: 15_000 });
 }
 
+/** Chromium's URL-less subresource failure text — see `watchFlowErrors`. */
+const GENERIC_RESOURCE_ERROR = /^Failed to load resource:/;
+
+interface FlowErrors {
+  console: string[];
+  requests: string[];
+}
+
+/**
+ * OBRS-1369: collector for AC8. Chromium reports a failed subresource as the
+ * literal text "Failed to load resource: the server responded with a status of
+ * 404 ()" — the URL is nowhere in the message — so a substring filter can neither
+ * tell an app bug from a third-party CDN hiccup nor say WHAT 404'd when the lane
+ * goes red (it went red on a `fonts.gstatic.com` woff2). We therefore also record
+ * the failing request's URL from `response`/`requestfailed`.
+ */
+function watchFlowErrors(page: Page): FlowErrors {
+  const collected: FlowErrors = { console: [], requests: [] };
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') {
+      collected.console.push(msg.text());
+    }
+  });
+  page.on('response', (res) => {
+    if (res.status() >= 400) {
+      collected.requests.push(`${res.status()} ${res.url()}`);
+    }
+  });
+  page.on('requestfailed', (req) => {
+    collected.requests.push(`${req.failure()?.errorText ?? 'failed'} ${req.url()}`);
+  });
+  return collected;
+}
+
+/**
+ * The subset AC8 holds this flow responsible for: script errors the app itself
+ * logged, plus request failures on the app's own origin (which carry their URL).
+ * Third-party assets — fonts, Google Maps, the placeholder photo host — are not
+ * under this test's control and are excluded by origin, not by keyword.
+ */
+function flowOwnedErrors(page: Page, collected: FlowErrors): string[] {
+  const appOrigin = new URL(page.url()).origin;
+  const scriptErrors = collected.console.filter(
+    (e) =>
+      !GENERIC_RESOURCE_ERROR.test(e) &&
+      !e.includes('favicon') &&
+      !e.includes('google') &&
+      !e.includes('maps')
+  );
+  const appRequestFailures = collected.requests.filter(
+    (r) => r.includes(appOrigin) && !r.includes('favicon')
+  );
+  return [...scriptErrors, ...appRequestFailures];
+}
+
 /** Assert a SweetAlert2 toast is present at top-end (non-blocking). */
 async function waitForToast(page: Page, expectedText: string): Promise<void> {
   const toast = page.locator(
@@ -115,12 +171,7 @@ test.describe('OBRS-73 – Non-blocking confirm guidance', () => {
   test('AC1+AC2: pickup-only confirm → warning toast (non-blocking, no OK button, amber), tab switches to Drop-off immediately', async ({
     page,
   }) => {
-    const consoleErrors: string[] = [];
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        consoleErrors.push(msg.text());
-      }
-    });
+    const collected = watchFlowErrors(page);
 
     await page.goto('/');
     await waitForRouteMapLoaded(page);
@@ -166,13 +217,7 @@ test.describe('OBRS-73 – Non-blocking confirm guidance', () => {
     await expect(dropoffRow).toHaveClass(/stop-row--selected/);
 
     // AC8: no new console errors
-    const newErrors = consoleErrors.filter(
-      (e) =>
-        !e.includes('favicon') &&
-        !e.includes('google') &&
-        !e.includes('maps')
-    );
-    expect(newErrors).toHaveLength(0);
+    expect(flowOwnedErrors(page, collected)).toHaveLength(0);
 
     // Must remain on /home
     expect(new URL(page.url()).pathname).toBe('/');
@@ -253,12 +298,7 @@ test.describe('OBRS-73 – Prefill and stay on /home', () => {
   test('AC5: both stops selected → confirm → hero bar prefilled with station names, no navigation to /schedule-booking', async ({
     page,
   }) => {
-    const consoleErrors: string[] = [];
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        consoleErrors.push(msg.text());
-      }
-    });
+    const collected = watchFlowErrors(page);
 
     await page.goto('/');
     await waitForRouteMapLoaded(page);
@@ -307,13 +347,7 @@ test.describe('OBRS-73 – Prefill and stay on /home', () => {
     await expect(page.locator('.swal2-backdrop-show')).toHaveCount(0);
 
     // AC8: no new console errors from this flow
-    const newErrors = consoleErrors.filter(
-      (e) =>
-        !e.includes('favicon') &&
-        !e.includes('google') &&
-        !e.includes('maps')
-    );
-    expect(newErrors).toHaveLength(0);
+    expect(flowOwnedErrors(page, collected)).toHaveLength(0);
   });
 
   test('AC5b: confirm via "Confirm pickup" button (both selected) → same prefill-and-stay behavior', async ({
