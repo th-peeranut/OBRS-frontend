@@ -2676,7 +2676,6 @@
       "EMAIL_PLACEHOLDER": "接收电子票的邮箱（选填）",
       "EMAIL_INVALID": "请输入有效的电子邮箱地址",
       "GENDER_STATUS": "性别/状态",
-      "GENDER_STATUS_REQUIRED": "请选择性别/状态",
       "SEAT_SECTION_TITLE": "座位选择",
       "SEAT_SECTION_HINT": "请选择您的座位 — 若跳过，系统将自动为您分配座位。",
       "SEAT_LEG_OUTBOUND": "去程座位",

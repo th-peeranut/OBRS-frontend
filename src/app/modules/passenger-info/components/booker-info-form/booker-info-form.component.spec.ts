@@ -97,6 +97,25 @@ describe('BookerInfoFormComponent', () => {
       expect(result?.email).toBe('somchai@example.com');
     });
 
+    // OBRS-1357: RED on the old code — `gender` carried Validators.required, so validateAndGetBooker()
+    // returned null and the booker could not proceed. Same shape as the OBRS-858 email inversion
+    // above and for the same reason: the field asks for something the system does not act on, so
+    // refusing the booking over it is a validation error no backend change could clear.
+    it('returns the booker when gender/status is missing — the field is optional', () => {
+      component.bookerForm.patchValue({
+        title: 1,
+        firstName: 'Somchai',
+        lastName: 'Jaidee',
+        phoneNumber: '0812345678',
+        gender: '',
+        email: 'somchai@example.com',
+      });
+
+      const result = component.validateAndGetBooker();
+      expect(result).not.toBeNull();
+      expect(result?.gender).toBe('');
+    });
+
     it('normalises title when value is a Dropdown object', () => {
       component.bookerForm.patchValue({
         title: { id: 2, nameThai: 'นางสาว', nameEnglish: 'Miss' },

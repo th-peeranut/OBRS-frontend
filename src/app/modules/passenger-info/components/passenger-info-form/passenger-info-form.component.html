@@ -215,16 +215,12 @@
                                 </div>
                               }
                             </div>
-                            <!-- Gender/status -->
+                            <!-- Gender/status — OBRS-1357: optional, so no `*`, no error state and
+                            no label-error binding: the control has no validator left that could
+                            put it in one. -->
                             <div class="col-6">
-                              <label
-                [class.label-error]="
-                  group.get('gender')?.errors &&
-                  (group.get('gender')?.touched || group.get('gender')?.dirty)
-                "
-                                >
+                              <label>
                                 {{ "PASSENGER_INFO.FORM.GENDER_STATUS" | translate }}
-                                <span class="form-required">*</span>
                               </label>
                               <!-- Male -->
                               <div class="form-check form-check-inline">
@@ -280,16 +276,6 @@
                                               {{ "PASSENGER_INFO.GENDER.MONK" | translate }}
                                             </label>
                                           </div>
-                                          @if (
-                                            group.get('gender')?.errors &&
-                                            (group.get('gender')?.touched || group.get('gender')?.dirty)
-                                            ) {
-                                            <div
-                                              class="text-error"
-                                              >
-                                              {{ "PASSENGER_INFO.FORM.GENDER_STATUS_REQUIRED" | translate }}
-                                            </div>
-                                          }
                                         </div>
                                         <!-- Seat preference / requirement (OBRS-361) — optional,
                                         best-effort, never pre-selected (design-system §3.1). Hidden

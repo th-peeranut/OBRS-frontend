@@ -760,7 +760,9 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       // See booker-info-form: `gender` is the local name for the wire's
       // `passengerType`, renamed at the payload boundary and persisted on the
       // ticket. It also drives the seat-map colouring here. Not a dead field.
-      gender: ['', Validators.required],
+      // OBRS-1357: optional now - see booker-info-form for why. The seat-map colouring is the only
+      // live consumer and it degrades to an uncoloured seat, which is what an unstated type is.
+      gender: [''],
       isSelectSeat: [true],
       passengerSeat: [''],
       passengerSeatReturn: [''],

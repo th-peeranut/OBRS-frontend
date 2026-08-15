@@ -513,8 +513,10 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     // Fill the other required fields so validateAndGetPassengerInfo() below
     // can actually return a payload — irrelevant to the seatPreference/
     // seatRequirement defect itself, just satisfying this form's normal
-    // required-field validators (title/firstName/lastName/gender), same as
-    // a real traveler would before submitting.
+    // required-field validators (firstName/lastName — gender stopped being one
+    // in OBRS-1357 and is set here only because this test is about the other
+    // two fields, not to satisfy a validator), same as a real traveler would
+    // before submitting.
     component.passengerData.at(0).patchValue({
       title: 1,
       firstName: 'Jane',
@@ -585,6 +587,32 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     expect(payload[0].seatPreference).toBe('window');
     expect(payload[0].seatRequirement).toBe('wheelchair');
   }));
+
+  // OBRS-1357: RED on the old code — `gender` carried Validators.required, so a passenger who
+  // left it blank could not submit at all and validateAndGetPassengerInfo() returned null. The
+  // whole point of the card is that a customer who declines to state a gender/status can still
+  // buy a ticket, so this asserts the submit path, not just the control's validity flag.
+  it('OBRS-1357: a passenger who states no gender/status can still submit, and the value travels as blank', () => {
+    render([assignedSchedule]);
+
+    component.passengerData.at(0).patchValue({
+      title: 1,
+      firstName: 'Jane',
+      lastName: 'Doe',
+      gender: '',
+    });
+    fixture.detectChanges();
+
+    expect(component.passengerData.at(0).get('gender')?.valid)
+      .withContext('gender has no validator left to fail')
+      .toBeTrue();
+
+    const submitted = component.validateAndGetPassengerInfo();
+    expect(submitted)
+      .withContext('the form submits without a gender/status')
+      .not.toBeNull();
+    expect(submitted?.[0].gender).toBe('');
+  });
 
   // OBRS-367 (follow-up from OBRS-361/362): count-delta prefs survival. The
   // OBRS-361 defect fix made `setPassengerData()` patch in place ONLY when the

@@ -1,5 +1,8 @@
 export interface BookingPassenger {
-  passengerType: string;
+  // OBRS-1357: nullable — the customer form no longer requires a gender/status and the backend
+  // dropped its @NotBlank to match. Null means "not stated", which is a different fact from any
+  // of the four slugs; there is deliberately no default.
+  passengerType: string | null;
   seatNumber: string | null;
   // OBRS-1231: optional. `tickets.title_snapshot` has been nullable since V14, and
   // Ticket.getPassengerName() already filters empty parts out of the joined name.
