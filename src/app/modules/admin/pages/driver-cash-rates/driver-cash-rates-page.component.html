@@ -117,3 +117,91 @@
         </table>
       </div>
     </section>
+
+    <!-- Card 3 (OBRS-1356): the driver's wage per LEG - what prices a DRIVER_WAGE field expense -->
+    <section class="admin-card mt-3">
+      <div class="admin-card-head">
+        <h4>{{ 'ADMIN.DRIVER_CASH_RATES.WAGE.TITLE' | translate }}</h4>
+      </div>
+      <p class="admin-muted mt-2">{{ 'ADMIN.DRIVER_CASH_RATES.WAGE.HINT' | translate }}</p>
+
+      <div class="admin-form-grid mt-3">
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.DRIVER_CASH_RATES.EFFECTIVE_FROM_LABEL' | translate }}</label>
+          <p-datePicker
+            styleClass="app-date-field"
+            panelStyleClass="app-date-field-panel"
+            dateFormat="dd/mm/yy"
+            [(ngModel)]="wageEffectiveFromDate"
+            [showIcon]="true"
+            [iconDisplay]="'input'"
+            [showButtonBar]="true"
+            [placeholder]="'ADMIN.DRIVER_CASH_RATES.EFFECTIVE_FROM_LABEL' | translate"
+            >
+            <ng-template pTemplate="inputicon">
+              <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+            </ng-template>
+          </p-datePicker>
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label" for="ratePerLeg">{{ 'ADMIN.DRIVER_CASH_RATES.WAGE.RATE_LABEL' | translate }}</label>
+          <input
+            id="ratePerLeg"
+            type="text"
+            inputmode="decimal"
+            class="admin-field"
+            [placeholder]="'ADMIN.DRIVER_CASH_RATES.RATE_PLACEHOLDER' | translate"
+            [(ngModel)]="ratePerLegInput"
+            />
+          </div>
+
+          @if (wageSubmitError) {
+            <div class="admin-form-field full">
+              <small class="admin-error" role="alert">{{ wageSubmitError }}</small>
+            </div>
+          }
+
+          <div class="admin-form-field full">
+            <button
+              type="button"
+              class="admin-btn admin-btn-primary"
+              [disabled]="!canSubmitWage"
+              data-testid="driver-wage-rate-add-btn"
+              (click)="submitWage()"
+              >
+              {{ (isSubmittingWage ? 'ADMIN.COMMON.SAVING' : 'ADMIN.DRIVER_CASH_RATES.ADD_BTN') | translate }}
+            </button>
+          </div>
+        </div>
+
+        <div class="admin-table-wrap mt-3">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>{{ 'ADMIN.DRIVER_CASH_RATES.EFFECTIVE_FROM_LABEL' | translate }}</th>
+                <th>{{ 'ADMIN.DRIVER_CASH_RATES.WAGE.RATE_LABEL' | translate }}</th>
+                <th>{{ 'ADMIN.SETTLEMENTS.COL.STATUS' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of wageRates; track trackWageById($index, row)) {
+                <tr>
+                  <td>{{ row.effectiveFrom }}</td>
+                  <td>{{ row.ratePerLeg }}</td>
+                  <td>
+                    @if (isCurrentWage(row)) {
+                      <span class="admin-status is-success">{{ 'ADMIN.DRIVER_CASH_RATES.CURRENT' | translate }}</span>
+                    }
+                  </td>
+                </tr>
+              }
+              @if (wageRates.length === 0) {
+                <tr class="admin-empty-row">
+                  <td colspan="3">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>

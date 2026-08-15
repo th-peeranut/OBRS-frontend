@@ -146,7 +146,12 @@ export interface DriverCashPerHeadReqDto {
 
 export interface DriverCashExpenseReqDto {
   category: string;
-  amount: string;
+  /**
+   * OBRS-1356 — optional ONLY for `DRIVER_WAGE`, which the backend prices
+   * from the owner's rate per leg (1 leg = 1 schedule). Sending a number
+   * there would be sending one the server discards.
+   */
+  amount?: string;
   note?: string;
 }
 
@@ -208,6 +213,22 @@ export interface DriverCashRateReqDto {
   salesPointId: number;
   effectiveFrom: string;
   ratePerHead: string;
+}
+
+/**
+ * OBRS-1356 — the driver's wage for ONE leg (1 leg = 1 schedule, the owner's
+ * own definition). No sales point: unlike the per-head fee above, a wage does
+ * not belong to a counter, so one row answers for the whole operator.
+ */
+export interface DriverWageRateRowDto {
+  id: number;
+  effectiveFrom: string;
+  ratePerLeg: string;
+}
+
+export interface DriverWageRateReqDto {
+  effectiveFrom: string;
+  ratePerLeg: string;
 }
 
 /** OBRS-1073 — `GET /api/private/owner/driver-cash/sales-points`, the picker source. */
@@ -293,3 +314,6 @@ export interface PerHeadEarningsRespDto {
 }
 
 export const DRIVER_CASH_RATE_DUPLICATE_ERROR_CODE = 'PER_HEAD_RATE_DUPLICATE';
+
+/** OBRS-1356 — the wage table's own duplicate, on (owner, effectiveFrom). */
+export const DRIVER_WAGE_RATE_DUPLICATE_ERROR_CODE = 'WAGE_RATE_DUPLICATE';

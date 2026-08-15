@@ -43,6 +43,17 @@ export class ReviewScheduleBookingSummaryComponent {
   scheduleFilter: Observable<ScheduleFilter>;
   rawProvinceStationList: Observable<StationApi[]>;
 
+  /**
+   * OBRS-1336 AC 5. The trip-type label used to be chosen by counting the
+   * selected schedules — `length == 1` meant "เที่ยวเดียว". That made the label
+   * a function of what happened to be selectable rather than of what the
+   * customer agreed to buy: a round-trip search whose return list came back
+   * empty carried exactly one leg here and was relabelled one-way with nobody
+   * asked. It is read off the same `roundTrip` that `passenger-info` turns into
+   * the booking's `bookingType`, so the screen and the record cannot disagree.
+   */
+  tripTypeLabelKey$: Observable<string>;
+
   constructor(
     private store: Store,
     private router: Router,
@@ -55,6 +66,22 @@ export class ReviewScheduleBookingSummaryComponent {
     );
     this.scheduleBooking = this.store.pipe(select(selectScheduleBooking));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
+    this.tripTypeLabelKey$ = this.scheduleFilter.pipe(
+      map((scheduleFilter) =>
+        this.isRoundTrip(scheduleFilter)
+          ? 'REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY'
+          : 'REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY'
+      )
+    );
+  }
+
+  /** `roundTrip` reaches the store as either the Dropdown or its bare id,
+   *  depending on whether the customer touched the control — same defensive
+   *  read `schedule-booking-list` and `passenger-info` do. */
+  private isRoundTrip(scheduleFilter: ScheduleFilter | null | undefined): boolean {
+    const roundTrip = scheduleFilter?.roundTrip as { id?: number } | number | undefined;
+    const roundTripId = typeof roundTrip === 'object' ? roundTrip?.id : roundTrip;
+    return roundTripId === 2;
   }
 
   getScheduleBooking(schedule?: Schedule[] | null): Schedule[] {

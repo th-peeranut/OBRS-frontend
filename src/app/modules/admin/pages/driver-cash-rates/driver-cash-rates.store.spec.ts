@@ -1,7 +1,7 @@
 import { of } from 'rxjs';
 import { DriverCashRatesStore } from './driver-cash-rates.store';
 
-function createAdminApiStub(rates: unknown, salesPoints: unknown): any {
+function createAdminApiStub(rates: unknown, salesPoints: unknown, wageRates: unknown = []): any {
   return {
     getDriverCashRates: jasmine
       .createSpy('getDriverCashRates')
@@ -9,6 +9,10 @@ function createAdminApiStub(rates: unknown, salesPoints: unknown): any {
     getDriverCashSalesPoints: jasmine
       .createSpy('getDriverCashSalesPoints')
       .and.returnValue(of({ code: 200, message: 'OK', data: salesPoints })),
+    // OBRS-1356 — the wage-per-leg table, fetched alongside the two above.
+    getDriverWageRates: jasmine
+      .createSpy('getDriverWageRates')
+      .and.returnValue(of({ code: 200, message: 'OK', data: wageRates })),
   };
 }
 
@@ -60,12 +64,27 @@ describe('DriverCashRatesStore', () => {
     expect((store as unknown as { stationService?: unknown }).stationService).toBeUndefined();
   });
 
-  it('defaults both to an empty array when the responses have no data', async () => {
-    const store = new DriverCashRatesStore(createAdminApiStub(null, null), createAuthServiceStub());
+  it('defaults all three to an empty array when the responses have no data', async () => {
+    const store = new DriverCashRatesStore(createAdminApiStub(null, null, null), createAuthServiceStub());
 
     await store.refresh();
 
     expect(store.value?.rates).toEqual([]);
     expect(store.value?.salesPoints).toEqual([]);
+    expect(store.value?.wageRates).toEqual([]);
+  });
+
+  // OBRS-1356 — the wage rate rides on the SAME fetch, so the page cannot show
+  // a per-head table that loaded and a wage table that silently did not.
+  it('fetches the wage-per-leg rates with the rest', async () => {
+    const wageRates = [{ id: 9, effectiveFrom: '2026-08-15', ratePerLeg: '700.00' }];
+    const store = new DriverCashRatesStore(
+      createAdminApiStub([], SALES_POINTS, wageRates),
+      createAuthServiceStub()
+    );
+
+    await store.refresh();
+
+    expect(store.value?.wageRates).toEqual(wageRates);
   });
 });

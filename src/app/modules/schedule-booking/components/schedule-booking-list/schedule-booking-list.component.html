@@ -234,3 +234,27 @@
     }
   </div>
 }
+
+<!-- OBRS-1336: shown INSTEAD of navigating when a round-trip search has no
+return leg. Same modal chrome as cancel-booking-modal / change-stop-dialog
+(design-system section 6) rather than a fourth pattern. -->
+@if (showNoReturnConfirm) {
+  <div class="nrc-backdrop">
+    <div class="nrc-modal" role="dialog" aria-modal="true">
+      <h2 class="nrc-modal__title">
+        {{ "SCHEDULE_BOOKING.NO_RETURN_CONFIRM.TITLE" | translate }}
+      </h2>
+      <p class="nrc-modal__body">
+        {{ "SCHEDULE_BOOKING.NO_RETURN_CONFIRM.BODY" | translate }}
+      </p>
+      <div class="nrc-modal__actions">
+        <button type="button" class="btn-secondary" (click)="cancelNoReturnConfirm()">
+          {{ "SCHEDULE_BOOKING.NO_RETURN_CONFIRM.EDIT_SEARCH" | translate }}
+        </button>
+        <button type="button" class="btn-primary" (click)="continueAsOneWay()">
+          {{ "SCHEDULE_BOOKING.NO_RETURN_CONFIRM.CONTINUE" | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
