@@ -2500,6 +2500,8 @@
       "PICKUP_LIST_HEADER": "Pickup points in {{province}} ({{count}})",
       "DROPOFF_LIST_HEADER": "Drop-off points in {{province}} ({{count}})",
       "VIEW_MAP": "View map",
+      "MAP_HINT_CTA": "Not sure where to board? View the pickup & drop-off map",
+      "MAP_PLACEHOLDER_TEXT": "Map not shown yet. Tap the button below to see pickup and drop-off points on the map.",
       "CONFIRM_PICKUP": "Confirm pickup",
       "CONFIRM_DROPOFF": "Confirm drop-off",
       "CONFIRM_PICKUP_DROPOFF": "Confirm pickup & drop-off",

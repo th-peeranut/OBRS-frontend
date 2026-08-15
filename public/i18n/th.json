@@ -2500,6 +2500,8 @@
       "PICKUP_LIST_HEADER": "จุดรับใน{{province}} ({{count}} จุด)",
       "DROPOFF_LIST_HEADER": "จุดส่งใน{{province}} ({{count}} จุด)",
       "VIEW_MAP": "ดูแผนที่",
+      "MAP_HINT_CTA": "ไม่รู้ว่าจะขึ้นรถตรงไหน? ดูแผนที่จุดรับ-ส่ง",
+      "MAP_PLACEHOLDER_TEXT": "ยังไม่ได้เปิดแผนที่ กดปุ่มด้านล่างเพื่อดูตำแหน่งจุดรับ-ส่งบนแผนที่",
       "CONFIRM_PICKUP": "ยืนยันจุดรับ",
       "CONFIRM_DROPOFF": "ยืนยันจุดส่ง",
       "CONFIRM_PICKUP_DROPOFF": "ยืนยันจุดรับ-ส่ง",

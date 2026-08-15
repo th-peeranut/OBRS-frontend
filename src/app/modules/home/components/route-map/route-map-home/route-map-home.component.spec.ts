@@ -1,4 +1,6 @@
 import { of, Subject, throwError } from 'rxjs';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { RouteMapHomeComponent } from './route-map-home.component';
 import {
   RouteListItem,
@@ -6,7 +8,7 @@ import {
   RouteStop,
 } from '../../../../../shared/interfaces/route-map.interface';
 import { RouteMapService } from '../../../../../services/route-map/route-map.service';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
 
 const mockPickupDropoffResponse: RoutePickupDropoffResponse = {
@@ -609,3 +611,188 @@ function stopAt(order: number, slug: string): RouteStop {
     googleMapsUrl: null,
   };
 }
+
+// ── OBRS-1211: gate the paid Google Maps JS load behind an explicit request ──
+//
+// `<app-route-map-panel>` is the sole call site in the repo that loads
+// `maps.googleapis.com/maps/api/js` (route-map-panel.component.ts:87). These
+// tests pin that it is absent from the DOM until `mapRevealed` is set, on
+// BOTH breakpoints — a unit-level assertion on `component.mapRevealed` alone
+// cannot see a template binding that forgot to gate the actual element.
+describe('RouteMapHomeComponent — map panel gated behind explicit request (OBRS-1211)', () => {
+  let fixture: ComponentFixture<RouteMapHomeComponent>;
+  let component: RouteMapHomeComponent;
+
+  async function createFixture(isDesktopMatches: boolean): Promise<void> {
+    await TestBed.configureTestingModule({
+      declarations: [RouteMapHomeComponent],
+      imports: [TranslateModule.forRoot()],
+      providers: [
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        {
+          provide: BreakpointObserver,
+          useValue: { observe: () => of({ matches: isDesktopMatches }) },
+        },
+      ],
+      // Same rationale as route-stop-list.component.spec.ts: these tests only
+      // care whether <app-route-map-panel> is present, not how PrimeNG's
+      // p-tabs/p-selectButton/etc. or the other route-map child components
+      // behave — declaring the whole tree would be scope well beyond this card.
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RouteMapHomeComponent);
+    component = fixture.componentInstance;
+  }
+
+  function mapPanelElements(): Element[] {
+    return Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('app-route-map-panel')
+    );
+  }
+
+  function travelSummaryElements(): Element[] {
+    return Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('app-route-travel-summary')
+    );
+  }
+
+  it('desktop + loaded: no app-route-map-panel in the DOM at init', async () => {
+    await createFixture(true);
+    fixture.detectChanges(); // triggers ngOnInit -> loadState becomes 'loaded' synchronously
+    expect(component.loadState).toBe('loaded');
+    expect(component.mapRevealed).toBeFalse();
+    expect(mapPanelElements().length).toBe(0);
+  });
+
+  it('mobile + loaded: no app-route-map-panel in the DOM at init', async () => {
+    await createFixture(false);
+    fixture.detectChanges();
+    expect(component.loadState).toBe('loaded');
+    expect(component.mapRevealed).toBeFalse();
+    expect(mapPanelElements().length).toBe(0);
+  });
+
+  it('revealMap() sets mapRevealed=true and app-route-map-panel appears (desktop)', async () => {
+    await createFixture(true);
+    fixture.detectChanges();
+
+    component.revealMap();
+    fixture.detectChanges();
+
+    expect(component.mapRevealed).toBeTrue();
+    expect(mapPanelElements().length).toBe(1);
+  });
+
+  it('revealMap() sets mapRevealed=true and app-route-map-panel appears (mobile)', async () => {
+    await createFixture(false);
+    fixture.detectChanges();
+
+    component.revealMap();
+    fixture.detectChanges();
+
+    expect(component.mapRevealed).toBeTrue();
+    expect(mapPanelElements().length).toBe(1);
+  });
+
+  // AC#3: gating the map must never take the mobile map tab's travel summary
+  // down with it — that panel has always rendered regardless of the map.
+  it('AC#3: app-route-travel-summary renders in the mobile map tab whether or not the map is revealed', async () => {
+    await createFixture(false);
+    fixture.detectChanges();
+    expect(component.mapRevealed).toBeFalse();
+    expect(travelSummaryElements().length).toBe(1);
+
+    component.revealMap();
+    fixture.detectChanges();
+    expect(travelSummaryElements().length).toBe(1);
+  });
+});
+
+// ── OBRS-1211: activeTabIndex has two different meanings per breakpoint (see
+// the component's own header comment on mapRevealed / revealMap) — every test
+// here is paired across desktop and mobile for exactly that reason.
+describe('RouteMapHomeComponent — revealMap() / onTabsValueChange() (OBRS-1211)', () => {
+  let translateServiceStub: AnyStub;
+  let routeMapServiceStub: AnyStub;
+
+  beforeEach(() => {
+    translateServiceStub = createTranslateServiceStub();
+    routeMapServiceStub = createRouteMapServiceStub();
+  });
+
+  it('revealMap() on mobile also sets activeTabIndex to the map tab (1)', () => {
+    const component = makeComponent(
+      routeMapServiceStub,
+      translateServiceStub,
+      { observe: () => of({ matches: false }) }
+    );
+    component.ngOnInit();
+    component.activeTabIndex = 0;
+
+    component.revealMap();
+
+    expect(component.mapRevealed).toBeTrue();
+    expect(component.activeTabIndex).toBe(1);
+  });
+
+  it('revealMap() on desktop does NOT touch activeTabIndex', () => {
+    const component = makeComponent(
+      routeMapServiceStub,
+      translateServiceStub,
+      { observe: () => of({ matches: true }) }
+    );
+    component.ngOnInit();
+    component.activeTabIndex = 1; // desktop's own meaning: drop-off tab
+
+    component.revealMap();
+
+    expect(component.mapRevealed).toBeTrue();
+    expect(component.activeTabIndex).toBe(1);
+  });
+
+  it('onTabsValueChange(1) on mobile reveals the map', () => {
+    const component = makeComponent(
+      routeMapServiceStub,
+      translateServiceStub,
+      { observe: () => of({ matches: false }) }
+    );
+    component.ngOnInit();
+
+    component.onTabsValueChange(1);
+
+    expect(component.activeTabIndex).toBe(1);
+    expect(component.mapRevealed).toBeTrue();
+  });
+
+  it('onTabsValueChange(0) and (2) on mobile do NOT reveal the map', () => {
+    const component = makeComponent(
+      routeMapServiceStub,
+      translateServiceStub,
+      { observe: () => of({ matches: false }) }
+    );
+    component.ngOnInit();
+
+    component.onTabsValueChange(0);
+    expect(component.activeTabIndex).toBe(0);
+    expect(component.mapRevealed).toBeFalse();
+
+    component.onTabsValueChange(2);
+    expect(component.activeTabIndex).toBe(2);
+    expect(component.mapRevealed).toBeFalse();
+  });
+
+  it('onTabsValueChange(1) on desktop moves the tab but does NOT reveal the map — desktop tab 1 is drop-off, not map', () => {
+    const component = makeComponent(
+      routeMapServiceStub,
+      translateServiceStub,
+      { observe: () => of({ matches: true }) }
+    );
+    component.ngOnInit();
+
+    component.onTabsValueChange(1);
+
+    expect(component.activeTabIndex).toBe(1);
+    expect(component.mapRevealed).toBeFalse();
+  });
+});

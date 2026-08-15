@@ -137,6 +137,21 @@ app-recent-routes-quick-pick.has-routes + .station-section {
 // classes in src/styles.scss (this component is the canonical reference for
 // that look) — no component-scoped override needed here anymore.
 
+// OBRS-1211: the "not sure where to board?" link that reveals the gated map
+// panel. min-height is the §11 tap target; color overrides .btn-link's
+// default #0d6efd so it reads as a design-system token, not Bootstrap blue.
+.map-hint-btn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: $text-primary;
+  font-weight: $font-weight-medium;
+
+  &:hover, &:focus-visible {
+    color: $primary-blue-hover;
+  }
+}
+
 .btn-search {
   height: 52px;
   width: 160px;

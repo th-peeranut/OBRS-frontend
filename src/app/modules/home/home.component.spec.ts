@@ -1,3 +1,4 @@
+import { fakeAsync, tick } from '@angular/core/testing';
 import { HomeComponent } from './home.component';
 import { createStoreStub, createTranslateStub } from '../../testing/test-stubs';
 import { StationApi } from '../../shared/interfaces/station.interface';
@@ -73,4 +74,27 @@ describe('HomeComponent', () => {
       jasmine.clock().uninstall();
     }
   });
+
+  // OBRS-1211: the mirror-image hand-off — the booking card asks HomeComponent
+  // to reveal the gated map panel and carry the user down to it, instead of
+  // collecting a confirmed pair and scrolling back up to the form.
+  it('onMapHintRequested() reveals the map panel and scrolls/focuses it (fakeAsync)', fakeAsync(() => {
+    const revealMapSpy = jasmine.createSpy('revealMap');
+    (component as any).routeMapHomeRef = { revealMap: revealMapSpy };
+
+    const scrollSpy = jasmine.createSpy('scrollIntoView');
+    const focusSpy = jasmine.createSpy('focus');
+    (component as any).routeMapHomeEl = {
+      nativeElement: { scrollIntoView: scrollSpy, focus: focusSpy },
+    };
+
+    component.onMapHintRequested();
+
+    expect(revealMapSpy).toHaveBeenCalledTimes(1);
+
+    tick();
+
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+  }));
 });

@@ -79,6 +79,18 @@
                   (currentValue)="onEndStationChange($event)"
                 ></app-dropdown-group-obrs>
               </div>
+              <!-- MAP HINT CTA (OBRS-1211). Sits inside the @if so it never shows
+              before the origin/destination fields are ready, and after the
+              station-group's own closing div so it renders on its own row
+              beneath the merged start/swap/end bar (`.station-section` is
+              `flex-wrap: wrap`). Gates `<app-route-map-panel>` — the sole
+              call site in the repo that loads Google Maps JS — behind this
+              explicit tap; see docs/adr for the full rationale. -->
+              <button type="button" class="btn btn-link p-0 map-hint-btn w-100"
+                      data-testid="show-route-map" (click)="onMapHintClick()">
+                <i class="bi bi-map me-1" aria-hidden="true"></i>
+                {{ 'HOME.ROUTE_MAP.MAP_HINT_CTA' | translate }}
+              </button>
             }
             <!-- DEPARTURE DATE -->
             <div class="form-group-obrs">

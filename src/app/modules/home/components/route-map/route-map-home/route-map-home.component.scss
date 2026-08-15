@@ -78,6 +78,38 @@
   color: $primary-blue;
 }
 
+// ---- Map placeholder (OBRS-1211) — shown until the user asks to reveal the
+// gated <app-route-map-panel>, which is the sole call site that loads the
+// paid Google Maps JS SDK. ----
+.map-placeholder {
+  color: $text-lightblack;
+}
+
+.map-placeholder-icon {
+  color: $primary-blue;
+  font-size: 2.5rem;
+}
+
+.map-placeholder-text {
+  color: $text-softblack;
+}
+
+.map-placeholder-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.6rem 1.4rem;
+  background: $primary-blue;
+  color: $text-white;
+  border: none;
+  border-radius: $radius-lg;
+  font-weight: $font-weight-semibold;
+
+  &:hover, &:focus-visible {
+    background: $primary-blue-hover;
+  }
+}
+
 // ---- Spinner -> brand cyan (overrides PrimeNG color-cycle keyframe) ----
 :host ::ng-deep .p-progressspinner-circle {
   stroke: $primary-blue !important;

@@ -8,6 +8,7 @@ import { StationApi } from '../../shared/interfaces/station.interface';
 import { AlertService } from '../../shared/services/alert.service';
 import { HomeBookingComponent } from './components/home-booking/home-booking.component';
 import { PickupDropoffConfirmedEvent } from '../../shared/interfaces/route-map.interface';
+import { RouteMapHomeComponent } from './components/route-map/route-map-home/route-map-home.component';
 
 @Component({
     selector: 'app-home',
@@ -18,6 +19,8 @@ import { PickupDropoffConfirmedEvent } from '../../shared/interfaces/route-map.i
 export class HomeComponent implements OnInit, OnDestroy {
   @ViewChild(HomeBookingComponent) homeBookingRef!: HomeBookingComponent;
   @ViewChild('homeBookingEl', { read: ElementRef }) homeBookingEl!: ElementRef;
+  @ViewChild(RouteMapHomeComponent) routeMapHomeRef!: RouteMapHomeComponent;
+  @ViewChild('routeMapHomeEl', { read: ElementRef }) routeMapHomeEl!: ElementRef;
 
   allStations: StationApi[] = [];
 
@@ -66,6 +69,21 @@ export class HomeComponent implements OnInit, OnDestroy {
         behavior: 'smooth',
         block: 'start',
       });
+    });
+  }
+
+  /** OBRS-1211: counterpart of `onPickupDropoffConfirmed()` above, in the
+   *  opposite direction — reveals the gated map panel and scrolls down to it,
+   *  instead of collecting a confirmed pair and scrolling up to the form. */
+  onMapHintRequested(): void {
+    this.routeMapHomeRef.revealMap();
+
+    setTimeout(() => {
+      this.routeMapHomeEl?.nativeElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+      this.routeMapHomeEl?.nativeElement?.focus({ preventScroll: true });
     });
   }
 }

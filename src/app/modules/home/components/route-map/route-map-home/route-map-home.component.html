@@ -122,18 +122,32 @@
                 <div class="mb-2">
                   <div class="map-title">{{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}</div>
                 </div>
-                <app-route-map-panel
-                  [pickupStops]="pickupStops"
-                  [dropoffStops]="dropoffStops"
-                  [selectedPickupSlug]="selectedPickupSlug"
-                  [selectedDropoffSlug]="selectedDropoffSlug"
-                  [mapsApiKey]="mapsApiKey"
-                  [routeMeta]="routeMeta"
-                  [userMarkerTitle]="'HOME.ROUTE_MAP.YOU_ARE_HERE' | translate"
-                  (userLocated)="onUserLocated($event)"
-                  (pickupStopSelected)="onPickupStopSelected($event)"
-                  (dropoffStopSelected)="onDropoffStopSelected($event)"
-                ></app-route-map-panel>
+                <!-- OBRS-1211: `<app-route-map-panel>` is the sole call site in the
+                repo that loads Google Maps JS — gated behind an explicit tap so it
+                never mounts (and never fires the request) on a plain page load. -->
+                @if (mapRevealed) {
+                  <app-route-map-panel
+                    [pickupStops]="pickupStops"
+                    [dropoffStops]="dropoffStops"
+                    [selectedPickupSlug]="selectedPickupSlug"
+                    [selectedDropoffSlug]="selectedDropoffSlug"
+                    [mapsApiKey]="mapsApiKey"
+                    [routeMeta]="routeMeta"
+                    [userMarkerTitle]="'HOME.ROUTE_MAP.YOU_ARE_HERE' | translate"
+                    (userLocated)="onUserLocated($event)"
+                    (pickupStopSelected)="onPickupStopSelected($event)"
+                    (dropoffStopSelected)="onDropoffStopSelected($event)"
+                  ></app-route-map-panel>
+                } @else {
+                  <div class="map-placeholder text-center d-flex flex-column justify-content-center align-items-center h-100 py-5">
+                    <i class="bi bi-map map-placeholder-icon mb-3 d-block" aria-hidden="true"></i>
+                    <p class="map-placeholder-text mb-3">{{ 'HOME.ROUTE_MAP.MAP_PLACEHOLDER_TEXT' | translate }}</p>
+                    <button type="button" class="map-placeholder-cta" (click)="revealMap()">
+                      <i class="bi bi-map me-1" aria-hidden="true"></i>
+                      {{ 'HOME.ROUTE_MAP.VIEW_MAP' | translate }}
+                    </button>
+                  </div>
+                }
               </div>
             </div>
             <!-- RIGHT PANEL: Dropoff detail + summary -->
@@ -173,7 +187,7 @@
         }
         <!-- ===== MOBILE/TABLET (<1200px): TabView with 3 tabs ===== -->
         @if (!isDesktop) {
-          <p-tabs [(value)]="activeTabIndex">
+          <p-tabs [value]="activeTabIndex" (valueChange)="onTabsValueChange($event)">
             <p-tablist>
               <p-tab [value]="0">
                 <i class="bi bi-geo-alt me-1"></i>
@@ -210,22 +224,30 @@
                   ></app-route-stop-detail-card>
                 </div>
               </p-tabpanel>
-              <!-- TAB 2: Map -->
+              <!-- TAB 2: Map. OBRS-1211: `<app-route-map-panel>` gated behind
+              `mapRevealed`, no @else — tapping this tab sets `mapRevealed=true`
+              in the same turn (`onTabsValueChange()`), so there is no frame
+              where this panel is visible with an empty map underneath it, and a
+              placeholder here would be dead code. `<app-route-travel-summary>`
+              stays OUTSIDE the @if: it must render whenever this tab is open,
+              map revealed or not (AC#3). -->
               <p-tabpanel [value]="1">
-                <div>
-                  <app-route-map-panel
-                    [pickupStops]="pickupStops"
-                    [dropoffStops]="dropoffStops"
-                    [selectedPickupSlug]="selectedPickupSlug"
-                    [selectedDropoffSlug]="selectedDropoffSlug"
-                    [mapsApiKey]="mapsApiKey"
-                    [routeMeta]="routeMeta"
-                    [userMarkerTitle]="'HOME.ROUTE_MAP.YOU_ARE_HERE' | translate"
-                    (userLocated)="onUserLocated($event)"
-                    (pickupStopSelected)="onPickupStopSelected($event)"
-                    (dropoffStopSelected)="onDropoffStopSelected($event)"
-                  ></app-route-map-panel>
-                </div>
+                @if (mapRevealed) {
+                  <div>
+                    <app-route-map-panel
+                      [pickupStops]="pickupStops"
+                      [dropoffStops]="dropoffStops"
+                      [selectedPickupSlug]="selectedPickupSlug"
+                      [selectedDropoffSlug]="selectedDropoffSlug"
+                      [mapsApiKey]="mapsApiKey"
+                      [routeMeta]="routeMeta"
+                      [userMarkerTitle]="'HOME.ROUTE_MAP.YOU_ARE_HERE' | translate"
+                      (userLocated)="onUserLocated($event)"
+                      (pickupStopSelected)="onPickupStopSelected($event)"
+                      (dropoffStopSelected)="onDropoffStopSelected($event)"
+                    ></app-route-map-panel>
+                  </div>
+                }
                 <div class="mt-3">
                   <app-route-travel-summary
                     [routeMeta]="routeMeta"

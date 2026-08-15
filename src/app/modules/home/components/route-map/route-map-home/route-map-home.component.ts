@@ -71,6 +71,18 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
   activeTabIndex: number = 0;
 
   /**
+   * OBRS-1211: gates `<app-route-map-panel>` — the sole call site in the repo
+   * that loads Google Maps JS — behind an explicit user request, instead of
+   * mounting it (and firing the paid `maps.googleapis.com/maps/api/js` request)
+   * on every `/home` page load. `false` until `revealMap()` runs.
+   *
+   * Deliberately NOT named `showMap`: that name is already taken by
+   * `route-map-panel.component.ts:336`, where it means "the Maps JS SDK
+   * finished loading" — a different signal entirely, one level down.
+   */
+  mapRevealed = false;
+
+  /**
    * Straight-line distance (km) from the user's location to each pickup stop,
    * keyed by slug. Null until the user taps "Use my location"; reset when the
    * route changes since the pickup set is then different.
@@ -191,6 +203,43 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
         }
         this.applyRouteData(response.data);
       });
+  }
+
+  /**
+   * OBRS-1211: reveals the gated map panel. Called both from the desktop/mobile
+   * placeholder's own button and from `HomeComponent.onMapHintRequested()` (the
+   * "not sure where to board?" link on the booking card above).
+   *
+   * On mobile, also switches the tab strip to the map tab (`1`) so the reveal
+   * is visible without a second tap — desktop shows the map in its own column,
+   * so `activeTabIndex` (0=pickup / 1=dropoff there) must NOT be touched.
+   */
+  revealMap(): void {
+    this.mapRevealed = true;
+    if (!this.isDesktop) {
+      this.activeTabIndex = 1;
+    }
+  }
+
+  /**
+   * OBRS-1211: mobile `<p-tabs>` no longer uses `[(value)]` two-way binding —
+   * tapping the map tab (index `1`) has to count as a reveal request too, and
+   * a plain banana-in-a-box binding has no hook to do that from.
+   *
+   * `activeTabIndex` means something different per breakpoint (see
+   * `revealMap()`'s comment), so this must stay guarded by `!this.isDesktop`
+   * exactly like `revealMap()` — desktop's tab `1` is "drop-off", not "map".
+   *
+   * `value`'s type is `p-tabs`' own `valueChange` shape (`string | number |
+   * undefined`) — this component only ever hands it numeric literals, but the
+   * signature has to accept what PrimeNG actually emits.
+   */
+  onTabsValueChange(value: string | number | undefined): void {
+    const index = Number(value);
+    this.activeTabIndex = index;
+    if (!this.isDesktop && index === 1) {
+      this.mapRevealed = true;
+    }
   }
 
   onDirectionChange(value: string): void {

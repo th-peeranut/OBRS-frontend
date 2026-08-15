@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, Signal } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output, Signal } from '@angular/core';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import dayjs from 'dayjs';
@@ -185,6 +185,12 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   // very first frame (AC#1).
   isRoundTripReturn: boolean = true;
 
+  /** OBRS-1211: tells `HomeComponent` the user asked to see the pickup/drop-off
+   *  map, so it can reveal `app-route-map-home`'s gated panel and scroll to it.
+   *  Mirrors the existing `onPickupDropoffConfirmed()` hand-off between these
+   *  two siblings, just in the opposite direction. */
+  @Output() mapHintRequested = new EventEmitter<void>();
+
   constructor(
     private fb: FormBuilder,
     private router: Router,
@@ -367,6 +373,12 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     // Home. The search button would simply stop working. The results list
     // belongs to the destination page and stays there.
     this.router.navigate(['/schedule-booking']);
+  }
+
+  /** OBRS-1211: the "not sure where to board?" link — defers to `HomeComponent`
+   *  to reveal the gated map panel and scroll to it. */
+  onMapHintClick(): void {
+    this.mapHintRequested.emit();
   }
 
   /** OBRS-575: tapping a quick-pick route reuses the exact prefill call
