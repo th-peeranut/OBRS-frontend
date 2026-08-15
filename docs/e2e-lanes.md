@@ -63,10 +63,17 @@ trusting it, in three ways:
    `e2e/fixtures/admin-auth.json`. That makes SIT a hard dependency of every test in that
    run, including ones that mock 100% of their own traffic. A gate a cold-starting Koyeb
    instance can turn red is not a gate.
-2. **The frontend is served with the default (local) configuration**, so `apiUrl` points
-   at `localhost:8080` where nothing is listening. An unintercepted request gets
-   ECONNREFUSED instead of quietly succeeding against SIT. A spec that passes here is
-   *provably* hermetic rather than asserted to be.
+2. **The frontend is served with the `gate` configuration**, which is the default (local)
+   environment — `apiUrl` points at `localhost:8080` where nothing is listening, so an
+   unintercepted API request gets ECONNREFUSED instead of quietly succeeding against SIT —
+   plus web fonts served out of `e2e/fixtures/fonts/` instead of Google's CDN.
+   **OBRS-1370 correction:** this bullet used to end "a spec that passes here is *provably*
+   hermetic". It was not. A third-party URL written absolutely inside a stylesheet never
+   goes near `apiUrl`, so the lane fetched Google Fonts on every page load and a gstatic
+   404 turned a `dev` merge red (OBRS-1369). Three things enforce it now instead of
+   asserting it: the local fonts above, `--host-resolver-rules` in the config's
+   `launchOptions` (Chromium resolves no hostname but localhost), and
+   `obrs-1370-lane-offline.spec.ts`, which goes red naming any host outside this machine.
 3. **An explicit viewport**, so a Playwright upgrade cannot move what these tests measure.
 
 Shared stubs for the public pages live in `e2e/fixtures/public-page-mocks.ts`. Call it
@@ -288,9 +295,13 @@ without declaring what it runs, which closes the family rather than the two inst
     decision" sentence here as unverified until you check the file it describes.
   The cost of the lane was always wall-clock, never quota. It is safe as a blocking gate
   because it is hermetic by construction — `playwright.gate.config.ts` serves the app with
-  the DEFAULT configuration, so `apiUrl` points at a `localhost:8080` where nothing
+  the `gate` configuration, so `apiUrl` points at a `localhost:8080` where nothing
   listens, and an un-intercepted request gets ECONNREFUSED instead of silently reaching
-  live SIT. A cold-starting Koyeb instance therefore cannot turn this job red.
+  live SIT. A cold-starting Koyeb instance therefore cannot turn this job red. **Until
+  OBRS-1370 that sentence covered less than it sounded like** — see bullet 2 above: the
+  lane also reached `fonts.googleapis.com`, `fonts.gstatic.com`, `accounts.google.com`,
+  `ssl.gstatic.com` and `placehold.co`, none of which travel through `apiUrl`, and any of
+  their outages could turn this job red. Measured, then closed.
 - **`b2c-critical-path` used to click `.btn-confirm` with `force: true`.** This bullet
   already said that "reports success whether or not the click lands" — and OBRS-750 found
   out the hard way that it was worse than that. `force` does not aim the event at the

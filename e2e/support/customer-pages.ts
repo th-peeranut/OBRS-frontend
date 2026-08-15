@@ -622,6 +622,13 @@ export async function seedCustomerSession(page: Page, dark: boolean): Promise<vo
   // No key and no network in this lane; without the abort the Home page waits on
   // the Maps bootstrap before it finishes rendering.
   await page.route('**/maps.googleapis.com/**', (route) => route.abort());
+
+  // OBRS-1370. /login pulls the Google Identity Services client, which pulls a second file
+  // from ssl.gstatic.com. Nothing in this lane signs in with Google, and these were two of
+  // the five external hosts this lane was measured reaching. `obrs-854-account-deeplink`
+  // aborts the same script for the same reason; this is the shared-harness half.
+  await page.route('**/accounts.google.com/**', (route) => route.abort());
+  await page.route('**/ssl.gstatic.com/**', (route) => route.abort());
 }
 
 /**

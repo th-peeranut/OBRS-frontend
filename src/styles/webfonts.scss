@@ -1,0 +1,12 @@
+// The app's two web fonts, in their own partial so the E2E gate lane can swap them for a
+// locally served mirror (`webfonts.gate.scss`, via the `gate` build configuration in
+// angular.json). OBRS-1370: these two lines are the reason a lane advertised as hermetic
+// reached the public internet on every page load -- an absolute URL inside a stylesheet
+// never passes through `apiUrl`, so nothing in the lane's design was ever going to catch
+// them. Production is unchanged and still loads them from Google.
+//
+// Must stay first in the compiled output: plain `@import url(...)` is a CSS statement, and
+// CSS ignores one that appears after a rule. `styles.scss` imports this file first for that
+// reason -- keep it there.
+@import url("https://fonts.googleapis.com/css2?family=Sarabun:wght@200;300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@200..700,0..1&display=swap");
