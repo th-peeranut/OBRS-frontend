@@ -707,6 +707,34 @@ describe('RouteMapHomeComponent — map panel gated behind explicit request (OBR
     fixture.detectChanges();
     expect(travelSummaryElements().length).toBe(1);
   });
+
+  // The one state that reaches the mobile map tab WITHOUT going through
+  // onTabsValueChange(): the user is on desktop tab 1 (which means DROP-OFF
+  // there) and shrinks the viewport past 1200px, so the mobile branch re-renders
+  // with activeTabIndex already 1 (which means MAP here) and mapRevealed still
+  // false. Before the @else existed that landed them on an empty tab with
+  // nothing to press — the dead end this asserts is gone.
+  it('mobile map tab reached by a desktop->mobile resize still offers a way to load the map', async () => {
+    await createFixture(false);
+    fixture.detectChanges();
+
+    component.activeTabIndex = 1; // carried over from the desktop drop-off tab
+    fixture.detectChanges();
+
+    expect(component.mapRevealed).toBeFalse();
+    expect(mapPanelElements().length).toBe(0);
+
+    const cta = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      '.map-placeholder-cta'
+    );
+    expect(cta).not.toBeNull();
+
+    cta!.click();
+    fixture.detectChanges();
+
+    expect(component.mapRevealed).toBeTrue();
+    expect(mapPanelElements().length).toBe(1);
+  });
 });
 
 // ── OBRS-1211: activeTabIndex has two different meanings per breakpoint (see

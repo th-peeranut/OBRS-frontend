@@ -225,10 +225,14 @@
                 </div>
               </p-tabpanel>
               <!-- TAB 2: Map. OBRS-1211: `<app-route-map-panel>` gated behind
-              `mapRevealed`, no @else — tapping this tab sets `mapRevealed=true`
-              in the same turn (`onTabsValueChange()`), so there is no frame
-              where this panel is visible with an empty map underneath it, and a
-              placeholder here would be dead code. `<app-route-travel-summary>`
+              `mapRevealed`. Tapping this tab normally sets `mapRevealed=true` in
+              the same turn (`onTabsValueChange()`), so the @else is not the
+              common path — it is the ONLY exit from the one state that reaches
+              this tab without it: a viewport resize from desktop (where value 1
+              means the DROP-OFF tab) to mobile (where it means MAP), which
+              re-renders this branch with `activeTabIndex` already 1 and
+              `mapRevealed` still false. Without it that resize lands the user on
+              an empty tab with nothing to press. `<app-route-travel-summary>`
               stays OUTSIDE the @if: it must render whenever this tab is open,
               map revealed or not (AC#3). -->
               <p-tabpanel [value]="1">
@@ -246,6 +250,15 @@
                       (pickupStopSelected)="onPickupStopSelected($event)"
                       (dropoffStopSelected)="onDropoffStopSelected($event)"
                     ></app-route-map-panel>
+                  </div>
+                } @else {
+                  <div class="map-placeholder text-center py-5">
+                    <i class="bi bi-map map-placeholder-icon mb-3 d-block" aria-hidden="true"></i>
+                    <p class="map-placeholder-text mb-3">{{ 'HOME.ROUTE_MAP.MAP_PLACEHOLDER_TEXT' | translate }}</p>
+                    <button type="button" class="map-placeholder-cta" (click)="revealMap()">
+                      <i class="bi bi-map me-1" aria-hidden="true"></i>
+                      {{ 'HOME.ROUTE_MAP.VIEW_MAP' | translate }}
+                    </button>
                   </div>
                 }
                 <div class="mt-3">

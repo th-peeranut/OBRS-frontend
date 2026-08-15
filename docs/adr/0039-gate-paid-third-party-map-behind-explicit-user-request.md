@@ -56,9 +56,19 @@ button and the booking-card hint link: in every case, the user has taken an
 action that can only mean "show me the map" — nothing else lives on that
 tab. Requiring a SECOND tap (open the tab, then press a placeholder button
 inside it) would be gating for the sake of gating: the tap into the tab is
-already unambiguous intent, and inserting a placeholder there would be dead
-code with no frame in which it is ever visible (`onTabsValueChange`'s reveal
-and the tab switch commit in the same synchronous handler). The desktop
+already unambiguous intent, and on that path the placeholder is never seen —
+`onTabsValueChange`'s reveal and the tab switch commit in the same synchronous
+handler.
+
+The mobile tab still carries the placeholder anyway, because that path is not
+the only way in. A viewport resize from desktop to mobile re-renders the mobile
+branch with `activeTabIndex` already `1` — which meant DROP-OFF on the strip the
+user was just looking at and means MAP on this one — while `mapRevealed` is
+still false. Without the placeholder that resize ends on an empty tab with
+nothing to press, which is the shape of OBRS-1085 (a blank map surface the user
+cannot recover from) rather than a saving. Pinned by
+`route-map-home.component.spec.ts` — "mobile map tab reached by a
+desktop->mobile resize still offers a way to load the map". The desktop
 `activeTabIndex` strip (0=pickup, 1=dropoff) carries no such meaning — its
 tab `1` is drop-off, not map — so `revealMap()` and `onTabsValueChange()` are
 both guarded by `!this.isDesktop` to keep the two meanings from crossing.
