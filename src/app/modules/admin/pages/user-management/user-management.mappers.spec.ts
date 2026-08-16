@@ -1,5 +1,6 @@
 import {
   RoleOption,
+  SALES_POINT_ACTIVE_NONE,
   StatusOption,
   UserRow,
   buildUserFormValues,
@@ -13,6 +14,7 @@ import {
   toCreateUserPayload,
   toRoleFilterOptions,
   toRoleOptions,
+  toSalesPointsPayload,
   toStatusOptions,
   translateRoleSlug,
   translateStatusCode,
@@ -595,6 +597,73 @@ describe('user-management.mappers', () => {
       expect(values['phoneNumber']).toBe('');
       expect(values['email']).not.toBe('-');
       expect(values['phoneNumber']).not.toBe('-');
+    });
+
+    // OBRS-1258 AC4: opening on a user with existing sales-point values pre-selects both.
+    it('OBRS-1258: pre-selects allowedSalesPointCodes/activeSalesPointCode from the detail', () => {
+      const detail: AdminUserDto = {
+        id: 1,
+        roles: ['salesperson'],
+        salesPointCodes: ['NONG_CHAK', 'BAN_BUENG'],
+        activeSalesPointCode: 'BAN_BUENG',
+      };
+
+      const values = buildUserFormValues(detail, user, 'en');
+
+      expect(values['allowedSalesPointCodes']).toEqual(['NONG_CHAK', 'BAN_BUENG']);
+      expect(values['activeSalesPointCode']).toBe('BAN_BUENG');
+    });
+
+    // A salesperson who was never configured (or any other user) gets the sentinel, never null -
+    // a null-mapped option would be indistinguishable from "nothing chosen yet" in app-admin-dropdown.
+    it('OBRS-1258: falls back to an empty array / the SALES_POINT_ACTIVE_NONE sentinel when absent', () => {
+      const detail: AdminUserDto = { id: 1, roles: [] };
+
+      const values = buildUserFormValues(detail, user, 'en');
+
+      expect(values['allowedSalesPointCodes']).toEqual([]);
+      expect(values['activeSalesPointCode']).toBe(SALES_POINT_ACTIVE_NONE);
+    });
+  });
+
+  describe('toSalesPointsPayload', () => {
+    it('OBRS-1258: copies the allowed codes and passes a real active code through unchanged', () => {
+      const payload = toSalesPointsPayload({
+        allowedSalesPointCodes: ['NONG_CHAK', 'BAN_BUENG'],
+        activeSalesPointCode: 'BAN_BUENG',
+      });
+
+      expect(payload).toEqual({
+        salesPointCodes: ['NONG_CHAK', 'BAN_BUENG'],
+        activeSalesPointCode: 'BAN_BUENG',
+      });
+    });
+
+    // AC3: an empty allowed set is a valid, meaningful value - it must reach the wire as [],
+    // not be dropped or defaulted away.
+    it('OBRS-1258 AC3: an empty allowed set is sent as [], truly clearing server state', () => {
+      const payload = toSalesPointsPayload({
+        allowedSalesPointCodes: [],
+        activeSalesPointCode: SALES_POINT_ACTIVE_NONE,
+      });
+
+      expect(payload).toEqual({ salesPointCodes: [], activeSalesPointCode: null });
+    });
+
+    // The sentinel is a form-only concept - it must never leak past this mapper onto the wire.
+    it('OBRS-1258: translates the SALES_POINT_ACTIVE_NONE sentinel to null at the payload boundary', () => {
+      const payload = toSalesPointsPayload({
+        allowedSalesPointCodes: ['NONG_CHAK'],
+        activeSalesPointCode: SALES_POINT_ACTIVE_NONE,
+      });
+
+      expect(payload.activeSalesPointCode).toBeNull();
+    });
+
+    it('OBRS-1258: defaults to the sentinel-mapped-to-null shape when both keys are absent', () => {
+      const payload = toSalesPointsPayload({});
+
+      expect(payload).toEqual({ salesPointCodes: [], activeSalesPointCode: null });
     });
   });
 

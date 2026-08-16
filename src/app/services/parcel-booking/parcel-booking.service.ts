@@ -44,11 +44,11 @@ export interface ParcelBookingProfile {
  * OBRS-415 — customer-facing parcel booking. Deliberately its OWN service
  * (not `StaffApiService`): CLAUDE.md/UX-OBRS-415 §3 — do not import a
  * staff-scoped service into a customer module. `GET /api/private/users/me`
- * is the same "authenticated-any" endpoint `StaffApiService.getMe()` already
- * calls for the staff walk-in form, but that service lives in the staff
- * shell — this is a thin, parallel call from the customer shell, not a fork
- * of shared logic (there is none to share; both just hit the same plain
- * endpoint).
+ * is an "authenticated-any" endpoint — this is a thin, parallel call from the
+ * customer shell, not a fork of shared logic (there is none to share; both
+ * just hit the same plain endpoint). (OBRS-1258: the staff walk-in sell page's
+ * own former caller of this endpoint, `StaffApiService.getMe()`, was removed —
+ * its one use, defaulting the pickup stop, moved server-side.)
  */
 @Injectable({ providedIn: 'root' })
 export class ParcelBookingService {

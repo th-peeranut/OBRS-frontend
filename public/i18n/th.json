@@ -791,7 +791,13 @@
       "UNLOCK_CONFIRM_TITLE": "ยืนยันการปลดล็อก",
       "UNLOCK_CONFIRM_MESSAGE": "การปลดล็อกบัญชีนี้จะอนุญาตให้เข้าสู่ระบบได้ทันที:",
       "UNLOCK_BTN": "ปลดล็อก",
-      "UNLOCKING": "กำลังปลดล็อก..."
+      "UNLOCKING": "กำลังปลดล็อก...",
+      "SALES_POINTS_SECTION_TITLE": "จุดขาย",
+      "ALLOWED_SALES_POINTS_LABEL": "จุดขายที่อนุญาต",
+      "ACTIVE_SALES_POINT_LABEL": "จุดขายที่ประจำอยู่ตอนนี้",
+      "ACTIVE_SALES_POINT_NONE": "ไม่กำหนด",
+      "SALES_POINTS_EMPTY": "ยังไม่มีจุดขายที่ตั้งค่าไว้ในระบบ",
+      "SALES_POINTS_UNAVAILABLE": "ไม่สามารถโหลดรายชื่อจุดขายได้ ลองใหม่อีกครั้ง"
     },
     "VEHICLES": {
       "MONITORING": "กำลังติดตามกองรถ",

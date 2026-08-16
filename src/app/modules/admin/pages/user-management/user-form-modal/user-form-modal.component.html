@@ -278,6 +278,63 @@
                   }
                 </section>
               }
+              <!-- OBRS-1258 AC1/AC5: edit-mode only, and only for a salesperson - gated live off
+              the roles chip list above (isSalespersonSelected), the same source of truth
+              isRoleChecked reads, so ticking/unticking 'salesperson' reveals/hides this
+              immediately without a second flag to keep in sync. -->
+              @if (mode === 'edit' && isSalespersonSelected) {
+                <section class="user-editor-section">
+                  <div class="user-editor-section-title">
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">storefront</span>
+                    <h5>{{ 'ADMIN.USERS.SALES_POINTS_SECTION_TITLE' | translate }}</h5>
+                  </div>
+                  @if (salesPointsLoadState === 'loading') {
+                    <app-loading-state variant="inline"></app-loading-state>
+                  } @else if (salesPointsLoadState === 'error') {
+                    <small class="admin-error" data-testid="user-sales-points-unavailable">
+                      {{ 'ADMIN.USERS.SALES_POINTS_UNAVAILABLE' | translate }}
+                    </small>
+                  } @else if (salesPointOptions.length === 0) {
+                    <p class="admin-muted">{{ 'ADMIN.USERS.SALES_POINTS_EMPTY' | translate }}</p>
+                  } @else {
+                    <div class="user-field">
+                      <label>{{ 'ADMIN.USERS.ALLOWED_SALES_POINTS_LABEL' | translate }}</label>
+                      <div class="user-role-list">
+                        @for (point of salesPointOptions; track point.code) {
+                          <label
+                            class="user-role-chip"
+                            [class.is-selected]="isSalesPointChecked(point.code)"
+                            >
+                            <input
+                              type="checkbox"
+                              [checked]="isSalesPointChecked(point.code)"
+                              (change)="toggleSalesPointSelection(point.code, $any($event.target).checked)"
+                              />
+                              <span>{{ point.name }}</span>
+                            </label>
+                          }
+                        </div>
+                        @if (serverFieldErrors['salesPointCodes']) {
+                          <small class="admin-error">
+                            {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['salesPointCodes'] } }}
+                          </small>
+                        }
+                      </div>
+                      <div class="user-field user-modal-select">
+                        <label>{{ 'ADMIN.USERS.ACTIVE_SALES_POINT_LABEL' | translate }}</label>
+                        <app-admin-dropdown
+                          formControlName="activeSalesPointCode"
+                          [options]="activeSalesPointOptions"
+                        ></app-admin-dropdown>
+                        @if (serverFieldErrors['activeSalesPointCode']) {
+                          <small class="admin-error">
+                            {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['activeSalesPointCode'] } }}
+                          </small>
+                        }
+                      </div>
+                    }
+                  </section>
+                }
             </form>
           </div>
           <div class="user-editor-footer">

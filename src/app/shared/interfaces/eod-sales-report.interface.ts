@@ -26,12 +26,14 @@ export interface EodSalespersonRowDto {
   salespersonId: number | null;
   salespersonName: string;
   /**
-   * `salesPointStopLabel` is the Stop's raw `slug` (e.g. "bkk_hub"), NOT a translated
-   * display name — this is an internal operational report. Both are `null` when the
-   * salesperson's profile has no sales-point stop set.
+   * OBRS-1258: renamed from `salesPointStopId`/`salesPointStopLabel` — the backend's
+   * `salesPointStop` concept (a single assigned stop) was replaced by a set of allowed sales
+   * points plus one active one. `salesPointLabel` is the sales point's raw `code` (e.g.
+   * "bkk_hub"), NOT a translated display name — this is an internal operational report. Both
+   * are `null` when the salesperson has no active sales point set.
    */
-  salesPointStopId: number | null;
-  salesPointStopLabel: string | null;
+  salesPointId: number | null;
+  salesPointLabel: string | null;
   bookingCount: number;
   ticketsSold: number;
   /**

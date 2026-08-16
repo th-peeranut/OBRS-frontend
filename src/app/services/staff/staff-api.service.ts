@@ -47,7 +47,7 @@ import {
   PerHeadEarningsGranularity,
   PerHeadEarningsRespDto,
 } from '../../shared/interfaces/driver-cash.interface';
-import { AdminUserDto, DriverDto } from '../admin/admin-api.service';
+import { DriverDto } from '../admin/admin-api.service';
 // OBRS-100: type-only — BoardingListComponent (shared/) reuses the response
 // SHAPE for its supplementary print/export trip header, but must not take a
 // runtime dependency on AdminApiService (see docs/adr/0015). Same type-only
@@ -220,6 +220,13 @@ export interface RouteStopTimeDto {
 
 export interface RouteStopsDto {
   stops: RouteStopTimeDto[];
+  // OBRS-1258: replaces the old client-side salesPointStop default-pickup mechanism.
+  // Resolved SERVER-side, per-caller, from the caller's active sales point on THIS route —
+  // `null` when the caller has no active sales point or it isn't on this route (sell-page
+  // then falls back to the route origin, same as before this field existed). Deliberately
+  // non-optional: every caller of getRouteStops must supply it, including the error-fallback
+  // literal in sell-page.component.ts.
+  defaultPickupStopSlug: string | null;
 }
 
 export interface WalkInBookingReqDto {
@@ -683,16 +690,6 @@ export class StaffApiService {
   getDrivers(): Observable<ResponseAPI<DriverDto[]>> {
     return this.http.get<ResponseAPI<DriverDto[]>>(
       `${environment.apiUrl}/api/private/users/drivers`,
-      { context: this.skipContext }
-    );
-  }
-
-  // Current user's own profile — GET /api/private/users/me. Used by the walk-in
-  // sell page (OBRS-193) to read the salesperson's assigned salesPointStop and
-  // default the pickup stop selection to it.
-  getMe(): Observable<ResponseAPI<AdminUserDto>> {
-    return this.http.get<ResponseAPI<AdminUserDto>>(
-      `${environment.apiUrl}/api/private/users/me`,
       { context: this.skipContext }
     );
   }
