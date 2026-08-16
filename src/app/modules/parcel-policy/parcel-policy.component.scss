@@ -1,0 +1,161 @@
+@import "../../../styles/variables.scss";
+
+// OBRS-775: a component that declares no `:host` display renders as `display: inline`, and an
+// inline box may not contain the block-level children below it.
+:host {
+  display: block;
+}
+
+.policy-container {
+  padding: $space-xl clamp(16px, 8vw, 360px);
+  background-color: $primary-white;
+}
+
+.policy-card {
+  max-width: 1100px;
+  margin: 0 auto;
+  color: $text-softblack;
+
+  h1 {
+    margin: 0 0 20px;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+    line-height: $line-height-tight;
+  }
+
+  p {
+    margin: 0;
+    font-size: $font-size-base;
+    line-height: 1.9;
+    white-space: normal;
+  }
+
+  // The version/date stamp is metadata under the title, not another clause — de-emphasised so it
+  // is never read as part of the terms. Same values as privacy-policy/business-policy.
+  p.policy-version {
+    margin-top: -12px;
+    margin-bottom: 20px;
+    font-size: $font-size-sm;
+    opacity: 0.75;
+  }
+
+  // The twelve clauses arrive through [innerHTML] and so carry no component scoping attribute;
+  // ::ng-deep scoped by .policy-body is the same escape hatch privacy-policy uses for its notice.
+  ::ng-deep .policy-body {
+    h2 {
+      margin: 32px 0 12px;
+      font-size: $font-size-lg;
+      font-weight: $font-weight-bold;
+      line-height: $line-height-tight;
+      color: $text-black; // 12.6:1 on $primary-white
+    }
+
+    h2:first-child {
+      margin-top: 24px;
+    }
+
+    p {
+      margin: 0 0 16px;
+      font-size: $font-size-base;
+      line-height: 1.9;
+    }
+
+    ul {
+      margin: 0 0 16px;
+      padding-left: 24px;
+      list-style: disc;
+    }
+
+    li {
+      margin-bottom: 8px;
+      font-size: $font-size-base;
+      line-height: 1.9;
+    }
+
+    strong {
+      font-weight: $font-weight-bold;
+      color: $text-black;
+    }
+  }
+}
+
+// Clause 2's rows are server-driven and carry an icon, so they are a list of items rather than
+// prose — laid out here rather than in .policy-body, which styles translated markup only.
+.policy-prohibited-list {
+  margin: 0 0 16px;
+  padding-left: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: $font-size-base;
+    line-height: 1.9;
+  }
+
+  .material-symbols-outlined {
+    font-size: 20px;
+    line-height: 1;
+  }
+}
+
+// Shown when the config resolves to an empty prohibited list: intake is currently blocking
+// nothing, and saying so is the honest rendering.
+.policy-inline-note {
+  margin-bottom: 16px;
+  font-size: $font-size-sm;
+  opacity: 0.75;
+}
+
+// Failure covers 1 clause of 12 — the UI's loudness matches the actual damage (design-system.md
+// §4 Link role for the retry, not a full p-button).
+.policy-inline-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: $space-md;
+  color: $text-red;
+  font-size: $font-size-sm;
+}
+
+.policy-inline-error-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.policy-inline-retry {
+  color: $text-red;
+  text-decoration: underline;
+}
+
+.policy-cross-link {
+  margin-top: 32px;
+  font-size: $font-size-base;
+
+  a {
+    color: $primary-blue;
+    text-decoration: underline;
+  }
+}
+
+@media (max-width: 768px) {
+  .policy-container {
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .policy-card {
+    h1 {
+      font-size: $font-size-xl;
+      margin-bottom: 16px;
+    }
+
+    p {
+      font-size: $font-size-sm;
+      line-height: $line-height-relaxed;
+    }
+  }
+}

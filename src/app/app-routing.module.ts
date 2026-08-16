@@ -226,6 +226,18 @@ export const appRoutes: Routes = [
       ),
   },
   {
+    // OBRS-629: the parcel carriage terms. Same customerArea/no-requireAuth shape as the three
+    // policy routes above — a sender consigning cash at a counter has no account, and the terms
+    // they are agreeing to must be readable without one.
+    path: 'parcel-policy',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
+    loadChildren: () =>
+      import('./modules/parcel-policy/parcel-policy.module').then(
+        (m) => m.ParcelPolicyModule
+      ),
+  },
+  {
     path: 'how-to-book',
     canActivate: [AuthGuard],
     data: { customerArea: true },

@@ -45,6 +45,15 @@
     <p class="policy-cross-link">
       <a routerLink="/refund-policy">{{ 'POLICY.BUSINESS.SEE_REFUND_POLICY' | translate }}</a>
     </p>
+
+    <!-- OBRS-629 AC-5: items 4 and 5 above refuse liquids, fragile goods and oversized items —
+         read literally, they said we cannot carry parcels at all, on a site that was already
+         selling parcel carriage. They now say in their own text that they cover carry-on baggage
+         only; this is the pointer to the terms that do cover parcels. A link, not a copy: two
+         pages restating one rule is how this page reached the state OBRS-627 reports. -->
+    <p class="policy-cross-link">
+      <a routerLink="/parcel-policy">{{ 'POLICY.BUSINESS.SEE_PARCEL_POLICY' | translate }}</a>
+    </p>
   </div>
 </section>
 

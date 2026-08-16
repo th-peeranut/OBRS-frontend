@@ -176,7 +176,9 @@ test('cross-links with /business-policy in both directions', async ({ page }) =>
   await page.locator('.policy-cross-link a').click();
   await expect(page).toHaveURL(/\/business-policy$/);
 
-  await page.locator('.policy-cross-link a').click();
+  // Anchored on the href since OBRS-629: /business-policy now carries a second cross-link (to
+  // /parcel-policy), so a bare `.policy-cross-link a` is a strict-mode violation here, not a link.
+  await page.locator('.policy-cross-link a[href="/refund-policy"]').click();
   await expect(page).toHaveURL(/\/refund-policy$/);
   await expect(page.getByTestId('refund-policy-rates')).toBeVisible();
 });
