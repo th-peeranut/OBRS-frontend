@@ -39,6 +39,7 @@ export class ParcelWaybillPageComponent implements OnInit, OnDestroy {
   protected waybill: WaybillRespDto | null = null;
   protected qrDataUrl = '';
   protected trackQrDataUrl = '';
+  protected termsQrDataUrl = '';
   protected isLoading = true;
   protected hasError = false;
 
@@ -60,6 +61,12 @@ export class ParcelWaybillPageComponent implements OnInit, OnDestroy {
       this.hasError = true;
       return;
     }
+
+    // OBRS-629: the terms QR carries no parcel data, so it does not wait on the fetch — and it is
+    // the same URL on every waybill, which is exactly why it must never be built from `waybill`.
+    void this.renderQr(`${window.location.origin}/parcel-policy`).then((url) => {
+      this.termsQrDataUrl = url;
+    });
 
     this.staffApiService
       .getWaybill(parcelId)

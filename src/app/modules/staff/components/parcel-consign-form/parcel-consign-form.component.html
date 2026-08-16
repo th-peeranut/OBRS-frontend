@@ -345,6 +345,15 @@
                           {{ 'STAFF.PARCEL_CONSIGN.FIELD.PROHIBITED_ACK' | translate }}
                         </label>
                       </div>
+                      <!-- OBRS-629 AC-1: this counter is the only parcel channel open at go-live
+                           (OBRS-622 gated the online wizard), so it is where "before the sender
+                           pays" actually happens. target="_blank" keeps the half-filled form
+                           alive; the sender also leaves with the same terms on the waybill. -->
+                      <p class="parcel-consign-form__terms-link">
+                        <a routerLink="/parcel-policy" target="_blank" rel="noopener">
+                          {{ 'PARCEL.TERMS_LINK' | translate }}
+                        </a>
+                      </p>
                     </div>
 
                     @if (shareNotConfigured) {

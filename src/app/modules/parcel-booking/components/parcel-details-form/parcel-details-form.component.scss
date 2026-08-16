@@ -79,3 +79,14 @@ label {
   display: flex;
   justify-content: flex-end;
 }
+
+// OBRS-629 AC-1: sits directly above the submit button, so the terms are the last thing before
+// the sender pays rather than something they would have to go looking for in the footer.
+.parcel-details-form__terms-link {
+  margin: 16px 0 0;
+  text-align: right;
+
+  a {
+    text-decoration: underline;
+  }
+}
