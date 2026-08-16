@@ -31,8 +31,20 @@ function todayBusinessDate(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-const ADVANCE_ERROR_KEYS: Record<string, string> = {};
-const PER_HEAD_ERROR_KEYS: Record<string, string> = {};
+// OBRS-1389 — OBRS-1368 put the sales-point 403 behind these two forms as well,
+// and both were still `{}`, so the refusal read as GENERIC's "please try again".
+// They do NOT share the expense sentence: the backend runs a DIFFERENT gate per
+// form (`DriverCashService#assertCallerSalesPointOrThrow` weighs the round's
+// ORIGIN, `#assertCallerSalesPointCoversStopOrThrow` weighs the STOP the request
+// names) behind one wire code, so per-head gets its own key — telling a
+// salesperson the round is not theirs, when what is not theirs is the stop they
+// picked, is the same unfollowable advice this card exists to remove.
+const ADVANCE_ERROR_KEYS: Record<string, string> = {
+  DRIVER_CASH_SALES_POINT_FORBIDDEN: 'STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN',
+};
+const PER_HEAD_ERROR_KEYS: Record<string, string> = {
+  DRIVER_CASH_SALES_POINT_FORBIDDEN: 'STAFF.DRIVER_CASH.ERROR.PER_HEAD_SALES_POINT_FORBIDDEN',
+};
 // OBRS-1356 — the ONE expense code worth naming: the generic message would
 // leave a salesperson retrying a wage entry that cannot succeed until the
 // owner sets the rate, and only this text says who has to do what.
