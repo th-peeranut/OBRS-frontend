@@ -239,9 +239,26 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
    * SUPERSEDED 2026-08-14 (OBRS-1351): the backend now forwards Omise's
    * `source.scannable_code.image.download_uri`, so on PromptPay `qrImageUrl` IS
    * an https URL on `api.omise.co` and the cross-origin row is reachable after
-   * all. It is already handled — `downloadQrViaAnchor()` fetches the image and
-   * hands `<a download>` a same-origin `blob:` instead. Left standing rather
-   * than deleted because the iOS branch above still rests on the measurement.
+   * all. Left standing rather than deleted because the iOS branch above still
+   * rests on the measurement.
+   *
+   * The sentence that stood here until 2026-08-16 — that `downloadQrViaAnchor()`
+   * "already handles it" by fetching the image and handing `<a download>` a
+   * same-origin `blob:` — was wrong, and OBRS-1378 measured the real thing
+   * (real test charge `chrg_test_68p2bd3mu052tx6bz2b`, this exact path run in
+   * Chromium from an http origin): `api.omise.co` sends no
+   * `Access-Control-Allow-Origin` at all, so that fetch dies at CORS and no
+   * blob is ever made. Desktop still downloads — but for a reason outside this
+   * file: the `catch` clicks `<a download>` at the cross-origin URL, `download`
+   * is ignored as always, and the 302 ends on an S3 object served
+   * `Content-Disposition: attachment`, so the browser saves it (228,248 B) and
+   * stays on the payment page. The price is that the file arrives as Omise's
+   * `qrcode.svg` and not the `promptpay-qr-<ref>.png` computed below, a CORS
+   * error is logged on every click, and the download survives only while Omise
+   * keeps sending that header. On iOS the same blocked fetch is inside
+   * `buildQrFile()`, so it returns null and the share sheet is never offered —
+   * the full-screen preview is what an iPhone gets now. OBRS-1379 (backend
+   * proxies the image, making it same-origin) is what removes all of it.
    *
    * Order (owner's decision of 2026-08-10, option 3 — feature-detect):
    *   1. iOS + Web Share with files → the share sheet, the only route on iOS
