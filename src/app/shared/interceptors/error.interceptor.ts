@@ -160,12 +160,13 @@ export const errorInterceptor: HttpInterceptorFn = (
       }
       if (shouldShowError) {
         // A dedicated message for the statuses whose body says nothing a user
-        // can act on (0 / 429 / 502 / 503 / 504 — OBRS-216, OBRS-567); every
+        // can act on (0 / 502 / 503 / 504 — OBRS-216, OBRS-567); every
         // other status keeps the backend-provided text, which is written for
         // the user and must not be blanketed over.
-        // Note for whoever throttles /external/otp (OBRS-136): if the backend
-        // starts sending a useful 429 body ("try again in 5 minutes"), this
-        // rule would suppress it — make 429 prefer the body then.
+        // OBRS-1381: 429 used to be on that list, and the note here asked for
+        // this the day a 429 body became useful. It did — our limiters name the
+        // ceiling they hit — so 429 now prefers its body and falls back to the
+        // generic key only when the refusal came from the edge.
         // OBRS-1072: the rule itself now lives in resolveApiAlertMessage, so a
         // page that opts out of this alert for one error code shows the same
         // text as this interceptor for every other one.
