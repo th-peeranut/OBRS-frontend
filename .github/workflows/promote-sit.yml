@@ -52,9 +52,10 @@ jobs:
       # The default is `fetch-depth: 1`, which runs `git fetch --depth=1 origin refs/heads/main*`
       # and writes main's tip into `.git/shallow`, where git treats it as a commit WITH NO PARENTS.
       # The `Fetch dev and sit` step below inherits that boundary, so any history lying under
-      # main's tip is never downloaded - and on THIS repo `sit` lies under it: measured 2026-08-15,
-      # `main..sit = 0` and `sit..main = 108`, i.e. main fully contains sit and is 108 commits past
-      # it. So `sit` is invisible on the runner, git cannot see it on dev's ancestry, and the push
+      # main's tip is never downloaded - and on THIS repo main's tip is NOT an ancestor of sit:
+      # measured 2026-08-15, `sit..main = 108` (main is 108 commits past sit; `main..sit` was 0
+      # too, but that is not the operative half - see below). So `sit` is invisible on the runner,
+      # git cannot see it on dev's ancestry, and the push
       # is refused CLIENT-SIDE with `non-fast-forward` - without GitHub ever being asked. That is
       # why the API answers `ahead_by:167, behind_by:0` for the same two refs in the same minute.
       #
@@ -65,9 +66,19 @@ jobs:
       # 167 commits behind.
       #
       # OBRS-backend's twin file is byte-identical here and pushed fine the same night, which is
-      # what makes this look like it cannot be the checkout. It is: over there `main..sit = 75`, so
-      # the graft sits BELOW sit and cuts nothing on dev's path. The variable is the main/sit
-      # topology, not the workflow and not the size of the gap.
+      # what makes this look like it cannot be the checkout. It is: over there main's tip WAS an
+      # ancestor of sit (`sit..main = 0`, measured on that night's main d7f56576 against sit), so
+      # the graft sat at or below sit and cut nothing on dev's path.
+      #
+      # So the variable is `sit..main > 0` - whether main has DIVERGED from sit - not the
+      # workflow, not the size of the gap, and NOT `main..sit`. While main's tip is an ancestor
+      # of sit, including main == sit exactly, the graft lands at or below sit and cuts nothing,
+      # which makes a sit -> main promote safe; what arms this is a commit reaching `main`
+      # without going through `sit`. OBRS-1408: this paragraph used to name `main..sit = 0` as
+      # the trigger and cite a `main..sit = 75` on the backend that no counting method
+      # reproduces. Isolated on a fixture in OBRS-1377 AC-2 (`sit..main = 160`, true
+      # `sit..dev = 163`): depth 1 counted 4 and was rejected, depth 0 counted 163 and pushed;
+      # while against the real origin with main == sit, depth 1 counted correctly and pushed.
       #
       # Proven off-runner on 2026-08-15 at a 202-commit gap, one variable changed, no `--force`:
       # depth 1 -> `ahead = 95`, `! [rejected] (non-fast-forward)`; depth 0 -> `ahead = 202`,
