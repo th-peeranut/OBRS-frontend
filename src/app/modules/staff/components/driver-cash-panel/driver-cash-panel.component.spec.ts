@@ -271,6 +271,45 @@ describe('DriverCashPanelComponent', () => {
     });
   });
 
+  // OBRS-1389 — OBRS-1368 gave advance and per-head the same 403, and both maps
+  // were empty, so both answered it with GENERIC's "please try again". The two
+  // assertions differ on purpose: one wire code, but two backend gates, so the
+  // per-head form must NOT tell the salesperson the ROUND is not theirs when
+  // what is not theirs is the STOP they picked.
+  describe('the sales-point refusal on the two forms OBRS-1368 gated', () => {
+    it('advance names the refusal instead of falling back to the generic retry message', () => {
+      staffApi.postDriverCashAdvance.and.returnValue(
+        throwError(() => new HttpErrorResponse({
+          status: 403,
+          error: { errorCode: 'DRIVER_CASH_SALES_POINT_FORBIDDEN' },
+        }))
+      );
+      component['toggleAction']('advance');
+
+      component['onSubmitAdvance']({ amount: '100.00' });
+
+      expect(component['advanceError']).toBe('STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN');
+      expect(alertService.error).toHaveBeenCalledWith('STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN');
+      expect(store.mutate).not.toHaveBeenCalled();
+    });
+
+    it('per-head names the STOP, not the round — its gate reads the stop the request names', () => {
+      staffApi.postDriverCashPerHead.and.returnValue(
+        throwError(() => new HttpErrorResponse({
+          status: 403,
+          error: { errorCode: 'DRIVER_CASH_SALES_POINT_FORBIDDEN' },
+        }))
+      );
+      component['toggleAction']('perHead');
+
+      component['onSubmitPerHead']({ stopId: 1, headCount: 3 });
+
+      expect(component['perHeadError']).toBe('STAFF.DRIVER_CASH.ERROR.PER_HEAD_SALES_POINT_FORBIDDEN');
+      expect(alertService.error).toHaveBeenCalledWith('STAFF.DRIVER_CASH.ERROR.PER_HEAD_SALES_POINT_FORBIDDEN');
+      expect(component['myDay']).toBeNull();
+    });
+  });
+
   it('a second submit call while one is in flight is a no-op (double-tap guard)', () => {
     staffApi.postDriverCashExpense.and.returnValue(of({ code: 200, message: 'OK', data: DAY_RESP }));
     component.isSubmitting = true;
