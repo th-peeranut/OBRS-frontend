@@ -494,7 +494,18 @@ export class MyBookingsComponent implements OnInit {
    * OBRS-backend/docs/api/booking.md) so the card never presents Change seat
    * as available when the server would reject it. First failing check wins;
    * the server remains the final authority. Unlike reschedule, there is no
-   * 30-day/TOO_FAR check — change-seat only cares about the 4h window.
+   * date-horizon/TOO_FAR check — change-seat only cares about its own window.
+   *
+   * ⚠️ The window is the one place this no longer mirrors the server. Since
+   * OBRS-655 the backend gates change-seat on `reschedule_window_hours` = 2h
+   * (`ChangeSeatService.validateChangeWindow` reads that key, not one of its
+   * own), while `CHANGE_SEAT_WINDOW_HOURS` here is still 4h. The divergence is
+   * deliberate and the owner decided to keep it: the FE is the STRICTER side,
+   * so between 2h and 4h out we hide an action the server would have accepted
+   * — an under-offer, never a false offer. Do not "fix" it by flipping this
+   * constant on its own; OBRS-699 removes the FE copy entirely by reading the
+   * policy from the API, which closes the gap without adding a third number
+   * to keep in sync.
    */
   private computeChangeSeatEligibility(
     booking: MyBookingDto,
@@ -536,8 +547,14 @@ export class MyBookingsComponent implements OnInit {
    * OBRS-backend/docs/api/booking.md) so the card never presents Change stop
    * as available when the server would reject it. First failing check wins;
    * the server remains the final authority. Like change-seat (and unlike
-   * reschedule), there is no 30-day/TOO_FAR check — change-stop doesn't move
+   * reschedule), there is no date-horizon/TOO_FAR check — change-stop doesn't move
    * the departure date, only the pickup/drop-off stops.
+   *
+   * ⚠️ Same window divergence as change-seat since OBRS-655:
+   * `ChangeStopService.validateChangeWindow` reads `reschedule_window_hours`
+   * = 2h while `CHANGE_STOP_WINDOW_HOURS` here is still 4h. See the note on
+   * {@link computeChangeSeatEligibility} — deliberate, FE is the stricter
+   * side, and OBRS-699 is what closes it.
    */
   private computeChangeStopEligibility(
     booking: MyBookingDto,

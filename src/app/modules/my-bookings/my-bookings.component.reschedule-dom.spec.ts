@@ -143,6 +143,36 @@ describe('MyBookingsComponent (reschedule action — action menu)', () => {
     expect(item.reasonText).toBeUndefined();
   });
 
+  it('OBRS-655: Reschedule is offered at 3 hours out — inside the OLD 4h window, outside the new 2h one', () => {
+    // The discriminating case for the window change. The guard is
+    // `hoursUntilDeparture <= RESCHEDULE_WINDOW_HOURS` -> INELIGIBLE, so at 3h
+    // out `3 <= 4` is true (blocked, old policy) while `3 <= 2` is false
+    // (offered, new policy): this spec is red against RESCHEDULE_WINDOW_HOURS
+    // = 4 and green against 2. A departure further out (the default fixture's
+    // 10 days) would pass under both values and prove nothing.
+    render(
+      buildBooking({
+        bookingSchedules: [
+          {
+            id: 1,
+            departureDateTime: dayjs().add(3, 'hour').toISOString(),
+            fromStop: { code: 'a', display: { en: { label: 'A' } } },
+            toStop: { code: 'b', display: { en: { label: 'B' } } },
+            tickets: [{ id: 1, seatNumber: '1' }],
+          },
+        ],
+      })
+    );
+
+    openMenu();
+
+    const item = rescheduleItem();
+    expect(item.disabled)
+      .withContext('3h out is outside the 2h window — the traveller must still be able to move it')
+      .toBeFalse();
+    expect(item.reasonText).toBeUndefined();
+  });
+
   it('dispatches openRescheduleDialog when the enabled Reschedule item is activated', () => {
     render(buildBooking());
     const dispatchSpy = spyOn(store, 'dispatch');

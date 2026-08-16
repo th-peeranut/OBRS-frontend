@@ -19,9 +19,9 @@
 -- EVERY DATE HERE IS RELATIVE TO NOW (`today + N`), so the fixture cannot rot.
 -- Offsets are chosen against the real server rules (see RescheduleService):
 --   * validateRescheduleWindow  — the NEW departure must be >= `reschedule_window_hours`
---     (system_configs, default 4) away. Everything here is >= 10 days out.
+--     (system_configs, default 2 since OBRS-655) away. Everything here is >= 10 days out.
 --   * validateDateNotTooFar     — |bangkokDay(old) - bangkokDay(new)| must be
---     <= `reschedule_max_days_ahead` (system_configs, default 30). Max span used
+--     <= `reschedule_max_days_ahead` (system_configs, default 60 since OBRS-655). Max span used
 --     below is 6 days (BOOK+10 -> COLLIDE+16), so it stays legal even if someone
 --     lowers that config substantially.
 --   * fee tiers                 — > 24h out means the late fee is 0, so a same-fare
