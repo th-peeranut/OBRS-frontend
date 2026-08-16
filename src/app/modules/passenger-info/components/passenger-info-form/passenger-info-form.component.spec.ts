@@ -421,6 +421,38 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     expect(component.passengerData.length).toBe(2);
   });
 
+  // OBRS-1226: the summary sidebar reads its headcount/total from the
+  // passenger-info store, so what the customer sees is only right if this
+  // form keeps that store current. Two failures this pins, both RED before
+  // the fix: (a) the search-page seed never reached the store at all until
+  // the 300ms debounce, so the money line rendered 0 first; (b) a +/- click
+  // moved the form but the store the summary reads was written from the
+  // SEARCH page, so "ผู้ใหญ่ 1 คน · 200 บาท" stayed put while 2 tickets were
+  // being bought.
+  it('OBRS-1226: the search-page seed reaches the passenger-info store on first render, and + dispatches the adjusted headcount', () => {
+    const dispatchedCounts: number[] = [];
+    // Installed BEFORE render() — the seed dispatch fires inside the very
+    // first change-detection pass, which render() runs.
+    spyOn(store, 'dispatch').and.callFake(((action: any) => {
+      if (action.type === invokeSetPassengerInfo.type) {
+        dispatchedCounts.push(action.passengerInfo.length);
+      }
+    }) as unknown as typeof store.dispatch);
+
+    render([openSchedule]); // filter seeds 1 adult; availableSeats = 2
+
+    expect(dispatchedCounts)
+      .withContext('the seeded passenger reaches the store synchronously, not 300ms later')
+      .toEqual([1]);
+
+    fixture.debugElement.query(By.css('.passenger-add')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(dispatchedCounts[dispatchedCounts.length - 1])
+      .withContext('+ writes the new headcount to the store the summary reads')
+      .toBe(2);
+  });
+
   it('OPEN near-full (availableSeats <= LOW_SEAT_THRESHOLD): the "เหลือ X ที่นั่ง" remaining-seat line IS shown', () => {
     render([openSchedule]); // availableSeats = 2 (<= 5)
     const card = fixture.debugElement.query(By.css('.open-seat-card')).nativeElement;

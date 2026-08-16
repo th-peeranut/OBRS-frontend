@@ -6,6 +6,7 @@ import {
   createStoreStub,
   createTranslateStub,
 } from '../../testing/test-stubs';
+import { PassengerInfoSummaryComponent } from './components/passenger-info-summary/passenger-info-summary.component';
 
 describe('PassengerInfoComponent', () => {
   let component: PassengerInfoComponent;
@@ -168,6 +169,53 @@ describe('PassengerInfoComponent', () => {
 
       expect(payload[0].seatPreference).toBe('window');
       expect(payload[0].seatRequirement).toBe('wheelchair');
+    });
+  });
+
+  // OBRS-1226 AC5: the headcount the summary sidebar shows and the headcount
+  // POST /bookings carries are the same list, counted the same way. Both sides
+  // are asserted against ONE array here on purpose — the bug was two sources
+  // drifting apart, so a test that builds its own expectation per side would
+  // not have caught it.
+  describe('the summary headcount and the POST /bookings headcount are the same list (OBRS-1226)', () => {
+    function buildPassenger(overrides: Partial<PassengerInfo> = {}): PassengerInfo {
+      return {
+        isAdult: true,
+        title: 1,
+        firstName: 'John',
+        middleName: '',
+        lastName: 'Doe',
+        phoneNumber: '',
+        gender: 'MALE',
+        isSelectSeat: true,
+        passengerSeat: '',
+        passengerSeatReturn: '',
+        ...overrides,
+      };
+    }
+
+    it('3 rows displayed = 3 passengers submitted, per leg', () => {
+      const passengers = [
+        buildPassenger(),
+        buildPassenger(),
+        buildPassenger({ isAdult: false }),
+      ];
+      const summary = new PassengerInfoSummaryComponent(
+        createStoreStub(),
+        createRouterStub(),
+        createStoreStub(),
+        createTranslateStub()
+      );
+
+      const outbound = (component as any).buildPassengersPayload(passengers, 'outbound', true);
+      const inbound = (component as any).buildPassengersPayload(passengers, 'inbound', true);
+
+      expect(summary.sumPassengers(passengers)).toBe(3);
+      expect(outbound.length).toBe(summary.sumPassengers(passengers));
+      expect(inbound.length).toBe(summary.sumPassengers(passengers));
+      expect(summary.getAdultCount(passengers) + summary.getKidCount(passengers)).toBe(
+        outbound.length
+      );
     });
   });
 });

@@ -83,21 +83,28 @@ export class PassengerInfoSummaryComponent {
     return schedule ?? [];
   }
 
-  getAdultCount(passengers?: { type: string; count: number }[]): number {
-    return passengers?.find((p) => p.type === 'ADULT')?.count ?? 0;
+  /**
+   * OBRS-1226: adult/child counts and the total below come from the
+   * passenger-info store — the rows that become the real tickets — not from
+   * `scheduleFilter.passengerInfo`, which only ever holds what was typed on
+   * the SEARCH page and never hears about the OPEN-seating +/- stepper or the
+   * adult/child radio on this page.
+   */
+  getAdultCount(passengers?: PassengerInfo[] | null): number {
+    return passengers?.filter((p) => p.isAdult).length ?? 0;
   }
 
-  getKidCount(passengers?: { type: string; count: number }[]): number {
-    return passengers?.find((p) => p.type === 'KIDS')?.count ?? 0;
+  getKidCount(passengers?: PassengerInfo[] | null): number {
+    return passengers?.filter((p) => !p.isAdult).length ?? 0;
   }
 
-  sumPassengers(items?: { type: string; count: number }[]): number {
-    return items?.reduce((total, item) => total + item.count, 0) ?? 0;
+  sumPassengers(items?: PassengerInfo[] | null): number {
+    return items?.length ?? 0;
   }
 
   sumFare(
     items?: Schedule[] | null,
-    passengers?: { type: string; count: number }[]
+    passengers?: PassengerInfo[] | null
   ): number {
     const sumPassengers = this.sumPassengers(passengers) ?? 0;
     const sumFare =
