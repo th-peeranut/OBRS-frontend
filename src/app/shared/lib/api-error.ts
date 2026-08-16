@@ -77,6 +77,15 @@ export function extractApiErrorMessage(error: unknown): string {
  * backend messages are written FOR the user ("this trip is full"), and blanketing
  * them with a generic string would be a downgrade, not a fix.
  *
+ * 429 is the exception to "one key per status" (OBRS-1381). Our rate limiters
+ * all answer through the same handler as every other domain error, so their 429
+ * carries a localized message that says which ceiling was hit — and since
+ * OBRS-1375 signup has two whose advice is opposite: retry in fifteen minutes,
+ * versus a system-wide daily cap that nothing but tomorrow clears. Blanketing
+ * both with "you sent too many requests, wait a moment" blames and misdirects
+ * the customer who only ever sent one. So the body decides: ours is used, and
+ * an edge refusal (no body, or the gateway's HTML) still gets the generic key.
+ *
  * Status 0 splits on `navigator.onLine` because the two causes need opposite
  * things from the user: their own connection dropped (turn wifi back on) versus
  * our API being unreachable while their connection is fine (wait and retry).
@@ -95,7 +104,11 @@ export function statusAlertMessageKey(error: unknown): string | null {
   }
 
   if (error.status === 429) {
-    return 'COMMON.ERROR.TOO_MANY_REQUESTS';
+    // OBRS-1381: 429 is the one status here that can come from either side of
+    // the edge, so it is decided per response rather than per status. Our own
+    // limiters answer with a localized, specific message; the edge answers with
+    // nothing, or with its own HTML page.
+    return extractApiErrorMessage(error) ? null : 'COMMON.ERROR.TOO_MANY_REQUESTS';
   }
 
   if (error.status === 502 || error.status === 503 || error.status === 504) {
