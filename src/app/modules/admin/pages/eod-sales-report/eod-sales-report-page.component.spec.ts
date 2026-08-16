@@ -24,8 +24,8 @@ function makeReport(overrides: Partial<EodSalesReportDto> = {}): EodSalesReportD
       {
         salespersonId: 42,
         salespersonName: 'Somchai Jai',
-        salesPointStopId: 7,
-        salesPointStopLabel: 'bkk_hub',
+        salesPointId: 7,
+        salesPointLabel: 'bkk_hub',
         bookingCount: 5,
         ticketsSold: 8,
         cashAmount: '3200.00',
@@ -39,8 +39,8 @@ function makeReport(overrides: Partial<EodSalesReportDto> = {}): EodSalesReportD
       {
         salespersonId: null,
         salespersonName: 'Unassigned',
-        salesPointStopId: null,
-        salesPointStopLabel: null,
+        salesPointId: null,
+        salesPointLabel: null,
         bookingCount: 1,
         ticketsSold: 1,
         cashAmount: '200.00',

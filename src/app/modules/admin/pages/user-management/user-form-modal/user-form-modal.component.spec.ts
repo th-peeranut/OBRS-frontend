@@ -5,7 +5,7 @@ import { FormBuilder } from '@angular/forms';
 import { Subject, of, throwError } from 'rxjs';
 import { UserFormModalComponent } from './user-form-modal.component';
 import { AdminUserDto } from '../../../../../services/admin/admin-api.service';
-import { UserRow } from '../user-management.mappers';
+import { SALES_POINT_ACTIVE_NONE, UserRow } from '../user-management.mappers';
 import { ResponseAPI } from '../../../../../shared/interfaces/response.interface';
 import { createTranslateStub } from '../../../../../testing/test-stubs';
 
@@ -97,6 +97,14 @@ function makeComponent(getUserById$: Subject<ResponseAPI<AdminUserDto>>) {
     checkUserExistsByPhoneNumber: jasmine
       .createSpy('checkUserExistsByPhoneNumber')
       .and.returnValue(of({ code: 200, message: 'OK', data: false })),
+    // OBRS-1258: harmless default for every pre-existing test (none of them select the
+    // 'salesperson' role, so updateUserSalesPoints is never expected to be called).
+    getDriverCashSalesPoints: jasmine
+      .createSpy('getDriverCashSalesPoints')
+      .and.returnValue(of({ code: 200, message: 'OK', data: [] })),
+    updateUserSalesPoints: jasmine
+      .createSpy('updateUserSalesPoints')
+      .and.returnValue(of({ code: 200, message: 'OK', data: null })),
   };
   const alert = {
     success: jasmine.createSpy('success').and.resolveTo(undefined),
@@ -721,6 +729,212 @@ describe('UserFormModalComponent', () => {
       component.ngOnChanges({ isOpen: new SimpleChange(true, false, false) });
 
       expect((component as any).serverFieldErrors).toEqual({});
+    });
+  });
+
+  // ── OBRS-1258 ───────────────────────────────────────────────────────────────────────────────
+  describe('sales points (edit mode, salesperson only)', () => {
+    const SALESPERSON_ROW: UserRow = {
+      ...JOHN_ROW,
+      roleSlugs: ['salesperson'],
+      roles: ['Salesperson'],
+    };
+
+    function makeComponentWithSalesPoints(
+      getUserById$: Subject<ResponseAPI<AdminUserDto>> = new Subject<ResponseAPI<AdminUserDto>>()
+    ) {
+      const result = makeComponent(getUserById$);
+      (result.adminApi as any).getDriverCashSalesPoints = jasmine
+        .createSpy('getDriverCashSalesPoints')
+        .and.returnValue(
+          of({
+            code: 200,
+            message: 'OK',
+            data: [
+              { id: 1, code: 'NONG_CHAK', name: 'Nong Chak' },
+              { id: 2, code: 'BAN_BUENG', name: 'Ban Bueng' },
+            ],
+          })
+        );
+      result.component.roleOptions = [
+        ...result.component.roleOptions,
+        { slug: 'salesperson', label: 'Salesperson' },
+      ];
+      return result;
+    }
+
+    // SEV1 (Scrutinize findings 1+6): activeSalesPointCode MUST be seeded in initCreateForm's
+    // reset object, or FormGroup.reset(value) resets it to null and — combined with no
+    // Validators.required on the control — the create form would still be well-formed, but a
+    // regression that instead added `required` to the control would make it permanently
+    // invalid with no visible error (the field is hidden in create mode). Both halves covered:
+    it('SEV1: activeSalesPointCode/allowedSalesPointCodes are seeded (not null) in create mode', () => {
+      const { component } = makeComponentWithSalesPoints();
+      openCreate(component);
+
+      const form = (component as any).userForm;
+      // Not null (FormGroup.reset(value) resets any ABSENT key to null) and not undefined —
+      // both would break the well-formed-value assumption the getters/toggle methods rely on.
+      expect(form.value['activeSalesPointCode']).toBe(SALES_POINT_ACTIVE_NONE);
+      expect(form.value['allowedSalesPointCodes']).toEqual([]);
+      // Neither new control contributes an error on its own (no validators) — any invalidity
+      // at this point in create mode belongs entirely to the still-blank required fields.
+      expect(form.get('activeSalesPointCode').errors).toBeNull();
+      expect(form.get('allowedSalesPointCodes').errors).toBeNull();
+    });
+
+    it('SEV1: drives the create modal all the way to a successful Save', async () => {
+      const { component, adminApi } = makeComponentWithSalesPoints();
+      openCreate(component);
+      fillValidCreateForm(component);
+
+      await (component as any).submitUser();
+
+      expect(adminApi.createUser).toHaveBeenCalled();
+    });
+
+    it('AC1: isSalespersonSelected is false for a non-salesperson row', () => {
+      const { component } = makeComponentWithSalesPoints();
+      openEdit(component, { ...JOHN_ROW });
+
+      expect((component as any).isSalespersonSelected).toBeFalse();
+    });
+
+    it('AC1: isSalespersonSelected flips live off the roles chip list, same source of truth isRoleChecked reads', () => {
+      const { component } = makeComponentWithSalesPoints();
+      openEdit(component, { ...JOHN_ROW });
+      expect((component as any).isSalespersonSelected).toBeFalse();
+
+      (component as any).toggleRoleSelection('salesperson', true);
+      expect((component as any).isSalespersonSelected).toBeTrue();
+
+      (component as any).toggleRoleSelection('salesperson', false);
+      expect((component as any).isSalespersonSelected).toBeFalse();
+    });
+
+    it('loads sales point options once per edit-modal open, NOT gated on isSalespersonSelected', fakeAsync(() => {
+      const { component } = makeComponentWithSalesPoints();
+      openEdit(component, { ...JOHN_ROW }); // not a salesperson
+      tick();
+
+      expect((component as any).salesPointOptions.length).toBe(2);
+      expect((component as any).salesPointsLoadState).toBe('loaded');
+    }));
+
+    it('sets salesPointsLoadState to "error" (not "loaded" with an empty list) when the fetch fails', fakeAsync(() => {
+      const { component, adminApi } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+      (adminApi as any).getDriverCashSalesPoints = jasmine
+        .createSpy('getDriverCashSalesPoints')
+        .and.returnValue(throwError(() => new Error('network error')));
+
+      openEdit(component, { ...JOHN_ROW });
+      tick();
+
+      expect((component as any).salesPointsLoadState).toBe('error');
+      expect((component as any).salesPointOptions).toEqual([]);
+    }));
+
+    it('AC2: removing the currently-active point from the allowed set clears the active field immediately', () => {
+      const { component } = makeComponentWithSalesPoints();
+      openEdit(component, { ...SALESPERSON_ROW });
+
+      (component as any).toggleSalesPointSelection('NONG_CHAK', true);
+      (component as any).toggleSalesPointSelection('BAN_BUENG', true);
+      (component as any).userForm.patchValue({ activeSalesPointCode: 'BAN_BUENG' });
+
+      (component as any).toggleSalesPointSelection('BAN_BUENG', false);
+
+      expect((component as any).userForm.value['allowedSalesPointCodes']).toEqual(['NONG_CHAK']);
+      expect((component as any).userForm.value['activeSalesPointCode']).toBe(SALES_POINT_ACTIVE_NONE);
+    });
+
+    it('AC2: removing a point that is NOT the active one leaves the active field untouched', () => {
+      const { component } = makeComponentWithSalesPoints();
+      openEdit(component, { ...SALESPERSON_ROW });
+
+      (component as any).toggleSalesPointSelection('NONG_CHAK', true);
+      (component as any).toggleSalesPointSelection('BAN_BUENG', true);
+      (component as any).userForm.patchValue({ activeSalesPointCode: 'BAN_BUENG' });
+
+      (component as any).toggleSalesPointSelection('NONG_CHAK', false);
+
+      expect((component as any).userForm.value['activeSalesPointCode']).toBe('BAN_BUENG');
+    });
+
+    it('activeSalesPointOptions offers the sentinel plus only currently-ALLOWED codes', fakeAsync(() => {
+      const { component } = makeComponentWithSalesPoints();
+      openEdit(component, { ...SALESPERSON_ROW });
+      tick();
+
+      (component as any).toggleSalesPointSelection('NONG_CHAK', true);
+
+      const options = (component as any).activeSalesPointOptions as { value: string }[];
+      expect(options.map((o) => o.value)).toEqual([SALES_POINT_ACTIVE_NONE, 'NONG_CHAK']);
+    }));
+
+    it('AC4: pre-selects both fields from the fetched detail', async () => {
+      const getUserById$ = new Subject<ResponseAPI<AdminUserDto>>();
+      const { component } = makeComponentWithSalesPoints(getUserById$);
+
+      const promise = openEditAwait(component, { ...SALESPERSON_ROW });
+      getUserById$.next(
+        detailResponse({
+          roles: ['salesperson'],
+          salesPointCodes: ['NONG_CHAK', 'BAN_BUENG'],
+          activeSalesPointCode: 'BAN_BUENG',
+        })
+      );
+      getUserById$.complete();
+      await promise;
+
+      const form = (component as any).userForm;
+      expect(form.value['allowedSalesPointCodes']).toEqual(['NONG_CHAK', 'BAN_BUENG']);
+      expect(form.value['activeSalesPointCode']).toBe('BAN_BUENG');
+    });
+
+    it('AC3: saving an empty allowed set sends a true clear (empty array + null active)', async () => {
+      const { component, adminApi } = makeComponentWithSalesPoints();
+      openEdit(component, { ...SALESPERSON_ROW });
+      fillValidCreateForm(component);
+      (component as any).userForm.patchValue({ roles: ['salesperson'] });
+
+      await (component as any).submitUser();
+
+      expect(adminApi.updateUserSalesPoints).toHaveBeenCalledWith(1, {
+        salesPointCodes: [],
+        activeSalesPointCode: null,
+      });
+    });
+
+    it('AC5: a non-salesperson save does not call the sales-points endpoint at all', async () => {
+      const { component, adminApi } = makeComponentWithSalesPoints();
+      openEdit(component, { ...JOHN_ROW }); // admin only, never salesperson
+      fillValidCreateForm(component);
+
+      await (component as any).submitUser();
+
+      expect(adminApi.updateUser).toHaveBeenCalled();
+      expect(adminApi.updateUserSalesPoints).not.toHaveBeenCalled();
+    });
+
+    it('base PUT + sales-points PUT both fire, base first, when editing a salesperson', async () => {
+      const order: string[] = [];
+      const { component, adminApi } = makeComponentWithSalesPoints();
+      adminApi.updateUser.and.callFake(() => {
+        order.push('updateUser');
+        return of({ code: 200, message: 'OK', data: null });
+      });
+      (adminApi as any).updateUserSalesPoints.and.callFake(() => {
+        order.push('updateUserSalesPoints');
+        return of({ code: 200, message: 'OK', data: null });
+      });
+      openEdit(component, { ...SALESPERSON_ROW });
+      fillValidCreateForm(component);
+      (component as any).userForm.patchValue({ roles: ['salesperson'] });
+
+      await (component as any).submitUser();
+
+      expect(order).toEqual(['updateUser', 'updateUserSalesPoints']);
     });
   });
 });

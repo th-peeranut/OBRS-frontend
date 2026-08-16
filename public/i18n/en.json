@@ -791,7 +791,13 @@
       "UNLOCK_CONFIRM_TITLE": "Unlock Account",
       "UNLOCK_CONFIRM_MESSAGE": "Unlocking this account will grant immediate login access to",
       "UNLOCK_BTN": "Unlock",
-      "UNLOCKING": "Unlocking..."
+      "UNLOCKING": "Unlocking...",
+      "SALES_POINTS_SECTION_TITLE": "Sales Points",
+      "ALLOWED_SALES_POINTS_LABEL": "Allowed Sales Points",
+      "ACTIVE_SALES_POINT_LABEL": "Active Sales Point",
+      "ACTIVE_SALES_POINT_NONE": "Not set",
+      "SALES_POINTS_EMPTY": "No sales points configured yet",
+      "SALES_POINTS_UNAVAILABLE": "Couldn't load sales points. Try again."
     },
     "VEHICLES": {
       "MONITORING": "Fleet Monitoring Active",

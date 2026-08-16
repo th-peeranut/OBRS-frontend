@@ -133,6 +133,27 @@ The User Management page (`/admin/users`) renders a **Locked badge** (`.admin-st
 
 An **Unlock action** button (`.admin-icon-btn` with a `lock_open` icon) appears in the Actions column only when `user.locked && hasAdminRole()`. Clicking it opens a confirmation modal; confirming fires `PUT /api/private/users/{id}/unlock` (ADMIN-only), applies an optimistic `store.mutate` to clear the flag immediately, then triggers a background `store.refresh()`. Success and error outcomes are shown via `AlertService`.
 
+### User Management — Sales Points (OBRS-1258, edit mode only)
+
+Editing a user whose `roles` currently include `salesperson` (checked LIVE off the roles chip
+list, the same source of truth the Roles section already reads — no separate flag) reveals a
+Sales Points section with two controls: an **Allowed Sales Points** checkbox-chip multi-select
+(reusing the modal's own `.user-role-list`/`.user-role-chip` markup, not a new pattern) and an
+**Active Sales Point** `app-admin-dropdown`. Both are hidden in create mode and for any other
+role. Options come from `AdminApiService.getDriverCashSalesPoints()` (the existing driver-cash
+sales-point roster, reused rather than a second endpoint), fetched once per edit-modal open in
+parallel with the user-detail fetch. Removing the currently-active point from the allowed set
+clears the active field immediately, client-side, before submit. The Active Sales Point dropdown
+always carries a real "ไม่กำหนด / Not set" option (`SALES_POINT_ACTIVE_NONE` sentinel,
+`user-management.mappers.ts`) rather than the placeholder-empty state most `app-admin-dropdown`
+selects use — see that constant's docblock for why this is a deliberate, documented deviation
+from `docs/design-system.md` §3.1, not a fork of it. Saving issues the base
+`PUT /api/private/users/{id}` first and, only when still a salesperson, a second
+`PUT /api/private/users/{id}/sales-points` (always a full replace of both fields) — un-ticking
+`salesperson` in the same Save deliberately skips the second call, leaving that user's prior
+sales-point configuration in place but functionally inert (see the `submitUser()` comment at that
+call site for the accepted trade-off).
+
 ### Admin sidebar menu search — matched description + highlight (OBRS-900)
 
 `AdminLayoutComponent`'s sidebar search (OBRS-290) matches a query against

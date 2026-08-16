@@ -791,7 +791,13 @@
       "UNLOCK_CONFIRM_TITLE": "确认解锁账户",
       "UNLOCK_CONFIRM_MESSAGE": "解锁此账户后，以下用户将可立即登录：",
       "UNLOCK_BTN": "解锁",
-      "UNLOCKING": "解锁中..."
+      "UNLOCKING": "解锁中...",
+      "SALES_POINTS_SECTION_TITLE": "销售点",
+      "ALLOWED_SALES_POINTS_LABEL": "允许的销售点",
+      "ACTIVE_SALES_POINT_LABEL": "当前所在销售点",
+      "ACTIVE_SALES_POINT_NONE": "未设定",
+      "SALES_POINTS_EMPTY": "系统中尚未设置销售点",
+      "SALES_POINTS_UNAVAILABLE": "无法加载销售点列表，请重试"
     },
     "VEHICLES": {
       "MONITORING": "车队监控已启用",

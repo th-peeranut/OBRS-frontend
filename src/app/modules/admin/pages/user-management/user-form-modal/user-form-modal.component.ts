@@ -20,16 +20,19 @@ import {
   switchMap,
 } from 'rxjs';
 import { AdminApiService, AdminUserDto } from '../../../../../services/admin/admin-api.service';
+import { SalesPointOptionDto } from '../../../../../shared/interfaces/driver-cash.interface';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { apiFieldErrors, extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import {
   RoleOption,
+  SALES_POINT_ACTIVE_NONE,
   StatusOption,
   UserRow,
   buildUserFormValues,
   roleRequiredValidator,
   toCreateUserPayload,
+  toSalesPointsPayload,
   toUpdateUserPayload,
   toUserDtoFallback,
 } from '../user-management.mappers';
@@ -86,6 +89,12 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
   // under the control the server named instead of collapsing into one modal-wide message.
   protected serverFieldErrors: Record<string, string> = {};
 
+  // OBRS-1258: options for the edit-mode-only Sales Points section. Populated once per
+  // edit-modal open (initEditForm), independent of which user is being edited — the roster
+  // itself is global, so no staleness guard is needed here the way the user-detail patch has one.
+  protected salesPointOptions: SalesPointOptionDto[] = [];
+  protected salesPointsLoadState: 'loading' | 'loaded' | 'error' = 'loading';
+
   protected readonly userForm: FormGroup;
   private emailCheckSubscription?: Subscription;
   private phoneNumberCheckSubscription?: Subscription;
@@ -122,6 +131,11 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
       status: ['', [Validators.required]],
       roles: [[], [roleRequiredValidator]],
       isPhoneNumberVerify: [true, [Validators.required]],
+      // OBRS-1258: no validators on either — an empty allowed set is a valid, meaningful
+      // value (AC3), and the sentinel is always pre-seeded so `required` would be dead
+      // ceremony in edit mode while permanently invalidating create mode (see initCreateForm).
+      allowedSalesPointCodes: [[]],
+      activeSalesPointCode: [SALES_POINT_ACTIVE_NONE],
     });
   }
 
@@ -196,6 +210,61 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
 
     this.userForm.patchValue({ roles: currentRoles });
     this.userForm.get('roles')?.markAsTouched();
+  }
+
+  // OBRS-1258 AC1: live off `userForm.value['roles']`, same source of truth
+  // `isRoleChecked` above already reads — roles are edited in this same modal, so ticking
+  // 'salesperson' reveals the section immediately without a separate flag to keep in sync.
+  protected get isSalespersonSelected(): boolean {
+    const roles: string[] = this.userForm.value['roles'] ?? [];
+    return roles.includes('salesperson');
+  }
+
+  // OBRS-1258 AC1: mirrors app-admin-dropdown's own `options` shape ({value,label}), built via
+  // AdminDropdownComponent.selectedLabel's getter idiom. The sentinel is always first and
+  // always present, and only currently-ALLOWED codes are offered — the dropdown can never
+  // offer a code the allowed multi-select doesn't (also) hold.
+  protected get activeSalesPointOptions(): { value: string; label: string }[] {
+    const allowed: string[] = this.userForm.value['allowedSalesPointCodes'] ?? [];
+
+    return [
+      {
+        value: SALES_POINT_ACTIVE_NONE,
+        label: this.translate.instant('ADMIN.USERS.ACTIVE_SALES_POINT_NONE'),
+      },
+      ...this.salesPointOptions
+        .filter((option) => allowed.includes(option.code))
+        .map((option) => ({ value: option.code, label: option.name })),
+    ];
+  }
+
+  protected isSalesPointChecked(code: string): boolean {
+    const allowed: string[] = this.userForm.value['allowedSalesPointCodes'] ?? [];
+    return allowed.includes(code);
+  }
+
+  // OBRS-1258 AC2: same direct-patchValue shape as toggleRoleSelection above (not a
+  // valueChanges subscription). Removing the currently-active point from the allowed set
+  // clears the active field immediately, before submit.
+  protected toggleSalesPointSelection(code: string, checked: boolean): void {
+    const current = [...(this.userForm.value['allowedSalesPointCodes'] ?? [])];
+
+    if (checked && !current.includes(code)) {
+      current.push(code);
+    }
+
+    if (!checked) {
+      const index = current.indexOf(code);
+      if (index > -1) {
+        current.splice(index, 1);
+      }
+    }
+
+    this.userForm.patchValue({ allowedSalesPointCodes: current });
+
+    if (!checked && this.userForm.value['activeSalesPointCode'] === code) {
+      this.userForm.patchValue({ activeSalesPointCode: SALES_POINT_ACTIVE_NONE });
+    }
   }
 
   // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts —
@@ -284,6 +353,21 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
       if (this.mode === 'edit' && this.selectedUser) {
         const payload = toUpdateUserPayload(this.userForm.getRawValue(), this.isGuestRowEdit);
         await firstValueFrom(this.adminApiService.updateUser(this.selectedUser.id, payload));
+
+        // OBRS-1258 AC5 accepted trade-off (owner decision): un-ticking 'salesperson' in the
+        // same Save means this branch is skipped, so the DB keeps that user's prior
+        // salesPointCodes/activeSalesPointCode even though they're no longer a salesperson.
+        // Left as-is deliberately — that state is functionally inert (defaultPickupStopSlug
+        // only matters on the salesperson-gated sell page; EOD rows only exist for
+        // salesperson walk-in sales), and clearing-on-removal would be a scope expansion the
+        // owner has not asked for. Do not "fix" this without re-confirming with the owner.
+        if (this.isSalespersonSelected) {
+          const salesPointsPayload = toSalesPointsPayload(this.userForm.getRawValue());
+          await firstValueFrom(
+            this.adminApiService.updateUserSalesPoints(this.selectedUser.id, salesPointsPayload)
+          );
+        }
+
         this.isSubmitting = false;
         this.closed.emit();
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
@@ -340,6 +424,12 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
       status: this.statusOptions[0]?.code ?? 'active',
       roles: [],
       isPhoneNumberVerify: true,
+      // OBRS-1258 SEV1: must be seeded here like every other control in this reset object —
+      // FormGroup.reset(value) resets any ABSENT key to null, and a null activeSalesPointCode
+      // would break the options getter's `?? []`-free assumption (dead ceremony aside, the
+      // field is hidden in create mode anyway, but the form value must stay well-formed).
+      allowedSalesPointCodes: [],
+      activeSalesPointCode: SALES_POINT_ACTIVE_NONE,
     });
     this.setCredentialFieldsForCreateMode();
   }
@@ -352,6 +442,12 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
     this.resetFieldErrorState();
     this.applyUserFormValues(toUserDtoFallback(user), user);
     this.setCredentialFieldsForEditMode();
+
+    // OBRS-1258: fired once here, in parallel with the getUserById fetch below — NOT gated on
+    // isSalespersonSelected, since the role can be toggled live inside this same open modal.
+    // Not awaited: the options list is user-independent (same global roster for every edit),
+    // so there is no staleness/ordering dependency with the detail fetch below.
+    void this.loadSalesPointOptions();
 
     try {
       const response = await firstValueFrom(this.adminApiService.getUserById(user.id));
@@ -390,6 +486,21 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
       if (control?.pristine) {
         control.setValue(value);
       }
+    }
+  }
+
+  // OBRS-1258: reuses AdminApiService.getDriverCashSalesPoints() — the same
+  // GET /private/owner/driver-cash/sales-points call driver-cash-rates already makes — rather
+  // than adding a second method for the same endpoint.
+  private async loadSalesPointOptions(): Promise<void> {
+    this.salesPointsLoadState = 'loading';
+    try {
+      const response = await firstValueFrom(this.adminApiService.getDriverCashSalesPoints());
+      this.salesPointOptions = response?.data ?? [];
+      this.salesPointsLoadState = 'loaded';
+    } catch {
+      this.salesPointOptions = [];
+      this.salesPointsLoadState = 'error';
     }
   }
 

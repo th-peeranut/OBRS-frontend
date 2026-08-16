@@ -132,10 +132,13 @@ export interface AdminUserDto {
   roles: Array<string | AdminRoleDto>;
   locked?: boolean;
   accountLockedUntil?: string | null;
-  // OBRS-193: salesperson's assigned pickup stop (stop slug), used by the staff
-  // walk-in sell page to default the pickup selection. Null/absent = no assigned
-  // sales point (falls back to route origin, same as before this field existed).
-  salesPointStop?: string | null;
+  // OBRS-1258: replaces `salesPointStop` (removed from the backend entirely).
+  // `salesPointCodes` is the full set of sales points this salesperson may sell
+  // from; `activeSalesPointCode` is the one currently in effect (must be a
+  // member of `salesPointCodes`, or `null` = none set). The walk-in sell page's
+  // default-pickup mechanism moved server-side to `RouteStopsDto.defaultPickupStopSlug`.
+  salesPointCodes?: string[];
+  activeSalesPointCode?: string | null;
   // OBRS-1230 / ADR-0123: true for a guest shadow user (created from a
   // walk-in/offline booking, never authenticates, carries zero roles by
   // design). Sent by GET /private/users (UserSummaryResponse) — NOT by
@@ -872,6 +875,14 @@ export interface UpdateUserPayload {
   roles?: string[];
 }
 
+// OBRS-1258: `PUT /api/private/users/{id}/sales-points` is a dedicated endpoint,
+// always a full replace of both fields — `UserUpdateReqDto` (UpdateUserPayload
+// above) cannot touch sales points by construction.
+export interface UpdateUserSalesPointsPayload {
+  salesPointCodes: string[];
+  activeSalesPointCode: string | null;
+}
+
 // OBRS-316 Gap 1: PUT /api/private/vehicles/{id} is a full-replace, so the form
 // MUST send all 7 attribute fields on every submit (create AND edit) — they are
 // non-optional KEYS here (always serialized), even though each value is nullable.
@@ -1330,6 +1341,14 @@ export class AdminApiService {
 
   updateUser(id: number, payload: UpdateUserPayload): Observable<ResponseAPI<unknown>> {
     return this.putRequest<unknown>(`${this.baseUrl}/private/users/${id}`, payload);
+  }
+
+  // OBRS-1258: always a full replace — see UpdateUserSalesPointsPayload.
+  updateUserSalesPoints(
+    id: number,
+    payload: UpdateUserSalesPointsPayload
+  ): Observable<ResponseAPI<AdminUserDto>> {
+    return this.putRequest<AdminUserDto>(`${this.baseUrl}/private/users/${id}/sales-points`, payload);
   }
 
   deleteUser(id: number): Observable<ResponseAPI<unknown>> {

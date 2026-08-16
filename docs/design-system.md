@@ -1085,6 +1085,29 @@ enforced rule with a test behind it.
   comments explicit about which contract applies; don't assume one implies
   the other just because the constant is shared.
 
+- **PRE-SEEDED variant of the sentinel above, where "none" is a resting answer
+  rather than a question to answer** (OBRS-1258, `UserFormModalComponent`'s
+  `activeSalesPointCode`): same coercion problem, same fix shape — non-empty
+  sentinel constant (`SALES_POINT_ACTIVE_NONE` in `user-management.mappers.ts`)
+  translated to `null` only at the payload boundary (`toSalesPointsPayload()`) —
+  but it deliberately breaks the OBRS-685 entry's other two halves, which is
+  the whole reason this row exists. It is **pre-seeded** (`buildUserFormValues`
+  sets the sentinel when the user has no active sales point) rather than
+  placeholder-first per §3.1, and it carries **no `required` validator**.
+  Reason: "ไม่กำหนด" is a legitimate final answer for an owner assigning sales
+  points, not a nag-to-choose — nobody must be forced off it. Do NOT "restore"
+  §3.1 here without also seeding the control in `initCreateForm`'s
+  `reset({...})` object: `FormGroup.reset(value)` nulls every control OMITTED
+  from that object rather than restoring its constructor default, so
+  `required` plus a field hidden in create mode made create-user permanently
+  invalid — Save silently did nothing and showed no error (caught at UX
+  Scrutinize, pre-code; it is the same trap the existing `roles: []` seed in
+  that method already exists to avoid). Locked by a spec that drives the
+  create modal all the way to a successful Save, so re-adding the validator
+  turns it red. Choose between the two variants by asking whether "none" is
+  an ANSWER (pre-seed, no `required`) or an UNANSWERED state
+  (placeholder-first, `required`) — not by whichever one you read last.
+
 - **Cross-shell dumb INPUT component with its own token namespace, overridden
   by ancestor** (OBRS-286, `AppRefundDestinationFieldsComponent`,
   `src/app/shared/components/refund-destination-fields/`): the first

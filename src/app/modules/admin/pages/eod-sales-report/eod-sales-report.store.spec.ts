@@ -15,8 +15,8 @@ function report(overrides: Partial<EodSalesReportDto> = {}): EodSalesReportDto {
       {
         salespersonId: 42,
         salespersonName: 'Somchai Jai',
-        salesPointStopId: 7,
-        salesPointStopLabel: 'bkk_hub',
+        salesPointId: 7,
+        salesPointLabel: 'bkk_hub',
         bookingCount: 5,
         ticketsSold: 8,
         cashAmount: '3200.00',

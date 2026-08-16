@@ -6,6 +6,7 @@ import {
   AdminUserDto,
   CreateUserPayload,
   UpdateUserPayload,
+  UpdateUserSalesPointsPayload,
   getAdminTranslationLabel,
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
@@ -61,6 +62,23 @@ export interface StatusOption {
   code: string;
   label: string;
 }
+
+/**
+ * OBRS-1258: sentinel for "no active sales point" on the Active Sales Point dropdown.
+ *
+ * `app-admin-dropdown` coerces every option value and its own empty-selection check
+ * through `String(x ?? '')` (`admin-dropdown.component.ts:33,54,96`), so a `null`-mapped
+ * option would be indistinguishable from "nothing chosen yet" — a non-empty sentinel is
+ * genuinely required here, same shape as `expenses-page.mappers.ts`'s `VEHICLE_CENTRAL_SENTINEL`.
+ *
+ * This is a DEVIATION from `docs/design-system.md` §3.1's placeholder-first shape, not a
+ * byte-for-byte reuse of it: §3.1 starts a select genuinely empty (placeholder shown) and
+ * relies on `Validators.required` to force an explicit choice. Here "ไม่กำหนด" (not set) is
+ * itself a legitimate resting answer for a salesperson, so this sentinel is PRE-SEEDED (never
+ * the placeholder-empty state) and the control carries no `required` validator — see
+ * `UserFormModalComponent`'s form group / `initCreateForm` for where it's seeded.
+ */
+export const SALES_POINT_ACTIVE_NONE = 'SALES_POINT_ACTIVE_NONE';
 
 export function statusClass(status: string): string {
   const normalizedStatus = status.toUpperCase();
@@ -308,6 +326,26 @@ export function buildUserFormValues(
     status: status.code,
     roles: roles.length > 0 ? roles : [...user.roleSlugs],
     isPhoneNumberVerify: true,
+    // OBRS-1258 AC4: pre-select both fields from the fetched detail. A non-salesperson's
+    // detail never carries these (or they're simply unused, gated by isSalespersonSelected),
+    // so the SALES_POINT_ACTIVE_NONE fallback is what a never-configured salesperson gets too.
+    allowedSalesPointCodes: [...(userDetail.salesPointCodes ?? [])],
+    activeSalesPointCode: userDetail.activeSalesPointCode ?? SALES_POINT_ACTIVE_NONE,
+  };
+}
+
+/**
+ * OBRS-1258: the pure payload half of the sales-points save — translates the sentinel back
+ * to `null` at the wire boundary, the one place it's allowed to leak out of the form. Always a
+ * full replace (`PUT /private/users/{id}/sales-points`), so both keys are always sent.
+ */
+export function toSalesPointsPayload(raw: Record<string, unknown>): UpdateUserSalesPointsPayload {
+  const activeSalesPointCode = String(raw['activeSalesPointCode'] ?? SALES_POINT_ACTIVE_NONE);
+
+  return {
+    salesPointCodes: [...((raw['allowedSalesPointCodes'] as string[] | null | undefined) ?? [])],
+    activeSalesPointCode:
+      activeSalesPointCode === SALES_POINT_ACTIVE_NONE ? null : activeSalesPointCode,
   };
 }
 
