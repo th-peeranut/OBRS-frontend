@@ -4179,3 +4179,35 @@ because the contract lacks X", that is a finding to RAISE, not a decision to bak
 contract can be extended, and this one was. Don't silently ship the workaround under a candid
 comment; the candid comment is exactly what makes it a Scrutinize/QA finding rather than a
 buried one.
+
+---
+
+## OBRS-655 (Scrutinize) — a policy-number card must sweep EVERY prose site that quotes the number, not just the ones next to the code you edited
+
+The diff moved `RESCHEDULE_WINDOW_HOURS` 4 -> 2 and `RESCHEDULE_MAX_DAYS_AHEAD` 30 -> 60, and
+carefully reworded the two README paragraphs about **change-seat** and **change-stop** (which keep
+their own 4h constants) plus the matching javadoc. Those rewrites were correct. But the README
+paragraph about **reschedule itself** — `README.md:655`, "the departure is inside the 4h reschedule
+window" — was never touched, so the one sentence in the repo that describes the constant the card
+actually changed was the one left stating the old value. The reworded neighbours made the file read
+as if it had been swept.
+
+Why it happens: the rewording pass follows the *code diff* (which files did I edit? what do their
+comments say?), and `README.md:655` is nowhere near the two `.interface.ts` lines that changed. The
+sweep has to follow the *number*, not the diff. Before submitting a constant change, run the value
+and its unit across all prose:
+`grep -rniE "reschedul.{0,120}\b(4|30)\b|\b(4|30)\b.{0,120}reschedul" README.md docs/ src/`
+and give every hit a verdict — same family as DEV-GOTCHAS "enumerate the WHOLE family, don't
+spot-fix the named line". Naming the constant next to the number (`RESCHEDULE_WINDOW_HOURS`, 2h
+since OBRS-655) makes the next such grep find it.
+
+Second, smaller fix in the same pass: the new spec's comment said 3h "fails `3 <= 4` and passes
+`3 <= 2`" — both literally the wrong boolean. The guard is `hoursUntil <= WINDOW` -> INELIGIBLE, so
+`3 <= 4` is *true* (blocked) and `3 <= 2` is *false* (offered). A reader who trusts that comment
+infers the opposite polarity for the guard. When a comment quotes a boolean expression, quote the
+expression's own truth value, not the outcome you want it to produce.
+
+Verified independently, not taken on report: mutating the two constants back to 4/30 turned exactly
+the 3 new specs red (measured, `ng test --include` on the 3 files: 69 SUCCESS at 2/60, 3 FAILED at
+4/30) — so the `jasmine.clock().mockDate` pin at 21:00 really does reach `dayjs()`, and the tests
+are falsifiable. Full suite `TOTAL: 5715 SUCCESS`; `npm run test:i18n` en=th=zh=3133.

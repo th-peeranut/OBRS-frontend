@@ -652,7 +652,8 @@ cancellable — the same conditional presence the old inline buttons had.
 instead of an inline button: it always appears in the opened menu, `disabled`
 whenever any client-side eligibility check fails — status isn't `confirmed`,
 the booking isn't one-way/single-leg, it has already been rescheduled once
-(`rescheduleCount >= 1`), or the departure is inside the 4h reschedule window
+(`rescheduleCount >= 1`), or the departure is inside the reschedule window
+(`RESCHEDULE_WINDOW_HOURS`, 2h since OBRS-655)
 — with the localized reason rendered as visible subtext directly under the
 label (`item.reasonText`, via `<p-menu>`'s custom `pTemplate="item"` — not a
 hover-only tooltip, so it's unconditionally present once the menu is open,

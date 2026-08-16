@@ -144,9 +144,11 @@ describe('MyBookingsComponent (reschedule action — action menu)', () => {
   });
 
   it('OBRS-655: Reschedule is offered at 3 hours out — inside the OLD 4h window, outside the new 2h one', () => {
-    // The discriminating case for the window change: 3h fails `3 <= 4` and
-    // passes `3 <= 2`, so this spec is red against RESCHEDULE_WINDOW_HOURS = 4
-    // and green against 2. A departure further out (the default fixture's
+    // The discriminating case for the window change. The guard is
+    // `hoursUntilDeparture <= RESCHEDULE_WINDOW_HOURS` -> INELIGIBLE, so at 3h
+    // out `3 <= 4` is true (blocked, old policy) while `3 <= 2` is false
+    // (offered, new policy): this spec is red against RESCHEDULE_WINDOW_HOURS
+    // = 4 and green against 2. A departure further out (the default fixture's
     // 10 days) would pass under both values and prove nothing.
     render(
       buildBooking({
