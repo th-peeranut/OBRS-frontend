@@ -24,9 +24,12 @@ const KNOWN_METHOD_ORDER = [
   'other',
 ];
 
-// Synthetic expand-state key for the single "Unassigned" row (`salespersonId: null`) — never
-// sent anywhere, only used to track expand/collapse in the page-local Set.
+// Synthetic expand-state key parts for a row that carries no salesperson (the single
+// "Unassigned" row, `salespersonId: null`) or no sales point (`salesPointId: null`, a sale made
+// before the snapshot column existed) — never sent anywhere, only used to track expand/collapse
+// in the page-local Set.
 const UNASSIGNED_EXPAND_KEY = -1;
+const NO_SALES_POINT_EXPAND_KEY = -1;
 
 interface EodMethodEntry extends EodMethodBreakdownDto {
   slug: string;
@@ -50,7 +53,7 @@ export class EodSalesReportPageComponent implements OnInit, OnDestroy {
   // and recreated on every navigation (no RouteReuseStrategy), so it always starts empty on
   // entry; it's also explicitly cleared below whenever the `salespersons` array's identity
   // changes (a new fetch), so stale expand state never survives a date change.
-  protected readonly expandedRows = new Set<number>();
+  protected readonly expandedRows = new Set<string>();
   private previousSalespersons: EodSalespersonRowDto[] | null = null;
 
   private readonly destroy$ = new Subject<void>();
@@ -133,8 +136,12 @@ export class EodSalesReportPageComponent implements OnInit, OnDestroy {
     this.store.setDate(this.toDateInputValue(value));
   }
 
-  private expandKey(row: EodSalespersonRowDto): number {
-    return row.salespersonId ?? UNASSIGNED_EXPAND_KEY;
+  // OBRS-1403: salespersonId alone is no longer unique. The backend now attributes each row to
+  // the counter the sale was taken AT (bookings.sales_point_id), so one salesperson who worked
+  // two counters in a day gets one row per counter — a bare salespersonId key would collide,
+  // which `@for ... track` rejects outright (NG0955) and which would expand both rows at once.
+  private expandKey(row: EodSalespersonRowDto): string {
+    return `${row.salespersonId ?? UNASSIGNED_EXPAND_KEY}:${row.salesPointId ?? NO_SALES_POINT_EXPAND_KEY}`;
   }
 
   protected isExpanded(row: EodSalespersonRowDto): boolean {
@@ -180,7 +187,7 @@ export class EodSalesReportPageComponent implements OnInit, OnDestroy {
   // "(template rendering)" block, which reproduces this by actually rendering the template
   // (unlike the rest of this file's specs, which call methods directly and never exercised the
   // detached-callback path) — confirmed to fail against the bare-method version, pass here.
-  protected readonly trackByRow = (_index: number, row: EodSalespersonRowDto): number =>
+  protected readonly trackByRow = (_index: number, row: EodSalespersonRowDto): string =>
     this.expandKey(row);
 
   protected readonly trackByMethod = (_index: number, entry: EodMethodEntry): string =>
