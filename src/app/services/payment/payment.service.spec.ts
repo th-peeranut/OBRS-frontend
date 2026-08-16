@@ -98,4 +98,30 @@ describe('PaymentService — guest vs signed-in payment endpoint (OBRS-858)', ()
     expect(req.request.headers.has('X-Guest-Payment-Token')).toBeFalse();
     req.flush({ code: 200, message: 'OK', data: {} });
   });
+
+  /**
+   * OBRS-1379. The QR image is a second call on the same two lanes, and it gets the lane from
+   * the path the server put in `qrImageUrl` rather than deciding again — deciding twice is how
+   * the two answers drift apart. What still has to be decided here is the credential: the guest
+   * lane's endpoint reads a header, and an image request that forgets it is a QR that never
+   * loads for exactly the customers this flow exists for.
+   */
+  it('the guest QR path carries the booking token; the private one carries none', () => {
+    authStub.isAuthenticated = () => false;
+    bookingStub.getGuestPaymentToken = () => 'signed.booking.token';
+
+    service.getQrImage('/api/payments/7/qr').subscribe();
+
+    const guestReq = httpMock.expectOne(`${environment.apiUrl}/api/payments/7/qr`);
+    expect(guestReq.request.method).toBe('GET');
+    expect(guestReq.request.responseType).toBe('blob');
+    expect(guestReq.request.headers.get('X-Guest-Payment-Token')).toBe('signed.booking.token');
+    guestReq.flush(new Blob(['<svg/>'], { type: 'image/svg+xml' }));
+
+    service.getQrImage('/api/private/payments/7/qr').subscribe();
+
+    const privateReq = httpMock.expectOne(`${environment.apiUrl}/api/private/payments/7/qr`);
+    expect(privateReq.request.headers.has('X-Guest-Payment-Token')).toBeFalse();
+    privateReq.flush(new Blob(['<svg/>'], { type: 'image/svg+xml' }));
+  });
 });

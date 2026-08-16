@@ -52,7 +52,6 @@
     "https://api.maptiler.com",
     "https://sit-obrs-backend.koyeb.app",
     "https://api.omise.co",
-    "https://omise-gateway-production.s3.ap-southeast-1.amazonaws.com",
     "https://vault.omise.co",
     "wss://sit-obrs-backend.koyeb.app",
     "https://*.omise.co",
