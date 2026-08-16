@@ -216,6 +216,31 @@ describe('EodSalesReportPageComponent', () => {
       expect((component as any).isExpanded((component as any).rows[0])).toBeFalse();
     });
 
+    // OBRS-1403: the backend attributes a row to the counter the sale was taken at, so ONE
+    // salesperson who worked two counters in a day comes back as two rows with the SAME
+    // salespersonId. Keyed on salespersonId alone (the pre-card behaviour), expanding either row
+    // expanded both, and `@for ... track` would reject the duplicate key outright (NG0955).
+    it('keeps two rows of the SAME salesperson at different sales points independently expandable', () => {
+      const twoCounters = makeReport();
+      twoCounters.salespersons = [
+        { ...twoCounters.salespersons[0], salesPointId: 7, salesPointLabel: 'ban_bueng' },
+        { ...twoCounters.salespersons[0], salesPointId: 9, salesPointLabel: 'nong_chak' },
+      ];
+      const store = makeStoreStub(twoCounters);
+      const component = new EodSalesReportPageComponent(store as any, createTranslateStub());
+      component.ngOnInit();
+      const first = (component as any).rows[0];
+      const second = (component as any).rows[1];
+
+      expect((component as any).trackByRow(0, first)).not
+        .toEqual((component as any).trackByRow(1, second));
+
+      (component as any).toggleExpand(first);
+
+      expect((component as any).isExpanded(first)).toBeTrue();
+      expect((component as any).isExpanded(second)).toBeFalse();
+    });
+
     it('clears expandedRows when the salespersons array identity changes (new fetch)', () => {
       const store = makeStoreStub(makeReport());
       const component = new EodSalesReportPageComponent(store as any, createTranslateStub());
