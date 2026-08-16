@@ -336,6 +336,15 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       }
 
       this.emitValidity();
+
+      // OBRS-1226: the summary sidebar reads its headcount and total from the
+      // passenger-info store now (the same source that becomes the booking),
+      // so this seed has to reach that store synchronously. Leaving it to the
+      // debounced `valueChanges` sync below would render the money line as 0
+      // for the first ~300ms.
+      if (this.passengerData.length > 0) {
+        this.syncPassengerInfoToStore();
+      }
     });
 
     this.passengerForm.statusChanges

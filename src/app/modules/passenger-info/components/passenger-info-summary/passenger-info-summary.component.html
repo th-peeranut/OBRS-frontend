@@ -309,7 +309,7 @@
           }
           <div class="card-body-summary">
             <!-- ADULT -->
-            @if (getAdultCount(scheduleFilter?.passengerInfo) > 0) {
+            @if (getAdultCount((passengerInfo$ | async)) > 0) {
               <div
                 class="card-body-summary-content"
                 >
@@ -317,13 +317,13 @@
                   {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.ADULT_UNIT" | translate }}
                 </span>
                 <span>
-                  {{ getAdultCount(scheduleFilter?.passengerInfo) }}
+                  {{ getAdultCount((passengerInfo$ | async)) }}
                   {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
                 </span>
               </div>
             }
             <!-- KIDS -->
-            @if (getKidCount(scheduleFilter?.passengerInfo) > 0) {
+            @if (getKidCount((passengerInfo$ | async)) > 0) {
               <div
                 class="card-body-summary-content"
                 >
@@ -331,7 +331,7 @@
                   {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.KID_UNIT" | translate }}
                 </span>
                 <span>
-                  {{ getKidCount(scheduleFilter?.passengerInfo) }}
+                  {{ getKidCount((passengerInfo$ | async)) }}
                   {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
                 </span>
               </div>
@@ -373,7 +373,7 @@
           subtotal above; only a confirmed-applied code is ever sent to the
           booking-submit call (see PassengerInfoComponent). -->
           <app-promo-code-field
-            [amount]="sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo)"
+            [amount]="sumFare(scheduleBooking?.schedule, (passengerInfo$ | async))"
             [disabled]="isNextDisabled"
             (applied)="onPromoApplied($event)"
             (removed)="onPromoRemoved()"
@@ -385,7 +385,7 @@
                 {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
               </span>
               <span>
-                {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+                {{ sumFare(scheduleBooking?.schedule, (passengerInfo$ | async)) }}
                 {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
               </span>
             </div>
@@ -397,7 +397,7 @@
                 {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.SUBTOTAL" | translate }}
               </span>
               <span>
-                {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+                {{ sumFare(scheduleBooking?.schedule, (passengerInfo$ | async)) }}
                 {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
               </span>
             </div>
