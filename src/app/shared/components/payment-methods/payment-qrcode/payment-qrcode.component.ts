@@ -82,6 +82,10 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   isQrPreviewOpen = false;
   isSubmittingPayment = false;
   isWaitingForConfirmation = false;
+  /** OBRS-1379: the QR bytes we fetched, kept so the download and the iOS share sheet need no
+   * second request — on iOS a request inside the tap can spend the transient activation. */
+  private qrBlob: Blob | null = null;
+  private qrObjectUrl = '';
   private hasRequestedQrCode = false;
   private paymentIdempotencyKey = '';
   private countdownTotalSeconds = 15 * 60;
@@ -111,6 +115,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearCountdown();
+    this.releaseQrObjectUrl();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -127,6 +132,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     // The preview renders the same `qrImageUrl`; leaving it open would show an
     // empty full-screen dialog over the payment page (OBRS-1203).
     this.isQrPreviewOpen = false;
+    this.releaseQrObjectUrl();
     this.qrImageUrl = '';
     this.qrPaymentUrl = '';
     this.hasRequestedQrCode = false;
@@ -236,29 +242,26 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
    * reachable on this path, so this is an iOS/WKWebView bug and not a
    * pan-platform one.
    *
-   * SUPERSEDED 2026-08-14 (OBRS-1351): the backend now forwards Omise's
-   * `source.scannable_code.image.download_uri`, so on PromptPay `qrImageUrl` IS
-   * an https URL on `api.omise.co` and the cross-origin row is reachable after
-   * all. Left standing rather than deleted because the iOS branch above still
-   * rests on the measurement.
+   * SUPERSEDED 2026-08-14 (OBRS-1351): the backend forwarded Omise's
+   * `source.scannable_code.image.download_uri`, so on PromptPay `qrImageUrl`
+   * became an https URL on `api.omise.co` and the cross-origin row was
+   * reachable after all. Left standing rather than deleted because the iOS
+   * branch above still rests on the 2026-08-12 measurement.
    *
-   * The sentence that stood here until 2026-08-16 — that `downloadQrViaAnchor()`
-   * "already handles it" by fetching the image and handing `<a download>` a
-   * same-origin `blob:` — was wrong, and OBRS-1378 measured the real thing
-   * (real test charge `chrg_test_68p2bd3mu052tx6bz2b`, this exact path run in
-   * Chromium from an http origin): `api.omise.co` sends no
-   * `Access-Control-Allow-Origin` at all, so that fetch dies at CORS and no
-   * blob is ever made. Desktop still downloads — but for a reason outside this
-   * file: the `catch` clicks `<a download>` at the cross-origin URL, `download`
-   * is ignored as always, and the 302 ends on an S3 object served
-   * `Content-Disposition: attachment`, so the browser saves it (228,248 B) and
-   * stays on the payment page. The price is that the file arrives as Omise's
-   * `qrcode.svg` and not the `promptpay-qr-<ref>.png` computed below, a CORS
-   * error is logged on every click, and the download survives only while Omise
-   * keeps sending that header. On iOS the same blocked fetch is inside
-   * `buildQrFile()`, so it returns null and the share sheet is never offered —
-   * the full-screen preview is what an iPhone gets now. OBRS-1379 (backend
-   * proxies the image, making it same-origin) is what removes all of it.
+   * SUPERSEDED AGAIN 2026-08-16 (OBRS-1379): `qrImageUrl` is a **same-origin
+   * `blob:`** now — the backend serves the image at `/api/…/payments/<id>/qr`
+   * and `loadQrImage()` fetches it — so every cross-origin problem below is
+   * gone at the source rather than handled. What OBRS-1378 measured on the way
+   * here, and what this file must not drift back into: `api.omise.co` sends no
+   * `Access-Control-Allow-Origin` at all, so the `fetch` in
+   * `downloadQrViaAnchor()` died at CORS on every click; desktop still saved a
+   * file only because the `catch` clicked `<a download>` at the cross-origin
+   * URL and the 302 ended on an S3 object served `Content-Disposition:
+   * attachment` — Omise's `qrcode.svg` (228,248 B), never the
+   * `promptpay-qr-<ref>` computed below, with a CORS error logged each time and
+   * the whole thing resting on a header Omise never promised. And on iOS the
+   * same blocked fetch was inside `buildQrFile()`, so it returned null and the
+   * share sheet — the reason OBRS-1203 exists — was never offered at all.
    *
    * Order (owner's decision of 2026-08-10, option 3 — feature-detect):
    *   1. iOS + Web Share with files → the share sheet, the only route on iOS
@@ -274,7 +277,10 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const filename = this.getQrCodeDownloadFilename(this.qrImageUrl);
+    // OBRS-1379: a blob: URL says nothing about what is inside it, so the extension comes from
+    // the blob's own MIME type — Omise serves this QR as SVG, and a .png holding SVG is a file
+    // some viewers refuse to open.
+    const filename = this.getQrCodeDownloadFilename(this.qrImageUrl, this.qrBlob?.type ?? '');
 
     if (this.isIosLike()) {
       const file = await this.buildQrFile(filename);
@@ -346,10 +352,18 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     // point rather than an optimisation: Safari requires navigator.share() to
     // run inside the click's transient activation, and an `await` before it can
     // spend that activation and earn a NotAllowedError instead of a share sheet.
-    // The measurement on 2026-08-12 showed `qrImageUrl` is always a data: URL
-    // here, so on the only route a customer takes, the tap and the share are
-    // separated by a microtask and nothing else — no network round-trip, which
-    // is the part that actually spends the activation.
+    // OBRS-1379: on PromptPay the bytes are already here — `loadQrImage()`
+    // fetched them when the QR was drawn — so this is a File constructor and
+    // nothing else. That restores the share sheet OBRS-1203 built, which
+    // OBRS-1351 took away without meaning to: the fetch below was the only
+    // route left and CORS refused it, so this returned null every time.
+    if (this.qrBlob) {
+      return new File([this.qrBlob], filename, {
+        type: this.qrBlob.type || 'image/png',
+      });
+    }
+
+    // Card 3DS and the redirect wallets still get a locally drawn data: QR.
     const decoded = this.decodeDataUrl(this.qrImageUrl, filename);
     if (decoded) {
       return decoded;
@@ -453,7 +467,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     const authorizeUri = this.getAuthorizeUri(payment);
     if (qrImageSource || authorizeUri) {
       this.qrPaymentUrl = authorizeUri ?? '';
-      this.qrImageUrl = qrImageSource ?? await this.generateQrImage(authorizeUri ?? '');
+      this.qrImageUrl = qrImageSource
+        ? await this.loadQrImage(qrImageSource)
+        : await this.generateQrImage(authorizeUri ?? '');
       this.referenceNo = this.getTransactionId(payment) ?? this.referenceNo;
       this.isWaitingForConfirmation = false;
       this.startCountdown();
@@ -479,6 +495,50 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     // payment-creditcard.component.ts (OBRS-569).
     console.error('PromptPay payment failed', this.getFailureReason(payment));
     this.alertService.error(this.translate.instant('PAYMENT.ALERT.FAILED'));
+  }
+
+  /**
+   * OBRS-1379. The backend answers with OUR path (`/api/…/payments/<id>/qr`), so the image is
+   * fetched here and bound as a `blob:` instead of pointed at with `<img src>`.
+   *
+   * Three things fall out of that, and all three are the point rather than a side effect:
+   * `img-src` needs no Omise origin (it needs `blob:`, which it already has); the guest lane's
+   * token can travel in a header, which an `<img>` cannot send; and the bytes are HERE, so the
+   * download button names the file and the iOS share sheet has a File to share without a
+   * network round-trip inside the tap.
+   *
+   * Returns `''` when the fetch fails — the caller turns that into the QR_UNAVAILABLE alert,
+   * which is honest. It must not fall back to `<img src="/api/…">`: relative on SIT means the
+   * Netlify origin, which serves no API, and even on prod it would drop the guest token.
+   *
+   * Anything that is not our path is passed through untouched (a `data:` URL, or the legacy
+   * gateway-response branch of `getQrImageSource`).
+   */
+  private async loadQrImage(source: string): Promise<string> {
+    if (!source.startsWith('/api/')) {
+      return source;
+    }
+
+    try {
+      const blob = await firstValueFrom(
+        this.paymentService.getQrImage(source).pipe(take(1))
+      );
+      this.releaseQrObjectUrl();
+      this.qrBlob = blob;
+      this.qrObjectUrl = URL.createObjectURL(blob);
+      return this.qrObjectUrl;
+    } catch (error) {
+      console.error('Could not load the PromptPay QR image', error);
+      return '';
+    }
+  }
+
+  private releaseQrObjectUrl(): void {
+    if (this.qrObjectUrl) {
+      URL.revokeObjectURL(this.qrObjectUrl);
+      this.qrObjectUrl = '';
+    }
+    this.qrBlob = null;
   }
 
   private watchAmount(): void {
@@ -665,9 +725,13 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       return undefined;
     }
 
-    // OBRS-1351: the create-payment response carries Omise's own QR here — it has no
-    // `transactions` array, so before this branch existed the loop below could never see
-    // one and every PromptPay QR was drawn locally from the authorize URL.
+    // OBRS-1351: the create-payment response carries the QR here — it has no `transactions`
+    // array, so before this branch existed the loop below could never see one and every
+    // PromptPay QR was drawn locally from the authorize URL.
+    // OBRS-1379: what it carries is now OUR path (`/api/…/payments/<id>/qr`), not Omise's
+    // download URL; `loadQrImage()` turns it into a blob:. The loop below is the legacy
+    // gateway-response shape and still yields an Omise URL — no caller reaches it with that
+    // shape today, and under the current CSP such a URL would not render.
     if ('qrImageUrl' in payment && payment.qrImageUrl) {
       return payment.qrImageUrl;
     }

@@ -126,6 +126,33 @@ export class PaymentService {
     );
   }
 
+  /**
+   * OBRS-1379: the PromptPay QR image, from our own backend.
+   *
+   * `qrPath` is whatever the create-payment response put in `qrImageUrl` — `/api/payments/<id>/qr`
+   * for a guest, `/api/private/payments/<id>/qr` for a signed-in customer. The backend picks the
+   * lane from the door the payment came in through, so the path already agrees with how this
+   * caller is authenticated; the only thing left to do here is attach the same booking-scoped
+   * token the guest pay call attaches, on the same condition.
+   *
+   * A blob rather than an `<img src>` because the guest lane's credential travels in a HEADER —
+   * an `<img>` cannot send one, and putting the token in the query string would write a
+   * credential into every access log and referrer between here and Koyeb.
+   */
+  getQrImage(qrPath: string): Observable<Blob> {
+    const guestToken = this.bookingService.getGuestPaymentToken();
+    const isGuestLane = !qrPath.startsWith('/api/private/');
+    const headers =
+      isGuestLane && guestToken
+        ? new HttpHeaders({ 'X-Guest-Payment-Token': guestToken })
+        : undefined;
+
+    return this.http.get(`${environment.apiUrl}${qrPath}`, {
+      responseType: 'blob',
+      headers,
+    });
+  }
+
   private postPayment(
     url: string,
     payload: PaymentPayload,

@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { throwError } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
@@ -581,6 +581,7 @@ describe('PaymentQrcodeComponent - the QR preview dialog (OBRS-1203)', () => {
 describe('PaymentQrcodeComponent - Omise forwards its own PromptPay QR (OBRS-1351)', () => {
   let component: PaymentQrcodeComponent;
   let alertService: jasmine.SpyObj<AlertService>;
+  let paymentService: jasmine.SpyObj<PaymentService>;
 
   beforeEach(() => {
     const store = jasmine.createSpyObj<Store>('Store', ['pipe', 'select']);
@@ -588,10 +589,11 @@ describe('PaymentQrcodeComponent - Omise forwards its own PromptPay QR (OBRS-135
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
     ]);
-    const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+    paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
       'createPayment',
       'createMockPayment',
+      'getQrImage',
     ]);
     alertService = jasmine.createSpyObj<AlertService>('AlertService', [
       'success',
@@ -635,23 +637,65 @@ describe('PaymentQrcodeComponent - Omise forwards its own PromptPay QR (OBRS-135
     ...extra,
   });
 
-  it("renders Omise's own QR image URL untouched — not a locally drawn QR of the authorize URL", async () => {
-    const downloadUri =
-      'https://api.omise.co/charges/chrg_test_obrs1351/documents/docu_test/downloads/47B72F81';
+  /**
+   * OBRS-1379 changed what "forwarded" means: the backend answers with OUR path, the component
+   * fetches it and binds the blob. Asserted on both halves — the exact path requested AND that
+   * what lands in `qrImageUrl` is a blob: — because either half alone is a passing test over a
+   * broken page: a request nobody renders, or a QR whose bytes came from somewhere else.
+   */
+  it('fetches the QR from our own endpoint and renders the blob, never an Omise URL', async () => {
+    const blob = new Blob(['<svg/>'], { type: 'image/svg+xml' });
+    paymentService.getQrImage.and.returnValue(of(blob));
 
-    await invoke(pendingPromptPay({ qrImageUrl: downloadUri }));
+    await invoke(pendingPromptPay({ qrImageUrl: '/api/payments/1/qr' }));
 
-    expect(component.qrImageUrl).toBe(downloadUri);
-    expect(component.qrImageUrl.startsWith('data:')).toBeFalse();
+    expect(paymentService.getQrImage).toHaveBeenCalledWith('/api/payments/1/qr');
+    expect(component.qrImageUrl.startsWith('blob:')).toBeTrue();
+    expect(component.qrImageUrl).not.toContain('omise');
     // The authorize URL is still kept: it is where "I have paid" navigates to.
     expect(component.qrPaymentUrl).toBe('https://pay.omise.co/payments/pay2_test/authorize');
     expect(alertService.error).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The failure must be visible. Falling back to `<img src="/api/…">` would look like it worked
+   * in a unit test and load nothing on SIT, where that path resolves against Netlify — and would
+   * drop the guest token even on prod, where the origin is right.
+   */
+  it('shows QR_UNAVAILABLE and renders nothing when our endpoint fails', async () => {
+    paymentService.getQrImage.and.returnValue(throwError(() => new Error('404')));
+
+    await invoke(pendingPromptPay({ qrImageUrl: '/api/payments/1/qr' }));
+
+    expect(component.qrImageUrl).toBe('');
+    expect(alertService.error).toHaveBeenCalledWith('PAYMENT.ALERT.QR_UNAVAILABLE');
   });
 
   it('still falls back to a locally drawn QR when no qrImageUrl is forwarded, so card 3DS and the redirect wallets keep working', async () => {
     await invoke(pendingPromptPay({}));
 
     expect(component.qrImageUrl.startsWith('data:image')).toBeTrue();
+    expect(paymentService.getQrImage).not.toHaveBeenCalled();
     expect(alertService.error).not.toHaveBeenCalled();
+  });
+
+  /**
+   * OBRS-1203's share sheet, which OBRS-1351 took away without meaning to: `buildQrFile()` used
+   * a `fetch` that CORS refused, so it returned null and an iPhone only ever got the preview.
+   * With the bytes already in hand it must produce a File - and synchronously, because a network
+   * round-trip inside the tap spends Safari's transient activation.
+   */
+  it('builds a shareable File from the fetched bytes, so the iOS share sheet works again', async () => {
+    const blob = new Blob(['<svg/>'], { type: 'image/svg+xml' });
+    paymentService.getQrImage.and.returnValue(of(blob));
+    await invoke(pendingPromptPay({ qrImageUrl: '/api/payments/1/qr' }));
+
+    const file = await (
+      component as unknown as { buildQrFile: (n: string) => Promise<File | null> }
+    ).buildQrFile('promptpay-qr-chrg_test_obrs1351.svg');
+
+    expect(file).not.toBeNull();
+    expect(file!.type).toBe('image/svg+xml');
+    expect(file!.name).toBe('promptpay-qr-chrg_test_obrs1351.svg');
   });
 });
