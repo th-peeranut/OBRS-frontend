@@ -135,8 +135,34 @@ describe('statusAlertMessageKey', () => {
     }
   });
 
-  it('maps 429 to the rate-limit key', () => {
+  it('maps a bodyless 429 to the rate-limit key', () => {
     const error = new HttpErrorResponse({ status: 429, error: null });
+    expect(statusAlertMessageKey(error)).toBe('COMMON.ERROR.TOO_MANY_REQUESTS');
+  });
+
+  // OBRS-1381. The generic key blankets every 429 the same way, and since
+  // OBRS-1375 signup answers 429 for two opposite reasons: "you, from this
+  // network, are too fast" (wait 15 minutes) and "the system-wide daily email
+  // cap is full" (nothing you do today helps). The generic string says the
+  // first, so the customer hit by the second is both blamed and misdirected.
+  it('yields to the backend message on a 429 that carries one', () => {
+    const error = new HttpErrorResponse({
+      status: 429,
+      error: {
+        message: 'ระบบสมัครสมาชิกไม่พร้อมให้บริการชั่วคราว กรุณาลองใหม่อีกครั้งภายหลัง',
+        errorCode: 'AUTH_SIGNUP_ERROR_TEMPORARILY_UNAVAILABLE',
+      },
+    });
+    expect(statusAlertMessageKey(error)).toBeNull();
+  });
+
+  // The edge refuses before our backend is reached, so there is no message of
+  // ours to prefer — and a gateway page must never be rendered (OBRS-567).
+  it('keeps the generic key for a 429 whose body is a gateway HTML page', () => {
+    const error = new HttpErrorResponse({
+      status: 429,
+      error: '<html><body>429 Too Many Requests</body></html>',
+    });
     expect(statusAlertMessageKey(error)).toBe('COMMON.ERROR.TOO_MANY_REQUESTS');
   });
 

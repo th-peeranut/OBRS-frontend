@@ -96,6 +96,60 @@ describe('errorInterceptor', () => {
     httpMock.verify();
   });
 
+  // OBRS-1381: the two signup ceilings added by OBRS-1375 reach the browser as
+  // the same status with different bodies, and the interceptor used to throw
+  // both bodies away. What the user was told for the shared daily cap — "wait a
+  // moment and try again" — is advice that cannot work before tomorrow.
+  it('shows the backend message on a 429 that carries one', () => {
+    const translate = jasmine.createSpyObj<TranslateService>(
+      'TranslateService',
+      ['instant']
+    );
+    configure([{ provide: TranslateService, useValue: translate }]);
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+    const backendMessage =
+      'ระบบสมัครสมาชิกไม่พร้อมให้บริการชั่วคราว กรุณาลองใหม่อีกครั้งภายหลัง';
+
+    http.post('/api/auth/signup', {}).subscribe({ next: () => {}, error: () => {} });
+    httpMock.expectOne('/api/auth/signup').flush(
+      {
+        errorCode: 'AUTH_SIGNUP_ERROR_TEMPORARILY_UNAVAILABLE',
+        message: backendMessage,
+      },
+      { status: 429, statusText: 'Too Many Requests' }
+    );
+
+    expect(alertService.error).toHaveBeenCalledWith(backendMessage);
+    expect(translate.instant).not.toHaveBeenCalledWith(
+      'COMMON.ERROR.TOO_MANY_REQUESTS'
+    );
+    httpMock.verify();
+  });
+
+  it('still translates the generic rate-limit message for a 429 with no message of ours', () => {
+    const translate = jasmine.createSpyObj<TranslateService>(
+      'TranslateService',
+      ['instant']
+    );
+    translate.instant.and.returnValue('มีคำขอเข้ามามากเกินไป กรุณารอสักครู่แล้วลองใหม่อีกครั้ง');
+    configure([{ provide: TranslateService, useValue: translate }]);
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    http.get('/api/foo').subscribe({ next: () => {}, error: () => {} });
+    // The edge refusing on its own behalf: no body of ours to prefer.
+    httpMock
+      .expectOne('/api/foo')
+      .flush(null, { status: 429, statusText: 'Too Many Requests' });
+
+    expect(translate.instant).toHaveBeenCalledWith('COMMON.ERROR.TOO_MANY_REQUESTS');
+    expect(alertService.error).toHaveBeenCalledWith(
+      'มีคำขอเข้ามามากเกินไป กรุณารอสักครู่แล้วลองใหม่อีกครั้ง'
+    );
+    httpMock.verify();
+  });
+
   it('translates the dedicated 503 dependency-outage message on an /api/ request (behavior preserved)', () => {
     const translate = jasmine.createSpyObj<TranslateService>(
       'TranslateService',
