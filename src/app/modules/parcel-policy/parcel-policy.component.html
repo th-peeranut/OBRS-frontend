@@ -1,0 +1,80 @@
+<app-navbar></app-navbar>
+
+<section class="policy-container">
+  <div class="policy-card">
+    <h1>{{ "POLICY.PARCEL.TITLE" | translate }}</h1>
+
+    <!-- OBRS-629: version + date come from parcel-policy.version.ts, never from a translation
+         file. Deliberately OUTSIDE the `limits` gate below — this states which WORDING the reader
+         is looking at, which is true even when the live config fetch fails. -->
+    <p class="policy-version" data-testid="parcel-policy-version">
+      {{
+        "POLICY.PARCEL.VERSION_LINE"
+          | translate: { version: version, effectiveDate: effectiveDate }
+      }}
+    </p>
+
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.SCOPE' | translate"></div>
+
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.PROHIBITED_INTRO' | translate"></div>
+
+    <!-- AC-4: the list comes from GET /api/parcel-policy, i.e. the same
+         parcel.prohibited_categories config ParcelIntakeService blocks on. Same rendering as the
+         staff consign form, so the counter and the published terms cannot disagree. -->
+    <ul class="policy-prohibited-list" data-testid="parcel-policy-prohibited">
+      @for (category of prohibitedCategories; track category.slug) {
+        <li>
+          <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">{{ category.icon }}</span>
+          <span>{{ category.i18nKey | translate: category.params }}</span>
+        </li>
+      }
+    </ul>
+    @if (limits && !prohibitedCategories.length) {
+      <p class="policy-inline-note">{{ 'PARCEL.PROHIBITED.EMPTY' | translate }}</p>
+    }
+
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.PROHIBITED_EXTRA' | translate"></div>
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.FALSE_DECLARATION' | translate"></div>
+
+    <!-- AC-3: every number in this clause interpolates from the live config. The `limits` gate is
+         what guarantees a reader can never see a raw `{{maxWeightKg}}` literal, and a failed fetch
+         must NEVER fall back to a typed-in number — it shows an inline error + retry instead. -->
+    @if (limits) {
+      <div class="policy-body" [innerHTML]="'POLICY.PARCEL.LIMITS' | translate: limits"></div>
+    } @else {
+      @if (!policyLoadFailed) {
+        <!-- The shared primitive, not a hand-rolled shimmer: OBRS-907 exists because fourteen
+             stylesheets had each grown their own, and business-policy.component.scss is one of
+             the copies still on the debt register. -->
+        <app-loading-state variant="skeleton" [rows]="2"></app-loading-state>
+      } @else {
+        <div class="policy-inline-error" role="alert">
+          <span class="material-symbols-outlined policy-inline-error-icon" [attr.translate]="'no'" aria-hidden="true">error</span>
+          <span>{{ 'POLICY.PARCEL.LIMITS_ERROR' | translate }}</span>
+          <button type="button" class="btn btn-link p-0 policy-inline-retry" (click)="retryPolicy()">
+            {{ 'POLICY.PARCEL.RETRY' | translate }}
+          </button>
+        </div>
+      }
+    }
+
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.FREIGHT' | translate"></div>
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.COLLECTION' | translate"></div>
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.LEFT_AT_STOP' | translate"></div>
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.CANCELLATION' | translate"></div>
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.LIABILITY' | translate"></div>
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.LIABILITY_TIERS' | translate"></div>
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.CLAIMS' | translate"></div>
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.CONSENT' | translate"></div>
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.NOT_PASSENGER_BAGGAGE' | translate"></div>
+    <div class="policy-body" [innerHTML]="'POLICY.PARCEL.AMENDMENT' | translate"></div>
+
+    <!-- AC-5: clause 11 says the passenger-baggage wording lives on the other page; this is the
+         clickable half of that pointer, the same shape /business-policy uses to point here. -->
+    <p class="policy-cross-link">
+      <a routerLink="/business-policy">{{ 'POLICY.PARCEL.SEE_BUSINESS_POLICY' | translate }}</a>
+    </p>
+  </div>
+</section>
+
+<app-footer></app-footer>

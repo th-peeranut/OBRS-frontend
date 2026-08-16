@@ -144,6 +144,16 @@
             </div>
           }
 
+          <!-- OBRS-629 AC-1: the second required entry point — the terms are reachable from
+               inside the consignment flow, immediately before the sender pays, not only from the
+               footer. target="_blank" on purpose: routing away would discard a half-filled form,
+               and a link that costs the sender their typing is a link they learn not to press. -->
+          <p class="parcel-details-form__terms-link">
+            <a routerLink="/parcel-policy" target="_blank" rel="noopener">
+              {{ "PARCEL.TERMS_LINK" | translate }}
+            </a>
+          </p>
+
           <div class="parcel-details-form__actions">
             <button type="submit" class="parcel-btn-primary" [disabled]="!canSubmit">
               {{ (isSubmitting ? "PARCEL_BOOKING.DETAILS.SUBMITTING" : "PARCEL_BOOKING.DETAILS.SUBMIT") | translate }}

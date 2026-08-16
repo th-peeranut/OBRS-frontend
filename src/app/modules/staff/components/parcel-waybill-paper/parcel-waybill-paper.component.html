@@ -50,5 +50,29 @@
         <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.TRACK_QR_HINT' | translate }}</div>
       </div>
     }
+
+    <!-- OBRS-629: clause 10 of the published terms says the sender signs THIS paper, that it
+         carries a short form of the terms, and that a QR opens the full version. All three had to
+         exist here before that clause could be published — a clause describing a document that
+         does not do what it says is the OBRS-627 defect, reintroduced.
+         ⛔ The third QR must not be confused with the two above it: `qrDataUrl` is the recipient's
+         collectionToken (a secret) and `trackQrDataUrl` is the sender's tracking link. This one
+         encodes a public policy page and is the only one of the three that is the same URL on
+         every waybill ever printed. -->
+    <section class="parcel-waybill-terms" data-testid="parcel-waybill-terms">
+      <h5 class="fw-bold">{{ 'STAFF.PARCEL_WAYBILL.TERMS_TITLE' | translate }}</h5>
+      <p class="parcel-waybill-terms-summary">{{ 'STAFF.PARCEL_WAYBILL.TERMS_SUMMARY' | translate }}</p>
+      @if (termsQrDataUrl) {
+        <div class="parcel-waybill-qr">
+          <div class="parcel-waybill-qr-for">{{ 'STAFF.PARCEL_WAYBILL.TERMS_QR_LABEL' | translate }}</div>
+          <img [src]="termsQrDataUrl" [attr.alt]="'STAFF.PARCEL_WAYBILL.TERMS_QR_ALT' | translate" />
+          <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.TERMS_QR_HINT' | translate }}</div>
+        </div>
+      }
+      <div class="parcel-waybill-signature">
+        <span class="parcel-waybill-signature-label">{{ 'STAFF.PARCEL_WAYBILL.TERMS_SIGNATURE' | translate }}</span>
+        <span class="parcel-waybill-signature-rule"></span>
+      </div>
+    </section>
   </div>
 }

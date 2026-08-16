@@ -155,6 +155,21 @@ const BUSINESS_POLICY_LEDGER = [
     worsensTerms: false,
     fingerprint: '6d21ca462ceb4be9e5a1cfe78816f1abb087b254c3ddc5872412e9d15e690903',
   },
+  {
+    // OBRS-629 AC-5. Items 4 and 5 refuse liquids, fragile goods and oversized items. Read
+    // literally they said this operator cannot carry parcels at all -- on a site that was already
+    // selling parcel carriage and taking money for it. They now state their own scope (baggage a
+    // passenger carries on board) and the parcel terms are linked from the page.
+    //
+    // worsensTerms: false, and not as a convenience. Nothing a ticket holder may do became
+    // narrower: the same items are refused in their hands as before. What changed is that text
+    // which never governed parcels stopped appearing to.
+    version: '1.1',
+    publishedOn: '2026-08-16',
+    effectiveDate: '2026-08-16',
+    worsensTerms: false,
+    fingerprint: '60971f342f0be0d4c8ca8ccf08367ec34956f665a0989186b219c5450d594dbc',
+  },
 ];
 
 function businessPolicyFingerprint(json) {
@@ -622,6 +637,157 @@ function visibleLength(value) {
         `KNOWN_SHORT_TRANSLATIONS still excuses [${entry.lang}] "${entry.key}" (${entry.owner}), but that translation now passes the length floor -- delete the entry so the key is guarded again (gate from OBRS-628; entries owned by OBRS-631 / OBRS-623)`
       );
     }
+  }
+}
+
+// 6) OBRS-629: the parcel carriage terms must stay tied to a published version, and the two
+//    numbers a sender reads must keep coming from the live config.
+//
+//    Why this gate and not just gate 3's shape: the parcel service was selling and taking money
+//    with NO published terms at all, so there was never a wording to drift -- this is the first
+//    one. Two distinct things are guarded here and they are guarded differently on purpose.
+//
+//    The weight/carry-on limits are ENFORCED by ParcelIntakeService, so a page repeating them can
+//    silently disagree with the code. They must interpolate from GET /api/parcel-policy, exactly
+//    as gate 3 requires for the booking-policy numbers (OBRS-564). carryOnFreeSizeMinInch is
+//    explicitly rejected: PublicParcelPolicyRespDto refuses to serve it because no main-source
+//    line reads it, and the draft wording had it published as a floor that applies to nothing.
+//
+//    The 500-baht liability ceiling is NOT enforced anywhere -- claims are settled at a counter in
+//    cash (clause 9) and there is no claims engine to disagree with. It is a contract term, so the
+//    protection it gets is the fingerprint below: change the number and this gate refuses until a
+//    new version is published. STAFF.PARCEL_WAYBILL.TERMS_SUMMARY is fingerprinted with the page
+//    because the printed waybill states the same ceiling; they are one published contract on two
+//    surfaces, and letting one move without the other is how they end up saying different numbers.
+const PARCEL_POLICY_VERSION_FILE = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'src',
+  'app',
+  'modules',
+  'parcel-policy',
+  'parcel-policy.version.ts'
+);
+const PARCEL_POLICY_FINGERPRINTED_KEYS = [
+  'TITLE',
+  'SCOPE',
+  'PROHIBITED_INTRO',
+  'PROHIBITED_EXTRA',
+  'FALSE_DECLARATION',
+  'LIMITS',
+  'FREIGHT',
+  'COLLECTION',
+  'LEFT_AT_STOP',
+  'CANCELLATION',
+  'LIABILITY',
+  'LIABILITY_TIERS',
+  'CLAIMS',
+  'CONSENT',
+  'NOT_PASSENGER_BAGGAGE',
+  'AMENDMENT',
+];
+const PARCEL_POLICY_LEDGER = [
+  {
+    // The first published wording. It replaces no earlier text -- before it there was no parcel
+    // terms page at all -- so there is nothing to give notice OF and publishedOn == effectiveDate.
+    version: '1.0',
+    publishedOn: '2026-08-16',
+    effectiveDate: '2026-08-16',
+    fingerprint: '2744d2c38c89598e7e2f87492f8ce56abfd57b5a4a2269a9d3744a8f0ca14479',
+  },
+];
+
+function parcelPolicyFingerprint(json) {
+  const p = json?.POLICY?.PARCEL;
+  const waybillSummary = json?.STAFF?.PARCEL_WAYBILL?.TERMS_SUMMARY;
+  if (!p || typeof waybillSummary !== 'string') {
+    return null;
+  }
+  const values = PARCEL_POLICY_FINGERPRINTED_KEYS.map((k) => p[k]);
+  if (values.some((v) => typeof v !== 'string')) {
+    return null;
+  }
+  return createHash('sha256')
+    .update(JSON.stringify([...values, waybillSummary]), 'utf8')
+    .digest('hex');
+}
+
+{
+  const seenVersions = new Set();
+  const seenFingerprints = new Set();
+  let previousDate = '';
+  for (const entry of PARCEL_POLICY_LEDGER) {
+    if (seenVersions.has(entry.version)) {
+      problems.push(`parcel-policy ledger lists version ${entry.version} twice -- a version number identifies one text forever (OBRS-629)`);
+    }
+    if (seenFingerprints.has(entry.fingerprint)) {
+      problems.push(`parcel-policy ledger lists the same fingerprint under two versions -- unchanged text must not be re-published as a new version (OBRS-629)`);
+    }
+    if (entry.effectiveDate <= previousDate) {
+      problems.push(`parcel-policy ledger entry ${entry.version} has effectiveDate ${entry.effectiveDate}, which does not come after the previous entry's ${previousDate} (OBRS-629)`);
+    }
+    if (entry.publishedOn > entry.effectiveDate) {
+      problems.push(`parcel-policy ledger entry ${entry.version} is published on ${entry.publishedOn} but effective from ${entry.effectiveDate} -- terms cannot take effect before the page states them (OBRS-629)`);
+    }
+    seenVersions.add(entry.version);
+    seenFingerprints.add(entry.fingerprint);
+    previousDate = entry.effectiveDate;
+  }
+
+  const published = PARCEL_POLICY_LEDGER[PARCEL_POLICY_LEDGER.length - 1];
+  const declared = readFileSync(PARCEL_POLICY_VERSION_FILE, 'utf8');
+  const declaredVersion = /PARCEL_POLICY_VERSION\s*=\s*'([^']*)'/.exec(declared)?.[1];
+  const declaredDate = /PARCEL_POLICY_EFFECTIVE_DATE\s*=\s*'([^']*)'/.exec(declared)?.[1];
+  if (declaredVersion !== published.version || declaredDate !== published.effectiveDate) {
+    problems.push(
+      `parcel-policy.version.ts declares ${declaredVersion} / ${declaredDate} but the newest ledger entry is ${published.version} / ${published.effectiveDate} -- the page renders the .ts values, so they are what senders see (OBRS-629)`
+    );
+  }
+
+  for (const lang of LANGS) {
+    const parcel = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8'))?.POLICY?.PARCEL;
+
+    const line = parcel?.VERSION_LINE;
+    if (typeof line !== 'string') {
+      problems.push(`[${lang}] POLICY.PARCEL.VERSION_LINE is missing or not a string -- the parcel terms page states its version through this key (OBRS-629)`);
+    } else {
+      for (const placeholder of ['{{version}}', '{{effectiveDate}}']) {
+        if (!line.includes(placeholder)) {
+          problems.push(`[${lang}] POLICY.PARCEL.VERSION_LINE is missing the ${placeholder} placeholder -- both values come from parcel-policy.version.ts and must never be typed into a translation file (OBRS-629)`);
+        }
+      }
+    }
+
+    // AC-3, the same rule gate 3 enforces for the booking-policy numbers.
+    const limits = parcel?.LIMITS;
+    if (typeof limits !== 'string') {
+      problems.push(`[${lang}] POLICY.PARCEL.LIMITS is missing or not a string -- the parcel terms page renders this key from live config and cannot fall back (OBRS-629 AC-3)`);
+    } else {
+      for (const placeholder of ['{{maxWeightKg}}', '{{carryOnFreeSizeMaxInch}}', '{{carryOnFreeAisleMaxPerTrip}}']) {
+        if (!limits.includes(placeholder)) {
+          problems.push(`[${lang}] POLICY.PARCEL.LIMITS is missing the ${placeholder} placeholder -- the weight and carry-on limits must interpolate from GET /api/parcel-policy, never be typed in as literals (OBRS-629 AC-3)`);
+        }
+      }
+      // Not served, and not enforced: classifyOnSeat compares against the MAX only, so a "from 16
+      // inches" floor on this page would be a limit in front of a customer that nothing applies.
+      if (limits.includes('carryOnFreeSizeMinInch')) {
+        problems.push(`[${lang}] POLICY.PARCEL.LIMITS references carryOnFreeSizeMinInch, which GET /api/parcel-policy deliberately does not serve because no code reads it -- publishing it states a limit nothing enforces (OBRS-629 AC-3)`);
+      }
+    }
+
+    if (typeof parcel?.LIMITS_ERROR !== 'string') {
+      problems.push(`[${lang}] POLICY.PARCEL.LIMITS_ERROR is missing or not a string -- it is what the page shows in place of the limits when the config cannot be read, and AC-3 forbids a hardcoded fallback (OBRS-629)`);
+    }
+  }
+
+  // Thai is the source language for these terms; en/zh are translations of it.
+  const actual = parcelPolicyFingerprint(JSON.parse(readFileSync(join(I18N_DIR, 'th.json'), 'utf8')));
+  if (actual === null) {
+    problems.push(`[th] POLICY.PARCEL.* or STAFF.PARCEL_WAYBILL.TERMS_SUMMARY is missing or not a string -- the parcel terms cannot be versioned if their text is not there (OBRS-629)`);
+  } else if (actual !== published.fingerprint) {
+    problems.push(
+      `[th] parcel terms text no longer matches published version ${published.version}. Its fingerprint is now ${actual}. Publish it: append {version, publishedOn, effectiveDate, fingerprint} to PARCEL_POLICY_LEDGER in this file and set the same version/effectiveDate in parcel-policy.version.ts (OBRS-629)`
+    );
   }
 }
 
