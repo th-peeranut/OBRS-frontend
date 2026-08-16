@@ -494,7 +494,9 @@ export class MyBookingsComponent implements OnInit {
    * OBRS-backend/docs/api/booking.md) so the card never presents Change seat
    * as available when the server would reject it. First failing check wins;
    * the server remains the final authority. Unlike reschedule, there is no
-   * 30-day/TOO_FAR check — change-seat only cares about the 4h window.
+   * date-horizon/TOO_FAR check — change-seat only cares about its own window
+   * (`CHANGE_SEAT_WINDOW_HOURS`, still 4h; reschedule's went to 2h in
+   * OBRS-655, and the two are deliberately separate constants).
    */
   private computeChangeSeatEligibility(
     booking: MyBookingDto,
@@ -536,7 +538,7 @@ export class MyBookingsComponent implements OnInit {
    * OBRS-backend/docs/api/booking.md) so the card never presents Change stop
    * as available when the server would reject it. First failing check wins;
    * the server remains the final authority. Like change-seat (and unlike
-   * reschedule), there is no 30-day/TOO_FAR check — change-stop doesn't move
+   * reschedule), there is no date-horizon/TOO_FAR check — change-stop doesn't move
    * the departure date, only the pickup/drop-off stops.
    */
   private computeChangeStopEligibility(

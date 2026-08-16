@@ -13,7 +13,7 @@ import { test, expect, Page, Locator } from '@playwright/test';
  * WHY IT MOVED OFF SIT
  * The spec used to pin four hand-made bookings on live SIT to July-2026 calendar
  * dates. Two failure modes, neither fixable from the test layer: departures drifted
- * into the past, after which the (correct) 4-hour cutoff disabled Reschedule and the
+ * into the past, after which the (correct) reschedule-window cutoff disabled Reschedule and the
  * spec read that as a defect; and the pre-consumed states it needs —
  * reschedule_count=1, a cancelled booking, a seat-collision partner — could only be
  * produced BY running the spec, so a re-run found them already spent. Owning the
@@ -279,7 +279,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await expect(dialog.locator('#reschedule-date-input')).toBeVisible();
 
     // EMPTY_DAY is in-range — 4 days from the booking's own departure, well inside
-    // reschedule_max_days_ahead (30) — and the fixture deliberately seeds no
+    // reschedule_max_days_ahead (60 since OBRS-655) — and the fixture deliberately seeds no
     // schedules on it, so this is the empty list rather than a rejected date.
     await openCalendar(dialog);
     await selectPCalendarDate(page, EMPTY_DAY);

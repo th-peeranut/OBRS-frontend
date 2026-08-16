@@ -267,7 +267,7 @@ describe('MyBookingsComponent', () => {
       expect(view.rescheduleReasonKey).toBe('MY_BOOKINGS.RESCHEDULE.REASON.ALREADY_USED');
     });
 
-    it('REASON.NO_WINDOW — departure is within the 4h reschedule window', () => {
+    it('REASON.NO_WINDOW — departure is within the 2h reschedule window', () => {
       const view = toView(
         buildBooking({
           bookingSchedules: [

@@ -787,7 +787,9 @@ established (`computeChangeSeatEligibility()` alongside
 `computeRescheduleEligibility()` in `my-bookings.component.ts`: not
 confirmed → not one-way/single-leg → already used
 (`seatChangeCount >= 1`) → inside the 4h window → eligible, first-failing-wins,
-no 30-day/TOO_FAR check since change-seat doesn't move the departure date).
+no date-horizon/TOO_FAR check since change-seat doesn't move the departure
+date. Change-seat keeps its own 4h `CHANGE_SEAT_WINDOW_HOURS`; reschedule's
+window went to 2h in OBRS-655 and the two are separate constants).
 
 The dialog itself is a single seat-map step (a ticket stepper — "Passenger
 {{index}} of {{total}}" — appears only for multi-ticket bookings) rather than
@@ -823,7 +825,7 @@ with a localized reason when ineligible" contract
 (`computeChangeStopEligibility()` alongside the other two `compute*Eligibility`
 methods in `my-bookings.component.ts`: not confirmed → not one-way/single-leg
 → already used (`stopChangeCount >= 1`) → inside the 4h window → eligible,
-first-failing-wins; no 30-day/TOO_FAR check, same as change-seat, since
+first-failing-wins; no date-horizon/TOO_FAR check, same as change-seat, since
 change-stop doesn't move the departure date).
 
 Unlike change-seat, this dialog's shape is much closer to reschedule's: it

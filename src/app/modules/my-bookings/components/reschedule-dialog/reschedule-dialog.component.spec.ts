@@ -561,4 +561,60 @@ describe('RescheduleDialogComponent', () => {
         .toBeFalse();
     });
   });
+
+  describe('OBRS-655: date-picker bounds carry the reschedule window and horizon', () => {
+    // `computeDateBounds` runs `now.add(RESCHEDULE_WINDOW_HOURS, 'hour').startOf('day')`,
+    // so at most clock times 2h and 4h collapse onto the SAME calendar day and a
+    // test written at an arbitrary `now` cannot tell them apart. The clock is
+    // pinned to 21:00 local — the one band where the two values differ: +2h stays
+    // on the pinned day, +4h rolls past midnight onto the next one.
+    const pinnedNow = new Date(2026, 11, 20, 21, 0, 0);
+
+    beforeEach(() => {
+      jasmine.clock().install();
+      jasmine.clock().mockDate(pinnedNow);
+    });
+
+    afterEach(() => {
+      jasmine.clock().uninstall();
+    });
+
+    it('minDate is the start of the day containing now + 2h (not now + 4h)', () => {
+      const { component } = create(
+        buildState({ bookings: [buildBooking()], rescheduleDialogBookingId: 5 })
+      );
+      component.ngOnInit();
+
+      expect(component.minDate)
+        .withContext('at 21:00, a 4h window would push the earliest pickable day to the 21st')
+        .toEqual(dayjs(pinnedNow).add(2, 'hour').startOf('day').toDate());
+    });
+
+    it('maxDate is the end of the day 60 days after the original departure (not 30)', () => {
+      // The horizon is anchored on the ORIGINAL departure, not on `now`.
+      const originalDeparture = dayjs(pinnedNow).add(10, 'day').toISOString();
+      const booking = buildBooking({
+        bookingSchedules: [
+          {
+            id: 1,
+            departureDateTime: originalDeparture,
+            fromStop: { code: 'a' },
+            toStop: { code: 'b' },
+            tickets: [{ id: 11, seatNumber: '1' }],
+          },
+        ],
+      });
+      const { component } = create(
+        buildState({ bookings: [booking], rescheduleDialogBookingId: 5 })
+      );
+      component.ngOnInit();
+
+      expect(component.maxDate).toEqual(
+        dayjs(originalDeparture).add(60, 'day').endOf('day').toDate()
+      );
+      expect(dayjs(component.maxDate).diff(dayjs(originalDeparture), 'day'))
+        .withContext('a 30-day horizon must not satisfy this')
+        .toBeGreaterThanOrEqual(60);
+    });
+  });
 });

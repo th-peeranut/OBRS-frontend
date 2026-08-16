@@ -246,8 +246,15 @@ export const CANCELLABLE_BOOKING_STATUS = 'confirmed';
 /** Backend defaults mirrored client-side for up-front reschedule eligibility
  * gating (see OBRS-backend/docs/api/booking.md, `reschedule_window_hours`).
  * The server is always the source of truth — these only avoid presenting an
- * action the backend would reject outright (acceptance criterion #3). */
-export const RESCHEDULE_WINDOW_HOURS = 4;
+ * action the backend would reject outright (acceptance criterion #3).
+ *
+ * ⚠️ DUPLICATE OF BACKEND STATE. This literal restates the `system_configs`
+ * row `reschedule_window_hours`; nothing enforces that the two agree, and both
+ * suites stay green while they disagree — the customer just sees the stricter
+ * of the two. Change one, change the other in the same card. OBRS-699 removes
+ * the duplication by having the frontend read the policy from the API; until
+ * it ships, this is the documented fallback. */
+export const RESCHEDULE_WINDOW_HOURS = 2;
 
 /** Refund methods that the gateway cannot auto-refund (handled manually). */
 export const MANUAL_REFUND_METHOD = 'MANUAL_REFUND_REQUIRED';
