@@ -3922,7 +3922,9 @@
         "EXPLOSIVE": "Explosives or fireworks",
         "WEAPON": "Weapons or weapon parts",
         "NARCOTIC": "Narcotics or controlled substances",
-        "CORPSE": "Human remains"
+        "CORPSE": "Human remains",
+        "VALUABLES": "Valuables (cash, gold, gemstones, jewellery)",
+        "ANIMAL": "Live animals or animal carcasses"
       },
       "UNLISTED": "Items in the \"{{slug}}\" category",
       "EMPTY": "No prohibited categories are configured right now. Please ask staff before consigning.",

@@ -39,6 +39,9 @@ const ICON_BY_SLUG: Readonly<Record<string, string>> = {
   weapon: 'gavel',
   narcotic: 'medication',
   corpse: 'sentiment_very_dissatisfied',
+  // OBRS-1402: the two the published terms refused in prose while the config did not.
+  valuables: 'diamond',
+  animal: 'pets',
 };
 
 const FALLBACK_ICON = 'block';
