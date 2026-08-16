@@ -20,5 +20,13 @@
 // Its origin, because a number in a contract must be traceable: ระเบียบและคู่มือรถร่วม บขส.
 // พ.ศ. 2547 ข้อ 82, which binds us through clauses 10 and 12 of affiliate contract E-51-29.
 // Recorded in obrs-agent-office `docs/regulatory/REGULATION-BKS-SHARED-BUS-2547.md`.
+// Clause 3's closing sentence was rewritten on the same day 1.0 was drafted, and the ledger
+// fingerprint corrected in place instead of opening a 1.1 -- 1.0 had not reached a reader yet
+// (unmerged branch, no deploy). The reason for the rewrite is regulatory, not cosmetic: ระเบียบ
+// ข้อ 80 forbids charging for a passenger's own baggage under 20 kg / 0.5 m³, so "must buy a seat
+// of its own" described our fee as a baggage charge, which is the one description that conflicts
+// with it. What actually happens -- confirmed by the owner 2026-08-16 -- is that there is no
+// luggage hold at all: everything rides in the saloon, in free floor space or the aisle, and an
+// over-size item is given a seat because it physically occupies one. The wording now says that.
 export const PARCEL_POLICY_VERSION = '1.0';
 export const PARCEL_POLICY_EFFECTIVE_DATE = '2026-08-16';

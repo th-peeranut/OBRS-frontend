@@ -690,10 +690,18 @@ const PARCEL_POLICY_LEDGER = [
   {
     // The first published wording. It replaces no earlier text -- before it there was no parcel
     // terms page at all -- so there is nothing to give notice OF and publishedOn == effectiveDate.
+    //
+    // The fingerprint was CORRECTED IN PLACE once, same day, rather than opening a 1.1: clause 3's
+    // last sentence said an over-size item "must buy a seat of its own", and the owner's account of
+    // the operation (2026-08-16) showed why that reads wrong -- there is no luggage hold, every
+    // item rides in the saloon, and an over-size one is charged because it occupies a seat's worth
+    // of floor. Amending is legitimate ONLY because 1.0 had never reached a reader: it lives on
+    // branch obrs-629-parcel-terms-fe, PR #233 is unmerged, and no deploy carries it. A version
+    // somebody has read is append-only and stays that way.
     version: '1.0',
     publishedOn: '2026-08-16',
     effectiveDate: '2026-08-16',
-    fingerprint: '2744d2c38c89598e7e2f87492f8ce56abfd57b5a4a2269a9d3744a8f0ca14479',
+    fingerprint: 'c9822e1c0667efb36af3c55935c1945b8aa8d92d5948515d693d4db934a2616d',
   },
 ];
 

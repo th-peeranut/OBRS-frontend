@@ -2863,7 +2863,7 @@
       "PROHIBITED_INTRO": "<h2>第 2 条 本公司不承运的物品</h2>\n<p>本公司不承运下列物品。</p>",
       "PROHIBITED_EXTRA": "<p>并包括<strong>现金、黄金、宝石、首饰及同类贵重物品</strong>，以及<strong>气味浓烈的食品</strong>。</p>",
       "FALSE_DECLARATION": "<p>因虚报包裹内容而产生的一切损害，由寄件人负责。工作人员在验收环节发现违禁物品的，本公司拒绝承运并全额退还运费；包裹已发出后才发现的，本公司有权中止运输并联系寄件人逐案处理。</p>",
-      "LIMITS": "<h2>第 3 条 重量与尺寸</h2>\n<p>交寄包裹每件重量<strong>不得超过 {{maxWeightKg}} 公斤</strong>。</p>\n<p>旅客随身带上车的行李，最长边<strong>不超过 {{carryOnFreeSizeMaxInch}} 英寸</strong>的免费携带，放置于过道的每班次<strong>最多 {{carryOnFreeAisleMaxPerTrip}} 件</strong>。最长边超过 {{carryOnFreeSizeMaxInch}} 英寸的，该件行李须另行购买座位。</p>",
+      "LIMITS": "<h2>第 3 条 重量与尺寸</h2>\n<p>交寄包裹每件重量<strong>不得超过 {{maxWeightKg}} 公斤</strong>。</p>\n<p>旅客随身带上车的行李，最长边<strong>不超过 {{carryOnFreeSizeMaxInch}} 英寸</strong>的免费携带，放置于过道的每班次<strong>最多 {{carryOnFreeAisleMaxPerTrip}} 件</strong>。最长边超过 {{carryOnFreeSizeMaxInch}} 英寸的行李，所占空间相当于一个座位，无法放置于空位或过道，本行将为该件行李安排座位并按该区间的座位票价收费；旅客亦可选择按本条款作为包裹交寄。</p>",
       "LIMITS_ERROR": "无法加载当前实际执行的重量与尺寸限制，交寄前请先咨询工作人员。",
       "RETRY": "重试",
       "FREIGHT": "<h2>第 4 条 运费及其包含与不包含的项目</h2>\n<p>交寄时显示的运费，是从始发点运至目的地停靠点的总价，已<strong>包含</strong>本公司工作人员装车与卸车的费用，不另行收费。</p>\n<p><strong>不包含</strong>损失或灭失的保险、包装、以及转送至具体地址。本公司目前<strong>尚未提供包裹保险服务</strong>，包裹由寄件人自行包装。</p>",

@@ -58,6 +58,13 @@ test.describe('OBRS-629 — parcel carriage terms', () => {
     await expect(body).toContainText('500');
     // Clause 2's list comes from the same config the intake check blocks on.
     await expect(page.locator('[data-testid="parcel-policy-prohibited"] li')).toHaveCount(5);
+    // Clause 3's closing sentence, rewritten because ระเบียบ ข้อ 80 forbids charging a passenger
+    // for their own baggage under 20 kg / 0.5 m³. The seat is charged for the FLOOR the item takes,
+    // which is what actually happens (no luggage hold; everything rides in the saloon), so the page
+    // must not say the old thing — that the item "must buy a seat of its own", which reads as a
+    // baggage fee and is the one reading clause 80 refuses.
+    await expect(body).toContainText('กินพื้นที่เท่ากับที่นั่งหนึ่งที่');
+    await expect(body).not.toContainText('ต้องซื้อที่นั่งของตนเอง');
     // And no placeholder ever reaches a reader.
     await expect(body).not.toContainText('{{');
 
