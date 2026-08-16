@@ -123,6 +123,12 @@
       "why": "OBRS-629 card evidence: the parcel carriage terms page that did not exist, the footer link that was missing, the amended passenger-baggage clause on /business-policy, and the two consignment surfaces that now reach the terms before the sender pays. AFTER-only for /parcel-policy on purpose -- there is no BEFORE frame of a page that was never routed, and a 404 is not a comparison. Every shot asserts what it is about to photograph first, including the one that proves a FAILED config read prints an error rather than inventing a weight limit. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT. Every assertion that must keep holding lives in parcel-policy.component.spec.ts and in gate 6 of scripts/check-i18n-parity.mjs, both on CI."
     },
     {
+      "spec": "obrs-1402-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1402capture.config.ts",
+      "why": "OBRS-1402 BEFORE/AFTER evidence for the two categories the published terms refused in prose while `parcel.prohibited_categories` did not list them. Same shape as obrs-629-capture above: `GET /api/parcel-policy` is stubbed with the five-slug array and then the seven-slug one, so the same page under the two stubs IS the before/after on the display side. What it does NOT prove -- that the SEEDED config really is those seven, and that intake really rejects them -- is proved backend-side in ParcelConsignedDeliveryIT. The AFTER shots assert no row fell through to UNLISTED_KEY, which is what a missing translation looks like: it renders the RAW SLUG inside a sentence and still reads like a working page, so a count assertion alone would pass on exactly that defect. The regression worth keeping lives in src/app/shared/lib/parcel-prohibited-categories.spec.ts on CI."
+    },
+    {
       "spec": "obrs-1372-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1372capture.config.ts",
