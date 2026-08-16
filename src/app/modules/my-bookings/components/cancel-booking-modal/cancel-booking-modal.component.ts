@@ -139,7 +139,7 @@ export class CancelBookingModalComponent implements OnInit, OnChanges {
    * OBRS-813 — offer the reschedule door only when the server would actually
    * open it. `rescheduleEligible` is computed once in
    * `MyBookingsComponent.computeRescheduleEligibility` (confirmed + one-way +
-   * never rescheduled + outside the 4h window); this modal re-uses that verdict
+   * never rescheduled + outside the 2h window); this modal re-uses that verdict
    * rather than re-deriving it, so there is exactly one FE mirror of the
    * backend's prerequisites and it cannot drift against the menu item that
    * opens the same dialog.

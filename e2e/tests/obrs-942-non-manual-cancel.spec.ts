@@ -24,7 +24,7 @@ import { seedAnalyticsConsent } from '../support/analytics-consent';
 
 const ok = <T>(data: T) => ({ code: 200, message: 'OK', data });
 
-/** Far enough out that the 4h reschedule window and the cancel window are both open. */
+/** Far enough out that the 2h reschedule window and the cancel window are both open. */
 const DEPARTURE = '2030-06-17T08:00:00+07:00';
 
 const lookup = (id: number, code: string, label: string) => ({

@@ -192,7 +192,7 @@ describe('MyBookingsComponent', () => {
   });
 
   describe('reschedule eligibility (card gating)', () => {
-    // A departure comfortably clear of the 4h reschedule window, computed
+    // A departure comfortably clear of the 2h reschedule window, computed
     // relative to "now" so the test never goes stale.
     const eligibleDeparture = dayjs().add(10, 'day').toISOString();
 
