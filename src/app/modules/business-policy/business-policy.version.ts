@@ -28,5 +28,11 @@
 // POLICY.BUSINESS.{TITLE,SALES_CHANNELS,CONTENT} text against BUSINESS_POLICY_LEDGER. Editing the
 // terms without appending a ledger entry fails `npm run test:i18n`, and re-using a version number
 // for different text collides with that version's own entry.
-export const BUSINESS_POLICY_VERSION = '1.0';
-export const BUSINESS_POLICY_EFFECTIVE_DATE = '2026-08-12';
+//
+// 1.1 (OBRS-629 AC-5): items 4 and 5 now state that they cover baggage a passenger carries on
+// board, and the page links to the parcel carriage terms. Read literally, the old wording refused
+// liquids, fragile goods and oversized items outright — i.e. said we cannot carry parcels — while
+// the site was already selling parcel carriage. Not a worsening: the same items are still refused
+// in a passenger's hands. See BUSINESS_POLICY_LEDGER in scripts/check-i18n-parity.mjs.
+export const BUSINESS_POLICY_VERSION = '1.1';
+export const BUSINESS_POLICY_EFFECTIVE_DATE = '2026-08-16';

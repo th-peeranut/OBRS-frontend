@@ -95,3 +95,14 @@
     color: var(--admin-text);
   }
 }
+
+// OBRS-629 AC-1: the terms link under the prohibited-item acknowledgement. `--admin-link` is not
+// a token this theme declares, so it inherits the anchor colour the admin shell already sets and
+// is distinguished by the underline alone.
+.parcel-consign-form__terms-link {
+  margin: 8px 0 0;
+
+  a {
+    text-decoration: underline;
+  }
+}

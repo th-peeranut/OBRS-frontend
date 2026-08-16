@@ -1,13 +1,18 @@
 import { toProhibitedCategoryViews, UNLISTED_KEY } from './parcel-prohibited-categories';
 
 describe('toProhibitedCategoryViews (OBRS-629 AC-4)', () => {
-  it('maps the five seeded slugs to their shipped copy and icons', () => {
+  it('maps the seven seeded slugs to their shipped copy and icons', () => {
+    // OBRS-1402 added `valuables`/`animal`. `params === undefined` on every row is the
+    // assertion that matters here: a slug we ship no copy for falls through to UNLISTED_KEY
+    // WITH params, so a missing icon or translation would show the raw slug rather than fail.
     const views = toProhibitedCategoryViews([
       'flammable',
       'explosive',
       'weapon',
       'narcotic',
       'corpse',
+      'valuables',
+      'animal',
     ]);
 
     expect(views.map((v) => v.i18nKey)).toEqual([
@@ -16,8 +21,12 @@ describe('toProhibitedCategoryViews (OBRS-629 AC-4)', () => {
       'PARCEL.PROHIBITED.ITEM.WEAPON',
       'PARCEL.PROHIBITED.ITEM.NARCOTIC',
       'PARCEL.PROHIBITED.ITEM.CORPSE',
+      'PARCEL.PROHIBITED.ITEM.VALUABLES',
+      'PARCEL.PROHIBITED.ITEM.ANIMAL',
     ]);
     expect(views[0].icon).toBe('local_fire_department');
+    expect(views[5].icon).toBe('diamond');
+    expect(views[6].icon).toBe('pets');
     expect(views.every((v) => v.params === undefined)).toBeTrue();
   });
 

@@ -32,3 +32,44 @@
   font-weight: 700;
   margin-bottom: 4px;
 }
+
+// OBRS-629: the short-form terms + signature block clause 10 of the published terms describes.
+// Kept below both parcel QRs so the top of the paper stays the operational half (who, where,
+// how much) that staff read out loud, and the contract half is what the sender signs.
+.parcel-waybill-terms {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--admin-outline, #bdc8cf);
+
+  // The terms QR is alone on its row, unlike the pair above, so it does not inherit their 48%.
+  .parcel-waybill-qr {
+    display: block;
+    width: auto;
+  }
+}
+
+.parcel-waybill-terms-summary {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.parcel-waybill-signature {
+  margin-top: 24px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.parcel-waybill-signature-label {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+// A rule to sign on, not an input: this surface is printed.
+.parcel-waybill-signature-rule {
+  flex: 1;
+  border-bottom: 1px solid var(--admin-text, #191c1e);
+  height: 1px;
+  max-width: 320px;
+}
