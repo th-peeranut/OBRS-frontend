@@ -327,6 +327,19 @@ jobs:
       - name: station-load failure surface gate
         run: npm run test:station-surface
 
+      # Thirteenth pure-node gate (OBRS-1415). /i18n/*.json is the only shipped asset
+      # that carries words, changes on most deploys, and has a filename that never
+      # changes - so it is the one asset for which a browser cache is a correctness
+      # question rather than a performance one. prod served it with no Cache-Control at
+      # all and returning visitors read the 12 Aug translations under the new bundle,
+      # i.e. raw i18n keys on the home page, including the notice telling customers
+      # where to book instead. SIT was measured NOT to share the hole - Netlify already
+      # sends a revalidating default - which is exactly why the netlify.toml block needs
+      # a gate: nothing breaks the day someone deletes it as redundant. It breaks later,
+      # on the unrelated push that adds a Cache-Control to the `/*` block.
+      - name: i18n cache-header gate
+        run: npm run test:i18n-cache
+
       # A Leaflet marker is positioned by a transform on an element Leaflet has
       # already made `absolute`. A component stylesheet that re-declares that
       # `position` through ::ng-deep outweighs Leaflet and wins, and `relative`

@@ -163,3 +163,33 @@
 # Strict-Transport-Security is deliberately NOT set here. SIT is a *.netlify.app
 # subdomain and an HSTS header from us binds that host for a year; prod sets it in the
 # Caddyfile, where the domain actually is ours.
+
+# OBRS-1415 — this block PINS a default, it does not repair a bug. State that plainly,
+# because the card was written against prod and the obvious next move is to copy prod's
+# fix over without checking whether SIT had the same hole.
+#
+# It did not. Measured 2026-08-17 with `curl -sD -`:
+#   https://nj-phuyaipu.com/i18n/th.json       -> no cache-control header at all
+#   https://sit-obrs-frontend.netlify.app/…    -> cache-control: public,max-age=0,must-revalidate
+# Netlify sends that revalidating default for static files on its own, so a returning
+# SIT visitor already re-asks for th.json on every load and a deploy is visible at once.
+# On prod, Caddy sends nothing and the browser falls back to heuristic freshness off
+# Last-Modified — a filename that never changes plus no header is what let prod serve
+# the 12 Aug translations to anyone who had visited before (raw BOOKING_CLOSED_NOTICE.*
+# keys on the home page, deploy/prod/Caddyfile carries the same story at the fix).
+#
+# What this block buys, then, is not today but the day someone adds a Cache-Control to
+# the `/*` block above — for the bundle, for a security sweep, for anything. Netlify
+# applies every matching rule, so `/*` would reach the unhashed i18n files too and SIT
+# would silently acquire prod's bug, on a host whose provider default had been carrying
+# the invariant for free. An invariant that only holds while nobody edits the file above
+# is not held by anything. `no-cache` is the same value and the same reasoning as prod's
+# — store it, revalidate before use, 304 on an unchanged file — so the two environments
+# now say it rather than one saying it and one meaning it.
+#
+# scripts/check-i18n-cache-headers.mjs fails the build if this block is removed or
+# weakened to a cacheable value.
+[[headers]]
+  for = "/i18n/*"
+  [headers.values]
+    Cache-Control = "no-cache"

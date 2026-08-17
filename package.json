@@ -40,6 +40,7 @@
     "test:icon-translate": "node scripts/check-icon-translate.mjs",
     "test:fab-yield-selector": "node scripts/check-fab-yield-selector.mjs",
     "test:netlify-ignore": "node scripts/check-netlify-ignore.mjs",
+    "test:i18n-cache": "node scripts/check-i18n-cache-headers.mjs",
     "test:station-surface": "node scripts/check-station-load-surface.mjs",
     "pree2e": "node scripts/check-local-env.mjs --require-local",
     "e2e": "playwright test",
