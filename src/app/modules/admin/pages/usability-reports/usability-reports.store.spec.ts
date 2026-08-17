@@ -199,6 +199,50 @@ describe('UsabilityReportsStore', () => {
     });
   });
 
+  // ── OBRS-1414: an admin-chosen column sort ──────────────────────────────
+  describe('setSort (OBRS-1414)', () => {
+    it('overrides the tab default sort, keeping the status param', async () => {
+      await store.setStatus('accepted');
+      adminApiServiceSpy.getUsabilityReports.calls.reset();
+
+      await store.setSort(['createdAt,desc', 'id,desc']);
+
+      expect(adminApiServiceSpy.getUsabilityReports).toHaveBeenCalledWith(
+        'accepted',
+        ['createdAt,desc', 'id,desc'],
+        0,
+        20
+      );
+    });
+
+    it('resets to page 0 — page 3 of oldest-first is not page 3 of newest-first', async () => {
+      await store.setStatus('new');
+      await store.setPage(3);
+      adminApiServiceSpy.getUsabilityReports.calls.reset();
+
+      await store.setSort(['id,asc']);
+
+      expect(adminApiServiceSpy.getUsabilityReports).toHaveBeenCalledWith('new', ['id,asc'], 0, 20);
+    });
+
+    // The chosen sort must SURVIVE a tab switch: an admin who asked for
+    // oldest-first and then changes tab would otherwise be silently returned to
+    // sortForStatus()'s default, which reads as "my click was forgotten".
+    it('survives a later setStatus (the tab default does not come back)', async () => {
+      await store.setSort(['id,asc']);
+      adminApiServiceSpy.getUsabilityReports.calls.reset();
+
+      await store.setStatus('dismissed');
+
+      expect(adminApiServiceSpy.getUsabilityReports).toHaveBeenCalledWith(
+        'dismissed',
+        ['id,asc'],
+        0,
+        20
+      );
+    });
+  });
+
   it('clears the cached value when the status actually changes (no stale-tab flash)', async () => {
     const page: UsabilityReportPage = {
       content: [

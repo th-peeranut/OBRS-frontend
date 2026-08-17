@@ -1235,6 +1235,27 @@ enforced rule with a test behind it.
   that needs both options visible at once, rather than reaching for
   `app-dropdown-obrs` or a raw PrimeNG button primitive.
 
+- **Sortable column header** (OBRS-1414, `AdminSortableHeaderComponent`, declared
+  by `AdminSharedModule`): no admin/staff table could be sorted by clicking a
+  header before this — `pSortableColumn`/`[sortField]` were **0 hits repo-wide**
+  and `<p-table>` **0** in `modules/admin` + `modules/staff`, against **46**
+  hand-rolled `<table>` templates. The reusable unit is therefore the HEADER
+  CELL, not a table wrapper: an attribute component on `<th>`
+  (`<th adminSortableHeader field="createdAt" [activeField] [activeDirection]
+  (sortChange)>`) so a page opts ONE column in without its markup being
+  rewritten. Follows the W3C APG sortable-table pattern — `aria-sort` on the
+  `<th>` (the host), a real `<button>` inside it taking its accessible name from
+  the projected label, and a decorative `aria-hidden` arrow
+  (`unfold_more`/`arrow_upward`/`arrow_downward`). It owns only the click rule
+  (same column = flip, other column = restart at asc) and emits
+  `{field, direction}`; it never reorders rows. **That last part is the rule, not
+  an implementation detail:** every admin list is server-paginated, so a header
+  that sorted the loaded page would order 20 of N rows and present the result as
+  the whole set. Adopt this on the next table whose endpoint accepts `sort`, and
+  do NOT put an arrow on a column the backend cannot order by, or one whose
+  ordering is arbitrary to the reader (an enum sorted by its stored English code
+  behind a translated label).
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that

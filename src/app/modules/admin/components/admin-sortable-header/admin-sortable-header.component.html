@@ -1,0 +1,10 @@
+<button type="button" class="admin-sortable-header-btn" (click)="onClick()">
+  <ng-content></ng-content>
+  <span
+    class="material-symbols-outlined admin-sortable-header-icon"
+    [class.is-inactive]="!isActive"
+    [attr.translate]="'no'"
+    aria-hidden="true"
+    >{{ icon }}</span
+  >
+</button>

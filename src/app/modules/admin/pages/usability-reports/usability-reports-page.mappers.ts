@@ -323,3 +323,16 @@ export function sortForStatus(status: StatusFilterValue | ''): string[] {
   const dir = status !== '' && status !== 'all' && FIFO_STATUSES.has(status) ? 'asc' : 'desc';
   return [`createdAt,${dir}`, `id,${dir}`];
 }
+
+// OBRS-1414: the wire `?sort=` for a column the admin picked by clicking its
+// header, which OVERRIDES the per-tab default above. The trailing `id` tiebreak
+// is not cosmetic: createdAt is written at OffsetDateTime.now() nanosecond
+// precision but stored as TIMESTAMPTZ microseconds, so rows inserted <1µs apart
+// truncate to byte-identical values and createdAt alone is not a total order —
+// the same reason sortForStatus() and the backend's @PageableDefault both carry
+// it (AdminUsabilityReportController.listReports, ADR-0080). Without a total
+// order the page boundaries drift between fetches and a row can appear twice or
+// never. Sorting BY id already is one, so it doesn't repeat itself.
+export function sortForColumn(field: string, direction: 'asc' | 'desc'): string[] {
+  return field === 'id' ? [`id,${direction}`] : [`${field},${direction}`, `id,${direction}`];
+}
