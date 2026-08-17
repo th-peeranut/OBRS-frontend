@@ -399,6 +399,12 @@
       "why": "OBRS-1370. The lane's own hermeticity, asserted rather than declared. Rule 2 of playwright.gate.config.ts argued this lane was provably hermetic because an unintercepted request hits a dead localhost:8080 -- true only of traffic that travels through `apiUrl`. An absolute third-party URL inside a stylesheet or a fixture never goes near it, so the lane was measured reaching five external hosts on an ordinary sweep (fonts.googleapis.com, fonts.gstatic.com, accounts.google.com, ssl.gstatic.com, and placehold.co from two specs' fixtures), and a transient gstatic 404 on one of them turned the dev merge red on a tree that had just passed on the PR (OBRS-1369). This spec sweeps the customer pages and fails naming any host outside this machine, with an allow list that costs a sentence per entry. Hermetic by definition: it is the thing that measures it."
     },
     {
+      "spec": "obrs-1301-qr-img-src.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-1301 AC-3. Serves the img-src directive READ FROM netlify.toml back as an enforcing Content-Security-Policy on the /payment document, then asks whether the PromptPay QR actually decoded. Nothing else in the repo can answer that: the two CSP gates (CspAllowlistMatchesInventoryTest, check-payment-page-scripts.mjs) compare the allowlist against the prose inventory and do not move when a backend starts forwarding a QR URL on a different origin, and no Karma spec has an enforcing header or a real image decode. Three cases, and the first is the reason the other two mean anything: a positive control that proves a blocked image reaches the violation listener at all; the shape prod sends today (our own path, fetched, bound as blob:) rendering with zero violations; and the legacy gatewayResponse shape being refused before it reaches <img src>, with the customer told instead of left in front of an empty frame. Hermetic on this lane's terms: seedCustomerSession's fixtures plus its own payment stubs, and the one Omise URL in the file is fixture data the header stops before DNS."
+    },
+    {
       "spec": "obrs-907-qa-parity-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs907qa.config.ts",
