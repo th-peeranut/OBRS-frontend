@@ -57,14 +57,42 @@
   <div class="admin-table-wrap">
     <table class="admin-table">
       <thead>
+        <!-- OBRS-1414: sortable on ID and Created at ONLY, deliberately not on
+        the other six. This list is server-paginated, so a column is sortable
+        here only if the backend can order the WHOLE set by it and that order
+        means something:
+          · Category / Status — the backend orders by the stored English enum
+            code, but the cells render translated Thai labels, so the rows
+            would come back in an order the admin cannot see any logic in.
+            Status is also already filterable by the dropdown above, which
+            groups it better than a sort would.
+          · User — a numeric account id; "user 3 before user 12" is not an
+            order anyone asked for.
+          · Description / Images / Actions — descriptionPreview and imageCount
+            are derived in the mapping layer, not columns Spring can sort by,
+            and Actions holds buttons.
+        Adding an arrow to a header whose ordering is arbitrary is the same
+        silently-wrong answer this card exists to avoid. -->
         <tr>
-          <th>{{ 'ADMIN.USABILITY_REPORTS.COL.ID' | translate }}</th>
+          <th
+            adminSortableHeader
+            field="id"
+            [activeField]="sortField"
+            [activeDirection]="sortDirection"
+            (sortChange)="onSortChange($event)"
+            >{{ 'ADMIN.USABILITY_REPORTS.COL.ID' | translate }}</th>
           <th>{{ 'ADMIN.USABILITY_REPORTS.COL.CATEGORY' | translate }}</th>
           <th>{{ 'ADMIN.USABILITY_REPORTS.COL.STATUS' | translate }}</th>
           <th>{{ 'ADMIN.USABILITY_REPORTS.COL.USER' | translate }}</th>
           <th>{{ 'ADMIN.USABILITY_REPORTS.COL.DESCRIPTION' | translate }}</th>
           <th>{{ 'ADMIN.USABILITY_REPORTS.COL.IMAGES' | translate }}</th>
-          <th>{{ 'ADMIN.USABILITY_REPORTS.COL.CREATED_AT' | translate }}</th>
+          <th
+            adminSortableHeader
+            field="createdAt"
+            [activeField]="sortField"
+            [activeDirection]="sortDirection"
+            (sortChange)="onSortChange($event)"
+            >{{ 'ADMIN.USABILITY_REPORTS.COL.CREATED_AT' | translate }}</th>
           <th>{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
         </tr>
       </thead>

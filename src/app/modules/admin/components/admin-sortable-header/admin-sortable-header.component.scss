@@ -1,0 +1,30 @@
+// OBRS-1414: no new color role and no new token — the button inherits the
+// `.admin-table thead th` typography/color it sits inside (admin-theme.scss
+// sets colour there per theme), so a sortable header is visually identical to
+// a plain one apart from the arrow. All this file does is strip the browser's
+// default button chrome so adding the button doesn't shift the header row.
+.admin-sortable-header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.admin-sortable-header-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+// The "this column is sortable but isn't the active one" arrow — present so
+// the affordance is discoverable, muted so it doesn't compete with the active
+// column's direction. Opacity, not a second colour token.
+.admin-sortable-header-icon.is-inactive {
+  opacity: 0.4;
+}

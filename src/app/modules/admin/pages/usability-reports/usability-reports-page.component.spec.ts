@@ -69,6 +69,7 @@ describe('UsabilityReportsPageComponent', () => {
       'mutate',
       'setStatus',
       'setPage',
+      'setSort',
     ]) as jasmine.SpyObj<UsabilityReportsStore> & {
       data$: BehaviorSubject<UsabilityReportPage | null>;
       refreshing$: BehaviorSubject<boolean>;
@@ -84,6 +85,7 @@ describe('UsabilityReportsPageComponent', () => {
     storeSpy.refresh.and.returnValue(Promise.resolve());
     storeSpy.setStatus.and.returnValue(Promise.resolve());
     storeSpy.setPage.and.returnValue(Promise.resolve());
+    storeSpy.setSort.and.returnValue(Promise.resolve());
 
     adminApiServiceSpy = jasmine.createSpyObj('AdminApiService', [
       'getUsabilityReportById',
@@ -2200,5 +2202,126 @@ describe('UsabilityReportsPageComponent', () => {
 
       discardPeriodicTasks();
     }));
+
+    // OBRS-1414 / AC-4: the pill's "jump to page 1" is only right while the
+    // ordering is newest-first. Under an admin-chosen ASCENDING sort the new
+    // rows are on the LAST page, and page 1 would show the oldest reports
+    // while the pill claimed they were the new ones.
+    it('under an ascending column sort, jumps to the LAST page instead of page 1', fakeAsync(() => {
+      fixture.detectChanges();
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 5, { number: 0, totalPages: 1 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      component['onSortChange']({ field: 'createdAt', direction: 'asc' });
+      // The refresh triggered by the pill lands with a third page now present.
+      storeSpy.refresh.and.callFake(() => {
+        storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 45, { number: 0, totalPages: 3 }));
+        return Promise.resolve();
+      });
+
+      pollReturns(45);
+      tick(30_000);
+      expect(component['newReportCount']).toBe(40);
+
+      component['showNewReports']();
+      tick();
+
+      expect(storeSpy.setPage)
+        .withContext('0-based wire page for the 3rd (last) page')
+        .toHaveBeenCalledWith(2);
+
+      discardPeriodicTasks();
+    }));
+
+    it('under a DESCENDING column sort, still jumps to page 1 (OBRS-373 behavior unchanged)', fakeAsync(() => {
+      fixture.detectChanges();
+      storeSpy.data$.next(
+        buildPage([mockSummaryPage.content[0]], 45, { number: 2, totalPages: 3 })
+      );
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      component['onSortChange']({ field: 'createdAt', direction: 'desc' });
+      storeSpy.setPage.calls.reset();
+
+      pollReturns(50);
+      tick(30_000);
+
+      component['showNewReports']();
+      tick();
+
+      expect(storeSpy.setPage).toHaveBeenCalledWith(0);
+
+      discardPeriodicTasks();
+    }));
+  });
+
+  // ── OBRS-1414: sortable column headers ────────────────────────────────────
+  describe('sortable column headers (OBRS-1414)', () => {
+    function sortableHeaders(): HTMLTableCellElement[] {
+      return Array.from(
+        fixture.nativeElement.querySelectorAll('.admin-table thead th[adminsortableheader]')
+      );
+    }
+
+    beforeEach(() => {
+      fixture.detectChanges();
+      storeSpy.data$.next(mockSummaryPage);
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+    });
+
+    // AC-6: NOT every column. Category/Status would be ordered by the stored
+    // English enum code behind translated Thai labels; User is an account id;
+    // descriptionPreview/imageCount are derived in the mapping layer and are
+    // not columns Spring can order by at all.
+    it('offers a sort on exactly the ID and Created-at columns', () => {
+      expect(sortableHeaders().length).toBe(2);
+      expect(sortableHeaders().map((th) => th.getAttribute('field'))).toEqual(['id', 'createdAt']);
+      expect(fixture.nativeElement.querySelectorAll('.admin-table thead th').length)
+        .withContext('the other six headers stay plain')
+        .toBe(8);
+    });
+
+    // AC-3: this list is server-paginated, so the sort MUST go to the backend.
+    // Reordering the 20 rows held in the DOM would present page 1 of N as the
+    // whole sorted set — a wrong answer delivered with full confidence.
+    it('sends the sort to the store (server-side), never reorders the loaded rows', () => {
+      const rowsBefore = Array.from(
+        fixture.nativeElement.querySelectorAll('tr.ur-report-row td:first-child')
+      ).map((td) => (td as HTMLElement).textContent?.trim());
+
+      sortableHeaders()[1].querySelector('button')!.click();
+      fixture.detectChanges();
+
+      expect(storeSpy.setSort).toHaveBeenCalledWith(['createdAt,asc', 'id,asc']);
+      const rowsAfter = Array.from(
+        fixture.nativeElement.querySelectorAll('tr.ur-report-row td:first-child')
+      ).map((td) => (td as HTMLElement).textContent?.trim());
+      expect(rowsAfter).toEqual(rowsBefore);
+    });
+
+    it('keeps the id tiebreak off an id sort (already a total order)', () => {
+      sortableHeaders()[0].querySelector('button')!.click();
+      expect(storeSpy.setSort).toHaveBeenCalledWith(['id,asc']);
+    });
+
+    // AC-1 end to end through the real header component (the toggle rule itself
+    // is pinned in admin-sortable-header.component.spec.ts).
+    it('a second click on the same column flips to desc and updates aria-sort', () => {
+      const createdAt = sortableHeaders()[1];
+      createdAt.querySelector('button')!.click();
+      fixture.detectChanges();
+      expect(createdAt.getAttribute('aria-sort')).toBe('ascending');
+
+      createdAt.querySelector('button')!.click();
+      fixture.detectChanges();
+      expect(storeSpy.setSort).toHaveBeenCalledWith(['createdAt,desc', 'id,desc']);
+      expect(createdAt.getAttribute('aria-sort')).toBe('descending');
+      expect(sortableHeaders()[0].getAttribute('aria-sort'))
+        .withContext('only one column is ever the sorted one')
+        .toBe('none');
+    });
   });
 });

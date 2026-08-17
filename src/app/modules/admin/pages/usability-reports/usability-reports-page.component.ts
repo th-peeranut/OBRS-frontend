@@ -9,6 +9,10 @@ import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/
 import { AuthService } from '../../../../auth/auth.service';
 import { UsabilityReportsStore } from './usability-reports.store';
 import {
+  AdminSortChange,
+  AdminSortDirection,
+} from '../../components/admin-sortable-header/admin-sortable-header.component';
+import {
   UsabilityReportDetail,
   UsabilityReportStatus,
   UsabilityReportSummary,
@@ -26,6 +30,7 @@ import {
   formatBytes as formatBytesPure,
   removeRow,
   seedDecisionStatus,
+  sortForColumn,
   sortForStatus,
   statusClass as statusClassPure,
   statusLabel as statusLabelPure,
@@ -68,6 +73,14 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected newReportCount = 0;
   private baselineTotal: number | null = null;
   private static readonly LIVE_REFRESH_POLL_MS = 30_000;
+
+  // OBRS-1414: the column the admin sorted by, null until they click a header
+  // (the per-tab default from sortForStatus is in force until then). Only the
+  // header cells read these; the ordering itself is applied SERVER-SIDE by the
+  // store — this list is paginated, so reordering the 20 rows in the DOM would
+  // present page 1 of 8 as if it were the whole sorted set.
+  protected sortField: string | null = null;
+  protected sortDirection: AdminSortDirection = 'asc';
 
   // OBRS-378: seeded to a concrete role default in ngOnInit and kept concrete
   // thereafter — the filter dropdown drops its [placeholder] binding
@@ -273,6 +286,15 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     void this.store.setPage(page - 1);
   }
 
+  // OBRS-1414: a header click. The asc/desc toggle rule lives in the header
+  // component; this only records what it chose and hands the wire params to
+  // the store, which re-fetches from page 1.
+  protected onSortChange(change: AdminSortChange): void {
+    this.sortField = change.field;
+    this.sortDirection = change.direction;
+    void this.store.setSort(sortForColumn(change.field, change.direction));
+  }
+
   // OBRS-373: fetch just the active filter's total (size=1 envelope — same
   // trick as getUsabilityReportCountByStatus, but for the CURRENT filter,
   // including 'all' → omit ?status=). Swallows errors so a transient poll
@@ -296,8 +318,24 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // place. Either path emits fresh data → baselineTotal resets and the pill
   // clears via the data$ handler above. Cleared optimistically here too so the
   // pill dismisses on the very click.
+  //
+  // OBRS-1414: "page 1" is only where the new rows are while the ordering is
+  // newest-first. Once the admin can pick an ASCENDING column sort, the new
+  // rows land on the LAST page instead — jumping to page 1 there would show
+  // the oldest reports and label them as the new ones. Refresh first (the row
+  // count just grew, so totalPages may have grown with it), then go to the
+  // last page. Gated on sortField so the default, un-sorted path below is
+  // byte-identical to what OBRS-373 shipped.
   protected showNewReports(): void {
     this.newReportCount = 0;
+    if (this.sortField !== null && this.sortDirection === 'asc') {
+      void this.store.refresh().then(() => {
+        if (this.currentPage !== this.totalPages) {
+          this.onPageChange(this.totalPages);
+        }
+      });
+      return;
+    }
     if (this.currentPage !== 1) {
       this.onPageChange(1);
     } else {
