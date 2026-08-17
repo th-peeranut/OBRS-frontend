@@ -55,9 +55,32 @@ const BLOCKED_QR_URL =
   'https://api.omise.co/charges/chrg_test_68pg4kb9eakt7batypq/documents/docu_test_68pg4kbc4/downloads/8B0B4B0C';
 const BLOCKED_ORIGIN = 'https://api.omise.co';
 
-/** 1x1 PNG. The bytes only have to decode; the assertion is `naturalWidth > 0`. */
-const ONE_PIXEL_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+/**
+ * A real 120px QR of an EMVCo-shaped PromptPay payload. The assertion only needs
+ * `naturalWidth > 0`, so a 1x1 pixel would do — but the AFTER capture this run writes is
+ * card evidence, and a 1x1 scaled into the frame photographs as a solid coloured square
+ * that reads as a BROKEN QR. The bytes are the difference between evidence and something
+ * a reviewer has to be talked out of misreading.
+ */
+const QR_PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAAAAAklEQVR4AewaftIAAASLSURBVO3BUY4cORbAQFKo+1+Z658E' +
+    'HgxUutLd4/FoFWE/cGxrcWxtcWxtcWztxU9U/pSKJ1Smin+LylRxR+VPqbgsjq0tjq0tjq29+IWK76TyKZWp4gmVqeJTKlPF' +
+    'd6n4TirvLI6tLY6tLY6tvXhI5YmKT6lMFXdUpoqpYlL5VMWkckdlqviUyhMVn1ocW1scW1scW3vxF6mYVKaKqWJSuVNxUfmK' +
+    'iv+CxbG1xbG1xbG1F/+nKu6oTBX/RYtja4tja4tjay8eqvhTKiaVr1B5p2Kq+FMq/imLY2uLY2uLY2svfkHlT1GZKu5UTCpT' +
+    'xaRyqZhUpopJZaqYVKaKd1T+lMWxtcWxtRc/qfhbVUwqU8WnVKaKSeWJijsV/4bFsbXFsbXFsbUXP1F5omJS+VMqJpWpYqp4' +
+    'R+VOxRMq71Q8oTJVfGpxbG1xbG1xbO3FQxWTylTxKZWpYlKZKiaVJ1TeqZhUJpUnKiaVi8pXqEwV7yyOrS2OrS2Orb34hYpJ' +
+    '5Y7KpyruVEwq36Xi31IxqUwVT6hMFZfFsbXFsbXFsbUXv6DyRMWnVKaKSeVOxaQyqUwVF5Wp4k7FEypTxUVlqphUpopJZap4' +
+    'Z3FsbXFsbXFszX7ghspUcUdlqphUPlUxqdypuKNyqbijcqdiUpkqJpXfVTGp3Km4LI6tLY6tLY6tvfiJylQxqdypmFSmih2o' +
+    'TBWTylRxUZkq/imLY2uLY2uLY2svHqp4omJSeafiiYrfpTJVTBWTylRxp2JSuVQ8oTJVTCrvLI6tLY6tvfhJxaTyFRVTxTsq' +
+    'U8VUMalMFXcq3lH5CpU7FReVOxXfZXFsbXFsbXFs7cVPVO5U3FGZVN6puKMyVUwVk8pUMalcKu5UTCqTyp2KSeVSMalMKt9l' +
+    'cWxtcWxtcWzNfuALVKaKSWWquKhMFZPKVDGpPFFxUfmKiknlTsWnVKaKSWWqeGdxbG1xbG1xbO3FT1SmiidUpopJ5VIxqdxR' +
+    '+S4Vk8pU8RUVk8qlYlKZKu5UTCpTxWVxbG1xbG1xbM1+4IbKVHFH5U7FReVOxRMqv6viCZWpYlKZKi4qU8UTKlPFO4tja4tj' +
+    'a4tja/YDg8pUcUdlqrij8k7FpPIVFZPKpeKOyt+qYlKZKi6LY2uLY2uLY2v2A38JlaliUrlTMal8quKOyhMVn1L5iop3FsfW' +
+    'FsfWFsfWXvxE5U+puKMyVdxRuVNxUZlU7lRMKk+oXCruVDyhMlVcFsfWFsfWXvxCxXdS+VTFpHKn4o7Kpyq+U8XvUpkqpop3' +
+    'FsfWFsfWFsfWXjyk8kTFP6XiiYpPqUwVU8WkMqn8LpWpYlK5U3FZHFtbHFtbHFt78RepeELliYqLylQxVUwqdyomlaniojJV' +
+    'TCpPVLyzOLa2OLa2OLb24i+i8qdUPFFxR2WqeKdiUpkqJpWpYlKZKi6LY2uLY2uLY2svHqr4r6iYVC4Vk8pU8UTFpPJOxVQx' +
+    'qTxR8c7i2Nri2Nri2NqLX1D5W1RMKndUporfpfJExadUpopJ5Y7KVHFZHFtbHFtbHFuzHzi2tTi2tji29j+6Wn3XfdojwAAA' +
+    'AABJRU5ErkJggg==',
   'base64'
 );
 
@@ -186,7 +209,7 @@ test.describe('OBRS-1301 AC-3: the QR under an enforcing img-src', () => {
   /** Answer `POST /api/private/payments` with `data`, and serve the same-origin QR bytes. */
   async function stubPaymentCreate(page: Page, data: unknown): Promise<void> {
     await page.route(`**${SAME_ORIGIN_QR_PATH}`, (route) =>
-      route.fulfill({ status: 200, contentType: 'image/png', body: ONE_PIXEL_PNG })
+      route.fulfill({ status: 200, contentType: 'image/png', body: QR_PNG })
     );
     // Registered after seedCustomerSession's catch-all, so it wins.
     await page.route('**/api/private/payments', (route) =>
