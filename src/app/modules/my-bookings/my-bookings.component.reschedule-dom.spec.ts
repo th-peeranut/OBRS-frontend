@@ -44,6 +44,9 @@ describe('MyBookingsComponent (reschedule action — action menu)', () => {
       status: 'confirmed',
       bookingType: 'one_way',
       rescheduleCount: 0,
+      // OBRS-699: the window is wire-supplied now, so every fixture must state
+      // it — a booking without it is INELIGIBLE by design, not "defaults to 2".
+      rescheduleWindowHours: 2,
       createdAt: dayjs().toISOString(),
       bookingSchedules: [
         {
@@ -143,34 +146,63 @@ describe('MyBookingsComponent (reschedule action — action menu)', () => {
     expect(item.reasonText).toBeUndefined();
   });
 
-  it('OBRS-655: Reschedule is offered at 3 hours out — inside the OLD 4h window, outside the new 2h one', () => {
-    // The discriminating case for the window change. The guard is
-    // `hoursUntilDeparture <= RESCHEDULE_WINDOW_HOURS` -> INELIGIBLE, so at 3h
-    // out `3 <= 4` is true (blocked, old policy) while `3 <= 2` is false
-    // (offered, new policy): this spec is red against RESCHEDULE_WINDOW_HOURS
-    // = 4 and green against 2. A departure further out (the default fixture's
-    // 10 days) would pass under both values and prove nothing.
-    render(
-      buildBooking({
-        bookingSchedules: [
-          {
-            id: 1,
-            departureDateTime: dayjs().add(3, 'hour').toISOString(),
-            fromStop: { code: 'a', display: { en: { label: 'A' } } },
-            toStop: { code: 'b', display: { en: { label: 'B' } } },
-            tickets: [{ id: 1, seatNumber: '1' }],
-          },
-        ],
-      })
-    );
+  /** A departure 3h out — the one band where a 2h and a 4h window disagree. */
+  function threeHoursOut(): Pick<MyBookingDto, 'bookingSchedules'> {
+    return {
+      bookingSchedules: [
+        {
+          id: 1,
+          departureDateTime: dayjs().add(3, 'hour').toISOString(),
+          fromStop: { code: 'a', display: { en: { label: 'A' } } },
+          toStop: { code: 'b', display: { en: { label: 'B' } } },
+          tickets: [{ id: 1, seatNumber: '1' }],
+        },
+      ],
+    };
+  }
+
+  // OBRS-699: these two are a matched pair and only mean something together.
+  // The guard is `hoursUntilDeparture <= rescheduleWindowHours` -> INELIGIBLE,
+  // so at 3h out a wire value of 2 offers the action and 4 blocks it. Running
+  // the SAME departure through both values is what proves the component reads
+  // the operator's number off the row instead of any constant: a component
+  // that ignored the wire could not satisfy both.
+  it('OBRS-699: Reschedule is offered at 3h out when the operator window on the row is 2h', () => {
+    render(buildBooking({ ...threeHoursOut(), rescheduleWindowHours: 2 }));
 
     openMenu();
 
     const item = rescheduleItem();
     expect(item.disabled)
-      .withContext('3h out is outside the 2h window — the traveller must still be able to move it')
+      .withContext('3h out is outside a 2h window — the traveller must still be able to move it')
       .toBeFalse();
     expect(item.reasonText).toBeUndefined();
+  });
+
+  it('OBRS-699: the SAME 3h departure is refused when the operator window on the row is 4h', () => {
+    render(buildBooking({ ...threeHoursOut(), rescheduleWindowHours: 4 }));
+
+    openMenu();
+
+    const item = rescheduleItem();
+    expect(item.disabled)
+      .withContext('3h out is inside a 4h window — this arm is what makes the pair above non-vacuous')
+      .toBeTrue();
+    expect(item.reasonText).toBe('MY_BOOKINGS.RESCHEDULE.REASON.NO_WINDOW');
+  });
+
+  it('OBRS-699: Reschedule is refused when the backend could not resolve a window (absent)', () => {
+    // Absent means "no governing operator", never "use the default" — an
+    // under-offer. Without this arm the no-fallback decision is untested.
+    render(buildBooking({ rescheduleWindowHours: undefined }));
+
+    openMenu();
+
+    const item = rescheduleItem();
+    expect(item.disabled)
+      .withContext('a booking whose policy the backend cannot state must not advertise the action')
+      .toBeTrue();
+    expect(item.reasonText).toBe('MY_BOOKINGS.RESCHEDULE.REASON.NO_WINDOW');
   });
 
   it('dispatches openRescheduleDialog when the enabled Reschedule item is activated', () => {

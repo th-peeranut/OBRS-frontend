@@ -293,8 +293,10 @@ const ok = <T>(data: T) => ({ code: 200, message: 'OK', data });
 
 /**
  * Far enough out that no policy window closes on it. `/staff/sell` groups trips
- * by date and `my-bookings` refuses to reschedule inside four hours, so a date
- * near today would make these screens depend on the day the suite runs.
+ * by date and `my-bookings` refuses to reschedule inside the operator's
+ * reschedule window (OBRS-699 — served per booking row, no longer a frontend
+ * constant), so a date near today would make these screens depend on the day
+ * the suite runs.
  */
 const FIXTURE_DEPARTURE = '2030-06-17T08:00:00+07:00';
 const FIXTURE_ARRIVAL = '2030-06-17T13:00:00+07:00';

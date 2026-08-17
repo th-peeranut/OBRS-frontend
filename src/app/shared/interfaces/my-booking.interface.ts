@@ -119,6 +119,24 @@ export interface MyBookingDto {
    * OBRS-backend/docs/api/booking.md `GET /bookings/me`.
    */
   stopChangeCount?: number;
+  /**
+   * OBRS-699 — the reschedule window, in hours before departure, resolved by the
+   * backend under the operator who sells THIS booking's trip. Gates all THREE
+   * actions (reschedule, change seat, change stop): the backend reads the one
+   * `reschedule_window_hours` key for each of them.
+   *
+   * Absent/null means the backend could NOT resolve a governing operator, never
+   * "use the default" — the action is hidden rather than offered on a policy
+   * nobody stated. `BookingRespDto` is `@JsonInclude(NON_NULL)`, so the key is
+   * missing rather than null on the wire.
+   */
+  rescheduleWindowHours?: number | null;
+  /**
+   * OBRS-699 — how far past the original departure date a reschedule may move
+   * the trip, in days, resolved under the same operator as
+   * `rescheduleWindowHours`. Same absent/null contract.
+   */
+  rescheduleMaxDaysAhead?: number | null;
   contact?: MyBookingContactDto;
   bookingSchedules?: MyBookingScheduleDto[];
 }
@@ -140,6 +158,14 @@ export interface CancellationPolicy {
    * sentence here would promise a wait nobody is measuring.
    */
   manualRefundDueDays?: number;
+  /**
+   * OBRS-699 (D-4) — the two reschedule dials the cancel dialog's own
+   * "reschedule instead?" offer needs, resolved under the same operator as the
+   * refund quote above so the offer cannot state one operator's horizon over
+   * another operator's trip. Absent/null means unresolvable, never a default.
+   */
+  rescheduleWindowHours?: number | null;
+  rescheduleMaxDaysAhead?: number | null;
 }
 
 /**
@@ -242,19 +268,6 @@ export interface MyBookingView {
 
 /** A booking can only be cancelled by the traveler while it is `confirmed`. */
 export const CANCELLABLE_BOOKING_STATUS = 'confirmed';
-
-/** Backend defaults mirrored client-side for up-front reschedule eligibility
- * gating (see OBRS-backend/docs/api/booking.md, `reschedule_window_hours`).
- * The server is always the source of truth — these only avoid presenting an
- * action the backend would reject outright (acceptance criterion #3).
- *
- * ⚠️ DUPLICATE OF BACKEND STATE. This literal restates the `system_configs`
- * row `reschedule_window_hours`; nothing enforces that the two agree, and both
- * suites stay green while they disagree — the customer just sees the stricter
- * of the two. Change one, change the other in the same card. OBRS-699 removes
- * the duplication by having the frontend read the policy from the API; until
- * it ships, this is the documented fallback. */
-export const RESCHEDULE_WINDOW_HOURS = 2;
 
 /** Refund methods that the gateway cannot auto-refund (handled manually). */
 export const MANUAL_REFUND_METHOD = 'MANUAL_REFUND_REQUIRED';

@@ -42,6 +42,10 @@ function buildBooking(overrides: Partial<MyBookingDto> = {}): MyBookingDto {
     status: 'confirmed',
     bookingType: 'one_way',
     rescheduleCount: 0,
+    // OBRS-699: both picker bounds are wire-supplied now. A fixture omitting
+    // them leaves the bound null (unbounded) by design, not defaulted.
+    rescheduleWindowHours: 2,
+    rescheduleMaxDaysAhead: 60,
     bookingSchedules: [
       {
         id: 1,
@@ -562,8 +566,8 @@ describe('RescheduleDialogComponent', () => {
     });
   });
 
-  describe('OBRS-655: date-picker bounds carry the reschedule window and horizon', () => {
-    // `computeDateBounds` runs `now.add(RESCHEDULE_WINDOW_HOURS, 'hour').startOf('day')`,
+  describe('OBRS-655/OBRS-699: date-picker bounds carry the reschedule window and horizon', () => {
+    // `computeDateBounds` runs `now.add(booking.rescheduleWindowHours, 'hour').startOf('day')`,
     // so at most clock times 2h and 4h collapse onto the SAME calendar day and a
     // test written at an arbitrary `now` cannot tell them apart. The clock is
     // pinned to 21:00 local — the one band where the two values differ: +2h stays
@@ -615,6 +619,53 @@ describe('RescheduleDialogComponent', () => {
       expect(dayjs(component.maxDate).diff(dayjs(originalDeparture), 'day'))
         .withContext('a 30-day horizon must not satisfy this')
         .toBeGreaterThanOrEqual(60);
+    });
+
+    // OBRS-699: absent means the backend could not resolve an operator. The
+    // bound stays unbounded and the server still refuses out-of-policy dates —
+    // substituting 2/60 here is exactly the fallback this card removed.
+    it('leaves both bounds null when the row carries no policy numbers', () => {
+      const booking = buildBooking({
+        rescheduleWindowHours: undefined,
+        rescheduleMaxDaysAhead: undefined,
+      });
+      const { component } = create(
+        buildState({ bookings: [booking], rescheduleDialogBookingId: 5 })
+      );
+      component.ngOnInit();
+
+      expect(component.minDate)
+        .withContext('an unresolvable window must not silently become 2 hours')
+        .toBeNull();
+      expect(component.maxDate)
+        .withContext('an unresolvable horizon must not silently become 60 days')
+        .toBeNull();
+    });
+
+    it('honours an operator horizon that is not the platform default', () => {
+      // 90 is a value no constant in this repo ever held, so a re-introduced
+      // literal cannot satisfy it.
+      const originalDeparture = dayjs(pinnedNow).add(10, 'day').toISOString();
+      const booking = buildBooking({
+        rescheduleMaxDaysAhead: 90,
+        bookingSchedules: [
+          {
+            id: 1,
+            departureDateTime: originalDeparture,
+            fromStop: { code: 'a' },
+            toStop: { code: 'b' },
+            tickets: [{ id: 11, seatNumber: '1' }],
+          },
+        ],
+      });
+      const { component } = create(
+        buildState({ bookings: [booking], rescheduleDialogBookingId: 5 })
+      );
+      component.ngOnInit();
+
+      expect(component.maxDate).toEqual(
+        dayjs(originalDeparture).add(90, 'day').endOf('day').toDate()
+      );
     });
   });
 });

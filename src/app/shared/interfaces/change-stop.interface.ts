@@ -59,11 +59,3 @@ export const CHANGE_STOP_ERROR_CODES = [
 ] as const;
 
 export type ChangeStopErrorCode = (typeof CHANGE_STOP_ERROR_CODES)[number] | 'GENERIC';
-
-/** Mirrors the backend's change-stop window default (see
- * OBRS-backend/docs/api/booking.md) — bounds up-front client-side
- * eligibility gating. The server remains the source of truth
- * (`CHANGE_STOP_ERROR_WINDOW_CLOSED` if this drifts). Unlike reschedule,
- * there is no 30-day/TOO_FAR check — change-stop doesn't move the
- * departure date, only the pickup/drop-off stops. */
-export const CHANGE_STOP_WINDOW_HOURS = 4;

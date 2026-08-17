@@ -78,6 +78,8 @@ import { DriverCashDaysListComponent } from './pages/settlements/driver-cash-day
 import { DriverCashDayReturnModalComponent } from './pages/settlements/driver-cash-day-return-modal/driver-cash-day-return-modal.component';
 import { ParcelShareConfigPageComponent } from './pages/parcel-share-config/parcel-share-config-page.component';
 import { DriverCashRatesPageComponent } from './pages/driver-cash-rates/driver-cash-rates-page.component';
+import { CancelReschedulePolicyConfigPageComponent } from './pages/cancel-reschedule-policy-config/cancel-reschedule-policy-config-page.component';
+import { ConfigSourceBadgeComponent } from './pages/cancel-reschedule-policy-config/config-source-badge/config-source-badge.component';
 // OBRS-1308 — owner-editable notification message overrides + admin approval.
 import { NotificationMessagesTabPageComponent } from './pages/notification-messages/notification-messages-tab-page.component';
 import { NotificationMessageListPageComponent } from './pages/notification-messages/notification-message-list-page.component';
@@ -488,6 +490,8 @@ export const adminRoutes: Routes = [
     DriverCashDayReturnModalComponent,
     ParcelShareConfigPageComponent,
     DriverCashRatesPageComponent,
+    CancelReschedulePolicyConfigPageComponent,
+    ConfigSourceBadgeComponent,
     NotificationMessagesTabPageComponent,
     NotificationMessageListPageComponent,
     NotificationMessageListTableComponent,

@@ -159,6 +159,12 @@ const myBooking = (
   rescheduleCount: 0,
   seatChangeCount: 0,
   stopChangeCount: 0,
+  // OBRS-699: reschedule/change-seat/change-stop eligibility reads the
+  // operator's window off the ROW. Absent means "no governing operator" and the
+  // action is withheld, so the `my-bookings-reschedule` host box (which clicks
+  // Reschedule in the overflow menu) cannot open its dialog without these.
+  rescheduleWindowHours: 2,
+  rescheduleMaxDaysAhead: 60,
   contact: { fullName: 'Somchai Jaidee', phoneNumber: '0812345678' },
   bookingSchedules: [
     {

@@ -51,6 +51,11 @@ const booking = (id: number, number: string, rescheduleCount: number) => ({
   rescheduleCount,
   seatChangeCount: 0,
   stopChangeCount: 0,
+  // OBRS-699: eligibility reads the operator's window off the ROW now, and an
+  // absent value withholds the action — omitting these would silently render
+  // the ELIGIBLE arm ineligible and take the offer assertions vacuous.
+  rescheduleWindowHours: 2,
+  rescheduleMaxDaysAhead: 60,
   contact: { fullName: 'Somchai Jaidee', phoneNumber: '0812345678' },
   bookingSchedules: [
     {
@@ -80,6 +85,9 @@ const CANCEL_POLICY = ok({
   refundRatePercent: '80%',
   refundMethod: 'card',
   policyWindow: 'EARLY',
+  // OBRS-699 (D-4): the offer's "within N days" bullet is quoted from here.
+  rescheduleWindowHours: 2,
+  rescheduleMaxDaysAhead: 60,
 });
 
 interface Harness {

@@ -6,6 +6,7 @@ import { JumpSeatConfigPageComponent } from '../jump-seat-config/jump-seat-confi
 import { ReminderConfigPageComponent } from '../reminder-config/reminder-config-page.component';
 import { ParcelShareConfigPageComponent } from '../parcel-share-config/parcel-share-config-page.component';
 import { DriverCashRatesPageComponent } from '../driver-cash-rates/driver-cash-rates-page.component';
+import { CancelReschedulePolicyConfigPageComponent } from '../cancel-reschedule-policy-config/cancel-reschedule-policy-config-page.component';
 import { NotificationMessagesTabPageComponent } from '../notification-messages/notification-messages-tab-page.component';
 import { NotificationMessageListPageComponent } from '../notification-messages/notification-message-list-page.component';
 import { NotificationMessageEditPageComponent } from '../notification-messages/notification-message-edit-page.component';
@@ -136,6 +137,18 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     subtitleKey: 'ADMIN.DRIVER_CASH_RATES.SUBTITLE',
     requiredRoles: ['owner'],
     component: DriverCashRatesPageComponent,
+  },
+  {
+    // OBRS-699: owner-only, new. APPENDED to the owner-only block
+    // (parcel-share, driver-cash-rates) rather than inserted into it, so the
+    // OBRS-960 pair keeps the adjacency it shipped with and only the two tabs
+    // after this one shift index.
+    path: 'cancel-reschedule-policy',
+    legacyPath: 'cancel-reschedule-policy-config', // no prior standalone page; kept for interface parity
+    labelKey: 'ADMIN.PAGES.CANCEL_RESCHEDULE_POLICY_CONFIG',
+    subtitleKey: 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.SUBTITLE',
+    requiredRoles: ['owner'],
+    component: CancelReschedulePolicyConfigPageComponent,
   },
   {
     // OBRS-1308: owner-editable notification message overrides + admin

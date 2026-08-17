@@ -26,6 +26,7 @@ const TAB_LABELS = [
   'Jump Seat',
   'Parcel Revenue Share',
   'Driver Cash Rates',
+  'Cancel & Reschedule', // OBRS-699
   'Notification Messages',
   'Config Change History',
 ];
@@ -105,7 +106,7 @@ describe('admin shell tab strip — wrapping (OBRS-1331)', () => {
     try {
       // Guard: if this ever stops wrapping the rest of the spec proves nothing.
       expect(rowCount(links))
-        .withContext('400px must not fit 7 tabs; without a wrap this spec is vacuous')
+        .withContext('400px must not fit 8 tabs; without a wrap this spec is vacuous')
         .toBeGreaterThan(1);
 
       const active = links[0];
@@ -154,13 +155,14 @@ describe('admin shell tab strip — wrapping (OBRS-1331)', () => {
   });
 
   it('a strip that does NOT wrap is unchanged — parcel-schedule-tabs / parcel-consign', () => {
-    // 2000px fits all 7, so this stands in for the 2-4 tab strips that never wrap. The
+    // 2000px fits all 8 (measured after OBRS-699 added the eighth tab; the row count
+    // was re-run, not assumed), so this stands in for the 2-4 tab strips that never wrap. The
     // point is the blast-radius claim: `margin-bottom: -1px` lands each tab's new border
     // on the <ul>'s own line, same token, same pixel.
     const { ul, links, teardown } = mountStrip(2000);
     try {
       expect(rowCount(links))
-        .withContext('2000px must fit all 7 tabs on one row')
+        .withContext('2000px must fit all 8 tabs on one row')
         .toBe(1);
 
       const inactive = links[1];

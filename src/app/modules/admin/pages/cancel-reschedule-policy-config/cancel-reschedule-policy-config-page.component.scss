@@ -1,0 +1,18 @@
+// OBRS-775 host-box rule: an Angular host defaults to `display: inline`, so
+// wrapping an in-flow block child makes the host box malformed.
+:host {
+  display: block;
+}
+
+// OBRS-699 — the takeover warning. Chip-pair-as-a-block, same usage as
+// `.parcel-share-config-warning`: bg + text TOGETHER on one element, never
+// the `-text` half alone as a standalone foreground (design-system §2.4.0,
+// enforced by scripts/check-admin-theme-tokens.mjs invariant 4).
+.cancel-reschedule-policy-takeover {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
+  font-size: 0.875rem;
+}

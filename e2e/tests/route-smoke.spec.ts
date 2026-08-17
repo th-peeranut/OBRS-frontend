@@ -45,6 +45,29 @@ function responseFor(pathname: string): unknown {
     });
   }
 
+  // OBRS-699: the owner cancel/reschedule policy tab. Stubbed EXPLICITLY, not
+  // left to the `ok(null)` fallback below: with null the store throws and the
+  // page renders LOAD_FAILED, which passes an "it rendered" assertion while
+  // proving the form was never built.
+  if (pathname.endsWith('/private/owner/configs/cancel-reschedule-policy')) {
+    return ok({
+      cancelWindowHours: 2,
+      cancelWindowHoursOverridden: false,
+      rescheduleWindowHours: 2,
+      rescheduleWindowHoursOverridden: false,
+      rescheduleMaxDaysAhead: 60,
+      rescheduleMaxDaysAheadOverridden: false,
+      earlyWindowHours: 24,
+      earlyWindowHoursOverridden: true,
+      cancelRefundRateEarly: 0.8,
+      cancelRefundRateEarlyOverridden: false,
+      cancelRefundRateLate: 0.5,
+      cancelRefundRateLateOverridden: false,
+      rescheduleFeeLateThb: 50,
+      rescheduleFeeLateThbOverridden: false,
+    });
+  }
+
   if (pathname.endsWith('/private/schedules/42/boarding-list')) {
     return ok([]);
   }
@@ -164,6 +187,26 @@ test.describe('route smoke coverage', () => {
     await page.goto('/admin/users');
     await expect(page.locator('.admin-shell.theme-admin')).toBeVisible();
     await expect(page.locator('.admin-table')).toBeVisible();
+  });
+
+  // OBRS-699: the tab is generated from SYSTEM_SETTINGS_TABS, so a missing
+  // entry ships as a 404-to-home rather than a compile error — and the legacy
+  // redirect is generated the same way.
+  test('the cancel/reschedule policy settings tab renders its seven fields', async ({ page }) => {
+    await page.goto('/admin/settings/cancel-reschedule-policy');
+    await expect(page.locator('.admin-shell.theme-admin')).toBeVisible();
+    await expect(page.locator('#cancelWindowHours')).toHaveValue('2');
+    // Whole percent on screen, 0.80 on the wire (UX §4.2).
+    await expect(page.locator('#cancelRefundRateEarlyPct')).toHaveValue('80');
+    await expect(page.locator('#earlyWindowHours')).toHaveValue('24');
+    await expect(page.locator('app-config-source-badge')).toHaveCount(7);
+    // One overridden of seven => the MIXED arm, and the reset card exists.
+    await expect(
+      page.locator('[data-testid="cancel-reschedule-policy-reset-btn"]')
+    ).toBeVisible();
+
+    await page.goto('/admin/cancel-reschedule-policy-config');
+    await expect(page).toHaveURL(/\/admin\/settings\/cancel-reschedule-policy$/);
   });
 
   test('customer booking and payment pages render with mocked state', async ({ page }) => {

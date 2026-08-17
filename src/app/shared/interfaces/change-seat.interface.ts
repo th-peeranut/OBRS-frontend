@@ -61,12 +61,6 @@ export const CHANGE_SEAT_ERROR_CODES = [
 
 export type ChangeSeatErrorCode = (typeof CHANGE_SEAT_ERROR_CODES)[number] | 'GENERIC';
 
-/** Mirrors the backend's change-seat window default (see
- * OBRS-backend/docs/api/booking.md) — bounds up-front client-side
- * eligibility gating. The server remains the source of truth
- * (`CHANGE_SEAT_ERROR_WINDOW_CLOSED` if this drifts). */
-export const CHANGE_SEAT_WINDOW_HOURS = 4;
-
 /** An existing ticket, carried through the dialog while the traveler picks a
  * new seat for it. */
 export interface ChangeSeatTicket {

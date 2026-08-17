@@ -37,6 +37,9 @@ describe('MyBookingsComponent (change seat action — action menu)', () => {
       bookingType: 'one_way',
       rescheduleCount: 0,
       seatChangeCount: 0,
+      // OBRS-699: change-seat is gated on the operator's
+      // `reschedule_window_hours`, wire-supplied per row.
+      rescheduleWindowHours: 2,
       createdAt: dayjs().toISOString(),
       bookingSchedules: [
         {
@@ -112,6 +115,68 @@ describe('MyBookingsComponent (change seat action — action menu)', () => {
       .withContext('disabled, never omitted — same contract as Reschedule')
       .toBeTrue();
     expect(item.reasonText).toBe('MY_BOOKINGS.CHANGE_SEAT.REASON.NOT_CONFIRMED');
+  });
+
+  // OBRS-699: before this card the FE cut change-seat off at a hardcoded 4h
+  // while the backend cut it at the operator's `reschedule_window_hours`.
+  // These two arms pin the window to the wire in both directions.
+  it('OBRS-699: Change seat is refused at 3h out when the operator window on the row is 4h', () => {
+    render(
+      buildBooking({
+        rescheduleWindowHours: 4,
+        bookingSchedules: [
+          {
+            id: 1,
+            departureDateTime: dayjs().add(3, 'hour').toISOString(),
+            fromStop: { code: 'a', display: { en: { label: 'A' } } },
+            toStop: { code: 'b', display: { en: { label: 'B' } } },
+            tickets: [{ id: 1, seatNumber: '1' }],
+          },
+        ],
+      })
+    );
+
+    openMenu();
+
+    const item = changeSeatItem();
+    expect(item.disabled).toBeTrue();
+    expect(item.reasonText).toBe('MY_BOOKINGS.CHANGE_SEAT.REASON.NO_WINDOW');
+  });
+
+  it('OBRS-699: the SAME 3h departure is offered when the operator window on the row is 2h', () => {
+    render(
+      buildBooking({
+        rescheduleWindowHours: 2,
+        bookingSchedules: [
+          {
+            id: 1,
+            departureDateTime: dayjs().add(3, 'hour').toISOString(),
+            fromStop: { code: 'a', display: { en: { label: 'A' } } },
+            toStop: { code: 'b', display: { en: { label: 'B' } } },
+            tickets: [{ id: 1, seatNumber: '1' }],
+          },
+        ],
+      })
+    );
+
+    openMenu();
+
+    const item = changeSeatItem();
+    expect(item.disabled)
+      .withContext('the 4h FE cutoff hid a seat change the backend would have accepted')
+      .toBeFalse();
+  });
+
+  it('OBRS-699: Change seat is refused when the backend could not resolve a window (absent)', () => {
+    render(buildBooking({ rescheduleWindowHours: undefined }));
+
+    openMenu();
+
+    const item = changeSeatItem();
+    expect(item.disabled)
+      .withContext('absent means no governing operator — under-offer, never a default')
+      .toBeTrue();
+    expect(item.reasonText).toBe('MY_BOOKINGS.CHANGE_SEAT.REASON.NO_WINDOW');
   });
 
   it('includes Change seat enabled, with no reason text, for an eligible booking', () => {

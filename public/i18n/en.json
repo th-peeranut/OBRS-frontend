@@ -525,6 +525,7 @@
       "OPS_EFFICIENCY": "Ops Efficiency",
       "PARCEL_SHARE_CONFIG": "Parcel Revenue Share",
       "DRIVER_CASH_RATES": "Driver Cash Rates",
+      "CANCEL_RESCHEDULE_POLICY_CONFIG": "Cancel & Reschedule",
       "NOTIFICATION_MESSAGES": "Notification Messages"
     },
     "NAV": {
@@ -1665,6 +1666,61 @@
       "CUTOFF_MINUTES_HELPER": "How close to departure an online booking can still be made, in minutes. This value also controls when the \"few seats left\" alert starts showing on a schedule. Walk-in counter sales are not limited by this.",
       "LOAD_FAILED": "Unable to load the booking-policy config."
     },
+    "CANCEL_RESCHEDULE_POLICY_CONFIG": {
+      "SUBTITLE": "Set your own cancellation and reschedule rules. Anything you do not set follows the platform default.",
+      "LOAD_FAILED": "Unable to load the cancel/reschedule policy.",
+      "STATE": {
+        "ALL_DEFAULT": "Every value below is the platform default. Nothing here is yours yet.",
+        "MIXED": "{{count}} of 7 values are yours; the rest still follow the platform default.",
+        "ALL_CUSTOM": "All 7 values are your own policy and no longer follow the platform default."
+      },
+      "SOURCE": {
+        "DEFAULT": "Platform default",
+        "CUSTOM": "Your setting",
+        "ARIA": "Value source: {{source}}"
+      },
+      "GROUP": {
+        "CANCEL": "Cancellation",
+        "RESCHEDULE": "Reschedule",
+        "BOUNDARY": "Early / late boundary",
+        "BOUNDARY_INTRO": "One boundary drives both sections: it decides which refund rate a cancellation gets AND whether a reschedule pays a fee. It must be larger than both windows above, or the late rate and the late fee can never apply."
+      },
+      "CANCEL_WINDOW_HOURS_LABEL": "Cancellation closes (hours before departure)",
+      "CANCEL_WINDOW_HOURS_HELPER": "After this point a customer can no longer cancel. Enter 0 to allow cancelling right up to departure.",
+      "CANCEL_REFUND_RATE_EARLY_LABEL": "Refund rate — early cancellation (%)",
+      "CANCEL_REFUND_RATE_EARLY_HELPER": "Percentage refunded when the customer cancels earlier than the early/late boundary below.",
+      "CANCEL_REFUND_RATE_LATE_LABEL": "Refund rate — late cancellation (%)",
+      "CANCEL_REFUND_RATE_LATE_HELPER": "Percentage refunded when the customer cancels at or after the early/late boundary. It cannot be higher than the early rate.",
+      "RESCHEDULE_WINDOW_HOURS_LABEL": "Reschedule closes (hours before departure)",
+      "RESCHEDULE_WINDOW_HOURS_HELPER": "After this point a customer can no longer move the trip. The same value also governs seat changes and stop changes. Enter 0 to allow it right up to departure.",
+      "RESCHEDULE_MAX_DAYS_AHEAD_LABEL": "Max days ahead for reschedule",
+      "RESCHEDULE_MAX_DAYS_AHEAD_HELPER": "How far past the original departure date a customer may move the trip, in days.",
+      "RESCHEDULE_FEE_LATE_THB_LABEL": "Late reschedule fee (THB)",
+      "RESCHEDULE_FEE_LATE_THB_HELPER": "Flat fee charged when a reschedule is requested at or after the early/late boundary. Before the boundary there is no fee. Enter 0 for no fee at all.",
+      "EARLY_WINDOW_HOURS_LABEL": "Early / late boundary (hours before departure)",
+      "EARLY_WINDOW_HOURS_HELPER": "Earlier than this counts as early: the early refund rate applies and a reschedule pays no fee. At or after it counts as late.",
+      "COHERENCE": {
+        "EARLY_ABOVE_CANCEL": "The early/late boundary must be greater than the cancellation window, otherwise the late refund rate can never apply.",
+        "EARLY_ABOVE_RESCHEDULE": "The early/late boundary must be greater than the reschedule window, otherwise the late reschedule fee can never apply.",
+        "EARLY_RATE_NOT_BELOW_LATE": "The early refund rate must be at least the late refund rate — cancelling sooner may not refund less."
+      },
+      "TAKEOVER_WARNING": "Saving writes all 7 values as your own. The {{count}} still marked \"Platform default\" will stop following the platform and will only change when you change them here.",
+      "SAVE_CONFIRM_TITLE": "Take over the whole policy?",
+      "SAVE_CONFIRM_TEXT": "All 7 values become yours, including the {{count}} you did not change. They will stop following the platform default. You can hand them back at any time with \"Use the platform default\".",
+      "SAVE_CONFIRM_BTN": "Save as my policy",
+      "SAVE_REJECTED": "The server rejected this policy and nothing was saved.",
+      "RESET": {
+        "TITLE": "Use the platform default",
+        "BODY": "Hands all 7 values back to the platform default. From then on they follow the platform whenever it changes, until you set your own again.",
+        "BTN": "Use the platform default",
+        "RUNNING": "Handing back...",
+        "CONFIRM_TITLE": "Hand the policy back to the platform?",
+        "CONFIRM_TEXT": "Your 7 values are removed and the platform default takes over immediately, for every trip you sell. Bookings already made are not changed.",
+        "CONFIRM_BTN": "Use the platform default",
+        "DONE": "The platform default is in use again.",
+        "FAILED": "Could not hand the policy back. Nothing was changed."
+      }
+    },
     "CONFIG_CHANGE_HISTORY": {
       "SUBTITLE": "View the change history of all system config values, with who changed them and when",
       "TABLE_TITLE": "Change history",
@@ -1719,6 +1775,7 @@
         "reschedule_window_hours": "Reschedule window (hours)",
         "reschedule_max_days_ahead": "Max days ahead for reschedule",
         "reschedule_fee_late_thb": "Late reschedule fee (THB)",
+        "early_window_hours": "Early/late boundary (hours)",
         "reschedule_payment_timeout_minutes": "Reschedule payment timeout (minutes)",
         "reminder_hours_before_departure": "Departure reminder lead time (hours)",
         "boarding_reminder_minutes_before_departure": "Boarding reminder lead time (minutes)",

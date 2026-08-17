@@ -38,6 +38,9 @@ function buildPolicy(): CancellationPolicy {
     refundRatePercent: '80%',
     refundMethod: 'MANUAL_REFUND_REQUIRED',
     policyWindow: '24h',
+    // OBRS-699: the reschedule offer's horizon rides on the cancel quote, so
+    // the operator selling this trip is the one who sets it.
+    rescheduleMaxDaysAhead: 60,
   };
 }
 
@@ -139,6 +142,34 @@ describe('CancelBookingModalComponent (OBRS-286, one screen since OBRS-942)', ()
     component.policy = { ...buildPolicy(), originalAmount: 777, refundAmount: 400 };
     expect(component['originalAmountLabel']).toContain('777');
     expect(component['refundLabel']).toContain('400');
+  });
+
+  // OBRS-699: the horizon in the offer is the operator's, off the cancel quote.
+  // 90 is a value no constant in this repo ever held, so a re-introduced
+  // literal cannot satisfy this.
+  it('OBRS-699: the offer quotes the horizon the server put on the cancel quote', () => {
+    component.booking = { ...buildBooking(), rescheduleEligible: true };
+    component.policy = { ...buildPolicy(), rescheduleMaxDaysAhead: 90 };
+    fixture.detectChanges();
+
+    expect(component['rescheduleMaxDaysAhead']).toBe(90);
+    expect(fixture.debugElement.queryAll(By.css('.crdm-offer__points li')).length)
+      .withContext('all four bullets render while the horizon is known')
+      .toBe(4);
+  });
+
+  it('OBRS-699: the within-days bullet is omitted when the server stated no horizon', () => {
+    // A blank or "null" mid-sentence is worse than saying nothing: the rest of
+    // the offer is still true and still worth showing.
+    component.booking = { ...buildBooking(), rescheduleEligible: true };
+    component.policy = { ...buildPolicy(), rescheduleMaxDaysAhead: undefined };
+    fixture.detectChanges();
+
+    expect(component['rescheduleMaxDaysAhead']).toBeNull();
+    expect(fixture.debugElement.query(By.css('.crdm-offer')))
+      .withContext('the offer itself survives — only the one unknown bullet drops')
+      .not.toBeNull();
+    expect(fixture.debugElement.queryAll(By.css('.crdm-offer__points li')).length).toBe(3);
   });
 
   it('OBRS-813: the offer emits rescheduleRequested and cancels nothing', () => {
