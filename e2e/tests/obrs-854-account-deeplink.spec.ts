@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { expect, Page, Route, test } from '@playwright/test';
+import { expect, Locator, Page, Route, test } from '@playwright/test';
 import { ANALYTICS_CONSENT_KEY } from '../support/analytics-consent';
+import { scrollToInstantly, stabilizeScrolling } from '../support/fab-occlusion';
 
 /**
  * OBRS-854 AC-2 / AC-3 — the counter QR and the email footer both point one place: `/account`.
@@ -156,6 +157,21 @@ async function logIn(page: Page): Promise<void> {
   await page.click('button.login-btn[type="submit"]');
 }
 
+/**
+ * OBRS-1383. What `document.elementFromPoint` returns at the centre of `target`, as
+ * `tag.class[data-testid]` — the element that would receive the tap, named well enough that a
+ * failure says WHAT took it rather than just "something did".
+ */
+async function hitAtCentre(target: Locator): Promise<string> {
+  return target.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    if (!top) return '<nothing: the centre is outside the viewport>';
+    const testid = top.getAttribute('data-testid');
+    return `${top.tagName.toLowerCase()}.${top.className}${testid ? `[${testid}]` : ''}`;
+  });
+}
+
 test.describe('OBRS-854: the counter QR lands a logged-out phone on a working close-account page', () => {
   // A real handset, not the default desktop viewport. AC-2 is about someone holding a phone at a
   // ticket counter; asserting the button exists at 1280px would evidence a screen nobody uses.
@@ -220,17 +236,49 @@ test.describe('OBRS-854: the counter QR lands a logged-out phone on a working cl
     const banner = page.locator('app-analytics-consent-banner .consent-banner');
     const openButton = page.locator('[data-testid="close-account-open"]');
     await expect(banner).toBeVisible();
-    await openButton.scrollIntoViewIfNeeded();
+    await stabilizeScrolling(page);
+
+    // OBRS-1383. This was `scrollIntoViewIfNeeded()` followed by one immediate read, and it
+    // measured 30/30 red on clean `dev` (99d70923). The read was never the race: the rect and
+    // the hit-test run in ONE synchronous task, so nothing can move between them. What moved
+    // was the DOCUMENT. OBRS-1372 gives the page back the pixels the bar covers by writing the
+    // bar's measured height onto `body { padding-bottom }` from a ResizeObserver, and the
+    // browser's MINIMUM scroll then stops somewhere else: with that write landed the page rests
+    // with the button 73px CLEAR of the bar (measured: bar top y=597, button centre y=524,
+    // scrollY=720=max); with it removed on the same bundle the same scroll clamps 247px lower
+    // and the button rests underneath (measured: scrollY=473, covered — 10/10). So the old
+    // assertion was not sampling a settled state, it was passing only while that write was
+    // still in flight, and it goes red for good once the machine is quick enough.
+    //
+    // Solve for the offset where the two meet instead of accepting whichever one the race
+    // produced — the same move OBRS-1207 made for the FAB, using its helpers.
+    const overlap = await openButton.evaluate((el) => {
+      const bar = document.querySelector('.consent-banner')!.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      const doc = document.documentElement;
+      const max = Math.round(doc.scrollHeight - doc.clientHeight);
+      // The bar is `position: fixed`, so its viewport rect does not move with the page: the
+      // offset that puts the button's centre in the middle of the bar is just the distance
+      // between the two, read in document coordinates. Clamped to what the document can
+      // actually scroll, so a premise that has gone away surfaces as the hit-test below naming
+      // what it found instead, rather than as a bare number nobody can act on.
+      const centre = window.scrollY + r.y + r.height / 2;
+      const solved = Math.round(centre - (bar.y + bar.height / 2));
+      return { target: Math.min(Math.max(solved, 0), max), max };
+    });
+    await scrollToInstantly(page, overlap.target);
 
     // Not an assumption about z-index: ask the browser what is actually on top of the button's
     // own centre point. OBRS-867's bar is fixed to the bottom and this card is deliberately the
     // last thing on the page, so on a 390px viewport they land on the same pixels.
-    const coveredBefore = await openButton.evaluate((el) => {
-      const r = el.getBoundingClientRect();
-      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-      return !!top && !el.contains(top);
-    });
-    expect(coveredBefore).toBe(true);
+    expect(await hitAtCentre(openButton)).toContain('consent-banner');
+
+    // The other half of what OBRS-1372 changed, on the one customer page its sweep cannot reach
+    // (`consent-banner-reachability.spec.ts` logs nobody in): the room it reserves is what lets
+    // this page's one irreversible control be scrolled clear WITHOUT answering the question.
+    // The bottom of the document is where that room is, so that is where this is asked.
+    await scrollToInstantly(page, overlap.max);
+    expect(await hitAtCentre(openButton)).toContain('close-account-open');
 
     // A real visitor answers it. Decline, not accept — the path must not require agreeing to be
     // measured in order to exercise a privacy right.
@@ -238,12 +286,7 @@ test.describe('OBRS-854: the counter QR lands a logged-out phone on a working cl
     await expect(banner).toHaveCount(0);
 
     await openButton.scrollIntoViewIfNeeded();
-    const coveredAfter = await openButton.evaluate((el) => {
-      const r = el.getBoundingClientRect();
-      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-      return !!top && !el.contains(top);
-    });
-    expect(coveredAfter).toBe(false);
+    expect(await hitAtCentre(openButton)).toContain('close-account-open');
 
     await openButton.click();
     await expect(page.locator('[data-testid="close-account-submit"]')).toBeVisible();
