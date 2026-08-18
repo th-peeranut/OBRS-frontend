@@ -233,6 +233,21 @@ export const CUSTOMER_HOST: Record<string, string> = {
   // OBRS-857. Registering it here is what made its missing `:host { display: block }` visible:
   // the page shipped as an inline host and nothing had ever swept it.
   'find-booking': 'app-find-booking-page',
+  // OBRS-970 group 1. Seven of these nine already had a row in PUBLIC_SWEEP below and
+  // are here because they joined CUSTOMER_PAGES, whose completeness check is keyed by
+  // ENTRY rather than by URL. Both rows are kept on purpose: PUBLIC_SWEEP opens each
+  // page SIGNED OUT while this list seeds a customer session, and /login proves that
+  // is not always the same screen. The duplication costs this sweep one extra page
+  // load each and buys the state nobody else measures.
+  'refund-policy': 'app-refund-policy',
+  'business-policy': 'app-business-policy',
+  'privacy-policy': 'app-privacy-policy',
+  'parcel-policy': 'app-parcel-policy',
+  'how-to-book': 'app-how-to-book',
+  register: 'app-register',
+  'login-mobile': 'app-login-mobile',
+  'forget-password': 'app-forget-password',
+  'track-parcel': 'app-parcel-tracking-page',
 };
 
 /** `CUSTOMER_PAGES` restated in this module's shape. */

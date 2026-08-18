@@ -258,6 +258,20 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   'light|button.tab|boundary-on-#ffffff': '1.15:1 -- OBRS-772 payment tab boundary',
   'dark|button.tab|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 payment tab boundary',
 
+  // OBRS-970 brought /register, /login-mobile and /forget-password into the sweep,
+  // and the same 1.4.11 family arrived with them -- on a surface none of the rows
+  // above measure. Those three pages render their OWN layout rather than the
+  // customer shell, so the field sits on the dark PAGE (#0f1117) with no card
+  // between, and the framework default border reads 1.29:1 there instead of the
+  // 1.35:1 it reads on #1a1d27. Same defect, same owner, different pair -- which is
+  // exactly why this register keys on the colour pair rather than the selector.
+  'dark|input.form-control.mt-1|boundary-on-#0f1117':
+    '1.29:1 x7 -- OBRS-772 form field boundary on the auth-page background (register, login-mobile, forget-password)',
+  'dark|input.form-control|boundary-on-#0f1117':
+    "1.29:1 x2 -- OBRS-772 form field boundary, register's two password fields (no .mt-1, inside .password-container)",
+  'dark|button.theme-toggle-btn|boundary-on-#0f1117':
+    '1.53:1 x3 -- OBRS-772 ghost control boundary: the theme toggle in the language row of the three auth pages, no fill at all',
+
   // -------------------------------------------------------------------------
   // OBRS-773 -- the one boundary finding that is NOT a faint border: a filled
   // primary button whose fill sinks into the card it sits on. OBRS-746 measured
@@ -281,4 +295,23 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   'dark:focus|button.select-btn|boundary-on-#1a1d27': '2.33:1 -- OBRS-773, focus fill sinks into the dark card',
   'dark:hover|button.payment-btn|boundary-on-#0f1117': '2.62:1 -- OBRS-773, hover fill sinks into the dark page',
   'dark:focus|button.payment-btn|boundary-on-#0f1117': '2.62:1 -- OBRS-773, focus fill sinks into the dark page',
+
+  // -------------------------------------------------------------------------
+  // OBRS-1424 -- found by OBRS-970's first sweep of /track-parcel, and the only
+  // TEXT finding the expansion produced.
+  //
+  // `.parcel-tracking-card` paints `$primary-white` with no dark rule, while the
+  // h1 inside it declares no colour of its own and therefore inherits `$dk-text`
+  // from `body.is-dark`. Themed foreground on an unthemed surface: the page title
+  // is #e8eaf0 on #ffffff. Same mechanism as OBRS-747 (staff `.card`) and OBRS-768
+  // (/my-bookings, /e-ticket), a different surface each time.
+  //
+  // Worth recording next to it, because the card predicted the opposite: the four
+  // POLICY pages joined the sweep in the same commit and did NOT go red. Their text
+  // is `$text-black`, declared in their own stylesheets, so their unthemed white
+  // surface keeps a legible pair. OBRS-969 is real and is about theme consistency
+  // -- it is not a contrast defect, and this register is the evidence.
+  // -------------------------------------------------------------------------
+  'dark|div.parcel-tracking-card > h1|#e8eaf0-on-#ffffff':
+    '1.20:1 -- OBRS-1424, page title inherits the dark body colour onto a card that never themes',
 };

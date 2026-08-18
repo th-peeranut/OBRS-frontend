@@ -22,7 +22,12 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { CUSTOMER_PAGES, seedCustomerSession, seedStore } from '../support/customer-pages';
+import {
+  CUSTOMER_PAGES,
+  customerSweepBudgetMs,
+  seedCustomerSession,
+  seedStore,
+} from '../support/customer-pages';
 
 /**
  * Hosts allowed to be REQUESTED. Not "allowed to be reached": every one of these is aborted
@@ -60,7 +65,8 @@ test.describe('OBRS-1370 - the gate lane stays inside this machine', () => {
     // A page load per customer page, plus a settle so late requests are counted. It ran in
     // 49s alone and timed out at the config's 60s when the contrast gate had the other
     // worker -- a sweep must not be a race against whatever else the lane is doing.
-    test.setTimeout(300_000);
+    // OBRS-970: derived from the population -- see customerSweepBudgetMs.
+    test.setTimeout(customerSweepBudgetMs());
 
     /** host -> one example URL, so a failure names WHAT leaked and not just where from. */
     const leaks = new Map<string, string>();
