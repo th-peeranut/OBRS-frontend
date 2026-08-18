@@ -35,7 +35,12 @@
 
 import { expect, test } from '@playwright/test';
 import { AA_BOUNDARY, MEASURE, boundaryKey, placeholderKey, textKey } from '../support/customer-contrast';
-import { CUSTOMER_PAGES, seedCustomerSession, seedStore } from '../support/customer-pages';
+import {
+  CUSTOMER_PAGES,
+  customerSweepBudgetMs,
+  seedCustomerSession,
+  seedStore,
+} from '../support/customer-pages';
 import { CONTRAST_ALLOW } from '../support/customer-contrast-allow';
 
 interface Row {
@@ -198,7 +203,10 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
   // stale-entry check impossible: an allowlist entry is only provably dead once
   // every page has run, and this lane spreads tests across workers.
   test('every text run and control surface is at or above its WCAG AA floor', async ({ page, browser }) => {
-    test.setTimeout(300_000);
+    // OBRS-970: derived from the population, not a constant under a list that only
+    // grows -- `2` because this is the one reader that visits every entry twice, once
+    // per theme. See customerSweepBudgetMs for the measurement behind the per-page rate.
+    test.setTimeout(customerSweepBudgetMs(2));
 
     // One row per DEFECT, accumulated across all sixteen sweeps. The worst
     // sighting wins the printed detail; every sighting is counted.

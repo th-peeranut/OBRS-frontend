@@ -1,5 +1,10 @@
 import { expect, test, Browser, Page } from '@playwright/test';
-import { CUSTOMER_PAGES, seedCustomerSession, seedStore } from '../support/customer-pages';
+import {
+  CUSTOMER_PAGES,
+  customerSweepBudgetMs,
+  seedCustomerSession,
+  seedStore,
+} from '../support/customer-pages';
 import { findUnreachable, formatUnreachable, Unreachable } from '../support/consent-banner-reachability';
 
 /**
@@ -48,6 +53,35 @@ function report(list: Unreachable[]): string {
 async function useThai(page: Page): Promise<void> {
   await page.addInitScript(() => localStorage.setItem('app_language', 'th'));
 }
+
+/**
+ * The one page in `CUSTOMER_PAGES` this sweep cannot ask its question of, and why.
+ *
+ * OBRS-874: the banner STANDS DOWN on /privacy-policy, because that page carries
+ * the full consent control -- grant and withdraw -- so a bar there would ask the
+ * same question twice on one screen, and would pop back up the instant a visitor
+ * withdrew, on the page they withdrew from. Reachability while the bar is up is
+ * therefore not a property that page has.
+ *
+ * This is NOT the gate being quieted. `findUnreachable` throws when the bar is
+ * absent, deliberately, so that a page whose banner silently stopped mounting goes
+ * red instead of being swept as clean -- and that guard is kept for every other
+ * entry. What this does is name the ONE page where the absence is the product
+ * decision, and then prove the decision is still in force: the loop asserts the
+ * bar really is missing here. Revert OBRS-874 and this skip fails as a stale
+ * exclusion rather than hiding a regression.
+ *
+ * Found by OBRS-970, which added /privacy-policy to CUSTOMER_PAGES. Worth knowing
+ * how it presented, because the shape is not what the throw promised: the sweep
+ * did not report "no .consent-banner". It lost the browser context and sat there
+ * until the test budget ran out -- 30 min in the instrumented run, and on every
+ * run that reached the page. A `waitFor` that throws inside a loop whose `finally`
+ * closes a dead context is an opaque timeout, not a named failure.
+ */
+const NO_BANNER_BY_DESIGN: Record<string, string> = {
+  'privacy-policy':
+    'OBRS-874 -- the page carries the consent CONTROL, so the bar stands down (isConsentControlRoute, analytics-consent-banner.component.ts)',
+};
 
 test.describe('OBRS-1372 — consent banner reachability', () => {
   /**
@@ -103,10 +137,12 @@ test.describe('OBRS-1372 — consent banner reachability', () => {
   }: {
     browser: Browser;
   }) => {
-    test.setTimeout(300_000);
+    // OBRS-970: derived from the population -- see customerSweepBudgetMs.
+    test.setTimeout(customerSweepBudgetMs());
 
     const found: Unreachable[] = [];
     const swept: string[] = [];
+    const skippedByDesign: string[] = [];
     let barHeight = 0;
 
     for (const target of CUSTOMER_PAGES) {
@@ -130,6 +166,19 @@ test.describe('OBRS-1372 — consent banner reachability', () => {
           target.landsOn
         );
 
+        const whyNoBanner = NO_BANNER_BY_DESIGN[target.key];
+        if (whyNoBanner) {
+          // Re-derived, never remembered: the exclusion above is only honest while
+          // the bar really is absent here.
+          expect(
+            await sheet.locator('.consent-banner').count(),
+            `${target.key} is excused from this sweep because the banner stands down there ` +
+              `(${whyNoBanner}) -- but the banner IS mounted. Drop the exclusion and sweep the page.`
+          ).toBe(0);
+          skippedByDesign.push(target.key);
+          continue;
+        }
+
         barHeight = Math.max(
           barHeight,
           await sheet.locator('.consent-banner').evaluate((el) => (el as HTMLElement).offsetHeight)
@@ -142,11 +191,12 @@ test.describe('OBRS-1372 — consent banner reachability', () => {
     }
 
     console.log(`  pages swept        : ${swept.length} (${swept.join(', ')})`);
+    console.log(`  no bar by design   : ${skippedByDesign.length} (${skippedByDesign.join(', ') || 'none'})`);
     console.log(`  tallest bar        : ${barHeight}px = ${((barHeight / PHONE.height) * 100).toFixed(1)}% of ${PHONE.height}px`);
     console.log(`  unreachable        : ${found.length}`);
 
     expect(swept.length, 'every page must be swept, or the count above is a lie').toBe(
-      CUSTOMER_PAGES.length
+      CUSTOMER_PAGES.length - skippedByDesign.length
     );
     expect(found, report(found)).toEqual([]);
   });

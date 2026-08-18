@@ -18,6 +18,54 @@
  * wrong state without noticing. Seeding uses the app's OWN action types through
  * the real reducer and the real selectors -- only the input is injected.
  *
+ * THE POPULATION IS DECLARED HERE, IN FULL (OBRS-970)
+ *
+ * This file used to name only the pages it swept, which made the pages it did
+ * NOT sweep invisible: the gate reported "8 pages swept" and nothing anywhere
+ * said 8 out of how many. `CUSTOMER_PAGES` below is the swept half and
+ * `EXCLUDED_CUSTOMER_ROUTES` is the other half, each excluded route carrying the
+ * reason it is not here. Between them they must account for EVERY customer-side
+ * route in `src/app/app-routing.module.ts` -- `obrs-970-route-population.spec.ts`
+ * fails by name when one is in neither list, which is the check that stops this
+ * gap from reopening the next time somebody ships a page.
+ *
+ * HOW TO MEASURE THE TWO SIDES (do not trust a number written in prose)
+ *
+ * Every count this card was argued with had rotted by the time it was worked,
+ * so the commands live here instead of their answers:
+ *
+ * Each command drops COMMENT LINES first. Both files argue with themselves in prose
+ * that quotes the very keys being counted, and the sweep count would otherwise count
+ * the line that documents it -- which is how a header ends up reporting its own size.
+ *
+ *   # customer-side routes: every route key minus the two shells and the wildcard
+ *   grep -v "^ *[/*]" src/app/app-routing.module.ts | grep "path: '" | grep -vE "'(admin|staff|\*\*)'" | wc -l
+ *
+ *   # the same population asked the other way: routes that DECLARE they are
+ *   # customer area. Smaller, because /login, /register, /otp/... and the two
+ *   # email-confirmation routes carry no `data` block at all. Both are correct;
+ *   # they answer different questions, so neither alone is "the" number.
+ *   grep -v "^ *[/*]" src/app/app-routing.module.ts | grep -c 'customerArea: true'
+ *   grep -v "^ *[/*]" src/app/app-routing.module.ts | grep -c 'requireAuth: true'
+ *
+ *   # what this file sweeps -- ENTRIES, which is more than URLs: /schedule-booking
+ *   # is three entries (seeded, empty, no-results) because they are three screens.
+ *   grep -v "^ *[/*]" e2e/support/customer-pages.ts | grep -c "url: '"
+ *
+ *   # and the half that is deliberately NOT swept
+ *   grep -c "    path: '" e2e/support/customer-pages.ts
+ *
+ * WHO ELSE READS `CUSTOMER_PAGES` (measured 2026-08-18 -- an entry added here is
+ * paid for five times over in the GATE lane, not once)
+ *
+ *   customer-contrast-gate.spec.ts        both themes, so 2 page loads per entry
+ *   obrs-1372-consent-banner-reachability.spec.ts
+ *   obrs-1370-lane-offline.spec.ts
+ *   dark-override-effective.spec.ts       via TARGETS
+ *   host-box-sweep.spec.ts                via CUSTOMER_SWEEP in host-boxes.ts,
+ *                                         which also REQUIRES a CUSTOMER_HOST row
+ *                                         per key or its own check fails by name
+ *
  * ASCII-only source.
  */
 
@@ -247,8 +295,48 @@ const boardingToken = (id: string) =>
     expiresAt: '2030-06-17T09:00:00+07:00',
   });
 
+/**
+ * OBRS-970. The three published-policy pages read their numbers from a PUBLIC
+ * endpoint rather than from a translation file -- that is OBRS-564's rule, and
+ * the reason those pages are not static.
+ *
+ * They matter to the fixture list because the fallback at the bottom of
+ * `seedCustomerSession` answers `data: null`, and each of these components turns
+ * a null payload into its inline-error branch: a retry link where the published
+ * terms should be. The page still renders, still clears any plausible text floor,
+ * and would be swept as "the refund policy" while showing an error. Same class of
+ * silent substitution `mustRender` was added for, one layer earlier.
+ *
+ * Values are shaped after the DTOs (`CancellationPolicyDto`, `BookingPolicyDto`,
+ * `ParcelPolicyDto`) and are deliberately ordinary: nothing here is a boundary,
+ * because these pages are swept for COLOUR, not for arithmetic. The arithmetic is
+ * pinned by obrs-627-refund-policy.spec.ts against the real th.json.
+ */
+const CANCELLATION_POLICY = {
+  cancelWindowHours: 24,
+  earlyWindowHours: 72,
+  refundRateEarly: 0.9,
+  refundRateLate: 0.5,
+  manualRefundDueDays: 14,
+};
+const BOOKING_POLICY = { maxAdvanceDays: 30, cutoffMinutes: 60 };
+const PARCEL_POLICY = {
+  maxWeightKg: 20,
+  carryOnFreeSizeMaxInch: 24,
+  carryOnFreeAisleMaxPerTrip: 2,
+  // NOT empty: an empty array renders the "nothing is prohibited" branch, which
+  // is a different screen with different elements. The list a customer actually
+  // reads is the one with rows in it.
+  prohibitedCategories: ['flammable', 'explosive', 'perishable'],
+};
+
 const FIXTURES: [RegExp, (m: RegExpExecArray) => unknown][] = [
   [/\/tickets\/(\d+)\/boarding-token$/, (m) => boardingToken(m[1])],
+  // OBRS-970. Anchored, and above the looser patterns below, so `/routes` cannot
+  // swallow them the day one of these paths grows a segment.
+  [/\/cancellation-policy$/, () => ok(CANCELLATION_POLICY)],
+  [/\/booking-policy$/, () => ok(BOOKING_POLICY)],
+  [/\/parcel-policy$/, () => ok(PARCEL_POLICY)],
   [/\/schedules\/search/, () => ok({ departureSchedules: SCHEDULES, arrivalSchedules: null })],
   [/\/routes\/[^/]+\/pickup-dropoff$/, () => ok({ route: ROUTE_META, pickup: PICKUP_STOPS, dropoff: DROPOFF_STOPS })],
   [/\/routes/, () => ROUTES],
@@ -573,6 +661,257 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     minPlaceholders: 2,
     mustRender: ['.find-booking-form', '.find-booking-lead', '.btn-primary'],
     hoverTargets: ['.btn-primary'],
+  },
+
+  // --- OBRS-970 group 1: the pages that open with a bare `goto` -------------
+  //
+  // Everything below needs no store seed and no session beyond the one
+  // `seedCustomerSession` already writes. Eight of the nine were ALREADY visited
+  // by this lane -- `route-smoke` proves they render and `PUBLIC_SWEEP` in
+  // host-boxes.ts measures their host boxes -- so "nothing was watching them" was
+  // never quite true. What none of those asked is the only question this list is
+  // for: what COLOUR are they, in the theme a customer might be reading them in.
+  //
+  // The four policy pages are the reason the card was filed: they are the footer's
+  // "information and services" column, they are reachable signed-out, and they are
+  // the closest thing this product has to a legal surface.
+  //
+  // EVERY FLOOR BELOW WAS READ OFF A REAL RUN (2026-08-18, this lane) and then cut
+  // to roughly two thirds of it, which is the same rule the eleven entries above
+  // follow: high enough to catch a page that stopped rendering, low enough that an
+  // ordinary copy edit does not redden the gate. The card predicted the three policy
+  // pages would go red on contrast because `.policy-container` is unthemed
+  // (OBRS-969). MEASURED: they do not -- their body text is `$text-black`, declared
+  // in their own stylesheets, so an unthemed white surface keeps a legible pair in
+  // both themes. 969 is a theme-consistency defect, not a contrast one. What DID go
+  // red on the first sweep was /track-parcel's h1 (1.20:1, OBRS-1424) and the 1.4.11
+  // control boundaries on the three auth pages (OBRS-772); both are in
+  // CONTRAST_ALLOW naming the card that owns the fix.
+  {
+    key: 'refund-policy',
+    url: '/refund-policy',
+    landsOn: '/refund-policy',
+    minText: 40,
+    minControls: 3,
+    mustRender: ['.policy-card', '.policy-body'],
+    // The cross-link to the sibling policy is the only control the page owns; the
+    // rest of what a sweep finds here belongs to the navbar and the footer, which
+    // are measured on every other page too.
+    hoverTargets: ['.policy-cross-link'],
+  },
+  {
+    key: 'business-policy',
+    url: '/business-policy',
+    landsOn: '/business-policy',
+    minText: 25,
+    minControls: 3,
+    // `.policy-version` is the OBRS-628 line that must never be re-typed into
+    // i18n. It is also the tell that the page rendered its CONTENT rather than
+    // its skeleton: the skeleton has no version stamp.
+    mustRender: ['.policy-card', '.policy-version'],
+    hoverTargets: ['.policy-cross-link'],
+  },
+  {
+    key: 'privacy-policy',
+    url: '/privacy-policy',
+    landsOn: '/privacy-policy',
+    minText: 90,
+    // The only page in this group that owns no control and fetches nothing -- it is
+    // static by construction (PrivacyPolicyComponent has no service at all). The
+    // three this floor guards are the shell's: navbar, footer, consent control. A
+    // floor is still worth having on them, because a shell that stopped rendering
+    // is exactly the failure a full-page sweep must not report as a clean pass.
+    minControls: 3,
+    mustRender: ['.policy-card', '.policy-body'],
+    hoverTargets: [],
+  },
+  {
+    key: 'parcel-policy',
+    url: '/parcel-policy',
+    landsOn: '/parcel-policy',
+    minText: 80,
+    minControls: 3,
+    // OBRS-629 shipped this page AFTER this card was written, which is the card's
+    // own AC-5 happening in front of us: the "three policy pages" in the card body
+    // are four today. The prohibited-item list is fixture-fed, so pinning it here
+    // is what separates "the terms rendered" from "the error branch rendered".
+    mustRender: ['.policy-card', '.policy-prohibited-list'],
+    hoverTargets: ['.policy-cross-link'],
+  },
+  {
+    key: 'how-to-book',
+    url: '/how-to-book',
+    landsOn: '/how-to-book',
+    minText: 35,
+    minControls: 3,
+    mustRender: ['.how-to-book-card', '.steps'],
+    hoverTargets: [],
+  },
+  {
+    // The three auth-entry pages below render their OWN layout -- `.bg-img`,
+    // `.left-section`, a language switch -- and not the customer navbar/footer, so
+    // almost nothing measured on them is measured anywhere else in this sweep.
+    key: 'register',
+    url: '/register',
+    landsOn: '/register',
+    minText: 20,
+    minControls: 9,
+    // The longest form a customer meets. Placeholders are the OBRS-797 defect
+    // class and this page carries more of them than any other.
+    minPlaceholders: 5,
+    mustRender: ['#firstName', '.login-btn'],
+    hoverTargets: ['.login-btn'],
+  },
+  {
+    key: 'login-mobile',
+    url: '/login-mobile',
+    landsOn: '/login-mobile',
+    minText: 11,
+    minControls: 5,
+    mustRender: ['#phoneNo', '.login-btn', '.login-by-phone-no-btn'],
+    // Two buttons with two different fills, which is two colour pairs -- the
+    // OBRS-575 shape exactly.
+    hoverTargets: ['.login-btn', '.login-by-phone-no-btn'],
+  },
+  {
+    key: 'forget-password',
+    url: '/forget-password',
+    landsOn: '/forget-password',
+    minText: 11,
+    minControls: 4,
+    minPlaceholders: 1,
+    mustRender: ['#email', '.login-btn'],
+    hoverTargets: ['.login-btn'],
+  },
+  {
+    // Public parcel tracking (OBRS-305), swept AT REST like /find-booking above
+    // and for the same reason: everything past a lookup response --
+    // `.parcel-tracking-result`, `.parcel-tracking-timeline`, both not-found
+    // states -- needs an answer this entry does not drive. Said out loud rather
+    // than implied by a green run.
+    key: 'track-parcel',
+    url: '/track-parcel',
+    landsOn: '/track-parcel',
+    minText: 24,
+    minControls: 4,
+    minPlaceholders: 1,
+    mustRender: ['.parcel-tracking-form', '.btn-primary'],
+    hoverTargets: ['.btn-primary'],
+  },
+];
+
+/**
+ * OBRS-970 AC-6. What one entry costs a sweep, and the budget derived from it.
+ *
+ * Every spec that loops `CUSTOMER_PAGES` used to hard-code its own ceiling --
+ * 300_000 in three of them, 240_000 in the fourth -- under a list whose whole
+ * purpose is to grow. That is the shape OBRS-798 already fixed once for the host
+ * -box sweeps (`sweepBudgetMs` in host-boxes.ts): a gate that reddens on the size
+ * of its own coverage teaches people to re-run CI until it passes.
+ *
+ * MEASURED 2026-08-18 on this lane, before this card added anything: the
+ * reachability sweep took 1.4 min over 11 entries = 7.6 s per entry, one pass
+ * each, fresh browser context per page.
+ *
+ * The nine pages this card added are CHEAPER than the eleven that were here:
+ * measured per entry on a quiet lane, 4.9-5.4 s for the policy pages against
+ * 6.1-8.4 s for the seeded funnel screens.
+ *
+ * ONE CORRECTION WORTH KEEPING, because it nearly went into this file as fact.
+ * The reachability sweep blew this budget twice while the value was being chosen,
+ * and the first diagnosis was contention -- the contrast gate loading 40 pages on
+ * the other worker. That was WRONG. Instrumenting the sweep per page showed it
+ * completing 13 entries in 87 s and then losing its browser context on
+ * /privacy-policy, where the consent banner stands down by design (OBRS-874); it
+ * then sat until whatever ceiling it had been given. The budget was never the
+ * problem, and raising it would have bought a slower red. See
+ * NO_BANNER_BY_DESIGN in obrs-1372-consent-banner-reachability.spec.ts.
+ *
+ * Re-measure with the wall clock the sweeps print, not with a number from here:
+ *   npx playwright test --config=playwright.gate.config.ts obrs-1372-consent-banner-reachability
+ */
+export const CUSTOMER_SWEEP_SETUP_MS = 30_000;
+export const CUSTOMER_SWEEP_PAGE_MS = 20_000;
+
+/**
+ * @param passesPerEntry how many times the sweep loads each entry -- the contrast
+ * gate visits every page once per THEME, so it passes 2; every other reader
+ * passes 1 and may leave it out.
+ */
+export function customerSweepBudgetMs(passesPerEntry = 1): number {
+  return CUSTOMER_SWEEP_SETUP_MS + CUSTOMER_PAGES.length * passesPerEntry * CUSTOMER_SWEEP_PAGE_MS;
+}
+
+/** A customer-side route this sweep does NOT visit, and why not. */
+export interface ExcludedCustomerRoute {
+  /** Exactly as written in `src/app/app-routing.module.ts`, leading slash added. */
+  path: string;
+  why: string;
+}
+
+/**
+ * The other half of the population (OBRS-970 AC-1).
+ *
+ * The gap this card was opened for did not survive because anyone decided these
+ * pages were not worth measuring -- it survived because nothing anywhere said
+ * they existed. A list that only names what it covers reports "8 pages swept" and
+ * cannot be read as "8 out of 24" by anybody who is not already counting routes
+ * by hand.
+ *
+ * So: every route that is not in `CUSTOMER_PAGES` is here, with the reason. The
+ * reason is the point. "Not yet" is a legitimate entry; an empty line is not.
+ *
+ * `obrs-970-route-population.spec.ts` fails when a route is in neither list, when
+ * it is in both, and when an entry here names a route that no longer exists.
+ */
+export const EXCLUDED_CUSTOMER_ROUTES: ExcludedCustomerRoute[] = [
+  {
+    path: '/otp/:option/:phoneno',
+    why:
+      'Reached only by submitting /login-mobile, and the OTP it renders against is minted by ' +
+      'a POST this lane does not answer. Visiting the URL directly renders the countdown ' +
+      'screen for a code nobody sent -- a real page, but not the one a customer sees. ' +
+      'host-box-sweep.ts reaches it under PUBLIC_SWEEP for the narrower host-box question, ' +
+      'which does not care which state the page is in.',
+  },
+  {
+    path: '/reset-password',
+    why:
+      'Needs a live, unexpired token in the query string (`#newPassword` only mounts for one). ' +
+      'A fixture token would pin this sweep to whatever the backend calls valid THIS month, ' +
+      'which is a coupling the GATE lane exists to not have.',
+  },
+  {
+    path: '/verify-email',
+    why: 'Same as /reset-password: a one-shot emailed token, and no screen at all without one.',
+  },
+  {
+    path: '/change-email/confirm',
+    why: 'Same as /verify-email -- opened from a confirmation mail, meaningless without its token.',
+  },
+  {
+    path: '/account',
+    why:
+      'NOT YET, and cheaper than this card first estimated: seedCustomerSession already writes ' +
+      'auth_token and auth_roles, which is why /my-bookings (requireAuth: true) is swept today, ' +
+      'so what is missing is an API fixture and not a login flow. Its consent-overlap seam is ' +
+      'covered meanwhile by obrs-854-account-deeplink.spec.ts; what is missing is the ' +
+      'systematic colour sweep.',
+  },
+  {
+    path: '/my-reports',
+    why: 'NOT YET. Same shape as /account -- a signed-in list page needing one API fixture.',
+  },
+  {
+    path: '/parcel-booking',
+    why:
+      'NOT YET. A multi-step form behind featureEnabledGuard(onlineParcelBooking); the flag is ' +
+      'true in the environment this lane builds, so it is reachable -- what it needs is the ' +
+      'fixtures for the step it should be measured at, which is a choice nobody has made yet.',
+  },
+  {
+    path: '/my-parcels',
+    why: 'NOT YET. Same shape as /my-reports, behind the same parcel flag as /parcel-booking.',
   },
 ];
 

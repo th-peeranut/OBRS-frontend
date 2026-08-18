@@ -214,6 +214,11 @@ export default defineConfig({
     // moves when a backend starts forwarding a different URL. Hermetic on this lane's terms:
     // it reuses the contrast gate's fixtures and stubs its own payment calls on top.
     '**/obrs-1301-qr-img-src.spec.ts',
+    // OBRS-970. Not a browser test at all -- it reads app-routing.module.ts off disk and
+    // compares it with the two lists in customer-pages.ts. It belongs in THIS lane because
+    // this lane is the merge gate: the drift it catches is a page shipping outside every
+    // sweep above, and a check for that which does not run at merge is a comment.
+    '**/obrs-970-route-population.spec.ts',
   ],
 
   timeout: 60_000,
