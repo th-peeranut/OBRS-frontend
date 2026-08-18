@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { StompConfig } from '@stomp/stompjs';
+import { Client, StompConfig } from '@stomp/stompjs';
 import { BadgeSocketService } from './badge-socket.service';
 import { AuthService } from '../../auth/auth.service';
 
@@ -7,6 +7,7 @@ import { AuthService } from '../../auth/auth.service';
 // third-party client rather than opening a real connection in specs.
 interface FakeStompClient {
   active: boolean;
+  connectHeaders?: { Authorization: string };
   activate: jasmine.Spy;
   deactivate: jasmine.Spy;
   subscribe: jasmine.Spy;
@@ -47,11 +48,22 @@ describe('BadgeSocketService', () => {
     });
   });
 
-  it('connects with the Authorization: Bearer <token> connect header from AuthService.getToken()', () => {
+  // OBRS-1425: `connectHeaders` on the config is read once at activate() time and
+  // replayed verbatim on every auto-reconnect. The token therefore has to be read
+  // in `beforeConnect`, which stompjs calls before EVERY CONNECT.
+  it('reads the token on every CONNECT attempt via beforeConnect, not once at activate() time', () => {
     service.connect();
 
+    capturedConfig.beforeConnect?.(fakeClient as unknown as Client);
     expect(authServiceStub.getToken).toHaveBeenCalled();
-    expect(capturedConfig.connectHeaders).toEqual({ Authorization: 'Bearer test-jwt-token' });
+    expect(fakeClient.connectHeaders).toEqual({ Authorization: 'Bearer test-jwt-token' });
+
+    // A reconnect after the session refreshed must carry the NEW token.
+    authServiceStub.getToken.and.returnValue('refreshed-jwt-token');
+    capturedConfig.beforeConnect?.(fakeClient as unknown as Client);
+
+    expect(fakeClient.connectHeaders).toEqual({ Authorization: 'Bearer refreshed-jwt-token' });
+    expect(capturedConfig.connectHeaders).toBeUndefined();
     expect(fakeClient.activate).toHaveBeenCalled();
   });
 
@@ -98,5 +110,37 @@ describe('BadgeSocketService', () => {
     service.connect();
 
     expect(fakeClient.activate).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops instead of retrying when there is no token to send (OBRS-1425)', () => {
+    service.connect();
+    authServiceStub.getToken.and.returnValue(null);
+
+    capturedConfig.beforeConnect?.(fakeClient as unknown as Client);
+
+    expect(fakeClient.deactivate).toHaveBeenCalled();
+    expect(fakeClient.connectHeaders).toBeUndefined();
+  });
+
+  it('stops retrying once the server rejects the CONNECT - a STOMP ERROR frame means the credentials are dead, so a retry can never succeed (OBRS-1425)', () => {
+    service.connect();
+
+    capturedConfig.onStompError?.({} as never);
+
+    expect(fakeClient.deactivate).toHaveBeenCalledTimes(1);
+  });
+
+  it('still reconnects after a transient drop - a socket close with a live token carries no ERROR frame, so nothing deactivates and the 5s reconnectDelay stands (OBRS-1425)', () => {
+    service.connect();
+
+    expect(capturedConfig.reconnectDelay).toBe(5000);
+    expect(capturedConfig.onWebSocketClose).toBeUndefined();
+
+    // stompjs's own reconnect calls beforeConnect again; a live token must re-arm
+    // the header and leave the client active.
+    capturedConfig.beforeConnect?.(fakeClient as unknown as Client);
+
+    expect(fakeClient.deactivate).not.toHaveBeenCalled();
+    expect(fakeClient.connectHeaders).toEqual({ Authorization: 'Bearer test-jwt-token' });
   });
 });
