@@ -207,6 +207,13 @@ export default defineConfig({
     // claimed that property for six months while `styles.scss` fetched Google Fonts on
     // every page load, because nothing was looking.
     '**/obrs-1370-lane-offline.spec.ts',
+    // OBRS-1301. The only question in this repo that needs a REAL enforcing CSP header and a
+    // real <img> decode at the same time: `img-src` names no gateway origin, so a QR URL on
+    // one is dropped by the browser and the frame goes quietly empty. Neither of the two CSP
+    // gates can see it -- both compare the allowlist against the prose inventory, and neither
+    // moves when a backend starts forwarding a different URL. Hermetic on this lane's terms:
+    // it reuses the contrast gate's fixtures and stubs its own payment calls on top.
+    '**/obrs-1301-qr-img-src.spec.ts',
   ],
 
   timeout: 60_000,

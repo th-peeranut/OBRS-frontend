@@ -173,12 +173,18 @@ describe('PaymentQrcodeComponent - refunded_partial payment summary (OBRS-298)',
 
       await invokeHandlePromptPayResponse(payment);
 
-      // Not "success" (isSuccessStatus still says no), but also not the
-      // failure alert — the QR is re-offered instead, since a scannable
-      // image was found in the transaction's gateway response.
+      // Not "success" (isSuccessStatus still says no), and still not the generic
+      // PAYMENT.ALERT.FAILED path — a scannable image WAS found in the transaction's
+      // gateway response, which is what this case exists to pin.
+      //
+      // OBRS-1301 AC-3 changed what happens to that image. It used to be bound straight
+      // into `<img src>`; `img-src` names no such origin, so the browser dropped it and
+      // `onQrError()` emptied the frame without a word. `loadQrImage()` refuses any URL
+      // carrying an origin of its own now, which turns the same outcome into the
+      // QR_UNAVAILABLE message the failed-fetch path already used.
       expect(alertService.success).not.toHaveBeenCalled();
-      expect(alertService.error).not.toHaveBeenCalled();
-      expect((component as any).qrImageUrl).toBe('https://example.test/qr.png');
+      expect(alertService.error).toHaveBeenCalledWith('PAYMENT.ALERT.QR_UNAVAILABLE');
+      expect((component as any).qrImageUrl).toBe('');
     }
   );
 });

@@ -18,6 +18,12 @@ export class UsabilityReportsStore extends AdminCollectionStore<UsabilityReportP
   // switch (see setStatus below) so a stale page number never survives a
   // status change.
   private page = 0;
+  // OBRS-1414: the `?sort=` the admin chose by clicking a column header. null
+  // = untouched, in which case the per-tab default (sortForStatus) still
+  // applies. Deliberately NOT reset by setStatus() below — an admin who asked
+  // for oldest-first keeps it across a tab switch; silently reverting to the
+  // tab default would look like the click was forgotten.
+  private sort: string[] | null = null;
   private static readonly PAGE_SIZE = 20;
 
   constructor(
@@ -52,6 +58,18 @@ export class UsabilityReportsStore extends AdminCollectionStore<UsabilityReportP
     return this.refresh();
   }
 
+  // OBRS-1414: a new ordering makes the current page number meaningless (page
+  // 3 of oldest-first is not page 3 of newest-first), so this resets to page 1
+  // and clear()s for the same reason setStatus/setPage do — otherwise the
+  // previous ordering's rows replay under the new header state, which reads as
+  // "the sort did nothing".
+  setSort(sort: string[]): Promise<void> {
+    this.sort = sort;
+    this.page = 0;
+    this.clear();
+    return this.refresh();
+  }
+
   protected async fetch(): Promise<UsabilityReportPage> {
     // OBRS-524: 'all' is a real, explicit filter value at the component
     // layer, but the backend has no "all" slug — GET .../usability-reports
@@ -63,7 +81,7 @@ export class UsabilityReportsStore extends AdminCollectionStore<UsabilityReportP
     const response = await firstValueFrom(
       this.adminApiService.getUsabilityReports(
         statusParam,
-        sortForStatus(this.status),
+        this.sort ?? sortForStatus(this.status),
         this.page,
         UsabilityReportsStore.PAGE_SIZE
       )

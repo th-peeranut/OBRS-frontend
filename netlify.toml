@@ -60,6 +60,24 @@
 # looks — this is the surface where violations are actually collected, so leaving it out
 # would fill the collector with false positives from every tile and bury the real ones.
 #
+# ⛔ `img-src` names NO omise.co origin, and that is the FINISHED STATE of OBRS-1301, not an
+# omission. Since OBRS-1379 (2026-08-16) the PromptPay QR is served by our own
+# `GET /api/…/payments/<id>/qr` — `loadQrImage()` fetches it and binds a `blob:` — so the
+# `<img>` is same-origin and `'self' data: blob:` covers it. OBRS-1301 AC-1 asked for a
+# decision between allowlisting the gateway origin ahead of time and making the code refuse
+# it loudly, and this is the answer, written down because that card's own warning was that
+# the next person would reverse it silently: the CODE refuses a QR URL that carries an
+# origin of its own (`loadQrImage()` returns '' → the existing QR_UNAVAILABLE alert), rather
+# than this policy quietly allowing one. The customer gets a message instead of a blank
+# square under a 15-minute timer, and `e2e/tests/obrs-1301-qr-img-src.spec.ts` re-serves
+# THIS header back as an enforcing one and holds both halves of that.
+#   ⚠️ What was here between OBRS-1351 (2026-08-14) and OBRS-1379 was `https://api.omise.co`
+#   PLUS the `omise-gateway-production` S3 bucket the document URL 302s to — CSP re-checks
+#   every hop but reports the PRE-redirect URL (OBRS-888). Both are gone together; ⛔ do not
+#   re-add one without the other, that state is a QR that renders nowhere and reports
+#   nothing. `connect-src https://api.omise.co` below stays — that is tokenisation, a
+#   different call by a different mechanism. Full history: the prod Caddyfile.
+#
 # `img-src https://hkupaujkdvdrqmtifgsm.supabase.co` is SIT's Supabase Storage project,
 # where the screenshots customers attach to usability reports live. The backend returns
 # an absolute `https://<project-ref>.supabase.co/storage/v1/object/public/…` URL and four
@@ -163,3 +181,33 @@
 # Strict-Transport-Security is deliberately NOT set here. SIT is a *.netlify.app
 # subdomain and an HSTS header from us binds that host for a year; prod sets it in the
 # Caddyfile, where the domain actually is ours.
+
+# OBRS-1415 — this block PINS a default, it does not repair a bug. State that plainly,
+# because the card was written against prod and the obvious next move is to copy prod's
+# fix over without checking whether SIT had the same hole.
+#
+# It did not. Measured 2026-08-17 with `curl -sD -`:
+#   https://nj-phuyaipu.com/i18n/th.json       -> no cache-control header at all
+#   https://sit-obrs-frontend.netlify.app/…    -> cache-control: public,max-age=0,must-revalidate
+# Netlify sends that revalidating default for static files on its own, so a returning
+# SIT visitor already re-asks for th.json on every load and a deploy is visible at once.
+# On prod, Caddy sends nothing and the browser falls back to heuristic freshness off
+# Last-Modified — a filename that never changes plus no header is what let prod serve
+# the 12 Aug translations to anyone who had visited before (raw BOOKING_CLOSED_NOTICE.*
+# keys on the home page, deploy/prod/Caddyfile carries the same story at the fix).
+#
+# What this block buys, then, is not today but the day someone adds a Cache-Control to
+# the `/*` block above — for the bundle, for a security sweep, for anything. Netlify
+# applies every matching rule, so `/*` would reach the unhashed i18n files too and SIT
+# would silently acquire prod's bug, on a host whose provider default had been carrying
+# the invariant for free. An invariant that only holds while nobody edits the file above
+# is not held by anything. `no-cache` is the same value and the same reasoning as prod's
+# — store it, revalidate before use, 304 on an unchanged file — so the two environments
+# now say it rather than one saying it and one meaning it.
+#
+# scripts/check-i18n-cache-headers.mjs fails the build if this block is removed or
+# weakened to a cacheable value.
+[[headers]]
+  for = "/i18n/*"
+  [headers.values]
+    Cache-Control = "no-cache"

@@ -511,12 +511,32 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
    * which is honest. It must not fall back to `<img src="/api/…">`: relative on SIT means the
    * Netlify origin, which serves no API, and even on prod it would drop the guest token.
    *
-   * Anything that is not our path is passed through untouched (a `data:` URL, or the legacy
-   * gateway-response branch of `getQrImageSource`).
+   * OBRS-1301 AC-3. What used to be "anything that is not our path is passed through
+   * untouched" now passes through only what carries NO origin — `data:` (the locally drawn
+   * fallback) and `blob:` (already fetched). A URL with an origin of its own is refused,
+   * because `img-src` names no gateway host: OBRS-1379 removed `api.omise.co` and the S3
+   * bucket its `download_uri` 302s to, in the same commit that made the QR same-origin. Bind
+   * one anyway and the browser drops the load, `onQrError()` clears the frame, and the
+   * customer is left with a blank square on the payment page with a 15-minute timer running
+   * and nothing said. Returning `''` takes the same QR_UNAVAILABLE path as a failed fetch, so
+   * the failure gets the same message whichever layer refused it — loud instead of silent.
+   * Both arms are measured under a real enforcing header by
+   * `e2e/tests/obrs-1301-qr-img-src.spec.ts`; re-allowing a remote QR means adding its origin
+   * to `netlify.toml`, `deploy/prod/Caddyfile` and the inventory FIRST, and that spec is what
+   * will tell you.
    */
   private async loadQrImage(source: string): Promise<string> {
     if (!source.startsWith('/api/')) {
-      return source;
+      if (source.startsWith('data:') || source.startsWith('blob:')) {
+        return source;
+      }
+
+      console.error(
+        'Refusing to render the PromptPay QR: the URL has an origin of its own and img-src ' +
+          'names no such origin, so it would be blocked (OBRS-1301)',
+        source
+      );
+      return '';
     }
 
     try {
