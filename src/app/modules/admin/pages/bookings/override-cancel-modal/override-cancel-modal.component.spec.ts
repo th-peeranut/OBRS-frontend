@@ -17,9 +17,13 @@ import { AA_NORMAL_TEXT, contrast, effectiveBg, fgOf } from '../../../../../test
 // success-message describe block below for why the mirror had to go.
 import enI18n from '../../../../../../../public/i18n/en.json';
 
-// Far future → inside the cancellation window; far past → out-of-window. Using
-// fixed sentinel dates keeps the window check deterministic without faking the
-// clock.
+// OBRS-699: the WINDOW VERDICT no longer comes from these dates — it comes from
+// `cancellationDeadline` on the refund-method response (see
+// `refundMethodInfo()` below), because `cancel_window_hours` became
+// owner-scoped and this file may not hold a copy of it. The departure still
+// drives the summary's DEPARTURE row, and the two sentinels are kept so a
+// booking's departure and its deadline can be set to disagree — which is what
+// proves the verdict is read off the wire.
 function bookingWithDeparture(departure: string): AdminBookingDetailDto {
   return {
     id: 42,
@@ -37,6 +41,31 @@ function bookingWithDeparture(departure: string): AdminBookingDetailDto {
 
 const IN_WINDOW = bookingWithDeparture('2099-01-01T00:00:00Z');
 const OUT_OF_WINDOW = bookingWithDeparture('2000-01-01T00:00:00Z');
+
+// OBRS-699: deliberately NOT `departure - 2h`. Both sentinels are hours the
+// platform default could never produce from these departures, so a re-introduced
+// `CANCEL_WINDOW_HOURS = 2` cannot satisfy any spec below.
+const DEADLINE_FUTURE = '2098-12-04T09:17:00Z';
+const DEADLINE_PAST = '2001-03-09T13:42:00Z';
+
+/** The refund-method read — since OBRS-699 it is also where the window verdict
+ * comes from. `cancellationDeadline: null` = the backend could not resolve a
+ * governing operator for this booking. */
+function refundMethodInfo(
+  cancellationDeadline: string | null,
+  overrides: Partial<{ refundMethod: string; destinationRequired: boolean }> = {}
+) {
+  return of({
+    code: 200,
+    message: 'ok',
+    data: {
+      refundMethod: 'card',
+      destinationRequired: false,
+      cancellationDeadline,
+      ...overrides,
+    },
+  });
+}
 
 // OBRS-839: the wire form, DERIVED from the messageKey exactly as
 // `DomainException.getErrorCode()` does it — never hand-typed, and never the
@@ -75,9 +104,7 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
     // the pre-existing tests below assert the AC1/AC2 reason behaviour and
     // don't care about the destination fields at all; the OBRS-286-specific
     // `describe` blocks override this per-case.
-    api.getBookingRefundMethod.and.returnValue(
-      of({ code: 200, message: 'ok', data: { refundMethod: 'card', destinationRequired: false } })
-    );
+    api.getBookingRefundMethod.and.returnValue(refundMethodInfo(DEADLINE_FUTURE) as any);
     alert = jasmine.createSpyObj<AlertService>('AlertService', ['success', 'error']);
     alert.success.and.resolveTo(undefined as any);
     alert.error.and.resolveTo(undefined as any);
@@ -146,12 +173,122 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
   });
 
   it('AC2: an out-of-window POLICY cancel still requires a reason (window is a rule-break)', () => {
+    api.getBookingRefundMethod.and.returnValue(refundMethodInfo(DEADLINE_PAST) as any);
     open(OUT_OF_WINDOW);
     expect((component as any).rateChoice).toBe('POLICY');
     expect((component as any).outsideWindow).toBeTrue();
     expect((component as any).reasonRequired).toBeTrue();
     expect(reasonField()).not.toBeNull();
     expect((component as any).canSubmit).toBeFalse();
+  });
+
+  // OBRS-699 — the window is the OPERATOR's, read off the refund-method
+  // response. Every case here uses a deadline that `departure - 2h` could not
+  // produce, so a re-introduced CANCEL_WINDOW_HOURS constant fails them.
+  describe('OBRS-699: the cancellation window comes from the wire, not a constant', () => {
+    const windowBanner = () => fixture.debugElement.query(By.css('.override-cancel-window'));
+
+    it('is IN-window for a PAST departure when the operator says the deadline has not passed', () => {
+      // The pair that a `departure - 2h` derivation cannot satisfy: the trip
+      // left in 2000, yet the operator's deadline is in 2098. Only a value read
+      // off the response gives "within".
+      api.getBookingRefundMethod.and.returnValue(refundMethodInfo(DEADLINE_FUTURE) as any);
+      open(OUT_OF_WINDOW);
+
+      expect((component as any).outsideWindow).toBeFalse();
+      expect((component as any).reasonRequired).toBeFalse();
+      expect(windowBanner().nativeElement.classList).not.toContain('is-violation');
+    });
+
+    it('is OUT-of-window for a FUTURE departure when the operator says the deadline has passed', () => {
+      // The mirror image: departure in 2099, deadline in 2001.
+      api.getBookingRefundMethod.and.returnValue(refundMethodInfo(DEADLINE_PAST) as any);
+      open(IN_WINDOW);
+
+      expect((component as any).outsideWindow).toBeTrue();
+      expect((component as any).reasonRequired).toBeTrue();
+      expect(reasonField()).not.toBeNull();
+      expect(windowBanner().nativeElement.classList).toContain('is-violation');
+    });
+
+    it('renders the operator deadline in the banner, never a fixed number of hours', () => {
+      // The SHIPPED bundle, not a hand-typed mirror (OBRS-1152, same reason as
+      // the success-message block below): this has to fail if the key loses its
+      // {{deadline}} placeholder, which a stub translation could never notice.
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation(
+        'en',
+        { ADMIN: { BOOKINGS: { CANCEL_OVERRIDE: (enI18n as any).ADMIN.BOOKINGS.CANCEL_OVERRIDE } } },
+        true
+      );
+      translate.use('en');
+
+      api.getBookingRefundMethod.and.returnValue(refundMethodInfo(DEADLINE_PAST) as any);
+      open(IN_WINDOW);
+
+      const label = (component as any).cancellationDeadlineLabel as string;
+      expect(label).withContext('a real formatted instant, not the placeholder').not.toBe('-');
+
+      const text = windowBanner().nativeElement.textContent as string;
+      expect(text).toContain(label);
+      expect(text)
+        .withContext('the sentence must not state a fixed window length any more')
+        .not.toContain('2-hour');
+    });
+
+    it('states NO window at all when the backend could not resolve an operator', () => {
+      api.getBookingRefundMethod.and.returnValue(refundMethodInfo(null) as any);
+      open(IN_WINDOW);
+
+      expect((component as any).hasCancellationDeadline).toBeFalse();
+      expect(windowBanner())
+        .withContext('null is "unknown", and "Within the cancellation window" would be an unbacked claim')
+        .toBeNull();
+      // The modal still works: unknown is not a violation, and FULL still
+      // forces the reason on its own.
+      expect((component as any).outsideWindow).toBeFalse();
+      expect((component as any).canSubmit).toBeTrue();
+      (component as any).selectRate('FULL');
+      fixture.detectChanges();
+      expect((component as any).reasonRequired).toBeTrue();
+    });
+
+    it('does not carry one booking’s deadline into the next open', () => {
+      api.getBookingRefundMethod.and.returnValue(refundMethodInfo(DEADLINE_PAST) as any);
+      open(IN_WINDOW);
+      expect((component as any).outsideWindow).toBeTrue();
+
+      // Second booking: the read never resolves, so nothing new arrives.
+      api.getBookingRefundMethod.and.returnValue(new Subject<any>() as any);
+      open(OUT_OF_WINDOW);
+
+      expect((component as any).hasCancellationDeadline)
+        .withContext('the previous booking’s window must not describe this one')
+        .toBeFalse();
+    });
+
+    it('flips the reason requirement when the deadline lands AFTER open', () => {
+      // Production is async: at open the verdict is unknown, so the reason is
+      // optional. Without a re-run of applyReasonValidators() in the response
+      // handler it would STAY optional over an out-of-window cancel — the AC2
+      // gate silently off.
+      const late = new Subject<any>();
+      api.getBookingRefundMethod.and.returnValue(late as any);
+      open(IN_WINDOW);
+      expect((component as any).reasonRequired).toBeFalse();
+
+      late.next({
+        code: 200,
+        message: 'ok',
+        data: { refundMethod: 'card', destinationRequired: false, cancellationDeadline: DEADLINE_PAST },
+      });
+      fixture.detectChanges();
+
+      expect((component as any).reasonRequired).toBeTrue();
+      expect((component as any).form.get('reason').valid)
+        .withContext('an empty reason must now block submit')
+        .toBeFalse();
+    });
   });
 
   it('submits POLICY with no reason for an in-window cancel and emits cancelled + closed', async () => {
@@ -509,6 +646,9 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
       });
 
       it(`${mode}: the out-of-window violation banner meets AA on the modal card`, () => {
+        // OBRS-699: the banner only renders with a deadline, so the state under
+        // test has to be armed from the wire — see the guard two lines down.
+        api.getBookingRefundMethod.and.returnValue(refundMethodInfo(DEADLINE_PAST) as any);
         open(OUT_OF_WINDOW);
         mountInShell(dark);
         const banner = el('.override-cancel-window');

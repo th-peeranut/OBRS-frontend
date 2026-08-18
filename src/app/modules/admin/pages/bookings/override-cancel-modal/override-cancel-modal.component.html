@@ -18,15 +18,20 @@
           <dd>{{ departureLabel }}</dd>
         </div>
       </dl>
-      <!-- Window banner (AC2 context): out-of-window is one of the two rule-breaks -->
-      <p class="override-cancel-window" [class.is-violation]="outsideWindow">
-        {{
-        (outsideWindow
-        ? 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_PAST'
-        : 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_WITHIN'
-        ) | translate
-        }}
-      </p>
+      <!-- Window banner (AC2 context): out-of-window is one of the two rule-breaks.
+      OBRS-699: both strings quote the operator's own deadline, so the banner is
+      suppressed while there is none — neither "within" nor "past" is a claim we
+      can back without it. -->
+      @if (hasCancellationDeadline) {
+        <p class="override-cancel-window" [class.is-violation]="outsideWindow">
+          {{
+          (outsideWindow
+          ? 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_PAST'
+          : 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_WITHIN'
+          ) | translate: { deadline: cancellationDeadlineLabel }
+          }}
+        </p>
+      }
       <!-- AC1: refund rate is TWO BUTTONS, never a free numeric input -->
       <div class="admin-form-field">
         <label class="admin-form-label">

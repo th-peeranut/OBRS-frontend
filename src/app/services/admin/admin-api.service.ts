@@ -683,6 +683,19 @@ export interface OverrideCancelReqDto {
 export interface AdminBookingRefundMethodDto {
   refundMethod: string;
   destinationRequired: boolean;
+  /**
+   * OBRS-699 — the instant self-service cancellation closes for THIS booking,
+   * `earliestDeparture - cancel_window_hours` under the operator selling the
+   * trip. It rides on this response and not on the cancel quote because
+   * `getCancellationPolicy` throws `cancel.error.window-closed` once the window
+   * has passed — a 400 in precisely the state the override modal exists for.
+   * This endpoint never window-gates, and the modal already calls it on open.
+   *
+   * Absent/null means the backend could not resolve a governing operator, never
+   * "use the platform window": the modal states no deadline rather than one
+   * that may belong to a different operator.
+   */
+  cancellationDeadline?: string | null;
 }
 
 // OBRS-286 SA contract #4 — POST /private/payments/{id}/manual-refund.

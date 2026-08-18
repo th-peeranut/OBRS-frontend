@@ -69,8 +69,11 @@ type RefundMethodState = 'loading' | 'resolved' | 'error';
 // 400 `cancel.error.override-reason-required` if the reason is missing when a
 // rule is broken. Everything computed here (the window check especially) is a
 // UX mirror of that gate, never a substitute for it.
-const CANCEL_WINDOW_HOURS = 2; // mirrors backend CANCEL_WINDOW_HOURS_DEFAULT
-const MS_PER_HOUR = 60 * 60 * 1000;
+//
+// OBRS-699: the window is no longer a number in this file. `cancel_window_hours`
+// became owner-scoped, so a constant here would have been right for exactly one
+// operator; the backend now sends the absolute instant on the refund-method read
+// this modal already makes on open.
 
 @Component({
     selector: 'app-override-cancel-modal',
@@ -94,6 +97,10 @@ export class OverrideCancelModalComponent implements OnChanges {
   // OBRS-286 Flow A3 — refund-destination requirement, component-local state.
   protected refundMethodState: RefundMethodState = 'loading';
   protected destinationRequired = false;
+  /** OBRS-699 — the operator's cancellation deadline, from the same read as
+   * `destinationRequired`. Null until it lands, and null forever for a booking
+   * whose governing operator the backend could not resolve. */
+  private cancellationDeadline: string | null = null;
   /** Belt-and-braces (Flow A3 step 6): a submit-time destination error code,
    * shown inline next to the destination fields — never the modal's generic
    * `errorMessage` banner. */
@@ -117,7 +124,11 @@ export class OverrideCancelModalComponent implements OnChanges {
     }
     if (this.isOpen) {
       // Every open starts clean: POLICY selected, no reason, no stale error.
+      // The deadline is cleared too — it belongs to the booking that was open
+      // last, and carrying it into the next one would state one booking's
+      // window over another's until the fetch lands.
       this.rateChoice = 'POLICY';
+      this.cancellationDeadline = null;
       this.errorMessage = '';
       this.destinationErrorMessage = '';
       this.form.reset({ reason: '' });
@@ -143,14 +154,22 @@ export class OverrideCancelModalComponent implements OnChanges {
     this.adminApiService.getBookingRefundMethod(booking.id).subscribe({
       next: (response) => {
         this.destinationRequired = response.data?.destinationRequired ?? true;
+        this.cancellationDeadline = response.data?.cancellationDeadline ?? null;
         this.refundMethodState = 'resolved';
         this.applyDestinationValidators();
+        // OBRS-699: the window verdict arrives WITH this response now, so the
+        // reason requirement can flip here — it no longer settles at open. A
+        // deadline already past makes the reason mandatory (AC2), and without
+        // this re-run the field would stay optional until the next rate click.
+        this.applyReasonValidators();
       },
       error: () => {
         // Deliberately NOT fail-safe-to-required (see the UI spec's Flow A3
         // step 5 for the full argued reasoning) — renders as optional.
         this.refundMethodState = 'error';
+        this.cancellationDeadline = null;
         this.applyDestinationValidators();
+        this.applyReasonValidators();
       },
     });
   }
@@ -182,27 +201,38 @@ export class OverrideCancelModalComponent implements OnChanges {
 
   // ── Rule-breaking / window state (AC2) ───────────────────────────────────
 
-  /** Earliest departure across all journeys, in epoch-ms, or null if unknown. */
-  private get departureMs(): number | null {
-    const times = (this.booking?.journeys ?? [])
-      .map((j) => j.departureDateTime)
-      .filter((t): t is string => !!t)
-      .map((t) => new Date(t).getTime())
-      .filter((ms) => Number.isFinite(ms));
-    return times.length ? Math.min(...times) : null;
-  }
-
   /**
-   * True when departure is inside the cancellation window (or already past).
-   * Unknown departure → false: we cannot assert a violation the backend hasn't
-   * confirmed, and FULL still forces the reason field on its own.
+   * True once the operator's cancellation deadline has passed.
+   *
+   * Unknown deadline → false, and that covers two states on purpose: the
+   * refund-method read is still in flight, or the backend could not resolve a
+   * governing operator for this booking. In neither can we assert a violation
+   * the backend has not confirmed, and FULL still forces the reason field on
+   * its own.
    */
   protected get outsideWindow(): boolean {
-    const departure = this.departureMs;
-    if (departure === null) {
-      return false;
+    const deadline = this.cancellationDeadlineMs;
+    return deadline !== null && Date.now() >= deadline;
+  }
+
+  /** The banner is suppressed entirely while this is false: with no deadline
+   * neither "within the window" nor "past it" is a claim we can back. */
+  protected get hasCancellationDeadline(): boolean {
+    return this.cancellationDeadlineMs !== null;
+  }
+
+  protected get cancellationDeadlineLabel(): string {
+    return this.cancellationDeadline
+      ? formatDisplayDateTime(this.cancellationDeadline, this.translate.currentLang)
+      : '-';
+  }
+
+  private get cancellationDeadlineMs(): number | null {
+    if (!this.cancellationDeadline) {
+      return null;
     }
-    return departure - Date.now() < CANCEL_WINDOW_HOURS * MS_PER_HOUR;
+    const ms = new Date(this.cancellationDeadline).getTime();
+    return Number.isFinite(ms) ? ms : null;
   }
 
   /** A rule is broken when refunding in full OR cancelling out-of-window. */
