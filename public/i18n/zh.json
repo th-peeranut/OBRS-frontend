@@ -1155,7 +1155,7 @@
         "RATE_LABEL": "退款比例",
         "RATE_POLICY": "按规则",
         "RATE_FULL": "全额退款",
-        "RATE_POLICY_HINT": "按基于时间窗口的常规金额退款（80% / 50%）。",
+        "RATE_POLICY_HINT": "按基于时间窗口的常规金额退款（早鸟 {{early}}% / 临期 {{late}}%）。",
         "RATE_FULL_HINT": "退款 100%——违反政策，因此必须填写原因。",
         "REASON_LABEL": "越权原因",
         "REASON_PLACEHOLDER": "为什么要在规则之外取消此预订？",

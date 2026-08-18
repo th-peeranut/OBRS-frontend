@@ -101,6 +101,11 @@ export class OverrideCancelModalComponent implements OnChanges {
    * `destinationRequired`. Null until it lands, and null forever for a booking
    * whose governing operator the backend could not resolve. */
   private cancellationDeadline: string | null = null;
+  /** OBRS-699 — the operator's own window-based rates, 0.0–1.0, from the same read. Null only
+   * before it lands (the backend always sends them); the hint waits rather than stating a pair
+   * nobody set. */
+  private policyRefundRateEarly: number | null = null;
+  private policyRefundRateLate: number | null = null;
   /** Belt-and-braces (Flow A3 step 6): a submit-time destination error code,
    * shown inline next to the destination fields — never the modal's generic
    * `errorMessage` banner. */
@@ -129,6 +134,8 @@ export class OverrideCancelModalComponent implements OnChanges {
       // window over another's until the fetch lands.
       this.rateChoice = 'POLICY';
       this.cancellationDeadline = null;
+      this.policyRefundRateEarly = null;
+      this.policyRefundRateLate = null;
       this.errorMessage = '';
       this.destinationErrorMessage = '';
       this.form.reset({ reason: '' });
@@ -155,6 +162,8 @@ export class OverrideCancelModalComponent implements OnChanges {
       next: (response) => {
         this.destinationRequired = response.data?.destinationRequired ?? true;
         this.cancellationDeadline = response.data?.cancellationDeadline ?? null;
+        this.policyRefundRateEarly = response.data?.policyRefundRateEarly ?? null;
+        this.policyRefundRateLate = response.data?.policyRefundRateLate ?? null;
         this.refundMethodState = 'resolved';
         this.applyDestinationValidators();
         // OBRS-699: the window verdict arrives WITH this response now, so the
@@ -168,6 +177,8 @@ export class OverrideCancelModalComponent implements OnChanges {
         // step 5 for the full argued reasoning) — renders as optional.
         this.refundMethodState = 'error';
         this.cancellationDeadline = null;
+        this.policyRefundRateEarly = null;
+        this.policyRefundRateLate = null;
         this.applyDestinationValidators();
         this.applyReasonValidators();
       },
@@ -225,6 +236,23 @@ export class OverrideCancelModalComponent implements OnChanges {
     return this.cancellationDeadline
       ? formatDisplayDateTime(this.cancellationDeadline, this.translate.currentLang)
       : '-';
+  }
+
+  /** The POLICY hint quotes both rates, so it waits for both rather than stating half a pair. */
+  protected get hasPolicyRates(): boolean {
+    return this.policyRefundRateEarly !== null && this.policyRefundRateLate !== null;
+  }
+
+  // Rate -> whole percent at the component boundary, the same one-line conversion the config
+  // tab does at its own boundary. Deliberately not extracted: a shared util for `x * 100` is
+  // an abstraction over arithmetic, and `money-cents.ts` is about MONEY (it trims and validates
+  // a currency string) — borrowing it for a rate would be reuse of the wrong meaning.
+  protected get policyRateEarlyPct(): number {
+    return Math.round((this.policyRefundRateEarly ?? 0) * 100);
+  }
+
+  protected get policyRateLatePct(): number {
+    return Math.round((this.policyRefundRateLate ?? 0) * 100);
   }
 
   private get cancellationDeadlineMs(): number | null {

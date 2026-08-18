@@ -1155,7 +1155,7 @@
         "RATE_LABEL": "Refund rate",
         "RATE_POLICY": "Per policy",
         "RATE_FULL": "Full refund",
-        "RATE_POLICY_HINT": "Refund the normal window-based amount (80% / 50%).",
+        "RATE_POLICY_HINT": "Refund the normal window-based amount ({{early}}% early / {{late}}% late).",
         "RATE_FULL_HINT": "Refund 100% — this breaks policy, so a reason is required.",
         "REASON_LABEL": "Reason for override",
         "REASON_PLACEHOLDER": "Why is this booking being cancelled outside the rules?",

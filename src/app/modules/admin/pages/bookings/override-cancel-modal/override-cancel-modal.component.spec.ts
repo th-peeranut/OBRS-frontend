@@ -53,7 +53,12 @@ const DEADLINE_PAST = '2001-03-09T13:42:00Z';
  * governing operator for this booking. */
 function refundMethodInfo(
   cancellationDeadline: string | null,
-  overrides: Partial<{ refundMethod: string; destinationRequired: boolean }> = {}
+  overrides: Partial<{
+    refundMethod: string;
+    destinationRequired: boolean;
+    policyRefundRateEarly: number;
+    policyRefundRateLate: number;
+  }> = {}
 ) {
   return of({
     code: 200,
@@ -62,6 +67,10 @@ function refundMethodInfo(
       refundMethod: 'card',
       destinationRequired: false,
       cancellationDeadline,
+      // OBRS-699: never null on the wire (an unresolved operator degrades to the platform
+      // read), and deliberately NOT the 80/50 pair the i18n bundle used to hardcode.
+      policyRefundRateEarly: 0.9,
+      policyRefundRateLate: 0.4,
       ...overrides,
     },
   });
@@ -265,6 +274,89 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
       expect((component as any).hasCancellationDeadline)
         .withContext('the previous booking’s window must not describe this one')
         .toBeFalse();
+    });
+
+    // The rates were the OTHER half of this constant, and they were never in TypeScript at all:
+    // RATE_POLICY_HINT read "(80% / 50%)" in every bundle, which is the PLATFORM pair. The tab
+    // this card ships lets an owner set 90/40, so the sentence was wrong for them on a screen
+    // that decides how much money goes back.
+    describe('the POLICY rates are the operator’s too', () => {
+      const rateHint = () => fixture.debugElement.query(By.css('.admin-hint'));
+
+      function useShippedBundle(): void {
+        const translate = TestBed.inject(TranslateService);
+        translate.setTranslation(
+          'en',
+          { ADMIN: { BOOKINGS: { CANCEL_OVERRIDE: (enI18n as any).ADMIN.BOOKINGS.CANCEL_OVERRIDE } } },
+          true
+        );
+        translate.use('en');
+      }
+
+      it('states the wire’s pair, and states NEITHER platform number', () => {
+        useShippedBundle();
+        api.getBookingRefundMethod.and.returnValue(refundMethodInfo(DEADLINE_FUTURE) as any);
+        open(IN_WINDOW);
+
+        const text = rateHint().nativeElement.textContent as string;
+        expect(text).toContain('90');
+        expect(text).toContain('40');
+        // The whole defect in one assertion: the wire said 90/40, so 80 and 50 must be nowhere
+        // on this line. A literal left behind in any of the three bundles fails here.
+        expect(text).withContext(`hint still leaks a platform rate: "${text}"`).not.toMatch(/80|50/);
+      });
+
+      it('converts the rate to whole percent at the boundary, not 0.9', () => {
+        api.getBookingRefundMethod.and.returnValue(
+          refundMethodInfo(DEADLINE_FUTURE, {
+            policyRefundRateEarly: 0.75,
+            policyRefundRateLate: 0.25,
+          }) as any
+        );
+        open(IN_WINDOW);
+
+        expect((component as any).policyRateEarlyPct).toBe(75);
+        expect((component as any).policyRateLatePct).toBe(25);
+      });
+
+      it('waits rather than stating half a pair it does not have yet', () => {
+        const late = new Subject<any>();
+        api.getBookingRefundMethod.and.returnValue(late as any);
+        open(IN_WINDOW);
+
+        expect((component as any).hasPolicyRates).toBeFalse();
+        expect(rateHint().nativeElement.textContent.trim())
+          .withContext('an empty hint beats one quoting a pair nobody set')
+          .toBe('');
+
+        late.next({
+          code: 200,
+          message: 'ok',
+          data: {
+            refundMethod: 'card',
+            destinationRequired: false,
+            cancellationDeadline: DEADLINE_FUTURE,
+            policyRefundRateEarly: 0.9,
+            policyRefundRateLate: 0.4,
+          },
+        });
+        fixture.detectChanges();
+
+        expect((component as any).hasPolicyRates).toBeTrue();
+      });
+
+      it('still states 100% for FULL — that one is what FULL MEANS, not a config', () => {
+        useShippedBundle();
+        const late = new Subject<any>();
+        api.getBookingRefundMethod.and.returnValue(late as any);
+        open(IN_WINDOW);
+        (component as any).selectRate('FULL');
+        fixture.detectChanges();
+
+        // No response has landed, so the POLICY hint would be blank — the FULL hint must not be,
+        // because it depends on nothing the operator can change.
+        expect(rateHint().nativeElement.textContent).toContain('100%');
+      });
     });
 
     it('flips the reason requirement when the deadline lands AFTER open', () => {

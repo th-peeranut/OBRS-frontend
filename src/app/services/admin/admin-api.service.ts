@@ -696,6 +696,19 @@ export interface AdminBookingRefundMethodDto {
    * that may belong to a different operator.
    */
   cancellationDeadline?: string | null;
+  /**
+   * OBRS-699 — the two window-based refund rates this endpoint already computes with
+   * (`resolveRefundRate`, under the same operator), as 0.0–1.0 rates. The override modal
+   * states them under the POLICY choice; they used to be typed into the i18n bundle as
+   * "(80% / 50%)", which is the PLATFORM pair and therefore wrong for any owner who sets
+   * their own.
+   *
+   * Unlike `cancellationDeadline` these are never null: an unresolved operator degrades to
+   * the platform read, and that is the number this endpoint itself refunds by — so there is
+   * no "no data" state to render, only a not-yet-fetched one.
+   */
+  policyRefundRateEarly?: number;
+  policyRefundRateLate?: number;
 }
 
 // OBRS-286 SA contract #4 — POST /private/payments/{id}/manual-refund.

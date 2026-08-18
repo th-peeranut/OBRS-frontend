@@ -161,8 +161,12 @@ const ADMIN_BOOKING_DETAIL = ok({
 const REFUND_METHOD_INFO = ok({
   refundMethod: 'card',
   destinationRequired: false,
-  // OBRS-699: the field this card added to RefundMethodInfoRespDto.
+  // OBRS-699: the fields this card added to RefundMethodInfoRespDto. The rates are the same
+  // 0.90/0.40 pair the config-tab frames use, and deliberately not the 80/50 that used to be
+  // typed into the i18n bundle — so the frame shows the operator's rates, not the platform's.
   cancellationDeadline: OVERRIDE_CANCELLATION_DEADLINE,
+  policyRefundRateEarly: POLICY_VALUES.cancelRefundRateEarly,
+  policyRefundRateLate: POLICY_VALUES.cancelRefundRateLate,
 });
 
 async function newPage(browser, { roles, dark, viewport, policyFlags }) {
@@ -423,6 +427,16 @@ async function shotOverrideCancelModal(browser, name) {
   }
   if (/2\s*ชั่วโมง|2-hour/.test(text)) {
     throw new Error(`refusing to save ${name}: the banner still states a fixed window — "${text}"`);
+  }
+
+  // The POLICY rate hint is the other half of the same defect: it used to read "(80% / 50%)",
+  // the PLATFORM pair, on a screen that decides how much money goes back.
+  const hint = await page.locator('.override-cancel-modal .admin-hint').first().innerText();
+  if (!hint.includes('90') || !hint.includes('40')) {
+    throw new Error(`refusing to save ${name}: the rate hint does not state the wire's pair — "${hint}"`);
+  }
+  if (/80|50/.test(hint)) {
+    throw new Error(`refusing to save ${name}: the rate hint still leaks a platform rate — "${hint}"`);
   }
   await assertNoErrorOverlay(page);
   await save(modal, name);

@@ -1155,7 +1155,7 @@
         "RATE_LABEL": "อัตราคืนเงิน",
         "RATE_POLICY": "ตามกฎ",
         "RATE_FULL": "คืนเต็มจำนวน",
-        "RATE_POLICY_HINT": "คืนตามอัตราปกติที่อิงหน้าต่างเวลา (80% / 50%)",
+        "RATE_POLICY_HINT": "คืนตามอัตราปกติที่อิงหน้าต่างเวลา (early {{early}}% / late {{late}}%)",
         "RATE_FULL_HINT": "คืน 100% — ฝ่านโยบาย จึงต้องระบุเหตุผล",
         "REASON_LABEL": "เหตุผลในการ override",
         "REASON_PLACEHOLDER": "ทำไมจึงยกเลิกการจองนี้นอกกฎ?",

@@ -193,8 +193,16 @@ test.describe('route smoke coverage', () => {
   // entry ships as a 404-to-home rather than a compile error — and the legacy
   // redirect is generated the same way.
   test('the cancel/reschedule policy settings tab renders its seven fields', async ({ page }) => {
-    await page.goto('/admin/settings/cancel-reschedule-policy');
+    // `networkidle`, unlike every other goto in this file: this route is the FIRST thing to pull
+    // the lazy admin chunk in some run orders, and on a cold `ng serve` that activation can throw
+    // and bounce to `/` — a flake that reads as "the tab does not exist". The idiom is the one
+    // obrs766-counter-cancel.spec.ts already uses for admin pages.
+    await page.goto('/admin/settings/cancel-reschedule-policy', { waitUntil: 'networkidle' });
+    // Asserted BEFORE the shell so a bounce fails saying where it landed, rather than the
+    // downstream "element not found" that hides the cause.
+    await expect(page).toHaveURL(/\/admin\/settings\/cancel-reschedule-policy$/);
     await expect(page.locator('.admin-shell.theme-admin')).toBeVisible();
+    // The form is behind the store's fetch, so wait for it rather than racing the skeleton.
     await expect(page.locator('#cancelWindowHours')).toHaveValue('2');
     // Whole percent on screen, 0.80 on the wire (UX §4.2).
     await expect(page.locator('#cancelRefundRateEarlyPct')).toHaveValue('80');
@@ -205,7 +213,7 @@ test.describe('route smoke coverage', () => {
       page.locator('[data-testid="cancel-reschedule-policy-reset-btn"]')
     ).toBeVisible();
 
-    await page.goto('/admin/cancel-reschedule-policy-config');
+    await page.goto('/admin/cancel-reschedule-policy-config', { waitUntil: 'networkidle' });
     await expect(page).toHaveURL(/\/admin\/settings\/cancel-reschedule-policy$/);
   });
 
