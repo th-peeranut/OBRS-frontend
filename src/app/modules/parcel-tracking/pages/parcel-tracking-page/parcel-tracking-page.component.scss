@@ -11,7 +11,15 @@
 // outside the admin/staff shell. Dark variant mirrors admin-theme.scss's own
 // `.admin-shell.is-dark` overrides, gated on this app's public dark-mode
 // class (`body.is-dark`, dark-theme.scss) instead of `.admin-shell.is-dark`.
+// OBRS-970 / OBRS-775. This page joined the customer sweep and `host-box-sweep`
+// immediately reported the host as INLINE while wrapping app-navbar, the page
+// section and app-footer -- an inline box may not contain block children, so the
+// browser splits the host and its own border box then describes nothing. Same
+// finding OBRS-857 got the day /find-booking joined the same list; the component
+// shipped without a display and nothing had ever measured it.
 :host {
+  display: block;
+
   --admin-success-bg: #d4e3ff;
   --admin-success-text: #154c85;
   --admin-warning-bg: #ffdcbe;

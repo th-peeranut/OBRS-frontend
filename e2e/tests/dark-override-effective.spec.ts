@@ -26,19 +26,30 @@
  */
 import { expect, test } from '@playwright/test';
 import { CENSUS, deadKey, type DeadDeclaration } from '../support/dark-override-effective';
-import { CUSTOMER_PAGES, seedCustomerSession, seedStore } from '../support/customer-pages';
+import {
+  CUSTOMER_PAGES,
+  CUSTOMER_SWEEP_PAGE_MS,
+  customerSweepBudgetMs,
+  seedCustomerSession,
+  seedStore,
+} from '../support/customer-pages';
 import { DARK_OVERRIDE_ALLOW } from '../support/dark-override-allow';
 
 /**
- * Two pages beyond the contrast gate's eight. dark-theme.scss section 5 is
- * written for login AND register, and section 9 for how-to-book; without them
- * a third of the file is unreachable and the census would report a clean sweep
- * over rules it never visited.
+ * Pages this census needs that the contrast gate's list does not carry.
+ *
+ * EMPTY since OBRS-970, and that is the intended state rather than an oversight.
+ * The two entries that lived here -- /register and /how-to-book -- were added
+ * because dark-theme.scss section 5 is written for login AND register and
+ * section 9 for how-to-book, so without them a third of the file was unreachable
+ * and this census reported a clean sweep over rules it never visited. Both are
+ * in `CUSTOMER_PAGES` now, so keeping them here would visit each page twice in
+ * the same run, in the same state, and judge the same DOM both times.
+ *
+ * A page that belongs to THIS question and not to the contrast gate's still
+ * belongs here. That is why the seam is kept rather than deleted.
  */
-const EXTRA_PAGES: { key: string; url: string; seed: boolean; storeOverride?: () => Record<string, unknown> }[] = [
-  { key: 'register', url: '/register', seed: false },
-  { key: 'how-to-book', url: '/how-to-book', seed: false },
-];
+const EXTRA_PAGES: { key: string; url: string; seed: boolean; storeOverride?: () => Record<string, unknown> }[] = [];
 
 // `storeOverride` is carried through (OBRS-1228): the empty-results entry exists
 // precisely because that state renders elements no other target does, and a
@@ -227,9 +238,11 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
   });
 
   test('no dark-theme.scss declaration is dead outside the debt register', async ({ page }) => {
-    // Ten page loads plus a full CSSOM walk each. The lane's 60s default is
-    // sized for a single-page spec; this one measures ~70s.
-    test.setTimeout(240_000);
+    // One page load plus a full CSSOM walk each. The lane's 60s default is sized for
+    // a single-page spec; this one measured ~70s over ten pages. OBRS-970 replaced the
+    // constant with the population it actually walks -- EXTRA_PAGES included, since a
+    // page beyond CUSTOMER_PAGES costs the same as one inside it.
+    test.setTimeout(customerSweepBudgetMs() + EXTRA_PAGES.length * CUSTOMER_SWEEP_PAGE_MS);
 
     const seen = new Map<string, { d: DeadDeclaration; pages: Set<string>; instances: number }>();
     const observed = new Set<string>();

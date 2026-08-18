@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-970-route-population.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-970. Reads src/app/app-routing.module.ts off disk and compares it against CUSTOMER_PAGES and EXCLUDED_CUSTOMER_ROUTES -- no backend, no network, and no page load at all, so it is hermetic by construction rather than by fixture. GATE because the drift it catches is a customer page shipping outside every sweep in this lane, and that drift happens at the commit that adds the route: a check for it that does not run at merge is a comment. Carries its own must-catch fixture for the parser, since a derived population that matches nothing reports a clean run."
+    },
+    {
       "spec": "obrs-857-find-booking.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
