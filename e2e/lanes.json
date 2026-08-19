@@ -129,6 +129,12 @@
       "why": "OBRS-629 card evidence: the parcel carriage terms page that did not exist, the footer link that was missing, the amended passenger-baggage clause on /business-policy, and the two consignment surfaces that now reach the terms before the sender pays. AFTER-only for /parcel-policy on purpose -- there is no BEFORE frame of a page that was never routed, and a 404 is not a comparison. Every shot asserts what it is about to photograph first, including the one that proves a FAILED config read prints an error rather than inventing a weight limit. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT. Every assertion that must keep holding lives in parcel-policy.component.spec.ts and in gate 6 of scripts/check-i18n-parity.mjs, both on CI."
     },
     {
+      "spec": "obrs-1424-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1424capture.config.ts",
+      "why": "OBRS-1424 BEFORE/AFTER evidence for the /track-parcel card in dark mode, and the measurements the GATE lane structurally cannot take. That lane sweeps this page AT REST -- its CUSTOMER_PAGES entry says so in its own comment -- so the status chip, the timeline rows and the not-found line are never measured there, and those are exactly the surfaces the card background changes underneath. This drives all eight parcel_delivery_status slugs plus the 404, in both themes, and runs the SAME `MEASURE` the gate uses so a number printed here and a number printed there mean the same thing. It asserts nothing about the floors on purpose: the verdict belongs to the gate, which owns the allowlist and fails the build, and a second weaker judge on the same question is worse than none. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT."
+    },
+    {
       "spec": "obrs-1402-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1402capture.config.ts",

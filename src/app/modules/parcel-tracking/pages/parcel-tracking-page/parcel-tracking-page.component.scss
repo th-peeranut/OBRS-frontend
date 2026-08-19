@@ -1,4 +1,5 @@
 @import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens";
 
 // OBRS-305 design-system §12 new-pattern note: this is a CUSTOMER-shell page
 // (no `.admin-shell` ancestor), but the status chip reuses the SAME
@@ -54,18 +55,86 @@
   border-radius: 16px;
   padding: 32px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+
+  // OBRS-1424. This surface stayed white in both themes while the text on it took
+  // `body.is-dark`'s `$dk-text`, so the h1 measured 1.20:1 and the timeline values
+  // measured the same. Written HERE, not in dark-theme.scss, for the reason
+  // styles/_dark-tokens.scss sets out and find-booking-page.component.scss repeats:
+  // Angular's emulated encapsulation rewrites a nested component rule to (0,2,0),
+  // which a global `body.is-dark .parcel-tracking-card` at (0,2,1) beats today and
+  // loses to the moment this block nests one level deeper. `:host-context` skips the
+  // arithmetic.
+  :host-context(body.is-dark) & {
+    background: $dk-bg-card;
+    color: $dk-text;
+    box-shadow: none;
+    border: 1px solid $dk-border;
+
+    // The four timeline labels. Bootstrap 5.3 paints `.text-muted` with
+    // `--bs-secondary-color` = `rgba(33,37,41,.75)` -- a THEME-BLIND dark grey, the
+    // same shape of defect OBRS-797 fixed for `::placeholder` a few lines up in
+    // dark-theme.scss.
+    //
+    // WORTH KNOWING BEFORE TRUSTING A GREEN RUN HERE: the contrast gate never saw
+    // these. `MEASURE` skips any text whose computed colour has alpha < 1
+    // (customer-contrast.ts, the `rgba(cs.color)[3] < 1` guard), so all four were
+    // counted as skipped, in BOTH themes, before and after this card -- they are
+    // absent from the failing list because they were never in the measured list.
+    // Composited over this card the pair is #1f2329 on #1a1d27 (DERIVED: 0.75 alpha
+    // over the card background, arithmetic on two measured colours), which is
+    // invisible. Making the colour opaque is what puts them under the gate at all:
+    // measured after this change, all four read 6.65:1.
+    //
+    // `!important` because Bootstrap's utility carries one (bootstrap.min.css), so
+    // specificity alone does not win. Same substitution admin-theme.scss:484 makes.
+    .text-muted {
+      color: $dk-text-muted !important;
+    }
+  }
 }
 
 .parcel-tracking-form {
   display: flex;
   gap: 12px;
   margin: 16px 0;
+
+  // The submit button is bare Bootstrap. On a card that has gone `$dk-bg-card` that is
+  // fine at rest (`#0d6efd` is 3.74:1) and BREAKS on hover/focus, where Bootstrap
+  // darkens the fill to `#0b5ed7` -- 2.88:1, under WCAG 1.4.11's 3:1 floor for
+  // identifying a control. Those two numbers were measured on /find-booking
+  // (find-booking-page.component.scss), which is the same card shape on the same
+  // background; cited rather than re-measured, because this file's own hover state was
+  // not swept. Fill with $dk-accent and put $dk-bg on it -- $text-white on $dk-accent
+  // is 2.03:1 and would trade one failure for another. The label was measured here
+  // after the change: 9.31:1, the same value /find-booking recorded.
+  :host-context(body.is-dark) & .btn-primary {
+    background-color: $dk-accent;
+    border-color: $dk-accent;
+    color: $dk-bg;
+
+    &:hover,
+    &:focus,
+    &:focus-visible {
+      background-color: $dk-accent-hover;
+      border-color: $dk-accent-hover;
+      color: $dk-bg;
+    }
+  }
 }
 
 .parcel-tracking-not-found {
   color: $text-lightblack;
   text-align: center;
   padding: 24px 0;
+
+  :host-context(body.is-dark) & {
+    // $text-lightblack resolves to #717581 and is chosen against white, where it reads
+    // 4.60:1 -- measured on this page. Left alone it lands on $dk-bg-card the moment
+    // the card above stops being white, and there it is 3.25:1 (measured on
+    // /find-booking's identical card, find-booking-page.component.scss) -- under AA,
+    // caused by this change. $dk-text-muted reads 6.65:1 here, measured.
+    color: $dk-text-muted;
+  }
 }
 
 // OBRS-1353: the drop-off proof. Bounded height so a phone photo cannot push the
@@ -90,5 +159,9 @@
 
   &:last-child {
     border-bottom: none;
+  }
+
+  :host-context(body.is-dark) & {
+    border-bottom-color: $dk-border-muted;
   }
 }

@@ -295,23 +295,4 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   'dark:focus|button.select-btn|boundary-on-#1a1d27': '2.33:1 -- OBRS-773, focus fill sinks into the dark card',
   'dark:hover|button.payment-btn|boundary-on-#0f1117': '2.62:1 -- OBRS-773, hover fill sinks into the dark page',
   'dark:focus|button.payment-btn|boundary-on-#0f1117': '2.62:1 -- OBRS-773, focus fill sinks into the dark page',
-
-  // -------------------------------------------------------------------------
-  // OBRS-1424 -- found by OBRS-970's first sweep of /track-parcel, and the only
-  // TEXT finding the expansion produced.
-  //
-  // `.parcel-tracking-card` paints `$primary-white` with no dark rule, while the
-  // h1 inside it declares no colour of its own and therefore inherits `$dk-text`
-  // from `body.is-dark`. Themed foreground on an unthemed surface: the page title
-  // is #e8eaf0 on #ffffff. Same mechanism as OBRS-747 (staff `.card`) and OBRS-768
-  // (/my-bookings, /e-ticket), a different surface each time.
-  //
-  // Worth recording next to it, because the card predicted the opposite: the four
-  // POLICY pages joined the sweep in the same commit and did NOT go red. Their text
-  // is `$text-black`, declared in their own stylesheets, so their unthemed white
-  // surface keeps a legible pair. OBRS-969 is real and is about theme consistency
-  // -- it is not a contrast defect, and this register is the evidence.
-  // -------------------------------------------------------------------------
-  'dark|div.parcel-tracking-card > h1|#e8eaf0-on-#ffffff':
-    '1.20:1 -- OBRS-1424, page title inherits the dark body colour onto a card that never themes',
 };
