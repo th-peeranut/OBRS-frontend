@@ -9,6 +9,18 @@
   },
   "specs": [
     {
+      "spec": "obrs-1388-qa-regression.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs1388qa.config.ts",
+      "why": "OBRS-1388. Files a damage claim, approves it as OWNER and reads the cash-box effect back, so it needs a claimant who already has a decided claim and a parcel that has none -- states that exist only by construction. Provisions its own obrs1388qa database behind a local :8080; never runnable against SIT, because an approval here moves money in a shared environment. The phone-spelling case additionally forces a raw un-canonicalized bookings.contact_phone_snapshot by direct SQL, which no API path has produced since OBRS-455, and that read-side defence is the one whose failure looks like a healthy empty history."
+    },
+    {
+      "spec": "obrs-1388-before-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1388before.config.ts",
+      "why": "OBRS-1388. Screenshots only, and that is the requirement rather than a shortcut: it runs unchanged against a clean origin/dev checkout (c1626562) served on :4200 and pointed at the SAME local backend the AFTER pass used, so the BEFORE image is the real previous behaviour instead of a reconstruction. Every assertion for this card lives in obrs-1388-qa-regression.spec.ts on the OWN-DB lane."
+    },
+    {
       "spec": "obrs-970-route-population.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",

@@ -64,7 +64,7 @@ test.describe.serial('OBRS-1388 parcel damage claims', () => {
     // Filed confirmation shows the SERVER-resolved claimant name/phone.
     await expect(dialog.getByText('TestClaimantA').first()).toBeVisible({ timeout: 10000 });
     await expect(dialog.getByText('0812345678', { exact: true })).toBeVisible();
-    await page.screenshot({ path: 'docs/prod/evidence/OBRS-1388-AFTER-staff-claim-filed-confirm.png', fullPage: true });
+    await page.screenshot({ path: 'e2e-evidence/OBRS-1388-AFTER-staff-claim-filed-confirm.png', fullPage: true });
     await dialog.getByRole('button', { name: 'เสร็จสิ้น (รอ OWNER อนุมัติ)' }).click();
     await expect(dialog).toBeHidden();
 
@@ -76,7 +76,7 @@ test.describe.serial('OBRS-1388 parcel damage claims', () => {
     await expect(queueRow).toBeVisible({ timeout: 15000 });
     // BR-1: site 1 of 3 -- the owner queue column.
     await expect(queueRow.getByText('ยังไม่ได้กำหนดจุดขาย')).toBeVisible();
-    await page.screenshot({ path: 'docs/prod/evidence/OBRS-1388-AFTER-owner-queue-pending.png', fullPage: true });
+    await page.screenshot({ path: 'e2e-evidence/OBRS-1388-AFTER-owner-queue-pending.png', fullPage: true });
 
     await queueRow.getByRole('button', { name: 'อนุมัติ' }).click();
     const approveModal = page.locator('.admin-modal');
@@ -86,7 +86,7 @@ test.describe.serial('OBRS-1388 parcel damage claims', () => {
     // BR-1: site 2 of 3 -- the approve modal's own claim-info panel. (The history table
     // below can ALSO legitimately show this claim itself with the same label -- scope tightly.)
     await expect(approveModal.locator('.pca-info-value').getByText('ยังไม่ได้กำหนดจุดขาย')).toBeVisible();
-    await page.screenshot({ path: 'docs/prod/evidence/OBRS-1388-AFTER-approve-modal-500-hint.png', fullPage: true });
+    await page.screenshot({ path: 'e2e-evidence/OBRS-1388-AFTER-approve-modal-500-hint.png', fullPage: true });
 
     await approveModal.locator('input[formcontrolname="approvedAmount"]').fill('500');
     await approveModal.locator('textarea[formcontrolname="decisionNote"]').fill('ยอมรับตามระเบียบ เพดาน 500 บาท');
@@ -133,7 +133,7 @@ test.describe.serial('OBRS-1388 parcel damage claims', () => {
     await expect(historyRow.getByText('อนุมัติแล้ว')).toBeVisible();
     // BR-1: site 3 of 3 -- every history row.
     await expect(historyRow.getByText('ยังไม่ได้กำหนดจุดขาย')).toBeVisible();
-    await page.screenshot({ path: 'docs/prod/evidence/OBRS-1388-AFTER-history-visible-cross-phone-spelling.png', fullPage: true });
+    await page.screenshot({ path: 'e2e-evidence/OBRS-1388-AFTER-history-visible-cross-phone-spelling.png', fullPage: true });
   });
 
   test('SALESPERSON cannot reach the owner /admin/parcel-claims surface (UI)', async ({ page }) => {
@@ -164,7 +164,7 @@ test.describe.serial('OBRS-1388 parcel damage claims', () => {
     await amountInput.blur();
     await expect(modal.getByText('กรอกจำนวนเงินระหว่าง 0.01–500 บาท')).toBeVisible();
     await expect(modal.getByRole('button', { name: 'อนุมัติ', exact: true })).toBeDisabled();
-    await page.screenshot({ path: 'docs/prod/evidence/OBRS-1388-AFTER-ceiling-501-inline-error.png', fullPage: true });
+    await page.screenshot({ path: 'e2e-evidence/OBRS-1388-AFTER-ceiling-501-inline-error.png', fullPage: true });
 
     await amountInput.fill('0');
     await amountInput.blur();
@@ -199,7 +199,7 @@ test.describe.serial('OBRS-1388 parcel damage claims', () => {
     await rowE2.getByRole('button', { name: 'File Claim' }).click();
     const dialogEn = page.locator('.admin-modal');
     await expect(dialogEn.getByRole('heading', { name: 'File a damage claim' })).toBeVisible();
-    await page.screenshot({ path: 'docs/prod/evidence/OBRS-1388-AFTER-i18n-live-switch-en.png', fullPage: true });
+    await page.screenshot({ path: 'e2e-evidence/OBRS-1388-AFTER-i18n-live-switch-en.png', fullPage: true });
 
     // Switch back to Thai for later tests / cleanliness.
     await dialogEn.getByRole('button', { name: /Cancel/i }).click();
@@ -230,6 +230,6 @@ test.describe.serial('OBRS-1388 parcel damage claims', () => {
     // both correctly composed, not a raw key; assert on the first and that zero raw keys leaked.
     await expect(returnModal.getByText('ค่าชดเชยพัสดุเสียหาย').first()).toBeVisible({ timeout: 10000 });
     await expect(returnModal.getByText('ADMIN.EXPENSES.CATEGORIES.PARCEL_COMPENSATION')).toHaveCount(0);
-    await page.screenshot({ path: 'docs/prod/evidence/OBRS-1388-AFTER-expense-category-label-return-modal.png', fullPage: true });
+    await page.screenshot({ path: 'e2e-evidence/OBRS-1388-AFTER-expense-category-label-return-modal.png', fullPage: true });
   });
 });

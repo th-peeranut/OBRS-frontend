@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * OBRS-1388 QA regression -- parcel damage-claim record + cross-counter claim
- * history. NOT part of any lane in e2e/lanes.json; run by hand against the
+ * history. OWN-DB lane in e2e/lanes.json; run by hand against the
  * already-running LOCAL stack (backend :8080 / obrs1388qa DB, frontend :4200
  * via `npm run start:local`).
  * reuseExistingServer is unconditionally true: this config must never try to

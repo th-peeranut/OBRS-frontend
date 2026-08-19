@@ -23,7 +23,7 @@ test('BEFORE: staff parcel delivery list has NO "ยื่นเคลม" actio
   await page.getByRole('tab', { name: 'ส่งมอบ' }).click();
   await expect(page.locator('table').first()).toBeVisible({ timeout: 15000 });
   await expect(page.getByRole('button', { name: 'ยื่นเคลม' })).toHaveCount(0);
-  await page.screenshot({ path: 'docs/prod/evidence/OBRS-1388-BEFORE-staff-delivery-list-no-claim-action.png', fullPage: true });
+  await page.screenshot({ path: 'e2e-evidence/OBRS-1388-BEFORE-staff-delivery-list-no-claim-action.png', fullPage: true });
 });
 
 test('BEFORE: /admin/parcel-claims route does not exist', async ({ page }) => {
@@ -33,5 +33,5 @@ test('BEFORE: /admin/parcel-claims route does not exist', async ({ page }) => {
   // No nav item, and the route bounces (AuthGuard has no matching route data at all --
   // Angular's router falls through to the wildcard/home redirect).
   await expect(page.getByText('เคลมพัสดุ')).toHaveCount(0);
-  await page.screenshot({ path: 'docs/prod/evidence/OBRS-1388-BEFORE-admin-parcel-claims-route-absent.png', fullPage: true });
+  await page.screenshot({ path: 'e2e-evidence/OBRS-1388-BEFORE-admin-parcel-claims-route-absent.png', fullPage: true });
 });
