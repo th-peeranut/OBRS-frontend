@@ -41,6 +41,10 @@ import {
   CashRefundApprovalRequest,
 } from '../../shared/interfaces/my-booking.interface';
 import {
+  ParcelClaimApproveReqDto,
+  ParcelClaimRespDto,
+} from '../../shared/interfaces/parcel-claim.interface';
+import {
   DriverCashDayRespDto,
   DriverCashDayReturnReqDto,
   DriverCashDayStatus,
@@ -2260,6 +2264,45 @@ export class AdminApiService {
     return this.postRequest<CashRefundApprovalCode>(
       `${this.baseUrl}/private/cash-refund-approvals/${requestId}/approve`,
       {}
+    );
+  }
+
+  // ── OBRS-1388: parcel damage-claim approvals (/admin/parcel-claims) ──────
+  // OWNER-only surface. See ../OBRS-backend/docs/spec/parcel-damage-claim-obrs-1388.md §4.
+  // Deliberately no NgRx store — same reasoning as the cash-refund queue
+  // directly above: a cached queue could show the owner a claim another
+  // device already decided.
+
+  /** GET /api/private/parcel-claims?status=PENDING — oldest first, `[]` when
+   * none. SALESPERSON floor (OWNER/ADMIN inherit). */
+  getPendingParcelClaims(): Observable<ResponseAPI<ParcelClaimRespDto[]>> {
+    const params = new HttpParams().set('status', 'PENDING');
+    return this.getRequest<ParcelClaimRespDto[]>(`${this.baseUrl}/private/parcel-claims`, params);
+  }
+
+  /** GET /api/private/parcels/{parcelId}/claim-history — the same
+   * cross-counter history the filing counter saw (AC-2), read again here
+   * because the OWNER is the one deciding. Same endpoint as
+   * `StaffApiService.getParcelClaimHistory`, called from this service so the
+   * owner's approve modal doesn't take a runtime dependency on the staff
+   * module. */
+  getParcelClaimHistory(parcelId: number): Observable<ResponseAPI<ParcelClaimRespDto[]>> {
+    return this.getRequest<ParcelClaimRespDto[]>(
+      `${this.baseUrl}/private/parcels/${parcelId}/claim-history`
+    );
+  }
+
+  /** POST /api/private/parcel-claims/{id}/approve — moves money
+   * (`DriverCashService#recordParcelClaimPayout`, §5). OWNER-only. Errors:
+   * 404 PARCEL_CLAIM_NOT_FOUND, 409 PARCEL_CLAIM_ALREADY_DECIDED, 400 amount
+   * out of range, 409 DRIVER_CASH_DAY_ALREADY_RETURNED (the FILER's box). */
+  approveParcelClaim(
+    claimId: number,
+    payload: ParcelClaimApproveReqDto
+  ): Observable<ResponseAPI<ParcelClaimRespDto>> {
+    return this.postRequest<ParcelClaimRespDto>(
+      `${this.baseUrl}/private/parcel-claims/${claimId}/approve`,
+      payload
     );
   }
 

@@ -113,6 +113,15 @@
                         {{ 'STAFF.PARCEL_DELIVERY.ACTION.VIEW_DROP_OFF_PHOTO' | translate }}
                       </a>
                     }
+                    <!-- OBRS-1388: available regardless of deliveryStatus — the
+                    backend imposes no gate (BR-10, the 1-day window is advisory,
+                    not enforced), so the FE invents none either. -->
+                    <button
+                      class="admin-btn admin-btn-small ms-1"
+                      (click)="openClaimDialog(row)"
+                      >
+                      {{ 'STAFF.PARCEL_DELIVERY.ACTION.FILE_CLAIM' | translate }}
+                    </button>
                   </td>
                 </tr>
               }
@@ -131,3 +140,21 @@
   (dismiss)="closeCollectDialog()"
   (confirm)="confirmCollect($event)"
 ></app-parcel-collect-dialog>
+
+<app-parcel-claim-dialog
+  [isOpen]="claimDialogParcel !== null"
+  [parcel]="claimDialogParcel"
+  [history]="claimHistory"
+  [isHistoryLoading]="isClaimHistoryLoading"
+  [historyErrorKey]="claimHistoryErrorKey"
+  [isFiling]="isFilingClaim"
+  [fileErrorKey]="fileClaimErrorKey"
+  [filedClaim]="filedClaim"
+  [isRejecting]="isRejectingClaim"
+  [rejectErrorKey]="rejectClaimErrorKey"
+  (dismiss)="closeClaimDialog()"
+  (fileClaim)="onFileClaim($event)"
+  (retryHistory)="onRetryClaimHistory()"
+  (rejectClaim)="onRejectClaim($event)"
+  (done)="onClaimDone()"
+></app-parcel-claim-dialog>

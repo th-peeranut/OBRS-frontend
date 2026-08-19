@@ -40,6 +40,11 @@ import {
   WaybillRespDto,
 } from '../../shared/interfaces/parcel.interface';
 import {
+  ParcelClaimReqDto,
+  ParcelClaimRejectReqDto,
+  ParcelClaimRespDto,
+} from '../../shared/interfaces/parcel-claim.interface';
+import {
   DriverCashAdvanceReqDto,
   DriverCashDayRespDto,
   DriverCashExpenseReqDto,
@@ -880,6 +885,51 @@ export class StaffApiService {
   ): Observable<ResponseAPI<ParcelVerifyRespDto>> {
     return this.http.post<ResponseAPI<ParcelVerifyRespDto>>(
       `${environment.apiUrl}/api/private/parcels/${parcelId}/verify`,
+      payload,
+      { context: this.parcelActionContext }
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // OBRS-1388 — parcel damage-claim record + cross-counter claim history
+  // (staff-facing: file / history / reject). See
+  // ../OBRS-backend/docs/spec/parcel-damage-claim-obrs-1388.md §4.
+  // ---------------------------------------------------------------------------
+
+  /** POST /api/private/parcel-claims — file a damage claim. SALESPERSON.
+   * Server derives claimantName/claimantContactPhone/salesPointId — never
+   * sent by the client. Errors: 400 blank/oversized claimReason, 404
+   * PARCEL_NOT_FOUND, 409 PARCEL_CLAIM_ALREADY_PENDING (BR-12). Reuses
+   * `parcelActionContext` — same reasoning as load/collect/verify above: a
+   * domain 409/404/400 here must never force-logout the operator. */
+  fileParcelClaim(payload: ParcelClaimReqDto): Observable<ResponseAPI<ParcelClaimRespDto>> {
+    return this.http.post<ResponseAPI<ParcelClaimRespDto>>(
+      `${environment.apiUrl}/api/private/parcel-claims`,
+      payload,
+      { context: this.parcelActionContext }
+    );
+  }
+
+  /** GET /api/private/parcels/{parcelId}/claim-history — AC-2. Keyed
+   * server-side on the parcel's own canonicalized claimant phone (BR-2),
+   * newest first, `[]` when none. 404 PARCEL_NOT_FOUND. */
+  getParcelClaimHistory(parcelId: number): Observable<ResponseAPI<ParcelClaimRespDto[]>> {
+    return this.http.get<ResponseAPI<ParcelClaimRespDto[]>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/claim-history`,
+      { context: this.parcelActionContext }
+    );
+  }
+
+  /** POST /api/private/parcel-claims/{id}/reject — SALESPERSON, moves no
+   * money (asymmetric with approve, BR-6). Errors: 404
+   * PARCEL_CLAIM_NOT_FOUND, 409 PARCEL_CLAIM_ALREADY_DECIDED, 400 blank
+   * decisionNote. */
+  rejectParcelClaim(
+    claimId: number,
+    payload: ParcelClaimRejectReqDto
+  ): Observable<ResponseAPI<ParcelClaimRespDto>> {
+    return this.http.post<ResponseAPI<ParcelClaimRespDto>>(
+      `${environment.apiUrl}/api/private/parcel-claims/${claimId}/reject`,
       payload,
       { context: this.parcelActionContext }
     );
