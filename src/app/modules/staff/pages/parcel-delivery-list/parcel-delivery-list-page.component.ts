@@ -19,6 +19,19 @@ import {
 import { parcelStopLabel } from '../../../../shared/lib/parcel-stop-label';
 import { ParcelDeliveryListStore } from './parcel-delivery-list.store';
 import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
+import { ParcelClaimRespDto } from '../../../../shared/interfaces/parcel-claim.interface';
+import {
+  ParcelClaimFilePayload,
+  ParcelClaimRejectPayload,
+} from '../../components/parcel-claim-dialog/parcel-claim-dialog.component';
+
+// OBRS-1388: separate error-code table from ACTION_ERROR_KEYS above — a
+// different domain (claim filing/rejecting, not delivery-status transitions)
+// with its own error codes, same mapApiErrorCode()/fallback-key shape.
+const CLAIM_ACTION_ERROR_KEYS: Record<string, string> = {
+  PARCEL_CLAIM_ALREADY_PENDING: 'STAFF.PARCEL_DELIVERY.ERROR.CLAIM_ALREADY_PENDING',
+  PARCEL_CLAIM_ALREADY_DECIDED: 'STAFF.PARCEL_DELIVERY.ERROR.CLAIM_ALREADY_DECIDED',
+};
 
 const ACTION_ERROR_KEYS: Record<string, string> = {
   PARCEL_COLLECT_CODE_MISMATCH: 'STAFF.PARCEL_DELIVERY.ERROR.CODE_MISMATCH',
@@ -68,6 +81,19 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
   protected collectDialogParcelId: number | null = null;
   protected isCollecting = false;
   protected collectErrorKey: string | null = null;
+
+  // OBRS-1388 — "ยื่นเคลม" dialog state. `claimDialogParcel` is the row
+  // already in hand (optimistic open, design-system §6); `claimHistory` and
+  // `filedClaim` arrive from the server and are never guessed client-side.
+  protected claimDialogParcel: ParcelDeliveryListItemDto | null = null;
+  protected claimHistory: ParcelClaimRespDto[] = [];
+  protected isClaimHistoryLoading = false;
+  protected claimHistoryErrorKey: string | null = null;
+  protected isFilingClaim = false;
+  protected fileClaimErrorKey: string | null = null;
+  protected filedClaim: ParcelClaimRespDto | null = null;
+  protected isRejectingClaim = false;
+  protected rejectClaimErrorKey: string | null = null;
 
   private readonly destroy$ = new Subject<void>();
 
@@ -147,6 +173,96 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
   protected closeCollectDialog(): void {
     if (this.isCollecting) return;
     this.collectDialogParcelId = null;
+  }
+
+  /** Opens optimistically (design-system §6): `row` is already in hand, so
+   * the parcel-info panel renders on first paint. History fetches in the
+   * background and never gates the reason field or the File button. */
+  protected openClaimDialog(row: ParcelDeliveryListItemDto): void {
+    this.claimDialogParcel = row;
+    this.fileClaimErrorKey = null;
+    this.filedClaim = null;
+    this.isRejectingClaim = false;
+    this.rejectClaimErrorKey = null;
+    this.loadClaimHistory(row.parcelId);
+  }
+
+  protected closeClaimDialog(): void {
+    if (this.isFilingClaim || this.isRejectingClaim) return;
+    this.claimDialogParcel = null;
+    this.claimHistory = [];
+    this.claimHistoryErrorKey = null;
+    this.filedClaim = null;
+    this.fileClaimErrorKey = null;
+    this.rejectClaimErrorKey = null;
+  }
+
+  protected onRetryClaimHistory(): void {
+    if (this.claimDialogParcel) {
+      this.loadClaimHistory(this.claimDialogParcel.parcelId);
+    }
+  }
+
+  private loadClaimHistory(parcelId: number): void {
+    this.isClaimHistoryLoading = true;
+    this.claimHistoryErrorKey = null;
+    this.staffApiService
+      .getParcelClaimHistory(parcelId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp) => {
+          this.isClaimHistoryLoading = false;
+          this.claimHistory = resp?.data ?? [];
+        },
+        error: () => {
+          this.isClaimHistoryLoading = false;
+          this.claimHistory = [];
+          this.claimHistoryErrorKey = 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_LOAD_FAILED';
+        },
+      });
+  }
+
+  protected onFileClaim(payload: ParcelClaimFilePayload): void {
+    this.isFilingClaim = true;
+    this.fileClaimErrorKey = null;
+    this.staffApiService
+      .fileParcelClaim(payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp) => {
+          this.isFilingClaim = false;
+          this.filedClaim = resp?.data ?? null;
+        },
+        error: (err: unknown) => {
+          this.isFilingClaim = false;
+          this.fileClaimErrorKey = this.mapClaimErrorCode(err);
+        },
+      });
+  }
+
+  protected onRejectClaim(payload: ParcelClaimRejectPayload): void {
+    this.isRejectingClaim = true;
+    this.rejectClaimErrorKey = null;
+    this.staffApiService
+      .rejectParcelClaim(payload.claimId, { decisionNote: payload.decisionNote })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.isRejectingClaim = false;
+          void this.alertService.success(
+            this.translate.instant('STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.REJECTED_CONFIRM')
+          );
+          this.closeClaimDialog();
+        },
+        error: (err: unknown) => {
+          this.isRejectingClaim = false;
+          this.rejectClaimErrorKey = this.mapClaimErrorCode(err);
+        },
+      });
+  }
+
+  protected onClaimDone(): void {
+    this.closeClaimDialog();
   }
 
   protected confirmCollect(collectionCode: string): void {
@@ -256,5 +372,10 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
   private mapErrorCode(err: unknown): string {
     const errorCode = (err as HttpErrorResponse)?.error?.errorCode as string | undefined;
     return mapApiErrorCode(errorCode, ACTION_ERROR_KEYS, 'STAFF.PARCEL_DELIVERY.ERROR.WRONG_STATE');
+  }
+
+  private mapClaimErrorCode(err: unknown): string {
+    const errorCode = (err as HttpErrorResponse)?.error?.errorCode as string | undefined;
+    return mapApiErrorCode(errorCode, CLAIM_ACTION_ERROR_KEYS, 'STAFF.PARCEL_DELIVERY.ERROR.CLAIM_GENERIC');
   }
 }

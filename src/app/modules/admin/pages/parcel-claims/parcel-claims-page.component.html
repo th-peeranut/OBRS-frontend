@@ -1,0 +1,93 @@
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.PARCEL_CLAIM.SUBTITLE' | translate }}</h4>
+    <button type="button" class="admin-btn admin-btn-small" [disabled]="isLoading" (click)="load()">
+      {{ 'ADMIN.PARCEL_CLAIM.REFRESH' | translate }}
+    </button>
+  </div>
+
+  @if (queueNoteKey) {
+    <p class="admin-hint">{{ queueNoteKey | translate }}</p>
+  }
+
+  @if (contentState === 'error') {
+    <p class="admin-error">{{ errorMessage }}</p>
+  }
+
+  <!-- An empty queue is good news: nothing is waiting on the owner's sign-off. -->
+  @if (contentState === 'empty') {
+    <div class="pcq-empty">
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">task_alt</span>
+      <p class="pcq-empty-title">{{ 'ADMIN.PARCEL_CLAIM.EMPTY' | translate }}</p>
+    </div>
+  }
+
+  @if (contentState === 'loading' || contentState === 'data') {
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'ADMIN.PARCEL_CLAIM.COL.TRACKING_NUMBER' | translate }}</th>
+            <th>{{ 'ADMIN.PARCEL_CLAIM.COL.CLAIMANT' | translate }}</th>
+            <th>{{ 'ADMIN.PARCEL_CLAIM.COL.REASON' | translate }}</th>
+            <th>{{ 'ADMIN.PARCEL_CLAIM.COL.SALES_POINT' | translate }}</th>
+            <th>{{ 'ADMIN.PARCEL_CLAIM.COL.FILED_AT' | translate }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (contentState === 'loading') {
+            @for (row of skeletonRows; track $index) {
+              <tr class="admin-skeleton-row" aria-hidden="true">
+                <td><span class="admin-skeleton"></span></td>
+                <td><span class="admin-skeleton"></span></td>
+                <td><span class="admin-skeleton"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              </tr>
+            }
+          }
+          @if (contentState === 'data') {
+            @for (row of rows; track row.id) {
+              <tr>
+                <td class="pcq-tracking">{{ row.trackingNumber }}</td>
+                <td>{{ row.claimantName }} ({{ row.claimantContactPhone }})</td>
+                <td class="pcq-reason">{{ row.claimReason }}</td>
+                <td>
+                  @if (row.salesPointId !== null) {
+                    #{{ row.salesPointId }}
+                  } @else {
+                    <span class="admin-muted">{{ 'ADMIN.PARCEL_CLAIM.SALES_POINT.UNASSIGNED' | translate }}</span>
+                  }
+                </td>
+                <td>{{ row.filedAt | date: 'dd MMM yyyy HH:mm' }}</td>
+                <td class="pcq-action">
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-primary admin-btn-small"
+                    (click)="openApproveModal(row)"
+                    >
+                    {{ 'ADMIN.PARCEL_CLAIM.APPROVE_BTN' | translate }}
+                  </button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<app-parcel-claim-approve-modal
+  [isOpen]="isApproveModalOpen"
+  [claim]="selectedClaim"
+  [history]="approveHistory"
+  [isHistoryLoading]="isApproveHistoryLoading"
+  [historyErrorKey]="approveHistoryErrorKey"
+  [isSubmitting]="isSubmittingApproval"
+  [submitErrorKey]="approveSubmitErrorKey"
+  (closed)="closeApproveModal()"
+  (approveRequested)="onApproveRequested($event)"
+></app-parcel-claim-approve-modal>

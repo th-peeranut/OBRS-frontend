@@ -31,14 +31,16 @@ import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
  */
 export const VEHICLE_CENTRAL_SENTINEL = 'CENTRAL_NONE';
 
-/** The 15 fixed `ExpenseCategory` enum codes (SA-locked contract) — a static
+/** The 16 fixed `ExpenseCategory` enum codes (SA-locked contract) — a static
  * list, not a Lookup-API fetch, mirroring `promotions-page`'s
  * `discountTypeOptions`.
  *
- * OBRS-961 added TOLL / PERMIT_FEE / DRIVER_WAGE / INSTALMENT and OBRS-1363
- * added PARKING_FEE. They are appended BEFORE CENTRAL and OTHER on purpose:
- * nothing the owner has already learned the position of moves, and OTHER stays
- * visually last as the catch-all. This order must stay identical to the backend
+ * OBRS-961 added TOLL / PERMIT_FEE / DRIVER_WAGE / INSTALMENT, OBRS-1363
+ * added PARKING_FEE and OBRS-1388 added PARCEL_COMPENSATION (the parcel
+ * damage-claim payout, §5 `DriverCashService#recordParcelClaimPayout`). They
+ * are appended BEFORE CENTRAL and OTHER on purpose: nothing the owner has
+ * already learned the position of moves, and OTHER stays visually last as
+ * the catch-all. This order must stay identical to the backend
  * `EExpenseCategory` declaration order — the values themselves are pinned
  * against the DB CHECK by `ExpenseCategoryCheckConstraintParityTest`. */
 export const EXPENSE_CATEGORY_CODES = [
@@ -55,6 +57,7 @@ export const EXPENSE_CATEGORY_CODES = [
   'DRIVER_WAGE',
   'INSTALMENT',
   'PARKING_FEE',
+  'PARCEL_COMPENSATION',
   'CENTRAL',
   'OTHER',
 ] as const;
@@ -67,7 +70,7 @@ export interface Option {
 }
 
 /** Pre-resolved (`translate.instant()`-ed by the component) labels for the
- * 15 fixed category codes — kept out of this file so the mapper stays free
+ * 16 fixed category codes — kept out of this file so the mapper stays free
  * of any Angular/TranslateService dependency, mirroring
  * `promotions-page.mappers.ts`'s `PromotionOptionLabels`. */
 export interface ExpenseCategoryLabels {
@@ -84,6 +87,7 @@ export interface ExpenseCategoryLabels {
   driverWage: string;
   instalment: string;
   parkingFee: string;
+  parcelCompensation: string;
   central: string;
   other: string;
 }
@@ -103,6 +107,7 @@ export function toExpenseCategoryOptions(labels: ExpenseCategoryLabels): Option[
     { code: 'DRIVER_WAGE', label: labels.driverWage },
     { code: 'INSTALMENT', label: labels.instalment },
     { code: 'PARKING_FEE', label: labels.parkingFee },
+    { code: 'PARCEL_COMPENSATION', label: labels.parcelCompensation },
     { code: 'CENTRAL', label: labels.central },
     { code: 'OTHER', label: labels.other },
   ];

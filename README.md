@@ -1078,6 +1078,55 @@ cancel flow — see `docs/design-system.md` §12's OBRS-286 entry and
 `docs/adr/0032-cross-shell-refund-destination-fields-component.md` for its
 cross-shell token-override pattern.
 
+### Parcel damage-claim record + cross-counter claim history (OBRS-1388)
+
+Two surfaces, no new NgRx slice (deliberately store-free, same reasoning as
+Cash Refund Approvals above — a cached queue could show the owner a claim
+another device already decided):
+
+- **Staff** — a **"ยื่นเคลม"** action on every row of the existing
+  `/staff/parcels/schedule/:scheduleId` delivery list (available regardless
+  of `deliveryStatus`; the backend imposes no such gate and BR-10 makes the
+  OBRS-629 1-day window advisory, not enforced) opens
+  `ParcelClaimDialogComponent` (`staff/components/parcel-claim-dialog/`).
+  Opens optimistically on the row already in hand; `GET
+  /parcels/{parcelId}/claim-history` fetches the claimant's cross-counter
+  history in the background and never blocks filing. A successful file does
+  **not** close the dialog — it moves to a "filed" phase showing the
+  server-confirmed `claimantName`/`claimantContactPhone` (the real
+  "right person?" check; the client never sends them) plus the standing
+  instruction not to pay the customer before OWNER approval, then either
+  rejects on the spot (`POST /parcel-claims/{id}/reject`, SALESPERSON) or
+  leaves the claim `PENDING` for the owner's queue.
+- **Owner** — `/admin/parcel-claims` (`ParcelClaimsPageComponent`,
+  OWNER-only, sidebar `operations` section next to Cash Refund Approvals)
+  lists `GET /parcel-claims?status=PENDING` oldest-first. Per-row **"อนุมัติ"**
+  opens `ParcelClaimApproveModalComponent`
+  (`admin/pages/parcel-claims/parcel-claim-approve-modal/`) optimistically on
+  the row in hand, fetching the SAME cross-counter history the filing
+  counter saw. `approvedAmount` is a plain `<input type="number">`
+  (`mark-refunded-modal` idiom — not PrimeNG `p-inputNumber`, no precedent in
+  this module), capped client-side at ฿500 (§1 of the locked spec, BR-4 —
+  the DB CHECK is the hard invariant either way).
+  `AlertService.confirm()` fires **before** the `POST
+  /parcel-claims/{id}/approve` — the confirm copy IS the operational
+  instruction (approving signals the counter to hand over cash NOW). A `409
+  PARCEL_CLAIM_ALREADY_DECIDED` closes the modal, shows an inline note, and
+  reloads the queue rather than surfacing a raw error.
+
+`salesPointId` (`ParcelClaimRespDto`) is best-effort, never a gate (BR-1) —
+NULL on every claim today (every `user_profiles.active_sales_point_id` is
+NULL in prod, OBRS-1371) and rendered as the labelled
+`ADMIN.PARCEL_CLAIM.SALES_POINT.UNASSIGNED` state everywhere a claim's
+filing point appears, never blank space. The payout itself travels the
+existing `expenses` + `driver_cash_entries.EXPENSE_PAID` path
+(`DriverCashService#recordParcelClaimPayout`), booked to the **filer's** cash
+box and released only by the OWNER's approve — `SettlementService` is not
+touched. `EExpenseCategory` widened to 16 codes with
+`PARCEL_COMPENSATION` (`expenses-page.mappers.ts`
+`EXPENSE_CATEGORY_CODES`) so the payout renders a real label, not a raw i18n
+key, in the owner's own driver-cash-day return modal.
+
 ## Counter (staff act-on-behalf) cancel (`/staff/cancel-booking`, OBRS-766)
 
 Salesperson-only page (`requiredRoles: ['salesperson']`, never `driver`) that

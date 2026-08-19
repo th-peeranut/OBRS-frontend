@@ -518,6 +518,7 @@
       "EXPENSES": "费用",
       "MANUAL_REFUNDS": "人工退款",
       "CASH_REFUND_APPROVALS": "现金退款审批",
+      "PARCEL_CLAIMS": "包裹索赔",
       "REVENUE_ANALYTICS": "收入分析",
       "BOOKING_TREND": "预订趋势",
       "ROUTE_PERFORMANCE": "路线绩效",
@@ -1791,6 +1792,13 @@
     },
     "SYSTEM_SETTINGS": {
       "SUBTITLE": "所有系统配置集中于一处，按主题分组",
+      "GROUPS": {
+        "SALES_POLICY": "销售政策",
+        "REVENUE_SHARE": "资金与分成",
+        "NOTIFICATIONS": "通知",
+        "SEATING": "座位与车辆",
+        "SYSTEM": "系统"
+      },
       "UNSAVED_CHANGES_TITLE": "放弃未保存的更改？",
       "UNSAVED_CHANGES_TEXT": "此标签页有尚未保存的修改，现在离开将会丢失。",
       "UNSAVED_CHANGES_CONFIRM": "放弃并离开",
@@ -1901,6 +1909,7 @@
         "DRIVER_WAGE": "司机工资",
         "INSTALMENT": "车辆分期付款",
         "PARKING_FEE": "停车费",
+        "PARCEL_COMPENSATION": "包裹损坏赔偿",
         "CENTRAL": "中央",
         "OTHER": "其他"
       },
@@ -1969,6 +1978,45 @@
         "AMOUNT": "应退现金",
         "REQUESTED_BY": "申请人",
         "REQUESTED_AT": "申请时间"
+      }
+    },
+    "PARCEL_CLAIM": {
+      "SUBTITLE": "等待批准的包裹损坏赔偿申请。",
+      "EMPTY": "没有待处理的索赔。",
+      "LOAD_FAILED": "无法加载索赔列表。",
+      "REFRESH": "刷新",
+      "APPROVE_BTN": "批准",
+      "COL": {
+        "TRACKING_NUMBER": "包裹编号",
+        "CLAIMANT": "索赔人",
+        "REASON": "申报原因",
+        "SALES_POINT": "提交网点",
+        "FILED_AT": "提交时间"
+      },
+      "STATUS": {
+        "PENDING": "待处理",
+        "APPROVED": "已批准",
+        "REJECTED": "已拒绝"
+      },
+      "SALES_POINT": {
+        "UNASSIGNED": "尚未指定销售网点"
+      },
+      "ERROR": {
+        "ALREADY_DECIDED": "该索赔已被处理。",
+        "DAY_ALREADY_RETURNED": "提交人的现金箱已结账，请稍后重试。"
+      },
+      "APPROVE_MODAL": {
+        "TITLE": "批准包裹赔偿",
+        "AMOUNT_LABEL": "批准金额（泰铢）",
+        "AMOUNT_HINT": "根据2547年 รถร่วม บขส. 条例，每件包裹最高500泰铢。",
+        "AMOUNT_ERROR_RANGE": "请输入0.01至500泰铢之间的金额。",
+        "NOTE_LABEL": "处理备注（可选）",
+        "NOTE_PLACEHOLDER": "例如：适用的责任等级或补充说明",
+        "CONFIRM_TITLE": "确认批准",
+        "CONFIRM_BODY": "批准即表示柜台可以立即退款给客户。该笔款项将记入提交员工的现金箱。仅在准备好放款时才确认。",
+        "SUBMIT_BTN": "批准",
+        "SUBMITTING": "批准中…",
+        "SUCCESS": "赔偿已批准。"
       }
     },
     "REVENUE_ANALYTICS": {
@@ -3566,7 +3614,8 @@
         "MARK_ARRIVED": "标记已到达",
         "COLLECT": "取件",
         "LEAVE_AT_STOP": "放置在站点并拍照",
-        "VIEW_DROP_OFF_PHOTO": "查看放置照片"
+        "VIEW_DROP_OFF_PHOTO": "查看放置照片",
+        "FILE_CLAIM": "提交索赔"
       },
       "COLLECT_DIALOG": {
         "TITLE": "取件",
@@ -3574,6 +3623,37 @@
         "CANCEL": "取消",
         "CONFIRM": "确认取件",
         "SUBMITTING": "确认中…"
+      },
+      "CLAIM_DIALOG": {
+        "TITLE": "提交损坏索赔",
+        "PARCEL_INFO_TITLE": "包裹信息",
+        "REASON_LABEL": "客户申报的原因",
+        "REASON_PLACEHOLDER": "请输入客户的原话，例如：箱子被打开、物品破损",
+        "REASON_HINT": "如实记录客户原话，无需自行解读。",
+        "HISTORY_TITLE": "该索赔人的索赔记录",
+        "HISTORY_EMPTY": "该客户此前从未提交过索赔。",
+        "HISTORY_LOAD_FAILED": "无法加载索赔记录。",
+        "HISTORY_COL": {
+          "TRACKING": "包裹编号",
+          "SALES_POINT": "提交网点",
+          "FILED_AT": "提交时间",
+          "STATUS": "状态"
+        },
+        "FILE_BTN": "提交索赔",
+        "FILING": "保存中…",
+        "CANCEL": "取消",
+        "FILED_TITLE": "索赔已记录",
+        "CLAIMANT_CONFIRM_TITLE": "系统确认的索赔人 — 请核实是否为本人",
+        "CLAIMANT_NAME_LABEL": "姓名",
+        "CLAIMANT_PHONE_LABEL": "电话",
+        "NEXT_STEP_HINT": "请等待 OWNER 批准金额后再退款给客户，批准前请勿付款。",
+        "REJECT_NOW_BTN": "立即拒绝此索赔",
+        "REJECT_NOTE_LABEL": "拒绝原因",
+        "REJECT_NOTE_PLACEHOLDER": "请说明原因，例如：不符合责任条款",
+        "REJECT_SUBMIT_BTN": "确认拒绝",
+        "REJECTING": "保存中…",
+        "DONE_BTN": "完成（等待 OWNER 批准）",
+        "REJECTED_CONFIRM": "已成功拒绝该索赔。"
       },
       "ERROR": {
         "CODE_MISMATCH": "取件码不匹配。",
@@ -3583,7 +3663,10 @@
         "ALREADY_LEFT_AT_STOP": "此包裹已被记录为放置在站点。",
         "PHOTO_TOO_LARGE": "照片超过 10 MB，请重新拍摄。",
         "PHOTO_UNSUPPORTED": "不支持的照片格式，请使用 JPEG、PNG 或 WebP。",
-        "PHOTO_FAILED": "照片上传失败，尚未记录放置，请重试。"
+        "PHOTO_FAILED": "照片上传失败，尚未记录放置，请重试。",
+        "CLAIM_ALREADY_PENDING": "此包裹已有一个待处理的索赔。",
+        "CLAIM_ALREADY_DECIDED": "该索赔已被处理。",
+        "CLAIM_GENERIC": "操作未成功，请重试。"
       },
       "PAYMENT": {
         "PENDING": "待付款",
