@@ -60,8 +60,9 @@ export type AnalyticsEventName =
    */
   | 'api_request_census'
   /**
-   * OBRS-380 Phase 0 — the visitor tapped the charter ("เหมาคัน") phone link on
-   * the home page.
+   * OBRS-380 Phase 0 — the visitor asked to see the charter ("เหมาคัน") phone
+   * number on the home page. The number is behind a click, so this fires on the
+   * reveal, not on the `tel:` link.
    *
    * It is the ONLY record a charter lead leaves. Phase 0 has no form, no
    * booking row and no enquiry table on purpose (the contract forbids
@@ -69,10 +70,11 @@ export type AnalyticsEventName =
    * happens on the phone) — which means without this event the answer to "did
    * anyone want this?" is unknowable rather than zero.
    *
-   * Counts intent, not conversation: `tel:` leaves the page to the dialer and
-   * never reports back whether the call was actually placed.
+   * Counts intent, and deliberately the WIDER intent: a desktop visitor reads
+   * the revealed number and dials a desk phone, so a `tel:`-tap event would
+   * have counted only the phone-shaped half of the demand.
    */
-  | 'charter_call_click';
+  | 'charter_phone_revealed';
 
 /**
  * Value types a provider can carry. GA4 accepts string / number / boolean;

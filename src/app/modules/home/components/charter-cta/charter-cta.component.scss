@@ -59,6 +59,13 @@
   background-color: $primary-blue;
   border-radius: $radius-xl;
 
+  // The same class dresses an <a> (number revealed) and a <button> (not yet), so
+  // the button's user-agent defaults have to be cleared or the two states are
+  // visibly different controls.
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+
   &:hover {
     background-color: $primary-blue-hover;
     color: $text-white;

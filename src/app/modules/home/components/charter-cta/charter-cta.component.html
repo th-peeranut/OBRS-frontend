@@ -8,10 +8,17 @@
       <!-- LEAD TIME: contract E-51-29 clause 8 needs written permission 3 days ahead -->
       <p class="charter-note">{{ "HOME.CHARTER.LEAD_TIME_NOTE" | translate }}</p>
     </div>
-    <!-- CALL CTA -->
-    <a class="charter-call-btn" href="tel:0814284492" (click)="onCallClick()">
-      <span class="material-symbols-outlined charter-call-icon" [attr.translate]="'no'">call</span>
-      {{ "HOME.CHARTER.CALL_CTA" | translate }}
-    </a>
+    <!-- The number is not in this template on purpose - see the component comment. -->
+    @if (revealed) {
+      <a class="charter-call-btn" [href]="telHref">
+        <span class="material-symbols-outlined charter-call-icon" [attr.translate]="'no'">call</span>
+        {{ "HOME.CHARTER.CALL_CTA" | translate: { phone: displayNumber } }}
+      </a>
+    } @else {
+      <button type="button" class="charter-call-btn" (click)="reveal()">
+        <span class="material-symbols-outlined charter-call-icon" [attr.translate]="'no'">call</span>
+        {{ "HOME.CHARTER.REVEAL_CTA" | translate }}
+      </button>
+    }
   </div>
 </section>
