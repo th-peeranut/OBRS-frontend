@@ -2534,6 +2534,12 @@
       "START": "Nong Sak - Ban Bueng - Bangkok",
       "STOP": "Bangkok - Ban Bueng - Nong Sak"
     },
+    "CHARTER": {
+      "TITLE": "Charter a whole minibus",
+      "DESC": "Hire an entire air-conditioned minibus for groups, company trips, seminars, merit-making and other events. Call us for routes and pricing.",
+      "LEAD_TIME_NOTE": "Please contact us at least 3 days in advance so the vehicle and its permit can be arranged.",
+      "CALL_CTA": "Call 081-428-4492"
+    },
     "FOOTER": {
       "TITLE": "NJ Phuyaipu",
       "TAGLINE": "Online bus ticket booking",

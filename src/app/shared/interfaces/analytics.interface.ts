@@ -58,7 +58,21 @@ export type AnalyticsEventName =
    * unbiased when a session ends mid-window: the unflushed partial window loses
    * both halves, not one.
    */
-  | 'api_request_census';
+  | 'api_request_census'
+  /**
+   * OBRS-380 Phase 0 — the visitor tapped the charter ("เหมาคัน") phone link on
+   * the home page.
+   *
+   * It is the ONLY record a charter lead leaves. Phase 0 has no form, no
+   * booking row and no enquiry table on purpose (the contract forbids
+   * confirming a charter without บขส.'s written permission, so the quote
+   * happens on the phone) — which means without this event the answer to "did
+   * anyone want this?" is unknowable rather than zero.
+   *
+   * Counts intent, not conversation: `tel:` leaves the page to the dialer and
+   * never reports back whether the call was actually placed.
+   */
+  | 'charter_call_click';
 
 /**
  * Value types a provider can carry. GA4 accepts string / number / boolean;
