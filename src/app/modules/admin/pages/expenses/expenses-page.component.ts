@@ -351,6 +351,7 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
       driverWage: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.DRIVER_WAGE'),
       instalment: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.INSTALMENT'),
       parkingFee: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.PARKING_FEE'),
+      parcelCompensation: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.PARCEL_COMPENSATION'),
       central: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.CENTRAL'),
       other: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.OTHER'),
     });

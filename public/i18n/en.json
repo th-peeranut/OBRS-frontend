@@ -518,6 +518,7 @@
       "EXPENSES": "Expenses",
       "MANUAL_REFUNDS": "Manual Refunds",
       "CASH_REFUND_APPROVALS": "Cash refund approvals",
+      "PARCEL_CLAIMS": "Parcel Claims",
       "REVENUE_ANALYTICS": "Revenue Analytics",
       "BOOKING_TREND": "Booking Trend",
       "ROUTE_PERFORMANCE": "Route Performance",
@@ -1901,6 +1902,7 @@
         "DRIVER_WAGE": "Driver Wage",
         "INSTALMENT": "Vehicle Instalment",
         "PARKING_FEE": "Parking Fee",
+        "PARCEL_COMPENSATION": "Parcel Damage Compensation",
         "CENTRAL": "Central",
         "OTHER": "Other"
       },
@@ -1969,6 +1971,45 @@
         "AMOUNT": "Cash to refund",
         "REQUESTED_BY": "Requested by",
         "REQUESTED_AT": "Requested at"
+      }
+    },
+    "PARCEL_CLAIM": {
+      "SUBTITLE": "Damage-compensation claims waiting for approval.",
+      "EMPTY": "No claims are waiting.",
+      "LOAD_FAILED": "Could not load the claims list.",
+      "REFRESH": "Refresh",
+      "APPROVE_BTN": "Approve",
+      "COL": {
+        "TRACKING_NUMBER": "Tracking number",
+        "CLAIMANT": "Claimant",
+        "REASON": "Reason claimed",
+        "SALES_POINT": "Filing point",
+        "FILED_AT": "Filed at"
+      },
+      "STATUS": {
+        "PENDING": "Pending",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected"
+      },
+      "SALES_POINT": {
+        "UNASSIGNED": "Sales point not assigned"
+      },
+      "ERROR": {
+        "ALREADY_DECIDED": "This claim has already been decided.",
+        "DAY_ALREADY_RETURNED": "The filer's cash box has already been closed out. Please try again later."
+      },
+      "APPROVE_MODAL": {
+        "TITLE": "Approve parcel compensation",
+        "AMOUNT_LABEL": "Approved amount (THB)",
+        "AMOUNT_HINT": "Up to ฿500 per parcel, per the 2547 รถร่วม บขส. regulation.",
+        "AMOUNT_ERROR_RANGE": "Enter an amount between 0.01 and 500 THB.",
+        "NOTE_LABEL": "Decision note (optional)",
+        "NOTE_PLACEHOLDER": "e.g. the liability tier applied, or supporting reasoning",
+        "CONFIRM_TITLE": "Confirm approval",
+        "CONFIRM_BODY": "Approving signals the counter to refund the customer right away. The money is recorded against the filing staff member's cash box. Confirm only when you're ready for the money to leave the box.",
+        "SUBMIT_BTN": "Approve",
+        "SUBMITTING": "Approving…",
+        "SUCCESS": "Compensation approved."
       }
     },
     "REVENUE_ANALYTICS": {
@@ -3566,7 +3607,8 @@
         "MARK_ARRIVED": "Mark arrived",
         "COLLECT": "Collect",
         "LEAVE_AT_STOP": "Leave at stop + photo",
-        "VIEW_DROP_OFF_PHOTO": "View drop-off photo"
+        "VIEW_DROP_OFF_PHOTO": "View drop-off photo",
+        "FILE_CLAIM": "File claim"
       },
       "COLLECT_DIALOG": {
         "TITLE": "Collect parcel",
@@ -3574,6 +3616,37 @@
         "CANCEL": "Cancel",
         "CONFIRM": "Confirm collection",
         "SUBMITTING": "Confirming…"
+      },
+      "CLAIM_DIALOG": {
+        "TITLE": "File a damage claim",
+        "PARCEL_INFO_TITLE": "Parcel information",
+        "REASON_LABEL": "Reason the customer gave",
+        "REASON_PLACEHOLDER": "Type the customer's own account, e.g. box was open, item broken",
+        "REASON_HINT": "Record the customer's own words as told — do not interpret them.",
+        "HISTORY_TITLE": "This claimant's claim history",
+        "HISTORY_EMPTY": "This claimant has never filed a claim before.",
+        "HISTORY_LOAD_FAILED": "Could not load the claim history.",
+        "HISTORY_COL": {
+          "TRACKING": "Tracking number",
+          "SALES_POINT": "Filing point",
+          "FILED_AT": "Filed at",
+          "STATUS": "Status"
+        },
+        "FILE_BTN": "File claim",
+        "FILING": "Saving…",
+        "CANCEL": "Cancel",
+        "FILED_TITLE": "Claim recorded",
+        "CLAIMANT_CONFIRM_TITLE": "Claimant the system confirmed — verify this is the right person",
+        "CLAIMANT_NAME_LABEL": "Name",
+        "CLAIMANT_PHONE_LABEL": "Phone",
+        "NEXT_STEP_HINT": "Wait for OWNER approval of the amount before refunding the customer. Do not pay before approval.",
+        "REJECT_NOW_BTN": "Reject this claim now",
+        "REJECT_NOTE_LABEL": "Reason for rejection",
+        "REJECT_NOTE_PLACEHOLDER": "State the reason, e.g. outside the liability terms",
+        "REJECT_SUBMIT_BTN": "Confirm rejection",
+        "REJECTING": "Saving…",
+        "DONE_BTN": "Done (awaiting OWNER approval)",
+        "REJECTED_CONFIRM": "The claim has been rejected."
       },
       "ERROR": {
         "CODE_MISMATCH": "This collection code does not match.",
@@ -3583,7 +3656,10 @@
         "ALREADY_LEFT_AT_STOP": "This parcel is already recorded as left at the stop.",
         "PHOTO_TOO_LARGE": "The photo is larger than 10 MB. Please take it again.",
         "PHOTO_UNSUPPORTED": "Unsupported photo type. Use JPEG, PNG or WebP.",
-        "PHOTO_FAILED": "The photo did not upload. The drop-off was NOT recorded — please try again."
+        "PHOTO_FAILED": "The photo did not upload. The drop-off was NOT recorded — please try again.",
+        "CLAIM_ALREADY_PENDING": "This parcel already has a claim awaiting a decision.",
+        "CLAIM_ALREADY_DECIDED": "This claim has already been decided.",
+        "CLAIM_GENERIC": "Could not complete the action. Please try again."
       },
       "PAYMENT": {
         "PENDING": "Awaiting payment",

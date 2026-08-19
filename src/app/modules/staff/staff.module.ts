@@ -39,6 +39,8 @@ import { ParcelWaybillPageComponent } from './pages/parcel-waybill/parcel-waybil
 import { ParcelWaybillPaperComponent } from './components/parcel-waybill-paper/parcel-waybill-paper.component';
 import { ParcelDeliveryListPageComponent } from './pages/parcel-delivery-list/parcel-delivery-list-page.component';
 import { ParcelCollectDialogComponent } from './components/parcel-collect-dialog/parcel-collect-dialog.component';
+// OBRS-1388 — "ยื่นเคลม" dialog on the same delivery list.
+import { ParcelClaimDialogComponent } from './components/parcel-claim-dialog/parcel-claim-dialog.component';
 
 // OBRS-416 (Epic OBRS-302, Card 3b) — staff/driver physical parcel verification.
 import { ParcelVerifyListPageComponent } from './pages/parcel-verify-list/parcel-verify-list-page.component';
@@ -275,6 +277,7 @@ export const staffRoutes: Routes = [
     ParcelWaybillPaperComponent,
     ParcelDeliveryListPageComponent,
     ParcelCollectDialogComponent,
+    ParcelClaimDialogComponent,
     ParcelVerifyListPageComponent,
     ParcelVerifyDialogComponent,
     ParcelScheduleEntryPageComponent,
