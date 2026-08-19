@@ -47,7 +47,11 @@ const PASSWORD = 'Str0ng-Passw0rd!';
 const ok = (data) => ({ code: 200, message: 'OK', data });
 
 // The spec's own fixtures, kept in the same shape so the flow this measures is the flow
-// that went red. `pdpaConsentVersion` is deliberately the spec's value.
+// that went red. `pdpaConsentVersion` is deliberately '1.0': that is the value the spec carried
+// on the day of the red run, and it is a STALE version, so this probe keeps the re-consent card
+// on the page the way that run had it. OBRS-1437 took the same literal out of the spec (it now
+// reads PRIVACY_POLICY_VERSION and the card is gone) — so this line no longer mirrors the spec,
+// and it must not be changed to follow it or this stops reproducing what it was written for.
 const PROFILE = {
   id: 4242,
   title: 'MR',
