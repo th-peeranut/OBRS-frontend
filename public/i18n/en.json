@@ -1792,6 +1792,13 @@
     },
     "SYSTEM_SETTINGS": {
       "SUBTITLE": "All system configuration in one place, grouped by topic",
+      "GROUPS": {
+        "SALES_POLICY": "Sales Policy",
+        "REVENUE_SHARE": "Money & Shares",
+        "NOTIFICATIONS": "Notifications",
+        "SEATING": "Seats & Vehicles",
+        "SYSTEM": "System"
+      },
       "UNSAVED_CHANGES_TITLE": "Discard unsaved changes?",
       "UNSAVED_CHANGES_TEXT": "You have edits on this tab that were never saved. Leaving it now discards them.",
       "UNSAVED_CHANGES_CONFIRM": "Discard and leave",
