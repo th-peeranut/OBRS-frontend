@@ -407,7 +407,12 @@ One color = one meaning. Never pick a button color for looks.
   stay in place) use `AlertService.toast()`. Components must not call
   `Swal.mixin()` or `Swal.fire()` directly.
 - One primary button (§4); close affordance top-right (`×`) **and** a secondary
-  Back/Cancel.
+  Back/Cancel. The top-right position comes from `.admin-modal-header` and the button
+  itself from `.admin-icon-btn`, both global in `admin-theme.scss` — **never a scoped
+  copy.** OBRS-1443: two components defined `.admin-modal-header` in their own SCSS,
+  encapsulation kept it from the other six, and those six shipped the `×` under the
+  title. Inside a modal header `.admin-icon-btn` turns red on hover; `.danger` stays
+  reserved for controls that actually remove something.
 - **Admin edit forms render as an `.admin-modal-backdrop` / `.admin-modal` dialog**,
   reusing `[adminModalBackdrop]` (`shared/directives/`) for backdrop-click/Escape/
   focus-trap/scroll-lock — never re-implemented per component. `[isOpen]` input +

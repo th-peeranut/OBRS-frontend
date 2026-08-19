@@ -36,34 +36,10 @@
   overflow-y: auto;
 }
 
-.admin-modal-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-// Top-right × close affordance (design-system.md §6) — same shape as
-// UsabilityReportsPageComponent's .ur-detail-close.
-.bk-detail-close {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--admin-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.bk-detail-close:hover {
-  background: var(--accent-soft);
-  color: var(--accent-text);
-}
+// OBRS-1443: `.admin-modal-header` and this page's own `×` button rule both moved to
+// `admin-theme.scss` — the copy here was unreachable from the other seven modals that
+// use the same class, which is why six of them rendered the close button under the
+// title. The button now carries the global `.admin-icon-btn`.
 
 .bk-inline-updating {
   margin-left: 6px;
