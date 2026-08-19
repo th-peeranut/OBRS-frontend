@@ -33,6 +33,7 @@ import { createLanguageServiceStub } from '../../testing/test-stubs';
 import { AdminApiService } from '../../services/admin/admin-api.service';
 import { UsabilityReportBadgeRefreshService } from '../../shared/services/usability-report-badge-refresh.service';
 import { BadgeSocketService } from '../../services/admin/badge-socket.service';
+import { SYSTEM_SETTINGS_TABS } from './pages/system-settings/system-settings-tabs';
 import { environment } from '../../../environments/environment';
 
 // OBRS-147: fake WebSocket badge push — a plain Subject the test drives
@@ -734,6 +735,143 @@ describe('AdminLayoutComponent', () => {
       // The proof that matters: no <img> element was ever created from it.
       expect(fixture.nativeElement.querySelector('img[src="x"]')).toBeNull();
       expect(fixture.debugElement.query(By.css('.admin-nav-empty'))).toBeTruthy();
+    });
+  });
+
+  // ── OBRS-1431: the /admin/settings tabs are searchable ──────────────────────
+  // OBRS-702 collapsed four searchable sidebar entries into the single
+  // 'settings' one; nothing put the tab names back into the search corpus, so
+  // typing a tab's own name returned nothing at all. These specs read
+  // SYSTEM_SETTINGS_TABS itself rather than a copied list of tab names — the
+  // card's "no second list" requirement is only actually held if the test that
+  // guards it does not keep one either.
+  describe('OBRS-1431: /admin/settings tabs in the menu search corpus', () => {
+    type TabSearchComp = SearchComp & {
+      navSearchCorpus: Array<{ path: string; labelKey: string; descriptionKey?: string }>;
+    };
+
+    // A tab whose requiredRoles are ['admin', 'owner'] and one whose roles are
+    // ['owner'] only, picked FROM the array so the role spec below keeps
+    // meaning what it says if a tab's roles ever change.
+    const sharedTab = SYSTEM_SETTINGS_TABS.find((t) => t.requiredRoles.includes('admin'))!;
+    const ownerOnlyTab = SYSTEM_SETTINGS_TABS.find((t) => !t.requiredRoles.includes('admin'))!;
+
+    /**
+     * Builds the layout with a caller-supplied role predicate. The predicate is
+     * a STUB on purpose: the real AuthService.ROLE_GRANTS is symmetric between
+     * admin and owner (auth.service.ts:60-62), so against the real service
+     * every tab admits every admin identity and a role spec could not fail. The
+     * stub is what lets this assert which side the code reads while that
+     * symmetry lasts.
+     */
+    function buildWith(hasAnyRole: (roles: string[]) => boolean): TabSearchComp {
+      const original = authStub.hasAnyRole;
+      authStub.hasAnyRole = hasAnyRole;
+      try {
+        const f = TestBed.createComponent(AdminLayoutComponent);
+        f.detectChanges();
+        return f.componentInstance as unknown as TabSearchComp;
+      } finally {
+        authStub.hasAnyRole = original;
+      }
+    }
+
+    function seedTabTranslations(): void {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('en', {
+        ADMIN: {
+          PAGES: { JUMP_SEAT_CONFIG: 'Jump seats' },
+          JUMP_SEAT_CONFIG: { SUBTITLE: 'Fold-down seats sold beyond the fixed layout' },
+        },
+      });
+      translate.use('en');
+    }
+
+    it('finds a settings tab by its own label and points at /admin/settings/<path> (AC1)', () => {
+      const comp = buildWith(() => true);
+      seedTabTranslations();
+      comp.applyNavSearch('jump seat');
+
+      expect(comp.filteredNavItems.map((i) => i.path))
+        .withContext('typing a tab name must return that tab, and only it')
+        .toEqual(['settings/jump-seat']);
+    });
+
+    it('finds a settings tab by its SUBTITLE, same as a normal menu description (AC2)', () => {
+      const comp = buildWith(() => true);
+      seedTabTranslations();
+      // "fold-down" appears only in the tab's subtitle, in no label anywhere
+      comp.applyNavSearch('fold-down');
+
+      expect(comp.filteredNavItems.map((i) => i.path)).toEqual(['settings/jump-seat']);
+    });
+
+    it('highlights the matched substring on a tab result too (AC4 / OBRS-900)', () => {
+      const comp = buildWith(() => true);
+      seedTabTranslations();
+      comp.applyNavSearch('seat');
+
+      const tab = comp.navSearchCorpus.find((i) => i.path === 'settings/jump-seat') as unknown as {
+        labelSegments?: HighlightSegment[];
+      };
+      expect(tab.labelSegments?.filter((seg) => seg.match).map((seg) => seg.text))
+        .withContext('the query substring must be highlighted in a tab result as in any other')
+        .toEqual(['seat']);
+    });
+
+    it('reads the OWN requiredRoles of each tab, not the union the shell uses (AC3)', () => {
+      // Admits the shell and the shared tab, refuses the owner-only tabs.
+      const comp = buildWith((roles) => roles.includes('admin'));
+      const corpusPaths = comp.navSearchCorpus.map((i) => i.path);
+
+      expect(corpusPaths)
+        .withContext(`a tab admitting admin (${sharedTab.path}) must be searchable`)
+        .toContain(`settings/${sharedTab.path}`);
+      expect(corpusPaths)
+        .withContext(
+          `an owner-only tab (${ownerOnlyTab.path}) must NOT be offered to an identity the ` +
+            'tab refuses — a result that 403s on click is worse than no result'
+        )
+        .not.toContain(`settings/${ownerOnlyTab.path}`);
+    });
+
+    it('derives every tab from SYSTEM_SETTINGS_TABS — a ninth tab needs no edit here', () => {
+      const comp = buildWith(() => true);
+      const corpusPaths = comp.navSearchCorpus.map((i) => i.path);
+
+      expect(SYSTEM_SETTINGS_TABS.map((tab) => `settings/${tab.path}`).filter((p) => !corpusPaths.includes(p)))
+        .withContext('every tab in the single source must be in the search corpus')
+        .toEqual([]);
+      // and each carries the tab's own i18n keys, not hand-written copies
+      const jumpSeat = comp.navSearchCorpus.find((i) => i.path === 'settings/jump-seat');
+      expect(jumpSeat?.labelKey).toBe('ADMIN.PAGES.JUMP_SEAT_CONFIG');
+      expect(jumpSeat?.descriptionKey).toBe('ADMIN.JUMP_SEAT_CONFIG.SUBTITLE');
+    });
+
+    it('adds NOTHING to the sidebar itself — the tabs are search-only (AC4)', () => {
+      const comp = buildWith(() => true);
+
+      expect(comp.navItems.filter((i) => i.path.startsWith('settings/')))
+        .withContext('OBRS-702 collapsed these into one entry; searching them must not undo that')
+        .toEqual([]);
+      expect(comp.filteredNavItems.length)
+        .withContext('the resting sidebar renders navItems, unchanged')
+        .toBe(comp.navItems.length);
+      expect(countSectionItems(comp)).toBe(comp.navItems.length);
+    });
+
+    it('restores the sidebar-only list after a tab result is cleared', () => {
+      const comp = buildWith(() => true);
+      seedTabTranslations();
+      const fullItemCount = countSectionItems(comp);
+
+      comp.applyNavSearch('jump seat');
+      expect(countSectionItems(comp)).toBe(1);
+
+      comp.clearNavSearch();
+      expect(countSectionItems(comp))
+        .withContext('clearing must fall back to navItems, never to the wider corpus')
+        .toBe(fullItemCount);
     });
   });
 });
