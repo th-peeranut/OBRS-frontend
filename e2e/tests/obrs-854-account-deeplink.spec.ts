@@ -3,6 +3,9 @@ import { join, resolve } from 'node:path';
 import { expect, Locator, Page, Route, test } from '@playwright/test';
 import { ANALYTICS_CONSENT_KEY } from '../support/analytics-consent';
 import { scrollToInstantly, stabilizeScrolling } from '../support/fab-occlusion';
+// The app's own constant, imported rather than copied. The file holds two string consts and
+// imports nothing, so this pulls no Angular into the spec's transform.
+import { PRIVACY_POLICY_VERSION } from '../../src/app/modules/privacy-policy/privacy-policy.version';
 
 /**
  * OBRS-854 AC-2 / AC-3 — the counter QR and the email footer both point one place: `/account`.
@@ -55,8 +58,24 @@ const PROFILE = {
   email: EMAIL,
   phoneNumber: '0812345678',
   preferredLocale: 'th',
-  // Current version, so the re-consent banner does not sit between the customer and the button.
-  pdpaConsentVersion: '1.0',
+  // Whatever version this build serves, so `needsReConsent()` is false and the re-consent card
+  // does not sit between the customer and the button. Read from the app's own constant rather
+  // than copied, for the same reason `confirmPhrase()` above reads the shipped bundle: this line
+  // said '1.0' with a comment calling it current, and that stopped being true on 2026-08-09 when
+  // OBRS-1140 AC#4 published '2.3' — the card was on the page for every case in this file from
+  // that day on, and nothing here was looking (OBRS-1437).
+  //
+  // OBRS-1437 AC-2, decided rather than inherited: the card does NOT belong in what this file
+  // measures. Its subject is OBRS-632 and it has its own coverage; this file's subject is the
+  // trip from a counter QR and the geometry of one irreversible button on a 390px handset, and
+  // an account that has accepted the current notice is the state a returning customer is in.
+  // Removing it costs no assertion here - measured on the `gate` build
+  // (`e2e/probe-obrs-1437-reconsent-geometry.mjs`): with the card the document scrolls 720px and
+  // the offset that centres the button on the consent bar solves to 523; without it, 467 and
+  // 271. Both solved offsets are inside their own scroll range, so neither hit-test below is
+  // clamped into asking nothing, and both return what they returned before (`consent-banner`
+  // at the overlap, `close-account-open` at the bottom).
+  pdpaConsentVersion: PRIVACY_POLICY_VERSION,
 };
 
 const LOGIN_RESPONSE = ok({
