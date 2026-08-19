@@ -199,3 +199,98 @@ describe('admin shell chrome — Bootstrap surfaces inside the shell (OBRS-755)'
     }
   });
 });
+
+/**
+ * OBRS-1446 — the sidebar section header has to read as a header in Thai too.
+ *
+ * The header separated itself from the links with three things: smaller, plus
+ * `text-transform: uppercase`, plus `letter-spacing`. Measured on SIT 2026-08-19,
+ * `uppercase` is a complete no-op on all five Thai headers (`s.toUpperCase() === s`),
+ * and Thai is the app default — so on the screen most users see, the design was down
+ * to "smaller and fainter", which reads as a de-emphasised menu item, not a label.
+ *
+ * What this pins is the two replacement signals, both script-independent: a rule above
+ * the header, and a top:bottom space ratio that makes proximity bind the header to the
+ * group BELOW it. A ratio test alone cannot see either — that is why they are here and
+ * not left to the eye.
+ */
+describe('admin shell chrome — nav section header (OBRS-1446)', () => {
+  /** The real shape: header, its links, then the next header. `:first-child` matters. */
+  function buildNav(): { nav: HTMLElement; first: HTMLElement; second: HTMLElement } {
+    const nav = document.createElement('nav');
+    nav.className = 'admin-nav';
+    const first = el('p', 'admin-nav-section-title', 'ภาพรวม');
+    const second = el('p', 'admin-nav-section-title', 'ข้อมูลหลัก');
+    nav.appendChild(first);
+    nav.appendChild(el('a', 'admin-nav-link'));
+    nav.appendChild(second);
+    nav.appendChild(el('a', 'admin-nav-link'));
+    return { nav, first, second };
+  }
+
+  [false, true].forEach((dark) => {
+    const mode = dark ? 'dark' : 'light';
+
+    it(`clears AA in ${mode} mode`, () => {
+      const { nav, second } = buildNav();
+      const teardown = mountInChain(nav, SIDEBAR_CHAIN('admin-shell theme-admin'), dark);
+      try {
+        const ratio = measuredContrast(second);
+        expect(ratio)
+          .withContext(
+            `${mode}: ${toHex(fgOf(second))} on painted ${toHex(effectiveBg(second))} = ` +
+              `${ratio.toFixed(2)}:1. Light measured 5.62:1 before this card and the colour ` +
+              'is unchanged; this pins that the added border did not move it.'
+          )
+          .toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      } finally {
+        teardown();
+      }
+    });
+
+    it(`carries a visible rule above it in ${mode} mode — the signal that survives Thai`, () => {
+      const { nav, first, second } = buildNav();
+      const teardown = mountInChain(nav, SIDEBAR_CHAIN('admin-shell theme-admin'), dark);
+      try {
+        const width = parseFloat(getComputedStyle(second).borderTopWidth);
+        expect(width)
+          .withContext(
+            `${mode}: border-top-width measured ${width}px, style ` +
+              `${getComputedStyle(second).borderTopStyle}. Without it the only thing left ` +
+              'saying "header" is uppercase, which does nothing in Thai.'
+          )
+          .toBeGreaterThan(0);
+
+        // The first header sits under the nav search box, already a boundary of its own.
+        expect(parseFloat(getComputedStyle(first).borderTopWidth))
+          .withContext('the first header must not double the line under the nav search box')
+          .toBe(0);
+      } finally {
+        teardown();
+      }
+    });
+  });
+
+  it('sits closer to the group below it than to the one above', () => {
+    const { nav, second } = buildNav();
+    const teardown = mountInChain(nav, SIDEBAR_CHAIN('admin-shell theme-admin'), false);
+    try {
+      const above = (second.previousElementSibling as HTMLElement).getBoundingClientRect();
+      const header = second.getBoundingClientRect();
+      const below = (second.nextElementSibling as HTMLElement).getBoundingClientRect();
+      const gapAbove = header.top - above.bottom;
+      const gapBelow = below.top - header.bottom;
+      expect(gapAbove)
+        .withContext(
+          `space above the header ${gapAbove}px vs below ${gapBelow}px. It shipped at ` +
+            '18px : 8px — 2.25:1, too weak for proximity to say which group the header ' +
+            'belongs to. (OBRS-1446 recorded 12px : 8px from the margins alone; the top ' +
+            "gap also carries .admin-nav's 6px flex gap, which the card did not count.) " +
+            'The factor of 3 is what separates the two designs, so it is the threshold.'
+        )
+        .toBeGreaterThanOrEqual(gapBelow * 3);
+    } finally {
+      teardown();
+    }
+  });
+});
