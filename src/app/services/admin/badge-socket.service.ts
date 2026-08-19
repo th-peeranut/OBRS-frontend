@@ -50,8 +50,19 @@ export class BadgeSocketService {
 
     this.client = this.createClient({
       brokerURL: this.resolveBrokerUrl(),
-      connectHeaders: {
-        Authorization: `Bearer ${this.authService.getToken() ?? ''}`,
+      // OBRS-1425: the token is read HERE, once per CONNECT attempt. Passing
+      // `connectHeaders` in this config object instead froze it at activate()
+      // time, and stompjs replays that same frozen object on every auto-
+      // reconnect - so a tab left open past the token's expiry re-sent the same
+      // dead JWT every reconnectDelay, forever (measured on SIT: one rejected
+      // CONNECT every ~9s, unbroken across the whole 14-minute log window).
+      beforeConnect: (client: Client) => {
+        const token = this.authService.getToken();
+        if (!token) {
+          this.disconnect();
+          return;
+        }
+        client.connectHeaders = { Authorization: `Bearer ${token}` };
       },
       reconnectDelay: STOMP_RECONNECT_DELAY_MS,
       heartbeatIncoming: STOMP_HEARTBEAT_MS,
@@ -61,6 +72,17 @@ export class BadgeSocketService {
           const payload = JSON.parse(frame.body) as UsabilityReportCountMessage;
           this.countsSubject.next(payload);
         });
+      },
+      // A STOMP ERROR frame is the server refusing the frame it was sent; on
+      // CONNECT that is StompAuthChannelInterceptor rejecting the JWT, and no
+      // number of retries with the same credentials can turn it into a CONNECTED.
+      // So stop rather than loop: the badge keeps updating from the 60s poll /
+      // NavigationEnd / countAdjustments$ fallbacks that the OBRS-147 contract
+      // above requires to stand on their own. A transient network drop carries no
+      // ERROR frame (the socket just closes), so it still reconnects on the normal
+      // reconnectDelay path.
+      onStompError: () => {
+        this.disconnect();
       },
     });
 
