@@ -81,6 +81,10 @@ const ROLES_BEFORE_OBRS_702: Record<string, readonly string[]> = {
   // what the roles were changed to).
   'parcel-share': ['owner'],
   'driver-cash-rates': ['owner'],
+  // OBRS-699: another NEW tab, never a standalone route — "before" is its own
+  // requiredRoles at creation, same frozen-literal discipline. Matches the
+  // backend owner controller, whose getCurrentOwnerId() refuses ADMIN.
+  'cancel-reschedule-policy': ['owner'],
   // OBRS-1308: another NEW tab, never a standalone route — same discipline.
   // Matches the backend owner controller (hasRole('OWNER'), ROLE_GRANTS
   // admits ADMIN). The separate admin-only review queue/detail underneath

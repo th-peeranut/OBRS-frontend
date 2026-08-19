@@ -18,6 +18,9 @@ function buildBooking(overrides: Partial<MyBookingDto> = {}): MyBookingDto {
     status: 'confirmed',
     bookingType: 'one_way',
     rescheduleCount: 0,
+    // OBRS-699: the reschedule/change-seat/change-stop window is wire-supplied
+    // per row. Omitting it makes all three INELIGIBLE by design.
+    rescheduleWindowHours: 2,
     createdAt: '2026-06-01T10:00:00',
     bookingSchedules: [
       {

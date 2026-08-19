@@ -683,6 +683,32 @@ export interface OverrideCancelReqDto {
 export interface AdminBookingRefundMethodDto {
   refundMethod: string;
   destinationRequired: boolean;
+  /**
+   * OBRS-699 — the instant self-service cancellation closes for THIS booking,
+   * `earliestDeparture - cancel_window_hours` under the operator selling the
+   * trip. It rides on this response and not on the cancel quote because
+   * `getCancellationPolicy` throws `cancel.error.window-closed` once the window
+   * has passed — a 400 in precisely the state the override modal exists for.
+   * This endpoint never window-gates, and the modal already calls it on open.
+   *
+   * Absent/null means the backend could not resolve a governing operator, never
+   * "use the platform window": the modal states no deadline rather than one
+   * that may belong to a different operator.
+   */
+  cancellationDeadline?: string | null;
+  /**
+   * OBRS-699 — the two window-based refund rates this endpoint already computes with
+   * (`resolveRefundRate`, under the same operator), as 0.0–1.0 rates. The override modal
+   * states them under the POLICY choice; they used to be typed into the i18n bundle as
+   * "(80% / 50%)", which is the PLATFORM pair and therefore wrong for any owner who sets
+   * their own.
+   *
+   * Unlike `cancellationDeadline` these are never null: an unresolved operator degrades to
+   * the platform read, and that is the number this endpoint itself refunds by — so there is
+   * no "no data" state to render, only a not-yet-fetched one.
+   */
+  policyRefundRateEarly?: number;
+  policyRefundRateLate?: number;
 }
 
 // OBRS-286 SA contract #4 — POST /private/payments/{id}/manual-refund.
@@ -2372,6 +2398,35 @@ export class AdminApiService {
     );
   }
 
+  // ── OBRS-699: owner settings — cancel/reschedule policy ──────────────────
+
+  getCancelReschedulePolicyOwnerConfig(): Observable<
+    ResponseAPI<OwnerCancelReschedulePolicyDto>
+  > {
+    return this.getRequest<OwnerCancelReschedulePolicyDto>(
+      `${this.baseUrl}/private/owner/configs/cancel-reschedule-policy`
+    );
+  }
+
+  updateCancelReschedulePolicyOwnerConfig(
+    payload: CancelReschedulePolicyReqDto
+  ): Observable<ResponseAPI<OwnerCancelReschedulePolicyDto>> {
+    return this.putRequest<OwnerCancelReschedulePolicyDto>(
+      `${this.baseUrl}/private/owner/configs/cancel-reschedule-policy`,
+      payload
+    );
+  }
+
+  /** DELETE drops all seven override rows as a unit and returns the re-read
+   * (now platform-default) policy — there is no per-key delete (BR-7). */
+  resetCancelReschedulePolicyOwnerConfig(): Observable<
+    ResponseAPI<OwnerCancelReschedulePolicyDto>
+  > {
+    return this.deleteRequest<OwnerCancelReschedulePolicyDto>(
+      `${this.baseUrl}/private/owner/configs/cancel-reschedule-policy`
+    );
+  }
+
   // ── OBRS-960: parcel-share monthly totals (/admin/reports) ───────────────
 
   getParcelShareMonthly(
@@ -2533,6 +2588,40 @@ export interface ParcelShareRepairRespDto {
   driverPctApplied: number;
   salespersonPctApplied: number;
 }
+
+/** `GET`/`PUT`/`DELETE /api/private/owner/configs/cancel-reschedule-policy` —
+ * OBRS-699.
+ *
+ * NOTE the suffix: `*Overridden`, matching the backend's
+ * `OwnerCancelReschedulePolicyRespDto` (OBRS-730's shape, owner-locked
+ * 2026-08-17), NOT the `*Configured` this frontend uses for parcel-share
+ * (`ParcelShareOwnerConfigDto` above). Do not rename them on the way in;
+ * unifying the two suffixes is a separate card. */
+export interface OwnerCancelReschedulePolicyDto {
+  cancelWindowHours: number;
+  cancelWindowHoursOverridden: boolean;
+  rescheduleWindowHours: number;
+  rescheduleWindowHoursOverridden: boolean;
+  rescheduleMaxDaysAhead: number;
+  rescheduleMaxDaysAheadOverridden: boolean;
+  earlyWindowHours: number;
+  earlyWindowHoursOverridden: boolean;
+  /** 0.0–1.0 rate, NOT a percentage. The form shows whole percent and the
+   * page component converts at its two boundaries. */
+  cancelRefundRateEarly: number;
+  cancelRefundRateEarlyOverridden: boolean;
+  cancelRefundRateLate: number;
+  cancelRefundRateLateOverridden: boolean;
+  rescheduleFeeLateThb: number;
+  rescheduleFeeLateThbOverridden: boolean;
+}
+
+/** The PUT body: the seven values only, no flags and no key parameter — the
+ * endpoint writes all seven or none (BR-7). */
+export type CancelReschedulePolicyReqDto = Omit<
+  OwnerCancelReschedulePolicyDto,
+  `${string}Overridden`
+>;
 
 /** One row of `GET /api/private/owner/parcel-share/monthly` — OBRS-960. */
 export interface ParcelShareMonthlyRowDto {

@@ -525,6 +525,7 @@
       "OPS_EFFICIENCY": "运营效率",
       "PARCEL_SHARE_CONFIG": "包裹收益分成",
       "DRIVER_CASH_RATES": "司机现金费率",
+      "CANCEL_RESCHEDULE_POLICY_CONFIG": "取消与改签",
       "NOTIFICATION_MESSAGES": "通知消息"
     },
     "NAV": {
@@ -1149,12 +1150,12 @@
         "BOOKING": "预订",
         "ROUTE": "路线",
         "DEPARTURE": "出发时间",
-        "WINDOW_PAST": "已超过 2 小时取消窗口——这属于政策越权。",
-        "WINDOW_WITHIN": "仍在取消窗口内。",
+        "WINDOW_PAST": "已超过取消窗口(已于 {{deadline}} 关闭)——这属于政策越权。",
+        "WINDOW_WITHIN": "仍在取消窗口内——将于 {{deadline}} 关闭。",
         "RATE_LABEL": "退款比例",
         "RATE_POLICY": "按规则",
         "RATE_FULL": "全额退款",
-        "RATE_POLICY_HINT": "按基于时间窗口的常规金额退款（80% / 50%）。",
+        "RATE_POLICY_HINT": "按基于时间窗口的常规金额退款（早鸟 {{early}}% / 临期 {{late}}%）。",
         "RATE_FULL_HINT": "退款 100%——违反政策，因此必须填写原因。",
         "REASON_LABEL": "越权原因",
         "REASON_PLACEHOLDER": "为什么要在规则之外取消此预订？",
@@ -1665,6 +1666,61 @@
       "CUTOFF_MINUTES_HELPER": "出发前多少分钟内仍可在线预订车票。此值也决定车次何时开始显示\"座位所剩无几\"提示。柜台现场售票不受此限制。",
       "LOAD_FAILED": "无法加载预订政策设置。"
     },
+    "CANCEL_RESCHEDULE_POLICY_CONFIG": {
+      "SUBTITLE": "设置您自己的取消与改签规则。未设置的项目将沿用平台默认值。",
+      "LOAD_FAILED": "无法加载取消/改签政策。",
+      "STATE": {
+        "ALL_DEFAULT": "以下所有数值均为平台默认值,您尚未自行设置任何一项。",
+        "MIXED": "7 项中有 {{count}} 项由您设置,其余仍沿用平台默认值。",
+        "ALL_CUSTOM": "全部 7 项均为您自己的政策,不再跟随平台默认值。"
+      },
+      "SOURCE": {
+        "DEFAULT": "平台默认",
+        "CUSTOM": "您的设置",
+        "ARIA": "数值来源:{{source}}"
+      },
+      "GROUP": {
+        "CANCEL": "取消",
+        "RESCHEDULE": "改签",
+        "BOUNDARY": "早鸟/临期分界",
+        "BOUNDARY_INTRO": "同一条分界线同时决定两件事:取消时适用哪一档退款比例,以及改签是否收费。它必须大于上面两个截止时段,否则 late 比例与 late 费用永远不会生效。"
+      },
+      "CANCEL_WINDOW_HOURS_LABEL": "取消截止(发车前小时数)",
+      "CANCEL_WINDOW_HOURS_HELPER": "超过此时间点后顾客将无法再取消。填 0 表示直到发车前都可取消。",
+      "CANCEL_REFUND_RATE_EARLY_LABEL": "退款比例 — 早鸟取消(%)",
+      "CANCEL_REFUND_RATE_EARLY_HELPER": "顾客在下方早鸟/临期分界之前取消时的退款百分比。",
+      "CANCEL_REFUND_RATE_LATE_LABEL": "退款比例 — 临期取消(%)",
+      "CANCEL_REFUND_RATE_LATE_HELPER": "顾客在早鸟/临期分界当刻或之后取消时的退款百分比,不得高于早鸟比例。",
+      "RESCHEDULE_WINDOW_HOURS_LABEL": "改签截止(发车前小时数)",
+      "RESCHEDULE_WINDOW_HOURS_HELPER": "超过此时间点后顾客无法再改签。此数值同时管控换座位与换上下车点。填 0 表示直到发车前都可操作。",
+      "RESCHEDULE_MAX_DAYS_AHEAD_LABEL": "改签最多可提前天数",
+      "RESCHEDULE_MAX_DAYS_AHEAD_HELPER": "顾客可将行程改到原出发日期之后最多多少天。",
+      "RESCHEDULE_FEE_LATE_THB_LABEL": "临期改签费(泰铢)",
+      "RESCHEDULE_FEE_LATE_THB_HELPER": "在早鸟/临期分界当刻或之后申请改签时收取的固定费用;分界之前不收费。填 0 表示完全不收费。",
+      "EARLY_WINDOW_HOURS_LABEL": "早鸟/临期分界(发车前小时数)",
+      "EARLY_WINDOW_HOURS_HELPER": "早于此数值视为早鸟:适用早鸟退款比例,改签不收费;到达或晚于此数值则视为临期。",
+      "COHERENCE": {
+        "EARLY_ABOVE_CANCEL": "早鸟/临期分界必须大于取消截止时段,否则 late 退款比例永远不会生效。",
+        "EARLY_ABOVE_RESCHEDULE": "早鸟/临期分界必须大于改签截止时段,否则 late 改签费永远不会被收取。",
+        "EARLY_RATE_NOT_BELOW_LATE": "早鸟退款比例不得低于 late 比例——越早取消不应退得更少。"
+      },
+      "TAKEOVER_WARNING": "保存会将全部 7 项写为您自己的设置。仍标记为\"平台默认\"的 {{count}} 项将不再跟随平台,今后只有您在此修改时才会变动。",
+      "SAVE_CONFIRM_TITLE": "要接管整套政策吗?",
+      "SAVE_CONFIRM_TEXT": "全部 7 项都将成为您的设置,包括您未修改的 {{count}} 项,并将不再跟随平台默认值。您随时可以通过\"改用平台默认值\"交还。",
+      "SAVE_CONFIRM_BTN": "保存为我的政策",
+      "SAVE_REJECTED": "服务器拒绝了此政策,未保存任何内容。",
+      "RESET": {
+        "TITLE": "改用平台默认值",
+        "BODY": "将全部 7 项交还平台默认值。此后每当平台默认值变动,您的设置也随之变动,直到您再次自行设置。",
+        "BTN": "改用平台默认值",
+        "RUNNING": "正在交还…",
+        "CONFIRM_TITLE": "要把政策交还给平台吗?",
+        "CONFIRM_TEXT": "您的 7 项设置将被移除,平台默认值立即对您售出的所有班次生效。已完成的订单不受影响。",
+        "CONFIRM_BTN": "改用平台默认值",
+        "DONE": "已恢复使用平台默认值。",
+        "FAILED": "交还政策失败,未做任何更改。"
+      }
+    },
     "CONFIG_CHANGE_HISTORY": {
       "SUBTITLE": "查看所有系统设置的变更历史,包括修改人和时间",
       "TABLE_TITLE": "变更记录",
@@ -1719,6 +1775,7 @@
         "reschedule_window_hours": "可改期时间窗口(小时)",
         "reschedule_max_days_ahead": "最多可提前改期天数",
         "reschedule_fee_late_thb": "临近改期手续费(泰铢)",
+        "early_window_hours": "早鸟/临期分界(小时)",
         "reschedule_payment_timeout_minutes": "改期补差价支付时限(分钟)",
         "reminder_hours_before_departure": "出发提醒提前时间(小时)",
         "boarding_reminder_minutes_before_departure": "上车提醒提前时间(分钟)",

@@ -16,7 +16,6 @@ import {
   toAmountNumber,
 } from '../../../../shared/interfaces/my-booking.interface';
 import { RefundDestinationReqDto } from '../../../../shared/interfaces/refund-destination.interface';
-import { RESCHEDULE_MAX_DAYS_AHEAD } from '../../../../shared/interfaces/reschedule.interface';
 import {
   applyRefundDestinationRequired,
   buildRefundDestinationForm,
@@ -76,11 +75,19 @@ export class CancelBookingModalComponent implements OnInit, OnChanges {
   protected readonly form: FormGroup;
   protected submitting = false;
 
-  /** Mirrors `reschedule_max_days_ahead`; already the date picker's bound
+  /** The operator's `reschedule_max_days_ahead`; already the date picker's bound
    * (`RescheduleDialogComponent.computeDateBounds`). Quoted here so the offer
    * states the one limit that can make this door useless to the traveler — if
-   * they don't yet know when they want to travel, only a cancel helps. */
-  protected readonly rescheduleMaxDaysAhead = RESCHEDULE_MAX_DAYS_AHEAD;
+   * they don't yet know when they want to travel, only a cancel helps.
+   *
+   * OBRS-699: read off the cancel quote (`policy`), which the backend resolves
+   * under the operator selling THIS booking's trip — `booking` here is the
+   * flattened `MyBookingView`, which carries no policy numbers. Null when the
+   * backend could not resolve an operator; the bullet is then not rendered
+   * rather than stating a horizon nobody set. */
+  protected get rescheduleMaxDaysAhead(): number | null {
+    return this.policy?.rescheduleMaxDaysAhead ?? null;
+  }
 
   constructor(private readonly formBuilder: FormBuilder) {
     this.form = buildRefundDestinationForm(this.formBuilder);

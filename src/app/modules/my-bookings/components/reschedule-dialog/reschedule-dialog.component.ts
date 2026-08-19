@@ -14,7 +14,6 @@ import { takeUntil } from 'rxjs/operators';
 import dayjs from 'dayjs';
 import {
   MyBookingDto,
-  RESCHEDULE_WINDOW_HOURS,
   SupportedLocale,
   getStopLabel,
   toAmountNumber,
@@ -22,7 +21,6 @@ import {
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { AuthService } from '../../../../auth/auth.service';
 import {
-  RESCHEDULE_MAX_DAYS_AHEAD,
   RescheduleEstimate,
   RescheduleOption,
   RescheduleSeatAssignment,
@@ -469,18 +467,23 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
     return this.booking?.bookingSchedules?.[0]?.toStop?.code ?? '';
   }
 
+  // OBRS-699: both bounds are the operator's, carried on the booking. A bound
+  // whose number the backend could not resolve stays null (unbounded) — the
+  // server still refuses out-of-policy dates, and inventing a horizon here is
+  // what this card removed.
   private computeDateBounds(booking: MyBookingDto): void {
     const departure = booking.bookingSchedules?.[0]?.departureDateTime;
     const original = dayjs(departure);
     const now = dayjs();
 
-    const earliestByWindow = now.add(RESCHEDULE_WINDOW_HOURS, 'hour');
-    this.minDate = earliestByWindow.startOf('day').toDate();
+    const windowHours = booking.rescheduleWindowHours;
+    this.minDate =
+      windowHours == null ? null : now.add(windowHours, 'hour').startOf('day').toDate();
 
-    const latestByOriginal = (original.isValid() ? original : now).add(
-      RESCHEDULE_MAX_DAYS_AHEAD,
-      'day'
-    );
-    this.maxDate = latestByOriginal.endOf('day').toDate();
+    const maxDaysAhead = booking.rescheduleMaxDaysAhead;
+    this.maxDate =
+      maxDaysAhead == null
+        ? null
+        : (original.isValid() ? original : now).add(maxDaysAhead, 'day').endOf('day').toDate();
   }
 }

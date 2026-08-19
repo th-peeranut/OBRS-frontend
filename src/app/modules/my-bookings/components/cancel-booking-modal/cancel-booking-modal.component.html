@@ -33,7 +33,9 @@
             <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.KEEP_FULL' | translate: { amount: originalAmountLabel } }}</li>
             <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.INSTANT' | translate }}</li>
             <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.FEE_SHOWN_FIRST' | translate }}</li>
-            <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.WITHIN_DAYS' | translate: { days: rescheduleMaxDaysAhead } }}</li>
+            @if (rescheduleMaxDaysAhead !== null) {
+              <li>{{ 'MY_BOOKINGS.CANCEL.COMPARE.WITHIN_DAYS' | translate: { days: rescheduleMaxDaysAhead } }}</li>
+            }
           </ul>
           <button
             type="button"

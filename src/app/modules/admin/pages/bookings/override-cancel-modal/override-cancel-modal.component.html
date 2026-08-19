@@ -18,15 +18,20 @@
           <dd>{{ departureLabel }}</dd>
         </div>
       </dl>
-      <!-- Window banner (AC2 context): out-of-window is one of the two rule-breaks -->
-      <p class="override-cancel-window" [class.is-violation]="outsideWindow">
-        {{
-        (outsideWindow
-        ? 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_PAST'
-        : 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_WITHIN'
-        ) | translate
-        }}
-      </p>
+      <!-- Window banner (AC2 context): out-of-window is one of the two rule-breaks.
+      OBRS-699: both strings quote the operator's own deadline, so the banner is
+      suppressed while there is none — neither "within" nor "past" is a claim we
+      can back without it. -->
+      @if (hasCancellationDeadline) {
+        <p class="override-cancel-window" [class.is-violation]="outsideWindow">
+          {{
+          (outsideWindow
+          ? 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_PAST'
+          : 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.WINDOW_WITHIN'
+          ) | translate: { deadline: cancellationDeadlineLabel }
+          }}
+        </p>
+      }
       <!-- AC1: refund rate is TWO BUTTONS, never a free numeric input -->
       <div class="admin-form-field">
         <label class="admin-form-label">
@@ -58,13 +63,18 @@
             {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_FULL' | translate }}
           </button>
         </div>
+        <!-- OBRS-699: the POLICY hint quotes the OPERATOR's two rates, so it waits for the
+        refund-method read; the FULL hint states 100%, which is what FULL means and is not
+        owner-configurable, so it never waits. -->
         <small class="admin-hint">
-          {{
-          (rateChoice === 'FULL'
-          ? 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_FULL_HINT'
-          : 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_POLICY_HINT'
-          ) | translate
-          }}
+          @if (rateChoice === 'FULL') {
+            {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_FULL_HINT' | translate }}
+          } @else if (hasPolicyRates) {
+            {{
+            'ADMIN.BOOKINGS.CANCEL_OVERRIDE.RATE_POLICY_HINT'
+              | translate: { early: policyRateEarlyPct, late: policyRateLatePct }
+            }}
+          }
         </small>
       </div>
       <!-- AC2: reason appears ONLY when a rule is actually broken -->

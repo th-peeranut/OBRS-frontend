@@ -1,0 +1,10 @@
+<span
+  class="admin-status"
+  [class.is-info]="overridden"
+  [class.is-neutral]="!overridden"
+  [attr.aria-label]="
+    'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.SOURCE.ARIA'
+      | translate: { source: sourceKey | translate }
+  "
+  data-testid="config-source-badge"
+>{{ sourceKey | translate }}</span>

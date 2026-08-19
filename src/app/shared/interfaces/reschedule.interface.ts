@@ -96,16 +96,3 @@ export type RescheduleErrorCode =
   | (typeof RESCHEDULE_ERROR_CODES)[number]
   | typeof RESCHEDULE_PRICE_CHANGED
   | 'GENERIC';
-
-/** Mirrors the backend's `reschedule_max_days_ahead` default (see
- * OBRS-backend/docs/api/booking.md) — bounds the date picker's max date
- * relative to the booking's original departure date. The server remains the
- * source of truth (`RESCHEDULE_ERROR_DATE_TOO_FAR` if this drifts).
- *
- * ⚠️ DUPLICATE OF BACKEND STATE. This literal restates the `system_configs`
- * row `reschedule_max_days_ahead`; nothing enforces that the two agree, and
- * both suites stay green while they disagree — the picker just caps earlier
- * than the server would. Change one, change the other in the same card.
- * OBRS-699 removes the duplication by having the frontend read the policy from
- * the API; until it ships, this is the documented fallback. */
-export const RESCHEDULE_MAX_DAYS_AHEAD = 60;

@@ -45,6 +45,13 @@ const booking = (id: number, number: string, rescheduleCount: number) => ({
   rescheduleCount,
   seatChangeCount: 0,
   stopChangeCount: 0,
+  // OBRS-699: eligibility reads the operator's window off the ROW now. Absent
+  // means "no governing operator" and the action is withheld — so omitting
+  // these here would render the ELIGIBLE arm ineligible, collapse it onto the
+  // control arm, and make the click-count comparison below agree for the wrong
+  // reason. They are the fixture's load-bearing fields, not decoration.
+  rescheduleWindowHours: 2,
+  rescheduleMaxDaysAhead: 60,
   contact: { fullName: 'Somchai Jaidee', phoneNumber: '0812345678' },
   bookingSchedules: [
     {
@@ -72,6 +79,10 @@ const CANCEL_POLICY = ok({
   refundRatePercent: '80%',
   refundMethod: 'MANUAL_REFUND_REQUIRED',
   policyWindow: 'EARLY',
+  // OBRS-699 (D-4): the offer's "within N days" bullet is quoted from the
+  // cancel quote. Without it that bullet does not render at all.
+  rescheduleWindowHours: 2,
+  rescheduleMaxDaysAhead: 60,
 });
 
 interface Harness {
@@ -185,6 +196,12 @@ test('OBRS-813: an eligible booking is shown the reschedule door, with the serve
   // No fee is quoted for the reschedule side, because none is knowable before a
   // trip is picked. What is promised instead is that it will be shown first.
   await expect(offer).toContainText('before you confirm');
+
+  // OBRS-699: the horizon is the operator's, quoted from the cancel-policy
+  // response above — not a frontend constant. The stub says 60, so 60 is what
+  // must be on screen; a re-introduced literal that happened to also be 60
+  // would survive this, which is why the unit specs drive a non-default 90.
+  await expect(offer).toContainText('within 60 days');
 });
 
 test('OBRS-813: taking the offer opens the reschedule dialog and cancels NOTHING', async ({ page }) => {

@@ -39,6 +39,9 @@ describe('MyBookingsComponent (change stop action — action menu)', () => {
       rescheduleCount: 0,
       seatChangeCount: 0,
       stopChangeCount: 0,
+      // OBRS-699: change-stop is gated on the operator's
+      // `reschedule_window_hours`, wire-supplied per row.
+      rescheduleWindowHours: 2,
       createdAt: dayjs().toISOString(),
       bookingSchedules: [
         {
@@ -116,6 +119,68 @@ describe('MyBookingsComponent (change stop action — action menu)', () => {
       .withContext('disabled, never omitted — same contract as Reschedule/Change seat')
       .toBeTrue();
     expect(item.reasonText).toBe('MY_BOOKINGS.CHANGE_STOP.REASON.NOT_CONFIRMED');
+  });
+
+  // OBRS-699: same story as change-seat — the FE's hardcoded 4h is gone and
+  // the gate is the operator's `reschedule_window_hours` off the row.
+  it('OBRS-699: Change stop is refused at 3h out when the operator window on the row is 4h', () => {
+    render(
+      buildBooking({
+        rescheduleWindowHours: 4,
+        bookingSchedules: [
+          {
+            id: 1,
+            departureDateTime: dayjs().add(3, 'hour').toISOString(),
+            fromStop: { code: 'a', display: { en: { label: 'A' } } },
+            toStop: { code: 'b', display: { en: { label: 'B' } } },
+            tickets: [{ id: 1, seatNumber: '1' }],
+            routeSlug: 'bkk-cnx',
+          },
+        ],
+      })
+    );
+
+    openMenu();
+
+    const item = changeStopItem();
+    expect(item.disabled).toBeTrue();
+    expect(item.reasonText).toBe('MY_BOOKINGS.CHANGE_STOP.REASON.NO_WINDOW');
+  });
+
+  it('OBRS-699: the SAME 3h departure is offered when the operator window on the row is 2h', () => {
+    render(
+      buildBooking({
+        rescheduleWindowHours: 2,
+        bookingSchedules: [
+          {
+            id: 1,
+            departureDateTime: dayjs().add(3, 'hour').toISOString(),
+            fromStop: { code: 'a', display: { en: { label: 'A' } } },
+            toStop: { code: 'b', display: { en: { label: 'B' } } },
+            tickets: [{ id: 1, seatNumber: '1' }],
+            routeSlug: 'bkk-cnx',
+          },
+        ],
+      })
+    );
+
+    openMenu();
+
+    expect(changeStopItem().disabled)
+      .withContext('the 4h FE cutoff hid a stop change the backend would have accepted')
+      .toBeFalse();
+  });
+
+  it('OBRS-699: Change stop is refused when the backend could not resolve a window (absent)', () => {
+    render(buildBooking({ rescheduleWindowHours: undefined }));
+
+    openMenu();
+
+    const item = changeStopItem();
+    expect(item.disabled)
+      .withContext('absent means no governing operator — under-offer, never a default')
+      .toBeTrue();
+    expect(item.reasonText).toBe('MY_BOOKINGS.CHANGE_STOP.REASON.NO_WINDOW');
   });
 
   it('is disabled with NOT_ONE_WAY when the booking is not one-way/single-leg', () => {

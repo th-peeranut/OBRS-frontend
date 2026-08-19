@@ -1,0 +1,375 @@
+<section class="admin-page-intro">
+  <div>
+    @if (isLoading) {
+      <p class="admin-muted">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    }
+    @if (errorMessage) {
+      <p class="admin-muted">{{ errorMessage }}</p>
+    }
+    @if (!isLoading && config) {
+      <p class="admin-muted" data-testid="cancel-reschedule-policy-state">
+        {{ stateKey | translate: { count: overriddenCount } }}
+      </p>
+    }
+    <app-admin-refresh-hint
+      [refreshing]="isRefreshing"
+      [failed]="refreshFailed"
+      [loading]="isLoading"
+    ></app-admin-refresh-hint>
+  </div>
+</section>
+
+@if (isLoading) {
+  <section class="admin-card mt-3">
+    @for (row of [1, 2, 3, 4, 5, 6, 7]; track row) {
+      <div class="admin-skeleton admin-skeleton--sm mb-2"></div>
+    }
+  </section>
+}
+
+@if (!isLoading && config) {
+  <!-- ONE form across three cards: PUT writes all seven keys or none (BR-7),
+  so three Save buttons would be three primary buttons advertising a partial
+  write the API does not offer. -->
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <section class="admin-card mt-3">
+      <div class="admin-card-head">
+        <h4>{{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.GROUP.CANCEL' | translate }}</h4>
+      </div>
+
+      <div class="admin-form-grid mt-3">
+        <div class="admin-form-field">
+          <label class="admin-form-label" for="cancelWindowHours">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.CANCEL_WINDOW_HOURS_LABEL' | translate }}
+            <span class="admin-required">*</span>
+            <app-config-source-badge [overridden]="config.cancelWindowHoursOverridden"></app-config-source-badge>
+          </label>
+          <input
+            #cancelWindowHoursInput
+            id="cancelWindowHours"
+            class="admin-field"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            max="168"
+            step="1"
+            required
+            formControlName="cancelWindowHours"
+            [attr.aria-invalid]="isFieldInvalid('cancelWindowHours') ? true : null"
+            [attr.aria-describedby]="describedBy('cancelWindowHours')"
+            />
+          <small class="admin-muted" id="cancelWindowHours-helper">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.CANCEL_WINDOW_HOURS_HELPER' | translate }}
+          </small>
+          @if (isFieldInvalid('cancelWindowHours')) {
+            <small
+              class="admin-error"
+              role="alert"
+              id="cancelWindowHours-error"
+            >{{ errorKey('cancelWindowHours') | translate: errorParams('cancelWindowHours') }}</small>
+          }
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label" for="cancelRefundRateEarlyPct">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.CANCEL_REFUND_RATE_EARLY_LABEL' | translate }}
+            <span class="admin-required">*</span>
+            <app-config-source-badge [overridden]="config.cancelRefundRateEarlyOverridden"></app-config-source-badge>
+          </label>
+          <input
+            #cancelRefundRateEarlyPctInput
+            id="cancelRefundRateEarlyPct"
+            class="admin-field"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            max="100"
+            step="1"
+            required
+            formControlName="cancelRefundRateEarlyPct"
+            [attr.aria-invalid]="isFieldInvalid('cancelRefundRateEarlyPct') ? true : null"
+            [attr.aria-describedby]="describedBy('cancelRefundRateEarlyPct')"
+            />
+          <small class="admin-muted" id="cancelRefundRateEarlyPct-helper">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.CANCEL_REFUND_RATE_EARLY_HELPER' | translate }}
+          </small>
+          @if (isFieldInvalid('cancelRefundRateEarlyPct')) {
+            <small
+              class="admin-error"
+              role="alert"
+              id="cancelRefundRateEarlyPct-error"
+            >{{ errorKey('cancelRefundRateEarlyPct') | translate: errorParams('cancelRefundRateEarlyPct') }}</small>
+          }
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label" for="cancelRefundRateLatePct">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.CANCEL_REFUND_RATE_LATE_LABEL' | translate }}
+            <span class="admin-required">*</span>
+            <app-config-source-badge [overridden]="config.cancelRefundRateLateOverridden"></app-config-source-badge>
+          </label>
+          <input
+            #cancelRefundRateLatePctInput
+            id="cancelRefundRateLatePct"
+            class="admin-field"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            max="100"
+            step="1"
+            required
+            formControlName="cancelRefundRateLatePct"
+            [attr.aria-invalid]="isFieldInvalid('cancelRefundRateLatePct') ? true : null"
+            [attr.aria-describedby]="describedBy('cancelRefundRateLatePct')"
+            />
+          <small class="admin-muted" id="cancelRefundRateLatePct-helper">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.CANCEL_REFUND_RATE_LATE_HELPER' | translate }}
+          </small>
+          @if (isFieldInvalid('cancelRefundRateLatePct')) {
+            <small
+              class="admin-error"
+              role="alert"
+              id="cancelRefundRateLatePct-error"
+            >{{ errorKey('cancelRefundRateLatePct') | translate: errorParams('cancelRefundRateLatePct') }}</small>
+          }
+        </div>
+
+        @if (form.hasError('earlyRateBelowLate')) {
+          <div class="admin-form-field full">
+            <small
+              class="admin-error"
+              role="alert"
+              data-testid="cancel-reschedule-policy-early-rate-error"
+            >{{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.COHERENCE.EARLY_RATE_NOT_BELOW_LATE' | translate }}</small>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="admin-card mt-3">
+      <div class="admin-card-head">
+        <h4>{{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.GROUP.RESCHEDULE' | translate }}</h4>
+      </div>
+
+      <div class="admin-form-grid mt-3">
+        <div class="admin-form-field">
+          <label class="admin-form-label" for="rescheduleWindowHours">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESCHEDULE_WINDOW_HOURS_LABEL' | translate }}
+            <span class="admin-required">*</span>
+            <app-config-source-badge [overridden]="config.rescheduleWindowHoursOverridden"></app-config-source-badge>
+          </label>
+          <input
+            #rescheduleWindowHoursInput
+            id="rescheduleWindowHours"
+            class="admin-field"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            max="168"
+            step="1"
+            required
+            formControlName="rescheduleWindowHours"
+            [attr.aria-invalid]="isFieldInvalid('rescheduleWindowHours') ? true : null"
+            [attr.aria-describedby]="describedBy('rescheduleWindowHours')"
+            />
+          <small class="admin-muted" id="rescheduleWindowHours-helper">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESCHEDULE_WINDOW_HOURS_HELPER' | translate }}
+          </small>
+          @if (isFieldInvalid('rescheduleWindowHours')) {
+            <small
+              class="admin-error"
+              role="alert"
+              id="rescheduleWindowHours-error"
+            >{{ errorKey('rescheduleWindowHours') | translate: errorParams('rescheduleWindowHours') }}</small>
+          }
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label" for="rescheduleMaxDaysAhead">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESCHEDULE_MAX_DAYS_AHEAD_LABEL' | translate }}
+            <span class="admin-required">*</span>
+            <app-config-source-badge [overridden]="config.rescheduleMaxDaysAheadOverridden"></app-config-source-badge>
+          </label>
+          <input
+            #rescheduleMaxDaysAheadInput
+            id="rescheduleMaxDaysAhead"
+            class="admin-field"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            max="365"
+            step="1"
+            required
+            formControlName="rescheduleMaxDaysAhead"
+            [attr.aria-invalid]="isFieldInvalid('rescheduleMaxDaysAhead') ? true : null"
+            [attr.aria-describedby]="describedBy('rescheduleMaxDaysAhead')"
+            />
+          <small class="admin-muted" id="rescheduleMaxDaysAhead-helper">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESCHEDULE_MAX_DAYS_AHEAD_HELPER' | translate }}
+          </small>
+          @if (isFieldInvalid('rescheduleMaxDaysAhead')) {
+            <small
+              class="admin-error"
+              role="alert"
+              id="rescheduleMaxDaysAhead-error"
+            >{{ errorKey('rescheduleMaxDaysAhead') | translate: errorParams('rescheduleMaxDaysAhead') }}</small>
+          }
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label" for="rescheduleFeeLateThb">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESCHEDULE_FEE_LATE_THB_LABEL' | translate }}
+            <span class="admin-required">*</span>
+            <app-config-source-badge [overridden]="config.rescheduleFeeLateThbOverridden"></app-config-source-badge>
+          </label>
+          <input
+            #rescheduleFeeLateThbInput
+            id="rescheduleFeeLateThb"
+            class="admin-field"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            max="10000"
+            step="1"
+            required
+            formControlName="rescheduleFeeLateThb"
+            [attr.aria-invalid]="isFieldInvalid('rescheduleFeeLateThb') ? true : null"
+            [attr.aria-describedby]="describedBy('rescheduleFeeLateThb')"
+            />
+          <small class="admin-muted" id="rescheduleFeeLateThb-helper">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESCHEDULE_FEE_LATE_THB_HELPER' | translate }}
+          </small>
+          @if (isFieldInvalid('rescheduleFeeLateThb')) {
+            <small
+              class="admin-error"
+              role="alert"
+              id="rescheduleFeeLateThb-error"
+            >{{ errorKey('rescheduleFeeLateThb') | translate: errorParams('rescheduleFeeLateThb') }}</small>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- Its own card because early_window_hours is NOT a cancel key: the
+    reschedule fee reads the same boundary, which is why the SA refused a
+    `cancel_`-prefixed name for it. -->
+    <section class="admin-card mt-3">
+      <div class="admin-card-head">
+        <h4>{{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.GROUP.BOUNDARY' | translate }}</h4>
+      </div>
+      <p class="admin-muted">
+        {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.GROUP.BOUNDARY_INTRO' | translate }}
+      </p>
+
+      <div class="admin-form-grid mt-3">
+        <div class="admin-form-field">
+          <label class="admin-form-label" for="earlyWindowHours">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.EARLY_WINDOW_HOURS_LABEL' | translate }}
+            <span class="admin-required">*</span>
+            <app-config-source-badge [overridden]="config.earlyWindowHoursOverridden"></app-config-source-badge>
+          </label>
+          <input
+            #earlyWindowHoursInput
+            id="earlyWindowHours"
+            class="admin-field"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            max="720"
+            step="1"
+            required
+            formControlName="earlyWindowHours"
+            [attr.aria-invalid]="isFieldInvalid('earlyWindowHours') ? true : null"
+            [attr.aria-describedby]="describedBy('earlyWindowHours')"
+            />
+          <small class="admin-muted" id="earlyWindowHours-helper">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.EARLY_WINDOW_HOURS_HELPER' | translate }}
+          </small>
+          @if (isFieldInvalid('earlyWindowHours')) {
+            <small
+              class="admin-error"
+              role="alert"
+              id="earlyWindowHours-error"
+            >{{ errorKey('earlyWindowHours') | translate: errorParams('earlyWindowHours') }}</small>
+          }
+        </div>
+
+        @if (form.hasError('earlyNotAboveCancel')) {
+          <div class="admin-form-field full">
+            <small
+              class="admin-error"
+              role="alert"
+              data-testid="cancel-reschedule-policy-early-above-cancel-error"
+            >{{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.COHERENCE.EARLY_ABOVE_CANCEL' | translate }}</small>
+          </div>
+        }
+        @if (form.hasError('earlyNotAboveReschedule')) {
+          <div class="admin-form-field full">
+            <small
+              class="admin-error"
+              role="alert"
+              data-testid="cancel-reschedule-policy-early-above-reschedule-error"
+            >{{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.COHERENCE.EARLY_ABOVE_RESCHEDULE' | translate }}</small>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="admin-card mt-3">
+      @if (inheritedCount > 0 && form.dirty) {
+        <div
+          class="cancel-reschedule-policy-takeover"
+          data-testid="cancel-reschedule-policy-takeover-warning"
+        >
+          {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.TAKEOVER_WARNING' | translate: { count: inheritedCount } }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isSaving || form.invalid || form.pristine"
+        >
+        {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+      </button>
+
+      <!-- Persistent, beside the toast on purpose: a faded toast leaves the
+      owner with a form that refused to save and no reason on screen (D-2). -->
+      @if (serverErrorMessage) {
+        <p class="admin-error mt-2" role="alert" data-testid="cancel-reschedule-policy-server-error">
+          {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.SAVE_REJECTED' | translate }}
+          {{ serverErrorMessage }}
+        </p>
+      }
+    </section>
+  </form>
+
+  <!-- Outside the form: it is not a form action, and inside it would give the
+  form a second button competing with Save. Hidden while there is nothing to
+  hand back — a permanently visible disabled button invites the click it then
+  refuses. -->
+  @if (overriddenCount > 0) {
+    <section class="admin-card mt-3">
+      <div class="admin-card-head">
+        <h4>{{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESET.TITLE' | translate }}</h4>
+      </div>
+      <p class="admin-muted">{{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESET.BODY' | translate }}</p>
+
+      <button
+        type="button"
+        class="admin-btn mt-2"
+        [disabled]="isResetting"
+        data-testid="cancel-reschedule-policy-reset-btn"
+        (click)="resetToPlatformDefault()"
+        >
+        {{ (isResetting ? 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESET.RUNNING' : 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESET.BTN') | translate }}
+      </button>
+
+      @if (resetErrorMessage) {
+        <p class="admin-error mt-2" role="alert" data-testid="cancel-reschedule-policy-reset-error">
+          {{ resetErrorMessage }}
+        </p>
+      }
+    </section>
+  }
+}

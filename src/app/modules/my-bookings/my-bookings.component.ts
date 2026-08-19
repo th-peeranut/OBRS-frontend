@@ -11,14 +11,11 @@ import {
   CancellationPolicy,
   MyBookingDto,
   MyBookingView,
-  RESCHEDULE_WINDOW_HOURS,
   SupportedLocale,
   getStopLabel,
   normalizeStatusCode,
   toAmountNumber,
 } from '../../shared/interfaces/my-booking.interface';
-import { CHANGE_SEAT_WINDOW_HOURS } from '../../shared/interfaces/change-seat.interface';
-import { CHANGE_STOP_WINDOW_HOURS } from '../../shared/interfaces/change-stop.interface';
 import { RefundDestinationReqDto } from '../../shared/interfaces/refund-destination.interface';
 import {
   closeCancelRefundDestinationModal,
@@ -481,8 +478,16 @@ export class MyBookingsComponent implements OnInit {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.ALREADY_USED' };
     }
 
+    // OBRS-699: the window is the operator's, carried on the row. Absent means
+    // the backend could not resolve one — under-offer rather than offer a
+    // policy nobody stated.
+    const windowHours = booking.rescheduleWindowHours;
+    if (windowHours == null) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.NO_WINDOW' };
+    }
+
     const departure = dayjs(schedules?.[0]?.departureDateTime);
-    if (!departure.isValid() || departure.diff(dayjs(), 'hour', true) <= RESCHEDULE_WINDOW_HOURS) {
+    if (!departure.isValid() || departure.diff(dayjs(), 'hour', true) <= windowHours) {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.NO_WINDOW' };
     }
 
@@ -495,17 +500,6 @@ export class MyBookingsComponent implements OnInit {
    * as available when the server would reject it. First failing check wins;
    * the server remains the final authority. Unlike reschedule, there is no
    * date-horizon/TOO_FAR check — change-seat only cares about its own window.
-   *
-   * ⚠️ The window is the one place this no longer mirrors the server. Since
-   * OBRS-655 the backend gates change-seat on `reschedule_window_hours` = 2h
-   * (`ChangeSeatService.validateChangeWindow` reads that key, not one of its
-   * own), while `CHANGE_SEAT_WINDOW_HOURS` here is still 4h. The divergence is
-   * deliberate and the owner decided to keep it: the FE is the STRICTER side,
-   * so between 2h and 4h out we hide an action the server would have accepted
-   * — an under-offer, never a false offer. Do not "fix" it by flipping this
-   * constant on its own; OBRS-699 removes the FE copy entirely by reading the
-   * policy from the API, which closes the gap without adding a third number
-   * to keep in sync.
    */
   private computeChangeSeatEligibility(
     booking: MyBookingDto,
@@ -534,8 +528,16 @@ export class MyBookingsComponent implements OnInit {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.ALREADY_USED' };
     }
 
+    // OBRS-699: change-seat is gated on the SAME `reschedule_window_hours` the
+    // backend reads (ChangeSeatService.validateChangeWindow). Absent means the
+    // backend could not resolve an operator — under-offer.
+    const windowHours = booking.rescheduleWindowHours;
+    if (windowHours == null) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.NO_WINDOW' };
+    }
+
     const departure = dayjs(schedules?.[0]?.departureDateTime);
-    if (!departure.isValid() || departure.diff(dayjs(), 'hour', true) <= CHANGE_SEAT_WINDOW_HOURS) {
+    if (!departure.isValid() || departure.diff(dayjs(), 'hour', true) <= windowHours) {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.NO_WINDOW' };
     }
 
@@ -549,12 +551,6 @@ export class MyBookingsComponent implements OnInit {
    * the server remains the final authority. Like change-seat (and unlike
    * reschedule), there is no date-horizon/TOO_FAR check — change-stop doesn't move
    * the departure date, only the pickup/drop-off stops.
-   *
-   * ⚠️ Same window divergence as change-seat since OBRS-655:
-   * `ChangeStopService.validateChangeWindow` reads `reschedule_window_hours`
-   * = 2h while `CHANGE_STOP_WINDOW_HOURS` here is still 4h. See the note on
-   * {@link computeChangeSeatEligibility} — deliberate, FE is the stricter
-   * side, and OBRS-699 is what closes it.
    */
   private computeChangeStopEligibility(
     booking: MyBookingDto,
@@ -580,8 +576,16 @@ export class MyBookingsComponent implements OnInit {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_STOP.REASON.ALREADY_USED' };
     }
 
+    // OBRS-699: change-stop is gated on the SAME `reschedule_window_hours` the
+    // backend reads (ChangeStopService.validateChangeWindow). Absent means the
+    // backend could not resolve an operator — under-offer.
+    const windowHours = booking.rescheduleWindowHours;
+    if (windowHours == null) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_STOP.REASON.NO_WINDOW' };
+    }
+
     const departure = dayjs(schedules?.[0]?.departureDateTime);
-    if (!departure.isValid() || departure.diff(dayjs(), 'hour', true) <= CHANGE_STOP_WINDOW_HOURS) {
+    if (!departure.isValid() || departure.diff(dayjs(), 'hour', true) <= windowHours) {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_STOP.REASON.NO_WINDOW' };
     }
 
