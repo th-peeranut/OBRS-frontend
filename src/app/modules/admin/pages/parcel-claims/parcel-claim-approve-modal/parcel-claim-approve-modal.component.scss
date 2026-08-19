@@ -1,0 +1,55 @@
+// OBRS-1388 — uses the shared .admin-modal-backdrop/.admin-modal/.admin-field/
+// .admin-btn/.admin-table primitives (admin-theme.scss). Only the small
+// info-row + empty-state blocks below are component-scoped.
+
+.pca-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.pca-info-label {
+  color: var(--admin-muted);
+}
+
+.pca-info-value {
+  color: var(--admin-text);
+  font-weight: 500;
+  text-align: right;
+}
+
+.pca-claim-info,
+.pca-history {
+  margin-bottom: 16px;
+
+  h6 {
+    color: var(--admin-text);
+    margin-bottom: 4px;
+  }
+}
+
+.admin-hint {
+  display: block;
+  color: var(--admin-muted);
+  font-size: 11px;
+}
+
+// OBRS-209 full-section empty state recipe (design-system §12).
+.pca-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  color: var(--admin-muted);
+  text-align: center;
+
+  .material-symbols-outlined {
+    font-size: 32px;
+  }
+
+  p {
+    margin: 0;
+  }
+}

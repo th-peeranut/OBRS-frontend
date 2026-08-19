@@ -72,6 +72,9 @@ import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-mod
 // OBRS-286 — manual refund worklist (AC-2/AC-3), owner-only.
 import { ManualRefundWorklistPageComponent } from './pages/manual-refund-worklist/manual-refund-worklist-page.component';
 import { CashRefundApprovalsPageComponent } from './pages/cash-refund-approvals/cash-refund-approvals-page.component';
+// OBRS-1388 — the owner's pending parcel-claims queue + approve modal.
+import { ParcelClaimsPageComponent } from './pages/parcel-claims/parcel-claims-page.component';
+import { ParcelClaimApproveModalComponent } from './pages/parcel-claims/parcel-claim-approve-modal/parcel-claim-approve-modal.component';
 import { MarkRefundedModalComponent } from './pages/manual-refund-worklist/mark-refunded-modal/mark-refunded-modal.component';
 // OBRS-960 — driver cash ledger + parcel revenue share.
 import { DriverCashDaysListComponent } from './pages/settlements/driver-cash-days-list/driver-cash-days-list.component';
@@ -403,6 +406,20 @@ export const adminRoutes: Routes = [
           requiredRoles: ['owner'],
         },
       },
+      {
+        // OBRS-1388: parcel damage-claim approvals — OWNER-only, matching the
+        // backend door it posts through (`hasRole('OWNER')` on
+        // ParcelClaimController#approve), same gating shape as
+        // manual-refunds/cash-refund-approvals directly above.
+        path: 'parcel-claims',
+        component: ParcelClaimsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.PARCEL_CLAIMS',
+          subtitleKey: 'ADMIN.PARCEL_CLAIM.SUBTITLE',
+          requiredRoles: ['owner'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -485,6 +502,8 @@ export const adminRoutes: Routes = [
     ExpenseDeleteModalComponent,
     ManualRefundWorklistPageComponent,
     CashRefundApprovalsPageComponent,
+    ParcelClaimsPageComponent,
+    ParcelClaimApproveModalComponent,
     MarkRefundedModalComponent,
     DriverCashDaysListComponent,
     DriverCashDayReturnModalComponent,

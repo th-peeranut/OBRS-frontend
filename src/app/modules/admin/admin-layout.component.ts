@@ -252,6 +252,20 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       });
     }
 
+    // OBRS-1388: parcel damage-claim approvals — OWNER-only, matching the
+    // route's `requiredRoles: ['owner']` (the backend approve endpoint is
+    // hasRole('OWNER')). Sits beside cash-refund-approvals: both are money
+    // the owner personally signs off on a device that may not be the counter's.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({
+        path: 'parcel-claims',
+        labelKey: 'ADMIN.PAGES.PARCEL_CLAIMS',
+        icon: 'report_problem',
+        descriptionKey: 'ADMIN.PARCEL_CLAIM.SUBTITLE',
+        section: 'operations',
+      });
+    }
+
     // OBRS-508: cargo-capacity settings is OWNER-only (route `requiredRoles:
     // ['owner']` — the backend PUT it saves through requires OWNER), gated
     // the same way Settlements is gated directly above. Lives in 'master'

@@ -1,0 +1,149 @@
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="onClose()">
+    <div class="admin-modal">
+      <div class="admin-modal-header">
+        <h5 class="admin-modal-title">{{ 'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.TITLE' | translate }}</h5>
+        <button type="button" class="admin-icon-btn" (click)="onClose()" [attr.aria-label]="'COMMON.CLOSE' | translate">
+          <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
+        </button>
+      </div>
+
+      <div class="admin-modal-body">
+        @if (claim) {
+          <section class="pca-claim-info">
+            <div class="pca-info-row">
+              <span class="pca-info-label">{{ 'ADMIN.PARCEL_CLAIM.COL.TRACKING_NUMBER' | translate }}</span>
+              <span class="pca-info-value">{{ claim.trackingNumber }}</span>
+            </div>
+            <div class="pca-info-row">
+              <span class="pca-info-label">{{ 'ADMIN.PARCEL_CLAIM.COL.CLAIMANT' | translate }}</span>
+              <span class="pca-info-value">{{ claim.claimantName }} ({{ claim.claimantContactPhone }})</span>
+            </div>
+            <div class="pca-info-row">
+              <span class="pca-info-label">{{ 'ADMIN.PARCEL_CLAIM.COL.REASON' | translate }}</span>
+              <span class="pca-info-value">{{ claim.claimReason }}</span>
+            </div>
+            <div class="pca-info-row">
+              <span class="pca-info-label">{{ 'ADMIN.PARCEL_CLAIM.COL.SALES_POINT' | translate }}</span>
+              <span class="pca-info-value">
+                @if (claim.salesPointId !== null) {
+                  #{{ claim.salesPointId }}
+                } @else {
+                  {{ 'ADMIN.PARCEL_CLAIM.SALES_POINT.UNASSIGNED' | translate }}
+                }
+              </span>
+            </div>
+          </section>
+        }
+
+        <form [formGroup]="form">
+          <div class="admin-form-field">
+            <label class="admin-form-label">
+              {{ 'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.AMOUNT_LABEL' | translate }}
+              <span class="admin-required">*</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              class="admin-field"
+              formControlName="approvedAmount"
+              [placeholder]="'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.AMOUNT_LABEL' | translate"
+              />
+            <small class="admin-hint">{{ 'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.AMOUNT_HINT' | translate }}</small>
+            @if (amountOutOfRange) {
+              <small class="admin-error">{{ 'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.AMOUNT_ERROR_RANGE' | translate }}</small>
+            }
+          </div>
+
+          <div class="admin-form-field">
+            <label class="admin-form-label">{{ 'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.NOTE_LABEL' | translate }}</label>
+            <textarea
+              class="admin-field"
+              rows="2"
+              maxlength="500"
+              formControlName="decisionNote"
+              [placeholder]="'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.NOTE_PLACEHOLDER' | translate"
+            ></textarea>
+          </div>
+
+          @if (submitErrorKey) {
+            <p class="admin-error">{{ submitErrorKey | translate }}</p>
+          }
+        </form>
+
+        <section class="pca-history">
+          <h6>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_TITLE' | translate }}</h6>
+
+          @if (isHistoryLoading) {
+            <app-loading-state variant="skeleton" [rows]="3"></app-loading-state>
+          }
+
+          @if (!isHistoryLoading && historyErrorKey) {
+            <p class="admin-error">{{ historyErrorKey | translate }}</p>
+          }
+
+          @if (!isHistoryLoading && !historyErrorKey && history.length === 0) {
+            <div class="pca-history-empty">
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">task_alt</span>
+              <p>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_EMPTY' | translate }}</p>
+            </div>
+          }
+
+          @if (!isHistoryLoading && !historyErrorKey && history.length > 0) {
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_COL.TRACKING' | translate }}</th>
+                    <th>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_COL.SALES_POINT' | translate }}</th>
+                    <th>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_COL.FILED_AT' | translate }}</th>
+                    <th>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_COL.STATUS' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of history; track row.id) {
+                    <tr>
+                      <td>{{ row.trackingNumber }}</td>
+                      <td>
+                        @if (row.salesPointId !== null) {
+                          #{{ row.salesPointId }}
+                        } @else {
+                          <span class="admin-muted">{{ 'ADMIN.PARCEL_CLAIM.SALES_POINT.UNASSIGNED' | translate }}</span>
+                        }
+                      </td>
+                      <td>{{ row.filedAt | date: 'dd MMM yyyy HH:mm' }}</td>
+                      <td>
+                        <span class="admin-status" [ngClass]="statusToken(row.status)">
+                          {{ 'ADMIN.PARCEL_CLAIM.STATUS.' + row.status | translate }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      </div>
+
+      <div class="admin-modal-footer">
+        <button type="button" class="admin-btn" [disabled]="isSubmitting" (click)="onClose()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-primary"
+          [disabled]="isSubmitting || form.invalid"
+          (click)="onSubmit()"
+          >
+          {{
+            (isSubmitting
+              ? 'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.SUBMITTING'
+              : 'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.SUBMIT_BTN'
+            ) | translate
+          }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

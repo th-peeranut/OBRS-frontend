@@ -1,0 +1,203 @@
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="onDismiss()">
+    <div class="admin-modal">
+      <div class="admin-modal-header">
+        <h5 class="admin-modal-title">
+          {{
+            (phase === 'filed'
+              ? 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.FILED_TITLE'
+              : 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.TITLE'
+            ) | translate
+          }}
+        </h5>
+        <button type="button" class="admin-icon-btn" (click)="onDismiss()" [attr.aria-label]="'COMMON.CLOSE' | translate">
+          <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
+        </button>
+      </div>
+
+      <div class="admin-modal-body">
+        <section class="pcd-parcel-info">
+          <h6>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.PARCEL_INFO_TITLE' | translate }}</h6>
+          @if (parcel) {
+            <div class="pcd-info-row">
+              <span class="pcd-info-label">{{ 'STAFF.PARCEL_DELIVERY.COL.TRACKING_NUMBER' | translate }}</span>
+              <span class="pcd-info-value">{{ parcel.trackingNumber }}</span>
+            </div>
+            <div class="pcd-info-row">
+              <span class="pcd-info-label">{{ 'STAFF.PARCEL_DELIVERY.COL.SENDER' | translate }}</span>
+              <span class="pcd-info-value">{{ parcel.senderName }} ({{ parcel.senderPhone }})</span>
+            </div>
+            <div class="pcd-info-row">
+              <span class="pcd-info-label">{{ 'STAFF.PARCEL_DELIVERY.COL.RECIPIENT' | translate }}</span>
+              <span class="pcd-info-value">{{ parcel.recipientName || '-' }}</span>
+            </div>
+          }
+        </section>
+
+        @if (phase === 'form') {
+          <form [formGroup]="form">
+            <div class="admin-form-field">
+              <label class="admin-form-label">
+                {{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.REASON_LABEL' | translate }}
+                <span class="admin-required">*</span>
+              </label>
+              <textarea
+                class="admin-field"
+                rows="3"
+                maxlength="500"
+                formControlName="claimReason"
+                [placeholder]="'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.REASON_PLACEHOLDER' | translate"
+              ></textarea>
+              <small class="admin-hint">{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.REASON_HINT' | translate }}</small>
+            </div>
+          </form>
+
+          @if (fileErrorKey) {
+            <p class="admin-error">{{ fileErrorKey | translate }}</p>
+          }
+        }
+
+        @if (phase === 'filed' && filedClaim) {
+          <section class="pcd-claimant-confirm">
+            <h6>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.CLAIMANT_CONFIRM_TITLE' | translate }}</h6>
+            <div class="pcd-info-row">
+              <span class="pcd-info-label">{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.CLAIMANT_NAME_LABEL' | translate }}</span>
+              <span class="pcd-info-value">{{ filedClaim.claimantName }}</span>
+            </div>
+            <div class="pcd-info-row">
+              <span class="pcd-info-label">{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.CLAIMANT_PHONE_LABEL' | translate }}</span>
+              <span class="pcd-info-value">{{ filedClaim.claimantContactPhone }}</span>
+            </div>
+          </section>
+
+          <p class="pcd-next-step-hint">{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.NEXT_STEP_HINT' | translate }}</p>
+
+          @if (!showRejectForm) {
+            <button type="button" class="admin-btn" (click)="openRejectForm()">
+              {{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.REJECT_NOW_BTN' | translate }}
+            </button>
+          }
+
+          @if (showRejectForm) {
+            <form [formGroup]="rejectForm" class="pcd-reject-form">
+              <div class="admin-form-field">
+                <label class="admin-form-label">
+                  {{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.REJECT_NOTE_LABEL' | translate }}
+                  <span class="admin-required">*</span>
+                </label>
+                <textarea
+                  class="admin-field"
+                  rows="2"
+                  maxlength="500"
+                  formControlName="decisionNote"
+                  [placeholder]="'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.REJECT_NOTE_PLACEHOLDER' | translate"
+                ></textarea>
+              </div>
+              @if (rejectErrorKey) {
+                <p class="admin-error">{{ rejectErrorKey | translate }}</p>
+              }
+              <button
+                type="button"
+                class="admin-btn"
+                [disabled]="isRejecting || rejectForm.invalid"
+                (click)="onReject()"
+                >
+                {{
+                  (isRejecting
+                    ? 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.REJECTING'
+                    : 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.REJECT_SUBMIT_BTN'
+                  ) | translate
+                }}
+              </button>
+            </form>
+          }
+        }
+
+        <section class="pcd-history">
+          <h6>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_TITLE' | translate }}</h6>
+
+          @if (isHistoryLoading) {
+            <app-loading-state variant="skeleton" [rows]="3"></app-loading-state>
+          }
+
+          @if (!isHistoryLoading && historyErrorKey) {
+            <div class="pcd-history-error">
+              <p class="admin-error">{{ historyErrorKey | translate }}</p>
+              <button type="button" class="admin-btn admin-btn-small" (click)="onRetryHistory()">
+                {{ 'ADMIN.PARCEL_CLAIM.REFRESH' | translate }}
+              </button>
+            </div>
+          }
+
+          @if (!isHistoryLoading && !historyErrorKey && history.length === 0) {
+            <div class="pcd-history-empty">
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">task_alt</span>
+              <p>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_EMPTY' | translate }}</p>
+            </div>
+          }
+
+          @if (!isHistoryLoading && !historyErrorKey && history.length > 0) {
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_COL.TRACKING' | translate }}</th>
+                    <th>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_COL.SALES_POINT' | translate }}</th>
+                    <th>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_COL.FILED_AT' | translate }}</th>
+                    <th>{{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.HISTORY_COL.STATUS' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of history; track row.id) {
+                    <tr>
+                      <td>{{ row.trackingNumber }}</td>
+                      <td>
+                        @if (row.salesPointId !== null) {
+                          #{{ row.salesPointId }}
+                        } @else {
+                          <span class="admin-muted">{{ 'ADMIN.PARCEL_CLAIM.SALES_POINT.UNASSIGNED' | translate }}</span>
+                        }
+                      </td>
+                      <td>{{ row.filedAt | date: 'dd MMM yyyy HH:mm' }}</td>
+                      <td>
+                        <span class="admin-status" [ngClass]="statusToken(row.status)">
+                          {{ 'ADMIN.PARCEL_CLAIM.STATUS.' + row.status | translate }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      </div>
+
+      <div class="admin-modal-footer">
+        @if (phase === 'form') {
+          <button type="button" class="admin-btn" [disabled]="isFiling" (click)="onDismiss()">
+            {{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.CANCEL' | translate }}
+          </button>
+          <button
+            type="button"
+            class="admin-btn admin-btn-primary"
+            [disabled]="isFiling || form.invalid"
+            (click)="onFile()"
+            >
+            {{
+              (isFiling
+                ? 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.FILING'
+                : 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.FILE_BTN'
+              ) | translate
+            }}
+          </button>
+        }
+        @if (phase === 'filed') {
+          <button type="button" class="admin-btn admin-btn-primary" [disabled]="isRejecting" (click)="onDone()">
+            {{ 'STAFF.PARCEL_DELIVERY.CLAIM_DIALOG.DONE_BTN' | translate }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
