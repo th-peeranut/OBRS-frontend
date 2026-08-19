@@ -1792,6 +1792,13 @@
     },
     "SYSTEM_SETTINGS": {
       "SUBTITLE": "รวมการตั้งค่าทั้งหมดของระบบไว้ที่เดียว แยกตามหัวข้อ",
+      "GROUPS": {
+        "SALES_POLICY": "นโยบายการขาย",
+        "REVENUE_SHARE": "เงินและส่วนแบ่ง",
+        "NOTIFICATIONS": "การแจ้งเตือน",
+        "SEATING": "ที่นั่งและรถ",
+        "SYSTEM": "ระบบ"
+      },
       "UNSAVED_CHANGES_TITLE": "ทิ้งการแก้ไขที่ยังไม่ได้บันทึก?",
       "UNSAVED_CHANGES_TEXT": "แท็บนี้มีการแก้ไขที่ยังไม่ได้บันทึก ถ้าออกตอนนี้การแก้ไขจะหายไป",
       "UNSAVED_CHANGES_CONFIRM": "ทิ้งแล้วออก",

@@ -25,6 +25,16 @@ export interface SystemSettingsTab {
   readonly legacyPath: string;
   /** Tab label. Reuses the standalone page's own nav label, already translated. */
   readonly labelKey: string;
+  /**
+   * OBRS-1432: i18n key of the topic this tab belongs to. The strip renders one
+   * entry per GROUP, not per tab — a group of two or more collapses into a
+   * dropdown, so the strip's width stops tracking the tab count.
+   *
+   * <p>This is the label key itself rather than an opaque id, because the key
+   * IS the identity: two tabs are in one group exactly when they name the same
+   * translation, and there is then no second table to keep in step.
+   */
+  readonly groupKey: string;
   /** Page subtitle while this tab is open. Reuses the standalone page's. */
   readonly subtitleKey: string;
   /**
@@ -85,20 +95,65 @@ export interface SystemSettingsTab {
  * route redirects its empty path there, so the first tab's `requiredRoles` have
  * to admit everyone the parent admits. {@link SYSTEM_SETTINGS_ROLES} is that
  * parent set, and system-settings-page.component.spec.ts asserts the invariant.
+ *
+ * <p><b>OBRS-1432: tabs sharing a {@link SystemSettingsTab.groupKey} must stay
+ * ADJACENT here.</b> {@link groupSystemSettingsTabs} keys on first appearance,
+ * so a group split across the array would render its dropdown once with the
+ * strays folded back into it — the strip would be right while THIS array reads
+ * as if it were not. The order spec in system-settings-page.component.spec.ts
+ * is what catches that: it compares the rendered order to this array's, and a
+ * non-adjacent entry is exactly what makes the two disagree.
  */
 export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
   {
     path: 'booking-policy',
     legacyPath: 'booking-policy-config',
     labelKey: 'ADMIN.PAGES.BOOKING_POLICY_CONFIG',
+    groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.SALES_POLICY',
     subtitleKey: 'ADMIN.BOOKING_POLICY_CONFIG.SUBTITLE',
     requiredRoles: ['admin', 'owner'],
     component: BookingPolicyConfigPageComponent,
   },
   {
+    // OBRS-699: owner-only, new. OBRS-1432 moved it up here, next to
+    // booking-policy: both answer "what may a customer do to a ticket", and a
+    // group only collapses into one dropdown entry if its members are adjacent.
+    // Nothing but the rendered order changes — the path, the legacy redirect
+    // and the guard are the ones it shipped with.
+    path: 'cancel-reschedule-policy',
+    legacyPath: 'cancel-reschedule-policy-config', // no prior standalone page; kept for interface parity
+    labelKey: 'ADMIN.PAGES.CANCEL_RESCHEDULE_POLICY_CONFIG',
+    groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.SALES_POLICY',
+    subtitleKey: 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.SUBTITLE',
+    requiredRoles: ['owner'],
+    component: CancelReschedulePolicyConfigPageComponent,
+  },
+  {
+    // OBRS-960: owner-only, new. The OBRS-960 pair keeps the adjacency it
+    // shipped with, and OBRS-1432 made that adjacency the group.
+    path: 'parcel-share',
+    legacyPath: 'parcel-share-config',
+    labelKey: 'ADMIN.PAGES.PARCEL_SHARE_CONFIG',
+    groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.REVENUE_SHARE',
+    subtitleKey: 'ADMIN.PARCEL_SHARE_CONFIG.SUBTITLE',
+    requiredRoles: ['owner'],
+    component: ParcelShareConfigPageComponent,
+  },
+  {
+    // OBRS-960: owner-only, new.
+    path: 'driver-cash-rates',
+    legacyPath: 'driver-cash-rates',
+    labelKey: 'ADMIN.PAGES.DRIVER_CASH_RATES',
+    groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.REVENUE_SHARE',
+    subtitleKey: 'ADMIN.DRIVER_CASH_RATES.SUBTITLE',
+    requiredRoles: ['owner'],
+    component: DriverCashRatesPageComponent,
+  },
+  {
     path: 'reminders',
     legacyPath: 'reminder-config',
     labelKey: 'ADMIN.PAGES.REMINDER_CONFIG',
+    groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.NOTIFICATIONS',
     subtitleKey: 'ADMIN.REMINDER_CONFIG.SUBTITLE',
     // OBRS-1016: was ['admin']. Inert either way (ROLE_GRANTS makes all three
     // spellings one predicate today), but the backend guard on
@@ -110,50 +165,9 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     component: ReminderConfigPageComponent,
   },
   {
-    path: 'jump-seat',
-    legacyPath: 'jump-seat-config',
-    labelKey: 'ADMIN.PAGES.JUMP_SEAT_CONFIG',
-    subtitleKey: 'ADMIN.JUMP_SEAT_CONFIG.SUBTITLE',
-    // OBRS-1016 / ADR-0120: same move as the reminders tab above — the backend
-    // GET/PUT /private/admin/configs/jump-seat is hasRole('OWNER') now.
-    requiredRoles: ['admin', 'owner'],
-    component: JumpSeatConfigPageComponent,
-  },
-  {
-    // OBRS-960: owner-only, new. Placed after the pre-existing four tabs and
-    // before the "meta" history tab (which stays last, per its own comment).
-    path: 'parcel-share',
-    legacyPath: 'parcel-share-config',
-    labelKey: 'ADMIN.PAGES.PARCEL_SHARE_CONFIG',
-    subtitleKey: 'ADMIN.PARCEL_SHARE_CONFIG.SUBTITLE',
-    requiredRoles: ['owner'],
-    component: ParcelShareConfigPageComponent,
-  },
-  {
-    // OBRS-960: owner-only, new.
-    path: 'driver-cash-rates',
-    legacyPath: 'driver-cash-rates',
-    labelKey: 'ADMIN.PAGES.DRIVER_CASH_RATES',
-    subtitleKey: 'ADMIN.DRIVER_CASH_RATES.SUBTITLE',
-    requiredRoles: ['owner'],
-    component: DriverCashRatesPageComponent,
-  },
-  {
-    // OBRS-699: owner-only, new. APPENDED to the owner-only block
-    // (parcel-share, driver-cash-rates) rather than inserted into it, so the
-    // OBRS-960 pair keeps the adjacency it shipped with and only the two tabs
-    // after this one shift index.
-    path: 'cancel-reschedule-policy',
-    legacyPath: 'cancel-reschedule-policy-config', // no prior standalone page; kept for interface parity
-    labelKey: 'ADMIN.PAGES.CANCEL_RESCHEDULE_POLICY_CONFIG',
-    subtitleKey: 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.SUBTITLE',
-    requiredRoles: ['owner'],
-    component: CancelReschedulePolicyConfigPageComponent,
-  },
-  {
     // OBRS-1308: owner-editable notification message overrides + admin
-    // approval queue. Placed after driver-cash-rates and before the "meta"
-    // history tab (which stays last, per its own comment). requiredRoles
+    // approval queue. OBRS-1432 moved it up beside `reminders`, which is the
+    // other half of "what the system says to people, and when". requiredRoles
     // matches the backend owner controller (hasRole('OWNER') admits ADMIN via
     // ROLE_GRANTS) — the SEPARATE admin-only review queue/detail underneath
     // this tab is gated at the component level (getRoles().includes('admin')),
@@ -163,6 +177,7 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     path: 'notification-messages',
     legacyPath: 'notification-messages', // no prior standalone page; kept for interface parity
     labelKey: 'ADMIN.PAGES.NOTIFICATION_MESSAGES',
+    groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.NOTIFICATIONS',
     subtitleKey: 'ADMIN.NOTIFICATION_MESSAGES.SUBTITLE',
     requiredRoles: ['admin', 'owner'],
     component: NotificationMessagesTabPageComponent,
@@ -174,16 +189,61 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     ],
   },
   {
+    // Sole member of its group today, so OBRS-1432 renders it as the plain link
+    // it has always been — a dropdown that opens onto one item is a click for
+    // nothing. It becomes a dropdown by itself the day a second tab names this
+    // same groupKey; the template asks the group's size, not this tab.
+    path: 'jump-seat',
+    legacyPath: 'jump-seat-config',
+    labelKey: 'ADMIN.PAGES.JUMP_SEAT_CONFIG',
+    groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.SEATING',
+    subtitleKey: 'ADMIN.JUMP_SEAT_CONFIG.SUBTITLE',
+    // OBRS-1016 / ADR-0120: same move as the reminders tab above — the backend
+    // GET/PUT /private/admin/configs/jump-seat is hasRole('OWNER') now.
+    requiredRoles: ['admin', 'owner'],
+    component: JumpSeatConfigPageComponent,
+  },
+  {
     // Last: the "meta" view over every other tab, same placement it held as the
-    // last entry of the sidebar's System section (OBRS-576).
+    // last entry of the sidebar's System section (OBRS-576). Also a one-tab
+    // group, so it stays a plain link too.
     path: 'history',
     legacyPath: 'config-change-history',
     labelKey: 'ADMIN.PAGES.CONFIG_CHANGE_HISTORY',
+    groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.SYSTEM',
     subtitleKey: 'ADMIN.CONFIG_CHANGE_HISTORY.SUBTITLE',
     requiredRoles: ['admin', 'owner'],
     component: ConfigChangeHistoryPageComponent,
   },
 ];
+
+/** One rendered entry of the `/admin/settings` strip — see {@link groupSystemSettingsTabs}. */
+export interface SystemSettingsTabGroup {
+  /** i18n key shown on the dropdown trigger. Unused when `tabs` holds one tab. */
+  readonly labelKey: string;
+  readonly tabs: readonly SystemSettingsTab[];
+}
+
+/**
+ * OBRS-1432: the tabs a visitor may see, folded into the entries the strip
+ * actually renders. Keyed on first appearance, so the group order is the order
+ * each group's first tab appears in {@link SYSTEM_SETTINGS_TABS}.
+ *
+ * <p>Runs on the ALREADY role-filtered list, never on the full table: a group
+ * whose every tab is hidden must not render an empty dropdown, and one with a
+ * single visible tab must render that tab as a link rather than bury it.
+ */
+export function groupSystemSettingsTabs(
+  tabs: readonly SystemSettingsTab[]
+): readonly SystemSettingsTabGroup[] {
+  const byKey = new Map<string, SystemSettingsTab[]>();
+  for (const tab of tabs) {
+    const members = byKey.get(tab.groupKey);
+    if (members) members.push(tab);
+    else byKey.set(tab.groupKey, [tab]);
+  }
+  return Array.from(byKey, ([labelKey, groupTabs]) => ({ labelKey, tabs: groupTabs }));
+}
 
 /**
  * Roles admitted to `/admin/settings` itself — the UNION of the tabs' roles, so

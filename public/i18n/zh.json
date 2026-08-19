@@ -1792,6 +1792,13 @@
     },
     "SYSTEM_SETTINGS": {
       "SUBTITLE": "所有系统配置集中于一处，按主题分组",
+      "GROUPS": {
+        "SALES_POLICY": "销售政策",
+        "REVENUE_SHARE": "资金与分成",
+        "NOTIFICATIONS": "通知",
+        "SEATING": "座位与车辆",
+        "SYSTEM": "系统"
+      },
       "UNSAVED_CHANGES_TITLE": "放弃未保存的更改？",
       "UNSAVED_CHANGES_TEXT": "此标签页有尚未保存的修改，现在离开将会丢失。",
       "UNSAVED_CHANGES_CONFIRM": "放弃并离开",
