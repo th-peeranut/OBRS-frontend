@@ -7,7 +7,7 @@ import { UsabilityReportBadgeRefreshService } from '../../shared/services/usabil
 import { BadgeSocketService } from '../../services/admin/badge-socket.service';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 import { UsabilityReportStatus } from '../../shared/interfaces/usability-report.interface';
-import { SYSTEM_SETTINGS_ROLES } from './pages/system-settings/system-settings-tabs';
+import { SYSTEM_SETTINGS_ROLES, SYSTEM_SETTINGS_TABS } from './pages/system-settings/system-settings-tabs';
 import { NavSearchHighlightSegment, buildHighlightSegments } from '../../shared/lib/nav-search-highlight';
 
 interface AdminNavItem {
@@ -165,6 +165,15 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // filteredNavItems; NOT a getter (same CD-safety rule as navItems above).
   protected filteredNavSections: AdminNavSection[] = [];
 
+  // OBRS-1431: what the SEARCH matches against — navItems PLUS one entry per
+  // /admin/settings tab. Deliberately a second array rather than more entries
+  // in navItems: navItems is the rendered sidebar, and these must never be
+  // rendered there (OBRS-702 collapsed those pages into ONE entry on purpose,
+  // and nav-reachability.spec.ts asserts one anchor per navItems entry). So
+  // the empty-query branch of applyNavSearch() below still restores navItems,
+  // while the filter and the highlight pass both read this superset.
+  private navSearchCorpus: AdminNavItem[] = [];
+
   // OBRS-196: Settlements is gated to owner/admin (route `requiredRoles:
   // ['owner']`; ROLE_GRANTS['admin'] includes 'owner', so admin is admitted
   // too). hasAnyRole(['owner']) alone is sufficient to cover both, mirroring
@@ -301,6 +310,39 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     return items;
   }
 
+  // OBRS-1431: the eight /admin/settings tabs as search-only nav entries.
+  // Before OBRS-702 four of them were sidebar entries of their own and the
+  // search found them; folding them into the single 'settings' entry dropped
+  // every tab name and subtitle out of the corpus, and nobody noticed.
+  //
+  // Derived from SYSTEM_SETTINGS_TABS, never re-listed here — that array
+  // already owns path/labelKey/subtitleKey/requiredRoles, so tab nine becomes
+  // searchable without this file changing. `descriptionKey` reuses the tab's
+  // own subtitleKey exactly as buildNavItems() reuses each route's, which is
+  // what makes description matching (OBRS-290) and highlighting (OBRS-900)
+  // work on these entries with no further wiring.
+  //
+  // Each tab is gated on its OWN requiredRoles rather than on the shell's
+  // union: the union is what opens /admin/settings, but a search result that
+  // 403s on click is worse than no result. Inert today (ROLE_GRANTS makes
+  // admin and owner one predicate, auth.service.ts:60-62) — written on the
+  // side it must be on for the day owner-scoping makes the two differ, the
+  // same standing the tabs' own requiredRoles carry.
+  private buildSettingsTabItems(): AdminNavItem[] {
+    return SYSTEM_SETTINGS_TABS.filter((tab) =>
+      this.authService.hasAnyRole([...tab.requiredRoles])
+    ).map((tab) => ({
+      path: `settings/${tab.path}`,
+      labelKey: tab.labelKey,
+      // Distinct from the 'settings' gear the parent entry uses, so a result
+      // row reads as a page inside System Settings rather than a second copy
+      // of it.
+      icon: 'tune',
+      descriptionKey: tab.subtitleKey,
+      section: 'system' as const,
+    }));
+  }
+
   // OBRS-378: the sidebar badge is now role-split — owner defaults to
   // watching 'new' (awaiting screening), admin watches 'owner_accepted'
   // (OBRS-527: owner-screened, awaiting platform adoption — 'accepted' is
@@ -346,6 +388,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     // fires synchronously via startWith) already has navItems in place —
     // mirrors StaffLayoutComponent.ngOnInit's ordering.
     this.navItems = this.buildNavItems();
+    this.navSearchCorpus = [...this.navItems, ...this.buildSettingsTabItems()];
     this.filteredNavItems = this.navItems;
     this.filteredNavSections = this.buildSections(this.navItems);
     super.ngOnInit();
@@ -399,7 +442,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     this.navSearchQuery = query;
     const q = query.trim().toLowerCase();
     this.filteredNavItems = q
-      ? this.navItems.filter((item) => {
+      ? this.navSearchCorpus.filter((item) => {
           const label = this.translate.instant(item.labelKey).toLowerCase();
           const description = item.descriptionKey
             ? this.translate.instant(item.descriptionKey).toLowerCase()
@@ -411,14 +454,14 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     // OBRS-900: precompute highlight segments for EVERY item here (query or
     // language change), never in the template — same CD-safety rule as the
     // fields above. Segments live on the item objects themselves, which
-    // navItems and filteredNavItems already share by reference, so this is
-    // one assignment site regardless of which list a given item currently
-    // sits in. Cleared to `undefined` when the (trimmed) query is blank —
+    // navSearchCorpus and filteredNavItems already share by reference, so
+    // this is one assignment site regardless of which list a given item
+    // currently sits in. Cleared to `undefined` when the (trimmed) query is blank —
     // deliberately the SAME trim this method already applies to `q` above, so
     // a whitespace-only query behaves identically for highlighting as it
     // already does for filtering (matches nothing extra, shows everything).
     const rawQuery = query.trim();
-    this.navItems.forEach((item) => {
+    this.navSearchCorpus.forEach((item) => {
       if (!rawQuery) {
         item.labelSegments = undefined;
         item.descriptionSegments = undefined;
