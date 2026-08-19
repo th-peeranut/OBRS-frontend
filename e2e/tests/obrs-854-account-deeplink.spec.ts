@@ -158,17 +158,58 @@ async function logIn(page: Page): Promise<void> {
 }
 
 /**
+ * OBRS-1436. `logIn()` above leaves an overlay behind, and it is not scenery: `errorInterceptor`
+ * raises `AlertService.showLoading()` for EVERY `/api/` request, so arriving on `/account` puts a
+ * full-viewport `.swal2-container` on screen for as long as `GET /api/private/users/me` is in
+ * flight, plus sweetalert2's close animation — it removes the container from `didClose`, which it
+ * runs on the popup's `animationend`, not when `Swal.close()` is called.
+ *
+ * MEASURED (`e2e/probe-obrs-1436-overlay-linger.mjs`, 5 runs on the `gate` build): the container
+ * is in the DOM for 231-272 ms, and in 5 runs out of 5 it was STILL THERE at the moment this spec
+ * has the button attached and starts measuring. This assertion never had margin — it passed only
+ * because the settling below usually outlasts the overlay, and in the red run's trace that
+ * settling took 134 ms. On a loaded CI box it does not, and `elementFromPoint` returns the overlay
+ * instead of the consent bar: the GATE lane went red that way on `d52b9f29` and again on `dev`
+ * `408a2ebe`, green on a re-run of the same tree.
+ *
+ * So wait for it to leave the DOM rather than sampling whichever side of the race the machine
+ * produced — the same move OBRS-1383 made for the scroll offset. The wait is bounded and its
+ * failure is deliberately NOT thrown: an overlay that never leaves is worth reporting as what it
+ * is, and the read below names it, which a bare timeout here would not.
+ */
+const OVERLAY_SETTLE_TIMEOUT_MS = 5_000;
+
+async function waitForNoOverlay(page: Page): Promise<void> {
+  await page
+    .waitForFunction(() => document.querySelectorAll('.swal2-container').length === 0, null, {
+      timeout: OVERLAY_SETTLE_TIMEOUT_MS,
+    })
+    .catch(() => undefined);
+}
+
+/**
  * OBRS-1383. What `document.elementFromPoint` returns at the centre of `target`, as
  * `tag.class[data-testid]` — the element that would receive the tap, named well enough that a
  * failure says WHAT took it rather than just "something did".
  */
 async function hitAtCentre(target: Locator): Promise<string> {
+  await waitForNoOverlay(target.page());
+
   return target.evaluate((el) => {
     const r = el.getBoundingClientRect();
     const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
     if (!top) return '<nothing: the centre is outside the viewport>';
     const testid = top.getAttribute('data-testid');
-    return `${top.tagName.toLowerCase()}.${top.className}${testid ? `[${testid}]` : ''}`;
+    const named = `${top.tagName.toLowerCase()}.${top.className}${testid ? `[${testid}]` : ''}`;
+    // OBRS-1436 AC-5. `div.swal2-container swal2-...` on its own says a modal took the tap but not
+    // WHICH one — every sweetalert2 container carries the same classes, and the app's only popup
+    // that sets a custom class does it on the popup, not the container. So when the winner is an
+    // overlay, name the popup and its title too.
+    const overlay = top.closest('.swal2-container');
+    if (!overlay) return named;
+    const popup = overlay.querySelector('.swal2-popup');
+    const title = overlay.querySelector('.swal2-title')?.textContent?.trim();
+    return `${named} — a SweetAlert2 overlay outlived the wait: popup "${popup?.className ?? '(none)'}"${title ? `, title "${title}"` : ''}`;
   });
 }
 
@@ -236,6 +277,10 @@ test.describe('OBRS-854: the counter QR lands a logged-out phone on a working cl
     const banner = page.locator('app-analytics-consent-banner .consent-banner');
     const openButton = page.locator('[data-testid="close-account-open"]');
     await expect(banner).toBeVisible();
+    // OBRS-1436, and not only for the hit-test below: sweetalert2 puts `overflow: hidden` on
+    // `body.swal2-shown`, so while that overlay is up this page cannot be scrolled at all — every
+    // scroll step from here down would be measuring a document that is pinned.
+    await waitForNoOverlay(page);
     await stabilizeScrolling(page);
 
     // OBRS-1383. This was `scrollIntoViewIfNeeded()` followed by one immediate read, and it
