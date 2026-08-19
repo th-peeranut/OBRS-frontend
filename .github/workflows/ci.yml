@@ -464,6 +464,14 @@ jobs:
       # step so that when it does give up, the failure names THIS step instead of the job
       # dying at its own cap with nothing to point at.
       #
+      # The two caps do not report the same thing, measured on run 32259750409 (three
+      # throwaway jobs that hung on purpose, reverted in the commit after it): a JOB-level
+      # timeout ends the job as `cancelled` after 2m45s against a 2m cap, while a
+      # STEP-level timeout ends it as `failure` after 1m13s against a 1m cap and the failed
+      # step is the one named. Both are red -- `ci-verdict.ps1` counts cancelled as fail --
+      # but only one of them tells the next reader where to look, which is the whole reason
+      # this step carries its own.
+      #
       # Measured 2026-08-19: this download normally costs 23s / 27s / 2m24s (runs
       # 32219717206, 32198992009, 32218179772). On the day of the incident the same fetch
       # took 25m15s on run 32225550203 and was still going at 3h10m on 32226812923 -- so
@@ -545,45 +553,3 @@ jobs:
             playwright-report/
           retention-days: 7
           if-no-files-found: ignore
-
-  # ==========================================================================================
-  # OBRS-1442 AC-5 -- TEMPORARY. This block exists to make one CI run that proves the caps
-  # actually fire, and the very next commit on this branch removes it. If you are reading this
-  # on dev, the revert was lost and this block should be deleted, not fixed.
-  # ==========================================================================================
-  ac5-proof-job-cap:
-    name: AC-5 proof - job cap fires (TEMPORARY)
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    steps:
-      - name: Hang for 20 minutes on purpose
-        run: sleep 1200
-
-  ac5-proof-step-cap:
-    name: AC-5 proof - step cap fires and names the step (TEMPORARY)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Hang for 20 minutes on purpose, bounded by the step
-        timeout-minutes: 1
-        run: sleep 1200
-
-  ac5-proof-retry-loop:
-    name: AC-5 proof - the install retry loop fails closed (TEMPORARY)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      # Same shape as `Install Playwright Chromium`, with the download replaced by a command
-      # that can only stall and the budgets scaled down so the proof costs ~70s instead of 13m.
-      - name: Three bounded attempts, then fail
-        timeout-minutes: 4
-        run: |
-          for attempt in 1 2 3; do
-            if timeout -k 10s 20s sleep 600; then
-              exit 0
-            fi
-            echo "::warning::attempt $attempt did not finish within 20s; retrying"
-            sleep 5
-          done
-          echo "::error::three attempts, still stalled"
-          exit 1
