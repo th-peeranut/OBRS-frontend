@@ -22,10 +22,31 @@ on:
   pull_request:
     branches: [dev, main]
 
+# OBRS-1442: every job below carries `timeout-minutes`. GitHub's default is 360 minutes
+# (six hours), and on 2026-08-19 that default let a single step run for 3h10m without one
+# test executing: `Install Playwright Chromium` stalled on three runs at once
+# (32226812923, 32225735192, 32225550203). Nothing anywhere says "hung" -- `gh pr checks`
+# prints the same `pending` at minute 1 and at minute 204 -- and `release-task.ps1` gate
+# 2.7 refuses to close a card while CI has no verdict, so the stall froze the reviews and
+# the close-outs behind it too.
+#
+# The caps are measured, not chosen. `gh run view <id> --json jobs` over the last 40
+# completed CI runs (n=38 per job after dropping skipped and cancelled) gives job maxima
+# of 2.1m for Unit Tests, 0.9m for Build Smoke Check, and 18.8m for E2E Gate once run
+# 32225550203 is set aside -- that one finished green in 41.6m, but 25m15s of it was the
+# stalled install, so it measures the incident, not the lane.
+#
+# Each cap sits above the worst case its job can legitimately reach, including the retry
+# budget e2e-gate now grants itself below. Deliberately not tighter: a cap that fires on a
+# slow-but-healthy run gets re-run until green, and a gate people re-run is not a gate.
+# Raise one when a measurement says to, never because a run went red once.
 jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    # Measured max 2.1m (n=38). 10 covers a cold npm cache, which is the only thing here
+    # that varies by minutes rather than seconds.
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -362,6 +383,9 @@ jobs:
   build:
     name: Build Smoke Check (AOT + budgets)
     runs-on: ubuntu-latest
+    # Measured max 0.9m (n=38) -- the AOT build itself is under a minute and `npm ci` is
+    # the rest. Same 10 as unit-tests for the same cold-cache reason.
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -401,6 +425,12 @@ jobs:
   e2e-gate:
     name: E2E Gate Lane (hermetic)
     runs-on: ubuntu-latest
+    # Measured max 18.8m healthy (n=38). The install step below may now spend up to 13m of
+    # its own retrying, and the slowest `Run deterministic E2E lane` step measured is
+    # 15m53s (run 32225550203), so the worst run that is still doing real work is about
+    # 13 + 16 + 1 = 30m. 35 is that with margin; anything under 30 would kill a run that
+    # was going to pass.
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -417,10 +447,55 @@ jobs:
       # Playwright drives its OWN bundled Chromium, not the Google Chrome that
       # ubuntu-latest ships (which is what the unit-test job's karma-chrome-launcher
       # picks up). Without this the run fails at browser launch, not at an assertion.
-      # `--with-deps` pulls the shared libraries that headless Chromium needs on a bare
+      # `install-deps` pulls the shared libraries that headless Chromium needs on a bare
       # runner image; chromium only, since `projects` declares no other browser.
+      #
+      # OBRS-1442 split this out of the `--with-deps` one-liner it used to be. Only the
+      # browser download below is retried, and a retry has to be safe to start over: this
+      # half is `apt-get`, and killing apt mid-transaction leaves a dpkg lock that makes
+      # every later attempt fail for a new reason. So the apt half gets a cap and no
+      # retry, and the fetch half gets both.
+      - name: Install Chromium system dependencies
+        timeout-minutes: 5
+        run: npx playwright install-deps chromium
+
+      # OBRS-1442 -- two bounds, deliberately. `timeout` bounds ONE attempt so a stalled
+      # fetch is abandoned and retried rather than waited on; `timeout-minutes` bounds the
+      # step so that when it does give up, the failure names THIS step instead of the job
+      # dying at its own cap with nothing to point at.
+      #
+      # Measured 2026-08-19: this download normally costs 23s / 27s / 2m24s (runs
+      # 32219717206, 32198992009, 32218179772). On the day of the incident the same fetch
+      # took 25m15s on run 32225550203 and was still going at 3h10m on 32226812923 -- so
+      # it is an intermittent stall, not a dead endpoint, and a fresh attempt is the thing
+      # that clears it: `gh run rerun --failed` got it back under 30s by hand. 240s is
+      # 1.7x the slowest healthy download measured, and three attempts is that same manual
+      # rerun without a human in it. Worst case 3 x 240s + 2 x 15s = 12m30s, inside the 13.
+      #
+      # `timeout` is coreutils, already on ubuntu-latest. Deliberately not a marketplace
+      # retry action: this workflow is the merge gate, and nothing on it should depend on
+      # a third-party repository that can change under us.
+      #
+      # AC-6, the cache decision, written here so it cannot be silently reversed: NO
+      # `actions/cache` for the browser. It would save ~27s on a job whose measured median
+      # is 14.0m (~3.2%), Actions minutes are unmetered here (OBRS-735, this repo is
+      # public), and a cache restore is itself a network fetch from the same
+      # infrastructure that stalled -- so it moves the failure mode rather than removing
+      # it, while adding a key that must track the exact Playwright version or the lane
+      # silently runs a browser the config never pinned. Revisit if the measured download
+      # median passes ~2 minutes.
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 13
+        run: |
+          for attempt in 1 2 3; do
+            if timeout -k 10s 240s npx playwright install chromium; then
+              exit 0
+            fi
+            echo "::warning::playwright install attempt $attempt did not finish within 240s (OBRS-1442 stall); retrying"
+            sleep 15
+          done
+          echo "::error::playwright install did not finish in three attempts -- this is the OBRS-1442 download stall, not a failure of the code under test"
+          exit 1
 
       # No `continue-on-error` and no `retries` override: a red lane must fail the
       # workflow, and a flake must be diagnosed rather than retried into a green tick.
