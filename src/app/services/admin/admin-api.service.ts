@@ -1226,17 +1226,34 @@ export interface JumpSeatConfigDto {
 
 // OBRS-564: booking-policy config, a singleton row (same shape/lifecycle as
 // ReminderConfigDto/JumpSeatConfigDto above) — GET/PUT
-// `/api/private/admin/configs/booking-policy`. Backend guard is
-// hasRole('OWNER') (ROLE_GRANTS admits ADMIN automatically, per the
-// OBRS-446 comment on AuthService — see admin.module.ts's
-// settings/booking-policy child route). Also backs the PUBLIC, unauthenticated
-// `GET /api/booking-policy` consumed by BookingPolicyService
-// (business-policy page + home-booking's date-picker maxDate) — same two
-// numbers, two different endpoints (this one read/write + admin-gated, that
-// one read-only + public).
+// `/api/private/admin/configs/booking-policy`.
+//
+// ⛔ OBRS-1454 CORRECTION: the backend guard on that endpoint is
+// hasRole('ADMIN'), not hasRole('OWNER'). OBRS-825 narrowed it and this
+// comment was never updated, so it described a permission the server had
+// already stopped granting. An OWNER is REFUSED there — the backend's role
+// hierarchy runs one way (ADMIN > OWNER), unlike this frontend's symmetric
+// ROLE_GRANTS. Owners write their own numbers through
+// `/api/private/owner/configs/booking-policy` instead (OwnerBookingPolicyDto).
+//
+// Also backs the PUBLIC, unauthenticated `GET /api/booking-policy` consumed by
+// BookingPolicyService (business-policy page + home-booking's date-picker
+// maxDate) — same two numbers, two different endpoints (this one read/write +
+// admin-gated, that one read-only + public).
 export interface BookingPolicyConfigDto {
   maxAdvanceDays: number;
   cutoffMinutes: number;
+}
+
+/** `GET`/`PUT /api/private/owner/configs/booking-policy` — OBRS-730's shape,
+ * wired up by OBRS-1454. The same two numbers plus an `*Overridden` flag per
+ * field, so the page can tell "you customised this" from "you inherit the
+ * platform default" when both resolve to the same number. Suffix matches
+ * OwnerCancelReschedulePolicyDto below; the PUT body is the two numbers only
+ * (`BookingPolicyConfigDto`), no flags. */
+export interface OwnerBookingPolicyDto extends BookingPolicyConfigDto {
+  maxAdvanceDaysOverridden: boolean;
+  cutoffMinutesOverridden: boolean;
 }
 
 @Injectable({
@@ -2148,6 +2165,8 @@ export class AdminApiService {
 
   // OBRS-564: booking-policy config (max advance-booking days, minutes-before
   // -departure cutoff) — mirrors getJumpSeatConfig/updateJumpSeatConfig above.
+  // OBRS-1454: the PLATFORM DEFAULT pair, ADMIN-only since OBRS-825. An owner
+  // editing their own numbers wants the owner pair below, not these.
   getBookingPolicyConfig(): Observable<ResponseAPI<BookingPolicyConfigDto>> {
     return this.getRequest<BookingPolicyConfigDto>(
       `${this.baseUrl}/private/admin/configs/booking-policy`
@@ -2159,6 +2178,28 @@ export class AdminApiService {
   ): Observable<ResponseAPI<BookingPolicyConfigDto>> {
     return this.putRequest<BookingPolicyConfigDto>(
       `${this.baseUrl}/private/admin/configs/booking-policy`,
+      payload
+    );
+  }
+
+  // ── OBRS-1454: owner settings — booking policy ───────────────────────────
+  // The owner-scoped surface OBRS-730 built and no screen ever called. Same
+  // two numbers, written as THIS operator's override rather than the platform
+  // default. Guarded hasRole('OWNER') and refused to an ADMIN, who has no
+  // owner identity to scope an override to — so the caller must dispatch on
+  // the role actually held (BookingPolicyConfigStore#usesOwnerSurface).
+
+  getBookingPolicyOwnerConfig(): Observable<ResponseAPI<OwnerBookingPolicyDto>> {
+    return this.getRequest<OwnerBookingPolicyDto>(
+      `${this.baseUrl}/private/owner/configs/booking-policy`
+    );
+  }
+
+  updateBookingPolicyOwnerConfig(
+    payload: BookingPolicyConfigDto
+  ): Observable<ResponseAPI<OwnerBookingPolicyDto>> {
+    return this.putRequest<OwnerBookingPolicyDto>(
+      `${this.baseUrl}/private/owner/configs/booking-policy`,
       payload
     );
   }

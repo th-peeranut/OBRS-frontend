@@ -186,10 +186,15 @@ export class BookingPolicyConfigPageComponent
 
     this.isSaving = true;
     try {
+      // OBRS-1454: Save must post back to the surface the form was LOADED
+      // from, or an owner's edit is judged against a row they may not write.
+      // The store owns that decision (BookingPolicyConfigStore#usesOwnerSurface)
+      // so the two can never disagree.
+      const payload = this.bookingPolicyConfigForm.value as BookingPolicyConfigDto;
       await firstValueFrom(
-        this.adminApiService.updateBookingPolicyConfig(
-          this.bookingPolicyConfigForm.value as BookingPolicyConfigDto
-        )
+        this.store.usesOwnerSurface
+          ? this.adminApiService.updateBookingPolicyOwnerConfig(payload)
+          : this.adminApiService.updateBookingPolicyConfig(payload)
       );
       // Values now match what was just saved — clear dirty so the next
       // background refresh patches these controls again without a visual jump.

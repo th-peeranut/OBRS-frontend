@@ -124,7 +124,12 @@ test.describe('OBRS-564 — round trip: 30 -> 45', () => {
   test('/business-policy now reads 45 without a restart', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('app_language', 'en'));
     await page.goto('/business-policy');
-    const salesChannels = page.locator('.policy-card p').first();
+    // OBRS-1454: `:not(.policy-version)` because OBRS-658 (`660a722e`, 2026-08-12) inserted a
+    // "Version 1.1 - In force from ..." paragraph ABOVE the sales-channels one, inside the same
+    // .policy-card. Since then a bare `.policy-card p` .first() has resolved to the version line,
+    // so all four assertions in this file were reading a sentence that has no numbers in it. Not a
+    // regression of this card - measured on the same run that proved the Save fix.
+    const salesChannels = page.locator('.policy-card p:not(.policy-version)').first();
     await expect(salesChannels).toContainText('45 days', { timeout: 15_000 });
     await expect(salesChannels).toContainText('20 minutes');
     // Never a raw placeholder token.
@@ -205,7 +210,7 @@ test.describe('OBRS-564 — failure path, i18n and layout', () => {
   test('language switch live: numbers stay correct, no extra HTTP request', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('app_language', 'en'));
     await page.goto('/business-policy');
-    const salesChannels = page.locator('.policy-card p').first();
+    const salesChannels = page.locator('.policy-card p:not(.policy-version)').first();
     await expect(salesChannels).toContainText('30 days', { timeout: 15_000 });
 
     let policyRequestCount = 0;
@@ -240,7 +245,7 @@ test.describe('OBRS-564 — failure path, i18n and layout', () => {
     // The rest of the page (item 2 onward, POLICY.BUSINESS.CONTENT) must still render. When item 1
     // fails, its <p> is replaced by the ng-template's error <div> (see business-policy.component.html),
     // so the CONTENT paragraph is the only <p> left and is at index 0, not 1.
-    await expect(page.locator('.policy-card p').first()).toBeVisible();
+    await expect(page.locator('.policy-card p:not(.policy-version)').first()).toBeVisible();
   });
 
   test('never a raw {{maxAdvanceDays}} placeholder during a slow load', async ({ page }) => {
@@ -253,6 +258,6 @@ test.describe('OBRS-564 — failure path, i18n and layout', () => {
     const bodyTextDuringLoad = await page.locator('.policy-card').innerText();
     expect(bodyTextDuringLoad).not.toContain('{{maxAdvanceDays}}');
     expect(bodyTextDuringLoad).not.toContain('{{cutoffMinutes}}');
-    await expect(page.locator('.policy-card p').first()).toContainText('days', { timeout: 15_000 });
+    await expect(page.locator('.policy-card p:not(.policy-version)').first()).toContainText('days', { timeout: 15_000 });
   });
 });

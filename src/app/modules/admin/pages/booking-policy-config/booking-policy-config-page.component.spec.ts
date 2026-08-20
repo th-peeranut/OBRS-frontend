@@ -274,6 +274,32 @@ describe('BookingPolicyConfigPageComponent', () => {
     expect(store.refresh).toHaveBeenCalled();
   });
 
+  it('OBRS-1454: an OWNER saves to the owner surface, not the ADMIN-only platform one', async () => {
+    const ownerSpy = jasmine
+      .createSpy('updateBookingPolicyOwnerConfig')
+      .and.returnValue(of({ code: 200, message: 'OK', data: CONFIG }));
+    const adminSpy = jasmine.createSpy('updateBookingPolicyConfig');
+    const store = makeStoreStub();
+    // The store owns the surface decision so load and save can never disagree.
+    (store as unknown as { usesOwnerSurface: boolean }).usesOwnerSurface = true;
+    const { component } = makeComponent(
+      { updateBookingPolicyOwnerConfig: ownerSpy, updateBookingPolicyConfig: adminSpy },
+      store
+    );
+
+    component.ngOnInit();
+    store.data$.next({ ...CONFIG });
+    component.bookingPolicyConfigForm.get('maxAdvanceDays')?.markAsDirty();
+    component.bookingPolicyConfigForm.get('maxAdvanceDays')?.setValue(45);
+
+    await component.save();
+
+    // Before this card the call below went to /private/admin/configs/booking-policy, which
+    // OBRS-825 had narrowed to hasRole('ADMIN') — so this was the 403.
+    expect(ownerSpy).toHaveBeenCalledOnceWith({ maxAdvanceDays: 45, cutoffMinutes: 20 });
+    expect(adminSpy).not.toHaveBeenCalled();
+  });
+
   it('on save failure: shows the error alert and does not mark the form pristine', async () => {
     const updateSpy = jasmine
       .createSpy('updateBookingPolicyConfig')

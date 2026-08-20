@@ -1,10 +1,22 @@
 # Booking Policy Config (OBRS-564)
 
-Admin config for the two real booking-policy numbers — advance-booking cap
-(days) and minutes-before-departure cutoff — `GET`/`PUT
-/api/private/admin/configs/booking-policy` (backend guard `hasRole('OWNER')`;
-`ROLE_GRANTS` admits ADMIN automatically, per the OBRS-446 comment on
-`AuthService`).
+Config for the two real booking-policy numbers — advance-booking cap (days)
+and minutes-before-departure cutoff.
+
+**Two backend surfaces, chosen by the role actually held (OBRS-1454):**
+
+| signed in as | endpoint | what the save writes |
+| --- | --- | --- |
+| OWNER | `GET`/`PUT /api/private/owner/configs/booking-policy` | this operator's override |
+| ADMIN | `GET`/`PUT /api/private/admin/configs/booking-policy` | the platform default |
+
+⛔ This page used to call the admin pair for everybody, and this file used to
+say its guard was `hasRole('OWNER')`. Both were wrong from OBRS-825 onwards,
+which narrowed that endpoint to `hasRole('ADMIN')` — so an owner filling in the
+form got a **403 on Save**. The backend's role hierarchy runs one way
+(ADMIN > OWNER); this frontend's `ROLE_GRANTS` is symmetric, which is why
+`hasAnyRole` cannot be used to pick the surface (see
+`booking-policy-config.store.ts`).
 
 ## Why this card exists
 
