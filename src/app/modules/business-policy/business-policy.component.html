@@ -15,9 +15,17 @@
       }}
     </p>
 
+    <!-- OBRS-623/659: CONTENT joined SALES_CHANNELS inside this gate. Items 2-5 now interpolate
+         the reschedule and cancellation values from /api/reschedule-policy and
+         /api/cancellation-policy, so rendering them without the fetch would print raw
+         {{rescheduleWindowHours}} at a customer — the literal defect OBRS-564 opened this gate
+         for. What must NOT happen is the whole page going blank on a failed fetch, so the
+         travel conditions below stay outside it: they carry no config value, and a reader
+         during an outage still gets the rules about baggage, no-show and liability. -->
     @if (policyParams) {
       <p
       [innerHTML]="'POLICY.BUSINESS.SALES_CHANNELS' | translate: policyParams"></p>
+      <p [innerHTML]="'POLICY.BUSINESS.CONTENT' | translate: policyParams"></p>
     } @else {
       @if (!policyLoadFailed) {
         <div class="policy-skeleton-block" aria-hidden="true">
@@ -35,13 +43,19 @@
         </div>
       }
     }
-    <p [innerHTML]="'POLICY.BUSINESS.CONTENT' | translate"></p>
+    <!-- OBRS-623/659: the passenger travel conditions, lifted out of CONTENT unchanged so that
+         what OBRS-620 settled (the no-show rule) and what OBRS-629 settled (carry-on baggage vs
+         consigned parcels) is not reworded here. Deliberately OUTSIDE the gate above: it holds no
+         config value, so an outage has no reason to hide it. -->
+    <p [innerHTML]="'POLICY.BUSINESS.TRAVEL_CONDITIONS' | translate"></p>
 
-    <!-- OBRS-627 AC-5: item 7 of CONTENT above used to repeat the refund terms
+    <!-- OBRS-627 AC-5: an item of CONTENT above used to repeat the refund terms
          verbatim from /refund-policy — one edit away from the two pages
          contradicting each other, which is how they reached the state that card
-         reports. /refund-policy is now the single source and item 7 is a pointer;
-         this is the clickable half of that pointer. -->
+         reports. /refund-policy is now the single source and this is the link to
+         it. OBRS-623/659 renumbered that item (7 -> 4) and gave it the rates and
+         windows themselves, read live from the same endpoint /refund-policy reads,
+         so the two pages still cannot disagree — the full terms stay over there. -->
     <p class="policy-cross-link">
       <a routerLink="/refund-policy">{{ 'POLICY.BUSINESS.SEE_REFUND_POLICY' | translate }}</a>
     </p>
