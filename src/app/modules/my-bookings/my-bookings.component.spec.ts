@@ -21,6 +21,10 @@ function buildBooking(overrides: Partial<MyBookingDto> = {}): MyBookingDto {
     // OBRS-699: the reschedule/change-seat/change-stop window is wire-supplied
     // per row. Omitting it makes all three INELIGIBLE by design.
     rescheduleWindowHours: 2,
+    // OBRS-1447: so is the cap, and by the same contract - omitting it now means
+    // "no governing operator", not "unlimited". 0 IS unlimited and is the shipped
+    // default, which is what makes this the right baseline.
+    rescheduleMaxCount: 0,
     createdAt: '2026-06-01T10:00:00',
     bookingSchedules: [
       {
@@ -284,6 +288,22 @@ describe('MyBookingsComponent', () => {
 
       expect(view.rescheduleEligible).toBeTrue();
       expect(view.rescheduleReasonKey).toBeNull();
+    });
+
+    // OBRS-1447: the cap is owner-scoped now, so an absent value is the SAME signal as an
+    // absent window - the backend could not resolve a governing operator. Reading it as
+    // "unlimited" would offer Reschedule on a booking whose policy nobody stated.
+    it('OBRS-1447: an ABSENT rescheduleMaxCount is ineligible, not unlimited', () => {
+      const view = toView(
+        buildBooking({
+          rescheduleCount: 0,
+          rescheduleMaxCount: null,
+          bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }],
+        })
+      );
+
+      expect(view.rescheduleEligible).toBeFalse();
+      expect(view.rescheduleReasonKey).toBe('MY_BOOKINGS.RESCHEDULE.REASON.NO_WINDOW');
     });
 
     it('OBRS-657: eligible below a cap of 5 and refused at it — the cap is the wire value, not a literal', () => {

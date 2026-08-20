@@ -47,6 +47,8 @@ describe('MyBookingsComponent (reschedule action — action menu)', () => {
       // OBRS-699: the window is wire-supplied now, so every fixture must state
       // it — a booking without it is INELIGIBLE by design, not "defaults to 2".
       rescheduleWindowHours: 2,
+      // OBRS-1447: the cap joined that contract. 0 = UNLIMITED, the shipped default.
+      rescheduleMaxCount: 0,
       createdAt: dayjs().toISOString(),
       bookingSchedules: [
         {

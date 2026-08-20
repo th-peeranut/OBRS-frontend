@@ -28,6 +28,8 @@ const CONFIG = {
   cancelRefundRateLateOverridden: false,
   rescheduleFeeLateThb: 50,
   rescheduleFeeLateThbOverridden: false,
+  rescheduleMaxCount: 0,
+  rescheduleMaxCountOverridden: false,
 };
 
 describe('CancelReschedulePolicyConfigStore', () => {
