@@ -229,8 +229,17 @@
                       }}
                       {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
                     </div>
-                    <!-- Province/Station Name -->
-                    @if (this.scheduleFilter | async; as scheduleFilter) {
+                    <!-- Province/Station Name.
+                         OBRS-1343: for a cross pair this is the stop the bus
+                         home actually leaves from, NOT the outbound drop-off —
+                         naming the drop-off here sent the customer to a stop no
+                         return round calls at, on the last screen before they
+                         paid. -->
+                    @if (crossPairBoardingStop(scheduleList | async); as boarding) {
+                      <div class="card-body-detail-station-info">
+                        <div class="body-header-text">{{ boarding.name }}</div>
+                      </div>
+                    } @else if (this.scheduleFilter | async; as scheduleFilter) {
                       <div
                         class="card-body-detail-station-info"
                         >
@@ -246,6 +255,36 @@
                       </div>
                     }
                   </div>
+                  <!-- OBRS-1343: and say WHY the stop above is not the one they
+                       got off at, with the real distance, while they can still
+                       change their mind. -->
+                  @if (crossPairBoardingStop(scheduleList | async); as boarding) {
+                    <div class="return-boarding-notice">
+                      <p class="return-boarding-notice__title">
+                        {{ "COMMON.RETURN_BOARDING.TITLE" | translate }}
+                      </p>
+                      @if (boardingDistanceView(boarding.distanceMeters); as distance) {
+                        <p class="return-boarding-notice__body">
+                          {{
+                            "COMMON.RETURN_BOARDING.BODY"
+                              | translate
+                                : {
+                                    name: boarding.name,
+                                    distance: distance.amount,
+                                    unit: distance.unitKey | translate
+                                  }
+                          }}
+                        </p>
+                      } @else {
+                        <p class="return-boarding-notice__body">
+                          {{
+                            "COMMON.RETURN_BOARDING.BODY_NO_DISTANCE"
+                              | translate: { name: boarding.name }
+                          }}
+                        </p>
+                      }
+                    </div>
+                  }
                   <!-- xx hours xx minutes -->
                   <div class="body-subheader-text">
                     {{

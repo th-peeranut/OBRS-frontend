@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
-import { EMPTY, Observable, of } from 'rxjs';
+import { EMPTY, Observable, from, of } from 'rxjs';
 import { catchError, map, mergeMap, switchMap, tap, withLatestFrom } from 'rxjs/operators';
 import { Appstate } from '../appstate';
 import {
@@ -19,7 +19,8 @@ import {
   readBookingContext,
   rememberBookingSelection,
 } from '../../lib/booking-context-storage';
-import { Schedule } from '../../interfaces/schedule.interface';
+import { Schedule, ScheduleList } from '../../interfaces/schedule.interface';
+import { invokeSetScheduleListApi } from '../schedule-list/schedule-list.action';
 import { ScheduleService } from '../../../services/schedule/schedule.service';
 import { AlertService } from '../../services/alert.service';
 
@@ -27,8 +28,10 @@ import { AlertService } from '../../services/alert.service';
 type RevalidateOutcome =
   /** Nothing to check, or the check itself could not be made. */
   | { status: 'skipped' }
-  /** Still bookable — carries the FRESH rows, not the restored ones. */
-  | { status: 'valid'; selection: Schedule[] }
+  /** Still bookable — carries the FRESH rows, not the restored ones, plus the
+   *  whole result they came from (OBRS-1343: `returnBoardingStop` lives on the
+   *  result, not on any schedule row, and nothing else restores it). */
+  | { status: 'valid'; selection: Schedule[]; scheduleList: ScheduleList }
   /** A chosen trip is gone or no longer has room for this many passengers. */
   | { status: 'unavailable' };
 
@@ -106,11 +109,19 @@ export class ScheduleBookingEffect {
       mergeMap(() => this.revalidateRestoredSelection()),
       mergeMap((outcome) => {
         if (outcome.status === 'valid') {
-          return of(
+          return from([
+            // OBRS-1343: the search result too, not just the selection. A tab
+            // that woke up holding a restored round trip has an EMPTY
+            // `scheduleList` slice, and `returnBoardingStop` lives only there —
+            // so without this the review page would name the outbound drop-off
+            // again and `passenger-info` would post it, which is a 404 at
+            // payment for the four cross pairs. The response is already in
+            // hand; nothing extra is fetched for it.
+            invokeSetScheduleListApi({ schedule_list: outcome.scheduleList }),
             invokeSetScheduleBookingApi({
               schedule_booking: { schedule: outcome.selection },
-            })
-          );
+            }),
+          ]);
         }
 
         if (outcome.status === 'unavailable') {
@@ -178,7 +189,7 @@ export class ScheduleBookingEffect {
           refreshed.push(match);
         }
 
-        return { status: 'valid', selection: refreshed };
+        return { status: 'valid', selection: refreshed, scheduleList: response.data };
       }),
       // Fail OPEN on a transport error: a network blip must not throw away a
       // selection the customer spent effort on. The seat map may then be stale,

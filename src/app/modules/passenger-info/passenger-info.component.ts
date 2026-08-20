@@ -18,6 +18,8 @@ import { PassengerInfoSummaryComponent } from './components/passenger-info-summa
 import { PromoCodeAppliedEvent } from '../../shared/components/promo-code-field/promo-code-field.component';
 import { selectScheduleBooking } from '../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../shared/stores/schedule-filter/schedule-filter.selector';
+import { selectScheduleList } from '../../shared/stores/schedule-list/schedule-list.selector';
+import { crossPairBoardingStop } from '../../shared/lib/return-boarding-stop';
 import { BookingService } from '../../services/booking/booking.service';
 import { parsePricePerSeat } from '../../shared/lib/trip-format';
 import {
@@ -234,6 +236,9 @@ export class PassengerInfoComponent {
     const scheduleFilter = await firstValueFrom(
       this.store.pipe(select(selectScheduleFilter), take(1))
     );
+    const scheduleList = await firstValueFrom(
+      this.store.pipe(select(selectScheduleList), take(1))
+    );
 
     const schedules = this.normalizeSchedules(scheduleBooking?.schedule);
     if (!schedules.length) {
@@ -306,9 +311,16 @@ export class PassengerInfoComponent {
     };
 
     if (arrivalPassengers.length && arrivalSchedule) {
+      // OBRS-1343: the return leg boards where the SEARCH ran from, which for 4
+      // of the 6 Bangkok destinations of `chonburi_bangkok` is not the outbound
+      // drop-off. Mirroring the two codes here would post a from/to pair with no
+      // `segments` fare row, and `SegmentService#getPricePerSeatBy` throws on a
+      // missing fare — a 404 at the moment of payment (V74), after the customer
+      // has filled in every passenger. The ticket must also name the stop the
+      // customer was actually told to go to.
       payload.arrivalSchedule = this.buildSchedulePayload(
         arrivalSchedule,
-        stopStationCode,
+        crossPairBoardingStop(scheduleList)?.slug ?? stopStationCode,
         startStationCode,
         arrivalPassengers
       );

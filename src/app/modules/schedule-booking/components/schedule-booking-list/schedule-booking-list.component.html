@@ -145,6 +145,38 @@
         <h3 class="title">
           {{ "SCHEDULE_BOOKING.SUBHEADER_RETURN" | translate }}
         </h3>
+        <!-- OBRS-1343: the rounds below leave from a DIFFERENT stop than the one
+             the outbound leg drops the customer at, and they have to be told
+             before they choose one. Rendered only for a cross pair; when the
+             return boards where they got off there is nothing to say, and a
+             notice on every round trip is how a real one stops being read. -->
+        @if (crossPairBoardingStop(schedules); as boarding) {
+          <div class="return-boarding-notice">
+            <p class="return-boarding-notice__title">
+              {{ "COMMON.RETURN_BOARDING.TITLE" | translate }}
+            </p>
+            @if (boardingDistanceView(boarding.distanceMeters); as distance) {
+              <p class="return-boarding-notice__body">
+                {{
+                  "COMMON.RETURN_BOARDING.BODY"
+                    | translate
+                      : {
+                          name: boarding.name,
+                          distance: distance.amount,
+                          unit: distance.unitKey | translate
+                        }
+                }}
+              </p>
+            } @else {
+              <p class="return-boarding-notice__body">
+                {{
+                  "COMMON.RETURN_BOARDING.BODY_NO_DISTANCE"
+                    | translate: { name: boarding.name }
+                }}
+              </p>
+            }
+          </div>
+        }
       }
       @if (isSelectFirst) {
         @for (return of returnList; track trackById($index, return)) {

@@ -17,6 +17,14 @@ import { ScheduleBookingEffect } from '../../shared/stores/schedule-booking/sche
 import { ScheduleBookingReducer } from '../../shared/stores/schedule-booking/schedule-booking.reducer';
 import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
 import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
+// OBRS-1343: the booking payload's return leg must name the stop the SEARCH ran
+// from, which is on the search result rather than on any schedule row. A tab
+// opened straight onto this URL (the OBRS-903 verify-your-email hop) never loads
+// `schedule-booking.module`, the only other place this slice is declared —
+// without it the return leg posts a from/to pair with no fare and 404s at
+// payment for the four Bangkok cross pairs.
+import { ScheduleListEffect } from '../../shared/stores/schedule-list/schedule-list.effect';
+import { ScheduleListReducer } from '../../shared/stores/schedule-list/schedule-list.reducer';
 import { PassengerInfoFormComponent } from './components/passenger-info-form/passenger-info-form.component';
 import { PassengerInfoSummaryComponent } from './components/passenger-info-summary/passenger-info-summary.component';
 import { BookerInfoFormComponent } from './components/booker-info-form/booker-info-form.component';
@@ -47,6 +55,7 @@ export const passengerInfoRoutes: Routes = [
     StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
     StoreModule.forFeature('passengerInfo', PassengerInfoReducer),
     StoreModule.forFeature('booking', BookingReducer),
+    StoreModule.forFeature('scheduleList', ScheduleListReducer),
 
     EffectsModule.forFeature([
       ProvinceEffect,
@@ -54,6 +63,7 @@ export const passengerInfoRoutes: Routes = [
       ScheduleBookingEffect,
       PassengerInfoEffect,
       BookingEffect,
+      ScheduleListEffect,
     ]),
 
     // Components

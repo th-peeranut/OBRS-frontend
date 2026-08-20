@@ -609,6 +609,29 @@ body.is-dark {
   // rule above would otherwise wash out to $dk-text.
   .schedule-item .seat-status--low { color: $dk-danger !important; }
 
+  // OBRS-1343 — the "your return leaves from another stop" notice. It renders
+  // on TWO surfaces: the trip list, where it sits on the #f6fcff panel and none
+  // of the rules above reach it, and the review page, where it is inside a
+  // `.card-container` whose blanket `*` rule fixes the text but not this
+  // element's own white fill. One unscoped rule covers both.
+  //
+  // `!important` for the reason spelled out on the `app-schedule-booking-list`
+  // block below: these are component styles, so Angular emits
+  // `.booking-container[_ngcontent-x] .return-boarding-notice__title[_ngcontent-x]`
+  // = (0,4,0), and without it this rule matches and paints nothing.
+  .return-boarding-notice {
+    background-color: $dk-bg-card !important;
+    border-left-color: $dk-accent !important;
+  }
+
+  .return-boarding-notice__title {
+    color: $dk-text !important;
+  }
+
+  .return-boarding-notice__body {
+    color: $dk-text-muted !important;
+  }
+
   // OBRS-752. The blanket rule above calls forcing a button label light
   // "harmless". It WAS, while every brand fill was #4bc2f7 and 1.9:1 in dark
   // mode -- a label colour cannot rescue a button that fails by that margin.
