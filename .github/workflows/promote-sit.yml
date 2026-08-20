@@ -21,16 +21,27 @@ name: Promote dev to sit (release window)
 # has nothing that can rot out of sync with dev.
 
 on:
-  # THERE IS NO `schedule:` HERE, AND ITS ABSENCE IS THE POINT (OBRS-1472). A cron fired this at
-  # 00:00 ICT Tue/Thu to buy SIT a soak with real staff on it. The owner moved those staff to prod
-  # on 2026-08-20, so the soak stopped proving anything ci.yml had not already proved - while
-  # still gating prod behind it, and while spending a measured 15 Netlify credits per publish on
-  # a site with nobody on it.
+  # THERE IS A `schedule:` HERE AGAIN, AND IT IS NOT THE ONE OBRS-1472 REMOVED. See the twin in
+  # OBRS-backend for the full reasoning; the short version is that the two crons buy different
+  # things.
   #
-  # The promote is now a step a person runs inside the release slot: Mon and Wed 21:00 ICT,
-  # `dev` -> `sit`, wait for CI to go green on `sit`, then `sit` -> `main` and out to the VM.
-  # Do not re-add a cron without re-answering "who is on SIT to notice?".
-  # Full procedure and the pre-flight: OBRS-backend `deploy/prod/README.md`.
+  # The RETIRED cron fired at 00:00 ICT Tue/Thu to buy SIT a soak with real staff on it. The owner
+  # moved those staff to prod on 2026-08-20, so the soak stopped proving anything ci.yml had not
+  # already proved - while still gating prod behind it, and while spending a measured 15 Netlify
+  # credits per publish on a site with nobody on it. "Who is on SIT to notice?" still answers
+  # `nobody`, and that cron is not coming back.
+  #
+  # THIS cron is not a soak: it front-loads the half of the release that needs no human, at 18:00
+  # ICT Mon/Wed, so that half is finished long before the owner starts the prod half at 21:00.
+  # Measured 2026-08-20, the whole chain is 75-79 min against a window that closes when the
+  # owner's machine does at 22:30 - a 21:00 start finishes at 22:15-22:19 with no rollback room.
+  # The credit cost is unchanged in kind and now bounded by the same twice-a-week cadence.
+  # Owner decision 2026-08-20 (OBRS-1475).
+  # Full procedure and the measured timings: OBRS-backend `deploy/prod/README.md`.
+  schedule:
+    # 11:00 UTC = 18:00 ICT, Mon and Wed. Must stay inside the guard's window below - a manual
+    # dispatch meets the same guard, and a cron firing outside it would fail every time.
+    - cron: '0 11 * * 1,3'
   workflow_dispatch:
     inputs:
       ignore_window:
@@ -106,8 +117,9 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      # See the twin step in OBRS-backend for the full reasoning. Short version (OBRS-1472): the
-      # window moved from 00:00-03:59 to 20:00-21:59 ICT and stopped being about SIT's users, who
+      # See the twin step in OBRS-backend for the full reasoning. Short version: OBRS-1472 moved
+      # the window from 00:00-03:59 to 20:00-21:59 ICT, and OBRS-1475 dropped its floor to 18:00
+      # so the cron at the top of this file fires inside it. It stopped being about SIT's users, who
       # are on prod now. It holds the promote inside the release slot so that what comes after it
       # - CI on `sit`, `sit` -> `main`, the VM deploy - still fits before the owner's machine, the
       # only one that can roll any of it back, shuts down at 22:30 ICT.
@@ -119,8 +131,8 @@ jobs:
           utc_hour=$(date -u +%H)
           ict_hour=$(( (10#${utc_hour} + 7) % 24 ))
           echo "UTC hour ${utc_hour} + 7 (ICT, no DST) = ICT hour ${ict_hour}"
-          if [ "${ict_hour}" -lt 20 ] || [ "${ict_hour}" -gt 21 ]; then
-            echo "::error::ICT hour is ${ict_hour}:xx - outside the 20:00-21:59 release window. Refusing to promote: Netlify publishes this ref automatically, and what follows this promote has to finish before the owner's machine shuts down at 22:30 ICT. Re-run manually with ignore_window=true to override."
+          if [ "${ict_hour}" -lt 18 ] || [ "${ict_hour}" -gt 21 ]; then
+            echo "::error::ICT hour is ${ict_hour}:xx - outside the 18:00-21:59 release window. Refusing to promote: Netlify publishes this ref automatically, and what follows this promote has to finish before the owner's machine shuts down at 22:30 ICT. Re-run manually with ignore_window=true to override."
             exit 1
           fi
           echo "Inside the release window."
@@ -183,6 +195,14 @@ jobs:
       # fits) and does clamp from about 21:20 ICT onward, which is the behaviour wanted.
       # `ignore_window` lifts the clamp for the same reason it lifts the guard: somebody asked for
       # it deliberately and is watching.
+      #
+      # OBRS-1475 moved the guard's FLOOR to 18:00 ICT and deliberately did NOT touch this value.
+      # The clamp tracks the window's CLOSE, and the close did not move - the ceiling is still
+      # 21:59, so 15:00:00Z is still the right instant. Do not "keep them in sync" by reflex: a
+      # floor and a close are different numbers, and the failure mode of getting this one wrong is
+      # silence, not an error (see the paragraph above). From the cron's 11:00Z start the deadline
+      # is 11:40Z, seven hours inside the close, so this clamp is simply inert on a cron run - it
+      # exists for the late manual dispatch, which is the only thing that can approach 22:00.
       - name: Refuse to promote unless dev's own CI is green
         if: steps.gap.outputs.ahead != '0'
         env:
@@ -259,10 +279,13 @@ jobs:
       # published - and INVISIBLE, because SIT simply kept serving last week's build and nothing
       # anywhere said so.
       #
-      # OBRS-1472 removed the cron and moved the window to 20:00-21:59 ICT, which retires the
-      # lateness half: a human dispatches this now and is present to read a refusal. Every OTHER
-      # refusal above is unchanged and still silent on its own - a red dev, a verdict belonging to
-      # the wrong sha, a divergent sit - which is what this step is now for.
+      # OBRS-1472 removed the cron, which briefly retired the lateness half: a human dispatched
+      # this and was present to read a refusal. OBRS-1475 put a cron back (18:00 ICT Mon/Wed), so
+      # THIS STEP IS LOAD-BEARING AGAIN - nobody is watching at 18:00, and a silent refusal there
+      # leaves the owner finding out at 21:00 that `sit` never moved. The margin is far larger
+      # than the 80 minutes measured above (18:00 start, 21:59 ceiling), which is not the same as
+      # safe. Every OTHER refusal above is unchanged and still silent on its own - a red dev, a
+      # verdict belonging to the wrong sha, a divergent sit - which is also what this step is for.
       #
       # A GitHub issue rather than mail, SMS or a Jira comment because it needs NO new credential -
       # GITHUB_TOKEN plus `issues: write` is the entire dependency, so there is nothing to store,
@@ -293,7 +316,7 @@ jobs:
             "@${GITHUB_REPOSITORY_OWNER} the ${GITHUB_EVENT_NAME} promote of dev to sit did not complete." \
             "" \
             "- run: ${run_url}" \
-            "- this attempt ran at ${utc_hour}:xx UTC = ICT hour ${ict_hour}; the release window is ICT 20:00-21:59" \
+            "- this attempt ran at ${utc_hour}:xx UTC = ICT hour ${ict_hour}; the release window is ICT 18:00-21:59" \
             "- \`sit..dev\` at this attempt: **${GAP_AHEAD}** commit(s) - that is how far behind SIT stays until a promote completes" \
             "" \
             "If the release-window guard refused, nothing was published and nothing is broken: this promote was skipped and sit is still serving the previous build. If a step after the push failed, open the run - sit may already have moved." \
