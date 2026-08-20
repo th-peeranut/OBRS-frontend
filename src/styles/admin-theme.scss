@@ -1020,10 +1020,18 @@
 }
 
 /* ── OBRS-289: nav section header ── muted, uppercase group label above each
-   cluster of nav links. Token-only color; no new hex. */
+   cluster of nav links. Token-only color; no new hex.
+   OBRS-1446: `text-transform: uppercase` is a no-op in Thai, which is the app's
+   default locale, so on the screen most users see the header was left with only
+   "smaller and fainter" to say it is a label and not a de-emphasised menu item.
+   The two signals below do not depend on the script: a rule above the header
+   (same divider as .admin-sidebar-footer) and a top:bottom space ratio wide
+   enough for proximity to bind the header to the group under it. `uppercase`
+   stays because it still earns its keep in `en`; nothing relies on it now. */
 .admin-nav-section-title {
-  margin: 12px 0 2px;
-  padding: 0 12px;
+  margin: 16px 0 0;
+  padding: 10px 12px 0;
+  border-top: 1px solid rgba(189, 200, 207, 0.5);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -1031,8 +1039,16 @@
   color: var(--admin-muted);
 }
 
+.is-dark .admin-nav-section-title {
+  border-top-color: var(--admin-outline);
+}
+
+/* The first header sits right under the nav search box, which is already a
+   visible boundary — a rule there reads as a double line. */
 .admin-nav-section-title:first-child {
   margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .admin-sidebar-footer {
