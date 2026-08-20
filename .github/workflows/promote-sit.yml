@@ -40,7 +40,12 @@ jobs:
   promote:
     name: Promote dev to sit
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # OBRS-1453: 10 was enough while the green-CI gate took one reading and left. It now waits up
+    # to 40 minutes for dev's verdict, and a job killed by its OWN timeout is `cancelled`, not
+    # `failure` - so the `if: failure()` report at the bottom would not run and the skipped promote
+    # would go silent again, which is the exact outcome OBRS-1067 exists to prevent. 50 = that
+    # 40-minute ceiling plus the checkout, fetch and push around it.
+    timeout-minutes: 50
     # OBRS-1067. Declared once at job level on purpose: the reporting step and the clearing step
     # find each other by EXACT title, so if the two literals ever drifted by one character the
     # clear would stop matching and every failure would open a fresh issue forever.
@@ -138,26 +143,72 @@ jobs:
       # asserts that verdict belongs to the exact commit being promoted: a run whose headSha is an
       # older commit is evidence about a tree nobody is shipping. Absent, queued, in-progress and
       # failed all refuse - the safe answer to "no evidence" is "do not publish".
+      # OBRS-1453. The verdict is now read repeatedly instead of once, and NOTHING about what
+      # counts as green moved: absent, queued, in_progress and a non-success conclusion all still
+      # refuse, and only a `completed` + `success` belonging to this exact sha passes. Waiting for
+      # an answer is not the same as accepting a worse one - AC-3 forbids the second, not the first.
+      #
+      # Why the single reading was not enough. On 2026-08-19 this step refused with
+      # `status=in_progress` and the round was discarded. The cause was NOT the cron crowding a
+      # merge - measured, the merge (15:45:25Z) and the cron (17:20:29Z) were 1h35m apart. dev's
+      # `Install Playwright Chromium` had hung and ran 6h00m40s before GitHub's own 360-minute
+      # default killed it; ci.yml at that commit carried no `timeout-minutes` at all.
+      #
+      # The ceiling below is DERIVED from the cap that OBRS-1442 has since put on that same job:
+      # 35 minutes worst case for dev's E2E lane, plus 5 for queueing. Measured healthy range for
+      # comparison: 15m08s-17m16s across 11 consecutive dev runs. So a wait that reaches the
+      # ceiling means dev CI hit its own cap, not that this number is too small.
+      #
+      # The wait may never outlive the night window. The guard above reads the hour only at START,
+      # and its entire safety argument is that nothing is published in daylight, so the deadline is
+      # clamped to 21:00:00Z = 04:00 ICT. `ignore_window` lifts the clamp for the same reason it
+      # lifts the guard: somebody asked for it deliberately and is watching.
       - name: Refuse to promote unless dev's own CI is green
         if: steps.gap.outputs.ahead != '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROMOTED_SHA: ${{ steps.gap.outputs.sha }}
+          WINDOW_ENFORCED: ${{ !inputs.ignore_window }}
+          POLL_MINUTES: '40'
         run: |
           set -euo pipefail
-          verdict=$(gh run list --workflow=ci.yml --branch=dev --limit 20 \
-            --json databaseId,headSha,status,conclusion \
-            --jq "map(select(.headSha == \"${PROMOTED_SHA}\")) | .[0] // empty")
-          if [ -z "${verdict}" ]; then
-            echo "::error::No ci.yml run found on dev for ${PROMOTED_SHA}. Netlify would publish this commit to real users with nothing having tested it. Refusing."
-            exit 1
+          deadline=$(( $(date -u +%s) + POLL_MINUTES * 60 ))
+          window_close=$(TZ=UTC date -d 'today 21:00' +%s)
+          if [ "${WINDOW_ENFORCED}" = 'true' ] && [ "${window_close}" -lt "${deadline}" ]; then
+            deadline=${window_close}
+            echo "Deadline clamped to the night window: $(TZ=UTC date -d "@${deadline}" -Iseconds)"
+          else
+            echo "Deadline is the ${POLL_MINUTES}-minute poll ceiling: $(TZ=UTC date -d "@${deadline}" -Iseconds)"
           fi
-          status=$(printf '%s' "${verdict}" | jq -r '.status')
-          conclusion=$(printf '%s' "${verdict}" | jq -r '.conclusion')
-          run_id=$(printf '%s' "${verdict}" | jq -r '.databaseId')
-          echo "dev CI run ${run_id}: status=${status} conclusion=${conclusion}"
-          if [ "${status}" != "completed" ] || [ "${conclusion}" != "success" ]; then
-            echo "::error::dev CI run ${run_id} for ${PROMOTED_SHA} is status=${status} conclusion=${conclusion}, not a completed success. Refusing to publish."
+          # `.[0]` is the MOST RECENT run for this sha, so a re-run started while we wait is what
+          # gets read - the same choice the single-reading version made, just taken later.
+          while : ; do
+            verdict=$(gh run list --workflow=ci.yml --branch=dev --limit 20 \
+              --json databaseId,headSha,status,conclusion \
+              --jq "map(select(.headSha == \"${PROMOTED_SHA}\")) | .[0] // empty")
+            if [ -z "${verdict}" ]; then
+              # Absent is waited on rather than refused outright: GitHub takes a moment to create
+              # the run after a push, and a promote that arrives inside that moment used to lose
+              # its whole round to a race it could simply have outlasted. It still refuses at the
+              # deadline - "no evidence" is never a pass.
+              status='absent'; conclusion=''; run_id='-'
+            else
+              status=$(printf '%s' "${verdict}" | jq -r '.status')
+              conclusion=$(printf '%s' "${verdict}" | jq -r '.conclusion')
+              run_id=$(printf '%s' "${verdict}" | jq -r '.databaseId')
+            fi
+            echo "$(date -u +%H:%M:%SZ) dev CI run ${run_id}: status=${status} conclusion=${conclusion}"
+            if [ "${status}" = 'completed' ]; then
+              break
+            fi
+            if [ "$(date -u +%s)" -ge "${deadline}" ]; then
+              echo "::error::Waited for dev CI on ${PROMOTED_SHA} until $(TZ=UTC date -d "@${deadline}" -Iseconds) and it is still status=${status}. Netlify would publish a commit with no verdict. Refusing."
+              exit 1
+            fi
+            sleep 30
+          done
+          if [ "${conclusion}" != 'success' ]; then
+            echo "::error::dev CI run ${run_id} for ${PROMOTED_SHA} completed with conclusion=${conclusion}, not success. Refusing to publish."
             exit 1
           fi
           echo "dev is green at ${PROMOTED_SHA} (run ${run_id})."
@@ -199,10 +250,17 @@ jobs:
       # Matched by reading the open list and comparing titles EXACTLY, not via `gh issue list
       # --search`: that index is eventually consistent, and a failure that repeats promptly would
       # be handed an empty result and open a duplicate.
+      #
+      # OBRS-1453 AC-5. The report said a promote had failed but never how far behind that left
+      # SIT, so the one number that says whether this matters was the one nobody had: issue #257
+      # sat open with zero comments while `sit..dev` went from 45 to 64 in a single afternoon.
+      # `steps.gap.outputs.ahead` is empty when the run stopped before the gap was counted (the
+      # window guard refuses above it), so the fallback says that rather than printing a bare 0.
       - name: Report a failed promote where a person will see it
         if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GAP_AHEAD: ${{ steps.gap.outputs.ahead || 'not counted - this attempt stopped before the gap step' }}
         run: |
           set -euo pipefail
           utc_hour=$(date -u +%H)
@@ -213,6 +271,7 @@ jobs:
             "" \
             "- run: ${run_url}" \
             "- this attempt ran at ${utc_hour}:xx UTC = ICT hour ${ict_hour}; the night window closes after ICT hour 3" \
+            "- \`sit..dev\` at this attempt: **${GAP_AHEAD}** commit(s) - that is how far behind SIT stays until a promote completes" \
             "" \
             "If the night-window guard refused, nothing was published and nothing is broken: this week's promote was skipped and sit is still serving the previous build. If a step after the push failed, open the run - sit may already have moved." \
             "" \
