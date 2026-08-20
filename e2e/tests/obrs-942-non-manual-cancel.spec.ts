@@ -34,13 +34,26 @@ const lookup = (id: number, code: string, label: string) => ({
 });
 
 /**
- * `rescheduleCount: 1` is what makes the control booking ineligible — it fails
- * `computeRescheduleEligibility`'s ALREADY_USED check while staying confirmed
- * and fully cancellable. Nothing else about the two rows differs, so the
+ * `rescheduleCount: 1` AGAINST `rescheduleMaxCount: 1` is what makes the control
+ * booking ineligible — it fails `computeRescheduleEligibility`'s ALREADY_USED
+ * check while staying confirmed and fully cancellable.
+ *
+ * OBRS-657: the cap became the operator's, and `rescheduleMaxCount: 0` — which is
+ * both the shipped default and what an ABSENT field means — is UNLIMITED. So the
+ * count alone no longer refuses anything: omitting the cap here makes the control
+ * arm eligible, the offer render on BOTH rows, and every comparison below agree
+ * for the wrong reason. The cap is a load-bearing field now, not decoration.
+ *
+ * Nothing else about the two rows differs, so the
  * comparison below is measuring the offer and not two different bookings —
  * same fixture shape as `obrs-813-cancel-offers-reschedule.spec.ts`.
  */
-const booking = (id: number, number: string, rescheduleCount: number) => ({
+const booking = (
+  id: number,
+  number: string,
+  rescheduleCount: number,
+  rescheduleMaxCount: number
+) => ({
   id,
   bookingNumber: number,
   totalAmount: 500,
@@ -49,6 +62,7 @@ const booking = (id: number, number: string, rescheduleCount: number) => ({
   bookingChannel: 'online',
   createdAt: '2026-07-20T10:00:00+07:00',
   rescheduleCount,
+  rescheduleMaxCount,
   seatChangeCount: 0,
   stopChangeCount: 0,
   // OBRS-699: eligibility reads the operator's window off the ROW now, and an
@@ -72,8 +86,8 @@ const booking = (id: number, number: string, rescheduleCount: number) => ({
   ],
 });
 
-const ELIGIBLE = booking(701, 'B-000701', 0);
-const NOT_ELIGIBLE = booking(702, 'B-000702', 1);
+const ELIGIBLE = booking(701, 'B-000701', 0, 1);
+const NOT_ELIGIBLE = booking(702, 'B-000702', 1, 1);
 
 /** The lane OBRS-942 fixes: the gateway auto-refunds, nobody at the counter
  * moves money by hand — and until this card, this lane never heard about the

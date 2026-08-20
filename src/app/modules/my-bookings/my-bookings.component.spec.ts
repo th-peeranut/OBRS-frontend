@@ -258,16 +258,53 @@ describe('MyBookingsComponent', () => {
       expect(view.rescheduleReasonKey).toBe('MY_BOOKINGS.RESCHEDULE.REASON.NOT_ONE_WAY');
     });
 
-    it('REASON.ALREADY_USED — rescheduleCount >= 1', () => {
+    it('OBRS-657: REASON.ALREADY_USED — rescheduleCount has reached the operator cap', () => {
       const view = toView(
         buildBooking({
           rescheduleCount: 1,
+          rescheduleMaxCount: 1,
           bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }],
         })
       );
 
       expect(view.rescheduleEligible).toBeFalse();
       expect(view.rescheduleReasonKey).toBe('MY_BOOKINGS.RESCHEDULE.REASON.ALREADY_USED');
+    });
+
+    // OBRS-657: this is the spec that goes red if anyone puts a policy number back into the
+    // component. A hardcoded `>= 1` passes the test above and fails both of these.
+    it('OBRS-657: eligible after THREE reschedules when rescheduleMaxCount is 0 (unlimited, the default)', () => {
+      const view = toView(
+        buildBooking({
+          rescheduleCount: 3,
+          rescheduleMaxCount: 0,
+          bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }],
+        })
+      );
+
+      expect(view.rescheduleEligible).toBeTrue();
+      expect(view.rescheduleReasonKey).toBeNull();
+    });
+
+    it('OBRS-657: eligible below a cap of 5 and refused at it — the cap is the wire value, not a literal', () => {
+      const below = toView(
+        buildBooking({
+          rescheduleCount: 4,
+          rescheduleMaxCount: 5,
+          bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }],
+        })
+      );
+      const at = toView(
+        buildBooking({
+          rescheduleCount: 5,
+          rescheduleMaxCount: 5,
+          bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }],
+        })
+      );
+
+      expect(below.rescheduleEligible).toBeTrue();
+      expect(at.rescheduleEligible).toBeFalse();
+      expect(at.rescheduleReasonKey).toBe('MY_BOOKINGS.RESCHEDULE.REASON.ALREADY_USED');
     });
 
     it('REASON.NO_WINDOW — departure is within the 2h reschedule window', () => {
@@ -337,7 +374,7 @@ describe('MyBookingsComponent', () => {
     it('OBRS-813: the offer cannot route an INELIGIBLE booking into reschedule (guard is shared with onReschedule)', () => {
       const dispatchSpy = spyOn(storeStub, 'dispatch');
       const view = toView(
-        buildBooking({ rescheduleCount: 1, bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }] })
+        buildBooking({ rescheduleCount: 1, rescheduleMaxCount: 1, bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }] })
       );
 
       component.onRescheduleInsteadOfCancel(view);

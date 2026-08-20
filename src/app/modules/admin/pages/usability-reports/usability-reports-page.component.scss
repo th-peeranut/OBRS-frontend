@@ -21,33 +21,8 @@
   overflow-y: auto;
 }
 
-.admin-modal-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-// Top-right × close affordance (design-system.md §6).
-.ur-detail-close {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--admin-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.ur-detail-close:hover {
-  background: var(--accent-soft);
-  color: var(--accent-text);
-}
+// OBRS-1443: `.admin-modal-header` and this page's own `×` button rule both moved to
+// `admin-theme.scss`; the button now carries the global `.admin-icon-btn`.
 
 .ur-detail-body {
   padding: 0 4px;

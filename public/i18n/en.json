@@ -225,7 +225,7 @@
       "REASON": {
         "NOT_CONFIRMED": "Confirmed bookings only",
         "NOT_ONE_WAY": "One-way trips only",
-        "ALREADY_USED": "Already rescheduled once",
+        "ALREADY_USED": "Reschedule limit reached",
         "NO_WINDOW": "Too close to departure"
       },
       "DIALOG_TITLE": "Reschedule your trip",

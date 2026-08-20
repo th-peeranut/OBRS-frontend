@@ -8,12 +8,9 @@
 // of the rules is one file.
 @import "../../../../../styles/variables.scss";
 
-.settlement-detail-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: inherit;
-}
+// OBRS-1443: `.settlement-detail-close` lived here with no positioning at all (border/
+// background/cursor/color only), so both modals that `@use` this partial got a close
+// button that fell under the title. Both now use the global `.admin-icon-btn`.
 
 .settlement-detail-row {
   display: flex;

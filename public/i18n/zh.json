@@ -225,7 +225,7 @@
       "REASON": {
         "NOT_CONFIRMED": "仅限已确认预订",
         "NOT_ONE_WAY": "仅限单程",
-        "ALREADY_USED": "已改签过一次",
+        "ALREADY_USED": "改签次数已用完",
         "NO_WINDOW": "临近发车"
       },
       "DIALOG_TITLE": "改签您的行程",

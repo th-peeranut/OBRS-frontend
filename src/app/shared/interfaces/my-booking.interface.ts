@@ -98,10 +98,13 @@ export interface MyBookingDto {
   bookingChannel?: string;
   createdAt?: string;
   /**
-   * Number of times this booking has already been rescheduled (0 or 1 — a
-   * booking can only be rescheduled once). Drives up-front eligibility gating
-   * for the Reschedule action without waiting for a `RESCHEDULE_ERROR_MAX_COUNT`
-   * response. See OBRS-backend/docs/api/booking.md `GET /bookings/me`.
+   * Number of times this booking has already been rescheduled. Drives up-front
+   * eligibility gating for the Reschedule action without waiting for a
+   * `RESCHEDULE_ERROR_MAX_COUNT` response. See OBRS-backend/docs/api/booking.md
+   * `GET /bookings/me`.
+   *
+   * OBRS-657 — no longer "0 or 1". Compare it against `rescheduleMaxCount`, never
+   * against a literal: the cap is the operator's, and it defaults to unlimited.
    */
   rescheduleCount?: number;
   /**
@@ -137,6 +140,19 @@ export interface MyBookingDto {
    * `rescheduleWindowHours`. Same absent/null contract.
    */
   rescheduleMaxDaysAhead?: number | null;
+  /**
+   * OBRS-657 — how many times this booking may be rescheduled in total, where
+   * **0 means UNLIMITED** (the shipped default, matching what the queue does at
+   * the counter). The literal `rescheduleCount >= 1` this replaced was the
+   * frontend re-declaring a server rule, so it kept hiding the Reschedule action
+   * after one use no matter what the backend enforced.
+   *
+   * Unlike the two fields above this is a PLATFORM value, so the backend states
+   * it on every row and it is not null-when-unresolvable. Treat an absent value
+   * as unlimited: it can only mean a backend older than OBRS-657, whose cap was
+   * enforced server-side anyway.
+   */
+  rescheduleMaxCount?: number;
   contact?: MyBookingContactDto;
   bookingSchedules?: MyBookingScheduleDto[];
 }
