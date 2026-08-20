@@ -1,6 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Store } from '@ngrx/store';
 import { of, throwError } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../../../services/booking/booking.service';
@@ -54,7 +53,6 @@ describe('PaymentQrcodeComponent - refunded_partial payment summary (OBRS-298)',
   let alertService: jasmine.SpyObj<AlertService>;
 
   beforeEach(() => {
-    const store = jasmine.createSpyObj<Store>('Store', ['pipe', 'select']);
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
@@ -74,7 +72,6 @@ describe('PaymentQrcodeComponent - refunded_partial payment summary (OBRS-298)',
     translate.instant.and.callFake((key: string) => key);
 
     component = new PaymentQrcodeComponent(
-      store,
       router,
       bookingService,
       paymentService,
@@ -204,7 +201,6 @@ describe('PaymentQrcodeComponent - gateway ceiling refusal (OBRS-736)', () => {
   let paymentService: jasmine.SpyObj<PaymentService>;
 
   beforeEach(() => {
-    const store = jasmine.createSpyObj<Store>('Store', ['pipe', 'select']);
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>(
       'BookingService',
@@ -229,7 +225,6 @@ describe('PaymentQrcodeComponent - gateway ceiling refusal (OBRS-736)', () => {
     translate.instant.and.callFake((key: string) => key);
 
     component = new PaymentQrcodeComponent(
-      store,
       router,
       bookingService,
       paymentService,
@@ -357,7 +352,6 @@ describe('PaymentQrcodeComponent - saving the QR on iOS (OBRS-1203)', () => {
   };
 
   beforeEach(() => {
-    const store = jasmine.createSpyObj<Store>('Store', ['pipe', 'select']);
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
@@ -377,7 +371,6 @@ describe('PaymentQrcodeComponent - saving the QR on iOS (OBRS-1203)', () => {
     translate.instant.and.callFake((key: string) => key);
 
     component = new PaymentQrcodeComponent(
-      store,
       router,
       bookingService,
       paymentService,
@@ -498,7 +491,6 @@ describe('PaymentQrcodeComponent - the QR preview dialog (OBRS-1203)', () => {
   let component: PaymentQrcodeComponent;
 
   beforeEach(() => {
-    const store = jasmine.createSpyObj<Store>('Store', ['pipe', 'select']);
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
@@ -518,7 +510,6 @@ describe('PaymentQrcodeComponent - the QR preview dialog (OBRS-1203)', () => {
     translate.instant.and.callFake((key: string) => key);
 
     component = new PaymentQrcodeComponent(
-      store,
       router,
       bookingService,
       paymentService,
@@ -590,7 +581,6 @@ describe('PaymentQrcodeComponent - Omise forwards its own PromptPay QR (OBRS-135
   let paymentService: jasmine.SpyObj<PaymentService>;
 
   beforeEach(() => {
-    const store = jasmine.createSpyObj<Store>('Store', ['pipe', 'select']);
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
@@ -611,7 +601,6 @@ describe('PaymentQrcodeComponent - Omise forwards its own PromptPay QR (OBRS-135
     translate.instant.and.callFake((key: string) => key);
 
     component = new PaymentQrcodeComponent(
-      store,
       router,
       bookingService,
       paymentService,
@@ -703,5 +692,158 @@ describe('PaymentQrcodeComponent - Omise forwards its own PromptPay QR (OBRS-135
     expect(file).not.toBeNull();
     expect(file!.type).toBe('image/svg+xml');
     expect(file!.name).toBe('promptpay-qr-chrg_test_obrs1351.svg');
+  });
+});
+
+/**
+ * OBRS-1384. The number under the QR used to be `sum(schedule.pricePerSeat) *
+ * sum(scheduleFilter.passengerInfo.count)` — the fares from one NgRx store times the
+ * headcount typed on the SEARCH page. That headcount never hears about the
+ * OPEN-seating +/- stepper on /passenger-info (the same source OBRS-1226 removed from
+ * that page's summary), so a customer who stepped 1 -> 2 was shown ONE seat's price
+ * at the exact second they were about to scan a QR the bank app priced at two.
+ *
+ * It now comes from the create-payment response, i.e. from the server that issued
+ * the charge that QR belongs to. Same direct-instantiation idiom as the blocks above.
+ */
+describe('PaymentQrcodeComponent - the amount under the QR comes from the server (OBRS-1384)', () => {
+  let component: PaymentQrcodeComponent;
+  let paymentService: jasmine.SpyObj<PaymentService>;
+  let bookingService: jasmine.SpyObj<BookingService>;
+
+  const CHARGE: PaymentResponse = {
+    id: 1,
+    bookingId: 10,
+    status: 'pending',
+    paymentMethod: 'qr_promptpay',
+    // Two seats at 190, the OPEN-seating case from the card. The old formula printed
+    // 190.00 here because the search page had been left at one passenger.
+    amount: '380',
+    currency: 'THB',
+    authorizeUri: 'https://pay.example/authorize',
+    transactionId: 'chrg_test_obrs1384',
+  };
+
+  beforeEach(() => {
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+    ]);
+    bookingService.getActiveBookingId.and.returnValue(10);
+    paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+      'createMockPayment',
+    ]);
+    const alertService = jasmine.createSpyObj<AlertService>('AlertService', [
+      'success',
+      'error',
+      'info',
+      'confirm',
+    ]);
+    const translate = jasmine.createSpyObj<TranslateService>('TranslateService', [
+      'instant',
+    ]);
+    translate.instant.and.callFake((key: string) => key);
+
+    component = new PaymentQrcodeComponent(
+      router,
+      bookingService,
+      paymentService,
+      alertService,
+      translate
+    );
+  });
+
+  afterEach(() => {
+    component.ngOnDestroy();
+  });
+
+  const answerWith = (payment: PaymentResponse): void => {
+    paymentService.createPayment.and.returnValue(
+      of({ code: 200, message: 'OK', data: payment }) as unknown as ReturnType<
+        PaymentService['createPayment']
+      >
+    );
+  };
+
+  const requestQr = (): Promise<void> =>
+    (
+      component as unknown as {
+        ensurePromptPayQrCode: (show?: boolean) => Promise<void>;
+      }
+    ).ensurePromptPayQrCode();
+
+  it("prints the charge's own amount, not a headcount x fare product", async () => {
+    answerWith(CHARGE);
+
+    await requestQr();
+
+    expect(component.amountDisplay).toBe('380.00');
+  });
+
+  it('takes the outstanding amount when the payload is the by-booking shape instead', async () => {
+    await (
+      component as unknown as {
+        handlePromptPayResponse: (p: PaymentByBookingIdResponse) => Promise<void>;
+      }
+    ).handlePromptPayResponse({
+      bookingId: 10,
+      paymentSummary: {
+        totalAmount: '380',
+        paidAmount: '0',
+        outstandingAmount: '380',
+        currency: 'THB',
+        status: 'pending',
+      },
+      transactions: [],
+    });
+
+    expect(component.amountDisplay).toBe('380.00');
+  });
+
+  it('leaves the amount alone when the response carries no amount at all', async () => {
+    answerWith({ ...CHARGE, amount: undefined as unknown as string });
+
+    await requestQr();
+
+    expect(component.amountDisplay).toBe('0.00');
+  });
+
+  /**
+   * The parcel lane (OBRS-415) tells this component what the amount is. That is a
+   * caller contract, not a guess to be corrected from the charge.
+   */
+  it('never overwrites an amountOverride the caller supplied', async () => {
+    component.amountOverride = 250;
+    component.amountDisplay = '250.00';
+    answerWith(CHARGE);
+
+    await requestQr();
+
+    expect(component.amountDisplay).toBe('250.00');
+  });
+
+  /**
+   * The must-NOT half of AC-1: the QR is requested off the active booking alone. It
+   * used to wait for a store-derived total to become > 0, which is why the amount and
+   * the QR could ever have been priced differently in the first place — and why the
+   * QR tab in the reschedule / change-stop dialogs, whose module registers neither
+   * `scheduleBooking` nor `scheduleFilter`, never requested one at all.
+   */
+  it('requests the QR on init with no NgRx store in play', () => {
+    answerWith(CHARGE);
+
+    component.ngOnInit();
+
+    expect(paymentService.createPayment).toHaveBeenCalled();
+  });
+
+  it('requests nothing when there is no active booking', () => {
+    bookingService.getActiveBookingId.and.returnValue(null);
+
+    component.ngOnInit();
+
+    expect(paymentService.createPayment).not.toHaveBeenCalled();
   });
 });

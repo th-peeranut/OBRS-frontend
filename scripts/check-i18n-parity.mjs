@@ -170,20 +170,71 @@ const BUSINESS_POLICY_LEDGER = [
     worsensTerms: false,
     fingerprint: '60971f342f0be0d4c8ca8ccf08367ec34956f665a0989186b219c5450d594dbc',
   },
+  {
+    // OBRS-623 + OBRS-659, published together because they rewrite the same single string and
+    // shipping them apart would mean two versions and two notices for one edit.
+    //
+    // What the old text said and the system never did: it named ANOTHER OPERATOR as the place to
+    // go ("จุดจำหน่ายตั๋วโดยสารของกรีนบัส"); it carried a COVID-19 annex dated 30 April 2564
+    // "until further notice" whose numbers contradicted the main body five paragraphs above it;
+    // it granted an open-date ticket the system has no mechanism for; it said a cancellation was
+    // possible only for force majeure or with a medical certificate, while the app has always let
+    // a customer cancel from My Bookings for any reason; and it advertised statutory fare
+    // reductions for monks and for soldiers and police in uniform, of which the system implements
+    // none (measured 2026-08-20: the only fare discount that reaches production is the child
+    // category at 50%, plus the automatic round-trip promotion, and neither was mentioned).
+    //
+    // The reschedule and cancellation numbers no longer appear as text at all. They interpolate
+    // from GET /api/reschedule-policy and GET /api/cancellation-policy, which is why the numbers
+    // in the paragraph above are absent from this note: after this version the ledger records the
+    // WORDING, and the values are whatever the owner has set (ADR-0125 "Consequence").
+    //
+    // worsensTerms: true, on three counts, none of which is close enough to argue about:
+    //   - the annex granted an open-date change and the new text withdraws it;
+    //   - "one change, no fee" becomes free only above the early window and
+    //     reschedule_fee_late_thb per seat below it — worse for a late change;
+    //   - the published fare reductions for monks and for soldiers/police are removed.
+    // That the last two were never honoured in code does not make withdrawing them costless: what
+    // a ticket holder relied on is what the page said, which is the whole reason this ledger
+    // exists. The notice period below is the owner's, not a default this file chose.
+    version: '1.2',
+    publishedOn: '2026-08-20',
+    effectiveDate: '2026-08-27',
+    worsensTerms: true,
+    fingerprint: 'e0f2eb098fb34e0e8dcd9cdf6b1747d5493700e0c8507f118bd4912a00df6d3c',
+  },
+];
+
+// OBRS-623/659 widened this from three keys to six. The terms did not grow — they were split, and
+// the split had to be matched here or half of them would have fallen outside the version they are
+// published under. CONTENT gave up the passenger travel conditions (TRAVEL_CONDITIONS, so an
+// outage cannot blank them: they hold no config value and the rest of the page now does), and the
+// reschedule cap became a pair of sentences the component picks between (RESCHEDULE_COUNT_*,
+// because `reschedule_max_count = 0` means UNLIMITED and cannot be interpolated as a number).
+// Every one of the six is published policy text; a key that is policy text and not in this hash is
+// text that can be reworded with no version and no notice, which is the hole OBRS-658 closed.
+//
+// ⚠️ Consequence, stated rather than hidden: the fingerprints stored for 1.0 and 1.1 were computed
+// over the THREE-key list and cannot be reproduced by this function. They stay in the ledger as the
+// historical record they are — the gate only ever recomputes the CURRENT text against the NEWEST
+// entry, and the older entries are read for uniqueness and date ordering, neither of which needs
+// the hash to be recomputable.
+const BUSINESS_POLICY_FINGERPRINT_KEYS = [
+  'TITLE',
+  'SALES_CHANNELS',
+  'CONTENT',
+  'TRAVEL_CONDITIONS',
+  'RESCHEDULE_COUNT_UNLIMITED',
+  'RESCHEDULE_COUNT_LIMITED',
 ];
 
 function businessPolicyFingerprint(json) {
   const b = json?.POLICY?.BUSINESS;
-  if (
-    !b ||
-    typeof b.TITLE !== 'string' ||
-    typeof b.SALES_CHANNELS !== 'string' ||
-    typeof b.CONTENT !== 'string'
-  ) {
+  if (!b || BUSINESS_POLICY_FINGERPRINT_KEYS.some((k) => typeof b[k] !== 'string')) {
     return null;
   }
   return createHash('sha256')
-    .update(JSON.stringify([b.TITLE, b.SALES_CHANNELS, b.CONTENT]), 'utf8')
+    .update(JSON.stringify(BUSINESS_POLICY_FINGERPRINT_KEYS.map((k) => b[k])), 'utf8')
     .digest('hex');
 }
 
@@ -250,7 +301,7 @@ function businessPolicyFingerprint(json) {
   // that defines the version -- same call gate 4 makes for the privacy notice.
   const actual = businessPolicyFingerprint(JSON.parse(readFileSync(join(I18N_DIR, 'th.json'), 'utf8')));
   if (actual === null) {
-    problems.push(`[th] POLICY.BUSINESS.{TITLE,SALES_CHANNELS,CONTENT} is missing or not a string -- the booking terms cannot be versioned if their text is not there (OBRS-658)`);
+    problems.push(`[th] POLICY.BUSINESS.{${BUSINESS_POLICY_FINGERPRINT_KEYS.join(',')}} -- one is missing or not a string, and the booking terms cannot be versioned if their text is not there (OBRS-658)`);
   } else if (actual !== published.fingerprint) {
     problems.push(
       `[th] POLICY.BUSINESS text no longer matches published version ${published.version}. Its fingerprint is now ${actual}. Publish it: append {version, publishedOn, effectiveDate, worsensTerms, fingerprint} to BUSINESS_POLICY_LEDGER in this file and set the same version/effectiveDate in business-policy.version.ts (OBRS-658)`
@@ -580,7 +631,11 @@ const KNOWN_SHORT_TRANSLATIONS = [
     lang: 'zh',
     owner: 'OBRS-631 (deliberate stub: notice is th/en only, owner 2026-07-23)',
   },
-  { key: 'POLICY.BUSINESS.CONTENT', lang: 'zh', owner: 'OBRS-623 / OBRS-629' },
+  // OBRS-623 AC-4 (2026-08-20): the [zh] POLICY.BUSINESS.CONTENT exemption is GONE, not moved.
+  // zh was 13.5% of the Thai and stopped mid-document at item 7 — no fare-discount block and no
+  // passenger travel conditions at all, so a Chinese reader was agreeing to terms whose second
+  // half they had never been shown. The rewrite covers every item in all three languages and the
+  // key clears the floor on its own, which is why this line can be deleted rather than reworded.
 ];
 
 /** Characters a reader actually sees: no markup, no entities, no whitespace. */

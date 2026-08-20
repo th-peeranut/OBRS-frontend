@@ -12,6 +12,8 @@ import {
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
+import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
+import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
 
 @Component({
     selector: 'app-review-schedule-booking-total',
@@ -22,6 +24,7 @@ import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/
 export class ReviewScheduleBookingTotalComponent {
   scheduleBooking: Observable<ScheduleBooking>;
   scheduleFilter: Observable<ScheduleFilter>;
+  passengerInfo$: Observable<PassengerInfo[] | null>;
 
   constructor(
     private store: Store,
@@ -31,26 +34,64 @@ export class ReviewScheduleBookingTotalComponent {
   ) {
     this.scheduleBooking = this.store.pipe(select(selectScheduleBooking));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
+    this.passengerInfo$ = this.store.pipe(select(selectPassengerInfo));
   }
 
   getScheduleBooking(schedule?: Schedule[] | null): Schedule[] {
     return schedule ?? [];
   }
 
-  getAdultCount(passengers?: { type: string; count: number }[]): number {
-    return passengers?.find((p) => p.type === 'ADULT')?.count ?? 0;
+  /**
+   * OBRS-1384 AC-3. This page comes BEFORE /passenger-info in the stepper, so the
+   * two directions through it have DIFFERENT correct answers and the fix OBRS-1226
+   * applied to /passenger-info would be wrong here.
+   *
+   * On the way forward no passenger row exists yet, and `scheduleFilter` — the
+   * headcount typed on the search page — is the only source there is and the right
+   * one; reading the passengers alone would print "0 คน" on every normal visit. It
+   * is only on the way BACK (`passenger-info.component.ts` -> onBack()) that
+   * passenger rows exist, and from then on they are what the tickets will be,
+   * OPEN-seating +/- and adult/child radio included. So: real passengers when there
+   * are any, the search filter when there are none.
+   */
+  getAdultCount(
+    filter?: ScheduleFilter | null,
+    passengers?: PassengerInfo[] | null
+  ): number {
+    if (passengers?.length) {
+      return passengers.filter((p) => p.isAdult).length;
+    }
+    return filter?.passengerInfo?.find((p) => p.type === 'ADULT')?.count ?? 0;
   }
 
-  getKidCount(passengers?: { type: string; count: number }[]): number {
-    return passengers?.find((p) => p.type === 'KIDS')?.count ?? 0;
+  getKidCount(
+    filter?: ScheduleFilter | null,
+    passengers?: PassengerInfo[] | null
+  ): number {
+    if (passengers?.length) {
+      return passengers.filter((p) => !p.isAdult).length;
+    }
+    return filter?.passengerInfo?.find((p) => p.type === 'KIDS')?.count ?? 0;
   }
 
-  sumPassengers(items?: { type: string; count: number }[]): number {
-    return items?.reduce((total, item) => total + item.count, 0) ?? 0;
+  sumPassengers(
+    filter?: ScheduleFilter | null,
+    passengers?: PassengerInfo[] | null
+  ): number {
+    if (passengers?.length) {
+      return passengers.length;
+    }
+    return (
+      filter?.passengerInfo?.reduce((total, item) => total + item.count, 0) ?? 0
+    );
   }
 
-  sumFare(items?: Schedule[] | null, passengers?: { type: string; count: number }[]): number {
-    const sumPassengers = this.sumPassengers(passengers) ?? 0;
+  sumFare(
+    items?: Schedule[] | null,
+    filter?: ScheduleFilter | null,
+    passengers?: PassengerInfo[] | null
+  ): number {
+    const sumPassengers = this.sumPassengers(filter, passengers) ?? 0;
     const sumFare =
       items?.reduce((total, item) => total + this.getPricePerSeat(item?.pricePerSeat), 0) ??
       0;

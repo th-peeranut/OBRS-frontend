@@ -34,5 +34,19 @@
 // liquids, fragile goods and oversized items outright — i.e. said we cannot carry parcels — while
 // the site was already selling parcel carriage. Not a worsening: the same items are still refused
 // in a passenger's hands. See BUSINESS_POLICY_LEDGER in scripts/check-i18n-parity.mjs.
-export const BUSINESS_POLICY_VERSION = '1.1';
-export const BUSINESS_POLICY_EFFECTIVE_DATE = '2026-08-16';
+//
+// 1.2 (OBRS-623 + OBRS-659): the rewrite. The old text named another operator as the place to go,
+// carried a COVID-19 annex from 2564 whose numbers contradicted the main body on the same page,
+// granted an open-date ticket the system cannot issue, said cancellation needed force majeure or a
+// medical certificate while the app has always allowed self-cancellation for any reason, and
+// advertised statutory fare reductions for monks and for soldiers and police that production does
+// not implement. The reschedule and cancellation numbers are no longer text at all — they render
+// from GET /api/reschedule-policy and GET /api/cancellation-policy.
+//
+// ⚠️ worsensTerms: true, so this version is PUBLISHED BEFORE IT TAKES EFFECT and the two dates
+// below are deliberately different. Three things a reader of 1.1 could point at are withdrawn: the
+// open-date change, "one change, no fee", and the monk/soldier/police fare reductions. That the
+// last two were never honoured in code does not make withdrawing them free — what a ticket holder
+// relied on is what the page said. See BUSINESS_POLICY_LEDGER in scripts/check-i18n-parity.mjs.
+export const BUSINESS_POLICY_VERSION = '1.2';
+export const BUSINESS_POLICY_EFFECTIVE_DATE = '2026-08-27';

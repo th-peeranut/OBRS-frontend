@@ -21,7 +21,7 @@ passengers/discount snapshot to show, just a single total. -->
           <div class="card-body-header">
             {{ "PAYMENT.SUMMARY.HEADER" | translate }}
           </div>
-          @if (getAdultCount(scheduleFilter?.passengerInfo) > 0) {
+          @if (getAdultCount((passengerInfo$ | async)) > 0) {
             <div
               class="card-body-content"
               >
@@ -29,12 +29,12 @@ passengers/discount snapshot to show, just a single total. -->
                 {{ "PAYMENT.SUMMARY.ADULT_LABEL" | translate }}
               </span>
               <span>
-                {{ getAdultCount(scheduleFilter?.passengerInfo) }}
+                {{ getAdultCount((passengerInfo$ | async)) }}
                 {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
               </span>
             </div>
           }
-          @if (getKidCount(scheduleFilter?.passengerInfo) > 0) {
+          @if (getKidCount((passengerInfo$ | async)) > 0) {
             <div
               class="card-body-content"
               >
@@ -42,7 +42,7 @@ passengers/discount snapshot to show, just a single total. -->
                 {{ "PAYMENT.SUMMARY.CHILD_LABEL" | translate }}
               </span>
               <span>
-                {{ getKidCount(scheduleFilter?.passengerInfo) }}
+                {{ getKidCount((passengerInfo$ | async)) }}
                 {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
               </span>
             </div>
@@ -113,7 +113,7 @@ passengers/discount snapshot to show, just a single total. -->
                 {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
               </span>
               <span>
-                {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+                {{ sumFare(scheduleBooking?.schedule, (passengerInfo$ | async)) }}
                 {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
               </span>
             </div>
@@ -124,7 +124,7 @@ passengers/discount snapshot to show, just a single total. -->
               {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
             </span>
             <span>
-              {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+              {{ sumFare(scheduleBooking?.schedule, (passengerInfo$ | async)) }}
               {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
             </span>
           </div>
