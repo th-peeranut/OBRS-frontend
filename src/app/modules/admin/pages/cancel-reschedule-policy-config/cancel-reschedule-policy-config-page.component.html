@@ -28,7 +28,7 @@
 }
 
 @if (!isLoading && config) {
-  <!-- ONE form across three cards: PUT writes all seven keys or none (BR-7),
+  <!-- ONE form across three cards: PUT writes all eight keys or none (BR-7),
   so three Save buttons would be three primary buttons advertising a partial
   write the API does not offer. -->
   <form [formGroup]="form" (ngSubmit)="save()">
@@ -213,6 +213,38 @@
               role="alert"
               id="rescheduleMaxDaysAhead-error"
             >{{ errorKey('rescheduleMaxDaysAhead') | translate: errorParams('rescheduleMaxDaysAhead') }}</small>
+          }
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label" for="rescheduleMaxCount">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESCHEDULE_MAX_COUNT_LABEL' | translate }}
+            <span class="admin-required">*</span>
+            <app-config-source-badge [overridden]="config.rescheduleMaxCountOverridden"></app-config-source-badge>
+          </label>
+          <input
+            #rescheduleMaxCountInput
+            id="rescheduleMaxCount"
+            class="admin-field"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            max="20"
+            step="1"
+            required
+            formControlName="rescheduleMaxCount"
+            [attr.aria-invalid]="isFieldInvalid('rescheduleMaxCount') ? true : null"
+            [attr.aria-describedby]="describedBy('rescheduleMaxCount')"
+            />
+          <small class="admin-muted" id="rescheduleMaxCount-helper">
+            {{ 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.RESCHEDULE_MAX_COUNT_HELPER' | translate }}
+          </small>
+          @if (isFieldInvalid('rescheduleMaxCount')) {
+            <small
+              class="admin-error"
+              role="alert"
+              id="rescheduleMaxCount-error"
+            >{{ errorKey('rescheduleMaxCount') | translate: errorParams('rescheduleMaxCount') }}</small>
           }
         </div>
 

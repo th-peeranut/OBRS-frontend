@@ -2647,6 +2647,10 @@ export interface OwnerCancelReschedulePolicyDto {
   rescheduleWindowHoursOverridden: boolean;
   rescheduleMaxDaysAhead: number;
   rescheduleMaxDaysAheadOverridden: boolean;
+  /** OBRS-1447: how many times one booking may be rescheduled; `0` means UNLIMITED,
+   * which is why the field's helper text has to say so. */
+  rescheduleMaxCount: number;
+  rescheduleMaxCountOverridden: boolean;
   earlyWindowHours: number;
   earlyWindowHoursOverridden: boolean;
   /** 0.0–1.0 rate, NOT a percentage. The form shows whole percent and the
@@ -2659,8 +2663,8 @@ export interface OwnerCancelReschedulePolicyDto {
   rescheduleFeeLateThbOverridden: boolean;
 }
 
-/** The PUT body: the seven values only, no flags and no key parameter — the
- * endpoint writes all seven or none (BR-7). */
+/** The PUT body: the eight values only, no flags and no key parameter — the
+ * endpoint writes all eight or none (BR-7). */
 export type CancelReschedulePolicyReqDto = Omit<
   OwnerCancelReschedulePolicyDto,
   `${string}Overridden`

@@ -1672,8 +1672,8 @@
       "LOAD_FAILED": "Unable to load the cancel/reschedule policy.",
       "STATE": {
         "ALL_DEFAULT": "Every value below is the platform default. Nothing here is yours yet.",
-        "MIXED": "{{count}} of 7 values are yours; the rest still follow the platform default.",
-        "ALL_CUSTOM": "All 7 values are your own policy and no longer follow the platform default."
+        "MIXED": "{{count}} of 8 values are yours; the rest still follow the platform default.",
+        "ALL_CUSTOM": "All 8 values are your own policy and no longer follow the platform default."
       },
       "SOURCE": {
         "DEFAULT": "Platform default",
@@ -1696,6 +1696,8 @@
       "RESCHEDULE_WINDOW_HOURS_HELPER": "After this point a customer can no longer move the trip. The same value also governs seat changes and stop changes. Enter 0 to allow it right up to departure.",
       "RESCHEDULE_MAX_DAYS_AHEAD_LABEL": "Max days ahead for reschedule",
       "RESCHEDULE_MAX_DAYS_AHEAD_HELPER": "How far past the original departure date a customer may move the trip, in days.",
+      "RESCHEDULE_MAX_COUNT_LABEL": "Max reschedules per booking",
+      "RESCHEDULE_MAX_COUNT_HELPER": "How many times one booking may be moved. Enter 0 for UNLIMITED (the default) — it does not mean 'no reschedules'.",
       "RESCHEDULE_FEE_LATE_THB_LABEL": "Late reschedule fee (THB)",
       "RESCHEDULE_FEE_LATE_THB_HELPER": "Flat fee charged when a reschedule is requested at or after the early/late boundary. Before the boundary there is no fee. Enter 0 for no fee at all.",
       "EARLY_WINDOW_HOURS_LABEL": "Early / late boundary (hours before departure)",
@@ -1705,18 +1707,18 @@
         "EARLY_ABOVE_RESCHEDULE": "The early/late boundary must be greater than the reschedule window, otherwise the late reschedule fee can never apply.",
         "EARLY_RATE_NOT_BELOW_LATE": "The early refund rate must be at least the late refund rate — cancelling sooner may not refund less."
       },
-      "TAKEOVER_WARNING": "Saving writes all 7 values as your own. The {{count}} still marked \"Platform default\" will stop following the platform and will only change when you change them here.",
+      "TAKEOVER_WARNING": "Saving writes all 8 values as your own. The {{count}} still marked \"Platform default\" will stop following the platform and will only change when you change them here.",
       "SAVE_CONFIRM_TITLE": "Take over the whole policy?",
-      "SAVE_CONFIRM_TEXT": "All 7 values become yours, including the {{count}} you did not change. They will stop following the platform default. You can hand them back at any time with \"Use the platform default\".",
+      "SAVE_CONFIRM_TEXT": "All 8 values become yours, including the {{count}} you did not change. They will stop following the platform default. You can hand them back at any time with \"Use the platform default\".",
       "SAVE_CONFIRM_BTN": "Save as my policy",
       "SAVE_REJECTED": "The server rejected this policy and nothing was saved.",
       "RESET": {
         "TITLE": "Use the platform default",
-        "BODY": "Hands all 7 values back to the platform default. From then on they follow the platform whenever it changes, until you set your own again.",
+        "BODY": "Hands all 8 values back to the platform default. From then on they follow the platform whenever it changes, until you set your own again.",
         "BTN": "Use the platform default",
         "RUNNING": "Handing back...",
         "CONFIRM_TITLE": "Hand the policy back to the platform?",
-        "CONFIRM_TEXT": "Your 7 values are removed and the platform default takes over immediately, for every trip you sell. Bookings already made are not changed.",
+        "CONFIRM_TEXT": "Your 8 values are removed and the platform default takes over immediately, for every trip you sell. Bookings already made are not changed.",
         "CONFIRM_BTN": "Use the platform default",
         "DONE": "The platform default is in use again.",
         "FAILED": "Could not hand the policy back. Nothing was changed."
@@ -2581,6 +2583,13 @@
       "HEADER": "Service point route map",
       "START": "Nong Sak - Ban Bueng - Bangkok",
       "STOP": "Bangkok - Ban Bueng - Nong Sak"
+    },
+    "CHARTER": {
+      "TITLE": "Charter a whole minibus",
+      "DESC": "Hire an entire air-conditioned minibus for groups, company trips, seminars, merit-making and other events. Need a van, a different size or more than one vehicle? Ask us by phone.",
+      "LEAD_TIME_NOTE": "Please contact us at least 3 calendar days in advance so the vehicle and its permit can be arranged.",
+      "REVEAL_CTA": "Show phone number",
+      "CALL_CTA": "Call {{phone}}"
     },
     "FOOTER": {
       "TITLE": "NJ Phuyaipu",

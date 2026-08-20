@@ -29,6 +29,9 @@ const ALL_DEFAULT: OwnerCancelReschedulePolicyDto = {
   cancelRefundRateLateOverridden: false,
   rescheduleFeeLateThb: 50,
   rescheduleFeeLateThbOverridden: false,
+  // OBRS-1447: 0 is the shipped default and means UNLIMITED, not "no reschedules".
+  rescheduleMaxCount: 0,
+  rescheduleMaxCountOverridden: false,
 };
 
 function allOverridden(): OwnerCancelReschedulePolicyDto {
@@ -41,10 +44,11 @@ function allOverridden(): OwnerCancelReschedulePolicyDto {
     cancelRefundRateEarlyOverridden: true,
     cancelRefundRateLateOverridden: true,
     rescheduleFeeLateThbOverridden: true,
+    rescheduleMaxCountOverridden: true,
   };
 }
 
-/** Three of seven owned — the arm that can only arrive from data written
+/** Three of eight owned — the arm that can only arrive from data written
  * outside this UI, and that a page rendering "all default" would lie about. */
 function mixed(): OwnerCancelReschedulePolicyDto {
   return {
@@ -130,6 +134,7 @@ describe('CancelReschedulePolicyConfigPageComponent (OBRS-699)', () => {
         cancelRefundRateLate: 0.5,
         rescheduleWindowHours: 2,
         rescheduleMaxDaysAhead: 60,
+        rescheduleMaxCount: 0,
         rescheduleFeeLateThb: 50,
         earlyWindowHours: 24,
       });
@@ -143,7 +148,7 @@ describe('CancelReschedulePolicyConfigPageComponent (OBRS-699)', () => {
       store.data$.next(ALL_DEFAULT);
 
       expect(component['overriddenCount']).toBe(0);
-      expect(component['inheritedCount']).toBe(7);
+      expect(component['inheritedCount']).toBe(8);
       expect(component['stateKey']).toBe('ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.STATE.ALL_DEFAULT');
     });
 
@@ -153,16 +158,16 @@ describe('CancelReschedulePolicyConfigPageComponent (OBRS-699)', () => {
       store.data$.next(mixed());
 
       expect(component['overriddenCount']).toBe(3);
-      expect(component['inheritedCount']).toBe(4);
+      expect(component['inheritedCount']).toBe(5);
       expect(component['stateKey']).toBe('ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.STATE.MIXED');
     });
 
-    it('reports ALL_CUSTOM once all seven are the owner’s', () => {
+    it('reports ALL_CUSTOM once all eight are the owner’s', () => {
       const { component, store } = makeComponent({});
       component.ngOnInit();
       store.data$.next(allOverridden());
 
-      expect(component['overriddenCount']).toBe(7);
+      expect(component['overriddenCount']).toBe(8);
       expect(component['stateKey']).toBe('ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.STATE.ALL_CUSTOM');
     });
   });
@@ -200,7 +205,7 @@ describe('CancelReschedulePolicyConfigPageComponent (OBRS-699)', () => {
       expect(update).not.toHaveBeenCalled();
     });
 
-    it('does NOT ask when all seven are already the owner’s — a routine edit gets no dialog', async () => {
+    it('does NOT ask when all eight are already the owner’s — a routine edit gets no dialog', async () => {
       const update = jasmine
         .createSpy('updateCancelReschedulePolicyOwnerConfig')
         .and.returnValue(okResponse(allOverridden()));

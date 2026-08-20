@@ -1,0 +1,107 @@
+@import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens.scss";
+
+// OBRS-775 — a component that declares no `:host` display renders as `display:
+// inline`, which may not contain the block children below it.
+:host {
+  display: block;
+}
+
+.charter-section {
+  padding: $space-md;
+}
+
+.charter-card {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  column-gap: $space-md;
+
+  padding: $space-md;
+
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: $radius-xl;
+}
+
+.charter-title {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  margin-bottom: 4px;
+}
+
+.charter-desc {
+  margin-bottom: 4px;
+}
+
+.charter-note {
+  color: $text-lightblack;
+  margin-bottom: 0;
+}
+
+.charter-call-btn {
+  flex-shrink: 0;
+
+  display: flex;
+  flex-direction: row;
+  column-gap: 8px;
+  justify-content: center;
+  align-items: center;
+
+  height: 52px;
+  padding: 0 $space-md;
+
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $text-white;
+  text-decoration: none;
+
+  background-color: $primary-blue;
+  border-radius: $radius-xl;
+
+  // The same class dresses an <a> (number revealed) and a <button> (not yet), so
+  // the button's user-agent defaults have to be cleared or the two states are
+  // visibly different controls.
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background-color: $primary-blue-hover;
+    color: $text-white;
+  }
+}
+
+.charter-call-icon {
+  font-size: 20px;
+}
+
+// `:host-context` per OBRS-767 — a global `body.is-dark .a .b` rule cannot
+// outrank a component rule, so the dark colours have to be declared here.
+:host-context(body.is-dark) {
+  .charter-card {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+  }
+
+  .charter-title,
+  .charter-desc {
+    color: $dk-text;
+  }
+
+  .charter-note {
+    color: $dk-text-muted;
+  }
+}
+
+@media (max-width: 768px) {
+  .charter-card {
+    flex-direction: column;
+    align-items: stretch;
+    row-gap: $space-sm;
+  }
+
+  .charter-call-btn {
+    width: 100%;
+  }
+}
