@@ -474,7 +474,13 @@ export class MyBookingsComponent implements OnInit {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.NOT_ONE_WAY' };
     }
 
-    if (Number(booking.rescheduleCount ?? 0) >= 1) {
+    // OBRS-657: the cap is the operator's `reschedule_max_count`, carried on the row;
+    // 0 (the shipped default) means UNLIMITED. The literal `>= 1` this replaces was this
+    // component re-declaring a server rule, so it went on hiding Reschedule after one use
+    // no matter what the backend enforced. An absent value can only be a pre-OBRS-657
+    // backend, which is unlimited too - and the server stays the final authority either way.
+    const maxCount = Number(booking.rescheduleMaxCount ?? 0);
+    if (maxCount > 0 && Number(booking.rescheduleCount ?? 0) >= maxCount) {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.ALREADY_USED' };
     }
 
