@@ -1,5 +1,7 @@
 import { test, expect, Page, Locator } from '@playwright/test';
 
+import { seedAnalyticsConsent } from '../support/analytics-consent';
+
 /**
  * OBRS-83 — customer My Bookings reschedule flow. Runs against a LOCAL
  * full-stack (OBRS-184):
@@ -32,20 +34,28 @@ import { test, expect, Page, Locator } from '@playwright/test';
  *   E2E-ELIGIBLE    confirmed  0      BOOK     4     read-only: options, empty day, NO_SEATS
  *   E2E-MOVE        confirmed  0      BOOK     5     the only booking a test really mutates
  *   E2E-CANCELLED   cancelled  0      BOOK     6     NOT_CONFIRMED disabled-item checks
- *   E2E-MAXCOUNT    confirmed  1      BOOK     7     both MAX_COUNT halves (seeded, not produced):
+ *   E2E-MAXCOUNT    confirmed  2      BOOK     7     both MAX_COUNT halves (seeded, not produced):
  *                                                    up-front disabled item, and — with its list
  *                                                    row's count mocked back to 0 — the reactive
  *                                                    options-load rejection
+ *   E2E-UNDERCAP    confirmed  1      BOOK     8     used once, still under the cap — the control
+ *                                                    arm that tells the operator's rule apart from
+ *                                                    the literal `>= 1` it replaced (OBRS-1448)
  *   E2E-SEATHOLD    confirmed  0      COLLIDE  4     holds seat 4 on COLLIDE; also the
  *                                                    generic confirmed card for menu checks
+ *
+ * Those counts mean nothing on their own: they are read against `reschedule_max_count`,
+ * which OBRS-657 made a config key whose shipped default (0) means UNLIMITED. The fixture
+ * pins it to 2 for this database — see its header for why 2 and not 1.
  */
 
 const CUSTOMER_EMAIL = 'customer@system.local';
 const CUSTOMER_PASSWORD = 'P@ssw0rd';
 
-/** Bangkok calendar date. `month` is 1-based to match both PrimeNG's `data-date`
- * key and the fixture's own day offsets — no 0-based/1-based conversion at any
- * call site. */
+/** Bangkok calendar date. `month` is 1-based, matching the fixture's own day offsets.
+ * PrimeNG's `data-date` key is 0-based and the single conversion for it lives in
+ * selectPCalendarDate — see the note there (OBRS-1448); this comment used to claim no
+ * conversion was needed anywhere, which is what put every picked date a month late. */
 interface CalDate {
   year: number;
   month: number;
@@ -91,6 +101,14 @@ function displayDateEn(d: CalDate): string {
 }
 
 async function loginAsCustomer(page: Page, locale: 'en' | 'th' = 'en'): Promise<void> {
+  // OBRS-1448: this lane never adopted OBRS-882's seed, so every test here ran with the
+  // analytics consent bar up — `position: fixed; bottom: 0; z-index: 1000`, i.e. over
+  // wherever the reschedule dialog's datepicker panel lands, and confirmed present in the
+  // page snapshot of this lane's failures on 2026-08-20. Nothing here has been shown to
+  // fail BECAUSE of it — the datepicker reds measured that day were the dead
+  // `.p-datepicker-next` selector below — but the bar took out 23 of 132 gate cases when
+  // it shipped and reports as anything but consent, so the lane stops carrying it.
+  await seedAnalyticsConsent(page);
   await page.addInitScript((lang) => {
     localStorage.setItem('app_language', lang);
   }, locale);
@@ -433,14 +451,20 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     page,
   }) => {
     // The up-front half of the MAX_COUNT rule, and the half that actually fires in
-    // production: rescheduleEligibility() (my-bookings.component.ts) gates on
-    // `rescheduleCount >= 1` while rendering the card, so a maxed booking never
-    // reaches the dialog at all — AC8b's reactive 400 only happens on a stale list.
+    // production: rescheduleEligibility() (my-bookings.component.ts) compares the row's
+    // `rescheduleCount` against the row's `rescheduleMaxCount` while rendering the card,
+    // so a maxed booking never reaches the dialog at all — AC8b's reactive 400 only
+    // happens on a stale list.
     //
-    // Untestable before this lane existed: it needs a booking that is ALREADY at
-    // count=1 when the list first paints. On SIT the only way to get one was to
-    // spend a booking by rescheduling it earlier in the same run, which left the
-    // rendered card stale and so exercised the reactive path instead of this one.
+    // OBRS-1448: that comparison used to be the literal `rescheduleCount >= 1`, and this
+    // test cannot tell the two apart on its own — E2E-MAXCOUNT is over 1 either way. The
+    // test immediately below is the arm that can, and the two are only meaningful
+    // together.
+    //
+    // Untestable before this lane existed: it needs a booking that is ALREADY at the cap
+    // when the list first paints. On SIT the only way to get one was to spend a booking
+    // by rescheduling it earlier in the same run, which left the rendered card stale and
+    // so exercised the reactive path instead of this one.
     await loginAsCustomer(page);
     await gotoMyBookings(page);
 
@@ -449,10 +473,34 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     const rescheduleItem = menuItem(menu, /^Reschedule$/);
     await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'true');
     await expect(rescheduleItem.locator('.action-menu-item__tooltip')).toHaveText(
-      /Already rescheduled once/i
+      /Reschedule limit reached/i
     );
 
     await page.screenshot({ path: 'e2e-evidence/already-used-disabled.png', fullPage: false });
+  });
+
+  test('AC2 (OBRS-1448): a booking rescheduled once but still UNDER the operator cap keeps Reschedule enabled', async ({
+    page,
+  }) => {
+    // The control arm for the test above, and the only thing in this file that goes red
+    // if computeRescheduleEligibility() is reverted to the literal `rescheduleCount >= 1`
+    // OBRS-657 removed. E2E-UNDERCAP is at count 1 under a cap of 2:
+    //
+    //   operator's rule (1 >= 2)  -> false -> item ENABLED, no reason tooltip
+    //   the old literal (1 >= 1)  -> true  -> item disabled with ALREADY_USED
+    //
+    // Enabled items render no `.action-menu-item__tooltip` at all, so the absence is
+    // asserted rather than the text — the same shape the AC1/AC2 menu test uses.
+    await loginAsCustomer(page);
+    await gotoMyBookings(page);
+
+    const card = cardByBookingNumber(page, 'E2E-UNDERCAP');
+    const menu = await openActionsMenu(page, card);
+    const rescheduleItem = menuItem(menu, /^Reschedule$/);
+    await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'false');
+    await expect(rescheduleItem.locator('.action-menu-item__tooltip')).toHaveCount(0);
+
+    await page.screenshot({ path: 'e2e-evidence/under-cap-enabled.png', fullPage: false });
   });
 
   test('AC5/AC6 (network-mocked): TOP_UP shows real amount ahead of the embedded payment step', async ({
@@ -641,9 +689,9 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     // failure, per shared/lib/reschedule-error.ts).
     //
     // But that path is unreachable from an HONEST list: my-bookings.component.ts's
-    // rescheduleEligibility() gates on `rescheduleCount >= 1` up front, so a
-    // truly-maxed booking renders with Reschedule already disabled and the dialog
-    // never opens. It is reachable exactly when the rendered list is STALE — the
+    // rescheduleEligibility() gates on `rescheduleCount >= rescheduleMaxCount` up
+    // front, so a truly-maxed booking renders with Reschedule already disabled and
+    // the dialog never opens. It is reachable exactly when the rendered list is STALE — the
     // tab was open before the booking was rescheduled elsewhere — so staleness is
     // what this mock reproduces, and only for E2E-MAXCOUNT's own row. Everything
     // downstream (options request, the 400, the message) is the real backend.
@@ -841,10 +889,10 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
 /** Clicks a day cell in the currently open PrimeNG p-datepicker panel, navigating
  * months first if the target isn't on the visible one.
  *
- * PrimeNG 17 stamps each day cell's <span> with `data-date="YYYY-M-D"` — 1-based
- * month, no zero padding (`formatDateKey` in primeng-calendar.mjs) — which is more
- * robust than matching visible text, and unlike the text it doesn't change under
- * the Thai locale.
+ * PrimeNG stamps each day cell's <span> with `data-date="YYYY-M-D"` — 0-based month,
+ * no zero padding (`formatDateKey`, primeng-datepicker.mjs:1410 at 21.1.9) — which is
+ * more robust than matching visible text, and unlike the text it doesn't change under
+ * the Thai locale. This line said 1-based until OBRS-1448; see the key built below.
  *
  * The `td:not(.p-datepicker-other-month)` scope is load-bearing, not defensive:
  * `showOtherMonths` defaults on, so the panel for the month BEFORE the target
@@ -856,7 +904,14 @@ async function selectPCalendarDate(page: Page, target: CalDate): Promise<void> {
   const dialog = page.locator('.reschedule-modal');
   const dateInput = dialog.locator('#reschedule-date-input');
   const panel = page.locator('.p-datepicker').first();
-  const key = `${target.year}-${target.month}-${target.day}`;
+  // OBRS-1448: `data-date` is `${y}-${date.getMonth()}-${d}` — getMonth() is 0-BASED
+  // (primeng 21.1.9, datepicker's formatDateKey). Passing this file's 1-based `month`
+  // straight through therefore addressed the month AFTER the target: measured on
+  // 2026-08-20, AC3 asked the server for `reschedule-options?date=2026-10-01` while
+  // meaning 1 September. Nothing failed at the click — the wrong day exists and is
+  // selectable — so it surfaced as "no available departures", and in AC4, whose whole
+  // assertion is that a date has none, it did not surface at all.
+  const key = `${target.year}-${target.month - 1}-${target.day}`;
 
   await panel.waitFor({ state: 'visible', timeout: 10_000 });
 
@@ -878,10 +933,19 @@ async function selectPCalendarDate(page: Page, target: CalDate): Promise<void> {
   // also what dispatches loadRescheduleOptions — so this cannot pass without the
   // selection having really happened.
   // The whole attempt is retried as one unit, month hop included. The hop clicks
-  // `.p-datepicker-next`, which sits in the same panel and so loses to the same
+  // the next-month button, which sits in the same panel and so loses to the same
   // animation — and a swallowed hop click ALSO closes the panel, which surfaces
   // one step later as `.p-datepicker-title` "not found" rather than as anything
   // that names the real problem. Patching only the day click left that half live.
+  //
+  // OBRS-1448: that button's class is `p-datepicker-next-button` (primeng 21.1.9,
+  // `[styleClass]="cx('pcNextButton')"`). The `.p-datepicker-next` this used to
+  // ask for matches nothing, so every hop threw, every attempt was swallowed by the
+  // catch below, and the panel sat on the opening month for all four of them.
+  // It stayed invisible because the hop only runs when the target is in a LATER
+  // month than the one the panel opens on — i.e. only in the last third of a
+  // calendar month, where today+12 crosses over. Same dead selector still lives in
+  // obrs-483-open-seating.spec.ts:138 and obrs-564-booking-policy.spec.ts:155.
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
       // A swallowed click still closes the panel, so reopen before retrying.
@@ -901,7 +965,7 @@ async function selectPCalendarDate(page: Page, target: CalDate): Promise<void> {
       // The ceiling exists to fail with a locator assertion rather than spin forever.
       for (let hop = 0; hop < 3 && (await cell.count()) === 0; hop++) {
         const before = (await title.textContent()) ?? '';
-        await panel.locator('.p-datepicker-next').click();
+        await panel.locator('.p-datepicker-next-button').click();
         // Wait on the header actually changing rather than a fixed delay — the next
         // count() would otherwise race the re-render and hop twice.
         await expect(title).not.toHaveText(before, { timeout: 5_000 });
