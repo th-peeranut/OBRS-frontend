@@ -460,6 +460,17 @@ links to `/home` and no separate `a[href="/home"]` Home button exists.
   string with no build error; `COMMON.*` is highest-risk. (`CORE.md`, Confirmed.)
 - Error handling branches on **`error.error.errorCode`** (stable UPPER_SNAKE), never
   the localized `message`. (`CORE.md`.)
+- **`text-transform: uppercase` may never be the only thing that separates one kind of
+  text from another (OBRS-1446).** Thai has no capital letters, so `uppercase` is a
+  measured no-op on Thai text — `s.toUpperCase() === s` came back `true` for all five
+  sidebar section headers — and Chinese is the same. Thai is the app's default locale,
+  so a design that leans on it is broken on the screen most users actually see, while
+  looking correct to whoever built it in `en`. The same applies to `letter-spacing`:
+  Thai does not space its words, so widening the tracking makes a word less of a unit
+  rather than more of a label. Both are fine as an *extra* signal for `en`; the signal
+  something depends on has to be script-independent — a rule, a surface, a spacing
+  ratio, a weight or size step. `.admin-nav-section-title` in `admin-theme.scss` is the
+  worked example, pinned by `admin-shell-chrome-contrast.spec.ts`.
 
 ---
 
