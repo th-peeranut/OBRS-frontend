@@ -46,6 +46,32 @@
 
 BEGIN;
 
+-- ── The reschedule cap this lane runs under (OBRS-1448) ──────────────────────
+-- OBRS-657 turned the once-only limit into `reschedule_max_count`, and the value
+-- data.sql ships is 0 = UNLIMITED. That is the right product default and it leaves
+-- both MAX_COUNT cases below with no rule to test: a booking seeded at
+-- reschedule_count = 1 is simply eligible, so "Reschedule is disabled up front"
+-- and "the server rejects on options load" both stop being true.
+--
+-- So the cap is fixture data here, like every seat number and date above it. 2, not
+-- 1, on purpose: at a cap of 1 the correct rule (count >= rescheduleMaxCount) and the
+-- literal this card exists to keep buried (count >= 1) agree on every row, and the
+-- pair of tests would pass just as happily against the reverted component. At 2,
+-- E2E-UNDERCAP (count 1) is eligible only under the correct rule.
+--
+-- Lane-private and nothing else: this database is dropped and rebuilt every run and
+-- is never SIT or prod (see the header of playwright.local.config.ts). The shipped
+-- 0 = unlimited default keeps its own coverage in my-bookings.component.spec.ts
+-- ("eligible after THREE reschedules when rescheduleMaxCount is 0").
+--
+-- Upsert rather than UPDATE: an UPDATE that matched no row would leave the cap at
+-- data.sql's 0 and hand both MAX_COUNT tests back the vacuous pass this card is
+-- fixing, silently.
+INSERT INTO system_configs (config_key, config_value, value_type, description)
+VALUES ('reschedule_max_count', '2', 'number',
+        'Maximum number of times one booking may be rescheduled; 0 means unlimited')
+ON CONFLICT (config_key) DO UPDATE SET config_value = EXCLUDED.config_value;
+
 -- ── Idempotency ──────────────────────────────────────────────────────────────
 -- global-setup-local.ts normally drops and recreates the whole database, so this
 -- is not needed for the happy path. It exists so a developer can re-apply JUST
@@ -166,7 +192,8 @@ FROM (VALUES
     ('E2E-ELIGIBLE',  'confirmed', 0, 10, 'E2E Eligible'),   -- read-only checks: options list, empty day, NO_SEATS
     ('E2E-MOVE',      'confirmed', 0, 10, 'E2E Move'),       -- the one booking a test really reschedules
     ('E2E-CANCELLED', 'cancelled', 0, 10, 'E2E Cancelled'),  -- NOT_CONFIRMED rejection
-    ('E2E-MAXCOUNT',  'confirmed', 1, 10, 'E2E Maxcount'),   -- MAX_COUNT rejection, pre-seeded (not produced by a test)
+    ('E2E-MAXCOUNT',  'confirmed', 2, 10, 'E2E Maxcount'),   -- AT the cap: MAX_COUNT rejection, pre-seeded (not produced by a test)
+    ('E2E-UNDERCAP',  'confirmed', 1, 10, 'E2E Undercap'),   -- USED ONCE but UNDER the cap: eligible only under the operator's rule
     ('E2E-SEATHOLD',  'confirmed', 0, 16, 'E2E Seathold')    -- holds seat '4' on COLLIDE
 ) AS spec(booking_number, booking_status, reschedule_count, offset_days, contact_name);
 
@@ -188,6 +215,7 @@ FROM (VALUES
     ('E2E-MOVE',      10, '09:00:00+07'),
     ('E2E-CANCELLED', 10, '09:00:00+07'),
     ('E2E-MAXCOUNT',  10, '09:00:00+07'),
+    ('E2E-UNDERCAP',  10, '09:00:00+07'),
     ('E2E-SEATHOLD',  16, '15:00:00+07')
 ) AS spec(booking_number, offset_days, tod)
 JOIN bookings b ON b.booking_number = spec.booking_number
@@ -248,6 +276,7 @@ FROM (VALUES
     ('E2E-MOVE',      'E2E-TK-MOVE',      'confirmed', 'Move',      '5'),
     ('E2E-CANCELLED', 'E2E-TK-CANCELLED', 'cancelled', 'Cancelled', '6'),
     ('E2E-MAXCOUNT',  'E2E-TK-MAXCOUNT',  'confirmed', 'Maxcount',  '7'),
+    ('E2E-UNDERCAP',  'E2E-TK-UNDERCAP',  'confirmed', 'Undercap',  '8'),
     -- seat '4' on COLLIDE: the collision partner for E2E-ELIGIBLE's seat '4'
     ('E2E-SEATHOLD',  'E2E-TK-SEATHOLD',  'confirmed', 'Seathold',  '4')
 ) AS spec(booking_number, ticket_number, ticket_status, first_name, seat_number)
