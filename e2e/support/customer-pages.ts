@@ -211,8 +211,11 @@ const myBooking = (
   // operator's window off the ROW. Absent means "no governing operator" and the
   // action is withheld, so the `my-bookings-reschedule` host box (which clicks
   // Reschedule in the overflow menu) cannot open its dialog without these.
+  // OBRS-1447: the cap joined that contract, so it is load-bearing here for the
+  // same reason - `0` is UNLIMITED, absent is "no operator" and withholds.
   rescheduleWindowHours: 2,
   rescheduleMaxDaysAhead: 60,
+  rescheduleMaxCount: 0,
   contact: { fullName: 'Somchai Jaidee', phoneNumber: '0812345678' },
   bookingSchedules: [
     {

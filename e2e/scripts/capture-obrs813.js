@@ -46,8 +46,10 @@ const BOOKING = {
   stopChangeCount: 0,
   // OBRS-699: without the operator's window on the row the booking is
   // ineligible and the offer this capture exists to photograph is absent.
+  // OBRS-1447: the cap is on the same contract now - `0` is UNLIMITED, absent withholds.
   rescheduleWindowHours: 2,
   rescheduleMaxDaysAhead: 60,
+  rescheduleMaxCount: 0,
   contact: { fullName: 'Somchai Jaidee', phoneNumber: '0812345678' },
   bookingSchedules: [
     {
