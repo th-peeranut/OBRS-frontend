@@ -1672,8 +1672,8 @@
       "LOAD_FAILED": "Unable to load the cancel/reschedule policy.",
       "STATE": {
         "ALL_DEFAULT": "Every value below is the platform default. Nothing here is yours yet.",
-        "MIXED": "{{count}} of 7 values are yours; the rest still follow the platform default.",
-        "ALL_CUSTOM": "All 7 values are your own policy and no longer follow the platform default."
+        "MIXED": "{{count}} of 8 values are yours; the rest still follow the platform default.",
+        "ALL_CUSTOM": "All 8 values are your own policy and no longer follow the platform default."
       },
       "SOURCE": {
         "DEFAULT": "Platform default",
@@ -1714,11 +1714,11 @@
       "SAVE_REJECTED": "The server rejected this policy and nothing was saved.",
       "RESET": {
         "TITLE": "Use the platform default",
-        "BODY": "Hands all 7 values back to the platform default. From then on they follow the platform whenever it changes, until you set your own again.",
+        "BODY": "Hands all 8 values back to the platform default. From then on they follow the platform whenever it changes, until you set your own again.",
         "BTN": "Use the platform default",
         "RUNNING": "Handing back...",
         "CONFIRM_TITLE": "Hand the policy back to the platform?",
-        "CONFIRM_TEXT": "Your 7 values are removed and the platform default takes over immediately, for every trip you sell. Bookings already made are not changed.",
+        "CONFIRM_TEXT": "Your 8 values are removed and the platform default takes over immediately, for every trip you sell. Bookings already made are not changed.",
         "CONFIRM_BTN": "Use the platform default",
         "DONE": "The platform default is in use again.",
         "FAILED": "Could not hand the policy back. Nothing was changed."
