@@ -145,14 +145,22 @@ test.describe('OBRS-564 — round trip: 30 -> 45', () => {
     target45.setDate(target45.getDate() + 45);
     const target46 = new Date();
     target46.setDate(target46.getDate() + 46);
-    const key45 = `${target45.getFullYear()}-${target45.getMonth() + 1}-${target45.getDate()}`;
-    const key46 = `${target46.getFullYear()}-${target46.getMonth() + 1}-${target46.getDate()}`;
+    // OBRS-1449: `data-date` is `${y}-${date.getMonth()}-${d}` — getMonth() is already
+    // 0-BASED (primeng 21.1.9, datepicker's formatDateKey), so the `+ 1` these two lines
+    // used to carry addressed the month AFTER the target. Every cell this test looked at
+    // was a month late, which put both of them past the 45-day cap: cell46 was disabled
+    // for the wrong reason (a vacuous pass) and cell45 was disabled too (a real red).
+    const key45 = `${target45.getFullYear()}-${target45.getMonth()}-${target45.getDate()}`;
+    const key46 = `${target46.getFullYear()}-${target46.getMonth()}-${target46.getDate()}`;
 
     async function navigateTo(key: string): Promise<void> {
       for (let hop = 0; hop < 4; hop++) {
         const cell = panel.locator(`td:not(.p-datepicker-other-month) span[data-date="${key}"]`);
         if ((await cell.count()) > 0) return;
-        await panel.locator('.p-datepicker-next').click();
+        // OBRS-1449: `p-datepicker-next-button` at primeng 21.1.9
+        // (`[styleClass]="cx('pcNextButton')"`); `.p-datepicker-next` matches nothing,
+        // and unlike obrs-483's helper there is no catch here — the hop threw outright.
+        await panel.locator('.p-datepicker-next-button').click();
         await page.waitForTimeout(300);
       }
     }
