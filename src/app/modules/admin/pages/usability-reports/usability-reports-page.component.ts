@@ -678,11 +678,18 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           // A saved decision is a completed action — dismiss back to the table.
           this.closeDetail();
         },
-        error: () => {
+        error: (error: unknown) => {
           this.isSavingStatus = false;
-          this.alertService.error(
-            this.translate.instant('ADMIN.USABILITY_REPORTS.STATUS_UPDATE_FAILED')
-          );
+          // OBRS-1473: branch on the stable errorCode, never the localized
+          // message (design-system §9). REPORT_INVALID_TRANSITION is a PERMANENT
+          // refusal — the backend's transition matrix will answer the same way
+          // every time — so the generic "please try again" was telling the admin
+          // to repeat something that can never succeed.
+          const message =
+            extractUsabilityReportErrorCode(error) === 'REPORT_INVALID_TRANSITION'
+              ? 'ADMIN.USABILITY_REPORTS.STATUS_UPDATE_INVALID_TRANSITION'
+              : 'ADMIN.USABILITY_REPORTS.STATUS_UPDATE_FAILED';
+          this.alertService.error(this.translate.instant(message));
           // OBRS-527: revert the optimistic badge delta above — mirror image
           // of both conditions (same shape as autoPromoteToInReview's revert).
           if (previousStatus === 'owner_accepted' && status !== 'owner_accepted') {
@@ -922,13 +929,15 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     this.rebuildDetailStatusOptions(this.detailReport?.status ?? '');
   }
 
-  // OBRS-527: decision-only dropdown options, now keyed by the report's
-  // CURRENT status (sourceStatus), not just role — admin is never restricted
-  // (always DETAIL_STATUS_VALUES); an owner's options depend on the legal
-  // edges from sourceStatus (detailStatusValuesFor/OWNER_ALLOWED_TARGETS in
-  // usability-reports-page.mappers.ts), collapsing to [] once the platform
-  // has already finalized the report (accepted/resolved/rejected/duplicate —
-  // PO-2). Kept a plain field, NOT a getter (CD-churn precedent documented at
+  // OBRS-527: decision-only dropdown options, keyed by the report's CURRENT
+  // status (sourceStatus) as well as role — see detailStatusValuesFor /
+  // ALLOWED_TARGETS in usability-reports-page.mappers.ts. An owner's options
+  // collapse to [] once the platform has finalized the report
+  // (accepted/resolved/rejected/duplicate — PO-2).
+  // OBRS-1473: this used to say "admin is never restricted (always
+  // DETAIL_STATUS_VALUES)" — that was the bug. Admin is source-aware now too,
+  // so admin options collapse to [] on 'rejected' and to the single reopen
+  // option on 'resolved'. Kept a plain field, NOT a getter (CD-churn precedent documented at
   // admin-layout.component.ts:174) — called explicitly at the same three
   // sites seedStatus() already runs, BEFORE the seed (AMENDMENT A1).
   private rebuildDetailStatusOptions(sourceStatus: UsabilityReportStatus | ''): void {

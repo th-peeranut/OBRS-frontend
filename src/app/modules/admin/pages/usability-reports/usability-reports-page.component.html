@@ -450,8 +450,12 @@
             OBRS-527 AMENDMENT A2: also hidden when detailStatusOptions is
             empty — that only happens for an OWNER viewing a report the
             platform already finalized (accepted/resolved/rejected/
-            duplicate); admin's detailStatusOptions is never empty (always
-            DETAIL_STATUS_VALUES), so this ngIf never fires for isAdmin. -->
+            duplicate); admin's detailStatusOptions is never empty, so this
+            ngIf never fires for isAdmin.
+            OBRS-1473: admin's options are source-aware now, so "never empty"
+            is no longer true just because the list is fixed — it holds because
+            every source keeps at least one option: a legal edge, or (on a
+            recorded decision) the same-state note edit. -->
             @if (detailReport.status !== 'dismissed' && detailStatusOptions.length) {
               <div
                 class="ur-status-update mt-3"
