@@ -9,8 +9,14 @@ import { combineLatest, map, Observable, of, switchMap, take } from 'rxjs';
 import {
   Schedule,
   ScheduleFilter,
+  ScheduleList,
 } from '../../../../shared/interfaces/schedule.interface';
+import {
+  boardingDistanceView,
+  crossPairBoardingStop,
+} from '../../../../shared/lib/return-boarding-stop';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
+import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
 import {
   getStationSlugById,
   getStationTranslationLabel,
@@ -44,6 +50,19 @@ export class ReviewScheduleBookingSummaryComponent {
   rawProvinceStationList: Observable<StationApi[]>;
 
   /**
+   * OBRS-1343. This is the LAST screen before payment, and until now it named
+   * the return leg's departure stop off `scheduleFilter.stopStationId` — where
+   * the outbound leg drops the customer. For 4 of the 6 Bangkok destinations of
+   * `chonburi_bangkok` the bus home does not call there at all, so the screen
+   * that confirms the trip was naming a stop the customer must not go to.
+   */
+  scheduleList: Observable<ScheduleList>;
+
+  /** Bound as-is so this page and the trip list answer with the same two rules. */
+  protected readonly crossPairBoardingStop = crossPairBoardingStop;
+  protected readonly boardingDistanceView = boardingDistanceView;
+
+  /**
    * OBRS-1336 AC 5. The trip-type label used to be chosen by counting the
    * selected schedules — `length == 1` meant "เที่ยวเดียว". That made the label
    * a function of what happened to be selectable rather than of what the
@@ -66,6 +85,7 @@ export class ReviewScheduleBookingSummaryComponent {
     );
     this.scheduleBooking = this.store.pipe(select(selectScheduleBooking));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
+    this.scheduleList = this.store.pipe(select(selectScheduleList));
     this.tripTypeLabelKey$ = this.scheduleFilter.pipe(
       map((scheduleFilter) =>
         this.isRoundTrip(scheduleFilter)
@@ -221,16 +241,26 @@ export class ReviewScheduleBookingSummaryComponent {
     }
     const routeSlug = schedule.routeSlug;
 
-    return combineLatest([this.scheduleFilter, this.rawProvinceStationList]).pipe(
+    return combineLatest([
+      this.scheduleFilter,
+      this.rawProvinceStationList,
+      this.scheduleList,
+    ]).pipe(
       take(1),
-      switchMap(([scheduleFilter, stations]) => {
+      switchMap(([scheduleFilter, stations, scheduleList]) => {
         const fromSlug = getStationSlugById(scheduleFilter?.startStationId, stations);
         const toSlug = getStationSlugById(scheduleFilter?.stopStationId, stations);
         if (!fromSlug || !toSlug) {
           return of<TripEstimate | null>(null);
         }
 
-        const pickupSlug = isReturnLeg ? toSlug : fromSlug;
+        // OBRS-1343: the return leg's pickup is the stop the search actually
+        // ran from, which is not always the outbound drop-off. Looking `toSlug`
+        // up in the reverse route's `pickup[]` found nothing for the four
+        // cross pairs, so their chip silently disappeared.
+        const returnPickupSlug =
+          crossPairBoardingStop(scheduleList)?.slug || toSlug;
+        const pickupSlug = isReturnLeg ? returnPickupSlug : fromSlug;
         const dropoffSlug = isReturnLeg ? fromSlug : toSlug;
 
         return this.routeMapService.getPickupDropoffCached(routeSlug).pipe(

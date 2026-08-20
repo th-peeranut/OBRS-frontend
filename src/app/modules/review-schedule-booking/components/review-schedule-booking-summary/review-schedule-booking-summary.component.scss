@@ -116,6 +116,33 @@
   color: $text-lightblack;
 }
 
+/* OBRS-1343 — same notice, same class names and same two text tokens as the
+   trip list, so the copy the customer read when choosing and the copy on the
+   last screen before paying cannot drift apart. It sits inside the white
+   `.card-container`, so the surface is white; dark mode repaints it in
+   dark-theme.scss section 14 (the `.card-container *` blanket rule there fixes
+   the text but not this element's own fill). */
+.return-boarding-notice {
+  margin: $space-2xs 0 0;
+  padding: $space-xs $space-sm;
+  border-left: 4px solid $primary-blue;
+  border-radius: 6px;
+  background: $primary-white;
+
+  &__title {
+    margin: 0;
+    font-size: $font-size-sm;
+    font-weight: bold;
+    color: $text-black;
+  }
+
+  &__body {
+    margin: 2px 0 0;
+    font-size: $font-size-sm;
+    color: $text-softblack;
+  }
+}
+
 .btn-change-info {
   display: flex;
   justify-content: center;
