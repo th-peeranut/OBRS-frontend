@@ -130,6 +130,20 @@ function cardByBookingNumber(page: Page, bookingNumber: string) {
  * BEFORE clicking the trigger (a scroll-into-view triggered by the click
  * itself, or any scroll afterward — including a `fullPage` screenshot's
  * internal scroll — will silently dismiss it).
+ *
+ * CLOSING it is asserted with `toBeHidden()`, never `toHaveCount(0)`: under
+ * PrimeNG 21 the popup container SURVIVES the close. Measured from the
+ * OBRS-1448 lane run's trace (2026-08-20, primeng 21.1.9) — the same
+ * `div#pn_id_1.p-menu` is, in order: appended to `<body>` with
+ * `p-anchored-overlay-enter-active` while open; still there carrying
+ * `p-anchored-overlay-leave-active` right after Escape; then restored under
+ * `<p-menu>` with `style="display: none"`. It is never removed, because
+ * `Menu.onOverlayAfterLeave()` sets `overlayVisible = false` with no
+ * `markForCheck()` on an OnPush component (primeng-menu.mjs:548-553, against
+ * `show()` at :460-467 which does call it), so the `@if (!popup ||
+ * overlayVisible)` at :960 never re-evaluates. Escape itself is fine — the
+ * same trace has focus back on the trigger, which is PrimeNG's
+ * `case 'Escape'` branch (:641-648). OBRS-1451.
  */
 async function openActionsMenu(page: Page, card: Locator): Promise<Locator> {
   await card.locator('.actions-menu-btn').scrollIntoViewIfNeeded();
@@ -594,7 +608,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await expect(menuItem(enMenu, /Reschedule/)).toHaveText(/Reschedule/i);
     // Close the menu (Escape — PrimeNG p-menu popup) before switching language.
     await page.keyboard.press('Escape');
-    await expect(enMenu).toHaveCount(0);
+    await expect(enMenu).toBeHidden();
 
     await page.locator('.navbar-lang-trigger').click();
     await page.locator('.navbar-lang-item', { hasText: 'ไทย' }).click();
@@ -602,7 +616,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     const thMenu = await openActionsMenu(page, card);
     await expect(menuItem(thMenu, /เลื่อนการเดินทาง/)).toHaveText(/เลื่อนการเดินทาง/);
     await page.keyboard.press('Escape');
-    await expect(thMenu).toHaveCount(0);
+    await expect(thMenu).toBeHidden();
     // The lang change also re-fetches the (server-localized) booking list
     // (my-bookings.component.ts subscribes to translate.onLangChange), which
     // shows a blocking SweetAlert2 loading overlay for the round trip — let it
@@ -718,7 +732,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
 
     // Escape closes, and focus returns to the trigger (onActionMenuHide()).
     await page.keyboard.press('Escape');
-    await expect(menu).toHaveCount(0);
+    await expect(menu).toBeHidden();
     await expect(trigger).toBeFocused();
 
     // Keyboard: Space also opens (re-open, then close via Escape again).
@@ -731,7 +745,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await expect(cancelItem).toBeVisible();
     await expect(cancelItem.locator('.action-menu-item--danger')).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(menu).toHaveCount(0);
+    await expect(menu).toBeHidden();
 
     // Disabled Reschedule item is still present (not omitted) on the seeded-cancelled
     // E2E-CANCELLED, with the NOT_CONFIRMED reason visible (not hover-only).
@@ -788,7 +802,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     expect(labels).toEqual(['ดูตั๋ว', 'เลื่อนการเดินทาง', 'เปลี่ยนที่นั่ง', 'เปลี่ยนจุดขึ้น-ลง', 'ยกเลิกการจอง']);
     await expect(menu).not.toContainText('MY_BOOKINGS.');
     await page.keyboard.press('Escape');
-    await expect(menu).toHaveCount(0);
+    await expect(menu).toBeHidden();
 
     const cancelledCard = cardByBookingNumber(page, 'E2E-CANCELLED');
     const cancelledMenu = await openActionsMenu(page, cancelledCard);
