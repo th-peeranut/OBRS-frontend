@@ -11,6 +11,8 @@ import { Appstate } from '../../../../shared/stores/appstate';
 import { selectBooking } from '../../../../shared/stores/booking/booking.selector';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
+import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
+import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
 
 @Component({
     selector: 'app-payment-summary',
@@ -34,6 +36,13 @@ export class PaymentSummaryComponent {
   @Input() amountOverride: number | null = null;
   scheduleBooking: Observable<ScheduleBooking>;
   scheduleFilter: Observable<ScheduleFilter>;
+  /**
+   * OBRS-1384: the passengers that became this booking's tickets, dispatched by
+   * /passenger-info immediately before it created the booking
+   * (`passenger-info.component.ts` -> `invokeSetPassengerInfo`). Same source
+   * OBRS-1226 moved the sibling summary on that page to, for the same reason.
+   */
+  passengerInfo$: Observable<PassengerInfo[] | null>;
   // OBRS-85: only the post-booking-creation payment summary can show a real
   // discount — the server computes discountAmountSnapshot/netAmount only once
   // the booking exists (see AGENT_MEMORY.md Finding 1). Never precompute one.
@@ -48,6 +57,7 @@ export class PaymentSummaryComponent {
     this.scheduleBooking = this.store.pipe(select(selectScheduleBooking));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
     this.booking = this.store.pipe(select(selectBooking));
+    this.passengerInfo$ = this.store.pipe(select(selectPassengerInfo));
   }
 
   hasDiscount(booking: BookingState | null | undefined): boolean {
@@ -58,21 +68,28 @@ export class PaymentSummaryComponent {
     return schedule ?? [];
   }
 
-  getAdultCount(passengers?: { type: string; count: number }[]): number {
-    return passengers?.find((p) => p.type === 'ADULT')?.count ?? 0;
+  /**
+   * OBRS-1384: counted off the passenger rows that become the real tickets, not
+   * off `scheduleFilter.passengerInfo` — that only ever holds what was typed on
+   * the SEARCH page and never hears about the OPEN-seating +/- stepper or the
+   * adult/child radio on /passenger-info. Printing it here put "ผู้ใหญ่ 1 คน"
+   * directly above a server total of 380.
+   */
+  getAdultCount(passengers?: PassengerInfo[] | null): number {
+    return passengers?.filter((p) => p.isAdult).length ?? 0;
   }
 
-  getKidCount(passengers?: { type: string; count: number }[]): number {
-    return passengers?.find((p) => p.type === 'KIDS')?.count ?? 0;
+  getKidCount(passengers?: PassengerInfo[] | null): number {
+    return passengers?.filter((p) => !p.isAdult).length ?? 0;
   }
 
-  sumPassengers(items?: { type: string; count: number }[]): number {
-    return items?.reduce((total, item) => total + item.count, 0) ?? 0;
+  sumPassengers(items?: PassengerInfo[] | null): number {
+    return items?.length ?? 0;
   }
 
   sumFare(
     items?: Schedule[] | null,
-    passengers?: { type: string; count: number }[]
+    passengers?: PassengerInfo[] | null
   ): number {
     const sumPassengers = this.sumPassengers(passengers) ?? 0;
     const sumFare =

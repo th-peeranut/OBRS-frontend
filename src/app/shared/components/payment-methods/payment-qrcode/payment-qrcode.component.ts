@@ -8,18 +8,11 @@ import {
   Output,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
-import { combineLatest, firstValueFrom, Subject } from 'rxjs';
-import { distinctUntilChanged, map, take, takeUntil } from 'rxjs/operators';
+import { firstValueFrom } from 'rxjs';
+import { take } from 'rxjs/operators';
 import QRCode from 'qrcode';
 import { environment } from '../../../../../environments/environment';
-import { Schedule } from '../../../../shared/interfaces/schedule.interface';
-import { parsePricePerSeat } from '../../../../shared/lib/trip-format';
-import { ScheduleFilter } from '../../../../shared/interfaces/schedule.interface';
-import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
-import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
-import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
 import { AlertService } from '../../../../shared/services/alert.service';
@@ -90,10 +83,8 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   private paymentIdempotencyKey = '';
   private countdownTotalSeconds = 15 * 60;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
-  private readonly destroy$ = new Subject<void>();
 
   constructor(
-    private store: Store,
     private router: Router,
     private bookingService: BookingService,
     private paymentService: PaymentService,
@@ -105,19 +96,16 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     this.startCountdown();
     if (this.amountOverride != null) {
       this.amountDisplay = this.formatAmount(this.amountOverride);
-      if (this.amountOverride > 0) {
-        void this.ensurePromptPayQrCode();
+      if (this.amountOverride <= 0) {
+        return;
       }
-      return;
     }
-    this.watchAmount();
+    void this.ensurePromptPayQrCode();
   }
 
   ngOnDestroy(): void {
     this.clearCountdown();
     this.releaseQrObjectUrl();
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   selectTab(tab: PaymentTab): void {
@@ -457,6 +445,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   private async handlePromptPayResponse(
     payment: PromptPayPaymentData | null | undefined
   ): Promise<void> {
+    this.applyServerAmount(payment);
     const paymentStatus = this.getPaymentStatus(payment);
     if (this.isSuccessStatus(paymentStatus)) {
       this.completePayment();
@@ -561,45 +550,44 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     this.qrBlob = null;
   }
 
-  private watchAmount(): void {
-    combineLatest([
-      this.store.pipe(select(selectScheduleBooking)),
-      this.store.pipe(select(selectScheduleFilter)),
-    ])
-      .pipe(
-        map(([booking, filter]) =>
-          this.calculateAmount(booking, filter)
-        ),
-        distinctUntilChanged(),
-        takeUntil(this.destroy$)
-      )
-      .subscribe((total) => {
-        this.amountDisplay = this.formatAmount(total);
-        if (total > 0) {
-          void this.ensurePromptPayQrCode();
-        }
-      });
-  }
+  /**
+   * OBRS-1384. The number under the QR is what the SERVER put on the charge this
+   * response created, not a product of two NgRx stores.
+   *
+   * What it replaced multiplied `scheduleBooking`'s fares by
+   * `scheduleFilter.passengerInfo` — the headcount typed on the SEARCH page, which
+   * never hears about the OPEN-seating +/- stepper on /passenger-info (OBRS-1226).
+   * A customer who stepped 1 -> 2 was therefore shown ONE seat's price at the exact
+   * second they were about to scan, while the bank app asked for the real total.
+   *
+   * Same rule OBRS-391 took for the OmiseCard `submitLabel` — read what is owed from
+   * the server — but from THIS response rather than from
+   * `GET /api/private/bookings/{id}/payments` as that card did. That endpoint sits
+   * under `/api/private/**`, which WebSecurityConfig marks `.authenticated()`, and
+   * guest checkout (OBRS-858) pays for a booking made with no account at all: polling
+   * it here would 401 for every guest and leave them with neither an amount nor a QR.
+   * The create-payment response is the same server's answer on BOTH lanes, and it is
+   * the amount that QR was issued for, so there is nothing left to disagree about.
+   */
+  private applyServerAmount(
+    payment: PromptPayPaymentData | null | undefined
+  ): void {
+    // `amountOverride` is the caller saying "this is the amount" (OBRS-415, the
+    // parcel lane). Honour it rather than second-guessing it from the charge.
+    if (this.amountOverride != null) {
+      return;
+    }
 
-  private calculateAmount(
-    booking: ScheduleBooking | null,
-    filter: ScheduleFilter | null
-  ): number {
-    const scheduleTotal = this.sumScheduleFare(booking?.schedule);
-    const passengerTotal = this.sumPassengers(filter?.passengerInfo);
-    const total = scheduleTotal * passengerTotal;
-    return Number.isFinite(total) ? total : 0;
-  }
+    const raw = !payment
+      ? undefined
+      : 'paymentSummary' in payment
+        ? payment.paymentSummary?.outstandingAmount
+        : payment.amount;
 
-  private sumScheduleFare(items?: Schedule[] | null): number {
-    return (
-      items?.reduce((total, item) => total + parsePricePerSeat(item?.pricePerSeat), 0) ??
-      0
-    );
-  }
-
-  private sumPassengers(items?: { type: string; count: number }[]): number {
-    return items?.reduce((total, item) => total + item.count, 0) ?? 0;
+    const amount = Number(raw);
+    if (Number.isFinite(amount)) {
+      this.amountDisplay = this.formatAmount(amount);
+    }
   }
 
   private formatAmount(value: number): string {

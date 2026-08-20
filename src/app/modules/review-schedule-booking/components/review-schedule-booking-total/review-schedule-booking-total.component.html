@@ -10,7 +10,7 @@
       <hr />
       <div class="card-body">
         <!-- ADULT -->
-        @if (getAdultCount(scheduleFilter?.passengerInfo) > 0) {
+        @if (getAdultCount(scheduleFilter, (passengerInfo$ | async)) > 0) {
           <div
             class="card-body-content"
             >
@@ -18,13 +18,13 @@
               {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.ADULT_UNIT" | translate }}
             </span>
             <span>
-              {{ getAdultCount(scheduleFilter?.passengerInfo) }}
+              {{ getAdultCount(scheduleFilter, (passengerInfo$ | async)) }}
               {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
             </span>
           </div>
         }
         <!-- KIDS -->
-        @if (getKidCount(scheduleFilter?.passengerInfo) > 0) {
+        @if (getKidCount(scheduleFilter, (passengerInfo$ | async)) > 0) {
           <div
             class="card-body-content"
             >
@@ -32,7 +32,7 @@
               {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.KID_UNIT" | translate }}
             </span>
             <span>
-              {{ getKidCount(scheduleFilter?.passengerInfo) }}
+              {{ getKidCount(scheduleFilter, (passengerInfo$ | async)) }}
               {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
             </span>
           </div>
@@ -72,7 +72,7 @@
           {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
         </span>
         <span>
-          {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+          {{ sumFare(scheduleBooking?.schedule, scheduleFilter, (passengerInfo$ | async)) }}
           {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
         </span>
       </div>
