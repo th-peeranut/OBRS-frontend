@@ -1,18 +1,50 @@
 <ul class="nav nav-tabs" role="tablist" data-testid="system-settings-tabs">
-  @for (tab of tabs; track tab) {
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        role="tab"
-        [routerLink]="tab.path"
-        routerLinkActive="active"
-        #tabLink="routerLinkActive"
-        [attr.aria-selected]="tabLink.isActive"
-        [attr.data-testid]="'system-settings-tab-' + tab.path"
-        >
-        {{ tab.labelKey | translate }}
-      </a>
-    </li>
+  @for (group of groups; track group.labelKey) {
+    @if (group.tabs.length === 1) {
+      <li class="nav-item">
+        <a
+          class="nav-link"
+          role="tab"
+          [routerLink]="group.tabs[0].path"
+          routerLinkActive="active"
+          #tabLink="routerLinkActive"
+          [attr.aria-selected]="tabLink.isActive"
+          [attr.data-testid]="'system-settings-tab-' + group.tabs[0].path"
+          >
+          {{ group.tabs[0].labelKey | translate }}
+        </a>
+      </li>
+    } @else {
+      <li class="nav-item dropdown">
+        <!-- A <button>, not an <a href="javascript:void(0)"> — the app serves a
+             CSP without 'unsafe-inline' (OBRS-1301), which refuses javascript:
+             URLs. Bootstrap's dropdown data-api binds either element. -->
+        <button
+          type="button"
+          class="nav-link dropdown-toggle"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+          [class.active]="isGroupActive(group)"
+          [attr.data-testid]="'system-settings-group-' + groupTestId(group)"
+          >
+          {{ group.labelKey | translate }}
+        </button>
+        <ul class="dropdown-menu">
+          @for (tab of group.tabs; track tab) {
+            <li>
+              <a
+                class="dropdown-item"
+                [routerLink]="tab.path"
+                routerLinkActive="active"
+                [attr.data-testid]="'system-settings-tab-' + tab.path"
+                >
+                {{ tab.labelKey | translate }}
+              </a>
+            </li>
+          }
+        </ul>
+      </li>
+    }
   }
 </ul>
 

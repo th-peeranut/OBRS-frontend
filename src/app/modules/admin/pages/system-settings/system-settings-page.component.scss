@@ -10,3 +10,33 @@
 // so each tab keeps its own guard and its own deep link), and PrimeNG's
 // index-based selection would have to be kept in sync with the router in both
 // directions.
+
+/* OBRS-1432: the only new surface this card introduces is the menu that a
+   collapsed group opens. Bootstrap 5.3 paints it from its own --bs-dropdown-*
+   variables, whose defaults are the LIGHT ones — and this app does not switch
+   modes with `data-bs-theme`, it switches them with `.is-dark` and the
+   --admin-* tokens (admin-theme.scss). So without this block the menu is a
+   white card hanging off a dark strip, in dark mode only.
+
+   Re-pointing Bootstrap's own variables rather than overriding its rules: the
+   values then follow whatever the shell's tokens resolve to in each mode, so
+   there is one definition per colour instead of a light copy and a dark copy
+   that drift (the OBRS-747 lesson recorded above the .nav-tabs block in
+   admin-theme.scss). Scoped to this component, because it is the strip that
+   grew a dropdown — no other .dropdown-menu in the app is touched. */
+.dropdown-menu {
+  --bs-dropdown-bg: var(--admin-surface-card);
+  --bs-dropdown-color: var(--admin-text);
+  --bs-dropdown-border-color: var(--admin-outline);
+  --bs-dropdown-link-color: var(--admin-text);
+  --bs-dropdown-link-hover-color: var(--admin-text);
+  --bs-dropdown-link-hover-bg: var(--admin-surface);
+  --bs-dropdown-link-active-color: var(--admin-primary-fg);
+  --bs-dropdown-link-active-bg: var(--admin-surface);
+}
+
+/* The open tab inside a collapsed group. `.active` alone would only recolour
+   it; the weight is what makes it findable without opening every group. */
+.dropdown-menu .dropdown-item.active {
+  font-weight: 600;
+}

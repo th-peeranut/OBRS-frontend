@@ -21,6 +21,12 @@
       "why": "OBRS-1388. Screenshots only, and that is the requirement rather than a shortcut: it runs unchanged against a clean origin/dev checkout (c1626562) served on :4200 and pointed at the SAME local backend the AFTER pass used, so the BEFORE image is the real previous behaviour instead of a reconstruction. Every assertion for this card lives in obrs-1388-qa-regression.spec.ts on the OWN-DB lane."
     },
     {
+      "spec": "obrs-1432-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1432.config.ts",
+      "why": "OBRS-1432. Screenshots only, and the requirement rather than a shortcut: it runs unchanged against a clean `dev` checkout on :4340 and this branch on :4341, so the BEFORE image is the real previous strip instead of a reconstruction. Every shot measures its own claim first (rows the strip wrapped into, entries it rendered) because a screenshot of a strip that happened to fit would look like proof of a fix that was never exercised. The regression lives in system-settings-page.component.spec.ts, which runs in CI."
+    },
+    {
       "spec": "obrs-970-route-population.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",

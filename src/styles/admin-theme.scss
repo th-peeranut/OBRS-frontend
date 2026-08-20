@@ -1945,6 +1945,33 @@
   width: min(880px, 100%);
 }
 
+/* OBRS-1443: eight templates use this row and not one of them defined it HERE. The
+   only two definitions were scoped copies inside `bookings-page` and
+   `usability-reports-page`, which view encapsulation keeps away from the other six —
+   so in those six the `<h5>` and the `<button>` stacked as blocks and the `×` landed
+   under the title, against design-system.md §6's top-right close affordance. */
+.admin-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* A long title must not squeeze the 36px button below its box — all three scoped
+   close-button copies this replaces carried `flex-shrink: 0` for that reason. */
+.admin-modal-header > .admin-icon-btn {
+  flex-shrink: 0;
+}
+
+/* OBRS-1443, owner's call: red, but on HOVER only. At rest the `×` stays neutral, so
+   `.admin-icon-btn.danger` keeps meaning "this removes something" at all 9 of its
+   sites; the hover borrows the same themed danger pair that rule already uses, so no
+   new colour enters the palette and both modes stay covered. */
+.admin-modal-header > .admin-icon-btn:hover {
+  background: var(--admin-danger-surface);
+  color: var(--admin-danger-fg);
+}
+
 .admin-modal-title {
   margin: 0;
   font-size: 22px;

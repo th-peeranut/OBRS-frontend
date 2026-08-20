@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { Route } from '@angular/router';
+import { Route, Router } from '@angular/router';
 
 import { AuthService } from '../../../../auth/auth.service';
 import { CanDeactivateGuard } from '../../../../shared/guards/can-deactivate.guard';
@@ -105,7 +105,10 @@ describe('OBRS-702 SystemSettingsPageComponent — tab strip', () => {
    * The spy must be installed BEFORE createComponent — the component reads the
    * roles in its constructor.
    */
-  async function renderFor(roles: string[]): Promise<ComponentFixture<SystemSettingsPageComponent>> {
+  async function renderFor(
+    roles: string[],
+    url?: string
+  ): Promise<ComponentFixture<SystemSettingsPageComponent>> {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       declarations: [SystemSettingsPageComponent],
@@ -113,6 +116,13 @@ describe('OBRS-702 SystemSettingsPageComponent — tab strip', () => {
     }).compileComponents();
 
     spyOn(TestBed.inject(AuthService), 'getRoles').and.returnValue(roles);
+    // OBRS-1432: the open tab, as the component reads it. Stubbed rather than
+    // navigated because RouterTestingModule has no /admin/settings tree to
+    // navigate INTO here, and the thing under test is how a URL is mapped onto
+    // a group — not whether the router can resolve one.
+    if (url !== undefined) {
+      spyOnProperty(TestBed.inject(Router), 'url', 'get').and.returnValue(url);
+    }
 
     const fixture = TestBed.createComponent(SystemSettingsPageComponent);
     fixture.detectChanges();
@@ -195,6 +205,64 @@ describe('OBRS-702 SystemSettingsPageComponent — tab strip', () => {
   it('renders an outlet for the active tab', async () => {
     const fixture = await renderFor(['admin']);
     expect(fixture.nativeElement.querySelector('router-outlet')).toBeTruthy();
+  });
+
+  /**
+   * OBRS-1432. What the strip now renders is a GROUP, not a tab. The specs
+   * above still pin every tab as present, in order, with an intact href — this
+   * block pins the thing that made the strip stop wrapping: the number of
+   * entries no longer tracks the number of tabs.
+   */
+  function stripEntries(fixture: ComponentFixture<SystemSettingsPageComponent>): HTMLElement[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('[data-testid="system-settings-tabs"] > li')
+    );
+  }
+
+  it('OBRS-1432: renders one entry per GROUP, and there are fewer groups than tabs', async () => {
+    const groupCount = new Set(SYSTEM_SETTINGS_TABS.map((t) => t.groupKey)).size;
+    expect(stripEntries(await renderFor(['admin'])).length).toBe(groupCount);
+    // The point of the card, as an assertion: adding a tab to an existing group
+    // adds nothing to the strip. Without this the whole change could be undone
+    // by giving every tab its own groupKey and every spec above would still pass.
+    expect(groupCount).toBeLessThan(SYSTEM_SETTINGS_TABS.length);
+  });
+
+  it('OBRS-1432: collapses a group of two or more, and leaves a group of one alone', async () => {
+    const fixture = await renderFor(['admin']);
+    for (const entry of stripEntries(fixture)) {
+      const tabs = entry.querySelectorAll('[data-testid^="system-settings-tab-"]');
+      const trigger = entry.querySelector('[data-testid^="system-settings-group-"]');
+      const inMenu = entry.querySelectorAll('.dropdown-menu [data-testid^="system-settings-tab-"]');
+
+      if (tabs.length === 1) {
+        // A dropdown that opens onto one item is a click for nothing.
+        expect(trigger).withContext(`one-tab group ${entry.textContent?.trim()}`).toBeNull();
+      } else {
+        expect(trigger).withContext(`group ${entry.textContent?.trim()} has no trigger`).toBeTruthy();
+        expect(inMenu.length)
+          .withContext(`group ${entry.textContent?.trim()} left a tab outside its menu`)
+          .toBe(tabs.length);
+      }
+    }
+  });
+
+  it('OBRS-1432: marks the group holding the open tab, from a tab CHILD route too', async () => {
+    // The notification-messages tab is the one with children (OBRS-1308), and
+    // a review detail is reached from the notification bell rather than from
+    // this strip — so its group has to light up on a URL the strip never
+    // produced itself.
+    const fixture = await renderFor(['admin'], '/admin/settings/notification-messages/reviews/7');
+    const lit = stripEntries(fixture).filter((e) => e.querySelector('.dropdown-toggle.active'));
+
+    expect(lit.length).withContext('exactly one group may be lit').toBe(1);
+    expect(lit[0].querySelector('[data-testid="system-settings-group-notifications"]')).toBeTruthy();
+  });
+
+  it('OBRS-1432: renders no group at all for someone with no tabs', async () => {
+    // The empty-dropdown case: grouping runs on the role-filtered list, so a
+    // group whose every tab is hidden must not leave a trigger behind.
+    expect(stripEntries(await renderFor(['customer'])).length).toBe(0);
   });
 });
 
