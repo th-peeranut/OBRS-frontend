@@ -59,9 +59,36 @@ export interface Schedule {
   seatingMode?: string;
 }
 
+/**
+ * OBRS-1343: the stop `arrivalSchedules` was actually searched FROM, which is not
+ * necessarily the stop the outbound leg drops the customer at — on
+ * `chonburi_bangkok` it is a different stop for 4 of the 6 Bangkok destinations.
+ *
+ * `distanceMeters` is a straight-line figure the backend computes from the two
+ * pins per request. The owner made the NUMBER mandatory rather than the word
+ * "nearby" (2026-08-14): one real pair is 8,626 m apart, which is not a walk.
+ * Null only when the drop-off stop carries no pin at all — no stop on today's
+ * routes is in that state.
+ *
+ * `sameAsDropOff` is the 2-of-6 case that was always correct; the client shows
+ * nothing extra for it, and must not, or every round trip grows a notice saying
+ * "board where you got off".
+ */
+export interface ReturnBoardingStop {
+  slug: string;
+  name: string;
+  distanceMeters: number | null;
+  sameAsDropOff: boolean;
+}
+
 export interface ScheduleList {
   departureSchedules: Schedule[] | null;
   arrivalSchedules: Schedule[] | null;
+  /** Absent on a one-way search, and on a return search with nothing to sell
+   *  back at all (that stays the OBRS-1336 empty-return path). Verified
+   *  passthrough — the schedule-list store keeps `data` as-is with no manual
+   *  field mapper, so it arrives here as the backend sent it. */
+  returnBoardingStop?: ReturnBoardingStop | null;
 }
 
 /**

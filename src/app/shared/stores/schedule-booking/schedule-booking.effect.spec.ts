@@ -11,6 +11,7 @@ import {
   invokeSetScheduleBookingApi,
   revalidateRestoredScheduleBooking,
 } from './schedule-booking.action';
+import { invokeSetScheduleListApi } from '../schedule-list/schedule-list.action';
 import { ScheduleService } from '../../../services/schedule/schedule.service';
 import { AlertService } from '../../services/alert.service';
 import { ResponseAPI } from '../../interfaces/response.interface';
@@ -159,7 +160,13 @@ describe('ScheduleBookingEffect — restored booking context (OBRS-903)', () => 
       actionsSubject.next(revalidateRestoredScheduleBooking());
 
       expect(scheduleService.getByFilter).toHaveBeenCalledWith(PAYLOAD);
+      // OBRS-1343: the RESULT is restored alongside the selection. It carries
+      // `returnBoardingStop`, which lives nowhere else — a tab that woke up here
+      // would otherwise name the outbound drop-off on the review page and post
+      // it as the return leg's boarding stop, which has no fare and 404s at
+      // payment for the four Bangkok cross pairs.
       expect(emitted).toEqual([
+        invokeSetScheduleListApi({ schedule_list: searchResponse([fresh]).data! }),
         invokeSetScheduleBookingApi({ schedule_booking: { schedule: [fresh] } }),
       ]);
       expect(alertService.warning).not.toHaveBeenCalled();
@@ -230,6 +237,7 @@ describe('ScheduleBookingEffect — restored booking context (OBRS-903)', () => 
 
       expect(router.navigate).not.toHaveBeenCalled();
       expect(emitted).toEqual([
+        invokeSetScheduleListApi({ schedule_list: searchResponse([exact]).data! }),
         invokeSetScheduleBookingApi({ schedule_booking: { schedule: [exact] } }),
       ]);
     });
