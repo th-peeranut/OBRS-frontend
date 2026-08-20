@@ -10,6 +10,7 @@ import {
   AdminVehicleTypeDto,
   CreateSchedulePayload,
   CreateScheduleSetPayload,
+  UpdateSchedulePayload,
   getAdminLookupLabel,
   getAdminTranslationLabel,
   parseAdminStatus,
@@ -503,5 +504,26 @@ export function toScheduleItemPayload(rawFormValue: Record<string, unknown>): {
       cargoCapacityKg,
     },
     cargoCapacityKgError,
+  };
+}
+
+// OBRS-1471: turns the create payload above into the full-replace PUT body.
+// This form owns a cargoCapacityKg control, so that value stays the form's;
+// `seatingCapacity` has no control anywhere on this page and must therefore be
+// carried from the schedule being edited or the PUT nulls it (OBRS-512
+// `applyTo` writes every mapped field unconditionally).
+export function toScheduleItemUpdatePayload(
+  payload: CreateSchedulePayload,
+  seatingCapacity: number | null
+): UpdateSchedulePayload {
+  return {
+    departureDateTime: payload.departureDateTime,
+    route: payload.route,
+    vehicleType: payload.vehicleType,
+    // Omitted on create = unassigned; the PUT has to say so explicitly.
+    vehicleId: payload.vehicleId ?? null,
+    driverId: payload.driverId ?? null,
+    seatingCapacity,
+    cargoCapacityKg: payload.cargoCapacityKg ?? null,
   };
 }

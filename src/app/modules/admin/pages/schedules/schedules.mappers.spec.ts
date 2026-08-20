@@ -17,6 +17,7 @@ import {
   toRouteOptions,
   toScheduleDetailFallback,
   toScheduleItemPayload,
+  toScheduleItemUpdatePayload,
   toSchedulePayload,
   toScheduleRow,
   toScheduleSetFallback,
@@ -552,6 +553,40 @@ describe('schedules.mappers', () => {
 
       expect(payload.cargoCapacityKg).toBeNull();
       expect(cargoCapacityKgError).toBe('INVALID_NUMBER');
+    });
+  });
+
+  // OBRS-1471: this page grew a cargoCapacityKg control in OBRS-508 but never
+  // one for seatingCapacity, so the edit PUT was nulling the seating cap.
+  describe('toScheduleItemUpdatePayload', () => {
+    const CREATED = {
+      departureDateTime: '2026-06-20T08:30:00+07:00',
+      route: 'bkk-cm',
+      vehicleType: 'van',
+      vehicleId: 4,
+      driverId: 5,
+      cargoCapacityKg: 300,
+    };
+
+    it('carries the seating cap the form cannot show, and keeps the cargo value the form does own', () => {
+      const payload = toScheduleItemUpdatePayload(CREATED, 20);
+
+      expect(payload.seatingCapacity).toBe(20);
+      expect(payload.cargoCapacityKg).toBe(300);
+    });
+
+    it('sends seatingCapacity as an explicit null when the trip had no override', () => {
+      expect(toScheduleItemUpdatePayload(CREATED, null).seatingCapacity).toBeNull();
+    });
+
+    it('turns an omitted vehicleId/driverId into an explicit null (full replace)', () => {
+      const payload = toScheduleItemUpdatePayload(
+        { ...CREATED, vehicleId: undefined, driverId: undefined },
+        20
+      );
+
+      expect(payload.vehicleId).toBeNull();
+      expect(payload.driverId).toBeNull();
     });
   });
 

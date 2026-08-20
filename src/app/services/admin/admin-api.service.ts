@@ -1144,6 +1144,27 @@ export interface UpdateSchedulePayload {
   cargoCapacityKg: number | null;
 }
 
+/** OBRS-1471: the two capacity overrides an edit form may have no control for.
+ * Because updateSchedule() is a full replace, such a form has to read them off
+ * the schedule it opened and send them straight back — see
+ * `toScheduleCapacityCarryForward()`. */
+export interface ScheduleCapacityCarryForward {
+  seatingCapacity: number | null;
+  cargoCapacityKg: number | null;
+}
+
+/** OBRS-1471: `undefined` (field absent on a cached/fallback DTO) and `null`
+ * (override deliberately cleared) both collapse to `null` here, which is what
+ * the backend reads as "inherit from the vehicle type". */
+export function toScheduleCapacityCarryForward(
+  dto: AdminScheduleDto | null | undefined
+): ScheduleCapacityCarryForward {
+  return {
+    seatingCapacity: dto?.seatingCapacity ?? null,
+    cargoCapacityKg: dto?.cargoCapacityKg ?? null,
+  };
+}
+
 export interface DriverDto {
   id: number;
   name: string;
@@ -1729,9 +1750,16 @@ export class AdminApiService {
     return this.postRequest<unknown>(`${this.baseUrl}/private/schedules`, payload);
   }
 
+  // OBRS-1471: takes UpdateSchedulePayload ONLY. This PUT is a full replace
+  // (OBRS-512 `ScheduleDtoService.applyTo` writes every MERGED_ENTITY_FIELD
+  // unconditionally), so a field the caller omits is not "left alone" — it is
+  // nulled. Accepting the all-optional CreateSchedulePayload here is what let
+  // three edit forms silently wipe seatingCapacity/cargoCapacityKg; with the
+  // union gone, every required field of UpdateSchedulePayload is a compile
+  // error at the call site until the caller sends the current value back.
   updateSchedule(
     id: number,
-    payload: CreateSchedulePayload | UpdateSchedulePayload
+    payload: UpdateSchedulePayload
   ): Observable<ResponseAPI<unknown>> {
     return this.putRequest<unknown>(`${this.baseUrl}/private/schedules/${id}`, payload);
   }

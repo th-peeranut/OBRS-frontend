@@ -6,6 +6,8 @@ import {
   AdminVehicleTypeDto,
   CreateSchedulePayload,
   DriverDto,
+  ScheduleCapacityCarryForward,
+  UpdateSchedulePayload,
   getAdminLookupLabel,
   getAdminTranslationLabel,
   parseAdminStatus,
@@ -184,6 +186,28 @@ export function toPayload(rawFormValue: Record<string, unknown>): CreateSchedule
     vehicleType: String(rawFormValue['vehicleType'] ?? '').trim(),
     ...(vehicleId !== undefined ? { vehicleId } : {}),
     ...(driverId !== undefined ? { driverId } : {}),
+  };
+}
+
+// OBRS-1471: the edit variant. `toPayload` above is a CREATE payload — the
+// keys it omits are simply absent on a brand-new row. On the PUT they are not
+// absent, they are nulls that overwrite (full replace, OBRS-512), and this
+// form has no control for either capacity override, so both come from the
+// schedule the modal was opened on.
+export function toUpdatePayload(
+  rawFormValue: Record<string, unknown>,
+  capacity: ScheduleCapacityCarryForward
+): UpdateSchedulePayload {
+  const created = toPayload(rawFormValue);
+  return {
+    departureDateTime: created.departureDateTime,
+    route: created.route,
+    vehicleType: created.vehicleType,
+    // Omitted on create = unassigned; the PUT has to say so explicitly.
+    vehicleId: created.vehicleId ?? null,
+    driverId: created.driverId ?? null,
+    seatingCapacity: capacity.seatingCapacity,
+    cargoCapacityKg: capacity.cargoCapacityKg,
   };
 }
 

@@ -29,8 +29,11 @@ import {
   AdminApiService,
   AdminScheduleDto,
   CreateSchedulePayload,
+  ScheduleCapacityCarryForward,
+  UpdateSchedulePayload,
   getAdminLookupLabel,
   getAdminTranslationLabel,
+  toScheduleCapacityCarryForward,
 } from '../../../../services/admin/admin-api.service';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 import { WalkInCheckoutPayload } from '../../components/walk-in-checkout/walk-in-checkout.component';
@@ -157,6 +160,10 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected isScheduleDeleting = false;
   protected isScheduleDetailLoading = false;
   protected editingScheduleId: number | null = null;
+  // OBRS-1471: the schedule form here has no capacity controls, so the values
+  // read on edit-open are what the full-replace PUT must send back unchanged.
+  // `null` = the detail fetch has not landed (or failed).
+  private editScheduleCapacity: ScheduleCapacityCarryForward | null = null;
   protected deletingTrip: WalkInTripDto | null = null;
 
   // Option arrays for schedule form (populated from StaffSchedulesStore)
@@ -828,6 +835,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
     const { trip, routeSlug } = event;
     this.isScheduleEditMode = true;
     this.editingScheduleId = trip.scheduleId;
+    this.editScheduleCapacity = null;
 
     // Build fallback synchronously from trip row data
     const fallbackDto: AdminScheduleDto = {
@@ -854,13 +862,16 @@ export class SellPageComponent implements OnInit, OnDestroy {
           const detail = resp?.data ?? null;
           if (detail && this.isScheduleFormOpen && this.editingScheduleId === trip.scheduleId) {
             this.applyScheduleFormValues(detail, true);
+            this.editScheduleCapacity = toScheduleCapacityCarryForward(detail);
           }
           if (this.isScheduleFormOpen && this.editingScheduleId === trip.scheduleId) {
             this.isScheduleDetailLoading = false;
           }
         },
         error: () => {
-          // Keep fallback values silently — do not close modal
+          // Keep fallback values silently — do not close modal.
+          // editScheduleCapacity stays null; submitSchedule() re-fetches it
+          // rather than nulling the capacity overrides (OBRS-1471).
           if (this.isScheduleFormOpen && this.editingScheduleId === trip.scheduleId) {
             this.isScheduleDetailLoading = false;
           }
@@ -885,14 +896,14 @@ export class SellPageComponent implements OnInit, OnDestroy {
 
     this.isScheduleSubmitting = true;
     try {
-      const payload = this.toSchedulePayload();
       if (this.isScheduleEditMode && this.editingScheduleId != null) {
+        const payload = await this.toScheduleUpdatePayload(this.editingScheduleId);
         await firstValueFrom(this.adminApiService.updateSchedule(this.editingScheduleId, payload));
         this.closeScheduleForm(true);
         this.loadTrips(this.selectedDate);
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
-        await firstValueFrom(this.adminApiService.createSchedule(payload));
+        await firstValueFrom(this.adminApiService.createSchedule(this.toSchedulePayload()));
         this.closeScheduleForm(true);
         this.loadTrips(this.selectedDate);
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
@@ -1060,6 +1071,29 @@ export class SellPageComponent implements OnInit, OnDestroy {
       vehicleType: String(raw.vehicleType ?? '').trim(),
       ...(vehicleId !== undefined ? { vehicleId } : {}),
       ...(driverId !== undefined ? { driverId } : {}),
+    };
+  }
+
+  // OBRS-1471: the edit variant. The keys toSchedulePayload() omits are absent
+  // on a create but are overwriting nulls on the full-replace PUT (OBRS-512),
+  // so both capacity overrides go back at their current value. When the
+  // edit-open fetch failed we re-read them here; if that read throws too,
+  // submitSchedule()'s catch aborts the PUT — better than nulling a live cap.
+  private async toScheduleUpdatePayload(scheduleId: number): Promise<UpdateSchedulePayload> {
+    const created = this.toSchedulePayload();
+    const capacity =
+      this.editScheduleCapacity ??
+      toScheduleCapacityCarryForward(
+        (await firstValueFrom(this.adminApiService.getScheduleById(scheduleId)))?.data ?? null
+      );
+    return {
+      departureDateTime: created.departureDateTime,
+      route: created.route,
+      vehicleType: created.vehicleType,
+      vehicleId: created.vehicleId ?? null,
+      driverId: created.driverId ?? null,
+      seatingCapacity: capacity.seatingCapacity,
+      cargoCapacityKg: capacity.cargoCapacityKg,
     };
   }
 
