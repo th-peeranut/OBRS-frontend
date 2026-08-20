@@ -27,7 +27,7 @@ fs.mkdirSync(ASSETS_DIR, { recursive: true });
 
 const ok = (data) => ({ code: 200, message: 'OK', data });
 
-// The seven values, none of them a platform default.
+// The eight values, none of them a platform default (OBRS-1447 added the last one).
 const POLICY_VALUES = {
   cancelWindowHours: 5,
   rescheduleWindowHours: 5,
@@ -36,6 +36,7 @@ const POLICY_VALUES = {
   cancelRefundRateEarly: 0.9, // renders as 90 — the page converts at its two boundaries
   cancelRefundRateLate: 0.4, // renders as 40
   rescheduleFeeLateThb: 120,
+  rescheduleMaxCount: 3,
 };
 
 const ALL_DEFAULT_FLAGS = {
@@ -46,6 +47,7 @@ const ALL_DEFAULT_FLAGS = {
   cancelRefundRateEarlyOverridden: false,
   cancelRefundRateLateOverridden: false,
   rescheduleFeeLateThbOverridden: false,
+  rescheduleMaxCountOverridden: false,
 };
 
 // 3 of 7. The arm that today can only arrive from data written outside this UI (PUT/DELETE move all
@@ -86,8 +88,11 @@ const myBookings = () =>
         seatChangeCount: 0,
         stopChangeCount: 0,
         // OBRS-699: the two fields this card added to BookingRespDto.
+        // OBRS-1447: and the cap, which became null-when-unresolvable with them - absent now
+        // withholds the action instead of reading as unlimited.
         rescheduleWindowHours: RESCHEDULE_WINDOW_ON_THE_WIRE,
         rescheduleMaxDaysAhead: 45,
+        rescheduleMaxCount: 0,
         contact: { fullName: 'สมชาย ใจดี', phoneNumber: '0812345678' },
         bookingSchedules: [
           {

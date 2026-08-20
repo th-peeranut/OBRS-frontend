@@ -65,6 +65,8 @@ function responseFor(pathname: string): unknown {
       cancelRefundRateLateOverridden: false,
       rescheduleFeeLateThb: 50,
       rescheduleFeeLateThbOverridden: false,
+      rescheduleMaxCount: 0,
+      rescheduleMaxCountOverridden: false,
     });
   }
 
@@ -192,7 +194,7 @@ test.describe('route smoke coverage', () => {
   // OBRS-699: the tab is generated from SYSTEM_SETTINGS_TABS, so a missing
   // entry ships as a 404-to-home rather than a compile error — and the legacy
   // redirect is generated the same way.
-  test('the cancel/reschedule policy settings tab renders its seven fields', async ({ page }) => {
+  test('the cancel/reschedule policy settings tab renders its eight fields', async ({ page }) => {
     // `networkidle`, unlike every other goto in this file: this route is the FIRST thing to pull
     // the lazy admin chunk in some run orders, and on a cold `ng serve` that activation can throw
     // and bounce to `/` — a flake that reads as "the tab does not exist". The idiom is the one
@@ -207,8 +209,10 @@ test.describe('route smoke coverage', () => {
     // Whole percent on screen, 0.80 on the wire (UX §4.2).
     await expect(page.locator('#cancelRefundRateEarlyPct')).toHaveValue('80');
     await expect(page.locator('#earlyWindowHours')).toHaveValue('24');
-    await expect(page.locator('app-config-source-badge')).toHaveCount(7);
-    // One overridden of seven => the MIXED arm, and the reset card exists.
+    // OBRS-1447: eight, not seven - the badge count IS the field count, which is why this
+    // assertion is the one that goes red when a key is added on one side only.
+    await expect(page.locator('app-config-source-badge')).toHaveCount(8);
+    // One overridden of eight => the MIXED arm, and the reset card exists.
     await expect(
       page.locator('[data-testid="cancel-reschedule-policy-reset-btn"]')
     ).toBeVisible();

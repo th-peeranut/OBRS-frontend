@@ -147,12 +147,13 @@ export interface MyBookingDto {
    * frontend re-declaring a server rule, so it kept hiding the Reschedule action
    * after one use no matter what the backend enforced.
    *
-   * Unlike the two fields above this is a PLATFORM value, so the backend states
-   * it on every row and it is not null-when-unresolvable. Treat an absent value
-   * as unlimited: it can only mean a backend older than OBRS-657, whose cap was
-   * enforced server-side anyway.
+   * OBRS-1447 — the cap became owner-scoped (an owner sets it on the
+   * cancel/reschedule policy page and the backend enforces it under the same
+   * operator), so this now carries the SAME absent/null contract as the two
+   * fields above: absent means no governing operator resolved, never "unlimited".
+   * Hide the action instead of offering one the server may refuse.
    */
-  rescheduleMaxCount?: number;
+  rescheduleMaxCount?: number | null;
   contact?: MyBookingContactDto;
   bookingSchedules?: MyBookingScheduleDto[];
 }

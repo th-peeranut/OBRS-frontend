@@ -21,13 +21,14 @@ import {
   earlyWindowAboveRescheduleWindow,
 } from './cancel-reschedule-policy-config-page.validators';
 
-/** The seven keys, in the order they are rendered and focused. */
+/** The eight keys, in the order they are rendered and focused. */
 const FIELD_ORDER = [
   'cancelWindowHours',
   'cancelRefundRateEarlyPct',
   'cancelRefundRateLatePct',
   'rescheduleWindowHours',
   'rescheduleMaxDaysAhead',
+  'rescheduleMaxCount',
   'rescheduleFeeLateThb',
   'earlyWindowHours',
 ] as const;
@@ -50,12 +51,12 @@ const WIRE_FIELD_TO_CONTROL: Readonly<Record<string, string>> = {
  *
  * What this page adds on top, and why each one is not decoration:
  *
- * 1. A per-field source badge. PUT writes all seven keys as a unit (BR-7), so
- *    an owner who edits ONE number converts the other six from "follows the
+ * 1. A per-field source badge. PUT writes all eight keys as a unit (BR-7), so
+ *    an owner who edits ONE number converts the other seven from "follows the
  *    platform" to "mine, forever". Without the badge (and the takeover warning
  *    and the confirm below it) nothing on screen says that.
  * 2. A page-level "use the platform default". It is page-level because DELETE
- *    drops all seven override rows as a unit and there is no per-key delete —
+ *    drops all eight override rows as a unit and there is no per-key delete —
  *    a per-field control would have to be faked by PUT-ing the platform value
  *    into that field, which writes an override row holding the default and
  *    permanently detaches it. Do not "improve" it into a per-field control.
@@ -83,6 +84,7 @@ export class CancelReschedulePolicyConfigPageComponent
   @ViewChild('cancelRefundRateLatePctInput') private readonly cancelRefundRateLatePctInput?: ElementRef<HTMLInputElement>;
   @ViewChild('rescheduleWindowHoursInput') private readonly rescheduleWindowHoursInput?: ElementRef<HTMLInputElement>;
   @ViewChild('rescheduleMaxDaysAheadInput') private readonly rescheduleMaxDaysAheadInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('rescheduleMaxCountInput') private readonly rescheduleMaxCountInput?: ElementRef<HTMLInputElement>;
   @ViewChild('rescheduleFeeLateThbInput') private readonly rescheduleFeeLateThbInput?: ElementRef<HTMLInputElement>;
   @ViewChild('earlyWindowHoursInput') private readonly earlyWindowHoursInput?: ElementRef<HTMLInputElement>;
 
@@ -117,6 +119,8 @@ export class CancelReschedulePolicyConfigPageComponent
         cancelRefundRateLatePct: [null, [integerRangeValidator(0, 100)]],
         rescheduleWindowHours: [null, [integerRangeValidator(0, 168)]],
         rescheduleMaxDaysAhead: [null, [integerRangeValidator(1, 365)]],
+        // OBRS-1447: 0 is a legal value and means UNLIMITED, so the lower bound is 0, not 1.
+        rescheduleMaxCount: [null, [integerRangeValidator(0, 20)]],
         rescheduleFeeLateThb: [null, [integerRangeValidator(0, 10000)]],
         earlyWindowHours: [null, [integerRangeValidator(1, 720)]],
       },
@@ -174,7 +178,7 @@ export class CancelReschedulePolicyConfigPageComponent
     return this.isRefreshing && !this.store.hasValue;
   }
 
-  /** How many of the seven the owner has set themselves. */
+  /** How many of the eight the owner has set themselves. */
   protected get overriddenCount(): number {
     const config = this.config;
     if (!config) {
@@ -186,6 +190,7 @@ export class CancelReschedulePolicyConfigPageComponent
       config.cancelRefundRateLateOverridden,
       config.rescheduleWindowHoursOverridden,
       config.rescheduleMaxDaysAheadOverridden,
+      config.rescheduleMaxCountOverridden,
       config.rescheduleFeeLateThbOverridden,
       config.earlyWindowHoursOverridden,
     ].filter(Boolean).length;
@@ -255,7 +260,7 @@ export class CancelReschedulePolicyConfigPageComponent
     }
 
     // Only the save that actually changes the inheritance relationship asks.
-    // Once all seven are already the owner's, a routine edit gets no dialog —
+    // Once all eight are already the owner's, a routine edit gets no dialog —
     // nagging on every save is how a dialog stops being read.
     const inherited = this.inheritedCount;
     if (inherited > 0) {
@@ -346,11 +351,11 @@ export class CancelReschedulePolicyConfigPageComponent
   }
 
   /** Marks the exact controls the server named, so the owner is not left to
-   * guess which of seven numbers the 400 was about.
+   * guess which of eight numbers the 400 was about.
    *
    * A field name is SERVER-supplied, so the map lookup is guarded (ADR-0028)
    * and the result is then narrowed to `FIELD_ORDER` — this page only ever
-   * marks one of the seven controls it owns. */
+   * marks one of the eight controls it owns. */
   private applyServerFieldErrors(error: unknown): void {
     for (const [wireField, reason] of Object.entries(apiFieldErrors(error))) {
       const controlName = hasOwnKey(WIRE_FIELD_TO_CONTROL, wireField)
@@ -374,6 +379,7 @@ export class CancelReschedulePolicyConfigPageComponent
       ['cancelRefundRateLatePct', this.cancelRefundRateLatePctInput],
       ['rescheduleWindowHours', this.rescheduleWindowHoursInput],
       ['rescheduleMaxDaysAhead', this.rescheduleMaxDaysAheadInput],
+      ['rescheduleMaxCount', this.rescheduleMaxCountInput],
       ['rescheduleFeeLateThb', this.rescheduleFeeLateThbInput],
       ['earlyWindowHours', this.earlyWindowHoursInput],
     ];
@@ -393,6 +399,7 @@ export class CancelReschedulePolicyConfigPageComponent
       cancelRefundRateLatePct: Math.round(config.cancelRefundRateLate * 100),
       rescheduleWindowHours: config.rescheduleWindowHours,
       rescheduleMaxDaysAhead: config.rescheduleMaxDaysAhead,
+      rescheduleMaxCount: config.rescheduleMaxCount,
       rescheduleFeeLateThb: config.rescheduleFeeLateThb,
       earlyWindowHours: config.earlyWindowHours,
     };
@@ -421,6 +428,7 @@ export class CancelReschedulePolicyConfigPageComponent
       cancelRefundRateLate: Number((value('cancelRefundRateLatePct') / 100).toFixed(2)),
       rescheduleWindowHours: value('rescheduleWindowHours'),
       rescheduleMaxDaysAhead: value('rescheduleMaxDaysAhead'),
+      rescheduleMaxCount: value('rescheduleMaxCount'),
       rescheduleFeeLateThb: value('rescheduleFeeLateThb'),
       earlyWindowHours: value('earlyWindowHours'),
     };
