@@ -451,6 +451,13 @@
     "LOADING": "加载中…",
     "LOADING_SLOW": "当前加载时间比平常长，您可以关闭此窗口继续使用本页面。",
     "READ_PRIVACY_POLICY": "阅读隐私政策",
+    "RETURN_BOARDING": {
+      "TITLE": "回程的上车点与下车点不同",
+      "BODY": "回程班车从 {{name}} 发车，距离您的下车点约 {{distance}} {{unit}}。",
+      "BODY_NO_DISTANCE": "回程班车从 {{name}} 发车。",
+      "UNIT_METERS": "米",
+      "UNIT_KILOMETERS": "公里"
+    },
     "ERROR": {
       "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后再试。",
       "NETWORK_OFFLINE": "您似乎已断开网络连接，请检查网络后重试。",

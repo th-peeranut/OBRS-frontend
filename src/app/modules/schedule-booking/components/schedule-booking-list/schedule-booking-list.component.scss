@@ -101,6 +101,34 @@
     }
   }
 
+  /* OBRS-1343 — "the way back leaves from somewhere else". Sits on
+     $primary-white like `.schedule-item`, NOT on the #f6fcff panel tint, so the
+     surface its two text tokens are measured against is white — where both
+     clear AA comfortably. The accent rail is the only new mark and carries no
+     text. Dark mode repaints it in dark-theme.scss section 14: this class is
+     not `.schedule-item` and not inside `.card-container` here, so the blanket
+     rules there do not reach it. */
+  .return-boarding-notice {
+    margin: 0 0 16px;
+    padding: $space-sm 16px;
+    border-left: 4px solid $primary-blue;
+    border-radius: 6px;
+    background: $primary-white;
+
+    &__title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: bold;
+      color: $text-black;
+    }
+
+    &__body {
+      margin: $space-2xs 0 0;
+      font-size: 15px;
+      color: $text-softblack;
+    }
+  }
+
   .schedule-item {
     background: $primary-white;
     border-radius: 10px;

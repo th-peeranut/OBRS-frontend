@@ -29,6 +29,10 @@ import {
   parsePricePerSeat,
   tripEstimateFromStops,
 } from '../../../../shared/lib/trip-format';
+import {
+  boardingDistanceView,
+  crossPairBoardingStop,
+} from '../../../../shared/lib/return-boarding-stop';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
@@ -85,6 +89,12 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   /** Bound into the template so the page URL is spelled in exactly one place. */
   protected readonly facebookUrl = NJ_FACEBOOK_PAGE_URL;
+
+  /** OBRS-1343: bound as-is so the same two rules answer here and on the review
+   *  page — the notice must say the same thing on both, or the last screen
+   *  before payment quietly contradicts the one that sold the trip. */
+  protected readonly crossPairBoardingStop = crossPairBoardingStop;
+  protected readonly boardingDistanceView = boardingDistanceView;
 
   scheduleList: Observable<ScheduleList>;
   scheduleFilter: Observable<ScheduleFilter | null>;
@@ -165,13 +175,25 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
         this.getRouteFromFilter(scheduleFilter, stationList, locale, false)
       )
     );
+    // OBRS-1343: the return leg's heading may NOT be read off the filter alone.
+    // The filter holds where the customer got off; the bus home can leave from
+    // somewhere else, and the backend says which stop it actually searched. A
+    // heading naming the wrong stop is worse than no heading — it is the
+    // instruction the customer follows.
     this.returnRouteLabel$ = combineLatest([
       this.scheduleFilter,
       this.rawProvinceStationList,
       this.currentLocale$,
+      this.scheduleList,
     ]).pipe(
-      map(([scheduleFilter, stationList, locale]) =>
-        this.getRouteFromFilter(scheduleFilter, stationList, locale, true)
+      map(([scheduleFilter, stationList, locale, scheduleList]) =>
+        this.getRouteFromFilter(
+          scheduleFilter,
+          stationList,
+          locale,
+          true,
+          crossPairBoardingStop(scheduleList)?.name
+        )
       )
     );
 
@@ -457,14 +479,16 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     scheduleFilter: ScheduleFilter | null | undefined,
     stationList: StationApi[] | null | undefined,
     locale: 'en' | 'th',
-    isReturn: boolean = false
+    isReturn: boolean = false,
+    boardingStopName?: string
   ): string {
     if (!scheduleFilter) return '';
 
     const fromId = isReturn ? scheduleFilter.stopStationId : scheduleFilter.startStationId;
     const toId = isReturn ? scheduleFilter.startStationId : scheduleFilter.stopStationId;
 
-    const fromName = this.getStationLabelById(fromId, stationList, locale);
+    // OBRS-1343: already localized by the backend, which resolved the stop.
+    const fromName = boardingStopName || this.getStationLabelById(fromId, stationList, locale);
     const toName = this.getStationLabelById(toId, stationList, locale);
 
     if (fromName && toName) {
@@ -513,26 +537,28 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       scheduleList?.departureSchedules ?? [],
       fromSlug,
       toSlug,
-      false,
       this.departureEstimates
     );
     // Return leg's routeSlug is the reverse route: its `pickup[]` holds the
     // destination-city stops and its `dropoff[]` holds the origin-city
     // stops, so the from/to lookup swaps versus the outbound leg.
+    //
+    // OBRS-1343: and the pickup is the stop the backend actually searched from,
+    // which for 4 of the 6 Bangkok destinations is NOT the outbound drop-off.
+    // Looking `toSlug` up in the reverse route's `pickup[]` found nothing for
+    // exactly those four, so their rows silently lost the "≈ N km" chip.
     this.resolveLegEstimates(
       scheduleList?.arrivalSchedules ?? [],
+      scheduleList?.returnBoardingStop?.slug || toSlug,
       fromSlug,
-      toSlug,
-      true,
       this.returnEstimates
     );
   }
 
   private resolveLegEstimates(
     schedules: Schedule[],
-    fromSlug: string,
-    toSlug: string,
-    isReturnLeg: boolean,
+    pickupSlug: string,
+    dropoffSlug: string,
     target: Record<number, TripEstimate>
   ): void {
     const scheduleIdsBySlug = new Map<string, number[]>();
@@ -544,9 +570,6 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       ids.push(schedule.id);
       scheduleIdsBySlug.set(schedule.routeSlug, ids);
     }
-
-    const pickupSlug = isReturnLeg ? toSlug : fromSlug;
-    const dropoffSlug = isReturnLeg ? fromSlug : toSlug;
 
     scheduleIdsBySlug.forEach((scheduleIds, slug) => {
       this.routeMapService

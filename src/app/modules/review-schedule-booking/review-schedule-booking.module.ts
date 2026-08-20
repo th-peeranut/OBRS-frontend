@@ -17,6 +17,13 @@ import { ScheduleBookingEffect } from '../../shared/stores/schedule-booking/sche
 import { ScheduleBookingReducer } from '../../shared/stores/schedule-booking/schedule-booking.reducer';
 import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
 import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
+// OBRS-1343: this page now reads the search RESULT, not just the selection —
+// `returnBoardingStop` says which stop the return leg boards at and lives there.
+// Registered here because a tab opened straight onto this URL (the OBRS-903
+// verify-your-email hop) never loads `schedule-booking.module`, which is the
+// only other place the slice is declared.
+import { ScheduleListEffect } from '../../shared/stores/schedule-list/schedule-list.effect';
+import { ScheduleListReducer } from '../../shared/stores/schedule-list/schedule-list.reducer';
 import { ProvinceReducer } from '../../shared/stores/station/station.reducer';
 import { ProvinceEffect } from '../../shared/stores/station/station.effect';
 
@@ -41,11 +48,13 @@ const routes: Routes = [
     StoreModule.forFeature('provinceWithStationList', ProvinceReducer),
     StoreModule.forFeature('scheduleBooking', ScheduleBookingReducer),
     StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
+    StoreModule.forFeature('scheduleList', ScheduleListReducer),
 
     EffectsModule.forFeature([
       ProvinceEffect,
       ScheduleFilterEffect,
       ScheduleBookingEffect,
+      ScheduleListEffect,
     ]),
 
     // Components

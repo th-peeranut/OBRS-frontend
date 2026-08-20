@@ -451,6 +451,13 @@
     "LOADING": "Loading…",
     "LOADING_SLOW": "This is taking longer than usual. You can close this and keep using the page.",
     "READ_PRIVACY_POLICY": "Read the Privacy Policy",
+    "RETURN_BOARDING": {
+      "TITLE": "The return trip boards at a different stop",
+      "BODY": "The bus back leaves from {{name}}, about {{distance}} {{unit}} from where you get off.",
+      "BODY_NO_DISTANCE": "The bus back leaves from {{name}}.",
+      "UNIT_METERS": "m",
+      "UNIT_KILOMETERS": "km"
+    },
     "ERROR": {
       "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later.",
       "NETWORK_OFFLINE": "You appear to be offline. Please check your internet connection and try again.",
