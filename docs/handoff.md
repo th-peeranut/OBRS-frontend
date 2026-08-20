@@ -14,6 +14,34 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ## Pending Changes (Backend → Frontend)
 
+## [Backend] 2026-08-20 — `userName` added to `GET/PUT /api/private/admin/usability-reports` (list + detail)
+**Risk level**: R1 (additive)
+**Triggered by**: bug report — the `/admin/usability-reports` page showed the raw numeric `userId` (e.g. `1`, `2`) in the reporter column/detail instead of a name.
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| `GET /api/private/admin/usability-reports` (list) | Field added | `UsabilityReportSummaryRespDto.userName` (string \| null) — reporter's display name, resolved from `userId` |
+| `GET /api/private/admin/usability-reports/{id}` (detail), and every write endpoint returning the same detail shape (`PUT .../status`, `PATCH .../jira-key`, `PATCH .../duplicate-of`) | Field added | `UsabilityReportDetailRespDto.userName` (string \| null), same resolution |
+
+`userName` is first + last name (from the user's profile), falling back to their email when
+the profile has no name set. `null` when `userId` is `null` (anonymous report) or the user no
+longer exists. `userId` itself is unchanged and remains the source of truth — `userName` is
+display-only, same pattern as the existing `triagedByName`/`authorName` fields on this DTO.
+
+### Response shapes before / after
+- **Before**: `{ "id": 1, "userId": 42, "descriptionPreview": "...", ... }`
+- **After**: `{ "id": 1, "userId": 42, "descriptionPreview": "...", ..., "userName": "สมชาย ใจดี" }`
+
+### Action required in frontend
+- [x] Add `userName: string | null` to `UsabilityReportSummary`/`UsabilityReportDetail` (`shared/interfaces/usability-report.interface.ts`)
+- [x] Render `report.userName` (falling back to `report.userId` if `userName` is null but `userId` isn't — a deleted-user edge case) instead of the raw `report.userId` in the admin list/detail template
+
+### Still unfinished on backend
+- None — see `../OBRS-backend/docs/api/usability-reports.md`.
+
+---
+
 ## [Backend] 2026-07-08 — `rescheduleCount` added to `GET /api/private/bookings/me` (`BookingRespDto`)
 **Risk level**: R1 (additive)
 **Triggered by**: OBRS-83 — surfacing the reschedule flow in the customer My Bookings page needed up-front, no-fetch eligibility gating (don't wait for a `RESCHEDULE_ERROR_MAX_COUNT` response to know a booking can't be rescheduled again).

@@ -307,6 +307,7 @@ describe('usability-reports-page.mappers', () => {
       createdAt: '2026-01-01T00:00:00Z',
       duplicateOfId: null,
       duplicateCount: 0,
+      userName: null,
     };
 
     it('carries id/category/status/userId/imageCount/createdAt straight through', () => {
@@ -354,6 +355,11 @@ describe('usability-reports-page.mappers', () => {
       const anon: UsabilityReportSummary = { ...summary, userId: null };
       expect(toUsabilityReportDetailFallback(anon).userId).toBeNull();
     });
+
+    it('carries userName straight through (already known from the summary row)', () => {
+      const withName: UsabilityReportSummary = { ...summary, userName: 'สมชาย ใจดี' };
+      expect(toUsabilityReportDetailFallback(withName).userName).toBe('สมชาย ใจดี');
+    });
   });
 
   describe('updateRowStatus', () => {
@@ -368,6 +374,7 @@ describe('usability-reports-page.mappers', () => {
         createdAt: '2026-01-01T00:00:00Z',
         duplicateOfId: null,
         duplicateCount: 0,
+        userName: null,
       },
       {
         id: 2,
@@ -379,6 +386,7 @@ describe('usability-reports-page.mappers', () => {
         createdAt: '2026-01-02T00:00:00Z',
         duplicateOfId: null,
         duplicateCount: 0,
+        userName: null,
       },
     ];
 
@@ -414,6 +422,7 @@ describe('usability-reports-page.mappers', () => {
         createdAt: '2026-01-01T00:00:00Z',
         duplicateOfId: null,
         duplicateCount: 0,
+        userName: null,
       },
       {
         id: 2,
@@ -425,6 +434,7 @@ describe('usability-reports-page.mappers', () => {
         createdAt: '2026-01-02T00:00:00Z',
         duplicateOfId: null,
         duplicateCount: 0,
+        userName: null,
       },
     ];
 
