@@ -325,6 +325,57 @@ describe('AdminApiService', () => {
     });
   });
 
+  // OBRS-1454: the owner-scoped pair. Same two numbers, different surface —
+  // `/owner/` writes THIS operator's override, `/admin/` writes the platform
+  // default and is refused to an owner (OBRS-825).
+  describe('getBookingPolicyOwnerConfig', () => {
+    it('issues a GET to /api/private/owner/configs/booking-policy', () => {
+      service.getBookingPolicyOwnerConfig().subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/owner/configs/booking-policy`
+      );
+      expect(req.request.method).toBe('GET');
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: {
+          maxAdvanceDays: 45,
+          maxAdvanceDaysOverridden: true,
+          cutoffMinutes: 20,
+          cutoffMinutesOverridden: false,
+        },
+      });
+    });
+  });
+
+  describe('updateBookingPolicyOwnerConfig', () => {
+    it('issues a PUT to /api/private/owner/configs/booking-policy carrying the two numbers only', () => {
+      service
+        .updateBookingPolicyOwnerConfig({ maxAdvanceDays: 45, cutoffMinutes: 20 })
+        .subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/owner/configs/booking-policy`
+      );
+      expect(req.request.method).toBe('PUT');
+      // No `*Overridden` flags on the way out: they are response-only.
+      expect(req.request.body).toEqual({ maxAdvanceDays: 45, cutoffMinutes: 20 });
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: {
+          maxAdvanceDays: 45,
+          maxAdvanceDaysOverridden: true,
+          cutoffMinutes: 20,
+          cutoffMinutesOverridden: false,
+        },
+      });
+    });
+  });
+
   // OBRS-196: regression for the wrong-URL contract break a coordinator
   // reconciliation found post-merge (base path is `/api/private/settlements`,
   // NO `/admin/` segment — `EndpointConstant.PRIVATE_SETTLEMENTS`) — a
