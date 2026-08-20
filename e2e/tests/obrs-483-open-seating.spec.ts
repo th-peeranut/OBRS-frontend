@@ -117,7 +117,12 @@ async function selectPCalendarDate(page: Page, target: CalDate): Promise<void> {
   const dialog = page.locator('.reschedule-modal');
   const dateInput = dialog.locator('#reschedule-date-input');
   const panel = page.locator('.p-datepicker').first();
-  const key = `${target.year}-${target.month}-${target.day}`;
+  // OBRS-1449: `data-date` is `${y}-${date.getMonth()}-${d}` — getMonth() is 0-BASED
+  // (primeng 21.1.9, datepicker's formatDateKey). This file's `month` is 1-based, so
+  // passing it straight through addressed the month AFTER the target: measured on
+  // 2026-08-20 this lane asked for `2026-9-2` while meaning 2 September, which is the
+  // October panel — one month further than the three hops below can reach.
+  const key = `${target.year}-${target.month - 1}-${target.day}`;
 
   await panel.waitFor({ state: 'visible', timeout: 10_000 });
 
@@ -135,7 +140,12 @@ async function selectPCalendarDate(page: Page, target: CalDate): Promise<void> {
 
       for (let hop = 0; hop < 3 && (await cell.count()) === 0; hop++) {
         const before = (await title.textContent()) ?? '';
-        await panel.locator('.p-datepicker-next').click();
+        // OBRS-1449: the next-month button's class is `p-datepicker-next-button`
+        // (primeng 21.1.9, `[styleClass]="cx('pcNextButton')"`). `.p-datepicker-next`
+        // matches nothing, so every hop threw into the catch below and the panel sat
+        // on the opening month for all four attempts — reported only as "the calendar
+        // never registered a click".
+        await panel.locator('.p-datepicker-next-button').click();
         await expect(title).not.toHaveText(before, { timeout: 5_000 });
       }
       await expect(cell).toHaveCount(1);
