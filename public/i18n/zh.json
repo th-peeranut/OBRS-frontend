@@ -2745,6 +2745,9 @@
     "STEP_3": "个人信息",
     "STEP_4": "付款"
   },
+  "ARRIVAL_DATE_NOTICE": {
+    "ARRIVES_ON": "{{date}} 到达"
+  },
   "SCHEDULE_DELAY_NOTICE": {
     "BADGE": "延误",
     "PLANNED": "原定 {{time}}",

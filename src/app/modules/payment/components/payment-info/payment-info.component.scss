@@ -100,6 +100,13 @@
       font-size: $font-size-base;
       font-weight: $font-weight-medium;
       color: $text-softblack;
+      /* OBRS-861: `schedule-booking-line.svg` is 420px intrinsically, so this
+         row's three items already asked for ~10px more than the 654px it has
+         and every one of them shrank - which used to cost only the space in
+         `23:30 น.` and now would fold the arrival date onto a second line. The
+         middle column is the one that can give: its `<img>` is `max-width:100%`
+         and its `.route` already ellipsises. */
+      flex-shrink: 0;
     }
 
     .time-info {

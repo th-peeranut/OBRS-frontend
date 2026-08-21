@@ -25,6 +25,7 @@ import {
 import { StationApi } from '../../../../shared/interfaces/station.interface';
 // OBRS-1141: declared alongside the component under test because the row
 // template now hosts it; without it every render logs an unknown-element error.
+import { ArrivalDateNoticeComponent } from '../../../../shared/components/arrival-date-notice/arrival-date-notice.component';
 import { ScheduleDelayNoticeComponent } from '../../../../shared/components/schedule-delay-notice/schedule-delay-notice.component';
 // OBRS-1302: the flag and the fallback channel the two arms assert against.
 import { environment } from '../../../../../environments/environment';
@@ -85,7 +86,11 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
+      declarations: [
+        ScheduleBookingListComponent,
+        ScheduleDelayNoticeComponent,
+        ArrivalDateNoticeComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         provideMockStore(),
@@ -224,7 +229,11 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
+      declarations: [
+        ScheduleBookingListComponent,
+        ScheduleDelayNoticeComponent,
+        ArrivalDateNoticeComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         provideMockStore(),
@@ -323,7 +332,11 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
+      declarations: [
+        ScheduleBookingListComponent,
+        ScheduleDelayNoticeComponent,
+        ArrivalDateNoticeComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         provideMockStore(),
@@ -428,7 +441,11 @@ describe('ScheduleBookingListComponent (announced-delay disclosure, OBRS-1141)',
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
+      declarations: [
+        ScheduleBookingListComponent,
+        ScheduleDelayNoticeComponent,
+        ArrivalDateNoticeComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         provideMockStore(),
@@ -573,7 +590,11 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
+      declarations: [
+        ScheduleBookingListComponent,
+        ScheduleDelayNoticeComponent,
+        ArrivalDateNoticeComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         provideMockStore(),
@@ -725,7 +746,11 @@ describe('ScheduleBookingListComponent (OBRS-1302 — online booking closed)', (
     originalOnlineTicketBooking = environment.features.onlineTicketBooking;
 
     await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingListComponent, ScheduleDelayNoticeComponent],
+      declarations: [
+        ScheduleBookingListComponent,
+        ScheduleDelayNoticeComponent,
+        ArrivalDateNoticeComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         provideMockStore(),
