@@ -37,7 +37,7 @@ const EN_TRANSLATIONS = {
       SALES_CHANNELS_ERROR: 'Unable to load the terms that read the current system values.',
       RETRY: 'Retry',
       CONTENT:
-        '2. Change up to {{rescheduleWindowHours}}h before departure, within {{rescheduleMaxDaysAhead}} days. {{rescheduleCountRule}} Free above {{earlyWindowHours}}h, else {{rescheduleFeeLateThb}} THB per seat. 4. Refund {{refundPercentEarly}}% early, {{refundPercentLate}}% late, none inside {{cancelWindowHours}}h.',
+        '2. Change up to {{rescheduleWindowHours}}h before departure, within {{rescheduleMaxDaysAhead}} days. {{rescheduleCountRule}} {{rescheduleFeeLateThb}} THB per seat, every time. 4. Refund {{refundPercentEarly}}% early above {{earlyWindowHours}}h, {{refundPercentLate}}% late, none inside {{cancelWindowHours}}h.',
       TRAVEL_CONDITIONS: 'Travel conditions for passengers. Item one. Item seven.',
       RESCHEDULE_COUNT_UNLIMITED: 'A booking may be changed an unlimited number of times.',
       RESCHEDULE_COUNT_LIMITED: 'A booking may be changed at most {{rescheduleMaxCount}} time(s).',
@@ -55,7 +55,7 @@ const TH_TRANSLATIONS = {
       SALES_CHANNELS_ERROR: 'ไม่สามารถโหลดเงื่อนไขที่อ้างอิงค่าปัจจุบันของระบบได้',
       RETRY: 'ลองใหม่',
       CONTENT:
-        '2. เลื่อนก่อนออก {{rescheduleWindowHours}} ชม. ภายใน {{rescheduleMaxDaysAhead}} วัน {{rescheduleCountRule}} เกิน {{earlyWindowHours}} ชม. ไม่มีค่าธรรมเนียม ไม่ถึงนั้น {{rescheduleFeeLateThb}} บาทต่อที่นั่ง 4. คืน {{refundPercentEarly}}% หรือ {{refundPercentLate}}% และยกเลิกไม่ได้ใน {{cancelWindowHours}} ชม.',
+        '2. เลื่อนก่อนออก {{rescheduleWindowHours}} ชม. ภายใน {{rescheduleMaxDaysAhead}} วัน {{rescheduleCountRule}} ค่าธรรมเนียม {{rescheduleFeeLateThb}} บาทต่อที่นั่งทุกครั้ง 4. คืน {{refundPercentEarly}}% เมื่อเกิน {{earlyWindowHours}} ชม. หรือ {{refundPercentLate}}% และยกเลิกไม่ได้ใน {{cancelWindowHours}} ชม.',
       TRAVEL_CONDITIONS: 'เงื่อนไขการเดินทางสำหรับผู้โดยสาร ข้อหนึ่ง ข้อเจ็ด',
       RESCHEDULE_COUNT_UNLIMITED: 'เลื่อนได้ไม่จำกัดจำนวนครั้ง',
       RESCHEDULE_COUNT_LIMITED: 'เลื่อนได้ไม่เกิน {{rescheduleMaxCount}} ครั้งต่อการจองหนึ่งรายการ',
@@ -123,11 +123,13 @@ describe('BusinessPolicyComponent (OBRS-564 / OBRS-658 / OBRS-623+659)', () => {
   function flushAllPolicies(
     overrides: {
       booking?: { maxAdvanceDays: number; cutoffMinutes: number };
+      // OBRS-656: no earlyWindowHours here any more. The reschedule endpoint stopped serving it
+      // when the fee lost its time boundary, and leaving it in the fixture would let the component
+      // keep reading it from the wrong payload for as long as both happened to say 24.
       reschedule?: Partial<{
         rescheduleWindowHours: number;
         rescheduleMaxDaysAhead: number;
         rescheduleFeeLateThb: number;
-        earlyWindowHours: number;
         rescheduleMaxCount: number;
       }>;
       cancellation?: Partial<{
@@ -151,7 +153,6 @@ describe('BusinessPolicyComponent (OBRS-564 / OBRS-658 / OBRS-623+659)', () => {
         rescheduleWindowHours: 2,
         rescheduleMaxDaysAhead: 60,
         rescheduleFeeLateThb: 30,
-        earlyWindowHours: 24,
         rescheduleMaxCount: 0,
         ...overrides.reschedule,
       },
@@ -171,7 +172,7 @@ describe('BusinessPolicyComponent (OBRS-564 / OBRS-658 / OBRS-623+659)', () => {
 
   // OBRS-658: the rendered text MINUS the version line. Assertions below check that a policy
   // number does not leak onto the page, and the version line legitimately carries a date whose
-  // digits collide with them ("2026-08-27" contains "20"). Those assertions are about the policy
+  // digits collide with them ("2026-08-28" contains "20"). Those assertions are about the policy
   // NUMBERS, so they read the page without the metadata stamp rather than being weakened — the
   // version line has its own tests further down.
   function textWithoutVersionLine(): string {
