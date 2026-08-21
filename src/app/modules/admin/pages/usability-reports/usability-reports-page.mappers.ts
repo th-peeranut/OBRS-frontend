@@ -148,10 +148,16 @@ export const OWNER_ALLOWED_TARGETS: Record<
   readonly UsabilityReportStatus[]
 > = {} as Record<UsabilityReportStatus, readonly UsabilityReportStatus[]>;
 
-for (const source of Object.keys(ALLOWED_TARGETS) as UsabilityReportStatus[]) {
+// `entries()`, not `keys()` + `ALLOWED_TARGETS[source]`: the value comes along with
+// the key, so there is no dynamic map lookup for the prototype-key gate to flag
+// (scripts/check-prototype-key-lookup.mjs / ADR-0028). Nothing to exempt.
+for (const [source, targets] of Object.entries(ALLOWED_TARGETS) as [
+  UsabilityReportStatus,
+  readonly UsabilityReportStatus[],
+][]) {
   OWNER_ALLOWED_TARGETS[source] = ADMIN_ONLY_SOURCES.has(source)
     ? []
-    : ALLOWED_TARGETS[source].filter((target) => !ADMIN_ONLY_TARGETS.has(target));
+    : targets.filter((target) => !ADMIN_ONLY_TARGETS.has(target));
 }
 
 // OBRS-527: the source-aware detail dropdown (solves PO-2 and the owner-undo
