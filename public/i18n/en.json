@@ -490,6 +490,7 @@
       "REQUIRED": "This field is required",
       "PATTERN": "Invalid format — must be a 10-digit mobile number",
       "NATIONAL_ID": "National ID numbers are not accepted — enter a PromptPay mobile number",
+      "ACCOUNT_NAME_CHARSET": "An account name should not contain digits or symbols — enter the name as it appears on the account",
       "SERVER_INVALID": "The refund destination details are invalid — please check and try again"
     },
     "CHECKING_METHOD": "Checking refund method…",

@@ -490,6 +490,7 @@
       "REQUIRED": "此字段为必填项",
       "PATTERN": "格式不正确 — 必须是10位手机号",
       "NATIONAL_ID": "不接受身份证号码 — 请输入PromptPay手机号",
+      "ACCOUNT_NAME_CHARSET": "账户名称不应包含数字或符号 — 请按账户上显示的名称填写",
       "SERVER_INVALID": "退款账户信息无效 — 请检查后重试"
     },
     "CHECKING_METHOD": "正在检查退款方式…",
