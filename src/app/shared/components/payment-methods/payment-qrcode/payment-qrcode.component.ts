@@ -65,6 +65,15 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   qrImageUrl = '';
   qrPaymentUrl = '';
   referenceNo = '';
+  /**
+   * OBRS-1204: the reference the QR card prints. Deliberately NOT `referenceNo`, which
+   * holds whatever the gateway called the charge — either Omise's own `chrg_...` id
+   * (measured on SIT, OBRS-1384's capture) or, when the response carries no
+   * transaction at all, the literal "-" the owner photographed on prod. Neither is a
+   * number anyone can quote: booking search resolves the BOOKING number, and unlike a
+   * transaction id that one already exists before the first scan.
+   */
+  bookingNumber = '';
   countdown = '15 : 00';
   /**
    * OBRS-1203 — the iOS fallback. Shows the QR full-screen with a
@@ -93,6 +102,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.bookingNumber = this.bookingService.getActiveBookingNumber() ?? '';
     this.startCountdown();
     if (this.amountOverride != null) {
       this.amountDisplay = this.formatAmount(this.amountOverride);

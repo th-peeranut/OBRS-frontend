@@ -165,7 +165,7 @@ export class PassengerInfoComponent {
           // { bookingId, bookingNumber }; 0/'' mean "not created".
           const bookingId = response.data?.bookingId || null;
           const bookingNumber = response.data?.bookingNumber || null;
-          this.bookingService.setActiveBookingId(bookingId);
+          this.bookingService.setActiveBookingId(bookingId, bookingNumber);
           this.setBookingStore(bookingId, bookingNumber, response.data);
           this.alertService.success(
             this.translateService.instant(

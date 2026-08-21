@@ -204,7 +204,9 @@ describe('ParcelBookingPageComponent', () => {
       prohibitedAcknowledged: true,
     });
 
-    expect(bookingService.setActiveBookingId).toHaveBeenCalledWith(99);
+    // OBRS-1204: the booking NUMBER travels with the id, so the QR card the parcel
+    // payment renders can print a reference the customer can quote.
+    expect(bookingService.setActiveBookingId).toHaveBeenCalledWith(99, 'BK1');
     expect((component as any).phase).toBe('payment');
     expect((component as any).trackingNumber).toBe('PCL1');
     expect((component as any).amount).toBe(120);

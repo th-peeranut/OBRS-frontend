@@ -1,7 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
 import { AlertService } from '../../../../shared/services/alert.service';
@@ -728,8 +730,11 @@ describe('PaymentQrcodeComponent - the amount under the QR comes from the server
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
+      // OBRS-1204: ngOnInit reads this now; the two specs below drive ngOnInit.
+      'getActiveBookingNumber',
     ]);
     bookingService.getActiveBookingId.and.returnValue(10);
+    bookingService.getActiveBookingNumber.and.returnValue(null);
     paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
       'createPayment',
@@ -845,5 +850,98 @@ describe('PaymentQrcodeComponent - the amount under the QR comes from the server
     component.ngOnInit();
 
     expect(paymentService.createPayment).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * OBRS-1204 — the footer under the QR.
+ *
+ * Two independent causes. The merchant-name row was a label with no binding at all, so
+ * it printed "ชื่อร้านค้า" and nothing else on every payment, everywhere. The reference
+ * read `transactionId`, which is whatever the gateway called the charge: prod
+ * photographed it as the literal "-" (no transaction on the response), SIT as
+ * `chrg_test_...` (OBRS-1384's capture). Neither is quotable to a call centre.
+ *
+ * These render the real template — the point is a row that DISAPPEARS, which a field
+ * assertion cannot show. `amountOverride = 0` returns out of `ngOnInit` before the
+ * payment request; the footer is not behind that branch, and the QR fetch is not what
+ * is under test here.
+ */
+describe('PaymentQrcodeComponent - the QR footer (OBRS-1204)', () => {
+  let fixture: ComponentFixture<PaymentQrcodeComponent>;
+  let bookingService: jasmine.SpyObj<BookingService>;
+
+  function footerText(): string {
+    return (fixture.nativeElement as HTMLElement).querySelector('.qr-footer')?.textContent?.trim() ?? '';
+  }
+
+  function refRow(): HTMLElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('.merchant-ref');
+  }
+
+  async function mount(activeBookingNumber: string | null): Promise<void> {
+    bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+      'getActiveBookingNumber',
+    ]);
+    bookingService.getActiveBookingId.and.returnValue(null);
+    bookingService.getActiveBookingNumber.and.returnValue(activeBookingNumber);
+
+    const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+      'createMockPayment',
+    ]);
+    const alertService = jasmine.createSpyObj<AlertService>('AlertService', [
+      'success',
+      'error',
+      'info',
+      'confirm',
+    ]);
+
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      declarations: [PaymentQrcodeComponent],
+      imports: [TranslateModule.forRoot()],
+      providers: [
+        { provide: Router, useValue: jasmine.createSpyObj<Router>('Router', ['navigate']) },
+        { provide: BookingService, useValue: bookingService },
+        { provide: PaymentService, useValue: paymentService },
+        { provide: AlertService, useValue: alertService },
+      ],
+      // `<app-payment-summary>` is a sibling of this component, not part of what the
+      // footer does. NO_ERRORS_SCHEMA leaves it as an inert unknown element.
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PaymentQrcodeComponent);
+    fixture.componentInstance.amountOverride = 0;
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  it('prints no merchant-name row at all - the name the payer must trust comes from their banking app', async () => {
+    await mount('BK-2026-000123');
+
+    expect(footerText()).not.toContain('MERCHANT_NAME');
+    expect((fixture.nativeElement as HTMLElement).querySelector('.merchant-name')).toBeNull();
+  });
+
+  it('shows the booking number as the reference, not a dash', async () => {
+    await mount('BK-2026-000123');
+
+    expect(refRow()).not.toBeNull();
+    expect(refRow()!.textContent).toContain('BK-2026-000123');
+    expect(refRow()!.textContent).not.toContain('-;');
+  });
+
+  it('drops the whole reference row when there is no booking number, rather than printing a bare label', async () => {
+    await mount(null);
+
+    expect(refRow()).toBeNull();
+    expect(footerText()).toBe('');
   });
 });

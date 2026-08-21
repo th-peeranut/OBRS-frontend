@@ -240,7 +240,7 @@ export class ChangeStopEffect {
     this.actions$.pipe(
       ofType(confirmChangeStopSuccess),
       filter(({ result }) => normalizeStatusCode(result.status) === 'pending_payment'),
-      tap(({ result }) => this.service.setActiveBookingId(result.bookingId)),
+      tap(({ result }) => this.service.setActiveBookingId(result.bookingId, result.bookingNumber)),
       map(({ result }) =>
         changeStopRequiresPayment({ bookingId: result.bookingId, paymentIntentId: result.paymentIntentId ?? null })
       )
