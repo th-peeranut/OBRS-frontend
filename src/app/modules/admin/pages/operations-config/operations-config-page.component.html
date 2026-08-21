@@ -1,0 +1,281 @@
+<section class="admin-page-intro">
+  <div>
+    @if (isLoading) {
+      <p class="admin-muted">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    }
+    <!-- OBRS-727 pattern (BookingsPageComponent): a 403 gets its own
+    presentation, not the muted grey the generic load-failure shares with
+    "loading" — the two say different things and must not look the same. -->
+    @if (isForbidden) {
+      <p class="operations-config-forbidden" role="status" data-testid="operations-config-forbidden">
+        <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">lock</span>
+        <span>{{ errorMessage }}</span>
+      </p>
+    }
+    @if (errorMessage && !isForbidden) {
+      <p class="admin-muted">{{ errorMessage }}</p>
+    }
+    @if (!isLoading && !isForbidden && config) {
+      <p class="admin-muted" data-testid="operations-config-state">
+        {{ stateKey | translate: { count: overriddenCount } }}
+      </p>
+    }
+    <app-admin-refresh-hint
+      [refreshing]="isRefreshing"
+      [failed]="refreshFailed"
+      [loading]="isLoading"
+    ></app-admin-refresh-hint>
+  </div>
+</section>
+
+<!-- OBRS-727 pattern (BookingsPageComponent): once the backend has said "not
+yours", the skeleton and the form go away entirely — never an empty form, and
+never controls acting on a config this caller is no longer entitled to see. -->
+@if (!isForbidden) {
+  @if (isLoading) {
+    <section class="admin-card mt-3">
+      @for (row of [1, 2, 3, 4]; track row) {
+        <div class="admin-skeleton admin-skeleton--sm mb-2"></div>
+      }
+    </section>
+  }
+
+  @if (!isLoading && config) {
+    <!-- ONE form across three cards: PUT writes all four keys or none (BR-7),
+    so three Save buttons would be three primary buttons advertising a
+    partial write the API does not offer. -->
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <section class="admin-card mt-3">
+        <div class="admin-card-head">
+          <h4>{{ 'ADMIN.OPERATIONS_CONFIG.GROUP.HOLD' | translate }}</h4>
+        </div>
+
+        <div class="admin-form-grid mt-3">
+          <div class="admin-form-field">
+            <label class="admin-form-label" for="seatReservationMinutes">
+              {{ 'ADMIN.CONFIG_CHANGE_HISTORY.KEYS.seat_reservation_minutes' | translate }}
+              <span class="admin-required">*</span>
+              <app-config-source-badge
+                [overridden]="config.seatReservationMinutesOverridden"
+                i18nPrefix="ADMIN.OPERATIONS_CONFIG"
+              ></app-config-source-badge>
+            </label>
+            <input
+              #seatReservationMinutesInput
+              id="seatReservationMinutes"
+              class="admin-field"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="60"
+              step="1"
+              required
+              formControlName="seatReservationMinutes"
+              [attr.aria-invalid]="isFieldInvalid('seatReservationMinutes') ? true : null"
+              [attr.aria-describedby]="describedBy('seatReservationMinutes')"
+              />
+            <small class="admin-muted" id="seatReservationMinutes-helper">
+              {{ 'ADMIN.OPERATIONS_CONFIG.SEAT_RESERVATION_MINUTES_HELPER' | translate }}
+            </small>
+            @if (isFieldInvalid('seatReservationMinutes')) {
+              <small
+                class="admin-error"
+                role="alert"
+                id="seatReservationMinutes-error"
+              >{{ errorKey('seatReservationMinutes') | translate: errorParams('seatReservationMinutes') }}</small>
+            }
+          </div>
+
+          <div class="admin-form-field">
+            <label class="admin-form-label" for="reschedulePaymentTimeoutMinutes">
+              {{ 'ADMIN.CONFIG_CHANGE_HISTORY.KEYS.reschedule_payment_timeout_minutes' | translate }}
+              <span class="admin-required">*</span>
+              <app-config-source-badge
+                [overridden]="config.reschedulePaymentTimeoutMinutesOverridden"
+                i18nPrefix="ADMIN.OPERATIONS_CONFIG"
+              ></app-config-source-badge>
+            </label>
+            <input
+              #reschedulePaymentTimeoutMinutesInput
+              id="reschedulePaymentTimeoutMinutes"
+              class="admin-field"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="60"
+              step="1"
+              required
+              formControlName="reschedulePaymentTimeoutMinutes"
+              [attr.aria-invalid]="isFieldInvalid('reschedulePaymentTimeoutMinutes') ? true : null"
+              [attr.aria-describedby]="describedBy('reschedulePaymentTimeoutMinutes')"
+              />
+            <small class="admin-muted" id="reschedulePaymentTimeoutMinutes-helper">
+              {{ 'ADMIN.OPERATIONS_CONFIG.RESCHEDULE_PAYMENT_TIMEOUT_MINUTES_HELPER' | translate }}
+            </small>
+            @if (isFieldInvalid('reschedulePaymentTimeoutMinutes')) {
+              <small
+                class="admin-error"
+                role="alert"
+                id="reschedulePaymentTimeoutMinutes-error"
+              >{{ errorKey('reschedulePaymentTimeoutMinutes') | translate: errorParams('reschedulePaymentTimeoutMinutes') }}</small>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-card mt-3">
+        <div class="admin-card-head">
+          <h4>{{ 'ADMIN.OPERATIONS_CONFIG.GROUP.BOARDING' | translate }}</h4>
+        </div>
+
+        <div class="admin-form-grid mt-3">
+          <div class="admin-form-field">
+            <label class="admin-form-label" for="noShowCutoffMinutes">
+              {{ 'ADMIN.CONFIG_CHANGE_HISTORY.KEYS.no_show_cutoff_minutes' | translate }}
+              <span class="admin-required">*</span>
+              <app-config-source-badge
+                [overridden]="config.noShowCutoffMinutesOverridden"
+                i18nPrefix="ADMIN.OPERATIONS_CONFIG"
+              ></app-config-source-badge>
+            </label>
+            <input
+              #noShowCutoffMinutesInput
+              id="noShowCutoffMinutes"
+              class="admin-field"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="240"
+              step="1"
+              required
+              formControlName="noShowCutoffMinutes"
+              [attr.aria-invalid]="isFieldInvalid('noShowCutoffMinutes') ? true : null"
+              [attr.aria-describedby]="describedBy('noShowCutoffMinutes')"
+              />
+            <small class="admin-muted" id="noShowCutoffMinutes-helper">
+              {{ 'ADMIN.OPERATIONS_CONFIG.NO_SHOW_CUTOFF_MINUTES_HELPER' | translate }}
+            </small>
+            @if (isFieldInvalid('noShowCutoffMinutes')) {
+              <small
+                class="admin-error"
+                role="alert"
+                id="noShowCutoffMinutes-error"
+              >{{ errorKey('noShowCutoffMinutes') | translate: errorParams('noShowCutoffMinutes') }}</small>
+            }
+            <!-- Persistent — visible before any edit, not gated on dirty/touched
+            (unlike the validation errors above): this is a consequence of the
+            number as it stands today, not a complaint about what was just typed. -->
+            <div class="operations-config-warning" data-testid="operations-config-no-show-warning">
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">warning</span>
+              <span>{{ 'ADMIN.OPERATIONS_CONFIG.NO_SHOW_MONEY_WARNING' | translate }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-card mt-3">
+        <div class="admin-card-head">
+          <h4>{{ 'ADMIN.OPERATIONS_CONFIG.GROUP.ALERT' | translate }}</h4>
+        </div>
+
+        <div class="admin-form-grid mt-3">
+          <div class="admin-form-field">
+            <label class="admin-form-label" for="nearFullAlertThresholdPercent">
+              {{ 'ADMIN.CONFIG_CHANGE_HISTORY.KEYS.near_full_alert_threshold_percent' | translate }}
+              <span class="admin-required">*</span>
+              <app-config-source-badge
+                [overridden]="config.nearFullAlertThresholdPercentOverridden"
+                i18nPrefix="ADMIN.OPERATIONS_CONFIG"
+              ></app-config-source-badge>
+            </label>
+            <input
+              #nearFullAlertThresholdPercentInput
+              id="nearFullAlertThresholdPercent"
+              class="admin-field"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="99"
+              step="1"
+              required
+              formControlName="nearFullAlertThresholdPercent"
+              [attr.aria-invalid]="isFieldInvalid('nearFullAlertThresholdPercent') ? true : null"
+              [attr.aria-describedby]="describedBy('nearFullAlertThresholdPercent')"
+              />
+            <small class="admin-muted" id="nearFullAlertThresholdPercent-helper">
+              {{ 'ADMIN.OPERATIONS_CONFIG.NEAR_FULL_ALERT_THRESHOLD_PERCENT_HELPER' | translate }}
+            </small>
+            @if (isFieldInvalid('nearFullAlertThresholdPercent')) {
+              <small
+                class="admin-error"
+                role="alert"
+                id="nearFullAlertThresholdPercent-error"
+              >{{ errorKey('nearFullAlertThresholdPercent') | translate: errorParams('nearFullAlertThresholdPercent') }}</small>
+            }
+            <div class="operations-config-warning" data-testid="operations-config-near-full-warning">
+              <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">warning</span>
+              <span>{{ 'ADMIN.OPERATIONS_CONFIG.NEAR_FULL_100_WARNING' | translate }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-card mt-3">
+        @if (inheritedCount > 0 && form.dirty) {
+          <div
+            class="operations-config-warning"
+            data-testid="operations-config-takeover-warning"
+          >
+            <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">info</span>
+            <span>{{ 'ADMIN.OPERATIONS_CONFIG.TAKEOVER_WARNING' | translate: { count: inheritedCount } }}</span>
+          </div>
+        }
+
+        <button
+          type="submit"
+          class="admin-btn admin-btn-primary"
+          [disabled]="isSaving || form.invalid || form.pristine"
+          >
+          {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+        </button>
+
+        <!-- Persistent, beside the toast on purpose: a faded toast leaves the
+        owner with a form that refused to save and no reason on screen. -->
+        @if (serverErrorMessage) {
+          <p class="admin-error mt-2" role="alert" data-testid="operations-config-server-error">
+            {{ 'ADMIN.OPERATIONS_CONFIG.SAVE_REJECTED' | translate }}
+            {{ serverErrorMessage }}
+          </p>
+        }
+      </section>
+    </form>
+
+    <!-- Outside the form: not a form action, and hidden while there is
+    nothing to hand back — a permanently visible disabled button invites the
+    click it then refuses. -->
+    @if (overriddenCount > 0) {
+      <section class="admin-card mt-3">
+        <div class="admin-card-head">
+          <h4>{{ 'ADMIN.OPERATIONS_CONFIG.RESET.TITLE' | translate }}</h4>
+        </div>
+        <p class="admin-muted">{{ 'ADMIN.OPERATIONS_CONFIG.RESET.BODY' | translate }}</p>
+
+        <button
+          type="button"
+          class="admin-btn mt-2"
+          [disabled]="isResetting"
+          data-testid="operations-config-reset-btn"
+          (click)="resetToPlatformDefault()"
+          >
+          {{ (isResetting ? 'ADMIN.OPERATIONS_CONFIG.RESET.RUNNING' : 'ADMIN.OPERATIONS_CONFIG.RESET.BTN') | translate }}
+        </button>
+
+        @if (resetErrorMessage) {
+          <p class="admin-error mt-2" role="alert" data-testid="operations-config-reset-error">
+            {{ resetErrorMessage }}
+          </p>
+        }
+      </section>
+    }
+  }
+}

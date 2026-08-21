@@ -19,13 +19,17 @@
          the reschedule and cancellation values from /api/reschedule-policy and
          /api/cancellation-policy, so rendering them without the fetch would print raw
          {{rescheduleWindowHours}} at a customer — the literal defect OBRS-564 opened this gate
-         for. What must NOT happen is the whole page going blank on a failed fetch, so the
-         travel conditions below stay outside it: they carry no config value, and a reader
-         during an outage still gets the rules about baggage, no-show and liability. -->
+         for. OBRS-703 AC-10 moved TRAVEL_CONDITIONS (item 3, the no-show cutoff) INSIDE this same
+         gate: it now interpolates a live value too, so it can no longer stay outside — an outage
+         must hide item 3 exactly like the others rather than announce a stale/wrong cutoff. -->
     @if (policyParams) {
       <p
       [innerHTML]="'POLICY.BUSINESS.SALES_CHANNELS' | translate: policyParams"></p>
       <p [innerHTML]="'POLICY.BUSINESS.CONTENT' | translate: policyParams"></p>
+      <!-- OBRS-623/659: the passenger travel conditions, lifted out of CONTENT unchanged so that
+           what OBRS-620 settled (the no-show rule) and what OBRS-629 settled (carry-on baggage vs
+           consigned parcels) is not reworded here. -->
+      <p [innerHTML]="'POLICY.BUSINESS.TRAVEL_CONDITIONS' | translate: policyParams"></p>
     } @else {
       @if (!policyLoadFailed) {
         <div class="policy-skeleton-block" aria-hidden="true">
@@ -43,11 +47,6 @@
         </div>
       }
     }
-    <!-- OBRS-623/659: the passenger travel conditions, lifted out of CONTENT unchanged so that
-         what OBRS-620 settled (the no-show rule) and what OBRS-629 settled (carry-on baggage vs
-         consigned parcels) is not reworded here. Deliberately OUTSIDE the gate above: it holds no
-         config value, so an outage has no reason to hide it. -->
-    <p [innerHTML]="'POLICY.BUSINESS.TRAVEL_CONDITIONS' | translate"></p>
 
     <!-- OBRS-627 AC-5: an item of CONTENT above used to repeat the refund terms
          verbatim from /refund-policy — one edit away from the two pages

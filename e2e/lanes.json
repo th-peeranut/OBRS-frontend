@@ -505,6 +505,12 @@
       "lane": "OWN-DB",
       "config": "playwright.obrs1258qa.config.ts",
       "why": "OBRS-1258 AC1-AC5 + AC7-AC9 -- the owner's sales-point picker in user-form-modal, the sell page's default pickup, and the EOD sales-point column. OWN-DB and NEVER runnable against SIT for a reason that is not a preference: SIT does not carry the OBRS-1260 backend contract this whole card depends on (measured 2026-08-16, `git merge-base --is-ancestor e68e48ae origin/sit` = false, origin/sit..origin/dev = 33 commits), so every assertion here would exercise the retired `salesPointStop` shape and pass or fail for the wrong reason. It also MUTATES a seeded salesperson's sales-point set and CREATES a user, with no sit-sweep teardown. Like playwright.obrs1298qa.config.ts and playwright.obrs1333.config.ts, the config does NOT provision anything -- it points at a stack the operator started first (backend :8080 on the obrs1258qa database built from schema.sql + lookups.sql + Flyway v96 + data.sql, ng serve :4200) and reuseExistingServer is unconditional. Not GATE for the load-bearing reason: `defaultPickupStopSlug` is resolved SERVER-side per caller from their active sales point, so intercepting /api/private/route-stops would replace the exact value under test and the assertion would restate its own fixture. Two harness traps are pinned in the file itself, both of which first read as product failures: a bare `.admin-dropdown-*` locator is a strict-mode violation (5 of them on this screen), and the route-group header in the trip browser is a COLLAPSE TOGGLE, so clicking it hides the trip you are about to select."
-    }
+    },
+  {
+    "spec": "obrs-703-operations-config-qa.spec.ts",
+    "lane": "CAPTURE",
+    "config": "playwright.obrs703qa.config.ts",
+    "why": "OBRS-703 AFTER evidence for the owner-scoped operations tab and the public no-show copy it feeds. NOT hermetic and never runnable against SIT: it needs a local backend on :8081 with the `dev,local` profiles over a dedicated obrs703qa database, because it writes system_config_overrides and mints a SECOND owner to prove the public readout takes the MIN across owners -- both of which would move state other sessions are watching in a shared environment. Every shot asserts its own claim before photographing it (the tab strip's row count is measured at 1366px and 390px, the admin pass reads the 403 panel rather than a spinner). The assertions that must keep holding live in operations-config-page.component.spec.ts, system-settings-page.component.spec.ts, how-to-book.component.spec.ts and gate 7 of scripts/check-i18n-parity.mjs on CI, and the server half in SchedulerConfigResolutionParityIT."
+  }
   ]
 }

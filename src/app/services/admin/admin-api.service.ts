@@ -2628,6 +2628,32 @@ export class AdminApiService {
     );
   }
 
+  // ── OBRS-703: owner settings — operations ─────────────────────────────────
+
+  getOperationsOwnerConfig(): Observable<ResponseAPI<OwnerOperationsConfigDto>> {
+    return this.getRequest<OwnerOperationsConfigDto>(
+      `${this.baseUrl}/private/owner/configs/operations`
+    );
+  }
+
+  updateOperationsOwnerConfig(
+    payload: OperationsConfigReqDto
+  ): Observable<ResponseAPI<OwnerOperationsConfigDto>> {
+    return this.putRequest<OwnerOperationsConfigDto>(
+      `${this.baseUrl}/private/owner/configs/operations`,
+      payload
+    );
+  }
+
+  /** DELETE drops all four override rows as a unit and returns the re-read
+   * (now platform-default) config — there is no per-key delete (same BR-7
+   * shape as cancel-reschedule-policy above). */
+  resetOperationsOwnerConfig(): Observable<ResponseAPI<OwnerOperationsConfigDto>> {
+    return this.deleteRequest<OwnerOperationsConfigDto>(
+      `${this.baseUrl}/private/owner/configs/operations`
+    );
+  }
+
   // ── OBRS-960: parcel-share monthly totals (/admin/reports) ───────────────
 
   getParcelShareMonthly(
@@ -2825,6 +2851,37 @@ export interface OwnerCancelReschedulePolicyDto {
  * endpoint writes all eight or none (BR-7). */
 export type CancelReschedulePolicyReqDto = Omit<
   OwnerCancelReschedulePolicyDto,
+  `${string}Overridden`
+>;
+
+/** `GET`/`PUT`/`DELETE /api/private/owner/configs/operations` — OBRS-703.
+ *
+ * Same `*Overridden` suffix convention as {@link OwnerCancelReschedulePolicyDto}
+ * (not the `*Configured` suffix parcel-share uses) — this is the owner-locked
+ * shape the backend answers with, not a frontend naming choice. */
+export interface OwnerOperationsConfigDto {
+  /** Minutes a chosen seat is held before release. Not retroactive: a
+   * reservation already in flight keeps the value it started with. */
+  seatReservationMinutes: number;
+  seatReservationMinutesOverridden: boolean;
+  /** Minutes to pay a reschedule's fare difference before it is dropped. */
+  reschedulePaymentTimeoutMinutes: number;
+  reschedulePaymentTimeoutMinutesOverridden: boolean;
+  /** Minutes after departure before a ticket is cut off as a no-show — the
+   * same number the customer-facing /business-policy and /how-to-book pages
+   * quote (OBRS-703 AC-10). A ticket cut off this way is NOT refunded. */
+  noShowCutoffMinutes: number;
+  noShowCutoffMinutesOverridden: boolean;
+  /** Percent full at which the near-full alert fires. 100 would mean "never
+   * alert", which is why the field's own range tops out at 99. */
+  nearFullAlertThresholdPercent: number;
+  nearFullAlertThresholdPercentOverridden: boolean;
+}
+
+/** The PUT body: the four values only, no flags — the endpoint writes all
+ * four or none (BR-7 shape). */
+export type OperationsConfigReqDto = Omit<
+  OwnerOperationsConfigDto,
   `${string}Overridden`
 >;
 

@@ -7,6 +7,7 @@ import { ReminderConfigPageComponent } from '../reminder-config/reminder-config-
 import { ParcelShareConfigPageComponent } from '../parcel-share-config/parcel-share-config-page.component';
 import { DriverCashRatesPageComponent } from '../driver-cash-rates/driver-cash-rates-page.component';
 import { CancelReschedulePolicyConfigPageComponent } from '../cancel-reschedule-policy-config/cancel-reschedule-policy-config-page.component';
+import { OperationsConfigPageComponent } from '../operations-config/operations-config-page.component';
 import { NotificationMessagesTabPageComponent } from '../notification-messages/notification-messages-tab-page.component';
 import { NotificationMessageListPageComponent } from '../notification-messages/notification-message-list-page.component';
 import { NotificationMessageEditPageComponent } from '../notification-messages/notification-message-edit-page.component';
@@ -202,6 +203,29 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     // GET/PUT /private/admin/configs/jump-seat is hasRole('OWNER') now.
     requiredRoles: ['admin', 'owner'],
     component: JumpSeatConfigPageComponent,
+  },
+  {
+    // OBRS-703: owner-only, new — sixth group. None of the five existing groups
+    // fit: SALES_POLICY is about a customer's rights over a ticket already
+    // booked (this is about the operational clock the platform runs on), and
+    // NOTIFICATIONS only ever admitted the one near-full alert, not the other
+    // three values PUT writes as a unit (BR-7 all-or-nothing), so splitting
+    // them across three existing groups isn't possible without breaking that
+    // atomicity's meaning on screen. Placed after jump-seat/SEATING and before
+    // the meta "history" tab below, which must stay last.
+    path: 'operations',
+    legacyPath: 'operations-config', // no prior standalone page; kept for interface parity
+    labelKey: 'ADMIN.PAGES.OPERATIONS_CONFIG',
+    groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.OPERATIONS',
+    subtitleKey: 'ADMIN.OPERATIONS_CONFIG.SUBTITLE',
+    // Owner-scoped endpoint (GET/PUT/DELETE /private/owner/configs/operations)
+    // — NOT ['admin','owner'] like the still-symmetric tabs above. Inert today
+    // (ROLE_GRANTS makes ['admin'] and ['owner'] one predicate — see the long
+    // note on SystemSettingsTab.requiredRoles), so an admin can still click in;
+    // the 403 that endpoint would answer with is handled as its own state by
+    // OperationsConfigPageComponent (OBRS-727 pattern), not hidden by this tab.
+    requiredRoles: ['owner'],
+    component: OperationsConfigPageComponent,
   },
   {
     // Last: the "meta" view over every other tab, same placement it held as the

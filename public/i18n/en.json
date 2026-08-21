@@ -542,7 +542,8 @@
       "PARCEL_SHARE_CONFIG": "Parcel Revenue Share",
       "DRIVER_CASH_RATES": "Driver Cash Rates",
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "Cancel & Reschedule",
-      "NOTIFICATION_MESSAGES": "Notification Messages"
+      "NOTIFICATION_MESSAGES": "Notification Messages",
+      "OPERATIONS_CONFIG": "Operations"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -1750,6 +1751,48 @@
         "FAILED": "Could not hand the policy back. Nothing was changed."
       }
     },
+    "OPERATIONS_CONFIG": {
+      "SUBTITLE": "Set your own operations values -- seat hold time, the no-show cutoff, and the near-full alert threshold. Anything not set here follows the platform default.",
+      "LOAD_FAILED": "Could not load the operations config.",
+      "FORBIDDEN": "You do not have access to this config -- this page is restricted to the business owner.",
+      "STATE": {
+        "ALL_DEFAULT": "Everything below is the platform default. You haven't set any of these yourself yet.",
+        "MIXED": "You've set {{count}} of 4 values yourself; the rest still follow the platform default.",
+        "ALL_CUSTOM": "All 4 values are your own settings, no longer following the platform default."
+      },
+      "SOURCE": {
+        "DEFAULT": "Platform default",
+        "CUSTOM": "Your setting",
+        "ARIA": "Source of this value: {{source}}"
+      },
+      "GROUP": {
+        "HOLD": "Seat hold & payment",
+        "BOARDING": "Boarding",
+        "ALERT": "Alerts"
+      },
+      "SEAT_RESERVATION_MINUTES_HELPER": "How long a chosen seat is held for a customer mid-booking before it's released. Not retroactive -- a reservation already in progress keeps the value it started with until it times out.",
+      "RESCHEDULE_PAYMENT_TIMEOUT_MINUTES_HELPER": "How long a customer has to pay a fare difference after requesting a reschedule before the request is dropped. Takes effect immediately, at the next scheduler run.",
+      "NO_SHOW_CUTOFF_MINUTES_HELPER": "How long after departure a passenger can still board before their ticket is recorded as a no-show. Takes effect immediately, at the next scheduler run, and is the same number quoted to customers on the terms of service page.",
+      "NEAR_FULL_ALERT_THRESHOLD_PERCENT_HELPER": "How full a trip must be before the near-full alert fires. Takes effect immediately, at the next scheduler run.",
+      "NO_SHOW_MONEY_WARNING": "A ticket recorded as a no-show is never refunded, and this number is the exact condition published to customers on the terms of service page -- changing it changes what customers see too.",
+      "NEAR_FULL_100_WARNING": "100 is not allowed, because 100% would mean the alert never fires at all -- that is why this field's ceiling stops at 99.",
+      "TAKEOVER_WARNING": "Saving writes all 4 values as your own. The other {{count}} still marked \"platform default\" stop following the platform and change only when you edit them here.",
+      "SAVE_CONFIRM_TITLE": "Use your own settings for all 4 values?",
+      "SAVE_CONFIRM_TEXT": "All 4 values become yours, including {{count}} you didn't touch, and they stop following the platform default. You can hand them back anytime with \"Use the platform default\".",
+      "SAVE_CONFIRM_BTN": "Save as my settings",
+      "SAVE_REJECTED": "The server rejected this config and nothing was saved.",
+      "RESET": {
+        "TITLE": "Use the platform default",
+        "BODY": "Hands all 4 values back to the platform default. From then on they follow the platform whenever it changes, until you set your own again.",
+        "BTN": "Use the platform default",
+        "RUNNING": "Handing back...",
+        "CONFIRM_TITLE": "Hand the config back to the platform?",
+        "CONFIRM_TEXT": "The retroactive effect differs by field -- seat hold time is NOT retroactive (a reservation already holding a seat keeps its current value until it times out), while the other 3 values take effect immediately, at the next scheduler run.",
+        "CONFIRM_BTN": "Use the platform default",
+        "DONE": "The platform default is in use again.",
+        "FAILED": "Could not hand the config back. Nothing was changed."
+      }
+    },
     "CONFIG_CHANGE_HISTORY": {
       "SUBTITLE": "View the change history of all system config values, with who changed them and when",
       "TABLE_TITLE": "Change history",
@@ -1825,6 +1868,7 @@
         "REVENUE_SHARE": "Money & Shares",
         "NOTIFICATIONS": "Notifications",
         "SEATING": "Seats & Vehicles",
+        "OPERATIONS": "Operations",
         "SYSTEM": "System"
       },
       "UNSAVED_CHANGES_TITLE": "Discard unsaved changes?",
@@ -3012,7 +3056,7 @@
       "CONTENT": "&emsp;&emsp;2. Changing your travel date\n      <br />&emsp;&emsp;&emsp;&emsp;• A change can be made up to {{rescheduleWindowHours}} hours before the bus departs from its origin.\n      <br />&emsp;&emsp;&emsp;&emsp;• A new travel date must always be specified, and it may be set within {{rescheduleMaxDaysAhead}} days of the date the change is made — we do not offer open-date tickets.\n      <br />&emsp;&emsp;&emsp;&emsp;• {{rescheduleCountRule}}\n      <br />&emsp;&emsp;&emsp;&emsp;• The change fee is {{rescheduleFeeLateThb}} THB per seat, charged on every change, however far ahead it is made.\n      <br />&emsp;&emsp;&emsp;&emsp;• Any fare difference between the old and the new trip is charged or refunded at the actual fare.\n      <br />&emsp;&emsp;&emsp;&emsp;• Changes can be made through 3 channels: our website, under \"My Bookings\" · the sales offices at all 3 stations · https://www.facebook.com/nj.phuyaipu\n      <br />&emsp;&emsp;3. Reprinting tickets is divided into 2 cases:\n      <br />&emsp;&emsp;&emsp;&emsp;• Reprint with fee: lost, torn, forgotten ticket, or tickets purchased and printed at another station, etc.\n      <br />&emsp;&emsp;&emsp;&emsp;• Reprint without fee: tickets purchased via internet channel, or printer problems during transaction, power outage, system failure, etc.\n      <br />&emsp;&emsp;4. Cancellation and refunds\n      <br />&emsp;&emsp;&emsp;&emsp;• You can cancel your own ticket on the website. No reason and no supporting document is required.\n      <br />&emsp;&emsp;&emsp;&emsp;• {{refundPercentEarly}}% of the fare is refunded when you cancel more than {{earlyWindowHours}} hours before the bus departs from its origin.\n      <br />&emsp;&emsp;&emsp;&emsp;• {{refundPercentLate}}% of the fare is refunded when you cancel between {{cancelWindowHours}} and {{earlyWindowHours}} hours before that departure.\n      <br />&emsp;&emsp;&emsp;&emsp;• Once fewer than {{cancelWindowHours}} hours remain before departure, a ticket can no longer be cancelled.\n      <br />&emsp;&emsp;&emsp;&emsp;• A ticket can also be cancelled at a sales office, under the same time conditions and the same refund rates as cancelling on the website.\n      <br />&emsp;&emsp;5. Fare discounts\n      <br />&emsp;&emsp;&emsp;&emsp;• Round-trip discount — applied automatically when the return trip is booked in the same order.\n      <br />&emsp;&emsp;&emsp;&emsp;• Child fare discount — ask about it and buy the ticket at a ticket sales point.",
       "SEE_REFUND_POLICY": "Read the full refund policy",
       "SEE_PARCEL_POLICY": "Read the parcel carriage terms",
-      "TRAVEL_CONDITIONS": "<br />&emsp;&emsp;&emsp;&emsp;Travel conditions for passengers\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;For your benefit, please read the following travel conditions:\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1. Passengers must comply with the Land Transport Act B.E. 2522 (1979), ministerial regulations, and other related transport laws\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2. Passengers must comply with the company?s transport conditions and acknowledge/accept these passenger travel announcements as stated herein\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;3. Passengers must be ready and arrive at the boarding point before the departure time shown on their ticket. Buses depart on time; a passenger arriving more than 10 minutes after that departure time is recorded as a no-show\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;4. The company will not accept baggage a passenger carries on board containing flammable objects, pets, illegal items, war weapons, strong-smelling food, objects containing liquid, fragile objects, improperly packed items, or oversized/heavy items unsuitable for transport\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;5. The company reserves the right to change unacceptable baggage categories without prior notice; in case of damage, the company is not liable and passengers are responsible for all damages. Items 4 and 5 apply only to baggage a passenger carries on board; a consigned parcel that carries a freight charge of its own is covered by the separate parcel carriage terms\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;6. The carrier is not liable for passengers or baggage due to delays, events beyond control, or inherent deterioration damage, etc.\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;7. If a passenger does not travel on the specified date/time in the agreed ticket, the travel right is considered forfeited",
+      "TRAVEL_CONDITIONS": "<br />&emsp;&emsp;&emsp;&emsp;Travel conditions for passengers\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;For your benefit, please read the following travel conditions:\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1. Passengers must comply with the Land Transport Act B.E. 2522 (1979), ministerial regulations, and other related transport laws\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2. Passengers must comply with the company?s transport conditions and acknowledge/accept these passenger travel announcements as stated herein\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;3. Passengers must be ready and arrive at the boarding point before the departure time shown on their ticket. Buses depart on time; a passenger arriving more than {{noShowCutoffMinutes}} minutes after that departure time is recorded as a no-show\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;4. The company will not accept baggage a passenger carries on board containing flammable objects, pets, illegal items, war weapons, strong-smelling food, objects containing liquid, fragile objects, improperly packed items, or oversized/heavy items unsuitable for transport\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;5. The company reserves the right to change unacceptable baggage categories without prior notice; in case of damage, the company is not liable and passengers are responsible for all damages. Items 4 and 5 apply only to baggage a passenger carries on board; a consigned parcel that carries a freight charge of its own is covered by the separate parcel carriage terms\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;6. The carrier is not liable for passengers or baggage due to delays, events beyond control, or inherent deterioration damage, etc.\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;7. If a passenger does not travel on the specified date/time in the agreed ticket, the travel right is considered forfeited",
       "RESCHEDULE_COUNT_UNLIMITED": "A booking may be changed an unlimited number of times.",
       "RESCHEDULE_COUNT_LIMITED": "A booking may be changed at most {{rescheduleMaxCount}} time(s)."
     },
@@ -3056,7 +3100,7 @@
     "ETICKET_TITLE": "Getting your e-ticket",
     "ETICKET_TEXT": "As soon as your payment is confirmed, your e-ticket is issued automatically. You can view it on the confirmation screen and find it again later in your booking history. Present the e-ticket — printed or on your phone — to staff before boarding.",
     "TIPS_TITLE": "Before you travel",
-    "TIP_1": "Buses depart at the time shown on your ticket. If you arrive more than 10 minutes after that departure time, your ticket is recorded as a no-show.",
+    "TIP_1": "Buses depart at the time shown on your ticket. If you arrive more than {{noShowCutoffMinutes}} minutes after that departure time, your ticket is recorded as a no-show.",
     "TIP_2": "If your trip is delayed, we will send you the new departure time by SMS and email, according to your notification settings.",
     "TIP_3": "Bring a valid photo ID that matches the passenger name on your ticket.",
     "TIP_4": "Keep your booking reference handy in case you need to contact support.",
