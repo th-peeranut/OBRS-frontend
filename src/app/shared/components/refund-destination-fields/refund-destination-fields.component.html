@@ -106,9 +106,10 @@
             id="rdf-account-number"
             type="text"
             inputmode="numeric"
-            obrsDigitsOnly
             class="rdf-input"
-            formControlName="accountNumber"
+            [value]="accountNumberDisplay"
+            (input)="onAccountNumberInput($any($event.target))"
+            (blur)="onAccountNumberBlur()"
             [class.is-invalid]="isInvalid('accountNumber')"
             [disabled]="disabled"
             [placeholder]="'REFUND_DESTINATION.ACCOUNT_NUMBER' | translate"

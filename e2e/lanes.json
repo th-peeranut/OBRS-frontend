@@ -153,6 +153,12 @@
       "why": "OBRS-1374 AC-11 evidence: a four-line repair bill rendered as ONE row in the expenses list, the same bill's four lines in the form (the fourth carrying no part at all, AC-3), and the mismatch warning firing BEFORE save once a line is edited so the lines stop adding up (AC-5). AFTER-only on purpose -- the BEFORE state is a form with no repeater in it at all, which is a picture of an absence, and the absence is already stated by the card. The regressions worth pinning live in expense-form-modal.component.spec.ts and expenses-page.mappers.spec.ts, and the server-side half in ExpenseServiceTest.LineItemTests, whose AC-1 tripwire was walked red. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT and no database is involved."
     },
     {
+      "spec": "obrs-1465-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1465capture.config.ts",
+      "why": "OBRS-1465 AC-5 evidence: the account-number field caught MID-TYPING, which is the only state that shows the dashes arriving rather than a finished string that could have been pasted. The owner chose grouping PER BANK, so the run drives two banks through the same field -- กสิกรไทย (BOT 004) takes the 10-digit convention 148-0-62262-1, ออมสิน (030) its own 12-digit 0-5459005667-4 -- because one bank alone would prove nothing a flat every-N rule would not also prove. It also asserts the half no screenshot can carry: the POST body's accountNumber is bare digits (AC-2), read off the wire rather than off the form, since that string is what reaches manual_refund_requests.destination_account_number. Fixtures and the two-click path into the cancel modal come from obrs-813-cancel-offers-reschedule.spec.ts, which is in GATE, so nothing here reaches a backend: apiUrl points at localhost:8080 where nothing listens."
+    },
+    {
       "spec": "obrs-1477-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1477capture.config.ts",

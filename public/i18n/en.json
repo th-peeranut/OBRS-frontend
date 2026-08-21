@@ -2715,6 +2715,9 @@
     "STEP_3": "Personal information",
     "STEP_4": "Pay"
   },
+  "ARRIVAL_DATE_NOTICE": {
+    "ARRIVES_ON": "Arrives {{date}}"
+  },
   "SCHEDULE_DELAY_NOTICE": {
     "BADGE": "Delayed",
     "PLANNED": "Scheduled {{time}}",
