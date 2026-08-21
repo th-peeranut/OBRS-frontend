@@ -37,8 +37,11 @@ describe('refund-destination-form', () => {
       expect(form.get('accountName')?.valid).toBeTrue();
       expect(form.get('promptpayPhone')?.valid).toBeFalse();
 
-      form.get('promptpayPhone')?.setValue('1234567890123');
-      expect(form.get('promptpayPhone')?.errors?.['nationalId']).toBeTrue();
+      form.get('promptpayPhone')?.setValue('1101700156175');
+      expect(form.get('promptpayPhone')?.errors?.['checkDigit']).toBeTrue();
+
+      form.get('promptpayPhone')?.setValue('1101700156176');
+      expect(form.valid).toBeTrue();
 
       form.get('promptpayPhone')?.setValue('0812345678');
       expect(form.valid).toBeTrue();

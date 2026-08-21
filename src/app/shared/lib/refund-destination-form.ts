@@ -1,6 +1,6 @@
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { trimmedRequiredValidator } from '../validators/trimmed-required.validator';
-import { promptPayPhoneValidator } from '../validators/promptpay-phone.validator';
+import { promptPayIdValidator } from '../validators/promptpay-id.validator';
 import { accountNameCharsetValidator } from '../validators/account-name-charset.validator';
 import { RefundDestinationReqDto, RefundDestinationType } from '../interfaces/refund-destination.interface';
 
@@ -64,7 +64,7 @@ function applyModeFieldValidators(form: FormGroup): void {
 
   const promptpayPhone = form.get('promptpayPhone');
   promptpayPhone?.setValidators(
-    mode === 'promptpay' ? [trimmedRequiredValidator, promptPayPhoneValidator] : []
+    mode === 'promptpay' ? [trimmedRequiredValidator, promptPayIdValidator] : []
   );
   promptpayPhone?.updateValueAndValidity({ emitEvent: false });
 }

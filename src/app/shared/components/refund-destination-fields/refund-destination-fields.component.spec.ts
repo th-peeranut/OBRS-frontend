@@ -46,16 +46,27 @@ describe('AppRefundDestinationFieldsComponent (OBRS-286)', () => {
     expect(fixture.debugElement.query(By.css('#rdf-account-name'))).toBeNull();
   });
 
-  it('surfaces the national-id-specific error distinctly from the generic pattern error', () => {
+  it('surfaces the check-digit error distinctly from the generic pattern error', () => {
     fixture.debugElement.queryAll(By.css('.rdf-toggle-btn'))[1].nativeElement.click();
     const control = component.formGroup.get('promptpayPhone')!;
-    control.setValue('1234567890123');
+    control.setValue('1101700156175');
     control.markAsTouched();
     fixture.detectChanges();
 
     const errors = fixture.debugElement.queryAll(By.css('.rdf-error'));
     expect(errors.length).toBe(1);
-    expect(errors[0].nativeElement.textContent).toContain('REFUND_DESTINATION.ERROR.NATIONAL_ID');
+    expect(errors[0].nativeElement.textContent).toContain('REFUND_DESTINATION.ERROR.CHECK_DIGIT');
+  });
+
+  it('accepts a valid 13-digit national ID with no error shown (OBRS-1462)', () => {
+    fixture.debugElement.queryAll(By.css('.rdf-toggle-btn'))[1].nativeElement.click();
+    const control = component.formGroup.get('promptpayPhone')!;
+    control.setValue('1101700156176');
+    control.markAsTouched();
+    fixture.detectChanges();
+
+    expect(control.valid).toBeTrue();
+    expect(fixture.debugElement.queryAll(By.css('.rdf-error')).length).toBe(0);
   });
 
   it('ignores clicks while disabled', () => {
