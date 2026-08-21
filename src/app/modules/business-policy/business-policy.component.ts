@@ -139,10 +139,12 @@ export class BusinessPolicyComponent implements OnInit, OnDestroy {
               rescheduleWindowHours: r.rescheduleWindowHours,
               rescheduleMaxDaysAhead: r.rescheduleMaxDaysAhead,
               rescheduleFeeLateThb: r.rescheduleFeeLateThb,
-              // Served by BOTH the reschedule and the cancellation endpoint off the one
-              // early_window_hours key, so they cannot disagree. Read from the reschedule
-              // payload; the choice is arbitrary and stated so nobody reads it as significant.
-              earlyWindowHours: r.earlyWindowHours,
+              // OBRS-656: read from the CANCELLATION payload, and the choice is no longer
+              // arbitrary — it is the only endpoint that still serves it. The reschedule fee lost
+              // its time boundary with that card, so /api/reschedule-policy stopped publishing
+              // early_window_hours rather than keep announcing a free window nothing honours.
+              // It is used below only in item 4, where it is a real cancellation rule.
+              earlyWindowHours: c.earlyWindowHours,
               cancelWindowHours: c.cancelWindowHours,
               refundPercentEarly: BusinessPolicyComponent.toPercent(c.refundRateEarly),
               refundPercentLate: BusinessPolicyComponent.toPercent(c.refundRateLate),

@@ -26,14 +26,12 @@ export interface ReschedulePolicyDto {
   rescheduleWindowHours: number;
   /** How far past the original departure a new departure may be set, in days. */
   rescheduleMaxDaysAhead: number;
-  /** Flat fee per seat (THB) charged when the NEW departure is inside earlyWindowHours. */
-  rescheduleFeeLateThb: number;
   /**
-   * Hours before the NEW departure above which no fee is charged. Published alongside the fee
-   * because a fee without the boundary it turns on is half a term -- see OBRS-656, which is open
-   * and will remove the free branch entirely.
+   * Flat fee per seat (THB), charged on EVERY reschedule (OBRS-656). The `Late` in the name is a
+   * legacy of the config key, which was deliberately not renamed so that saved rows and their
+   * history are not orphaned -- there is no longer a cheap or free case for a reader to look for.
    */
-  earlyWindowHours: number;
+  rescheduleFeeLateThb: number;
   /**
    * How many times one booking may be changed; 0 means UNLIMITED (OBRS-657, and 0 is the shipped
    * default). The page picks a SENTENCE off this rather than printing the number, because

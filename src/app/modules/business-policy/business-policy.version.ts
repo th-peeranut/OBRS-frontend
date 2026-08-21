@@ -48,5 +48,20 @@
 // open-date change, "one change, no fee", and the monk/soldier/police fare reductions. That the
 // last two were never honoured in code does not make withdrawing them free — what a ticket holder
 // relied on is what the page said. See BUSINESS_POLICY_LEDGER in scripts/check-i18n-parity.mjs.
-export const BUSINESS_POLICY_VERSION = '1.2';
-export const BUSINESS_POLICY_EFFECTIVE_DATE = '2026-08-27';
+// 1.3 (OBRS-656): the change fee is reschedule_fee_late_thb per seat on EVERY change. The bullet
+// that offered it free when the new departure was more than early_window_hours away is withdrawn —
+// that branch is gone from RescheduleService, and it was the rule the comment at the top of this
+// file predicted would need a notice period.
+//
+// ⚠️ worsensTerms: true, and unlike 1.1 there is nothing to argue: a customer who could move a
+// far-off trip for nothing now pays for it. early_window_hours itself is untouched and still
+// governs the cancellation refund rates in item 4 — only its reschedule half is gone, which is why
+// the number still appears on the page.
+//
+// ⚠️ The seven days between the two dates below are NOT the one day the owner approved on
+// 2026-08-19. That plan was made before 1.2 merged (2026-08-20) carrying an effective date of
+// 2026-08-27, and the ledger refuses an entry whose effectiveDate does not come AFTER the previous
+// entry's — a version cannot take force before the one ahead of it. 2026-08-28 is the earliest
+// date this entry can have while 1.2 stands. The backend change merges ON that date.
+export const BUSINESS_POLICY_VERSION = '1.3';
+export const BUSINESS_POLICY_EFFECTIVE_DATE = '2026-08-28';
