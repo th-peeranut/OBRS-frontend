@@ -1,12 +1,12 @@
 import {
   arrivalDateWhenDayDiffers,
-  arrivesOnLaterBangkokDay,
   capitalizeVehicleType,
   durationHours,
   durationMinutes,
   durationMinutesTotal,
   formatTimeHHMM,
   isLowSeatCount,
+  laterBangkokArrivalDay,
   parsePricePerSeat,
   tripEstimateFromStops,
 } from './trip-format';
@@ -228,15 +228,23 @@ describe('trip-format', () => {
     });
   });
 
-  describe('arrivesOnLaterBangkokDay (OBRS-1502)', () => {
-    it('answers the same question its sibling answers, without the formatting', () => {
+  describe('laterBangkokArrivalDay (OBRS-1502)', () => {
+    it('answers the same question its sibling answers, in a shape a caller can re-format', () => {
       expect(
-        arrivesOnLaterBangkokDay('2026-08-23T18:00:00+07:00', '2026-08-24T00:00:00+07:00')
-      ).toBeTrue();
+        laterBangkokArrivalDay('2026-08-23T18:00:00+07:00', '2026-08-24T00:00:00+07:00')
+      ).toBe('2026-08-24');
       expect(
-        arrivesOnLaterBangkokDay('2026-08-23T08:00:00+07:00', '2026-08-23T23:59:00+07:00')
-      ).toBeFalse();
-      expect(arrivesOnLaterBangkokDay(null, undefined)).toBeFalse();
+        laterBangkokArrivalDay('2026-08-23T08:00:00+07:00', '2026-08-23T23:59:00+07:00')
+      ).toBeNull();
+      expect(laterBangkokArrivalDay(null, undefined)).toBeNull();
+    });
+
+    // The day is read at +07:00 whatever the runner's clock is, which is what lets
+    // the e-ticket assertions below hold on a UTC CI box as well as on a Bangkok one.
+    it('reads the day at +07:00, not at the runner’s own offset', () => {
+      expect(
+        laterBangkokArrivalDay('2026-12-20T16:30:00Z', '2026-12-20T18:05:00Z')
+      ).toBe('2026-12-21');
     });
   });
 });

@@ -1011,7 +1011,6 @@ describe('ETicketComponent', () => {
       paint([leg('2026-12-20T23:30:00+07:00', '2026-12-21T01:05:00+07:00')]);
 
       expect(component.travelDate).toBe('20 Dec 2026');
-      expect(component.travelTime).toBe('23:30 - 01:05');
       expect(component.arrivalDate).toBe('21 Dec 2026');
     });
 

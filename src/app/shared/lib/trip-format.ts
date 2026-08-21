@@ -78,19 +78,25 @@ export function arrivalDateWhenDayDiffers(
 }
 
 /**
- * OBRS-1502 — the same "does this trip land on a later Bangkok day?" question as
- * `arrivalDateWhenDayDiffers`, without its answer's formatting.
+ * OBRS-1502 — the arrival's Bangkok calendar day as `YYYY-MM-DD`, and only when
+ * the trip lands on a LATER Bangkok day than it departed; `null` otherwise.
  *
- * The e-ticket needs the question but not the `DD/MM/YYYY` it comes back in: the
- * ticket prints its dates as `22 ส.ค. 2026` through its own locale-aware
- * `formatDate`, and a `23/08/2026` beside that would put two date dialects on one
- * printed page. So the ticket asks this, then formats the arrival itself.
+ * The same question `arrivalDateWhenDayDiffers` answers, returned in a shape the
+ * caller can re-format: the e-ticket prints its dates as `22 ส.ค. 2026` through
+ * its own locale-aware `formatDate`, and a `23/08/2026` beside that would put two
+ * date dialects on one printed page. The DAY is Bangkok's and not the device's on
+ * purpose — a viewer whose clock is not +07:00 would otherwise be told the trip
+ * lands on a later day and then shown the day it left.
  */
-export function arrivesOnLaterBangkokDay(
+export function laterBangkokArrivalDay(
   departureDateTime: string | null | undefined,
   arrivalDateTime: string | null | undefined
-): boolean {
-  return arrivalDateWhenDayDiffers(departureDateTime, arrivalDateTime) !== null;
+): string | null {
+  const departureDay = bangkokDay(departureDateTime);
+  const arrivalDay = bangkokDay(arrivalDateTime);
+  if (!departureDay || !arrivalDay) return null;
+
+  return arrivalDay.iso > departureDay.iso ? arrivalDay.iso : null;
 }
 
 /** Whole minutes between two date strings, clamped to `>= 0`. `0` for missing/invalid input. */

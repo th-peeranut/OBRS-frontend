@@ -12,8 +12,8 @@ import {
 } from 'rxjs';
 import dayjs from 'dayjs';
 import {
-  arrivesOnLaterBangkokDay,
   capitalizeVehicleType,
+  laterBangkokArrivalDay,
   parsePricePerSeat,
 } from '../../shared/lib/trip-format';
 import { buildMapsDirectionsUrl } from '../../shared/lib/maps-directions-url';
@@ -568,13 +568,12 @@ export class ETicketComponent implements OnInit, OnDestroy {
     trip: TripTimestamps | null | undefined,
     locale: Locale
   ): string {
-    if (
-      !arrivesOnLaterBangkokDay(trip?.departureDateTime, trip?.arrivalDateTime)
-    ) {
-      return '';
-    }
+    const arrivalDay = laterBangkokArrivalDay(
+      trip?.departureDateTime,
+      trip?.arrivalDateTime
+    );
 
-    return this.formatDate(trip?.arrivalDateTime, locale);
+    return arrivalDay ? this.formatDate(arrivalDay, locale) : '';
   }
 
   private buildTravelTime(
