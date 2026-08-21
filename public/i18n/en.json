@@ -1552,6 +1552,7 @@
         "COUNTED_INVALID": "Enter a valid amount, e.g. 480.00.",
         "PER_HEAD_DEDUCTED": "Less per-head fee kept by the seller",
         "DEFERRED_TICKET_CASH": "Less ticket cash transferred at end of day",
+        "ADVANCE_PAID_OUT": "Less advance paid to the driver",
         "EXPECTED_CASH": "Expected cash",
         "DISCREPANCY": "Discrepancy",
         "HANDER_LABEL": "Handed over by",
