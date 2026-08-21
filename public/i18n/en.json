@@ -490,6 +490,7 @@
     "BANK_SEARCH_EMPTY": "No bank matches that search",
     "RETRY_BANK_LIST": "Retry",
     "ACCOUNT_NUMBER": "Account number",
+    "ACCOUNT_NUMBER_NEEDS_BANK": "Choose a bank first — this field opens once you have",
     "PROMPTPAY_ID": "PromptPay ID — 10-digit mobile number or 13-digit national ID",
     "ERROR": {
       "REQUIRED": "This field is required",
