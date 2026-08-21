@@ -71,6 +71,22 @@ export const DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
   'rejected',
 ];
 
+// OBRS-1473/OBRS-1474: the admin's full set. DETAIL_STATUS_VALUES above is the
+// OUTCOME-only list (OBRS-174 removed 'new'/'in_review' because an admin lands
+// on those, they are not outcomes to pick). 'in_review' is back here — not as an
+// outcome, but as a DESTINATION: it is the only legal target from 'resolved'
+// (the OBRS-1474 reopen), from 'dismissed' and from 'duplicate'. It never leaks
+// onto reports where the backend would reject it, because
+// detailStatusValuesFor() below intersects this with the legal edges from the
+// report's current status.
+export const ADMIN_DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
+  'in_review',
+  'accepted',
+  'dismissed',
+  'resolved',
+  'rejected',
+];
+
 // OBRS-370: owner is a SCREEN-ONLY tier on this page — the backend 403s a
 // non-admin on the terminal decisions (resolved/rejected, which are terminal
 // and email the reporter) and on the Jira key, so the owner's decision
@@ -87,57 +103,100 @@ export const OWNER_DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
   'dismissed',
 ];
 
-// OBRS-527: mirrors the backend's ALLOWED_TRANSITIONS matrix
-// (UsabilityReportService.java), restricted to the targets an OWNER (not
-// admin) may legally reach — i.e. with every ADMIN_ONLY_TARGET_STATUSES
-// target ('accepted'/'resolved'/'rejected') removed from each source's set.
-// This is a MIRROR, not the authority — the backend still enforces every
-// transition; this only drives which options the owner's dropdown shows so
-// they don't hit an avoidable 403. Sources the owner cannot act on at all
-// (accepted/resolved/rejected/duplicate — PO-2 makes these admin-only
-// SOURCES too) map to an empty array.
-export const OWNER_ALLOWED_TARGETS: Record<
+// OBRS-1473: the full mirror of the backend's ALLOWED_TRANSITIONS matrix
+// (UsabilityReportService.java). This is a MIRROR, not the authority — the
+// backend still enforces every transition and still answers 400
+// REPORT_INVALID_TRANSITION; this only decides which options a dropdown offers,
+// so nobody is invited to click a save that cannot succeed.
+// OBRS-1474: 'resolved' -> ['in_review'] is the reopen edge (ADR-0136).
+// 'rejected' stays terminal.
+export const ALLOWED_TARGETS: Record<
   UsabilityReportStatus,
   readonly UsabilityReportStatus[]
 > = {
-  new: ['in_review', 'dismissed'],
-  in_review: ['owner_accepted', 'dismissed'],
-  owner_accepted: ['in_review', 'dismissed'],
-  accepted: [],
+  new: ['in_review', 'accepted', 'dismissed', 'rejected'],
+  in_review: ['owner_accepted', 'accepted', 'dismissed', 'resolved', 'rejected'],
+  owner_accepted: ['in_review', 'accepted', 'dismissed', 'resolved', 'rejected'],
+  accepted: ['resolved', 'rejected', 'dismissed'],
   dismissed: ['in_review'],
-  resolved: [],
+  resolved: ['in_review'],
   rejected: [],
-  duplicate: [],
+  duplicate: ['in_review'],
 };
 
-// OBRS-527: the source-aware detail dropdown (solves PO-2 and the
-// owner-undo case with one mechanism). Admin is never restricted. An owner's
-// options depend on the report's CURRENT status (sourceStatus) — a report
-// already 'accepted'/'resolved'/'rejected'/'duplicate' has no legal owner
-// move at all (the source-side guard already 403s these; offering options
-// here would just eat a free 403), and every other source is filtered to
-// OWNER_DETAIL_STATUS_VALUES minus itself and minus any target that isn't a
-// legal edge per OWNER_ALLOWED_TARGETS above.
+// The backend's ADMIN_ONLY_TARGET_STATUSES / ADMIN_ONLY_SOURCE_STATUSES, mirrored
+// so OWNER_ALLOWED_TARGETS below can be DERIVED from the one matrix above rather
+// than hand-maintained beside it (they drifted apart once already — OBRS-1473).
+const ADMIN_ONLY_TARGETS: ReadonlySet<UsabilityReportStatus> = new Set<UsabilityReportStatus>([
+  'accepted',
+  'resolved',
+  'rejected',
+]);
+const ADMIN_ONLY_SOURCES: ReadonlySet<UsabilityReportStatus> = new Set<UsabilityReportStatus>([
+  'accepted',
+  'resolved',
+  'rejected',
+  'duplicate',
+]);
+
+// OBRS-527, derived from ALLOWED_TARGETS since OBRS-1473: the targets an OWNER
+// (not admin) may legally reach. Sources the owner cannot act on at all map to an
+// empty array — the backend's source-side guard already 403s those, so offering
+// options would just eat a free 403.
+export const OWNER_ALLOWED_TARGETS: Record<
+  UsabilityReportStatus,
+  readonly UsabilityReportStatus[]
+> = {} as Record<UsabilityReportStatus, readonly UsabilityReportStatus[]>;
+
+// `entries()`, not `keys()` + `ALLOWED_TARGETS[source]`: the value comes along with
+// the key, so there is no dynamic map lookup for the prototype-key gate to flag
+// (scripts/check-prototype-key-lookup.mjs / ADR-0028). Nothing to exempt.
+for (const [source, targets] of Object.entries(ALLOWED_TARGETS) as [
+  UsabilityReportStatus,
+  readonly UsabilityReportStatus[],
+][]) {
+  OWNER_ALLOWED_TARGETS[source] = ADMIN_ONLY_SOURCES.has(source)
+    ? []
+    : targets.filter((target) => !ADMIN_ONLY_TARGETS.has(target));
+}
+
+// OBRS-527: the source-aware detail dropdown (solves PO-2 and the owner-undo
+// case with one mechanism).
+// OBRS-1473: admin is source-aware TOO now. It used to return the fixed
+// DETAIL_STATUS_VALUES for every report, which meant a 'resolved' report offered
+// four options the backend rejects with 400 — measured on SIT, 12 of 13 reports
+// were in exactly that state. Both roles now go through the same intersection:
+// what the role may pick at all, ∩ what is a legal edge from this report's
+// current status.
 export function detailStatusValuesFor(
   isAdmin: boolean,
   sourceStatus: UsabilityReportStatus | ''
 ): readonly UsabilityReportStatus[] {
-  if (isAdmin) {
-    return DETAIL_STATUS_VALUES;
-  }
   if (sourceStatus === '') {
-    return OWNER_DETAIL_STATUS_VALUES;
+    // No report open — there is no source to be aware of, so this stays the
+    // role's plain default (unchanged by OBRS-1473). `in_review` is deliberately
+    // NOT offered here: it only makes sense as the target of a specific edge.
+    return isAdmin ? DETAIL_STATUS_VALUES : OWNER_DETAIL_STATUS_VALUES;
   }
+  const roleValues = isAdmin ? ADMIN_DETAIL_STATUS_VALUES : OWNER_DETAIL_STATUS_VALUES;
   // OBRS-601: `sourceStatus` is typed `UsabilityReportStatus`, but it reaches
   // here from an HttpClient generic over server JSON — an implicit cast, not a
   // runtime guarantee. A status this FE does not know yet (or a prototype
   // member name) left `legalTargets` undefined and threw on `.includes()`
-  // below, blanking the detail modal. Degrade to "no legal owner move".
-  const legalTargets = hasOwnKey(OWNER_ALLOWED_TARGETS, sourceStatus)
-    ? OWNER_ALLOWED_TARGETS[sourceStatus]
-    : [];
-  return OWNER_DETAIL_STATUS_VALUES.filter(
-    (value) => value !== sourceStatus && legalTargets.includes(value)
+  // below, blanking the detail modal. Degrade to "no legal move".
+  const table = isAdmin ? ALLOWED_TARGETS : OWNER_ALLOWED_TARGETS;
+  const legalTargets = hasOwnKey(table, sourceStatus) ? table[sourceStatus] : [];
+  // OBRS-1473: the same-state diagonal (from == to) is ALWAYS legal on the
+  // backend — it is how an admin edits triageNote without moving the report, and
+  // it is why an already-decided report pre-seeds its own status
+  // (DECISION_STATUSES / seedDecisionStatus). So an admin keeps the current
+  // status selectable when that status IS a recorded decision; dropping it would
+  // have taken the note edit away from every resolved/rejected report, which is
+  // the opposite of what this card is for. Owner is unchanged — PO-2 gives the
+  // owner no move at all out of those statuses, note edits included.
+  const keepsSelf = isAdmin && DECISION_STATUSES.has(sourceStatus);
+  return roleValues.filter(
+    (value) => legalTargets.includes(value) || (keepsSelf && value === sourceStatus)
   );
 }
 

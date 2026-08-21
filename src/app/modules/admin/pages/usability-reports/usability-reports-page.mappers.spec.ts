@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   DECISION_STATUSES,
+  ALLOWED_TARGETS,
   DETAIL_STATUS_VALUES,
   FIFO_STATUSES,
   MARK_AS_DUPLICATE_STATUSES,
@@ -73,9 +74,12 @@ describe('usability-reports-page.mappers', () => {
       expect(OWNER_ALLOWED_TARGETS.duplicate).toEqual([]);
     });
 
-    it('admin (isAdmin=true) always gets DETAIL_STATUS_VALUES regardless of sourceStatus', () => {
-      const everyStatus: readonly (UsabilityReportStatus | '')[] = [
-        '',
+    // OBRS-1473: admin used to get the fixed DETAIL_STATUS_VALUES for EVERY
+    // source — the bug. On SIT (measured 2026-08-20) 12 of 13 reports were
+    // `resolved`, so 12 of 13 detail modals offered four options the backend
+    // answers with 400 REPORT_INVALID_TRANSITION.
+    it('admin never gets an option the backend would reject — every admin option is either a legal edge or the always-legal same-state diagonal', () => {
+      const everySource: readonly UsabilityReportStatus[] = [
         'new',
         'in_review',
         'owner_accepted',
@@ -85,9 +89,69 @@ describe('usability-reports-page.mappers', () => {
         'rejected',
         'duplicate',
       ];
-      for (const source of everyStatus) {
-        expect(detailStatusValuesFor(true, source)).toEqual(DETAIL_STATUS_VALUES);
+      for (const source of everySource) {
+        for (const option of detailStatusValuesFor(true, source)) {
+          expect([...ALLOWED_TARGETS[source], source])
+            .withContext(`admin option "${option}" offered on a "${source}" report`)
+            .toContain(option);
+        }
       }
+    });
+
+    it('admin viewing a resolved report gets the reopen plus the same-state note edit — not the four impossible ones (OBRS-1473/1474)', () => {
+      expect(detailStatusValuesFor(true, 'resolved')).toEqual(['in_review', 'resolved']);
+    });
+
+    it('admin viewing a rejected report gets only the same-state note edit — rejected stays terminal', () => {
+      expect(detailStatusValuesFor(true, 'rejected')).toEqual(['rejected']);
+    });
+
+    it('admin viewing a dismissed or duplicate report gets exactly the pull-back option', () => {
+      expect(detailStatusValuesFor(true, 'dismissed')).toEqual(['in_review']);
+      expect(detailStatusValuesFor(true, 'duplicate')).toEqual(['in_review']);
+    });
+
+    it('admin viewing an in_review report is UNCHANGED by this card — still the four decision outcomes', () => {
+      expect(detailStatusValuesFor(true, 'in_review')).toEqual(DETAIL_STATUS_VALUES);
+    });
+
+    it('admin viewing an accepted report is UNCHANGED by this card — the three legal edges plus its own status', () => {
+      expect(detailStatusValuesFor(true, 'accepted')).toEqual([
+        'accepted',
+        'dismissed',
+        'resolved',
+        'rejected',
+      ]);
+    });
+
+    it('admin never gets owner_accepted — that tier stays the owner\'s to set', () => {
+      expect(detailStatusValuesFor(true, 'in_review')).not.toContain(
+        'owner_accepted' as UsabilityReportStatus
+      );
+    });
+
+    it('ALLOWED_TARGETS mirrors the backend matrix, cell by cell (UsabilityReportService.ALLOWED_TRANSITIONS)', () => {
+      expect(ALLOWED_TARGETS.new).toEqual(['in_review', 'accepted', 'dismissed', 'rejected']);
+      expect(ALLOWED_TARGETS.in_review).toEqual([
+        'owner_accepted',
+        'accepted',
+        'dismissed',
+        'resolved',
+        'rejected',
+      ]);
+      expect(ALLOWED_TARGETS.owner_accepted).toEqual([
+        'in_review',
+        'accepted',
+        'dismissed',
+        'resolved',
+        'rejected',
+      ]);
+      expect(ALLOWED_TARGETS.accepted).toEqual(['resolved', 'rejected', 'dismissed']);
+      expect(ALLOWED_TARGETS.dismissed).toEqual(['in_review']);
+      // OBRS-1474 — the reopen edge, and the one status it deliberately skipped.
+      expect(ALLOWED_TARGETS.resolved).toEqual(['in_review']);
+      expect(ALLOWED_TARGETS.rejected).toEqual([]);
+      expect(ALLOWED_TARGETS.duplicate).toEqual(['in_review']);
     });
 
     it('owner viewing an already-finalized report (accepted/resolved/rejected/duplicate) gets [] — PO-2, no legal move exists', () => {
