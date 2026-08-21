@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { Option, StopDetailForm } from '../stops.mappers';
+import { Option, ReturnStopOption, StopDetailForm } from '../stops.mappers';
 
 /**
  * OBRS-1298: presentational modal shell for the stop edit form, split out of
@@ -40,6 +40,9 @@ export class StopFormModalComponent {
   @Input() provinceOptions: Option[] = [];
   @Input() statusOptions: Option[] = [];
   @Input() stopTypeOptions: Option[] = [];
+  /** OBRS-1481: the pin choices, already including the saved value even when it is no
+   *  longer eligible - StopsPageComponent owns that rule (toReturnStopOptions, AC-7). */
+  @Input() returnStopOptions: ReturnStopOption[] = [];
 
   @Output() closed = new EventEmitter<void>();
   @Output() save = new EventEmitter<void>();

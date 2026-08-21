@@ -15,6 +15,8 @@ import {
   toRouteStatusOptions,
   toSegmentGroups,
   toSegmentPivotRows,
+  findStopPairProblem,
+  toSegmentAppendPayload,
   toSegmentUpdatePayload,
   toSegments,
   toStopName,
@@ -494,6 +496,124 @@ describe('routes.mappers', () => {
       expect(edited.estimatedDurationMinutes).toBe(1); // clamped
       expect(untouched.fare).toBe(15);
       expect(untouched.estimatedDurationMinutes).toBeUndefined();
+    });
+  });
+
+  // OBRS-1074: one direction rule, asked by both the edit and the add dialog.
+  describe('findStopPairProblem', () => {
+    const stopAt = (slug: string, stopOrder: number, offsetMinutesFromOrigin: number) => ({
+      slug,
+      name: slug.toUpperCase(),
+      distance: '0 km',
+      duration: '0 mins',
+      stopOrder,
+      offsetMinutesFromOrigin,
+    });
+
+    it('accepts a pair that follows the stop order', () => {
+      expect(findStopPairProblem(stopAt('a', 1, 0), stopAt('b', 2, 20))).toBeNull();
+    });
+
+    it('reports a missing stop, the same stop twice, and a backwards pair', () => {
+      expect(findStopPairProblem(undefined, stopAt('b', 2, 20))).toBe('unknownStop');
+      expect(findStopPairProblem(stopAt('a', 1, 0), stopAt('a', 1, 0))).toBe('sameStop');
+      expect(findStopPairProblem(stopAt('b', 2, 20), stopAt('a', 1, 0))).toBe('stopOrder');
+    });
+
+    // The shipped route data holds stops that share a minute (and one pair that
+    // reads backwards in minutes after V66 reordered boarding), so ordering by
+    // offset would refuse pairs the route sells today.
+    it('orders by stop order, not by arrival minute', () => {
+      expect(findStopPairProblem(stopAt('a', 1, 10), stopAt('b', 2, 10))).toBeNull();
+      expect(findStopPairProblem(stopAt('a', 1, 48), stopAt('b', 2, 45))).toBeNull();
+    });
+  });
+
+  describe('toSegmentAppendPayload', () => {
+    const segments: SegmentRow[] = [
+      {
+        id: 1,
+        origin: 'A',
+        destination: 'C',
+        fare: 180,
+        duration: '-',
+        estimatedDurationMinutes: 40,
+        fromStopSlug: 'a',
+        toStopSlug: 'c',
+        vehicleTypeSlug: 'van',
+        vehicleTypeName: 'Van',
+      },
+      {
+        id: 2,
+        origin: 'A',
+        destination: 'C',
+        fare: 200,
+        duration: '-',
+        estimatedDurationMinutes: 40,
+        fromStopSlug: 'a',
+        toStopSlug: 'c',
+        vehicleTypeSlug: 'minibus',
+        vehicleTypeName: 'Minibus',
+      },
+    ];
+
+    // The PUT is a full replace per (route, vehicleType): a payload that omits
+    // an existing pair DELETES it. So the existing rows must ride along.
+    it('carries every existing pair of the priced vehicle type, then the new one', () => {
+      const payload = toSegmentAppendPayload(
+        'a',
+        'b',
+        [{ vehicleTypeSlug: 'van', fare: 90 }],
+        segments,
+        'route-1'
+      );
+
+      expect(payload).toEqual({
+        route: 'route-1',
+        vehicleTypes: [
+          {
+            vehicleType: 'van',
+            stopPairs: [
+              { fromStop: 'a', toStop: 'c', fare: 180 },
+              { fromStop: 'a', toStop: 'b', fare: 90 },
+            ],
+          },
+        ],
+      });
+    });
+
+    it('emits no block for a vehicle type that was not priced', () => {
+      const payload = toSegmentAppendPayload(
+        'a',
+        'b',
+        [{ vehicleTypeSlug: 'van', fare: 90 }],
+        segments,
+        'route-1'
+      );
+
+      expect(payload.vehicleTypes.map((block) => block.vehicleType)).toEqual(['van']);
+    });
+
+    // Not a per-pair value: the backend derives it from the two stops' arrival
+    // minutes, and sending one back overwrites the destination stop for every
+    // other pair that shares it (OBRS-1031).
+    it('never sends estimatedDurationMinutes', () => {
+      const payload = toSegmentAppendPayload(
+        'a',
+        'b',
+        [
+          { vehicleTypeSlug: 'van', fare: 90 },
+          { vehicleTypeSlug: 'minibus', fare: 95 },
+        ],
+        segments,
+        'route-1'
+      );
+
+      const everyPair = payload.vehicleTypes.flatMap((block) => block.stopPairs);
+      expect(everyPair.length).toBe(4);
+      for (const pair of everyPair) {
+        expect('estimatedDurationMinutes' in pair).toBeFalse();
+      }
     });
   });
 

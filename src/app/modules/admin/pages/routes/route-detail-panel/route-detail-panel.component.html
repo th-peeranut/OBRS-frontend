@@ -35,6 +35,19 @@
       <div class="admin-card-head">
         <h4>{{ 'ADMIN.ROUTES.SEGMENTS_TITLE' | translate }}</h4>
         <div class="admin-inline-actions">
+          <!-- OBRS-1074: disabled when the route has no segment at all, because
+               the vehicle types offered in the dialog are derived from the ones
+               already priced - with none there is nothing to price against. -->
+          <button
+            type="button"
+            class="admin-btn admin-btn-small admin-btn-primary"
+            data-testid="add-segment-button"
+            [disabled]="vehicleTypeOptions.length === 0"
+            (click)="addSegment.emit()"
+            >
+            <span class="material-symbols-outlined" [attr.translate]="'no'">add</span>
+            {{ 'ADMIN.ROUTES.ADD_SEGMENT' | translate }}
+          </button>
           <!-- Two buttons, not one toggle: a single toggle cannot express
                "some groups are collapsed", and disabling each button is what
                makes the current state readable without clicking anything. -->

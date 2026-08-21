@@ -131,6 +131,18 @@ export interface SettlementLiveDto {
    * made every honest hand-over look short by exactly that amount.
    */
   deferredTicketCash: string;
+
+  /**
+   * OBRS-1245 — cash handed to the driver as an advance out of THIS round's
+   * drawer, already netted out of `expectedCashAmount`. Positive magnitude.
+   *
+   * The driver's own day has demanded this money back since OBRS-960; nothing
+   * took it off the person who physically handed it over, so the round asked
+   * them for cash they no longer had and the gap was typed into the discrepancy
+   * box as a reason. Advances funded from a counter that transfers at close of
+   * day are 0.00 here — they are deducted on that funder's own day instead.
+   */
+  advancePaidOut: string;
 }
 
 /**

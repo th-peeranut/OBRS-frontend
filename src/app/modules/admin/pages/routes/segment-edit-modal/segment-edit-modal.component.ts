@@ -5,7 +5,12 @@ import { AdminApiService } from '../../../../../services/admin/admin-api.service
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
-import { SegmentRow, StopPoint, toSegmentUpdatePayload } from '../routes.mappers';
+import {
+  SegmentRow,
+  StopPoint,
+  findStopPairProblem,
+  toSegmentUpdatePayload,
+} from '../routes.mappers';
 
 @Component({
     selector: 'app-segment-edit-modal',
@@ -184,29 +189,23 @@ export class SegmentEditModalComponent {
   }
 
   private validateSegmentStops(fromStopSlug: string, toStopSlug: string): boolean {
-    const fromStop = this.getStopPointBySlug(fromStopSlug);
-    const toStop = this.getStopPointBySlug(toStopSlug);
+    // OBRS-1074: the comparison itself lives in routes.mappers so the add-pair
+    // modal enforces the SAME rule instead of a second copy of it.
+    const problem = findStopPairProblem(
+      this.getStopPointBySlug(fromStopSlug),
+      this.getStopPointBySlug(toStopSlug)
+    );
+
+    if (!problem) {
+      return true;
+    }
+
     const toStopControl = this.editSegmentForm.get('toStopSlug');
-
-    if (!fromStop || !toStop) {
-      toStopControl?.setErrors({ required: true });
-      toStopControl?.markAsTouched();
-      return false;
-    }
-
-    if (fromStop.slug === toStop.slug) {
-      toStopControl?.setErrors({ sameStop: true });
-      toStopControl?.markAsTouched();
-      return false;
-    }
-
-    if (toStop.stopOrder <= fromStop.stopOrder) {
-      toStopControl?.setErrors({ stopOrder: true });
-      toStopControl?.markAsTouched();
-      return false;
-    }
-
-    return true;
+    toStopControl?.setErrors(
+      problem === 'unknownStop' ? { required: true } : { [problem]: true }
+    );
+    toStopControl?.markAsTouched();
+    return false;
   }
 
   private getStopPointBySlug(slug: string): StopPoint | undefined {
