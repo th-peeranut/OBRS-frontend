@@ -714,7 +714,12 @@ test.describe('Admin usability-reports triage page (stubbed)', () => {
       data: {
         ...REPORT_LIST_STUB.data,
         content: [
-          { ...REPORT_LIST_STUB.data.content[0], status: 'resolved' as const },
+          // OBRS-1473: 'accepted', not 'resolved'. rep-001 is 'new', and the backend's
+          // ALLOWED_TRANSITIONS has no new -> resolved edge, so the save this test used to
+          // drive would have answered 400 REPORT_INVALID_TRANSITION against a real server —
+          // it only passed because the dropdown offered every status regardless of the
+          // current one (that is the bug this card fixes) and the PUT here is stubbed 200.
+          { ...REPORT_LIST_STUB.data.content[0], status: 'accepted' as const },
           REPORT_LIST_STUB.data.content[1],
         ],
       },
@@ -767,12 +772,14 @@ test.describe('Admin usability-reports triage page (stubbed)', () => {
     await viewBtn.click();
     await page.locator('.admin-modal.ur-detail-modal').waitFor({ state: 'visible', timeout: 10_000 });
 
-    // Change status via the detail modal's dropdown to "resolved"
+    // Change status via the detail modal's dropdown to "accepted" — a LEGAL edge out of
+    // 'new' (OBRS-1473; the dropdown is source-aware now, so an illegal target is not on
+    // offer to click at all).
     const statusDropdown = page.locator('.ur-detail-modal .ur-status-controls app-admin-dropdown');
     await statusDropdown.locator('.admin-dropdown-trigger').click();
-    const resolvedOpt = statusDropdown.locator('.admin-dropdown-option', { hasText: 'Resolved' });
-    await resolvedOpt.waitFor({ state: 'visible', timeout: 5_000 });
-    await resolvedOpt.click();
+    const acceptedOpt = statusDropdown.locator('.admin-dropdown-option', { hasText: 'Accepted' });
+    await acceptedOpt.waitFor({ state: 'visible', timeout: 5_000 });
+    await acceptedOpt.click();
 
     // Save. Selected structurally, not by label: the copy behind
     // `ADMIN.USABILITY_REPORTS.STATUS.SAVE` has since changed from "Save
@@ -786,9 +793,9 @@ test.describe('Admin usability-reports triage page (stubbed)', () => {
     await page.waitForFunction(() => true); // allow micro-task queue to flush
     expect(putCalled).toBe(true);
 
-    // After the save + refresh, the table must now show "Resolved" (from the second GET stub)
+    // After the save + refresh, the table must now show "Accepted" (from the second GET stub)
     const firstStatusBadge = page.locator('table.admin-table tbody tr').first().locator('.admin-status');
-    await expect(firstStatusBadge).toHaveText('Resolved', { timeout: 10_000 });
+    await expect(firstStatusBadge).toHaveText('Accepted', { timeout: 10_000 });
   });
 
   test('"Usability Reports" appears in admin sidebar nav', async ({ page }) => {
