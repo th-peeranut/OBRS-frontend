@@ -25,6 +25,9 @@ export class RoleListTableComponent {
   @Input() isLoading = false;
   @Input() skeletonRows: unknown[] = Array.from({ length: 5 });
   @Input() hasError = false;
+  // OBRS-1495: decided by the parent from the held role, like `canUnlock` on
+  // UserListTableComponent. Defaults to the pre-1495 behaviour.
+  @Input() showSlugColumn = true;
   // Total (unfiltered) role count for the "Showing X-Y of Z" footer —
   // distinct from `rows.length`, which reflects the filtered set. Matches
   // the pre-split template's `roles.length` vs `filteredRoles.length` split.

@@ -35,7 +35,9 @@
       <table class="admin-table">
         <thead>
           <tr>
-            <th>{{ 'ADMIN.STOPS.COL_SLUG' | translate }}</th>
+            @if (showSlugColumn) {
+              <th>{{ 'ADMIN.STOPS.COL_SLUG' | translate }}</th>
+            }
             <th>{{ 'ADMIN.STOPS.COL_NAME' | translate }}</th>
             <th>{{ 'ADMIN.STOPS.COL_TYPE' | translate }}</th>
             <th>{{ 'ADMIN.STOPS.COL_STATUS' | translate }}</th>
@@ -52,7 +54,9 @@
               [class.is-selected]="row.id === selectedStopId"
               (click)="onRowActivate(row, $event)"
             >
-              <td><code>{{ row.slug }}</code></td>
+              @if (showSlugColumn) {
+                <td><code>{{ row.slug }}</code></td>
+              }
               <td>{{ row.name }}</td>
               <td>{{ row.stopType }}</td>
               <td>{{ row.status }}</td>
@@ -65,7 +69,7 @@
           }
           @if (filteredRows.length === 0) {
             <tr>
-              <td colspan="5" class="admin-muted">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+              <td [attr.colspan]="showSlugColumn ? 5 : 4" class="admin-muted">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
             </tr>
           }
         </tbody>

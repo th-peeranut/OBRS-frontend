@@ -49,7 +49,9 @@
       <table class="admin-table">
         <thead>
           <tr>
-            <th>{{ 'ADMIN.LOOKUP.SLUG' | translate }}</th>
+            @if (showSlugColumn) {
+              <th>{{ 'ADMIN.LOOKUP.SLUG' | translate }}</th>
+            }
             <th>{{ 'ADMIN.LOOKUP.TRANSLATIONS' | translate }}</th>
             <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
           </tr>
@@ -58,7 +60,9 @@
           @if (isLoading) {
             @for (row of skeletonRows; track $index) {
               <tr class="admin-skeleton-row" aria-hidden="true">
-                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                @if (showSlugColumn) {
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                }
                 <td>
                   <div class="admin-cell-stack">
                     <span class="admin-skeleton"></span>
@@ -73,14 +77,16 @@
           @if (!isLoading) {
             @for (group of groupedEntries; track group) {
               <tr class="admin-group-row">
-                <td colspan="3">
+                <td [attr.colspan]="showSlugColumn ? 3 : 2">
                   <span class="admin-chip">{{ group.category }}</span>
                   <span class="admin-muted">· {{ group.items.length }}</span>
                 </td>
               </tr>
               @for (entry of group.items; track entry; let i = $index) {
                 <tr [class.zebra]="i % 2 === 1">
-                  <td><code>{{ entry.slug }}</code></td>
+                  @if (showSlugColumn) {
+                    <td><code>{{ entry.slug }}</code></td>
+                  }
                   <td>
                     <div class="admin-cell-stack">
                       <span><strong>EN:</strong> {{ entry.enLabel }}</span>
@@ -112,7 +118,7 @@
             }
             @if (entries.length === 0 && !errorMessage) {
               <tr class="admin-empty-row">
-                <td colspan="3">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                <td [attr.colspan]="showSlugColumn ? 3 : 2">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
               </tr>
             }
           }

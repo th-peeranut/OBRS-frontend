@@ -43,7 +43,7 @@ const RETURN_STOP_OPTIONS = [
   { id: 3, slug: 'pt_srinakarin', translations: { th: { label: 'ปตท. ศรีนครินทร์' } } },
 ];
 
-function makeComponent(overrides: Record<string, unknown> = {}) {
+function makeComponent(overrides: Record<string, unknown> = {}, roles: string[] = ['admin']) {
   const adminApi = {
     getStopsForAdmin: jasmine.createSpy('getStopsForAdmin').and.returnValue(of({ data: STOP_LIST })),
     getProvincesForAdmin: jasmine
@@ -79,7 +79,7 @@ function makeComponent(overrides: Record<string, unknown> = {}) {
   // real data (every stop has a `th` label, most have no `en` one at all).
   const translate = createTranslateStub();
   translate.currentLang = 'th';
-  const component = new StopsPageComponent(adminApi as any, alert as any, translate);
+  const component = new StopsPageComponent(adminApi as any, alert as any, translate, { getRoles: () => roles } as any);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return { component: component as any, adminApi, alert, translate };
 }
@@ -388,5 +388,24 @@ describe('StopsPageComponent (OBRS-1022)', () => {
     expect(component.returnStopOptions.find((o: { id: number }) => o.id === 9).label).toBe(
       'จุดพักรถลาดกระบัง 1'
     );
+  });
+});
+
+
+// OBRS-1495 AC-6: the role rule itself, in BOTH directions. The held-role test
+// must stay `getRoles().includes('admin')` — `hasAnyRole(['admin'])` answers
+// true for an owner through `AuthService.ROLE_GRANTS`, so the column would
+// never hide for the one role it was meant to hide from (the OBRS-869 trap).
+describe('StopsPageComponent slug column rule (OBRS-1495)', () => {
+  const OWNER_ROLES = ['owner', 'salesperson', 'driver', 'customer'];
+
+  it('shows the slug column when the held role is admin', () => {
+    const { component } = makeComponent({}, ['admin']);
+    expect((component as any).showSlugColumn).toBeTrue();
+  });
+
+  it('hides the slug column from an owner', () => {
+    const { component } = makeComponent({}, OWNER_ROLES);
+    expect((component as any).showSlugColumn).toBeFalse();
   });
 });

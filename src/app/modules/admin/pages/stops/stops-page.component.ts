@@ -10,6 +10,7 @@ import {
   getAdminTranslationLabel,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import {
   Option,
@@ -93,11 +94,21 @@ export class StopsPageComponent implements OnInit, OnDestroy {
   // A's late response paint into B's modal (or reset B's isDetailLoading).
   private pendingStopId: number | null = null;
 
+  /**
+   * OBRS-1495: same rule and same held-role test as
+   * `RoutesPageComponent.showSlugColumn` — see the comment there for why this is
+   * `getRoles().includes('admin')` and not `hasAnyRole(['admin'])`, and why it
+   * is screen tidiness rather than an access control.
+   */
+  protected readonly showSlugColumn: boolean;
+
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly authService: AuthService
   ) {
+    this.showSlugColumn = this.authService.getRoles().includes('admin');
     // Every label on this page is server-localized, and so is the CONTENT of the form
     // (the detail payload's translations map is complete, but the labels beside it are
     // not). Relabel from memory and reload the open stop.
