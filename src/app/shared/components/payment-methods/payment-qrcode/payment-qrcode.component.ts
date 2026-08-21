@@ -181,7 +181,6 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     const payload: PaymentPayload = {
       bookingId,
       paymentMethod: 'qr_promptpay',
-      qrReferenceNumber: this.referenceNo || this.generateReferenceNo(),
     };
     const idempotencyKey =
       this.paymentIdempotencyKey || generateIdempotencyKey();
@@ -658,12 +657,6 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     }
 
     return 'png';
-  }
-
-  private generateReferenceNo(): string {
-    const timestamp = Date.now().toString();
-    const randomSuffix = Math.floor(10 + Math.random() * 90).toString();
-    return `RQ${timestamp}${randomSuffix}`;
   }
 
   private clearCountdown(): void {

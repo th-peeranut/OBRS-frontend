@@ -105,6 +105,12 @@ export interface MyBookingsState {
   /** Total-failure message for the availability GET itself (drives the
    * dialog's full-step error card + Retry). */
   changeSeatAvailabilityError: string | null;
+  /** The stable `errorCode` behind `changeSeatAvailabilityError`. Carried
+   * alongside the translated message for the same reason `confirmChangeSeat`
+   * carries its own: the error step must branch on the code, never on the
+   * localized text (design-system §9). A terminal code means the retry would
+   * return the same 400 forever, so the error step drops Retry (OBRS-1489). */
+  changeSeatAvailabilityErrorCode: string | null;
 
   /** The open booking's current tickets (existing seat numbers), the basis
    * for `seatAssignments` (`GET /bookings/{id}/tickets`). */
@@ -204,6 +210,7 @@ export const initialMyBookingsState: MyBookingsState = {
   changeSeatAvailability: null,
   changeSeatAvailabilityLoading: false,
   changeSeatAvailabilityError: null,
+  changeSeatAvailabilityErrorCode: null,
 
   changeSeatTickets: [],
   changeSeatTicketsLoading: false,

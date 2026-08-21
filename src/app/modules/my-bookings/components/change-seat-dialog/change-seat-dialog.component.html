@@ -23,12 +23,21 @@
         <div class="change-seat-step change-seat-step--error">
           <i class="bi bi-exclamation-triangle"></i>
           <p>{{ availabilityError }}</p>
-          <button type="button" class="btn-secondary" [disabled]="availabilityLoading" (click)="onRetry()">
-            @if (availabilityLoading) {
-              <span class="spinner" aria-hidden="true"></span>
-            }
-            {{ "MY_BOOKINGS.RETRY" | translate }}
-          </button>
+          @if (availabilityTerminal) {
+            <!-- OBRS-1489: a terminal rejection returns the same 400 on every
+                 retry, so Retry would be the one action on screen that can
+                 never succeed. -->
+            <button type="button" class="btn-secondary" (click)="close()">
+              {{ "COMMON.CLOSE" | translate }}
+            </button>
+          } @else {
+            <button type="button" class="btn-secondary" [disabled]="availabilityLoading" (click)="onRetry()">
+              @if (availabilityLoading) {
+                <span class="spinner" aria-hidden="true"></span>
+              }
+              {{ "MY_BOOKINGS.RETRY" | translate }}
+            </button>
+          }
         </div>
       }
 

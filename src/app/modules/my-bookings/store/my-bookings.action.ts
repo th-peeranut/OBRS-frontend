@@ -275,7 +275,7 @@ export const loadChangeSeatAvailabilitySuccess = createAction(
 
 export const loadChangeSeatAvailabilityFailure = createAction(
   '[MyBookings API] Load change seat availability failure',
-  props<{ error: string }>()
+  props<{ errorCode: string; error: string }>()
 );
 
 export const loadChangeSeatTickets = createAction(
