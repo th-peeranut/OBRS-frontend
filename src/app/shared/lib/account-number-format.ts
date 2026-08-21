@@ -26,6 +26,8 @@
  * grouping in front of a human who is about to transfer real money by hand.
  */
 
+import { hasOwnKey } from './own-key';
+
 /** Group sizes for a 10-digit account number: `012-3-45678-9`. */
 const DEFAULT_GROUPS = [3, 1, 5, 1];
 
@@ -52,7 +54,13 @@ export function stripAccountNumber(text: string): string {
  * EXPECTED length is written, and the backend accepts other lengths on purpose.
  */
 export function formatAccountNumber(digits: string, bankCode: string | null): string {
-  const groups = (bankCode && GROUPS_BY_BANK_CODE[bankCode]) || DEFAULT_GROUPS;
+  // hasOwnKey, not `MAP[key] || FALLBACK` (ADR-0028): `bankCode` is a runtime
+  // string, and for 'constructor' an object literal answers with a FUNCTION,
+  // which is truthy -- the `||` would pass it straight to the for..of below.
+  const groups =
+    bankCode && hasOwnKey(GROUPS_BY_BANK_CODE, bankCode)
+      ? GROUPS_BY_BANK_CODE[bankCode]
+      : DEFAULT_GROUPS;
   const parts: string[] = [];
   let taken = 0;
 

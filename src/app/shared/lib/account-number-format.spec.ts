@@ -42,6 +42,15 @@ describe('account-number-format (OBRS-1465)', () => {
       expect(formatAccountNumber('1480622621', '004')).toBe('148-0-62262-1');
     });
 
+    it('does not answer a prototype key with a function (ADR-0028)', () => {
+      // 'constructor' is truthy on any object literal, so `MAP[key] || FALLBACK`
+      // would have handed a FUNCTION to the loop. The guard is what keeps this
+      // a formatted number instead of a crash, and only a test says so -- the
+      // gate is satisfied by a comment too.
+      expect(formatAccountNumber('1480622621', 'constructor')).toBe('148-0-62262-1');
+      expect(formatAccountNumber('1480622621', '__proto__')).toBe('148-0-62262-1');
+    });
+
     it('emits digits past the template as one trailing group, never dropping them', () => {
       // The server bounds the length nowhere on purpose (OBRS-1464), so a
       // number longer than the template must still render in full.
