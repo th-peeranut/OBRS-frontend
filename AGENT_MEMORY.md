@@ -4230,3 +4230,29 @@ three files. Verified with a positive+negative control (green normally; fails
 with the exact message when "10" is typed back; green when restored).
 Lesson: when a value is de-hardcoded in i18n, every string that carried it needs
 a content gate — a component spec with a fixture placeholder is NOT that gate.
+
+## OBRS-703 (2026-08-21, QA): PASSED — full local stack, real browser, real backend on :8081
+`npx playwright test --config=playwright.obrs703qa.config.ts` (new spec
+`e2e/tests/obrs-703-operations-config-qa.spec.ts`, real login, no stubs) — 7/7
+green. Tab strip measured (not eyeballed): 6 groups render at **1 row @1366px,
+3 rows @390px** — same shape OBRS-1432 measured at 5 groups (1 row/3 rows), so
+the 6th group did not push the desktop strip to wrap. ADMIN login really hits
+the 403 panel (`operations-config-forbidden`), never an empty form. Save/reset
+round-trip through the real UI: badge flips `ค่ากลางของแพลตฟอร์ม` ->
+`คุณตั้งเอง` on save, back on reset. `/business-policy` + `/how-to-book`
+rotated 10 -> 33 minutes and re-verified in all 3 locales (th/en/zh),
+before/after screenshot pairs for both pages.
+**Gotcha hit and fixed**: the FIRST attempt at the before/after screenshots
+came back with BYTE-IDENTICAL before/after file sizes for `/how-to-book` in
+all 3 locales — the `<app-analytics-consent-banner>` (fixed, bottom of
+viewport, OBRS-882's own documented trap in `e2e/support/analytics-consent.ts`)
+sits exactly over the `HOW_TO_BOOK.TIPS_TITLE` section in a `fullPage`
+screenshot's stitched capture, so the number WAS correct in the DOM
+(`toBeVisible` passed) but was invisible in the evidence. Fixed by calling
+`seedAnalyticsConsent(page, 'denied')` before every `goto` in that test — this
+is exactly the trap the helper's own header describes, just hit again from the
+screenshot side rather than the click-interception side. Full `e2e:gate`
+regression lane also run clean off this worktree: **199/199 passed, 0
+failures, 13.3 min**.
+Artifacts left uncommitted in the worktree (not deleted, not committed):
+`e2e/tests/obrs-703-operations-config-qa.spec.ts`, `playwright.obrs703qa.config.ts`.
