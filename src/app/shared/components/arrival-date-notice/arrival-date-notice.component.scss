@@ -27,7 +27,14 @@
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   line-height: $line-height-tight;
-  white-space: nowrap;
+  /* The arrival time this sits under is a `.body-header-text`, and that class
+     sets `overflow-wrap: anywhere`, which inherits - left alone it would break
+     the date itself into `23/08/` + `2026`. `normal` restores UAX#14, whose
+     numeric rule keeps `23/08/2026` whole while still allowing a break at the
+     space before it. Not `nowrap`: in the ~215px passenger-info sidebar an
+     unbreakable 119px line claimed the whole column and squeezed the station
+     name next to it down to one character per line. */
+  overflow-wrap: normal;
 }
 
 /* Dark mode lives here rather than in dark-theme.scss for the reason recorded on
