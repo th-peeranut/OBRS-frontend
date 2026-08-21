@@ -3,18 +3,43 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
+import { Observable, of, throwError } from 'rxjs';
 import { AppRefundDestinationFieldsComponent } from './refund-destination-fields.component';
 import { buildRefundDestinationForm } from '../../lib/refund-destination-form';
 import { AA_NORMAL_TEXT, contrast, effectiveBg, fgOf, mountInChain } from '../../../testing/contrast';
+import { BankService } from '../../../services/bank/bank.service';
+import { BankDto } from '../../interfaces/bank.interface';
+
+const BANKS: BankDto[] = [
+  { code: '002', nameTh: 'ธนาคารกรุงเทพ', nameEn: 'Bangkok Bank', nameZh: '盘谷银行' },
+  { code: '004', nameTh: 'ธนาคารกสิกรไทย', nameEn: 'Kasikornbank', nameZh: '开泰银行' },
+  { code: '014', nameTh: 'ธนาคารไทยพาณิชย์', nameEn: 'Siam Commercial Bank', nameZh: '汇商银行' },
+];
+
+/** Stands in for the real HTTP-backed service — `banks$` is swapped per test. */
+class BankServiceStub {
+  banks$: Observable<BankDto[]> = of(BANKS);
+  resetCalls = 0;
+  getBanks(): Observable<BankDto[]> {
+    return this.banks$;
+  }
+  resetCache(): void {
+    this.resetCalls += 1;
+  }
+}
 
 describe('AppRefundDestinationFieldsComponent (OBRS-286)', () => {
   let fixture: ComponentFixture<AppRefundDestinationFieldsComponent>;
   let component: AppRefundDestinationFieldsComponent;
+  let bankService: BankServiceStub;
 
   beforeEach(async () => {
+    bankService = new BankServiceStub();
+
     await TestBed.configureTestingModule({
       imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
       declarations: [AppRefundDestinationFieldsComponent],
+      providers: [{ provide: BankService, useValue: bankService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AppRefundDestinationFieldsComponent);
@@ -22,6 +47,13 @@ describe('AppRefundDestinationFieldsComponent (OBRS-286)', () => {
     component.formGroup = buildRefundDestinationForm(TestBed.inject(FormBuilder));
     fixture.detectChanges();
   });
+
+  /** Opens the bank_account branch and returns the bank combobox input. */
+  function openBankAccountMode(): HTMLInputElement {
+    fixture.debugElement.queryAll(By.css('.rdf-toggle-btn'))[0].nativeElement.click();
+    fixture.detectChanges();
+    return fixture.nativeElement.querySelector('#rdf-bank') as HTMLInputElement;
+  }
 
   it('renders no destination fields until a mode is chosen (§3.1: no pre-selection)', () => {
     expect(fixture.debugElement.query(By.css('.rdf-input'))).toBeNull();
@@ -74,6 +106,74 @@ describe('AppRefundDestinationFieldsComponent (OBRS-286)', () => {
     fixture.detectChanges();
     fixture.debugElement.queryAll(By.css('.rdf-toggle-btn'))[0].nativeElement.click();
     expect(component.formGroup.get('mode')?.value).toBeNull();
+  });
+
+  // ── OBRS-1463: the bank field is a picker over `EThaiBank`, not free text.
+  describe('the bank picker (OBRS-1463)', () => {
+    it('writes the BANK CODE to the form, never the name the user read', () => {
+      const input = openBankAccountMode();
+      input.dispatchEvent(new Event('focus'));
+      fixture.detectChanges();
+
+      const options = fixture.debugElement.queryAll(By.css('.rdf-bank-option'));
+      expect(options.length).toBe(BANKS.length);
+      options[1].nativeElement.click();
+      fixture.detectChanges();
+
+      // "ธนาคารกสิกรไทย" is what the customer saw; "004" is what the backend validates.
+      expect(component.formGroup.get('bank')?.value).toBe('004');
+      expect(input.value).toBe('ธนาคารกสิกรไทย');
+    });
+
+    it('typing filters the list and leaves the form untouched until an option is picked', () => {
+      const input = openBankAccountMode();
+      input.dispatchEvent(new Event('focus'));
+      fixture.detectChanges();
+
+      input.value = 'กสิกร';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+
+      const options = fixture.debugElement.queryAll(By.css('.rdf-bank-option'));
+      expect(options.length).toBe(1);
+      // The whole point of the card: what was typed is not what gets stored.
+      expect(component.formGroup.get('bank')?.value).toBe('');
+    });
+
+    it('filters on the 3-digit code too — a customer who knows only that should not have to guess our spelling', () => {
+      const input = openBankAccountMode();
+      input.dispatchEvent(new Event('focus'));
+      input.value = '014';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+
+      const options = fixture.debugElement.queryAll(By.css('.rdf-bank-option'));
+      expect(options.length).toBe(1);
+      expect(options[0].nativeElement.textContent).toContain('ธนาคารไทยพาณิชย์');
+    });
+
+    it('shows a retry instead of an empty picker when the list cannot be loaded', () => {
+      bankService.banks$ = throwError(() => new Error('offline'));
+      const rebuilt = TestBed.createComponent(AppRefundDestinationFieldsComponent);
+      rebuilt.componentInstance.formGroup = buildRefundDestinationForm(TestBed.inject(FormBuilder));
+      rebuilt.detectChanges();
+      rebuilt.debugElement.queryAll(By.css('.rdf-toggle-btn'))[0].nativeElement.click();
+      rebuilt.detectChanges();
+
+      const retry = rebuilt.nativeElement.querySelector('.rdf-retry') as HTMLButtonElement;
+      expect(retry).not.toBeNull();
+      expect((rebuilt.nativeElement.querySelector('#rdf-bank') as HTMLInputElement).disabled).toBeTrue();
+
+      bankService.banks$ = of(BANKS);
+      retry.click();
+      rebuilt.detectChanges();
+
+      // resetCache is what makes the retry mean anything: shareReplay would
+      // otherwise hand the same failure to every later subscriber.
+      expect(bankService.resetCalls).toBe(1);
+      expect(rebuilt.nativeElement.querySelector('.rdf-retry')).toBeNull();
+      rebuilt.destroy();
+    });
   });
 
   // ── OBRS-286 UI spec — cross-shell contrast, measured in all FOUR
