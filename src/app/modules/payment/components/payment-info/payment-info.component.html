@@ -89,6 +89,10 @@
             )
             }}
             {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+            <app-arrival-date-notice
+              [departureDateTime]="getScheduleBooking(bookingData?.schedule)[0].departureDateTime"
+              [arrivalDateTime]="getScheduleBooking(bookingData?.schedule)[0].arrivalDateTime"
+            ></app-arrival-date-notice>
           </div>
         </div>
       </div>
@@ -206,6 +210,10 @@
             )
             }}
             {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+            <app-arrival-date-notice
+              [departureDateTime]="getScheduleBooking(bookingData?.schedule)[1].departureDateTime"
+              [arrivalDateTime]="getScheduleBooking(bookingData?.schedule)[1].arrivalDateTime"
+            ></app-arrival-date-notice>
           </div>
         </div>
       </div>
