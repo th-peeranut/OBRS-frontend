@@ -1,5 +1,6 @@
 import {
   arrivalDateWhenDayDiffers,
+  arrivesOnLaterBangkokDay,
   capitalizeVehicleType,
   durationHours,
   durationMinutes,
@@ -224,6 +225,18 @@ describe('trip-format', () => {
       expect(
         arrivalDateWhenDayDiffers('2026-08-23T18:00:00+07:00', '2026-08-23T17:00:00Z')
       ).toBe('24/08/2026');
+    });
+  });
+
+  describe('arrivesOnLaterBangkokDay (OBRS-1502)', () => {
+    it('answers the same question its sibling answers, without the formatting', () => {
+      expect(
+        arrivesOnLaterBangkokDay('2026-08-23T18:00:00+07:00', '2026-08-24T00:00:00+07:00')
+      ).toBeTrue();
+      expect(
+        arrivesOnLaterBangkokDay('2026-08-23T08:00:00+07:00', '2026-08-23T23:59:00+07:00')
+      ).toBeFalse();
+      expect(arrivesOnLaterBangkokDay(null, undefined)).toBeFalse();
     });
   });
 });

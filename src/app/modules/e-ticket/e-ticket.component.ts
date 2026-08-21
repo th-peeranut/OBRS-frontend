@@ -11,7 +11,11 @@ import {
   takeUntil,
 } from 'rxjs';
 import dayjs from 'dayjs';
-import { capitalizeVehicleType, parsePricePerSeat } from '../../shared/lib/trip-format';
+import {
+  arrivesOnLaterBangkokDay,
+  capitalizeVehicleType,
+  parsePricePerSeat,
+} from '../../shared/lib/trip-format';
 import { buildMapsDirectionsUrl } from '../../shared/lib/maps-directions-url';
 import html2canvas from 'html2canvas';
 import { AuthService } from '../../auth/auth.service';
@@ -90,6 +94,16 @@ interface TicketPassengerGroup {
 type Locale = 'en' | 'th' | 'zh';
 
 /**
+ * OBRS-1502 — the two timestamps of one leg, which is all `buildArrivalDate`
+ * reads. `Schedule` (store pass) and `BookingTicketJourney` (API pass) both
+ * satisfy it, so one builder serves both.
+ */
+interface TripTimestamps {
+  departureDateTime?: string;
+  arrivalDateTime?: string;
+}
+
+/**
  * OBRS-1249: the inputs of the "route" line, snapshotted by whichever render
  * pass ran last. `*RouteName` is the authoritative name when the tickets API
  * has answered (it resolves the locale ladder server-side — OBRS-1219);
@@ -123,6 +137,12 @@ export class ETicketComponent implements OnInit, OnDestroy {
   ticketNumber = '-';
   travelDate = '-';
   travelTime = '-';
+  /**
+   * OBRS-1502 — the arrival's DATE, and only for a leg that lands on a later
+   * Bangkok day. Empty is the ordinary case and renders no cell at all, so a
+   * same-day ticket keeps the exact markup it had before this card.
+   */
+  arrivalDate = '';
   route = '-';
   origin = '-';
   destination = '-';
@@ -423,6 +443,11 @@ export class ETicketComponent implements OnInit, OnDestroy {
       locale
     );
     this.travelTime = this.buildTravelTime(departureSchedule, returnSchedule);
+    this.arrivalDate = this.buildArrivalDate(
+      departureSchedule,
+      returnSchedule,
+      locale
+    );
     // OBRS-1249: this pass knows the stations the customer searched with, never
     // the route's name — the store keeps `routeSlug` and nothing else about the
     // route (schedule.interface.ts). So it paints the station pair now and
@@ -507,6 +532,49 @@ export class ETicketComponent implements OnInit, OnDestroy {
     }
 
     return departureDate || returnDate || '-';
+  }
+
+  /**
+   * OBRS-1502 — the arrival DATE for the legs that need one, `''` for a ticket
+   * where every leg lands on the day it left.
+   *
+   * Both render passes feed this: the store pass hands it `Schedule`s and the
+   * API pass hands it `BookingTicketJourney`s, and the only fields it reads are
+   * the departure/arrival timestamps both shapes carry.
+   *
+   * A return ticket keeps the positional `A / B` of the two cells above it — the
+   * travel date and time already read that way — so the leg that does NOT cross
+   * midnight prints `-` rather than being dropped. Dropped, a lone date under a
+   * two-leg ticket reads as the outbound's whichever leg it belongs to (AC5).
+   */
+  private buildArrivalDate(
+    outbound: TripTimestamps | null | undefined,
+    inbound: TripTimestamps | null | undefined,
+    locale: Locale
+  ): string {
+    const outboundDate = this.arrivalDateWhenLater(outbound, locale);
+    const inboundDate = this.arrivalDateWhenLater(inbound, locale);
+
+    if (!outboundDate && !inboundDate) {
+      return '';
+    }
+
+    return inbound
+      ? `${outboundDate || '-'} / ${inboundDate || '-'}`
+      : outboundDate;
+  }
+
+  private arrivalDateWhenLater(
+    trip: TripTimestamps | null | undefined,
+    locale: Locale
+  ): string {
+    if (
+      !arrivesOnLaterBangkokDay(trip?.departureDateTime, trip?.arrivalDateTime)
+    ) {
+      return '';
+    }
+
+    return this.formatDate(trip?.arrivalDateTime, locale);
   }
 
   private buildTravelTime(
@@ -957,6 +1025,14 @@ export class ETicketComponent implements OnInit, OnDestroy {
     const travelTime = this.buildJourneyTravelTime(outbound, inbound);
     if (travelTime !== '-') {
       this.travelTime = travelTime;
+    }
+
+    // Guarded like its two neighbours above: this pass can arrive without the
+    // timestamps at all, and an empty answer from a journey that carries none
+    // must not wipe the store pass's correct one.
+    const arrivalDate = this.buildArrivalDate(outbound, inbound, locale);
+    if (arrivalDate) {
+      this.arrivalDate = arrivalDate;
     }
 
     const vehicleType = outbound?.vehicle?.vehicleType?.label?.trim();

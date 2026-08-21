@@ -974,4 +974,87 @@ describe('ETicketComponent', () => {
       expect(component.ticketIncomplete).toBeFalse();
     });
   });
+
+  describe('OBRS-1502: the arrival DATE of a leg that lands on a later day', () => {
+    function leg(departureDateTime: string, arrivalDateTime: string): Schedule {
+      return {
+        id: 1,
+        pricePerSeat: '0',
+        departureDateTime,
+        arrivalDateTime,
+      } as unknown as Schedule;
+    }
+
+    /** The store-only first paint - the pass a guest never gets past. */
+    function paint(schedules: Schedule[]): void {
+      (component as any).mapTicketFields(
+        { schedule: schedules },
+        null,
+        { startStationId: 1, stopStationId: 2 },
+        null,
+        [],
+        'en'
+      );
+    }
+
+    function overnightJourneys(): BookingTicketsData {
+      const data = buildTicketsData();
+      const journeys = data.journeys ?? [];
+      journeys[0].departureDateTime = '2026-12-20T23:30:00+07:00';
+      journeys[0].arrivalDateTime = '2026-12-21T01:05:00+07:00';
+      journeys[1].departureDateTime = '2026-12-24T08:00:00+07:00';
+      journeys[1].arrivalDateTime = '2026-12-24T09:48:00+07:00';
+      return data;
+    }
+
+    it('names the day the bus actually gets in', () => {
+      paint([leg('2026-12-20T23:30:00+07:00', '2026-12-21T01:05:00+07:00')]);
+
+      expect(component.travelDate).toBe('20 Dec 2026');
+      expect(component.travelTime).toBe('23:30 - 01:05');
+      expect(component.arrivalDate).toBe('21 Dec 2026');
+    });
+
+    it('says nothing at all when the trip lands on the day it left (AC2)', () => {
+      paint([leg('2026-12-20T08:00:00+07:00', '2026-12-20T09:48:00+07:00')]);
+
+      expect(component.arrivalDate).toBe('');
+    });
+
+    it('names the real day when the trip crosses two nights, never a counter (AC3)', () => {
+      paint([leg('2026-12-20T23:30:00+07:00', '2026-12-22T06:00:00+07:00')]);
+
+      expect(component.arrivalDate).toBe('22 Dec 2026');
+    });
+
+    it('marks the crossing leg only, in the same leg order the two cells above use (AC5)', () => {
+      paint([
+        leg('2026-12-20T23:30:00+07:00', '2026-12-21T01:05:00+07:00'),
+        leg('2026-12-24T08:00:00+07:00', '2026-12-24T09:48:00+07:00'),
+      ]);
+
+      expect(component.arrivalDate).toBe('21 Dec 2026 / -');
+    });
+
+    it('is filled by the API pass as well, not only by the store pass', () => {
+      (component as any).ticketApiData = overnightJourneys();
+      (component as any).applyApiOverrides('en', null);
+
+      expect(component.arrivalDate).toBe('21 Dec 2026 / -');
+    });
+
+    it('does not let an API pass with no timestamps wipe what the store pass found', () => {
+      paint([leg('2026-12-20T23:30:00+07:00', '2026-12-21T01:05:00+07:00')]);
+
+      const data = buildTicketsData();
+      (data.journeys ?? []).forEach((journey) => {
+        journey.departureDateTime = undefined as unknown as string;
+        journey.arrivalDateTime = undefined as unknown as string;
+      });
+      (component as any).ticketApiData = data;
+      (component as any).applyApiOverrides('en', null);
+
+      expect(component.arrivalDate).toBe('21 Dec 2026');
+    });
+  });
 });
