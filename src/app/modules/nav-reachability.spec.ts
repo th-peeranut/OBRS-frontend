@@ -110,6 +110,20 @@ function requiredRolesOf(routes: Route[], shellPath: string, path: string): stri
 }
 
 /**
+ * OBRS-1498: the second, narrower key a page can carry — the roles it requires
+ * the user to HOLD, with no ROLE_GRANTS expansion (see AuthGuard). Only pages
+ * whose backend doors 403 an owner declare it, and it never falls back to the
+ * shell: absent means the area check above is the whole gate. Without this the
+ * sweep below would read /admin/lookups as admitting an owner and stop noticing
+ * if its nav entry ever came back.
+ */
+function requiredHeldRolesOf(routes: Route[], path: string): string[] {
+  return (leafRoutes(routes).find((r) => r.path === path)?.data?.['requiredHeldRoles'] as
+    | string[]
+    | undefined) ?? [];
+}
+
+/**
  * A REAL AuthService whose only stub is the role list a JWT would have supplied.
  * Everything the access check depends on — ROLE_GRANTS expansion, normalisation,
  * the empty-requiredRoles behaviour — stays the production implementation.
@@ -143,6 +157,10 @@ async function navEntriesFor(
           getUsername: () => 'nav@obrs.test',
           getRoles: () => [...roles],
           hasAnyRole: (required: string[]) => required.some((r) => roles.includes(r)),
+          // OBRS-1498: the held-role question, with no ROLE_GRANTS expansion —
+          // here that is the same shape as the stub above, but it is what
+          // AdminLayoutComponent asks before listing lookups/roles.
+          hasHeldRole: (required: string[]) => required.some((r) => roles.includes(r)),
           logout: () => {},
         },
       },
@@ -281,6 +299,12 @@ function describeShell(
           const allowed = requiredRolesOf(routes, shellPath, path);
           if (!auth.hasAnyRole(allowed)) {
             violations.push(`${role} sees '${path}' but the guard admits [${allowed.join(', ')}]`);
+          }
+          // OBRS-1498: the guard's second door. A page can pass the area check
+          // above and still bounce this role.
+          const held = requiredHeldRolesOf(routes, path);
+          if (!auth.hasHeldRole(held)) {
+            violations.push(`${role} sees '${path}' but the guard requires HELD [${held.join(', ')}]`);
           }
         }
       }

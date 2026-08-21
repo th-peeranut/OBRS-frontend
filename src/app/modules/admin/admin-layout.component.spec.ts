@@ -66,6 +66,12 @@ describe('AdminLayoutComponent', () => {
     getUsername: () => 'admin@obrs.test',
     logout: jasmine.createSpy('logout'),
     hasAnyRole: (_roles: string[]) => false,
+    // OBRS-1498: gates the lookups/roles nav entries. A blunt fixture switch
+    // like hasAnyRole above, NOT a model of getRoles() below: the search and
+    // section specs here were written against a sidebar that HAS those two
+    // entries and match on 'lookups' by name. The gate itself is measured by
+    // flipping this, in the OBRS-1498 specs further down.
+    hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['owner'],
   };
 
@@ -300,6 +306,39 @@ describe('AdminLayoutComponent', () => {
       );
     } finally {
       authStub.hasAnyRole = original;
+    }
+  });
+
+  // OBRS-1498 AC-3 — the nav half of hiding /admin/lookups and /admin/roles
+  // from an owner. Both directions, because a gate that hides the entry from
+  // everyone is as wrong as one that hides it from nobody: the route guard
+  // bounces an owner (admin-only-pages-route-guard.spec.ts) and an entry that
+  // outlived the guard would be a link straight into that bounce.
+  it('shows the lookups and roles nav items for a held admin', () => {
+    const comp = fixture.componentInstance as unknown as { navItems: Array<{ path: string }> };
+    const paths = comp.navItems.map((item) => item.path);
+    expect(paths).toContain('lookups');
+    expect(paths).toContain('roles');
+  });
+
+  it('hides the lookups and roles nav items when hasHeldRole(["admin"]) is false', () => {
+    const original = authStub.hasHeldRole;
+    authStub.hasHeldRole = (_roles: string[]) => false;
+    try {
+      const f = TestBed.createComponent(AdminLayoutComponent);
+      f.detectChanges();
+
+      const comp = f.componentInstance as unknown as { navItems: Array<{ path: string }> };
+      const paths = comp.navItems.map((item) => item.path);
+      expect(paths)
+        .withContext('every write on /admin/lookups is hasRole(ADMIN) — an owner would only find 403s')
+        .not.toContain('lookups');
+      expect(paths).not.toContain('roles');
+      // Not vacuous: the rest of the master section is untouched.
+      expect(paths).toContain('users');
+      expect(paths).toContain('routes');
+    } finally {
+      authStub.hasHeldRole = original;
     }
   });
 
@@ -895,6 +934,8 @@ describe('AdminLayoutComponent — usability report badge', () => {
     getUsername: () => 'admin@obrs.test',
     logout: jasmine.createSpy('logout'),
     hasAnyRole: (_roles: string[]) => false,
+    // OBRS-1498: same blunt fixture switch as the outer describe's.
+    hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['owner'],
   };
 
@@ -1141,6 +1182,7 @@ describe('AdminLayoutComponent — usability report badge (admin badgeStatus)', 
     getUsername: () => 'admin@obrs.test',
     logout: jasmine.createSpy('logout'),
     hasAnyRole: (_roles: string[]) => true,
+    hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['admin'],
   };
 
@@ -1313,6 +1355,7 @@ describe('AdminLayoutComponent — personal menu (OBRS-1071)', () => {
   const authStub = {
     getUsername: () => 'admin@obrs.test',
     hasAnyRole: (_roles: string[]) => false,
+    hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['admin'],
     logout: jasmine.createSpy('logout'),
   };
