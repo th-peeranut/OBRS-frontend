@@ -64,6 +64,7 @@ export class RouteDetailPanelComponent implements OnChanges, OnDestroy {
   @Input() allSegments: SegmentRow[] = [];
   @Input() isDetailLoading = false;
   @Output() editSegment = new EventEmitter<SegmentRow>();
+  @Output() addSegment = new EventEmitter<void>();
 
   protected vehicleTypeOptions: VehicleTypeOption[] = [];
   protected segmentSearchTerm = '';

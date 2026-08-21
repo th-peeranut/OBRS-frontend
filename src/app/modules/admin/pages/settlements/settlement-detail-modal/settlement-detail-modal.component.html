@@ -294,6 +294,15 @@
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.DEFERRED_TICKET_CASH' | translate }}</span>
                     <span>-{{ formatMoney(deferredTicketCash, detail.currency) }}</span>
                   </div>
+                  <!-- OBRS-1245: cash this round already paid out to the driver
+                  as an advance. Its counterpart has been on the driver's own
+                  day since OBRS-960 with nothing on this side, so the drawer
+                  was asked for money it had already handed over. Unconditional
+                  for the same reason as both rows above it. -->
+                  <div class="settlement-detail-row" data-testid="settlement-advance-paid-out">
+                    <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.ADVANCE_PAID_OUT' | translate }}</span>
+                    <span>-{{ formatMoney(advancePaidOut, detail.currency) }}</span>
+                  </div>
                   <div class="settlement-detail-row">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.EXPECTED_CASH' | translate }}</span>
                     <span data-testid="settlement-expected-cash">{{ formatMoney(expectedCashAmount(), detail.currency) }}</span>

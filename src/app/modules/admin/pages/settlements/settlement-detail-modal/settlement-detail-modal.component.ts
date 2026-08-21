@@ -141,6 +141,18 @@ export class SettlementDetailModalComponent implements OnChanges {
     return this.detail?.live.deferredTicketCash ?? '0.00';
   }
 
+  // OBRS-1245: cash the driver drew out of this round's drawer before it left.
+  // Netted out of the expectation above, positive magnitude, and — for the same
+  // reason as the two rows above — rendered even at 0.00.
+  //
+  // It reads like the deferred row but is the opposite movement: deferred cash
+  // never arrived at this round, an advance arrived and then left. Both end up
+  // reducing what the person signing has to produce, and neither is visible
+  // anywhere else on this screen.
+  protected get advancePaidOut(): string {
+    return this.detail?.live.advancePaidOut ?? '0.00';
+  }
+
   // Cents of the counted input, or null when it isn't a valid money string.
   protected get countedCents(): number | null {
     return SettlementDetailModalComponent.toCents(this.countedCashInput);

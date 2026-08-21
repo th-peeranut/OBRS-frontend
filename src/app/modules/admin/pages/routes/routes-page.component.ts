@@ -11,6 +11,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { RoutesStore } from './routes.store';
 import { RouteFormModalComponent } from './route-form-modal/route-form-modal.component';
 import { SegmentEditModalComponent } from './segment-edit-modal/segment-edit-modal.component';
+import { AddSegmentModalComponent } from './add-segment-modal/add-segment-modal.component';
 import {
   Option,
   RouteRow,
@@ -59,6 +60,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   private routeDetailSection?: ElementRef<HTMLElement>;
   @ViewChild(RouteFormModalComponent) private routeFormModal!: RouteFormModalComponent;
   @ViewChild(SegmentEditModalComponent) private segmentEditModal!: SegmentEditModalComponent;
+  @ViewChild(AddSegmentModalComponent) private addSegmentModal!: AddSegmentModalComponent;
   private readonly subscriptions = new Subscription();
 
   private rawRouteDtos: AdminRouteDto[] = [];
@@ -267,6 +269,10 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     } finally {
       this.isDeleting = false;
     }
+  }
+
+  protected openSegmentAddModal(): void {
+    this.addSegmentModal.open();
   }
 
   protected openSegmentEditModal(segment: SegmentRow): void {

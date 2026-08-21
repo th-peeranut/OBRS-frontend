@@ -52,6 +52,7 @@ function makeDetail(overrides: Partial<SettlementScheduleDetailDto> = {}): Settl
       expectedCashAmount: '600.00',
       perHeadDeducted: '0.00',
       deferredTicketCash: '0.00',
+      advancePaidOut: '0.00',
     },
     settled: null,
     discrepancy: null,
@@ -124,6 +125,7 @@ describe('SettlementDetailModalComponent', () => {
         expectedCashAmount: '0.00',
         perHeadDeducted: '0.00',
         deferredTicketCash: '0.00',
+        advancePaidOut: '0.00',
         passengerCount: 0,
         ticketCount: 0,
         byMethod: [],
@@ -208,6 +210,7 @@ describe('SettlementDetailModalComponent', () => {
         expectedCashAmount: '880.00',
         perHeadDeducted: '120.00',
         deferredTicketCash: '0.00',
+        advancePaidOut: '0.00',
       },
     });
     expect(component['expectedCashAmount']()).toBe('880.00');
@@ -232,6 +235,7 @@ describe('SettlementDetailModalComponent', () => {
         expectedCashAmount: '300.00',
         perHeadDeducted: '0.00',
         deferredTicketCash: '700.00',
+        advancePaidOut: '0.00',
       },
     });
     expect(component['deferredTicketCash']).toBe('700.00');
@@ -249,6 +253,39 @@ describe('SettlementDetailModalComponent', () => {
     const component = new SettlementDetailModalComponent(createTranslateStub());
     component.detail = makeDetail();
     expect(component['deferredTicketCash']).toBe('0.00');
+  });
+
+  // OBRS-1245: the driver drew 500.00 out of this round's drawer before it
+  // left. The server has already taken it off the expectation; the screen must
+  // show the line, because otherwise the only reading available to the person
+  // counting 500.00 into an envelope is that the round is 500.00 short.
+  it('advancePaidOut is the served figure and the expectation is already net of it', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeDetail({
+      live: {
+        ...makeDetail().live,
+        totalAmount: '1000.00',
+        byMethod: [{ method: 'cash', amount: '1000.00', ticketCount: 3 }],
+        expectedCashAmount: '500.00',
+        perHeadDeducted: '0.00',
+        deferredTicketCash: '0.00',
+        advancePaidOut: '500.00',
+      },
+    });
+    expect(component['advancePaidOut']).toBe('500.00');
+    expect(component['expectedCashAmount']()).toBe('500.00');
+
+    component['countedCashInput'] = '500.00';
+    expect(component['hasDiscrepancy']()).toBeFalse();
+  });
+
+  // Same reason as the deferred row above it: a getter falling back to '' — or
+  // a template hiding the row at zero — makes "nobody drew an advance" and "the
+  // server stopped sending it" identical on the one screen where they are not.
+  it('advancePaidOut reads 0.00 — never blank — on a round that has none', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeDetail();
+    expect(component['advancePaidOut']).toBe('0.00');
   });
 
   it('expectedCashAmount is 0.00 when the round took no cash', () => {
@@ -274,6 +311,7 @@ describe('SettlementDetailModalComponent', () => {
         expectedCashAmount: '880.00',
         perHeadDeducted: '120.00',
         deferredTicketCash: '0.00',
+        advancePaidOut: '0.00',
       },
     });
     component['countedCashInput'] = '880.00';
@@ -489,6 +527,7 @@ describe('SettlementDetailModalComponent', () => {
         expectedCashAmount: '600.00',
         perHeadDeducted: '0.00',
         deferredTicketCash: '0.00',
+        advancePaidOut: '0.00',
         passengerCount: 4,
         ticketCount: 4,
         byMethod: [{ method: 'cash', amount: '600.00', ticketCount: 2 }],

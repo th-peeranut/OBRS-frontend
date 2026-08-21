@@ -1077,7 +1077,13 @@
       "FARE_VALIDATION": "Please enter a valid fare greater than 0.",
       "SAME_STOP_VALIDATION": "Destination stop must not match origin stop.",
       "STOP_ORDER_VALIDATION": "Destination stop must be after origin stop.",
-      "DURATION_VALIDATION": "Please enter duration in minutes greater than 0."
+      "DURATION_VALIDATION": "Please enter duration in minutes greater than 0.",
+      "ADD_SEGMENT": "Add stop pair",
+      "ADD_SEGMENT_TITLE": "Add a stop pair and its fare",
+      "ADD_SEGMENT_HINT": "Pick an origin and a destination from this route's stops, then enter a fare only for the vehicle types you want to sell. A blank fare creates nothing for that vehicle type and leaves its existing rows untouched. The estimated duration is already derived from the two stops' arrival times, so there is nothing to enter.",
+      "FARE_FOR_VEHICLE_TYPE": "{{vehicleType}} fare (THB)",
+      "FARE_REQUIRED_AT_LEAST_ONE": "Enter a fare for at least one vehicle type",
+      "SEGMENT_EXISTS_VALIDATION": "This stop pair already has a {{vehicleType}} fare. Use the Edit action in the table instead."
     },
     "SCHEDULES": {
       "TITLE": "Schedule Management",
@@ -1556,6 +1562,7 @@
         "COUNTED_INVALID": "Enter a valid amount, e.g. 480.00.",
         "PER_HEAD_DEDUCTED": "Less per-head fee kept by the seller",
         "DEFERRED_TICKET_CASH": "Less ticket cash transferred at end of day",
+        "ADVANCE_PAID_OUT": "Less advance paid to the driver",
         "EXPECTED_CASH": "Expected cash",
         "DISCREPANCY": "Discrepancy",
         "HANDER_LABEL": "Handed over by",

@@ -1077,7 +1077,13 @@
       "FARE_VALIDATION": "请输入大于0的有效票价。",
       "SAME_STOP_VALIDATION": "目的地站不能与起始站相同。",
       "STOP_ORDER_VALIDATION": "目的地站必须在起始站之后。",
-      "DURATION_VALIDATION": "请输入大于0的时长（分钟）。"
+      "DURATION_VALIDATION": "请输入大于0的时长（分钟）。",
+      "ADD_SEGMENT": "添加站点对",
+      "ADD_SEGMENT_TITLE": "添加站点对及票价",
+      "ADD_SEGMENT_HINT": "从本线路的站点中选择起点和终点，然后仅为需要开售的车辆类型填写票价。留空的车辆类型不会新建，其现有记录也不会被改动。预计时长已由两个站点的到达时间推算得出，无需填写。",
+      "FARE_FOR_VEHICLE_TYPE": "{{vehicleType}}票价（泰铢）",
+      "FARE_REQUIRED_AT_LEAST_ONE": "请至少为一种车辆类型填写票价",
+      "SEGMENT_EXISTS_VALIDATION": "该站点对已有{{vehicleType}}票价。请改用表格中的编辑操作。"
     },
     "SCHEDULES": {
       "TITLE": "班次管理",
@@ -1556,6 +1562,7 @@
         "COUNTED_INVALID": "请输入有效金额，例如 480.00。",
         "PER_HEAD_DEDUCTED": "减去售票员留存的人头费",
         "DEFERRED_TICKET_CASH": "减去日终统一转交车主的票款",
+        "ADVANCE_PAID_OUT": "减去预支给司机的现金",
         "EXPECTED_CASH": "应收现金",
         "DISCREPANCY": "差异",
         "HANDER_LABEL": "交接人",
