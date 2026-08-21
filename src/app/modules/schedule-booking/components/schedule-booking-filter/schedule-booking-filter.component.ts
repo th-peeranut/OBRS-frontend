@@ -324,15 +324,15 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // OBRS-1503: writing the filter is the ONLY dispatch this button needs.
+    // The `scheduleFilter` subscription in ngOnInit runs the search off the
+    // value that lands in the store, behind its own `isSearchable()` guard, so
+    // a second `invokeGetScheduleListApi` from here put two identical
+    // POST /schedules/search on the wire for every press. Same shape as
+    // home-booking.component.ts's onSearch(), which never had the duplicate.
     this.store.dispatch(
       invokeSetScheduleFilterApi({
         schedule_filter: formValue,
-      })
-    );
-
-    this.store.dispatch(
-      invokeGetScheduleListApi({
-        schedule_filter: payload,
       })
     );
   }
