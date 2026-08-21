@@ -5,7 +5,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Store } from '@ngrx/store';
 import { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import dayjs from 'dayjs';
 
 import { ScheduleBookingFilterComponent } from './schedule-booking-filter.component';
@@ -26,6 +26,10 @@ import {
   createTranslateStub,
 } from '../../../../testing/test-stubs';
 import { LanguageService } from '../../../../shared/services/language.service';
+// OBRS-1501: asserted on by type, so a renamed action breaks the test instead
+// of silently making it pass against an action nobody dispatches any more.
+import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
+import { invokeGetScheduleListApi } from '../../../../shared/stores/schedule-list/schedule-list.action';
 // OBRS-1222: this template now renders `app-station-load-error`. Declared here
 // rather than schema-suppressed so the slices keep failing on a REAL unknown
 // element. With `createStoreStub()` its two selectors both read null, so it
@@ -1056,5 +1060,137 @@ describe('ScheduleBookingFilterComponent — a saved ONE-WAY filter survives the
 
     expect(component.isRoundTripReturn).toBeTrue();
     expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(2);
+  });
+});
+
+/**
+ * OBRS-1501 — the trip-type pills on the RESULTS page must move the booking,
+ * not just the form.
+ *
+ * AC#5 wants both arms, and the first one is the arm no spec in this file
+ * walked before this card: flip the pill and DO NOT press ค้นหา. That is
+ * exactly what the customer in usability report #1 did (OBRS-1409) — the
+ * return date field vanished, so the screen said "one-way", while every
+ * downstream reader (`review-schedule-booking-summary`, `passenger-info`)
+ * kept reading `scheduleFilter` in the STORE, which still said round-trip.
+ * They were asked for a return leg, checked out as `bookingType: 'return'`
+ * and were priced "ราคาตั๋วไป-กลับ".
+ */
+describe('ScheduleBookingFilterComponent — the trip-type toggle applies without a second ค้นหา (OBRS-1501)', () => {
+  const ONE_WAY = { id: 1, nameThai: 'เที่ยวเดียว', nameEnglish: 'One-way' };
+  const ROUND_TRIP = { id: 2, nameThai: 'ไป-กลับ', nameEnglish: 'Round-trip' };
+  const STATIONS: any = [
+    { id: 1, slug: 'station-a', status: 'active', stopType: 'station' },
+    { id: 2, slug: 'station-b', status: 'active', stopType: 'station' },
+  ];
+
+  let component: ScheduleBookingFilterComponent;
+  let alertService: any;
+  let dispatched: any[];
+
+  function build(store: any) {
+    return new ScheduleBookingFilterComponent(
+      new FormBuilder(),
+      createRouterStub(),
+      store,
+      createStoreStub(),
+      createTranslateStub(),
+      alertService,
+      createBookingPolicyServiceStub(),
+      createLanguageServiceStub()
+    );
+  }
+
+  const typed = (type: string) => dispatched.filter((action) => action.type === type);
+
+  beforeEach(() => {
+    dispatched = [];
+    alertService = { warning: () => {}, error: () => {}, success: () => {} };
+
+    const store = createStoreStub();
+    spyOn(store, 'dispatch').and.callFake((action: any) => dispatched.push(action));
+    component = build(store);
+
+    // The state the customer is in while the results are on screen: a search
+    // that already ran, so nothing here is what makes the toggle searchable.
+    (component as any).allProvinceStationList = STATIONS;
+    component.bookingForm.patchValue({
+      startStationId: 1,
+      stopStationId: 2,
+      passengerInfo: [
+        { type: 'ADULT', count: 1 },
+        { type: 'KIDS', count: 0 },
+      ],
+    });
+    dispatched.length = 0;
+  });
+
+  it('AC#2: flipping to one-way writes the trip type to the STORE, not just to the form', () => {
+    component.bookingForm.patchValue({ roundTrip: ONE_WAY });
+
+    const written = typed(invokeSetScheduleFilterApi.type);
+    expect(written.length).toBe(1);
+    expect(written[0].schedule_filter.roundTrip).toEqual(ONE_WAY);
+  });
+
+  it('AC#3: flipping back to round-trip writes id 2 back — the return path still works', () => {
+    component.bookingForm.patchValue({ roundTrip: ONE_WAY });
+    dispatched.length = 0;
+
+    component.bookingForm.patchValue({ roundTrip: ROUND_TRIP });
+
+    const written = typed(invokeSetScheduleFilterApi.type);
+    expect(written.length).toBe(1);
+    expect(written[0].schedule_filter.roundTrip).toEqual(ROUND_TRIP);
+  });
+
+  it('must-NOT: never warns SEARCH_VALIDATION — the customer pressed a pill, not a search button', () => {
+    const warnSpy = spyOn(alertService, 'warning');
+    (component as any).allProvinceStationList = [];
+    component.bookingForm.patchValue({ startStationId: '', stopStationId: '' });
+
+    component.bookingForm.patchValue({ roundTrip: ONE_WAY });
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('must-NOT: the toggle does not fire the list search itself — that would search twice', () => {
+    // The `scheduleFilter` subscription in ngOnInit re-searches off the value
+    // written above (pinned by the next test). A second dispatch from here
+    // would put two identical POST /schedules/search on the wire per tap.
+    component.bookingForm.patchValue({ roundTrip: ONE_WAY });
+
+    expect(typed(invokeGetScheduleListApi.type).length).toBe(0);
+  });
+
+  it('AC#2: the filter the toggle writes is what re-runs the search, as one_way', () => {
+    // The load-bearing half of the fix: without this chain the toggle would
+    // relabel the booking while leaving the round-trip RESULT list on screen.
+    const filter$ = new BehaviorSubject<any>(null);
+    let call = 0;
+    const chainStore: any = {
+      pipe: () => (++call === 1 ? of(STATIONS) : filter$.asObservable()),
+      select: () => of(null),
+      dispatch: (action: any) => dispatched.push(action),
+    };
+    component = build(chainStore);
+    component.ngOnInit();
+    dispatched.length = 0;
+
+    filter$.next({
+      roundTrip: ONE_WAY,
+      startStationId: 1,
+      stopStationId: 2,
+      passengerInfo: [
+        { type: 'ADULT', count: 1 },
+        { type: 'KIDS', count: 0 },
+      ],
+      departureDate: dayjs().add(1, 'day').toDate(),
+    });
+
+    const searches = typed(invokeGetScheduleListApi.type);
+    expect(searches.length).toBe(1);
+    expect(searches[0].schedule_filter.bookingType).toBe('one_way');
+    expect(searches[0].schedule_filter.returnDate).toBeUndefined();
   });
 });
