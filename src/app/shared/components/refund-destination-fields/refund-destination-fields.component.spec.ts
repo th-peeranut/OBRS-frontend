@@ -226,4 +226,82 @@ describe('AppRefundDestinationFieldsComponent (OBRS-286)', () => {
       });
     }
   });
+
+  describe('account number grouping (OBRS-1465)', () => {
+    /** Opens bank_account mode and returns the account-number input. */
+    function accountNumberInput(): HTMLInputElement {
+      openBankAccountMode();
+      return fixture.nativeElement.querySelector('#rdf-account-number') as HTMLInputElement;
+    }
+
+    /** Types `text` into the field the way a browser does: the element already
+     * holds the new value and the caret sits at `caret` when `input` fires. */
+    function type(input: HTMLInputElement, text: string, caret = text.length): void {
+      input.value = text;
+      input.setSelectionRange(caret, caret);
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    }
+
+    it('shows the number grouped while the control keeps bare digits (AC-2)', () => {
+      const input = accountNumberInput();
+
+      type(input, '1480622621');
+
+      expect(input.value).toBe('148-0-62262-1');
+      expect(component.formGroup.get('accountNumber')?.value).toBe('1480622621');
+    });
+
+    it('accepts a number pasted with its dashes already in it (AC-3)', () => {
+      const input = accountNumberInput();
+
+      type(input, '148-0-62262-1');
+
+      expect(component.formGroup.get('accountNumber')?.value).toBe('1480622621');
+      expect(input.value).toBe('148-0-62262-1');
+    });
+
+    it('keeps a non-digit out of the control, as obrsDigitsOnly used to (OBRS-1464)', () => {
+      const input = accountNumberInput();
+
+      type(input, '148x0');
+
+      expect(component.formGroup.get('accountNumber')?.value).toBe('1480');
+      expect(input.value).toBe('148-0');
+    });
+
+    it('leaves the caret after the digit just typed mid-string, not at the end (AC-4)', () => {
+      const input = accountNumberInput();
+      type(input, '1480622621');
+
+      // Caret after the '0' (index 5 of '148-0-62262-1'), then a 9 is typed.
+      type(input, '148-09-62262-1', 6);
+
+      expect(input.value).toBe('148-0-96226-2-1');
+      // The 9 is the 5th digit; the caret belongs right after it, at index 7.
+      expect(input.selectionStart).toBe(7);
+      expect(input.selectionStart).not.toBe(input.value.length);
+    });
+
+    it('regroups when the bank changes, with no keystroke involved', () => {
+      const input = accountNumberInput();
+      type(input, '054590056674');
+      expect(input.value).toBe('054-5-90056-6-74');
+
+      component.formGroup.get('bank')?.setValue('030');
+      fixture.detectChanges();
+
+      expect(input.value).toBe('0-5459005667-4');
+      expect(component.formGroup.get('accountNumber')?.value).toBe('054590056674');
+    });
+
+    it('marks the control touched on blur so the required error can show', () => {
+      const input = accountNumberInput();
+
+      input.dispatchEvent(new Event('blur'));
+      fixture.detectChanges();
+
+      expect(component.formGroup.get('accountNumber')?.touched).toBeTrue();
+    });
+  });
 });

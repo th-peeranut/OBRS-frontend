@@ -59,9 +59,11 @@ function applyModeFieldValidators(form: FormGroup): void {
   for (const name of ['accountName', 'bank', 'accountNumber']) {
     const control = form.get(name);
     // OBRS-1464 (AC-3): `accountName` additionally carries the narrow charset
-    // denylist. `accountNumber` needs no validator of its own - the
-    // `obrsDigitsOnly` directive on the input means a non-digit never reaches
-    // the control in the first place (AC-2/AC-4), and the server re-checks.
+    // denylist. `accountNumber` needs no validator of its own - the input
+    // handler on the field strips every non-digit before the control sees it
+    // (OBRS-1465 took that job over from the `obrsDigitsOnly` directive, which
+    // could not stay on an element that now shows GROUPED text), and the server
+    // re-checks.
     const extra = name === 'accountName' ? [accountNameCharsetValidator] : [];
     control?.setValidators(mode === 'bank_account' ? [trimmedRequiredValidator, ...extra] : []);
     control?.updateValueAndValidity({ emitEvent: false });

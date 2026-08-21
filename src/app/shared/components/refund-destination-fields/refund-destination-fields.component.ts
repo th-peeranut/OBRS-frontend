@@ -4,6 +4,11 @@ import { TranslateService } from '@ngx-translate/core';
 import { BankService } from '../../../services/bank/bank.service';
 import { BankDto, bankNameFor } from '../../interfaces/bank.interface';
 import { RefundDestinationType } from '../../interfaces/refund-destination.interface';
+import {
+  caretAfterDigits,
+  formatAccountNumber,
+  stripAccountNumber,
+} from '../../lib/account-number-format';
 
 /**
  * OBRS-286 — dumb, cross-shell input control for a refund bank/PromptPay
@@ -147,6 +152,55 @@ export class AppRefundDestinationFieldsComponent implements OnInit {
     control?.markAsDirty();
     control?.markAsTouched();
     this.closeBankList();
+  }
+
+  /**
+   * OBRS-1465 — the field SHOWS the number grouped per the chosen bank while
+   * the control keeps bare digits. Rendering it with `[value]` + `(input)`
+   * instead of `formControlName` is the same split the bank combobox above
+   * already uses, and it is what lets the display follow a change of bank
+   * without an input event: what is on screen is a rendering of the control,
+   * not the control itself.
+   */
+  protected get accountNumberDisplay(): string {
+    const digits = (this.formGroup.get('accountNumber')?.value ?? '') as string;
+    return formatAccountNumber(digits, this.bankCode);
+  }
+
+  /**
+   * Strips, regroups and puts the caret back after the same digit it was after
+   * — AC-4. This also absorbs what `obrsDigitsOnly` (OBRS-1464) did for this
+   * one field, which is why the directive came off this input: two handlers on
+   * the same `input` event, one writing dashes and the other stripping them,
+   * would fight in an order neither of them chooses.
+   */
+  protected onAccountNumberInput(input: HTMLInputElement): void {
+    const caret = input.selectionStart ?? input.value.length;
+    const digitsBeforeCaret = stripAccountNumber(input.value.slice(0, caret)).length;
+    const digits = stripAccountNumber(input.value);
+
+    const control = this.formGroup.get('accountNumber');
+    control?.setValue(digits);
+    control?.markAsDirty();
+
+    const formatted = formatAccountNumber(digits, this.bankCode);
+    input.value = formatted;
+    const nextCaret = caretAfterDigits(formatted, digitsBeforeCaret);
+    input.setSelectionRange(nextCaret, nextCaret);
+  }
+
+  /** `formControlName` marked the control touched on blur for us; rendering the
+   * field ourselves means doing it by hand, and without it the REQUIRED error
+   * would never appear. */
+  protected onAccountNumberBlur(): void {
+    this.formGroup.get('accountNumber')?.markAsTouched();
+  }
+
+  /** The BOT code the bank field holds since OBRS-1463, or null before a bank
+   * is picked — grouping still applies then, so the field helps the user count
+   * from the first keystroke rather than only after they choose. */
+  private get bankCode(): string | null {
+    return (this.formGroup.get('bank')?.value as string | null) || null;
   }
 
   private closeBankList(): void {
