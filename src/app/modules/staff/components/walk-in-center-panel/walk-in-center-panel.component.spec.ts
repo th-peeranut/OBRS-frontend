@@ -14,7 +14,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { TripDetailsEditFormComponent } from '../trip-details-edit/trip-details-edit-form/trip-details-edit-form.component';
 import { AdminDropdownComponent } from '../../../admin/components/admin-dropdown/admin-dropdown.component';
 
@@ -715,6 +715,18 @@ describe('WalkInCenterPanelComponent', () => {
     });
 
     it('keeps the tab editable after a successful save (no read-only fallback)', () => {
+      // OBRS-1477: onSave refuses to build a full-replace PUT without the edit-open detail,
+      // since that is where both capacity overrides come from. This suite's blanket
+      // `{ data: null }` stub is not what the real screen gets, so give this one the detail.
+      adminApiServiceSpy.getScheduleById.and.returnValue(of({
+        data: {
+          departureDateTime: '2026-07-01T08:00:00+07:00',
+          vehicleType: { slug: 'bus', totalSeats: 21 },
+          seatingCapacity: null,
+          cargoCapacityKg: null,
+          route: { slug: 'bkk-cnx' },
+        },
+      }));
       component.selectedTrip = makeTrip();
       internals().onTabChange(TRIP_DETAILS_TAB);
 
@@ -885,5 +897,168 @@ describe('WalkInCenterPanelComponent — OBRS-517 seat-map phantom control (full
     // Every genuinely required field (departureTime, vehicleType, seatingCapacity)
     // was patched from the real schedule detail — saving must reach the backend.
     expect(adminApiSpy.updateSchedule).toHaveBeenCalled();
+  }));
+});
+
+// ---------------------------------------------------------------------------
+// OBRS-1477: the control holds the STORED override, not the resolved capacity.
+// GET /schedules/{id} returns seatingCapacity exactly as stored — null meaning
+// "inherit from the vehicle type" (OBRS-512) — while the trips list carries the
+// COALESCEd value. Seeding the control from the resolved value made pressing Save
+// without touching a thing rewrite null into a hard 21, which is why the suite
+// above stayed green: its stub already had an override (21) to carry forward.
+// Same full-render setup as that block, on purpose.
+// ---------------------------------------------------------------------------
+describe('WalkInCenterPanelComponent — OBRS-1477 stored override vs resolved capacity', () => {
+  let component: WalkInCenterPanelComponent;
+  let fixture: ComponentFixture<WalkInCenterPanelComponent>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- matches this file's existing spy style
+  let adminApiSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let staffApiSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let alertSpy: any;
+
+  /** GET /schedules/{id} as the backend really answers it: the stored column, not the COALESCE. */
+  function stubDetail(storedSeatingCapacity: number | null) {
+    adminApiSpy.getScheduleById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: {
+        departureDateTime: '2026-07-01T08:00:00+07:00',
+        vehicleType: { id: 5, slug: 'bus', totalSeats: 21 },
+        vehicle: { id: 10 },
+        driver: { id: 3, fullName: 'Somchai' },
+        seatingCapacity: storedSeatingCapacity,
+        cargoCapacityKg: 150,
+        route: { slug: 'bkk-cnx' },
+      },
+    }));
+  }
+
+  /** Open the Trip Details tab and press Save without editing a single control. */
+  function openEditAndSave() {
+    (component as unknown as { onTabChange: (i: number) => void }).onTabChange(1);
+    fixture.detectChanges();
+    tick(); // flush the openEditMode() applyUntouchedPatch microtask
+    fixture.detectChanges();
+
+    const saveButton = fixture.nativeElement.querySelector('.btn.btn-primary') as HTMLButtonElement | null;
+    if (saveButton) {
+      saveButton.click();
+      fixture.detectChanges();
+      tick();
+    }
+    return saveButton;
+  }
+
+  beforeEach(() => {
+    adminApiSpy = jasmine.createSpyObj('AdminApiService', [
+      'getScheduleById',
+      'getVehicleTypes',
+      'getVehicles',
+      'getVehicleTypeById',
+      'updateSchedule',
+    ]);
+    stubDetail(null);
+    adminApiSpy.getVehicleTypes.and.returnValue(
+      of({ code: 200, message: 'OK', data: [{ id: 5, slug: 'bus', totalSeats: 21 }] })
+    );
+    adminApiSpy.getVehicles.and.returnValue(of({ code: 200, message: 'OK', data: [] }));
+    adminApiSpy.getVehicleTypeById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: {
+        seatMaps: [
+          { seatNumber: '1', rowIndex: 0, columnIndex: 0 },
+          { seatNumber: '2', rowIndex: 0, columnIndex: 1 },
+        ],
+      },
+    }));
+    adminApiSpy.updateSchedule.and.returnValue(of({ code: 200, message: 'OK', data: null }));
+
+    staffApiSpy = jasmine.createSpyObj('StaffApiService', ['getDrivers']);
+    staffApiSpy.getDrivers.and.returnValue(of({ code: 200, message: 'OK', data: [] }));
+
+    alertSpy = jasmine.createSpyObj('AlertService', ['success', 'error', 'warning']);
+    alertSpy.success.and.returnValue(Promise.resolve());
+    alertSpy.error.and.returnValue(Promise.resolve());
+    alertSpy.warning.and.returnValue(Promise.resolve());
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      declarations: [
+        WalkInCenterPanelComponent,
+        TripDetailsEditFormComponent,
+        AdminDropdownComponent,
+      ],
+      imports: [
+        CommonModule,
+        HttpClientTestingModule,
+        RouterTestingModule,
+        TranslateModule.forRoot(),
+        ReactiveFormsModule,
+        DatePickerModule,
+        InputNumberModule,
+        NoopAnimationsModule,
+      ],
+      providers: [
+        { provide: AdminApiService, useValue: adminApiSpy },
+        { provide: StaffApiService, useValue: staffApiSpy },
+        { provide: AlertService, useValue: alertSpy },
+        TranslateService,
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(WalkInCenterPanelComponent);
+    component = fixture.componentInstance;
+    // capacity 21 is the RESOLVED value the trips list carries — the exact number the old
+    // code copied into the control for a trip that has no override at all.
+    component.selectedTrip = makeTrip({ scheduleId: 42, vehicleType: 'bus', capacity: 21 });
+    fixture.detectChanges();
+  });
+
+  it('save-without-editing leaves an inherited cap inherited (does NOT freeze the COALESCEd 21)', fakeAsync(() => {
+    stubDetail(null);
+
+    expect(openEditAndSave()).withContext('Save button should be rendered').toBeTruthy();
+
+    expect(adminApiSpy.updateSchedule).toHaveBeenCalled();
+    const payload = adminApiSpy.updateSchedule.calls.mostRecent().args[1];
+    expect(payload.seatingCapacity)
+      .withContext('an untouched form must PUT the stored null back, not the resolved 21')
+      .toBeNull();
+    expect(payload.cargoCapacityKg)
+      .withContext('OBRS-1471 carry-forward must still hold')
+      .toBe(150);
+  }));
+
+  it('save-without-editing carries a real per-trip override forward unchanged', fakeAsync(() => {
+    stubDetail(20);
+
+    openEditAndSave();
+
+    const payload = adminApiSpy.updateSchedule.calls.mostRecent().args[1];
+    expect(payload.seatingCapacity).toBe(20);
+  }));
+
+  it('refuses to save when the detail fetch failed, instead of PUTting invented capacities', fakeAsync(() => {
+    adminApiSpy.getScheduleById.and.returnValue(throwError(() => new Error('detail unavailable')));
+
+    openEditAndSave();
+
+    expect(adminApiSpy.updateSchedule)
+      .withContext('neither capacity override is known here — a full-replace PUT would invent both')
+      .not.toHaveBeenCalled();
+    expect(alertSpy.error).toHaveBeenCalled();
+  }));
+
+  it('refuses to save when the detail responds with no data at all', fakeAsync(() => {
+    adminApiSpy.getScheduleById.and.returnValue(of({ code: 200, message: 'OK', data: null }));
+
+    openEditAndSave();
+
+    expect(adminApiSpy.updateSchedule).not.toHaveBeenCalled();
   }));
 });

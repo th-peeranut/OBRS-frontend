@@ -169,6 +169,11 @@ export interface AdminVehicleTypeDto {
   slug: string;
   code?: string;
   totalSeats?: number;
+  /** OBRS-1477 (ADR-0137): the vehicle type's standing commercial cap — how many of
+   * its `totalSeats` may actually be sold. `null`/absent = no cap. NOT interchangeable
+   * with `totalSeats`, which stays the physical seat map and is what a per-trip
+   * override is validated against. */
+  sellableSeats?: number | null;
   status?: string | AdminStatusDto;
   display?: AdminTranslationCollection;
   translations?: AdminTranslationCollection;
@@ -402,6 +407,10 @@ export interface AdminStopDetailDto {
   primaryPhotoUrl?: string | null;
   /** locale -> address; a locale with no address is absent, not null. */
   addresses?: Record<string, string> | null;
+  /** OBRS-1481: where a round-trip customer boards for the way back after getting off
+   *  HERE — the `stop_return_pairs` row keyed by this stop. `null` means no pin, and the
+   *  server answers by distance instead. */
+  returnStopId?: number | null;
 }
 
 /**
@@ -421,6 +430,14 @@ export interface AdminStopUpdatePayload {
   longitude: number | null;
   addresses: Record<string, string>;
   translations: AdminTranslationReqDto[];
+  /**
+   * OBRS-1481: the return boarding pin. Unlike `primaryPhotoUrl` above this key is ALWAYS
+   * sent, including as `null` — the form owns this field, nothing writes it out of band, and
+   * `null` is the owner choosing "ไม่กำหนด", which must really clear the row. The server
+   * distinguishes the two cases by key presence, so omitting it here would silently mean
+   * "leave it alone" and the owner could never unset a pin.
+   */
+  returnStopId: number | null;
 }
 
 export interface AdminStopPhotoDto {
@@ -1691,6 +1708,19 @@ export class AdminApiService {
 
   getStopDetail(id: number): Observable<ResponseAPI<AdminStopDetailDto>> {
     return this.getRequest<AdminStopDetailDto>(`${this.baseUrl}/stops/${id}`);
+  }
+
+  /**
+   * OBRS-1481: the stops the owner may pin as a return boarding stop — every stop a bus
+   * actually picks passengers up at, on any route.
+   *
+   * <p>A private OWNER-gated endpoint rather than a flag on `getStopsForAdmin()` above: that
+   * list is served from the `allStops` cache, which is evicted by stop mutations only, while
+   * this set turns on `route_stops.boarding_type` — so a flag riding along there would go
+   * stale the moment a route stop was reclassified.
+   */
+  getReturnStopOptions(): Observable<ResponseAPI<AdminStopSummaryDto[]>> {
+    return this.getRequest<AdminStopSummaryDto[]>(`${this.baseUrl}/private/stops/return-stop-options`);
   }
 
   /** Province options for the stop form. `PUT /private/stops/{id}` takes a province
