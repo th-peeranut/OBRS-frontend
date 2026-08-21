@@ -101,6 +101,37 @@ describe('TripDetailsEditFormComponent', () => {
     });
   });
 
+  // OBRS-1477 (ADR-0137): the hint under the capacity box tells the user what an EMPTY box
+  // resolves to. Once a vehicle type carries a standing cap, that is the cap and not the
+  // physical seat map -- printing totalSeats there would state a number the system will not sell.
+  describe('inheritedSeatingCapacity', () => {
+    function inherited(): number | null {
+      return (component as unknown as { inheritedSeatingCapacity: number | null })
+        .inheritedSeatingCapacity;
+    }
+
+    it('should return the standing cap when the vehicle type carries one', () => {
+      component.vehicleTypes = [{ id: 3, slug: 'minibus', totalSeats: 21, sellableSeats: 20 }];
+      getForm(component).get('vehicleType')!.setValue('minibus', { emitEvent: false });
+      expect(inherited()).toBe(20);
+    });
+
+    it('should fall back to totalSeats when no cap is configured', () => {
+      getForm(component).get('vehicleType')!.setValue('van', { emitEvent: false });
+      expect(inherited()).toBe(13);
+    });
+
+    it('should stay separate from the override ceiling, which is still totalSeats', () => {
+      // The backend validates a per-trip override against total_seats, so the max the control
+      // accepts must NOT follow the cap down -- otherwise the form rejects what the API allows.
+      component.vehicleTypes = [{ id: 3, slug: 'minibus', totalSeats: 21, sellableSeats: 20 }];
+      getForm(component).get('vehicleType')!.setValue('minibus', { emitEvent: false });
+      const max = (component as unknown as { effectiveTotalSeats: number | null }).effectiveTotalSeats;
+      expect(max).toBe(21);
+      expect(inherited()).toBe(20);
+    });
+  });
+
   describe('driverOptions mapping', () => {
     it('should map driver list to options', () => {
       component.drivers = [{ id: 7, name: 'Alice' }];

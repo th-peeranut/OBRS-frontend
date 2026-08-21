@@ -30,6 +30,18 @@ export interface Option {
   label: string;
 }
 
+/**
+ * OBRS-1481: one choice in the "ขากลับขึ้นรถที่" dropdown.
+ *
+ * <p>Keyed by `id`, not by a slug `code` like {@link Option}: `stop_return_pairs` stores stop
+ * IDs, and the PUT body carries the id straight through. Round-tripping it through a slug would
+ * mean resolving it back on the server for no gain.
+ */
+export interface ReturnStopOption {
+  id: number;
+  label: string;
+}
+
 export interface StopRow {
   id: number;
   slug: string;
@@ -58,6 +70,8 @@ export interface StopDetailForm {
   latitude: number | null;
   longitude: number | null;
   primaryPhotoUrl: string | null;
+  /** OBRS-1481: the pinned return boarding stop's id, or null for "ไม่กำหนด". */
+  returnStopId: number | null;
   translations: StopTranslationForm[];
 }
 
@@ -98,6 +112,7 @@ export function toStopDetailForm(dto: AdminStopDetailDto): StopDetailForm {
     latitude: toNumberOrNull(dto.latitude),
     longitude: toNumberOrNull(dto.longitude),
     primaryPhotoUrl: dto.primaryPhotoUrl ?? null,
+    returnStopId: dto.returnStopId ?? null,
     translations: STOP_LOCALES.map((locale) => {
       const exact = readExactTranslation(dto.translations, locale);
       return {
@@ -179,7 +194,53 @@ export function toStopUpdatePayload(form: StopDetailForm): AdminStopUpdatePayloa
     longitude: form.longitude,
     addresses,
     translations,
+    // OBRS-1481: sent ALWAYS, null included — see AdminStopUpdatePayload. The opposite of
+    // primaryPhotoUrl above: that key must be absent so a save cannot erase an upload, this
+    // one must be present so a save CAN clear a pin the owner just unset.
+    returnStopId: form.returnStopId,
   };
+}
+
+/**
+ * Builds the return-boarding-stop choices.
+ *
+ * <p>`eligible` is the server's list of stops a bus actually picks passengers up at. `allStops`
+ * is only a label source for the one case below.
+ *
+ * <p><b>AC-7: a pin already saved is ALWAYS offered, even when it is no longer eligible.</b> The
+ * eligible set turns on `route_stops.boarding_type`, which somebody can change long after the pin
+ * was made. If this list simply dropped the stale value, the `<select>` would render with nothing
+ * selected and the owner's next save would post `null` — deleting a pin they never touched and
+ * were never told about. That is OBRS-1476's failure wearing a dropdown, so the stale value stays
+ * on the list and stays selected until the owner themselves changes it.
+ */
+export function toReturnStopOptions(
+  eligible: AdminStopSummaryDto[],
+  allStops: AdminStopSummaryDto[],
+  locale: string,
+  currentReturnStopId: number | null
+): ReturnStopOption[] {
+  const options = eligible.map((dto) => ({ id: dto.id, label: returnStopLabel(dto, locale) }));
+
+  if (currentReturnStopId !== null && !options.some((option) => option.id === currentReturnStopId)) {
+    const pinned = allStops.find((dto) => dto.id === currentReturnStopId);
+    options.push({
+      id: currentReturnStopId,
+      // A pin can outlive the stop row itself only if the delete missed it; the id is then all
+      // there is to show, and showing it beats showing an empty box.
+      label: pinned ? returnStopLabel(pinned, locale) : String(currentReturnStopId),
+    });
+  }
+
+  return options;
+}
+
+function returnStopLabel(dto: AdminStopSummaryDto, locale: string): string {
+  return (
+    getAdminTranslationLabel(dto.translations, locale) ??
+    getAdminTranslationLabel(dto.translations, 'en') ??
+    dto.slug
+  );
 }
 
 /** Case-insensitive keyword match over the columns the table actually shows. */

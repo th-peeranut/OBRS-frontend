@@ -16,6 +16,7 @@ const SELECTED: StopDetailForm = {
   latitude: 13.5,
   longitude: 101.5,
   primaryPhotoUrl: null,
+  returnStopId: null,
   translations: [
     { locale: 'th', label: 'หนองชาก', description: '', address: '' },
     { locale: 'en', label: '', description: '', address: '' },
