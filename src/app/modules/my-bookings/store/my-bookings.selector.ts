@@ -143,6 +143,11 @@ export const selectChangeSeatAvailabilityError = createSelector(
   (state) => state.changeSeatAvailabilityError
 );
 
+export const selectChangeSeatAvailabilityErrorCode = createSelector(
+  selectMyBookings,
+  (state) => state.changeSeatAvailabilityErrorCode
+);
+
 export const selectChangeSeatTickets = createSelector(
   selectMyBookings,
   (state) => state.changeSeatTickets

@@ -5,6 +5,8 @@ import { TranslateService } from '@ngx-translate/core';
 import { ManualRefundWorklistStore } from './manual-refund-worklist.store';
 import { PendingRefund } from '../../../../shared/interfaces/payment.interface';
 import { hasDestination, queueAgeDays, queueAgeSeverity } from './manual-refund-worklist-page.mappers';
+import { BankService } from '../../../../services/bank/bank.service';
+import { BankDto, bankNameFor } from '../../../../shared/interfaces/bank.interface';
 
 type WorklistContentState = 'loading' | 'error' | 'empty' | 'data';
 
@@ -38,14 +40,26 @@ export class ManualRefundWorklistPageComponent implements OnInit, OnDestroy {
    * re-reads the live store mid-edit. */
   protected markRefundedRow: PendingRefund | null = null;
 
+  /** OBRS-1463 — code-to-name for the destination column; see `bankLabel()`. */
+  private banks: BankDto[] = [];
+
   private readonly destroy$ = new Subject<void>();
 
   constructor(
     protected readonly store: ManualRefundWorklistStore,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly bankService: BankService
   ) {}
 
   ngOnInit(): void {
+    // A failure here costs the codes their names and nothing else — `bankLabel`
+    // falls back to the raw value, which is what the rows written before
+    // OBRS-1463 render anyway.
+    this.bankService
+      .getBanks()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({ next: (banks) => (this.banks = banks), error: () => (this.banks = []) });
+
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       this.rows = data?.content ?? [];
       this.totalElements = data?.totalElements ?? 0;
@@ -98,6 +112,21 @@ export class ManualRefundWorklistPageComponent implements OnInit, OnDestroy {
 
   protected hasDestination(row: PendingRefund): boolean {
     return hasDestination(row);
+  }
+
+  /**
+   * OBRS-1463 (AC-4): `destination.bank` holds an `EThaiBank` code on every row
+   * written since that card, and hand-typed free text (`"กสิกร"`, `"KBANK"`) on
+   * every row written before it. Unknown values are shown VERBATIM — the owner
+   * still has to transfer that money, and blanking the field or printing a
+   * placeholder would take away the only clue those older rows carry.
+   */
+  protected bankLabel(bank: string | undefined): string {
+    if (!bank) {
+      return '';
+    }
+    const known = this.banks.find((candidate) => candidate.code === bank);
+    return known ? bankNameFor(known, this.translate.currentLang) : bank;
   }
 
   protected queueAgeDays(row: PendingRefund): number | null {

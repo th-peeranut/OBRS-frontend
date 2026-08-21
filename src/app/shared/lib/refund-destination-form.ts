@@ -22,8 +22,13 @@ export interface RefundDestinationFormValue {
  *
  * `mode` starts unselected — no pre-seeded default, the design-system §3.1 rule
  * applied to a hand-rolled 2-segment toggle instead of `app-admin-dropdown`
- * (the UI spec explicitly rules out a dropdown here: `bank` is free text, no
- * enum exists to back a select).
+ * (which is declared in `admin-shared.module.ts` and so cannot be reached from
+ * the customer shell this component also renders in).
+ *
+ * `bank` holds a Bank of Thailand code (`"004"`), not a name (OBRS-1463) — the
+ * UI spec's "free text, no enum exists to back a select" was true only until
+ * one did: `EThaiBank`, served over `GET /api/private/banks` and validated on
+ * the way back in by `CancellationService`.
  *
  * Whether `mode` itself is REQUIRED is a separate, caller-controlled axis — see
  * `applyRefundDestinationRequired` below — because the two call sites disagree:

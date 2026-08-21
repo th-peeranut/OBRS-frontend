@@ -326,6 +326,7 @@ export const myBookingsReducer = createReducer(
     changeSeatAvailability: null,
     changeSeatAvailabilityLoading: true,
     changeSeatAvailabilityError: null,
+    changeSeatAvailabilityErrorCode: null,
     changeSeatTickets: [],
     changeSeatTicketsLoading: true,
     changeSeatTicketsError: null,
@@ -339,6 +340,7 @@ export const myBookingsReducer = createReducer(
     changeSeatAvailability: null,
     changeSeatAvailabilityLoading: false,
     changeSeatAvailabilityError: null,
+    changeSeatAvailabilityErrorCode: null,
     changeSeatTickets: [],
     changeSeatTicketsLoading: false,
     changeSeatTicketsError: null,
@@ -351,17 +353,20 @@ export const myBookingsReducer = createReducer(
     ...state,
     changeSeatAvailabilityLoading: true,
     changeSeatAvailabilityError: null,
+    changeSeatAvailabilityErrorCode: null,
   })),
   on(loadChangeSeatAvailabilitySuccess, (state, { availability }) => ({
     ...state,
     changeSeatAvailability: availability,
     changeSeatAvailabilityLoading: false,
     changeSeatAvailabilityError: null,
+    changeSeatAvailabilityErrorCode: null,
   })),
-  on(loadChangeSeatAvailabilityFailure, (state, { error }) => ({
+  on(loadChangeSeatAvailabilityFailure, (state, { errorCode, error }) => ({
     ...state,
     changeSeatAvailabilityLoading: false,
     changeSeatAvailabilityError: error,
+    changeSeatAvailabilityErrorCode: errorCode,
   })),
 
   on(loadChangeSeatTickets, (state) => ({

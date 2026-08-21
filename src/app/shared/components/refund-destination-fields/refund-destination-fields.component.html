@@ -47,17 +47,53 @@
           </small>
         }
       </div>
-      <div class="rdf-field">
+      <div class="rdf-field rdf-bank">
         <label for="rdf-bank">{{ 'REFUND_DESTINATION.BANK' | translate }}</label>
         <input
           id="rdf-bank"
           type="text"
           class="rdf-input"
-          formControlName="bank"
+          role="combobox"
+          autocomplete="off"
+          aria-autocomplete="list"
+          [attr.aria-expanded]="bankListOpen"
           [class.is-invalid]="isInvalid('bank')"
-          [disabled]="disabled"
-          [placeholder]="'REFUND_DESTINATION.BANK' | translate"
+          [disabled]="disabled || banksState !== 'ready'"
+          [value]="bankListOpen ? bankQuery : selectedBankName"
+          [placeholder]="(banksState === 'loading'
+            ? 'REFUND_DESTINATION.BANK_LOADING'
+            : 'REFUND_DESTINATION.BANK_PLACEHOLDER') | translate"
+          (focus)="openBankList()"
+          (input)="onBankQueryInput($any($event.target).value)"
           />
+          @if (bankListOpen) {
+            <ul class="rdf-bank-list" role="listbox" [attr.aria-label]="'REFUND_DESTINATION.BANK' | translate">
+              @for (bank of filteredBanks; track bank.code) {
+                <li>
+                  <button
+                    type="button"
+                    class="rdf-bank-option"
+                    role="option"
+                    [attr.aria-selected]="formGroup.get('bank')?.value === bank.code"
+                    (click)="selectBank(bank)"
+                    >
+                    {{ bankName(bank) }}
+                  </button>
+                </li>
+              }
+              @if (!filteredBanks.length) {
+                <li class="rdf-bank-empty">{{ 'REFUND_DESTINATION.BANK_SEARCH_EMPTY' | translate }}</li>
+              }
+            </ul>
+          }
+          @if (banksState === 'error') {
+            <small class="rdf-error">
+              {{ 'REFUND_DESTINATION.ERROR.BANK_LIST_FAILED' | translate }}
+              <button type="button" class="rdf-retry" (click)="retryBanks()">
+                {{ 'REFUND_DESTINATION.RETRY_BANK_LIST' | translate }}
+              </button>
+            </small>
+          }
           @if (isInvalid('bank')) {
             <small class="rdf-error">
               {{ 'REFUND_DESTINATION.ERROR.REQUIRED' | translate }}

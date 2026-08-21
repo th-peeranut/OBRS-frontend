@@ -215,7 +215,10 @@ describe('ChangeSeatEffect', () => {
       actionsSubject.next(loadChangeSeatAvailability({ bookingId: 5 }));
 
       expect(emitted).toEqual([
-        loadChangeSeatAvailabilityFailure({ error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.SERVICE_UNAVAILABLE' }),
+        loadChangeSeatAvailabilityFailure({
+          errorCode: 'GENERIC',
+          error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.SERVICE_UNAVAILABLE',
+        }),
       ]);
     });
 
@@ -230,7 +233,10 @@ describe('ChangeSeatEffect', () => {
       actionsSubject.next(loadChangeSeatAvailability({ bookingId: 5 }));
 
       expect(emitted).toEqual([
-        loadChangeSeatAvailabilityFailure({ error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.ACTION_UNAVAILABLE' }),
+        loadChangeSeatAvailabilityFailure({
+          errorCode: 'GENERIC',
+          error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.ACTION_UNAVAILABLE',
+        }),
       ]);
     });
 
@@ -251,7 +257,10 @@ describe('ChangeSeatEffect', () => {
       actionsSubject.next(loadChangeSeatAvailability({ bookingId: 5 }));
 
       expect(emitted).toEqual([
-        loadChangeSeatAvailabilityFailure({ error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.WINDOW_CLOSED' }),
+        loadChangeSeatAvailabilityFailure({
+          errorCode: 'CHANGE_SEAT_ERROR_WINDOW_CLOSED',
+          error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.WINDOW_CLOSED',
+        }),
       ]);
     });
   });
