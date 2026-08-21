@@ -183,8 +183,18 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     // subtitleKey (admin.module.ts) so search can match a menu by what it does.
     const items: AdminNavItem[] = [
       { path: 'dashboard', labelKey: 'ADMIN.PAGES.DASHBOARD', icon: 'dashboard', descriptionKey: 'ADMIN.DASHBOARD.SUBTITLE', section: 'overview' },
-      { path: 'lookups', labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', icon: 'settings_input_component', descriptionKey: 'ADMIN.LOOKUP.SUBTITLE', section: 'master' },
-      { path: 'roles', labelKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', icon: 'admin_panel_settings', descriptionKey: 'ADMIN.ROLES.SUBTITLE', section: 'master' },
+      // OBRS-1498: held-admin only, and spread in place rather than pushed
+      // conditionally below so the master section keeps its order for an admin.
+      // hasHeldRole, NOT hasAnyRole(['admin']) — ROLE_GRANTS grants an owner
+      // 'admin', so hasAnyRole would still show both entries to the very role
+      // this hides them from. Matches the routes' own `requiredHeldRoles`
+      // (admin.module.ts), which is what would bounce an owner who deep-links.
+      ...(this.authService.hasHeldRole(['admin'])
+        ? ([
+            { path: 'lookups', labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', icon: 'settings_input_component', descriptionKey: 'ADMIN.LOOKUP.SUBTITLE', section: 'master' },
+            { path: 'roles', labelKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', icon: 'admin_panel_settings', descriptionKey: 'ADMIN.ROLES.SUBTITLE', section: 'master' },
+          ] as AdminNavItem[])
+        : []),
       { path: 'users', labelKey: 'ADMIN.PAGES.USER_MANAGEMENT', icon: 'group', descriptionKey: 'ADMIN.USERS.SUBTITLE', section: 'master' },
       { path: 'vehicles', labelKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT', icon: 'directions_bus', descriptionKey: 'ADMIN.VEHICLES.SUBTITLE', section: 'master' },
       { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route', descriptionKey: 'ADMIN.ROUTES.SUBTITLE', section: 'master' },

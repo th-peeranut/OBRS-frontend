@@ -338,6 +338,29 @@ export class AuthService {
     );
   }
 
+  /**
+   * OBRS-1498: does the user HOLD one of these roles — no ROLE_GRANTS expansion.
+   *
+   * `hasAnyRole` answers the FE's area-based question ("may they be in this
+   * portal"), where owner and admin grant each other and ['admin'] therefore
+   * admits an owner. That is deliberate (see ROLE_GRANTS above) and must stay.
+   * But the backend hierarchy runs ONE way — WebSecurityConfig.java has
+   * ROLE_ADMIN > ROLE_OWNER, not the reverse — so an endpoint written
+   * `hasRole('ADMIN')` 403s an owner. For a page whose every write goes through
+   * such an endpoint, `hasAnyRole` is the wrong question: it opens a page that
+   * cannot work. Ask this one instead.
+   */
+  hasHeldRole(requiredRoles: string[]): boolean {
+    if (!Array.isArray(requiredRoles) || requiredRoles.length === 0) {
+      return true;
+    }
+
+    const heldRoles = new Set(this.getRoles());
+    return requiredRoles.some((role) =>
+      heldRoles.has(String(role ?? '').trim().toLowerCase())
+    );
+  }
+
   // The route a user should land on / be sent back to for their portal. Owner
   // is all-access so it defaults to the public home; admin → /admin; staff
   // roles → /staff; customer / unknown / guest → public home.

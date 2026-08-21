@@ -1045,6 +1045,24 @@ export interface CreateVehicleMaintenancePlanRespDto {
  * added by OBRS-961; `EXPENSE_CATEGORY_CODES` is the single list to read,
  * this comment is prose that can rot). Audit fields are `@JsonUnwrapped` on the backend DTO —
  * flattened here, read-only, never sent back by the form (§9 of the UX spec). */
+/**
+ * OBRS-1374: one line of a repair/gas bill. The BILL is still one `AdminExpenseDto` (its
+ * `amount` is the total); these are the lines written on it. `part` is `null` for the lines
+ * that are not a part at all - labour, service, sundry - which is a real answer, not missing
+ * data. The codes are `MAINTENANCE_PART_CODES`, shared verbatim with the maintenance-plan
+ * panel (OBRS-1333): a second parts vocabulary would give "how many times did we change the
+ * brake pads" two answers and no way to tell which is right.
+ */
+export interface AdminExpenseItemDto {
+  id: number;
+  lineNo: number;
+  part?: string | null;
+  description: string;
+  quantity?: number | null;
+  unitPrice?: number | null;
+  amount: number;
+}
+
 export interface AdminExpenseDto {
   id: number;
   /** OBRS-791/808: the operator that BEARS this cost. NOT NULL on the backend
@@ -1086,6 +1104,12 @@ export interface AdminExpenseDto {
    * absence-reads-as-normal reason as `source` above.
    */
   approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  /**
+   * OBRS-1374: this bill's lines, in `lineNo` order. Absent or empty for every bill nobody
+   * broke down, which is most of them - the child table is never mandatory. Returned on the
+   * LIST too, because the edit modal opens straight from the row the list already holds.
+   */
+  items?: AdminExpenseItemDto[];
   rejectionReason?: string | null;
 }
 
@@ -1093,6 +1117,16 @@ export interface AdminExpenseDto {
  * (`toExpensePayload()` in `expenses-page.mappers.ts`). Every optional field
  * is an explicit key (`null` when blank), never omitted — same full-replace
  * contract as `CreateVehiclePayload` above, and PUT sends all 9 fields. */
+/** OBRS-1374: one line as SENT. No `id` and no `lineNo` - the server numbers the lines from
+ * their position and replaces the whole set, so there is nothing for a client to renumber. */
+export interface CreateExpenseItemPayload {
+  part: string | null;
+  description: string;
+  quantity: number | null;
+  unitPrice: number | null;
+  amount: number;
+}
+
 export interface CreateExpensePayload {
   /** OBRS-808: which operator bears the cost. Read by the backend on **POST
    * from an ADMIN only** — for any other caller it is ignored (not rejected:
@@ -1111,6 +1145,11 @@ export interface CreateExpensePayload {
   receiptNo: string | null;
   paidBy: string | null;
   note: string | null;
+  /** OBRS-1374: the bill's lines. `[]` means "this bill has no breakdown", which is the
+   * normal case and is accepted unchanged. When lines ARE sent their amounts must sum to
+   * `amount`, or the server answers 400 `EXPENSE_ITEMS_TOTAL_MISMATCH` - the modal blocks that
+   * before it can happen. */
+  items: CreateExpenseItemPayload[];
 }
 
 /** OBRS-685: `POST /api/private/expenses` 201 response body. */

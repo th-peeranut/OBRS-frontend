@@ -490,6 +490,7 @@
     "BANK_SEARCH_EMPTY": "未找到匹配的银行",
     "RETRY_BANK_LIST": "重试",
     "ACCOUNT_NUMBER": "账号",
+    "ACCOUNT_NUMBER_NEEDS_BANK": "请先选择银行，此栏随后开放填写",
     "PROMPTPAY_ID": "PromptPay 账号 — 10位手机号或13位身份证号",
     "ERROR": {
       "REQUIRED": "此字段为必填项",
@@ -1991,6 +1992,20 @@
       "PAID_BY": "付款人/账户",
       "NOTE": "备注",
       "NOTE_PLACEHOLDER": "补充说明(可选)",
+      "ITEMS": {
+        "TITLE": "单据明细",
+        "HINT": "可不填。将维修或燃气单据拆分为明细，即可看出各配件各花多少。留空则按单一金额记录该单据。",
+        "ADD": "新增明细",
+        "REMOVE": "删除",
+        "PART": "配件",
+        "PART_NONE": "非配件（工时／服务／其他）",
+        "DESCRIPTION": "单据上的文字",
+        "QUANTITY": "数量",
+        "UNIT_PRICE": "单价",
+        "AMOUNT": "明细金额",
+        "TOTAL": "明细合计",
+        "MISMATCH": "明细合计与单据总额不一致。请先修改明细或总额使两者一致，然后再保存。"
+      },
       "FILTER_VEHICLE": "车辆:全部",
       "FILTER_VEHICLE_CENTRAL_ONLY": "仅中央/不绑定",
       "FILTER_CATEGORY": "类别:全部",

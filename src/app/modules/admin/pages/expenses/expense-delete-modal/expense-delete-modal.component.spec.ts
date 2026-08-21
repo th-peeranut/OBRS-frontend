@@ -23,6 +23,7 @@ const ROW: ExpenseRow = {
   paidBy: '',
   note: '',
   source: 'MANUAL',
+  items: [],
 };
 
 describe('ExpenseDeleteModalComponent', () => {
