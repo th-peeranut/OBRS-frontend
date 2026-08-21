@@ -259,7 +259,15 @@ test.describe('My Bookings — OPEN-seating flows (OBRS-483)', () => {
 
     // Keep the same pickup (nong_chak, the booking's current origin) — it must
     // be present and selectable.
-    await dialog.locator('.stop-row', { hasText: 'Nong chak' }).click();
+    // OBRS-1455: filter on `.stop-name`, not the whole row. One `.stop-row`
+    // renders the name AND the address line OBRS-636 added, and Playwright's
+    // `hasText` is a substring match over the element's ENTIRE text - so
+    // 'Nong chak' matched all six stops whose address reads
+    // "Nong Chak, Ban Bueng...", whatever their own name was.
+    await dialog
+      .locator('.stop-row')
+      .filter({ has: page.locator('.stop-name', { hasText: /^Nong chak$/ }) })
+      .click();
     await dialog.locator('p-button', { hasText: 'Confirm pickup' }).click();
 
     // Drop-off step: pick a stop ONE short of the current destination
@@ -272,7 +280,12 @@ test.describe('My Bookings — OPEN-seating flows (OBRS-483)', () => {
       fullPage: true,
     });
 
-    await dialog.locator('.stop-row', { hasText: 'Bts mo chit' }).click();
+    // OBRS-1455: same shape as the pickup click above - this one never went red
+    // only because the test died at the pickup step before reaching it.
+    await dialog
+      .locator('.stop-row')
+      .filter({ has: page.locator('.stop-name', { hasText: /^Bts mo chit$/ }) })
+      .click();
     await dialog.locator('p-button', { hasText: 'Confirm drop-off' }).click();
 
     // Real network round trip for the estimate — the headline behavior this
@@ -304,6 +317,12 @@ test.describe('My Bookings — OPEN-seating flows (OBRS-483)', () => {
     await gotoMyBookings(page);
     const updatedCard = cardByBookingNumber(page, BOOKING_NUMBER);
     await expect(updatedCard.locator('.status-badge')).toHaveText(/Confirmed/i);
+    // OBRS-1455: the status badge alone proves nothing here - the fixture seeds
+    // this booking `confirmed` and change-stop never moves it, so that line
+    // passes whether or not the stop changed. The route line is what carries
+    // the effect the comment above claims: it read "Nong chak -> Mo chit 2 bus
+    // terminal" before and must name the new drop-off now.
+    await expect(updatedCard.locator('.route-text')).toHaveText(/Bts mo chit/i);
     await page.screenshot({
       path: 'e2e-evidence/OBRS-483/after-change-stop-success.png',
       fullPage: true,
