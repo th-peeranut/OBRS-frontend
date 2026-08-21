@@ -101,6 +101,10 @@ export interface ConfirmChangeStopPayload {
 })
 export class BookingService {
   private readonly BOOKING_ID_KEY = 'active_booking_id';
+  // OBRS-1204: the human-facing half of the same identity. The id addresses the booking
+  // over the API; this is the number the customer quotes and the one booking search
+  // resolves, so the payment screen can print a reference before any transaction exists.
+  private readonly BOOKING_NUMBER_KEY = 'active_booking_number';
   // OBRS-858 (ADR-0123 Decision 6). Deliberately NOT named *_token in a way that resembles
   // `auth_token`: it is a capability for one booking, not a session, and a reader skimming
   // localStorage should not mistake one for the other.
@@ -443,13 +447,29 @@ export class BookingService {
     return context;
   }
 
-  setActiveBookingId(bookingId: number | null | undefined): void {
+  /**
+   * OBRS-1204: `bookingNumber` is optional, but omitting it CLEARS any stored one
+   * rather than leaving it. The two belong to the same booking, so a kept-over number
+   * from the previous booking would print the wrong reference on the next payment
+   * screen — worse than printing none.
+   */
+  setActiveBookingId(
+    bookingId: number | null | undefined,
+    bookingNumber?: string | null
+  ): void {
     const normalized = Number(bookingId);
     if (!Number.isFinite(normalized) || normalized <= 0) {
       return;
     }
 
     localStorage.setItem(this.BOOKING_ID_KEY, String(normalized));
+
+    const normalizedNumber = String(bookingNumber ?? '').trim();
+    if (normalizedNumber) {
+      localStorage.setItem(this.BOOKING_NUMBER_KEY, normalizedNumber);
+    } else {
+      localStorage.removeItem(this.BOOKING_NUMBER_KEY);
+    }
   }
 
   getActiveBookingId(): number | null {
@@ -460,8 +480,13 @@ export class BookingService {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 
+  getActiveBookingNumber(): string | null {
+    return localStorage.getItem(this.BOOKING_NUMBER_KEY)?.trim() || null;
+  }
+
   clearActiveBookingId(): void {
     localStorage.removeItem(this.BOOKING_ID_KEY);
+    localStorage.removeItem(this.BOOKING_NUMBER_KEY);
     // OBRS-858: the token belongs to the booking it names, so it dies with it. Leaving it behind
     // would mean the next booking's payment could be attempted with the previous booking's token,
     // which the server refuses (GuestPaymentService compares the two ids) — as a confusing error

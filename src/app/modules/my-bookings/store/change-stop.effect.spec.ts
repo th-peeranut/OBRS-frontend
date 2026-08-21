@@ -432,7 +432,9 @@ describe('ChangeStopEffect', () => {
         })
       );
 
-      expect(bookingService.setActiveBookingId).toHaveBeenCalledWith(5);
+      // OBRS-1204: the booking NUMBER travels with the id, so the QR card the
+      // top-up payment renders can print a reference the customer can quote.
+      expect(bookingService.setActiveBookingId).toHaveBeenCalledWith(5, 'B-5');
       expect(emitted).toEqual([changeStopRequiresPayment({ bookingId: 5, paymentIntentId: 42 })]);
     });
 
