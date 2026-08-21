@@ -65,7 +65,13 @@
     &-station {
       display: flex;
       flex-direction: row;
-      gap: clamp(16px, 6vw, 80px);
+      /* OBRS-861: a viewport-scaled gap inside a ~235px sidebar column. At a
+         1280px window `6vw` resolves to 77px - a third of the box - so both
+         columns were squeezed to their min-content, and because
+         `.body-header-text` carries `overflow-wrap: anywhere` the station name
+         rendered one character per line. The review summary's copy of this rule
+         keeps the clamp; its card is wide enough for it. */
+      gap: $space-sm;
 
       &-info {
         display: flex;

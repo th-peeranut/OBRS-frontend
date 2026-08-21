@@ -81,6 +81,10 @@
             <div class="time">
               {{ formatDateTimeToHHMM(departure.arrivalDateTime) }}
               {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+              <app-arrival-date-notice
+                [departureDateTime]="departure.departureDateTime"
+                [arrivalDateTime]="departure.arrivalDateTime"
+              ></app-arrival-date-notice>
             </div>
           </div>
           <!-- RIGHT -->
@@ -220,6 +224,10 @@
               <div class="time">
                 {{ formatDateTimeToHHMM(return.arrivalDateTime) }}
                 {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+                <app-arrival-date-notice
+                  [departureDateTime]="return.departureDateTime"
+                  [arrivalDateTime]="return.arrivalDateTime"
+                ></app-arrival-date-notice>
               </div>
             </div>
             <!-- RIGHT -->

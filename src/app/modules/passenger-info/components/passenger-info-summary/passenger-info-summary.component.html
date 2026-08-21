@@ -115,6 +115,10 @@
                 )
                 }}
                 {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
+                <app-arrival-date-notice
+                  [departureDateTime]="getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime"
+                  [arrivalDateTime]="getScheduleBooking(scheduleBooking?.schedule)[0].arrivalDateTime"
+                ></app-arrival-date-notice>
               </div>
               @if (
                 findStationById(scheduleFilter.stopStationId)
@@ -227,6 +231,10 @@
                     )
                     }}
                     {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
+                    <app-arrival-date-notice
+                      [departureDateTime]="getScheduleBooking(scheduleBooking?.schedule)[1].departureDateTime"
+                      [arrivalDateTime]="getScheduleBooking(scheduleBooking?.schedule)[1].arrivalDateTime"
+                    ></app-arrival-date-notice>
                   </div>
                   @if (
                     findStationById(scheduleFilter.stopStationId)

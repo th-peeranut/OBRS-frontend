@@ -1,4 +1,5 @@
 import {
+  arrivalDateWhenDayDiffers,
   capitalizeVehicleType,
   durationHours,
   durationMinutes,
@@ -171,6 +172,58 @@ describe('trip-format', () => {
         distanceKm: 45,
         durationMinutes: 45,
       });
+    });
+  });
+
+  // OBRS-861. Every timestamp here carries an explicit offset, because that is
+  // what the endpoint actually sends: `POST /api/schedules/search` on SIT returns
+  // `"departureDateTime":"2026-08-23T07:00:00+07:00"` (measured 2026-08-21).
+  describe('arrivalDateWhenDayDiffers', () => {
+    it('returns null when the bus arrives at 23:59 on its departure day (AC4)', () => {
+      expect(
+        arrivalDateWhenDayDiffers('2026-08-23T08:00:00+07:00', '2026-08-23T23:59:00+07:00')
+      ).toBeNull();
+    });
+
+    it('returns the arrival date the moment it lands at 00:00 the next day (AC1)', () => {
+      expect(
+        arrivalDateWhenDayDiffers('2026-08-23T18:00:00+07:00', '2026-08-24T00:00:00+07:00')
+      ).toBe('24/08/2026');
+    });
+
+    it('returns the real date when the trip crosses two days — nothing counts to 1 (AC3)', () => {
+      expect(
+        arrivalDateWhenDayDiffers('2026-08-23T18:00:00+07:00', '2026-08-25T05:30:00+07:00')
+      ).toBe('25/08/2026');
+    });
+
+    it('returns null when arrival precedes departure — corrupt data gets no date', () => {
+      expect(
+        arrivalDateWhenDayDiffers('2026-08-24T05:30:00+07:00', '2026-08-23T18:00:00+07:00')
+      ).toBeNull();
+    });
+
+    it('returns null for missing or unparseable input', () => {
+      expect(arrivalDateWhenDayDiffers(null, '2026-08-24T05:30:00+07:00')).toBeNull();
+      expect(arrivalDateWhenDayDiffers('2026-08-23T18:00:00+07:00', undefined)).toBeNull();
+      expect(arrivalDateWhenDayDiffers('not-a-date', 'also-not-a-date')).toBeNull();
+    });
+
+    // The discriminating case for AC7: both instants fall on 23 Aug in UTC, and
+    // only the Bangkok day tells them apart. An implementation that compared UTC
+    // days — the shape the card warned about, citing OBRS-371/OBRS-448 — returns
+    // null here and this assertion goes red.
+    it('compares Bangkok days, not UTC days (AC7)', () => {
+      expect(arrivalDateWhenDayDiffers('2026-08-23T13:00:00Z', '2026-08-23T19:00:00Z')).toBe(
+        '24/08/2026'
+      );
+    });
+
+    it('is unmoved by which equivalent offset the same instant is written in', () => {
+      // 2026-08-23T17:00:00Z IS 2026-08-24T00:00:00+07:00.
+      expect(
+        arrivalDateWhenDayDiffers('2026-08-23T18:00:00+07:00', '2026-08-23T17:00:00Z')
+      ).toBe('24/08/2026');
     });
   });
 });
