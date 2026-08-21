@@ -143,6 +143,34 @@ test.describe(`OBRS-1477 capture (${PHASE})`, () => {
     expect(putBody!['cargoCapacityKg']).toBe(150);
   });
 
+  test('a vehicle type carrying a standing cap: the hint names 20, not the 21 seats it has',
+    async ({ page }) => {
+      // OBRS-1477 AC-1 landed as ADR-0137: the cap lives on the vehicle type and is resolved at
+      // read. Registered after the shell so it wins: same bus, same 21 physical seats, now
+      // carrying sellableSeats: 20.
+      await page.route('**/api/private/vehicle-types', (route) =>
+        route.fulfill({
+          json: {
+            code: 200,
+            message: 'OK',
+            data: [{ id: 5, slug: 'bus', totalSeats: 21, sellableSeats: 20 }],
+          },
+        })
+      );
+      await page.route(
+        (url) => new RegExp(`/private/schedules/${SCHEDULE_ID}$`).test(url.pathname),
+        (route) => route.fulfill({ json: scheduleDetail(null) })
+      );
+
+      await openTripDetails(page);
+      await page.locator('app-trip-details-edit-form').screenshot({
+        path: `${ASSETS}/OBRS-1477-${PHASE}-2-standing-cap-20.png`,
+      });
+
+      // The picture is the deliverable, but a picture cannot say WHICH number it is.
+      await expect(page.locator('app-trip-details-edit-form')).toContainText('20');
+    });
+
   test('a trip with a real 20-seat override still shows and sends 20', async ({ page }) => {
     await page.route(
       (url) => new RegExp(`/private/schedules/${SCHEDULE_ID}$`).test(url.pathname),
