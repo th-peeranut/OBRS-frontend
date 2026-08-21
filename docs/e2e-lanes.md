@@ -236,8 +236,11 @@ Needs booking or report states that can only exist by construction — an alread
 rescheduled booking, a cancelled one, a seat collision. On a shared environment those can
 only be produced by running the spec, which spends them, so the next run finds them gone.
 `playwright.local.config.ts` and `playwright.obrs483.config.ts` provision their own
-database; `obrs-564` and `obrs-576` expect one built by hand and provision nothing, which
-is why neither has a committed config.
+database; `obrs-564` and `obrs-576` expect one built by hand and provision nothing.
+`obrs-564` still got a committed config in OBRS-1456 (`playwright.obrs1456.config.ts`) —
+provisioning and configuration are separate questions, and the thing that kept breaking
+that lane was the ports, not the seeding. Its config therefore names the port pair and
+the database build command without running the latter.
 
 ### CAPTURE
 
@@ -400,11 +403,15 @@ without declaring what it runs, which closes the family rather than the two inst
   `PAGE_READY_TIMEOUT_MS` to come up, and a new case proves a stuck page is still reported
   by name -- because "the gate went red so we raised the limit" is otherwise
   indistinguishable from muting it.
-- **Three specs are run by no committed config** — `obrs-564-booking-policy`,
-  `obrs-576-config-change-history` and `obrs-296-child-fare-qa`. The first two expect a
-  hand-built database and say so in their headers. The third is genuinely hermetic and is
-  one `testMatch` line from joining the gate; it stays in CAPTURE because its purpose is
-  producing the OBRS-296 screenshots, not asserting behaviour.
+- **Two specs are run by no committed config** — `obrs-576-config-change-history` and
+  `obrs-296-child-fare-qa`. The first expects a hand-built database and says so in its
+  header. The second is genuinely hermetic and is one `testMatch` line from joining the
+  gate; it stays in CAPTURE because its purpose is producing the OBRS-296 screenshots,
+  not asserting behaviour. `obrs-564-booking-policy` was the third until OBRS-1456: three
+  cards in a row (OBRS-1449, OBRS-1454, OBRS-1456) had to re-derive its ports by hand
+  before they could read a verdict, and by the last of them the ports its header named
+  (`:8080` / `:4200`) were held by two unrelated sessions — the API probe inside the spec
+  read a stranger's database and reported it as this lane's.
 - **`e2e/lanes.json`'s `config` field is documentation, not enforcement.** Nothing checks
   that the named config can actually run the spec — one entry was wrong on the first pass
   and only a human reading caught it.

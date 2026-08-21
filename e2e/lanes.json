@@ -317,8 +317,8 @@
     {
       "spec": "obrs-564-booking-policy.spec.ts",
       "lane": "OWN-DB",
-      "config": "none -- run by hand against obrs564qa on :8080",
-      "why": "Calls http://localhost:8080 directly and writes the global booking cap to 45, resetting it in a separate test that a mid-suite failure skips. Must never point at a shared environment."
+      "config": "playwright.obrs1456.config.ts",
+      "why": "Writes the booking cap to 45 and reads it back through the public page, resetting it in a separate test that a mid-suite failure skips. Must never point at a shared environment. OBRS-1456 gave it a config and a :8181/:4256 pair; the database is still built by hand (new-local-db.ps1) because the config provisions no backend."
     },
     {
       "spec": "obrs-576-config-change-history.spec.ts",
