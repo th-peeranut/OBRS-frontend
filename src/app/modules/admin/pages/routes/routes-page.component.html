@@ -68,6 +68,7 @@
     [allSegments]="allSegments"
     [isDetailLoading]="isDetailLoading"
     (editSegment)="openSegmentEditModal($event)"
+    (addSegment)="openSegmentAddModal()"
   ></app-route-detail-panel>
 
   <app-route-form-modal
@@ -104,3 +105,11 @@
     [reloadStructure]="reloadStructureBound"
     (saved)="onSegmentSaved()"
   ></app-segment-edit-modal>
+
+  <app-add-segment-modal
+    [stops]="stops"
+    [allSegments]="allSegments"
+    [routeSlug]="selectedRouteSlug"
+    [reloadStructure]="reloadStructureBound"
+    (saved)="onSegmentSaved()"
+  ></app-add-segment-modal>

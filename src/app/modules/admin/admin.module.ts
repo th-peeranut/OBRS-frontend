@@ -23,6 +23,7 @@ import { VehicleDeleteModalComponent } from './pages/vehicles/vehicle-delete-mod
 import { RoutesPageComponent } from './pages/routes/routes-page.component';
 import { RouteFormModalComponent } from './pages/routes/route-form-modal/route-form-modal.component';
 import { SegmentEditModalComponent } from './pages/routes/segment-edit-modal/segment-edit-modal.component';
+import { AddSegmentModalComponent } from './pages/routes/add-segment-modal/add-segment-modal.component';
 import { RouteDetailPanelComponent } from './pages/routes/route-detail-panel/route-detail-panel.component';
 import { RouteListTableComponent } from './pages/routes/route-list-table/route-list-table.component';
 import { StopsPageComponent } from './pages/stops/stops-page.component';
@@ -460,6 +461,7 @@ export const adminRoutes: Routes = [
     StopFormModalComponent,
     RouteFormModalComponent,
     SegmentEditModalComponent,
+    AddSegmentModalComponent,
     RouteDetailPanelComponent,
     RouteListTableComponent,
     SchedulesPageComponent,

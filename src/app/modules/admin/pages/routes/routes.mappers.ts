@@ -2,6 +2,7 @@ import {
   AdminLookupDto,
   AdminRouteDto,
   AdminRouteStopDto,
+  AdminSegmentBatchReqDto,
   AdminSegmentDto,
   AdminSegmentReqDto,
   AdminStopDto,
@@ -502,6 +503,99 @@ export function toRoutePayload(rawFormValue: Record<string, unknown>): CreateRou
     slug: String(rawFormValue['slug'] ?? '').trim().toLowerCase(),
     status: String(rawFormValue['status'] ?? '').trim().toLowerCase(),
     translations,
+  };
+}
+
+/** What is wrong with a from/to pair, or `null` when nothing is. */
+export type StopPairProblem = 'unknownStop' | 'sameStop' | 'stopOrder';
+
+/**
+ * The ONE direction rule for a stop pair on this page (OBRS-1074 AC-2). Both the
+ * edit modal and the add modal ask this instead of each spelling out its own
+ * comparison, so "the destination must come after the origin" cannot end up
+ * meaning two different things on two screens.
+ *
+ * Ordering is by `stopOrder`, never by `offsetMinutesFromOrigin`: the shipped
+ * route data holds stops that share a minute and even one pair that runs
+ * backwards in minutes after V66 reordered the boarding sequence, so minutes do
+ * not order the route - the stop order does. (Backend counterpart:
+ * `SegmentService` throws `segment.error.destination-before-origin` on the same
+ * comparison; that it only runs when a duration is attached is OBRS-1484.)
+ */
+export function findStopPairProblem(
+  fromStop: StopPoint | undefined,
+  toStop: StopPoint | undefined
+): StopPairProblem | null {
+  if (!fromStop || !toStop) {
+    return 'unknownStop';
+  }
+
+  if (fromStop.slug === toStop.slug) {
+    return 'sameStop';
+  }
+
+  return toStop.stopOrder <= fromStop.stopOrder ? 'stopOrder' : null;
+}
+
+/** A fare the owner typed for one vehicle type in the add-pair modal. */
+export interface NewSegmentFare {
+  vehicleTypeSlug: string;
+  fare: number;
+}
+
+/**
+ * OBRS-1074: the payload that adds a stop pair the route has no row for.
+ *
+ * `PUT /api/private/segments` is a full replace per (route, vehicleType) - it
+ * deletes that whole set and rebuilds it from what arrives (ADR-0122). So the
+ * pair is appended to a block that ALREADY carries every existing pair of the
+ * same vehicle type; sending the new pair alone would delete the rest of the
+ * route's fares. Vehicle types the owner left blank get no block at all, which
+ * is what leaves their rows untouched rather than deleted.
+ *
+ * `estimatedDurationMinutes` is deliberately absent on every pair, new one
+ * included. It is not a property of a pair: the backend derives it from the two
+ * stops' `route_stops.offset_minutes_from_origin`, which both stops already
+ * carry, and writing it back would overwrite the destination stop's arrival
+ * minute for every other pair that shares it (the OBRS-1031 blast radius). A new
+ * pair between two existing stops therefore gets its duration for free.
+ *
+ * The batch shape of OBRS-1033 is used even for a single vehicle type: when the
+ * owner prices both, the two blocks must land in ONE transaction, or a rejection
+ * of the second (the gateway fare ceiling, say) leaves the first committed.
+ */
+export function toSegmentAppendPayload(
+  fromStopSlug: string,
+  toStopSlug: string,
+  fares: NewSegmentFare[],
+  allSegments: SegmentRow[],
+  selectedRouteSlug: string
+): AdminSegmentBatchReqDto {
+  return {
+    route: selectedRouteSlug,
+    vehicleTypes: fares.map((entry) => {
+      const existingPairs = allSegments.filter(
+        (segment) =>
+          normalizeVehicleTypeKey(segment.vehicleTypeSlug) ===
+          normalizeVehicleTypeKey(entry.vehicleTypeSlug)
+      );
+
+      return {
+        vehicleType: entry.vehicleTypeSlug,
+        stopPairs: [
+          ...existingPairs.map((segment) => ({
+            fromStop: segment.fromStopSlug,
+            toStop: segment.toStopSlug,
+            fare: normalizeFareForSave(segment.fare),
+          })),
+          {
+            fromStop: fromStopSlug,
+            toStop: toStopSlug,
+            fare: normalizeFareForSave(entry.fare),
+          },
+        ],
+      };
+    }),
   };
 }
 
