@@ -14,6 +14,7 @@ import {
   toScheduleStatusOptions,
   toTimeControlValue,
   toTimeInputValue,
+  toUpdatePayload,
   toVehicleOptions,
   toVehicleTypeOptions,
 } from './staff-schedules-page.mappers';
@@ -298,7 +299,7 @@ describe('staff-schedules-page.mappers', () => {
   });
 
   describe('toPayload', () => {
-    it('builds a create/update payload from raw form values, trimming strings and combining date+time', () => {
+    it('builds a create payload from raw form values, trimming strings and combining date+time', () => {
       const payload = toPayload({
         departureDate: '2026-07-10',
         departureTime: '08:30',
@@ -344,6 +345,54 @@ describe('staff-schedules-page.mappers', () => {
 
       expect(payload.vehicleId).toBeUndefined();
       expect(payload.driverId).toBeUndefined();
+    });
+  });
+
+  // OBRS-1471: the spec that was missing. The suite above only ever asserted
+  // the keys toPayload() *sends*, so the two keys it silently dropped on the
+  // full-replace PUT — which nulled a live seating cap — stayed green.
+  describe('toUpdatePayload', () => {
+    const FORM = {
+      departureDate: '2026-07-10',
+      departureTime: '08:30',
+      route: 'bkk-cnx',
+      vehicleType: 'van',
+      vehicleId: '4',
+      driverId: '5',
+    };
+
+    it('carries seatingCapacity and cargoCapacityKg through unchanged — the form has no control for either', () => {
+      const payload = toUpdatePayload(FORM, { seatingCapacity: 20, cargoCapacityKg: 500 });
+
+      expect(payload.seatingCapacity).toBe(20);
+      expect(payload.cargoCapacityKg).toBe(500);
+    });
+
+    it('sends both capacity keys even when they are null, so an inherited value stays inherited', () => {
+      const payload = toUpdatePayload(FORM, { seatingCapacity: null, cargoCapacityKg: null });
+
+      expect(payload.seatingCapacity).toBeNull();
+      expect(payload.cargoCapacityKg).toBeNull();
+    });
+
+    it('spells vehicleId/driverId as explicit nulls where toPayload() omits them (full replace = an omitted key is a null)', () => {
+      const payload = toUpdatePayload(
+        { ...FORM, vehicleId: '0', driverId: undefined },
+        { seatingCapacity: 20, cargoCapacityKg: null }
+      );
+
+      expect(payload.vehicleId).toBeNull();
+      expect(payload.driverId).toBeNull();
+    });
+
+    it('leaves the fields the form does own coming from the form', () => {
+      const payload = toUpdatePayload(FORM, { seatingCapacity: 20, cargoCapacityKg: 500 });
+
+      expect(payload.route).toBe('bkk-cnx');
+      expect(payload.vehicleType).toBe('van');
+      expect(payload.vehicleId).toBe(4);
+      expect(payload.driverId).toBe(5);
+      expect(payload.departureDateTime).toContain('2026-07-10');
     });
   });
 

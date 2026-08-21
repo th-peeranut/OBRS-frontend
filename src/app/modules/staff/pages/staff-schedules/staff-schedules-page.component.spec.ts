@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, throwError } from 'rxjs';
 import { StaffSchedulesPageComponent } from './staff-schedules-page.component';
 import { createAuthServiceStub, createRouterStub, createTranslateStub } from '../../../../testing/test-stubs';
 import { AuthService } from '../../../../auth/auth.service';
@@ -174,6 +174,91 @@ describe('StaffSchedulesPageComponent — OBRS-283 smart cancel branch', () => {
     expect((component as any).rows)
       .withContext('a null emission must not leave the previous session\'s rows on screen')
       .toEqual([]);
+  });
+});
+
+// OBRS-1471: PUT /api/private/schedules/{id} is a full replace, so anything
+// this form has no control for has to be sent back at its current value.
+// Nothing here changes a single control — opening the modal and pressing
+// confirm is by itself enough to null a seating cap, because seatingCapacity
+// is in the backend's CHANGE_DETECTED_FIELDS.
+describe('StaffSchedulesPageComponent — OBRS-1471 capacity carry-forward', () => {
+  const DETAIL = {
+    code: 200,
+    message: 'OK',
+    data: {
+      id: 2,
+      departureDateTime: '2026-07-01T08:00:00',
+      route: { id: 1, slug: 'a-b' },
+      vehicleType: { id: 1, slug: 'van' },
+      vehicle: { id: 1, vehicleNumber: 'Van' },
+      driver: { id: 1, fullName: 'John' },
+      seatingCapacity: 20,
+      cargoCapacityKg: 500,
+    },
+  };
+
+  it('opening the edit modal and confirming without touching anything sends both capacities back unchanged', async () => {
+    const updateSpy = jasmine
+      .createSpy('updateSchedule')
+      .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null }));
+    const getSpy = jasmine
+      .createSpy('getScheduleById')
+      .and.returnValue(new BehaviorSubject(DETAIL));
+    const { component } = makeComponent({ getScheduleById: getSpy, updateSchedule: updateSpy });
+    component.ngOnInit();
+
+    await (component as any).openEditModal(ROW);
+    await (component as any).submitSchedule();
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    const [id, payload] = updateSpy.calls.mostRecent().args;
+    expect(id).toBe(2);
+    expect(payload.seatingCapacity).toBe(20);
+    expect(payload.cargoCapacityKg).toBe(500);
+  });
+
+  it('re-reads the capacities when the edit-open detail fetch failed, instead of PUTting nulls', async () => {
+    const updateSpy = jasmine
+      .createSpy('updateSchedule')
+      .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null }));
+    let call = 0;
+    const getSpy = jasmine.createSpy('getScheduleById').and.callFake(() => {
+      call += 1;
+      return call === 1 ? throwError(() => new Error('boom')) : new BehaviorSubject(DETAIL);
+    });
+    const { component } = makeComponent({ getScheduleById: getSpy, updateSchedule: updateSpy });
+    component.ngOnInit();
+
+    await (component as any).openEditModal(ROW);
+    expect((component as any).editCapacity).toBeNull();
+
+    await (component as any).submitSchedule();
+
+    expect(getSpy).toHaveBeenCalledTimes(2);
+    const [, payload] = updateSpy.calls.mostRecent().args;
+    expect(payload.seatingCapacity).toBe(20);
+    expect(payload.cargoCapacityKg).toBe(500);
+  });
+
+  it('creating a schedule still goes through createSchedule() with no capacity keys invented', async () => {
+    const createSpy = jasmine
+      .createSpy('createSchedule')
+      .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null }));
+    const updateSpy = jasmine.createSpy('updateSchedule');
+    const { component } = makeComponent({ createSchedule: createSpy, updateSchedule: updateSpy });
+    component.ngOnInit();
+
+    (component as any).openCreateModal();
+    // openCreateModal() picks route from routeOptions, which this stub has none of.
+    (component as any).scheduleItemForm.patchValue({ route: 'a-b', vehicleType: 'van' });
+
+    await (component as any).submitSchedule();
+
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    const [payload] = createSpy.calls.mostRecent().args;
+    expect('seatingCapacity' in payload).toBeFalse();
   });
 });
 

@@ -12,6 +12,8 @@ import {
   AdminVehicleDto,
   AdminVehicleTypeDto,
   DriverDto,
+  ScheduleCapacityCarryForward,
+  toScheduleCapacityCarryForward,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
@@ -31,6 +33,7 @@ import {
   toRow,
   toScheduleFormValues,
   toScheduleStatusOptions,
+  toUpdatePayload,
   toVehicleOptions,
   toVehicleTypeOptions,
 } from './staff-schedules-page.mappers';
@@ -62,6 +65,10 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
   protected isEditMode = false;
   protected isEditDetailLoading = false;
   protected selectedRow: ScheduleRow | null = null;
+  // OBRS-1471: this form has no capacity controls, so the values the open
+  // edit read off the server are what the full-replace PUT must send back.
+  // `null` = the edit-open detail fetch has not landed (or failed).
+  private editCapacity: ScheduleCapacityCarryForward | null = null;
 
   protected searchKeyword = '';
   protected selectedRouteFilter = '';
@@ -171,6 +178,7 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
     this.isEditMode = true;
     this.selectedRow = row;
     this.isEditDetailLoading = true;
+    this.editCapacity = null;
     this.applyFormValues(toFallbackDto(row));
     this.isFormModalOpen = true;
 
@@ -179,9 +187,11 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
       const detail = response?.data ?? null;
       if (detail && this.isFormModalOpen && this.selectedRow?.id === row.id) {
         this.applyFormValues(detail, true);
+        this.editCapacity = toScheduleCapacityCarryForward(detail);
       }
     } catch {
-      // Keep fallback values
+      // Keep fallback values. editCapacity stays null and submitSchedule()
+      // re-fetches rather than sending nulls (OBRS-1471).
     } finally {
       if (this.isFormModalOpen && this.selectedRow?.id === row.id) {
         this.isEditDetailLoading = false;
@@ -231,15 +241,18 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
 
     this.isSubmitting = true;
     try {
-      const payload = toPayload(this.scheduleItemForm.getRawValue());
       if (this.isEditMode && this.selectedRow) {
+        const capacity = this.editCapacity ?? (await this.fetchEditCapacity(this.selectedRow.id));
+        const payload = toUpdatePayload(this.scheduleItemForm.getRawValue(), capacity);
         await firstValueFrom(this.adminApiService.updateSchedule(this.selectedRow.id, payload));
         this.closeFormModal(true);
         const refresh = this.store.refresh();
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
         await refresh;
       } else {
-        await firstValueFrom(this.adminApiService.createSchedule(payload));
+        await firstValueFrom(
+          this.adminApiService.createSchedule(toPayload(this.scheduleItemForm.getRawValue()))
+        );
         this.closeFormModal(true);
         const refresh = this.store.refresh();
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
@@ -328,6 +341,14 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
     this.statusOptions = toScheduleStatusOptions(this.rawLookups, locale);
     this.rows = this.rawSchedules.map((s) => toRow(s, locale));
     this.applyFilter();
+  }
+
+  // OBRS-1471: last resort when the edit-open fetch failed but staff saved
+  // anyway. Throwing here is correct — submitSchedule()'s catch aborts the PUT
+  // with SAVE_FAILED, which beats replacing a live capacity cap with null.
+  private async fetchEditCapacity(id: number): Promise<ScheduleCapacityCarryForward> {
+    const response = await firstValueFrom(this.adminApiService.getScheduleById(id));
+    return toScheduleCapacityCarryForward(response?.data ?? null);
   }
 
   private applyFormValues(dto: AdminScheduleDto, onlyPristine = false): void {

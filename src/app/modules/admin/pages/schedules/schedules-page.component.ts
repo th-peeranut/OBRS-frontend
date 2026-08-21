@@ -11,6 +11,8 @@ import {
   AdminVehicleDto,
   AdminVehicleTypeDto,
   CreateScheduleSetPayload,
+  ScheduleCapacityCarryForward,
+  toScheduleCapacityCarryForward,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
@@ -35,6 +37,7 @@ import {
   toRouteOptions,
   toScheduleDetailFallback,
   toScheduleItemPayload as toScheduleItemPayloadValue,
+  toScheduleItemUpdatePayload,
   toSchedulePayload as toSchedulePayloadValue,
   toScheduleRow,
   toScheduleSetFallback,
@@ -103,6 +106,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   // cargoCapacityKg control. Cleared on input change and modal close, same
   // contract as vehicleUnderMaintenanceMessage above.
   protected cargoCapacityKgErrorCode: CargoCapacityValidationErrorCode | null = null;
+  // OBRS-1471: this page has a cargo-capacity control but none for seating
+  // capacity, so the seating cap read on edit-open is what the full-replace
+  // PUT must send back. `null` = the detail fetch has not landed (or failed).
+  private editCapacity: ScheduleCapacityCarryForward | null = null;
 
   protected readonly scheduleForm: FormGroup;
   protected readonly scheduleItemForm: FormGroup;
@@ -371,6 +378,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.isScheduleEditDetailLoading = true;
     this.vehicleUnderMaintenanceMessage = '';
     this.cargoCapacityKgErrorCode = null;
+    this.editCapacity = null;
     this.applyScheduleItemFormValues(toScheduleDetailFallback(schedule), schedule);
     this.isScheduleFormModalOpen = true;
 
@@ -379,9 +387,12 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       const detail = response?.data ?? null;
       if (detail && this.isScheduleFormModalOpen && this.selectedSchedule?.id === schedule.id) {
         this.applyScheduleItemFormValues(detail, schedule, true);
+        this.editCapacity = toScheduleCapacityCarryForward(detail);
       }
     } catch {
       // Keep the fallback values already shown in the open modal.
+      // editCapacity stays null and submitSchedule() re-fetches rather
+      // than nulling the trip's seating cap (OBRS-1471).
     } finally {
       if (this.isScheduleFormModalOpen && this.selectedSchedule?.id === schedule.id) {
         this.isScheduleEditDetailLoading = false;
@@ -596,8 +607,17 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.isSubmitting = true;
     try {
       if (this.isScheduleItemEditMode && this.selectedSchedule) {
+        const carried =
+          this.editCapacity ??
+          toScheduleCapacityCarryForward(
+            (await firstValueFrom(this.adminApiService.getScheduleById(this.selectedSchedule.id)))
+              ?.data ?? null
+          );
         await firstValueFrom(
-          this.adminApiService.updateSchedule(this.selectedSchedule.id, payload)
+          this.adminApiService.updateSchedule(
+            this.selectedSchedule.id,
+            toScheduleItemUpdatePayload(payload, carried.seatingCapacity)
+          )
         );
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
