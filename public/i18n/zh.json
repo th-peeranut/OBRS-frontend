@@ -490,6 +490,7 @@
     "BANK_SEARCH_EMPTY": "未找到匹配的银行",
     "RETRY_BANK_LIST": "重试",
     "ACCOUNT_NUMBER": "账号",
+    "ACCOUNT_NUMBER_NEEDS_BANK": "请先选择银行，此栏随后开放填写",
     "PROMPTPAY_ID": "PromptPay 账号 — 10位手机号或13位身份证号",
     "ERROR": {
       "REQUIRED": "此字段为必填项",

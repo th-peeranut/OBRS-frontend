@@ -228,9 +228,15 @@ describe('AppRefundDestinationFieldsComponent (OBRS-286)', () => {
   });
 
   describe('account number grouping (OBRS-1465)', () => {
-    /** Opens bank_account mode and returns the account-number input. */
+    /** Opens bank_account mode, picks a bank, and returns the account-number
+     * input. The bank is not scenery: OBRS-1499 keeps the field disabled until
+     * one is chosen, so without it these tests would describe a state the
+     * browser can no longer reach. `004` has no row of its own in
+     * `GROUPS_BY_BANK_CODE`, so the default 3-1-5-1 is still what is exercised. */
     function accountNumberInput(): HTMLInputElement {
       openBankAccountMode();
+      component.formGroup.get('bank')?.setValue('004');
+      fixture.detectChanges();
       return fixture.nativeElement.querySelector('#rdf-account-number') as HTMLInputElement;
     }
 
@@ -302,6 +308,29 @@ describe('AppRefundDestinationFieldsComponent (OBRS-286)', () => {
       fixture.detectChanges();
 
       expect(component.formGroup.get('accountNumber')?.touched).toBeTrue();
+    });
+  });
+
+  describe('the account-number field waits for a bank (OBRS-1499)', () => {
+    it('stays shut, and says why, while no bank is chosen (AC-1, AC-2)', () => {
+      openBankAccountMode();
+
+      const input = fixture.nativeElement.querySelector('#rdf-account-number') as HTMLInputElement;
+      expect(input.disabled).toBeTrue();
+      // A grey box with no reason on it is the failure this AC exists to stop.
+      expect(fixture.nativeElement.querySelector('.rdf-hint')).not.toBeNull();
+    });
+
+    it('opens the moment a bank is picked from the list, and drops the hint', () => {
+      const bank = openBankAccountMode();
+      bank.dispatchEvent(new Event('focus'));
+      fixture.detectChanges();
+      fixture.debugElement.queryAll(By.css('.rdf-bank-option'))[1].nativeElement.click();
+      fixture.detectChanges();
+
+      const input = fixture.nativeElement.querySelector('#rdf-account-number') as HTMLInputElement;
+      expect(input.disabled).toBeFalse();
+      expect(fixture.nativeElement.querySelector('.rdf-hint')).toBeNull();
     });
   });
 });
