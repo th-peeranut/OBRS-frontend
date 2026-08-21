@@ -541,7 +541,8 @@
       "PARCEL_SHARE_CONFIG": "包裹收益分成",
       "DRIVER_CASH_RATES": "司机现金费率",
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "取消与改签",
-      "NOTIFICATION_MESSAGES": "通知消息"
+      "NOTIFICATION_MESSAGES": "通知消息",
+      "OPERATIONS_CONFIG": "运营"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -1749,6 +1750,48 @@
         "FAILED": "交还政策失败,未做任何更改。"
       }
     },
+    "OPERATIONS_CONFIG": {
+      "SUBTITLE": "设置您自己的运营参数——留座时间、未乘车(no-show)截止时间、以及座位即将订满的提醒阈值。尚未设置的项目将使用平台默认值。",
+      "LOAD_FAILED": "无法加载运营设置。",
+      "FORBIDDEN": "您没有权限访问此设置——此页面仅限企业主使用。",
+      "STATE": {
+        "ALL_DEFAULT": "以下全部为平台默认值,您尚未自行设置任何一项。",
+        "MIXED": "您已自行设置 4 项中的 {{count}} 项,其余仍使用平台默认值。",
+        "ALL_CUSTOM": "全部 4 项均为您自己的设置,不再跟随平台默认值。"
+      },
+      "SOURCE": {
+        "DEFAULT": "平台默认值",
+        "CUSTOM": "您的设置",
+        "ARIA": "数值来源:{{source}}"
+      },
+      "GROUP": {
+        "HOLD": "留座与付款",
+        "BOARDING": "上车",
+        "ALERT": "提醒"
+      },
+      "SEAT_RESERVATION_MINUTES_HELPER": "客户下单过程中,系统为其保留所选座位、直到释放前的时长。此值不追溯——正在保留座位的订单会沿用开始时的数值,直到到期。",
+      "RESCHEDULE_PAYMENT_TIMEOUT_MINUTES_HELPER": "客户申请改签后,需在多长时间内补齐票价差额,否则申请将被取消。此值在下一次 scheduler 运行时立即生效。",
+      "NO_SHOW_CUTOFF_MINUTES_HELPER": "发车后乘客仍可上车的时长,超过此时长车票将被记录为未乘车(no-show)。此值在下一次 scheduler 运行时立即生效,并与服务条款页面向客户公布的数字相同。",
+      "NEAR_FULL_ALERT_THRESHOLD_PERCENT_HELPER": "座位占用达到多少百分比时触发即将订满的提醒。此值在下一次 scheduler 运行时立即生效。",
+      "NO_SHOW_MONEY_WARNING": "被记录为未乘车(no-show)的车票概不退款,且此数字正是服务条款页面向客户公布的确切条件——更改此值也会改变客户所看到的内容。",
+      "NEAR_FULL_100_WARNING": "不能设为 100,因为 100% 意味着提醒将永远不会触发——因此此字段的上限为 99。",
+      "TAKEOVER_WARNING": "保存将把全部 4 项写为您自己的设置。其余 {{count}} 项目前仍显示\"平台默认值\",此后将不再跟随平台变化,只有您在此处修改时才会改变。",
+      "SAVE_CONFIRM_TITLE": "对全部 4 项使用您自己的设置?",
+      "SAVE_CONFIRM_TEXT": "全部 4 项都将变为您的设置,其中包含您未修改的 {{count}} 项,并将不再跟随平台默认值。您可以随时点击\"改用平台默认值\"恢复。",
+      "SAVE_CONFIRM_BTN": "保存为我的设置",
+      "SAVE_REJECTED": "服务器拒绝了此设置,未保存任何内容。",
+      "RESET": {
+        "TITLE": "改用平台默认值",
+        "BODY": "将全部 4 项交还平台默认值。此后每当平台默认值变动,您的设置也随之变动,直到您再次自行设置。",
+        "BTN": "改用平台默认值",
+        "RUNNING": "正在交还…",
+        "CONFIRM_TITLE": "要把设置交还给平台吗?",
+        "CONFIRM_TEXT": "各项的追溯效果并不相同——留座时间不追溯(正在保留座位的订单会沿用当前数值直至到期),其余 3 项将在下一次 scheduler 运行时立即生效。",
+        "CONFIRM_BTN": "改用平台默认值",
+        "DONE": "已恢复使用平台默认值。",
+        "FAILED": "交还设置失败,未做任何更改。"
+      }
+    },
     "CONFIG_CHANGE_HISTORY": {
       "SUBTITLE": "查看所有系统设置的变更历史,包括修改人和时间",
       "TABLE_TITLE": "变更记录",
@@ -1824,6 +1867,7 @@
         "REVENUE_SHARE": "资金与分成",
         "NOTIFICATIONS": "通知",
         "SEATING": "座位与车辆",
+        "OPERATIONS": "运营",
         "SYSTEM": "系统"
       },
       "UNSAVED_CHANGES_TITLE": "放弃未保存的更改？",
@@ -2993,7 +3037,7 @@
       "CONTENT": "&emsp;&emsp;2. 更改乘车日期\n      <br />&emsp;&emsp;&emsp;&emsp;• 须在班车从始发站开出前不少于 {{rescheduleWindowHours}} 小时办理改签。\n      <br />&emsp;&emsp;&emsp;&emsp;• 必须指定新的乘车日期，且须在办理之日起 {{rescheduleMaxDaysAhead}} 天之内——本公司不提供不定期票。\n      <br />&emsp;&emsp;&emsp;&emsp;• {{rescheduleCountRule}}\n      <br />&emsp;&emsp;&emsp;&emsp;• 改签手续费每座位 {{rescheduleFeeLateThb}} 泰铢，每次改签均收取，无论提前多久办理。\n      <br />&emsp;&emsp;&emsp;&emsp;• 新旧班次之间的票价差额按实际票价计算，需补缴或退还。\n      <br />&emsp;&emsp;&emsp;&emsp;• 改签可通过3个渠道办理：本公司网站\"我的订单\"栏目 · 所有3个站的售票处 · https://www.facebook.com/nj.phuyaipu\n      <br />&emsp;&emsp;3. 重印票据分为两种情况：\n      <br />&emsp;&emsp;&emsp;&emsp;• 收费重印：票据丢失、撕毁、遗忘，或在其他站购买和打印的票据等。\n      <br />&emsp;&emsp;&emsp;&emsp;• 免费重印：通过网络渠道购买的票据，或交易期间打印机故障、停电、系统故障等。\n      <br />&emsp;&emsp;4. 退票与退款\n      <br />&emsp;&emsp;&emsp;&emsp;• 乘客可自行通过网站退票，无需说明理由，也无需提交任何证明文件。\n      <br />&emsp;&emsp;&emsp;&emsp;• 在班车从始发站开出前超过 {{earlyWindowHours}} 小时退票，退还票价的 {{refundPercentEarly}}%。\n      <br />&emsp;&emsp;&emsp;&emsp;• 在开出前 {{cancelWindowHours}} 至 {{earlyWindowHours}} 小时之间退票，退还票价的 {{refundPercentLate}}%。\n      <br />&emsp;&emsp;&emsp;&emsp;• 距开出时间不足 {{cancelWindowHours}} 小时时，将无法退票。\n      <br />&emsp;&emsp;&emsp;&emsp;• 也可在售票处办理退票，适用与网站退票完全相同的时间条件和退款比例。\n      <br />&emsp;&emsp;5. 票价优惠\n      <br />&emsp;&emsp;&emsp;&emsp;• 往返优惠——在同一订单中预订回程时由系统自动计算。\n      <br />&emsp;&emsp;&emsp;&emsp;• 儿童票价优惠——请在售票点咨询并购票。",
       "SEE_REFUND_POLICY": "阅读完整退款政策",
       "SEE_PARCEL_POLICY": "阅读包裹运输条款",
-      "TRAVEL_CONDITIONS": "<br />&emsp;&emsp;&emsp;&emsp;乘客乘车条件\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;为保障您的权益，请阅读以下乘车条件：\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1. 乘客须遵守佛历2522年（1979年）《陆路运输法》、部颁条例及其他相关运输法规。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2. 乘客须遵守本公司的运输条件，并已知悉并接受此处所载的乘客乘车公告。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;3. 乘客须做好准备，并在车票所示的发车时间之前到达上车地点。班车准时发出；乘客迟于该发车时间超过10分钟到达的，将被记录为未乘车（no-show）。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;4. 乘客随身携带上车的行李中，不得含有易燃物品、宠物、违法物品、军用武器、气味浓烈的食物、内含液体的物品、易碎物品、包装不当的物品，或体积过大、过重而不适宜运输的物品。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;5. 本公司保留在不事先通知的情况下变更不予接受的行李类别的权利；如发生损坏，本公司不承担责任，损失由乘客自行承担。第4项与第5项仅适用于乘客随身携带上车的行李；另行支付运费的托运包裹适用另一份包裹运输条款。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;6. 承运人对因延误、不可控事件或物品自身变质所造成的乘客或行李损失不承担责任等。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;7. 乘客未在约定车票所载日期及时间乘车的，视为放弃该次乘车权利。",
+      "TRAVEL_CONDITIONS": "<br />&emsp;&emsp;&emsp;&emsp;乘客乘车条件\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;为保障您的权益，请阅读以下乘车条件：\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1. 乘客须遵守佛历2522年（1979年）《陆路运输法》、部颁条例及其他相关运输法规。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2. 乘客须遵守本公司的运输条件，并已知悉并接受此处所载的乘客乘车公告。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;3. 乘客须做好准备，并在车票所示的发车时间之前到达上车地点。班车准时发出；乘客迟于该发车时间超过{{noShowCutoffMinutes}}分钟到达的，将被记录为未乘车（no-show）。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;4. 乘客随身携带上车的行李中，不得含有易燃物品、宠物、违法物品、军用武器、气味浓烈的食物、内含液体的物品、易碎物品、包装不当的物品，或体积过大、过重而不适宜运输的物品。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;5. 本公司保留在不事先通知的情况下变更不予接受的行李类别的权利；如发生损坏，本公司不承担责任，损失由乘客自行承担。第4项与第5项仅适用于乘客随身携带上车的行李；另行支付运费的托运包裹适用另一份包裹运输条款。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;6. 承运人对因延误、不可控事件或物品自身变质所造成的乘客或行李损失不承担责任等。\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;7. 乘客未在约定车票所载日期及时间乘车的，视为放弃该次乘车权利。",
       "RESCHEDULE_COUNT_UNLIMITED": "同一订单可无限次改签。",
       "RESCHEDULE_COUNT_LIMITED": "同一订单最多可改签 {{rescheduleMaxCount}} 次。"
     },
@@ -3037,7 +3081,7 @@
     "ETICKET_TITLE": "获取电子车票",
     "ETICKET_TEXT": "付款确认后，系统将自动签发电子车票。您可在确认页面查看，之后也可在预订记录中找到。登车前请向工作人员出示电子车票（打印版或手机版）。",
     "TIPS_TITLE": "出行前须知",
-    "TIP_1": "车辆按车票上标注的时间发车。若您在该发车时间后超过10分钟才到达，车票将被记录为未乘车（no-show）。",
+    "TIP_1": "车辆按车票上标注的时间发车。若您在该发车时间后超过{{noShowCutoffMinutes}}分钟才到达，车票将被记录为未乘车（no-show）。",
     "TIP_2": "如班次延误，我们会根据您的通知设置，通过短信和电子邮件告知新的发车时间。",
     "TIP_3": "请携带与车票上乘客姓名一致的有效带照片证件。",
     "TIP_4": "请保存好您的预订编号，以便需要时联系客服。",

@@ -4211,3 +4211,22 @@ Verified independently, not taken on report: mutating the two constants back to 
 the 3 new specs red (measured, `ng test --include` on the 3 files: 69 SUCCESS at 2/60, 3 FAILED at
 4/30) — so the `jasmine.clock().mockDate` pin at 21:00 really does reach `dayjs()`, and the tests
 are falsifiable. Full suite `TOTAL: 5715 SUCCESS`; `npm run test:i18n` en=th=zh=3133.
+
+## 2026-08-21 — Scrutinize self-fix (OBRS-703): TIP_1 needed its own i18n gate
+The card removed a hardcoded "10" from TWO customer-facing no-show strings and
+made both interpolate `{{noShowCutoffMinutes}}`:
+- `POLICY.BUSINESS.TRAVEL_CONDITIONS` (business-policy) — already protected: it
+  is in `BUSINESS_POLICY_FINGERPRINT_KEYS`, so any text change (incl.
+  re-hardcoding) breaks the fingerprint gate.
+- `HOW_TO_BOOK.TIP_1` (how-to-book) — had NO regression guard. The component
+  spec uses a FIXTURE placeholder, so it proves interpolation works but never
+  sees the real en/th/zh strings; i18n-parity only checked key COUNT, not
+  content. A dev could type "10 minutes" back and every test/gate stayed green
+  → the exact OBRS-620/AC-10 lie returns silently.
+Fix: added a per-locale placeholder gate in `scripts/check-i18n-parity.mjs`
+(mirrors the existing SALES_CHANNELS/REFUND.RATES `REQUIRED_*_PLACEHOLDERS`
+idiom) asserting `HOW_TO_BOOK.TIP_1` contains `{{noShowCutoffMinutes}}` in all
+three files. Verified with a positive+negative control (green normally; fails
+with the exact message when "10" is typed back; green when restored).
+Lesson: when a value is de-hardcoded in i18n, every string that carried it needs
+a content gate — a component spec with a fixture placeholder is NOT that gate.

@@ -112,6 +112,23 @@ for (const lang of LANGS) {
       );
     }
   }
+  // OBRS-703 AC-10: HOW_TO_BOOK.TIP_1's no-show grace period must interpolate
+  // {{noShowCutoffMinutes}} from GET /api/operations-policy, never be typed
+  // back as a literal (the OBRS-620 defect this card removed). Its sibling
+  // POLICY.BUSINESS.TRAVEL_CONDITIONS is guarded by the business-policy
+  // fingerprint (BUSINESS_POLICY_FINGERPRINT_KEYS below); TIP_1 lives outside
+  // that ledger, so without its own gate re-hardcoding "10 minutes" here would
+  // pass every other check -- exactly the silent regression AC-10 forbids.
+  const tip1 = json?.HOW_TO_BOOK?.TIP_1;
+  if (typeof tip1 !== 'string') {
+    problems.push(
+      `[${lang}] HOW_TO_BOOK.TIP_1 is missing or not a string -- the how-to-book page renders the no-show cutoff from live config and cannot fall back (OBRS-703)`
+    );
+  } else if (!tip1.includes('{{noShowCutoffMinutes}}')) {
+    problems.push(
+      `[${lang}] HOW_TO_BOOK.TIP_1 is missing the {{noShowCutoffMinutes}} placeholder -- the no-show cutoff must interpolate from GET /api/operations-policy, never be typed in as a literal (OBRS-703 AC-10)`
+    );
+  }
 }
 
 // 3b) OBRS-658 AC 2 + AC 6 (ADR-0125): the booking terms must stay tied to a published version,
@@ -232,6 +249,39 @@ const BUSINESS_POLICY_LEDGER = [
     effectiveDate: '2026-08-28',
     worsensTerms: true,
     fingerprint: '0003a80bd49694ca0475cba3225c4641c4c4ca0571b6c6f7b8a5db5d48cb299c',
+  },
+  {
+    // OBRS-703 AC-10. Item 3 of TRAVEL_CONDITIONS ("...more than 10 minutes
+    // after that departure time...") stopped being a literal "10" and now
+    // interpolates {{noShowCutoffMinutes}} from the PUBLIC
+    // GET /api/operations-policy endpoint -- the strictest (lowest) no-show
+    // cutoff across every owner. Same defect shape gate 3 above already
+    // guards for SALES_CHANNELS (OBRS-564): the number was typed into i18n
+    // and could silently go wrong the moment an owner's real cutoff diverged
+    // from the literal "10" this page had quoted since 1.0.
+    //
+    // worsensTerms: false. The number itself is unchanged today (an owner who
+    // has never overridden noShowCutoffMinutes still gets 10), and going
+    // forward the page can only ever UNDERSTATE the grace period relative to
+    // any individual owner's true cutoff (it renders the STRICTEST value
+    // platform-wide, never the platform default) -- so the worst case for a
+    // customer is arriving earlier than strictly necessary, not losing a
+    // ticket the old hardcoded "10" would have told them they still had time
+    // to catch. A wording fix that can only make the promise MORE
+    // conservative is not a worsening of what a ticket holder relied on.
+    //
+    // ⚠️ effectiveDate is NOT publishedOn, even though worsensTerms is false --
+    // same forced gap as 1.3's own comment above: the ordering rule
+    // (`effectiveDate` must come strictly after the PREVIOUS entry's) is
+    // unconditional, and 1.3 is not itself in force until 2026-08-28. 1.4
+    // cannot take effect before the version ahead of it does, so 2026-08-29
+    // is the earliest date available while 1.3 stands, not a chosen notice
+    // period.
+    version: '1.4',
+    publishedOn: '2026-08-21',
+    effectiveDate: '2026-08-29',
+    worsensTerms: false,
+    fingerprint: '07a4da3484a127787b275070d4e85298242869b68ae182dbc1954356620fabe1',
   },
 ];
 

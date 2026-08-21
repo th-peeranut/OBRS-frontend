@@ -92,6 +92,12 @@ const ROLES_BEFORE_OBRS_702: Record<string, readonly string[]> = {
   // system-settings-notification-messages-routes.spec.ts and the
   // review-queue/detail page components' own AC5 doc comments.
   'notification-messages': ['admin', 'owner'],
+  // OBRS-703: another NEW tab, never a standalone route — same discipline.
+  // Matches the backend owner controller
+  // (/private/owner/configs/operations, hasRole('OWNER'), ROLE_GRANTS admits
+  // ADMIN) — see OperationsConfigPageComponent's own 403 handling for what
+  // happens when an admin clicks in anyway.
+  operations: ['owner'],
 };
 
 describe('OBRS-702 SystemSettingsPageComponent — tab strip', () => {

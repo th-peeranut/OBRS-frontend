@@ -4,6 +4,7 @@ import { forkJoin, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { BookingPolicyService } from '../../services/booking-policy/booking-policy.service';
 import { CancellationPolicyService } from '../../services/cancellation-policy/cancellation-policy.service';
+import { OperationsPolicyService } from '../../services/operations-policy/operations-policy.service';
 import {
   ReschedulePolicyDto,
   ReschedulePolicyService,
@@ -26,6 +27,12 @@ export interface BusinessPolicyParams {
   refundPercentLate: string;
   /** An already-translated sentence, not a number -- see rescheduleCountRule below. */
   rescheduleCountRule: string;
+  /** OBRS-703 AC-10: item 3 of TRAVEL_CONDITIONS used to hardcode this as "10"
+   * in all three locale files -- an owner who set their own no-show cutoff
+   * left the page announcing a number that was no longer true. Read from the
+   * PUBLIC /api/operations-policy endpoint (OperationsPolicyService), same
+   * "never hardcoded again" rule as every other value on this page. */
+  noShowCutoffMinutes: number;
 }
 
 // OBRS-564: policy item 1 ("Ticket sales are divided into 2 types") used to
@@ -47,10 +54,17 @@ export interface BusinessPolicyParams {
 //   GET /api/booking-policy       -> advance cap + cutoff        (item 1)
 //   GET /api/reschedule-policy    -> window, horizon, fee, cap   (item 2)
 //   GET /api/cancellation-policy  -> window, boundary, 2 rates   (item 4)
+//   GET /api/operations-policy    -> no-show cutoff              (item 3, TRAVEL_CONDITIONS)
 //
-// forkJoin, not three independent subscriptions: the terms are one document and
+// forkJoin, not four independent subscriptions: the terms are one document and
 // a half-rendered set of them is a worse answer than the inline error, because a
 // customer cannot tell which half is missing. One failure fails the block.
+//
+// OBRS-703 AC-10 added the fourth call. TRAVEL_CONDITIONS (item 3) moved INSIDE
+// the policyParams gate as part of that fix -- it used to sit outside because it
+// carried no config value; now it carries the no-show cutoff, so an outage has
+// to hide it exactly like items 1/2/4 rather than announce a number that failed
+// to load.
 @Component({
     selector: 'app-business-policy',
     templateUrl: './business-policy.component.html',
@@ -88,6 +102,7 @@ export class BusinessPolicyComponent implements OnInit, OnDestroy {
     private readonly bookingPolicyService: BookingPolicyService,
     private readonly cancellationPolicyService: CancellationPolicyService,
     private readonly reschedulePolicyService: ReschedulePolicyService,
+    private readonly operationsPolicyService: OperationsPolicyService,
     private readonly translate: TranslateService
   ) {}
 
@@ -124,14 +139,16 @@ export class BusinessPolicyComponent implements OnInit, OnDestroy {
       booking: this.bookingPolicyService.getBookingPolicy(),
       reschedule: this.reschedulePolicyService.getReschedulePolicy(),
       cancellation: this.cancellationPolicyService.getCancellationPolicy(),
+      operations: this.operationsPolicyService.getOperationsPolicy(),
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ({ booking, reschedule, cancellation }) => {
+        next: ({ booking, reschedule, cancellation, operations }) => {
           const b = booking.data;
           const r = reschedule.data;
           const c = cancellation.data;
-          if (b && r && c) {
+          const o = operations.data;
+          if (b && r && c && o) {
             this.lastRescheduleMaxCount = r.rescheduleMaxCount;
             this.policyParams = {
               maxAdvanceDays: b.maxAdvanceDays,
@@ -149,6 +166,7 @@ export class BusinessPolicyComponent implements OnInit, OnDestroy {
               refundPercentEarly: BusinessPolicyComponent.toPercent(c.refundRateEarly),
               refundPercentLate: BusinessPolicyComponent.toPercent(c.refundRateLate),
               rescheduleCountRule: this.rescheduleCountRule(r.rescheduleMaxCount),
+              noShowCutoffMinutes: o.noShowCutoffMinutes,
             };
           } else {
             this.policyLoadFailed = true;
