@@ -169,6 +169,11 @@ export interface AdminVehicleTypeDto {
   slug: string;
   code?: string;
   totalSeats?: number;
+  /** OBRS-1477 (ADR-0137): the vehicle type's standing commercial cap — how many of
+   * its `totalSeats` may actually be sold. `null`/absent = no cap. NOT interchangeable
+   * with `totalSeats`, which stays the physical seat map and is what a per-trip
+   * override is validated against. */
+  sellableSeats?: number | null;
   status?: string | AdminStatusDto;
   display?: AdminTranslationCollection;
   translations?: AdminTranslationCollection;
