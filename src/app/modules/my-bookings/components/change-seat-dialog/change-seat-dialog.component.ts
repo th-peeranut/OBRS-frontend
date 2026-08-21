@@ -12,6 +12,7 @@ import { combineLatest, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ChangeSeatAvailability, ChangeSeatTicket } from '../../../../shared/interfaces/change-seat.interface';
 import { normalizeSeatAssignments, toSeatLabel } from '../../../../shared/lib/seat-number';
+import { isTerminalChangeSeatError } from '../../../../shared/lib/change-seat-error';
 import {
   closeChangeSeatDialog,
   confirmChangeSeat,
@@ -21,6 +22,7 @@ import {
 import {
   selectChangeSeatAvailability,
   selectChangeSeatAvailabilityError,
+  selectChangeSeatAvailabilityErrorCode,
   selectChangeSeatAvailabilityLoading,
   selectChangeSeatConfirmError,
   selectChangeSeatSubmitting,
@@ -54,6 +56,11 @@ export class ChangeSeatDialogComponent implements OnInit, OnDestroy {
   availability: ChangeSeatAvailability | null = null;
   availabilityError: string | null = null;
   availabilityLoading = false;
+  /** True when `availabilityError` came from an errorCode that can never
+   * clear on a retry (`open-seating`/`max-count`/`window-closed`/...), so the
+   * error step offers Close instead of a Retry that always returns the same
+   * 400 (OBRS-1489). */
+  availabilityTerminal = false;
 
   tickets: ChangeSeatTicket[] = [];
   activeTicketIndex = 0;
@@ -128,6 +135,10 @@ export class ChangeSeatDialogComponent implements OnInit, OnDestroy {
           }
         }
       );
+
+    this.store
+      .pipe(select(selectChangeSeatAvailabilityErrorCode), takeUntil(this.destroy$))
+      .subscribe((errorCode) => (this.availabilityTerminal = isTerminalChangeSeatError(errorCode)));
 
     this.store
       .pipe(select(selectChangeSeatSubmitting), takeUntil(this.destroy$))
