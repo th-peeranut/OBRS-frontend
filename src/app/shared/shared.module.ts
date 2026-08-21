@@ -57,9 +57,6 @@ import { StationLoadErrorComponent } from './components/station-load-error/stati
 // OBRS-272: relocated here from `modules/admin/components/` — see the
 // directive's own doc comment for the module-cycle rationale.
 import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.directive';
-// OBRS-1464: the project's only keystroke-level charset filter — see the
-// census in docs/input-charset-census-2026-08-21.md for why there was none.
-import { DigitsOnlyDirective } from './directives/digits-only.directive';
 
 @NgModule({
   declarations: [
@@ -86,7 +83,6 @@ import { DigitsOnlyDirective } from './directives/digits-only.directive';
     ScheduleDelayNoticeComponent,
     StationLoadErrorComponent,
     AdminModalBackdropDirective,
-    DigitsOnlyDirective,
   ],
   imports: [
     CommonModule,
@@ -133,7 +129,6 @@ import { DigitsOnlyDirective } from './directives/digits-only.directive';
 
     // Directives
     AdminModalBackdropDirective,
-    DigitsOnlyDirective,
   ],
 })
 export class SharedModule {}

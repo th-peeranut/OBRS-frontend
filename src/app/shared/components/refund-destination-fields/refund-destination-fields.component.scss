@@ -154,6 +154,15 @@
   margin-top: 4px;
 }
 
+// OBRS-1499 — same shape as `.rdf-error`, muted instead of red: a locked field
+// waiting for the bank above it is not a mistake the user has made yet.
+.rdf-hint {
+  display: block;
+  color: var(--rdf-muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
 // OBRS-1463 — the bank picker's own popup. Same `--rdf-*` tokens as everything
 // above for the same reason (ADR-0032): it renders in both shells, so it may
 // not reach for `--admin-*` or the customer `.form-control` palette.
