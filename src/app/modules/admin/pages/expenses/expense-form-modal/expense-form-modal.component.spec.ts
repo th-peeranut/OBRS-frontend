@@ -2,7 +2,11 @@ import { SimpleChange } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { of, throwError } from 'rxjs';
 import { ExpenseFormModalComponent } from './expense-form-modal.component';
-import { ExpenseRow, VEHICLE_CENTRAL_SENTINEL } from '../expenses-page.mappers';
+import {
+  ExpenseRow,
+  EXPENSE_ITEM_PART_NONE_SENTINEL,
+  VEHICLE_CENTRAL_SENTINEL,
+} from '../expenses-page.mappers';
 import { createTranslateStub } from '../../../../../testing/test-stubs';
 
 const VEHICLE_ROW: ExpenseRow = {
@@ -22,6 +26,7 @@ const VEHICLE_ROW: ExpenseRow = {
   paidBy: 'Somchai',
   note: 'note',
   source: 'MANUAL',
+  items: [],
 };
 
 const CENTRAL_ROW: ExpenseRow = {
@@ -134,7 +139,7 @@ describe('ExpenseFormModalComponent', () => {
       expect((component as any).expenseForm.get('vehicleSelection').value).toBe(VEHICLE_CENTRAL_SENTINEL);
     });
 
-    it('sends all 9 fields on PUT', async () => {
+    it('sends all 10 fields on PUT, the bill lines included', async () => {
       const { component, adminApiServiceSpy } = makeComponent();
       openEdit(component, VEHICLE_ROW);
 
@@ -155,6 +160,10 @@ describe('ExpenseFormModalComponent', () => {
         receiptNo: 'RC-1',
         paidBy: 'Somchai',
         note: 'note',
+        // OBRS-1374: a bill with no breakdown sends an EMPTY list, never an omitted key -
+        // an omission would mean toExpensePayload had branched, and the server would read
+        // it the same way, which is exactly the ambiguity the explicit [] removes.
+        items: [],
       });
     });
   });
@@ -228,6 +237,7 @@ describe('ExpenseFormModalComponent', () => {
         receiptNo: null,
         paidBy: null,
         note: null,
+        items: [],
       });
     });
 
@@ -408,6 +418,131 @@ describe('ExpenseFormModalComponent', () => {
       await (component as any).submitExpense();
 
       expect(alertServiceSpy.error).toHaveBeenCalled();
+    });
+  });
+
+  // OBRS-1374 AC9
+  describe('bill lines repeater', () => {
+    function fillBill(component: ExpenseFormModalComponent, amount: number): void {
+      (component as any).expenseForm.patchValue({
+        vehicleSelection: '1',
+        category: 'REPAIR',
+        amount,
+        expenseDate: new Date(2026, 7, 21),
+      });
+    }
+
+    it('opens with NO lines - the breakdown is optional and never becomes mandatory (AC4)', () => {
+      const { component } = makeComponent();
+      openCreate(component);
+
+      expect((component as any).itemsArray.length).toBe(0);
+      expect((component as any).expenseForm.valid).toBeFalse();  // still missing the required fields
+    });
+
+    it('a new line starts on the "not a part" sentinel, so a blank part is expressible (AC3)', () => {
+      const { component } = makeComponent();
+      openCreate(component);
+
+      (component as any).addItem();
+
+      expect((component as any).itemsArray.at(0).get('part').value).toBe(EXPENSE_ITEM_PART_NONE_SENTINEL);
+    });
+
+    it('shows the running total and warns BEFORE save when the lines do not match the bill (AC5)', async () => {
+      const { component, adminApiServiceSpy, alertServiceSpy } = makeComponent();
+      openCreate(component);
+      fillBill(component, 3100);
+      (component as any).addItem();
+      (component as any).itemsArray.at(0).patchValue({ description: 'ผ้าเบรกหน้า', amount: 3150 });
+
+      expect((component as any).itemsTotal).toBe(3150);
+      expect((component as any).itemsTotalMismatch).toBeTrue();
+
+      await (component as any).submitExpense();
+
+      expect(adminApiServiceSpy.createExpense).not.toHaveBeenCalled();
+      expect(alertServiceSpy.warning).toHaveBeenCalled();
+    });
+
+    it('submits a four-line bill as ONE expense carrying four lines (AC1/AC9)', async () => {
+      const { component, adminApiServiceSpy } = makeComponent();
+      openCreate(component);
+      fillBill(component, 3100);
+      [
+        { part: 'BRAKE_PADS', description: 'ผ้าเบรกหน้า', amount: 1200 },
+        { part: 'BRAKE_FLUID', description: 'น้ำมันเบรก', amount: 400 },
+        { part: 'ENGINE_OIL', description: 'น้ำมันเครื่อง', amount: 900 },
+        { part: EXPENSE_ITEM_PART_NONE_SENTINEL, description: 'ค่าแรง', amount: 600 },
+      ].forEach((line, index) => {
+        (component as any).addItem();
+        (component as any).itemsArray.at(index).patchValue(line);
+      });
+
+      expect((component as any).itemsTotalMismatch).toBeFalse();
+
+      await (component as any).submitExpense();
+
+      expect(adminApiServiceSpy.createExpense).toHaveBeenCalledTimes(1);
+      const payload = adminApiServiceSpy.createExpense.calls.mostRecent().args[0];
+      expect(payload.amount).toBe(3100);
+      expect(payload.items.length).toBe(4);
+      expect(payload.items[3]).toEqual({
+        part: null,
+        description: 'ค่าแรง',
+        quantity: null,
+        unitPrice: null,
+        amount: 600,
+      });
+    });
+
+    it('removes the line the owner asked to remove, not the last one', () => {
+      const { component } = makeComponent();
+      openCreate(component);
+      (component as any).addItem();
+      (component as any).addItem();
+      (component as any).itemsArray.at(0).patchValue({ description: 'first', amount: 1 });
+      (component as any).itemsArray.at(1).patchValue({ description: 'second', amount: 2 });
+
+      (component as any).removeItem(0);
+
+      expect((component as any).itemsArray.length).toBe(1);
+      expect((component as any).itemsArray.at(0).get('description').value).toBe('second');
+    });
+
+    it('closing empties the repeater - a four-line bill must not leave rows behind for the next open', () => {
+      const { component } = makeComponent();
+      openEdit(component, {
+        ...VEHICLE_ROW,
+        amount: 900,
+        items: [
+          { lineNo: 1, part: 'ENGINE_OIL', description: 'น้ำมันเครื่อง', quantity: 1, unitPrice: 900, amount: 900 },
+        ],
+      });
+      expect((component as any).itemsArray.length).toBe(1);
+
+      (component as any).isOpen = false;
+      component.ngOnChanges({ isOpen: new SimpleChange(true, false, false) });
+      openCreate(component);
+
+      expect((component as any).itemsArray.length).toBe(0);
+    });
+
+    it('edit prefills the saved lines, and a saved line with no part comes back on the sentinel', () => {
+      const { component } = makeComponent();
+      openEdit(component, {
+        ...VEHICLE_ROW,
+        amount: 1800,
+        items: [
+          { lineNo: 1, part: 'BRAKE_PADS', description: 'ผ้าเบรกหน้า', quantity: 2, unitPrice: 600, amount: 1200 },
+          { lineNo: 2, part: '', description: 'ค่าแรง', quantity: null, unitPrice: null, amount: 600 },
+        ],
+      });
+
+      expect((component as any).itemsArray.length).toBe(2);
+      expect((component as any).itemsArray.at(1).get('part').value).toBe(EXPENSE_ITEM_PART_NONE_SENTINEL);
+      expect((component as any).itemsTotal).toBe(1800);
+      expect((component as any).itemsTotalMismatch).toBeFalse();
     });
   });
 });

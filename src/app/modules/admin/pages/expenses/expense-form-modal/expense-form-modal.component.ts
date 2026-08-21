@@ -7,27 +7,36 @@ import {
   Output,
   SimpleChanges,
 } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AdminApiService } from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import { trimmedRequiredValidator } from '../../../../../shared/validators/trimmed-required.validator';
+import { MAINTENANCE_PART_CODES } from '../../vehicles/vehicle-maintenance-plan/vehicle-maintenance-plan.mappers';
 import {
   Option,
+  ExpenseItemFormValue,
+  ExpenseItemRow,
   ExpenseRow,
+  EXPENSE_ITEM_PART_NONE_SENTINEL,
   VEHICLE_CENTRAL_SENTINEL,
+  expenseItemsTotal,
   toDateControlValue,
   toExpensePayload,
 } from '../expenses-page.mappers';
 import {
+  itemsTotalMatchesAmountValidator,
   nonNegativeAmountValidator,
   positiveAmountValidator,
   tooManyDecimalsValidator,
 } from './expense-form-modal.validators';
 
 const AMOUNT_MAX_DECIMALS = 2;
+
+// OBRS-1374 (schema.sql expense_items.description VARCHAR(255)).
+const ITEM_DESCRIPTION_MAX_LENGTH = 255;
 
 // Smart create/edit form modal (OBRS-685), mirroring VehicleFormModalComponent
 // (OBRS-261) / AppVehicleMaintenancePanelComponent's modal (OBRS-209). Owns
@@ -70,6 +79,12 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
   @Output() closed = new EventEmitter<void>();
 
   protected readonly VEHICLE_CENTRAL_SENTINEL = VEHICLE_CENTRAL_SENTINEL;
+  protected readonly ITEM_DESCRIPTION_MAX_LENGTH = ITEM_DESCRIPTION_MAX_LENGTH;
+  /** OBRS-1374 AC10: the part labels come from OBRS-1333's OWN i18n keys
+   * (`ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.*`). Minting a second set here would let the same
+   * code read as two different things on two screens. Rebuilt on every open so a language
+   * switch between opens is picked up. */
+  protected partOptions: Option[] = [];
   protected isSubmitting = false;
   protected readonly expenseForm: FormGroup;
 
@@ -103,7 +118,10 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
       receiptNo: ['', [Validators.maxLength(100)]],
       paidBy: ['', [Validators.maxLength(255)]],
       note: ['', [Validators.maxLength(500)]],
-    });
+      // OBRS-1374 AC4: starts EMPTY and may stay empty - a bill with no breakdown must save
+      // exactly as it did before this card.
+      items: this.formBuilder.array([]),
+    }, { validators: [itemsTotalMatchesAmountValidator] });
 
     // §4.1 field table: the instant `category` leaves 'OTHER', clear BOTH
     // the visible control's value AND its validator state in the same tick
@@ -137,12 +155,16 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
     }
 
     if (this.isOpen) {
+      this.partOptions = this.buildPartOptions();
       if (this.mode === 'edit' && this.selectedExpense) {
         this.initEditForm(this.selectedExpense);
       } else {
         this.initCreateForm();
       }
     } else {
+      // FormGroup.reset() blanks the controls a FormArray HOLDS, it does not remove them - a
+      // four-line bill would leave four empty rows behind for the next open. Clear it first.
+      this.itemsArray.clear();
       this.expenseForm.reset();
     }
   }
@@ -153,6 +175,70 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
 
   protected get showCategoryOtherLabel(): boolean {
     return this.expenseForm.get('category')?.value === 'OTHER';
+  }
+
+  protected get itemsArray(): FormArray {
+    return this.expenseForm.get('items') as FormArray;
+  }
+
+  /** OBRS-1374 AC9: what the lines add up to, shown live under the repeater. */
+  protected get itemsTotal(): number {
+    return expenseItemsTotal(this.itemsArray.getRawValue() as ExpenseItemFormValue[]);
+  }
+
+  /** OBRS-1374 AC9: the warning, and the reason submit is blocked. Deliberately NOT gated on
+   * dirty/touched like `isFieldInvalid` - an edit that opens on an already-mismatched bill must
+   * say so immediately, not wait for the owner to touch something. */
+  protected get itemsTotalMismatch(): boolean {
+    return this.expenseForm.hasError('itemsTotalMismatch');
+  }
+
+  protected addItem(): void {
+    this.itemsArray.push(this.buildItemGroup());
+  }
+
+  protected removeItem(index: number): void {
+    this.itemsArray.removeAt(index);
+  }
+
+  protected trackByIndex(index: number): number {
+    return index;
+  }
+
+  private buildItemGroup(item?: ExpenseItemRow): FormGroup {
+    return this.formBuilder.group({
+      // AC3: blank is a real answer (labour, service, sundry), so no required validator - the
+      // sentinel option is what lets an owner take a part back off a line.
+      part: [item?.part ? item.part : EXPENSE_ITEM_PART_NONE_SENTINEL],
+      description: [
+        item?.description ?? '',
+        [Validators.required, Validators.maxLength(ITEM_DESCRIPTION_MAX_LENGTH)],
+      ],
+      quantity: [item?.quantity ?? null, [positiveAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)]],
+      unitPrice: [item?.unitPrice ?? null, [nonNegativeAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)]],
+      amount: [
+        item?.amount ?? null,
+        [Validators.required, positiveAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)],
+      ],
+    });
+  }
+
+  private buildPartOptions(): Option[] {
+    return [
+      {
+        code: EXPENSE_ITEM_PART_NONE_SENTINEL,
+        label: this.translate.instant('ADMIN.EXPENSES.ITEMS.PART_NONE'),
+      },
+      ...MAINTENANCE_PART_CODES.map((code) => ({
+        code,
+        label: this.translate.instant(`ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.${code}`),
+      })),
+    ];
+  }
+
+  private setItems(items: ExpenseItemRow[]): void {
+    this.itemsArray.clear();
+    items.forEach((item) => this.itemsArray.push(this.buildItemGroup(item)));
   }
 
   /**
@@ -264,6 +350,7 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
       paidBy: '',
       note: '',
     });
+    this.setItems([]);
   }
 
   /**
@@ -309,5 +396,6 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
       paidBy: expense.paidBy,
       note: expense.note,
     });
+    this.setItems(expense.items ?? []);
   }
 }

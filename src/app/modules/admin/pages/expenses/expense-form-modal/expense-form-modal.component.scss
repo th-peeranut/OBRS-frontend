@@ -32,3 +32,51 @@
   font-size: 13px;
   font-weight: 600;
 }
+
+/* OBRS-1374: the bill-line repeater. One CSS grid per row so the columns line up down the
+   whole list; it collapses to stacked fields on a narrow screen, where a five-column row would
+   be unreadable. */
+.expense-items-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.expense-item-row {
+  display: grid;
+  grid-template-columns: 1.2fr 2fr 0.8fr 1fr 1fr auto;
+  gap: 0.5rem;
+  align-items: start;
+  margin-top: 0.5rem;
+}
+
+.expense-item-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Without this the inputs keep their intrinsic `size` width, overflow the grid cell and
+   the text scrolls out of sight behind the neighbouring column. */
+.expense-item-cell .admin-field,
+.expense-item-cell app-admin-dropdown {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.expense-item-remove {
+  justify-content: flex-end;
+}
+
+.expense-items-total {
+  margin: 0.75rem 0 0;
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .expense-item-row {
+    grid-template-columns: 1fr;
+  }
+}

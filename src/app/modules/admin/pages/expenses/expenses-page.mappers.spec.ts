@@ -14,6 +14,10 @@ import {
   toExpenseCategoryDisplay,
   toExpenseCategoryOptions,
   toExpensePayload,
+  toExpenseItemRow,
+  expenseItemsTotal,
+  expenseItemsMatchAmount,
+  EXPENSE_ITEM_PART_NONE_SENTINEL,
   toExpenseRow,
   toExpenseVehicleOptions,
   toOwnerOptions,
@@ -77,6 +81,7 @@ function makeRow(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     paidBy: '',
     note: '',
     source: 'MANUAL',
+    items: [],
     ...overrides,
   };
 }
@@ -329,6 +334,7 @@ describe('expenses-page.mappers', () => {
         receiptNo: null,
         paidBy: null,
         note: null,
+        items: [],
       });
     });
 
@@ -357,6 +363,7 @@ describe('expenses-page.mappers', () => {
         receiptNo: 'R-1',
         paidBy: 'Somchai',
         note: 'note',
+        items: [],
       });
     });
 
@@ -459,6 +466,61 @@ describe('expenses-page.mappers', () => {
       const copy = [...rows];
       filterExpensesByCategoryAndRange(rows, { category: 'FUEL', centralOnly: false, from: null, to: null });
       expect(rows).toEqual(copy);
+    });
+  });
+
+  // OBRS-1374
+  describe('bill lines (expense_items)', () => {
+    it('maps a line with no part to \'\' — "not a part" is a real answer, not missing data', () => {
+      const row = toExpenseItemRow({ id: 1, lineNo: 1, part: null, description: 'ค่าแรง', amount: 600 });
+      expect(row.part).toBe('');
+      expect(row.quantity).toBeNull();
+      expect(row.unitPrice).toBeNull();
+    });
+
+    it('translates the part sentinel back to a real null at the submit boundary', () => {
+      const payload = toExpensePayload({
+        ownerSelection: '',
+        vehicleSelection: '1',
+        category: 'REPAIR',
+        categoryOtherLabel: '',
+        amount: 1600,
+        vatAmount: null,
+        expenseDate: '2026-08-21',
+        receiptNo: '',
+        paidBy: '',
+        note: '',
+        items: [
+          { part: 'BRAKE_PADS', description: '  ผ้าเบรกหน้า  ', quantity: 2, unitPrice: 500, amount: 1000 },
+          { part: EXPENSE_ITEM_PART_NONE_SENTINEL, description: 'ค่าแรง', quantity: null, unitPrice: null, amount: 600 },
+        ],
+      });
+
+      expect(payload.items).toEqual([
+        { part: 'BRAKE_PADS', description: 'ผ้าเบรกหน้า', quantity: 2, unitPrice: 500, amount: 1000 },
+        { part: null, description: 'ค่าแรง', quantity: null, unitPrice: null, amount: 600 },
+      ]);
+    });
+
+    it('adds the lines up in satang, so float noise cannot invent a difference', () => {
+      // 0.1 + 0.2 is 0.30000000000000004 in a JS number. A naive reduce would report a
+      // mismatch of 4e-17 against a total the owner can see is identical.
+      const items = [
+        { part: '', description: 'a', quantity: null, unitPrice: null, amount: 0.1 },
+        { part: '', description: 'b', quantity: null, unitPrice: null, amount: 0.2 },
+      ];
+      expect(expenseItemsTotal(items)).toBe(0.3);
+      expect(expenseItemsMatchAmount(items, 0.3)).toBe(true);
+    });
+
+    it('no lines is never a mismatch — the child table is optional (AC4)', () => {
+      expect(expenseItemsMatchAmount([], 500)).toBe(true);
+      expect(expenseItemsMatchAmount(undefined, 500)).toBe(true);
+    });
+
+    it('lines that do not add up to the bill total ARE a mismatch', () => {
+      const items = [{ part: '', description: 'a', quantity: null, unitPrice: null, amount: 3150 }];
+      expect(expenseItemsMatchAmount(items, 3100)).toBe(false);
     });
   });
 });

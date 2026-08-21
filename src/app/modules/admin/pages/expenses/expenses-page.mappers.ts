@@ -1,5 +1,6 @@
 import {
   AdminExpenseDto,
+  AdminExpenseItemDto,
   AdminOwnerDto,
   AdminVehicleDto,
   CreateExpensePayload,
@@ -30,6 +31,16 @@ import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
  * needs an explicit "none" distinguishable from "not yet answered".
  */
 export const VEHICLE_CENTRAL_SENTINEL = 'CENTRAL_NONE';
+
+/**
+ * OBRS-1374: the same sentinel shape as `VEHICLE_CENTRAL_SENTINEL` above, for the same reason,
+ * on the bill-line `part` dropdown. "Not a part" is a REAL answer here (labour, service,
+ * sundry - AC3), and without an explicit option for it an owner who picked a part by mistake
+ * could never take it back: `app-admin-dropdown` has no clear affordance, only a placeholder
+ * that is unreachable once a value is set. Translated to a real `null` only in
+ * `toExpensePayload()`, at the submit boundary.
+ */
+export const EXPENSE_ITEM_PART_NONE_SENTINEL = 'PART_NONE';
 
 /** The 16 fixed `ExpenseCategory` enum codes (SA-locked contract) — a static
  * list, not a Lookup-API fetch, mirroring `promotions-page`'s
@@ -219,6 +230,32 @@ export interface ExpenseRow {
    * pre-OBRS-960 cached response) to `'MANUAL'` so it reads as the
    * pre-existing, unremarkable row shape. */
   source: 'FIELD' | 'MANUAL';
+  /** OBRS-1374: the bill's lines, in `lineNo` order. `[]` for the bills nobody broke down.
+   * Carried on the ROW because the edit modal opens synchronously from it (there is no
+   * second detail fetch), so a row without lines would silently drop them on the next save. */
+  items: ExpenseItemRow[];
+}
+
+/** OBRS-1374: one line of a bill as the table/modal reads it. `part` is `''` when the line is
+ * not a part at all - the template tests it directly rather than rendering a blank label. */
+export interface ExpenseItemRow {
+  lineNo: number;
+  part: string;
+  description: string;
+  quantity: number | null;
+  unitPrice: number | null;
+  amount: number;
+}
+
+export function toExpenseItemRow(dto: AdminExpenseItemDto): ExpenseItemRow {
+  return {
+    lineNo: dto.lineNo,
+    part: dto.part ?? '',
+    description: dto.description ?? '',
+    quantity: dto.quantity ?? null,
+    unitPrice: dto.unitPrice ?? null,
+    amount: dto.amount,
+  };
 }
 
 /**
@@ -266,6 +303,7 @@ export function toExpenseRow(
     paidBy: dto.paidBy ?? '',
     note: dto.note ?? '',
     source: dto.source ?? 'MANUAL',
+    items: (dto.items ?? []).map(toExpenseItemRow),
   };
 }
 
@@ -292,6 +330,46 @@ export interface ExpenseFormValue {
   receiptNo: string | null;
   paidBy: string | null;
   note: string | null;
+  /** OBRS-1374: the repeater's rows. Absent when the caller has no lines at all. */
+  items?: ExpenseItemFormValue[];
+}
+
+/** OBRS-1374: one repeater row, raw. Every numeric control can hold `''` because an emptied
+ * number input reports one - that is what `toNullableNumber` below is for. */
+export interface ExpenseItemFormValue {
+  part: string;
+  description: string | null;
+  quantity: number | string | null;
+  unitPrice: number | string | null;
+  amount: number | string | null;
+}
+
+/**
+ * OBRS-1374 AC5: what the lines add up to, in whole satang, rounded once at the end.
+ *
+ * Money in a JS `number` is the reason this is a function and not an inline `reduce`: the
+ * owner types 0.1 and 0.2 and gets 0.30000000000000004, which would show a difference of
+ * 4e-17 against a total that is visibly identical. Rounding to satang before comparing is what
+ * makes "these agree" mean what the owner sees on screen.
+ */
+export function expenseItemsTotal(items: ExpenseItemFormValue[] | undefined): number {
+  const satang = (items ?? []).reduce(
+    (sum, item) => sum + Math.round((toNullableNumber(item.amount) ?? 0) * 100),
+    0
+  );
+  return satang / 100;
+}
+
+/** OBRS-1374 AC5: the same comparison the backend makes, made here first so the owner is told
+ * BEFORE they press save rather than by a 400 afterwards. No lines is never a mismatch (AC4). */
+export function expenseItemsMatchAmount(
+  items: ExpenseItemFormValue[] | undefined,
+  amount: number | string | null
+): boolean {
+  if (!items || items.length === 0) {
+    return true;
+  }
+  return Math.round(expenseItemsTotal(items) * 100) === Math.round((toNullableNumber(amount) ?? 0) * 100);
 }
 
 /** "YYYY-MM-DD" string <-> local calendar Date — mirrors
@@ -367,6 +445,16 @@ export function toExpensePayload(formValue: ExpenseFormValue): CreateExpensePayl
     receiptNo: toNullableTrimmedString(formValue.receiptNo),
     paidBy: toNullableTrimmedString(formValue.paidBy),
     note: toNullableTrimmedString(formValue.note),
+    // OBRS-1374: the ONE place the part sentinel becomes a real `null`, mirroring the vehicle
+    // sentinel above. An empty repeater sends `[]`, which the backend reads as "no breakdown".
+    items: (formValue.items ?? []).map((item) => ({
+      part:
+        !item.part || item.part === EXPENSE_ITEM_PART_NONE_SENTINEL ? null : item.part,
+      description: String(item.description ?? '').trim(),
+      quantity: toNullableNumber(item.quantity),
+      unitPrice: toNullableNumber(item.unitPrice),
+      amount: toNullableNumber(item.amount) ?? 0,
+    })),
   };
 }
 
