@@ -13,9 +13,11 @@ import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import {
   Option,
+  ReturnStopOption,
   StopDetailForm,
   StopRow,
   filterStopRows,
+  toReturnStopOptions,
   toStopDetailForm,
   toStopRow,
   toStopUpdatePayload,
@@ -75,10 +77,14 @@ export class StopsPageComponent implements OnInit, OnDestroy {
   protected isPhotoBusy = false;
 
   protected provinceOptions: Option[] = [];
+  // OBRS-1481: rebuilt in applyLocalization AND whenever a stop is opened, because the list
+  // depends on the pin currently saved on that stop (see toReturnStopOptions, AC-7).
+  protected returnStopOptions: ReturnStopOption[] = [];
   protected statusOptions: Option[] = [];
   protected stopTypeOptions: Option[] = [];
 
   private rawStops: AdminStopSummaryDto[] = [];
+  private rawReturnStops: AdminStopSummaryDto[] = [];
   private rawProvinces: AdminStopLookupDto[] = [];
   private rawLookups: AdminLookupDto[] = [];
   private readonly subscriptions = new Subscription();
@@ -117,12 +123,14 @@ export class StopsPageComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
     try {
-      const [stops, provinces, lookups] = await Promise.all([
+      const [stops, provinces, lookups, returnStops] = await Promise.all([
         firstValueFrom(this.adminApiService.getStopsForAdmin()),
         firstValueFrom(this.adminApiService.getProvincesForAdmin()),
         firstValueFrom(this.adminApiService.getLookups()),
+        firstValueFrom(this.adminApiService.getReturnStopOptions()),
       ]);
       this.rawStops = stops.data ?? [];
+      this.rawReturnStops = returnStops.data ?? [];
       this.rawProvinces = provinces.data ?? [];
       this.rawLookups = lookups.data ?? [];
       this.applyLocalization();
@@ -181,6 +189,9 @@ export class StopsPageComponent implements OnInit, OnDestroy {
       // first (now stale) response overwrite the second row's modal.
       if (this.isFormModalOpen && this.pendingStopId === id) {
         this.selected = toStopDetailForm(response.data);
+        // OBRS-1481: the choices depend on THIS stop's saved pin, so they are rebuilt here
+        // rather than only on load - a pin no longer eligible must still be on the list.
+        this.refreshReturnStopOptions();
       }
     } catch (error) {
       // Under the old inline layout, a failed fetch left `selected` null with just an
@@ -300,6 +311,18 @@ export class StopsPageComponent implements OnInit, OnDestroy {
 
     this.statusOptions = this.lookupOptions('stop_status', locale);
     this.stopTypeOptions = this.lookupOptions('stop_type', locale);
+    this.refreshReturnStopOptions();
+  }
+
+  /** OBRS-1481: the list carries the currently saved pin even when it is no longer eligible,
+   *  so it has to be rebuilt whenever either the locale or the open stop changes. */
+  private refreshReturnStopOptions(): void {
+    this.returnStopOptions = toReturnStopOptions(
+      this.rawReturnStops,
+      this.rawStops,
+      this.currentLocale,
+      this.selected?.returnStopId ?? null
+    );
   }
 
   private lookupOptions(category: string, locale: string): Option[] {
