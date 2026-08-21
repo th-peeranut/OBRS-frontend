@@ -153,3 +153,57 @@
   font-size: 12px;
   margin-top: 4px;
 }
+
+// OBRS-1463 — the bank picker's own popup. Same `--rdf-*` tokens as everything
+// above for the same reason (ADR-0032): it renders in both shells, so it may
+// not reach for `--admin-*` or the customer `.form-control` palette.
+.rdf-bank {
+  position: relative;
+}
+
+.rdf-bank-list {
+  position: absolute;
+  z-index: 5;
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--rdf-border);
+  border-radius: 12px;
+  background: var(--rdf-surface);
+}
+
+.rdf-bank-option {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--rdf-text);
+  cursor: pointer;
+
+  &:hover,
+  &[aria-selected='true'] {
+    background: var(--rdf-accent);
+    color: var(--rdf-accent-contrast);
+  }
+}
+
+.rdf-bank-empty {
+  padding: 8px 12px;
+  color: var(--rdf-muted);
+  font-size: 13px;
+}
+
+.rdf-retry {
+  padding: 0 0 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--rdf-accent);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}

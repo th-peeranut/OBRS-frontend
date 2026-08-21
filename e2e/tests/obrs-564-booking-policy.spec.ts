@@ -1,11 +1,23 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Page, request as playwrightRequest } from '@playwright/test';
 
 /**
  * OBRS-564 QA E2E — booking-policy config (advance-booking cap + cutoff).
- * Runs against the local full-stack QA lane started by hand for this card
- * (obrs564qa DB, backend on :8080, `ng serve --configuration sit` on :4200
- * with apiUrl temp-overridden to http://localhost:8080). Not part of the
- * committed regression suite (same convention as obrs-433-my-reports.spec.ts).
+ * OWN-DB lane, run by `playwright.obrs1456.config.ts` (backend :8181 against a
+ * throwaway database, frontend :4256 on `--configuration e2e`). That config is
+ * where the setup lives; before OBRS-1456 there was none, and this header named
+ * a :8080 / :4200 pair that by then belonged to two unrelated sessions.
+ *
+ * OBRS-1456 — THE BASELINE CAP IS READ, NEVER ASSUMED. This file used to state
+ * its own starting value: the round trip was titled `30 -> 45`, its cleanup
+ * wrote 30 back, and the i18n test asserted the page said "30 days". None of
+ * that had been true since OBRS-647 moved `data.sql`'s seed to 60 — so the
+ * cleanup RESTORED THE WRONG VALUE whenever it ran, and the i18n test was red
+ * against a database seeded exactly as intended. Seeding the lane's own 30
+ * instead (OWN-DB permits it) was rejected: it keeps the number correct by
+ * pinning this lane's database away from the one every other lane builds, and
+ * the next seed change rots the pin the same way it rotted the literal.
+ * `currentMaxAdvanceDays()` asks the running backend, so the only numbers left
+ * in this file are the ones the test itself writes.
  */
 
 const OWNER_EMAIL = 'owner@system.local';
@@ -13,6 +25,25 @@ const ADMIN_EMAIL = 'admin@system.local';
 const SALESPERSON_EMAIL = 'salesperson@system.local';
 const CUSTOMER_EMAIL = 'customer@system.local';
 const PASSWORD = 'P@ssw0rd';
+
+// The API probe below leaves the browser, so it cannot inherit `baseURL` — it
+// needs the backend origin that `environment.e2e.ts` compiled into the app.
+// Keep the two in step: pointed at the wrong port this file does not fail, it
+// silently reports on someone else's database (OBRS-1456 measured exactly that
+// — the probe read 60 off a stranger's :8080 while this lane's backend said 45).
+const API_URL = 'http://localhost:8181';
+
+/** The cap the public page and the date picker are rendering right now. */
+async function currentMaxAdvanceDays(): Promise<number> {
+  const context = await playwrightRequest.newContext();
+  try {
+    const response = await context.get(`${API_URL}/api/booking-policy`);
+    expect(response.ok()).toBeTruthy();
+    return (await response.json()).data.maxAdvanceDays;
+  } finally {
+    await context.dispose();
+  }
+}
 
 async function login(page: Page, email: string): Promise<void> {
   await page.addInitScript(() => {
@@ -102,8 +133,19 @@ test.describe('OBRS-564 — role matrix', () => {
   });
 });
 
-test.describe('OBRS-564 — round trip: 30 -> 45', () => {
+// OBRS-1456: `30 -> 45` in this title was a claim about the database, and it had
+// been false since OBRS-647. The starting cap is whatever the backend serves;
+// only 45 — the value this block writes — is fixed.
+test.describe('OBRS-564 — round trip: the seeded cap -> 45', () => {
   test.describe.configure({ mode: 'serial' });
+
+  /** Read before the first write, so the cleanup puts back what was actually there. */
+  let baselineMaxAdvanceDays: number;
+
+  test.beforeAll(async () => {
+    baselineMaxAdvanceDays = await currentMaxAdvanceDays();
+    expect(baselineMaxAdvanceDays).not.toBe(45);
+  });
 
   test('owner changes the cap to 45 and saves', async ({ page }) => {
     await login(page, OWNER_EMAIL);
@@ -185,33 +227,39 @@ test.describe('OBRS-564 — round trip: 30 -> 45', () => {
     // Direct API probe of the same guard the UI relies on — ScheduleService
     // search enforces the same booking_max_advance_days cap the date picker
     // renders as a UI affordance.
-    const loginRes = await request.post('http://localhost:8080/api/auth/login', {
+    const loginRes = await request.post(`${API_URL}/api/auth/login`, {
       data: { email: CUSTOMER_EMAIL, password: PASSWORD },
     });
     expect(loginRes.ok()).toBeTruthy();
-    const policyRes = await request.get('http://localhost:8080/api/booking-policy');
+    const policyRes = await request.get(`${API_URL}/api/booking-policy`);
     const policyBody = await policyRes.json();
     expect(policyBody.data.maxAdvanceDays).toBe(45);
   });
 
-  test('reset cap back to 30 (cleanup, does not affect verdict)', async ({ page }) => {
+  test('reset the cap to what it was (cleanup, does not affect verdict)', async ({ page }) => {
     await login(page, OWNER_EMAIL);
     await page.goto('/admin/settings/booking-policy');
     const maxAdvanceDaysInput = page.locator('input#maxAdvanceDays');
     await maxAdvanceDaysInput.waitFor({ state: 'visible', timeout: 15_000 });
     await maxAdvanceDaysInput.fill('');
-    await maxAdvanceDaysInput.fill('30');
+    await maxAdvanceDaysInput.fill(String(baselineMaxAdvanceDays));
     await page.locator('form button[type="submit"]').click();
     await dismissSweetAlert(page);
+    expect(await currentMaxAdvanceDays()).toBe(baselineMaxAdvanceDays);
   });
 });
 
 test.describe('OBRS-564 — failure path, i18n and layout', () => {
   test('language switch live: numbers stay correct, no extra HTTP request', async ({ page }) => {
+    // OBRS-1456: read, do not assume. This block runs after the round trip above,
+    // so the cap it should see is whatever that block's cleanup restored — and
+    // when the round trip goes red mid-way the cleanup never runs at all. Both
+    // states are legitimate here; a hardcoded number is right in neither.
+    const cap = await currentMaxAdvanceDays();
     await page.addInitScript(() => localStorage.setItem('app_language', 'en'));
     await page.goto('/business-policy');
     const salesChannels = page.locator('.policy-card p:not(.policy-version)').first();
-    await expect(salesChannels).toContainText('30 days', { timeout: 15_000 });
+    await expect(salesChannels).toContainText(`${cap} days`, { timeout: 15_000 });
 
     let policyRequestCount = 0;
     page.on('request', (req) => {
@@ -223,7 +271,7 @@ test.describe('OBRS-564 — failure path, i18n and layout', () => {
     await page.locator('.navbar-lang-menu').first().waitFor({ state: 'visible', timeout: 5_000 });
     await page.locator('.navbar-lang-item', { hasText: 'ไทย' }).click();
 
-    await expect(salesChannels).toContainText('30 วัน', { timeout: 10_000 });
+    await expect(salesChannels).toContainText(`${cap} วัน`, { timeout: 10_000 });
     expect(policyRequestCount).toBe(0);
   });
 
@@ -242,10 +290,20 @@ test.describe('OBRS-564 — failure path, i18n and layout', () => {
       // Must not overflow the 390px viewport (crushed/clipped layout).
       expect(box.width).toBeLessThanOrEqual(390);
     }
-    // The rest of the page (item 2 onward, POLICY.BUSINESS.CONTENT) must still render. When item 1
-    // fails, its <p> is replaced by the ng-template's error <div> (see business-policy.component.html),
-    // so the CONTENT paragraph is the only <p> left and is at index 0, not 1.
-    await expect(page.locator('.policy-card p:not(.policy-version)').first()).toBeVisible();
+    // The rest of the page must still render when the fetch fails. OBRS-1456: name the
+    // paragraph, do not merely assert one is visible — `toBeVisible()` on "the first
+    // paragraph" passes for whichever paragraph happens to be first, which is how this
+    // line stayed green against the version banner for the four days before OBRS-1454
+    // fixed the selector.
+    //
+    // That paragraph is TRAVEL_CONDITIONS, not CONTENT. The comment here used to say
+    // CONTENT, and had been wrong since OBRS-623/659 moved CONTENT inside the same
+    // `@if (policyParams)` gate as SALES_CHANNELS — a failed fetch now takes both, and
+    // the travel conditions are deliberately left outside precisely so an outage cannot
+    // blank the page (see business-policy.component.html's own comment there).
+    await expect(page.locator('.policy-card p:not(.policy-version)').first()).toContainText(
+      'Travel conditions for passengers'
+    );
   });
 
   test('never a raw {{maxAdvanceDays}} placeholder during a slow load', async ({ page }) => {

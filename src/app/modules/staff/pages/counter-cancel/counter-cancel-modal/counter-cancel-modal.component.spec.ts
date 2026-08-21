@@ -654,6 +654,12 @@ describe('CounterCancelModalComponent — cancel body byte-identity (OBRS-766 FE
   });
 
   afterEach(() => {
+    // OBRS-1463: the mounted picker fetches its bank list. Answered here rather
+    // than per test — it is not what any assertion below is about, and leaving it
+    // open would fail verify() on the byte-identity tests for an unrelated reason.
+    httpMock
+      .match((r) => r.url.endsWith('/api/private/banks'))
+      .forEach((r) => r.flush({ code: 200, message: 'ok', data: [] }));
     httpMock.verify();
   });
 

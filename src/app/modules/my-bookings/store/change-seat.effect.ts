@@ -78,6 +78,7 @@ export class ChangeSeatEffect {
             const availability = response.data;
             if (!availability) {
               return loadChangeSeatAvailabilityFailure({
+                errorCode: 'GENERIC',
                 error: this.translate.instant('MY_BOOKINGS.CHANGE_SEAT.ERROR.GENERIC'),
               });
             }
@@ -88,15 +89,17 @@ export class ChangeSeatEffect {
           // request's Accept-Language. With no recognized code, `fallbackTier`
           // further splits "backend unreachable" from "rejected, no code"
           // (OBRS-170) instead of one vague GENERIC message.
-          catchError((error: unknown) =>
-            of(
+          catchError((error: unknown) => {
+            const errorCode = extractChangeSeatErrorCode(error);
+            return of(
               loadChangeSeatAvailabilityFailure({
+                errorCode,
                 error: this.translate.instant(
-                  mapChangeSeatErrorCode(extractChangeSeatErrorCode(error), classifyHttpFallback(error))
+                  mapChangeSeatErrorCode(errorCode, classifyHttpFallback(error))
                 ),
               })
-            )
-          )
+            );
+          })
         )
       )
     )
