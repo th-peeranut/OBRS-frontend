@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { AdminApiService } from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
+import { hasOwnKey } from '../../../../../shared/lib/own-key';
 import { TranslateService } from '@ngx-translate/core';
 import {
   NewSegmentFare,
@@ -190,7 +191,14 @@ export class AddSegmentModalComponent {
     const fares: NewSegmentFare[] = [];
 
     for (const option of this.vehicleTypeOptions) {
-      const value = String(rawFares?.[this.fareControlName(option.slug)] ?? '').trim();
+      const controlName = this.fareControlName(option.slug);
+      // ADR-0028: `rawFares[controlName]` alone would resolve 'constructor' to a FUNCTION,
+      // which is both non-nullish and truthy, so `?? ''` would not catch it.
+      if (!rawFares || !hasOwnKey(rawFares, controlName)) {
+        continue;
+      }
+
+      const value = String(rawFares[controlName] ?? '').trim();
       if (!value) {
         continue;
       }
