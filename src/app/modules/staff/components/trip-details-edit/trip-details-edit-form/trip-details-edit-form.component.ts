@@ -144,7 +144,19 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
     return vt?.totalSeats ?? null;
   }
 
-  /** OBRS-1477: empty control = no per-trip override, i.e. inherit effectiveTotalSeats. */
+  /**
+   * OBRS-1477 (ADR-0137): what an EMPTY control actually resolves to — the vehicle type's
+   * standing cap when it has one, else its physical seat map. Deliberately not
+   * effectiveTotalSeats: that one is the ceiling a per-trip override may take, which the
+   * backend still validates against totalSeats, so the two numbers are allowed to differ.
+   */
+  protected get inheritedSeatingCapacity(): number | null {
+    const slug = this.form.get('vehicleType')!.value as string;
+    const vt = this.vehicleTypes.find((t) => t.slug === slug);
+    return vt?.sellableSeats ?? vt?.totalSeats ?? null;
+  }
+
+  /** OBRS-1477: empty control = no per-trip override, i.e. inherit inheritedSeatingCapacity. */
   protected get isCapacityInherited(): boolean {
     return this.form.get('seatingCapacity')!.value == null;
   }
