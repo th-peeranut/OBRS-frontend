@@ -147,6 +147,12 @@
       "why": "OBRS-629 card evidence: the parcel carriage terms page that did not exist, the footer link that was missing, the amended passenger-baggage clause on /business-policy, and the two consignment surfaces that now reach the terms before the sender pays. AFTER-only for /parcel-policy on purpose -- there is no BEFORE frame of a page that was never routed, and a 404 is not a comparison. Every shot asserts what it is about to photograph first, including the one that proves a FAILED config read prints an error rather than inventing a weight limit. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT. Every assertion that must keep holding lives in parcel-policy.component.spec.ts and in gate 6 of scripts/check-i18n-parity.mjs, both on CI."
     },
     {
+      "spec": "obrs-1374-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1374capture.config.ts",
+      "why": "OBRS-1374 AC-11 evidence: a four-line repair bill rendered as ONE row in the expenses list, the same bill's four lines in the form (the fourth carrying no part at all, AC-3), and the mismatch warning firing BEFORE save once a line is edited so the lines stop adding up (AC-5). AFTER-only on purpose -- the BEFORE state is a form with no repeater in it at all, which is a picture of an absence, and the absence is already stated by the card. The regressions worth pinning live in expense-form-modal.component.spec.ts and expenses-page.mappers.spec.ts, and the server-side half in ExpenseServiceTest.LineItemTests, whose AC-1 tripwire was walked red. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT and no database is involved."
+    },
+    {
       "spec": "obrs-1477-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1477capture.config.ts",

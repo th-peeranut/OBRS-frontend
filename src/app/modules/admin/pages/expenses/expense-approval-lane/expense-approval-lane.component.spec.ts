@@ -22,6 +22,7 @@ function row(id: number): ExpenseRow {
     paidBy: '',
     note: '',
     source: 'FIELD',
+    items: [],
   };
 }
 

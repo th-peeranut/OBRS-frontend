@@ -157,6 +157,89 @@
             [placeholder]="'ADMIN.EXPENSES.NOTE_PLACEHOLDER' | translate"
           ></textarea>
         </div>
+        <!-- OBRS-1374 AC9: the bill's lines. Optional (AC4) - a bill with no breakdown saves
+        exactly as it did before this card, so the section opens with zero rows and no
+        required-marker. The running total and the mismatch warning sit directly under the rows,
+        where the number they are about is, and the warning appears BEFORE save rather than
+        arriving as a 400 afterwards. -->
+        <div class="admin-form-field full expense-items" formArrayName="items" data-testid="expense-items">
+          <div class="expense-items-head">
+            <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.TITLE' | translate }}</label>
+            <button
+              type="button"
+              class="admin-btn admin-btn-small"
+              data-testid="expense-item-add"
+              (click)="addItem()"
+              >
+              {{ 'ADMIN.EXPENSES.ITEMS.ADD' | translate }}
+            </button>
+          </div>
+          <small class="admin-hint">{{ 'ADMIN.EXPENSES.ITEMS.HINT' | translate }}</small>
+
+          @for (itemGroup of itemsArray.controls; track trackByIndex($index); let i = $index) {
+            <div class="expense-item-row" [formGroupName]="i" [attr.data-testid]="'expense-item-row-' + i">
+              <div class="expense-item-cell expense-item-part">
+                <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.PART' | translate }}</label>
+                <app-admin-dropdown
+                  formControlName="part"
+                  [options]="partOptions"
+                  valueKey="code"
+                  labelKey="label"
+                  [placeholder]="'ADMIN.EXPENSES.ITEMS.PART' | translate"
+                ></app-admin-dropdown>
+              </div>
+              <div class="expense-item-cell expense-item-description">
+                <label class="admin-form-label">
+                  {{ 'ADMIN.EXPENSES.ITEMS.DESCRIPTION' | translate }} <span class="admin-required">*</span>
+                </label>
+                <input class="admin-field" formControlName="description" [maxlength]="ITEM_DESCRIPTION_MAX_LENGTH" />
+                @if (itemGroup.get('description')?.invalid && itemGroup.get('description')?.touched) {
+                  <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
+                }
+              </div>
+              <div class="expense-item-cell expense-item-number">
+                <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.QUANTITY' | translate }}</label>
+                <input type="number" class="admin-field" formControlName="quantity" min="0.01" step="0.01" />
+              </div>
+              <div class="expense-item-cell expense-item-number">
+                <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.UNIT_PRICE' | translate }}</label>
+                <input type="number" class="admin-field" formControlName="unitPrice" min="0" step="0.01" />
+              </div>
+              <div class="expense-item-cell expense-item-number">
+                <label class="admin-form-label">
+                  {{ 'ADMIN.EXPENSES.ITEMS.AMOUNT' | translate }} <span class="admin-required">*</span>
+                </label>
+                <input type="number" class="admin-field" formControlName="amount" min="0.01" step="0.01" />
+                @if (itemGroup.get('amount')?.invalid && itemGroup.get('amount')?.touched) {
+                  <small class="admin-error">{{ 'ADMIN.VALIDATION.POSITIVE_NUMBER' | translate }}</small>
+                }
+              </div>
+              <div class="expense-item-cell expense-item-remove">
+                <button
+                  type="button"
+                  class="admin-btn admin-btn-small"
+                  [attr.data-testid]="'expense-item-remove-' + i"
+                  [attr.aria-label]="'ADMIN.EXPENSES.ITEMS.REMOVE' | translate"
+                  (click)="removeItem(i)"
+                  >
+                  {{ 'ADMIN.EXPENSES.ITEMS.REMOVE' | translate }}
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (itemsArray.length > 0) {
+            <p class="expense-items-total" data-testid="expense-items-total">
+              {{ 'ADMIN.EXPENSES.ITEMS.TOTAL' | translate }}
+              <strong>{{ itemsTotal | number: '1.2-2' }}</strong>
+            </p>
+            @if (itemsTotalMismatch) {
+              <small class="admin-error" data-testid="expense-items-mismatch">
+                {{ 'ADMIN.EXPENSES.ITEMS.MISMATCH' | translate }}
+              </small>
+            }
+          }
+        </div>
       </form>
       <div class="admin-modal-actions">
         <button type="button" class="admin-btn" (click)="requestClose()">

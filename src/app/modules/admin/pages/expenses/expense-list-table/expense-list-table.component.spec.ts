@@ -23,6 +23,7 @@ function row(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     paidBy: 'Somchai',
     note: 'note',
     source: 'MANUAL',
+    items: [],
     ...overrides,
   };
 }
