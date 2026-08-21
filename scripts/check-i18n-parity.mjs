@@ -203,6 +203,36 @@ const BUSINESS_POLICY_LEDGER = [
     worsensTerms: true,
     fingerprint: 'e0f2eb098fb34e0e8dcd9cdf6b1747d5493700e0c8507f118bd4912a00df6d3c',
   },
+  {
+    // OBRS-656. One bullet in item 2. The change fee no longer depends on when the change is made:
+    // it is reschedule_fee_late_thb per seat on every change, and the sentence that offered it free
+    // above early_window_hours is withdrawn.
+    //
+    // worsensTerms: true, and there is nothing to weigh. This is the only card in Epic OBRS-654
+    // that takes something away — a customer who could change a far-off trip for nothing now pays
+    // per seat for it. The field describes the TEXT, not how many people it reaches; the owner's
+    // position that nobody holds a ticket under 1.2 yet is a reason the notice can be short, not a
+    // reason to record this as neutral.
+    //
+    // ⚠️ The dates are NOT the "publish today, effective tomorrow" the owner approved on
+    // 2026-08-19, and the difference is the ledger's doing, not a change of mind. Entry 1.2
+    // (OBRS-623/659) merged on 08-20 with an effective date of 08-27, and the ordering rule above
+    // (`effectiveDate <= previousDate` is an error) means this entry cannot take effect until
+    // 08-28 at the earliest — a version cannot come into force before the one ahead of it. So the
+    // notice period here is seven days because 1.2 is still pending, not because anyone chose
+    // seven. Moving it earlier is not available without moving 1.2.
+    //
+    // ⚠️ If the frontend PR is merged after 2026-08-27, publishedOn is no longer true and BOTH
+    // dates move: publishedOn to the real merge date, effectiveDate to the day after. The backend
+    // PR that drops the free branch merges ON effectiveDate, so that the page and the money agree
+    // from the first minute the new rule is enforced (ADR-0125: enforcement reads live config, so
+    // the announced date is the only protection an existing ticket holder has).
+    version: '1.3',
+    publishedOn: '2026-08-21',
+    effectiveDate: '2026-08-28',
+    worsensTerms: true,
+    fingerprint: '0003a80bd49694ca0475cba3225c4641c4c4ca0571b6c6f7b8a5db5d48cb299c',
+  },
 ];
 
 // OBRS-623/659 widened this from three keys to six. The terms did not grow — they were split, and
