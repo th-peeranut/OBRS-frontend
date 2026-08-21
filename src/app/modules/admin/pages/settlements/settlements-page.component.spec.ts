@@ -69,6 +69,7 @@ function makeDetail(overrides: Partial<SettlementScheduleDetailDto> = {}): Settl
       expectedCashAmount: '600.00',
       perHeadDeducted: '0.00',
       deferredTicketCash: '0.00',
+      advancePaidOut: '0.00',
     },
     settled: null,
     discrepancy: null,
