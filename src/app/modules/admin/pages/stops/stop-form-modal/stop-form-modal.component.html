@@ -94,6 +94,25 @@
               </select>
             </div>
 
+            <!-- OBRS-1481: [ngValue], not [value], unlike every select above it. Those bind a
+                 slug and a slug is a string; this one binds `stop_return_pairs.return_stop_id`,
+                 a number, and the empty choice binds null. [value] stringifies both, so the
+                 saved pin would never match its own option and the form would open showing
+                 nothing selected. -->
+            <div class="admin-form-field">
+              <label class="admin-form-label" for="stopReturnStop">
+                {{ 'ADMIN.STOPS.RETURN_BOARDING_STOP' | translate }}
+              </label>
+              <select id="stopReturnStop" class="admin-input"
+                      [(ngModel)]="selected.returnStopId" name="returnStopId">
+                <option [ngValue]="null">{{ 'ADMIN.STOPS.RETURN_BOARDING_STOP_NONE' | translate }}</option>
+                @for (option of returnStopOptions; track option.id) {
+                  <option [ngValue]="option.id">{{ option.label }}</option>
+                }
+              </select>
+              <small class="admin-hint">{{ 'ADMIN.STOPS.RETURN_BOARDING_STOP_HINT' | translate }}</small>
+            </div>
+
             <div class="admin-form-field">
               <label class="admin-form-label" for="stopLat">{{ 'ADMIN.STOPS.LATITUDE' | translate }}</label>
               <input id="stopLat" type="number" step="any" class="admin-input"
