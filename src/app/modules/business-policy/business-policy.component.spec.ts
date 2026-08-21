@@ -2,7 +2,11 @@ import { CommonModule } from '@angular/common';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { BusinessPolicyComponent } from './business-policy.component';
@@ -15,9 +19,12 @@ import {
 // OBRS-564: real translation fixtures (not a stub pipe) — this suite asserts
 // on the RENDERED DOM (does it contain "45"? does it contain a raw "{{"?),
 // which only means anything if TranslatePipe actually interpolates. Both
-// languages carry the SAME {{maxAdvanceDays}}/{{cutoffMinutes}} placeholders
-// so the language-switch test can prove the numbers survive a `translate.use()`
-// call, not just a fresh fetch.
+// languages carry the SAME placeholders so the language-switch test can prove
+// the values survive a `translate.use()` call, not just a fresh fetch.
+//
+// OBRS-623/659: CONTENT now carries placeholders too, so the fixtures below spell out every one
+// the real files use. A fixture that dropped a placeholder would let a regression through by
+// simply having nothing to interpolate.
 const EN_TRANSLATIONS = {
   POLICY: {
     BUSINESS: {
@@ -27,10 +34,13 @@ const EN_TRANSLATIONS = {
       VERSION_LINE: 'Version {{version}} · In force from {{effectiveDate}}',
       SALES_CHANNELS:
         '1. Regular sale: up to {{cutoffMinutes}} minutes before departure. Advance sale: up to {{maxAdvanceDays}} days ahead.',
-      SALES_CHANNELS_ERROR: 'Unable to load the current advance-booking policy.',
+      SALES_CHANNELS_ERROR: 'Unable to load the terms that read the current system values.',
       RETRY: 'Retry',
       CONTENT:
-        '2. Item two. 3. Item three. 4. Item four. 5. Item five. 6. Item six.',
+        '2. Change up to {{rescheduleWindowHours}}h before departure, within {{rescheduleMaxDaysAhead}} days. {{rescheduleCountRule}} Free above {{earlyWindowHours}}h, else {{rescheduleFeeLateThb}} THB per seat. 4. Refund {{refundPercentEarly}}% early, {{refundPercentLate}}% late, none inside {{cancelWindowHours}}h.',
+      TRAVEL_CONDITIONS: 'Travel conditions for passengers. Item one. Item seven.',
+      RESCHEDULE_COUNT_UNLIMITED: 'A booking may be changed an unlimited number of times.',
+      RESCHEDULE_COUNT_LIMITED: 'A booking may be changed at most {{rescheduleMaxCount}} time(s).',
     },
   },
 };
@@ -42,14 +52,22 @@ const TH_TRANSLATIONS = {
       VERSION_LINE: 'ฉบับที่ {{version}} · มีผลตั้งแต่ {{effectiveDate}}',
       SALES_CHANNELS:
         '1. ขายปกติ: ก่อนออกเดินทาง {{cutoffMinutes}} นาที ขายล่วงหน้า: สูงสุด {{maxAdvanceDays}} วัน',
-      SALES_CHANNELS_ERROR: 'ไม่สามารถโหลดนโยบายการจองล่วงหน้าได้',
+      SALES_CHANNELS_ERROR: 'ไม่สามารถโหลดเงื่อนไขที่อ้างอิงค่าปัจจุบันของระบบได้',
       RETRY: 'ลองใหม่',
-      CONTENT: 'ข้อ 2 ข้อ 3 ข้อ 4 ข้อ 5 ข้อ 6',
+      CONTENT:
+        '2. เลื่อนก่อนออก {{rescheduleWindowHours}} ชม. ภายใน {{rescheduleMaxDaysAhead}} วัน {{rescheduleCountRule}} เกิน {{earlyWindowHours}} ชม. ไม่มีค่าธรรมเนียม ไม่ถึงนั้น {{rescheduleFeeLateThb}} บาทต่อที่นั่ง 4. คืน {{refundPercentEarly}}% หรือ {{refundPercentLate}}% และยกเลิกไม่ได้ใน {{cancelWindowHours}} ชม.',
+      TRAVEL_CONDITIONS: 'เงื่อนไขการเดินทางสำหรับผู้โดยสาร ข้อหนึ่ง ข้อเจ็ด',
+      RESCHEDULE_COUNT_UNLIMITED: 'เลื่อนได้ไม่จำกัดจำนวนครั้ง',
+      RESCHEDULE_COUNT_LIMITED: 'เลื่อนได้ไม่เกิน {{rescheduleMaxCount}} ครั้งต่อการจองหนึ่งรายการ',
     },
   },
 };
 
-describe('BusinessPolicyComponent (OBRS-564)', () => {
+const BOOKING_URL = `${environment.apiUrl}/api/booking-policy`;
+const RESCHEDULE_URL = `${environment.apiUrl}/api/reschedule-policy`;
+const CANCELLATION_URL = `${environment.apiUrl}/api/cancellation-policy`;
+
+describe('BusinessPolicyComponent (OBRS-564 / OBRS-658 / OBRS-623+659)', () => {
   let fixture: ComponentFixture<BusinessPolicyComponent>;
   let httpMock: HttpTestingController;
   let translate: TranslateService;
@@ -75,83 +93,229 @@ describe('BusinessPolicyComponent (OBRS-564)', () => {
     httpMock.verify();
   });
 
-  function flushPolicy(data: { maxAdvanceDays: number; cutoffMinutes: number }): void {
-    const req = httpMock.expectOne(`${environment.apiUrl}/api/booking-policy`);
-    req.flush({ code: 200, message: 'OK', data });
+  /**
+   * Match all three in-flight requests BEFORE resolving any of them.
+   *
+   * ⚠️ Order matters and is not cosmetic. forkJoin unsubscribes from its siblings the instant one
+   * source errors, so a test that errors the first request and only then calls expectOne() for the
+   * second finds nothing — the request was cancelled out from under it. All three are issued
+   * eagerly on subscribe, so matching them up front is both possible and the only thing that
+   * works. They stay MATCHED once captured, which is also what keeps httpMock.verify() happy
+   * about the two the component went on to cancel.
+   */
+  function expectAllThree(): {
+    booking: TestRequest;
+    reschedule: TestRequest;
+    cancellation: TestRequest;
+  } {
+    return {
+      booking: httpMock.expectOne(BOOKING_URL),
+      reschedule: httpMock.expectOne(RESCHEDULE_URL),
+      cancellation: httpMock.expectOne(CANCELLATION_URL),
+    };
   }
 
-  // OBRS-658: the rendered text MINUS the version line. Two assertions below check that a policy
-  // number ("20", "30") does not leak onto the page, and the version line legitimately carries a
-  // date whose digits collide with them ("2026-08-12" contains "20"). Those assertions are about
-  // the booking-policy NUMBERS, so they read the page without the metadata stamp rather than being
-  // weakened — the version line has its own tests further down.
+  /**
+   * Flush all three policy endpoints. Deliberately one helper rather than three call sites: the
+   * component forkJoins them, so a test that flushed only one would hang on a half-resolved page
+   * and assert nothing — and httpMock.verify() would then blame the wrong test.
+   */
+  function flushAllPolicies(
+    overrides: {
+      booking?: { maxAdvanceDays: number; cutoffMinutes: number };
+      reschedule?: Partial<{
+        rescheduleWindowHours: number;
+        rescheduleMaxDaysAhead: number;
+        rescheduleFeeLateThb: number;
+        earlyWindowHours: number;
+        rescheduleMaxCount: number;
+      }>;
+      cancellation?: Partial<{
+        cancelWindowHours: number;
+        earlyWindowHours: number;
+        refundRateEarly: number;
+        refundRateLate: number;
+      }>;
+    } = {}
+  ): void {
+    const reqs = expectAllThree();
+    reqs.booking.flush({
+      code: 200,
+      message: 'OK',
+      data: overrides.booking ?? { maxAdvanceDays: 45, cutoffMinutes: 20 },
+    });
+    reqs.reschedule.flush({
+      code: 200,
+      message: 'OK',
+      data: {
+        rescheduleWindowHours: 2,
+        rescheduleMaxDaysAhead: 60,
+        rescheduleFeeLateThb: 30,
+        earlyWindowHours: 24,
+        rescheduleMaxCount: 0,
+        ...overrides.reschedule,
+      },
+    });
+    reqs.cancellation.flush({
+      code: 200,
+      message: 'OK',
+      data: {
+        cancelWindowHours: 2,
+        earlyWindowHours: 24,
+        refundRateEarly: 0.8,
+        refundRateLate: 0.5,
+        ...overrides.cancellation,
+      },
+    });
+  }
+
+  // OBRS-658: the rendered text MINUS the version line. Assertions below check that a policy
+  // number does not leak onto the page, and the version line legitimately carries a date whose
+  // digits collide with them ("2026-08-27" contains "20"). Those assertions are about the policy
+  // NUMBERS, so they read the page without the metadata stamp rather than being weakened — the
+  // version line has its own tests further down.
   function textWithoutVersionLine(): string {
     const clone = fixture.nativeElement.cloneNode(true) as HTMLElement;
     clone.querySelector('[data-testid="business-policy-version"]')?.remove();
     return clone.textContent as string;
   }
 
-  it('before the API resolves: item 1 is absent, no raw "{{" leaks, and items 2-6 already render', () => {
+  it('before the APIs resolve: the config-bearing terms are absent, no raw "{{" leaks, and the travel conditions already render', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).not.toContain('{{');
     expect(text).not.toContain('45');
-    expect(text).toContain('Item two');
-    expect(text).toContain('Item six');
+    // OBRS-623/659 moved CONTENT behind the gate because it now interpolates. This pins the half
+    // that must NOT move with it: a reader during an outage still gets the baggage, no-show and
+    // liability rules, which carry no config value at all.
+    expect(text).toContain('Travel conditions for passengers');
+    expect(text).toContain('Item seven');
 
-    // Drain the still-pending request so httpMock.verify() (afterEach) passes
+    // Drain the still-pending requests so httpMock.verify() (afterEach) passes
     // — this test's assertions above are about the state BEFORE the flush.
-    flushPolicy({ maxAdvanceDays: 45, cutoffMinutes: 20 });
+    flushAllPolicies();
   });
 
-  it('renders the real config numbers (45, not the old hardcoded 60/12) once the API resolves', () => {
+  it('renders every live policy value once all three APIs resolve, and no raw placeholder survives', () => {
     fixture.detectChanges();
-    flushPolicy({ maxAdvanceDays: 45, cutoffMinutes: 20 });
+    flushAllPolicies();
     fixture.detectChanges();
 
-    const text = fixture.nativeElement.textContent as string;
+    const text = textWithoutVersionLine();
     expect(text).not.toContain('{{');
+    // booking-policy (OBRS-564): 45, not the old hardcoded 60/12
     expect(text).toContain('45');
-    expect(text).toContain('20');
-    expect(text).toContain('Item two');
+    // reschedule-policy (OBRS-655/657): 2h window, 60-day horizon, THB 30 fee, 24h boundary
+    expect(text).toContain('2h before departure');
+    expect(text).toContain('within 60 days');
+    expect(text).toContain('30 THB per seat');
+    expect(text).toContain('above 24h');
+    // cancellation-policy (OBRS-627): the 0.0-1.0 rates arrive as percentages
+    expect(text).toContain('80%');
+    expect(text).toContain('50%');
   });
 
-  it('survives a language switch without re-fetching: numbers stay correct in the new language, and httpMock.verify() proves no extra request', () => {
+  // OBRS-657 shipped reschedule_max_count = 0 meaning UNLIMITED. The number therefore cannot be
+  // printed into the sentence, and both branches need pinning: a component that always returned
+  // the unlimited string would pass a test that only ever sent 0.
+  describe('reschedule cap sentence (OBRS-657)', () => {
+    it('0 from the server renders the UNLIMITED sentence, and never the literal 0', () => {
+      fixture.detectChanges();
+      flushAllPolicies({ reschedule: { rescheduleMaxCount: 0 } });
+      fixture.detectChanges();
+
+      const text = textWithoutVersionLine();
+      expect(text).toContain('unlimited number of times');
+      expect(text).not.toContain('at most 0');
+    });
+
+    it('a positive cap renders the LIMITED sentence with that number', () => {
+      fixture.detectChanges();
+      flushAllPolicies({ reschedule: { rescheduleMaxCount: 3 } });
+      fixture.detectChanges();
+
+      const text = textWithoutVersionLine();
+      expect(text).toContain('at most 3 time(s)');
+      expect(text).not.toContain('unlimited');
+    });
+
+    it('a negative cap left by a bad config edit reads as unlimited, matching the n <= 0 test at the server read site', () => {
+      fixture.detectChanges();
+      flushAllPolicies({ reschedule: { rescheduleMaxCount: -1 } });
+      fixture.detectChanges();
+
+      const text = textWithoutVersionLine();
+      expect(text).toContain('unlimited number of times');
+      expect(text).not.toContain('-1');
+    });
+  });
+
+  it('survives a language switch without re-fetching: values stay correct AND the cap sentence changes language', () => {
     fixture.detectChanges();
-    flushPolicy({ maxAdvanceDays: 45, cutoffMinutes: 20 });
+    flushAllPolicies({ reschedule: { rescheduleMaxCount: 0 } });
     fixture.detectChanges();
 
     translate.use('th');
     fixture.detectChanges();
 
-    const text = fixture.nativeElement.textContent as string;
+    const text = textWithoutVersionLine();
     expect(text).toContain('ข้อกำหนดและเงื่อนไข');
     expect(text).toContain('45');
-    expect(text).toContain('20');
-    // httpMock.verify() in afterEach fails this test if a second request for
-    // the language switch was made — the assertion IS the absence of a call.
+    expect(text).toContain('80%');
+    // The load-bearing half: rescheduleCountRule is an already-TRANSLATED sentence substituted
+    // into the params object, so unlike every other value here it does not re-interpolate for
+    // free. Without the onLangChange rebuild it would leave an English sentence sitting inside
+    // the Thai paragraph.
+    expect(text).toContain('เลื่อนได้ไม่จำกัดจำนวนครั้ง');
+    expect(text).not.toContain('unlimited number of times');
+    // httpMock.verify() in afterEach fails this test if a second request was made for the
+    // language switch — the assertion IS the absence of a call.
   });
 
-  it('on API error: item 1 is replaced by an inline error + retry, items 2-6 still render, and neither the old 30 nor 20 leaks in', () => {
+  it('on API error: the config-bearing terms are replaced by an inline error + retry, the travel conditions still render, and no policy number leaks', () => {
     fixture.detectChanges();
-    const req = httpMock.expectOne(`${environment.apiUrl}/api/booking-policy`);
-    req.error(new ProgressEvent('error'));
+    // Only the first is errored: forkJoin cancels the other two the moment it does, and a
+    // TestRequest that has been cancelled can no longer be flushed or errored.
+    expectAllThree().booking.error(new ProgressEvent('error'));
     fixture.detectChanges();
 
     const text = textWithoutVersionLine();
-    expect(text).toContain('Unable to load the current advance-booking policy.');
+    expect(text).toContain('Unable to load the terms that read the current system values.');
     expect(text).toContain('Retry');
-    expect(text).toContain('Item two');
-    expect(text).toContain('Item six');
-    expect(text).not.toContain('30');
-    expect(text).not.toContain('20');
+    expect(text).toContain('Travel conditions for passengers');
+    expect(text).not.toContain('{{');
+    expect(text).not.toContain('80%');
+    expect(text).not.toContain('45');
   });
 
-  it('retry re-fetches after a failure and renders the numbers on success', () => {
+  // forkJoin means one failure fails the block. That is the intended behaviour and not an
+  // accident: these are ONE document, and a half-rendered set of terms is worse than the inline
+  // error because a customer cannot tell which half is missing.
+  it('one endpoint failing while the other two succeed still shows the inline error, never a partial set of terms', () => {
     fixture.detectChanges();
-    const failedReq = httpMock.expectOne(`${environment.apiUrl}/api/booking-policy`);
-    failedReq.error(new ProgressEvent('error'));
+    const reqs = expectAllThree();
+    reqs.booking.flush({
+      code: 200,
+      message: 'OK',
+      data: { maxAdvanceDays: 45, cutoffMinutes: 20 },
+    });
+    // The cancellation request is deliberately left un-resolved: forkJoin cancels it the moment
+    // the reschedule one errors, which is the behaviour under test. It was matched above, so
+    // httpMock.verify() is satisfied without it ever being flushed.
+    reqs.reschedule.error(new ProgressEvent('error'));
+    fixture.detectChanges();
+
+    const text = textWithoutVersionLine();
+    expect(text).toContain('Unable to load the terms that read the current system values.');
+    expect(text).not.toContain('45');
+    expect(text).not.toContain('80%');
+    expect(text).toContain('Travel conditions for passengers');
+  });
+
+  it('retry re-fetches all three after a failure and renders the values on success', () => {
+    fixture.detectChanges();
+    expectAllThree().booking.error(new ProgressEvent('error'));
     fixture.detectChanges();
 
     const retryButton: HTMLButtonElement = fixture.nativeElement.querySelector(
@@ -160,11 +324,12 @@ describe('BusinessPolicyComponent (OBRS-564)', () => {
     retryButton.click();
     fixture.detectChanges();
 
-    flushPolicy({ maxAdvanceDays: 45, cutoffMinutes: 20 });
+    flushAllPolicies();
     fixture.detectChanges();
 
-    const text = fixture.nativeElement.textContent as string;
+    const text = textWithoutVersionLine();
     expect(text).toContain('45');
+    expect(text).toContain('80%');
     expect(text).not.toContain('Unable to load');
   });
 
@@ -173,7 +338,7 @@ describe('BusinessPolicyComponent (OBRS-564)', () => {
   describe('published version line (OBRS-658)', () => {
     it('states the version and effective date from business-policy.version.ts, not from i18n', () => {
       fixture.detectChanges();
-      flushPolicy({ maxAdvanceDays: 45, cutoffMinutes: 20 });
+      flushAllPolicies();
       fixture.detectChanges();
 
       const line: HTMLElement = fixture.nativeElement.querySelector(
@@ -190,11 +355,10 @@ describe('BusinessPolicyComponent (OBRS-564)', () => {
 
     it('still states which wording is on screen when the live config fetch fails', () => {
       fixture.detectChanges();
-      const req = httpMock.expectOne(`${environment.apiUrl}/api/booking-policy`);
-      req.error(new ProgressEvent('error'));
+      expectAllThree().booking.error(new ProgressEvent('error'));
       fixture.detectChanges();
 
-      // The version identifies the TEXT, which is on the page whether or not the two numbers
+      // The version identifies the TEXT, which is on the page whether or not the numbers
       // resolved — so it must sit outside the policyParams gate, and this is what pins that.
       const text = fixture.nativeElement.querySelector(
         '[data-testid="business-policy-version"]'
@@ -205,7 +369,7 @@ describe('BusinessPolicyComponent (OBRS-564)', () => {
 
     it('survives a language switch with the same version and date', () => {
       fixture.detectChanges();
-      flushPolicy({ maxAdvanceDays: 45, cutoffMinutes: 20 });
+      flushAllPolicies();
       fixture.detectChanges();
 
       translate.use('th');

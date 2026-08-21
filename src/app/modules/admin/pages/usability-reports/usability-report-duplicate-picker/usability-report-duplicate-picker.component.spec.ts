@@ -26,6 +26,7 @@ const CANDIDATES: UsabilityReportSummary[] = [
     createdAt: '2026-01-01T00:00:00Z',
     duplicateOfId: null,
     duplicateCount: 0,
+    userName: null,
   },
   {
     id: 5,
@@ -37,6 +38,7 @@ const CANDIDATES: UsabilityReportSummary[] = [
     createdAt: '2026-01-02T00:00:00Z',
     duplicateOfId: null,
     duplicateCount: 0,
+    userName: null,
   },
 ];
 

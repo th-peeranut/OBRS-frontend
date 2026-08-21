@@ -40,6 +40,10 @@ export interface UsabilityReportSummary {
   // of its own status.
   duplicateOfId: number | null;
   duplicateCount: number;
+  // Reporter's display name, resolved server-side from userId (first + last name, falling
+  // back to email). Null when userId is null (anonymous report) or the user no longer
+  // exists — userId itself remains the source of truth.
+  userName: string | null;
 }
 
 // OBRS-403: the Spring `Page<T>` envelope this list endpoint actually returns
@@ -91,6 +95,8 @@ export interface UsabilityReportDetail {
   // UsabilityReportFollowUp shape as MyUsabilityReportDetail.followUps below —
   // do not fork a parallel type.
   followUps: UsabilityReportFollowUp[];
+  // See UsabilityReportSummary.userName above — same resolution/null rules.
+  userName: string | null;
 }
 
 export interface UsabilityReportReceipt {

@@ -200,6 +200,7 @@ describe('UsabilityReportsPageComponent', () => {
           createdAt: '2026-01-01T00:00:00Z',
           duplicateOfId: null,
           duplicateCount: 0,
+          userName: null,
         },
       ],
       1
@@ -239,6 +240,7 @@ describe('UsabilityReportsPageComponent', () => {
       reporterNotifiedAt: null,
       duplicateOfId: null,
       duplicateCount: 0,
+      userName: null,
       followUps: [],
     };
 
@@ -287,6 +289,7 @@ describe('UsabilityReportsPageComponent', () => {
         createdAt: '2026-01-01T00:00:00Z',
         duplicateOfId: null,
         duplicateCount: 0,
+        userName: null,
       },
     ],
     1
@@ -321,6 +324,7 @@ describe('UsabilityReportsPageComponent', () => {
     reporterNotifiedAt: null,
     duplicateOfId: null,
     duplicateCount: 0,
+    userName: null,
     followUps: [],
   };
 
@@ -1457,6 +1461,7 @@ describe('UsabilityReportsPageComponent', () => {
             createdAt: '2026-01-02T00:00:00Z',
             duplicateOfId: null,
             duplicateCount: 0,
+            userName: null,
           },
         ],
         2,
@@ -1850,7 +1855,7 @@ describe('UsabilityReportsPageComponent', () => {
       const page = buildPage(
         [
           { ...mockSummaryPage.content[0], status: 'new' },
-          { id: 2, category: 'suggestion', status: 'new', userId: 7, descriptionPreview: 'other', imageCount: 0, createdAt: '2026-01-02T00:00:00Z', duplicateOfId: null, duplicateCount: 0 },
+          { id: 2, category: 'suggestion', status: 'new', userId: 7, descriptionPreview: 'other', imageCount: 0, createdAt: '2026-01-02T00:00:00Z', duplicateOfId: null, duplicateCount: 0, userName: null },
         ],
         22,
         { number: 1, totalPages: 2 }

@@ -327,6 +327,9 @@ export function toUsabilityReportDetailFallback(
     // arrives with the real detail fetch — the fallback renders an empty list
     // pending it.
     followUps: [],
+    // Already known from the summary row (same resolution as the list) — carried
+    // straight through, same reasoning as duplicateOfId/duplicateCount above.
+    userName: summary.userName,
   };
 }
 

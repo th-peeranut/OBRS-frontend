@@ -26,6 +26,7 @@ import { ScheduleListEffect } from '../../shared/stores/schedule-list/schedule-l
 import { ScheduleListReducer } from '../../shared/stores/schedule-list/schedule-list.reducer';
 import { ProvinceReducer } from '../../shared/stores/station/station.reducer';
 import { ProvinceEffect } from '../../shared/stores/station/station.effect';
+import { PassengerInfoReducer } from '../../shared/stores/passenger-info/passenger-info.reducer';
 
 const routes: Routes = [
   { path: '', component: ReviewScheduleBookingComponent },
@@ -49,6 +50,11 @@ const routes: Routes = [
     StoreModule.forFeature('scheduleBooking', ScheduleBookingReducer),
     StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
     StoreModule.forFeature('scheduleList', ScheduleListReducer),
+    // OBRS-1384: this page now reads the passenger rows too, to tell the way BACK
+    // from /passenger-info (rows exist -> they are the truth) from the way forward
+    // (no rows -> the search filter is). Registered here so the forward leg selects
+    // a real empty slice instead of an unregistered feature.
+    StoreModule.forFeature('passengerInfo', PassengerInfoReducer),
 
     EffectsModule.forFeature([
       ProvinceEffect,
