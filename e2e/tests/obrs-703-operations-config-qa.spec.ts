@@ -23,9 +23,10 @@ const ADMIN_EMAIL = 'admin@system.local';
 const PASSWORD = 'P@ssw0rd';
 const API_BASE = 'http://localhost:8081';
 
-const CAPTURE_DIR = path.resolve(
-  'C:/Users/thpee/Desktop/workshop/obrs-agent-office/.claude/agent-office/scripts/captures/obrs-703'
-);
+// Evidence lands under e2e-evidence/ (gitignored). scripts/check-e2e-lanes.mjs rule 3:
+// a spec must not write into another repository, and an absolute path carries one
+// developer's username with it.
+const CAPTURE_DIR = path.resolve('e2e-evidence/obrs-703');
 
 function shot(name: string): string {
   return path.join(CAPTURE_DIR, `OBRS-703-${name}.png`);
