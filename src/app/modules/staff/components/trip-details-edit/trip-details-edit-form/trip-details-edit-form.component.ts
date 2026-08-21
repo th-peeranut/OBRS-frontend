@@ -144,6 +144,11 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
     return vt?.totalSeats ?? null;
   }
 
+  /** OBRS-1477: empty control = no per-trip override, i.e. inherit effectiveTotalSeats. */
+  protected get isCapacityInherited(): boolean {
+    return this.form.get('seatingCapacity')!.value == null;
+  }
+
   protected get selectedVehicleTypeLabel(): string {
     const slug = this.form.get('vehicleType')!.value as string;
     const vt = this.vehicleTypes.find((t) => t.slug === slug);

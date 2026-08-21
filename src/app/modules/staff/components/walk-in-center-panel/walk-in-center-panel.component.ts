@@ -165,6 +165,10 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   // this, PUT /schedules/{id}'s full-replace body would silently wipe it to
   // null on every staff save (the exact "omitted field wiped" hazard).
   private cargoCapacityKgFromDetail: number | null = null;
+  // OBRS-1477: false until the edit-open detail actually lands. Both capacity overrides
+  // come from it and nothing else on this screen carries them — the trips row holds the
+  // COALESCEd value, not the override — so a PUT built without it would invent two.
+  private isDetailLoaded = false;
 
   private readonly destroy$ = new Subject<void>();
 
@@ -324,6 +328,7 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
 
     this.isEditMode = true;
     this.capacityInlineError = '';
+    this.isDetailLoaded = false;
 
     // Build fallback form values synchronously from the trip row data.
     const fallback = this.buildFallbackValues(trip);
@@ -357,6 +362,7 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
 
           // Store route info for the form display and PUT payload.
           if (scheduleDetail) {
+            this.isDetailLoaded = true;
             this.cargoCapacityKgFromDetail = scheduleDetail.cargoCapacityKg ?? null;
             this.routeSlugForForm = scheduleDetail.route?.slug ?? '';
             this.routeNameForForm = getAdminLookupLabel(scheduleDetail.route) ?? scheduleDetail.route?.slug ?? '';
@@ -371,7 +377,7 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
             if (!this.editFormRef) return;
 
             if (scheduleDetail) {
-              const patch = this.buildDetailPatch(scheduleDetail, trip);
+              const patch = this.buildDetailPatch(scheduleDetail);
               this.editFormRef.applyUntouchedPatch(patch);
             }
           });
@@ -399,6 +405,7 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     this.routeDateForForm = '';
     this.routeSlugForForm = '';
     this.cargoCapacityKgFromDetail = null;
+    this.isDetailLoaded = false;
   }
 
   protected get editFormRouteName(): string {
@@ -412,6 +419,17 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   protected onSave(formValue: TripEditFormValue): void {
     if (!this.selectedTrip) return;
     const trip = this.selectedTrip;
+
+    // OBRS-1477: the edit-open detail is the only source of the two capacity overrides, and
+    // this PUT replaces the whole schedule (OBRS-512) — so without it, saving would write an
+    // invented seatingCapacity and wipe cargoCapacityKg. Refusing is better than either; the
+    // tab re-fetches when it is reopened.
+    if (!this.isDetailLoaded) {
+      void this.alertService.error(
+        this.translate.instant('STAFF.SELL.TRIP_DETAIL_EDIT_LOAD_FAILED')
+      );
+      return;
+    }
 
     this.capacityInlineError = '';
 
@@ -510,7 +528,11 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
       vehicleType: trip.vehicleType ?? '',
       vehicleId: '',
       driverId: '',
-      seatingCapacity: trip.capacity ?? null,
+      // OBRS-1477: trip.capacity is the RESOLVED cap — COALESCE(schedules.seating_capacity,
+      // vehicle_types.total_seats) — never the stored override, so it cannot stand in for one.
+      // Until the detail lands the override is simply unknown, and empty is the only honest
+      // answer; buildDetailPatch() fills in the real one.
+      seatingCapacity: null,
     };
   }
 
@@ -521,8 +543,7 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
       vehicleType?: AdminVehicleTypeDto;
       driver?: { id?: number; fullName?: string };
       seatingCapacity?: number | null;
-    },
-    trip: WalkInTripDto
+    }
   ): Partial<{
     departureTime: Date | null;
     vehicleType: string;
@@ -550,10 +571,11 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     if (detail.driver?.id) {
       patch.driverId = String(detail.driver.id);
     }
-    const effectiveCap = detail.seatingCapacity ?? detail.vehicleType?.totalSeats ?? trip.capacity;
-    if (effectiveCap != null) {
-      patch.seatingCapacity = effectiveCap;
-    }
+    // OBRS-1477: the STORED override only. Falling back to totalSeats here put the resolved
+    // 21 into the control, so opening this tab and pressing Save without editing anything
+    // turned "inherit from the vehicle type" (OBRS-512's null) into a hard-coded 21 — the
+    // mirror image of OBRS-1471, which cleared a real value on the same keystroke.
+    patch.seatingCapacity = detail.seatingCapacity ?? null;
 
     return patch;
   }

@@ -3422,6 +3422,7 @@
       "TRIP_DETAIL_EDIT_CAPACITY": "座位容量",
       "TRIP_DETAIL_EDIT_CAPACITY_PH": "输入座位数",
       "TRIP_DETAIL_EDIT_CAPACITY_HINT": "最多 {{max}} 座（{{type}}）",
+      "TRIP_DETAIL_EDIT_CAPACITY_INHERITED": "留空 = 沿用车型设置（{{seats}} 座）",
       "TRIP_DETAIL_EDIT_DRIVER": "司机",
       "TRIP_DETAIL_EDIT_DRIVER_PH": "选择司机",
       "TRIP_DETAIL_EDIT_NO_DRIVER": "— 无司机 —",

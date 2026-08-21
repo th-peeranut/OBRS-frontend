@@ -99,6 +99,14 @@
         | translate: { max: effectiveTotalSeats, type: selectedVehicleTypeLabel } }}
       </div>
     }
+    <!-- OBRS-1477: an empty control means "no per-trip override", which the staff user can
+         only tell apart from a typed value if the inherited number is spelled out here. -->
+    @if (isCapacityInherited && effectiveTotalSeats != null) {
+      <div class="text-muted small mt-1">
+        {{ 'STAFF.SELL.TRIP_DETAIL_EDIT_CAPACITY_INHERITED'
+        | translate: { seats: effectiveTotalSeats } }}
+      </div>
+    }
     <!-- Capacity inline errors: backend-mapped or form validator -->
     @if (capacityInlineError) {
       <div class="text-danger small mt-1">

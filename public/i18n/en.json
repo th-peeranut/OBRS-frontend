@@ -3422,6 +3422,7 @@
       "TRIP_DETAIL_EDIT_CAPACITY": "Seating Capacity",
       "TRIP_DETAIL_EDIT_CAPACITY_PH": "Enter seat count",
       "TRIP_DETAIL_EDIT_CAPACITY_HINT": "Max {{max}} seats ({{type}})",
+      "TRIP_DETAIL_EDIT_CAPACITY_INHERITED": "Leave empty = follow the vehicle type ({{seats}} seats)",
       "TRIP_DETAIL_EDIT_DRIVER": "Driver",
       "TRIP_DETAIL_EDIT_DRIVER_PH": "Select driver",
       "TRIP_DETAIL_EDIT_NO_DRIVER": "— No driver —",

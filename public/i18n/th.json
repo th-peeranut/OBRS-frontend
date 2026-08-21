@@ -3422,6 +3422,7 @@
       "TRIP_DETAIL_EDIT_CAPACITY": "ความจุที่นั่ง",
       "TRIP_DETAIL_EDIT_CAPACITY_PH": "ระบุจำนวนที่นั่ง",
       "TRIP_DETAIL_EDIT_CAPACITY_HINT": "สูงสุด {{max}} ที่นั่ง ({{type}})",
+      "TRIP_DETAIL_EDIT_CAPACITY_INHERITED": "เว้นว่าง = ใช้ตามประเภทรถ ({{seats}} ที่นั่ง)",
       "TRIP_DETAIL_EDIT_DRIVER": "คนขับ",
       "TRIP_DETAIL_EDIT_DRIVER_PH": "เลือกคนขับ",
       "TRIP_DETAIL_EDIT_NO_DRIVER": "— ไม่มีคนขับ —",
