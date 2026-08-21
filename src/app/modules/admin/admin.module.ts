@@ -118,14 +118,38 @@ export const adminRoutes: Routes = [
         data: { titleKey: 'ADMIN.PAGES.DASHBOARD', subtitleKey: 'ADMIN.DASHBOARD.SUBTITLE' },
       },
       {
+        // OBRS-1498: `requiredHeldRoles`, NOT `requiredRoles` — an owner must
+        // not reach this page. Every write on it (POST/PUT/DELETE on
+        // LookupController) is `hasRole('ADMIN')`, and the backend hierarchy in
+        // WebSecurityConfig.java only runs ROLE_ADMIN > ROLE_OWNER, so an owner
+        // got the whole screen and a 403 from every button. `requiredRoles:
+        // ['admin']` would NOT have kept them out: ROLE_GRANTS grants an owner
+        // 'admin' (see auth.service.ts), which is correct for area access and
+        // wrong here. Read the guard's `requiredHeldRoles` branch before
+        // "fixing" this back. Decision: OBRS-1498 AC-1, option (ก) — owner does
+        // not see the page at all. The nav entry is gated to match
+        // (admin-layout.component.ts).
         path: 'lookups',
         component: LookupSettingsPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', subtitleKey: 'ADMIN.LOOKUP.SUBTITLE' },
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.LOOKUP_SETTINGS',
+          subtitleKey: 'ADMIN.LOOKUP.SUBTITLE',
+          requiredHeldRoles: ['admin'],
+        },
       },
       {
+        // OBRS-1498: same shape and same reason as `lookups` above — every
+        // write on RoleController is `hasRole('ADMIN')` (its GET reaches OWNER,
+        // which is what made this a readable-but-unusable page for an owner).
         path: 'roles',
         component: RoleManagementPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', subtitleKey: 'ADMIN.ROLES.SUBTITLE' },
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.ROLE_MANAGEMENT',
+          subtitleKey: 'ADMIN.ROLES.SUBTITLE',
+          requiredHeldRoles: ['admin'],
+        },
       },
       {
         path: 'users',
