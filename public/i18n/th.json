@@ -2702,6 +2702,9 @@
     "STEP_3": "ข้อมูลส่วนตัว",
     "STEP_4": "ชำระเงิน"
   },
+  "ARRIVAL_DATE_NOTICE": {
+    "ARRIVES_ON": "ถึงวันที่ {{date}}"
+  },
   "SCHEDULE_DELAY_NOTICE": {
     "BADGE": "ล่าช้า",
     "PLANNED": "ตามตารางเดิม {{time}} น.",
