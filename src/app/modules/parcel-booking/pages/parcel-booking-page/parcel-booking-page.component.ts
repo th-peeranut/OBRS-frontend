@@ -393,7 +393,7 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
           }
           this.trackingNumber = data.trackingNumber;
           this.amount = Number(data.amount);
-          this.bookingService.setActiveBookingId(data.bookingId);
+          this.bookingService.setActiveBookingId(data.bookingId, data.bookingNumber);
           this.phase = 'payment';
         },
         error: (err: unknown) => {

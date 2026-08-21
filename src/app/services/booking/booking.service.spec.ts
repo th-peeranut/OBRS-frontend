@@ -250,4 +250,47 @@ describe('BookingService', () => {
       data: { content: [], totalElements: 0, totalPages: 0 },
     });
   });
+  /**
+   * OBRS-1204 — the active booking's human-facing number, stored beside its id.
+   *
+   * The interesting case is the one that has no assertion anywhere else: calling
+   * `setActiveBookingId` WITHOUT a number must clear whatever number is stored, not
+   * leave the previous booking's. The payment screen prints this value, so a kept-over
+   * one would tell a customer to quote a reference belonging to somebody else's booking.
+   */
+  describe('the active booking number', () => {
+    afterEach(() => {
+      service.clearActiveBookingId();
+    });
+
+    it('stores the number alongside the id', () => {
+      service.setActiveBookingId(7, 'BK-7');
+
+      expect(service.getActiveBookingId()).toBe(7);
+      expect(service.getActiveBookingNumber()).toBe('BK-7');
+    });
+
+    it('clears a previously stored number when the next booking supplies none', () => {
+      service.setActiveBookingId(7, 'BK-7');
+
+      service.setActiveBookingId(8);
+
+      expect(service.getActiveBookingId()).toBe(8);
+      expect(service.getActiveBookingNumber()).toBeNull();
+    });
+
+    it('treats a blank number as no number', () => {
+      service.setActiveBookingId(7, '   ');
+
+      expect(service.getActiveBookingNumber()).toBeNull();
+    });
+
+    it('drops the number when the active booking is cleared', () => {
+      service.setActiveBookingId(7, 'BK-7');
+
+      service.clearActiveBookingId();
+
+      expect(service.getActiveBookingNumber()).toBeNull();
+    });
+  });
 });

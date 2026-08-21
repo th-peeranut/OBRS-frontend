@@ -53,13 +53,17 @@
         </div>
       </div>
 
+      <!-- OBRS-1204: the merchant-name row is gone, not blanked. The name the payer
+      must trust is the one their banking app reads out of the QR itself, from the
+      PromptPay account registered with Omise; nothing in this app knows that string,
+      and printing a different one would undermine the very scan it is meant to
+      reassure. A row with no value shows nothing at all. -->
       <div class="qr-footer">
-        <div class="merchant-name">
-          {{ "PAYMENT.QR.MERCHANT_NAME" | translate }}
-        </div>
-        <div class="merchant-ref">
-          {{ "PAYMENT.QR.MERCHANT_REF" | translate }} {{ referenceNo || "-" }}
-        </div>
+        @if (bookingNumber) {
+          <div class="merchant-ref">
+            {{ "PAYMENT.QR.MERCHANT_REF" | translate }} {{ bookingNumber }}
+          </div>
+        }
       </div>
     </div>
 

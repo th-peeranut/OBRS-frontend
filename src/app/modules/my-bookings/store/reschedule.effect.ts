@@ -269,7 +269,7 @@ export class RescheduleEffect {
     this.actions$.pipe(
       ofType(confirmRescheduleSuccess),
       filter(({ result }) => normalizeStatusCode(result.status) === 'pending_payment'),
-      tap(({ result }) => this.service.setActiveBookingId(result.bookingId)),
+      tap(({ result }) => this.service.setActiveBookingId(result.bookingId, result.bookingNumber)),
       map(({ result }) =>
         rescheduleRequiresPayment({ bookingId: result.bookingId, paymentIntentId: result.paymentIntentId ?? null })
       )
