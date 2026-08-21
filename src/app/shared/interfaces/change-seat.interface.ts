@@ -49,6 +49,13 @@ export const CHANGE_SEAT_ERROR_CODES = [
   'CHANGE_SEAT_ERROR_SEAT_NOT_IN_MAP',
   'CHANGE_SEAT_ERROR_TICKET_MISMATCH',
   'CHANGE_SEAT_ERROR_MULTI_LEG_NOT_SUPPORTED',
+  // OBRS-599: an OPEN-seating trip has no assigned seat to change — a
+  // permanent domain rule the backend enforces on BOTH the availability read
+  // and the change-seat write (ChangeSeatService#assertNotOpenSeating).
+  // `my-bookings` disables the action before it can be reached, so this only
+  // surfaces to an API client calling directly; without the mapping below it
+  // read as the generic ACTION_UNAVAILABLE.
+  'CHANGE_SEAT_ERROR_OPEN_SEATING',
   'CHANGE_SEAT_ERROR_UNAUTHORIZED',
   'CHANGE_SEAT_ERROR_BOOKING_NOT_FOUND',
   // OBRS-358: the ONE shared jump-seat channel-guard code, also reachable

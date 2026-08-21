@@ -323,6 +323,7 @@
         "SEAT_NOT_IN_MAP": "That seat doesn't exist on this vehicle's map. Please choose another.",
         "TICKET_MISMATCH": "Your tickets have changed since this dialog opened. Please try again.",
         "MULTI_LEG_NOT_SUPPORTED": "Round-trip bookings can't have their seat changed.",
+        "OPEN_SEATING": "This trip boards by open seating — there is no assigned seat to change.",
         "UNAUTHORIZED": "You don't have permission to change the seat on this booking.",
         "BOOKING_NOT_FOUND": "This booking is no longer available.",
         "GENERIC": "Unable to change seat. Please try again.",
