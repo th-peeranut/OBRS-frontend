@@ -81,7 +81,7 @@
 
         @if (mode === 'promptpay') {
           <div class="rdf-field">
-            <label for="rdf-promptpay-phone">{{ 'REFUND_DESTINATION.PROMPTPAY_PHONE' | translate }}</label>
+            <label for="rdf-promptpay-phone">{{ 'REFUND_DESTINATION.PROMPTPAY_ID' | translate }}</label>
             <input
               id="rdf-promptpay-phone"
               type="text"
@@ -91,11 +91,11 @@
               formControlName="promptpayPhone"
               [class.is-invalid]="isInvalid('promptpayPhone')"
               [disabled]="disabled"
-              [placeholder]="'REFUND_DESTINATION.PROMPTPAY_PHONE' | translate"
+              [placeholder]="'REFUND_DESTINATION.PROMPTPAY_ID' | translate"
               />
-              @if (isInvalid('promptpayPhone') && hasError('promptpayPhone', 'nationalId')) {
+              @if (isInvalid('promptpayPhone') && hasError('promptpayPhone', 'checkDigit')) {
                 <small class="rdf-error">
-                  {{ 'REFUND_DESTINATION.ERROR.NATIONAL_ID' | translate }}
+                  {{ 'REFUND_DESTINATION.ERROR.CHECK_DIGIT' | translate }}
                 </small>
               }
               @if (isInvalid('promptpayPhone') && hasError('promptpayPhone', 'pattern')) {

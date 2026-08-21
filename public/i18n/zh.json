@@ -485,11 +485,11 @@
     "ACCOUNT_NAME": "账户名称",
     "BANK": "银行",
     "ACCOUNT_NUMBER": "账号",
-    "PROMPTPAY_PHONE": "PromptPay 手机号（10位，以0开头）",
+    "PROMPTPAY_ID": "PromptPay 账号 — 10位手机号或13位身份证号",
     "ERROR": {
       "REQUIRED": "此字段为必填项",
-      "PATTERN": "格式不正确 — 必须是10位手机号",
-      "NATIONAL_ID": "不接受身份证号码 — 请输入PromptPay手机号",
+      "PATTERN": "必须是以0开头的10位手机号，或13位身份证号",
+      "CHECK_DIGIT": "身份证号无效 — 请核对全部13位数字",
       "SERVER_INVALID": "退款账户信息无效 — 请检查后重试"
     },
     "CHECKING_METHOD": "正在检查退款方式…",

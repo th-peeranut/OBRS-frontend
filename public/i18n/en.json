@@ -485,11 +485,11 @@
     "ACCOUNT_NAME": "Account name",
     "BANK": "Bank",
     "ACCOUNT_NUMBER": "Account number",
-    "PROMPTPAY_PHONE": "PromptPay mobile number (10 digits, starts with 0)",
+    "PROMPTPAY_ID": "PromptPay ID — 10-digit mobile number or 13-digit national ID",
     "ERROR": {
       "REQUIRED": "This field is required",
-      "PATTERN": "Invalid format — must be a 10-digit mobile number",
-      "NATIONAL_ID": "National ID numbers are not accepted — enter a PromptPay mobile number",
+      "PATTERN": "Must be a 10-digit mobile number starting with 0, or a 13-digit national ID",
+      "CHECK_DIGIT": "That national ID is not valid — check all 13 digits",
       "SERVER_INVALID": "The refund destination details are invalid — please check and try again"
     },
     "CHECKING_METHOD": "Checking refund method…",
