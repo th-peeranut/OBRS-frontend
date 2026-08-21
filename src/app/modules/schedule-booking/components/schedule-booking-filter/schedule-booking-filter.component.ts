@@ -274,6 +274,24 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
           },
         })
       );
+
+      // OBRS-1501: the toggle used to move the FORM only. `scheduleFilter`
+      // kept whatever trip type the last ค้นหา wrote, and every downstream
+      // reader goes to the STORE, not to this form — so a customer who
+      // switched to one-way here was still asked for a return leg
+      // (`arrivalSchedules` is still in the list response), still checked out
+      // as `bookingType: 'return'` (passenger-info.component.ts) and was still
+      // priced and labelled round-trip on the summary. Writing the filter is
+      // the whole fix: the `scheduleFilter` subscription in ngOnInit re-runs
+      // the search off the new value behind its own `isSearchable()` guard.
+      // Deliberately NOT `onSearch()` — that warns SEARCH_VALIDATION at a
+      // customer who never pressed a search button — and deliberately not a
+      // second `invokeGetScheduleListApi` here, which would search twice.
+      this.store.dispatch(
+        invokeSetScheduleFilterApi({
+          schedule_filter: this.bookingForm.getRawValue(),
+        })
+      );
     });
 
     // OBRS-1185 AC#4: moving departureDate past returnDate must carry
@@ -306,15 +324,15 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // OBRS-1503: writing the filter is the ONLY dispatch this button needs.
+    // The `scheduleFilter` subscription in ngOnInit runs the search off the
+    // value that lands in the store, behind its own `isSearchable()` guard, so
+    // a second `invokeGetScheduleListApi` from here put two identical
+    // POST /schedules/search on the wire for every press. Same shape as
+    // home-booking.component.ts's onSearch(), which never had the duplicate.
     this.store.dispatch(
       invokeSetScheduleFilterApi({
         schedule_filter: formValue,
-      })
-    );
-
-    this.store.dispatch(
-      invokeGetScheduleListApi({
-        schedule_filter: payload,
       })
     );
   }
