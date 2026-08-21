@@ -23,8 +23,6 @@ export interface PaymentPayload {
   bookingId: number;
   paymentMethod: PaymentMethod;
   cardToken?: string;
-  bankReferenceNumber?: string;
-  qrReferenceNumber?: string;
   sourceType?: MobileBankingSourceType;
   phoneNumber?: string;
   amount?: number;
