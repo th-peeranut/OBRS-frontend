@@ -197,9 +197,11 @@ export class AppRefundDestinationFieldsComponent implements OnInit {
   }
 
   /** The BOT code the bank field holds since OBRS-1463, or null before a bank
-   * is picked — grouping still applies then, so the field helps the user count
-   * from the first keystroke rather than only after they choose. */
-  private get bankCode(): string | null {
+   * is picked. OBRS-1499 made that null the gate on the account-number field
+   * rather than a fallback grouping: with per-bank grouping the field cannot
+   * render the number correctly until it knows the bank, so the template reads
+   * this too and keeps the input shut until it answers. */
+  protected get bankCode(): string | null {
     return (this.formGroup.get('bank')?.value as string | null) || null;
   }
 
