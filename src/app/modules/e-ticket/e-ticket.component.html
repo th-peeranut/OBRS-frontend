@@ -87,6 +87,18 @@
                 </span>
                 <span class="value">{{ travelTime }}</span>
               </div>
+              <!-- OBRS-1502: the fourth cell of a 2-column grid that until now held
+                   three, so an overnight trip fills a gap rather than moving anything.
+                   Absent for a same-day trip, which is what keeps that ticket
+                   byte-identical to before this card. -->
+              @if (arrivalDate) {
+                <div class="ticket-item">
+                  <span class="label">
+                    {{ "E_TICKET.LABEL.ARRIVAL_DATE" | translate }}
+                  </span>
+                  <span class="value">{{ arrivalDate }}</span>
+                </div>
+              }
             </div>
 
             <div class="ticket-route">

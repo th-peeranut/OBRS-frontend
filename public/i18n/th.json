@@ -2957,6 +2957,7 @@
       "TICKET_NO": "เลขที่ตั๋ว",
       "TRAVEL_DATE": "วันเดินทาง",
       "TRAVEL_TIME": "เวลาเดินทาง",
+      "ARRIVAL_DATE": "วันที่ถึง",
       "ROUTE": "เส้นทาง",
       "ORIGIN": "ต้นทาง",
       "DESTINATION": "ปลายทาง",

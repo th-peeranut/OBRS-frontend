@@ -2957,6 +2957,7 @@
       "TICKET_NO": "Ticket no.",
       "TRAVEL_DATE": "Travel date",
       "TRAVEL_TIME": "Travel time",
+      "ARRIVAL_DATE": "Arrival date",
       "ROUTE": "Route",
       "ORIGIN": "Origin",
       "DESTINATION": "Destination",

@@ -77,6 +77,28 @@ export function arrivalDateWhenDayDiffers(
   return arrivalDay.iso > departureDay.iso ? arrivalDay.display : null;
 }
 
+/**
+ * OBRS-1502 — the arrival's Bangkok calendar day as `YYYY-MM-DD`, and only when
+ * the trip lands on a LATER Bangkok day than it departed; `null` otherwise.
+ *
+ * The same question `arrivalDateWhenDayDiffers` answers, returned in a shape the
+ * caller can re-format: the e-ticket prints its dates as `22 ส.ค. 2026` through
+ * its own locale-aware `formatDate`, and a `23/08/2026` beside that would put two
+ * date dialects on one printed page. The DAY is Bangkok's and not the device's on
+ * purpose — a viewer whose clock is not +07:00 would otherwise be told the trip
+ * lands on a later day and then shown the day it left.
+ */
+export function laterBangkokArrivalDay(
+  departureDateTime: string | null | undefined,
+  arrivalDateTime: string | null | undefined
+): string | null {
+  const departureDay = bangkokDay(departureDateTime);
+  const arrivalDay = bangkokDay(arrivalDateTime);
+  if (!departureDay || !arrivalDay) return null;
+
+  return arrivalDay.iso > departureDay.iso ? arrivalDay.iso : null;
+}
+
 /** Whole minutes between two date strings, clamped to `>= 0`. `0` for missing/invalid input. */
 export function durationMinutesTotal(
   startDateTime: string | null | undefined,

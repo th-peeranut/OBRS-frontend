@@ -2957,6 +2957,7 @@
       "TICKET_NO": "票号",
       "TRAVEL_DATE": "出行日期",
       "TRAVEL_TIME": "出行时间",
+      "ARRIVAL_DATE": "到达日期",
       "ROUTE": "路线",
       "ORIGIN": "出发地",
       "DESTINATION": "目的地",
