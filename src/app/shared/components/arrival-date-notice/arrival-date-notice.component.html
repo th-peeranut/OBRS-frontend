@@ -1,0 +1,5 @@
+@if (arrivalDate; as date) {
+  <span class="arrival-date-notice" data-testid="arrival-date-notice">
+    {{ "ARRIVAL_DATE_NOTICE.ARRIVES_ON" | translate: { date: date } }}
+  </span>
+}

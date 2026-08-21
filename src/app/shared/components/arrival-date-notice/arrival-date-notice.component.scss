@@ -1,0 +1,41 @@
+@import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
+
+/* OBRS-775: a host that declares no `display` renders as `inline`, and the sweep
+   in e2e/tests/host-box-sweep.spec.ts fails any inline host with block-level
+   children. `block` also puts this on its own line under the arrival time it
+   annotates, which is where it belongs. */
+:host {
+  display: block;
+}
+
+/* AC4 — a same-day trip must render exactly as it did before this card. The
+   template emits nothing then, but an empty block host is still a box: inside a
+   flex/grid parent with `gap` it would widen the row by one gap at zero height.
+   `:empty` ignores the comment an inactive `@if` leaves behind, so this matches
+   exactly the same-day case. */
+:host(:empty) {
+  display: none;
+}
+
+/* Not muted. This is the line that stops a customer planning a day early — the
+   same reasoning as the delay notice's own date (OBRS-1141). */
+.arrival-date-notice {
+  display: inline-block;
+  margin-top: $space-3xs;
+  color: $text-softblack;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
+  white-space: nowrap;
+}
+
+/* Dark mode lives here rather than in dark-theme.scss for the reason recorded on
+   the delay notice: `body.is-dark .schedule-item *` sets `color: $dk-text
+   !important` on every descendant of a result row, and a global rule could not
+   outrank it. A component rule scores higher in the class column. */
+:host-context(body.is-dark) {
+  .arrival-date-notice {
+    color: $dk-text !important;
+  }
+}

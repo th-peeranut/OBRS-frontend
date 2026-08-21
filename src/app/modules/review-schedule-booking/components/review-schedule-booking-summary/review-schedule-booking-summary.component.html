@@ -128,6 +128,10 @@
                   }}
                   {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
                 </div>
+                <app-arrival-date-notice
+                  [departureDateTime]="departureSchedule.departureDateTime"
+                  [arrivalDateTime]="departureSchedule.arrivalDateTime"
+                ></app-arrival-date-notice>
                 <!-- Province/Station Name -->
                 @if (this.scheduleFilter | async; as scheduleFilter) {
                   <div
@@ -320,6 +324,10 @@
                       }}
                       {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
                     </div>
+                    <app-arrival-date-notice
+                      [departureDateTime]="returnSchedule.departureDateTime"
+                      [arrivalDateTime]="returnSchedule.arrivalDateTime"
+                    ></app-arrival-date-notice>
                     <!-- Province/Station Name -->
                     @if (this.scheduleFilter | async; as scheduleFilter) {
                       <div
