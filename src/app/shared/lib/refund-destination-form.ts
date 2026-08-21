@@ -1,6 +1,7 @@
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { trimmedRequiredValidator } from '../validators/trimmed-required.validator';
 import { promptPayPhoneValidator } from '../validators/promptpay-phone.validator';
+import { accountNameCharsetValidator } from '../validators/account-name-charset.validator';
 import { RefundDestinationReqDto, RefundDestinationType } from '../interfaces/refund-destination.interface';
 
 export interface RefundDestinationFormValue {
@@ -52,7 +53,12 @@ function applyModeFieldValidators(form: FormGroup): void {
 
   for (const name of ['accountName', 'bank', 'accountNumber']) {
     const control = form.get(name);
-    control?.setValidators(mode === 'bank_account' ? [trimmedRequiredValidator] : []);
+    // OBRS-1464 (AC-3): `accountName` additionally carries the narrow charset
+    // denylist. `accountNumber` needs no validator of its own - the
+    // `obrsDigitsOnly` directive on the input means a non-digit never reaches
+    // the control in the first place (AC-2/AC-4), and the server re-checks.
+    const extra = name === 'accountName' ? [accountNameCharsetValidator] : [];
+    control?.setValidators(mode === 'bank_account' ? [trimmedRequiredValidator, ...extra] : []);
     control?.updateValueAndValidity({ emitEvent: false });
   }
 
