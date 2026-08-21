@@ -1,0 +1,105 @@
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="closeModal()">
+    <div class="admin-modal">
+      <h4 class="admin-modal-title">{{ 'ADMIN.ROUTES.ADD_SEGMENT_TITLE' | translate }}</h4>
+      <p class="admin-modal-subtitle">{{ 'ADMIN.ROUTES.ADD_SEGMENT_HINT' | translate }}</p>
+      <form [formGroup]="addSegmentForm" class="admin-form-grid" (ngSubmit)="submit()">
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.ROUTES.ORIGIN_STOP' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="fromStopSlug"
+            [options]="stops"
+            valueKey="slug"
+            labelKey="name"
+          ></app-admin-dropdown>
+          @if (isFieldInvalid('fromStopSlug')) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.ROUTES.DESTINATION_STOP' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="toStopSlug"
+            [options]="stops"
+            valueKey="slug"
+            labelKey="name"
+          ></app-admin-dropdown>
+          @if (hasFieldError('toStopSlug', 'sameStop')) {
+            <small class="admin-error">
+              {{ 'ADMIN.ROUTES.SAME_STOP_VALIDATION' | translate }}
+            </small>
+          }
+          @if (hasFieldError('toStopSlug', 'stopOrder')) {
+            <small class="admin-error">
+              {{ 'ADMIN.ROUTES.STOP_ORDER_VALIDATION' | translate }}
+            </small>
+          }
+          @if (hasFieldError('toStopSlug', 'noFare')) {
+            <small class="admin-error" data-testid="add-segment-no-fare">
+              {{ 'ADMIN.ROUTES.FARE_REQUIRED_AT_LEAST_ONE' | translate }}
+            </small>
+          }
+          @if (
+            isFieldInvalid('toStopSlug') &&
+            !hasFieldError('toStopSlug', 'sameStop') &&
+            !hasFieldError('toStopSlug', 'stopOrder') &&
+            !hasFieldError('toStopSlug', 'noFare')
+            ) {
+            <small class="admin-error">
+              {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+        <ng-container formGroupName="fares">
+          @for (option of vehicleTypeOptions; track option.slug) {
+            <div class="admin-form-field">
+              <label class="admin-form-label">
+                {{ 'ADMIN.ROUTES.FARE_FOR_VEHICLE_TYPE' | translate: { vehicleType: option.name } }}
+              </label>
+              <input
+                class="admin-field"
+                [formControlName]="fareControlName(option.slug)"
+                [attr.data-testid]="'add-segment-fare-' + fareControlName(option.slug)"
+                type="number"
+                min="0.01"
+                step="0.01"
+                />
+                @if (hasFieldError('fares.' + fareControlName(option.slug), 'alreadyPriced')) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.ROUTES.SEGMENT_EXISTS_VALIDATION' | translate: { vehicleType: option.name } }}
+                  </small>
+                }
+                @if (
+                  isFareInvalid(option.slug) &&
+                  !hasFieldError('fares.' + fareControlName(option.slug), 'alreadyPriced')
+                  ) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.ROUTES.FARE_VALIDATION' | translate }}
+                  </small>
+                }
+              </div>
+            }
+          </ng-container>
+        </form>
+        <div class="admin-modal-actions">
+          <button type="button" class="admin-btn" (click)="closeModal()">
+            {{ 'ADMIN.COMMON.CANCEL' | translate }}
+          </button>
+          <button
+            type="button"
+            class="admin-btn admin-btn-primary"
+            [disabled]="isSaving"
+            (click)="submit()"
+            >
+            {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }

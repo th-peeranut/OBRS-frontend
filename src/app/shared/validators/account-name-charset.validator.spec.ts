@@ -47,4 +47,16 @@ describe('accountNameCharsetValidator', () => {
       accountNameCharset: true,
     });
   });
+
+  // OBRS-1486: the owner kept the strict rule knowing this is exactly what it
+  // costs. If this test ever needs changing, the DECISION changed - read the
+  // card before touching DENIED.
+  it('rejects a company whose legal name carries a numeral (accepted cost)', () => {
+    expect(accountNameCharsetValidator(new FormControl('บริษัท 3 พี่น้อง จำกัด'))).toEqual({
+      accountNameCharset: true,
+    });
+    expect(accountNameCharsetValidator(new FormControl('บริษัท 108 ช็อป จำกัด'))).toEqual({
+      accountNameCharset: true,
+    });
+  });
 });

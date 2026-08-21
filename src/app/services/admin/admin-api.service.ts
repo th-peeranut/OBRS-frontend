@@ -488,6 +488,24 @@ export interface AdminSegmentReqDto {
   stopPairs: AdminStopPairReqDto[];
 }
 
+/** One vehicle type's whole stop-pair set inside a batch PUT. */
+export interface AdminVehicleTypeSegmentReqDto {
+  vehicleType: string;
+  stopPairs: AdminStopPairReqDto[];
+}
+
+/**
+ * OBRS-1033's batch shape for `PUT /api/private/segments`: several vehicle
+ * types replaced in ONE transaction. Kept as a separate type rather than
+ * optional fields on {@link AdminSegmentReqDto} because the backend refuses a
+ * payload carrying both shapes (400, `segment.validation.both-shapes-present`)
+ * - a type that permits both would let a caller build exactly that.
+ */
+export interface AdminSegmentBatchReqDto {
+  route: string;
+  vehicleTypes: AdminVehicleTypeSegmentReqDto[];
+}
+
 export interface AdminScheduleSetDto {
   id: number;
   startDate?: string;
@@ -1750,7 +1768,9 @@ export class AdminApiService {
     );
   }
 
-  updateSegments(payload: AdminSegmentReqDto): Observable<ResponseAPI<unknown>> {
+  updateSegments(
+    payload: AdminSegmentReqDto | AdminSegmentBatchReqDto
+  ): Observable<ResponseAPI<unknown>> {
     return this.putRequest<unknown>(`${this.baseUrl}/private/segments`, payload);
   }
 
