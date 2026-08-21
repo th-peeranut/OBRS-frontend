@@ -1194,3 +1194,88 @@ describe('ScheduleBookingFilterComponent — the trip-type toggle applies withou
     expect(searches[0].schedule_filter.returnDate).toBeUndefined();
   });
 });
+
+/**
+ * OBRS-1503 — one press of ค้นหา on the results page is ONE
+ * POST /schedules/search.
+ *
+ * `onSearch()` used to dispatch both halves: it wrote `scheduleFilter` AND
+ * fired `invokeGetScheduleListApi` itself. But writing the filter is already
+ * enough — the `scheduleFilter` subscription in ngOnInit searches off the new
+ * store value behind its own `isSearchable()` guard (the chain OBRS-1501 made
+ * load-bearing) — so every press put two identical requests on the wire.
+ * Measured on `origin/main` 0cb7bd3c: home → ค้นหา → results → ค้นหา again
+ * gave 3 `POST /api/schedules/search`, #2 and #3 byte-identical.
+ */
+describe('ScheduleBookingFilterComponent — one press of ค้นหา is one search (OBRS-1503)', () => {
+  const STATIONS: any = [
+    { id: 1, slug: 'station-a', status: 'active', stopType: 'station' },
+    { id: 2, slug: 'station-b', status: 'active', stopType: 'station' },
+  ];
+
+  let component: ScheduleBookingFilterComponent;
+  let dispatched: any[];
+  let filter$: BehaviorSubject<any>;
+
+  const typed = (type: string) => dispatched.filter((action) => action.type === type);
+
+  beforeEach(() => {
+    dispatched = [];
+    filter$ = new BehaviorSubject<any>(null);
+
+    // Same two-observable stand-in OBRS-1501 uses: the first `pipe()` in
+    // ngOnInit is the station list, everything after it is `scheduleFilter`.
+    // It has to be the REAL subscription here — the duplicate this card
+    // removes is only visible once both halves of the press are counted.
+    let call = 0;
+    const chainStore: any = {
+      pipe: () => (++call === 1 ? of(STATIONS) : filter$.asObservable()),
+      select: () => of(null),
+      dispatch: (action: any) => dispatched.push(action),
+    };
+
+    component = new ScheduleBookingFilterComponent(
+      new FormBuilder(),
+      createRouterStub(),
+      chainStore,
+      createStoreStub(),
+      createTranslateStub(),
+      { warning: () => {}, error: () => {}, success: () => {} } as any,
+      createBookingPolicyServiceStub(),
+      createLanguageServiceStub()
+    );
+    component.ngOnInit();
+
+    component.bookingForm.patchValue({
+      startStationId: 1,
+      stopStationId: 2,
+      passengerInfo: [
+        { type: 'ADULT', count: 1 },
+        { type: 'KIDS', count: 0 },
+      ],
+      departureDate: dayjs().add(1, 'day').toDate(),
+    });
+    dispatched.length = 0;
+  });
+
+  it('AC#4: onSearch() writes the filter and does not fire the list search itself', () => {
+    component.onSearch();
+
+    expect(typed(invokeSetScheduleFilterApi.type).length).toBe(1);
+    expect(typed(invokeGetScheduleListApi.type).length).toBe(0);
+  });
+
+  it('AC#1/AC#2: the press still ends in exactly one search, carrying what the form holds', () => {
+    component.onSearch();
+
+    // The reducer stores the action payload verbatim, so replaying it into the
+    // filter stream is what the store does one tick later.
+    filter$.next(typed(invokeSetScheduleFilterApi.type)[0].schedule_filter);
+
+    const searches = typed(invokeGetScheduleListApi.type);
+    expect(searches.length).toBe(1);
+    expect(searches[0].schedule_filter.fromStop).toBe('station-a');
+    expect(searches[0].schedule_filter.toStop).toBe('station-b');
+    expect(searches[0].schedule_filter.numberOfPassengers).toBe(1);
+  });
+});
