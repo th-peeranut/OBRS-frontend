@@ -19,6 +19,9 @@ describe('mapChangeSeatErrorCode', () => {
         'CHANGE_SEAT_ERROR_MULTI_LEG_NOT_SUPPORTED',
         'MY_BOOKINGS.CHANGE_SEAT.ERROR.MULTI_LEG_NOT_SUPPORTED',
       ],
+      // OBRS-599: the backend has thrown this since OBRS-475 (write path) and
+      // OBRS-501 (read path); without the mapping it read as ACTION_UNAVAILABLE.
+      ['CHANGE_SEAT_ERROR_OPEN_SEATING', 'MY_BOOKINGS.CHANGE_SEAT.ERROR.OPEN_SEATING'],
       ['CHANGE_SEAT_ERROR_UNAUTHORIZED', 'MY_BOOKINGS.CHANGE_SEAT.ERROR.UNAUTHORIZED'],
       ['CHANGE_SEAT_ERROR_BOOKING_NOT_FOUND', 'MY_BOOKINGS.CHANGE_SEAT.ERROR.BOOKING_NOT_FOUND'],
       // OBRS-358: shared jump-seat channel-guard code -> the shared COMMON.ERROR.* key.
@@ -63,6 +66,9 @@ describe('isTerminalChangeSeatError', () => {
   it('is terminal for NOT_CONFIRMED/MAX_COUNT/WINDOW_CLOSED/MULTI_LEG/UNAUTHORIZED/BOOKING_NOT_FOUND', () => {
     expect(isTerminalChangeSeatError('CHANGE_SEAT_ERROR_NOT_CONFIRMED')).toBeTrue();
     expect(isTerminalChangeSeatError('CHANGE_SEAT_ERROR_MAX_COUNT')).toBeTrue();
+    // OBRS-599: OPEN seating is a property of the trip, not a state that can
+    // move under the dialog — re-fetching would return the same rejection.
+    expect(isTerminalChangeSeatError('CHANGE_SEAT_ERROR_OPEN_SEATING')).toBeTrue();
     expect(isTerminalChangeSeatError('CHANGE_SEAT_ERROR_SEAT_UNAVAILABLE')).toBeFalse();
     expect(isTerminalChangeSeatError(undefined)).toBeFalse();
   });

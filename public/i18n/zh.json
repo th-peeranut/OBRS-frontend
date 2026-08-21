@@ -323,6 +323,7 @@
         "SEAT_NOT_IN_MAP": "该座位不在此车辆的座位图中，请另选一个。",
         "TICKET_MISMATCH": "自打开此窗口以来您的车票已发生变化，请重试。",
         "MULTI_LEG_NOT_SUPPORTED": "往返预订无法更改座位。",
+        "OPEN_SEATING": "此行程采用不指定座位的乘车方式，没有可更改的指定座位。",
         "UNAUTHORIZED": "您无权更改此预订的座位。",
         "BOOKING_NOT_FOUND": "此预订已不可用。",
         "GENERIC": "无法更改座位，请重试。",
