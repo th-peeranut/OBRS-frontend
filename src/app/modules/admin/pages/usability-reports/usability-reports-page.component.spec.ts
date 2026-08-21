@@ -871,6 +871,81 @@ describe('UsabilityReportsPageComponent', () => {
       .toBe(1);
   });
 
+  // OBRS-1473: the save-failure toast used to be one fixed string — "please try
+  // again" — for every failure, including REPORT_INVALID_TRANSITION, which is a
+  // PERMANENT refusal from the backend's transition matrix. That is what reached
+  // the owner on SIT as an unexplained failure they were told to retry.
+  it('a REPORT_INVALID_TRANSITION save failure says the move is not possible, not "please try again"', () => {
+    storeSpy.data$.next(pageWithStatus('resolved'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: { ...mockFullDetail, status: 'resolved' },
+    }));
+    // A REAL HttpErrorResponse, not a plain object: extractApiErrorCode() gates
+    // on `instanceof HttpErrorResponse`, so a hand-rolled `{status, error}`
+    // silently reads as "no code" and would make this test pass for the wrong
+    // reason (it failed for exactly that reason on the first run).
+    adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(
+      throwError(() => new HttpErrorResponse({
+        status: 400,
+        error: { errorCode: 'REPORT_INVALID_TRANSITION' },
+      }))
+    );
+
+    component['openDetail'](1);
+    fixture.detectChanges();
+    component['selectedDetailStatus'] = 'accepted';
+    component.saveStatus();
+
+    expect(alertServiceSpy.error)
+      .withContext('a permanent refusal must not be reported as retryable')
+      .toHaveBeenCalledWith('ADMIN.USABILITY_REPORTS.STATUS_UPDATE_INVALID_TRANSITION');
+  });
+
+  it('any other save failure keeps the retryable "please try again" message (control)', () => {
+    storeSpy.data$.next(pageWithStatus('in_review'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: { ...mockFullDetail, status: 'in_review' },
+    }));
+    adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(
+      throwError(() => ({ status: 500, error: {} }))
+    );
+
+    component['openDetail'](1);
+    fixture.detectChanges();
+    component['selectedDetailStatus'] = 'accepted';
+    component.saveStatus();
+
+    expect(alertServiceSpy.error)
+      .withContext('a 500 IS worth retrying — this branch must not be swallowed by the new one')
+      .toHaveBeenCalledWith('ADMIN.USABILITY_REPORTS.STATUS_UPDATE_FAILED');
+  });
+
+  it('the detail dropdown on a resolved report offers the reopen plus the same-state note edit, and nothing that would 400 (OBRS-1473/1474)', () => {
+    storeSpy.data$.next(pageWithStatus('resolved'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: { ...mockFullDetail, status: 'resolved' },
+    }));
+
+    component['openDetail'](1);
+    fixture.detectChanges();
+
+    expect(component['detailStatusOptions'].map((o) => o.value))
+      .withContext('accepted/rejected here would each be a guaranteed 400')
+      .toEqual(['in_review', 'resolved']);
+  });
+
   it('leaves the detail status selection empty (Save disabled) when opening a "new" report', () => {
     storeSpy.data$.next(pageWithStatus('new'));
     storeSpy.hasValue = true;

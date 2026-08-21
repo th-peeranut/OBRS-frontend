@@ -1330,6 +1330,7 @@
       },
       "STATUS_UPDATE_SUCCESS": "状态更新成功。",
       "STATUS_UPDATE_FAILED": "状态更新失败，请重试。",
+      "STATUS_UPDATE_INVALID_TRANSITION": "无法从当前状态更改为所选状态。请刷新页面，并从可选项中选择。",
       "NEW_BADGE_ARIA": "{{count}} 条新的可用性反馈",
       "ACCEPTED_BADGE_ARIA": "{{count}} 条待处理的可用性反馈",
       "DUPLICATE": {

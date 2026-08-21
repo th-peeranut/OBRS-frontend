@@ -1330,6 +1330,7 @@
       },
       "STATUS_UPDATE_SUCCESS": "Status updated successfully.",
       "STATUS_UPDATE_FAILED": "Failed to update status. Please try again.",
+      "STATUS_UPDATE_INVALID_TRANSITION": "This report cannot move from its current status to the one selected. Refresh the page and pick from the options offered.",
       "NEW_BADGE_ARIA": "{{count}} new usability reports",
       "ACCEPTED_BADGE_ARIA": "{{count}} usability reports awaiting action",
       "DUPLICATE": {
