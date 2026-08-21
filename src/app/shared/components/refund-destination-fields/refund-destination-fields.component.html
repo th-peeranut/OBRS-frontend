@@ -36,7 +36,12 @@
         [disabled]="disabled"
         [placeholder]="'REFUND_DESTINATION.ACCOUNT_NAME' | translate"
         />
-        @if (isInvalid('accountName')) {
+        @if (isInvalid('accountName') && hasError('accountName', 'accountNameCharset')) {
+          <small class="rdf-error">
+            {{ 'REFUND_DESTINATION.ERROR.ACCOUNT_NAME_CHARSET' | translate }}
+          </small>
+        }
+        @if (isInvalid('accountName') && hasError('accountName', 'required')) {
           <small class="rdf-error">
             {{ 'REFUND_DESTINATION.ERROR.REQUIRED' | translate }}
           </small>
@@ -65,6 +70,7 @@
             id="rdf-account-number"
             type="text"
             inputmode="numeric"
+            obrsDigitsOnly
             class="rdf-input"
             formControlName="accountNumber"
             [class.is-invalid]="isInvalid('accountNumber')"

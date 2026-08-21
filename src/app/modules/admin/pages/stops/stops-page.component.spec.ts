@@ -12,6 +12,16 @@ const STOP_LIST = [
   },
 ];
 
+// OBRS-1481: a stop a pin can point at AFTER it stopped being pickup-eligible. Kept out of
+// STOP_LIST so the row-count assertions in the existing tests keep meaning what they meant.
+const STALE_PIN_STOP = {
+  id: 9,
+  slug: 'lat_krabang_rest_stop_1',
+  status: { slug: 'active', translations: { th: { label: 'ใช้งาน' } } },
+  stopType: { slug: 'pickup', translations: { th: { label: 'จุดรับ' } } },
+  translations: { th: { label: 'จุดพักรถลาดกระบัง 1' } },
+};
+
 const STOP_DETAIL = {
   id: 7,
   slug: 'nong_chak',
@@ -24,6 +34,14 @@ const STOP_DETAIL = {
   primaryPhotoUrl: null,
   addresses: {},
 };
+
+// OBRS-1481: what GET /private/stops/return-stop-options answers - the stops a bus actually
+// picks passengers up at. Deliberately does NOT contain id 9, so the AC-7 test below can prove a
+// pin that fell out of the eligible set is still offered.
+const RETURN_STOP_OPTIONS = [
+  { id: 2, slug: 'ds293_chatuchak', translations: { th: { label: 'ดีเอส293 จตุจักร' } } },
+  { id: 3, slug: 'pt_srinakarin', translations: { th: { label: 'ปตท. ศรีนครินทร์' } } },
+];
 
 function makeComponent(overrides: Record<string, unknown> = {}) {
   const adminApi = {
@@ -40,6 +58,9 @@ function makeComponent(overrides: Record<string, unknown> = {}) {
         ],
       })
     ),
+    getReturnStopOptions: jasmine
+      .createSpy('getReturnStopOptions')
+      .and.returnValue(of({ data: RETURN_STOP_OPTIONS })),
     getStopDetail: jasmine.createSpy('getStopDetail').and.returnValue(of({ data: STOP_DETAIL })),
     updateStop: jasmine.createSpy('updateStop').and.returnValue(of({ data: null })),
     uploadStopPhoto: jasmine
@@ -337,5 +358,35 @@ describe('StopsPageComponent (OBRS-1022)', () => {
       expect(component.isFormModalOpen).toBeTrue();
       expect(adminApi.getStopDetail).toHaveBeenCalledWith(7);
     });
+  });
+
+  // ---------------------------------------------------------------------------
+  // OBRS-1481: the return boarding pin
+  // ---------------------------------------------------------------------------
+
+  it('offers the pickup-eligible stops the server returned', async () => {
+    const { component } = makeComponent();
+
+    await component.load();
+
+    expect(component.returnStopOptions.map((o: { id: number }) => o.id)).toEqual([2, 3]);
+  });
+
+  it('keeps a saved pin on the list even after it stopped being pickup-eligible', async () => {
+    // AC-7. boarding_type is edited elsewhere, so a pin made months ago can fall out of the
+    // eligible set. If the dropdown simply dropped it, the select would render with nothing
+    // chosen and the owner's next save would post null - deleting a pin they never touched.
+    const { component, adminApi } = makeComponent();
+    adminApi.getStopsForAdmin.and.returnValue(of({ data: [...STOP_LIST, STALE_PIN_STOP] }));
+    adminApi.getStopDetail.and.returnValue(of({ data: { ...STOP_DETAIL, returnStopId: 9 } }));
+
+    await component.load();
+    await component.openStop(7);
+
+    expect(component.selected.returnStopId).toBe(9);
+    expect(component.returnStopOptions.map((o: { id: number }) => o.id)).toContain(9);
+    expect(component.returnStopOptions.find((o: { id: number }) => o.id === 9).label).toBe(
+      'จุดพักรถลาดกระบัง 1'
+    );
   });
 });
