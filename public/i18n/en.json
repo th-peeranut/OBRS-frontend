@@ -1984,7 +1984,7 @@
       },
       "ZERO": {
         "RAN_NO_REVENUE": "Ran, but took no money",
-        "DID_NOT_RUN": "Did not run in this period",
+        "DID_NOT_RUN": "No recorded round in this period",
         "ENTERED_AS_ZERO": "Recorded as zero",
         "NO_ENTRIES": "Nobody has recorded any cost"
       },
