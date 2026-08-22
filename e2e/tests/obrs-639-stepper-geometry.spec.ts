@@ -108,26 +108,21 @@ function readStepper(): StepperShot | null {
 }
 
 async function shoot(page: Page, tag: string): Promise<StepperShot> {
-  // Two frames after the click that got here: a stepper measured mid-transition is
-  // narrower than the settled one and would under-report.
+  // Scroll to the stepper BEFORE anything is read or shot. A page-coordinate `clip`
+  // does not scroll, so on /payment -- where the flow arrives part-way down the page --
+  // both the "stepper" shot and the page shot were of the footer.
+  const stepper = page.locator('.stepper-container').first();
+  await stepper.scrollIntoViewIfNeeded();
+
+  // Two frames after that: a stepper measured mid-transition is narrower than the
+  // settled one and would under-report.
   await page.evaluate(
     () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
   );
   const shot = await page.evaluate(readStepper);
   expect(shot, `${tag}: no .stepper-container on the page`).not.toBeNull();
 
-  const box = await page.locator('.stepper-container').first().boundingBox();
-  if (box) {
-    await page.screenshot({
-      path: `${ASSETS}/OBRS-639-${tag}-stepper.png`,
-      clip: {
-        x: Math.max(0, box.x - 12),
-        y: Math.max(0, box.y - 12),
-        width: Math.min(page.viewportSize()?.width ?? box.width, box.width + 24),
-        height: box.height + 24,
-      },
-    });
-  }
+  await stepper.screenshot({ path: `${ASSETS}/OBRS-639-${tag}-stepper.png` });
   await page.screenshot({ path: `${ASSETS}/OBRS-639-${tag}-page.png` });
   return shot as StepperShot;
 }
