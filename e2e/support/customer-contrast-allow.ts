@@ -53,8 +53,11 @@
  *     in the same state, so the mechanism now has a gate of its own
  *     (`dark-override-effective.spec.ts`) rather than a paragraph here.
  *
- *   OBRS-768 -- /my-bookings and /e-ticket never enter dark mode. Every one of
- *     their entries measures the IDENTICAL colour in both themes.
+ *   OBRS-768 -- CLOSED for /my-bookings, and its two entries are gone from the
+ *     register. That page never entered dark mode, so every entry it had measured
+ *     the IDENTICAL colour in both themes -- which is exactly what a contrast
+ *     floor cannot see, since a white card with dark ink passes. /e-ticket keeps
+ *     its documented paper exemption; the block below carries the measurements.
  *
  *   OBRS-772 -- 1.4.11 control boundaries. Real by the letter of the standard,
  *     and also the Bootstrap/PrimeNG default border. That card has to settle
@@ -78,27 +81,43 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   // -------------------------------------------------------------------------
 
   // -------------------------------------------------------------------------
-  // OBRS-768 -- /my-bookings and /e-ticket do not respond to dark mode at all.
-  // Each of these measures the SAME value in light and dark; that identity is
-  // the evidence, not an inference. `body.is-dark` is asserted by the sweep, so
-  // the theme did apply -- the page's own surfaces just ignore it.
-  // -------------------------------------------------------------------------
-  // Three of this family's TEXT rows are gone as of OBRS-769, and NOT because
-  // OBRS-768 was fixed -- these pages still ignore dark mode, which is why the
-  // two boundary rows below are still here. What changed is that the colour they
-  // were measuring stopped being sub-AA: repainting a white surface's text for
-  // LIGHT mode necessarily repaints it in dark too, on a page whose surface is
-  // white in both. The three that left:
+  // OBRS-768 -- FIXED (2026-08-22) for /my-bookings. Two entries used to sit here:
+  //
+  //   dark|button.filter-pill|boundary-on-#f9f9ff       1.28:1
+  //   dark|button.actions-menu-btn|boundary-on-#ffffff  1.35:1
+  //
+  // Both were BOUNDARY rows and neither was really a boundary defect: the page did
+  // not respond to dark mode at all, so the dark sweep was measuring the LIGHT
+  // control on the LIGHT page and filing the light number twice. The card's evidence
+  // was never a list of failures, it was a list of IDENTITIES -- seventeen of the
+  // twenty surfaces AC-1 names returned byte-identical computed values in both
+  // themes. A contrast floor cannot express that: white card, dark ink, 4.60:1, pass.
+  // The fix is a `:host-context(body.is-dark)` block in
+  // my-bookings.component.scss, and these two controls now take $dk-text-muted
+  // borders -- 7.46:1 on $dk-bg for the pill, 6.65:1 on $dk-bg-card for the kebab.
+  //
+  // Their LIGHT twins are still on the register, under OBRS-772 at the same 1.28 and
+  // 1.35, and that is the correct place for them: 772 owns the 1.4.11 boundary policy
+  // for the whole app. So the pages are asymmetric on purpose until 772 settles.
+  //
+  // /e-ticket did NOT get this treatment, and the reason is a measurement rather than
+  // an omission (owner's call, 2026-08-22). Measured on the same lane the same day:
+  // `.ticket-page` already flips #edf9fe -> #0f1117 (dark-theme.scss section 15 works),
+  // `.ticket-paper` is white in both themes by a decision recorded in four places
+  // (section 15, design-system.md's dark-theme-exempt note, and the OBRS-296 /
+  // OBRS-857 comments in that page's own scss and html), and the sweep found ZERO
+  // text runs below AA there in either theme. The card's premise about that page was
+  // written in July and OBRS-857 reaffirmed the exemption afterwards.
+  //
+  // Three TEXT rows of this family left earlier, under OBRS-769 and NOT because 768
+  // was fixed -- at that point the surface had not moved and only the colour on it
+  // had. Recorded because "an OBRS-769 fix closed OBRS-768 rows" reads like scope
+  // creep and is the opposite:
   //
   //   dark|span.label|#989ba4-on-#ffffff                  2.78 -> 4.60
   //   dark|div > dt|#989ba4-on-#ffffff                    2.78 -> 4.60
   //   dark|header.my-bookings__header > p|#717581-on-#f9f9ff  4.39 -> 6.68
-  //
-  // Worth stating plainly, because "an OBRS-769 fix closed OBRS-768 rows" reads
-  // like scope creep and is the opposite: 768 owns the SURFACE, and the surface
-  // has not moved.
-  'dark|button.filter-pill|boundary-on-#f9f9ff': '1.28:1 -- OBRS-768, unthemed surface (boundary debt itself is OBRS-772)',
-  'dark|button.actions-menu-btn|boundary-on-#ffffff': '1.35:1 -- OBRS-768, unthemed surface (boundary debt itself is OBRS-772)',
+  // -------------------------------------------------------------------------
 
   // -------------------------------------------------------------------------
   // OBRS-769 -- FIXED (2026-07-28), and OBRS-817 was the same defect filed twice

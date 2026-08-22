@@ -270,7 +270,15 @@ const pageOf = <T>(content: T[]) => ({
 // The pinning is `mustRender: '.recent-route-btn:not(.is-active)'` on the home
 // target below. Change these ids back to one pair and that fires by name rather
 // than surfacing a week later as a CSS rule that looks broken and is not.
-const MY_BOOKINGS = ok(
+// OBRS-768 exports this. `/bookings/me` is fulfilled by the catch-all `page.route` inside
+// seedCustomerSession, and a later handler cannot read what an earlier one would have
+// answered -- `route.fetch()` goes to the real network, which in this lane is
+// localhost:8080 with nothing listening. A spec that needs a FOURTH status (the capture
+// lane does: `pending` is the only `.is-warning` of the four `statusClass()` returns)
+// therefore has to build its payload from this constant rather than intercept the answer.
+// Exported rather than widened here on purpose: six other specs read this population, and
+// a fourth booking would move every one of their counts.
+export const MY_BOOKINGS = ok(
   pageOf([
     myBooking(501, 'B-000501', 'confirmed', 360),
     myBooking(502, 'B-000502', 'refunded', 180),
