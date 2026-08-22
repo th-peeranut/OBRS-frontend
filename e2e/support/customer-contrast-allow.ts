@@ -273,26 +273,14 @@ export const CONTRAST_ALLOW: Record<string, string> = {
     '1.53:1 x3 -- OBRS-772 ghost control boundary: the theme toggle in the language row of the three auth pages, no fill at all',
 
   // -------------------------------------------------------------------------
-  // OBRS-773 -- the one boundary finding that is NOT a faint border: a filled
-  // primary button whose fill sinks into the card it sits on. OBRS-746 measured
-  // this and wrote it onto OBRS-584's card; nothing owned the fix until now.
-  // Before OBRS-752 the same button failed the OTHER criterion (white label at
-  // 2.03:1 on #4bc2f7), so this is the tail of a trade, not a new regression.
+  // The five OBRS-773 entries are GONE because they are FIXED, not moved. The
+  // $primary-blue customer button family (.btn-search / .select-btn /
+  // .payment-btn and their four unmeasured siblings) now carries a $dk-accent
+  // ring in dark mode:
+  // 7.37:1 / 8.29:1 / 9.31:1 against the three surfaces it lands on, and a ring
+  // is not a fill, so it does not dim on hover -- which is what put the
+  // select/payment rows here in the first place. Section P of
+  // src/styles/dark-theme.scss carries the derivation, and why a ring beat
+  // every fill change available.
   // -------------------------------------------------------------------------
-  'dark|button.btn.btn-search|boundary-on-#22263a': '2.80:1 -- OBRS-773 primary fill vs the dark card, no border to carry it',
-
-  // The same family, in a state the rest sweep cannot reach: these two buttons
-  // CLEAR 3:1 at rest ($primary-blue #0772a2) and fall below it on hover, when
-  // the fill darkens to $primary-blue-hover #065d85. The button loses its
-  // boundary at the moment you point at it.
-  //
-  // Note the tension this creates, because whoever picks OBRS-773 up will hit
-  // it: invariant 2 of check-brand-fill-contrast.mjs REQUIRES a hover fill to be
-  // darker than its rest fill (OBRS-763, after the OBRS-741 inversion). On a
-  // dark page "darker" and "still 3:1 against the page" pull against each other,
-  // so the answer is probably a ring rather than a different fill.
-  'dark:hover|button.select-btn|boundary-on-#1a1d27': '2.33:1 -- OBRS-773, hover fill sinks into the dark card',
-  'dark:focus|button.select-btn|boundary-on-#1a1d27': '2.33:1 -- OBRS-773, focus fill sinks into the dark card',
-  'dark:hover|button.payment-btn|boundary-on-#0f1117': '2.62:1 -- OBRS-773, hover fill sinks into the dark page',
-  'dark:focus|button.payment-btn|boundary-on-#0f1117': '2.62:1 -- OBRS-773, focus fill sinks into the dark page',
 };
