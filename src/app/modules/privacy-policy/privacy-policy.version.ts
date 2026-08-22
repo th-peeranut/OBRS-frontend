@@ -69,5 +69,26 @@
 // two versions sharing an effective date cannot be ordered by the only field a data
 // subject can see. Nobody loses a day by it — prod serves no site yet (it answers 404)
 // and the scheduled dev->sit promote does not run until Monday night.
-export const PRIVACY_POLICY_VERSION = '2.3';
-export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026-08-10';
+// 2.4 (OBRS-1528 + OBRS-1366) is the first version published to fix statements that
+// were simply not true of the running system, rather than to add something the notice
+// had never covered. Three of them, and they ship as ONE version on the owner's
+// decision of 2026-08-22: the ledger refuses to let one version cover two texts, so
+// two separate fixes would have meant 2.4 and 2.5 and the re-consent above paid twice.
+//
+// What changed: the two sentences that pointed at the withdraw button "at the end of
+// this page" as plain fact are now conditional on the site actually collecting —
+// OBRS-1179 stops rendering that button wherever no measurement ID is configured,
+// which is every build prod runs, so the notice was describing a control the reader
+// could not find; the cookie paragraph no longer says consent alone makes _ga/_clck/
+// _clsk appear, because with no ID configured `loadGa4()` returns early and nothing is
+// set whatever the visitor answers; and section 2 no longer claims passenger type is
+// used "to arrange seating and to apply the correct fare", which measurement on the
+// code prod runs disproves twice over (OBRS-1366) — it is display-only, it is optional
+// since OBRS-1357, and the list now includes the nun option OBRS-1365 shipped.
+//
+// The re-consent consequence above applies again. It is no longer free — prod serves a
+// live site now, unlike at 2.2/2.3 — and that is the argument FOR one bump, not
+// against fixing the text: an untrue notice is what consent would otherwise be
+// recorded against.
+export const PRIVACY_POLICY_VERSION = '2.4';
+export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026-08-22';
