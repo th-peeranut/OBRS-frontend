@@ -2569,7 +2569,7 @@
     "OTP_TIME": "OTP number expired. Please enter it again",
     "OTP_REF": "Ref",
     "OTP_LOGIN": "Confirm",
-    "NO_OTP": "You have not received the OPT number?",
+    "NO_OTP": "You have not received the OTP number?",
     "NO_OTP_LINK": "Resend",
     "LOGIN_SUCCESS": "Login successful",
     "OTP_REQUEST_FAILED": "Failed to send OTP. Please try again.",
