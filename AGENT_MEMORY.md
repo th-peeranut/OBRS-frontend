@@ -4302,3 +4302,14 @@ explanation, the page/selector names inside it are per-file facts — don't copy
 The code change itself (deleting the private `background` so the cascade resolves to the shared
 0.75) is correct and empirically confirmed: result-AFTER.json shows backdropBg
 rgba(25,28,30,0.75) on all six shots including both dual-class backdrops.
+
+## OBRS-1539 (Scrutinize self-fix, 2026-08-22)
+The fix for a drifted COPY of a claim must not be a fresh, fuller COPY of the same claim.
+The submitted comment re-stated the mechanism ("gtag batches…") AND the exact measured
+numbers (4,906/4,909 ms) that already live in `AnalyticsTagsService.setSuspended` and
+ADR-0034 §10 — putting those numbers in THREE sites. That is the identical failure mode
+OBRS-1539 exists to correct (OBRS-1206 fixed the service, the component copy stayed false).
+Reduced the block to a POINTER: keep the correction (COLLECTING vs SENDING) + provenance
+(OBRS-1206/1539) + a qualitative "a few seconds", and defer the measurements/alternatives
+to `setSuspended` and ADR-0034 §10. Rule: a comment that documents someone else's measured
+fact should cite the owner, not restate the number — restated numbers drift.

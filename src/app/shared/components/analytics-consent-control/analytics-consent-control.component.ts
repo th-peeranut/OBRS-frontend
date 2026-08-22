@@ -33,12 +33,21 @@ import { hasOwnKey } from '../../lib/own-key';
  *
  * `AnalyticsService.init()` subscribes to `isGranted$`, so `reset()` runs
  * `AnalyticsTagsService.setSuspended(true)` in the same tick: `ga-disable-<id>`
- * goes true (gtag reads it at send time) and `clarity('stop')` is called. So
- * collection stops WITHOUT a reload, for a tag already in the document — and on
- * the next load the scripts are never injected at all, because `load()` is only
- * reached while granted. The vendor switches are best-effort by nature (a
- * renamed global is caught and warned, see `setSuspended`); the never-injected
- * path is the hard guarantee, and the copy below is written to match.
+ * goes true and `clarity('stop')` is called. So collection stops WITHOUT a
+ * reload, for a tag already in the document — and on the next load the scripts
+ * are never injected at all, because `load()` is only reached while granted.
+ *
+ * ⚠️ That stops gtag COLLECTING, not gtag SENDING: a hit already queued when
+ * consent was withdrawn still goes out, about five seconds later. This block used
+ * to assert the flag is "read at send time" — false, removed from
+ * `analytics-tags.service.ts` by OBRS-1206, and this was its surviving copy
+ * (OBRS-1539). The measurements, the alternatives that were tried, and why that
+ * tail is ACCEPTED live in `AnalyticsTagsService.setSuspended` and ADR-0034 §10;
+ * do not "fix" it here without overturning that section.
+ *
+ * The vendor switches are best-effort by nature (a renamed global is caught and
+ * warned, see `setSuspended`); the never-injected path is the hard guarantee,
+ * and the copy below is written to match.
  *
  * IT STANDS DOWN WITH THE BANNER WHEN THERE IS NO ID (OBRS-1179)
  *
