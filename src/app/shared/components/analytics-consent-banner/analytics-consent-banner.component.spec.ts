@@ -3,8 +3,38 @@ import { NavigationEnd, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
-import { AnalyticsConsentService } from '../../../services/analytics/analytics-consent.service';
+import { environment } from '../../../../environments/environment';
+import {
+  ANALYTICS_CONSENT_STORAGE_KEY,
+  AnalyticsConsentService,
+} from '../../../services/analytics/analytics-consent.service';
 import { AnalyticsConsentBannerComponent } from './analytics-consent-banner.component';
+
+/**
+ * OBRS-1179 — the bar only asks where something can be measured, and the Karma
+ * build (`environment.ts`) ships the blank IDs every checkout has. Without this
+ * every case in this file would be asserting the empty-build arm by accident,
+ * and the ask itself — which is what most of them are about — would go untested.
+ *
+ * Only GA4 is filled: AC-2 says either ID is enough, so the whole file doubles
+ * as the "Clarity blank, bar still owed" case. `environment.analytics` is a
+ * shared mutable object, so it is put back after every case.
+ */
+const originalAnalytics = { ...environment.analytics };
+
+function setMeasurementIds(ga4: string, clarity: string): void {
+  environment.analytics.ga4MeasurementId = ga4;
+  environment.analytics.clarityProjectId = clarity;
+}
+
+beforeEach(() => setMeasurementIds('G-OBRS1179TEST', ''));
+
+afterEach(() =>
+  setMeasurementIds(
+    originalAnalytics.ga4MeasurementId,
+    originalAnalytics.clarityProjectId
+  )
+);
 
 describe('AnalyticsConsentBannerComponent', () => {
   let fixture: ComponentFixture<AnalyticsConsentBannerComponent>;
@@ -357,5 +387,85 @@ describe('AnalyticsConsentBannerComponent — route scope', () => {
 
       expect(banner()).not.toBeNull();
     });
+  });
+});
+
+/**
+ * OBRS-1179 — the arm that did not exist: a build that measures nothing.
+ *
+ * BOTH arms, deliberately (AC-4). A single "it does not render" case passes just
+ * as well on a component that never renders at all, which is the vacuous green
+ * this repo has paid for before; the cases above are the other arm, and they run
+ * with an ID set for exactly that reason.
+ */
+describe('AnalyticsConsentBannerComponent — with nothing to measure', () => {
+  let fixture: ComponentFixture<AnalyticsConsentBannerComponent>;
+
+  function banner(): HTMLElement | null {
+    return fixture.nativeElement.querySelector('.consent-banner');
+  }
+
+  /** Built after the IDs are set — the component reads them as it renders. */
+  async function render(): Promise<void> {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      declarations: [AnalyticsConsentBannerComponent],
+      imports: [TranslateModule.forRoot(), RouterTestingModule],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(AnalyticsConsentBannerComponent);
+    fixture.detectChanges();
+  }
+
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('does not ask when neither ID is configured — there is nothing to consent to', async () => {
+    setMeasurementIds('', '');
+
+    await render();
+
+    expect(banner()).toBeNull();
+  });
+
+  it('does not ask for whitespace either — a blank-looking ID builds no tag URL', async () => {
+    // Same `?.trim()` the loader applies, so the two halves cannot disagree
+    // about what counts as configured.
+    setMeasurementIds('   ', '	');
+
+    await render();
+
+    expect(banner()).toBeNull();
+  });
+
+  it('still asks when only Clarity is configured — AC-2, either ID is enough', async () => {
+    setMeasurementIds('', 'obrs1179clarity');
+
+    await render();
+
+    expect(banner()).not.toBeNull();
+  });
+
+  it('still asks when only GA4 is configured', async () => {
+    setMeasurementIds('G-OBRS1179TEST', '');
+
+    await render();
+
+    expect(banner()).not.toBeNull();
+  });
+
+  /**
+   * AC-3. Hiding the ask is not the same as forgetting the answer. A visitor who
+   * declined before the IDs were removed has not withdrawn that refusal, and the
+   * day an ID is configured the bar must not reappear to re-ask them.
+   */
+  it('leaves a stored answer alone when it stops rendering', async () => {
+    localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'denied');
+    setMeasurementIds('', '');
+
+    await render();
+
+    expect(banner()).toBeNull();
+    expect(localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY)).toBe('denied');
   });
 });

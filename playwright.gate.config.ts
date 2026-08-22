@@ -39,9 +39,16 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * 2. The frontend is served with the `gate` configuration, which is the DEFAULT (local)
  *    environment — `apiUrl` still points at `http://localhost:8080`, where nothing is
- *    listening — plus one file replacement: `src/styles/webfonts.scss` becomes
+ *    listening — plus two file replacements. `src/styles/webfonts.scss` becomes
  *    `webfonts.gate.scss`, so the app's two web fonts are served out of
- *    `e2e/fixtures/fonts/` rather than fetched from Google's CDN.
+ *    `e2e/fixtures/fonts/` rather than fetched from Google's CDN. And
+ *    `src/environments/environment.ts` becomes `environment.gate.ts`, which fills in
+ *    the two analytics measurement ids with fakes: since OBRS-1179 the consent
+ *    banner and the withdrawal control stand down when no id is configured, and
+ *    `environment.ts` configures none, so without this the specs that exist to
+ *    assert the banner is up would be asserting against a build that correctly
+ *    never shows it. The ids are fake; `--host-resolver-rules` still makes the
+ *    tag hosts unresolvable, so nothing is ever sent.
  *
  *    The dead `apiUrl` is the enforcement mechanism for everything that travels through
  *    it: a call this lane failed to intercept gets ECONNREFUSED instead of quietly

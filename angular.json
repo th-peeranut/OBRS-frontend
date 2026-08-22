@@ -155,6 +155,12 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.gate.ts"
+                }
+              ],
               "styles": [
                 "src/styles/webfonts.gate.scss",
                 "node_modules/bootstrap/dist/css/bootstrap.min.css",

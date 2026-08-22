@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AnalyticsConsentService } from '../../../services/analytics/analytics-consent.service';
 import { AnalyticsConsentDecision } from '../../interfaces/analytics.interface';
+import { hasAnyMeasurementId } from '../../lib/analytics-measurement-ids';
 import { hasOwnKey } from '../../lib/own-key';
 
 /**
@@ -38,6 +39,14 @@ import { hasOwnKey } from '../../lib/own-key';
  * reached while granted. The vendor switches are best-effort by nature (a
  * renamed global is caught and warned, see `setSuspended`); the never-injected
  * path is the hard guarantee, and the copy below is written to match.
+ *
+ * IT STANDS DOWN WITH THE BANNER WHEN THERE IS NO ID (OBRS-1179)
+ *
+ * Same reason, one step further on: a build with no measurement ID collects
+ * nothing, so there is no permission to grant here and nothing to withdraw. What
+ * disappears is a switch wired to nothing; the policy page keeps its notice.
+ * Hiding it does NOT clear a stored answer — the moment an ID is configured the
+ * control comes back showing whatever the visitor last chose.
  */
 @Component({
   selector: 'app-analytics-consent-control',
@@ -54,6 +63,12 @@ export class AnalyticsConsentControlComponent {
     denied: 'ANALYTICS_CONSENT.CONTROL_STATUS_DENIED',
     unset: 'ANALYTICS_CONSENT.CONTROL_STATUS_UNSET',
   };
+
+  /**
+   * OBRS-1179. Read once here rather than called from the template, where every
+   * change-detection pass would re-ask a question whose answer is fixed at build.
+   */
+  protected readonly measured = hasAnyMeasurementId();
 
   constructor(private readonly consent: AnalyticsConsentService) {
     this.decision$ = this.consent.decision$;
