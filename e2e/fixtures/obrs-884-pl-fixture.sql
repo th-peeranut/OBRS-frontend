@@ -15,9 +15,31 @@
 --   16-9310  in_service_from IS NULL            -> SERVICE_WINDOW_UNKNOWN
 --   16-9535  in_service_from 2026-07-10         -> OUTSIDE_SERVICE_WINDOW (money in June)
 --
+-- 🔴 OBRS-1526 — the UNKNOWN row is now a vehicle THIS FIXTURE OWNS (16-0884), not 16-9310.
+-- It used to come for free because data.sql left 16-9310's column NULL; OBRS-886's census filled
+-- all seven of the real plates in, and this lane's premise disappeared with a seed edit in
+-- another repo. Nothing went red until somebody ran it by hand — backend CI runs migration-guard
+-- only on a PR into dev, and this lane is not in frontend CI either.
+--
+-- ⚠️ AND NULLING 16-9310 HERE DOES NOT WORK, which is worth writing down because it looks like it
+-- should. The fixture is applied while the database is BUILT; Flyway runs when the app BOOTS,
+-- after it. V115's guard is `WHERE in_service_from IS NULL`, so a fixture that nulls a censused
+-- plate is handing V115 exactly the row it is looking for, and the date comes straight back
+-- (measured 2026-08-22: fixture 19:04, V115 19:05:15, column repopulated). A plate the census
+-- does not name is immune, so the fixture brings its own.
+--
 -- Revenue comes from `historical_revenue` rather than bookings+payments+schedules: the
 -- report sums both into one figure (OBRS-1508) and this half needs no journey to exist, so
 -- seeding it directly keeps the fixture to what it is actually about.
+
+-- ── The unknown-window vehicle this lane owns (see the OBRS-1526 note above) ─────────────
+INSERT INTO vehicles (owner_id, vehicle_type_id, status_id, number_plate, vehicle_number, brand,
+                      model, manufacture_year, colour, engine_cc, in_service_from, note)
+SELECT (SELECT id FROM owners WHERE slug = 'nj-travel'), 2,
+       (SELECT id FROM lookups WHERE category = 'vehicle_status' AND slug = 'active' LIMIT 1),
+       '16-0884', '00-00', 'Toyota', 'Coaster', 2012, 'ขาว', 2500, NULL,
+       'obrs884 fixture only - the SERVICE_WINDOW_UNKNOWN row'
+WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE number_plate = '16-0884');
 
 -- ── Revenue ──────────────────────────────────────────────────────────────────────────────
 INSERT INTO historical_revenue (owner_id, vehicle_id, revenue_date, amount, note)
