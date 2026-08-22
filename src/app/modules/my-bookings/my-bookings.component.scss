@@ -389,6 +389,28 @@
   }
 }
 
+// OBRS-1521. PrimeNG's `@layer primeng { .p-disabled { opacity: .6 } }` fades the
+// whole row, and in LIGHT mode that composites `$text-black` onto the white panel
+// as `#868a8f` — measured 3.48:1 on the open menu, below the 4.5:1 AA floor for
+// normal text. Opacity cannot be tuned out of it: it fades label, icon and every
+// future child by the same amount, and the label here is the only text saying WHY
+// the action is unavailable, so it is not the "inactive control" WCAG 1.4.3
+// exempts. Drop the fade for THIS menu and say "disabled" with colour instead —
+// `$text-lightblack` is the token this app already uses for de-emphasised text,
+// and the row keeps its `not-allowed` cursor and its reason tooltip.
+//
+// Unlayered, unlike the `cursor` rule below: PrimeNG's opacity declaration carries
+// no `!important`, and an unlayered normal declaration beats a layered one whatever
+// the specificity (same argument dark-theme.scss makes for this popup's colours).
+::ng-deep .my-bookings-action-menu .p-menu-item.p-disabled {
+  opacity: 1;
+
+  .action-menu-item__label,
+  .action-menu-item__icon-slot {
+    color: $text-lightblack;
+  }
+}
+
 // Paint the disabled cursor on our own row + its children, scoped to this menu.
 // PrimeNG ships `@layer primeng { .p-disabled, .p-disabled * { cursor: default
 // !important } }`. A cascade-LAYERED `!important` beats an unlayered one no
