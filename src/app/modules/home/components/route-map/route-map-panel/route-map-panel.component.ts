@@ -286,6 +286,12 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   /** Handle for the tiles-load watchdog timer; null when none is armed. */
   private tilesWatchdogHandle: ReturnType<typeof setTimeout> | null = null;
 
+  /**
+   * How many times the watchdog has tripped for this component instance. Drives
+   * the retry escalation in {@link retryMap} -- see the reasoning there.
+   */
+  private drawFailures = 0;
+
   // ---------------------------------------------------------------------------
   // "Use my location" state
   // ---------------------------------------------------------------------------
@@ -673,9 +679,26 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
    * fresh watchdog for that new attempt.
    */
   retryMap(): void {
+    // Escalate on a repeat failure. Re-mounting recreates OUR component, which is
+    // enough when a single map instance died — but measured 2026-08-22 (OBRS-1085):
+    // once the Maps JS loader has failed to fetch its own `map.js` sub-module it
+    // never re-requests it, so no amount of re-mounting can bring the map back and
+    // the user would just watch the same error return 8s later. Only a fresh
+    // document re-runs their loader, which is why a refresh fixed the originally
+    // reported incident. So: first click re-mounts (cheap, no lost page state),
+    // a second failure earns the reload.
+    if (this.drawFailures >= 2) {
+      this.reloadPage();
+      return;
+    }
     this.mapDrawFailed = false;
     this.tilesConfirmed = false;
     this.evaluateTilesWatchdog();
+  }
+
+  /** Seam so specs can assert the escalation without navigating the test runner. */
+  protected reloadPage(): void {
+    location.reload();
   }
 
   /**
@@ -713,6 +736,7 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       // defensive, not load-bearing, so the state flip stays change-detected
       // even if a future call site arms this from outside the zone.
       this.zone.run(() => {
+        this.drawFailures++;
         this.mapDrawFailed = true;
       });
     }, MAP_TILES_TIMEOUT_MS);

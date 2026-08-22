@@ -940,6 +940,37 @@ describe('RouteMapPanelComponent', () => {
       expect(component.mapDrawFailed).toBeTrue();
     });
 
+    it('the FIRST retry re-mounts and does not reload the page', () => {
+      const reload = spyOn(component as any, 'reloadPage');
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1); // failure #1
+
+      component.retryMap();
+
+      expect(reload).not.toHaveBeenCalled();
+      expect(component.showMap).toBeTrue(); // a fresh <google-map> can mount
+    });
+
+    it('a retry after a SECOND failure reloads instead of re-mounting again', () => {
+      // Measured OBRS-1085: once the Maps JS loader has failed to fetch its own
+      // map.js sub-module it never re-requests it, so a second re-mount would
+      // show the user the same error 8s later. Escalate to a fresh document.
+      const reload = spyOn(component as any, 'reloadPage');
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1); // failure #1
+      component.retryMap();
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1); // failure #2
+
+      component.retryMap();
+
+      expect(reload).toHaveBeenCalledTimes(1);
+      // The error state must survive: the reload is what clears it, and blanking
+      // it here would flash the failed map back before the page goes away.
+      expect(component.mapDrawFailed).toBeTrue();
+    });
+
     it('retryMap followed by a real tilesloaded clears the error for good', () => {
       component.pickupStops = [makeStop(1, true)];
       component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
