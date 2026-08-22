@@ -2969,7 +2969,8 @@
     "GENDER": {
       "MALE": "男",
       "FEMALE": "女",
-      "MONK": "僧侣"
+      "MONK": "僧侣",
+      "NUN": "尼姑"
     },
     "SUMMARY": {
       "OPEN_SEATING_BADGE": "不指定座位（开放座位）",

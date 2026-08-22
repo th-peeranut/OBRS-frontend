@@ -176,7 +176,7 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     { value: 'male',   labelKey: 'STAFF.SELL.PTYPE_MALE',   icon: 'icons/passenger-male.svg' },
     { value: 'female', labelKey: 'STAFF.SELL.PTYPE_FEMALE', icon: 'icons/passenger-female.svg' },
     { value: 'monk',   labelKey: 'STAFF.SELL.PTYPE_MONK',   icon: 'icons/passenger-monk.svg' },
-    { value: 'nun',    labelKey: 'STAFF.SELL.PTYPE_NUN',    icon: '' },
+    { value: 'nun',    labelKey: 'STAFF.SELL.PTYPE_NUN',    icon: 'icons/passenger-nun.svg' },
   ];
 
   constructor(

@@ -55,6 +55,24 @@ describe('PassengerSeatBoxComponent', () => {
     expect(fixture.debugElement.query(By.css('.passenger-monk-icon'))).not.toBeNull();
   });
 
+  it('renders the nun icon when gender is NUN (OBRS-1365)', () => {
+    component.label = 'B1';
+    component.gender = 'NUN';
+    fixture.detectChanges();
+
+    const imgs = fixture.debugElement.queryAll(By.css('img[src="icons/passenger-nun.svg"]'));
+    expect(imgs.length).toBe(1);
+  });
+
+  it('does not render the nun icon when gender is FEMALE (OBRS-1365)', () => {
+    component.label = 'B1';
+    component.gender = 'FEMALE';
+    fixture.detectChanges();
+
+    const imgs = fixture.debugElement.queryAll(By.css('img[src="icons/passenger-nun.svg"]'));
+    expect(imgs.length).toBe(0);
+  });
+
   describe("gender='SELECTED' (OBRS-110 change-seat marker)", () => {
     it('renders a neutral check-marker icon, not a gender image', () => {
       component.label = 'B1';
