@@ -6,6 +6,7 @@ import { filter, map, startWith } from 'rxjs/operators';
 import { AnalyticsConsentService } from '../../../services/analytics/analytics-consent.service';
 import { AnalyticsRouteScopeService } from '../../../services/analytics/analytics-route-scope.service';
 import { isConsentControlRoute } from '../../lib/analytics-consent-control';
+import { hasAnyMeasurementId } from '../../lib/analytics-measurement-ids';
 
 /**
  * OBRS-867 — the PDPA ask that stands in front of every measurement tag.
@@ -62,6 +63,15 @@ import { isConsentControlRoute } from '../../lib/analytics-consent-control';
  * The one thing NOT given room back is the usability FAB, which is `fixed` too and
  * so cannot be scrolled anywhere. That overlap is deliberate and stays pinned by
  * `e2e/tests/analytics-consent-banner.spec.ts`; see the z-index note in the SCSS.
+ *
+ * **It does not ask when there is no tag to ask about (OBRS-1179).** For eleven
+ * months prod shipped with `PROD_GA4_MEASUREMENT_ID` and `PROD_CLARITY_PROJECT_ID`
+ * unset, so pressing accept loaded nothing — the loader returns on a blank ID —
+ * and we banked the yes anyway. Consent for an activity that does not exist is
+ * worse than not asking: it is a record with nothing behind it, and it makes a
+ * mistyped ID invisible, because a build that measures nothing by accident looks
+ * exactly like this one. `hasAnyMeasurementId()` reads the same two values the
+ * loader reads, so the two halves cannot decide different things.
  *
  * The component holds no state of its own: `AnalyticsConsentService` is the
  * single source of truth, consumed through the async pipe so there is nothing
@@ -154,7 +164,10 @@ export class AnalyticsConsentBannerComponent implements OnDestroy {
     ]).pipe(
       map(
         ([undecided, restricted, url]) =>
-          undecided && !restricted && !isConsentControlRoute(url)
+          hasAnyMeasurementId() &&
+          undecided &&
+          !restricted &&
+          !isConsentControlRoute(url)
       )
     );
   }

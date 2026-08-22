@@ -72,6 +72,24 @@ const DECLINE = '.consent-banner__actions .consent-banner__btn:not(.consent-bann
 const FAB = '.report-fab';
 
 /**
+ * The measurement vendors, blocked at the browser.
+ *
+ * OBRS-1179. This spec is the one place in the lane that presses ACCEPT, and since
+ * that card the gate build carries a (deliberately invalid) measurement ID — the bar
+ * cannot render without one, which is the whole point of the card. So accept now
+ * reaches `AnalyticsTagsService.load()` for real and it builds a `googletagmanager.com`
+ * URL, exactly as production would.
+ *
+ * Nothing in this spec asserts on that traffic; `obrs-867-analytics-consent-gate.spec.ts`
+ * owns the network claim, on a lane that is allowed to have a network. Here the request
+ * would only be an external dependency in a lane whose entire premise is that it has
+ * none — so it is aborted by name. `e2e/support/analytics-consent.ts` keeps every OTHER
+ * spec away from these hosts by seeding a settled `denied`; this is the same guarantee
+ * for the one spec that cannot use that seed.
+ */
+const TAG_HOSTS = ['**googletagmanager.com/**', '**clarity.ms/**', '**google-analytics.com/**'];
+
+/**
  * Home-page traffic only. Same two stubs the rest of the lane uses for `/`; nothing else
  * is needed, which is what keeps this spec admissible to the hermetic lane.
  */
@@ -79,6 +97,9 @@ async function stubHome(page: Page): Promise<void> {
   await page.addInitScript(() => {
     localStorage.setItem('app_language', 'en');
   });
+  for (const host of TAG_HOSTS) {
+    await page.route(host, (route) => route.abort());
+  }
   await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
   await page.route('**/api/schedules/search', (route) =>
     route.fulfill({ json: schedulesFixture })

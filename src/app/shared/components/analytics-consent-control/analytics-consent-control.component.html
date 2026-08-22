@@ -1,7 +1,10 @@
 <!-- OBRS-874 AC-1: the withdrawal surface. Always rendered on the policy page —
 it states the current answer even when that answer is "none", because a
 control that appears only after consent is a control nobody can find. -->
-@if (decision$ | async; as decision) {
+<!-- OBRS-1179: `measured` first — with no measurement ID configured there is no
+collection to permit or to withdraw, so this would be a switch wired to nothing.
+The stored answer is untouched and the control returns with the ID. -->
+@if (measured && (decision$ | async); as decision) {
   <section
     class="consent-control"
     data-testid="analytics-consent-control"
