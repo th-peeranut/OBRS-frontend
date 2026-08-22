@@ -2915,7 +2915,8 @@
     "GENDER": {
       "MALE": "ชาย",
       "FEMALE": "หญิง",
-      "MONK": "พระ"
+      "MONK": "พระ",
+      "NUN": "แม่ชี"
     },
     "SUMMARY": {
       "OPEN_SEATING_BADGE": "ไม่ระบุที่นั่ง (Open Seating)",

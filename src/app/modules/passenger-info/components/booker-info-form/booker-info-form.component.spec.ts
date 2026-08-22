@@ -222,4 +222,35 @@ describe('BookerInfoFormComponent', () => {
       expect(component.bookerForm.get('title')?.valid).toBeTrue();
     });
   });
+
+  // OBRS-1365: adds a 4th gender/status radio (Nun) alongside Male/Female/Monk.
+  describe('gender/status radios (OBRS-1365 nun option)', () => {
+    function radioEl(id: string): HTMLInputElement {
+      const el = fixture.nativeElement.querySelector(`#${id}`) as HTMLInputElement | null;
+      if (!el) {
+        throw new Error(`Radio input #${id} not found in the rendered template`);
+      }
+      return el;
+    }
+
+    it('renders exactly 4 gender/status radios', () => {
+      const radios = fixture.nativeElement.querySelectorAll('input[type="radio"][id^="booker-gender_"]');
+      expect(radios.length).toBe(4);
+    });
+
+    it('the 4th gender radio is Nun with value="NUN", and selecting it through the DOM writes "NUN" to the form', () => {
+      const nunRadio = radioEl('booker-gender_nun');
+      expect(nunRadio.value).toBe('NUN');
+
+      nunRadio.click();
+      fixture.detectChanges();
+
+      expect(component.bookerForm.get('gender')?.value).toBe('NUN');
+    });
+
+    it('renders the nun icon image for the Nun radio', () => {
+      const img = fixture.nativeElement.querySelector('img[src="icons/passenger-nun.svg"]');
+      expect(img).not.toBeNull();
+    });
+  });
 });
