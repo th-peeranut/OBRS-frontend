@@ -185,9 +185,11 @@ export class AnalyticsConsentBannerComponent implements OnDestroy {
    * this component never touched.
    */
   private reserve(heightPx: number): void {
-    // Same number, no write. The scrollbar exchange described on the observer
-    // above hands back a height this already holds; without the guard the same
-    // value would be rewritten every frame for as long as the bar is on screen.
+    // Same number, no write. `reserve` runs only when the observer reports a
+    // real size change, so this guards the case where a resize settles back to a
+    // height already held (a transient, an A→B→A wrap): it skips a redundant
+    // identical write. It is the animation-frame defer above — not this guard —
+    // that keeps the write out of the observation loop.
     if (heightPx === this.reserved) return;
     this.reserved = heightPx;
 

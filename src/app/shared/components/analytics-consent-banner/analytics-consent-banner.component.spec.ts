@@ -121,13 +121,15 @@ describe('AnalyticsConsentBannerComponent', () => {
      * observation was being broadcast. The spec answers that by dropping the
      * notification and reporting `ResizeObserver loop completed with undelivered
      * notifications` at `window`, which Karma charges to whichever spec is
-     * running. That is how it arrived as a red `Unit Tests` job on `dev` that
-     * belonged to no card and reran green on the same sha: it turns on a
-     * scrollbar threshold, so it depends on how tall the page happens to be when
-     * this file runs, not on anything in the tree.
+     * running. Jasmine shuffles the spec order on every run (measured here:
+     * `random: true`, `seed: null` — nothing pins it), so which spec is running
+     * when it fires is a fresh draw: that is how it arrived as a red `Unit Tests`
+     * job on `dev` that belonged to no card, green on one attempt and red on a
+     * rerun of the same job on the same sha.
      *
      * The spacer puts the page exactly at that threshold on purpose. Without it
-     * the Karma page is far too short and this passes without proving anything.
+     * the Karma page is far too short and this passes without proving anything —
+     * measured 2026-08-22, it walks red 3 times out of 3 with the defer removed.
      */
     it('does not resize the document from inside its own observer callback', async () => {
       const el = banner()!;
@@ -149,10 +151,16 @@ describe('AnalyticsConsentBannerComponent', () => {
 
       try {
         expect(page.scrollHeight).toBe(page.clientHeight);
+        const roomy = page.clientWidth;
 
         el.style.minHeight = `${before + 120}px`;
         await paddingSettlesAt(() => el.offsetHeight);
 
+        // Asserted, not assumed: the loop needs a scrollbar that takes width off
+        // the viewport. On a runner that draws overlay scrollbars there is no
+        // width to take, nothing below can arise, and this guard would pass
+        // without guarding — so it says so instead of going quietly green.
+        expect(page.clientWidth).toBeLessThan(roomy);
         expect(loops).toEqual([]);
       } finally {
         window.removeEventListener('error', onError);
