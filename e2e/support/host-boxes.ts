@@ -541,6 +541,32 @@ export const ADMIN_SWEEP: SweepPage[] = [
     requires: 'app-cash-online-reconciliation-report-page',
   },
   { key: 'admin-expenses', url: '/admin/expenses', landsOn: /\/admin\/expenses$/, requires: 'app-expenses-page' },
+
+  // --- OBRS-884 -------------------------------------------------------------
+  // The per-vehicle P&L screen carries the same two `p-datepicker`s as the
+  // filter rows above, and the coverage gate named it on the first CI run after
+  // it landed -- the gate working, not a flake. Its own OWN-DB lane is green and
+  // says nothing about this: that lane proves the numbers, this one proves the
+  // host box is measured before an app-wide rule moves it.
+  //
+  // ADMIN_SWEEP and not OWNER_SWEEP: the route is requiredRoles:
+  // ['admin','owner'], so this sweep's ['admin'] session lands on it without
+  // widening the session -- which is the whole reason OWNER_SWEEP exists as a
+  // separate list. Only the EXPORT BUTTON inside the page is owner-only, and a
+  // button that does not render cannot hide a PrimeNG host that is not in it.
+  //
+  // `requires` names the p-datepicker rather than the page selector alone, for
+  // the reason spelled out on `staff-my-earnings` above: the filter section
+  // renders unconditionally ABOVE every contentState branch, so this lane's
+  // empty backend still RENDERS the host being measured, while a bare
+  // `app-vehicle-pl-report-page` would pass on a page whose PrimeNG tag never
+  // rendered at all.
+  {
+    key: 'admin-vehicle-pl-report',
+    url: '/admin/vehicle-pl-report',
+    landsOn: /\/admin\/vehicle-pl-report$/,
+    requires: 'app-vehicle-pl-report-page p-datepicker',
+  },
   {
     key: 'admin-promotions',
     url: '/admin/promotions',
