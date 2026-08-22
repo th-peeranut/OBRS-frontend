@@ -530,6 +530,7 @@
       "SYSTEM_SETTINGS": "系统设置",
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
+      "VEHICLE_PL_REPORT": "单车损益",
       "EXPENSES": "费用",
       "MANUAL_REFUNDS": "人工退款",
       "CASH_REFUND_APPROVALS": "现金退款审批",
@@ -1937,6 +1938,59 @@
       "ERROR": {
         "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
         "RANGE_TOO_LARGE": "所选日期范围过大，请选择366天以内的范围。"
+      }
+    },
+    "VEHICLE_PL_REPORT": {
+      "SUBTITLE": "按车辆统计的损益，来自车票收入与已记录的支出。",
+      "FILTER_FROM": "起始日期",
+      "FILTER_TO": "结束日期",
+      "VAT_NOTE": "所有金额均已含增值税。车费免征增值税，因此进项税无法抵扣，是真实成本——增值税数字是金额中已包含的部分，不应再另外相加。",
+      "MARGIN_NOTE": "每辆车的利润等于该车自身收入减去该车自身支出。中央成本不分摊到各车，只在公司合计中扣除一次。",
+      "LOAD_FAILED": "报表加载失败，请重试。",
+      "TABLE_TITLE": "按车辆的损益",
+      "EMPTY": "该日期范围内没有任何车辆的数据。",
+      "OF_WHICH_VAT": "其中增值税",
+      "OF_WHICH_HISTORICAL": "其中导入的历史收入",
+      "HISTORICAL_CONFLICTS": "有 {{count}} 天导入数据与实际销售冲突",
+      "EXPAND_ARIA": "查看该车辆的支出明细",
+      "COLLAPSE_ARIA": "隐藏该车辆的支出明细",
+      "ERROR": {
+        "RANGE_INVALID": "起始日期不能晚于结束日期。",
+        "RANGE_TOO_LARGE": "日期范围不能超过 366 天。"
+      },
+      "CARD": {
+        "REVENUE": "总收入",
+        "EXPENSES": "总支出",
+        "MARGIN": "利润",
+        "PENDING_EXPENSES": "待审批支出",
+        "PENDING_EXPENSES_HINT": "尚未从利润中扣除"
+      },
+      "COL": {
+        "VEHICLE": "车辆",
+        "REVENUE": "收入",
+        "EXPENSES": "支出",
+        "VAT": "其中增值税",
+        "MARGIN": "利润"
+      },
+      "COVERAGE": {
+        "SERVICE_WINDOW_UNKNOWN": "运营区间未知",
+        "OUTSIDE_SERVICE_WINDOW": "不在运营区间内，但有金额归属于它"
+      },
+      "ZERO": {
+        "RAN_NO_REVENUE": "有运营但无收入",
+        "DID_NOT_RUN": "本期未运营",
+        "ENTERED_AS_ZERO": "已记录为零",
+        "NO_ENTRIES": "尚无人记录任何支出"
+      },
+      "UNASSIGNED": {
+        "TITLE": "未归属车辆的收入",
+        "HINT": "系统无法归属到任何车辆的金额——这是数据缺口，不是会计科目，且已计入上方的公司合计。",
+        "NONE": "本期没有。"
+      },
+      "CENTRAL": {
+        "TITLE": "中央成本",
+        "HINT": "不属于任何单一车辆的成本。在公司合计中只扣除一次，绝不分摊到各车。",
+        "NONE": "本期没有。"
       }
     },
     "EXPENSES": {

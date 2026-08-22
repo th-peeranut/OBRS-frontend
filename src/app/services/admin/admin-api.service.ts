@@ -26,6 +26,7 @@ import { CustomerBehaviorDto } from '../../shared/interfaces/customer-behavior.i
 import { OpsEfficiencyDto } from '../../shared/interfaces/ops-efficiency.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
+import { VehiclePlReportDto } from '../../shared/interfaces/vehicle-pl-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
@@ -2149,6 +2150,16 @@ export class AdminApiService {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.getRequest<RefundVoidReportDto>(
       `${this.baseUrl}/private/admin/reports/refund-void`,
+      params
+    );
+  }
+
+  // OBRS-841/OBRS-884: per-vehicle P&L — same [from, to] HttpParams shape as the other
+  // four reports (identical defaulting/range guards, ReportService#resolveRange).
+  getVehiclePlReport(from: string, to: string): Observable<ResponseAPI<VehiclePlReportDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<VehiclePlReportDto>(
+      `${this.baseUrl}/private/admin/reports/pl-per-vehicle`,
       params
     );
   }
