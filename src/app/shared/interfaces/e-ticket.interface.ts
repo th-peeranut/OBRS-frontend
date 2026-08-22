@@ -17,12 +17,23 @@ export interface TicketPassenger {
    *  category of its own) and for a pre-API render where the ticket API
    *  response hasn't landed yet. */
   fareCategory?: 'adult' | 'child' | null;
+  /** OBRS-1510: true when THIS passenger's own ticket has a null seatNumber
+   *  (an open-seating schedule) — mirrors `TicketLeg.isOpenSeating`, but per
+   *  row, so the card can hide this passenger's individual SEAT cell instead
+   *  of only the leg-level summary. `false` for a row with no ticket of its
+   *  own (the booker row) and for a pre-API render. */
+  seatOpen: boolean;
 }
 
 /** Presentation-ready fields for a single leg (outbound or return) of the e-ticket card. */
 export interface TicketLeg {
   travelDate: string;
   travelTime: string;
+  /** OBRS-1502/OBRS-1510: this leg's arrival DATE, filled only when it lands
+   *  on a later Bangkok day than it left (`arrivalDateWhenLater`/
+   *  `laterBangkokArrivalDay`). `''` is the ordinary same-day case and renders
+   *  no cell at all. */
+  arrivalDate: string;
   route: string;
   origin: string;
   destination: string;
