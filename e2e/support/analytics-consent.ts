@@ -19,10 +19,17 @@
  * WHY `denied` IS THE DEFAULT AND NOT `granted`
  * Both dismiss the banner. `denied` also keeps `AnalyticsTagsService.load()` from ever
  * running, so no spec in a lane whose entire premise is "needs nothing but a browser"
- * can reach googletagmanager.com or clarity.ms. Today that is belt-and-braces — the gate
- * lane serves the DEFAULT configuration, where `environment.analytics` IDs are blank and
- * the loader no-ops — but the belt is one `fileReplacements` edit from being the only
- * thing there, and a hermetic lane should not depend on a build config to stay hermetic.
+ * can reach googletagmanager.com or clarity.ms.
+ *
+ * That used to be belt-and-braces, the braces being a gate build with blank
+ * `environment.analytics` IDs, and this paragraph used to warn that they were one
+ * `fileReplacements` edit from disappearing. OBRS-1179 made that edit — the consent bar
+ * now renders only where an ID is configured, so the two GATE specs that assert the
+ * banner-up state need `src/environments/environment.gate.ts`, which carries the
+ * deliberately-invalid pair. The belt below is therefore the only thing keeping the lane
+ * off those hosts, which is exactly what it was written to be able to do alone.
+ * `analytics-consent-banner.spec.ts` is the one spec that cannot use this seed (it presses
+ * accept on purpose) and it aborts the three hosts itself.
  *
  * WHAT THIS DELIBERATELY DOES NOT DO
  * It does not hide the banner with CSS and it does not remove the component. Seeding a
