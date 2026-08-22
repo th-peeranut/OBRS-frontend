@@ -375,7 +375,10 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
    */
   private dirReqDispatchedSeq = -1;
 
-  constructor(private zone: NgZone) {}
+  constructor(
+    private zone: NgZone,
+    private host: ElementRef<HTMLElement>,
+  ) {}
 
   get showMap(): boolean {
     return (
@@ -702,6 +705,44 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
+   * Is the map box showing the user *nothing*? This, not a missing `tilesloaded`,
+   * is the failure this card is about — the reported symptom was a box with no
+   * Google logo and no attribution bar, i.e. nothing drawn at all.
+   *
+   * Measured 2026-08-22, inducing two different Maps failures against this build:
+   *
+   * - tile requests (`maps/vt`) blocked → `tilesloaded` still FIRES, and the map
+   *   draws the basemap, our route polyline, our markers and the zoom controls
+   *   over a grey "no imagery" backdrop. Degraded, entirely usable.
+   * - the `map.js` sub-module blocked → `tilesloaded` never fires, but Google
+   *   falls back to a single `StaticMapService.GetMapImage` <img> of the same
+   *   area. No route line and no markers, but the user still sees where they are.
+   *
+   * Failing on the timer alone would have replaced BOTH of those with an error
+   * box — taking away a map the user could still read. So the timer only asks the
+   * question; this answers it by looking for any evidence something rendered.
+   *
+   * Scoped to the <google-map> element deliberately: our own locate-me and zoom
+   * controls live in a sibling `.map-overlay-controls` div, and counting their
+   * icons would make the box look occupied when it is empty.
+   */
+  private mapAreaIsBlank(): boolean {
+    const box = this.host.nativeElement.querySelector('google-map');
+    if (!box) {
+      return true;
+    }
+    if (box.querySelector('.gm-style')) {
+      return false;
+    }
+    if (
+      Array.from(box.querySelectorAll('canvas')).some((c) => c.width > 0 && c.height > 0)
+    ) {
+      return false;
+    }
+    return !Array.from(box.querySelectorAll('img')).some((i) => i.naturalWidth > 0);
+  }
+
+  /**
    * (Re)synchronize the watchdog with the current `showMap` state. Idempotent
    * — safe to call from any point that might change `showMap`'s inputs
    * (bootstrap resolving, a stop-set change, or a retry): arms the watchdog
@@ -736,6 +777,12 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       // defensive, not load-bearing, so the state flip stays change-detected
       // even if a future call site arms this from outside the zone.
       this.zone.run(() => {
+        // A missing `tilesloaded` is NOT the same as "the user sees nothing", so
+        // the timer only opens the question — {@link mapAreaIsBlank} answers it.
+        if (!this.mapAreaIsBlank()) {
+          this.tilesConfirmed = true;
+          return;
+        }
         this.drawFailures++;
         this.mapDrawFailed = true;
       });

@@ -1,4 +1,4 @@
-import { NgZone, SimpleChange, SimpleChanges } from '@angular/core';
+import { ElementRef, NgZone, SimpleChange, SimpleChanges } from '@angular/core';
 import { GoogleMap } from '@angular/google-maps';
 import {
   RouteMapPanelComponent,
@@ -61,6 +61,15 @@ function removeGoogleMock(): void {
   delete (window as unknown as Record<string, unknown>)['google'];
 }
 
+/**
+ * Host element the component reads through `ElementRef` when deciding whether the
+ * map box is blank (OBRS-1085). Detached by default, so it holds no <google-map>
+ * and therefore reads as blank — which is what every pre-existing spec assumes.
+ */
+function hostStub(): ElementRef<HTMLElement> {
+  return { nativeElement: document.createElement('div') } as ElementRef<HTMLElement>;
+}
+
 // ---------------------------------------------------------------------------
 describe('RouteMapPanelComponent', () => {
   let component: RouteMapPanelComponent;
@@ -69,7 +78,7 @@ describe('RouteMapPanelComponent', () => {
     // Reset the module-level + localStorage road-path cache so each test starts
     // from a clean miss (the cache is shared across component instances).
     clearDirectionsPathCache();
-    component = new RouteMapPanelComponent(zoneStub);
+    component = new RouteMapPanelComponent(zoneStub, hostStub());
   });
 
   it('should create', () => {
@@ -700,7 +709,7 @@ describe('RouteMapPanelComponent', () => {
 
       // Second, fresh instance with the same stops: cache hit → NO Directions call.
       const spy2 = installMockWithDirections(roadResult);
-      const second = new RouteMapPanelComponent(zoneStub);
+      const second = new RouteMapPanelComponent(zoneStub, hostStub());
       second.pickupStops = [makeStop(1, true), makeStop(2, true)];
       second.ngOnChanges(changes('pickupStops', second.pickupStops, []));
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -759,7 +768,7 @@ describe('RouteMapPanelComponent', () => {
       const spy = installMockWithDirections(roadResult);
       const moved = makeStop(2, true);
       moved.latitude = 13.95;
-      const second = new RouteMapPanelComponent(zoneStub);
+      const second = new RouteMapPanelComponent(zoneStub, hostStub());
       second.pickupStops = [makeStop(1, true), moved];
       second.ngOnChanges(changes('pickupStops', second.pickupStops, []));
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -938,6 +947,49 @@ describe('RouteMapPanelComponent', () => {
       // it too — proves retryMap re-armed rather than just clearing the flag.
       jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1);
       expect(component.mapDrawFailed).toBeTrue();
+    });
+
+    it('the timeout does NOT fail a map that rendered a static fallback image', () => {
+      // Measured OBRS-1085: with Google's `map.js` sub-module blocked, `tilesloaded`
+      // never fires but Google still injects a StaticMapService <img> of the area.
+      // The user can see where they are, so replacing that with an error box would
+      // make the page worse. Only an EMPTY box is the failure this card is about.
+      const host = document.createElement('div');
+      const box = document.createElement('google-map');
+      const img = document.createElement('img');
+      Object.defineProperty(img, 'naturalWidth', { value: 550 });
+      box.appendChild(img);
+      host.appendChild(box);
+      component = new RouteMapPanelComponent(zoneStub, {
+        nativeElement: host,
+      } as ElementRef<HTMLElement>);
+      component.mapsApiKey = 'test-key';
+      component.mapsLoaded = true;
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1); // (tilesloaded) never fired
+
+      expect(component.mapDrawFailed).toBeFalse();
+      expect(component.showMap).toBeTrue();
+    });
+
+    it('the timeout DOES fail a map box that rendered nothing at all', () => {
+      // Same timer, empty box: no .gm-style, no sized canvas, no loaded <img>.
+      const host = document.createElement('div');
+      host.appendChild(document.createElement('google-map'));
+      component = new RouteMapPanelComponent(zoneStub, {
+        nativeElement: host,
+      } as ElementRef<HTMLElement>);
+      component.mapsApiKey = 'test-key';
+      component.mapsLoaded = true;
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1);
+
+      expect(component.mapDrawFailed).toBeTrue();
+      expect(component.showMap).toBeFalse();
     });
 
     it('the FIRST retry re-mounts and does not reload the page', () => {

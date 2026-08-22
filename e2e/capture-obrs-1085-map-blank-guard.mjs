@@ -115,7 +115,14 @@ let mapModuleBlocked = true;
 // faithfully: the bootstrap `js?key=` still resolves (so `mapsLoaded` goes true
 // and we stay on the new code path, not the pre-existing `.catch`), but the map
 // never draws.
-const MAP_MODULE_URL = /maps-api-v3\/api\/js\/[^?]*\/map\.js/;
+// BOTH halves are required. Blocking only `map.js` leaves Google's own fallback in
+// place: it injects a single StaticMapService.GetMapImage <img> of the same area
+// (measured — that is the map you see in an earlier revision of the BEFORE shot,
+// basemap without our polyline or markers). That state is degraded but readable,
+// the guard deliberately does NOT fire on it, and it is not the reported symptom.
+// Blocking the static fallback too leaves the box genuinely empty — no logo, no
+// attribution, nothing — which IS the reported symptom.
+const MAP_MODULE_URL = /maps-api-v3\/api\/js\/[^?]*\/map\.js|StaticMapService\.GetMapImage/;
 await page.route(MAP_MODULE_URL, (route) => {
   if (mapModuleBlocked) {
     blockedRequests++;
@@ -269,15 +276,58 @@ if (PHASE === 'before') {
   if (state.mapCount === 0) pass('the blank <google-map> was replaced, not overlaid');
   else fail(`<google-map> still mounted (${state.mapCount}) — the blank box is still on screen`);
 
+  // ── DARK MODE. The scrutinize pass found this error box inheriting the
+  // component's light-mode text colour onto a dark card, and derived the ratio
+  // from the tokens. Measure the rendered pixels instead. ThemeService applies
+  // dark mode by putting `is-dark` on <body>, so this drives the real mechanism.
+  await page.evaluate(() => document.body.classList.add('is-dark'));
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: join(OUT, 'OBRS-1085-AFTER-2-dark-mode.png'), fullPage: false });
+  const contrast = await page.evaluate(() => {
+    const span = document.querySelector('.route-error span');
+    const box = document.querySelector('.route-error');
+    if (!span || !box) return null;
+    const rgb = (s) => (s.match(/\d+/g) || []).slice(0, 3).map(Number);
+    const lum = ([r, g, b]) => {
+      const f = (v) => {
+        v /= 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      };
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const fg = getComputedStyle(span).color;
+    const bg = getComputedStyle(box).backgroundColor;
+    const [hi, lo] = [lum(rgb(fg)), lum(rgb(bg))].sort((a, b) => b - a);
+    return { fg, bg, ratio: Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100 };
+  });
+  if (!contrast) fail('could not measure dark-mode contrast — .route-error span not found');
+  else if (contrast.ratio >= 4.5)
+    pass(`dark-mode message contrast ${contrast.ratio}:1 — ${contrast.fg} on ${contrast.bg} (WCAG AA)`);
+  else
+    fail(`dark-mode message contrast ${contrast.ratio}:1 — ${contrast.fg} on ${contrast.bg}, below AA 4.5:1`);
+  await page.evaluate(() => document.body.classList.remove('is-dark'));
+
   // ── 4. retry genuinely re-inits, and does NOT reload the page
   await page.evaluate(() => {
     window.__obrs1085NoReload = true;
   });
-  mapModuleBlocked = false;
+  // Click 1 — still blocked. Re-mounts our component, which cannot recover, because
+  // Google's loader never re-requests the sub-module it already gave up on. The
+  // error must therefore come BACK, and that is what earns the escalation.
   const retryBtn = page.locator('.route-error button');
   if ((await retryBtn.count()) === 0) {
     fail('no retry button to click — skipping the re-init proof');
   } else {
+    await retryBtn.click();
+    await page.waitForTimeout(WATCHDOG_WINDOW_MS);
+    const backAgain = await page.locator('.route-error').count();
+    if (backAgain === 1)
+      pass('first retry re-mounted, the map still could not draw, the error returned');
+    else fail(`after the first retry .route-error count = ${backAgain}, expected 1`);
+
+    // Click 2 — the escalation. Unblock first so the fresh document can succeed,
+    // which is the whole point of preferring a reload over a third re-mount.
+    mapModuleBlocked = false;
     await retryBtn.click();
   }
 
@@ -294,6 +344,12 @@ if (PHASE === 'before') {
   };
   let reinit = { mapCount: 0, drew: false, sentinel: false, errorCount: 0 };
   try {
+    // The reload lands on a fresh document, which returns to the "ask for the map"
+    // state (OBRS-1211's reveal gate) — pre-existing behaviour, not this card's.
+    // So the map is only expected to come back after the CTA is clicked again.
+    const ctaAgain = page.locator('.map-placeholder-cta');
+    await ctaAgain.waitFor({ state: 'visible', timeout: 30_000 });
+    await ctaAgain.click();
     await page.locator('google-map').first().waitFor({ state: 'attached', timeout: 15_000 });
     await page.waitForFunction(didDraw, { timeout: 30_000 });
   } catch {
@@ -318,9 +374,14 @@ if (PHASE === 'before') {
   if (reinit.errorCount === 0) pass('error state cleared after a successful retry');
   else fail(`.route-error still present after retry (${reinit.errorCount})`);
 
-  if (reinit.sentinel)
-    pass('window sentinel survived — the map re-inited WITHOUT a page reload (AC#2)');
-  else fail('window sentinel gone — the page reloaded, which AC#2 explicitly rules out');
+  // The sentinel was planted before click 1. It must SURVIVE that click (AC#2: the
+  // first retry re-inits without a reload) and be GONE after click 2 (the
+  // escalation). Its absence here is the only proof the reload actually happened —
+  // a recovered map alone cannot distinguish a reload from a successful re-mount.
+  if (!reinit.sentinel)
+    pass('window sentinel gone after the second click — the escalation really did reload');
+  else
+    fail('window sentinel still present — the second click did not reload, so the escalation never fired');
 
   await page.screenshot({
     path: join(OUT, 'OBRS-1085-AFTER-1-retry-recovered.png'),
