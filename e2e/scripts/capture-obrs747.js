@@ -184,6 +184,47 @@ const WAYBILL = ok({
   qrPayload: 'PCL-000001|ABC123',
 });
 
+// OBRS-1517 AC-3: a static census of every `<a>` under `.admin-shell` left exactly
+// one candidate besides the parcel-consign terms link -- this page's three
+// `.btn.btn-link` anchors, whose only own rule (`.ur-duplicate-link`) sets margin
+// and font-size. This page is not a `.card` page, so the 12-page sweep never
+// reached it. Measure it rather than argue from the SCSS. `duplicateOfId` is what
+// makes the link render at all; the second row exists so `duplicateCount` renders
+// its pill next to it (UsabilityReportSummary, shared/interfaces).
+const USABILITY_REPORTS = ok({
+  content: [
+    {
+      id: 91,
+      category: 'bug',
+      status: 'duplicate',
+      userId: 4,
+      descriptionPreview: 'ปุ่มยืนยันกดไม่ติดบนมือถือ',
+      imageCount: 1,
+      createdAt: '2026-08-20T10:15:00+07:00',
+      duplicateOfId: 88,
+      duplicateCount: 0,
+      userName: 'สมชาย ใจดี',
+    },
+    {
+      id: 88,
+      category: 'ux_ui_improvement',
+      status: 'accepted',
+      userId: null,
+      descriptionPreview: 'ตัวหนังสือบนการ์ดอ่านยากในโหมดมืด',
+      imageCount: 0,
+      createdAt: '2026-08-19T09:00:00+07:00',
+      duplicateOfId: null,
+      duplicateCount: 1,
+      userName: null,
+    },
+  ],
+  totalElements: 2,
+  totalPages: 1,
+  size: 20,
+  number: 0,
+  numberOfElements: 2,
+});
+
 // Matched against the request PATHNAME, first match wins, and only ever for
 // requests already under `/api/`. An earlier version keyed these on Playwright
 // URL globs (`**/schedules**`) and every one of them also matched the page's own
@@ -196,6 +237,7 @@ const FIXTURES = [
   [/\/schedules\/\d+\/boarding-list$/, BOARDING_ROWS],
   [/\/schedules\/\d+$/, SINGLE_SCHEDULE],
   [/\/parcels\/\d+\/waybill$/, WAYBILL],
+  [/\/admin\/usability-reports$/, USABILITY_REPORTS],
   [/\/schedules/, SCHEDULE_ROWS],
 ];
 
@@ -255,6 +297,9 @@ const PAGES = [
   // `.nav-tabs` strip, which OBRS-747 themes at SHELL scope. Here to bound the
   // blast radius of that one decision with a measurement instead of an argument.
   { key: 'admin-system-settings', url: '/admin/settings' },
+  // OBRS-1517 AC-3, see USABILITY_REPORTS above: the last admin-shell anchors
+  // that carry no colour of their own.
+  { key: 'admin-usability-reports', url: '/admin/usability-reports' },
 ];
 
 // --- browser-side measurement ----------------------------------------------
