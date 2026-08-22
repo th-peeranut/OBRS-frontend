@@ -11,9 +11,10 @@ import * as path from 'path';
  * mounted, and a screen whose whole purpose is distinguishing three ฿0s from each other is
  * exactly the kind that passes a mount check while showing the wrong thing.
  *
- * The three states are in ONE period because data.sql's real fleet already straddles it:
+ * The three states are in ONE period, two of them off data.sql's real fleet and one built by
+ * the fixture (OBRS-1526 — the census filled every real plate's window in):
  *   16-8829  in_service 2026-01-30..2026-06-17  -> IN_SERVICE, no caveat
- *   16-9310  in_service_from IS NULL            -> SERVICE_WINDOW_UNKNOWN
+ *   16-0884  fixture-owned, in_service_from NULL -> SERVICE_WINDOW_UNKNOWN
  *   16-9535  in_service_from 2026-07-10         -> OUTSIDE_SERVICE_WINDOW, with June money
  *
  * The last test is the one AC 4 actually asks for: it DOWNLOADS the export from the same
@@ -96,19 +97,21 @@ test.describe('OBRS-884 per-vehicle P&L', () => {
     expect(await rowFor(page, '8829').locator('.vehicle-pl-zero-reason').count()).toBe(0);
     expect(await rowFor(page, '8829').locator('.vehicle-pl-badge').count()).toBe(0);
 
-    // Spent, never ran: revenue ฿0 means "did not run", cost is real.
+    // Spent, no round recorded: revenue ฿0 says only that, cost is real.
     const parked = await cellsOf(page, '8747');
     expect(parked[1]).toContain('0.00');
-    expect(parked[1]).toContain('ไม่ได้วิ่งในช่วงนี้');
+    expect(parked[1]).toContain('ไม่มีรอบที่บันทึกไว้ในช่วงนี้');
     expect(parked[2]).toContain('600.00');
 
     // Neither ran nor spent: BOTH zeros carry their own, different reason.
     const idle = await cellsOf(page, '2733');
-    expect(idle[1]).toContain('ไม่ได้วิ่งในช่วงนี้');
+    expect(idle[1]).toContain('ไม่มีรอบที่บันทึกไว้ในช่วงนี้');
     expect(idle[2]).toContain('ยังไม่มีใครบันทึกรายจ่าย');
 
-    // The service window is the third source of ambiguity and gets its own badge.
-    await expect(rowFor(page, '9310').locator('.vehicle-pl-badge')).toHaveText(
+    // The service window is the third source of ambiguity and gets its own badge. OBRS-1526:
+    // this row is 16-0884, a vehicle the fixture owns, because OBRS-886's census gave all seven
+    // real plates a date and the fixture cannot take one back (see the note in the fixture).
+    await expect(rowFor(page, '0884').locator('.vehicle-pl-badge')).toHaveText(
       /ไม่ทราบช่วงให้บริการ/
     );
     await expect(rowFor(page, '9535').locator('.vehicle-pl-badge')).toHaveText(

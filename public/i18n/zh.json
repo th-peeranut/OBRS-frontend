@@ -1984,7 +1984,7 @@
       },
       "ZERO": {
         "RAN_NO_REVENUE": "有运营但无收入",
-        "DID_NOT_RUN": "本期未运营",
+        "DID_NOT_RUN": "本期没有已记录的班次",
         "ENTERED_AS_ZERO": "已记录为零",
         "NO_ENTRIES": "尚无人记录任何支出"
       },

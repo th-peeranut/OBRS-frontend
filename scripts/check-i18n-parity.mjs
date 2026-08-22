@@ -495,6 +495,40 @@ const PRIVACY_LEDGER = [
     effectiveDate: '2026-08-10',
     fingerprint: '3e3ae981343e8237641c11b49535e2ded6f9e1e51c85ea30c217eac1f2335c73',
   },
+  {
+    // OBRS-1528 + OBRS-1366, published together on the owner's decision of
+    // 2026-08-22 precisely BECAUSE this ledger refuses to let one version cover
+    // two texts: fixed separately they would have cost two bumps, and every bump
+    // re-asks every existing account for consent (OBRS-632). Three sentences that
+    // described something the code does not do:
+    //
+    // 1. The withdraw button (OBRS-1528). The notice pointed at it twice as plain
+    //    fact — "the button at the end of this page" — and OBRS-1179 correctly
+    //    stopped rendering it wherever no measurement ID is configured, which is
+    //    every build prod runs. A declared right with no mechanism is the OBRS-627
+    //    defect. Both sentences are now conditional on the site actually
+    //    collecting, which is true in both builds instead of neither.
+    //
+    // 2. The cookie paragraph (the half OBRS-1179 did not cause). It said consent
+    //    alone makes the analytics providers set _ga/_clck/_clsk; consent alone
+    //    does not, because `loadGa4()` returns early with no ID. It now states
+    //    both conditions and says plainly that without analytics switched on
+    //    nothing is collected whatever the visitor answers.
+    //
+    // 3. Passenger type (OBRS-1366). Section 2 said it is used "to arrange seating
+    //    and to apply the correct fare"; measured on the code prod runs, seat
+    //    assignment never reads it and no discount service reads it either. It is
+    //    display-only, so the notice now says display-only. The list also gains
+    //    "nun" (OBRS-1365 shipped that option) and records that the field is
+    //    optional (OBRS-1357 stopped requiring it).
+    //
+    // Deliberately NOT written: the gender-aware seating rules of OBRS-1364, which
+    // would make sentence 3 true again. A notice describes what the system does on
+    // its effective date, not what a card plans.
+    version: '2.4',
+    effectiveDate: '2026-08-22',
+    fingerprint: '88913a6ed309150e206ac58d55f7dced2b147a5a11540a9af71d3d22dc3591c1',
+  },
 ];
 
 function privacyFingerprint(json) {
