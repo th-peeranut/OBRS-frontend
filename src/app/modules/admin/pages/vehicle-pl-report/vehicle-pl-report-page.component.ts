@@ -189,9 +189,15 @@ export class VehiclePlReportPageComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * "This bus ran and sold nothing" vs. "this bus never turned a wheel" — the same ฿0 on
-   * screen, two different things for the owner to do about it. `null` when the revenue is
+   * "This bus ran and sold nothing" vs. "OBRS has no round on record for it" — the same ฿0
+   * on screen, two different things for the owner to do about it. `null` when the revenue is
    * not zero and there is nothing to explain.
+   *
+   * OBRS-1526: the false branch says what OBRS KNOWS, never what the bus did. `ranInPeriod`
+   * is computed from the revenue matrix, so it is false for every period before go-live by
+   * construction — there are no bookings and no schedules back there. Wording it as "did not
+   * run" made this screen assert, of years the owner's books show the fleet working, that it
+   * never moved.
    */
   protected zeroRevenueReasonKey(row: VehiclePlRowDto): string | null {
     if (!this.isZero(row.revenue)) {
