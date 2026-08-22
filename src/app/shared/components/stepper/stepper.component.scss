@@ -98,7 +98,9 @@
 
   .step {
     .title {
-      font-size: 11px;
+      // OBRS-639 AC-4: 11px was the smallest text in the app. $font-size-xs is
+      // the floor the card sets, and it is what .desc below already uses.
+      font-size: $font-size-xs;
     }
 
     .desc {
@@ -109,31 +111,50 @@
 
 @media (max-width: 768px) {
   .stepper-container {
-    justify-content: flex-start;
-    padding: $space-md 16px;
+    // OBRS-639. The four steps SHARE the width instead of queueing up behind a
+    // scroller. `min-width` on .step made the row 556px wide whatever the screen
+    // was, so on a 360px phone steps 3 and 4 sat off the right edge with nothing
+    // on screen saying they were there.
+    //
+    // `overflow-x: auto` stays. Nothing overflows now, so it never triggers - but
+    // it is the clip that lets OBRS-634's viewport gate treat this box as allowed
+    // rather than as a page-widening violation, and removing it would turn one
+    // unwrappable label into a horizontal-scroll bug for the whole page.
+    justify-content: space-between;
+    padding: $space-md $space-2xs;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
 
   .step {
-    min-width: 112px;
+    flex: 1 1 0;
+    min-width: 0;
+
+    // "ขั้นตอนที่ N" is what made a step too wide to fit at a legible size, and it
+    // is the half that repeats what the row already shows: four dots in order,
+    // with the live one lit. AC-5 asked for the label to be shortened before
+    // reaching for a scroller, and this is the shortening.
+    .title {
+      display: none;
+    }
 
     .desc {
       font-size: $font-size-xs;
       line-height: $line-height-tight;
+      // Thai and Chinese break by dictionary, English by space; `anywhere` is for
+      // the one long word neither rule can place inside a ~78px step.
+      overflow-wrap: anywhere;
     }
   }
 
   .line {
-    flex: 0 0 28px;
-    min-width: 28px;
+    flex: 0 1 28px;
+    min-width: 8px;
   }
 }
 
 @media (max-width: 480px) {
   .step {
-    min-width: 98px;
-
     .circle {
       width: 14px;
       height: 14px;
