@@ -91,10 +91,64 @@ interface TicketPassengerGroup {
   isReturn: boolean;
   passengers: TicketPassenger[];
 }
+
+/**
+ * OBRS-260: one leg's own copy of the fields this page used to `/`-join into a
+ * single booking-level string.
+ *
+ * The field names are deliberately `TicketLeg`'s
+ * (`shared/interfaces/e-ticket.interface.ts`), which the my-bookings modal has
+ * rendered since OBRS-254 — this page keeps its own type only because its two
+ * render passes read a `Schedule` (guest, store) and a `BookingTicketJourney`
+ * (API) rather than the modal's single mapped shape. Same vocabulary, so the
+ * consolidation left open at the end of this card is a swap, not a redesign.
+ */
+interface TicketLegView {
+  travelDate: string;
+  travelTime: string;
+  /** OBRS-1502 — the arrival's DATE, and only when this leg lands on a later
+   *  Bangkok day. `''` is the ordinary case and renders no cell at all. Before
+   *  this card the two legs shared one cell and the leg that did NOT cross
+   *  midnight had to print `-` to hold its position; on its own leg it simply
+   *  says nothing. */
+  arrivalDate: string;
+  route: string;
+  origin: string;
+  destination: string;
+  vehicleType: string;
+  vehiclePlate: string;
+  seats: string;
+  /** OBRS-325: true when every ticket on THIS leg has a null `seatNumber` —
+   *  mirrors `TicketLeg.isOpenSeating` on the shared card. */
+  seatsOpen: boolean;
+  /** OBRS-269: this leg's own pickup-stop coords. `null` until the API pass
+   *  lands (the store knows no coordinates), which hides the Navigate button. */
+  pickupLatitude: number | null;
+  pickupLongitude: number | null;
+}
+
+/** The all-dashes leg. What a render with nothing in the store shows — the
+ *  same placeholders the booking-level scalars held before OBRS-260. */
+function emptyLegView(): TicketLegView {
+  return {
+    travelDate: '-',
+    travelTime: '-',
+    arrivalDate: '',
+    route: '-',
+    origin: '-',
+    destination: '-',
+    vehicleType: '-',
+    vehiclePlate: '-',
+    seats: '-',
+    seatsOpen: false,
+    pickupLatitude: null,
+    pickupLongitude: null,
+  };
+}
 type Locale = 'en' | 'th' | 'zh';
 
 /**
- * OBRS-1502 — the two timestamps of one leg, which is all `buildArrivalDate`
+ * OBRS-1502 — the two timestamps of one leg, which is all `arrivalDateWhenLater`
  * reads. `Schedule` (store pass) and `BookingTicketJourney` (API pass) both
  * satisfy it, so one builder serves both.
  */
@@ -135,23 +189,17 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
   bookingNumber = '-';
   ticketNumber = '-';
-  travelDate = '-';
-  travelTime = '-';
   /**
-   * OBRS-1502 — the arrival's DATE, and only for a leg that lands on a later
-   * Bangkok day. Empty is the ordinary case and renders no cell at all, so a
-   * same-day ticket keeps the exact markup it had before this card.
+   * OBRS-260: one entry per leg — length 1 for a one-way booking, 2 for a round
+   * trip. Every field in here used to be a booking-level scalar carrying
+   * `outbound / return`, which left the reader pairing up four parallel lines
+   * by position; OBRS-1502's arrival date is what made that unreadable out
+   * loud, printing `23 ส.ค. 2026 / -` on a trip that crossed midnight one way.
+   *
+   * Never empty — the placeholder leg is what keeps a render with nothing in
+   * the store showing dashes rather than nothing, exactly as the scalars did.
    */
-  arrivalDate = '';
-  route = '-';
-  origin = '-';
-  destination = '-';
-  vehicleType = '-';
-  vehiclePlate = '-';
-  seats = '-';
-  /** OBRS-325: true when every ticket in the outbound journey has a null
-   *  `seatNumber` — mirrors `TicketLeg.isOpenSeating` on the shared card. */
-  seatsOpen = false;
+  legs: TicketLegView[] = [emptyLegView()];
   passengerSummary = '-';
   paymentDate = '-';
   totalAmount = '0.00';
@@ -211,13 +259,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
    * booking reference in the store already, so it never fires there either.
    */
   ticketIncomplete = false;
-  /** OBRS-269: outbound pickup-stop coords, threaded through from the tickets
-   *  API's `fromStop.latitude`/`longitude` in `applyApiOverrides()`. `null` until
-   *  the API response lands (store-only pre-API render) — the Navigate button
-   *  hides until then. */
-  originLatitude: number | null = null;
-  originLongitude: number | null = null;
-
   /** OBRS-873: what the template renders — the per-leg groups. */
   passengerGroups: TicketPassengerGroup[] = [];
   /** Every group's rows flattened, in leg order. Derived — only ever written
@@ -336,14 +377,17 @@ export class ETicketComponent implements OnInit, OnDestroy {
   }
 
   /** OBRS-269: opens Google Maps Directions from the user's current location to
-   *  the outbound pickup stop — a deep-link only (no Directions API call). The
+   *  this leg's own pickup stop — a deep-link only (no Directions API call). The
    *  template hides the button entirely when either coord is null, so this is a
-   *  defensive no-op rather than the primary gate. */
-  navigateToPickup(): void {
-    if (this.originLatitude == null || this.originLongitude == null) {
+   *  defensive no-op rather than the primary gate. OBRS-260 made the argument
+   *  the leg: a round trip leaves from the other end on the way home, and the
+   *  outbound pickup was the wrong place to send that passenger to.
+   */
+  navigateToPickup(leg: TicketLegView): void {
+    if (leg.pickupLatitude == null || leg.pickupLongitude == null) {
       return;
     }
-    const url = buildMapsDirectionsUrl(this.originLatitude, this.originLongitude);
+    const url = buildMapsDirectionsUrl(leg.pickupLatitude, leg.pickupLongitude);
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 
@@ -437,15 +481,12 @@ export class ETicketComponent implements OnInit, OnDestroy {
       this.bookingNumber !== '-'
         ? this.bookingNumber
         : this.buildTicketNumber(bookingId, departureSchedule);
-    this.travelDate = this.buildTravelDate(
-      departureSchedule?.departureDateTime,
-      returnSchedule?.departureDateTime,
-      locale
-    );
-    this.travelTime = this.buildTravelTime(departureSchedule, returnSchedule);
-    this.arrivalDate = this.buildArrivalDate(
+    this.legs = this.buildLegsFromSchedules(
       departureSchedule,
       returnSchedule,
+      fromName,
+      toName,
+      ticketPassengers,
       locale
     );
     // OBRS-1249: this pass knows the stations the customer searched with, never
@@ -466,18 +507,12 @@ export class ETicketComponent implements OnInit, OnDestroy {
     };
     this.refreshRouteLine();
     this.loadRouteNames([departureSchedule, returnSchedule]);
-    this.origin = fromName || '-';
-    this.destination = toName || '-';
     // OBRS-1246: recorded from the STORE-only render, then cleared further down
     // by `applyApiOverrides` when the API supplies what the roster could not.
     // `-` is this page's generic "no data yet" placeholder, so it cannot be read
     // back as "the lookup failed" — the failure has to be captured here, at the
     // one place that knows the lookup returned nothing.
     this.stationLabelsUnresolved = !fromName || !toName;
-    this.vehicleType =
-      capitalizeVehicleType(departureSchedule?.vehicleType) || '-';
-    this.vehiclePlate = '-';
-    this.seats = this.buildSeatList(ticketPassengers);
     // Pre-API render: the store only knows the booking's passenger form, which
     // has no leg dimension at all — one unlabelled group, same as a one-way.
     this.setPassengerGroups([{ isReturn: false, passengers: ticketPassengers }]);
@@ -519,49 +554,61 @@ export class ETicketComponent implements OnInit, OnDestroy {
     return '-';
   }
 
-  private buildTravelDate(
-    departureDateTime: string | undefined,
-    returnDateTime: string | undefined,
+  /**
+   * OBRS-260: the store pass's legs.
+   *
+   * The way home runs the customer's searched station pair backwards. The store
+   * holds exactly one pair (`ScheduleFilter.startStationId`/`stopStationId`) and
+   * has no second one to read, so reversing it is not a guess — it is the only
+   * reading there is, and it is what the return schedule in `schedules[1]`
+   * means.
+   */
+  private buildLegsFromSchedules(
+    departureSchedule: Schedule | null,
+    returnSchedule: Schedule | null,
+    fromName: string,
+    toName: string,
+    passengers: TicketPassenger[],
     locale: Locale
-  ): string {
-    const departureDate = this.formatDate(departureDateTime, locale);
-    const returnDate = this.formatDate(returnDateTime, locale);
-
-    if (departureDate && returnDate && departureDate !== returnDate) {
-      return `${departureDate} / ${returnDate}`;
+  ): TicketLegView[] {
+    // The store's passenger form has no leg dimension at all (see
+    // `buildPassengerRows`), so both legs carry the same seat list until the API
+    // pass replaces each with that leg's own tickets.
+    const seats = this.buildSeatList(passengers);
+    const legs = [
+      this.legFromSchedule(departureSchedule, fromName, toName, seats, locale),
+    ];
+    if (returnSchedule) {
+      legs.push(
+        this.legFromSchedule(returnSchedule, toName, fromName, seats, locale)
+      );
     }
 
-    return departureDate || returnDate || '-';
+    return legs;
   }
 
-  /**
-   * OBRS-1502 — the arrival DATE for the legs that need one, `''` for a ticket
-   * where every leg lands on the day it left.
-   *
-   * Both render passes feed this: the store pass hands it `Schedule`s and the
-   * API pass hands it `BookingTicketJourney`s, and the only fields it reads are
-   * the departure/arrival timestamps both shapes carry.
-   *
-   * A return ticket keeps the positional `A / B` of the two cells above it — the
-   * travel date and time already read that way — so the leg that does NOT cross
-   * midnight prints `-` rather than being dropped. Dropped, a lone date under a
-   * two-leg ticket reads as the outbound's whichever leg it belongs to (AC5).
-   */
-  private buildArrivalDate(
-    outbound: TripTimestamps | null | undefined,
-    inbound: TripTimestamps | null | undefined,
+  private legFromSchedule(
+    schedule: Schedule | null,
+    fromName: string,
+    toName: string,
+    seats: string,
     locale: Locale
-  ): string {
-    const outboundDate = this.arrivalDateWhenLater(outbound, locale);
-    const inboundDate = this.arrivalDateWhenLater(inbound, locale);
-
-    if (!outboundDate && !inboundDate) {
-      return '';
-    }
-
-    return inbound
-      ? `${outboundDate || '-'} / ${inboundDate || '-'}`
-      : outboundDate;
+  ): TicketLegView {
+    return {
+      ...emptyLegView(),
+      travelDate: this.formatDate(schedule?.departureDateTime, locale) || '-',
+      travelTime: this.formatScheduleTimeRange(schedule) || '-',
+      // OBRS-1502, now per leg: `''` when this leg lands on the day it left, so
+      // the cell is absent rather than holding a `-` to keep its position.
+      arrivalDate: this.arrivalDateWhenLater(schedule, locale),
+      // `route` is deliberately left at its placeholder: `refreshRouteLine()` is
+      // the ONE writer of that line (OBRS-1249) and runs straight after this,
+      // once for both legs.
+      origin: fromName || '-',
+      destination: toName || '-',
+      vehicleType: capitalizeVehicleType(schedule?.vehicleType) || '-',
+      seats,
+    };
   }
 
   private arrivalDateWhenLater(
@@ -574,20 +621,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
     );
 
     return arrivalDay ? this.formatDate(arrivalDay, locale) : '';
-  }
-
-  private buildTravelTime(
-    departureSchedule: Schedule | null,
-    returnSchedule: Schedule | null
-  ): string {
-    const departureTime = this.formatScheduleTimeRange(departureSchedule);
-    const returnTime = this.formatScheduleTimeRange(returnSchedule);
-
-    if (departureTime && returnTime) {
-      return `${departureTime} / ${returnTime}`;
-    }
-
-    return departureTime || returnTime || '-';
   }
 
   private formatScheduleTimeRange(schedule: Schedule | null): string {
@@ -623,37 +656,23 @@ export class ETicketComponent implements OnInit, OnDestroy {
    * resort, and the slug is never a candidate here: it is not passed in at all
    * (OBRS-1216).
    */
-  private buildRouteLabel(
-    fromName: string,
-    toName: string,
-    hasReturn: boolean,
-    outboundRouteName: string | null = null,
-    inboundRouteName: string | null = null
-  ): string {
-    const departurePair = fromName && toName ? `${fromName} - ${toName}` : fromName || toName;
-    const outbound = outboundRouteName?.trim() || departurePair;
-    if (!outbound) {
-      return '-';
-    }
-
-    if (!hasReturn) {
-      return outbound;
-    }
-
-    // Without both endpoints there is no pair to reverse, so a return leg with
-    // no name of its own contributes nothing rather than repeating one station
-    // back at itself — the pre-OBRS-1249 behaviour, kept byte-for-byte.
-    const returnPair = fromName && toName ? `${toName} - ${fromName}` : '';
-    const inbound = inboundRouteName?.trim() || returnPair;
-
-    return inbound ? `${outbound} / ${inbound}` : outbound;
-  }
-
   /**
-   * OBRS-1249: re-renders the route line from whatever has landed so far. Every
-   * writer of `routeLineContext` calls this instead of assigning `this.route`,
-   * so the store pass, the API overlay and the late-arriving public lookup all
-   * produce the line the same way.
+   * OBRS-1249: re-renders each leg's route line from whatever has landed so
+   * far. Every writer of `routeLineContext` calls this instead of assigning a
+   * leg's `route`, so the store pass, the API overlay and the late-arriving
+   * public lookup all produce the line the same way.
+   *
+   * The route's own name wins over the endpoint pair PER LEG — a route seeded
+   * on the way out but not on the way back is a real state (`route_translations`
+   * is written per route, and the two directions are two routes), so falling
+   * back to the pair for both would hide a name the owner did write. `'-'` stays
+   * the last resort, and the slug is never a candidate here: it is not passed in
+   * at all (OBRS-1216).
+   *
+   * OBRS-260 turned the one `A / B` line into one line per leg. Before, a return
+   * leg with neither a name nor a reversible pair contributed nothing and the
+   * line silently showed the outbound alone; now that leg prints `-` in its own
+   * cell, under its own heading, where it cannot be read as the outbound's.
    */
   private refreshRouteLine(): void {
     const context = this.routeLineContext;
@@ -661,13 +680,22 @@ export class ETicketComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.route = this.buildRouteLabel(
-      context.fromName,
-      context.toName,
-      context.hasReturn,
-      context.outboundRouteName ?? this.routeNameForSlug(context.outboundSlug, context.locale),
-      context.inboundRouteName ?? this.routeNameForSlug(context.inboundSlug, context.locale)
-    );
+    const { fromName, toName, locale } = context;
+    const outboundPair = fromName && toName ? `${fromName} - ${toName}` : fromName || toName;
+    // Without both endpoints there is no pair to reverse, so the way home falls
+    // through to `-` rather than repeating one station back at itself.
+    const inboundPair = fromName && toName ? `${toName} - ${fromName}` : '';
+    const outboundName =
+      context.outboundRouteName ?? this.routeNameForSlug(context.outboundSlug, locale);
+    const inboundName =
+      context.inboundRouteName ?? this.routeNameForSlug(context.inboundSlug, locale);
+
+    if (this.legs[0]) {
+      this.legs[0].route = outboundName?.trim() || outboundPair || '-';
+    }
+    if (this.legs[1]) {
+      this.legs[1].route = inboundName?.trim() || inboundPair || '-';
+    }
   }
 
   /**
@@ -978,12 +1006,34 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
     const fromName = outbound?.fromStop?.label?.trim() ?? '';
     const toName = outbound?.toStop?.label?.trim() ?? '';
-    if (fromName) {
-      this.origin = fromName;
-    }
-    if (toName) {
-      this.destination = toName;
-    }
+
+    // OBRS-873: BOTH legs, not just the outbound one. The return leg has its
+    // own tickets and therefore its own boarding QRs; building rows from
+    // `outbound` alone is what left a round-trip passenger with nothing to scan
+    // on the way home.
+    const outboundPassengers = this.buildPassengersFromApi(outbound, storePassengers);
+    const inboundPassengers = this.buildPassengersFromApi(inbound, storePassengers);
+
+    // OBRS-260: the legs, rebuilt from the authoritative copy and merged over
+    // what the store pass painted. The fallback per field is the same guard the
+    // flat fields each carried before this card — a response that arrives
+    // without a value must not wipe a good one — and the leg COUNT never
+    // shrinks, so a response with no journeys in it leaves a round trip still
+    // reading as one.
+    const apiLegs = [
+      { journey: outbound, passengers: outboundPassengers },
+      { journey: inbound, passengers: inboundPassengers },
+    ];
+    const legCount = Math.max(this.legs.length, inbound ? 2 : 1);
+    this.legs = Array.from({ length: legCount }, (_, index) =>
+      this.legFromJourney(
+        apiLegs[index]?.journey ?? null,
+        apiLegs[index]?.passengers ?? [],
+        this.legs[index] ?? emptyLegView(),
+        locale
+      )
+    );
+
     if (fromName || toName) {
       // OBRS-1249: same line, better inputs. `routeLabel` is the name OBRS-1219
       // resolved server-side; when it is null (route unseeded) the slug lookup
@@ -1009,52 +1059,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
       // beside a `-` is still a ticket the gate staff cannot read.
       this.stationLabelsUnresolved = false;
     }
-    this.originLatitude = outbound?.fromStop?.latitude ?? null;
-    this.originLongitude = outbound?.fromStop?.longitude ?? null;
-
-    const travelDate = this.buildTravelDate(
-      outbound?.departureDateTime,
-      inbound?.departureDateTime,
-      locale
-    );
-    if (travelDate !== '-') {
-      this.travelDate = travelDate;
-    }
-
-    const travelTime = this.buildJourneyTravelTime(outbound, inbound);
-    if (travelTime !== '-') {
-      this.travelTime = travelTime;
-    }
-
-    // Guarded like its two neighbours above: this pass can arrive without the
-    // timestamps at all, and an empty answer from a journey that carries none
-    // must not wipe the store pass's correct one.
-    const arrivalDate = this.buildArrivalDate(outbound, inbound, locale);
-    if (arrivalDate) {
-      this.arrivalDate = arrivalDate;
-    }
-
-    const vehicleType = outbound?.vehicle?.vehicleType?.label?.trim();
-    if (vehicleType) {
-      this.vehicleType = capitalizeVehicleType(vehicleType);
-    }
-
-    const vehiclePlate = this.buildVehiclePlate(
-      outbound?.vehicle?.vehicleNumber?.trim() ?? '',
-      outbound?.vehicle?.numberPlate?.trim() ?? ''
-    );
-    if (vehiclePlate) {
-      this.vehiclePlate = vehiclePlate;
-    }
-
-    // OBRS-873: BOTH legs, not just the outbound one. The return leg has its
-    // own tickets and therefore its own boarding QRs; building rows from
-    // `outbound` alone is what left a round-trip passenger with nothing to scan
-    // on the way home. Empty legs are dropped rather than rendered as a headed
-    // but empty list, so `passengerGroups.length > 1` means "both legs are
-    // shown" and is exactly the condition for labelling them.
-    const outboundPassengers = this.buildPassengersFromApi(outbound, storePassengers);
-    const inboundPassengers = this.buildPassengersFromApi(inbound, storePassengers);
+    // Empty legs are dropped rather than rendered as a headed but empty list, so
+    // `passengerGroups.length > 1` means "both legs are shown" and is exactly
+    // the condition for labelling them (OBRS-873).
     const apiGroups: TicketPassengerGroup[] = [
       { isReturn: false, passengers: outboundPassengers },
       { isReturn: true, passengers: inboundPassengers },
@@ -1063,15 +1070,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
     if (apiGroups.length > 0) {
       this.setPassengerGroups(apiGroups);
       this.fetchBoardingTokensForPassengers();
-    }
-    if (outboundPassengers.length > 0) {
-      // The page's seat/open-seating summary is a single journey-level line and
-      // stays outbound-only, unchanged — the per-leg seat breakdown lives on
-      // the shared card (`TicketLeg.seats`), not on this flat page.
-      this.seats = this.buildSeatList(outboundPassengers);
-      // OBRS-325: every ticket on the outbound leg shares one schedule, so
-      // either all of them are open-seating or none are.
-      this.seatsOpen = outboundPassengers.every((passenger) => passenger.seatOpen);
     }
 
     this.booker = this.buildBookerFromApi(data);
@@ -1132,24 +1130,51 @@ export class ETicketComponent implements OnInit, OnDestroy {
     return numbers.join(', ');
   }
 
-  private buildJourneyTravelTime(
-    outbound: BookingTicketJourney | null,
-    inbound: BookingTicketJourney | null
-  ): string {
-    const departureTime = this.formatTimeRange(
-      outbound?.departureDateTime,
-      outbound?.arrivalDateTime
-    );
-    const returnTime = this.formatTimeRange(
-      inbound?.departureDateTime,
-      inbound?.arrivalDateTime
+  /**
+   * OBRS-260: one leg as the authoritative copy describes it, over `base` —
+   * the same leg as the store pass painted it. Every field falls back rather
+   * than overwriting with nothing, which is what the flat fields' individual
+   * `if (value)` guards did before this card: this response can arrive without
+   * timestamps, without a vehicle, or without stop labels, and none of those
+   * absences may wipe what the store already got right.
+   */
+  private legFromJourney(
+    journey: BookingTicketJourney | null,
+    passengers: TicketPassenger[],
+    base: TicketLegView,
+    locale: Locale
+  ): TicketLegView {
+    const vehicleType = journey?.vehicle?.vehicleType?.label?.trim();
+    const vehiclePlate = this.buildVehiclePlate(
+      journey?.vehicle?.vehicleNumber?.trim() ?? '',
+      journey?.vehicle?.numberPlate?.trim() ?? ''
     );
 
-    if (departureTime && returnTime) {
-      return `${departureTime} / ${returnTime}`;
-    }
-
-    return departureTime || returnTime || '-';
+    return {
+      ...base,
+      travelDate: this.formatDate(journey?.departureDateTime, locale) || base.travelDate,
+      travelTime:
+        this.formatTimeRange(journey?.departureDateTime, journey?.arrivalDateTime) ||
+        base.travelTime,
+      arrivalDate: this.arrivalDateWhenLater(journey, locale) || base.arrivalDate,
+      // `route` rides along in `base`: `refreshRouteLine()` owns that line and
+      // runs straight after this (OBRS-1249).
+      origin: journey?.fromStop?.label?.trim() || base.origin,
+      destination: journey?.toStop?.label?.trim() || base.destination,
+      vehicleType: vehicleType ? capitalizeVehicleType(vehicleType) : base.vehicleType,
+      vehiclePlate: vehiclePlate || base.vehiclePlate,
+      // OBRS-873: this leg's OWN tickets. The seat line was outbound-only for
+      // the whole ticket before OBRS-260, so a round trip printed the seats it
+      // was leaving in under the heading for the seats it was coming home in.
+      seats: passengers.length ? this.buildSeatList(passengers) : base.seats,
+      // OBRS-325: every ticket on a leg shares one schedule, so either all of
+      // them are open-seating or none are.
+      seatsOpen: passengers.length
+        ? passengers.every((passenger) => passenger.seatOpen)
+        : base.seatsOpen,
+      pickupLatitude: journey?.fromStop?.latitude ?? null,
+      pickupLongitude: journey?.fromStop?.longitude ?? null,
+    };
   }
 
   private buildPassengersFromApi(
