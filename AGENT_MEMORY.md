@@ -4287,3 +4287,18 @@ Pattern (DEV-GOTCHAS "a comment stating the WRONG NUMBER becomes the next reader
 belief"): a "measured" range in a comment is still a claim — recompute it from the tokens the
 code actually resolves, don't trust the number's provenance label. The decision to keep the
 badges light is unaffected (all four clear AA 4.5:1); only the stated ceiling was wrong.
+
+---
+## OBRS-1234 follow-up (Scrutinize self-fix, 2026-08-22)
+
+role-form-modal.component.scss carried a copy-paste comment saying the 0.4-vs-0.75 scrim gap
+showed as "two dialogs on /admin/schedules" — but the role-form modal lives on /admin/roles,
+not /admin/schedules. The sentence was lifted verbatim from schedules-page.component.scss (which
+correctly says "this very page"). Fixed to name /admin/roles and the actual second dialog there
+(role-delete-modal, which uses the shared `.admin-modal-backdrop` at 0.75).
+Pattern (DEV-GOTCHAS "a comment/javadoc stating the WRONG MECHANISM/LOCATION for a right
+conclusion becomes the next reader's false belief"): when two component files share one
+explanation, the page/selector names inside it are per-file facts — don't copy them across.
+The code change itself (deleting the private `background` so the cascade resolves to the shared
+0.75) is correct and empirically confirmed: result-AFTER.json shows backdropBg
+rgba(25,28,30,0.75) on all six shots including both dual-class backdrops.
