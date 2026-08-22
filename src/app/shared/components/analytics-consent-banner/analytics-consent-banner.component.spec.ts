@@ -112,6 +112,62 @@ describe('AnalyticsConsentBannerComponent', () => {
       expect(await paddingSettlesAt(() => el.offsetHeight)).toBe(before + 120);
     });
 
+    /**
+     * OBRS-1524 — the same follow, watched for the error it fired on the way.
+     *
+     * Measured 2026-08-22: the write inside the callback is what makes the page
+     * long enough to scroll, the scrollbar takes 15px off the viewport, and the
+     * bar is `left: 0; right: 0` — so the callback resized the very element whose
+     * observation was being broadcast. The spec answers that by dropping the
+     * notification and reporting `ResizeObserver loop completed with undelivered
+     * notifications` at `window`, which Karma charges to whichever spec is
+     * running. Jasmine shuffles the spec order on every run (measured here:
+     * `random: true`, `seed: null` — nothing pins it), so which spec is running
+     * when it fires is a fresh draw: that is how it arrived as a red `Unit Tests`
+     * job on `dev` that belonged to no card, green on one attempt and red on a
+     * rerun of the same job on the same sha.
+     *
+     * The spacer puts the page exactly at that threshold on purpose. Without it
+     * the Karma page is far too short and this passes without proving anything —
+     * measured 2026-08-22, it walks red 3 times out of 3 with the defer removed.
+     */
+    it('does not resize the document from inside its own observer callback', async () => {
+      const el = banner()!;
+      const before = await paddingSettlesAt(() => el.offsetHeight);
+
+      // Exactly as tall as the viewport, room for the bar included, so the next
+      // pixels it asks for are the ones that turn the scrollbar on.
+      const page = document.documentElement;
+      const spacer = document.createElement('div');
+      const filled = document.body.getBoundingClientRect().height;
+      spacer.style.height = `${Math.max(0, page.clientHeight - filled)}px`;
+      document.body.appendChild(spacer);
+
+      const loops: string[] = [];
+      const onError = (event: ErrorEvent) => {
+        if (/ResizeObserver loop/.test(event.message)) loops.push(event.message);
+      };
+      window.addEventListener('error', onError);
+
+      try {
+        expect(page.scrollHeight).toBe(page.clientHeight);
+        const roomy = page.clientWidth;
+
+        el.style.minHeight = `${before + 120}px`;
+        await paddingSettlesAt(() => el.offsetHeight);
+
+        // Asserted, not assumed: the loop needs a scrollbar that takes width off
+        // the viewport. On a runner that draws overlay scrollbars there is no
+        // width to take, nothing below can arise, and this guard would pass
+        // without guarding — so it says so instead of going quietly green.
+        expect(page.clientWidth).toBeLessThan(roomy);
+        expect(loops).toEqual([]);
+      } finally {
+        window.removeEventListener('error', onError);
+        spacer.remove();
+      }
+    });
+
     it('gives the room back the moment the question is answered', async () => {
       await paddingSettlesAt(() => banner()!.offsetHeight);
 
