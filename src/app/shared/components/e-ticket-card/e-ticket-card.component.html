@@ -29,10 +29,12 @@
             <span class="label">{{ "E_TICKET.LABEL.BOOKING_REF" | translate }}</span>
             <span class="value">{{ bookingNumber }}</span>
           </div>
-          <div class="ticket-item">
-            <span class="label">{{ "E_TICKET.LABEL.TICKET_NO" | translate }}</span>
-            <span class="value">{{ ticketNumber }}</span>
-          </div>
+          @if (ticketNumber !== '-') {
+            <div class="ticket-item">
+              <span class="label">{{ "E_TICKET.LABEL.TICKET_NO" | translate }}</span>
+              <span class="value">{{ ticketNumber }}</span>
+            </div>
+          }
         </div>
 
         @for (leg of legs; track trackByIndex(i); let i = $index) {
@@ -52,6 +54,12 @@
                 <span class="label">{{ "E_TICKET.LABEL.TRAVEL_TIME" | translate }}</span>
                 <span class="value">{{ leg.travelTime }}</span>
               </div>
+              @if (leg.arrivalDate) {
+                <div class="ticket-item">
+                  <span class="label">{{ "E_TICKET.LABEL.ARRIVAL_DATE" | translate }}</span>
+                  <span class="value">{{ leg.arrivalDate }}</span>
+                </div>
+              }
             </div>
             <div class="ticket-route">
               <div class="ticket-item full">
@@ -127,119 +135,132 @@
           </div>
         }
 
-        <div class="ticket-passengers mt-3">
-          <div class="ticket-item full">
-            <span class="label">{{ "E_TICKET.LABEL.PASSENGERS" | translate }}</span>
-          </div>
+        <!-- OBRS-1510: gated the way the booking-flow page gated its own copy
+        of this block (`@if (passengers.length)`), because that page renders
+        through here now and a guest can arrive with no passenger rows at all
+        (a hard-load whose booking cannot be restored, OBRS-1252). Without the
+        guard the heading printed over nothing. This subsumes the narrower one
+        that used to sit around the QR hint alone. The modal is unaffected: its
+        rows come from `journey.tickets`, never empty for a booking it opens. -->
+        @if (hasPassengerRows) {
+          <div class="ticket-passengers mt-3">
+            <div class="ticket-item full">
+              <span class="label">{{ "E_TICKET.LABEL.PASSENGERS" | translate }}</span>
+            </div>
 
-          <!-- OBRS-873: one list PER LEG. A round trip issues a separate ticket per
-          leg, so its return passengers need their own QRs — and need to be
-          told apart from the outbound ones, hence the same LEG_OUTBOUND /
-          LEG_RETURN heading the leg blocks above use. A one-way booking has a
-          single leg, so the heading is suppressed and this renders exactly the
-          one flat list it rendered before. -->
-          @for (rows of legPassengerRows; track trackByIndex(legIndex); let legIndex = $index) {
-            @if (rows.length) {
-              @if (hasMultiplePassengerLegs) {
-                <div class="ticket-leg-heading">
-                  {{ (legIndex === 0 ? "E_TICKET.LABEL.LEG_OUTBOUND" : "E_TICKET.LABEL.LEG_RETURN") | translate }}
-                </div>
-              }
-              <div class="passenger-list">
-                @for (passenger of rows; track trackByIndex(i); let i = $index) {
-                  <div
-                    class="passenger-row"
-                    >
-                    <!-- OBRS-866: this passenger's OWN boarding QR, encoding the signed
-                    boarding token for `passenger.ticketId` — what
-                    POST /tickets/boarding-scan actually accepts. (It used to be one
-                    card-level QR of the `ticketNumber` string, which the scanner
-                    rejects with 400 INVALID_TICKET_TOKEN and which could never have
-                    boarded more than one passenger anyway.) A per-ticket fetch
-                    failure — e.g. 409 TICKET_NOT_CONFIRMED on a cancelled leg —
-                    marks THIS row unavailable; every other row still renders.
-                    Spans the whole `auto 1fr` row grid, like .child-fare-note. -->
-                    @if (passenger.ticketId !== null) {
-                      <div class="passenger-qr">
-                        @if (passenger.qrDataUrl) {
-                          <img
-                            class="qr-code"
-                            [src]="passenger.qrDataUrl"
-                            [attr.alt]="'E_TICKET.QR_ARIA_LABEL' | translate"
-                            />
-                          } @else {
-                            <div
-                              class="qr-code qr-code-placeholder"
-                              [class.is-unavailable]="passenger.qrUnavailable"
-                              role="img"
-                              [attr.aria-label]="'E_TICKET.QR_ARIA_LABEL' | translate"
-                              >
-                              @if (passenger.qrUnavailable) {
-                                <span
-                                  class="material-symbols-outlined qr-unavailable-icon" [attr.translate]="'no'"
-                                  aria-hidden="true"
-                                  >block</span
-                                  >
-                              }
-                            </div>
-                          }
-                          <div class="passenger-ticket-number">{{ passenger.ticketNumber }}</div>
-                          @if (passenger.qrUnavailable) {
-                            <div class="qr-unavailable-text">
-                              {{ "E_TICKET.QR_UNAVAILABLE" | translate }}
-                            </div>
-                          }
-                        </div>
-                      }
-                      <div class="passenger-index">{{ i + 1 }}.</div>
-                      <div class="passenger-detail">
-                        <div class="passenger-field">
-                          <span class="label">
-                            {{ "E_TICKET.LABEL.PASSENGER_NAME" | translate }}
-                          </span>
-                          <span class="value">{{ passenger.name }}</span>
-                        </div>
-                        @if (passenger.fareCategory) {
-                          <div class="passenger-field">
-                            <span class="label">
-                              {{ "E_TICKET.LABEL.FARE_CATEGORY" | translate }}
-                            </span>
-                            <span class="value">
-                              {{
-                              (passenger.fareCategory === "adult"
-                              ? "PASSENGER_INFO.BADGE.ADULT"
-                              : "PASSENGER_INFO.BADGE.CHILD"
-                              ) | translate
-                              }}
-                            </span>
+            <!-- OBRS-873: one list PER LEG. A round trip issues a separate ticket per
+            leg, so its return passengers need their own QRs — and need to be
+            told apart from the outbound ones, hence the same LEG_OUTBOUND /
+            LEG_RETURN heading the leg blocks above use. A one-way booking has a
+            single leg, so the heading is suppressed and this renders exactly the
+            one flat list it rendered before. -->
+            @for (rows of legPassengerRows; track trackByIndex(legIndex); let legIndex = $index) {
+              @if (rows.length) {
+                @if (hasMultiplePassengerLegs) {
+                  <div class="ticket-leg-heading">
+                    {{ (legIndex === 0 ? "E_TICKET.LABEL.LEG_OUTBOUND" : "E_TICKET.LABEL.LEG_RETURN") | translate }}
+                  </div>
+                }
+                <div class="passenger-list">
+                  @for (passenger of rows; track trackByIndex(i); let i = $index) {
+                    <div
+                      class="passenger-row"
+                      >
+                      <!-- OBRS-866: this passenger's OWN boarding QR, encoding the signed
+                      boarding token for `passenger.ticketId` — what
+                      POST /tickets/boarding-scan actually accepts. (It used to be one
+                      card-level QR of the `ticketNumber` string, which the scanner
+                      rejects with 400 INVALID_TICKET_TOKEN and which could never have
+                      boarded more than one passenger anyway.) A per-ticket fetch
+                      failure — e.g. 409 TICKET_NOT_CONFIRMED on a cancelled leg —
+                      marks THIS row unavailable; every other row still renders.
+                      Spans the whole `auto 1fr` row grid, like .child-fare-note. -->
+                      @if (passenger.ticketId !== null) {
+                        <div class="passenger-qr">
+                          @if (passenger.qrDataUrl) {
+                            <img
+                              class="qr-code"
+                              [src]="passenger.qrDataUrl"
+                              [attr.alt]="'E_TICKET.QR_ARIA_LABEL' | translate"
+                              />
+                            } @else {
+                              <div
+                                class="qr-code qr-code-placeholder"
+                                [class.is-unavailable]="passenger.qrUnavailable"
+                                role="img"
+                                [attr.aria-label]="'E_TICKET.QR_ARIA_LABEL' | translate"
+                                >
+                                @if (passenger.qrUnavailable) {
+                                  <span
+                                    class="material-symbols-outlined qr-unavailable-icon" [attr.translate]="'no'"
+                                    aria-hidden="true"
+                                    >block</span
+                                    >
+                                }
+                              </div>
+                            }
+                            <div class="passenger-ticket-number">{{ passenger.ticketNumber }}</div>
+                            @if (passenger.qrUnavailable) {
+                              <div class="qr-unavailable-text">
+                                {{ "E_TICKET.QR_UNAVAILABLE" | translate }}
+                              </div>
+                            }
                           </div>
                         }
+                        <div class="passenger-index">{{ i + 1 }}.</div>
+                        <div class="passenger-detail">
+                          <div class="passenger-field">
+                            <span class="label">
+                              {{ "E_TICKET.LABEL.PASSENGER_NAME" | translate }}
+                            </span>
+                            <span class="value">{{ passenger.name }}</span>
+                          </div>
+                          @if (!passenger.seatOpen) {
+                            <div class="passenger-field">
+                              <span class="label">{{ "E_TICKET.LABEL.SEAT" | translate }}</span>
+                              <span class="value">{{ passenger.seat }}</span>
+                            </div>
+                          }
+                          @if (passenger.fareCategory) {
+                            <div class="passenger-field">
+                              <span class="label">
+                                {{ "E_TICKET.LABEL.FARE_CATEGORY" | translate }}
+                              </span>
+                              <span class="value">
+                                {{
+                                (passenger.fareCategory === "adult"
+                                ? "PASSENGER_INFO.BADGE.ADULT"
+                                : "PASSENGER_INFO.BADGE.CHILD"
+                                ) | translate
+                                }}
+                              </span>
+                            </div>
+                          }
+                        </div>
+                        <!-- OBRS-296: boarding-check note for a child-fare passenger —
+                        static token ($text-lightblack via .child-fare-note), matching
+                        the .trip-estimate/.ticket-leg-heading precedent on this
+                        dark-theme-exempt ticket paper. -->
+                        @if (passenger.fareCategory === 'child') {
+                          <small class="child-fare-note">
+                            {{ "E_TICKET.CHILD_FARE_NOTE" | translate }}
+                          </small>
+                        }
                       </div>
-                      <!-- OBRS-296: boarding-check note for a child-fare passenger —
-                      static token ($text-lightblack via .child-fare-note), matching
-                      the .trip-estimate/.ticket-leg-heading precedent on this
-                      dark-theme-exempt ticket paper. -->
-                      @if (passenger.fareCategory === 'child') {
-                        <small class="child-fare-note">
-                          {{ "E_TICKET.CHILD_FARE_NOTE" | translate }}
-                        </small>
-                      }
-                    </div>
-                  }
-                </div>
+                    }
+                  </div>
+                }
               }
-            }
 
-            <!-- OBRS-866: the hint moved here from the (now removed) card-level QR
-            footer, so the sentence "scan this before boarding" sits with the
-            QRs it describes rather than under a QR that no longer exists. -->
-            @if (hasPassengerRows) {
+              <!-- OBRS-866: the hint moved here from the (now removed) card-level QR
+              footer, so the sentence "scan this before boarding" sits with the
+              QRs it describes rather than under a QR that no longer exists. -->
               <div class="qr-hint">
                 {{ "E_TICKET.NOTE_LABEL" | translate }}<br />
                 {{ "E_TICKET.QR_HINT" | translate }}
               </div>
-            }
-          </div>
+            </div>
+        }
 
           <div class="ticket-footer">
             <div class="ticket-item">

@@ -287,6 +287,48 @@ body.is-dark {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
   }
 
+  // My-bookings action-menu PANEL (OBRS-959). The tooltip rule below has been
+  // here since the menu was built and proves the relocation was understood —
+  // but it was the only dark rule this popup ever got, so the panel itself kept
+  // PrimeNG's light surface: measured on `origin/dev` 2026-08-22, background
+  // `rgb(255,255,255)` and label `rgb(53,60,68)` in BOTH modes, the two panel
+  // crops byte-identical. The component's own `.my-bookings-action-menu` rules
+  // (my-bookings.component.scss) are layout-only, so nothing else claims these
+  // properties. Unlayered on purpose: PrimeNG's own colours live in
+  // `@layer primeng`, which any unlayered rule beats regardless of specificity.
+  .my-bookings-action-menu {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+
+    .action-menu-item__label {
+      color: $dk-text;
+    }
+
+    .action-menu-item__icon-slot {
+      color: $dk-text-muted;
+    }
+
+    // Danger row (Cancel booking) — the light twin `$text-red` computes to
+    // 3.08:1 on `$dk-bg-card` (fails AA); `$dk-danger`, the token already used
+    // for destructive text in dark mode, gives 6.08:1.
+    .action-menu-item--danger .action-menu-item__label,
+    .action-menu-item--danger .action-menu-item__icon-slot {
+      color: $dk-danger;
+    }
+
+    // Hover and keyboard focus land on PrimeNG's own row wrapper. Without this
+    // the light theme's near-white highlight paints over the dark panel — the
+    // keyboard half matters here because the trigger opens on Enter/Space.
+    // PrimeNG 21 puts `.p-focus` on the `.p-menu-item` <li> (menustyle
+    // `classes.item`), NOT on `.p-menu-item-content` — so the focus half must
+    // read the class off the li and paint the child content div (OBRS-959 Scrutinize).
+    .p-menu-item:not(.p-disabled) > .p-menu-item-content:hover,
+    .p-menu-item.p-focus:not(.p-disabled) > .p-menu-item-content {
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+  }
+
   // My-bookings action-menu disabled-reason tooltip — same dark treatment as
   // `.tooltip-box` above (the menu popup is appendTo="body", so it lives under
   // `body.is-dark` here rather than inside the component's encapsulation).
