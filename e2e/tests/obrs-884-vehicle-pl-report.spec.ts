@@ -70,7 +70,7 @@ async function openJune2026(page: Page): Promise<void> {
 
 function rowFor(page: Page, plateFragment: string) {
   return page
-    .locator('tbody tr:not(.vehicle-pl-detail-row)')
+    .locator('table.admin-table tbody tr:not(.vehicle-pl-detail-row)')
     .filter({ hasText: plateFragment })
     .first();
 }
@@ -140,7 +140,7 @@ test.describe('OBRS-884 per-vehicle P&L', () => {
     // total minus exactly that line. This goes red both if the line vanishes and if it is
     // averaged down onto the buses.
     const vehicleExpenses = await page
-      .locator('tbody tr:not(.vehicle-pl-detail-row) td:nth-child(3)')
+      .locator('table.admin-table tbody tr:not(.vehicle-pl-detail-row) td:nth-child(3)')
       .allInnerTexts();
     const fleetTotal = vehicleExpenses.reduce((sum, cell) => sum + money(cell), 0);
     expect(fleetTotal).toBeCloseTo(money(EXPECTED.totals.expenses) - money(EXPECTED.central), 2);
@@ -175,9 +175,11 @@ test.describe('OBRS-884 per-vehicle P&L', () => {
     await page.locator('app-export-button .export-button-trigger').first().click();
     const csvItem = page.locator('.p-menu-item-label', { hasText: 'CSV' }).first();
     await expect(csvItem).toBeVisible();
+    // Viewport-only, NOT fullPage: a fullPage screenshot scrolls the document and a
+    // PrimeNG popup menu closes on scroll, so the click below would land on a menu that is
+    // no longer there and no export request would ever be made.
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, 'OBRS-884-AFTER-8-ownDb-export-menu.png'),
-      fullPage: true,
     });
 
     const [download] = await Promise.all([page.waitForEvent('download'), csvItem.click()]);
@@ -185,18 +187,22 @@ test.describe('OBRS-884 per-vehicle P&L', () => {
     await download.saveAs(saved);
     const rows = parseCsv(fs.readFileSync(saved, 'utf8'));
 
+    // Thai, like every other assertion in this file: the export's labels come from
+    // messages_th.properties via the browser's own Accept-Language, and this app runs in
+    // Thai for its owner. Asserting English here would only pass on a machine whose
+    // browser asks for it.
     // The preamble carries the report-level scalars; the header row is found, not assumed.
-    const headerIndex = rows.findIndex((r) => r[0] === 'Kind');
+    const headerIndex = rows.findIndex((r) => r[0] === 'ชนิดแถว');
     expect(headerIndex).toBeGreaterThan(0);
     const preamble = new Map(rows.slice(0, headerIndex).filter((r) => r.length >= 2).map((r) => [r[0], r[1]]));
-    expect(money(preamble.get('Total revenue')!)).toBeCloseTo(money(EXPECTED.totals.revenue), 2);
-    expect(money(preamble.get('Total expenses')!)).toBeCloseTo(money(EXPECTED.totals.expenses), 2);
-    expect(money(preamble.get('Margin')!)).toBeCloseTo(money(EXPECTED.totals.margin), 2);
-    expect(money(preamble.get('Pending expenses (not in margin)')!)).toBeCloseTo(
+    expect(money(preamble.get('รายได้รวม')!)).toBeCloseTo(money(EXPECTED.totals.revenue), 2);
+    expect(money(preamble.get('รายจ่ายรวม')!)).toBeCloseTo(money(EXPECTED.totals.expenses), 2);
+    expect(money(preamble.get('กำไรขั้นต้น')!)).toBeCloseTo(money(EXPECTED.totals.margin), 2);
+    expect(money(preamble.get('รายจ่ายรออนุมัติ (ยังไม่หักในกำไร)')!)).toBeCloseTo(
       money(EXPECTED.totals.pending),
       2
     );
-    expect(preamble.get('Amounts include VAT')).toBe('true');
+    expect(preamble.get('ยอดรวม VAT แล้ว')).toBe('true');
 
     const header = rows[headerIndex];
     const col = (name: string) => {
@@ -207,33 +213,39 @@ test.describe('OBRS-884 per-vehicle P&L', () => {
     const dataRows = rows.slice(headerIndex + 1).filter((r) => r.length === header.length);
 
     for (const [plate, cells] of onScreen) {
-      const fileRow = dataRows.find((r) => (r[col('Number plate')] ?? '').includes(plate));
+      const fileRow = dataRows.find((r) => (r[col('ทะเบียนรถ')] ?? '').includes(plate));
       expect(fileRow, `plate ${plate} is on screen but not in the file`).toBeTruthy();
-      expect(money(fileRow![col('Revenue')])).toBeCloseTo(money(cells[1]), 2);
-      expect(money(fileRow![col('Expense total')])).toBeCloseTo(money(cells[2]), 2);
-      expect(money(fileRow![col('VAT inside the expenses')])).toBeCloseTo(money(cells[3]), 2);
-      expect(money(fileRow![col('Margin')])).toBeCloseTo(money(cells[4]), 2);
+      expect(money(fileRow![col('รายได้')])).toBeCloseTo(money(cells[1]), 2);
+      expect(money(fileRow![col('รายจ่ายรวม')])).toBeCloseTo(money(cells[2]), 2);
+      expect(money(fileRow![col('VAT ที่อยู่ในรายจ่าย')])).toBeCloseTo(money(cells[3]), 2);
+      expect(money(fileRow![col('กำไรขั้นต้น')])).toBeCloseTo(money(cells[4]), 2);
     }
 
     // The central line is a ROW in the file, which is what lets a plain column sum over it
     // reconcile to the preamble's company total.
-    expect(dataRows.some((r) => r[col('Kind')] === 'CENTRAL_EXPENSE')).toBeTrue();
-    const summedExpenses = dataRows.reduce((sum, r) => sum + money(r[col('Expense total')]), 0);
+    expect(dataRows.some((r) => r[col('ชนิดแถว')] === 'CENTRAL_EXPENSE')).toBe(true);
+    const summedExpenses = dataRows.reduce((sum, r) => sum + money(r[col('รายจ่ายรวม')]), 0);
     expect(summedExpenses).toBeCloseTo(money(EXPECTED.totals.expenses), 2);
 
     // A category nobody spent on in June gets no column at all - an empty column would read
     // as a real ฿0 for every bus in the fleet.
-    expect(header).toContain('Fuel');
-    expect(header).toContain('Vehicle Instalment');
-    expect(header).not.toContain('Tire');
+    expect(header).toContain('น้ำมัน');
+    expect(header).toContain('ค่างวดรถ');
+    expect(header).not.toContain('ยาง');
   });
 });
 
 /** The leading currency code and the thousands separators are presentation; the number is
  *  what is being compared. `-` and `.` survive. */
 function money(text: string): number {
-  const match = text.replace(/ /g, ' ').match(/-?[\d,]+\.\d{2}/);
-  return match ? Number(match[0].replace(/,/g, '')) : Number.NaN;
+  const normalised = text.replace(/ /g, ' ').replace(/THB\s*/g, '');
+  const match = normalised.match(/-?[\d,]+\.\d{2}/);
+  if (!match) {
+    // NOT NaN: a silent NaN propagates through a sum and reports as "expected X, received
+    // NaN", which says nothing about WHICH cell was wrong (measured -- it cost a whole run).
+    throw new Error('no money value in ' + JSON.stringify(text));
+  }
+  return Number(match[0].replace(/,/g, ''));
 }
 
 /** Minimal RFC-4180 reader — the export quotes any cell containing a comma (several
