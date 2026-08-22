@@ -547,10 +547,13 @@
 // and cannot lose that race. This is the trap the card's AC-3 points at.
 //
 // NOT TOUCHED HERE, on purpose, each with an owner:
-//   * The `⋮` popup (`.my-bookings-action-menu`) is PrimeNG's own surface, `appendTo="body"`,
-//     and white in BOTH themes. Repainting its labels to $dk-text would put light ink on
-//     that white -- the OBRS-747 defect, manufactured by hand. The popup surface is
-//     OBRS-959. Only its trigger button, which is on the card and in AC-1's list, is here.
+//   * The `⋮` popup (`.my-bookings-action-menu`). It is PrimeNG's own surface, rendered
+//     `appendTo="body"` and therefore OUTSIDE this component's encapsulation, so its dark
+//     rules cannot live here at all -- `:host-context` needs the host in the chain and the
+//     popup is detached from it. That is why dark-theme.scss is the right home for it, and
+//     OBRS-959 put them there (merged 2026-08-22, while this card was in review; before that
+//     the panel was white in both themes and only its tooltip had a dark rule). Only the
+//     TRIGGER button, which is on the card and in AC-1's list, is here.
 //   * `.status-badge` keeps its four light tints. Each carries its own fill AND its own
 //     ink (4.50-4.65:1, measured, unchanged by this card), so it reads as a chip on the
 //     dark card rather than as an unthemed hole; and a dark variant needs four new

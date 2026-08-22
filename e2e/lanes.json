@@ -39,6 +39,12 @@
       "why": "Fulfils every /api/** call from its own fixture and seeds NO session at all -- signed-out is the assertion, not a shortcut, since the whole card is about a customer with no account. Proves what neither end can: that the navbar link on / actually resolves to the page, and that the phone number rides in the POST body rather than the URL."
     },
     {
+      "spec": "obrs-639-stepper-geometry.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-639. Fulfils every /api/** call from the shared public-page fixture plus the booking POST, and seeds its own customer session in-browser. Measures where the four stepper boxes land at 360 and 390 in both shipped label sets -- a cascade question (which media query wins, what flex leaves each step) that Karma's 800px window cannot ask. It has to walk the whole flow rather than visit one page because a stepper that fits only while step 1 is active still hides the step the customer is on later, and the pages after the first are unreachable on --configuration sit, where features.onlineTicketBooking is false (OBRS-1302)."
+    },
+    {
       "spec": "obrs-1038-station-seam.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
