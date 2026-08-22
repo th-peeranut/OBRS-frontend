@@ -230,6 +230,18 @@ export interface AdminVehicleDto {
    * to echo back until the detail fetch lands.
    */
   assignedDriverId?: number | null;
+  /**
+   * OBRS-885: the vehicle's service window, `"YYYY-MM-DD"` or null. The two nulls mean
+   * DIFFERENT things — a null `inServiceFrom` is NOT KNOWN (not "since forever"), a null
+   * `inServiceTo` is STILL IN SERVICE. The whole per-vehicle P&L rests on that difference,
+   * which is why the form's help text spells it out rather than leaving it to the reader.
+   *
+   * Rides the same detail-only narrowing as `gpsImei`/`assignedDriverId` above — the backend's
+   * `toDetailDto` is the only projection that carries it, so a form seeded from a list row has
+   * nothing to echo back until the detail fetch lands.
+   */
+  inServiceFrom?: string | null;
+  inServiceTo?: string | null;
 }
 
 /** OBRS-209: a single vehicle-maintenance record (backend OBRS-102).
@@ -981,6 +993,16 @@ export interface CreateVehiclePayload {
    * fourth of that shape). Always sent, for the same reason as `gpsImei` above.
    */
   assignedDriverId: number | null;
+  /**
+   * OBRS-885: the service window, `"YYYY-MM-DD"` or null. `null` CLEARS it back to "not
+   * known" / "still in service"; an absent key would mean "leave whatever is there"
+   * (`applyTo` is conditional on both fields — the fifth and sixth of that shape). Always
+   * sent, for the same reason as `gpsImei` above: the absent-preserves flag exists for
+   * curl/fixture callers that do not know the field, and this form is the one caller that
+   * DOES know it and whose admin may have blanked it on purpose.
+   */
+  inServiceFrom: string | null;
+  inServiceTo: string | null;
 }
 
 /** OBRS-209: create/update payload for a vehicle-maintenance record.
