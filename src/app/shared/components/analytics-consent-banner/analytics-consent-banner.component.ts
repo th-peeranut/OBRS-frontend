@@ -82,6 +82,7 @@ export class AnalyticsConsentBannerComponent implements OnDestroy {
 
   private observer?: ResizeObserver;
   private reserved = 0;
+  private frame: number | null = null;
 
   /**
    * OBRS-1372. A setter rather than `ngAfterViewInit` because the element is
@@ -94,6 +95,7 @@ export class AnalyticsConsentBannerComponent implements OnDestroy {
   protected set banner(ref: ElementRef<HTMLElement> | undefined) {
     this.observer?.disconnect();
     this.observer = undefined;
+    this.cancelPendingReserve();
 
     if (!ref) {
       this.reserve(0);
@@ -102,7 +104,28 @@ export class AnalyticsConsentBannerComponent implements OnDestroy {
 
     const element = ref.nativeElement;
     // Fires once on observe(), so the first measurement is this call too.
-    this.observer = new ResizeObserver(() => this.reserve(element.offsetHeight));
+    //
+    // OBRS-1524 — the measuring happens in the callback, the WRITE does not.
+    // `reserve` is often what makes the page long enough to need a scrollbar; the
+    // scrollbar takes ~15px off the viewport; and this bar is `left: 0; right: 0`.
+    // So writing from inside the callback resizes the very element whose
+    // observation is being broadcast, which the spec answers by dropping the
+    // notification and reporting `ResizeObserver loop completed with undelivered
+    // notifications` at `window` — measured 2026-08-22 in Karma on a page sitting
+    // at that threshold: viewport 747 → 732px and the error every time. It is not
+    // fatal to the page, but it is an error event, and Karma charges one to
+    // whichever spec is running, which is how it turned up as a red `Unit Tests`
+    // job on `dev` that belonged to no card.
+    //
+    // The next frame instead: the write lands before that frame's layout, so
+    // anything it resizes is delivered in a fresh cycle with nothing skipped.
+    this.observer = new ResizeObserver(() => {
+      if (this.frame !== null) return;
+      this.frame = requestAnimationFrame(() => {
+        this.frame = null;
+        this.reserve(element.offsetHeight);
+      });
+    });
     this.observer.observe(element);
   }
 
@@ -138,6 +161,7 @@ export class AnalyticsConsentBannerComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.observer?.disconnect();
+    this.cancelPendingReserve();
     this.reserve(0);
   }
 
@@ -149,16 +173,21 @@ export class AnalyticsConsentBannerComponent implements OnDestroy {
     this.consent.deny();
   }
 
+  private cancelPendingReserve(): void {
+    if (this.frame === null) return;
+    cancelAnimationFrame(this.frame);
+    this.frame = null;
+  }
+
   /**
    * Hold `heightPx` of the page's bottom edge clear of the bar. Zero removes the
    * declaration rather than writing `0px`, so a page with no bar left is a page
    * this component never touched.
    */
   private reserve(heightPx: number): void {
-    // Same number, no write. On a desktop width the padding can be what makes the
-    // page long enough to need a scrollbar, which narrows the viewport, which
-    // re-wraps the bar — writing unconditionally puts that exchange in a loop the
-    // browser reports as an undelivered-notification error rather than as a hang.
+    // Same number, no write. The scrollbar exchange described on the observer
+    // above hands back a height this already holds; without the guard the same
+    // value would be rewritten every frame for as long as the bar is on screen.
     if (heightPx === this.reserved) return;
     this.reserved = heightPx;
 
