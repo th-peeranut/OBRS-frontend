@@ -320,8 +320,11 @@ body.is-dark {
     // Hover and keyboard focus land on PrimeNG's own row wrapper. Without this
     // the light theme's near-white highlight paints over the dark panel — the
     // keyboard half matters here because the trigger opens on Enter/Space.
+    // PrimeNG 21 puts `.p-focus` on the `.p-menu-item` <li> (menustyle
+    // `classes.item`), NOT on `.p-menu-item-content` — so the focus half must
+    // read the class off the li and paint the child content div (OBRS-959 Scrutinize).
     .p-menu-item:not(.p-disabled) > .p-menu-item-content:hover,
-    .p-menu-item:not(.p-disabled) > .p-menu-item-content.p-focus {
+    .p-menu-item.p-focus:not(.p-disabled) > .p-menu-item-content {
       background-color: rgba(255, 255, 255, 0.08);
     }
   }
