@@ -139,7 +139,11 @@ describe('ParcelDeliveryListPageComponent', () => {
     const store = makeStoreStub([makeRow({ parcelId: 7, deliveryStatus: 'arrived_notified' })]);
     const staffApi = {
       collectParcel: jasmine.createSpy().and.returnValue(
-        throwError(() => ({ error: { errorCode: 'PARCEL_COLLECT_CODE_MISMATCH' } }))
+        // OBRS-1537: the code the backend actually throws
+        // (ParcelDeliveryService.collect()). The old mock dropped the `ION`,
+        // a code no backend ever sends, so this test passed against a map key
+        // that could never be hit in production.
+        throwError(() => ({ error: { errorCode: 'PARCEL_COLLECTION_CODE_MISMATCH' } }))
       ),
     } as any;
     const component = new ParcelDeliveryListPageComponent(makeRouteStub('42'), staffApi, makeAlertStub(), createTranslateStub(), store);
