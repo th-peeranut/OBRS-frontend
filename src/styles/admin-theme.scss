@@ -24,10 +24,14 @@
      to live. Before it, an anchor with no colour of its own kept #0d6efd on the dark card
      and measured 3.56:1. */
   --admin-link: #0d6efd;
-  /* The frosted modal panel. Translucent ON PURPOSE - the page shows through it, which is
-     the whole look. Making it opaque "fixed" dark mode but quietly flattened light mode, so
-     it is a themed TRANSLUCENT pair instead of a themed opaque one. */
-  --admin-surface-modal: rgba(255, 255, 255, 0.88);
+  /* OBRS-1234: the modal panel is OPAQUE. It was a themed translucent pair (0.88 light /
+     0.92 dark) because the frosted look was read as the design - but the page kept showing
+     through it, and the owner reported reading the filter bar's "สถานะทั้งหมด" as if it
+     were a line of the dialog. A dialog is the layer that CUTS OFF what is behind it; the
+     elevation now comes from the border and shadow the panels already carry, not from
+     letting the page bleed into the text. Same value as --admin-surface-card, which is what
+     the shared .admin-modal shell has always used. */
+  --admin-surface-modal: #ffffff;
   /* OBRS-741: was #4dbeef, which put --admin-on-primary (white) at 2.12:1 on
      the bright stop. This token has exactly one job -- it appears only ever as
      the second stop of `linear-gradient(--admin-primary, --admin-primary-bright)`,
@@ -282,7 +286,7 @@
      recognisably "a blue link" where --admin-primary-fg would make it read as accent text.
      6.64:1 on --admin-surface-card (#1d2226) against the 3.56:1 the light literal gave. */
   --admin-link: #6ea8fe;
-  --admin-surface-modal: rgba(29, 34, 38, 0.92); /* --admin-surface-card, same translucency */
+  --admin-surface-modal: #1d2226; /* OBRS-1234: --admin-surface-card, now opaque like it */
   /* NOTE: intentionally NO --admin-accepted-text override here. Like every
      other status pill (success/warning/danger), .is-accepted keeps its light
      pastel bg (#b7f3c0) + dark text (#0a3d1d) in both themes — a self-contained
@@ -1939,7 +1943,14 @@
 .admin-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(25, 28, 30, 0.45);
+  /* OBRS-1234: was 0.45, at which the page text BESIDE the panel stayed plainly readable, so
+     an opaque panel alone still left the dialog competing with a legible page. Measured on
+     the /admin/users heading through the scrim: 3.84:1 light / 3.24:1 dark at 0.45, and
+     1.93 / 1.63 at 0.75 - under 3:1, the floor below which WCAG stops calling even large
+     text legible. This is now the ONLY place an admin scrim colour is written:
+     `.role-form-backdrop` and `.schedule-form-backdrop` used to carry a private 0.4 copy of
+     it and gave up that copy in the same card, keeping only their own blur(5px). */
+  background: rgba(25, 28, 30, 0.75);
   z-index: 1200;
   display: flex;
   align-items: center;

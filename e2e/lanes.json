@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-1521-disabled-census.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1521.config.ts",
+      "why": "OBRS-1521. Measures the ONE population customer-contrast-gate.spec.ts refuses to score: `MEASURE` skips every element under `[disabled]` and every element under `opacity < 1`, so PrimeNG's global `.p-disabled { opacity: .6 }` has never been scored on any page in either theme. CAPTURE rather than GATE because it reports composited ratios and screenshots for the card; it asserts only that the population is non-empty, since a census that measured nothing reads as a clean sweep. Hermetic on the gate lane's terms -- it reuses seedCustomerSession, so every /api/** call is fulfilled in-browser."
+    },
+    {
       "spec": "obrs-1388-qa-regression.spec.ts",
       "lane": "OWN-DB",
       "config": "playwright.obrs1388qa.config.ts",
@@ -187,6 +193,12 @@
       "lane": "CAPTURE",
       "config": "playwright.obrs1424capture.config.ts",
       "why": "OBRS-1424 BEFORE/AFTER evidence for the /track-parcel card in dark mode, and the measurements the GATE lane structurally cannot take. That lane sweeps this page AT REST -- its CUSTOMER_PAGES entry says so in its own comment -- so the status chip, the timeline rows and the not-found line are never measured there, and those are exactly the surfaces the card background changes underneath. This drives all eight parcel_delivery_status slugs plus the 404, in both themes, and runs the SAME `MEASURE` the gate uses so a number printed here and a number printed there mean the same thing. It asserts nothing about the floors on purpose: the verdict belongs to the gate, which owns the allowlist and fails the build, and a second weaker judge on the same question is worse than none. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT."
+    },
+    {
+      "spec": "obrs-773-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs773capture.config.ts",
+      "why": "OBRS-773 BEFORE/AFTER evidence for the $primary-blue customer button family in dark mode, across the six pages CUSTOMER_PAGES can reach it on. CAPTURE and not GATE because the verdict already belongs to the gate: customer-contrast-gate.spec.ts owns the allowlist and fails the build, and a second weaker judge on the same question is worse than none. What this adds is the two things that lane structurally cannot give the card. First, pictures -- AC-4 asks for the screen, and a ring is a change a human reviews by looking at it. Second, the PASSING rows: the gate reports only what breaches its allowlist, and four of the eight family members pass today at 3.15:1 / 3.54:1, so the gate is silent about them in BOTH trees, which is the wrong evidence for a change whose whole purpose for those four is to lift barely-passing to 8.29:1. It runs the SAME `MEASURE` the gate runs, narrowed per selector, so a number printed here and a number printed there mean the same thing, and it asserts only the two things that decide whether a frame is evidence at all: body.is-dark actually applied, and the button actually rendered. Hermetic on the gate lane's own terms -- it reuses e2e/support/customer-pages.ts, which fulfils every /api/** call, and apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT."
     },
     {
       "spec": "obrs-1402-capture.spec.ts",
