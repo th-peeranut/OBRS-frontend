@@ -52,16 +52,38 @@ Concretely:
   (`@if (ticketNumber !== '-')`), not behind a new `@Input()` flag. A flag
   would have been a second lever controlling the same surface — exactly the
   kind of extra degree of freedom that let the page and the card disagree
-  before. Guest still sees no row (its default is `'-'`, unchanged); a
-  signed-in customer on `/e-ticket` now sees one, which is new and intended —
-  the modal already showed it for every logged-in customer, so this closes
-  the last visible gap between the two surfaces instead of opening one.
+  before. Making the gate meaningful for a guest required a matching change
+  on the mapper side: the store pass — the only pass a guest ever gets
+  (OBRS-858) — used to backfill `ticketNumber` from `bookingNumber` (or a
+  synthesized `YYYYMMDD-<id>` string on a guest hard-load, OBRS-1252), which
+  the OLD page never rendered (it had no TICKET_NO row of its own — the only
+  pre-card read of that field was the download filename) but the card's new
+  gate would have. `mapTicketFields` now leaves `ticketNumber` untouched on
+  the store pass, so it stays `'-'` for a guest and the row stays hidden,
+  exactly as it read before this card; only `collectTicketNumbers` (the
+  tickets-API pass, signed-in customers only) ever assigns a real value. A
+  signed-in customer on `/e-ticket` now sees the row once that pass lands,
+  which is new and intended — the modal already showed it for every
+  logged-in customer, so this closes the last visible gap between the two
+  surfaces instead of opening one.
 - The store-only pre-API pass (the only render a **guest** ever gets —
   `loadTicketFromApi` returns early without a token, OBRS-858) has no
   leg-dimension for its passenger data; it is placed on `legs[0]` only
   (`buildLegsFromSchedules`), matching the pre-existing `passengerGroups`
-  behavior byte-for-byte (a single unlabelled list, never a false
-  outbound/return split invented from data that does not carry one).
+  behavior for the leg dimension exactly (a single unlabelled list, never a
+  false outbound/return split invented from data that does not carry one).
+  "Exactly" is scoped to that dimension on purpose -- the per-row QR block is
+  the one place the guest render is NOT identical; see the bullet below.
+- **A guest no longer gets an empty QR box.** The card gates the whole
+  per-passenger QR block on `@if (passenger.ticketId !== null)` (OBRS-866);
+  the page's own markup had no such guard, so a guest -- who can never hold a
+  boarding token (`loadTicketFromApi` returns early without one, OBRS-858) --
+  used to see a blank placeholder square with a `-` printed under it. Adopting
+  the card's guard removes both. This is a visible change on the guest lane
+  and it was signed off deliberately (OBRS-1510 AC-10, 2026-08-22) rather than
+  slipped through as a refactor: it is the same judgement AC-7 already made
+  about the `-` ticket-number row, applied to the same reader. Restoring the
+  old box would have meant deleting a guard the card added on purpose.
 - The distance chip (`TicketLeg.distanceKm`) stays `null` always on this page
   (`legFromJourney` sets it explicitly) — the chip has never appeared on
   `/e-ticket`, only in the modal (whose mapper derives a real value from

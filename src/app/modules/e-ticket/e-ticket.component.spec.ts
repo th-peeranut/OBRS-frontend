@@ -1,6 +1,6 @@
 import { of, Subject } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { CUSTOM_ELEMENTS_SCHEMA, NO_ERRORS_SCHEMA } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -9,10 +9,12 @@ import { ETicketComponent } from './e-ticket.component';
 import { AuthService } from '../../auth/auth.service';
 import { BookingService } from '../../services/booking/booking.service';
 import { RouteMapService } from '../../services/route-map/route-map.service';
+import { TicketService } from '../../services/ticket/ticket.service';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 import { Schedule, ScheduleFilter } from '../../shared/interfaces/schedule.interface';
 import { StationApi } from '../../shared/interfaces/station.interface';
+import { ETicketCardModule } from '../../shared/components/e-ticket-card/e-ticket-card.module';
 
 function buildTicketsData(): BookingTicketsData {
   return {
@@ -1095,5 +1097,170 @@ describe('ETicketComponent — template (OBRS-1510)', () => {
     component.ticketIncomplete = true;
     fixture.detectChanges();
     expect(fixture.debugElement.query(By.css('.ticket-retrieval-note'))).toBeNull();
+  });
+});
+
+/**
+ * OBRS-1510 Scrutinize fix — AC-7 regression the `NO_ERRORS_SCHEMA` template
+ * block above cannot catch, by construction: stubbing `<app-e-ticket-card>`
+ * only proves the PAGE feeds it the right inputs, never what the card does
+ * with them. The bug was exactly that gap — the store pass backfilled
+ * `ticketNumber` from `bookingNumber`/a synthesized string, which the OLD
+ * page never rendered (no TICKET_NO row of its own) but the CARD's
+ * `@if (ticketNumber !== '-')` gate (AC-7) does. This block mounts the REAL
+ * `ETicketCardModule`, not a stub, so the gate is actually exercised.
+ */
+describe('ETicketComponent — AC-7 TICKET_NO gate on the REAL card (Scrutinize fix)', () => {
+  let fixture: ComponentFixture<ETicketComponent>;
+  let component: ETicketComponent;
+  let ticketServiceStub: { getBoardingToken: jasmine.Spy };
+  let bookingServiceStub2: { getActiveBookingId: jasmine.Spy; getBookingTickets: jasmine.Spy };
+  let authStub2: { isAuthenticated: jasmine.Spy };
+
+  beforeEach(async () => {
+    ticketServiceStub = {
+      getBoardingToken: jasmine.createSpy('getBoardingToken').and.returnValue(of(null)),
+    };
+    bookingServiceStub2 = {
+      getActiveBookingId: jasmine.createSpy('getActiveBookingId').and.returnValue(null),
+      getBookingTickets: jasmine.createSpy('getBookingTickets').and.returnValue(of(null)),
+    };
+    authStub2 = {
+      isAuthenticated: jasmine.createSpy('isAuthenticated').and.returnValue(false),
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [ETicketComponent],
+      imports: [ETicketCardModule, TranslateModule.forRoot()],
+      // CUSTOM_ELEMENTS_SCHEMA, not NO_ERRORS_SCHEMA: the page template also
+      // carries <app-navbar>/<app-stepper>/<app-footer>, which this bed does
+      // not declare. CUSTOM_ELEMENTS_SCHEMA tolerates those three while a
+      // component that IS imported still renders for real -- so
+      // <app-e-ticket-card> is the genuine card here, which is the whole point
+      // of this describe. The positive case below (a signed-in customer DOES
+      // get the row) is what proves the card rendered rather than being
+      // silently swallowed as an unknown element.
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
+      providers: [
+        { provide: Store, useValue: { pipe: () => of(null), dispatch: () => undefined } },
+        { provide: BookingService, useValue: bookingServiceStub2 },
+        { provide: AuthService, useValue: authStub2 },
+        { provide: RouteMapService, useValue: { getPickupDropoffCached: () => of(null) } },
+        { provide: TicketService, useValue: ticketServiceStub },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ETicketComponent);
+    component = fixture.componentInstance;
+    // ngOnInit — the store stub's `of(null)` completes synchronously, so this
+    // is the only emission `combineLatest` delivers on its own.
+    fixture.detectChanges();
+  });
+
+  function hasTicketNoRow(): boolean {
+    return (fixture.nativeElement.textContent || '').includes('E_TICKET.LABEL.TICKET_NO');
+  }
+
+  // This is the case that shipped wrong: an ordinary guest, post-checkout,
+  // with a real booking reference already in the store. Before this fix the
+  // store pass set `ticketNumber = bookingNumber`, and the card's new AC-7
+  // gate turned that into a real, rendered, DUPLICATE row.
+  it('guest with a real booking reference: the store pass alone must NOT surface a TICKET_NO row', () => {
+    (component as unknown as {
+      mapTicketFields: (
+        a: { schedule: Schedule[] },
+        b: { bookingId: number; bookingNumber: string },
+        c: ScheduleFilter,
+        d: PassengerInfo[] | null,
+        e: StationApi[],
+        f: 'en'
+      ) => void;
+    }).mapTicketFields(
+      { schedule: [] },
+      { bookingId: 1, bookingNumber: 'B-29RGZW' },
+      {} as ScheduleFilter,
+      null,
+      [],
+      'en'
+    );
+    fixture.detectChanges();
+
+    expect(component.bookingNumber).toBe('B-29RGZW');
+    expect(component.ticketNumber).toBe('-');
+    expect(hasTicketNoRow()).toBeFalse();
+  });
+
+  // The guest hard-load case (OBRS-1252): no booking reference in the store
+  // either. Before this fix the store pass synthesized a `YYYYMMDD-<id>`
+  // string that LOOKED like a real ticket number for a booking that cannot
+  // even be retrieved.
+  it('guest hard-load (no booking reference at all): still no TICKET_NO row', () => {
+    (component as unknown as {
+      mapTicketFields: (
+        a: { schedule: Schedule[] },
+        b: null,
+        c: ScheduleFilter,
+        d: PassengerInfo[] | null,
+        e: StationApi[],
+        f: 'en'
+      ) => void;
+    }).mapTicketFields({ schedule: [] }, null, {} as ScheduleFilter, null, [], 'en');
+    fixture.detectChanges();
+
+    expect(component.bookingNumber).toBe('-');
+    expect(component.ticketNumber).toBe('-');
+    expect(hasTicketNoRow()).toBeFalse();
+  });
+
+  it('signed-in customer: once the tickets API pass supplies real ticket numbers, the row appears', async () => {
+    authStub2.isAuthenticated.and.returnValue(true);
+    bookingServiceStub2.getBookingTickets.and.returnValue(
+      of({
+        code: 200,
+        message: 'OK',
+        data: {
+          bookingId: 1,
+          bookingNumber: 'B-29RGZW',
+          journeys: [
+            {
+              legType: { code: 'outbound', label: 'Outbound' },
+              tickets: [
+                {
+                  id: 1,
+                  ticketNumber: 'T-Q4QZXTZAFY',
+                  passengerName: 'Mr A',
+                  seatNumber: '1',
+                  status: { code: 'confirmed', label: 'Confirmed' },
+                },
+              ],
+            },
+          ],
+        },
+      } as never)
+    );
+
+    (component as unknown as {
+      mapTicketFields: (
+        a: { schedule: Schedule[] },
+        b: { bookingId: number; bookingNumber: string },
+        c: ScheduleFilter,
+        d: PassengerInfo[] | null,
+        e: StationApi[],
+        f: 'en'
+      ) => void;
+    }).mapTicketFields(
+      { schedule: [] },
+      { bookingId: 1, bookingNumber: 'B-29RGZW' },
+      {} as ScheduleFilter,
+      null,
+      [],
+      'en'
+    );
+    // Let the async tickets-API fetch (firstValueFrom) resolve.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    fixture.detectChanges();
+
+    expect(component.ticketNumber).toBe('T-Q4QZXTZAFY');
+    expect(hasTicketNoRow()).toBeTrue();
   });
 });

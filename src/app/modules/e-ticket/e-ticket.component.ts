@@ -326,10 +326,21 @@ export class ETicketComponent implements OnInit, OnDestroy {
     // in advance rather than guessing at it.
     const ticketApiPassExpected = !!bookingId && this.authService.isAuthenticated();
     this.ticketIncomplete = this.bookingNumber === '-' && !ticketApiPassExpected;
-    this.ticketNumber =
-      this.bookingNumber !== '-'
-        ? this.bookingNumber
-        : this.buildTicketNumber(bookingId, departureSchedule);
+    // OBRS-1510 Scrutinize fix: the store pass is the ONLY pass a guest ever
+    // gets (OBRS-858), and `<app-e-ticket-card>` now gates its TICKET_NO row
+    // on `ticketNumber !== '-'` (AC-7). This used to backfill `ticketNumber`
+    // from `bookingNumber`/a synthesized `YYYYMMDD-<id>` string here — on the
+    // OLD page that string was never rendered (the page had no TICKET_NO row
+    // of its own; the only pre-card use of this field was the download
+    // filename). Feeding it to the card now would render a real row: either a
+    // duplicate of BOOKING_REF (same value, different label) on an ordinary
+    // guest ticket, or a synthetic number that LOOKS like a real ticket
+    // number on a hard-load guest can't even retrieve (OBRS-1252). So the
+    // store pass leaves `ticketNumber` untouched — it stays whatever it
+    // already was (the field default `'-'`, or a real number a PRIOR API
+    // pass already set — `applyApiOverrides` runs after this on every call
+    // and never resets it). Only `collectTicketNumbers` (API pass,
+    // `applyApiOverrides`) ever assigns a real value.
     this.legs = this.buildLegsFromSchedules(
       departureSchedule,
       returnSchedule,
@@ -379,25 +390,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
   private getSchedules(schedule?: Schedule[] | null): Schedule[] {
     return schedule ?? [];
-  }
-
-  private buildTicketNumber(
-    bookingId: number | null,
-    departureSchedule: Schedule | null
-  ): string {
-    const datePart = departureSchedule?.departureDateTime
-      ? dayjs(departureSchedule.departureDateTime).format('YYYYMMDD')
-      : dayjs().format('YYYYMMDD');
-
-    if (bookingId && bookingId > 0) {
-      return `${datePart}-${bookingId}`;
-    }
-
-    if (departureSchedule?.id) {
-      return `${datePart}-${String(departureSchedule.id).padStart(3, '0')}`;
-    }
-
-    return '-';
   }
 
   /**
