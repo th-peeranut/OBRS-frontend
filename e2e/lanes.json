@@ -511,6 +511,12 @@
     "lane": "CAPTURE",
     "config": "playwright.obrs703qa.config.ts",
     "why": "OBRS-703 AFTER evidence for the owner-scoped operations tab and the public no-show copy it feeds. NOT hermetic and never runnable against SIT: it needs a local backend on :8081 with the `dev,local` profiles over a dedicated obrs703qa database, because it writes system_config_overrides and mints a SECOND owner to prove the public readout takes the MIN across owners -- both of which would move state other sessions are watching in a shared environment. Every shot asserts its own claim before photographing it (the tab strip's row count is measured at 1366px and 390px, the admin pass reads the 403 panel rather than a spinner). The assertions that must keep holding live in operations-config-page.component.spec.ts, system-settings-page.component.spec.ts, how-to-book.component.spec.ts and gate 7 of scripts/check-i18n-parity.mjs on CI, and the server half in SchedulerConfigResolutionParityIT."
+  },
+  {
+    "spec": "obrs-884-vehicle-pl-report.spec.ts",
+    "lane": "OWN-DB",
+    "config": "playwright.obrs884.config.ts",
+    "why": "OBRS-884. The screen's whole job is telling three different meanings of a THB 0 apart -- service window unknown, outside the service window with money attributed anyway, and a real zero -- which means all three states have to exist in ONE period at once. A shared fleet cannot be in three states on demand, so the premise is only constructible on a database this lane owns (obrs884qa, e2e/fixtures/obrs-884-pl-fixture.sql, every figure invented). It also downloads the pl-per-vehicle export from the SAME backend the screen just read and compares the file's cells to the DOM's, which is AC 4: VehiclePlExportParityIT proves the file matches the service, and only this proves it matches the screen. Never runnable against SIT -- the export dataset is on this card's backend branch, and SIT's in_service_from values are the owner's real (and still unknown) ones."
   }
   ]
 }
