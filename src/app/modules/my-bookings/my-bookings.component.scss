@@ -399,14 +399,25 @@
 // `$text-lightblack` is the token this app already uses for de-emphasised text,
 // and the row keeps its `not-allowed` cursor and its reason tooltip.
 //
-// Unlayered, unlike the `cursor` rule below: PrimeNG's opacity declaration carries
-// no `!important`, and an unlayered normal declaration beats a layered one whatever
-// the specificity (same argument dark-theme.scss makes for this popup's colours).
+// Unlayered on purpose: PrimeNG's declaration is a bare `opacity:
+// dt('disabled.opacity')` with no `!important` (read in @primeuix/styles 2.0.3,
+// primeng 21.1.9), and an unlayered normal declaration beats a layered one
+// whatever the specificity — the same argument dark-theme.scss makes for this
+// popup's colours. Read this as a statement about `opacity` only; the `cursor`
+// rule below is layered on its own history and is not evidence either way.
 ::ng-deep .my-bookings-action-menu .p-menu-item.p-disabled {
   opacity: 1;
 
-  .action-menu-item__label,
-  .action-menu-item__icon-slot {
+  // `.action-menu-item--disabled` is in the chain for WEIGHT, not for matching —
+  // it comes from the same `item.disabled` that gives PrimeNG its `.p-disabled`,
+  // so it is always there. Without it this is (0,4,0): identical to the danger
+  // rule above, which under emulated encapsulation compiles to 2 classes + 2
+  // `_ngcontent` attributes. A tie is decided by source order, so a disabled
+  // Cancel row would go back to red — reading as clickable, the one thing AC-3
+  // forbids — the moment someone reorders this file. One more class makes it
+  // (0,5,0), the same +1 margin the dark twin already wins by.
+  .action-menu-item--disabled .action-menu-item__label,
+  .action-menu-item--disabled .action-menu-item__icon-slot {
     color: $text-lightblack;
   }
 }
