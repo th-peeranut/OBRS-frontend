@@ -299,8 +299,10 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
   // consolidation buys — the modal never had an arrival-date cell before.
   it('OBRS-1510 AC-2: shows the ARRIVAL_DATE cell when the booking\'s journey lands on a later day', () => {
     const data = buildTicketsData();
-    data.journeys![0].departureDateTime = '2026-12-20T23:30:00';
-    data.journeys![0].arrivalDateTime = '2026-12-21T01:05:00';
+    // Offsets are explicit: the day is read at +07:00 whatever the runner's clock
+    // is, so an offset-less literal crosses midnight only on a +07:00 machine.
+    data.journeys![0].departureDateTime = '2026-12-20T23:30:00+07:00';
+    data.journeys![0].arrivalDateTime = '2026-12-21T01:05:00+07:00';
     spyOn(TestBed.inject(BookingService), 'getBookingTickets').and.returnValue(
       of({ code: 200, message: 'OK', data })
     );
