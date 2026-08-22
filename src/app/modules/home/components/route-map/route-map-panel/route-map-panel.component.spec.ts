@@ -4,6 +4,7 @@ import {
   RouteMapPanelComponent,
   UserLocatedEvent,
   clearDirectionsPathCache,
+  MAP_TILES_TIMEOUT_MS,
 } from './route-map-panel.component';
 import { RouteStop } from '../../../../../shared/interfaces/route-map.interface';
 
@@ -873,6 +874,105 @@ describe('RouteMapPanelComponent', () => {
 
       expect(emissions.length).toBe(1);
       expect(emissions[0].nearestPickupSlug).toBe('stop-5');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Tiles-drawn watchdog (OBRS-1085) — `mapsLoaded` only means the Maps JS
+  // *script* resolved; before this fix nothing ever caught the map failing to
+  // actually draw a tile (e.g. maps/vt blocked), and `showMap` going true was
+  // a one-way door so the placeholder could never come back. These pin both
+  // directions plus the retry re-init path and teardown cleanup.
+  // -------------------------------------------------------------------------
+
+  describe('tiles watchdog (OBRS-1085)', () => {
+    beforeEach(() => {
+      jasmine.clock().install();
+      component.mapsApiKey = 'test-key';
+      component.mapsLoaded = true; // simulates the bootstrap script having resolved
+    });
+
+    afterEach(() => {
+      jasmine.clock().uninstall();
+    });
+
+    it('(a) tilesloaded firing before the timeout leaves no error state', () => {
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      expect(component.showMap).toBeTrue(); // watchdog armed, live map showing
+
+      component.onTilesLoaded(); // <google-map> (tilesloaded) fired
+
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 100);
+
+      expect(component.mapDrawFailed).toBeFalse();
+      expect(component.showMap).toBeTrue();
+    });
+
+    it('(b) no tilesloaded within the timeout flips to the error/retry state', () => {
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      expect(component.mapDrawFailed).toBeFalse();
+
+      // (tilesloaded) never fires — e.g. maps/vt tile requests blocked.
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1);
+
+      expect(component.mapDrawFailed).toBeTrue();
+      // showMap flipping false is what lets the template's @else if render
+      // the retry state instead of leaving the live <google-map> mounted.
+      expect(component.showMap).toBeFalse();
+    });
+
+    it('retryMap resets the error state and genuinely re-arms a fresh watchdog', () => {
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1);
+      expect(component.mapDrawFailed).toBeTrue();
+
+      component.retryMap();
+
+      expect(component.mapDrawFailed).toBeFalse();
+      expect(component.showMap).toBeTrue(); // re-init path taken: a fresh <google-map> can mount
+
+      // If tiles still never load after the retry, the NEW watchdog must catch
+      // it too — proves retryMap re-armed rather than just clearing the flag.
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1);
+      expect(component.mapDrawFailed).toBeTrue();
+    });
+
+    it('retryMap followed by a real tilesloaded clears the error for good', () => {
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1);
+      expect(component.mapDrawFailed).toBeTrue();
+
+      component.retryMap();
+      component.onTilesLoaded();
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 100);
+
+      expect(component.mapDrawFailed).toBeFalse();
+      expect(component.showMap).toBeTrue();
+    });
+
+    it('ngOnDestroy clears a pending watchdog timer so it cannot flip state after teardown', () => {
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      component.ngOnDestroy();
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1);
+
+      expect(component.mapDrawFailed).toBeFalse();
+    });
+
+    it('does not arm a watchdog when showMap is false (no coordinates)', () => {
+      component.pickupStops = [makeStop(1, false)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      expect(component.showMap).toBeFalse();
+
+      jasmine.clock().tick(MAP_TILES_TIMEOUT_MS + 1);
+
+      // No watchdog was ever armed for a map that was never expected to draw.
+      expect(component.mapDrawFailed).toBeFalse();
     });
   });
 

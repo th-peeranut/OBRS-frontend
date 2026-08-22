@@ -7,6 +7,7 @@
       [options]="mapOptions"
       width="100%"
       height="480px"
+      (tilesloaded)="onTilesLoaded()"
       >
       <!-- PICKUP MARKERS — iterate precomputed stable array; trackBy prevents destruction on reorder -->
       @for (m of pickupMarkers; track trackBySlug($index, m)) {
@@ -102,6 +103,23 @@
         </span>
       </div>
     }
+  </div>
+} @else if (mapDrawFailed) {
+  <!-- DRAW FAILURE (OBRS-1085): the Maps JS script loaded but the map never
+  actually drew a tile (e.g. maps/vt blocked). Mirrors route-map-home's
+  LOAD_FAILED error+retry shape (class names, role="alert", p-button
+  role/severity/size) so the two failure states in this feature read as one
+  system instead of two near-identical hand-rolled blocks. -->
+  <div class="route-error" role="alert">
+    <i class="bi bi-exclamation-triangle-fill route-error-icon"></i>
+    <span>{{ 'HOME.ROUTE_MAP.MAP_UNAVAILABLE' | translate }}</span>
+    <p-button
+      styleClass="ms-auto"
+      severity="danger"
+      size="small"
+      [label]="'HOME.ROUTE_MAP.RETRY' | translate"
+      (onClick)="retryMap()"
+    ></p-button>
   </div>
 } @else {
   <div class="route-map-placeholder d-flex flex-column align-items-center justify-content-center">

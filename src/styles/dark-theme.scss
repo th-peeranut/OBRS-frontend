@@ -756,6 +756,14 @@ body.is-dark app-route-map-home {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
   }
 
+  // The error box's bare message <span> would otherwise inherit the component's
+  // light-mode $text-softblack (#535968), which is only 2.40:1 on $dk-bg-card —
+  // sub-AA. Lift it to $dk-text so both this section's load-failure box and the
+  // route-map-panel draw-failure box (OBRS-1085) stay readable in dark mode.
+  // The icon (.route-error-icon) and the retry p-button keep their own explicit
+  // colours, so only the message copy is affected.
+  .route-error { color: $dk-text !important; }
+
 
   // Map placeholder (shown before the map loads / on a map error)
   .route-map-placeholder {
