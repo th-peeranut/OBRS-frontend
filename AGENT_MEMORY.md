@@ -4256,3 +4256,17 @@ regression lane also run clean off this worktree: **199/199 passed, 0
 failures, 13.3 min**.
 Artifacts left uncommitted in the worktree (not deleted, not committed):
 `e2e/tests/obrs-703-operations-config-qa.spec.ts`, `playwright.obrs703qa.config.ts`.
+
+---
+## OBRS-768 Scrutinize self-fix (2026-08-22) — wrong contrast number in a comment
+
+The new `:host-context(body.is-dark)` block's "NOT TOUCHED HERE" note claimed the four
+`.status-badge` tints measure **4.50-6.61:1** ink-on-fill. Measured all four with the WCAG
+formula against their current tokens (`$text-red` is now `#c33334`, `$text-blue` `#2d7799`
+per variables.scss):
+  is-warning 4.50, is-success 4.55, is-danger 4.62, is-info 4.65.
+The true range is **4.50-4.65:1**; no badge reaches 6.61. Corrected the comment.
+Pattern (DEV-GOTCHAS "a comment stating the WRONG NUMBER becomes the next reader's false
+belief"): a "measured" range in a comment is still a claim — recompute it from the tokens the
+code actually resolves, don't trust the number's provenance label. The decision to keep the
+badges light is unaffected (all four clear AA 4.5:1); only the stated ceiling was wrong.
