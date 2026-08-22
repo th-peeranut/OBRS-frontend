@@ -200,37 +200,48 @@ describe('ETicketComponent', () => {
       expect(component.ticketNumber).toBe('T-Q4QZXTZAFY, T-JJTETZNMF2');
     });
 
-    it('maps route, origin and destination from the outbound stops', () => {
+    /**
+     * OBRS-260 — every one of these used to be a booking-level scalar holding
+     * `outbound / return`. The return leg's own values were in the response the
+     * whole time; the page threw them into the same string as the outbound's.
+     */
+    it('maps route, origin and destination from EACH leg own stops', () => {
       apply(buildTicketsData());
 
-      expect(component.origin).toBe('Nong chak');
-      expect(component.destination).toBe('Bts mo chit');
-      expect(component.route).toBe(
-        'Nong chak - Bts mo chit / Bts mo chit - Nong chak'
-      );
+      expect(component.legs.length).toBe(2);
+      expect(component.legs[0].origin).toBe('Nong chak');
+      expect(component.legs[0].destination).toBe('Bts mo chit');
+      expect(component.legs[0].route).toBe('Nong chak - Bts mo chit');
+      expect(component.legs[1].origin).toBe('Bts mo chit');
+      expect(component.legs[1].destination).toBe('Nong chak');
+      expect(component.legs[1].route).toBe('Bts mo chit - Nong chak');
     });
 
-    it('maps travel date and time from the journeys', () => {
+    it('maps travel date and time per leg from that leg journey', () => {
       apply(buildTicketsData());
 
-      expect(component.travelDate).toBe('20 Dec 2026');
-      expect(component.travelTime).toBe('08:00 - 09:48 / 18:14 - 20:02');
+      expect(component.legs[0].travelDate).toBe('20 Dec 2026');
+      expect(component.legs[0].travelTime).toBe('08:00 - 09:48');
+      expect(component.legs[1].travelDate).toBe('20 Dec 2026');
+      expect(component.legs[1].travelTime).toBe('18:14 - 20:02');
     });
 
-    it('maps vehicle type from the code/label object shape', () => {
+    it('maps vehicle type from the code/label object shape, per leg', () => {
       apply(buildTicketsData());
 
-      expect(component.vehicleType).toBe('Van');
-      expect(component.vehiclePlate).toBe('12-34/กข 1234');
+      expect(component.legs[0].vehicleType).toBe('Van');
+      expect(component.legs[0].vehiclePlate).toBe('12-34/กข 1234');
+      expect(component.legs[1].vehicleType).toBe('Van');
+      expect(component.legs[1].vehiclePlate).toBe('12-34/กข 1234');
     });
 
     it('maps passengers and seats, matching phone from the store by seat, and threads ticketId/ticketNumber through for the per-ticket QR fetch', () => {
       apply(buildTicketsData());
 
-      // The journey-level seat summary stays outbound-only (OBRS-873 left it
-      // alone deliberately — the per-leg seat breakdown lives on the shared
-      // card, not on this flat page).
-      expect(component.seats).toBe('1');
+      // OBRS-260: each leg's seat line comes from that leg's OWN tickets. It
+      // was outbound-only for the whole ticket until this card.
+      expect(component.legs[0].seats).toBe('1');
+      expect(component.legs[1].seats).toBe('1');
       // The default ticketServiceStub resolves with no boardingToken, so the
       // (synchronous, since the empty-token branch never awaits) QR fetch has
       // already marked this ticket qrUnavailable by the time we assert here.
@@ -249,7 +260,7 @@ describe('ETicketComponent', () => {
           fareCategory: 'child',
         },
       ]);
-      expect(component.seatsOpen).toBeFalse();
+      expect(component.legs[0].seatsOpen).toBeFalse();
     });
 
     /**
@@ -288,8 +299,8 @@ describe('ETicketComponent', () => {
 
       apply(data);
 
-      expect(component.origin).toBe('Nong chak');
-      expect(component.destination).toBe('Bts mo chit');
+      expect(component.legs[0].origin).toBe('Nong chak');
+      expect(component.legs[0].destination).toBe('Bts mo chit');
     });
 
     it('keeps a one-way booking without a return leg', () => {
@@ -299,8 +310,11 @@ describe('ETicketComponent', () => {
       apply(data);
 
       expect(component.ticketNumber).toBe('T-Q4QZXTZAFY');
-      expect(component.route).toBe('Nong chak - Bts mo chit');
-      expect(component.travelTime).toBe('08:00 - 09:48');
+      // OBRS-260: one leg, so no heading and no second block — the ticket a
+      // one-way customer has always seen.
+      expect(component.legs.length).toBe(1);
+      expect(component.legs[0].route).toBe('Nong chak - Bts mo chit');
+      expect(component.legs[0].travelTime).toBe('08:00 - 09:48');
     });
 
     it('does nothing when there is no api data', () => {
@@ -312,31 +326,40 @@ describe('ETicketComponent', () => {
       expect(component.bookingNumber).toBe('STORE-REF');
     });
 
-    it('OBRS-269: threads originLatitude/originLongitude from the outbound fromStop coords', () => {
+    it('OBRS-269: threads each leg pickup coords from ITS OWN fromStop', () => {
       const data = buildTicketsData();
       data.journeys![0].fromStop!.latitude = 13.7563;
       data.journeys![0].fromStop!.longitude = 100.5018;
+      data.journeys![1].fromStop!.latitude = 13.0827;
+      data.journeys![1].fromStop!.longitude = 101.0028;
 
       apply(data);
 
-      expect(component.originLatitude).toBe(13.7563);
-      expect(component.originLongitude).toBe(100.5018);
+      expect(component.legs[0].pickupLatitude).toBe(13.7563);
+      expect(component.legs[0].pickupLongitude).toBe(100.5018);
+      // OBRS-260: the way home leaves from the other end. Before this card the
+      // Navigate button sent that passenger back to the outbound pickup.
+      expect(component.legs[1].pickupLatitude).toBe(13.0827);
+      expect(component.legs[1].pickupLongitude).toBe(101.0028);
     });
 
-    it('OBRS-269: leaves originLatitude/originLongitude null when the outbound fromStop has no coords', () => {
+    it('OBRS-269: leaves a leg pickup coords null when its fromStop has no coords', () => {
       apply(buildTicketsData());
 
-      expect(component.originLatitude).toBeNull();
-      expect(component.originLongitude).toBeNull();
+      expect(component.legs[0].pickupLatitude).toBeNull();
+      expect(component.legs[0].pickupLongitude).toBeNull();
     });
 
-    it('OBRS-325: an OPEN ticket (null seatNumber) flags seatOpen on the passenger and seatsOpen overall, and seat falls back to "-"', () => {
+    it('OBRS-325: an OPEN ticket (null seatNumber) flags seatOpen on the passenger and seatsOpen on ITS leg, and seat falls back to "-"', () => {
       const data = buildTicketsData();
       data.journeys![0].tickets![0].seatNumber = undefined;
 
       apply(data);
 
-      expect(component.seatsOpen).toBeTrue();
+      expect(component.legs[0].seatsOpen).toBeTrue();
+      // OBRS-260: open seating is a property of one schedule, so the return
+      // leg keeps its assigned seat rather than inheriting the outbound's flag.
+      expect(component.legs[1].seatsOpen).toBeFalse();
       expect(component.passengers[0].seat).toBe('-');
       expect(component.passengers[0].seatOpen).toBeTrue();
     });
@@ -344,7 +367,7 @@ describe('ETicketComponent', () => {
     it('OBRS-325 (ASSIGNED regression): a ticket with a seatNumber keeps seatOpen false and the real seat unchanged', () => {
       apply(buildTicketsData());
 
-      expect(component.seatsOpen).toBeFalse();
+      expect(component.legs[0].seatsOpen).toBeFalse();
       expect(component.passengers[0].seat).toBe('1');
       expect(component.passengers[0].seatOpen).toBeFalse();
     });
@@ -494,11 +517,10 @@ describe('ETicketComponent', () => {
 
   describe('navigateToPickup (OBRS-269)', () => {
     it('opens the Google Maps directions deep-link when coords are present', () => {
-      component.originLatitude = 13.7563;
-      component.originLongitude = 100.5018;
+      const leg = { ...component.legs[0], pickupLatitude: 13.7563, pickupLongitude: 100.5018 };
       const openSpy = spyOn(window, 'open');
 
-      component.navigateToPickup();
+      component.navigateToPickup(leg);
 
       expect(openSpy).toHaveBeenCalledWith(
         'https://www.google.com/maps/dir/?api=1&destination=13.7563,100.5018&travelmode=driving',
@@ -508,13 +530,30 @@ describe('ETicketComponent', () => {
     });
 
     it('does nothing when coords are missing', () => {
-      component.originLatitude = null;
-      component.originLongitude = null;
       const openSpy = spyOn(window, 'open');
 
-      component.navigateToPickup();
+      component.navigateToPickup(component.legs[0]);
 
       expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    /**
+     * OBRS-260: the button is per leg now. This is the case the old
+     * booking-level pair could not express — a round trip whose two ends have
+     * different coordinates, where the way home used to deep-link to the
+     * outbound pickup.
+     */
+    it('sends the return leg to ITS OWN pickup stop', () => {
+      const leg = { ...component.legs[0], pickupLatitude: 13.0827, pickupLongitude: 101.0028 };
+      const openSpy = spyOn(window, 'open');
+
+      component.navigateToPickup(leg);
+
+      expect(openSpy).toHaveBeenCalledWith(
+        'https://www.google.com/maps/dir/?api=1&destination=13.0827,101.0028&travelmode=driving',
+        '_blank',
+        'noopener,noreferrer'
+      );
     });
   });
 
@@ -647,7 +686,7 @@ describe('ETicketComponent', () => {
       paint([scheduleWith(1, 'chonburi-bangkok')]);
 
       expect(routeMapStub.getPickupDropoffCached).toHaveBeenCalledWith('chonburi-bangkok');
-      expect(component.route).toBe('หนองชาก-บ้านบึง-กรุงเทพฯ');
+      expect(component.legs[0].route).toBe('หนองชาก-บ้านบึง-กรุงเทพฯ');
     });
 
     it('a round trip names BOTH legs from their own route, not the outbound one twice', () => {
@@ -659,7 +698,8 @@ describe('ETicketComponent', () => {
 
       paint([scheduleWith(1, 'chonburi-bangkok'), scheduleWith(2, 'bangkok-chonburi')]);
 
-      expect(component.route).toBe('หนองชาก-บ้านบึง-กรุงเทพฯ / กรุงเทพฯ-บ้านบึง-หนองชาก');
+      expect(component.legs[0].route).toBe('หนองชาก-บ้านบึง-กรุงเทพฯ');
+      expect(component.legs[1].route).toBe('กรุงเทพฯ-บ้านบึง-หนองชาก');
     });
 
     // The same ladder OBRS-1219's RouteLabelResolver applies server-side, so
@@ -674,7 +714,7 @@ describe('ETicketComponent', () => {
 
       paint([scheduleWith(1, 'chonburi-bangkok')], 'zh');
 
-      expect(component.route).toBe('หนองชาก-บ้านบึง-กรุงเทพฯ');
+      expect(component.legs[0].route).toBe('หนองชาก-บ้านบึง-กรุงเทพฯ');
     });
 
     it('keeps the station pair — never the slug — when the route has no name at all', () => {
@@ -682,8 +722,8 @@ describe('ETicketComponent', () => {
 
       paint([scheduleWith(1, 'chonburi-bangkok')]);
 
-      expect(component.route).toBe('nong-chak-station - mo-chit-station');
-      expect(component.route).not.toContain('chonburi-bangkok');
+      expect(component.legs[0].route).toBe('nong-chak-station - mo-chit-station');
+      expect(component.legs[0].route).not.toContain('chonburi-bangkok');
     });
 
     // getPickupDropoffCached swallows a failure to null by design. A route
@@ -693,7 +733,7 @@ describe('ETicketComponent', () => {
       routeMapStub.getPickupDropoffCached.and.returnValue(of(null));
 
       expect(() => paint([scheduleWith(1, 'chonburi-bangkok')])).not.toThrow();
-      expect(component.route).toBe('nong-chak-station - mo-chit-station');
+      expect(component.legs[0].route).toBe('nong-chak-station - mo-chit-station');
     });
 
     it('asks once for an out-and-back on the same physical route', () => {
@@ -717,12 +757,11 @@ describe('ETicketComponent', () => {
 
         overlay(data);
 
-        expect(component.route).toBe(
-          'Nong Chak-Ban Bueng-Bangkok / Bangkok-Ban Bueng-Nong Chak'
-        );
+        expect(component.legs[0].route).toBe('Nong Chak-Ban Bueng-Bangkok');
+        expect(component.legs[1].route).toBe('Bangkok-Ban Bueng-Nong Chak');
         // AC-2 of OBRS-1219 still holds here: the stop rows are the STOPS.
-        expect(component.origin).toBe('Nong chak');
-        expect(component.destination).toBe('Bts mo chit');
+        expect(component.legs[0].origin).toBe('Nong chak');
+        expect(component.legs[0].destination).toBe('Bts mo chit');
       });
 
       // A route seeded one way and not the other is a real state — the two
@@ -735,9 +774,8 @@ describe('ETicketComponent', () => {
 
         overlay(data);
 
-        expect(component.route).toBe(
-          'Nong Chak-Ban Bueng-Bangkok / Bts mo chit - Nong chak'
-        );
+        expect(component.legs[0].route).toBe('Nong Chak-Ban Bueng-Bangkok');
+        expect(component.legs[1].route).toBe('Bts mo chit - Nong chak');
       });
 
       it('falls back to the stop pair when the response carries no name', () => {
@@ -747,7 +785,8 @@ describe('ETicketComponent', () => {
 
         overlay(data);
 
-        expect(component.route).toBe('Nong chak - Bts mo chit / Bts mo chit - Nong chak');
+        expect(component.legs[0].route).toBe('Nong chak - Bts mo chit');
+        expect(component.legs[1].route).toBe('Bts mo chit - Nong chak');
       });
 
       // The defect this card is named for: one pass fixed and the other not
@@ -757,7 +796,7 @@ describe('ETicketComponent', () => {
           titles({ en: 'Nong Chak-Ban Bueng-Bangkok' })
         );
         paint([scheduleWith(1, 'chonburi-bangkok')], 'en');
-        const afterFirstPaint = component.route;
+        const afterFirstPaint = component.legs[0].route;
 
         const data = buildTicketsData();
         data.journeys = [data.journeys![0]];
@@ -765,7 +804,7 @@ describe('ETicketComponent', () => {
         overlay(data);
 
         expect(afterFirstPaint).toBe('Nong Chak-Ban Bueng-Bangkok');
-        expect(component.route).toBe(afterFirstPaint);
+        expect(component.legs[0].route).toBe(afterFirstPaint);
       });
     });
   });
@@ -817,16 +856,16 @@ describe('ETicketComponent', () => {
     it('flags the ticket when the roster is empty - the case a failed /api/stops leaves behind', () => {
       mapFromStore([]);
 
-      expect(component.origin).toBe('-');
-      expect(component.destination).toBe('-');
+      expect(component.legs[0].origin).toBe('-');
+      expect(component.legs[0].destination).toBe('-');
       expect(component.stationLabelsUnresolved).toBeTrue();
     });
 
     it('flags it when only ONE of the two ids resolves - half a route is still unreadable at the gate', () => {
       mapFromStore([station(11, 'nong_chak', 'Nong chak')]);
 
-      expect(component.origin).toBe('Nong chak');
-      expect(component.destination).toBe('-');
+      expect(component.legs[0].origin).toBe('Nong chak');
+      expect(component.legs[0].destination).toBe('-');
       expect(component.stationLabelsUnresolved).toBeTrue();
     });
 
@@ -836,8 +875,8 @@ describe('ETicketComponent', () => {
         station(22, 'bts_mo_chit', 'Bts mo chit'),
       ]);
 
-      expect(component.origin).toBe('Nong chak');
-      expect(component.destination).toBe('Bts mo chit');
+      expect(component.legs[0].origin).toBe('Nong chak');
+      expect(component.legs[0].destination).toBe('Bts mo chit');
       expect(component.stationLabelsUnresolved).toBeFalse();
     });
 
@@ -857,8 +896,8 @@ describe('ETicketComponent', () => {
         applyApiOverrides: (locale: 'en', passengers: null) => void;
       }).applyApiOverrides('en', null);
 
-      expect(component.origin).toBe('Nong chak');
-      expect(component.destination).toBe('Bts mo chit');
+      expect(component.legs[0].origin).toBe('Nong chak');
+      expect(component.legs[0].destination).toBe('Bts mo chit');
       expect(component.stationLabelsUnresolved).toBeFalse();
     });
 
@@ -876,8 +915,8 @@ describe('ETicketComponent', () => {
         applyApiOverrides: (locale: 'en', passengers: null) => void;
       }).applyApiOverrides('en', null);
 
-      expect(component.origin).toBe('Nong chak');
-      expect(component.destination).toBe('-');
+      expect(component.legs[0].origin).toBe('Nong chak');
+      expect(component.legs[0].destination).toBe('-');
       expect(component.stationLabelsUnresolved).toBeTrue();
     });
   });
@@ -1010,36 +1049,42 @@ describe('ETicketComponent', () => {
     it('names the day the bus actually gets in', () => {
       paint([leg('2026-12-20T23:30:00+07:00', '2026-12-21T01:05:00+07:00')]);
 
-      expect(component.travelDate).toBe('20 Dec 2026');
-      expect(component.arrivalDate).toBe('21 Dec 2026');
+      expect(component.legs[0].travelDate).toBe('20 Dec 2026');
+      expect(component.legs[0].arrivalDate).toBe('21 Dec 2026');
     });
 
     it('says nothing at all when the trip lands on the day it left (AC2)', () => {
       paint([leg('2026-12-20T08:00:00+07:00', '2026-12-20T09:48:00+07:00')]);
 
-      expect(component.arrivalDate).toBe('');
+      expect(component.legs[0].arrivalDate).toBe('');
     });
 
     it('names the real day when the trip crosses two nights, never a counter (AC3)', () => {
       paint([leg('2026-12-20T23:30:00+07:00', '2026-12-22T06:00:00+07:00')]);
 
-      expect(component.arrivalDate).toBe('22 Dec 2026');
+      expect(component.legs[0].arrivalDate).toBe('22 Dec 2026');
     });
 
-    it('marks the crossing leg only, in the same leg order the two cells above use (AC5)', () => {
+    // OBRS-260 retired the positional `/ -` this used to assert. The leg that
+    // does not cross midnight no longer has to hold a place in a shared cell:
+    // it simply has no arrival-date cell of its own, and the leg that does
+    // crosses under its own heading.
+    it('marks the crossing leg only, and says nothing on the leg that lands the same day (AC5)', () => {
       paint([
         leg('2026-12-20T23:30:00+07:00', '2026-12-21T01:05:00+07:00'),
         leg('2026-12-24T08:00:00+07:00', '2026-12-24T09:48:00+07:00'),
       ]);
 
-      expect(component.arrivalDate).toBe('21 Dec 2026 / -');
+      expect(component.legs[0].arrivalDate).toBe('21 Dec 2026');
+      expect(component.legs[1].arrivalDate).toBe('');
     });
 
     it('is filled by the API pass as well, not only by the store pass', () => {
       (component as any).ticketApiData = overnightJourneys();
       (component as any).applyApiOverrides('en', null);
 
-      expect(component.arrivalDate).toBe('21 Dec 2026 / -');
+      expect(component.legs[0].arrivalDate).toBe('21 Dec 2026');
+      expect(component.legs[1].arrivalDate).toBe('');
     });
 
     it('does not let an API pass with no timestamps wipe what the store pass found', () => {
@@ -1053,7 +1098,7 @@ describe('ETicketComponent', () => {
       (component as any).ticketApiData = data;
       (component as any).applyApiOverrides('en', null);
 
-      expect(component.arrivalDate).toBe('21 Dec 2026');
+      expect(component.legs[0].arrivalDate).toBe('21 Dec 2026');
     });
   });
 });
