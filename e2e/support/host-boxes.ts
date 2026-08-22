@@ -392,6 +392,24 @@ const ONE_VEHICLE = ok([
 ]);
 
 /**
+ * OBRS-885. The single-vehicle DETAIL row `GET /vehicles/{id}` answers, which is
+ * a different projection from the list above: `toDetailDto` is the only one that
+ * carries `gpsImei`, `assignedDriverId` and the service window. Present so
+ * `admin-vehicles-edit-modal` measures the modal's ordinary state -- the generic
+ * `ok(null)` would be a 2xx with an empty envelope, which the modal treats as a
+ * failed fetch.
+ */
+const ONE_VEHICLE_DETAIL = ok({
+  id: 1,
+  vehicleNumber: 'BUS-01',
+  numberPlate: 'TH-8888',
+  vehicleType: { id: 1, slug: 'bus', name: 'Bus' },
+  status: 'active',
+  inServiceFrom: '2024-07-17',
+  inServiceTo: null,
+});
+
+/**
  * The round-trip promotion singleton. Its whole form -- both calendars included
  * -- is `*ngIf="!isLoading && promotion"`, and the endpoint is one the generic
  * mock answers with `null`, which renders the "no promotion configured" line
@@ -769,6 +787,36 @@ export const ADMIN_SWEEP: SweepPage[] = [
       await expect(page.locator('app-vehicle-maintenance-plan-panel')).toBeVisible({ timeout: 10_000 });
       await page.locator('app-vehicle-maintenance-plan-panel button.admin-btn-primary').first().click();
       await expect(page.locator('app-vehicle-maintenance-plan-panel .admin-modal')).toBeVisible({ timeout: 10_000 });
+    },
+  },
+  {
+    // OBRS-885. The vehicle EDIT modal, a third screen off the same page and a
+    // different component again from the two panels above -- its two
+    // `<p-datePicker>`s are the service window (in_service_from / in_service_to).
+    // Whole template is behind `@if (isOpen)`, so nothing of it exists until the
+    // row's edit icon is clicked.
+    //
+    // The detail row is fixtured rather than left to the generic `ok(null)`: a
+    // null envelope trips the modal's R1 fetch-fail guard, which measures the
+    // ERROR state of this screen and not the one an admin normally sees. The
+    // pickers render either way, which is exactly why leaving it to chance would
+    // have been invisible.
+    key: 'admin-vehicles-edit-modal',
+    url: '/admin/vehicles',
+    landsOn: /\/admin\/vehicles$/,
+    requires: 'app-vehicles-page',
+    fixture: [
+      { match: /\/vehicles$/, body: ONE_VEHICLE },
+      { match: /\/vehicles\/\d+$/, body: ONE_VEHICLE_DETAIL },
+    ],
+    act: async (page) => {
+      await page
+        .locator('app-vehicle-list-table button.admin-icon-btn')
+        .filter({ has: page.locator('span.material-symbols-outlined', { hasText: /^edit_square$/ }) })
+        .first()
+        .click();
+      await expect(page.locator('app-vehicle-form-modal .admin-modal')).toBeVisible({ timeout: 10_000 });
+      await expect(page.locator('app-vehicle-form-modal p-datepicker').first()).toBeVisible({ timeout: 10_000 });
     },
   },
 ];

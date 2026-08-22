@@ -855,6 +855,12 @@
         "GPS_IMEI_FORMAT": "GPS IMEI must be exactly 15 digits.",
         "ASSIGNED_DRIVER": "Regular driver",
         "ASSIGNED_DRIVER_NONE": "No regular driver",
+        "SECTION_SERVICE_WINDOW": "Service window",
+        "SERVICE_WINDOW_HINT": "Leave the start blank only when the date is genuinely not known — blank does NOT mean \"since forever\", and the per-vehicle P&L treats the two differently. Leave the end blank while the vehicle is still running.",
+        "IN_SERVICE_FROM": "In service from",
+        "IN_SERVICE_TO": "Retired on",
+        "IN_SERVICE_UNKNOWN": "Not known",
+        "IN_SERVICE_STILL_RUNNING": "Still in service",
         "NOTE": "Note",
         "NOTE_PLACEHOLDER": "Add any additional notes about this vehicle (optional)"
       },

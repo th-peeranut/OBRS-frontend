@@ -1,4 +1,8 @@
 @import "../../../styles/variables.scss";
+// OBRS-768: the dark block at the foot of this file needs the $dk-* palette. It emits no
+// CSS of its own -- it declares variables only, which is why it is safe in a component
+// stylesheet (styles/_dark-tokens.scss says so in its own header).
+@import "../../../styles/dark-tokens";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -32,8 +36,9 @@
   }
 
   // OBRS-769: was $text-lightblack, 4.39:1 on this page's $secondary-grey
-  // (#f9f9ff) — measured in BOTH themes, since /my-bookings does not respond to
-  // dark mode at all (OBRS-768), so the same 4.39 was on the register twice.
+  // (#f9f9ff) — measured in BOTH themes, because at the time /my-bookings did not
+  // respond to dark mode at all (OBRS-768, fixed at the foot of this file), so the
+  // same 4.39 was on the register twice.
   // $text-softblack is 6.68:1 on the same tint. The identical header block on
   // /account, /account/notifications, /my-parcels and /my-reports was repointed
   // with it: same shell pattern, same tint, same number, and only this one was
@@ -534,9 +539,9 @@
 }
 
 // OBRS-577 AC2/AC4/AC6 — mirrors my-reports.component.scss:189-193 (the
-// OBRS-433 "Load more" precedent) verbatim; /my-bookings does not respond to
-// dark mode at all (OBRS-768, see the header comment above), so no dark
-// override is needed here either.
+// OBRS-433 "Load more" precedent) verbatim. Its note that no dark override was
+// needed held only while this page ignored dark mode; OBRS-768 ended that, and
+// both of these now have one in the block at the foot of this file.
 .my-bookings__count {
   margin: 0 0 $space-xs;
   font-size: $font-size-sm;
@@ -547,6 +552,195 @@
   display: flex;
   justify-content: center;
   margin-top: $space-md;
+}
+
+// =============================================================================
+// OBRS-768 — dark mode
+// =============================================================================
+// This page never entered dark mode. `body.is-dark` was set (the contrast gate asserts
+// it, so a sweep that measured the wrong palette would go red rather than pass), the
+// navbar and footer went dark, and everything between them stayed the colour it is in
+// light mode. Measured before this change: of the twenty surfaces AC-1 names, SEVENTEEN
+// returned byte-identical `background-color` / `color` / `border-color` in both themes.
+//
+// THAT IDENTITY IS WHY NO CONTRAST GATE WAS EVER GOING TO CATCH THIS. A white card with
+// dark ink scores 4.60:1 and passes; it is the correct answer to the question the gate
+// asks. The three surfaces that did NOT match are the interesting ones and they are the
+// defect's other half: `section.my-bookings`, `.booking-card` and `.booking-card__meta`
+// each inherited `$dk-text` (#e8eaf0) from `body.is-dark` while keeping their white
+// background. Nothing was visibly broken only because every text run under them declares
+// its own colour -- the same latent trap OBRS-747 and OBRS-1424 each found the moment a
+// child stopped doing that.
+//
+// WRITTEN HERE, NOT IN dark-theme.scss, for the mechanical reason styles/_dark-tokens.scss
+// sets out in full: Angular's emulated encapsulation rewrites this file's
+// `.booking-card__meta dt` to `.booking-card__meta[_ngcontent] dt[_ngcontent]` = (0,3,0),
+// and a global `body.is-dark .booking-card__meta dt` = (0,3,1) beats that today and loses
+// the day either side nests one level deeper. `:host-context` carries the host attribute
+// and cannot lose that race. This is the trap the card's AC-3 points at.
+//
+// NOT TOUCHED HERE, on purpose, each with an owner:
+//   * The `⋮` popup (`.my-bookings-action-menu`). It is PrimeNG's own surface, rendered
+//     `appendTo="body"` and therefore OUTSIDE this component's encapsulation, so its dark
+//     rules cannot live here at all -- `:host-context` needs the host in the chain and the
+//     popup is detached from it. That is why dark-theme.scss is the right home for it, and
+//     OBRS-959 put them there (merged 2026-08-22, while this card was in review; before that
+//     the panel was white in both themes and only its tooltip had a dark rule). Only the
+//     TRIGGER button, which is on the card and in AC-1's list, is here.
+//   * `.status-badge` keeps its four light tints. Each carries its own fill AND its own
+//     ink (4.50-4.65:1, measured, unchanged by this card), so it reads as a chip on the
+//     dark card rather than as an unthemed hole; and a dark variant needs four new
+//     tint/ink pairs, which AC-2 forbids.
+//   * The dialogs this page opens are their own components with their own stylesheets.
+:host-context(body.is-dark) {
+  .my-bookings {
+    background-color: $dk-bg;
+  }
+
+  .my-bookings__header {
+    h1 {
+      color: $dk-text;
+    }
+
+    p {
+      color: $dk-text-muted;
+    }
+  }
+
+  .my-bookings__count {
+    color: $dk-text-muted;
+  }
+
+  // AC-5 takes this control's boundary row out of CONTRAST_ALLOW, so its border has to
+  // clear WCAG 1.4.11's 3:1 against the page it sits on -- and $dk-border
+  // (rgba(255,255,255,.1)) cannot: it is a hairline by design, and composited over $dk-bg
+  // it is a shade of the page. $dk-text-muted is the token that makes this a control
+  // rather than a word: 7.46:1 on $dk-bg.
+  //
+  // The LIGHT pill keeps its 1.28:1 border. That asymmetry is not introduced here -- the
+  // light row is a separate entry in the register under OBRS-772, which owns the 1.4.11
+  // boundary policy for the whole app and has to settle it before twenty controls are
+  // repainted. This card only owes the rows that were attributed to it.
+  .filter-pill {
+    background-color: $dk-bg-card;
+    border-color: $dk-text-muted;
+    color: $dk-text-muted;
+
+    &:hover {
+      border-color: $dk-accent;
+    }
+
+    &.is-active {
+      background-color: $dk-accent;
+      border-color: $dk-accent;
+      color: $dk-bg;
+    }
+  }
+
+  .booking-card {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+    // The light shadow is tuned for a white card on a pale page; on a dark one it reads as
+    // a smudge. The border above is what separates the card here.
+    box-shadow: none;
+  }
+
+  .booking-card__top .booking-card__ref {
+    .label {
+      color: $dk-text-muted;
+    }
+
+    strong {
+      color: $dk-text;
+    }
+  }
+
+  .booking-card__route {
+    color: $dk-text;
+
+    i {
+      color: $dk-accent;
+    }
+
+    .trip-type {
+      background-color: $dk-bg-soft;
+      color: $dk-accent;
+    }
+  }
+
+  .booking-card__meta {
+    border-top-color: $dk-border;
+    border-bottom-color: $dk-border;
+
+    dt {
+      color: $dk-text-muted;
+    }
+
+    dd {
+      color: $dk-text;
+    }
+
+    .amount {
+      color: $dk-accent;
+    }
+  }
+
+  // Same 1.4.11 argument as .filter-pill, one surface deeper: this button sits on the
+  // card, so its border is scored against $dk-bg-card (6.65:1) rather than the page.
+  .actions-menu-btn {
+    background-color: $dk-bg-card;
+    border-color: $dk-text-muted;
+    color: $dk-text-muted;
+
+    &:hover,
+    &:focus-visible {
+      border-color: $dk-accent;
+      color: $dk-accent;
+    }
+  }
+
+  // The error and empty states. NOT MEASURED by either the gate or this card's capture
+  // lane: both render the page with bookings, so neither state is ever on screen there.
+  // Said out loud rather than folded into a green run -- they are themed from the same
+  // tokens as .booking-card above, which is an argument, not a measurement.
+  .state-card {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+
+    i {
+      color: $dk-text-muted;
+    }
+
+    p {
+      color: $dk-text-muted;
+    }
+  }
+
+  .btn-primary {
+    background-color: $dk-accent;
+    border-color: $dk-accent;
+    color: $dk-bg;
+  }
+
+  .btn-secondary {
+    background-color: $dk-bg-card;
+    border-color: $dk-accent;
+    color: $dk-accent;
+  }
+
+  // Three light greys chosen against a white card; on $dk-bg-card that is a white bar
+  // sweeping a dark page for the length of the first load. Same three-stop shape, dark
+  // tokens. Unmeasured for the same reason as .state-card, and additionally because the
+  // gate does not score gradients at all -- it counts them as skipped.
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      $dk-bg-soft 25%,
+      $dk-bg-card 37%,
+      $dk-bg-soft 63%
+    );
+    background-size: 400% 100%;
+  }
 }
 
 @media (max-width: 576px) {
