@@ -1947,9 +1947,9 @@
      an opaque panel alone still left the dialog competing with a legible page. Measured on
      the /admin/users heading through the scrim: 3.84:1 light / 3.24:1 dark at 0.45, and
      1.93 / 1.63 at 0.75 - under 3:1, the floor below which WCAG stops calling even large
-     text legible. `.role-form-backdrop` and `.schedule-form-backdrop` override this rule
-     with their own 0.4 + blur(5px) and are deliberately left alone: blur already makes the
-     page behind them unreadable, which a contrast ratio cannot express. */
+     text legible. This is now the ONLY place an admin scrim colour is written:
+     `.role-form-backdrop` and `.schedule-form-backdrop` used to carry a private 0.4 copy of
+     it and gave up that copy in the same card, keeping only their own blur(5px). */
   background: rgba(25, 28, 30, 0.75);
   z-index: 1200;
   display: flex;
