@@ -138,6 +138,35 @@ describe('AnalyticsConsentBannerComponent', () => {
       // Exactly as tall as the viewport, room for the bar included, so the next
       // pixels it asks for are the ones that turn the scrollbar on.
       const page = document.documentElement;
+
+      // OBRS-1527 — that arithmetic only holds on a page this spec owns, and in
+      // a full run it does not own one. Measured 2026-08-22 in `ng test`: the
+      // live jasmine reporter (107px) and six `p-menu` overlays other specs
+      // appended to `body` and never removed (6 × 48px) put the page past the
+      // viewport before this spec starts, so the spacer came out at 0 and the
+      // page was already scrolling — `Expected 522 to be 428`, whenever the
+      // shuffle ran those specs first. Stowed here, restored below; alone in
+      // the document the spacer is the 285px the threshold was measured with.
+      const stowed = Array.from(document.body.children).filter(
+        (child): child is HTMLElement =>
+          child instanceof HTMLElement && !child.contains(fixture.nativeElement)
+      );
+      const shown = stowed.map((child) => child.style.display);
+      stowed.forEach((child) => (child.style.display = 'none'));
+
+      // OBRS-1527 — the threshold below needs a scrollbar that *appears*, and
+      // this runner does not start without one. Measured 2026-08-22 on Windows
+      // Chrome Headless 151: the viewport already holds its 15px gutter open on
+      // the first frame (`clientWidth` 732 against `innerWidth` 747, nothing
+      // overflowing yet), so nothing the bar writes can take width off it and
+      // the assertion below could never hold — `Expected 732 to be less than
+      // 732`, on every Windows box, forever. Handing the gutter back restores
+      // the condition rather than excusing the runner from it: measured 747 →
+      // 732 with this line in, and the loop error 3 runs out of 3 once the
+      // defer is removed from the component.
+      const priorOverflowY = page.style.overflowY;
+      page.style.overflowY = 'auto';
+
       const spacer = document.createElement('div');
       const filled = document.body.getBoundingClientRect().height;
       spacer.style.height = `${Math.max(0, page.clientHeight - filled)}px`;
@@ -165,6 +194,8 @@ describe('AnalyticsConsentBannerComponent', () => {
       } finally {
         window.removeEventListener('error', onError);
         spacer.remove();
+        page.style.overflowY = priorOverflowY;
+        stowed.forEach((child, i) => (child.style.display = shown[i]));
       }
     });
 
