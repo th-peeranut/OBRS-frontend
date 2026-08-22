@@ -16,7 +16,7 @@ import {
 export class PassengerSeatBoxComponent implements OnChanges {
   @Input() label: string = '';
   @Input() isDisabled: boolean = false;
-  @Input() gender: string = ''; // MALE, FEMALE, MONK, SELECTED, ORIGINAL
+  @Input() gender: string = ''; // MALE, FEMALE, MONK, NUN, SELECTED, ORIGINAL
   /**
    * Owner badge for the collapsed shared seat map (OBRS-242): a short label
    * (e.g. passenger ordinal "1", "2") naming which passenger a seat belongs

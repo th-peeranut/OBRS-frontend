@@ -802,4 +802,25 @@ describe('PassengerInfoFormComponent — fare-category radio (OBRS-296) — real
     expect(radioEl('fareCategory_adult-0').checked).toBeTrue();
     expect(radioEl('fareCategory_child-0').checked).toBeFalse();
   });
+
+  // OBRS-1365: adds a 4th gender/status radio (Nun) alongside Male/Female/Monk.
+  it('renders exactly 4 gender/status radios', () => {
+    const radios = fixture.nativeElement.querySelectorAll('input[type="radio"][id^="gender_"]');
+    expect(radios.length).toBe(4);
+  });
+
+  it('the 4th gender radio is Nun with value="NUN", and selecting it through the DOM writes "NUN" to the form', () => {
+    const nunRadio = radioEl('gender_nun-0');
+    expect(nunRadio.value).toBe('NUN');
+
+    nunRadio.click();
+    fixture.detectChanges();
+
+    expect(component.passengerData.at(0).get('gender')?.value).toBe('NUN');
+  });
+
+  it('renders the nun icon image for the Nun radio', () => {
+    const img = fixture.nativeElement.querySelector('img[src="icons/passenger-nun.svg"]');
+    expect(img).not.toBeNull();
+  });
 });

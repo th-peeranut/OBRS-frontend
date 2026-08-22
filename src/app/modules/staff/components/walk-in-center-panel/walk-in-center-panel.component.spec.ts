@@ -99,16 +99,22 @@ describe('WalkInCenterPanelComponent', () => {
       expect(values).toEqual(['male', 'female', 'monk', 'nun']);
     });
 
-    it('provides an SVG icon path for male, female and monk', () => {
+    it('provides an SVG icon path for male, female, monk and nun', () => {
       const opts = (component as unknown as { passengerTypeOptions: { value: string; icon: string }[] }).passengerTypeOptions;
       expect(opts.find((o) => o.value === 'male')?.icon).toContain('passenger-male.svg');
       expect(opts.find((o) => o.value === 'female')?.icon).toContain('passenger-female.svg');
       expect(opts.find((o) => o.value === 'monk')?.icon).toContain('passenger-monk.svg');
+      expect(opts.find((o) => o.value === 'nun')?.icon).toContain('passenger-nun.svg');
     });
 
-    it('uses empty icon string for nun (Bootstrap Icon fallback)', () => {
+    // OBRS-1365: nun used to be the one option with no icon (icon: '') — now every
+    // option's icon is non-empty, closing the gap that let the counter show no icon
+    // for a passenger typed 'nun'.
+    it('every passenger type option has a non-empty icon', () => {
       const opts = (component as unknown as { passengerTypeOptions: { value: string; icon: string }[] }).passengerTypeOptions;
-      expect(opts.find((o) => o.value === 'nun')?.icon).toBe('');
+      for (const opt of opts) {
+        expect(opt.icon).withContext(opt.value).not.toBe('');
+      }
     });
   });
 
@@ -140,6 +146,15 @@ describe('WalkInCenterPanelComponent', () => {
     it('defaults to MALE when passengerGender is empty', () => {
       component.passengerGender = '';
       expect((component as unknown as { seatGender: string }).seatGender).toBe('MALE');
+    });
+
+    // OBRS-1365: this getter already uppercased generically, so 'nun' -> 'NUN' worked
+    // before this card — the bug was on the seat-box side, which had no branch to
+    // render 'NUN' at all (fixed in PassengerSeatBoxComponent). Pinned here so the
+    // counter side of the wire stays correct too.
+    it('uppercases nun to NUN', () => {
+      component.passengerGender = 'nun';
+      expect((component as unknown as { seatGender: string }).seatGender).toBe('NUN');
     });
   });
 

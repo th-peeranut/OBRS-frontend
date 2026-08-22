@@ -2915,7 +2915,8 @@
     "GENDER": {
       "MALE": "Male",
       "FEMALE": "Female",
-      "MONK": "Monk"
+      "MONK": "Monk",
+      "NUN": "Nun"
     },
     "SUMMARY": {
       "OPEN_SEATING_BADGE": "No assigned seat (Open Seating)",

@@ -44,6 +44,15 @@
       />
   }
 
+  <!-- Nun -->
+  @if (!isDisabled && gender == 'NUN') {
+    <img
+      class="passenger-nun-icon"
+      src="icons/passenger-nun.svg"
+      alt="Passenger Nun Icon"
+      />
+  }
+
   <!-- Selected (neutral marker — no gender, e.g. the change-seat dialog) -->
   @if (!isDisabled && gender == 'SELECTED') {
     <span
