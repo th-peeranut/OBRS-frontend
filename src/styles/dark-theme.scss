@@ -309,6 +309,19 @@ body.is-dark {
       color: $dk-text-muted;
     }
 
+    // OBRS-1521 removed PrimeNG's `.p-disabled` opacity from this menu (it put
+    // the LIGHT label at 3.48:1). That fade was also the only thing marking a
+    // disabled row in dark, so dark states its own de-emphasis here rather than
+    // inheriting an enabled row's colour. This also outranks the danger rule
+    // below by one class (0,5,1 vs 0,4,1), so a disabled Cancel goes muted
+    // rather than staying red -- derived from the selectors, NOT measured: the
+    // gate fixture has no booking mid-cancellation, which is the only state
+    // that produces a disabled danger row.
+    .p-menu-item.p-disabled .action-menu-item__label,
+    .p-menu-item.p-disabled .action-menu-item__icon-slot {
+      color: $dk-text-muted;
+    }
+
     // Danger row (Cancel booking) — the light twin `$text-red` computes to
     // 3.08:1 on `$dk-bg-card` (fails AA); `$dk-danger`, the token already used
     // for destructive text in dark mode, gives 6.08:1.
