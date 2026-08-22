@@ -29,10 +29,12 @@
             <span class="label">{{ "E_TICKET.LABEL.BOOKING_REF" | translate }}</span>
             <span class="value">{{ bookingNumber }}</span>
           </div>
-          <div class="ticket-item">
-            <span class="label">{{ "E_TICKET.LABEL.TICKET_NO" | translate }}</span>
-            <span class="value">{{ ticketNumber }}</span>
-          </div>
+          @if (ticketNumber !== '-') {
+            <div class="ticket-item">
+              <span class="label">{{ "E_TICKET.LABEL.TICKET_NO" | translate }}</span>
+              <span class="value">{{ ticketNumber }}</span>
+            </div>
+          }
         </div>
 
         @for (leg of legs; track trackByIndex(i); let i = $index) {
@@ -52,6 +54,12 @@
                 <span class="label">{{ "E_TICKET.LABEL.TRAVEL_TIME" | translate }}</span>
                 <span class="value">{{ leg.travelTime }}</span>
               </div>
+              @if (leg.arrivalDate) {
+                <div class="ticket-item">
+                  <span class="label">{{ "E_TICKET.LABEL.ARRIVAL_DATE" | translate }}</span>
+                  <span class="value">{{ leg.arrivalDate }}</span>
+                </div>
+              }
             </div>
             <div class="ticket-route">
               <div class="ticket-item full">
@@ -199,6 +207,12 @@
                           </span>
                           <span class="value">{{ passenger.name }}</span>
                         </div>
+                        @if (!passenger.seatOpen) {
+                          <div class="passenger-field">
+                            <span class="label">{{ "E_TICKET.LABEL.SEAT" | translate }}</span>
+                            <span class="value">{{ passenger.seat }}</span>
+                          </div>
+                        }
                         @if (passenger.fareCategory) {
                           <div class="passenger-field">
                             <span class="label">

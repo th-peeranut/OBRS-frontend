@@ -15,7 +15,12 @@ import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedu
 import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
 import { ProvinceEffect } from '../../shared/stores/station/station.effect';
 import { ProvinceReducer } from '../../shared/stores/station/station.reducer';
-import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
+// OBRS-1510: this page's own ticket markup is gone — `<app-e-ticket-card>` (its
+// only consumer, along with the my-bookings ticket modal) needs its own module
+// import here since SharedModule deliberately excludes it (its heavy deps —
+// html2canvas, qrcode — stay out of the eager chunk; see ETicketCardModule's
+// class comment).
+import { ETicketCardModule } from '../../shared/components/e-ticket-card/e-ticket-card.module';
 
 const routes: Routes = [{ path: '', component: ETicketComponent }];
 
@@ -73,7 +78,7 @@ const routes: Routes = [{ path: '', component: ETicketComponent }];
       ProvinceEffect,
     ]),
 
-    PhoneFormatPipe,
+    ETicketCardModule,
   ],
 })
 export class ETicketModule {}

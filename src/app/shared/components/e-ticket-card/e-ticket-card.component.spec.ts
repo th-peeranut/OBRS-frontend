@@ -13,6 +13,7 @@ function buildLeg(overrides: Partial<TicketLeg> = {}): TicketLeg {
   return {
     travelDate: '20 Dec 2026',
     travelTime: '08:00 - 09:00',
+    arrivalDate: '',
     route: 'Station A - Station B',
     origin: 'Station A',
     destination: 'Station B',
@@ -35,6 +36,7 @@ function buildPassenger(overrides: Partial<TicketPassenger> = {}): TicketPasseng
     seat: '1',
     ticketId: 1,
     ticketNumber: 'T-1',
+    seatOpen: false,
     ...overrides,
   };
 }
@@ -492,5 +494,137 @@ describe('ETicketCardComponent — leg rendering', () => {
     const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
     expect(text).toContain('A5');
     expect(text).not.toContain('E_TICKET.LABEL.SEAT_OPEN');
+  });
+
+  // OBRS-1510 AC-7: the TICKET_NO row is gated in the CARD, deliberately not
+  // behind a new `@Input()` flag (a flag would just be a second lever for the
+  // same drift this consolidation exists to close — see ADR-0041). Guest
+  // renders never set `ticketNumber`, so the default '-' is what keeps this
+  // row hidden for them, exactly as it already was on the page before this
+  // card; a signed-in customer's real ticket number is what the my-bookings
+  // modal has ALWAYS supplied, unchanged by this card.
+  it('OBRS-1510 AC-7: hides the TICKET_NO row when ticketNumber is the "-" default (guest)', () => {
+    component.ticketNumber = '-';
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(text).not.toContain('E_TICKET.LABEL.TICKET_NO');
+  });
+
+  it('OBRS-1510 AC-7: shows the TICKET_NO row once a real ticketNumber is set', () => {
+    component.ticketNumber = 'T-Q4QZXTZAFY';
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(text).toContain('E_TICKET.LABEL.TICKET_NO');
+    expect(text).toContain('T-Q4QZXTZAFY');
+  });
+
+  // OBRS-1510 AC-2: this leg-level cell used to live only on the e-ticket
+  // page's own template (OBRS-1502) — now on the card, so the my-bookings
+  // modal gets it too.
+  it('OBRS-1510 AC-2: hides the ARRIVAL_DATE cell when the leg\'s arrivalDate is empty (same-day trip)', () => {
+    component.legs = [buildLeg({ arrivalDate: '' })];
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(text).not.toContain('E_TICKET.LABEL.ARRIVAL_DATE');
+  });
+
+  it('OBRS-1510 AC-2: shows the ARRIVAL_DATE cell with its value when the leg lands on a later day', () => {
+    component.legs = [buildLeg({ arrivalDate: '21 Dec 2026' })];
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(text).toContain('E_TICKET.LABEL.ARRIVAL_DATE');
+    expect(text).toContain('21 Dec 2026');
+  });
+
+  it('OBRS-1510 AC-2: round trip shows the ARRIVAL_DATE cell only on the leg that crosses', () => {
+    component.legs = [
+      buildLeg({ arrivalDate: '21 Dec 2026' }),
+      buildLeg({ arrivalDate: '' }),
+    ];
+    fixture.detectChanges();
+
+    expect(
+      fixture.debugElement.queryAll(By.css('.ticket-leg .ticket-item')).filter((el) =>
+        (el.nativeElement.textContent || '').includes('E_TICKET.LABEL.ARRIVAL_DATE')
+      ).length
+    ).toBe(1);
+  });
+});
+
+/**
+ * OBRS-1510 AC-8: the per-passenger SEAT cell — lifted from the e-ticket
+ * page's own passenger-card markup onto the shared card, so the my-bookings
+ * modal gets it too (intentional per the AC). Rendered from
+ * `legPassengerRows`, which only the real `ngOnChanges` lifecycle populates —
+ * same TestBed/TicketService-stub setup as the boarding-QR describe above.
+ */
+describe('ETicketCardComponent — per-passenger SEAT cell (OBRS-1510 AC-8)', () => {
+  let fixture: ComponentFixture<ETicketCardComponent>;
+  let component: ETicketCardComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ETicketCardComponent],
+      imports: [TranslateModule.forRoot(), PhoneFormatPipe],
+      providers: [{ provide: TicketService, useValue: createTicketServiceStub() }],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ETicketCardComponent);
+    component = fixture.componentInstance;
+  });
+
+  function setLegs(legs: TicketLeg[]): void {
+    component.legs = legs;
+    component.ngOnChanges({
+      legs: {
+        currentValue: legs,
+        previousValue: [],
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
+    fixture.detectChanges();
+  }
+
+  function seatCells(): string[] {
+    return fixture.debugElement
+      .queryAll(By.css('.passenger-field'))
+      .filter((el) => (el.nativeElement.textContent || '').includes('E_TICKET.LABEL.SEAT'))
+      .map((el) => (el.nativeElement.textContent || '').trim());
+  }
+
+  it('hides this passenger\'s own SEAT cell when seatOpen is true (open seating)', () => {
+    setLegs([
+      buildLeg({ passengers: [buildPassenger({ seatOpen: true, seat: '-' })] }),
+    ]);
+
+    expect(seatCells().length).toBe(0);
+  });
+
+  it('shows this passenger\'s own SEAT cell with the real seat when seatOpen is false', () => {
+    setLegs([
+      buildLeg({ passengers: [buildPassenger({ seatOpen: false, seat: 'A5' })] }),
+    ]);
+
+    expect(seatCells().length).toBe(1);
+    expect(seatCells()[0]).toContain('A5');
+  });
+
+  it('gates independently PER PASSENGER, not per leg — one open-seating row and one assigned row on the same leg', () => {
+    setLegs([
+      buildLeg({
+        passengers: [
+          buildPassenger({ name: 'Open Passenger', ticketId: 1, seatOpen: true, seat: '-' }),
+          buildPassenger({ name: 'Assigned Passenger', ticketId: 2, seatOpen: false, seat: 'B2' }),
+        ],
+      }),
+    ]);
+
+    expect(seatCells().length).toBe(1);
+    expect(seatCells()[0]).toContain('B2');
   });
 });

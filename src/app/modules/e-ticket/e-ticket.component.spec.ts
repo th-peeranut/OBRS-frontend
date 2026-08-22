@@ -1,13 +1,14 @@
-import { of, throwError, Subject } from 'rxjs';
+import { of, Subject } from 'rxjs';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { ETicketComponent } from './e-ticket.component';
 import { AuthService } from '../../auth/auth.service';
 import { BookingService } from '../../services/booking/booking.service';
 import { RouteMapService } from '../../services/route-map/route-map.service';
-import { TicketService } from '../../services/ticket/ticket.service';
-import { BoardingQrService } from '../../shared/services/boarding-qr.service';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 import { Schedule, ScheduleFilter } from '../../shared/interfaces/schedule.interface';
@@ -99,8 +100,6 @@ describe('ETicketComponent', () => {
     getBookingTickets: () => of(null),
   } as unknown as BookingService;
 
-  let ticketServiceStub: jasmine.SpyObj<TicketService>;
-  let boardingQrService: BoardingQrService;
   // OBRS-858: loadTicketFromApi skips the private ticket call entirely for a guest. Defaults to
   // TRUE so every pre-existing assertion in this file keeps exercising the authenticated path
   // it was written for; the guest case flips it explicitly.
@@ -116,28 +115,20 @@ describe('ETicketComponent', () => {
   } as unknown as TranslateService;
 
   beforeEach(() => {
-    ticketServiceStub = jasmine.createSpyObj<TicketService>('TicketService', [
-      'getBoardingToken',
-    ]);
-    ticketServiceStub.getBoardingToken.and.returnValue(
-      of(null) as unknown as ReturnType<TicketService['getBoardingToken']>
-    );
-    // Real BoardingQrService wired to the ticket-service stub (not a mock of
-    // the service itself) — a fresh instance per test, matching the
-    // component-scoped `providers: [BoardingQrService]` lifetime, so the
-    // existing assertions on `ticketServiceStub.getBoardingToken` calls stay
-    // meaningful (OBRS-221 extraction).
-    boardingQrService = new BoardingQrService(ticketServiceStub);
     authStub = { isAuthenticated: () => true };
     routeMapStub = jasmine.createSpyObj<RouteMapService>('RouteMapService', [
       'getPickupDropoffCached',
     ]);
     routeMapStub.getPickupDropoffCached.and.returnValue(of(null));
 
+    // OBRS-1510: the page no longer owns a BoardingQrService — boarding-QR
+    // resolution is entirely `<app-e-ticket-card>`'s own job now (its own
+    // component-scoped instance, fed by `legs[].passengers[].ticketId`). See
+    // e-ticket-card.component.spec.ts for the QR-fetch coverage this file used
+    // to carry.
     component = new ETicketComponent(
       storeStub,
       bookingServiceStub,
-      boardingQrService,
       translateStub,
       authStub as unknown as AuthService,
       routeMapStub
@@ -235,32 +226,30 @@ describe('ETicketComponent', () => {
       expect(component.legs[1].vehiclePlate).toBe('12-34/กข 1234');
     });
 
-    it('maps passengers and seats, matching phone from the store by seat, and threads ticketId/ticketNumber through for the per-ticket QR fetch', () => {
+    it('maps passengers and seats, matching phone from the store by seat, and threads ticketId/ticketNumber onto the leg for the card\'s own QR fetch', () => {
       apply(buildTicketsData());
 
       // OBRS-260: each leg's seat line comes from that leg's OWN tickets. It
       // was outbound-only for the whole ticket until this card.
       expect(component.legs[0].seats).toBe('1');
       expect(component.legs[1].seats).toBe('1');
-      // The default ticketServiceStub resolves with no boardingToken, so the
-      // (synchronous, since the empty-token branch never awaits) QR fetch has
-      // already marked this ticket qrUnavailable by the time we assert here.
-      expect(component.passengerGroups[0].passengers).toEqual([
+      // OBRS-1510: the page no longer resolves the boarding QR itself — that is
+      // `<app-e-ticket-card>`'s own job now, fed by `ticketId`/`ticketNumber`
+      // on each leg's own passengers.
+      expect(component.legs[0].passengers).toEqual([
         {
           name: 'Mr. Abc Def',
           phone: '0812345678',
           seat: '1',
           ticketId: 1,
           ticketNumber: 'T-Q4QZXTZAFY',
-          qrDataUrl: '',
-          qrUnavailable: true,
           seatOpen: false,
           // OBRS-296: server-authoritative — carried from the ticket
           // response's fareCategory, never re-derived client-side.
           fareCategory: 'child',
         },
       ]);
-      expect(component.legs[0].seatsOpen).toBeFalse();
+      expect(component.legs[0].isOpenSeating).toBeFalse();
     });
 
     /**
@@ -269,28 +258,23 @@ describe('ETicketComponent', () => {
      * existed in the response and reached no surface at all, so a passenger
      * flying home had no QR to scan. These pin both legs through.
      */
-    it('OBRS-873: builds a group per leg, so the RETURN leg\'s ticket gets its own row and QR', () => {
+    it('OBRS-873: each leg carries its OWN passengers, so the RETURN leg\'s ticket gets its own row for the card to QR', () => {
       apply(buildTicketsData());
 
-      expect(component.passengerGroups.length).toBe(2);
-      expect(component.passengerGroups[0].isReturn).toBeFalse();
-      expect(component.passengerGroups[1].isReturn).toBeTrue();
-      expect(
-        component.passengerGroups.map((g) => g.passengers.map((p) => p.ticketNumber))
-      ).toEqual([['T-Q4QZXTZAFY'], ['T-JJTETZNMF2']]);
-      // …and the flat list the QR fetch walks covers both legs' ticket ids.
-      expect(component.passengers.map((p) => p.ticketId)).toEqual([1, 2]);
+      expect(component.legs.map((leg) => leg.passengers.map((p) => p.ticketNumber))).toEqual([
+        ['T-Q4QZXTZAFY'],
+        ['T-JJTETZNMF2'],
+      ]);
     });
 
-    it('OBRS-873: a one-way booking yields a single unlabelled group', () => {
+    it('OBRS-873: a one-way booking yields a single leg with its own passengers', () => {
       const data = buildTicketsData();
       data.journeys = [data.journeys![0]];
 
       apply(data);
 
-      expect(component.passengerGroups.length).toBe(1);
-      expect(component.passengerGroups[0].isReturn).toBeFalse();
-      expect(component.passengers.map((p) => p.ticketId)).toEqual([1]);
+      expect(component.legs.length).toBe(1);
+      expect(component.legs[0].passengers.map((p) => p.ticketId)).toEqual([1]);
     });
 
     it('selects the outbound journey even when legType order changes', () => {
@@ -350,26 +334,26 @@ describe('ETicketComponent', () => {
       expect(component.legs[0].pickupLongitude).toBeNull();
     });
 
-    it('OBRS-325: an OPEN ticket (null seatNumber) flags seatOpen on the passenger and seatsOpen on ITS leg, and seat falls back to "-"', () => {
+    it('OBRS-325: an OPEN ticket (null seatNumber) flags seatOpen on the passenger and isOpenSeating on ITS leg, and seat falls back to "-"', () => {
       const data = buildTicketsData();
       data.journeys![0].tickets![0].seatNumber = undefined;
 
       apply(data);
 
-      expect(component.legs[0].seatsOpen).toBeTrue();
+      expect(component.legs[0].isOpenSeating).toBeTrue();
       // OBRS-260: open seating is a property of one schedule, so the return
       // leg keeps its assigned seat rather than inheriting the outbound's flag.
-      expect(component.legs[1].seatsOpen).toBeFalse();
-      expect(component.passengers[0].seat).toBe('-');
-      expect(component.passengers[0].seatOpen).toBeTrue();
+      expect(component.legs[1].isOpenSeating).toBeFalse();
+      expect(component.legs[0].passengers[0].seat).toBe('-');
+      expect(component.legs[0].passengers[0].seatOpen).toBeTrue();
     });
 
     it('OBRS-325 (ASSIGNED regression): a ticket with a seatNumber keeps seatOpen false and the real seat unchanged', () => {
       apply(buildTicketsData());
 
-      expect(component.legs[0].seatsOpen).toBeFalse();
-      expect(component.passengers[0].seat).toBe('1');
-      expect(component.passengers[0].seatOpen).toBeFalse();
+      expect(component.legs[0].isOpenSeating).toBeFalse();
+      expect(component.legs[0].passengers[0].seat).toBe('1');
+      expect(component.legs[0].passengers[0].seatOpen).toBeFalse();
     });
   });
 
@@ -432,10 +416,10 @@ describe('ETicketComponent', () => {
 
       apply(data, storePassengers);
 
-      expect(component.passengers[0].name).toBe('Mr. Alice Wong');
-      expect(component.passengers[0].phone).toBe('0811111111');
-      expect(component.passengers[1].name).toBe('Ms. Bob Lee');
-      expect(component.passengers[1].phone).toBe('0822222222');
+      expect(component.legs[0].passengers[0].name).toBe('Mr. Alice Wong');
+      expect(component.legs[0].passengers[0].phone).toBe('0811111111');
+      expect(component.legs[0].passengers[1].name).toBe('Ms. Bob Lee');
+      expect(component.legs[0].passengers[1].phone).toBe('0822222222');
     });
 
     it('ASSIGNED regression: seat-based match is untouched when real seat numbers are present, even with the same store-list reordering trick', () => {
@@ -456,10 +440,10 @@ describe('ETicketComponent', () => {
 
       apply(data, storePassengers);
 
-      expect(component.passengers[0].seat).toBe('2');
-      expect(component.passengers[0].phone).toBe('0811111111');
-      expect(component.passengers[1].seat).toBe('5');
-      expect(component.passengers[1].phone).toBe('0822222222');
+      expect(component.legs[0].passengers[0].seat).toBe('2');
+      expect(component.legs[0].passengers[0].phone).toBe('0811111111');
+      expect(component.legs[0].passengers[1].seat).toBe('5');
+      expect(component.legs[0].passengers[1].phone).toBe('0822222222');
     });
 
     it('OPEN + duplicate passenger names: falls back to positional index within an aligned (same-length) list, never leaking the wrong phone', () => {
@@ -474,8 +458,8 @@ describe('ETicketComponent', () => {
 
       apply(data, storePassengers);
 
-      expect(component.passengers[0].phone).toBe('0810000001');
-      expect(component.passengers[1].phone).toBe('0810000002');
+      expect(component.legs[0].passengers[0].phone).toBe('0810000001');
+      expect(component.legs[0].passengers[1].phone).toBe('0810000002');
     });
 
     it('OPEN + round-trip/length-mismatch (store holds more/fewer passengers than this leg has tickets): ambiguous name + mismatched length never guesses positionally — falls back to "-"', () => {
@@ -495,8 +479,8 @@ describe('ETicketComponent', () => {
 
       apply(data, storePassengers);
 
-      expect(component.passengers[0].phone).toBe('-');
-      expect(component.passengers[1].phone).toBe('-');
+      expect(component.legs[0].passengers[0].phone).toBe('-');
+      expect(component.legs[0].passengers[1].phone).toBe('-');
     });
 
     it('OPEN + unique name match still resolves correctly even when list lengths differ', () => {
@@ -511,118 +495,7 @@ describe('ETicketComponent', () => {
 
       apply(data, storePassengers);
 
-      expect(component.passengers[0].phone).toBe('0811111111');
-    });
-  });
-
-  describe('navigateToPickup (OBRS-269)', () => {
-    it('opens the Google Maps directions deep-link when coords are present', () => {
-      const leg = { ...component.legs[0], pickupLatitude: 13.7563, pickupLongitude: 100.5018 };
-      const openSpy = spyOn(window, 'open');
-
-      component.navigateToPickup(leg);
-
-      expect(openSpy).toHaveBeenCalledWith(
-        'https://www.google.com/maps/dir/?api=1&destination=13.7563,100.5018&travelmode=driving',
-        '_blank',
-        'noopener,noreferrer'
-      );
-    });
-
-    it('does nothing when coords are missing', () => {
-      const openSpy = spyOn(window, 'open');
-
-      component.navigateToPickup(component.legs[0]);
-
-      expect(openSpy).not.toHaveBeenCalled();
-    });
-
-    /**
-     * OBRS-260: the button is per leg now. This is the case the old
-     * booking-level pair could not express — a round trip whose two ends have
-     * different coordinates, where the way home used to deep-link to the
-     * outbound pickup.
-     */
-    it('sends the return leg to ITS OWN pickup stop', () => {
-      const leg = { ...component.legs[0], pickupLatitude: 13.0827, pickupLongitude: 101.0028 };
-      const openSpy = spyOn(window, 'open');
-
-      component.navigateToPickup(leg);
-
-      expect(openSpy).toHaveBeenCalledWith(
-        'https://www.google.com/maps/dir/?api=1&destination=13.0827,101.0028&travelmode=driving',
-        '_blank',
-        'noopener,noreferrer'
-      );
-    });
-  });
-
-  describe('per-ticket boarding-token QR fetch (OBRS-96)', () => {
-    const storePassengers: PassengerInfo[] = [];
-
-    function twoTicketData(): BookingTicketsData {
-      const data = buildTicketsData();
-      // OBRS-873: one-way on purpose. This fixture is about TWO TICKETS ON ONE
-      // LEG (one of them cancelled); keeping the inbound journey would add a
-      // third ticket and make "the other ticket's QR still renders" ambiguous.
-      data.journeys = [data.journeys![0]];
-      data.journeys[0].tickets = [
-        {
-          id: 1,
-          ticketNumber: 'T-OK',
-          passengerName: 'Mr. Ok Passenger',
-          seatNumber: '1',
-          status: { code: 'confirmed', label: 'Confirmed' },
-        },
-        {
-          id: 2,
-          ticketNumber: 'T-CANCELLED',
-          passengerName: 'Mr. Cancelled Passenger',
-          seatNumber: '2',
-          status: { code: 'cancelled', label: 'Cancelled' },
-        },
-      ];
-      return data;
-    }
-
-    function apply(data: BookingTicketsData): void {
-      (component as any).ticketApiData = data;
-      (component as any).applyApiOverrides('en', storePassengers);
-    }
-
-    it('fetches one boarding token per ticketId — across BOTH legs of a round trip (OBRS-873)', () => {
-      apply(buildTicketsData());
-
-      expect(ticketServiceStub.getBoardingToken.calls.allArgs()).toEqual([[1], [2]]);
-    });
-
-    it('does not re-issue the GET for a ticket already fetched/in-flight (duplicate-fetch guard, e.g. a locale switch)', () => {
-      apply(buildTicketsData());
-      apply(buildTicketsData());
-
-      // Two tickets (one per leg), fetched once each — not four calls.
-      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledTimes(2);
-    });
-
-    it('isolates one ticket\'s failure via forkJoin + per-inner catchError — the other ticket\'s QR still renders, the page never blanks', async () => {
-      ticketServiceStub.getBoardingToken.and.callFake((ticketId: number) =>
-        ticketId === 1
-          ? (of({ code: 200, message: 'OK', data: { ticketId: 1, ticketNumber: 'T-OK', boardingToken: 'valid-token-1', expiresAt: '' } }) as never)
-          : (throwError(() => ({ error: { errorCode: 'TICKET_NOT_CONFIRMED' } })) as never)
-      );
-
-      apply(twoTicketData());
-      // Let the forkJoin subscription + the real QRCode.toDataURL promise settle.
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      expect(component.passengers.length).toBe(2);
-      const okPassenger = component.passengers.find((p) => p.ticketId === 1);
-      const cancelledPassenger = component.passengers.find((p) => p.ticketId === 2);
-
-      expect(okPassenger?.qrUnavailable).toBeFalse();
-      expect(okPassenger?.qrDataUrl).toContain('data:image');
-      expect(cancelledPassenger?.qrUnavailable).toBeTrue();
-      expect(cancelledPassenger?.qrDataUrl).toBe('');
+      expect(component.legs[0].passengers[0].phone).toBe('0811111111');
     });
   });
 
@@ -1100,5 +973,127 @@ describe('ETicketComponent', () => {
 
       expect(component.legs[0].arrivalDate).toBe('21 Dec 2026');
     });
+  });
+});
+
+/**
+ * OBRS-1510 — DOM coverage. The previous version of this spec file (1,104
+ * lines / 54 `it()`) asserted ZERO times on the compiled template — every case
+ * above talks to the component class directly (`new ETicketComponent(...)`,
+ * never `TestBed`), so moving `.ticket-paper` out of this page's own template
+ * and into `<app-e-ticket-card>` could have gone through with every one of
+ * those assertions still green. This block is what would have caught it: it
+ * compiles the REAL template and checks what actually renders.
+ *
+ * The per-cell rendering rules the card owns now (the TICKET_NO gate — AC-7,
+ * the arrivalDate cell — AC-2, the per-passenger SEAT cell — AC-8) are pinned
+ * directly on `e-ticket-card.component.spec.ts`, which is where that markup
+ * and its gating logic actually live; duplicating them here against a
+ * `NO_ERRORS_SCHEMA`-stubbed `<app-e-ticket-card>` would only prove the stub
+ * echoes back whatever this file feeds it. What belongs here is what this
+ * page is still responsible for: that it renders the card at all, wired to
+ * the right data, and that the markup that never moved (the station-load
+ * error slot, the ticket-incomplete banner, the retrieval note) still does.
+ */
+describe('ETicketComponent — template (OBRS-1510)', () => {
+  let fixture: ComponentFixture<ETicketComponent>;
+  let component: ETicketComponent;
+
+  const templateStoreStub = {
+    pipe: () => of(null),
+    dispatch: () => undefined,
+  } as unknown as Store;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ETicketComponent],
+      // app-e-ticket-card, app-navbar, app-stepper, app-station-load-error and
+      // app-footer are real components from other modules — not declared here,
+      // the same NO_ERRORS_SCHEMA pattern the my-bookings ticket-modal spec
+      // uses for its own child components. This suite only verifies the page
+      // wires the right data down and keeps its own retained markup; the
+      // card's own rendering is covered by e-ticket-card.component.spec.ts.
+      schemas: [NO_ERRORS_SCHEMA],
+      imports: [TranslateModule.forRoot()],
+      providers: [
+        { provide: Store, useValue: templateStoreStub },
+        {
+          provide: BookingService,
+          useValue: { getActiveBookingId: () => null, getBookingTickets: () => of(null) },
+        },
+        { provide: AuthService, useValue: { isAuthenticated: () => false } },
+        { provide: RouteMapService, useValue: { getPickupDropoffCached: () => of(null) } },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ETicketComponent);
+    component = fixture.componentInstance;
+    // Runs ngOnInit once — the store stub's `of(null)` completes synchronously,
+    // so this is the only emission `combineLatest` ever delivers; every
+    // property set on `component` after this point is safe from being
+    // overwritten by a later emission.
+    fixture.detectChanges();
+  });
+
+  function cardEl() {
+    return fixture.debugElement.query(By.css('app-e-ticket-card'));
+  }
+
+  it('renders exactly one app-e-ticket-card, wired to the page\'s own bookingNumber/ticketNumber/legs/booker/paymentDate/totalAmount', () => {
+    component.bookingNumber = 'B-29RGZW';
+    component.ticketNumber = 'T-Q4QZXTZAFY';
+    component.booker = {
+      name: '-',
+      phone: '0812345678',
+      seat: '-',
+      ticketId: null,
+      ticketNumber: '-',
+      seatOpen: false,
+      fareCategory: null,
+    };
+    component.paymentDate = '20 Dec 2026 10:00';
+    component.totalAmount = '500.00';
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('app-e-ticket-card')).length).toBe(1);
+    const el = cardEl();
+    expect(el.properties['legs']).toBe(component.legs);
+    expect(el.properties['bookingNumber']).toBe('B-29RGZW');
+    expect(el.properties['ticketNumber']).toBe('T-Q4QZXTZAFY');
+    expect(el.properties['booker']).toBe(component.booker);
+    expect(el.properties['paymentDate']).toBe('20 Dec 2026 10:00');
+    expect(el.properties['totalAmount']).toBe('500.00');
+  });
+
+  it('OBRS-1246: shows app-station-load-error only while stationLabelsUnresolved is true', () => {
+    component.stationLabelsUnresolved = true;
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('app-station-load-error'))).not.toBeNull();
+
+    component.stationLabelsUnresolved = false;
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('app-station-load-error'))).toBeNull();
+  });
+
+  it('OBRS-1252: shows the ticket-incomplete banner only while ticketIncomplete is true', () => {
+    component.ticketIncomplete = true;
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('[data-testid="eticket-unavailable"]'))).not.toBeNull();
+
+    component.ticketIncomplete = false;
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('[data-testid="eticket-unavailable"]'))).toBeNull();
+  });
+
+  it('OBRS-857/OBRS-1252: shows the retrieval note only while NOT ticketIncomplete, and it stays a sibling of the card, never inside it', () => {
+    component.ticketIncomplete = false;
+    fixture.detectChanges();
+    const note = fixture.debugElement.query(By.css('.ticket-retrieval-note'));
+    expect(note).not.toBeNull();
+    expect(note.nativeElement.closest('app-e-ticket-card')).toBeNull();
+
+    component.ticketIncomplete = true;
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('.ticket-retrieval-note'))).toBeNull();
   });
 });
