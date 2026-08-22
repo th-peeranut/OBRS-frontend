@@ -530,6 +530,7 @@
       "SYSTEM_SETTINGS": "System Settings",
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation",
+      "VEHICLE_PL_REPORT": "Per-vehicle P&L",
       "EXPENSES": "Expenses",
       "MANUAL_REFUNDS": "Manual Refunds",
       "CASH_REFUND_APPROVALS": "Cash refund approvals",
@@ -1937,6 +1938,59 @@
       "ERROR": {
         "RANGE_INVALID": "The From date must be on or before the To date.",
         "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
+      }
+    },
+    "VEHICLE_PL_REPORT": {
+      "SUBTITLE": "Profit and loss for each vehicle, from ticket revenue and the recorded costs.",
+      "FILTER_FROM": "From",
+      "FILTER_TO": "To",
+      "VAT_NOTE": "Every amount already includes VAT. Fares are VAT-exempt, so input VAT cannot be reclaimed and is a real cost - the VAT figure is the part already inside the amount, never something to add on top.",
+      "MARGIN_NOTE": "A vehicle's margin is its own revenue minus its own costs. Central costs are not spread across the buses - they are subtracted exactly once, in the company total.",
+      "LOAD_FAILED": "The report could not be loaded. Please try again.",
+      "TABLE_TITLE": "Profit and loss by vehicle",
+      "EMPTY": "No vehicles have any figures in this date range.",
+      "OF_WHICH_VAT": "of which VAT",
+      "OF_WHICH_HISTORICAL": "of which imported historical revenue",
+      "HISTORICAL_CONFLICTS": "{{count}} day(s) where imported figures clashed with real sales",
+      "EXPAND_ARIA": "Show this vehicle's cost breakdown",
+      "COLLAPSE_ARIA": "Hide this vehicle's cost breakdown",
+      "ERROR": {
+        "RANGE_INVALID": "The start date must not be after the end date.",
+        "RANGE_TOO_LARGE": "The date range must not exceed 366 days."
+      },
+      "CARD": {
+        "REVENUE": "Total revenue",
+        "EXPENSES": "Total expenses",
+        "MARGIN": "Margin",
+        "PENDING_EXPENSES": "Costs awaiting approval",
+        "PENDING_EXPENSES_HINT": "Not yet subtracted from the margin"
+      },
+      "COL": {
+        "VEHICLE": "Vehicle",
+        "REVENUE": "Revenue",
+        "EXPENSES": "Expenses",
+        "VAT": "of which VAT",
+        "MARGIN": "Margin"
+      },
+      "COVERAGE": {
+        "SERVICE_WINDOW_UNKNOWN": "Service window unknown",
+        "OUTSIDE_SERVICE_WINDOW": "Outside its service window, yet money is attributed to it"
+      },
+      "ZERO": {
+        "RAN_NO_REVENUE": "Ran, but took no money",
+        "DID_NOT_RUN": "Did not run in this period",
+        "ENTERED_AS_ZERO": "Recorded as zero",
+        "NO_ENTRIES": "Nobody has recorded any cost"
+      },
+      "UNASSIGNED": {
+        "TITLE": "Revenue with no vehicle",
+        "HINT": "Money the system could not attribute to any vehicle - a data gap, not an accounting category. It is already counted in the company total above.",
+        "NONE": "None in this period."
+      },
+      "CENTRAL": {
+        "TITLE": "Central costs",
+        "HINT": "Costs that belong to no single vehicle. Subtracted exactly once in the company total, never averaged down onto the buses.",
+        "NONE": "None in this period."
       }
     },
     "EXPENSES": {
