@@ -18,6 +18,12 @@
   --admin-primary-fg: #006687; /* the accent used AS TEXT/icon on a surface, not as a fill */
   --admin-text-secondary: #3e484e; /* sits between --admin-text and --admin-muted */
   --admin-outline-soft: #eceef0; /* hairline separators - far softer than --admin-outline */
+  /* OBRS-1517: the colour of an inline text link on an admin/staff surface. This is the
+     EXACT Bootstrap default the anchors already inherited (4.50:1 on --admin-surface-card),
+     so light mode is unchanged; the token exists so the dark override below has somewhere
+     to live. Before it, an anchor with no colour of its own kept #0d6efd on the dark card
+     and measured 3.56:1. */
+  --admin-link: #0d6efd;
   /* The frosted modal panel. Translucent ON PURPOSE - the page shows through it, which is
      the whole look. Making it opaque "fixed" dark mode but quietly flattened light mode, so
      it is a themed TRANSLUCENT pair instead of a themed opaque one. */
@@ -272,6 +278,10 @@
   --admin-primary-fg: #6ec4e8;
   --admin-text-secondary: #c3ced5;
   --admin-outline-soft: #2f383e;
+  /* OBRS-1517: Bootstrap's own dark-mode link colour, not an invented shade - it stays
+     recognisably "a blue link" where --admin-primary-fg would make it read as accent text.
+     6.64:1 on --admin-surface-card (#1d2226) against the 3.56:1 the light literal gave. */
+  --admin-link: #6ea8fe;
   --admin-surface-modal: rgba(29, 34, 38, 0.92); /* --admin-surface-card, same translucency */
   /* NOTE: intentionally NO --admin-accepted-text override here. Like every
      other status pill (success/warning/danger), .is-accepted keeps its light
