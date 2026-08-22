@@ -4256,3 +4256,34 @@ regression lane also run clean off this worktree: **199/199 passed, 0
 failures, 13.3 min**.
 Artifacts left uncommitted in the worktree (not deleted, not committed):
 `e2e/tests/obrs-703-operations-config-qa.spec.ts`, `playwright.obrs703qa.config.ts`.
+
+---
+## OBRS-959 (2026-08-22, Scrutinize): SELF_FIXED — dead PrimeNG 21 focus selector
+`dark-theme.scss` `.my-bookings-action-menu` block shipped a keyboard-focus
+override written as `.p-menu-item:not(.p-disabled) > .p-menu-item-content.p-focus`.
+In PrimeNG 21 the `p-focus` class is toggled on the `.p-menu-item` <li>, not on
+`.p-menu-item-content` — verified in `node_modules/primeng/fesm2022/primeng-menu.mjs`
+menustyle `classes.item` (line ~45: `'p-focus': …` sits in the same array as
+`'p-menu-item'`, and the <li> template binds `[class]="cx('item')"`). So
+`.p-menu-item-content.p-focus` matched nothing and the focus highlight was DEAD.
+Corrected to `.p-menu-item.p-focus:not(.p-disabled) > .p-menu-item-content` (read
+the state class off the li, paint the child content div). The hover half was
+already correct (`.p-menu-item-content:hover` is a real element). Pattern to keep:
+when writing a `dark-theme.scss` override against a PrimeNG STATE class
+(`p-focus`/`p-highlight`/`p-disabled`), grep the vendor `*style.mjs` `classes` map
+to see which element carries the class before pinning the selector — neither the
+karma DOM spec (no pseudo-state) nor the `dark-override-effective` e2e gate (skips
+:hover/:focus) can catch a state-class selector aimed at the wrong element.
+
+## OBRS-768 Scrutinize self-fix (2026-08-22) — wrong contrast number in a comment
+
+The new `:host-context(body.is-dark)` block's "NOT TOUCHED HERE" note claimed the four
+`.status-badge` tints measure **4.50-6.61:1** ink-on-fill. Measured all four with the WCAG
+formula against their current tokens (`$text-red` is now `#c33334`, `$text-blue` `#2d7799`
+per variables.scss):
+  is-warning 4.50, is-success 4.55, is-danger 4.62, is-info 4.65.
+The true range is **4.50-4.65:1**; no badge reaches 6.61. Corrected the comment.
+Pattern (DEV-GOTCHAS "a comment stating the WRONG NUMBER becomes the next reader's false
+belief"): a "measured" range in a comment is still a claim — recompute it from the tokens the
+code actually resolves, don't trust the number's provenance label. The decision to keep the
+badges light is unaffected (all four clear AA 4.5:1); only the stated ceiling was wrong.
