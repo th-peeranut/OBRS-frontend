@@ -19,8 +19,10 @@
   border-radius: $radius-md;
   // OBRS-734: was rgba(255,255,255,.88) - a near-white panel that survived into dark mode
   // while the global theme flipped label text to #e7edf1, giving 1.03:1.
+  // OBRS-1234: the blur(20px) that stood here blurred what shows THROUGH the panel, and the
+  // panel is opaque now - nothing shows through, so it painted nothing and only cost a
+  // compositor layer.
   background: var(--admin-surface-modal);
-  backdrop-filter: blur(20px);
   box-shadow: 0 12px 32px rgba(25, 28, 30, 0.12);
 }
 
