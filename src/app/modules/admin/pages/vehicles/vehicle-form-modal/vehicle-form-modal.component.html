@@ -151,6 +151,40 @@
               ></app-admin-dropdown>
             </div>
             <div class="admin-form-field full">
+              <hr />
+              <h5 class="admin-form-subheading">{{ 'ADMIN.VEHICLES.DETAILS.SECTION_SERVICE_WINDOW' | translate }}</h5>
+              <!-- OBRS-885: before this card in_service_from/to had no write path at all —
+              every vehicle added from here was permanently "dates unknown", and the per-vehicle
+              P&L quietly reported SERVICE_WINDOW_UNKNOWN for a van bought yesterday. -->
+              <small class="admin-muted">{{ 'ADMIN.VEHICLES.DETAILS.SERVICE_WINDOW_HINT' | translate }}</small>
+            </div>
+            <div class="admin-form-field">
+              <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.IN_SERVICE_FROM' | translate }}</label>
+              <p-datePicker
+                formControlName="inServiceFrom"
+                styleClass="schedule-calendar-filter"
+                inputStyleClass="schedule-calendar-filter-input"
+                panelStyleClass="schedule-calendar-filter-panel"
+                dateFormat="dd/mm/yy"
+                [showIcon]="true"
+                [showButtonBar]="true"
+                [placeholder]="'ADMIN.VEHICLES.DETAILS.IN_SERVICE_UNKNOWN' | translate"
+              ></p-datePicker>
+            </div>
+            <div class="admin-form-field">
+              <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.IN_SERVICE_TO' | translate }}</label>
+              <p-datePicker
+                formControlName="inServiceTo"
+                styleClass="schedule-calendar-filter"
+                inputStyleClass="schedule-calendar-filter-input"
+                panelStyleClass="schedule-calendar-filter-panel"
+                dateFormat="dd/mm/yy"
+                [showIcon]="true"
+                [showButtonBar]="true"
+                [placeholder]="'ADMIN.VEHICLES.DETAILS.IN_SERVICE_STILL_RUNNING' | translate"
+              ></p-datePicker>
+            </div>
+            <div class="admin-form-field full">
               <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.NOTE' | translate }}</label>
               <textarea
                 class="admin-field"

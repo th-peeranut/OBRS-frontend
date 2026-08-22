@@ -855,6 +855,12 @@
         "GPS_IMEI_FORMAT": "GPS IMEI 必须为 15 位数字。",
         "ASSIGNED_DRIVER": "固定司机",
         "ASSIGNED_DRIVER_NONE": "无固定司机",
+        "SECTION_SERVICE_WINDOW": "服务期间",
+        "SERVICE_WINDOW_HINT": "仅在确实不知道日期时才将启用日留空——留空不等于「一直以来」，单车损益报表会区分这两者。车辆仍在运营时，退役日请留空。",
+        "IN_SERVICE_FROM": "启用日期",
+        "IN_SERVICE_TO": "退役日期",
+        "IN_SERVICE_UNKNOWN": "不详",
+        "IN_SERVICE_STILL_RUNNING": "仍在运营",
         "NOTE": "备注",
         "NOTE_PLACEHOLDER": "添加关于此车辆的其他备注（可选）"
       },
