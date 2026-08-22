@@ -22,6 +22,33 @@
   color: $primary-blue;
 }
 
+// ---- Draw-failure error (OBRS-1085) — mirrors route-map-home.component.scss's
+// `.route-error`/`.route-error-icon` (same tokens) so the two failure states
+// read as one system. Duplicated rather than shared because Angular's emulated
+// view encapsulation scopes a component-scoped rule to elements written in
+// THAT component's own template — the sibling's `.route-error` rule cannot
+// reach markup rendered here. Dark-mode and the `.p-button` severity override
+// ARE already covered without duplication: dark-theme.scss section 16 and
+// route-map-home.component.scss's `:host ::ng-deep .route-error .p-button`
+// both target plain/deep (unscoped) selectors under the `app-route-map-home`
+// host, and this component is only ever mounted inside that host's DOM
+// subtree (route-map-home.component.html, desktop + mobile).
+.route-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: $primary-white;
+  border: 1px solid $secondary-light-blue;
+  border-radius: $radius-xl;
+  padding: 1rem 1.25rem;
+  color: $text-softblack;
+}
+
+.route-error-icon {
+  color: $text-red;
+  font-size: 1.25rem;
+}
+
 // OBRS-769: $text-lightblack is 4.60:1 on white and 4.29:1 on the tint this
 // placeholder actually sits on ($secondary-lightgrey #edf9fe, declared eleven
 // lines up) — measured on the live page, which is the whole point of the card:
