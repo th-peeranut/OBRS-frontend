@@ -7,6 +7,8 @@ import {
   isVehicleStatusFilterStale,
   statusClass,
   toVehicleDtoFallback,
+  toDateControlValue,
+  toDateInputValue,
   toVehiclePayload,
   toVehicleRow,
   toVehicleStatusOptions,
@@ -309,6 +311,20 @@ describe('vehicles-page.mappers', () => {
       const values = buildVehicleFormValues({ id: 1, gpsImei: null }, row, 'en');
       expect(values['gpsImei']).toBe('');
     });
+
+    // OBRS-885: null rather than '' — these two controls are p-datePickers, whose empty
+    // value is null, and null is also what "not known" / "still in service" mean.
+    it('reads the service window into the form as local calendar Dates', () => {
+      const values = buildVehicleFormValues(
+        { id: 1, inServiceFrom: '2024-07-05', inServiceTo: null },
+        row,
+        'en'
+      );
+      const from = values['inServiceFrom'] as Date;
+
+      expect([from.getFullYear(), from.getMonth() + 1, from.getDate()]).toEqual([2024, 7, 5]);
+      expect(values['inServiceTo']).toBeNull();
+    });
   });
 
   describe('toVehiclePayload', () => {
@@ -383,6 +399,45 @@ describe('vehicles-page.mappers', () => {
 
       it('sends a NUMBER, not the select\'s string code', () => {
         expect(toVehiclePayload({ assignedDriverId: '55' }).assignedDriverId).toBe(55);
+      });
+    });
+
+    // OBRS-885: the fourth and fifth fields of that shape — `in_service_from` /
+    // `in_service_to`. Wrong here and an owner editing a colour resets the vehicle to
+    // "dates unknown", which surfaces only as a P&L row changing months later.
+    describe('service window (OBRS-885)', () => {
+      it('sends a blanked picker as null, and always serializes both keys', () => {
+        expect(toVehiclePayload({}).inServiceFrom).toBeNull();
+        expect(toVehiclePayload({ inServiceFrom: null }).inServiceFrom).toBeNull();
+        expect('inServiceFrom' in toVehiclePayload({})).toBe(true);
+        expect('inServiceTo' in toVehiclePayload({})).toBe(true);
+      });
+
+      /**
+       * The picker holds a Date; the backend takes a LocalDate. Built from the LOCAL
+       * calendar parts, never toISOString(): at UTC+7 a Date parked on local midnight
+       * serializes to the previous day in UTC, so every window would land one day early
+       * — silently, and only on the machines that are not on UTC.
+       */
+      it('serializes the local calendar day, not the UTC one', () => {
+        expect(toVehiclePayload({ inServiceFrom: new Date(2023, 8, 1) }).inServiceFrom).toBe(
+          '2023-09-01'
+        );
+        expect(toVehiclePayload({ inServiceTo: new Date(2026, 5, 17) }).inServiceTo).toBe(
+          '2026-06-17'
+        );
+      });
+
+      it('round-trips a "YYYY-MM-DD" string through the picker and back unchanged', () => {
+        expect(toDateInputValue(toDateControlValue('2024-07-05'))).toBe('2024-07-05');
+      });
+
+      it('reads an absent or malformed date as no date at all', () => {
+        expect(toDateControlValue(null)).toBeNull();
+        expect(toDateControlValue('')).toBeNull();
+        expect(toDateControlValue('not-a-date')).toBeNull();
+        expect(toDateInputValue(null)).toBe('');
+        expect(toDateInputValue(new Date(NaN))).toBe('');
       });
     });
 
