@@ -29,8 +29,31 @@ import { CUSTOMER_PAGES, seedCustomerSession, seedStore } from '../support/custo
 // path against /^e2e-evidence\//, and a variable it cannot resolve reads as an escape.
 const OUT_DIR = 'e2e-evidence/obrs-641';
 
-/** The customer pages that own a field this card touched. */
+/**
+ * Three pages this card changed that the shared fixture list can reach, plus two
+ * it did NOT change kept as controls: `find-booking` already carried hints before
+ * this card, and `track-parcel` is the field the card deliberately left alone.
+ */
 const PAGES = ['passenger-info', 'register', 'login-mobile', 'find-booking', 'track-parcel'];
+
+/**
+ * The other two pages this card changed. They are NOT in `CUSTOMER_PAGES` --
+ * `EXCLUDED_CUSTOMER_ROUTES` parks both as "NOT YET", and moving them in would
+ * change the OBRS-584 contrast gate's own population, which is not this card's
+ * business. They need no store seed, so the probe walks to them directly on the
+ * same mocked session. Without this the card's account-page and parcel-details-form
+ * edits would have had no evidence but the diff, while the manifest claimed the
+ * sweep covered every touched page (caught by Scrutinize).
+ *
+ * /parcel-booking only gets as far as its TRIP step here: the details step that owns
+ * senderPhone/recipientPhone is behind a trip selection this hermetic session cannot
+ * make. Its frame is therefore context, not proof -- the proof for that page is
+ * `parcel-details-form.component.spec.ts`, which asserts the same attributes.
+ */
+const EXTRA_PAGES: { key: string; url: string }[] = [
+  { key: 'account', url: '/account' },
+  { key: 'parcel-booking', url: '/parcel-booking' },
+];
 
 // BEFORE is produced by checking the seven templates back out from origin/dev and
 // re-running; an unlabelled pair proves nothing, so the label is stamped into both
@@ -78,18 +101,57 @@ test('OBRS-641 -- keyboard + autofill hints on the customer text inputs (390x844
   mkdirSync(OUT_DIR, { recursive: true });
   const all: Row[] = [];
 
-  for (const key of PAGES) {
-    const entry = CUSTOMER_PAGES.find((p) => p.key === key);
-    if (!entry) throw new Error(`CUSTOMER_PAGES has no entry '${key}' -- the fixture list moved under this probe`);
+  const targets = [
+    ...PAGES.map((key) => {
+      const entry = CUSTOMER_PAGES.find((p) => p.key === key);
+      if (!entry) throw new Error(`CUSTOMER_PAGES has no entry '${key}' -- the fixture list moved under this probe`);
+      return { key, url: entry.url, seed: entry.seed === true, storeOverride: entry.storeOverride };
+    }),
+    ...EXTRA_PAGES.map((e) => ({ ...e, seed: false, storeOverride: undefined })),
+  ];
+
+  for (const entry of targets) {
+    const key = entry.key;
 
     await seedCustomerSession(page, false);
+
+    // /account renders its edit form only once GET /api/private/users/me has
+    // returned a profile; the shared fixture map has no entry for it and answers
+    // `data: null`, so the page shows a retry card and no input at all. The
+    // override is LOCAL to this probe on purpose -- adding it to the shared
+    // fixtures would change what the OBRS-584 contrast gate sweeps.
+    if (key === 'account') {
+      await page.route('**/api/private/users/me', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            code: 200,
+            message: 'OK',
+            data: {
+              id: 1, title: 'Mr.', firstName: 'Somchai', middleName: null, lastName: 'Jaidee',
+              email: 'customer@system.local', phoneNumber: '0811111111', preferredLocale: 'en',
+              pdpaConsentVersion: null,
+            },
+          }),
+        }),
+      );
+    }
+
     await page.goto(entry.url);
     if (entry.seed) await seedStore(page, entry.storeOverride ? entry.storeOverride() : {});
     await page.waitForTimeout(1_200);
 
-    // The passenger-info fixture seeds useBookerInfo:true, which hides the
-    // passenger's OWN contact fields -- the very fields AC-3 is about. Untick it
-    // so the row this card changed is on screen and in the census.
+    // /account opens in READ state; the fields this card changed live behind the
+    // edit button.
+    if (key === 'account') {
+      const edit = page.locator('[data-testid="profile-edit"]');
+      if ((await edit.count()) > 0) {
+        await edit.click();
+        await page.waitForTimeout(400);
+      }
+    }
+
     if (key === 'passenger-info') {
       const useBooker = page.locator('#useBookerInfo-0');
       if ((await useBooker.count()) > 0 && (await useBooker.isChecked())) {
@@ -99,6 +161,9 @@ test('OBRS-641 -- keyboard + autofill hints on the customer text inputs (390x844
     }
 
     const rows = await page.evaluate(CENSUS);
+    // A page that rendered no input at all is a fixture failure wearing the costume
+    // of a clean sweep -- say so in the log rather than shipping an empty frame.
+    if (rows.length === 0) console.log(`\n!! ${key} (${entry.url}) rendered NO text input -- not evidence of anything`);
     all.push(...rows.map((r) => ({ page: key, ...r })));
 
     await page.evaluate(OVERLAY, [rows, key, LABEL] as [Omit<Row, 'page'>[], string, string]);
@@ -110,5 +175,5 @@ test('OBRS-641 -- keyboard + autofill hints on the customer text inputs (390x844
   }
 
   writeFileSync(`e2e-evidence/obrs-641/obrs-641-input-hints-${LABEL}.json`, JSON.stringify(all, null, 2));
-  console.log(`\n${all.length} text inputs measured across ${PAGES.length} pages -> ${OUT_DIR}`);
+  console.log(`\n${all.length} text inputs measured across ${targets.length} pages -> ${OUT_DIR}`);
 });
