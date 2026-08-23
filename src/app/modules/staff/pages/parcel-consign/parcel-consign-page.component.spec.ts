@@ -24,7 +24,26 @@ function createStaffApiStub(): any {
                 availableCount: 10,
                 reservedUnpaidCount: 0,
                 soldPaidCount: 0,
+                seatingMode: 'ASSIGNED',
                 availableSeatNumbers: ['A1', 'A2'],
+              },
+              // OBRS-615: an OPEN-seating trip that DOES carry a seat list — on OPEN the
+              // backend aggregates every seat on the vehicle however full it is, so a stub
+              // with an empty list here would prove nothing about the branch.
+              {
+                scheduleId: 43,
+                vehicleType: 'bus',
+                licensePlate: 'CD-5678',
+                driverName: 'Jane',
+                departureDateTime: '2026-07-14T09:30:00',
+                arrivalDateTime: '2026-07-14T19:30:00',
+                pricePerSeat: '300',
+                capacity: 21,
+                availableCount: 10,
+                reservedUnpaidCount: 0,
+                soldPaidCount: 0,
+                seatingMode: 'OPEN',
+                availableSeatNumbers: ['B1', 'B2'],
               },
             ],
           },
@@ -160,6 +179,7 @@ describe('ParcelConsignPageComponent', () => {
     expect(staffApi.getWalkInSchedules).toHaveBeenCalled();
     expect(component['scheduleOptions']).toEqual([
       { value: '42', label: 'Bangkok - Chiang Mai · 08:00 · bus' },
+      { value: '43', label: 'Bangkok - Chiang Mai · 09:30 · bus' },
     ]);
   });
 
@@ -478,6 +498,16 @@ describe('ParcelConsignPageComponent', () => {
     component['onScheduleChange']('42');
 
     expect(component['carryOnAvailableSeatNumbers']).toEqual(['A1', 'A2']);
+  });
+
+  it('onScheduleChange() offers NO seat numbers on an OPEN-seating trip, seat list or not (OBRS-615)', () => {
+    component.ngOnInit();
+    component['onScheduleChange']('42');
+    expect(component['carryOnAvailableSeatNumbers']).toEqual(['A1', 'A2']);
+
+    component['onScheduleChange']('43');
+
+    expect(component['carryOnAvailableSeatNumbers']).toEqual([]);
   });
 
   it('getParcelQuote() is called with parcelType=carry_on_seat once in carry-on mode', () => {
