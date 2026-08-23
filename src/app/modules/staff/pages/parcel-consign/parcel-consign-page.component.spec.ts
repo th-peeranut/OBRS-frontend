@@ -221,6 +221,7 @@ describe('ParcelConsignPageComponent', () => {
   });
 
   it('fetches a quote when quoteParamsChange emits complete params', () => {
+    component.ngOnInit(); // OBRS-616 — the quote pipeline is wired there
     component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
 
     expect(staffApi.getParcelQuote).toHaveBeenCalledWith({
@@ -241,12 +242,66 @@ describe('ParcelConsignPageComponent', () => {
   });
 
   it('maps a PARCEL_STOP_PAIR_NOT_PRICEABLE quote error to its i18n key', () => {
+    component.ngOnInit(); // OBRS-616 — the quote pipeline is wired there
     staffApi.getParcelQuote.and.returnValue(
       throwError(() => ({ error: { errorCode: 'PARCEL_STOP_PAIR_NOT_PRICEABLE' } }))
     );
     component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
 
     expect(component['quoteErrorKey']).toBe('STAFF.PARCEL_CONSIGN.ERROR.STOP_PAIR_NOT_PRICEABLE');
+  });
+
+  // OBRS-616 — two quote requests overlap whenever the salesperson changes a
+  // field faster than the API answers (debounce shortens that window, it does
+  // not close it). Which price the page ends up showing must be decided by
+  // which request was issued LAST, never by which response the network
+  // happened to deliver last. Walked red against the pre-fix plain
+  // `.subscribe()`: the stale 100 overwrote the fresh 180.
+  it('IGNORES an earlier quote response that arrives after a newer request was issued', () => {
+    component.ngOnInit();
+    const first$ = new Subject<any>();
+    const second$ = new Subject<any>();
+    staffApi.getParcelQuote.and.returnValues(first$.asObservable(), second$.asObservable());
+
+    component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
+    component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 9 });
+
+    second$.next({
+      code: 200,
+      message: 'OK',
+      data: { amount: 180, farePerUnit: 20, unitCount: 9, weightTierMultiplier: 1 },
+    });
+    first$.next({
+      code: 200,
+      message: 'OK',
+      data: { amount: 100, farePerUnit: 20, unitCount: 5, weightTierMultiplier: 1 },
+    });
+
+    expect(component['quote']).toEqual({ amount: 180, farePerUnit: 20, unitCount: 9, weightTierMultiplier: 1 });
+    expect(component['isLoadingQuote']).toBeFalse();
+  });
+
+  // OBRS-616 — same race, error branch: the stale response's own writer is
+  // `quote = null` + `quoteErrorKey`, so an earlier request FAILING late used
+  // to blank a price that the newer request had already answered correctly.
+  it('IGNORES an earlier quote ERROR that arrives after a newer request was issued', () => {
+    component.ngOnInit();
+    const first$ = new Subject<any>();
+    const second$ = new Subject<any>();
+    staffApi.getParcelQuote.and.returnValues(first$.asObservable(), second$.asObservable());
+
+    component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
+    component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 9 });
+
+    second$.next({
+      code: 200,
+      message: 'OK',
+      data: { amount: 180, farePerUnit: 20, unitCount: 9, weightTierMultiplier: 1 },
+    });
+    first$.error({ error: { errorCode: 'PARCEL_STOP_PAIR_NOT_PRICEABLE' } });
+
+    expect(component['quote']).toEqual({ amount: 180, farePerUnit: 20, unitCount: 9, weightTierMultiplier: 1 });
+    expect(component['quoteErrorKey']).toBeNull();
   });
 
   it('submits and sets the result on success (201)', () => {
