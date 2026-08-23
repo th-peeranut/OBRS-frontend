@@ -1786,3 +1786,73 @@ describe('HomeBookingComponent — "show route map" CTA (OBRS-1211)', () => {
     expect(emitSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * OBRS-1562. The CTA moved out of `.station-section` and into the actions row
+ * beside the search button, so the two facts that move with it are pinned here.
+ * The gate is the same store selector as before — the button names fields the
+ * visitor cannot see yet if the roster has not resolved — but it is now a
+ * SECOND `@if` rather than the station block's, and nothing else would notice
+ * if it were dropped. And the search button has to survive the frame where
+ * that gate is shut, which is why `.form-actions` is `justify-content:
+ * flex-end` with an auto margin on the hint instead of `space-between`.
+ */
+describe('HomeBookingComponent — form actions row (OBRS-1562)', () => {
+  async function setUp(stations: unknown): Promise<ComponentFixture<HomeBookingComponent>> {
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStubWithValue(stations) },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(HomeBookingComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('puts the map CTA and the search button in the same actions row', async () => {
+    const fixture = await setUp([STATION_1, STATION_2]);
+
+    const actions = fixture.debugElement.query(By.css('.form-actions'));
+    expect(actions).withContext('the actions row must exist').not.toBeNull();
+
+    expect(actions.query(By.css('[data-testid="show-route-map"]')))
+      .withContext('the map CTA belongs to the actions row now, not .station-section')
+      .not.toBeNull();
+    expect(actions.query(By.css('.btn-search')))
+      .withContext('the search button shares that row')
+      .not.toBeNull();
+
+    expect(fixture.debugElement.query(By.css('.station-section [data-testid="show-route-map"]')))
+      .withContext('and it must no longer sit inside the field row it used to split')
+      .toBeNull();
+  });
+
+  it('keeps the search button when the station roster has not resolved', async () => {
+    const fixture = await setUp(null);
+
+    expect(fixture.debugElement.query(By.css('[data-testid="show-route-map"]')))
+      .withContext('the CTA stays gated on the roster after the move')
+      .toBeNull();
+    expect(fixture.debugElement.query(By.css('.form-actions .btn-search')))
+      .withContext('the search button is not gated and must still render')
+      .not.toBeNull();
+  });
+});

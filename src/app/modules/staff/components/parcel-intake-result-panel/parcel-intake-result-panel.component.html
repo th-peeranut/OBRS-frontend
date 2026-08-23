@@ -43,7 +43,13 @@
         }
         @if (!r.freeAisle) {
           <dt>{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.SEATS' | translate }}</dt>
-          <dd>{{ (r.seatNumbers ?? []).join(', ') }}</dd>
+          <!-- OBRS-615: an OPEN-seating trip charges the same seat units but has no seat number to
+               name, so the server returns an empty list - say so instead of an empty line. -->
+          @if ((r.seatNumbers ?? []).length) {
+            <dd>{{ (r.seatNumbers ?? []).join(', ') }}</dd>
+          } @else {
+            <dd>{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.OPEN_SEATING' | translate }}</dd>
+          }
           <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.AMOUNT' | translate }}</dt>
           <dd>{{ r.amount }}</dd>
         }
