@@ -253,4 +253,37 @@ describe('BookerInfoFormComponent', () => {
       expect(img).not.toBeNull();
     });
   });
+  // OBRS-641: on a phone these fields opened the full QWERTY keyboard and the browser had no
+  // token to autofill the customer's own contact details against. inputmode is a keyboard hint
+  // only - the phone rule above still owns validation and must not soften to match it.
+  describe('mobile keyboard + autofill hints (OBRS-641)', () => {
+    function inputEl(id: string): HTMLInputElement {
+      const el = fixture.nativeElement.querySelector(`#${id}`) as HTMLInputElement | null;
+      if (!el) {
+        throw new Error(`Input #${id} not found in the rendered template`);
+      }
+      return el;
+    }
+
+    it('the phone field opens the telephone keypad and offers the tel autofill', () => {
+      const el = inputEl('booker-phoneNumber');
+      expect(el.getAttribute('inputmode')).toBe('tel');
+      expect(el.getAttribute('autocomplete')).toBe('tel');
+    });
+
+    it('the name and email fields carry their matching autofill tokens', () => {
+      expect(inputEl('booker-firstName').getAttribute('autocomplete')).toBe('given-name');
+      expect(inputEl('booker-middleName').getAttribute('autocomplete')).toBe('additional-name');
+      expect(inputEl('booker-lastName').getAttribute('autocomplete')).toBe('family-name');
+      expect(inputEl('booker-email').getAttribute('autocomplete')).toBe('email');
+    });
+
+    // AC-6: the keypad lets you type 4 digits just as happily as 10. The validator is what
+    // rejects them, and it is unchanged.
+    it('still rejects a phone number the keypad would happily let you type', () => {
+      const ctrl = component.bookerForm.get('phoneNumber');
+      ctrl?.setValue('0812');
+      expect(ctrl?.valid).toBeFalse();
+    });
+  });
 });
