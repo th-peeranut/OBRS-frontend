@@ -2920,7 +2920,11 @@ export type OperationsConfigReqDto = Omit<
 
 /** One row of `GET /api/private/owner/parcel-share/monthly` — OBRS-960. */
 export interface ParcelShareMonthlyRowDto {
-  payeeUserId: number;
+  /**
+   * OBRS-1009: null on a "no salesperson — the driver kept it" row. Those shares are reported as
+   * one line per cause instead of under the driver's name, so they name no person and carry no id.
+   */
+  payeeUserId: number | null;
   payeeName: string;
   total: string;
 }

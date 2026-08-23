@@ -100,6 +100,21 @@ const perHeadEarningsStoreStub = {
 };
 
 describe('ReportsPageComponent', () => {
+  // OBRS-1009: the monthly report now carries "no salesperson - the driver kept it" rows, one
+  // per cause, each with payeeUserId null. Tracking by the id alone gave them all the same key
+  // and @for rejects duplicates, so a month with two causes would have thrown on render.
+  it('gives every null-payee fallback row its own track key', () => {
+    const store = makeStoreStub(null);
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
+    const trackBy = (component as any).trackByPayeeId.bind(component);
+
+    const first = trackBy(0, { payeeUserId: null, payeeName: 'no sales point', total: '50.00' });
+    const second = trackBy(1, { payeeUserId: null, payeeName: 'salesperson deleted', total: '20.00' });
+
+    expect(first).not.toEqual(second);
+    expect(trackBy(2, { payeeUserId: 7, payeeName: 'a real salesperson', total: '10.00' })).toBe(7);
+  });
+
   it('should create', () => {
     const store = makeStoreStub(null);
     const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
