@@ -15,6 +15,12 @@
       "why": "OBRS-1521. Measures the ONE population customer-contrast-gate.spec.ts refuses to score: `MEASURE` skips every element under `[disabled]` and every element under `opacity < 1`, so PrimeNG's global `.p-disabled { opacity: .6 }` has never been scored on any page in either theme. CAPTURE rather than GATE because it reports composited ratios and screenshots for the card; it asserts only that the population is non-empty, since a census that measured nothing reads as a clean sweep. Hermetic on the gate lane's terms -- it reuses seedCustomerSession, so every /api/** call is fulfilled in-browser."
     },
     {
+      "spec": "obrs-641-input-hints-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs641.config.ts",
+      "why": "OBRS-641. Reads `inputmode`/`autocomplete` off the live DOM at a 390x844 phone viewport and paints what it read onto the page before shooting it. Seven frames: the FIVE pages the card changed (passenger-info, register, login-mobile, account, parcel-booking -- the last two walked to directly, because EXCLUDED_CUSTOMER_ROUTES parks them as 'NOT YET' and moving them into CUSTOMER_PAGES would change the OBRS-584 contrast gate's own population), plus find-booking and track-parcel as untouched controls. /parcel-booking reaches only its trip step here -- the details step with the two phone fields sits behind a trip selection this hermetic session cannot make, so THAT page's evidence is the unit spec in parcel-details-form.component.spec.ts, not this frame. The first version of this entry said 'the five customer pages that own a field the card touched' while shooting two pages the card never touched and missing two it did -- a screenshot cannot show a mobile OS keyboard, so the evidence has to be the attribute the keyboard is chosen from. CAPTURE rather than GATE because the enforcing tests are the unit specs in booker-info-form/passenger-info-form; this exists to make the AFTER image checkable. Hermetic on the gate lane's terms -- it reuses seedCustomerSession, so every /api/** call is fulfilled in-browser."
+    },
+    {
       "spec": "obrs-1388-qa-regression.spec.ts",
       "lane": "OWN-DB",
       "config": "playwright.obrs1388qa.config.ts",
