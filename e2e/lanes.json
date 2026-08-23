@@ -63,6 +63,12 @@
       "why": "Fulfils every /api/** call from its own fixture and seeds no session at all. Measures the station bar's geometry at this lane's pinned 1280px viewport -- the ROW layout the three Karma specs cannot reach, because their window is 800px and the 992px stack switch is a viewport query."
     },
     {
+      "spec": "obrs-1189-search-bar.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-1189. Fulfils every /api/** call from its own fixture and seeds no session -- same shape as obrs-1038-station-seam above, and here for the same reason one card further on: the date fields and the search button are segments of that bar now, and every claim about them is a cascade-at-a-viewport-width fact Karma's 800px window cannot ask. It also measures the one thing geometry alone misses, whether the VALUE fits the segment it was given (scrollWidth - clientWidth), which is how OBRS-1562's narrower field shipped reading a date with the year cut off."
+    },
+    {
       "spec": "obrs-1222-station-load-error.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
