@@ -317,8 +317,14 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     this.parcelShareMonthlyStore.setPeriod(this.selectedYear, this.selectedMonth);
   }
 
-  protected trackByPayeeId(_index: number, row: ParcelShareMonthlyRowDto): number {
-    return row.payeeUserId;
+  /**
+   * OBRS-1009: `payeeUserId` is null on the report's "no salesperson — the driver kept it" rows,
+   * and a month can carry more than one of them (one per cause). Tracking by the id alone gave
+   * every such row the same key, which `@for` rejects as a duplicate — so the index is the
+   * tie-breaker for exactly those rows, and real payees keep their stable id.
+   */
+  protected trackByPayeeId(index: number, row: ParcelShareMonthlyRowDto): number | string {
+    return row.payeeUserId ?? `fallback-${index}`;
   }
 
   protected get selectedYearStr(): string {
