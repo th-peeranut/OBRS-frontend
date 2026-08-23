@@ -3,6 +3,9 @@ import { convertToParamMap, ActivatedRoute } from '@angular/router';
 import { ParcelDeliveryListPageComponent } from './parcel-delivery-list-page.component';
 import { ParcelDeliveryListItemDto } from '../../../../shared/interfaces/parcel.interface';
 import { createTranslateStub } from '../../../../testing/test-stubs';
+import { errorCodeFromMessageKey } from '../../../../shared/lib/api-error-code';
+
+const RATE_LIMITED_CODE = errorCodeFromMessageKey('parcel.error.collect-rate-limited');
 
 function makeRouteStub(scheduleId: string): ActivatedRoute {
   return { snapshot: { paramMap: convertToParamMap({ scheduleId }) } } as unknown as ActivatedRoute;
@@ -154,6 +157,27 @@ describe('ParcelDeliveryListPageComponent', () => {
 
     expect(component['collectErrorKey']).toBe('STAFF.PARCEL_DELIVERY.ERROR.CODE_MISMATCH');
     expect(component['collectDialogParcelId']).toBe(7); // stays open so staff can retry
+  });
+
+  it('OBRS-1545: confirmCollect() names the temporary lock on the rate-limit 429, not WRONG_STATE', () => {
+    const store = makeStoreStub([makeRow({ parcelId: 7, deliveryStatus: 'arrived_notified' })]);
+    const staffApi = {
+      collectParcel: jasmine.createSpy().and.returnValue(
+        // The 429 `ParcelCollectAttemptService.checkNotBlocked()` throws once the
+        // parcel has 5 failed attempts inside the 15-minute window. Its code is
+        // DERIVED from the messageKey (RateLimitException carries no explicit
+        // one), so derive it here too rather than hand-typing the wire form.
+        throwError(() => ({ error: { errorCode: RATE_LIMITED_CODE } }))
+      ),
+    } as any;
+    const component = new ParcelDeliveryListPageComponent(makeRouteStub('42'), staffApi, makeAlertStub(), createTranslateStub(), store);
+    component.ngOnInit();
+    component['openCollectDialog'](makeRow({ parcelId: 7 }));
+
+    component['confirmCollect']('WRONG');
+
+    expect(component['collectErrorKey']).toBe('STAFF.PARCEL_DELIVERY.ERROR.COLLECT_RATE_LIMITED');
+    expect(component['collectDialogParcelId']).toBe(7);
   });
 
   describe('OBRS-396 — unpaid rows are flagged and blocked, never hidden', () => {

@@ -3818,6 +3818,7 @@
       },
       "ERROR": {
         "CODE_MISMATCH": "This collection code does not match.",
+        "COLLECT_RATE_LIMITED": "Too many wrong codes. This parcel is locked for 15 minutes — try again after that.",
         "ALREADY_COLLECTED": "This parcel has already been collected.",
         "WRONG_STATE": "This parcel is not in the expected state. The list has been refreshed.",
         "BOOKING_NOT_CONFIRMED": "This parcel is not paid for. Take payment on the booking before handing it over.",
