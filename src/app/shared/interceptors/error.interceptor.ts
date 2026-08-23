@@ -10,10 +10,7 @@ import { Subscription, throwError } from 'rxjs';
 import { catchError, finalize, tap, timeout } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../services/alert.service';
-import {
-  APP_LANGUAGE_KEY,
-  DEFAULT_LANGUAGE,
-} from '../services/language.service';
+import { readStoredLanguage } from '../services/language.service';
 import { resolveApiAlertMessage } from '../lib/api-error';
 import {
   ApiLatencyTelemetryService,
@@ -121,7 +118,7 @@ export const errorInterceptor: HttpInterceptorFn = (
       if (!translate) {
         return undefined;
       }
-      const chosen = localStorage.getItem(APP_LANGUAGE_KEY) || DEFAULT_LANGUAGE;
+      const chosen = readStoredLanguage();
       if (!translate.translations?.[chosen]) {
         return undefined;
       }
