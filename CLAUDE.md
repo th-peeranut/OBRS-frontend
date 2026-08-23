@@ -161,8 +161,8 @@ npm start                          # Dev server on http://localhost:4200, agains
 npm run start:local                # Dev server against the local backend (http://localhost:8000)
 ng build                           # Production build
 ng build --configuration sit       # SIT build
-ng test --watch=false --browsers ChromeHeadless   # CI-safe test run
-ng test                            # Interactive test (opens browser)
+ng test --watch=false           # Unit tests; headless by default (angular.json pins browsers=ChromeHeadless, same as CI)
+ng test --watch=false --browsers Chrome            # Same run in a VISIBLE Chrome window - only when you need to debug by eye (OBRS-1563)
 npx tsc --noEmit -p tsconfig.app.json              # Authoritative type check
 ```
 

@@ -174,6 +174,7 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
 
   private printPortalHost: HTMLElement | null = null;
   private printPortalOutlet: DomPortalOutlet | null = null;
+  private printTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly handleAfterPrint = (): void => this.disposePrintPortal();
 
   /** Ticket ids with a board() call in flight (button spinner/disabled state). */
@@ -1354,7 +1355,7 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     this.printPortalOutlet.attach(new TemplatePortal(this.printTemplate, this.viewContainerRef));
 
     window.addEventListener('afterprint', this.handleAfterPrint);
-    setTimeout(() => window.print(), 0);
+    this.printTimer = setTimeout(() => window.print(), 0);
   }
 
   /**
@@ -1365,6 +1366,10 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * portal host would otherwise leak as an orphaned `document.body` node).
    */
   private disposePrintPortal(): void {
+    if (this.printTimer) {
+      clearTimeout(this.printTimer);
+      this.printTimer = null;
+    }
     if (!this.printPortalHost) {
       return;
     }
