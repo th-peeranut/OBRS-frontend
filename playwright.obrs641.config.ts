@@ -38,7 +38,15 @@ export default defineConfig({
     },
   },
 
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // The viewport is repeated AFTER the device spread on purpose: `devices['Desktop Chrome']`
+  // carries its own 1280x720 viewport, and a project-level `use` beats the top-level one --
+  // so the first run of this probe shot a desktop page while the title said 390x844.
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
+    },
+  ],
 
   webServer: {
     command: `npx ng serve --configuration gate --port ${PORT} --no-live-reload`,

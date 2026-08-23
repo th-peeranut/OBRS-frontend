@@ -55,18 +55,23 @@ const CENSUS = (): Omit<Row, 'page'>[] =>
       autocomplete: el.getAttribute('autocomplete') ?? '-',
     }));
 
-/** Paint the measured values onto the page so the PNG carries its own proof. */
+/**
+ * Paint the measured values onto the page so the PNG carries its own proof.
+ * Prepended to <body> rather than fixed-positioned: at 390px a fixed panel sits
+ * on top of the very fields it is describing, and a full-page shot renders it
+ * wherever the viewport happened to be.
+ */
 const OVERLAY = ([rows, title, label]: [Omit<Row, 'page'>[], string, string]): void => {
   const box = document.createElement('div');
   box.setAttribute('style', [
-    'position:fixed', 'inset:0 0 auto 0', 'z-index:2147483647',
-    'background:#101418', 'color:#e8eef5', 'font:11px/1.45 monospace',
-    'padding:8px 10px', 'border-bottom:2px solid #4da3ff',
+    'position:relative', 'z-index:2147483647',
+    'background:#101418', 'color:#e8eef5', 'font:9px/1.5 monospace',
+    'padding:8px 10px', 'border-bottom:2px solid #4da3ff', 'white-space:pre-wrap',
   ].join(';'));
-  const lines = rows.map((r) => `${r.id}  |  inputmode=${r.inputmode}  |  autocomplete=${r.autocomplete}`);
-  box.textContent = `OBRS-641 AFTER -- ${title}\n` + lines.join('\n');
-  box.style.whiteSpace = 'pre';
-  document.body.appendChild(box);
+  const lines = rows.map((r) => `${r.id}\n    inputmode=${r.inputmode}  autocomplete=${r.autocomplete}`);
+  box.textContent = `OBRS-641 ${label} -- ${title}\n` + lines.join('\n');
+  document.body.insertBefore(box, document.body.firstChild);
+  window.scrollTo(0, 0);
 };
 
 test('OBRS-641 -- keyboard + autofill hints on the customer text inputs (390x844)', async ({ page }) => {
