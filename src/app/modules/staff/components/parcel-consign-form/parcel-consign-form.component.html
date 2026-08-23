@@ -217,6 +217,9 @@
                       <small class="admin-error">{{ err | translate }}</small>
                     }
                   </div>
+                  <!-- OBRS-615: hidden on an OPEN-seating trip - it has no seat list to offer and
+                       the server rejects a named seat there (PARCEL_SEAT_NUMBERS_NOT_ALLOWED_OPEN). -->
+                  @if (canSpecifySeats) {
                   <div class="col-12">
                     <div class="form-check">
                       <input type="checkbox" class="form-check-input" id="specifySeats" formControlName="specifySeats" />
@@ -251,6 +254,7 @@
                         </div>
                       }
                     </div>
+                  }
                   }
 
                   <div class="col-12">

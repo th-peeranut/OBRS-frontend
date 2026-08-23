@@ -311,6 +311,19 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
     if (changes['mode'] && !changes['mode'].firstChange) {
       this.resetForMode(changes['mode'].currentValue as ParcelConsignMode);
     }
+    // OBRS-615: switching to a trip with no seat list (an OPEN-seating one) must also drop a
+    // seat choice made on the previous trip - the checkbox that produced it is gone, so nothing
+    // else would ever clear it and it would ride along into the next submit.
+    if (changes['availableSeatNumbers'] && !this.canSpecifySeats) {
+      this.selectedSeatNumbers = [];
+      this.form.get('specifySeats')?.setValue(false);
+    }
+  }
+
+  /** OBRS-615: an OPEN-seating trip has no seat to pick - the page passes an empty list there
+   * and the backend rejects any named seat on such a trip, so the whole opt-in is hidden. */
+  protected get canSpecifySeats(): boolean {
+    return this.availableSeatNumbers.length > 0;
   }
 
   ngOnDestroy(): void {

@@ -14,6 +14,10 @@ import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
+import {
+  APP_LANGUAGE_KEY,
+  DEFAULT_LANGUAGE,
+} from '../../shared/services/language.service';
 
 interface RouteListResponse {
   status: string;
@@ -26,7 +30,8 @@ interface RouteListResponse {
 })
 export class RouteMapService {
   /**
-   * Session-scoped in-memory request-dedup cache, keyed by request URL.
+   * Session-scoped in-memory request-dedup cache, keyed by request URL (plus the
+   * request language where the response is localized — see `languageScopedKey`).
    * Intentionally lighter than the map's two-tier Directions cache
    * (localStorage + TTL) — this is purely a dedup so N callers asking for the
    * same route on one page fire a single HTTP call; the server already
@@ -47,11 +52,28 @@ export class RouteMapService {
 
   getPickupDropoff(slug: string): Observable<RoutePickupDropoffResponse> {
     const url = `${environment.apiUrl}/api/routes/${slug}/pickup-dropoff`;
-    return this.shared(url, () =>
+    return this.shared(this.languageScopedKey(url), () =>
       this.http.get<RoutePickupDropoffResponse>(url, {
         context: this.selfHandledContext(),
       })
     );
+  }
+
+  /**
+   * OBRS-929: this payload's stop names, addresses and province labels are localized by the
+   * BACKEND from the request's `Accept-Language` header, so one entry per URL would replay the
+   * first language's payload for the rest of the page — the browser-side half of the trap the
+   * backend already guards on its own cache (`RouteStopService` puts the language in its key).
+   *
+   * The language is read from localStorage exactly as `authInterceptor` reads it to BUILD that
+   * header, not from `TranslateService`: the key then cannot disagree with what was actually
+   * sent, and this service keeps its single `HttpClient` dependency.
+   *
+   * `getActiveRoutes` deliberately keeps the bare URL — `/api/routes` ships `translations` for
+   * all three languages in one payload, so it is the same bytes whatever the header says.
+   */
+  private languageScopedKey(url: string): string {
+    return `${url}|${localStorage.getItem(APP_LANGUAGE_KEY) || DEFAULT_LANGUAGE}`;
   }
 
   /**
