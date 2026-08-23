@@ -1,7 +1,7 @@
 # ADR-0035 — Promote `dev` → `sit` only for what only SIT can prove
 
 **Date:** 2026-07-30
-**Status:** Accepted
+**Status:** Accepted — amended 2026-08-23 (OBRS-1557: §Scope now names the GitHub Actions bill it used to wave through)
 **Card:** OBRS-912 (the policy half; the structural half is OBRS-911)
 
 ---
@@ -126,8 +126,10 @@ metered. Measured 2026-08-23 over 08-01→08-23 by rounding each job up the way 
 it (`gh api repos/th-peeranut/OBRS-backend/actions/runs?created=">=2026-08-01"`, then
 `/jobs` for every run): `OBRS-backend` spent **1,991 of the account's 2,000** monthly
 minutes, roughly **35** of them per push into `sit`; `OBRS-frontend` spent **0** across 490
-CI runs in the same window, because it is public. So the promote discipline in this ADR
-governs the half of the pipeline that is free and is silent on the half that pays.
+CI runs in the same window, because it is public. Free of Actions minutes is all that
+means — `OBRS-frontend` is still the repo paying the ~15 Netlify credits a deploy that this
+ADR is entirely about. So the promote discipline decided here governs the repo that pays
+credits and not minutes, and is silent on the repo that pays minutes and not credits.
 OBRS-1557 owns that gap; do not read "unaffected" as covering it. Both figures are
 measurements with a date on them — do not freeze either into a gate or an acceptance
 criterion, for the same reason "15 credits" is not frozen into one below.
