@@ -85,12 +85,33 @@ machine:
 - Google sign-in
 - OTP / SMS (ThaiBulkSMS)
 - outbound email (Brevo)
-- MapTiler map tiles
+- MapTiler map tiles (frontend only)
 - GPS ingest (ThaiStar push webhook)
 
 This is not a new rule so much as the written form of one already in use — work against
 an external API has always had to reach SIT before its evidence capture, because a local
 mock cannot produce that evidence.
+
+**One list, two repos, and a marker where a line does not reach both.** OBRS-1557 extended
+the SIT-promote gate to `OBRS-backend`, which promotes to a `sit` of its own and pays
+GitHub Actions minutes for the CI that runs there — see §Scope. The bullets above stay a
+single list, because a second copy is a copy that drifts. But a line one repo cannot
+exercise is not a reason that repo may name, so a bullet may end in `(frontend only)` or
+`(backend only)` and the gate honours it; an unmarked bullet is available to both.
+
+Exactly one line carries a marker today: **MapTiler is frontend only.** Measured 2026-08-23
+against `OBRS-backend@dev` — `grep -rli maptiler src/` returns 2 files,
+`payment-page-expected-headers.properties` and `CspAllowlistMatchesInventoryTest.java`, and
+both are the CSP allow-list string the backend *serves*. There is no client, no key and no
+request to `api.maptiler.com` in the backend, so a backend promote naming "maptiler" would
+be naming work it cannot do. The counter-argument was weighed and rejected: the backend does
+own the header that names `api.maptiler.com`, but a change to that header is a change to
+the *CSP*, and a CSP is proven by loading the real page against the real origins — which is
+what the frontend's own promote is for.
+
+The marker is not a licence to fork the list. Adding an integration still means adding one
+bullet; a marker is only for a line that provably cannot be reached from one side, and the
+proof belongs here, next to it, rather than in the gate.
 
 Everything else — component behaviour, routing, forms, i18n, styling, dark mode,
 accessibility, guards, state — is verified locally against the SIT backend, and simply
