@@ -176,8 +176,48 @@ describe('ParcelDeliveryListPageComponent', () => {
 
     component['confirmCollect']('WRONG');
 
-    expect(component['collectErrorKey']).toBe('STAFF.PARCEL_DELIVERY.ERROR.COLLECT_RATE_LIMITED');
+    // OBRS-1553: this 429 carries no `retryAfterSeconds` (a backend older than that
+    // card, which is what every deployed backend was until it shipped), so the copy
+    // that names a number must NOT be the one chosen - it would render an empty gap.
+    expect(component['collectErrorKey']).toBe('STAFF.PARCEL_DELIVERY.ERROR.COLLECT_RATE_LIMITED_UNKNOWN_WAIT');
+    expect(component['collectErrorParams']).toBeNull();
     expect(component['collectDialogParcelId']).toBe(7);
+  });
+
+  it('OBRS-1553: the minutes shown come from the 429 body, not from a hard-coded window', () => {
+    const store = makeStoreStub([makeRow({ parcelId: 7, deliveryStatus: 'arrived_notified' })]);
+    const staffApi = {
+      collectParcel: jasmine.createSpy().and.returnValue(
+        // 5 minutes LEFT of the block - not the 15-minute window. Before this card the
+        // copy said 15 whatever the server thought, because the number lived in the
+        // frontend's own i18n files.
+        throwError(() => ({ error: { errorCode: RATE_LIMITED_CODE, retryAfterSeconds: 300 } }))
+      ),
+    } as any;
+    const component = new ParcelDeliveryListPageComponent(makeRouteStub('42'), staffApi, makeAlertStub(), createTranslateStub(), store);
+    component.ngOnInit();
+    component['openCollectDialog'](makeRow({ parcelId: 7 }));
+
+    component['confirmCollect']('WRONG');
+
+    expect(component['collectErrorKey']).toBe('STAFF.PARCEL_DELIVERY.ERROR.COLLECT_RATE_LIMITED');
+    expect(component['collectErrorParams']).toEqual({ minutes: 5 });
+  });
+
+  it('OBRS-1553: a partial minute rounds UP - never tell a driver to come back before the block lifts', () => {
+    const store = makeStoreStub([makeRow({ parcelId: 7, deliveryStatus: 'arrived_notified' })]);
+    const staffApi = {
+      collectParcel: jasmine.createSpy().and.returnValue(
+        throwError(() => ({ error: { errorCode: RATE_LIMITED_CODE, retryAfterSeconds: 61 } }))
+      ),
+    } as any;
+    const component = new ParcelDeliveryListPageComponent(makeRouteStub('42'), staffApi, makeAlertStub(), createTranslateStub(), store);
+    component.ngOnInit();
+    component['openCollectDialog'](makeRow({ parcelId: 7 }));
+
+    component['confirmCollect']('WRONG');
+
+    expect(component['collectErrorParams']).toEqual({ minutes: 2 });
   });
 
   describe('OBRS-396 — unpaid rows are flagged and blocked, never hidden', () => {
