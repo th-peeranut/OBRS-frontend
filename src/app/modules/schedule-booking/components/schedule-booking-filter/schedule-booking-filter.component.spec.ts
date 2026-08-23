@@ -1286,3 +1286,65 @@ describe('ScheduleBookingFilterComponent — one press of ค้นหา is one
     expect(searches[0].schedule_filter.numberOfPassengers).toBe(1);
   });
 });
+
+// The twin of home-booking's "search bar actions" describe. Scrutinize caught
+// that only home had it: both screens got the same structural move, but if
+// someone re-nests THIS button the stylesheet it shares by `@import` goes on
+// claiming a bar it no longer builds, and nothing goes red. Karma's window is
+// 800px so the >=993px `order`/width branch is E2E-only either way -- what is
+// testable here, and what the whole desktop branch rests on, is that the button
+// is a DIRECT child of the bar.
+describe('ScheduleBookingFilterComponent — the search button is a segment of the bar (OBRS-1189 AC#3)', () => {
+  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingFilterComponent, StationLoadErrorComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: AlertService, useValue: { warning: () => {} } },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
+    fixture.detectChanges();
+  });
+
+  it('renders the button inside .station-section, not in a row wrapper of its own', () => {
+    const bar = fixture.debugElement.query(By.css('.station-section'));
+    expect(bar).withContext('the search bar must exist').not.toBeNull();
+
+    const button = bar.query(By.css('.btn-search'));
+    expect(button)
+      .withContext('AC#3: the search button is a segment of the bar')
+      .not.toBeNull();
+
+    // Direct child, not merely a descendant: the `d-flex justify-content-end
+    // w-100` wrapper this card deleted was INSIDE `.station-section` too, and a
+    // 100%-wide row is exactly what put the button on a line of its own.
+    expect((button.nativeElement as HTMLElement).parentElement)
+      .toBe(bar.nativeElement as HTMLElement);
+  });
+
+  it('keeps the accessible name when the label is hidden between 993 and 1199', () => {
+    const button = fixture.debugElement.query(By.css('.station-section .btn-search'))
+      .nativeElement as HTMLElement;
+
+    // The label is what the stylesheet hides in that band; the aria-label is
+    // unconditional, which is the only reason hiding it is allowed.
+    expect(button.querySelector('.btn-search__label')).not.toBeNull();
+    expect(button.getAttribute('aria-label')).toBe('HOME.HOME_BOOKING.SEARCH');
+  });
+});
