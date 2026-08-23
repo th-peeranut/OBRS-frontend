@@ -5,6 +5,11 @@ import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../../auth/auth.service';
 import { AdminScheduleDto, parseAdminStatus } from '../../../../services/admin/admin-api.service';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import {
+  bangkokInstantMs,
+  controlValueToDateString,
+  splitApiOffsetDateTime,
+} from '../../../../shared/lib/api-date-time';
 import { DriverSchedulesStore } from '../driver-schedules/driver-schedules.store';
 import { StaffSchedulesStore } from '../staff-schedules/staff-schedules.store';
 
@@ -26,7 +31,13 @@ interface BoardingEntryRow {
 })
 export class BoardingEntryPageComponent implements OnInit, OnDestroy {
   protected rows: BoardingEntryRow[] = [];
+  protected filteredRows: BoardingEntryRow[] = [];
   protected isLoading = false;
+  // OBRS-33: this list used to render every schedule the store held, oldest
+  // first, so the first row on prod was 19 days in the past. One day at a
+  // time, today by default. Past days stay reachable (no `minDate`) — the
+  // point is a default that is useful, not hiding history.
+  protected selectedDate: Date | null = new Date();
   protected readonly skeletonRows = Array.from({ length: 4 });
 
   private readonly subscriptions = new Subscription();
@@ -88,7 +99,12 @@ export class BoardingEntryPageComponent implements OnInit, OnDestroy {
   }
 
   protected get isEmpty(): boolean {
-    return !this.isLoading && this.rows.length === 0;
+    return !this.isLoading && this.filteredRows.length === 0;
+  }
+
+  protected onDateChange(value: Date | null): void {
+    this.selectedDate = value;
+    this.applyFilter();
   }
 
   protected viewBoarding(row: BoardingEntryRow): void {
@@ -108,6 +124,21 @@ export class BoardingEntryPageComponent implements OnInit, OnDestroy {
         statusCode: status.code,
       };
     });
+    this.applyFilter();
+  }
+
+  private applyFilter(): void {
+    // '' when no date is selected — then nothing is filtered out.
+    const dayKey = controlValueToDateString(this.selectedDate);
+    this.filteredRows = this.rows
+      .filter((row) => !dayKey || splitApiOffsetDateTime(row.departure).date === dayKey)
+      // Soonest departure first. A row whose departure cannot be parsed sorts
+      // last rather than first: it cannot be the next trip to board.
+      .sort(
+        (a, b) =>
+          (bangkokInstantMs(a.departure) ?? Number.MAX_SAFE_INTEGER) -
+          (bangkokInstantMs(b.departure) ?? Number.MAX_SAFE_INTEGER)
+      );
   }
 
   private get currentLocale(): string {

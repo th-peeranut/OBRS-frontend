@@ -3613,7 +3613,7 @@
       "TITLE": "Select a Schedule",
       "SUBTITLE": "Choose a schedule to view its boarding list.",
       "EMPTY_TITLE": "No schedules available",
-      "EMPTY_BODY": "You have no schedules assigned. Please check back later."
+      "EMPTY_BODY": "No trips on the selected date. Pick another date."
     },
     "PARCEL_INTAKE": {
       "SUBTITLE": "Record a consigned parcel, or a carry-on item that needs its own seat."

@@ -571,6 +571,13 @@ Run this against any UI diff (and during the live-verify screenshot glance):
 - [ ] **Wide tables scroll, they don't overflow:** a table that can exceed the viewport
       sits in an `overflow-x: auto` wrapper; the shell itself never scrolls sideways.
       §6's `max-height: 60vh; overflow-y: auto` is the vertical half of the same rule.
+- [ ] **A list whose row count grows with time is bounded before it ships:** schedules,
+      bookings, parcels — anything that accumulates — needs a **default window** (the
+      day or period staff actually work in, never "everything since launch") and a way
+      to reach the rest (`app-admin-paginator`, or a date/period control that moves the
+      window). `/staff/schedules` and `/staff/boarding` shipped with neither and opened
+      on a trip 19 days in the past (OBRS-33). A window with no paginator is fine only
+      when one window provably fits a screen — put the measured row count in the UX spec.
 - [ ] **New pattern?** justified in the UX spec and locked with a spec test (§12).
 
 > **Where the eight rules above came from (OBRS-1327):** harvested once from the
@@ -794,7 +801,9 @@ enforced rule with a test behind it.
 - **Incremental "Load more" button for a low-volume customer-shell list**
   (OBRS-433, `MyReportsComponent`): the reporter's own usability-report list
   is low-volume/casual browsing, not a back-office table, so it does NOT use
-  `app-admin-paginator` (the page-number control every admin list uses).
+  `app-admin-paginator` (the page-number control 5 of the 50 `<table>`
+  templates under `src/app/modules/` use — measured 2026-08-23 on `a308e7d0`;
+  see the list-volume item in §11 for when a list owes you one).
   Instead `MyReportsStore.loadMore()` fetches the next server page and
   APPENDS it to the cached content (never replaces, no page-number/back
   state) via `AdminCollectionStore.mutate()` — a subclass-only addition, the
@@ -1265,9 +1274,11 @@ enforced rule with a test behind it.
   (`unfold_more`/`arrow_upward`/`arrow_downward`). It owns only the click rule
   (same column = flip, other column = restart at asc) and emits
   `{field, direction}`; it never reorders rows. **That last part is the rule, not
-  an implementation detail:** every admin list is server-paginated, so a header
-  that sorted the loaded page would order 20 of N rows and present the result as
-  the whole set. Adopt this on the next table whose endpoint accepts `sort`, and
+  an implementation detail:** on a paginated list a header that sorted the loaded
+  page would order 20 of N rows and present the result as the whole set. Most
+  lists here are NOT paginated (5 of 50 `<table>` templates, measured 2026-08-23
+  on `a308e7d0`) — on those a client-side sort would reorder whatever the endpoint
+  happened to return, which is the same lie with a different N. Adopt this on the next table whose endpoint accepts `sort`, and
   do NOT put an arrow on a column the backend cannot order by, or one whose
   ordering is arbitrary to the reader (an enum sorted by its stored English code
   behind a translated label).

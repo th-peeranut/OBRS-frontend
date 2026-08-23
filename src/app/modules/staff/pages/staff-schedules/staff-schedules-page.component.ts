@@ -19,6 +19,11 @@ import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import {
+  bangkokInstantMs,
+  controlValueToDateString,
+  splitApiOffsetDateTime,
+} from '../../../../shared/lib/api-date-time';
+import {
   ScheduleDeleteModalMode,
   resolveScheduleDeleteModalMode,
 } from '../../../../shared/lib/schedule-delete-mode';
@@ -73,6 +78,11 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
   protected searchKeyword = '';
   protected selectedRouteFilter = '';
   protected selectedStatusFilter = '';
+  // OBRS-33: the list used to render every schedule the API returned, oldest
+  // first, so the first row on prod was 19 days in the past. One day at a
+  // time, today by default. Past days stay reachable (no `minDate`) — the
+  // point is a default that is useful, not hiding history.
+  protected selectedDate: Date | null = new Date();
 
   protected readonly scheduleItemForm: FormGroup;
   // OBRS-667: whole-trip cancel (deletable===false path below) issues a
@@ -327,6 +337,11 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
     this.applyFilter();
   }
 
+  protected onDateChange(value: Date | null): void {
+    this.selectedDate = value;
+    this.applyFilter();
+  }
+
   protected onStatusFilterChange(value: string): void {
     this.selectedStatusFilter = String(value ?? '').trim().toLowerCase();
     this.applyFilter();
@@ -367,12 +382,24 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
     const keyword = this.searchKeyword.trim().toLowerCase();
     const routeFilter = this.selectedRouteFilter;
     const statusFilter = this.selectedStatusFilter;
-    this.filteredRows = this.rows.filter((row) => {
-      if (routeFilter && row.routeSlug.toLowerCase() !== routeFilter) return false;
-      if (statusFilter && row.statusCode.toLowerCase() !== statusFilter) return false;
-      if (!keyword) return true;
-      return [row.tripId, row.route, row.driver, row.vehicle].join(' ').toLowerCase().includes(keyword);
-    });
+    // '' when no date is selected — then nothing is filtered out by date.
+    const dayKey = controlValueToDateString(this.selectedDate);
+    this.filteredRows = this.rows
+      .filter((row) => {
+        if (dayKey && splitApiOffsetDateTime(row.departure).date !== dayKey) return false;
+        if (routeFilter && row.routeSlug.toLowerCase() !== routeFilter) return false;
+        if (statusFilter && row.statusCode.toLowerCase() !== statusFilter) return false;
+        if (!keyword) return true;
+        return [row.tripId, row.route, row.driver, row.vehicle].join(' ').toLowerCase().includes(keyword);
+      })
+      // OBRS-33: soonest departure first (the list used to arrive in id order).
+      // A row whose departure cannot be parsed sorts last rather than first:
+      // it cannot be the next trip to leave.
+      .sort(
+        (a, b) =>
+          (bangkokInstantMs(a.departure) ?? Number.MAX_SAFE_INTEGER) -
+          (bangkokInstantMs(b.departure) ?? Number.MAX_SAFE_INTEGER)
+      );
   }
 
   private get currentLocale(): string {
