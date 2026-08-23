@@ -1,5 +1,6 @@
 import { of, throwError } from 'rxjs';
 import { RouteMapService } from './route-map.service';
+import { APP_LANGUAGE_KEY } from '../../shared/services/language.service';
 
 function createHttpStub(responseData: unknown): any {
   return {
@@ -196,6 +197,83 @@ describe('RouteMapService', () => {
 
       expect(http.calls.length).toBe(2);
       expect(recovered).toBeTruthy();
+    });
+
+    // OBRS-929 AC-2. The payload is localized by the BACKEND from Accept-Language, which
+    // authInterceptor sets from this very localStorage key — so a cache keyed on the URL alone
+    // replays the first language's stop names and addresses for the rest of the page, and the
+    // language switch on /home looks broken no matter what the component does.
+    describe('language-scoped cache (OBRS-929)', () => {
+      const original = localStorage.getItem(APP_LANGUAGE_KEY);
+
+      afterEach(() => {
+        if (original === null) {
+          localStorage.removeItem(APP_LANGUAGE_KEY);
+        } else {
+          localStorage.setItem(APP_LANGUAGE_KEY, original);
+        }
+      });
+
+      function localizedHttpStub(): any {
+        return createCountingHttpStub(() =>
+          of({
+            data: {
+              pickup: [
+                {
+                  slug: 'nong_chak',
+                  name:
+                    localStorage.getItem(APP_LANGUAGE_KEY) === 'en'
+                      ? 'Nong Chak'
+                      : 'หนองชาก',
+                },
+              ],
+              dropoff: [],
+            },
+          })
+        );
+      }
+
+      it('asking in a second language refetches and returns THAT language payload', () => {
+        const http = localizedHttpStub();
+        const service = new RouteMapService(http);
+
+        localStorage.setItem(APP_LANGUAGE_KEY, 'th');
+        let th: any = null;
+        service.getPickupDropoffCached('corridor').subscribe((d) => (th = d));
+
+        localStorage.setItem(APP_LANGUAGE_KEY, 'en');
+        let en: any = null;
+        service.getPickupDropoffCached('corridor').subscribe((d) => (en = d));
+
+        expect(http.calls.length).toBe(2);
+        expect(th.pickup[0].name).toBe('หนองชาก');
+        expect(en.pickup[0].name).toBe('Nong Chak');
+      });
+
+      it('still dedupes WITHIN one language', () => {
+        const http = localizedHttpStub();
+        const service = new RouteMapService(http);
+
+        localStorage.setItem(APP_LANGUAGE_KEY, 'en');
+        service.getPickupDropoff('corridor').subscribe();
+        service.getPickupDropoffCached('corridor').subscribe();
+
+        expect(http.calls.length).toBe(1);
+      });
+
+      // /api/routes ships every language in one payload, so scoping its key would buy nothing
+      // and cost the map + booking form their shared call.
+      it('leaves /api/routes deduped across a language switch', () => {
+        const http = createCountingHttpStub(() => of({ data: [] }));
+        const service = new RouteMapService(http);
+
+        localStorage.setItem(APP_LANGUAGE_KEY, 'th');
+        service.getActiveRoutes().subscribe();
+        localStorage.setItem(APP_LANGUAGE_KEY, 'en');
+        service.getActiveRoutes().subscribe();
+
+        expect(http.calls.length).toBe(1);
+      });
     });
 
     it('propagates the failure to the raw caller; only the cached variant swallows it', () => {
