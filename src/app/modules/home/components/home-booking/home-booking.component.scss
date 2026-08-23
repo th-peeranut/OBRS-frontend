@@ -116,6 +116,33 @@
       margin-top: 30px;
     }
   }
+
+  // OBRS-1562 — the date fields take the row's leftover width instead of
+  // wrapping. Measured on prod 2026-08-23 the row needs 1108 of the 1136px
+  // content column, so at >=1200px this only shares out the 28px remainder;
+  // its real job is 993-1199px, where both fields shrink together rather than
+  // dropping `รอบวันกลับ` onto a line of its own.
+  //
+  // The basis is 190px and not the field's natural ~250px because a wrappable
+  // flex line WRAPS BEFORE IT SHRINKS: at 1100px the basis alone overflows the
+  // line by 9px, and the browser answers that by moving the second field to a
+  // row of its own, then growing both back to their max-width. Measured
+  // 250px basis -> 2 rows at 1100px; 190px -> 1 row, because 190 is what still
+  // fits beside the 506px station bar in the narrowest desktop column
+  // (993px viewport = 929px of content: 929 - 506 - 40 of gaps = 192 for two).
+  //
+  // The max-width is what keeps this from being the stretched-field
+  // anti-pattern: one-way mode renders a single date field, and with grow
+  // alone it would swell to ~610px to hold "อา., 23/08/2026".
+  // `>` and not a descendant match: `app-dropdown-group-obrs` wraps its own
+  // toggle in a `.form-group-obrs` too, so the loose selector reached inside
+  // `.station-group` and put a flex basis and a 320px cap on the two halves of
+  // the merged bar — the one element this card is not allowed to move.
+  > .form-group-obrs {
+    flex: 1 1 190px;
+    min-width: 0;
+    max-width: 320px;
+  }
 }
 
 // OBRS-928: when the quick-pick strip actually renders, pull the origin/
@@ -161,6 +188,24 @@ app-recent-routes-quick-pick.has-routes + .station-section {
 
   &:hover, &:focus-visible {
     color: $dk-accent-hover;
+  }
+}
+
+// OBRS-1562 — the map hint and the search button share one row. `flex-end` plus
+// `margin-right: auto` on the hint, NOT `space-between`: the hint sits behind an
+// `@if`, and under `space-between` a single remaining child is placed at the
+// START, so on the frame where the station roster has not resolved the search
+// button would jump to the left edge and back.
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  column-gap: $space-md;
+  row-gap: $space-xs;
+
+  .map-hint-btn {
+    margin-right: auto;
   }
 }
 
@@ -218,6 +263,20 @@ app-recent-routes-quick-pick.has-routes + .station-section {
   .station-section {
     flex-direction: column;
     align-items: stretch;
+
+    // OBRS-1562 — undo the row-mode sizing, BOTH halves of it. The cap is the
+    // obvious one: stacked, `align-items: stretch` is supposed to give each
+    // date field the full column, and a leftover 320px max-width would pin
+    // them to a third of a 992px screen. The `flex` reset is the one that bit
+    // — `flex-basis` follows the MAIN axis, and this container is
+    // `flex-direction: column` here, so `flex: 1 1 190px` stopped meaning
+    // "190px wide" and started meaning "190px TALL". Measured before the
+    // reset: each field 250px high and `.station-section` 682px instead of
+    // 396px.
+    > .form-group-obrs {
+      flex: 0 0 auto;
+      max-width: none;
+    }
   }
 
   // AC#3: the bar stacks, it does not wrap and it does not shrink two 250px
@@ -261,6 +320,20 @@ app-recent-routes-quick-pick.has-routes + .station-section {
       &:last-of-type {
         margin-left: 0;
       }
+    }
+  }
+
+  // OBRS-1562 — `.btn-search` is `width: 100%` here, so the two controls cannot
+  // share a line at all: stack them, and let the hint drop its `margin-right`
+  // (an auto margin against a stretched column does nothing but confuse the
+  // next reader) and sit left-aligned above the button.
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    .map-hint-btn {
+      margin-right: 0;
+      justify-content: flex-start;
     }
   }
 
