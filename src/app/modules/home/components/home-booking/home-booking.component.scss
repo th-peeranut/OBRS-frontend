@@ -118,18 +118,20 @@
   }
 
   // OBRS-1562 — the date fields take the row's leftover width instead of
-  // wrapping. Measured on prod 2026-08-23 the row needs 1108 of the 1136px
-  // content column, so at >=1200px this only shares out the 28px remainder;
-  // its real job is 993-1199px, where both fields shrink together rather than
-  // dropping `รอบวันกลับ` onto a line of its own.
+  // leaving it empty. Measured on prod 2026-08-23 the row needs 1108 of the
+  // 1136px content column, so at >=1200px this shares out the 28px remainder,
+  // and down to ~1090px it keeps all four fields on one line.
   //
-  // The basis is 190px and not the field's natural ~250px because a wrappable
-  // flex line WRAPS BEFORE IT SHRINKS: at 1100px the basis alone overflows the
-  // line by 9px, and the browser answers that by moving the second field to a
-  // row of its own, then growing both back to their max-width. Measured
-  // 250px basis -> 2 rows at 1100px; 190px -> 1 row, because 190 is what still
-  // fits beside the 506px station bar in the narrowest desktop column
-  // (993px viewport = 929px of content: 929 - 506 - 40 of gaps = 192 for two).
+  // The basis is what the DATE TEXT needs, not what makes the row fit. A
+  // wrappable flex line wraps before it shrinks, so a small basis buys extra
+  // one-row width -- and 190px bought it by CLIPPING: measured at a 993px
+  // viewport the field came out 192px and the input read `อา., 23/08/20`,
+  // with the year cut off (208px at 1024px still put the last digit against
+  // the border). 230px is the smallest basis that never clips, and it costs
+  // only the band below ~1090px, where the line wraps to two rows of
+  // full-width, readable fields instead. An extra row is a worse layout; a
+  // truncated year on the field a customer picks their travel date in is a
+  // worse product.
   //
   // The max-width is what keeps this from being the stretched-field
   // anti-pattern: one-way mode renders a single date field, and with grow
@@ -139,7 +141,7 @@
   // `.station-group` and put a flex basis and a 320px cap on the two halves of
   // the merged bar — the one element this card is not allowed to move.
   > .form-group-obrs {
-    flex: 1 1 190px;
+    flex: 1 1 230px;
     min-width: 0;
     max-width: 320px;
   }
@@ -269,7 +271,7 @@ app-recent-routes-quick-pick.has-routes + .station-section {
     // date field the full column, and a leftover 320px max-width would pin
     // them to a third of a 992px screen. The `flex` reset is the one that bit
     // — `flex-basis` follows the MAIN axis, and this container is
-    // `flex-direction: column` here, so `flex: 1 1 190px` stopped meaning
+    // `flex-direction: column` here, so `flex: 1 1 230px` stopped meaning
     // "190px wide" and started meaning "190px TALL". Measured before the
     // reset: each field 250px high and `.station-section` 682px instead of
     // 396px.
