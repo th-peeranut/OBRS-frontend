@@ -154,14 +154,20 @@ export class AlertService {
   }
 
   /**
-   * @param title       spinner title, already translated by the caller.
+   * @param title       spinner title, already translated by the caller. Defaults to
+   *                    NO title (OBRS-930): it used to default to the English
+   *                    'Loading...', which is a word the caller reaches only when it
+   *                    could not translate one — i.e. exactly when it does not know
+   *                    the reader's language. An empty title is the one string that
+   *                    is never the wrong language. `updateLoadingTitle()` fills it
+   *                    in the moment the caller can.
    * @param slowHint    line shown alongside the close button once the overlay has been
    *                    up for `LOADING_ESCAPE_AFTER_MS`, explaining why it is still
    *                    there. Optional: without it the escape hatch still appears, just
    *                    without an explanation.
    * @param closeLabel  accessible name for that close button.
    */
-  showLoading(title = 'Loading...', slowHint?: string, closeLabel?: string) {
+  showLoading(title = '', slowHint?: string, closeLabel?: string) {
     this.loadingCount += 1;
 
     if (this.isLoadingVisible) {
@@ -207,6 +213,29 @@ export class AlertService {
         this.resetLoadingState();
       },
     });
+  }
+
+  /**
+   * Put a title on the overlay this service currently owns (OBRS-930).
+   *
+   * The interceptor opens the spinner title-less when the i18n bundle for the
+   * selected language has not arrived yet — a raw `COMMON.LOADING` or the wrong
+   * language is worse than no word at all — and calls this the moment it has.
+   * Same two guards as `hideLoading()`: only ever touch an overlay this service
+   * opened, so a late bundle cannot retitle an error dialog that replaced the
+   * spinner in the meantime.
+   */
+  updateLoadingTitle(title: string): void {
+    if (!this.isLoadingVisible) {
+      return;
+    }
+    if (!Swal.getPopup()?.classList.contains(LOADING_POPUP_CLASS)) {
+      return;
+    }
+    Swal.update({ title });
+    // Swal.update() re-renders the popup and drops the spinner — same reason
+    // armEscapeHatch puts it back.
+    Swal.showLoading();
   }
 
   hideLoading() {

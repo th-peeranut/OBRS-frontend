@@ -10,8 +10,10 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { TranslateService } from '@ngx-translate/core';
+import { EventEmitter } from '@angular/core';
+import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../services/alert.service';
+import { APP_LANGUAGE_KEY } from '../services/language.service';
 import { errorInterceptor, IDEMPOTENT_REQUEST_TIMEOUT_MS } from './error.interceptor';
 import { ApiLatencyTelemetryService } from '../../services/analytics/api-latency-telemetry.service';
 import { SKIP_REQUEST_TIMEOUT } from './http-context-tokens';
@@ -28,8 +30,13 @@ describe('errorInterceptor', () => {
   let alertService: jasmine.SpyObj<AlertService>;
 
   function configure(providers: unknown[] = []): void {
+    // OBRS-930 reads the customer's chosen language from localStorage, and karma
+    // shares one across the whole run: a test that leaves 'en' behind would
+    // silently change what the NEXT test is exercising.
+    localStorage.removeItem(APP_LANGUAGE_KEY);
     alertService = jasmine.createSpyObj<AlertService>('AlertService', [
       'showLoading',
+      'updateLoadingTitle',
       'hideLoading',
       'error',
     ]);
@@ -42,6 +49,38 @@ describe('errorInterceptor', () => {
       ],
     });
   }
+
+  /**
+   * A TranslateService double that can answer the question OBRS-930 made this
+   * interceptor ask: WHICH language bundles are in the store right now.
+   *
+   * `jasmine.createSpyObj`'s property bag cannot express that, because the store
+   * has to CHANGE mid-test — a bundle landing is the event under test. So this
+   * is a plain object with a real spy on `instant`, a mutable `translations`,
+   * and a real EventEmitter for `onLangChange`.
+   */
+  interface TranslateDouble extends TranslateService {
+    instant: jasmine.Spy;
+    translations: Record<string, unknown>;
+    onLangChange: EventEmitter<LangChangeEvent>;
+  }
+
+  function translateDouble(loaded: string[]): TranslateDouble {
+    const translations: Record<string, unknown> = {};
+    for (const lang of loaded) {
+      translations[lang] = { COMMON: {} };
+    }
+    return {
+      // What ngx-translate does with a key it cannot resolve: hands it back.
+      instant: jasmine.createSpy('instant').and.callFake((key: string) => key),
+      translations,
+      currentLang: loaded[0] ?? 'th',
+      onLangChange: new EventEmitter<LangChangeEvent>(),
+    } as unknown as TranslateDouble;
+  }
+
+  /** The warm state every test here except the OBRS-930 group means to exercise. */
+  const loadedTranslateSpy = (): TranslateDouble => translateDouble(['th']);
 
   it('does not resolve TranslateService for a non-/api/ request (the i18n loader path) — guards the NG0200 cold-load cycle', () => {
     // No TranslateService provider on purpose: the old top-level inject() would
@@ -66,10 +105,7 @@ describe('errorInterceptor', () => {
     // ever stopped being true, the passenger would see nothing at all — a worse
     // outcome than the double toast this replaced. So the assumption is pinned
     // here rather than assumed there.
-    const translate = jasmine.createSpyObj<TranslateService>(
-      'TranslateService',
-      ['instant']
-    );
+    const translate = loadedTranslateSpy();
     configure([{ provide: TranslateService, useValue: translate }]);
     const http = TestBed.inject(HttpClient);
     const httpMock = TestBed.inject(HttpTestingController);
@@ -101,10 +137,7 @@ describe('errorInterceptor', () => {
   // both bodies away. What the user was told for the shared daily cap — "wait a
   // moment and try again" — is advice that cannot work before tomorrow.
   it('shows the backend message on a 429 that carries one', () => {
-    const translate = jasmine.createSpyObj<TranslateService>(
-      'TranslateService',
-      ['instant']
-    );
+    const translate = loadedTranslateSpy();
     configure([{ provide: TranslateService, useValue: translate }]);
     const http = TestBed.inject(HttpClient);
     const httpMock = TestBed.inject(HttpTestingController);
@@ -128,10 +161,7 @@ describe('errorInterceptor', () => {
   });
 
   it('still translates the generic rate-limit message for a 429 with no message of ours', () => {
-    const translate = jasmine.createSpyObj<TranslateService>(
-      'TranslateService',
-      ['instant']
-    );
+    const translate = loadedTranslateSpy();
     translate.instant.and.returnValue('มีคำขอเข้ามามากเกินไป กรุณารอสักครู่แล้วลองใหม่อีกครั้ง');
     configure([{ provide: TranslateService, useValue: translate }]);
     const http = TestBed.inject(HttpClient);
@@ -151,10 +181,7 @@ describe('errorInterceptor', () => {
   });
 
   it('translates the dedicated 503 dependency-outage message on an /api/ request (behavior preserved)', () => {
-    const translate = jasmine.createSpyObj<TranslateService>(
-      'TranslateService',
-      ['instant']
-    );
+    const translate = loadedTranslateSpy();
     translate.instant.and.returnValue('บริการไม่พร้อมใช้งานชั่วคราว');
     configure([{ provide: TranslateService, useValue: translate }]);
     const http = TestBed.inject(HttpClient);
@@ -178,10 +205,7 @@ describe('errorInterceptor', () => {
   // make — what the USER is actually shown. Before the fix this alert read
   // "Http failure response for /api/external/otp/request/test: 0 Unknown Error".
   it('shows a translated message, never the transport string, when the request never reached the server', () => {
-    const translate = jasmine.createSpyObj<TranslateService>(
-      'TranslateService',
-      ['instant']
-    );
+    const translate = loadedTranslateSpy();
     translate.instant.and.returnValue('ระบบมีปัญหาชั่วคราว กรุณาลองใหม่ภายหลัง');
     configure([{ provide: TranslateService, useValue: translate }]);
     const http = TestBed.inject(HttpClient);
@@ -205,10 +229,7 @@ describe('errorInterceptor', () => {
   });
 
   it('falls back to a translated generic message when the body carries nothing readable', () => {
-    const translate = jasmine.createSpyObj<TranslateService>(
-      'TranslateService',
-      ['instant']
-    );
+    const translate = loadedTranslateSpy();
     translate.instant.and.returnValue('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     configure([{ provide: TranslateService, useValue: translate }]);
     const http = TestBed.inject(HttpClient);
@@ -234,10 +255,7 @@ describe('errorInterceptor', () => {
   // argument can. Every /api/ request in the app went through this line, so the
   // English word was on screen for a moment on literally every page.
   it('translates the loading spinner title instead of the English default', () => {
-    const translate = jasmine.createSpyObj<TranslateService>(
-      'TranslateService',
-      ['instant']
-    );
+    const translate = loadedTranslateSpy();
     translate.instant.and.returnValue('กำลังโหลด…');
     configure([{ provide: TranslateService, useValue: translate }]);
     const http = TestBed.inject(HttpClient);
@@ -254,6 +272,108 @@ describe('errorInterceptor', () => {
     expect(title).toBe('กำลังโหลด…');
     expect(title).not.toBe('Loading...');
     expect(title).not.toBeUndefined();
+
+    httpMock.expectOne('/api/foo').flush({});
+    httpMock.verify();
+  });
+
+  /**
+   * OBRS-930, and the test above is its positive control: same call, same
+   * assertion on the same argument, with the only difference being whether the
+   * selected language's bundle has landed. A cold-load test that can pass
+   * because nothing rendered proves nothing on its own — the repro for this bug
+   * reported "no spinner at all" three times before a positive control showed
+   * the harness was broken, not the app.
+   *
+   * The mechanism in one line: `instant()` is synchronous and reads the store as
+   * it is right now, so on an empty store it hands back the KEY as if it were
+   * text. A customer whose first /api/ request beat GET /i18n/{lang}.json read
+   * `COMMON.LOADING` off the spinner (reproduced on SIT by delaying the bundle
+   * 4s).
+   */
+  it('never puts a raw i18n key on the spinner while the chosen language bundle is still loading', () => {
+    const translate = translateDouble([]);
+    configure([{ provide: TranslateService, useValue: translate }]);
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    http.get('/api/foo').subscribe({ next: () => {}, error: () => {} });
+
+    // All three, not just the title: the slow-load hint is rendered as the
+    // popup's text once the escape hatch opens, so a key there reaches the
+    // screen too.
+    const args = alertService.showLoading.calls.mostRecent().args;
+    for (const arg of args) {
+      expect(arg ?? '').not.toMatch(/^COMMON\./);
+    }
+    expect(args[0]).toBeUndefined();
+
+    // The bundle lands while the request is still in flight.
+    translate.translations['th'] = { COMMON: { LOADING: 'กำลังโหลด…' } };
+    translate.instant.and.returnValue('กำลังโหลด…');
+    translate.onLangChange.emit({ lang: 'th' } as LangChangeEvent);
+    expect(alertService.updateLoadingTitle).toHaveBeenCalledWith('กำลังโหลด…');
+
+    httpMock.expectOne('/api/foo').flush({});
+
+    // `onLangChange` never completes, so the binding has to end with the request
+    // or every /api/ call in the session leaves one behind.
+    alertService.updateLoadingTitle.calls.reset();
+    translate.onLangChange.emit({ lang: 'th' } as LangChangeEvent);
+    expect(alertService.updateLoadingTitle).not.toHaveBeenCalled();
+
+    httpMock.verify();
+  });
+
+  it('never shows the default language while the chosen one is still loading, and switches to it when it lands', () => {
+    // The other face of the same race, and the one that survived the first
+    // attempt at this fix: `app_language` is `en`, but `use('en')` leaves
+    // `currentLang` on `th` until en.json lands, and `getParsedResult` falls
+    // back to the default bundle. So `instant()` answers 'กำลังโหลด…' and looks
+    // perfectly healthy doing it — a Thai spinner for an English visitor, which
+    // is what AC3 forbids. Only the CHOSEN language may reach this overlay.
+    const translate = translateDouble(['th']);
+    translate.instant.and.returnValue('กำลังโหลด…');
+    configure([{ provide: TranslateService, useValue: translate }]);
+    // After configure(), which clears it for every other test in this file.
+    localStorage.setItem(APP_LANGUAGE_KEY, 'en');
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    http.get('/api/foo').subscribe({ next: () => {}, error: () => {} });
+
+    expect(alertService.showLoading.calls.mostRecent().args[0]).toBeUndefined();
+    expect(translate.instant).not.toHaveBeenCalledWith('COMMON.LOADING');
+
+    // th.json finishing is not the customer's language finishing.
+    translate.onLangChange.emit({ lang: 'th' } as LangChangeEvent);
+    expect(alertService.updateLoadingTitle).not.toHaveBeenCalled();
+
+    // en.json is.
+    translate.translations['en'] = { COMMON: { LOADING: 'Loading…' } };
+    translate.instant.and.returnValue('Loading…');
+    translate.onLangChange.emit({ lang: 'en' } as LangChangeEvent);
+    expect(alertService.updateLoadingTitle).toHaveBeenCalledWith('Loading…');
+
+    httpMock.expectOne('/api/foo').flush({});
+    httpMock.verify();
+  });
+
+  it('does not repaint the overlay when a language change resolves to the title it already has', () => {
+    // `Swal.update()` re-renders the popup and drops the spinner (armEscapeHatch
+    // documents the same), so repainting to the identical string is a flicker
+    // with no reader.
+    const translate = loadedTranslateSpy();
+    translate.instant.and.returnValue('กำลังโหลด…');
+    configure([{ provide: TranslateService, useValue: translate }]);
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    http.get('/api/foo').subscribe({ next: () => {}, error: () => {} });
+
+    expect(alertService.showLoading.calls.mostRecent().args[0]).toBe('กำลังโหลด…');
+    translate.onLangChange.emit({ lang: 'th' } as LangChangeEvent);
+    expect(alertService.updateLoadingTitle).not.toHaveBeenCalled();
 
     httpMock.expectOne('/api/foo').flush({});
     httpMock.verify();
@@ -285,9 +405,7 @@ describe('errorInterceptor', () => {
    */
   describe('pending-request ceiling (OBRS-642)', () => {
     const translateStub = () => {
-      const translate = jasmine.createSpyObj<TranslateService>('TranslateService', [
-        'instant',
-      ]);
+      const translate = loadedTranslateSpy();
       translate.instant.and.callFake((key: string | string[]) => key as string);
       return translate;
     };
@@ -399,9 +517,7 @@ describe('errorInterceptor', () => {
     let telemetry: jasmine.SpyObj<ApiLatencyTelemetryService>;
 
     const translateStub = () => {
-      const translate = jasmine.createSpyObj<TranslateService>('TranslateService', [
-        'instant',
-      ]);
+      const translate = loadedTranslateSpy();
       translate.instant.and.callFake((key: string | string[]) => key as string);
       return translate;
     };
