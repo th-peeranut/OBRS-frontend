@@ -132,3 +132,15 @@
 .form-group-obrs {
   margin-top: 16px;
 }
+
+// OBRS-1189, owner-approved follow-up. `--date-segment-radius` is the one thing
+// the shared segment rule (styles.scss) leaves to the call site, and this field
+// joins nothing, so both ends are round.
+//
+// $radius-xl, not the $radius-pill the other 44 `.app-date-field` sites use:
+// this field stands directly under the station bar on the same card, and the
+// bar's own ends are $radius-xl. Matching the thing six inches above it beats
+// matching a field on another screen.
+.form-group-obrs.has-inline-label {
+  --date-segment-radius: #{$radius-xl};
+}

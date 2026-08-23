@@ -302,10 +302,13 @@ $app-date-field-segment-inset: 38px;
 // OBRS-1189 — a date field as a SEGMENT of the search bar.
 //
 // `app-date-field--segment` is opt-in: 45 pickers in the app carry
-// `app-date-field` and only the four in the two booking bars are segments of
-// anything. Everything below is additive to the canonical look above — same
-// border, same icon, same panel — so a segment and a standalone field are still
-// the SAME field, at a different height and with its label inside it.
+// `app-date-field` and five carry this — the four in the two booking bars, plus
+// the parcel wizard's own date field, which is NOT a segment of anything and
+// takes the class for the taller frame and the inline label alone (it sets
+// `--date-segment-radius` back to round at both ends). Everything below is
+// additive to the canonical look above — same border, same icon, same panel —
+// so a segment and a standalone field are still the SAME field, at a different
+// height and with its label inside it.
 //
 // It lives in this global file for the reason the block above does: `.p-inputtext`
 // is created inside PrimeNG's own encapsulation and no component stylesheet can

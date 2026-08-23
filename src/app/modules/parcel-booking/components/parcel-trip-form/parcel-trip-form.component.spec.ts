@@ -228,4 +228,93 @@ describe('ParcelTripFormComponent', () => {
     });
   });
 
+  // OBRS-1189 follow-up, owner-approved after the card's own ACs shipped: the
+  // ACs named the search BAR only, which left this card changing convention
+  // halfway down its own screen -- a joined bar with the labels inside the
+  // frames, then two fields still wearing theirs above the box. All three
+  // assertions below are red against every build before this change.
+  describe("the wizard's own two fields (OBRS-1189 follow-up)", () => {
+    it('puts the date label inside the frame and keeps it bound to the input', () => {
+      const root = fixture.nativeElement as HTMLElement;
+
+      const group = root.querySelector(
+        '.form-group-obrs.has-inline-label'
+      ) as HTMLElement | null;
+      expect(group)
+        .withContext('the date group carries has-inline-label')
+        .not.toBeNull();
+
+      const label = group!.querySelector(
+        'label.field-inline-label'
+      ) as HTMLLabelElement | null;
+      expect(label).not.toBeNull();
+
+      // The binding, not just the markup: `inputId` is what puts the id on
+      // PrimeNG's input, and `for` has to name that same id or the label is
+      // decoration.
+      const input = group!.querySelector('input') as HTMLInputElement;
+      expect(input.id).toBe('parcelTripDate');
+      expect(label!.getAttribute('for')).toBe(input.id);
+
+      const picker = group!.querySelector('.p-datepicker') as HTMLElement;
+      expect(picker.classList.contains('app-date-field--segment')).toBeTrue();
+    });
+
+    it('moves the schedule label inside the dropdown frame when there is a frame', () => {
+      component.scheduleOptions = [{ id: 7, label: '08:00' }];
+      fixture.detectChanges();
+
+      const root = fixture.nativeElement as HTMLElement;
+      const dropdowns = Array.from(
+        root.querySelectorAll('app-dropdown-group-obrs')
+      ) as HTMLElement[];
+      const schedule = dropdowns[dropdowns.length - 1];
+
+      const label = schedule.querySelector(
+        '.combo-label-slot label.field-inline-label'
+      ) as HTMLLabelElement | null;
+      expect(label).not.toBeNull();
+      expect(label!.textContent!.trim()).toBe('PARCEL_BOOKING.TRIP.SCHEDULE');
+
+      const trigger = schedule.querySelector('.dropdown-btn') as HTMLElement;
+      expect(label!.getAttribute('for')).toBe(trigger.id);
+
+      // And no second copy left standing above the box.
+      const groups = Array.from(
+        root.querySelectorAll('.form-group-obrs')
+      ) as HTMLElement[];
+      const scheduleGroup = groups.find((g) =>
+        g.contains(schedule)
+      ) as HTMLElement;
+      expect(
+        scheduleGroup.querySelector(':scope > label')
+      ).toBeNull();
+    });
+
+    it('keeps a heading above the schedule slot while it is loading or empty', () => {
+      const root = fixture.nativeElement as HTMLElement;
+
+      for (const state of [
+        { isLoadingSchedules: true, noSchedulesFound: false },
+        { isLoadingSchedules: false, noSchedulesFound: true },
+      ]) {
+        component.isLoadingSchedules = state.isLoadingSchedules;
+        component.noSchedulesFound = state.noSchedulesFound;
+        fixture.detectChanges();
+
+        // Neither branch draws a field, so there is no frame to put the label
+        // inside; without the heading these two states say "loading" and "not
+        // found" about nothing.
+        const headings = Array.from(root.querySelectorAll('label')).filter(
+          (l) =>
+            l.textContent!.trim() === 'PARCEL_BOOKING.TRIP.SCHEDULE' &&
+            !l.classList.contains('field-inline-label')
+        );
+        expect(headings.length)
+          .withContext(JSON.stringify(state))
+          .toBe(1);
+      }
+    });
+  });
+
 });

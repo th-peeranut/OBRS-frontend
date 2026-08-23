@@ -39,10 +39,20 @@
       </div>
     }
 
-    <div class="form-group-obrs">
-      <label>{{ "PARCEL_BOOKING.TRIP.DATE" | translate }}</label>
+    <!-- OBRS-1189, owner-approved follow-up: the wizard's own fields carry their
+    label inside the frame too. Without it this one card changes convention
+    halfway down — a joined station bar with inline labels, then two fields with
+    the label above the box. `for` names the id `inputId` puts on the input.
+
+    It is a LONE field, not a segment of anything, so both ends stay round; the
+    corner radius is the one thing the shared segment rule leaves to the call
+    site (see the scss). -->
+    <div class="form-group-obrs has-inline-label">
+      <label class="field-inline-label" for="parcelTripDate">{{
+        "PARCEL_BOOKING.TRIP.DATE" | translate
+      }}</label>
       <p-datePicker
-        styleClass="app-date-field"
+        styleClass="app-date-field app-date-field--segment"
         panelStyleClass="app-date-field-panel"
         dateFormat="dd/mm/yy"
         [minDate]="minDate"
@@ -62,7 +72,12 @@
       </div>
 
       <div class="form-group-obrs">
-        <label>{{ "PARCEL_BOOKING.TRIP.SCHEDULE" | translate }}</label>
+        <!-- Above the box ONLY where there is no box. The two branches below are
+        bare text with no frame to put a label inside, and the field name is the
+        only thing that says what is loading or what was not found. -->
+        @if (isLoadingSchedules || noSchedulesFound) {
+          <label>{{ "PARCEL_BOOKING.TRIP.SCHEDULE" | translate }}</label>
+        }
 
         @if (isLoadingSchedules) {
           <div class="text-center py-3">
@@ -79,6 +94,8 @@
         @if (!isLoadingSchedules && !noSchedulesFound) {
           <app-dropdown-group-obrs
             [isBorder]="true"
+            [isLabel]="true"
+            [label]="'PARCEL_BOOKING.TRIP.SCHEDULE'"
             [value]="form.get('scheduleId')?.value"
             [options]="scheduleOptions"
             (currentValue)="onScheduleSelect($event)"
