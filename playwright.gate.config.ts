@@ -96,6 +96,14 @@ export default defineConfig({
     // branch there. This lane pins 1280x720 (rule 3 above), which is the point.
     '**/obrs-857-find-booking.spec.ts',
     '**/obrs-1038-station-seam.spec.ts',
+    // OBRS-1189. The rest of the same bar: the date fields and the search button
+    // became segments of it, and every claim about that is a cascade-at-a-width
+    // fact for the reason the entry above gives. It also measures the one thing
+    // a geometry assertion can miss -- whether the value FITS the segment it was
+    // given (`scrollWidth - clientWidth`), which is how OBRS-1562's narrower
+    // field shipped reading `อา., 23/08/20`. Same fixture shape as 1038: every
+    // /api/** call is answered in-spec.
+    '**/obrs-1189-search-bar.spec.ts',
     // OBRS-639. Same argument one page further in: the booking stepper's four boxes
     // are laid out by a media query and a flex line, so where they land is a property
     // of the cascade at a viewport width and nothing else. This spec sets its own

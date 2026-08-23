@@ -53,6 +53,13 @@
     var(--station-swap-icon-size, 32px) / 2 + #{$space-xs}
   );
 
+  // OBRS-1189: the halves carry their label inside the frame now, so the field
+  // is taller and the button's own centring formula has to be told once. Same
+  // knob, same reason as `--station-swap-icon-size` above — this form's numbers
+  // differ from the two passenger screens', which is what proves the button
+  // derives its offsets instead of hard-coding them.
+  --station-swap-field-height: #{$field-height-inline-label};
+
   app-dropdown-group-obrs {
     &:first-of-type {
       --dropdown-toggle-radius: #{$radius-xl} 0 0 #{$radius-xl};
@@ -69,10 +76,12 @@
   }
 }
 
-// AC#3 — stacks at the same 992px as the two passenger bars, which is the
-// breakpoint `app-station-swap-button`'s own @media turns at. It un-merges when
-// it stacks, for the reason spelled out in home-booking.component.scss: the
-// lower field's label lands between the two boxes, so there is no seam.
+// Stacks at the same 992px as the two passenger bars, which is the breakpoint
+// `app-station-swap-button`'s own @media turns at. OBRS-1189: it STAYS MERGED
+// when it stacks — the joins are flattened by 90 degrees rather than reset. The
+// reason it could not before is spelled out in home-booking.component.scss and
+// is now gone: the label that used to land between the two boxes is inside the
+// frame, so the boxes touch and the seam is real at every width.
 @media (max-width: 992px) {
   .parcel-trip-form__stations {
     flex-direction: column;
@@ -82,14 +91,21 @@
       width: 100%;
       --dropdown-toggle-width: 100%;
 
+      // Nothing sits inside either half here — the disc is on the seam between
+      // them — so both go back to even padding.
       &:first-of-type,
       &:last-of-type {
-        --dropdown-toggle-radius: #{$radius-xl};
         --dropdown-toggle-padding: #{$space-xs};
       }
 
+      &:first-of-type {
+        --dropdown-toggle-radius: #{$radius-xl} #{$radius-xl} 0 0;
+      }
+
       &:last-of-type {
+        --dropdown-toggle-radius: 0 0 #{$radius-xl} #{$radius-xl};
         margin-left: 0;
+        margin-top: -1px;
       }
     }
   }
@@ -115,4 +131,16 @@
 
 .form-group-obrs {
   margin-top: 16px;
+}
+
+// OBRS-1189, owner-approved follow-up. `--date-segment-radius` is the one thing
+// the shared segment rule (styles.scss) leaves to the call site, and this field
+// joins nothing, so both ends are round.
+//
+// $radius-xl, not the $radius-pill the other 44 `.app-date-field` sites use:
+// this field stands directly under the station bar on the same card, and the
+// bar's own ends are $radius-xl. Matching the thing six inches above it beats
+// matching a field on another screen.
+.form-group-obrs.has-inline-label {
+  --date-segment-radius: #{$radius-xl};
 }

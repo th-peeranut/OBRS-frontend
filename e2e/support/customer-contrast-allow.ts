@@ -259,10 +259,18 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   // debt and buys silence. Two renames in two consecutive upgrades is the honest
   // signal that keying on a vendor's class list is fragile -- that deserves its
   // own card, not a quiet redesign smuggled into an upgrade.
+  //
+  // OBRS-1189 DELETED THE TWO DARK ENTRIES, because it repainted them. The date
+  // fields on both of these pages are segments of the station bar now, and a bar
+  // whose halves carry a $dk-text-muted border while its date segments carry
+  // $dk-border is not one bar -- so the segment takes the same token the station
+  // half already uses, which measures 5.90:1 on #22263a instead of 1.36:1. The
+  // gate found them stale on the next run and said to delete them; keeping a
+  // fixed debt registered is the mirror image of the mistake the note above
+  // refuses. The two LIGHT entries stay exactly as they are: $primary-lightgrey
+  // on #ffffff is untouched, still 1.35:1, and still OBRS-772's policy question.
   'light|input.p-datepicker-input.p-component.p-filled|boundary-on-#ffffff': '1.35:1 -- OBRS-772 p-datepicker field boundary (home, pre-filled)',
   'light|input.p-datepicker-input.p-component.p-inputtext|boundary-on-#ffffff': '1.35:1 -- OBRS-772 p-datepicker field boundary (schedule-booking, empty)',
-  'dark|input.p-datepicker-input.p-component.p-filled|boundary-on-#22263a': '1.36:1 -- OBRS-772 p-datepicker field boundary (home, pre-filled)',
-  'dark|input.p-datepicker-input.p-component.p-inputtext|boundary-on-#22263a': '1.36:1 -- OBRS-772 p-datepicker field boundary (schedule-booking, empty)',
   'light|button.theme-toggle-btn|boundary-on-#ffffff': '1.36:1 -- OBRS-772 navbar icon button boundary',
   'dark|button.theme-toggle-btn|boundary-on-#1a1d27': '1.60:1 -- OBRS-772 navbar icon button boundary',
   'light|button.navbar-lang-trigger|boundary-on-#ffffff': '1.36:1 -- OBRS-772 navbar language trigger boundary',
