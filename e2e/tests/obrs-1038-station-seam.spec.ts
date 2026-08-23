@@ -146,8 +146,13 @@ test('at 1280 the two halves are ONE bar and the button sits on its seam', async
 
   // ...and the corners that meet are square, which is what makes it read as one
   // box rather than two pills pushed together.
+  //
+  // The destination half is square on EVERY side since OBRS-1189: it stopped
+  // being the end of the bar when the date segments and the search button joined
+  // it, and the radius that used to close the bar here is on the search button
+  // now. `obrs-1189-search-bar.spec.ts` owns the two ends.
   expect(r.aRadius).toBe('24px 0px 0px 24px');
-  expect(r.bRadius).toBe('0px 24px 24px 0px');
+  expect(r.bRadius).toBe('0px');
 
   // On the seam, horizontally.
   const seamX = (r.a.right + r.b.left) / 2;
@@ -157,7 +162,7 @@ test('at 1280 the two halves are ONE bar and the button sits on its seam', async
   expect(Math.abs(r.host.cy - r.a.cy)).toBeLessThanOrEqual(1);
 });
 
-test('at 768 it stacks, and the button turns onto the upper field edge instead of vanishing', async ({
+test('at 768 it stacks, and the button turns onto the seam instead of vanishing', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 768, height: 900 });
@@ -176,10 +181,13 @@ test('at 768 it stacks, and the button turns onto the upper field edge instead o
   expect(r.direction).toBe('column');
   expect(r.a.left).toBe(r.b.left);
 
-  // Still on screen, still on an edge that exists: the upper field's bottom.
+  // Still on screen, still on an edge that exists: the upper field's bottom,
+  // which since OBRS-1189 is a real seam -- the two boxes touch here as well.
+  expect(Math.abs(r.b.top - r.a.bottom)).toBeLessThanOrEqual(1);
   expect(Math.abs(r.host.cy - r.a.bottom)).toBeLessThanOrEqual(1);
-  // At the right end, clear of the left-aligned label that sits between the two
-  // boxes -- the reason this mode has no seam to straddle at all.
+  // At the right end, which is where the same four reference sites put it on a
+  // phone. It was forced there while a left-aligned label filled this gap; it
+  // stays there because a full-width seam is a seam at any point along it.
   expect(r.host.cx).toBeGreaterThan(r.a.cx);
   expect(r.host.right).toBeLessThanOrEqual(r.a.right);
 

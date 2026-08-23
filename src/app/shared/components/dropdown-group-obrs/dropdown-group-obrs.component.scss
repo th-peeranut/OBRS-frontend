@@ -25,7 +25,12 @@
     border: 1px solid $primary-lightgrey !important;
     border-radius: var(--dropdown-toggle-radius, #{$radius-xl});
     width: var(--dropdown-toggle-width, auto);
-    min-width: 250px;
+    // OBRS-1189 made the floor overridable for the same reason OBRS-1038 made
+    // the radius overridable: 250px is right for a field standing on its own,
+    // and it is a WRAP TRIGGER for a half of a bar that now shares one row with
+    // two date segments and the search button. A caller that owns the whole row
+    // sets its own floor; every other call site keeps 250px.
+    min-width: var(--dropdown-toggle-min-width, 250px);
     height: 48px;
     // `!important` stays — it is what beats Bootstrap's `.p-0` on the button —
     // and a `var()` inside an `!important` declaration resolves identically.
@@ -57,6 +62,46 @@
 
 .dropdown-toggle::after {
   content: none;
+}
+
+// OBRS-1189 — LABEL INSIDE THE FRAME.
+//
+// Only the vertical box changes: the frame grows to hold a second text row and
+// the value is pushed off the top of it. `padding-top`/`padding-bottom` as
+// LONGHANDS, deliberately — `.btn.dropdown-toggle-border` sets `padding` as an
+// `!important` SHORTHAND fed by `--dropdown-toggle-padding` (OBRS-1038 owns the
+// left/right halves of that, which carry the swap disc's clearance). Two
+// longhands at higher specificity replace the two sides this card is allowed to
+// move and leave the seam clearance exactly where the call sites put it. Same
+// technique `input.btn.dropdown-combo-input`'s `padding-right` below already
+// uses against the same shorthand.
+//
+// 26px top is not a nudge: the label row sits at 9px with a 12px line, so the
+// value's content box starts clear of its descenders and an <input>'s own
+// vertical centring puts the value on the lower half of the 64px frame.
+.dropdown.has-inline-label {
+  .btn.dropdown-toggle-border {
+    height: $field-height-inline-label;
+    padding-top: 26px !important;
+    padding-bottom: $space-2xs !important;
+  }
+}
+
+// Spans the field and re-uses the field's OWN padding, so the label's left inset
+// IS the value's left inset at every call site — including the origin half,
+// where `--dropdown-toggle-padding`'s right side is widened for the swap disc
+// and the left side is not. Same construction as `.combo-arrow-slot`, and the
+// same `pointer-events: none`: a click on the label belongs to the field under
+// it. `align-items: flex-start` + the 9px top is the label's row; the slot
+// cannot use the shorthand's own top padding, which is the VALUE's.
+.combo-label-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--dropdown-toggle-padding, #{$space-xs});
+  padding-top: 9px;
+  pointer-events: none;
 }
 
 .dropdown-btn {

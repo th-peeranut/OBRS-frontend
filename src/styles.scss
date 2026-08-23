@@ -157,6 +157,54 @@ label {
   }
 }
 
+// ============================================================================
+// OBRS-1189 — the label INSIDE its field's frame.
+//
+// The LOOK lives here and the GEOMETRY does not: two very different frames use
+// this label (the station picker, whose slot derives its inset from the field's
+// own `--dropdown-toggle-padding`, and the date segment below), and the one
+// thing that must not differ between them is the type. A second copy of these
+// five declarations inside dropdown-group-obrs.component.scss is exactly how the
+// three copies of the station bar drifted apart before OBRS-1035/1038.
+//
+// A global rule reaches inside an encapsulated component's template; only the
+// component's OWN stylesheet is scoped. The dark counterpart is in
+// dark-theme.scss, which beats this on specificity (2 classes vs 1) with no
+// !important.
+//
+// The `!important` pair is not a shortcut past specificity — it is the only way
+// past `label, input { font-size: 18px !important; color: … !important }` at the
+// top of this file, which is what the labels MEASURED as on the first build of
+// this card (18px in $text-black, i.e. the above-the-frame styling it exists to
+// replace). `width: auto` is from the same rule's third declaration, which is
+// NOT important: `width: 100%` on an absolutely-positioned box overrides the
+// `left`/`right` pair below it, and that is what put the date label's right edge
+// 47px past its own field.
+//
+// The `label` tag in the selector is load-bearing for a second reason: it beats
+// `.form-group-obrs label` twenty lines up, which is (0,1,1). Matching that
+// score and standing later in the file settles it; a third class would have
+// beaten the dark rule in dark-theme.scss too, which is the opposite mistake.
+// ============================================================================
+label.field-inline-label {
+  font-size: $font-size-xs !important;
+  font-weight: $font-weight-regular;
+  line-height: 1;
+  color: $text-lightblack !important;
+  width: auto;
+
+  // The frame is a fixed height and the label shares it with the value, so a
+  // long label in another locale has to ellipsize rather than push the value
+  // out of the box.
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  // A click on the label belongs to the control underneath it (`for` still
+  // names that control for a screen reader).
+  pointer-events: none;
+}
+
 .p-datepicker .p-inputtext {
   height: 48px;
   border-radius: 24px;
@@ -187,6 +235,14 @@ label {
 // `body.is-dark .p-datepicker .p-inputtext` override (`!important`, still wins
 // here — no duplicate dark rule needed).
 // ============================================================================
+// OBRS-1189 — the left inset of a date SEGMENT: where its value starts and
+// therefore where its inline label starts, which is the only reason it is a
+// variable rather than two literals that stop agreeing. 38px against the
+// standalone field's 46px, because the segment shares one row with three other
+// fields and a button: measured at a 993px viewport, the 8px it gives back is
+// most of what stopped `อา., 23/08/2026` being clipped there.
+$app-date-field-segment-inset: 38px;
+
 .p-datepicker.app-date-field {
   position: relative;
   display: flex;
@@ -240,6 +296,59 @@ label {
 .p-datepicker.app-date-field .p-inputtext:focus {
   border-color: var(--accent-strong, #{$primary-blue});
   box-shadow: 0 0 0 3px var(--accent-soft, #{rgba($primary-blue, 0.18)});
+}
+
+// ============================================================================
+// OBRS-1189 — a date field as a SEGMENT of the search bar.
+//
+// `app-date-field--segment` is opt-in: 45 pickers in the app carry
+// `app-date-field` and only the four in the two booking bars are segments of
+// anything. Everything below is additive to the canonical look above — same
+// border, same icon, same panel — so a segment and a standalone field are still
+// the SAME field, at a different height and with its label inside it.
+//
+// It lives in this global file for the reason the block above does: `.p-inputtext`
+// is created inside PrimeNG's own encapsulation and no component stylesheet can
+// reach it. The two things a CALL SITE has to vary — the corner radius at the
+// bar's ends — are a custom property instead, which inherits straight through
+// that boundary (the mechanism OBRS-1038 already uses on the station halves).
+// ============================================================================
+.form-group-obrs.has-inline-label {
+  position: relative;
+
+  > .field-inline-label {
+    position: absolute;
+    top: 9px;
+    // +1px is the field's own border: the label is positioned against the GROUP
+    // box, the value against the INPUT's padding box, and the border sits
+    // between them.
+    left: calc(#{$app-date-field-segment-inset} + 1px);
+    right: $space-xs;
+    z-index: 1;
+  }
+}
+
+.p-datepicker.app-date-field--segment {
+  .p-inputtext {
+    height: $field-height-inline-label;
+    min-height: $field-height-inline-label;
+    border-radius: var(--date-segment-radius, 0);
+
+    // The value drops to the lower half of the frame to clear the label row. An
+    // <input> centres its text in its CONTENT box, so these two paddings are
+    // what place it — there is no line-height to set.
+    padding-top: 26px;
+    padding-bottom: $space-2xs;
+    padding-left: $app-date-field-segment-inset;
+  }
+
+  // Centre the icon on the VALUE, not on the frame: the frame's own middle is
+  // now the gap between the label row and the value row. It moves in with the
+  // inset above — the two are one clearance, not two numbers.
+  .app-date-field-icon {
+    top: calc(#{$field-height-inline-label} / 2 + 9px);
+    left: $space-xs;
+  }
 }
 
 .app-date-field-panel {

@@ -45,7 +45,15 @@ body.is-dark {
   // own label/input via admin-theme.scss (`.admin-shell label/input`), and
   // body.is-dark is now applied globally, so an unqualified rule here would
   // bleed the public palette into the admin/staff surfaces.
-  label:not(.admin-shell label),
+  //
+  // OBRS-1189 excluded `.field-inline-label` HERE rather than out-specifying it
+  // below. This selector scores (0,2,3) — `:not()` carries its argument's
+  // specificity, and `body`, `label` and the `label` inside `:not()` are three
+  // type selectors — so the rule that gives that label its own muted token had
+  // to reach (0,3,3) to be seen at all, and the only ways there are a third
+  // class it does not have or a `:not()` written purely for the score. Saying
+  // "this blanket does not cover that label" is the same fact and is checkable.
+  label:not(.admin-shell label):not(.field-inline-label),
   input:not(.admin-shell input) {
     color: $dk-text !important;
   }
@@ -242,6 +250,28 @@ body.is-dark {
   // Link colour
   .obrs-link {
     color: $dk-accent;
+  }
+
+  // OBRS-1189 — the inline field label (styles.scss). Its light-theme colour is
+  // $text-lightblack, which variables.scss:101 already records as 3.25:1 on
+  // $dk-bg-soft — the booking card's dark surface, and under the 4.5:1 floor for
+  // text. $dk-text-muted is 5.90:1 there (derived, WCAG 1.4.3 formula on the two
+  // token hexes) and is the token this file already uses for every other muted
+  // foreground on that surface — the same pairing the station picker's own
+  // placeholder makes one component over. It belongs HERE and
+  // not in a component stylesheet because the base rule is global too, so this
+  // outranks it on specificity alone (2 vs 1) — the OBRS-767 trap needs an
+  // ENCAPSULATED base rule to spring, and there is none.
+  // `!important` is forced, not chosen: the light rule has to carry it to get
+  // past `label, input { color: … !important }` in styles.scss, and an important
+  // declaration is only ever beaten by another one.
+  //
+  // The `label` tag mirrors the light rule's selector so the two are read as a
+  // pair. What actually keeps this one alive is the `:not(.field-inline-label)`
+  // added to the blanket label rule at the top of this section — see the note
+  // there for why out-specifying it was the worse of the two options.
+  label.field-inline-label {
+    color: $dk-text-muted !important;
   }
 }
 
@@ -576,10 +606,34 @@ body.is-dark {
 // it went red because a debt entry stopped matching, and the entry stopped
 // matching because the colour underneath had changed.
 body.is-dark {
-  .p-datepicker .p-inputtext {
+  // `:not(.app-date-field--segment)` is not decoration — OBRS-1189 added it
+  // because the segment rule below OVERRIDES this one wherever this lane can see
+  // a date field at all: every reachable customer-shell picker is now a segment
+  // of a booking bar. Left unscoped, all five of this rule's declarations were
+  // reported DEAD by `dark-override-effective.spec.ts` (x8 instances, home +
+  // three schedule-booking states) — a rule that parses, matches and paints
+  // nothing, which is the exact shape OBRS-767 exists to catch. Scoped, it does
+  // not match those elements at all, and an unmatched selector is not judged.
+  // It still dresses every standalone picker (payment expiry, admin) unchanged.
+  .p-datepicker:not(.app-date-field--segment) .p-inputtext {
     background-color: $dk-bg-input !important;
     border-color: $dk-border !important;
     color: $dk-text !important;
+  }
+
+  // OBRS-1189 — a date SEGMENT is part of the station bar, and a bar with two
+  // fills and two border colours is not a bar. Measured on the finished layout:
+  // the rule above paints these four fields $dk-bg-input behind a $dk-border
+  // outline, directly beside two station halves that are TRANSPARENT over the
+  // card ($dk-bg-soft) behind a $dk-text-muted one
+  // (dropdown-group-obrs.component.scss, which chose that token because
+  // $dk-border composites to 1.36:1 there — under the 3:1 WCAG 1.4.11 asks of a
+  // component boundary). Light mode has no such split: the card and the field
+  // are both $primary-white and the borders are both $primary-lightgrey. So this
+  // is what makes dark match light, not a second design for it.
+  .p-datepicker.app-date-field--segment .p-inputtext {
+    background-color: transparent !important;
+    border-color: $dk-text-muted !important;
   }
 
   .p-datepicker-panel {

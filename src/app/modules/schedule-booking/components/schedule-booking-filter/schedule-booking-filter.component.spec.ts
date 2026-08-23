@@ -764,10 +764,17 @@ describe('ScheduleBookingFilterComponent — origin/destination swap (OBRS-1035)
     const centreY = (el: HTMLElement) => box(el).top + box(el).height / 2;
 
     if (window.matchMedia('(max-width: 992px)').matches) {
-      // No seam exists here: the lower field's LABEL sits between the two
-      // boxes. The button straddles the upper field's bottom edge instead, at
-      // the right end, where that left-aligned label has no text.
+      // AC#4 of OBRS-1189: there IS a seam here now. While the labels sat ABOVE
+      // their fields the lower one's label filled the gap between the two boxes
+      // (measured 2026-08-05: its midpoint 15px below the upper field, inside
+      // that label's own text row), so the button could only straddle the upper
+      // field's bottom edge. The boxes TOUCH now -- they overlap by the 1px that
+      // collapses their two borders into one line -- and that is the assertion
+      // this card added: it is red against every build before it, which is what
+      // makes it a proof of AC#4 rather than a restatement of the old layout.
+      // It still hangs at the right end, where the reference sites put it.
       expect(box(fields[0]).left).toBe(box(fields[1]).left);
+      expect(Math.abs(box(fields[1]).top - box(fields[0]).bottom)).toBeLessThanOrEqual(1);
 
       expect(Math.abs(centreY(host) - box(fields[0]).bottom)).toBeLessThanOrEqual(1);
       expect(centreX(host)).toBeGreaterThan(centreX(fields[0]));

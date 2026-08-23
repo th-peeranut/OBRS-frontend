@@ -203,6 +203,14 @@ $radius-xl:     24px;
 $radius-pill:   999px;   // the single input shape (design-system §5)
 $radius-circle: 50%;
 
+// Field height — OBRS-1189. The search bar's segments carry their label INSIDE
+// the frame, which is a second text row the 48px field never had to hold. One
+// token because four places have to agree on it or the bar stops being a bar:
+// the station picker's own frame (dropdown-group-obrs), the date segments
+// (styles.scss), and the swap button's vertical centring, which is derived from
+// the field height rather than nudged (OBRS-1035).
+$field-height-inline-label: 64px;
+
 // Elevation — focus ring + neutral drop shadows (admin focus uses var(--accent-soft))
 // rgb() of $primary-blue at 20%. It followed the brand when the brand moved
 // (OBRS-752) -- a cyan focus ring around a deep-blue input is the same
