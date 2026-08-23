@@ -134,10 +134,14 @@ describe('BoardingEntryPageComponent', () => {
       expect(component.isEmpty).toBe(true);
     });
 
-    it('clearing the date shows every trip, still soonest first', () => {
+    // OBRS-1584: this spec used to assert the opposite — clearing the field
+    // rendered every trip the store held, which is the OBRS-33 symptom one
+    // keystroke away. The day already in effect survives instead.
+    it('clearing the date keeps the day already in effect, never every trip', () => {
       const component = componentWith(TRIPS);
+      component.onDateChange(new Date(2026, 7, 23));
       component.onDateChange(null);
-      expect(component.filteredRows.map((r: { id: number }) => r.id)).toEqual([1, 3, 2]);
+      expect(component.filteredRows.map((r: { id: number }) => r.id)).toEqual([3, 2]);
     });
 
     it('defaults to today', () => {
