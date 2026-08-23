@@ -116,7 +116,21 @@ promote in one build.
 **SIT only.** Production frontend is not on Netlify — it is the Oracle Cloud VM behind
 Caddy, which this repo's own `netlify.toml` records ("prod carries the header today, but
 the Angular app is not published to that VM yet"). A prod deploy costs nothing on this
-bill. The SIT backend is on Koyeb and is likewise unaffected.
+bill. The SIT backend is on Koyeb, which is not on this bill either.
+
+**"This bill" means Netlify credits and nothing else.** That last sentence used to end "and
+is likewise unaffected". True of Netlify, and read by everyone since as a blanket all-clear
+it was never entitled to give. Koyeb does not charge per deploy — but the `ci.yml` that has
+to go green before that deploy runs on GitHub Actions, in a **private** repo, and is
+metered. Measured 2026-08-23 over 08-01→08-23 by rounding each job up the way GitHub bills
+it (`gh api repos/th-peeranut/OBRS-backend/actions/runs?created=">=2026-08-01"`, then
+`/jobs` for every run): `OBRS-backend` spent **1,991 of the account's 2,000** monthly
+minutes, roughly **35** of them per push into `sit`; `OBRS-frontend` spent **0** across 490
+CI runs in the same window, because it is public. So the promote discipline in this ADR
+governs the half of the pipeline that is free and is silent on the half that pays.
+OBRS-1557 owns that gap; do not read "unaffected" as covering it. Both figures are
+measurements with a date on them — do not freeze either into a gate or an acceptance
+criterion, for the same reason "15 credits" is not frozen into one below.
 
 ## What is measured here, and what is inferred
 
