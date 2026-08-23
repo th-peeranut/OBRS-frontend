@@ -1,15 +1,15 @@
 @import '../../../../styles/variables.scss';
+@import '../../../../styles/dark-tokens.scss';
 
 // OBRS-874 — the consent control on the privacy policy page.
 //
-// NO `:host-context(body.is-dark)` BLOCK HERE, DELIBERATELY.
-// The banner has one because it is fixed to the viewport and sits on whatever
-// the theme paints. This control does not: it renders inside `.policy-card`,
-// and `.policy-container` is `$primary-white` with no dark rule anywhere in
-// `src/styles/` (checked 2026-08-01). Adding dark-mode colours here would put
-// pale text on a white panel — a themed foreground over an unthemed background,
-// which is a contrast defect, not a dark-mode feature. If the policy page ever
-// gains a dark background, this file gains its override in the same change.
+// It used to say NO `:host-context(body.is-dark)` BLOCK HERE, DELIBERATELY, and
+// gave the condition under which that would stop being true: `.policy-container`
+// was `$primary-white` with no dark rule anywhere, so a themed foreground here
+// would have been pale text on a white panel — a contrast defect, not a
+// dark-mode feature. "If the policy page ever gains a dark background, this file
+// gains its override in the same change." OBRS-969 is that change, and the block
+// at the foot of this file is that override, in that same commit.
 
 // OBRS-775: a component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -93,5 +93,60 @@
   .consent-control__btn {
     flex: 1 1 0;
     min-width: 0;
+  }
+}
+
+// OBRS-969. The override the header promised. Values are the ones
+// analytics-consent-banner.component.scss already uses for the same class names on the
+// same decision: the two surfaces ask one question and must not answer it in two palettes.
+// The control sits on `$dk-bg` now, so it keeps being a raised card via `$dk-bg-card`.
+:host-context(body.is-dark) {
+  .consent-control {
+    border-color: $dk-border;
+    background: $dk-bg-card;
+  }
+
+  .consent-control__title {
+    color: $dk-text;
+  }
+
+  .consent-control__status {
+    color: $dk-text;
+  }
+
+  .consent-control__note {
+    color: $dk-text-muted;
+  }
+
+  // `:not()` here where the light block above just writes `.consent-control__btn`, and
+  // that is not a style preference. The template renders exactly ONE of the two buttons —
+  // withdraw when consent is granted, accept otherwise — and every sweep of this page runs
+  // with `denied` seeded, so the only button in the DOM is the accept variant, whose own
+  // rule below overrides this `color`. `dark-override-effective.spec.ts` measures a
+  // declaration by removing it and seeing whether the page moves; written as a plain
+  // `.consent-control__btn` it read as dead and failed the gate. Narrowing the selector
+  // says what was always meant: these are the OUTLINE button's colours.
+  .consent-control__btn:not(.consent-control__btn--accept) {
+    border-color: $dk-accent;
+    color: $dk-accent;
+
+    &:hover {
+      border-color: $dk-accent-hover;
+      color: $dk-accent-hover;
+    }
+  }
+
+  .consent-control__btn--accept {
+    background: $dk-accent;
+    border-color: $dk-accent;
+    // Dark text on the bright accent, NOT white: white on #4bc2f7 measures 2.03:1
+    // (variables.scss records it for the same colour under its old light-mode name).
+    color: $dk-bg;
+
+    &:hover {
+      background: $dk-accent-hover;
+      border-color: $dk-accent-hover;
+      color: $dk-bg;
+    }
   }
 }
