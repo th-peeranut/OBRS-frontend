@@ -3721,6 +3721,7 @@
           "BOOKING_NUMBER": "Booking number",
           "SEATS": "Seats",
           "FREE_AISLE": "Free — no seat used",
+          "OPEN_SEATING": "No seat number — this trip is open seating",
           "UNPAID_NOTE": "Not yet paid — collect cash at the counter (Booking #{{bookingNumber}})",
           "PAY_CASH_BUTTON": "Collect cash",
           "PAYING": "Recording payment…",
