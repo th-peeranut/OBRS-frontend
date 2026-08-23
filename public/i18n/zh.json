@@ -3818,7 +3818,8 @@
       },
       "ERROR": {
         "CODE_MISMATCH": "取件码不匹配。",
-        "COLLECT_RATE_LIMITED": "取件码输入错误次数过多，此包裹已被锁定 15 分钟，请稍后再试。",
+        "COLLECT_RATE_LIMITED": "取件码输入错误次数过多，此包裹已被锁定，请在 {{minutes}} 分钟后重试。",
+        "COLLECT_RATE_LIMITED_UNKNOWN_WAIT": "取件码输入错误次数过多，此包裹已被暂时锁定，请稍后再试。",
         "ALREADY_COLLECTED": "此包裹已被取走。",
         "WRONG_STATE": "此包裹状态与预期不符，列表已刷新。",
         "BOOKING_NOT_CONFIRMED": "此包裹尚未付款。交付前请先在预订上收款。",
