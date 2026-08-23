@@ -18,7 +18,7 @@ import {
 } from '../../../../shared/lib/parcel-booking-status';
 import { parcelStopLabel } from '../../../../shared/lib/parcel-stop-label';
 import { ParcelDeliveryListStore } from './parcel-delivery-list.store';
-import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
+import { errorCodeFromMessageKey, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import { ParcelClaimRespDto } from '../../../../shared/interfaces/parcel-claim.interface';
 import {
   ParcelClaimFilePayload,
@@ -37,6 +37,19 @@ const ACTION_ERROR_KEYS: Record<string, string> = {
   // OBRS-1537: COLLECTION, not COLLECT — the key was spelled without `ION`, so
   // it never matched and every wrong code fell through to WRONG_STATE.
   PARCEL_COLLECTION_CODE_MISMATCH: 'STAFF.PARCEL_DELIVERY.ERROR.CODE_MISMATCH',
+  // OBRS-1545: the 429 from `ParcelCollectAttemptService.checkNotBlocked()`.
+  // Without it a blocked driver was told the parcel was in the wrong state and
+  // the list had been refreshed — advice that is both untrue and unhelpful, the
+  // parcel is fine and the only thing that clears the block is waiting. The
+  // code is DERIVED, not curated: `RateLimitException` passes no errorCode, so
+  // `DomainException.getErrorCode()` builds it from the messageKey. Derived
+  // here too rather than hand-typed — the sibling entry above is a card of its
+  // own about exactly that kind of typo. The copy names the 15-minute window,
+  // which is `SecurityConstant.PARCEL_COLLECT_RATE_LIMIT_WINDOW_MINUTES` copied
+  // across repos with no gate between them; OBRS-1553 is the card to have the
+  // 429 carry the number instead.
+  [errorCodeFromMessageKey('parcel.error.collect-rate-limited')]:
+    'STAFF.PARCEL_DELIVERY.ERROR.COLLECT_RATE_LIMITED',
   PARCEL_ALREADY_COLLECTED: 'STAFF.PARCEL_DELIVERY.ERROR.ALREADY_COLLECTED',
   PARCEL_BOOKING_NOT_CONFIRMED: 'STAFF.PARCEL_DELIVERY.ERROR.BOOKING_NOT_CONFIRMED',
   // OBRS-1345. The photo failures get their OWN messages rather than falling
