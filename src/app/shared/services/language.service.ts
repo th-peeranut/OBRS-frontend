@@ -12,6 +12,19 @@ export const APP_LANGUAGE_KEY = 'app_language';
 export const DEFAULT_LANGUAGE = 'th';
 
 /**
+ * The language the customer has chosen, or the default when they never have.
+ *
+ * A free function and not only a method on the service, because errorInterceptor
+ * has to ask the same question (OBRS-930) and cannot inject LanguageService
+ * without dragging TranslateService back into the interceptor's own injection
+ * chain — the NG0200 cycle OBRS-352 exists to keep out. Written once so that a
+ * later rule about what counts as a valid choice cannot land on one caller only.
+ */
+export function readStoredLanguage(): string {
+  return localStorage.getItem(APP_LANGUAGE_KEY) || DEFAULT_LANGUAGE;
+}
+
+/**
  * OBRS-1023: the display format a customer-facing `p-datePicker` binds to,
  * derived from the locale's own `CALENDAR.dateFormat` and prefixed with
  * PrimeNG's short-day-name token `D`.
@@ -85,7 +98,7 @@ export class LanguageService {
 
   /** The persisted language, or the default when none has been stored yet. */
   getStoredLanguage(): string {
-    return localStorage.getItem(APP_LANGUAGE_KEY) || DEFAULT_LANGUAGE;
+    return readStoredLanguage();
   }
 
   /** Apply and persist `lang`, then refresh the PrimeNG calendar translations. */

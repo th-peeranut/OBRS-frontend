@@ -6,10 +6,11 @@ import {
   HttpInterceptorFn,
   HttpRequest,
 } from '@angular/common/http';
-import { throwError } from 'rxjs';
+import { Subscription, throwError } from 'rxjs';
 import { catchError, finalize, tap, timeout } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../services/alert.service';
+import { readStoredLanguage } from '../services/language.service';
 import { resolveApiAlertMessage } from '../lib/api-error';
 import {
   ApiLatencyTelemetryService,
@@ -78,19 +79,73 @@ export const errorInterceptor: HttpInterceptorFn = (
   const skipGlobalLoadingAlert = req.context.get(SKIP_GLOBAL_LOADING_ALERT);
   const shouldShowLoading = isApiRequest && !skipGlobalLoadingAlert;
   const shouldShowError = isApiRequest && !skipGlobalErrorAlert;
+  /** Live language binding for this request's overlay title — see below (OBRS-930). */
+  let titleSub: Subscription | null = null;
 
   if (shouldShowLoading) {
-    // AlertService.showLoading() defaults its title to the English 'Loading...',
-    // and this interceptor is its ONLY production caller — so that word was the
-    // spinner every Thai and Chinese user saw on every /api/ request (OBRS-569).
+    // AlertService.showLoading() used to default its title to the English
+    // 'Loading...', and this interceptor is its ONLY production caller — so that
+    // word was the spinner every Thai and Chinese user saw on every /api/
+    // request (OBRS-569). OBRS-930 emptied that default rather than restoring it
+    // here, for the reason written on the parameter.
     // Translating here rather than inside AlertService keeps the service free of
     // TranslateService, whose HTTP loader would otherwise re-enter this very
     // interceptor (the NG0200 cycle documented above).
+    //
+    // OBRS-930. Two ways this line put the wrong thing on a customer's screen,
+    // and NEITHER is visible in what `instant()` returns — which is why the
+    // answer is not read off its return value at all:
+    //
+    //   1. Before GET /i18n/{lang}.json lands there is nothing in the store, and
+    //      `instant()` hands the KEY back as if it were text. That is the
+    //      literal `COMMON.LOADING` on the spinner (reproduced by holding the
+    //      bundle 4s).
+    //   2. `getParsedResult` falls back to `defaultLang` (`th`), and
+    //      `use('en')` leaves `currentLang` on the previous language until
+    //      en.json finishes loading. So `instant()` answers in Thai for an
+    //      English visitor and looks entirely healthy doing it.
+    //
+    // So the question asked is the one the card's AC3 asks: has the language the
+    // CUSTOMER chose actually arrived? Nothing else may reach this overlay.
+    // Until it has, the overlay opens with no title, because nothing is the only
+    // string that is neither a key nor the wrong language.
+    //
+    // The escape hatch's own two strings go through the same door rather than
+    // becoming two more keys on screen. It still opens on time (OBRS-642) — the
+    // close button, Esc and outside-click all arrive — just unlabelled, and only
+    // for a bundle still missing 8s in.
+    const inChosenLanguage = (key: string): string | undefined => {
+      if (!translate) {
+        return undefined;
+      }
+      const chosen = readStoredLanguage();
+      if (!translate.translations?.[chosen]) {
+        return undefined;
+      }
+      const value = translate.instant(key);
+      return value && value !== key ? value : undefined;
+    };
+    const initialTitle = inChosenLanguage('COMMON.LOADING');
     alertService.showLoading(
-      translate ? translate.instant('COMMON.LOADING') : undefined,
-      translate ? translate.instant('COMMON.LOADING_SLOW') : undefined,
-      translate ? translate.instant('COMMON.CLOSE') : undefined
+      initialTitle,
+      inChosenLanguage('COMMON.LOADING_SLOW'),
+      inChosenLanguage('COMMON.CLOSE')
     );
+    // ...and a title read once stays wrong: the bundle lands a second later, the
+    // whole page turns, and the overlay is still holding the string it was given
+    // at open. `onLangChange` is exactly that moment — `changeLang()` fires it
+    // when a pending bundle finishes loading and on every later switch — and the
+    // title is RE-RESOLVED through the same gate rather than taken from the
+    // event, whose payload carries the default-language fallback too.
+    // `finalize` drops the subscription with the overlay it belongs to.
+    if (translate) {
+      titleSub = translate.onLangChange.subscribe(() => {
+        const title = inChosenLanguage('COMMON.LOADING');
+        if (title && title !== initialTitle) {
+          alertService.updateLoadingTitle(title);
+        }
+      });
+    }
   }
 
   // OBRS-642: idempotent requests get a hard ceiling; mutations deliberately do not.
@@ -179,6 +234,10 @@ export const errorInterceptor: HttpInterceptorFn = (
       return throwError(() => error);
     }),
     finalize(() => {
+      // OBRS-930. `onLangChange` never completes, so the overlay's language
+      // binding has to be dropped with the overlay itself — same place, same
+      // ending, or every /api/ call in the session leaves one behind.
+      titleSub?.unsubscribe();
       if (shouldShowLoading) {
         alertService.hideLoading();
       }
