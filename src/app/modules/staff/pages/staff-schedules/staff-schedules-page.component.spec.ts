@@ -1,9 +1,10 @@
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { DatePickerModule } from 'primeng/datepicker';
 import { BehaviorSubject, throwError } from 'rxjs';
 import { StaffSchedulesPageComponent } from './staff-schedules-page.component';
 import { createAuthServiceStub, createRouterStub, createTranslateStub } from '../../../../testing/test-stubs';
@@ -289,7 +290,10 @@ describe('StaffSchedulesPageComponent — OBRS-667 owner-only cancel gate (DOM)'
       .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null }));
 
     TestBed.configureTestingModule({
-      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
+      // OBRS-33: FormsModule + DatePickerModule for the header date filter
+      // ([ngModel] on a real p-datePicker) — the same pair the analytics page
+      // specs use; the real StaffModule gets both from SharedModule/StaffModule.
+      imports: [CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
       declarations: [StaffSchedulesPageComponent],
       providers: [
         { provide: Router, useValue: createRouterStub() },
@@ -368,5 +372,53 @@ describe('StaffSchedulesPageComponent — OBRS-667 owner-only cancel gate (DOM)'
 
     expect(deleteSpy).toHaveBeenCalledWith(2);
     expect(cancelSpy).not.toHaveBeenCalled();
+  });
+});
+
+
+// OBRS-33: the list used to render every schedule the API returned, in id
+// order, so the first row on prod was a trip 19 days in the past.
+describe('StaffSchedulesPageComponent - OBRS-33 one day at a time, soonest first', () => {
+  const TRIPS: ScheduleRow[] = [
+    { ...ROW, id: 1, tripId: '#SCH-1', departure: '2026-08-04T07:00:00+07:00' },
+    { ...ROW, id: 2, tripId: '#SCH-2', departure: '2026-08-23T18:00:00+07:00' },
+    { ...ROW, id: 3, tripId: '#SCH-3', departure: '2026-08-23T06:30:00+07:00' },
+  ];
+
+  function componentWithTrips(): any {
+    const { component } = makeComponent({});
+    (component as any).rows = [...TRIPS];
+    return component;
+  }
+
+  it('keeps only the selected day and puts the soonest departure on top', () => {
+    const component = componentWithTrips();
+    component.onDateChange(new Date(2026, 7, 23));
+    expect(component.filteredRows.map((r: ScheduleRow) => r.id)).toEqual([3, 2]);
+  });
+
+  it('a day with no trips filters everything out', () => {
+    const component = componentWithTrips();
+    component.onDateChange(new Date(2026, 7, 22));
+    expect(component.filteredRows.length).toBe(0);
+  });
+
+  it('clearing the date shows every trip, still soonest first', () => {
+    const component = componentWithTrips();
+    component.onDateChange(null);
+    expect(component.filteredRows.map((r: ScheduleRow) => r.id)).toEqual([1, 3, 2]);
+  });
+
+  it('the date filter composes with the existing route filter', () => {
+    const component = componentWithTrips();
+    component.rows = [...TRIPS, { ...ROW, id: 4, tripId: '#SCH-4', departure: '2026-08-23T09:00:00+07:00', routeSlug: 'c-d' }];
+    component.onDateChange(new Date(2026, 7, 23));
+    component.onRouteFilterChange('c-d');
+    expect(component.filteredRows.map((r: ScheduleRow) => r.id)).toEqual([4]);
+  });
+
+  it('defaults to today', () => {
+    const { component } = makeComponent({});
+    expect((component as any).selectedDate.toDateString()).toBe(new Date().toDateString());
   });
 });

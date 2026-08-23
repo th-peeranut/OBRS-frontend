@@ -3,6 +3,28 @@
   the staff layout topbar; this h4 is the distinct in-step action heading. -->
   <h4 class="fw-bold mb-3">{{ 'STAFF.BOARDING_ENTRY.TITLE' | translate }}</h4>
 
+  <!-- OBRS-33: one day at a time (today by default). Outside the empty-state
+  branch below on purpose — a day with no trips must still let staff pick
+  another day. -->
+  <div class="d-flex mb-3">
+    <div class="flex-shrink-0" style="width: 200px">
+      <p-datePicker
+        styleClass="app-date-field"
+        panelStyleClass="app-date-field-panel"
+        dateFormat="dd/mm/yy"
+        [ngModel]="selectedDate"
+        (ngModelChange)="onDateChange($event)"
+        [showIcon]="true"
+        [iconDisplay]="'input'"
+        [placeholder]="'STAFF.SELL.DATE_PLACEHOLDER' | translate"
+        >
+        <ng-template pTemplate="inputicon">
+          <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+        </ng-template>
+      </p-datePicker>
+    </div>
+  </div>
+
   <!-- Empty state -->
   @if (isEmpty) {
     <div class="text-center py-5">
@@ -36,7 +58,7 @@
                 }
               }
               @if (!isLoading) {
-                @for (row of rows; track row) {
+                @for (row of filteredRows; track row) {
                   <tr>
                     <td class="fw-semibold">{{ row.tripId }}</td>
                     <td>{{ displayDateTime(row.departure) }}</td>
