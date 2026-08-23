@@ -3721,6 +3721,7 @@
           "BOOKING_NUMBER": "订单号",
           "SEATS": "座位",
           "FREE_AISLE": "免费 — 未占用座位",
+          "OPEN_SEATING": "无座位号 — 本班次为自由座",
           "UNPAID_NOTE": "尚未付款 — 请在柜台收取现金（订单号 #{{bookingNumber}}）",
           "PAY_CASH_BUTTON": "收取现金",
           "PAYING": "正在记录付款…",

@@ -447,11 +447,17 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
 
   /** OBRS-341 — `WalkInTripDto.availableSeatNumbers` for the chosen trip, the
    * same source `getWalkInSchedules()` already populated for the schedule
-   * dropdown above (no extra HTTP call). */
+   * dropdown above (no extra HTTP call).
+   *
+   * OBRS-615 — empty on an OPEN-seating trip. `availableSeatNumbers` is built from
+   * `string_agg(seat_number)`, and OPEN tickets carry NULL there, so on OPEN it lists
+   * every seat on the vehicle however full it is. The backend now rejects any named
+   * seat on such a trip (`PARCEL_SEAT_NUMBERS_NOT_ALLOWED_OPEN`), so offering that list
+   * could only produce a 400. */
   private findTripSeatNumbers(scheduleId: number): string[] {
     for (const group of this.routeGroups) {
       const trip = group.trips.find((t) => t.scheduleId === scheduleId);
-      if (trip) return trip.availableSeatNumbers ?? [];
+      if (trip) return trip.seatingMode === 'OPEN' ? [] : (trip.availableSeatNumbers ?? []);
     }
     return [];
   }
