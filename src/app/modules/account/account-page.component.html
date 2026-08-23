@@ -106,6 +106,7 @@
                   type="text"
                   id="account-profile-first-name"
                   formControlName="firstName"
+                  autocomplete="given-name"
                   [class.form-error]="getForm('firstName')?.touched && getForm('firstName')?.errors"
                   />
                   @if (getForm('firstName')?.touched && getForm('firstName')?.errors) {
@@ -121,6 +122,7 @@
                     type="text"
                     id="account-profile-middle-name"
                     formControlName="middleName"
+                    autocomplete="additional-name"
                     />
                   </div>
                   <div class="mt-2">
@@ -130,6 +132,7 @@
                       type="text"
                       id="account-profile-last-name"
                       formControlName="lastName"
+                      autocomplete="family-name"
                       [class.form-error]="getForm('lastName')?.touched && getForm('lastName')?.errors"
                       />
                       @if (getForm('lastName')?.touched && getForm('lastName')?.errors) {
@@ -143,6 +146,8 @@
                       <input
                         class="form-control mt-1"
                         type="tel"
+                        inputmode="tel"
+                        autocomplete="tel"
                         id="account-profile-phone"
                         formControlName="phoneNumber"
                         (focus)="onPhoneFocus()"
