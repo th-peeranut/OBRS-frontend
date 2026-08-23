@@ -1394,3 +1394,48 @@ body.is-dark {
   }
 }
 
+
+// =============================================================================
+// 17. Parcel booking page card
+//
+// `.parcel-booking-card` is `background: $primary-white` in its own stylesheet
+// (parcel-booking-page.component.scss:9) and had no dark override, so the whole
+// wizard sat on a WHITE card in dark mode while sections 1 and 4 painted its
+// headings, labels and inputs light. Measured on the gate build at 1280 before
+// this rule: the station value and the date value both **1.20:1** against that
+// white, the field labels 2.53:1, and the page title with them.
+//
+// OBRS-1189 is what forced the question rather than what caused it. The bar's
+// segments are TRANSPARENT by design -- they borrow the surface they stand on --
+// and when this card made the parcel date field a segment, the one field that
+// still carried its own dark box (section 4's `$dk-bg-input`) lost it. Putting
+// that box back alone would have left one dark field standing on a white card
+// beside two transparent ones: the defect is the surface, not the field.
+//
+// `$dk-bg-soft` and `!important` for exactly the reasons OBRS-217 gives for
+// `.booking-card` in section 6 -- same defect (an inner white card left behind
+// when its wrapper was themed), same token, and the component-scoped rule
+// carries Angular's `[_ngcontent]` attribute, which out-specifies a bare global
+// class selector.
+// =============================================================================
+body.is-dark {
+  .parcel-booking-card {
+    background-color: $dk-bg-soft !important;
+
+    // Changing the surface moves every light-mode token that was chosen against
+    // white. These four are the ones inside this card that carry their own
+    // colour: $text-lightblack is 4.60:1 on white and computes 3.24:1 on
+    // $dk-bg-soft (WCAG formula over the two measured values -- under the 4.5:1
+    // text floor), and $text-red is worse. Repointed to the tokens this file
+    // already uses for exactly this, in sections 1 and 14.
+    .parcel-trip-form__empty,
+    .parcel-details-form__help {
+      color: $dk-text-muted !important;
+    }
+
+    .parcel-trip-form__error,
+    .text-error {
+      color: $dk-danger !important;
+    }
+  }
+}
