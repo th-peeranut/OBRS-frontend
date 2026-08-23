@@ -233,4 +233,36 @@ describe('ParcelDetailsFormComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('PARCEL.PROHIBITED.EMPTY');
     });
   });
+  // OBRS-641: the two phone fields opened the full QWERTY keyboard on a phone. The
+  // /parcel-booking details step is not reachable on the hermetic capture lane -- it
+  // sits behind a trip selection -- so this spec, not a screenshot, is the evidence
+  // for it.
+  describe('mobile keyboard + autofill hints (OBRS-641)', () => {
+    function inputEl(id: string): HTMLInputElement {
+      const el = fixture.nativeElement.querySelector(`#${id}`) as HTMLInputElement | null;
+      if (!el) {
+        throw new Error(`Input #${id} not found in the rendered template`);
+      }
+      return el;
+    }
+
+    it('both phone fields open the telephone keypad', () => {
+      expect(inputEl('senderPhone').getAttribute('inputmode')).toBe('tel');
+      expect(inputEl('recipientPhone').getAttribute('inputmode')).toBe('tel');
+    });
+
+    it("offers tel autofill for the sender's own number and NOT for the recipient's", () => {
+      // The recipient is a third party. Offering the person filling the form their
+      // own number there would be a wrong suggestion, not a convenience.
+      expect(inputEl('senderPhone').getAttribute('autocomplete')).toBe('tel');
+      expect(inputEl('recipientPhone').getAttribute('autocomplete')).toBeNull();
+    });
+
+    it('still rejects a phone number the keypad would happily let you type', () => {
+      // `form` is protected on the component -- same bracket access the specs above use.
+      const ctrl = component['form'].get('senderPhone');
+      ctrl?.setValue('0812');
+      expect(ctrl?.valid).toBeFalse();
+    });
+  });
 });

@@ -824,3 +824,60 @@ describe('PassengerInfoFormComponent — fare-category radio (OBRS-296) — real
     expect(img).not.toBeNull();
   });
 });
+
+// OBRS-641: every passenger row asked for a full QWERTY keyboard for a phone number, and the
+// browser could offer nothing for the name fields. The autofill tokens are scoped per row with
+// `section-passenger-<i>` so tapping a suggestion on row 1 cannot overwrite row 0.
+describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-641)', () => {
+  let fixture: ComponentFixture<PassengerInfoFormComponent>;
+  let component: PassengerInfoFormComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [PassengerInfoFormComponent],
+      imports: [SharedModule, DropdownObrsComponent, PassengerSeatModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: Store, useValue: createStoreStub() },
+        { provide: Router, useValue: createRouterStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PassengerInfoFormComponent);
+    component = fixture.componentInstance;
+    component.insertPassenger(true);
+    component.insertPassenger(true);
+    fixture.detectChanges();
+  });
+
+  function inputEl(id: string): HTMLInputElement {
+    const el = fixture.nativeElement.querySelector(`#${id}`) as HTMLInputElement | null;
+    if (!el) {
+      throw new Error(`Input #${id} not found in the rendered template`);
+    }
+    return el;
+  }
+
+  it('every passenger phone opens the telephone keypad', () => {
+    for (const i of [0, 1]) {
+      expect(inputEl(`phoneNumber-${i}`).getAttribute('inputmode')).withContext(`row ${i}`).toBe('tel');
+    }
+  });
+
+  it('the autofill tokens are scoped to their own passenger row', () => {
+    for (const i of [0, 1]) {
+      expect(inputEl(`phoneNumber-${i}`).getAttribute('autocomplete')).toBe(`section-passenger-${i} tel`);
+      expect(inputEl(`firstName-${i}`).getAttribute('autocomplete')).toBe(`section-passenger-${i} given-name`);
+      expect(inputEl(`middleName-${i}`).getAttribute('autocomplete')).toBe(`section-passenger-${i} additional-name`);
+      expect(inputEl(`lastName-${i}`).getAttribute('autocomplete')).toBe(`section-passenger-${i} family-name`);
+    }
+  });
+
+  // AC-6: inputmode is a keyboard hint, not a check. The rule that rejects a bad number is the
+  // validator, and it must be exactly as strict as it was before the hint was added.
+  it('still rejects a phone number that the keypad would happily let you type', () => {
+    const ctrl = component.passengerData.at(0).get('phoneNumber');
+    ctrl?.setValue('0812');
+    expect(ctrl?.valid).toBeFalse();
+  });
+});
