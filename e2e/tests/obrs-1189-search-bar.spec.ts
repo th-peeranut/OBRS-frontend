@@ -333,7 +333,15 @@ test('the inline label is painted from the right token in each theme', async ({ 
   await page.reload();
   await page.waitForSelector('body.is-dark .station-group app-dropdown-group-obrs .dropdown-btn');
 
-  for (const f of (await read(page)).fields) {
+  const dark = await read(page);
+  for (const f of dark.fields) {
     expect(f.labelColor).toBe('rgb(154, 163, 184)'); // $dk-text-muted
   }
+
+  // And it is still ONE bar in dark. This is not a restatement of the 1280 test:
+  // dark-theme.scss puts a 2px accent ring on `.btn-search` (the brand fill needs
+  // it to clear 3:1 on the dark card) while every other segment carries a 1px
+  // border, and the segments overlap by exactly 1px. A theme that widens one
+  // segment's border is precisely how a bar comes apart at one end only.
+  assertOneRow(dark);
 });

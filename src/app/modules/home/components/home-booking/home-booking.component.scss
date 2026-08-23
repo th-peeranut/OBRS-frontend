@@ -286,8 +286,11 @@ app-recent-routes-quick-pick.has-routes + .station-section {
   justify-content: center;
   align-items: center;
 
-  margin-top: 30px;
-
+  // `margin-top: 30px` stood here. It was the offset that put a button on its own
+  // row level with the label+field boxes beside it; OBRS-1189 made the button a
+  // SEGMENT, and both branches of `.station-section > .btn-search` now set the
+  // margin themselves (0 in the row, $space-md in the column), so this one could
+  // no longer apply at any width.
   font-size: $font-size-md;
   font-weight: $font-weight-medium;
   color: $text-white;

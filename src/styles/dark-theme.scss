@@ -1365,10 +1365,12 @@ body.is-dark app-report-usability-fab {
 // the same shape as OBRS-768's /my-bookings finding.)
 //
 // GEOMETRY: nothing moves. `box-sizing: border-box` (Bootstrap reboot, global)
-// plus a declared `height` on every member -- 52px on .btn-search / .select-btn /
-// .payment-btn / .btn-confirm / .btn-next, 48px on .parcel-btn-primary, 44px on
+// plus a declared `height` on every member -- 52px on .select-btn / .payment-btn /
+// .btn-confirm / .btn-next, 48px on .parcel-btn-primary, 44px on
 // .promo-code-apply-btn -- means the ring is drawn inside the box that is already
-// there. `.login-btn` was the one member with no declared height, so it was the
+// there. (.btn-search is 64px on the desktop search bar and 52px stacked since
+// OBRS-1189; what this paragraph depends on is that a height is DECLARED, not
+// which one, and both of those are.) `.login-btn` was the one member with no declared height, so it was the
 // one that would have grown 4px; dropping it for the reason above takes the last
 // geometry change out of this card with it.
 //
