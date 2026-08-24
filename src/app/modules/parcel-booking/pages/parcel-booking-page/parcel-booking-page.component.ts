@@ -113,7 +113,6 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
   private fromStationId: number | null = null;
   private toStationId: number | null = null;
   private selectedDate: Date = new Date();
-  private scheduleId: number | null = null;
 
   // --- Resolved trip selection (carried into Details/Payment) ---
   protected tripValue: ParcelTripFormValue | null = null;
@@ -236,10 +235,6 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
   protected onDateChange(date: Date): void {
     this.selectedDate = date;
     this.searchSchedules();
-  }
-
-  protected onScheduleChange(scheduleId: number): void {
-    this.scheduleId = scheduleId;
   }
 
   private syncStationOptions(): void {
