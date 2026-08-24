@@ -1,27 +1,37 @@
 // My Bookings → reschedule flow contract — backed by:
-//   GET  /api/private/bookings/{id}/reschedule-options   (ScheduleSearchProjection[])
+//   GET  /api/private/bookings/{id}/reschedule-options   (RescheduleOptionRespDto[])
 //   GET  /api/private/bookings/{id}/reschedule-estimate  (RescheduleEstimateRespDto)
 //   POST /api/private/bookings/{id}/reschedule            (RescheduleBookingRespDto)
 // See ../../../../OBRS-backend/docs/api/booking.md.
 
-/** `ScheduleSearchProjection` — one candidate departure for a reschedule date. */
+/** The project's standard `{slug, name}` pair (`NewTranslationRespDto`) — `name` is already
+ *  resolved against the request's language by the backend and is the ONLY half a screen renders;
+ *  `slug` is the stable key for icons/predicates. */
+export interface TranslatedRef {
+  slug: string;
+  name: string;
+}
+
+/** `RescheduleOptionRespDto` — one candidate departure for a reschedule date. */
 export interface RescheduleOption {
   scheduleId: number;
-  vehicleTypeId?: number;
-  vehicleTypeName?: string;
+  /** OBRS-1060: was `vehicleTypeName`, which carried `vt.slug` ("minibus") straight out of the
+   *  shared search query and printed it in the middle of the dialog's Thai text. The endpoint has
+   *  its own DTO now and sends the translated label as `vehicleType.name`. `vehicleTypeId` and
+   *  `occupiedSeatNumbers` went with it — declared here, read nowhere. */
+  vehicleType?: TranslatedRef;
   departureDateTime: string;
   arrivalDateTime: string;
   /** OBRS-1099/OBRS-1141: the originally planned departure, present ONLY when
    *  this candidate round has an announced delay. `getRescheduleOptions` runs
-   *  the same `searchSchedulesWithAvailability` query as customer search and
-   *  returns the projection straight out of `BookingController`, so this field
-   *  arrives here for free — and it matters most here, because OBRS-666 lets a
-   *  45-minute delay unlock a free reschedule and a passenger must not land on
-   *  another delayed round without being told. */
+   *  the same `searchSchedulesWithAvailability` query as customer search, so a
+   *  candidate round here can be delayed exactly like a search result — and it
+   *  matters most here, because OBRS-666 lets a 45-minute delay unlock a free
+   *  reschedule and a passenger must not land on another delayed round without
+   *  being told. */
   scheduledDepartureDateTime?: string | null;
   pricePerSeat: number | string;
   availableSeats: number;
-  occupiedSeatNumbers?: string[];
 }
 
 /** `RescheduleEstimateRespDto.paymentDirection`. */

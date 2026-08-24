@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, ViewChild } from '@angular/core';
 import * as L from 'leaflet';
 import { TranslateService } from '@ngx-translate/core';
+import { Subject, takeUntil } from 'rxjs';
 import { mapTileUrl, MAP_TILE_ATTRIBUTION } from '../../../../shared/lib/map-tiles';
 
 /**
@@ -48,7 +49,15 @@ export class TripTrackMapComponent implements OnChanges, AfterViewInit, OnDestro
   private latestBoardingLat: number | null = null;
   private latestBoardingLon: number | null = null;
 
-  constructor(private readonly translate: TranslateService) {}
+  private readonly destroy$ = new Subject<void>();
+
+  constructor(private readonly translate: TranslateService) {
+    // OBRS-1096 — the marker names live on a Leaflet layer, not in a template,
+    // so nothing re-renders them when the language changes. Same subscription
+    // as `FleetMapPanelComponent` (OBRS-1082) and safe before the map exists:
+    // `applyMarkerLabels()` finds no markers and does nothing.
+    this.translate.onLangChange.pipe(takeUntil(this.destroy$)).subscribe(() => this.applyMarkerLabels());
+  }
 
   get canShowMap(): boolean {
     return !!this.maptilerKey;
@@ -83,6 +92,8 @@ export class TripTrackMapComponent implements OnChanges, AfterViewInit, OnDestro
     this.map = null;
     this.vehicleMarker = null;
     this.boardingMarker = null;
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private initialCenter(): L.LatLngExpression {
@@ -101,6 +112,8 @@ export class TripTrackMapComponent implements OnChanges, AfterViewInit, OnDestro
     }
     this.syncVehicleMarker();
     this.syncBoardingMarker();
+    // After both, so one call names whichever marker this sync just created.
+    this.applyMarkerLabels();
 
     // Fit bounds to both markers exactly ONCE, the first time both exist —
     // never re-run automatically on a later poll tick (would yank the map out
@@ -122,7 +135,6 @@ export class TripTrackMapComponent implements OnChanges, AfterViewInit, OnDestro
     if (!this.vehicleMarker) {
       this.vehicleMarker = L.marker(latLng, {
         icon: this.buildVehicleIcon(this.latestStale),
-        alt: this.translate.instant('MY_BOOKINGS.TRIP_TRACK.MARKER.VEHICLE'),
       }).addTo(this.map);
       this.prevStale = this.latestStale;
       return;
@@ -148,11 +160,32 @@ export class TripTrackMapComponent implements OnChanges, AfterViewInit, OnDestro
     if (!this.boardingMarker) {
       this.boardingMarker = L.marker(latLng, {
         icon: this.buildBoardingIcon(),
-        alt: this.translate.instant('MY_BOOKINGS.TRIP_TRACK.MARKER.BOARDING_STOP'),
       }).addTo(this.map);
     } else {
       this.boardingMarker.setLatLng(latLng);
     }
+  }
+
+  /** OBRS-1096. Both icons are `L.divIcon`s, and Leaflet copies the `alt`
+   * marker option onto the element ONLY when it is an `IMG`
+   * (`leaflet-src.js:7907`) — so the two translated names this component used
+   * to pass as `alt` were computed and thrown away, leaving the vehicle and
+   * boarding pins nameless in the accessibility tree. Writing them straight
+   * onto the marker's own element instead keeps the CSS-custom-property
+   * styling the DIV icons exist for (BR-24/U28), and re-running this is all a
+   * language switch needs: no new marker, no extra request.
+   *
+   * `aria-label` only, no `role`: Leaflet's default `keyboard: true` already
+   * stamps `role="button"` + `tabIndex=0` on every marker element
+   * (`leaflet-src.js:7916`), so the element is focusable and only ever lacked
+   * a NAME — overwriting that role with `img` would make it a focusable image. */
+  private applyMarkerLabels(): void {
+    this.labelMarker(this.vehicleMarker, 'MY_BOOKINGS.TRIP_TRACK.MARKER.VEHICLE');
+    this.labelMarker(this.boardingMarker, 'MY_BOOKINGS.TRIP_TRACK.MARKER.BOARDING_STOP');
+  }
+
+  private labelMarker(marker: L.Marker | null, key: string): void {
+    marker?.getElement()?.setAttribute('aria-label', this.translate.instant(key));
   }
 
   /** BR-11/BR-24: the STALE marker must be visibly different from LIVE —

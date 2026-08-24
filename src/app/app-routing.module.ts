@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './auth/auth.guard';
 import { featureEnabledGuard } from './shared/guards/feature-flag.guard';
+import { onlineTicketBookingGuard } from './shared/guards/online-ticket-booking.guard';
 
 // OBRS-543: exported (was module-private) so nav-reachability.spec.ts can read
 // each portal shell's own `requiredRoles`. Most admin child routes carry no
@@ -91,11 +92,15 @@ export const appRoutes: Routes = [
       ),
   },
   {
-    // OBRS-1302: first step that commits to a seat — flag-gated. `featureEnabledGuard`
+    // OBRS-1302: first step that commits to a seat — flag-gated. The guard
     // runs AFTER AuthGuard, same order as the parcel routes below, so auth still
     // decides first and a closed flag redirects to '/' rather than 404ing.
+    // OBRS-1583: `onlineTicketBookingGuard`, not the generic
+    // `featureEnabledGuard`, so the flag/role predicate the banner and the trip
+    // list read is the same one this route runs. The parcel routes below keep
+    // the generic guard and are untouched by that exception.
     path: 'review-schedule-booking',
-    canActivate: [AuthGuard, featureEnabledGuard('onlineTicketBooking')],
+    canActivate: [AuthGuard, onlineTicketBookingGuard],
     data: { customerArea: true },
     loadChildren: () =>
       import('./modules/review-schedule-booking/review-schedule-booking.module').then(
@@ -112,7 +117,7 @@ export const appRoutes: Routes = [
   {
     // OBRS-1302: flag-gated — see /review-schedule-booking above.
     path: 'passenger-info',
-    canActivate: [AuthGuard, featureEnabledGuard('onlineTicketBooking')],
+    canActivate: [AuthGuard, onlineTicketBookingGuard],
     data: { customerArea: true },
     loadChildren: () =>
       import('./modules/passenger-info/passenger-info.module').then(
@@ -123,7 +128,7 @@ export const appRoutes: Routes = [
     // OBRS-1302: flag-gated — the route that reaches the LIVE Omise form, so this
     // is the one a deep link from a search engine must not be able to open.
     path: 'payment',
-    canActivate: [AuthGuard, featureEnabledGuard('onlineTicketBooking')],
+    canActivate: [AuthGuard, onlineTicketBookingGuard],
     data: { customerArea: true },
     loadChildren: () =>
       import('./modules/payment/payment.module').then(

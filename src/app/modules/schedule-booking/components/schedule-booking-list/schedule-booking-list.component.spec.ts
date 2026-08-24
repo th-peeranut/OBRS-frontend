@@ -12,6 +12,7 @@ import {
   createRouterStub,
   createStoreStub,
   createTranslateStub,
+  createAuthServiceStub,
 } from '../../../../testing/test-stubs';
 import { Schedule, ScheduleList } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
@@ -30,6 +31,10 @@ import { ScheduleDelayNoticeComponent } from '../../../../shared/components/sche
 // OBRS-1302: the flag and the fallback channel the two arms assert against.
 import { environment } from '../../../../../environments/environment';
 import { NJ_FACEBOOK_PAGE_URL } from '../../../../shared/lib/online-booking-channel';
+// OBRS-1583: the gate now asks AuthService as well as the flag.
+import { AuthService } from '../../../../auth/auth.service';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 // The component's own time formatter — see the AC-2 assertion for why the expected
 // value is computed and not written down.
 import { formatTimeHHMM } from '../../../../shared/lib/trip-format';
@@ -44,7 +49,8 @@ describe('ScheduleBookingListComponent', () => {
       createStoreStub(),
       createTranslateStub(),
       createRouteMapServiceStub(),
-      createAnalyticsServiceStub()
+      createAnalyticsServiceStub(),
+      createAuthServiceStub()
     );
   });
 
@@ -95,6 +101,7 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -238,6 +245,7 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: routeMapServiceStub },
+        { provide: AuthService, useValue: createAuthServiceStub() },
       ],
     }).compileComponents();
 
@@ -341,6 +349,7 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -450,6 +459,7 @@ describe('ScheduleBookingListComponent (announced-delay disclosure, OBRS-1141)',
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -599,6 +609,7 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -755,13 +766,21 @@ describe('ScheduleBookingListComponent (OBRS-1302 — online booking closed)', (
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        // OBRS-1583: the REAL AuthService here, not the stub the other blocks
+        // use. What the staff-preview arms below have to prove is that a held
+        // role expands through ROLE_GRANTS the way the card claims — a stub
+        // returning a canned boolean would prove only that the stub was called.
+        provideHttpClient(),
+        provideHttpClientTesting(),
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
+    localStorage.removeItem('auth_roles');
   });
 
   afterEach(() => {
     environment.features.onlineTicketBooking = originalOnlineTicketBooking;
+    localStorage.removeItem('auth_roles');
   });
 
   describe('flag OFF', () => {
@@ -822,6 +841,58 @@ describe('ScheduleBookingListComponent (OBRS-1302 — online booking closed)', (
       expect(fixture.debugElement.query(By.css('a.select-btn--closed'))).toBeNull();
     });
   });
+
+  /**
+   * OBRS-1583 — with the flag still OFF, a signed-in staff member sees the
+   * booking button and a customer does not.
+   *
+   * `driver` is asserted separately from `salesperson` on purpose: they are the
+   * pair the owner's decision moved. `salesperson` carries `driver` in
+   * ROLE_GRANTS but not the other way round, so a preview list written as
+   * `['salesperson']` would pass the salesperson case and silently drop every
+   * driver — the exact mistake this arm exists to catch.
+   */
+  describe('OBRS-1583 — flag OFF, staff preview', () => {
+    beforeEach(() => {
+      environment.features.onlineTicketBooking = false;
+    });
+
+    function renderAs(roles: string[] | null): void {
+      if (roles) {
+        localStorage.setItem('auth_roles', JSON.stringify(roles));
+      }
+      render();
+    }
+
+    ['owner', 'admin', 'salesperson', 'driver'].forEach((role) => {
+      it(`${role} gets the booking button, not the Facebook fallback`, () => {
+        renderAs([role]);
+
+        expect(fixture.debugElement.query(By.css('button.select-btn')))
+          .withContext(role)
+          .not.toBeNull();
+        expect(fixture.debugElement.query(By.css('a.select-btn--closed')))
+          .withContext(role)
+          .toBeNull();
+      });
+    });
+
+    // The must-NOT-regress half. Anyone who is not staff must see exactly what
+    // they see today, and "signed out" is the case a role check gets wrong by
+    // reading an empty list as permissive.
+    [null, ['customer'], ['__proto__']].forEach((roles) => {
+      it(`${roles ? roles.join(',') : 'signed out'} still gets the Facebook fallback and no button`, () => {
+        renderAs(roles);
+
+        expect(fixture.debugElement.query(By.css('button.select-btn')))
+          .withContext(String(roles))
+          .toBeNull();
+        expect(fixture.debugElement.query(By.css('a.select-btn--closed')))
+          .withContext(String(roles))
+          .not.toBeNull();
+      });
+    });
+  });
 });
 
 /**
@@ -865,7 +936,8 @@ describe('ScheduleBookingListComponent (OBRS-1302 — selectSchedule side effect
       createStoreStub(),
       createTranslateStub(),
       createRouteMapServiceStub(),
-      analytics
+      analytics,
+      createAuthServiceStub()
     );
   }
 
@@ -940,7 +1012,8 @@ describe('ScheduleBookingListComponent (OBRS-1336 — round trip with no return 
       createStoreStub(),
       createTranslateStub(),
       createRouteMapServiceStub(),
-      createAnalyticsServiceStub()
+      createAnalyticsServiceStub(),
+      createAuthServiceStub()
     );
     component.scheduleList = of({
       departureSchedules: [trip],
