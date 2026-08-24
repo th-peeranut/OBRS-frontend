@@ -259,6 +259,22 @@ describe('ParcelConsignPageComponent', () => {
       expect(clearScheduleSelection).toHaveBeenCalledBefore(staffApi.getWalkInSchedules);
     });
 
+    // PrimeNG fires (onSelect) on every day-cell click, the already-selected day
+    // included, so the clear must be conditional or dismissing the panel by
+    // re-clicking today would wipe a round, its stops and its quote for nothing.
+    it('does NOT clear when the same day is re-selected', () => {
+      const clearScheduleSelection = jasmine.createSpy('clearScheduleSelection');
+      component['formRef'] = { clearScheduleSelection, clearStopSelections: () => {} } as any;
+      component.ngOnInit(); // loads today's schedules
+      const sameDay = new Date(component['selectedDate']);
+
+      component['onDateChange'](sameDay);
+
+      expect(clearScheduleSelection).not.toHaveBeenCalled();
+      // still refetched — this guards the clear, not the load
+      expect(staffApi.getWalkInSchedules).toHaveBeenCalledTimes(2);
+    });
+
     // The clear above emits, and THIS is what the emission buys: the cascade
     // that drops everything the old round fed. Green before the fix too - it
     // guards the handler the fix depends on, so a later `{ emitEvent: false }`

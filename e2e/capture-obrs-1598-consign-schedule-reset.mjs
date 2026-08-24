@@ -246,6 +246,22 @@ const readState = (page, note) =>
 const shot = (page, name, selector = 'app-parcel-consign-page') =>
   page.locator(selector).screenshot({ path: path.join(OUT, `${LABEL}-${name}.png`) });
 
+/**
+ * Without this the run cannot fail. A renamed dropdown class would make
+ * `pickDropdown` a no-op and both reads would come back `''`; a missing
+ * `window.ng` would make both `'NG_DEBUG_UNAVAILABLE'`. Either way the two
+ * reads MATCH, `staleIdSurvived` computes `true`, and a run that selected
+ * nothing at all reads as "bug reproduced" on the before arm and "fix broken"
+ * on the after arm. So the premise is asserted, not assumed.
+ */
+function assertPremise(state, arm) {
+  const fail = (why) => { throw new Error(`${arm}: premise not established — ${why}. Got ${JSON.stringify(state)}`); };
+  if (state.scheduleIdInForm !== '9001') fail('the D1 round was never selected');
+  if (state.formValid !== true) fail('the form did not reach a valid state');
+  if (state.submitDisabled !== false) fail('submit was not pressable before the date change');
+  if (state.pickupOptionCount !== 2) fail('the route stops never loaded');
+}
+
 // ── ARM 1: consigned — change the DATE, then press submit anyway ─────────────
 // `ParcelConsignedReqDto` carries no date, so a stale scheduleId from another
 // day is a fully valid payload: nothing downstream would have refused it.
@@ -260,10 +276,14 @@ const shot = (page, name, selector = 'app-parcel-consign-page') =>
   await fillNonTripFields(page, 'consigned');
   await page.waitForTimeout(700);
   const picked = await readState(page, 'round of D1 picked, form complete');
+  assertPremise(picked, 'consigned');
   await shot(page, '1-consigned-round-picked');
 
   await pickTomorrow(page);
   const afterDate = await readState(page, 'date moved to D2, options refetched');
+  if (scheduleQueryDates.at(-1) !== D2) {
+    throw new Error(`consigned: the date picker never moved the query to ${D2} — saw ${JSON.stringify(scheduleQueryDates)}`);
+  }
   await shot(page, '2-consigned-after-date-change');
 
   // What a salesperson who trusts the placeholder does next: press submit.
@@ -303,6 +323,7 @@ const shot = (page, name, selector = 'app-parcel-consign-page') =>
   await fillNonTripFields(page, 'carry_on_seat');
   await page.waitForTimeout(700);
   const picked = await readState(page, 'carry-on: round of D1 picked, form complete');
+  assertPremise(picked, 'carry-on');
   await shot(page, '4-carryon-round-picked');
 
   await pickTomorrow(page);
