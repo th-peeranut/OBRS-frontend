@@ -313,7 +313,8 @@ describe('DriverCashDayReturnModalComponent', () => {
 
       setAmount('480.00');
       expect(discrepancyRow()).not.toBeNull();
-      expect(discrepancyRow()!.textContent).toContain('-20.00');
+      // OBRS-1592: rendered through the shared formatter — `THB -20`, sign kept.
+      expect(discrepancyRow()!.textContent).toContain('THB -20');
     });
 
     // The exact screen the owner was looking at: a salesperson whose per-head
@@ -508,7 +509,7 @@ describe('DriverCashDayReturnModalComponent', () => {
         '[data-testid="driver-cash-return-parcel-clawback"]'
       );
       expect(line).not.toBeNull();
-      expect(line.textContent).toContain('15.00');
+      expect(line.textContent).toContain('THB 15');
     });
 
     /** A breakdown line, never an addend: the sign-off must still measure the

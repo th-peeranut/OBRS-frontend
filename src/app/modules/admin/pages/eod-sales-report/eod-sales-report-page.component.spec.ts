@@ -186,7 +186,7 @@ describe('EodSalesReportPageComponent', () => {
     const component = new EodSalesReportPageComponent(store as any, createTranslateStub());
     component.ngOnInit();
 
-    expect((component as any).formatMoney('not-a-number', 'THB')).toContain('0.00');
+    expect((component as any).formatMoney('not-a-number')).toBe('THB 0');
   });
 
   describe('expand toggle', () => {

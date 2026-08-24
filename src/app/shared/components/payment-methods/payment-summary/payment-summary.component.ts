@@ -6,6 +6,7 @@ import { Observable } from 'rxjs';
 import { BookingState } from '../../../../shared/interfaces/booking.interface';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { parsePricePerSeat } from '../../../../shared/lib/trip-format';
+import { formatMoney } from '../../../../shared/lib/money-display';
 import { ScheduleFilter, Schedule } from '../../../../shared/interfaces/schedule.interface';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectBooking } from '../../../../shared/stores/booking/booking.selector';
@@ -99,5 +100,12 @@ export class PaymentSummaryComponent {
 
   getPricePerSeat(value: string | number | null | undefined): number {
     return parsePricePerSeat(value);
+  }
+
+  /** OBRS-1592: this screen used to compose the raw number with a `*_UNIT`
+   * i18n key, which is the same shape the search page carried and printed
+   * `1850 บาท` — no thousand separator, satang whenever the API sent them. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translateService.currentLang);
   }
 }

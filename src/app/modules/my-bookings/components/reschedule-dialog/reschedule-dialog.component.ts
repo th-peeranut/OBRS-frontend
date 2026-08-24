@@ -50,6 +50,7 @@ import {
   selectRescheduleTicketsLoading,
   selectStopsLookup,
 } from '../../store/my-bookings.selector';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 type RescheduleStep = 'date' | 'options' | 'estimate' | 'payment';
 type PaymentTab = 'creditcard' | 'qrcode';
@@ -264,11 +265,7 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
       }
       this.cashRefundEligible = eligible;
       this.paymentAmountLabel = estimate
-        ? new Intl.NumberFormat('th-TH', {
-            style: 'currency',
-            currency: 'THB',
-            maximumFractionDigits: 2,
-          }).format(Math.abs(toAmountNumber(estimate.netAmount)))
+        ? formatMoney(Math.abs(toAmountNumber(estimate.netAmount)), this.translate.currentLang)
         : '';
     });
     this.store

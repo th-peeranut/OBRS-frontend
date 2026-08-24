@@ -3,6 +3,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { MyEarningsStore } from './my-earnings.store';
+import { formatMoney } from '../../../../shared/lib/money-display';
 import {
   PerHeadEarningBucketDto,
   PerHeadEarningsGranularity,
@@ -144,15 +145,16 @@ export class MyEarningsPageComponent implements OnInit, OnDestroy {
     return start.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
+  /** OBRS-1592: this had the same NAME as the shared formatter and a different
+   * output — always two decimals, never a unit — which is the worst combination
+   * to leave behind: a reader who greps `formatMoney` finds it and moves on.
+   * The `null -> '—'` arm is this screen's own and stays: an unearned bucket is
+   * not zero baht. */
   protected formatMoney(value: string | null): string {
     if (value === null) {
       return '—';
     }
-    const amount = Number(value);
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(amount) ? amount : 0);
+    return formatMoney(value, this.translate.currentLang);
   }
 
   protected trackByBucketKey(_index: number, bucket: PerHeadEarningBucketDto): string {

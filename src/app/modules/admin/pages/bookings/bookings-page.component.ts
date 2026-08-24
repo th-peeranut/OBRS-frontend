@@ -14,6 +14,7 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AuthService } from '../../../../auth/auth.service';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 interface TimelineEvent {
   time: string | null;
@@ -455,19 +456,12 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
     return `${from} -> ${to}`;
   }
 
-  protected formatMoney(
-    amount: string | number | null | undefined,
-    currency: string | null | undefined
-  ): string {
+  protected formatMoney(amount: string | number | null | undefined): string {
     const value = Number(amount);
     if (!Number.isFinite(value)) {
       return '-';
     }
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency || 'THB',
-      maximumFractionDigits: 2,
-    }).format(value);
+    return formatMoney(value, this.translate.currentLang);
   }
 
   // Client-composed timeline (design-system.md §12, new pattern) — no

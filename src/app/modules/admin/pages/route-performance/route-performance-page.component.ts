@@ -8,6 +8,7 @@ import {
   RoutePerformanceRowDto,
   RoutePerformanceTotalsDto,
 } from '../../../../shared/interfaces/route-performance.interface';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -87,13 +88,9 @@ export class RoutePerformancePageComponent implements OnInit, OnDestroy {
     return `${pct.toFixed(1)}%`;
   }
 
-  protected formatMoney(value: string, currency: string): string {
+  protected formatMoney(value: string): string {
     const amount = Number(value);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency || 'THB',
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(amount) ? amount : 0);
+    return formatMoney(Number.isFinite(amount) ? amount : 0, this.translate.currentLang);
   }
 
   protected formatCount(value: number): string {

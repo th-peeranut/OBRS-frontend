@@ -56,14 +56,16 @@ describe('DriverCashDaySummaryComponent', () => {
     fixture.detectChanges();
 
     const net = fixture.nativeElement.querySelector('[data-testid="driver-cash-net"]');
-    expect(net.textContent).toContain('250.00');
+    // OBRS-1592: driver-cash money goes through the one formatter now, so a whole
+    // amount loses its `.00` and gains its unit. Still the server's number, unchanged.
+    expect(net.textContent).toContain('THB 250');
   });
 
   it('renders parcelRemitTotal (the field the first version of this component never showed)', () => {
     fixture.componentInstance.day = makeDay({ parcelRemitTotal: '30.00' });
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('30.00');
+    expect(fixture.nativeElement.textContent).toContain('THB 30');
   });
 
   // ── OBRS-1053: the parcel-share clawback pill ──────────────────────────
@@ -83,7 +85,7 @@ describe('DriverCashDaySummaryComponent', () => {
 
     const pill = fixture.nativeElement.querySelector('[data-testid="driver-cash-parcel-clawback"]');
     expect(pill).not.toBeNull();
-    expect(pill.textContent).toContain('15.00');
+    expect(pill.textContent).toContain('THB 15');
   });
 
   /**
@@ -100,7 +102,7 @@ describe('DriverCashDaySummaryComponent', () => {
     fixture.detectChanges();
 
     const net = fixture.nativeElement.querySelector('[data-testid="driver-cash-net"]');
-    expect(net.textContent).toContain('265.00');
-    expect(net.textContent).not.toContain('280.00');
+    expect(net.textContent).toContain('THB 265');
+    expect(net.textContent).not.toContain('280');
   });
 });
