@@ -827,7 +827,10 @@
       "ACTIVE_SALES_POINT_LABEL": "当前所在销售点",
       "ACTIVE_SALES_POINT_NONE": "未设定",
       "SALES_POINTS_EMPTY": "系统中尚未设置销售点",
-      "SALES_POINTS_UNAVAILABLE": "无法加载销售点列表，请重试"
+      "SALES_POINTS_UNAVAILABLE": "无法加载销售点列表，请重试",
+      "PERSONAL_SECTION_TITLE": "个人信息",
+      "CREDENTIALS_SECTION_TITLE": "账户凭据",
+      "CONTACT_SECTION_TITLE": "联系方式与设置"
     },
     "VEHICLES": {
       "MONITORING": "车队监控已启用",

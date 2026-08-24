@@ -827,7 +827,10 @@
       "ACTIVE_SALES_POINT_LABEL": "จุดขายที่ประจำอยู่ตอนนี้",
       "ACTIVE_SALES_POINT_NONE": "ไม่กำหนด",
       "SALES_POINTS_EMPTY": "ยังไม่มีจุดขายที่ตั้งค่าไว้ในระบบ",
-      "SALES_POINTS_UNAVAILABLE": "ไม่สามารถโหลดรายชื่อจุดขายได้ ลองใหม่อีกครั้ง"
+      "SALES_POINTS_UNAVAILABLE": "ไม่สามารถโหลดรายชื่อจุดขายได้ ลองใหม่อีกครั้ง",
+      "PERSONAL_SECTION_TITLE": "ข้อมูลส่วนตัว",
+      "CREDENTIALS_SECTION_TITLE": "ข้อมูลเข้าสู่ระบบ",
+      "CONTACT_SECTION_TITLE": "ข้อมูลติดต่อและการตั้งค่า"
     },
     "VEHICLES": {
       "MONITORING": "กำลังติดตามกองรถ",
