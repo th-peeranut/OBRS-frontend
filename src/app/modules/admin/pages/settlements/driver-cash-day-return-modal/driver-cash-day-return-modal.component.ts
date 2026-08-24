@@ -7,6 +7,7 @@ import {
 } from '../../../../../shared/interfaces/driver-cash.interface';
 import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
 import { centsToDecimalString, toSignedCents } from '../../../../../shared/lib/money-cents';
+import { formatMoney } from '../../../../../shared/lib/money-display';
 
 /** `confirmRequested` payload — `POST /api/private/driver-cash/days/{dayId}/return`. */
 export interface DriverCashDayReturnPayload {
@@ -241,4 +242,10 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
       discrepancyReason: this.hasDiscrepancy() ? reason : undefined,
     });
   }
+  /** OBRS-1592: driver-cash printed these decimal strings raw — no unit, no
+   * thousand separator, `.00` on every whole amount. Staff money is money. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translate.currentLang);
+  }
+
 }

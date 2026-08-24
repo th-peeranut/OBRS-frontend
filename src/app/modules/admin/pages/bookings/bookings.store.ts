@@ -12,6 +12,8 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AuthService } from '../../../../auth/auth.service';
+import { TranslateService } from '@ngx-translate/core';
+import { formatMoney } from '../../../../shared/lib/money-display';
 import { AdminCollectionStore } from '../../shared/admin-collection-store';
 
 export interface BookingRow {
@@ -50,6 +52,7 @@ export interface BookingsData {
 export class BookingsStore extends AdminCollectionStore<BookingsData> {
   constructor(
     private readonly adminApiService: AdminApiService,
+    private readonly translate: TranslateService,
     authService: AuthService
   ) {
     super(authService);
@@ -140,13 +143,8 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
       booking.pricing?.netAmount ??
       booking.payment?.totalAmount
     );
-    const currency = booking.pricing?.currency ?? booking.payment?.currency ?? 'THB';
     const totalFare = Number.isFinite(totalAmount)
-      ? new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency,
-          maximumFractionDigits: 2,
-        }).format(totalAmount)
+      ? formatMoney(totalAmount, this.translate.currentLang)
       : String(booking.totalAmount ?? booking.pricing?.netAmount ?? '0.00');
 
     const bookingStatus = this.parseStatus(booking.status);

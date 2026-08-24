@@ -96,8 +96,12 @@ describe('MyEarningsPageComponent (OBRS-1147)', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
+    // OBRS-1592: the figure now carries its unit. This screen had its own
+    // `formatMoney` doing a bare two-decimal Intl — same name as the shared
+    // formatter, different output, no unit at all. `TranslateModule.forRoot()`
+    // here leaves `currentLang` unset, which is the code-leads-the-number form.
     const total = fixture.debugElement.query(By.css('[data-testid="my-earnings-total"]'));
-    expect(total.nativeElement.textContent.trim()).toBe('199.99');
+    expect(total.nativeElement.textContent.trim()).toBe('THB 199.99');
   });
 
   it('switching the grouping refetches with the new granularity', async () => {

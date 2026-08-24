@@ -280,7 +280,12 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     const first = dialog.locator('.reschedule-option-card').first();
     await expect(first.locator('.reschedule-option-card__time')).toContainText(':');
     await expect(first.locator('.reschedule-option-card__vehicle')).toHaveText(/van/i);
-    await expect(first.locator('.reschedule-option-card__price')).toContainText('฿');
+    // OBRS-1592: the price is no longer `฿200.00`. One shared formatter renders it as
+    // `THB 200` in English and `200 บาท` in Thai, with satang only when there are satang,
+    // so pin the shape rather than a symbol this app no longer prints anywhere.
+    await expect(first.locator('.reschedule-option-card__price')).toHaveText(
+      /^(THB [\d,]+|[\d,]+ บาท)/,
+    );
     await expect(first.locator('.reschedule-option-card__seats')).toContainText(/Seats/i);
 
     await page.screenshot({ path: 'e2e-evidence/options-list.png', fullPage: true });

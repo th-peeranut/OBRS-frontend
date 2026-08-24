@@ -24,6 +24,7 @@ import {
   DriverCashDayRespDto,
   DriverCashDaySummaryRespDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -319,8 +320,9 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Echo the exact counted cash, including "THB 0.00" for a zero drawer.
-    const countedText = this.formatMoney(payload.countedCashAmount, detail.currency);
+    // Echo the exact counted cash through the one formatter — even a zero
+    // drawer (e.g. `THB 0` / `0 บาท`), so the sign-off dialog states the amount.
+    const countedText = this.formatMoney(payload.countedCashAmount);
     const confirmed = await this.alertService.confirm({
       title: this.translate.instant('ADMIN.SETTLEMENTS.CONFIRM.TITLE'),
       text: this.translate.instant('ADMIN.SETTLEMENTS.CONFIRM.DIALOG_TEXT', { counted: countedText }),
@@ -434,13 +436,9 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
     }));
   }
 
-  protected formatMoney(value: string, currency: string): string {
+  protected formatMoney(value: string): string {
     const amount = Number(value);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(amount) ? amount : 0);
+    return formatMoney(Number.isFinite(amount) ? amount : 0, this.translate.currentLang);
   }
 
   // Client guard first (design-system §9-adjacent: never trust raw input into

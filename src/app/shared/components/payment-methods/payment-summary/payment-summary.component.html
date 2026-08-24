@@ -5,7 +5,7 @@ passengers/discount snapshot to show, just a single total. -->
   <div class="card-container" [ngClass]="{ inline: variant === 'inline' }">
     <div class="card-footer">
       <span>{{ "PAYMENT.SUMMARY.TOTAL" | translate }}</span>
-      <span>{{ amountOverride }} {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}</span>
+      <span>{{ formatMoney(amountOverride) }}</span>
     </div>
   </div>
 }
@@ -55,8 +55,7 @@ passengers/discount snapshot to show, just a single total. -->
                 {{ "PAYMENT.SUMMARY.TICKET_PRICE_ONEWAY" | translate }}
               </span>
               <span>
-                {{ getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) }}
-                {{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
+                {{ formatMoney(getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat)) }}{{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
               </span>
             </div>
           }
@@ -69,10 +68,11 @@ passengers/discount snapshot to show, just a single total. -->
               </span>
               <span>
                 {{
+                formatMoney(
                 getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) +
                 getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[1].pricePerSeat)
-                }}
-                {{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
+                )
+                }}{{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
               </span>
             </div>
           }
@@ -85,8 +85,7 @@ passengers/discount snapshot to show, just a single total. -->
                 {{ "PAYMENT.SUMMARY.SUBTOTAL" | translate }}
               </span>
               <span>
-                {{ booking.totalAmount }}
-                {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+                {{ formatMoney(booking.totalAmount) }}
               </span>
             </div>
             <div class="card-footer card-footer--subtle card-footer--discount">
@@ -94,8 +93,7 @@ passengers/discount snapshot to show, just a single total. -->
                 {{ "PAYMENT.SUMMARY.DISCOUNT" | translate }}
               </span>
               <span>
-                -{{ booking.discountAmountSnapshot }}
-                {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+                -{{ formatMoney(booking.discountAmountSnapshot) }}
               </span>
             </div>
             <div class="card-footer">
@@ -103,8 +101,7 @@ passengers/discount snapshot to show, just a single total. -->
                 {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
               </span>
               <span>
-                {{ booking.netAmount }}
-                {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+                {{ formatMoney(booking.netAmount) }}
               </span>
             </div>
           } @else {
@@ -113,8 +110,7 @@ passengers/discount snapshot to show, just a single total. -->
                 {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
               </span>
               <span>
-                {{ sumFare(scheduleBooking?.schedule, (passengerInfo$ | async)) }}
-                {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+                {{ formatMoney(sumFare(scheduleBooking?.schedule, (passengerInfo$ | async))) }}
               </span>
             </div>
           }
@@ -124,8 +120,7 @@ passengers/discount snapshot to show, just a single total. -->
               {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
             </span>
             <span>
-              {{ sumFare(scheduleBooking?.schedule, (passengerInfo$ | async)) }}
-              {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+              {{ formatMoney(sumFare(scheduleBooking?.schedule, (passengerInfo$ | async))) }}
             </span>
           </div>
         }

@@ -12,6 +12,7 @@ import {
   CounterBookingSearchResultDto,
 } from '../../../../../services/staff/staff-api.service';
 import { formatDisplayDateTime } from '../../../../../shared/lib/display-date-time';
+import { formatMoney } from '../../../../../shared/lib/money-display';
 
 /**
  * OBRS-766 — dumb result table. Columns/i18n keys per the UX spec: most are
@@ -99,10 +100,6 @@ export class CounterCancelResultListComponent {
   }
 
   protected amountLabel(netAmount: number | string): string {
-    return new Intl.NumberFormat('th-TH', {
-      style: 'currency',
-      currency: 'THB',
-      maximumFractionDigits: 2,
-    }).format(toAmountNumber(netAmount));
+    return formatMoney(toAmountNumber(netAmount), this.translate.currentLang);
   }
 }
