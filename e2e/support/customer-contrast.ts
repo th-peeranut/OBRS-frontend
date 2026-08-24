@@ -597,3 +597,54 @@ export const boundaryKey = (theme: string, f: { path: string; page: string }): s
  */
 export const placeholderKey = (theme: string, f: { path: string; fg: string; bg: string }): string =>
   `${theme}|${leafOf(f.path)}|placeholder|${f.fg}-on-${f.bg}`;
+
+/**
+ * A key with its FOREGROUND dropped and everything that says WHERE it was
+ * painted kept: theme, element, role, and the surface it sat on.
+ *
+ * The foreground belongs in the key -- a repaint has to invalidate the entry,
+ * which is the argument made at length above. But it also means "no key matches"
+ * has two causes that read identically, and OBRS-1435 is what that costs: the
+ * gate told a reader to delete a LIVE OBRS-1424 entry because the h1 that carried
+ * it was never scored on that run. An element the sweep did not measure says
+ * nothing about whether its debt was paid.
+ *
+ * Applied to both sides -- a CONTRAST_ALLOW key, and the key of a row the sweep
+ * actually scored, passing or failing -- this answers the narrower question the
+ * verdict needs first: did this run measure that element, in that theme, in that
+ * role, ON THAT SURFACE? `text` / `placeholder` / `boundary` stay apart for the
+ * same reason `placeholderKey` gives: different defects, different fixes.
+ *
+ * THE SURFACE IS NOT OPTIONAL, and the first version of this function dropped it.
+ * Measured against the register as it stands: collapsing a boundary key to
+ * `theme|leaf|boundary` gave 22 identities for 25 entries, and all three
+ * collisions were a control that carries the SAME framework-default border on two
+ * different backgrounds -- `input.form-control`, `input.form-control.mt-1` and
+ * `button.theme-toggle-btn`, each registered on both `#1a1d27` and `#0f1117` by
+ * OBRS-970. One twin being scored would then vouch for the other, so the entry
+ * whose element did not render would be pronounced paid: the exact false delete
+ * this card exists to stop, reintroduced by its own fix. With the surface kept:
+ * 25 identities, 0 collisions.
+ *
+ * A boundary key carries no foreground at all -- the fill/border ratio is not in
+ * it -- so it is kept whole. A repaint still invalidates it through `collapsed`:
+ * a control that now clears 3:1 stops being a finding while its identity stays in
+ * the measured set, which is `stale`, "delete it". The one case that reads
+ * differently after this is a fix that ALSO moves the surface: that lands in
+ * `unmeasured`, "go and look", rather than "delete". Never a false delete, which
+ * is the direction to be wrong in.
+ *
+ * Parsed rather than built a second time, so there is one definition of a key and
+ * not two that can drift. Safe because a colour pair contains no `|`, and `leafOf`
+ * returns a class chain joined by ' > ', which contains none either -- so the
+ * third field alone names the role.
+ */
+export function keyIdentity(key: string): string {
+  const parts = key.split('|');
+  const [theme, leaf] = parts;
+  const third = parts[2] ?? '';
+  if (third.startsWith('boundary-on-')) return `${theme}|${leaf}|${third}`;
+  const role = third === 'placeholder' ? 'placeholder' : 'text';
+  const pair = role === 'placeholder' ? parts[3] ?? '' : third;
+  return `${theme}|${leaf}|${role}|on-${pair.split('-on-')[1] ?? ''}`;
+}
