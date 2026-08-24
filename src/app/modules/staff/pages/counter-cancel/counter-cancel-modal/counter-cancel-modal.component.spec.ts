@@ -423,7 +423,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
       submitCash();
 
       const message = alert.success.calls.mostRecent().args[0] as string;
-      expect(message).toContain('450.00');
+      expect(message).toContain('THB 450');
       expect(message).toContain('in cash');
     });
 
@@ -450,7 +450,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
       (component as any).submit();
 
       const message = alert.success.calls.mostRecent().args[0] as string;
-      expect(message).toContain('450.00');
+      expect(message).toContain('THB 450');
       expect(message).toContain('transferred by the owner');
       expect(message).toContain('do not pay cash');
     });
@@ -463,7 +463,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
       (component as any).submit();
 
       const message = alert.success.calls.mostRecent().args[0] as string;
-      expect(message).toContain('450.00');
+      expect(message).toContain('THB 450');
       expect(message).toContain('refunded to the method the customer paid with');
     });
 

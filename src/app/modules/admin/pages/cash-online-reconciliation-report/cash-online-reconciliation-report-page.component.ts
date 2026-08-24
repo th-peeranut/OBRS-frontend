@@ -8,6 +8,7 @@ import {
   CashOnlineReconciliationReportDto,
   CashOnlineSummaryDto,
 } from '../../../../shared/interfaces/cash-online-reconciliation-report.interface';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -160,13 +161,9 @@ export class CashOnlineReconciliationReportPageComponent implements OnInit, OnDe
   // Copied verbatim from RefundVoidReportPageComponent.formatMoney — same money-string
   // -> localized-currency formatting. Never do arithmetic on the decimal-string
   // amounts, only format for display.
-  protected formatMoney(value: string, currency: string): string {
+  protected formatMoney(value: string): string {
     const amount = Number(value);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(amount) ? amount : 0);
+    return formatMoney(Number.isFinite(amount) ? amount : 0, this.translate.currentLang);
   }
 
   // Client guard first (design-system §9-adjacent: never trust raw input into a

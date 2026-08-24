@@ -182,7 +182,7 @@ and the daily table — never shown next to stale/zero numbers. -->
                   <td>{{ occupancyDisplay(row.occupancyRatePct) }}</td>
                   @if (showRevenue) {
                     <td>
-                      {{ row.revenue ? formatMoney(row.revenue.net, row.revenue.currency) : '-' }}
+                      {{ row.revenue ? formatMoney(row.revenue.net) : '-' }}
                     </td>
                   }
                 </tr>

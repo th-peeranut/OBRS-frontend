@@ -9,6 +9,7 @@ import {
   SimpleChanges,
 } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
+import { TranslateService } from '@ngx-translate/core';
 import {
   CancellationPolicy,
   MANUAL_REFUND_METHOD,
@@ -16,6 +17,7 @@ import {
   toAmountNumber,
 } from '../../../../shared/interfaces/my-booking.interface';
 import { RefundDestinationReqDto } from '../../../../shared/interfaces/refund-destination.interface';
+import { formatMoney } from '../../../../shared/lib/money-display';
 import {
   applyRefundDestinationRequired,
   buildRefundDestinationForm,
@@ -89,7 +91,10 @@ export class CancelBookingModalComponent implements OnInit, OnChanges {
     return this.policy?.rescheduleMaxDaysAhead ?? null;
   }
 
-  constructor(private readonly formBuilder: FormBuilder) {
+  constructor(
+    private readonly formBuilder: FormBuilder,
+    private readonly translate: TranslateService
+  ) {
     this.form = buildRefundDestinationForm(this.formBuilder);
   }
 
@@ -233,10 +238,6 @@ export class CancelBookingModalComponent implements OnInit, OnChanges {
   }
 
   private formatCurrency(value: number | string): string {
-    return new Intl.NumberFormat('th-TH', {
-      style: 'currency',
-      currency: 'THB',
-      maximumFractionDigits: 2,
-    }).format(toAmountNumber(value));
+    return formatMoney(toAmountNumber(value), this.translate.currentLang);
   }
 }

@@ -38,10 +38,13 @@ describe('SettlementsListComponent', () => {
     expect(spy).not.toHaveBeenCalled(); // interactive-target click is ignored
   });
 
-  it('formats a decimal-string amount with the given currency', () => {
+  // OBRS-1592: the currency argument is gone (the backend emits THB and nothing
+  // else), and a whole amount no longer carries `.00` — satang show only when
+  // there are satang. The stub reports `en`, so the unit leads.
+  it('formats a decimal-string amount through the one shared formatter', () => {
     const component = new SettlementsListComponent(createTranslateStub());
-    expect(component['formatMoney']('0.00', 'THB')).toContain('0.00');
-    expect(component['formatMoney']('1234.5', 'THB')).toContain('1,234.50');
+    expect(component['formatMoney']('0.00')).toBe('THB 0');
+    expect(component['formatMoney']('1234.5')).toBe('THB 1,234.50');
   });
 
   it('trackByScheduleId tracks by scheduleId', () => {

@@ -138,18 +138,18 @@
                 @if (discountAmount && discountAmount > 0) {
                   <div class="d-flex justify-content-between mb-2">
                     <span class="small">{{ 'STAFF.SELL.SUBTOTAL' | translate }}</span>
-                    <span class="small">{{ totalAmount | currency:'THB':'symbol' }}</span>
+                    <span class="small">{{ formatMoney(totalAmount) }}</span>
                   </div>
                 }
                 @if (discountAmount && discountAmount > 0) {
                   <div class="d-flex justify-content-between mb-2">
                     <span class="small">{{ 'STAFF.SELL.DISCOUNT_ROUND_TRIP' | translate }}</span>
-                    <span class="small text-danger">-{{ discountAmount | currency:'THB':'symbol' }}</span>
+                    <span class="small text-danger">-{{ formatMoney(discountAmount) }}</span>
                   </div>
                 }
                 <div class="d-flex justify-content-between mb-2">
                   <span class="fw-semibold">{{ 'STAFF.SELL.TOTAL_AMOUNT' | translate }}</span>
-                  <span class="fw-bold">{{ netAmount | currency:'THB':'symbol' }}</span>
+                  <span class="fw-bold">{{ formatMoney(netAmount) }}</span>
                 </div>
 
                 <div class="mb-2">
@@ -167,7 +167,7 @@
                     <span class="fw-semibold"
                       [class.text-success]="changeDue >= 0"
                       [class.text-danger]="changeDue < 0">
-                      {{ changeDue | currency:'THB':'symbol' }}
+                      {{ formatMoney(changeDue) }}
                     </span>
                   </div>
                 </div>

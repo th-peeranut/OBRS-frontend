@@ -2840,7 +2840,6 @@
     "TIME_UNIT": "",
     "HOUR_UNIT": "hour",
     "MINITE_UNIT": "minute",
-    "BAHT_UNIT": "baht",
     "SEAT_REMAIN": "remaining",
     "SEAT_UNIT": "seats",
     "SEAT_PER_PASSENGER": "/seat",

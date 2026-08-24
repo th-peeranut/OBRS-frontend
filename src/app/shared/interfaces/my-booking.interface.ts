@@ -5,6 +5,7 @@
 // See ../../../../OBRS-backend/docs/api/booking.md.
 
 import { RefundDestinationReqDto } from './refund-destination.interface';
+import { formatMoney } from '../lib/money-display';
 
 export type SupportedLocale = 'en' | 'th' | 'zh';
 
@@ -318,13 +319,17 @@ export function refundLane(refundMethod: string | null | undefined): RefundLane 
   return method === MANUAL_REFUND_METHOD ? 'MANUAL' : 'AUTO';
 }
 
-/** THB, grouped, 2dp — the one refund-amount format every cancel surface shows. */
-export function formatRefundAmount(value: number | string | null | undefined): string {
-  return new Intl.NumberFormat('th-TH', {
-    style: 'currency',
-    currency: 'THB',
-    maximumFractionDigits: 2,
-  }).format(toAmountNumber(value));
+/**
+ * The one refund-amount format every cancel surface shows. Takes `lang` because
+ * OBRS-1592 made the unit language-dependent (`200 บาท` / `THB 200` / `200泰铢`),
+ * so a caller that cannot say which language it is rendering in cannot render
+ * money correctly.
+ */
+export function formatRefundAmount(
+  value: number | string | null | undefined,
+  lang?: string | null
+): string {
+  return formatMoney(toAmountNumber(value), lang);
 }
 
 export function normalizeStatusCode(status: string | null | undefined): string {

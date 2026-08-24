@@ -87,7 +87,7 @@ the daily table — never shown next to stale/zero numbers. -->
           </button>
         </div>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(summary?.refunded?.amount ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(summary?.refunded?.amount ?? '0.00') }}</p>
         }
         @if (isLoading) {
           <span class="admin-skeleton admin-skeleton--sm"></span>
@@ -104,7 +104,7 @@ the daily table — never shown next to stale/zero numbers. -->
       <div>
         <p class="admin-muted">{{ 'ADMIN.REFUND_VOID_REPORT.CARD.MANUAL_PENDING' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(summary?.manualRefundPending?.amount ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(summary?.manualRefundPending?.amount ?? '0.00') }}</p>
         }
         @if (isLoading) {
           <span class="admin-skeleton admin-skeleton--sm"></span>
@@ -121,7 +121,7 @@ the daily table — never shown next to stale/zero numbers. -->
       <div>
         <p class="admin-muted">{{ 'ADMIN.REFUND_VOID_REPORT.CARD.VOIDED' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(summary?.voided?.amount ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(summary?.voided?.amount ?? '0.00') }}</p>
         }
         @if (isLoading) {
           <span class="admin-skeleton admin-skeleton--sm"></span>
@@ -132,11 +132,11 @@ the daily table — never shown next to stale/zero numbers. -->
           </p>
           <p class="admin-muted refund-void-sub-line">
             {{ 'ADMIN.REFUND_VOID_REPORT.CARD.CANCELLED' | translate }}:
-            {{ formatMoney(summary?.voided?.cancelled?.amount ?? '0.00', currency) }} ({{ summary?.voided?.cancelled?.count ?? 0 }})
+            {{ formatMoney(summary?.voided?.cancelled?.amount ?? '0.00') }} ({{ summary?.voided?.cancelled?.count ?? 0 }})
           </p>
           <p class="admin-muted refund-void-sub-line">
             {{ 'ADMIN.REFUND_VOID_REPORT.CARD.EXPIRED' | translate }}:
-            {{ formatMoney(summary?.voided?.expired?.amount ?? '0.00', currency) }} ({{ summary?.voided?.expired?.count ?? 0 }})
+            {{ formatMoney(summary?.voided?.expired?.amount ?? '0.00') }} ({{ summary?.voided?.expired?.count ?? 0 }})
           </p>
         }
       </div>
@@ -204,11 +204,11 @@ the daily table — never shown next to stale/zero numbers. -->
                     <span class="admin-emphasis">{{ row.date }}</span>
                   </td>
                   <td class="refund-void-money">{{ row.refunded.count }}</td>
-                  <td class="refund-void-money">{{ formatMoney(row.refunded.amount, currency) }}</td>
+                  <td class="refund-void-money">{{ formatMoney(row.refunded.amount) }}</td>
                   <td class="refund-void-money">{{ row.manualRefundPending.count }}</td>
-                  <td class="refund-void-money">{{ formatMoney(row.manualRefundPending.amount, currency) }}</td>
+                  <td class="refund-void-money">{{ formatMoney(row.manualRefundPending.amount) }}</td>
                   <td class="refund-void-money">{{ row.voided.count }}</td>
-                  <td class="refund-void-money">{{ formatMoney(row.voided.amount, currency) }}</td>
+                  <td class="refund-void-money">{{ formatMoney(row.voided.amount) }}</td>
                 </tr>
                 @if (isExpanded(row)) {
                   <tr class="refund-void-detail-row">
@@ -216,11 +216,11 @@ the daily table — never shown next to stale/zero numbers. -->
                       <div class="refund-void-chip-list">
                         <span class="refund-void-chip">
                           {{ 'ADMIN.REFUND_VOID_REPORT.CARD.CANCELLED' | translate }}:
-                          {{ formatMoney(row.voided.cancelled.amount, currency) }} ({{ row.voided.cancelled.count }})
+                          {{ formatMoney(row.voided.cancelled.amount) }} ({{ row.voided.cancelled.count }})
                         </span>
                         <span class="refund-void-chip">
                           {{ 'ADMIN.REFUND_VOID_REPORT.CARD.EXPIRED' | translate }}:
-                          {{ formatMoney(row.voided.expired.amount, currency) }} ({{ row.voided.expired.count }})
+                          {{ formatMoney(row.voided.expired.amount) }} ({{ row.voided.expired.count }})
                         </span>
                       </div>
                     </td>
