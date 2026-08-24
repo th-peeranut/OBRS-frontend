@@ -1,20 +1,27 @@
 /**
  * OBRS-1601 evidence -- the booking CONTACT carries an optional honorific again, as a CODE.
  *
- * Run it TWICE against the same local database (obrs1601qa), once per BACKEND, so the two sets of
- * images differ only by the code under test:
+ * Run it TWICE against the same stack and the same local database (obrs1601qa), with one SQL
+ * statement between the runs:
  *
- *   # BEFORE -- origin/dev backend (no contact_title_snapshot on the wire at all)
+ *   # BEFORE -- the seeded booking with contact_title_snapshot still NULL
  *   OBRS_VARIANT=BEFORE OBRS_OUT_DIR=e2e/out/obrs-1601/before node e2e/capture-obrs-1601-contact-title.mjs
- *   # AFTER -- this card's backend
+ *   psql -d obrs1601qa -c "UPDATE bookings SET contact_title_snapshot='MISS' WHERE booking_number='<n>'"
+ *   # AFTER
  *   OBRS_VARIANT=AFTER  OBRS_OUT_DIR=e2e/out/obrs-1601/after  node e2e/capture-obrs-1601-contact-title.mjs
  *
- * The FRONTEND is this branch in both runs, and that is deliberate rather than a shortcut: the four
- * templates changed here pipe a field the BEFORE backend never sends, and `TitleLabelPipe` returns
- * the bare name for a null/undefined code -- so against the dev backend this frontend renders
- * byte-for-byte what the dev frontend renders. Booting a second `ng serve` would photograph the same
- * pixels for another ~1.3 GB. (The pipe's null behaviour is pinned by its own spec, so the claim is
- * checked by a test rather than asserted here.)
+ * ONE backend and ONE frontend for both runs, and each half of that is a deliberate claim, not a
+ * shortcut:
+ *
+ *  - **NULL is byte-identical to the dev backend's absent field.** `TitleLabelPipe.transform` does
+ *    `code ?? ''`, so `null` and a missing key take the same branch and print the bare name. The
+ *    BEFORE images are therefore what `origin/dev` renders, and the pipe's null behaviour is pinned
+ *    by its own spec rather than asserted here. Booting a second backend and a second `ng serve`
+ *    would photograph the same pixels for another ~1.3 GB.
+ *  - **Setting the column with SQL is not the same as proving the write path**, and this script does
+ *    not claim to. What fills that column from `contactRequest.getTitle()` is proven by
+ *    `BookingServiceTest.createBooking_contactTitleSnapshot_*`; what these images prove is what the
+ *    four screens DO with the value once it is there, which is the half a test cannot photograph.
  *
  * Screens per language (th, en, zh):
  *   1-find-booking-<lang>.png   /find-booking, the CONTACT_NAME summary row
