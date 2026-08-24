@@ -97,11 +97,12 @@ export class ExpensePayeesPageComponent implements OnInit, OnDestroy {
 
     this.subscriptions.add(
       this.store.data$.subscribe((data) => {
-        if (data === null) {
-          return;
-        }
-        this.hasLoadedOnce = true;
-        this.allPayees = sortPayeesByName(data);
+        // OBRS-506 honor-null convention: clear() (e.g. logout) emits null. Returning early here
+        // left the previous session's payee names on screen; `hasLoadedOnce` has to go back with
+        // them, because after a clear there IS nothing cached and a later failure is a full-page
+        // error again, not a background refresh hint.
+        this.hasLoadedOnce = data !== null;
+        this.allPayees = data === null ? [] : sortPayeesByName(data);
         this.applyFilters();
       })
     );

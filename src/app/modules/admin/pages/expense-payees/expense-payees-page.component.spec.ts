@@ -191,6 +191,21 @@ describe('ExpensePayeesPageComponent', () => {
     expect(component.payees.length).toBe(1);
   });
 
+  it('honors a null emission from clear() (logout) instead of keeping stale rows', () => {
+    // OBRS-506. Caught by scripts/check-store-null-handling.mjs, not by any test that existed:
+    // returning early on null left the previous session's payee names readable on screen.
+    const store = makeStoreStub([ACTIVE_GARAGE, ACTIVE_STATION]);
+    const { component } = makeComponent(store);
+    expect(component.payees.length).toBe(2);
+
+    store.data$.next(null);
+
+    expect(component.payees.length).toBe(0);
+    // Nothing is cached any more, so a failure is a full-page error again - not a refresh hint.
+    store.error$.next(true);
+    expect(component.errorMessage).toBeTruthy();
+  });
+
   it('reports empty and filtered-empty as different states', () => {
     const { component } = makeComponent(makeStoreStub([]));
     expect(component.isEmpty).toBeTrue();
