@@ -99,10 +99,6 @@ export class VehiclePlReportPageComponent implements OnInit, OnDestroy {
     return this.report?.totals ?? null;
   }
 
-  protected get currency(): string {
-    return this.totals?.currency ?? 'THB';
-  }
-
   /** The fleet lines only — the two vehicle-less kinds are rendered separately below. */
   protected get vehicleRows(): VehiclePlRowDto[] {
     return (this.report?.rows ?? []).filter((row) => row.kind === 'VEHICLE');

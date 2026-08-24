@@ -93,10 +93,6 @@ export class CashOnlineReconciliationReportPageComponent implements OnInit, OnDe
     return this.report?.daily ?? [];
   }
 
-  protected get currency(): string {
-    return this.summary?.currency ?? 'THB';
-  }
-
   /**
    * A 200 whose three buckets (cash / online / other) are all zero-count is not
    * an error — a friendly note, not a warning.

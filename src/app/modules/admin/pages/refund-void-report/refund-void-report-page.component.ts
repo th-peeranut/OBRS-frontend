@@ -88,10 +88,6 @@ export class RefundVoidReportPageComponent implements OnInit, OnDestroy {
     return this.report?.daily ?? [];
   }
 
-  protected get currency(): string {
-    return this.summary?.currency ?? 'THB';
-  }
-
   /**
    * A 200 whose three partitions (refunded / manualRefundPending / voided) are all
    * zero-count is not an error — a friendly note, not a warning.
