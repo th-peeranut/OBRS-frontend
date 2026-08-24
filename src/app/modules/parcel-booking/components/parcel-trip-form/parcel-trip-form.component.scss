@@ -63,7 +63,8 @@
   app-dropdown-group-obrs {
     // OBRS-1587: the two halves split the card's column instead of standing at
     // the 250px floor their own toggle carries. Measured on this card, the bar
-    // came to 499px inside a 704px column while the date field below it was
+    // came to 501px inside a 704px column -- two halves of 250 and 252 over a
+    // 1px seam, never the equal pair the card assumed -- while the date was
     // 704px and the trip field was 250px -- one left edge, three right edges,
     // the shape OBRS-1562 closed on the booking card. Basis 0, so neither half
     // may keep an intrinsic width; `--dropdown-toggle-width` is the knob
