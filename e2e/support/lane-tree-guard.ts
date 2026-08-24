@@ -72,12 +72,16 @@ export default function laneTreeGuard(config: FullConfig): void {
   // backslashes. Compare in one spelling, and keep the trailing separator: without it
   // the MAIN clone's `...\OBRS-frontend` is a prefix of every worktree path beside it
   // (`...\OBRS-frontend-wt-obrs-1531`), so the clone would accept a worktree's server.
+  // Only on win32: this string is also the path the banner prints, and rewriting the
+  // separators off Windows printed `\home\runner\work\...` into the CI log -- a path
+  // that names the right tree in a spelling that box does not use.
   let tree: string;
   let sha: string;
   let branch: string;
   let dirty: string;
   try {
-    tree = git(config.rootDir, ['rev-parse', '--show-toplevel']).replace(/\//g, '\\');
+    const toplevel = git(config.rootDir, ['rev-parse', '--show-toplevel']);
+    tree = process.platform === 'win32' ? toplevel.replace(/\//g, '\\') : toplevel;
     sha = git(config.rootDir, ['rev-parse', '--short', 'HEAD']);
     branch = git(config.rootDir, ['rev-parse', '--abbrev-ref', 'HEAD']);
     dirty = git(config.rootDir, ['status', '--porcelain']) ? ' +uncommitted changes' : '';
