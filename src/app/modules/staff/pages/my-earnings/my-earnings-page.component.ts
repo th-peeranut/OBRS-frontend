@@ -134,7 +134,13 @@ export class MyEarningsPageComponent implements OnInit, OnDestroy {
     if (!start) {
       return bucket.bucketKey;
     }
-    const locale = this.translate.currentLang === 'th' ? 'th-TH' : 'en-GB';
+    // OBRS-1593: `-u-ca-gregory` is what keeps the YEAR Gregorian while the month and day names
+    // stay Thai. Plain `th-TH` defaults to the Buddhist calendar, so this row was the last place in
+    // the app that printed 2569 where every other screen prints 2026 - measured 2026-08-24, a full
+    // census of `th-TH` in src/ found the other twelve hits are all Intl.NumberFormat (money, no
+    // calendar) plus one date formatter that omits the year on purpose. The owner's rule is
+    // Gregorian everywhere; a single screen disagreeing reads as a wrong number, not as a locale.
+    const locale = this.translate.currentLang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB';
     if (this.granularity === 'YEAR') {
       return start.toLocaleDateString(locale, { year: 'numeric' });
     }

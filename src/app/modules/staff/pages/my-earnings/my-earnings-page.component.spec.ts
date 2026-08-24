@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 // The real p-datePicker, not a schema-suppressed unknown element: [ngModel] on an
 // unknown tag has no value accessor and every test in this file dies at NG01203.
 import { DatePickerModule } from 'primeng/datepicker';
@@ -72,6 +72,28 @@ describe('MyEarningsPageComponent (OBRS-1147)', () => {
     // The endpoint takes no holder id at all — the guarantee that one staff
     // member cannot read another's pay is that there is no parameter for it.
     expect(api.getDriverCashMyEarnings.calls.mostRecent().args.length).toBe(3);
+  });
+
+  // OBRS-1593: the owner's standing rule is Gregorian years EVERYWHERE. This row was the last
+  // place in the app that disagreed - `th-TH` defaults to the Buddhist calendar, so a bucket that
+  // every other screen calls 2026 printed here as 2569. The assertion is on the RENDERED cell, not
+  // on the formatter, because the bug was visible only after the locale reached Intl.
+  it('prints the Gregorian year in Thai, never the Buddhist one', async () => {
+    TestBed.inject(TranslateService).currentLang = 'th';
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const label = fixture.debugElement
+      .query(By.css('[data-testid="bucket-2026-08"] td'))
+      .nativeElement.textContent as string;
+
+    expect(label).toContain('2026');
+    // 2569 is 2026 in the Buddhist era - the exact number this card exists to stop rendering.
+    expect(label).not.toContain('2569');
+    // The month name still comes out in Thai: this is a calendar change, not a language change.
+    expect(label).toContain('สิงหาคม');
   });
 
   it('renders one row per bucket, most recent first', async () => {
