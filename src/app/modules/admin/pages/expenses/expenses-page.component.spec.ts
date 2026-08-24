@@ -1,6 +1,10 @@
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { ExpensesPageComponent } from './expenses-page.component';
-import { AdminExpenseDto, AdminVehicleDto } from '../../../../services/admin/admin-api.service';
+import {
+  AdminExpenseDto,
+  AdminExpensePayeeDto,
+  AdminVehicleDto,
+} from '../../../../services/admin/admin-api.service';
 import { VEHICLE_CENTRAL_SENTINEL } from './expenses-page.mappers';
 import { VehiclesData } from '../vehicles/vehicles.store';
 import { createTranslateStub } from '../../../../testing/test-stubs';
@@ -55,6 +59,21 @@ function makeVehiclesStoreStub(vehicles: AdminVehicleDto[] = []) {
   };
 }
 
+/** OBRS-1577: the payee registry cache. Defaults to a loaded-but-empty list, which is the state an
+ * operator who has not added any garages yet is genuinely in. */
+function makePayeesStoreStub(payees: AdminExpensePayeeDto[] = []) {
+  const data$ = new BehaviorSubject<AdminExpensePayeeDto[] | null>(payees);
+  return {
+    data$,
+    refreshing$: new BehaviorSubject<boolean>(false),
+    error$: new BehaviorSubject<boolean>(false),
+    refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+    get hasValue() {
+      return data$.value !== null;
+    },
+  };
+}
+
 function makeComponent(
   expensesStore: ReturnType<typeof makeExpensesStoreStub>,
   vehiclesStore = makeVehiclesStoreStub([{ id: 1, vehicleNumber: 'V1', numberPlate: 'ABC-123' }]),
@@ -62,7 +81,8 @@ function makeComponent(
   adminApi: Record<string, unknown> = {
     deleteExpense: jasmine.createSpy('deleteExpense').and.returnValue(of({ code: 200, message: 'OK', data: null })),
   },
-  roles: string[] = ['owner']
+  roles: string[] = ['owner'],
+  payeesStore = makePayeesStoreStub()
 ) {
   const alert = { success: () => Promise.resolve(), error: () => Promise.resolve() };
   const auth = {
@@ -79,6 +99,7 @@ function makeComponent(
     createTranslateStub(),
     expensesStore as any,
     vehiclesStore as any,
+    payeesStore as any,
     auth as any
   );
 }

@@ -101,9 +101,11 @@
   [vehicleOptions]="vehicleOptions"
   [categoryOptions]="categoryOptions"
   [ownerOptions]="ownerOptions"
+  [payeeOptions]="payeeOptions"
   [isAdmin]="isAdmin"
   [reloadStructure]="reloadStructureBound"
   (closed)="onFormModalClosed()"
+  (payeeCreated)="onPayeeCreated()"
 ></app-expense-form-modal>
 
 <app-expense-delete-modal

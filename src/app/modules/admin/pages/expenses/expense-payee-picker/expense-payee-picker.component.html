@@ -1,0 +1,79 @@
+<div class="payee-picker" [class.is-open]="isOpen" [class.is-disabled]="disabled">
+  <button
+    type="button"
+    class="payee-picker-trigger"
+    data-testid="payee-picker-trigger"
+    [disabled]="disabled"
+    [attr.aria-expanded]="isOpen"
+    (click)="toggle()"
+    >
+    <span class="payee-picker-value" [class.is-placeholder]="!selectedLabel">
+      {{ selectedLabel || ('ADMIN.EXPENSES.PAYEE.PLACEHOLDER' | translate) }}
+    </span>
+    <span class="material-symbols-outlined payee-picker-arrow" [attr.translate]="'no'">expand_more</span>
+  </button>
+
+  @if (isOpen) {
+    <div class="payee-picker-panel">
+      <input
+        #queryInput
+        type="text"
+        class="admin-field payee-picker-search"
+        data-testid="payee-picker-search"
+        [attr.placeholder]="'ADMIN.EXPENSES.PAYEE.SEARCH_PLACEHOLDER' | translate"
+        [(ngModel)]="query"
+        [ngModelOptions]="{ standalone: true }"
+        />
+
+      <div class="payee-picker-list">
+        <!-- AC1: leaving it blank is a real answer, so it is an option in the list rather than a
+        thing you achieve by deleting text. -->
+        <button
+          type="button"
+          class="payee-picker-option is-none"
+          data-testid="payee-picker-none"
+          (click)="clear()"
+          >
+          {{ 'ADMIN.EXPENSES.PAYEE.NONE' | translate }}
+        </button>
+
+        @for (payee of visiblePayees; track trackById($index, payee)) {
+          <button
+            type="button"
+            class="payee-picker-option"
+            data-testid="payee-picker-option"
+            [class.is-selected]="payee.id === selectedId"
+            (click)="select(payee)"
+            >
+            <span class="payee-picker-option-name">{{ payee.name }}</span>
+            <span class="payee-picker-type">
+              {{ 'ADMIN.EXPENSES.PAYEE.TYPES.' + payee.type | translate }}
+            </span>
+          </button>
+        }
+      </div>
+
+      <!-- AC2: a name that is not on record yet gets added from HERE. The button names the type it
+      will create so an inferred type is never a silent one (owner decision 1, 2026-08-24). -->
+      @if (canCreate) {
+        <div class="payee-picker-create" data-testid="payee-picker-create">
+          <p class="payee-picker-create-text">
+            {{ 'ADMIN.EXPENSES.PAYEE.NO_MATCH' | translate: { name: query.trim() } }}
+          </p>
+          <button
+            type="button"
+            class="admin-btn admin-btn-small"
+            data-testid="payee-picker-create-button"
+            [disabled]="isCreating"
+            (click)="createFromQuery()"
+            >
+            {{
+            'ADMIN.EXPENSES.PAYEE.ADD_AS'
+            | translate: { type: 'ADMIN.EXPENSES.PAYEE.TYPES.' + inferredType | translate }
+            }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>

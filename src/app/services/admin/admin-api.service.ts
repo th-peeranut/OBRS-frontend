@@ -1105,6 +1105,16 @@ export interface AdminExpenseDto {
   expenseDate: string;
   receiptNo?: string | null;
   paidBy?: string | null;
+  /**
+   * OBRS-1577: who RECEIVED the money, by FK into the payee registry, plus the name resolved
+   * server-side. The NAME comes down with the row rather than being looked up client-side because
+   * the pickers list ACTIVE payees only — a bill paid to a garage that has since closed would
+   * otherwise render blank, and re-saving it from a form whose dropdown never held that id would
+   * silently drop the link. Optional: every bill written before V119 has no payee, and that is a
+   * real answer rather than a missing one.
+   */
+  payeeId?: number | null;
+  payeeName?: string | null;
   note?: string | null;
   createdByName?: string;
   createdAt?: string;
@@ -1167,6 +1177,9 @@ export interface CreateExpensePayload {
   expenseDate: string;
   receiptNo: string | null;
   paidBy: string | null;
+  /** OBRS-1577: which registry payee received this money. `null` is the normal case — a bill whose
+   * payee is not on record, which every row written before this card is. */
+  payeeId: number | null;
   note: string | null;
   /** OBRS-1374: the bill's lines. `[]` means "this bill has no breakdown", which is the
    * normal case and is accepted unchanged. When lines ARE sent their amounts must sum to
@@ -1178,6 +1191,25 @@ export interface CreateExpensePayload {
 /** OBRS-685: `POST /api/private/expenses` 201 response body. */
 export interface CreateExpenseRespDto {
   expenseId: number;
+}
+
+/**
+ * OBRS-1577: one row of the payee registry — a garage, a petrol station, a shop the operator's
+ * money goes to. `type` is what keeps them apart in the pickers (the owner's 2026-08-24 ruling:
+ * ONE table with a type column, because splitting one table later is a migration and merging two
+ * later is a reconciliation project).
+ */
+export interface AdminExpensePayeeDto {
+  id: number;
+  name: string;
+  type: 'GARAGE' | 'FUEL_STATION' | 'OTHER';
+  active: boolean;
+}
+
+/** OBRS-1577: `ExpensePayeeReqDto` — the body for create and for rename. */
+export interface CreateExpensePayeePayload {
+  name: string;
+  type: 'GARAGE' | 'FUEL_STATION' | 'OTHER';
 }
 
 /** OBRS-809: one operator, as returned by `GET /api/private/owners`.
@@ -2411,6 +2443,52 @@ export class AdminApiService {
   }
 
   // ── OBRS-1356: the owner's review of what a salesperson recorded in the field ──
+
+  /**
+   * OBRS-1577. `includeInactive` is what separates the two callers: a picker leaves it false and
+   * never offers a payee the owner retired, the registry screen sets it true because a screen that
+   * cannot see a retired row cannot un-retire it.
+   */
+  getExpensePayees(
+    type: AdminExpensePayeeDto['type'] | null,
+    includeInactive = false
+  ): Observable<ResponseAPI<AdminExpensePayeeDto[]>> {
+    let params = new HttpParams();
+    if (type) {
+      params = params.set('type', type);
+    }
+    if (includeInactive) {
+      params = params.set('includeInactive', 'true');
+    }
+    return this.getRequest<AdminExpensePayeeDto[]>(`${this.baseUrl}/private/expense-payees`, params);
+  }
+
+  /**
+   * OBRS-1577: 200, not 201, and it returns the ROW. The endpoint is idempotent by normalized name
+   * (trimmed, spaces removed, lower-cased), so asking for a garage that already exists hands back
+   * the one that exists rather than failing in the middle of entering a bill.
+   */
+  createExpensePayee(
+    payload: CreateExpensePayeePayload
+  ): Observable<ResponseAPI<AdminExpensePayeeDto>> {
+    return this.postRequest<AdminExpensePayeeDto>(`${this.baseUrl}/private/expense-payees`, payload);
+  }
+
+  updateExpensePayee(
+    id: number,
+    payload: CreateExpensePayeePayload
+  ): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/expense-payees/${id}`, payload);
+  }
+
+  /** OBRS-1577: retire/restore. There is no DELETE — a garage that closed still owns every bill it
+   * was ever paid, and there is no second place that history is written down. */
+  setExpensePayeeActive(id: number, active: boolean): Observable<ResponseAPI<unknown>> {
+    return this.patchRequest<unknown>(
+      `${this.baseUrl}/private/expense-payees/${id}/active`,
+      { active }
+    );
+  }
 
   getPendingExpenses(): Observable<ResponseAPI<AdminExpenseDto[]>> {
     return this.getRequest<AdminExpenseDto[]>(`${this.baseUrl}/private/expenses/pending`);

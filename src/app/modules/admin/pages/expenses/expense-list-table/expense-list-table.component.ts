@@ -46,7 +46,8 @@ export class ExpenseListTableComponent {
    */
   protected get columnCount(): number {
     // OBRS-960: +1 for the always-rendered Source column.
-    return 9 + (this.showOwnerColumn ? 1 : 0) + (this.canWrite ? 1 : 0);
+    // OBRS-1577: +1 for the always-rendered Payee column.
+    return 10 + (this.showOwnerColumn ? 1 : 0) + (this.canWrite ? 1 : 0);
   }
 
   // Arrow-function field: NgForOf invokes trackBy as a free function, so a
