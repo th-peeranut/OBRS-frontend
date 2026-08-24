@@ -46,6 +46,7 @@ import { RouteMapService } from '../../../../services/route-map/route-map.servic
 import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
 import { LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
 import { AnalyticsService } from '../../../../services/analytics/analytics.service';
+import { AuthService } from '../../../../auth/auth.service';
 import {
   isOnlineTicketBookingOpen,
   NJ_FACEBOOK_PAGE_URL,
@@ -84,7 +85,7 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
    * swapped for the way a customer can actually reach us today.
    */
   protected get isOnlineBookingOpen(): boolean {
-    return isOnlineTicketBookingOpen();
+    return isOnlineTicketBookingOpen(this.authService);
   }
 
   /** Bound into the template so the page URL is spelled in exactly one place. */
@@ -153,7 +154,8 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     private appStore: Store<Appstate>,
     private translateService: TranslateService,
     private routeMapService: RouteMapService,
-    private analytics: AnalyticsService
+    private analytics: AnalyticsService,
+    private authService: AuthService
   ) {
     this.scheduleList = this.store.pipe(select(selectScheduleList));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
