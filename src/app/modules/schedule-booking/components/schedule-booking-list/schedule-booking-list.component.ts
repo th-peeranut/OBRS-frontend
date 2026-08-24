@@ -379,8 +379,11 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   /**
    * Per-seat fare WITH its unit (OBRS-1592). Replaces the number-plus-
-   * `BAHT_UNIT`-key pair this template used to compose, which was the only
-   * money on any screen that carried no thousand separator.
+   * `BAHT_UNIT`-key pair this template used to compose. An earlier version of
+   * this comment called that pair the ONLY money on any screen without a
+   * thousand separator; scrutinize found five more files composing the same
+   * number-plus-unit-key shape under different key names, and they are
+   * converted with it.
    */
   formatPricePerSeat(value: string | number | null | undefined): string {
     return formatMoney(parsePricePerSeat(value), this.translateService.currentLang);

@@ -81,7 +81,7 @@
           </div>
           <div class="receipt-item">
             <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.AMOUNT_PAID' | translate }}</span>
-            <span class="value fw-bold">{{ amountPaid }} {{ 'E_TICKET.LABEL.TOTAL_UNIT' | translate }}</span>
+            <span class="value fw-bold">{{ formatMoney(amountPaid) }}</span>
           </div>
         </div>
         <div class="receipt-divider dotted"></div>

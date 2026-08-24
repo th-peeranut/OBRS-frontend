@@ -12,8 +12,10 @@
  * copied into 11 components printed `฿200.00`; the `| currency:'THB':'symbol'`
  * pipe printed the same in walk-in checkout; 13 admin/report screens ran
  * `Intl.NumberFormat('en-US', {currency})` and printed `THB 200.00`; and the
- * search page composed `parsePricePerSeat()` with an i18n unit and printed
- * `200 บาท` with no thousand separator at all. A customer could be told
+ * search page — and the whole booking / checkout / e-ticket flow, under five
+ * differently-named `*_UNIT` keys that a `BAHT_UNIT` ban never saw — composed
+ * the raw number with an i18n unit and printed `200 บาท` with no thousand
+ * separator at all. A customer could be told
  * `฿200.00` on screen and `200.00 บาท` in the confirmation email a minute later.
  *
  * WHY THE UNIT IS NOT AN i18n KEY. Thai and Chinese put the unit AFTER the

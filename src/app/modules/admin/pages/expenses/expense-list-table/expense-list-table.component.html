@@ -92,8 +92,8 @@
                   }
                 </td>
                 <td>{{ row.categoryDisplay }}</td>
-                <td class="expense-money">{{ row.amount | number: '1.2-2' }}</td>
-                <td class="expense-money">{{ row.vatAmount === null ? '-' : (row.vatAmount | number: '1.2-2') }}</td>
+                <td class="expense-money">{{ formatMoney(row.amount) }}</td>
+                <td class="expense-money">{{ row.vatAmount === null ? '-' : formatMoney(row.vatAmount) }}</td>
                 <td>{{ row.receiptNo || '-' }}</td>
                 <td>{{ row.paidBy || '-' }}</td>
                 <td [attr.title]="row.note || null">{{ row.note || '-' }}</td>

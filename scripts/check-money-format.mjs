@@ -27,8 +27,22 @@
  *   a bare `BAHT_UNIT`-style unit   - composing a raw number with a unit word
  *                                    cannot express that English puts a code
  *                                    BEFORE the number and Chinese takes no
- *                                    space, and the one screen that did it also
+ *                                    space, and every screen that did it also
  *                                    lost its thousand separator.
+ *   ANY i18n value that IS a        - the first version of this gate banned the
+ *   currency word                     NAME `BAHT_UNIT` rather than the mechanism,
+ *                                    and scrutinize walked straight through it:
+ *                                    `PAYMENT.SUMMARY.TOTAL_UNIT`,
+ *                                    `REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT`,
+ *                                    `E_TICKET.LABEL.TOTAL_UNIT` and two
+ *                                    `TICKET_UNIT`s were all the word `บาท` under
+ *                                    another name, live across the whole booking
+ *                                    flow. So a currency word cannot be a
+ *                                    translation value at all now, whatever the
+ *                                    key is called - a rename cannot evade that.
+ *                                    A per-unit SUFFIX that is not itself money
+ *                                    (`/คน`, `/seat`) stays legal: that is what
+ *                                    goes AFTER formatMoney()'s output.
  *
  * `Intl.NumberFormat` WITHOUT `style: 'currency'` stays legal on purpose: five
  * call sites format plain counts and percentages, which are not money and must
@@ -57,6 +71,12 @@ const INTL_CURRENCY_RE = /style\s*:\s*['"]currency['"]/g;
 const CURRENCY_PIPE_RE = /\|\s*currency\s*[:}]/g;
 /** A unit word composed onto a bare number by the template. */
 const BARE_UNIT_KEY_RE = /\bBAHT_UNIT\b/g;
+/**
+ * An i18n VALUE that OPENS with a currency word, whatever its key is called.
+ * This is the mechanism `BAHT_UNIT` was only one instance of - see the header
+ * for the five keys that got past the name-based ban.
+ */
+const MONEY_WORD_VALUE_RE = /"[A-Za-z0-9_]+"\s*:\s*"(?:฿|THB|บาท|baht|泰铢)[^"]*"/gi;
 
 /**
  * true when `index` sits inside a comment - `//`, `/* *​/` or `<!-- -->`.
@@ -112,6 +132,17 @@ const SELF_TEST = [
   ['<!-- was {{ "X.BAHT_UNIT" | translate }} -->', BARE_UNIT_KEY_RE, 0],
   ["/* was style: 'currency' */", INTL_CURRENCY_RE, 0],
   ['// was {{ total | currency:"THB" }}', CURRENCY_PIPE_RE, 0],
+
+  // The MECHANISM, not the name: any key whose VALUE opens with a unit word.
+  ['"TOTAL_UNIT": "บาท",', MONEY_WORD_VALUE_RE, 1],
+  ['"TICKET_UNIT": "baht/person",', MONEY_WORD_VALUE_RE, 1],
+  ['"ANYTHING_AT_ALL": "泰铢/人",', MONEY_WORD_VALUE_RE, 1],
+  ['"CURRENCY_FORMAT": "฿{0}",', MONEY_WORD_VALUE_RE, 1],
+  // MUST-NOT-CATCH: the per-unit SUFFIX that follows formatMoney()'s output.
+  ['"TICKET_UNIT": "/คน",', MONEY_WORD_VALUE_RE, 0],
+  ['"SEAT_PER_PASSENGER": "/seat",', MONEY_WORD_VALUE_RE, 0],
+  // MUST-NOT-CATCH: prose that merely mentions the unit somewhere inside it.
+  ['"CAP": "สูงสุด 500 บาทต่อพัสดุ",', MONEY_WORD_VALUE_RE, 0],
 ];
 for (const [sample, re, expected] of SELF_TEST) {
   const got = hits(sample, re).length;
@@ -158,11 +189,19 @@ for (const file of files) {
 }
 
 // The retired key must not come back into the bundles either: re-adding it is
-// how a template gets its second money format back.
+// how a template gets its second money format back. And no NEW key may become
+// the next `BAHT_UNIT` under a different name — five already had, on the whole
+// booking flow, while this gate reported OK.
 for (const bundle of readdirSync(I18N_DIR).filter((f) => f.endsWith('.json'))) {
   const text = readFileSync(join(I18N_DIR, bundle), 'utf8');
   for (const line of hits(text, BARE_UNIT_KEY_RE)) {
     failures.push(`public/i18n/${bundle}:${line}  BAHT_UNIT was retired by OBRS-1592`);
+  }
+  for (const line of hits(text, MONEY_WORD_VALUE_RE)) {
+    failures.push(
+      `public/i18n/${bundle}:${line}  a currency word is not a translation value — ` +
+        'the unit comes from formatMoney(), not from a key'
+    );
   }
 }
 

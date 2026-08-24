@@ -2884,11 +2884,10 @@
       "PASSENGER_UNIT": "Person",
       "TICKET_PRICE": "Ticket Price",
       "TICKET_PRICE_RETURN": "Round-trip ticket price",
-      "TICKET_UNIT": "baht/person",
+      "TICKET_UNIT": "/person",
       "SUBTOTAL": "Subtotal",
       "PROMO_DISCOUNT": "Promo discount",
       "TOTAL": "Total price",
-      "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm information"
     }
   },
@@ -3004,12 +3003,11 @@
       "PASSENGER_UNIT": "Person",
       "TICKET_PRICE_ONEWAY": "Ticket price",
       "TICKET_PRICE_ROUNDTRIP": "Round-trip ticket price",
-      "TICKET_UNIT": "baht/person",
+      "TICKET_UNIT": "/person",
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_ROUND_TRIP": "Round-trip discount",
       "DISCOUNT": "Discount",
       "TOTAL": "Total",
-      "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm payment"
     },
     "CREDIT_CARD": {
@@ -3075,7 +3073,6 @@
       "PASSENGER_PHONE": "Phone number of the booker",
       "PAYMENT_DATE": "Payment date/time",
       "TOTAL": "Total",
-      "TOTAL_UNIT": "baht",
       "ESTIMATE_KM_UNIT": "km",
       "LEG_OUTBOUND": "Outbound",
       "LEG_RETURN": "Return",

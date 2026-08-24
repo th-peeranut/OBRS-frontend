@@ -12,6 +12,7 @@ import {
 } from '../../../../shared/interfaces/booking-ticket.interface';
 import { PaymentByBookingIdResponse, PaymentTransaction } from '../../../../shared/interfaces/payment.interface';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 /** One printable ticket row: seat + passenger + this ticket's own boarding QR
  * (OBRS-96 boarding-token, reused verbatim — see `fetchBoardingTokens` below). */
@@ -204,6 +205,12 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
   private formatAmount(value: number | string | null | undefined): string {
     const parsed = typeof value === 'string' ? parseFloat(value) : value;
     return Number.isFinite(parsed) ? Number(parsed).toFixed(2) : '0.00';
+  }
+
+  /** OBRS-1592: `formatAmount` above still produces the `'0.00'` string this
+   * page stores; only the RENDERING of it changes. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translate.currentLang);
   }
 
   private get currentLocale(): string {

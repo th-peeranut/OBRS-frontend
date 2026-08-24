@@ -2884,11 +2884,10 @@
       "PASSENGER_UNIT": "人",
       "TICKET_PRICE": "票价",
       "TICKET_PRICE_RETURN": "往返票价",
-      "TICKET_UNIT": "泰铢/人",
+      "TICKET_UNIT": "/人",
       "SUBTOTAL": "小计",
       "PROMO_DISCOUNT": "促销折扣",
       "TOTAL": "总价",
-      "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认信息"
     }
   },
@@ -3004,12 +3003,11 @@
       "PASSENGER_UNIT": "人",
       "TICKET_PRICE_ONEWAY": "票价",
       "TICKET_PRICE_ROUNDTRIP": "往返票价",
-      "TICKET_UNIT": "泰铢/人",
+      "TICKET_UNIT": "/人",
       "SUBTOTAL": "小计",
       "DISCOUNT_ROUND_TRIP": "往返折扣",
       "DISCOUNT": "折扣",
       "TOTAL": "总计",
-      "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认付款"
     },
     "CREDIT_CARD": {
@@ -3075,7 +3073,6 @@
       "PASSENGER_PHONE": "预订人电话号码",
       "PAYMENT_DATE": "付款日期/时间",
       "TOTAL": "总计",
-      "TOTAL_UNIT": "泰铢",
       "ESTIMATE_KM_UNIT": "公里",
       "LEG_OUTBOUND": "去程",
       "LEG_RETURN": "返程",
