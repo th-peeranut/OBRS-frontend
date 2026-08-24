@@ -711,6 +711,8 @@ export interface AdminBookingActorDetailDto {
 }
 
 export interface AdminBookingContactDetailDto {
+  /** OBRS-1601 — title CODE, rendered through `titleLabel`; absent when the contact gave none. */
+  title?: string | null;
   fullName?: string;
   phoneNumber?: string;
 }

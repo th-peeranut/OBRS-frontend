@@ -5,11 +5,13 @@ import { By } from '@angular/platform-browser';
 import { CounterCancelResultListComponent } from './counter-cancel-result-list.component';
 import { CounterBookingSearchResultDto } from '../../../../../services/staff/staff-api.service';
 import { AdminPaginatorComponent } from '../../../../admin/components/admin-paginator/admin-paginator.component';
+import { TitleLabelPipe } from '../../../../../shared/pipes/title-label.pipe';
 
 function row(overrides: Partial<CounterBookingSearchResultDto> = {}): CounterBookingSearchResultDto {
   return {
     bookingId: 1,
     bookingNumber: 'B-000123',
+    contactTitle: 'MR',
     contactName: 'Somchai Jaidee',
     contactPhoneMasked: '••••5678',
     status: 'confirmed',
@@ -31,7 +33,7 @@ describe('CounterCancelResultListComponent (OBRS-766)', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CommonModule, TranslateModule.forRoot()],
+      imports: [CommonModule, TranslateModule.forRoot(), TitleLabelPipe],
       declarations: [CounterCancelResultListComponent, AdminPaginatorComponent],
     }).compileComponents();
 
@@ -51,6 +53,46 @@ describe('CounterCancelResultListComponent (OBRS-766)', () => {
     const cell = fixture.debugElement.query(By.css('.ccrl-phone'));
     expect(cell).not.toBeNull();
     expect(cell.nativeElement.textContent.trim()).toBe('••••5678');
+  });
+
+  /**
+   * OBRS-1601. Two things at once, on purpose:
+   *
+   * <p>The honorific reaches the DOM at all — the wiring (`row.contactTitle` + the pipe in this
+   * module) is the part that breaks silently, since a missing field renders as an empty prefix and
+   * every other assertion in this file stays green.
+   *
+   * <p>And it MOVES when the reader switches language with no refetch. That is the whole reason the
+   * code crosses the wire instead of a word, and the reason `titleLabel` is impure — a pure pipe, or
+   * a string composed in the store/getter, would leave `Mr.` on screen after the switch.
+   */
+  it('OBRS-1601: renders the contact honorific in the active language and re-renders on a switch', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { COMMON: { TITLES: { MR: 'Mr.' } } }, true);
+    translate.setTranslation('th', { COMMON: { TITLES: { MR: 'นาย' } } }, true);
+    translate.currentLang = 'en';
+
+    component.results = [row({ contactTitle: 'MR', contactName: 'Somchai Jaidee' })];
+    component.hasSearched = true;
+    fixture.detectChanges();
+
+    const nameCell = () =>
+      fixture.debugElement.queryAll(By.css('.ccrl-row td'))[1].nativeElement.textContent.trim();
+    expect(nameCell()).toBe('Mr. Somchai Jaidee');
+
+    translate.use('th');
+    fixture.detectChanges();
+    expect(nameCell()).toBe('นาย Somchai Jaidee');
+  });
+
+  it('OBRS-1601: a contact with no title renders the bare name - no prefix, no leading space', () => {
+    component.results = [row({ contactTitle: null, contactName: 'Somchai Jaidee' })];
+    component.hasSearched = true;
+    fixture.detectChanges();
+
+    expect(
+      fixture.debugElement.queryAll(By.css('.ccrl-row td'))[1].nativeElement.textContent.trim(),
+    ).toBe('Somchai Jaidee');
   });
 
   it('shows the Cancel action only for a confirmed booking', () => {

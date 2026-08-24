@@ -202,7 +202,10 @@ longer entitled to see, plus filter/export controls acting on them. -->
               <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.CONTACT' | translate }}</h5>
               <div class="bk-detail-row">
                 <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CONTACT_NAME' | translate }}</span>
-                <span>{{ detailBooking.contact?.fullName || '-' }}</span>
+                <!-- OBRS-1601: title CODE + name, joined by the impure `titleLabel` pipe so the
+                     honorific follows the reader's language. `|| '-'` still guards the empty case:
+                     with no title AND no name the pipe returns '', which must stay a dash. -->
+                <span>{{ (detailBooking.contact?.title | titleLabel: detailBooking.contact?.fullName) || '-' }}</span>
               </div>
               <div class="bk-detail-row">
                 <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CONTACT_PHONE' | translate }}</span>
