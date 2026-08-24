@@ -19,6 +19,7 @@ import {
 import { ParcelVerifyFormValue } from '../../components/parcel-verify-dialog/parcel-verify-dialog.component';
 import { ParcelVerifyListStore } from './parcel-verify-list.store';
 import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 /** Error-code -> i18n key lookup, same shape as
  * `parcel-delivery-list-page.component.ts`'s `ACTION_ERROR_KEYS` (branches on
@@ -166,7 +167,9 @@ export class ParcelVerifyListPageComponent implements OnInit, OnDestroy {
     const parcel = this.dialogParcel;
     if (!parcel) return;
 
-    const amount = (parcel.amount ?? 0).toFixed(2);
+    // OBRS-1592: the unit is no longer spelled inside the i18n value, so the
+    // amount arrives already formatted - `.toFixed(2)` printed `200.00 บาท`.
+    const amount = formatMoney(parcel.amount ?? 0, this.translate.currentLang);
     const confirmed = await this.alertService.confirm({
       icon: 'warning',
       title: this.translate.instant('STAFF.PARCEL_VERIFY.REJECT_CONFIRM.TITLE'),
@@ -224,7 +227,7 @@ export class ParcelVerifyListPageComponent implements OnInit, OnDestroy {
       // list page's silent-success convention for Load/Mark-arrived.
     }
 
-    const amount = ((data?.refundAmount ?? 0) as number).toFixed(2);
+    const amount = formatMoney((data?.refundAmount ?? 0) as number, this.translate.currentLang);
     // MUST distinguish a real gateway refund from manual_refund_required —
     // the latter means the money has NOT actually gone back yet and a human
     // still owes the sender a cash hand-back. A single "refunded

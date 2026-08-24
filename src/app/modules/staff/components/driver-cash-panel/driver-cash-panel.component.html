@@ -8,7 +8,7 @@
       (driver + business date) plus the net (expected-return) pill. -->
       <span class="admin-emphasis">{{ day.driverName }}</span>
       <span class="admin-muted">{{ day.businessDate }}</span>
-      <span class="dcp-net-pill" data-testid="driver-cash-context-net">{{ day.expectedReturnAmount }}</span>
+      <span class="dcp-net-pill" data-testid="driver-cash-context-net">{{ formatMoney(day.expectedReturnAmount) }}</span>
     }
     @if (!day && isLoading) {
       <span class="admin-muted">{{ 'COMMON.LOADING' | translate }}</span>
@@ -25,9 +25,9 @@
     <div class="dcp-my-day" data-testid="driver-cash-my-day">
       <span class="admin-emphasis">{{ 'STAFF.DRIVER_CASH.MY_DAY.TITLE' | translate }}</span>
       <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.MY_DAY.PER_HEAD_EARNED' | translate }}</span>
-      <span data-testid="driver-cash-my-day-per-head">{{ myDay.perHeadTotal }}</span>
+      <span data-testid="driver-cash-my-day-per-head">{{ formatMoney(myDay.perHeadTotal) }}</span>
       <span class="admin-muted">{{ 'STAFF.DRIVER_CASH.MY_DAY.TO_RETURN' | translate }}</span>
-      <span class="dcp-net-pill" data-testid="driver-cash-my-day-net">{{ myDay.expectedReturnAmount }}</span>
+      <span class="dcp-net-pill" data-testid="driver-cash-my-day-net">{{ formatMoney(myDay.expectedReturnAmount) }}</span>
     </div>
   }
 

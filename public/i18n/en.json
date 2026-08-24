@@ -3721,7 +3721,7 @@
           "UNPAID_NOTE": "Not yet paid — collect cash at the counter (Booking #{{bookingNumber}})",
           "PAY_CASH_BUTTON": "Collect cash",
           "PAYING": "Recording payment…",
-          "PAID": "Paid — ฿{{amount}} collected"
+          "PAID": "Paid — {{amount}} collected"
         }
       },
       "SHARE_NOT_CONFIGURED": "Parcel revenue share is not configured — it will be recorded at 0% until the owner sets it up.",
@@ -3901,7 +3901,7 @@
       "SUBMITTING": "Saving…",
       "REJECT_CONFIRM": {
         "TITLE": "Confirm reject & refund",
-        "BODY": "Reject parcel {{tracking}} and immediately refund {{amount}} THB in full to the payment method the sender used. This action cannot be undone.",
+        "BODY": "Reject parcel {{tracking}} and immediately refund {{amount}} in full to the payment method the sender used. This action cannot be undone.",
         "CONFIRM_BTN": "Reject & refund",
         "CANCEL_BTN": "Cancel"
       },
@@ -3913,8 +3913,8 @@
         "VALIDATION": "Some values are invalid. Please check and try again."
       },
       "SUCCESS": {
-        "REJECTED_REFUNDED": "Parcel rejected. Refunded {{amount}} THB.",
-        "REJECTED_MANUAL_REFUND": "Parcel rejected. The automatic refund could not be processed — hand back {{amount}} THB to the recipient in cash."
+        "REJECTED_REFUNDED": "Parcel rejected. Refunded {{amount}}.",
+        "REJECTED_MANUAL_REFUND": "Parcel rejected. The automatic refund could not be processed — hand back {{amount}} to the recipient in cash."
       }
     },
     "INSPECTION": {
@@ -4153,7 +4153,7 @@
       "DESCRIPTION": "Parcel description",
       "PROHIBITED_ACK": "I have read the prohibited-items list above and confirm this parcel contains none of them.",
       "QUOTE_LOADING": "Calculating price…",
-      "QUOTE_AMOUNT": "Price: {{amount}} THB",
+      "QUOTE_AMOUNT": "Price: {{amount}}",
       "SUBMIT": "Confirm parcel details",
       "SUBMITTING": "Submitting…"
     },

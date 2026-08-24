@@ -3721,7 +3721,7 @@
           "UNPAID_NOTE": "尚未付款 — 请在柜台收取现金（订单号 #{{bookingNumber}}）",
           "PAY_CASH_BUTTON": "收取现金",
           "PAYING": "正在记录付款…",
-          "PAID": "已付款 — 已收取现金 ฿{{amount}}"
+          "PAID": "已付款 — 已收取现金 {{amount}}"
         }
       },
       "SHARE_NOT_CONFIGURED": "尚未设置包裹收益分成——在业主设置之前将记为0%。",
@@ -3901,7 +3901,7 @@
       "SUBMITTING": "保存中…",
       "REJECT_CONFIRM": {
         "TITLE": "确认拒绝并退款",
-        "BODY": "拒绝包裹 {{tracking}} 并立即全额退款 {{amount}} 泰铢至寄件人付款时使用的支付渠道。此操作无法撤销。",
+        "BODY": "拒绝包裹 {{tracking}} 并立即全额退款 {{amount}} 至寄件人付款时使用的支付渠道。此操作无法撤销。",
         "CONFIRM_BTN": "拒绝并退款",
         "CANCEL_BTN": "取消"
       },
@@ -3913,8 +3913,8 @@
         "VALIDATION": "数据无效，请重新检查。"
       },
       "SUCCESS": {
-        "REJECTED_REFUNDED": "包裹已拒绝，已退款 {{amount}} 泰铢。",
-        "REJECTED_MANUAL_REFUND": "包裹已拒绝，自动退款未成功，请将 {{amount}} 泰铢现金亲手退还收件人。"
+        "REJECTED_REFUNDED": "包裹已拒绝，已退款 {{amount}}。",
+        "REJECTED_MANUAL_REFUND": "包裹已拒绝，自动退款未成功，请将 {{amount}} 现金亲手退还收件人。"
       }
     },
     "INSPECTION": {
@@ -4153,7 +4153,7 @@
       "DESCRIPTION": "物品描述",
       "PROHIBITED_ACK": "我已阅读上述违禁物品清单，并确认本包裹不含其中任何一项",
       "QUOTE_LOADING": "正在计算价格…",
-      "QUOTE_AMOUNT": "价格：{{amount}} 泰铢",
+      "QUOTE_AMOUNT": "价格：{{amount}}",
       "SUBMIT": "确认包裹信息",
       "SUBMITTING": "正在提交…"
     },

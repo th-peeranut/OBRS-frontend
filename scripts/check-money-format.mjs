@@ -72,11 +72,58 @@ const CURRENCY_PIPE_RE = /\|\s*currency\s*[:}]/g;
 /** A unit word composed onto a bare number by the template. */
 const BARE_UNIT_KEY_RE = /\bBAHT_UNIT\b/g;
 /**
- * An i18n VALUE that OPENS with a currency word, whatever its key is called.
- * This is the mechanism `BAHT_UNIT` was only one instance of - see the header
+ * An i18n VALUE that IS a currency word — the whole value, not a mention.
+ * This is the mechanism `BAHT_UNIT` was only one instance of; see the header
  * for the five keys that got past the name-based ban.
  */
 const MONEY_WORD_VALUE_RE = /"[A-Za-z0-9_]+"\s*:\s*"(?:฿|THB|บาท|baht|泰铢)[^"]*"/gi;
+/** A `{{x}}`/`{0}` placeholder, either interpolation dialect. */
+const PLACEHOLDER = String.raw`(?:\{\{[^{}]*\}\}|\{\d+\})`;
+/** The unit words, in every language this product ships. */
+const UNIT = String.raw`(?:฿|THB|บาท|baht|泰铢)`;
+/**
+ * A currency word sitting NEXT TO an interpolated amount, anywhere in a value.
+ *
+ * This is the second correction to the same mistake. The name-ban missed five
+ * keys called `*_UNIT`; the value-ban that replaced it was anchored to the START
+ * of the value, and scrutinize walked through THAT too - `"ราคา: {{amount}} บาท"`,
+ * `"Refunded {{amount}} THB."`, `"Paid — ฿{{amount}} collected"` and the parcel
+ * reject dialog were all live, on customer and staff screens, while this file
+ * printed OK. Position was never the mechanism. Adjacency is: a unit word
+ * touching a placeholder is a number being given a unit by hand, which is the
+ * one thing only formatMoney() may do.
+ *
+ * Prose that merely CONTAINS a unit word is untouched, which matters more in Thai
+ * than it looks: `บาท` is a substring of `บทบาท` ("role"), which appears in 15
+ * legitimate keys. Requiring a placeholder beside it is what keeps those green.
+ */
+const MONEY_WORD_NEAR_PLACEHOLDER_RE = new RegExp(
+  `"[A-Za-z0-9_]+"\\s*:\\s*"[^"]*(?:${PLACEHOLDER}\\s*${UNIT}|${UNIT}\\s*${PLACEHOLDER})[^"]*"`,
+  'gi'
+);
+
+/**
+ * The ONE key this gate knowingly does not enforce, and why.
+ *
+ * `POLICY.BUSINESS.CONTENT` says "the change fee is {{rescheduleFeeLateThb}} THB
+ * per seat". By the rule above that is a hand-composed unit, and it should go
+ * through formatMoney() like everything else. It does not, because it is not
+ * ordinary copy: OBRS-658 / ADR-0125 make this paragraph a PUBLISHED CONSUMER
+ * CONTRACT under a version ledger, and check-i18n-parity.mjs refuses any edit to
+ * it that does not also append {version, publishedOn, effectiveDate,
+ * worsensTerms, fingerprint} and bump business-policy.version.ts. Re-wording it
+ * therefore means republishing the terms with an effective date and an honest
+ * worsensTerms judgement - the owner's call, on its own card, not a side effect
+ * of a formatting change. This exemption is PRINTED on every run rather than
+ * skipped silently, so it stays a decision someone can revisit and not a hole.
+ */
+const KNOWN_UNENFORCED = [
+  {
+    key: 'POLICY.BUSINESS.CONTENT',
+    match: /"CONTENT"\s*:\s*"[^"]*rescheduleFeeLateThb[^"]*"/,
+    why: 'published consumer terms under the OBRS-658 version ledger — re-wording needs a new published version',
+  },
+];
 
 /**
  * true when `index` sits inside a comment - `//`, `/* *​/` or `<!-- -->`.
@@ -143,6 +190,22 @@ const SELF_TEST = [
   ['"SEAT_PER_PASSENGER": "/seat",', MONEY_WORD_VALUE_RE, 0],
   // MUST-NOT-CATCH: prose that merely mentions the unit somewhere inside it.
   ['"CAP": "สูงสุด 500 บาทต่อพัสดุ",', MONEY_WORD_VALUE_RE, 0],
+
+  // Adjacency, at any position — the four shapes that were live past the value-ban.
+  ['"QUOTE_AMOUNT": "ราคา: {{amount}} บาท",', MONEY_WORD_NEAR_PLACEHOLDER_RE, 1],
+  ['"REJECTED": "Parcel rejected. Refunded {{amount}} THB.",', MONEY_WORD_NEAR_PLACEHOLDER_RE, 1],
+  ['"PAID": "Paid — ฿{{amount}} collected",', MONEY_WORD_NEAR_PLACEHOLDER_RE, 1],
+  ['"FEE": "改签手续费每座位 {{fee}} 泰铢，每次改签均收取。",', MONEY_WORD_NEAR_PLACEHOLDER_RE, 1],
+  ['"CURRENCY_FORMAT": "{0} บาท",', MONEY_WORD_NEAR_PLACEHOLDER_RE, 1],
+  // MUST-NOT-CATCH: the amount already formatted, unit removed from the sentence.
+  ['"QUOTE_AMOUNT": "ราคา: {{amount}}",', MONEY_WORD_NEAR_PLACEHOLDER_RE, 0],
+  ['"PAID": "Paid — {{amount}} collected",', MONEY_WORD_NEAR_PLACEHOLDER_RE, 0],
+  // MUST-NOT-CATCH: `บาท` is a substring of `บทบาท` ("role") — 15 real keys.
+  ['"ROLE_COUNT": "{{count}} บทบาท",', MONEY_WORD_NEAR_PLACEHOLDER_RE, 0],
+  // MUST-NOT-CATCH: a unit named in a column HEADER, with no amount beside it.
+  ['"FARE_FOR_VEHICLE_TYPE": "{{vehicleType}} fare (THB)",', MONEY_WORD_NEAR_PLACEHOLDER_RE, 0],
+  // MUST-NOT-CATCH: prose with a placeholder and a unit word far apart.
+  ['"CAP": "{{n}} รายการ สูงสุด 500 บาทต่อพัสดุ",', MONEY_WORD_NEAR_PLACEHOLDER_RE, 0],
 ];
 for (const [sample, re, expected] of SELF_TEST) {
   const got = hits(sample, re).length;
@@ -166,6 +229,8 @@ function walk(dir, out = []) {
 
 const files = walk(APP_DIR);
 const failures = [];
+/** Sites this gate knowingly does not enforce. Printed, never silent. */
+const exempted = [];
 
 for (const file of files) {
   const rel = relative(root, file);
@@ -203,6 +268,22 @@ for (const bundle of readdirSync(I18N_DIR).filter((f) => f.endsWith('.json'))) {
         'the unit comes from formatMoney(), not from a key'
     );
   }
+  for (const line of hits(text, MONEY_WORD_NEAR_PLACEHOLDER_RE)) {
+    const lineText = text.split('\n')[line - 1] ?? '';
+    const exempt = KNOWN_UNENFORCED.find((e) => e.match.test(lineText));
+    if (exempt) {
+      exempted.push(`public/i18n/${bundle}:${line}  ${exempt.key} — ${exempt.why}`);
+      continue;
+    }
+    failures.push(
+      `public/i18n/${bundle}:${line}  a currency word next to an interpolated amount — ` +
+        'pass formatMoney(x) in as the parameter and drop the unit from the sentence'
+    );
+  }
+}
+
+for (const e of exempted) {
+  console.log(`check-money-format: NOT ENFORCED — ${e}`);
 }
 
 if (failures.length > 0) {
