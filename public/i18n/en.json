@@ -827,7 +827,10 @@
       "ACTIVE_SALES_POINT_LABEL": "Active Sales Point",
       "ACTIVE_SALES_POINT_NONE": "Not set",
       "SALES_POINTS_EMPTY": "No sales points configured yet",
-      "SALES_POINTS_UNAVAILABLE": "Couldn't load sales points. Try again."
+      "SALES_POINTS_UNAVAILABLE": "Couldn't load sales points. Try again.",
+      "PERSONAL_SECTION_TITLE": "Personal Information",
+      "CREDENTIALS_SECTION_TITLE": "Account Credentials",
+      "CONTACT_SECTION_TITLE": "Contact & Settings"
     },
     "VEHICLES": {
       "MONITORING": "Fleet Monitoring Active",
