@@ -4325,3 +4325,14 @@ FIRST and convert every display site; the "money-moving action" sites are the on
 quiet column/label render is the one that ships. A `check-money-format` gate that only scans for
 Intl-currency/`| currency`/unit-word-i18n CANNOT see a `.toFixed(2)`-to-template render, so green
 gate + green tests is not proof the family is done.
+
+## OBRS-1592 (Scrutinize round 4) — a comment stating the OLD format is a false claim too
+`settlements-page.component.ts:323` still read `// Echo the exact counted cash, including
+"THB 0.00" for a zero drawer.` — but the line below it is `this.formatMoney(...)`, and
+`formatMoney(0)` now yields `THB 0` / `0 บาท` (no satang on a whole number, per `hasSatang`),
+never `THB 0.00`. The comment described the exact `0.00` format this card removed, and it
+also assumed English. Self-fixed (comment only) to stop it teaching the next reader the
+pre-card format. Rule for a format-migration card: after converting a render, grep the file's
+COMMENTS for the old format literal (`0.00`, `฿`, `THB x.xx`) as well as the code — a comment
+asserting the old shape is the same false-completeness claim as a `.toFixed` that survived,
+just one a test can never catch.

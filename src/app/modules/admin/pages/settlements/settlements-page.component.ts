@@ -320,7 +320,8 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Echo the exact counted cash, including "THB 0.00" for a zero drawer.
+    // Echo the exact counted cash through the one formatter — even a zero
+    // drawer (e.g. `THB 0` / `0 บาท`), so the sign-off dialog states the amount.
     const countedText = this.formatMoney(payload.countedCashAmount);
     const confirmed = await this.alertService.confirm({
       title: this.translate.instant('ADMIN.SETTLEMENTS.CONFIRM.TITLE'),
