@@ -12,7 +12,8 @@
         counter staff must be able to get back to it after picking one by mistake. -->
         <option value="">{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
         @for (t of titleOptions; track t) {
-          <option [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
+          <!-- OBRS-1232: the VALUE is the stable code; titleLabel() still renders the word. -->
+          <option [value]="t.code">{{ titleLabel(t) }}</option>
         }
       </select>
       @if (fieldError('title'); as key) {

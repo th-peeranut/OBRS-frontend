@@ -443,6 +443,17 @@
     "ERROR_GENERAL": "发生错误，请重试。"
   },
   "COMMON": {
+    "TITLES": {
+      "MR": "先生",
+      "MRS": "太太",
+      "MISS": "小姐",
+      "MASTER": "小弟弟",
+      "MISS_CHILD": "小妹妹",
+      "DR": "博士",
+      "PROF": "教授",
+      "ASSOC_PROF": "副教授",
+      "ASST_PROF": "助理教授"
+    },
     "NOT_SPECIFIED": "未填写",
     "THEME_TOGGLE": "切换深色模式",
     "CLEAR": "清除",

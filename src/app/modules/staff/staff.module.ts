@@ -86,6 +86,7 @@ import { DriverCashExpenseFormComponent } from './components/driver-cash-panel/d
 
 // OBRS-1147 — the holder's own per-head earnings (/staff/my-earnings).
 import { MyEarningsPageComponent } from './pages/my-earnings/my-earnings-page.component';
+import { TitleLabelPipe } from '../../shared/pipes/title-label.pipe';
 
 export const staffRoutes: Routes = [
   {
@@ -297,6 +298,7 @@ export const staffRoutes: Routes = [
     MyEarningsPageComponent,
   ],
   imports: [
+    TitleLabelPipe,
     SharedModule,
     RouterModule.forChild(staffRoutes),
     DatePickerModule,

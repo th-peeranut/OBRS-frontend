@@ -57,6 +57,7 @@ import { StationLoadErrorComponent } from './components/station-load-error/stati
 // OBRS-272: relocated here from `modules/admin/components/` — see the
 // directive's own doc comment for the module-cycle rationale.
 import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.directive';
+import { TitleLabelPipe } from './pipes/title-label.pipe';
 
 @NgModule({
   declarations: [
@@ -85,6 +86,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     AdminModalBackdropDirective,
   ],
   imports: [
+    TitleLabelPipe,
     CommonModule,
     RouterModule,
     FormsModule,

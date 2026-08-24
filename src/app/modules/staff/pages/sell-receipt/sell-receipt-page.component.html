@@ -132,7 +132,7 @@
                       <div class="passenger-index">{{ i + 1 }}.</div>
                       <div class="passenger-field">
                         <span class="label">{{ 'E_TICKET.LABEL.PASSENGER_NAME' | translate }}</span>
-                        <span class="value">{{ ticket.passengerName }}</span>
+                        <span class="value">{{ ticket.passengerTitle | titleLabel: ticket.passengerName }}</span>
                       </div>
                       <div class="passenger-field">
                         <span class="label">{{ 'E_TICKET.LABEL.SEAT' | translate }}</span>

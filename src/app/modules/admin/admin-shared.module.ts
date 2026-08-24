@@ -6,6 +6,7 @@ import { AdminPaginatorComponent } from './components/admin-paginator/admin-pagi
 import { AdminSortableHeaderComponent } from './components/admin-sortable-header/admin-sortable-header.component';
 import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { TitleLabelPipe } from '../../shared/pipes/title-label.pipe';
 
 /**
  * Thin shared module that declares and exports the admin UI primitives that
@@ -38,7 +39,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
     AdminPaginatorComponent,
     AdminSortableHeaderComponent,
   ],
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TranslateModule],
+  imports: [
+    TitleLabelPipe,CommonModule, FormsModule, ReactiveFormsModule, TranslateModule],
   exports: [
     AdminDropdownComponent,
     AdminRefreshHintComponent,

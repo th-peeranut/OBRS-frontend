@@ -18,6 +18,7 @@ import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time'
 interface ReceiptTicketRow {
   ticketId: number | null;
   ticketNumber: string;
+  passengerTitle: string | null;
   passengerName: string;
   seat: string;
   // OBRS-324 (Epic OBRS-318 open seating, 318-d): true when this ticket has no
@@ -172,6 +173,9 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
       return {
         ticketId,
         ticketNumber: ticket.ticketNumber?.trim() || '-',
+        // OBRS-1232: carried as a code, composed with the name by the `titleLabel` pipe in the
+        // template - not joined here, or a language switch would leave the old word on screen.
+        passengerTitle: ticket.passengerTitle ?? null,
         passengerName: ticket.passengerName?.trim() || '-',
         seat: ticket.seatNumber?.trim() || '-',
         seatOpen: !ticket.seatNumber?.trim(),

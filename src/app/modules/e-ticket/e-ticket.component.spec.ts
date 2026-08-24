@@ -47,7 +47,8 @@ function buildTicketsData(): BookingTicketsData {
             id: 1,
             ticketNumber: 'T-Q4QZXTZAFY',
             passengerType: { code: 'male', label: 'Male' },
-            passengerName: 'Mr. Abc Def',
+            passengerTitle: 'MR',
+            passengerName: 'Abc Def',
             seatNumber: '1',
             status: { code: 'confirmed', label: 'Confirmed' },
             // OBRS-296: server-authoritative fare category.
@@ -79,7 +80,8 @@ function buildTicketsData(): BookingTicketsData {
             id: 2,
             ticketNumber: 'T-JJTETZNMF2',
             passengerType: { code: 'male', label: 'Male' },
-            passengerName: 'Mr. Abc Def',
+            passengerTitle: 'MR',
+            passengerName: 'Abc Def',
             seatNumber: '1',
             status: { code: 'confirmed', label: 'Confirmed' },
           },
@@ -240,7 +242,11 @@ describe('ETicketComponent', () => {
       // on each leg's own passengers.
       expect(component.legs[0].passengers).toEqual([
         {
-          name: 'Mr. Abc Def',
+          // OBRS-1232: the code travels beside the name and the card's template composes them,
+          // so a language switch changes the word with no refetch. A joined 'Mr. Abc Def' here
+          // would mean the old, untranslatable shape came back.
+          title: 'MR',
+          name: 'Abc Def',
           phone: '0812345678',
           seat: '1',
           ticketId: 1,
