@@ -99,7 +99,7 @@ longer entitled to see, plus filter/export controls acting on them. -->
                   >
                   <td class="admin-emphasis">{{ booking.bookingId }}</td>
                   <td>{{ booking.customer }}</td>
-                  <td>{{ booking.route }}</td>
+                  <td>{{ routeLabel(booking) }}</td>
                   <td>{{ displayDateTime(booking.bookingDate) }}</td>
                   <td>{{ displayDateTime(booking.departureTime) }}</td>
                   <td class="admin-emphasis">{{ booking.totalFare }}</td>
