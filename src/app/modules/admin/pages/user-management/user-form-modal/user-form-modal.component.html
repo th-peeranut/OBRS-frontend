@@ -28,18 +28,25 @@
             </div>
             <div class="user-editor-grid">
               <div class="user-field is-title">
-                <!-- OBRS-1231: optional. Only the length rule survives, so the message
-                is the length one - a "required" message on a field nothing requires is
-                how the old copy read even after the validator was gone. -->
-                <label>
+                <!-- OBRS-1232: was a free-text input, which is what let an unmappable string into
+                the column in the first place. The VALUE is the stable code; the word comes from
+                COMMON.TITLES.* so it follows the reader's language.
+                OBRS-1231: optional - the blank option is selectable, not disabled, so an admin can
+                get back to "not specified" after picking one by mistake. -->
+                <label for="user-form-title">
                   {{ 'ADMIN.USERS.FORM_TITLE' | translate }}
                 </label>
-                <input class="admin-field user-input" formControlName="title" />
-                @if (isFieldInvalid('title')) {
-                  <small class="admin-error">
-                    {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
-                  </small>
-                }
+                <select id="user-form-title" class="admin-field user-input" formControlName="title">
+                  <option value="">{{ 'COMMON.NOT_SPECIFIED' | translate }}</option>
+                  @if (legacyTitleValue; as legacy) {
+                    <!-- OBRS-1232 AC-5: a value the migration could not map. Kept selectable so a
+                    Save that changed nothing else does not wipe it. -->
+                    <option [value]="legacy">{{ legacy }}</option>
+                  }
+                  @for (option of titleOptions; track option.code) {
+                    <option [value]="option.code">{{ option.code | titleLabel }}</option>
+                  }
+                </select>
                 @if (serverFieldErrors['title']) {
                   <small class="admin-error">
                     {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['title'] } }}

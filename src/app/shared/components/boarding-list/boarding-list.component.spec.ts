@@ -13,6 +13,7 @@ import { AuthService } from '../../../auth/auth.service';
 import { BoardingListStore } from './boarding-list.store';
 import { AdminModalBackdropDirective } from '../../directives/admin-modal-backdrop.directive';
 import { createTranslateStub } from '../../../testing/test-stubs';
+import { TitleLabelPipe } from '../../pipes/title-label.pipe';
 
 function createAlertServiceStub(confirmResult = true): any {
   return {
@@ -2037,7 +2038,7 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
   }): void {
     const roles = opts.roles ?? (opts.canControl ? ['salesperson'] : []);
     TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2161,7 +2162,7 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
   // existing behavior this card deliberately preserves rather than replaces.
   it('OBRS-451 AC: tripHeader === null (self-fetch failed) hides the transition button for a DRIVER', fakeAsync(() => {
     TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2341,7 +2342,7 @@ describe('BoardingListComponent — OBRS-272 delay pill / indicator / dialog (Te
   }): void {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent, AdminModalBackdropDirective],
       providers: [
         BoardingListStore,
@@ -2469,7 +2470,7 @@ describe('BoardingListComponent — printManifest() portal lifecycle (OBRS-100, 
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,

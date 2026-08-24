@@ -443,6 +443,17 @@
     "ERROR_GENERAL": "พบข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
   },
   "COMMON": {
+    "TITLES": {
+      "MR": "นาย",
+      "MRS": "นาง",
+      "MISS": "นางสาว",
+      "MASTER": "เด็กชาย",
+      "MISS_CHILD": "เด็กหญิง",
+      "DR": "ดร.",
+      "PROF": "ศ.",
+      "ASSOC_PROF": "รศ.",
+      "ASST_PROF": "ผศ."
+    },
     "NOT_SPECIFIED": "ไม่ระบุ",
     "THEME_TOGGLE": "สลับโหมดมืด",
     "CLEAR": "ล้าง",

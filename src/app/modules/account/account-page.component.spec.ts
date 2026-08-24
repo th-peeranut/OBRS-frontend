@@ -58,6 +58,46 @@ describe('AccountPageComponent', () => {
     return { component, myAccountServiceStub, alertServiceStub };
   }
 
+  // OBRS-1232: same dropdown swap as the admin user form, same risk. This customer's row may hold
+  // a value the migration could not map to a code (the field was free text for months); a select
+  // with no matching option would show blank and the next Save would silently drop it.
+  describe('title dropdown (OBRS-1232)', () => {
+    it('offers no extra option when the stored title is one of the nine codes', () => {
+      const { component } = create('user@example.com', {
+        getProfile: jasmine.createSpy('getProfile').and.returnValue(
+          of({ code: 200, message: 'OK', data: profileOf({ title: 'MR' }) })
+        ),
+      });
+
+      component.ngOnInit();
+
+      expect((component as any).legacyTitleValue).toBeNull();
+      expect(component.profileForm.get('title')!.value).toBe('MR');
+    });
+
+    it('keeps an unmappable legacy value as its own option, so a Save cannot drop it', () => {
+      const { component } = create('user@example.com', {
+        getProfile: jasmine.createSpy('getProfile').and.returnValue(
+          of({ code: 200, message: 'OK', data: profileOf({ title: 'คุณ' }) })
+        ),
+      });
+
+      component.ngOnInit();
+
+      expect((component as any).legacyTitleValue).toBe('คุณ');
+      expect(component.profileForm.get('title')!.value).toBe('คุณ');
+    });
+
+    it('accepts a blank title - length no longer rules a control the customer cannot type into', () => {
+      const { component } = create('user@example.com');
+      component.ngOnInit();
+
+      const ctrl = component.profileForm.get('title')!;
+      ctrl.setValue('');
+      expect(ctrl.valid).toBeTrue();
+    });
+  });
+
   it('should create', () => {
     const { component } = create('user@example.com');
     expect(component).toBeTruthy();

@@ -303,7 +303,7 @@
                   <tr>
                     <td class="fw-semibold">{{ item.ticketNumber }}</td>
                     <td>{{ item.seatNumber }}</td>
-                    <td>{{ item.passengerName }}</td>
+                    <td>{{ item.passengerTitle | titleLabel: item.passengerName }}</td>
                     <td>{{ item.fromStop }}</td>
                     <td>{{ item.toStop }}</td>
                     <td>
@@ -563,7 +563,7 @@
             <tr>
               <td>{{ item.ticketNumber }}</td>
               <td>{{ item.seatNumber }}</td>
-              <td>{{ item.passengerName }}</td>
+              <td>{{ item.passengerTitle | titleLabel: item.passengerName }}</td>
               <td>{{ item.fromStop }}</td>
               <td>{{ item.toStop }}</td>
               <td>{{ item.status.label }}</td>
