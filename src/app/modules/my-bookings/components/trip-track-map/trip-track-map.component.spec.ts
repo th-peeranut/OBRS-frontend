@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import * as L from 'leaflet';
 import { TripTrackMapComponent } from './trip-track-map.component';
 
@@ -228,6 +228,91 @@ describe('TripTrackMapComponent', () => {
       component.maptilerKey = '';
       fixture.detectChanges();
       expect(() => component.ngOnDestroy()).not.toThrow();
+    });
+  });
+
+  // ── OBRS-1096 — both marker names used to be passed as the `alt` marker
+  // option, which Leaflet copies onto the element ONLY when it is an `IMG`
+  // (`leaflet-src.js:7907`); both icons here are `L.divIcon`s rendering a DIV,
+  // so the translated strings were computed and dropped on the floor. Every
+  // assertion below therefore reads `marker.getElement()` — the real DOM the
+  // screen reader sees — and never the options object: an option that is
+  // passed and then discarded is precisely the bug.
+  describe('OBRS-1096 — marker names reach the DOM and follow the language', () => {
+    const MARKER_EN = { MY_BOOKINGS: { TRIP_TRACK: { MARKER: { VEHICLE: 'Vehicle', BOARDING_STOP: 'Your pickup stop' } } } };
+    const MARKER_TH = { MY_BOOKINGS: { TRIP_TRACK: { MARKER: { VEHICLE: 'รถ', BOARDING_STOP: 'จุดขึ้นรถของคุณ' } } } };
+
+    let translate: TranslateService;
+
+    beforeEach(() => {
+      translate = TestBed.inject(TranslateService);
+      translate.setTranslation('en', MARKER_EN, true);
+      translate.setTranslation('th', MARKER_TH, true);
+      translate.use('en');
+    });
+
+    function firstSync(): void {
+      component.maptilerKey = 'test-key';
+      component.lat = 13.36;
+      component.lon = 100.98;
+      component.boardingStopLat = 13.4;
+      component.boardingStopLon = 101.0;
+      component.ngOnChanges();
+      fixture.detectChanges();
+    }
+
+    function vehicleMarker(): L.Marker {
+      return (component as unknown as { vehicleMarker: L.Marker }).vehicleMarker;
+    }
+
+    function boardingMarker(): L.Marker {
+      return (component as unknown as { boardingMarker: L.Marker }).boardingMarker;
+    }
+
+    it('AC3: both markers carry a readable name on their own element, not merely in the `alt` option', () => {
+      firstSync();
+
+      const vehicle = vehicleMarker().getElement() as HTMLElement;
+      const boarding = boardingMarker().getElement() as HTMLElement;
+
+      expect(vehicle.getAttribute('aria-label')).toBe('Vehicle');
+      expect(boarding.getAttribute('aria-label')).toBe('Your pickup stop');
+      // Leaflet's own `keyboard: true` default already made both elements
+      // focusable buttons; the name was the only part missing, so the fix must
+      // not have traded that role away.
+      expect(vehicle.getAttribute('role')).toBe('button');
+      expect(boarding.getAttribute('role')).toBe('button');
+    });
+
+    it('AC4/AC5: a language switch on the SAME instance renames both markers without rebuilding either one', () => {
+      firstSync();
+      const vehicleBefore = vehicleMarker();
+      const boardingBefore = boardingMarker();
+
+      // Fired the way the topbar fires it: same component instance, no
+      // re-construction and no second ngOnChanges() — the only version of the
+      // event that can catch this bug.
+      translate.use('th');
+
+      expect(vehicleMarker()).toBe(vehicleBefore); // identity: mutated in place
+      expect(boardingMarker()).toBe(boardingBefore);
+      expect((vehicleMarker().getElement() as HTMLElement).getAttribute('aria-label')).toBe('รถ');
+      expect((boardingMarker().getElement() as HTMLElement).getAttribute('aria-label')).toBe('จุดขึ้นรถของคุณ');
+    });
+
+    it('the name survives the LIVE -> STALE setIcon(), which rewrites the element className and innerHTML', () => {
+      firstSync();
+      const classBefore = (vehicleMarker().getElement() as HTMLElement).className;
+
+      component.stale = true;
+      component.ngOnChanges();
+      fixture.detectChanges();
+
+      const element = vehicleMarker().getElement() as HTMLElement;
+      expect(element.className)
+        .withContext('sanity: setIcon() must really have re-styled the element, or this test proves nothing')
+        .not.toBe(classBefore);
+      expect(element.getAttribute('aria-label')).toBe('Vehicle');
     });
   });
 });

@@ -1,7 +1,7 @@
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, SimpleChange } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { By } from '@angular/platform-browser';
 import { TripTrackPanelComponent } from './trip-track-panel.component';
@@ -385,6 +385,73 @@ describe('TripTrackPanelComponent', () => {
       expect(ratio)
         .withContext(`stale banner ${toHex(fgOf(banner!))} on ${toHex(bg)} = ${ratio.toFixed(2)}:1`)
         .toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    });
+  });
+
+  // ── OBRS-1096 — `errorText` is a plain field holding an already-translated
+  // string, so no template binding re-renders it on a language switch. Unlike
+  // the fleet map (OBRS-1082) there is no later poll tick to repair it either:
+  // the only path that sets it calls stopPolling() (BR-18), so the stale copy
+  // survives until a full page reload. Every test fires the switch on the SAME
+  // instance — no re-construction, no second ngOnChanges() — because a rebuilt
+  // component would translate correctly no matter what the code does.
+  describe('OBRS-1096 — the 403/404 error copy follows a language switch', () => {
+    const ERROR_EN = { MY_BOOKINGS: { TRIP_TRACK: { ERROR: { UNAVAILABLE: 'We cannot show the vehicle position.' } } } };
+    const ERROR_TH = { MY_BOOKINGS: { TRIP_TRACK: { ERROR: { UNAVAILABLE: 'ไม่สามารถแสดงตำแหน่งรถได้' } } } };
+
+    let translate: TranslateService;
+
+    beforeEach(() => {
+      translate = TestBed.inject(TranslateService);
+      translate.setTranslation('en', ERROR_EN, true);
+      translate.setTranslation('th', ERROR_TH, true);
+      translate.use('en');
+      service.getVehiclePosition.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+    });
+
+    it('AC1: the error text switches language even though polling has already stopped', fakeAsync(() => {
+      changeTicketId(1);
+      fixture.detectChanges();
+      expect(component.errorText).toBe('We cannot show the vehicle position.');
+
+      translate.use('th');
+      fixture.detectChanges();
+
+      expect(component.errorText).toBe('ไม่สามารถแสดงตำแหน่งรถได้');
+      expect(
+        (fixture.debugElement.query(By.css('.trip-track-panel__error p')).nativeElement as HTMLElement).textContent
+      ).toContain('ไม่สามารถแสดงตำแหน่งรถได้');
+
+      // The polling really is still stopped — the retranslation must not have
+      // resurrected it (that would restore an endless 60s poll against a
+      // ticket that will 403 forever, U18a's whole point).
+      const callsBefore = service.getVehiclePosition.calls.count();
+      tick(5 * 60000);
+      expect(service.getVehiclePosition.calls.count()).toBe(callsBefore);
+      fixture.destroy();
+    }));
+
+    it('AC4: a language switch issues ZERO extra requests — it re-translates from the state in hand', () => {
+      changeTicketId(1);
+      fixture.detectChanges();
+      const callsBefore = service.getVehiclePosition.calls.count();
+
+      translate.use('th');
+      translate.use('en');
+
+      expect(service.getVehiclePosition.calls.count())
+        .withContext('re-translate from state in hand; never re-fetch')
+        .toBe(callsBefore);
+    });
+
+    it('AC2: after ngOnDestroy a language change no longer touches the component', () => {
+      changeTicketId(1);
+      fixture.detectChanges();
+      component.ngOnDestroy();
+
+      translate.use('th');
+
+      expect(component.errorText).toBe('We cannot show the vehicle position.');
     });
   });
 });
