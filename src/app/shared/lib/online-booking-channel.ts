@@ -33,8 +33,10 @@ export const ONLINE_TICKET_BOOKING_PREVIEW_ROLES = [
  *
  * WHY A HELPER AND NOT `environment.features.onlineTicketBooking` INLINE
  *
- * The answer is needed by the notice banner and by the trip list's
- * call-to-action, and AC-5 of that card is that reopening is ONE value change
+ * THREE readers need the answer — the notice banner, the trip list's
+ * call-to-action, and the route guards (through `onlineTicketBookingGuard`,
+ * which delegates here; see the OBRS-1583 note below for why that wiring is the
+ * whole point) — and AC-5 of that card is that reopening is ONE value change
  * with nothing left behind. Reading the raw field in each file is how that
  * becomes one more file: the extra reader is the one somebody adds later with a
  * subtly different condition (`!== true`, or a cached boolean captured at
