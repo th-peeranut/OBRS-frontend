@@ -41,16 +41,26 @@ function git(rootDir: string, args: string[]): string {
   return execFileSync('git', args, { cwd: rootDir, encoding: 'utf8' }).trim();
 }
 
-/** Command line of the process LISTENING on `port`, or null if nothing is. */
+/**
+ * A one-line description of the process LISTENING on `port`, or null only when NOTHING
+ * is. A `pid <n>` marker is emitted first so that a listener whose command line cannot
+ * be read -- Win32_Process.CommandLine is null for a process owned by another user or
+ * running elevated -- still comes back non-null. The caller then fails closed on it
+ * (the port IS held, just by something it cannot name) instead of mistaking it for a
+ * free port and letting reuseExistingServer attach to it. OBRS-1531: a guard that goes
+ * quiet is the failure mode this card is about.
+ */
 function listenerCommandLine(port: string): string | null {
   const script =
     `$ErrorActionPreference='SilentlyContinue'; ` +
     `$c = Get-NetTCPConnection -LocalPort ${port} -State Listen | Select-Object -First 1; ` +
-    `if ($c) { (Get-CimInstance Win32_Process -Filter ("ProcessId=" + $c.OwningProcess)).CommandLine }`;
+    `if ($c) { "pid " + $c.OwningProcess; (Get-CimInstance Win32_Process -Filter ("ProcessId=" + $c.OwningProcess)).CommandLine }`;
   const out = execFileSync('powershell', ['-NoProfile', '-Command', script], {
     encoding: 'utf8',
   });
-  return out.trim() || null;
+  // The pid and the command line come back as two lines; keep them on one so the refusal
+  // below stays a block of `label : value` a reader can scan.
+  return out.trim().replace(/\s*\r?\n\s*/g, ' :: ') || null;
 }
 
 export default function laneTreeGuard(config: FullConfig): void {
@@ -62,10 +72,23 @@ export default function laneTreeGuard(config: FullConfig): void {
   // backslashes. Compare in one spelling, and keep the trailing separator: without it
   // the MAIN clone's `...\OBRS-frontend` is a prefix of every worktree path beside it
   // (`...\OBRS-frontend-wt-obrs-1531`), so the clone would accept a worktree's server.
-  const tree = git(config.rootDir, ['rev-parse', '--show-toplevel']).replace(/\//g, '\\');
-  const sha = git(config.rootDir, ['rev-parse', '--short', 'HEAD']);
-  const branch = git(config.rootDir, ['rev-parse', '--abbrev-ref', 'HEAD']);
-  const dirty = git(config.rootDir, ['status', '--porcelain']) ? ' +uncommitted changes' : '';
+  let tree: string;
+  let sha: string;
+  let branch: string;
+  let dirty: string;
+  try {
+    tree = git(config.rootDir, ['rev-parse', '--show-toplevel']).replace(/\//g, '\\');
+    sha = git(config.rootDir, ['rev-parse', '--short', 'HEAD']);
+    branch = git(config.rootDir, ['rev-parse', '--abbrev-ref', 'HEAD']);
+    dirty = git(config.rootDir, ['status', '--porcelain']) ? ' +uncommitted changes' : '';
+  } catch (e) {
+    // AC-5: this runs on CI too (up to the CI return below). A git hiccup -- not a repo,
+    // git not on PATH -- must not redden the lane; stand down loudly instead. Locally a
+    // git failure also means the tree cannot be computed, so the owner check below could
+    // not run either.
+    console.log(`${TAG} git unavailable -- standing down (${(e as Error).message.split('\n')[0]})`);
+    return;
+  }
 
   console.log(`${TAG} tree ${tree}`);
   console.log(`${TAG} head ${sha} (${branch})${dirty}`);
