@@ -214,6 +214,8 @@ function collectTicketNumbers(journeys: BookingTicketJourney[]): string {
 function buildPassengers(journey: BookingTicketJourney | null): TicketPassenger[] {
   const tickets = journey?.tickets ?? [];
   return tickets.map((ticket) => ({
+    // OBRS-1232: the title travels beside the name as a code; the card's template composes them.
+    title: ticket.passengerTitle ?? null,
     name: ticket.passengerName?.trim() || '-',
     phone: '-',
     seat: ticket.seatNumber?.trim() || '-',

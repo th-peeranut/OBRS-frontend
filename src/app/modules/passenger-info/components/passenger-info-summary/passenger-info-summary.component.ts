@@ -26,6 +26,7 @@ import { selectProvinceWithStation } from '../../../../shared/stores/station/sta
 import { Station } from '../../../../shared/interfaces/station.interface';
 import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
 import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
+import { formatMoney } from '../../../../shared/lib/money-display';
 import dayjs from 'dayjs';
 import {
   capitalizeVehicleType,
@@ -264,6 +265,13 @@ export class PassengerInfoSummaryComponent {
   revertPromoWithError(errorCode: string): void {
     this.promoCodeFieldComponent?.applyExternalError(errorCode);
   }
+  /** OBRS-1592: this screen used to compose the raw number with a `*_UNIT`
+   * i18n key, which is the same shape the search page carried and printed
+   * `1850 บาท` — no thousand separator, satang whenever the API sent them. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translateService.currentLang);
+  }
+
 }
 
 

@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { ParcelIntakeResultPanelComponent } from './parcel-intake-result-panel.component';
+import { createTranslateStub } from '../../../../testing/test-stubs';
 import { ParcelCarryOnRespDto, ParcelConsignedRespDto } from '../../../../shared/interfaces/parcel.interface';
 import {
   AA_LARGE_TEXT,
@@ -17,17 +18,17 @@ import {
 
 describe('ParcelIntakeResultPanelComponent', () => {
   it('should be created', () => {
-    const component = new ParcelIntakeResultPanelComponent();
+    const component = new ParcelIntakeResultPanelComponent(createTranslateStub());
     expect(component).toBeTruthy();
   });
 
   it('defaults result to null', () => {
-    const component = new ParcelIntakeResultPanelComponent();
+    const component = new ParcelIntakeResultPanelComponent(createTranslateStub());
     expect(component.result).toBeNull();
   });
 
   it('accepts an assigned result', () => {
-    const component = new ParcelIntakeResultPanelComponent();
+    const component = new ParcelIntakeResultPanelComponent(createTranslateStub());
     component.result = {
       parcelId: 1,
       trackingNumber: 'PCL-1',
@@ -45,7 +46,7 @@ describe('ParcelIntakeResultPanelComponent', () => {
   // response shape (design-system §10: extend, don't fork).
   describe('isCarryOnResult() — the consigned/carry-on discriminant', () => {
     it('returns false for a consigned result (no parcelType field at all)', () => {
-      const component = new ParcelIntakeResultPanelComponent();
+      const component = new ParcelIntakeResultPanelComponent(createTranslateStub());
       const consigned = {
         parcelId: 1,
         trackingNumber: 'PCL-1',
@@ -60,7 +61,7 @@ describe('ParcelIntakeResultPanelComponent', () => {
     });
 
     it('returns true for a carry-on-on-seat result (parcelType === carry_on_seat)', () => {
-      const component = new ParcelIntakeResultPanelComponent();
+      const component = new ParcelIntakeResultPanelComponent(createTranslateStub());
       const carryOn = {
         parcelId: 5,
         trackingNumber: 'P-AB12CD34EF',
@@ -77,7 +78,7 @@ describe('ParcelIntakeResultPanelComponent', () => {
     });
 
     it('returns true for a free-aisle carry-on result (freeAisle: true, seats null)', () => {
-      const component = new ParcelIntakeResultPanelComponent();
+      const component = new ParcelIntakeResultPanelComponent(createTranslateStub());
       const freeAisle = {
         parcelId: 6,
         trackingNumber: 'P-FREE1',
@@ -137,26 +138,26 @@ describe('ParcelIntakeResultPanelComponent', () => {
 
   describe('isNextItemPrimary — exactly one primary action per result state', () => {
     it('is false for a consigned result ("View waybill" is primary)', () => {
-      const component = new ParcelIntakeResultPanelComponent();
+      const component = new ParcelIntakeResultPanelComponent(createTranslateStub());
       component.result = consignedResult;
       expect(component['isNextItemPrimary']).toBeFalse();
     });
 
     it('is true for a free-aisle carry-on result (no other action exists)', () => {
-      const component = new ParcelIntakeResultPanelComponent();
+      const component = new ParcelIntakeResultPanelComponent(createTranslateStub());
       component.result = freeAisleResult;
       expect(component['isNextItemPrimary']).toBeTrue();
     });
 
     it('is false for an on-seat UNPAID result ("เก็บเงินสด" is primary)', () => {
-      const component = new ParcelIntakeResultPanelComponent();
+      const component = new ParcelIntakeResultPanelComponent(createTranslateStub());
       component.result = onSeatResult;
       component.carryOnPaid = false;
       expect(component['isNextItemPrimary']).toBeFalse();
     });
 
     it('is true for an on-seat PAID result (pay button is gone)', () => {
-      const component = new ParcelIntakeResultPanelComponent();
+      const component = new ParcelIntakeResultPanelComponent(createTranslateStub());
       component.result = onSeatResult;
       component.carryOnPaid = true;
       expect(component['isNextItemPrimary']).toBeTrue();

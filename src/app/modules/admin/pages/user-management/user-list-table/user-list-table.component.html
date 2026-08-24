@@ -42,7 +42,7 @@
             <tr [class.zebra]="i % 2 === 1">
               <td>
                 <div class="admin-cell-stack">
-                  <span class="admin-emphasis">{{ user.fullName }}</span>
+                  <span class="admin-emphasis">{{ user.title | titleLabel: user.fullName }}</span>
                   <span class="admin-muted">
                     {{ 'ADMIN.USERS.LAST_LOGIN' | translate }}:
                     {{ user.hasLoggedIn ? user.lastLogin : ('ADMIN.USERS.NEVER_LOGGED_IN' | translate) }}

@@ -4314,5 +4314,28 @@ Reduced the block to a POINTER: keep the correction (COLLECTING vs SENDING) + pr
 to `setSuspended` and ADR-0034 §10. Rule: a comment that documents someone else's measured
 fact should cite the owner, not restate the number — restated numbers drift.
 
+## OBRS-1592 (Scrutinize round 3) — enumerate the WHOLE money-render family in a file, not the "action" ones
+`parcel-verify-list-page.component.ts` had THREE `.toFixed(2)` money sites, not two. The round-2
+claim "both parcel-verify-list sites converted" counted only the two REJECT amounts (confirm
+dialog + toast) and missed `paidAmountLabel()` at line 128 — the paid-amount COLUMN, same
+`row.amount` field, rendered on every row via `{{ paidAmountLabel(row) }}`. Self-fixed to
+`formatMoney(row.amount, this.translate.currentLang)` (formatMoney already imported).
+Rule: when converting a file's money renders, grep the whole file for `.toFixed`/`toLocaleString`
+FIRST and convert every display site; the "money-moving action" sites are the ones you notice, the
+quiet column/label render is the one that ships. A `check-money-format` gate that only scans for
+Intl-currency/`| currency`/unit-word-i18n CANNOT see a `.toFixed(2)`-to-template render, so green
+gate + green tests is not proof the family is done.
+
+## OBRS-1592 (Scrutinize round 4) — a comment stating the OLD format is a false claim too
+`settlements-page.component.ts:323` still read `// Echo the exact counted cash, including
+"THB 0.00" for a zero drawer.` — but the line below it is `this.formatMoney(...)`, and
+`formatMoney(0)` now yields `THB 0` / `0 บาท` (no satang on a whole number, per `hasSatang`),
+never `THB 0.00`. The comment described the exact `0.00` format this card removed, and it
+also assumed English. Self-fixed (comment only) to stop it teaching the next reader the
+pre-card format. Rule for a format-migration card: after converting a render, grep the file's
+COMMENTS for the old format literal (`0.00`, `฿`, `THB x.xx`) as well as the code — a comment
+asserting the old shape is the same false-completeness claim as a `.toFixed` that survived,
+just one a test can never catch.
+
 ## OBRS-1577 re-review (Scrutinize self-fix, 2026-08-24)
 - Gating a create AFFORDANCE for a role the server refuses is not done until the COPY that points at that affordance is gated too. The fix hid the registry ADD button + the picker create for `admin` (correct), but `expense-payees-page.component.html` still rendered `ADMIN.EXPENSE_PAYEES.EMPTY_BODY` — copy that says "use the Add payee button, or type a new name while entering a bill" — to an admin for whom BOTH routes are now hidden. Wrapped that `<p>` in `@if (canCreate)` so admins see only the honest title. No invented copy, owners unaffected. Lesson: when you role-gate a button, grep the empty-state / hint / aria copy that references it — same family, different file.

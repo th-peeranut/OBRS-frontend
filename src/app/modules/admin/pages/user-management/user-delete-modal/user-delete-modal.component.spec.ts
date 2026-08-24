@@ -5,6 +5,7 @@ import { By } from '@angular/platform-browser';
 import { UserDeleteModalComponent } from './user-delete-modal.component';
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
 import { UserRow } from '../user-management.mappers';
+import { TitleLabelPipe } from '../../../../../shared/pipes/title-label.pipe';
 
 const JOHN_ROW: UserRow = {
   id: 1,
@@ -26,7 +27,7 @@ describe('UserDeleteModalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CommonModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, CommonModule, TranslateModule.forRoot()],
       declarations: [UserDeleteModalComponent, AdminModalBackdropDirective],
     }).compileComponents();
 

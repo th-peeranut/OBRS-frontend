@@ -12,7 +12,8 @@
         counter staff must be able to get back to it after picking one by mistake. -->
         <option value="">{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
         @for (t of titleOptions; track t) {
-          <option [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
+          <!-- OBRS-1232: the VALUE is the stable code; titleLabel() still renders the word. -->
+          <option [value]="t.code">{{ titleLabel(t) }}</option>
         }
       </select>
       @if (fieldError('title'); as key) {
@@ -138,18 +139,18 @@
                 @if (discountAmount && discountAmount > 0) {
                   <div class="d-flex justify-content-between mb-2">
                     <span class="small">{{ 'STAFF.SELL.SUBTOTAL' | translate }}</span>
-                    <span class="small">{{ totalAmount | currency:'THB':'symbol' }}</span>
+                    <span class="small">{{ formatMoney(totalAmount) }}</span>
                   </div>
                 }
                 @if (discountAmount && discountAmount > 0) {
                   <div class="d-flex justify-content-between mb-2">
                     <span class="small">{{ 'STAFF.SELL.DISCOUNT_ROUND_TRIP' | translate }}</span>
-                    <span class="small text-danger">-{{ discountAmount | currency:'THB':'symbol' }}</span>
+                    <span class="small text-danger">-{{ formatMoney(discountAmount) }}</span>
                   </div>
                 }
                 <div class="d-flex justify-content-between mb-2">
                   <span class="fw-semibold">{{ 'STAFF.SELL.TOTAL_AMOUNT' | translate }}</span>
-                  <span class="fw-bold">{{ netAmount | currency:'THB':'symbol' }}</span>
+                  <span class="fw-bold">{{ formatMoney(netAmount) }}</span>
                 </div>
 
                 <div class="mb-2">
@@ -167,7 +168,7 @@
                     <span class="fw-semibold"
                       [class.text-success]="changeDue >= 0"
                       [class.text-danger]="changeDue < 0">
-                      {{ changeDue | currency:'THB':'symbol' }}
+                      {{ formatMoney(changeDue) }}
                     </span>
                   </div>
                 </div>

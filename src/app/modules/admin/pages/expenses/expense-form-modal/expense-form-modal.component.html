@@ -250,6 +250,12 @@
           @if (itemsArray.length > 0) {
             <p class="expense-items-total" data-testid="expense-items-total">
               {{ 'ADMIN.EXPENSES.ITEMS.TOTAL' | translate }}
+              <!-- OBRS-1592 left this one on `| number` deliberately, while the two
+              expense TABLES moved to formatMoney(). This is a live sum sitting beside
+              the numeric inputs that feed it, and it exists to be compared digit for
+              digit against the amount the admin typed above (`itemsTotalMismatch`) —
+              a currency unit on it would be reading noise, and dropping the `.00` would
+              make the two halves of that comparison look different when they are not. -->
               <strong>{{ itemsTotal | number: '1.2-2' }}</strong>
             </p>
             @if (itemsTotalMismatch) {

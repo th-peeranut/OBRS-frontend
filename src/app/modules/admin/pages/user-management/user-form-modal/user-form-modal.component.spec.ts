@@ -190,6 +190,49 @@ describe('UserFormModalComponent', () => {
     });
   });
 
+  // OBRS-1232: the field became a dropdown over a stable code. The risk that came with it is
+  // narrow and expensive: this control was free text for months, so a row can hold a value that is
+  // not one of the nine codes, and a select with no matching option shows blank - after which a
+  // Save that changed nothing else WIPES it. That is the OBRS-1230 shape (a modal guessing at data
+  // it could not represent) and it is what `legacyTitleValue` exists to stop.
+  describe('title dropdown (OBRS-1232)', () => {
+    it('offers no extra option when the stored title is one of the nine codes', async () => {
+      const getUserById$ = new Subject<ResponseAPI<AdminUserDto>>();
+      const { component } = makeComponent(getUserById$);
+
+      const promise = openEditAwait(component, { ...JOHN_ROW, title: 'MISS' });
+      getUserById$.next(detailResponse({ title: 'MISS' }));
+      getUserById$.complete();
+      await promise;
+
+      expect((component as any).legacyTitleValue).toBeNull();
+      expect((component as any).userForm.get('title').value).toBe('MISS');
+    });
+
+    it('keeps an unmappable legacy value as its own option, so a Save cannot drop it', async () => {
+      const getUserById$ = new Subject<ResponseAPI<AdminUserDto>>();
+      const { component } = makeComponent(getUserById$);
+
+      const promise = openEditAwait(component, { ...JOHN_ROW, title: 'คุณ' });
+      getUserById$.next(detailResponse({ title: 'คุณ' }));
+      getUserById$.complete();
+      await promise;
+
+      expect((component as any).legacyTitleValue).toBe('คุณ');
+      expect((component as any).userForm.get('title').value).toBe('คุณ');
+    });
+
+    it('accepts a blank title - no title is a valid answer (OBRS-1231) and length no longer rules', () => {
+      const { component } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+      openCreate(component);
+
+      const ctrl = (component as any).userForm.get('title');
+      ctrl.setValue('');
+      expect(ctrl.valid).toBeTrue();
+      expect((component as any).legacyTitleValue).toBeNull();
+    });
+  });
+
   describe('create mode', () => {
     it('opens with the default create values, including the pre-seeded first status option', () => {
       // Pre-existing behavior carried over verbatim from

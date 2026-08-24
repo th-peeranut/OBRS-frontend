@@ -360,7 +360,7 @@ export class OverrideCancelModalComponent implements OnChanges {
     if (!result) {
       return this.translate.instant('ADMIN.BOOKINGS.CANCEL_OVERRIDE.SUCCESS');
     }
-    const refund = formatRefundAmount(result.refundAmount);
+    const refund = formatRefundAmount(result.refundAmount, this.translate.currentLang);
     switch (refundLane(result.refundMethod)) {
       case 'CASH':
         return this.translate.instant('ADMIN.BOOKINGS.CANCEL_OVERRIDE.SUCCESS_CASH', { refund });

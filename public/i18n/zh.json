@@ -443,6 +443,17 @@
     "ERROR_GENERAL": "发生错误，请重试。"
   },
   "COMMON": {
+    "TITLES": {
+      "MR": "先生",
+      "MRS": "太太",
+      "MISS": "小姐",
+      "MASTER": "小弟弟",
+      "MISS_CHILD": "小妹妹",
+      "DR": "博士",
+      "PROF": "教授",
+      "ASSOC_PROF": "副教授",
+      "ASST_PROF": "助理教授"
+    },
     "NOT_SPECIFIED": "未填写",
     "THEME_TOGGLE": "切换深色模式",
     "CLEAR": "清除",
@@ -818,7 +829,10 @@
       "ACTIVE_SALES_POINT_LABEL": "当前所在销售点",
       "ACTIVE_SALES_POINT_NONE": "未设定",
       "SALES_POINTS_EMPTY": "系统中尚未设置销售点",
-      "SALES_POINTS_UNAVAILABLE": "无法加载销售点列表，请重试"
+      "SALES_POINTS_UNAVAILABLE": "无法加载销售点列表，请重试",
+      "PERSONAL_SECTION_TITLE": "个人信息",
+      "CREDENTIALS_SECTION_TITLE": "账户凭据",
+      "CONTACT_SECTION_TITLE": "联系方式与设置"
     },
     "VEHICLES": {
       "MONITORING": "车队监控已启用",
@@ -2881,7 +2895,6 @@
     "TIME_UNIT": "",
     "HOUR_UNIT": "小时",
     "MINITE_UNIT": "分钟",
-    "BAHT_UNIT": "泰铢",
     "SEAT_REMAIN": "剩余",
     "SEAT_UNIT": "个座位",
     "SEAT_PER_PASSENGER": "/座位",
@@ -2926,11 +2939,10 @@
       "PASSENGER_UNIT": "人",
       "TICKET_PRICE": "票价",
       "TICKET_PRICE_RETURN": "往返票价",
-      "TICKET_UNIT": "泰铢/人",
+      "TICKET_UNIT": "/人",
       "SUBTOTAL": "小计",
       "PROMO_DISCOUNT": "促销折扣",
       "TOTAL": "总价",
-      "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认信息"
     }
   },
@@ -3046,12 +3058,11 @@
       "PASSENGER_UNIT": "人",
       "TICKET_PRICE_ONEWAY": "票价",
       "TICKET_PRICE_ROUNDTRIP": "往返票价",
-      "TICKET_UNIT": "泰铢/人",
+      "TICKET_UNIT": "/人",
       "SUBTOTAL": "小计",
       "DISCOUNT_ROUND_TRIP": "往返折扣",
       "DISCOUNT": "折扣",
       "TOTAL": "总计",
-      "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认付款"
     },
     "CREDIT_CARD": {
@@ -3117,7 +3128,6 @@
       "PASSENGER_PHONE": "预订人电话号码",
       "PAYMENT_DATE": "付款日期/时间",
       "TOTAL": "总计",
-      "TOTAL_UNIT": "泰铢",
       "ESTIMATE_KM_UNIT": "公里",
       "LEG_OUTBOUND": "去程",
       "LEG_RETURN": "返程",
@@ -3766,7 +3776,7 @@
           "UNPAID_NOTE": "尚未付款 — 请在柜台收取现金（订单号 #{{bookingNumber}}）",
           "PAY_CASH_BUTTON": "收取现金",
           "PAYING": "正在记录付款…",
-          "PAID": "已付款 — 已收取现金 ฿{{amount}}"
+          "PAID": "已付款 — 已收取现金 {{amount}}"
         }
       },
       "SHARE_NOT_CONFIGURED": "尚未设置包裹收益分成——在业主设置之前将记为0%。",
@@ -3946,7 +3956,7 @@
       "SUBMITTING": "保存中…",
       "REJECT_CONFIRM": {
         "TITLE": "确认拒绝并退款",
-        "BODY": "拒绝包裹 {{tracking}} 并立即全额退款 {{amount}} 泰铢至寄件人付款时使用的支付渠道。此操作无法撤销。",
+        "BODY": "拒绝包裹 {{tracking}} 并立即全额退款 {{amount}} 至寄件人付款时使用的支付渠道。此操作无法撤销。",
         "CONFIRM_BTN": "拒绝并退款",
         "CANCEL_BTN": "取消"
       },
@@ -3958,8 +3968,8 @@
         "VALIDATION": "数据无效，请重新检查。"
       },
       "SUCCESS": {
-        "REJECTED_REFUNDED": "包裹已拒绝，已退款 {{amount}} 泰铢。",
-        "REJECTED_MANUAL_REFUND": "包裹已拒绝，自动退款未成功，请将 {{amount}} 泰铢现金亲手退还收件人。"
+        "REJECTED_REFUNDED": "包裹已拒绝，已退款 {{amount}}。",
+        "REJECTED_MANUAL_REFUND": "包裹已拒绝，自动退款未成功，请将 {{amount}} 现金亲手退还收件人。"
       }
     },
     "INSPECTION": {
@@ -4198,7 +4208,7 @@
       "DESCRIPTION": "物品描述",
       "PROHIBITED_ACK": "我已阅读上述违禁物品清单，并确认本包裹不含其中任何一项",
       "QUOTE_LOADING": "正在计算价格…",
-      "QUOTE_AMOUNT": "价格：{{amount}} 泰铢",
+      "QUOTE_AMOUNT": "价格：{{amount}}",
       "SUBMIT": "确认包裹信息",
       "SUBMITTING": "正在提交…"
     },

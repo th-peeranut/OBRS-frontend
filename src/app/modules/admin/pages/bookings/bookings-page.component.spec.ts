@@ -9,7 +9,6 @@ function makeRows(count: number): BookingRow[] {
     id: i + 1,
     bookingId: `#BK-${i + 1}`,
     customer: `Customer ${i + 1}`,
-    route: 'A -> B',
     bookingDate: 'Jun 19, 2026, 10:00',
     departureTime: 'Jun 19, 2026, 08:00',
     totalFare: 'THB 100.00',
@@ -227,7 +226,6 @@ describe('BookingsPageComponent', () => {
       id: 42,
       bookingId: '#BK-42',
       customer: 'Jane Doe',
-      route: 'A -> B',
       bookingDate: '2026-07-01T10:00:00Z',
       departureTime: '2026-07-02T08:00:00Z',
       totalFare: 'THB 500.00',
@@ -575,6 +573,85 @@ describe('BookingsPageComponent', () => {
       expect((component as any).isOverrideCancelOpen).toBeFalse();
       expect((component as any).selectedBookingId).toBeNull();
       expect(store.refresh).toHaveBeenCalled();
+    });
+  });
+
+  // OBRS-1237: the store baked 'en' into the row, so a Thai back office read
+  // "Nong chak -> Bts mo chit" while /api/stops already returned "หนองชาก".
+  describe('route column locale (OBRS-1237)', () => {
+    const bilingualRow: BookingRow = {
+      id: 7,
+      bookingId: '#BK-7',
+      customer: 'Jane Doe',
+      fromStop: {
+        slug: 'nong-chak',
+        translations: { th: { label: 'หนองชาก' }, en: { label: 'Nong chak' } },
+      },
+      toStop: {
+        slug: 'bts-mo-chit',
+        translations: { th: { label: 'บีทีเอส หมอชิต' }, en: { label: 'Bts mo chit' } },
+      },
+      bookingDate: '2026-08-11T01:00:00Z',
+      departureTime: '2026-08-11T02:00:00Z',
+      totalFare: 'THB 100.00',
+      bookingStatus: 'CONFIRMED',
+      paymentStatus: 'PAID',
+    };
+
+    function setup(lang: string, rows: BookingRow[] = [bilingualRow]) {
+      const translate = createTranslateStub();
+      translate.currentLang = lang;
+      const store = makeStoreStub({ rows, statusOptions: [] });
+      const component = new BookingsPageComponent(
+        translate,
+        store as any,
+        makeAdminApiServiceStub() as any,
+        makeAuthStub() as any
+      );
+      component.ngOnInit();
+      return component;
+    }
+
+    it('labels the stop pair in Thai when the UI is Thai', () => {
+      const component: any = setup('th');
+      expect(component.routeLabel(bilingualRow)).toBe('หนองชาก -> บีทีเอส หมอชิต');
+    });
+
+    it('labels the stop pair in English when the UI is English', () => {
+      const component: any = setup('en');
+      expect(component.routeLabel(bilingualRow)).toBe('Nong chak -> Bts mo chit');
+    });
+
+    // A locale that is not seeded yet (zh, OBRS-1046) must not blank the column.
+    // getAdminLookupLabel's miss path is "any translation the payload carries"
+    // (first key wins — th, in the prod /api/stops shape), not a strict 'en';
+    // it then falls to the slug, and routeLabel supplies the dash. Same chain
+    // every other admin page gets — see toStopName in routes.mappers.ts.
+    it('never blanks the column for a locale with no translation', () => {
+      const component: any = setup('zh');
+      expect(component.routeLabel(bilingualRow)).toBe('หนองชาก -> บีทีเอส หมอชิต');
+      expect(
+        component.routeLabel({ ...bilingualRow, fromStop: { slug: 'ban-bueng' }, toStop: undefined })
+      ).toBe('ban-bueng -> -');
+    });
+
+    it('writes the same label into the exported CSV', async () => {
+      const component: any = setup('th');
+      const anchor = { href: '', download: '', click: jasmine.createSpy('click') };
+      spyOn(document, 'createElement').and.returnValue(anchor as any);
+      let exported: Blob | null = null;
+      spyOn(URL, 'createObjectURL').and.callFake((blob: Blob | MediaSource) => {
+        exported = blob as Blob;
+        return 'blob:stub';
+      });
+      spyOn(URL, 'revokeObjectURL');
+
+      component.exportCsv();
+
+      expect(anchor.click).toHaveBeenCalled();
+      const text = await exported!.text();
+      expect(text).toContain('"หนองชาก -> บีทีเอส หมอชิต"');
+      expect(text).not.toContain('Nong chak');
     });
   });
 });

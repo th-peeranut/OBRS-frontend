@@ -105,6 +105,7 @@ import { NotificationMessageAccessDeniedComponent } from './pages/notification-m
 import { AuthGuard } from '../../auth/auth.guard';
 import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
 import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
+import { TitleLabelPipe } from '../../shared/pipes/title-label.pipe';
 
 // OBRS-543: exported (was module-private) so staff-nav-reachability.spec.ts can
 // assert against the REAL route list rather than a hand-mirrored copy — the same
@@ -592,6 +593,7 @@ export const adminRoutes: Routes = [
     NotificationMessageAccessDeniedComponent,
   ],
   imports: [
+    TitleLabelPipe,
     SharedModule,
     RouterModule.forChild(adminRoutes),
     DatePickerModule,

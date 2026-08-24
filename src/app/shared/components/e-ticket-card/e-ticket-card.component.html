@@ -213,7 +213,7 @@
                             <span class="label">
                               {{ "E_TICKET.LABEL.PASSENGER_NAME" | translate }}
                             </span>
-                            <span class="value">{{ passenger.name }}</span>
+                            <span class="value">{{ passenger.title | titleLabel: passenger.name }}</span>
                           </div>
                           @if (!passenger.seatOpen) {
                             <div class="passenger-field">
@@ -270,7 +270,7 @@
             <div class="ticket-total">
               <span class="label">{{ "E_TICKET.LABEL.TOTAL" | translate }}</span>
               <span class="value">
-                {{ totalAmount }} {{ "E_TICKET.LABEL.TOTAL_UNIT" | translate }}
+                {{ formatMoney(totalAmount) }}
               </span>
             </div>
           </div>

@@ -51,6 +51,7 @@ import {
   isOnlineTicketBookingOpen,
   NJ_FACEBOOK_PAGE_URL,
 } from '../../../../shared/lib/online-booking-channel';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 /**
  * OBRS-1217: what the empty result list means when the customer searched TODAY.
@@ -374,6 +375,18 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   getPricePerSeat(value: string | number | null | undefined): number {
     return parsePricePerSeat(value);
+  }
+
+  /**
+   * Per-seat fare WITH its unit (OBRS-1592). Replaces the number-plus-
+   * `BAHT_UNIT`-key pair this template used to compose. An earlier version of
+   * this comment called that pair the ONLY money on any screen without a
+   * thousand separator; scrutinize found five more files composing the same
+   * number-plus-unit-key shape under different key names, and they are
+   * converted with it.
+   */
+  formatPricePerSeat(value: string | number | null | undefined): string {
+    return formatMoney(parsePricePerSeat(value), this.translateService.currentLang);
   }
 
   isLowSeats(availableSeats: number | null | undefined): boolean {

@@ -1,6 +1,8 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { PaymentDirection } from '../../../../../shared/interfaces/reschedule.interface';
 import { toAmountNumber } from '../../../../../shared/interfaces/my-booking.interface';
+import { formatMoney } from '../../../../../shared/lib/money-display';
 
 /**
  * Structural subset of `RescheduleEstimate`/`ChangeStopEstimate` this dumb
@@ -46,6 +48,8 @@ export class RescheduleEstimateSummaryComponent {
   @Input() i18nPrefix = 'MY_BOOKINGS.RESCHEDULE';
   @Output() readonly confirm = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
+
+  constructor(private readonly translate: TranslateService) {}
 
   onConfirm(): void {
     if (this.loading || this.submitting || !this.estimate) {
@@ -98,10 +102,6 @@ export class RescheduleEstimateSummaryComponent {
   }
 
   formatCurrency(value: number | string | undefined): string {
-    return new Intl.NumberFormat('th-TH', {
-      style: 'currency',
-      currency: 'THB',
-      maximumFractionDigits: 2,
-    }).format(toAmountNumber(value));
+    return formatMoney(toAmountNumber(value), this.translate.currentLang);
   }
 }

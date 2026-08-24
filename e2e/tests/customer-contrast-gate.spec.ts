@@ -34,7 +34,7 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { AA_BOUNDARY, MEASURE, boundaryKey, placeholderKey, textKey } from '../support/customer-contrast';
+import { AA_BOUNDARY, MEASURE, boundaryKey, keyIdentity, placeholderKey, textKey } from '../support/customer-contrast';
 import {
   CUSTOMER_PAGES,
   customerSweepBudgetMs,
@@ -198,6 +198,40 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
     expect(textOf('broken-ph'), 'invariant A also scored an input -- the two now overlap').toBeFalsy();
   });
 
+  /**
+   * The property the OBRS-1435 verdict rests on, pinned against the REGISTER
+   * rather than against an example.
+   *
+   * `keyIdentity` decides whether an unmatched entry reads as "delete it" or as
+   * "the sweep never scored this". Two entries that share an identity vouch for
+   * each other: score one, and the other is pronounced paid without anybody
+   * measuring it -- which is the false delete this card exists to stop, arriving
+   * through its own fix. The first version of the function did exactly that. It
+   * dropped the surface from a boundary key, and three pairs in this register
+   * differ ONLY by their surface, because OBRS-970 brought the auth pages in and
+   * the same framework-default border sits on #1a1d27 and on #0f1117.
+   *
+   * No browser, no page loads: it reads the register and the pure function.
+   */
+  test('no two CONTRAST_ALLOW entries share a keyIdentity', () => {
+    const byIdentity = new Map<string, string[]>();
+    for (const key of Object.keys(CONTRAST_ALLOW)) {
+      const id = keyIdentity(key);
+      byIdentity.set(id, [...(byIdentity.get(id) ?? []), key]);
+    }
+    const collided = [...byIdentity.entries()].filter(([, keys]) => keys.length > 1);
+
+    const report = collided.flatMap(([id, keys]) => ['  ' + id, ...keys.map((k) => '      ' + k)]);
+
+    expect(
+      report.join('\n'),
+      `\n${collided.length} keyIdentity collision(s). Each is a pair of entries that would vouch for\n` +
+        `each other: score either one and the gate pronounces the OTHER paid without measuring it,\n` +
+        `which is the OBRS-1435 false delete. Widen keyIdentity until they are distinct -- do not\n` +
+        `merge or delete the entries to make this pass.\n${report.join('\n')}\n`
+    ).toBe('');
+  });
+
   // Eight pages in two themes, sequentially, in one browser context. Splitting
   // them into a test each would read better in a report but makes the
   // stale-entry check impossible: an allowlist entry is only provably dead once
@@ -211,6 +245,20 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
     // One row per DEFECT, accumulated across all sixteen sweeps. The worst
     // sighting wins the printed detail; every sighting is counted.
     const collapsed = new Map<string, Row>();
+
+    /**
+     * Every identity the sweep actually SCORED, passing rows included -- which is
+     * why it cannot be derived from `collapsed`, which holds failures only.
+     *
+     * This is the denominator the stale-entry verdict was missing (OBRS-1435). An
+     * allow entry whose identity never appears here was not measured this run, and
+     * an element nobody measured cannot be evidence that its debt was paid. It is
+     * registered where the rows are read rather than inside MEASURE, so it counts
+     * what the VERDICT saw -- a page that `continue`s out above contributes
+     * nothing here, which is the property the split relies on.
+     */
+    const measured = new Set<string>();
+
     const record = (hit: { key: string; page: string; detail: string; ratio: number; floor: number }) => {
       const seen = collapsed.get(hit.key);
       if (!seen) {
@@ -350,6 +398,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
           totals.thirdParty += sweep.skipped.thirdParty;
 
           for (const f of sweep.text) {
+            measured.add(keyIdentity(textKey(theme, f)));
             if (f.ratio >= f.floor) continue;
             record({
               key: textKey(theme, f),
@@ -361,6 +410,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
           }
 
           for (const f of sweep.placeholders) {
+            measured.add(keyIdentity(placeholderKey(theme, f)));
             if (f.ratio >= f.floor) continue;
             record({
               key: placeholderKey(theme, f),
@@ -372,6 +422,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
           }
 
           for (const c of sweep.controls) {
+            measured.add(keyIdentity(boundaryKey(theme, c)));
             if (c.boundary >= AA_BOUNDARY) continue;
             record({
               key: boundaryKey(theme, c),
@@ -403,6 +454,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
               const one = await sheet.evaluate(MEASURE, selector);
               const stateTheme = `${theme}:${state}`;
               for (const f of one.text) {
+                measured.add(keyIdentity(textKey(stateTheme, f)));
                 if (f.ratio >= f.floor) continue;
                 if (coveredAtRest(textKey(theme, f), f.ratio)) continue;
                 record({
@@ -414,6 +466,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
                 });
               }
               for (const f of one.placeholders) {
+                measured.add(keyIdentity(placeholderKey(stateTheme, f)));
                 if (f.ratio >= f.floor) continue;
                 if (coveredAtRest(placeholderKey(theme, f), f.ratio)) continue;
                 record({
@@ -425,6 +478,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
                 });
               }
               for (const c of one.controls) {
+                measured.add(keyIdentity(boundaryKey(stateTheme, c)));
                 if (c.boundary >= AA_BOUNDARY) continue;
                 if (coveredAtRest(boundaryKey(theme, c), c.boundary)) continue;
                 record({
@@ -455,7 +509,15 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
     const findings = [...collapsed.values()];
     const allowed = findings.filter((f) => CONTRAST_ALLOW[f.key]);
     const unexpected = findings.filter((f) => !CONTRAST_ALLOW[f.key]);
-    const stale = Object.keys(CONTRAST_ALLOW).filter((k) => !collapsed.has(k));
+    // OBRS-1435. An entry that matched nothing used to be one verdict -- "the debt
+    // was paid, delete it" -- inferred from an absence that has two causes. The
+    // second cause is the dangerous one: an element the sweep never scored produces
+    // the same absence, and a reader who obeys retires a debt nobody paid. So the
+    // absence is split by the only evidence that separates them, whether the sweep
+    // measured that element AT ALL this run (`measured`, above).
+    const unmatched = Object.keys(CONTRAST_ALLOW).filter((k) => !collapsed.has(k));
+    const unmeasured = unmatched.filter((k) => !measured.has(keyIdentity(k)));
+    const stale = unmatched.filter((k) => measured.has(keyIdentity(k)));
 
     console.log('\ncustomer shell contrast gate (OBRS-584)');
     console.log(`  pages swept        : ${CUSTOMER_PAGES.length} x 2 themes`);
@@ -469,6 +531,8 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
     console.log(`  skipped (3rd party): ${totals.thirdParty} -- markup this app does not own (Google Identity Services)`);
     console.log(`  skipped (hidden)   : ${totals.invisible}`);
     console.log(`  known-open (ALLOW) : ${allowed.length} of ${Object.keys(CONTRAST_ALLOW).length} entries still hit`);
+    console.log(`  ALLOW not measured : ${unmeasured.length} -- element never scored this run, verdict withheld (OBRS-1435)`);
+    console.log(`  ALLOW stale        : ${stale.length} -- element WAS scored and no longer matches`);
     console.log(`  NEW below floor    : ${unexpected.length}`);
 
     if (process.env['CONTRAST_CENSUS']) {
@@ -482,10 +546,25 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
         `false green, not a pass:\n${shortfalls.map((s) => '  - ' + s).join('\n')}\n`
     ).toBe('');
 
+    // Read before the stale check on purpose: this is the weaker claim, and a run
+    // that could not measure an element has not earned the right to make the
+    // stronger one about it.
+    expect(
+      unmeasured.join('\n'),
+      `\n${unmeasured.length} CONTRAST_ALLOW entr(ies) name an element this run NEVER MEASURED.\n` +
+        `DO NOT DELETE THEM -- nothing here says the debt was paid, only that the sweep did not\n` +
+        `score that element: the page rendered enough to clear its floors, but this element was\n` +
+        `absent, empty, hidden, faded or disabled at the moment the sweep read it. Find out why,\n` +
+        `then re-run. (OBRS-1435: obeying this as a delete instruction retired a live OBRS-1424\n` +
+        `debt on a flaky run.)\n${unmeasured.map((s) => '  - ' + s).join('\n')}\n`
+    ).toBe('');
+
     expect(
       stale.join('\n'),
-      `\n${stale.length} CONTRAST_ALLOW entr(ies) no longer match anything. Delete them -- a debt\n` +
-        `register that rots reads as a considered decision:\n${stale.map((s) => '  - ' + s).join('\n')}\n`
+      `\n${stale.length} CONTRAST_ALLOW entr(ies) were MEASURED this run and no longer match. Delete\n` +
+        `them -- a debt register that rots reads as a considered decision. The element was scored,\n` +
+        `so this is a repaint or a fix, not a page that failed to render:\n` +
+        `${stale.map((s) => '  - ' + s).join('\n')}\n`
     ).toBe('');
 
     expect(
