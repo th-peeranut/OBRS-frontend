@@ -91,8 +91,7 @@
           <div class="right">
             <div class="text-container">
               <div class="price">
-                {{ getPricePerSeat(departure.pricePerSeat) }}
-                {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}<span class="price-unit">{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
+                {{ formatPricePerSeat(departure.pricePerSeat) }}<span class="price-unit">{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
               </div>
               @if (isLowSeats(departure.availableSeats)) {
                 <div class="availability">
@@ -234,8 +233,7 @@
             <div class="right">
               <div class="text-container">
                 <div class="price">
-                  {{ getPricePerSeat(return.pricePerSeat) }}
-                  {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}<span class="price-unit">{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
+                  {{ formatPricePerSeat(return.pricePerSeat) }}<span class="price-unit">{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
                 </div>
                 @if (isLowSeats(return.availableSeats)) {
                   <div class="availability">

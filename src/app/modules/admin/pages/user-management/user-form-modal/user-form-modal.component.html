@@ -24,7 +24,7 @@
           <section class="user-editor-section">
             <div class="user-editor-section-title">
               <span class="material-symbols-outlined" [attr.translate]="'no'">person</span>
-              <h5>Personal Information</h5>
+              <h5>{{ 'ADMIN.USERS.PERSONAL_SECTION_TITLE' | translate }}</h5>
             </div>
             <div class="user-editor-grid">
               <div class="user-field is-title">
@@ -100,7 +100,7 @@
             <section class="user-editor-section">
               <div class="user-editor-section-title">
                 <span class="material-symbols-outlined" [attr.translate]="'no'">key</span>
-                <h5>Account Credentials</h5>
+                <h5>{{ 'ADMIN.USERS.CREDENTIALS_SECTION_TITLE' | translate }}</h5>
               </div>
               <div class="user-editor-grid is-two-column">
                 <div class="user-field">
@@ -136,7 +136,7 @@
           <section class="user-editor-section">
             <div class="user-editor-section-title">
               <span class="material-symbols-outlined" [attr.translate]="'no'">contact_mail</span>
-              <h5>Contact &amp; Settings</h5>
+              <h5>{{ 'ADMIN.USERS.CONTACT_SECTION_TITLE' | translate }}</h5>
             </div>
             <div class="user-editor-grid is-two-column">
               <!-- OBRS-1255 / AC2: a guest shadow row (ADR-0123) has no login address by

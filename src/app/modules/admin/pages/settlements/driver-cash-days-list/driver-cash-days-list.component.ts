@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { DriverCashDaySummaryRespDto } from '../../../../../shared/interfaces/driver-cash.interface';
 import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
+import { formatMoney } from '../../../../../shared/lib/money-display';
 
 export type DriverCashDaysContentState = 'loading' | 'invalid' | 'error' | 'empty' | 'data';
 
@@ -57,4 +58,10 @@ export class DriverCashDaysListComponent {
   protected trackByDayId(_index: number, item: DriverCashDaySummaryRespDto): number {
     return item.dayId;
   }
+  /** OBRS-1592: driver-cash printed these decimal strings raw — no unit, no
+   * thousand separator, `.00` on every whole amount. Staff money is money. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translate.currentLang);
+  }
+
 }

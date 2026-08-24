@@ -827,7 +827,10 @@
       "ACTIVE_SALES_POINT_LABEL": "Active Sales Point",
       "ACTIVE_SALES_POINT_NONE": "Not set",
       "SALES_POINTS_EMPTY": "No sales points configured yet",
-      "SALES_POINTS_UNAVAILABLE": "Couldn't load sales points. Try again."
+      "SALES_POINTS_UNAVAILABLE": "Couldn't load sales points. Try again.",
+      "PERSONAL_SECTION_TITLE": "Personal Information",
+      "CREDENTIALS_SECTION_TITLE": "Account Credentials",
+      "CONTACT_SECTION_TITLE": "Contact & Settings"
     },
     "VEHICLES": {
       "MONITORING": "Fleet Monitoring Active",
@@ -2851,7 +2854,6 @@
     "TIME_UNIT": "",
     "HOUR_UNIT": "hour",
     "MINITE_UNIT": "minute",
-    "BAHT_UNIT": "baht",
     "SEAT_REMAIN": "remaining",
     "SEAT_UNIT": "seats",
     "SEAT_PER_PASSENGER": "/seat",
@@ -2896,11 +2898,10 @@
       "PASSENGER_UNIT": "Person",
       "TICKET_PRICE": "Ticket Price",
       "TICKET_PRICE_RETURN": "Round-trip ticket price",
-      "TICKET_UNIT": "baht/person",
+      "TICKET_UNIT": "/person",
       "SUBTOTAL": "Subtotal",
       "PROMO_DISCOUNT": "Promo discount",
       "TOTAL": "Total price",
-      "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm information"
     }
   },
@@ -3016,12 +3017,11 @@
       "PASSENGER_UNIT": "Person",
       "TICKET_PRICE_ONEWAY": "Ticket price",
       "TICKET_PRICE_ROUNDTRIP": "Round-trip ticket price",
-      "TICKET_UNIT": "baht/person",
+      "TICKET_UNIT": "/person",
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_ROUND_TRIP": "Round-trip discount",
       "DISCOUNT": "Discount",
       "TOTAL": "Total",
-      "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm payment"
     },
     "CREDIT_CARD": {
@@ -3087,7 +3087,6 @@
       "PASSENGER_PHONE": "Phone number of the booker",
       "PAYMENT_DATE": "Payment date/time",
       "TOTAL": "Total",
-      "TOTAL_UNIT": "baht",
       "ESTIMATE_KM_UNIT": "km",
       "LEG_OUTBOUND": "Outbound",
       "LEG_RETURN": "Return",
@@ -3736,7 +3735,7 @@
           "UNPAID_NOTE": "Not yet paid — collect cash at the counter (Booking #{{bookingNumber}})",
           "PAY_CASH_BUTTON": "Collect cash",
           "PAYING": "Recording payment…",
-          "PAID": "Paid — ฿{{amount}} collected"
+          "PAID": "Paid — {{amount}} collected"
         }
       },
       "SHARE_NOT_CONFIGURED": "Parcel revenue share is not configured — it will be recorded at 0% until the owner sets it up.",
@@ -3916,7 +3915,7 @@
       "SUBMITTING": "Saving…",
       "REJECT_CONFIRM": {
         "TITLE": "Confirm reject & refund",
-        "BODY": "Reject parcel {{tracking}} and immediately refund {{amount}} THB in full to the payment method the sender used. This action cannot be undone.",
+        "BODY": "Reject parcel {{tracking}} and immediately refund {{amount}} in full to the payment method the sender used. This action cannot be undone.",
         "CONFIRM_BTN": "Reject & refund",
         "CANCEL_BTN": "Cancel"
       },
@@ -3928,8 +3927,8 @@
         "VALIDATION": "Some values are invalid. Please check and try again."
       },
       "SUCCESS": {
-        "REJECTED_REFUNDED": "Parcel rejected. Refunded {{amount}} THB.",
-        "REJECTED_MANUAL_REFUND": "Parcel rejected. The automatic refund could not be processed — hand back {{amount}} THB to the recipient in cash."
+        "REJECTED_REFUNDED": "Parcel rejected. Refunded {{amount}}.",
+        "REJECTED_MANUAL_REFUND": "Parcel rejected. The automatic refund could not be processed — hand back {{amount}} to the recipient in cash."
       }
     },
     "INSPECTION": {
@@ -4168,7 +4167,7 @@
       "DESCRIPTION": "Parcel description",
       "PROHIBITED_ACK": "I have read the prohibited-items list above and confirm this parcel contains none of them.",
       "QUOTE_LOADING": "Calculating price…",
-      "QUOTE_AMOUNT": "Price: {{amount}} THB",
+      "QUOTE_AMOUNT": "Price: {{amount}}",
       "SUBMIT": "Confirm parcel details",
       "SUBMITTING": "Submitting…"
     },

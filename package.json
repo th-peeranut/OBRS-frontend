@@ -52,7 +52,8 @@
     "e2e:ui": "playwright test --ui",
     "e2e:route-coverage": "node e2e/route-coverage.mjs",
     "test:brand-contrast": "node scripts/check-brand-fill-contrast.mjs",
-    "test:marker-position": "node scripts/check-leaflet-marker-position.mjs"
+    "test:marker-position": "node scripts/check-leaflet-marker-position.mjs",
+    "test:money-format": "node scripts/check-money-format.mjs"
   },
   "private": true,
   "dependencies": {
