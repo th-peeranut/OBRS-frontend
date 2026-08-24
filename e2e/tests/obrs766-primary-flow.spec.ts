@@ -107,11 +107,16 @@ test('salesperson logs in, sees nav, searches, cancels a booking they did not se
   // priced differently (฿200 vs ฿180), so a literal expectation silently depends
   // on call order: this assertion was written as /144/ (= 180 * 0.8) and failed
   // against a ฿200 booking whose refund of ฿160.00 was perfectly correct.
-  const rowTotalText = await row2.locator('td').filter({ hasText: /฿/ }).last().innerText();
+  // OBRS-1592: money cells no longer carry `฿`, and a whole amount no longer carries a
+  // `.00` tail (`฿160.00` became `160 บาท`). Both halves below therefore stop matching a
+  // spelling: the cell is found by its unit, and the refund is read back as a NUMBER.
+  const rowTotalText = await row2.locator('td').filter({ hasText: /THB|บาท/ }).last().innerText();
   const rowTotal = Number(rowTotalText.replace(/[^0-9.]/g, ''));
   expect(rowTotal).toBeGreaterThan(0);
-  const expectedRefund = (rowTotal * 0.8).toFixed(2);
-  expect(policyText.replace(/,/g, '')).toContain(expectedRefund);
+  const shownRefund = (policyText.match(/THB\s*([\d,]+(?:\.\d+)?)|([\d,]+(?:\.\d+)?)\s*บาท/) ?? [])
+    .slice(1)
+    .find(Boolean);
+  expect(Number((shownRefund ?? '').replace(/,/g, ''))).toBeCloseTo(rowTotal * 0.8, 2);
   await page.screenshot({ path: path.join(ASSETS, 'OBRS-766-AFTER-cancel-modal-policy-light.png') });
 
   // Cash step-up section: visually distinct + tells staff to hand the

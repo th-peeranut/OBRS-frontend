@@ -9,6 +9,7 @@ import { TicketService } from '../../../services/ticket/ticket.service';
 import { ETicketCardComponent } from './e-ticket-card.component';
 import { PhoneFormatPipe } from '../../pipes/phone-format.pipe';
 import { TitleLabelPipe } from '../../pipes/title-label.pipe';
+import { createTranslateStub } from '../../../testing/test-stubs';
 
 function buildLeg(overrides: Partial<TicketLeg> = {}): TicketLeg {
   return {
@@ -76,7 +77,8 @@ describe('ETicketCardComponent', () => {
     component = new ETicketCardComponent(
       new BoardingQrService(
         createTicketServiceStub() as unknown as TicketService
-      )
+      ),
+      createTranslateStub()
     );
   });
 

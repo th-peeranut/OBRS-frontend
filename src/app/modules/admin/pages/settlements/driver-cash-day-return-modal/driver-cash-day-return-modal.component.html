@@ -52,7 +52,7 @@
             <div class="settlement-detail-totals">
               <div class="settlement-detail-row">
                 <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.EXPECTED' | translate }}</span>
-                <span class="admin-emphasis">{{ detail.expectedReturnAmount }}</span>
+                <span class="admin-emphasis">{{ formatMoney(detail.expectedReturnAmount) }}</span>
               </div>
               <!-- OBRS-1053: the owner is about to collect an amount that is
               higher than this day's own takings, and until now nothing on
@@ -61,7 +61,7 @@
               @if (hasParcelClawback) {
                 <div class="settlement-detail-row" data-testid="driver-cash-return-parcel-clawback">
                   <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.PARCEL_CLAWBACK' | translate }}</span>
-                  <span>{{ detail.parcelClawbackTotal }}</span>
+                  <span>{{ formatMoney(detail.parcelClawbackTotal) }}</span>
                 </div>
               }
               <!-- OBRS-1145: ค่าหัว is what this person EARNED, not a term of
@@ -73,7 +73,7 @@
               @if (hasPerHead) {
                 <div class="settlement-detail-row" data-testid="driver-cash-return-per-head-pay">
                   <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.PER_HEAD_PAY' | translate }}</span>
-                  <span>{{ detail.perHeadTotal }}</span>
+                  <span>{{ formatMoney(detail.perHeadTotal) }}</span>
                 </div>
               }
             </div>
@@ -103,7 +103,7 @@
                             </div>
                           }
                         </td>
-                        <td data-testid="driver-cash-entry-amount">{{ entry.amount }}</td>
+                        <td data-testid="driver-cash-entry-amount">{{ formatMoney(entry.amount) }}</td>
                       </tr>
                     }
                   </tbody>
@@ -146,7 +146,7 @@
                   <div class="settlement-detail-row" data-testid="driver-cash-return-discrepancy">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.DISCREPANCY' | translate }}</span>
                     <span class="admin-emphasis" [class.settlement-nt-negative]="isNegativeMoney(discrepancyAmount())">
-                      {{ discrepancyAmount() }}
+                      {{ formatMoney(discrepancyAmount()) }}
                     </span>
                   </div>
                 }

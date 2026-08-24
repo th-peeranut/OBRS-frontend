@@ -458,7 +458,7 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
       await (component as any).submit();
 
       const message = alert.success.calls.mostRecent().args[0] as string;
-      expect(message).toContain('400.00');
+      expect(message).toContain('THB 400');
       expect(message).toContain('NOT been handed over');
       expect(message).toContain('PromptPay');
       expect(message).not.toContain('in cash');
@@ -474,7 +474,7 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
       await (component as any).submit();
 
       const message = alert.success.calls.mostRecent().args[0] as string;
-      expect(message).toContain('400.00');
+      expect(message).toContain('THB 400');
       expect(message).toContain('has not been paid yet');
       expect(message).not.toContain('OK');
     });
