@@ -133,7 +133,11 @@ const KNOWN_UNENFORCED = [
   {
     key: 'POLICY.BUSINESS.CONTENT',
     match: /"CONTENT"\s*:\s*"[^"]*rescheduleFeeLateThb[^"]*"/,
-    why: 'published consumer terms under the OBRS-658 version ledger — re-wording needs a new published version',
+    why:
+      'published consumer terms under the OBRS-658 version ledger — re-wording needs a new published version. ' +
+      'OBRS-1592 decided NOT to publish one for a formatting change: a terms version carries a publishedOn and an ' +
+      'effectiveDate every customer sees, and spending one on the spelling of a unit devalues the ledger it is read from. ' +
+      'Fold this wording into the NEXT version published for a substantive reason — then it costs nothing extra.',
   },
 ];
 
