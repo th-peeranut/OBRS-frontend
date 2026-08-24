@@ -822,20 +822,25 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await loginAsCustomer(page);
     await gotoMyBookings(page);
 
-    // E2E-SEATHOLD is confirmed/cancellable — reach the SweetAlert2 confirm via
-    // the menu, then back OUT (click the swal2 cancel button, not confirm) so the
-    // booking is left untouched; AC7 still needs it holding seat '4' on COLLIDE_DAY.
+    // E2E-SEATHOLD is confirmed/cancellable — reach the cancel modal via the menu,
+    // then back OUT (its "Keep booking" button, not Confirm) so the booking is left
+    // untouched; AC7 still needs it holding seat '4' on COLLIDE_DAY.
+    //
+    // OBRS-1450: this waited for a SweetAlert2 confirm until here. OBRS-286 replaced
+    // that Swal with <app-cancel-booking-modal> (the `.crdm-*` classes) and OBRS-942
+    // made that modal the ONLY cancel screen, for every refundMethod — so no Swal is
+    // raised anywhere on this path any more and the wait could only time out.
     const card = cardByBookingNumber(page, 'E2E-SEATHOLD');
     const menu = await openActionsMenu(page, card);
     await clickMenuItem(menu, /Cancel booking/);
 
-    const swalPopup = page.locator('.swal2-popup');
-    await expect(swalPopup).toBeVisible({ timeout: 10_000 });
-    await expect(swalPopup.locator('.swal2-confirm')).toBeVisible();
+    const modal = page.locator('.crdm-modal');
+    await expect(modal).toBeVisible({ timeout: 10_000 });
+    await expect(modal.locator('.crdm-actions .btn-primary')).toBeVisible();
     await page.screenshot({ path: 'e2e-evidence/menu-cancel-confirm-dialog.png', fullPage: true });
 
-    await page.locator('.swal2-cancel').click();
-    await expect(swalPopup).toHaveCount(0);
+    await modal.locator('.crdm-actions .btn-secondary').click();
+    await expect(modal).toHaveCount(0);
 
     // Unchanged: still confirmed, still cancellable via the menu.
     await expect(cardByBookingNumber(page, 'E2E-SEATHOLD').locator('.status-badge')).toHaveText(/Confirmed/i);
@@ -884,15 +889,35 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await loginAsCustomer(page);
     await gotoMyBookings(page);
 
-    // The cancel FLOW itself: menu -> SweetAlert2 confirm (not a native browser
-    // dialog) -> resulting state. The NOT_CONFIRMED consequence this used to assert
-    // on the freshly-cancelled booking is now covered by the AC2 test above against
-    // the seeded E2E-CANCELLED, so those two no longer have to share a booking.
+    // The cancel FLOW itself: menu -> the cancel modal (not a native browser dialog,
+    // and since OBRS-286/OBRS-942 not a SweetAlert either) -> resulting state. The
+    // NOT_CONFIRMED consequence this used to assert on the freshly-cancelled booking
+    // is now covered by the AC2 test above against the seeded E2E-CANCELLED, so those
+    // two no longer have to share a booking.
     const card = cardByBookingNumber(page, 'E2E-MOVE');
     await expect(card.locator('.status-badge')).toHaveText(/Confirmed/i);
     const cardMenu = await openActionsMenu(page, card);
     await clickMenuItem(cardMenu, /Cancel booking/);
-    await page.locator('.swal2-confirm').click({ timeout: 30_000 });
+
+    // OBRS-1450: the fixture seeds no `payments` row (see its header), so the backend's
+    // cancel quote resolves MANUAL_REFUND_REQUIRED (CancellationService.resolveRefundMethod
+    // returns it for an empty refundable-payment set) and the modal opens on its manual
+    // lane — Confirm stays disabled until a refund destination is supplied. PromptPay is
+    // the shorter of the two: one toggle and one field, same as
+    // e2e/tests/obrs-813-cancel-offers-reschedule.spec.ts drives it.
+    const modal = page.locator('.crdm-modal');
+    await expect(modal).toBeVisible({ timeout: 10_000 });
+    await modal.locator('.rdf-toggle-btn', { hasText: 'PromptPay' }).click();
+    await modal.locator('#rdf-promptpay-phone').fill('0812345678');
+    await modal.locator('.crdm-actions .btn-primary').click({ timeout: 30_000 });
+
+    // The SUCCESS toast is still a real Swal (MyBookingsEffect.showCancelSuccess ->
+    // alertService.success). Dismiss it — it is modal and would swallow the reload below.
+    const successConfirm = page.locator('.swal2-confirm');
+    await expect(successConfirm).toBeVisible({ timeout: 30_000 });
+    await successConfirm.click();
+    await expect(page.locator('.swal2-container')).toHaveCount(0, { timeout: 30_000 });
+
     await expect(cardByBookingNumber(page, 'E2E-MOVE').locator('.status-badge')).toHaveText(
       /Cancelled/i,
       { timeout: 30_000 }
