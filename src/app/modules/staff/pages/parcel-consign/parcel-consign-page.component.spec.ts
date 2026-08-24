@@ -240,6 +240,51 @@ describe('ParcelConsignPageComponent', () => {
     expect(component['dropoffOptions']).toEqual([]);
   });
 
+  // OBRS-1598: `loadSchedules()` rewrites `scheduleOptions` wholesale, so a
+  // round chosen for the OLD day survives in the child form's `scheduleId`
+  // unless this page clears it — the dropdown falls back to its placeholder
+  // (no option matches the stale id) while the form stays valid, so the next
+  // submit consigns the parcel onto the previous day's trip.
+  describe("onDateChange() - the previous day's round must not survive a date change (OBRS-1598)", () => {
+    it("clears the form's schedule selection BEFORE fetching the new day's schedules", () => {
+      const clearScheduleSelection = jasmine.createSpy('clearScheduleSelection');
+      component['formRef'] = { clearScheduleSelection, clearStopSelections: () => {} } as any;
+      component.ngOnInit();
+      component['onScheduleChange']('42');
+      staffApi.getWalkInSchedules.calls.reset();
+
+      component['onDateChange'](new Date(2026, 6, 15));
+
+      expect(clearScheduleSelection).toHaveBeenCalled();
+      expect(clearScheduleSelection).toHaveBeenCalledBefore(staffApi.getWalkInSchedules);
+    });
+
+    // The clear above emits, and THIS is what the emission buys: the cascade
+    // that drops everything the old round fed. Green before the fix too - it
+    // guards the handler the fix depends on, so a later `{ emitEvent: false }`
+    // or a trimmed handler cannot quietly re-strand this state.
+    it("drops every piece of state that hung off the old round when the cleared control emits ''", () => {
+      component.ngOnInit();
+      component['onScheduleChange']('42');
+      component['onPickupChange']('1');
+      component['quote'] = { amount: 100 } as any;
+      component['quoteErrorKey'] = 'STAFF.PARCEL_CONSIGN.ERROR.QUOTE_FAILED';
+      const clearStopSelections = jasmine.createSpy('clearStopSelections');
+      component['formRef'] = { clearStopSelections } as any;
+      cargoStore.setScheduleId.calls.reset();
+
+      component['onScheduleChange']('');
+
+      expect(component['pickupOptions']).toEqual([]);
+      expect(component['dropoffOptions']).toEqual([]);
+      expect(component['carryOnAvailableSeatNumbers']).toEqual([]);
+      expect(component['quote']).toBeNull();
+      expect(component['quoteErrorKey']).toBeNull();
+      expect(clearStopSelections).toHaveBeenCalled();
+      expect(cargoStore.setScheduleId).toHaveBeenCalledWith(null);
+    });
+  });
+
   it('fetches a quote when quoteParamsChange emits complete params', () => {
     component.ngOnInit(); // OBRS-616 — the quote pipeline is wired there
     component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });

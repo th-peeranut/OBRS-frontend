@@ -393,6 +393,13 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
 
   protected onDateChange(date: Date): void {
     this.selectedDate = date;
+    // OBRS-1598: drop the round chosen for the OLD day BEFORE its options are
+    // replaced. `loadSchedules()` rewrites `scheduleOptions` wholesale, and
+    // `app-admin-dropdown` then shows its placeholder (no option matches the
+    // stale id) while `scheduleId` still holds it — the form stays valid and
+    // submits the previous day's trip. The clear emits, so the page's own
+    // `onScheduleChange('')` drops the stops/seats/quote/cargo it fed.
+    this.formRef?.clearScheduleSelection();
     this.loadSchedules(date);
   }
 

@@ -671,6 +671,16 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
     return !this.isCarryOnMode && group.invalid && (group.dirty || group.touched);
   }
 
+  /** OBRS-1598 — called by the parent page when the DATE changes and a fresh
+   * schedule list is about to be fetched: the round chosen belongs to the OLD
+   * day and must not survive into the new one. Unlike the two clears below,
+   * this one deliberately EMITS: the page's `onScheduleChange('')` is what
+   * drops the stop options, seat list, quote and cargo state that hung off the
+   * old round, so silencing the event would leave all of those stale. */
+  clearScheduleSelection(): void {
+    this.form.patchValue({ scheduleId: '' });
+  }
+
   /** Called by the parent page whenever the schedule changes and a fresh
    * stop list is being fetched — the previously-selected pickup/dropoff ids
    * belong to the OLD route and must not silently carry over. */
