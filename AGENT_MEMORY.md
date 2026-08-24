@@ -4313,3 +4313,6 @@ Reduced the block to a POINTER: keep the correction (COLLECTING vs SENDING) + pr
 (OBRS-1206/1539) + a qualitative "a few seconds", and defer the measurements/alternatives
 to `setSuspended` and ADR-0034 §10. Rule: a comment that documents someone else's measured
 fact should cite the owner, not restate the number — restated numbers drift.
+
+## OBRS-1577 re-review (Scrutinize self-fix, 2026-08-24)
+- Gating a create AFFORDANCE for a role the server refuses is not done until the COPY that points at that affordance is gated too. The fix hid the registry ADD button + the picker create for `admin` (correct), but `expense-payees-page.component.html` still rendered `ADMIN.EXPENSE_PAYEES.EMPTY_BODY` — copy that says "use the Add payee button, or type a new name while entering a bill" — to an admin for whom BOTH routes are now hidden. Wrapped that `<p>` in `@if (canCreate)` so admins see only the honest title. No invented copy, owners unaffected. Lesson: when you role-gate a button, grep the empty-state / hint / aria copy that references it — same family, different file.

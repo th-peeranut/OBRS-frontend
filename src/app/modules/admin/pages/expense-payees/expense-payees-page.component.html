@@ -60,7 +60,12 @@
     <div class="payee-empty">
       <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">storefront</span>
       <p class="payee-empty-title">{{ 'ADMIN.EXPENSE_PAYEES.EMPTY_TITLE' | translate }}</p>
-      <p class="payee-empty-body">{{ 'ADMIN.EXPENSE_PAYEES.EMPTY_BODY' | translate }}</p>
+      <!-- OBRS-1577: the body names both ways to add a payee (the "Add payee" button and typing one
+      into a bill). BOTH are hidden for an admin (canCreate false), so showing it to them points at
+      affordances they do not have — the same family as the hidden ADD button. Owners keep it. -->
+      @if (canCreate) {
+        <p class="payee-empty-body">{{ 'ADMIN.EXPENSE_PAYEES.EMPTY_BODY' | translate }}</p>
+      }
     </div>
   }
 
