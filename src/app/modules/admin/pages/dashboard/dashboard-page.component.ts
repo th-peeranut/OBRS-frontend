@@ -10,6 +10,7 @@ import {
 } from '../../../../shared/interfaces/dashboard-today.interface';
 import { pollWhileVisible } from '../../shared/admin-auto-refresh';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 @Component({
     selector: 'app-dashboard-page',
@@ -122,16 +123,12 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
   protected get revenueTileDisplay(): string {
     const revenue = this.tiles?.revenue;
-    return revenue ? this.formatMoney(revenue.net, revenue.currency) : '';
+    return revenue ? this.formatMoney(revenue.net) : '';
   }
 
-  protected formatMoney(value: string, currency: string): string {
+  protected formatMoney(value: string): string {
     const amount = Number(value);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(amount) ? amount : 0);
+    return formatMoney(Number.isFinite(amount) ? amount : 0, this.translate.currentLang);
   }
 
   protected displayDeparture(iso: string): string {

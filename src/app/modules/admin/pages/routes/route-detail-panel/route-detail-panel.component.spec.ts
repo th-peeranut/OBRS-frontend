@@ -336,7 +336,9 @@ describe('RouteDetailPanelComponent (logic)', () => {
           min: 120,
           max: 120,
         })
-      ).toBe('120.00');
+        // OBRS-1592: through the one formatter now — no `.00` on a whole fare,
+        // and the unit is part of the string. The stub reports `en`.
+      ).toBe('THB 120');
       expect(
         (component as any).formatFareRange({
           vehicleTypeSlug: 'van',
@@ -344,7 +346,7 @@ describe('RouteDetailPanelComponent (logic)', () => {
           min: 120,
           max: 260,
         })
-      ).toBe('120.00 – 260.00');
+      ).toBe('THB 120 – THB 260');
     });
 
     it('prints the not-set label rather than 0.00 when a group has no fare for the type', () => {
@@ -377,7 +379,7 @@ describe('RouteDetailPanelComponent (logic)', () => {
 
     it('formatFare delegates to the shared mapper (2 decimal places)', () => {
       const component = makeComponent();
-      expect((component as any).formatFare(9.5)).toBe('9.50');
+      expect((component as any).formatFare(9.5)).toBe('THB 9.50');
     });
   });
 
@@ -547,8 +549,8 @@ describe('RouteDetailPanelComponent (template)', () => {
     const cells = dataRow
       .queryAll(By.css('td'))
       .map((cell) => cell.nativeElement.textContent.trim());
-    expect(cells[1]).toBe('100.00');
-    expect(cells[2]).toBe('140.00');
+    expect(cells[1]).toBe('THB 100');
+    expect(cells[2]).toBe('THB 140');
   });
 
   it('prints the not-set label, never 0.00, for a vehicle type missing on a pair', () => {

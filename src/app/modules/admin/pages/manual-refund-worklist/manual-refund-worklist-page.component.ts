@@ -7,6 +7,7 @@ import { PendingRefund } from '../../../../shared/interfaces/payment.interface';
 import { hasDestination, queueAgeDays, queueAgeSeverity } from './manual-refund-worklist-page.mappers';
 import { BankService } from '../../../../services/bank/bank.service';
 import { BankDto, bankNameFor } from '../../../../shared/interfaces/bank.interface';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 type WorklistContentState = 'loading' | 'error' | 'empty' | 'data';
 
@@ -145,11 +146,7 @@ export class ManualRefundWorklistPageComponent implements OnInit, OnDestroy {
 
   protected formatMoney(value: number | string | undefined): string {
     const numeric = typeof value === 'string' ? parseFloat(value) : value ?? 0;
-    return new Intl.NumberFormat('th-TH', {
-      style: 'currency',
-      currency: 'THB',
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(numeric) ? Number(numeric) : 0);
+    return formatMoney(Number.isFinite(numeric) ? Number(numeric) : 0, this.translate.currentLang);
   }
 
   protected openMarkRefunded(row: PendingRefund): void {

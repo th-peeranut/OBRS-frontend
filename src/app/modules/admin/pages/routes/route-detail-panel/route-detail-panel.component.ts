@@ -260,7 +260,7 @@ export class RouteDetailPanelComponent implements OnChanges, OnDestroy {
   }
 
   protected formatFare(fare: number): string {
-    return formatFareValue(fare);
+    return formatFareValue(fare, this.translate.currentLang);
   }
 
   /** "120.00" when a group's fares are all equal, "120.00 – 260.00" when they
@@ -271,10 +271,13 @@ export class RouteDetailPanelComponent implements OnChanges, OnDestroy {
     }
 
     if (range.min === range.max) {
-      return formatFareValue(range.min);
+      return formatFareValue(range.min, this.translate.currentLang);
     }
 
-    return `${formatFareValue(range.min)} – ${formatFareValue(range.max)}`;
+    return `${formatFareValue(range.min, this.translate.currentLang)} – ${formatFareValue(
+      range.max,
+      this.translate.currentLang
+    )}`;
   }
 
   private buildPageSizeOptions(): void {

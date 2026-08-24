@@ -81,7 +81,7 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
       <div>
         <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.CARD.REVENUE' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(totals?.revenue ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(totals?.revenue ?? '0.00') }}</p>
         }
         @if (isLoading) {
           <span class="admin-skeleton admin-skeleton--sm"></span>
@@ -93,10 +93,10 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
       <div>
         <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.CARD.EXPENSES' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(totals?.expenses ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(totals?.expenses ?? '0.00') }}</p>
           <p class="admin-muted vehicle-pl-sub-line">
             {{ 'ADMIN.VEHICLE_PL_REPORT.OF_WHICH_VAT' | translate }}:
-            {{ formatMoney(totals?.vat ?? '0.00', currency) }}
+            {{ formatMoney(totals?.vat ?? '0.00') }}
           </p>
         }
         @if (isLoading) {
@@ -110,7 +110,7 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
         <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.CARD.MARGIN' | translate }}</p>
         @if (!isLoading) {
           <p class="admin-big-number" [class.vehicle-pl-negative]="isNegative(totals?.margin ?? '0.00')">
-            {{ formatMoney(totals?.margin ?? '0.00', currency) }}
+            {{ formatMoney(totals?.margin ?? '0.00') }}
           </p>
         }
         @if (isLoading) {
@@ -125,7 +125,7 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
       <div>
         <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.CARD.PENDING_EXPENSES' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(totals?.pendingExpenses ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(totals?.pendingExpenses ?? '0.00') }}</p>
           <p class="admin-muted vehicle-pl-sub-line">
             {{ 'ADMIN.VEHICLE_PL_REPORT.CARD.PENDING_EXPENSES_HINT' | translate }}
           </p>
@@ -192,20 +192,20 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
                     }
                   </td>
                   <td class="vehicle-pl-money">
-                    {{ formatMoney(row.revenue, currency) }}
+                    {{ formatMoney(row.revenue) }}
                     @if (zeroRevenueReasonKey(row); as reasonKey) {
                       <span class="vehicle-pl-zero-reason">{{ reasonKey | translate }}</span>
                     }
                   </td>
                   <td class="vehicle-pl-money">
-                    {{ formatMoney(row.expenseTotal, currency) }}
+                    {{ formatMoney(row.expenseTotal) }}
                     @if (zeroExpenseReasonKey(row); as reasonKey) {
                       <span class="vehicle-pl-zero-reason">{{ reasonKey | translate }}</span>
                     }
                   </td>
-                  <td class="vehicle-pl-money">{{ formatMoney(row.vatTotal, currency) }}</td>
+                  <td class="vehicle-pl-money">{{ formatMoney(row.vatTotal) }}</td>
                   <td class="vehicle-pl-money" [class.vehicle-pl-negative]="isNegative(row.margin)">
-                    {{ formatMoney(row.margin, currency) }}
+                    {{ formatMoney(row.margin) }}
                   </td>
                 </tr>
                 @if (isExpanded(row)) {
@@ -214,7 +214,7 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
                       @if (hasHistoricalRevenue(row)) {
                         <p class="admin-muted vehicle-pl-sub-line">
                           {{ 'ADMIN.VEHICLE_PL_REPORT.OF_WHICH_HISTORICAL' | translate }}:
-                          {{ formatMoney(row.historicalRevenue, currency) }}
+                          {{ formatMoney(row.historicalRevenue) }}
                           @if (row.historicalRevenueConflictCount > 0) {
                             <span class="admin-status is-warning vehicle-pl-badge">
                               {{ 'ADMIN.VEHICLE_PL_REPORT.HISTORICAL_CONFLICTS' | translate:{ count: row.historicalRevenueConflictCount } }}
@@ -231,7 +231,7 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
                         @for (line of row.expensesByCategory; track line.category) {
                           <span class="vehicle-pl-chip">
                             {{ categoryLabel(line.category) }}:
-                            {{ formatMoney(line.amount, currency) }} ({{ line.entryCount }})
+                            {{ formatMoney(line.amount) }} ({{ line.entryCount }})
                           </span>
                         }
                       </div>
@@ -259,7 +259,7 @@ inside the company totals above — counted exactly once, never averaged onto th
       </div>
       <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.UNASSIGNED.HINT' | translate }}</p>
       @if (unassignedRevenueRow; as unassigned) {
-        <p class="admin-big-number">{{ formatMoney(unassigned.revenue, currency) }}</p>
+        <p class="admin-big-number">{{ formatMoney(unassigned.revenue) }}</p>
       }
       @if (!unassignedRevenueRow) {
         <p class="admin-muted vehicle-pl-sub-line">
@@ -273,12 +273,12 @@ inside the company totals above — counted exactly once, never averaged onto th
       </div>
       <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.CENTRAL.HINT' | translate }}</p>
       @if (centralExpenseRow; as central) {
-        <p class="admin-big-number">{{ formatMoney(central.expenseTotal, currency) }}</p>
+        <p class="admin-big-number">{{ formatMoney(central.expenseTotal) }}</p>
         <div class="vehicle-pl-chip-list">
           @for (line of central.expensesByCategory; track line.category) {
             <span class="vehicle-pl-chip">
               {{ categoryLabel(line.category) }}:
-              {{ formatMoney(line.amount, currency) }} ({{ line.entryCount }})
+              {{ formatMoney(line.amount) }} ({{ line.entryCount }})
             </span>
           }
         </div>

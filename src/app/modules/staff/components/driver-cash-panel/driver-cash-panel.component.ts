@@ -17,6 +17,7 @@ import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorCode, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import { DriverCashDayStore } from './driver-cash-day.store';
 import { DriverCashDayRespDto } from '../../../../shared/interfaces/driver-cash.interface';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 type DriverCashAction = 'advance' | 'perHead' | 'expense' | null;
 
@@ -307,4 +308,10 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
     this.alertService.error(message);
     return message;
   }
+  /** OBRS-1592: driver-cash printed these decimal strings raw — no unit, no
+   * thousand separator, `.00` on every whole amount. Staff money is money. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translate.currentLang);
+  }
+
 }

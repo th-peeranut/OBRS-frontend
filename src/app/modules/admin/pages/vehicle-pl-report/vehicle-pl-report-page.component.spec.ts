@@ -118,8 +118,9 @@ function makeReport(overrides: Partial<VehiclePlReportDto> = {}): VehiclePlRepor
   };
 }
 
-/** `Intl.NumberFormat` separates the currency code from the amount with a NON-BREAKING
- * space (U+00A0), so a plain 'THB 700.00' never matches the rendered text. */
+/** Kept after OBRS-1592: `formatMoney()` now joins unit and amount with an ordinary
+ * space, but the page still renders other `Intl`-produced numbers whose separators
+ * are NON-BREAKING (U+00A0), which a plain string literal never matches. */
 function visibleText(element: { textContent: string | null }): string {
   return (element.textContent ?? '').replace(/ /g, ' ');
 }
@@ -317,9 +318,9 @@ describe('VehiclePlReportPageComponent (template rendering)', () => {
 
     const asides = fixture.nativeElement.querySelectorAll('.vehicle-pl-aside');
     expect(asides.length).toBe(2);
-    expect(visibleText(asides[0])).toContain('THB 700.00');
+    expect(visibleText(asides[0])).toContain('THB 700');
     expect(visibleText(asides[0])).toContain('ADMIN.VEHICLE_PL_REPORT.UNASSIGNED.HINT');
-    expect(visibleText(asides[1])).toContain('THB 500.00');
+    expect(visibleText(asides[1])).toContain('THB 500');
     expect(visibleText(asides[1])).toContain('ADMIN.VEHICLE_PL_REPORT.CENTRAL.HINT');
   });
 
@@ -348,10 +349,10 @@ describe('VehiclePlReportPageComponent (template rendering)', () => {
     renderReport(makeReport());
 
     const text = visibleText(fixture.nativeElement);
-    expect(text).toContain('THB 1,200.00');
-    expect(text).toContain('THB 84.00');
-    expect(text).not.toContain('THB 1,284.00');
-    expect(text).not.toContain('THB 1,819.00'); // totals.expenses + totals.vat
+    expect(text).toContain('THB 1,200');
+    expect(text).toContain('THB 84');
+    expect(text).not.toContain('THB 1,284');
+    expect(text).not.toContain('THB 1,819'); // totals.expenses + totals.vat
   });
 
   it('offers the export with the dataset key and the range currently on screen', () => {
