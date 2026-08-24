@@ -4336,3 +4336,6 @@ pre-card format. Rule for a format-migration card: after converting a render, gr
 COMMENTS for the old format literal (`0.00`, `฿`, `THB x.xx`) as well as the code — a comment
 asserting the old shape is the same false-completeness claim as a `.toFixed` that survived,
 just one a test can never catch.
+
+## OBRS-1577 re-review (Scrutinize self-fix, 2026-08-24)
+- Gating a create AFFORDANCE for a role the server refuses is not done until the COPY that points at that affordance is gated too. The fix hid the registry ADD button + the picker create for `admin` (correct), but `expense-payees-page.component.html` still rendered `ADMIN.EXPENSE_PAYEES.EMPTY_BODY` — copy that says "use the Add payee button, or type a new name while entering a bill" — to an admin for whom BOTH routes are now hidden. Wrapped that `<p>` in `@if (canCreate)` so admins see only the honest title. No invented copy, owners unaffected. Lesson: when you role-gate a button, grep the empty-state / hint / aria copy that references it — same family, different file.

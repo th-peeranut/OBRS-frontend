@@ -144,9 +144,28 @@
           <label class="admin-form-label">{{ 'ADMIN.EXPENSES.RECEIPT_NO' | translate }}</label>
           <input class="admin-field" formControlName="receiptNo" maxlength="100" />
         </div>
+        <!-- OBRS-1577 owner decision 2 (2026-08-24): these two fields stay side by side and are told
+        apart BY THEIR WORDS, because they are genuinely two facts — which pocket the money left, and
+        who received it. Before this card only the first existed and was doing duty for both, which
+        is why "how much did I pay this garage" had no answer. The hints are not decoration: two
+        similar-looking text controls next to each other is precisely how they get filled in
+        swapped. -->
         <div class="admin-form-field">
           <label class="admin-form-label">{{ 'ADMIN.EXPENSES.PAID_BY' | translate }}</label>
           <input class="admin-field" formControlName="paidBy" maxlength="255" />
+          <small class="admin-hint">{{ 'ADMIN.EXPENSES.PAID_BY_HINT' | translate }}</small>
+        </div>
+        <div class="admin-form-field" data-testid="expense-payee-field">
+          <label class="admin-form-label">{{ 'ADMIN.EXPENSES.PAYEE.LABEL' | translate }}</label>
+          <app-expense-payee-picker
+            formControlName="payeeId"
+            [payees]="payeeOptions"
+            [canCreate]="canCreatePayee"
+            [category]="selectedCategory"
+            [fallbackName]="editingPayeeName"
+            (payeeCreated)="payeeCreated.emit($event)"
+          ></app-expense-payee-picker>
+          <small class="admin-hint">{{ 'ADMIN.EXPENSES.PAYEE.HINT' | translate }}</small>
         </div>
         <div class="admin-form-field full">
           <label class="admin-form-label">{{ 'ADMIN.EXPENSES.NOTE' | translate }}</label>
