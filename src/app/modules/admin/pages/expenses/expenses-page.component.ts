@@ -97,6 +97,17 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
    * nothing. Two different questions, two different flags.
    */
   protected readonly isAdmin: boolean;
+  /**
+   * OBRS-1577: may this caller CREATE a payee from inside the bill form?
+   *
+   * `hasHeldRole(['owner'])` and NOT `hasAnyRole` — the OBRS-1498 distinction, and this is exactly
+   * the case it was written for. Reading, renaming and retiring a payee all go through
+   * `getCurrentOwnerScope()`, which an admin satisfies; CREATE alone goes through
+   * `getCurrentOwnerId()`, which throws for an admin because they own no fleet to attach the row
+   * to. `hasAnyRole(['owner'])` is true for an admin (ROLE_GRANTS maps admin→owner), so using it
+   * here would render an "add" button whose only outcome is a server error.
+   */
+  protected readonly canCreatePayee: boolean;
 
   // Bound reloader passed to the form modal (arrow closes over `this`),
   // mirroring VehiclesPageComponent.reloadStructureBound.
@@ -119,6 +130,7 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
   ) {
     this.canWrite = this.authService.hasAnyRole(['admin', 'owner']);
     this.isAdmin = this.authService.getRoles().includes('admin');
+    this.canCreatePayee = this.authService.hasHeldRole(['owner']);
 
     this.subscriptions.add(
       this.translate.onLangChange.subscribe(() => {
@@ -157,10 +169,15 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
     );
 
     // OBRS-1577. A failed payee fetch is deliberately NOT surfaced as a page error and NOT alerted:
-    // the expense log is fully usable without it, and the picker degrades to "add the one I am
-    // typing" — the same reasoning `loadOwners`/`loadPending` below already apply to their own
-    // secondary fetches. An `admin` gets a 403 here (the endpoint is OWNER-only), which is the
-    // ordinary case rather than a fault.
+    // the expense log is fully usable without it, and the picker degrades to offering nothing —
+    // the same reasoning `loadOwners`/`loadPending` below already apply to their own secondary
+    // fetches.
+    //
+    // ⚠️ An `admin` does NOT 403 here, contrary to what "OWNER-only" suggests: WebSecurityConfig
+    // declares `ROLE_ADMIN > ROLE_OWNER`, so `hasRole('OWNER')` PASSES for an admin and the GET
+    // returns 200. What they get back is `findForPlatform` — every operator's payees merged — for
+    // the same reason every other read on this domain does. See `canCreatePayee` below for the one
+    // operation where admin is genuinely refused.
     this.subscriptions.add(
       this.payeesStore.data$.subscribe((data) => {
         this.payeeOptions = sortPayeesByName((data ?? []).filter((payee) => payee.active));

@@ -92,6 +92,9 @@ function makeComponent(
     // see them — an admin-by-default stub would make every existing test a
     // silent admin test.
     getRoles: jasmine.createSpy('getRoles').and.returnValue(roles),
+    // OBRS-1577: the HELD role, with no ROLE_GRANTS expansion — `hasAnyRole(['owner'])` is true for
+    // an admin, and the create affordance this feeds must be false for them.
+    hasHeldRole: (required: string[]) => required.some((role) => roles.includes(role)),
   };
   return new ExpensesPageComponent(
     adminApi as any,

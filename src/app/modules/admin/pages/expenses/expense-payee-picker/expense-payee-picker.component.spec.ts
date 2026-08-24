@@ -59,7 +59,7 @@ describe('ExpensePayeePickerComponent', () => {
     component.query =
       '  อู่เฮีย หน่อง  ';
 
-    expect(component.canCreate).toBeFalse();
+    expect(component.showCreateOption).toBeFalse();
   });
 
   it('offers to create a name that only PARTIALLY matches an existing one', () => {
@@ -67,7 +67,26 @@ describe('ExpensePayeePickerComponent', () => {
     component.query = 'PTT';
 
     expect(component.visiblePayees.length).toBe(1);
-    expect(component.canCreate).toBeTrue();
+    expect(component.showCreateOption).toBeTrue();
+  });
+
+  it('offers no create affordance to a caller the server would refuse', async () => {
+    // An admin. Every other payee operation resolves through `getCurrentOwnerScope()` and works for
+    // them; CREATE alone needs `getCurrentOwnerId()`, which throws — so the button is hidden rather
+    // than shown-and-failing, and the method refuses too in case something else calls it.
+    const spy = jasmine.createSpy('createExpensePayee');
+    const component = makeComponent({ createExpensePayee: spy });
+    component.canCreate = false;
+    component.query = 'Somewhere Not On Record';
+
+    expect(component.showCreateOption).toBeFalse();
+
+    await component.createFromQuery();
+    expect(spy).not.toHaveBeenCalled();
+
+    // ...and the picker still LISTS and SELECTS normally for them.
+    component.query = 'PTT';
+    expect(component.visiblePayees.map((p: AdminExpensePayeeDto) => p.id)).toEqual([2]);
   });
 
   it('names the type it would create from the bill category, not a fixed default', () => {

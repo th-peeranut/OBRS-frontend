@@ -6,6 +6,7 @@ import {
   AdminExpensePayeeDto,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { Option } from '../expenses/expenses-page.mappers';
 import { ExpensePayeesStore } from './expense-payees.store';
@@ -59,6 +60,21 @@ export class ExpensePayeesPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected busyId: number | null = null;
 
+  /**
+   * OBRS-1577: may this caller ADD a payee?
+   *
+   * ⚠️ This page is reachable by an `admin`, and that is not a gap in the route: the FE's
+   * ROLE_GRANTS map admin→owner, and the backend's `ROLE_ADMIN > ROLE_OWNER` hierarchy means
+   * `hasRole('OWNER')` passes for them, so the GET returns 200. Rename and retire also work for
+   * them — both resolve the row through `getCurrentOwnerScope()`, which an admin satisfies.
+   *
+   * CREATE is the single exception: it needs `getCurrentOwnerId()`, which throws for an admin
+   * because they own no fleet for the new row to belong to. `hasHeldRole` (OBRS-1498) rather than
+   * `hasAnyRole` is what tells the two apart — `hasAnyRole(['owner'])` is TRUE for an admin, so it
+   * would leave a button here whose only outcome is a server error.
+   */
+  protected readonly canCreate: boolean;
+
   private allPayees: AdminExpensePayeeDto[] = [];
   private hasLoadedOnce = false;
   private readonly subscriptions = new Subscription();
@@ -67,8 +83,10 @@ export class ExpensePayeesPageComponent implements OnInit, OnDestroy {
     private readonly adminApiService: AdminApiService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly store: ExpensePayeesStore
+    private readonly store: ExpensePayeesStore,
+    authService: AuthService
   ) {
+    this.canCreate = authService.hasHeldRole(['owner']);
     this.subscriptions.add(
       this.translate.onLangChange.subscribe(() => this.applyLocalization())
     );
@@ -132,6 +150,9 @@ export class ExpensePayeesPageComponent implements OnInit, OnDestroy {
   }
 
   protected openCreateModal(): void {
+    if (!this.canCreate) {
+      return;
+    }
     this.modalMode = 'create';
     this.editingPayee = null;
     this.formName = '';
@@ -167,6 +188,9 @@ export class ExpensePayeesPageComponent implements OnInit, OnDestroy {
   }
 
   protected get canSubmit(): boolean {
+    if (this.modalMode === 'create' && !this.canCreate) {
+      return false;
+    }
     return this.formName.trim().length > 0 && !this.nameAlreadyTaken && !this.isSubmitting;
   }
 

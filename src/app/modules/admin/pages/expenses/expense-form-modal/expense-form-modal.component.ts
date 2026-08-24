@@ -82,6 +82,9 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
    * working state, not a broken one — an operator with no payees on record yet gets a picker whose
    * only offer is "add the one I am typing", which is exactly how the registry gets populated. */
   @Input() payeeOptions: AdminExpensePayeeDto[] = [];
+  /** OBRS-1577: whether this caller may CREATE a payee from here. False for an admin — the backend
+   * refuses that one operation alone (see `ExpensesPageComponent.canCreatePayee`). */
+  @Input() canCreatePayee = true;
   @Input() reloadStructure!: () => Promise<void>;
   @Output() closed = new EventEmitter<void>();
   /** OBRS-1577: forwarded up from the picker so the page can revalidate the shared registry cache —

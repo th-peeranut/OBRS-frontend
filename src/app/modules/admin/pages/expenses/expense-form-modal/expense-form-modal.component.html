@@ -160,6 +160,7 @@
           <app-expense-payee-picker
             formControlName="payeeId"
             [payees]="payeeOptions"
+            [canCreate]="canCreatePayee"
             [category]="selectedCategory"
             [fallbackName]="editingPayeeName"
             (payeeCreated)="payeeCreated.emit($event)"

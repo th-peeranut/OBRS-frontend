@@ -17,8 +17,11 @@ export const PAYEE_TYPE_CODES: readonly PayeeType[] = ['GARAGE', 'FUEL_STATION',
  * <p>Three groups, and the last two are the ones a bare `\s` misses in BOTH languages:
  * <ul>
  *   <li>`\s` — but the two languages disagree on what it means. JavaScript's includes U+FEFF and
- *       excludes U+0085 (NEL); Java's, with `UNICODE_CHARACTER_CLASS`, is the reverse. Both
- *       characters are therefore named explicitly below in both files rather than left to `\s`.</li>
+ *       excludes U+0085 (NEL); Java's, with `UNICODE_CHARACTER_CLASS`, is the reverse. Each file
+ *       therefore names the character ITS OWN `\s` misses: U+0085 here, U+FEFF on the Java side.
+ *       The two sets end up equal — brute-forced over every code point 0x0–0x10FFFF, zero
+ *       disagreements — but they get there by naming different characters, so do not "add" U+0085
+ *       to the Java pattern for symmetry; its `\s` already covers it.</li>
  *   <li>The zero-width family (U+200B–U+200D, U+2060) is not whitespace to Unicode at all. Thai has
  *       no inter-word space, so ZERO WIDTH SPACE is exactly how Thai text marks a word break — an
  *       invisible character no owner can see, delete, or be told about.</li>

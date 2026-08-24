@@ -32,14 +32,21 @@ describe('ExpensePayeesPageComponent', () => {
     alert: Record<string, unknown> = {
       success: jasmine.createSpy('success').and.resolveTo(undefined),
       error: jasmine.createSpy('error').and.resolveTo(undefined),
-    }
+    },
+    heldRoles: string[] = ['owner']
   ) {
     const translate = { instant: (key: string) => key, onLangChange: new Subject<unknown>() };
+    // `hasHeldRole`, not `hasAnyRole`: the point of the flag under test is that they answer
+    // differently for an admin.
+    const auth = {
+      hasHeldRole: (roles: string[]) => roles.some((role) => heldRoles.includes(role)),
+    };
     const component = new ExpensePayeesPageComponent(
       adminApi as any,
       alert as any,
       translate as any,
-      store as any
+      store as any,
+      auth as any
     );
     component.ngOnInit();
     return { component: component as any, store, adminApi, alert };
@@ -64,6 +71,30 @@ describe('ExpensePayeesPageComponent', () => {
 
     expect(component.payees.map((p: AdminExpensePayeeDto) => p.id)).toEqual([2]);
     expect(store.refresh).not.toHaveBeenCalled();
+  });
+
+  it('lets an admin read and rename, but never add', async () => {
+    // The backend hierarchy is ROLE_ADMIN > ROLE_OWNER, so an admin reaches this page and its GET
+    // returns 200 — the "OWNER-only" label is about the endpoint annotation, not about who arrives.
+    // Rename and retire resolve through `getCurrentOwnerScope()` and work for them. CREATE alone
+    // needs `getCurrentOwnerId()`, which throws, so the add button must not be there at all.
+    const create = jasmine.createSpy('createExpensePayee');
+    const { component } = makeComponent(undefined, { createExpensePayee: create }, undefined, [
+      'admin',
+    ]);
+
+    expect(component.canCreate).toBeFalse();
+    expect(component.payees.length).toBe(2);
+
+    component.openCreateModal();
+    expect(component.isModalOpen).toBeFalse();
+
+    await component.submitModal();
+    expect(create).not.toHaveBeenCalled();
+
+    // Rename is still offered — the server does allow it for them.
+    component.openRenameModal(ACTIVE_GARAGE);
+    expect(component.isModalOpen).toBeTrue();
   });
 
   it('refuses a rename onto a name another payee already holds', () => {

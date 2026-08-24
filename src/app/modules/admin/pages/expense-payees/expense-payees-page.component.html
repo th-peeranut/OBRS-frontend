@@ -28,15 +28,20 @@
     <span>{{ 'ADMIN.EXPENSE_PAYEES.SHOW_RETIRED' | translate }}</span>
   </label>
 
-  <button
-    type="button"
-    class="admin-btn admin-btn-primary ms-auto"
-    data-testid="payee-add"
-    (click)="openCreateModal()"
-    >
-    <span class="material-symbols-outlined" [attr.translate]="'no'">add</span>
-    <span>{{ 'ADMIN.EXPENSE_PAYEES.ADD' | translate }}</span>
-  </button>
+  <!-- Hidden for an admin: they can read, rename and retire here, but CREATE is the one payee
+  operation the backend refuses them (see `canCreate`). A button that can only produce a server
+  error is worse than no button — the user cannot tell it apart from a bug. -->
+  @if (canCreate) {
+    <button
+      type="button"
+      class="admin-btn admin-btn-primary ms-auto"
+      data-testid="payee-add"
+      (click)="openCreateModal()"
+      >
+      <span class="material-symbols-outlined" [attr.translate]="'no'">add</span>
+      <span>{{ 'ADMIN.EXPENSE_PAYEES.ADD' | translate }}</span>
+    </button>
+  }
 </section>
 
 <section class="admin-card mt-3">

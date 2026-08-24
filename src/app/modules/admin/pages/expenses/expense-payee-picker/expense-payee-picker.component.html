@@ -55,7 +55,7 @@
 
       <!-- AC2: a name that is not on record yet gets added from HERE. The button names the type it
       will create so an inferred type is never a silent one (owner decision 1, 2026-08-24). -->
-      @if (canCreate) {
+      @if (showCreateOption) {
         <div class="payee-picker-create" data-testid="payee-picker-create">
           <p class="payee-picker-create-text">
             {{ 'ADMIN.EXPENSES.PAYEE.NO_MATCH' | translate: { name: query.trim() } }}

@@ -89,6 +89,18 @@ export class ExpensePayeePickerComponent implements ControlValueAccessor {
    */
   @Input() fallbackName = '';
 
+  /**
+   * OBRS-1577: whether "add the one I am typing" is offered at all.
+   *
+   * False for an admin. Every OTHER payee operation resolves through
+   * `getCurrentOwnerScope()`, which an admin satisfies — but CREATE goes through
+   * `getCurrentOwnerId()`, which throws for an admin, who owns no fleet for the row to belong to.
+   * The button is therefore hidden rather than shown-and-failing: an affordance whose only outcome
+   * is a server error is worse than no affordance, because the user cannot tell it apart from a
+   * bug. The picker still LISTS and SELECTS normally for them.
+   */
+  @Input() canCreate = true;
+
   @Input() disabled = false;
 
   /** Emitted after a successful create so the parent can revalidate the registry cache. */
@@ -178,7 +190,10 @@ export class ExpensePayeePickerComponent implements ControlValueAccessor {
    * Whether to offer "add this one". Requires a non-blank query with NO exact registry match — a
    * substring match is not enough, because a shorter name is a legitimately different payee.
    */
-  protected get canCreate(): boolean {
+  protected get showCreateOption(): boolean {
+    if (!this.canCreate) {
+      return false;
+    }
     const typed = this.query.trim();
     return typed.length > 0 && !findPayeeByExactName(this.knownPayees, typed);
   }
@@ -212,7 +227,9 @@ export class ExpensePayeePickerComponent implements ControlValueAccessor {
 
   protected async createFromQuery(): Promise<void> {
     const name = this.query.trim();
-    if (!name || this.isCreating) {
+    // `canCreate` is re-tested here and not only in the template: hiding a button is a UI decision,
+    // and this method is the one that actually spends a request the server will refuse.
+    if (!name || this.isCreating || !this.canCreate) {
       return;
     }
 
