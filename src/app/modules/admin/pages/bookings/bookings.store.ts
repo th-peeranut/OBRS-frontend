@@ -3,15 +3,14 @@ import { firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminBookingDto,
+  AdminBookingStopDto,
   AdminPaymentByBookingIdDto,
   AdminStatusDto,
-  AdminTranslationCollection,
-  getAdminLookupCode,
-  getAdminLookupLabel,
-  getAdminTranslationLabel,
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AuthService } from '../../../../auth/auth.service';
+import { TranslateService } from '@ngx-translate/core';
+import { formatMoney } from '../../../../shared/lib/money-display';
 import { AdminCollectionStore } from '../../shared/admin-collection-store';
 
 export interface BookingRow {
@@ -21,7 +20,10 @@ export interface BookingRow {
   id: number;
   bookingId: string;
   customer: string;
-  route: string;
+  /** Raw stop pair, labelled in the template (OBRS-1237) — same reason the
+   * dates stay raw below: the cached rows must not carry a language. */
+  fromStop?: AdminBookingStopDto;
+  toStop?: AdminBookingStopDto;
   bookingDate: string;
   departureTime: string;
   totalFare: string;
@@ -50,6 +52,7 @@ export interface BookingsData {
 export class BookingsStore extends AdminCollectionStore<BookingsData> {
   constructor(
     private readonly adminApiService: AdminApiService,
+    private readonly translate: TranslateService,
     authService: AuthService
   ) {
     super(authService);
@@ -121,32 +124,14 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
     paymentStatus: string | null | undefined
   ): BookingRow {
     const firstSchedule = booking.journeys?.[0] ?? booking.bookingSchedules?.[0];
-    const fromStop = (
-      getAdminLookupLabel(firstSchedule?.fromStop, 'en') ??
-      this.getTranslationLabel(firstSchedule?.fromStop?.translations, 'en') ??
-      getAdminLookupCode(firstSchedule?.fromStop)
-    ) ||
-      '-';
-    const toStop = (
-      getAdminLookupLabel(firstSchedule?.toStop, 'en') ??
-      this.getTranslationLabel(firstSchedule?.toStop?.translations, 'en') ??
-      getAdminLookupCode(firstSchedule?.toStop)
-    ) ||
-      '-';
-    const route = `${fromStop} -> ${toStop}`;
 
     const totalAmount = Number(
       booking.totalAmount ??
       booking.pricing?.netAmount ??
       booking.payment?.totalAmount
     );
-    const currency = booking.pricing?.currency ?? booking.payment?.currency ?? 'THB';
     const totalFare = Number.isFinite(totalAmount)
-      ? new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency,
-          maximumFractionDigits: 2,
-        }).format(totalAmount)
+      ? formatMoney(totalAmount, this.translate.currentLang)
       : String(booking.totalAmount ?? booking.pricing?.netAmount ?? '0.00');
 
     const bookingStatus = this.parseStatus(booking.status);
@@ -160,7 +145,8 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
       id: booking.id,
       bookingId: booking.bookingNumber ?? `#BK-${booking.id}`,
       customer: booking.contact?.fullName ?? booking.actor?.name ?? '-',
-      route,
+      fromStop: firstSchedule?.fromStop,
+      toStop: firstSchedule?.toStop,
       // Raw ISO, formatted in the template (OBRS-178) — keeps the cached rows
       // locale-independent so a live language switch re-renders the dates.
       bookingDate: booking.createdAt ?? '',
@@ -188,13 +174,6 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
     }
 
     return 'PENDING';
-  }
-
-  private getTranslationLabel(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationLabel(translations, locale);
   }
 
   private parseStatus(value: string | AdminStatusDto | null | undefined): {

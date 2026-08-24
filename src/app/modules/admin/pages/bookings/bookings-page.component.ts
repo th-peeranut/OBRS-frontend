@@ -14,6 +14,7 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AuthService } from '../../../../auth/auth.service';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 interface TimelineEvent {
   time: string | null;
@@ -86,6 +87,17 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
   // re-render on a live language switch (OBRS-178).
   protected displayDateTime(value: string | null | undefined): string {
     return formatDisplayDateTime(value, this.translate.currentLang);
+  }
+
+  // Label the stop pair in the current UI language (OBRS-1237). Same reason as
+  // displayDateTime above: the store used to bake 'en' into the row, so a Thai
+  // back office read "Nong chak -> Bts mo chit". getAdminLookupLabel resolves
+  // the locale, then any translation present, then the slug; '-' covers a stop
+  // that carries none of them.
+  protected routeLabel(booking: BookingRow): string {
+    const from = getAdminLookupLabel(booking.fromStop, this.translate.currentLang) ?? '-';
+    const to = getAdminLookupLabel(booking.toStop, this.translate.currentLang) ?? '-';
+    return `${from} -> ${to}`;
   }
 
   ngOnInit(): void {
@@ -455,19 +467,12 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
     return `${from} -> ${to}`;
   }
 
-  protected formatMoney(
-    amount: string | number | null | undefined,
-    currency: string | null | undefined
-  ): string {
+  protected formatMoney(amount: string | number | null | undefined): string {
     const value = Number(amount);
     if (!Number.isFinite(value)) {
       return '-';
     }
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency || 'THB',
-      maximumFractionDigits: 2,
-    }).format(value);
+    return formatMoney(value, this.translate.currentLang);
   }
 
   // Client-composed timeline (design-system.md §12, new pattern) — no
@@ -527,7 +532,7 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
       [
         row.bookingId,
         row.customer,
-        row.route,
+        this.routeLabel(row),
         // Rows carry raw ISO now (OBRS-178); format for the export too.
         this.displayDateTime(row.bookingDate),
         this.displayDateTime(row.departureTime),

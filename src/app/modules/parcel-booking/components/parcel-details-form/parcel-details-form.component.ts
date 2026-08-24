@@ -1,3 +1,4 @@
+import { TranslateService } from '@ngx-translate/core';
 import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
@@ -16,6 +17,7 @@ import {
   ProhibitedCategoryView,
   toProhibitedCategoryViews,
 } from '../../../../shared/lib/parcel-prohibited-categories';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 export interface ParcelDetailsFormValue {
   senderPhone: string;
@@ -119,7 +121,8 @@ export class ParcelDetailsFormComponent implements OnInit, OnChanges, OnDestroy 
 
   constructor(
     private readonly fb: FormBuilder,
-    private readonly parcelPolicyService: ParcelPolicyService
+    private readonly parcelPolicyService: ParcelPolicyService,
+    private readonly translate: TranslateService
   ) {
     this.form = this.fb.group({
       senderPhone: ['', [Validators.required, separatorTolerantPattern(SENDER_PHONE_PATTERN)]],
@@ -299,4 +302,12 @@ export class ParcelDetailsFormComponent implements OnInit, OnChanges, OnDestroy 
     const group = this.dimensionsGroup;
     return group.invalid && (group.dirty || group.touched);
   }
+  /** OBRS-1592: the amount used to go into the sentence RAW, with the unit
+   * spelled inside the i18n value — `{{amount}} บาท`. That is the same
+   * number-plus-unit-word shape this card removed everywhere else, just
+   * hidden inside a format string. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translate.currentLang);
+  }
+
 }

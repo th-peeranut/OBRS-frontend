@@ -43,7 +43,7 @@
       <div>
         <p class="admin-muted">{{ 'ADMIN.ROUTE_PERFORMANCE.TILE.REVENUE' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(totals?.netRevenue ?? '0', totals?.currency ?? 'THB') }}</p>
+          <p class="admin-big-number">{{ formatMoney(totals?.netRevenue ?? '0') }}</p>
         } @else {
           <span class="admin-skeleton admin-skeleton--sm"></span>
         }
@@ -110,7 +110,7 @@
                 <td class="admin-emphasis">{{ row.routeSlug }}</td>
                 <td>{{ formatCount(row.departures) }}</td>
                 <td>{{ formatCount(row.ticketsSold) }}</td>
-                <td>{{ formatMoney(row.netRevenue, row.currency) }}</td>
+                <td>{{ formatMoney(row.netRevenue) }}</td>
                 <td>
                   <div class="rp-share">
                     <div class="rp-share-track"><div class="rp-share-bar" [style.width.%]="shareBarPct(row)"></div></div>

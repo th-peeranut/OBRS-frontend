@@ -23,7 +23,7 @@
               <td>{{ row.expenseDateDisplay }}</td>
               <td>{{ row.vehicleLabel }}</td>
               <td>{{ row.categoryDisplay }}</td>
-              <td class="expense-money">{{ row.amount | number: '1.2-2' }}</td>
+              <td class="expense-money">{{ formatMoney(row.amount) }}</td>
               <td>{{ row.note }}</td>
               <td class="text-right">
                 <button

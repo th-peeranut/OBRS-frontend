@@ -372,6 +372,17 @@ jobs:
       - name: Leaflet marker position gate
         run: npm run test:marker-position
 
+      # One fare of 200 baht used to render four different ways: `฿200.00` on the
+      # reschedule dialog, `THB 200.00` on the settlement report, `200 บาท` with no
+      # thousand separator on the search page, and `200.00 บาท` in the confirmation
+      # email the same customer got a minute later (measured on dev 2026-08-24).
+      # None of it was one bad decision - it was one line copied into the next
+      # component twenty-four times, and every copy was self-consistent, so nothing
+      # ever went red. Only a scanner that reads the whole tree can see a format
+      # diverging, which is why the twenty-fifth copy has to be stopped here.
+      - name: Money format gate
+        run: npm run test:money-format
+
       - name: Install dependencies
         run: npm ci
 
