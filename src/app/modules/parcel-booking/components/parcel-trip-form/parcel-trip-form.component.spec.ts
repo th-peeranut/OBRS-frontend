@@ -28,6 +28,14 @@ describe('ParcelTripFormComponent', () => {
     createdAt: '',
     updatedAt: '',
   };
+  const stationC: StationApi = {
+    id: 3,
+    slug: 'c',
+    status: 'operational',
+    stopType: 'station',
+    createdAt: '',
+    updatedAt: '',
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -104,6 +112,99 @@ describe('ParcelTripFormComponent', () => {
 
     expect(from).toEqual([1]);
     expect(to).toEqual([2]);
+  });
+
+  // OBRS-1063. Deliberately NOT asserting that the dropdown shows its
+  // placeholder: it already did that before the fix (the dropdown cannot find
+  // the old id among the new options and falls back on its own), which is
+  // exactly what made the bug easy to miss. What used to disagree with the
+  // screen is the FormControl and the Next button, so those are what is
+  // asserted here -- each case is red against the code before this change.
+  describe('changing the route or the date clears the schedule (OBRS-1063)', () => {
+    function nextButton(): HTMLButtonElement {
+      return (fixture.nativeElement as HTMLElement).querySelector(
+        '.parcel-btn-primary'
+      ) as HTMLButtonElement;
+    }
+
+    function pickWholeTrip(): void {
+      (component as any).onFromStationSelect(stationA);
+      (component as any).onToStationSelect(stationB);
+      (component as any).onScheduleSelect({ id: 42, label: '08:00' });
+      fixture.detectChanges();
+    }
+
+    function expectCleared(): void {
+      expect(component['form'].get('scheduleId')?.value)
+        .withContext('the id from the previous route/date must not survive')
+        .toBe('');
+      expect((component as any).canGoNext).toBeFalse();
+      expect(nextButton().disabled).toBeTrue();
+    }
+
+    beforeEach(() => {
+      pickWholeTrip();
+      // The premise: everything below starts from a form that IS submittable.
+      expect(component['form'].get('scheduleId')?.value).toBe(42);
+      expect(nextButton().disabled).toBeFalse();
+    });
+
+    it('AC#1/#2: changing the origin clears it and disables Next', () => {
+      (component as any).onFromStationSelect(stationC);
+      fixture.detectChanges();
+
+      expectCleared();
+    });
+
+    it('AC#1/#2: changing the destination clears it and disables Next', () => {
+      (component as any).onToStationSelect(stationC);
+      fixture.detectChanges();
+
+      expectCleared();
+    });
+
+    // The dangerous one: `ParcelOnlineReqDto` carries no date, so a stale
+    // scheduleId from another day is a perfectly valid payload to the backend
+    // -- nothing downstream would have caught this one.
+    it('AC#5: changing the date clears it, and Next cannot submit the old round', () => {
+      const emitted: unknown[] = [];
+      component.next.subscribe((v) => emitted.push(v));
+
+      component['form'].get('date')?.setValue(new Date('2026-09-01'));
+      fixture.detectChanges();
+
+      expectCleared();
+
+      (component as any).onNext();
+      expect(emitted).toEqual([]);
+    });
+
+    // OBRS-1035's swap is one more route change, and it patches with
+    // `{ emitEvent: false }`, so it has to clear the schedule itself.
+    it('AC#1: swapping origin/destination clears it too', () => {
+      (
+        fixture.debugElement.query(By.css('app-station-swap-button button'))
+          .nativeElement as HTMLButtonElement
+      ).click();
+      fixture.detectChanges();
+
+      expectCleared();
+    });
+
+    // AC#3: the new route has no rounds at all, so no dropdown is even drawn
+    // -- "no schedules found" and an enabled Next used to sit on screen together.
+    it('AC#3: Next stays disabled when the new route has no schedules', () => {
+      (component as any).onFromStationSelect(stationC);
+      component.noSchedulesFound = true;
+      fixture.detectChanges();
+
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('app-dropdown-group-obrs').length
+      )
+        .withContext('no schedule dropdown is drawn -- only the two station pickers')
+        .toBe(2);
+      expectCleared();
+    });
   });
 
   // OBRS-1035 -- the third copy of the dead swap icon.
