@@ -443,6 +443,17 @@
     "ERROR_GENERAL": "An error occurred. Please try again."
   },
   "COMMON": {
+    "TITLES": {
+      "MR": "Mr.",
+      "MRS": "Mrs.",
+      "MISS": "Miss",
+      "MASTER": "Master",
+      "MISS_CHILD": "Miss (Child)",
+      "DR": "Dr.",
+      "PROF": "Professor",
+      "ASSOC_PROF": "Associate Professor",
+      "ASST_PROF": "Assistant Professor"
+    },
     "NOT_SPECIFIED": "Not specified",
     "THEME_TOGGLE": "Toggle dark mode",
     "CLEAR": "Clear",

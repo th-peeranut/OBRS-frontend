@@ -27,6 +27,12 @@ export interface BookingLookupTicket {
    * Full, UNMASKED — these are the passengers the caller entered on their own booking, and the
    * driver checks the name against an ID card at the door. See `PublicBookingTicketRespDto`.
    */
+  /**
+   * OBRS-1232: the title as a stable CODE ('MISS'), separate from the name and untranslated on the
+   * wire. Render it with the `titleLabel` pipe so switching language changes the word without a
+   * refetch. A legacy free-text value the migration left alone comes through verbatim (AC-5).
+   */
+  passengerTitle?: string | null;
   passengerName?: string | null;
   /** `null` on an OPEN-seating schedule (OBRS-321/483), not merely omitted. */
   seatNumber?: string | null;

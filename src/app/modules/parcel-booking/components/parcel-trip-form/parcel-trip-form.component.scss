@@ -61,6 +61,19 @@
   --station-swap-field-height: #{$field-height-inline-label};
 
   app-dropdown-group-obrs {
+    // OBRS-1587: the two halves split the card's column instead of standing at
+    // the 250px floor their own toggle carries. Measured on this card, the bar
+    // came to 501px inside a 704px column -- two halves of 250 and 252 over a
+    // 1px seam, never the equal pair the card assumed -- while the date was
+    // 704px and the trip field was 250px -- one left edge, three right edges,
+    // the shape OBRS-1562 closed on the booking card. Basis 0, so neither half
+    // may keep an intrinsic width; `--dropdown-toggle-width` is the knob
+    // OBRS-1038 added for this, because the toggle's own `width: auto` is its
+    // content's width and not the half it was handed.
+    flex: 1 1 0;
+    min-width: 0;
+    --dropdown-toggle-width: 100%;
+
     &:first-of-type {
       --dropdown-toggle-radius: #{$radius-xl} 0 0 #{$radius-xl};
       --dropdown-toggle-padding: #{$space-xs} var(--station-swap-clearance)
@@ -131,6 +144,13 @@
 
 .form-group-obrs {
   margin-top: 16px;
+}
+
+// OBRS-1587: the trip field fills the column too. Its group is a plain block, so
+// the toggle is the only box to widen -- 250px is the floor `.dropdown-toggle-
+// border` carries for a field standing on its own, not a width this one chose.
+.form-group-obrs > app-dropdown-group-obrs {
+  --dropdown-toggle-width: 100%;
 }
 
 // OBRS-1189, owner-approved follow-up. `--date-segment-radius` is the one thing

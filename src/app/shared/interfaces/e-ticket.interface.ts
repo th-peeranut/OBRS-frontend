@@ -1,5 +1,11 @@
 /** A single passenger row rendered on the e-ticket card. */
 export interface TicketPassenger {
+  /**
+   * OBRS-1232: the title as a stable CODE ('MISS'), separate from the name and untranslated on the
+   * wire. Render it with the `titleLabel` pipe so switching language changes the word without a
+   * refetch. A legacy free-text value the migration left alone comes through verbatim (AC-5).
+   */
+  title?: string | null;
   name: string;
   phone: string;
   seat: string;

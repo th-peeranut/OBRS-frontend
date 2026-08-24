@@ -43,6 +43,7 @@ import { invokeGetScheduleFilterApi } from '../../shared/stores/schedule-filter/
 import { selectScheduleFilter } from '../../shared/stores/schedule-filter/schedule-filter.selector';
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 import { selectProvinceWithStation } from '../../shared/stores/station/station.selector';
+import { TITLE_OPTIONS } from '../../shared/constants/title-options';
 
 /** The all-dashes leg. What a render with nothing in the store shows — the
  *  same placeholders the booking-level scalars held before OBRS-260.
@@ -210,18 +211,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
   private readonly routeTitlesBySlug = new Map<string, Partial<Record<Locale, string>>>();
 
   private readonly destroy$ = new Subject<void>();
-  private readonly titleMap: Record<number, { en: string; th: string; zh: string }> = {
-    1: { en: 'Mr.', th: 'นาย', zh: '先生' },
-    2: { en: 'Miss', th: 'นางสาว', zh: '小姐' },
-    3: { en: 'Mrs.', th: 'นาง', zh: '女士' },
-    4: { en: 'Master', th: 'เด็กชาย', zh: '小弟' },
-    5: { en: 'Miss (Child)', th: 'เด็กหญิง', zh: '小妹' },
-    6: { en: 'Dr.', th: 'ดร.', zh: '博士' },
-    7: { en: 'Professor', th: 'ศ.', zh: '教授' },
-    8: { en: 'Associate Professor', th: 'รศ.', zh: '副教授' },
-    9: { en: 'Assistant Professor', th: 'ผศ.', zh: '助理教授' },
-  };
-
   private readonly scheduleBooking$: Observable<ScheduleBooking | null>;
   private readonly booking$: Observable<BookingState | null>;
   private readonly scheduleFilter$: Observable<ScheduleFilter | null>;
@@ -605,15 +594,17 @@ export class ETicketComponent implements OnInit, OnDestroy {
   ): TicketPassenger[] {
     const passengers = passengerInfo ?? [];
     return passengers.map((passenger) => {
-      const title = this.resolveTitleLabel(passenger.title, locale);
       const nameParts = [
-        title,
         passenger.firstName,
         passenger.middleName,
         passenger.lastName,
       ].filter((part) => !!part && String(part).trim().length > 0);
 
       return {
+        // OBRS-1232: this used to resolve the label here, off a SECOND private title map that
+        // disagreed with title-options.ts on three Chinese words. The card carries the code and
+        // the `titleLabel` pipe renders it, so there is one catalogue and one composition rule.
+        title: TITLE_OPTIONS.find((option) => option.id === passenger.title)?.code ?? null,
         name: nameParts.join(' ').trim() || '-',
         phone: passenger.phoneNumber?.trim() || '-',
         seat: passenger.passengerSeat?.trim() || '-',
@@ -682,14 +673,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
     }
 
     return getStationFallbackLabel(station, locale);
-  }
-
-  private resolveTitleLabel(titleCode: number | null, locale: Locale): string {
-    if (titleCode == null) {
-      return '';
-    }
-
-    return this.titleMap[titleCode]?.[locale] || this.titleMap[titleCode]?.en || '';
   }
 
   private formatDate(dateTime: string | undefined, locale: Locale): string {
@@ -1015,6 +998,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
       const ticketId = Number.isFinite(ticket.id) && ticket.id > 0 ? ticket.id : null;
 
       return {
+        title: ticket.passengerTitle ?? null,
         name: ticket.passengerName?.trim() || '-',
         phone: this.findPhoneForPassenger(
           ticket,

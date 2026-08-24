@@ -178,7 +178,7 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
     };
 
     // OBRS-1231: a blank select becomes null, not ''. Trimmed first because the option
-    // values come from TITLE_OPTIONS' nameEnglish and a future edit could pad one.
+    // values come from TITLE_OPTIONS' `code` (OBRS-1232) and a future edit could pad one.
     const title = String(v.title ?? '').trim();
 
     const payload: WalkInCheckoutPayload = {

@@ -267,7 +267,7 @@ longer entitled to see, plus filter/export controls acting on them. -->
                   <tbody>
                     @for (ticket of journey.tickets; track ticket) {
                       <tr>
-                        <td>{{ ticket.passengerName }}</td>
+                        <td>{{ ticket.passengerTitle | titleLabel: ticket.passengerName }}</td>
                         <td>{{ ticket.passengerType?.label || ticket.passengerType?.code }}</td>
                         <td class="admin-emphasis">{{ ticket.seatNumber }}</td>
                         <td><code>{{ ticket.ticketNumber }}</code></td>

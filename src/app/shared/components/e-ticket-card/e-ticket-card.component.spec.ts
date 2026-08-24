@@ -8,6 +8,7 @@ import { BoardingQrService } from '../../services/boarding-qr.service';
 import { TicketService } from '../../../services/ticket/ticket.service';
 import { ETicketCardComponent } from './e-ticket-card.component';
 import { PhoneFormatPipe } from '../../pipes/phone-format.pipe';
+import { TitleLabelPipe } from '../../pipes/title-label.pipe';
 import { createTranslateStub } from '../../../testing/test-stubs';
 
 function buildLeg(overrides: Partial<TicketLeg> = {}): TicketLeg {
@@ -139,7 +140,7 @@ describe('ETicketCardComponent — boarding QR (OBRS-866)', () => {
 
     await TestBed.configureTestingModule({
       declarations: [ETicketCardComponent],
-      imports: [TranslateModule.forRoot(), PhoneFormatPipe],
+      imports: [TitleLabelPipe, TranslateModule.forRoot(), PhoneFormatPipe],
       // The component's own `providers: [BoardingQrService]` resolves
       // TicketService from here, so the real QR pipeline runs over the stub.
       providers: [{ provide: TicketService, useValue: ticketServiceStub }],
@@ -358,7 +359,7 @@ describe('ETicketCardComponent — leg rendering', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [ETicketCardComponent],
-      imports: [TranslateModule.forRoot(), PhoneFormatPipe],
+      imports: [TitleLabelPipe, TranslateModule.forRoot(), PhoneFormatPipe],
       providers: [{ provide: TicketService, useValue: createTicketServiceStub() }],
     }).compileComponents();
 
@@ -571,7 +572,7 @@ describe('ETicketCardComponent — per-passenger SEAT cell (OBRS-1510 AC-8)', ()
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [ETicketCardComponent],
-      imports: [TranslateModule.forRoot(), PhoneFormatPipe],
+      imports: [TitleLabelPipe, TranslateModule.forRoot(), PhoneFormatPipe],
       providers: [{ provide: TicketService, useValue: createTicketServiceStub() }],
     }).compileComponents();
 

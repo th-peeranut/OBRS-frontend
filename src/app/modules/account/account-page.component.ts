@@ -7,6 +7,7 @@ import { AlertService } from '../../shared/services/alert.service';
 import { MyAccountProfile } from '../../shared/interfaces/my-account.interface';
 import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
 import { trimmedRequiredValidator } from '../../shared/validators/trimmed-required.validator';
+import { TITLE_OPTIONS } from '../../shared/constants/title-options';
 import {
   THAI_MOBILE_PATTERN,
   formatThaiMobile,
@@ -57,6 +58,24 @@ export function thaiMobileValidator(control: AbstractControl): ValidationErrors 
     standalone: false
 })
 export class AccountPageComponent implements OnInit {
+  /**
+   * OBRS-1232 AC-6: the nine codes the dropdown offers.
+   */
+  protected readonly titleOptions = TITLE_OPTIONS;
+
+  /**
+   * OBRS-1232 AC-5: this field was free text for months, so a row can hold a value that is not one
+   * of the nine codes ('คุณ', a typo) — the migration deliberately left those alone. Without an
+   * extra option carrying it, opening the form on such a row would show a blank select and a Save
+   * that changed nothing else would WIPE the value. That is the OBRS-1230 failure shape (a modal
+   * guessing at data it could not represent), so it is pinned here rather than left to chance.
+   */
+  protected get legacyTitleValue(): string | null {
+    const current = String(this.profileForm.get('title')?.value ?? '').trim();
+    if (!current) return null;
+    return TITLE_OPTIONS.some((option) => option.code === current) ? null : current;
+  }
+
   currentEmail: string | null = null;
   isChangeEmailDialogOpen = false;
   isCloseAccountDialogOpen = false;
@@ -86,7 +105,8 @@ export class AccountPageComponent implements OnInit {
     // this shape (OBRS-409) and is a strict subset of what the server accepts, so nothing the server
     // would have taken is rejected here.
     this.profileForm = this.fb.group({
-      title: ['', [Validators.minLength(2), Validators.maxLength(50)]],
+      // OBRS-1232: minLength went with the free-text input - see the admin user form for why.
+      title: ['', [Validators.maxLength(50)]],
       firstName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
       middleName: ['', [Validators.maxLength(50)]],
       lastName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
