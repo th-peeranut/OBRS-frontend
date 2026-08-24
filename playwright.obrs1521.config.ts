@@ -14,7 +14,10 @@ import { defineConfig, devices } from '@playwright/test';
  * ASCII-only source.
  */
 
-const PORT = process.env['E2E_OBRS1521_PORT'] ?? '4232';
+// OBRS-1531: the default was 4232, which `playwright.obrs775.config.ts` also defaults
+// to. Separate env vars do not help when both lanes are run the documented way, with
+// neither var set — the second one just attaches to the first one's server.
+const PORT = process.env['E2E_OBRS1521_PORT'] ?? '4245';
 
 export default defineConfig({
   testDir: './e2e/tests',
