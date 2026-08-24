@@ -373,7 +373,47 @@ describe('StaffSchedulesPageComponent — OBRS-667 owner-only cancel gate (DOM)'
     expect(deleteSpy).toHaveBeenCalledWith(2);
     expect(cancelSpy).not.toHaveBeenCalled();
   });
+
+  // OBRS-1584, through the real p-datePicker rather than the handler: emptying
+  // the field must not lift the day window, and a date typed key by key must
+  // still land. Those two pull against each other — PrimeNG reports every
+  // unparseable prefix as `null`, so a fix that reacts to `null` by writing a
+  // new date back into the model would repaint the input mid-word and make
+  // keyboard entry impossible.
+  it('emptying the date input keeps the day window, and a typed date still filters', () => {
+    const { fixture, component } = setupFixture(true);
+    (component as any).rows = [
+      { ...ROW, id: 1, tripId: '#SCH-1', departure: '2026-08-04T07:00:00+07:00' },
+      { ...ROW, id: 2, tripId: '#SCH-2', departure: '2026-08-23T18:00:00+07:00' },
+      { ...ROW, id: 3, tripId: '#SCH-3', departure: '2026-08-23T06:30:00+07:00' },
+    ];
+    (component as any).onDateChange(new Date(2026, 7, 23));
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('.p-datepicker input');
+    expect(input).withContext('the header date input must render').not.toBeNull();
+    expect(input.readOnly).withContext('keyboard date entry must stay available').toBe(false);
+
+    typeInto(input, '');
+    fixture.detectChanges();
+    expect((component as any).filteredRows.map((r: ScheduleRow) => r.id))
+      .withContext('an emptied field must not fall back to every trip')
+      .toEqual([3, 2]);
+
+    for (let i = 1; i <= '04/08/2026'.length; i++) typeInto(input, '04/08/2026'.slice(0, i));
+    fixture.detectChanges();
+    expect((component as any).filteredRows.map((r: ScheduleRow) => r.id))
+      .withContext('the typed day must be the one filtered on')
+      .toEqual([1]);
+  });
 });
+
+// PrimeNG only reads the input when it saw a keydown first (its IE11 guard).
+function typeInto(input: HTMLInputElement, value: string): void {
+  input.dispatchEvent(new KeyboardEvent('keydown'));
+  input.value = value;
+  input.dispatchEvent(new Event('input'));
+}
 
 
 // OBRS-33: the list used to render every schedule the API returned, in id
@@ -403,10 +443,14 @@ describe('StaffSchedulesPageComponent - OBRS-33 one day at a time, soonest first
     expect(component.filteredRows.length).toBe(0);
   });
 
-  it('clearing the date shows every trip, still soonest first', () => {
+  // OBRS-1584: this spec used to assert the opposite — clearing the field
+  // rendered every trip the API returned, which is the OBRS-33 symptom one
+  // keystroke away. The day already in effect survives instead.
+  it('clearing the date keeps the day already in effect, never every trip', () => {
     const component = componentWithTrips();
+    component.onDateChange(new Date(2026, 7, 23));
     component.onDateChange(null);
-    expect(component.filteredRows.map((r: ScheduleRow) => r.id)).toEqual([1, 3, 2]);
+    expect(component.filteredRows.map((r: ScheduleRow) => r.id)).toEqual([3, 2]);
   });
 
   it('the date filter composes with the existing route filter', () => {
