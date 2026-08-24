@@ -88,6 +88,17 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
     return formatDisplayDateTime(value, this.translate.currentLang);
   }
 
+  // Label the stop pair in the current UI language (OBRS-1237). Same reason as
+  // displayDateTime above: the store used to bake 'en' into the row, so a Thai
+  // back office read "Nong chak -> Bts mo chit". getAdminLookupLabel resolves
+  // the locale, then any translation present, then the slug; '-' covers a stop
+  // that carries none of them.
+  protected routeLabel(booking: BookingRow): string {
+    const from = getAdminLookupLabel(booking.fromStop, this.translate.currentLang) ?? '-';
+    const to = getAdminLookupLabel(booking.toStop, this.translate.currentLang) ?? '-';
+    return `${from} -> ${to}`;
+  }
+
   ngOnInit(): void {
     // Render the cached bookings instantly on re-entry (skipping the payment
     // N+1 burst), then revalidate in the background.
@@ -527,7 +538,7 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
       [
         row.bookingId,
         row.customer,
-        row.route,
+        this.routeLabel(row),
         // Rows carry raw ISO now (OBRS-178); format for the export too.
         this.displayDateTime(row.bookingDate),
         this.displayDateTime(row.departureTime),
