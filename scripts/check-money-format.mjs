@@ -48,6 +48,16 @@
  * call sites format plain counts and percentages, which are not money and must
  * not be routed through a money formatter.
  *
+ * WHAT THIS GATE CANNOT SEE, stated because it has already cost this card three
+ * passes. It recognises money by the FORM used to render it. A `.toFixed(2)` or a
+ * `${n}` concat assigned to a field and interpolated by a template is
+ * indistinguishable here from a percentage, a distance or a file size - and
+ * `.toFixed` has legitimate non-money callers all over this tree, so it cannot
+ * simply be banned. The PromptPay amount, the admin fare matrix and a parcel
+ * paid-amount column all shipped that way while this file printed OK. So its
+ * success line says `no banned money format found`, not `every money-rendering
+ * site goes through formatMoney()` - a claim it has no way to make.
+ *
  * Self-tests its own matchers before trusting them with the real tree - a
  * scanner that has quietly stopped matching reports "one format everywhere",
  * which is the exact green-and-worthless result this file exists to prevent.
@@ -77,6 +87,8 @@ const BARE_UNIT_KEY_RE = /\bBAHT_UNIT\b/g;
  * for the five keys that got past the name-based ban.
  */
 const MONEY_WORD_VALUE_RE = /"[A-Za-z0-9_]+"\s*:\s*"(?:฿|THB|บาท|baht|泰铢)[^"]*"/gi;
+/** How many banned forms this scanner actually checks - printed, so the claim is bounded. */
+const BANNED_FORM_COUNT = 5;
 /** A `{{x}}`/`{0}` placeholder, either interpolation dialect. */
 const PLACEHOLDER = String.raw`(?:\{\{[^{}]*\}\}|\{\d+\})`;
 /** The unit words, in every language this product ships. */
@@ -295,4 +307,14 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('check-money-format: OK - every money-rendering site goes through formatMoney().');
+// Says what it PROVED, not what it wishes were true. The four banned forms above are
+// the ones this scanner can see; a `.toFixed(2)` or a string concat that reaches a
+// template is money it cannot recognise as money, and three separate passes of
+// OBRS-1592 shipped exactly that while this line read "every money-rendering site".
+// A gate that overstates its own coverage is worse than one with a known gap, because
+// the overstatement is what stops anyone looking.
+console.log(
+  `check-money-format: OK - no banned money format found (${BANNED_FORM_COUNT} forms checked ` +
+    `across src/app and public/i18n; a raw .toFixed()/concat reaching a template is NOT ` +
+    `detectable here - see the header).`
+);

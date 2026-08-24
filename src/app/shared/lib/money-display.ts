@@ -1,6 +1,9 @@
 /**
- * The single source of truth for displaying an amount of money to users
- * (OBRS-1592). The standard shape puts the unit where each language actually
+ * The one place a money amount is turned into a string for a user (OBRS-1592).
+ * Every render site found by three passes of this card routes through it, and
+ * `scripts/check-money-format.mjs` keeps the four forms it can SEE from coming
+ * back - it cannot see a `.toFixed()` that reaches a template, so "single source
+ * of truth" is the intent here, not a proven property of the tree. The standard shape puts the unit where each language actually
  * reads it, and shows satang only when there are satang:
  *   formatMoney(200,    'th') -> `200 บาท`      · formatMoney(1850, 'th') -> `1,850 บาท`
  *   formatMoney(199.5,  'th') -> `199.50 บาท`

@@ -4313,3 +4313,15 @@ Reduced the block to a POINTER: keep the correction (COLLECTING vs SENDING) + pr
 (OBRS-1206/1539) + a qualitative "a few seconds", and defer the measurements/alternatives
 to `setSuspended` and ADR-0034 §10. Rule: a comment that documents someone else's measured
 fact should cite the owner, not restate the number — restated numbers drift.
+
+## OBRS-1592 (Scrutinize round 3) — enumerate the WHOLE money-render family in a file, not the "action" ones
+`parcel-verify-list-page.component.ts` had THREE `.toFixed(2)` money sites, not two. The round-2
+claim "both parcel-verify-list sites converted" counted only the two REJECT amounts (confirm
+dialog + toast) and missed `paidAmountLabel()` at line 128 — the paid-amount COLUMN, same
+`row.amount` field, rendered on every row via `{{ paidAmountLabel(row) }}`. Self-fixed to
+`formatMoney(row.amount, this.translate.currentLang)` (formatMoney already imported).
+Rule: when converting a file's money renders, grep the whole file for `.toFixed`/`toLocaleString`
+FIRST and convert every display site; the "money-moving action" sites are the ones you notice, the
+quiet column/label render is the one that ships. A `check-money-format` gate that only scans for
+Intl-currency/`| currency`/unit-word-i18n CANNOT see a `.toFixed(2)`-to-template render, so green
+gate + green tests is not proof the family is done.

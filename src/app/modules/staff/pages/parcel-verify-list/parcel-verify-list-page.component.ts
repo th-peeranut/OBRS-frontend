@@ -126,7 +126,10 @@ export class ParcelVerifyListPageComponent implements OnInit, OnDestroy {
   }
 
   protected paidAmountLabel(row: ParcelDeliveryListItemDto): string {
-    return row.amount != null ? row.amount.toFixed(2) : '-';
+    // OBRS-1592: the paid-amount column is money too — the same `row.amount`
+    // the reject confirm/toast below now format. `.toFixed(2)` printed `200.00`,
+    // no unit and no thousand separator, on every row of the list.
+    return row.amount != null ? formatMoney(row.amount, this.translate.currentLang) : '-';
   }
 
   protected openVerifyDialog(row: ParcelDeliveryListItemDto): void {
