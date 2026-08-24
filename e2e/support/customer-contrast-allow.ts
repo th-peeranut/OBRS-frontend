@@ -18,6 +18,12 @@
  *     entries to be FIXED rather than tolerated.
  *   * An entry that stops matching anything FAILS the gate. A list that rots is
  *     worse than no list, because it reads as a considered decision.
+ *   * ...but "stopped matching" is TWO verdicts, and only one of them says to
+ *     delete (OBRS-1435). The gate now separates them: if it scored the element
+ *     and the pair moved, that is a repaint or a fix and the entry goes. If it
+ *     never scored the element at all, it says so and withholds the verdict --
+ *     an element nobody measured is not evidence that anybody paid. Obeying the
+ *     old single message on a flaky run would have retired a live OBRS-1424 debt.
  *
  * HOW THIS LIST WAS ARRIVED AT, since "53 known failures" deserves an argument
  * rather than an assertion:
