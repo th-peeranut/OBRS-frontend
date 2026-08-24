@@ -21,6 +21,7 @@
           dateFormat="dd/mm/yy"
           [ngModel]="selectedDate"
           (ngModelChange)="onDateChange($event)"
+          (onBlur)="onDateBlur()"
           [showIcon]="true"
           [iconDisplay]="'input'"
           [placeholder]="'STAFF.SELL.DATE_PLACEHOLDER' | translate"
