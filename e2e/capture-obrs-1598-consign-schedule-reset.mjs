@@ -313,7 +313,7 @@ function assertPremise(state, arm) {
 {
   const context = await browser.newContext({ viewport: { width: 1400, height: 1200 } });
   const page = await context.newPage();
-  await openConsignPage(page);
+  const { scheduleQueryDates } = await openConsignPage(page);
 
   await page.locator('[data-testid="parcel-consign-mode-carry-on"]').click();
   await page.waitForTimeout(500);
@@ -328,6 +328,12 @@ function assertPremise(state, arm) {
 
   await pickTomorrow(page);
   const afterDate = await readState(page, 'carry-on: date moved to D2');
+  // Its own positive control, not the consigned arm's. Relying on that one to
+  // abort the whole run first is real but implicit — it would quietly stop being
+  // true the day someone reorders the arms.
+  if (scheduleQueryDates.at(-1) !== D2) {
+    throw new Error(`carry-on: the date picker never moved the query to ${D2} — saw ${JSON.stringify(scheduleQueryDates)}`);
+  }
   await shot(page, '5-carryon-after-date-change');
 
   results.arms.carryOn = {
