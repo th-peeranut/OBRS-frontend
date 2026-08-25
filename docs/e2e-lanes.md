@@ -308,11 +308,12 @@ port clash — it attaches to whatever already answers and runs your specs again
 Measured 2026-08-22 (OBRS-773): a lane run reported `199 passed` onto a card, and the tree it
 had measured was another worktree's. `e2e/support/lane-tree-guard.ts` started as the gate
 config's `globalSetup` alone and reached 2 configs; OBRS-1611 wired it into all 37 that
-declare a `webServer`, and OBRS-1616 added the 8 that declare no server at all and simply
+declare a `webServer`, and OBRS-1616 added the 9 that declare no server at all and simply
 point `baseURL` at a port somebody started by hand — the same exposure, reached by a
 different route. Rule 7 of `scripts/check-e2e-lanes.mjs` fails the build if a new config in
-either shape does not wire it. **45 of 53** are covered; the 8 that are not are listed at the
-end of this section. Every run now opens with:
+either shape does not wire it, and it resolves `baseURL: BASE_URL` as well as the literal
+spellings, so the gate is not weaker than the guard it enforces. **46 of 53** are covered;
+the 7 that are not are listed at the end of this section. Every run now opens with:
 
 ```
 [lane-tree] tree C:\Users\thpee\Desktop\workshop\OBRS-frontend-wt-obrs-1531
@@ -337,12 +338,12 @@ six full-stack lanes are read off the first project's loopback `baseURL` instead
 down on CI (`reuseExistingServer` is false there, one lane per runner) and on any non-Windows
 box, and prints that it did rather than going quiet.
 
-**Eleven lanes are allowed to attach to somebody else's server**, because that is what they
+**Twelve lanes are allowed to attach to somebody else's server**, because that is what they
 are for: `obrs1258qa`, `obrs1388qa`, `obrs1388before`, `obrs433`, `obrs1298qa`, `obrs1308`,
 `obrs1333`, `obrs703qa`, `obrs766` and `obrs960qa` all drive the local stack an operator
-started by hand (:4200 in every case), and `obrs769capture` points `OBRS769_PORT` at a
-throwaway worktree at `origin/dev` for its BEFORE phase. Each says so in its own header. They
-declare
+started by hand (:4200 in every case); `obrs769capture` points `OBRS769_PORT` at a throwaway
+worktree at `origin/dev` for its BEFORE phase; and `obrs742` serves each of its two trees on
+:4200 in turn, one invocation each. Each says so in its own header. They declare
 
 ```ts
 metadata: { laneTree: 'attach-to-operator-stack' },
@@ -355,16 +356,22 @@ the other default costs a picture of the wrong tree that nobody does. `obrs575` 
 lane of the eight OBRS-1616 wired that gets no marker: :4575 is the server its own tree
 starts, so a foreign tree answering it is a mistake, not a plan.
 
-**Eight lanes are outside the guard, decided rather than overlooked** (OBRS-1616 AC-5), and
+**Seven lanes are outside the guard, decided rather than overlooked** (OBRS-1616 AC-5), and
 each says why in its own header. `obrs874census` measures the deployed SIT site and `obrs617`
 is pure API with no browser at all — neither has a local server to attribute, and rule 7 skips
-them because their `baseURL` is not a loopback port. The other six — `obrs391`, `obrs702`,
-`obrs722`, `obrs1331`, `obrs1432`, `obrs742` — are BEFORE/AFTER capture lanes that serve **two
-trees**, whose ports live as full URLs inside the spec rather than in the config. The guard
+them because their `baseURL` is not a loopback port. The other five — `obrs391`, `obrs702`,
+`obrs722`, `obrs1331`, `obrs1432` — are BEFORE/AFTER capture lanes that serve **two trees at
+once**, on two ports written as full URLs inside the spec rather than in the config. The guard
 attributes one port; a banner naming the runner's tree would be right for the AFTER half and
 wrong for the BEFORE, and a wrong attribution is worse than none. If a future lane of that
 shape needs covering, the missing piece is a per-navigation attribution, not another
 `globalSetup`.
+
+**"Two trees" is not by itself a reason to skip the guard** — `obrs742` is the counter-example
+and was in that list until OBRS-1616 was reviewed. Its two trees take turns on ONE port across
+two separate invocations, so within any one run there is a single server to attribute, which
+is exactly what the guard does. The question to ask is not "does this card compare two trees?"
+but **"how many ports does one invocation touch?"**.
 
 ## Known gaps
 

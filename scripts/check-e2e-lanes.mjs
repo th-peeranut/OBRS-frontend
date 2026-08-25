@@ -157,7 +157,28 @@ const HAS_WEBSERVER = /^\s*webServer\s*:/m;
 // An explicit port is required, in either spelling this repo uses (`:4200` and
 // `:${PORT}`): `playwright.obrs874census.config.ts` points at the deployed SIT site and
 // `playwright.obrs617.config.ts` at no site at all, and neither has a local server to name.
-const LOOPBACK_BASE_URL = /baseURL\s*:\s*[`'"]https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]):(?:\d|\$\{)/;
+const LOOPBACK_URL = /[`'"]https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]):(?:\d|\$\{)/;
+// `}` ends the value as surely as a comma does: `use: { baseURL: BASE_URL }` is one of the
+// spellings here, and reading the brace as part of the name is how this check first shipped
+// matching nothing on the very shape it was added for.
+const BASE_URL_VALUE = /baseURL\s*:\s*([^,\n}]+)/g;
+
+// `baseURL: BASE_URL` is the third spelling, and reading only the literal ones would leave
+// the gate WEAKER than the guard it enforces: `lanePort()` resolves the value at runtime,
+// so it attributes such a lane while this check would not have asked for the wiring. Eight
+// configs are written that way today and every one of them also declares a webServer, so
+// nothing leaks yet -- the shape is only one no-webServer sibling away from leaking.
+function pointsAtLocalPort(src) {
+  for (const [, raw] of src.matchAll(BASE_URL_VALUE)) {
+    const value = raw.trim();
+    if (LOOPBACK_URL.test(value)) return true;
+    const ident = value.match(/^([A-Za-z_$][\w$]*)$/);
+    if (!ident) continue;
+    const decl = src.match(new RegExp(`\\b(?:const|let|var)\\s+${ident[1]}\\s*=([^;]*);`));
+    if (decl && LOOPBACK_URL.test(decl[1])) return true;
+  }
+  return false;
+}
 // A config may reach the guard through the file its own `globalSetup` names
 // (playwright.config.ts -> e2e/global-setup.ts) or by spreading a base config that wires
 // it (playwright.obrs769.config.ts -> playwright.gate.config.ts). Both are real wiring and
@@ -480,7 +501,7 @@ for (const file of readdirSync(ROOT)) {
   if (!/^playwright.*\.config\.ts$/.test(file)) continue;
   const src = readFileSync(join(ROOT, file), 'utf8');
   const declaresServer = HAS_WEBSERVER.test(src);
-  if (!declaresServer && !LOOPBACK_BASE_URL.test(src)) continue;
+  if (!declaresServer && !pointsAtLocalPort(src)) continue;
 
   if (!wiresGuard(file)) {
     fail(
