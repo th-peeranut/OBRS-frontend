@@ -980,8 +980,9 @@ function parcelPolicyFingerprint(json) {
 //    Asserted as a property that must HOLD, not as a denylist of characters seen once:
 //    in this bundle a question mark is punctuation, so it always ENDS a clause. It never
 //    sits glued between two letters and it never opens a segment the way a bullet does.
-//    Measured on the fixed bundle: 0 violations across 3 x 3,458 keys, so the property is
-//    true today and any new one is a regression, not a pre-existing exception.
+//    Measured on the fixed bundle: 0 violations across all 3,498 string leaves in each of the
+//    three files -- the 3,458 keys, with the five CALENDAR.* arrays expanded to the 45 strings
+//    they hold. The property is true today, so any new one is a regression, not an exception.
 //    Both shapes were tightened by scrutinize, each for a case it got wrong:
 //    digits are IN the glued class because policy text is full of them and "the 1990?s
 //    rate" would otherwise pass; the bullet shape anchors on `&emsp;` rather than on any
@@ -993,11 +994,16 @@ const LETTER = 'A-Za-z0-9\\u0E00-\\u0E7F\\u4E00-\\u9FFF';
 const MOJIBAKE_GLUED = new RegExp(`[${LETTER}]\\?[${LETTER}]`);
 const MOJIBAKE_AS_BULLET = /(^|>|&emsp;)\s*\?\s/;
 
-/** Flatten a translation object into [dotted key, string value] pairs. */
+/** Flatten a translation object into [dotted key, string value] pairs.
+ *  Array members are pairs too: CALENDAR.dayNames and its four siblings hold their strings in
+ *  arrays, and the key-set `flatten` above stops at the array because a key set is all it needs.
+ *  Stopping here as well would leave 15 customer-visible strings unscanned while the gate said
+ *  it had checked everything. */
 function flattenValues(obj, prefix = '', out = []) {
   for (const [k, v] of Object.entries(obj)) {
     const key = prefix ? `${prefix}.${k}` : k;
-    if (v !== null && typeof v === 'object' && !Array.isArray(v)) flattenValues(v, key, out);
+    if (Array.isArray(v)) v.forEach((s, i) => typeof s === 'string' && out.push([`${key}[${i}]`, s]));
+    else if (v !== null && typeof v === 'object') flattenValues(v, key, out);
     else if (typeof v === 'string') out.push([key, v]);
   }
   return out;
