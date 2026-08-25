@@ -174,6 +174,10 @@ describe('ExpensesPageComponent', () => {
       ]);
       const component = makeComponent(store);
       component.ngOnInit();
+      // OBRS-1626: the page now opens on the CURRENT month, and these rows are
+      // dated 2026-07 - pin the month so this test keeps testing the sentinel.
+      (component as any).onYearChange('2026');
+      (component as any).onMonthChange('7');
 
       (component as any).onVehicleFilterChange(VEHICLE_CENTRAL_SENTINEL);
 
@@ -183,7 +187,7 @@ describe('ExpensesPageComponent', () => {
     });
   });
 
-  describe('category / date-range filters (client-side, no network call)', () => {
+  describe('category / month filters (client-side, no network call)', () => {
     it('narrows by category without calling the store', () => {
       const store = makeExpensesStoreStub([
         expense({ id: 1, category: 'FUEL' }),
@@ -191,6 +195,8 @@ describe('ExpensesPageComponent', () => {
       ]);
       const component = makeComponent(store);
       component.ngOnInit();
+      (component as any).onYearChange('2026');
+      (component as any).onMonthChange('7');
       store.setVehicleFilter.calls.reset();
 
       (component as any).onCategoryFilterChange('FUEL');
@@ -199,19 +205,72 @@ describe('ExpensesPageComponent', () => {
       expect(store.setVehicleFilter).not.toHaveBeenCalled();
     });
 
-    it('narrows by date range without calling the store', () => {
+    // OBRS-1626 AC-2: opening the page used to render every row in the system.
+    it('opens on the CURRENT month, not on everything', () => {
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const store = makeExpensesStoreStub([
-        expense({ id: 1, expenseDate: '2026-07-01' }),
+        expense({ id: 1, expenseDate: '2024-03-11' }),
+        expense({ id: 2, expenseDate: `${thisMonth}-05` }),
+      ]);
+      const component = makeComponent(store);
+      component.ngOnInit();
+
+      expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([2]);
+      expect(store.setVehicleFilter).not.toHaveBeenCalled();
+    });
+
+    it('narrows to the picked year+month without calling the store', () => {
+      const store = makeExpensesStoreStub([
+        expense({ id: 1, expenseDate: '2026-06-30' }),
         expense({ id: 2, expenseDate: '2026-07-20' }),
+        expense({ id: 3, expenseDate: '2026-08-01' }),
       ]);
       const component = makeComponent(store);
       component.ngOnInit();
       store.setVehicleFilter.calls.reset();
 
-      (component as any).onFromDateChange(new Date(2026, 6, 10));
+      (component as any).onYearChange('2026');
+      (component as any).onMonthChange('7');
 
       expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([2]);
       expect(store.setVehicleFilter).not.toHaveBeenCalled();
+    });
+
+    // OBRS-1626: the dropdown's own placeholder row emits '' when clicked, and
+    // `Number('')` is 0, which `new Date` reads as the year 1900 - the table
+    // would empty itself with no explanation.
+    it('ignores the empty value the dropdown placeholder emits', () => {
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const store = makeExpensesStoreStub([expense({ id: 1, expenseDate: `${thisMonth}-05` })]);
+      const component = makeComponent(store);
+      component.ngOnInit();
+
+      (component as any).onYearChange('');
+      (component as any).onMonthChange('');
+
+      expect((component as any).selectedYear).toBe(String(now.getFullYear()));
+      expect((component as any).selectedMonth).toBe(String(now.getMonth() + 1));
+      expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([1]);
+    });
+
+    // OBRS-1626: /admin/reports builds its year list as `period.year - 2 + i`,
+    // which offers two years the expense data cannot reach. Copying that here
+    // was the trap; this test is what makes copying it fail.
+    it('offers the years the data actually has, and no future year', () => {
+      const store = makeExpensesStoreStub([
+        expense({ id: 1, expenseDate: '2024-03-11' }),
+        expense({ id: 2, expenseDate: '2025-11-02' }),
+      ]);
+      const component = makeComponent(store);
+      component.ngOnInit();
+
+      const years = (component as any).yearOptions.map((option: any) => option.code);
+      expect(years).toContain('2024');
+      expect(years).toContain('2025');
+      expect(years).toContain(String(new Date().getFullYear()));
+      expect(years).not.toContain(String(new Date().getFullYear() + 1));
     });
   });
 
