@@ -14,6 +14,8 @@
         id="senderPhone"
         class="form-control"
         type="text"
+        inputmode="tel"
+        autocomplete="tel"
         formControlName="senderPhone"
         (focus)="onPhoneFocus('senderPhone')"
         (blur)="onPhoneBlur('senderPhone')"
@@ -53,6 +55,7 @@
             id="recipientPhone"
             class="form-control"
             type="text"
+            inputmode="tel"
             formControlName="recipientPhone"
             (focus)="onPhoneFocus('recipientPhone')"
             (blur)="onPhoneBlur('recipientPhone')"
@@ -98,7 +101,7 @@
             {{ "PARCEL_BOOKING.DETAILS.QUOTE_LOADING" | translate }}
           }
           @if (!isLoadingQuote && quote; as q) {
-            {{ "PARCEL_BOOKING.DETAILS.QUOTE_AMOUNT" | translate: { amount: q.amount } }}
+            {{ "PARCEL_BOOKING.DETAILS.QUOTE_AMOUNT" | translate: { amount: formatMoney(q.amount) } }}
           }
           @if (!isLoadingQuote && quoteErrorKey; as err) {
             <div class="text-error">{{ err | translate }}</div>

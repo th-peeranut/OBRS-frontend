@@ -1,19 +1,41 @@
 <div class="admin-dropdown" [class.is-open]="isOpen" [class.is-disabled]="disabled">
-  <button
-    type="button"
-    class="admin-dropdown-trigger"
-    [disabled]="disabled"
-    [attr.aria-expanded]="isOpen"
-    (click)="toggleDropdown()"
-    >
-    <span class="admin-dropdown-value">
-      @if (icon) {
-        <span class="material-symbols-outlined admin-dropdown-leading" [attr.translate]="'no'">{{ icon }}</span>
-      }
-      <span [class.is-placeholder]="!selectedLabel">{{ selectedLabel || placeholder }}</span>
-    </span>
-    <span class="material-symbols-outlined admin-dropdown-arrow" [attr.translate]="'no'">expand_more</span>
-  </button>
+  <!-- OBRS-1576 AC5: two triggers, one list. The button below is the control as it has always been
+  and is what all 66 existing call sites still render; the input above it appears only for a caller
+  that asked for `[searchable]`. Kept as two elements rather than one that switches tag by binding,
+  because a button and a text input differ in what a screen reader announces and in what typing
+  means, and pretending otherwise is how one of the two ends up subtly wrong. -->
+  @if (searchable) {
+    <input
+      type="text"
+      class="admin-dropdown-trigger admin-dropdown-search-trigger"
+      data-testid="admin-dropdown-search"
+      role="combobox"
+      autocomplete="off"
+      [disabled]="disabled"
+      [placeholder]="placeholder"
+      [value]="triggerText"
+      [attr.aria-expanded]="isOpen"
+      (input)="onQueryInput($any($event.target).value)"
+      (keydown)="onTriggerKeydown($event)"
+      (click)="onTriggerClick()"
+      />
+  } @else {
+    <button
+      type="button"
+      class="admin-dropdown-trigger"
+      [disabled]="disabled"
+      [attr.aria-expanded]="isOpen"
+      (click)="toggleDropdown()"
+      >
+      <span class="admin-dropdown-value">
+        @if (icon) {
+          <span class="material-symbols-outlined admin-dropdown-leading" [attr.translate]="'no'">{{ icon }}</span>
+        }
+        <span [class.is-placeholder]="!selectedLabel">{{ selectedLabel || placeholder }}</span>
+      </span>
+      <span class="material-symbols-outlined admin-dropdown-arrow" [attr.translate]="'no'">expand_more</span>
+    </button>
+  }
 
   @if (isOpen) {
     <div class="admin-dropdown-menu">
@@ -22,6 +44,7 @@
           type="button"
           class="admin-dropdown-option"
           [class.is-selected]="hasEmptySelection"
+          [class.is-active]="isActive(-1)"
           (click)="selectOption('')"
           >
           <span>{{ placeholder }}</span>
@@ -32,11 +55,12 @@
           }
         </button>
       }
-      @for (option of options; track trackByOption($index, option)) {
+      @for (option of visibleOptions; track trackByOption($index, option); let i = $index) {
         <button
           type="button"
           class="admin-dropdown-option"
           [class.is-selected]="isSelected(option)"
+          [class.is-active]="isActive(i)"
           (click)="selectOption(option)"
           >
           <span>{{ getOptionLabel(option) }}</span>
@@ -46,6 +70,14 @@
             </span>
           }
         </button>
+      }
+      <!-- OBRS-1576: a filter that matches nothing must SAY so. Without this the panel collapses to
+      the placeholder row alone, which reads as "this list is empty" — and the owner's next move is
+      to go and add a vehicle that already exists. -->
+      @if (searchable && visibleOptions.length === 0) {
+        <p class="admin-dropdown-empty" data-testid="admin-dropdown-empty">
+          {{ 'ADMIN.COMMON.NO_MATCH' | translate }}
+        </p>
       }
     </div>
   }

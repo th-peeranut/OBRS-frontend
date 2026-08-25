@@ -10,7 +10,10 @@ import {
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
-import { AdminApiService } from '../../../../../services/admin/admin-api.service';
+import {
+  AdminApiService,
+  AdminExpensePayeeDto,
+} from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import { trimmedRequiredValidator } from '../../../../../shared/validators/trimmed-required.validator';
@@ -75,8 +78,18 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
    * silent, worse one.
    */
   @Input() isAdmin = false;
+  /** OBRS-1577: the ACTIVE rows of the payee registry, for the "จ่ายให้ใคร" picker. Empty is a
+   * working state, not a broken one — an operator with no payees on record yet gets a picker whose
+   * only offer is "add the one I am typing", which is exactly how the registry gets populated. */
+  @Input() payeeOptions: AdminExpensePayeeDto[] = [];
+  /** OBRS-1577: whether this caller may CREATE a payee from here. False for an admin — the backend
+   * refuses that one operation alone (see `ExpensesPageComponent.canCreatePayee`). */
+  @Input() canCreatePayee = true;
   @Input() reloadStructure!: () => Promise<void>;
   @Output() closed = new EventEmitter<void>();
+  /** OBRS-1577: forwarded up from the picker so the page can revalidate the shared registry cache —
+   * a payee added from inside one bill must be offered on the next bill without a page reload. */
+  @Output() payeeCreated = new EventEmitter<AdminExpensePayeeDto>();
 
   protected readonly VEHICLE_CENTRAL_SENTINEL = VEHICLE_CENTRAL_SENTINEL;
   protected readonly ITEM_DESCRIPTION_MAX_LENGTH = ITEM_DESCRIPTION_MAX_LENGTH;
@@ -117,6 +130,10 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
       expenseDate: [null, [Validators.required]],
       receiptNo: ['', [Validators.maxLength(100)]],
       paidBy: ['', [Validators.maxLength(255)]],
+      // OBRS-1577 AC1: optional by design. Every bill written before this card has no payee, and an
+      // owner who cannot remember who a bill went to must be able to say so by leaving it alone —
+      // a required field here would be answered with whichever name is nearest the top.
+      payeeId: [null],
       note: ['', [Validators.maxLength(500)]],
       // OBRS-1374 AC4: starts EMPTY and may stay empty - a bill with no breakdown must save
       // exactly as it did before this card.
@@ -175,6 +192,19 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
 
   protected get showCategoryOtherLabel(): boolean {
     return this.expenseForm.get('category')?.value === 'OTHER';
+  }
+
+  /** OBRS-1577: the bill's category, fed live to the picker so the type it would create is always
+   * the one the bill is actually filed under (owner decision 1, 2026-08-24). */
+  protected get selectedCategory(): string {
+    return String(this.expenseForm.get('category')?.value ?? '');
+  }
+
+  /** OBRS-1577: the payee name carried on the row being edited. The picker offers ACTIVE payees
+   * only, so without this a bill paid to a since-retired garage would render as an empty field —
+   * which reads as "no payee" and is one save away from becoming true. */
+  protected get editingPayeeName(): string {
+    return this.selectedExpense?.payeeName ?? '';
   }
 
   protected get itemsArray(): FormArray {
@@ -348,6 +378,7 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
       expenseDate: null,
       receiptNo: '',
       paidBy: '',
+      payeeId: null,
       note: '',
     });
     this.setItems([]);
@@ -394,6 +425,7 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
       expenseDate: toDateControlValue(expense.expenseDate),
       receiptNo: expense.receiptNo,
       paidBy: expense.paidBy,
+      payeeId: expense.payeeId,
       note: expense.note,
     });
     this.setItems(expense.items ?? []);

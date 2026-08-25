@@ -79,21 +79,12 @@
                   (currentValue)="onEndStationChange($event)"
                 ></app-dropdown-group-obrs>
               </div>
-              <!-- MAP HINT CTA (OBRS-1211). Sits inside the @if so it never shows
-              before the origin/destination fields are ready, and after the
-              station-group's own closing div so it renders on its own row
-              beneath the merged start/swap/end bar (`.station-section` is
-              `flex-wrap: wrap`). Gates `<app-route-map-panel>` — the sole
-              call site in the repo that loads Google Maps JS — behind this
-              explicit tap; see docs/adr for the full rationale. -->
-              <button type="button" class="btn btn-link p-0 map-hint-btn w-100"
-                      data-testid="show-route-map" (click)="onMapHintClick()">
-                <i class="bi bi-map me-1" aria-hidden="true"></i>
-                {{ 'HOME.ROUTE_MAP.MAP_HINT_CTA' | translate }}
-              </button>
             }
-            <!-- DEPARTURE DATE -->
-            <div class="form-group-obrs">
+            <!-- DEPARTURE DATE. OBRS-1189: `has-inline-label` + the segment
+            styleClass are what make this a SEGMENT of the station bar rather
+            than a differently-shaped control parked beside it — same height,
+            square inner corners, label inside the frame. -->
+            <div class="form-group-obrs has-inline-label">
               <!-- LABEL. OBRS-1021: in round-trip mode this field stops being
               "the date" and becomes "the OUTBOUND date", so it switches to the
               ROUND_DEPARTURE/ROUND_RETURN pair the i18n files have carried
@@ -109,8 +100,8 @@
               words, but a screen reader still announced two unnamed text boxes.
               Pattern copied from reschedule-date-picker-step.component.html,
               which has paired them correctly since it shipped. -->
-              <label for="home-departure-date">
-                {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }} :
+              <label class="field-inline-label" for="home-departure-date">
+                {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }}
               </label>
               <!-- CALENDAR MAIN ELEMENT
 
@@ -134,7 +125,7 @@
               itself. `readonly`, never `disabled`: the input must still focus
               and still open the calendar it is now the only way into. -->
               <p-datePicker
-                styleClass="app-date-field"
+                styleClass="app-date-field app-date-field--segment"
                 panelStyleClass="app-date-field-panel"
                 [dateFormat]="calendarDateFormat()"
                 [readonlyInput]="true"
@@ -161,12 +152,12 @@
                 whole block was copied from the one above, label included — the
                 two fields rendered the same words and only their order told a
                 customer which was which (OBRS-1021). -->
-                <div class="form-group-obrs">
+                <div class="form-group-obrs has-inline-label">
                   <!-- LABEL (OBRS-1028: its own id — this block only renders
                   alongside the departure one, so a shared id was always a
                   duplicate, never a merely-unhelpful name). -->
-                  <label for="home-return-date">
-                    {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }} :
+                  <label class="field-inline-label" for="home-return-date">
+                    {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }}
                   </label>
                   <!-- CALENDAR MAIN ELEMENT (OBRS-1023: same bound format as the
                   departure field above — a return date shown in a different
@@ -184,7 +175,7 @@
                   tracks every departureDate change with no extra field to
                   keep in sync.) -->
                   <p-datePicker
-                    styleClass="app-date-field"
+                    styleClass="app-date-field app-date-field--segment"
                     panelStyleClass="app-date-field-panel"
                     [dateFormat]="calendarDateFormat()"
                     [readonlyInput]="true"
@@ -206,13 +197,53 @@
                     </p-datePicker>
                   </div>
                 }
-              </div>
-              <!-- SEARCH BUTTON -->
-              <div class="d-flex justify-content-end w-100">
-                <button class="btn btn-search" type="button" (click)="onSearch()">
+                <!-- SEARCH — the last SEGMENT of the bar, not a row of its own
+                (OBRS-1189 AC#3). It is a child of `.station-section` and no
+                longer of a `.form-actions` wrapper, which is what lets the
+                stylesheet re-order it against the map hint below 993px: `order`
+                only ranks SIBLINGS, and the two buttons were in different
+                containers. The wrapper is gone rather than emptied — with the
+                button in the bar it would have held one left-aligned link. -->
+                <button class="btn btn-search" type="button" (click)="onSearch()"
+                        [attr.aria-label]="'HOME.HOME_BOOKING.SEARCH' | translate">
                   <img src="icons/search.svg" alt="Search Icon" />
-                  {{ "HOME.HOME_BOOKING.SEARCH" | translate }}
+                  <!-- The word is in its own element because it is HIDDEN between
+                  993px and 1199px, where the bar is one row and 96px of button
+                  label is 96px the date segments need to print a whole date (the
+                  band was measured clipping by 22px with it). `display: none`
+                  takes an element out of the accessibility tree too, hence the
+                  `aria-label` above — which is why it is unconditional: a name
+                  that only exists at some widths is the defect twice over. -->
+                  <span class="btn-search__label">{{ "HOME.HOME_BOOKING.SEARCH" | translate }}</span>
                 </button>
+                <!-- MAP HINT (OBRS-1211, moved here by OBRS-1562 and again by
+                OBRS-1189). It takes a line of its OWN under the bar — `w-100` in
+                the stylesheet, the same mechanism 1562 removed from it, except
+                that here it is LAST in the flex order rather than in the middle,
+                so it wraps below the bar instead of splitting it. That is also
+                the answer to "where does the link go when the search button
+                leaves its row": under the fields it refers to, left-aligned,
+                where nothing else is competing for the line.
+
+                The `@if` is the same store selector that guards the station
+                block above, repeated rather than hoisted: the guard is the
+                reason the hint does not appear before the fields it refers to
+                (OBRS-1211), and the station block is a sibling, not an ancestor.
+                `selectProvinceWithStation` is an NgRx selector, so the second
+                `| async` costs one more subscription to an already-multicast
+                source, not a second load. -->
+                @if (rawProvinceStationList | async) {
+                  <!-- The wrapper is what takes the line, not the button: a
+                  100%-wide <button> would make the whole width of the card
+                  clickable for a link four words long. -->
+                  <div class="map-hint-row">
+                    <button type="button" class="btn btn-link p-0 map-hint-btn"
+                            data-testid="show-route-map" (click)="onMapHintClick()">
+                      <i class="bi bi-map me-1" aria-hidden="true"></i>
+                      {{ 'HOME.ROUTE_MAP.MAP_HINT_CTA' | translate }}
+                    </button>
+                  </div>
+                }
               </div>
             </div>
           }

@@ -19,6 +19,7 @@ import {
   RouteStop,
 } from '../../../../../shared/interfaces/route-map.interface';
 import { UserLocatedEvent } from '../route-map-panel/route-map-panel.component';
+import { readStoredLanguage } from '../../../../../shared/services/language.service';
 
 type LoadState = 'loading' | 'loaded' | 'error' | 'empty';
 type ErrorRetryTarget = 'directions' | 'pickupDropoff';
@@ -100,6 +101,17 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
   private activeRoutes: RouteListItem[] = [];
   private destroy$ = new Subject<void>();
 
+  /**
+   * OBRS-1565: the language the pickup-dropoff request currently in flight was BUILT with.
+   *
+   * `authInterceptor` stamps `Accept-Language` from this same stored value at request
+   * creation, so a switch that lands after that is already too late for the payload coming
+   * back — and `reloadLocalizedStops()`'s `loadState !== 'loaded'` guard drops the switch
+   * instead of queueing it. Remembering what went out is what lets `applyRouteData()` notice
+   * that the answer arrived in a language the user has already left.
+   */
+  private requestLanguage: string | null = null;
+
   constructor(
     private routeMapService: RouteMapService,
     private translateService: TranslateService,
@@ -118,6 +130,7 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.buildDirectionOptions();
+        this.reloadLocalizedStops();
       });
 
     this.loadDirections();
@@ -130,6 +143,7 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
 
   loadDirections(): void {
     this.loadState = 'loading';
+    this.requestLanguage = readStoredLanguage();
     const homeSlug = environment.homeRouteSlug || null;
 
     // Pre-fetch pickup-dropoff concurrently when the slug is already known from
@@ -183,6 +197,7 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
 
   loadPickupDropoff(slug: string): void {
     this.loadState = 'loading';
+    this.requestLanguage = readStoredLanguage();
     this.routeMapService
       .getPickupDropoff(slug)
       .pipe(
@@ -289,16 +304,70 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * OBRS-929: re-fetches the same route because the LANGUAGE changed.
+   *
+   * `buildDirectionOptions()` above can only re-label the direction tabs — `titleLocalized` is the
+   * one payload carrying all three languages at once. Everything else on this panel (province
+   * labels, stop names, addresses) is localized by the backend from the `Accept-Language` header,
+   * so it only changes by asking again.
+   *
+   * Deliberately NOT `loadPickupDropoff()`: that sets `loadState = 'loading'`, which unmounts
+   * `<app-route-map-panel>` and would re-load the Google Maps JS SDK — the paid request OBRS-1211
+   * exists to fire only on request — on every language switch. The list therefore stays on screen
+   * in the old language for the one request it takes, and a failure leaves the working page alone
+   * instead of replacing it with an error.
+   */
+  private reloadLocalizedStops(): void {
+    if (this.loadState !== 'loaded' || !this.selectedRouteSlug) {
+      return;
+    }
+    this.requestLanguage = readStoredLanguage();
+    this.routeMapService
+      .getPickupDropoff(this.selectedRouteSlug)
+      .pipe(
+        catchError(() => of(null)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((response) => {
+        if (response) {
+          this.applyRouteData(response.data);
+        }
+      });
+  }
+
   private applyRouteData(data: RoutePickupDropoffData): void {
     this.routeMeta = data.route;
     this.pickupStops = data.pickup ?? [];
     this.allDropoffStops = data.dropoff ?? [];
+    // OBRS-929: the two selected stops are objects out of the PREVIOUS payload, and on a
+    // language re-fetch the lists arrive re-localized while those two still carry the old
+    // language's name and address — they are what the summary card under each list renders.
+    // Re-point them at the new objects by slug, keeping the old one if the slug is gone so a
+    // selection can never become `null` while its slug still says a stop is chosen. On first
+    // load and on a direction change both slugs are null, so this is a no-op there.
+    this.selectedPickupStop =
+      this.pickupStops.find((s) => s.slug === this.selectedPickupSlug) ??
+      this.selectedPickupStop;
+    this.selectedDropoffStop =
+      this.allDropoffStops.find((s) => s.slug === this.selectedDropoffSlug) ??
+      this.selectedDropoffStop;
     this.refreshDropoffOptions();
 
     if (this.pickupStops.length === 0 && this.allDropoffStops.length === 0) {
       this.loadState = 'empty';
     } else {
       this.loadState = 'loaded';
+      // OBRS-1565: a switch made while this request was in flight was dropped by
+      // reloadLocalizedStops()'s guard, and this payload is in the language the user has
+      // already left. Now that the state IS 'loaded' the same call goes through — and it is
+      // deliberately that call and not loadPickupDropoff(), which would flip back to
+      // 'loading', unmount <app-route-map-panel> and re-load the paid Maps SDK (OBRS-1211).
+      // Terminates: reloadLocalizedStops() re-stamps requestLanguage before it dispatches,
+      // so the retry only repeats while the user keeps switching.
+      if (this.requestLanguage !== readStoredLanguage()) {
+        this.reloadLocalizedStops();
+      }
     }
   }
 

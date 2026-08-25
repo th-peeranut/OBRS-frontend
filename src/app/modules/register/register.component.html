@@ -61,6 +61,7 @@
               type="text"
               id="firstName"
               formControlName="firstName"
+              autocomplete="given-name"
               [placeholder]="'REGISTER.FIRSTNAME_PLACEHOLDER' | translate"
             [class.form-error]="
               getForm('firstName')?.errors &&
@@ -88,6 +89,7 @@
                 type="text"
                 id="middleName"
                 formControlName="middleName"
+                autocomplete="additional-name"
                 [placeholder]="'REGISTER.MIDDLENAME_PLACEHOLDER' | translate"
                 />
               </div>
@@ -108,6 +110,7 @@
                   type="text"
                   id="lastName"
                   formControlName="lastName"
+                  autocomplete="family-name"
                   [placeholder]="'REGISTER.LASTNAME_PLACEHOLDER' | translate"
             [class.form-error]="
               getForm('lastName')?.errors &&
@@ -148,6 +151,8 @@
                   <input
                     class="form-control mt-1"
                     type="text"
+                    inputmode="email"
+                    autocomplete="email"
                     id="email"
                     formControlName="email"
                     [placeholder]="'REGISTER.EMAIL_PLACEHOLDER' | translate"
@@ -194,6 +199,8 @@
                     <input
                       class="form-control mt-1"
                       type="text"
+                      inputmode="tel"
+                      autocomplete="tel"
                       id="phoneNumber"
                       formControlName="phoneNumber"
                       (focus)="onPhoneFocus()"

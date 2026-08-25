@@ -17,6 +17,9 @@ import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorCode, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import { DriverCashDayStore } from './driver-cash-day.store';
 import { DriverCashDayRespDto } from '../../../../shared/interfaces/driver-cash.interface';
+import { formatMoney } from '../../../../shared/lib/money-display';
+import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
+import { bangkokInstantMs } from '../../../../shared/lib/api-date-time';
 
 type DriverCashAction = 'advance' | 'perHead' | 'expense' | null;
 
@@ -31,6 +34,32 @@ function todayBusinessDate(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
+/**
+ * OBRS-1579 — the Bangkok calendar date of an API date-time, as `yyyy-MM-dd`,
+ * or null when it is absent or unparseable. See `loadScheduleBusinessDate()`
+ * for why neither half of this can be skipped.
+ */
+const BANGKOK_DATE_PARTS = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Bangkok',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function toBangkokBusinessDate(value: string | null | undefined): string | null {
+  const ms = bangkokInstantMs(value);
+  if (ms === null) {
+    return null;
+  }
+  const parts = BANGKOK_DATE_PARTS.formatToParts(new Date(ms));
+  const get = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  const year = get('year');
+  const month = get('month');
+  const day = get('day');
+  return year && month && day ? `${year}-${month}-${day}` : null;
+}
+
 // OBRS-1389 — OBRS-1368 put the sales-point 403 behind these two forms as well,
 // and both were still `{}`, so the refusal read as GENERIC's "please try again".
 // They do NOT share the expense sentence: the backend runs a DIFFERENT gate per
@@ -39,11 +68,18 @@ function todayBusinessDate(): string {
 // names) behind one wire code, so per-head gets its own key — telling a
 // salesperson the round is not theirs, when what is not theirs is the stop they
 // picked, is the same unfollowable advice this card exists to remove.
+// OBRS-1579 — all three forms resolve their box through
+// `DriverCashService#getOpenDayOrThrow`, so all three can be refused with
+// DRIVER_CASH_DAY_ALREADY_RETURNED. GENERIC's "please try again" is advice
+// that cannot work here: the box is signed off and no retry will re-open it.
+// This is the one message that names who has to do what next.
 const ADVANCE_ERROR_KEYS: Record<string, string> = {
   DRIVER_CASH_SALES_POINT_FORBIDDEN: 'STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN',
+  DRIVER_CASH_DAY_ALREADY_RETURNED: 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED',
 };
 const PER_HEAD_ERROR_KEYS: Record<string, string> = {
   DRIVER_CASH_SALES_POINT_FORBIDDEN: 'STAFF.DRIVER_CASH.ERROR.PER_HEAD_SALES_POINT_FORBIDDEN',
+  DRIVER_CASH_DAY_ALREADY_RETURNED: 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED',
 };
 // OBRS-1356 — the ONE expense code worth naming: the generic message would
 // leave a salesperson retrying a wage entry that cannot succeed until the
@@ -55,6 +91,7 @@ const PER_HEAD_ERROR_KEYS: Record<string, string> = {
 const EXPENSE_ERROR_KEYS: Record<string, string> = {
   DRIVER_WAGE_RATE_NOT_CONFIGURED: 'STAFF.DRIVER_CASH.ERROR.WAGE_RATE_NOT_CONFIGURED',
   DRIVER_CASH_SALES_POINT_FORBIDDEN: 'STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN',
+  DRIVER_CASH_DAY_ALREADY_RETURNED: 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED',
 };
 
 /**
@@ -98,6 +135,14 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
    */
   protected myDay: DriverCashDayRespDto | null = null;
   protected isLoading = false;
+  /**
+   * OBRS-1579 — the business date of the box this round's entries land in,
+   * resolved from the SCHEDULE rather than from `day`, because on the morning
+   * the late bill arrives the round often has no box yet: `day` is null until
+   * the first entry creates it, and that is exactly when nothing on screen
+   * said which day's box was about to be opened.
+   */
+  protected scheduleBusinessDate: string | null = null;
 
   protected activeAction: DriverCashAction = null;
   protected isSubmitting = false;
@@ -135,6 +180,7 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
     }
 
     this.loadMyDay();
+    this.loadScheduleBusinessDate();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -142,6 +188,8 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
       this.store.setScheduleId(this.scheduleId);
       void this.store.refresh();
       this.activeAction = null;
+      this.scheduleBusinessDate = null;
+      this.loadScheduleBusinessDate();
     }
   }
 
@@ -195,6 +243,55 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
    */
   protected get perHeadRates() {
     return this.day?.perHeadRates ?? this.myDay?.perHeadRates ?? [];
+  }
+
+  /**
+   * OBRS-1579 — which day's cash box an entry made here will land in. `day`'s
+   * own value wins whenever the box exists (it is what the server already
+   * decided); the schedule-derived date is the fallback for a round whose box
+   * has not been opened yet.
+   */
+  protected get boxBusinessDate(): string | null {
+    return this.day?.businessDate ?? this.scheduleBusinessDate;
+  }
+
+  /**
+   * Mirrors the backend exactly: `DriverCashService#getOpenDriverDayOrThrow`
+   * derives the business date from `DateTimeUtil.toBangkokDate(schedule
+   * .getDepartureDateTime())`.
+   *
+   * ⛔ `departureDateTime`, NOT `delayedDepartureDateTime` — a delayed trip
+   * keeps its original business date on the backend, and reading the delayed
+   * field here would put a different date on screen from the one the entry
+   * actually lands on, which is the entire failure this card removes.
+   *
+   * ⛔ And NOT `new Date(raw)` + local getters, which is what this method did
+   * first. `departureDateTime` is one of the fields this API emits WITHOUT an
+   * offset (`ParcelScheduleTabsPageComponent`'s doc names it), and `Date` then
+   * reads an offset-less string as the VIEWER's wall clock while prod and SIT
+   * run their JVM and Postgres in UTC — seven hours early, which around a
+   * late-evening or after-midnight departure is a different calendar day. That
+   * would put a confident, wrong date on the one label this card exists to
+   * add. `bangkokInstantMs()` pins the offset-less case to Bangkok (OBRS-574)
+   * and `BANGKOK_DATE_PARTS` reads the calendar date back in Bangkok, so the
+   * viewer's own timezone drops out of both ends.
+   *
+   * Fails silently, like `loadMyDay()`: this is supplementary signposting and
+   * must not put a banner over a boarding list the round depends on.
+   */
+  private loadScheduleBusinessDate(): void {
+    if (!this.scheduleId) {
+      return;
+    }
+    this.staffApiService
+      .getScheduleById(this.scheduleId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp) => {
+          this.scheduleBusinessDate = toBangkokBusinessDate(resp?.data?.departureDateTime);
+        },
+        error: () => { this.scheduleBusinessDate = null; },
+      });
   }
 
   // ── Submit handlers — never reset the form on failure (card) ─────────────
@@ -307,4 +404,14 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
     this.alertService.error(message);
     return message;
   }
+  /** OBRS-1592: driver-cash printed these decimal strings raw — no unit, no
+   * thousand separator, `.00` on every whole amount. Staff money is money. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translate.currentLang);
+  }
+
+  protected displayDate(value: string | null | undefined): string {
+    return formatDisplayDate(value, this.translate.currentLang);
+  }
+
 }

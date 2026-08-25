@@ -20,6 +20,9 @@ function createStaffApiStub(): any {
     // observable in EVERY test, not only the ones that assert on it.
     getDriverCashMyDay: jasmine.createSpy('getDriverCashMyDay')
       .and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    // OBRS-1579: same reason - ngOnInit calls this unconditionally too.
+    getScheduleById: jasmine.createSpy('getScheduleById')
+      .and.returnValue(of({ code: 200, message: 'OK', data: { id: 42, departureDateTime: '2026-08-24T07:30:00+07:00' } })),
     postDriverCashAdvance: jasmine.createSpy('postDriverCashAdvance'),
     postDriverCashPerHead: jasmine.createSpy('postDriverCashPerHead'),
     postDriverCashExpense: jasmine.createSpy('postDriverCashExpense'),
@@ -64,6 +67,8 @@ const DAY_RESP: DriverCashDayRespDto = {
   discrepancy: null,
   discrepancyReason: null,
   perHeadRates: [],
+  reopenCount: 0,
+  reopens: [],
   hasUnmappedSalesPointRemit: false,
 };
 
@@ -126,6 +131,106 @@ describe('DriverCashPanelComponent', () => {
       component.ngOnInit();
       expect(component['myDay']).toBeNull();
       expect(alertService.error).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── OBRS-1579: which cash box is this? ──────────────────────────────────
+  // The strip printed a bare `yyyy-MM-dd` with no label, and the expense form
+  // showed no date at all, so a fuel bill handed over the morning after its
+  // round was keyed into TODAY's box with nothing on screen to contradict it.
+  describe('boxBusinessDate — the box an entry lands in, before the box exists', () => {
+    it('falls back to the SCHEDULE when the round has no box yet', () => {
+      component.ngOnInit();
+      expect(staffApi.getScheduleById).toHaveBeenCalledWith(42);
+      // Derived the same way the backend does: Bangkok-local calendar date of
+      // the departure, NOT a UTC-shifted one.
+      expect(component['boxBusinessDate']).toBe('2026-08-24');
+    });
+
+    it('prefers the box own date once the box exists', () => {
+      component.ngOnInit();
+      component['day'] = { ...DAY_RESP, businessDate: '2026-08-01' };
+      expect(component['boxBusinessDate']).toBe('2026-08-01');
+    });
+
+    it('stays silent when the schedule fetch fails - this is signposting, not the boarding list', () => {
+      staffApi.getScheduleById.and.returnValue(throwError(() => new Error('boom')));
+      component.ngOnInit();
+      expect(component['boxBusinessDate']).toBeNull();
+      expect(alertService.error).not.toHaveBeenCalled();
+    });
+
+    it('ignores a schedule with no departure rather than showing a wrong date', () => {
+      staffApi.getScheduleById.and.returnValue(of({ code: 200, message: 'OK', data: { id: 42 } }));
+      component.ngOnInit();
+      expect(component['boxBusinessDate']).toBeNull();
+    });
+
+    /**
+     * ⛔ The case the first version of this got wrong. `departureDateTime` is
+     * one of the fields this API emits WITHOUT an offset
+     * (`ParcelScheduleTabsPageComponent`'s doc names it), and `new Date(raw)`
+     * + local getters reads the result in the VIEWER's zone while prod and SIT
+     * run UTC — so the label this card exists to add could name the wrong box
+     * with total confidence.
+     *
+     * ⚠️ Honest about what these three can and cannot catch. Only the
+     * UTC-offset one below discriminates the two implementations at all, and
+     * only when the runner is NOT on Bangkok time — when ambient == Bangkok
+     * the old and new answers are equal for every possible input, so no spec
+     * can go red here. Measured on this machine 2026-08-25:
+     * `new Date('2026-08-23T18:00:00Z')` gives the 24th under Asia/Bangkok and
+     * the 23rd under TZ=UTC, while this code gives the 24th under both. CI
+     * runs UTC, so that is where the red would appear. `TZ=UTC` does NOT reach
+     * Karma's Chrome on this box, so the local mutant run stayed green and is
+     * not evidence either way.
+     *
+     * The other two pin the two offset-less SHAPES the API emits (`T` and
+     * space separated) parse at all - `toApiOffsetDateTime` is what turns the
+     * space into a `T` before anything reads it.
+     */
+    it('reads an offset-LESS after-midnight departure as the Bangkok calendar day', () => {
+      staffApi.getScheduleById.and.returnValue(
+        of({ code: 200, message: 'OK', data: { id: 42, departureDateTime: '2026-08-24T00:15:00' } })
+      );
+      component.ngOnInit();
+      expect(component['boxBusinessDate']).toBe('2026-08-24');
+    });
+
+    it('reads the space-separated offset-less shape the same way', () => {
+      staffApi.getScheduleById.and.returnValue(
+        of({ code: 200, message: 'OK', data: { id: 42, departureDateTime: '2026-08-24 00:15:00' } })
+      );
+      component.ngOnInit();
+      expect(component['boxBusinessDate']).toBe('2026-08-24');
+    });
+
+    it('reads a UTC-offset late-evening departure as the NEXT Bangkok day', () => {
+      // 2026-08-23T18:00Z is 2026-08-24 01:00 in Bangkok. A plain string split
+      // of the wire value would have said the 23rd.
+      staffApi.getScheduleById.and.returnValue(
+        of({ code: 200, message: 'OK', data: { id: 42, departureDateTime: '2026-08-23T18:00:00Z' } })
+      );
+      component.ngOnInit();
+      expect(component['boxBusinessDate']).toBe('2026-08-24');
+    });
+  });
+
+  // OBRS-1579 — GENERIC's "please try again" is advice that cannot work once
+  // the box is signed off: no retry re-opens it. Only the owner can.
+  describe('the already-returned refusal names the next action', () => {
+    it('maps DRIVER_CASH_DAY_ALREADY_RETURNED on the expense form', () => {
+      // A real HttpErrorResponse, not an object literal - extractApiErrorCode
+      // gates on `instanceof HttpErrorResponse` (api-error-code.ts:26).
+      staffApi.postDriverCashExpense.and.returnValue(
+        throwError(() => new HttpErrorResponse({
+          status: 409,
+          error: { errorCode: 'DRIVER_CASH_DAY_ALREADY_RETURNED' },
+        }))
+      );
+      component.ngOnInit();
+      component['onSubmitExpense']({ category: 'FUEL', amount: '1200.00' });
+      expect(component['expenseError']).toBe('STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED');
     });
   });
 

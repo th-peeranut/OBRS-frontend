@@ -443,6 +443,17 @@
     "ERROR_GENERAL": "发生错误，请重试。"
   },
   "COMMON": {
+    "TITLES": {
+      "MR": "先生",
+      "MRS": "太太",
+      "MISS": "小姐",
+      "MASTER": "小弟弟",
+      "MISS_CHILD": "小妹妹",
+      "DR": "博士",
+      "PROF": "教授",
+      "ASSOC_PROF": "副教授",
+      "ASST_PROF": "助理教授"
+    },
     "NOT_SPECIFIED": "未填写",
     "THEME_TOGGLE": "切换深色模式",
     "CLEAR": "清除",
@@ -530,8 +541,10 @@
       "SYSTEM_SETTINGS": "系统设置",
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
+      "PAYEE_SPEND_REPORT": "按收款方统计支出",
       "VEHICLE_PL_REPORT": "单车损益",
       "EXPENSES": "费用",
+      "EXPENSE_PAYEES": "收款方名录",
       "MANUAL_REFUNDS": "人工退款",
       "CASH_REFUND_APPROVALS": "现金退款审批",
       "PARCEL_CLAIMS": "包裹索赔",
@@ -544,7 +557,8 @@
       "DRIVER_CASH_RATES": "司机现金费率",
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "取消与改签",
       "NOTIFICATION_MESSAGES": "通知消息",
-      "OPERATIONS_CONFIG": "运营"
+      "OPERATIONS_CONFIG": "运营",
+      "EXPENSE_BATCH": "批量录入单据"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -612,7 +626,8 @@
       "CANCEL_TRIP_REFUND_MESSAGE": "{{count}} 个预订将自动退款并收到通知。",
       "CANCEL_TRIP_NO_REFUND_MESSAGE": "行程将被取消，不会产生退款。",
       "CANCEL_TRIP_BTN": "取消行程",
-      "CANCELLING": "取消中..."
+      "CANCELLING": "取消中...",
+      "NO_MATCH": "无匹配项"
     },
     "VALIDATION": {
       "REQUIRED": "此字段为必填项。",
@@ -651,6 +666,7 @@
       "LOAD_MAINTENANCE_FAILED": "无法加载维护记录。",
       "LOAD_MAINTENANCE_PLANS_FAILED": "无法加载保养计划。",
       "LOAD_EXPENSES_FAILED": "无法加载费用数据",
+      "LOAD_EXPENSE_PAYEES_FAILED": "无法加载收款方名录",
       "DELETE_CONFIRM_BODY": "此操作无法撤销，是否继续？",
       "DELETE_BTN": "删除",
       "UNLOCK_SUCCESS": "账户解锁成功。",
@@ -811,12 +827,26 @@
       "UNLOCK_CONFIRM_MESSAGE": "解锁此账户后，以下用户将可立即登录：",
       "UNLOCK_BTN": "解锁",
       "UNLOCKING": "解锁中...",
+      "CLOSE_ACTION": "关闭账户",
+      "CLOSE_CONFIRM_TITLE": "确认关闭账户",
+      "CLOSE_CONFIRM_MESSAGE": "关闭账户并清除个人资料中的身份信息（姓名 · 邮箱 · 电话）：",
+      "CLOSE_POINT_LOGIN": "该账户将无法再登录，并从用户列表和司机指派名单中消失。",
+      "CLOSE_POINT_RECORDS": "订票记录和收据仍按会计法规保留 —— 这并非完全删除其数据。",
+      "CLOSE_POINT_EMAIL": "原邮箱地址将被释放，本人可用它重新注册。",
+      "CLOSE_IRREVERSIBLE": "此操作无法撤销。",
+      "CLOSE_BTN": "关闭账户",
+      "CLOSING": "正在关闭...",
+      "CLOSE_SUCCESS": "账户已关闭，身份信息已清除。订票记录仍保留。",
+      "CLOSE_FAILED": "无法关闭该账户。",
       "SALES_POINTS_SECTION_TITLE": "销售点",
       "ALLOWED_SALES_POINTS_LABEL": "允许的销售点",
       "ACTIVE_SALES_POINT_LABEL": "当前所在销售点",
       "ACTIVE_SALES_POINT_NONE": "未设定",
       "SALES_POINTS_EMPTY": "系统中尚未设置销售点",
-      "SALES_POINTS_UNAVAILABLE": "无法加载销售点列表，请重试"
+      "SALES_POINTS_UNAVAILABLE": "无法加载销售点列表，请重试",
+      "PERSONAL_SECTION_TITLE": "个人信息",
+      "CREDENTIALS_SECTION_TITLE": "账户凭据",
+      "CONTACT_SECTION_TITLE": "联系方式与设置"
     },
     "VEHICLES": {
       "MONITORING": "车队监控已启用",
@@ -1621,16 +1651,30 @@
           "RETURNED_PLACEHOLDER": "0.00",
           "CONFIRM_BTN": "确认归还",
           "CONFIRM_TITLE": "确认司机现金归还？",
-          "CONFIRM_TEXT": "将记录归还金额为 {{amount}}，此操作无法撤销。",
+          "CONFIRM_TEXT": "将记录归还金额为 {{amount}}。如果之后出现当日的票据，车主可以在此页面重新打开该现金盒。",
           "SUCCESS": "司机现金日已标记为已归还。",
           "ALREADY_RETURNED": "该日已完成归还。",
           "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）",
           "PER_HEAD_PAY": "今日所得人头费（已在班次结算中扣除，不计入上方金额）"
         },
+        "REOPEN": {
+          "ACTION_LABEL": "重新打开此现金盒",
+          "HINT": "适用于该班次的票据在签署归还之后才送到柜台的情况。已签署的金额会保留在历史记录中，现金盒将恢复为未关闭状态。",
+          "REASON_LABEL": "原因",
+          "REASON_PLACEHOLDER": "例如：昨天班次的油费票据今早才送到",
+          "CONFIRM_BTN": "重新打开",
+          "CONFIRM_TITLE": "重新打开此现金盒？",
+          "CONFIRM_TEXT": "已签署的归还金额将被清除并保留在历史记录中。现金盒将恢复为未关闭状态，添加项目后需要重新签署归还。",
+          "SUCCESS": "现金盒已重新打开。",
+          "HISTORY_TITLE": "此现金盒已被重新打开 {{count}} 次",
+          "PREV_RETURNED": "此前签署的金额："
+        },
         "ERROR": {
           "REASON_REQUIRED": "归还金额与预期不符时必须填写原因。",
           "ALREADY_RETURNED": "该日已完成归还。",
-          "RETURN_FAILED": "无法记录此次归还。"
+          "RETURN_FAILED": "无法记录此次归还。",
+          "NOT_RETURNED": "此现金盒尚未签署归还，无需重新打开。",
+          "REOPEN_FAILED": "无法重新打开此现金盒。"
         },
         "COL": {
           "HOLDER": "持现金人",
@@ -1946,6 +1990,44 @@
         "RANGE_TOO_LARGE": "所选日期范围过大，请选择366天以内的范围。"
       }
     },
+    "PAYEE_SPEND_REPORT": {
+      "SUBTITLE": "按收款方统计的支出——修车厂、加油站及其他收款方",
+      "FILTER_YEAR": "年份",
+      "YEAR_OPTION": "{{year}} · {{count}} 张单据 · {{amount}}",
+      "FILTER_MONTH": "月份",
+      "MONTH_NEEDS_YEAR": "请先选择年份，再选择月份",
+      "MONTHS": {
+        "1": "一月",
+        "2": "二月",
+        "3": "三月",
+        "4": "四月",
+        "5": "五月",
+        "6": "六月",
+        "7": "七月",
+        "8": "八月",
+        "9": "九月",
+        "10": "十月",
+        "11": "十一月",
+        "12": "十二月"
+      },
+      "FILTER_CATEGORY": "支出类别",
+      "SCOPE_NOTE": "本页回答钱付给了谁，不回答修车厂是否涨价——同一家修车厂的两张单据是不同的工作，金额无法直接比较。",
+      "LOAD_FAILED": "加载报表失败，请重试。",
+      "EMPTY": "所选期间没有支出",
+      "COVERAGE_TITLE": "本页涵盖了多少支出",
+      "COVERAGE_TEXT": "已记录收款方的支出为 {{assigned}}，占总支出 {{total}} 的 {{percent}}%。其余为系统尚无收款方字段时录入的单据。",
+      "TABLE_TITLE": "各收款方合计",
+      "COL_PAYEE": "收款方",
+      "COL_WORK": "所做工作",
+      "COL_BILLS": "单据数",
+      "COL_TOTAL": "合计",
+      "UNASSIGNED": "未记录收款方",
+      "UNASSIGNED_HINT": "系统尚无此字段时录入的单据",
+      "TOTAL_ROW": "总计",
+      "PERIOD_ALL": "当前显示：全部年份",
+      "PERIOD_YEAR": "当前显示：{{year}} 年全年",
+      "PERIOD_YEAR_MONTH": "当前显示：{{year}} 年 {{month}}"
+    },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "按车辆统计的损益，来自车票收入与已记录的支出。",
       "FILTER_FROM": "起始日期",
@@ -2049,7 +2131,23 @@
       "VAT_AMOUNT": "增值税金额(泰铢)",
       "EXPENSE_DATE": "支出日期",
       "RECEIPT_NO": "收据/税务发票号",
-      "PAID_BY": "付款人/账户",
+      "PAID_BY": "付款来源",
+      "PAID_BY_HINT": "这笔钱从哪个钱包或账户支出 — 不是收款方名称。",
+      "PAYEE": {
+        "LABEL": "付给谁",
+        "HINT": "收到这笔钱的修理厂、加油站或商店。可以留空 — 旧账单若无收款方记录，系统不会替您猜测。",
+        "PLACEHOLDER": "选择或输入名称",
+        "SEARCH_PLACEHOLDER": "输入修理厂或加油站名称",
+        "NONE": "未指定收款方",
+        "NO_MATCH": "名录中没有“{{name}}”",
+        "ADD_AS": "添加为{{type}}",
+        "FILTER_TYPE_ALL": "类型：全部",
+        "TYPES": {
+          "GARAGE": "修理厂",
+          "FUEL_STATION": "加油站",
+          "OTHER": "其他"
+        }
+      },
       "NOTE": "备注",
       "NOTE_PLACEHOLDER": "补充说明(可选)",
       "ITEMS": {
@@ -2076,7 +2174,54 @@
       "NO_MATCH": "没有符合当前筛选条件的费用",
       "SOURCE": "来源",
       "SOURCE_FIELD": "系统自动生成（来自司机）",
-      "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。"
+      "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。",
+      "BATCH": {
+        "OPEN": "批量录入单据",
+        "SUBTITLE": "一次保存整批单据",
+        "PAGE_PURPOSE": "修理厂往往一次交来多张单据。在这里全部录入后只需保存一次 —— 要么全部入账，要么一张也不入，不会只存一半。",
+        "BILL_N": "第 {{n}} 张",
+        "BILL_TOTAL": "本张合计",
+        "BILL_COUNT": "{{n}} 张单据",
+        "LINE_COUNT": "{{n}} 条明细",
+        "ADD_BILL": "+ 添加单据",
+        "ADD_LINE": "+ 添加明细",
+        "REMOVE_BILL": "删除本张单据",
+        "COLLAPSE": "收起",
+        "GARAGE": "修理厂",
+        "LINE_DESCRIPTION": "明细（按修理厂所写）",
+        "LINE_PART": "配件 / 工时",
+        "SAVE_ENVELOPE": "保存整批",
+        "SAVED": "已录入 {{n}} 张单据",
+        "OWNER_HINT": "本批单据均计入该运营商。",
+        "BILL_DATE": "单据日期",
+        "VEHICLE": "车牌",
+        "CATEGORY": "类别",
+        "PAID_BY": "付款方式",
+        "LINE_PART_NONE": "非配件"
+      }
+    },
+    "EXPENSE_PAYEES": {
+      "SUBTITLE": "我们付款的修理厂、加油站和商店",
+      "PAGE_PURPOSE": "本页是我们付款的修理厂、加油站和商店名录。账单保存的是收款方编号而非名称拼写，因此在此改名一次，所有历史账单同步更新。此处刻意没有删除按钮：收款方仍然是其收过的每一张账单的归属。请改用“停用”，停用后它不再出现在选择框中。",
+      "TABLE_TITLE": "收款方列表",
+      "ADD": "添加收款方",
+      "ADD_TITLE": "添加收款方",
+      "ADD_HINT": "请按您实际的称呼命名，方便录入账单时查找。",
+      "RENAME": "改名",
+      "RENAME_TITLE": "修改收款方名称",
+      "RENAME_HINT": "所有历史账单会同步更新 — 账单保存的是收款方编号，不是名称拼写。",
+      "RETIRE": "停用",
+      "RESTORE": "恢复使用",
+      "NAME": "名称",
+      "TYPE": "类型",
+      "STATUS": "状态",
+      "STATUS_ACTIVE": "使用中",
+      "STATUS_RETIRED": "已停用",
+      "SHOW_RETIRED": "显示已停用",
+      "EMPTY_TITLE": "名录中还没有收款方",
+      "EMPTY_BODY": "请点击“添加收款方”，或在录入账单时直接输入新名称，从那里即可添加。",
+      "NO_MATCH": "没有符合筛选条件的记录",
+      "NAME_TAKEN": "该名称已存在于名录中。系统不会自动合并两个收款方，因为合并无法撤销。"
     },
     "MANUAL_REFUNDS": {
       "SUBTITLE": "等待人工退款转账的付款",
@@ -2840,7 +2985,6 @@
     "TIME_UNIT": "",
     "HOUR_UNIT": "小时",
     "MINITE_UNIT": "分钟",
-    "BAHT_UNIT": "泰铢",
     "SEAT_REMAIN": "剩余",
     "SEAT_UNIT": "个座位",
     "SEAT_PER_PASSENGER": "/座位",
@@ -2885,11 +3029,10 @@
       "PASSENGER_UNIT": "人",
       "TICKET_PRICE": "票价",
       "TICKET_PRICE_RETURN": "往返票价",
-      "TICKET_UNIT": "泰铢/人",
+      "TICKET_UNIT": "/人",
       "SUBTOTAL": "小计",
       "PROMO_DISCOUNT": "促销折扣",
       "TOTAL": "总价",
-      "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认信息"
     }
   },
@@ -3005,12 +3148,11 @@
       "PASSENGER_UNIT": "人",
       "TICKET_PRICE_ONEWAY": "票价",
       "TICKET_PRICE_ROUNDTRIP": "往返票价",
-      "TICKET_UNIT": "泰铢/人",
+      "TICKET_UNIT": "/人",
       "SUBTOTAL": "小计",
       "DISCOUNT_ROUND_TRIP": "往返折扣",
       "DISCOUNT": "折扣",
       "TOTAL": "总计",
-      "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认付款"
     },
     "CREDIT_CARD": {
@@ -3076,7 +3218,6 @@
       "PASSENGER_PHONE": "预订人电话号码",
       "PAYMENT_DATE": "付款日期/时间",
       "TOTAL": "总计",
-      "TOTAL_UNIT": "泰铢",
       "ESTIMATE_KM_UNIT": "公里",
       "LEG_OUTBOUND": "去程",
       "LEG_RETURN": "返程",
@@ -3721,10 +3862,11 @@
           "BOOKING_NUMBER": "订单号",
           "SEATS": "座位",
           "FREE_AISLE": "免费 — 未占用座位",
+          "OPEN_SEATING": "无座位号 — 本班次为自由座",
           "UNPAID_NOTE": "尚未付款 — 请在柜台收取现金（订单号 #{{bookingNumber}}）",
           "PAY_CASH_BUTTON": "收取现金",
           "PAYING": "正在记录付款…",
-          "PAID": "已付款 — 已收取现金 ฿{{amount}}"
+          "PAID": "已付款 — 已收取现金 {{amount}}"
         }
       },
       "SHARE_NOT_CONFIGURED": "尚未设置包裹收益分成——在业主设置之前将记为0%。",
@@ -3818,6 +3960,8 @@
       },
       "ERROR": {
         "CODE_MISMATCH": "取件码不匹配。",
+        "COLLECT_RATE_LIMITED": "取件码输入错误次数过多，此包裹已被锁定，请在 {{minutes}} 分钟后重试。",
+        "COLLECT_RATE_LIMITED_UNKNOWN_WAIT": "取件码输入错误次数过多，此包裹已被暂时锁定，请稍后再试。",
         "ALREADY_COLLECTED": "此包裹已被取走。",
         "WRONG_STATE": "此包裹状态与预期不符，列表已刷新。",
         "BOOKING_NOT_CONFIRMED": "此包裹尚未付款。交付前请先在预订上收款。",
@@ -3902,7 +4046,7 @@
       "SUBMITTING": "保存中…",
       "REJECT_CONFIRM": {
         "TITLE": "确认拒绝并退款",
-        "BODY": "拒绝包裹 {{tracking}} 并立即全额退款 {{amount}} 泰铢至寄件人付款时使用的支付渠道。此操作无法撤销。",
+        "BODY": "拒绝包裹 {{tracking}} 并立即全额退款 {{amount}} 至寄件人付款时使用的支付渠道。此操作无法撤销。",
         "CONFIRM_BTN": "拒绝并退款",
         "CANCEL_BTN": "取消"
       },
@@ -3914,8 +4058,8 @@
         "VALIDATION": "数据无效，请重新检查。"
       },
       "SUCCESS": {
-        "REJECTED_REFUNDED": "包裹已拒绝，已退款 {{amount}} 泰铢。",
-        "REJECTED_MANUAL_REFUND": "包裹已拒绝，自动退款未成功，请将 {{amount}} 泰铢现金亲手退还收件人。"
+        "REJECTED_REFUNDED": "包裹已拒绝，已退款 {{amount}}。",
+        "REJECTED_MANUAL_REFUND": "包裹已拒绝，自动退款未成功，请将 {{amount}} 现金亲手退还收件人。"
       }
     },
     "INSPECTION": {
@@ -4004,6 +4148,7 @@
         "PARCEL_REMIT": "包裹汇款",
         "PARCEL_CLAWBACK": "包裹分成追回"
       },
+      "BOX_DATE": "{{date}} 的现金盒",
       "ADVANCE": {
         "ACTION_LABEL": "现金预支",
         "AMOUNT_LABEL": "金额",
@@ -4021,11 +4166,14 @@
       },
       "EXPENSE": {
         "ACTION_LABEL": "现场支出",
+        "LANDS_IN_BOX": "此项目将记入 {{date}} 的现金盒",
         "CATEGORY_LABEL": "类别",
         "AMOUNT_LABEL": "金额",
         "AMOUNT_PLACEHOLDER": "0.00",
         "NOTE_LABEL": "备注（选填）",
         "NOTE_PLACEHOLDER": "例如收据编号",
+        "BILL_DATE_LABEL": "票据上的日期",
+        "BILL_DATE_MISMATCH": "票据日期与将要记入的现金盒不一致 — 此项目将记入 {{date}} 的现金盒。",
         "SUBMIT": "记录支出",
         "WAGE_PRICED_BY_OWNER": "工资按车主设定的每趟费率计算（1 趟 = 1 个班次），无需填写金额。"
       },
@@ -4037,7 +4185,8 @@
         "GENERIC": "无法记录此项目，请重试。",
         "WAGE_RATE_NOT_CONFIGURED": "尚未设置每趟工资费率。请先让车主在司机工资费率页面设置。",
         "SALES_POINT_FORBIDDEN": "您只能为从自己售票点发车的班次记录此项目。此班次不属于您。",
-        "PER_HEAD_SALES_POINT_FORBIDDEN": "您只能为属于自己售票点的站点记录人头费。"
+        "PER_HEAD_SALES_POINT_FORBIDDEN": "您只能为属于自己售票点的站点记录人头费。",
+        "DAY_ALREADY_RETURNED": "当日的现金盒已完成归还并签署，无法再添加项目。请让车主重新打开当日的现金盒，然后再录入此票据。"
       },
       "MY_DAY": {
         "TITLE": "我今日的现金",
@@ -4154,7 +4303,7 @@
       "DESCRIPTION": "物品描述",
       "PROHIBITED_ACK": "我已阅读上述违禁物品清单，并确认本包裹不含其中任何一项",
       "QUOTE_LOADING": "正在计算价格…",
-      "QUOTE_AMOUNT": "价格：{{amount}} 泰铢",
+      "QUOTE_AMOUNT": "价格：{{amount}}",
       "SUBMIT": "确认包裹信息",
       "SUBMITTING": "正在提交…"
     },

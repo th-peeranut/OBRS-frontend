@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { EMPTY, Subject, of } from 'rxjs';
+import { catchError, map, switchMap, takeUntil } from 'rxjs/operators';
 import dayjs from 'dayjs';
 import { StationService } from '../../../../services/station/station.service';
 import { ParcelBookingService } from '../../../../services/parcel-booking/parcel-booking.service';
@@ -113,7 +113,6 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
   private fromStationId: number | null = null;
   private toStationId: number | null = null;
   private selectedDate: Date = new Date();
-  private scheduleId: number | null = null;
 
   // --- Resolved trip selection (carried into Details/Payment) ---
   protected tripValue: ParcelTripFormValue | null = null;
@@ -134,6 +133,22 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
+  /** OBRS-1552 — every quote request is issued through this subject so
+   * `switchMap` drops the previous one. Two requests overlap whenever the
+   * customer edits the weight faster than the API answers (the details form's
+   * 400ms debounce shortens that window, it does not close it), and with a
+   * plain `.subscribe()` the price on screen was decided by whichever response
+   * the network delivered LAST — so a slower EARLIER request overwrote the
+   * newer price with a stale one, or blanked it from its error branch.
+   * `null` (params no longer complete) cancels whatever is in flight;
+   * `onQuoteParamsChange()` still clears the displayed state itself.
+   *
+   * No epoch guard of the OBRS-341 kind is needed here, unlike the staff
+   * consign page (OBRS-616): this wizard only moves forward — `phase` goes
+   * trip → details → payment and there is no control anywhere that sends it
+   * back — so the trip cannot change under an in-flight quote. */
+  private readonly quoteParams$ = new Subject<ParcelOnlineQuoteParams | null>();
+
   constructor(
     private readonly stationService: StationService,
     private readonly parcelBookingService: ParcelBookingService,
@@ -145,6 +160,33 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // OBRS-1552 — the only place this page asks for a quote. `switchMap`
+    // unsubscribes the previous request, so an earlier response can no longer
+    // land at all. `catchError` is INSIDE the inner observable on purpose: an
+    // error left to reach the outer pipeline would kill this subscription and
+    // the page would silently stop quoting for the rest of the session.
+    this.quoteParams$
+      .pipe(
+        switchMap((params) => {
+          if (!params) return EMPTY;
+          return this.parcelBookingService.getParcelQuote(params).pipe(
+            map((resp) => ({ quote: resp?.data ?? null, errorKey: null as string | null })),
+            catchError((err: unknown) =>
+              of({
+                quote: null,
+                errorKey: this.mapErrorCode(err, QUOTE_ERROR_KEYS, 'PARCEL_BOOKING.ERROR.GENERIC'),
+              })
+            )
+          );
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(({ quote, errorKey }) => {
+        this.quote = quote;
+        this.quoteErrorKey = errorKey;
+        this.isLoadingQuote = false;
+      });
+
     this.stationService
       .getAll()
       .pipe(takeUntil(this.destroy$))
@@ -193,10 +235,6 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
   protected onDateChange(date: Date): void {
     this.selectedDate = date;
     this.searchSchedules();
-  }
-
-  protected onScheduleChange(scheduleId: number): void {
-    this.scheduleId = scheduleId;
   }
 
   private syncStationOptions(): void {
@@ -342,25 +380,13 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
       this.quote = null;
       this.quoteErrorKey = null;
       this.isLoadingQuote = false;
+      this.quoteParams$.next(null);
       return;
     }
 
     this.isLoadingQuote = true;
     this.quoteErrorKey = null;
-    this.parcelBookingService
-      .getParcelQuote(params)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (resp) => {
-          this.quote = resp?.data ?? null;
-          this.isLoadingQuote = false;
-        },
-        error: (err: unknown) => {
-          this.quote = null;
-          this.isLoadingQuote = false;
-          this.quoteErrorKey = this.mapErrorCode(err, QUOTE_ERROR_KEYS, 'PARCEL_BOOKING.ERROR.GENERIC');
-        },
-      });
+    this.quoteParams$.next(params);
   }
 
   protected onDetailsSubmit(value: ParcelDetailsFormValue): void {

@@ -311,6 +311,12 @@ export interface BoardingListItemDto {
   ticketId: number;
   ticketNumber: string;
   seatNumber: string;
+  /**
+   * OBRS-1232: the title as a stable CODE ('MISS'), separate from the name and untranslated on the
+   * wire. Render it with the `titleLabel` pipe so switching language changes the word without a
+   * refetch. A legacy free-text value the migration left alone comes through verbatim (AC-5).
+   */
+  passengerTitle?: string | null;
   passengerName: string;
   fromStop: string;
   toStop: string;
@@ -477,6 +483,8 @@ export interface CounterBookingSearchJourneyDto {
 export interface CounterBookingSearchResultDto {
   bookingId: number;
   bookingNumber: string;
+  /** OBRS-1601 — title CODE, rendered through `titleLabel`; null when the contact gave none. */
+  contactTitle: string | null;
   contactName: string;
   contactPhoneMasked: string;
   status: string;

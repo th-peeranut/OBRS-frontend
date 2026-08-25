@@ -5,6 +5,11 @@ import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../../auth/auth.service';
 import { AdminScheduleDto, parseAdminStatus } from '../../../../services/admin/admin-api.service';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import {
+  bangkokInstantMs,
+  controlValueToDateString,
+  splitApiOffsetDateTime,
+} from '../../../../shared/lib/api-date-time';
 import { DriverSchedulesStore } from '../driver-schedules/driver-schedules.store';
 import { StaffSchedulesStore } from '../staff-schedules/staff-schedules.store';
 
@@ -26,7 +31,15 @@ interface BoardingEntryRow {
 })
 export class BoardingEntryPageComponent implements OnInit, OnDestroy {
   protected rows: BoardingEntryRow[] = [];
+  protected filteredRows: BoardingEntryRow[] = [];
   protected isLoading = false;
+  // OBRS-33: this list used to render every schedule the store held, oldest
+  // first, so the first row on prod was 19 days in the past. One day at a
+  // time, today by default. Past days stay reachable (no `minDate`) — the
+  // point is a default that is useful, not hiding history.
+  // OBRS-1584: non-null on purpose. There is always a day in effect, so there
+  // is no state this page can reach that renders every trip ever created.
+  protected selectedDate: Date = new Date();
   protected readonly skeletonRows = Array.from({ length: 4 });
 
   private readonly subscriptions = new Subscription();
@@ -88,7 +101,26 @@ export class BoardingEntryPageComponent implements OnInit, OnDestroy {
   }
 
   protected get isEmpty(): boolean {
-    return !this.isLoading && this.rows.length === 0;
+    return !this.isLoading && this.filteredRows.length === 0;
+  }
+
+  // OBRS-1584: PrimeNG hands us `null` for anything the input cannot parse —
+  // an emptied field, but also every partial keystroke of a date being typed
+  // (`parseValueFromString('')` → null → `updateModel(null)`). Keeping the day
+  // already in effect covers both: the day window never lifts, and the model
+  // reference is deliberately left untouched so no repaint is pushed back into
+  // the input mid-typing, which is what would kill keyboard date entry.
+  protected onDateChange(value: Date | null): void {
+    if (value === null) return;
+    this.selectedDate = value;
+    this.applyFilter();
+  }
+
+  // OBRS-1584: the input can be left holding text that no longer describes the
+  // day the rows are filtered by. Re-emit the date actually in effect on the
+  // way out so the field and the list agree again.
+  protected onDateBlur(): void {
+    this.selectedDate = new Date(this.selectedDate);
   }
 
   protected viewBoarding(row: BoardingEntryRow): void {
@@ -108,6 +140,22 @@ export class BoardingEntryPageComponent implements OnInit, OnDestroy {
         statusCode: status.code,
       };
     });
+    this.applyFilter();
+  }
+
+  private applyFilter(): void {
+    // OBRS-1584: unconditional. The "no day selected ⇒ keep every row" branch
+    // that used to guard this line is the OBRS-33 symptom, one keystroke away.
+    const dayKey = controlValueToDateString(this.selectedDate);
+    this.filteredRows = this.rows
+      .filter((row) => splitApiOffsetDateTime(row.departure).date === dayKey)
+      // Soonest departure first. A row whose departure cannot be parsed sorts
+      // last rather than first: it cannot be the next trip to board.
+      .sort(
+        (a, b) =>
+          (bangkokInstantMs(a.departure) ?? Number.MAX_SAFE_INTEGER) -
+          (bangkokInstantMs(b.departure) ?? Number.MAX_SAFE_INTEGER)
+      );
   }
 
   private get currentLocale(): string {

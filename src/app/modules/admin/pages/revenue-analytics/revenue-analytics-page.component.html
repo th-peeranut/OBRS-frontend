@@ -63,7 +63,7 @@
       <div>
         <p class="admin-muted">{{ 'ADMIN.REVENUE_ANALYTICS.TILE.NET' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(totals?.net ?? '0', totals?.currency ?? 'THB') }}</p>
+          <p class="admin-big-number">{{ formatMoney(totals?.net ?? '0') }}</p>
           @if (changePct !== null) {
             <span
               class="ra-delta"
@@ -92,7 +92,7 @@
       <div>
         <p class="admin-muted">{{ 'ADMIN.REVENUE_ANALYTICS.TILE.PAID' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(totals?.paid ?? '0', totals?.currency ?? 'THB') }}</p>
+          <p class="admin-big-number">{{ formatMoney(totals?.paid ?? '0') }}</p>
         } @else {
           <span class="admin-skeleton admin-skeleton--sm"></span>
         }
@@ -103,7 +103,7 @@
       <div>
         <p class="admin-muted">{{ 'ADMIN.REVENUE_ANALYTICS.TILE.REFUNDED' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(totals?.refunded ?? '0', totals?.currency ?? 'THB') }}</p>
+          <p class="admin-big-number">{{ formatMoney(totals?.refunded ?? '0') }}</p>
         } @else {
           <span class="admin-skeleton admin-skeleton--sm"></span>
         }
@@ -135,7 +135,7 @@
               <div
                 class="ra-bar"
                 [style.height.%]="barHeightPct(point)"
-                [attr.title]="shortDate(point.date) + ' · ' + formatMoney(point.net, point.currency)"
+                [attr.title]="shortDate(point.date) + ' · ' + formatMoney(point.net)"
               ></div>
             </div>
             <span class="ra-bar-label">{{ shortDate(point.date) }}</span>

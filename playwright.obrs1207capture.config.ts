@@ -23,9 +23,15 @@ import { defineConfig, devices } from '@playwright/test';
  * repo, which check-e2e-lanes rule 3 exists to prevent.
  */
 
-const PORT = process.env['E2E_GATE_PORT'] ?? '4230';
+// OBRS-1531: was `E2E_GATE_PORT` with the gate's own default, 4230. Two lanes on one
+// port and one env var is not a shortcut — `reuseExistingServer` is on locally, so the
+// second one to start attaches to the first one's build and photographs it. Its own
+// var, its own default.
+const PORT = process.env['OBRS1207_PORT'] ?? '4231';
 
 export default defineConfig({
+  // OBRS-1611: name the tree this run measures, and refuse a port another tree holds.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
   testDir: './e2e/tests',
   testMatch: ['**/obrs-1207-capture.spec.ts'],
   timeout: 90_000,

@@ -285,6 +285,94 @@ the one named on the card would have left an identical trapdoor one `--config` f
 so `scripts/check-e2e-lanes.mjs` now refuses any root config that declares a directory
 without declaring what it runs, which closes the family rather than the two instances.
 
+### Ports, and which tree answered them (OBRS-1531)
+
+**One lane, one env var, one default.** `scripts/check-e2e-lanes.mjs` fails a build where
+two root configs read the same `process.env['..._PORT']`, or default to the same port,
+unless the sharing is declared in `SHARED_PORT_ENV_OK` with its reason. Three configs used
+to read `E2E_GATE_PORT` — the gate, `obrs1207capture` (same default, 4230) and `obrs769`
+(4272) — so setting the variable to escape a busy port quietly moved two lanes nobody was
+thinking about. `obrs1207capture` is now `OBRS1207_PORT`/4231, `obrs769` is
+`OBRS769_CENSUS_PORT`/4272, and `obrs1521` moved off `obrs775`'s 4232 to 4245.
+
+One group is declared shared on purpose: `E2E_FRONTEND_PORT` + `E2E_BACKEND_PORT` across
+`local`, `obrs483`, `obrs577`, `obrs732`, `obrs884` and `obrs1456`. `environment.e2e.ts`
+pins `apiUrl` to that one backend port, so two of those lanes can never be up at the same
+time whatever their frontend port says. Configs that hardcode `--port 4200` are outside
+this rule: they name no variable, and their port is pinned by the backend CORS allow-list
+they are pointed at.
+
+**Every lane that names a local port says which tree it measured.** `webServer.reuseExistingServer`
+is `!CI` or a flat `true` in 36 of the 53 root configs, so locally Playwright never reports a
+port clash — it attaches to whatever already answers and runs your specs against that build.
+Measured 2026-08-22 (OBRS-773): a lane run reported `199 passed` onto a card, and the tree it
+had measured was another worktree's. `e2e/support/lane-tree-guard.ts` started as the gate
+config's `globalSetup` alone and reached 2 configs; OBRS-1611 wired it into all 37 that
+declare a `webServer`, and OBRS-1616 added the 9 that declare no server at all and simply
+point `baseURL` at a port somebody started by hand — the same exposure, reached by a
+different route. Rule 7 of `scripts/check-e2e-lanes.mjs` fails the build if a new config in
+either shape does not wire it, and it resolves `baseURL: BASE_URL` as well as the literal
+spellings, so the gate is not weaker than the guard it enforces. **46 of 53** are covered;
+the 7 that are not are listed at the end of this section. Every run now opens with:
+
+```
+[lane-tree] tree C:\Users\thpee\Desktop\workshop\OBRS-frontend-wt-obrs-1531
+[lane-tree] head 5f9860fb (ao/obrs-1531-e2e-gate-lane-isolation) +uncommitted changes
+[lane-tree] port 4230
+[lane-tree] the server on 4230 is this tree's own
+```
+
+and if that last line cannot be said, the run does not start:
+
+```
+Error: [lane-tree] REFUSING TO RUN -- port 4230 belongs to another tree.
+    this tree : ...\OBRS-frontend-wt-obrs-1531
+    listening : "node" "...\OBRS-frontend-wt-obrs-1531-foreign\...\ng.js" serve ... --port 4230
+```
+
+The remedy is a port of your own — `$env:E2E_GATE_PORT='4290'; npm run e2e:gate` — or
+stopping the leftover server if it is one of your own killed runs. The guard reads the port
+out of `config.webServer.url`, so a config that spreads the gate config is checked on ITS
+port; when `webServer` is given as an ARRAY, Playwright leaves `config.webServer` null, so the
+six full-stack lanes are read off the first project's loopback `baseURL` instead. It stands
+down on CI (`reuseExistingServer` is false there, one lane per runner) and on any non-Windows
+box, and prints that it did rather than going quiet.
+
+**Twelve lanes are allowed to attach to somebody else's server**, because that is what they
+are for: `obrs1258qa`, `obrs1388qa`, `obrs1388before`, `obrs433`, `obrs1298qa`, `obrs1308`,
+`obrs1333`, `obrs703qa`, `obrs766` and `obrs960qa` all drive the local stack an operator
+started by hand (:4200 in every case); `obrs769capture` points `OBRS769_PORT` at a throwaway
+worktree at `origin/dev` for its BEFORE phase; and `obrs742` serves each of its two trees on
+:4200 in turn, one invocation each. Each says so in its own header. They declare
+
+```ts
+metadata: { laneTree: 'attach-to-operator-stack' },
+```
+
+and get the banner without the refusal — the log still names the tree that served the pages,
+which is the half that matters when the output is a screenshot. Anything that declares nothing
+is guarded strictly, on purpose: an undeclared lane costs a refused run somebody notices, and
+the other default costs a picture of the wrong tree that nobody does. `obrs575` is the one
+lane of the nine OBRS-1616 wired that gets no marker: :4575 is the server its own tree
+starts, so a foreign tree answering it is a mistake, not a plan.
+
+**Seven lanes are outside the guard, decided rather than overlooked** (OBRS-1616 AC-5), and
+each says why in its own header. `obrs874census` measures the deployed SIT site and `obrs617`
+is pure API with no browser at all — neither has a local server to attribute, and rule 7 skips
+them because their `baseURL` is not a loopback port. The other five — `obrs391`, `obrs702`,
+`obrs722`, `obrs1331`, `obrs1432` — are BEFORE/AFTER capture lanes that serve **two trees at
+once**, on two ports written as full URLs inside the spec rather than in the config. The guard
+attributes one port; a banner naming the runner's tree would be right for the AFTER half and
+wrong for the BEFORE, and a wrong attribution is worse than none. If a future lane of that
+shape needs covering, the missing piece is a per-navigation attribution, not another
+`globalSetup`.
+
+**"Two trees" is not by itself a reason to skip the guard** — `obrs742` is the counter-example
+and was in that list until OBRS-1616 was reviewed. Its two trees take turns on ONE port across
+two separate invocations, so within any one run there is a single server to attribute, which
+is exactly what the guard does. The question to ask is not "does this card compare two trees?"
+but **"how many ports does one invocation touch?"**.
+
 ## Known gaps
 
 - **The 214/223 hang has not been reproduced.** It was reported on a full-sweep run and

@@ -12,6 +12,25 @@
 
   <div class="card shadow-sm border-0 mt-3">
     <div class="card-header bg-white border-bottom-0 d-flex gap-2 flex-wrap py-3">
+      <!-- OBRS-33: one day at a time (today by default), soonest trip first.
+      No `minDate` — past days stay reachable. -->
+      <div class="flex-shrink-0" style="width: 200px">
+        <p-datePicker
+          styleClass="app-date-field"
+          panelStyleClass="app-date-field-panel"
+          dateFormat="dd/mm/yy"
+          [ngModel]="selectedDate"
+          (ngModelChange)="onDateChange($event)"
+          (onBlur)="onDateBlur()"
+          [showIcon]="true"
+          [iconDisplay]="'input'"
+          [placeholder]="'STAFF.SELL.DATE_PLACEHOLDER' | translate"
+          >
+          <ng-template pTemplate="inputicon">
+            <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+          </ng-template>
+        </p-datePicker>
+      </div>
       <input class="form-control form-control-sm w-auto flex-grow-1"
         [placeholder]="'STAFF.SCHEDULES.SEARCH_PLACEHOLDER' | translate"
         (input)="onSearchChange($any($event.target).value)" />

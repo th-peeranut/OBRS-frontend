@@ -1,4 +1,8 @@
 @import "../../../styles/variables.scss";
+// OBRS-969: the dark block at the foot of this file needs the $dk-* palette. It declares
+// variables only and emits no CSS, which is why it is safe in a component stylesheet
+// (styles/_dark-tokens.scss says so in its own header).
+@import "../../../styles/dark-tokens";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -138,5 +142,41 @@
   a {
     color: $primary-blue;
     text-decoration: underline;
+  }
+}
+
+// OBRS-969. See refund-policy.component.scss's block for why this lives in the component
+// and not in dark-theme.scss (encapsulation outranks the global override, OBRS-767).
+// Ratios are MEASURED by e2e/tests/obrs-969-capture.spec.ts.
+:host-context(body.is-dark) {
+  .policy-container {
+    background-color: $dk-bg;
+  }
+
+  .policy-card {
+    color: $dk-text;
+  }
+
+  // The shimmer's light values were copied from `.skeleton` in my-bookings.component.scss
+  // (the comment above says so); its dark values come from the same place, so the two
+  // stay one pair rather than drifting into two. A bright grey bar is the one surface
+  // here that a near-black page turns into a hole.
+  .policy-skeleton {
+    background: linear-gradient(
+      90deg,
+      $dk-bg-soft 25%,
+      $dk-bg-card 37%,
+      $dk-bg-soft 63%
+    );
+    background-size: 400% 100%;
+  }
+
+  .policy-inline-error,
+  .policy-inline-retry {
+    color: $dk-danger;
+  }
+
+  .policy-cross-link a {
+    color: $dk-accent;
   }
 }

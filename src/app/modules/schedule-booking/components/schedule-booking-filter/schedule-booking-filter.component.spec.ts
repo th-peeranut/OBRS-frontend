@@ -764,10 +764,17 @@ describe('ScheduleBookingFilterComponent — origin/destination swap (OBRS-1035)
     const centreY = (el: HTMLElement) => box(el).top + box(el).height / 2;
 
     if (window.matchMedia('(max-width: 992px)').matches) {
-      // No seam exists here: the lower field's LABEL sits between the two
-      // boxes. The button straddles the upper field's bottom edge instead, at
-      // the right end, where that left-aligned label has no text.
+      // AC#4 of OBRS-1189: there IS a seam here now. While the labels sat ABOVE
+      // their fields the lower one's label filled the gap between the two boxes
+      // (measured 2026-08-05: its midpoint 15px below the upper field, inside
+      // that label's own text row), so the button could only straddle the upper
+      // field's bottom edge. The boxes TOUCH now -- they overlap by the 1px that
+      // collapses their two borders into one line -- and that is the assertion
+      // this card added: it is red against every build before it, which is what
+      // makes it a proof of AC#4 rather than a restatement of the old layout.
+      // It still hangs at the right end, where the reference sites put it.
       expect(box(fields[0]).left).toBe(box(fields[1]).left);
+      expect(Math.abs(box(fields[1]).top - box(fields[0]).bottom)).toBeLessThanOrEqual(1);
 
       expect(Math.abs(centreY(host) - box(fields[0]).bottom)).toBeLessThanOrEqual(1);
       expect(centreX(host)).toBeGreaterThan(centreX(fields[0]));
@@ -1277,5 +1284,67 @@ describe('ScheduleBookingFilterComponent — one press of ค้นหา is one
     expect(searches[0].schedule_filter.fromStop).toBe('station-a');
     expect(searches[0].schedule_filter.toStop).toBe('station-b');
     expect(searches[0].schedule_filter.numberOfPassengers).toBe(1);
+  });
+});
+
+// The twin of home-booking's "search bar actions" describe. Scrutinize caught
+// that only home had it: both screens got the same structural move, but if
+// someone re-nests THIS button the stylesheet it shares by `@import` goes on
+// claiming a bar it no longer builds, and nothing goes red. Karma's window is
+// 800px so the >=993px `order`/width branch is E2E-only either way -- what is
+// testable here, and what the whole desktop branch rests on, is that the button
+// is a DIRECT child of the bar.
+describe('ScheduleBookingFilterComponent — the search button is a segment of the bar (OBRS-1189 AC#3)', () => {
+  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingFilterComponent, StationLoadErrorComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: AlertService, useValue: { warning: () => {} } },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
+    fixture.detectChanges();
+  });
+
+  it('renders the button inside .station-section, not in a row wrapper of its own', () => {
+    const bar = fixture.debugElement.query(By.css('.station-section'));
+    expect(bar).withContext('the search bar must exist').not.toBeNull();
+
+    const button = bar.query(By.css('.btn-search'));
+    expect(button)
+      .withContext('AC#3: the search button is a segment of the bar')
+      .not.toBeNull();
+
+    // Direct child, not merely a descendant: the `d-flex justify-content-end
+    // w-100` wrapper this card deleted was INSIDE `.station-section` too, and a
+    // 100%-wide row is exactly what put the button on a line of its own.
+    expect((button.nativeElement as HTMLElement).parentElement)
+      .toBe(bar.nativeElement as HTMLElement);
+  });
+
+  it('keeps the accessible name when the label is hidden between 993 and 1199', () => {
+    const button = fixture.debugElement.query(By.css('.station-section .btn-search'))
+      .nativeElement as HTMLElement;
+
+    // The label is what the stylesheet hides in that band; the aria-label is
+    // unconditional, which is the only reason hiding it is allowed.
+    expect(button.querySelector('.btn-search__label')).not.toBeNull();
+    expect(button.getAttribute('aria-label')).toBe('HOME.HOME_BOOKING.SEARCH');
   });
 });

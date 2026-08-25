@@ -3,6 +3,7 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminExpenseDto,
+  AdminExpensePayeeDto,
   AdminOwnerDto,
   AdminVehicleDto,
 } from '../../../../services/admin/admin-api.service';
@@ -12,6 +13,8 @@ import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../../auth/auth.service';
 import { ExpensesStore } from './expenses.store';
 import { VehiclesStore } from '../vehicles/vehicles.store';
+import { ExpensePayeesStore } from '../expense-payees/expense-payees.store';
+import { sortPayeesByName } from '../expense-payees/expense-payees.mappers';
 import {
   ExpenseRow,
   Option,
@@ -55,6 +58,10 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
   /** OBRS-808: only ever populated for an `admin` — the roster endpoint 403s
    * everyone else, so it is not even requested for them. */
   protected ownerOptions: Option[] = [];
+  /** OBRS-1577: the ACTIVE payees, for the bill form's picker. The store caches retired ones too
+   * (the registry screen needs them to un-retire) — filtering happens HERE so a retired garage can
+   * never be offered on a new bill. */
+  protected payeeOptions: AdminExpensePayeeDto[] = [];
 
   protected selectedVehicleFilter = '';
   protected selectedCategoryFilter = '';
@@ -95,6 +102,17 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
    * nothing. Two different questions, two different flags.
    */
   protected readonly isAdmin: boolean;
+  /**
+   * OBRS-1577: may this caller CREATE a payee from inside the bill form?
+   *
+   * `hasHeldRole(['owner'])` and NOT `hasAnyRole` — the OBRS-1498 distinction, and this is exactly
+   * the case it was written for. Reading, renaming and retiring a payee all go through
+   * `getCurrentOwnerScope()`, which an admin satisfies; CREATE alone goes through
+   * `getCurrentOwnerId()`, which throws for an admin because they own no fleet to attach the row
+   * to. `hasAnyRole(['owner'])` is true for an admin (ROLE_GRANTS maps admin→owner), so using it
+   * here would render an "add" button whose only outcome is a server error.
+   */
+  protected readonly canCreatePayee: boolean;
 
   // Bound reloader passed to the form modal (arrow closes over `this`),
   // mirroring VehiclesPageComponent.reloadStructureBound.
@@ -112,10 +130,12 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
     private readonly translate: TranslateService,
     private readonly store: ExpensesStore,
     private readonly vehiclesStore: VehiclesStore,
+    private readonly payeesStore: ExpensePayeesStore,
     private readonly authService: AuthService
   ) {
     this.canWrite = this.authService.hasAnyRole(['admin', 'owner']);
     this.isAdmin = this.authService.getRoles().includes('admin');
+    this.canCreatePayee = this.authService.hasHeldRole(['owner']);
 
     const today = new Date();
     this.selectedYear = String(today.getFullYear());
@@ -157,10 +177,34 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
       })
     );
 
+    // OBRS-1577. A failed payee fetch is deliberately NOT surfaced as a page error and NOT alerted:
+    // the expense log is fully usable without it, and the picker degrades to offering nothing —
+    // the same reasoning `loadOwners`/`loadPending` below already apply to their own secondary
+    // fetches.
+    //
+    // ⚠️ An `admin` does NOT 403 here, contrary to what "OWNER-only" suggests: WebSecurityConfig
+    // declares `ROLE_ADMIN > ROLE_OWNER`, so `hasRole('OWNER')` PASSES for an admin and the GET
+    // returns 200. What they get back is `findForPlatform` — every operator's payees merged — for
+    // the same reason every other read on this domain does. See `canCreatePayee` below for the one
+    // operation where admin is genuinely refused.
+    this.subscriptions.add(
+      this.payeesStore.data$.subscribe((data) => {
+        this.payeeOptions = sortPayeesByName((data ?? []).filter((payee) => payee.active));
+      })
+    );
+
     void this.store.refresh();
     void this.vehiclesStore.refresh();
+    void this.payeesStore.refresh();
     void this.loadOwners();
     void this.loadPending();
+  }
+
+  /** OBRS-1577: a payee added from inside the bill form. Revalidating the shared cache is what
+   * makes it available on the NEXT bill and on the registry screen without a page reload; the
+   * picker has already selected it locally, so nothing on screen waits for this. */
+  protected onPayeeCreated(): void {
+    void this.payeesStore.refresh();
   }
 
   /**

@@ -46,13 +46,35 @@
   }
 }
 
+// THE SEARCH BAR (OBRS-1189). One continuous bar from the origin picker to the
+// search button — what all four reference sites do, and what OBRS-1038 started
+// and could only take halfway: it merged the two station halves and left the
+// date fields and the button beside the bar as differently-shaped controls.
+//
+// Every child here is a SEGMENT: `$field-height-inline-label` tall, square on
+// the side where it meets its neighbour, pulled back 1px so the two borders that
+// meet collapse into one line (the same construction as the station seam below,
+// which is why the seam needs no divider element). Only the two ENDS carry a
+// radius. The map hint is the one child that is not a segment — it is 100% wide,
+// so it takes the line under the bar.
+//
+// EVERY SEGMENT SHRINKS AND NONE OF THEM WRAP. A flex line breaks on its items'
+// HYPOTHETICAL sizes, so a `flex-basis: 0` on the shrinkable segments means this
+// bar cannot break into two rows anywhere on the desktop side of 993px — it
+// narrows instead. AC#3 asks for the button at the end of the bar down to 993px,
+// and `flex-wrap: wrap` is here for the map hint's own line and nothing else.
 .station-section {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   flex-direction: row;
   flex-wrap: wrap;
-  column-gap: $space-md;
+  column-gap: 0;
   row-gap: $space-xs;
+
+  // The swap button centres itself on the FIELD, and the field is taller now
+  // that it carries its own label. Declared here, read by the button's own
+  // stylesheet — the knob OBRS-1035 left for exactly this, not a nudge.
+  --station-swap-field-height: #{$field-height-inline-label};
 
   // Was Bootstrap's `mt-4` (1.5rem) in the template. Identical value, moved
   // here by OBRS-928 only because that utility is `!important` and the rule
@@ -82,6 +104,19 @@
     flex-wrap: nowrap;
     gap: 0;
 
+    // Two shares of the bar against one per date segment (OBRS-1189): the pair
+    // holds two station names and each date holds one short string, so an equal
+    // split would starve the halves. Basis 0 — see the bar's own note on why no
+    // segment may have a hypothetical size.
+    flex: 2 1 0;
+    min-width: 0;
+
+    // The 250px floor each half carries on its own would force the bar onto a
+    // second row (it is a hypothetical size, so it breaks the line before
+    // anything gets a chance to shrink). Station names ellipsize; a bar that
+    // wraps at 1100px does not satisfy AC#3.
+    --dropdown-toggle-min-width: 0;
+
     // `.station-icon { margin-top: 30px }` used to live here — a nudge that
     // happened to land the swap slot on the field's centre line at this width
     // and nowhere else (it read −9.5px below 993px, and the parcel copy, which
@@ -98,14 +133,30 @@
     );
 
     app-dropdown-group-obrs {
+      // The two halves split whatever the pair was given, and neither may keep
+      // an intrinsic width — a half sized by its content is a half that moves
+      // the seam every time a station name changes.
+      flex: 1 1 0;
+      min-width: 0;
+
+      // ...and the FIELD has to fill the half it was given. The toggle is an
+      // `<input>`, so `width: auto` is its `size` attribute's intrinsic width
+      // (~177px), not its column: with the 250px floor lifted above, the field
+      // stopped tracking the half and left a measured 4-48px hole between the
+      // segments. This knob is the one OBRS-1038 added for the stacked case.
+      --dropdown-toggle-width: 100%;
+
       &:first-of-type {
         --dropdown-toggle-radius: #{$radius-xl} 0 0 #{$radius-xl};
         --dropdown-toggle-padding: #{$space-xs} var(--station-swap-clearance)
           #{$space-xs} #{$space-xs};
       }
 
+      // Square on BOTH sides now (OBRS-1189): the destination half is no longer
+      // the end of the bar — the first date segment butts against it, and the
+      // radius that used to close the bar here is now on the search button.
       &:last-of-type {
-        --dropdown-toggle-radius: 0 #{$radius-xl} #{$radius-xl} 0;
+        --dropdown-toggle-radius: 0;
         --dropdown-toggle-padding: #{$space-xs} #{$space-xs} #{$space-xs}
           var(--station-swap-clearance);
         margin-left: -1px;
@@ -115,6 +166,61 @@
     .station-datepicker {
       margin-top: 30px;
     }
+  }
+
+  // DATE SEGMENTS. OBRS-1562's `flex: 1 1 230px; max-width: 320px` is gone
+  // rather than retuned, and the card said so before this one started: that was
+  // the sizing for a date field standing BESIDE the bar. The 320px cap existed
+  // to stop a lone one-way field swelling to ~610px, and a segment cannot swell
+  // — the bar is full by construction. The 230px basis existed to buy one-row
+  // width without clipping the year, and a basis is exactly what a segment may
+  // not have (it is what wrapped the row below ~1090px). OBRS-1566 (a 3px gap in
+  // `zh` that only exists at that basis) goes with it.
+  //
+  // `>` and not a descendant match: `app-dropdown-group-obrs` wraps its own
+  // toggle in a `.form-group-obrs` too, so the loose selector reaches inside
+  // `.station-group` and re-sizes the two halves of the merged bar.
+  > .form-group-obrs {
+    flex: 1 1 0;
+    min-width: 0;
+    // Collapse the doubled border against the segment before it, the same 1px
+    // the destination half already pulls back against the origin half.
+    margin-left: -1px;
+  }
+
+  // THE LAST SEGMENT (AC#3). Fixed width, because the one thing on the row that
+  // must not shrink is the button a customer is looking for; the segments before
+  // it absorb the width instead.
+  > .btn-search {
+    flex: 0 0 auto;
+    height: $field-height-inline-label;
+    margin-top: 0;
+    margin-left: -1px;
+    border-radius: 0 $radius-xl $radius-xl 0;
+  }
+
+  // NOT a segment — the line under the bar. `width: 100%` is what forces the
+  // break; being LAST in the flex order is what puts that break below the bar
+  // rather than inside it, which is the difference between this and the same
+  // declaration OBRS-1562 removed from an element sitting in the middle. The
+  // width is on the ROW, not on the button: a 100%-wide `<button>` would hand a
+  // four-word link the whole width of the card as a click target.
+  > .map-hint-row {
+    width: 100%;
+  }
+}
+
+// Hidden where the bar is one row and narrow enough that the label's ~96px is
+// what the date segments need to print a whole date -- measured clipping by 22px
+// at 993px with it. Above 1199 there is room for the word; below 993 the button
+// is full width and stacked, and the word is the only thing in it.
+@media (min-width: 993px) and (max-width: 1199px) {
+  .station-section > .btn-search {
+    width: $field-height-inline-label; // a square end-cap, the icon centred in it
+  }
+
+  .btn-search__label {
+    display: none;
   }
 }
 
@@ -164,6 +270,12 @@ app-recent-routes-quick-pick.has-routes + .station-section {
   }
 }
 
+// OBRS-1562's `.form-actions` block stood here. OBRS-1189 moved both of its
+// children into `.station-section` — the search button because AC#3 puts it at
+// the end of the bar, the map hint because `order` only ranks siblings and the
+// two have to swap places below 993px — so the wrapper and its rules have no
+// element left to match.
+
 .btn-search {
   height: 52px;
   width: 160px;
@@ -174,8 +286,11 @@ app-recent-routes-quick-pick.has-routes + .station-section {
   justify-content: center;
   align-items: center;
 
-  margin-top: 30px;
-
+  // `margin-top: 30px` stood here. It was the offset that put a button on its own
+  // row level with the label+field boxes beside it; OBRS-1189 made the button a
+  // SEGMENT, and both branches of `.station-section > .btn-search` now set the
+  // margin themselves (0 in the row, $space-md in the column), so this one could
+  // no longer apply at any width.
   font-size: $font-size-md;
   font-weight: $font-weight-medium;
   color: $text-white;
@@ -215,32 +330,84 @@ app-recent-routes-quick-pick.has-routes + .station-section {
     padding: $space-md;
   }
 
+  // STACKED, AND STILL ONE BAR (OBRS-1189 AC#4). Every `flex` here is reset to
+  // `0 0 auto` for the reason OBRS-1562 measured the hard way: a flex-basis
+  // follows the MAIN axis, and the main axis is the HEIGHT in this container, so
+  // the row-mode shares would size these fields vertically (it read 250px tall
+  // per field, and `.station-section` 682px instead of 396px). The 1px pull-back
+  // moves to the cross... to the top, rather: it is the same collapsed double
+  // border, turned with the bar.
   .station-section {
     flex-direction: column;
     align-items: stretch;
+
+    // `row-gap` is the gap BETWEEN the bar and the hint line while this is a
+    // row; turned, it is the gap between every segment — measured 12px of white
+    // space in the middle of a bar whose whole point is that it has none. The
+    // spacing the two buttons need is their own margin, below.
+    row-gap: 0;
+
+    > .form-group-obrs {
+      flex: 0 0 auto;
+      margin-left: 0;
+      margin-top: -1px;
+
+      // Only the LAST date segment closes the bar, and "last" has to mean NOT
+      // FOLLOWED BY ANOTHER ONE — one-way mode renders a single date field, so
+      // neither position names it. `:last-of-type` said this correctly until the
+      // map hint's wrapper became a later `div` sibling and silently took the
+      // title; a rule that can be broken by an unrelated element two lines away
+      // is not the rule. Where `:has()` is unsupported the bar's bottom corners
+      // stay square, which is a plainer bar, not a broken one.
+      &:not(:has(+ .form-group-obrs)) {
+        --date-segment-radius: 0 0 #{$radius-xl} #{$radius-xl};
+      }
+    }
+
+    // Below 993px the button is NOT a segment: a full-width brand fill welded to
+    // the bottom of the field stack reads as a fifth field, and AC#3 asks for
+    // the end-of-bar position on desktop only.
+    //
+    // `order` is why both buttons had to become children of this element: it
+    // ranks SIBLINGS, and the hint must stay above the button here — a "not sure
+    // where to board?" link below the search button is a link nobody reaches in
+    // time.
+    > .btn-search {
+      order: 2;
+      width: 100%;
+      height: 52px;
+      margin-top: $space-md;
+      margin-left: 0;
+      border-radius: $radius-xl;
+    }
+
+    > .map-hint-row {
+      order: 1;
+      margin-top: $space-2xs;
+    }
   }
 
-  // AC#3: the bar stacks, it does not wrap and it does not shrink two 250px
-  // fields into a 375px screen.
+  // The bar turns; it does NOT come apart, and it does not shrink two 250px
+  // fields into a 375px screen either.
   //
-  // IT DOES NOT STAY MERGED, and that is forced by this card's own scope cut,
-  // not a shortcut. Stacked, the DOM order is labelA · fieldA · labelB · fieldB
-  // — the lower field's label sits *between* the two boxes, so there is no
-  // continuous bar to seam and no seam for the button to straddle. Measured:
-  // the midpoint between the two field boxes lands 15px below the upper one,
-  // inside the label's text row. Merging would mean moving the labels into the
-  // frames, which the owner cut from this card on 2026-08-05.
+  // Until OBRS-1189 this block reset the row-mode joins — full radius on both
+  // halves, normal padding, no pull-back — and the comment that stood here said
+  // why: with the label above the field, the stacked DOM order was
+  // labelA · fieldA · labelB · fieldB, so the lower half's LABEL sat between the
+  // two boxes (measured 15px below the upper one, inside its own text row).
+  // There was no seam. The label is inside the frame now, so the two boxes touch
+  // and the joins are FLATTENED here instead of reset — turned by 90 degrees,
+  // exactly as they are in row mode. That is AC#4, and it is the debt OBRS-1038
+  // recorded against its own scope cut.
   //
-  // So each half keeps its own full radius here (the row-mode overrides are
-  // reset, not flattened), and the button — positioned entirely by its own
-  // stylesheet's matching @media — hangs at the right on the upper field's
-  // bottom edge. Nothing about the button is nudged from here;
-  // `.station-icon { margin: … auto }` used to be, and that hand-tuned pair is
-  // exactly the class of rule OBRS-1035 removed.
+  // Nothing about the swap button is nudged from here; it straddles the seam
+  // from its own stylesheet's matching @media, as it did before.
   .station-section .station-group {
     width: 100%;
     flex-direction: column;
     align-items: stretch;
+    // A share is a HEIGHT in a column — see the note on the date segments above.
+    flex: 0 0 auto;
 
     app-dropdown-group-obrs {
       width: 100%;
@@ -249,23 +416,29 @@ app-recent-routes-quick-pick.has-routes + .station-section {
       // full-width column between 577px and 992px (below 577px the component's
       // own rule already forces 100%).
       --dropdown-toggle-width: 100%;
+      flex: 0 0 auto;
 
-      // Reset the row-mode joins: full radius on both halves again, normal
-      // padding (nothing sits between them here to clear), no pull-back.
+      // Padding back to normal on both halves — the swap disc sits on the seam
+      // between them here, not inside either one, so neither has to hold its
+      // content clear of it.
       &:first-of-type,
       &:last-of-type {
-        --dropdown-toggle-radius: #{$radius-xl};
         --dropdown-toggle-padding: #{$space-xs};
       }
 
+      // Only the TOP of the first half is an end of the bar...
+      &:first-of-type {
+        --dropdown-toggle-radius: #{$radius-xl} #{$radius-xl} 0 0;
+      }
+
+      // ...and the second half is square on every side: the date segments
+      // continue below it.
       &:last-of-type {
+        --dropdown-toggle-radius: 0;
         margin-left: 0;
+        margin-top: -1px;
       }
     }
-  }
-
-  .btn-search {
-    width: 100%;
   }
 }
 
@@ -279,7 +452,7 @@ app-recent-routes-quick-pick.has-routes + .station-section {
     object-fit: cover;
   }
 
-  .btn-search {
-    margin-top: 20px;
-  }
+  // `.btn-search { margin-top: 20px }` stood here and no longer reaches the
+  // button: OBRS-1189 made it a child of `.station-section`, whose own rule is
+  // one class more specific — and sets $space-md, the same 20px.
 }

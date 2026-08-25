@@ -37,6 +37,12 @@ export interface BookingTicketItem {
   id: number;
   ticketNumber: string;
   passengerType?: CodeLabel;
+  /**
+   * OBRS-1232: the title as a stable CODE ('MISS'), separate from the name and untranslated on the
+   * wire. Render it with the `titleLabel` pipe so switching language changes the word without a
+   * refetch. A legacy free-text value the migration left alone comes through verbatim (AC-5).
+   */
+  passengerTitle?: string | null;
   passengerName?: string;
   /** `null` (not just absent) on an `OPEN`-seating schedule — the backend
    * normalizes every ticket's seat to null there (OBRS-321/483), it is

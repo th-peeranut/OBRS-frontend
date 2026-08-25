@@ -15,6 +15,7 @@ import {
   stripPhoneSeparators,
   THAI_MOBILE_PATTERN,
 } from '../../../../shared/constants/thai-msisdn';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 export interface WalkInCheckoutPayload {
   contact: {
@@ -177,7 +178,7 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
     };
 
     // OBRS-1231: a blank select becomes null, not ''. Trimmed first because the option
-    // values come from TITLE_OPTIONS' nameEnglish and a future edit could pad one.
+    // values come from TITLE_OPTIONS' `code` (OBRS-1232) and a future edit could pad one.
     const title = String(v.title ?? '').trim();
 
     const payload: WalkInCheckoutPayload = {
@@ -223,5 +224,9 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
 
   protected getControl(name: string): AbstractControl | null {
     return this.contactForm.get(name);
+  }
+
+  protected formatMoney(value: number): string {
+    return formatMoney(value, this.translate.currentLang);
   }
 }

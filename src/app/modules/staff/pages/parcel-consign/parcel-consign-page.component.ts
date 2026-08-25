@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Subject, forkJoin } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { EMPTY, Subject, forkJoin, of } from 'rxjs';
+import { catchError, map, switchMap, takeUntil } from 'rxjs/operators';
 import dayjs from 'dayjs';
 import {
   RouteSegmentsDto,
@@ -159,8 +159,19 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
    * request captures the epoch at issue time and drops its own response if
    * the epoch has moved. (The pre-existing same-mode quote race — two
    * overlapping requests resolving out of order after a schedule/stop change
-   * — is NOT closed by this and is left for a `switchMap` follow-up.) */
+   * — is a DIFFERENT race and is closed separately by `quoteParams$` below,
+   * OBRS-616.) */
   private modeEpoch = 0;
+
+  /** OBRS-616 — every quote request is issued through this subject so
+   * `switchMap` drops the previous one. Two requests overlap whenever a field
+   * changes faster than the API answers (the form's 400ms debounce shortens
+   * that window, it does not close it), and with a plain `.subscribe()` the
+   * price on screen was decided by whichever response the network delivered
+   * LAST — so a slower EARLIER request overwrote the newer price with a stale
+   * one. `null` (params no longer complete) cancels whatever is in flight;
+   * `onQuoteParamsChange()` still clears the displayed state itself. */
+  private readonly quoteParams$ = new Subject<ParcelQuoteParams | null>();
 
   /** OBRS-341 (card AC follow-up) — bumped by `clearSubmissionState()`
    * (i.e. by BOTH `onModeChange()` and `onNextItem()`). Guards
@@ -178,6 +189,12 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
    * by `clearSubmissionState()` (a new booking needs a new key). */
   private carryOnIdempotencyKey: string | null = null;
 
+  /** OBRS-1598 — the day whose `scheduleOptions` are currently loaded, so
+   * `onDateChange()` can tell a real day change from a re-click on the same
+   * day. Written by `loadSchedules()`, the one place that loads them, so the
+   * initial `ngOnInit` load counts too. */
+  private loadedDateStr: string | null = null;
+
   private routeGroups: WalkInRouteGroupDto[] = [];
   private scheduleRouteSlug = new Map<number, string>();
   private orderedStops: OrderedStop[] = [];
@@ -191,6 +208,39 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadSchedules(this.selectedDate);
+
+    // OBRS-616 — the only place this page asks for a quote (both modes come
+    // through here; `parcelType` is read per request). `switchMap` unsubscribes
+    // the previous request, so an earlier response can no longer land at all;
+    // the `modeEpoch` capture stays because a mode switch does not necessarily
+    // emit new params (it clears the form), so the in-flight request of the
+    // OLD mode must still be dropped on arrival. `catchError` is INSIDE the
+    // inner observable on purpose: an error left to reach the outer pipeline
+    // would kill this subscription and the page would silently stop quoting.
+    this.quoteParams$
+      .pipe(
+        switchMap((params) => {
+          if (!params) return EMPTY;
+          const epoch = this.modeEpoch;
+          return this.staffApiService.getParcelQuote({ parcelType: this.mode, ...params }).pipe(
+            map((resp) => ({ epoch, quote: resp?.data ?? null, errorKey: null as string | null })),
+            catchError((err: unknown) =>
+              of({
+                epoch,
+                quote: null,
+                errorKey: this.mapErrorCode(err, QUOTE_ERROR_KEYS, 'STAFF.PARCEL_CONSIGN.ERROR.QUOTE_FAILED'),
+              })
+            )
+          );
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(({ epoch, quote, errorKey }) => {
+        if (epoch !== this.modeEpoch) return;
+        this.quote = quote;
+        this.quoteErrorKey = errorKey;
+        this.isLoadingQuote = false;
+      });
 
     this.cargoStore.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       this.cargoValue = data;
@@ -349,11 +399,29 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
 
   protected onDateChange(date: Date): void {
     this.selectedDate = date;
+    // OBRS-1598: drop the round chosen for the OLD day BEFORE its options are
+    // replaced. `loadSchedules()` rewrites `scheduleOptions` wholesale, and
+    // `app-admin-dropdown` then shows its placeholder (no option matches the
+    // stale id) while `scheduleId` still holds it — the form stays valid and
+    // submits the previous day's trip. The clear emits, so the page's own
+    // `onScheduleChange('')` drops the stops/seats/quote/cargo it fed.
+    //
+    // Only when the day actually CHANGED. PrimeNG fires `(onSelect)` on every
+    // day-cell click, the already-selected day included (`shouldSelectDate()`
+    // returns true unconditionally for single selection, then `selectDate()`
+    // always emits) — so re-clicking today to dismiss the panel would otherwise
+    // wipe a round, its stops and its quote for no change at all. `selectedDate`
+    // cannot answer "did it change": ngModel writes it BEFORE `(onSelect)`
+    // fires, so it already holds the new value here — hence `loadedDateStr`.
+    if (dayjs(date).format('YYYY-MM-DD') !== this.loadedDateStr) {
+      this.formRef?.clearScheduleSelection();
+    }
     this.loadSchedules(date);
   }
 
   private loadSchedules(date: Date): void {
     const dateStr = dayjs(date).format('YYYY-MM-DD');
+    this.loadedDateStr = dateStr;
     this.staffApiService
       .getWalkInSchedules(dateStr)
       .pipe(takeUntil(this.destroy$))
@@ -380,6 +448,13 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
   }
 
   protected onScheduleChange(value: string): void {
+    // OBRS-1606 (owner decision): a submit error names the round it was raised
+    // for (cargo capacity exceeded, seats unavailable), so it must not outlive
+    // that round. This method is the single funnel for BOTH a round
+    // change and a day change (`onDateChange()` -> `clearScheduleSelection()` ->
+    // `scheduleId` valueChanges -> `scheduleChange`), so one clear covers both.
+    // Re-clicking the SAME day never reaches here - OBRS-1598's `loadedDateStr` guard.
+    this.serverErrorKey = null;
     this.pickupOptions = [];
     this.dropoffOptions = [];
     this.orderedStops = [];
@@ -403,11 +478,17 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
 
   /** OBRS-341 — `WalkInTripDto.availableSeatNumbers` for the chosen trip, the
    * same source `getWalkInSchedules()` already populated for the schedule
-   * dropdown above (no extra HTTP call). */
+   * dropdown above (no extra HTTP call).
+   *
+   * OBRS-615 — empty on an OPEN-seating trip. `availableSeatNumbers` is built from
+   * `string_agg(seat_number)`, and OPEN tickets carry NULL there, so on OPEN it lists
+   * every seat on the vehicle however full it is. The backend now rejects any named
+   * seat on such a trip (`PARCEL_SEAT_NUMBERS_NOT_ALLOWED_OPEN`), so offering that list
+   * could only produce a 400. */
   private findTripSeatNumbers(scheduleId: number): string[] {
     for (const group of this.routeGroups) {
       const trip = group.trips.find((t) => t.scheduleId === scheduleId);
-      if (trip) return trip.availableSeatNumbers ?? [];
+      if (trip) return trip.seatingMode === 'OPEN' ? [] : (trip.availableSeatNumbers ?? []);
     }
     return [];
   }
@@ -494,28 +575,13 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
       this.quote = null;
       this.quoteErrorKey = null;
       this.isLoadingQuote = false;
+      this.quoteParams$.next(null);
       return;
     }
 
     this.isLoadingQuote = true;
     this.quoteErrorKey = null;
-    const epoch = this.modeEpoch;
-    this.staffApiService
-      .getParcelQuote({ parcelType: this.mode, ...params })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (resp) => {
-          if (epoch !== this.modeEpoch) return;
-          this.quote = resp?.data ?? null;
-          this.isLoadingQuote = false;
-        },
-        error: (err: unknown) => {
-          if (epoch !== this.modeEpoch) return;
-          this.quote = null;
-          this.isLoadingQuote = false;
-          this.quoteErrorKey = this.mapErrorCode(err, QUOTE_ERROR_KEYS, 'STAFF.PARCEL_CONSIGN.ERROR.QUOTE_FAILED');
-        },
-      });
+    this.quoteParams$.next(params);
   }
 
   protected onSubmit(value: ParcelConsignFormValue | ParcelCarryOnFormValue): void {

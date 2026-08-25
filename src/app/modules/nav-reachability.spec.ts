@@ -82,7 +82,12 @@ const STAFF_LINKED_FROM: Record<string, string> = {
 };
 
 /** Admin has no detail-page routes today; kept for symmetry and future ones. */
-const ADMIN_LINKED_FROM: Record<string, string> = {};
+const ADMIN_LINKED_FROM: Record<string, string> = {
+  // OBRS-1576: expenses-page.component.html — the `รับซองบิล` button beside `เพิ่มค่าใช้จ่าย`.
+  // Deliberately NOT a nav entry: it is one of two ways to record the same thing, and a second
+  // top-level "expenses" item in the sidebar would read as a second cost book.
+  'expenses/batch': 'expenses',
+};
 
 /**
  * Leaf pages of a shell's route tree. Redirects (the bare-path default and the

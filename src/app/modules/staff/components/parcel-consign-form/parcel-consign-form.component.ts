@@ -311,6 +311,19 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
     if (changes['mode'] && !changes['mode'].firstChange) {
       this.resetForMode(changes['mode'].currentValue as ParcelConsignMode);
     }
+    // OBRS-615: switching to a trip with no seat list (an OPEN-seating one) must also drop a
+    // seat choice made on the previous trip - the checkbox that produced it is gone, so nothing
+    // else would ever clear it and it would ride along into the next submit.
+    if (changes['availableSeatNumbers'] && !this.canSpecifySeats) {
+      this.selectedSeatNumbers = [];
+      this.form.get('specifySeats')?.setValue(false);
+    }
+  }
+
+  /** OBRS-615: an OPEN-seating trip has no seat to pick - the page passes an empty list there
+   * and the backend rejects any named seat on such a trip, so the whole opt-in is hidden. */
+  protected get canSpecifySeats(): boolean {
+    return this.availableSeatNumbers.length > 0;
   }
 
   ngOnDestroy(): void {
@@ -656,6 +669,24 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
   protected get isDimensionsIncomplete(): boolean {
     const group = this.dimensionsGroup;
     return !this.isCarryOnMode && group.invalid && (group.dirty || group.touched);
+  }
+
+  /** OBRS-1598 — called by the parent page when the DATE changes and a fresh
+   * schedule list is about to be fetched: the round chosen belongs to the OLD
+   * day and must not survive into the new one.
+   *
+   * ⛔ This one EMITS, and that is load-bearing — do NOT "make it consistent"
+   * with the two clears below by adding `{ emitEvent: false }`. The page's
+   * `onScheduleChange('')` is what drops the stop options, seat list, quote and
+   * cargo state that hung off the old round; silencing the event leaves all of
+   * those stale and only the id looks cleared. The sibling it actually matches
+   * is `resetForMode()` above, whose `form.reset(...)` emits by default and
+   * whose emission the page has relied on since OBRS-341 — the two below are
+   * silent precisely because the page is already mid-cascade when it calls
+   * them. A spec asserts the emission (`…dom.spec.ts`, "emits the cleared
+   * value"), so this is caught, but the reason belongs here. */
+  clearScheduleSelection(): void {
+    this.form.patchValue({ scheduleId: '' });
   }
 
   /** Called by the parent page whenever the schedule changes and a fresh

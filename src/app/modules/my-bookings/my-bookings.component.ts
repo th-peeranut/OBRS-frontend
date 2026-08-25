@@ -37,6 +37,7 @@ import {
   selectMyBookings,
   selectRescheduleDialogBookingId,
 } from './store/my-bookings.selector';
+import { formatMoney } from '../../shared/lib/money-display';
 
 interface MyBookingsVm {
   items: MyBookingView[];
@@ -606,11 +607,7 @@ export class MyBookingsComponent implements OnInit {
 
 
   private formatCurrency(value: number): string {
-    return new Intl.NumberFormat('th-TH', {
-      style: 'currency',
-      currency: 'THB',
-      maximumFractionDigits: 2,
-    }).format(value);
+    return formatMoney(value, this.translate.currentLang);
   }
 
   private normalizeLocale(locale: string | null | undefined): SupportedLocale {

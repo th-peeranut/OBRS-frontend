@@ -1,0 +1,84 @@
+<section class="admin-page-intro">
+  <div>
+    <p class="admin-muted">{{ 'ADMIN.EXPENSES.BATCH.PAGE_PURPOSE' | translate }}</p>
+  </div>
+</section>
+
+<form [formGroup]="envelopeForm" class="envelope" (ngSubmit)="submitEnvelope()">
+  <!-- OBRS-808: admin-only, and ONE per envelope rather than one per bill. The server derives the
+  operator for an owner and ignores what they send, so this control would do nothing for them; and a
+  stack of bills that came from two operators is not an envelope. -->
+  @if (isAdmin) {
+    <div class="admin-form-field envelope-owner" data-testid="envelope-owner-field">
+      <label class="admin-form-label">
+        {{ 'ADMIN.EXPENSES.OWNER' | translate }} <span class="admin-required">*</span>
+      </label>
+      <app-admin-dropdown
+        formControlName="ownerSelection"
+        [options]="ownerOptions"
+        valueKey="code"
+        labelKey="label"
+        [searchable]="true"
+        [placeholder]="'ADMIN.EXPENSES.OWNER' | translate"
+      ></app-admin-dropdown>
+      <small class="admin-hint">{{ 'ADMIN.EXPENSES.BATCH.OWNER_HINT' | translate }}</small>
+      @if (ownerOptions.length === 0) {
+        <small class="admin-error" data-testid="envelope-owner-unavailable">
+          {{ 'ADMIN.EXPENSES.OWNER_UNAVAILABLE' | translate }}
+        </small>
+      }
+    </div>
+  }
+
+  @for (billForm of billForms; track trackByIndex($index); let i = $index) {
+    <app-expense-bill-card
+      [billForm]="billForm"
+      [index]="i"
+      [vehicleOptions]="vehicleOptions"
+      [categoryOptions]="categoryOptions"
+      [payees]="payeeOptions"
+      [canCreatePayee]="canCreatePayee"
+      [collapsed]="collapsed[i]"
+      [removable]="billForms.length > 1"
+      (remove)="removeBill(i)"
+      (toggleCollapse)="toggleCollapse(i)"
+      (payeeCreated)="onPayeeCreated()"
+    ></app-expense-bill-card>
+  }
+
+  <button
+    type="button"
+    class="admin-btn envelope-add-bill"
+    data-testid="envelope-add-bill"
+    (click)="addBill()"
+    >
+    {{ 'ADMIN.EXPENSES.BATCH.ADD_BILL' | translate }}
+  </button>
+
+  <!-- AC1: what is about to be saved, in the owner's own units — bills, lines, money. It is the
+  line he checks against the stack in his hand before pressing save. -->
+  <div class="envelope-foot">
+    <p class="envelope-summary" data-testid="envelope-summary">
+      <span>{{ 'ADMIN.EXPENSES.BATCH.BILL_COUNT' | translate: { n: billForms.length } }}</span>
+      <span>{{ 'ADMIN.EXPENSES.BATCH.LINE_COUNT' | translate: { n: envelopeLineCount } }}</span>
+      <strong>{{ envelopeTotal | number: '1.2-2' }}</strong>
+    </p>
+    <div class="envelope-actions">
+      <button type="button" class="admin-btn" [disabled]="isSubmitting" (click)="cancel()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button
+        type="submit"
+        class="admin-btn admin-btn-primary"
+        data-testid="envelope-save"
+        [disabled]="isSubmitting"
+        >
+        {{
+        isSubmitting
+        ? ('ADMIN.COMMON.SAVING' | translate)
+        : ('ADMIN.EXPENSES.BATCH.SAVE_ENVELOPE' | translate)
+        }}
+      </button>
+    </div>
+  </div>
+</form>

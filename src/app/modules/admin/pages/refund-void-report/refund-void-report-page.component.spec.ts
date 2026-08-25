@@ -281,7 +281,7 @@ describe('RefundVoidReportPageComponent', () => {
     const component = new RefundVoidReportPageComponent(store as any, createTranslateStub());
     component.ngOnInit();
 
-    expect((component as any).formatMoney('not-a-number', 'THB')).toContain('0.00');
+    expect((component as any).formatMoney('not-a-number')).toBe('THB 0');
   });
 
   it('unsubscribes on destroy', () => {

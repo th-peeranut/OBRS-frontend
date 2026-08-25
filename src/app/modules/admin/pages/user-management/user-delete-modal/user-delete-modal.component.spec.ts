@@ -5,6 +5,7 @@ import { By } from '@angular/platform-browser';
 import { UserDeleteModalComponent } from './user-delete-modal.component';
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
 import { UserRow } from '../user-management.mappers';
+import { TitleLabelPipe } from '../../../../../shared/pipes/title-label.pipe';
 
 const JOHN_ROW: UserRow = {
   id: 1,
@@ -26,7 +27,7 @@ describe('UserDeleteModalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CommonModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, CommonModule, TranslateModule.forRoot()],
       declarations: [UserDeleteModalComponent, AdminModalBackdropDirective],
     }).compileComponents();
 
@@ -58,6 +59,27 @@ describe('UserDeleteModalComponent', () => {
 
     const confirmButton = fixture.debugElement.query(By.css('.admin-btn-primary'));
     expect(confirmButton.nativeElement.disabled).toBeTrue();
+    expect(confirmButton.nativeElement.textContent.trim()).toBe('ADMIN.USERS.CLOSING');
+  });
+
+  // OBRS-653: DELETE /users/{id} anonymises the row and keeps it, so the
+  // confirm has to say so before the admin agrees on the customer's behalf.
+  // AC-2 asks for two outcomes; the released email address is the third,
+  // because it is the question the admin gets asked next.
+  it('states what closing the account actually does', () => {
+    component.isOpen = true;
+    component.user = JOHN_ROW;
+    fixture.detectChanges();
+
+    const points = fixture.debugElement
+      .queryAll(By.css('.user-close-points li'))
+      .map((li) => li.nativeElement.textContent.trim());
+
+    expect(points).toEqual([
+      'ADMIN.USERS.CLOSE_POINT_LOGIN',
+      'ADMIN.USERS.CLOSE_POINT_RECORDS',
+      'ADMIN.USERS.CLOSE_POINT_EMAIL',
+    ]);
   });
 
   it('emits confirm/cancel on button clicks', () => {

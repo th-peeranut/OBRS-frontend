@@ -5,7 +5,7 @@
       <p class="admin-modal-subtitle">
         {{ 'ADMIN.USERS.UNLOCK_CONFIRM_MESSAGE' | translate }}
         @if (user) {
-          <strong>{{ user.fullName }}</strong>
+          <strong>{{ user.title | titleLabel: user.fullName }}</strong>
         }
       </p>
       <div class="admin-modal-actions">

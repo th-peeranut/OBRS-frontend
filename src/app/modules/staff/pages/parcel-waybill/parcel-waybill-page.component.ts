@@ -45,6 +45,7 @@ export class ParcelWaybillPageComponent implements OnInit, OnDestroy {
 
   private printPortalHost: HTMLElement | null = null;
   private printPortalOutlet: DomPortalOutlet | null = null;
+  private printTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly handleAfterPrint = (): void => this.disposePrintPortal();
   private readonly destroy$ = new Subject<void>();
 
@@ -135,12 +136,16 @@ export class ParcelWaybillPageComponent implements OnInit, OnDestroy {
     this.printPortalOutlet.attach(new TemplatePortal(this.printTemplate, this.viewContainerRef));
 
     window.addEventListener('afterprint', this.handleAfterPrint);
-    setTimeout(() => window.print(), 0);
+    this.printTimer = setTimeout(() => window.print(), 0);
   }
 
   /** Idempotent teardown — safe from `afterprint`, the top of a subsequent
    * `printWaybill()` call, and `ngOnDestroy` (navigating away mid-print-dialog). */
   private disposePrintPortal(): void {
+    if (this.printTimer) {
+      clearTimeout(this.printTimer);
+      this.printTimer = null;
+    }
     if (!this.printPortalHost) {
       return;
     }

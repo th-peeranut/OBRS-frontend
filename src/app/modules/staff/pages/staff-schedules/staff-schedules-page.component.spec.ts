@@ -1,9 +1,10 @@
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { DatePickerModule } from 'primeng/datepicker';
 import { BehaviorSubject, throwError } from 'rxjs';
 import { StaffSchedulesPageComponent } from './staff-schedules-page.component';
 import { createAuthServiceStub, createRouterStub, createTranslateStub } from '../../../../testing/test-stubs';
@@ -289,7 +290,10 @@ describe('StaffSchedulesPageComponent — OBRS-667 owner-only cancel gate (DOM)'
       .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null }));
 
     TestBed.configureTestingModule({
-      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
+      // OBRS-33: FormsModule + DatePickerModule for the header date filter
+      // ([ngModel] on a real p-datePicker) — the same pair the analytics page
+      // specs use; the real StaffModule gets both from SharedModule/StaffModule.
+      imports: [CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
       declarations: [StaffSchedulesPageComponent],
       providers: [
         { provide: Router, useValue: createRouterStub() },
@@ -368,5 +372,97 @@ describe('StaffSchedulesPageComponent — OBRS-667 owner-only cancel gate (DOM)'
 
     expect(deleteSpy).toHaveBeenCalledWith(2);
     expect(cancelSpy).not.toHaveBeenCalled();
+  });
+
+  // OBRS-1584, through the real p-datePicker rather than the handler: emptying
+  // the field must not lift the day window, and a date typed key by key must
+  // still land. Those two pull against each other — PrimeNG reports every
+  // unparseable prefix as `null`, so a fix that reacts to `null` by writing a
+  // new date back into the model would repaint the input mid-word and make
+  // keyboard entry impossible.
+  it('emptying the date input keeps the day window, and a typed date still filters', () => {
+    const { fixture, component } = setupFixture(true);
+    (component as any).rows = [
+      { ...ROW, id: 1, tripId: '#SCH-1', departure: '2026-08-04T07:00:00+07:00' },
+      { ...ROW, id: 2, tripId: '#SCH-2', departure: '2026-08-23T18:00:00+07:00' },
+      { ...ROW, id: 3, tripId: '#SCH-3', departure: '2026-08-23T06:30:00+07:00' },
+    ];
+    (component as any).onDateChange(new Date(2026, 7, 23));
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('.p-datepicker input');
+    expect(input).withContext('the header date input must render').not.toBeNull();
+    expect(input.readOnly).withContext('keyboard date entry must stay available').toBe(false);
+
+    typeInto(input, '');
+    fixture.detectChanges();
+    expect((component as any).filteredRows.map((r: ScheduleRow) => r.id))
+      .withContext('an emptied field must not fall back to every trip')
+      .toEqual([3, 2]);
+
+    for (let i = 1; i <= '04/08/2026'.length; i++) typeInto(input, '04/08/2026'.slice(0, i));
+    fixture.detectChanges();
+    expect((component as any).filteredRows.map((r: ScheduleRow) => r.id))
+      .withContext('the typed day must be the one filtered on')
+      .toEqual([1]);
+  });
+});
+
+// PrimeNG only reads the input when it saw a keydown first (its IE11 guard).
+function typeInto(input: HTMLInputElement, value: string): void {
+  input.dispatchEvent(new KeyboardEvent('keydown'));
+  input.value = value;
+  input.dispatchEvent(new Event('input'));
+}
+
+
+// OBRS-33: the list used to render every schedule the API returned, in id
+// order, so the first row on prod was a trip 19 days in the past.
+describe('StaffSchedulesPageComponent - OBRS-33 one day at a time, soonest first', () => {
+  const TRIPS: ScheduleRow[] = [
+    { ...ROW, id: 1, tripId: '#SCH-1', departure: '2026-08-04T07:00:00+07:00' },
+    { ...ROW, id: 2, tripId: '#SCH-2', departure: '2026-08-23T18:00:00+07:00' },
+    { ...ROW, id: 3, tripId: '#SCH-3', departure: '2026-08-23T06:30:00+07:00' },
+  ];
+
+  function componentWithTrips(): any {
+    const { component } = makeComponent({});
+    (component as any).rows = [...TRIPS];
+    return component;
+  }
+
+  it('keeps only the selected day and puts the soonest departure on top', () => {
+    const component = componentWithTrips();
+    component.onDateChange(new Date(2026, 7, 23));
+    expect(component.filteredRows.map((r: ScheduleRow) => r.id)).toEqual([3, 2]);
+  });
+
+  it('a day with no trips filters everything out', () => {
+    const component = componentWithTrips();
+    component.onDateChange(new Date(2026, 7, 22));
+    expect(component.filteredRows.length).toBe(0);
+  });
+
+  // OBRS-1584: this spec used to assert the opposite — clearing the field
+  // rendered every trip the API returned, which is the OBRS-33 symptom one
+  // keystroke away. The day already in effect survives instead.
+  it('clearing the date keeps the day already in effect, never every trip', () => {
+    const component = componentWithTrips();
+    component.onDateChange(new Date(2026, 7, 23));
+    component.onDateChange(null);
+    expect(component.filteredRows.map((r: ScheduleRow) => r.id)).toEqual([3, 2]);
+  });
+
+  it('the date filter composes with the existing route filter', () => {
+    const component = componentWithTrips();
+    component.rows = [...TRIPS, { ...ROW, id: 4, tripId: '#SCH-4', departure: '2026-08-23T09:00:00+07:00', routeSlug: 'c-d' }];
+    component.onDateChange(new Date(2026, 7, 23));
+    component.onRouteFilterChange('c-d');
+    expect(component.filteredRows.map((r: ScheduleRow) => r.id)).toEqual([4]);
+  });
+
+  it('defaults to today', () => {
+    const { component } = makeComponent({});
+    expect((component as any).selectedDate.toDateString()).toBe(new Date().toDateString());
   });
 });

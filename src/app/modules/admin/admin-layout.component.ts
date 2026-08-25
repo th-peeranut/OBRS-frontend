@@ -227,11 +227,20 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       // OBRS-884: per-vehicle P&L — same admin+owner audience (route
       // `requiredRoles: ['admin','owner']`) as cash-online-reconciliation-report above.
       { path: 'vehicle-pl-report', labelKey: 'ADMIN.PAGES.VEHICLE_PL_REPORT', icon: 'directions_bus', descriptionKey: 'ADMIN.VEHICLE_PL_REPORT.SUBTITLE', section: 'reports' },
+      { path: 'payee-spend-report', labelKey: 'ADMIN.PAGES.PAYEE_SPEND_REPORT', icon: 'store', descriptionKey: 'ADMIN.PAYEE_SPEND_REPORT.SUBTITLE', section: 'reports' },
       // OBRS-685: vehicle/central expense log — admin+owner (route
       // `requiredRoles: ['admin','owner']`), same always-shown audience as
       // eod-sales-report above — operational record-keeping, not a report.
       { path: 'expenses', labelKey: 'ADMIN.PAGES.EXPENSES', icon: 'receipt_long', descriptionKey: 'ADMIN.EXPENSES.SUBTITLE', section: 'operations' },
     ];
+
+    // OBRS-1577: the payee registry — OWNER-only (route `requiredRoles: ['owner']`, and the backend
+    // is `hasRole('OWNER')` on every endpoint including the GET). Placed immediately after Expenses
+    // in the same `operations` section, which is the owner's own ruling on 2026-08-24: this is a
+    // screen you open while filing bills, not a one-off configuration screen.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({ path: 'expense-payees', labelKey: 'ADMIN.PAGES.EXPENSE_PAYEES', icon: 'storefront', descriptionKey: 'ADMIN.EXPENSE_PAYEES.SUBTITLE', section: 'operations' });
+    }
 
     if (this.authService.hasAnyRole(['owner'])) {
       items.push({ path: 'settlements', labelKey: 'ADMIN.PAGES.SETTLEMENTS', icon: 'point_of_sale', descriptionKey: 'ADMIN.SETTLEMENTS.SUBTITLE', section: 'operations' });

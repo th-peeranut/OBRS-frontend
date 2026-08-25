@@ -109,6 +109,7 @@
                         class="form-control mt-1"
                         id="firstName-{{ i }}"
                         formControlName="firstName"
+                        autocomplete="section-passenger-{{ i }} given-name"
                 [class.form-error]="
                   group.get('firstName')?.errors &&
                   (group.get('firstName')?.touched ||
@@ -136,6 +137,7 @@
                           class="form-control mt-1"
                           id="middleName-{{ i }}"
                           formControlName="middleName"
+                          autocomplete="section-passenger-{{ i }} additional-name"
                           />
                         </div>
                         <!-- Last name -->
@@ -155,6 +157,7 @@
                             class="form-control mt-1"
                             id="lastName-{{ i }}"
                             formControlName="lastName"
+                            autocomplete="section-passenger-{{ i }} family-name"
                 [class.form-error]="
                   group.get('lastName')?.errors &&
                   (group.get('lastName')?.touched ||
@@ -188,6 +191,8 @@
                             <input
                               class="form-control mt-1"
                               type="text"
+                              inputmode="tel"
+                              autocomplete="section-passenger-{{ i }} tel"
                               id="phoneNumber-{{ i }}"
                               formControlName="phoneNumber"
                               (focus)="onPassengerPhoneFocus(i)"

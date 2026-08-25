@@ -1,5 +1,14 @@
+import { TranslateService } from '@ngx-translate/core';
 import { RescheduleEstimateSummaryComponent } from './reschedule-estimate-summary.component';
 import { RescheduleEstimate } from '../../../../../shared/interfaces/reschedule.interface';
+
+/**
+ * Only `currentLang` is read — OBRS-1592 made the money unit language-dependent,
+ * so this dumb component now needs to know which language it is rendering in.
+ */
+function translateStub(lang = 'th'): TranslateService {
+  return { currentLang: lang } as unknown as TranslateService;
+}
 
 function buildEstimate(overrides: Partial<RescheduleEstimate> = {}): RescheduleEstimate {
   return {
@@ -17,7 +26,7 @@ describe('RescheduleEstimateSummaryComponent', () => {
   let component: RescheduleEstimateSummaryComponent;
 
   beforeEach(() => {
-    component = new RescheduleEstimateSummaryComponent();
+    component = new RescheduleEstimateSummaryComponent(translateStub());
   });
 
   it('should create', () => {

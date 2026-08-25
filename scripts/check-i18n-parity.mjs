@@ -968,6 +968,63 @@ function parcelPolicyFingerprint(json) {
   }
 }
 
+// 7) OBRS-566: a character that was lost in an encoding round-trip.
+//
+//    The bundle was written through a pipeline that did not survive non-ASCII: a
+//    bullet U+2022 and a curly apostrophe U+2019 both came out the other side as a
+//    literal "?" (U+003F). Nothing caught it -- the JSON is valid, the key sets match,
+//    the lengths are right, and "?" prints back as "?" so reading the file cannot tell
+//    you it is wrong (see the mojibake lesson: assert the codepoint, do not look at it).
+//    Customers read "? Reprint with fee:" and "the company?s transport conditions".
+//
+//    Asserted as a property that must HOLD, not as a denylist of characters seen once:
+//    in this bundle a question mark is punctuation, so it always ENDS a clause. It never
+//    sits glued between two letters and it never opens a segment the way a bullet does.
+//    Measured on the fixed bundle: 0 violations across all 3,498 string leaves in each of the
+//    three files -- the 3,458 keys, with the five CALENDAR.* arrays expanded to the 45 strings
+//    they hold. The property is true today, so any new one is a regression, not an exception.
+//    Both shapes were tightened by scrutinize, each for a case it got wrong:
+//    digits are IN the glued class because policy text is full of them and "the 1990?s
+//    rate" would otherwise pass; the bullet shape anchors on `&emsp;` rather than on any
+//    `;` because `&nbsp;` ends in `;` too, so "Are you sure&nbsp;? Click yes." was a
+//    false CI failure waiting for whoever writes that sentence. The bundle indents every
+//    list item with `&emsp;`, so nothing real is lost by naming it.
+// Escapes, not literals: this file is ASCII apart from the historical strings in gate 3.
+const LETTER = 'A-Za-z0-9\\u0E00-\\u0E7F\\u4E00-\\u9FFF';
+const MOJIBAKE_GLUED = new RegExp(`[${LETTER}]\\?[${LETTER}]`);
+const MOJIBAKE_AS_BULLET = /(^|>|&emsp;)\s*\?\s/;
+
+/** Flatten a translation object into [dotted key, string value] pairs.
+ *  Array members are pairs too: CALENDAR.dayNames and its four siblings hold their strings in
+ *  arrays, and the key-set `flatten` above stops at the array because a key set is all it needs.
+ *  Stopping here as well would leave 15 customer-visible strings unscanned while the gate said
+ *  it had checked everything. */
+function flattenValues(obj, prefix = '', out = []) {
+  for (const [k, v] of Object.entries(obj)) {
+    const key = prefix ? `${prefix}.${k}` : k;
+    if (Array.isArray(v)) v.forEach((s, i) => typeof s === 'string' && out.push([`${key}[${i}]`, s]));
+    else if (v !== null && typeof v === 'object') flattenValues(v, key, out);
+    else if (typeof v === 'string') out.push([key, v]);
+  }
+  return out;
+}
+
+for (const lang of LANGS) {
+  const json = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8'));
+  for (const [key, value] of flattenValues(json)) {
+    if (/\uFFFD/.test(value)) {
+      problems.push(`[${lang}] ${key} contains U+FFFD -- the text was decoded with the wrong encoding somewhere in its path into this file (OBRS-566)`);
+    }
+    const glued = value.match(MOJIBAKE_GLUED);
+    if (glued) {
+      problems.push(`[${lang}] ${key} has "${glued[0]}" -- a "?" wedged between two word characters is a lost apostrophe or dash, not punctuation (OBRS-566)`);
+    }
+    if (MOJIBAKE_AS_BULLET.test(value)) {
+      problems.push(`[${lang}] ${key} opens a segment with "? " -- that is a lost bullet U+2022, which the other languages still have (OBRS-566)`);
+    }
+  }
+}
+
 const counts = LANGS.map((l) => `${l}=${keysByLang[l].size}`).join(' ');
 
 if (problems.length > 0) {

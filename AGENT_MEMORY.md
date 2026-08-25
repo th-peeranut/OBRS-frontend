@@ -1,6 +1,36 @@
 # Agent Memory — Scrutinize notes for developers
 
-## 2026-07-15 — SELF-FIXED: OBRS-370 duplicated HTML comment (copy-paste artifact)
+## 2026-08-25 — SELF-FIXED: OBRS-1576 `[searchable]` opt-in leaked a new highlight onto the 21 of 71 non-searchable `app-admin-dropdown` sites with no `[placeholder]`
+
+The card's own claim was "`[searchable]` is opt-in, the existing call sites unchanged" — and that
+claim was tested (`admin-dropdown.component.spec.ts` `describe('when [searchable] is not set …')`),
+but the test never set `placeholder` and never asserted on `isActive()`, so it missed this.
+
+`toggleDropdown()` — the plain `<button>` trigger's own click handler, used by every non-searchable
+site — sets `activeIndex = this.firstActiveIndex` on every open, unconditionally (not gated on
+`searchable`). `firstActiveIndex` is `placeholder && !query.trim() ? -1 : 0`. `placeholder` defaults
+to `''`. Grepping every `<app-admin-dropdown …>` block in `src/app` for one with no `[placeholder]`
+binding found **21 of 71** (re-measured on `origin/dev` 2026-08-25; the card's quoted "66 in 31 files" is the 2026-08-23 count and `dev` has moved since) (e.g. `schedules-page.component.html` ×6, `vehicle-form-modal` ×2,
+`route-form-modal`, `role-form-modal`, …). For all 21, `firstActiveIndex` returns `0` on every open,
+and the template's `[class.is-active]="isActive(i)"` (new CSS: `rgba(0,102,135,.12)` wash, added this
+card) then highlighted their first option the instant the dropdown opened — a real, new, visible
+behavior change on pre-existing screens this card was not supposed to touch.
+
+**Fix (1 line, `admin-dropdown.component.ts`):** gated `isActive()` on `this.searchable`. Safe because
+a plain `<button>` has no arrow-key handler wired (`(keydown)="onTriggerKeydown($event)"` is only on
+the searchable `<input>`), so `activeIndex` is never used for real keyboard navigation on the
+non-searchable path — only for this unintended paint. Re-ran `admin-dropdown.component.spec.ts` (14/14),
+plus `expense-bill-card` / `expense-batch-page` / `expense-payee-picker` / `nav-reachability` specs
+(49/49) — all still green.
+
+**Lesson for next time an existing shared component gains an opt-in `@Input`:** "the new `@Input` is
+`false`/unset at every old call site" is not the same claim as "every new code path this card adds is
+unreachable from an old call site." Here the new code path (`firstActiveIndex`/`isActive`) was reached
+from `toggleDropdown()`, which every old call site already calls — the gate needed to be on the
+*input flag itself* inside the new logic, not just on which trigger element renders. When a "byte-
+identical for non-opted-in callers" claim is made, grep for every new method the shared, ungated
+methods (the ones both branches call, like `toggleDropdown`) now touch, not just the new template
+branch.
 
 In `usability-reports-page.component.html` the OBRS-370 Jira-key-visibility
 comment block was pasted twice, back-to-back, above the
@@ -4313,3 +4343,53 @@ Reduced the block to a POINTER: keep the correction (COLLECTING vs SENDING) + pr
 (OBRS-1206/1539) + a qualitative "a few seconds", and defer the measurements/alternatives
 to `setSuspended` and ADR-0034 §10. Rule: a comment that documents someone else's measured
 fact should cite the owner, not restate the number — restated numbers drift.
+
+## OBRS-1592 (Scrutinize round 3) — enumerate the WHOLE money-render family in a file, not the "action" ones
+`parcel-verify-list-page.component.ts` had THREE `.toFixed(2)` money sites, not two. The round-2
+claim "both parcel-verify-list sites converted" counted only the two REJECT amounts (confirm
+dialog + toast) and missed `paidAmountLabel()` at line 128 — the paid-amount COLUMN, same
+`row.amount` field, rendered on every row via `{{ paidAmountLabel(row) }}`. Self-fixed to
+`formatMoney(row.amount, this.translate.currentLang)` (formatMoney already imported).
+Rule: when converting a file's money renders, grep the whole file for `.toFixed`/`toLocaleString`
+FIRST and convert every display site; the "money-moving action" sites are the ones you notice, the
+quiet column/label render is the one that ships. A `check-money-format` gate that only scans for
+Intl-currency/`| currency`/unit-word-i18n CANNOT see a `.toFixed(2)`-to-template render, so green
+gate + green tests is not proof the family is done.
+
+## OBRS-1592 (Scrutinize round 4) — a comment stating the OLD format is a false claim too
+`settlements-page.component.ts:323` still read `// Echo the exact counted cash, including
+"THB 0.00" for a zero drawer.` — but the line below it is `this.formatMoney(...)`, and
+`formatMoney(0)` now yields `THB 0` / `0 บาท` (no satang on a whole number, per `hasSatang`),
+never `THB 0.00`. The comment described the exact `0.00` format this card removed, and it
+also assumed English. Self-fixed (comment only) to stop it teaching the next reader the
+pre-card format. Rule for a format-migration card: after converting a render, grep the file's
+COMMENTS for the old format literal (`0.00`, `฿`, `THB x.xx`) as well as the code — a comment
+asserting the old shape is the same false-completeness claim as a `.toFixed` that survived,
+just one a test can never catch.
+
+## OBRS-1531 scrutinize self-fixes (e2e/support/lane-tree-guard.ts)
+- Fail-open closed: `Get-NetTCPConnection` finds a listener but `Win32_Process.CommandLine`
+  is null for an elevated/other-user process. The guard used to read that as "nothing on
+  the port" and PASS while reuseExistingServer attached to that foreign server. Now the PS
+  script emits `pid <n>` first, so a held-but-unnamed port comes back non-null and fails
+  closed (the whole point of the guard is not to go quiet). Pattern: a "is X present?"
+  probe that infers absence from an empty *secondary* lookup will report present-as-absent.
+- AC-5: the four `git` calls ran on CI before the `if (CI) return`. execFileSync('git')
+  throws on a non-zero exit (not a repo / git absent) and would have reddened the gate lane
+  on CI. Wrapped in try/catch that stands down loudly. Pattern: any command a globalSetup
+  runs BEFORE its CI early-return still runs on CI -- it must not be able to throw there.
+
+## OBRS-1577 re-review (Scrutinize self-fix, 2026-08-24)
+- Gating a create AFFORDANCE for a role the server refuses is not done until the COPY that points at that affordance is gated too. The fix hid the registry ADD button + the picker create for `admin` (correct), but `expense-payees-page.component.html` still rendered `ADMIN.EXPENSE_PAYEES.EMPTY_BODY` — copy that says "use the Add payee button, or type a new name while entering a bill" — to an admin for whom BOTH routes are now hidden. Wrapped that `<p>` in `@if (canCreate)` so admins see only the honest title. No invented copy, owners unaffected. Lesson: when you role-gate a button, grep the empty-state / hint / aria copy that references it — same family, different file.
+
+## OBRS-566 scrutinize self-fix (scripts/check-i18n-parity.mjs, 2026-08-25)
+- Gate 7's own rationale comment claimed "0 violations across 3 x 3,498 keys" but the script's
+  own printed count (`node scripts/check-i18n-parity.mjs` -> `en=3458 th=3458 zh=3458`) and the
+  commit message ("3 x 3,458 keys") both say 3,458. A transposed digit in a comment that exists
+  specifically to be the trustworthy record of what was measured is the exact failure mode
+  DEV-GOTCHAS warns about (a comment stating a wrong number becomes the next reader's false
+  belief) — fixed the comment to match the number the script itself prints. Not a logic bug,
+  the gate's behavior was unaffected; verified `node scripts/check-i18n-parity.mjs` still green
+  after the edit. Lesson: when a gate's comment quotes a measured count, that count is
+  independently checkable against the script's own console output — check it, don't trust the
+  commit message's copy of it.

@@ -44,8 +44,7 @@
               {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE" | translate }}
             </span>
             <span>
-              {{ getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) }}
-              {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
+              {{ formatMoney(getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat)) }}{{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
             </span>
           </div>
         }
@@ -57,10 +56,11 @@
             </span>
             <span>
               {{
+              formatMoney(
               getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) +
               getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[1].pricePerSeat)
-              }}
-              {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
+              )
+              }}{{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
             </span>
           </div>
         }
@@ -72,8 +72,7 @@
           {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
         </span>
         <span>
-          {{ sumFare(scheduleBooking?.schedule, scheduleFilter, (passengerInfo$ | async)) }}
-          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
+          {{ formatMoney(sumFare(scheduleBooking?.schedule, scheduleFilter, (passengerInfo$ | async))) }}
         </span>
       </div>
     }

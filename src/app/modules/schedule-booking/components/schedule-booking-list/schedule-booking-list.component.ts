@@ -46,10 +46,12 @@ import { RouteMapService } from '../../../../services/route-map/route-map.servic
 import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
 import { LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
 import { AnalyticsService } from '../../../../services/analytics/analytics.service';
+import { AuthService } from '../../../../auth/auth.service';
 import {
   isOnlineTicketBookingOpen,
   NJ_FACEBOOK_PAGE_URL,
 } from '../../../../shared/lib/online-booking-channel';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 /**
  * OBRS-1217: what the empty result list means when the customer searched TODAY.
@@ -84,7 +86,7 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
    * swapped for the way a customer can actually reach us today.
    */
   protected get isOnlineBookingOpen(): boolean {
-    return isOnlineTicketBookingOpen();
+    return isOnlineTicketBookingOpen(this.authService);
   }
 
   /** Bound into the template so the page URL is spelled in exactly one place. */
@@ -153,7 +155,8 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     private appStore: Store<Appstate>,
     private translateService: TranslateService,
     private routeMapService: RouteMapService,
-    private analytics: AnalyticsService
+    private analytics: AnalyticsService,
+    private authService: AuthService
   ) {
     this.scheduleList = this.store.pipe(select(selectScheduleList));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
@@ -372,6 +375,18 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   getPricePerSeat(value: string | number | null | undefined): number {
     return parsePricePerSeat(value);
+  }
+
+  /**
+   * Per-seat fare WITH its unit (OBRS-1592). Replaces the number-plus-
+   * `BAHT_UNIT`-key pair this template used to compose. An earlier version of
+   * this comment called that pair the ONLY money on any screen without a
+   * thousand separator; scrutinize found five more files composing the same
+   * number-plus-unit-key shape under different key names, and they are
+   * converted with it.
+   */
+  formatPricePerSeat(value: string | number | null | undefined): string {
+    return formatMoney(parsePricePerSeat(value), this.translateService.currentLang);
   }
 
   isLowSeats(availableSeats: number | null | undefined): boolean {

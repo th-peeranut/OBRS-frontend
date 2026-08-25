@@ -443,6 +443,17 @@
     "ERROR_GENERAL": "An error occurred. Please try again."
   },
   "COMMON": {
+    "TITLES": {
+      "MR": "Mr.",
+      "MRS": "Mrs.",
+      "MISS": "Miss",
+      "MASTER": "Master",
+      "MISS_CHILD": "Miss (Child)",
+      "DR": "Dr.",
+      "PROF": "Professor",
+      "ASSOC_PROF": "Associate Professor",
+      "ASST_PROF": "Assistant Professor"
+    },
     "NOT_SPECIFIED": "Not specified",
     "THEME_TOGGLE": "Toggle dark mode",
     "CLEAR": "Clear",
@@ -530,8 +541,10 @@
       "SYSTEM_SETTINGS": "System Settings",
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation",
+      "PAYEE_SPEND_REPORT": "Spend by payee",
       "VEHICLE_PL_REPORT": "Per-vehicle P&L",
       "EXPENSES": "Expenses",
+      "EXPENSE_PAYEES": "Payee Registry",
       "MANUAL_REFUNDS": "Manual Refunds",
       "CASH_REFUND_APPROVALS": "Cash refund approvals",
       "PARCEL_CLAIMS": "Parcel Claims",
@@ -544,7 +557,8 @@
       "DRIVER_CASH_RATES": "Driver Cash Rates",
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "Cancel & Reschedule",
       "NOTIFICATION_MESSAGES": "Notification Messages",
-      "OPERATIONS_CONFIG": "Operations"
+      "OPERATIONS_CONFIG": "Operations",
+      "EXPENSE_BATCH": "Envelope of bills"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -612,7 +626,8 @@
       "CANCEL_TRIP_REFUND_MESSAGE": "{{count}} booking(s) will be automatically refunded and notified.",
       "CANCEL_TRIP_NO_REFUND_MESSAGE": "The trip will be cancelled. No refund will be issued.",
       "CANCEL_TRIP_BTN": "Cancel Trip",
-      "CANCELLING": "Cancelling..."
+      "CANCELLING": "Cancelling...",
+      "NO_MATCH": "No match"
     },
     "VALIDATION": {
       "REQUIRED": "This field is required.",
@@ -651,6 +666,7 @@
       "LOAD_MAINTENANCE_FAILED": "Unable to load maintenance records.",
       "LOAD_MAINTENANCE_PLANS_FAILED": "Unable to load maintenance plans.",
       "LOAD_EXPENSES_FAILED": "Unable to load expenses.",
+      "LOAD_EXPENSE_PAYEES_FAILED": "Unable to load the payee registry",
       "DELETE_CONFIRM_BODY": "This action cannot be undone. Do you want to continue?",
       "DELETE_BTN": "Delete",
       "UNLOCK_SUCCESS": "Account unlocked successfully.",
@@ -811,12 +827,26 @@
       "UNLOCK_CONFIRM_MESSAGE": "Unlocking this account will grant immediate login access to",
       "UNLOCK_BTN": "Unlock",
       "UNLOCKING": "Unlocking...",
+      "CLOSE_ACTION": "Close account",
+      "CLOSE_CONFIRM_TITLE": "Confirm account closure",
+      "CLOSE_CONFIRM_MESSAGE": "Close the account and erase the identifying details in the profile (name · email · phone) of",
+      "CLOSE_POINT_LOGIN": "This account can no longer sign in, and disappears from the user list and the driver-assignment list.",
+      "CLOSE_POINT_RECORDS": "Booking history and receipts are kept as accounting records — this is not a full erasure of their data.",
+      "CLOSE_POINT_EMAIL": "The original email address is released; the person can sign up again with it.",
+      "CLOSE_IRREVERSIBLE": "This cannot be undone.",
+      "CLOSE_BTN": "Close account",
+      "CLOSING": "Closing...",
+      "CLOSE_SUCCESS": "Account closed and identifying details erased. Booking history is kept.",
+      "CLOSE_FAILED": "Could not close the account.",
       "SALES_POINTS_SECTION_TITLE": "Sales Points",
       "ALLOWED_SALES_POINTS_LABEL": "Allowed Sales Points",
       "ACTIVE_SALES_POINT_LABEL": "Active Sales Point",
       "ACTIVE_SALES_POINT_NONE": "Not set",
       "SALES_POINTS_EMPTY": "No sales points configured yet",
-      "SALES_POINTS_UNAVAILABLE": "Couldn't load sales points. Try again."
+      "SALES_POINTS_UNAVAILABLE": "Couldn't load sales points. Try again.",
+      "PERSONAL_SECTION_TITLE": "Personal Information",
+      "CREDENTIALS_SECTION_TITLE": "Account Credentials",
+      "CONTACT_SECTION_TITLE": "Contact & Settings"
     },
     "VEHICLES": {
       "MONITORING": "Fleet Monitoring Active",
@@ -1621,16 +1651,30 @@
           "RETURNED_PLACEHOLDER": "0.00",
           "CONFIRM_BTN": "Confirm return",
           "CONFIRM_TITLE": "Confirm driver cash return?",
-          "CONFIRM_TEXT": "Recording {{amount}} as returned. This cannot be undone.",
+          "CONFIRM_TEXT": "Recording {{amount}} as returned. If a bill for this day turns up later, the owner can re-open this box from this screen.",
           "SUCCESS": "Driver cash day marked as returned.",
           "ALREADY_RETURNED": "This day has already been returned.",
           "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)",
           "PER_HEAD_PAY": "Per-head pay earned today (already netted at the round, not in the amount above)"
         },
+        "REOPEN": {
+          "ACTION_LABEL": "Re-open this box",
+          "HINT": "For a bill from this round that reaches the counter after the box was signed off. The amount already signed for is kept in the history, and the box goes back to open.",
+          "REASON_LABEL": "Reason",
+          "REASON_PLACEHOLDER": "e.g. yesterday’s fuel bill only arrived this morning",
+          "CONFIRM_BTN": "Re-open box",
+          "CONFIRM_TITLE": "Re-open this cash box?",
+          "CONFIRM_TEXT": "The amount signed for is cleared and kept in the history. The box goes back to open, and has to be signed off again once the entry is added.",
+          "SUCCESS": "Cash box re-opened.",
+          "HISTORY_TITLE": "This box has been re-opened {{count}} time(s)",
+          "PREV_RETURNED": "Previously signed for:"
+        },
         "ERROR": {
           "REASON_REQUIRED": "A reason is required when the returned amount does not match.",
           "ALREADY_RETURNED": "This day was already returned.",
-          "RETURN_FAILED": "Unable to record this return."
+          "RETURN_FAILED": "Unable to record this return.",
+          "NOT_RETURNED": "This box is not signed off, so there is nothing to re-open.",
+          "REOPEN_FAILED": "Unable to re-open this cash box."
         },
         "COL": {
           "HOLDER": "Cash holder",
@@ -1946,6 +1990,44 @@
         "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
       }
     },
+    "PAYEE_SPEND_REPORT": {
+      "SUBTITLE": "Spend grouped by who received the money — garages, fuel stations and other payees",
+      "FILTER_YEAR": "Year",
+      "YEAR_OPTION": "{{year}} · {{count}} bills · {{amount}}",
+      "FILTER_MONTH": "Month",
+      "MONTH_NEEDS_YEAR": "Pick a year before picking a month",
+      "MONTHS": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "FILTER_CATEGORY": "Expense category",
+      "SCOPE_NOTE": "This screen says where the money went, not whether a garage put its prices up — two bills from one garage are different work, so their totals are not comparable.",
+      "LOAD_FAILED": "Could not load the report. Please try again.",
+      "EMPTY": "No expenses in the selected period",
+      "COVERAGE_TITLE": "How much of the spend is on this screen",
+      "COVERAGE_TEXT": "{{assigned}} has a payee on record, out of {{total}} spent in total ({{percent}}%). The rest was entered before this system had a payee field.",
+      "TABLE_TITLE": "Total per payee",
+      "COL_PAYEE": "Payee",
+      "COL_WORK": "Work done",
+      "COL_BILLS": "Bills",
+      "COL_TOTAL": "Total",
+      "UNASSIGNED": "No payee on record",
+      "UNASSIGNED_HINT": "Bills entered before this field existed",
+      "TOTAL_ROW": "Total",
+      "PERIOD_ALL": "Showing: every year",
+      "PERIOD_YEAR": "Showing: {{year}}, whole year",
+      "PERIOD_YEAR_MONTH": "Showing: {{month}} {{year}}"
+    },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "Profit and loss for each vehicle, from ticket revenue and the recorded costs.",
       "FILTER_FROM": "From",
@@ -2049,7 +2131,23 @@
       "VAT_AMOUNT": "VAT Amount (THB)",
       "EXPENSE_DATE": "Expense Date",
       "RECEIPT_NO": "Receipt / Tax Invoice No.",
-      "PAID_BY": "Paid By",
+      "PAID_BY": "Paid from",
+      "PAID_BY_HINT": "Which pocket or account the money left — not the garage’s name.",
+      "PAYEE": {
+        "LABEL": "Paid to",
+        "HINT": "The garage, petrol station or shop that received this money. May be left blank — an older bill with no payee on record is not guessed at.",
+        "PLACEHOLDER": "Pick or type a name",
+        "SEARCH_PLACEHOLDER": "Type a garage or station name",
+        "NONE": "No payee",
+        "NO_MATCH": "\"{{name}}\" is not in the registry",
+        "ADD_AS": "Add as {{type}}",
+        "FILTER_TYPE_ALL": "Type: all",
+        "TYPES": {
+          "GARAGE": "Garage",
+          "FUEL_STATION": "Petrol station",
+          "OTHER": "Other"
+        }
+      },
       "NOTE": "Note",
       "NOTE_PLACEHOLDER": "Additional details (optional)",
       "ITEMS": {
@@ -2076,7 +2174,54 @@
       "NO_MATCH": "No expenses match the current filters",
       "SOURCE": "Source",
       "SOURCE_FIELD": "Auto-generated (from driver)",
-      "FIELD_ROW_IMMUTABLE": "This row was recorded automatically from a driver’s cash entry. It cannot be edited or deleted here."
+      "FIELD_ROW_IMMUTABLE": "This row was recorded automatically from a driver’s cash entry. It cannot be edited or deleted here.",
+      "BATCH": {
+        "OPEN": "Take an envelope of bills",
+        "SUBTITLE": "Record a whole stack of bills in one save",
+        "PAGE_PURPOSE": "A garage hands over several bills at once. Enter them all here and press save once — either every bill is recorded or none of them is, never half a stack.",
+        "BILL_N": "Bill {{n}}",
+        "BILL_TOTAL": "This bill",
+        "BILL_COUNT": "{{n}} bills",
+        "LINE_COUNT": "{{n}} lines",
+        "ADD_BILL": "+ Add a bill",
+        "ADD_LINE": "+ Add a line",
+        "REMOVE_BILL": "Remove this bill",
+        "COLLAPSE": "Collapse",
+        "GARAGE": "Garage",
+        "LINE_DESCRIPTION": "Line (as the garage wrote it)",
+        "LINE_PART": "Part / labour",
+        "SAVE_ENVELOPE": "Save the whole envelope",
+        "SAVED": "{{n}} bills recorded",
+        "OWNER_HINT": "Every bill in this envelope is filed against this operator.",
+        "BILL_DATE": "Bill date",
+        "VEHICLE": "Plate",
+        "CATEGORY": "Category",
+        "PAID_BY": "Paid by",
+        "LINE_PART_NONE": "Not a part"
+      }
+    },
+    "EXPENSE_PAYEES": {
+      "SUBTITLE": "The garages, petrol stations and shops we pay",
+      "PAGE_PURPOSE": "The list of garages, petrol stations and shops this operator pays. Bills store the payee’s ID, never its spelling, so correcting a name here corrects it on every past bill at once. There is deliberately no delete: a payee still owns every bill it was ever paid. Retire it instead and it stops appearing in the pickers.",
+      "TABLE_TITLE": "Payees",
+      "ADD": "Add payee",
+      "ADD_TITLE": "Add a payee",
+      "ADD_HINT": "Name it the way you actually refer to it, so you can find it while entering a bill.",
+      "RENAME": "Rename",
+      "RENAME_TITLE": "Rename payee",
+      "RENAME_HINT": "Every past bill changes with it — bills hold the payee’s ID, not its spelling.",
+      "RETIRE": "Retire",
+      "RESTORE": "Restore",
+      "NAME": "Name",
+      "TYPE": "Type",
+      "STATUS": "Status",
+      "STATUS_ACTIVE": "In use",
+      "STATUS_RETIRED": "Retired",
+      "SHOW_RETIRED": "Show retired",
+      "EMPTY_TITLE": "No payees on record yet",
+      "EMPTY_BODY": "Use \"Add payee\", or simply type a new name while entering a bill — it can be added from there.",
+      "NO_MATCH": "Nothing matches these filters",
+      "NAME_TAKEN": "That name is already in the registry. Two payees are never merged automatically, because merging cannot be undone."
     },
     "MANUAL_REFUNDS": {
       "SUBTITLE": "Payments awaiting manual refund transfer",
@@ -2840,7 +2985,6 @@
     "TIME_UNIT": "",
     "HOUR_UNIT": "hour",
     "MINITE_UNIT": "minute",
-    "BAHT_UNIT": "baht",
     "SEAT_REMAIN": "remaining",
     "SEAT_UNIT": "seats",
     "SEAT_PER_PASSENGER": "/seat",
@@ -2885,11 +3029,10 @@
       "PASSENGER_UNIT": "Person",
       "TICKET_PRICE": "Ticket Price",
       "TICKET_PRICE_RETURN": "Round-trip ticket price",
-      "TICKET_UNIT": "baht/person",
+      "TICKET_UNIT": "/person",
       "SUBTOTAL": "Subtotal",
       "PROMO_DISCOUNT": "Promo discount",
       "TOTAL": "Total price",
-      "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm information"
     }
   },
@@ -3005,12 +3148,11 @@
       "PASSENGER_UNIT": "Person",
       "TICKET_PRICE_ONEWAY": "Ticket price",
       "TICKET_PRICE_ROUNDTRIP": "Round-trip ticket price",
-      "TICKET_UNIT": "baht/person",
+      "TICKET_UNIT": "/person",
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_ROUND_TRIP": "Round-trip discount",
       "DISCOUNT": "Discount",
       "TOTAL": "Total",
-      "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm payment"
     },
     "CREDIT_CARD": {
@@ -3076,7 +3218,6 @@
       "PASSENGER_PHONE": "Phone number of the booker",
       "PAYMENT_DATE": "Payment date/time",
       "TOTAL": "Total",
-      "TOTAL_UNIT": "baht",
       "ESTIMATE_KM_UNIT": "km",
       "LEG_OUTBOUND": "Outbound",
       "LEG_RETURN": "Return",
@@ -3117,7 +3258,7 @@
       "CONTENT": "&emsp;&emsp;2. Changing your travel date\n      <br />&emsp;&emsp;&emsp;&emsp;• A change can be made up to {{rescheduleWindowHours}} hours before the bus departs from its origin.\n      <br />&emsp;&emsp;&emsp;&emsp;• A new travel date must always be specified, and it may be set within {{rescheduleMaxDaysAhead}} days of the date the change is made — we do not offer open-date tickets.\n      <br />&emsp;&emsp;&emsp;&emsp;• {{rescheduleCountRule}}\n      <br />&emsp;&emsp;&emsp;&emsp;• The change fee is {{rescheduleFeeLateThb}} THB per seat, charged on every change, however far ahead it is made.\n      <br />&emsp;&emsp;&emsp;&emsp;• Any fare difference between the old and the new trip is charged or refunded at the actual fare.\n      <br />&emsp;&emsp;&emsp;&emsp;• Changes can be made through 3 channels: our website, under \"My Bookings\" · the sales offices at all 3 stations · https://www.facebook.com/nj.phuyaipu\n      <br />&emsp;&emsp;3. Reprinting tickets is divided into 2 cases:\n      <br />&emsp;&emsp;&emsp;&emsp;• Reprint with fee: lost, torn, forgotten ticket, or tickets purchased and printed at another station, etc.\n      <br />&emsp;&emsp;&emsp;&emsp;• Reprint without fee: tickets purchased via internet channel, or printer problems during transaction, power outage, system failure, etc.\n      <br />&emsp;&emsp;4. Cancellation and refunds\n      <br />&emsp;&emsp;&emsp;&emsp;• You can cancel your own ticket on the website. No reason and no supporting document is required.\n      <br />&emsp;&emsp;&emsp;&emsp;• {{refundPercentEarly}}% of the fare is refunded when you cancel more than {{earlyWindowHours}} hours before the bus departs from its origin.\n      <br />&emsp;&emsp;&emsp;&emsp;• {{refundPercentLate}}% of the fare is refunded when you cancel between {{cancelWindowHours}} and {{earlyWindowHours}} hours before that departure.\n      <br />&emsp;&emsp;&emsp;&emsp;• Once fewer than {{cancelWindowHours}} hours remain before departure, a ticket can no longer be cancelled.\n      <br />&emsp;&emsp;&emsp;&emsp;• A ticket can also be cancelled at a sales office, under the same time conditions and the same refund rates as cancelling on the website.\n      <br />&emsp;&emsp;5. Fare discounts\n      <br />&emsp;&emsp;&emsp;&emsp;• Round-trip discount — applied automatically when the return trip is booked in the same order.\n      <br />&emsp;&emsp;&emsp;&emsp;• Child fare discount — ask about it and buy the ticket at a ticket sales point.",
       "SEE_REFUND_POLICY": "Read the full refund policy",
       "SEE_PARCEL_POLICY": "Read the parcel carriage terms",
-      "TRAVEL_CONDITIONS": "<br />&emsp;&emsp;&emsp;&emsp;Travel conditions for passengers\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;For your benefit, please read the following travel conditions:\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1. Passengers must comply with the Land Transport Act B.E. 2522 (1979), ministerial regulations, and other related transport laws\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2. Passengers must comply with the company?s transport conditions and acknowledge/accept these passenger travel announcements as stated herein\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;3. Passengers must be ready and arrive at the boarding point before the departure time shown on their ticket. Buses depart on time; a passenger arriving more than {{noShowCutoffMinutes}} minutes after that departure time is recorded as a no-show\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;4. The company will not accept baggage a passenger carries on board containing flammable objects, pets, illegal items, war weapons, strong-smelling food, objects containing liquid, fragile objects, improperly packed items, or oversized/heavy items unsuitable for transport\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;5. The company reserves the right to change unacceptable baggage categories without prior notice; in case of damage, the company is not liable and passengers are responsible for all damages. Items 4 and 5 apply only to baggage a passenger carries on board; a consigned parcel that carries a freight charge of its own is covered by the separate parcel carriage terms\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;6. The carrier is not liable for passengers or baggage due to delays, events beyond control, or inherent deterioration damage, etc.\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;7. If a passenger does not travel on the specified date/time in the agreed ticket, the travel right is considered forfeited",
+      "TRAVEL_CONDITIONS": "<br />&emsp;&emsp;&emsp;&emsp;Travel conditions for passengers\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;For your benefit, please read the following travel conditions:\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1. Passengers must comply with the Land Transport Act B.E. 2522 (1979), ministerial regulations, and other related transport laws\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2. Passengers must comply with the company's transport conditions and acknowledge/accept these passenger travel announcements as stated herein\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;3. Passengers must be ready and arrive at the boarding point before the departure time shown on their ticket. Buses depart on time; a passenger arriving more than {{noShowCutoffMinutes}} minutes after that departure time is recorded as a no-show\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;4. The company will not accept baggage a passenger carries on board containing flammable objects, pets, illegal items, war weapons, strong-smelling food, objects containing liquid, fragile objects, improperly packed items, or oversized/heavy items unsuitable for transport\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;5. The company reserves the right to change unacceptable baggage categories without prior notice; in case of damage, the company is not liable and passengers are responsible for all damages. Items 4 and 5 apply only to baggage a passenger carries on board; a consigned parcel that carries a freight charge of its own is covered by the separate parcel carriage terms\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;6. The carrier is not liable for passengers or baggage due to delays, events beyond control, or inherent deterioration damage, etc.\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;7. If a passenger does not travel on the specified date/time in the agreed ticket, the travel right is considered forfeited",
       "RESCHEDULE_COUNT_UNLIMITED": "A booking may be changed an unlimited number of times.",
       "RESCHEDULE_COUNT_LIMITED": "A booking may be changed at most {{rescheduleMaxCount}} time(s)."
     },
@@ -3613,7 +3754,7 @@
       "TITLE": "Select a Schedule",
       "SUBTITLE": "Choose a schedule to view its boarding list.",
       "EMPTY_TITLE": "No schedules available",
-      "EMPTY_BODY": "You have no schedules assigned. Please check back later."
+      "EMPTY_BODY": "No trips on the selected date. Pick another date."
     },
     "PARCEL_INTAKE": {
       "SUBTITLE": "Record a consigned parcel, or a carry-on item that needs its own seat."
@@ -3721,10 +3862,11 @@
           "BOOKING_NUMBER": "Booking number",
           "SEATS": "Seats",
           "FREE_AISLE": "Free — no seat used",
+          "OPEN_SEATING": "No seat number — this trip is open seating",
           "UNPAID_NOTE": "Not yet paid — collect cash at the counter (Booking #{{bookingNumber}})",
           "PAY_CASH_BUTTON": "Collect cash",
           "PAYING": "Recording payment…",
-          "PAID": "Paid — ฿{{amount}} collected"
+          "PAID": "Paid — {{amount}} collected"
         }
       },
       "SHARE_NOT_CONFIGURED": "Parcel revenue share is not configured — it will be recorded at 0% until the owner sets it up.",
@@ -3818,6 +3960,8 @@
       },
       "ERROR": {
         "CODE_MISMATCH": "This collection code does not match.",
+        "COLLECT_RATE_LIMITED": "Too many wrong codes. This parcel is locked — try again in {{minutes}} min.",
+        "COLLECT_RATE_LIMITED_UNKNOWN_WAIT": "Too many wrong codes. This parcel is temporarily locked — please try again later.",
         "ALREADY_COLLECTED": "This parcel has already been collected.",
         "WRONG_STATE": "This parcel is not in the expected state. The list has been refreshed.",
         "BOOKING_NOT_CONFIRMED": "This parcel is not paid for. Take payment on the booking before handing it over.",
@@ -3902,7 +4046,7 @@
       "SUBMITTING": "Saving…",
       "REJECT_CONFIRM": {
         "TITLE": "Confirm reject & refund",
-        "BODY": "Reject parcel {{tracking}} and immediately refund {{amount}} THB in full to the payment method the sender used. This action cannot be undone.",
+        "BODY": "Reject parcel {{tracking}} and immediately refund {{amount}} in full to the payment method the sender used. This action cannot be undone.",
         "CONFIRM_BTN": "Reject & refund",
         "CANCEL_BTN": "Cancel"
       },
@@ -3914,8 +4058,8 @@
         "VALIDATION": "Some values are invalid. Please check and try again."
       },
       "SUCCESS": {
-        "REJECTED_REFUNDED": "Parcel rejected. Refunded {{amount}} THB.",
-        "REJECTED_MANUAL_REFUND": "Parcel rejected. The automatic refund could not be processed — hand back {{amount}} THB to the recipient in cash."
+        "REJECTED_REFUNDED": "Parcel rejected. Refunded {{amount}}.",
+        "REJECTED_MANUAL_REFUND": "Parcel rejected. The automatic refund could not be processed — hand back {{amount}} to the recipient in cash."
       }
     },
     "INSPECTION": {
@@ -4004,6 +4148,7 @@
         "PARCEL_REMIT": "Parcel remit",
         "PARCEL_CLAWBACK": "Parcel clawback"
       },
+      "BOX_DATE": "Cash box for {{date}}",
       "ADVANCE": {
         "ACTION_LABEL": "Cash advance",
         "AMOUNT_LABEL": "Amount",
@@ -4021,11 +4166,14 @@
       },
       "EXPENSE": {
         "ACTION_LABEL": "Field expense",
+        "LANDS_IN_BOX": "This entry lands in the cash box for {{date}}",
         "CATEGORY_LABEL": "Category",
         "AMOUNT_LABEL": "Amount",
         "AMOUNT_PLACEHOLDER": "0.00",
         "NOTE_LABEL": "Note (optional)",
         "NOTE_PLACEHOLDER": "e.g. receipt number",
+        "BILL_DATE_LABEL": "Date on the bill",
+        "BILL_DATE_MISMATCH": "The bill is dated differently from the box it is going into — this entry will be recorded in the cash box for {{date}}.",
         "SUBMIT": "Record expense",
         "WAGE_PRICED_BY_OWNER": "The wage is priced from the owner's rate per leg (1 leg = 1 run), so there is no amount to enter."
       },
@@ -4037,7 +4185,8 @@
         "GENERIC": "Unable to record this entry. Please try again.",
         "WAGE_RATE_NOT_CONFIGURED": "No wage per leg has been set yet. Ask the owner to set it on the driver wage rate page first.",
         "SALES_POINT_FORBIDDEN": "You can only record this entry for rounds departing from your own sales point. This round is not yours.",
-        "PER_HEAD_SALES_POINT_FORBIDDEN": "You can only record heads for stops that belong to your own sales point."
+        "PER_HEAD_SALES_POINT_FORBIDDEN": "You can only record heads for stops that belong to your own sales point.",
+        "DAY_ALREADY_RETURNED": "That day’s cash box has already been returned and signed off, so entries can no longer be added to it. Ask the owner to re-open the box for that day, then key this bill again."
       },
       "MY_DAY": {
         "TITLE": "My cash box today",
@@ -4154,7 +4303,7 @@
       "DESCRIPTION": "Parcel description",
       "PROHIBITED_ACK": "I have read the prohibited-items list above and confirm this parcel contains none of them.",
       "QUOTE_LOADING": "Calculating price…",
-      "QUOTE_AMOUNT": "Price: {{amount}} THB",
+      "QUOTE_AMOUNT": "Price: {{amount}}",
       "SUBMIT": "Confirm parcel details",
       "SUBMITTING": "Submitting…"
     },

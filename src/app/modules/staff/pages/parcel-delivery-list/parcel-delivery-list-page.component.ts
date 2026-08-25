@@ -18,7 +18,7 @@ import {
 } from '../../../../shared/lib/parcel-booking-status';
 import { parcelStopLabel } from '../../../../shared/lib/parcel-stop-label';
 import { ParcelDeliveryListStore } from './parcel-delivery-list.store';
-import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
+import { errorCodeFromMessageKey, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import { ParcelClaimRespDto } from '../../../../shared/interfaces/parcel-claim.interface';
 import {
   ParcelClaimFilePayload,
@@ -33,10 +33,31 @@ const CLAIM_ACTION_ERROR_KEYS: Record<string, string> = {
   PARCEL_CLAIM_ALREADY_DECIDED: 'STAFF.PARCEL_DELIVERY.ERROR.CLAIM_ALREADY_DECIDED',
 };
 
+// OBRS-1553: the copy now names a number the SERVER computed, so it needs a
+// second key for the case where no number arrives - a frontend deployed ahead
+// of the backend that added `retryAfterSeconds` (Netlify and Koyeb ship
+// independently). Saying nothing about the wait beats printing an empty gap
+// where the minutes should be, and beats the hard-coded 15 this card removed.
+const COLLECT_RATE_LIMITED_KEY = 'STAFF.PARCEL_DELIVERY.ERROR.COLLECT_RATE_LIMITED';
+const COLLECT_RATE_LIMITED_NO_WAIT_KEY = 'STAFF.PARCEL_DELIVERY.ERROR.COLLECT_RATE_LIMITED_UNKNOWN_WAIT';
+
 const ACTION_ERROR_KEYS: Record<string, string> = {
   // OBRS-1537: COLLECTION, not COLLECT — the key was spelled without `ION`, so
   // it never matched and every wrong code fell through to WRONG_STATE.
   PARCEL_COLLECTION_CODE_MISMATCH: 'STAFF.PARCEL_DELIVERY.ERROR.CODE_MISMATCH',
+  // OBRS-1545: the 429 from `ParcelCollectAttemptService.checkNotBlocked()`.
+  // Without it a blocked driver was told the parcel was in the wrong state and
+  // the list had been refreshed — advice that is both untrue and unhelpful, the
+  // parcel is fine and the only thing that clears the block is waiting. The
+  // code is DERIVED, not curated: `RateLimitException` passes no errorCode, so
+  // `DomainException.getErrorCode()` builds it from the messageKey. Derived
+  // here too rather than hand-typed — the sibling entry above is a card of its
+  // own about exactly that kind of typo. The copy names the 15-minute window,
+  // which is `SecurityConstant.PARCEL_COLLECT_RATE_LIMIT_WINDOW_MINUTES` copied
+  // across repos with no gate between them; OBRS-1553 is the card to have the
+  // 429 carry the number instead.
+  [errorCodeFromMessageKey('parcel.error.collect-rate-limited')]:
+    COLLECT_RATE_LIMITED_KEY,
   PARCEL_ALREADY_COLLECTED: 'STAFF.PARCEL_DELIVERY.ERROR.ALREADY_COLLECTED',
   PARCEL_BOOKING_NOT_CONFIRMED: 'STAFF.PARCEL_DELIVERY.ERROR.BOOKING_NOT_CONFIRMED',
   // OBRS-1345. The photo failures get their OWN messages rather than falling
@@ -83,6 +104,8 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
   protected collectDialogParcelId: number | null = null;
   protected isCollecting = false;
   protected collectErrorKey: string | null = null;
+  /** OBRS-1553: `{ minutes }` for the rate-limit copy; null for every other error. */
+  protected collectErrorParams: { minutes: number } | null = null;
 
   // OBRS-1388 — "ยื่นเคลม" dialog state. `claimDialogParcel` is the row
   // already in hand (optimistic open, design-system §6); `claimHistory` and
@@ -169,6 +192,7 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
     // action that can't be undone, so the invariant lives in the component.
     if (this.isRowBlocked(row)) return;
     this.collectErrorKey = null;
+    this.collectErrorParams = null;
     this.collectDialogParcelId = row.parcelId;
   }
 
@@ -273,6 +297,7 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
 
     this.isCollecting = true;
     this.collectErrorKey = null;
+    this.collectErrorParams = null;
     this.staffApiService
       .collectParcel(parcelId, { collectionCode })
       .pipe(takeUntil(this.destroy$))
@@ -284,7 +309,9 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
         },
         error: (err: unknown) => {
           this.isCollecting = false;
-          this.collectErrorKey = this.mapErrorCode(err);
+          const collectError = this.mapCollectError(err);
+          this.collectErrorKey = collectError.key;
+          this.collectErrorParams = collectError.params;
         },
       });
   }
@@ -369,6 +396,28 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
     this.store.mutate((rows) =>
       rows.map((r) => (r.parcelId === parcelId ? { ...r, deliveryStatus } : r))
     );
+  }
+
+  /**
+   * OBRS-1553: the rate-limit 429 is the one collect error whose text needs a
+   * value off the wire. `retryAfterSeconds` is what is LEFT of the block, so a
+   * driver who comes back mid-window is told the truth rather than the window
+   * length; until this card the copy named 15 minutes itself, copied out of the
+   * backend's `SecurityConstant` with nothing keeping the two in step.
+   *
+   * Rounded UP to whole minutes: the block is measured in minutes on screen, and
+   * rounding down would tell a driver to come back before it actually lifts.
+   */
+  private mapCollectError(err: unknown): { key: string; params: { minutes: number } | null } {
+    const key = this.mapErrorCode(err);
+    if (key !== COLLECT_RATE_LIMITED_KEY) {
+      return { key, params: null };
+    }
+    const retryAfterSeconds = (err as HttpErrorResponse)?.error?.retryAfterSeconds as unknown;
+    if (typeof retryAfterSeconds !== 'number' || retryAfterSeconds <= 0) {
+      return { key: COLLECT_RATE_LIMITED_NO_WAIT_KEY, params: null };
+    }
+    return { key, params: { minutes: Math.ceil(retryAfterSeconds / 60) } };
   }
 
   private mapErrorCode(err: unknown): string {

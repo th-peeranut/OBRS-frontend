@@ -70,7 +70,7 @@ the daily table — never shown next to stale/zero numbers. -->
       <div>
         <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.CASH' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(summary?.cash?.collected ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(summary?.cash?.collected ?? '0.00') }}</p>
         }
         @if (isLoading) {
           <span class="admin-skeleton admin-skeleton--sm"></span>
@@ -81,11 +81,11 @@ the daily table — never shown next to stale/zero numbers. -->
           </p>
           <p class="admin-muted cor-sub-line">
             {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}:
-            {{ formatMoney(summary?.cash?.refunded ?? '0.00', currency) }}
+            {{ formatMoney(summary?.cash?.refunded ?? '0.00') }}
           </p>
           <p class="admin-emphasis cor-sub-line">
             {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}:
-            {{ formatMoney(summary?.cash?.net ?? '0.00', currency) }}
+            {{ formatMoney(summary?.cash?.net ?? '0.00') }}
           </p>
         }
       </div>
@@ -95,7 +95,7 @@ the daily table — never shown next to stale/zero numbers. -->
       <div>
         <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.ONLINE' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(summary?.online?.collected ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(summary?.online?.collected ?? '0.00') }}</p>
         }
         @if (isLoading) {
           <span class="admin-skeleton admin-skeleton--sm"></span>
@@ -106,11 +106,11 @@ the daily table — never shown next to stale/zero numbers. -->
           </p>
           <p class="admin-muted cor-sub-line">
             {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}:
-            {{ formatMoney(summary?.online?.refunded ?? '0.00', currency) }}
+            {{ formatMoney(summary?.online?.refunded ?? '0.00') }}
           </p>
           <p class="admin-emphasis cor-sub-line">
             {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}:
-            {{ formatMoney(summary?.online?.net ?? '0.00', currency) }}
+            {{ formatMoney(summary?.online?.net ?? '0.00') }}
           </p>
         }
       </div>
@@ -120,7 +120,7 @@ the daily table — never shown next to stale/zero numbers. -->
       <div>
         <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.OTHER' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(summary?.other?.collected ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(summary?.other?.collected ?? '0.00') }}</p>
         }
         @if (isLoading) {
           <span class="admin-skeleton admin-skeleton--sm"></span>
@@ -131,11 +131,11 @@ the daily table — never shown next to stale/zero numbers. -->
           </p>
           <p class="admin-muted cor-sub-line">
             {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.REFUNDED' | translate }}:
-            {{ formatMoney(summary?.other?.refunded ?? '0.00', currency) }}
+            {{ formatMoney(summary?.other?.refunded ?? '0.00') }}
           </p>
           <p class="admin-emphasis cor-sub-line">
             {{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.NET' | translate }}:
-            {{ formatMoney(summary?.other?.net ?? '0.00', currency) }}
+            {{ formatMoney(summary?.other?.net ?? '0.00') }}
           </p>
         }
       </div>
@@ -149,7 +149,7 @@ the daily table — never shown next to stale/zero numbers. -->
   <section class="admin-card cor-total-card mt-3">
     <p class="admin-muted">{{ 'ADMIN.CASH_ONLINE_RECONCILIATION.CARD.TOTAL_COLLECTED' | translate }}</p>
     @if (!isLoading) {
-      <p class="cor-total-figure">{{ formatMoney(summary?.totalCollected ?? '0.00', currency) }}</p>
+      <p class="cor-total-figure">{{ formatMoney(summary?.totalCollected ?? '0.00') }}</p>
     }
     @if (isLoading) {
       <span class="admin-skeleton admin-skeleton--sm"></span>
@@ -227,15 +227,15 @@ the daily table — never shown next to stale/zero numbers. -->
                     </button>
                     <span class="admin-emphasis">{{ row.date }}</span>
                   </td>
-                  <td class="cor-money">{{ formatMoney(row.cash.collected, currency) }}</td>
-                  <td class="cor-money">{{ formatMoney(row.cash.refunded, currency) }}</td>
-                  <td class="cor-money">{{ formatMoney(row.cash.net, currency) }}</td>
-                  <td class="cor-money">{{ formatMoney(row.online.collected, currency) }}</td>
-                  <td class="cor-money">{{ formatMoney(row.online.refunded, currency) }}</td>
-                  <td class="cor-money">{{ formatMoney(row.online.net, currency) }}</td>
-                  <td class="cor-money">{{ formatMoney(row.other.collected, currency) }}</td>
-                  <td class="cor-money">{{ formatMoney(row.other.refunded, currency) }}</td>
-                  <td class="cor-money">{{ formatMoney(row.other.net, currency) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.cash.collected) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.cash.refunded) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.cash.net) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.online.collected) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.online.refunded) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.online.net) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.other.collected) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.other.refunded) }}</td>
+                  <td class="cor-money">{{ formatMoney(row.other.net) }}</td>
                 </tr>
                 @if (isExpanded(row)) {
                   <tr class="cor-detail-row">

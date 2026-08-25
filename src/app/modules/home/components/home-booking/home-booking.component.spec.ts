@@ -1218,10 +1218,10 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
   // The two modes are NOT the same claim, because the layouts are not: in a row
   // the button's centre is on the SEAM of the merged bar and level with the
   // FIELDS (never with the taller label+field group — that was the OBRS-1035
-  // defect); stacked, there is no seam to sit on, because the lower field's
-  // label sits between the two boxes, so it straddles the upper field's bottom
-  // edge at the right end. Both are checked against the field boxes, which is
-  // what makes either of them fail when a call site re-adds a nudge.
+  // defect); stacked, the seam is horizontal and the button straddles it at the
+  // right end (OBRS-1189 — before it, the lower field's label filled that gap
+  // and there was no seam to sit on). Both are checked against the field boxes,
+  // which is what makes either of them fail when a call site re-adds a nudge.
   //
   // The row branch therefore does not run in CI. Its coverage is
   // e2e/tests/obrs-1038-station-seam.spec.ts, which sets a real 1280px viewport.
@@ -1250,10 +1250,17 @@ describe('HomeBookingComponent — origin/destination swap (OBRS-1035)', () => {
 
     if (window.matchMedia('(max-width: 992px)').matches) {
       // Stacked: one column, the seam is horizontal.
-      // No seam exists here: the lower field's LABEL sits between the two
-      // boxes. The button straddles the upper field's bottom edge instead, at
-      // the right end, where that left-aligned label has no text.
+      // AC#4 of OBRS-1189: there IS a seam here now. While the labels sat ABOVE
+      // their fields the lower one's label filled the gap between the two boxes
+      // (measured 2026-08-05: its midpoint 15px below the upper field, inside
+      // that label's own text row), so the button could only straddle the upper
+      // field's bottom edge. The boxes TOUCH now -- they overlap by the 1px that
+      // collapses their two borders into one line -- and that is the assertion
+      // this card added: it is red against every build before it, which is what
+      // makes it a proof of AC#4 rather than a restatement of the old layout.
+      // It still hangs at the right end, where the reference sites put it.
       expect(box(fields[0]).left).toBe(box(fields[1]).left);
+      expect(Math.abs(box(fields[1]).top - box(fields[0]).bottom)).toBeLessThanOrEqual(1);
 
       expect(Math.abs(centreY(host) - box(fields[0]).bottom)).toBeLessThanOrEqual(1);
       expect(centreX(host)).toBeGreaterThan(centreX(fields[0]));
@@ -1784,5 +1791,97 @@ describe('HomeBookingComponent — "show route map" CTA (OBRS-1211)', () => {
     button.nativeElement.click();
 
     expect(emitSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * OBRS-1562, rewritten by OBRS-1189. The two buttons moved once more: the search
+ * button is the last SEGMENT of the bar now (AC#3), and the map CTA followed it
+ * into `.station-section` because `order` — which is what keeps the CTA above the
+ * button below 993px — ranks SIBLINGS only, and the two were in different
+ * containers. `.form-actions` is gone with its wrapper.
+ *
+ * What survives from 1562 and is pinned here for the same reasons: the CTA's
+ * gate is a SECOND `@if` on the same store selector (nothing else would notice
+ * if it were dropped), and the search button is NOT gated, so it must still
+ * render on the frame where the roster has not resolved.
+ *
+ * DOM ORDER is asserted, not CSS: `order` is a stylesheet fact this fixture
+ * cannot see (Karma lays out at 800px, and the rule that swaps them lives in a
+ * media query), but "the button comes before the hint in the DOM" is the
+ * precondition without which no `order` value can produce either arrangement.
+ */
+describe('HomeBookingComponent — search bar actions (OBRS-1189)', () => {
+  async function setUp(stations: unknown): Promise<ComponentFixture<HomeBookingComponent>> {
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStubWithValue(stations) },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(HomeBookingComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('puts the search button and the map CTA inside the bar, button first', async () => {
+    const fixture = await setUp([STATION_1, STATION_2]);
+
+    const bar = fixture.debugElement.query(By.css('.station-section'));
+    expect(bar).withContext('the search bar must exist').not.toBeNull();
+
+    expect(bar.query(By.css('.btn-search')))
+      .withContext('AC#3: the search button is a segment of the bar, not a row of its own')
+      .not.toBeNull();
+    expect(bar.query(By.css('[data-testid="show-route-map"]')))
+      .withContext('the map CTA follows it in, or `order` cannot reach both')
+      .not.toBeNull();
+
+    expect(fixture.debugElement.query(By.css('.form-actions')))
+      .withContext('the OBRS-1562 actions wrapper is gone, not merely emptied')
+      .toBeNull();
+
+    // The children of `.station-section`, in the order the DOM has them. The
+    // stylesheet re-ranks these two below 993px; it can only do that if the
+    // button is the earlier sibling here.
+    const children = Array.from(
+      (bar.nativeElement as HTMLElement).children
+    ) as HTMLElement[];
+    const searchIndex = children.findIndex((el) => el.classList.contains('btn-search'));
+    // The hint's flex item is its ROW, not the link: the row is what takes a
+    // line of its own on desktop, so it is what `order` has to rank.
+    const hintIndex = children.findIndex((el) => el.classList.contains('map-hint-row'));
+
+    expect(searchIndex).withContext('the search button is a direct child').toBeGreaterThan(-1);
+    expect(hintIndex).withContext('the map CTA row is a direct child').toBeGreaterThan(-1);
+    expect(searchIndex).toBeLessThan(hintIndex);
+  });
+
+  it('keeps the search button when the station roster has not resolved', async () => {
+    const fixture = await setUp(null);
+
+    expect(fixture.debugElement.query(By.css('[data-testid="show-route-map"]')))
+      .withContext('the CTA stays gated on the roster after the move')
+      .toBeNull();
+    expect(fixture.debugElement.query(By.css('.station-section .btn-search')))
+      .withContext('the search button is not gated and must still render')
+      .not.toBeNull();
   });
 });

@@ -27,6 +27,7 @@ import { OpsEfficiencyDto } from '../../shared/interfaces/ops-efficiency.interfa
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { VehiclePlReportDto } from '../../shared/interfaces/vehicle-pl-report.interface';
+import { PayeeSpendReportDto } from '../../shared/interfaces/payee-spend-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
@@ -46,6 +47,7 @@ import {
   ParcelClaimRespDto,
 } from '../../shared/interfaces/parcel-claim.interface';
 import {
+  DriverCashDayReopenReqDto,
   DriverCashDayRespDto,
   DriverCashDayReturnReqDto,
   DriverCashDayStatus,
@@ -680,6 +682,12 @@ export interface AdminBookingTicketDto {
   id?: number;
   ticketNumber?: string;
   passengerType?: AdminStatusDto;
+  /**
+   * OBRS-1232: the title as a stable CODE ('MISS'), separate from the name and untranslated on the
+   * wire. Render it with the `titleLabel` pipe so switching language changes the word without a
+   * refetch. A legacy free-text value the migration left alone comes through verbatim (AC-5).
+   */
+  passengerTitle?: string | null;
   passengerName?: string;
   seatNumber?: string;
   // Ticket status is included for EVERY ticket on the booking, including
@@ -705,6 +713,8 @@ export interface AdminBookingActorDetailDto {
 }
 
 export interface AdminBookingContactDetailDto {
+  /** OBRS-1601 — title CODE, rendered through `titleLabel`; absent when the contact gave none. */
+  title?: string | null;
   fullName?: string;
   phoneNumber?: string;
 }
@@ -1105,6 +1115,16 @@ export interface AdminExpenseDto {
   expenseDate: string;
   receiptNo?: string | null;
   paidBy?: string | null;
+  /**
+   * OBRS-1577: who RECEIVED the money, by FK into the payee registry, plus the name resolved
+   * server-side. The NAME comes down with the row rather than being looked up client-side because
+   * the pickers list ACTIVE payees only — a bill paid to a garage that has since closed would
+   * otherwise render blank, and re-saving it from a form whose dropdown never held that id would
+   * silently drop the link. Optional: every bill written before V119 has no payee, and that is a
+   * real answer rather than a missing one.
+   */
+  payeeId?: number | null;
+  payeeName?: string | null;
   note?: string | null;
   createdByName?: string;
   createdAt?: string;
@@ -1167,6 +1187,9 @@ export interface CreateExpensePayload {
   expenseDate: string;
   receiptNo: string | null;
   paidBy: string | null;
+  /** OBRS-1577: which registry payee received this money. `null` is the normal case — a bill whose
+   * payee is not on record, which every row written before this card is. */
+  payeeId: number | null;
   note: string | null;
   /** OBRS-1374: the bill's lines. `[]` means "this bill has no breakdown", which is the
    * normal case and is accepted unchanged. When lines ARE sent their amounts must sum to
@@ -1178,6 +1201,40 @@ export interface CreateExpensePayload {
 /** OBRS-685: `POST /api/private/expenses` 201 response body. */
 export interface CreateExpenseRespDto {
   expenseId: number;
+}
+
+/**
+ * OBRS-1576: one envelope of bills for `POST /api/private/expenses/batch`. Each entry is exactly
+ * the body the single-bill create takes, so the two screens that write this table cannot drift in
+ * what they send; what the batch adds is that the server writes all of them or none of them.
+ */
+export interface CreateExpenseBatchPayload {
+  bills: CreateExpensePayload[];
+}
+
+/** OBRS-1576: `POST /api/private/expenses/batch` 201 body — the ids it created, in the order the
+ * bills were sent. */
+export interface CreateExpenseBatchRespDto {
+  expenseIds: number[];
+}
+
+/**
+ * OBRS-1577: one row of the payee registry — a garage, a petrol station, a shop the operator's
+ * money goes to. `type` is what keeps them apart in the pickers (the owner's 2026-08-24 ruling:
+ * ONE table with a type column, because splitting one table later is a migration and merging two
+ * later is a reconciliation project).
+ */
+export interface AdminExpensePayeeDto {
+  id: number;
+  name: string;
+  type: 'GARAGE' | 'FUEL_STATION' | 'OTHER';
+  active: boolean;
+}
+
+/** OBRS-1577: `ExpensePayeeReqDto` — the body for create and for rename. */
+export interface CreateExpensePayeePayload {
+  name: string;
+  type: 'GARAGE' | 'FUEL_STATION' | 'OTHER';
 }
 
 /** OBRS-809: one operator, as returned by `GET /api/private/owners`.
@@ -2186,6 +2243,32 @@ export class AdminApiService {
     );
   }
 
+  /**
+   * OBRS-1578: spend per payee. Every parameter is optional and omitting `year` means EVERY year —
+   * the screen's default. `month` is only ever sent alongside a year; the backend refuses the pair
+   * without one rather than guessing which of the two readings was meant.
+   */
+  getPayeeSpendReport(
+    year: number | null,
+    month: number | null,
+    category: string | null
+  ): Observable<ResponseAPI<PayeeSpendReportDto>> {
+    let params = new HttpParams();
+    if (year !== null) {
+      params = params.set('year', String(year));
+      if (month !== null) {
+        params = params.set('month', String(month));
+      }
+    }
+    if (category !== null) {
+      params = params.set('category', category);
+    }
+    return this.getRequest<PayeeSpendReportDto>(
+      `${this.baseUrl}/private/admin/reports/expense-by-payee`,
+      params
+    );
+  }
+
   getCashOnlineReconciliationReport(
     from: string,
     to: string
@@ -2402,6 +2485,21 @@ export class AdminApiService {
     return this.postRequest<CreateExpenseRespDto>(`${this.baseUrl}/private/expenses`, payload);
   }
 
+  /**
+   * OBRS-1576: a whole envelope of repair bills in one call. Not a loop over `createExpense` on this
+   * side, and that is the point — a client-side loop would leave the owner with half a stack
+   * recorded the moment one bill is refused, which is precisely the state AC3 forbids. The server
+   * writes all of them in one transaction or none.
+   */
+  createExpenseBatch(
+    payload: CreateExpenseBatchPayload
+  ): Observable<ResponseAPI<CreateExpenseBatchRespDto>> {
+    return this.postRequest<CreateExpenseBatchRespDto>(
+      `${this.baseUrl}/private/expenses/batch`,
+      payload
+    );
+  }
+
   updateExpense(id: number, payload: CreateExpensePayload): Observable<ResponseAPI<unknown>> {
     return this.putRequest<unknown>(`${this.baseUrl}/private/expenses/${id}`, payload);
   }
@@ -2411,6 +2509,52 @@ export class AdminApiService {
   }
 
   // ── OBRS-1356: the owner's review of what a salesperson recorded in the field ──
+
+  /**
+   * OBRS-1577. `includeInactive` is what separates the two callers: a picker leaves it false and
+   * never offers a payee the owner retired, the registry screen sets it true because a screen that
+   * cannot see a retired row cannot un-retire it.
+   */
+  getExpensePayees(
+    type: AdminExpensePayeeDto['type'] | null,
+    includeInactive = false
+  ): Observable<ResponseAPI<AdminExpensePayeeDto[]>> {
+    let params = new HttpParams();
+    if (type) {
+      params = params.set('type', type);
+    }
+    if (includeInactive) {
+      params = params.set('includeInactive', 'true');
+    }
+    return this.getRequest<AdminExpensePayeeDto[]>(`${this.baseUrl}/private/expense-payees`, params);
+  }
+
+  /**
+   * OBRS-1577: 200, not 201, and it returns the ROW. The endpoint is idempotent by normalized name
+   * (trimmed, spaces removed, lower-cased), so asking for a garage that already exists hands back
+   * the one that exists rather than failing in the middle of entering a bill.
+   */
+  createExpensePayee(
+    payload: CreateExpensePayeePayload
+  ): Observable<ResponseAPI<AdminExpensePayeeDto>> {
+    return this.postRequest<AdminExpensePayeeDto>(`${this.baseUrl}/private/expense-payees`, payload);
+  }
+
+  updateExpensePayee(
+    id: number,
+    payload: CreateExpensePayeePayload
+  ): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/expense-payees/${id}`, payload);
+  }
+
+  /** OBRS-1577: retire/restore. There is no DELETE — a garage that closed still owns every bill it
+   * was ever paid, and there is no second place that history is written down. */
+  setExpensePayeeActive(id: number, active: boolean): Observable<ResponseAPI<unknown>> {
+    return this.patchRequest<unknown>(
+      `${this.baseUrl}/private/expense-payees/${id}/active`,
+      { active }
+    );
+  }
 
   getPendingExpenses(): Observable<ResponseAPI<AdminExpenseDto[]>> {
     return this.getRequest<AdminExpenseDto[]>(`${this.baseUrl}/private/expenses/pending`);
@@ -2556,6 +2700,27 @@ export class AdminApiService {
   ): Observable<ResponseAPI<DriverCashDayRespDto>> {
     return this.postRequest<DriverCashDayRespDto>(
       `${this.baseUrl}/private/driver-cash/days/${dayId}/return`,
+      payload
+    );
+  }
+
+  /**
+   * OBRS-1579 — OWNER-only re-open of a box that was already signed off, for
+   * the bill that reaches the counter the morning AFTER the round it paid for.
+   * Wipes the day's return snapshot into `driver_cash_day_reopens` and puts the
+   * day back to `OPEN`, so the late bill lands on the round that actually
+   * incurred it instead of on today's.
+   *
+   * No client-side role check guards the caller: `/admin/settlements` is
+   * already `requiredRoles: ['owner']` (admin.module.ts, and `ROLE_GRANTS` has
+   * admin granting owner), and the backend enforces `hasRole('OWNER')` itself.
+   */
+  reopenDriverCashDay(
+    dayId: number,
+    payload: DriverCashDayReopenReqDto
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.postRequest<DriverCashDayRespDto>(
+      `${this.baseUrl}/private/driver-cash/days/${dayId}/reopen`,
       payload
     );
   }
@@ -2920,7 +3085,11 @@ export type OperationsConfigReqDto = Omit<
 
 /** One row of `GET /api/private/owner/parcel-share/monthly` — OBRS-960. */
 export interface ParcelShareMonthlyRowDto {
-  payeeUserId: number;
+  /**
+   * OBRS-1009: null on a "no salesperson — the driver kept it" row. Those shares are reported as
+   * one line per cause instead of under the driver's name, so they name no person and carry no id.
+   */
+  payeeUserId: number | null;
   payeeName: string;
   total: string;
 }

@@ -1,7 +1,7 @@
 # ADR-0035 — Promote `dev` → `sit` only for what only SIT can prove
 
 **Date:** 2026-07-30
-**Status:** Accepted
+**Status:** Accepted — amended 2026-08-23 (OBRS-1557: §Scope now names the GitHub Actions bill it used to wave through)
 **Card:** OBRS-912 (the policy half; the structural half is OBRS-911)
 
 ---
@@ -85,12 +85,33 @@ machine:
 - Google sign-in
 - OTP / SMS (ThaiBulkSMS)
 - outbound email (Brevo)
-- MapTiler map tiles
+- MapTiler map tiles (frontend only)
 - GPS ingest (ThaiStar push webhook)
 
 This is not a new rule so much as the written form of one already in use — work against
 an external API has always had to reach SIT before its evidence capture, because a local
 mock cannot produce that evidence.
+
+**One list, two repos, and a marker where a line does not reach both.** OBRS-1557 extended
+the SIT-promote gate to `OBRS-backend`, which promotes to a `sit` of its own and pays
+GitHub Actions minutes for the CI that runs there — see §Scope. The bullets above stay a
+single list, because a second copy is a copy that drifts. But a line one repo cannot
+exercise is not a reason that repo may name, so a bullet may end in `(frontend only)` or
+`(backend only)` and the gate honours it; an unmarked bullet is available to both.
+
+Exactly one line carries a marker today: **MapTiler is frontend only.** Measured 2026-08-23
+against `OBRS-backend@dev` — `grep -rli maptiler src/` returns 2 files,
+`payment-page-expected-headers.properties` and `CspAllowlistMatchesInventoryTest.java`, and
+both are the CSP allow-list string the backend *serves*. There is no client, no key and no
+request to `api.maptiler.com` in the backend, so a backend promote naming "maptiler" would
+be naming work it cannot do. The counter-argument was weighed and rejected: the backend does
+own the header that names `api.maptiler.com`, but a change to that header is a change to
+the *CSP*, and a CSP is proven by loading the real page against the real origins — which is
+what the frontend's own promote is for.
+
+The marker is not a licence to fork the list. Adding an integration still means adding one
+bullet; a marker is only for a line that provably cannot be reached from one side, and the
+proof belongs here, next to it, rather than in the gate.
 
 Everything else — component behaviour, routing, forms, i18n, styling, dark mode,
 accessibility, guards, state — is verified locally against the SIT backend, and simply
@@ -116,7 +137,23 @@ promote in one build.
 **SIT only.** Production frontend is not on Netlify — it is the Oracle Cloud VM behind
 Caddy, which this repo's own `netlify.toml` records ("prod carries the header today, but
 the Angular app is not published to that VM yet"). A prod deploy costs nothing on this
-bill. The SIT backend is on Koyeb and is likewise unaffected.
+bill. The SIT backend is on Koyeb, which is not on this bill either.
+
+**"This bill" means Netlify credits and nothing else.** That last sentence used to end "and
+is likewise unaffected". True of Netlify, and read by everyone since as a blanket all-clear
+it was never entitled to give. Koyeb does not charge per deploy — but the `ci.yml` that has
+to go green before that deploy runs on GitHub Actions, in a **private** repo, and is
+metered. Measured 2026-08-23 over 08-01→08-23 by rounding each job up the way GitHub bills
+it (`gh api repos/th-peeranut/OBRS-backend/actions/runs?created=">=2026-08-01"`, then
+`/jobs` for every run): `OBRS-backend` spent **1,991 of the account's 2,000** monthly
+minutes, roughly **35** of them per push into `sit`; `OBRS-frontend` spent **0** across 490
+CI runs in the same window, because it is public. Free of Actions minutes is all that
+means — `OBRS-frontend` is still the repo paying the ~15 Netlify credits a deploy that this
+ADR is entirely about. So the promote discipline decided here governs the repo that pays
+credits and not minutes, and is silent on the repo that pays minutes and not credits.
+OBRS-1557 owns that gap; do not read "unaffected" as covering it. Both figures are
+measurements with a date on them — do not freeze either into a gate or an acceptance
+criterion, for the same reason "15 credits" is not frozen into one below.
 
 ## What is measured here, and what is inferred
 
