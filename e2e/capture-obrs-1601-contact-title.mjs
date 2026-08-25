@@ -144,7 +144,23 @@ async function adminDetail(browser, lang) {
   await page.goto(`${BASE}/admin/bookings`, { waitUntil: 'networkidle' });
   const row = page.locator('tbody tr', { hasText: BOOKING_NUMBER }).first();
   await row.waitFor({ timeout: 30000 });
-  await row.click();
+  // `openDetail` seeds the panel OPTIMISTICALLY from the list row and only then fetches
+  // /private/bookings/<id>. Waiting on `.bk-detail-row` alone photographs that placeholder: the
+  // first (cold) language came out with the contact name as `-` while the two after it, running
+  // against a warm backend, read the real name. So wait for the fetch that fills it.
+  await Promise.all([
+    page.waitForResponse((r) => /\/private\/bookings\/\d+(\?|$)/.test(r.url())
+      && r.request().method() === 'GET', { timeout: 30000 }),
+    row.click(),
+  ]);
+  // The response reaching the browser is still one change-detection pass short of the real name
+  // being painted. `isDetailFetching` is cleared in the SAME subscribe callback that assigns
+  // `detailBooking` (bookings-page.component.ts:338, and :349 on error), and the template shows
+  // `.bk-inline-updating` exactly while it is true (bookings-page.component.html:244) - so waiting
+  // for that span to detach is the paint, not a guessed number of milliseconds. The payments fetch
+  // renders a second span with the same class (:316, cleared at :361/:368), which only makes this
+  // wait broader; both clear on error too, so a failed fetch cannot hang it.
+  await page.locator('.bk-inline-updating').first().waitFor({ state: 'detached', timeout: 20000 });
 
   const detail = page.locator('.bk-detail-row').first();
   await detail.waitFor({ timeout: 20000 });
