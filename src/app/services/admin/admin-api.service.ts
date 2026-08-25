@@ -1204,6 +1204,21 @@ export interface CreateExpenseRespDto {
 }
 
 /**
+ * OBRS-1576: one envelope of bills for `POST /api/private/expenses/batch`. Each entry is exactly
+ * the body the single-bill create takes, so the two screens that write this table cannot drift in
+ * what they send; what the batch adds is that the server writes all of them or none of them.
+ */
+export interface CreateExpenseBatchPayload {
+  bills: CreateExpensePayload[];
+}
+
+/** OBRS-1576: `POST /api/private/expenses/batch` 201 body — the ids it created, in the order the
+ * bills were sent. */
+export interface CreateExpenseBatchRespDto {
+  expenseIds: number[];
+}
+
+/**
  * OBRS-1577: one row of the payee registry — a garage, a petrol station, a shop the operator's
  * money goes to. `type` is what keeps them apart in the pickers (the owner's 2026-08-24 ruling:
  * ONE table with a type column, because splitting one table later is a migration and merging two
@@ -2468,6 +2483,21 @@ export class AdminApiService {
 
   createExpense(payload: CreateExpensePayload): Observable<ResponseAPI<CreateExpenseRespDto>> {
     return this.postRequest<CreateExpenseRespDto>(`${this.baseUrl}/private/expenses`, payload);
+  }
+
+  /**
+   * OBRS-1576: a whole envelope of repair bills in one call. Not a loop over `createExpense` on this
+   * side, and that is the point — a client-side loop would leave the owner with half a stack
+   * recorded the moment one bill is refused, which is precisely the state AC3 forbids. The server
+   * writes all of them in one transaction or none.
+   */
+  createExpenseBatch(
+    payload: CreateExpenseBatchPayload
+  ): Observable<ResponseAPI<CreateExpenseBatchRespDto>> {
+    return this.postRequest<CreateExpenseBatchRespDto>(
+      `${this.baseUrl}/private/expenses/batch`,
+      payload
+    );
   }
 
   updateExpense(id: number, payload: CreateExpensePayload): Observable<ResponseAPI<unknown>> {

@@ -21,8 +21,10 @@
         class="admin-field payee-picker-search"
         data-testid="payee-picker-search"
         [attr.placeholder]="'ADMIN.EXPENSES.PAYEE.SEARCH_PLACEHOLDER' | translate"
-        [(ngModel)]="query"
+        [ngModel]="query"
         [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="onQueryChange($event)"
+        (keydown)="onQueryKeydown($event)"
         />
 
       <div class="payee-picker-list">
@@ -37,12 +39,13 @@
           {{ 'ADMIN.EXPENSES.PAYEE.NONE' | translate }}
         </button>
 
-        @for (payee of visiblePayees; track trackById($index, payee)) {
+        @for (payee of visiblePayees; track trackById($index, payee); let i = $index) {
           <button
             type="button"
             class="payee-picker-option"
             data-testid="payee-picker-option"
             [class.is-selected]="payee.id === selectedId"
+            [class.is-active]="isActive(i)"
             (click)="select(payee)"
             >
             <span class="payee-picker-option-name">{{ payee.name }}</span>

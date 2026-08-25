@@ -1,0 +1,228 @@
+<div class="bill-card" [formGroup]="billForm" [attr.data-testid]="'bill-card-' + index">
+  <div class="bill-card-head">
+    <h5 class="bill-card-title">
+      {{ 'ADMIN.EXPENSES.BATCH.BILL_N' | translate: { n: index + 1 } }}
+    </h5>
+
+    @if (collapsed) {
+      <!-- AC1: the folded line. Date, van, garage, category, line count, total — enough to find the
+      right slip in a stack of ten without unfolding any of the others. -->
+      <p class="bill-card-summary" [attr.data-testid]="'bill-card-summary-' + index">
+        <span>{{ summaryDate ? (summaryDate | date: 'dd/MM/yyyy') : '—' }}</span>
+        <span>{{ summaryVehicleLabel || '—' }}</span>
+        <span>{{ summaryPayeeName || '—' }}</span>
+        <span>{{ summaryCategoryLabel || '—' }}</span>
+        <span>{{ 'ADMIN.EXPENSES.BATCH.LINE_COUNT' | translate: { n: itemsArray.length } }}</span>
+        <strong>{{ billTotal | number: '1.2-2' }}</strong>
+      </p>
+    }
+
+    <div class="bill-card-actions">
+      <button
+        type="button"
+        class="admin-btn admin-btn-small"
+        [attr.data-testid]="'bill-card-toggle-' + index"
+        (click)="toggleCollapse.emit()"
+        >
+        {{ (collapsed ? 'ADMIN.COMMON.EDIT' : 'ADMIN.EXPENSES.BATCH.COLLAPSE') | translate }}
+      </button>
+      @if (removable) {
+        <button
+          type="button"
+          class="admin-btn admin-btn-small bill-card-remove"
+          [attr.data-testid]="'bill-card-remove-' + index"
+          [attr.aria-label]="'ADMIN.EXPENSES.BATCH.REMOVE_BILL' | translate"
+          (click)="remove.emit()"
+          >
+          &#10005;
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (!collapsed) {
+    <!-- The header, one short row. `เลขที่บิล` and `VAT` are not here on the owner's instruction
+    (2026-08-24); the columns still exist and the single-bill modal still writes them. -->
+    <div class="bill-card-header-fields">
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.EXPENSES.BATCH.BILL_DATE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <p-datePicker
+          formControlName="expenseDate"
+          styleClass="schedule-calendar-filter"
+          inputStyleClass="schedule-calendar-filter-input"
+          panelStyleClass="schedule-calendar-filter-panel"
+          dateFormat="dd/mm/yy"
+          [showIcon]="true"
+          [showButtonBar]="true"
+          [placeholder]="'ADMIN.EXPENSES.BATCH.BILL_DATE' | translate"
+        ></p-datePicker>
+        @if (isControlInvalid('expenseDate')) {
+          <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
+        }
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.EXPENSES.BATCH.VEHICLE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <!-- AC4/AC5: `[searchable]` is what makes this fillable without letting go of the paper
+        bill — Tab in, type two characters of the plate, Enter. -->
+        <app-admin-dropdown
+          formControlName="vehicleSelection"
+          [options]="vehicleOptions"
+          valueKey="code"
+          labelKey="label"
+          [searchable]="true"
+          [placeholder]="'ADMIN.EXPENSES.BATCH.VEHICLE' | translate"
+        ></app-admin-dropdown>
+        @if (isControlInvalid('vehicleSelection')) {
+          <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
+        }
+      </div>
+
+      <div class="admin-form-field" [attr.data-testid]="'bill-card-payee-' + index">
+        <label class="admin-form-label">
+          {{ 'ADMIN.EXPENSES.BATCH.GARAGE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <!-- The list shows garages (owner ruling 2026-08-24), but a typed query still reaches every
+        payee — 3 of the owner's own 5 repair-bill payees are not garages, and hiding them while he
+        types is how a duplicate gets created. See `restrictToType`. -->
+        <app-expense-payee-picker
+          formControlName="payeeId"
+          [payees]="payees"
+          [canCreate]="canCreatePayee"
+          [category]="selectedCategory"
+          restrictToType="GARAGE"
+          (payeeCreated)="payeeCreated.emit($event)"
+        ></app-expense-payee-picker>
+        @if (isControlInvalid('payeeId')) {
+          <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
+        }
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.EXPENSES.BATCH.CATEGORY' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="category"
+          [options]="categoryOptions"
+          valueKey="code"
+          labelKey="label"
+          [searchable]="true"
+          [placeholder]="'ADMIN.EXPENSES.BATCH.CATEGORY' | translate"
+        ></app-admin-dropdown>
+        @if (isControlInvalid('category')) {
+          <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
+        }
+      </div>
+
+      @if (showCategoryOtherLabel) {
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.EXPENSES.CATEGORY_OTHER_LABEL' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="categoryOtherLabel" maxlength="100" />
+          @if (isControlInvalid('categoryOtherLabel')) {
+            <small class="admin-error">
+              {{ 'ADMIN.EXPENSES.CATEGORY_OTHER_REQUIRED' | translate }}
+            </small>
+          }
+        </div>
+      }
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.BATCH.PAID_BY' | translate }}</label>
+        <input class="admin-field" formControlName="paidBy" maxlength="255" />
+      </div>
+    </div>
+
+    <!-- The lines, as the garage wrote them. `จำนวน` and `ราคา/หน่วย` are NOT required: measured on
+    the owner's own bill, 2 of its 4 lines carry neither, and a required field there would be
+    answered with an invented number. -->
+    <div class="bill-items" formArrayName="items">
+      <table class="bill-items-table">
+        <thead>
+          <tr>
+            <th class="bill-items-no">#</th>
+            <th>{{ 'ADMIN.EXPENSES.BATCH.LINE_DESCRIPTION' | translate }}</th>
+            <th class="bill-items-part">{{ 'ADMIN.EXPENSES.BATCH.LINE_PART' | translate }}</th>
+            <th class="bill-items-number">{{ 'ADMIN.EXPENSES.ITEMS.QUANTITY' | translate }}</th>
+            <th class="bill-items-number">{{ 'ADMIN.EXPENSES.ITEMS.UNIT_PRICE' | translate }}</th>
+            <th class="bill-items-number">{{ 'ADMIN.EXPENSES.ITEMS.AMOUNT' | translate }}</th>
+            <th class="bill-items-remove"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (itemGroup of itemsArray.controls; track trackByIndex($index); let i = $index) {
+            <tr [formGroupName]="i" [attr.data-testid]="'bill-' + index + '-item-' + i">
+              <td class="bill-items-no">{{ i + 1 }}</td>
+              <td>
+                <input
+                  class="admin-field"
+                  formControlName="description"
+                  [maxlength]="ITEM_DESCRIPTION_MAX_LENGTH"
+                  />
+                @if (itemGroup.get('description')?.invalid && itemGroup.get('description')?.touched) {
+                  <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
+                }
+              </td>
+              <td class="bill-items-part">
+                <app-admin-dropdown
+                  formControlName="part"
+                  [options]="partOptions"
+                  valueKey="code"
+                  labelKey="label"
+                  [searchable]="true"
+                  [placeholder]="'ADMIN.EXPENSES.ITEMS.PART' | translate"
+                ></app-admin-dropdown>
+              </td>
+              <td class="bill-items-number">
+                <input type="number" class="admin-field" formControlName="quantity" min="0.01" step="0.01" />
+              </td>
+              <td class="bill-items-number">
+                <input type="number" class="admin-field" formControlName="unitPrice" min="0" step="0.01" />
+              </td>
+              <td class="bill-items-number">
+                <input type="number" class="admin-field" formControlName="amount" min="0" step="0.01" />
+                @if (itemGroup.get('amount')?.invalid && itemGroup.get('amount')?.touched) {
+                  <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
+                }
+              </td>
+              <td class="bill-items-remove">
+                @if (itemsArray.length > 1) {
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    [attr.data-testid]="'bill-' + index + '-item-remove-' + i"
+                    [attr.aria-label]="'ADMIN.EXPENSES.ITEMS.REMOVE' | translate"
+                    (click)="removeItem(i)"
+                    >
+                    &#10005;
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <div class="bill-items-foot">
+        <button
+          type="button"
+          class="admin-btn admin-btn-small"
+          [attr.data-testid]="'bill-' + index + '-item-add'"
+          (click)="addItem()"
+          >
+          {{ 'ADMIN.EXPENSES.BATCH.ADD_LINE' | translate }}
+        </button>
+        <p class="bill-items-total" [attr.data-testid]="'bill-total-' + index">
+          {{ 'ADMIN.EXPENSES.BATCH.BILL_TOTAL' | translate }}
+          <strong>{{ billTotal | number: '1.2-2' }}</strong>
+        </p>
+      </div>
+    </div>
+  }
+</div>

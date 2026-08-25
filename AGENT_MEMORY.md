@@ -1,6 +1,36 @@
 # Agent Memory — Scrutinize notes for developers
 
-## 2026-07-15 — SELF-FIXED: OBRS-370 duplicated HTML comment (copy-paste artifact)
+## 2026-08-25 — SELF-FIXED: OBRS-1576 `[searchable]` opt-in leaked a new highlight onto the 21 of 71 non-searchable `app-admin-dropdown` sites with no `[placeholder]`
+
+The card's own claim was "`[searchable]` is opt-in, the existing call sites unchanged" — and that
+claim was tested (`admin-dropdown.component.spec.ts` `describe('when [searchable] is not set …')`),
+but the test never set `placeholder` and never asserted on `isActive()`, so it missed this.
+
+`toggleDropdown()` — the plain `<button>` trigger's own click handler, used by every non-searchable
+site — sets `activeIndex = this.firstActiveIndex` on every open, unconditionally (not gated on
+`searchable`). `firstActiveIndex` is `placeholder && !query.trim() ? -1 : 0`. `placeholder` defaults
+to `''`. Grepping every `<app-admin-dropdown …>` block in `src/app` for one with no `[placeholder]`
+binding found **21 of 71** (re-measured on `origin/dev` 2026-08-25; the card's quoted "66 in 31 files" is the 2026-08-23 count and `dev` has moved since) (e.g. `schedules-page.component.html` ×6, `vehicle-form-modal` ×2,
+`route-form-modal`, `role-form-modal`, …). For all 21, `firstActiveIndex` returns `0` on every open,
+and the template's `[class.is-active]="isActive(i)"` (new CSS: `rgba(0,102,135,.12)` wash, added this
+card) then highlighted their first option the instant the dropdown opened — a real, new, visible
+behavior change on pre-existing screens this card was not supposed to touch.
+
+**Fix (1 line, `admin-dropdown.component.ts`):** gated `isActive()` on `this.searchable`. Safe because
+a plain `<button>` has no arrow-key handler wired (`(keydown)="onTriggerKeydown($event)"` is only on
+the searchable `<input>`), so `activeIndex` is never used for real keyboard navigation on the
+non-searchable path — only for this unintended paint. Re-ran `admin-dropdown.component.spec.ts` (14/14),
+plus `expense-bill-card` / `expense-batch-page` / `expense-payee-picker` / `nav-reachability` specs
+(49/49) — all still green.
+
+**Lesson for next time an existing shared component gains an opt-in `@Input`:** "the new `@Input` is
+`false`/unset at every old call site" is not the same claim as "every new code path this card adds is
+unreachable from an old call site." Here the new code path (`firstActiveIndex`/`isActive`) was reached
+from `toggleDropdown()`, which every old call site already calls — the gate needed to be on the
+*input flag itself* inside the new logic, not just on which trigger element renders. When a "byte-
+identical for non-opted-in callers" claim is made, grep for every new method the shared, ungated
+methods (the ones both branches call, like `toggleDropdown`) now touch, not just the new template
+branch.
 
 In `usability-reports-page.component.html` the OBRS-370 Jira-key-visibility
 comment block was pasted twice, back-to-back, above the

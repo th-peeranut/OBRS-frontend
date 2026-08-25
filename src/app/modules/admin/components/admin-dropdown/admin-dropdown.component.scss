@@ -123,6 +123,35 @@
   font-size: $font-size-md;
 }
 
+// OBRS-1576 AC5. The searchable trigger reuses .admin-dropdown-trigger wholesale so the two forms
+// of this control are the same object on screen; only what an <input> needs differently is set
+// here. No arrow chevron on this one on purpose - the caret already says "type here", and a
+// chevron next to a caret offers a click that does something the caret does not.
+.admin-dropdown-search-trigger {
+  font-size: 13px;
+  font-weight: $font-weight-bold;
+}
+
+.admin-dropdown-search-trigger::placeholder {
+  color: var(--admin-muted);
+  font-weight: $font-weight-bold;
+}
+
+// The arrow-key highlight. Same wash as :hover rather than a colour of its own: pointer and
+// keyboard are pointing at the same thing, and two different "this one" colours would read as two
+// different states.
+.admin-dropdown-option.is-active {
+  background: rgba(0, 102, 135, 0.12);
+  color: var(--admin-primary-fg);
+}
+
+.admin-dropdown-empty {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: $font-size-xs;
+  padding: 10px 12px;
+}
+
 .admin-dropdown.is-disabled {
   opacity: 0.65;
 }

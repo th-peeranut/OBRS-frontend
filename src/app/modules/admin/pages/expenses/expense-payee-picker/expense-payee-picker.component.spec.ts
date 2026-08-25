@@ -179,4 +179,97 @@ describe('ExpensePayeePickerComponent', () => {
     expect(component.selectedId).toBeNull();
     expect(onChange).toHaveBeenCalledWith(null);
   });
+
+  // OBRS-1576. The owner's ruling ("the อู่ซ่อมรถ field must show garages only") and the measurement
+  // that ruling collides with (3 of his own 5 ค่าซ่อม payees are NOT garages) are both satisfied by
+  // the same rule: the CLOSED list obeys the ruling, a typed query reaches everybody.
+  describe('with [restrictToType]', () => {
+    it('lists only that type before anything is typed', () => {
+      const component = makeComponent();
+      component.restrictToType = 'GARAGE';
+
+      expect(component.visiblePayees.map((payee: AdminExpensePayeeDto) => payee.id)).toEqual([1]);
+    });
+
+    // The regression this exists to stop: hiding a payee that IS on record puts "+ add this one" in
+    // front of the owner, and the duplicate that creates is what OBRS-1577 was built to prevent.
+    it('still finds a payee of another type once it is typed', () => {
+      const component = makeComponent();
+      component.restrictToType = 'GARAGE';
+      component.query = 'PTT Nong Chak';
+
+      expect(component.visiblePayees.map((payee: AdminExpensePayeeDto) => payee.id)).toEqual([2]);
+      expect(component.showCreateOption)
+        .withContext('the name is already on record, so "add it" must not be the offer')
+        .toBeFalse();
+    });
+
+    it('is inert when unset, which is what the general bill form passes', () => {
+      const component = makeComponent();
+
+      expect(component.visiblePayees.length).toBe(2);
+    });
+  });
+
+  // OBRS-1576 AC4: the owner has a paper bill in the other hand. Enter takes the highlighted match;
+  // with nothing matching, the same key is what adds the name they typed.
+  describe('keyboard', () => {
+    it('Enter selects the highlighted match', () => {
+      const component = makeComponent();
+      const onChange = jasmine.createSpy('onChange');
+      component.registerOnChange(onChange);
+      component.query = 'PTT';
+
+      component.onQueryKeydown(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+      expect(onChange).toHaveBeenCalledWith(2);
+    });
+
+    it('arrows move the highlight within the matches', () => {
+      const component = makeComponent();
+
+      component.onQueryKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      expect(component.activeIndex).toBe(1);
+      component.onQueryKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      expect(component.activeIndex)
+        .withContext('must not walk past the last match')
+        .toBe(1);
+      component.onQueryKeydown(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+      component.onQueryKeydown(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+      expect(component.activeIndex).toBe(0);
+    });
+
+    it('re-typing resets the highlight, so Enter cannot take a row from the previous list', () => {
+      const component = makeComponent();
+      component.onQueryKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      expect(component.activeIndex).toBe(1);
+
+      component.onQueryChange('อู่');
+
+      expect(component.activeIndex).toBe(0);
+    });
+
+    it('Enter creates when nothing matches what was typed', () => {
+      const created = { id: 9, name: 'อู่พรชัย', type: 'GARAGE', active: true };
+      const createExpensePayee = jasmine
+        .createSpy('createExpensePayee')
+        .and.returnValue(of({ code: 200, message: 'OK', data: created }));
+      const component = makeComponent({ createExpensePayee });
+      component.query = 'อู่พรชัย';
+
+      component.onQueryKeydown(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+      expect(createExpensePayee).toHaveBeenCalledWith({ name: 'อู่พรชัย', type: 'OTHER' });
+    });
+
+    // Without preventDefault the keystroke that picks a garage also submits the bill behind it.
+    it('Enter does not reach the surrounding form', () => {
+      const component = makeComponent();
+      const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+
+      component.onQueryKeydown(event);
+
+      expect(event.defaultPrevented).toBeTrue();
+    });
+  });
 });

@@ -1,0 +1,60 @@
+@import "../../../../../../styles/variables.scss";
+
+// OBRS-1576. The page is a stack of cards and one foot; everything that is not a card lives here.
+.envelope {
+  display: block;
+  margin-top: $space-sm;
+}
+
+.envelope-owner {
+  margin-bottom: $space-sm;
+  max-width: 360px;
+}
+
+.envelope-add-bill {
+  margin-bottom: $space-sm;
+}
+
+// Sticky so the running total and the save button stay reachable while the owner is 8 bills down a
+// long page - the numbers here are what he checks against the paper before committing, and a foot
+// he has to scroll to find is one he stops checking.
+.envelope-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-xs;
+  border-top: 1px solid rgba(189, 200, 207, 0.35);
+  background: var(--admin-surface-card);
+  padding: $space-xs 0;
+}
+
+.envelope-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-2xs $space-xs;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: $font-size-sm;
+}
+
+.envelope-summary > span + span::before,
+.envelope-summary > strong::before {
+  color: var(--admin-muted);
+  content: "\00B7";
+  margin-right: $space-xs;
+}
+
+.envelope-summary strong {
+  color: var(--admin-text);
+  font-size: $font-size-md;
+}
+
+.envelope-actions {
+  display: flex;
+  align-items: center;
+  gap: $space-2xs;
+  margin-left: auto;
+}
