@@ -198,11 +198,16 @@ payee registry it mirrors: two controls and one submit, with no state of its own
             [(ngModel)]="formName"
             />
           @if (nameCollision) {
-            <!-- Two different messages because the server does two different things: create is
-            idempotent and hands back the row that exists, rename is a 409 and cannot go through. -->
+            <!-- Three messages, because the server does three different things with the same
+            collision: rename 409s, create REUSES the row when the kind matches, and create 409s
+            when it does not (one name cannot be both a part and a labour item). -->
             @if (modalMode === 'rename') {
               <small class="admin-error" data-testid="part-name-taken">
                 {{ 'ADMIN.MAINTENANCE_PARTS.NAME_TAKEN' | translate }}
+              </small>
+            } @else if (kindConflict) {
+              <small class="admin-error" data-testid="part-kind-conflict">
+                {{ 'ADMIN.MAINTENANCE_PARTS.NAME_KIND_CONFLICT' | translate:{ name: nameCollision.name, kind: kindLabel(nameCollision.kind) } }}
               </small>
             } @else {
               <small class="part-name-reuse" data-testid="part-name-reuse">

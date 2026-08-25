@@ -164,6 +164,46 @@ describe('MaintenancePartsPageComponent', () => {
     expect(component.canSubmit).toBeTrue();
   });
 
+  /**
+   * Found by review on 2026-08-25, and it was a lie on screen rather than a crash: the reuse only
+   * happens when the KIND matches too. `createPart` runs `assertSameKind` BEFORE its idempotent
+   * branch, so a same-name-other-kind create is a 409 - and the dialog was telling the owner "we
+   * will use the existing one" and leaving the button enabled right up until the server refused.
+   */
+  it('blocks CREATE when the name exists under the OTHER kind, which the server 409s', () => {
+    const { component } = makeComponent();
+    component.openCreateModal();
+    component.formName = 'จาระบี';           // exists, kind PART
+    component.formKind = 'LABOUR';
+
+    expect(component.nameCollision?.id).toBe(2);
+    expect(component.kindConflict).toBeTrue();
+    expect(component.canSubmit).toBeFalse();
+  });
+
+  it('does not call a matching kind a conflict', () => {
+    const { component } = makeComponent();
+    component.openCreateModal();
+    component.formName = 'จาระบี';
+    component.formKind = 'PART';
+
+    expect(component.kindConflict).toBeFalse();
+    expect(component.canSubmit).toBeTrue();
+  });
+
+  /**
+   * RENAME is blocked by the collision itself, so `kindConflict` must not ALSO fire there - two
+   * messages at once would leave the owner reading a kind explanation for a name problem.
+   */
+  it('never reports a kind conflict on the rename path', () => {
+    const { component } = makeComponent();
+    component.openRenameModal(LABOUR);
+    component.formName = 'จาระบี';           // a PART, so the kinds genuinely differ
+
+    expect(component.canSubmit).toBeFalse();
+    expect(component.kindConflict).toBeFalse();
+  });
+
   it('blocks RENAME onto an existing name, because that one really is a 409', () => {
     // A rename onto a taken name would be a merge, and a merge re-points one entry's price history
     // onto another with no undo.

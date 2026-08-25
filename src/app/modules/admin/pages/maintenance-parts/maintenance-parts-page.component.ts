@@ -200,12 +200,28 @@ export class MaintenancePartsPageComponent implements OnInit, OnDestroy {
    * would be a lie about what pressing it does.
    *
    * <p>On RENAME the same collision is a 409 and the save genuinely cannot go through, so the button
-   * is disabled here and only here. Renaming onto an existing name would be a merge, and a merge
-   * re-points one entry's price history onto another with no undo.
+   * is disabled. Renaming onto an existing name would be a merge, and a merge re-points one entry's
+   * price history onto another with no undo.
+   *
+   * <p>And on CREATE there is a third case, which `kindConflict` below answers: the reuse only
+   * happens when the KIND matches too.
    */
   protected get nameCollision(): AdminMaintenancePartDto | null {
     const match = findMaintenancePartByExactName(this.allParts, this.formName);
     return match && match.id !== this.editingPart?.id ? match : null;
+  }
+
+  /**
+    * The collision that is a real error on BOTH paths: one name cannot be a part and a labour item
+    * at once, so `createPart` runs `assertSameKind` before its idempotent-reuse branch and 409s.
+    *
+    * <p>Found by review, not by me. Without this the create dialog showed "we will use the existing
+    * one" for a same-name-other-kind entry and left the button enabled, so the owner pressed save on
+    * a promise the server then refused — the exact class of lie the reuse message exists to avoid.
+    */
+  protected get kindConflict(): boolean {
+    const match = this.nameCollision;
+    return this.modalMode === 'create' && !!match && match.kind !== this.formKind;
   }
 
   protected get canSubmit(): boolean {
@@ -213,6 +229,9 @@ export class MaintenancePartsPageComponent implements OnInit, OnDestroy {
       return false;
     }
     if (this.modalMode === 'rename' && this.nameCollision) {
+      return false;
+    }
+    if (this.kindConflict) {
       return false;
     }
     return this.formName.trim().length > 0 && !this.isSubmitting;
