@@ -21,6 +21,8 @@ function row(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     expenseDateDisplay: '24 ก.ค. 2026',
     receiptNo: 'RC-1',
     paidBy: 'Somchai',
+    payeeId: null,
+    payeeName: '',
     note: 'note',
     source: 'MANUAL',
     items: [],

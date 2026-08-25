@@ -189,6 +189,12 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
    * by `clearSubmissionState()` (a new booking needs a new key). */
   private carryOnIdempotencyKey: string | null = null;
 
+  /** OBRS-1598 — the day whose `scheduleOptions` are currently loaded, so
+   * `onDateChange()` can tell a real day change from a re-click on the same
+   * day. Written by `loadSchedules()`, the one place that loads them, so the
+   * initial `ngOnInit` load counts too. */
+  private loadedDateStr: string | null = null;
+
   private routeGroups: WalkInRouteGroupDto[] = [];
   private scheduleRouteSlug = new Map<number, string>();
   private orderedStops: OrderedStop[] = [];
@@ -393,11 +399,29 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
 
   protected onDateChange(date: Date): void {
     this.selectedDate = date;
+    // OBRS-1598: drop the round chosen for the OLD day BEFORE its options are
+    // replaced. `loadSchedules()` rewrites `scheduleOptions` wholesale, and
+    // `app-admin-dropdown` then shows its placeholder (no option matches the
+    // stale id) while `scheduleId` still holds it — the form stays valid and
+    // submits the previous day's trip. The clear emits, so the page's own
+    // `onScheduleChange('')` drops the stops/seats/quote/cargo it fed.
+    //
+    // Only when the day actually CHANGED. PrimeNG fires `(onSelect)` on every
+    // day-cell click, the already-selected day included (`shouldSelectDate()`
+    // returns true unconditionally for single selection, then `selectDate()`
+    // always emits) — so re-clicking today to dismiss the panel would otherwise
+    // wipe a round, its stops and its quote for no change at all. `selectedDate`
+    // cannot answer "did it change": ngModel writes it BEFORE `(onSelect)`
+    // fires, so it already holds the new value here — hence `loadedDateStr`.
+    if (dayjs(date).format('YYYY-MM-DD') !== this.loadedDateStr) {
+      this.formRef?.clearScheduleSelection();
+    }
     this.loadSchedules(date);
   }
 
   private loadSchedules(date: Date): void {
     const dateStr = dayjs(date).format('YYYY-MM-DD');
+    this.loadedDateStr = dateStr;
     this.staffApiService
       .getWalkInSchedules(dateStr)
       .pipe(takeUntil(this.destroy$))
