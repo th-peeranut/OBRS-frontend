@@ -27,6 +27,7 @@ import { OpsEfficiencyDto } from '../../shared/interfaces/ops-efficiency.interfa
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { VehiclePlReportDto } from '../../shared/interfaces/vehicle-pl-report.interface';
+import { PayeeSpendReportDto } from '../../shared/interfaces/payee-spend-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
@@ -2220,6 +2221,32 @@ export class AdminApiService {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.getRequest<VehiclePlReportDto>(
       `${this.baseUrl}/private/admin/reports/pl-per-vehicle`,
+      params
+    );
+  }
+
+  /**
+   * OBRS-1578: spend per payee. Every parameter is optional and omitting `year` means EVERY year —
+   * the screen's default. `month` is only ever sent alongside a year; the backend refuses the pair
+   * without one rather than guessing which of the two readings was meant.
+   */
+  getPayeeSpendReport(
+    year: number | null,
+    month: number | null,
+    category: string | null
+  ): Observable<ResponseAPI<PayeeSpendReportDto>> {
+    let params = new HttpParams();
+    if (year !== null) {
+      params = params.set('year', String(year));
+      if (month !== null) {
+        params = params.set('month', String(month));
+      }
+    }
+    if (category !== null) {
+      params = params.set('category', category);
+    }
+    return this.getRequest<PayeeSpendReportDto>(
+      `${this.baseUrl}/private/admin/reports/expense-by-payee`,
       params
     );
   }

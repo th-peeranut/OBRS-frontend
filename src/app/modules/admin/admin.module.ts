@@ -48,6 +48,7 @@ import { OpsEfficiencyPageComponent } from './pages/ops-efficiency/ops-efficienc
 import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-report-page.component';
 import { RefundVoidReportPageComponent } from './pages/refund-void-report/refund-void-report-page.component';
 import { CashOnlineReconciliationReportPageComponent } from './pages/cash-online-reconciliation-report/cash-online-reconciliation-report-page.component';
+import { PayeeSpendReportPageComponent } from './pages/payee-spend-report/payee-spend-report-page.component';
 import { VehiclePlReportPageComponent } from './pages/vehicle-pl-report/vehicle-pl-report-page.component';
 import { AppVehicleMaintenancePanelComponent } from './pages/vehicles/vehicle-maintenance/vehicle-maintenance-panel.component';
 import { AppVehicleInspectionPanelComponent } from './pages/vehicles/vehicle-inspection/vehicle-inspection-panel.component';
@@ -395,6 +396,18 @@ export const adminRoutes: Routes = [
         },
       },
       {
+        // OBRS-1578: spend per payee. Same admin+owner audience as every other report on
+        // this nav (the endpoint 403s anyone else).
+        path: 'payee-spend-report',
+        component: PayeeSpendReportPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.PAYEE_SPEND_REPORT',
+          subtitleKey: 'ADMIN.PAYEE_SPEND_REPORT.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
         // OBRS-884: per-vehicle P&L. Same admin+owner audience as every other report on
         // this nav (the endpoint 403s anyone else), not a further-restricted owner-only
         // page like settlements.
@@ -545,6 +558,7 @@ export const adminRoutes: Routes = [
     EodSalesReportPageComponent,
     RefundVoidReportPageComponent,
     CashOnlineReconciliationReportPageComponent,
+    PayeeSpendReportPageComponent,
     VehiclePlReportPageComponent,
     AppVehicleMaintenancePanelComponent,
     AppVehicleInspectionPanelComponent,

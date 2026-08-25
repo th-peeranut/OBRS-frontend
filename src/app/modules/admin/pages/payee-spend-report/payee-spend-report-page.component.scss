@@ -1,0 +1,77 @@
+// OBRS-1578. Everything here reads its colours from the admin theme tokens, so the page follows
+// light/dark with the rest of the console and nothing needs a second definition.
+
+.payee-spend-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 12rem;
+}
+
+.payee-spend-field-label {
+  font-size: 0.8125rem;
+  color: var(--admin-text-muted);
+}
+
+.payee-spend-field-hint {
+  font-size: 0.75rem;
+}
+
+.payee-spend-scope-note {
+  max-width: 68ch;
+}
+
+// The coverage banner. Warning-toned rather than neutral on purpose: it is telling the reader that
+// the number below is not the whole story, which is a caution, not a caption.
+.payee-spend-coverage {
+  border: 1px solid var(--admin-warning-border, var(--admin-border));
+  background: var(--admin-warning-surface, var(--admin-surface-card));
+  border-radius: 0.25rem;
+  padding: 0.75rem 0.9rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.payee-spend-coverage-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.payee-spend-coverage-bar {
+  height: 0.5rem;
+  border-radius: 0.125rem;
+  background: var(--admin-border);
+  overflow: hidden;
+  display: flex;
+}
+
+.payee-spend-coverage-known {
+  display: block;
+  height: 100%;
+  background: var(--admin-accent, var(--admin-text));
+}
+
+.payee-spend-coverage-text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--admin-text-muted);
+}
+
+.payee-spend-name {
+  font-weight: 500;
+}
+
+// The bill's own words. Clamped rather than truncated to one line: a garage bill routinely lists
+// four or five things and the point of the column is that the reader can see what the money bought.
+.payee-spend-work {
+  font-size: 0.8125rem;
+  color: var(--admin-text-muted);
+  max-width: 42ch;
+  line-height: 1.5;
+}
+
+.payee-spend-unassigned .payee-spend-name {
+  font-style: italic;
+  font-weight: 400;
+}

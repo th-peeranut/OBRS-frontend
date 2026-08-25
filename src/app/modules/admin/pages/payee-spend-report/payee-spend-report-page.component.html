@@ -1,0 +1,164 @@
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div>
+      <app-admin-refresh-hint
+        [refreshing]="isRefreshing"
+        [failed]="false"
+        [loading]="isLoading"
+      ></app-admin-refresh-hint>
+    </div>
+  </section>
+}
+
+<section class="admin-page-filters mt-3">
+  <label class="payee-spend-field">
+    <span class="payee-spend-field-label">{{ 'ADMIN.PAYEE_SPEND_REPORT.FILTER_YEAR' | translate }}</span>
+    <select
+      id="payeeSpendYear"
+      class="admin-input"
+      [ngModel]="selectedYear"
+      (ngModelChange)="onYearChange($event)"
+      name="payeeSpendYear"
+    >
+      <!-- First and default. Every other option prints what choosing it would drop. -->
+      <option [value]="noFilter">{{ 'ADMIN.PAYEE_SPEND_REPORT.YEAR_ALL' | translate }}</option>
+      @for (option of report?.yearOptions ?? []; track option.year) {
+        <option [value]="option.year">
+          {{ yearOptionLabel(option.year, option.billCount, option.totalAmount) }}
+        </option>
+      }
+    </select>
+  </label>
+
+  <label class="payee-spend-field">
+    <span class="payee-spend-field-label">{{ 'ADMIN.PAYEE_SPEND_REPORT.FILTER_MONTH' | translate }}</span>
+    <select
+      id="payeeSpendMonth"
+      class="admin-input"
+      [ngModel]="selectedMonth"
+      (ngModelChange)="onMonthChange($event)"
+      [disabled]="isMonthDisabled"
+      name="payeeSpendMonth"
+    >
+      <option [value]="noFilter">{{ 'ADMIN.PAYEE_SPEND_REPORT.MONTH_ALL' | translate }}</option>
+      @for (month of monthNumbers; track month) {
+        <option [value]="month">{{ 'ADMIN.PAYEE_SPEND_REPORT.MONTHS.' + month | translate }}</option>
+      }
+    </select>
+    @if (isMonthDisabled) {
+      <small class="admin-muted payee-spend-field-hint">
+        {{ 'ADMIN.PAYEE_SPEND_REPORT.MONTH_NEEDS_YEAR' | translate }}
+      </small>
+    }
+  </label>
+
+  <label class="payee-spend-field">
+    <span class="payee-spend-field-label">{{ 'ADMIN.PAYEE_SPEND_REPORT.FILTER_CATEGORY' | translate }}</span>
+    <select
+      id="payeeSpendCategory"
+      class="admin-input"
+      [ngModel]="selectedCategory"
+      (ngModelChange)="onCategoryChange($event)"
+      name="payeeSpendCategory"
+    >
+      <option [value]="noFilter">{{ 'ADMIN.PAYEE_SPEND_REPORT.CATEGORY_ALL' | translate }}</option>
+      @for (code of categoryCodes; track code) {
+        <option [value]="code">{{ 'ADMIN.EXPENSES.CATEGORIES.' + code | translate }}</option>
+      }
+    </select>
+  </label>
+</section>
+
+<!-- Why a bill total cannot answer "did this garage put its prices up" — said on the screen, not
+left in a Jira comment, because the chart that WOULD look like an answer is the one thing this
+report must never grow. -->
+<p class="admin-muted payee-spend-scope-note mt-2">
+  {{ 'ADMIN.PAYEE_SPEND_REPORT.SCOPE_NOTE' | translate }}
+</p>
+
+@if (loadError) {
+  <p class="admin-error mt-3">{{ loadError }}</p>
+} @else if (isLoading) {
+  <div class="admin-table-wrap mt-3">
+    <table class="admin-table">
+      <tbody>
+        @for (row of skeletonRows; track $index) {
+          <tr><td><span class="admin-skeleton"></span></td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else if (isEmptyReport) {
+  <p class="admin-muted mt-3">{{ 'ADMIN.PAYEE_SPEND_REPORT.EMPTY' | translate }}</p>
+} @else {
+  @if (hasCoverageGap) {
+    <section class="payee-spend-coverage mt-3">
+      <h3 class="payee-spend-coverage-title">
+        {{ 'ADMIN.PAYEE_SPEND_REPORT.COVERAGE_TITLE' | translate }}
+      </h3>
+      <div class="payee-spend-coverage-bar" role="presentation">
+        <span class="payee-spend-coverage-known" [style.width.%]="coveragePercent"></span>
+      </div>
+      <p class="payee-spend-coverage-text">
+        {{
+          'ADMIN.PAYEE_SPEND_REPORT.COVERAGE_TEXT'
+            | translate
+              : {
+                  assigned: money(report?.assignedTotalAmount),
+                  total: money(report?.totalAmount),
+                  percent: coveragePercent
+                }
+        }}
+      </p>
+    </section>
+  }
+
+  <div class="admin-table-wrap mt-3">
+    <table class="admin-table payee-spend-table">
+      <caption class="admin-table-caption">
+        {{ 'ADMIN.PAYEE_SPEND_REPORT.TABLE_TITLE' | translate }}
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ 'ADMIN.PAYEE_SPEND_REPORT.COL_PAYEE' | translate }}</th>
+          <th scope="col">{{ 'ADMIN.PAYEE_SPEND_REPORT.COL_WORK' | translate }}</th>
+          <th scope="col" class="text-end">{{ 'ADMIN.PAYEE_SPEND_REPORT.COL_BILLS' | translate }}</th>
+          <th scope="col" class="text-end">{{ 'ADMIN.PAYEE_SPEND_REPORT.COL_TOTAL' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows; track row.payeeId) {
+          <tr>
+            <td class="payee-spend-name">{{ row.payeeName }}</td>
+            <td class="payee-spend-work">{{ workText(row) }}</td>
+            <td class="text-end">{{ row.billCount }}</td>
+            <td class="text-end">{{ money(row.totalAmount) }}</td>
+          </tr>
+        }
+        <!-- The bills nobody recorded a payee for. A ROW, deliberately: dropping it would make the
+        total above look like the whole of the period's spend. -->
+        @if (unassignedRow) {
+          <tr class="payee-spend-unassigned">
+            <td class="payee-spend-name">
+              {{ 'ADMIN.PAYEE_SPEND_REPORT.UNASSIGNED' | translate }}
+              <small class="admin-muted d-block">
+                {{ 'ADMIN.PAYEE_SPEND_REPORT.UNASSIGNED_HINT' | translate }}
+              </small>
+            </td>
+            <td></td>
+            <td class="text-end">{{ unassignedRow.billCount }}</td>
+            <td class="text-end">{{ money(unassignedRow.totalAmount) }}</td>
+          </tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>{{ 'ADMIN.PAYEE_SPEND_REPORT.TOTAL_ROW' | translate }}</td>
+          <td></td>
+          <td class="text-end">{{ report?.totalBillCount }}</td>
+          <td class="text-end">{{ money(report?.totalAmount) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+}
