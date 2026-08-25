@@ -274,13 +274,26 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  // `app-admin-dropdown` renders its own placeholder as a clickable option that
+  // emits '' (admin-dropdown.component.html:20-32). For the vehicle and category
+  // filters above, '' legitimately means "all". A month is not nullable: ''
+  // would reach `Number('')` === 0 and `new Date(0, ...)` is the year 1900, so
+  // the table would silently go empty. Keep the current selection instead.
   protected onYearChange(value: string): void {
-    this.selectedYear = String(value ?? '').trim();
+    const year = String(value ?? '').trim();
+    if (!year) {
+      return;
+    }
+    this.selectedYear = year;
     this.applyFilters();
   }
 
   protected onMonthChange(value: string): void {
-    this.selectedMonth = String(value ?? '').trim();
+    const month = String(value ?? '').trim();
+    if (!month) {
+      return;
+    }
+    this.selectedMonth = month;
     this.applyFilters();
   }
 

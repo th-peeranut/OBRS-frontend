@@ -213,6 +213,24 @@ describe('ExpensesPageComponent', () => {
       expect(store.setVehicleFilter).not.toHaveBeenCalled();
     });
 
+    // OBRS-1626: the dropdown's own placeholder row emits '' when clicked, and
+    // `Number('')` is 0, which `new Date` reads as the year 1900 - the table
+    // would empty itself with no explanation.
+    it('ignores the empty value the dropdown placeholder emits', () => {
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const store = makeExpensesStoreStub([expense({ id: 1, expenseDate: `${thisMonth}-05` })]);
+      const component = makeComponent(store);
+      component.ngOnInit();
+
+      (component as any).onYearChange('');
+      (component as any).onMonthChange('');
+
+      expect((component as any).selectedYear).toBe(String(now.getFullYear()));
+      expect((component as any).selectedMonth).toBe(String(now.getMonth() + 1));
+      expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([1]);
+    });
+
     // OBRS-1626: /admin/reports builds its year list as `period.year - 2 + i`,
     // which offers two years the expense data cannot reach. Copying that here
     // was the trap; this test is what makes copying it fail.
