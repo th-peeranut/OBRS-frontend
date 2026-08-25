@@ -40,6 +40,15 @@ import { defineConfig, devices } from '@playwright/test';
  * :8080 — the stack booted above. The viewport is tall enough for the whole
  * six-row card in one shot; never "fix" a clipped element screenshot by
  * scrolling, Playwright leaves the off-screen part unpainted (OBRS-702).
+ *
+ * NO LANE-TREE GUARD, decided in OBRS-1616 AC-5 rather than overlooked. This lane is the
+ * odd one of the two-tree family: its two trees share ONE port and take turns, so a port
+ * is not the thing that separates them — OBRS742_PHASE is, and that lives in the spec,
+ * not in this config. `e2e/support/lane-tree-guard.ts` reads a port from `webServer.url`
+ * or `baseURL`, and this config has neither (the spec navigates by full URL). Giving it a
+ * `baseURL` nothing navigates by, purely to feed the guard, would put a second source of
+ * truth for the port in a file where the first one is a comment — the drift this repo
+ * keeps paying for. Rule 7 of scripts/check-e2e-lanes.mjs therefore does not ask for one.
  */
 export default defineConfig({
   testDir: './e2e/tests',

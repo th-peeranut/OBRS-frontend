@@ -150,6 +150,14 @@ const SHARED_PORT_ENV_OK = new Map([
 const WIRES_GUARD =
   /globalSetup\s*:\s*(['"])[^'"]*lane-tree-guard[^'"]*\1|^\s*import\s[^\n]*(['"])[^'"]*lane-tree-guard[^'"]*\2/m;
 const HAS_WEBSERVER = /^\s*webServer\s*:/m;
+// OBRS-1616. Rule 7 first asked only for `webServer`, and 16 configs answer to no server
+// they declare: they point `baseURL` at a port somebody started by hand. Playwright manages
+// nothing for them, the spec gets whatever answers that port, and the result is
+// indistinguishable from `reuseExistingServer` -- with no line saying whose tree it was.
+// An explicit port is required, in either spelling this repo uses (`:4200` and
+// `:${PORT}`): `playwright.obrs874census.config.ts` points at the deployed SIT site and
+// `playwright.obrs617.config.ts` at no site at all, and neither has a local server to name.
+const LOOPBACK_BASE_URL = /baseURL\s*:\s*[`'"]https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]):(?:\d|\$\{)/;
 // A config may reach the guard through the file its own `globalSetup` names
 // (playwright.config.ts -> e2e/global-setup.ts) or by spreading a base config that wires
 // it (playwright.obrs769.config.ts -> playwright.gate.config.ts). Both are real wiring and
@@ -471,14 +479,17 @@ function wiresGuard(file, seen = new Set()) {
 for (const file of readdirSync(ROOT)) {
   if (!/^playwright.*\.config\.ts$/.test(file)) continue;
   const src = readFileSync(join(ROOT, file), 'utf8');
-  if (!HAS_WEBSERVER.test(src)) continue;
+  const declaresServer = HAS_WEBSERVER.test(src);
+  if (!declaresServer && !LOOPBACK_BASE_URL.test(src)) continue;
 
   if (!wiresGuard(file)) {
     fail(
-      `${file} declares a webServer but nothing wires ${GUARD_FILE}. Locally ` +
-        `reuseExistingServer is on, so if another worktree already answers this lane's port ` +
-        `Playwright attaches to it and reports THAT tree's code as this lane's result, with ` +
-        `nothing in the output to say so (OBRS-773, OBRS-1531, OBRS-1611). Add ` +
+      `${file} ${declaresServer ? 'declares a webServer' : 'points baseURL at a local port'} ` +
+        `but nothing wires ${GUARD_FILE}. If another worktree already answers this lane's ` +
+        `port, the specs run against THAT tree's build and it is reported as this lane's ` +
+        `result with nothing in the output to say so -- ` +
+        `${declaresServer ? 'locally reuseExistingServer is on, so Playwright attaches instead of clashing' : 'this lane declares no server at all, so it can only ever take what is already there'} ` +
+        `(OBRS-773, OBRS-1531, OBRS-1611, OBRS-1616). Add ` +
         `globalSetup: './${GUARD_FILE}' -- or, if this lane already owns a globalSetup, call ` +
         `the guard from inside it the way e2e/global-setup.ts does.`
     );
