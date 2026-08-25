@@ -16,6 +16,7 @@ import { StaffApiService, CounterBookingSearchResultDto } from '../../../../serv
 import { AlertService } from '../../../../shared/services/alert.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { errorCodeFromMessageKey } from '../../../../shared/lib/api-error-code';
+import { TitleLabelPipe } from '../../../../shared/pipes/title-label.pipe';
 
 // OBRS-766 (QA-caught): the wire `errorCode` is derived from its dotted
 // messageKey — see `api-error-code.ts`'s `errorCodeFromMessageKey` doc
@@ -27,6 +28,7 @@ function resultRow(overrides: Partial<CounterBookingSearchResultDto> = {}): Coun
   return {
     bookingId: 7,
     bookingNumber: 'B-000007',
+    contactTitle: null,
     contactName: 'Somchai Jaidee',
     contactPhoneMasked: '••••1234',
     status: 'confirmed',
@@ -71,7 +73,7 @@ describe('CounterCancelPageComponent (OBRS-766)', () => {
     auth.getUsername.and.returnValue('salesperson@obrs.test');
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
+      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot(), TitleLabelPipe],
       declarations: [
         CounterCancelPageComponent,
         CounterCancelSearchFormComponent,

@@ -57,6 +57,11 @@ export interface BookingLookupResult {
   bookingNumber: string;
   /** Booking status slug — a cancelled booking IS returned, so the screen must render that. */
   status?: string | null;
+  /**
+   * OBRS-1601 — the contact's title CODE (`MISS`), never a word. Render it through `titleLabel` so
+   * the honorific follows the reader's language, exactly as the passenger's title already does.
+   */
+  contactTitle?: string | null;
   /** Full contact name. Unmasked by the same argument as `passengerName` above. */
   contactName?: string | null;
   /** `••••1234` — a confirmation that the phone matched, never a readback. */
