@@ -654,4 +654,50 @@ describe('BookingsPageComponent', () => {
       expect(text).not.toContain('Nong chak');
     });
   });
+
+  // OBRS-1603 opened on the premise that this dialog resolves the stop pair from a
+  // locale the way the table above does. It does not, and cannot: the dialog reads
+  // GET /api/private/bookings/{id}, whose journeys carry
+  // JourneyStopResponse = { code, label, ... } - one label the SERVER already picked
+  // for the request's Accept-Language (BookingScheduleDtoService), and no
+  // `translations` map for getAdminLookupLabel to choose a leg from. So
+  // `journeyRouteLabel` prints what the wire sent, and handing it
+  // `translate.currentLang` would change nothing. Pinned here so the next reader
+  // does not pay to rediscover it, and so a resolver that forces one language
+  // (which OBRS-1237's review ruled out) shows up as a failure.
+  describe('journey stop pair comes off the wire, not the UI locale (OBRS-1603)', () => {
+    function labelFor(lang: string, journey: unknown): string {
+      const translate = createTranslateStub();
+      translate.currentLang = lang;
+      const component: any = new BookingsPageComponent(
+        translate,
+        makeStoreStub(null) as any,
+        makeAdminApiServiceStub() as any,
+        makeAuthStub() as any
+      );
+      return component.journeyRouteLabel(journey);
+    }
+
+    const wireJourney = {
+      fromStop: { code: 'nong-chak', label: 'หนองชาก' },
+      toStop: { code: 'bts-mo-chit', label: 'บีทีเอส หมอชิต' },
+    };
+    const wireLabels = 'หนองชาก -> บีทีเอส หมอชิต';
+
+    it('prints the labels the backend resolved, in either UI language', () => {
+      expect(labelFor('th', wireJourney)).toBe(wireLabels);
+      expect(labelFor('en', wireJourney)).toBe(wireLabels);
+    });
+
+    // The mapper maps a missing translation to null, not to a blank string, so this
+    // is a state the dialog really renders: the operator gets the stop's identifier
+    // rather than a dash that names nothing.
+    it('falls back to the stop code when the backend had no label for that language', () => {
+      const unlabelled = {
+        fromStop: { code: 'nong-chak', label: null },
+        toStop: { code: 'bts-mo-chit', label: null },
+      };
+      expect(labelFor('en', unlabelled)).toBe('nong-chak -> bts-mo-chit');
+    });
+  });
 });
