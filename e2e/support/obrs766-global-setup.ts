@@ -24,12 +24,20 @@
  * shared database.
  */
 import { execFileSync } from 'child_process';
+import type { FullConfig } from '@playwright/test';
+import laneTreeGuard from './lane-tree-guard';
 
 // OBRS-844: see obrs766-seed.ts — same override, same default.
 const DB = process.env['OBRS_QA_DB'] ?? 'obrs766qa';
 const PRESERVED_BOOKING_IDS = 2;
 
-export default function globalSetup(): void {
+export default function globalSetup(config: FullConfig): void {
+  // OBRS-1616: this lane owns the one globalSetup slot, so the tree guard is CALLED here
+  // rather than wired as the entry point (same shape as e2e/global-setup.ts). It runs
+  // BEFORE the wipe below: refusing after cancelling a database's bookings would leave
+  // the operator's stack changed by a run that never started.
+  laneTreeGuard(config);
+
   const sql = `
     UPDATE tickets SET status_id =
       (SELECT id FROM lookups WHERE category='ticket_status' AND slug='cancelled')

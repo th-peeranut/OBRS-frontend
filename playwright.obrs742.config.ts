@@ -40,8 +40,23 @@ import { defineConfig, devices } from '@playwright/test';
  * :8080 — the stack booted above. The viewport is tall enough for the whole
  * six-row card in one shot; never "fix" a clipped element screenshot by
  * scrolling, Playwright leaves the off-screen part unpainted (OBRS-702).
+ *
+ * GUARDED, unlike the rest of the two-tree capture family (OBRS-1616). Those serve their
+ * two trees on two ports inside ONE run, so a single banner would be right for one half
+ * and wrong for the other. This lane does not: each phase is its own invocation against
+ * ONE server on ONE port, which is exactly the shape `e2e/support/lane-tree-guard.ts`
+ * attributes. It is also the family's most exposed lane — :4200 is shared and
+ * hand-started, so a BEFORE server left running when the AFTER invocation starts produces
+ * origin/dev screenshots labelled "after" with nothing to say so (OBRS-773). The banner
+ * says so. `baseURL` repeats the port the spec already hardcodes, which is safe here and
+ * only here: the dev profile's CORS pins it to http://localhost:4200 (see above), so it
+ * is a constant, not a per-session choice, and nothing in the spec navigates by it.
  */
 export default defineConfig({
+  // OBRS-1616: each phase serves ONE tree on :4200, so the guard can name it. A foreign
+  // tree there is the documented state for the BEFORE phase, so it must not refuse.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
+  metadata: { laneTree: 'attach-to-operator-stack' },
   testDir: './e2e/tests',
   testMatch: ['obrs-742-capture.spec.ts'],
   fullyParallel: false,
@@ -49,6 +64,8 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
+    // OBRS-1616: the guard's only handle on the port. The spec navigates by full URL.
+    baseURL: 'http://localhost:4200',
     viewport: { width: 1440, height: 1000 },
     trace: 'retain-on-failure',
   },

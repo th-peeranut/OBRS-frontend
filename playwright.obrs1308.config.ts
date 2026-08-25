@@ -9,6 +9,11 @@ import { defineConfig, devices } from '@playwright/test';
  * silently, and re-seeding here would undo the QA-run's own submitted overrides.
  */
 export default defineConfig({
+  // OBRS-1616: no `webServer`, so nothing said which tree served these pages. This lane
+  // drives the stack the operator started by hand (see the header above), so a foreign
+  // tree on the port is the documented state -- the guard must name it, not refuse.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
+  metadata: { laneTree: 'attach-to-operator-stack' },
   testDir: './e2e/tests',
   testMatch: ['**/obrs-1308-notification-message-override-qa.spec.ts', '**/obrs-1308-capture.spec.ts'],
   timeout: 120_000,
