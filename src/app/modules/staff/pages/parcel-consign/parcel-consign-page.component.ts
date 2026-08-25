@@ -448,6 +448,13 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
   }
 
   protected onScheduleChange(value: string): void {
+    // OBRS-1606 (owner decision): a submit error names the round it was raised
+    // for (cargo capacity exceeded, seats unavailable), so it must not outlive
+    // that round. This method is the single funnel for BOTH a round
+    // change and a day change (`onDateChange()` -> `clearScheduleSelection()` ->
+    // `scheduleId` valueChanges -> `scheduleChange`), so one clear covers both.
+    // Re-clicking the SAME day never reaches here - OBRS-1598's `loadedDateStr` guard.
+    this.serverErrorKey = null;
     this.pickupOptions = [];
     this.dropoffOptions = [];
     this.orderedStops = [];
