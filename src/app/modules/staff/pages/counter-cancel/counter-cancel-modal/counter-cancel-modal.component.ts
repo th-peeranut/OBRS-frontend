@@ -313,6 +313,15 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
     return this.booking?.contactName ?? '-';
   }
 
+  /**
+   * OBRS-1601: the CODE only. The word is produced by `titleLabel` in the template, not composed
+   * here — the pipe is impure so the honorific follows a language switch, which a string built in
+   * this getter would not.
+   */
+  protected get contactTitle(): string | null {
+    return this.booking?.contactTitle ?? null;
+  }
+
   protected get refundLabel(): string {
     return this.formatCurrency(this.policy?.refundAmount ?? 0);
   }

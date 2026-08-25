@@ -81,7 +81,10 @@
             </div>
             <div class="find-booking-summary-row">
               <span class="label">{{ 'FIND_BOOKING.RESULT.CONTACT_NAME' | translate }}</span>
-              <span class="value">{{ booking.contactName }}</span>
+              <!-- OBRS-1601: the honorific is a CODE on the wire; `titleLabel` is impure so it
+                   follows a language switch with no refetch, and prints the bare name when the
+                   contact gave no title. -->
+              <span class="value">{{ booking.contactTitle | titleLabel: booking.contactName }}</span>
             </div>
             <div class="find-booking-summary-row">
               <span class="label">{{ 'FIND_BOOKING.RESULT.CONTACT_PHONE' | translate }}</span>

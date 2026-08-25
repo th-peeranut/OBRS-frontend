@@ -483,6 +483,8 @@ export interface CounterBookingSearchJourneyDto {
 export interface CounterBookingSearchResultDto {
   bookingId: number;
   bookingNumber: string;
+  /** OBRS-1601 — title CODE, rendered through `titleLabel`; null when the contact gave none. */
+  contactTitle: string | null;
   contactName: string;
   contactPhoneMasked: string;
   status: string;

@@ -16,6 +16,7 @@ import { AuthService } from '../../../../../auth/auth.service';
 import { CancellationPolicy } from '../../../../../shared/interfaces/my-booking.interface';
 import { AA_NORMAL_TEXT, contrast, effectiveBg, fgOf } from '../../../../../testing/contrast';
 import { errorCodeFromMessageKey } from '../../../../../shared/lib/api-error-code';
+import { TitleLabelPipe } from '../../../../../shared/pipes/title-label.pipe';
 
 // OBRS-766 (QA-caught): the wire `errorCode` field is derived from its
 // dotted messageKey (see `api-error-code.ts`'s `errorCodeFromMessageKey`
@@ -31,6 +32,7 @@ const REFUND_DESTINATION_INVALID_CODE = errorCodeFromMessageKey('cancel.error.re
 const BOOKING: CounterBookingSearchResultDto = {
   bookingId: 42,
   bookingNumber: 'B-000042',
+  contactTitle: 'MISS',
   contactName: 'Somchai Jaidee',
   contactPhoneMasked: '••••5678',
   status: 'confirmed',
@@ -94,7 +96,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
     auth.getUsername.and.returnValue('salesperson@obrs.test');
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
+      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot(), TitleLabelPipe],
       declarations: [
         CounterCancelModalComponent,
         AdminModalBackdropDirective,
@@ -636,7 +638,8 @@ describe('CounterCancelModalComponent — cancel body byte-identity (OBRS-766 FE
     auth.getUsername.and.returnValue('salesperson@obrs.test');
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot(), HttpClientTestingModule],
+      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot(), HttpClientTestingModule,
+        TitleLabelPipe],
       declarations: [
         CounterCancelModalComponent,
         AdminModalBackdropDirective,
