@@ -59,8 +59,13 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
   protected selectedVehicleFilter = '';
   protected selectedCategoryFilter = '';
   protected centralOnlyFilter = false;
-  protected dateFrom: Date | null = null;
-  protected dateTo: Date | null = null;
+  // OBRS-1626: the date filter is one month, not a free range. Strings because
+  // app-admin-dropdown emits the option's `code`; seeded in the constructor so
+  // both halves come from the same `new Date()`.
+  protected selectedYear: string;
+  protected selectedMonth: string;
+  protected yearOptions: Option[] = [];
+  protected monthOptions: Option[] = [];
 
   protected isRefreshing = false;
   protected refreshFailed = false;
@@ -111,6 +116,10 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
   ) {
     this.canWrite = this.authService.hasAnyRole(['admin', 'owner']);
     this.isAdmin = this.authService.getRoles().includes('admin');
+
+    const today = new Date();
+    this.selectedYear = String(today.getFullYear());
+    this.selectedMonth = String(today.getMonth() + 1);
 
     this.subscriptions.add(
       this.translate.onLangChange.subscribe(() => {
@@ -265,13 +274,13 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
-  protected onFromDateChange(value: Date | null): void {
-    this.dateFrom = value;
+  protected onYearChange(value: string): void {
+    this.selectedYear = String(value ?? '').trim();
     this.applyFilters();
   }
 
-  protected onToDateChange(value: Date | null): void {
-    this.dateTo = value;
+  protected onMonthChange(value: string): void {
+    this.selectedMonth = String(value ?? '').trim();
     this.applyFilters();
   }
 
@@ -393,6 +402,8 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
         this.rawOwners
       )
     );
+    this.rebuildYearOptions();
+    this.rebuildMonthOptions();
     this.applyFilters();
   }
 
@@ -406,11 +417,44 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
   }
 
   private applyFilters(): void {
+    const year = Number(this.selectedYear);
+    const month = Number(this.selectedMonth);
     this.filteredExpenses = filterExpensesByCategoryAndRange(this.expenses, {
       category: this.selectedCategoryFilter,
       centralOnly: this.centralOnlyFilter,
-      from: this.dateFrom,
-      to: this.dateTo,
+      // `new Date(year, month, 0)` is the last day of `month` - the range stays
+      // inclusive on both ends, which is what the ISO string compare expects.
+      from: new Date(year, month - 1, 1),
+      to: new Date(year, month, 0),
     });
+  }
+
+  /**
+   * OBRS-1626: the year list is built from the dates that actually exist, never
+   * from a `year +- N` formula. /admin/reports uses `period.year - 2 + i`, which
+   * in 2026 would offer 2027 and 2028 - two years the expense data cannot reach.
+   * The current year is always included because it is the default selection.
+   */
+  private rebuildYearOptions(): void {
+    const years = new Set(
+      this.expenses.map((row) => row.expenseDate.slice(0, 4)).filter((year) => year.length === 4)
+    );
+    years.add(this.selectedYear);
+    this.yearOptions = [...years]
+      .sort((a, b) => b.localeCompare(a))
+      .map((year) => ({ code: year, label: year }));
+  }
+
+  /** Month names in the active language, so the filter bar reads "สิงหาคม" and
+   * not a bare "8" next to "รถ: ทั้งหมด". Rebuilt on language change with the
+   * rest of applyLocalization. */
+  private rebuildMonthOptions(): void {
+    const formatter = new Intl.DateTimeFormat(this.translate.currentLang || 'th', {
+      month: 'long',
+    });
+    this.monthOptions = Array.from({ length: 12 }, (_, index) => ({
+      code: String(index + 1),
+      label: formatter.format(new Date(2000, index, 1)),
+    }));
   }
 }

@@ -30,37 +30,27 @@
     (valueChange)="onCategoryFilterChange($event)"
   ></app-admin-dropdown>
 
-  <p-datePicker
-    styleClass="app-date-field"
-    panelStyleClass="app-date-field-panel"
-    dateFormat="dd/mm/yy"
-    [ngModel]="dateFrom"
-    (ngModelChange)="onFromDateChange($event)"
-    [showIcon]="true"
-    [iconDisplay]="'input'"
-    [showButtonBar]="true"
-    [placeholder]="'ADMIN.EXPENSES.FILTER_DATE_FROM' | translate"
-    >
-    <ng-template pTemplate="inputicon">
-      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-    </ng-template>
-  </p-datePicker>
+  <!-- OBRS-1626: was two free-form date pickers, both defaulting to null, so
+  opening the page rendered every row in the system (8,580 on prod, 18.5 s to
+  settle). Year + month defaulting to the current month is the pattern
+  /admin/reports already uses for its monthly section. -->
+  <app-admin-dropdown
+    [value]="selectedYear"
+    [options]="yearOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.EXPENSES.FILTER_YEAR' | translate"
+    (valueChange)="onYearChange($event)"
+  ></app-admin-dropdown>
 
-  <p-datePicker
-    styleClass="app-date-field"
-    panelStyleClass="app-date-field-panel"
-    dateFormat="dd/mm/yy"
-    [ngModel]="dateTo"
-    (ngModelChange)="onToDateChange($event)"
-    [showIcon]="true"
-    [iconDisplay]="'input'"
-    [showButtonBar]="true"
-    [placeholder]="'ADMIN.EXPENSES.FILTER_DATE_TO' | translate"
-    >
-    <ng-template pTemplate="inputicon">
-      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-    </ng-template>
-  </p-datePicker>
+  <app-admin-dropdown
+    [value]="selectedMonth"
+    [options]="monthOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.EXPENSES.FILTER_MONTH' | translate"
+    (valueChange)="onMonthChange($event)"
+  ></app-admin-dropdown>
 
   @if (canWrite) {
     <button
