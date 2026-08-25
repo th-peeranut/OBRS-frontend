@@ -115,6 +115,22 @@ describe('UserListTableComponent (template)', () => {
     expect(buttons.length).toBe(2);
   });
 
+  // OBRS-653: the row action closes and anonymises the account, it does not
+  // delete the row. The icon is pinned beside the label because a trash can
+  // still says "delete" in a picture even once the words have moved on.
+  it('labels the row action as closing the account, not deleting it', () => {
+    component.isLoading = false;
+    component.canUnlock = false;
+    component.rows = [makeRow({ id: 1 })];
+    fixture.detectChanges();
+
+    const closeButton = fixture.debugElement.query(By.css('.admin-icon-btn.danger'));
+    expect(closeButton.nativeElement.getAttribute('aria-label')).toBe('ADMIN.USERS.CLOSE_ACTION');
+    expect(
+      closeButton.query(By.css('.material-symbols-outlined')).nativeElement.textContent.trim()
+    ).toBe('person_off');
+  });
+
   it('emits edit/delete/unlock with the user row on each action button click', () => {
     component.isLoading = false;
     component.canUnlock = true;
