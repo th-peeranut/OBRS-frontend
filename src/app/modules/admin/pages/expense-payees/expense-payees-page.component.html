@@ -1,0 +1,221 @@
+<section class="admin-page-intro">
+  <div>
+    <p class="admin-muted">{{ 'ADMIN.EXPENSE_PAYEES.PAGE_PURPOSE' | translate }}</p>
+    <app-admin-refresh-hint
+      [refreshing]="isRefreshing"
+      [failed]="refreshFailed"
+      [loading]="isLoading"
+    ></app-admin-refresh-hint>
+  </div>
+</section>
+
+<section class="admin-page-filters mt-3">
+  <app-admin-dropdown
+    [value]="selectedTypeFilter"
+    [options]="typeFilterOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.EXPENSES.PAYEE.FILTER_TYPE_ALL' | translate"
+    (valueChange)="onTypeFilterChange($event)"
+  ></app-admin-dropdown>
+
+  <label class="payee-retired-toggle" data-testid="payee-show-retired">
+    <input
+      type="checkbox"
+      [checked]="showRetired"
+      (change)="onShowRetiredChange($any($event.target).checked)"
+      />
+    <span>{{ 'ADMIN.EXPENSE_PAYEES.SHOW_RETIRED' | translate }}</span>
+  </label>
+
+  <!-- Hidden for an admin: they can read, rename and retire here, but CREATE is the one payee
+  operation the backend refuses them (see `canCreate`). A button that can only produce a server
+  error is worse than no button — the user cannot tell it apart from a bug. -->
+  @if (canCreate) {
+    <button
+      type="button"
+      class="admin-btn admin-btn-primary ms-auto"
+      data-testid="payee-add"
+      (click)="openCreateModal()"
+      >
+      <span class="material-symbols-outlined" [attr.translate]="'no'">add</span>
+      <span>{{ 'ADMIN.EXPENSE_PAYEES.ADD' | translate }}</span>
+    </button>
+  }
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.EXPENSE_PAYEES.TABLE_TITLE' | translate }}</h4>
+  </div>
+
+  @if (!isLoading && errorMessage) {
+    <div class="payee-empty">
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">error</span>
+      <p class="payee-empty-title">{{ errorMessage }}</p>
+    </div>
+  }
+
+  @if (!isLoading && !errorMessage && isEmpty) {
+    <div class="payee-empty">
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">storefront</span>
+      <p class="payee-empty-title">{{ 'ADMIN.EXPENSE_PAYEES.EMPTY_TITLE' | translate }}</p>
+      <!-- OBRS-1577: the body names both ways to add a payee (the "Add payee" button and typing one
+      into a bill). BOTH are hidden for an admin (canCreate false), so showing it to them points at
+      affordances they do not have — the same family as the hidden ADD button. Owners keep it. -->
+      @if (canCreate) {
+        <p class="payee-empty-body">{{ 'ADMIN.EXPENSE_PAYEES.EMPTY_BODY' | translate }}</p>
+      }
+    </div>
+  }
+
+  @if (!isLoading && !errorMessage && isFilteredEmpty) {
+    <div class="payee-empty">
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">filter_alt_off</span>
+      <p class="payee-empty-title">{{ 'ADMIN.EXPENSE_PAYEES.NO_MATCH' | translate }}</p>
+    </div>
+  }
+
+  @if (isLoading || (!errorMessage && !isEmpty && !isFilteredEmpty)) {
+    <div class="admin-table-wrap mt-3">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'ADMIN.EXPENSE_PAYEES.NAME' | translate }}</th>
+            <th>{{ 'ADMIN.EXPENSE_PAYEES.TYPE' | translate }}</th>
+            <th>{{ 'ADMIN.EXPENSE_PAYEES.STATUS' | translate }}</th>
+            <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (isLoading) {
+            @for (row of skeletonRows; track $index) {
+              <tr class="admin-skeleton-row" aria-hidden="true">
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              </tr>
+            }
+          } @else {
+            @for (payee of payees; track trackById($index, payee)) {
+              <tr [class.is-retired]="!payee.active" data-testid="payee-row">
+                <td class="payee-name">{{ payee.name }}</td>
+                <td>{{ typeLabel(payee.type) }}</td>
+                <td>
+                  <span class="payee-status" [class.is-retired]="!payee.active">
+                    {{
+                    (payee.active
+                    ? 'ADMIN.EXPENSE_PAYEES.STATUS_ACTIVE'
+                    : 'ADMIN.EXPENSE_PAYEES.STATUS_RETIRED'
+                    ) | translate
+                    }}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <!-- ⛔ No delete button, deliberately (AC6): this row is the only record of who
+                  every bill paid to it went to. Retire hides it from the pickers; nothing else. -->
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    data-testid="payee-rename"
+                    (click)="openRenameModal(payee)"
+                    >
+                    {{ 'ADMIN.EXPENSE_PAYEES.RENAME' | translate }}
+                  </button>
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    data-testid="payee-toggle-active"
+                    [disabled]="busyId === payee.id"
+                    (click)="toggleActive(payee)"
+                    >
+                    {{
+                    (payee.active
+                    ? 'ADMIN.EXPENSE_PAYEES.RETIRE'
+                    : 'ADMIN.EXPENSE_PAYEES.RESTORE'
+                    ) | translate
+                    }}
+                  </button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<!-- Add / rename. Kept in this template rather than split into its own component like
+`expense-delete-modal`: it is two controls and one submit, and the sibling it would mirror carries
+no state of its own. Split it if a third caller ever needs it. -->
+@if (isModalOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="closeModal()">
+    <div class="admin-modal">
+      <h4 class="admin-modal-title">
+        {{
+        (modalMode === 'rename'
+        ? 'ADMIN.EXPENSE_PAYEES.RENAME_TITLE'
+        : 'ADMIN.EXPENSE_PAYEES.ADD_TITLE'
+        ) | translate
+        }}
+      </h4>
+      <p class="admin-modal-subtitle">
+        {{
+        (modalMode === 'rename'
+        ? 'ADMIN.EXPENSE_PAYEES.RENAME_HINT'
+        : 'ADMIN.EXPENSE_PAYEES.ADD_HINT'
+        ) | translate
+        }}
+      </p>
+
+      <div class="admin-form-grid">
+        <div class="admin-form-field full">
+          <label class="admin-form-label">
+            {{ 'ADMIN.EXPENSE_PAYEES.NAME' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input
+            class="admin-field"
+            data-testid="payee-name-input"
+            maxlength="150"
+            [(ngModel)]="formName"
+            />
+          @if (nameAlreadyTaken) {
+            <!-- AC5 client side. The server refuses this too (409) — this message exists so the
+            answer arrives in the dialog rather than after pressing save. It never merges. -->
+            <small class="admin-error" data-testid="payee-name-taken">
+              {{ 'ADMIN.EXPENSE_PAYEES.NAME_TAKEN' | translate }}
+            </small>
+          }
+        </div>
+
+        <div class="admin-form-field full">
+          <label class="admin-form-label">{{ 'ADMIN.EXPENSE_PAYEES.TYPE' | translate }}</label>
+          <app-admin-dropdown
+            [value]="formType"
+            [options]="typeOptions"
+            valueKey="code"
+            labelKey="label"
+            (valueChange)="formType = $any($event)"
+          ></app-admin-dropdown>
+        </div>
+      </div>
+
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" (click)="closeModal()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-primary"
+          data-testid="payee-submit"
+          [disabled]="!canSubmit"
+          (click)="submitModal()"
+          >
+          {{ 'ADMIN.COMMON.SAVE' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

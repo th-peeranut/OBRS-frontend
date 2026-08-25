@@ -79,6 +79,8 @@ function makeRow(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     expenseDateDisplay: '20 ก.ค. 2026',
     receiptNo: '',
     paidBy: '',
+    payeeId: null,
+    payeeName: '',
     note: '',
     source: 'MANUAL',
     items: [],
@@ -320,6 +322,7 @@ describe('expenses-page.mappers', () => {
         expenseDate: new Date(2026, 6, 24),
         receiptNo: '',
         paidBy: '',
+        payeeId: null,
         note: '',
       });
 
@@ -333,6 +336,7 @@ describe('expenses-page.mappers', () => {
         expenseDate: '2026-07-24',
         receiptNo: null,
         paidBy: null,
+        payeeId: null,
         note: null,
         items: [],
       });
@@ -349,6 +353,7 @@ describe('expenses-page.mappers', () => {
         expenseDate: '2026-07-24',
         receiptNo: 'R-1',
         paidBy: 'Somchai',
+        payeeId: null,
         note: 'note',
       });
 
@@ -362,6 +367,7 @@ describe('expenses-page.mappers', () => {
         expenseDate: '2026-07-24',
         receiptNo: 'R-1',
         paidBy: 'Somchai',
+        payeeId: null,
         note: 'note',
         items: [],
       });
@@ -378,6 +384,7 @@ describe('expenses-page.mappers', () => {
         expenseDate: '2026-07-24',
         receiptNo: '',
         paidBy: '',
+        payeeId: null,
         note: '',
       });
 
@@ -397,6 +404,7 @@ describe('expenses-page.mappers', () => {
         expenseDate: '2026-07-24',
         receiptNo: '',
         paidBy: '',
+        payeeId: null,
         note: '',
       });
 
@@ -489,6 +497,7 @@ describe('expenses-page.mappers', () => {
         expenseDate: '2026-08-21',
         receiptNo: '',
         paidBy: '',
+        payeeId: null,
         note: '',
         items: [
           { part: 'BRAKE_PADS', description: '  ผ้าเบรกหน้า  ', quantity: 2, unitPrice: 500, amount: 1000 },

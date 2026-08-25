@@ -24,6 +24,8 @@ const VEHICLE_ROW: ExpenseRow = {
   expenseDateDisplay: '20 ก.ค. 2026',
   receiptNo: 'RC-1',
   paidBy: 'Somchai',
+  payeeId: null,
+  payeeName: '',
   note: 'note',
   source: 'MANUAL',
   items: [],
@@ -159,6 +161,7 @@ describe('ExpenseFormModalComponent', () => {
         expenseDate: '2026-07-20',
         receiptNo: 'RC-1',
         paidBy: 'Somchai',
+        payeeId: null,
         note: 'note',
         // OBRS-1374: a bill with no breakdown sends an EMPTY list, never an omitted key -
         // an omission would mean toExpensePayload had branched, and the server would read
@@ -216,6 +219,7 @@ describe('ExpenseFormModalComponent', () => {
         expenseDate: new Date(2026, 6, 24),
         receiptNo: '',
         paidBy: '',
+        payeeId: null,
         note: '',
       });
 
@@ -236,6 +240,7 @@ describe('ExpenseFormModalComponent', () => {
         expenseDate: '2026-07-24',
         receiptNo: null,
         paidBy: null,
+        payeeId: null,
         note: null,
         items: [],
       });
