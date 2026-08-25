@@ -1,0 +1,243 @@
+<section class="admin-page-intro">
+  <div>
+    <p class="admin-muted">{{ 'ADMIN.MAINTENANCE_PARTS.PAGE_PURPOSE' | translate }}</p>
+    <app-admin-refresh-hint
+      [refreshing]="isRefreshing"
+      [failed]="refreshFailed"
+      [loading]="isLoading"
+    ></app-admin-refresh-hint>
+  </div>
+</section>
+
+<section class="admin-page-filters mt-3">
+  <app-admin-dropdown
+    [value]="selectedKindFilter"
+    [options]="kindFilterOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.MAINTENANCE_PARTS.FILTER_KIND_ALL' | translate"
+    (valueChange)="onKindFilterChange($event)"
+  ></app-admin-dropdown>
+
+  <label class="part-retired-toggle" data-testid="part-show-retired">
+    <input
+      type="checkbox"
+      [checked]="showRetired"
+      (change)="onShowRetiredChange($any($event.target).checked)"
+      />
+    <span>{{ 'ADMIN.MAINTENANCE_PARTS.SHOW_RETIRED' | translate }}</span>
+  </label>
+
+  <!-- Hidden for an admin: they can read, rename and retire here, but CREATE is the one operation
+  the backend refuses them (see `canCreate`). A button whose only outcome is a server error is worse
+  than no button — the user cannot tell it apart from a bug. -->
+  @if (canCreate) {
+    <button
+      type="button"
+      class="admin-btn admin-btn-primary ms-auto"
+      data-testid="part-add"
+      (click)="openCreateModal()"
+      >
+      <span class="material-symbols-outlined" [attr.translate]="'no'">add</span>
+      <span>{{ 'ADMIN.MAINTENANCE_PARTS.ADD' | translate }}</span>
+    </button>
+  }
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.MAINTENANCE_PARTS.TABLE_TITLE' | translate }}</h4>
+  </div>
+
+  @if (!isLoading && errorMessage) {
+    <div class="part-empty">
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">error</span>
+      <p class="part-empty-title">{{ errorMessage }}</p>
+    </div>
+  }
+
+  @if (!isLoading && !errorMessage && isEmpty) {
+    <div class="part-empty">
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">build</span>
+      <p class="part-empty-title">{{ 'ADMIN.MAINTENANCE_PARTS.EMPTY_TITLE' | translate }}</p>
+      <!-- Both ways to add an entry are hidden for an admin (canCreate false), so pointing them at
+      affordances they do not have would be the same mistake as leaving the ADD button up. -->
+      @if (canCreate) {
+        <p class="part-empty-body">{{ 'ADMIN.MAINTENANCE_PARTS.EMPTY_BODY' | translate }}</p>
+      }
+    </div>
+  }
+
+  @if (!isLoading && !errorMessage && isFilteredEmpty) {
+    <div class="part-empty">
+      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">filter_alt_off</span>
+      <p class="part-empty-title">{{ 'ADMIN.MAINTENANCE_PARTS.NO_MATCH' | translate }}</p>
+    </div>
+  }
+
+  @if (isLoading || (!errorMessage && !isEmpty && !isFilteredEmpty)) {
+    <div class="admin-table-wrap mt-3">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'ADMIN.MAINTENANCE_PARTS.NAME' | translate }}</th>
+            <th>{{ 'ADMIN.MAINTENANCE_PARTS.KIND' | translate }}</th>
+            <th>{{ 'ADMIN.MAINTENANCE_PARTS.STATUS' | translate }}</th>
+            <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (isLoading) {
+            @for (row of skeletonRows; track $index) {
+              <tr class="admin-skeleton-row" aria-hidden="true">
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              </tr>
+            }
+          } @else {
+            @for (part of parts; track trackById($index, part)) {
+              <tr [class.is-retired]="!part.active" data-testid="part-row">
+                <td class="part-name">
+                  {{ partLabel(part) }}
+                  <!-- Which rows are translated is invisible from a Thai screen, and it decides what
+                  the rename dialog is about to throw away. The badge is the only place it shows. -->
+                  @if (isSeeded(part)) {
+                    <span class="part-seeded" data-testid="part-seeded">
+                      {{ 'ADMIN.MAINTENANCE_PARTS.SEEDED_BADGE' | translate }}
+                    </span>
+                  }
+                </td>
+                <td>{{ kindLabel(part.kind) }}</td>
+                <td>
+                  <span class="part-status" [class.is-retired]="!part.active">
+                    {{
+                    (part.active
+                    ? 'ADMIN.MAINTENANCE_PARTS.STATUS_ACTIVE'
+                    : 'ADMIN.MAINTENANCE_PARTS.STATUS_RETIRED'
+                    ) | translate
+                    }}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <!-- ⛔ No delete button, deliberately: this row is the only thing tying every plan
+                  and every bill line that named it together. Retire hides it from the pickers. -->
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    data-testid="part-rename"
+                    (click)="openRenameModal(part)"
+                    >
+                    {{ 'ADMIN.MAINTENANCE_PARTS.RENAME' | translate }}
+                  </button>
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    data-testid="part-toggle-active"
+                    [disabled]="busyId === part.id"
+                    (click)="toggleActive(part)"
+                    >
+                    {{
+                    (part.active
+                    ? 'ADMIN.MAINTENANCE_PARTS.RETIRE'
+                    : 'ADMIN.MAINTENANCE_PARTS.RESTORE'
+                    ) | translate
+                    }}
+                  </button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<!-- Add / rename. Kept in this template rather than split into its own component, matching the
+payee registry it mirrors: two controls and one submit, with no state of its own. -->
+@if (isModalOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="closeModal()">
+    <div class="admin-modal">
+      <h4 class="admin-modal-title">
+        {{
+        (modalMode === 'rename'
+        ? 'ADMIN.MAINTENANCE_PARTS.RENAME_TITLE'
+        : 'ADMIN.MAINTENANCE_PARTS.ADD_TITLE'
+        ) | translate
+        }}
+      </h4>
+      <p class="admin-modal-subtitle">
+        {{
+        (modalMode === 'rename'
+        ? 'ADMIN.MAINTENANCE_PARTS.RENAME_HINT'
+        : 'ADMIN.MAINTENANCE_PARTS.ADD_HINT'
+        ) | translate
+        }}
+      </p>
+
+      <!-- The one thing on this screen that cannot be undone from any screen: the server clears the
+      i18n key on rename, so the en/zh names go with it. The owner ruled on 2026-08-25 that the 13
+      seeded entries keep their translations — which forbids losing them QUIETLY, not renaming. -->
+      @if (isRenamingSeededPart) {
+        <p class="part-seeded-warning" data-testid="part-seeded-warning">
+          {{ 'ADMIN.MAINTENANCE_PARTS.SEEDED_RENAME_WARNING' | translate }}
+        </p>
+      }
+
+      <div class="admin-form-grid">
+        <div class="admin-form-field full">
+          <label class="admin-form-label">
+            {{ 'ADMIN.MAINTENANCE_PARTS.NAME' | translate }} <span class="admin-required">*</span>
+          </label>
+          <input
+            class="admin-field"
+            data-testid="part-name-input"
+            maxlength="150"
+            [(ngModel)]="formName"
+            />
+          @if (nameCollision) {
+            <!-- Two different messages because the server does two different things: create is
+            idempotent and hands back the row that exists, rename is a 409 and cannot go through. -->
+            @if (modalMode === 'rename') {
+              <small class="admin-error" data-testid="part-name-taken">
+                {{ 'ADMIN.MAINTENANCE_PARTS.NAME_TAKEN' | translate }}
+              </small>
+            } @else {
+              <small class="part-name-reuse" data-testid="part-name-reuse">
+                {{ 'ADMIN.MAINTENANCE_PARTS.NAME_WILL_REUSE' | translate }}
+              </small>
+            }
+          }
+        </div>
+
+        <div class="admin-form-field full">
+          <label class="admin-form-label">{{ 'ADMIN.MAINTENANCE_PARTS.KIND' | translate }}</label>
+          <app-admin-dropdown
+            [value]="formKind"
+            [options]="kindOptions"
+            valueKey="code"
+            labelKey="label"
+            (valueChange)="formKind = $any($event)"
+          ></app-admin-dropdown>
+        </div>
+      </div>
+
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" (click)="closeModal()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-primary"
+          data-testid="part-submit"
+          [disabled]="!canSubmit"
+          (click)="submitModal()"
+          >
+          {{ 'ADMIN.COMMON.SAVE' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

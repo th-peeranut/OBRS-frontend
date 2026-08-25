@@ -252,6 +252,14 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       items.push({ path: 'expense-payees', labelKey: 'ADMIN.PAGES.EXPENSE_PAYEES', icon: 'storefront', descriptionKey: 'ADMIN.EXPENSE_PAYEES.SUBTITLE', section: 'operations' });
     }
 
+    // OBRS-1613: the parts/labour registry - OWNER-only (route `requiredRoles: ['owner']`, backend
+    // `hasRole('OWNER')` on every endpoint including the GET). Immediately after the payee registry
+    // in the same `operations` section: the two are the same kind of screen, an owner opens both
+    // while filing bills, and putting them anywhere but side by side makes one of them hard to find.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({ path: 'maintenance-parts', labelKey: 'ADMIN.PAGES.MAINTENANCE_PARTS', icon: 'build', descriptionKey: 'ADMIN.MAINTENANCE_PARTS.SUBTITLE', section: 'operations' });
+    }
+
     if (this.authService.hasAnyRole(['owner'])) {
       items.push({ path: 'settlements', labelKey: 'ADMIN.PAGES.SETTLEMENTS', icon: 'point_of_sale', descriptionKey: 'ADMIN.SETTLEMENTS.SUBTITLE', section: 'operations' });
     }

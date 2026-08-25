@@ -76,6 +76,7 @@ import { ExpensePayeePickerComponent } from './pages/expenses/expense-payee-pick
 import { ExpenseBatchPageComponent } from './pages/expenses/expense-batch-page/expense-batch-page.component';
 import { ExpenseBillCardComponent } from './pages/expenses/expense-bill-card/expense-bill-card.component';
 import { ExpensePayeesPageComponent } from './pages/expense-payees/expense-payees-page.component';
+import { MaintenancePartsPageComponent } from './pages/maintenance-parts/maintenance-parts-page.component';
 // OBRS-286 — manual refund worklist (AC-2/AC-3), owner-only.
 import { ManualRefundWorklistPageComponent } from './pages/manual-refund-worklist/manual-refund-worklist-page.component';
 import { CashRefundApprovalsPageComponent } from './pages/cash-refund-approvals/cash-refund-approvals-page.component';
@@ -475,6 +476,27 @@ export const adminRoutes: Routes = [
         },
       },
       {
+        // OBRS-1613: the parts/labour registry the maintenance plan and the repair bill BOTH draw
+        // from - one list, which is the point (V113__create_expense_items.sql wrote down why: two
+        // lists means "how many times did I change the brake pads" has two answers).
+        //
+        // OWNER-only, and `['owner']` rather than `['admin', 'owner']` for the reason the payee
+        // route above states: the backend is `hasRole('OWNER')` on every endpoint including the GET,
+        // AuthService.ROLE_GRANTS has admin granting owner, so the two spellings are one predicate
+        // and the narrower one is the honest description of who this is for.
+        //
+        // Sits beside `expense-payees`: both are lists an owner maintains while filing bills, not
+        // one-off product configuration.
+        path: 'maintenance-parts',
+        component: MaintenancePartsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.MAINTENANCE_PARTS',
+          subtitleKey: 'ADMIN.MAINTENANCE_PARTS.SUBTITLE',
+          requiredRoles: ['owner'],
+        },
+      },
+      {
         // OBRS-286: manual refund worklist — OWNER-only (the backend GET
         // /payments/refunds/pending is `hasRole('OWNER')`, K9), same gating
         // shape as settlements/cargo-capacity above.
@@ -603,6 +625,7 @@ export const adminRoutes: Routes = [
     ExpenseBatchPageComponent,
     ExpenseBillCardComponent,
     ExpensePayeesPageComponent,
+    MaintenancePartsPageComponent,
     ManualRefundWorklistPageComponent,
     CashRefundApprovalsPageComponent,
     ParcelClaimsPageComponent,
