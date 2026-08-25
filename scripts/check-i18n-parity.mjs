@@ -968,6 +968,51 @@ function parcelPolicyFingerprint(json) {
   }
 }
 
+// 7) OBRS-566: a character that was lost in an encoding round-trip.
+//
+//    The bundle was written through a pipeline that did not survive non-ASCII: a
+//    bullet U+2022 and a curly apostrophe U+2019 both came out the other side as a
+//    literal "?" (U+003F). Nothing caught it -- the JSON is valid, the key sets match,
+//    the lengths are right, and "?" prints back as "?" so reading the file cannot tell
+//    you it is wrong (see the mojibake lesson: assert the codepoint, do not look at it).
+//    Customers read "? Reprint with fee:" and "the company?s transport conditions".
+//
+//    Asserted as a property that must HOLD, not as a denylist of characters seen once:
+//    in this bundle a question mark is punctuation, so it always ENDS a clause. It never
+//    sits glued between two letters and it never opens a segment the way a bullet does.
+//    Measured on the fixed bundle: 0 violations across 3 x 3,498 keys, so the property is
+//    true today and any new one is a regression, not a pre-existing exception.
+// Escapes, not literals: this file is ASCII apart from the historical strings in gate 3.
+const LETTER = 'A-Za-z\\u0E00-\\u0E7F\\u4E00-\\u9FFF';
+const MOJIBAKE_GLUED = new RegExp(`[${LETTER}]\\?[${LETTER}]`);
+const MOJIBAKE_AS_BULLET = /(^|>|;)\s*\?\s/;
+
+/** Flatten a translation object into [dotted key, string value] pairs. */
+function flattenValues(obj, prefix = '', out = []) {
+  for (const [k, v] of Object.entries(obj)) {
+    const key = prefix ? `${prefix}.${k}` : k;
+    if (v !== null && typeof v === 'object' && !Array.isArray(v)) flattenValues(v, key, out);
+    else if (typeof v === 'string') out.push([key, v]);
+  }
+  return out;
+}
+
+for (const lang of LANGS) {
+  const json = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8'));
+  for (const [key, value] of flattenValues(json)) {
+    if (/\uFFFD/.test(value)) {
+      problems.push(`[${lang}] ${key} contains U+FFFD -- the text was decoded with the wrong encoding somewhere in its path into this file (OBRS-566)`);
+    }
+    const glued = value.match(MOJIBAKE_GLUED);
+    if (glued) {
+      problems.push(`[${lang}] ${key} has "${glued[0]}" -- a "?" between two letters is a lost apostrophe or dash, not punctuation (OBRS-566)`);
+    }
+    if (MOJIBAKE_AS_BULLET.test(value)) {
+      problems.push(`[${lang}] ${key} opens a segment with "? " -- that is a lost bullet U+2022, which the other languages still have (OBRS-566)`);
+    }
+  }
+}
+
 const counts = LANGS.map((l) => `${l}=${keysByLang[l].size}`).join(' ');
 
 if (problems.length > 0) {
