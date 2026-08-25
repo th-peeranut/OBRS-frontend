@@ -7,18 +7,21 @@
       no route/departure fields; the strip shows what the real DTO has
       (driver + business date) plus the net (expected-return) pill. -->
       <span class="admin-emphasis">{{ day.driverName }}</span>
-      <span class="dcp-net-pill" data-testid="driver-cash-context-net">{{ formatMoney(day.expectedReturnAmount) }}</span>
     }
     <!-- OBRS-1579: this used to print `day.businessDate` as a bare `yyyy-MM-dd`
     with no label, so nothing on the screen said that the date WAS the cash box
     an entry would land in. It is now stated in words, and it renders even
     before the box exists (`boxBusinessDate` falls back to the schedule) -
     the morning the driver hands over yesterday's fuel bill is exactly when
-    this round has no entries on it yet. -->
+    this round has no entries on it yet. Sits between the name and the net
+    pill, in the reading order of the sentence it makes. -->
     @if (boxBusinessDate) {
       <span class="dcp-box-date" data-testid="driver-cash-box-date">
         {{ 'STAFF.DRIVER_CASH.BOX_DATE' | translate: { date: displayDate(boxBusinessDate) } }}
       </span>
+    }
+    @if (day) {
+      <span class="dcp-net-pill" data-testid="driver-cash-context-net">{{ formatMoney(day.expectedReturnAmount) }}</span>
     }
     @if (!day && isLoading) {
       <span class="admin-muted">{{ 'COMMON.LOADING' | translate }}</span>
