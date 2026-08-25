@@ -15,6 +15,11 @@
   position: sticky;
   z-index: 5;
   display: flex;
+  // OBRS-1579: the strip carries a sentence now ("the cash box for 24 Aug
+  // 2026"), not a bare `yyyy-MM-dd`. Without this the row could not wrap, so
+  // flex shrank its siblings instead - the driver's name broke onto two lines
+  // and the net pill squeezed into a circle. Measured on the AFTER capture.
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
@@ -65,4 +70,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+// OBRS-1579 — the box date. Emphasised, not muted: on this strip it is the fact
+// that decides where the money lands, and it used to be the one thing rendered
+// with no weight and no label at all. It wraps onto its own line on a narrow
+// phone via the strip's `flex-wrap` above.
+.dcp-box-date {
+  font-weight: 600;
 }

@@ -47,6 +47,7 @@ import {
   ParcelClaimRespDto,
 } from '../../shared/interfaces/parcel-claim.interface';
 import {
+  DriverCashDayReopenReqDto,
   DriverCashDayRespDto,
   DriverCashDayReturnReqDto,
   DriverCashDayStatus,
@@ -2669,6 +2670,27 @@ export class AdminApiService {
   ): Observable<ResponseAPI<DriverCashDayRespDto>> {
     return this.postRequest<DriverCashDayRespDto>(
       `${this.baseUrl}/private/driver-cash/days/${dayId}/return`,
+      payload
+    );
+  }
+
+  /**
+   * OBRS-1579 — OWNER-only re-open of a box that was already signed off, for
+   * the bill that reaches the counter the morning AFTER the round it paid for.
+   * Wipes the day's return snapshot into `driver_cash_day_reopens` and puts the
+   * day back to `OPEN`, so the late bill lands on the round that actually
+   * incurred it instead of on today's.
+   *
+   * No client-side role check guards the caller: `/admin/settlements` is
+   * already `requiredRoles: ['owner']` (admin.module.ts, and `ROLE_GRANTS` has
+   * admin granting owner), and the backend enforces `hasRole('OWNER')` itself.
+   */
+  reopenDriverCashDay(
+    dayId: number,
+    payload: DriverCashDayReopenReqDto
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.postRequest<DriverCashDayRespDto>(
+      `${this.baseUrl}/private/driver-cash/days/${dayId}/reopen`,
       payload
     );
   }

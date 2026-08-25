@@ -49,6 +49,34 @@
           }
 
           @if (detail) {
+            <!-- OBRS-1579: a box that was signed off and then re-opened must
+            never read as an ordinary one - including once it is RETURNED
+            again. This sits ABOVE the money, because it is the reason the
+            money below it is not what someone already signed for. -->
+            @if (hasReopens) {
+              <div class="driver-cash-reopen-history" data-testid="driver-cash-reopen-history">
+                <p class="driver-cash-reopen-history-title">
+                  <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">history</span>
+                  {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.REOPEN.HISTORY_TITLE' | translate: { count: detail.reopenCount } }}
+                </p>
+                @for (reopen of detail.reopens; track $index) {
+                  <div class="driver-cash-reopen-entry" data-testid="driver-cash-reopen-entry">
+                    <span class="admin-muted">{{ displayDateTime(reopen.reopenedAt) }}</span>
+                    @if (reopen.reopenedByName) {
+                      <span class="admin-muted"> · {{ reopen.reopenedByName }}</span>
+                    }
+                    <div>{{ reopen.reason }}</div>
+                    @if (reopen.prevReturnedAmount !== null) {
+                      <div class="admin-muted" data-testid="driver-cash-reopen-prev-returned">
+                        {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.REOPEN.PREV_RETURNED' | translate }}
+                        {{ formatMoney(reopen.prevReturnedAmount) }}
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
             <div class="settlement-detail-totals">
               <div class="settlement-detail-row">
                 <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.EXPECTED' | translate }}</span>
@@ -183,6 +211,56 @@
 
             @if (detail.status === 'RETURNED') {
               <p class="admin-muted mt-3">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.ALREADY_RETURNED' | translate }}</p>
+
+              <!-- OBRS-1579: the driver's fuel bill reaches the counter the
+              MORNING AFTER the round it paid for, by which time this box is
+              signed off. Without this the only way to record it was to key it
+              into a round that never incurred it. -->
+              <div class="mt-2">
+                @if (!isReopenFormOpen) {
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    (click)="toggleReopenForm()"
+                    data-testid="driver-cash-reopen-open"
+                    >
+                    {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.REOPEN.ACTION_LABEL' | translate }}
+                  </button>
+                }
+                @if (isReopenFormOpen) {
+                  <p class="admin-muted driver-cash-reopen-hint">
+                    {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.REOPEN.HINT' | translate }}
+                  </p>
+                  <div class="settlement-field">
+                    <label class="settlement-field-label" for="dcp-reopen-reason">
+                      {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.REOPEN.REASON_LABEL' | translate }}
+                    </label>
+                    <textarea
+                      id="dcp-reopen-reason"
+                      class="admin-input settlement-field-input"
+                      rows="2"
+                      maxlength="500"
+                      [placeholder]="'ADMIN.SETTLEMENTS.DRIVER_CASH.REOPEN.REASON_PLACEHOLDER' | translate"
+                      [(ngModel)]="reopenReasonInput"
+                      data-testid="driver-cash-reopen-reason-input"
+                      ></textarea>
+                  </div>
+                  <div class="settlement-detail-actions mt-2">
+                    <button
+                      type="button"
+                      class="admin-btn admin-btn-primary"
+                      [disabled]="!canReopen"
+                      (click)="onReopenClick()"
+                      data-testid="driver-cash-reopen-confirm"
+                      >
+                      {{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.REOPEN.CONFIRM_BTN' | translate }}
+                    </button>
+                    <button type="button" class="admin-btn" (click)="toggleReopenForm()">
+                      {{ 'ADMIN.COMMON.CANCEL' | translate }}
+                    </button>
+                  </div>
+                }
+              </div>
             }
           }
         </div>

@@ -1649,16 +1649,30 @@
           "RETURNED_PLACEHOLDER": "0.00",
           "CONFIRM_BTN": "Confirm return",
           "CONFIRM_TITLE": "Confirm driver cash return?",
-          "CONFIRM_TEXT": "Recording {{amount}} as returned. This cannot be undone.",
+          "CONFIRM_TEXT": "Recording {{amount}} as returned. If a bill for this day turns up later, the owner can re-open this box from this screen.",
           "SUCCESS": "Driver cash day marked as returned.",
           "ALREADY_RETURNED": "This day has already been returned.",
           "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)",
           "PER_HEAD_PAY": "Per-head pay earned today (already netted at the round, not in the amount above)"
         },
+        "REOPEN": {
+          "ACTION_LABEL": "Re-open this box",
+          "HINT": "For a bill from this round that reaches the counter after the box was signed off. The amount already signed for is kept in the history, and the box goes back to open.",
+          "REASON_LABEL": "Reason",
+          "REASON_PLACEHOLDER": "e.g. yesterday’s fuel bill only arrived this morning",
+          "CONFIRM_BTN": "Re-open box",
+          "CONFIRM_TITLE": "Re-open this cash box?",
+          "CONFIRM_TEXT": "The amount signed for is cleared and kept in the history. The box goes back to open, and has to be signed off again once the entry is added.",
+          "SUCCESS": "Cash box re-opened.",
+          "HISTORY_TITLE": "This box has been re-opened {{count}} time(s)",
+          "PREV_RETURNED": "Previously signed for:"
+        },
         "ERROR": {
           "REASON_REQUIRED": "A reason is required when the returned amount does not match.",
           "ALREADY_RETURNED": "This day was already returned.",
-          "RETURN_FAILED": "Unable to record this return."
+          "RETURN_FAILED": "Unable to record this return.",
+          "NOT_RETURNED": "This box is not signed off, so there is nothing to re-open.",
+          "REOPEN_FAILED": "Unable to re-open this cash box."
         },
         "COL": {
           "HOLDER": "Cash holder",
@@ -4108,6 +4122,7 @@
         "PARCEL_REMIT": "Parcel remit",
         "PARCEL_CLAWBACK": "Parcel clawback"
       },
+      "BOX_DATE": "Cash box for {{date}}",
       "ADVANCE": {
         "ACTION_LABEL": "Cash advance",
         "AMOUNT_LABEL": "Amount",
@@ -4125,11 +4140,14 @@
       },
       "EXPENSE": {
         "ACTION_LABEL": "Field expense",
+        "LANDS_IN_BOX": "This entry lands in the cash box for {{date}}",
         "CATEGORY_LABEL": "Category",
         "AMOUNT_LABEL": "Amount",
         "AMOUNT_PLACEHOLDER": "0.00",
         "NOTE_LABEL": "Note (optional)",
         "NOTE_PLACEHOLDER": "e.g. receipt number",
+        "BILL_DATE_LABEL": "Date on the bill",
+        "BILL_DATE_MISMATCH": "The bill is dated differently from the box it is going into — this entry will be recorded in the cash box for {{date}}.",
         "SUBMIT": "Record expense",
         "WAGE_PRICED_BY_OWNER": "The wage is priced from the owner's rate per leg (1 leg = 1 run), so there is no amount to enter."
       },
@@ -4141,7 +4159,8 @@
         "GENERIC": "Unable to record this entry. Please try again.",
         "WAGE_RATE_NOT_CONFIGURED": "No wage per leg has been set yet. Ask the owner to set it on the driver wage rate page first.",
         "SALES_POINT_FORBIDDEN": "You can only record this entry for rounds departing from your own sales point. This round is not yours.",
-        "PER_HEAD_SALES_POINT_FORBIDDEN": "You can only record heads for stops that belong to your own sales point."
+        "PER_HEAD_SALES_POINT_FORBIDDEN": "You can only record heads for stops that belong to your own sales point.",
+        "DAY_ALREADY_RETURNED": "That day’s cash box has already been returned and signed off, so entries can no longer be added to it. Ask the owner to re-open the box for that day, then key this bill again."
       },
       "MY_DAY": {
         "TITLE": "My cash box today",

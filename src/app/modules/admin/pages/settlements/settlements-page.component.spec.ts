@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { SettlementsPageComponent } from './settlements-page.component';
 import {
@@ -631,5 +632,107 @@ describe('SettlementsPageComponent', () => {
 
     store.data$.next(makePage([makeItem({ scheduleId: 999 })]));
     expect((component as any).items.find((i: SettlementPendingItemDto) => i.scheduleId === 999)).toBeUndefined();
+  });
+
+  // ── OBRS-1579: the owner puts a signed-off box back to OPEN ─────────────
+  describe('requestDayReopen', () => {
+    const REOPENED = {
+      dayId: 7,
+      status: 'OPEN',
+      reopenCount: 1,
+      expectedReturnAmount: '-1320.00',
+      returnedAmount: null,
+    };
+    const ROW = { dayId: 7, status: 'RETURNED', returnedAmount: '-120.00', discrepancy: null };
+
+    function makeComponentWithOpenDay(apiOverrides: Record<string, jasmine.Spy> = {}) {
+      const adminApi: any = makeAdminApiStub({
+        reopenDriverCashDay: jasmine.createSpy('reopenDriverCashDay').and.returnValue(of(ok(REOPENED))),
+        getDriverCashDayDetail: jasmine.createSpy('getDriverCashDayDetail').and.returnValue(of(ok(REOPENED))),
+        ...apiOverrides,
+      });
+      const alert = makeAlertStub();
+      const component = new SettlementsPageComponent(
+        makeStoreStub(null) as any,
+        driverCashDaysStoreStub as any,
+        adminApi as any,
+        alert as any,
+        createTranslateStub()
+      );
+      (component as any).openDayId = 7;
+      (component as any).dayModalSummary = ROW;
+      (component as any).dayModalDetail = { ...ROW, entries: [] };
+      return { component, adminApi, alert };
+    }
+
+    it('asks first, then posts the reason and swaps the open detail for the re-opened one', async () => {
+      const { component, adminApi, alert } = makeComponentWithOpenDay();
+
+      await (component as any).requestDayReopen('late fuel bill');
+
+      expect(alert.confirm).toHaveBeenCalled();
+      expect(adminApi.reopenDriverCashDay).toHaveBeenCalledWith(7, { reason: 'late fuel bill' });
+      expect((component as any).dayModalDetail).toEqual(REOPENED as any);
+      expect((component as any).isDayReopening).toBeFalse();
+      expect(alert.success).toHaveBeenCalled();
+    });
+
+    it('posts nothing when the owner cancels', async () => {
+      const { component, adminApi, alert } = makeComponentWithOpenDay();
+      alert.confirm.and.resolveTo(false);
+
+      await (component as any).requestDayReopen('late fuel bill');
+
+      expect(adminApi.reopenDriverCashDay).not.toHaveBeenCalled();
+    });
+
+    /**
+     * `requestDayReturn` filters the row OUT of the cached array, so after a
+     * sign-off the worklist no longer holds it. Mapping alone would then leave
+     * the owner looking at a list with nothing where a now-OPEN box belongs.
+     */
+    it('puts the row back into a list it had been filtered out of', async () => {
+      const { component } = makeComponentWithOpenDay();
+      driverCashDaysStoreStub.mutate.calls.reset();
+
+      await (component as any).requestDayReopen('late fuel bill');
+
+      const mutator = driverCashDaysStoreStub.mutate.calls.mostRecent().args[0] as (c: any[]) => any[];
+      expect(mutator([])).toEqual([
+        jasmine.objectContaining({ dayId: 7, status: 'OPEN', returnedAmount: null }),
+      ]);
+      expect(mutator([ROW])).toEqual([
+        jasmine.objectContaining({ dayId: 7, status: 'OPEN', returnedAmount: null }),
+      ]);
+    });
+
+    /** A 2xx with no body: the cache must be dropped AND the open modal
+     * re-fetched, or it keeps showing the box as still signed off. */
+    it('re-fetches the open modal when the re-open answers with no body', async () => {
+      const { component, adminApi } = makeComponentWithOpenDay({
+        reopenDriverCashDay: jasmine.createSpy('reopenDriverCashDay').and.returnValue(of(ok(null))),
+      });
+
+      await (component as any).requestDayReopen('late fuel bill');
+
+      expect(adminApi.getDriverCashDayDetail).toHaveBeenCalledWith(7);
+      expect((component as any).isDayReopening).toBeFalse();
+    });
+
+    it('names the refusal instead of saying "please try again"', async () => {
+      const { component, alert } = makeComponentWithOpenDay({
+        reopenDriverCashDay: jasmine.createSpy('reopenDriverCashDay').and.returnValue(
+          throwError(() => new HttpErrorResponse({
+            status: 409,
+            error: { errorCode: 'DRIVER_CASH_DAY_NOT_RETURNED' },
+          }))
+        ),
+      });
+
+      await (component as any).requestDayReopen('late fuel bill');
+
+      expect(alert.error).toHaveBeenCalledWith('ADMIN.SETTLEMENTS.DRIVER_CASH.ERROR.NOT_RETURNED');
+      expect((component as any).isDayReopening).toBeFalse();
+    });
   });
 });

@@ -34,6 +34,13 @@ const DRIVER_CASH_RETURN_ERROR_KEYS: Record<string, string> = {
   DRIVER_CASH_DAY_ALREADY_RETURNED: 'ADMIN.SETTLEMENTS.DRIVER_CASH.ERROR.ALREADY_RETURNED',
 };
 
+// OBRS-1579 — the one re-open refusal worth naming: the box is already OPEN,
+// so there is nothing to re-open and retrying can never help. Anything else
+// falls through to the generic failure line.
+const DRIVER_CASH_REOPEN_ERROR_KEYS: Record<string, string> = {
+  DRIVER_CASH_DAY_NOT_RETURNED: 'ADMIN.SETTLEMENTS.DRIVER_CASH.ERROR.NOT_RETURNED',
+};
+
 /**
  * OBRS-196 — per-round revenue settlement + owner cash-handover sign-off.
  *
@@ -92,6 +99,7 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
   protected dayModalDetail: DriverCashDayRespDto | null = null;
   protected isDayDetailFetching = false;
   protected isDayConfirming = false;
+  protected isDayReopening = false;
   protected dayDetailFetchError = '';
 
   private readonly dayDetailCache = new Map<number, DriverCashDayRespDto>();
@@ -551,6 +559,7 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
     this.openDayId = dayId;
     this.dayDetailFetchError = '';
     this.isDayConfirming = false;
+    this.isDayReopening = false;
 
     const cached = this.dayDetailCache.get(dayId);
     if (cached) {
@@ -597,6 +606,7 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
     this.dayModalDetail = null;
     this.isDayDetailFetching = false;
     this.isDayConfirming = false;
+    this.isDayReopening = false;
     this.dayDetailFetchError = '';
   }
 
@@ -652,6 +662,84 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
           const code = this.extractErrorCode(error);
           const message = this.translate.instant(
             mapApiErrorCode(code, DRIVER_CASH_RETURN_ERROR_KEYS, 'ADMIN.SETTLEMENTS.DRIVER_CASH.ERROR.RETURN_FAILED')
+          );
+          this.alertService.error(message);
+        },
+      });
+  }
+
+  /**
+   * OBRS-1579 — the owner re-opens a box that was already signed off, so the
+   * bill that reached the counter the morning after the round can be keyed
+   * against the round that actually incurred it.
+   *
+   * ⚠️ The re-opened day goes back into the list as OPEN. It was filtered OUT
+   * of the cached array by `requestDayReturn` above, so the row is put back
+   * from `dayModalSummary` rather than mapped in place - mapping alone would
+   * leave the owner's worklist showing nothing where a now-OPEN box belongs.
+   */
+  protected async requestDayReopen(reason: string): Promise<void> {
+    const id = this.openDayId;
+    const summary = this.dayModalSummary;
+    if (id === null || this.isDayReopening) {
+      return;
+    }
+
+    const confirmed = await this.alertService.confirm({
+      title: this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.REOPEN.CONFIRM_TITLE'),
+      text: this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.REOPEN.CONFIRM_TEXT'),
+      confirmButtonText: this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.REOPEN.CONFIRM_BTN'),
+      cancelButtonText: this.translate.instant('ADMIN.COMMON.CANCEL'),
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.isDayReopening = true;
+    this.adminApiService
+      .reopenDriverCashDay(id, { reason })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.isDayReopening = false;
+          const reopened = response.data ?? null;
+          if (!reopened) {
+            // No body to trust. Dropping the cache is not enough on its own:
+            // `dayModalDetail` is still bound to the RETURNED snapshot, so the
+            // owner would be left staring at a modal that says the box is
+            // still signed off while the list behind it has already moved.
+            // Re-fetching is what makes the screen say the truth.
+            this.dayDetailCache.delete(id);
+            void this.driverCashDaysStore.refresh();
+            if (this.openDayId === id) {
+              this.openDayDetail(id);
+            }
+            return;
+          }
+          this.dayDetailCache.set(id, reopened);
+          if (this.openDayId === id) {
+            this.dayModalDetail = reopened;
+          }
+          this.alertService.success(this.translate.instant('ADMIN.SETTLEMENTS.DRIVER_CASH.REOPEN.SUCCESS'));
+          this.driverCashDaysStore.mutate((current) => {
+            const row = current.find((i) => i.dayId === id);
+            if (row) {
+              return current.map((i) =>
+                i.dayId === id
+                  ? { ...i, status: reopened.status, returnedAmount: null, discrepancy: null }
+                  : i
+              );
+            }
+            return summary
+              ? [...current, { ...summary, status: reopened.status, returnedAmount: null, discrepancy: null }]
+              : current;
+          });
+        },
+        error: (error: unknown) => {
+          this.isDayReopening = false;
+          const code = this.extractErrorCode(error);
+          const message = this.translate.instant(
+            mapApiErrorCode(code, DRIVER_CASH_REOPEN_ERROR_KEYS, 'ADMIN.SETTLEMENTS.DRIVER_CASH.ERROR.REOPEN_FAILED')
           );
           this.alertService.error(message);
         },

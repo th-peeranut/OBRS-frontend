@@ -3,6 +3,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { toCents } from '../../../../../shared/lib/money-cents';
+import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
 
 /**
  * OBRS-960 — the field-expense categories a driver plausibly pays for AT
@@ -50,6 +51,12 @@ const OTHER_CATEGORY = 'OTHER';
     standalone: false
 })
 export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
+  /**
+   * OBRS-1579 — the business date of the cash box this entry lands in
+   * (`yyyy-MM-dd`), resolved by the panel. Null only while it is still being
+   * resolved, or when the schedule fetch failed.
+   */
+  @Input() businessDate: string | null = null;
   @Input() isSubmitting = false;
   @Input() submitError: string | null = null;
   @Output() submitExpense = new EventEmitter<{
@@ -70,6 +77,22 @@ export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
   protected amountInput = '';
   protected noteInput = '';
   protected otherLabelInput = '';
+  /**
+   * OBRS-1579 — the date printed on the bill in the salesperson's hand.
+   *
+   * ⛔ Deliberately NOT sent to the server and NOT persisted. The owner's
+   * ruling (2026-08-25) was one field, and what that field has to do is make
+   * the person LOOK at the bill's date before they key it: the driver's fuel
+   * bill reaches the counter the morning after the round it paid for, and
+   * nothing here used to say which day's box was about to receive it. Storing
+   * it would mean writing `expenses.expense_date`, which the OBRS-841 P&L
+   * groups on - a different, larger decision that was not asked for.
+   *
+   * Starts equal to the box's own date, so the ordinary same-day entry costs
+   * nobody a keystroke and the warning fires only when someone says the bill
+   * is from another day.
+   */
+  protected billDateInput = '';
 
   private readonly destroy$ = new Subject<void>();
 
@@ -93,6 +116,14 @@ export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    // Seed (and re-seed on a round change) from the box's own date. Never
+    // overwrites a date the user has already typed for THIS box.
+    if (changes['businessDate'] && this.businessDate) {
+      const previous = changes['businessDate'].previousValue as string | null;
+      if (this.billDateInput === '' || this.billDateInput === previous) {
+        this.billDateInput = this.businessDate;
+      }
+    }
     if (
       changes['isSubmitting'] &&
       changes['isSubmitting'].previousValue === true &&
@@ -103,7 +134,26 @@ export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
       this.amountInput = '';
       this.noteInput = '';
       this.otherLabelInput = '';
+      this.billDateInput = this.businessDate ?? '';
     }
+  }
+
+  /**
+   * OBRS-1579 — the whole point of the field. A WARNING, never a block: a bill
+   * from another day is sometimes exactly what is being keyed on purpose (the
+   * owner has re-opened that day's box and this is the correction). What must
+   * not happen is keying it without noticing.
+   */
+  protected get hasBillDateMismatch(): boolean {
+    return (
+      this.billDateInput !== '' &&
+      this.businessDate !== null &&
+      this.billDateInput !== this.businessDate
+    );
+  }
+
+  protected displayDate(value: string | null | undefined): string {
+    return formatDisplayDate(value, this.translate.currentLang);
   }
 
   protected get amountCents(): number | null {
