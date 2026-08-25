@@ -559,6 +559,12 @@
     "lane": "OWN-DB",
     "config": "playwright.obrs884.config.ts",
     "why": "OBRS-884. The screen's whole job is telling three different meanings of a THB 0 apart -- service window unknown, outside the service window with money attributed anyway, and a real zero -- which means all three states have to exist in ONE period at once. A shared fleet cannot be in three states on demand, so the premise is only constructible on a database this lane owns (obrs884qa, e2e/fixtures/obrs-884-pl-fixture.sql, every figure invented). It also downloads the pl-per-vehicle export from the SAME backend the screen just read and compares the file's cells to the DOM's, which is AC 4: VehiclePlExportParityIT proves the file matches the service, and only this proves it matches the screen. Never runnable against SIT -- the export dataset is on this card's backend branch, and SIT's in_service_from values are the owner's real (and still unknown) ones."
+  },
+  {
+    "spec": "obrs-1578-payee-spend-report.spec.ts",
+    "lane": "OWN-DB",
+    "config": "playwright.obrs1578capture.config.ts",
+    "why": "OBRS-1578. The report's two decisions only exist against a fleet whose spend has a particular SHAPE: the second-largest payee on record must have its only bill outside the current year (otherwise the every-year default looks like an arbitrary preference rather than the thing that keeps a supplier on screen), and some APPROVED money must belong to no payee at all (otherwise AC2's coverage banner has nothing to describe). Neither is orderable from a shared environment, so the lane provisions obrs1578qa from e2e/fixtures/obrs-1578-payee-spend-fixture.sql -- every name and figure invented, because this repository is public. OWN-DB and not CAPTURE even though it also saves the card's AFTER frames: it asserts the rendered period text, the payee ORDER, the unassigned row's presence and that a job billed twice is listed once, and it is expected to pass unattended. The screenshots are written only after those assertions, so an unasserted frame can never become the evidence. Never runnable against SIT -- the payee registry and the report endpoint are on this card's backend branch until it merges."
   }
   ]
 }
