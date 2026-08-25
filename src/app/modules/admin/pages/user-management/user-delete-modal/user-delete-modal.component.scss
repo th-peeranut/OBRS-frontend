@@ -1,3 +1,10 @@
 :host {
   display: block;
 }
+
+/* OBRS-653: the confirm now spells out what closing an account actually does,
+   so it carries a bullet list. `.admin-modal-subtitle` on the <ul> supplies the
+   colour and size; only the marker indent is not covered by it. */
+.user-close-points {
+  padding-left: 18px;
+}

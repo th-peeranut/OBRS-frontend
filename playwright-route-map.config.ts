@@ -8,6 +8,8 @@ import { defineConfig, devices } from '@playwright/test';
  * tests use Playwright HTTP route interception to mock the endpoint.
  */
 export default defineConfig({
+  // OBRS-1611: name the tree this run measures, and refuse a port another tree holds.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
   testDir: './e2e/tests',
   testMatch: '**/route-map.spec.ts',
   timeout: 90_000,

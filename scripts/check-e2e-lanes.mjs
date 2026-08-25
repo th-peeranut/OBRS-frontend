@@ -52,6 +52,15 @@
 //      Three configs read `E2E_GATE_PORT` and two of them defaulted to 4230, so setting
 //      the var to escape a collision moved two other lanes along with it.
 //
+//   7. Every root config that declares a `webServer` is wired to
+//      `e2e/support/lane-tree-guard.ts` (OBRS-1611). Rule 6 stops two DIFFERENT configs
+//      from claiming one port; it cannot see the other half, which is ONE config run from
+//      two worktrees at once -- the normal case at a parallel-session ceiling of 4. The
+//      guard names the tree that served the pages and refuses a port another tree holds;
+//      this rule is the bookkeeping that a config cannot quietly opt out of it. It exists
+//      because OBRS-1531 shipped that guard and reached 2 of 53 configs, and nothing
+//      noticed the other 34 for three days.
+//
 // Deliberate non-goal: this gate does NOT verify that a GATE spec actually mocks every
 // call it makes. It cannot -- that is a runtime property. `playwright.gate.config.ts`
 // verifies it instead, and does so far better than any static check could, by serving
@@ -132,6 +141,21 @@ const SHARED_PORT_ENV_OK = new Map([
   ],
   ['E2E_BACKEND_PORT', 'same family, same reason: there is one backend to point at.'],
 ]);
+
+
+// Rule 7 (OBRS-1611). "Wired to the guard" means a `globalSetup` that points at it or a
+// real `import` of it -- never a bare mention. Ten configs name playwright.gate.config.ts
+// in a COMMENT saying they copied its hermetic conditions, and reading those as wired is
+// the exact miscount that made the card's own first count of "11 covered" wrong.
+const WIRES_GUARD =
+  /globalSetup\s*:\s*(['"])[^'"]*lane-tree-guard[^'"]*\1|^\s*import\s[^\n]*(['"])[^'"]*lane-tree-guard[^'"]*\2/m;
+const HAS_WEBSERVER = /^\s*webServer\s*:/m;
+// A config may reach the guard through the file its own `globalSetup` names
+// (playwright.config.ts -> e2e/global-setup.ts) or by spreading a base config that wires
+// it (playwright.obrs769.config.ts -> playwright.gate.config.ts). Both are real wiring and
+// both are invisible to a grep of the config alone.
+const GLOBAL_SETUP_FILE = /globalSetup\s*:\s*(['"])\.\/([^'"]+)\1/;
+const BASE_IMPORT = /^\s*import\s+(\w+)\s+from\s+(['"])\.\/(playwright[^'"]+?)(?:\.ts)?\2/gm;
 
 const errors = [];
 const fail = (msg) => errors.push(msg);
@@ -399,6 +423,76 @@ for (const [port, uses] of byDefaultPort) {
       `with neither variable set: the second one to start reuses the first one's server and ` +
       `reports its tree as the result (OBRS-1531). Give one of them a free default.`
   );
+}
+
+// --- Rule 7: a webServer lane must be wired to the lane-tree guard (OBRS-1611) -------
+
+// The marker is read out of the guard instead of spelled again here: two copies of a
+// magic string is one copy that goes stale. A misspelt marker fails CLOSED -- the lane
+// refuses where it meant to attach -- which is a run somebody has to debug rather than a
+// silent picture of the wrong tree, so this check is about the debugging, not the safety.
+const GUARD_FILE = 'e2e/support/lane-tree-guard.ts';
+const attachMarker = existsSync(join(ROOT, GUARD_FILE))
+  ? readFileSync(join(ROOT, GUARD_FILE), 'utf8').match(
+      /ATTACH_TO_OPERATOR_STACK\s*=\s*(['"])([^'"]+)\1/
+    )?.[2]
+  : undefined;
+if (!attachMarker) {
+  fail(
+    `${GUARD_FILE} no longer exports ATTACH_TO_OPERATOR_STACK as a string literal, so this ` +
+      `gate cannot tell a declared attach lane from a typo. Restore it or delete rule 7 ` +
+      `deliberately -- do not leave the check reading undefined.`
+  );
+}
+
+function wiresGuard(file, seen = new Set()) {
+  if (seen.has(file)) return false;
+  seen.add(file);
+  const path = join(ROOT, file);
+  if (!existsSync(path)) return false;
+  const src = readFileSync(path, 'utf8');
+  if (WIRES_GUARD.test(src)) return true;
+
+  const named = src.match(GLOBAL_SETUP_FILE);
+  if (named) {
+    const target = named[2].endsWith('.ts') ? named[2] : `${named[2]}.ts`;
+    if (wiresGuard(target, seen)) return true;
+  }
+  // A spread only inherits globalSetup if this config does not set its own.
+  if (!/^\s*globalSetup\s*:/m.test(src)) {
+    for (const m of src.matchAll(BASE_IMPORT)) {
+      if (!new RegExp(`\\.\\.\\.${m[1]}\\b`).test(src)) continue;
+      if (wiresGuard(`${m[3]}.ts`, seen)) return true;
+    }
+  }
+  return false;
+}
+
+for (const file of readdirSync(ROOT)) {
+  if (!/^playwright.*\.config\.ts$/.test(file)) continue;
+  const src = readFileSync(join(ROOT, file), 'utf8');
+  if (!HAS_WEBSERVER.test(src)) continue;
+
+  if (!wiresGuard(file)) {
+    fail(
+      `${file} declares a webServer but nothing wires ${GUARD_FILE}. Locally ` +
+        `reuseExistingServer is on, so if another worktree already answers this lane's port ` +
+        `Playwright attaches to it and reports THAT tree's code as this lane's result, with ` +
+        `nothing in the output to say so (OBRS-773, OBRS-1531, OBRS-1611). Add ` +
+        `globalSetup: './${GUARD_FILE}' -- or, if this lane already owns a globalSetup, call ` +
+        `the guard from inside it the way e2e/global-setup.ts does.`
+    );
+  }
+
+  const declared = src.match(/\blaneTree\s*:\s*(['"])([^'"]*)\1/);
+  if (declared && attachMarker && declared[2] !== attachMarker) {
+    fail(
+      `${file} declares metadata.laneTree: '${declared[2]}', which the guard does not ` +
+        `recognise -- the only value is '${attachMarker}'. An unrecognised marker is read as ` +
+        `"guard me strictly", so this lane will refuse to run the moment the stack it means ` +
+        `to attach to is up.`
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
