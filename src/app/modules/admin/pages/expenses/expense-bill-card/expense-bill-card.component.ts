@@ -195,7 +195,7 @@ export function buildItemGroup(formBuilder: FormBuilder): FormGroup {
     description: ['', [Validators.required, Validators.maxLength(ITEM_DESCRIPTION_MAX_LENGTH)]],
     quantity: [null, [positiveAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)]],
     unitPrice: [null, [nonNegativeAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)]],
-    // OBRS-1576/V122: zero is allowed. A garage that does a job and does not charge for it writes
+    // OBRS-1576/V124: zero is allowed. A garage that does a job and does not charge for it writes
     // the line with nothing against it, and the alternatives were to drop the line or invent a
     // price — one loses the work, the other stops the bill matching the paper.
     amount: [null, [Validators.required, nonNegativeAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)]],

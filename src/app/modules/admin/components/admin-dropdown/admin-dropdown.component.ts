@@ -37,11 +37,14 @@ export class AdminDropdownComponent implements ControlValueAccessor {
    * OBRS-1576 AC5: turns the trigger into a text box you can type into, and makes the list
    * keyboard-navigable — Tab in, type to narrow, arrows to move, Enter to take it.
    *
-   * <p><b>Opt-in, and it has to be.</b> Measured 2026-08-23: this control is used at 66 places in 31
-   * files. Making search the default would change every one of them — including the many that offer
-   * three options, where a text cursor invites typing that nothing needs and a filtered-to-empty
-   * list is a state those screens never had. So the default path below is untouched: when this is
-   * false the component renders and behaves exactly as it did before this card.
+   * <p><b>Opt-in, and it has to be.</b> Measured on `origin/dev` 2026-08-25: **71** uses of this
+   * control, of which **21 pass no placeholder at all**. (The card's own "66 in 31 files" is the
+   * 2026-08-23 count; `dev` has moved since, and quoting the older number as if it were current is
+   * how a stale measurement gets a second life.) Making search the default would change every one of
+   * them — including the many that offer three options, where a text cursor invites typing that
+   * nothing needs and a filtered-to-empty list is a state those screens never had. So the default
+   * path below is untouched: when this is false the component renders and behaves exactly as it did
+   * before this card.
    *
    * <p>What it is FOR is not "the list is long". The owner sits with a paper bill in one hand, so
    * the cost that matters is taking the other hand off the keyboard to reach the mouse — which is
@@ -211,8 +214,19 @@ export class AdminDropdownComponent implements ControlValueAccessor {
     }
   }
 
+  /**
+   * OBRS-1576 scrutinize fix: gated on `searchable`. `toggleDropdown()` (the non-searchable
+   * button's own click handler) sets `activeIndex` via `firstActiveIndex` on every open, and
+   * `firstActiveIndex` falls through to `0` whenever `placeholder` is unset — true for 21 of the
+   * 66 pre-existing call sites (measured: `grep` for `<app-admin-dropdown` blocks with no
+   * `[placeholder]` binding). Without this gate those 21 sites would highlight their first option
+   * with the new `.is-active` wash the instant they open, which is not "byte-identical to before
+   * this card" — the claim the opt-in `searchable` flag exists to keep true. The keyboard highlight
+   * itself is a `searchable`-only feature (a plain `<button>` has no arrow-key handler to move
+   * `activeIndex` off its initial value), so gating here costs the searchable path nothing.
+   */
   protected isActive(index: number): boolean {
-    return this.isOpen && this.activeIndex === index;
+    return this.searchable && this.isOpen && this.activeIndex === index;
   }
 
   /**

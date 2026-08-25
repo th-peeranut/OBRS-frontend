@@ -61,7 +61,7 @@ describe('ExpenseBillCardComponent', () => {
     expect(bill.get('amount')).toBeNull();
   });
 
-  // OBRS-1576/V122. Measured on the owner's own bill (OBRS-1578, 2026-08-24): bill 2 line 4 has no
+  // OBRS-1576/V124. Measured on the owner's own bill (OBRS-1578, 2026-08-24): bill 2 line 4 has no
   // money against it. Under `> 0` that whole bill could not be typed in at all.
   it('accepts a line worth 0.00', () => {
     const { bill } = makeComponent();

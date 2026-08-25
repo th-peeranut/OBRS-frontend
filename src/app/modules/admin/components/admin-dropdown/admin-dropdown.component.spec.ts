@@ -44,7 +44,7 @@ describe('AdminDropdownComponent', () => {
 
   // OBRS-1576 AC5. The 66 existing call sites do not pass [searchable], and this is the test that
   // says so: every assertion below describes the control as it behaved before this card.
-  describe('when [searchable] is not set (the 66 existing call sites)', () => {
+  describe('when [searchable] is not set (the 71 existing call sites)', () => {
     beforeEach(() => {
       component.valueKey = 'code';
       component.options = [
@@ -55,6 +55,29 @@ describe('AdminDropdownComponent', () => {
 
     it('offers every option, unfiltered', () => {
       expect(component['visibleOptions']).toEqual(component.options);
+    });
+
+    /**
+     * The regression scrutinize caught and this block had missed, because every case above happens
+     * to set a placeholder.
+     *
+     * `toggleDropdown()` is shared by BOTH triggers and unconditionally seeds `activeIndex`;
+     * `firstActiveIndex` falls through to 0 when `placeholder` is '' — the default, and true for
+     * **21 of the 71** uses of this control on `origin/dev` (measured 2026-08-25). With `isActive()`
+     * ungated, those 21 dropdowns would paint the new `.is-active` wash on their first option the
+     * instant they opened: a visible change on screens this card never meant to touch.
+     */
+    it('never paints the keyboard highlight, not even with no placeholder to sit on', () => {
+      component.placeholder = '';
+
+      component['toggleDropdown']();
+
+      expect(component['activeIndex'])
+        .withContext('the shared open path still seeds it; that is fine, PAINTING it is not')
+        .toBe(0);
+      expect(component['isActive'](0))
+        .withContext('un-gate isActive() and 21 existing dropdowns highlight their first row on open')
+        .toBeFalse();
     });
 
     // The query is only ever set by the searchable trigger, which these call sites do not render;
