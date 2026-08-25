@@ -980,12 +980,18 @@ function parcelPolicyFingerprint(json) {
 //    Asserted as a property that must HOLD, not as a denylist of characters seen once:
 //    in this bundle a question mark is punctuation, so it always ENDS a clause. It never
 //    sits glued between two letters and it never opens a segment the way a bullet does.
-//    Measured on the fixed bundle: 0 violations across 3 x 3,498 keys, so the property is
+//    Measured on the fixed bundle: 0 violations across 3 x 3,458 keys, so the property is
 //    true today and any new one is a regression, not a pre-existing exception.
+//    Both shapes were tightened by scrutinize, each for a case it got wrong:
+//    digits are IN the glued class because policy text is full of them and "the 1990?s
+//    rate" would otherwise pass; the bullet shape anchors on `&emsp;` rather than on any
+//    `;` because `&nbsp;` ends in `;` too, so "Are you sure&nbsp;? Click yes." was a
+//    false CI failure waiting for whoever writes that sentence. The bundle indents every
+//    list item with `&emsp;`, so nothing real is lost by naming it.
 // Escapes, not literals: this file is ASCII apart from the historical strings in gate 3.
-const LETTER = 'A-Za-z\\u0E00-\\u0E7F\\u4E00-\\u9FFF';
+const LETTER = 'A-Za-z0-9\\u0E00-\\u0E7F\\u4E00-\\u9FFF';
 const MOJIBAKE_GLUED = new RegExp(`[${LETTER}]\\?[${LETTER}]`);
-const MOJIBAKE_AS_BULLET = /(^|>|;)\s*\?\s/;
+const MOJIBAKE_AS_BULLET = /(^|>|&emsp;)\s*\?\s/;
 
 /** Flatten a translation object into [dotted key, string value] pairs. */
 function flattenValues(obj, prefix = '', out = []) {
@@ -1005,7 +1011,7 @@ for (const lang of LANGS) {
     }
     const glued = value.match(MOJIBAKE_GLUED);
     if (glued) {
-      problems.push(`[${lang}] ${key} has "${glued[0]}" -- a "?" between two letters is a lost apostrophe or dash, not punctuation (OBRS-566)`);
+      problems.push(`[${lang}] ${key} has "${glued[0]}" -- a "?" wedged between two word characters is a lost apostrophe or dash, not punctuation (OBRS-566)`);
     }
     if (MOJIBAKE_AS_BULLET.test(value)) {
       problems.push(`[${lang}] ${key} opens a segment with "? " -- that is a lost bullet U+2022, which the other languages still have (OBRS-566)`);
