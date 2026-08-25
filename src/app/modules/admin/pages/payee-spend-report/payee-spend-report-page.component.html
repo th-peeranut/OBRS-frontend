@@ -10,64 +10,57 @@
   </section>
 }
 
+<!-- app-admin-dropdown, not a raw <select> (design-system.md 3.1): the empty selection is the
+component's own placeholder-header row, which is exactly what "every year" is here — a real choice
+that happens to be the resting state, not an unmade one. -->
 <section class="admin-page-filters mt-3">
-  <label class="payee-spend-field">
-    <span class="payee-spend-field-label">{{ 'ADMIN.PAYEE_SPEND_REPORT.FILTER_YEAR' | translate }}</span>
-    <select
-      id="payeeSpendYear"
-      class="admin-input"
-      [ngModel]="selectedYear"
-      (ngModelChange)="onYearChange($event)"
-      name="payeeSpendYear"
-    >
-      <!-- First and default. Every other option prints what choosing it would drop. -->
-      <option [value]="noFilter">{{ 'ADMIN.PAYEE_SPEND_REPORT.YEAR_ALL' | translate }}</option>
-      @for (option of report?.yearOptions ?? []; track option.year) {
-        <option [value]="option.year">
-          {{ yearOptionLabel(option.year, option.billCount, option.totalAmount) }}
-        </option>
-      }
-    </select>
-  </label>
+  <app-admin-dropdown
+    [value]="selectedYear"
+    [options]="yearOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.PAYEE_SPEND_REPORT.FILTER_YEAR' | translate"
+    (valueChange)="onYearChange($event)"
+  ></app-admin-dropdown>
 
-  <label class="payee-spend-field">
-    <span class="payee-spend-field-label">{{ 'ADMIN.PAYEE_SPEND_REPORT.FILTER_MONTH' | translate }}</span>
-    <select
-      id="payeeSpendMonth"
-      class="admin-input"
-      [ngModel]="selectedMonth"
-      (ngModelChange)="onMonthChange($event)"
-      [disabled]="isMonthDisabled"
-      name="payeeSpendMonth"
-    >
-      <option [value]="noFilter">{{ 'ADMIN.PAYEE_SPEND_REPORT.MONTH_ALL' | translate }}</option>
-      @for (month of monthNumbers; track month) {
-        <option [value]="month">{{ 'ADMIN.PAYEE_SPEND_REPORT.MONTHS.' + month | translate }}</option>
-      }
-    </select>
-    @if (isMonthDisabled) {
-      <small class="admin-muted payee-spend-field-hint">
-        {{ 'ADMIN.PAYEE_SPEND_REPORT.MONTH_NEEDS_YEAR' | translate }}
-      </small>
-    }
-  </label>
+  <app-admin-dropdown
+    [value]="selectedMonth"
+    [options]="monthOptions"
+    valueKey="code"
+    labelKey="label"
+    [disabled]="isMonthDisabled"
+    [placeholder]="'ADMIN.PAYEE_SPEND_REPORT.FILTER_MONTH' | translate"
+    (valueChange)="onMonthChange($event)"
+  ></app-admin-dropdown>
 
-  <label class="payee-spend-field">
-    <span class="payee-spend-field-label">{{ 'ADMIN.PAYEE_SPEND_REPORT.FILTER_CATEGORY' | translate }}</span>
-    <select
-      id="payeeSpendCategory"
-      class="admin-input"
-      [ngModel]="selectedCategory"
-      (ngModelChange)="onCategoryChange($event)"
-      name="payeeSpendCategory"
-    >
-      <option [value]="noFilter">{{ 'ADMIN.PAYEE_SPEND_REPORT.CATEGORY_ALL' | translate }}</option>
-      @for (code of categoryCodes; track code) {
-        <option [value]="code">{{ 'ADMIN.EXPENSES.CATEGORIES.' + code | translate }}</option>
-      }
-    </select>
-  </label>
+  <app-admin-dropdown
+    [value]="selectedCategory"
+    [options]="categoryOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.PAYEE_SPEND_REPORT.FILTER_CATEGORY' | translate"
+    (valueChange)="onCategoryChange($event)"
+  ></app-admin-dropdown>
 </section>
+
+<!-- The window in words. The dropdowns carry their FIELD NAMES as placeholders (3.1 rule 2), so
+without this line the resting state would show "ปี" and leave the reader to infer that nothing
+selected means everything — the one inference this report cannot afford. -->
+<p class="payee-spend-period mt-2">
+  @if (isMonthDisabled) {
+    {{ 'ADMIN.PAYEE_SPEND_REPORT.PERIOD_ALL' | translate }}
+  } @else if (store.filter.month === null) {
+    {{ 'ADMIN.PAYEE_SPEND_REPORT.PERIOD_YEAR' | translate: { year: store.filter.year } }}
+  } @else {
+    {{
+      'ADMIN.PAYEE_SPEND_REPORT.PERIOD_YEAR_MONTH'
+        | translate: { year: store.filter.year, month: monthLabel(store.filter.month) }
+    }}
+  }
+  @if (isMonthDisabled) {
+    <span class="admin-muted"> · {{ 'ADMIN.PAYEE_SPEND_REPORT.MONTH_NEEDS_YEAR' | translate }}</span>
+  }
+</p>
 
 <!-- Why a bill total cannot answer "did this garage put its prices up" — said on the screen, not
 left in a Jira comment, because the chart that WOULD look like an answer is the one thing this

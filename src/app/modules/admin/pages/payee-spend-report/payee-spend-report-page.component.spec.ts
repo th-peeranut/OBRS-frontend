@@ -2,6 +2,7 @@ import { BehaviorSubject } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
 import { PayeeSpendReportPageComponent } from './payee-spend-report-page.component';
 import { PayeeSpendReportStore } from './payee-spend-report.store';
@@ -11,6 +12,7 @@ import {
 } from '../../../../shared/interfaces/payee-spend-report.interface';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
+import { AdminDropdownComponent } from '../../components/admin-dropdown/admin-dropdown.component';
 
 function payeeRow(overrides: Partial<PayeeSpendRowDto> = {}): PayeeSpendRowDto {
   return {
@@ -124,38 +126,66 @@ describe('PayeeSpendReportPageComponent', () => {
     expect(fixture.nativeElement.querySelector('.payee-spend-coverage')).toBeNull();
   });
 
-  it('offers every year first and prints what each year would cost to choose', () => {
+  /** The filter row, in template order: year, month, category. */
+  function dropdowns(): AdminDropdownComponent[] {
+    return fixture.debugElement
+      .queryAll(By.directive(AdminDropdownComponent))
+      .map((element) => element.componentInstance as AdminDropdownComponent);
+  }
+
+  // design-system.md 3.1: every filter is the shared dropdown, whose placeholder-header row IS the
+  // no-filter choice. A raw <select> here would be the one on the console that looks different.
+  it('builds all three filters from the shared admin dropdown', () => {
     renderReport(makeReport());
 
-    const options = fixture.nativeElement.querySelectorAll('#payeeSpendYear option');
-    expect(options.length).toBe(3);
-    expect(options[0].value).toBe('');
-    expect(options[1].value).toContain('2026');
+    expect(dropdowns().length).toBe(3);
+  });
+
+  it('turns every year in the response into an option', () => {
+    renderReport(makeReport());
+
+    const yearOptions = dropdowns()[0].options as { code: string; label: string }[];
+    expect(yearOptions.map((option) => option.code)).toEqual(['2026', '2025']);
+  });
+
+  // The label is what makes narrowing an informed choice — it has to carry the bill count and the
+  // money, not just the year. Asserted on the interpolation PARAMS, because the test bundle has no
+  // translations loaded and every key resolves to itself.
+  it('hands the year label its bill count and its money', () => {
+    const translate = createTranslateStub();
+    spyOn(translate, 'instant').and.callThrough();
+    const component = new PayeeSpendReportPageComponent(storeStub as never, translate);
+
+    component['yearOptionLabel'](2026, 5, '16559.00');
+
+    expect(translate.instant).toHaveBeenCalledWith(
+      'ADMIN.PAYEE_SPEND_REPORT.YEAR_OPTION',
+      jasmine.objectContaining({ year: 2026, count: 5 })
+    );
   });
 
   // The ruling of 2026-08-25: "January of every year" is not a report this screen produces.
-  //
-  // Awaited, because `[disabled]` next to `ngModel` binds NgModel's own `disabled` INPUT rather
-  // than the DOM property, and NgModel applies it through the form control on a resolved promise —
-  // so one detectChanges() is genuinely too early to read `select.disabled` and asserting there
-  // would pass or fail on timing rather than on behaviour.
-  it('leaves the month control inert while every year is selected', async () => {
+  it('leaves the month control inert while every year is selected', () => {
     renderReport(makeReport());
-    await fixture.whenStable();
-    fixture.detectChanges();
 
-    const month: HTMLSelectElement = fixture.nativeElement.querySelector('#payeeSpendMonth');
-    expect(month.disabled).toBeTrue();
+    expect(dropdowns()[1].disabled).toBeTrue();
   });
 
-  it('enables the month control once a year is picked', async () => {
+  it('enables the month control once a year is picked', () => {
     storeStub.filter = { year: 2026, month: null, category: null };
     renderReport(makeReport({ year: 2026 }));
-    await fixture.whenStable();
-    fixture.detectChanges();
 
-    const month: HTMLSelectElement = fixture.nativeElement.querySelector('#payeeSpendMonth');
-    expect(month.disabled).toBeFalse();
+    expect(dropdowns()[1].disabled).toBeFalse();
+  });
+
+  // The dropdowns show their FIELD NAMES when nothing is chosen, so this line is the only place the
+  // reader is told that "nothing chosen" means "everything".
+  it('spells out the active window in words', () => {
+    renderReport(makeReport());
+
+    expect(fixture.nativeElement.querySelector('.payee-spend-period').textContent).toContain(
+      'PERIOD_ALL'
+    );
   });
 
   it('passes a chosen year to the store as a number, and every-year as null', () => {

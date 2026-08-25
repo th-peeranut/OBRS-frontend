@@ -1977,10 +1977,8 @@
     "PAYEE_SPEND_REPORT": {
       "SUBTITLE": "按收款方统计的支出——修车厂、加油站及其他收款方",
       "FILTER_YEAR": "年份",
-      "YEAR_ALL": "全部年份",
       "YEAR_OPTION": "{{year}} · {{count}} 张单据 · {{amount}}",
       "FILTER_MONTH": "月份",
-      "MONTH_ALL": "全年",
       "MONTH_NEEDS_YEAR": "请先选择年份，再选择月份",
       "MONTHS": {
         "1": "一月",
@@ -1997,7 +1995,6 @@
         "12": "十二月"
       },
       "FILTER_CATEGORY": "支出类别",
-      "CATEGORY_ALL": "全部",
       "SCOPE_NOTE": "本页回答钱付给了谁，不回答修车厂是否涨价——同一家修车厂的两张单据是不同的工作，金额无法直接比较。",
       "LOAD_FAILED": "加载报表失败，请重试。",
       "EMPTY": "所选期间没有支出",
@@ -2010,7 +2007,10 @@
       "COL_TOTAL": "合计",
       "UNASSIGNED": "未记录收款方",
       "UNASSIGNED_HINT": "系统尚无此字段时录入的单据",
-      "TOTAL_ROW": "总计"
+      "TOTAL_ROW": "总计",
+      "PERIOD_ALL": "当前显示：全部年份",
+      "PERIOD_YEAR": "当前显示：{{year}} 年全年",
+      "PERIOD_YEAR_MONTH": "当前显示：{{year}} 年 {{month}}"
     },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "按车辆统计的损益，来自车票收入与已记录的支出。",

@@ -7,11 +7,16 @@ import {
   PayeeSpendReportDto,
   PayeeSpendRowDto,
 } from '../../../../shared/interfaces/payee-spend-report.interface';
-import { EXPENSE_CATEGORY_CODES } from '../expenses/expenses-page.mappers';
+import { EXPENSE_CATEGORY_CODES, Option } from '../expenses/expenses-page.mappers';
 import { formatMoney } from '../../../../shared/lib/money-display';
 
-/** The `<select>` value that means "no filter" — an empty option value, not a magic number. */
+/**
+ * The dropdown value that means "no filter". `app-admin-dropdown` emits the empty string for its
+ * placeholder-header row, so this is that row — not a sentinel of our own invention.
+ */
 const NO_FILTER = '';
+
+const MONTH_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 /**
  * OBRS-1578 — the screen for `GET /admin/reports/expense-by-payee`. Structurally a sibling of
@@ -45,9 +50,12 @@ export class PayeeSpendReportPageComponent implements OnInit, OnDestroy {
   protected loadError = '';
 
   protected readonly skeletonRows = Array.from({ length: 5 });
-  protected readonly categoryCodes = EXPENSE_CATEGORY_CODES;
-  protected readonly monthNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-  protected readonly noFilter = NO_FILTER;
+
+  // Built once per language rather than in a getter: `app-admin-dropdown` takes an array input, and
+  // rebuilding it on every change-detection pass would hand the component a new identity each time.
+  protected yearOptions: Option[] = [];
+  protected monthOptions: Option[] = [];
+  protected categoryOptions: Option[] = [];
 
   private readonly destroy$ = new Subject<void>();
 
@@ -59,6 +67,10 @@ export class PayeeSpendReportPageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       this.report = data;
+      this.yearOptions = (data?.yearOptions ?? []).map((option) => ({
+        code: String(option.year),
+        label: this.yearOptionLabel(option.year, option.billCount, option.totalAmount),
+      }));
     });
     this.store.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((refreshing) => {
       this.isRefreshing = refreshing;
@@ -68,6 +80,15 @@ export class PayeeSpendReportPageComponent implements OnInit, OnDestroy {
         ? this.translate.instant('ADMIN.PAYEE_SPEND_REPORT.LOAD_FAILED')
         : '';
     });
+
+    this.monthOptions = MONTH_NUMBERS.map((month) => ({
+      code: String(month),
+      label: this.monthLabel(month),
+    }));
+    this.categoryOptions = EXPENSE_CATEGORY_CODES.map((code) => ({
+      code,
+      label: this.translate.instant(`ADMIN.EXPENSES.CATEGORIES.${code}`),
+    }));
 
     void this.store.refresh();
   }
@@ -151,6 +172,10 @@ export class PayeeSpendReportPageComponent implements OnInit, OnDestroy {
   /** The bill's own words, joined — never re-interpreted into parts (that is OBRS-1613). */
   protected workText(row: PayeeSpendRowDto): string {
     return row.workDone.join(' · ');
+  }
+
+  protected monthLabel(month: number): string {
+    return this.translate.instant(`ADMIN.PAYEE_SPEND_REPORT.MONTHS.${month}`);
   }
 
   protected yearOptionLabel(year: number, billCount: number, totalAmount: string): string {

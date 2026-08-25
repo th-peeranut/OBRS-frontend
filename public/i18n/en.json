@@ -1977,10 +1977,8 @@
     "PAYEE_SPEND_REPORT": {
       "SUBTITLE": "Spend grouped by who received the money — garages, fuel stations and other payees",
       "FILTER_YEAR": "Year",
-      "YEAR_ALL": "Every year",
       "YEAR_OPTION": "{{year}} · {{count}} bills · {{amount}}",
       "FILTER_MONTH": "Month",
-      "MONTH_ALL": "Whole year",
       "MONTH_NEEDS_YEAR": "Pick a year before picking a month",
       "MONTHS": {
         "1": "January",
@@ -1997,7 +1995,6 @@
         "12": "December"
       },
       "FILTER_CATEGORY": "Expense category",
-      "CATEGORY_ALL": "All",
       "SCOPE_NOTE": "This screen says where the money went, not whether a garage put its prices up — two bills from one garage are different work, so their totals are not comparable.",
       "LOAD_FAILED": "Could not load the report. Please try again.",
       "EMPTY": "No expenses in the selected period",
@@ -2010,7 +2007,10 @@
       "COL_TOTAL": "Total",
       "UNASSIGNED": "No payee on record",
       "UNASSIGNED_HINT": "Bills entered before this field existed",
-      "TOTAL_ROW": "Total"
+      "TOTAL_ROW": "Total",
+      "PERIOD_ALL": "Showing: every year",
+      "PERIOD_YEAR": "Showing: {{year}}, whole year",
+      "PERIOD_YEAR_MONTH": "Showing: {{month}} {{year}}"
     },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "Profit and loss for each vehicle, from ticket revenue and the recorded costs.",

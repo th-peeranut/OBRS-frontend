@@ -1,20 +1,12 @@
 // OBRS-1578. Everything here reads its colours from the admin theme tokens, so the page follows
 // light/dark with the rest of the console and nothing needs a second definition.
 
-.payee-spend-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 12rem;
-}
-
-.payee-spend-field-label {
-  font-size: 0.8125rem;
-  color: var(--admin-text-muted);
-}
-
-.payee-spend-field-hint {
-  font-size: 0.75rem;
+// The active window, spelled out. The filters carry their field names as placeholders (design
+// system 3.1), so this is where the reader learns that nothing selected means everything.
+.payee-spend-period {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .payee-spend-scope-note {
