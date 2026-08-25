@@ -1237,6 +1237,41 @@ export interface CreateExpensePayeePayload {
   type: 'GARAGE' | 'FUEL_STATION' | 'OTHER';
 }
 
+/**
+ * OBRS-1613: one row of the parts/labour registry — the vocabulary a maintenance plan and a repair
+ * bill BOTH draw from, which is the whole point (`V113__create_expense_items.sql` wrote down why:
+ * two lists in one system means "how many times did I change the brake pads" has two answers).
+ *
+ * <p>`code` is the field with the rule on it. The 13 rows V125 seeded per owner carry their old
+ * `EMaintenancePart` code, and that code is still the i18n key
+ * (`ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.*`) — so a row is translated if and only if `code` is
+ * non-null. Anything the owner typed has `code: null` and is shown verbatim in Thai on every
+ * locale, which is the owner's 2026-08-25 ruling. There is no third state and no per-row
+ * "translate me" flag to drift.
+ *
+ * <p>⚠️ Renaming a seeded row CLEARS its code server-side, permanently: the translations describe
+ * the old spelling and would be a lie against the new one. A screen offering rename on a seeded row
+ * is offering to discard its en/zh names, and has to say so.
+ */
+export interface AdminMaintenancePartDto {
+  id: number;
+  code: string | null;
+  name: string;
+  kind: 'PART' | 'LABOUR';
+  active: boolean;
+}
+
+/**
+ * OBRS-1613: `MaintenancePartReqDto` — the body for create and for rename.
+ *
+ * <p>No `code`, deliberately, and not an oversight to fix later: a caller that could set one would
+ * point a made-up entry at a translation key it has no relation to. Only the V125 seed writes codes.
+ */
+export interface CreateMaintenancePartPayload {
+  name: string;
+  kind: 'PART' | 'LABOUR';
+}
+
 /** OBRS-809: one operator, as returned by `GET /api/private/owners`.
  *
  * That endpoint is `@PreAuthorize("hasRole('ADMIN')")` — the reverse of nearly
@@ -2552,6 +2587,78 @@ export class AdminApiService {
   setExpensePayeeActive(id: number, active: boolean): Observable<ResponseAPI<unknown>> {
     return this.patchRequest<unknown>(
       `${this.baseUrl}/private/expense-payees/${id}/active`,
+      { active }
+    );
+  }
+
+  // ── OBRS-1613: the parts/labour registry ──
+
+  /**
+   * OBRS-1613. `includeInactive` separates the two callers exactly as it does for payees: a picker
+   * leaves it false and never offers an entry the owner retired, the registry screen sets it true
+   * because a screen that cannot see a retired row cannot un-retire it.
+   *
+   * <p>Merged rows are never returned on any of these calls — the server filters
+   * `merged_into_id IS NULL` everywhere — so no caller has to know the column exists.
+   */
+  getMaintenanceParts(
+    kind: AdminMaintenancePartDto['kind'] | null,
+    includeInactive = false
+  ): Observable<ResponseAPI<AdminMaintenancePartDto[]>> {
+    let params = new HttpParams();
+    if (kind) {
+      params = params.set('kind', kind);
+    }
+    if (includeInactive) {
+      params = params.set('includeInactive', 'true');
+    }
+    return this.getRequest<AdminMaintenancePartDto[]>(
+      `${this.baseUrl}/private/maintenance-parts`,
+      params
+    );
+  }
+
+  /**
+   * OBRS-1613: 200, not 201, and it returns the ROW — same shape as `createExpensePayee`. The
+   * endpoint is idempotent by normalized name, so asking for an entry that already exists hands back
+   * the one that exists rather than failing in the middle of writing a bill. A retired match is
+   * REACTIVATED and returned with its seeded `code` intact.
+   *
+   * <p>The one case that is a real error is a name that exists under the OTHER kind: one name cannot
+   * be both a part and a labour item, so that is a 409 and the registry screen is where it is sorted
+   * out.
+   */
+  createMaintenancePart(
+    payload: CreateMaintenancePartPayload
+  ): Observable<ResponseAPI<AdminMaintenancePartDto>> {
+    return this.postRequest<AdminMaintenancePartDto>(
+      `${this.baseUrl}/private/maintenance-parts`,
+      payload
+    );
+  }
+
+  /**
+   * OBRS-1613: rename, and change of kind on the same call. Every plan and every bill line follows
+   * it, because those rows hold this entry's id and never its spelling — which is the whole reason
+   * the FK exists.
+   *
+   * <p>⚠️ Two things this call does that the payload does not show: renaming onto a name already in
+   * the registry is a 409 and NOT a merge (merging re-points one entry's price history onto another
+   * with no undo, so it is its own deliberate action); and renaming a SEEDED row clears its `code`,
+   * dropping the en/zh translations for good.
+   */
+  updateMaintenancePart(
+    id: number,
+    payload: CreateMaintenancePartPayload
+  ): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/maintenance-parts/${id}`, payload);
+  }
+
+  /** OBRS-1613: retire/restore. No DELETE, for the payee registry's reason: this row is the only
+   * record tying every plan and every bill line that used it together. */
+  setMaintenancePartActive(id: number, active: boolean): Observable<ResponseAPI<unknown>> {
+    return this.patchRequest<unknown>(
+      `${this.baseUrl}/private/maintenance-parts/${id}/active`,
       { active }
     );
   }
