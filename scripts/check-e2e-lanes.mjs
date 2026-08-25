@@ -44,6 +44,14 @@
 //      does not aim the event; it deletes the check that the click reached what it
 //      names. OBRS-750 spent a card and a wrong diagnosis on exactly that.
 //
+//   6. No two root configs read the same port env var, and no two default to the same
+//      port -- unless the sharing is declared in SHARED_PORT_ENV_OK with a reason
+//      (OBRS-1531). This is not tidiness. `webServer.reuseExistingServer` is `!CI`, so
+//      locally the second lane to start gets no port-in-use error: it attaches to the
+//      first one's dev server and reports THAT tree's code as its own result, silently.
+//      Three configs read `E2E_GATE_PORT` and two of them defaulted to 4230, so setting
+//      the var to escape a collision moved two other lanes along with it.
+//
 // Deliberate non-goal: this gate does NOT verify that a GATE spec actually mocks every
 // call it makes. It cannot -- that is a runtime property. `playwright.gate.config.ts`
 // verifies it instead, and does so far better than any static check could, by serving
@@ -57,6 +65,11 @@
 //     shape is reported as a parse failure rather than passed over silently.
 //   - Rule 3 matches Windows drive-letter and POSIX `/Users|/home` roots. A path built
 //     at runtime by string concatenation is not caught.
+//   - Rule 6 reads only `process.env['X'] ?? 'NNNN'` declarations. A config that
+//     hardcodes `--port 4200` states no variable and is not compared -- and about ten
+//     of them do, all pointing at a hand-started server whose CORS allow-list pins that
+//     exact origin. Those lanes cannot be moved by an env var, which is why they are
+//     out of scope here rather than silently exempted.
 //   - Lane correctness is not checked. Nothing here can tell you a spec labelled
 //     SIT-LIVE would really pass on SIT; the label records intent, and intent is what
 //     was missing.
@@ -102,6 +115,23 @@ const FORCED_POINTER = /\b(click|dblclick|hover|tap|check|uncheck|selectOption|d
 // spot-fixing the named one would have left the family intact. Any new root config must
 // declare a testMatch (or be listed here with a reason).
 const CONFIGS_WITHOUT_TESTMATCH_OK = new Set([]);
+
+// Rule 6 (OBRS-1531). `const PORT = process.env['NAME'] ?? '4230'` -- the one shape
+// every config in this repo uses to declare a movable port.
+const PORT_ENV_DECL = /process\.env\[(['"])([A-Za-z0-9_]+)\1\]\s*\?\?\s*(['"])(\d{2,5})\3/g;
+
+// Sharing that is a decision, not an accident. A var listed here may be read by any
+// number of configs, and those configs may share a default port with each other.
+const SHARED_PORT_ENV_OK = new Map([
+  [
+    'E2E_FRONTEND_PORT',
+    'the full-local-stack family (local, obrs483, obrs577, obrs732, obrs884, obrs1456). ' +
+      'Every one of them talks to a hand-started backend on E2E_BACKEND_PORT, and ' +
+      '`environment.e2e.ts` pins `apiUrl` to that one port -- so two of these lanes can ' +
+      'never be up at the same time whatever their frontend port says.',
+  ],
+  ['E2E_BACKEND_PORT', 'same family, same reason: there is one backend to point at.'],
+]);
 
 const errors = [];
 const fail = (msg) => errors.push(msg);
@@ -321,6 +351,54 @@ for (const file of readdirSync(ROOT)) {
         `once. Give it a testMatch (deriving from e2e/lanes.json is fine) or delete it.`
     );
   }
+}
+
+// --- Rule 6: one lane, one port env var, one default (OBRS-1531) ---------------------
+
+const byEnvVar = new Map(); // VAR -> [{ file, port }]
+for (const file of readdirSync(ROOT)) {
+  if (!/^playwright.*\.config\.ts$/.test(file)) continue;
+  const src = readFileSync(join(ROOT, file), 'utf8');
+  for (const m of src.matchAll(PORT_ENV_DECL)) {
+    if (!byEnvVar.has(m[2])) byEnvVar.set(m[2], []);
+    byEnvVar.get(m[2]).push({ file, port: m[4] });
+  }
+}
+
+for (const [envVar, uses] of byEnvVar) {
+  if (uses.length > 1 && !SHARED_PORT_ENV_OK.has(envVar)) {
+    fail(
+      `${uses.map((u) => u.file).join(', ')} all read process.env['${envVar}']. Setting it ` +
+        `to move one lane off a busy port moves the others too, and reuseExistingServer is ` +
+        `on locally, so the one you were not thinking about attaches to somebody else's dev ` +
+        `server instead of failing (OBRS-773). Give each lane its own variable, or add ` +
+        `'${envVar}' to SHARED_PORT_ENV_OK with the reason the sharing is deliberate.`
+    );
+  }
+}
+
+// A default port is what the lane actually uses, because the documented way to run any
+// of these is with no variable set at all.
+const byDefaultPort = new Map(); // '4230' -> [{ file, envVar }]
+for (const [envVar, uses] of byEnvVar) {
+  for (const u of uses) {
+    if (!byDefaultPort.has(u.port)) byDefaultPort.set(u.port, []);
+    byDefaultPort.get(u.port).push({ file: u.file, envVar });
+  }
+}
+
+for (const [port, uses] of byDefaultPort) {
+  if (uses.length < 2) continue;
+  // Two configs may land on one default only through a var that is declared shared --
+  // which is the claim that they can never be up together.
+  const vars = new Set(uses.map((u) => u.envVar));
+  if (vars.size === 1 && SHARED_PORT_ENV_OK.has([...vars][0])) continue;
+  fail(
+    `${uses.map((u) => `${u.file} (${u.envVar})`).join(', ')} all default to port ${port}. ` +
+      `Separate variables do not separate the lanes when both are run the documented way, ` +
+      `with neither variable set: the second one to start reuses the first one's server and ` +
+      `reports its tree as the result (OBRS-1531). Give one of them a free default.`
+  );
 }
 
 // ---------------------------------------------------------------------------

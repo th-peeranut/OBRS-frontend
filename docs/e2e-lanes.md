@@ -285,6 +285,51 @@ the one named on the card would have left an identical trapdoor one `--config` f
 so `scripts/check-e2e-lanes.mjs` now refuses any root config that declares a directory
 without declaring what it runs, which closes the family rather than the two instances.
 
+### Ports, and which tree answered them (OBRS-1531)
+
+**One lane, one env var, one default.** `scripts/check-e2e-lanes.mjs` fails a build where
+two root configs read the same `process.env['..._PORT']`, or default to the same port,
+unless the sharing is declared in `SHARED_PORT_ENV_OK` with its reason. Three configs used
+to read `E2E_GATE_PORT` — the gate, `obrs1207capture` (same default, 4230) and `obrs769`
+(4272) — so setting the variable to escape a busy port quietly moved two lanes nobody was
+thinking about. `obrs1207capture` is now `OBRS1207_PORT`/4231, `obrs769` is
+`OBRS769_CENSUS_PORT`/4272, and `obrs1521` moved off `obrs775`'s 4232 to 4245.
+
+One group is declared shared on purpose: `E2E_FRONTEND_PORT` + `E2E_BACKEND_PORT` across
+`local`, `obrs483`, `obrs577`, `obrs732`, `obrs884` and `obrs1456`. `environment.e2e.ts`
+pins `apiUrl` to that one backend port, so two of those lanes can never be up at the same
+time whatever their frontend port says. Configs that hardcode `--port 4200` are outside
+this rule: they name no variable, and their port is pinned by the backend CORS allow-list
+they are pointed at.
+
+**The gate lane now says which tree it measured.** `webServer.reuseExistingServer` is
+`!CI`, so locally Playwright never reports a port clash — it attaches to whatever already
+answers and runs your specs against that build. Measured 2026-08-22 (OBRS-773): a lane run
+reported `199 passed` onto a card, and the tree it had measured was another worktree's.
+`e2e/support/lane-tree-guard.ts` is the gate config's `globalSetup` (and, through the
+spread, `obrs769`'s). Every run now opens with:
+
+```
+[lane-tree] tree C:\Users\thpee\Desktop\workshop\OBRS-frontend-wt-obrs-1531
+[lane-tree] head 5f9860fb (ao/obrs-1531-e2e-gate-lane-isolation) +uncommitted changes
+[lane-tree] port 4230
+[lane-tree] the server on 4230 is this tree's own
+```
+
+and if that last line cannot be said, the run does not start:
+
+```
+Error: [lane-tree] REFUSING TO RUN -- port 4230 belongs to another tree.
+    this tree : ...\OBRS-frontend-wt-obrs-1531
+    listening : "node" "...\OBRS-frontend-wt-obrs-1531-foreign\...\ng.js" serve ... --port 4230
+```
+
+The remedy is a port of your own — `$env:E2E_GATE_PORT='4290'; npm run e2e:gate` — or
+stopping the leftover server if it is one of your own killed runs. The guard reads the port
+out of `config.webServer.url`, so a config that spreads the gate config is checked on ITS
+port. It stands down on CI (`reuseExistingServer` is false there, one lane per runner) and
+on any non-Windows box, and prints that it did rather than going quiet.
+
 ## Known gaps
 
 - **The 214/223 hang has not been reproduced.** It was reported on a full-sweep run and

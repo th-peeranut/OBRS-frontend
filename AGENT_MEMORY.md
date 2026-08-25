@@ -4337,5 +4337,17 @@ COMMENTS for the old format literal (`0.00`, `฿`, `THB x.xx`) as well as the c
 asserting the old shape is the same false-completeness claim as a `.toFixed` that survived,
 just one a test can never catch.
 
+## OBRS-1531 scrutinize self-fixes (e2e/support/lane-tree-guard.ts)
+- Fail-open closed: `Get-NetTCPConnection` finds a listener but `Win32_Process.CommandLine`
+  is null for an elevated/other-user process. The guard used to read that as "nothing on
+  the port" and PASS while reuseExistingServer attached to that foreign server. Now the PS
+  script emits `pid <n>` first, so a held-but-unnamed port comes back non-null and fails
+  closed (the whole point of the guard is not to go quiet). Pattern: a "is X present?"
+  probe that infers absence from an empty *secondary* lookup will report present-as-absent.
+- AC-5: the four `git` calls ran on CI before the `if (CI) return`. execFileSync('git')
+  throws on a non-zero exit (not a repo / git absent) and would have reddened the gate lane
+  on CI. Wrapped in try/catch that stands down loudly. Pattern: any command a globalSetup
+  runs BEFORE its CI early-return still runs on CI -- it must not be able to throw there.
+
 ## OBRS-1577 re-review (Scrutinize self-fix, 2026-08-24)
 - Gating a create AFFORDANCE for a role the server refuses is not done until the COPY that points at that affordance is gated too. The fix hid the registry ADD button + the picker create for `admin` (correct), but `expense-payees-page.component.html` still rendered `ADMIN.EXPENSE_PAYEES.EMPTY_BODY` — copy that says "use the Add payee button, or type a new name while entering a bill" — to an admin for whom BOTH routes are now hidden. Wrapped that `<p>` in `@if (canCreate)` so admins see only the honest title. No invented copy, owners unaffected. Lesson: when you role-gate a button, grep the empty-state / hint / aria copy that references it — same family, different file.
