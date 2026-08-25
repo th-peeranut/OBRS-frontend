@@ -15,9 +15,15 @@
 
 // The coverage banner. Warning-toned rather than neutral on purpose: it is telling the reader that
 // the number below is not the whole story, which is a caution, not a caption.
+// --admin-warning-bg/-text is the pair every other warning surface in the admin theme uses
+// (admin-theme.scss:1456, :1766). An earlier draft of this file asked for --admin-warning-border,
+// --admin-warning-surface and --admin-accent, none of which are defined anywhere in src/: all
+// three silently took their fallback, so the banner rendered as a plain white card and the bar as
+// a solid near-black slab. The capture run is what showed it.
 .payee-spend-coverage {
-  border: 1px solid var(--admin-warning-border, var(--admin-border));
-  background: var(--admin-warning-surface, var(--admin-surface-card));
+  border: 1px solid var(--admin-border);
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
   border-radius: 0.25rem;
   padding: 0.75rem 0.9rem;
   display: grid;
@@ -41,13 +47,12 @@
 .payee-spend-coverage-known {
   display: block;
   height: 100%;
-  background: var(--admin-accent, var(--admin-text));
+  background: var(--admin-primary);
 }
 
 .payee-spend-coverage-text {
   margin: 0;
   font-size: 0.875rem;
-  color: var(--admin-text-muted);
 }
 
 .payee-spend-name {
