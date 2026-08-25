@@ -557,7 +557,8 @@
       "DRIVER_CASH_RATES": "Driver Cash Rates",
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "Cancel & Reschedule",
       "NOTIFICATION_MESSAGES": "Notification Messages",
-      "OPERATIONS_CONFIG": "Operations"
+      "OPERATIONS_CONFIG": "Operations",
+      "EXPENSE_BATCH": "Envelope of bills"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -625,7 +626,8 @@
       "CANCEL_TRIP_REFUND_MESSAGE": "{{count}} booking(s) will be automatically refunded and notified.",
       "CANCEL_TRIP_NO_REFUND_MESSAGE": "The trip will be cancelled. No refund will be issued.",
       "CANCEL_TRIP_BTN": "Cancel Trip",
-      "CANCELLING": "Cancelling..."
+      "CANCELLING": "Cancelling...",
+      "NO_MATCH": "No match"
     },
     "VALIDATION": {
       "REQUIRED": "This field is required.",
@@ -2172,7 +2174,26 @@
       "NO_MATCH": "No expenses match the current filters",
       "SOURCE": "Source",
       "SOURCE_FIELD": "Auto-generated (from driver)",
-      "FIELD_ROW_IMMUTABLE": "This row was recorded automatically from a driver’s cash entry. It cannot be edited or deleted here."
+      "FIELD_ROW_IMMUTABLE": "This row was recorded automatically from a driver’s cash entry. It cannot be edited or deleted here.",
+      "BATCH": {
+        "OPEN": "Take an envelope of bills",
+        "SUBTITLE": "Record a whole stack of bills in one save",
+        "PAGE_PURPOSE": "A garage hands over several bills at once. Enter them all here and press save once — either every bill is recorded or none of them is, never half a stack.",
+        "BILL_N": "Bill {{n}}",
+        "BILL_TOTAL": "This bill",
+        "BILL_COUNT": "{{n}} bills",
+        "LINE_COUNT": "{{n}} lines",
+        "ADD_BILL": "+ Add a bill",
+        "ADD_LINE": "+ Add a line",
+        "REMOVE_BILL": "Remove this bill",
+        "COLLAPSE": "Collapse",
+        "GARAGE": "Garage",
+        "LINE_DESCRIPTION": "Line (as the garage wrote it)",
+        "LINE_PART": "Part / labour",
+        "SAVE_ENVELOPE": "Save the whole envelope",
+        "SAVED": "{{n}} bills recorded",
+        "OWNER_HINT": "Every bill in this envelope is filed against this operator."
+      }
     },
     "EXPENSE_PAYEES": {
       "SUBTITLE": "The garages, petrol stations and shops we pay",

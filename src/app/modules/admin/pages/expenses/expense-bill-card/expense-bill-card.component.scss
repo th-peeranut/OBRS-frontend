@@ -1,0 +1,129 @@
+@import "../../../../../../styles/variables.scss";
+
+// OBRS-1576. One bill = one bordered card, because the thing the owner is holding is a stack of
+// separate pieces of paper and the screen has to look like that stack. Colour language borrowed
+// wholesale from the admin surfaces already on this page - a new palette here would make the
+// envelope screen read as a different product.
+:host {
+  display: block;
+}
+
+.bill-card {
+  border: 1px solid rgba(189, 200, 207, 0.35);
+  border-radius: $radius-md;
+  background: var(--admin-surface-card);
+  margin-bottom: $space-sm;
+  padding: $space-sm;
+}
+
+.bill-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.bill-card-title {
+  margin: 0;
+  color: var(--admin-text);
+  font-size: $font-size-md;
+  font-weight: $font-weight-extrabold;
+}
+
+// The folded line. Separators are drawn by the gap plus a middot pseudo-element rather than typed
+// into the strings, so no translation has to carry punctuation.
+.bill-card-summary {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-2xs $space-xs;
+  margin: 0;
+  min-width: 0;
+  color: var(--admin-muted);
+  font-size: $font-size-sm;
+}
+
+.bill-card-summary > span + span::before,
+.bill-card-summary > strong::before {
+  color: var(--admin-muted);
+  content: "\00B7";
+  margin-right: $space-xs;
+}
+
+.bill-card-summary strong {
+  color: var(--admin-text);
+}
+
+.bill-card-actions {
+  display: flex;
+  align-items: center;
+  gap: $space-2xs;
+  margin-left: auto;
+}
+
+.bill-card-header-fields {
+  display: grid;
+  gap: $space-xs;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin-top: $space-sm;
+}
+
+.bill-items {
+  margin-top: $space-sm;
+  // The table is wider than a phone and must scroll INSIDE its card, never take the page with it.
+  overflow-x: auto;
+}
+
+.bill-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.bill-items-table th {
+  border-bottom: 1px solid rgba(189, 200, 207, 0.35);
+  color: var(--admin-muted);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  padding: 6px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.bill-items-table td {
+  padding: 6px 8px;
+  vertical-align: top;
+}
+
+.bill-items-no {
+  color: var(--admin-muted);
+  width: 40px;
+}
+
+.bill-items-number {
+  text-align: right;
+  width: 120px;
+}
+
+.bill-items-remove {
+  width: 56px;
+}
+
+.bill-items-foot {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  margin-top: $space-xs;
+}
+
+.bill-items-total {
+  margin: 0 0 0 auto;
+  color: var(--admin-text);
+  font-size: $font-size-sm;
+}
+
+.bill-items-total strong {
+  font-size: $font-size-md;
+  margin-left: $space-2xs;
+}

@@ -101,6 +101,22 @@ export class ExpensePayeePickerComponent implements ControlValueAccessor {
    */
   @Input() canCreate = true;
 
+  /**
+   * OBRS-1576: the type to show when nothing has been typed. `''` (the default, and what the
+   * general bill form passes) shows everything, exactly as before this card.
+   *
+   * <p>The multi-bill screen sets `'GARAGE'`, because the owner's ruling on 2026-08-24 was that its
+   * field — labelled อู่ซ่อมรถ and meaning it — must not have petrol stations in the list.
+   *
+   * <p><b>The restriction applies to BROWSING only, never to searching.</b> That is the whole design
+   * and not a shortcut: measured on the owner's own five ค่าซ่อม bills (OBRS-1578, 2026-08-24),
+   * THREE of the five payees are not garages — a glass shop, a battery shop, a gas-system company.
+   * A list that hid them while typing would put "+ add this one" in front of a name that is already
+   * on record, and the duplicate that creates is the exact failure OBRS-1577 exists to prevent. So
+   * the closed list obeys the ruling and a typed query still reaches every payee.
+   */
+  @Input() restrictToType: PayeeType | '' = '';
+
   @Input() disabled = false;
 
   /** Emitted after a successful create so the parent can revalidate the registry cache. */
@@ -111,6 +127,9 @@ export class ExpensePayeePickerComponent implements ControlValueAccessor {
   protected isOpen = false;
   protected isCreating = false;
   protected query = '';
+  /** OBRS-1576: which match the arrow keys are on. 0 rather than -1 so the very first Enter after
+   * typing takes the top match, which is the whole point of typing two letters. */
+  protected activeIndex = 0;
   protected selectedId: number | null = null;
 
   /**
@@ -177,7 +196,65 @@ export class ExpensePayeePickerComponent implements ControlValueAccessor {
   }
 
   protected get visiblePayees(): AdminExpensePayeeDto[] {
+    const typed = this.query.trim();
+    if (this.restrictToType && !typed) {
+      return this.knownPayees.filter((payee) => payee.type === this.restrictToType);
+    }
     return filterPayeesByQuery(this.knownPayees, this.query);
+  }
+
+  /**
+   * OBRS-1576 AC4: Enter takes the highlighted row, arrows move it, Escape gives up — the owner has
+   * a paper bill in the other hand and cannot reach the mouse. Enter also prevents default, or the
+   * keystroke that picks a garage would submit the bill behind it.
+   *
+   * <p>With nothing highlighted (a name typed that matches nobody), Enter is what CREATES — which is
+   * what the approved mock annotates on this field, and it is the same key doing the same thing:
+   * "take what I typed".
+   */
+  protected onQueryKeydown(event: KeyboardEvent): void {
+    const matches = this.visiblePayees;
+    switch (event.key) {
+      case 'ArrowDown':
+      case 'ArrowUp': {
+        event.preventDefault();
+        if (!matches.length) {
+          return;
+        }
+        const step = event.key === 'ArrowDown' ? 1 : -1;
+        this.activeIndex = Math.min(Math.max(this.activeIndex + step, 0), matches.length - 1);
+        return;
+      }
+      case 'Enter': {
+        event.preventDefault();
+        const active = matches[this.activeIndex];
+        if (active) {
+          this.select(active);
+          return;
+        }
+        if (this.showCreateOption) {
+          void this.createFromQuery();
+        }
+        return;
+      }
+      case 'Escape':
+        // Not prevented: this panel closes, and the modal above it stays the owner of the key.
+        this.close();
+        return;
+      default:
+        return;
+    }
+  }
+
+  protected isActive(index: number): boolean {
+    return this.activeIndex === index;
+  }
+
+  /** Every keystroke re-cuts the match list, so an index kept from the previous one would highlight
+   * an unrelated payee — and Enter would then select it. */
+  protected onQueryChange(value: string): void {
+    this.query = value;
+    this.activeIndex = 0;
   }
 
   /** The type a payee added right now would be created as — shown ON the button, never inferred
@@ -206,6 +283,7 @@ export class ExpensePayeePickerComponent implements ControlValueAccessor {
     this.onTouched();
     if (this.isOpen) {
       this.query = '';
+      this.activeIndex = 0;
       // The input only exists once the panel is rendered.
       setTimeout(() => this.queryInput?.nativeElement.focus());
     }
@@ -263,5 +341,6 @@ export class ExpensePayeePickerComponent implements ControlValueAccessor {
   private close(): void {
     this.isOpen = false;
     this.query = '';
+    this.activeIndex = 0;
   }
 }

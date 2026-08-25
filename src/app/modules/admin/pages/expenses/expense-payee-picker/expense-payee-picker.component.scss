@@ -107,6 +107,13 @@
   color: var(--admin-primary-fg);
 }
 
+// OBRS-1576: the arrow-key highlight. Same wash as :hover — pointer and keyboard point at the same
+// row, and two "this one" colours would read as two different states.
+.payee-picker-option.is-active {
+  background: rgba(0, 102, 135, 0.12);
+  color: var(--admin-primary-fg);
+}
+
 .payee-picker-option.is-selected {
   background: rgba(0, 102, 135, 0.2);
   color: var(--admin-primary-fg);

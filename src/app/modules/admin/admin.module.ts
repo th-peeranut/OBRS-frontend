@@ -73,6 +73,8 @@ import { ExpenseApprovalLaneComponent } from './pages/expenses/expense-approval-
 import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/expense-form-modal.component';
 import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
 import { ExpensePayeePickerComponent } from './pages/expenses/expense-payee-picker/expense-payee-picker.component';
+import { ExpenseBatchPageComponent } from './pages/expenses/expense-batch-page/expense-batch-page.component';
+import { ExpenseBillCardComponent } from './pages/expenses/expense-bill-card/expense-bill-card.component';
 import { ExpensePayeesPageComponent } from './pages/expense-payees/expense-payees-page.component';
 // OBRS-286 — manual refund worklist (AC-2/AC-3), owner-only.
 import { ManualRefundWorklistPageComponent } from './pages/manual-refund-worklist/manual-refund-worklist-page.component';
@@ -435,6 +437,25 @@ export const adminRoutes: Routes = [
         },
       },
       {
+        // OBRS-1576: the envelope screen. AHEAD of nothing and beside `expenses` rather than nested
+        // under it as a child route — it replaces the whole page while it is open (the owner is
+        // typing off paper and the log behind it is not something he is reading), so it has no use
+        // for the parent's filters, table or modals.
+        //
+        // Same audience as `expenses` above: the backend is `hasRole('OWNER')` on the endpoint, and
+        // the role hierarchy admits an admin through it. An admin who comes here gets the operator
+        // picker (OBRS-808's rule — they have no owner identity to derive), which is why the route
+        // is not narrowed to `['owner']`.
+        path: 'expenses/batch',
+        component: ExpenseBatchPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.EXPENSE_BATCH',
+          subtitleKey: 'ADMIN.EXPENSES.BATCH.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
         // OBRS-1577: the payee registry that the expense form's picker draws from. OWNER-only
         // (owner decision 3, 2026-08-24) because who an operator buys from is commercial
         // information — the backend is `hasRole('OWNER')` on every endpoint INCLUDING the GET, so a
@@ -579,6 +600,8 @@ export const adminRoutes: Routes = [
     ExpenseFormModalComponent,
     ExpenseDeleteModalComponent,
     ExpensePayeePickerComponent,
+    ExpenseBatchPageComponent,
+    ExpenseBillCardComponent,
     ExpensePayeesPageComponent,
     ManualRefundWorklistPageComponent,
     CashRefundApprovalsPageComponent,

@@ -63,6 +63,9 @@
   </p-datePicker>
 
   @if (canWrite) {
+    <!-- OBRS-1576: two ways in, because there are two things to record. This one is one loose bill;
+    `รับซองบิล` beside it is the stack a garage hands over at once. Neither replaces the other — a
+    single slip through the envelope page is more clicks, not fewer. -->
     <button
       type="button"
       class="admin-btn admin-btn-primary ms-auto"
@@ -70,6 +73,15 @@
       >
       <span class="material-symbols-outlined" [attr.translate]="'no'">add</span>
       <span>{{ 'ADMIN.EXPENSES.ADD' | translate }}</span>
+    </button>
+    <button
+      type="button"
+      class="admin-btn"
+      data-testid="expenses-open-batch"
+      routerLink="/admin/expenses/batch"
+      >
+      <span class="material-symbols-outlined" [attr.translate]="'no'">receipt_long</span>
+      <span>{{ 'ADMIN.EXPENSES.BATCH.OPEN' | translate }}</span>
     </button>
   }
 </section>

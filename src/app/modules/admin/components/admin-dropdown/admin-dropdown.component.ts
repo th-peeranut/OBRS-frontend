@@ -9,6 +9,10 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
+/** OBRS-1576: `activeIndex` when the highlighted row is the placeholder/clear entry above the
+ * options, which is not a member of `visibleOptions` and so has no index of its own. */
+const ACTIVE_INDEX_PLACEHOLDER = -1;
+
 @Component({
     selector: 'app-admin-dropdown',
     templateUrl: './admin-dropdown.component.html',
@@ -29,6 +33,22 @@ export class AdminDropdownComponent implements ControlValueAccessor {
   @Input() labelKey = 'label';
   @Input() icon = '';
   @Input() disabled = false;
+  /**
+   * OBRS-1576 AC5: turns the trigger into a text box you can type into, and makes the list
+   * keyboard-navigable — Tab in, type to narrow, arrows to move, Enter to take it.
+   *
+   * <p><b>Opt-in, and it has to be.</b> Measured 2026-08-23: this control is used at 66 places in 31
+   * files. Making search the default would change every one of them — including the many that offer
+   * three options, where a text cursor invites typing that nothing needs and a filtered-to-empty
+   * list is a state those screens never had. So the default path below is untouched: when this is
+   * false the component renders and behaves exactly as it did before this card.
+   *
+   * <p>What it is FOR is not "the list is long". The owner sits with a paper bill in one hand, so
+   * the cost that matters is taking the other hand off the keyboard to reach the mouse — which is
+   * why the vehicle field gets this despite the fleet being six vans (seeded V8; the live count is
+   * not measured).
+   */
+  @Input() searchable = false;
   @Input() set value(value: unknown) {
     this.selectedValue = String(value ?? '');
   }
@@ -37,6 +57,11 @@ export class AdminDropdownComponent implements ControlValueAccessor {
 
   protected isOpen = false;
   protected selectedValue = '';
+  /** OBRS-1576: what has been typed into the trigger this time it was open. Blank whenever the
+   * control is closed, so reopening always starts from the whole list rather than from a filter the
+   * user set minutes ago and cannot see. */
+  protected query = '';
+  protected activeIndex = ACTIVE_INDEX_PLACEHOLDER;
 
   private onChange: (value: unknown) => void = () => {};
   private onTouched: () => void = () => {};
@@ -46,7 +71,7 @@ export class AdminDropdownComponent implements ControlValueAccessor {
   @HostListener('document:click', ['$event'])
   protected onDocumentClick(event: MouseEvent): void {
     if (!this.elementRef.nativeElement.contains(event.target as Node)) {
-      this.isOpen = false;
+      this.close();
     }
   }
 
@@ -71,16 +96,142 @@ export class AdminDropdownComponent implements ControlValueAccessor {
       return;
     }
 
-    this.isOpen = !this.isOpen;
+    if (this.isOpen) {
+      this.close();
+      return;
+    }
+    this.isOpen = true;
+    this.query = '';
+    this.activeIndex = this.firstActiveIndex;
     this.onTouched();
   }
 
   protected selectOption(option: unknown): void {
     const value = this.getOptionValue(option);
     this.selectedValue = value;
-    this.isOpen = false;
+    this.close();
     this.onChange(value);
     this.valueChange.emit(value);
+  }
+
+  /**
+   * OBRS-1576: what the trigger shows. Open, it shows what is being typed — including the empty
+   * string, so the first keystroke replaces the current selection instead of appending to it.
+   * Closed, it shows the selection, which is the only state the non-searchable control has.
+   *
+   * <p>Deliberately NOT `selectedLabel`, which falls back to the placeholder TEXT: in a button that
+   * renders as grey hint text, but in an input it would be a real value, and the owner would be
+   * saving a bill whose vehicle field says "ทะเบียนรถ". The placeholder belongs on the input's own
+   * `placeholder` attribute, where it stays hint text.
+   */
+  protected get triggerText(): string {
+    if (this.isOpen) {
+      return this.query;
+    }
+    const selectedOption = this.options.find((option) => this.isSelected(option));
+    return selectedOption ? this.getOptionLabel(selectedOption) : '';
+  }
+
+  /** OBRS-1576: the options the query leaves standing. Matched on the LABEL, because the label is
+   * what is on screen — filtering on the code would hide rows the user can see and is reading. */
+  protected get visibleOptions(): unknown[] {
+    const typed = this.query.trim().toLocaleLowerCase();
+    if (!typed) {
+      return this.options;
+    }
+    return this.options.filter((option) =>
+      this.getOptionLabel(option).toLocaleLowerCase().includes(typed)
+    );
+  }
+
+  /** Clicking the search trigger OPENS but never closes: the caret has to be able to land in the
+   * middle of what was typed, and a toggle would shut the panel on that click. */
+  protected onTriggerClick(): void {
+    if (!this.isOpen) {
+      this.toggleDropdown();
+    }
+  }
+
+  protected onQueryInput(value: string): void {
+    this.query = value;
+    this.isOpen = true;
+    // Typing re-cuts the list, so an index kept from the old one would highlight an unrelated row.
+    this.activeIndex = this.firstActiveIndex;
+  }
+
+  /**
+   * OBRS-1576 AC4: the whole keyboard contract in one place — arrows move, Enter takes, Escape
+   * abandons. Enter also PREVENTS DEFAULT: every use of this control is inside a form, and without
+   * that the same keystroke that picks a vehicle would submit the bill behind it.
+   */
+  protected onTriggerKeydown(event: KeyboardEvent): void {
+    if (this.disabled) {
+      return;
+    }
+    switch (event.key) {
+      case 'ArrowDown':
+      case 'ArrowUp': {
+        event.preventDefault();
+        if (!this.isOpen) {
+          this.isOpen = true;
+          this.activeIndex = this.firstActiveIndex;
+          return;
+        }
+        const step = event.key === 'ArrowDown' ? 1 : -1;
+        const lowest = this.firstActiveIndex;
+        const highest = this.visibleOptions.length - 1;
+        this.activeIndex = Math.min(Math.max(this.activeIndex + step, lowest), Math.max(highest, lowest));
+        return;
+      }
+      case 'Enter':
+        event.preventDefault();
+        if (!this.isOpen) {
+          this.toggleDropdown();
+          return;
+        }
+        if (this.activeIndex === ACTIVE_INDEX_PLACEHOLDER) {
+          this.selectOption('');
+          return;
+        }
+        if (this.visibleOptions[this.activeIndex] !== undefined) {
+          this.selectOption(this.visibleOptions[this.activeIndex]);
+        }
+        return;
+      case 'Escape':
+        // Not preventDefault: closing this list is what Escape does HERE, but the same key also
+        // closes the modal these fields sit in, and swallowing it would strand a user one layer up.
+        this.close();
+        return;
+      case 'Tab':
+        // Leaving the field commits nothing — the typed text was a filter, never a value.
+        this.close();
+        return;
+      default:
+        return;
+    }
+  }
+
+  protected isActive(index: number): boolean {
+    return this.isOpen && this.activeIndex === index;
+  }
+
+  /**
+   * The topmost row the arrows may reach, and where the highlight sits after every re-cut of the
+   * list: the placeholder/clear entry when it is rendered, otherwise the first real option.
+   *
+   * <p><b>A typed query moves it off the placeholder</b>, and that is the AC4 flow, not a detail:
+   * with the highlight parked on "clear", typing a plate and pressing Enter would BLANK the field
+   * the owner was filling in — the opposite of what those two keystrokes mean. Clearing is
+   * something you go up to, never something you land on by typing.
+   */
+  private get firstActiveIndex(): number {
+    return this.placeholder && !this.query.trim() ? ACTIVE_INDEX_PLACEHOLDER : 0;
+  }
+
+  private close(): void {
+    this.isOpen = false;
+    this.query = '';
+    this.activeIndex = this.firstActiveIndex;
   }
 
   protected get selectedLabel(): string {

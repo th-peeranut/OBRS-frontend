@@ -557,7 +557,8 @@
       "DRIVER_CASH_RATES": "司机现金费率",
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "取消与改签",
       "NOTIFICATION_MESSAGES": "通知消息",
-      "OPERATIONS_CONFIG": "运营"
+      "OPERATIONS_CONFIG": "运营",
+      "EXPENSE_BATCH": "批量录入单据"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -625,7 +626,8 @@
       "CANCEL_TRIP_REFUND_MESSAGE": "{{count}} 个预订将自动退款并收到通知。",
       "CANCEL_TRIP_NO_REFUND_MESSAGE": "行程将被取消，不会产生退款。",
       "CANCEL_TRIP_BTN": "取消行程",
-      "CANCELLING": "取消中..."
+      "CANCELLING": "取消中...",
+      "NO_MATCH": "无匹配项"
     },
     "VALIDATION": {
       "REQUIRED": "此字段为必填项。",
@@ -2172,7 +2174,26 @@
       "NO_MATCH": "没有符合当前筛选条件的费用",
       "SOURCE": "来源",
       "SOURCE_FIELD": "系统自动生成（来自司机）",
-      "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。"
+      "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。",
+      "BATCH": {
+        "OPEN": "批量录入单据",
+        "SUBTITLE": "一次保存整批单据",
+        "PAGE_PURPOSE": "修理厂往往一次交来多张单据。在这里全部录入后只需保存一次 —— 要么全部入账，要么一张也不入，不会只存一半。",
+        "BILL_N": "第 {{n}} 张",
+        "BILL_TOTAL": "本张合计",
+        "BILL_COUNT": "{{n}} 张单据",
+        "LINE_COUNT": "{{n}} 条明细",
+        "ADD_BILL": "+ 添加单据",
+        "ADD_LINE": "+ 添加明细",
+        "REMOVE_BILL": "删除本张单据",
+        "COLLAPSE": "收起",
+        "GARAGE": "修理厂",
+        "LINE_DESCRIPTION": "明细（按修理厂所写）",
+        "LINE_PART": "配件 / 工时",
+        "SAVE_ENVELOPE": "保存整批",
+        "SAVED": "已录入 {{n}} 张单据",
+        "OWNER_HINT": "本批单据均计入该运营商。"
+      }
     },
     "EXPENSE_PAYEES": {
       "SUBTITLE": "我们付款的修理厂、加油站和商店",
