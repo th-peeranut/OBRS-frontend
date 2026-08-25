@@ -1,0 +1,151 @@
+@import "../../../../../../styles/variables.scss";
+
+// OBRS-1577. Deliberately the same shape/colour language as AdminDropdownComponent — this control
+// sits directly beside two of them on the bill form, and a picker that looked like a different KIND
+// of control would read as a different kind of answer.
+:host {
+  display: block;
+  min-width: 180px;
+}
+
+.payee-picker {
+  position: relative;
+  width: 100%;
+}
+
+.payee-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 40px;
+  gap: $space-xs;
+  border: 1px solid rgba(189, 200, 207, 0.35);
+  border-radius: $radius-pill;
+  background: var(--admin-surface-card);
+  color: var(--admin-text);
+  cursor: pointer;
+  padding: 0 14px;
+  text-align: left;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.payee-picker-trigger:hover,
+.payee-picker.is-open .payee-picker-trigger {
+  border-color: var(--admin-primary-fg);
+  box-shadow: 0 0 0 3px rgba(77, 190, 239, 0.16);
+}
+
+.payee-picker-value {
+  overflow: hidden;
+  color: var(--admin-text);
+  font-size: 13px;
+  font-weight: $font-weight-bold;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.payee-picker-value.is-placeholder {
+  color: var(--admin-muted);
+  font-weight: $font-weight-bold;
+}
+
+.payee-picker-arrow {
+  flex: 0 0 auto;
+  color: var(--admin-muted);
+  font-size: $font-size-lg;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.payee-picker.is-open .payee-picker-arrow {
+  color: var(--admin-primary-fg);
+  transform: rotate(180deg);
+}
+
+.payee-picker-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 1250;
+  width: 100%;
+  min-width: 240px;
+  padding: $space-2xs;
+  border: 1px solid rgba(189, 200, 207, 0.3);
+  border-radius: $radius-md;
+  background: var(--admin-surface-card);
+  box-shadow: 0 12px 32px rgba(25, 28, 30, 0.08);
+}
+
+.payee-picker-search {
+  width: 100%;
+  margin-bottom: $space-2xs;
+}
+
+.payee-picker-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.payee-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  gap: $space-xs;
+  border: 0;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: var(--admin-text);
+  cursor: pointer;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.payee-picker-option:hover {
+  background: rgba(0, 102, 135, 0.12);
+  color: var(--admin-primary-fg);
+}
+
+.payee-picker-option.is-selected {
+  background: rgba(0, 102, 135, 0.2);
+  color: var(--admin-primary-fg);
+  font-weight: $font-weight-extrabold;
+}
+
+.payee-picker-option.is-none {
+  color: var(--admin-muted);
+  font-style: italic;
+}
+
+.payee-picker-option-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.payee-picker-type {
+  flex: 0 0 auto;
+  color: var(--admin-muted);
+  font-size: $font-size-xs;
+}
+
+.payee-picker-create {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-2xs;
+  border-top: 1px solid rgba(189, 200, 207, 0.3);
+  margin-top: $space-2xs;
+  padding: $space-xs 12px 8px;
+}
+
+.payee-picker-create-text {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: $font-size-xs;
+}
+
+.payee-picker.is-disabled {
+  opacity: 0.65;
+}

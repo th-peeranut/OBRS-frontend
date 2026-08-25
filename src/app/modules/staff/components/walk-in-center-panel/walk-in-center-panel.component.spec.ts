@@ -764,6 +764,42 @@ describe('WalkInCenterPanelComponent', () => {
     });
   });
 
+  // OBRS-1603: `/private/schedules/{id}` sends the route as `{slug, translations[]}`
+  // (RouteRespDto) - no server-resolved `label`, unlike the booking-detail stops. So
+  // getAdminLookupLabel has to pick the leg by locale, and called without one it
+  // returned the FIRST translation the payload carried: the array order out of JPA,
+  // not the language the panel is in. Each case below is ordered so the right answer
+  // is NOT the first element, or the assertion would pass on the bug.
+  describe('trip details route name locale (OBRS-1603)', () => {
+    const TRIP_DETAILS_TAB = 1;
+    const TH = { locale: 'th', label: 'กรุงเทพฯ-เชียงใหม่' };
+    const EN = { locale: 'en', label: 'Bangkok-Chiang Mai' };
+
+    function routeNameFor(lang: string, translations: unknown[]): string {
+      adminApiServiceSpy.getScheduleById.and.returnValue(
+        of({
+          data: {
+            departureDateTime: '2026-07-01T08:00:00+07:00',
+            vehicleType: { slug: 'bus', totalSeats: 21 },
+            route: { slug: 'bkk-cnx', translations },
+          },
+        })
+      );
+      TestBed.inject(TranslateService).currentLang = lang;
+      component.selectedTrip = makeTrip();
+      (component as unknown as { onTabChange: (i: number) => void }).onTabChange(TRIP_DETAILS_TAB);
+      return (component as unknown as { editFormRouteName: string }).editFormRouteName;
+    }
+
+    it('names the route in Thai when the panel is Thai', () => {
+      expect(routeNameFor('th', [EN, TH])).toBe(TH.label);
+    });
+
+    it('names the route in English when the panel is English', () => {
+      expect(routeNameFor('en', [TH, EN])).toBe(EN.label);
+    });
+  });
+
   // OBRS-130 follow-up (product-owner request): the sell-page hides the
   // checkout column and widens the center column on any tab other than
   // Ticket Sales (index 0). This component reports the active tab via

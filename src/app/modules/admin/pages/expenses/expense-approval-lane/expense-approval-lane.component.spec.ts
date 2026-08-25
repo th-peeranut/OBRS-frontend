@@ -20,6 +20,8 @@ function row(id: number): ExpenseRow {
     expenseDateDisplay: '14/08/2026',
     receiptNo: '',
     paidBy: '',
+    payeeId: null,
+    payeeName: '',
     note: '',
     source: 'FIELD',
     items: [],

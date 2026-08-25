@@ -671,6 +671,24 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
     return !this.isCarryOnMode && group.invalid && (group.dirty || group.touched);
   }
 
+  /** OBRS-1598 — called by the parent page when the DATE changes and a fresh
+   * schedule list is about to be fetched: the round chosen belongs to the OLD
+   * day and must not survive into the new one.
+   *
+   * ⛔ This one EMITS, and that is load-bearing — do NOT "make it consistent"
+   * with the two clears below by adding `{ emitEvent: false }`. The page's
+   * `onScheduleChange('')` is what drops the stop options, seat list, quote and
+   * cargo state that hung off the old round; silencing the event leaves all of
+   * those stale and only the id looks cleared. The sibling it actually matches
+   * is `resetForMode()` above, whose `form.reset(...)` emits by default and
+   * whose emission the page has relied on since OBRS-341 — the two below are
+   * silent precisely because the page is already mid-cascade when it calls
+   * them. A spec asserts the emission (`…dom.spec.ts`, "emits the cleared
+   * value"), so this is caught, but the reason belongs here. */
+  clearScheduleSelection(): void {
+    this.form.patchValue({ scheduleId: '' });
+  }
+
   /** Called by the parent page whenever the schedule changes and a fresh
    * stop list is being fetched — the previously-selected pickup/dropoff ids
    * belong to the OLD route and must not silently carry over. */

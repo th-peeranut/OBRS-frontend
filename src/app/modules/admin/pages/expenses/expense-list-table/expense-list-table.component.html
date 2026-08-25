@@ -39,6 +39,9 @@
             <th class="expense-money">{{ 'ADMIN.EXPENSES.VAT_AMOUNT' | translate }}</th>
             <th>{{ 'ADMIN.EXPENSES.RECEIPT_NO' | translate }}</th>
             <th>{{ 'ADMIN.EXPENSES.PAID_BY' | translate }}</th>
+            <!-- OBRS-1577: the column is what makes AC2 visible — bills hold the payee's ID, so
+            renaming a garage on the registry screen changes every row of this column at once. -->
+            <th>{{ 'ADMIN.EXPENSES.PAYEE.LABEL' | translate }}</th>
             <th>{{ 'ADMIN.EXPENSES.NOTE' | translate }}</th>
             @if (canWrite) {
               <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
@@ -60,6 +63,8 @@
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <!-- OBRS-1577: the payee column's skeleton cell. -->
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 @if (canWrite) {
                   <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
@@ -96,6 +101,7 @@
                 <td class="expense-money">{{ row.vatAmount === null ? '-' : formatMoney(row.vatAmount) }}</td>
                 <td>{{ row.receiptNo || '-' }}</td>
                 <td>{{ row.paidBy || '-' }}</td>
+                <td>{{ row.payeeName || '-' }}</td>
                 <td [attr.title]="row.note || null">{{ row.note || '-' }}</td>
                 @if (canWrite) {
                   <td class="text-right">

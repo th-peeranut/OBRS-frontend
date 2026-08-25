@@ -19,7 +19,11 @@
 import base from './playwright.gate.config';
 import { defineConfig } from '@playwright/test';
 
-const PORT = process.env['E2E_GATE_PORT'] ?? '4272';
+// OBRS-1531: was `E2E_GATE_PORT`, which is the gate lane's. Sharing the var while
+// keeping a different default is the worst of both: setting it to move the gate off a
+// busy port dragged this census onto that same port. `OBRS769_PORT` is already taken by
+// `playwright.obrs769capture.config.ts`, hence the longer name.
+const PORT = process.env['OBRS769_CENSUS_PORT'] ?? '4272';
 
 export default defineConfig({
   ...base,

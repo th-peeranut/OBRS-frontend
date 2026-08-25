@@ -223,6 +223,15 @@ export interface ExpenseRow {
   expenseDateDisplay: string;
   receiptNo: string;
   paidBy: string;
+  /** OBRS-1577: the registry payee this bill was paid TO. `null` for every bill written before
+   * V119, and for a bill whose payee the owner deliberately left blank — the two are the same
+   * answer here and neither is guessed at. Not to be confused with `paidBy` above, which is who the
+   * money came FROM. */
+  payeeId: number | null;
+  /** OBRS-1577: the payee's name as resolved server-side, carried on the ROW because the pickers
+   * list ACTIVE payees only — a bill paid to a garage that has since been retired would otherwise
+   * render blank in both the table and the edit modal. `''` when there is no payee. */
+  payeeName: string;
   note: string;
   /** OBRS-960: `'FIELD'` (backend auto-created from a driver's cash-panel
    * expense entry) vs `'MANUAL'` (admin/owner-entered) — passed through
@@ -301,6 +310,8 @@ export function toExpenseRow(
     expenseDateDisplay: formatDisplayDate(dto.expenseDate, dateLang),
     receiptNo: dto.receiptNo ?? '',
     paidBy: dto.paidBy ?? '',
+    payeeId: dto.payeeId ?? null,
+    payeeName: dto.payeeName ?? '',
     note: dto.note ?? '',
     source: dto.source ?? 'MANUAL',
     items: (dto.items ?? []).map(toExpenseItemRow),
@@ -329,6 +340,11 @@ export interface ExpenseFormValue {
   expenseDate: Date | string | null;
   receiptNo: string | null;
   paidBy: string | null;
+  /** OBRS-1577: the picker's value. A real number or `null` — unlike `ownerSelection` above this
+   * control is NOT string-coerced, because `ExpensePayeePickerComponent` writes the id it was given
+   * straight through rather than routing it via `String(x ?? '')` the way `app-admin-dropdown`
+   * does. There is therefore no empty-string case to unpick at the payload boundary. */
+  payeeId: number | null;
   note: string | null;
   /** OBRS-1374: the repeater's rows. Absent when the caller has no lines at all. */
   items?: ExpenseItemFormValue[];
@@ -444,6 +460,7 @@ export function toExpensePayload(formValue: ExpenseFormValue): CreateExpensePayl
     expenseDate: toIsoDateString(formValue.expenseDate),
     receiptNo: toNullableTrimmedString(formValue.receiptNo),
     paidBy: toNullableTrimmedString(formValue.paidBy),
+    payeeId: formValue.payeeId ?? null,
     note: toNullableTrimmedString(formValue.note),
     // OBRS-1374: the ONE place the part sentinel becomes a real `null`, mirroring the vehicle
     // sentinel above. An empty repeater sends `[]`, which the backend reads as "no breakdown".

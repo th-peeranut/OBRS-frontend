@@ -14,9 +14,14 @@ import { defineConfig, devices } from '@playwright/test';
  * ASCII-only source.
  */
 
-const PORT = process.env['E2E_OBRS1521_PORT'] ?? '4232';
+// OBRS-1531: the default was 4232, which `playwright.obrs775.config.ts` also defaults
+// to. Separate env vars do not help when both lanes are run the documented way, with
+// neither var set — the second one just attaches to the first one's server.
+const PORT = process.env['E2E_OBRS1521_PORT'] ?? '4245';
 
 export default defineConfig({
+  // OBRS-1611: name the tree this run measures, and refuse a port another tree holds.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
   testDir: './e2e/tests',
   testMatch: ['**/obrs-1521-disabled-census.spec.ts'],
   timeout: 300_000,

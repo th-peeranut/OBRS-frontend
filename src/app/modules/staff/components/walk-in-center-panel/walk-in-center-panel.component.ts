@@ -365,7 +365,10 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
             this.isDetailLoaded = true;
             this.cargoCapacityKgFromDetail = scheduleDetail.cargoCapacityKg ?? null;
             this.routeSlugForForm = scheduleDetail.route?.slug ?? '';
-            this.routeNameForForm = getAdminLookupLabel(scheduleDetail.route) ?? scheduleDetail.route?.slug ?? '';
+            this.routeNameForForm =
+              getAdminLookupLabel(scheduleDetail.route, this.translate.currentLang) ??
+              scheduleDetail.route?.slug ??
+              '';
             this.routeDateForForm = scheduleDetail.departureDateTime
               ? formatDisplayDate(scheduleDetail.departureDateTime, this.translate.currentLang)
               : '';
