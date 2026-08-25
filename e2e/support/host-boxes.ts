@@ -560,6 +560,30 @@ export const ADMIN_SWEEP: SweepPage[] = [
   },
   { key: 'admin-expenses', url: '/admin/expenses', landsOn: /\/admin\/expenses$/, requires: 'app-expenses-page' },
 
+  // --- OBRS-1576 ------------------------------------------------------------
+  // The envelope screen. Its `p-datepicker` is one per BILL, inside
+  // `app-expense-bill-card`, so no page already here can reach it -- and the
+  // coverage gate named the component on the first CI run after the page
+  // landed, which is the gate working rather than a flake.
+  //
+  // ADMIN_SWEEP and not OWNER_SWEEP for the reason spelled out on
+  // `admin-vehicle-pl-report` below: the route is requiredRoles:
+  // ['admin','owner'], so this sweep's ['admin'] session lands on it without
+  // widening the session. The admin-only owner picker above the bill cards is a
+  // dropdown, not a PrimeNG host, so the extra role hides nothing measured here.
+  //
+  // `requires` names the p-datepicker rather than the page selector alone, per
+  // `staff-my-earnings` above: the page opens with exactly one bill card and it
+  // starts EXPANDED (`collapsed = [false]`), and the bill date sits above every
+  // field that needs a loaded list -- so this lane's empty backend still
+  // RENDERS the host being measured.
+  {
+    key: 'admin-expenses-batch',
+    url: '/admin/expenses/batch',
+    landsOn: /\/admin\/expenses\/batch$/,
+    requires: 'app-expense-bill-card p-datepicker',
+  },
+
   // --- OBRS-884 -------------------------------------------------------------
   // The per-vehicle P&L screen carries the same two `p-datepicker`s as the
   // filter rows above, and the coverage gate named it on the first CI run after
