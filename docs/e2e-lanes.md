@@ -353,7 +353,7 @@ and get the banner without the refusal — the log still names the tree that ser
 which is the half that matters when the output is a screenshot. Anything that declares nothing
 is guarded strictly, on purpose: an undeclared lane costs a refused run somebody notices, and
 the other default costs a picture of the wrong tree that nobody does. `obrs575` is the one
-lane of the eight OBRS-1616 wired that gets no marker: :4575 is the server its own tree
+lane of the nine OBRS-1616 wired that gets no marker: :4575 is the server its own tree
 starts, so a foreign tree answering it is a mistake, not a plan.
 
 **Seven lanes are outside the guard, decided rather than overlooked** (OBRS-1616 AC-5), and
