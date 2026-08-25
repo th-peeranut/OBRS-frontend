@@ -2192,7 +2192,12 @@
         "LINE_PART": "Part / labour",
         "SAVE_ENVELOPE": "Save the whole envelope",
         "SAVED": "{{n}} bills recorded",
-        "OWNER_HINT": "Every bill in this envelope is filed against this operator."
+        "OWNER_HINT": "Every bill in this envelope is filed against this operator.",
+        "BILL_DATE": "Bill date",
+        "VEHICLE": "Plate",
+        "CATEGORY": "Category",
+        "PAID_BY": "Paid by",
+        "LINE_PART_NONE": "Not a part"
       }
     },
     "EXPENSE_PAYEES": {

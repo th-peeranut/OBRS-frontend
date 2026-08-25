@@ -2192,7 +2192,12 @@
         "LINE_PART": "配件 / 工时",
         "SAVE_ENVELOPE": "保存整批",
         "SAVED": "已录入 {{n}} 张单据",
-        "OWNER_HINT": "本批单据均计入该运营商。"
+        "OWNER_HINT": "本批单据均计入该运营商。",
+        "BILL_DATE": "单据日期",
+        "VEHICLE": "车牌",
+        "CATEGORY": "类别",
+        "PAID_BY": "付款方式",
+        "LINE_PART_NONE": "非配件"
       }
     },
     "EXPENSE_PAYEES": {

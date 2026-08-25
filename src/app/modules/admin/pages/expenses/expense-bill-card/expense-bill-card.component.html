@@ -46,7 +46,7 @@
     <div class="bill-card-header-fields">
       <div class="admin-form-field">
         <label class="admin-form-label">
-          {{ 'ADMIN.EXPENSES.EXPENSE_DATE' | translate }} <span class="admin-required">*</span>
+          {{ 'ADMIN.EXPENSES.BATCH.BILL_DATE' | translate }} <span class="admin-required">*</span>
         </label>
         <p-datePicker
           formControlName="expenseDate"
@@ -56,7 +56,7 @@
           dateFormat="dd/mm/yy"
           [showIcon]="true"
           [showButtonBar]="true"
-          [placeholder]="'ADMIN.EXPENSES.EXPENSE_DATE' | translate"
+          [placeholder]="'ADMIN.EXPENSES.BATCH.BILL_DATE' | translate"
         ></p-datePicker>
         @if (isControlInvalid('expenseDate')) {
           <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
@@ -65,7 +65,7 @@
 
       <div class="admin-form-field">
         <label class="admin-form-label">
-          {{ 'ADMIN.EXPENSES.VEHICLE' | translate }} <span class="admin-required">*</span>
+          {{ 'ADMIN.EXPENSES.BATCH.VEHICLE' | translate }} <span class="admin-required">*</span>
         </label>
         <!-- AC4/AC5: `[searchable]` is what makes this fillable without letting go of the paper
         bill — Tab in, type two characters of the plate, Enter. -->
@@ -75,7 +75,7 @@
           valueKey="code"
           labelKey="label"
           [searchable]="true"
-          [placeholder]="'ADMIN.EXPENSES.VEHICLE' | translate"
+          [placeholder]="'ADMIN.EXPENSES.BATCH.VEHICLE' | translate"
         ></app-admin-dropdown>
         @if (isControlInvalid('vehicleSelection')) {
           <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
@@ -104,7 +104,7 @@
 
       <div class="admin-form-field">
         <label class="admin-form-label">
-          {{ 'ADMIN.EXPENSES.CATEGORY' | translate }} <span class="admin-required">*</span>
+          {{ 'ADMIN.EXPENSES.BATCH.CATEGORY' | translate }} <span class="admin-required">*</span>
         </label>
         <app-admin-dropdown
           formControlName="category"
@@ -112,7 +112,7 @@
           valueKey="code"
           labelKey="label"
           [searchable]="true"
-          [placeholder]="'ADMIN.EXPENSES.CATEGORY' | translate"
+          [placeholder]="'ADMIN.EXPENSES.BATCH.CATEGORY' | translate"
         ></app-admin-dropdown>
         @if (isControlInvalid('category')) {
           <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
@@ -134,7 +134,7 @@
       }
 
       <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.PAID_BY' | translate }}</label>
+        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.BATCH.PAID_BY' | translate }}</label>
         <input class="admin-field" formControlName="paidBy" maxlength="255" />
       </div>
     </div>
@@ -148,7 +148,7 @@
           <tr>
             <th class="bill-items-no">#</th>
             <th>{{ 'ADMIN.EXPENSES.BATCH.LINE_DESCRIPTION' | translate }}</th>
-            <th>{{ 'ADMIN.EXPENSES.BATCH.LINE_PART' | translate }}</th>
+            <th class="bill-items-part">{{ 'ADMIN.EXPENSES.BATCH.LINE_PART' | translate }}</th>
             <th class="bill-items-number">{{ 'ADMIN.EXPENSES.ITEMS.QUANTITY' | translate }}</th>
             <th class="bill-items-number">{{ 'ADMIN.EXPENSES.ITEMS.UNIT_PRICE' | translate }}</th>
             <th class="bill-items-number">{{ 'ADMIN.EXPENSES.ITEMS.AMOUNT' | translate }}</th>
@@ -169,7 +169,7 @@
                   <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
                 }
               </td>
-              <td>
+              <td class="bill-items-part">
                 <app-admin-dropdown
                   formControlName="part"
                   [options]="partOptions"

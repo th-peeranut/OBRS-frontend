@@ -65,8 +65,15 @@
 .bill-card-header-fields {
   display: grid;
   gap: $space-xs;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   margin-top: $space-sm;
+}
+
+// p-datePicker renders an inline-block wrapper around [input + icon button]. In a grid cell it
+// shrinks to its content and the icon wraps onto a second line, which pushed this row a line taller
+// than every other field in it. Making the wrapper own the cell puts them back on one line.
+.bill-card-header-fields ::ng-deep .p-datepicker {
+  width: 100%;
 }
 
 .bill-items {
@@ -79,6 +86,12 @@
   width: 100%;
   border-collapse: collapse;
   min-width: 760px;
+  // Deliberately AUTO layout. `table-layout: fixed` was tried and reverted: the admin shell forces
+  // `.admin-shell input { width: auto !important }`, so a fixed 130px cell cannot shrink the ~180px
+  // intrinsic input inside it and the numeric controls spilled across the columns to their right.
+  // Under auto layout the cells grow to fit their controls, which is what every other admin form
+  // on this app relies on. The clipped part label that sent me here was the LABEL's length, and it
+  // is fixed where it belongs - a screen-scoped, short i18n string (BATCH.LINE_PART_NONE).
 }
 
 .bill-items-table th {
@@ -99,6 +112,10 @@
 .bill-items-no {
   color: var(--admin-muted);
   width: 40px;
+}
+
+.bill-items-part {
+  min-width: 200px;
 }
 
 .bill-items-number {

@@ -85,7 +85,10 @@ export class ExpenseBillCardComponent {
     return [
       {
         code: EXPENSE_ITEM_PART_NONE_SENTINEL,
-        label: this.translate.instant('ADMIN.EXPENSES.ITEMS.PART_NONE'),
+        // Screen-scoped: this column's header already says "part / labour", so the modal's longer
+        // wording is redundant here and does not fit - it clipped mid-word, and a truncated option
+        // label reads as a different option.
+        label: this.translate.instant('ADMIN.EXPENSES.BATCH.LINE_PART_NONE'),
       },
       ...MAINTENANCE_PART_CODES.map((code) => ({
         code,
