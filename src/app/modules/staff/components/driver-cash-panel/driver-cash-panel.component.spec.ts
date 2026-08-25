@@ -165,6 +165,55 @@ describe('DriverCashPanelComponent', () => {
       component.ngOnInit();
       expect(component['boxBusinessDate']).toBeNull();
     });
+
+    /**
+     * ⛔ The case the first version of this got wrong. `departureDateTime` is
+     * one of the fields this API emits WITHOUT an offset
+     * (`ParcelScheduleTabsPageComponent`'s doc names it), and `new Date(raw)`
+     * + local getters reads the result in the VIEWER's zone while prod and SIT
+     * run UTC — so the label this card exists to add could name the wrong box
+     * with total confidence.
+     *
+     * ⚠️ Honest about what these three can and cannot catch. Only the
+     * UTC-offset one below discriminates the two implementations at all, and
+     * only when the runner is NOT on Bangkok time — when ambient == Bangkok
+     * the old and new answers are equal for every possible input, so no spec
+     * can go red here. Measured on this machine 2026-08-25:
+     * `new Date('2026-08-23T18:00:00Z')` gives the 24th under Asia/Bangkok and
+     * the 23rd under TZ=UTC, while this code gives the 24th under both. CI
+     * runs UTC, so that is where the red would appear. `TZ=UTC` does NOT reach
+     * Karma's Chrome on this box, so the local mutant run stayed green and is
+     * not evidence either way.
+     *
+     * The other two pin the two offset-less SHAPES the API emits (`T` and
+     * space separated) parse at all - `toApiOffsetDateTime` is what turns the
+     * space into a `T` before anything reads it.
+     */
+    it('reads an offset-LESS after-midnight departure as the Bangkok calendar day', () => {
+      staffApi.getScheduleById.and.returnValue(
+        of({ code: 200, message: 'OK', data: { id: 42, departureDateTime: '2026-08-24T00:15:00' } })
+      );
+      component.ngOnInit();
+      expect(component['boxBusinessDate']).toBe('2026-08-24');
+    });
+
+    it('reads the space-separated offset-less shape the same way', () => {
+      staffApi.getScheduleById.and.returnValue(
+        of({ code: 200, message: 'OK', data: { id: 42, departureDateTime: '2026-08-24 00:15:00' } })
+      );
+      component.ngOnInit();
+      expect(component['boxBusinessDate']).toBe('2026-08-24');
+    });
+
+    it('reads a UTC-offset late-evening departure as the NEXT Bangkok day', () => {
+      // 2026-08-23T18:00Z is 2026-08-24 01:00 in Bangkok. A plain string split
+      // of the wire value would have said the 23rd.
+      staffApi.getScheduleById.and.returnValue(
+        of({ code: 200, message: 'OK', data: { id: 42, departureDateTime: '2026-08-23T18:00:00Z' } })
+      );
+      component.ngOnInit();
+      expect(component['boxBusinessDate']).toBe('2026-08-24');
+    });
   });
 
   // OBRS-1579 — GENERIC's "please try again" is advice that cannot work once

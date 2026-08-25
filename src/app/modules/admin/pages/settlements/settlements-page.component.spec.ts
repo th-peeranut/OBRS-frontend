@@ -648,6 +648,7 @@ describe('SettlementsPageComponent', () => {
     function makeComponentWithOpenDay(apiOverrides: Record<string, jasmine.Spy> = {}) {
       const adminApi: any = makeAdminApiStub({
         reopenDriverCashDay: jasmine.createSpy('reopenDriverCashDay').and.returnValue(of(ok(REOPENED))),
+        getDriverCashDayDetail: jasmine.createSpy('getDriverCashDayDetail').and.returnValue(of(ok(REOPENED))),
         ...apiOverrides,
       });
       const alert = makeAlertStub();
@@ -703,6 +704,19 @@ describe('SettlementsPageComponent', () => {
       expect(mutator([ROW])).toEqual([
         jasmine.objectContaining({ dayId: 7, status: 'OPEN', returnedAmount: null }),
       ]);
+    });
+
+    /** A 2xx with no body: the cache must be dropped AND the open modal
+     * re-fetched, or it keeps showing the box as still signed off. */
+    it('re-fetches the open modal when the re-open answers with no body', async () => {
+      const { component, adminApi } = makeComponentWithOpenDay({
+        reopenDriverCashDay: jasmine.createSpy('reopenDriverCashDay').and.returnValue(of(ok(null))),
+      });
+
+      await (component as any).requestDayReopen('late fuel bill');
+
+      expect(adminApi.getDriverCashDayDetail).toHaveBeenCalledWith(7);
+      expect((component as any).isDayReopening).toBeFalse();
     });
 
     it('names the refusal instead of saying "please try again"', async () => {

@@ -704,10 +704,16 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
           this.isDayReopening = false;
           const reopened = response.data ?? null;
           if (!reopened) {
-            // No body to trust: drop the cache so the next open re-fetches
-            // rather than showing a day the server has already changed.
+            // No body to trust. Dropping the cache is not enough on its own:
+            // `dayModalDetail` is still bound to the RETURNED snapshot, so the
+            // owner would be left staring at a modal that says the box is
+            // still signed off while the list behind it has already moved.
+            // Re-fetching is what makes the screen say the truth.
             this.dayDetailCache.delete(id);
             void this.driverCashDaysStore.refresh();
+            if (this.openDayId === id) {
+              this.openDayDetail(id);
+            }
             return;
           }
           this.dayDetailCache.set(id, reopened);

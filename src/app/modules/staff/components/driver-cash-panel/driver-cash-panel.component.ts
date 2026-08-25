@@ -19,6 +19,7 @@ import { DriverCashDayStore } from './driver-cash-day.store';
 import { DriverCashDayRespDto } from '../../../../shared/interfaces/driver-cash.interface';
 import { formatMoney } from '../../../../shared/lib/money-display';
 import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
+import { bangkokInstantMs } from '../../../../shared/lib/api-date-time';
 
 type DriverCashAction = 'advance' | 'perHead' | 'expense' | null;
 
@@ -31,6 +32,32 @@ function todayBusinessDate(): string {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${now.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * OBRS-1579 — the Bangkok calendar date of an API date-time, as `yyyy-MM-dd`,
+ * or null when it is absent or unparseable. See `loadScheduleBusinessDate()`
+ * for why neither half of this can be skipped.
+ */
+const BANGKOK_DATE_PARTS = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Bangkok',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function toBangkokBusinessDate(value: string | null | undefined): string | null {
+  const ms = bangkokInstantMs(value);
+  if (ms === null) {
+    return null;
+  }
+  const parts = BANGKOK_DATE_PARTS.formatToParts(new Date(ms));
+  const get = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  const year = get('year');
+  const month = get('month');
+  const day = get('day');
+  return year && month && day ? `${year}-${month}-${day}` : null;
 }
 
 // OBRS-1389 — OBRS-1368 put the sales-point 403 behind these two forms as well,
@@ -238,9 +265,16 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
    * field here would put a different date on screen from the one the entry
    * actually lands on, which is the entire failure this card removes.
    *
-   * Local-calendar extraction, same reasoning as `todayBusinessDate()` above:
-   * a staff device runs on Bangkok time, and `toISOString()` would shift the
-   * date backwards for the whole evening.
+   * ⛔ And NOT `new Date(raw)` + local getters, which is what this method did
+   * first. `departureDateTime` is one of the fields this API emits WITHOUT an
+   * offset (`ParcelScheduleTabsPageComponent`'s doc names it), and `Date` then
+   * reads an offset-less string as the VIEWER's wall clock while prod and SIT
+   * run their JVM and Postgres in UTC — seven hours early, which around a
+   * late-evening or after-midnight departure is a different calendar day. That
+   * would put a confident, wrong date on the one label this card exists to
+   * add. `bangkokInstantMs()` pins the offset-less case to Bangkok (OBRS-574)
+   * and `BANGKOK_DATE_PARTS` reads the calendar date back in Bangkok, so the
+   * viewer's own timezone drops out of both ends.
    *
    * Fails silently, like `loadMyDay()`: this is supplementary signposting and
    * must not put a banner over a boarding list the round depends on.
@@ -254,17 +288,7 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (resp) => {
-          const departure = resp?.data?.departureDateTime;
-          if (!departure) {
-            return;
-          }
-          const parsed = new Date(departure);
-          if (Number.isNaN(parsed.getTime())) {
-            return;
-          }
-          const month = String(parsed.getMonth() + 1).padStart(2, '0');
-          const day = String(parsed.getDate()).padStart(2, '0');
-          this.scheduleBusinessDate = `${parsed.getFullYear()}-${month}-${day}`;
+          this.scheduleBusinessDate = toBangkokBusinessDate(resp?.data?.departureDateTime);
         },
         error: () => { this.scheduleBusinessDate = null; },
       });
