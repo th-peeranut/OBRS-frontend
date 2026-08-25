@@ -100,7 +100,9 @@ sections on one page. -->
   [isFetching]="isDayDetailFetching"
   [isConfirming]="isDayConfirming"
   [fetchError]="dayDetailFetchError"
+  [isReopening]="isDayReopening"
   (closed)="closeDayDetail()"
   (confirmRequested)="requestDayReturn($event)"
+  (reopenRequested)="requestDayReopen($event)"
   (retryFetch)="retryDayFetch()"
 ></app-driver-cash-day-return-modal>

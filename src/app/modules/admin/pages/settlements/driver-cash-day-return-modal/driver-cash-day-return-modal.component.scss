@@ -25,3 +25,36 @@
   font-weight: 600;
   margin-top: 2px;
 }
+
+// OBRS-1579 — the re-open record. Warning-toned, not error-toned: a re-opened
+// box is not a fault, it is a correction that has to stay visible. Same
+// `--admin-warning-*` surface role the entry note above already uses.
+.driver-cash-reopen-history {
+  background: var(--admin-warning-bg);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.driver-cash-reopen-history-title {
+  align-items: center;
+  color: var(--admin-warning-fg);
+  display: flex;
+  font-weight: 600;
+  gap: 6px;
+  margin: 0 0 4px;
+}
+
+.driver-cash-reopen-entry {
+  font-size: 0.85rem;
+
+  & + & {
+    border-top: 1px solid var(--admin-warning-fg);
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+}
+
+.driver-cash-reopen-hint {
+  margin: 0 0 6px;
+}

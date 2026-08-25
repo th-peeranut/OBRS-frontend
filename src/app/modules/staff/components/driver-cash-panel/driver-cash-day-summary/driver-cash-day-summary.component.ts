@@ -35,6 +35,17 @@ export class DriverCashDaySummaryComponent {
   protected get hasParcelClawback(): boolean {
     return Number(this.day?.parcelClawbackTotal ?? 0) > 0;
   }
+
+  /**
+   * OBRS-1579 — same rule, one pill over. This strip shows the DRIVER's box,
+   * and since OBRS-1073 a per-head fee lands on the salesperson's box instead,
+   * so on any day recorded after that card this reads a permanent `0.00`.
+   * Pre-OBRS-1073 days still carry real per-head rows, which is why the pill is
+   * hidden at zero rather than removed.
+   */
+  protected get hasPerHead(): boolean {
+    return Number(this.day?.perHeadTotal ?? 0) !== 0;
+  }
   constructor(private readonly translate: TranslateService) {}
 
   /** OBRS-1592: driver-cash printed these decimal strings raw — no unit, no

@@ -128,6 +128,31 @@ export interface DriverCashDayRespDto {
   discrepancyReason: string | null;
   perHeadRates: DriverCashPerHeadRateLineDto[];
   hasUnmappedSalesPointRemit: boolean;
+  /**
+   * OBRS-1579 — how many times the owner has re-opened this box after it was
+   * already signed off. ⛔ A box with `reopenCount > 0` must NEVER render as
+   * an ordinary one, including once it is `RETURNED` again: the whole point of
+   * the audit row is that a second sign-off is visible as a second sign-off.
+   */
+  reopenCount: number;
+  /** OBRS-1579 — oldest first. Empty whenever `reopenCount` is 0. */
+  reopens: DriverCashDayReopenRespDto[];
+}
+
+/**
+ * OBRS-1579 — one re-open of a box that had already been returned, carrying
+ * the snapshot the re-open wiped off the day row. `prevReturnedAmount` is what
+ * the owner had signed for BEFORE this re-open, so a re-returned box can still
+ * be read as "signed 120, then re-opened, then signed 1,320".
+ */
+export interface DriverCashDayReopenRespDto {
+  reopenedAt: string;
+  reopenedByUserId: number | null;
+  reopenedByName: string | null;
+  reason: string;
+  prevReturnedAmount: string | null;
+  prevExpectedReturnAmount: string | null;
+  prevDiscrepancyReason: string | null;
 }
 
 export interface DriverCashAdvanceReqDto {
@@ -165,6 +190,16 @@ export interface DriverCashExpenseReqDto {
 export interface DriverCashDayReturnReqDto {
   returnedAmount: string;
   discrepancyReason?: string;
+}
+
+/**
+ * `POST /api/private/driver-cash/days/{dayId}/reopen` — OWNER-only
+ * (`@PreAuthorize("hasRole('OWNER')")`). The reason is mandatory server-side
+ * (`@NotBlank`, max 500) and is the only thing that explains, months later,
+ * why a signed-off box was opened again.
+ */
+export interface DriverCashDayReopenReqDto {
+  reason: string;
 }
 
 /**

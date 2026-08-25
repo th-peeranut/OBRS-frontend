@@ -66,3 +66,12 @@
   align-items: center;
   justify-content: space-between;
 }
+
+// OBRS-1579 — the box date. On its own line so it survives a narrow phone
+// screen next to the driver name and the net pill: it is the fact that decides
+// where the money lands, and wrapping it off the end of the strip would put it
+// back where this card found it.
+.dcp-box-date {
+  flex-basis: 100%;
+  font-weight: 600;
+}

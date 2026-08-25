@@ -1649,16 +1649,30 @@
           "RETURNED_PLACEHOLDER": "0.00",
           "CONFIRM_BTN": "确认归还",
           "CONFIRM_TITLE": "确认司机现金归还？",
-          "CONFIRM_TEXT": "将记录归还金额为 {{amount}}，此操作无法撤销。",
+          "CONFIRM_TEXT": "将记录归还金额为 {{amount}}。如果之后出现当日的票据，车主可以在此页面重新打开该现金盒。",
           "SUCCESS": "司机现金日已标记为已归还。",
           "ALREADY_RETURNED": "该日已完成归还。",
           "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）",
           "PER_HEAD_PAY": "今日所得人头费（已在班次结算中扣除，不计入上方金额）"
         },
+        "REOPEN": {
+          "ACTION_LABEL": "重新打开此现金盒",
+          "HINT": "适用于该班次的票据在签署归还之后才送到柜台的情况。已签署的金额会保留在历史记录中，现金盒将恢复为未关闭状态。",
+          "REASON_LABEL": "原因",
+          "REASON_PLACEHOLDER": "例如：昨天班次的油费票据今早才送到",
+          "CONFIRM_BTN": "重新打开",
+          "CONFIRM_TITLE": "重新打开此现金盒？",
+          "CONFIRM_TEXT": "已签署的归还金额将被清除并保留在历史记录中。现金盒将恢复为未关闭状态，添加项目后需要重新签署归还。",
+          "SUCCESS": "现金盒已重新打开。",
+          "HISTORY_TITLE": "此现金盒已被重新打开 {{count}} 次",
+          "PREV_RETURNED": "此前签署的金额："
+        },
         "ERROR": {
           "REASON_REQUIRED": "归还金额与预期不符时必须填写原因。",
           "ALREADY_RETURNED": "该日已完成归还。",
-          "RETURN_FAILED": "无法记录此次归还。"
+          "RETURN_FAILED": "无法记录此次归还。",
+          "NOT_RETURNED": "此现金盒尚未签署归还，无需重新打开。",
+          "REOPEN_FAILED": "无法重新打开此现金盒。"
         },
         "COL": {
           "HOLDER": "持现金人",
@@ -4108,6 +4122,7 @@
         "PARCEL_REMIT": "包裹汇款",
         "PARCEL_CLAWBACK": "包裹分成追回"
       },
+      "BOX_DATE": "{{date}} 的现金盒",
       "ADVANCE": {
         "ACTION_LABEL": "现金预支",
         "AMOUNT_LABEL": "金额",
@@ -4125,11 +4140,14 @@
       },
       "EXPENSE": {
         "ACTION_LABEL": "现场支出",
+        "LANDS_IN_BOX": "此项目将记入 {{date}} 的现金盒",
         "CATEGORY_LABEL": "类别",
         "AMOUNT_LABEL": "金额",
         "AMOUNT_PLACEHOLDER": "0.00",
         "NOTE_LABEL": "备注（选填）",
         "NOTE_PLACEHOLDER": "例如收据编号",
+        "BILL_DATE_LABEL": "票据上的日期",
+        "BILL_DATE_MISMATCH": "票据日期与将要记入的现金盒不一致 — 此项目将记入 {{date}} 的现金盒。",
         "SUBMIT": "记录支出",
         "WAGE_PRICED_BY_OWNER": "工资按车主设定的每趟费率计算（1 趟 = 1 个班次），无需填写金额。"
       },
@@ -4141,7 +4159,8 @@
         "GENERIC": "无法记录此项目，请重试。",
         "WAGE_RATE_NOT_CONFIGURED": "尚未设置每趟工资费率。请先让车主在司机工资费率页面设置。",
         "SALES_POINT_FORBIDDEN": "您只能为从自己售票点发车的班次记录此项目。此班次不属于您。",
-        "PER_HEAD_SALES_POINT_FORBIDDEN": "您只能为属于自己售票点的站点记录人头费。"
+        "PER_HEAD_SALES_POINT_FORBIDDEN": "您只能为属于自己售票点的站点记录人头费。",
+        "DAY_ALREADY_RETURNED": "当日的现金盒已完成归还并签署，无法再添加项目。请让车主重新打开当日的现金盒，然后再录入此票据。"
       },
       "MY_DAY": {
         "TITLE": "我今日的现金",
