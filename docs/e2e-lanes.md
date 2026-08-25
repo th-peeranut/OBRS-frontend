@@ -302,12 +302,14 @@ time whatever their frontend port says. Configs that hardcode `--port 4200` are 
 this rule: they name no variable, and their port is pinned by the backend CORS allow-list
 they are pointed at.
 
-**The gate lane now says which tree it measured.** `webServer.reuseExistingServer` is
-`!CI`, so locally Playwright never reports a port clash — it attaches to whatever already
-answers and runs your specs against that build. Measured 2026-08-22 (OBRS-773): a lane run
-reported `199 passed` onto a card, and the tree it had measured was another worktree's.
-`e2e/support/lane-tree-guard.ts` is the gate config's `globalSetup` (and, through the
-spread, `obrs769`'s). Every run now opens with:
+**Every lane with a `webServer` says which tree it measured.** `webServer.reuseExistingServer`
+is `!CI` or a flat `true` in 36 of the 53 root configs, so locally Playwright never reports a
+port clash — it attaches to whatever already answers and runs your specs against that build.
+Measured 2026-08-22 (OBRS-773): a lane run reported `199 passed` onto a card, and the tree it
+had measured was another worktree's. `e2e/support/lane-tree-guard.ts` started as the gate
+config's `globalSetup` alone and reached 2 configs; OBRS-1611 wired it into all 37 that
+declare a `webServer`, and rule 7 of `scripts/check-e2e-lanes.mjs` fails the build if a new
+one does not. Every run now opens with:
 
 ```
 [lane-tree] tree C:\Users\thpee\Desktop\workshop\OBRS-frontend-wt-obrs-1531
@@ -327,8 +329,23 @@ Error: [lane-tree] REFUSING TO RUN -- port 4230 belongs to another tree.
 The remedy is a port of your own — `$env:E2E_GATE_PORT='4290'; npm run e2e:gate` — or
 stopping the leftover server if it is one of your own killed runs. The guard reads the port
 out of `config.webServer.url`, so a config that spreads the gate config is checked on ITS
-port. It stands down on CI (`reuseExistingServer` is false there, one lane per runner) and
-on any non-Windows box, and prints that it did rather than going quiet.
+port; when `webServer` is given as an ARRAY, Playwright leaves `config.webServer` null, so the
+six full-stack lanes are read off the first project's loopback `baseURL` instead. It stands
+down on CI (`reuseExistingServer` is false there, one lane per runner) and on any non-Windows
+box, and prints that it did rather than going quiet.
+
+**Four lanes are allowed to attach to somebody else's server**, because that is what they are
+for: `obrs1258qa`, `obrs1388qa`, `obrs1388before` and `obrs433` all drive the local stack an
+operator started by hand on :4200, and each says so in its own header. They declare
+
+```ts
+metadata: { laneTree: 'attach-to-operator-stack' },
+```
+
+and get the banner without the refusal — the log still names the tree that served the pages,
+which is the half that matters when the output is a screenshot. Anything that declares nothing
+is guarded strictly, on purpose: an undeclared lane costs a refused run somebody notices, and
+the other default costs a picture of the wrong tree that nobody does.
 
 ## Known gaps
 

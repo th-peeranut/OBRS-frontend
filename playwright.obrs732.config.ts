@@ -57,6 +57,8 @@ const BASE_URL = `http://localhost:${FRONTEND_PORT}`;
 const API_URL = `http://localhost:${BACKEND_PORT}`;
 
 export default defineConfig({
+  // OBRS-1611: name the tree this run measures, and refuse a port another tree holds.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
   testDir: './e2e/tests',
   testMatch: '**/obrs-732-3ds.spec.ts',
   // Generous: one test drives our page, Omise's iframe, Omise's 3DS page and the return
