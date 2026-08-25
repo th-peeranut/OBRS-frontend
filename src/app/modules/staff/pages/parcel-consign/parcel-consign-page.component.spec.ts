@@ -301,6 +301,53 @@ describe('ParcelConsignPageComponent', () => {
     });
   });
 
+  // OBRS-1606 (owner decision, option A): a submit error names the round it was
+  // raised for, so it must not outlive that round. Both a round change and a day
+  // change funnel through `onScheduleChange()`, so the clear lives there.
+  describe('OBRS-1606 - a submit error must not outlive the round it was raised for', () => {
+    it('clears serverErrorKey when the round changes', () => {
+      component.ngOnInit();
+      component['serverErrorKey'] = 'STAFF.PARCEL_CONSIGN.ERROR.CARGO_CAPACITY_EXCEEDED';
+
+      component['onScheduleChange']('43');
+
+      expect(component['serverErrorKey']).toBeNull();
+    });
+
+    // The day path reaches the same method only through the emission that
+    // `clearScheduleSelection()` triggers - this is what makes one clear cover both.
+    it('clears serverErrorKey when the day changes, via the schedule-clear emission', () => {
+      component['formRef'] = {
+        clearScheduleSelection: () => component['onScheduleChange'](''),
+        clearStopSelections: () => {},
+      } as any;
+      component.ngOnInit();
+      component['serverErrorKey'] = 'STAFF.PARCEL_CONSIGN.ERROR.CARGO_CAPACITY_EXCEEDED';
+
+      component['onDateChange'](new Date(2026, 6, 15));
+
+      expect(component['serverErrorKey']).toBeNull();
+    });
+
+    // OBRS-1598's guard: re-clicking the already-selected day is not a change, so
+    // it must not wipe the message the salesperson is still reading.
+    it('keeps serverErrorKey when the same day is re-selected', () => {
+      // The stub CLEARS, exactly as the real emission does - otherwise this test
+      // could not go red: a no-op stub leaves serverErrorKey untouched whether the
+      // guard holds or not, so it would pass even on a build that dropped the guard.
+      component['formRef'] = {
+        clearScheduleSelection: () => component['onScheduleChange'](''),
+        clearStopSelections: () => {},
+      } as any;
+      component.ngOnInit();
+      component['serverErrorKey'] = 'STAFF.PARCEL_CONSIGN.ERROR.CARGO_CAPACITY_EXCEEDED';
+
+      component['onDateChange'](new Date(component['selectedDate']));
+
+      expect(component['serverErrorKey']).toBe('STAFF.PARCEL_CONSIGN.ERROR.CARGO_CAPACITY_EXCEEDED');
+    });
+  });
+
   it('fetches a quote when quoteParamsChange emits complete params', () => {
     component.ngOnInit(); // OBRS-616 — the quote pipeline is wired there
     component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
