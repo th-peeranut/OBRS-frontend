@@ -4351,3 +4351,15 @@ just one a test can never catch.
 
 ## OBRS-1577 re-review (Scrutinize self-fix, 2026-08-24)
 - Gating a create AFFORDANCE for a role the server refuses is not done until the COPY that points at that affordance is gated too. The fix hid the registry ADD button + the picker create for `admin` (correct), but `expense-payees-page.component.html` still rendered `ADMIN.EXPENSE_PAYEES.EMPTY_BODY` — copy that says "use the Add payee button, or type a new name while entering a bill" — to an admin for whom BOTH routes are now hidden. Wrapped that `<p>` in `@if (canCreate)` so admins see only the honest title. No invented copy, owners unaffected. Lesson: when you role-gate a button, grep the empty-state / hint / aria copy that references it — same family, different file.
+
+## OBRS-566 scrutinize self-fix (scripts/check-i18n-parity.mjs, 2026-08-25)
+- Gate 7's own rationale comment claimed "0 violations across 3 x 3,498 keys" but the script's
+  own printed count (`node scripts/check-i18n-parity.mjs` -> `en=3458 th=3458 zh=3458`) and the
+  commit message ("3 x 3,458 keys") both say 3,458. A transposed digit in a comment that exists
+  specifically to be the trustworthy record of what was measured is the exact failure mode
+  DEV-GOTCHAS warns about (a comment stating a wrong number becomes the next reader's false
+  belief) — fixed the comment to match the number the script itself prints. Not a logic bug,
+  the gate's behavior was unaffected; verified `node scripts/check-i18n-parity.mjs` still green
+  after the edit. Lesson: when a gate's comment quotes a measured count, that count is
+  independently checkable against the script's own console output — check it, don't trust the
+  commit message's copy of it.
