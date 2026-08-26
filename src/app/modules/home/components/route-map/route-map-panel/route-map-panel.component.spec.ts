@@ -500,66 +500,72 @@ describe('RouteMapPanelComponent', () => {
 
   describe('Directions road-snapping', () => {
     /**
-     * Minimal LatLngAltitude mock: exposes `.lat`/`.lng` as plain GETTER
-     * PROPERTIES, matching the real `google.maps.routes.Route.path` element
-     * type (OBRS-936: computeRoutes's `path` is `LatLngAltitude[]`, unlike the
-     * legacy `overview_path`'s `LatLng[]`, whose `.lat()`/`.lng()` were methods
-     * — confirmed against `@types/google.maps`'s `LatLngAltitude` class, not
-     * guessed).
+     * Minimal LatLng mock: exposes .lat() and .lng() methods as the real API
+     * does, allowing the component to read overview_path entries correctly.
      */
-    class MockLatLngAltitude {
-      constructor(public lat: number, public lng: number) {}
+    class MockLatLng {
+      constructor(private _lat: number, private _lng: number) {}
+      lat(): number { return this._lat; }
+      lng(): number { return this._lng; }
     }
 
     /**
-     * Build a mock computeRoutes() success result with a simple two-point path.
+     * Build a mock DirectionsResult with a simple two-point overview_path.
      */
-    function mockComputeRoutesResult(
-      pathPoints: Array<{ lat: number; lng: number }>
-    ): { routes: google.maps.routes.Route[] } {
+    function mockDirectionsResult(
+      overviewPoints: Array<{ lat: number; lng: number }>
+    ): google.maps.DirectionsResult {
       return {
         routes: [
           {
-            path: pathPoints.map((p) => new MockLatLngAltitude(p.lat, p.lng)),
-          } as unknown as google.maps.routes.Route,
+            overview_path: overviewPoints.map(
+              (p) => new MockLatLng(p.lat, p.lng) as unknown as google.maps.LatLng
+            ),
+          } as unknown as google.maps.DirectionsRoute,
         ],
-      };
+      } as unknown as google.maps.DirectionsResult;
     }
 
     /**
-     * Install a google.maps mock whose `importLibrary('routes')` resolves to a
-     * `Route` class whose static `computeRoutes()` is controlled by `respondWith`.
+     * Install a google.maps mock that includes a DirectionsService whose
+     * `route()` callback is controlled by `respondWith`.
      *
-     * @param respondWith  Null ⇒ computeRoutes() REJECTS (mirrors the real API's
-     *                     promise-rejection failure mode — no route found, quota,
-     *                     API not enabled, etc. — replacing the legacy callback's
-     *                     non-OK status branch).
-     *                     Result object ⇒ computeRoutes() resolves with it.
+     * @param respondWith  Null ⇒ call callback with (null, errorStatus).
+     *                     DirectionsResult ⇒ call callback with (result, 'OK').
+     * @param errorStatus  Status string used when respondWith is null.
      */
     function installMockWithDirections(
-      respondWith: { routes: google.maps.routes.Route[] } | null
+      respondWith: google.maps.DirectionsResult | null,
+      errorStatus = 'REQUEST_DENIED'
     ): jasmine.Spy {
-      const computeRoutesSpy = jasmine
-        .createSpy('computeRoutes')
-        .and.callFake(() => {
-          return respondWith
-            ? Promise.resolve(respondWith)
-            : Promise.reject(new Error('mock computeRoutes failure'));
-        });
+      const routeSpy = jasmine
+        .createSpy('route')
+        .and.callFake(
+          (
+            _req: google.maps.DirectionsRequest,
+            cb: (
+              r: google.maps.DirectionsResult | null,
+              s: google.maps.DirectionsStatus
+            ) => void
+          ) => {
+            if (respondWith) {
+              cb(respondWith, 'OK' as google.maps.DirectionsStatus);
+            } else {
+              cb(null, errorStatus as google.maps.DirectionsStatus);
+            }
+          }
+        );
 
       (window as unknown as Record<string, unknown>)['google'] = {
         maps: {
           ...mockMapsLib,
-          importLibrary: (name: string) =>
-            name === 'routes'
-              ? Promise.resolve({
-                  Route: { computeRoutes: computeRoutesSpy },
-                })
-              : Promise.reject(new Error(`unmocked library: ${name}`)),
+          DirectionsService: class {
+            route = routeSpy;
+          },
         },
       };
 
-      return computeRoutesSpy;
+      return routeSpy;
     }
 
     afterEach(() => {
@@ -591,7 +597,7 @@ describe('RouteMapPanelComponent', () => {
     });
 
     it('(b) polylinePath is upgraded to road-snapped path when DirectionsService returns OK', async () => {
-      const roadResult = mockComputeRoutesResult([
+      const roadResult = mockDirectionsResult([
         { lat: 14.0, lng: 101.0 },
         { lat: 14.5, lng: 101.5 },
       ]);
@@ -614,7 +620,7 @@ describe('RouteMapPanelComponent', () => {
     });
 
     it('(c) polylinePath stays as straight path when DirectionsService returns REQUEST_DENIED', async () => {
-      installMockWithDirections(null);
+      installMockWithDirections(null, 'REQUEST_DENIED');
 
       component.pickupStops = [makeStop(1, true), makeStop(2, true)];
       component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
@@ -632,7 +638,7 @@ describe('RouteMapPanelComponent', () => {
     });
 
     it('(c) polylinePath stays as straight path when DirectionsService returns ZERO_RESULTS', async () => {
-      installMockWithDirections(null);
+      installMockWithDirections(null, 'ZERO_RESULTS');
 
       component.pickupStops = [makeStop(1, true), makeStop(3, true)];
       component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
@@ -655,7 +661,7 @@ describe('RouteMapPanelComponent', () => {
 
     it('stale-response guard: direction toggle discards slow response for previous direction', async () => {
       // First direction: two pickup stops.
-      const roadResult1 = mockComputeRoutesResult([
+      const roadResult1 = mockDirectionsResult([
         { lat: 10.0, lng: 100.0 },
         { lat: 10.5, lng: 100.5 },
       ]);
@@ -665,7 +671,7 @@ describe('RouteMapPanelComponent', () => {
       component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
 
       // Immediately change direction (new stops) before first response settles.
-      const roadResult2 = mockComputeRoutesResult([
+      const roadResult2 = mockDirectionsResult([
         { lat: 20.0, lng: 100.0 },
         { lat: 20.5, lng: 100.5 },
       ]);
@@ -688,7 +694,7 @@ describe('RouteMapPanelComponent', () => {
     // -----------------------------------------------------------------------
 
     it('caches the road-snapped path so a later panel skips the Directions call', async () => {
-      const roadResult = mockComputeRoutesResult([
+      const roadResult = mockDirectionsResult([
         { lat: 14.0, lng: 101.0 },
         { lat: 14.5, lng: 101.5 },
       ]);
@@ -719,7 +725,7 @@ describe('RouteMapPanelComponent', () => {
     // rebuilds `dropoffStops` with `.filter()`, a new array reference even when
     // every member is identical, and the map went diagonal until a reload.
     it('[OBRS-1340] a re-fire with the SAME stop set keeps the road path and issues no second Directions call', async () => {
-      const roadResult = mockComputeRoutesResult([
+      const roadResult = mockDirectionsResult([
         { lat: 14.0, lng: 101.0 },
         { lat: 14.5, lng: 101.5 },
       ]);
@@ -749,7 +755,7 @@ describe('RouteMapPanelComponent', () => {
     });
 
     it('a changed stop coordinate invalidates the cache and re-queries Directions', async () => {
-      const roadResult = mockComputeRoutesResult([
+      const roadResult = mockDirectionsResult([
         { lat: 14.0, lng: 101.0 },
         { lat: 14.5, lng: 101.5 },
       ]);
@@ -771,7 +777,7 @@ describe('RouteMapPanelComponent', () => {
 
     it('ignores a corrupt localStorage cache entry and still road-snaps', async () => {
       window.localStorage.setItem('obrs.dirPathCache.v1', '{ not valid json');
-      const roadResult = mockComputeRoutesResult([
+      const roadResult = mockDirectionsResult([
         { lat: 14.0, lng: 101.0 },
         { lat: 14.5, lng: 101.5 },
       ]);
