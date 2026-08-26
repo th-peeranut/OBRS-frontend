@@ -99,8 +99,36 @@ function loadGoogleMapsApi(apiKey: string): Promise<void> {
 const stopToken = (s: RouteStop): string =>
   `${s.slug}@${(s.latitude as number).toFixed(5)},${(s.longitude as number).toFixed(5)}`;
 
-/** Maximum number of points per Directions API request (origin + N-2 waypoints + destination). */
+/**
+ * Maximum number of points per road-snap request (origin + N-2 intermediates + destination).
+ *
+ * OBRS-936 (tech-debt): road-snapping moved from the deprecated
+ * `google.maps.DirectionsService` to `google.maps.routes.Route.computeRoutes`
+ * (Google's migration guide: https://developers.google.com/maps/documentation/javascript/routes/routes-js-migration).
+ * The new API's own limit is looser — "up to 25 intermediate waypoints" EXCLUDING
+ * origin/destination (27 points/request total), vs. the legacy 25-points-total cap
+ * this constant enforced — but the value is kept unchanged: it is still a valid
+ * (just more conservative) chunk size under the new limit, so the chunking
+ * algorithm and its cache-key/combine logic below needed no change at all.
+ */
 const DIRECTIONS_CHUNK_SIZE = 25;
+
+/**
+ * Resolves the `routes` library's `Route` class via `google.maps.importLibrary`
+ * (Google's documented dynamic-library pattern for the non-deprecated Routes
+ * API) — called once per road-snap request, same as the legacy code called
+ * `new google.maps.DirectionsService()` fresh each time. No local caching
+ * here: `importLibrary` already memoizes the underlying fetch/script-load
+ * internally (repeated calls for an already-loaded library resolve
+ * immediately), so a second cache on top of it would only risk going stale —
+ * e.g. across test runs that swap the `window.google.maps.importLibrary` mock
+ * between cases. `importLibrary('routes')` is safe to call even though
+ * `&libraries=marker` (not `routes`) is what the bootstrap `<script>` tag
+ * eagerly loads: `importLibrary` fetches any additional library on demand.
+ */
+function loadRoutesLibrary(): Promise<typeof google.maps.routes.Route> {
+  return google.maps.importLibrary('routes').then((lib) => lib.Route);
+}
 
 /**
  * Max time to wait, after the map is expected to draw, for the `<google-map>`
@@ -595,8 +623,8 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
         this.recomputeMarkers();
         // Stops may have arrived before maps finished loading. If a straight path
         // is already set and a Directions key was registered, resolve the
-        // road-snap now that the DirectionsService is available — from cache if
-        // possible, otherwise via a Directions request.
+        // road-snap now that the routes library is available — from cache if
+        // possible, otherwise via a computeRoutes request.
         if (
           this.straightPath.length > 1 &&
           this.lastDirReqKey &&
@@ -1033,43 +1061,50 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
-   * Wrap a single DirectionsService.route() callback call in a Promise.
-   * Returns the DirectionsResult on success, null on any failure status.
+   * Request one chunk's road-snapped points from `Route.computeRoutes`.
+   * Returns the road-snapped `{lat,lng}` array on success, null on any failure
+   * (no route found, or the promise rejects — e.g. quota/API-not-enabled/network).
+   *
+   * OBRS-936: replaces the old `DirectionsService.route()` callback wrapper.
+   * `intermediates` (not `waypoints`) is the routes-library field name, and each
+   * entry is a `Waypoint` object (`{ location: <LatLngLiteral> }`), not a bare
+   * coordinate — confirmed against `@types/google.maps`'s `ComputeRoutesRequest`/
+   * `Waypoint` definitions, not guessed. `fields: ['path']` is REQUIRED by this
+   * API (unlike the legacy call, which returned everything by default) — omitting
+   * it is a request-time error, not just a wasted read. `route.path` entries are
+   * `LatLngAltitude`, whose `lat`/`lng` are plain GETTER PROPERTIES, not methods
+   * like the legacy `LatLng.lat()`/`.lng()` this replaces — `p.lat`, never `p.lat()`.
    */
-  private requestChunk(
-    svc: google.maps.DirectionsService,
+  private async requestChunk(
+    RouteClass: typeof google.maps.routes.Route,
     chunk: google.maps.LatLngLiteral[]
-  ): Promise<google.maps.DirectionsResult | null> {
-    return new Promise((resolve) => {
-      const origin = chunk[0];
-      const destination = chunk[chunk.length - 1];
-      const waypoints: google.maps.DirectionsWaypoint[] = chunk
-        .slice(1, -1)
-        .map((p) => ({
-          location: p as google.maps.LatLngLiteral,
-          stopover: false,
-        }));
+  ): Promise<google.maps.LatLngLiteral[] | null> {
+    const origin = chunk[0];
+    const destination = chunk[chunk.length - 1];
+    const intermediates: google.maps.routes.Waypoint[] = chunk
+      .slice(1, -1)
+      .map((p) => ({ location: p }));
 
-      svc.route(
-        {
-          origin,
-          destination,
-          waypoints,
-          // Use string literals to avoid a runtime dependency on the
-          // google.maps enum objects (which may be absent in test mocks
-          // or before the Maps JS script finishes loading).
-          travelMode: 'DRIVING' as google.maps.TravelMode,
-          optimizeWaypoints: false,
-        },
-        (result, status) => {
-          if ((status as string) === 'OK' && result) {
-            resolve(result);
-          } else {
-            resolve(null);
-          }
-        }
-      );
-    });
+    try {
+      const { routes } = await RouteClass.computeRoutes({
+        origin,
+        destination,
+        intermediates,
+        travelMode: 'DRIVING' as google.maps.TravelModeString,
+        fields: ['path'],
+      });
+      const path = routes?.[0]?.path;
+      if (!path || path.length === 0) {
+        return null;
+      }
+      return path.map((p) => ({ lat: p.lat, lng: p.lng }));
+    } catch {
+      // No route found, quota exceeded, API not enabled, network error, etc. —
+      // the caller's outer try/catch in requestDirectionsPath logs; this layer
+      // just reports "this chunk failed" the same way the legacy non-OK-status
+      // branch did.
+      return null;
+    }
   }
 
   /**
@@ -1105,14 +1140,14 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     cacheKey: string,
     seqId: number
   ): Promise<void> {
-    // Guard: DirectionsService might not exist in the current maps stub (tests).
+    // Guard: google.maps might not exist in the current maps stub (tests).
     const win = window as unknown as GoogleWindow;
     if (!win.google?.maps) {
       return;
     }
 
     try {
-      const svc = new google.maps.DirectionsService();
+      const RouteClass = await loadRoutesLibrary();
       const chunks = this.chunkPath(straightPath);
       const roadPaths: google.maps.LatLngLiteral[][] = [];
 
@@ -1122,19 +1157,15 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
           return;
         }
 
-        const result = await this.requestChunk(svc, chunk);
+        const chunkRoadPath = await this.requestChunk(RouteClass, chunk);
 
-        if (!result) {
+        if (!chunkRoadPath) {
           // Any chunk failure means we can't assemble a complete road path —
           // keep the straight path (already assigned) and abort.
-          console.warn('[RouteMapPanel] Directions chunk failed; using straight-line path.');
+          console.warn('[RouteMapPanel] Route computation chunk failed; using straight-line path.');
           return;
         }
 
-        const chunkRoadPath = result.routes[0].overview_path.map((p) => ({
-          lat: p.lat(),
-          lng: p.lng(),
-        }));
         roadPaths.push(chunkRoadPath);
       }
 
@@ -1157,9 +1188,9 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       // Persist the deterministic road path so repeat views skip the API.
       writeDirPathCache(cacheKey, combined);
     } catch (e) {
-      // Covers: DirectionsService constructor unavailable, network failures,
-      // API not enabled on this key, quota exceeded, etc.
-      console.warn('[RouteMapPanel] Directions API error; using straight-line path.', e);
+      // Covers: the "routes" library failing to load, network failures, API not
+      // enabled on this key, quota exceeded, etc.
+      console.warn('[RouteMapPanel] Route computation error; using straight-line path.', e);
       // polylinePath is already set to straightPath — no action needed.
     }
   }
