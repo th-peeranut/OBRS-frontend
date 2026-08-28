@@ -54,12 +54,22 @@ interface AdminNavSection {
   items: AdminNavItem[];
 }
 
+// OBRS-1432 follow-up: 'system' moved to position 2 (right after 'overview'),
+// owner-decided 2026-08-20. The sidebar rail is 1.95x the 768px viewport, so
+// "ตั้งค่าระบบ" — the SOLE row this section renders (OBRS-702 collapsed 7
+// config pages into it; the 8 items buildSettingsTabItems() also produces are
+// search-only, per OBRS-1431, and never painted into the rail) — sat 1,699px
+// from the top and was permanently below the fold. Position 2 was chosen
+// over position 1 (would displace 'overview', everyone's first stop) and
+// position 3 (would need proving the first 10 rows still clear 768px);
+// position 2 needs no such proof because it costs exactly one row + one
+// section header. The other three sections keep their relative order.
 const SECTION_ORDER: { key: NavSectionKey; titleKey: string }[] = [
   { key: 'overview', titleKey: 'ADMIN.NAV.SECTION.OVERVIEW' },
+  { key: 'system', titleKey: 'ADMIN.NAV.SECTION.SYSTEM' },
   { key: 'master', titleKey: 'ADMIN.NAV.SECTION.MASTER_DATA' },
   { key: 'operations', titleKey: 'ADMIN.NAV.SECTION.OPERATIONS' },
   { key: 'reports', titleKey: 'ADMIN.NAV.SECTION.REPORTS' },
-  { key: 'system', titleKey: 'ADMIN.NAV.SECTION.SYSTEM' },
 ];
 
 // OBRS-939: the two `routerLinkActiveOptions` values, as module-level frozen
