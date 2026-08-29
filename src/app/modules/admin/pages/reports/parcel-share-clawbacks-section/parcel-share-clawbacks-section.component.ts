@@ -97,8 +97,14 @@ export class ParcelShareClawbacksSectionComponent implements OnInit, OnDestroy {
     return this.store.filter;
   }
 
+  // OBRS-1631: the dropdown's own `[placeholder]` is a clickable row emitting `''`, which is not
+  // one of the three wire values — and not 'ALL' either, so the store sent a blank `status=`.
   protected onFilterChange(value: string): void {
-    this.store.setFilter(value as ParcelShareClawbackFilter);
+    const filter = String(value ?? '').trim();
+    if (!filter) {
+      return;
+    }
+    this.store.setFilter(filter as ParcelShareClawbackFilter);
   }
 
   /** Dropdown options carry i18n KEYS (the store's values are wire values, and

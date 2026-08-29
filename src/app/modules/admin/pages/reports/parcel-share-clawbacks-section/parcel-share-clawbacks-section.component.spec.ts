@@ -243,6 +243,19 @@ describe('ParcelShareClawbacksSectionComponent', () => {
     expect(store.setFilter).toHaveBeenCalledWith('ALL');
   });
 
+  // OBRS-1631: the dropdown renders its own `[placeholder]` as a clickable row emitting `''`
+  // (admin-dropdown.component.html:42-57). `'' as ParcelShareClawbackFilter` is not one of the
+  // three wire values, and it is not 'ALL' either, so the store sent `status=` to the API.
+  it('ignores the empty value the dropdown placeholder emits', () => {
+    configure([]);
+    fixture.detectChanges();
+    store.setFilter.calls.reset();
+
+    fixture.componentInstance['onFilterChange']('');
+
+    expect(store.setFilter).not.toHaveBeenCalled();
+  });
+
   it('shows the load error only when there is nothing cached to show', () => {
     configure(null);
     fixture.detectChanges();
