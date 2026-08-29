@@ -343,6 +343,35 @@ $app-date-field-segment-inset: 38px;
     padding-top: 26px;
     padding-bottom: $space-2xs;
     padding-left: $app-date-field-segment-inset;
+
+    // OBRS-1586 — reclaim the inset PrimeNG reserves for a TRAILING icon that
+    // this app does not have. `[showIcon]="true"` makes @primeuix pad the input
+    // by 40px on the inline-end for the icon it would park there, and all five
+    // `--segment` sites then hand that icon to `pTemplate="inputicon"` and pin
+    // it to the LEFT (`.app-date-field-icon` above, and OBRS-1003's
+    // `position: static` on the container that made that pin resolve). The
+    // reservation was never cancelled, so 40px of every segment paid for
+    // something that is drawn at the other end.
+    //
+    // Measured at a 993px viewport, the narrowest width the bar is still one
+    // row: content box 137px against `周六, 2026/08/29` at 139.05px -- CLIPPED.
+    // This gives the box back 28px (137 -> 165) and clips nothing in any of the
+    // three locales, and it costs no other element a pixel: the two station
+    // halves and the search button are the widths they were, because a segment's
+    // padding is inside a box whose width the flex row already fixed.
+    //
+    // ⚠️ This beats @primeuix on SOURCE ORDER, not on specificity. The rule it
+    // overrides is `.p-datepicker:has(.p-datepicker-input-icon-container)
+    // .p-datepicker-input` (@primeuix/styles/dist/datepicker), and `:has()`
+    // takes the specificity of its argument, so both selectors are (0,3,0) --
+    // and `padding-right` and `padding-inline-end` share one cascade in LTR.
+    // What settles it is that PrimeNG prepends its styles into <head>, so this
+    // file comes later. That is the same footing `padding-left` above has stood
+    // on since OBRS-1189, which is why this is documented rather than
+    // "hardened": adding a class here would lift the WHOLE block's specificity,
+    // including declarations no one asked this card to move. The 993px locale
+    // tests in obrs-1189-search-bar.spec.ts go red if the order ever flips.
+    padding-right: $space-xs;
   }
 
   // Centre the icon on the VALUE, not on the frame: the frame's own middle is
