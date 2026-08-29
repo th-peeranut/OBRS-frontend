@@ -331,6 +331,48 @@ describe('ExpensesPageComponent', () => {
       expect((component as any).expenses[0].ownerLabel).toBe('Second Lines');
     });
 
+    // OBRS-1627: the operator COLUMN became this filter. With one operator on
+    // prod it narrows nothing today, which is exactly why it needs a test - a
+    // control that quietly matched no rows would look identical.
+    it('narrows the table by operator, client-side and without a store call', async () => {
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const store = makeExpensesStoreStub([
+        expense({ id: 1, ownerId: 7, expenseDate: `${thisMonth}-05` }),
+        expense({ id: 2, ownerId: 9, expenseDate: `${thisMonth}-06` }),
+      ]);
+      const component = makeComponent(store, undefined, true, adminApiWithOwners(), ['admin']);
+
+      component.ngOnInit();
+      await Promise.resolve();
+      await Promise.resolve();
+      store.setVehicleFilter.calls.reset();
+
+      (component as any).onOwnerFilterChange('9');
+
+      expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([2]);
+      expect(store.setVehicleFilter).not.toHaveBeenCalled();
+    });
+
+    it('clearing the operator filter restores every operator, not none', async () => {
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const store = makeExpensesStoreStub([
+        expense({ id: 1, ownerId: 7, expenseDate: `${thisMonth}-05` }),
+        expense({ id: 2, ownerId: 9, expenseDate: `${thisMonth}-06` }),
+      ]);
+      const component = makeComponent(store, undefined, true, adminApiWithOwners(), ['admin']);
+
+      component.ngOnInit();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      (component as any).onOwnerFilterChange('9');
+      (component as any).onOwnerFilterChange('');
+
+      expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([1, 2]);
+    });
+
     it('a failed roster fetch leaves the page usable and the options empty — no alert on load', async () => {
       // The consequence is confined to the create modal, which says so itself.
       // Alerting here would fire on every page load for a control the user may
