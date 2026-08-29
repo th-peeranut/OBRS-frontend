@@ -238,6 +238,9 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       // `requiredRoles: ['admin','owner']`) as cash-online-reconciliation-report above.
       { path: 'vehicle-pl-report', labelKey: 'ADMIN.PAGES.VEHICLE_PL_REPORT', icon: 'directions_bus', descriptionKey: 'ADMIN.VEHICLE_PL_REPORT.SUBTITLE', section: 'reports' },
       { path: 'payee-spend-report', labelKey: 'ADMIN.PAGES.PAYEE_SPEND_REPORT', icon: 'store', descriptionKey: 'ADMIN.PAYEE_SPEND_REPORT.SUBTITLE', section: 'reports' },
+      // OBRS-1613: sits next to payee-spend-report because it answers the other half of the same
+      // question — same admin+owner audience (route `requiredRoles: ['admin','owner']`).
+      { path: 'part-unit-price-report', labelKey: 'ADMIN.PAGES.PART_UNIT_PRICE_REPORT', icon: 'monitoring', descriptionKey: 'ADMIN.PART_UNIT_PRICE_REPORT.SUBTITLE', section: 'reports' },
       // OBRS-685: vehicle/central expense log — admin+owner (route
       // `requiredRoles: ['admin','owner']`), same always-shown audience as
       // eod-sales-report above — operational record-keeping, not a report.

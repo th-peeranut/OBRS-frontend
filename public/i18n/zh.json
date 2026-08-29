@@ -542,6 +542,7 @@
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
       "PAYEE_SPEND_REPORT": "按收款方统计支出",
+      "PART_UNIT_PRICE_REPORT": "配件单价",
       "VEHICLE_PL_REPORT": "单车损益",
       "EXPENSES": "费用",
       "EXPENSE_PAYEES": "收款方名录",
@@ -2028,6 +2029,34 @@
       "PERIOD_ALL": "当前显示：全部年份",
       "PERIOD_YEAR": "当前显示：{{year}} 年全年",
       "PERIOD_YEAR_MONTH": "当前显示：{{year}} 年 {{month}}"
+    },
+    "PART_UNIT_PRICE_REPORT": {
+      "SUBTITLE": "各配件／工时的单价——哪家车行收多少、何时收",
+      "FILTER_PART": "要比较的项目",
+      "PART_OPTION": "{{name}} · 可比较 {{comparable}}/{{lines}}",
+      "SCOPE_NOTE": "本页涵盖全部记录，并且刻意不设年份筛选——目前唯一可比较的价格都横跨 2025 与 2026 年，加上时间范围反而会把本页存在的意义清空。",
+      "LOAD_FAILED": "报表加载失败",
+      "EMPTY": "还没有账单指定登记表中的项目——只要录入账单时从登记表选择项目，本报表就会有可比较的数据。",
+      "PICK_A_PART": "选择一个项目，查看哪家车行收多少、何时收",
+      "COVERAGE_TITLE": "本报表能说明多少金额",
+      "COVERAGE_TEXT": "支出合计 {{total}} · 可按单价比较 {{comparable}}（{{totalLines}} 行中的 {{comparableLines}} 行）",
+      "COVERAGE_EXCLUDED": "无法比较：{{unnamed}}（{{unnamedLines}} 行）未指定任何项目，其中包含“多项一价”的行 · {{noPrice}}（{{noPriceLines}} 行）已指定项目，但账单未写单价，或写为 ฿0。",
+      "NO_COMPARISON": "暂时没有可比较的数据",
+      "NO_COMPARISON_UNITS": "此项目在多张账单上都有价格，但单位不同，无法并列比较——每罐的价格与每升的价格不是涨价。",
+      "NO_COMPARISON_ONE_BILL": "此项目目前只有一张账单的价格——出现第二张使用相同单位的账单后，图表就会显示。",
+      "UNIT_GROUP": "每 {{unit}}",
+      "UNIT_NONE": "未注明单位",
+      "PAYEE_UNKNOWN": "未记录收款方",
+      "TABLE_TITLE": "所选项目的全部明细",
+      "COL_DATE": "日期",
+      "COL_PAYEE": "车行／收款方",
+      "COL_UNIT_PRICE": "单价",
+      "COL_STATUS": "状态",
+      "STATUS": {
+        "COMPARABLE": "计入",
+        "EXCLUDED_ZERO_PRICE": "不计入 · 账单单价写为 ฿0",
+        "EXCLUDED_NO_UNIT_PRICE": "不计入 · 账单未写单价"
+      }
     },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "按车辆统计的损益，来自车票收入与已记录的支出。",

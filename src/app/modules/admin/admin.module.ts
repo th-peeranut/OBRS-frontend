@@ -49,6 +49,7 @@ import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-
 import { RefundVoidReportPageComponent } from './pages/refund-void-report/refund-void-report-page.component';
 import { CashOnlineReconciliationReportPageComponent } from './pages/cash-online-reconciliation-report/cash-online-reconciliation-report-page.component';
 import { PayeeSpendReportPageComponent } from './pages/payee-spend-report/payee-spend-report-page.component';
+import { PartUnitPriceReportPageComponent } from './pages/part-unit-price-report/part-unit-price-report-page.component';
 import { VehiclePlReportPageComponent } from './pages/vehicle-pl-report/vehicle-pl-report-page.component';
 import { AppVehicleMaintenancePanelComponent } from './pages/vehicles/vehicle-maintenance/vehicle-maintenance-panel.component';
 import { AppVehicleInspectionPanelComponent } from './pages/vehicles/vehicle-inspection/vehicle-inspection-panel.component';
@@ -412,6 +413,18 @@ export const adminRoutes: Routes = [
         },
       },
       {
+        // OBRS-1613: unit price per registry entry, across time and across garages — the other
+        // half of the question payee-spend-report above answers. Same admin+owner audience.
+        path: 'part-unit-price-report',
+        component: PartUnitPriceReportPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.PART_UNIT_PRICE_REPORT',
+          subtitleKey: 'ADMIN.PART_UNIT_PRICE_REPORT.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
         // OBRS-884: per-vehicle P&L. Same admin+owner audience as every other report on
         // this nav (the endpoint 403s anyone else), not a further-restricted owner-only
         // page like settlements.
@@ -603,6 +616,7 @@ export const adminRoutes: Routes = [
     RefundVoidReportPageComponent,
     CashOnlineReconciliationReportPageComponent,
     PayeeSpendReportPageComponent,
+    PartUnitPriceReportPageComponent,
     VehiclePlReportPageComponent,
     AppVehicleMaintenancePanelComponent,
     AppVehicleInspectionPanelComponent,

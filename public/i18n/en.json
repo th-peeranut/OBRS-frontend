@@ -542,6 +542,7 @@
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation",
       "PAYEE_SPEND_REPORT": "Spend by payee",
+      "PART_UNIT_PRICE_REPORT": "Unit price by part",
       "VEHICLE_PL_REPORT": "Per-vehicle P&L",
       "EXPENSES": "Expenses",
       "EXPENSE_PAYEES": "Payee Registry",
@@ -2028,6 +2029,34 @@
       "PERIOD_ALL": "Showing: every year",
       "PERIOD_YEAR": "Showing: {{year}}, whole year",
       "PERIOD_YEAR_MONTH": "Showing: {{month}} {{year}}"
+    },
+    "PART_UNIT_PRICE_REPORT": {
+      "SUBTITLE": "Unit price per part or labour entry — which garage charged what, and when",
+      "FILTER_PART": "Entry to compare",
+      "PART_OPTION": "{{name}} · {{comparable}}/{{lines}} comparable",
+      "SCOPE_NOTE": "This screen covers everything on record and deliberately has no year filter — the only prices with anything to compare straddle 2025 and 2026, so a date range would empty exactly the chart this screen exists for.",
+      "LOAD_FAILED": "Could not load the report",
+      "EMPTY": "No bill has named a registry entry yet — once bills are entered by picking from the registry, this report starts having something to compare.",
+      "PICK_A_PART": "Pick one entry to see which garage charged what, and when",
+      "COVERAGE_TITLE": "How much of the money this report can speak for",
+      "COVERAGE_TEXT": "Total spend {{total}} · comparable by unit price {{comparable}} ({{comparableLines}} of {{totalLines}} lines)",
+      "COVERAGE_EXCLUDED": "Not comparable: {{unnamed}} ({{unnamedLines}} lines) name no entry at all, which includes lines covering several things for one price · {{noPrice}} ({{noPriceLines}} lines) name an entry but the bill wrote no unit price, or wrote ฿0.",
+      "NO_COMPARISON": "Nothing to compare yet",
+      "NO_COMPARISON_UNITS": "This entry has prices on several bills, but in different units, so they cannot be lined up — a price per can and a price per litre is not a price rise.",
+      "NO_COMPARISON_ONE_BILL": "This entry has a price on one bill so far — the chart appears once a second bill uses the same unit.",
+      "UNIT_GROUP": "Per {{unit}}",
+      "UNIT_NONE": "no unit given",
+      "PAYEE_UNKNOWN": "No payee on record",
+      "TABLE_TITLE": "Every line of the selected entry",
+      "COL_DATE": "Date",
+      "COL_PAYEE": "Garage / payee",
+      "COL_UNIT_PRICE": "Unit price",
+      "COL_STATUS": "Status",
+      "STATUS": {
+        "COMPARABLE": "Counted",
+        "EXCLUDED_ZERO_PRICE": "Not counted · the bill wrote ฿0 per unit",
+        "EXCLUDED_NO_UNIT_PRICE": "Not counted · the bill wrote no unit price"
+      }
     },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "Profit and loss for each vehicle, from ticket revenue and the recorded costs.",

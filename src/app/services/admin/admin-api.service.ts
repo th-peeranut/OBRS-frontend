@@ -28,6 +28,7 @@ import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.inte
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { VehiclePlReportDto } from '../../shared/interfaces/vehicle-pl-report.interface';
 import { PayeeSpendReportDto } from '../../shared/interfaces/payee-spend-report.interface';
+import { PartUnitPriceReportDto } from '../../shared/interfaces/part-unit-price-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
@@ -2322,6 +2323,25 @@ export class AdminApiService {
     }
     return this.getRequest<PayeeSpendReportDto>(
       `${this.baseUrl}/private/admin/reports/expense-by-payee`,
+      params
+    );
+  }
+
+  /**
+   * OBRS-1613: what one registry entry cost, per garage, over time.
+   *
+   * No date range at ALL, unlike every other report method here — the owner ruled that on
+   * 2026-08-25 because both parts on record with anything to compare straddle 2025/2026, so any
+   * default window would open the screen on an empty chart. `partId` omitted is the first paint:
+   * the picker's rows and the coverage figures come back without it.
+   */
+  getPartUnitPriceReport(partId: number | null): Observable<ResponseAPI<PartUnitPriceReportDto>> {
+    let params = new HttpParams();
+    if (partId !== null) {
+      params = params.set('partId', String(partId));
+    }
+    return this.getRequest<PartUnitPriceReportDto>(
+      `${this.baseUrl}/private/admin/reports/part-unit-price`,
       params
     );
   }
