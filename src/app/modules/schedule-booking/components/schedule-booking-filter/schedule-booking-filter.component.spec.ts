@@ -1348,3 +1348,109 @@ describe('ScheduleBookingFilterComponent — the search button is a segment of t
     expect(button.getAttribute('aria-label')).toBe('HOME.HOME_BOOKING.SEARCH');
   });
 });
+
+/**
+ * OBRS-1597 — landing on /schedule-booking is ONE search, and the roster
+ * arriving afterwards is not a second one.
+ *
+ * The reported symptom was a second `POST /api/schedules/search` on arrival
+ * from the home form, carrying the roster's FIRST stop as origin instead of the
+ * chosen one, coming back with zero rounds and wiping the rows already
+ * rendered. It did not reproduce (34 walks, see the card), and the reason it
+ * cannot is structural: `ngOnInit` subscribes to two independent store streams
+ * — the station roster and `scheduleFilter` — and only the second one is
+ * allowed to search. `syncStationOptions()` rebuilds the option lists and
+ * dispatches nothing.
+ *
+ * That "only one of the two may search" is the property worth pinning, because
+ * nothing else states it: `ScheduleBookingComponent.ngOnInit` dispatches
+ * `invokeGetAllProvinceWithStationApi()` on every arrival, so the roster stream
+ * genuinely can emit again after the list has rendered. A future edit that
+ * moves a dispatch into the station subscription re-creates exactly the
+ * reported defect, and the origin it would carry is whatever the form holds at
+ * that moment.
+ */
+describe('ScheduleBookingFilterComponent — arriving with a filter searches once (OBRS-1597)', () => {
+  const STATIONS: any = [
+    // Deliberately NOT the chosen origin: the reported payload named the
+    // roster's first stop, so the first entry has to be a stop the filter does
+    // not ask for, or the assertion cannot tell the two apart.
+    { id: 9, slug: 'roster-first', status: 'active', stopType: 'station' },
+    { id: 1, slug: 'station-a', status: 'active', stopType: 'station' },
+    { id: 2, slug: 'station-b', status: 'active', stopType: 'station' },
+  ];
+
+  const SAVED_FILTER = {
+    roundTrip: 1,
+    startStationId: 1,
+    stopStationId: 2,
+    departureDate: dayjs().add(1, 'day').toDate(),
+    passengerInfo: [
+      { type: 'ADULT', count: 1 },
+      { type: 'KIDS', count: 0 },
+    ],
+  };
+
+  let component: ScheduleBookingFilterComponent;
+  let dispatched: any[];
+  let stations$: BehaviorSubject<any>;
+  let filter$: BehaviorSubject<any>;
+
+  const searches = () =>
+    dispatched.filter((action) => action.type === invokeGetScheduleListApi.type);
+
+  beforeEach(() => {
+    dispatched = [];
+    stations$ = new BehaviorSubject<any>(STATIONS);
+    filter$ = new BehaviorSubject<any>(null);
+
+    // Same two-observable stand-in as the OBRS-1503 block above: the first
+    // `pipe()` in the constructor is the station roster, the second is
+    // `scheduleFilter`. Here BOTH are subjects, because this card is about what
+    // the roster stream is allowed to do after the list has already rendered.
+    let call = 0;
+    const chainStore: any = {
+      pipe: () => (++call === 1 ? stations$.asObservable() : filter$.asObservable()),
+      select: () => of(null),
+      dispatch: (action: any) => dispatched.push(action),
+    };
+
+    component = new ScheduleBookingFilterComponent(
+      new FormBuilder(),
+      createRouterStub(),
+      chainStore,
+      createStoreStub(),
+      createTranslateStub(),
+      { warning: () => {}, error: () => {}, success: () => {} } as any,
+      createBookingPolicyServiceStub(),
+      createLanguageServiceStub()
+    );
+    component.ngOnInit();
+  });
+
+  it('AC#3: the arrival search carries the origin the customer chose', () => {
+    filter$.next(SAVED_FILTER);
+
+    expect(searches().length).toBe(1);
+    expect(searches()[0].schedule_filter.fromStop).toBe('station-a');
+    expect(searches()[0].schedule_filter.toStop).toBe('station-b');
+  });
+
+  it('must-NOT: the roster arriving after the results does not fire a second search', () => {
+    filter$.next(SAVED_FILTER);
+    expect(searches().length).toBe(1);
+
+    // What `ScheduleBookingComponent.ngOnInit`'s own
+    // `invokeGetAllProvinceWithStationApi()` produces: the same roster, a new
+    // array reference, after the list has rendered.
+    stations$.next([...STATIONS]);
+
+    expect(searches().length).toBe(1);
+  });
+
+  it('positive control: the guard is real — a filter with no origin searches not at all', () => {
+    filter$.next({ ...SAVED_FILTER, startStationId: '' });
+
+    expect(searches().length).toBe(0);
+  });
+});

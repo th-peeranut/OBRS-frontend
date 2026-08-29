@@ -20,8 +20,9 @@ import { DriverCashDayRespDto } from '../../../../shared/interfaces/driver-cash.
 import { formatMoney } from '../../../../shared/lib/money-display';
 import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
 import { bangkokInstantMs } from '../../../../shared/lib/api-date-time';
+import { DriverCashRepairBillItemReqDto } from '../../../../shared/interfaces/driver-cash.interface';
 
-type DriverCashAction = 'advance' | 'perHead' | 'expense' | null;
+type DriverCashAction = 'advance' | 'perHead' | 'expense' | 'repair' | null;
 
 /** Local calendar date as `yyyy-MM-dd`, the same hand-rolled shape
  * `SettlementsPageComponent#toDateInputValue` and `BookingTrendStore` use — a
@@ -94,6 +95,13 @@ const EXPENSE_ERROR_KEYS: Record<string, string> = {
   DRIVER_CASH_DAY_ALREADY_RETURNED: 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED',
 };
 
+/** OBRS-1630 — the repair bill shares every gate `expense-paid` has, so it shares those messages,
+ * and adds the one refusal only it can make. */
+const REPAIR_ERROR_KEYS: Record<string, string> = {
+  ...EXPENSE_ERROR_KEYS,
+  DRIVER_CASH_REPAIR_BILL_ZERO_TOTAL: 'STAFF.DRIVER_CASH.ERROR.REPAIR_BILL_ZERO_TOTAL',
+};
+
 /**
  * OBRS-960 — smart: `/staff/boarding/:scheduleId`'s per-round cash panel.
  * Owns `DriverCashDayStore` (component-scoped, `providers: []` below — see
@@ -149,6 +157,7 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
   protected advanceError: string | null = null;
   protected perHeadError: string | null = null;
   protected expenseError: string | null = null;
+  protected repairError: string | null = null;
 
   protected topOffsetPx = 0;
 
@@ -347,6 +356,30 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
         error: (err: unknown) => {
           this.isSubmitting = false;
           this.expenseError = this.mapError(err, EXPENSE_ERROR_KEYS);
+        },
+      });
+  }
+
+  /**
+   * OBRS-1630 — the repair bill. Lands on the SAME box as `onSubmitExpense`, through the same
+   * `EXPENSE_PAID` entry, so the response refreshes `day` exactly as the other field costs do and
+   * `เงินสดสุทธิ` moves by the bill's total with no change to the formula.
+   */
+  protected onSubmitRepairBill(payload: {
+    payeeId: number;
+    items: DriverCashRepairBillItemReqDto[];
+  }): void {
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
+    this.repairError = null;
+    this.staffApiService
+      .postDriverCashRepairBill(this.scheduleId, payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp) => this.onActionSuccess(resp?.data ?? null),
+        error: (err: unknown) => {
+          this.isSubmitting = false;
+          this.repairError = this.mapError(err, REPAIR_ERROR_KEYS);
         },
       });
   }

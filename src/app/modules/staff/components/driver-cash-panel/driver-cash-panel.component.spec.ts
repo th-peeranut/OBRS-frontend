@@ -26,6 +26,7 @@ function createStaffApiStub(): any {
     postDriverCashAdvance: jasmine.createSpy('postDriverCashAdvance'),
     postDriverCashPerHead: jasmine.createSpy('postDriverCashPerHead'),
     postDriverCashExpense: jasmine.createSpy('postDriverCashExpense'),
+    postDriverCashRepairBill: jasmine.createSpy('postDriverCashRepairBill'),
   };
 }
 
@@ -231,6 +232,62 @@ describe('DriverCashPanelComponent', () => {
       component.ngOnInit();
       component['onSubmitExpense']({ category: 'FUEL', amount: '1200.00' });
       expect(component['expenseError']).toBe('STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED');
+    });
+  });
+
+  // OBRS-1630 — a repair bill is a field cost, so it lands on the SAME box through the same
+  // EXPENSE_PAID entry. What is proved here is that the panel treats the response the way it
+  // treats the other field costs: refresh the day, close the accordion.
+  describe('onSubmitRepairBill', () => {
+    const BILL = {
+      payeeId: 5,
+      items: [{ part: 'TIRES', description: 'ยางหน้าซ้าย', quantity: null, unitPrice: null, amount: 4200 }],
+    };
+
+    it('refreshes the day from the response and collapses the box', () => {
+      staffApi.postDriverCashRepairBill.and.returnValue(of({ code: 201, message: 'OK', data: DAY_RESP }));
+      component.ngOnInit();
+      component['toggleAction']('repair');
+
+      component['onSubmitRepairBill'](BILL);
+
+      expect(staffApi.postDriverCashRepairBill).toHaveBeenCalledWith(component.scheduleId, BILL);
+      expect(store.mutate).toHaveBeenCalled();
+      expect(component['isActionOpen']('repair')).toBeFalse();
+      expect(component.isSubmitting).toBeFalse();
+    });
+
+    // The one refusal only this endpoint can make. Without the map entry it would fall back to the
+    // generic "please try again", which is advice that cannot work on a bill of zero.
+    it('names the zero-total refusal instead of the generic retry message', () => {
+      staffApi.postDriverCashRepairBill.and.returnValue(
+        throwError(() => new HttpErrorResponse({
+          status: 400,
+          error: { errorCode: 'DRIVER_CASH_REPAIR_BILL_ZERO_TOTAL' },
+        }))
+      );
+      component.ngOnInit();
+
+      component['onSubmitRepairBill'](BILL);
+
+      expect(component['repairError']).toBe('STAFF.DRIVER_CASH.ERROR.REPAIR_BILL_ZERO_TOTAL');
+      expect(component['isActionOpen']('repair')).toBeFalse();
+    });
+
+    // The gates it INHERITS from expense-paid, not a second copy of them: the same sales point,
+    // the same signed-off box. A separate error map that quietly lost these was the risk.
+    it('still names the sales-point refusal, which it shares with the field-cost form', () => {
+      staffApi.postDriverCashRepairBill.and.returnValue(
+        throwError(() => new HttpErrorResponse({
+          status: 403,
+          error: { errorCode: 'DRIVER_CASH_SALES_POINT_FORBIDDEN' },
+        }))
+      );
+      component.ngOnInit();
+
+      component['onSubmitRepairBill'](BILL);
+
+      expect(component['repairError']).toBe('STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN');
     });
   });
 

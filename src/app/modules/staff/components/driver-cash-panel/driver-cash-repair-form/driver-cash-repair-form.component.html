@@ -1,0 +1,39 @@
+<form class="dcp-inline-form" (ngSubmit)="onSubmit()" data-testid="driver-cash-repair-form">
+  <!-- Same signpost the field-cost form carries (OBRS-1579): a repair bill reaches the counter
+  later than the round it paid for more often than a fuel bill does, not less. -->
+  @if (businessDate) {
+    <p class="dcp-box-date-note" data-testid="driver-cash-repair-box-date">
+      {{ 'STAFF.DRIVER_CASH.REPAIR.LANDS_IN_BOX' | translate: { date: displayDate(businessDate) } }}
+    </p>
+  }
+
+  @if (billForm) {
+    <!-- OBRS-1630 AC2: the back-office bill card itself, in its `field` variant — the van, the date
+    and the category are the box's, so the card shows the garage and the lines and nothing else.
+    `canCreatePayee` is false: adding a garage to the registry is still the owner's (the POST is
+    `hasRole('OWNER')`), and a button that 403s is worse than no button. -->
+    <app-expense-bill-card
+      variant="field"
+      [billForm]="billForm"
+      [payees]="payees"
+      [canCreatePayee]="false"
+      [removable]="false"
+    ></app-expense-bill-card>
+  }
+
+  @if (submitError; as err) {
+    <div class="admin-error">{{ err | translate }}</div>
+  }
+
+  <button
+    type="submit"
+    class="admin-btn admin-btn-primary dcp-action-btn"
+    [disabled]="!canSubmit"
+    data-testid="driver-cash-repair-submit"
+    >
+    {{ (isSubmitting ? 'STAFF.DRIVER_CASH.SUBMITTING' : 'STAFF.DRIVER_CASH.REPAIR.SUBMIT') | translate }}
+    @if (!isSubmitting && billTotal > 0) {
+      <span data-testid="driver-cash-repair-total">{{ billTotal | number: '1.2-2' }}</span>
+    }
+  </button>
+</form>
