@@ -10,6 +10,8 @@ import {
   VEHICLE_CENTRAL_SENTINEL,
   filterExpensesByCategoryAndRange,
   ownerIdentifier,
+  vehicleIdentifier,
+  vehiclePlateIdentifier,
   toDateControlValue,
   toExpenseCategoryDisplay,
   toExpenseCategoryOptions,
@@ -69,7 +71,7 @@ function makeRow(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     ownerId: 7,
     ownerLabel: 'NJ Travel',
     vehicleId: 1,
-    vehicleLabel: 'V1 / ABC-123',
+    vehicleLabel: 'ABC-123',
     category: 'FUEL',
     categoryOtherLabel: '',
     categoryDisplay: 'Fuel',
@@ -171,9 +173,12 @@ describe('expenses-page.mappers', () => {
       note: 'wash',
     };
 
-    it('resolves the vehicle label from the vehicles list', () => {
+    // OBRS-1627: the PLATE alone. Was 'V1 / ABC-123' - the co-op number spent
+    // half the column's width on a value the owner does not read rows by.
+    it('resolves the vehicle label from the vehicles list, as the plate alone', () => {
       const row = toExpenseRow(dto, [VAN, BUS], categoryOptions(), 'Central', 'th');
-      expect(row.vehicleLabel).toBe('V1 / ABC-123');
+      expect(row.vehicleLabel).toBe('ABC-123');
+      expect(row.vehicleLabel).not.toContain('V1');
       expect(row.categoryDisplay).toBe('Other (ล้างรถ)');
     });
 
@@ -412,6 +417,27 @@ describe('expenses-page.mappers', () => {
     });
   });
 
+  // OBRS-1627
+  describe('vehiclePlateIdentifier', () => {
+    it('is the plate alone, while vehicleIdentifier keeps the joined form the FILTER renders', () => {
+      // Both shapes on purpose (AC-4): the cell is short, the vehicle filter
+      // above the table stays a superset of it, so a plate seen in a row is
+      // still findable in the dropdown.
+      expect(vehiclePlateIdentifier(VAN)).toBe('ABC-123');
+      expect(vehicleIdentifier(VAN)).toBe('V1 / ABC-123');
+    });
+
+    it('falls back to the co-op number when no plate is recorded yet', () => {
+      // Not a blank cell: a van has a co-op number before it has a plate, and
+      // an empty identifier makes its expenses unattributable.
+      expect(vehiclePlateIdentifier({ ...VAN, numberPlate: undefined })).toBe('V1');
+    });
+
+    it('falls back to #id when neither is recorded', () => {
+      expect(vehiclePlateIdentifier(BUS)).toBe('#2');
+    });
+  });
+
   describe('filterExpensesByCategoryAndRange (client-side filter pure function, §6.2)', () => {
     const rows: ExpenseRow[] = [
       makeRow({ id: 1, vehicleId: 1, category: 'FUEL', expenseDate: '2026-07-01' }),
@@ -424,6 +450,7 @@ describe('expenses-page.mappers', () => {
       const result = filterExpensesByCategoryAndRange(rows, {
         category: '',
         centralOnly: false,
+        ownerId: '',
         from: null,
         to: null,
       });
@@ -434,6 +461,7 @@ describe('expenses-page.mappers', () => {
       const result = filterExpensesByCategoryAndRange(rows, {
         category: 'FUEL',
         centralOnly: false,
+        ownerId: '',
         from: null,
         to: null,
       });
@@ -444,6 +472,7 @@ describe('expenses-page.mappers', () => {
       const result = filterExpensesByCategoryAndRange(rows, {
         category: '',
         centralOnly: true,
+        ownerId: '',
         from: null,
         to: null,
       });
@@ -454,6 +483,7 @@ describe('expenses-page.mappers', () => {
       const result = filterExpensesByCategoryAndRange(rows, {
         category: '',
         centralOnly: false,
+        ownerId: '',
         from: new Date(2026, 6, 5),
         to: new Date(2026, 6, 20),
       });
@@ -464,15 +494,42 @@ describe('expenses-page.mappers', () => {
       const result = filterExpensesByCategoryAndRange(rows, {
         category: 'FUEL',
         centralOnly: true,
+        ownerId: '',
         from: new Date(2026, 6, 1),
         to: new Date(2026, 6, 31),
       });
       expect(result.map((r) => r.id)).toEqual([4]);
     });
 
+    // OBRS-1627: the operator predicate. It replaces the operator COLUMN, so a
+    // filter that silently matched nothing would be worse than the column was.
+    it('narrows by operator', () => {
+      const withSecond = [...rows, makeRow({ id: 5, ownerId: 9, expenseDate: '2026-07-02' })];
+      const result = filterExpensesByCategoryAndRange(withSecond, {
+        category: '',
+        centralOnly: false,
+        ownerId: '9',
+        from: null,
+        to: null,
+      });
+      expect(result.map((r) => r.id)).toEqual([5]);
+    });
+
+    it("treats ownerId '' as every operator, not as 'no operator'", () => {
+      const withSecond = [...rows, makeRow({ id: 5, ownerId: 9, expenseDate: '2026-07-02' })];
+      const result = filterExpensesByCategoryAndRange(withSecond, {
+        category: '',
+        centralOnly: false,
+        ownerId: '',
+        from: null,
+        to: null,
+      });
+      expect(result.map((r) => r.id)).toEqual([1, 2, 3, 4, 5]);
+    });
+
     it('never mutates the input array', () => {
       const copy = [...rows];
-      filterExpensesByCategoryAndRange(rows, { category: 'FUEL', centralOnly: false, from: null, to: null });
+      filterExpensesByCategoryAndRange(rows, { category: 'FUEL', centralOnly: false, ownerId: '', from: null, to: null });
       expect(rows).toEqual(copy);
     });
   });

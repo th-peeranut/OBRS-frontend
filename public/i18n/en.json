@@ -2165,6 +2165,7 @@
         "MISMATCH": "The lines do not add up to the bill total. Fix a line or the total so the two agree before saving."
       },
       "FILTER_VEHICLE": "Vehicle: All",
+      "FILTER_OWNER": "Operator: All",
       "FILTER_VEHICLE_CENTRAL_ONLY": "Central / Not linked only",
       "FILTER_CATEGORY": "Category: All",
       "FILTER_YEAR": "Year",
@@ -2172,7 +2173,6 @@
       "EMPTY_TITLE": "No expenses recorded yet",
       "EMPTY_BODY": "Start logging vehicle or central expenses with the \"Add Expense\" button",
       "NO_MATCH": "No expenses match the current filters",
-      "SOURCE": "Source",
       "SOURCE_FIELD": "Auto-generated (from driver)",
       "FIELD_ROW_IMMUTABLE": "This row was recorded automatically from a driver’s cash entry. It cannot be edited or deleted here.",
       "BATCH": {
