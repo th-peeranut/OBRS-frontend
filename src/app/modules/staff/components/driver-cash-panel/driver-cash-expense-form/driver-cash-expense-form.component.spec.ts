@@ -27,6 +27,10 @@ describe('DriverCashExpenseFormComponent', () => {
   // DRIVER_WAGE used to be excluded as "a cost a driver never pays roadside",
   // and the owner overturned exactly that on 2026-08-14. Leaving the old list
   // green beside a new one would keep both readings alive in the suite.
+  //
+  // OBRS-1630 CHANGES it again, the same way: REPAIR is OUT, on the owner's
+  // 2026-08-24 ruling that a repair bill gets its own box rather than a row
+  // here — a row carries one amount, a repair bill has lines and parts.
   it('builds category options from the existing ADMIN.EXPENSES.CATEGORIES i18n namespace', () => {
     const codes = component['categoryOptions'].map((o) => o.value);
     expect(codes).toEqual([
@@ -34,10 +38,16 @@ describe('DriverCashExpenseFormComponent', () => {
       'TOLL',
       'PERMIT_FEE',
       'DRIVER_WAGE',
-      'REPAIR',
       'PARKING_FEE',
       'OTHER',
     ]);
+  });
+
+  // AC3 stated as its own assertion, not as a side effect of the list above:
+  // the one thing the owner asked for by name is that REPAIR is not offered
+  // here, and a reordering of the list must not be able to lose it silently.
+  it('does not offer REPAIR — that bill has its own box (OBRS-1630 AC3)', () => {
+    expect(component['categoryOptions'].map((o) => o.value)).not.toContain('REPAIR');
   });
 
   // OBRS-1356 — the wage is priced server-side from the owner's rate per leg.

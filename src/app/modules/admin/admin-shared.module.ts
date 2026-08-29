@@ -7,6 +7,9 @@ import { AdminSortableHeaderComponent } from './components/admin-sortable-header
 import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TitleLabelPipe } from '../../shared/pipes/title-label.pipe';
+import { DatePickerModule } from 'primeng/datepicker';
+import { ExpenseBillCardComponent } from './pages/expenses/expense-bill-card/expense-bill-card.component';
+import { ExpensePayeePickerComponent } from './pages/expenses/expense-payee-picker/expense-payee-picker.component';
 
 /**
  * Thin shared module that declares and exports the admin UI primitives that
@@ -31,6 +34,13 @@ import { TitleLabelPipe } from '../../shared/pipes/title-label.pipe';
  * it is a `<th>` inside `.admin-table`, whose thead typography/colour comes
  * from `.admin-shell`-scoped rules in admin-theme.scss, and its only
  * prospective consumers are the 46 hand-rolled admin/staff tables.
+ *
+ * OBRS-1630: `ExpenseBillCardComponent` (and the payee picker it renders) move here on the
+ * same rule. The staff cash box's `เพิ่มรายการซ่อม` box IS this card — the owner's ruling
+ * (2026-08-24) was to reuse it, not to grow a second bill editor that would drift. It is not a
+ * `SharedModule` candidate either: it is `.admin-field`/`.admin-btn` throughout, so outside an
+ * admin or staff shell it renders unstyled, and `SharedModule` reaches ~25 modules including
+ * every public customer-facing one.
  */
 @NgModule({
   declarations: [
@@ -38,14 +48,18 @@ import { TitleLabelPipe } from '../../shared/pipes/title-label.pipe';
     AdminRefreshHintComponent,
     AdminPaginatorComponent,
     AdminSortableHeaderComponent,
+    ExpensePayeePickerComponent,
+    ExpenseBillCardComponent,
   ],
   imports: [
-    TitleLabelPipe,CommonModule, FormsModule, ReactiveFormsModule, TranslateModule],
+    TitleLabelPipe,CommonModule, FormsModule, ReactiveFormsModule, TranslateModule, DatePickerModule],
   exports: [
     AdminDropdownComponent,
     AdminRefreshHintComponent,
     AdminPaginatorComponent,
     AdminSortableHeaderComponent,
+    ExpensePayeePickerComponent,
+    ExpenseBillCardComponent,
   ],
 })
 export class AdminSharedModule {}

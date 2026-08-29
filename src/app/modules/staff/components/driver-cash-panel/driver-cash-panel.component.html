@@ -100,5 +100,29 @@
         (submitExpense)="onSubmitExpense($event)"
       ></app-driver-cash-expense-form>
     }
+
+    <!-- OBRS-1630: last, straight after the field costs, because a repair bill IS a field cost -
+    the owner asked for it "after the driver wage row", and the wage is a value inside the form
+    above (there is no row table on this screen; the 2026-08-23 draft of one was never built).
+    Its own button rather than a seventh category, on the owner's 2026-08-24 ruling: a category row
+    holds one amount and a repair bill has lines and parts. -->
+    <button
+      type="button"
+      class="admin-btn dcp-action-btn"
+      [class.admin-btn-primary]="isActionOpen('repair')"
+      (click)="toggleAction('repair')"
+      data-testid="driver-cash-action-repair"
+      >
+      <span>{{ 'STAFF.DRIVER_CASH.REPAIR.ACTION_LABEL' | translate }}</span>
+      <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isActionOpen('repair') ? 'expand_less' : 'expand_more' }}</span>
+    </button>
+    @if (isActionOpen('repair')) {
+      <app-driver-cash-repair-form
+        [businessDate]="boxBusinessDate"
+        [isSubmitting]="isSubmitting"
+        [submitError]="repairError"
+        (submitRepairBill)="onSubmitRepairBill($event)"
+      ></app-driver-cash-repair-form>
+    }
   </div>
 </div>

@@ -26,13 +26,22 @@ import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
  * `DriverCashExpensePaidReqDto.ALLOWED_CATEGORIES`; nothing in either build
  * can see both, so `verify-field-expense-categories.ps1` in the office reads
  * the two files at `origin/dev` and is what fails on a one-sided edit.
+ *
+ * OBRS-1630 — `REPAIR` is OUT again, on the owner's ruling (2026-08-24). Not
+ * because a driver never pays a garage, but because a row here carries one
+ * amount and a repair bill has lines and parts: keying one as a single number
+ * throws away exactly what `expense_items` was added to hold. It has its own
+ * entry point now — the `เพิ่มรายการซ่อม` box on the panel, which posts to
+ * `POST /driver-cash/schedules/{id}/repair-bill`. The backend still ACCEPTS
+ * `REPAIR` on `expense-paid` (the admin path and older rows depend on the
+ * category existing); the gate above only fails on a code the FE offers and
+ * the BE refuses, so a narrower list here is a note, never a failure.
  */
 export const DRIVER_CASH_EXPENSE_CATEGORIES: readonly string[] = [
   'FUEL',
   'TOLL',
   'PERMIT_FEE',
   'DRIVER_WAGE',
-  'REPAIR',
   'PARKING_FEE',
   'OTHER',
 ];

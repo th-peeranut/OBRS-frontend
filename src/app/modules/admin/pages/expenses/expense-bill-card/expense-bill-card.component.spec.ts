@@ -1,5 +1,10 @@
 import { FormArray, FormBuilder, FormGroup } from '@angular/forms';
-import { ExpenseBillCardComponent, buildBillGroup, buildItemGroup } from './expense-bill-card.component';
+import {
+  ExpenseBillCardComponent,
+  buildBillGroup,
+  buildFieldRepairBillGroup,
+  buildItemGroup,
+} from './expense-bill-card.component';
 import { EXPENSE_ITEM_PART_NONE_SENTINEL } from '../expenses-page.mappers';
 import { createTranslateStub } from '../../../../../testing/test-stubs';
 
@@ -128,5 +133,37 @@ describe('ExpenseBillCardComponent', () => {
 
     expect(line.get('description')!.valid).toBeFalse();
     expect(line.get('amount')!.valid).toBeFalse();
+  });
+
+  // OBRS-1630: the staff cash box renders this same card. Its header controls are ABSENT rather
+  // than hidden - a `required` control nobody can reach is a form that is invalid with nothing on
+  // screen to fix, which is precisely how a submit button that never enables gets shipped.
+  describe('field variant (OBRS-1630)', () => {
+    it('carries only the garage and the lines, and is valid once both are filled', () => {
+      const fb = new FormBuilder();
+      const bill = buildFieldRepairBillGroup(fb);
+
+      expect(Object.keys(bill.controls).sort()).toEqual(['items', 'payeeId']);
+
+      bill.get('payeeId')!.setValue(5);
+      itemsOf(bill).at(0).patchValue({ description: 'ยางหน้าซ้าย', amount: 4200 });
+
+      expect(bill.valid).toBeTrue();
+    });
+
+    it('is invalid with no garage - the per-payee report cannot see a bill that arrives without one', () => {
+      const fb = new FormBuilder();
+      const bill = buildFieldRepairBillGroup(fb);
+      itemsOf(bill).at(0).patchValue({ description: 'ยางหน้าซ้าย', amount: 4200 });
+
+      expect(bill.valid).toBeFalse();
+    });
+
+    it('starts with one blank line, exactly as the envelope variant does', () => {
+      const bill = buildFieldRepairBillGroup(new FormBuilder());
+
+      expect(itemsOf(bill).length).toBe(1);
+      expect(itemsOf(bill).at(0).get('part')!.value).toBe(EXPENSE_ITEM_PART_NONE_SENTINEL);
+    });
   });
 });
