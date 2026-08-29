@@ -150,6 +150,7 @@
             <th>{{ 'ADMIN.EXPENSES.BATCH.LINE_DESCRIPTION' | translate }}</th>
             <th class="bill-items-part">{{ 'ADMIN.EXPENSES.BATCH.LINE_PART' | translate }}</th>
             <th class="bill-items-number">{{ 'ADMIN.EXPENSES.ITEMS.QUANTITY' | translate }}</th>
+            <th class="bill-items-unit">{{ 'ADMIN.EXPENSES.ITEMS.UNIT' | translate }}</th>
             <th class="bill-items-number">{{ 'ADMIN.EXPENSES.ITEMS.UNIT_PRICE' | translate }}</th>
             <th class="bill-items-number">{{ 'ADMIN.EXPENSES.ITEMS.AMOUNT' | translate }}</th>
             <th class="bill-items-remove"></th>
@@ -170,17 +171,26 @@
                 }
               </td>
               <td class="bill-items-part">
-                <app-admin-dropdown
-                  formControlName="part"
-                  [options]="partOptions"
-                  valueKey="code"
-                  labelKey="label"
-                  [searchable]="true"
-                  [placeholder]="'ADMIN.EXPENSES.ITEMS.PART' | translate"
-                ></app-admin-dropdown>
+                <app-expense-part-picker
+                  formControlName="partId"
+                  [parts]="parts"
+                  [canCreate]="canCreatePart"
+                  (partCreated)="partCreated.emit($event)"
+                ></app-expense-part-picker>
               </td>
               <td class="bill-items-number">
                 <input type="number" class="admin-field" formControlName="quantity" min="0.01" step="0.01" />
+              </td>
+              <td class="bill-items-unit">
+                <!-- OBRS-1613: free text, and short. The bills are handwritten and the words on them
+                (แผ่น / ตารางฟุต / ใบ) are not a list anyone can close; a dropdown would force the
+                owner to file a real unit under a wrong one. -->
+                <input
+                  class="admin-field"
+                  formControlName="unit"
+                  [maxlength]="ITEM_UNIT_MAX_LENGTH"
+                  [attr.placeholder]="'ADMIN.EXPENSES.ITEMS.UNIT_PLACEHOLDER' | translate"
+                  />
               </td>
               <td class="bill-items-number">
                 <input type="number" class="admin-field" formControlName="unitPrice" min="0" step="0.01" />

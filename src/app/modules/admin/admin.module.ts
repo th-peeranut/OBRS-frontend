@@ -73,6 +73,7 @@ import { ExpenseApprovalLaneComponent } from './pages/expenses/expense-approval-
 import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/expense-form-modal.component';
 import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
 import { ExpensePayeePickerComponent } from './pages/expenses/expense-payee-picker/expense-payee-picker.component';
+import { ExpensePartPickerComponent } from './pages/expenses/expense-part-picker/expense-part-picker.component';
 import { ExpenseBatchPageComponent } from './pages/expenses/expense-batch-page/expense-batch-page.component';
 import { ExpenseBillCardComponent } from './pages/expenses/expense-bill-card/expense-bill-card.component';
 import { ExpensePayeesPageComponent } from './pages/expense-payees/expense-payees-page.component';
@@ -622,6 +623,7 @@ export const adminRoutes: Routes = [
     ExpenseFormModalComponent,
     ExpenseDeleteModalComponent,
     ExpensePayeePickerComponent,
+    ExpensePartPickerComponent,
     ExpenseBatchPageComponent,
     ExpenseBillCardComponent,
     ExpensePayeesPageComponent,

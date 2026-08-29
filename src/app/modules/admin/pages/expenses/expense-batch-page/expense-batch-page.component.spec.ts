@@ -13,6 +13,13 @@ function makeStores() {
       { id: 5, name: 'อู่ช่างปุ้น', type: 'GARAGE', active: true },
       { id: 6, name: 'ปั๊มบางจาก', type: 'FUEL_STATION', active: true },
     ]),
+    // OBRS-1613: the registry store hands down retired rows too - the registry SCREEN needs them.
+    // The retired one is here so the page's own filter is what the assertions exercise.
+    parts$: new BehaviorSubject<any>([
+      { id: 1, code: 'ENGINE_OIL', name: 'น้ำมันเครื่อง', kind: 'PART', active: true },
+      { id: 2, code: null, name: 'ค่าแรงเปลี่ยนสายพาน', kind: 'LABOUR', active: true },
+      { id: 3, code: null, name: 'อะไหล่ที่เลิกใช้แล้ว', kind: 'PART', active: false },
+    ]),
   };
 }
 
@@ -40,6 +47,10 @@ function makeComponent(options: { isAdmin?: boolean; createBatch?: jasmine.Spy }
   const expensesStore = { refresh: jasmine.createSpy('refresh').and.resolveTo(undefined) };
   const vehiclesStore = { data$: stores.vehicles$, refresh: () => Promise.resolve() };
   const payeesStore = { data$: stores.payees$, refresh: jasmine.createSpy('refresh').and.resolveTo(undefined) };
+  const maintenancePartsStore = {
+    data$: stores.parts$,
+    refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+  };
 
   const component = new ExpenseBatchPageComponent(
     adminApiService as any,
@@ -50,10 +61,21 @@ function makeComponent(options: { isAdmin?: boolean; createBatch?: jasmine.Spy }
     authService as any,
     expensesStore as any,
     vehiclesStore as any,
-    payeesStore as any
+    payeesStore as any,
+    maintenancePartsStore as any
   );
   component.ngOnInit();
-  return { component, adminApiService, alertService, router, expensesStore, payeesStore, stores, createExpenseBatch };
+  return {
+    component,
+    adminApiService,
+    alertService,
+    router,
+    expensesStore,
+    payeesStore,
+    maintenancePartsStore,
+    stores,
+    createExpenseBatch,
+  };
 }
 
 /** Fill one bill card so the envelope is valid, mirroring what the owner types off a slip. */
@@ -154,6 +176,57 @@ describe('ExpenseBatchPageComponent', () => {
     expect(bill.receiptNo).toBeNull();
     expect(bill.vatAmount).toBeNull();
     expect(bill.note).toBeNull();
+  });
+
+  // OBRS-1613 AC1: the picker offers the registry, and only the rows the owner has not retired -
+  // retiring one is exactly how they say "stop offering this", so a picker that still showed it
+  // would make the action do nothing.
+  it('offers the line picker ACTIVE registry rows only', () => {
+    const { component } = makeComponent();
+
+    expect(component['partOptions'].map((part: { id: number }) => part.id)).toEqual([2, 1]);
+  });
+
+  // OBRS-1613 AC1/AC3: the two columns V128 added. Without this the registry the card exists to
+  // build is populated by the maintenance-plan screen alone, and a unit price cannot be compared.
+  it('sends the picked registry id and the typed unit on every line', async () => {
+    const { component, createExpenseBatch } = makeComponent();
+    const bill = component['billForms'][0];
+    fillBill(bill, [{ description: 'ฟิล์มกรองแสง', amount: 4500 }]);
+    const line = (bill.get('items') as FormArray).at(0);
+    line.get('partId')!.setValue(2);
+    line.get('unit')!.setValue('  ตารางฟุต  ');
+
+    await component['submitEnvelope']();
+
+    const sent = (createExpenseBatch.calls.mostRecent().args[0] as CreateExpenseBatchPayload)
+      .bills[0].items[0];
+    expect(sent.partId).toBe(2);
+    expect(sent.unit).toBe('ตารางฟุต');
+    // The legacy code goes out as null from THIS screen: it picks an id and has no code. The
+    // single-bill modal is the one that still sends a code, and the server takes either.
+    expect(sent.part).toBeNull();
+  });
+
+  it('sends a line with no part as partId null, not as a registry row it guessed', async () => {
+    const { component, createExpenseBatch } = makeComponent();
+    fillBill(component['billForms'][0], [{ description: 'ค่าแรง', amount: 300 }]);
+
+    await component['submitEnvelope']();
+
+    const sent = (createExpenseBatch.calls.mostRecent().args[0] as CreateExpenseBatchPayload)
+      .bills[0].items[0];
+    expect(sent.partId).toBeNull();
+    expect(sent.unit).toBeNull();
+  });
+
+  it('revalidates the registry after a part is added from inside a bill', () => {
+    const { component, maintenancePartsStore } = makeComponent();
+    maintenancePartsStore.refresh.calls.reset();
+
+    component['onPartCreated']();
+
+    expect(maintenancePartsStore.refresh).toHaveBeenCalledTimes(1);
   });
 
   // A rejected envelope has written NOTHING (the server runs it in one transaction), so the screen

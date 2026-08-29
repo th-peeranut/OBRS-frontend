@@ -17,7 +17,6 @@ import {
   toExpenseItemRow,
   expenseItemsTotal,
   expenseItemsMatchAmount,
-  EXPENSE_ITEM_PART_NONE_SENTINEL,
   toExpenseRow,
   toExpenseVehicleOptions,
   toOwnerOptions,
@@ -500,14 +499,17 @@ describe('expenses-page.mappers', () => {
         payeeId: null,
         note: '',
         items: [
-          { part: 'BRAKE_PADS', description: '  ผ้าเบรกหน้า  ', quantity: 2, unitPrice: 500, amount: 1000 },
-          { part: EXPENSE_ITEM_PART_NONE_SENTINEL, description: 'ค่าแรง', quantity: null, unitPrice: null, amount: 600 },
+          { partId: 7, description: '  ผ้าเบรกหน้า  ', quantity: 2, unit: 'ชิ้น', unitPrice: 500, amount: 1000 },
+          { partId: null, description: 'ค่าแรง', quantity: null, unit: '', unitPrice: null, amount: 600 },
         ],
       });
 
+      // OBRS-1613: `part` is always null now - both screens pick a registry ROW and the server
+      // writes the frozen code from it. It is still an explicit key rather than an omitted one, so
+      // "this line has no part" cannot arrive looking like "this client cannot express one".
       expect(payload.items).toEqual([
-        { part: 'BRAKE_PADS', description: 'ผ้าเบรกหน้า', quantity: 2, unitPrice: 500, amount: 1000 },
-        { part: null, description: 'ค่าแรง', quantity: null, unitPrice: null, amount: 600 },
+        { part: null, partId: 7, description: 'ผ้าเบรกหน้า', quantity: 2, unit: 'ชิ้น', unitPrice: 500, amount: 1000 },
+        { part: null, partId: null, description: 'ค่าแรง', quantity: null, unit: null, unitPrice: null, amount: 600 },
       ]);
     });
 

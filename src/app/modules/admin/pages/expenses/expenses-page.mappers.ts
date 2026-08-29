@@ -32,16 +32,6 @@ import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
  */
 export const VEHICLE_CENTRAL_SENTINEL = 'CENTRAL_NONE';
 
-/**
- * OBRS-1374: the same sentinel shape as `VEHICLE_CENTRAL_SENTINEL` above, for the same reason,
- * on the bill-line `part` dropdown. "Not a part" is a REAL answer here (labour, service,
- * sundry - AC3), and without an explicit option for it an owner who picked a part by mistake
- * could never take it back: `app-admin-dropdown` has no clear affordance, only a placeholder
- * that is unreachable once a value is set. Translated to a real `null` only in
- * `toExpensePayload()`, at the submit boundary.
- */
-export const EXPENSE_ITEM_PART_NONE_SENTINEL = 'PART_NONE';
-
 /** The 16 fixed `ExpenseCategory` enum codes (SA-locked contract) — a static
  * list, not a Lookup-API fetch, mirroring `promotions-page`'s
  * `discountTypeOptions`.
@@ -250,8 +240,14 @@ export interface ExpenseRow {
 export interface ExpenseItemRow {
   lineNo: number;
   part: string;
+  /** OBRS-1613: the registry row. `null` = this line is not a part at all. */
+  partId: number | null;
+  /** OBRS-1613: the registry row's name as the SERVER resolved it — see `AdminExpenseItemDto`. */
+  partName: string;
   description: string;
   quantity: number | null;
+  /** OBRS-1613: what `quantity` is counted in. `''` when the bill did not say. */
+  unit: string;
   unitPrice: number | null;
   amount: number;
 }
@@ -260,8 +256,11 @@ export function toExpenseItemRow(dto: AdminExpenseItemDto): ExpenseItemRow {
   return {
     lineNo: dto.lineNo,
     part: dto.part ?? '',
+    partId: dto.partId ?? null,
+    partName: dto.partName ?? '',
     description: dto.description ?? '',
     quantity: dto.quantity ?? null,
+    unit: dto.unit ?? '',
     unitPrice: dto.unitPrice ?? null,
     amount: dto.amount,
   };
@@ -353,9 +352,17 @@ export interface ExpenseFormValue {
 /** OBRS-1374: one repeater row, raw. Every numeric control can hold `''` because an emptied
  * number input reports one - that is what `toNullableNumber` below is for. */
 export interface ExpenseItemFormValue {
-  part: string;
+  /**
+   * OBRS-1613: the registry row this line is for. `null` = not a part at all (labour, sundry).
+   * Optional on this interface only because a raw form value is read before the array is filled;
+   * BOTH screens that write bills carry this control.
+   */
+  partId?: number | null;
   description: string | null;
   quantity: number | string | null;
+  /** OBRS-1613: the unit the quantity is counted in, free text off the paper bill. On both
+   * screens, and optional here for the same reason as `partId`. */
+  unit?: string | null;
   unitPrice: number | string | null;
   amount: number | string | null;
 }
@@ -462,13 +469,18 @@ export function toExpensePayload(formValue: ExpenseFormValue): CreateExpensePayl
     paidBy: toNullableTrimmedString(formValue.paidBy),
     payeeId: formValue.payeeId ?? null,
     note: toNullableTrimmedString(formValue.note),
-    // OBRS-1374: the ONE place the part sentinel becomes a real `null`, mirroring the vehicle
-    // sentinel above. An empty repeater sends `[]`, which the backend reads as "no breakdown".
+    // An empty repeater sends `[]`, which the backend reads as "no breakdown".
     items: (formValue.items ?? []).map((item) => ({
-      part:
-        !item.part || item.part === EXPENSE_ITEM_PART_NONE_SENTINEL ? null : item.part,
+      // OBRS-1613: always null. Both screens pick a registry ROW now; the frozen `EMaintenancePart`
+      // code is written server-side from the row `partId` resolved to, so no screen can express one
+      // and none should try. It stays on the payload as an explicit null rather than an omitted key
+      // because the backend still ACCEPTS a code from a client that has not been rebuilt, and
+      // "this line has no part" must not arrive looking like "this client cannot express one".
+      part: null,
+      partId: item.partId ?? null,
       description: String(item.description ?? '').trim(),
       quantity: toNullableNumber(item.quantity),
+      unit: toNullableTrimmedString(item.unit ?? null),
       unitPrice: toNullableNumber(item.unitPrice),
       amount: toNullableNumber(item.amount) ?? 0,
     })),

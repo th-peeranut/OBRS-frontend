@@ -79,3 +79,30 @@ export function sortMaintenancePartsByName(
 ): AdminMaintenancePartDto[] {
   return [...parts].sort((left, right) => left.name.localeCompare(right.name, 'th'));
 }
+
+/**
+ * OBRS-1613: the rows a typed query should offer, matched on the NORMALIZED forms of both sides so
+ * "สายพาน หน้าเครื่อง" finds "สายพานหน้าเครื่อง" — the same rule and the same reason as
+ * `filterPayeesByQuery`. An empty query offers everything.
+ *
+ * <p>`label` is matched as well as `name`, and that is not belt-and-braces: the 13 seeded rows are
+ * stored in Thai and DISPLAYED through i18n (owner ruling 2026-08-25), so on an English screen the
+ * owner reads "Engine oil" and types "engine" — matching `name` alone would return nothing and put
+ * "+ add engine" in front of a row that is already there, which is the duplicate this registry
+ * exists to prevent.
+ */
+export function filterMaintenancePartsByQuery(
+  parts: AdminMaintenancePartDto[],
+  query: string,
+  label: (part: AdminMaintenancePartDto) => string
+): AdminMaintenancePartDto[] {
+  const needle = normalizeRegistryName(query);
+  if (!needle) {
+    return parts;
+  }
+  return parts.filter(
+    (part) =>
+      normalizeRegistryName(part.name).includes(needle) ||
+      normalizeRegistryName(label(part)).includes(needle)
+  );
+}

@@ -2149,6 +2149,11 @@
           "OTHER": "其他"
         }
       },
+      "PART": {
+        "SEARCH_PLACEHOLDER": "输入配件或工时名称",
+        "NO_MATCH": "名录中没有“{{name}}”",
+        "ADD_AS": "添加为{{kind}}"
+      },
       "NOTE": "备注",
       "NOTE_PLACEHOLDER": "补充说明(可选)",
       "ITEMS": {
@@ -2157,13 +2162,14 @@
         "ADD": "新增明细",
         "REMOVE": "删除",
         "PART": "配件",
-        "PART_NONE": "非配件（工时／服务／其他）",
         "DESCRIPTION": "单据上的文字",
         "QUANTITY": "数量",
         "UNIT_PRICE": "单价",
         "AMOUNT": "明细金额",
         "TOTAL": "明细合计",
-        "MISMATCH": "明细合计与单据总额不一致。请先修改明细或总额使两者一致，然后再保存。"
+        "MISMATCH": "明细合计与单据总额不一致。请先修改明细或总额使两者一致，然后再保存。",
+        "UNIT": "单位",
+        "UNIT_PLACEHOLDER": "张 / 个 / 平方英尺"
       },
       "FILTER_VEHICLE": "车辆:全部",
       "FILTER_VEHICLE_CENTRAL_ONLY": "仅中央/不绑定",

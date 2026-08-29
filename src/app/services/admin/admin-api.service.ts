@@ -1089,9 +1089,20 @@ export interface CreateVehicleMaintenancePlanRespDto {
 export interface AdminExpenseItemDto {
   id: number;
   lineNo: number;
+  /** OBRS-1613: frozen history — the old `EMaintenancePart` code. `partId` is what to read. */
   part?: string | null;
+  /** OBRS-1613: the registry row this line is keyed against. `null` = not a part (labour, sundry). */
+  partId?: number | null;
+  /**
+   * OBRS-1613: the registry row's name, resolved by the server. Read it rather than looking
+   * `partId` up in the picker list: the pickers carry ACTIVE parts only, so a line whose part has
+   * since been retired resolves to nothing on this side and would render blank.
+   */
+  partName?: string | null;
   description: string;
   quantity?: number | null;
+  /** OBRS-1613: what `quantity` is counted in, as written on the paper bill (แผ่น / ตารางฟุต / ใบ). */
+  unit?: string | null;
   unitPrice?: number | null;
   amount: number;
 }
@@ -1163,9 +1174,20 @@ export interface AdminExpenseDto {
 /** OBRS-1374: one line as SENT. No `id` and no `lineNo` - the server numbers the lines from
  * their position and replaces the whole set, so there is nothing for a client to renumber. */
 export interface CreateExpenseItemPayload {
+  /**
+   * OBRS-1613: the legacy `EMaintenancePart` code. **No screen sends one any more** — both bill
+   * forms pick a registry row and the server writes this column from the row `partId` resolved to.
+   * It stays on the contract, always `null` from this client, because the backend still ACCEPTS a
+   * code from a client that has not been rebuilt (`partId` wins when both are present), and an
+   * explicit null keeps "this line has no part" distinct from "this client cannot express one".
+   */
   part: string | null;
+  /** OBRS-1613: the registry row. `null` = this line is not a part at all (labour, sundry). */
+  partId: number | null;
   description: string;
   quantity: number | null;
+  /** OBRS-1613: free text off the paper bill. Without it a unit price cannot be compared. */
+  unit: string | null;
   unitPrice: number | null;
   amount: number;
 }

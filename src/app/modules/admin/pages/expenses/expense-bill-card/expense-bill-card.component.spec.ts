@@ -1,11 +1,10 @@
 import { FormArray, FormBuilder, FormGroup } from '@angular/forms';
 import { ExpenseBillCardComponent, buildBillGroup, buildItemGroup } from './expense-bill-card.component';
-import { EXPENSE_ITEM_PART_NONE_SENTINEL } from '../expenses-page.mappers';
 import { createTranslateStub } from '../../../../../testing/test-stubs';
 
 function makeComponent(): { component: ExpenseBillCardComponent; bill: FormGroup; fb: FormBuilder } {
   const fb = new FormBuilder();
-  const component = new ExpenseBillCardComponent(createTranslateStub(), fb);
+  const component = new ExpenseBillCardComponent(fb);
   const bill = buildBillGroup(fb);
   component.billForm = bill;
   component.vehicleOptions = [
@@ -35,7 +34,9 @@ describe('ExpenseBillCardComponent', () => {
     const { bill } = makeComponent();
 
     expect(itemsOf(bill).length).toBe(1);
-    expect(itemsOf(bill).at(0).get('part')!.value).toBe(EXPENSE_ITEM_PART_NONE_SENTINEL);
+    // OBRS-1613: a blank line has no registry row, which is a plain null - the 'PART_NONE'
+    // sentinel existed only for the enum dropdown this screen no longer has.
+    expect(itemsOf(bill).at(0).get('partId')!.value).toBeNull();
   });
 
   it('adds and removes lines', () => {

@@ -9,7 +9,10 @@ import {
   AdminVehicleDto,
   CreateExpensePayload,
 } from '../../../../../services/admin/admin-api.service';
-import { AdminExpensePayeeDto } from '../../../../../services/admin/admin-api.service';
+import {
+  AdminExpensePayeeDto,
+  AdminMaintenancePartDto,
+} from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import { trimmedRequiredValidator } from '../../../../../shared/validators/trimmed-required.validator';
@@ -17,6 +20,8 @@ import { AuthService } from '../../../../../auth/auth.service';
 import { VehiclesStore } from '../../vehicles/vehicles.store';
 import { ExpensePayeesStore } from '../../expense-payees/expense-payees.store';
 import { sortPayeesByName } from '../../expense-payees/expense-payees.mappers';
+import { MaintenancePartsStore } from '../../maintenance-parts/maintenance-parts.store';
+import { sortMaintenancePartsByName } from '../../maintenance-parts/maintenance-parts.mappers';
 import { ExpensesStore } from '../expenses.store';
 import { buildBillGroup } from '../expense-bill-card/expense-bill-card.component';
 import {
@@ -59,6 +64,8 @@ export class ExpenseBatchPageComponent implements OnInit, OnDestroy {
   protected categoryOptions: Option[] = [];
   protected ownerOptions: Option[] = [];
   protected payeeOptions: AdminExpensePayeeDto[] = [];
+  /** OBRS-1613: the parts/labour registry the line pickers offer. */
+  protected partOptions: AdminMaintenancePartDto[] = [];
 
   /** Which bills are folded, by position. A parallel array rather than a control, because it is
    * about the screen and not about the bill — reordering never happens here, and a `collapsed` flag
@@ -72,6 +79,9 @@ export class ExpenseBatchPageComponent implements OnInit, OnDestroy {
    * `getCurrentOwnerId()` throws for them. */
   protected readonly isAdmin: boolean;
   protected readonly canCreatePayee: boolean;
+  /** OBRS-1613: the same flag and the same reason as `canCreatePayee` — CREATE resolves through
+   * `getCurrentOwnerId()`, which throws for an admin who owns no fleet. */
+  protected readonly canCreatePart: boolean;
 
   private rawVehicles: AdminVehicleDto[] = [];
   private rawOwners: AdminOwnerDto[] = [];
@@ -86,10 +96,12 @@ export class ExpenseBatchPageComponent implements OnInit, OnDestroy {
     private readonly authService: AuthService,
     private readonly expensesStore: ExpensesStore,
     private readonly vehiclesStore: VehiclesStore,
-    private readonly payeesStore: ExpensePayeesStore
+    private readonly payeesStore: ExpensePayeesStore,
+    private readonly maintenancePartsStore: MaintenancePartsStore
   ) {
     this.isAdmin = this.authService.getRoles().includes('admin');
     this.canCreatePayee = this.authService.hasHeldRole(['owner']);
+    this.canCreatePart = this.canCreatePayee;
 
     this.envelopeForm = this.formBuilder.group({
       // Registered unconditionally, validated conditionally — the control has to exist before the
@@ -123,9 +135,17 @@ export class ExpenseBatchPageComponent implements OnInit, OnDestroy {
         this.payeeOptions = sortPayeesByName((data ?? []).filter((payee) => payee.active));
       })
     );
+    // OBRS-1613: the store fetches retired rows too (the registry screen needs them); a picker must
+    // not offer them, because retiring one is exactly how the owner says "stop offering this".
+    this.subscriptions.add(
+      this.maintenancePartsStore.data$.subscribe((data) => {
+        this.partOptions = sortMaintenancePartsByName((data ?? []).filter((part) => part.active));
+      })
+    );
 
     void this.vehiclesStore.refresh();
     void this.payeesStore.refresh();
+    void this.maintenancePartsStore.refresh();
     if (this.isAdmin) {
       void this.loadOwners();
     }
@@ -169,6 +189,10 @@ export class ExpenseBatchPageComponent implements OnInit, OnDestroy {
 
   protected toggleCollapse(index: number): void {
     this.collapsed[index] = !this.collapsed[index];
+  }
+
+  protected onPartCreated(): void {
+    void this.maintenancePartsStore.refresh();
   }
 
   protected onPayeeCreated(): void {

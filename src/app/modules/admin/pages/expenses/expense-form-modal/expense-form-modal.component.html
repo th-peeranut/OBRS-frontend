@@ -199,13 +199,13 @@
             <div class="expense-item-row" [formGroupName]="i" [attr.data-testid]="'expense-item-row-' + i">
               <div class="expense-item-cell expense-item-part">
                 <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.PART' | translate }}</label>
-                <app-admin-dropdown
-                  formControlName="part"
-                  [options]="partOptions"
-                  valueKey="code"
-                  labelKey="label"
-                  [placeholder]="'ADMIN.EXPENSES.ITEMS.PART' | translate"
-                ></app-admin-dropdown>
+                <app-expense-part-picker
+                  formControlName="partId"
+                  [parts]="partOptions"
+                  [canCreate]="canCreatePart"
+                  [fallbackName]="itemGroup.get('partName')?.value ?? ''"
+                  (partCreated)="partCreated.emit($event)"
+                ></app-expense-part-picker>
               </div>
               <div class="expense-item-cell expense-item-description">
                 <label class="admin-form-label">
@@ -219,6 +219,15 @@
               <div class="expense-item-cell expense-item-number">
                 <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.QUANTITY' | translate }}</label>
                 <input type="number" class="admin-field" formControlName="quantity" min="0.01" step="0.01" />
+              </div>
+              <div class="expense-item-cell expense-item-number">
+                <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.UNIT' | translate }}</label>
+                <input
+                  class="admin-field"
+                  formControlName="unit"
+                  [maxlength]="ITEM_UNIT_MAX_LENGTH"
+                  [attr.placeholder]="'ADMIN.EXPENSES.ITEMS.UNIT_PLACEHOLDER' | translate"
+                  />
               </div>
               <div class="expense-item-cell expense-item-number">
                 <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.UNIT_PRICE' | translate }}</label>

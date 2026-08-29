@@ -2149,6 +2149,11 @@
           "OTHER": "Other"
         }
       },
+      "PART": {
+        "SEARCH_PLACEHOLDER": "Type a part or labour name",
+        "NO_MATCH": "\"{{name}}\" is not in the registry",
+        "ADD_AS": "Add as {{kind}}"
+      },
       "NOTE": "Note",
       "NOTE_PLACEHOLDER": "Additional details (optional)",
       "ITEMS": {
@@ -2157,13 +2162,14 @@
         "ADD": "Add line",
         "REMOVE": "Remove",
         "PART": "Part",
-        "PART_NONE": "Not a part (labour / service / other)",
         "DESCRIPTION": "What the bill says",
         "QUANTITY": "Qty",
         "UNIT_PRICE": "Unit price",
         "AMOUNT": "Line total",
         "TOTAL": "Lines add up to",
-        "MISMATCH": "The lines do not add up to the bill total. Fix a line or the total so the two agree before saving."
+        "MISMATCH": "The lines do not add up to the bill total. Fix a line or the total so the two agree before saving.",
+        "UNIT": "Unit",
+        "UNIT_PLACEHOLDER": "sheet / piece / sq.ft."
       },
       "FILTER_VEHICLE": "Vehicle: All",
       "FILTER_VEHICLE_CENTRAL_ONLY": "Central / Not linked only",
