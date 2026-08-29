@@ -431,7 +431,10 @@ export function toDateControlValue(dateValue: string | null | undefined): Date |
   return new Date(year, month - 1, day);
 }
 
-function toNullableNumber(value: number | string | null | undefined): number | null {
+/** OBRS-1630: exported so the staff repair box parses a form number by the SAME rule the admin
+ * bill screen does. An empty box is absent, not zero - `Number('')` is `0`, and a zero unit price
+ * is a different statement from "the garage did not write one". */
+export function toNullableNumber(value: number | string | null | undefined): number | null {
   if (value === null || value === undefined || value === '') {
     return null;
   }
