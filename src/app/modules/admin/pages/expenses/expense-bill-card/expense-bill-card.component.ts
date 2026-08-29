@@ -64,6 +64,21 @@ export class ExpenseBillCardComponent {
   /** False when this is the only bill left: an envelope with no bills in it is not a state the
    * screen can do anything with, and a remove button that refuses is worse than none. */
   @Input() removable = true;
+  /**
+   * OBRS-1630 — which of this card's two callers is rendering it.
+   *
+   * <p>`envelope` is the back-office screen this card was written for: a stack of slips, each one
+   * choosing its own van, date and category.
+   *
+   * <p>`field` is the staff cash box. There the header is not a set of choices at all — the van,
+   * the date and the category are facts about the box the entry lands in, and the server reads them
+   * off the schedule rather than trusting the counter (see `DriverCashService#repairBill`). So the
+   * card drops its own title bar and every header control except the garage, and what is left is
+   * exactly the owner's description of the box: sub-lines, parts, and a garage field. Hidden, not
+   * disabled: a greyed-out van picker on a screen that has one van invites the question of how to
+   * change it, and there is no answer.
+   */
+  @Input() variant: 'envelope' | 'field' = 'envelope';
 
   @Output() remove = new EventEmitter<void>();
   @Output() toggleCollapse = new EventEmitter<void>();
@@ -185,6 +200,25 @@ export function buildBillGroup(formBuilder: FormBuilder): FormGroup {
     // still writes them), but on the envelope screen the lines are what produces the total, so a
     // bill with none has an amount of 0 and the server would refuse it with a message about a field
     // this screen does not show.
+    items: formBuilder.array([buildItemGroup(formBuilder)], [Validators.minLength(1)]),
+  });
+}
+
+/**
+ * OBRS-1630: the `field` variant's form group — the same card, the header it can actually answer.
+ *
+ * <p>Lives beside `buildBillGroup` for the reason that one gives: the page that builds the group
+ * and the card that renders it must not drift, and two builders in two files is exactly how they
+ * would. The controls the field variant does not render are ABSENT rather than present-and-hidden:
+ * a `required` control nobody can reach is a form that is invalid with nothing on screen to fix.
+ *
+ * <p>`vehicleSelection`, `category` and `expenseDate` are not missing information — the server reads
+ * all three off the schedule and the cash box, which is also why the counter cannot file a bill
+ * against the wrong van.
+ */
+export function buildFieldRepairBillGroup(formBuilder: FormBuilder): FormGroup {
+  return formBuilder.group({
+    payeeId: [null, [Validators.required]],
     items: formBuilder.array([buildItemGroup(formBuilder)], [Validators.minLength(1)]),
   });
 }

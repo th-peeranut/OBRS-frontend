@@ -48,6 +48,7 @@ import {
   DriverCashAdvanceReqDto,
   DriverCashDayRespDto,
   DriverCashExpenseReqDto,
+  DriverCashRepairBillReqDto,
   DriverCashPerHeadReqDto,
   PerHeadEarningsGranularity,
   PerHeadEarningsRespDto,
@@ -1185,6 +1186,22 @@ export class StaffApiService {
   ): Observable<ResponseAPI<DriverCashDayRespDto>> {
     return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
       `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/expense-paid`,
+      payload,
+      { context: this.driverCashActionContext }
+    );
+  }
+
+  /**
+   * OBRS-1630 — the repair bill, the one field cost that does not fit `expense-paid`'s single
+   * amount. Same `driverCashActionContext` as its sibling: this is a money write at the vehicle and
+   * it must not be swallowed by a generic interceptor banner.
+   */
+  postDriverCashRepairBill(
+    scheduleId: number,
+    payload: DriverCashRepairBillReqDto
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
+      `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/repair-bill`,
       payload,
       { context: this.driverCashActionContext }
     );
