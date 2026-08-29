@@ -237,8 +237,14 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
 
   // ── OBRS-1147: per-head earnings by person ───────────────────────────────
 
+  // OBRS-1631: same placeholder row, and here the `as` cast is what hides the empty string from
+  // the compiler — `'' as PerHeadEarningsGranularity` reaches setQuery as a blank granularity.
   protected onPerHeadGranularityChange(value: string): void {
-    this.perHeadGranularity = value as PerHeadEarningsGranularity;
+    const granularity = String(value ?? '').trim();
+    if (!granularity) {
+      return;
+    }
+    this.perHeadGranularity = granularity as PerHeadEarningsGranularity;
     this.applyPerHeadRange();
   }
 
@@ -304,13 +310,25 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
 
   // ── OBRS-960: parcel-share monthly totals ────────────────────────────────
 
+  // OBRS-1631: `app-admin-dropdown` renders its own `[placeholder]` as a clickable row that emits
+  // `''`, and design-system §3.1 item 2 requires that row — so the guard belongs here, not there.
+  // `Number('')` is 0, not NaN, so without it a click on "ปี" asked for year 0. Same shape as the
+  // guard OBRS-1626 put on /admin/expenses, deliberately, so the two screens behave identically.
   protected onYearChange(value: string): void {
-    this.selectedYear = Number(value);
+    const year = String(value ?? '').trim();
+    if (!year) {
+      return;
+    }
+    this.selectedYear = Number(year);
     this.parcelShareMonthlyStore.setPeriod(this.selectedYear, this.selectedMonth);
   }
 
   protected onMonthChange(value: string): void {
-    this.selectedMonth = Number(value);
+    const month = String(value ?? '').trim();
+    if (!month) {
+      return;
+    }
+    this.selectedMonth = Number(month);
     this.parcelShareMonthlyStore.setPeriod(this.selectedYear, this.selectedMonth);
   }
 
