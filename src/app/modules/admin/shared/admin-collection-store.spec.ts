@@ -198,6 +198,35 @@ describe('AdminCollectionStore', () => {
     });
   });
 
+  // OBRS-1639: the no-op above is right for a T that excludes null, and wrong
+  // for the three subclasses whose T is `Something | null` — there the cache
+  // being null can mean "the server answered null", and a write that already
+  // holds the new value must still be able to put it in. set() is that path.
+  describe('set', () => {
+    it('emits the new value even when the cache is null', () => {
+      const store = new TestStore();
+
+      const emitted: Array<Data | null> = [];
+      store.data$.subscribe((value) => emitted.push(value));
+      expect(emitted).toEqual([null]); // BehaviorSubject initial replay
+
+      store.set({ items: [99] });
+
+      expect(emitted).toEqual([null, { items: [99] }]);
+      expect(store.value).toEqual({ items: [99] });
+    });
+
+    it('replaces an existing cached value', async () => {
+      const store = new TestStore();
+      store.fetchImpl = () => Promise.resolve({ items: [1, 2] });
+      await store.refresh();
+
+      store.set({ items: [3] });
+
+      expect(store.value).toEqual({ items: [3] });
+    });
+  });
+
   // OBRS-424: lastFetchedAt$ backs the "Unable to refresh — showing data from
   // {{time}}" banner (UX-OBRS-424-fleet-live-map.md §9.5). It must be honest
   // about the STORE's own fetch success/failure, independent of any
