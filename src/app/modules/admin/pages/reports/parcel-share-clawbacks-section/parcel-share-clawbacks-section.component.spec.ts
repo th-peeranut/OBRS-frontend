@@ -246,6 +246,8 @@ describe('ParcelShareClawbacksSectionComponent', () => {
   // OBRS-1631: the dropdown renders its own `[placeholder]` as a clickable row emitting `''`
   // (admin-dropdown.component.html:42-57). `'' as ParcelShareClawbackFilter` is not one of the
   // three wire values, and it is not 'ALL' either, so the store sent `status=` to the API.
+  // OBRS-1643: the row is gone from this dropdown ([placeholderSelectable]="false"); the guard
+  // stays as the second layer for a call site added later that forgets the opt-out.
   it('ignores the empty value the dropdown placeholder emits', () => {
     configure([]);
     fixture.detectChanges();

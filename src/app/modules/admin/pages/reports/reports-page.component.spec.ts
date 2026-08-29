@@ -337,6 +337,9 @@ describe('ReportsPageComponent', () => {
   // is 0, not NaN, so the un-guarded handler asked the store for year 0 — measured on the deployed
   // SIT frontend: GET .../parcel-share/monthly?year=0&month=8. Same fix as OBRS-1626 used on
   // /admin/expenses, so the two screens behave identically.
+  // OBRS-1643: all three dropdowns on this page now pass [placeholderSelectable]="false", so the
+  // row that emitted '' is no longer rendered. These two specs stay as the second layer, for a
+  // call site added later that forgets the opt-out.
   it('ignores the empty value the year/month dropdown placeholder emits', () => {
     const store = makeStoreStub(makeSummary());
     const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
