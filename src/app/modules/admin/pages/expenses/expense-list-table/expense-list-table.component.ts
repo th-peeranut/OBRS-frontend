@@ -27,16 +27,6 @@ export class ExpenseListTableComponent {
    * list to nothing isn't told "ยังไม่มีรายการ" (a false claim). */
   @Input() isEmpty = false;
   @Input() canWrite = false;
-  /**
-   * OBRS-808: show the operator column. True only for an `admin`, whose list
-   * spans every operator — for an `owner` every row is theirs by construction
-   * (the backend confines the query to `expenses.owner_id`), so a column
-   * repeating their own name on every line would be pure noise. The caller
-   * passes their role; this component does not infer it from the data, because
-   * a one-operator admin view is indistinguishable from an owner view.
-   */
-  @Input() showOwnerColumn = false;
-
   constructor(private readonly translate: TranslateService) {}
 
   @Output() edit = new EventEmitter<ExpenseRow>();
@@ -49,9 +39,10 @@ export class ExpenseListTableComponent {
    * ragged cell rather than failing.
    */
   protected get columnCount(): number {
-    // OBRS-960: +1 for the always-rendered Source column.
     // OBRS-1577: +1 for the always-rendered Payee column.
-    return 10 + (this.showOwnerColumn ? 1 : 0) + (this.canWrite ? 1 : 0);
+    // OBRS-1627: 10 -> 6. Operator, Source, VAT, receipt no. and paid-by all
+    // left the table; the operator column's conditional +1 went with them.
+    return 6 + (this.canWrite ? 1 : 0);
   }
 
   // Arrow-function field: NgForOf invokes trackBy as a free function, so a

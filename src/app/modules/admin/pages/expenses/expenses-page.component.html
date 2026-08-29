@@ -12,6 +12,22 @@
 </section>
 
 <section class="admin-page-filters mt-3">
+  @if (isAdmin) {
+    <!-- OBRS-1627: the operator moved from a COLUMN to this filter. As a column it
+    printed one name on all 8,580 prod rows (distinct ownerId = 1); as a filter it
+    does nothing today and starts working the day a second operator exists, which
+    is the shape the owner asked for. Admin-only, exactly as the column was: the
+    roster endpoint 403s an owner, so `ownerOptions` is empty for them. -->
+    <app-admin-dropdown
+      [value]="selectedOwnerFilter"
+      [options]="ownerOptions"
+      valueKey="code"
+      labelKey="label"
+      [placeholder]="'ADMIN.EXPENSES.FILTER_OWNER' | translate"
+      (valueChange)="onOwnerFilterChange($event)"
+    ></app-admin-dropdown>
+  }
+
   <app-admin-dropdown
     [value]="selectedVehicleFilter"
     [options]="vehicleFilterOptions"
@@ -91,7 +107,6 @@
   [errorMessage]="errorMessage"
   [isEmpty]="isEmpty"
   [canWrite]="canWrite"
-  [showOwnerColumn]="isAdmin"
   (edit)="openEditModal($event)"
   (delete)="openDeleteModal($event)"
 ></app-expense-list-table>

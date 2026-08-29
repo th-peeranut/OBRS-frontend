@@ -11,7 +11,7 @@ function row(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     ownerId: 7,
     ownerLabel: 'NJ Travel',
     vehicleId: 1,
-    vehicleLabel: 'V1 / ABC-123',
+    vehicleLabel: 'ABC-123',
     category: 'FUEL',
     categoryOtherLabel: '',
     categoryDisplay: 'Fuel',
@@ -108,54 +108,71 @@ describe('ExpenseListTableComponent', () => {
     expect(fixture.debugElement.query(By.css('.admin-inline-actions'))).toBeNull();
   });
 
-  // OBRS-808. Asserts what is RENDERED, not what is mounted: an *ngIf that
-  // never fires still counts as covered, so every case here reads the DOM.
-  describe('operator column (OBRS-808)', () => {
-    it('renders the operator cell for an admin', () => {
+  // OBRS-1627 replaces the OBRS-808 block that stood here. That column was
+  // admin-only; now there is no column for anyone, because with one operator on
+  // prod it printed the same name on all 8,580 rows. Still asserts what is
+  // RENDERED, not what is mounted - a template branch that never fires would
+  // otherwise read as covered.
+  describe('columns that left the table (OBRS-1627)', () => {
+    function headers(): string[] {
+      return fixture.debugElement.queryAll(By.css('thead th')).map((th) => th.nativeElement.textContent.trim());
+    }
+
+    it('renders NO operator cell and NO operator header, for an admin as much as an owner', () => {
       component.isLoading = false;
-      component.showOwnerColumn = true;
       component.rows = [row({ ownerLabel: 'Second Lines' })];
       fixture.detectChanges();
 
-      const cell = fixture.debugElement.query(By.css('[data-testid="expense-owner-cell"]'));
-      expect(cell).toBeTruthy();
-      expect(cell.nativeElement.textContent.trim()).toBe('Second Lines');
+      expect(fixture.debugElement.query(By.css('[data-testid="expense-owner-cell"]'))).toBeNull();
+      expect(headers()).not.toContain('ADMIN.EXPENSES.OWNER');
     });
 
-    it('AC2: renders NO operator cell and NO header for an owner', () => {
+    it('renders no header for Source, VAT, receipt no. or paid-by', () => {
       component.isLoading = false;
-      component.showOwnerColumn = false;
-      component.rows = [row({ ownerLabel: 'NJ Travel' })];
+      component.rows = [row()];
       fixture.detectChanges();
 
-      expect(fixture.debugElement.query(By.css('[data-testid="expense-owner-cell"]'))).toBeNull();
-      const headers = fixture.debugElement
-        .queryAll(By.css('thead th'))
-        .map((th) => th.nativeElement.textContent.trim());
-      expect(headers).not.toContain('ADMIN.EXPENSES.OWNER');
+      for (const key of [
+        'ADMIN.EXPENSES.SOURCE',
+        'ADMIN.EXPENSES.VAT_AMOUNT',
+        'ADMIN.EXPENSES.RECEIPT_NO',
+        'ADMIN.EXPENSES.PAID_BY',
+      ]) {
+        expect(headers()).withContext(key).not.toContain(key);
+      }
     });
 
-    it('the no-match colspan tracks the real column count in every combination', () => {
-      // A colspan that undercounts leaves a ragged cell rather than failing, so
-      // it is asserted for each of the four (showOwnerColumn x canWrite) states
-      // against the header count actually rendered - not against a literal.
-      for (const showOwnerColumn of [false, true]) {
-        for (const canWrite of [false, true]) {
-          component.isLoading = false;
-          component.isEmpty = false;
-          component.rows = [];
-          component.showOwnerColumn = showOwnerColumn;
-          component.canWrite = canWrite;
-          fixture.detectChanges();
+    it('AC-2: the row still CARRIES what the table stopped printing', () => {
+      // The columns went, the data did not - the edit form reads these off the
+      // same row object. A test that only counted headers would stay green on a
+      // mapper that had quietly stopped carrying them.
+      component.isLoading = false;
+      component.rows = [row({ vatAmount: 84, receiptNo: 'RC-9', paidBy: 'Somchai' })];
+      fixture.detectChanges();
 
-          const headerCount = fixture.debugElement.queryAll(By.css('thead th')).length;
-          const colspan = fixture.debugElement
-            .query(By.css('.admin-empty-row td'))
-            .nativeElement.getAttribute('colspan');
-          expect(Number(colspan))
-            .withContext(`showOwnerColumn=${showOwnerColumn} canWrite=${canWrite}`)
-            .toBe(headerCount);
-        }
+      const body = fixture.debugElement.query(By.css('tbody')).nativeElement.textContent;
+      expect(body).not.toContain('RC-9');
+      expect(body).not.toContain('Somchai');
+      expect(component.rows[0].vatAmount).toBe(84);
+      expect(component.rows[0].receiptNo).toBe('RC-9');
+    });
+
+    it('the no-match colspan tracks the real column count in both canWrite states', () => {
+      // A colspan that undercounts leaves a ragged cell rather than failing, so
+      // it is asserted against the header count actually rendered - never a
+      // literal. Removing five columns is exactly the edit that used to break it.
+      for (const canWrite of [false, true]) {
+        component.isLoading = false;
+        component.isEmpty = false;
+        component.rows = [];
+        component.canWrite = canWrite;
+        fixture.detectChanges();
+
+        const headerCount = fixture.debugElement.queryAll(By.css('thead th')).length;
+        const colspan = fixture.debugElement
+          .query(By.css('.admin-empty-row td'))
+          .nativeElement.getAttribute('colspan');
+        expect(Number(colspan)).withContext(`canWrite=${canWrite}`).toBe(headerCount);
       }
     });
 
@@ -164,7 +181,6 @@ describe('ExpenseListTableComponent', () => {
       // column of the loading table one place left, which looks like a layout
       // glitch rather than a bug and so never gets reported.
       component.isLoading = true;
-      component.showOwnerColumn = true;
       component.canWrite = true;
       fixture.detectChanges();
 
@@ -178,18 +194,22 @@ describe('ExpenseListTableComponent', () => {
   // expense entry) renders the "ที่มา" chip and has BOTH edit/delete disabled
   // WITH a title (never absent, never erroring on click); a MANUAL row does
   // neither.
-  describe('Source column (OBRS-960)', () => {
+  describe('Source chip (OBRS-960, moved onto the date cell by OBRS-1627)', () => {
     function sourceCell(): HTMLElement {
-      return fixture.debugElement.query(By.css('[data-testid="expense-source-cell"]')).nativeElement;
+      return fixture.debugElement.query(By.css('[data-testid="expense-date-cell"]')).nativeElement;
     }
 
-    it('renders the FIELD chip for a source:FIELD row', () => {
+    it('renders the FIELD chip for a source:FIELD row, beside the date', () => {
       component.isLoading = false;
       component.rows = [row({ source: 'FIELD' })];
       fixture.detectChanges();
 
-      const chip = sourceCell().querySelector('.admin-status.is-neutral');
+      const cell = sourceCell();
+      const chip = cell.querySelector('.admin-status.is-neutral');
       expect(chip).not.toBeNull();
+      // OBRS-1627: the chip did not merely survive - it moved, and the cell it
+      // moved into still shows the date it now shares.
+      expect(cell.textContent).toContain('24 ก.ค. 2026');
     });
 
     it('renders NO chip for a source:MANUAL row', () => {
