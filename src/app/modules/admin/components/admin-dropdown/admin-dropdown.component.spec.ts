@@ -1,3 +1,7 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { TranslateModule } from '@ngx-translate/core';
+
 import { AdminDropdownComponent } from './admin-dropdown.component';
 import { createElementRefStub } from '../../../../testing/test-stubs';
 
@@ -208,6 +212,34 @@ describe('AdminDropdownComponent', () => {
       expect(component['triggerText']).toBe('');
     });
 
+    /**
+     * OBRS-1643 AC9. The keyboard reaches the clear row through `activeIndex`, not through the
+     * template, so a fix that only gates the `@if` leaves Enter selecting a row that is not on
+     * screen. Revert the `placeholderSelectable` term in `firstActiveIndex` and this turns red
+     * while the DOM specs below stay green — which is the whole reason it is written separately.
+     */
+    it('keeps the highlight off the clear row when it is not selectable, and Enter never blanks the field', () => {
+      component.placeholderSelectable = false;
+      const emitted: string[] = [];
+      component.valueChange.subscribe((value) => emitted.push(value));
+
+      component['toggleDropdown']();
+      expect(component['activeIndex'])
+        .withContext('there is no clear row to sit on; the first real option is the top row')
+        .toBe(0);
+
+      component['onTriggerKeydown'](new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+      component['onTriggerKeydown'](new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+      expect(component['activeIndex'])
+        .withContext('the arrows must not walk up to the row the panel does not render')
+        .toBe(0);
+
+      component['onTriggerKeydown'](new KeyboardEvent('keydown', { key: 'Enter' }));
+      expect(emitted)
+        .withContext("Enter took the first option; an emitted '' would be the desync coming back")
+        .toEqual(['1']);
+    });
+
     // Closing must not leave a filter the user can no longer see: reopening always starts whole.
     it('closing clears the query', () => {
       component['toggleDropdown']();
@@ -216,6 +248,90 @@ describe('AdminDropdownComponent', () => {
 
       expect(component['isOpen']).toBeFalse();
       expect(component['visibleOptions'].length).toBe(3);
+    });
+  });
+
+  /**
+   * OBRS-1643 AC1/AC2. Everything above instantiates the class and never compiles the template,
+   * so "the row is not RENDERED" — as opposed to disabled, or hidden by CSS — cannot be said
+   * there. These compile it and count the buttons the panel actually puts on screen.
+   */
+  describe('the placeholder row, as rendered', () => {
+    let fixture: ComponentFixture<AdminDropdownComponent>;
+    let dropdown: AdminDropdownComponent;
+
+    const OPTIONS = [
+      { code: '2026', label: '2026' },
+      { code: '2025', label: '2025' },
+    ];
+
+    const openPanel = () => {
+      fixture.debugElement.query(By.css('.admin-dropdown-trigger')).triggerEventHandler('click', null);
+      fixture.detectChanges();
+    };
+    // The row's FIRST span, not its whole textContent: the selected row also carries the
+    // `check_circle` icon, whose ligature text would otherwise land in the label.
+    const optionLabels = () =>
+      fixture.debugElement
+        .queryAll(By.css('.admin-dropdown-option'))
+        .map((row) => (row.nativeElement as HTMLElement).querySelector('span')?.textContent?.trim() ?? '');
+
+    beforeEach(async () => {
+      await TestBed.configureTestingModule({
+        imports: [TranslateModule.forRoot()],
+        declarations: [AdminDropdownComponent],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(AdminDropdownComponent);
+      dropdown = fixture.componentInstance;
+      dropdown.valueKey = 'code';
+      dropdown.labelKey = 'label';
+      dropdown.placeholder = 'ปี';
+      dropdown.options = OPTIONS;
+    });
+
+    // AC2. The 75 call sites that pass nothing must keep exactly the behaviour they have today —
+    // flip the default to false and this is the spec that goes red.
+    it('is rendered and selectable by default, and picking it clears the field', () => {
+      const emitted: string[] = [];
+      dropdown.valueChange.subscribe((value) => emitted.push(value));
+      fixture.detectChanges();
+
+      openPanel();
+      expect(optionLabels())
+        .withContext('the clear row sits above the options, as it has always done')
+        .toEqual(['ปี', '2026', '2025']);
+
+      fixture.debugElement
+        .queryAll(By.css('.admin-dropdown-option'))[0]
+        .triggerEventHandler('click', null);
+
+      expect(emitted).toEqual(['']);
+    });
+
+    // AC1. Not `disabled`, not `display:none` — absent. A rendered-but-inert row is still a row
+    // the owner clicks and gets nothing from, which is the state this card exists to remove.
+    it('is absent from the panel when [placeholderSelectable] is false', () => {
+      dropdown.placeholderSelectable = false;
+      fixture.detectChanges();
+
+      openPanel();
+
+      expect(optionLabels())
+        .withContext('the clear row must not be in the DOM at all')
+        .toEqual(['2026', '2025']);
+    });
+
+    // AC1, second half: §3.1 item 3 still owns the trigger. Dropping the row must not turn the
+    // resting button blank — the field still has to say which field it is.
+    it('still shows the placeholder on the trigger while nothing is chosen', () => {
+      dropdown.placeholderSelectable = false;
+      fixture.detectChanges();
+
+      const trigger = fixture.debugElement.query(By.css('.admin-dropdown-trigger'))
+        .nativeElement as HTMLElement;
+
+      expect(trigger.textContent).toContain('ปี');
     });
   });
 });

@@ -39,7 +39,11 @@
 
   @if (isOpen) {
     <div class="admin-dropdown-menu">
-      @if (placeholder) {
+      <!-- OBRS-1643: not rendered at all when the caller opted out — a `disabled` button or a
+      CSS hide would still be a row the panel offers, and the point is that the field has no
+      empty state to offer. The TRIGGER still shows `[placeholder]` while nothing is chosen
+      (§3.1 item 3, untouched). -->
+      @if (placeholder && placeholderSelectable) {
         <button
           type="button"
           class="admin-dropdown-option"

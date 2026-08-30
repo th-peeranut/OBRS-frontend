@@ -125,6 +125,23 @@ export abstract class AdminCollectionStore<T> implements OnDestroy {
   }
 
   /**
+   * Replace the cached value and emit it, whether or not one is cached yet —
+   * the companion to `mutate` for a caller that already holds the whole new
+   * value, e.g. a write endpoint that answers with the updated resource.
+   *
+   * OBRS-1639: `mutate` cannot serve that caller. It reads a null cache as
+   * "nothing loaded yet" and no-ops, which is correct for every subclass whose
+   * `T` excludes null, but wrong for the ones where the server's own answer
+   * can BE null (`DriverCashDayRespDto | null`, `PerHeadEarningsRespDto |
+   * null`): there a loaded value and an empty cache are the same `null`, so
+   * the FIRST write against an empty box changed nothing on screen until the
+   * user reloaded the page.
+   */
+  set(value: T): void {
+    this.dataSubject.next(value);
+  }
+
+  /**
    * Revalidate in the background. The cached value stays visible throughout.
    *
    * Concurrent calls are deduped into a single in-flight cycle (no parallel

@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ElementRef } from '@angular/core';
 import { DriverCashPanelComponent } from './driver-cash-panel.component';
 import { DriverCashDayRespDto } from '../../../../shared/interfaces/driver-cash.interface';
+import { DriverCashDayStore } from './driver-cash-day.store';
 
 function createStoreStub(): any {
   return {
@@ -11,6 +12,7 @@ function createStoreStub(): any {
     setScheduleId: jasmine.createSpy('setScheduleId'),
     refresh: jasmine.createSpy('refresh').and.returnValue(Promise.resolve()),
     mutate: jasmine.createSpy('mutate'),
+    set: jasmine.createSpy('set'),
   };
 }
 
@@ -252,7 +254,7 @@ describe('DriverCashPanelComponent', () => {
       component['onSubmitRepairBill'](BILL);
 
       expect(staffApi.postDriverCashRepairBill).toHaveBeenCalledWith(component.scheduleId, BILL);
-      expect(store.mutate).toHaveBeenCalled();
+      expect(store.set).toHaveBeenCalledWith(DAY_RESP);
       expect(component['isActionOpen']('repair')).toBeFalse();
       expect(component.isSubmitting).toBeFalse();
     });
@@ -335,6 +337,7 @@ describe('DriverCashPanelComponent', () => {
 
       component['onSubmitPerHead']({ stopId: 1, headCount: 3 });
 
+      expect(store.set).not.toHaveBeenCalled();
       expect(store.mutate).not.toHaveBeenCalled();
     });
 
@@ -382,11 +385,44 @@ describe('DriverCashPanelComponent', () => {
 
       component['onSubmitAdvance']({ amount: '100.00' });
 
-      expect(store.mutate).toHaveBeenCalled();
-      const transform = store.mutate.calls.mostRecent().args[0];
-      expect(transform(null)).toEqual(DAY_RESP);
+      expect(store.set).toHaveBeenCalledWith(DAY_RESP);
       expect(component['isActionOpen']('advance')).toBeFalse();
       expect(component.isSubmitting).toBeFalse();
+    });
+  });
+
+  // ── OBRS-1639: the FIRST entry into a box that does not exist yet ───────
+  // Every other test in this file drives a store STUB whose write method is a
+  // spy that always "succeeds" — which is exactly how the panel shipped with a
+  // cache write that did nothing. This one drives the REAL DriverCashDayStore
+  // with the API answering `data: null` (the ordinary answer for a round with
+  // no entries yet) and asserts what the staff member actually sees.
+  describe('the first entry of a round, against the real store', () => {
+    it('shows the totals from the POST response without a reload', async () => {
+      const realStore = new DriverCashDayStore(
+        staffApi,
+        { authStatus$: new BehaviorSubject(true) } as any
+      );
+      staffApi.getDriverCashDay = jasmine.createSpy('getDriverCashDay')
+        .and.returnValue(of({ code: 200, message: 'OK', data: null }));
+      staffApi.postDriverCashAdvance.and.returnValue(
+        of({ code: 201, message: 'OK', data: DAY_RESP })
+      );
+      const panel: any = new DriverCashPanelComponent(
+        realStore, staffApi, alertService, translate,
+        new ElementRef(document.createElement('div'))
+      );
+      panel.scheduleId = 42;
+
+      panel.ngOnInit();
+      await realStore.refresh();
+      expect(panel.day).toBeNull(); // no box yet — this is the loaded value
+
+      panel['toggleAction']('advance');
+      panel['onSubmitAdvance']({ amount: '10000.00' });
+
+      expect(panel.day).toEqual(DAY_RESP);
+      panel.ngOnDestroy();
     });
   });
 
@@ -400,7 +436,7 @@ describe('DriverCashPanelComponent', () => {
 
       component['onSubmitAdvance']({ amount: '100.00' });
 
-      expect(store.mutate).not.toHaveBeenCalled();
+      expect(store.set).not.toHaveBeenCalled();
       expect(component['isActionOpen']('advance')).toBeTrue();
       expect(alertService.error).toHaveBeenCalled();
       expect(component['advanceError']).toBeTruthy();
@@ -429,7 +465,7 @@ describe('DriverCashPanelComponent', () => {
       // The stub's instant() echoes the key, so this asserts the KEY that was chosen.
       expect(component['expenseError']).toBe('STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN');
       expect(alertService.error).toHaveBeenCalledWith('STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN');
-      expect(store.mutate).not.toHaveBeenCalled();
+      expect(store.set).not.toHaveBeenCalled();
     });
   });
 
@@ -452,7 +488,7 @@ describe('DriverCashPanelComponent', () => {
 
       expect(component['advanceError']).toBe('STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN');
       expect(alertService.error).toHaveBeenCalledWith('STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN');
-      expect(store.mutate).not.toHaveBeenCalled();
+      expect(store.set).not.toHaveBeenCalled();
     });
 
     it('per-head names the STOP, not the round — its gate reads the stop the request names', () => {
