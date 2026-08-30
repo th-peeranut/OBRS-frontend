@@ -94,6 +94,20 @@
                   </small>
                 }
               </div>
+              <div class="user-field is-half">
+                <label>{{ 'ADMIN.USERS.NICKNAME' | translate }}</label>
+                <input class="admin-field user-input" formControlName="nickname" placeholder="-" />
+                @if (isFieldInvalid('nickname')) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
+                  </small>
+                }
+                @if (serverFieldErrors['nickname']) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['nickname'] } }}
+                  </small>
+                }
+              </div>
             </div>
           </section>
           @if (mode !== 'edit') {

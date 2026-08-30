@@ -110,6 +110,9 @@ export class AccountPageComponent implements OnInit {
       firstName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
       middleName: ['', [Validators.maxLength(50)]],
       lastName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
+      // OBRS-1558: optional, but 2-50 when filled in - the same bounds the backend enforces, so a
+      // 1-character nickname is refused here instead of coming back as a 400.
+      nickname: ['', [Validators.minLength(2), Validators.maxLength(50)]],
       phoneNumber: ['', [Validators.required, thaiMobileValidator]],
     });
   }
@@ -197,6 +200,7 @@ export class AccountPageComponent implements OnInit {
     this.isProfileSaving = true;
     const value = this.profileForm.value;
     const middleName = ((value.middleName as string) ?? '').trim();
+    const nickname = ((value.nickname as string) ?? '').trim();
 
     this.myAccountService
       .updateProfile({
@@ -206,6 +210,8 @@ export class AccountPageComponent implements OnInit {
         // field has to travel as null rather than "".
         middleName: middleName === '' ? null : middleName,
         lastName: (value.lastName as string).trim(),
+        // OBRS-1558: same reason as middleName above - clearing the field has to travel as null.
+        nickname: nickname === '' ? null : nickname,
         // The field may carry display dashes (080-000-0000); the backend stores canonical digits,
         // so strip them back out before the PUT.
         phoneNumber: stripPhoneSeparators(value.phoneNumber as string),
@@ -264,6 +270,7 @@ export class AccountPageComponent implements OnInit {
       firstName: this.profile.firstName ?? '',
       middleName: this.profile.middleName ?? '',
       lastName: this.profile.lastName ?? '',
+      nickname: this.profile.nickname ?? '',
       // Enter edit mode showing the grouped form; onPhoneFocus() peels the dashes off for typing.
       phoneNumber: formatThaiMobile(this.profile.phoneNumber),
     });
