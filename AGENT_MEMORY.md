@@ -1,5 +1,20 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-08-30 — SELF-FIXED (cosmetic): OBRS-1569 new `data-testid` attribute split across three lines against the file's own one-line-attribute convention
+
+`business-policy.component.html`: the new `<p data-testid="business-policy-terms" [innerHTML]="…">`
+was written as `<p` / `data-testid="…"` / `[innerHTML]="…"` on three separate lines, each at the
+same indent. Every other `<p>` in this file (including the sibling `.policy-version` tag two lines
+above, which also carries a `data-testid`) keeps its attributes on the opening tag's own line.
+No functional difference (Angular ignores the extra whitespace) and no lint/format gate catches
+HTML template style in this repo, so this would have shipped silently. Collapsed back to one line
+to match. Nothing else about this card needed a fix — fixture shapes match `flush()` field-for-field,
+`rescheduleMaxCount: 0` was already an exercised branch (`RESCHEDULE_COUNT_UNLIMITED`, not a hidden
+paragraph), the two new regexes are anchored/ordered correctly, and the other four `CUSTOMER_PAGES`
+readers (consent-banner-reachability, lane-offline, dark-override-effective, host-box-sweep) check
+reachability/host-leaks/mounted-component, not this page's text count, so widening the fixture does
+not move what they measure.
+
 ## 2026-08-25 — SELF-FIXED: OBRS-1576 `[searchable]` opt-in leaked a new highlight onto the 21 of 71 non-searchable `app-admin-dropdown` sites with no `[placeholder]`
 
 The card's own claim was "`[searchable]` is opt-in, the existing call sites unchanged" — and that
