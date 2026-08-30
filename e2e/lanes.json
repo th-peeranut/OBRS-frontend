@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-1569-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1569.config.ts",
+      "why": "OBRS-1569. The before/after for a card whose subject IS the shared fixture, so neither arm may add endpoints of its own: the AFTER arm is plain seedCustomerSession, and the BEFORE arm reconstructs the previous behaviour by answering /reschedule-policy and /operations-policy the way the catch-all four lines below the fixture table answers an unmatched path (`data: null`). CAPTURE rather than GATE because the enforcing check is customer-contrast-gate.spec.ts, whose mustRender now names a hook that exists only in the resolved-terms branch; this exists to make the AFTER image checkable and to print the whole-page text-run count the minText floor is set from. Hermetic on the gate lane's terms -- it reuses seedCustomerSession, so every /api/** call is fulfilled in-browser."
+    },
+    {
       "spec": "obrs-1521-disabled-census.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1521.config.ts",
