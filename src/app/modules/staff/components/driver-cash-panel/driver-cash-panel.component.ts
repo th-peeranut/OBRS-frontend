@@ -423,7 +423,10 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
   private onActionSuccess(data: DriverCashDayRespDto | null): void {
     this.isSubmitting = false;
     if (data) {
-      this.store.mutate(() => data);
+      // OBRS-1639: `set`, not `mutate` — this store's `T` includes null, so
+      // on the round's first entry the cache holds a loaded `null` and
+      // `mutate` would no-op, leaving the totals strip blank until a reload.
+      this.store.set(data);
     }
     // Collapse back to the totals view — the whole point of the accordion
     // is one tap in, one tap done, at the vehicle.
