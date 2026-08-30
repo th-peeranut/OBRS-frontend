@@ -90,5 +90,37 @@
 // live site now, unlike at 2.2/2.3 — and that is the argument FOR one bump, not
 // against fixing the text: an untrue notice is what consent would otherwise be
 // recorded against.
-export const PRIVACY_POLICY_VERSION = '2.4';
-export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026-08-22';
+// 2.5 — OBRS-1364 AC-4 + OBRS-1546, one bump for both.
+//
+// 2.4 told the reader passenger type is used "for display only" and "not used to
+// arrange seating". OBRS-1364 makes that untrue the moment a schedule is set to
+// `ASSIGNED`: `ScheduleService.getBlockedSeatsForPassengerType` closes the seats
+// beside a conflicting occupant, and `BookingService.assignAutomaticSeats` avoids
+// the same pairing on all three allocation paths. Under `OPEN` neither runs —
+// `BookingService:684` nulls every seat before auto-assign is reachable — so the
+// new sentence is written CONDITIONALLY ("เฉพาะรอบที่ระบุหมายเลขที่นั่ง"). That is
+// deliberate: it is true today under OPEN and still true after ASSIGNED is switched
+// on, which is what buys one bump instead of two. It also states the limits the code
+// actually has — the auto-allocation is best-effort with a silent fallback, and a
+// blank passenger type constrains nothing.
+//
+// ⚠️ The closure is in the BOOKING SCREEN, which is why the sentence says seats "may
+// be closed to you" and not that the pairing cannot happen. `verifySeatAvailability`
+// checks occupancy and nothing else, so a seat this rule greys out is still bookable
+// by a walk-in POS sale or any other client. That is not a hole to plug: the owner
+// decided on 2026-08-30 that nobody is ever refused a seat over this rule.
+//
+// ⚠️ What this bump does NOT settle: whether `monk`/`nun` is sensitive data under
+// PDPA §26. Section 3 still lists no §26 basis, and that gap predates OBRS-1364 —
+// the display purpose has the same exposure. Tracked as OBRS-1666, awaiting a
+// lawyer's answer; do not read this version as an answer to it.
+//
+// OBRS-1546 rides along per the owner's 2026-08-22 decision (never ship it alone):
+// sections 3 and 6 now carry the same "only while analytics is switched on"
+// condition that 2.4 gave sections 7 and 8.
+//
+// The re-consent consequence above applies again — one banner on /account for every
+// existing account. It buys a notice that is true both before and after the seating
+// mode changes, against one that is already false the day a schedule flips.
+export const PRIVACY_POLICY_VERSION = '2.5';
+export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026-08-30';
