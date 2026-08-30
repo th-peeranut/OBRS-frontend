@@ -1,13 +1,17 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { SimpleChange } from '@angular/core';
-import { fakeAsync, tick } from '@angular/core/testing';
-import { FormBuilder } from '@angular/forms';
+import { NO_ERRORS_SCHEMA, SimpleChange } from '@angular/core';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Subject, of, throwError } from 'rxjs';
 import { UserFormModalComponent } from './user-form-modal.component';
-import { AdminUserDto } from '../../../../../services/admin/admin-api.service';
+import { AdminApiService, AdminUserDto } from '../../../../../services/admin/admin-api.service';
 import { SALES_POINT_ACTIVE_NONE, UserRow } from '../user-management.mappers';
 import { ResponseAPI } from '../../../../../shared/interfaces/response.interface';
 import { createTranslateStub } from '../../../../../testing/test-stubs';
+import { TranslateModule } from '@ngx-translate/core';
+import { AlertService } from '../../../../../shared/services/alert.service';
+import { TitleLabelPipe } from '../../../../../shared/pipes/title-label.pipe';
+import { AdminDropdownComponent } from '../../../components/admin-dropdown/admin-dropdown.component';
 
 // OBRS-1230: real (not parsed/guessed) name parts, same as toUserRow now
 // carries from the list endpoint's AdminUserDto — this fixture is built by
@@ -979,5 +983,62 @@ describe('UserFormModalComponent', () => {
 
       expect(order).toEqual(['updateUser', 'updateUserSalesPoints']);
     });
+  });
+});
+
+/**
+ * OBRS-1559. `new-password`, never `current-password`: an admin creating somebody else's account
+ * is not logging in, and `current-password` here would invite the browser to drop the ADMIN's own
+ * saved password into the new user's credentials. The token that is right for the customer-facing
+ * screens is the one that would do damage on this one.
+ *
+ * Rendered rather than constructed, unlike every describe above: the attribute is on the element.
+ */
+describe('UserFormModalComponent — password manager autofill tokens (OBRS-1559)', () => {
+  let fixture: ComponentFixture<UserFormModalComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      // AdminDropdownComponent is the ControlValueAccessor behind formControlName="preferredLocale"
+      // (and title/status/roles); without it every one of them is NG01203, schema or not.
+      declarations: [UserFormModalComponent, AdminDropdownComponent],
+      // TitleLabelPipe is standalone and NO_ERRORS_SCHEMA does not cover a missing PIPE (NG0302).
+      imports: [ReactiveFormsModule, TranslateModule.forRoot(), TitleLabelPipe],
+      providers: [
+        // Nothing is typed and no save is submitted here, so no endpoint is reached.
+        { provide: AdminApiService, useValue: {} },
+        { provide: AlertService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA], // adminModalBackdrop is a real directive, not declared here
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(UserFormModalComponent);
+    // The credentials section is behind @if (isOpen) and @if (mode !== 'edit'); an edit
+    // never renders these boxes at all.
+    fixture.componentInstance.isOpen = true;
+    fixture.componentInstance.mode = 'create';
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+  });
+
+  function autocompleteOf(controlName: string): string | null {
+    const el = (fixture.nativeElement as HTMLElement).querySelector(
+      `input[formControlName="${controlName}"]`
+    );
+    if (!el) {
+      throw new Error(`Input [formControlName="${controlName}"] not found in the rendered template`);
+    }
+    return el.getAttribute('autocomplete');
+  }
+
+  it('asks for a NEW password on the password field, not the admin\u0027s own saved one', () => {
+    expect(autocompleteOf('password')).toBe('new-password');
+  });
+
+  it('carries the same token on the confirmation field', () => {
+    expect(autocompleteOf('confirmPassword')).toBe('new-password');
   });
 });

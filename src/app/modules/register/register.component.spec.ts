@@ -273,3 +273,59 @@ describe('RegisterComponent — PDPA consent links to the notice (OBRS-628)', ()
     expect(link()?.getAttribute('rel')).toContain('noopener');
   });
 });
+
+/**
+ * OBRS-1559. Signup is where a weak password gets chosen, and the browser could not help:
+ * with no `autocomplete` token on either box, Chrome/Safari/1Password neither offered to
+ * generate a strong password nor offered to save what was typed. `new-password` on BOTH the
+ * password and its confirmation is what turns the offer on — the pair is how the browser knows
+ * this is a signup and not a login.
+ *
+ * Rendered rather than asserted on the template text, same reason as the OBRS-628 describe
+ * above: the attribute is only real if it survives compilation onto the element.
+ */
+describe('RegisterComponent — password manager autofill tokens (OBRS-1559)', () => {
+  let fixture: ComponentFixture<RegisterComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [RegisterComponent],
+      imports: [
+        ReactiveFormsModule,
+        RouterTestingModule,
+        TranslateModule.forRoot(),
+        // Real, not stubbed: the ControlValueAccessor behind formControlName="title".
+        DropdownObrsComponent,
+      ],
+      providers: [
+        { provide: AuthService, useValue: {} },
+        { provide: AlertService, useValue: {} },
+        { provide: UserService, useValue: {} },
+      ],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RegisterComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+  });
+
+  function autocompleteOf(id: string): string | null {
+    const el = (fixture.nativeElement as HTMLElement).querySelector(`#${id}`);
+    if (!el) {
+      throw new Error(`Input #${id} not found in the rendered template`);
+    }
+    return el.getAttribute('autocomplete');
+  }
+
+  it('offers a generated password on the password field', () => {
+    expect(autocompleteOf('password')).toBe('new-password');
+  });
+
+  it('carries the same token on the confirmation field, so the generated value fills both', () => {
+    expect(autocompleteOf('confirmPassword')).toBe('new-password');
+  });
+});

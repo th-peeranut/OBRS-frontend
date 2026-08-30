@@ -23,8 +23,10 @@
          gate: it now interpolates a live value too, so it can no longer stay outside — an outage
          must hide item 3 exactly like the others rather than announce a stale/wrong cutoff. -->
     @if (policyParams) {
-      <p
-      [innerHTML]="'POLICY.BUSINESS.SALES_CHANNELS' | translate: policyParams"></p>
+      <!-- OBRS-1569: the only hook that is present in THIS branch and absent in the error one.
+           `.policy-version` above renders in both, so a sweep watching it cannot tell the
+           published terms from a retry link. Nothing here is user-visible text. -->
+      <p data-testid="business-policy-terms" [innerHTML]="'POLICY.BUSINESS.SALES_CHANNELS' | translate: policyParams"></p>
       <p [innerHTML]="'POLICY.BUSINESS.CONTENT' | translate: policyParams"></p>
       <!-- OBRS-623/659: the passenger travel conditions, lifted out of CONTENT unchanged so that
            what OBRS-620 settled (the no-show rule) and what OBRS-629 settled (carry-on baggage vs

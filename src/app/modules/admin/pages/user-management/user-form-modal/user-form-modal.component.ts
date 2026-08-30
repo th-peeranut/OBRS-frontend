@@ -138,6 +138,8 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
       firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
       middleName: ['', [Validators.minLength(2), Validators.maxLength(50)]],
       lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
+      // OBRS-1558: optional, 2-50 when filled in - the same bounds as middleName above.
+      nickname: ['', [Validators.minLength(2), Validators.maxLength(50)]],
       email: ['', [Validators.required, Validators.email]],
       // OBRS-455 AC#2: this writes users.phone_number, the same column signup and /account write —
       // and the one OTP login matches on and the driver reminder texts. It was the last surface
@@ -438,6 +440,7 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
       firstName: '',
       middleName: '',
       lastName: '',
+      nickname: '',
       email: '',
       phoneNumber: '',
       password: '',

@@ -124,6 +124,9 @@ export interface AdminUserDto {
   firstName?: string;
   middleName?: string;
   lastName?: string;
+  // OBRS-1558: the name the LINE driver board prints. Carried by both the list and the detail
+  // endpoint, so the edit modal can populate it from either.
+  nickname?: string | null;
   fullName?: string;
   email?: string;
   phoneNumber?: string;
@@ -935,6 +938,8 @@ export interface CreateUserPayload {
   firstName: string;
   middleName?: string;
   lastName: string;
+  // OBRS-1558: omitted when blank, same reason as title above.
+  nickname?: string;
   email: string;
   phoneNumber: string;
   password: string;
@@ -950,6 +955,8 @@ export interface UpdateUserPayload {
   firstName: string;
   middleName?: string;
   lastName: string;
+  // OBRS-1558: omitted when blank, same reason as title above.
+  nickname?: string;
   // OBRS-1255: the three keys a guest shadow row omits entirely (AC2 / owner's option C). Optional
   // in the TYPE so omitting them is a legal shape rather than a cast — and optional on the server
   // only under `UserUpdateReqDto.FullAccount`, a validation group it runs after loading the row.

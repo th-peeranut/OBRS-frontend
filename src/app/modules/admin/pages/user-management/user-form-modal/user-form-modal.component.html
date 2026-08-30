@@ -94,6 +94,20 @@
                   </small>
                 }
               </div>
+              <div class="user-field is-half">
+                <label>{{ 'ADMIN.USERS.NICKNAME' | translate }}</label>
+                <input class="admin-field user-input" formControlName="nickname" placeholder="-" />
+                @if (isFieldInvalid('nickname')) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
+                  </small>
+                }
+                @if (serverFieldErrors['nickname']) {
+                  <small class="admin-error">
+                    {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['nickname'] } }}
+                  </small>
+                }
+              </div>
             </div>
           </section>
           @if (mode !== 'edit') {
@@ -107,7 +121,7 @@
                   <label>
                     {{ 'ADMIN.USERS.PASSWORD' | translate }} <span class="admin-required">*</span>
                   </label>
-                  <input class="admin-field user-input" formControlName="password" type="password" />
+                  <input class="admin-field user-input" formControlName="password" type="password" autocomplete="new-password" />
                   @if (isFieldInvalid('password')) {
                     <small class="admin-error">
                       {{ 'ADMIN.VALIDATION.PASSWORD' | translate }}
@@ -118,7 +132,7 @@
                   <label>
                     {{ 'ADMIN.USERS.CONFIRM_PASSWORD' | translate }} <span class="admin-required">*</span>
                   </label>
-                  <input class="admin-field user-input" formControlName="confirmPassword" type="password" />
+                  <input class="admin-field user-input" formControlName="confirmPassword" type="password" autocomplete="new-password" />
                   @if (isFieldInvalid('confirmPassword')) {
                     <small class="admin-error">
                       {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
