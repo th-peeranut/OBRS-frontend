@@ -8,13 +8,21 @@
     <div class="summary-row">
       <span class="summary-label small">{{ 'HOME.ROUTE_MAP.SUMMARY_PICKUP_LABEL' | translate }}</span>
       <span class="summary-value small">
-        {{ 'HOME.ROUTE_MAP.SUMMARY_PICKUP_VALUE' | translate: { province: routeMeta.originProvinceLabel, count: pickupCount } }}
+        @if (selectedPickupStopName) {
+          {{ selectedPickupStopName }}
+        } @else {
+          {{ 'HOME.ROUTE_MAP.SUMMARY_PICKUP_VALUE' | translate: { province: routeMeta.originProvinceLabel, count: pickupCount } }}
+        }
       </span>
     </div>
     <div class="summary-row">
       <span class="summary-label small">{{ 'HOME.ROUTE_MAP.SUMMARY_DROPOFF_LABEL' | translate }}</span>
       <span class="summary-value small">
-        {{ 'HOME.ROUTE_MAP.SUMMARY_DROPOFF_VALUE' | translate: { province: routeMeta.destinationProvinceLabel, count: dropoffCount } }}
+        @if (selectedDropoffStopName) {
+          {{ selectedDropoffStopName }}
+        } @else {
+          {{ 'HOME.ROUTE_MAP.SUMMARY_DROPOFF_VALUE' | translate: { province: routeMeta.destinationProvinceLabel, count: dropoffCount } }}
+        }
       </span>
     </div>
     <hr class="my-2" />
