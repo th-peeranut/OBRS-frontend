@@ -48,6 +48,18 @@
 }
 
 // Moved from admin-theme.scss (OBRS-907), byte-identical declarations.
+//
+// The two gradient stops are TRANSLUCENT on purpose, and that is the whole
+// reason this primitive has no `body.is-dark` pair while every hand-rolled
+// shimmer (my-bookings `.skeleton`, business-policy `.policy-skeleton`) needs
+// one: rgba() composites against whatever surface is behind it, so the bar
+// adapts to both themes instead of painting a fixed grey. OBRS-1572 decided
+// NOT to add a dark pair for that reason — DERIVED from the alpha-compositing
+// formula, over `$dk-bg` #0f1117 these stops land on #1a1d23 → #24282e, a few
+// points off the #1a1d27 → #22263a pair those two files chose by hand for dark.
+// Change these to opaque colours and a dark pair becomes MANDATORY, with
+// nothing to catch its absence: the contrast gate's MEASURE step skips
+// gradient-backed elements (it counts them under `skipped (gradient)`).
 .admin-skeleton {
   display: block;
   width: 100%;
