@@ -52,6 +52,20 @@ export class AdminDropdownComponent implements ControlValueAccessor {
    * not measured).
    */
   @Input() searchable = false;
+  /**
+   * OBRS-1643: whether the placeholder row in the panel is a CHOICE. Default `true` = the
+   * behaviour every call site has today, so 75 of the 81 uses on `origin/dev` are untouched.
+   *
+   * <p><b>Why an opt-out and not a fix.</b> On a field that cannot be empty (year, month,
+   * granularity, status) `''` is not a value at all, so OBRS-1626/-1631 put a guard in the
+   * handler that drops it. The guard stops the wrong request, but the control has already
+   * written `selectedValue = ''` on itself before emitting — the parent refusing the value
+   * changes no binding, so no `SimpleChange` arrives, `writeValue()` never runs, and the
+   * button is left reading "ปี" over a table still showing 2026. Removing the row is the
+   * only cut that leaves nothing to refuse. The guards stay as a second layer for a call
+   * site that forgets to opt out.
+   */
+  @Input() placeholderSelectable = true;
   @Input() set value(value: unknown) {
     this.selectedValue = String(value ?? '');
   }
@@ -237,9 +251,17 @@ export class AdminDropdownComponent implements ControlValueAccessor {
    * with the highlight parked on "clear", typing a plate and pressing Enter would BLANK the field
    * the owner was filling in — the opposite of what those two keystrokes mean. Clearing is
    * something you go up to, never something you land on by typing.
+   *
+   * <p>OBRS-1643: `placeholderSelectable` belongs here and not only in the template. This is the
+   * ONLY producer of `ACTIVE_INDEX_PLACEHOLDER` — `toggleDropdown`, `onQueryInput`, `close` and
+   * the arrow branch (whose floor is this getter) all take their index from it — so gating it
+   * here is what keeps Enter off a row the panel does not render. Gating the template alone
+   * would leave the keyboard able to pick the row that is no longer on screen.
    */
   private get firstActiveIndex(): number {
-    return this.placeholder && !this.query.trim() ? ACTIVE_INDEX_PLACEHOLDER : 0;
+    return this.placeholder && this.placeholderSelectable && !this.query.trim()
+      ? ACTIVE_INDEX_PLACEHOLDER
+      : 0;
   }
 
   private close(): void {

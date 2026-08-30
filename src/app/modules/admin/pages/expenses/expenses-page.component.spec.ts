@@ -240,6 +240,9 @@ describe('ExpensesPageComponent', () => {
     // OBRS-1626: the dropdown's own placeholder row emits '' when clicked, and
     // `Number('')` is 0, which `new Date` reads as the year 1900 - the table
     // would empty itself with no explanation.
+    // OBRS-1643: these two dropdowns now pass [placeholderSelectable]="false", so nothing
+    // on screen can produce that '' any more. This stays as the second layer, for a call
+    // site added later that forgets the opt-out.
     it('ignores the empty value the dropdown placeholder emits', () => {
       const now = new Date();
       const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
