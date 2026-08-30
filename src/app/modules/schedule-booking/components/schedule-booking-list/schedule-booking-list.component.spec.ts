@@ -90,6 +90,13 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
       .map((p) => (p.nativeElement.textContent || '').trim());
   }
 
+  // every rendered section heading, in document order.
+  function titleKeys(): string[] {
+    return fixture.debugElement
+      .queryAll(By.css('h3.title'))
+      .map((h) => (h.nativeElement.textContent || '').trim());
+  }
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [
@@ -126,6 +133,18 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
   it('shows no message when both outbound and return schedules exist', () => {
     render({ departureSchedules: [sampleSchedule], arrivalSchedules: [sampleSchedule] });
     expect(noResultsKeys()).toEqual([]);
+  });
+
+  // OBRS-1574 pins the two shapes whose heading must NOT change while the
+  // sold-out outbound below stops printing one.
+  it('keeps the split departure heading for a round trip that HAS outbound trips', () => {
+    render({ departureSchedules: [sampleSchedule], arrivalSchedules: [sampleSchedule] });
+    expect(titleKeys()).toEqual(['SCHEDULE_BOOKING.SUBHEADER_DEPARTURE']);
+  });
+
+  it('keeps the single header for a one-way search that has trips', () => {
+    render({ departureSchedules: [sampleSchedule], arrivalSchedules: null });
+    expect(titleKeys()).toEqual(['SCHEDULE_BOOKING.HEADER']);
   });
 });
 
@@ -573,6 +592,19 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
    */
   const TONIGHT = new Date('2026-08-10T20:58:00');
 
+  // OBRS-1574: the return leg the owner's screenshot had under it - the
+  // outbound day is over, the return day is fully bookable.
+  const returnRound: Schedule = {
+    id: 2,
+    vehicleType: 'van',
+    departureDateTime: '2026-08-11T08:00:00+07:00',
+    arrivalDateTime: '2026-08-11T09:58:00+07:00',
+    pricePerSeat: '200',
+    availableSeats: 20,
+    availableSeatNumbers: ['1A'],
+    routeSlug: 'chonburi-bangkok',
+  };
+
   function filterFor(departureDate: string, roundTripId: number = 1): any {
     return {
       roundTrip: { id: roundTripId },
@@ -711,6 +743,18 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
     // 2026-08-10 is now YESTERDAY: it is no longer "today's rounds have left".
     expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeNull();
     expect(textOf('.no-results')).toContain('SCHEDULE_BOOKING.NO_RESULTS');
+  });
+
+  // OBRS-1574 - same evening, round trip: the outbound answers `[]` while the
+  // return day still sells, so the outbound heading printed itself over an
+  // empty list directly under the sold-out copy.
+  it('prints no outbound heading when the sold-out leg has no rounds to head', () => {
+    render({ departureSchedules: [], arrivalSchedules: [returnRound] }, filterFor('2026-08-10', 2));
+
+    expect(textOf('.sold-out-today__title')).toEqual([
+      'SCHEDULE_BOOKING.SOLD_OUT_TODAY_TITLE',
+    ]);
+    expect(textOf('h3.title')).not.toContain('SCHEDULE_BOOKING.SUBHEADER_DEPARTURE');
   });
 });
 
