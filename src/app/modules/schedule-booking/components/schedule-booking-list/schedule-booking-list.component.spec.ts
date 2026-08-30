@@ -146,6 +146,33 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
     render({ departureSchedules: [sampleSchedule], arrivalSchedules: null });
     expect(titleKeys()).toEqual(['SCHEDULE_BOOKING.HEADER']);
   });
+
+  // OBRS-1654 — OBRS-1574's defect on the other leg. `isSelectFirst` is set the
+  // moment an outbound round is picked (component:267) and, on a round trip with
+  // no return rounds, the same call opens OBRS-1336's modal instead of navigating
+  // (component:295) — so this exact DOM is what the customer is left looking at
+  // through a 55%-opaque backdrop.
+  it('prints no return heading once an outbound is picked and the return list is empty', () => {
+    render({ departureSchedules: [sampleSchedule], arrivalSchedules: [] });
+    fixture.componentInstance.isSelectFirst = true;
+    fixture.detectChanges();
+
+    expect(noResultsKeys()).toContain('SCHEDULE_BOOKING.NO_RETURN_RESULTS');
+    expect(titleKeys()).toEqual(['SCHEDULE_BOOKING.HEADER']);
+  });
+
+  // AC-2: the shape that must not regress — a return leg that HAS rounds still
+  // gets its heading, and the outbound one OBRS-1574 fixed is still above it.
+  it('keeps the return heading once an outbound is picked and the return list has rounds', () => {
+    render({ departureSchedules: [sampleSchedule], arrivalSchedules: [sampleSchedule] });
+    fixture.componentInstance.isSelectFirst = true;
+    fixture.detectChanges();
+
+    expect(titleKeys()).toEqual([
+      'SCHEDULE_BOOKING.SUBHEADER_DEPARTURE',
+      'SCHEDULE_BOOKING.SUBHEADER_RETURN',
+    ]);
+  });
 });
 
 describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
