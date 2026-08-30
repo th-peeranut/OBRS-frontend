@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-1569-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1569.config.ts",
+      "why": "OBRS-1569. The before/after for a card whose subject IS the shared fixture, so neither arm may add endpoints of its own: the AFTER arm is plain seedCustomerSession, and the BEFORE arm reconstructs the previous behaviour by answering /reschedule-policy and /operations-policy the way the catch-all four lines below the fixture table answers an unmatched path (`data: null`). CAPTURE rather than GATE because the enforcing check is customer-contrast-gate.spec.ts, whose mustRender now names a hook that exists only in the resolved-terms branch; this exists to make the AFTER image checkable and to print the whole-page text-run count the minText floor is set from. Hermetic on the gate lane's terms -- it reuses seedCustomerSession, so every /api/** call is fulfilled in-browser."
+    },
+    {
       "spec": "obrs-1521-disabled-census.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1521.config.ts",
@@ -193,6 +199,12 @@
       "lane": "CAPTURE",
       "config": "playwright.obrs1477capture.config.ts",
       "why": "OBRS-1477 BEFORE/AFTER evidence for the trip-details capacity box, plus the one measurement a unit spec structurally cannot take. The regression worth pinning lives in walk-in-center-panel.component.spec.ts, which spies on updateSchedule -- one layer ABOVE the wire. This lane reads the body of the real PUT out of the browser, which is where 'pressing Save without editing anything turned inherit into a hard-coded 21' is actually visible, and it went red on the old code with 'Received: 21' the same way the unit spec did. Its third case gives the vehicle type a standing cap (ADR-0137) so the screen has to print two DIFFERENT numbers -- the override ceiling and the inherited value -- which no earlier picture could distinguish, because before the backend half they were the same 21. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT."
+    },
+    {
+      "spec": "obrs-1572-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1572capture.config.ts",
+      "why": "OBRS-1572 ships comments only, so a BEFORE/AFTER pair of the page would be two identical pictures. This lane proves the two claims those comments now make instead. First, that `.admin-skeleton` RENDERS on a customer-shell page: the wording this card replaces told the next reader it was scoped under `.admin-shell` and would resolve to nothing off the admin shell, so the spec asserts the bar is visible and non-zero on /refund-policy while asserting that page has no `.admin-shell` ancestor at all. Second, that it renders in BOTH themes with no `body.is-dark` rule of its own, which is the reason AC-3 was answered 'no dark pair' -- its rgba() stops composite against whatever surface is behind them, so the lane reads that surface and the gradient out of the browser rather than leaving the claim as arithmetic in a comment. The skeleton is only up while GET /api/cancellation-policy is in flight, so that one call is held open. Fully stubbed through seedCustomerSession: nothing reaches SIT."
     },
     {
       "spec": "obrs-969-capture.spec.ts",
