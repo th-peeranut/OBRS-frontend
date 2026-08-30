@@ -337,6 +337,19 @@ const CANCELLATION_POLICY = {
   manualRefundDueDays: 14,
 };
 const BOOKING_POLICY = { maxAdvanceDays: 30, cutoffMinutes: 60 };
+/**
+ * OBRS-1569. /business-policy forkJoins FOUR endpoints and shows one inline error if any
+ * of them resolves empty, so the two missing here put that page in its error branch on
+ * every run of this lane -- the terms themselves were never swept. Shapes copied from the
+ * four `flush()` calls in business-policy.component.spec.ts, the file that pins them.
+ */
+const RESCHEDULE_POLICY = {
+  rescheduleWindowHours: 2,
+  rescheduleMaxDaysAhead: 60,
+  rescheduleFeeLateThb: 30,
+  rescheduleMaxCount: 0,
+};
+const OPERATIONS_POLICY = { noShowCutoffMinutes: 10 };
 const PARCEL_POLICY = {
   maxWeightKg: 20,
   carryOnFreeSizeMaxInch: 24,
@@ -353,6 +366,9 @@ const FIXTURES: [RegExp, (m: RegExpExecArray) => unknown][] = [
   // swallow them the day one of these paths grows a segment.
   [/\/cancellation-policy$/, () => ok(CANCELLATION_POLICY)],
   [/\/booking-policy$/, () => ok(BOOKING_POLICY)],
+  // OBRS-1569. The other two thirds of /business-policy's forkJoin.
+  [/\/reschedule-policy$/, () => ok(RESCHEDULE_POLICY)],
+  [/\/operations-policy$/, () => ok(OPERATIONS_POLICY)],
   [/\/parcel-policy$/, () => ok(PARCEL_POLICY)],
   [/\/schedules\/search/, () => ok({ departureSchedules: SCHEDULES, arrivalSchedules: null })],
   [/\/routes\/[^/]+\/pickup-dropoff$/, () => ok({ route: ROUTE_META, pickup: PICKUP_STOPS, dropoff: DROPOFF_STOPS })],
@@ -720,12 +736,26 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     key: 'business-policy',
     url: '/business-policy',
     landsOn: '/business-policy',
-    minText: 25,
+    // OBRS-1569: re-read off a real run (2026-08-30, this lane) now that the fixture serves all
+    // four endpoints and the page reaches its CONTENT branch -- 40 scoreable text runs in both
+    // themes, cut to two thirds like every other floor in this file. The 25 it replaces was read
+    // off a run in the inline-error branch, so it was a floor over a retry link.
+    //
+    // MEASURED, and worth knowing before anyone trusts this number: the count does NOT move
+    // between the two branches. obrs-1569-capture.spec.ts scores 37 either way (its own harness
+    // seeds the consent bar away, which is the whole difference from the 40 here). The error
+    // branch spends its runs on an icon, a message, a Retry button; the terms branch spends them
+    // on three paragraphs. So a text floor CANNOT be what tells this page's two states apart, at
+    // any value -- that job belongs to the mustRender hook below, and this stays what it says it
+    // is: a floor under "the page rendered at all".
+    minText: 26,
     minControls: 3,
     // `.policy-version` is the OBRS-628 line that must never be re-typed into
-    // i18n. It is also the tell that the page rendered its CONTENT rather than
-    // its skeleton: the skeleton has no version stamp.
-    mustRender: ['.policy-card', '.policy-version'],
+    // i18n. OBRS-1569: it is NOT the tell that the content rendered, which is what
+    // the line it replaced claimed -- it is interpolated from a .ts file on disk, so
+    // it renders over the inline-error branch just as happily, and that is the branch
+    // this lane was passing over. The testid is the one inside `@if (policyParams)`.
+    mustRender: ['.policy-card', '.policy-version', '[data-testid="business-policy-terms"]'],
     hoverTargets: ['.policy-cross-link'],
   },
   {

@@ -151,6 +151,48 @@ describe('BoardingEntryPageComponent', () => {
     });
   });
 
+  // OBRS-1585: the filter used to cut the raw string at `T`, so a departure
+  // that arrives in any offset but +07:00 was filed under a different day than
+  // its own date column prints. 06:30 Bangkok is 23:30Z the day before — the
+  // early-morning departures this page exists to board.
+  describe('OBRS-1585 the day filter reads the same clock as the date column', () => {
+    // One instant — 06:30 on 21 Dec 2026 in Bangkok — in the four shapes the
+    // API has emitted for this field (see bangkokInstantMs, OBRS-574).
+    const TRIPS = [
+      { id: 11, departureDateTime: '2026-12-21T06:30:00+07:00', status: 'scheduled' },
+      { id: 12, departureDateTime: '2026-12-21T06:30:00', status: 'scheduled' },
+      { id: 13, departureDateTime: '2026-12-20T23:30:00Z', status: 'scheduled' },
+      { id: 14, departureDateTime: '2026-12-21 06:30:00', status: 'scheduled' },
+    ];
+
+    function componentWith(trips: unknown[]): any {
+      const component = new BoardingEntryPageComponent(
+        createRouterStub(),
+        createTranslateStub(),
+        createAuthStub(['driver']),
+        createDriverStoreStub(trips),
+        createStaffStoreStub()
+      );
+      component.ngOnInit();
+      return component;
+    }
+
+    it('keeps all four shapes on the day their column prints', () => {
+      const component = componentWith(TRIPS);
+      component.onDateChange(new Date(2026, 11, 21));
+      expect(component.filteredRows.map((r: { id: number }) => r.id)).toEqual([11, 12, 13, 14]);
+      for (const row of component.filteredRows) {
+        expect(component.displayDateTime(row.departure)).toBe('21 Dec 2026 06:30');
+      }
+    });
+
+    it('and none of them is filed under the previous day', () => {
+      const component = componentWith(TRIPS);
+      component.onDateChange(new Date(2026, 11, 20));
+      expect(component.filteredRows.length).toBe(0);
+    });
+  });
+
   it('cleans up subscriptions on destroy', () => {
     const component = new BoardingEntryPageComponent(
       createRouterStub(),
