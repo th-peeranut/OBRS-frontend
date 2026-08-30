@@ -377,3 +377,63 @@ describe('LoginComponent — email-changed banner (OBRS-84)', () => {
     expect(el.querySelector('.email-changed-banner')).toBeTruthy();
   });
 });
+
+/**
+ * OBRS-1559. Neither box carried an `autocomplete` token, so a password manager had nothing
+ * to recognise this screen by: it could not fill the saved credential and never offered to.
+ * `current-password` alone is not enough either — WHATWG pairs it with the username field, and
+ * without that half the browser has a password with no account to file it under.
+ *
+ * Read off the rendered DOM rather than the template text: the attribute only matters if it
+ * survives Angular's compilation and reaches the real element.
+ */
+describe('LoginComponent — password manager autofill tokens (OBRS-1559)', () => {
+  let fixture: ComponentFixture<LoginComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [LoginComponent],
+      imports: [ReactiveFormsModule, RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: {} },
+        { provide: AlertService, useValue: {} },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: { get: () => null } } },
+        },
+      ],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(LoginComponent);
+    // Same reason as the first describe: ngAfterViewInit would otherwise fetch
+    // accounts.google.com for real on every detectChanges().
+    spyOn(
+      fixture.componentInstance as unknown as {
+        loadGisScript(l: string, cb: () => void): void;
+      },
+      'loadGisScript'
+    );
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+  });
+
+  function autocompleteOf(id: string): string | null {
+    const el = (fixture.nativeElement as HTMLElement).querySelector(`#${id}`);
+    if (!el) {
+      throw new Error(`Input #${id} not found in the rendered template`);
+    }
+    return el.getAttribute('autocomplete');
+  }
+
+  it('marks the email field as the username half of the credential pair', () => {
+    expect(autocompleteOf('email')).toBe('username');
+  });
+
+  it('asks for the saved password, not a generated one', () => {
+    expect(autocompleteOf('password')).toBe('current-password');
+  });
+});
