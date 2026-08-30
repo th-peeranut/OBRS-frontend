@@ -149,7 +149,18 @@
           {{ "SCHEDULE_BOOKING.NO_RETURN_RESULTS" | translate }}
         </p>
       }
-      @if (isSelectFirst) {
+      <!-- OBRS-1654: the same defect as OBRS-1574, on this leg. `isSelectFirst`
+           only says an outbound round has been picked; it says nothing about
+           there being anything to come back on. A round trip with no return
+           rounds answers `[]` (not null), so this block is entered anyway and
+           the heading printed itself over an empty list, right under the
+           NO_RETURN_RESULTS copy above — in the very frame OBRS-1336's modal
+           dims to 55% and therefore does not hide. The OBRS-1343 boarding
+           notice sits in the same block and comes along, which is redundancy
+           rather than a second fix: `returnBoardingStop` is already absent
+           whenever there is nothing to sell back (schedule.interface.ts:87),
+           so it was rendering nothing here before this line moved. -->
+      @if (isSelectFirst && returnList.length) {
         <h3 class="title">
           {{ "SCHEDULE_BOOKING.SUBHEADER_RETURN" | translate }}
         </h3>
