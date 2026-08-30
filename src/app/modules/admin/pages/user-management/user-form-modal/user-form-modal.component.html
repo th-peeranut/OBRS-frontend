@@ -121,7 +121,7 @@
                   <label>
                     {{ 'ADMIN.USERS.PASSWORD' | translate }} <span class="admin-required">*</span>
                   </label>
-                  <input class="admin-field user-input" formControlName="password" type="password" />
+                  <input class="admin-field user-input" formControlName="password" type="password" autocomplete="new-password" />
                   @if (isFieldInvalid('password')) {
                     <small class="admin-error">
                       {{ 'ADMIN.VALIDATION.PASSWORD' | translate }}
@@ -132,7 +132,7 @@
                   <label>
                     {{ 'ADMIN.USERS.CONFIRM_PASSWORD' | translate }} <span class="admin-required">*</span>
                   </label>
-                  <input class="admin-field user-input" formControlName="confirmPassword" type="password" />
+                  <input class="admin-field user-input" formControlName="confirmPassword" type="password" autocomplete="new-password" />
                   @if (isFieldInvalid('confirmPassword')) {
                     <small class="admin-error">
                       {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}

@@ -1,6 +1,12 @@
-import { FormBuilder } from '@angular/forms';
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { ChangeEmailDialogComponent } from './change-email-dialog.component';
+import { AuthService } from '../../../../auth/auth.service';
+import { UserService } from '../../../../services/user/user.service';
+import { AlertService } from '../../../../shared/services/alert.service';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 
 describe('ChangeEmailDialogComponent', () => {
@@ -191,5 +197,49 @@ describe('ChangeEmailDialogComponent', () => {
 
       expect(spy).toHaveBeenCalled();
     });
+  });
+});
+
+/**
+ * OBRS-1559. Changing an email address re-asks for the account's EXISTING password, and with no
+ * token the manager could not fill it — the user had to go find a password they had already
+ * stored. `current-password`, not `new-password`: nothing here sets a password.
+ *
+ * Rendered rather than constructed, unlike the describes above, because the attribute only
+ * exists on a compiled element.
+ */
+describe('ChangeEmailDialogComponent — password manager autofill tokens (OBRS-1559)', () => {
+  let fixture: ComponentFixture<ChangeEmailDialogComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ChangeEmailDialogComponent],
+      imports: [ReactiveFormsModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: {} },
+        // Nothing is typed into the form here, so the debounced duplicate-check never fires.
+        { provide: UserService, useValue: { checkExistEmail: () => of(null) } },
+        { provide: AlertService, useValue: {} },
+      ],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ChangeEmailDialogComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+  });
+
+  it('asks the manager for the saved password of the account being changed', () => {
+    const el = (fixture.nativeElement as HTMLElement).querySelector(
+      '#change-email-current-password'
+    );
+    if (!el) {
+      throw new Error('Input #change-email-current-password not found in the rendered template');
+    }
+
+    expect(el.getAttribute('autocomplete')).toBe('current-password');
   });
 });
