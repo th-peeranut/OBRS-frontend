@@ -35,7 +35,12 @@
     }
     <!-- Outbound leg -->
     @if (schedules.departureSchedules; as departureList) {
-      @if (schedules.arrivalSchedules?.length) {
+      <!-- OBRS-1574: a heading needs rows to head. A round trip whose outbound
+           has sold out answers `[]` (not null), so this block is still entered
+           and the heading used to print itself over an empty list, right under
+           the sold-out copy. The arrival check stays as it was: it is what
+           picks the split departure/return headings over HEADER at the top. -->
+      @if (departureList.length && schedules.arrivalSchedules?.length) {
         <h3 class="title">
           {{ "SCHEDULE_BOOKING.SUBHEADER_DEPARTURE" | translate }}
         </h3>
