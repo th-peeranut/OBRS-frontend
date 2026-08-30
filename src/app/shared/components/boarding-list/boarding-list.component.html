@@ -265,6 +265,31 @@
     </div>
 
     <div class="card shadow-sm border-0">
+      <!-- OBRS-1659: manifest search. Filters the rows already loaded (the endpoint is
+      unpaginated) - no refetch, so it still works at a roadside stop with no signal.
+      Deliberately NOT the scan box above: that one BOARDS a ticket, this one only looks. -->
+      <div class="boarding-search-row">
+        <span class="material-symbols-outlined text-muted" [attr.translate]="'no'" aria-hidden="true">search</span>
+        <input
+          id="boardingSearchInput"
+          type="search"
+          class="admin-field boarding-search-input"
+          name="boardingSearchInput"
+          [(ngModel)]="searchTerm"
+          [placeholder]="'STAFF.BOARDING.SEARCH.PLACEHOLDER' | translate"
+          [attr.aria-label]="'STAFF.BOARDING.SEARCH.LABEL' | translate"
+          autocomplete="off"
+          />
+        @if (searchTerm) {
+          <button
+            type="button"
+            class="admin-btn admin-btn-small"
+            (click)="searchTerm = ''"
+            >
+            {{ 'STAFF.BOARDING.SEARCH.CLEAR' | translate }}
+          </button>
+        }
+      </div>
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover mb-0 align-middle">
@@ -298,10 +323,27 @@
                   </td>
                 </tr>
               }
+              @if (!isLoading && hasNoSearchMatch) {
+                <tr>
+                  <td colspan="9" class="text-center py-5">
+                    <span class="material-symbols-outlined text-muted d-block mb-2" [attr.translate]="'no'" style="font-size:48px">search_off</span>
+                    <div class="fw-semibold">{{ 'STAFF.BOARDING.SEARCH.NO_MATCH_TITLE' | translate }}</div>
+                    <div class="text-muted small">{{ 'STAFF.BOARDING.SEARCH.NO_MATCH_BODY' | translate: { term: searchTerm } }}</div>
+                  </td>
+                </tr>
+              }
               @if (!isLoading) {
-                @for (item of items; track item) {
+                @for (item of filteredItems; track item) {
                   <tr>
-                    <td class="fw-semibold">{{ item.ticketNumber }}</td>
+                    <td class="fw-semibold">
+                      {{ item.ticketNumber }}
+                      <!-- OBRS-1659: the booking number rides as a sub-line rather than a 10th
+                      column - this table is already 9 wide on a driver's phone. Same
+                      .boarding-audit-line treatment the boarded-at/child-fare lines use. -->
+                      @if (item.bookingNumber) {
+                        <div class="text-muted small fw-normal boarding-audit-line">{{ item.bookingNumber }}</div>
+                      }
+                    </td>
                     <td>{{ item.seatNumber }}</td>
                     <td>{{ item.passengerTitle | titleLabel: item.passengerName }}</td>
                     <td>{{ item.fromStop }}</td>

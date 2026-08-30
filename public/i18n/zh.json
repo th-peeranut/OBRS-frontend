@@ -3495,6 +3495,13 @@
       "FROM": "出发站",
       "TO": "到达站",
       "STATUS": "状态",
+      "SEARCH": {
+        "LABEL": "在本班次旅客名单中搜索",
+        "PLACEHOLDER": "订票号、姓名、座位或票号",
+        "CLEAR": "清除",
+        "NO_MATCH_TITLE": "未找到匹配的旅客",
+        "NO_MATCH_BODY": "本班车上没有与“{{term}}”匹配的记录。请与旅客核对订票号，可能属于其他班次。"
+      },
       "EMPTY_TITLE": "暂无旅客",
       "EMPTY_BODY": "本班次暂无登车记录。",
       "BOARDED": "已登车",
