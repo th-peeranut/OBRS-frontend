@@ -295,6 +295,7 @@
                           [type]="isShowPassword ? 'text' : 'password'"
                           id="password"
                           formControlName="password"
+                          autocomplete="new-password"
                           [placeholder]="'REGISTER.PASSWORD_PLACEHOLDER' | translate"
               [class.form-error]="
                 getForm('password')?.errors &&
@@ -354,6 +355,7 @@
                             [type]="isShowConfirmPassword ? 'text' : 'password'"
                             id="confirmPassword"
                             formControlName="confirmPassword"
+                            autocomplete="new-password"
               [placeholder]="
                 'REGISTER.CONFIRM_PASSWORD_PLACEHOLDER' | translate
               "

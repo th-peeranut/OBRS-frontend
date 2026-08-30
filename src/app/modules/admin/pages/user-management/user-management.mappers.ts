@@ -47,6 +47,9 @@ export interface UserRow {
   firstName?: string;
   middleName?: string;
   lastName?: string;
+  // OBRS-1558: the LINE driver board's name for this person. Optional here for the same reason
+  // the four above are.
+  nickname?: string;
   // OBRS-1230 / ADR-0123: true for a guest shadow user — zero roles by
   // design (a row that can never authenticate carries no authority), so the
   // Roles column can render an explanatory chip instead of "-".
@@ -262,6 +265,7 @@ export function toUserRow(
     firstName: String(user.firstName ?? '').trim(),
     middleName: String(user.middleName ?? '').trim(),
     lastName: String(user.lastName ?? '').trim(),
+    nickname: String(user.nickname ?? '').trim(),
     guest: user.guest ?? false,
   };
 }
@@ -280,6 +284,7 @@ export function toUserDtoFallback(user: UserRow): AdminUserDto {
     firstName: user.firstName,
     middleName: user.middleName,
     lastName: user.lastName,
+    nickname: user.nickname,
     guest: user.guest,
   };
 }
@@ -314,6 +319,7 @@ export function buildUserFormValues(
     firstName: String(userDetail.firstName ?? user.firstName ?? '').trim(),
     middleName: String(userDetail.middleName ?? user.middleName ?? '').trim(),
     lastName: String(userDetail.lastName ?? user.lastName ?? '').trim(),
+    nickname: String(userDetail.nickname ?? user.nickname ?? '').trim(),
     // OBRS-1255: `?? ''`, never `?? '-'`. An empty control is what "this account has no address"
     // looks like to a reader AND the only thing safe to hand to toUpdateUserPayload, which cannot
     // tell a placeholder from a value.
@@ -357,6 +363,8 @@ export function toCreateUserPayload(raw: Record<string, unknown>): CreateUserPay
     firstName: String(raw['firstName'] ?? '').trim(),
     middleName: String(raw['middleName'] ?? '').trim() || undefined,
     lastName: String(raw['lastName'] ?? '').trim(),
+    // OBRS-1558: omitted when blank - same shape as middleName, same @Size(min = 2) reason.
+    nickname: String(raw['nickname'] ?? '').trim() || undefined,
     email: String(raw['email'] ?? '').trim(),
     // OBRS-691: the control may carry display dashes (regrouped on blur) —
     // the backend stores/validates bare digits only.
@@ -400,6 +408,9 @@ export function toUpdateUserPayload(
     firstName: String(raw['firstName'] ?? '').trim(),
     middleName: String(raw['middleName'] ?? '').trim() || undefined,
     lastName: String(raw['lastName'] ?? '').trim(),
+    // OBRS-1558: omitted when blank - and an omitted nickname CLEARS the stored one, which is the
+    // full-replace semantics every other name part on this payload already has.
+    nickname: String(raw['nickname'] ?? '').trim() || undefined,
     // OBRS-691: same rationale as toCreateUserPayload above.
     phoneNumber: stripPhoneSeparators(String(raw['phoneNumber'] ?? '')),
     preferredLocale: String(raw['preferredLocale'] ?? 'th').trim(),

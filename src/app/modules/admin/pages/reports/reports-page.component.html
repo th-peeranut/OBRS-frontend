@@ -218,6 +218,7 @@ round, so every line here is money the person already kept. -->
     <app-admin-dropdown
       [options]="perHeadGranularityOptions"
       [placeholder]="'ADMIN.REPORTS.PER_HEAD_EARNINGS.GRANULARITY.LABEL' | translate"
+      [placeholderSelectable]="false"
       valueKey="value"
       labelKey="label"
       [ngModel]="perHeadGranularity"
@@ -316,6 +317,7 @@ role selector — deliberately deferred: no chart, no export). -->
     <app-admin-dropdown
       [options]="yearOptions"
       [placeholder]="'ADMIN.REPORTS.PARCEL_SHARE_MONTHLY.YEAR_LABEL' | translate"
+      [placeholderSelectable]="false"
       valueKey="value"
       labelKey="label"
       [ngModel]="selectedYearStr"
@@ -324,6 +326,7 @@ role selector — deliberately deferred: no chart, no export). -->
     <app-admin-dropdown
       [options]="monthOptions"
       [placeholder]="'ADMIN.REPORTS.PARCEL_SHARE_MONTHLY.MONTH_LABEL' | translate"
+      [placeholderSelectable]="false"
       valueKey="value"
       labelKey="label"
       [ngModel]="selectedMonthStr"

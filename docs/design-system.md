@@ -321,7 +321,7 @@ do not add a fourth.
 
 | Need | Canonical component | Notes |
 |---|---|---|
-| **Select / dropdown in a form** | **`app-admin-dropdown`** | The only one with the placeholder-header contract (§3.1). Inputs: `[options]`, `[placeholder]`, `valueKey`, `labelKey`, `[icon]`, `[disabled]`, `formControlName`. |
+| **Select / dropdown in a form** | **`app-admin-dropdown`** | The only one with the placeholder-header contract (§3.1). Inputs: `[options]`, `[placeholder]`, `valueKey`, `labelKey`, `[icon]`, `[disabled]`, `[searchable]` (OBRS-1576, default `false` — type-to-filter trigger + keyboard navigation), `[placeholderSelectable]` (OBRS-1643, default `true` — set `false` on a field that cannot be empty, §3.1 item 2), `formControlName`. |
 | Localized name dropdown (stop/route pickers with i18n labels) | `app-dropdown-obrs` | Legacy Bootstrap dropdown; **no placeholder support**. Keep only where it's already wired for localized names; do **not** use for new plain selects. **Exception (OBRS-433):** a plain select on a **customer-shell** page that must not import `AdminSharedModule`/`AdminModule` (a lazy-module-boundary violation — `app-admin-dropdown` lives there and its styling depends on `--admin-*` vars only defined inside `.admin-shell`) may use the standalone `app-dropdown-obrs` instead, imported directly into that feature module's `imports`. See `docs/adr/0023-my-reports-customer-page.md`. Still **not** for a new select inside an admin/staff page — `app-admin-dropdown` remains canonical there. |
 | Date / time | PrimeNG `p-calendar` (date), the existing time control | Keep the **single input shape** (§5). |
 | **Export trigger** (download current view as CSV/Excel) | **`app-export-button`** (`src/app/shared/components/export-button/`) | Presentational, self-sufficient: `[datasetKey]`, `[requiredRole]`, `[params]`. Renders a **secondary** `admin-btn` (never `admin-btn-primary` — exporting is a supporting action) that opens a `p-menu[popup]` with CSV / Excel items, following the trigger-popup pattern already used by `walk-in-trip-browser.component` (not `p-splitButton` — unused in this codebase). **Hidden** (not disabled) when `authService.hasAnyRole([requiredRole])` is false, matching the staff-layout/navbar role-gating precedent. Success is silent (the browser download is the confirmation); errors branch on `ExportError.errorCode` via `AlertService.error()`. See `docs/adr/0001-export-button-component.md`. |
@@ -334,8 +334,18 @@ Every form select **MUST**:
 
 1. Use `app-admin-dropdown` (or a component that renders the same placeholder-header).
 2. Pass a `[placeholder]` equal to the **field's name** (e.g. `Vehicle Type`,
-   `Vehicle`, `Driver`) — the component renders it as the top, selectable header row
-   with a checkmark when nothing is chosen.
+   `Vehicle`, `Driver`) — the component renders it as the top header row with a
+   checkmark when nothing is chosen. That row is **selectable by default**, and picking
+   it means "clear this field".
+   **A field that cannot be empty must opt out** with `[placeholderSelectable]="false"`
+   (OBRS-1643), which drops the row from the panel and from the keyboard path — the
+   trigger still shows the placeholder per item 3. A handler guard alone is not enough:
+   the control writes `selectedValue = ''` on itself *before* it emits, so a parent that
+   rejects `''` changes no binding, `writeValue()` never runs, and the button is left
+   reading the field's name over a table that still holds the old value (measured on
+   `/admin/expenses`, OBRS-1626/-1631). Keep the guard as a second layer; the opt-out is
+   the cut that leaves nothing to reject. A filter whose empty value legitimately means
+   **"all"** keeps the default `true` — that is a real choice, not an empty field.
 3. **MUST NOT pre-seed a default value** unless the spec explicitly requires one.
    The control starts **empty**, showing the placeholder, so the user makes an
    explicit choice — identical to every sibling field.

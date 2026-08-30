@@ -1,9 +1,15 @@
-import { FormBuilder } from '@angular/forms';
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { RouterTestingModule } from '@angular/router/testing';
+import { TranslateModule } from '@ngx-translate/core';
 
 import {
   RESET_PASSWORD_PATTERN,
   ResetPasswordComponent,
 } from './reset-password.component';
+import { AuthService } from '../../auth/auth.service';
 
 describe('ResetPasswordComponent', () => {
   let authStub: { confirmPasswordReset: jasmine.Spy };
@@ -151,5 +157,60 @@ describe('ResetPasswordComponent', () => {
       expect(c.state).toBe('form');
       expect(c.errorKey).toBe('RESET_PASSWORD.ERROR.GENERIC');
     });
+  });
+});
+
+/**
+ * OBRS-1559. This screen exists to set a NEW password, and it said nothing about that to the
+ * browser: no token on either box, so no generator offer and no save prompt — the one place a
+ * user is forced to invent a password was also the place they got the least help.
+ *
+ * Rendered rather than constructed, unlike the describe above: the whole defect is an attribute
+ * on the element, which only a compiled template has.
+ */
+describe('ResetPasswordComponent — password manager autofill tokens (OBRS-1559)', () => {
+  let fixture: ComponentFixture<ResetPasswordComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ResetPasswordComponent],
+      imports: [ReactiveFormsModule, RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: {} },
+        {
+          // A token is what puts the component in its 'form' state; without one the
+          // template renders the "link expired" branch and there is no input to read.
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { queryParamMap: { get: (k: string) => (k === 'token' ? 'tok' : null) } },
+          },
+        },
+      ],
+      // app-theme-toggle / app-lang-switcher have their own specs.
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ResetPasswordComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+  });
+
+  function autocompleteOf(id: string): string | null {
+    const el = (fixture.nativeElement as HTMLElement).querySelector(`#${id}`);
+    if (!el) {
+      throw new Error(`Input #${id} not found in the rendered template`);
+    }
+    return el.getAttribute('autocomplete');
+  }
+
+  it('offers a generated password on the new-password field', () => {
+    expect(autocompleteOf('newPassword')).toBe('new-password');
+  });
+
+  it('carries the same token on the confirmation field', () => {
+    expect(autocompleteOf('confirmPassword')).toBe('new-password');
   });
 });
