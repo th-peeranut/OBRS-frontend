@@ -38,11 +38,14 @@
       [categoryOptions]="categoryOptions"
       [payees]="payeeOptions"
       [canCreatePayee]="canCreatePayee"
+      [parts]="partOptions"
+      [canCreatePart]="canCreatePart"
       [collapsed]="collapsed[i]"
       [removable]="billForms.length > 1"
       (remove)="removeBill(i)"
       (toggleCollapse)="toggleCollapse(i)"
       (payeeCreated)="onPayeeCreated()"
+      (partCreated)="onPartCreated()"
     ></app-expense-bill-card>
   }
 

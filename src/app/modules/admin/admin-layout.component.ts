@@ -238,6 +238,9 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       // `requiredRoles: ['admin','owner']`) as cash-online-reconciliation-report above.
       { path: 'vehicle-pl-report', labelKey: 'ADMIN.PAGES.VEHICLE_PL_REPORT', icon: 'directions_bus', descriptionKey: 'ADMIN.VEHICLE_PL_REPORT.SUBTITLE', section: 'reports' },
       { path: 'payee-spend-report', labelKey: 'ADMIN.PAGES.PAYEE_SPEND_REPORT', icon: 'store', descriptionKey: 'ADMIN.PAYEE_SPEND_REPORT.SUBTITLE', section: 'reports' },
+      // OBRS-1613: sits next to payee-spend-report because it answers the other half of the same
+      // question — same admin+owner audience (route `requiredRoles: ['admin','owner']`).
+      { path: 'part-unit-price-report', labelKey: 'ADMIN.PAGES.PART_UNIT_PRICE_REPORT', icon: 'monitoring', descriptionKey: 'ADMIN.PART_UNIT_PRICE_REPORT.SUBTITLE', section: 'reports' },
       // OBRS-685: vehicle/central expense log — admin+owner (route
       // `requiredRoles: ['admin','owner']`), same always-shown audience as
       // eod-sales-report above — operational record-keeping, not a report.
@@ -250,6 +253,14 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     // screen you open while filing bills, not a one-off configuration screen.
     if (this.authService.hasAnyRole(['owner'])) {
       items.push({ path: 'expense-payees', labelKey: 'ADMIN.PAGES.EXPENSE_PAYEES', icon: 'storefront', descriptionKey: 'ADMIN.EXPENSE_PAYEES.SUBTITLE', section: 'operations' });
+    }
+
+    // OBRS-1613: the parts/labour registry - OWNER-only (route `requiredRoles: ['owner']`, backend
+    // `hasRole('OWNER')` on every endpoint including the GET). Immediately after the payee registry
+    // in the same `operations` section: the two are the same kind of screen, an owner opens both
+    // while filing bills, and putting them anywhere but side by side makes one of them hard to find.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({ path: 'maintenance-parts', labelKey: 'ADMIN.PAGES.MAINTENANCE_PARTS', icon: 'build', descriptionKey: 'ADMIN.MAINTENANCE_PARTS.SUBTITLE', section: 'operations' });
     }
 
     if (this.authService.hasAnyRole(['owner'])) {

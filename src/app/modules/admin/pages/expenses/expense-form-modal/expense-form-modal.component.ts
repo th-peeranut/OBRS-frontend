@@ -13,17 +13,16 @@ import { TranslateService } from '@ngx-translate/core';
 import {
   AdminApiService,
   AdminExpensePayeeDto,
+  AdminMaintenancePartDto,
 } from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import { trimmedRequiredValidator } from '../../../../../shared/validators/trimmed-required.validator';
-import { MAINTENANCE_PART_CODES } from '../../vehicles/vehicle-maintenance-plan/vehicle-maintenance-plan.mappers';
 import {
   Option,
   ExpenseItemFormValue,
   ExpenseItemRow,
   ExpenseRow,
-  EXPENSE_ITEM_PART_NONE_SENTINEL,
   VEHICLE_CENTRAL_SENTINEL,
   expenseItemsTotal,
   toDateControlValue,
@@ -40,6 +39,9 @@ const AMOUNT_MAX_DECIMALS = 2;
 
 // OBRS-1374 (schema.sql expense_items.description VARCHAR(255)).
 const ITEM_DESCRIPTION_MAX_LENGTH = 255;
+
+// OBRS-1613 (schema.sql expense_items.unit VARCHAR(20)).
+const ITEM_UNIT_MAX_LENGTH = 20;
 
 // Smart create/edit form modal (OBRS-685), mirroring VehicleFormModalComponent
 // (OBRS-261) / AppVehicleMaintenancePanelComponent's modal (OBRS-209). Owns
@@ -85,19 +87,19 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
   /** OBRS-1577: whether this caller may CREATE a payee from here. False for an admin — the backend
    * refuses that one operation alone (see `ExpensesPageComponent.canCreatePayee`). */
   @Input() canCreatePayee = true;
+  /** OBRS-1613: the parts/labour registry, ACTIVE rows only - the page filters. */
+  @Input() partOptions: AdminMaintenancePartDto[] = [];
+  @Input() canCreatePart = true;
   @Input() reloadStructure!: () => Promise<void>;
   @Output() closed = new EventEmitter<void>();
   /** OBRS-1577: forwarded up from the picker so the page can revalidate the shared registry cache —
    * a payee added from inside one bill must be offered on the next bill without a page reload. */
   @Output() payeeCreated = new EventEmitter<AdminExpensePayeeDto>();
+  @Output() partCreated = new EventEmitter<AdminMaintenancePartDto>();
 
   protected readonly VEHICLE_CENTRAL_SENTINEL = VEHICLE_CENTRAL_SENTINEL;
   protected readonly ITEM_DESCRIPTION_MAX_LENGTH = ITEM_DESCRIPTION_MAX_LENGTH;
-  /** OBRS-1374 AC10: the part labels come from OBRS-1333's OWN i18n keys
-   * (`ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.*`). Minting a second set here would let the same
-   * code read as two different things on two screens. Rebuilt on every open so a language
-   * switch between opens is picked up. */
-  protected partOptions: Option[] = [];
+  protected readonly ITEM_UNIT_MAX_LENGTH = ITEM_UNIT_MAX_LENGTH;
   protected isSubmitting = false;
   protected readonly expenseForm: FormGroup;
 
@@ -172,7 +174,6 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
     }
 
     if (this.isOpen) {
-      this.partOptions = this.buildPartOptions();
       if (this.mode === 'edit' && this.selectedExpense) {
         this.initEditForm(this.selectedExpense);
       } else {
@@ -237,9 +238,27 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
 
   private buildItemGroup(item?: ExpenseItemRow): FormGroup {
     return this.formBuilder.group({
+      // OBRS-1613: the registry id is the line's part now, on this screen as on the multi-bill one.
+      // It is NOT a hidden value carried past a dropdown the owner can still change: this modal's
+      // save is a full replace (ExpenseService#replaceItems deletes and reinserts the whole set),
+      // so a line loaded here and saved back must round-trip everything it arrived with - and a
+      // carried id would also WIN over the dropdown server-side (resolvePartForOwner takes partId
+      // first), silently discarding the change the owner just made.
+      partId: [item?.partId ?? null],
+      // OBRS-1613: display only, never sent - `toExpensePayload` names the fields it puts on the
+      // wire. It is the picker's fallback label for a part that has since been RETIRED: the picker
+      // is offered ACTIVE rows only, so without this the field renders blank on a line whose link
+      // is intact and the owner's natural repair is to overwrite it.
+      partName: [item?.partName ?? ''],
       // AC3: blank is a real answer (labour, service, sundry), so no required validator - the
-      // sentinel option is what lets an owner take a part back off a line.
-      part: [item?.part ? item.part : EXPENSE_ITEM_PART_NONE_SENTINEL],
+      // "not a part" option is what lets an owner take a part back off a line.
+      //
+      // OBRS-1613: `part` is no longer a control. The enum it was picked from is frozen history;
+      // the payload sends the id and the server writes the code from the row it resolved. Keeping a
+      // second, narrower vocabulary on this screen is the "two lists in one system" the card's
+      // constraint 1 forbids - V113 wrote down why: the same question then has two answers.
+      // OBRS-1613: free text, and carried on edit for the same round-trip reason as partId above.
+      unit: [item?.unit ?? '', [Validators.maxLength(ITEM_UNIT_MAX_LENGTH)]],
       description: [
         item?.description ?? '',
         [Validators.required, Validators.maxLength(ITEM_DESCRIPTION_MAX_LENGTH)],
@@ -251,19 +270,6 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
         [Validators.required, positiveAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)],
       ],
     });
-  }
-
-  private buildPartOptions(): Option[] {
-    return [
-      {
-        code: EXPENSE_ITEM_PART_NONE_SENTINEL,
-        label: this.translate.instant('ADMIN.EXPENSES.ITEMS.PART_NONE'),
-      },
-      ...MAINTENANCE_PART_CODES.map((code) => ({
-        code,
-        label: this.translate.instant(`ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.${code}`),
-      })),
-    ];
   }
 
   private setItems(items: ExpenseItemRow[]): void {

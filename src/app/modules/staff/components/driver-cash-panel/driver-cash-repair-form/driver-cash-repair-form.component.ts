@@ -10,12 +10,16 @@ import {
 } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { AdminExpensePayeeDto } from '../../../../../services/admin/admin-api.service';
+import {
+  AdminExpensePayeeDto,
+  AdminMaintenancePartDto,
+} from '../../../../../services/admin/admin-api.service';
 import { ExpensePayeesStore } from '../../../../admin/pages/expense-payees/expense-payees.store';
 import { sortPayeesByName } from '../../../../admin/pages/expense-payees/expense-payees.mappers';
+import { MaintenancePartsStore } from '../../../../admin/pages/maintenance-parts/maintenance-parts.store';
+import { sortMaintenancePartsByName } from '../../../../admin/pages/maintenance-parts/maintenance-parts.mappers';
 import { buildFieldRepairBillGroup } from '../../../../admin/pages/expenses/expense-bill-card/expense-bill-card.component';
 import {
-  EXPENSE_ITEM_PART_NONE_SENTINEL,
   ExpenseItemFormValue,
   expenseItemsTotal,
   toNullableNumber,
@@ -55,12 +59,14 @@ export class DriverCashRepairFormComponent implements OnInit, OnChanges, OnDestr
 
   protected billForm!: FormGroup;
   protected payees: AdminExpensePayeeDto[] = [];
+  protected parts: AdminMaintenancePartDto[] = [];
 
   private readonly subscriptions = new Subscription();
 
   constructor(
     private readonly formBuilder: FormBuilder,
-    private readonly payeesStore: ExpensePayeesStore
+    private readonly payeesStore: ExpensePayeesStore,
+    private readonly partsStore: MaintenancePartsStore
   ) {}
 
   ngOnInit(): void {
@@ -82,6 +88,18 @@ export class DriverCashRepairFormComponent implements OnInit, OnChanges, OnDestr
       })
     );
     void this.payeesStore.refresh();
+
+    // OBRS-1613: the same shared cache, one registry over — the card's part column is a picker over
+    // `maintenance_parts` now, and a `source='FIELD'` bill cannot be edited afterwards, so a line
+    // that leaves this box without a part never gets one. `canCreatePart` is false in the template
+    // for the reason `canCreatePayee` is: the POST is the owner's, and a button that 403s is worse
+    // than no button. Retired rows are dropped here exactly as retired garages are.
+    this.subscriptions.add(
+      this.partsStore.data$.subscribe((data) => {
+        this.parts = sortMaintenancePartsByName((data ?? []).filter((part) => part.active));
+      })
+    );
+    void this.partsStore.refresh();
   }
 
   ngOnDestroy(): void {
@@ -130,12 +148,13 @@ export class DriverCashRepairFormComponent implements OnInit, OnChanges, OnDestr
     this.submitRepairBill.emit({
       payeeId: raw.payeeId,
       items: raw.items.map((item) => ({
-        // The part dropdown carries a sentinel for "no part"; the wire wants it absent — the same
-        // translation `ExpenseBatchPageComponent#toBillPayload` makes on the back-office path.
-        part:
-          !item.part || item.part === EXPENSE_ITEM_PART_NONE_SENTINEL ? null : String(item.part),
+        // OBRS-1613: the same translation `toBillPayload` makes on the back-office path — the line
+        // carries a registry id, and the frozen code is the server's to write.
+        part: null,
+        partId: item.partId ?? null,
         description: String(item.description ?? '').trim(),
         quantity: toNullableNumber(item.quantity),
+        unit: String(item.unit ?? '').trim() || null,
         unitPrice: toNullableNumber(item.unitPrice),
         amount: toNullableNumber(item.amount) ?? 0,
       })),

@@ -3,6 +3,7 @@ import { ExpensesPageComponent } from './expenses-page.component';
 import {
   AdminExpenseDto,
   AdminExpensePayeeDto,
+  AdminMaintenancePartDto,
   AdminVehicleDto,
 } from '../../../../services/admin/admin-api.service';
 import { VEHICLE_CENTRAL_SENTINEL } from './expenses-page.mappers';
@@ -61,6 +62,27 @@ function makeVehiclesStoreStub(vehicles: AdminVehicleDto[] = []) {
 
 /** OBRS-1577: the payee registry cache. Defaults to a loaded-but-empty list, which is the state an
  * operator who has not added any garages yet is genuinely in. */
+/** OBRS-1613: the registry store hands down retired rows too — the registry SCREEN needs them. The
+ * retired row is in the default so this page's own ACTIVE filter is what the assertions exercise. */
+function makePartsStoreStub(
+  parts: AdminMaintenancePartDto[] = [
+    { id: 1, code: 'ENGINE_OIL', name: 'น้ำมันเครื่อง', kind: 'PART', active: true },
+    { id: 2, code: null, name: 'ค่าแรงเปลี่ยนสายพาน', kind: 'LABOUR', active: true },
+    { id: 3, code: null, name: 'อะไหล่ที่เลิกใช้แล้ว', kind: 'PART', active: false },
+  ]
+) {
+  const data$ = new BehaviorSubject<AdminMaintenancePartDto[] | null>(parts);
+  return {
+    data$,
+    refreshing$: new BehaviorSubject<boolean>(false),
+    error$: new BehaviorSubject<boolean>(false),
+    refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+    get hasValue() {
+      return data$.value !== null;
+    },
+  };
+}
+
 function makePayeesStoreStub(payees: AdminExpensePayeeDto[] = []) {
   const data$ = new BehaviorSubject<AdminExpensePayeeDto[] | null>(payees);
   return {
@@ -82,7 +104,8 @@ function makeComponent(
     deleteExpense: jasmine.createSpy('deleteExpense').and.returnValue(of({ code: 200, message: 'OK', data: null })),
   },
   roles: string[] = ['owner'],
-  payeesStore = makePayeesStoreStub()
+  payeesStore = makePayeesStoreStub(),
+  maintenancePartsStore = makePartsStoreStub()
 ) {
   const alert = { success: () => Promise.resolve(), error: () => Promise.resolve() };
   const auth = {
@@ -103,6 +126,7 @@ function makeComponent(
     expensesStore as any,
     vehiclesStore as any,
     payeesStore as any,
+    maintenancePartsStore as any,
     auth as any
   );
 }
