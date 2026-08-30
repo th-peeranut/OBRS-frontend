@@ -99,12 +99,6 @@
   color: $text-lightblack;
 }
 
-.stop-time {
-  font-size: 0.8125rem;
-  color: $text-lightblack;
-  white-space: nowrap;
-}
-
 // Confirm buttons - brand monochrome, overriding PrimeNG severity styles
 //
 // OBRS-915: `color` is declared here now. It always should have been -- this

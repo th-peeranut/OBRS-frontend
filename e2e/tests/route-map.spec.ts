@@ -160,8 +160,10 @@ test.describe('Route Map – Success State', () => {
     await expect(pickupRow.locator('.stop-name')).toContainText('Nong Sak Station');
     // Address from mock
     await expect(pickupRow.locator('.stop-address')).toContainText('123 Test Road');
-    // approxTime from mock
-    await expect(pickupRow.locator('.stop-time')).toContainText('05:00');
+    // OBRS-1494: no clock time on the stop-picking step. `approxTime` is still in the
+    // API payload (the mock sends 05:00) but no round on the route departs at that hour,
+    // so the row must not print it - the customer has not picked a schedule yet.
+    await expect(pickupRow.locator('.stop-time')).toHaveCount(0);
 
     // Tab header for pickup should contain the province label and badge "1"
     const pickupTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Pickup' }).first();
@@ -177,7 +179,7 @@ test.describe('Route Map – Success State', () => {
     await dropoffRow.waitFor({ state: 'visible' });
     await expect(dropoffRow.locator('.stop-order-badge')).toContainText('2');
     await expect(dropoffRow.locator('.stop-name')).toContainText('Bangkok Station');
-    await expect(dropoffRow.locator('.stop-time')).toContainText('06:30');
+    await expect(dropoffRow.locator('.stop-time')).toHaveCount(0);
 
     // Dropoff tab badge should show "1"
     await expect(dropoffTab.locator('.p-badge')).toContainText('1');
@@ -217,11 +219,12 @@ test.describe('Route Map – Success State', () => {
 
     await expect(pickupCard).toContainText('Nong Sak Station');
     await expect(pickupCard).toContainText('123 Test Road');
-    await expect(pickupCard).toContainText('05:00');
+    // OBRS-1494: the detail card carried the same unbuyable clock as the row. Gone from both.
+    await expect(pickupCard).not.toContainText('05:00');
 
     await expect(dropoffCard).toContainText('Bangkok Station');
     await expect(dropoffCard).toContainText('456 Bangkok Road');
-    await expect(dropoffCard).toContainText('06:30');
+    await expect(dropoffCard).not.toContainText('06:30');
 
     // Action button visible: "Open in Google Maps" (the "View photo" button was removed in OBRS-72)
     await expect(pickupCard.locator('button', { hasText: 'Open in Google Maps' })).toBeVisible();

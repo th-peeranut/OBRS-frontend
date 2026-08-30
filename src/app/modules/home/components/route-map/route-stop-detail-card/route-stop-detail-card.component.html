@@ -59,11 +59,6 @@
         {{ landmark }}
       </div>
     }
-    <!-- APPROX TIME -->
-    <div class="mb-2 small">
-      <i class="bi bi-clock me-1 detail-meta"></i>
-      {{ 'HOME.ROUTE_MAP.DETAIL_TIME' | translate: { time: stop.approxTime } }}
-    </div>
     <!-- ADDRESS -->
     @if (stop.address) {
       <div class="mb-3 small detail-meta">
