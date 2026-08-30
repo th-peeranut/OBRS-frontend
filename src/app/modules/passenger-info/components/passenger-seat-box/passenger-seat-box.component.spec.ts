@@ -248,4 +248,54 @@ describe('PassengerSeatBoxComponent', () => {
       expect(fixture.debugElement.query(By.css('.seat-attribute-badge-legroom'))).not.toBeNull();
     });
   });
+
+  describe('blocked by the monk/nun adjacency rule (OBRS-1364)', () => {
+    it('wears its own marker and NOT the taken-seat look — the seat is free, just not for them', () => {
+      component.label = 'B1';
+      component.isBlocked = true;
+      component.blockedSeatAriaLabel = 'Not available for this passenger';
+      fixture.detectChanges();
+
+      const seat = fixture.debugElement.query(By.css('.seat-box'));
+      expect(seat.nativeElement.classList).toContain('blocked');
+      expect(seat.nativeElement.classList).not.toContain('disabled');
+      expect(fixture.debugElement.query(By.css('.passenger-blocked-icon'))).not.toBeNull();
+      expect(seat.nativeElement.getAttribute('aria-label')).toBe('Not available for this passenger');
+      expect(seat.nativeElement.getAttribute('aria-disabled')).toBe('true');
+    });
+
+    it('refuses the click, so a blocked seat can never be selected', () => {
+      const emitted: string[] = [];
+      component.label = 'B1';
+      component.isBlocked = true;
+      component.passengerSeatOutput.subscribe((v) => emitted.push(v));
+      fixture.detectChanges();
+
+      fixture.debugElement.query(By.css('.seat-box')).nativeElement.click();
+
+      expect(emitted).toEqual([]);
+    });
+
+    it('an already-taken seat keeps the taken look — "gone" is the fact the traveler can act on', () => {
+      component.label = 'B1';
+      component.isDisabled = true;
+      component.isBlocked = true;
+      fixture.detectChanges();
+
+      const seat = fixture.debugElement.query(By.css('.seat-box'));
+      expect(seat.nativeElement.classList).toContain('disabled');
+      expect(seat.nativeElement.classList).not.toContain('blocked');
+      expect(fixture.debugElement.query(By.css('.passenger-blocked-icon'))).toBeNull();
+    });
+
+    it('every existing call site is untouched: isBlocked defaults to false', () => {
+      component.label = 'B1';
+      fixture.detectChanges();
+
+      const seat = fixture.debugElement.query(By.css('.seat-box'));
+      expect(component.isBlocked).toBeFalse();
+      expect(seat.nativeElement.classList).not.toContain('blocked');
+      expect(seat.nativeElement.getAttribute('aria-label')).toBeNull();
+    });
+  });
 });

@@ -3114,7 +3114,9 @@
       "EXTRA_LEGROOM_BADGE_ARIA": "ที่นั่งมีพื้นที่วางขาเพิ่ม",
       "LEGEND_TITLE": "สัญลักษณ์ที่นั่ง",
       "LEGEND_WHEELCHAIR": "รองรับรถเข็น",
-      "LEGEND_EXTRA_LEGROOM": "พื้นที่วางขาเพิ่ม"
+      "LEGEND_EXTRA_LEGROOM": "พื้นที่วางขาเพิ่ม",
+      "BLOCKED_SEAT_ARIA": "เลือกไม่ได้สำหรับผู้โดยสารคนนี้",
+      "LEGEND_BLOCKED": "เลือกไม่ได้สำหรับผู้โดยสารคนนี้"
     },
     "GENDER": {
       "MALE": "ชาย",

@@ -3114,7 +3114,9 @@
       "EXTRA_LEGROOM_BADGE_ARIA": "Extra legroom seat",
       "LEGEND_TITLE": "Seat legend",
       "LEGEND_WHEELCHAIR": "Wheelchair accessible",
-      "LEGEND_EXTRA_LEGROOM": "Extra legroom"
+      "LEGEND_EXTRA_LEGROOM": "Extra legroom",
+      "BLOCKED_SEAT_ARIA": "Not available for this passenger",
+      "LEGEND_BLOCKED": "Not available for this passenger"
     },
     "GENDER": {
       "MALE": "Male",

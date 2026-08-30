@@ -83,6 +83,9 @@ export function createScheduleServiceStub(): any {
   return {
     getByFilter: () => of({ data: null }),
     getSeatMap: () => of({ data: [] }),
+    // OBRS-1364: same shape as getSeatMap above — an empty answer blocks no
+    // seat, so a component that asks the question has no side-effect here.
+    getBlockedSeats: () => of({ data: [] }),
   };
 }
 

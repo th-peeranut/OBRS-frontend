@@ -3114,7 +3114,9 @@
       "EXTRA_LEGROOM_BADGE_ARIA": "加大腿部空间座位",
       "LEGEND_TITLE": "座位图例",
       "LEGEND_WHEELCHAIR": "轮椅无障碍",
-      "LEGEND_EXTRA_LEGROOM": "加大腿部空间"
+      "LEGEND_EXTRA_LEGROOM": "加大腿部空间",
+      "BLOCKED_SEAT_ARIA": "此乘客不可选择",
+      "LEGEND_BLOCKED": "此乘客不可选择"
     },
     "GENDER": {
       "MALE": "男",

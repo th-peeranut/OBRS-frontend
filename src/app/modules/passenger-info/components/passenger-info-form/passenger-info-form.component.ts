@@ -33,6 +33,7 @@ import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.inte
 import {
   catchError,
   debounceTime,
+  distinctUntilChanged,
   filter,
   map,
   switchMap,
@@ -170,6 +171,25 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
    */
   activeOutboundIndex = 0;
   activeReturnIndex = 0;
+
+  /**
+   * OBRS-1364: seats the ACTIVE passenger may not take on each leg, because
+   * sitting there would put a monk beside a woman or a nun beside a man. Plain
+   * arrays rather than observables because they depend on the active passenger
+   * index, which is plain state this component already keeps that way.
+   *
+   * Best-effort, like the seat-attribute badges above: a failed or slow fetch
+   * leaves them empty and blocks nothing — it never blocks booking.
+   */
+  blockedSeatsOutbound: string[] = [];
+  blockedSeatsReturn: string[] = [];
+
+  private outboundScheduleId: number | null = null;
+  private returnScheduleId: number | null = null;
+  private fromStopId: number | null = null;
+  private toStopId: number | null = null;
+  /** Nudged whenever the blocked-seat question may have changed; see ngOnInit. */
+  private readonly blockedSeatsQuery$ = new Subject<void>();
 
   titleOptions: Dropdown[] = [...TITLE_OPTIONS];
 
@@ -380,6 +400,66 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
         this.syncPassengerInfoToStore();
       });
 
+    // OBRS-1364: the blocked-seat question needs the two schedule IDs, the two
+    // stop IDs of the segment, and the active passenger's stated type. The first
+    // two arrive from the store; the third changes as the traveler fills the
+    // form, which is why this rides the same `valueChanges` stream as the sync
+    // above rather than a control-specific handler (there is none — `gender` is
+    // a plain form control).
+    this.scheduleBooking$.pipe(takeUntil(this.destroy$)).subscribe((booking) => {
+      this.outboundScheduleId = this.outboundSchedule(booking)?.id ?? null;
+      this.returnScheduleId = this.returnSchedule(booking)?.id ?? null;
+      this.refreshBlockedSeats();
+    });
+
+    this.scheduleFilter.pipe(takeUntil(this.destroy$)).subscribe((filterState) => {
+      this.fromStopId = Number(filterState?.startStationId) || null;
+      this.toStopId = Number(filterState?.stopStationId) || null;
+      this.refreshBlockedSeats();
+    });
+
+    // Same pre-debounce `isPatchingFromStore` guard, and for the same reason, as
+    // the OBRS-361 subscription above: a store-driven rebuild is not a user edit.
+    // It cannot loop here (this branch writes component fields and dispatches
+    // nothing), but re-asking against a half-rebuilt form would blink the blocked
+    // markers and the legend row off and back on for something the user never did.
+    this.passengerData.valueChanges
+      .pipe(
+        filter(() => !this.isPatchingFromStore),
+        debounceTime(300),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.refreshBlockedSeats();
+      });
+
+    // One stream per leg, and `switchMap` is the point of it: when the traveler
+    // moves to another passenger the previous leg's request is CANCELLED rather
+    // than left to land later and paint one passenger's constraint onto another's
+    // seat map. `distinctUntilChanged` on the question itself means a keystroke in
+    // a name field asks nothing new, and `catchError` sits INSIDE the inner
+    // observable so a failed fetch degrades that one answer to "nothing blocked"
+    // instead of tearing down the stream for the rest of the session.
+    (['outbound', 'return'] as const).forEach((leg) => {
+      this.blockedSeatsQuery$
+        .pipe(
+          map(() => this.blockedSeatsQueryFor(leg)),
+          distinctUntilChanged((a, b) => a.key === b.key),
+          switchMap((query) =>
+            query.scheduleId && query.fromStopId && query.toStopId && query.passengerType
+              ? this.scheduleService
+                  .getBlockedSeats(query.scheduleId, query.passengerType, query.fromStopId, query.toStopId)
+                  .pipe(
+                    map((res) => res?.data ?? []),
+                    catchError(() => of([] as string[]))
+                  )
+              : of([] as string[])
+          ),
+          takeUntil(this.destroy$)
+        )
+        .subscribe((seats) => this.setBlockedSeats(leg, seats));
+    });
+
     this.emitValidity();
   }
 
@@ -435,6 +515,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   setActiveOutbound(index: number): void {
     if (index >= 0 && index < this.passengerData.length) {
       this.activeOutboundIndex = index;
+      this.refreshBlockedSeats();
     }
   }
 
@@ -442,6 +523,50 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   setActiveReturn(index: number): void {
     if (index >= 0 && index < this.passengerData.length) {
       this.activeReturnIndex = index;
+      this.refreshBlockedSeats();
+    }
+  }
+
+  /**
+   * OBRS-1364: says that the blocked-seat question may have changed. The streams
+   * wired in `ngOnInit` decide whether it actually did and, if so, cancel
+   * whatever they were still waiting on.
+   */
+  private refreshBlockedSeats(): void {
+    this.blockedSeatsQuery$.next();
+  }
+
+  /**
+   * The current question for one leg, plus a `key` that is the question's whole
+   * identity — two calls with the same key ask the same thing and only the first
+   * is worth sending. An empty `passengerType` is the ordinary state of a form
+   * being filled in, not an error (OBRS-1357 made the field optional).
+   */
+  private blockedSeatsQueryFor(leg: 'outbound' | 'return') {
+    const index = leg === 'outbound' ? this.activeOutboundIndex : this.activeReturnIndex;
+    const scheduleId = leg === 'outbound' ? this.outboundScheduleId : this.returnScheduleId;
+    // The store emits the schedules and the segment before the passenger rows
+    // exist, so the active index can point at nothing yet — `getFormValue`
+    // assumes the row is there and throws if it is not.
+    const passengerType =
+      index < this.passengerData.length
+        ? String(this.getFormValue(index, 'gender') ?? '').toLowerCase()
+        : '';
+
+    return {
+      scheduleId,
+      fromStopId: this.fromStopId,
+      toStopId: this.toStopId,
+      passengerType,
+      key: `${scheduleId}|${this.fromStopId}|${this.toStopId}|${passengerType}`,
+    };
+  }
+
+  private setBlockedSeats(leg: 'outbound' | 'return', seats: string[]): void {
+    if (leg === 'outbound') {
+      this.blockedSeatsOutbound = seats;
+    } else {
+      this.blockedSeatsReturn = seats;
     }
   }
 

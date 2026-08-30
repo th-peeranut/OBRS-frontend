@@ -51,6 +51,16 @@ export class PassengerSeatVanComponent implements OnChanges {
   @Input() wheelchairBadgeAriaLabel: string = '';
   @Input() extraLegroomBadgeAriaLabel: string = '';
   /**
+   * Seats this passenger may not take because of the monk/nun adjacency rule
+   * (OBRS-1364), as the backend's plain-numeric seat numbers — same keying as
+   * `seatAttributes` above. Empty (the default) blocks nothing. These seats are
+   * FREE: they are refused for this passenger only, which is why they are not
+   * folded into `takenSeats`.
+   */
+  @Input() blockedSeats: string[] = [];
+  /** Pre-translated aria-label for a blocked seat, forwarded to every box. */
+  @Input() blockedSeatAriaLabel: string = '';
+  /**
    * OBRS-384: the vehicle's seat floor plan — rows of seat/empty/driver cells.
    * Null (the default) renders the built-in 13-seat van (DEFAULT_VAN_SEAT_LAYOUT),
    * identical to the previous hardcoded template, so every existing call site is
@@ -89,6 +99,12 @@ export class PassengerSeatVanComponent implements OnChanges {
     }
 
     if (this.isSeatTakenByOther(passengerSeatPosition)) {
+      return;
+    }
+
+    // OBRS-1364: free, but not for this passenger. Refused here as well as in
+    // the seat box so a click can never arrive from anywhere else either.
+    if (this.isSeatBlocked(passengerSeatPosition)) {
       return;
     }
 
@@ -185,6 +201,19 @@ export class PassengerSeatVanComponent implements OnChanges {
 
   hasExtraLegroomBadge(label: string): boolean {
     return this.attributesFor(label).includes('EXTRA_LEGROOM');
+  }
+
+  /**
+   * OBRS-1364: whether the monk/nun adjacency rule closes this seat to the
+   * passenger being seated. The seat they are already on is never blocked —
+   * otherwise re-opening the form would strand them on a seat they could
+   * neither keep nor re-pick.
+   */
+  isSeatBlocked(label: string): boolean {
+    if (!label || label === this.currentSeat) {
+      return false;
+    }
+    return this.blockedSeats.includes(normalizeSeatNumber(label));
   }
 
   private isSeatAvailable(seat: string): boolean {

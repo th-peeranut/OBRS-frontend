@@ -36,6 +36,18 @@
     color: $brand-customer-strong;
   }
 
+  // Blocked by the monk/nun adjacency rule (OBRS-1364) — centered like
+  // Selected above, because it is the seat's whole state and not a badge on
+  // top of another one.
+  .passenger-blocked-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: calc(var(--seat-size, 80px) * 0.45);
+    color: $primary-grey;
+  }
+
   // Corner badge (not centered, unlike Selected) so the seat label stays
   // readable — the traveler still needs to see this seat's number while
   // it's marked as their original one.
@@ -112,4 +124,15 @@
   img {
     filter: grayscale(100%);
   }
+}
+
+// Blocked for THIS passenger by the monk/nun adjacency rule (OBRS-1364).
+// Deliberately not `.disabled`'s filled grey: the seat is genuinely free and
+// search has already shown it as available, so it keeps the white ground and
+// says "not this one" with a dashed edge instead of "gone".
+.blocked {
+  background-color: $primary-white;
+  border: 1px dashed $primary-grey;
+  color: $primary-grey;
+  cursor: not-allowed;
 }

@@ -7,7 +7,7 @@ import { Store } from '@ngrx/store';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 import { PassengerInfoFormComponent } from './passenger-info-form.component';
 import { SharedModule } from '../../../../shared/shared.module';
@@ -43,6 +43,94 @@ describe('PassengerInfoFormComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  /**
+   * OBRS-1364. The seat-blocking fetch is the part of this feature with no DOM to
+   * look at: it has to ask the right question, ask it once, and — the reason it is
+   * a `switchMap` and not a bare `subscribe` — never let a slow answer for the
+   * passenger the traveler has already moved on from land on the seat map.
+   */
+  describe('blocked seats (OBRS-1364)', () => {
+    let askedFor: string[];
+    let answers: Subject<{ data: string[] }>[];
+
+    beforeEach(() => {
+      askedFor = [];
+      answers = [];
+      component = new PassengerInfoFormComponent(
+        createStoreStub(),
+        createRouterStub(),
+        new FormBuilder(),
+        createTranslateStub(),
+        {
+          ...createScheduleServiceStub(),
+          getBlockedSeats: (_id: unknown, passengerType: string) => {
+            askedFor.push(passengerType);
+            const answer = new Subject<{ data: string[] }>();
+            answers.push(answer);
+            return answer.asObservable();
+          },
+        }
+      );
+      component.ngOnInit();
+      // The segment and the leg, as the two store subscriptions would have set them.
+      (component as unknown as Record<string, unknown>)['outboundScheduleId'] = 11;
+      (component as unknown as Record<string, unknown>)['fromStopId'] = 100;
+      (component as unknown as Record<string, unknown>)['toStopId'] = 200;
+    });
+
+    function seatTwoPassengers(): void {
+      component.insertPassenger(true);
+      component.insertPassenger(true);
+      component.passengerData.at(0).get('gender')?.setValue('MONK');
+      component.passengerData.at(1).get('gender')?.setValue('FEMALE');
+    }
+
+    it('a late answer for the previous passenger cannot paint the next one\'s seat map', () => {
+      seatTwoPassengers();
+
+      component.setActiveOutbound(0);
+      component.setActiveOutbound(1);
+
+      expect(askedFor).toEqual(['monk', 'female']);
+
+      // The monk's answer comes back LAST, after the traveler has moved on.
+      answers[1].next({ data: ['3'] });
+      answers[0].next({ data: ['7'] });
+
+      expect(component.blockedSeatsOutbound).toEqual(['3']);
+    });
+
+    it('does not re-ask a question whose answer cannot have changed', () => {
+      seatTwoPassengers();
+
+      component.setActiveOutbound(0);
+      component.setActiveOutbound(0);
+
+      expect(askedFor).toEqual(['monk']);
+    });
+
+    it('asks nothing before the passenger rows exist — the store emits first', () => {
+      // No insertPassenger. This is the store's own trigger, not a click: the
+      // schedules and the segment arrive before any passenger row does, and
+      // `activeOutboundIndex` is already 0, pointing at a row that is not there.
+      // Reading the gender off it threw a TypeError until this was guarded.
+      const refresh = (component as unknown as Record<string, () => void>)['refreshBlockedSeats'];
+
+      expect(() => refresh.call(component)).not.toThrow();
+      expect(askedFor).toEqual([]);
+      expect(component.blockedSeatsOutbound).toEqual([]);
+    });
+
+    it('asks nothing for a passenger who stated no type (OBRS-1357)', () => {
+      component.insertPassenger(true);
+
+      component.setActiveOutbound(0);
+
+      expect(askedFor).toEqual([]);
+      expect(component.blockedSeatsOutbound).toEqual([]);
+    });
   });
 
   describe('seat map always visible (Phase 1-A)', () => {
