@@ -2557,7 +2557,12 @@
         "LABEL": "{{credits}} 条短信额度（原 {{baseline}}，{{delta}}）",
         "DELTA_ZERO": "无变化",
         "HINT": "一个特殊字符或表情符号即可使短信额度成倍增加",
-        "NOT_BLOCKING_NOTE": "仅供参考，不会阻止保存"
+        "NOT_BLOCKING_NOTE": "仅供参考，不会阻止保存",
+        "RISE_DIALOG_TITLE": "此次修改会提高短信费用",
+        "RISE_DIALOG_FIGURES": "{{baseline}} → {{credits}} 条短信额度（每发送一次）",
+        "RISE_DIALOG_BODY": "增加的费用适用于该消息的每一次发送，而不只是一次。仍要提交审批吗？",
+        "RISE_DIALOG_CONFIRM": "仍要提交",
+        "RISE_DIALOG_CANCEL": "返回修改"
       },
       "REVIEWS": {
         "COL_KEY": "消息键",
