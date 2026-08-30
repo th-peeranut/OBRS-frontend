@@ -2934,7 +2934,6 @@
       "SUMMARY_SEGMENT_NOTE": "สำหรับจุดรับและจุดส่งที่คุณเลือก",
       "DETAIL_PICKUP_TITLE": "รายละเอียดจุดรับ ({{province}})",
       "DETAIL_DROPOFF_TITLE": "รายละเอียดจุดส่ง ({{province}})",
-      "DETAIL_TIME": "เวลาโดยประมาณ {{time}} น.",
       "DETAIL_LANDMARK_LABEL": "จุดสังเกต",
       "DETAIL_NO_PHOTO": "ยังไม่มีรูปจุดจอดนี้",
       "BTN_OPEN_MAPS": "เปิดใน Google Maps",

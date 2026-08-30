@@ -21,6 +21,20 @@ export class RouteTravelSummaryComponent {
   @Input() selectedPickupStop: RouteStop | null = null;
   @Input() selectedDropoffStop: RouteStop | null = null;
 
+  /** OBRS-1496: the two top rows named the whole route (`province + count`) even
+   *  after a stop was chosen, while the distance/duration rows below had already
+   *  switched to the selected segment. Null until that row's own stop is chosen,
+   *  so choosing only a pickup leaves the drop-off row on the whole-route text —
+   *  the same per-row independence `segmentDistanceKm` and `segmentDurationMinutes`
+   *  already have. */
+  get selectedPickupStopName(): string | null {
+    return this.selectedPickupStop?.name ?? null;
+  }
+
+  get selectedDropoffStopName(): string | null {
+    return this.selectedDropoffStop?.name ?? null;
+  }
+
   /** True when at least one figure below reflects the selected pickup→dropoff
    *  segment (not the whole route). Drives a small hint in the template. */
   get isSegment(): boolean {
