@@ -3315,7 +3315,7 @@
       "SELL_RECEIPT": "打印车票",
       "SCHEDULES": "班次管理",
       "DRIVER": "我的班次",
-      "BOARDING": "登车名单",
+      "BOARDING": "班次作业",
       "PARCEL_INTAKE": "包裹收件",
       "PARCEL_WAYBILL": "运单",
       "PARCEL_SCHEDULE": "班次包裹作业",
@@ -3346,7 +3346,7 @@
       "SELL": "现场售票",
       "SCHEDULES": "班次",
       "MY_SCHEDULES": "我的班次",
-      "BOARDING": "登车名单",
+      "BOARDING": "班次作业",
       "PARCEL_CONSIGN": "寄送包裹",
       "PARCEL_SCHEDULE": "验收 / 交接",
       "INSPECTION": "车辆检查",
@@ -3419,7 +3419,7 @@
     },
     "BOARDING": {
       "TITLE": "登车名单",
-      "SUBTITLE": "管理本班次旅客登车情况",
+      "SUBTITLE": "本班次的旅客登车、司机现金箱、发车记录与打印",
       "TICKET_NO": "票号",
       "SEAT": "座位",
       "PASSENGER": "旅客",
@@ -3752,7 +3752,7 @@
     },
     "BOARDING_ENTRY": {
       "TITLE": "选择班次",
-      "SUBTITLE": "选择班次以查看登车名单。",
+      "SUBTITLE": "选择班次以进入班次作业。",
       "EMPTY_TITLE": "暂无可用班次",
       "EMPTY_BODY": "您没有分配的班次，请稍后再查。"
     },

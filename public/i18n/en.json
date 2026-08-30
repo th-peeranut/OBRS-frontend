@@ -3315,7 +3315,7 @@
       "SELL_RECEIPT": "Print Ticket",
       "SCHEDULES": "Schedule Management",
       "DRIVER": "My Schedules",
-      "BOARDING": "Boarding List",
+      "BOARDING": "Schedule Operations",
       "PARCEL_INTAKE": "Parcel Intake",
       "PARCEL_WAYBILL": "Waybill",
       "PARCEL_SCHEDULE": "Parcel Handling",
@@ -3346,7 +3346,7 @@
       "SELL": "Walk-in Sales",
       "SCHEDULES": "Schedules",
       "MY_SCHEDULES": "My Schedules",
-      "BOARDING": "Boarding List",
+      "BOARDING": "Schedule Operations",
       "PARCEL_CONSIGN": "Consign Parcel",
       "PARCEL_SCHEDULE": "Verify & Handover",
       "INSPECTION": "Inspection",
@@ -3419,7 +3419,7 @@
     },
     "BOARDING": {
       "TITLE": "Boarding List",
-      "SUBTITLE": "Manage passenger check-ins for this schedule.",
+      "SUBTITLE": "Passenger check-in, driver cash box, departure record and printing for this schedule.",
       "TICKET_NO": "Ticket No.",
       "SEAT": "Seat",
       "PASSENGER": "Passenger",
@@ -3752,7 +3752,7 @@
     },
     "BOARDING_ENTRY": {
       "TITLE": "Select a Schedule",
-      "SUBTITLE": "Choose a schedule to view its boarding list.",
+      "SUBTITLE": "Choose a schedule to open its operations.",
       "EMPTY_TITLE": "No schedules available",
       "EMPTY_BODY": "No trips on the selected date. Pick another date."
     },
