@@ -70,6 +70,9 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
    * can un-retire them, and a retired part must never be offered on a bill. */
   protected partOptions: AdminMaintenancePartDto[] = [];
 
+  /** OBRS-1627: `''` = all operators. The operator COLUMN became this filter;
+   * client-side like the category filter, never a fourth server call. */
+  protected selectedOwnerFilter = '';
   protected selectedVehicleFilter = '';
   protected selectedCategoryFilter = '';
   protected centralOnlyFilter = false;
@@ -336,6 +339,11 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  protected onOwnerFilterChange(value: string): void {
+    this.selectedOwnerFilter = String(value ?? '').trim();
+    this.applyFilters();
+  }
+
   protected onCategoryFilterChange(value: string): void {
     this.selectedCategoryFilter = String(value ?? '').trim();
     this.applyFilters();
@@ -502,6 +510,7 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
     this.filteredExpenses = filterExpensesByCategoryAndRange(this.expenses, {
       category: this.selectedCategoryFilter,
       centralOnly: this.centralOnlyFilter,
+      ownerId: this.selectedOwnerFilter,
       // `new Date(year, month, 0)` is the last day of `month` - the range stays
       // inclusive on both ends, which is what the ISO string compare expects.
       from: new Date(year, month - 1, 1),

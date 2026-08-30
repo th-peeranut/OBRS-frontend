@@ -73,10 +73,7 @@ import { ExpenseListTableComponent } from './pages/expenses/expense-list-table/e
 import { ExpenseApprovalLaneComponent } from './pages/expenses/expense-approval-lane/expense-approval-lane.component';
 import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/expense-form-modal.component';
 import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
-import { ExpensePayeePickerComponent } from './pages/expenses/expense-payee-picker/expense-payee-picker.component';
-import { ExpensePartPickerComponent } from './pages/expenses/expense-part-picker/expense-part-picker.component';
 import { ExpenseBatchPageComponent } from './pages/expenses/expense-batch-page/expense-batch-page.component';
-import { ExpenseBillCardComponent } from './pages/expenses/expense-bill-card/expense-bill-card.component';
 import { ExpensePayeesPageComponent } from './pages/expense-payees/expense-payees-page.component';
 import { MaintenancePartsPageComponent } from './pages/maintenance-parts/maintenance-parts-page.component';
 // OBRS-286 — manual refund worklist (AC-2/AC-3), owner-only.
@@ -636,10 +633,7 @@ export const adminRoutes: Routes = [
     ExpenseApprovalLaneComponent,
     ExpenseFormModalComponent,
     ExpenseDeleteModalComponent,
-    ExpensePayeePickerComponent,
-    ExpensePartPickerComponent,
     ExpenseBatchPageComponent,
-    ExpenseBillCardComponent,
     ExpensePayeesPageComponent,
     MaintenancePartsPageComponent,
     ManualRefundWorklistPageComponent,

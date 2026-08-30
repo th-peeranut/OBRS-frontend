@@ -1,4 +1,8 @@
 <div class="bill-card" [formGroup]="billForm" [attr.data-testid]="'bill-card-' + index">
+  <!-- OBRS-1630: the title bar names a slip's position in a STACK and offers to fold or drop it.
+  The field variant has exactly one bill and no stack to find it in, so none of that has a meaning
+  there. -->
+  @if (variant === 'envelope') {
   <div class="bill-card-head">
     <h5 class="bill-card-title">
       {{ 'ADMIN.EXPENSES.BATCH.BILL_N' | translate: { n: index + 1 } }}
@@ -39,11 +43,13 @@
       }
     </div>
   </div>
+  }
 
   @if (!collapsed) {
     <!-- The header, one short row. `เลขที่บิล` and `VAT` are not here on the owner's instruction
     (2026-08-24); the columns still exist and the single-bill modal still writes them. -->
     <div class="bill-card-header-fields">
+      @if (variant === 'envelope') {
       <div class="admin-form-field">
         <label class="admin-form-label">
           {{ 'ADMIN.EXPENSES.BATCH.BILL_DATE' | translate }} <span class="admin-required">*</span>
@@ -81,6 +87,7 @@
           <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
         }
       </div>
+      }
 
       <div class="admin-form-field" [attr.data-testid]="'bill-card-payee-' + index">
         <label class="admin-form-label">
@@ -102,6 +109,7 @@
         }
       </div>
 
+      @if (variant === 'envelope') {
       <div class="admin-form-field">
         <label class="admin-form-label">
           {{ 'ADMIN.EXPENSES.BATCH.CATEGORY' | translate }} <span class="admin-required">*</span>
@@ -137,6 +145,7 @@
         <label class="admin-form-label">{{ 'ADMIN.EXPENSES.BATCH.PAID_BY' | translate }}</label>
         <input class="admin-field" formControlName="paidBy" maxlength="255" />
       </div>
+      }
     </div>
 
     <!-- The lines, as the garage wrote them. `จำนวน` and `ราคา/หน่วย` are NOT required: measured on

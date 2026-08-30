@@ -173,6 +173,18 @@ export function vehicleIdentifier(vehicle: AdminVehicleDto): string {
   return [vehicle.vehicleNumber, vehicle.numberPlate].filter(Boolean).join(' / ') || `#${vehicle.id}`;
 }
 
+/** OBRS-1627: the vehicle label for a TABLE ROW — the plate alone. The owner
+ * reads rows by plate and `51-25 / 16-8368` spent half the column on the
+ * co-op number. `vehicleIdentifier` above is deliberately untouched: the
+ * vehicle FILTER dropdown and `schedules.mappers.ts` both render the joined
+ * form, and the filter staying a superset of the cell is what keeps a plate
+ * findable from it (AC-4). Same fallback shape as `vehicleIdentifier`, so a
+ * van with no plate recorded yet still identifies itself instead of rendering
+ * an empty cell. */
+export function vehiclePlateIdentifier(vehicle: AdminVehicleDto): string {
+  return vehicle.numberPlate || vehicle.vehicleNumber || `#${vehicle.id}`;
+}
+
 /** Table column 3 (§3.1): when `category === 'OTHER'`, append the free-text
  * label the admin typed — `"อื่นๆ (categoryOtherLabel)"` shape, generalized
  * to whatever locale's "Other" label is passed in. */
@@ -193,14 +205,15 @@ export interface ExpenseRow {
   /** OBRS-808. `null` only when the response predates V55 or the row's operator
    * is not in the roster this caller holds — never a real "no operator". */
   ownerId: number | null;
-  /** The operator's label for the admin-only table column and the edit modal's
-   * read-only line. Empty string when it cannot be resolved (an `owner` caller
-   * never fetches the roster at all — they get 403 — and does not render the
-   * column), so a template can test it directly. */
+  /** The operator's label for the edit modal's read-only line. The admin-only
+   * table COLUMN this also fed became a filter in OBRS-1627, so the modal is now
+   * the only reader. Empty string when it cannot be resolved (an `owner` caller
+   * never fetches the roster at all — they get 403), so a template can test it
+   * directly. */
   ownerLabel: string;
   vehicleId: number | null;
-  /** Table column 2: the vehicle identifier, or the muted "central" label
-   * when `vehicleId === null` — never blank. */
+  /** Table column 2: the vehicle's PLATE (OBRS-1627), or the muted "central"
+   * label when `vehicleId === null` — never blank. */
   vehicleLabel: string;
   category: string;
   categoryOtherLabel: string;
@@ -282,7 +295,7 @@ export function toExpenseRow(
 ): ExpenseRow {
   const vehicle = dto.vehicleId !== null ? vehicles.find((v) => v.id === dto.vehicleId) : undefined;
   const vehicleLabel =
-    dto.vehicleId === null ? centralLabel : vehicle ? vehicleIdentifier(vehicle) : `#${dto.vehicleId}`;
+    dto.vehicleId === null ? centralLabel : vehicle ? vehiclePlateIdentifier(vehicle) : `#${dto.vehicleId}`;
   const categoryLabel = categoryOptions.find((option) => option.code === dto.category)?.label ?? dto.category;
 
   // OBRS-808: an unresolvable owner falls back to `#id` rather than a blank
@@ -425,7 +438,10 @@ export function toDateControlValue(dateValue: string | null | undefined): Date |
   return new Date(year, month - 1, day);
 }
 
-function toNullableNumber(value: number | string | null | undefined): number | null {
+/** OBRS-1630: exported so the staff repair box parses a form number by the SAME rule the admin
+ * bill screen does. An empty box is absent, not zero - `Number('')` is `0`, and a zero unit price
+ * is a different statement from "the garage did not write one". */
+export function toNullableNumber(value: number | string | null | undefined): number | null {
   if (value === null || value === undefined || value === '') {
     return null;
   }
@@ -494,6 +510,11 @@ export interface ExpenseFilterOptions {
    * client-side predicate layered on top of the (unfiltered) server fetch —
    * NOT a separate query param. */
   centralOnly: boolean;
+  /** OBRS-1627: `''` = every operator. Replaces the operator COLUMN, which
+   * repeated one name down all 8,580 prod rows. Admin-only in practice — an
+   * `owner` never fetches the roster, so the page renders no control for them
+   * and this stays `''`. */
+  ownerId: string;
   from: Date | null;
   to: Date | null;
 }
@@ -516,6 +537,9 @@ export function filterExpensesByCategoryAndRange(
 
   return rows.filter((row) => {
     if (filters.centralOnly && row.vehicleId !== null) {
+      return false;
+    }
+    if (filters.ownerId && String(row.ownerId ?? '') !== filters.ownerId) {
       return false;
     }
     if (filters.category && row.category !== filters.category) {

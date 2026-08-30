@@ -2201,6 +2201,7 @@
         "UNIT_PLACEHOLDER": "张 / 个 / 平方英尺"
       },
       "FILTER_VEHICLE": "车辆:全部",
+      "FILTER_OWNER": "经营者：全部",
       "FILTER_VEHICLE_CENTRAL_ONLY": "仅中央/不绑定",
       "FILTER_CATEGORY": "类别:全部",
       "FILTER_YEAR": "年份",
@@ -2208,7 +2209,6 @@
       "EMPTY_TITLE": "暂无费用记录",
       "EMPTY_BODY": "点击\"添加费用\"开始记录车辆或中央支出",
       "NO_MATCH": "没有符合当前筛选条件的费用",
-      "SOURCE": "来源",
       "SOURCE_FIELD": "系统自动生成（来自司机）",
       "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。",
       "BATCH": {
@@ -4245,6 +4245,11 @@
         "SUBMIT": "记录支出",
         "WAGE_PRICED_BY_OWNER": "工资按车主设定的每趟费率计算（1 趟 = 1 个班次），无需填写金额。"
       },
+      "REPAIR": {
+        "ACTION_LABEL": "添加维修项目",
+        "LANDS_IN_BOX": "此维修账单将记入 {{date}} 的现金盒",
+        "SUBMIT": "记录维修账单"
+      },
       "SUBMITTING": "提交中...",
       "VALIDATION": {
         "AMOUNT_INVALID": "请输入有效金额（最多两位小数）。"
@@ -4254,7 +4259,8 @@
         "WAGE_RATE_NOT_CONFIGURED": "尚未设置每趟工资费率。请先让车主在司机工资费率页面设置。",
         "SALES_POINT_FORBIDDEN": "您只能为从自己售票点发车的班次记录此项目。此班次不属于您。",
         "PER_HEAD_SALES_POINT_FORBIDDEN": "您只能为属于自己售票点的站点记录人头费。",
-        "DAY_ALREADY_RETURNED": "当日的现金盒已完成归还并签署，无法再添加项目。请让车主重新打开当日的现金盒，然后再录入此票据。"
+        "DAY_ALREADY_RETURNED": "当日的现金盒已完成归还并签署，无法再添加项目。请让车主重新打开当日的现金盒，然后再录入此票据。",
+        "REPAIR_BILL_ZERO_TOTAL": "维修账单总额必须大于零。请至少为一行填写金额。"
       },
       "MY_DAY": {
         "TITLE": "我今日的现金",

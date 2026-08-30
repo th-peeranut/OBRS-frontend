@@ -331,6 +331,40 @@ describe('ReportsPageComponent', () => {
     store.data$.next(makeSummary({ tiles: { bookingCount: 999, ticketsSold: 1, occupancyRatePct: 1 } }));
     expect((component as any).tiles.bookingCount).not.toBe(999);
   });
+
+  // OBRS-1631: `app-admin-dropdown` renders its own `[placeholder]` as a clickable row that emits
+  // `''` (admin-dropdown.component.html:42-57, mandated by design-system §3.1 item 2). `Number('')`
+  // is 0, not NaN, so the un-guarded handler asked the store for year 0 — measured on the deployed
+  // SIT frontend: GET .../parcel-share/monthly?year=0&month=8. Same fix as OBRS-1626 used on
+  // /admin/expenses, so the two screens behave identically.
+  it('ignores the empty value the year/month dropdown placeholder emits', () => {
+    const store = makeStoreStub(makeSummary());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
+    parcelShareMonthlyStoreStub.setPeriod.calls.reset();
+    const { year, month } = parcelShareMonthlyStoreStub.period;
+
+    (component as any).onYearChange('');
+    (component as any).onMonthChange('');
+
+    expect((component as any).selectedYear).toBe(year);
+    expect((component as any).selectedMonth).toBe(month);
+    expect(parcelShareMonthlyStoreStub.setPeriod).not.toHaveBeenCalled();
+  });
+
+  // OBRS-1631: the same placeholder row on the per-head EARNINGS granularity dropdown, one section
+  // above. `'' as PerHeadEarningsGranularity` type-checks and reaches setQuery as a blank
+  // granularity — the cast is what hides it from the compiler.
+  it('ignores the empty value the granularity dropdown placeholder emits', () => {
+    const store = makeStoreStub(makeSummary());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
+    component.ngOnInit();
+    perHeadEarningsStoreStub.setQuery.calls.reset();
+
+    (component as any).onPerHeadGranularityChange('');
+
+    expect((component as any).perHeadGranularity).toBe('MONTH');
+    expect(perHeadEarningsStoreStub.setQuery).not.toHaveBeenCalled();
+  });
 });
 
 // OBRS-442: proves the export button is wired to the STORE's `range` getter (wire-format

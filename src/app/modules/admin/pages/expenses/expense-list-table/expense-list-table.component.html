@@ -26,19 +26,16 @@
       <table class="admin-table">
         <thead>
           <tr>
+            <!-- OBRS-1627: five columns left this header. Operator repeated one
+            name down every row (distinct ownerId = 1 across all 8,580 prod rows)
+            and is a filter above the table now; Source, VAT, receipt no. and
+            paid-by were empty in 8,580 of 8,580. The FIELD chip moved onto the
+            date cell. The columns went, the data did not - AC-2: the form still
+            writes and reads every one of these fields. -->
             <th>{{ 'ADMIN.EXPENSES.EXPENSE_DATE' | translate }}</th>
-            <!-- OBRS-808: admin only - an owner's rows are all theirs, so the
-            column would repeat one name down the whole table. -->
-            @if (showOwnerColumn) {
-              <th>{{ 'ADMIN.EXPENSES.OWNER' | translate }}</th>
-            }
-            <th>{{ 'ADMIN.EXPENSES.SOURCE' | translate }}</th>
             <th>{{ 'ADMIN.EXPENSES.VEHICLE' | translate }}</th>
             <th>{{ 'ADMIN.EXPENSES.CATEGORY' | translate }}</th>
             <th class="expense-money">{{ 'ADMIN.EXPENSES.AMOUNT' | translate }}</th>
-            <th class="expense-money">{{ 'ADMIN.EXPENSES.VAT_AMOUNT' | translate }}</th>
-            <th>{{ 'ADMIN.EXPENSES.RECEIPT_NO' | translate }}</th>
-            <th>{{ 'ADMIN.EXPENSES.PAID_BY' | translate }}</th>
             <!-- OBRS-1577: the column is what makes AC2 visible — bills hold the payee's ID, so
             renaming a garage on the registry screen changes every row of this column at once. -->
             <th>{{ 'ADMIN.EXPENSES.PAYEE.LABEL' | translate }}</th>
@@ -52,13 +49,6 @@
           @if (isLoading) {
             @for (row of skeletonRows; track $index) {
               <tr class="admin-skeleton-row" aria-hidden="true">
-                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-                @if (showOwnerColumn) {
-                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-                }
-                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
@@ -75,15 +65,15 @@
           @if (!isLoading && !hasError && !isEmpty) {
             @for (row of rows; track trackById(i, row); let i = $index) {
               <tr [class.zebra]="i % 2 === 1">
-                <td>{{ row.expenseDateDisplay }}</td>
-                @if (showOwnerColumn) {
-                  <td data-testid="expense-owner-cell">{{ row.ownerLabel || '-' }}</td>
-                }
-                <td data-testid="expense-source-cell">
-                  <!-- Absence reads as normal/MANUAL (Vehicle's own "-"
-                  precedent) — the chip renders ONLY for a FIELD row, never a
-                  weaker/always-present badge (the card: "the whole
-                  mitigation fails if the badge is weak"). -->
+                <td data-testid="expense-date-cell">
+                  {{ row.expenseDateDisplay }}
+                  <!-- OBRS-1627: the chip rides here now that Source has no column
+                  of its own. Unchanged in every other respect: it renders ONLY for
+                  a FIELD row, never a weaker/always-present badge (OBRS-960: "the
+                  whole mitigation fails if the badge is weak"), and its absence
+                  still reads as normal/MANUAL. The disabled edit/delete buttons
+                  below are the second signal, so dropping the column took no
+                  protection with it. -->
                   @if (row.source === 'FIELD') {
                     <span class="admin-status is-neutral">{{ 'ADMIN.EXPENSES.SOURCE_FIELD' | translate }}</span>
                   }
@@ -98,9 +88,6 @@
                 </td>
                 <td>{{ row.categoryDisplay }}</td>
                 <td class="expense-money">{{ formatMoney(row.amount) }}</td>
-                <td class="expense-money">{{ row.vatAmount === null ? '-' : formatMoney(row.vatAmount) }}</td>
-                <td>{{ row.receiptNo || '-' }}</td>
-                <td>{{ row.paidBy || '-' }}</td>
                 <td>{{ row.payeeName || '-' }}</td>
                 <td [attr.title]="row.note || null">{{ row.note || '-' }}</td>
                 @if (canWrite) {

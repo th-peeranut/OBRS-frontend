@@ -1,5 +1,10 @@
 import { FormArray, FormBuilder, FormGroup } from '@angular/forms';
-import { ExpenseBillCardComponent, buildBillGroup, buildItemGroup } from './expense-bill-card.component';
+import {
+  ExpenseBillCardComponent,
+  buildBillGroup,
+  buildFieldRepairBillGroup,
+  buildItemGroup,
+} from './expense-bill-card.component';
 import { createTranslateStub } from '../../../../../testing/test-stubs';
 
 function makeComponent(): { component: ExpenseBillCardComponent; bill: FormGroup; fb: FormBuilder } {
@@ -129,5 +134,38 @@ describe('ExpenseBillCardComponent', () => {
 
     expect(line.get('description')!.valid).toBeFalse();
     expect(line.get('amount')!.valid).toBeFalse();
+  });
+
+  // OBRS-1630: the staff cash box renders this same card. Its header controls are ABSENT rather
+  // than hidden - a `required` control nobody can reach is a form that is invalid with nothing on
+  // screen to fix, which is precisely how a submit button that never enables gets shipped.
+  describe('field variant (OBRS-1630)', () => {
+    it('carries only the garage and the lines, and is valid once both are filled', () => {
+      const fb = new FormBuilder();
+      const bill = buildFieldRepairBillGroup(fb);
+
+      expect(Object.keys(bill.controls).sort()).toEqual(['items', 'payeeId']);
+
+      bill.get('payeeId')!.setValue(5);
+      itemsOf(bill).at(0).patchValue({ description: 'ยางหน้าซ้าย', amount: 4200 });
+
+      expect(bill.valid).toBeTrue();
+    });
+
+    it('is invalid with no garage - the per-payee report cannot see a bill that arrives without one', () => {
+      const fb = new FormBuilder();
+      const bill = buildFieldRepairBillGroup(fb);
+      itemsOf(bill).at(0).patchValue({ description: 'ยางหน้าซ้าย', amount: 4200 });
+
+      expect(bill.valid).toBeFalse();
+    });
+
+    it('starts with one blank line, exactly as the envelope variant does', () => {
+      const bill = buildFieldRepairBillGroup(new FormBuilder());
+
+      expect(itemsOf(bill).length).toBe(1);
+      // OBRS-1613: the line starts with no registry row picked, which is what "no part" is now.
+      expect(itemsOf(bill).at(0).get('partId')!.value).toBeNull();
+    });
   });
 });

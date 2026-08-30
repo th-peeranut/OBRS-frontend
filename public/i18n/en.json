@@ -2201,6 +2201,7 @@
         "UNIT_PLACEHOLDER": "sheet / piece / sq.ft."
       },
       "FILTER_VEHICLE": "Vehicle: All",
+      "FILTER_OWNER": "Operator: All",
       "FILTER_VEHICLE_CENTRAL_ONLY": "Central / Not linked only",
       "FILTER_CATEGORY": "Category: All",
       "FILTER_YEAR": "Year",
@@ -2208,7 +2209,6 @@
       "EMPTY_TITLE": "No expenses recorded yet",
       "EMPTY_BODY": "Start logging vehicle or central expenses with the \"Add Expense\" button",
       "NO_MATCH": "No expenses match the current filters",
-      "SOURCE": "Source",
       "SOURCE_FIELD": "Auto-generated (from driver)",
       "FIELD_ROW_IMMUTABLE": "This row was recorded automatically from a driver’s cash entry. It cannot be edited or deleted here.",
       "BATCH": {
@@ -4245,6 +4245,11 @@
         "SUBMIT": "Record expense",
         "WAGE_PRICED_BY_OWNER": "The wage is priced from the owner's rate per leg (1 leg = 1 run), so there is no amount to enter."
       },
+      "REPAIR": {
+        "ACTION_LABEL": "Add repair line",
+        "LANDS_IN_BOX": "This repair bill lands in the cash box for {{date}}",
+        "SUBMIT": "Record repair bill"
+      },
       "SUBMITTING": "Submitting...",
       "VALIDATION": {
         "AMOUNT_INVALID": "Enter a valid amount (up to 2 decimal places)."
@@ -4254,7 +4259,8 @@
         "WAGE_RATE_NOT_CONFIGURED": "No wage per leg has been set yet. Ask the owner to set it on the driver wage rate page first.",
         "SALES_POINT_FORBIDDEN": "You can only record this entry for rounds departing from your own sales point. This round is not yours.",
         "PER_HEAD_SALES_POINT_FORBIDDEN": "You can only record heads for stops that belong to your own sales point.",
-        "DAY_ALREADY_RETURNED": "That day’s cash box has already been returned and signed off, so entries can no longer be added to it. Ask the owner to re-open the box for that day, then key this bill again."
+        "DAY_ALREADY_RETURNED": "That day’s cash box has already been returned and signed off, so entries can no longer be added to it. Ask the owner to re-open the box for that day, then key this bill again.",
+        "REPAIR_BILL_ZERO_TOTAL": "A repair bill must come to more than zero. Enter the amount on at least one line."
       },
       "MY_DAY": {
         "TITLE": "My cash box today",

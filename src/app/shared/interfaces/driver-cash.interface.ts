@@ -169,6 +169,38 @@ export interface DriverCashPerHeadReqDto {
   headCount: number;
 }
 
+/**
+ * OBRS-1630 — one repair bill, keyed at the counter into the driver's cash box.
+ *
+ * No `category`, no `expenseDate`, no `vehicleId` and no `amount`: the first three are facts about
+ * the box the entry lands in and the server reads them off the schedule, and the amount is the
+ * lines' total, which the server adds up. That is the whole reason a repair bill needed its own
+ * endpoint rather than a seventh value in the category dropdown — a row there carries one number,
+ * and a repair bill has lines and parts (owner ruling 2026-08-24).
+ */
+export interface DriverCashRepairBillReqDto {
+  payeeId: number;
+  note?: string;
+  items: DriverCashRepairBillItemReqDto[];
+}
+
+/** OBRS-1630 — one line of the bill. Mirrors `ExpenseItemReqDto` on the wire; the part is absent for
+ * the labour and sundry lines that are not a part at all.
+ *
+ * OBRS-1613: `partId` is the registry row, and `part` is always null for the same reason the
+ * back-office payload sends it null — the frozen code is written server-side from the row the id
+ * resolved to. `unit` travels too: the card renders the unit box in this variant as well, and a
+ * price whose unit was dropped on the way is one the unit-price report has to exclude. */
+export interface DriverCashRepairBillItemReqDto {
+  part?: string | null;
+  partId?: number | null;
+  description: string;
+  quantity?: number | null;
+  unit?: string | null;
+  unitPrice?: number | null;
+  amount: number;
+}
+
 export interface DriverCashExpenseReqDto {
   category: string;
   /**
