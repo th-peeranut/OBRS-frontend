@@ -17,6 +17,8 @@
  * `lang` — UI language code; only the `th` / non-`th` distinction matters.
  */
 
+import { toApiOffsetDateTime } from './api-date-time';
+
 /** Full date + 24h time, e.g. `8 ก.ค. 2026 08:32`. */
 export function formatDisplayDateTime(
   value: string | null | undefined,
@@ -64,6 +66,28 @@ export function formatDisplayTime(value: string | null | undefined): string {
   return `${parts.hour}:${parts.minute}`;
 }
 
+/**
+ * OBRS-1585: the Bangkok wall-clock calendar day of an API timestamp, as
+ * `YYYY-MM-DD` — `''` for empty or unparseable input, which matches no day.
+ *
+ * For deciding which day a row belongs to, and nothing else. It exists so a
+ * day filter reads the row off the SAME clock that prints the row's date
+ * column: splitting the raw string at `T` is a different clock, and the two
+ * disagree the moment a value arrives in any offset but `+07:00`
+ * (`2026-12-20T23:30:00Z` is 06:30 on the 21st in Bangkok, so the split says
+ * the 20th while the column says the 21st and the row vanishes from its own
+ * day). Compare against the day a `p-datePicker` holds via
+ * `controlValueToDateString()`.
+ */
+export function bangkokDayKey(value: string | null | undefined): string {
+  const parts = bangkokParts(value);
+  if (typeof parts === 'string') {
+    return '';
+  }
+  const { day, month, year } = parts;
+  return `${year}-${String(month + 1).padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
 interface DateParts {
   day: string;
   month: number; // 0-based index
@@ -81,7 +105,15 @@ function bangkokParts(value: string | null | undefined): DateParts | string {
   if (!value) {
     return '-';
   }
-  const date = new Date(value);
+  // OBRS-1585: `Date` reads an offset-less date-TIME as the VIEWER's own wall
+  // clock, so the "stable regardless of the viewer's timezone" promise above
+  // only held for values that already carried an offset. Pin those to Bangkok
+  // first — the same normalisation `bangkokInstantMs()` does, and what the
+  // value always meant. A date-only string is deliberately left alone:
+  // `new Date('2026-07-08+07:00')` is Invalid Date, and callers do pass plain
+  // `YYYY-MM-DD` (expenseDate, nextDueDate, ...) to `formatDisplayDate()`.
+  const raw = String(value);
+  const date = new Date(/\d:\d/.test(raw) ? toApiOffsetDateTime(raw) : raw);
   if (!Number.isFinite(date.getTime())) {
     return value;
   }

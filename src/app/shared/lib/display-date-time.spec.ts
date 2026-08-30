@@ -1,4 +1,9 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayTime } from './display-date-time';
+import {
+  bangkokDayKey,
+  formatDisplayDate,
+  formatDisplayDateTime,
+  formatDisplayTime,
+} from './display-date-time';
 
 describe('formatDisplayDateTime', () => {
   const ISO = '2026-07-08T08:32:44.105575+07:00'; // Bangkok 08:32, day 8
@@ -86,5 +91,55 @@ describe('formatDisplayTime (time-only, language-independent)', () => {
 
   it('normalizes midnight (ICU "24") to "00"', () => {
     expect(formatDisplayTime('2026-07-09T00:05:00+07:00')).toBe('00:05');
+  });
+});
+
+// OBRS-1585: the day a staff row belongs to is decided here, on the same clock
+// that prints the row's date column. The four shapes below are the ones the API
+// has actually emitted for `departureDateTime` (see bangkokInstantMs's
+// OBRS-574 note) and they all describe the same instant: 06:30 on 21 Dec 2026,
+// Bangkok. The `Z` one is the case that used to break — as a raw string it
+// starts with the 20th.
+describe('bangkokDayKey — the filter clock is the display clock', () => {
+  const SAME_MOMENT_FOUR_WAYS = [
+    '2026-12-21T06:30:00+07:00',
+    '2026-12-21T06:30:00',
+    '2026-12-20T23:30:00Z',
+    '2026-12-21 06:30:00',
+  ];
+
+  it('answers the same Bangkok day for all four shapes', () => {
+    for (const value of SAME_MOMENT_FOUR_WAYS) {
+      expect(bangkokDayKey(value)).toBe('2026-12-21');
+    }
+  });
+
+  it('agrees with the date column rendered from the same value', () => {
+    for (const value of SAME_MOMENT_FOUR_WAYS) {
+      expect(formatDisplayDateTime(value)).toBe('21 ธ.ค. 2026 06:30');
+    }
+  });
+
+  it('zero-pads month and day so it compares to controlValueToDateString()', () => {
+    expect(bangkokDayKey('2026-01-05T08:00:00+07:00')).toBe('2026-01-05');
+  });
+
+  it('returns "" for empty and unparseable input — a key that matches no day', () => {
+    expect(bangkokDayKey('')).toBe('');
+    expect(bangkokDayKey(null)).toBe('');
+    expect(bangkokDayKey(undefined)).toBe('');
+    expect(bangkokDayKey('-')).toBe('');
+    expect(bangkokDayKey('not-a-date')).toBe('');
+  });
+});
+
+// OBRS-1585: pinning an offset-less date-TIME to Bangkok must not reach a
+// date-only string — `new Date('2026-07-08+07:00')` is Invalid Date, and
+// expenseDate / nextDueDate / a split departure date are passed in exactly
+// that shape.
+describe('formatDisplayDate on a plain YYYY-MM-DD', () => {
+  it('still renders the day it names', () => {
+    expect(formatDisplayDate('2026-07-08')).toBe('8 ก.ค. 2026');
+    expect(formatDisplayDate('2026-07-08', 'en')).toBe('8 Jul 2026');
   });
 });

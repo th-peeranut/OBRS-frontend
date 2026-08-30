@@ -466,3 +466,39 @@ describe('StaffSchedulesPageComponent - OBRS-33 one day at a time, soonest first
     expect((component as any).selectedDate.toDateString()).toBe(new Date().toDateString());
   });
 });
+
+// OBRS-1585: the filter used to cut the raw string at `T`, so a departure that
+// arrives in any offset but +07:00 was filed under a different day than its own
+// date column prints. 06:30 Bangkok is 23:30Z the day before — the early
+// morning departures this list exists to show.
+describe('StaffSchedulesPageComponent - OBRS-1585 the day filter reads the same clock as the date column', () => {
+  // One instant — 06:30 on 21 Dec 2026 in Bangkok — in the four shapes the API
+  // has emitted for this field (see bangkokInstantMs, OBRS-574).
+  const TRIPS: ScheduleRow[] = [
+    { ...ROW, id: 11, tripId: '#SCH-11', departure: '2026-12-21T06:30:00+07:00' },
+    { ...ROW, id: 12, tripId: '#SCH-12', departure: '2026-12-21T06:30:00' },
+    { ...ROW, id: 13, tripId: '#SCH-13', departure: '2026-12-20T23:30:00Z' },
+    { ...ROW, id: 14, tripId: '#SCH-14', departure: '2026-12-21 06:30:00' },
+  ];
+
+  function componentWithTrips(): any {
+    const { component } = makeComponent({});
+    (component as any).rows = [...TRIPS];
+    return component;
+  }
+
+  it('keeps all four shapes on the day their column prints', () => {
+    const component = componentWithTrips();
+    component.onDateChange(new Date(2026, 11, 21));
+    expect(component.filteredRows.map((r: ScheduleRow) => r.id)).toEqual([11, 12, 13, 14]);
+    for (const row of component.filteredRows) {
+      expect(component.displayDateTime(row.departure)).toBe('21 Dec 2026 06:30');
+    }
+  });
+
+  it('and none of them is filed under the previous day', () => {
+    const component = componentWithTrips();
+    component.onDateChange(new Date(2026, 11, 20));
+    expect(component.filteredRows.length).toBe(0);
+  });
+});
