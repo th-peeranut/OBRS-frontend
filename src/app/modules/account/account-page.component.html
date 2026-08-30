@@ -65,6 +65,14 @@
                 {{ profile.title | titleLabel }} {{ profile.firstName }} {{ profile.middleName }} {{ profile.lastName }}
               </dd>
             </div>
+            <!-- OBRS-1558: shown only when there is one - an empty row would read as a field
+            the account is missing, and most accounts have no nickname on purpose. -->
+            @if (profile.nickname) {
+              <div>
+                <dt>{{ "ACCOUNT.PROFILE_NICKNAME_LABEL" | translate }}</dt>
+                <dd data-testid="profile-nickname">{{ profile.nickname }}</dd>
+              </div>
+            }
             <div>
               <dt>{{ "ACCOUNT.PROFILE_PHONE_LABEL" | translate }}</dt>
               <dd data-testid="profile-phone">{{ formatPhone(profile.phoneNumber) }}</dd>
@@ -147,6 +155,22 @@
                         </div>
                       }
                     </div>
+                    <div class="mt-2">
+                      <label for="account-profile-nickname">{{ "ACCOUNT.PROFILE_NICKNAME_LABEL" | translate }}</label>
+                      <input
+                        class="form-control mt-1"
+                        type="text"
+                        id="account-profile-nickname"
+                        formControlName="nickname"
+                        autocomplete="nickname"
+                        [class.form-error]="getForm('nickname')?.touched && getForm('nickname')?.errors"
+                        />
+                        @if (getForm('nickname')?.touched && getForm('nickname')?.errors) {
+                          <div class="text-error">
+                            {{ "ACCOUNT.PROFILE_FIELD_LENGTH" | translate }}
+                          </div>
+                        }
+                      </div>
                     <div class="mt-2">
                       <label for="account-profile-phone">{{ "ACCOUNT.PROFILE_PHONE_LABEL" | translate }}</label>
                       <input

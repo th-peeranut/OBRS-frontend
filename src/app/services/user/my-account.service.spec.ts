@@ -85,6 +85,7 @@ describe('MyAccountService', () => {
         firstName: null,
         middleName: null,
         lastName: null,
+        nickname: null,
         email: 'u@example.com',
         phoneNumber: null,
         preferredLocale: 'th',
