@@ -2934,7 +2934,6 @@
       "SUMMARY_SEGMENT_NOTE": "For your selected pickup and drop-off",
       "DETAIL_PICKUP_TITLE": "Pickup detail ({{province}})",
       "DETAIL_DROPOFF_TITLE": "Drop-off detail ({{province}})",
-      "DETAIL_TIME": "Approx. {{time}}",
       "DETAIL_LANDMARK_LABEL": "Landmark",
       "DETAIL_NO_PHOTO": "No photo of this stop yet",
       "BTN_OPEN_MAPS": "Open in Google Maps",
