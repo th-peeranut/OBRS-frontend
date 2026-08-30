@@ -120,4 +120,39 @@ describe('RouteTravelSummaryComponent', () => {
     component.selectedDropoffStop = makeStop(133.13);
     expect(component.displayDistanceKm).toBe(133);
   });
+
+  // OBRS-1496: the two top rows must name the chosen stop once it is chosen, and each
+  // row decides on its own input — exactly like the distance/duration rows below.
+  describe('selected stop names in the two top rows', () => {
+    const pickup = { ...makeStop(10, 15), name: 'หนองชาก' };
+    const dropoff = { ...makeStop(55, 60), name: 'แอร์พอร์ทลิงค์ลาดกระบัง' };
+
+    it('names neither row when nothing is selected', () => {
+      component.routeMeta = mockMeta;
+      expect(component.selectedPickupStopName).toBeNull();
+      expect(component.selectedDropoffStopName).toBeNull();
+    });
+
+    it('names only the pickup row when only the pickup is selected', () => {
+      component.routeMeta = mockMeta;
+      component.selectedPickupStop = pickup;
+      expect(component.selectedPickupStopName).toBe('หนองชาก');
+      expect(component.selectedDropoffStopName).toBeNull();
+    });
+
+    it('names only the drop-off row when only the drop-off is selected', () => {
+      component.routeMeta = mockMeta;
+      component.selectedDropoffStop = dropoff;
+      expect(component.selectedPickupStopName).toBeNull();
+      expect(component.selectedDropoffStopName).toBe('แอร์พอร์ทลิงค์ลาดกระบัง');
+    });
+
+    it('names both rows when both are selected', () => {
+      component.routeMeta = mockMeta;
+      component.selectedPickupStop = pickup;
+      component.selectedDropoffStop = dropoff;
+      expect(component.selectedPickupStopName).toBe('หนองชาก');
+      expect(component.selectedDropoffStopName).toBe('แอร์พอร์ทลิงค์ลาดกระบัง');
+    });
+  });
 });
