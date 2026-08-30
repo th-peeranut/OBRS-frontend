@@ -23,6 +23,16 @@ import { expect, Page, test } from '@playwright/test';
  *   - the date text is not CLIPPED at any of these widths. OBRS-1562 shipped a
  *     narrower field that read `อา., 23/08/20`, and a bar that fits by cutting
  *     the year off the field a customer picks their travel date in has not fit.
+ *
+ *     OBRS-1640 CORRECTED THE SCOPE OF THAT SENTENCE. It used to sit here
+ *     unqualified while every test in this file did `goto('/')`, so it read as a
+ *     claim about the app and was a claim about ONE route. The declaration it
+ *     guards is global (`.p-datepicker.app-date-field--segment .p-inputtext` in
+ *     styles.scss) and five call sites carry that class, so the widths above are
+ *     the home bar's alone: the `/schedule-booking` filter bar is measured by the
+ *     993 locale loop below and by nothing else, and the parcel wizard's lone
+ *     field is measured nowhere (see the note above that loop for why that is a
+ *     finding rather than an omission).
  *   - AC#4 stacked, the bar stays merged and the swap button straddles a REAL
  *     seam. (`obrs-1038-station-seam.spec.ts` measures the button; this measures
  *     the whole column it now belongs to.)
@@ -101,12 +111,35 @@ type Reading = {
 };
 
 /**
+ * OBRS-1640 -- the TWO bars the one global `--segment` rule builds.
+ *
+ * `schedule-booking-filter.component.html` is a copy of `home-booking.component
+ * .html` and says so on four separate blocks; its stylesheet `@import`s home's
+ * whole file. So the two bars share the class, the layout, the `.station-section`
+ * wrapper, the `.btn-search`, and even the i18n keys -- which is why the first
+ * OBRS-1586 probe measured the home bar three times and reported it as coverage
+ * of both. `inputId` is the ONE thing that differs, so it is the anchor here and
+ * `location.pathname` is asserted rather than assumed: a guard or a redirect is
+ * free to ignore the URL a run asked for, and a wrong page would otherwise
+ * report a plausible number instead of an error.
+ */
+type Bar = {
+  route: string;
+  /** `inputId` prefix -- `home-departure-date` vs `filter-departure-date`. */
+  idPrefix: string;
+};
+
+const HOME_BAR: Bar = { route: '/', idPrefix: 'home' };
+const FILTER_BAR: Bar = { route: '/schedule-booking', idPrefix: 'filter' };
+const SEGMENT_BARS: Bar[] = [HOME_BAR, FILTER_BAR];
+
+/**
  * Reads the boxes the browser actually laid out -- the only place the cascade
  * exists. The four fields are collected in bar order (origin, destination,
  * departure, return) so adjacency can be asserted pairwise.
  */
-async function read(page: Page): Promise<Reading> {
-  return page.evaluate(() => {
+async function read(page: Page, bar: Bar = HOME_BAR): Promise<Reading> {
+  return page.evaluate((prefix) => {
     const box = (el: Element): Box => {
       const r = el.getBoundingClientRect();
       return {
@@ -188,7 +221,17 @@ async function read(page: Page): Promise<Reading> {
       };
     };
 
-    const bar = document.querySelector('.station-section') as HTMLElement;
+    // OBRS-1640: anchored on the date field's `inputId`, not on the first
+    // `.station-section` in the document. That shortcut was correct on `/` and
+    // wrong the moment this function was pointed at `/schedule-booking`, where
+    // the SHARED stepper (`shared/components/stepper/stepper.component.html:4`)
+    // renders a `.station-section` of its own ABOVE the filter bar -- so
+    // `querySelector` returned the stepper and every read below came back null.
+    // Four elements in this repo carry the class; only two of them are a bar.
+    const anchor = document.getElementById(`${prefix}-departure-date`);
+    if (!anchor) throw new Error(`no #${prefix}-departure-date on ${location.pathname}`);
+    const bar = anchor.closest('.station-section') as HTMLElement | null;
+    if (!bar) throw new Error(`#${prefix}-departure-date is not inside a .station-section`);
     const stationFrames = Array.from(
       bar.querySelectorAll('.station-group app-dropdown-group-obrs .dropdown')
     ).slice(0, 2);
@@ -217,7 +260,7 @@ async function read(page: Page): Promise<Reading> {
       hint: hint ? box(hint) : null,
       hintBtn: hintBtn ? box(hintBtn) : null,
     };
-  });
+  }, bar.idPrefix);
 }
 
 /**
@@ -226,25 +269,40 @@ async function read(page: Page): Promise<Reading> {
  * unset the app takes its own default, which is what every test here did until
  * OBRS-1586 -- and `th` is the one locale of the three with room to spare, so a
  * suite that never switched was measuring the only case that could not fail.
+ *
+ * `bar` defaults to home: every test above the locale loop is about the home
+ * page's own geometry (the hint row, the dark theme, the 390px stack) and stays
+ * there.
  */
-async function open(page: Page, width: number, height = 900, lang?: string): Promise<void> {
+async function open(
+  page: Page,
+  width: number,
+  height = 900,
+  lang?: string,
+  bar: Bar = HOME_BAR
+): Promise<void> {
   await page.setViewportSize({ width, height });
   await mockApi(page);
   if (lang) {
     await page.addInitScript((l) => localStorage.setItem('app_language', l), lang);
   }
-  await page.goto('/');
+  await page.goto(bar.route);
   // The bar renders only once the stop list resolves; a bare `goto` would let the
   // first assertion fail as a timeout rather than as a measurement.
-  await page.waitForSelector('.station-group app-dropdown-group-obrs .dropdown-btn');
+  await page.waitForSelector(`#${bar.idPrefix}-departure-date`);
+  // Asked-for route vs LANDED-on route. Both bars answer to the same selectors,
+  // so without this a redirect home would be measured as the filter bar.
+  expect(await page.evaluate(() => location.pathname)).toBe(bar.route);
   // Both date fields carry a default value (OBRS-1185), and an empty one would
   // measure as a value that fits. Wait for the text before measuring the text.
-  await page.waitForFunction(() => {
-    const inputs = document.querySelectorAll<HTMLInputElement>(
-      '.station-section > .form-group-obrs input'
-    );
+  await page.waitForFunction((prefix) => {
+    const anchor = document.getElementById(`${prefix}-departure-date`);
+    const section = anchor?.closest('.station-section');
+    const inputs = section
+      ? section.querySelectorAll<HTMLInputElement>(':scope > .form-group-obrs input')
+      : [];
     return inputs.length > 0 && [...inputs].every((i) => !!i.value);
-  });
+  }, bar.idPrefix);
   // Metrics read before the webfont lands are the fallback's, not the screen's.
   await page.evaluate(() => document.fonts.ready);
 }
@@ -417,16 +475,23 @@ async function weekdayNames(page: Page, lang: string): Promise<string[]> {
  * string length: `พฤ.` is 3 characters and wider than 4-character `อา.`, and in
  * `zh` all seven are the same width.
  */
-async function dateOverflow(page: Page, weekdays: string[]) {
-  const rows = await page.evaluate((names) => {
+async function dateOverflow(page: Page, weekdays: string[], idPrefix: string) {
+  const rows = await page.evaluate(({ names, prefix }) => {
     const pen = document.createElement('canvas').getContext('2d') as CanvasRenderingContext2D & {
       letterSpacing?: string;
       fontKerning?: string;
     };
+    // Anchored on the id, not on structure -- see the `Bar` note above.
+    const anchor = document.getElementById(`${prefix}-departure-date`);
+    if (!anchor) throw new Error(`no #${prefix}-departure-date on ${location.pathname}`);
+    const section = anchor.closest('.station-section');
+    if (!section) {
+      throw new Error(`#${prefix}-departure-date is not inside a .station-section`);
+    }
     const inputs = [
-      ...document.querySelectorAll<HTMLInputElement>('.station-section > .form-group-obrs input'),
+      ...section.querySelectorAll<HTMLInputElement>(':scope > .form-group-obrs input'),
     ];
-    return inputs.map((el, idx) => {
+    return inputs.map((el) => {
       const cs = getComputedStyle(el);
       pen.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
       if ('letterSpacing' in pen) {
@@ -453,8 +518,10 @@ async function dateOverflow(page: Page, weekdays: string[]) {
       const icon = el
         .closest('.p-datepicker')
         ?.querySelector('.app-date-field-icon') as HTMLElement | null;
+      const iconBox = icon ? icon.getBoundingClientRect() : null;
       return {
-        key: idx === 0 ? 'departure' : 'return',
+        // The input's own id, so a failure names the bar as well as the field.
+        key: el.id,
         contentW: +contentW.toFixed(2),
         live,
         worst,
@@ -466,10 +533,17 @@ async function dateOverflow(page: Page, weekdays: string[]) {
         // `textLeft >= iconRight` pass, so a vanished icon would read as a
         // comfortably-cleared one -- a check that goes green when the thing it
         // measures disappears, which is the exact shape of this card's defect.
-        iconRight: icon ? +icon.getBoundingClientRect().right.toFixed(2) : null,
+        iconRight: iconBox ? +iconBox.right.toFixed(2) : null,
+        // OBRS-1640: `null` was never the shape the defect takes. An icon hidden
+        // with `display: none` is still FOUND by querySelector -- it just has a
+        // zero rect, so `iconRight` is 0, the null check passes and `textLeft >=
+        // 0` passes for free. Measured: with `display: none` added to
+        // `.app-date-field-icon` in styles.scss this whole file was 12/12 green.
+        // The width is what tells a cleared icon from an absent one.
+        iconW: iconBox ? +iconBox.width.toFixed(2) : null,
       };
     });
-  }, weekdays);
+  }, { names: weekdays, prefix: idPrefix });
 
   // The weekday swap above is `live.replace(/^[^,]*/, name)`, which needs the
   // comma the three `dateFormat`s put after `D`. Without one, `[^,]*` eats the
@@ -487,12 +561,36 @@ async function dateOverflow(page: Page, weekdays: string[]) {
   return rows;
 }
 
-for (const lang of ['th', 'en', 'zh']) {
-  test(`at 993 in ${lang} every date value keeps ${MIN_HEADROOM_PX}px of headroom`, async ({
+/**
+ * OBRS-1640 -- the loop runs on BOTH bars now, and the parcel wizard is
+ * deliberately not a third entry.
+ *
+ * The three call sites are not three of a kind. The two here are four-segment
+ * flex rows whose date fields hold `flex: 1 1 0; min-width: 0`, so the box the
+ * value gets is whatever the row has left -- 137px of content box before
+ * OBRS-1586, 165px after, at a 993px viewport. `parcel-trip-form`'s field is a
+ * plain block in the wizard card's own column: it is the only thing on its line,
+ * so its box IS the column. Measured at the same 993px in the same run
+ * (`bars-1640.json`, this card's captures): 704px wide, 652px of content box, and
+ * a value that measures 94.14px. The widest value either bar prints anywhere in
+ * this file is 139.05px (`zh`), which that box would clear by 512px. It cannot
+ * clip by the mechanism this loop measures, and admitting it here would mean
+ * asserting the loop's other claim -- `assertOneRow` -- about a field that is not
+ * part of any row.
+ *
+ * What the parcel field DOES share is the icon clearance below, and that half is
+ * a property of the global rule (`padding-left: $app-date-field-segment-inset`
+ * against `.app-date-field-icon`'s `left`/`width`), identical at all five sites
+ * and pinned here.
+ */
+for (const { bar, lang } of SEGMENT_BARS.flatMap((b) =>
+  ['th', 'en', 'zh'].map((l) => ({ bar: b, lang: l }))
+)) {
+  test(`at 993 on ${bar.route} in ${lang} every date value keeps ${MIN_HEADROOM_PX}px of headroom`, async ({
     page,
   }) => {
-    await open(page, 993, 900, lang);
-    const r = await read(page);
+    await open(page, 993, 900, lang, bar);
+    const r = await read(page, bar);
 
     assertOneRow(r);
 
@@ -508,8 +606,14 @@ for (const lang of ['th', 'en', 'zh']) {
     // asserts the station halves' WIDTH either. `assertOneRow` checks height,
     // top alignment and adjacency, so a change that quietly took width from them
     // would pass everything in this file.
-    const dates = await dateOverflow(page, await weekdayNames(page, lang));
+    const dates = await dateOverflow(page, await weekdayNames(page, lang), bar.idPrefix);
     expect(dates).toHaveLength(2);
+    // The ids, not just the count: this is the assertion that a run which landed
+    // on the wrong bar fails ON, rather than passing with the other bar's numbers.
+    expect(dates.map((d) => d.key)).toEqual([
+      `${bar.idPrefix}-departure-date`,
+      `${bar.idPrefix}-return-date`,
+    ]);
 
     for (const f of dates) {
       expect(
@@ -527,6 +631,13 @@ for (const lang of ['th', 'en', 'zh']) {
       // (styles.scss, the `--segment` block); this is the assertion that makes
       // that true of the gate as well as of the comment.
       expect(f.iconRight, `${f.key}: no .app-date-field-icon to clear`).not.toBeNull();
+      // OBRS-1640: and it has to be DRAWN. Without this the clearance assertion
+      // is vacuous the moment the icon is hidden -- proven, not argued: adding
+      // `display: none` to `.app-date-field-icon` left this file 12/12 green.
+      expect(
+        f.iconW,
+        `${f.key}: .app-date-field-icon is present but ${f.iconW}px wide -- the clearance below would pass on an icon nobody can see`
+      ).toBeGreaterThan(0);
       expect(
         f.textLeft,
         `${f.key}: value starts at ${f.textLeft}px, under the calendar icon that ends at ${f.iconRight}px`
