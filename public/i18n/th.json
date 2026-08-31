@@ -3512,6 +3512,7 @@
       "BOARDING_IN_PROGRESS": "กำลังบันทึกการขึ้นรถ…",
       "BOARDED_AT": "เวลาขึ้นรถ",
       "BOARDED_BY": "บันทึกโดย",
+      "CALL_BOOKER": "โทรหาผู้จอง",
       "UNBOARD_BTN": "ยกเลิกขึ้นรถ",
       "UNBOARD_IN_PROGRESS": "กำลังยกเลิกการขึ้นรถ…",
       "UNBOARD_CONFIRM_TITLE": "ยกเลิกการขึ้นรถของผู้โดยสารรายนี้หรือไม่?",
