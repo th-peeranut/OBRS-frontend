@@ -3520,6 +3520,7 @@
       "BOARDING_IN_PROGRESS": "登车处理中…",
       "BOARDED_AT": "登车时间",
       "BOARDED_BY": "登车登记人",
+      "CALL_BOOKER": "致电订票人",
       "UNBOARD_BTN": "取消登车",
       "UNBOARD_IN_PROGRESS": "取消登车处理中…",
       "UNBOARD_CONFIRM_TITLE": "确定要取消此旅客的登车记录吗？",

@@ -2662,3 +2662,90 @@ describe('BoardingListComponent — manifest search (OBRS-1659)', () => {
     expect(component['boardedCount']).toBe(2);
   });
 });
+
+// OBRS-1673: the call action. The window is the BACKEND's - it either sends
+// `bookingContactPhone` or it does not - so what is testable here is that the
+// row offers a `tel:` link exactly when the field arrived, and never invents
+// one. There is deliberately no client-side clock to test.
+describe('BoardingListComponent — OBRS-1673 call-the-booker action (TestBed)', () => {
+  let fixture: ComponentFixture<BoardingListComponent>;
+
+  function render(items: BoardingListItemDto[]): void {
+    TestBed.configureTestingModule({
+      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      declarations: [BoardingListComponent],
+      providers: [
+        BoardingListStore,
+        {
+          provide: StaffApiService,
+          useValue: {
+            getBoardingList: () => of({ code: 200, message: 'OK', data: items }),
+            getScheduleById: () =>
+              of({ code: 200, message: 'OK', data: { id: 42, status: 'scheduled' } }),
+          },
+        },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+        {
+          provide: AuthService,
+          useValue: {
+            hasAnyRole: () => true,
+            getRoles: () => ['salesperson'],
+            getUsername: () => 'operator1',
+            authStatus$: of(true),
+          },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(BoardingListComponent);
+    fixture.componentInstance.scheduleId = 42;
+    fixture.componentInstance.ngOnChanges({ scheduleId: {} as any });
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  function telLinks(): HTMLAnchorElement[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('.boarding-actions a[href^="tel:"]')
+    ) as HTMLAnchorElement[];
+  }
+
+  it('dials the booking contact phone the backend sent for a passenger who has not boarded', fakeAsync(() => {
+    render([buildItem({ ticketId: 1, boardedAt: undefined, bookingContactPhone: '0899990823' })]);
+    tick();
+    fixture.detectChanges();
+
+    const links = telLinks();
+    expect(links.length).toBe(1);
+    expect(links[0].getAttribute('href')).toBe('tel:0899990823');
+    // The number itself must be reachable to a screen reader / on hover, since the
+    // visible label only says WHOSE number it is.
+    expect(links[0].getAttribute('title')).toBe('0899990823');
+  }));
+
+  it('offers nothing to dial when the response carried no number — outside the window', fakeAsync(() => {
+    render([buildItem({ ticketId: 1, boardedAt: undefined, bookingContactPhone: undefined })]);
+    tick();
+    fixture.detectChanges();
+
+    expect(telLinks().length).toBe(0);
+  }));
+
+  it('does not offer the call on a row that has already boarded', fakeAsync(() => {
+    render([
+      buildItem({
+        ticketId: 1,
+        boardedAt: '2026-07-10T08:00:00Z',
+        bookingContactPhone: '0899990823',
+      }),
+    ]);
+    tick();
+    fixture.detectChanges();
+
+    expect(telLinks().length).toBe(0);
+  }));
+});

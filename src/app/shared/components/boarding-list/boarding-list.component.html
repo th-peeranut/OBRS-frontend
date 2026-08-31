@@ -418,6 +418,23 @@
                       (flag never blocks boarding). Flag has no confirm (like
                       Board); unflag requires one (like Un-board) and is
                       salesperson-only. -->
+                      <!-- OBRS-1673: chase a passenger who has not boarded. The backend sends
+                      `bookingContactPhone` only inside a window around departure, so the absence of
+                      the field is what hides this action the rest of the time — there is no
+                      client-side time check to get out of step with the server's. The number is the
+                      BOOKER's, which is why the label says so (the per-passenger number is never
+                      recorded — OBRS-1672). Not offered on an already-boarded row: the point of the
+                      call is that the seat is still empty. -->
+                      @if (!isBoarded(item) && item.bookingContactPhone) {
+                        <a
+                          class="admin-btn admin-btn-small text-decoration-none"
+                          [href]="'tel:' + item.bookingContactPhone"
+                          [title]="item.bookingContactPhone"
+                          [attr.aria-label]="('STAFF.BOARDING.CALL_BOOKER' | translate) + ' ' + item.bookingContactPhone">
+                          <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">call</span>
+                          {{ 'STAFF.BOARDING.CALL_BOOKER' | translate }}
+                        </a>
+                      }
                       @if (isChildFare(item) && !isFlagged(item)) {
                         <button
                           type="button"

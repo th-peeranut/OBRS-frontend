@@ -3520,6 +3520,7 @@
       "BOARDING_IN_PROGRESS": "Boarding…",
       "BOARDED_AT": "Boarded at",
       "BOARDED_BY": "Boarded by",
+      "CALL_BOOKER": "Call booker",
       "UNBOARD_BTN": "Un-board",
       "UNBOARD_IN_PROGRESS": "Un-boarding…",
       "UNBOARD_CONFIRM_TITLE": "Un-board this passenger?",
