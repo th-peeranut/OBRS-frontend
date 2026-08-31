@@ -3495,6 +3495,13 @@
       "FROM": "From",
       "TO": "To",
       "STATUS": "Status",
+      "SEARCH": {
+        "LABEL": "Search this manifest",
+        "PLACEHOLDER": "Booking no., name, seat or ticket no.",
+        "CLEAR": "Clear",
+        "NO_MATCH_TITLE": "No passenger matches that",
+        "NO_MATCH_BODY": "Nothing on this bus matches \"{{term}}\". Check the booking number with the passenger — it may be for a different trip."
+      },
       "EMPTY_TITLE": "No passengers yet",
       "EMPTY_BODY": "No boarding records found for this schedule.",
       "BOARDED": "Boarded",
