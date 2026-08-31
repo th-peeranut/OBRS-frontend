@@ -360,6 +360,14 @@ export interface BoardingListItemDto {
    * just acted on" rule as `boardedByName` (see
    * `boarding-list.component.ts`). */
   childFareFlaggedByName?: string;
+  /**
+   * OBRS-1673: the number the driver calls to chase a passenger who has not boarded. It is the
+   * BOOKING's contact phone — the person who booked, NOT the passenger in this seat — so the
+   * manifest labels it as the booker's; the per-passenger number is never written server-side
+   * (OBRS-1672). `undefined` OUTSIDE the window around departure that the backend releases it in:
+   * the field is simply absent from the payload then, so there is nothing to hide client-side.
+   */
+  bookingContactPhone?: string;
 }
 
 // ---------------------------------------------------------------------------
