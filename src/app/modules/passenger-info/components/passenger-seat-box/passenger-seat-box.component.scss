@@ -130,9 +130,12 @@
 // Deliberately not `.disabled`'s filled grey: the seat is genuinely free and
 // search has already shown it as available, so it keeps the white ground and
 // says "not this one" with a dashed edge instead of "gone".
+// The dash and the number are $text-lightblack, not $primary-grey: #babdc3 on this
+// white ground is 1.88:1, which check-brand-fill-contrast.mjs fails and which made the
+// only signal that the seat is closed nearly invisible. #717581 is 4.60:1 (OBRS-769).
 .blocked {
   background-color: $primary-white;
-  border: 1px dashed $primary-grey;
-  color: $primary-grey;
+  border: 1px dashed $text-lightblack;
+  color: $text-lightblack;
   cursor: not-allowed;
 }

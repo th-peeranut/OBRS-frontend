@@ -1,7 +1,11 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
+import {
+  SKIP_GLOBAL_ERROR_ALERT,
+  SKIP_GLOBAL_LOADING_ALERT,
+} from '../../shared/interceptors/http-context-tokens';
 import { Observable } from 'rxjs';
 import {
   ScheduleFilterPayload,
@@ -55,7 +59,18 @@ export class ScheduleService {
       .set('toStopId', String(toStopId));
     return this.http.get<ResponseAPI<string[]>>(
       `${environment.apiUrl}/api/schedules/${scheduleId}/blocked-seats`,
-      { params }
+      {
+        params,
+        // Silent on both counts, because the caller already treats a failure as
+        // "nothing is blocked" (`catchError(() => of([]))` in
+        // passenger-info-form). Without these the global interceptor is louder
+        // than the feature: every click on male/female/monk/nun flashes the
+        // full-screen loading overlay, and one failed lookup opens a SweetAlert
+        // whose backdrop swallows the click on Next (OBRS-1364).
+        context: new HttpContext()
+          .set(SKIP_GLOBAL_LOADING_ALERT, true)
+          .set(SKIP_GLOBAL_ERROR_ALERT, true),
+      }
     );
   }
 }
