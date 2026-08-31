@@ -529,6 +529,43 @@ const PRIVACY_LEDGER = [
     effectiveDate: '2026-08-22',
     fingerprint: '88913a6ed309150e206ac58d55f7dced2b147a5a11540a9af71d3d22dc3591c1',
   },
+  {
+    // 2.5 — two changes, one bump.
+    //
+    // 1. Passenger type and seating (OBRS-1364). This reverses the "Deliberately NOT
+    //    written" note on 2.4 above, and the reason it is not a contradiction is that
+    //    2.5 ships in the same commit as the rule itself: the code is in prod on this
+    //    entry's effective date, so the notice is still describing what the system
+    //    does, not what a card plans. `ScheduleService.getBlockedSeatsForPassengerType`
+    //    closes the seats beside a conflicting occupant, and
+    //    `BookingService.assignAutomaticSeats` avoids the same pairing on all three
+    //    allocation paths.
+    //
+    //    The sentence is CONDITIONAL ("only on services with numbered seats") because
+    //    under OPEN seating none of it runs — BookingService nulls every seat before
+    //    auto-assign is reachable, and getBlockedSeatsForPassengerType returns an empty
+    //    list. Conditional wording is true today AND after a schedule is set to
+    //    ASSIGNED, which is what makes this one bump instead of two. It also states the
+    //    limits that are actually in the code: the automatic allocation is best-effort
+    //    with a silent fallback, and a blank passenger type constrains nothing. The
+    //    closure is in the booking screen only — `verifySeatAvailability` checks
+    //    occupancy and nothing else — which is why the sentence says seats "may be
+    //    closed to you" rather than promising the pairing cannot happen.
+    //
+    //    ⚠️ NOT settled here: whether monk/nun is sensitive data under PDPA §26.
+    //    Section 3 still lists no §26 basis. That gap is older than OBRS-1364 — the
+    //    display purpose carries the same exposure — and is tracked as OBRS-1666.
+    //
+    // 2. Analytics conditionality (OBRS-1546). Sections 3 and 6 described analytics
+    //    unconditionally while 2.4 had made sections 7 and 8 conditional, so a reader
+    //    going in order met a contradiction. Both now carry the same condition. The
+    //    owner decided on 2026-08-22 that this may never ship alone, because it buys
+    //    readability only and would not be worth a re-consent round of its own; it
+    //    rides here.
+    version: '2.5',
+    effectiveDate: '2026-08-30',
+    fingerprint: '0dab69c2523d41dd0b87e39083ccde21d12126ef6c89e9aaf8ead339bbc13ec5',
+  },
 ];
 
 function privacyFingerprint(json) {

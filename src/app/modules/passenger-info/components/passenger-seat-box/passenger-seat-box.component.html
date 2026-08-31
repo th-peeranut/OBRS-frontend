@@ -2,10 +2,24 @@
 <div
   class="seat-box"
   [class.disabled]="isDisabled"
+  [class.blocked]="!isDisabled && isBlocked"
   [class.active-owner]="isActiveOwner"
+  [attr.aria-disabled]="!isDisabled && isBlocked ? 'true' : null"
+  [attr.aria-label]="!isDisabled && isBlocked ? blockedSeatAriaLabel : null"
   (click)="setPassengerSeatOuput(label)"
   >
   {{ label }}
+
+  <!-- Blocked by the monk/nun adjacency rule (OBRS-1364). Its own marker, not
+  the taken-seat look: the seat IS free, just not for this passenger. Hidden
+  when the seat is also already booked — "taken" is the stronger fact and the
+  one the customer can act on. -->
+  @if (!isDisabled && isBlocked) {
+    <span
+      class="material-symbols-outlined passenger-blocked-icon" [attr.translate]="'no'"
+      aria-hidden="true"
+    >block</span>
+  }
 
   <!-- Owner badge (shared seat map, OBRS-242): which passenger this seat
   belongs to. A corner badge (like Original below) so it never hides
