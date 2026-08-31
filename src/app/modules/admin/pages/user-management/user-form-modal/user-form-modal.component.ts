@@ -19,13 +19,19 @@ import {
   Subscription,
   switchMap,
 } from 'rxjs';
-import { AdminApiService, AdminUserDto } from '../../../../../services/admin/admin-api.service';
+import {
+  AdminApiService,
+  AdminOwnerDto,
+  AdminUserDto,
+} from '../../../../../services/admin/admin-api.service';
+import { AuthService } from '../../../../../auth/auth.service';
 import { SalesPointOptionDto } from '../../../../../shared/interfaces/driver-cash.interface';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { apiFieldErrors, extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import { TITLE_OPTIONS } from '../../../../../shared/constants/title-options';
 import {
+  EMPLOYER_OWNER_NONE,
   RoleOption,
   SALES_POINT_ACTIVE_NONE,
   StatusOption,
@@ -34,6 +40,7 @@ import {
   roleRequiredValidator,
   toCreateUserPayload,
   toSalesPointsPayload,
+  toSellableOwnersPayload,
   toUpdateUserPayload,
   toUserDtoFallback,
 } from '../user-management.mappers';
@@ -114,6 +121,12 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
   protected salesPointOptions: SalesPointOptionDto[] = [];
   protected salesPointsLoadState: 'loading' | 'loaded' | 'error' = 'loading';
 
+  // OBRS-1662: the operator roster behind BOTH fields of the Operator section. Fetched only
+  // for a platform ADMIN — `GET /private/owners` answers an `owner` caller 403 on purpose
+  // (OBRS-809), so asking as one is not a recoverable empty list, it is a call not to make.
+  protected ownerOptions: AdminOwnerDto[] = [];
+  protected ownersLoadState: 'loading' | 'loaded' | 'error' = 'loading';
+
   protected readonly userForm: FormGroup;
   private emailCheckSubscription?: Subscription;
   private phoneNumberCheckSubscription?: Subscription;
@@ -128,7 +141,8 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly authService: AuthService
   ) {
     this.userForm = this.formBuilder.group({
       // OBRS-1232: minLength went with the free-text input. The control now holds a code from a
@@ -160,6 +174,11 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
       // ceremony in edit mode while permanently invalidating create mode (see initCreateForm).
       allowedSalesPointCodes: [[]],
       activeSalesPointCode: [SALES_POINT_ACTIVE_NONE],
+      // OBRS-1662: no validators, for the same reason the two above have none — "employs
+      // nobody" and "sells for nobody" are both legitimate resting answers, and the whole
+      // section is hidden for a caller who is not a platform ADMIN.
+      employerOwnerSlug: [EMPLOYER_OWNER_NONE],
+      sellableOwnerSlugs: [[]],
     });
   }
 
@@ -291,6 +310,61 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  // OBRS-1662: RAW held role, never hasAnyRole(['admin']) — an OWNER passes that one because
+  // ROLE_GRANTS lists 'admin' among owner's grants, and would then be shown a section whose
+  // roster endpoint 403s them. Same precedent as UserManagementPageComponent.isPlatformAdmin.
+  protected get isPlatformAdmin(): boolean {
+    return this.authService.getRoles().includes('admin');
+  }
+
+  // OBRS-1662: the EMPLOYER picker (`users.owner_id`). Sentinel first and always present,
+  // mirroring activeSalesPointOptions — a user who works for nobody is the common case here,
+  // not an unanswered question.
+  protected get employerOwnerOptions(): { value: string; label: string }[] {
+    return [
+      {
+        value: EMPLOYER_OWNER_NONE,
+        label: this.translate.instant('ADMIN.USERS.EMPLOYER_OWNER_NONE'),
+      },
+      ...this.ownerOptions.map((owner) => ({ value: owner.slug, label: owner.displayName })),
+    ];
+  }
+
+  // OBRS-1662: edit mode cannot CHANGE the employer — `UserUpdateReqDto` carries no owner
+  // field, so a control here would be one the Save silently drops. Shown as text instead.
+  protected get employerOwnerLabel(): string {
+    const slug = String(this.userForm.value['employerOwnerSlug'] ?? EMPLOYER_OWNER_NONE);
+    if (slug === EMPLOYER_OWNER_NONE) {
+      return this.translate.instant('ADMIN.USERS.EMPLOYER_OWNER_NONE');
+    }
+    return this.ownerOptions.find((owner) => owner.slug === slug)?.displayName ?? slug;
+  }
+
+  protected isSellableOwnerChecked(slug: string): boolean {
+    const selected: string[] = this.userForm.value['sellableOwnerSlugs'] ?? [];
+    return selected.includes(slug);
+  }
+
+  // OBRS-1662: same direct-patchValue shape as toggleSalesPointSelection above. No cross-field
+  // clean-up to do here: the employer and the sellable set are independent by design — that
+  // they were ever the same column is the defect this card exists to undo.
+  protected toggleSellableOwnerSelection(slug: string, checked: boolean): void {
+    const current = [...(this.userForm.value['sellableOwnerSlugs'] ?? [])];
+
+    if (checked && !current.includes(slug)) {
+      current.push(slug);
+    }
+
+    if (!checked) {
+      const index = current.indexOf(slug);
+      if (index > -1) {
+        current.splice(index, 1);
+      }
+    }
+
+    this.userForm.patchValue({ sellableOwnerSlugs: current });
+  }
+
   // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts —
   // peel dashes off for typing, regroup on blur. Validators and the
   // create/update payload builders (user-management.mappers.ts) always read
@@ -392,11 +466,31 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
           );
         }
 
+        // OBRS-1662: its own endpoint, so its own call — and NOT gated on
+        // isSalespersonSelected the way sales points are. Whose trips a person may sell is a
+        // permission on the person, not a property of the role they happen to hold today, and
+        // an empty list is a real value the admin may have just chosen on purpose. That is
+        // exactly why this ALSO checks `!isEditDetailLoading`: until getUserById resolves, the
+        // control holds toUserDtoFallback's fallback ([], since UserRow carries no sellable-
+        // owner data), not the user's real grants — an admin who saves while that fetch is
+        // still in flight (getOwners resolving first is the common case, not the rare one) would
+        // otherwise silently wipe every real grant via this full-replace endpoint (Scrutinize,
+        // OBRS-1662).
+        if (this.isPlatformAdmin && this.ownersLoadState === 'loaded' && !this.isEditDetailLoading) {
+          const sellableOwnersPayload = toSellableOwnersPayload(this.userForm.getRawValue());
+          await firstValueFrom(
+            this.adminApiService.updateUserSellableOwners(
+              this.selectedUser.id,
+              sellableOwnersPayload
+            )
+          );
+        }
+
         this.isSubmitting = false;
         this.closed.emit();
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
-        const payload = toCreateUserPayload(this.userForm.getRawValue());
+        const payload = toCreateUserPayload(this.userForm.getRawValue(), this.isPlatformAdmin);
         await firstValueFrom(this.adminApiService.createUser(payload));
         this.isSubmitting = false;
         this.closed.emit();
@@ -455,8 +549,13 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
       // field is hidden in create mode anyway, but the form value must stay well-formed).
       allowedSalesPointCodes: [],
       activeSalesPointCode: SALES_POINT_ACTIVE_NONE,
+      // OBRS-1662: seeded here for the same reason activeSalesPointCode is — reset() nulls
+      // any key absent from this object, and the sentinel is what the getters assume.
+      employerOwnerSlug: EMPLOYER_OWNER_NONE,
+      sellableOwnerSlugs: [],
     });
     this.setCredentialFieldsForCreateMode();
+    void this.loadOwnerOptions();
   }
 
   // Open immediately with the row data already in hand, then patch in the
@@ -473,6 +572,7 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
     // Not awaited: the options list is user-independent (same global roster for every edit),
     // so there is no staleness/ordering dependency with the detail fetch below.
     void this.loadSalesPointOptions();
+    void this.loadOwnerOptions();
 
     try {
       const response = await firstValueFrom(this.adminApiService.getUserById(user.id));
@@ -526,6 +626,27 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
     } catch {
       this.salesPointOptions = [];
       this.salesPointsLoadState = 'error';
+    }
+  }
+
+  // OBRS-1662: not called at all for a caller who is not a platform ADMIN — the endpoint
+  // answers them 403 by design (OBRS-809), and firing it anyway would put a red herring in
+  // the console on every modal open for the operator this section is already hidden from.
+  private async loadOwnerOptions(): Promise<void> {
+    if (!this.isPlatformAdmin) {
+      this.ownerOptions = [];
+      this.ownersLoadState = 'error';
+      return;
+    }
+
+    this.ownersLoadState = 'loading';
+    try {
+      const response = await firstValueFrom(this.adminApiService.getOwners());
+      this.ownerOptions = response?.data ?? [];
+      this.ownersLoadState = 'loaded';
+    } catch {
+      this.ownerOptions = [];
+      this.ownersLoadState = 'error';
     }
   }
 

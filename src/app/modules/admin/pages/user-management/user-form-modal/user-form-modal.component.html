@@ -299,6 +299,82 @@
                   }
                 </section>
               }
+              <!-- OBRS-1662 AC2/AC6, layout the owner chose on 2026-08-31: both operator
+              questions in ONE section, one under the other, because the defect this card exists
+              to undo is the two of them having shared a single column (users.owner_id). A form
+              that files them under separate headings hides exactly the distinction it has to
+              teach. ADMIN-only: an OWNER hires into their own company and the backend takes the
+              employer from the security context regardless, and the roster endpoint behind both
+              fields answers them 403 on purpose (OBRS-809). -->
+              @if (isPlatformAdmin) {
+                <section class="user-editor-section">
+                  <div class="user-editor-section-title">
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">apartment</span>
+                    <h5>{{ 'ADMIN.USERS.OPERATOR_SECTION_TITLE' | translate }}</h5>
+                  </div>
+                  @if (ownersLoadState === 'loading') {
+                    <app-loading-state variant="inline"></app-loading-state>
+                  } @else if (ownersLoadState === 'error') {
+                    <small class="admin-error" data-testid="user-operators-unavailable">
+                      {{ 'ADMIN.USERS.OPERATORS_UNAVAILABLE' | translate }}
+                    </small>
+                  } @else if (ownerOptions.length === 0) {
+                    <p class="admin-muted">{{ 'ADMIN.USERS.OPERATORS_EMPTY' | translate }}</p>
+                  } @else {
+                    <div class="user-field user-modal-select">
+                      <label>{{ 'ADMIN.USERS.EMPLOYER_OWNER_LABEL' | translate }}</label>
+                      <!-- Editable on create only. PUT /private/users/{id} carries no owner
+                      field, so a control here in edit mode would be one the Save drops without
+                      saying so. Changing an employer is OBRS-1676's problem, not a hidden one. -->
+                      @if (mode === 'create') {
+                        <app-admin-dropdown
+                          formControlName="employerOwnerSlug"
+                          [options]="employerOwnerOptions"
+                        ></app-admin-dropdown>
+                      } @else {
+                        <p class="admin-muted" data-testid="user-employer-owner-readonly">
+                          {{ employerOwnerLabel }}
+                        </p>
+                      }
+                      <small class="admin-hint">
+                        {{ 'ADMIN.USERS.EMPLOYER_OWNER_HINT' | translate }}
+                      </small>
+                      @if (serverFieldErrors['ownerSlug']) {
+                        <small class="admin-error">
+                          {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['ownerSlug'] } }}
+                        </small>
+                      }
+                    </div>
+                    <div class="user-field">
+                      <label>{{ 'ADMIN.USERS.SELLABLE_OWNERS_LABEL' | translate }}</label>
+                      <div class="user-role-list">
+                        @for (owner of ownerOptions; track owner.slug) {
+                          <label
+                            class="user-role-chip"
+                            data-testid="user-sellable-owner-chip"
+                            [class.is-selected]="isSellableOwnerChecked(owner.slug)"
+                            >
+                            <input
+                              type="checkbox"
+                              [checked]="isSellableOwnerChecked(owner.slug)"
+                              (change)="toggleSellableOwnerSelection(owner.slug, $any($event.target).checked)"
+                              />
+                              <span>{{ owner.displayName }}</span>
+                            </label>
+                          }
+                        </div>
+                        <small class="admin-hint">
+                          {{ 'ADMIN.USERS.SELLABLE_OWNERS_HINT' | translate }}
+                        </small>
+                        @if (serverFieldErrors['sellableOwnerSlugs']) {
+                          <small class="admin-error">
+                            {{ 'ADMIN.VALIDATION.SERVER_FIELD_ERROR' | translate: { reason: serverFieldErrors['sellableOwnerSlugs'] } }}
+                          </small>
+                        }
+                      </div>
+                    }
+                  </section>
+                }
               <!-- OBRS-1258 AC1/AC5: edit-mode only, and only for a salesperson - gated live off
               the roles chip list above (isSalespersonSelected), the same source of truth
               isRoleChecked reads, so ticking/unticking 'salesperson' reveals/hides this

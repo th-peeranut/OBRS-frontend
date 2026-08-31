@@ -150,6 +150,13 @@ export interface AdminUserDto {
   // default-pickup mechanism moved server-side to `RouteStopsDto.defaultPickupStopSlug`.
   salesPointCodes?: string[];
   activeSalesPointCode?: string | null;
+  // OBRS-1662: TWO different questions, deliberately two fields. `ownerSlug` is the EMPLOYER
+  // (`users.owner_id`, OBRS-756) — who this person works for, one operator or none.
+  // `sellableOwnerSlugs` is whose trips they may SELL, which the owner confirmed on OBRS-1656
+  // can be several at once: the salesperson at a shared counter like Mo Chit sells other
+  // operators' queues as well as their employer's. Only `ownerSlug` is `null` for a customer.
+  ownerSlug?: string | null;
+  sellableOwnerSlugs?: string[];
   // OBRS-1230 / ADR-0123: true for a guest shadow user (created from a
   // walk-in/offline booking, never authenticates, carries zero roles by
   // design). Sent by GET /private/users (UserSummaryResponse) — NOT by
@@ -947,6 +954,12 @@ export interface CreateUserPayload {
   preferredLocale: string;
   status: string;
   roles: string[];
+  // OBRS-1662: both omitted for a caller who is not a platform ADMIN. An OWNER hires into
+  // their own company and the backend takes the employer from the security context, ignoring
+  // anything sent here; the operator picker they would need is `GET /private/owners`, which
+  // 403s them by design (see AdminOwnerDto).
+  ownerSlug?: string;
+  sellableOwnerSlugs?: string[];
   pdpaConsent: boolean;
 }
 
@@ -977,6 +990,13 @@ export interface UpdateUserPayload {
 export interface UpdateUserSalesPointsPayload {
   salesPointCodes: string[];
   activeSalesPointCode: string | null;
+}
+
+// OBRS-1662: `PUT /api/private/users/{id}/sellable-owners` — its own endpoint for the same
+// reason the sales-points one is (UpdateUserPayload cannot express a collection being cleared
+// to `[]`). `[]` is a real value meaning "sells for nobody", never "leave it alone".
+export interface UpdateUserSellableOwnersPayload {
+  ownerSlugs: string[];
 }
 
 // OBRS-316 Gap 1: PUT /api/private/vehicles/{id} is a full-replace, so the form
@@ -1636,6 +1656,18 @@ export class AdminApiService {
     payload: UpdateUserSalesPointsPayload
   ): Observable<ResponseAPI<AdminUserDto>> {
     return this.putRequest<AdminUserDto>(`${this.baseUrl}/private/users/${id}/sales-points`, payload);
+  }
+
+  /** OBRS-1662: whose trips this person may SELL — a different question from who employs
+   * them, and the only one of the two that a `PUT /private/users/{id}` cannot touch. */
+  updateUserSellableOwners(
+    id: number,
+    payload: UpdateUserSellableOwnersPayload
+  ): Observable<ResponseAPI<AdminUserDto>> {
+    return this.putRequest<AdminUserDto>(
+      `${this.baseUrl}/private/users/${id}/sellable-owners`,
+      payload
+    );
   }
 
   deleteUser(id: number): Observable<ResponseAPI<unknown>> {
