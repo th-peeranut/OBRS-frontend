@@ -2566,3 +2566,99 @@ describe('BoardingListComponent — printManifest() portal lifecycle (OBRS-100, 
     expect(document.querySelectorAll('.boarding-manifest-print-portal').length).toBe(1);
   });
 });
+
+describe('BoardingListComponent — manifest search (OBRS-1659)', () => {
+  function searchComponent() {
+    return createComponent({ getScheduleById: jasmine.createSpy() }, createStoreStub([
+      buildItem({ ticketId: 1, ticketNumber: 'T-AAA111', bookingNumber: 'BK-ABC123', seatNumber: '1', passengerName: 'Mr. Somchai Jaidee' }),
+      buildItem({ ticketId: 2, ticketNumber: 'T-BBB222', bookingNumber: 'BK-ABC123', seatNumber: '2', passengerName: 'Ms. Malee Thongdee' }),
+      buildItem({ ticketId: 3, ticketNumber: 'T-CCC333', bookingNumber: 'BK-XYZ789', seatNumber: '9', passengerName: 'Mr. Wichai Sukjai' }),
+    ]));
+  }
+
+  it('an empty search term leaves the whole manifest visible', () => {
+    const component = searchComponent();
+
+    component['searchTerm'] = '   ';
+
+    expect(component['filteredItems'].length).toBe(3);
+    expect(component['hasNoSearchMatch']).toBeFalse();
+  });
+
+  it('a booking number returns EVERY seat on that booking — the party that booked together, not one passenger', () => {
+    const component = searchComponent();
+
+    component['searchTerm'] = 'BK-ABC123';
+
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([1, 2]);
+  });
+
+  it('matches a PARTIAL, case-insensitive string — the driver types the last few characters, not the whole number', () => {
+    const component = searchComponent();
+
+    component['searchTerm'] = 'xyz78';
+
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([3]);
+  });
+
+  it('also matches passenger name, seat and ticket number — not the booking number alone', () => {
+    const component = searchComponent();
+
+    component['searchTerm'] = 'malee';
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([2]);
+
+    component['searchTerm'] = 'T-CCC333';
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([3]);
+  });
+
+  it('a term matching nothing reports hasNoSearchMatch — distinct from an empty bus', () => {
+    const component = searchComponent();
+
+    component['searchTerm'] = 'BK-NOPE';
+
+    expect(component['filteredItems']).toEqual([]);
+    expect(component['hasNoSearchMatch']).toBeTrue();
+  });
+
+  it('an empty bus is NOT a no-match — the two empty-states must not collide', () => {
+    const component = createComponent({ getScheduleById: jasmine.createSpy() }, createStoreStub([]));
+
+    component['searchTerm'] = 'BK-ABC123';
+
+    expect(component['hasNoSearchMatch']).toBeFalse();
+  });
+
+  it('a row with no bookingNumber does not break the search (older fixture / parcel-era ticket)', () => {
+    const component = createComponent({ getScheduleById: jasmine.createSpy() }, createStoreStub([
+      buildItem({ ticketId: 4, bookingNumber: undefined, passengerName: 'Mr. No Booking' }),
+    ]));
+
+    component['searchTerm'] = 'no booking';
+
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([4]);
+  });
+
+  it('switching to another trip clears the search - the walk-in panel keeps this component mounted, so a stale term would filter the NEXT bus', () => {
+    const component = searchComponent();
+    component['searchTerm'] = 'BK-ABC123';
+    expect(component['filteredItems'].length).toBe(2);
+
+    component.scheduleId = 99;
+    component.ngOnChanges({ scheduleId: {} as any });
+
+    expect(component['searchTerm']).toBe('');
+    expect(component['hasNoSearchMatch']).toBeFalse();
+  });
+
+  it('the print header count stays on the WHOLE bus while a search is active', () => {
+    const component = createComponent({ getScheduleById: jasmine.createSpy() }, createStoreStub([
+      buildItem({ ticketId: 1, bookingNumber: 'BK-ABC123', boardedAt: '2026-07-10T08:00:00Z' }),
+      buildItem({ ticketId: 2, bookingNumber: 'BK-XYZ789', boardedAt: '2026-07-10T09:00:00Z' }),
+    ]));
+
+    component['searchTerm'] = 'BK-ABC123';
+
+    expect(component['filteredItems'].length).toBe(1);
+    expect(component['boardedCount']).toBe(2);
+  });
+});

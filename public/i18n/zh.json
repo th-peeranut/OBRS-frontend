@@ -542,9 +542,11 @@
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
       "PAYEE_SPEND_REPORT": "按收款方统计支出",
+      "PART_UNIT_PRICE_REPORT": "配件单价",
       "VEHICLE_PL_REPORT": "单车损益",
       "EXPENSES": "费用",
       "EXPENSE_PAYEES": "收款方名录",
+      "MAINTENANCE_PARTS": "配件／工时登记表",
       "MANUAL_REFUNDS": "人工退款",
       "CASH_REFUND_APPROVALS": "现金退款审批",
       "PARCEL_CLAIMS": "包裹索赔",
@@ -2029,6 +2031,34 @@
       "PERIOD_YEAR": "当前显示：{{year}} 年全年",
       "PERIOD_YEAR_MONTH": "当前显示：{{year}} 年 {{month}}"
     },
+    "PART_UNIT_PRICE_REPORT": {
+      "SUBTITLE": "各配件／工时的单价——哪家车行收多少、何时收",
+      "FILTER_PART": "要比较的项目",
+      "PART_OPTION": "{{name}} · 可比较 {{comparable}}/{{lines}}",
+      "SCOPE_NOTE": "本页涵盖全部记录，并且刻意不设年份筛选——目前唯一可比较的价格都横跨 2025 与 2026 年，加上时间范围反而会把本页存在的意义清空。",
+      "LOAD_FAILED": "报表加载失败",
+      "EMPTY": "还没有账单指定登记表中的项目——只要录入账单时从登记表选择项目，本报表就会有可比较的数据。",
+      "PICK_A_PART": "选择一个项目，查看哪家车行收多少、何时收",
+      "COVERAGE_TITLE": "本报表能说明多少金额",
+      "COVERAGE_TEXT": "支出合计 {{total}} · 可按单价比较 {{comparable}}（{{totalLines}} 行中的 {{comparableLines}} 行）",
+      "COVERAGE_EXCLUDED": "无法比较：{{unnamed}}（{{unnamedLines}} 行）未指定任何项目，其中包含“多项一价”的行 · {{noPrice}}（{{noPriceLines}} 行）已指定项目，但账单未写单价，或写为 ฿0。",
+      "NO_COMPARISON": "暂时没有可比较的数据",
+      "NO_COMPARISON_UNITS": "此项目在多张账单上都有价格，但单位不同，无法并列比较——每罐的价格与每升的价格不是涨价。",
+      "NO_COMPARISON_ONE_BILL": "此项目目前只有一张账单的价格——出现第二张使用相同单位的账单后，图表就会显示。",
+      "UNIT_GROUP": "每 {{unit}}",
+      "UNIT_NONE": "未注明单位",
+      "PAYEE_UNKNOWN": "未记录收款方",
+      "TABLE_TITLE": "所选项目的全部明细",
+      "COL_DATE": "日期",
+      "COL_PAYEE": "车行／收款方",
+      "COL_UNIT_PRICE": "单价",
+      "COL_STATUS": "状态",
+      "STATUS": {
+        "COMPARABLE": "计入",
+        "EXCLUDED_ZERO_PRICE": "不计入 · 账单单价写为 ฿0",
+        "EXCLUDED_NO_UNIT_PRICE": "不计入 · 账单未写单价"
+      }
+    },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "按车辆统计的损益，来自车票收入与已记录的支出。",
       "FILTER_FROM": "起始日期",
@@ -2149,6 +2179,11 @@
           "OTHER": "其他"
         }
       },
+      "PART": {
+        "SEARCH_PLACEHOLDER": "输入配件或工时名称",
+        "NO_MATCH": "名录中没有“{{name}}”",
+        "ADD_AS": "添加为{{kind}}"
+      },
       "NOTE": "备注",
       "NOTE_PLACEHOLDER": "补充说明(可选)",
       "ITEMS": {
@@ -2157,13 +2192,14 @@
         "ADD": "新增明细",
         "REMOVE": "删除",
         "PART": "配件",
-        "PART_NONE": "非配件（工时／服务／其他）",
         "DESCRIPTION": "单据上的文字",
         "QUANTITY": "数量",
         "UNIT_PRICE": "单价",
         "AMOUNT": "明细金额",
         "TOTAL": "明细合计",
-        "MISMATCH": "明细合计与单据总额不一致。请先修改明细或总额使两者一致，然后再保存。"
+        "MISMATCH": "明细合计与单据总额不一致。请先修改明细或总额使两者一致，然后再保存。",
+        "UNIT": "单位",
+        "UNIT_PLACEHOLDER": "张 / 个 / 平方英尺"
       },
       "FILTER_VEHICLE": "车辆:全部",
       "FILTER_OWNER": "经营者：全部",
@@ -2223,6 +2259,38 @@
       "EMPTY_BODY": "请点击“添加收款方”，或在录入账单时直接输入新名称，从那里即可添加。",
       "NO_MATCH": "没有符合筛选条件的记录",
       "NAME_TAKEN": "该名称已存在于名录中。系统不会自动合并两个收款方，因为合并无法撤销。"
+    },
+    "MAINTENANCE_PARTS": {
+      "SUBTITLE": "保养计划和维修账单共用的配件与工时项目清单",
+      "PAGE_PURPOSE": "这是您自己的配件／工时名称清单。保养计划和账单保存的是项目编号，不是名称拼写，所以在这里改一次名称，过往记录全部随之更新。这里没有删除按钮：停用的项目仍然拥有所有引用过它的价格记录，请改用「停用」，之后它就不会再出现在选择列表中。",
+      "TABLE_TITLE": "全部项目",
+      "ADD": "新增项目",
+      "ADD_TITLE": "新增项目",
+      "ADD_HINT": "请按账单上的写法命名，这样录入账单或设置保养计划时才找得到。",
+      "RENAME": "改名",
+      "RENAME_TITLE": "修改项目名称",
+      "RENAME_HINT": "所有保养计划和历史账单会立即随之更新，因为它们保存的是项目编号而不是名称。",
+      "RETIRE": "停用",
+      "RESTORE": "恢复使用",
+      "NAME": "名称",
+      "KIND": "配件／工时",
+      "STATUS": "状态",
+      "STATUS_ACTIVE": "使用中",
+      "STATUS_RETIRED": "已停用",
+      "SHOW_RETIRED": "显示已停用的项目",
+      "EMPTY_TITLE": "登记表中还没有项目",
+      "EMPTY_BODY": "可以用「新增项目」按钮添加，或者在录入账单时直接输入新名称，系统会从那里帮您加入。",
+      "NO_MATCH": "没有符合筛选条件的项目",
+      "NAME_TAKEN": "该名称已在登记表中。系统不会自动合并两个项目，因为合并无法撤销。",
+      "NAME_WILL_REUSE": "该名称已在登记表中。仍可保存：系统会沿用已有的项目，不会重复创建。",
+      "NAME_KIND_CONFLICT": "「{{name}}」已存在，类型为{{kind}}。同一个名称不能同时属于两种类型，否则会把两种不同的东西拿来比价。请换一个名称，例如「工时：更换……」。",
+      "SEEDED_BADGE": "内置 · 有翻译",
+      "SEEDED_RENAME_WARNING": "⚠️ 这是 13 个内置项目之一，带有英文和中文名称。改名后它会变成您自己输入的项目，翻译将永久丢失——英文界面会显示泰文名称，且无法从此页面恢复。",
+      "FILTER_KIND_ALL": "类型：全部",
+      "KINDS": {
+        "PART": "配件",
+        "LABOUR": "工时"
+      }
     },
     "MANUAL_REFUNDS": {
       "SUBTITLE": "等待人工退款转账的付款",
@@ -3429,6 +3497,13 @@
       "FROM": "出发站",
       "TO": "到达站",
       "STATUS": "状态",
+      "SEARCH": {
+        "LABEL": "在本班次旅客名单中搜索",
+        "PLACEHOLDER": "订票号、姓名、座位或票号",
+        "CLEAR": "清除",
+        "NO_MATCH_TITLE": "未找到匹配的旅客",
+        "NO_MATCH_BODY": "本班车上没有与“{{term}}”匹配的记录。请与旅客核对订票号，可能属于其他班次。"
+      },
       "EMPTY_TITLE": "暂无旅客",
       "EMPTY_BODY": "本班次暂无登车记录。",
       "BOARDED": "已登车",

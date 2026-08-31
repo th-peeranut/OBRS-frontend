@@ -542,9 +542,11 @@
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation",
       "PAYEE_SPEND_REPORT": "Spend by payee",
+      "PART_UNIT_PRICE_REPORT": "Unit price by part",
       "VEHICLE_PL_REPORT": "Per-vehicle P&L",
       "EXPENSES": "Expenses",
       "EXPENSE_PAYEES": "Payee Registry",
+      "MAINTENANCE_PARTS": "Parts & labour registry",
       "MANUAL_REFUNDS": "Manual Refunds",
       "CASH_REFUND_APPROVALS": "Cash refund approvals",
       "PARCEL_CLAIMS": "Parcel Claims",
@@ -2029,6 +2031,34 @@
       "PERIOD_YEAR": "Showing: {{year}}, whole year",
       "PERIOD_YEAR_MONTH": "Showing: {{month}} {{year}}"
     },
+    "PART_UNIT_PRICE_REPORT": {
+      "SUBTITLE": "Unit price per part or labour entry — which garage charged what, and when",
+      "FILTER_PART": "Entry to compare",
+      "PART_OPTION": "{{name}} · {{comparable}}/{{lines}} comparable",
+      "SCOPE_NOTE": "This screen covers everything on record and deliberately has no year filter — the only prices with anything to compare straddle 2025 and 2026, so a date range would empty exactly the chart this screen exists for.",
+      "LOAD_FAILED": "Could not load the report",
+      "EMPTY": "No bill has named a registry entry yet — once bills are entered by picking from the registry, this report starts having something to compare.",
+      "PICK_A_PART": "Pick one entry to see which garage charged what, and when",
+      "COVERAGE_TITLE": "How much of the money this report can speak for",
+      "COVERAGE_TEXT": "Total spend {{total}} · comparable by unit price {{comparable}} ({{comparableLines}} of {{totalLines}} lines)",
+      "COVERAGE_EXCLUDED": "Not comparable: {{unnamed}} ({{unnamedLines}} lines) name no entry at all, which includes lines covering several things for one price · {{noPrice}} ({{noPriceLines}} lines) name an entry but the bill wrote no unit price, or wrote ฿0.",
+      "NO_COMPARISON": "Nothing to compare yet",
+      "NO_COMPARISON_UNITS": "This entry has prices on several bills, but in different units, so they cannot be lined up — a price per can and a price per litre is not a price rise.",
+      "NO_COMPARISON_ONE_BILL": "This entry has a price on one bill so far — the chart appears once a second bill uses the same unit.",
+      "UNIT_GROUP": "Per {{unit}}",
+      "UNIT_NONE": "no unit given",
+      "PAYEE_UNKNOWN": "No payee on record",
+      "TABLE_TITLE": "Every line of the selected entry",
+      "COL_DATE": "Date",
+      "COL_PAYEE": "Garage / payee",
+      "COL_UNIT_PRICE": "Unit price",
+      "COL_STATUS": "Status",
+      "STATUS": {
+        "COMPARABLE": "Counted",
+        "EXCLUDED_ZERO_PRICE": "Not counted · the bill wrote ฿0 per unit",
+        "EXCLUDED_NO_UNIT_PRICE": "Not counted · the bill wrote no unit price"
+      }
+    },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "Profit and loss for each vehicle, from ticket revenue and the recorded costs.",
       "FILTER_FROM": "From",
@@ -2149,6 +2179,11 @@
           "OTHER": "Other"
         }
       },
+      "PART": {
+        "SEARCH_PLACEHOLDER": "Type a part or labour name",
+        "NO_MATCH": "\"{{name}}\" is not in the registry",
+        "ADD_AS": "Add as {{kind}}"
+      },
       "NOTE": "Note",
       "NOTE_PLACEHOLDER": "Additional details (optional)",
       "ITEMS": {
@@ -2157,13 +2192,14 @@
         "ADD": "Add line",
         "REMOVE": "Remove",
         "PART": "Part",
-        "PART_NONE": "Not a part (labour / service / other)",
         "DESCRIPTION": "What the bill says",
         "QUANTITY": "Qty",
         "UNIT_PRICE": "Unit price",
         "AMOUNT": "Line total",
         "TOTAL": "Lines add up to",
-        "MISMATCH": "The lines do not add up to the bill total. Fix a line or the total so the two agree before saving."
+        "MISMATCH": "The lines do not add up to the bill total. Fix a line or the total so the two agree before saving.",
+        "UNIT": "Unit",
+        "UNIT_PLACEHOLDER": "sheet / piece / sq.ft."
       },
       "FILTER_VEHICLE": "Vehicle: All",
       "FILTER_OWNER": "Operator: All",
@@ -2223,6 +2259,38 @@
       "EMPTY_BODY": "Use \"Add payee\", or simply type a new name while entering a bill — it can be added from there.",
       "NO_MATCH": "Nothing matches these filters",
       "NAME_TAKEN": "That name is already in the registry. Two payees are never merged automatically, because merging cannot be undone."
+    },
+    "MAINTENANCE_PARTS": {
+      "SUBTITLE": "The parts and labour entries your maintenance plans and repair bills both draw from",
+      "PAGE_PURPOSE": "This is your own list of parts and labour. Plans and bills store an entry's ID, never its spelling, so correcting a name here corrects it everywhere at once. There is no delete on purpose: a retired entry still owns the price history of every line that named it. Retire it instead and it stops appearing in the pickers.",
+      "TABLE_TITLE": "All entries",
+      "ADD": "Add entry",
+      "ADD_TITLE": "Add a new entry",
+      "ADD_HINT": "Name it the way the bill does, so you can find it while entering a bill or setting up a plan.",
+      "RENAME": "Rename",
+      "RENAME_TITLE": "Rename entry",
+      "RENAME_HINT": "Every plan and every past bill follows immediately, because they store the entry's ID and not its spelling.",
+      "RETIRE": "Retire",
+      "RESTORE": "Restore",
+      "NAME": "Name",
+      "KIND": "Part / labour",
+      "STATUS": "Status",
+      "STATUS_ACTIVE": "In use",
+      "STATUS_RETIRED": "Retired",
+      "SHOW_RETIRED": "Show retired entries",
+      "EMPTY_TITLE": "No entries in the registry yet",
+      "EMPTY_BODY": "Add one with the \"Add entry\" button, or just type a new name while entering a bill and it will be added from there.",
+      "NO_MATCH": "No entry matches this filter",
+      "NAME_TAKEN": "That name is already in the registry. Entries are never merged automatically, because a merge cannot be undone.",
+      "NAME_WILL_REUSE": "That name is already in the registry. You can still save: the existing entry will be used rather than a duplicate created.",
+      "NAME_KIND_CONFLICT": "\"{{name}}\" already exists as {{kind}}. One name cannot be both, or two different things end up compared on price. Give it a distinct name, e.g. \"Labour: change …\".",
+      "SEEDED_BADGE": "Built in · translated",
+      "SEEDED_RENAME_WARNING": "⚠️ This is one of the 13 built-in entries and has English and Chinese names. Renaming it makes it an entry you typed and its translations are lost for good — English screens will show the Thai name, and this cannot be undone from here.",
+      "FILTER_KIND_ALL": "Type: all",
+      "KINDS": {
+        "PART": "Part",
+        "LABOUR": "Labour"
+      }
     },
     "MANUAL_REFUNDS": {
       "SUBTITLE": "Payments awaiting manual refund transfer",
@@ -3429,6 +3497,13 @@
       "FROM": "From",
       "TO": "To",
       "STATUS": "Status",
+      "SEARCH": {
+        "LABEL": "Search this manifest",
+        "PLACEHOLDER": "Booking no., name, seat or ticket no.",
+        "CLEAR": "Clear",
+        "NO_MATCH_TITLE": "No passenger matches that",
+        "NO_MATCH_BODY": "Nothing on this bus matches \"{{term}}\". Check the booking number with the passenger — it may be for a different trip."
+      },
       "EMPTY_TITLE": "No passengers yet",
       "EMPTY_BODY": "No boarding records found for this schedule.",
       "BOARDED": "Boarded",

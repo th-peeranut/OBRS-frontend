@@ -184,12 +184,19 @@ export interface DriverCashRepairBillReqDto {
   items: DriverCashRepairBillItemReqDto[];
 }
 
-/** OBRS-1630 — one line of the bill. Mirrors `ExpenseItemReqDto` on the wire; `part` is absent for
- * the labour and sundry lines that are not a part at all. */
+/** OBRS-1630 — one line of the bill. Mirrors `ExpenseItemReqDto` on the wire; the part is absent for
+ * the labour and sundry lines that are not a part at all.
+ *
+ * OBRS-1613: `partId` is the registry row, and `part` is always null for the same reason the
+ * back-office payload sends it null — the frozen code is written server-side from the row the id
+ * resolved to. `unit` travels too: the card renders the unit box in this variant as well, and a
+ * price whose unit was dropped on the way is one the unit-price report has to exclude. */
 export interface DriverCashRepairBillItemReqDto {
   part?: string | null;
+  partId?: number | null;
   description: string;
   quantity?: number | null;
+  unit?: string | null;
   unitPrice?: number | null;
   amount: number;
 }

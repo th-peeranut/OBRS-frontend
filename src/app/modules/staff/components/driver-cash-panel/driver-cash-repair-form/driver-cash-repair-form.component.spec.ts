@@ -4,8 +4,12 @@ import { FormArray, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { BehaviorSubject } from 'rxjs';
 import { DriverCashRepairFormComponent } from './driver-cash-repair-form.component';
-import { AdminExpensePayeeDto } from '../../../../../services/admin/admin-api.service';
+import {
+  AdminExpensePayeeDto,
+  AdminMaintenancePartDto,
+} from '../../../../../services/admin/admin-api.service';
 import { ExpensePayeesStore } from '../../../../admin/pages/expense-payees/expense-payees.store';
+import { MaintenancePartsStore } from '../../../../admin/pages/maintenance-parts/maintenance-parts.store';
 
 /**
  * OBRS-1630 — the staff repair box. The bill card itself is covered by its own spec; what is
@@ -19,6 +23,10 @@ describe('DriverCashRepairFormComponent', () => {
     data$: BehaviorSubject<AdminExpensePayeeDto[] | null>;
     refresh: jasmine.Spy;
   };
+  let partsStore: {
+    data$: BehaviorSubject<AdminMaintenancePartDto[] | null>;
+    refresh: jasmine.Spy;
+  };
 
   function itemsOf(): FormArray {
     return (component['billForm'] as FormGroup).get('items') as FormArray;
@@ -28,7 +36,10 @@ describe('DriverCashRepairFormComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ReactiveFormsModule, TranslateModule.forRoot()],
       declarations: [DriverCashRepairFormComponent],
-      providers: [{ provide: ExpensePayeesStore, useValue: payeesStore }],
+      providers: [
+        { provide: ExpensePayeesStore, useValue: payeesStore },
+        { provide: MaintenancePartsStore, useValue: partsStore },
+      ],
       // The bill card is declared in AdminSharedModule and has a spec of its own; this one is
       // about the wrapper, so the tag is left unknown rather than dragging that module in.
       schemas: [NO_ERRORS_SCHEMA],
@@ -46,6 +57,13 @@ describe('DriverCashRepairFormComponent', () => {
       ]),
       refresh: jasmine.createSpy('refresh'),
     };
+    partsStore = {
+      data$: new BehaviorSubject<AdminMaintenancePartDto[] | null>([
+        { id: 7, code: null, name: 'ยางหน้า', kind: 'PART', active: true },
+        { id: 8, code: null, name: 'อะไหล่ที่เลิกใช้แล้ว', kind: 'PART', active: false },
+      ]),
+      refresh: jasmine.createSpy('refresh'),
+    };
   });
 
   // The box is behind an accordion, so it is rebuilt on every open/close. Reading the SHARED
@@ -55,6 +73,15 @@ describe('DriverCashRepairFormComponent', () => {
 
     expect(payeesStore.refresh).toHaveBeenCalled();
     expect(component['payees'].map((p) => p.id)).toEqual([5]);
+  });
+
+  // OBRS-1613: the counter can name a part now. It has to be able to — `source='FIELD'` bills are
+  // immutable, so a line that leaves this box unnamed is unnamed for good.
+  it('reads the shared parts registry the same way, retired rows dropped', async () => {
+    await build();
+
+    expect(partsStore.refresh).toHaveBeenCalled();
+    expect(component['parts'].map((p) => p.id)).toEqual([7]);
   });
 
   it('drops a retired garage — the picker must never offer one', async () => {
@@ -71,10 +98,13 @@ describe('DriverCashRepairFormComponent', () => {
     expect(component['payees']).toEqual([]);
   });
 
-  it('emits the lines with the part sentinel translated to absent, and no amount of its own', async () => {
+  // OBRS-1613: the line carries a registry id now, and `part` is always null on the wire — the
+  // frozen code is written server-side from the row the id resolved to, on this path exactly as on
+  // the back-office one.
+  it('emits the lines with the registry id, the code left to the server, and no amount of its own', async () => {
     await build();
     component['billForm'].get('payeeId')!.setValue(5);
-    itemsOf().at(0).patchValue({ description: 'ยางหน้าซ้าย', part: 'TIRES', amount: 4200 });
+    itemsOf().at(0).patchValue({ description: 'ยางหน้าซ้าย', partId: 7, unit: 'เส้น', amount: 4200 });
     const spy = spyOn(component.submitRepairBill, 'emit');
 
     component['onSubmit']();
@@ -83,9 +113,11 @@ describe('DriverCashRepairFormComponent', () => {
       payeeId: 5,
       items: [
         {
-          part: 'TIRES',
+          part: null,
+          partId: 7,
           description: 'ยางหน้าซ้าย',
           quantity: null,
+          unit: 'เส้น',
           unitPrice: null,
           amount: 4200,
         },
@@ -106,7 +138,7 @@ describe('DriverCashRepairFormComponent', () => {
     const emitted = spy.calls.mostRecent().args[0]!;
     expect(emitted.items[0].quantity).toBeNull();
     expect(emitted.items[0].unitPrice).toBeNull();
-    expect(emitted.items[0].part).toBeNull();
+    expect(emitted.items[0].partId).toBeNull();
   });
 
   it('refuses to submit a bill of zero — the server would refuse it too, with a message about a field this form does not show', async () => {

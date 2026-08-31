@@ -1,12 +1,12 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { TranslateService } from '@ngx-translate/core';
-import { AdminExpensePayeeDto } from '../../../../../services/admin/admin-api.service';
-import { MAINTENANCE_PART_CODES } from '../../vehicles/vehicle-maintenance-plan/vehicle-maintenance-plan.mappers';
+import {
+  AdminExpensePayeeDto,
+  AdminMaintenancePartDto,
+} from '../../../../../services/admin/admin-api.service';
 import {
   ExpenseItemFormValue,
   Option,
-  EXPENSE_ITEM_PART_NONE_SENTINEL,
   expenseItemsTotal,
 } from '../expenses-page.mappers';
 import {
@@ -19,6 +19,9 @@ const AMOUNT_MAX_DECIMALS = 2;
 
 // OBRS-1374 (schema.sql expense_items.description VARCHAR(255)).
 const ITEM_DESCRIPTION_MAX_LENGTH = 255;
+
+// OBRS-1613 (schema.sql expense_items.unit VARCHAR(20)).
+const ITEM_UNIT_MAX_LENGTH = 20;
 
 /**
  * OBRS-1576: ONE bill inside the envelope — its own header, its own lines, its own total.
@@ -55,6 +58,9 @@ export class ExpenseBillCardComponent {
   @Input() categoryOptions: Option[] = [];
   @Input() payees: AdminExpensePayeeDto[] = [];
   @Input() canCreatePayee = true;
+  /** OBRS-1613: the parts/labour registry, ACTIVE rows only — the parent filters. */
+  @Input() parts: AdminMaintenancePartDto[] = [];
+  @Input() canCreatePart = true;
   /**
    * Folded to a one-line summary. AC1: a stack can be 8–10 slips, and a page of fully-expanded
    * bills is one the owner has to scroll to find the row they are typing into. Owned by the parent
@@ -83,34 +89,12 @@ export class ExpenseBillCardComponent {
   @Output() remove = new EventEmitter<void>();
   @Output() toggleCollapse = new EventEmitter<void>();
   @Output() payeeCreated = new EventEmitter<AdminExpensePayeeDto>();
+  @Output() partCreated = new EventEmitter<AdminMaintenancePartDto>();
 
   protected readonly ITEM_DESCRIPTION_MAX_LENGTH = ITEM_DESCRIPTION_MAX_LENGTH;
+  protected readonly ITEM_UNIT_MAX_LENGTH = ITEM_UNIT_MAX_LENGTH;
 
-  constructor(
-    private readonly translate: TranslateService,
-    private readonly formBuilder: FormBuilder
-  ) {}
-
-  /**
-   * OBRS-1374 AC10: the part labels come from OBRS-1333's OWN i18n keys, never a second set minted
-   * here — one code must not read as two different things on two screens. A getter rather than a
-   * field so a language switch is picked up without the page rebuilding its cards.
-   */
-  protected get partOptions(): Option[] {
-    return [
-      {
-        code: EXPENSE_ITEM_PART_NONE_SENTINEL,
-        // Screen-scoped: this column's header already says "part / labour", so the modal's longer
-        // wording is redundant here and does not fit - it clipped mid-word, and a truncated option
-        // label reads as a different option.
-        label: this.translate.instant('ADMIN.EXPENSES.BATCH.LINE_PART_NONE'),
-      },
-      ...MAINTENANCE_PART_CODES.map((code) => ({
-        code,
-        label: this.translate.instant(`ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.${code}`),
-      })),
-    ];
-  }
+  constructor(private readonly formBuilder: FormBuilder) {}
 
   protected get itemsArray(): FormArray {
     return this.billForm.get('items') as FormArray;
@@ -228,9 +212,12 @@ export function buildFieldRepairBillGroup(formBuilder: FormBuilder): FormGroup {
  * bill: 2 of its 4 lines carry neither), `description` and `amount` required. */
 export function buildItemGroup(formBuilder: FormBuilder): FormGroup {
   return formBuilder.group({
-    part: [EXPENSE_ITEM_PART_NONE_SENTINEL],
+    partId: [null],
     description: ['', [Validators.required, Validators.maxLength(ITEM_DESCRIPTION_MAX_LENGTH)]],
     quantity: [null, [positiveAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)]],
+    // OBRS-1613: optional. The bills that do not say a unit are the common case, and inventing one
+    // would put a wrong unit into the comparison the unit-price report is built on.
+    unit: ['', [Validators.maxLength(ITEM_UNIT_MAX_LENGTH)]],
     unitPrice: [null, [nonNegativeAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)]],
     // OBRS-1576/V124: zero is allowed. A garage that does a job and does not charge for it writes
     // the line with nothing against it, and the alternatives were to drop the line or invent a

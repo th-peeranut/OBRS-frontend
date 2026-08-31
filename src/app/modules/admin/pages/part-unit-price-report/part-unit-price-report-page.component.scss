@@ -1,0 +1,115 @@
+// OBRS-1613. Every colour here is an admin theme token, so the page follows light/dark with the
+// rest of the console and nothing needs a second definition.
+//
+// Only tokens that actually exist are used: --admin-outline, --admin-muted, --admin-primary,
+// --admin-warning-bg, --admin-warning-text. `npm run test:theme-tokens` is what catches an
+// invented one — see payee-spend-report-page.component.scss, where three invented names rendered
+// as plausible-looking fallbacks and nobody noticed until a capture run.
+
+.part-price-scope-note {
+  max-width: 68ch;
+}
+
+// AC5. Warning-toned like its sibling, and for the same reason: it is telling the reader that the
+// chart below is not the whole story, which is a caution rather than a caption.
+.part-price-coverage {
+  border: 1px solid var(--admin-outline);
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
+  border-radius: 0.25rem;
+  padding: 0.75rem 0.9rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.part-price-coverage-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.part-price-coverage-text {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+// The chart. Bars rather than a plotted line: the reader is comparing a handful of separate bills,
+// not watching a continuous series, and a line between two dots a year apart draws a trend through
+// data that has none.
+.part-price-chart {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.part-price-unit-heading {
+  margin: 0.6rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--admin-muted);
+}
+
+.part-price-bar-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 16rem) 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.part-price-bar-who {
+  font-size: 0.875rem;
+}
+
+.part-price-bar-track {
+  display: block;
+  height: 0.9rem;
+  border-radius: 0.125rem;
+  background: var(--admin-outline);
+  overflow: hidden;
+}
+
+.part-price-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--admin-primary);
+}
+
+.part-price-bar-amount {
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+// Two prices in two units, or one price and nothing to put beside it. Said in words rather than
+// drawn as a chart of one bar, which would read as a trend.
+.part-price-no-comparison {
+  border: 1px solid var(--admin-outline);
+  border-radius: 0.25rem;
+  padding: 0.75rem 0.9rem;
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--admin-muted);
+}
+
+// The excluded lines stay legible, not hidden: the reader has to be able to find the bill the
+// chart left out. Dimmed only enough to say "this one is not in the picture above".
+.part-price-excluded {
+  color: var(--admin-muted);
+}
+
+.part-price-status {
+  font-size: 0.8125rem;
+}
+
+// --admin-warning-fg, NOT --admin-warning-text. The latter is the dark half of a pastel CHIP pair
+// and is only legible on its own --admin-warning-bg; standing alone on the card surface it measures
+// 1.3-1.7:1 in dark mode. `npm run test:theme-tokens` is what named this - it is the gate that
+// exists because .admin-btn-danger shipped at 1.71:1 (OBRS-520). The coverage box above keeps
+// --admin-warning-text because it sets --admin-warning-bg on the same rule.
+.part-price-status.is-excluded {
+  color: var(--admin-warning-fg);
+}
+
+.part-price-table td {
+  font-variant-numeric: tabular-nums;
+}

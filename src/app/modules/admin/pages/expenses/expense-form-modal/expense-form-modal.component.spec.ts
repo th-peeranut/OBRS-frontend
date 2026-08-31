@@ -4,7 +4,6 @@ import { of, throwError } from 'rxjs';
 import { ExpenseFormModalComponent } from './expense-form-modal.component';
 import {
   ExpenseRow,
-  EXPENSE_ITEM_PART_NONE_SENTINEL,
   VEHICLE_CENTRAL_SENTINEL,
 } from '../expenses-page.mappers';
 import { createTranslateStub } from '../../../../../testing/test-stubs';
@@ -445,13 +444,63 @@ describe('ExpenseFormModalComponent', () => {
       expect((component as any).expenseForm.valid).toBeFalse();  // still missing the required fields
     });
 
-    it('a new line starts on the "not a part" sentinel, so a blank part is expressible (AC3)', () => {
+    // OBRS-1613 REGRESSION (found by obrs-scrutinize, 2026-08-29). This modal's save is a FULL
+    // replace - ExpenseService#replaceItems deletes every line and reinserts what the request
+    // carries - so any column the form cannot express is wiped on a save that never meant to touch
+    // it. While this screen still built its lines from an enum code and had no partId/unit control,
+    // opening a bill entered on the multi-bill screen and correcting, say, the total silently
+    // destroyed the registry link and the unit on EVERY line: exactly the two columns this card
+    // exists to populate, on a field the owner never saw. The line below is what proves it cannot
+    // happen again - it must round-trip an untouched bill byte for byte.
+    it('an untouched edit round-trips partId and unit rather than wiping them', async () => {
+      const { component, adminApiServiceSpy } = makeComponent();
+      openEdit(component, {
+        ...VEHICLE_ROW,
+        amount: 1800,
+        items: [
+          // A part the OWNER typed: no code at all, so a wipe cannot be undone from the frozen
+          // `part` column either - the row is simply unlinked from its price history for good.
+          { lineNo: 1, part: '', partId: 42, partName: 'สายพานหน้าเครื่อง', description: 'สายพานหน้าเครื่อง', quantity: 1, unit: 'เส้น', unitPrice: 1200, amount: 1200 },
+          { lineNo: 2, part: '', partId: null, partName: '', description: 'ค่าแรง', quantity: null, unit: '', unitPrice: null, amount: 600 },
+        ],
+      });
+
+      await (component as any).submitExpense();
+
+      const sent = adminApiServiceSpy.updateExpense.calls.mostRecent().args[1];
+      expect(sent.items[0].partId).toBe(42);
+      expect(sent.items[0].unit).toBe('เส้น');
+      expect(sent.items[1].partId).toBeNull();
+      expect(sent.items[1].unit).toBeNull();
+    });
+
+    // OBRS-1613 (obrs-scrutinize round 2): the picker is handed ACTIVE registry rows only, so a
+    // line pointing at a RETIRED part resolves to nothing on this side. The bill carries the
+    // server-resolved name for exactly that case; this proves it reaches the control rather than
+    // stopping at the DTO.
+    it('carries the server-resolved part name so a retired part is not shown as blank', () => {
+      const { component } = makeComponent();
+      openEdit(component, {
+        ...VEHICLE_ROW,
+        amount: 1200,
+        items: [
+          { lineNo: 1, part: '', partId: 404, partName: 'อะไหล่ที่เลิกใช้แล้ว', description: 'ยางแท่นเครื่อง', quantity: 1, unit: '', unitPrice: 1200, amount: 1200 },
+        ],
+      });
+
+      expect((component as any).itemsArray.at(0).get('partName').value).toBe('อะไหล่ที่เลิกใช้แล้ว');
+      expect((component as any).itemsArray.at(0).get('partId').value).toBe(404);
+    });
+
+    it('a new line starts with no part, so a blank part is expressible (AC3)', () => {
+      // OBRS-1613: the sentinel was the "no part" value while this screen picked an enum CODE. It
+      // picks a registry ROW now, and the absence of a row is a plain null.
       const { component } = makeComponent();
       openCreate(component);
 
       (component as any).addItem();
 
-      expect((component as any).itemsArray.at(0).get('part').value).toBe(EXPENSE_ITEM_PART_NONE_SENTINEL);
+      expect((component as any).itemsArray.at(0).get('partId').value).toBeNull();
     });
 
     it('shows the running total and warns BEFORE save when the lines do not match the bill (AC5)', async () => {
@@ -475,10 +524,10 @@ describe('ExpenseFormModalComponent', () => {
       openCreate(component);
       fillBill(component, 3100);
       [
-        { part: 'BRAKE_PADS', description: 'ผ้าเบรกหน้า', amount: 1200 },
-        { part: 'BRAKE_FLUID', description: 'น้ำมันเบรก', amount: 400 },
-        { part: 'ENGINE_OIL', description: 'น้ำมันเครื่อง', amount: 900 },
-        { part: EXPENSE_ITEM_PART_NONE_SENTINEL, description: 'ค่าแรง', amount: 600 },
+        { partId: 11, description: 'ผ้าเบรกหน้า', amount: 1200 },
+        { partId: 12, description: 'น้ำมันเบรก', amount: 400 },
+        { partId: 13, description: 'น้ำมันเครื่อง', amount: 900 },
+        { partId: null, description: 'ค่าแรง', amount: 600 },
       ].forEach((line, index) => {
         (component as any).addItem();
         (component as any).itemsArray.at(index).patchValue(line);
@@ -493,9 +542,14 @@ describe('ExpenseFormModalComponent', () => {
       expect(payload.amount).toBe(3100);
       expect(payload.items.length).toBe(4);
       expect(payload.items[3]).toEqual({
+        // OBRS-1613: the frozen enum code is never sent from a screen any more - the server writes
+        // it from the row `partId` resolved to. An explicit null rather than an omitted key, so
+        // "this line has no part" stays distinguishable from "this client cannot express one".
         part: null,
+        partId: null,
         description: 'ค่าแรง',
         quantity: null,
+        unit: null,
         unitPrice: null,
         amount: 600,
       });
@@ -521,7 +575,7 @@ describe('ExpenseFormModalComponent', () => {
         ...VEHICLE_ROW,
         amount: 900,
         items: [
-          { lineNo: 1, part: 'ENGINE_OIL', description: 'น้ำมันเครื่อง', quantity: 1, unitPrice: 900, amount: 900 },
+          { lineNo: 1, part: 'ENGINE_OIL', partId: 3, partName: 'น้ำมันเครื่อง', description: 'น้ำมันเครื่อง', quantity: 1, unit: '', unitPrice: 900, amount: 900 },
         ],
       });
       expect((component as any).itemsArray.length).toBe(1);
@@ -539,13 +593,13 @@ describe('ExpenseFormModalComponent', () => {
         ...VEHICLE_ROW,
         amount: 1800,
         items: [
-          { lineNo: 1, part: 'BRAKE_PADS', description: 'ผ้าเบรกหน้า', quantity: 2, unitPrice: 600, amount: 1200 },
-          { lineNo: 2, part: '', description: 'ค่าแรง', quantity: null, unitPrice: null, amount: 600 },
+          { lineNo: 1, part: 'BRAKE_PADS', partId: 4, partName: 'ผ้าเบรกหน้า', description: 'ผ้าเบรกหน้า', quantity: 2, unit: '', unitPrice: 600, amount: 1200 },
+          { lineNo: 2, part: '', partId: null, partName: '', description: 'ค่าแรง', quantity: null, unit: '', unitPrice: null, amount: 600 },
         ],
       });
 
       expect((component as any).itemsArray.length).toBe(2);
-      expect((component as any).itemsArray.at(1).get('part').value).toBe(EXPENSE_ITEM_PART_NONE_SENTINEL);
+      expect((component as any).itemsArray.at(1).get('partId').value).toBeNull();
       expect((component as any).itemsTotal).toBe(1800);
       expect((component as any).itemsTotalMismatch).toBeFalse();
     });

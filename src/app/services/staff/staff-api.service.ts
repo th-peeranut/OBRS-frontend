@@ -311,6 +311,10 @@ export interface DelayScheduleRespDto {
 export interface BoardingListItemDto {
   ticketId: number;
   ticketNumber: string;
+  /** OBRS-1659: the booking this seat belongs to. One booking can hold several seats on
+   * the same trip, so this is what groups a party together in the manifest — and what the
+   * client-side manifest search matches on. `undefined` on a fixture predating the field. */
+  bookingNumber?: string;
   seatNumber: string;
   /**
    * OBRS-1232: the title as a stable CODE ('MISS'), separate from the name and untranslated on the

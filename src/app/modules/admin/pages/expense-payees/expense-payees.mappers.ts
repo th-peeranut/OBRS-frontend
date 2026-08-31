@@ -1,4 +1,5 @@
 import { AdminExpensePayeeDto } from '../../../../services/admin/admin-api.service';
+import { normalizeRegistryName } from '../../../../shared/lib/registry-name';
 
 export type PayeeType = AdminExpensePayeeDto['type'];
 
@@ -6,46 +7,19 @@ export type PayeeType = AdminExpensePayeeDto['type'];
 export const PAYEE_TYPE_CODES: readonly PayeeType[] = ['GARAGE', 'FUEL_STATION', 'OTHER'] as const;
 
 /**
- * OBRS-1577: every character that must not decide whether two typed names are the same garage.
- *
- * <p>⚠️ <b>This is a hand-maintained mirror of the backend's
- * `ExpensePayeeDtoService.INSIGNIFICANT_CHARS`, and nothing enforces the two stay equal.</b> The
- * backend is the authority — it owns `uq_expense_payees_owner_name` and its create is idempotent by
- * this rule — so a drift here is not a data defect but a UI lie: this copy decides whether the form
- * offers "add this payee" for a name that in fact already exists.
- *
- * <p>Three groups, and the last two are the ones a bare `\s` misses in BOTH languages:
- * <ul>
- *   <li>`\s` — but the two languages disagree on what it means. JavaScript's includes U+FEFF and
- *       excludes U+0085 (NEL); Java's, with `UNICODE_CHARACTER_CLASS`, is the reverse. Each file
- *       therefore names the character ITS OWN `\s` misses: U+0085 here, U+FEFF on the Java side.
- *       The two sets end up equal — brute-forced over every code point 0x0–0x10FFFF, zero
- *       disagreements — but they get there by naming different characters, so do not "add" U+0085
- *       to the Java pattern for symmetry; its `\s` already covers it.</li>
- *   <li>The zero-width family (U+200B–U+200D, U+2060) is not whitespace to Unicode at all. Thai has
- *       no inter-word space, so ZERO WIDTH SPACE is exactly how Thai text marks a word break — an
- *       invisible character no owner can see, delete, or be told about.</li>
- *   <li>U+FEFF, which rides on the front of anything pasted out of a UTF-8 file with a BOM.</li>
- * </ul>
- */
-const INSIGNIFICANT_CHARS = /[\s\u0085\u200B-\u200D\u2060\uFEFF]+/gu;
-
-/**
  * OBRS-1577 AC5, client side: the same "are these two names one garage" rule the server applies,
  * so the form can tell whether what was typed is already on record WITHOUT a round trip per
  * keystroke.
  *
- * <p>NFC first, and it is not decoration: a Thai syllable stacks marks on its base consonant, and
- * `อู่` is อ + SARA UU + MAI EK. Typed in the other order it renders IDENTICALLY and is a different
- * string, so without canonical composition the picker would show "not in the registry — add it?" for
- * a garage that is sitting in the list directly above the message.
- *
- * <p>`toLowerCase()` and not `toLocaleLowerCase()`: the locale-sensitive one lower-cases `I` to a
- * dotless `ı` under a Turkish locale, which would make the same name match differently depending on
- * the browser's language setting. The server pins `Locale.ROOT` for exactly this reason.
+ * <p>OBRS-1613 moved the rule itself - and the whole rationale for every character in it - to
+ * `shared/lib/registry-name.ts`, when the parts registry became the second screen that needs it.
+ * The backend made the same move in the same card (`RegistryNameNormalizer.java`). Kept as a named
+ * delegate rather than replaced at every call site: `normalizePayeeName` reads as what it does
+ * here, and the two registries agreeing is now a property of the code instead of a thing two
+ * people have to remember.
  */
 export function normalizePayeeName(name: string): string {
-  return name.normalize('NFC').replace(INSIGNIFICANT_CHARS, '').toLowerCase();
+  return normalizeRegistryName(name);
 }
 
 /**

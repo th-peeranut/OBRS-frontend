@@ -137,6 +137,23 @@
   }
 }
 
+// OBRS-1659: manifest search row - sits in the table card's header, above the table.
+// Same flex shape as .boarding-scan-input-row below so the two text fields on this
+// screen wrap identically on a phone.
+.boarding-search-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--admin-outline);
+}
+
+.boarding-search-input {
+  flex: 1 1 280px;
+  min-width: 200px;
+}
+
 .boarding-scan-input-row {
   display: flex;
   gap: 10px;

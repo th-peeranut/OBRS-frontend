@@ -4,6 +4,7 @@ import {
   AdminApiService,
   AdminExpenseDto,
   AdminExpensePayeeDto,
+  AdminMaintenancePartDto,
   AdminOwnerDto,
   AdminVehicleDto,
 } from '../../../../services/admin/admin-api.service';
@@ -14,6 +15,8 @@ import { AuthService } from '../../../../auth/auth.service';
 import { ExpensesStore } from './expenses.store';
 import { VehiclesStore } from '../vehicles/vehicles.store';
 import { ExpensePayeesStore } from '../expense-payees/expense-payees.store';
+import { MaintenancePartsStore } from '../maintenance-parts/maintenance-parts.store';
+import { sortMaintenancePartsByName } from '../maintenance-parts/maintenance-parts.mappers';
 import { sortPayeesByName } from '../expense-payees/expense-payees.mappers';
 import {
   ExpenseRow,
@@ -62,6 +65,10 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
    * (the registry screen needs them to un-retire) — filtering happens HERE so a retired garage can
    * never be offered on a new bill. */
   protected payeeOptions: AdminExpensePayeeDto[] = [];
+  /** OBRS-1613: the ACTIVE parts/labour registry, for the bill form's line picker. Filtered HERE
+   * for the same reason as the payees above - the store caches retired rows so the registry screen
+   * can un-retire them, and a retired part must never be offered on a bill. */
+  protected partOptions: AdminMaintenancePartDto[] = [];
 
   /** OBRS-1627: `''` = all operators. The operator COLUMN became this filter;
    * client-side like the category filter, never a fourth server call. */
@@ -116,6 +123,8 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
    * here would render an "add" button whose only outcome is a server error.
    */
   protected readonly canCreatePayee: boolean;
+  /** OBRS-1613: same flag, same reason - CREATE goes through `getCurrentOwnerId()`. */
+  protected readonly canCreatePart: boolean;
 
   // Bound reloader passed to the form modal (arrow closes over `this`),
   // mirroring VehiclesPageComponent.reloadStructureBound.
@@ -134,11 +143,13 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
     private readonly store: ExpensesStore,
     private readonly vehiclesStore: VehiclesStore,
     private readonly payeesStore: ExpensePayeesStore,
+    private readonly maintenancePartsStore: MaintenancePartsStore,
     private readonly authService: AuthService
   ) {
     this.canWrite = this.authService.hasAnyRole(['admin', 'owner']);
     this.isAdmin = this.authService.getRoles().includes('admin');
     this.canCreatePayee = this.authService.hasHeldRole(['owner']);
+    this.canCreatePart = this.canCreatePayee;
 
     const today = new Date();
     this.selectedYear = String(today.getFullYear());
@@ -196,9 +207,16 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
       })
     );
 
+    this.subscriptions.add(
+      this.maintenancePartsStore.data$.subscribe((data) => {
+        this.partOptions = sortMaintenancePartsByName((data ?? []).filter((part) => part.active));
+      })
+    );
+
     void this.store.refresh();
     void this.vehiclesStore.refresh();
     void this.payeesStore.refresh();
+    void this.maintenancePartsStore.refresh();
     void this.loadOwners();
     void this.loadPending();
   }
@@ -208,6 +226,11 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
    * picker has already selected it locally, so nothing on screen waits for this. */
   protected onPayeeCreated(): void {
     void this.payeesStore.refresh();
+  }
+
+  /** OBRS-1613: a part added from inside the bill form — same contract as `onPayeeCreated`. */
+  protected onPartCreated(): void {
+    void this.maintenancePartsStore.refresh();
   }
 
   /**

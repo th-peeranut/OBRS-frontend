@@ -10,6 +10,7 @@ import { TitleLabelPipe } from '../../shared/pipes/title-label.pipe';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ExpenseBillCardComponent } from './pages/expenses/expense-bill-card/expense-bill-card.component';
 import { ExpensePayeePickerComponent } from './pages/expenses/expense-payee-picker/expense-payee-picker.component';
+import { ExpensePartPickerComponent } from './pages/expenses/expense-part-picker/expense-part-picker.component';
 
 /**
  * Thin shared module that declares and exports the admin UI primitives that
@@ -41,6 +42,12 @@ import { ExpensePayeePickerComponent } from './pages/expenses/expense-payee-pick
  * `SharedModule` candidate either: it is `.admin-field`/`.admin-btn` throughout, so outside an
  * admin or staff shell it renders unstyled, and `SharedModule` reaches ~25 modules including
  * every public customer-facing one.
+ *
+ * OBRS-1613: `ExpensePartPickerComponent` follows the payee picker for the same reason and by
+ * the same route — the bill card renders it, and the bill card now lives here, so declaring it
+ * back in `AdminModule` would be a second declaration of a component this module already owns
+ * the template of. `ExpenseFormModalComponent` (still in `AdminModule`) reaches it through the
+ * export, exactly as it reaches the payee picker.
  */
 @NgModule({
   declarations: [
@@ -49,6 +56,7 @@ import { ExpensePayeePickerComponent } from './pages/expenses/expense-payee-pick
     AdminPaginatorComponent,
     AdminSortableHeaderComponent,
     ExpensePayeePickerComponent,
+    ExpensePartPickerComponent,
     ExpenseBillCardComponent,
   ],
   imports: [
@@ -59,6 +67,7 @@ import { ExpensePayeePickerComponent } from './pages/expenses/expense-payee-pick
     AdminPaginatorComponent,
     AdminSortableHeaderComponent,
     ExpensePayeePickerComponent,
+    ExpensePartPickerComponent,
     ExpenseBillCardComponent,
   ],
 })
