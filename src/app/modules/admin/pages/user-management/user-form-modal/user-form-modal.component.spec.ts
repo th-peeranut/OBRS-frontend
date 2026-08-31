@@ -86,7 +86,17 @@ function detailResponse(overrides: Partial<AdminUserDto> = {}): ResponseAPI<Admi
   };
 }
 
-function makeComponent(getUserById$: Subject<ResponseAPI<AdminUserDto>>) {
+/** OBRS-1662: the CALLER's held roles, not the edited user's. Defaults to a caller who is not
+ * a platform admin, which is what every pre-1662 test assumed without having to say so — the
+ * operator section and both of its API calls are gated on this. */
+function createAuthStub(roles: string[] = []) {
+  return { getRoles: () => roles };
+}
+
+function makeComponent(
+  getUserById$: Subject<ResponseAPI<AdminUserDto>>,
+  callerRoles: string[] = []
+) {
   const adminApi = {
     getUserById: jasmine.createSpy('getUserById').and.returnValue(getUserById$.asObservable()),
     createUser: jasmine
@@ -109,6 +119,21 @@ function makeComponent(getUserById$: Subject<ResponseAPI<AdminUserDto>>) {
     updateUserSalesPoints: jasmine
       .createSpy('updateUserSalesPoints')
       .and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    // OBRS-1662: two operators, so a test can tell "granted A" apart from "granted whatever
+    // the roster happened to return first".
+    getOwners: jasmine.createSpy('getOwners').and.returnValue(
+      of({
+        code: 200,
+        message: 'OK',
+        data: [
+          { id: 1, slug: 'nj-travel', displayName: 'NJ Travel', legalName: 'NJ Travel Co.' },
+          { id: 2, slug: 'rival-lines', displayName: 'Rival Lines', legalName: 'Rival Co.' },
+        ],
+      })
+    ),
+    updateUserSellableOwners: jasmine
+      .createSpy('updateUserSellableOwners')
+      .and.returnValue(of({ code: 200, message: 'OK', data: null })),
   };
   const alert = {
     success: jasmine.createSpy('success').and.resolveTo(undefined),
@@ -118,7 +143,8 @@ function makeComponent(getUserById$: Subject<ResponseAPI<AdminUserDto>>) {
     adminApi as any,
     new FormBuilder(),
     alert as any,
-    createTranslateStub()
+    createTranslateStub(),
+    createAuthStub(callerRoles) as any
   );
   component.roleOptions = [
     { slug: 'admin', label: 'Admin' },
@@ -621,7 +647,8 @@ describe('UserFormModalComponent', () => {
         adminApi as any,
         new FormBuilder(),
         alert as any,
-        createTranslateStub()
+        createTranslateStub(),
+        createAuthStub() as any
       );
       component.roleOptions = [{ slug: 'admin', label: 'Admin' }];
       component.statusOptions = [{ code: 'active', label: 'Active' }];
@@ -982,6 +1009,141 @@ describe('UserFormModalComponent', () => {
       await (component as any).submitUser();
 
       expect(order).toEqual(['updateUser', 'updateUserSalesPoints']);
+    });
+  });
+
+  // OBRS-1662 AC2/AC6: the two operator axes on the modal. The employer (users.owner_id) and
+  // the set of operators whose trips this person may sell are DIFFERENT questions — that they
+  // were one column is the defect. Every test here is about the caller's own role, never the
+  // edited user's: the section and both of its calls are ADMIN-only.
+  describe('operator section (OBRS-1662)', () => {
+    // loadOwnerOptions is fired un-awaited by initCreateForm/initEditForm, exactly as
+    // loadSalesPointOptions is. One macrotask is enough for a synchronous `of(...)` stub.
+    async function settleOwnerOptions(): Promise<void> {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    it('sends both axes on create when the caller is a platform admin', async () => {
+      const { component, adminApi } = makeComponent(
+        new Subject<ResponseAPI<AdminUserDto>>(),
+        ['admin']
+      );
+      openCreate(component);
+      await settleOwnerOptions();
+      fillValidCreateForm(component);
+      (component as any).userForm.patchValue({ employerOwnerSlug: 'nj-travel' });
+      (component as any).toggleSellableOwnerSelection('nj-travel', true);
+      (component as any).toggleSellableOwnerSelection('rival-lines', true);
+
+      await (component as any).submitUser();
+
+      const payload = adminApi.createUser.calls.mostRecent().args[0];
+      expect(payload.ownerSlug).toBe('nj-travel');
+      expect(payload.sellableOwnerSlugs).toEqual(['nj-travel', 'rival-lines']);
+    });
+
+    // The wire difference an empty control cannot express: OMITTED means "whoever employs
+    // them" (what V132 backfilled), `[]` means "sells for nobody". An OWNER never holds these
+    // controls, so sending their empty value would create a seller who may sell for no one.
+    it('omits both keys entirely on create when the caller is not a platform admin', async () => {
+      const { component, adminApi } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+      openCreate(component);
+      await settleOwnerOptions();
+      fillValidCreateForm(component);
+
+      await (component as any).submitUser();
+
+      const payload = adminApi.createUser.calls.mostRecent().args[0];
+      expect('ownerSlug' in payload).toBeFalse();
+      expect('sellableOwnerSlugs' in payload).toBeFalse();
+      expect(adminApi.getOwners).not.toHaveBeenCalled();
+    });
+
+    // The detail fetch is what carries the user's REAL grants; the row does not (toUserDtoFallback
+    // has no sellable-owner data). Every edit test below therefore resolves it before saving —
+    // see the race test at the end of this block for what happens when it has not.
+    async function openEditWithDetail(
+      component: UserFormModalComponent,
+      adminApi: Record<string, jasmine.Spy>,
+      sellableOwnerSlugs: string[]
+    ): Promise<void> {
+      adminApi['getUserById'].and.returnValue(
+        of(detailResponse({ ownerSlug: 'nj-travel', sellableOwnerSlugs }))
+      );
+      await openEditAwait(component, { ...JOHN_ROW });
+      await settleOwnerOptions();
+      fillValidCreateForm(component);
+    }
+
+    it('adds to the grants the user already had, rather than replacing them', async () => {
+      const { component, adminApi } = makeComponent(
+        new Subject<ResponseAPI<AdminUserDto>>(),
+        ['admin']
+      );
+      await openEditWithDetail(component, adminApi as any, ['nj-travel']);
+      (component as any).toggleSellableOwnerSelection('rival-lines', true);
+
+      await (component as any).submitUser();
+
+      expect(adminApi.updateUserSellableOwners).toHaveBeenCalledWith(JOHN_ROW.id, {
+        ownerSlugs: ['nj-travel', 'rival-lines'],
+      });
+    });
+
+    // Not gated on isSalespersonSelected the way sales points are, and an empty set is a real
+    // value: an admin who unticks the last operator is REVOKING, not declining to answer.
+    it('sends an empty set rather than skipping the call when the last grant is unticked', async () => {
+      const { component, adminApi } = makeComponent(
+        new Subject<ResponseAPI<AdminUserDto>>(),
+        ['admin']
+      );
+      await openEditWithDetail(component, adminApi as any, ['nj-travel']);
+      (component as any).toggleSellableOwnerSelection('nj-travel', false);
+
+      await (component as any).submitUser();
+
+      expect(adminApi.updateUserSellableOwners).toHaveBeenCalledWith(JOHN_ROW.id, {
+        ownerSlugs: [],
+      });
+    });
+
+    it('never touches the sellable endpoint when the caller is not a platform admin', async () => {
+      const { component, adminApi } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+      await openEditWithDetail(component, adminApi as any, ['nj-travel']);
+
+      await (component as any).submitUser();
+
+      expect(adminApi.updateUserSellableOwners).not.toHaveBeenCalled();
+    });
+
+    // Scrutinize, 2026-08-31. The roster (GET /private/owners, one flat table) routinely resolves
+    // BEFORE the user detail (which joins profile/roles/sales-points/sellable-owners), and until
+    // it does the control holds toUserDtoFallback's `[]`. Saving in that window would have posted
+    // `[]` to a full-replace endpoint and wiped every real grant, with no error shown.
+    it('does not write the sellable set while the user detail is still in flight', async () => {
+      const detail$ = new Subject<ResponseAPI<AdminUserDto>>();
+      const { component, adminApi } = makeComponent(detail$, ['admin']);
+      openEdit(component, { ...JOHN_ROW }); // detail$ never emits: the fetch stays pending
+      await settleOwnerOptions();
+      fillValidCreateForm(component);
+
+      await (component as any).submitUser();
+
+      expect(adminApi.updateUserSellableOwners).not.toHaveBeenCalled();
+    });
+
+    it('unticking an operator removes it and leaves the others standing', async () => {
+      const { component } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>(), ['admin']);
+      openCreate(component);
+      await settleOwnerOptions();
+      (component as any).toggleSellableOwnerSelection('nj-travel', true);
+      (component as any).toggleSellableOwnerSelection('rival-lines', true);
+
+      (component as any).toggleSellableOwnerSelection('nj-travel', false);
+
+      expect((component as any).userForm.value['sellableOwnerSlugs']).toEqual(['rival-lines']);
+      expect((component as any).isSellableOwnerChecked('nj-travel')).toBeFalse();
+      expect((component as any).isSellableOwnerChecked('rival-lines')).toBeTrue();
     });
   });
 });

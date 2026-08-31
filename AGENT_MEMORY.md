@@ -4408,3 +4408,23 @@ just one a test can never catch.
   after the edit. Lesson: when a gate's comment quotes a measured count, that count is
   independently checkable against the script's own console output — check it, don't trust the
   commit message's copy of it.
+
+## OBRS-1662 scrutinize self-fix (user-form-modal.component.ts, 2026-08-31)
+- The sellable-owners save (`submitUser`, edit branch) was gated on `isPlatformAdmin &&
+  ownersLoadState === 'loaded'` only. `ownersLoadState` tracks the OWNER ROSTER fetch
+  (`GET /private/owners`), a global list independent of which user is open — it says nothing
+  about whether THIS user's real `sellableOwnerSlugs` has arrived yet from the separate,
+  awaited `getUserById` call. Until that resolves, the control holds `toUserDtoFallback`'s
+  fallback value, which has no sellable-owner data at all and so renders as `[]`. Because the
+  endpoint is `PUT /api/private/users/{id}/sellable-owners` with an unconditional-full-replace,
+  `[]`-really-means-nobody contract (by design — see the mapper comment), an admin who clicked
+  Save in the window after the (typically fast, small) owner roster loaded but before the
+  (typically slower, joins more tables) user detail loaded would silently wipe every real grant
+  the user had — with no error, no confirmation, nothing in the UI to suggest data was lost.
+  Fixed by adding `&& !this.isEditDetailLoading` to the same guard, so the write waits for the
+  real value to be in the form before treating an unticked box as an instruction to revoke.
+  Lesson for the next full-replace-write-on-its-own-endpoint (sales points already has this
+  shape too, pre-existing, not touched here): the write guard must include "has the FORM's OWN
+  data for this specific record finished loading", not just "has some unrelated options list
+  finished loading" — two different async fetches racing past each other is the trap, and
+  `ownersLoadState`/`salesPointsLoadState` only ever answer the second question.
