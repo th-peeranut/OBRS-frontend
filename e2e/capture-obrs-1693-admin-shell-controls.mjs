@@ -24,8 +24,17 @@
  * WHAT IT REFUSES TO CALL A PASS
  * A checkbox that is absent reads the same as a checkbox that is fine if you only
  * look for "nothing too small". So each surface first waits for its control to be
- * visible, and the run fails if a surface yields zero controls. On `--label after` a
- * width below MIN_PX exits non-zero: that is the regression guard, not the images.
+ * visible, and the run fails if a surface yields zero controls — a photograph of a
+ * missing control is not evidence of anything.
+ *
+ * OBRS-1704: THIS IS A CAPTURE SCRIPT AND NOTHING ELSE.
+ * It used to exit non-zero on `--label after` when a control measured under MIN_PX,
+ * which made it an assertion wearing a capture script's name — and by this repo's
+ * convention (e2e/lanes.json, the OBRS-1333 entry) a root `capture-*.mjs` is "a script
+ * rather than a spec and so has no lane of its own", so that guard was called by
+ * nothing and the fix above could be deleted with CI green. The guard now lives where
+ * it runs at merge: `e2e/tests/obrs-1693-admin-shell-control-width.spec.ts`, GATE lane.
+ * MIN_PX stays here as the threshold the printed measurements are read against.
  */
 import { chromium } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -244,9 +253,5 @@ console.log(JSON.stringify(results, null, 2));
 if (empty.length > 0) {
   console.error(`FAIL: no control found on ${empty.map(([n]) => n).join(', ')} - the run proves nothing`);
   process.exit(2);
-}
-if (LABEL === 'after' && collapsed.length > 0) {
-  console.error(`FAIL: ${collapsed.length} control(s) still render under ${MIN_PX}px wide`);
-  process.exit(1);
 }
 console.log(`OK: ${all.length} control(s) measured, ${collapsed.length} under ${MIN_PX}px`);
