@@ -764,6 +764,15 @@
   margin-bottom: 0 !important;
 }
 
+// OBRS-1693: the rule above hands `width: auto !important` to every input under the
+// shell. A control drawn with `appearance: none` has no intrinsic width, so `auto`
+// collapses it - measured 2x14 px on /staff/parcels/consign and /staff/sell. `height`
+// survives because the shell never overrides it, which is why it renders as a thin bar
+// rather than vanishing. Only `!important` can win the width back.
+.admin-shell .form-check-input {
+  width: 1em !important;
+}
+
 .admin-shell .material-symbols-outlined {
   font-family: "Material Symbols Outlined";
   font-style: normal;
