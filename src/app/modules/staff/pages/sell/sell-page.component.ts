@@ -9,6 +9,7 @@ import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
+import { PRIVACY_POLICY_VERSION } from '../../../privacy-policy/privacy-policy.version';
 import { normalizeSeatNumber } from '../../../../shared/lib/seat-number';
 import {
   ScheduleDeleteModalMode,
@@ -73,6 +74,7 @@ interface WalkInBookingPayloadDraft {
     arrivalDateTime: string;
     passengers: {
       passengerType: string;
+      passengerTypeConsentVersion?: string | null;
       seatNumber: string;
       // OBRS-1231: nullable on both halves — see WalkInCheckoutPayload.contact.title.
       title: string | null;
@@ -124,6 +126,10 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected selectedPassengerType = 'male';
   /** Per-seat passenger type map — seat label → passenger_type slug. */
   protected seatPassengerTypes: Record<string, string> = {};
+  // OBRS-1666: the consent captured with the type, per seat, at click time. A seat missing from
+  // this map is a seat nobody consented for - which only matters for monk/nun.
+  protected selectedPassengerTypeConsent = false;
+  protected seatPassengerTypeConsents: Record<string, boolean> = {};
   protected isSelling = false;
   protected bookingId: number | null = null;
   protected bookingNumber: string | null = null;
@@ -268,6 +274,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.selectedSeats = [];
     this.passengerCount = 1;
     this.seatPassengerTypes = {};
+    this.seatPassengerTypeConsents = {};
+    this.selectedPassengerTypeConsent = false;
     this.idempotencyKey = null;
     this.activeTabIndex = 0;
     this._resetSegments();
@@ -280,6 +288,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.selectedSeats = [];
     this.passengerCount = 1;
     this.seatPassengerTypes = {};
+    this.seatPassengerTypeConsents = {};
+    this.selectedPassengerTypeConsent = false;
     this.idempotencyKey = null;
     this.activeTabIndex = 0;
     this.loadSegments(selection.routeSlug, selection.trip);
@@ -325,6 +335,27 @@ export class SellPageComponent implements OnInit, OnDestroy {
     // Only update the active type for FUTURE seat clicks — never re-colour
     // already-selected seats.
     this.selectedPassengerType = passengerType;
+    // OBRS-1666: the panel clears its own tick on the same event; keep this side in step so a
+    // seat clicked straight afterwards cannot inherit the previous type's consent.
+    this.selectedPassengerTypeConsent = false;
+  }
+
+  /**
+   * OBRS-1666: null unless this seat's captured type is monk/nun AND its captured consent was
+   * given. The backend treats null as a refusal and drops the type - it never refuses the sale.
+   */
+  private passengerTypeConsentVersionFor(seat: string): string | null {
+    // proto-key-ok: ADR-0028 -- `seat` is a label this page's own seat map rendered from the
+    // server's seat list, the same family as seatPassengerTypes/seatGenders above.
+    const type = this.seatPassengerTypes[seat] ?? this.selectedPassengerType;
+    const isSensitive = type === 'monk' || type === 'nun';
+    // proto-key-ok: ADR-0028 -- same seat label, captured by onSeatToggled a few lines up.
+    const consent = this.seatPassengerTypeConsents[seat] ?? this.selectedPassengerTypeConsent;
+    return isSensitive && consent ? PRIVACY_POLICY_VERSION : null;
+  }
+
+  protected onPassengerTypeConsentChanged(consent: boolean): void {
+    this.selectedPassengerTypeConsent = consent;
   }
 
   protected onSeatToggled(seat: string): void {
@@ -336,10 +367,17 @@ export class SellPageComponent implements OnInit, OnDestroy {
       const next = { ...this.seatPassengerTypes };
       delete next[seat];
       this.seatPassengerTypes = next;
+      const nextConsents = { ...this.seatPassengerTypeConsents };
+      delete nextConsents[seat];
+      this.seatPassengerTypeConsents = nextConsents;
     } else {
       // Adding seat: capture currently-active type.
       this.selectedSeats = [...this.selectedSeats, seat];
       this.seatPassengerTypes = { ...this.seatPassengerTypes, [seat]: this.selectedPassengerType };
+      this.seatPassengerTypeConsents = {
+        ...this.seatPassengerTypeConsents,
+        [seat]: this.selectedPassengerTypeConsent,
+      };
     }
   }
 
@@ -436,6 +474,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
     const passengers = seatNumbers.map((seat) => {
       const p: {
         passengerType: string;
+      passengerTypeConsentVersion?: string | null;
         seatNumber: string;
         // OBRS-1231: nullable, and it arrives already normalised to null by
         // WalkInCheckoutComponent.onSell — this page must not turn it back into ''.
@@ -451,6 +490,9 @@ export class SellPageComponent implements OnInit, OnDestroy {
         // proto-key-ok: ADR-0028 -- `seat` is a label this page's own seat map rendered
         // from the server's seat list, same family as seatGenders/seatOwners.
         passengerType: this.seatPassengerTypes[seat] ?? this.selectedPassengerType,
+        // OBRS-1666: sent only for the two religious answers, and only when the box beside
+        // them was ticked.
+        passengerTypeConsentVersion: this.passengerTypeConsentVersionFor(seat),
         // The seat maps render/select letter-prefixed labels (van "A1".."A13", bus
         // "B1".."B21" — see `selectedSeats` / `busSeatLabels` in
         // WalkInCenterPanelComponent), but the booking endpoint's
@@ -603,6 +645,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
                   this.selectedSeats = [];
                   this.passengerCount = 1;
                   this.seatPassengerTypes = {};
+                  this.seatPassengerTypeConsents = {};
+                  this.selectedPassengerTypeConsent = false;
                   // Staff POS: do NOT navigate to /e-ticket — it's a customerArea
                   // route, so AuthGuard bounces staff to their home and leaves the
                   // just-sold seat showing as available on the now-stale seat map
@@ -967,6 +1011,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
       this.selectedSeats = [];
       this.passengerCount = 1;
       this.seatPassengerTypes = {};
+      this.seatPassengerTypeConsents = {};
+      this.selectedPassengerTypeConsent = false;
       this.idempotencyKey = null;
       this.activeTabIndex = 0;
       this._resetSegments();

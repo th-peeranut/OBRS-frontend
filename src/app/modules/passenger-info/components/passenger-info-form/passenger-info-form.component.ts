@@ -643,6 +643,11 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       // OBRS-691: display grouped, same as every other phone field at rest.
       phoneNumber: formatThaiMobile(booker.phoneNumber ?? ''),
       gender: booker.gender ?? '',
+      // OBRS-1666: this overwrites the type, so it withdraws the consent given for the old one
+      // - exactly what onPassengerTypeChanged does on a radio click. patchValue leaves omitted
+      // controls alone, so without this line a tick given for MONK survives onto the booker's
+      // NUN and the box renders already ticked, which is not explicit consent.
+      passengerTypeConsent: false,
     });
     group.markAllAsTouched();
     this.emitValidity();
@@ -897,6 +902,10 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       // OBRS-1357: optional now - see booker-info-form for why. The seat-map colouring is the only
       // live consumer and it degrades to an uncoloured seat, which is what an unstated type is.
       gender: [''],
+      // OBRS-1666: explicit consent to hold this passenger's monk/nun status. Starts false and
+      // is reset to false on every gender change (onPassengerTypeChanged) - a box that arrives
+      // already ticked is not explicit consent. Only read when the type is monk/nun.
+      passengerTypeConsent: [false],
       isSelectSeat: [true],
       passengerSeat: [''],
       passengerSeatReturn: [''],
@@ -974,6 +983,24 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       // final validateAndGetPassengerInfo submit) need bare digits.
       phoneNumber: stripPhoneSeparators(p.phoneNumber),
     })) as PassengerInfo[];
+  }
+
+  /**
+   * OBRS-1666: 'monk'/'nun' state a religious status; 'male'/'female' do not (PDPA section 26
+   * lists sexual behaviour, not sex). Only the first pair asks for explicit consent.
+   */
+  isSensitivePassengerType(index: number): boolean {
+    const gender = String(this.getFormValue(index, 'gender') ?? '').toUpperCase();
+    return gender === 'MONK' || gender === 'NUN';
+  }
+
+  /**
+   * OBRS-1666: any change of type withdraws the consent that was given for the previous one.
+   * Wired on the radios rather than on `valueChanges` because ticking the consent box is itself a
+   * value change, and a subscription that could not tell the two apart would clear the tick.
+   */
+  onPassengerTypeChanged(index: number): void {
+    this.passengerData.at(index)?.get('passengerTypeConsent')?.setValue(false);
   }
 
   trackByIndex(index: number): number {

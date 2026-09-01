@@ -122,5 +122,45 @@
 // The re-consent consequence above applies again — one banner on /account for every
 // existing account. It buys a notice that is true both before and after the seating
 // mode changes, against one that is already false the day a schedule flips.
-export const PRIVACY_POLICY_VERSION = '2.5';
-export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026-08-30';
+// 2.6 (OBRS-1666) closes the gap 2.5's own note flagged and refused to answer.
+//
+// Section 3 declared a legal basis for every purpose the notice states - 24(3), 24(5), 24(6),
+// 19 - and never once wrote 'section 26' or 'sensitive data', while section 2 collected
+// passenger type including monk and nun. Those two answers state a religious status, and
+// section 24 is expressly subject to section 26, so if they are section-26 data then the bases
+// the notice named could not carry them and the notice was describing a lawfulness it did not
+// have. The owner's decision of 2026-08-31 (AC-2 option b) does not wait for that legal
+// question: it asks for explicit consent, which is correct whichever way the answer goes -
+// required if section 26 applies, harmless over-compliance if it does not.
+//
+// What changed: section 2 says the two religious answers are collected ONLY with explicit
+// consent given on the passenger-details page, and that refusing costs the traveller nothing
+// because the type is then simply not recorded; section 3 gains the section-26 bullet it never
+// had, naming both purposes (display + seating) against 'your explicit consent only'.
+//
+// Enforced rather than promised: the checkbox is per passenger, starts unticked and is reset to
+// unticked on every change of type (a pre-ticked box is not explicit consent), and
+// BookingService DROPS a monk/nun answer that arrives without a consent version rather than
+// store it - PassengerReqDto.passengerTypeConsentVersion lands in tickets.
+// passenger_type_consent_version (V133). A booking is never refused over this: the field has
+// been optional since OBRS-1357.
+//
+// ⚠️ One half of the purpose this consent names is NOT running on `dev` today. Section 2's
+// seating sentence arrived with 2.5, but OBRS-1364's backend was never merged (PR #293 is
+// still open - OBRS-1687), so `blocked-seats` 404s and the frontend swallows it. 2.6 keeps
+// seating in the new section-26 bullet on purpose: AC-2 option (b) requires the consent to
+// name BOTH purposes, and asking again later would cost a second bump and a second re-consent
+// banner. What makes that safe rather than untrue is OBRS-1687 AC-2, which forbids promoting
+// `dev` to SIT/prod before #293 lands - so no reader ever meets this text while the sentence
+// is false. If that card is closed any other way, this bullet has to be re-read before the
+// promote, not after.
+//
+// The staff sell page ticks the same box on the passenger's behalf. Whether consent given by a
+// clerk (or by a booker for a co-passenger) is valid consent is NOT settled here - it is
+// OBRS-1666 AC-1, still with a lawyer. Do not read this version as an answer to it.
+//
+// The re-consent consequence above applies again - one banner on /account for every existing
+// account - and it is the same trade 2.4 made: an untrue notice is what consent would otherwise
+// be recorded against.
+export const PRIVACY_POLICY_VERSION = '2.6';
+export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026-08-31';

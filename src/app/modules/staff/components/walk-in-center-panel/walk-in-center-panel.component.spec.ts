@@ -92,6 +92,33 @@ describe('WalkInCenterPanelComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('sensitive passenger type consent (OBRS-1666)', () => {
+    it('only monk and nun ask for consent', () => {
+      const comp = component as unknown as { passengerGender: string; isSensitivePassengerType: boolean };
+      comp.passengerGender = 'monk';
+      expect(comp.isSensitivePassengerType).toBeTrue();
+      comp.passengerGender = 'nun';
+      expect(comp.isSensitivePassengerType).toBeTrue();
+      comp.passengerGender = 'female';
+      expect(comp.isSensitivePassengerType).toBeFalse();
+      comp.passengerGender = '';
+      expect(comp.isSensitivePassengerType).toBeFalse();
+    });
+
+    it('does not hold the tick itself - it only reports it, so a completed sale cannot leave one behind', () => {
+      const comp = component as any;
+      const emitted: boolean[] = [];
+      component.passengerTypeConsentChange.subscribe((v) => emitted.push(v));
+
+      comp.onTogglePassengerTypeConsent(true);
+
+      expect(emitted).toEqual([true]);
+      // The box renders off the @Input, so what the sell page holds is what is shown - there is no
+      // second copy here to go stale after a sale.
+      expect(component.passengerTypeConsent).toBeFalse();
+    });
+  });
+
   describe('passengerTypeOptions', () => {
     it('defines 4 passenger type options (male, female, monk, nun)', () => {
       const values = (component as unknown as { passengerTypeOptions: { value: string }[] })

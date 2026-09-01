@@ -968,4 +968,71 @@ describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-
     ctrl?.setValue('0812');
     expect(ctrl?.valid).toBeFalse();
   });
+  describe('sensitive passenger type consent (OBRS-1666)', () => {
+    beforeEach(() => {
+      component.ngOnInit();
+      component.insertPassenger(true);
+    });
+
+    it('a new passenger row starts with the consent box unticked', () => {
+      expect(component.passengerData.at(0).get('passengerTypeConsent')?.value).toBeFalse();
+    });
+
+    it('only monk and nun ask for consent - male and female do not', () => {
+      component.passengerData.at(0).get('gender')?.setValue('MONK');
+      expect(component.isSensitivePassengerType(0)).toBeTrue();
+
+      component.passengerData.at(0).get('gender')?.setValue('NUN');
+      expect(component.isSensitivePassengerType(0)).toBeTrue();
+
+      component.passengerData.at(0).get('gender')?.setValue('FEMALE');
+      expect(component.isSensitivePassengerType(0)).toBeFalse();
+
+      component.passengerData.at(0).get('gender')?.setValue('');
+      expect(component.isSensitivePassengerType(0)).toBeFalse();
+    });
+
+    it('changing the type withdraws the consent given for the previous one', () => {
+      component.passengerData.at(0).get('gender')?.setValue('MONK');
+      component.passengerData.at(0).get('passengerTypeConsent')?.setValue(true);
+
+      component.passengerData.at(0).get('gender')?.setValue('NUN');
+      component.onPassengerTypeChanged(0);
+
+      expect(component.passengerData.at(0).get('passengerTypeConsent')?.value)
+        .withContext('a box that reappears already ticked is not explicit consent')
+        .toBeFalse();
+    });
+
+    it('using the booker as this passenger withdraws the tick with the type it overwrites', () => {
+      component.passengerData.at(0).get('gender')?.setValue('MONK');
+      component.passengerData.at(0).get('passengerTypeConsent')?.setValue(true);
+
+      // The booker is a nun. patchValue leaves omitted controls alone, so without an explicit
+      // reset the MONK tick would survive onto NUN and render as consent nobody gave.
+      component.applyBookerToPassenger(0, {
+        isAdult: true,
+        title: 1,
+        firstName: 'Malee',
+        middleName: '',
+        lastName: 'Jaidee',
+        phoneNumber: '0812345678',
+        gender: 'NUN',
+        isSelectSeat: true,
+        passengerSeat: '',
+      });
+
+      expect(component.passengerData.at(0).get('gender')?.value).toBe('NUN');
+      expect(component.passengerData.at(0).get('passengerTypeConsent')?.value).toBeFalse();
+    });
+
+    it('the consent reaches the emitted passenger payload', () => {
+      component.passengerData.at(0).get('gender')?.setValue('MONK');
+      component.passengerData.at(0).get('passengerTypeConsent')?.setValue(true);
+
+      const payload = (component as any).buildPassengerInfoPayload();
+
+      expect(payload[0].passengerTypeConsent).toBeTrue();
+    });
+  });
 });
