@@ -2,7 +2,10 @@
  * OBRS-1704 — the merge gate for OBRS-1693's fix.
  *
  * WHAT REGRESSED AND WHY NOTHING CAUGHT IT
- * `admin-theme.scss` hands `width: auto !important` to every `input` under `.admin-shell`.
+ * `admin-theme.scss` hands `width: auto` to every `input` under `.admin-shell` — with an
+ * `!important` on it until OBRS-1703 dropped that, which changes nothing here: Bootstrap's
+ * `.form-check-input { width: 1em }` scores (0,1,0) and still loses to the shell's (0,1,1),
+ * so the collapse this spec guards is exactly as reachable as it was.
  * A control drawn with `appearance: none` has no intrinsic width, so `auto` collapses it —
  * measured 2x14 px on /staff/parcels/consign and /staff/sell. Every Karma spec on these
  * forms asserts the control's VALUE (`checked`, the form value), and Karma's DOM never
