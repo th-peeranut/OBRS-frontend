@@ -175,23 +175,3 @@
     }
   }
 }
-
-// OBRS-1666: the consent checkbox rendered 2px wide - a sliver whose tick state a
-// clerk cannot read. `admin-theme.scss:758` sets `.admin-shell label, .admin-shell
-// input, .admin-shell select { width: auto !important }`, and Bootstrap draws this
-// control with `appearance: none`, so an auto width collapses it. Only the WIDTH is
-// lost - height stays 1em because no shell rule sets height, which is why it read as
-// a vertical bar rather than disappearing.
-// `!important` here is required, not stylistic: the declaration being corrected is
-// itself `!important`, so a normal one loses however specific its selector. `1em` is
-// 14px because that same shell rule pins `font-size: 14px !important` - which is
-// exactly why the height was already 14.
-// Measured on /staff/sell 2026-09-01: 2x14 px before this rule, 14x14 px after
-// (`consentBoxSizePx` in e2e/capture-obrs-1666-pos-consent.mjs records it every run).
-// ⚠️ Scoped to this component on purpose. The same collision hits every
-// `.form-check-input` under `.admin-shell` - measured 2x14 on parcel-consign too -
-// but that is not this card's surface. Root cause and the full sweep are OBRS-1693,
-// whose AC-2 is to delete this block once the theme file itself is corrected.
-.form-check .form-check-input[type='checkbox'] {
-  width: 1em !important;
-}
