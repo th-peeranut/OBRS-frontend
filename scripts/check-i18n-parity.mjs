@@ -1071,13 +1071,56 @@ for (const lang of LANGS) {
   }
 }
 
+// 8) OBRS-1690: a report's basis note must keep naming the basis its query actually uses.
+//
+//    Both /admin/refund-void-report and /admin/cash-online-reconciliation-report bucket every row
+//    by the BOOKING's created_at -- PaymentRepository.REFUND_DAILY_LEDGER_ARM /
+//    REFUND_DAILY_MANUAL_ARM and BookingRepository.VOIDED_DAILY_BODY all GROUP BY
+//    (b.created_at AT TIME ZONE 'Asia/Bangkok')::date. RefundVoidReportIT is the behavioural half
+//    of this pair: its refund-ledger rows are dated 25 days after their booking on purpose, and
+//    the money still reports on the booking's day.
+//
+//    The refund/void note said the OPPOSITE for as long as the screen existed -- "bucketed by the
+//    date the refund or void was processed, not the original booking date" -- so a refund issued
+//    today against a three-month-old booking landed in a month already closed while the screen
+//    assured the reader it had not, and nothing on the page could tell them otherwise. The sibling
+//    cash/online note had been stating the same basis honestly the whole time, which is why this
+//    gate holds BOTH to one phrase: two screens read one basis, and whoever moves it must find
+//    both notes.
+//
+//    Positive check, for the reason gate 3 spells out: a denylist of "processed date" phrasings
+//    would fire on the honest sentence, which has to name the processing date in order to rule it
+//    out. Escapes, not literals, per the file header.
+const BOOKING_CREATED_BASIS_PHRASE = {
+  en: 'the date the booking was created',
+  th: '\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E01\u0E32\u0E23\u0E08\u0E2D\u0E07',
+  zh: '\u8BA2\u5355\u521B\u5EFA\u65E5\u671F',
+};
+const BOOKING_CREATED_BASIS_NOTES = [
+  'ADMIN.REFUND_VOID_REPORT.BASIS_NOTE',
+  'ADMIN.CASH_ONLINE_RECONCILIATION.BASIS_NOTE',
+];
+
+for (const lang of LANGS) {
+  const json = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8'));
+  const phrase = BOOKING_CREATED_BASIS_PHRASE[lang];
+  for (const key of BOOKING_CREATED_BASIS_NOTES) {
+    const value = key.split('.').reduce((node, part) => (node == null ? node : node[part]), json);
+    if (typeof value !== 'string') {
+      problems.push(`[${lang}] ${key} is missing or not a string -- it is the only place the screen states which date the report buckets by (OBRS-1690)`);
+    } else if (!value.includes(phrase)) {
+      problems.push(`[${lang}] ${key} no longer says "${phrase}" -- both reports GROUP BY the booking's created_at, so this note must name that basis or the screen is lying about which month the money fell in (OBRS-1690)`);
+    }
+  }
+}
+
 const counts = LANGS.map((l) => `${l}=${keysByLang[l].size}`).join(' ');
 
 if (problems.length > 0) {
   console.error(`i18n parity gate FAILED (${counts}):`);
   for (const p of problems) console.error(`  - ${p}`);
   // GitHub Actions surfaces ::error:: lines in the PR checks summary.
-  console.error(`::error::i18n gate: ${problems.length} problem(s) in public/i18n/{en,th,zh}.json -- key-set drift (OBRS-469), hardcoded booking-policy numbers (OBRS-564), unpublished booking terms (OBRS-658), or an unpublished/truncated privacy notice (OBRS-628). Each line above says which.`);
+  console.error(`::error::i18n gate: ${problems.length} problem(s) in public/i18n/{en,th,zh}.json -- key-set drift (OBRS-469), hardcoded booking-policy numbers (OBRS-564), unpublished booking terms (OBRS-658), an unpublished/truncated privacy notice (OBRS-628), or a report basis note that no longer matches the date its query buckets by (OBRS-1690). Each line above says which.`);
   process.exit(1);
 }
 

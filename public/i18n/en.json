@@ -1943,7 +1943,7 @@
       "SUBTITLE": "Refunded, pending-manual-refund, and voided ticket totals for a date range.",
       "FILTER_FROM": "From",
       "FILTER_TO": "To",
-      "BASIS_NOTE": "Refunded and Voided are bucketed by the date the refund or void was processed, not the original booking or departure date.",
+      "BASIS_NOTE": "Refunded, Refund pending (manual), and Voided are all bucketed by the date the booking was created - not the date the refund or void was processed, and not the departure date. A refund processed today for an older booking therefore lands on that booking's original date.",
       "PARTITION_NOTE": "Voided splits into Cancelled (staff-cancelled) and Expired (unpaid holds that timed out) — the two always sum to the Voided total.",
       "CARD": {
         "REFUNDED": "Refunded",
