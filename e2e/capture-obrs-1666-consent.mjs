@@ -142,6 +142,16 @@ async function readState(page) {
   return {
     consentBoxPresent: present,
     consentBoxChecked: present ? await input.isChecked() : null,
+    // The POS twin of this box rendered 2x14 px - `.admin-shell input { width: auto
+    // !important }` beating Bootstrap's `width: 1em`. This page is NOT under
+    // `.admin-shell`, so it should be square; recorded rather than assumed, because the
+    // specs on both sides assert the control's VALUE and can never see its size.
+    consentBoxSizePx: present
+      ? await input.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          return `${Math.round(r.width)}x${Math.round(r.height)}`;
+        })
+      : null,
     labelText: present
       ? (await page.locator(`label[for="passenger-type-consent-0"]`).innerText()).trim().slice(0, 200)
       : null,
