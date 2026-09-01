@@ -1945,8 +1945,8 @@
       "BASIS_NOTE": "Refunded and Voided are bucketed by the date the refund or void was processed, not the original booking or departure date.",
       "PARTITION_NOTE": "Voided splits into Cancelled (staff-cancelled) and Expired (unpaid holds that timed out) — the two always sum to the Voided total.",
       "CARD": {
-        "REFUNDED": "Refunded (gross)",
-        "REFUNDED_HINT": "Gross amount refunded to customers, before any processing fees are deducted.",
+        "REFUNDED": "Refunded",
+        "REFUNDED_HINT": "Money actually paid back to customers, summed per refund from the refund ledger, including partial refunds. Refunds made before the ledger existed are carried at the payment's full amount. Amounts still awaiting a manual payout are counted separately under Refund pending (manual).",
         "MANUAL_PENDING": "Refund pending (manual)",
         "VOIDED": "Voided",
         "CANCELLED": "Cancelled",
