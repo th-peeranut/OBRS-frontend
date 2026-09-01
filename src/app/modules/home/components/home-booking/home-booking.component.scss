@@ -14,10 +14,66 @@
 .booking-container {
   width: 100%;
 
+  // OBRS-1700. The wrapper exists only to be the positioning context, and it
+  // adds nothing else on purpose: measured in the running page, its height is
+  // 567.30px against the image's 567.30px both as written and with
+  // `line-height: normal` forced on, because bootstrap's reboot already sets
+  // `img { vertical-align: middle }`. A `line-height: 0` stood here to close
+  // the inline-image descender strip and was removed once that measurement
+  // showed there is no strip to close - it would have moved `.booking-card`'s
+  // -80px overlap for nothing.
+  .home-hero {
+    position: relative;
+  }
+
   .home-bg {
     width: -webkit-fill-available;
     max-width: 100%;
     object-fit: cover;
+  }
+
+  // OBRS-1700. Numbers taken from where the outlined `<path>` actually sat in
+  // the 1920x720 artwork before it was deleted, measured off its own `d` data:
+  // ink box x 617.2-1272.6, y 144.0-217.2, so the centre is y 180.6 = 25.1% of
+  // the height, and x 944.9 - 15px left of the 960 centre line, which is why
+  // this centres instead of carrying an offset nobody could later explain.
+  //
+  // Colour is $secondary-blue, not the artwork's own gradient. The gradient ran
+  // #4BC2F7 -> #4069B8, and #4BC2F7 measures 1.8:1 on the #DBF3FD sky behind
+  // it: acceptable while it was a picture, a fail the moment it becomes text a
+  // contrast checker judges. $secondary-blue IS #4069B8 darkened for exactly
+  // this reason (OBRS-752) and covers most of the original run anyway, since
+  // the gradient reaches its dark stop by x 797. #3b61a9 on #DBF3FD computes
+  // to 5.26:1 - AA for body text, not merely for large text. (variables.scss
+  // quotes 4.61:1 for this token; that is against $secondary-light-blue, a
+  // different surface from the one behind this headline.)
+  .home-headline {
+    position: absolute;
+    top: 25.1%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+
+    margin: 0;
+    padding: 0 $space-md;
+
+    color: $secondary-blue;
+    // Not a round number and not a guess: measured in the running page. The
+    // deleted artwork drew the Thai string 655.4 units wide out of 1920; at
+    // 2.42vw Sarabun 700 renders the same string 656.2 units wide (the loop
+    // that produced it also priced 2.30 = 623.7 and 2.55 = 691.4). Sarabun is
+    // wider than the typeface the designer outlined, so matching the WIDTH is
+    // what keeps the headline inside the same span of the hero; matching the
+    // height instead would have overflowed it.
+    // The floor is not decoration: `vw` alone is 13.9px at 576 and 8.7px at
+    // 360, which is a headline nobody can read on the phone most of these
+    // visitors arrive on. 18px is the largest floor at which the LONGEST of
+    // the three strings ("Book NJ Phuyaipu bus tickets online", ~1.15x the
+    // Thai) still fits one line inside a 360px viewport minus this padding.
+    font-size: max(2.42vw, 18px);
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
   }
 }
 

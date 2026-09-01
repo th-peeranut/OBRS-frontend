@@ -1293,6 +1293,31 @@ enforced rule with a test behind it.
   ordering is arbitrary to the reader (an enum sorted by its stored English code
   behind a translated label).
 
+- **Headline text over a hero image — never inside it** (OBRS-1700,
+  `HomeBookingComponent`'s `.home-hero` / `.home-headline`): the home page's own
+  sentence used to be a single outlined `<path>` baked into `home-bg.svg`
+  (`<text>` 0, `<tspan>` 0, Thai characters 0 in a 394,864-byte file — that is
+  `git cat-file -s`, the portable figure; a Windows checkout reports 396,992
+  because `core.autocrlf` adds one byte per line), which is
+  why it stayed Thai for a visitor on English or 中文, why the site's front page
+  had no `<h1>` at all, and why changing the wording was a graphics job rather
+  than a JSON edit. **Any text a reader is meant to read belongs in the DOM
+  behind an i18n key — never in the asset**, however convenient the designer's
+  export is. The pattern for putting it back: wrap the `<img>` in a
+  `position: relative` box that IS the image box (do not use the section around
+  it — a percentage measured against a container that also holds the form drifts
+  as the form grows, and `object-fit: cover` at small widths defeats a `vw`
+  calculation), then place the heading in PERCENTAGES read off the deleted
+  artwork's own path data, and size it in `vw` so it tracks the image, with a
+  `max(…, 18px)` floor because `vw` alone is 8.7px on a 360px phone. Colour it
+  from a token rather than reproducing the artwork's gradient: a gradient stop
+  that was fine behind a picture (#4BC2F7, 1.8:1 on this sky) fails the moment a
+  contrast checker starts judging it as text. Lock it with the §12(3) assertion
+  — `expect(queryAll(By.css('h1')).length).toBe(1)` plus the TRANSLATED string,
+  not the key. Reuse this instead of shipping one asset per language: that was
+  the rejected option here at +~400 KB each, and it still leaves the page with
+  no heading.
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that
