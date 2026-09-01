@@ -235,6 +235,7 @@
                                   id="gender_male-{{ i }}"
                                   formControlName="gender"
                                   value="MALE"
+                                  (change)="onPassengerTypeChanged(i)"
                                   />
                                   <label class="form-check-label" for="gender_male-{{ i }}">
                                     <img
@@ -253,6 +254,7 @@
                                       id="gender_female-{{ i }}"
                                       formControlName="gender"
                                       value="FEMALE"
+                                      (change)="onPassengerTypeChanged(i)"
                                       />
                                       <label class="form-check-label" for="gender_female-{{ i }}">
                                         <img
@@ -271,6 +273,7 @@
                                           id="gender_monk-{{ i }}"
                                           formControlName="gender"
                                           value="MONK"
+                                          (change)="onPassengerTypeChanged(i)"
                                           />
                                           <label class="form-check-label" for="gender_monk-{{ i }}">
                                             <img
@@ -289,6 +292,7 @@
                                               id="gender_nun-{{ i }}"
                                               formControlName="gender"
                                               value="NUN"
+                                              (change)="onPassengerTypeChanged(i)"
                                               />
                                               <label class="form-check-label" for="gender_nun-{{ i }}">
                                                 <img
@@ -300,6 +304,27 @@
                                                 </label>
                                               </div>
                                         </div>
+                                        <!-- OBRS-1666: explicit consent (PDPA s.26). Shown ONLY
+                                        for monk/nun, never pre-ticked, and refusing it costs the
+                                        traveller nothing - the type is simply not recorded. -->
+                                        @if (isSensitivePassengerType(i)) {
+                                          <div class="col-12 mt-3">
+                                            <div class="form-check">
+                                              <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="passenger-type-consent-{{ i }}"
+                                                formControlName="passengerTypeConsent"
+                                                />
+                                                <label class="form-check-label" for="passenger-type-consent-{{ i }}">
+                                                  {{ "PASSENGER_INFO.FORM.SENSITIVE_TYPE_CONSENT_LABEL" | translate }}
+                                                </label>
+                                              </div>
+                                              <small class="text-muted d-block mt-1">
+                                                {{ "PASSENGER_INFO.FORM.SENSITIVE_TYPE_CONSENT_HINT" | translate }}
+                                              </small>
+                                            </div>
+                                          }
                                         <!-- Seat preference / requirement (OBRS-361) — optional,
                                         best-effort, never pre-selected (design-system §3.1). Hidden
                                         leg-aware via showSeatPreferenceFields(): every leg OPEN, or

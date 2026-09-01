@@ -203,6 +203,26 @@
                   </div>
                 }
               </div>
+              <!-- OBRS-1666: explicit consent (PDPA s.26) for monk/nun only. Never pre-ticked, and
+              cleared whenever the type changes. Refusing costs the passenger nothing - the type is
+              simply not recorded on the ticket. -->
+              @if (isSensitivePassengerType) {
+                <div class="form-check mb-3">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="walkin-passenger-type-consent"
+                    [checked]="passengerTypeConsent"
+                    (change)="onTogglePassengerTypeConsent($any($event.target).checked)"
+                    />
+                    <label class="form-check-label" for="walkin-passenger-type-consent">
+                      {{ "STAFF.SELL.SENSITIVE_TYPE_CONSENT_LABEL" | translate }}
+                    </label>
+                    <small class="text-muted d-block mt-1">
+                      {{ "STAFF.SELL.SENSITIVE_TYPE_CONSENT_HINT" | translate }}
+                    </small>
+                  </div>
+              }
               <!-- OBRS-324: OPEN schedules sell by passenger count only — no seat map/picker. -->
               @if (isOpenSeating) {
                 <div class="open-seating-count d-flex flex-column align-items-center gap-2 py-4">

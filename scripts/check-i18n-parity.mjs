@@ -566,6 +566,15 @@ const PRIVACY_LEDGER = [
     effectiveDate: '2026-08-30',
     fingerprint: '0dab69c2523d41dd0b87e39083ccde21d12126ef6c89e9aaf8ead339bbc13ec5',
   },
+  {
+    // OBRS-1666. Section 3 named a legal basis for every purpose except one: nothing in the
+    // notice had ever mentioned section 26, while section 2 collected monk/nun - a religious
+    // status - under bases (24(3)/(5)) that section 26 puts out of reach. 2.6 says so, and the
+    // checkout screen now asks for the explicit consent that sentence promises.
+    version: '2.6',
+    effectiveDate: '2026-08-31',
+    fingerprint: 'a0cc3ffaf5717849621404be6ad9b7dd2f28f4af4b0aa9eda316ad101a02bbe4',
+  },
 ];
 
 function privacyFingerprint(json) {

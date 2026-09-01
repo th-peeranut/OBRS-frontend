@@ -6,6 +6,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { SellPageComponent } from './sell-page.component';
+import { PRIVACY_POLICY_VERSION } from '../../../privacy-policy/privacy-policy.version';
 import {
   StaffApiService,
   WalkInTripDto,
@@ -1781,5 +1782,68 @@ describe('SellPageComponent — OBRS-667 owner-only cancel gate (DOM)', () => {
 
     expect(deleteSpy).toHaveBeenCalledWith(10);
     expect(cancelSpy).not.toHaveBeenCalled();
+  });
+  describe('sensitive passenger type consent (OBRS-1666)', () => {
+    it('captures the consent with the type, per seat, at click time', () => {
+      const comp: any = makeComponent();
+      comp.onPassengerTypeChanged('monk');
+      comp.onPassengerTypeConsentChanged(true);
+      comp.onSeatToggled('A1');
+
+      // The next passenger is a monk too, but this clerk did not tick the box.
+      comp.onPassengerTypeConsentChanged(false);
+      comp.onSeatToggled('A2');
+
+      expect(comp.passengerTypeConsentVersionFor('A1')).toBe(PRIVACY_POLICY_VERSION);
+      expect(comp.passengerTypeConsentVersionFor('A2')).toBeNull();
+    });
+
+    it('changing the type clears the consent, so the next seat cannot inherit it', () => {
+      const comp: any = makeComponent();
+      comp.onPassengerTypeChanged('monk');
+      comp.onPassengerTypeConsentChanged(true);
+
+      comp.onPassengerTypeChanged('nun');
+      comp.onSeatToggled('A1');
+
+      expect(comp.passengerTypeConsentVersionFor('A1')).toBeNull();
+    });
+
+    it('sends nothing for male/female - section 26 does not cover sex', () => {
+      const comp: any = makeComponent();
+      comp.onPassengerTypeChanged('female');
+      comp.onPassengerTypeConsentChanged(true);
+      comp.onSeatToggled('A1');
+
+      expect(comp.passengerTypeConsentVersionFor('A1')).toBeNull();
+    });
+
+    it('starting a new trip does not leave the previous tick behind for the next customer', () => {
+      const comp: any = makeComponent();
+      comp.ngOnInit();
+      comp.onPassengerTypeChanged('monk');
+      comp.onPassengerTypeConsentChanged(true);
+      comp.onSeatToggled('A1');
+      expect(comp.passengerTypeConsentVersionFor('A1')).toBe(PRIVACY_POLICY_VERSION);
+
+      // Every block that clears the per-seat map must clear the PENDING tick with it. Without
+      // that, the next customer's first seat click captures a consent nobody gave for them -
+      // and this one runs on the staff POS many times a shift.
+      comp.onTripSelected({ trip: makeTrip({ scheduleId: 77 }), routeSlug: 'bkk-cm' });
+      comp.onSeatToggled('A2');
+
+      expect(comp.selectedPassengerTypeConsent).toBeFalse();
+      expect(comp.passengerTypeConsentVersionFor('A2')).toBeNull();
+    });
+
+    it('deselecting a seat forgets its consent too', () => {
+      const comp: any = makeComponent();
+      comp.onPassengerTypeChanged('monk');
+      comp.onPassengerTypeConsentChanged(true);
+      comp.onSeatToggled('A1');
+      comp.onSeatToggled('A1');
+
+      expect(comp.seatPassengerTypeConsents['A1']).toBeUndefined();
+    });
   });
 });

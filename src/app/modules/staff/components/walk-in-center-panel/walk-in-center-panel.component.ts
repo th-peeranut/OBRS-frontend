@@ -50,6 +50,10 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   @Input() selectedSeats: string[] = [];
   /** passenger_type lookup slug (male|female|monk|nun); drives the seat-map icon for the NEXT seat. */
   @Input() passengerGender = 'male';
+  // OBRS-1666: driven by the sell page, never held here. A local copy survived a completed sale
+  // (nothing on this component clears it) and the next walk-in customer met a checkbox that was
+  // already ticked for a consent they had not given.
+  @Input() passengerTypeConsent = false;
 
   /** Per-seat passenger type map (seat label → passenger_type slug) for multi-select rendering. */
   @Input() seatPassengerTypes: Record<string, string> = {};
@@ -79,6 +83,11 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
 
   @Output() seatToggled = new EventEmitter<string>();
   @Output() passengerTypeChange = new EventEmitter<string>();
+
+  // OBRS-1666: the clerk's record that this passenger gave explicit consent to us holding their
+  // monk/nun status. Emitted (never held only here) because the sell page captures it per seat at
+  // click time, exactly like the type itself.
+  @Output() passengerTypeConsentChange = new EventEmitter<boolean>();
   @Output() pickupChange = new EventEmitter<string>();
   @Output() dropoffChange = new EventEmitter<string>();
 
@@ -245,8 +254,24 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     this.destroy$.complete();
   }
 
+
+  /**
+   * OBRS-1666: 'monk'/'nun' state a religious status and are the only two answers that ask for
+   * consent. 'male'/'female' do not - PDPA section 26 lists sexual behaviour, not sex.
+   */
+  protected get isSensitivePassengerType(): boolean {
+    const value = (this.passengerGender || '').toLowerCase();
+    return value === 'monk' || value === 'nun';
+  }
+
   protected onSelectPassengerType(v: string): void {
+    // OBRS-1666: the sell page clears the tick on this event and feeds it back down, so the box
+    // is never already ticked when it reappears for a different type.
     this.passengerTypeChange.emit(v);
+  }
+
+  protected onTogglePassengerTypeConsent(checked: boolean): void {
+    this.passengerTypeConsentChange.emit(checked);
   }
 
   /** Seat components expect an upper-case gender token (MALE|FEMALE|MONK). */

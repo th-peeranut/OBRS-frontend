@@ -86,6 +86,10 @@ export interface ScheduleSearchResultDto {
 
 export interface WalkInBookingPassengerReqDto {
   passengerType: string;
+  // OBRS-1666: the privacy-notice version the clerk had in front of them when the passenger gave
+  // explicit consent to a monk/nun answer. Null everywhere else; a monk/nun sent without it is
+  // dropped by the backend rather than stored, and the sale still goes through.
+  passengerTypeConsentVersion?: string | null;
   seatNumber: string;
   title: string;
   firstName: string;
