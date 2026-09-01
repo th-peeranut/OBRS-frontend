@@ -3774,7 +3774,7 @@
       "PASSENGER_TYPE": "Passenger Type",
       "PTYPE_MALE": "Male",
       "PTYPE_FEMALE": "Female",
-      "SENSITIVE_TYPE_CONSENT_LABEL": "The passenger gives explicit consent to collecting and using their monk/nun status, to show on the ticket and booking list and to help arrange seats",
+      "SENSITIVE_TYPE_CONSENT_LABEL": "The passenger gives explicit consent to collecting and using their monk/nun status, to show on the ticket and booking list and to help arrange seats on services with numbered seats",
       "SENSITIVE_TYPE_CONSENT_HINT": "Leaving it unticked is fine - the sale goes through, we simply do not record the passenger type",
       "PTYPE_MONK": "Monk",
       "PTYPE_NUN": "Nun",

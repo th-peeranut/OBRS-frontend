@@ -3774,7 +3774,7 @@
       "PASSENGER_TYPE": "乘客类型",
       "PTYPE_MALE": "男性",
       "PTYPE_FEMALE": "女性",
-      "SENSITIVE_TYPE_CONSENT_LABEL": "乘客明确同意收集并使用其僧侣/尼姑身份，用于显示在车票与订单列表中并协助安排座位",
+      "SENSITIVE_TYPE_CONSENT_LABEL": "乘客明确同意收集并使用其僧侣/尼姑身份，用于显示在车票与订单列表中，并在指定座位号的班次上用于安排座位",
       "SENSITIVE_TYPE_CONSENT_HINT": "不勾选亦可正常售票，我们只是不会记录乘客类型",
       "PTYPE_MONK": "僧侣",
       "PTYPE_NUN": "尼姑",
