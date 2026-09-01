@@ -454,6 +454,7 @@
       "ASSOC_PROF": "副教授",
       "ASST_PROF": "助理教授"
     },
+    "APP_TITLE": "在线预订巴士车票 | NJ Phuyaipu",
     "NOT_SPECIFIED": "未填写",
     "THEME_TOGGLE": "切换深色模式",
     "CLEAR": "清除",
@@ -2927,6 +2928,7 @@
       "SIGNED_IN_AS": "当前登录账号"
     },
     "HOME_BOOKING": {
+      "HERO_HEADLINE": "在线预订 NJ Phuyaipu 巴士车票",
       "TRIP_TYPE": "行程类型",
       "ROUNDTRIP_1": "单程",
       "ROUNDTRIP_2": "往返",

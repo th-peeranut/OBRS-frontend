@@ -454,6 +454,7 @@
       "ASSOC_PROF": "Associate Professor",
       "ASST_PROF": "Assistant Professor"
     },
+    "APP_TITLE": "Book bus tickets online | NJ Phuyaipu",
     "NOT_SPECIFIED": "Not specified",
     "THEME_TOGGLE": "Toggle dark mode",
     "CLEAR": "Clear",
@@ -2927,6 +2928,7 @@
       "SIGNED_IN_AS": "Signed in as"
     },
     "HOME_BOOKING": {
+      "HERO_HEADLINE": "Book NJ Phuyaipu bus tickets online",
       "TRIP_TYPE": "Trip type",
       "ROUNDTRIP_1": "One-way",
       "ROUNDTRIP_2": "Round-trip",

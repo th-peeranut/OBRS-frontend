@@ -454,6 +454,7 @@
       "ASSOC_PROF": "รศ.",
       "ASST_PROF": "ผศ."
     },
+    "APP_TITLE": "จองตั๋วออนไลน์ คิวรถ NJ ผู้ใหญ่ปู",
     "NOT_SPECIFIED": "ไม่ระบุ",
     "THEME_TOGGLE": "สลับโหมดมืด",
     "CLEAR": "ล้าง",
@@ -2927,6 +2928,7 @@
       "SIGNED_IN_AS": "เข้าสู่ระบบในชื่อ"
     },
     "HOME_BOOKING": {
+      "HERO_HEADLINE": "จองตั๋ว คิวรถ NJ ผู้ใหญ่ปู ออนไลน์",
       "TRIP_TYPE": "ประเภทการเดินทาง",
       "ROUNDTRIP_1": "เที่ยวเดียว",
       "ROUNDTRIP_2": "ไป-กลับ",
