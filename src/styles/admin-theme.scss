@@ -760,15 +760,26 @@
 .admin-shell select {
   font-size: 14px !important;
   color: var(--admin-text) !important;
-  width: auto !important;
+  // OBRS-1703: `width` is NOT `!important` and must not become one again. What it has to
+  // undo is `styles.scss` `label, input { width: 100% }`, which is not `!important`
+  // either, so this selector already wins that on specificity alone (0,1,1 vs 0,0,1).
+  // The `!important` bought nothing there and cost every component under the shell its
+  // own width, because `!important` beats non-`!important` at ANY specificity. Measured
+  // in a browser: `.user-role-chip input { width: 18px }` rendered 13 (native), and
+  // `.admin-search input { width: 100% }` rendered 154 of the 206 it asks for. Two
+  // earlier cards paid for the same wall by adding `!important` back one selector at a
+  // time - `.admin-chip input[type="checkbox"]` below, `.form-check-input` just under.
+  width: auto;
   margin-bottom: 0 !important;
 }
 
-// OBRS-1693: the rule above hands `width: auto !important` to every input under the
+// OBRS-1693: the rule above hands `width: auto` to every input under the
 // shell. A control drawn with `appearance: none` has no intrinsic width, so `auto`
 // collapses it - measured 2x14 px on /staff/parcels/consign and /staff/sell. `height`
 // survives because the shell never overrides it, which is why it renders as a thin bar
-// rather than vanishing. Only `!important` can win the width back.
+// rather than vanishing. Still needed after OBRS-1703 dropped that `!important`: this
+// selector outranks the shell's on specificity (0,2,0 vs 0,1,1), and Bootstrap's own
+// `.form-check-input { width: 1em }` (0,1,0) does not.
 .admin-shell .form-check-input {
   width: 1em !important;
 }
