@@ -10,7 +10,18 @@ import { FormGroup, FormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
 import dayjs from 'dayjs';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
-import { map, Observable, Subject, Subscription, takeUntil } from 'rxjs';
+import {
+  catchError,
+  forkJoin,
+  map,
+  Observable,
+  of,
+  Subject,
+  Subscription,
+  switchMap,
+  take,
+  takeUntil,
+} from 'rxjs';
 import {
   ScheduleFilter,
   ScheduleFilterPayload,
@@ -33,6 +44,14 @@ import {
 } from '../../../../services/booking-policy/booking-policy.service';
 import { LanguageService } from '../../../../shared/services/language.service';
 import { carryReturnDate, defaultReturnDate } from '../../../../shared/lib/return-date';
+import { RouteMapService } from '../../../../services/route-map/route-map.service';
+import { StationService } from '../../../../services/station/station.service';
+import { RouteSegments } from '../../../../shared/lib/bookable-stations';
+import {
+  ProvinceStopsApi,
+  StationGroup,
+} from '../../../../shared/lib/station-groups';
+import { buildStationPairOptions } from '../../../../shared/lib/station-pair-options';
 
 @Component({
     selector: 'app-schedule-booking-filter',
@@ -84,8 +103,20 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   rawProvinceStationList: Observable<StationApi[]>;
   allProvinceStationList: StationApi[] = [];
 
-  startProvinceStationList: StationApi[] = [];
-  endProvinceStationList: StationApi[] = [];
+  // OBRS-1701: widened from `StationApi[]` to carry province groups, the same
+  // pair of types the home form's twin fields have held since OBRS-1212.
+  startProvinceStationList: StationApi[] | StationGroup[] = [];
+  endProvinceStationList: StationApi[] | StationGroup[] = [];
+
+  /** OBRS-1701: the pickup/dropoff halves of every active route — the input
+   *  that turns this bar's two dropdowns from "every stop" into "the stops
+   *  that can produce a trip". `null` is load-bearing: it means "route data
+   *  unavailable", which `buildStationPairOptions()` reads as "offer
+   *  everything", the behaviour this screen had before the card. */
+  private routeSegments: RouteSegments[] | null = null;
+  /** OBRS-1701: which province each stop belongs to, for the dropdown
+   *  headings. `null` means "render flat" — the pre-card behaviour again. */
+  private provinceStops: ProvinceStopsApi[] | null = null;
 
   scheduleFilter: Observable<ScheduleFilter>;
 
@@ -109,6 +140,8 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     private translate: TranslateService,
     private alertService: AlertService,
     private bookingPolicyService: BookingPolicyService,
+    private routeMapService: RouteMapService,
+    private stationService: StationService,
     languageService: LanguageService
   ) {
     this.minDate = new Date();
@@ -153,6 +186,11 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
         this.allProvinceStationList = stationList || [];
         this.syncStationOptions();
       });
+
+    // OBRS-1701: both refine the dropdowns and neither gates them — see each
+    // method for why a failure is silent.
+    this.loadRouteSegments();
+    this.loadProvinceStops();
 
     this.scheduleFilter
       .pipe(
@@ -448,6 +486,16 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     return this.isRoundTripReturn;
   }
 
+  /**
+   * Rebuilds both dropdown option lists for the currently selected pair.
+   *
+   * <p>OBRS-1701: this used to remove the mirror stop and nothing else, so the
+   * bar offered every stop on the roster as an origin AND as a destination —
+   * from `nong_chak` that was 27 destinations where `/home` offered 6 (measured
+   * on prod 2026-09-01). The rule now comes from `buildStationPairOptions()`,
+   * the same call the home form makes, so the two search bars cannot answer the
+   * same question differently again.
+   */
   private syncStationOptions(
     selectedStartId?: string | number | null,
     selectedStopId?: string | number | null
@@ -457,11 +505,79 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     const currentStopId =
       selectedStopId ?? this.bookingForm.get('stopStationId')?.value;
 
-    this.startProvinceStationList = this.allProvinceStationList.filter(
-      (item) => item.id !== Number(currentStopId)
-    );
-    this.endProvinceStationList = this.allProvinceStationList.filter(
-      (item) => item.id !== Number(currentStartId)
-    );
+    const options = buildStationPairOptions({
+      stations: this.allProvinceStationList,
+      routeSegments: this.routeSegments,
+      provinceStops: this.provinceStops,
+      startStationId: currentStartId,
+      stopStationId: currentStopId,
+    });
+
+    if (options.clearStopStation) {
+      this.bookingForm.patchValue({ stopStationId: '' });
+    }
+
+    this.startProvinceStationList = options.origins;
+    this.endProvinceStationList = options.destinations;
+  }
+
+  /**
+   * OBRS-1701: loads the pickup/dropoff lists of every active route, the same
+   * way `HomeBookingComponent` does — `RouteMapService` dedupes both calls per
+   * URL, so arriving here from the home search reuses the responses `/home`
+   * already fetched rather than issuing them again.
+   *
+   * <p>Failure is not reported anywhere: `catchError` leaves `routeSegments`
+   * null, which `buildStationPairOptions()` reads as "offer every stop" — the
+   * behaviour this screen had before the card. Narrowing is a REFINEMENT of a
+   * bar that works without it, so it must never block or alert.
+   */
+  private loadRouteSegments(): void {
+    this.routeMapService
+      .getActiveRoutes()
+      .pipe(
+        switchMap((routes) =>
+          routes.length === 0
+            ? of<(RouteSegments | null)[]>([])
+            : forkJoin(
+                routes.map((route) =>
+                  this.routeMapService.getPickupDropoffCached(route.slug).pipe(take(1))
+                )
+              )
+        ),
+        catchError(() => of<(RouteSegments | null)[]>([])),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((segments) => {
+        const usable = segments.filter((s): s is RouteSegments => !!s);
+        // An empty result stays null rather than becoming an empty array: an
+        // empty array is a claim that NO stop is bookable, and would blank both
+        // dropdowns on the strength of a request that simply did not answer.
+        this.routeSegments = usable.length > 0 ? usable : null;
+        this.syncStationOptions();
+      });
+  }
+
+  /**
+   * OBRS-1701: loads which province every stop belongs to, so the two dropdowns
+   * carry province headings here as they do on `/home`. Deduped for the whole
+   * session inside `StationService`.
+   *
+   * <p>Failure leaves `provinceStops` null, which is read as "render flat" —
+   * again a refinement, never a precondition.
+   */
+  private loadProvinceStops(): void {
+    this.stationService
+      .getProvincesWithStops()
+      .pipe(
+        map((response) => response?.data ?? null),
+        catchError(() => of<ProvinceStopsApi[] | null>(null)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((provinces) => {
+        // An empty array stays null for the same reason `routeSegments` does.
+        this.provinceStops = provinces?.length ? provinces : null;
+        this.syncStationOptions();
+      });
   }
 }
