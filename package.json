@@ -77,7 +77,7 @@
     "@stomp/stompjs": "^7.3.0",
     "@zxing/browser": "^0.2.1",
     "bootstrap": "~5.3.3",
-    "bootstrap-icons": "~1.11.3",
+    "bootstrap-icons": "~1.13.1",
     "dayjs": "~1.11.13",
     "html2canvas": "^1.4.1",
     "leaflet": "^1.9.4",
