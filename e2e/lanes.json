@@ -45,6 +45,12 @@
       "why": "OBRS-1432. Screenshots only, and the requirement rather than a shortcut: it runs unchanged against a clean `dev` checkout on :4340 and this branch on :4341, so the BEFORE image is the real previous strip instead of a reconstruction. Every shot measures its own claim first (rows the strip wrapped into, entries it rendered) because a screenshot of a strip that happened to fit would look like proof of a fix that was never exercised. The regression lives in system-settings-page.component.spec.ts, which runs in CI."
     },
     {
+      "spec": "obrs-1693-admin-shell-control-width.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-1704. Measures the RENDERED WIDTH of every `.form-check-input` under `.admin-shell` on /staff/parcels/consign and /staff/sell, and fails under 10px. `admin-theme.scss` gives every input under the shell `width: auto !important`, which collapses an `appearance: none` control to 2px; OBRS-1693 bought it back with one `!important` declaration and nothing stopped that declaration being deleted again. GATE and not CAPTURE for the reason lanes.json gives against OBRS-1333: that spec cannot be a gate because 'intercepting the API would replace exactly the values under test', whereas the value under test HERE is a width the CSS cascade produces, so a mock destroys nothing. Not a unit test either -- Karma's DOM never loads admin-theme.scss, so a checkbox a clerk physically cannot read passes every spec in the repo. Hermetic on this lane's terms: seedGateAdminSession with the `salesperson` role both routes require, stubWalkInSellShell, and its own handlers for schedules/walk-in, segments, route-stops, share-config and the PUBLIC /api/parcel-policy. Fails a surface that yields zero controls, because an absent checkbox reads the same as a healthy one if you only look for 'nothing too small'."
+    },
+    {
       "spec": "obrs-970-route-population.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",

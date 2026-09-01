@@ -257,6 +257,15 @@ export default defineConfig({
     // this lane is the merge gate: the drift it catches is a page shipping outside every
     // sweep above, and a check for that which does not run at merge is a comment.
     '**/obrs-970-route-population.spec.ts',
+    // OBRS-1704. The rendered WIDTH of the shell's checkboxes. `admin-theme.scss` gives
+    // every input under `.admin-shell` `width: auto !important`, which collapses an
+    // `appearance: none` control to 2px, and Karma's DOM never loads that stylesheet --
+    // so the defect passed every unit spec on those forms. OBRS-1693 fixed it with one
+    // `!important` declaration and shipped the check as a root capture script, which by
+    // this repo's convention has no lane and is called by nothing; deleting the
+    // declaration left CI green. Hermetic on the same terms as the rest: synthetic
+    // session, every call answered in-spec.
+    '**/obrs-1693-admin-shell-control-width.spec.ts',
   ],
 
   timeout: 60_000,
