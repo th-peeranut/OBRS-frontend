@@ -18,7 +18,7 @@ import {
   takeUntil,
 } from 'rxjs';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
-import { getStationSlugById, StationApi } from '../../../../shared/interfaces/station.interface';
+import { StationApi } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { AuthService } from '../../../../auth/auth.service';
 import { BookingService } from '../../../../services/booking/booking.service';
@@ -37,20 +37,12 @@ import {
 import { LanguageService } from '../../../../shared/services/language.service';
 import { canSwapStationPair, isEmptyStationValue } from '../../../../shared/lib/station-swap';
 import { RouteMapService } from '../../../../services/route-map/route-map.service';
+import { RouteSegments } from '../../../../shared/lib/bookable-stations';
 import {
-  collectBookableDestinationSlugs,
-  collectBookableOriginSlugs,
-  filterStationsBySlugs,
-  RouteSegments,
-} from '../../../../shared/lib/bookable-stations';
-import {
-  buildStopOrderMap,
-  groupStationsByProvince,
   ProvinceStopsApi,
-  RouteSide,
-  sortStationsByStopOrder,
   StationGroup,
 } from '../../../../shared/lib/station-groups';
+import { buildStationPairOptions } from '../../../../shared/lib/station-pair-options';
 import { StationService } from '../../../../services/station/station.service';
 import { carryReturnDate, defaultReturnDate } from '../../../../shared/lib/return-date';
 
@@ -532,6 +524,13 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
    *      impossible pair this method exists to prevent, and the list on screen
    *      would no longer contain it, so nothing would show the customer why.
    *      Same reasoning, same trigger as `RouteMapHomeComponent.refreshDropoffOptions()`.
+   *
+   * <p>OBRS-1701: the three filters and the OBRS-1212 ordering/grouping moved
+   * verbatim into `buildStationPairOptions()` so `/schedule-booking`'s filter
+   * bar can run the SAME rule instead of the mirror-stop-only one it shipped
+   * with. What stays here is the half that owns the form: reading the current
+   * pair out of it, and clearing the destination when the derivation says the
+   * new origin cannot reach it.
    */
   private syncStationOptions(
     selectedStartId?: string | number | null,
@@ -539,77 +538,23 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   ): void {
     const currentStartId =
       selectedStartId ?? this.bookingForm.get('startStationId')?.value;
-    let currentStopId =
+    const currentStopId =
       selectedStopId ?? this.bookingForm.get('stopStationId')?.value;
 
-    const originSlugs = this.routeSegments
-      ? collectBookableOriginSlugs(this.routeSegments)
-      : null;
+    const options = buildStationPairOptions({
+      stations: this.allProvinceStationList,
+      routeSegments: this.routeSegments,
+      provinceStops: this.provinceStops,
+      startStationId: currentStartId,
+      stopStationId: currentStopId,
+    });
 
-    // A start that is not a bookable origin at all — a stale prefill from
-    // booking history, a stop retired since — narrows nothing instead of
-    // narrowing to nothing. The alternative is a destination dropdown that is
-    // simply empty, with nothing on screen saying why.
-    const startSlug = getStationSlugById(currentStartId, this.allProvinceStationList);
-    const narrowFrom = originSlugs?.has(startSlug) ? startSlug : '';
-
-    const destinationSlugs = this.routeSegments
-      ? collectBookableDestinationSlugs(this.routeSegments, narrowFrom)
-      : null;
-
-    if (destinationSlugs && !isEmptyStationValue(currentStopId)) {
-      const stopSlug = getStationSlugById(currentStopId, this.allProvinceStationList);
-      if (!destinationSlugs.has(stopSlug)) {
-        this.bookingForm.patchValue({ stopStationId: '' });
-        // Cleared BEFORE the lists are built, not after: the origin list
-        // excludes whatever the destination currently is, so recomputing off
-        // the stale id would keep the just-released stop hidden from the
-        // origin dropdown until some later sync happened to run.
-        currentStopId = '';
-      }
+    if (options.clearStopStation) {
+      this.bookingForm.patchValue({ stopStationId: '' });
     }
 
-    const origins = filterStationsBySlugs(this.allProvinceStationList, originSlugs).filter(
-      (item) => item.id !== Number(currentStopId)
-    );
-    const destinations = filterStationsBySlugs(
-      this.allProvinceStationList,
-      destinationSlugs
-    ).filter((item) => item.id !== Number(currentStartId));
-
-    this.startProvinceStationList = this.toDropdownOptions(origins, 'pickup');
-    this.endProvinceStationList = this.toDropdownOptions(destinations, 'dropoff');
-  }
-
-  /**
-   * OBRS-1212: turns a filtered station list into what the dropdown renders —
-   * ordered by position along the route, then bucketed by province.
-   *
-   * <p>Order comes from the ROUTE (`pickup`/`dropoff` `order`), never from
-   * `/api/stops`' id order and never from the order `/api/provinces/stops`
-   * happens to return: `Province.stops` is a bare `@OneToMany` with no
-   * `@OrderBy`, so its order is whatever Postgres returns and moves whenever a
-   * row is updated. Measured 2026-08-10 it already puts "ตลาดเนื่องจำนงค์"
-   * last in Chonburi, where the live dropdown shows it second (AC#8, AC#10).
-   *
-   * <p>Sort BEFORE grouping, not after: the buckets keep insertion order, so
-   * one sort of the flat list orders every group at once — and it means the
-   * ungrouped fallback below is ordered identically to the grouped one, rather
-   * than being a second, differently-sorted screen.
-   *
-   * <p>Falls back to the flat list whenever province data is unavailable
-   * (`groupStationsByProvince` returns null). Ordering survives that fallback:
-   * losing the province lookup costs the headings, not the sequence.
-   */
-  private toDropdownOptions(
-    stations: StationApi[],
-    side: RouteSide
-  ): StationApi[] | StationGroup[] {
-    const ordered = sortStationsByStopOrder(
-      stations,
-      buildStopOrderMap(this.routeSegments, side)
-    );
-    return groupStationsByProvince(ordered, this.provinceStops) ?? ordered;
+    this.startProvinceStationList = options.origins;
+    this.endProvinceStationList = options.destinations;
   }
 
   /** OBRS-575: fetches the logged-in user's booking history for the

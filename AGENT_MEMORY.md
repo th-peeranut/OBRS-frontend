@@ -4428,3 +4428,24 @@ just one a test can never catch.
   data for this specific record finished loading", not just "has some unrelated options list
   finished loading" — two different async fetches racing past each other is the trap, and
   `ownersLoadState`/`salesPointsLoadState` only ever answer the second question.
+
+## OBRS-1701 scrutinize self-fix (schedule-booking-filter.component.spec.ts, 2026-09-01)
+- The new AC5 "province headings" test's `PROVINCES` fixture used `{ id, nameThai, nameEnglish,
+  stops }` — fields `toStationGroup()` (station-groups.ts) never reads. It reads
+  `province.slug` and `province.translations[locale].label`; both were absent, so every group
+  built from this fixture silently got `slug: '' / nameThai: '' / nameEnglish: ''`. The test
+  still passed because it only asserted `Array.isArray(g.stations)` and the flattened station
+  order — never the heading fields its own name claims to prove. Classic fixture-wrong-shape:
+  green test, wrong belief (this describe block's provinces exercised nothing about labels).
+  Fixed the fixture to the `slug`/`translations` shape the correct twin fixture in
+  home-booking.component.spec.ts already uses, and added `expect(groups.map(g =>
+  g.nameEnglish)).toEqual([...])` so the test actually checks what its title says. Also added a
+  test for the swap button clearing the far side (`onSwapStations` swapping onto a
+  dropoff-only stop, which is a real pickup-set miss, not a hand-picked edge case) — the
+  existing "AC3: swap re-narrows" test only used a pair where nothing needed clearing, so the
+  suite had zero coverage of `clearStopStation` reached via the swap entry point specifically
+  (only via `onStartStationChange`/`onEndStationChange`). Lesson: when a describe block borrows
+  a fixture shape from a sibling spec, diff the two fixtures field-by-field against the
+  interface both are supposed to satisfy — a same-named field one level up (`id` vs `slug`) is
+  the kind of drift a type checker won't catch when the stub's parameter type is loosened to
+  `unknown[]`.
