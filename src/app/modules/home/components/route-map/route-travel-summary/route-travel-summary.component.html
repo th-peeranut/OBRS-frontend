@@ -25,18 +25,14 @@
         }
       </span>
     </div>
-    <hr class="my-2" />
-    <div class="summary-row">
-      <i class="bi bi-map summary-meta small me-1"></i>
-      <span class="small">
-        {{ 'HOME.ROUTE_MAP.SUMMARY_DISTANCE' | translate: { distance: displayDistanceKm } }}
-      </span>
-    </div>
-    @if (!isDurationSegment) {
+    @if (isSegment) {
+      <hr class="my-2" />
+    }
+    @if (isDistanceSegment) {
       <div class="summary-row">
-        <i class="bi bi-clock summary-meta small me-1"></i>
+        <i class="bi bi-map summary-meta small me-1"></i>
         <span class="small">
-          {{ 'HOME.ROUTE_MAP.SUMMARY_DURATION' | translate: { min: displayDurationMin, max: displayDurationMax } }}
+          {{ 'HOME.ROUTE_MAP.SUMMARY_DISTANCE' | translate: { distance: displayDistanceKm } }}
         </span>
       </div>
     }

@@ -3007,7 +3007,6 @@
       "SUMMARY_PICKUP_VALUE": "{{province}} {{count}} stops",
       "SUMMARY_DROPOFF_VALUE": "{{province}} {{count}} stops",
       "SUMMARY_DISTANCE": "Approx. {{distance}} km",
-      "SUMMARY_DURATION": "Travel time approx. {{min}} - {{max}} min",
       "SUMMARY_DURATION_SEGMENT": "Travel time approx. {{duration}} min",
       "SUMMARY_SEGMENT_NOTE": "For your selected pickup and drop-off",
       "DETAIL_PICKUP_TITLE": "Pickup detail ({{province}})",

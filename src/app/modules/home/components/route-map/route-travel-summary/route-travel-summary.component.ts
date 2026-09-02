@@ -38,7 +38,7 @@ export class RouteTravelSummaryComponent {
   /** True when at least one figure below reflects the selected pickup→dropoff
    *  segment (not the whole route). Drives a small hint in the template. */
   get isSegment(): boolean {
-    return this.segmentDistanceKm != null || this.isDurationSegment;
+    return this.isDistanceSegment || this.isDurationSegment;
   }
 
   /** Authoritative along-route distance (km) between the selected pickup and
@@ -65,30 +65,29 @@ export class RouteTravelSummaryComponent {
     return Math.abs(dropoff - pickup);
   }
 
-  /** True when the duration figure reflects the selected segment (renders
-   *  `SUMMARY_DURATION_SEGMENT` instead of the whole-route `SUMMARY_DURATION`
-   *  range). Independent of `segmentDistanceKm` — distance and duration each
-   *  fall back on their own missing source field. */
+  /** True when the distance row can show the selected segment. Independent of
+   *  `isDurationSegment` — distance and duration each hide on their own missing
+   *  source field. */
+  get isDistanceSegment(): boolean {
+    return this.segmentDistanceKm != null;
+  }
+
+  /** True when the duration row can show the selected segment. */
   get isDurationSegment(): boolean {
     return this.segmentDurationMinutes != null;
   }
 
-  /** Distance shown in the summary: the authoritative selected-segment delta
-   *  when available, else the whole-route total. Rounded to a whole km
-   *  (min 1 for a real segment).
+  /** Distance shown in the summary when a segment is resolved: the
+   *  authoritative selected-segment delta, rounded to a whole km (min 1).
+   *  Only meaningful when `isDistanceSegment` is true.
    *
-   *  OBRS-1341: the whole-route total is rounded on the same line as the segment.
-   *  It used to be returned raw, which was invisible only because the seeded total
-   *  was the whole number 80 — against a measured 133.57 the same panel would have
-   *  read "133.57 km" unselected and "134 km" for first-stop→last-stop, which is the
-   *  two-numbers-for-one-journey bug this card exists to remove, reintroduced by
-   *  rounding instead of by data. */
+   *  OBRS-1718: there is no whole-route fallback any more. The row is hidden
+   *  until both stops are chosen, so the panel never prints a figure for a
+   *  journey the customer is not buying — the whole-route total is what
+   *  OBRS-1341 had to keep rounding in step with the segment. */
   get displayDistanceKm(): number {
     const segment = this.segmentDistanceKm;
-    if (segment != null) {
-      return Math.max(1, Math.round(segment));
-    }
-    return Math.round(this.routeMeta?.totalDistanceKm ?? 0);
+    return segment != null ? Math.max(1, Math.round(segment)) : 0;
   }
 
   /** Duration shown in the summary when a segment is resolved: the
@@ -97,13 +96,5 @@ export class RouteTravelSummaryComponent {
   get displayDurationMinutes(): number {
     const segment = this.segmentDurationMinutes;
     return segment != null ? Math.max(1, Math.round(segment)) : 0;
-  }
-
-  get displayDurationMin(): number {
-    return this.routeMeta?.durationMinMinutes ?? 0;
-  }
-
-  get displayDurationMax(): number {
-    return this.routeMeta?.durationMaxMinutes ?? 0;
   }
 }
