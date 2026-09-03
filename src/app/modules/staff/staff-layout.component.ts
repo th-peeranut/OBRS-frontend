@@ -173,10 +173,16 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
     // Build nav items and check admin role before calling super so that the
     // route subscription (which fires synchronously via startWith) already has
     // navItems in place.
+    this.rebuildNav();
+    super.ngOnInit();
+  }
+
+  // OBRS-1721: also re-run on entering/leaving a role preview — every line here
+  // reads authService, whose answers narrow while a preview is on.
+  protected override rebuildNav(): void {
     this.navItems = this.buildNavItems();
     this.navSections = this.buildSections(this.navItems);
     this.isAdmin = this.authService.hasAnyRole(['admin']);
-    super.ngOnInit();
   }
 
   // OBRS-317: stop the notification-bell unread-count poll on leaving the

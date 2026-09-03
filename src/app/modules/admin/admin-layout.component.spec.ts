@@ -73,6 +73,12 @@ describe('AdminLayoutComponent', () => {
     // flipping this, in the OBRS-1498 specs further down.
     hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['owner'],
+    // OBRS-1721: the shell reads these three at construction and subscribes to
+    // the stream in ngOnInit. Never-previewing is the baseline every spec here
+    // was written against; the preview itself is measured in nav-reachability.spec.ts.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');
@@ -937,6 +943,12 @@ describe('AdminLayoutComponent — usability report badge', () => {
     // OBRS-1498: same blunt fixture switch as the outer describe's.
     hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['owner'],
+    // OBRS-1721: the shell reads these three at construction and subscribes to
+    // the stream in ngOnInit. Never-previewing is the baseline every spec here
+    // was written against; the preview itself is measured in nav-reachability.spec.ts.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');
@@ -1184,6 +1196,10 @@ describe('AdminLayoutComponent — usability report badge (admin badgeStatus)', 
     hasAnyRole: (_roles: string[]) => true,
     hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['admin'],
+    // OBRS-1721 — see the note on the outer describe's stub.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');
@@ -1358,6 +1374,10 @@ describe('AdminLayoutComponent — personal menu (OBRS-1071)', () => {
     hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['admin'],
     logout: jasmine.createSpy('logout'),
+    // OBRS-1721 — see the note on the outer describe's stub.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');

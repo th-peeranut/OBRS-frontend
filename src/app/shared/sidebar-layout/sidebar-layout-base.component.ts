@@ -1,6 +1,6 @@
 import { Directive, ElementRef, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
-import { filter, startWith, Subject, takeUntil } from 'rxjs';
+import { filter, skip, startWith, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
 import { ThemeService } from '../../shared/services/theme.service';
@@ -89,6 +89,18 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   // role-aware the dependency has to already be in scope.
   protected readonly personalMenuItems: PersonalMenuItem[] = buildPersonalMenuItems();
 
+  // ── Profile menu: "ดูในมุมมองของ…" (OBRS-1721) ──────────────────────────────
+  // The roles this user may preview, derived from the roles they HOLD — empty
+  // for anyone but a held admin or owner, which is what keeps the whole submenu
+  // off a salesperson's screen. Read once into a stable field for the same
+  // change-detection reason as personalMenuItems above; the held roles cannot
+  // change without a new sign-in, and a sign-in rebuilds the shell.
+  protected readonly previewableRoles: string[] = this.authService.getPreviewableRoles();
+
+  /** Null unless a preview is active. Bound by the templates to hide the
+   *  "view as" choices while one is already running — the banner owns the exit. */
+  protected previewRole: string | null = this.authService.getPreviewRole();
+
   protected get userInitials(): string {
     const username = this.authService.getUsername() ?? '';
     const namePart = username.split('@')[0] ?? '';
@@ -116,6 +128,18 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
     this.themeService.mode$.pipe(takeUntil(this.destroy$)).subscribe((mode) => {
       this.isDarkMode = mode === 'dark';
     });
+
+    // OBRS-1721: both shells build their nav ONCE, in ngOnInit, from
+    // authService.hasAnyRole/hasHeldRole. Entering or leaving a preview changes
+    // what those answer, so it has to redo exactly that work — hence rebuildNav().
+    // `skip(1)` drops the BehaviorSubject's replay: the child already built with
+    // the current value, before it called super.ngOnInit().
+    this.authService.previewRole$
+      .pipe(skip(1), takeUntil(this.destroy$))
+      .subscribe((role) => {
+        this.previewRole = role;
+        this.rebuildNav();
+      });
 
     this.router.events
       .pipe(
@@ -214,6 +238,22 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
 
   protected closeProfileMenu(): void {
     this.isProfileMenuOpen = false;
+  }
+
+  // ── Role preview (OBRS-1721) ───────────────────────────────────────────────
+  /**
+   * Re-run whatever the child does to its nav in ngOnInit. Overridden by both
+   * shells; the base has nothing of its own to rebuild.
+   */
+  protected rebuildNav(): void {}
+
+  protected onViewAs(role: string): void {
+    this.isProfileMenuOpen = false;
+    this.authService.startRolePreview(role);
+  }
+
+  protected roleLabelKey(role: string): string {
+    return `ROLE_PREVIEW.ROLES.${role.toUpperCase()}`;
   }
 
   // ── Logout ──────────────────────────────────────────────────────────────────

@@ -53,6 +53,7 @@ const LaraBlue = definePreset(Lara, {
 // auth
 import { AuthGuard } from './auth/auth.guard';
 import { authInterceptor } from './auth/auth.interceptor';
+import { previewReadonlyInterceptor } from './auth/preview-readonly.interceptor';
 import { AuthService } from './auth/auth.service';
 
 // i18n
@@ -116,7 +117,12 @@ export function HttpLoaderFactory(http: HttpClient) {
   providers: [
     AuthService,
     AuthGuard,
-    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+    // OBRS-1721: previewReadonlyInterceptor is LAST on purpose — it is the
+    // innermost handler, so the rejection it raises still passes back out
+    // through errorInterceptor and reaches the user as the normal global toast.
+    provideHttpClient(
+      withInterceptors([authInterceptor, errorInterceptor, previewReadonlyInterceptor])
+    ),
     providePrimeNG({
       theme: {
         // Lara, because that is what the deleted stylesheet was
