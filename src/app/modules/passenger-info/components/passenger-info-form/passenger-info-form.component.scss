@@ -361,13 +361,13 @@
   // recessed for rest, lifted plus an accent border for active, which is the
   // dark-page reading of the same idea.
   //
-  // Only the ACTIVE chip is in the GATE's reach: its fixture seeds one
-  // passenger, so exactly one chip renders and it is always the active one. The
-  // rest state was measured separately, by a probe that seeds two — white fill
-  // with $dk-text forced onto it, 1.20:1 — so it is a reading, not an inference.
-  // The probe is `.claude/agent-office/scripts/captures/obrs-771/` in the office
-  // repo; the gate's own fixture is deliberately NOT widened here, because
-  // `e2e/support/customer-pages.ts` is shared with two other specs.
+  // The rest state reads white fill with $dk-text forced onto it — 1.20:1. When
+  // OBRS-771 fixed it that was a PROBE reading, not a gate reading: the fixture
+  // seeded one passenger, so exactly one chip rendered and it was always the
+  // active one, and this declaration had no element to control anywhere the
+  // sweep could see. OBRS-795 seeded the second passenger and pinned the rest
+  // state in the entry's `mustRender` (`.seat-passenger-chip:not(.active)`), so
+  // the gate scores it directly now — delete this rule and the gate goes red.
   .seat-passenger-chip {
     background: $dk-bg-input;
     border-color: $dk-border;
@@ -381,9 +381,10 @@
   // The numbered circle inside the chip. Its light fill is $primary-lightgrey
   // #dddee1, so section 14's blanket leaves #e8eaf0 on #dddee1 — measured
   // 1.12:1, the worst reading on the page and the only one below the two the
-  // card was filed for. Invisible to the sweep for the same one-passenger reason
-  // as above: with a single passenger the only badge on screen is the filled
-  // active one, which passes.
+  // card was filed for. It was invisible to the sweep for the same one-passenger
+  // reason as above — with a single passenger the only badge on screen is the
+  // filled active one, which passes — and it is visible to it now, for the same
+  // reason as above too (OBRS-795).
   .seat-passenger-chip-badge {
     background: $dk-bg-soft;
   }
