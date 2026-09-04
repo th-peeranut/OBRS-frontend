@@ -266,6 +266,14 @@ export default defineConfig({
     // declaration left CI green. Hermetic on the same terms as the rest: synthetic
     // session, every call answered in-spec.
     '**/obrs-1693-admin-shell-control-width.spec.ts',
+    // OBRS-913. The sidebar toggle's rendered SIZE, same argument one control over:
+    // `.admin-sidebar-pin` declares 28px and rendered 20px, because it is a
+    // `flex-shrink: 1` item of a column that overflows on a laptop-height viewport.
+    // A parser reads the declaration and passes it; Karma's 800px window never
+    // enters the `min-width: 1101px` block the rule lives in. This spec sets its own
+    // 1536x900 (the card's viewport) and asserts the overflow precondition before
+    // measuring, so it cannot go green without having reproduced the condition.
+    '**/obrs-913-sidebar-toggle-target-size.spec.ts',
   ],
 
   timeout: 60_000,
