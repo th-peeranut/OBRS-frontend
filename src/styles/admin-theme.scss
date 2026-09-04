@@ -333,6 +333,25 @@
   --admin-text: #191c1e;
 }
 
+/* OBRS-1721: the view-as strip (`app-role-preview-banner`) renders from
+   app.component.html, above the router outlet — i.e. OUTSIDE `.admin-shell`, and
+   on customer pages there is no `.admin-shell` on screen at all. Custom
+   properties inherit down the real DOM tree, so none of the tokens above are in
+   scope there; same relocation problem, same remedy as
+   `.notification-inbox-overlay` directly above.
+
+   Only the warning CHIP PAIR is re-declared, copied byte-for-byte from the light
+   block, and it needs NO `.is-dark` counterpart: that pair is deliberately
+   untouched in the dark block ("the chip pairs --admin-warning-bg/-text and
+   --admin-accepted-bg/-text are intentionally NOT touched here"), which is
+   exactly why it is the pair a strip rendering in BOTH shells can use. Measured
+   from these two declared values by the WCAG formula: #673a00 on #ffdcbe =
+   7.44:1, in both themes. */
+.role-preview-banner {
+  --admin-warning-bg: #ffdcbe;
+  --admin-warning-text: #673a00;
+}
+
 .notification-inbox-overlay.theme-admin {
   --accent-strong: #c2410c;
   --accent-soft: rgba(234, 88, 12, 0.14);
@@ -1281,6 +1300,21 @@
 .is-dark .admin-profile-menu {
   border-color: var(--admin-outline);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* OBRS-1721: a non-interactive group label inside the profile menu (the
+   "ดูในมุมมองของ…" heading over the role choices). Deliberately NOT an
+   .admin-profile-item — it is not a menuitem and must not take the hover
+   affordance of one. --admin-muted is themed in both modes, so no .is-dark
+   counterpart is needed here. */
+.admin-profile-heading {
+  display: block;
+  padding: 8px 9px 2px;
+  color: var(--admin-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .admin-profile-item {

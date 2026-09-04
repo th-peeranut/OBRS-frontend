@@ -79,12 +79,16 @@ const ROLES_BEFORE_OBRS_702: Record<string, readonly string[]> = {
   // their own requiredRoles at creation, same frozen-literal discipline as
   // the four above (derived from SYSTEM_SETTINGS_TABS would pass no matter
   // what the roles were changed to).
-  'parcel-share': ['owner'],
-  'driver-cash-rates': ['owner'],
+  // OBRS-1719 moved these two off ['owner'] ON PURPOSE, same as OBRS-1016
+  // below — the backend (ParcelShareConfigController / DriverPerHeadRateService)
+  // no longer refuses ADMIN, so the pin moves with it.
+  'parcel-share': ['admin', 'owner'],
+  'driver-cash-rates': ['admin', 'owner'],
   // OBRS-699: another NEW tab, never a standalone route — "before" is its own
-  // requiredRoles at creation, same frozen-literal discipline. Matches the
-  // backend owner controller, whose getCurrentOwnerId() refuses ADMIN.
-  'cancel-reschedule-policy': ['owner'],
+  // requiredRoles at creation, same frozen-literal discipline.
+  // OBRS-1719 moved this off ['owner'] ON PURPOSE — the backend owner
+  // controller's getCurrentOwnerId() no longer refuses ADMIN outright.
+  'cancel-reschedule-policy': ['admin', 'owner'],
   // OBRS-1308: another NEW tab, never a standalone route — same discipline.
   // Matches the backend owner controller (hasRole('OWNER'), ROLE_GRANTS
   // admits ADMIN). The separate admin-only review queue/detail underneath
@@ -93,11 +97,10 @@ const ROLES_BEFORE_OBRS_702: Record<string, readonly string[]> = {
   // review-queue/detail page components' own AC5 doc comments.
   'notification-messages': ['admin', 'owner'],
   // OBRS-703: another NEW tab, never a standalone route — same discipline.
-  // Matches the backend owner controller
-  // (/private/owner/configs/operations, hasRole('OWNER'), ROLE_GRANTS admits
-  // ADMIN) — see OperationsConfigPageComponent's own 403 handling for what
-  // happens when an admin clicks in anyway.
-  operations: ['owner'],
+  // OBRS-1719 moved this off ['owner'] ON PURPOSE — the backend owner
+  // controller's getCurrentOwnerId() (/private/owner/configs/operations) no
+  // longer refuses ADMIN outright.
+  operations: ['admin', 'owner'],
 };
 
 describe('OBRS-702 SystemSettingsPageComponent — tab strip', () => {

@@ -444,10 +444,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     // Build nav items before calling super so the route subscription (which
     // fires synchronously via startWith) already has navItems in place —
     // mirrors StaffLayoutComponent.ngOnInit's ordering.
-    this.navItems = this.buildNavItems();
-    this.navSearchCorpus = [...this.navItems, ...this.buildSettingsTabItems()];
-    this.filteredNavItems = this.navItems;
-    this.filteredNavSections = this.buildSections(this.navItems);
+    this.rebuildNav();
     super.ngOnInit();
     this.watchNewReportCount();
 
@@ -463,6 +460,21 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     this.translate.onLangChange
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.applyNavSearch(this.navSearchQuery));
+  }
+
+  // OBRS-1721: also re-run on entering/leaving a role preview. buildNavItems()
+  // asks hasHeldRole(['admin']) for the lookups/roles pair, which is the ONLY
+  // difference between the admin and owner menus (ADR-0040) — so without this
+  // an admin previewing as owner would see no change at all. The search state
+  // is reset alongside it because a query filtered against the previous role's
+  // items would otherwise keep showing entries the new nav no longer has —
+  // clearing the query is what keeps the box and the list telling the same story.
+  protected override rebuildNav(): void {
+    this.navItems = this.buildNavItems();
+    this.navSearchCorpus = [...this.navItems, ...this.buildSettingsTabItems()];
+    this.navSearchQuery = '';
+    this.filteredNavItems = this.navItems;
+    this.filteredNavSections = this.buildSections(this.navItems);
   }
 
   override ngOnDestroy(): void {

@@ -210,6 +210,19 @@
                       <span>{{ 'ADMIN.LAYOUT.STAFF_AREA' | translate }}</span>
                     </a>
                   }
+                  <!-- OBRS-1721: "ดูในมุมมองของ…". previewableRoles is empty for
+                  anyone but a HELD admin/owner, so this cannot appear for a role
+                  that merely GRANTS admin; it is also hidden while a preview is
+                  running — the banner owns the way out. -->
+                  @if (previewableRoles.length > 0 && !previewRole) {
+                    <span class="admin-profile-heading">{{ 'ROLE_PREVIEW.MENU' | translate }}</span>
+                    @for (role of previewableRoles; track role) {
+                      <button type="button" class="admin-profile-item" role="menuitem" (click)="onViewAs(role)">
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">visibility</span>
+                        <span>{{ roleLabelKey(role) | translate }}</span>
+                      </button>
+                    }
+                  }
                   <button type="button" class="admin-profile-item" role="menuitem" (click)="onLogout()">
                     <span class="material-symbols-outlined" [attr.translate]="'no'">logout</span>
                     <span>{{ 'ADMIN.LAYOUT.SIGN_OUT' | translate }}</span>

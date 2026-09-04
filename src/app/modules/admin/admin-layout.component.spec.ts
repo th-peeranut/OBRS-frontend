@@ -73,6 +73,12 @@ describe('AdminLayoutComponent', () => {
     // flipping this, in the OBRS-1498 specs further down.
     hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['owner'],
+    // OBRS-1721: the shell reads these three at construction and subscribes to
+    // the stream in ngOnInit. Never-previewing is the baseline every spec here
+    // was written against; the preview itself is measured in nav-reachability.spec.ts.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');
@@ -789,11 +795,11 @@ describe('AdminLayoutComponent', () => {
       navSearchCorpus: Array<{ path: string; labelKey: string; descriptionKey?: string }>;
     };
 
-    // A tab whose requiredRoles are ['admin', 'owner'] and one whose roles are
-    // ['owner'] only, picked FROM the array so the role spec below keeps
-    // meaning what it says if a tab's roles ever change.
-    const sharedTab = SYSTEM_SETTINGS_TABS.find((t) => t.requiredRoles.includes('admin'))!;
-    const ownerOnlyTab = SYSTEM_SETTINGS_TABS.find((t) => !t.requiredRoles.includes('admin'))!;
+    // OBRS-1719 flipped the last tabs that used to be a real ['owner']-only
+    // literal to ['admin','owner'], so there is no longer a real tab in
+    // SYSTEM_SETTINGS_TABS this describe block can pick to prove "own roles,
+    // not the union" by CONTENT. The role spec below proves it by CALL SHAPE
+    // instead (see the AC3 test).
 
     /**
      * Builds the layout with a caller-supplied role predicate. The predicate is
@@ -858,20 +864,37 @@ describe('AdminLayoutComponent', () => {
         .toEqual(['seat']);
     });
 
-    it('reads the OWN requiredRoles of each tab, not the union the shell uses (AC3)', () => {
-      // Admits the shell and the shared tab, refuses the owner-only tabs.
-      const comp = buildWith((roles) => roles.includes('admin'));
-      const corpusPaths = comp.navSearchCorpus.map((i) => i.path);
+    it('calls hasAnyRole once per settings tab, in tab order, each with that tab\'s OWN requiredRoles (AC3)', () => {
+      // Every SYSTEM_SETTINGS_TABS entry now carries the identical ['admin',
+      // 'owner'] literal (OBRS-1719 closed the last real owner-only case), so
+      // a synthetic predicate can no longer discriminate tabs by CONTENT —
+      // admin-layout.component.ts:356 also gates the shell's own "settings"
+      // link with a role array that is now content-identical
+      // ([...SYSTEM_SETTINGS_ROLES]). What is still checkable, and is the
+      // actual mechanism this AC pins, is CALL SHAPE: buildSettingsTabItems()
+      // (:389-391) calls hasAnyRole once PER TAB, in array order, each with
+      // that tab's own (spread) requiredRoles — never once with the
+      // aggregate union. Those calls are exactly the trailing
+      // SYSTEM_SETTINGS_TABS.length calls, because buildNavItems() (which
+      // owns every earlier hasAnyRole call, including the shell's own union
+      // check) runs to completion before buildSettingsTabItems() is invoked
+      // (admin-layout.component.ts:447-448) — true regardless of how many
+      // calls buildNavItems happens to make.
+      const hasAnyRoleSpy = jasmine.createSpy('hasAnyRole').and.returnValue(true);
+      const comp = buildWith(hasAnyRoleSpy);
 
-      expect(corpusPaths)
-        .withContext(`a tab admitting admin (${sharedTab.path}) must be searchable`)
-        .toContain(`settings/${sharedTab.path}`);
-      expect(corpusPaths)
-        .withContext(
-          `an owner-only tab (${ownerOnlyTab.path}) must NOT be offered to an identity the ` +
-            'tab refuses — a result that 403s on click is worse than no result'
-        )
-        .not.toContain(`settings/${ownerOnlyTab.path}`);
+      const tabCount = SYSTEM_SETTINGS_TABS.length;
+      const tabCallArgs = hasAnyRoleSpy.calls.allArgs().slice(-tabCount).map((args) => args[0]);
+      expect(tabCallArgs)
+        .withContext('one call per tab, in tab order, each with that tab\'s own requiredRoles')
+        .toEqual(SYSTEM_SETTINGS_TABS.map((tab) => [...tab.requiredRoles]));
+
+      const corpusPaths = comp.navSearchCorpus.map((i) => i.path);
+      for (const tab of SYSTEM_SETTINGS_TABS) {
+        expect(corpusPaths)
+          .withContext(`tab ${tab.path} admitted by its own call must be searchable`)
+          .toContain(`settings/${tab.path}`);
+      }
     });
 
     it('derives every tab from SYSTEM_SETTINGS_TABS — a ninth tab needs no edit here', () => {
@@ -937,6 +960,12 @@ describe('AdminLayoutComponent — usability report badge', () => {
     // OBRS-1498: same blunt fixture switch as the outer describe's.
     hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['owner'],
+    // OBRS-1721: the shell reads these three at construction and subscribes to
+    // the stream in ngOnInit. Never-previewing is the baseline every spec here
+    // was written against; the preview itself is measured in nav-reachability.spec.ts.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');
@@ -1184,6 +1213,10 @@ describe('AdminLayoutComponent — usability report badge (admin badgeStatus)', 
     hasAnyRole: (_roles: string[]) => true,
     hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['admin'],
+    // OBRS-1721 — see the note on the outer describe's stub.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');
@@ -1358,6 +1391,10 @@ describe('AdminLayoutComponent — personal menu (OBRS-1071)', () => {
     hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['admin'],
     logout: jasmine.createSpy('logout'),
+    // OBRS-1721 — see the note on the outer describe's stub.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');

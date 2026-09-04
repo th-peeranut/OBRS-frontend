@@ -133,11 +133,18 @@ function requiredHeldRolesOf(routes: Route[], path: string): string[] {
  * Everything the access check depends on — ROLE_GRANTS expansion, normalisation,
  * the empty-requiredRoles behaviour — stays the production implementation.
  */
-function realAuthServiceFor(roles: string[]): AuthService {
+function realAuthServiceFor(roles: string[], previewRole: string | null = null): AuthService {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({ imports: [HttpClientTestingModule, RouterTestingModule] });
   const auth = TestBed.inject(AuthService);
-  spyOn(auth, 'getRoles').and.returnValue(roles);
+  // OBRS-1721: the spy moved from getRoles() to getHeldRoles(), one layer down.
+  // With no preview the two are the same function, so every caller above is
+  // unchanged — but stubbing getRoles() would have stubbed OUT the preview
+  // override itself, i.e. the thing under test.
+  spyOn(auth, 'getHeldRoles').and.returnValue(roles);
+  if (previewRole) {
+    auth.startRolePreview(previewRole);
+  }
   return auth;
 }
 
@@ -150,6 +157,11 @@ function realAuthServiceFor(roles: string[]): AuthService {
 async function navEntriesFor(
   layout: Type<unknown>,
   roles: readonly string[],
+  // OBRS-1721: optional, null-default — when supplied it REPLACES the role stub
+  // below with a real AuthService, so the preview override, ROLE_GRANTS
+  // expansion and hasHeldRole are all production code. Omitted, every existing
+  // caller behaves exactly as before.
+  authOverride: AuthService | null = null,
 ): Promise<{ paths: string[]; hrefs: string[] }> {
   TestBed.resetTestingModule();
   await TestBed.configureTestingModule({
@@ -158,7 +170,7 @@ async function navEntriesFor(
     providers: [
       {
         provide: AuthService,
-        useValue: {
+        useValue: authOverride ?? {
           getUsername: () => 'nav@obrs.test',
           getRoles: () => [...roles],
           hasAnyRole: (required: string[]) => required.some((r) => roles.includes(r)),
@@ -167,6 +179,11 @@ async function navEntriesFor(
           // AdminLayoutComponent asks before listing lookups/roles.
           hasHeldRole: (required: string[]) => required.some((r) => roles.includes(r)),
           logout: () => {},
+          // OBRS-1721: never previewing on this path — the preview cases below
+          // pass a real AuthService through authOverride instead.
+          getPreviewRole: () => null,
+          getPreviewableRoles: () => [],
+          previewRole$: of<string | null>(null),
         },
       },
       { provide: AlertService, useValue: { success: () => {} } },
@@ -347,4 +364,148 @@ describeShell(
 describeShell('admin', AdminLayoutComponent, adminRoutes, 'admin', ADMIN_ROLES, ADMIN_LINKED_FROM, {
   minRoutes: 15,
   minNav: 15,
+});
+
+/**
+ * OBRS-1721 — "ดูในมุมมองของ…", the read-only role preview.
+ *
+ * The defect this locks down is the reason the card exists: `ROLE_GRANTS.owner`
+ * includes 'driver', and StaffLayoutComponent asks `hasAnyRole(['salesperson'])`
+ * and `hasAnyRole(['driver'])` SEPARATELY — so an owner passes both and sees the
+ * UNION of the two staff menus, a menu no real staff member has ever had. Nobody
+ * could check what a salesperson actually sees, because nobody could be one.
+ *
+ * These specs run the real AuthService (only `getHeldRoles()` is stubbed, in
+ * place of the JWT), so what they exercise is the production override at the
+ * `getRoles()` choke point, not a model of it.
+ */
+describe('OBRS-1721 — view-as role preview', () => {
+  // The promise the feature makes, asserted directly: the nav a previewer gets
+  // is BYTE-FOR-BYTE the nav a real holder of that role gets. Stated this way it
+  // is independent of which items happen to be in each menu, so it keeps meaning
+  // the same thing as the menus change.
+  it('previewing as salesperson reproduces a real salesperson’s staff nav exactly', async () => {
+    const previewing = realAuthServiceFor(['owner'], 'salesperson');
+    const real = realAuthServiceFor(['salesperson']);
+
+    expect((await navEntriesFor(StaffLayoutComponent, [], previewing)).paths).toEqual(
+      (await navEntriesFor(StaffLayoutComponent, [], real)).paths,
+    );
+  });
+
+  it('previewing as driver drops every salesperson-only item, and matches a real driver', async () => {
+    const previewing = realAuthServiceFor(['owner'], 'driver');
+    const paths = (await navEntriesFor(StaffLayoutComponent, [], previewing)).paths;
+
+    // Real narrowing, not just equality with another computed list: these five
+    // sit inside `if (isSalesperson)` in staff-layout's buildNavItems().
+    expect(paths).not.toContain('sell');
+    expect(paths).not.toContain('schedules');
+    expect(paths).not.toContain('cancel-booking');
+    expect(paths).not.toContain('fleet-map');
+    expect(paths).not.toContain('parcels/consign');
+    // Narrowed, not emptied — an empty nav would satisfy every line above while
+    // proving nothing about what a driver sees.
+    expect(paths).toContain('driver');
+    expect(paths).toContain('inspection');
+
+    const real = realAuthServiceFor(['driver']);
+    expect(paths).toEqual((await navEntriesFor(StaffLayoutComponent, [], real)).paths);
+  });
+
+  it('...and the un-previewed owner sees the salesperson items the driver preview dropped', async () => {
+    // The positive control for the spec above: without it, "not.toContain('sell')"
+    // cannot distinguish "the preview dropped it" from "it was never there".
+    const auth = realAuthServiceFor(['owner']);
+    const paths = (await navEntriesFor(StaffLayoutComponent, [], auth)).paths;
+
+    expect(paths).toContain('sell');
+    expect(paths).toContain('fleet-map');
+  });
+
+  /**
+   * FINDING, recorded rather than patched around (OBRS-1721 AC-2).
+   *
+   * The card's AC-8 asked for `driver` + `inspection` to disappear when an owner
+   * previews as SALESPERSON, on the premise that an owner sees a salesperson +
+   * driver union "no real staff member ever sees". That premise does not hold:
+   * `ROLE_GRANTS.salesperson` is `['salesperson','driver']`, so a real
+   * salesperson passes `hasAnyRole(['driver'])` too — and `staff.module.ts`
+   * gives both routes `requiredRoles: ['driver']`, which the same expansion
+   * admits. A salesperson sees those two items TODAY, in production.
+   *
+   * So the preview is right and the expectation was wrong: reproducing a
+   * salesperson faithfully MUST include them. The only way to drop them would be
+   * to special-case the staff layout (which AC-2 forbids) or to narrow
+   * `ROLE_GRANTS.salesperson` (a product decision about who may drive, well
+   * outside this card). This spec pins the fact so the next reader meets it as
+   * data rather than re-deriving it.
+   */
+  it('FINDING: ROLE_GRANTS.salesperson grants driver, so a real salesperson already sees the driver items', async () => {
+    const real = realAuthServiceFor(['salesperson']);
+    const paths = (await navEntriesFor(StaffLayoutComponent, [], real)).paths;
+
+    expect(paths).toContain('driver');
+    expect(paths).toContain('inspection');
+    expect(real.hasAnyRole(['driver'])).toBeTrue();
+  });
+
+  it('an admin previewing as owner loses the two admin-only entries (ADR-0040)', async () => {
+    // hasHeldRole() is the gate on these two, and it reads getRoles() — so the
+    // single override covers it. Without that, the admin→owner preview would
+    // change nothing at all, these two being the whole difference.
+    const auth = realAuthServiceFor(['admin'], 'owner');
+    const paths = (await navEntriesFor(AdminLayoutComponent, [], auth)).paths;
+
+    expect(paths).not.toContain('lookups');
+    expect(paths).not.toContain('roles');
+    expect(paths).toContain('users');
+  });
+
+  it('...and the same admin sees both without a preview', async () => {
+    const auth = realAuthServiceFor(['admin']);
+    const paths = (await navEntriesFor(AdminLayoutComponent, [], auth)).paths;
+
+    expect(paths).toContain('lookups');
+    expect(paths).toContain('roles');
+  });
+
+  it('offers only roles BELOW the held one, and never customer', () => {
+    // 'customer' is excluded on purpose: auth.guard.ts's customerArea branch
+    // runs no role check, so previewing as customer would change nothing while
+    // implying it had (ADR-0042).
+    expect(realAuthServiceFor(['admin']).getPreviewableRoles()).toEqual([
+      'owner',
+      'salesperson',
+      'driver',
+    ]);
+    expect(realAuthServiceFor(['owner']).getPreviewableRoles()).toEqual([
+      'salesperson',
+      'driver',
+    ]);
+  });
+
+  it('offers nothing to a salesperson or a driver — which is what hides the menu', () => {
+    // hasHeldRole, not hasAnyRole: a salesperson holds no admin/owner role, and
+    // the empty list is what both shell templates gate the submenu on.
+    expect(realAuthServiceFor(['salesperson']).getPreviewableRoles()).toEqual([]);
+    expect(realAuthServiceFor(['driver']).getPreviewableRoles()).toEqual([]);
+  });
+
+  it('refuses a role the holder may not preview', () => {
+    const auth = realAuthServiceFor(['owner']);
+    auth.startRolePreview('admin');
+    expect(auth.getPreviewRole()).toBeNull();
+    auth.startRolePreview('customer');
+    expect(auth.getPreviewRole()).toBeNull();
+  });
+
+  it('exiting restores the real roles, and the real roles are never lost while previewing', () => {
+    const auth = realAuthServiceFor(['owner'], 'driver');
+    expect(auth.getRoles()).toEqual(['driver']);
+    expect(auth.getHeldRoles()).toEqual(['owner']);
+
+    auth.exitRolePreview();
+    expect(auth.getRoles()).toEqual(['owner']);
+  });
 });
