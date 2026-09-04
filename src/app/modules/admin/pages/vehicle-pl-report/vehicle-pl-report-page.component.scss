@@ -81,3 +81,185 @@
 .vehicle-pl-aside .admin-big-number {
   margin-top: 8px;
 }
+
+// ── OBRS-1725: the cost-mix donut and the margin ranking ──
+// Both are drawn from CSS/SVG primitives rather than a charting library, so every colour
+// here resolves to an `--admin-*` token and follows the shell into dark mode. The series
+// tokens are declared in `styles/admin-theme.scss`; nothing below carries a literal.
+
+// Same two-up shape as the aside grid, and the same single-column fallback.
+.vehicle-pl-chart-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .vehicle-pl-chart-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+// The centre figure sits INSIDE the ring, so the wrapper is the positioning context and
+// the ring keeps a fixed aspect ratio at any card width.
+.vehicle-pl-donut-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 220px;
+  margin: 12px auto 4px;
+}
+
+.vehicle-pl-donut {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+// 24 of the 160-unit viewBox, i.e. a ring rather than a pie: the hole is what makes room
+// for the total, which is the number the owner reads first.
+.vehicle-pl-donut-slice {
+  stroke-width: 24;
+}
+
+.vehicle-pl-donut-centre {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+
+  p {
+    margin: 0;
+  }
+}
+
+.vehicle-pl-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 0.85rem;
+  }
+}
+
+.vehicle-pl-legend-label {
+  color: var(--admin-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vehicle-pl-legend-value {
+  color: var(--admin-muted);
+}
+
+.vehicle-pl-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+// Written out rather than looped with `var(--admin-series-#{$i})`: the theme-token gate
+// (scripts/check-admin-theme-tokens.mjs) matches token names as literal text, and an
+// interpolated name reads to it as an undeclared `--admin-series-`. A colour it cannot
+// see is a colour it cannot prove is themed, which is the whole reason that gate exists.
+.vehicle-pl-donut-slice.is-series-1 {
+  stroke: var(--admin-series-1);
+}
+
+.vehicle-pl-donut-slice.is-series-2 {
+  stroke: var(--admin-series-2);
+}
+
+.vehicle-pl-donut-slice.is-series-3 {
+  stroke: var(--admin-series-3);
+}
+
+.vehicle-pl-donut-slice.is-series-4 {
+  stroke: var(--admin-series-4);
+}
+
+.vehicle-pl-donut-slice.is-series-5 {
+  stroke: var(--admin-series-5);
+}
+
+.vehicle-pl-swatch.is-series-1 {
+  background: var(--admin-series-1);
+}
+
+.vehicle-pl-swatch.is-series-2 {
+  background: var(--admin-series-2);
+}
+
+.vehicle-pl-swatch.is-series-3 {
+  background: var(--admin-series-3);
+}
+
+.vehicle-pl-swatch.is-series-4 {
+  background: var(--admin-series-4);
+}
+
+.vehicle-pl-swatch.is-series-5 {
+  background: var(--admin-series-5);
+}
+
+.vehicle-pl-bar-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.vehicle-pl-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: 0.9rem;
+}
+
+.vehicle-pl-bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vehicle-pl-bar-track {
+  height: 12px;
+  border-radius: 6px;
+  background: var(--admin-surface-soft);
+  overflow: hidden;
+}
+
+.vehicle-pl-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--admin-series-1);
+
+  // A losing bus is the finding, so the bar says so as well as the amount beside it —
+  // the length only ever carries magnitude.
+  &.is-negative {
+    background: var(--admin-danger-fg);
+  }
+}
+
+// The cost sub-columns are a breakdown OF the expenses column, not five more totals of
+// equal weight, so their headings and figures sit one step back.
+.vehicle-pl-subcost {
+  font-size: 0.85rem;
+  color: var(--admin-muted);
+}
+
+// Nobody recorded anything in this category — deliberately not a 0, which on this screen
+// means somebody entered one.
+.vehicle-pl-no-entry {
+  color: var(--admin-muted);
+}

@@ -2613,3 +2613,36 @@ textarea.admin-field {
     display: block !important;
   }
 }
+
+/* ── Categorical SERIES fills (OBRS-1725) ──
+   The first chart surface in this app needs colours whose only job is to tell five
+   slices APART. Every existing token names a meaning (danger / success / accepted /
+   warning) and reusing them would say a cost category is bad or good, which is not
+   what a cost mix means.
+
+   These are FILLS with nothing read on top of them: the legend beside the donut
+   carries the label and the amount as ordinary body text, so the number that matters
+   is each fill's separation from the card behind it, not a text-contrast ratio.
+   Measured (WCAG relative luminance, computed from the declared values):
+   light 6.73 / 6.22 / 6.45 / 6.12 / 6.54 on --admin-surface-card #ffffff;
+   dark 9.36 / 9.45 / 9.45 / 9.92 / 8.53 on --admin-surface-card #1d2226 - the same
+   brightness step as the --admin-*-fg family (9.45:1) rather than a new one.
+
+   Hues are ordered so the two biggest slices are the two furthest apart (teal then
+   burnt orange); each pair also differs in lightness, so the set survives being read
+   as five greys. */
+.admin-shell {
+  --admin-series-1: #00647d;
+  --admin-series-2: #a1450f;
+  --admin-series-3: #2f6099;
+  --admin-series-4: #4c6b1f;
+  --admin-series-5: #6a4f9c;
+}
+
+.admin-shell.is-dark {
+  --admin-series-1: #62d4f5;
+  --admin-series-2: #ffb877;
+  --admin-series-3: #a8c8ff;
+  --admin-series-4: #b9d76a;
+  --admin-series-5: #cbb2f0;
+}

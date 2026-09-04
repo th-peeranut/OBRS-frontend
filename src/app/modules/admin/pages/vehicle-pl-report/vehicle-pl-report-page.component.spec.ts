@@ -372,4 +372,240 @@ describe('VehiclePlReportPageComponent (template rendering)', () => {
     expect(fixture.nativeElement.textContent).toContain('ADMIN.VEHICLE_PL_REPORT.VAT_NOTE');
     expect(fixture.nativeElement.textContent).toContain('ADMIN.VEHICLE_PL_REPORT.MARGIN_NOTE');
   });
+  // OBRS-1725. The donut is the only place on this page where a figure is assembled
+  // rather than printed, so the legend is checked against the numbers it claims.
+  it('draws one arc and one legend line per cost slice, each carrying its own share', () => {
+    renderReport(makeReport());
+
+    expect(fixture.nativeElement.querySelectorAll('.vehicle-pl-donut-slice').length).toBe(2);
+
+    const legend = fixture.nativeElement.querySelectorAll('.vehicle-pl-legend li');
+    expect(legend.length).toBe(2);
+    expect(visibleText(legend[0])).toContain('ADMIN.EXPENSES.CATEGORIES.FUEL');
+    expect(visibleText(legend[0])).toContain('70.6%');
+    expect(visibleText(legend[0])).toContain('THB 1,200');
+  });
+
+  // AC2 rendered: the ranking is the fleet's, and the card says what it leaves out rather
+  // than leaving the reader to work out why the totals do not add up to it.
+  it('ranks the fleet only, and states the exclusion on the card', () => {
+    renderReport(makeReport());
+
+    const bars = fixture.nativeElement.querySelectorAll('.vehicle-pl-bar-row');
+    expect(bars.length).toBe(2);
+    expect(visibleText(bars[0])).toContain('THB 3,800');
+    expect(fixture.nativeElement.textContent).toContain(
+      'ADMIN.VEHICLE_PL_REPORT.TOP_MARGIN.HINT'
+    );
+  });
+
+  // AC3 rendered: a category nobody spent on has no column, and a vehicle with no line in
+  // a column that DOES exist gets a dash - never a zero, which here means a recorded zero.
+  it('gives each spent-on category a column and the vehicles with no line a dash', () => {
+    renderReport(makeReport());
+
+    const headers = Array.from(fixture.nativeElement.querySelectorAll('thead th')).map(
+      (th: any) => (th.textContent ?? '').trim()
+    );
+    expect(headers).toContain('ADMIN.EXPENSES.CATEGORIES.FUEL');
+    expect(headers).not.toContain('ADMIN.EXPENSES.CATEGORIES.TOLL');
+
+    const quietRow: HTMLTableRowElement = fixture.nativeElement.querySelectorAll(
+      'tbody tr:not(.vehicle-pl-detail-row)'
+    )[1];
+    expect(quietRow.querySelectorAll('.vehicle-pl-no-entry').length).toBe(1);
+  });
+});
+
+/**
+ * OBRS-1725. Both pictures are DERIVED, so these are tests about the derivation: what
+ * gets ranked, what gets folded away, and which zeros are not zeros at all.
+ */
+describe('VehiclePlReportPageComponent (cost mix and margin ranking)', () => {
+  function mounted(report: VehiclePlReportDto): any {
+    const component = new VehiclePlReportPageComponent(
+      makeStoreStub(report) as any,
+      createTranslateStub()
+    );
+    component.ngOnInit();
+    return component as any;
+  }
+
+  function lines(...pairs: Array<[string, string]>) {
+    return pairs.map(([category, amount]) => ({
+      category,
+      amount,
+      vatAmount: '0.00',
+      entryCount: 1,
+    }));
+  }
+
+  it('aggregates the cost mix across every row, central costs included', () => {
+    const component = mounted(makeReport());
+
+    expect(component.costMix.length).toBe(2);
+    expect(component.costMix[0]).toEqual(
+      jasmine.objectContaining({
+        categoryKey: 'FUEL',
+        amount: '1200.00',
+        percent: 70.6,
+        seriesIndex: 1,
+      })
+    );
+    expect(component.costMix[1]).toEqual(
+      jasmine.objectContaining({ categoryKey: 'CENTRAL', amount: '500.00', percent: 29.4 })
+    );
+  });
+
+  it('sums one category across the vehicles that spent on it', () => {
+    const component = mounted(
+      makeReport({
+        rows: [
+          vehicleRow({ expensesByCategory: lines(['FUEL', '1200.55']) }),
+          vehicleRow({
+            vehicleId: 2,
+            numberPlate: '16-8747',
+            header: '16-8747',
+            expensesByCategory: lines(['FUEL', '0.45']),
+          }),
+        ],
+      })
+    );
+
+    expect(component.costMix.length).toBe(1);
+    expect(component.costMix[0].amount).toBe('1201.00');
+    expect(component.costMix[0].percent).toBe(100);
+  });
+
+  it('folds everything past the fourth category into one slice and one column', () => {
+    const component = mounted(
+      makeReport({
+        rows: [
+          vehicleRow({
+            expensesByCategory: lines(
+              ['FUEL', '600.00'],
+              ['REPAIR', '500.00'],
+              ['TOLL', '400.00'],
+              ['TIRE', '300.00'],
+              ['GPS', '200.00'],
+              ['PARKING_FEE', '100.00']
+            ),
+          }),
+        ],
+      })
+    );
+
+    expect(component.costColumns).toEqual(['FUEL', 'REPAIR', 'TOLL', 'TIRE']);
+    expect(component.foldedColumnCount).toBe(2);
+    expect(component.columnCount).toBe(10); // the 5 fixed columns + 4 named + 1 folded
+
+    const folded = component.costMix[component.costMix.length - 1];
+    expect(folded.categoryKey).toBeNull();
+    expect(folded.foldedCount).toBe(2);
+    expect(folded.amount).toBe('300.00'); // GPS 200 + PARKING_FEE 100, nothing else
+  });
+
+  // The whole point of AC2's `kind === 'VEHICLE'`: an attribution gap and a central cost
+  // are not buses, so they cannot be ranked against one.
+  it('ranks only vehicles, and only five of them', () => {
+    const fleet = Array.from({ length: 7 }, (_, index) =>
+      vehicleRow({
+        vehicleId: index + 1,
+        numberPlate: `16-000${index}`,
+        header: `16-000${index}`,
+        margin: `${(index + 1) * 100}.00`,
+      })
+    );
+    const component = mounted(
+      makeReport({ rows: [...fleet, ...makeReport().rows.slice(2)] })
+    );
+
+    expect(component.marginBars.length).toBe(5);
+    expect(component.marginBars.map((bar: any) => bar.label)).toEqual([
+      '16-0006',
+      '16-0005',
+      '16-0004',
+      '16-0003',
+      '16-0002',
+    ]);
+    expect(component.marginBars[0].widthPercent).toBe(100);
+    expect(component.marginBars[4].widthPercent).toBe(43); // 300 against the 700 at the top
+  });
+
+  it('draws a loss at its real size and marks it as one', () => {
+    const component = mounted(
+      makeReport({
+        rows: [
+          vehicleRow({ margin: '-800.00' }),
+          vehicleRow({ vehicleId: 2, numberPlate: 'B', header: 'B', margin: '400.00' }),
+        ],
+      })
+    );
+
+    expect(component.marginBars[0]).toEqual(
+      jasmine.objectContaining({ label: 'B', widthPercent: 50, negative: false })
+    );
+    expect(component.marginBars[1]).toEqual(
+      jasmine.objectContaining({ widthPercent: 100, negative: true })
+    );
+  });
+
+  it('tells "no line at all" apart from "a line that says zero"', () => {
+    const component = mounted(makeReport());
+    const row = vehicleRow({ expensesByCategory: lines(['FUEL', '0.00']) });
+
+    expect(component.categoryAmount(row, 'FUEL')).toBe('0.00');
+    expect(component.categoryAmount(row, 'TOLL')).toBeNull();
+    expect(component.foldedAmount(row)).toBeNull();
+  });
+
+  it('drops a category with no money rather than drawing an empty slice', () => {
+    const component = mounted(
+      makeReport({
+        rows: [vehicleRow({ expensesByCategory: lines(['FUEL', '900.00'], ['TOLL', '0.00']) })],
+      })
+    );
+
+    expect(component.costMix.map((slice: any) => slice.categoryKey)).toEqual(['FUEL']);
+    expect(component.costColumns).toEqual(['FUEL']);
+  });
+
+  // Caught on the real screen, not in a spec: rounding five shares independently printed
+  // a legend that summed to 100.1%.
+  it('prints a legend whose shares add up to exactly 100', () => {
+    const component = mounted(
+      makeReport({
+        rows: [
+          vehicleRow({
+            expensesByCategory: lines(
+              ['FUEL', '52900.00'],
+              ['REPAIR', '20300.00'],
+              ['CENTRAL', '15000.00'],
+              ['TIRE', '8400.00'],
+              ['TOLL', '7500.00'],
+              ['GPS', '900.00'],
+              ['PARKING_FEE', '450.00']
+            ),
+          }),
+        ],
+      })
+    );
+
+    const shares = component.costMix.map((slice: any) => slice.percent);
+    expect(shares).toEqual([50.2, 19.2, 14.2, 8, 8.4]);
+    // Summed in tenths, not as the floats `percent` carries: 8 + 8.4 alone is
+    // 16.399999999999995 in IEEE754, which is a rounding artefact of the check, not of
+    // the derivation under test.
+    const tenths = shares.reduce((sum: number, share: number) => sum + Math.round(share * 10), 0);
+    expect(tenths).toBe(1000);
+  });
+
+  it('has nothing to draw for a period with no rows at all', () => {
+    const component = mounted(makeReport({ rows: [] }));
+
+    expect(component.costMix).toEqual([]);
+    expect(component.marginBars).toEqual([]);
+    expect(component.costColumns).toEqual([]);
+    expect(component.columnCount).toBe(5);
+  });
 });
