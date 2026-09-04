@@ -67,6 +67,27 @@
             <p class="sold-out-today__hint">
               {{ "SCHEDULE_BOOKING.NEAREST_DAY_HINT" | translate: { date: nearestDay.label } }}
             </p>
+            <!-- The asymmetry above is deliberate, do not "fix" it: the HINT
+                 renders for every trip type, the BUTTON is one-way only.
+                 `canJumpToDay$` is the same predicate as the sold-out branch's
+                 `canJumpToNextDay` — a round trip's outbound cannot be moved
+                 from here without possibly leaving the return date before it,
+                 and this screen has no say over the return leg (owner,
+                 2026-08-10). Round-trip customers reach the day by tapping its
+                 chip in the day strip above. -->
+            @if (canJumpToDay$ | async) {
+              <button
+                type="button"
+                class="sold-out-today__action"
+                data-testid="nearest-day-action"
+                (click)="showDay(nearestDay.iso)"
+              >
+                {{
+                  "SCHEDULE_BOOKING.SOLD_OUT_TODAY_ACTION"
+                    | translate: { date: nearestDay.label }
+                }}
+              </button>
+            }
           }
         </div>
       }

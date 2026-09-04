@@ -128,6 +128,13 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
    *  makes no claim. Subscribed only from the empty-result branch of the
    *  template, so a page whose search returned trips asks nothing extra. */
   nearestDay$: Observable<{ iso: string; label: string } | null>;
+  /** OBRS-862. Gates the jump BUTTON in the plain empty-result branch — never
+   *  the hint, which names the nearest day for every trip type. Exactly the
+   *  predicate `resolveSoldOutToday` puts on `canJumpToNextDay` (owner's
+   *  2026-08-10 call: moving the outbound can leave the return date before it,
+   *  and this screen has no say over the return leg), reused rather than
+   *  restated so the two buttons cannot drift apart. */
+  canJumpToDay$: Observable<boolean>;
   /** The raw active language ('th' | 'en' | 'zh') — unlike `currentLocale$`,
    *  which deliberately narrows to the two locales station labels exist in. */
   private currentLang$: Observable<string>;
@@ -300,6 +307,10 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
               )
           : of(null)
       )
+    );
+
+    this.canJumpToDay$ = this.scheduleFilter.pipe(
+      map((scheduleFilter) => !this.isRoundTrip(scheduleFilter))
     );
   }
 

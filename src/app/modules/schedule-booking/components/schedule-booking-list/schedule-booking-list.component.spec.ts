@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DebugElement } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -1281,6 +1282,10 @@ describe('ScheduleBookingListComponent (OBRS-862 nearest day with trips)', () =>
     return el ? (el.nativeElement.textContent || '').trim() : null;
   }
 
+  function actionButton(): DebugElement | null {
+    return fixture.debugElement.query(By.css('[data-testid="nearest-day-action"]'));
+  }
+
   beforeEach(async () => {
     availability = null;
 
@@ -1316,6 +1321,7 @@ describe('ScheduleBookingListComponent (OBRS-862 nearest day with trips)', () =>
     translate.setTranslation('en', {
       SCHEDULE_BOOKING: {
         NEAREST_DAY_HINT: 'The nearest day with trips is {{date}}',
+        SOLD_OUT_TODAY_ACTION: 'Show trips on {{date}}',
         NO_RESULTS: 'No trips found',
       },
     });
@@ -1377,6 +1383,48 @@ describe('ScheduleBookingListComponent (OBRS-862 nearest day with trips)', () =>
     expect(action.type).toBe(invokeSetScheduleFilterApi.type);
     expect(action.schedule_filter.departureDate).toBe('2026-08-16');
     expect(action.schedule_filter.returnDate).toBe('2026-08-17');
+  });
+
+  // AC "พร้อมปุ่มกดไปวันนั้นเลย": the hint alone is not the deliverable. This is
+  // the plain empty-result branch (SEARCHED is 3 days out, so `soldOutToday$`
+  // is null) — the case the card was opened about, and the one that shipped
+  // with a hint and no way to act on it.
+  it('offers a jump button on the named day for a ONE-WAY empty result', () => {
+    availability = { availableDates: ['2026-08-15'], effectiveDays: 7 };
+    render(filterFor(SEARCHED));
+    const dispatch = spyOn(store, 'dispatch');
+
+    const button = actionButton();
+    expect(button).not.toBeNull();
+    expect((button!.nativeElement.textContent || '').trim()).toBe(
+      'Show trips on ' + expectedLabel('2026-08-15')
+    );
+
+    button!.nativeElement.click();
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    const action = dispatch.calls.mostRecent().args[0] as unknown as {
+      type: string;
+      schedule_filter: ScheduleFilter;
+    };
+    expect(action.type).toBe(invokeSetScheduleFilterApi.type);
+    // The day the hint named, not the day after the searched one — this button
+    // goes through showDay(nearestDay.iso), not showNextDay().
+    expect(action.schedule_filter.departureDate).toBe('2026-08-15');
+  });
+
+  // The other half of the same rule, and the half that is easy to break by
+  // "fixing" the asymmetry: the owner's 2026-08-10 call keeps the BUTTON
+  // one-way-only, while the HINT names the nearest day for every trip type.
+  // Asserting both in one arm is what stops a widened gate from passing (button
+  // appears) and a deleted hint from passing (hint gone) alike. The arm above
+  // is the positive control that proves this selector can match at all.
+  it('withholds the jump button for a ROUND TRIP but still names the day', () => {
+    availability = { availableDates: ['2026-08-15'], effectiveDays: 7 };
+    render(filterFor(SEARCHED, { roundTrip: { id: 2 }, returnDate: '2026-08-20' }));
+
+    expect(actionButton()).toBeNull();
+    expect(hintText()).toBe(hint('2026-08-15'));
   });
 
   // What commit 455f697e guards. `dayjs(null).format('YYYY-MM-DD')` is the
