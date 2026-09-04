@@ -4449,3 +4449,22 @@ just one a test can never catch.
   interface both are supposed to satisfy — a same-named field one level up (`id` vs `slug`) is
   the kind of drift a type checker won't catch when the stub's parameter type is loosened to
   `unknown[]`.
+
+## OBRS-1730 scrutinize self-fix (auth.service.ts, currentRouteAllowsPreviewedRole, 2026-09-04)
+- The new walk that checks whether the previewed role still passes the route on screen used
+  `for (snapshot = root; snapshot; snapshot = snapshot.firstChild)` — primary-outlet-only.
+  `ActivatedRouteSnapshot.children` (not `firstChild`) is what actually carries every outlet's
+  branch, and this repo already has a documented lesson about exactly that gap:
+  `src/app/shared/lib/analytics-route-scope.ts`'s `childrenOf()` — "a named outlet branches the
+  tree, and a walk that only ever took `firstChild` would read a staff page sitting in a
+  secondary outlet as measurable" — prefers `children`, falling back to `firstChild` only for
+  snapshot-shaped test doubles. No route in this app uses a named outlet today, so the bug was
+  dormant, not live (`ng test` stayed green, `grep -rn "outlet:" src/app` was empty) — but the
+  fail direction is fail-OPEN: a route in a secondary outlet the previewed role can't pass would
+  silently stay on screen exactly like the pre-OBRS-1730 defect this card exists to fix. Changed
+  the loop to a BFS queue that prefers `snapshot.children` and falls back to `snapshot.firstChild`
+  when `children` is empty (same fallback rule as `childrenOf()`), so the existing spec doubles
+  (which only set `firstChild`) still pass unmodified. Lesson: `grep firstChild` across the repo
+  before writing a NEW `ActivatedRouteSnapshot` walk — this one exact trap was already fixed once
+  in `analytics-route-scope.ts` and the fix didn't carry over because nobody grepped for the
+  precedent.
