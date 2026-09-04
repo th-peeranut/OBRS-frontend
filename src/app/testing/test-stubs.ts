@@ -1,5 +1,10 @@
 import { signal } from '@angular/core';
-import { BehaviorSubject, of, Subject } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
+import {
+  BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK,
+  BookingPolicyService,
+} from '../services/booking-policy/booking-policy.service';
 
 // Lightweight dependency stubs for component "should create" smoke tests.
 // Components here are instantiated directly (no TestBed/template render), so the
@@ -95,11 +100,21 @@ export function createScheduleServiceStub(): any {
 
 /** OBRS-862. Defaults to the shared fallback so a caller that only needs the
  *  service to exist gets the same window the in-flight path renders; pass a
- *  number to prove a component reads the API rather than a constant. */
-export function createBookingPolicyServiceStub(maxAdvanceDays: number = 60): any {
-  return {
-    getBookingPolicy: () => of({ data: { maxAdvanceDays, cutoffMinutes: 20 } }),
-  };
+ *  number to prove a component reads the API rather than a constant.
+ *
+ *  A REAL `BookingPolicyService` over a fake `HttpClient`, not a hand-written
+ *  object: `maxAdvanceDays$` carries the fallback/`catchError`/`shareReplay`
+ *  the components now depend on, and a stub that re-implemented that pipeline
+ *  would be asserting against a copy of the code under test. Pass an
+ *  observable to drive the failure/empty-body arms through the real pipeline. */
+export function createBookingPolicyServiceStub(
+  policy: number | Observable<unknown> = BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK
+): any {
+  const response$ =
+    typeof policy === 'number'
+      ? of({ data: { maxAdvanceDays: policy, cutoffMinutes: 20 } })
+      : policy;
+  return new BookingPolicyService({ get: () => response$ } as unknown as HttpClient);
 }
 
 /** AuthService: `authStatus$` is a real BehaviorSubject so a test can `.next()`

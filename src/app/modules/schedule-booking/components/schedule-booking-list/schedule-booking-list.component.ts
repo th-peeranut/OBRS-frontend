@@ -6,13 +6,11 @@ import {
   ScheduleList,
 } from '../../../../shared/interfaces/schedule.interface';
 import {
-  catchError,
   combineLatest,
   distinctUntilChanged,
   map,
   Observable,
   of,
-  shareReplay,
   startWith,
   Subject,
   Subscription,
@@ -55,10 +53,7 @@ import {
   buildDayWindow,
 } from '../../../../shared/lib/schedule-day-window';
 import { ScheduleService } from '../../../../services/schedule/schedule.service';
-import {
-  BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK,
-  BookingPolicyService,
-} from '../../../../services/booking-policy/booking-policy.service';
+import { BookingPolicyService } from '../../../../services/booking-policy/booking-policy.service';
 import { RouteMapService } from '../../../../services/route-map/route-map.service';
 import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
 import { LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
@@ -173,12 +168,6 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  /** OBRS-862 AC#3: the advance-sale cap, from the API and never a literal.
-   *  `BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK` covers only the in-flight and
-   *  failed cases, exactly as `ScheduleBookingFilterComponent` does since
-   *  OBRS-698. Shared so the two `| async` branches below cannot ask twice. */
-  private readonly maxAdvanceDays$: Observable<number>;
-
   constructor(
     private store: Store,
     private router: Router,
@@ -190,16 +179,6 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     private scheduleService: ScheduleService,
     private bookingPolicyService: BookingPolicyService
   ) {
-    this.maxAdvanceDays$ = this.bookingPolicyService.getBookingPolicy().pipe(
-      map(
-        (response) =>
-          response.data?.maxAdvanceDays ?? BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK
-      ),
-      catchError(() => of(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK)),
-      startWith(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK),
-      shareReplay({ bufferSize: 1, refCount: false })
-    );
-
     this.scheduleList = this.store.pipe(select(selectScheduleList));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
     this.rawProvinceStationList = this.store.pipe(select(selectProvinceWithStation));
@@ -267,7 +246,7 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       this.scheduleFilter,
       this.rawProvinceStationList,
       this.currentLang$,
-      this.maxAdvanceDays$,
+      this.bookingPolicyService.maxAdvanceDays$,
     ]).pipe(
       map(([scheduleList, scheduleFilter, stationList, lang, maxAdvanceDays]) => {
         const departures = scheduleList?.departureSchedules;
@@ -278,7 +257,10 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
         // it is not defensive dressing: `availabilityRequestFor` does not look
         // at `departureDate`, so a restored filter without one still produces a
         // request, and `dayjs(null).format(...)` is the literal STRING
-        // "Invalid Date" — which sorts BELOW every ISO date. `resolveNearestDay`
+        // "Invalid Date" — which sorts ABOVE every ISO date ('I' 0x49 vs a
+        // leading digit 0x32), so nothing in the window is "after" it and the
+        // "before" arm takes over with the whole window to choose from.
+        // `resolveNearestDay`
         // would then find nothing "after", take the last entry "before", and
         // name the FARTHEST day in the window as the nearest one with trips.
         const searchedDate = dayjs(scheduleFilter?.departureDate);
@@ -558,7 +540,7 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
    *  so the outbound-only rule and the carried return date are written in ONE
    *  place — see that file's header for AC#4's reasoning. */
   showDay(day: string): void {
-    combineLatest([this.scheduleFilter, this.maxAdvanceDays$])
+    combineLatest([this.scheduleFilter, this.bookingPolicyService.maxAdvanceDays$])
       .pipe(take(1))
       .subscribe(([scheduleFilter, maxAdvanceDays]) => {
         if (!scheduleFilter) {

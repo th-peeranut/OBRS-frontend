@@ -11,7 +11,6 @@ import { select, Store } from '@ngrx/store';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import dayjs from 'dayjs';
 import {
-  catchError,
   combineLatest,
   distinctUntilChanged,
   map,
@@ -34,10 +33,7 @@ import {
   ScheduleFilter,
 } from '../../../../shared/interfaces/schedule.interface';
 import { ScheduleService } from '../../../../services/schedule/schedule.service';
-import {
-  BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK,
-  BookingPolicyService,
-} from '../../../../services/booking-policy/booking-policy.service';
+import { BookingPolicyService } from '../../../../services/booking-policy/booking-policy.service';
 import {
   availabilityRequestFor,
   availabilityRequestKey,
@@ -116,17 +112,13 @@ export class ScheduleBookingDayStripComponent
 
   ngOnInit(): void {
     // AC#3. The upper bound is the owner-editable advance-sale cap, read from
-    // the API and never a literal; `BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK`
-    // is used ONLY until the response lands, exactly as
-    // `ScheduleBookingFilterComponent` does after OBRS-698. A failed fetch just
-    // keeps the fallback — the server re-validates the real cap on search, and
-    // `catchError` here is what stops the interceptor's rethrow from surfacing
-    // as an RxJS unhandled error.
-    const maxAdvanceDays$ = this.bookingPolicyService.getBookingPolicy().pipe(
-      map((response) => response.data?.maxAdvanceDays ?? BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK),
-      catchError(() => of(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK)),
-      startWith(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK)
-    );
+    // the API and never a literal. The fallback, the failed-fetch handling and
+    // the "render before the answer lands" `startWith` all live on
+    // `BookingPolicyService.maxAdvanceDays$` — shared with the filter and the
+    // list so this strip and the empty-state hint can never hold two different
+    // caps, compute two different windows, and put two identical availability
+    // POSTs on the wire.
+    const maxAdvanceDays$ = this.bookingPolicyService.maxAdvanceDays$;
 
     const lang$ = this.translate.onLangChange.pipe(
       map((event: LangChangeEvent) => event.lang),

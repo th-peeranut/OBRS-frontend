@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClient } from '@angular/common/http';
 import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
@@ -40,7 +41,6 @@ describe('ScheduleBookingDayStripComponent', () => {
   let component: ScheduleBookingDayStripComponent;
   let store: MockStore;
   let scheduleServiceStub: { getAvailabilityCached: jasmine.Spy };
-  let bookingPolicyServiceStub: { getBookingPolicy: jasmine.Spy };
 
   function setup(options: {
     filter: ScheduleFilter | null;
@@ -53,11 +53,17 @@ describe('ScheduleBookingDayStripComponent', () => {
         .createSpy('getAvailabilityCached')
         .and.returnValue(of(options.availability ?? null)),
     };
-    bookingPolicyServiceStub = {
-      getBookingPolicy: jasmine
-        .createSpy('getBookingPolicy')
-        .and.returnValue(options.policy ?? of({ data: { maxAdvanceDays: 60, cutoffMinutes: 20 } })),
-    };
+    // OBRS-862 (review): the fallback/`catchError`/`shareReplay` this component
+    // used to own now live on `BookingPolicyService.maxAdvanceDays$`, so the
+    // policy stub is the REAL service over a fake `HttpClient`. `options.policy`
+    // still drives it exactly as before — including `throwError` for the arm
+    // that proves a failed fetch keeps the fallback cap — and re-implementing
+    // that pipeline here would make these arms assert against a copy of the
+    // code under test.
+    const bookingPolicyServiceStub = new BookingPolicyService({
+      get: () =>
+        options.policy ?? of({ data: { maxAdvanceDays: 60, cutoffMinutes: 20 } }),
+    } as unknown as HttpClient);
 
     TestBed.configureTestingModule({
       declarations: [ScheduleBookingDayStripComponent],
