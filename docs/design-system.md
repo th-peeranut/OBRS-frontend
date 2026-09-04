@@ -1318,6 +1318,23 @@ enforced rule with a test behind it.
   the rejected option here at +~400 KB each, and it still leaves the page with
   no heading.
 
+- **Categorical (non-semantic) series palette** (OBRS-1725, the vehicle P&L
+  cost-mix donut/legend and its swatches): the first chart on an admin page
+  needed five fills whose only job is telling slices apart, and every existing
+  `--admin-*` token names a MEANING (danger/success/warning/etc.), so reusing
+  one would say a cost category is good or bad, which a cost mix does not mean.
+  Declared as `--admin-series-1..5` in `admin-theme.scss`'s `.admin-shell` /
+  `.admin-shell.is-dark` blocks (same declare-in-both-blocks contract as every
+  other admin token, so `check-admin-theme-tokens.mjs` covers it), each pair
+  chosen for hue separation first (biggest two slices get the most different
+  hues) and measured contrast second (WCAG relative luminance against
+  `--admin-surface-card`, ~6.1–6.7:1 light / ~8.5–9.9:1 dark — legend text
+  carries the label, so a fill only needs to read as distinct, not as a text
+  foreground). Reuse these five for the next categorical (not status) chart on
+  an admin page instead of inventing a second set; add a `--admin-series-6`
+  pair, following the same two measurements, only when a chart genuinely needs
+  a sixth simultaneous category.
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that

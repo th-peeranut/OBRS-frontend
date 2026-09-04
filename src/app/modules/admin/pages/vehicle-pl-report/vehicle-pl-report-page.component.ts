@@ -9,9 +9,45 @@ import {
   VehiclePlTotalsDto,
 } from '../../../../shared/interfaces/vehicle-pl-report.interface';
 import { formatMoney } from '../../../../shared/lib/money-display';
+import { centsToDecimalString, toSignedCents } from '../../../../shared/lib/money-cents';
 
 const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * OBRS-1725 - how many cost categories get a slice of the donut and a column of the
+ * table to themselves before the rest are folded into one line. Four is the layout the
+ * owner approved, and it is also about as many fills as a donut this size keeps apart;
+ * sixteen categories exist, so folding is the normal case rather than the edge one.
+ */
+const NAMED_COST_CATEGORIES = 4;
+
+/** How many vehicles the margin ranking shows. */
+const TOP_MARGIN_ROWS = 5;
+
+/** Donut geometry, shared with the template so the dash maths and the drawn circle
+ * cannot drift apart. */
+const DONUT_RADIUS = 60;
+const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
+
+/** One slice of the company-wide cost mix. `categoryKey` is null on the folded slice. */
+interface CostMixSlice {
+  categoryKey: string | null;
+  foldedCount: number;
+  amount: string;
+  percent: number;
+  seriesIndex: number;
+  dash: number;
+  offset: number;
+}
+
+/** One bar of the per-vehicle margin ranking. */
+interface MarginBar {
+  label: string;
+  margin: string;
+  widthPercent: number;
+  negative: boolean;
+}
 
 /**
  * OBRS-884 — the screen for `GET /admin/reports/pl-per-vehicle` (OBRS-841). Structurally a
@@ -48,6 +84,16 @@ export class VehiclePlReportPageComponent implements OnInit, OnDestroy {
 
   protected readonly skeletonRows = Array.from({ length: 7 });
 
+  // OBRS-1725: the two pictures and the table's data-driven cost columns. Derived from
+  // the rows the server already sent - see `recomputeDerived`.
+  protected costMix: CostMixSlice[] = [];
+  protected marginBars: MarginBar[] = [];
+  protected costColumns: string[] = [];
+  protected foldedColumnCount = 0;
+
+  protected readonly donutRadius = DONUT_RADIUS;
+  protected readonly donutCircumference = DONUT_CIRCUMFERENCE;
+
   // Page-local UI state, not store state — the component is recreated on every navigation
   // (no RouteReuseStrategy) and is cleared whenever a new fetch replaces the rows array.
   // Keyed by number plate, which is unique per row and stable across a refresh.
@@ -73,6 +119,7 @@ export class VehiclePlReportPageComponent implements OnInit, OnDestroy {
         this.previousRows = rows;
       }
       this.report = data;
+      this.recomputeDerived(data);
     });
 
     this.store.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((refreshing) => {
@@ -225,6 +272,41 @@ export class VehiclePlReportPageComponent implements OnInit, OnDestroy {
     return this.translate.instant(`ADMIN.EXPENSES.CATEGORIES.${category}`);
   }
 
+  /** A slice's label: the category's own name, or "N more categories" for the folded one. */
+  protected sliceLabel(slice: CostMixSlice): string {
+    return slice.categoryKey
+      ? this.categoryLabel(slice.categoryKey)
+      : this.translate.instant('ADMIN.VEHICLE_PL_REPORT.COST_MIX.FOLDED', {
+          count: slice.foldedCount,
+        });
+  }
+
+  /**
+   * What this vehicle spent in this category, or `null` when the server sent no line for
+   * it. The table must not render those the same: a `0.00` line means somebody entered a
+   * zero, no line at all means nobody entered anything - the same distinction
+   * `zeroExpenseReasonKey` already makes for the row's total.
+   */
+  protected categoryAmount(row: VehiclePlRowDto, category: string): string | null {
+    return row.expensesByCategory.find((line) => line.category === category)?.amount ?? null;
+  }
+
+  /** The same cell for the folded column: this row's lines outside `costColumns`. */
+  protected foldedAmount(row: VehiclePlRowDto): string | null {
+    const folded = row.expensesByCategory.filter(
+      (line) => !this.costColumns.includes(line.category)
+    );
+    if (folded.length === 0) {
+      return null;
+    }
+    return centsToDecimalString(folded.reduce((sum, line) => sum + this.cents(line.amount), 0));
+  }
+
+  /** The skeleton and detail rows span the whole table, and its width is now data-driven. */
+  protected get columnCount(): number {
+    return 5 + this.costColumns.length + (this.foldedColumnCount > 0 ? 1 : 0);
+  }
+
   protected isNegative(value: string): boolean {
     return Number(value) < 0;
   }
@@ -243,6 +325,154 @@ export class VehiclePlReportPageComponent implements OnInit, OnDestroy {
 
   private isZero(value: string): boolean {
     return Number(value) === 0;
+  }
+
+  /**
+   * OBRS-1725. Both pictures are DERIVED from the rows already on screen - no second
+   * request, and no money figure the response does not already carry. Recomputed once per
+   * emission rather than in a getter, because each pass walks every row's category list
+   * and a getter would re-walk it on every change-detection cycle.
+   *
+   * The arithmetic is integer CENTS through `money-cents.ts` (OBRS-960), which is the
+   * thing the interface's "never do arithmetic on the amounts" is protecting against:
+   * adding the decimal strings as floats is how `0.1 + 0.2 !== 0.3` gets into a report.
+   * Summing them exactly invents nothing either - `totals.expenses` IS the sum of every
+   * row's `expensesByCategory[].amount` on the server side (`ReportService.rollUpExpenses`
+   * builds the lines and the total from the same projections), so the donut divides up
+   * exactly the number the card above it prints.
+   */
+  private recomputeDerived(data: VehiclePlReportDto | null): void {
+    const rows = data?.rows ?? [];
+    this.costMix = this.buildCostMix(rows);
+
+    // Only the fleet's own categories get a column - this table has no central-expense
+    // row to put one on.
+    const perVehicle = this.rankCategories(rows.filter((row) => row.kind === 'VEHICLE'));
+    this.costColumns = perVehicle.slice(0, NAMED_COST_CATEGORIES).map(([category]) => category);
+    this.foldedColumnCount = Math.max(perVehicle.length - NAMED_COST_CATEGORIES, 0);
+
+    this.marginBars = this.buildMarginBars(rows);
+  }
+
+  /**
+   * The categories present in these rows, biggest first. A category with no money in it
+   * is dropped rather than ranked: the server sends no line at all for a category with no
+   * entries, so a zero here would be one somebody explicitly entered - not a slice of
+   * anything. A negative total is dropped for the reason a donut cannot draw one;
+   * expenses are stored non-negative, so that is a guard and not a case.
+   */
+  private rankCategories(rows: VehiclePlRowDto[]): Array<[string, number]> {
+    const byCategory = new Map<string, number>();
+    for (const row of rows) {
+      for (const line of row.expensesByCategory) {
+        byCategory.set(
+          line.category,
+          (byCategory.get(line.category) ?? 0) + this.cents(line.amount)
+        );
+      }
+    }
+    return [...byCategory.entries()].filter(([, cents]) => cents > 0).sort((a, b) => b[1] - a[1]);
+  }
+
+  /**
+   * Every row's costs, the central ones included: the mix answers "where did the company's
+   * money go", and a central cost is money that went somewhere. They are still never
+   * averaged onto a bus - that is the table below, which excludes them.
+   */
+  private buildCostMix(rows: VehiclePlRowDto[]): CostMixSlice[] {
+    const ranked = this.rankCategories(rows);
+    if (ranked.length === 0) {
+      return [];
+    }
+
+    const named = ranked.slice(0, NAMED_COST_CATEGORIES);
+    const folded = ranked.slice(NAMED_COST_CATEGORIES);
+    const parts: Array<{ categoryKey: string | null; foldedCount: number; cents: number }> =
+      named.map(([category, cents]) => ({ categoryKey: category, foldedCount: 0, cents }));
+    if (folded.length > 0) {
+      parts.push({
+        categoryKey: null,
+        foldedCount: folded.length,
+        cents: folded.reduce((sum, [, cents]) => sum + cents, 0),
+      });
+    }
+
+    const totalCents = parts.reduce((sum, part) => sum + part.cents, 0);
+    const percents = this.roundedPercents(
+      parts.map((part) => part.cents),
+      totalCents
+    );
+    let offset = 0;
+    return parts.map((part, index) => {
+      const share = part.cents / totalCents;
+      const dash = share * DONUT_CIRCUMFERENCE;
+      const slice: CostMixSlice = {
+        categoryKey: part.categoryKey,
+        foldedCount: part.foldedCount,
+        amount: centsToDecimalString(part.cents),
+        // The arc is drawn from `share`, never from this rounded percent, so the picture
+        // cannot disagree with the number printed beside it.
+        percent: percents[index],
+        seriesIndex: index + 1,
+        dash,
+        offset,
+      };
+      offset += dash;
+      return slice;
+    });
+  }
+
+  /**
+   * Percentages that add up to exactly 100.0. Rounding each share on its own is the
+   * obvious way and it is the wrong way here: the first capture of this screen printed
+   * `50.2 + 19.3 + 14.2 + 8.0 + 8.4 = 100.1`, which on a report whose whole job is
+   * arithmetic reads as an arithmetic mistake. Largest remainder gives the leftover
+   * tenths to the slices that lost the most in rounding, so no figure moves by more
+   * than 0.1 and the column still sums to the whole.
+   */
+  private roundedPercents(cents: number[], totalCents: number): number[] {
+    const exact = cents.map((value) => (value * 1000) / totalCents);
+    const tenths = exact.map((value) => Math.floor(value));
+    let left = 1000 - tenths.reduce((sum, value) => sum + value, 0);
+    const byRemainder = exact
+      .map((value, index) => ({ index, remainder: value - Math.floor(value) }))
+      .sort((a, b) => b.remainder - a.remainder);
+    for (const entry of byRemainder) {
+      if (left <= 0) {
+        break;
+      }
+      tenths[entry.index] += 1;
+      left -= 1;
+    }
+    return tenths.map((value) => value / 10);
+  }
+
+  /**
+   * The exclusion here is structural, not cosmetic: `UNASSIGNED_REVENUE` is money whose
+   * bus is unknown and `CENTRAL_EXPENSE` is a cost with no bus at all, so neither is a
+   * vehicle that can be ranked against one. Bar length is |margin| against the largest
+   * |margin| among the five, which keeps a fleet that is losing money readable - the sign
+   * is carried by the colour and by the amount beside the bar, never by its length.
+   */
+  private buildMarginBars(rows: VehiclePlRowDto[]): MarginBar[] {
+    const ranked = rows
+      .filter((row) => row.kind === 'VEHICLE')
+      .map((row) => ({ row, cents: this.cents(row.margin) }))
+      .sort((a, b) => b.cents - a.cents)
+      .slice(0, TOP_MARGIN_ROWS);
+
+    const widest = Math.max(...ranked.map((entry) => Math.abs(entry.cents)), 1);
+    return ranked.map((entry) => ({
+      label: this.rowLabel(entry.row),
+      margin: entry.row.margin,
+      widthPercent: Math.round((Math.abs(entry.cents) / widest) * 100),
+      negative: entry.cents < 0,
+    }));
+  }
+
+  /** Money string -> integer cents; `0` for anything unparsable (see `recomputeDerived`). */
+  private cents(value: string): number {
+    return toSignedCents(value) ?? 0;
   }
 
   // Client guard first, copied verbatim from `RefundVoidReportPageComponent.applyRange()`.

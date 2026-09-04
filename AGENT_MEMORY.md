@@ -4468,3 +4468,30 @@ just one a test can never catch.
   before writing a NEW `ActivatedRouteSnapshot` walk — this one exact trap was already fixed once
   in `analytics-route-scope.ts` and the fix didn't carry over because nobody grepped for the
   precedent.
+## OBRS-1725 scrutinize self-fixes (vehicle-pl-report-page, 2026-09-04)
+- **Display bug in the largest-remainder rounding itself.** `roundedPercents` (built
+  specifically to make the cost-mix legend sum to exactly 100.0, after an earlier capture
+  showed `50.2+19.3+14.2+8.0+8.4=100.1`) returns `tenths.map(v => v / 10)`. That's correct
+  arithmetic, but when a slice's tenths value is an exact multiple of 10 (e.g. `80`), `80/10`
+  is the JS number `8`, not `8.0` — and the template interpolated `{{ slice.percent }}%`
+  directly, so that one legend row rendered as `8%` while its siblings in the same list
+  rendered `50.2%`/`19.2%`/`14.2%`/`8.4%`. Same bug family as the one the rounding fix was
+  written to kill (a report whose whole job is arithmetic showing something that reads as a
+  mistake), just moved from "doesn't sum to 100" to "doesn't format consistently" — a number
+  can be arithmetically exact and still look wrong next to its neighbors. The component-level
+  tests never catch this because they assert on the numeric `percent` field (`8`, correctly),
+  never on rendered DOM text for that value. Fixed by formatting at the template boundary —
+  `{{ slice.percent.toFixed(1) }}%` — rather than changing what `percent` stores, since a test
+  sums `Math.round(share * 10)` over the raw numbers and would need reworking for no reason if
+  the field itself became a string. Lesson: any per-item numeric render inside a `@for` whose
+  values come from a rounding/distribution algorithm needs a DOM-text assertion on the case
+  that lands on a whole number, not just a component-state assertion — the two can disagree
+  and the state-only test is blind to it.
+- **Missing design-system.md pattern-log entry.** The five new `--admin-series-1..5` tokens
+  are "the first categorical/non-semantic palette in the app" by the diff's own code comment —
+  a genuinely new pattern under design-system.md §12, which requires logging it so the next
+  chart reuses these five instead of inventing a second set. The tokens themselves were
+  correctly declared (`.admin-shell` + `.admin-shell.is-dark`, gated by
+  `check-admin-theme-tokens.mjs`, contrast pre-measured and verified accurate against the
+  actual hex values), but §12 step 2 ("add it here") was never done. Added a "Categorical
+  (non-semantic) series palette" entry to the New pattern log.
