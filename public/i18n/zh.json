@@ -3107,6 +3107,9 @@
     "SOLD_OUT_TODAY_HINT": "请查看次日的班次。",
     "SOLD_OUT_TODAY_ACTION": "查看{{date}}的班次",
     "ESTIMATE_KM_UNIT": "公里",
+    "PICKUP_STOP": "上车点",
+    "DROPOFF_STOP": "下车点",
+    "OPEN_IN_MAPS": "在地图中打开",
     "RESTORED_UNAVAILABLE": "您之前选择的班次已无空位，请重新选择。"
   },
   "REVIEW_SCHEDULE_BOOKING": {

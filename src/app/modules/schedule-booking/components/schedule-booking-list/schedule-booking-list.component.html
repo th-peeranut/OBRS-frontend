@@ -82,6 +82,32 @@
                   </small>
                 }
               }
+              <!-- OBRS-864: the stops this row actually uses. `resolveLegEstimates`
+                   already resolved both `RouteStop` objects in order to read two numbers
+                   off them, so naming them here adds no request. The wrapper renders
+                   unconditionally and reserves its height in CSS: the rows arrive after
+                   the route data does, and a block that appears out of nothing is what
+                   moves the card under the cursor of someone about to click it. -->
+              <div class="stop-detail">
+                @for (line of stopLines(departureStops[departure.id]); track line.labelKey) {
+                  <div class="stop-detail__row">
+                    <i class="bi {{ line.icon }} stop-detail__icon" aria-hidden="true"></i>
+                    <span class="stop-detail__label">{{ line.labelKey | translate }}</span>
+                    @if (line.mapsUrl) {
+                      <a
+                        class="stop-detail__link"
+                        [href]="line.mapsUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        [attr.title]="line.title"
+                        [attr.aria-label]="line.text + ' - ' + ('SCHEDULE_BOOKING.OPEN_IN_MAPS' | translate)"
+                        >{{ line.text }}</a>
+                    } @else {
+                      <span class="stop-detail__text" [attr.title]="line.title">{{ line.text }}</span>
+                    }
+                  </div>
+                }
+              </div>
             </div>
             <div class="time">
               {{ formatDateTimeToHHMM(departure.arrivalDateTime) }}
@@ -235,6 +261,32 @@
                     </small>
                   }
                 }
+                <!-- OBRS-864: the stops this row actually uses. `resolveLegEstimates`
+                     already resolved both `RouteStop` objects in order to read two numbers
+                     off them, so naming them here adds no request. The wrapper renders
+                     unconditionally and reserves its height in CSS: the rows arrive after
+                     the route data does, and a block that appears out of nothing is what
+                     moves the card under the cursor of someone about to click it. -->
+                <div class="stop-detail">
+                  @for (line of stopLines(returnStops[return.id]); track line.labelKey) {
+                    <div class="stop-detail__row">
+                      <i class="bi {{ line.icon }} stop-detail__icon" aria-hidden="true"></i>
+                      <span class="stop-detail__label">{{ line.labelKey | translate }}</span>
+                      @if (line.mapsUrl) {
+                        <a
+                          class="stop-detail__link"
+                          [href]="line.mapsUrl"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          [attr.title]="line.title"
+                          [attr.aria-label]="line.text + ' - ' + ('SCHEDULE_BOOKING.OPEN_IN_MAPS' | translate)"
+                          >{{ line.text }}</a>
+                      } @else {
+                        <span class="stop-detail__text" [attr.title]="line.title">{{ line.text }}</span>
+                      }
+                    </div>
+                  }
+                </div>
               </div>
               <div class="time">
                 {{ formatDateTimeToHHMM(return.arrivalDateTime) }}

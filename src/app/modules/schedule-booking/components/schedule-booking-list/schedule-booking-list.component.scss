@@ -200,6 +200,54 @@
           text-align: center;
           white-space: nowrap;
         }
+
+        /* OBRS-864. The height is RESERVED, not grown into: `min-height` is two
+           rows at this block's own line-height (14px x 1.4 x 2 = 39.2px), held
+           from first paint while `getPickupDropoffCached` is still in flight,
+           so the row that lands changes the card's text and not its size.
+           Each line is kept to exactly one row (`nowrap` + ellipsis) for the
+           same reason - a long address must not wrap into a second row and
+           re-open the same shift by another door. The full text stays reachable
+           through the `title` attribute the template binds. */
+        .stop-detail {
+          display: flex;
+          flex-direction: column;
+          align-self: stretch;
+          min-width: 0;
+          min-height: $font-size-sm * 2.8;
+
+          .stop-detail__row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            min-width: 0;
+            font-size: $font-size-sm;
+            line-height: 1.4;
+            color: $text-lightblack;
+          }
+
+          .stop-detail__icon {
+            flex: 0 0 auto;
+          }
+
+          .stop-detail__label {
+            flex: 0 0 auto;
+          }
+
+          .stop-detail__link,
+          .stop-detail__text {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .stop-detail__link {
+            color: $primary-blue; /* on $primary-white = 5.33:1 */
+            text-decoration: underline;
+          }
+        }
       }
     }
 
@@ -372,6 +420,14 @@
 
   .booking-container .schedule-item .left .time-info .trip-estimate {
     white-space: normal;
+    text-align: left;
+  }
+
+  /* OBRS-864. `.route` above is allowed to wrap on a phone; these lines are
+     not, deliberately - the reserved two-row height only holds while each line
+     stays one row. Left-aligned to match the stacked column. */
+  .booking-container .schedule-item .left .time-info .stop-detail .stop-detail__row {
+    justify-content: flex-start;
     text-align: left;
   }
 

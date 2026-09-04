@@ -43,7 +43,7 @@ import {
 } from '../../../../shared/interfaces/station.interface';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import { RouteMapService } from '../../../../services/route-map/route-map.service';
-import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
+import { RouteStop, TripEstimate } from '../../../../shared/interfaces/route-map.interface';
 import { LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
 import { AnalyticsService } from '../../../../services/analytics/analytics.service';
 import { AuthService } from '../../../../auth/auth.service';
@@ -65,6 +65,26 @@ export interface SoldOutTodayState {
    *  tomorrow can leave the return date BEFORE it, and this screen has no say
    *  over the return leg. Owner's call, 2026-08-10. */
   canJumpToNextDay: boolean;
+}
+
+/** OBRS-864: the two `RouteStop` objects a result row's estimate was derived
+ *  from. `resolveLegEstimates` already resolves both to read two numbers off
+ *  them and then drops them, so keeping them costs no extra request. */
+export interface LegStops {
+  pickup: RouteStop | null;
+  dropoff: RouteStop | null;
+}
+
+/** OBRS-864: one rendered stop line on a result row. */
+export interface StopLine {
+  labelKey: string;
+  icon: string;
+  /** "<name> · <address>", or just the name when the stop has no address. */
+  text: string;
+  /** Full address for the native tooltip, since the line itself is truncated. */
+  title: string | null;
+  /** Null renders plain text, never a dead link (AC3). */
+  mapsUrl: string | null;
 }
 
 @Component({
@@ -146,6 +166,14 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
    *  (progressive enhancement, no loading spinner). */
   departureEstimates: Record<number, TripEstimate> = {};
   returnEstimates: Record<number, TripEstimate> = {};
+
+  /** OBRS-864: the pickup/dropoff stops behind those same estimates, kept so
+   *  the row can name the stop the customer will actually stand at instead of
+   *  echoing back the stations they typed into the filter. Absent (no key)
+   *  until resolved, exactly like the estimate above — `.stop-detail` reserves
+   *  their height in CSS so the card does not grow when they land. */
+  departureStops: Record<number, LegStops> = {};
+  returnStops: Record<number, LegStops> = {};
 
   private destroy$ = new Subject<void>();
 
@@ -552,7 +580,8 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       scheduleList?.departureSchedules ?? [],
       fromSlug,
       toSlug,
-      this.departureEstimates
+      this.departureEstimates,
+      this.departureStops
     );
     // Return leg's routeSlug is the reverse route: its `pickup[]` holds the
     // destination-city stops and its `dropoff[]` holds the origin-city
@@ -566,7 +595,8 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       scheduleList?.arrivalSchedules ?? [],
       scheduleList?.returnBoardingStop?.slug || toSlug,
       fromSlug,
-      this.returnEstimates
+      this.returnEstimates,
+      this.returnStops
     );
   }
 
@@ -574,7 +604,8 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     schedules: Schedule[],
     pickupSlug: string,
     dropoffSlug: string,
-    target: Record<number, TripEstimate>
+    target: Record<number, TripEstimate>,
+    stopTarget: Record<number, LegStops>
   ): void {
     const scheduleIdsBySlug = new Map<string, number[]>();
     for (const schedule of schedules) {
@@ -599,9 +630,40 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
           const estimate = tripEstimateFromStops(pickupStop, dropoffStop);
           scheduleIds.forEach((id) => {
             target[id] = estimate;
+            // OBRS-864: same two objects, same subscription - the stops the
+            // estimate was measured between are the stops the row names.
+            stopTarget[id] = { pickup: pickupStop, dropoff: dropoffStop };
           });
         });
     });
+  }
+
+  /** OBRS-864: the stop lines for one row - empty until
+   *  `getPickupDropoffCached` answers for that row's route. */
+  stopLines(stops: LegStops | undefined): StopLine[] {
+    const lines: StopLine[] = [];
+    if (stops?.pickup) {
+      lines.push(this.toStopLine(stops.pickup, 'SCHEDULE_BOOKING.PICKUP_STOP', 'bi-geo-alt'));
+    }
+    if (stops?.dropoff) {
+      lines.push(this.toStopLine(stops.dropoff, 'SCHEDULE_BOOKING.DROPOFF_STOP', 'bi-flag'));
+    }
+    return lines;
+  }
+
+  private toStopLine(stop: RouteStop, labelKey: string, icon: string): StopLine {
+    const address = (stop.address || '').trim();
+    return {
+      labelKey,
+      icon,
+      text: address ? `${stop.name} · ${address}` : stop.name,
+      title: address || null,
+      // OBRS-864 AC3: the link exists only when the backend gave one. Nothing
+      // here composes a maps URL out of lat/lng - that is OBRS-269's separate
+      // "navigate from where I am" deep-link, a different destination and a
+      // decision this card explicitly leaves alone.
+      mapsUrl: stop.googleMapsUrl || null,
+    };
   }
 
   private normalizeLocale(locale: string | null | undefined): 'en' | 'th' {

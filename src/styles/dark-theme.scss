@@ -718,6 +718,14 @@ body.is-dark {
   // rule above would otherwise wash out to $dk-text.
   .schedule-item .seat-status--low { color: $dk-danger !important; }
 
+  // OBRS-864 - the pickup/drop-off maps link on a result row. The blanket
+  // `.schedule-item *` rule above paints every text node $dk-text, which would
+  // leave the one clickable thing on that line looking exactly like the address
+  // printed next to it. `!important` for the same reason the rules around it
+  // carry one: these are component styles, so Angular emits the selector with
+  // an attribute on every part and the global rule loses on specificity.
+  .schedule-item .stop-detail__link { color: $dk-accent !important; }
+
   // OBRS-1343 — the "your return leaves from another stop" notice. It renders
   // on TWO surfaces: the trip list, where it sits on the #f6fcff panel and none
   // of the rules above reach it, and the review page, where it is inside a
