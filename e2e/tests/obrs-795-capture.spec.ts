@@ -54,9 +54,12 @@ test.describe('OBRS-795 evidence — the fixture reaches the surfaces', () => {
     // The claim this card is built on: before it, exactly one chip rendered and it
     // was always `.active`, so every rule written for the rest state controlled
     // nothing the sweep could see.
-    const chips = page.locator('.seat-passenger-chip');
-    const rest = page.locator('.seat-passenger-chip:not(.active)');
-    await expect(chips, 'the seed must render one chip per passenger').toHaveCount(2);
+    // `button`, not the bare class: app-passenger-info-summary renders
+    // `<span class="seat-passenger-chip">` per passenger and those are never
+    // `.active`, so the bare selector counts them and passes at one passenger.
+    const chips = page.locator('button.seat-passenger-chip');
+    const rest = page.locator('button.seat-passenger-chip:not(.active)');
+    await expect(chips, 'the seed must render one form chip per passenger').toHaveCount(2);
     await expect(rest, 'a chip AT REST is the state the gate could not see before').toHaveCount(1);
     // The badge is the worst reading of the four (1.12:1 before OBRS-771) and it
     // lives inside the chip, so it is only at rest when its chip is.
@@ -85,7 +88,12 @@ test.describe('OBRS-795 evidence — the fixture reaches the surfaces', () => {
     // The form's half of the same branch: with OPEN seating the seat map and the
     // chip row are replaced by the shared passenger-count card.
     await expect(page.locator('.open-seat-card')).toHaveCount(1);
-    await expect(page.locator('.seat-passenger-chip')).toHaveCount(0);
+    // The form's chip row is what OPEN seating replaces, so no BUTTON chip may
+    // survive here. The summary's `<span class="seat-passenger-chip">Seat A1</span>`
+    // does survive -- it is a different component listing who is travelling, not
+    // a seat picker -- which is exactly why the ASSIGNED entry above pins the
+    // button and not the bare class.
+    await expect(page.locator('button.seat-passenger-chip')).toHaveCount(0);
 
     await badge.screenshot({ path: `${ASSETS}/OBRS-795-AFTER-3-open-seating-badge-dark.png` });
     await page.screenshot({ path: `${ASSETS}/OBRS-795-AFTER-4-passenger-info-open-dark.png`, fullPage: true });

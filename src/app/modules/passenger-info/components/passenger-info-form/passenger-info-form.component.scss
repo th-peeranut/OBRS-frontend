@@ -366,8 +366,10 @@
   // seeded one passenger, so exactly one chip rendered and it was always the
   // active one, and this declaration had no element to control anywhere the
   // sweep could see. OBRS-795 seeded the second passenger and pinned the rest
-  // state in the entry's `mustRender` (`.seat-passenger-chip:not(.active)`), so
-  // the gate scores it directly now — delete this rule and the gate goes red.
+  // state in the entry's `mustRender` (`button.seat-passenger-chip:not(.active)`
+  // — `button`, because passenger-info-summary renders spans of the same class
+  // that are never `.active`), so the gate scores it directly now — delete this
+  // rule and the gate goes red.
   .seat-passenger-chip {
     background: $dk-bg-input;
     border-color: $dk-border;

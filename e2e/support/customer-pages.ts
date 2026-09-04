@@ -687,14 +687,27 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     // floor exists to catch a page that did not render, and raising it to the
     // two-passenger count would make it fail for a reason it is not asking about.
     minPlaceholders: 2,
-    // `:not(.active)` and not `.seat-passenger-chip`, for the reason the
-    // `mustRender` doc gives above: PRESENT is not MEASURABLE. A chip has always
-    // rendered here; what never rendered until OBRS-795 seeded a second
-    // passenger is a chip AT REST, which is the state `.seat-passenger-chip` and
-    // `.seat-passenger-chip-badge` were fixed in and the only state their dark
-    // rules control. Drop back to one passenger and this fails by name instead
-    // of going quietly green over the active chip.
-    mustRender: ['.btn-next', '.seat-passenger-chip:not(.active)'],
+    // `button.seat-passenger-chip:not(.active)`, and every part of that selector
+    // is load-bearing -- measured, after a shorter version of it turned out to be
+    // a guard that guarded nothing.
+    //
+    // `:not(.active)` is the reason the `mustRender` doc gives above: PRESENT is
+    // not MEASURABLE. A chip has always rendered here; what never rendered until
+    // OBRS-795 seeded a second passenger is a chip AT REST, which is the state
+    // `.seat-passenger-chip` and `.seat-passenger-chip-badge` were fixed in and
+    // the only state their dark rules control.
+    //
+    // `button` is the half that is easy to miss: TWO components use this class.
+    // The form renders `<button class="seat-passenger-chip">` and marks one
+    // `.active`; `app-passenger-info-summary` also renders
+    // `<span class="seat-passenger-chip">Seat A1</span>` per passenger, and those
+    // spans carry `.active` NEVER. So the bare `.seat-passenger-chip:not(.active)`
+    // matched a summary span even with one passenger seeded -- it passed before
+    // this card changed anything, which is a `mustRender` entry that reads as
+    // coverage and asserts nothing. The dark rules under test live in
+    // passenger-info-form.component.scss and, under view encapsulation, can only
+    // ever match the form's buttons.
+    mustRender: ['.btn-next', 'button.seat-passenger-chip:not(.active)'],
     hoverTargets: ['.btn-next', '.btn-back'],
   },
   {
