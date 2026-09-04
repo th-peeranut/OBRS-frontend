@@ -607,6 +607,8 @@
       "THEME_DARK": "โหมดมืด",
       "COLLAPSE_MENU": "ย่อเมนู",
       "EXPAND_MENU": "ขยายเมนู",
+      "COLLAPSE_MENU_TITLE": "ย่อเมนู (Ctrl+B)",
+      "EXPAND_MENU_TITLE": "ขยายเมนู (Ctrl+B)",
       "PIN_MENU": "ปักหมุดเมนูให้เปิดอยู่",
       "UNPIN_MENU": "เลิกปักหมุดเมนู"
     },
@@ -3446,6 +3448,8 @@
       "LOGOUT_SUCCESS": "ออกจากระบบสำเร็จ",
       "COLLAPSE_MENU": "ย่อเมนู",
       "EXPAND_MENU": "ขยายเมนู",
+      "COLLAPSE_MENU_TITLE": "ย่อเมนู (Ctrl+B)",
+      "EXPAND_MENU_TITLE": "ขยายเมนู (Ctrl+B)",
       "PIN_MENU": "ปักหมุดเมนูให้เปิดอยู่",
       "UNPIN_MENU": "เลิกปักหมุดเมนู",
       "THEME_TOGGLE": "สลับโหมดมืด"

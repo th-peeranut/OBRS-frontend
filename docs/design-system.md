@@ -381,6 +381,13 @@ One color = one meaning. Never pick a button color for looks.
   brand primary; they should not be green in one place and `#0d6efd` blue in another.
 - **MUST NOT** use raw `btn-primary` (Bootstrap blue) on a themed surface — use the
   brand/accent primary.
+- **An icon-only control needs a hit target of at least 24x24 CSS px** (WCAG 2.2
+  SC 2.5.8), and the number that counts is the **rendered** one — a declared
+  `height`/`width` on a flex item inside an overflowing column is not what the user
+  gets. `.admin-sidebar-pin` declared 28x28 but rendered 20px tall once its column
+  overflowed (OBRS-913); the fix was `flex-shrink: 0`, not a bigger declared size.
+  This is a repo-wide expectation, not a repo-wide *gate* — the automated check for
+  it is OBRS-925, not this note.
 
 ---
 

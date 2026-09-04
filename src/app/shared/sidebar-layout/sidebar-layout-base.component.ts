@@ -270,6 +270,26 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
     this.isProfileMenuOpen = false;
   }
 
+  /**
+   * Ctrl+B toggles the sidebar expand/collapse state (OBRS-913), mirroring the
+   * toggle button. Guarded against INPUT/TEXTAREA/contentEditable targets
+   * because the sidebar menu search (OBRS-900) lives inside this same shell —
+   * without the guard, Ctrl+B while filtering the menu would collapse the
+   * very menu being filtered.
+   */
+  // Typed `Event`, not `KeyboardEvent`: Angular's host-listener $event typing
+  // infers the plain DOM Event type for a compound modifier binding like
+  // `keydown.control.b` (TS2345 otherwise) — only `.target`/`.preventDefault()`
+  // are needed here, both present on `Event`.
+  @HostListener('document:keydown.control.b', ['$event'])
+  protected onToggleShortcut(event: Event): void {
+    const el = event.target as HTMLElement | null;
+    const tag = el?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return;
+    event.preventDefault();
+    this.togglePin();
+  }
+
   @HostListener('document:click', ['$event'])
   protected onDocumentClick(event: MouseEvent): void {
     const profile = this.elementRef.nativeElement.querySelector('.admin-profile');

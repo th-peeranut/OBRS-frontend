@@ -607,6 +607,8 @@
       "THEME_DARK": "Dark mode",
       "COLLAPSE_MENU": "Collapse menu",
       "EXPAND_MENU": "Expand menu",
+      "COLLAPSE_MENU_TITLE": "Collapse menu (Ctrl+B)",
+      "EXPAND_MENU_TITLE": "Expand menu (Ctrl+B)",
       "PIN_MENU": "Pin menu open",
       "UNPIN_MENU": "Unpin menu"
     },
@@ -3446,6 +3448,8 @@
       "LOGOUT_SUCCESS": "Signed out successfully",
       "COLLAPSE_MENU": "Collapse menu",
       "EXPAND_MENU": "Expand menu",
+      "COLLAPSE_MENU_TITLE": "Collapse menu (Ctrl+B)",
+      "EXPAND_MENU_TITLE": "Expand menu (Ctrl+B)",
       "PIN_MENU": "Pin menu open",
       "UNPIN_MENU": "Unpin menu",
       "THEME_TOGGLE": "Toggle dark mode"
