@@ -277,12 +277,8 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
    * without the guard, Ctrl+B while filtering the menu would collapse the
    * very menu being filtered.
    */
-  // Typed `Event`, not `KeyboardEvent`: Angular's host-listener $event typing
-  // infers the plain DOM Event type for a compound modifier binding like
-  // `keydown.control.b` (TS2345 otherwise) — only `.target`/`.preventDefault()`
-  // are needed here, both present on `Event`.
   @HostListener('document:keydown.control.b', ['$event'])
-  protected onToggleShortcut(event: Event): void {
+  protected onToggleShortcut(event: KeyboardEvent): void {
     const el = event.target as HTMLElement | null;
     const tag = el?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return;

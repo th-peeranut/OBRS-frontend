@@ -4477,3 +4477,18 @@ just one a test can never catch.
   `check-admin-theme-tokens.mjs`, contrast pre-measured and verified accurate against the
   actual hex values), but §12 step 2 ("add it here") was never done. Added a "Categorical
   (non-semantic) series palette" entry to the New pattern log.
+- **OBRS-913: a code comment stated a specific TS error (`TS2345`) that does not actually
+  occur.** `sidebar-layout-base.component.ts`'s `onToggleShortcut` was typed `event: Event`
+  with a comment claiming Angular's `@HostListener('document:keydown.control.b', ['$event'])`
+  forces the plain `Event` type and that `KeyboardEvent` triggers `TS2345`. Verified false by
+  changing the param to `KeyboardEvent` and running `npx tsc --noEmit -p tsconfig.json`: zero
+  errors anywhere near this file (the only `TS2345` hits were pre-existing, unrelated
+  Playwright `PageFunction` typing errors in `e2e/tests/`). `@HostListener`'s event-name string
+  is decorator metadata — TypeScript never cross-checks it against the handler's declared
+  parameter type, so there was never a mechanism that could produce this error, regardless of
+  event string. Self-fixed: retyped the param `KeyboardEvent` (matches this file's own
+  `onKeydown(event: KeyboardEvent)` convention elsewhere in the repo) and deleted the false
+  comment; `ng test` on the affected specs stayed 94/94 green. Lesson (DEV-GOTCHAS "wrong
+  mechanism" family): a plausible-sounding TS-error claim in a comment is still a claim —
+  cheap to verify with a scoped `tsc --noEmit`, and left unverified it teaches the next reader
+  a compiler behavior that doesn't exist.
