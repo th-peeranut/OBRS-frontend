@@ -13,6 +13,8 @@ import {
   createStoreStub,
   createTranslateStub,
   createAuthServiceStub,
+  createScheduleServiceStub,
+  createBookingPolicyServiceStub,
 } from '../../../../testing/test-stubs';
 import { Schedule, ScheduleList } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
@@ -33,6 +35,8 @@ import { environment } from '../../../../../environments/environment';
 import { NJ_FACEBOOK_PAGE_URL } from '../../../../shared/lib/online-booking-channel';
 // OBRS-1583: the gate now asks AuthService as well as the flag.
 import { AuthService } from '../../../../auth/auth.service';
+import { ScheduleService } from '../../../../services/schedule/schedule.service';
+import { BookingPolicyService } from '../../../../services/booking-policy/booking-policy.service';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 // The component's own time formatter — see the AC-2 assertion for why the expected
@@ -50,7 +54,9 @@ describe('ScheduleBookingListComponent', () => {
       createTranslateStub(),
       createRouteMapServiceStub(),
       createAnalyticsServiceStub(),
-      createAuthServiceStub()
+      createAuthServiceStub(),
+      createScheduleServiceStub(),
+      createBookingPolicyServiceStub()
     );
   });
 
@@ -109,6 +115,8 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -292,6 +300,8 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
         provideMockStore(),
         { provide: RouteMapService, useValue: routeMapServiceStub },
         { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
 
@@ -396,6 +406,8 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -506,6 +518,8 @@ describe('ScheduleBookingListComponent (announced-delay disclosure, OBRS-1141)',
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -669,6 +683,8 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -696,7 +712,11 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
     render({ departureSchedules: [], arrivalSchedules: null }, filterFor('2026-08-15'));
 
     expect(textOf('.no-results')).toContain('SCHEDULE_BOOKING.NO_RESULTS');
-    expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeNull();
+    // OBRS-862 wraps `.no-results` in the same `.sold-out-today` panel so the
+    // nearest-day hint has somewhere to sit, so the panel DIV is no longer the
+    // branch discriminator — `__title` is, and it is what the contrast gate
+    // pins for this state too.
+    expect(fixture.debugElement.query(By.css('.sold-out-today__title'))).toBeNull();
   });
 
   it('shows the message but NO button for a round trip — moving the outbound could put it after the return', () => {
@@ -768,7 +788,8 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
     fixture.detectChanges();
 
     // 2026-08-10 is now YESTERDAY: it is no longer "today's rounds have left".
-    expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeNull();
+    // `__title` and not the panel div — see the OBRS-862 note above.
+    expect(fixture.debugElement.query(By.css('.sold-out-today__title'))).toBeNull();
     expect(textOf('.no-results')).toContain('SCHEDULE_BOOKING.NO_RESULTS');
   });
 
@@ -1008,7 +1029,9 @@ describe('ScheduleBookingListComponent (OBRS-1302 — selectSchedule side effect
       createTranslateStub(),
       createRouteMapServiceStub(),
       analytics,
-      createAuthServiceStub()
+      createAuthServiceStub(),
+      createScheduleServiceStub(),
+      createBookingPolicyServiceStub()
     );
   }
 
@@ -1084,7 +1107,9 @@ describe('ScheduleBookingListComponent (OBRS-1336 — round trip with no return 
       createTranslateStub(),
       createRouteMapServiceStub(),
       createAnalyticsServiceStub(),
-      createAuthServiceStub()
+      createAuthServiceStub(),
+      createScheduleServiceStub(),
+      createBookingPolicyServiceStub()
     );
     component.scheduleList = of({
       departureSchedules: [trip],

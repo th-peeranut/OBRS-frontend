@@ -3107,6 +3107,10 @@
     "SOLD_OUT_TODAY_TITLE": "รอบของวันนี้ออกครบแล้ว",
     "SOLD_OUT_TODAY_HINT": "ลองดูรอบของวันถัดไป",
     "SOLD_OUT_TODAY_ACTION": "ดูรอบ{{date}}",
+    "DAY_STRIP_LABEL": "เลือกวันเดินทาง",
+    "DAY_STRIP_TODAY": "วันนี้",
+    "DAY_STRIP_NO_TRIPS": "ไม่มีรอบเดินทาง",
+    "NEAREST_DAY_HINT": "วันที่มีรอบเดินทางใกล้ที่สุดคือ{{date}}",
     "ESTIMATE_KM_UNIT": "กม.",
     "RESTORED_UNAVAILABLE": "รอบการเดินทางที่คุณเลือกไว้ก่อนหน้านี้ไม่ว่างแล้ว กรุณาเลือกรอบใหม่"
   },

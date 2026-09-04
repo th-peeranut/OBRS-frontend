@@ -10,27 +10,65 @@
          way out is different: today's rounds have all departed (offer the next
          day) vs. the chosen day genuinely has none (the original copy). -->
     @if (!schedules.departureSchedules?.length) {
+      <!-- OBRS-862: the same one block, extended — no second widget. When
+           availability names a nearer day with trips, the HINT says which day
+           instead of the generic invitation; when it does not, every line below
+           is byte-identical to the pre-card render.
+
+           `canJumpToNextDay` and its guard are LEFT AS THEY ARE. Reversing the
+           owner's 2026-08-10 call ("this screen has no say over the return
+           leg") was out of bounds for this card, so the consequence is
+           deliberate: the hint names the nearest day for every trip type, while
+           the jump BUTTON stays one-way-only. A round-trip customer reaches
+           that day by tapping its chip in the day strip above, which is the
+           control AC#1 added for exactly this. -->
       @if (soldOutToday$ | async; as soldOutToday) {
         <div class="sold-out-today">
           <p class="sold-out-today__title">
             {{ "SCHEDULE_BOOKING.SOLD_OUT_TODAY_TITLE" | translate }}
           </p>
-          <p class="sold-out-today__hint">
-            {{ "SCHEDULE_BOOKING.SOLD_OUT_TODAY_HINT" | translate }}
-          </p>
-          @if (soldOutToday.canJumpToNextDay) {
-            <button type="button" class="sold-out-today__action" (click)="showNextDay()">
-              {{
-                "SCHEDULE_BOOKING.SOLD_OUT_TODAY_ACTION"
-                  | translate: { date: soldOutToday.nextDayLabel }
-              }}
-            </button>
+          @if (nearestDay$ | async; as nearestDay) {
+            <p class="sold-out-today__hint">
+              {{ "SCHEDULE_BOOKING.NEAREST_DAY_HINT" | translate: { date: nearestDay.label } }}
+            </p>
+            @if (soldOutToday.canJumpToNextDay) {
+              <button
+                type="button"
+                class="sold-out-today__action"
+                data-testid="nearest-day-action"
+                (click)="showDay(nearestDay.iso)"
+              >
+                {{
+                  "SCHEDULE_BOOKING.SOLD_OUT_TODAY_ACTION"
+                    | translate: { date: nearestDay.label }
+                }}
+              </button>
+            }
+          } @else {
+            <p class="sold-out-today__hint">
+              {{ "SCHEDULE_BOOKING.SOLD_OUT_TODAY_HINT" | translate }}
+            </p>
+            @if (soldOutToday.canJumpToNextDay) {
+              <button type="button" class="sold-out-today__action" (click)="showNextDay()">
+                {{
+                  "SCHEDULE_BOOKING.SOLD_OUT_TODAY_ACTION"
+                    | translate: { date: soldOutToday.nextDayLabel }
+                }}
+              </button>
+            }
           }
         </div>
       } @else {
-        <p class="no-results">
-          {{ "SCHEDULE_BOOKING.NO_RESULTS" | translate }}
-        </p>
+        <div class="sold-out-today">
+          <p class="no-results">
+            {{ "SCHEDULE_BOOKING.NO_RESULTS" | translate }}
+          </p>
+          @if (nearestDay$ | async; as nearestDay) {
+            <p class="sold-out-today__hint">
+              {{ "SCHEDULE_BOOKING.NEAREST_DAY_HINT" | translate: { date: nearestDay.label } }}
+            </p>
+          }
+        </div>
       }
     }
     <!-- Outbound leg -->

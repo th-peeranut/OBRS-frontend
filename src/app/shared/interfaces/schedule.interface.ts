@@ -26,6 +26,30 @@ export interface ScheduleFilterPayload {
   returnDate?: string | null;
 }
 
+/**
+ * OBRS-862 — POST /api/schedules/availability (public, OBRS-1251).
+ *
+ * `fromDate` is `@FutureOrPresent` AND capped by the booking policy on the
+ * server: a date past the cap answers 400 BOOKING_ERROR_ADVANCE_CAP_EXCEEDED
+ * rather than an empty list, so the caller clamps before it asks. `days` is
+ * NOT clamped by the caller — the server answers how far it actually looked
+ * in `effectiveDays`.
+ */
+export interface ScheduleAvailabilityReq {
+  fromStop: string;
+  toStop: string;
+  numberOfPassengers: number;
+  /** "YYYY-MM-DD", already clamped to [today, today + maxAdvanceDays]. */
+  fromDate: string;
+  days: number;
+}
+
+export interface ScheduleAvailability {
+  /** Ascending "YYYY-MM-DD". Days NOT listed are empty only within `effectiveDays`. */
+  availableDates: string[];
+  effectiveDays: number;
+}
+
 export interface Schedule {
   id: number;
   vehicleType: string | null;

@@ -86,6 +86,19 @@ export function createScheduleServiceStub(): any {
     // OBRS-1364: same shape as getSeatMap above — an empty answer blocks no
     // seat, so a component that asks the question has no side-effect here.
     getBlockedSeats: () => of({ data: [] }),
+    // OBRS-862: `null` is the "we were told nothing" answer the real service
+    // gives on failure, and it leaves every day chip enabled — the state a
+    // component must render correctly before availability is known.
+    getAvailabilityCached: () => of(null),
+  };
+}
+
+/** OBRS-862. Defaults to the shared fallback so a caller that only needs the
+ *  service to exist gets the same window the in-flight path renders; pass a
+ *  number to prove a component reads the API rather than a constant. */
+export function createBookingPolicyServiceStub(maxAdvanceDays: number = 60): any {
+  return {
+    getBookingPolicy: () => of({ data: { maxAdvanceDays, cutoffMinutes: 20 } }),
   };
 }
 
