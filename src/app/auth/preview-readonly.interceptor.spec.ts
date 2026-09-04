@@ -82,7 +82,7 @@ describe('previewReadonlyInterceptor (OBRS-1721)', () => {
     expect(read).toEqual({ ok: true });
   });
 
-  it('never blocks /api/auth/ — refreshing or signing out must still work mid-preview', () => {
+  it('never blocks refresh or logout — session upkeep must still work mid-preview', () => {
     auth.startRolePreview('driver');
 
     let ok = false;
@@ -90,6 +90,18 @@ describe('previewReadonlyInterceptor (OBRS-1721)', () => {
 
     httpMock.expectOne('https://api.test/api/auth/refresh').flush({});
     expect(ok).toBeTrue();
+  });
+
+  it('still blocks a credential write under /api/auth/ — refresh/logout are the only exemption', () => {
+    auth.startRolePreview('driver');
+
+    let status = 0;
+    http
+      .post('https://api.test/api/auth/password-reset/confirm', {})
+      .subscribe({ error: (err: HttpErrorResponse) => (status = err.status) });
+
+    httpMock.expectNone('https://api.test/api/auth/password-reset/confirm');
+    expect(status).toBe(403);
   });
 
   it('answers in the stored language, and falls back for a junk one', () => {

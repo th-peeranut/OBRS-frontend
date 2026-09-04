@@ -33,6 +33,9 @@ import { hasOwnKey } from '../shared/lib/own-key';
  */
 const BLOCKED_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
+/** The only /api/auth/ paths a preview may still write to — session upkeep. */
+const ALLOWED_AUTH_PATHS = ['/api/auth/refresh', '/api/auth/logout'];
+
 /**
  * Inline (non-ngx-translate) copy, for the reason `auth.interceptor.ts` spells
  * out on SESSION_EXPIRED_MESSAGE: injecting TranslateService into an
@@ -53,12 +56,19 @@ export const previewReadonlyInterceptor: HttpInterceptorFn = (
 ) => {
   const authService = inject(AuthService);
 
-  // `/api/auth/` is exempt: the session's own upkeep is not the previewed
-  // role's doing. Blocking POST /api/auth/refresh would sign the viewer out
-  // mid-preview, and POST /api/auth/logout is how they leave.
+  // Two endpoints are exempt, and ONLY these two: the session's own upkeep is
+  // not the previewed role's doing. Blocking POST /api/auth/refresh would sign
+  // the viewer out mid-preview, and POST /api/auth/logout is how they leave.
+  //
+  // Deliberately not the whole `/api/auth/` prefix, which this check used to
+  // exempt: that prefix also covers change-email/confirm, change-email/resend,
+  // password-reset/request and password-reset/confirm — real credential writes,
+  // reachable from the viewer's own account pages, which they can walk to while
+  // a preview is running. The exemption has to be the two the reason names.
+  const isSessionUpkeep = ALLOWED_AUTH_PATHS.some((path) => req.url.includes(path));
   const isBlockable =
     req.url.includes('/api/') &&
-    !req.url.includes('/api/auth/') &&
+    !isSessionUpkeep &&
     BLOCKED_METHODS.includes(req.method.toUpperCase());
 
   if (!isBlockable || !authService.getPreviewRole()) {
