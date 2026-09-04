@@ -2095,6 +2095,7 @@
       "HISTORICAL_CONFLICTS": "有 {{count}} 天导入数据与实际销售冲突",
       "EXPAND_ARIA": "查看该车辆的支出明细",
       "COLLAPSE_ARIA": "隐藏该车辆的支出明细",
+      "NO_CATEGORY_ENTRY": "此类别没有记录（不是记录为 0）",
       "ERROR": {
         "RANGE_INVALID": "起始日期不能晚于结束日期。",
         "RANGE_TOO_LARGE": "日期范围不能超过 366 天。"
@@ -2111,7 +2112,19 @@
         "REVENUE": "收入",
         "EXPENSES": "支出",
         "VAT": "其中增值税",
-        "MARGIN": "利润"
+        "MARGIN": "利润",
+        "OTHER_CATEGORIES": "其他 {{count}} 个类别"
+      },
+      "COST_MIX": {
+        "TITLE": "成本构成",
+        "HINT": "本期公司全部成本按类别划分，含中央费用。",
+        "NONE": "本期尚无人记录任何支出。",
+        "FOLDED": "其他 {{count}} 个类别"
+      },
+      "TOP_MARGIN": {
+        "TITLE": "利润最高的 5 辆车",
+        "HINT": "按各车自身利润排序——未计入无车归属的收入和中央费用，因为两者都不属于某一辆车。",
+        "NONE": "此日期范围内没有车辆有数据。"
       },
       "COVERAGE": {
         "SERVICE_WINDOW_UNKNOWN": "运营区间未知",

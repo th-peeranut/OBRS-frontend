@@ -2095,6 +2095,7 @@
       "HISTORICAL_CONFLICTS": "{{count}} day(s) where imported figures clashed with real sales",
       "EXPAND_ARIA": "Show this vehicle's cost breakdown",
       "COLLAPSE_ARIA": "Hide this vehicle's cost breakdown",
+      "NO_CATEGORY_ENTRY": "Nothing recorded in this category (not a recorded zero)",
       "ERROR": {
         "RANGE_INVALID": "The start date must not be after the end date.",
         "RANGE_TOO_LARGE": "The date range must not exceed 366 days."
@@ -2111,7 +2112,19 @@
         "REVENUE": "Revenue",
         "EXPENSES": "Expenses",
         "VAT": "of which VAT",
-        "MARGIN": "Margin"
+        "MARGIN": "Margin",
+        "OTHER_CATEGORIES": "{{count}} other categories"
+      },
+      "COST_MIX": {
+        "TITLE": "Cost mix",
+        "HINT": "Every cost the company recorded in this period, by category, central costs included.",
+        "NONE": "Nobody has recorded any cost in this period.",
+        "FOLDED": "{{count}} other categories"
+      },
+      "TOP_MARGIN": {
+        "TITLE": "Top 5 vehicles by margin",
+        "HINT": "Ranked on each vehicle's own margin. Revenue with no vehicle and central costs are left out, because neither is a single bus.",
+        "NONE": "No vehicles have any figures in this date range."
       },
       "COVERAGE": {
         "SERVICE_WINDOW_UNKNOWN": "Service window unknown",
