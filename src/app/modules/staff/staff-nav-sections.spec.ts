@@ -19,7 +19,7 @@ import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { PrimeNG } from 'primeng/config';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 
 import { StaffLayoutComponent } from './staff-layout.component';
 import { LangSwitcherComponent } from '../../shared/components/lang-switcher/lang-switcher.component';
@@ -60,6 +60,10 @@ async function renderNav(layout: Type<unknown>, roles: readonly string[]): Promi
           getRoles: () => [...roles],
           hasAnyRole: (required: string[]) => required.some((r) => roles.includes(r)),
           logout: () => {},
+          // OBRS-1721 — see the note in admin-layout.component.spec.ts.
+          getPreviewRole: () => null,
+          getPreviewableRoles: () => [],
+          previewRole$: of<string | null>(null),
         },
       },
       { provide: AlertService, useValue: { success: () => {} } },

@@ -43,6 +43,7 @@ import { AnalyticsConsentControlComponent } from './components/analytics-consent
 // reasoning as the consent bar, opposite end of the page so the two cannot
 // collide.
 import { BookingClosedNoticeComponent } from './components/booking-closed-notice/booking-closed-notice.component';
+import { RolePreviewBannerComponent } from './components/role-preview-banner/role-preview-banner.component';
 // OBRS-907: the one shared loading indicator (skeleton / spinner / inline).
 import { LoadingStateComponent } from './components/loading-state/loading-state.component';
 // OBRS-1141: the "this round was announced as delayed" disclosure. Shared
@@ -80,6 +81,7 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     AnalyticsConsentControlComponent,
     ArrivalDateNoticeComponent,
     BookingClosedNoticeComponent,
+    RolePreviewBannerComponent,
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,
     StationLoadErrorComponent,
@@ -125,6 +127,7 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     AnalyticsConsentControlComponent,
     ArrivalDateNoticeComponent,
     BookingClosedNoticeComponent,
+    RolePreviewBannerComponent,
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,
     StationLoadErrorComponent,

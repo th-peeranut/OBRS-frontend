@@ -1,0 +1,23 @@
+@if (previewRole$ | async; as previewRole) {
+  <div
+    class="role-preview-banner"
+    role="region"
+    [attr.aria-label]="'ROLE_PREVIEW.ARIA_LABEL' | translate"
+    >
+    <span class="material-symbols-outlined role-preview-banner__icon" aria-hidden="true" [attr.translate]="'no'">visibility</span>
+    <p class="role-preview-banner__text">
+      <span class="role-preview-banner__title">{{
+        'ROLE_PREVIEW.VIEWING_AS' | translate: { role: roleLabelKey(previewRole) | translate }
+      }}</span>
+      <span class="role-preview-banner__body">{{ 'ROLE_PREVIEW.OWN_DATA' | translate }}</span>
+    </p>
+    <button
+      type="button"
+      class="role-preview-banner__exit"
+      (click)="onExit()"
+      [attr.title]="'ROLE_PREVIEW.EXIT' | translate"
+      >
+      {{ 'ROLE_PREVIEW.EXIT' | translate }}
+    </button>
+  </div>
+}

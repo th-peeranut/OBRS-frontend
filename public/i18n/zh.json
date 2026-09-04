@@ -20,6 +20,19 @@
     "BODY": "请通过 Facebook 专页联系我们订票：",
     "CHANNEL": "NJ Phuyaipu"
   },
+  "ROLE_PREVIEW": {
+    "MENU": "以其他角色查看…",
+    "ARIA_LABEL": "您正在以其他角色查看此页面",
+    "VIEWING_AS": "正在以此角色查看：{{role}}",
+    "OWN_DATA": "数据仍属于您本人的账户",
+    "EXIT": "退出此视图",
+    "BLOCKED": "您正在以其他角色预览，因此无法保存任何更改。请先退出预览。",
+    "ROLES": {
+      "OWNER": "运营方",
+      "SALESPERSON": "售票员",
+      "DRIVER": "司机"
+    }
+  },
   "USABILITY_REPORT": {
     "FAB": {
       "LABEL": "报告问题",

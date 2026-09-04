@@ -20,6 +20,19 @@
     "BODY": "Please message us on our Facebook page:",
     "CHANNEL": "NJ Phuyaipu"
   },
+  "ROLE_PREVIEW": {
+    "MENU": "View as…",
+    "ARIA_LABEL": "You are viewing this screen as another role",
+    "VIEWING_AS": "Viewing as: {{role}}",
+    "OWN_DATA": "The data still belongs to your own account",
+    "EXIT": "Exit this view",
+    "BLOCKED": "You are viewing as another role, so nothing can be saved. Exit the preview first.",
+    "ROLES": {
+      "OWNER": "Owner",
+      "SALESPERSON": "Salesperson",
+      "DRIVER": "Driver"
+    }
+  },
   "USABILITY_REPORT": {
     "FAB": {
       "LABEL": "Report Issue",
