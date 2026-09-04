@@ -65,20 +65,31 @@ Both rows are the same route, same day, same backend; only the worktree serving 
 | Day control on `/schedule-booking` | **none** — `[data-testid="day-strip"]` count **0**, chips **0** | strip present, `role="group"`, 7 chips |
 | `POST /api/schedules/availability` | **0** (the endpoint is never called) | 1 per search |
 | Searching **today** (`09-05`, empty) | "รอบของวันนี้ออกครบแล้ว" + generic "ลองดูรอบของวันถัดไป" + the OBRS-1217 blind "+1 day" button — it steps one day forward whether or not that day has trips | same block, but the hint **names the day**: "วันที่มีรอบเดินทางใกล้ที่สุดคือวันอาทิตย์ที่ 6 ก.ย." |
-| Searching **`09-08`** (empty, not today) | bare `.no-results` paragraph — **no control, no hint, no button.** A dead end | strip (with `09-10`/`09-11` selectable) + "วันที่มีรอบเดินทางใกล้ที่สุดคือวันพฤหัสบดีที่ 10 ก.ย." |
+| Searching **`09-08`** (empty, not today) | bare `.no-results` paragraph — **no control, no hint, no button.** A dead end | strip (with `09-10`/`09-11` selectable) + "วันที่มีรอบเดินทางใกล้ที่สุดคือวันพฤหัสบดีที่ 10 ก.ย." + the jump button "ดูรอบวันพฤหัสบดีที่ 10 ก.ย." (added by `e21f928c`; see Observation 1) |
+
+> ⚠️ The AFTER column was re-measured after `e21f928c`. The AFTER screenshots on the Jira card were
+> re-captured from that same build and the pre-fix ones deleted, so the images and this table agree.
+> The three BEFORE attachments are untouched — `origin/dev` did not move.
 
 ## Observations — not AC failures, recorded so they are decisions and not surprises
 
-1. **The nearest-day jump BUTTON appears in only one of the three empty states.** Measured:
-   today + one-way → hint **and** button; today + round trip → hint, no button
-   (`canJumpToNextDay = !isRoundTrip`, the owner's 2026-08-10 call, deliberately left alone and
-   documented in the template); **any day that is not today → hint, no button**, because the
-   `@else` branch of `schedule-booking-list.component.html` renders the hint without one.
-   The UX spec `docs/ux/UX-OBRS-862-date-strip.md` §6.2 writes a `nearest-day-action` button into
-   that `@else` branch, so the shipped markup deviates from the spec there. It is not an AC-1…7
-   failure (the nearest-day copy is ส่วนที่ 2, whose button was gated on an unanswered question),
-   and the customer is not stranded — the named day's chip is selectable in the strip directly
-   above. Flagging it so the owner decides whether the button should be consistent.
+1. ~~**The nearest-day jump BUTTON appears in only one of the three empty states.**~~ **CLOSED
+   2026-09-05, commit `e21f928c` — re-measured after the fix, this observation no longer holds.**
+   As first measured: today + one-way → hint **and** button; today + round trip → hint, no button;
+   **any day that is not today → hint, no button**, because the `@else` branch of
+   `schedule-booking-list.component.html` rendered the hint without one, deviating from UX spec
+   §6.2. The card itself asks for the hint *พร้อมปุ่มกดไปวันนั้นเลย*, so this was a gap against the
+   card's own wording, not merely against the spec — it was fixed rather than left for the owner.
+   Re-run of `capture-obrs-862-date-strip.mjs --label after` against the fixed build measures
+   `emptyState.actionPresent = true` with `actionTestId = "nearest-day-action"` in **stage A**
+   (today, one-way) **and stage G** (`09-08`, not today) — stage G's button reads
+   *"ดูรอบวันพฤหัสบดีที่ 10 ก.ย."* — while **stage F** (round trip) still measures
+   `actionPresent = false` with the hint present.
+   ⛔ **The round-trip omission is NOT a bug and must not be "fixed".** It is the owner's
+   2026-08-10 call (`canJumpToNextDay = !isRoundTrip`), deliberately preserved: an unattended queue
+   run may not overturn an owner decision. Both halves are now pinned by unit tests whose failure
+   was proven by mutation (widening the gate fails the round-trip arm; closing it fails the
+   one-way arm).
 
 2. **Pre-existing, NOT this card:** on the **home** page the "เที่ยวเดียว" (one-way) button cannot
    be clicked by a real user — the decorative `<img class="home-bg" role="presentation">` paints
