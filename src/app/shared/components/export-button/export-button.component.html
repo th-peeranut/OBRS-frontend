@@ -7,7 +7,17 @@
     [appPending]="loading"
     (click)="menu.toggle($event)"
     >
-    <span class="material-symbols-outlined" [attr.translate]="'no'">download</span>
+    <!-- scrutinize (OBRS-910 review): [appPending] always inserts its spinner
+    slot, it never removes this icon, so both showed at once while loading.
+    Hidden with `visibility` (not `@if`/`display`) so the icon keeps its
+    layout box and the button's width stays identical loading vs idle (AC-3);
+    [appPendingIconOnly] was rejected here because it also hides the label,
+    which this button must keep visible while loading. -->
+    <span
+      class="material-symbols-outlined"
+      [attr.translate]="'no'"
+      [style.visibility]="loading ? 'hidden' : 'visible'"
+      >download</span>
     <span>{{ (label || 'COMMON.EXPORT.BUTTON_LABEL') | translate }}</span>
     <span class="material-symbols-outlined" [attr.translate]="'no'">expand_more</span>
   </button>

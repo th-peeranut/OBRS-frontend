@@ -37,6 +37,21 @@ class IconOnlyButtonHostComponent {
   disabled = false;
 }
 
+// scrutinize (OBRS-910 review): a button OUTSIDE `.admin-shell` where `color`
+// is something other than the `--accent` fallback (#0772a2 -> rgb(7, 114, 162))
+// used by loading-state.component.scss's OWN default. Customer `.btn-primary`
+// is rgb(59, 97, 169) (#3b61a9) — used here directly to reproduce that exact
+// call site without depending on `.btn-primary`'s own stylesheet being loaded.
+@Component({
+  template: `
+    <button type="button" style="color: rgb(59, 97, 169)" [appPending]="pending">Confirm</button>
+  `,
+  standalone: false,
+})
+class CustomerColoredButtonHostComponent {
+  pending = true;
+}
+
 describe('PendingButtonDirective', () => {
   describe('plain <button> host', () => {
     let fixture: ComponentFixture<PlainButtonHostComponent>;
@@ -185,6 +200,42 @@ describe('PendingButtonDirective', () => {
       host.pending = true;
       fixture.detectChanges();
       expect(button.getBoundingClientRect().width).toBeCloseTo(before, 0);
+    });
+  });
+
+  // scrutinize finding 1 (OBRS-910 review): `_loading.scss`'s
+  // `.app-pending-slot .loading-state-ring { border-top-color: currentColor }`
+  // and loading-state.component.scss's own `.loading-state-ring[_ngcontent] {
+  // border-top-color: var(--accent, #0772a2) }` are equal (0,2,0) specificity,
+  // and the component style is always injected after the global stylesheet
+  // has loaded, so it always won and the ring silently ignored the button's
+  // own color everywhere outside `.admin-shell`. This mounts a real button
+  // with a non-accent `color` and reads the LIVE computed style off the ring
+  // — it only stays green if `.app-pending-slot.app-pending-slot ...` in
+  // `_loading.scss` is actually the selector that applies.
+  describe('currentColor ring override (outside .admin-shell)', () => {
+    let fixture: ComponentFixture<CustomerColoredButtonHostComponent>;
+    let button: HTMLButtonElement;
+
+    beforeEach(async () => {
+      await TestBed.configureTestingModule({
+        declarations: [CustomerColoredButtonHostComponent, PendingButtonDirective, LoadingStateComponent],
+        imports: [TranslateModule.forRoot()],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(CustomerColoredButtonHostComponent);
+      fixture.detectChanges();
+      button = fixture.debugElement.query(By.css('button')).nativeElement;
+    });
+
+    it("inherits the button's own text color, not loading-state's fixed --accent fallback", () => {
+      const ring = button.querySelector('.loading-state-ring') as HTMLElement;
+      const buttonColor = getComputedStyle(button).color;
+      const ringBorderTopColor = getComputedStyle(ring).borderTopColor;
+
+      expect(buttonColor).toBe('rgb(59, 97, 169)');
+      expect(ringBorderTopColor).toBe(buttonColor);
+      expect(ringBorderTopColor).not.toBe('rgb(7, 114, 162)');
     });
   });
 });
