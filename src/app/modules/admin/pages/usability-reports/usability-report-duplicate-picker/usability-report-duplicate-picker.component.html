@@ -63,6 +63,7 @@
           type="button"
           class="admin-btn admin-btn-primary"
           [disabled]="!selectedId || isSaving"
+          [appPending]="isSaving"
           (click)="onConfirm()"
           >
           {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.PICKER_CONFIRM' | translate }}

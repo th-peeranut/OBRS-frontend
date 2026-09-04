@@ -120,6 +120,7 @@
           (click)="confirmPayment()"
           [class.payment-btn-diabled]="isSubmittingPayment || !qrPaymentUrl"
           [disabled]="isSubmittingPayment || !qrPaymentUrl"
+          [appPending]="isSubmittingPayment"
           >
           {{ "PAYMENT.QR.CONFIRM_PAYMENT" | translate }}
         </button>

@@ -103,13 +103,9 @@
               type="submit"
               class="login-btn mt-3"
               [disabled]="isResendLoading"
+              [appPending]="isResendLoading"
               >
-              @if (!isResendLoading) {
-                {{ "VERIFY_EMAIL.RESEND_BUTTON" | translate }}
-              }
-              @if (isResendLoading) {
-                {{ "VERIFY_EMAIL.RESEND_LOADING" | translate }}
-              }
+              {{ "VERIFY_EMAIL.RESEND_BUTTON" | translate }}
             </button>
           </form>
         </div>

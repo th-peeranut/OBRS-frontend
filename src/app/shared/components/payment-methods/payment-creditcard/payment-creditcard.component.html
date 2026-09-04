@@ -56,6 +56,7 @@
       (click)="submitPayment()"
       [class.select-btn-diabled]="isSubmittingPayment || isWaitingForConfirmation"
       [disabled]="isSubmittingPayment || isWaitingForConfirmation"
+      [appPending]="isSubmittingPayment || isWaitingForConfirmation"
     >
       {{ "PAYMENT.CREDIT_CARD.PAY_NOW" | translate }}
     </button>

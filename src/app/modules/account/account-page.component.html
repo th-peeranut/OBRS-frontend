@@ -25,6 +25,7 @@
           class="btn-primary"
           data-testid="reconsent-accept"
           [disabled]="isConsentSubmitting"
+          [appPending]="isConsentSubmitting"
           (click)="acceptCurrentPolicy()"
           >
           {{ "ACCOUNT.CONSENT_ACCEPT_BUTTON" | translate }}

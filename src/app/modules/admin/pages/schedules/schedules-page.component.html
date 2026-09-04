@@ -471,9 +471,10 @@
             type="button"
             class="admin-btn admin-btn-primary"
             [disabled]="isSubmitting"
+            [appPending]="isSubmitting"
             (click)="submitScheduleSet()"
             >
-            {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+            {{ 'ADMIN.COMMON.SAVE' | translate }}
           </button>
         </div>
       </div>
@@ -641,8 +642,8 @@
               <button type="button" class="admin-btn" [disabled]="isSubmitting" (click)="closeScheduleFormModal()">
                 {{ 'ADMIN.COMMON.CANCEL' | translate }}
               </button>
-              <button type="submit" class="admin-btn admin-btn-primary" [disabled]="isSubmitting">
-                {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+              <button type="submit" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" [appPending]="isSubmitting">
+                {{ 'ADMIN.COMMON.SAVE' | translate }}
               </button>
             </div>
           </form>

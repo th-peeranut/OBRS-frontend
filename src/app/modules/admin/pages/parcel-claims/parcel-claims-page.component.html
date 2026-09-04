@@ -1,7 +1,7 @@
 <section class="admin-card mt-3">
   <div class="admin-card-head">
     <h4>{{ 'ADMIN.PARCEL_CLAIM.SUBTITLE' | translate }}</h4>
-    <button type="button" class="admin-btn admin-btn-small" [disabled]="isLoading" (click)="load()">
+    <button type="button" class="admin-btn admin-btn-small" [disabled]="isLoading" [appPending]="isLoading" (click)="load()">
       {{ 'ADMIN.PARCEL_CLAIM.REFRESH' | translate }}
     </button>
   </div>

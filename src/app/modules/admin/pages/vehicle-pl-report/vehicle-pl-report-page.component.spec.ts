@@ -14,6 +14,7 @@ import {
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { ExportButtonComponent } from '../../../../shared/components/export-button/export-button.component';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { ExportService } from '../../../../services/export/export.service';
@@ -283,7 +284,7 @@ describe('VehiclePlReportPageComponent (template rendering)', () => {
         MenuModule,
         AdminSharedModule,
       ],
-      declarations: [VehiclePlReportPageComponent, ExportButtonComponent],
+      declarations: [VehiclePlReportPageComponent, ExportButtonComponent, PendingButtonDirective],
       providers: [
         { provide: VehiclePlReportStore, useValue: storeStub },
         { provide: AuthService, useValue: jasmine.createSpyObj('AuthService', { hasAnyRole: true }) },

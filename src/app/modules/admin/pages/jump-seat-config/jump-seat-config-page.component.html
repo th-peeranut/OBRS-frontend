@@ -44,8 +44,9 @@
           type="submit"
           class="admin-btn admin-btn-primary"
           [disabled]="isSaving || jumpSeatConfigForm.pristine"
+          [appPending]="isSaving"
           >
-          {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+          {{ 'ADMIN.COMMON.SAVE' | translate }}
         </button>
       </div>
     </form>

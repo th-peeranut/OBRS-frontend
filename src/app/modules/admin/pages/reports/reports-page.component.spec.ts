@@ -12,6 +12,7 @@ import { ReportsSummaryDto } from '../../../../shared/interfaces/reports-summary
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { ExportButtonComponent } from '../../../../shared/components/export-button/export-button.component';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { ExportService } from '../../../../services/export/export.service';
@@ -405,7 +406,12 @@ describe('ReportsPageComponent (export button, OBRS-442)', () => {
 
     TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
-      declarations: [ReportsPageComponent, ExportButtonComponent, ParcelShareClawbacksSectionComponent],
+      declarations: [
+        ReportsPageComponent,
+        ExportButtonComponent,
+        ParcelShareClawbacksSectionComponent,
+        PendingButtonDirective,
+      ],
       providers: [
         { provide: ReportsStore, useValue: storeStub },
         // OBRS-960: ReportsPageComponent now also injects ParcelShareMonthlyStore

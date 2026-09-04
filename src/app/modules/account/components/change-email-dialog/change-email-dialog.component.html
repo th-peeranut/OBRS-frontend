@@ -135,12 +135,7 @@
                   {{ "EMAIL_CHANGE.CANCEL" | translate }}
                 </button>
                 <button type="submit" class="btn-primary" [disabled]="isSubmitting" [appPending]="isSubmitting">
-                  @if (!isSubmitting) {
-                    {{ "EMAIL_CHANGE.SUBMIT" | translate }}
-                  }
-                  @if (isSubmitting) {
-                    {{ "EMAIL_CHANGE.SUBMIT_LOADING" | translate }}
-                  }
+                  {{ "EMAIL_CHANGE.SUBMIT" | translate }}
                 </button>
               </div>
             </form>
@@ -154,12 +149,7 @@
               <p>{{ "EMAIL_CHANGE.SENT_MESSAGE" | translate: { email: sentToEmail } }}</p>
               <p class="change-email-sent__note">{{ "EMAIL_CHANGE.SENT_NOTE" | translate }}</p>
               <button type="button" class="btn-secondary" [disabled]="isResendLoading" [appPending]="isResendLoading" (click)="resend()">
-                @if (!isResendLoading) {
-                  {{ "EMAIL_CHANGE.RESEND_BUTTON" | translate }}
-                }
-                @if (isResendLoading) {
-                  {{ "EMAIL_CHANGE.RESEND_LOADING" | translate }}
-                }
+                {{ "EMAIL_CHANGE.RESEND_BUTTON" | translate }}
               </button>
             </div>
           }

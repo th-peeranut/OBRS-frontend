@@ -556,9 +556,10 @@
             type="button"
             class="admin-btn admin-btn-primary"
             [disabled]="isSubmittingDelay || delayForm.invalid"
+            [appPending]="isSubmittingDelay"
             (click)="submitDelaySchedule()"
             >
-            {{ (isSubmittingDelay ? 'STAFF.SCHEDULE_DELAY.SUBMITTING' : 'STAFF.SCHEDULE_DELAY.SUBMIT') | translate }}
+            {{ 'STAFF.SCHEDULE_DELAY.SUBMIT' | translate }}
           </button>
         </div>
       </div>

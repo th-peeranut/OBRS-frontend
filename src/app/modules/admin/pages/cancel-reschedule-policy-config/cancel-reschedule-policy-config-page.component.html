@@ -361,8 +361,9 @@
         type="submit"
         class="admin-btn admin-btn-primary"
         [disabled]="isSaving || form.invalid || form.pristine"
+        [appPending]="isSaving"
         >
-        {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+        {{ 'ADMIN.COMMON.SAVE' | translate }}
       </button>
 
       <!-- Persistent, beside the toast on purpose: a faded toast leaves the

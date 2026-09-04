@@ -177,8 +177,8 @@
     disabled for incompleteness, only while actually submitting. -->
     @if (!isLoading) {
       <div class="inspection-bottom-bar">
-        <button type="submit" class="admin-btn admin-btn-primary inspection-submit-btn" [disabled]="isSubmitting">
-          {{ isSubmitting ? ('STAFF.INSPECTION.SUBMITTING' | translate) : ('STAFF.INSPECTION.SUBMIT' | translate) }}
+        <button type="submit" class="admin-btn admin-btn-primary inspection-submit-btn" [disabled]="isSubmitting" [appPending]="isSubmitting">
+          {{ 'STAFF.INSPECTION.SUBMIT' | translate }}
         </button>
       </div>
     }

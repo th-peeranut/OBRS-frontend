@@ -10,6 +10,7 @@ import { OperationsConfigStore } from './operations-config.store';
 import { AdminRefreshHintComponent } from '../../components/admin-refresh-hint/admin-refresh-hint.component';
 import { AdminApiService, OwnerOperationsConfigDto } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AA_NORMAL_TEXT, contrast, effectiveBg, fgOf, mountInChain } from '../../../../testing/contrast';
 
@@ -361,6 +362,7 @@ describe('OperationsConfigPageComponent (OBRS-703)', () => {
           OperationsConfigPageComponent,
           ConfigSourceBadgeComponent,
           AdminRefreshHintComponent,
+          PendingButtonDirective,
         ],
         imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
         providers: [
@@ -478,6 +480,7 @@ describe('OperationsConfigPageComponent (OBRS-703)', () => {
           OperationsConfigPageComponent,
           ConfigSourceBadgeComponent,
           AdminRefreshHintComponent,
+          PendingButtonDirective,
         ],
         imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
         providers: [

@@ -4,6 +4,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { ETicketCardComponent } from './e-ticket-card.component';
 import { PhoneFormatPipe } from '../../pipes/phone-format.pipe';
 import { TitleLabelPipe } from '../../pipes/title-label.pipe';
+import { SharedModule } from '../../shared.module';
 
 /**
  * Standalone-feature module for the shared e-ticket card. Kept out of
@@ -13,7 +14,7 @@ import { TitleLabelPipe } from '../../pipes/title-label.pipe';
 @NgModule({
   declarations: [ETicketCardComponent],
   imports: [
-    TitleLabelPipe,CommonModule, TranslateModule, PhoneFormatPipe],
+    TitleLabelPipe,CommonModule, TranslateModule, PhoneFormatPipe, SharedModule],
   exports: [ETicketCardComponent],
 })
 export class ETicketCardModule {}

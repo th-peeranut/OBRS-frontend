@@ -94,8 +94,9 @@
               type="submit"
               class="admin-btn admin-btn-primary"
               [disabled]="isSaving || bookingPolicyConfigForm.invalid || bookingPolicyConfigForm.pristine"
+              [appPending]="isSaving"
               >
-              {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+              {{ 'ADMIN.COMMON.SAVE' | translate }}
             </button>
           </div>
         </form>

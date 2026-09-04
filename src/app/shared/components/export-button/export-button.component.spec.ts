@@ -6,6 +6,7 @@ import { ExportButtonComponent } from './export-button.component';
 import { AuthService } from '../../../auth/auth.service';
 import { AlertService } from '../../services/alert.service';
 import { ExportError, ExportService } from '../../../services/export/export.service';
+import { PendingButtonDirective } from '../../directives/pending-button.directive';
 
 describe('ExportButtonComponent', () => {
   let fixture: ComponentFixture<ExportButtonComponent>;
@@ -22,7 +23,7 @@ describe('ExportButtonComponent', () => {
 
     TestBed.configureTestingModule({
       imports: [TranslateModule.forRoot(), MenuModule],
-      declarations: [ExportButtonComponent],
+      declarations: [ExportButtonComponent, PendingButtonDirective],
       providers: [
         { provide: ExportService, useValue: exportServiceSpy },
         { provide: AuthService, useValue: authServiceSpy },
@@ -123,7 +124,9 @@ describe('ExportButtonComponent', () => {
     setup(true);
     fixture.detectChanges();
 
-    const labelSpan = fixture.nativeElement.querySelector('button.export-button-trigger > span:nth-child(2)');
+    // nth-child(3): PendingButtonDirective (OBRS-910) inserts the spinner slot as the
+    // button's first child, so the label span is now the third child, not the second.
+    const labelSpan = fixture.nativeElement.querySelector('button.export-button-trigger > span:nth-child(3)');
     expect(labelSpan.textContent.trim()).toBe('COMMON.EXPORT.BUTTON_LABEL');
   });
 
@@ -132,7 +135,9 @@ describe('ExportButtonComponent', () => {
     component.label = 'ADMIN.REPORTS.EXPORT_REVENUE_PER_VEHICLE';
     fixture.detectChanges();
 
-    const labelSpan = fixture.nativeElement.querySelector('button.export-button-trigger > span:nth-child(2)');
+    // nth-child(3): PendingButtonDirective (OBRS-910) inserts the spinner slot as the
+    // button's first child, so the label span is now the third child, not the second.
+    const labelSpan = fixture.nativeElement.querySelector('button.export-button-trigger > span:nth-child(3)');
     expect(labelSpan.textContent.trim()).toBe('ADMIN.REPORTS.EXPORT_REVENUE_PER_VEHICLE');
   });
 });
