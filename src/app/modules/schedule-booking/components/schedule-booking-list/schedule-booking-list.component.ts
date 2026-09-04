@@ -274,16 +274,27 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
         if (!Array.isArray(departures) || departures.length > 0) {
           return null;
         }
+        // The SAME gate `resolveSoldOutToday` puts on the same field below, and
+        // it is not defensive dressing: `availabilityRequestFor` does not look
+        // at `departureDate`, so a restored filter without one still produces a
+        // request, and `dayjs(null).format(...)` is the literal STRING
+        // "Invalid Date" — which sorts BELOW every ISO date. `resolveNearestDay`
+        // would then find nothing "after", take the last entry "before", and
+        // name the FARTHEST day in the window as the nearest one with trips.
+        const searchedDate = dayjs(scheduleFilter?.departureDate);
+        if (!scheduleFilter?.departureDate || !searchedDate.isValid()) {
+          return null;
+        }
         const request = availabilityRequestFor(
           scheduleFilter,
           stationList,
-          buildDayWindow(scheduleFilter?.departureDate, new Date(), maxAdvanceDays)
+          buildDayWindow(scheduleFilter.departureDate, new Date(), maxAdvanceDays)
         );
         return request
           ? {
               request,
               lang,
-              selected: dayjs(scheduleFilter?.departureDate).format('YYYY-MM-DD'),
+              selected: searchedDate.format('YYYY-MM-DD'),
             }
           : null;
       }),
