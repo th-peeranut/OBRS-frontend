@@ -1,5 +1,31 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-09-05 — SELF-FIXED (DRY, ~26 lines): OBRS-812 CSSOM placeholder-strip helper was a byte-identical copy in two spec files
+
+`staff-contrast-gate.spec.ts`'s mutation test and `obrs-812-capture.spec.ts`'s BEFORE/AFTER capture
+each carried their own ~26-line inline `strip()` walk that deletes every `.admin-field ... ::placeholder`
+rule from the live CSSOM — same code, same comments, both reconstructing the pre-OBRS-797 boarding
+placeholder for the same reason. Extracted to `stripAdminFieldPlaceholderRules()` in
+`e2e/support/staff-pages.ts` (same shape as `MEASURE` in `customer-contrast.ts` — a closure-free
+top-level function passed straight to `page.evaluate()`), and both call sites now do
+`await sheet.evaluate(stripAdminFieldPlaceholderRules)`. Verified `npx tsc --noEmit` shows the same
+2 pre-existing-shaped `evaluate(MEASURE)` overload errors in these two files before and after (that
+error is unrelated to this helper and already exists on `origin/dev` in four other capture specs) —
+the consolidation introduced no new type errors. Net line count across the three files went down,
+not up.
+
+Deliberately did NOT touch the ~100-line duplicated verdict/ledger block (`Row`, `fmt`, `record`,
+the `shortfalls`/`totals` accumulation, the `unmatched`/`unmeasured`/`stale` computation) between
+`staff-contrast-gate.spec.ts` and `customer-contrast-gate.spec.ts` — that duplication is real but
+consolidating it means editing `customer-contrast-gate.spec.ts`, which is the repo's live merge gate
+(`FRONTEND-GOTCHAS.md`: "`ng test` green is not a merge signal... relocating shared state breaks it
+loudly in one place and vacuously in another," 4 occurrences). A shared verdict function would also
+need `collapsed`/`measured` state passed in or module-scoped — module-scoped mutable state shared
+across two spec files in one worker process is the exact shape that made `host-boxes.ts`'s
+`activeFixture` unsafe to reuse here in the first place (see `staff-pages.ts`'s own docblock). Over
+30 lines and touches the passing merge gate for no test benefit to this card — left as a finding for
+the developer/a follow-up card, not self-fixed.
+
 ## 2026-08-30 — SELF-FIXED (cosmetic): OBRS-1569 new `data-testid` attribute split across three lines against the file's own one-line-attribute convention
 
 `business-policy.component.html`: the new `<p data-testid="business-policy-terms" [innerHTML]="…">`
