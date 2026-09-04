@@ -6,6 +6,8 @@ import { By } from '@angular/platform-browser';
 import { CancelBookingModalComponent } from './cancel-booking-modal.component';
 import { AppRefundDestinationFieldsComponent } from '../../../../shared/components/refund-destination-fields/refund-destination-fields.component';
 import { CancellationPolicy, MyBookingView } from '../../../../shared/interfaces/my-booking.interface';
+import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 
 function buildBooking(): MyBookingView {
   return {
@@ -51,7 +53,12 @@ describe('CancelBookingModalComponent (OBRS-286, one screen since OBRS-942)', ()
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
-      declarations: [CancelBookingModalComponent, AppRefundDestinationFieldsComponent],
+      declarations: [
+        CancelBookingModalComponent,
+        AppRefundDestinationFieldsComponent,
+        PendingButtonDirective,
+        LoadingStateComponent,
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CancelBookingModalComponent);
@@ -116,6 +123,52 @@ describe('CancelBookingModalComponent (OBRS-286, one screen since OBRS-942)', ()
 
     fixture.debugElement.query(By.css('.crdm-modal__close')).nativeElement.click();
     expect(dismissed).not.toHaveBeenCalled();
+  });
+
+  // OBRS-910: the Confirm button's hand-rolled `<span class="spinner">` was
+  // replaced with `[appPending]="submitting"` — `disabled` stays bound to
+  // `!canSubmit` (form validity), a SEPARATE flag from `submitting`, which is
+  // exactly what proves AC-4's two polarities on one button.
+  describe('OBRS-910 pending button state', () => {
+    it('AC-4: disabled for an unrelated reason (invalid form, not submitting) shows neither a visible spinner nor aria-busy', () => {
+      // default fixture: no destination chosen -> form invalid -> disabled,
+      // and submitting is still false.
+      const confirmBtn = fixture.debugElement.query(By.css('.btn-primary')).nativeElement as HTMLButtonElement;
+
+      expect(confirmBtn.disabled).toBeTrue();
+      expect(confirmBtn.getAttribute('aria-busy')).toBeNull();
+      const ring = confirmBtn.querySelector('.loading-state-ring') as HTMLElement;
+      expect(getComputedStyle(ring).visibility).toBe('hidden');
+    });
+
+    it('AC-4 / AC-2: submitting shows a visible spinner and aria-busy', () => {
+      (component as any).submitting = true;
+      fixture.detectChanges();
+
+      const confirmBtn = fixture.debugElement.query(By.css('.btn-primary')).nativeElement as HTMLButtonElement;
+      expect(confirmBtn.getAttribute('aria-busy')).toBe('true');
+      const ring = confirmBtn.querySelector('.loading-state-ring') as HTMLElement;
+      expect(getComputedStyle(ring).visibility).toBe('visible');
+    });
+
+    it('AC-3: keeps the Confirm button-s rendered width identical, and pins the ring to 16px, across the pending toggle', () => {
+      const form = (component as any).form;
+      form.get('mode').setValue('promptpay');
+      form.get('promptpayPhone').setValue('0812345678');
+      fixture.detectChanges();
+      const confirmBtn = fixture.debugElement.query(By.css('.btn-primary')).nativeElement as HTMLButtonElement;
+      const before = confirmBtn.getBoundingClientRect().width;
+
+      (component as any).submitting = true;
+      fixture.detectChanges();
+      const ring = confirmBtn.querySelector('.loading-state-ring') as HTMLElement;
+      expect(getComputedStyle(ring).width).toBe('16px');
+      expect(confirmBtn.getBoundingClientRect().width).toBeCloseTo(before, 0);
+
+      (component as any).submitting = false;
+      fixture.detectChanges();
+      expect(confirmBtn.getBoundingClientRect().width).toBeCloseTo(before, 0);
+    });
   });
 
   // --- OBRS-813: the reschedule offer ---

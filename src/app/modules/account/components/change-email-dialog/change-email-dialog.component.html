@@ -134,10 +134,7 @@
                 <button type="button" class="btn-secondary" (click)="close()">
                   {{ "EMAIL_CHANGE.CANCEL" | translate }}
                 </button>
-                <button type="submit" class="btn-primary" [disabled]="isSubmitting">
-                  @if (isSubmitting) {
-                    <span class="spinner" aria-hidden="true"></span>
-                  }
+                <button type="submit" class="btn-primary" [disabled]="isSubmitting" [appPending]="isSubmitting">
                   @if (!isSubmitting) {
                     {{ "EMAIL_CHANGE.SUBMIT" | translate }}
                   }
@@ -156,10 +153,7 @@
               <h3>{{ "EMAIL_CHANGE.SENT_TITLE" | translate }}</h3>
               <p>{{ "EMAIL_CHANGE.SENT_MESSAGE" | translate: { email: sentToEmail } }}</p>
               <p class="change-email-sent__note">{{ "EMAIL_CHANGE.SENT_NOTE" | translate }}</p>
-              <button type="button" class="btn-secondary" [disabled]="isResendLoading" (click)="resend()">
-                @if (isResendLoading) {
-                  <span class="spinner" aria-hidden="true"></span>
-                }
+              <button type="button" class="btn-secondary" [disabled]="isResendLoading" [appPending]="isResendLoading" (click)="resend()">
                 @if (!isResendLoading) {
                   {{ "EMAIL_CHANGE.RESEND_BUTTON" | translate }}
                 }

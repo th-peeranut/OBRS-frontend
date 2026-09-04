@@ -1,6 +1,9 @@
-import { TranslateService } from '@ngx-translate/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { RescheduleEstimateSummaryComponent } from './reschedule-estimate-summary.component';
 import { RescheduleEstimate } from '../../../../../shared/interfaces/reschedule.interface';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { PendingButtonDirective } from '../../../../../shared/directives/pending-button.directive';
 
 /**
  * Only `currentLang` is read — OBRS-1592 made the money unit language-dependent,
@@ -147,5 +150,54 @@ describe('RescheduleEstimateSummaryComponent', () => {
       expect(component.estimate.rescheduleFee).toBeUndefined();
       expect(component.netAmountAbsLabel).toContain('20');
     });
+  });
+});
+
+// OBRS-910: the Confirm button's hand-rolled `<span class="spinner">` was
+// replaced with `[appPending]="submitting"`. Rendered via TestBed (unlike the
+// describes above) because AC-2/AC-3 are DOM-level: aria-busy on the real
+// button element, and its rendered width across the pending toggle.
+describe('RescheduleEstimateSummaryComponent — OBRS-910 pending button state (DOM)', () => {
+  let fixture: ComponentFixture<RescheduleEstimateSummaryComponent>;
+  let component: RescheduleEstimateSummaryComponent;
+  let confirmBtn: HTMLButtonElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [RescheduleEstimateSummaryComponent, PendingButtonDirective, LoadingStateComponent],
+      imports: [TranslateModule.forRoot()],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RescheduleEstimateSummaryComponent);
+    component = fixture.componentInstance;
+    component.estimate = buildEstimate();
+    fixture.detectChanges();
+    confirmBtn = (fixture.nativeElement as HTMLElement).querySelector('.btn-primary') as HTMLButtonElement;
+  });
+
+  it('adds aria-busy to the Confirm button while submitting is true (AC-2)', () => {
+    expect(confirmBtn.getAttribute('aria-busy')).toBeNull();
+
+    component.submitting = true;
+    fixture.detectChanges();
+    expect(confirmBtn.getAttribute('aria-busy')).toBe('true');
+
+    component.submitting = false;
+    fixture.detectChanges();
+    expect(confirmBtn.getAttribute('aria-busy')).toBeNull();
+  });
+
+  it('keeps the Confirm button-s rendered width identical, and pins the ring to 16px, across the pending toggle (AC-3)', () => {
+    const before = confirmBtn.getBoundingClientRect().width;
+
+    component.submitting = true;
+    fixture.detectChanges();
+    const ring = confirmBtn.querySelector('.loading-state-ring') as HTMLElement;
+    expect(getComputedStyle(ring).width).toBe('16px');
+    expect(confirmBtn.getBoundingClientRect().width).toBeCloseTo(before, 0);
+
+    component.submitting = false;
+    fixture.detectChanges();
+    expect(confirmBtn.getBoundingClientRect().width).toBeCloseTo(before, 0);
   });
 });

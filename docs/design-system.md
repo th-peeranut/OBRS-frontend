@@ -681,6 +681,17 @@ enforced rule with a test behind it.
   `p-overlayPanel` for the next back-office popup that needs to host a stateful list,
   and the root-service shape for the next cross-cutting back-office signal.
 
+- **Button pending state, `[appPending]` (OBRS-910)**: the shared spinner slot a
+  submit/confirm button shows while its action is in flight, replacing the
+  hand-rolled `<span class="spinner">` / Bootstrap `.spinner-border` copies each
+  call site used to insert next to its own label. The pending-slot spinner
+  (`<app-loading-state variant="inline">`, `.loading-state-ring`) reads
+  `currentColor` from the button instead of a fixed accent token — every button
+  role already passes contrast for its own label color, so a ring that inherits
+  that same color is pre-validated on every role/theme with no new token. Reuse
+  `[appPending]` for the next submit/confirm button instead of hand-rolling
+  another spinner span.
+
 - **`.admin-kpi-icon.is-danger`** (OBRS-98, `RefundVoidReportPageComponent`'s Voided
   card): completes the `is-success`/`is-warning` KPI-icon modifier set with the existing
   `--admin-danger-bg`/`--admin-danger-text` tokens (§2.4) — no new color, added to

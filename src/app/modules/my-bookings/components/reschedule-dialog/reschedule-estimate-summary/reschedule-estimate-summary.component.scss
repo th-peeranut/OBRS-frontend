@@ -115,11 +115,3 @@
   border: 1px solid $secondary-blue;
 }
 
-.spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: $radius-circle;
-  animation: reschedule-estimate-spin 0.7s linear infinite;
-}
