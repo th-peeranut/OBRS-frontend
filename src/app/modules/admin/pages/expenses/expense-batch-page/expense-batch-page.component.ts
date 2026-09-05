@@ -327,6 +327,11 @@ export class ExpenseBatchPageComponent implements OnInit, OnDestroy {
       instalment: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.INSTALMENT'),
       parkingFee: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.PARKING_FEE'),
       parcelCompensation: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.PARCEL_COMPENSATION'),
+      staffWage: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.STAFF_WAGE'),
+      utility: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.UTILITY'),
+      rent: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.RENT'),
+      security: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.SECURITY'),
+      softwareFee: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.SOFTWARE_FEE'),
       central: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.CENTRAL'),
       other: this.translate.instant('ADMIN.EXPENSES.CATEGORIES.OTHER'),
     });
