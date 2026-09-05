@@ -228,6 +228,10 @@ export const CUSTOMER_HOST: Record<string, string> = {
   'schedule-booking-no-results': 'app-schedule-booking',
   'review-schedule-booking': 'app-review-schedule-booking',
   'passenger-info': 'app-passenger-info',
+  // OBRS-795, same reason as the two schedule-booking rows above: keyed by ENTRY,
+  // not by URL. The OPEN-seating entry is the same route with a different seeded
+  // store, so it is the same host.
+  'passenger-info-open': 'app-passenger-info',
   payment: 'app-payment',
   'e-ticket': 'app-e-ticket',
   // OBRS-857. Registering it here is what made its missing `:host { display: block }` visible:

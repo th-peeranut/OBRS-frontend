@@ -348,9 +348,12 @@ hr {
     border-color: $dk-border;
   }
 
-  // NOT measured by the OBRS-584 sweep, and not healthy either: the fixture
-  // seeds an ASSIGNED-seating schedule, so the OPEN-seating badge never
-  // rendered for it to be judged. It is the same two declarations as
+  // NOT measured by the OBRS-584 sweep when OBRS-771 fixed it, and not healthy
+  // either: every entry in that sweep seeded an ASSIGNED-seating schedule, so
+  // the OPEN-seating badge never rendered for it to be judged. OBRS-795 added
+  // the `passenger-info-open` entry, which seeds `seatingMode: 'OPEN'` through
+  // `storeOverride` and names this class in `mustRender`, so it is measured in
+  // both themes now. It is the same two declarations as
   // `.passenget-badge` ($secondary-light-blue fill, $text-primary ink) with the
   // same blanket landing on it, which makes it the same 1.09:1 — fixing the
   // three that happened to render and leaving this one would be filing the

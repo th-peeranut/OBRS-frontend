@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-795-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs795.config.ts",
+      "why": "OBRS-795. Evidence that the widened GATE fixture renders the three dark-mode surfaces it was widened for: a `.seat-passenger-chip` AT REST and the `.seat-passenger-chip-badge` inside it (which need a second passenger to exist at all), and `.open-seating-badge` (which needs `seatingMode: 'OPEN'`, seeded through the `passenger-info-open` entry's storeOverride). CAPTURE rather than GATE because the ENFORCING test is customer-contrast-gate.spec.ts, whose mustRender now names the rest-state chip and the OPEN badge, and whose mutation test is the card's actual proof of coverage; this exists to make the AFTER image checkable. It still asserts the state before it shoots -- a frame of the active chip would look exactly like a frame of the rest chip to a reviewer, and the active one was never the defect. Hermetic on the gate lane's terms: seedCustomerSession + seedStore, so every /api/** call is fulfilled in-browser."
+    },
+    {
       "spec": "obrs-1569-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1569.config.ts",

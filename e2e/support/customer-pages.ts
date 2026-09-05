@@ -418,16 +418,32 @@ const RECENT_ROUTES_SEED = JSON.stringify({
 const STORE_SEED = {
   filter: {
     roundTrip: { id: 'one_way', name: 'One way' },
-    passengerInfo: [{ type: 'adult', count: 1 }],
+    passengerInfo: [{ type: 'adult', count: 2 }],
     startStationId: 'nong_chak',
     stopStationId: 'bkr_mochit2',
     departureDate: '2030-06-17',
     returnDate: null,
-    adultCount: 1,
+    adultCount: 2,
     kidsCount: 0,
   },
   list: { departureSchedules: SCHEDULES, arrivalSchedules: null },
   booking: { schedule: [SCHEDULES[0]] },
+  // OBRS-795: TWO passengers on purpose, and the count is the fixture's whole
+  // point rather than an incidental detail. `setPassengerData()` sizes the
+  // `passengerData` FormArray from THIS array's length, and the seat-chip row
+  // renders one `.seat-passenger-chip` per control with `.active` on
+  // `activeOutboundIndex` (0). At one passenger the only chip that exists is the
+  // active one, so every rule written for a chip AT REST -- and the badge inside
+  // it -- had no element to control anywhere in the gate. Measured by OBRS-771's
+  // probe before that card's fix: `.seat-passenger-chip-badge` at rest 1.12:1,
+  // `.seat-passenger-chip` at rest 1.20:1. Both were fixed and neither was
+  // guarded. A second passenger is what puts a chip in the rest state.
+  //
+  // The second traveller is deliberately NOT a copy of the first: `useBookerInfo`
+  // is false, which is what makes the form render that row's own phone and email
+  // fields (the first row hides them -- see the `/passenger-info` entry's
+  // `minPlaceholders` note), and the seat differs so the chip's seat pill is
+  // populated on both rows.
   passengers: [
     {
       isAdult: true,
@@ -444,8 +460,27 @@ const STORE_SEED = {
       seatPreference: null,
       seatRequirement: null,
     },
+    {
+      isAdult: true,
+      title: 2,
+      firstName: 'Malee',
+      middleName: '',
+      lastName: 'Sooksai',
+      phoneNumber: '0898765432',
+      gender: 'female',
+      isSelectSeat: true,
+      passengerSeat: 'A2',
+      useBookerInfo: false,
+      email: 'malee@system.local',
+      seatPreference: null,
+      seatRequirement: null,
+    },
   ],
-  bookingResult: { id: 501, bookingNumber: 'B-000501', totalAmount: 180, status: 'pending' },
+  // Two seats at the `pricePerSeat: 180` above. The seed's headcount and its
+  // money have to agree: the summary sidebar derives the total from the
+  // passenger-info store (OBRS-1226), so a 180 here against two travellers would
+  // put two different totals on the same screen.
+  bookingResult: { id: 501, bookingNumber: 'B-000501', totalAmount: 360, status: 'pending' },
 };
 
 export interface CustomerPage {
@@ -646,12 +681,70 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     minText: 25,
     minControls: 3,
     // booker-info-form's Phone + Email, which is where the user reported it.
-    // Two, not three: this fixture seeds `useBookerInfo: true`, so the
-    // passenger-info-form's own phone field is not rendered -- the same
-    // one-passenger fixture narrowness OBRS-795 tracks, restated for invariant C.
+    // OBRS-795 seeded the second traveller with `useBookerInfo: false`, so that
+    // row now renders its own phone and email too and the real count is higher
+    // than this floor. Left at the number the first row alone guarantees: the
+    // floor exists to catch a page that did not render, and raising it to the
+    // two-passenger count would make it fail for a reason it is not asking about.
     minPlaceholders: 2,
-    mustRender: ['.btn-next'],
+    // `button.seat-passenger-chip:not(.active)`, and every part of that selector
+    // is load-bearing -- measured, after a shorter version of it turned out to be
+    // a guard that guarded nothing.
+    //
+    // `:not(.active)` is the reason the `mustRender` doc gives above: PRESENT is
+    // not MEASURABLE. A chip has always rendered here; what never rendered until
+    // OBRS-795 seeded a second passenger is a chip AT REST, which is the state
+    // `.seat-passenger-chip` and `.seat-passenger-chip-badge` were fixed in and
+    // the only state their dark rules control.
+    //
+    // `button` is the half that is easy to miss: TWO components use this class.
+    // The form renders `<button class="seat-passenger-chip">` and marks one
+    // `.active`; `app-passenger-info-summary` also renders
+    // `<span class="seat-passenger-chip">Seat A1</span>` per passenger, and those
+    // spans carry `.active` NEVER. So the bare `.seat-passenger-chip:not(.active)`
+    // matched a summary span even with one passenger seeded -- it passed before
+    // this card changed anything, which is a `mustRender` entry that reads as
+    // coverage and asserts nothing. The dark rules under test live in
+    // passenger-info-form.component.scss and, under view encapsulation, can only
+    // ever match the form's buttons.
+    mustRender: ['.btn-next', 'button.seat-passenger-chip:not(.active)'],
     hoverTargets: ['.btn-next', '.btn-back'],
+  },
+  {
+    // The SAME route in its OPEN-seating state, and a separate entry because the
+    // two states are mutually exclusive in the DOM: the form renders the seat map
+    // and the chip row under `!(isOpenSeatingOutbound$)` and the shared
+    // passenger-count card under `allLegsOpenSeating$`, while the summary renders
+    // `.open-seating-badge` only when the leg's `seatingMode` is OPEN. One seed
+    // cannot show both, so the entry above measures the ASSIGNED half and this
+    // one measures the OPEN half. Same host, same page, different seeded store --
+    // the shape OBRS-1228 established for /schedule-booking's two empty states.
+    //
+    // `.open-seating-badge` was measured at 1.09:1 by OBRS-771's probe and fixed
+    // there. Nothing has rendered it under a gate since, because every entry in
+    // this list seeds `seatingMode: 'ASSIGNED'`.
+    key: 'passenger-info-open',
+    url: '/passenger-info',
+    landsOn: '/passenger-info',
+    seed: true,
+    storeOverride: () => ({ booking: { schedule: [{ ...SCHEDULES[0], seatingMode: 'OPEN' }] } }),
+    // Measured on this branch, not guessed: a calibration run with the floors set
+    // to a sentinel reported 111 scoreable text runs and 35 controls in light,
+    // 123 and 35 in dark. Left well under the smaller of each, so a copy edit
+    // does not trip them but a page that rendered its shell and nothing else does.
+    minText: 60,
+    minControls: 20,
+    // The booker's Phone + Email, as on the ASSIGNED entry above. The same
+    // calibration run measured 4 -- the second traveller's own two, which exist
+    // because that row is seeded `useBookerInfo: false` -- and the floor stays at
+    // the two the booker alone guarantees, for the reason given there.
+    minPlaceholders: 2,
+    // Both sides of the OPEN branch, so a fixture that stopped reaching it fails
+    // by name rather than sweeping the ASSIGNED screen under this entry's key:
+    // `.open-seating-badge` is the element under test in the summary, and
+    // `.open-seat-card` is what the form puts where the seat map would be.
+    mustRender: ['.open-seating-badge', '.open-seat-card'],
+    hoverTargets: [],
   },
   {
     key: 'payment',
