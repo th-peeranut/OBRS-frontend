@@ -81,12 +81,11 @@
                 type="button"
                 class="admin-btn admin-btn-small"
                 [disabled]="isSubmitting || approvalState === 'requesting'"
+                [appPending]="approvalState === 'requesting'"
                 (click)="requestApproval()"
                 >
                 {{
-                approvalState === 'requesting'
-                ? ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUESTING' | translate)
-                : approvalState === 'requested'
+                approvalState === 'requested'
                 ? ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUEST_AGAIN' | translate)
                 : ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUEST' | translate)
                 }}

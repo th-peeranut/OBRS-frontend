@@ -8,6 +8,8 @@ import { AdminVehicleDto, AdminVehicleTypeDto } from '../../../../../services/ad
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { PendingButtonDirective } from '../../../../../shared/directives/pending-button.directive';
 
 describe('TripDetailsEditFormComponent', () => {
   let component: TripDetailsEditFormComponent;
@@ -33,6 +35,8 @@ describe('TripDetailsEditFormComponent', () => {
       declarations: [
         TripDetailsEditFormComponent,
         AdminDropdownComponent,
+        PendingButtonDirective,
+        LoadingStateComponent,
       ],
       imports: [
         CommonModule,
@@ -151,6 +155,34 @@ describe('TripDetailsEditFormComponent', () => {
     it('should be invalid when vehicleType is empty', () => {
       getForm(component).get('vehicleType')!.setValue('');
       expect(getForm(component).invalid).toBeTrue();
+    });
+  });
+
+  // OBRS-910: the Save button's hand-rolled `.spinner-border` was replaced with
+  // `[appPending]="isSaving"`.
+  describe('OBRS-910 pending button state', () => {
+    function saveButton(): HTMLButtonElement {
+      return (fixture.nativeElement as HTMLElement).querySelector('.btn-primary') as HTMLButtonElement;
+    }
+
+    it('adds aria-busy to the Save button while isSaving is true (AC-2)', () => {
+      expect(saveButton().getAttribute('aria-busy')).toBeNull();
+
+      component.isSaving = true;
+      fixture.detectChanges();
+      expect(saveButton().getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('pins the ring to 16px via inline style while pending (AC-3)', () => {
+      // Note: this button's own LABEL TEXT swaps (SAVE_BTN -> SAVING) while
+      // pending, a pre-existing, unrelated behavior — so its overall width is
+      // NOT asserted stable here; that invariant is covered on buttons whose
+      // label does not change (cancel-booking-modal, reschedule-estimate-summary).
+      component.isSaving = true;
+      fixture.detectChanges();
+      const ring = saveButton().querySelector('.loading-state-ring') as HTMLElement;
+      expect(getComputedStyle(ring).width).toBe('16px');
+      expect(getComputedStyle(ring).height).toBe('16px');
     });
   });
 });

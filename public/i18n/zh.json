@@ -2735,7 +2735,6 @@
     "RESEND_EMAIL_REQUIRED": "请输入您的电子邮件",
     "RESEND_EMAIL_INVALID": "请输入有效的电子邮件",
     "RESEND_BUTTON": "重新发送验证邮件",
-    "RESEND_LOADING": "发送中...",
     "RESEND_SUCCESS": "验证邮件已重新发送，请检查您的收件箱。",
     "ERROR": {
       "TOKEN_MISSING": "未找到验证令牌，请检查邮件中的链接。",
@@ -2852,14 +2851,12 @@
     "NEW_EMAIL_REQUIRED": "请输入有效的电子邮件",
     "NEW_EMAIL_EXIST": "此电子邮件已被使用",
     "SUBMIT": "发送验证链接",
-    "SUBMIT_LOADING": "发送中...",
     "CANCEL": "取消",
     "CLOSE": "关闭",
     "SENT_TITLE": "验证链接已发送",
     "SENT_MESSAGE": "我们已向 {{email}} 发送了验证链接。",
     "SENT_NOTE": "在您通过链接确认之前，您的登录邮箱不会更改。",
     "RESEND_BUTTON": "重新发送链接",
-    "RESEND_LOADING": "发送中...",
     "RESEND_SUCCESS": "验证链接已重新发送，请检查您的收件箱。",
     "ERROR": {
       "INVALID_PASSWORD": "密码不正确，请重试。",
@@ -2906,7 +2903,6 @@
     "EMAIL_REQUIRED": "请输入电子邮箱",
     "EMAIL_INVALID": "电子邮箱格式不正确",
     "SEND_LINK": "发送重置链接",
-    "SEND_LINK_LOADING": "发送中...",
     "SENT_MESSAGE": "如果该邮箱已绑定账户，我们已向其发送重置密码的链接。请查收您的邮箱。",
     "BACK_TO_LOGIN": "返回登录"
   },
@@ -2919,7 +2915,6 @@
     "PASSWORD_RULE": "密码需为 8-128 个字符，并至少包含一个大写字母、一个小写字母和一个数字",
     "PASSWORD_MISMATCH": "两次输入的密码不一致",
     "SUBMIT": "设置新密码",
-    "SUBMIT_LOADING": "保存中...",
     "SUCCESS_TITLE": "密码已更改",
     "SUCCESS_MESSAGE": "您的密码已更改，现在可以使用新密码登录。",
     "SUCCESS_SIGNIN": "登录",

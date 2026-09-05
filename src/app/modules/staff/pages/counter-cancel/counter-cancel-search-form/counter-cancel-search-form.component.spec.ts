@@ -4,6 +4,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
 import { CounterCancelSearchFormComponent } from './counter-cancel-search-form.component';
+import { PendingButtonDirective } from '../../../../../shared/directives/pending-button.directive';
 
 describe('CounterCancelSearchFormComponent (OBRS-766)', () => {
   let fixture: ComponentFixture<CounterCancelSearchFormComponent>;
@@ -12,7 +13,7 @@ describe('CounterCancelSearchFormComponent (OBRS-766)', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
-      declarations: [CounterCancelSearchFormComponent],
+      declarations: [CounterCancelSearchFormComponent, PendingButtonDirective],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CounterCancelSearchFormComponent);

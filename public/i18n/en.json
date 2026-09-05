@@ -2735,7 +2735,6 @@
     "RESEND_EMAIL_REQUIRED": "Please enter your email",
     "RESEND_EMAIL_INVALID": "Please enter a valid email",
     "RESEND_BUTTON": "Resend verification email",
-    "RESEND_LOADING": "Sending...",
     "RESEND_SUCCESS": "Verification email resent. Please check your inbox.",
     "ERROR": {
       "TOKEN_MISSING": "No verification token found. Please check the link in your email.",
@@ -2852,14 +2851,12 @@
     "NEW_EMAIL_REQUIRED": "Please enter a valid email",
     "NEW_EMAIL_EXIST": "This email is already in use",
     "SUBMIT": "Send verification link",
-    "SUBMIT_LOADING": "Sending...",
     "CANCEL": "Cancel",
     "CLOSE": "Close",
     "SENT_TITLE": "Verification link sent",
     "SENT_MESSAGE": "We sent a verification link to {{email}}.",
     "SENT_NOTE": "Your login email will not change until you confirm via the link.",
     "RESEND_BUTTON": "Resend link",
-    "RESEND_LOADING": "Sending...",
     "RESEND_SUCCESS": "Verification link resent. Please check your inbox.",
     "ERROR": {
       "INVALID_PASSWORD": "Incorrect password. Please try again.",
@@ -2906,7 +2903,6 @@
     "EMAIL_REQUIRED": "Please enter your email",
     "EMAIL_INVALID": "Please enter a valid email",
     "SEND_LINK": "Send reset link",
-    "SEND_LINK_LOADING": "Sending...",
     "SENT_MESSAGE": "If that email address belongs to an account, we have sent a password reset link to it. Please check your inbox.",
     "BACK_TO_LOGIN": "Back to sign in"
   },
@@ -2919,7 +2915,6 @@
     "PASSWORD_RULE": "Password must be 8-128 characters and contain an uppercase letter, a lowercase letter and a digit",
     "PASSWORD_MISMATCH": "The two passwords do not match",
     "SUBMIT": "Set new password",
-    "SUBMIT_LOADING": "Saving...",
     "SUCCESS_TITLE": "Password changed",
     "SUCCESS_MESSAGE": "Your password has been changed. You can now sign in with it.",
     "SUCCESS_SIGNIN": "Sign in",

@@ -1,10 +1,6 @@
-// .admin-btn / .admin-loading-spinner / @keyframes admin-loading-spin are
-// global (src/styles/admin-theme.scss, imported once in styles.scss) — reuse
-// them here rather than redefining a spinner or button chrome per component.
-
-.export-button-spinner {
-  // Design spec calls for a small ~16-18px rotating icon in the trigger
-  // button; .admin-loading-spinner alone is sized for full-page loading
-  // overlays (34px), so only the size is overridden here.
-  font-size: 18px;
-}
+// .admin-btn is global (src/styles/admin-theme.scss, imported once in
+// styles.scss) — reuse it here rather than redefining button chrome per
+// component. OBRS-910: the trigger's own pending indicator is now
+// [appPending] (shared/directives/pending-button.directive.ts), which owns
+// its spinner sizing via [appPendingSizePx] — no component-local spinner
+// style needed.

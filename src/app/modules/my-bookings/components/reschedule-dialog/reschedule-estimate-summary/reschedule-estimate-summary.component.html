@@ -46,11 +46,9 @@
       type="button"
       class="btn-primary"
       [disabled]="loading || submitting || !estimate"
+      [appPending]="submitting"
       (click)="onConfirm()"
       >
-      @if (submitting) {
-        <span class="spinner" aria-hidden="true"></span>
-      }
       {{ confirmButtonLabelKey | translate }}
     </button>
   </div>

@@ -73,12 +73,8 @@
     page-number paginator on the customer shell). -->
     @if (showLoadMore) {
       <div class="my-reports__load-more">
-        <button type="button" class="btn-secondary" [disabled]="isLoadingMore" (click)="onLoadMore()">
-          {{
-          isLoadingMore
-          ? ('USABILITY_REPORT.MY_REPORTS.LOADING_MORE' | translate)
-          : ('USABILITY_REPORT.MY_REPORTS.LOAD_MORE' | translate)
-          }}
+        <button type="button" class="btn-secondary" [disabled]="isLoadingMore" [appPending]="isLoadingMore" (click)="onLoadMore()">
+          {{ 'USABILITY_REPORT.MY_REPORTS.LOAD_MORE' | translate }}
         </button>
       </div>
     }

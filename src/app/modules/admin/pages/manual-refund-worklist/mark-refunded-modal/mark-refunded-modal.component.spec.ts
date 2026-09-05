@@ -8,6 +8,7 @@ import { By } from '@angular/platform-browser';
 import { Observable, of, throwError } from 'rxjs';
 import { MarkRefundedModalComponent } from './mark-refunded-modal.component';
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
+import { PendingButtonDirective } from '../../../../../shared/directives/pending-button.directive';
 import { AdminApiService } from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { PendingRefund } from '../../../../../shared/interfaces/payment.interface';
@@ -38,7 +39,7 @@ describe('MarkRefundedModalComponent (OBRS-286 Flow C)', () => {
 
     await TestBed.configureTestingModule({
       imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
-      declarations: [MarkRefundedModalComponent, AdminModalBackdropDirective],
+      declarations: [MarkRefundedModalComponent, AdminModalBackdropDirective, PendingButtonDirective],
       providers: [
         { provide: AdminApiService, useValue: api },
         { provide: AlertService, useValue: alert },

@@ -255,9 +255,10 @@
           type="button"
           class="admin-btn admin-btn-primary"
           [disabled]="isSubmitting"
+          [appPending]="isSubmitting"
           (click)="submitPlan()"
           >
-          {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+          {{ 'ADMIN.COMMON.SAVE' | translate }}
         </button>
       </div>
     </div>

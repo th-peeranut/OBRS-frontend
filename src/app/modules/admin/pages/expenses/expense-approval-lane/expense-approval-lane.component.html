@@ -30,6 +30,7 @@
                   type="button"
                   class="admin-btn admin-btn-primary admin-btn-sm"
                   [disabled]="busyId === row.id"
+                  [appPending]="busyId === row.id"
                   [attr.data-testid]="'expense-approve-' + row.id"
                   (click)="approve.emit(row.id)"
                   >
@@ -64,6 +65,7 @@
                       type="button"
                       class="admin-btn admin-btn-primary admin-btn-sm"
                       [disabled]="!canConfirmReject || busyId === row.id"
+                      [appPending]="busyId === row.id"
                       [attr.data-testid]="'expense-reject-confirm-' + row.id"
                       (click)="confirmReject(row.id)"
                       >

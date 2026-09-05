@@ -9,6 +9,7 @@ import { UsabilityReportsPageComponent } from './usability-reports-page.componen
 import { UsabilityReportsStore } from './usability-reports.store';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/usability-report-badge-refresh.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { AdminSharedModule } from '../../admin-shared.module';
@@ -128,6 +129,7 @@ describe('UsabilityReportsPageComponent', () => {
         AdminModalBackdropDirective,
         UsabilityReportDuplicatePickerComponent,
         UsabilityReportFollowUpTimelineComponent,
+        PendingButtonDirective,
       ],
       providers: [
         { provide: UsabilityReportsStore, useValue: storeSpy },

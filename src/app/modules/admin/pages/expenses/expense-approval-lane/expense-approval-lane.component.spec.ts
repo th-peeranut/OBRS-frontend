@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { ExpenseApprovalLaneComponent } from './expense-approval-lane.component';
 import { ExpenseRow } from '../expenses-page.mappers';
+import { PendingButtonDirective } from '../../../../../shared/directives/pending-button.directive';
 
 function row(id: number): ExpenseRow {
   return {
@@ -35,7 +36,7 @@ describe('ExpenseApprovalLaneComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [FormsModule, TranslateModule.forRoot()],
-      declarations: [ExpenseApprovalLaneComponent],
+      declarations: [ExpenseApprovalLaneComponent, PendingButtonDirective],
     }).compileComponents();
     fixture = TestBed.createComponent(ExpenseApprovalLaneComponent);
     component = fixture.componentInstance;

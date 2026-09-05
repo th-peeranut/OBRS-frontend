@@ -14,6 +14,7 @@ import {
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { ExportButtonComponent } from '../../../../shared/components/export-button/export-button.component';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
@@ -327,7 +328,7 @@ describe('VehiclePlReportPageComponent (template rendering)', () => {
         MenuModule,
         AdminSharedModule,
       ],
-      declarations: [VehiclePlReportPageComponent, ExportButtonComponent, DateRangePickerComponent],
+      declarations: [VehiclePlReportPageComponent, ExportButtonComponent, PendingButtonDirective, DateRangePickerComponent],
       providers: [
         { provide: VehiclePlReportStore, useValue: storeStub },
         { provide: AuthService, useValue: jasmine.createSpyObj('AuthService', { hasAnyRole: true }) },

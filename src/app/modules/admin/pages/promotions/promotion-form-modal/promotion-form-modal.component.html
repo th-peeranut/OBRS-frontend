@@ -213,8 +213,8 @@
               <button type="button" class="admin-btn" (click)="requestClose()">
                 {{ 'ADMIN.COMMON.CANCEL' | translate }}
               </button>
-              <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitPromotion()">
-                {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+              <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" [appPending]="isSubmitting" (click)="submitPromotion()">
+                {{ 'ADMIN.COMMON.SAVE' | translate }}
               </button>
             </div>
           </div>

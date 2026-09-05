@@ -16,10 +16,7 @@
         <div class="change-stop-step change-stop-step--error">
           <i class="bi bi-exclamation-triangle"></i>
           <p>{{ routeStopsError }}</p>
-          <button type="button" class="btn-secondary" [disabled]="routeStopsLoading" (click)="onRetry()">
-            @if (routeStopsLoading) {
-              <span class="spinner" aria-hidden="true"></span>
-            }
+          <button type="button" class="btn-secondary" [disabled]="routeStopsLoading" [appPending]="routeStopsLoading" (click)="onRetry()">
             {{ "MY_BOOKINGS.RETRY" | translate }}
           </button>
         </div>

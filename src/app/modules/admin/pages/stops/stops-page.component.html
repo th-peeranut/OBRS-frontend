@@ -16,7 +16,7 @@
         (ngModelChange)="onSearchKeywordChange($event)"
         [attr.aria-label]="'ADMIN.STOPS.SEARCH_PLACEHOLDER' | translate"
       />
-      <button type="button" class="admin-btn" [disabled]="isLoading" (click)="load()">
+      <button type="button" class="admin-btn" [disabled]="isLoading" [appPending]="isLoading" (click)="load()">
         {{ 'ADMIN.COMMON.REFRESH' | translate }}
       </button>
     </div>

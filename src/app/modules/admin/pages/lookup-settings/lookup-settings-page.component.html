@@ -184,8 +184,8 @@
         <button type="button" class="admin-btn" (click)="closeFormModal()">
           {{ 'ADMIN.COMMON.CANCEL' | translate }}
         </button>
-        <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitLookup()">
-          {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+        <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" [appPending]="isSubmitting" (click)="submitLookup()">
+          {{ 'ADMIN.COMMON.SAVE' | translate }}
         </button>
       </div>
     </div>

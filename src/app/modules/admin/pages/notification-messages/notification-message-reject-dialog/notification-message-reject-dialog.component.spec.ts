@@ -4,6 +4,7 @@ import { By } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
+import { PendingButtonDirective } from '../../../../../shared/directives/pending-button.directive';
 import { NotificationMessageRejectDialogComponent } from './notification-message-reject-dialog.component';
 
 describe('NotificationMessageRejectDialogComponent', () => {
@@ -12,7 +13,11 @@ describe('NotificationMessageRejectDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NotificationMessageRejectDialogComponent, AdminModalBackdropDirective],
+      declarations: [
+        NotificationMessageRejectDialogComponent,
+        AdminModalBackdropDirective,
+        PendingButtonDirective,
+      ],
       imports: [FormsModule, TranslateModule.forRoot()],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     }).compileComponents();

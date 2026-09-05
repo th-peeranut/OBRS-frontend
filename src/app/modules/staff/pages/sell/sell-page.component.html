@@ -172,10 +172,7 @@
             <button class="btn btn-secondary" (click)="closeScheduleForm()" [disabled]="isScheduleSubmitting">
               {{ 'STAFF.SELL.BACK_BTN' | translate }}
             </button>
-            <button class="btn btn-primary" (click)="submitSchedule()" [disabled]="isScheduleSubmitting || !scheduleStore.hasValue">
-              @if (isScheduleSubmitting) {
-                <span class="spinner-border spinner-border-sm me-1"></span>
-              }
+            <button class="btn btn-primary" (click)="submitSchedule()" [disabled]="isScheduleSubmitting || !scheduleStore.hasValue" [appPending]="isScheduleSubmitting">
               {{ 'STAFF.SELL.CONFIRM_BTN' | translate }}
             </button>
           </div>

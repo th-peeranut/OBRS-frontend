@@ -151,14 +151,10 @@
       type="button"
       class="btn btn-sm btn-primary"
       [disabled]="isSaving"
+      [appPending]="isSaving"
       (click)="onSave()"
       >
-      @if (isSaving) {
-        <span class="spinner-border spinner-border-sm me-1"></span>
-      }
-      {{ isSaving
-      ? ('STAFF.SELL.TRIP_DETAIL_SAVING' | translate)
-      : ('STAFF.SELL.TRIP_DETAIL_SAVE_BTN' | translate) }}
+      {{ 'STAFF.SELL.TRIP_DETAIL_SAVE_BTN' | translate }}
     </button>
   </div>
 

@@ -158,12 +158,9 @@
                     type="submit"
                     class="admin-btn admin-btn-primary"
                     [disabled]="isSubmitting"
+                    [appPending]="isSubmitting"
                     >
-                    {{
-                    isSubmitting
-                    ? ('USABILITY_REPORT.MODAL.SUBMITTING' | translate)
-                    : ('USABILITY_REPORT.MODAL.SUBMIT' | translate)
-                    }}
+                    {{ 'USABILITY_REPORT.MODAL.SUBMIT' | translate }}
                   </button>
                 </div>
               </form>

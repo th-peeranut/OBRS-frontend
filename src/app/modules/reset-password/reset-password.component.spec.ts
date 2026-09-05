@@ -10,6 +10,7 @@ import {
   ResetPasswordComponent,
 } from './reset-password.component';
 import { AuthService } from '../../auth/auth.service';
+import { PendingButtonDirective } from '../../shared/directives/pending-button.directive';
 
 describe('ResetPasswordComponent', () => {
   let authStub: { confirmPasswordReset: jasmine.Spy };
@@ -173,7 +174,7 @@ describe('ResetPasswordComponent — password manager autofill tokens (OBRS-1559
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ResetPasswordComponent],
+      declarations: [ResetPasswordComponent, PendingButtonDirective],
       imports: [ReactiveFormsModule, RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: {} },

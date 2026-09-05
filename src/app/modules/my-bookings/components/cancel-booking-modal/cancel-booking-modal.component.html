@@ -86,10 +86,7 @@
         <button type="button" class="btn-secondary" [disabled]="submitting" (click)="requestClose()">
           {{ 'MY_BOOKINGS.CANCEL.CANCEL_BUTTON' | translate }}
         </button>
-        <button type="button" class="btn-primary" [disabled]="!canSubmit" (click)="submit()">
-          @if (submitting) {
-            <span class="spinner" aria-hidden="true"></span>
-          }
+        <button type="button" class="btn-primary" [disabled]="!canSubmit" [appPending]="submitting" (click)="submit()">
           {{ 'MY_BOOKINGS.CANCEL.CONFIRM_BUTTON' | translate }}
         </button>
       </div>
