@@ -3107,6 +3107,10 @@
     "SOLD_OUT_TODAY_TITLE": "今天的班次均已发车",
     "SOLD_OUT_TODAY_HINT": "请查看次日的班次。",
     "SOLD_OUT_TODAY_ACTION": "查看{{date}}的班次",
+    "DAY_STRIP_LABEL": "选择出行日期",
+    "DAY_STRIP_TODAY": "今天",
+    "DAY_STRIP_NO_TRIPS": "无班次",
+    "NEAREST_DAY_HINT": "最近有班次的日期是{{date}}",
     "ESTIMATE_KM_UNIT": "公里",
     "RESTORED_UNAVAILABLE": "您之前选择的班次已无空位，请重新选择。"
   },

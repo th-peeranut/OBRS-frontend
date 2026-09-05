@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DebugElement } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 
 import { of } from 'rxjs';
@@ -13,10 +14,18 @@ import {
   createStoreStub,
   createTranslateStub,
   createAuthServiceStub,
+  createScheduleServiceStub,
+  createBookingPolicyServiceStub,
 } from '../../../../testing/test-stubs';
-import { Schedule, ScheduleList } from '../../../../shared/interfaces/schedule.interface';
+import {
+  Schedule,
+  ScheduleAvailability,
+  ScheduleFilter,
+  ScheduleList,
+} from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
+import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { RouteMapService } from '../../../../services/route-map/route-map.service';
 import {
@@ -33,6 +42,8 @@ import { environment } from '../../../../../environments/environment';
 import { NJ_FACEBOOK_PAGE_URL } from '../../../../shared/lib/online-booking-channel';
 // OBRS-1583: the gate now asks AuthService as well as the flag.
 import { AuthService } from '../../../../auth/auth.service';
+import { ScheduleService } from '../../../../services/schedule/schedule.service';
+import { BookingPolicyService } from '../../../../services/booking-policy/booking-policy.service';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 // The component's own time formatter — see the AC-2 assertion for why the expected
@@ -50,7 +61,9 @@ describe('ScheduleBookingListComponent', () => {
       createTranslateStub(),
       createRouteMapServiceStub(),
       createAnalyticsServiceStub(),
-      createAuthServiceStub()
+      createAuthServiceStub(),
+      createScheduleServiceStub(),
+      createBookingPolicyServiceStub()
     );
   });
 
@@ -109,6 +122,8 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -292,6 +307,8 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
         provideMockStore(),
         { provide: RouteMapService, useValue: routeMapServiceStub },
         { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
 
@@ -396,6 +413,8 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -506,6 +525,8 @@ describe('ScheduleBookingListComponent (announced-delay disclosure, OBRS-1141)',
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -669,6 +690,8 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
         { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -696,7 +719,11 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
     render({ departureSchedules: [], arrivalSchedules: null }, filterFor('2026-08-15'));
 
     expect(textOf('.no-results')).toContain('SCHEDULE_BOOKING.NO_RESULTS');
-    expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeNull();
+    // OBRS-862 wraps `.no-results` in the same `.sold-out-today` panel so the
+    // nearest-day hint has somewhere to sit, so the panel DIV is no longer the
+    // branch discriminator — `__title` is, and it is what the contrast gate
+    // pins for this state too.
+    expect(fixture.debugElement.query(By.css('.sold-out-today__title'))).toBeNull();
   });
 
   it('shows the message but NO button for a round trip — moving the outbound could put it after the return', () => {
@@ -768,7 +795,8 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
     fixture.detectChanges();
 
     // 2026-08-10 is now YESTERDAY: it is no longer "today's rounds have left".
-    expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeNull();
+    // `__title` and not the panel div — see the OBRS-862 note above.
+    expect(fixture.debugElement.query(By.css('.sold-out-today__title'))).toBeNull();
     expect(textOf('.no-results')).toContain('SCHEDULE_BOOKING.NO_RESULTS');
   });
 
@@ -1008,7 +1036,9 @@ describe('ScheduleBookingListComponent (OBRS-1302 — selectSchedule side effect
       createTranslateStub(),
       createRouteMapServiceStub(),
       analytics,
-      createAuthServiceStub()
+      createAuthServiceStub(),
+      createScheduleServiceStub(),
+      createBookingPolicyServiceStub()
     );
   }
 
@@ -1084,7 +1114,9 @@ describe('ScheduleBookingListComponent (OBRS-1336 — round trip with no return 
       createTranslateStub(),
       createRouteMapServiceStub(),
       createAnalyticsServiceStub(),
-      createAuthServiceStub()
+      createAuthServiceStub(),
+      createScheduleServiceStub(),
+      createBookingPolicyServiceStub()
     );
     component.scheduleList = of({
       departureSchedules: [trip],
@@ -1165,5 +1197,250 @@ describe('ScheduleBookingListComponent (OBRS-1336 — round trip with no return 
     expect(component.selectedSchedule).toEqual([]);
     expect(component.isSelectFirst).toBeFalse();
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * OBRS-862 (review finding 1) — the card's headline behaviour, which shipped
+ * with no unit test at all.
+ *
+ * Every other block in this file wires `createScheduleServiceStub()`, whose
+ * `getAvailabilityCached` answers `of(null)` — the "we were told nothing"
+ * branch — so `nearestDay$`, `showDay()` and `resolveNearestDay()` were only
+ * ever exercised down the path that returns `null` and renders nothing. The
+ * proof it was uncovered: a reviewer changed behaviour INSIDE
+ * `resolveNearestDay` and the suite did not move (6734 passing before and
+ * after). These arms feed it a real availability answer.
+ */
+describe('ScheduleBookingListComponent (OBRS-862 nearest day with trips)', () => {
+  let fixture: ComponentFixture<ScheduleBookingListComponent>;
+  let component: ScheduleBookingListComponent;
+  let store: MockStore;
+  let availability: ScheduleAvailability | null;
+
+  /**
+   * NO `+07:00`, for the reason the OBRS-1217 block above documents at length:
+   * the component compares `dayjs(date)` against `dayjs()`, both in the
+   * RUNNER's zone, so pinning an instant in ICT makes "which day is it" a
+   * different question here than in CI. A bare literal is parsed as LOCAL time.
+   */
+  const TONIGHT = new Date('2026-08-10T20:58:00');
+  /** 3 days out, so this is NOT the sold-out-today panel — it is the plain
+   *  empty-result state, the one the card's new copy had to fit into. */
+  const SEARCHED = '2026-08-13';
+  /** The window `buildDayWindow` produces for SEARCHED at TONIGHT:
+   *  2026-08-10 (today, the lower clamp) … 2026-08-16. */
+  const WINDOW_END = '2026-08-16';
+
+  const STATIONS = [
+    { id: 1, slug: 'nong_chak' },
+    { id: 4, slug: 'bts_mo_chit' },
+  ] as unknown as StationApi[];
+
+  function filterFor(
+    departureDate: string | null,
+    extra: Record<string, unknown> = {}
+  ): any {
+    return {
+      roundTrip: { id: 1 },
+      passengerInfo: [{ type: 'ADULT', count: 1 }],
+      startStationId: 1,
+      stopStationId: 4,
+      departureDate,
+      ...extra,
+    };
+  }
+
+  /** Through `Intl`, never a literal, so this stays a test of the component and
+   *  not of one runtime's ICU data — same reasoning as OBRS-1217's label test. */
+  function expectedLabel(iso: string): string {
+    return new Intl.DateTimeFormat('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+    }).format(new Date(iso + 'T00:00:00'));
+  }
+
+  function hint(iso: string): string {
+    return 'The nearest day with trips is ' + expectedLabel(iso);
+  }
+
+  function render(scheduleFilter: any) {
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: [],
+      arrivalSchedules: null,
+    } as unknown as ScheduleList);
+    store.overrideSelector(selectScheduleFilter, scheduleFilter);
+    store.overrideSelector(selectProvinceWithStation, STATIONS as never);
+    fixture = TestBed.createComponent(ScheduleBookingListComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
+  function hintText(): string | null {
+    const el = fixture.debugElement.query(By.css('.sold-out-today__hint'));
+    return el ? (el.nativeElement.textContent || '').trim() : null;
+  }
+
+  function actionButton(): DebugElement | null {
+    return fixture.debugElement.query(By.css('[data-testid="nearest-day-action"]'));
+  }
+
+  beforeEach(async () => {
+    availability = null;
+
+    await TestBed.configureTestingModule({
+      declarations: [
+        ScheduleBookingListComponent,
+        ScheduleDelayNoticeComponent,
+        ArrivalDateNoticeComponent,
+      ],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        provideMockStore(),
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub() },
+        {
+          provide: ScheduleService,
+          useValue: {
+            ...createScheduleServiceStub(),
+            // Read at subscribe time, so each arm sets `availability` first.
+            getAvailabilityCached: () => of(availability),
+          },
+        },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+      ],
+    }).compileComponents();
+
+    store = TestBed.inject(MockStore);
+
+    // The hint's whole point is the DATE it names, and an untranslated key
+    // renders WITHOUT its interpolation — so the copy has to be loaded for the
+    // assertion to be about anything at all. Only the two keys these arms read.
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', {
+      SCHEDULE_BOOKING: {
+        NEAREST_DAY_HINT: 'The nearest day with trips is {{date}}',
+        SOLD_OUT_TODAY_ACTION: 'Show trips on {{date}}',
+        NO_RESULTS: 'No trips found',
+      },
+    });
+    translate.use('en');
+
+    jasmine.clock().install();
+    jasmine.clock().mockDate(TONIGHT);
+  });
+
+  afterEach(() => {
+    jasmine.clock().uninstall();
+  });
+
+  it('names the nearest day AFTER the searched one when the result is empty', () => {
+    availability = { availableDates: ['2026-08-11', '2026-08-15'], effectiveDays: 7 };
+    render(filterFor(SEARCHED));
+
+    expect(hintText()).toBe(hint('2026-08-15'));
+  });
+
+  it('prefers a day AFTER the searched date over an equally near one before it', () => {
+    // 08-12 and 08-14 are both one day from 08-13. A customer looking for a
+    // trip wants the next one, not the one they have already missed.
+    availability = { availableDates: ['2026-08-12', '2026-08-14'], effectiveDays: 7 };
+    render(filterFor(SEARCHED));
+
+    expect(hintText()).toBe(hint('2026-08-14'));
+    expect(hintText()).not.toContain(expectedLabel('2026-08-12'));
+  });
+
+  it('falls back to the CLOSEST earlier day when nothing later has trips', () => {
+    availability = { availableDates: ['2026-08-10', '2026-08-11'], effectiveDays: 7 };
+    render(filterFor(SEARCHED));
+
+    // 08-11, not 08-10: the backward arm takes the LAST entry before the
+    // searched day, which is the nearest one and not the earliest.
+    expect(hintText()).toBe(hint('2026-08-11'));
+  });
+
+  it('showDay() dispatches the filter change and carries the return date', () => {
+    // The return date is set BEFORE the day being jumped to, so the carry rule
+    // has visible work to do. A jump that only spread the old filter and
+    // overwrote `departureDate` would leave 08-14 behind a 08-16 outbound —
+    // the pair the backend rejects — and would pass any arm where the return
+    // date happened to already be valid. `scheduleFilterForDay`'s own rules are
+    // pinned in schedule-day-jump.spec.ts; what this asserts is that showDay()
+    // goes THROUGH it rather than round the side of it.
+    availability = { availableDates: ['2026-08-16'], effectiveDays: 7 };
+    render(filterFor(SEARCHED, { roundTrip: { id: 2 }, returnDate: '2026-08-14' }));
+    const dispatch = spyOn(store, 'dispatch');
+
+    component.showDay('2026-08-16');
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    const action = dispatch.calls.mostRecent().args[0] as unknown as {
+      type: string;
+      schedule_filter: ScheduleFilter;
+    };
+    expect(action.type).toBe(invokeSetScheduleFilterApi.type);
+    expect(action.schedule_filter.departureDate).toBe('2026-08-16');
+    expect(action.schedule_filter.returnDate).toBe('2026-08-17');
+  });
+
+  // AC "พร้อมปุ่มกดไปวันนั้นเลย": the hint alone is not the deliverable. This is
+  // the plain empty-result branch (SEARCHED is 3 days out, so `soldOutToday$`
+  // is null) — the case the card was opened about, and the one that shipped
+  // with a hint and no way to act on it.
+  it('offers a jump button on the named day for a ONE-WAY empty result', () => {
+    availability = { availableDates: ['2026-08-15'], effectiveDays: 7 };
+    render(filterFor(SEARCHED));
+    const dispatch = spyOn(store, 'dispatch');
+
+    const button = actionButton();
+    expect(button).not.toBeNull();
+    expect((button!.nativeElement.textContent || '').trim()).toBe(
+      'Show trips on ' + expectedLabel('2026-08-15')
+    );
+
+    button!.nativeElement.click();
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    const action = dispatch.calls.mostRecent().args[0] as unknown as {
+      type: string;
+      schedule_filter: ScheduleFilter;
+    };
+    expect(action.type).toBe(invokeSetScheduleFilterApi.type);
+    // The day the hint named, not the day after the searched one — this button
+    // goes through showDay(nearestDay.iso), not showNextDay().
+    expect(action.schedule_filter.departureDate).toBe('2026-08-15');
+  });
+
+  // The other half of the same rule, and the half that is easy to break by
+  // "fixing" the asymmetry: the owner's 2026-08-10 call keeps the BUTTON
+  // one-way-only, while the HINT names the nearest day for every trip type.
+  // Asserting both in one arm is what stops a widened gate from passing (button
+  // appears) and a deleted hint from passing (hint gone) alike. The arm above
+  // is the positive control that proves this selector can match at all.
+  it('withholds the jump button for a ROUND TRIP but still names the day', () => {
+    availability = { availableDates: ['2026-08-15'], effectiveDays: 7 };
+    render(filterFor(SEARCHED, { roundTrip: { id: 2 }, returnDate: '2026-08-20' }));
+
+    expect(actionButton()).toBeNull();
+    expect(hintText()).toBe(hint('2026-08-15'));
+  });
+
+  // What commit 455f697e guards. `dayjs(null).format('YYYY-MM-DD')` is the
+  // literal string "Invalid Date", which sorts ABOVE every ISO date ('I' 0x49
+  // vs a leading digit 0x32) — so without the validity guard nothing in the
+  // window is "after" it, the backward arm takes over, and the hint names
+  // WINDOW_END: the FARTHEST day in the window, announced as the nearest.
+  it('renders the pre-card copy, and no hint, when the filter has no valid date', () => {
+    availability = { availableDates: ['2026-08-11', WINDOW_END], effectiveDays: 7 };
+    render(filterFor(null));
+
+    expect(fixture.debugElement.query(By.css('.sold-out-today__hint'))).toBeNull();
+    expect(
+      (
+        fixture.debugElement.query(By.css('.no-results')).nativeElement.textContent || ''
+      ).trim()
+    ).toBe('No trips found');
   });
 });

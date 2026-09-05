@@ -4577,3 +4577,30 @@ just one a test can never catch.
   here the answer was `npm run e2e:gate` / any `ng build`, and neither was run. A green result
   from an instrument that is structurally unable to fail is indistinguishable from no test at
   all (QA-HARNESS family: *you believe a result that is not true*).
+
+## OBRS-862 — scrutinize (day strip on /schedule-booking)
+
+- **A guard the sibling method 30 lines below already applies to the SAME field was not
+  copied into the new one.** `resolveSoldOutToday` reads `scheduleFilter.departureDate`
+  behind `if (!scheduleFilter?.departureDate || !searchedDate.isValid()) return null;`.
+  The new `nearestDay$` pipeline read the same field with a bare
+  `dayjs(scheduleFilter?.departureDate).format('YYYY-MM-DD')`. Two facts make that a live
+  wrong-statement bug rather than a style nit: (1) `dayjs(null).format(...)` and
+  `dayjs('').format(...)` both return the literal STRING `"Invalid Date"` — no throw, no
+  empty string, nothing a `?.` or a truthiness check would stop; (2) `"Invalid Date"` starts
+  with `I` (0x49) and every ISO date starts with a digit (0x32), so **every** available date
+  sorts BELOW it. `resolveNearestDay` therefore found nothing "after", fell through to
+  "before", and would have told the customer the FARTHEST day in the 7-day window was
+  "the nearest day with trips". The store CAN hold such a filter: `initialState` is
+  `restoreBookingFilter()`, which is `readBookingContext()?.filter` straight out of
+  localStorage with no shape validation, and `availabilityRequestFor` never looks at
+  `departureDate` at all, so the request still builds. Lesson: when you add a second reader
+  of a field an existing method in the same file already reads, diff the two guards — and
+  never let a `dayjs(x).format()` result reach a string comparison without an `isValid()`
+  in front of it, because the invalid case is a plausible-looking string, not a failure.
+- **6734/6734 stayed green across that behaviour change**, which is itself the finding:
+  `nearestDay$`, `showDay()` and `resolveNearestDay()` (~90 new lines carrying the card's
+  headline AC, "the nearest day with trips is …") have no unit test at all —
+  `createScheduleServiceStub().getAvailabilityCached` returns `of(null)`, so every existing
+  list spec exercises only the null branch. A green suite is not coverage of the branch a
+  stub never enters.

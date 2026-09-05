@@ -7,11 +7,14 @@ import {
 } from '../../../../shared/interfaces/schedule.interface';
 import {
   combineLatest,
+  distinctUntilChanged,
   map,
   Observable,
+  of,
   startWith,
   Subject,
   Subscription,
+  switchMap,
   take,
   takeUntil,
 } from 'rxjs';
@@ -42,6 +45,15 @@ import {
   StationApi,
 } from '../../../../shared/interfaces/station.interface';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
+import { formatDayLabel } from '../../../../shared/lib/day-label';
+import { scheduleFilterForDay } from '../../../../shared/lib/schedule-day-jump';
+import {
+  availabilityRequestFor,
+  availabilityRequestKey,
+  buildDayWindow,
+} from '../../../../shared/lib/schedule-day-window';
+import { ScheduleService } from '../../../../services/schedule/schedule.service';
+import { BookingPolicyService } from '../../../../services/booking-policy/booking-policy.service';
 import { RouteMapService } from '../../../../services/route-map/route-map.service';
 import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
 import { LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
@@ -109,6 +121,20 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
    *  last bus has left, because the calendar defaults to today and the search
    *  filters departed rounds out in SQL (`ScheduleRepository:151`). */
   soldOutToday$: Observable<SoldOutTodayState | null>;
+  /** OBRS-862. The nearest day with trips INSIDE the strip's own 7-day window
+   *  — the same cached availability answer the strip renders, so one HTTP call
+   *  serves both. `null` when availability is unknown, empty, or holds only the
+   *  day already searched; the block then degrades to its pre-card copy and
+   *  makes no claim. Subscribed only from the empty-result branch of the
+   *  template, so a page whose search returned trips asks nothing extra. */
+  nearestDay$: Observable<{ iso: string; label: string } | null>;
+  /** OBRS-862. Gates the jump BUTTON in the plain empty-result branch — never
+   *  the hint, which names the nearest day for every trip type. Exactly the
+   *  predicate `resolveSoldOutToday` puts on `canJumpToNextDay` (owner's
+   *  2026-08-10 call: moving the outbound can leave the return date before it,
+   *  and this screen has no say over the return leg), reused rather than
+   *  restated so the two buttons cannot drift apart. */
+  canJumpToDay$: Observable<boolean>;
   /** The raw active language ('th' | 'en' | 'zh') — unlike `currentLocale$`,
    *  which deliberately narrows to the two locales station labels exist in. */
   private currentLang$: Observable<string>;
@@ -156,7 +182,9 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     private translateService: TranslateService,
     private routeMapService: RouteMapService,
     private analytics: AnalyticsService,
-    private authService: AuthService
+    private authService: AuthService,
+    private scheduleService: ScheduleService,
+    private bookingPolicyService: BookingPolicyService
   ) {
     this.scheduleList = this.store.pipe(select(selectScheduleList));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
@@ -214,6 +242,75 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       map(([scheduleList, scheduleFilter, lang]) =>
         this.resolveSoldOutToday(scheduleList, scheduleFilter, lang)
       )
+    );
+
+    // OBRS-862. Asked ONLY while the outbound list is empty — the one state
+    // this copy renders in — so a successful search costs no extra request at
+    // all, and when it does fire the day strip above has almost always already
+    // filled `getAvailabilityCached`'s entry for the identical key.
+    this.nearestDay$ = combineLatest([
+      this.scheduleList,
+      this.scheduleFilter,
+      this.rawProvinceStationList,
+      this.currentLang$,
+      this.bookingPolicyService.maxAdvanceDays$,
+    ]).pipe(
+      map(([scheduleList, scheduleFilter, stationList, lang, maxAdvanceDays]) => {
+        const departures = scheduleList?.departureSchedules;
+        if (!Array.isArray(departures) || departures.length > 0) {
+          return null;
+        }
+        // The SAME gate `resolveSoldOutToday` puts on the same field below, and
+        // it is not defensive dressing: `availabilityRequestFor` does not look
+        // at `departureDate`, so a restored filter without one still produces a
+        // request, and `dayjs(null).format(...)` is the literal STRING
+        // "Invalid Date" — which sorts ABOVE every ISO date ('I' 0x49 vs a
+        // leading digit 0x32), so nothing in the window is "after" it and the
+        // "before" arm takes over with the whole window to choose from.
+        // `resolveNearestDay`
+        // would then find nothing "after", take the last entry "before", and
+        // name the FARTHEST day in the window as the nearest one with trips.
+        const searchedDate = dayjs(scheduleFilter?.departureDate);
+        if (!scheduleFilter?.departureDate || !searchedDate.isValid()) {
+          return null;
+        }
+        const request = availabilityRequestFor(
+          scheduleFilter,
+          stationList,
+          buildDayWindow(scheduleFilter.departureDate, new Date(), maxAdvanceDays)
+        );
+        return request
+          ? {
+              request,
+              lang,
+              selected: searchedDate.format('YYYY-MM-DD'),
+            }
+          : null;
+      }),
+      distinctUntilChanged(
+        (previous, current) =>
+          `${availabilityRequestKey(previous?.request ?? null)}|${previous?.selected}|${previous?.lang}` ===
+          `${availabilityRequestKey(current?.request ?? null)}|${current?.selected}|${current?.lang}`
+      ),
+      switchMap((context) =>
+        context
+          ? this.scheduleService
+              .getAvailabilityCached(context.request)
+              .pipe(
+                map((availability) =>
+                  this.resolveNearestDay(
+                    availability?.availableDates ?? [],
+                    context.selected,
+                    context.lang
+                  )
+                )
+              )
+          : of(null)
+      )
+    );
+
+    this.canJumpToDay$ = this.scheduleFilter.pipe(
+      map((scheduleFilter) => !this.isRoundTrip(scheduleFilter))
     );
   }
 
@@ -420,7 +517,7 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     }
 
     return {
-      nextDayLabel: this.formatDayLabel(searchedDate.add(1, 'day').toDate(), lang),
+      nextDayLabel: formatDayLabel(searchedDate.add(1, 'day').toDate(), lang),
       canJumpToNextDay: !this.isRoundTrip(scheduleFilter),
     };
   }
@@ -445,15 +542,44 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this.store.dispatch(
-        invokeSetScheduleFilterApi({
-          schedule_filter: {
-            ...scheduleFilter,
-            departureDate: nextDay.format('YYYY-MM-DD'),
-          },
-        })
-      );
+      this.showDay(nextDay.format('YYYY-MM-DD'));
     });
+  }
+
+  /** OBRS-862: the same jump, aimed at a day availability actually named.
+   *  Both routes go through `scheduleFilterForDay` (shared/lib/schedule-day-jump)
+   *  so the outbound-only rule and the carried return date are written in ONE
+   *  place — see that file's header for AC#4's reasoning. */
+  showDay(day: string): void {
+    combineLatest([this.scheduleFilter, this.bookingPolicyService.maxAdvanceDays$])
+      .pipe(take(1))
+      .subscribe(([scheduleFilter, maxAdvanceDays]) => {
+        if (!scheduleFilter) {
+          return;
+        }
+        this.store.dispatch(
+          invokeSetScheduleFilterApi({
+            schedule_filter: scheduleFilterForDay(
+              scheduleFilter,
+              day,
+              dayjs().add(maxAdvanceDays, 'day').toDate()
+            ),
+          })
+        );
+      });
+  }
+
+  /** Forward wins ties by construction — a customer looking for a trip wants
+   *  the next one, not the one they have missed. */
+  private resolveNearestDay(
+    availableDates: string[],
+    selected: string,
+    lang: string
+  ): { iso: string; label: string } | null {
+    const after = availableDates.find((date) => date > selected);
+    const before = [...availableDates].reverse().find((date) => date < selected);
+    const iso = after ?? before ?? null;
+    return iso ? { iso, label: formatDayLabel(dayjs(iso).toDate(), lang) } : null;
   }
 
   /** `roundTrip` reaches the store as either the Dropdown or its bare id,
@@ -463,31 +589,6 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     const roundTrip = scheduleFilter?.roundTrip as { id?: number } | number | undefined;
     const roundTripId = typeof roundTrip === 'object' ? roundTrip?.id : roundTrip;
     return roundTripId === 2;
-  }
-
-  /** Weekday + day + short month in the ACTIVE language, via the platform's
-   *  own calendar data — no locale bundle to register and no fourth date
-   *  format to keep in sync. The year is left out on purpose: `th-TH` renders
-   *  it as a Buddhist-era year, which is right but noisy inside a button. */
-  private formatDayLabel(date: Date, lang: string): string {
-    const bcp47 = this.toBcp47(lang);
-    try {
-      return new Intl.DateTimeFormat(bcp47, {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'short',
-      }).format(date);
-    } catch {
-      // A locale the runtime rejects must not blank the button out.
-      return dayjs(date).format('D MMM');
-    }
-  }
-
-  private toBcp47(lang: string | null | undefined): string {
-    const normalized = (lang || '').toLowerCase();
-    if (normalized.startsWith('th')) return 'th-TH';
-    if (normalized.startsWith('zh')) return 'zh-CN';
-    return 'en-GB';
   }
 
   private getRouteFromFilter(
