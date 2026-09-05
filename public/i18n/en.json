@@ -472,6 +472,7 @@
     "THEME_TOGGLE": "Toggle dark mode",
     "CLEAR": "Clear",
     "CALENDAR_ICON_ALT": "Calendar Icon",
+    "DATE_RANGE_PLACEHOLDER": "Select date range",
     "SWAP_STATIONS": "Swap origin and destination",
     "CLOSE": "Close",
     "LOADING": "Loading…",
@@ -2083,8 +2084,6 @@
     },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "Profit and loss for each vehicle, from ticket revenue and the recorded costs.",
-      "FILTER_FROM": "From",
-      "FILTER_TO": "To",
       "VAT_NOTE": "Every amount already includes VAT. Fares are VAT-exempt, so input VAT cannot be reclaimed and is a real cost - the VAT figure is the part already inside the amount, never something to add on top.",
       "MARGIN_NOTE": "A vehicle's margin is its own revenue minus its own costs. Central costs are not spread across the buses - they are subtracted exactly once, in the company total.",
       "LOAD_FAILED": "The report could not be loaded. Please try again.",

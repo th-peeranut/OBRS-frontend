@@ -472,6 +472,7 @@
     "THEME_TOGGLE": "切换深色模式",
     "CLEAR": "清除",
     "CALENDAR_ICON_ALT": "日历图标",
+    "DATE_RANGE_PLACEHOLDER": "选择日期范围",
     "SWAP_STATIONS": "交换出发地和目的地",
     "CLOSE": "关闭",
     "LOADING": "加载中…",
@@ -2083,8 +2084,6 @@
     },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "按车辆统计的损益，来自车票收入与已记录的支出。",
-      "FILTER_FROM": "起始日期",
-      "FILTER_TO": "结束日期",
       "VAT_NOTE": "所有金额均已含增值税。车费免征增值税，因此进项税无法抵扣，是真实成本——增值税数字是金额中已包含的部分，不应再另外相加。",
       "MARGIN_NOTE": "每辆车的利润等于该车自身收入减去该车自身支出。中央成本不分摊到各车，只在公司合计中扣除一次。",
       "LOAD_FAILED": "报表加载失败，请重试。",
