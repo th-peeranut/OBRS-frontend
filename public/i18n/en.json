@@ -2190,6 +2190,11 @@
         "INSTALMENT": "Vehicle Instalment",
         "PARKING_FEE": "Parking Fee",
         "PARCEL_COMPENSATION": "Parcel Damage Compensation",
+        "STAFF_WAGE": "Counter Staff Wage",
+        "UTILITY": "Water / Power / Phone / Internet",
+        "RENT": "Counter Rent",
+        "SECURITY": "Security Fee",
+        "SOFTWARE_FEE": "Ticketing Software Fee",
         "CENTRAL": "Central",
         "OTHER": "Other"
       },

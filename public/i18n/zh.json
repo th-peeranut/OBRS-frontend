@@ -2190,6 +2190,11 @@
         "INSTALMENT": "车辆分期付款",
         "PARKING_FEE": "停车费",
         "PARCEL_COMPENSATION": "包裹损坏赔偿",
+        "STAFF_WAGE": "站点员工工资",
+        "UTILITY": "水电通讯费",
+        "RENT": "站点租金",
+        "SECURITY": "治安费",
+        "SOFTWARE_FEE": "售票系统软件费",
         "CENTRAL": "中央",
         "OTHER": "其他"
       },
