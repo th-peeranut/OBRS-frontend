@@ -51,6 +51,12 @@
       "why": "OBRS-1704. Measures the RENDERED WIDTH of every `.form-check-input` under `.admin-shell` on /staff/parcels/consign and /staff/sell, and fails under 10px. `admin-theme.scss` gives every input under the shell `width: auto !important`, which collapses an `appearance: none` control to 2px; OBRS-1693 bought it back with one `!important` declaration and nothing stopped that declaration being deleted again. GATE and not CAPTURE for the reason lanes.json gives against OBRS-1333: that spec cannot be a gate because 'intercepting the API would replace exactly the values under test', whereas the value under test HERE is a width the CSS cascade produces, so a mock destroys nothing. Not a unit test either -- Karma's DOM never loads admin-theme.scss, so a checkbox a clerk physically cannot read passes every spec in the repo. Hermetic on this lane's terms: seedGateAdminSession with the `salesperson` role both routes require, stubWalkInSellShell, and its own handlers for schedules/walk-in, segments, route-stops, share-config and the PUBLIC /api/parcel-policy. Fails a surface that yields zero controls, because an absent checkbox reads the same as a healthy one if you only look for 'nothing too small'."
     },
     {
+      "spec": "obrs-913-sidebar-toggle-target-size.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-913. Measures the RENDERED size of `.admin-sidebar-pin` against WCAG 2.2 SC 2.5.8's 24x24 floor, on AdminLayout and StaffLayout, expanded and collapsed. The declared size is 28x28 and the used size was 20px: the button is a shrinkable flex item of `.admin-sidebar-panel`, whose column overflows at laptop height (measured 2252 vs 900 at 1536x900). GATE and not CAPTURE for the same reason as obrs-1693 above -- the value under test is what the cascade produces, so mocking the API destroys nothing. Not a unit test either: Karma's 800px window never enters the `min-width: 1101px` block the rule lives in, and no stylesheet parser can see a used value. It sets its own 1536x900 rather than the lane's 1280x720 because that is the viewport the card measured, and it ASSERTS the overflow precondition before measuring anything, so it fails loudly rather than going green on a viewport where the squeeze cannot happen. Also covers the Ctrl+B shortcut, including that it does NOT fire from inside the sidebar menu search."
+    },
+    {
       "spec": "obrs-970-route-population.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",

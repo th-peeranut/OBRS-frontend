@@ -4556,3 +4556,24 @@ just one a test can never catch.
   `check-admin-theme-tokens.mjs`, contrast pre-measured and verified accurate against the
   actual hex values), but §12 step 2 ("add it here") was never done. Added a "Categorical
   (non-semantic) series palette" entry to the New pattern log.
+- **OBRS-913 — ⚠️ RETRACTED, and the retraction is the lesson. `tsc --noEmit` and `ng test`
+  are both BLIND to Angular's `@HostListener` `$event` typing; only `ng build` sees it.**
+  This entry originally read "a code comment stated a `TS2345` that does not actually occur",
+  and it was wrong. `sidebar-layout-base.component.ts`'s `onToggleShortcut` is typed
+  `event: Event` with a comment saying Angular types `$event` for the pseudo-event listener
+  `@HostListener('document:keydown.control.b', ['$event'])` as plain `Event`, so
+  `KeyboardEvent` is a `TS2345`. The comment was **right**. The scrutinize pass "disproved" it
+  with `npx tsc --noEmit -p tsconfig.json` (clean) and `ng test` (**6714/6714 SUCCESS on the
+  broken tree**), retyped the param to `KeyboardEvent` — and the very next `ng build` failed:
+  `X [ERROR] TS2345: Argument of type 'Event' is not assignable to parameter of type
+  'KeyboardEvent' … [plugin angular-compiler]` at that exact line. The check lives in the
+  **Angular compiler plugin**, which bare `tsc` does not load and karma's build does not run,
+  so both instruments answer a different question and answer it cleanly.
+  Reverted in `6b8baa8b`; the comment now names its own instrument so nobody re-disproves it
+  with the same blind tool. Two lessons, and the second is the expensive one:
+  **(a)** a claim in a comment is still a claim, verify it — that part stands;
+  **(b)** *"I ran a checker and it was clean"* is only evidence if that checker can see the
+  thing. Before calling a claim false, ask which tool would go red if the claim were TRUE —
+  here the answer was `npm run e2e:gate` / any `ng build`, and neither was run. A green result
+  from an instrument that is structurally unable to fail is indistinguishable from no test at
+  all (QA-HARNESS family: *you believe a result that is not true*).

@@ -382,6 +382,13 @@ One color = one meaning. Never pick a button color for looks.
   brand primary; they should not be green in one place and `#0d6efd` blue in another.
 - **MUST NOT** use raw `btn-primary` (Bootstrap blue) on a themed surface — use the
   brand/accent primary.
+- **An icon-only control needs a hit target of at least 24x24 CSS px** (WCAG 2.2
+  SC 2.5.8), and the number that counts is the **rendered** one — a declared
+  `height`/`width` on a flex item inside an overflowing column is not what the user
+  gets. `.admin-sidebar-pin` declared 28x28 but rendered 20px tall once its column
+  overflowed (OBRS-913); the fix was `flex-shrink: 0`, not a bigger declared size.
+  This is a repo-wide expectation, not a repo-wide *gate* — the automated check for
+  it is OBRS-925, not this note.
 
 ---
 
@@ -573,6 +580,12 @@ Run this against any UI diff (and during the live-verify screenshot glance):
       neighbours. The admin desktop primitives are the deliberate exception
       (`.admin-icon-btn` 36 px, `.refund-void-info-btn` 22 px) — don't shrink a
       customer-facing control to match them.
+- [ ] **Icon-only controls render at ≥ 24×24 CSS px** (WCAG 2.2 SC 2.5.8) — §4 has the
+      rule and why *rendered* is the only number that counts. This floor is not a
+      customer-surface rule, so the 44 px exemption above does not carry over to it:
+      `.refund-void-info-btn` at 22 px is exempted from 44 but is **below 24 and
+      therefore unresolved**, not grandfathered. Whether to raise it is the owner's
+      call (raised on OBRS-913); the repo-wide check is OBRS-925.
 - [ ] **No layout jump:** anything arriving async reserves its space first — images and
       map tiles get explicit dimensions or `aspect-ratio`, and a list that will become
       rows renders the `skeleton` variant rather than collapsing to zero height.

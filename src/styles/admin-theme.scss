@@ -2416,11 +2416,21 @@ textarea.admin-field {
   /* ── BRAND ── */
   .admin-brand {
     display: flex;
+    align-items: center;
     justify-content: center;
+    /* Collapsed rail: the toggle button now lives inside .admin-brand (OBRS-913),
+       and the 76px rail has no horizontal room beside the logo for a 28px
+       button, so stack them instead of sitting them on one row. */
+    flex-direction: column;
+    gap: 8px;
+    /* Sits in an overflowing sidebar column — without this it is a shrinkable
+       flex item and can be squeezed below its content height. */
+    flex-shrink: 0;
   }
 
   .admin-shell.is-sidebar-pinned .admin-brand {
-    justify-content: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
   }
 
   .admin-brand-logo {
@@ -2450,16 +2460,16 @@ textarea.admin-field {
     opacity: 1;
     pointer-events: auto;
     align-self: center;
+    /* OBRS-913: a squeezed flex item is how this declared 28px rendered as
+       20px — the sidebar panel overflows its column, and the default
+       flex-shrink: 1 let this button shrink along with it. Do not remove
+       this to "simplify" — it is the fix, not a redundant safety net. */
+    flex-shrink: 0;
     transition: background 0.15s ease, color 0.15s ease;
   }
 
   .admin-sidebar-pin .material-symbols-outlined {
     font-size: 18px;
-  }
-
-  /* Expanded: right-aligned at the top of the panel */
-  .admin-shell.is-sidebar-pinned .admin-sidebar-pin {
-    align-self: flex-end;
   }
 
   /* ── OBRS-755: `--accent-strong` is a FILL colour, not a foreground ───────────

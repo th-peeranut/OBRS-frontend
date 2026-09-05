@@ -270,6 +270,33 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
     this.isProfileMenuOpen = false;
   }
 
+  /**
+   * Ctrl+B toggles the sidebar expand/collapse state (OBRS-913), mirroring the
+   * toggle button. Guarded against INPUT/TEXTAREA/contentEditable targets
+   * because the sidebar menu search (OBRS-900) lives inside this same shell —
+   * without the guard, Ctrl+B while filtering the menu would collapse the
+   * very menu being filtered.
+   */
+  // Typed `Event`, not `KeyboardEvent`. Angular's compiler types `$event` for a
+  // pseudo-event host listener (`keydown.control.b`) as plain `Event`, so
+  // `KeyboardEvent` here is a real `TS2345: Argument of type 'Event' is not
+  // assignable to parameter of type 'KeyboardEvent'`.
+  //
+  // ⚠️ `npx tsc --noEmit` does NOT reproduce it — the check lives in the Angular
+  // compiler plugin, not in bare tsc, so tsc is the wrong instrument for this
+  // question and reports a clean tree. It was used to "disprove" this comment
+  // once (OBRS-913 scrutinize pass); `npm run e2e:gate`'s ng build is what
+  // surfaced the error. `.target`/`.preventDefault()` are all this needs and
+  // both are on `Event`.
+  @HostListener('document:keydown.control.b', ['$event'])
+  protected onToggleShortcut(event: Event): void {
+    const el = event.target as HTMLElement | null;
+    const tag = el?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return;
+    event.preventDefault();
+    this.togglePin();
+  }
+
   @HostListener('document:click', ['$event'])
   protected onDocumentClick(event: MouseEvent): void {
     const profile = this.elementRef.nativeElement.querySelector('.admin-profile');

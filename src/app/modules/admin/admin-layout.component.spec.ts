@@ -235,6 +235,42 @@ describe('AdminLayoutComponent', () => {
     expect(pinBtn).withContext('toggle button should exist inside .admin-sidebar-panel').toBeTruthy();
   });
 
+  it('renders the toggle button inside .admin-brand (OBRS-913: shares the logo row)', () => {
+    const pinBtn = fixture.debugElement.query(By.css('.admin-brand .admin-sidebar-pin'));
+    expect(pinBtn)
+      .withContext('toggle button should be a child of .admin-brand so it sits on the logo row')
+      .toBeTruthy();
+  });
+
+  it('Ctrl+B toggles the pinned state (OBRS-913)', () => {
+    const comp = fixture.componentInstance as AdminLayoutComponent & {
+      onToggleShortcut: (event: Event) => void;
+    };
+    const shell = fixture.debugElement.query(By.css('.admin-shell'));
+    const before = shell.nativeElement.classList.contains('is-sidebar-pinned');
+    const event = new KeyboardEvent('keydown', { key: 'b', ctrlKey: true });
+    comp.onToggleShortcut(event);
+    fixture.detectChanges();
+    expect(shell.nativeElement.classList.contains('is-sidebar-pinned'))
+      .withContext('Ctrl+B should flip is-sidebar-pinned')
+      .toBe(!before);
+  });
+
+  it('Ctrl+B is ignored when the event target is an <input> (OBRS-913: menu search)', () => {
+    const comp = fixture.componentInstance as AdminLayoutComponent & {
+      onToggleShortcut: (event: Event) => void;
+    };
+    const shell = fixture.debugElement.query(By.css('.admin-shell'));
+    const before = shell.nativeElement.classList.contains('is-sidebar-pinned');
+    const event = new KeyboardEvent('keydown', { key: 'b', ctrlKey: true });
+    Object.defineProperty(event, 'target', { value: document.createElement('input') });
+    comp.onToggleShortcut(event);
+    fixture.detectChanges();
+    expect(shell.nativeElement.classList.contains('is-sidebar-pinned'))
+      .withContext('Ctrl+B typed inside the sidebar menu search must not collapse the menu being filtered')
+      .toBe(before);
+  });
+
   it('the .admin-collapse-toggle button is absent (replaced by sidebar-pin toggle)', () => {
     const collapseBtn = fixture.debugElement.query(By.css('.admin-collapse-toggle'));
     expect(collapseBtn).withContext('old collapse toggle must not exist').toBeNull();
