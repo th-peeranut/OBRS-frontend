@@ -16,6 +16,9 @@ import { LangSwitcherComponent } from './components/lang-switcher/lang-switcher.
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { ReportUsabilityFabComponent } from './components/report-usability-fab/report-usability-fab.component';
 import { ExportButtonComponent } from './components/export-button/export-button.component';
+// OBRS-1734: the one combined date-range picker, replacing the two-separate-
+// `p-datePicker` pattern one report page at a time.
+import { DateRangePickerComponent } from './components/date-range-picker/date-range-picker.component';
 import { PromoCodeFieldComponent } from './components/promo-code-field/promo-code-field.component';
 import { BoardingListComponent } from './components/boarding-list/boarding-list.component';
 // OBRS-317: owner/staff in-app notification bell + inbox panel family.
@@ -72,6 +75,7 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     ThemeToggleComponent,
     ReportUsabilityFabComponent,
     ExportButtonComponent,
+    DateRangePickerComponent,
     PromoCodeFieldComponent,
     BoardingListComponent,
     NotificationBellComponent,
@@ -121,6 +125,7 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     ThemeToggleComponent,
     ReportUsabilityFabComponent,
     ExportButtonComponent,
+    DateRangePickerComponent,
     PromoCodeFieldComponent,
     BoardingListComponent,
     NotificationBellComponent,

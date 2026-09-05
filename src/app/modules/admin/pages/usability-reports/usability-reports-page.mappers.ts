@@ -109,7 +109,9 @@ export const OWNER_DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
 // REPORT_INVALID_TRANSITION; this only decides which options a dropdown offers,
 // so nobody is invited to click a save that cannot succeed.
 // OBRS-1474: 'resolved' -> ['in_review'] is the reopen edge (ADR-0136).
-// 'rejected' stays terminal.
+// OBRS-1733: 'rejected' -> ['in_review'] is that same edge for the other terminal
+// status (ADR-0149). Both are ADMIN-only — enforced by the backend's SOURCE guard and
+// mirrored here by ADMIN_ONLY_SOURCES below, which is why OWNER_ALLOWED_TARGETS stays [].
 export const ALLOWED_TARGETS: Record<
   UsabilityReportStatus,
   readonly UsabilityReportStatus[]
@@ -120,7 +122,7 @@ export const ALLOWED_TARGETS: Record<
   accepted: ['resolved', 'rejected', 'dismissed'],
   dismissed: ['in_review'],
   resolved: ['in_review'],
-  rejected: [],
+  rejected: ['in_review'],
   duplicate: ['in_review'],
 };
 
