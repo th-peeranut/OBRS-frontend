@@ -1,5 +1,40 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-09-05 — SELF-FIXED: OBRS-1734 spec test asserted the OLD getter's behavior after the component was fixed to a plain field
+
+`date-range-picker.component.spec.ts`, the test `'exposes the from/to inputs as PrimeNG's own
+[start, end] range value'`: it set `component.from`/`component.to` directly, then asserted
+`(component as any).value` immediately reflected them, with no `fixture.detectChanges()` and no
+call to `ngOnChanges()`. That assertion was only ever true while `value` was a **getter** —
+`get value() { return [this.from, this.to]; }` — the exact reference-instability bug this card's
+underlying fix removed (a getter bound via `[ngModel]="value"` returns a new array every CD tick,
+which drove `NgModel`/PrimeNG into a synchronous change-detection loop that hung the browser tab).
+Once `value` became a plain field, refreshed only inside `ngOnChanges` when `changes['from']` /
+`changes['to']` is present, directly assigning `component.from`/`.to` in a test no longer updates
+`value` — Angular only calls `ngOnChanges` in response to an actual template-bound `@Input` change,
+never in response to a bare property write. Ran the spec file alone (`ng test --include=**/date-
+range-picker.component.spec.ts`) to confirm: 1 FAILED / 4 SUCCESS before the fix.
+
+**Lesson for next time:** whenever a getter that fed an input-bound field is replaced with an
+`ngOnChanges`-refreshed plain field, grep that field's existing spec for any test that pokes
+`@Input`s directly and reads a **derived** field back out in the same tick — it needs an explicit
+lifecycle-hook call to keep testing real behavior, not the getter's old shortcut.
+
+**Fix (5 lines, `date-range-picker.component.spec.ts`):** import `SimpleChange` from
+`@angular/core` and call `component.ngOnChanges({ from: new SimpleChange(null, component.from,
+true), to: new SimpleChange(null, component.to, true) })` right after setting `from`/`to`, the same
+way Angular's own change detection would invoke it after a bound input actually changes. Re-ran the
+spec file alone: 5/5 green. Re-ran the full suite afterward: 6716/6716 green (unchanged total — this
+fixed an existing failing test rather than adding one), and `npm run build` exit 0.
+
+Also fixed in the same pass, same card: `docs/design-system.md`'s new "Combined range picker"
+pattern-log entry described the new CSS as "a `.app-date-field-panel--range` width modifier" only —
+it omitted the `.app-date-field--range` **trigger** min-width modifier (`src/styles.scss`), which is
+actually the fix for the real bug this card also found (the combined range value, ~23 chars,
+clipping in the trigger's unstyled browser-default input width). Expanded the entry to name both
+modifiers, so a future reader grepping the pattern log for "why is there a min-width on the date
+field" finds it.
+
 ## 2026-08-30 — SELF-FIXED (cosmetic): OBRS-1569 new `data-testid` attribute split across three lines against the file's own one-line-attribute convention
 
 `business-policy.component.html`: the new `<p data-testid="business-policy-terms" [innerHTML]="…">`
@@ -4450,6 +4485,24 @@ just one a test can never catch.
   the kind of drift a type checker won't catch when the stub's parameter type is loosened to
   `unknown[]`.
 
+## OBRS-1730 scrutinize self-fix (auth.service.ts, currentRouteAllowsPreviewedRole, 2026-09-04)
+- The new walk that checks whether the previewed role still passes the route on screen used
+  `for (snapshot = root; snapshot; snapshot = snapshot.firstChild)` — primary-outlet-only.
+  `ActivatedRouteSnapshot.children` (not `firstChild`) is what actually carries every outlet's
+  branch, and this repo already has a documented lesson about exactly that gap:
+  `src/app/shared/lib/analytics-route-scope.ts`'s `childrenOf()` — "a named outlet branches the
+  tree, and a walk that only ever took `firstChild` would read a staff page sitting in a
+  secondary outlet as measurable" — prefers `children`, falling back to `firstChild` only for
+  snapshot-shaped test doubles. No route in this app uses a named outlet today, so the bug was
+  dormant, not live (`ng test` stayed green, `grep -rn "outlet:" src/app` was empty) — but the
+  fail direction is fail-OPEN: a route in a secondary outlet the previewed role can't pass would
+  silently stay on screen exactly like the pre-OBRS-1730 defect this card exists to fix. Changed
+  the loop to a BFS queue that prefers `snapshot.children` and falls back to `snapshot.firstChild`
+  when `children` is empty (same fallback rule as `childrenOf()`), so the existing spec doubles
+  (which only set `firstChild`) still pass unmodified. Lesson: `grep firstChild` across the repo
+  before writing a NEW `ActivatedRouteSnapshot` walk — this one exact trap was already fixed once
+  in `analytics-route-scope.ts` and the fix didn't carry over because nobody grepped for the
+  precedent.
 ## OBRS-1725 scrutinize self-fixes (vehicle-pl-report-page, 2026-09-04)
 - **Display bug in the largest-remainder rounding itself.** `roundedPercents` (built
   specifically to make the cost-mix legend sum to exactly 100.0, after an earlier capture

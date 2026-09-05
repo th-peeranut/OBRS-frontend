@@ -323,7 +323,8 @@ do not add a fourth.
 |---|---|---|
 | **Select / dropdown in a form** | **`app-admin-dropdown`** | The only one with the placeholder-header contract (§3.1). Inputs: `[options]`, `[placeholder]`, `valueKey`, `labelKey`, `[icon]`, `[disabled]`, `[searchable]` (OBRS-1576, default `false` — type-to-filter trigger + keyboard navigation), `[placeholderSelectable]` (OBRS-1643, default `true` — set `false` on a field that cannot be empty, §3.1 item 2), `formControlName`. |
 | Localized name dropdown (stop/route pickers with i18n labels) | `app-dropdown-obrs` | Legacy Bootstrap dropdown; **no placeholder support**. Keep only where it's already wired for localized names; do **not** use for new plain selects. **Exception (OBRS-433):** a plain select on a **customer-shell** page that must not import `AdminSharedModule`/`AdminModule` (a lazy-module-boundary violation — `app-admin-dropdown` lives there and its styling depends on `--admin-*` vars only defined inside `.admin-shell`) may use the standalone `app-dropdown-obrs` instead, imported directly into that feature module's `imports`. See `docs/adr/0023-my-reports-customer-page.md`. Still **not** for a new select inside an admin/staff page — `app-admin-dropdown` remains canonical there. |
-| Date / time | PrimeNG `p-calendar` (date), the existing time control | Keep the **single input shape** (§5). |
+| Date / time | PrimeNG `p-datePicker` (date), the existing time control | Keep the **single input shape** (§5). |
+| **Date range filter** | **`app-admin-date-range-picker`** (`src/app/shared/components/date-range-picker/`) | OBRS-1734. One combined trigger, one popup, both ends — not two separate `p-datePicker` fields. Only for a range with a real start and end; a page whose range can be one-sided/open (e.g. `config-change-history`) keeps two separate `p-datePicker`s instead. |
 | **Export trigger** (download current view as CSV/Excel) | **`app-export-button`** (`src/app/shared/components/export-button/`) | Presentational, self-sufficient: `[datasetKey]`, `[requiredRole]`, `[params]`. Renders a **secondary** `admin-btn` (never `admin-btn-primary` — exporting is a supporting action) that opens a `p-menu[popup]` with CSV / Excel items, following the trigger-popup pattern already used by `walk-in-trip-browser.component` (not `p-splitButton` — unused in this codebase). **Hidden** (not disabled) when `authService.hasAnyRole([requiredRole])` is false, matching the staff-layout/navbar role-gating precedent. Success is silent (the browser download is the confirmation); errors branch on `ExportError.errorCode` via `AlertService.error()`. See `docs/adr/0001-export-button-component.md`. |
 | **Rich-content popup** (a trigger button opening a stateful, scrollable list — not a flat command menu) | **`p-overlayPanel`** | First used by `app-notification-bell` (OBRS-317) for the owner/staff notification inbox: `p-menu[popup]`'s `MenuItem[]` shape can't carry a row's message/timestamp/read-state/click-handler, so `p-overlayPanel` hosts the dumb `app-notification-inbox-panel` (→ `app-notification-inbox-row`) instead, keeping the same trigger-toggles-a-floating-panel model as the `app-export-button` precedent above (`appendTo="body"`). Use `p-menu[popup]` when the popup is a flat list of commands; reach for `p-overlayPanel` when it's a stateful list. See `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`. |
 | **Loading / busy indicator** (skeleton row, mid-panel spinner, or an in-button spinner) | **`app-loading-state`** (`src/app/shared/components/loading-state/`) | OBRS-907. Inputs: `[variant]` (`'skeleton' \| 'spinner' \| 'inline'`), `[graphic]` (`'ring' \| 'icon'`, spinner/inline only), `[icon]`, `[rows]`/`[skeletonShape]` (skeleton), `[sizePx]`/`[ringWidthPx]`/`[durationMs]` (pixel/ms overrides so a migrated call site can reproduce its exact prior look). `skeleton` reuses the existing global `.admin-skeleton` primitive (`src/styles/_loading.scss`) byte-identical; `graphic="icon"` reuses the existing global `.admin-loading-spinner` (`admin-theme.scss`); `graphic="ring"` (default) is the one NEW visual this card introduced, replacing the ~12 near-identical hand-rolled `.xxx__spinner` + `@keyframes xxx-spin` pairs across customer-shell dialogs — reach for it instead of hand-rolling a 15th. Renders `role="status"` + a translated, visually-hidden status message (`[messageKey]`, default `COMMON.LOADING`) with the graphic itself `aria-hidden="true"`; a visible caption stays owned by the call site. `prefers-reduced-motion: reduce` freezes every graphic this component can render without it disappearing (a static ring/icon remains visible) — locked by `e2e/tests/obrs-907-loading-state-reduced-motion.spec.ts` (GATE lane) rather than a unit test, since Karma's ChromeHeadless has no per-spec way to force the OS reduced-motion preference. Only 1 call site per shell was migrated as proof (`my-booking-ticket-modal` / `notification-inbox-panel`); sweeping the remaining ~28 hand-rolled spinner/skeleton sites onto this component is OBRS-909/910, not a blanket mandate to migrate on sight. |
@@ -1347,6 +1348,33 @@ enforced rule with a test behind it.
   an admin page instead of inventing a second set; add a `--admin-series-6`
   pair, following the same two measurements, only when a chart genuinely needs
   a sixth simultaneous category.
+
+- **Combined range picker** (OBRS-1734, `app-admin-date-range-picker`, proof
+  site the vehicle P&L report): a report's date-range filter was two separate
+  `p-datePicker` fields (`fromDate`/`toDate` side by side) on every report
+  page — the owner asked for one control instead, matching a reference
+  mockup's single "from – to" trigger opening one popup for both ends. Built
+  as a thin wrapper around `p-datePicker[selectionMode="range"]` with
+  `[numberOfMonths]="2"` (one popup, both months at once) and
+  `[responsiveOptions]="[{breakpoint:'640px', numMonths:1}]"` collapsing to
+  one month under the same breakpoint `.app-date-field-panel` already uses.
+  Keeps the app's existing Gregorian `dd/mm/yy` display — **not** the
+  mockup's Buddhist-era year — because `display-date-time.spec.ts` already
+  locks "not Buddhist era" as a tested contract and `schedule-booking-list.
+  component.ts` already omits a `th-TH`-rendered year specifically to avoid
+  it; reusing the mockup's *interaction*, not its date-text style, was the
+  owner's own call (OBRS-1734 card). New CSS is additive only, two width
+  modifiers in `src/styles.scss`: `.app-date-field--range` (310px min-width
+  on the trigger — the combined value, "dd/mm/yyyy - dd/mm/yyyy", clipped the
+  unstyled browser-default input width every single-date field happened to
+  fit inside by accident) and `.app-date-field-panel--range` (576px popup,
+  collapsing to the single-month 280px under the same 640px breakpoint) — the
+  existing `app-date-field`/`app-date-field-panel`/icon classes and the
+  page's own `applyRange()` validation are unchanged. Reuse this component
+  for the next report page's date-range filter (OBRS-1735 sweeps the other
+  9) instead of adding a 13th pair of separate fields; it is not for a page
+  whose range can be one-sided/open (`config-change-history` was excluded
+  for exactly that reason).
 
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
