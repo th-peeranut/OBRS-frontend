@@ -9,7 +9,7 @@
   [submitting]="submitting"
   [validationError]="validationError"
   (bodyChange)="onBodyChange($event)"
-  (save)="onSave($event)"
+  (save)="onSaveRequested($event)"
   (cancel)="onCancel()"
 ></app-notification-message-edit-form>
 
@@ -20,3 +20,12 @@
     [encoding]="creditEstimate?.encoding ?? null"
   ></app-notification-message-credit-panel>
 }
+
+<app-notification-message-credit-rise-dialog
+  [visible]="creditRiseBody !== null"
+  [submitting]="submitting"
+  [credits]="creditRiseTo"
+  [baselineCredits]="creditRiseFrom"
+  (confirm)="onCreditRiseConfirm()"
+  (cancel)="onCreditRiseCancel()"
+></app-notification-message-credit-rise-dialog>

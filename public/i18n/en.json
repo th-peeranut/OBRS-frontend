@@ -2596,7 +2596,12 @@
         "LABEL": "{{credits}} credit (was {{baseline}}, {{delta}})",
         "DELTA_ZERO": "no change",
         "HINT": "A single special character or emoji can multiply the SMS credit cost",
-        "NOT_BLOCKING_NOTE": "Shown for information only — does not block saving"
+        "NOT_BLOCKING_NOTE": "Shown for information only — does not block saving",
+        "RISE_DIALOG_TITLE": "This edit raises the SMS cost",
+        "RISE_DIALOG_FIGURES": "{{baseline}} → {{credits}} credits per message sent",
+        "RISE_DIALOG_BODY": "The higher cost applies to every send of this message, not just once. Submit it for approval anyway?",
+        "RISE_DIALOG_CONFIRM": "Submit anyway",
+        "RISE_DIALOG_CANCEL": "Go back and edit"
       },
       "REVIEWS": {
         "COL_KEY": "Message key",

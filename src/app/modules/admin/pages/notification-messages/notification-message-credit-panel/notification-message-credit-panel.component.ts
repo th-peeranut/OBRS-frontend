@@ -41,7 +41,11 @@ export class NotificationMessageCreditPanelComponent {
 
   protected get deltaClass(): string {
     if (this.delta > 0) {
-      return 'is-warning';
+      // OBRS-1550: red, not amber. `credits` is a whole SMS segment count
+      // (`SmsCreditCalculator.SmsCreditEstimate(int credits, ...)`), so a
+      // positive delta is never a rounding wobble — it is at least one more
+      // segment billed on every send of this message, forever.
+      return 'is-danger';
     }
     if (this.delta < 0) {
       return 'is-success';

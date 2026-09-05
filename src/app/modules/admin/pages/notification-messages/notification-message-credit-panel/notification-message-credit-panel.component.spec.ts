@@ -32,14 +32,24 @@ describe('NotificationMessageCreditPanelComponent (AC12)', () => {
     component = fixture.componentInstance;
   });
 
-  it('shows a plus-signed delta in the warning colour when cost went up', () => {
+  it('shows a plus-signed delta in the danger colour when cost went up (OBRS-1550)', () => {
     component.credits = 3;
     component.baselineCredits = 2;
     fixture.detectChanges();
 
     expect(component['delta']).toBe(1);
     expect(component['deltaDisplay']).toBe('+1');
-    expect(component['deltaClass']).toBe('is-warning');
+    expect(component['deltaClass']).toBe('is-danger');
+  });
+
+  it('the smallest possible rise is already red — there is no sub-credit rise to soften (OBRS-1550)', () => {
+    component.credits = 2;
+    component.baselineCredits = 1;
+    fixture.detectChanges();
+
+    expect(component['deltaClass']).toBe('is-danger');
+    expect(fixture.nativeElement.querySelector('.nm-credit-line.is-danger')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.nm-credit-line.is-warning')).toBeNull();
   });
 
   it('shows the already-signed negative delta in the success colour when cost went down', () => {

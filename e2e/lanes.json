@@ -213,6 +213,12 @@
       "why": "OBRS-1572 ships comments only, so a BEFORE/AFTER pair of the page would be two identical pictures. This lane proves the two claims those comments now make instead. First, that `.admin-skeleton` RENDERS on a customer-shell page: the wording this card replaces told the next reader it was scoped under `.admin-shell` and would resolve to nothing off the admin shell, so the spec asserts the bar is visible and non-zero on /refund-policy while asserting that page has no `.admin-shell` ancestor at all. Second, that it renders in BOTH themes with no `body.is-dark` rule of its own, which is the reason AC-3 was answered 'no dark pair' -- its rgba() stops composite against whatever surface is behind them, so the lane reads that surface and the gradient out of the browser rather than leaving the claim as arithmetic in a comment. The skeleton is only up while GET /api/cancellation-policy is in flight, so that one call is held open. Fully stubbed through seedCustomerSession: nothing reaches SIT."
     },
     {
+      "spec": "obrs-1550-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1550capture.config.ts",
+      "why": "OBRS-1550 AC-5 evidence. The card has two AFTER states that are two different code paths, not two views of one: a credit RISE turns the panel red AND holds the submit behind a confirm modal, while a FALL keeps the previous behaviour byte-for-byte with no modal at all. 'No modal' is only evidence if the same run also shows the modal appearing when it should, so both come out of one spec against one stack. The colour is asserted (is-danger present, is-warning absent) rather than eyeballed, because a screenshot of the wrong colour still looks like a screenshot. The credit figures are fixtures: SmsCreditCalculator runs on the backend and this lane has none -- what is under test is what the frontend does with a rise or a fall, which is the whole of this card. Fully stubbed through seedGateAdminSession plus expectNoEscapedGateCalls: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT."
+    },
+    {
       "spec": "obrs-969-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs969capture.config.ts",

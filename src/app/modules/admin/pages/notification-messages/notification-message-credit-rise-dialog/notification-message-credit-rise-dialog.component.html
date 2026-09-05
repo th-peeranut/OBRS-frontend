@@ -1,0 +1,41 @@
+@if (visible) {
+  <div
+    class="admin-modal-backdrop"
+    adminModalBackdrop
+    [dismissOnBackdrop]="false"
+    (dismiss)="onCancel()"
+    >
+    <div class="admin-modal" data-testid="notification-message-credit-rise-dialog">
+      <h4 class="admin-modal-title">{{ 'ADMIN.NOTIFICATION_MESSAGES.CREDIT.RISE_DIALOG_TITLE' | translate }}</h4>
+
+      <p class="nm-credit-rise-figures" data-testid="notification-message-credit-rise-figures">
+        {{
+          'ADMIN.NOTIFICATION_MESSAGES.CREDIT.RISE_DIALOG_FIGURES'
+          | translate: { baseline: baselineCredits, credits: credits }
+        }}
+      </p>
+      <p class="nm-credit-rise-body">{{ 'ADMIN.NOTIFICATION_MESSAGES.CREDIT.RISE_DIALOG_BODY' | translate }}</p>
+
+      <div class="admin-modal-actions">
+        <button
+          type="button"
+          class="admin-btn"
+          data-testid="notification-message-credit-rise-cancel"
+          [disabled]="submitting"
+          (click)="onCancel()"
+          >
+          {{ 'ADMIN.NOTIFICATION_MESSAGES.CREDIT.RISE_DIALOG_CANCEL' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-primary"
+          data-testid="notification-message-credit-rise-confirm"
+          [disabled]="submitting"
+          (click)="onConfirm()"
+          >
+          {{ 'ADMIN.NOTIFICATION_MESSAGES.CREDIT.RISE_DIALOG_CONFIRM' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
