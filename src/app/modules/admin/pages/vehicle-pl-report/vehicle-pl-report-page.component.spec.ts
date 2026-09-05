@@ -15,6 +15,7 @@ import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { ExportButtonComponent } from '../../../../shared/components/export-button/export-button.component';
 import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
+import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { ExportService } from '../../../../services/export/export.service';
@@ -155,6 +156,49 @@ describe('VehiclePlReportPageComponent', () => {
     expect(store.refresh).toHaveBeenCalled();
   });
 
+  // OBRS-1734: onFromDateChange/onToDateChange collapsed into one onRangeChange
+  // handler, called from the new app-admin-date-range-picker's single (rangeChange)
+  // instead of two separate p-datePicker (ngModelChange)s — applyRange()'s own
+  // validation is untouched, so these three prove it still isn't.
+  describe('onRangeChange (applyRange validation, unchanged by the range-picker refactor)', () => {
+    it('rejects from > to', () => {
+      const store = makeStoreStub(null);
+      const component = new VehiclePlReportPageComponent(store as any, createTranslateStub());
+
+      (component as any).onRangeChange({ from: new Date(2026, 5, 30), to: new Date(2026, 5, 1) });
+
+      expect((component as any).rangeError).toBe('ADMIN.VEHICLE_PL_REPORT.ERROR.RANGE_INVALID');
+      expect(store.setRange).not.toHaveBeenCalled();
+    });
+
+    it('accepts a range exactly at the 366-day cap', () => {
+      const store = makeStoreStub(null);
+      const component = new VehiclePlReportPageComponent(store as any, createTranslateStub());
+
+      // 2026-01-01 -> 2027-01-02 spans 366 days (2026 is not a leap year).
+      (component as any).onRangeChange({
+        from: new Date(2026, 0, 1),
+        to: new Date(2027, 0, 2),
+      });
+
+      expect((component as any).rangeError).toBe('');
+      expect(store.setRange).toHaveBeenCalledWith('2026-01-01', '2027-01-02');
+    });
+
+    it('rejects a range one day past the 366-day cap', () => {
+      const store = makeStoreStub(null);
+      const component = new VehiclePlReportPageComponent(store as any, createTranslateStub());
+
+      (component as any).onRangeChange({
+        from: new Date(2026, 0, 1),
+        to: new Date(2027, 0, 3),
+      });
+
+      expect((component as any).rangeError).toBe('ADMIN.VEHICLE_PL_REPORT.ERROR.RANGE_TOO_LARGE');
+      expect(store.setRange).not.toHaveBeenCalled();
+    });
+  });
+
   // The split the whole screen rests on: the fleet table shows vehicles only, and the two
   // vehicle-less lines are found by `kind`, never by position in the array.
   it('splits the rows into the fleet table and the two vehicle-less lines', () => {
@@ -284,7 +328,7 @@ describe('VehiclePlReportPageComponent (template rendering)', () => {
         MenuModule,
         AdminSharedModule,
       ],
-      declarations: [VehiclePlReportPageComponent, ExportButtonComponent, PendingButtonDirective],
+      declarations: [VehiclePlReportPageComponent, ExportButtonComponent, PendingButtonDirective, DateRangePickerComponent],
       providers: [
         { provide: VehiclePlReportStore, useValue: storeStub },
         { provide: AuthService, useValue: jasmine.createSpyObj('AuthService', { hasAnyRole: true }) },

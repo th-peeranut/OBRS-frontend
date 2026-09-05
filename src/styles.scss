@@ -431,6 +431,34 @@ $app-date-field-segment-inset: 38px;
   }
 }
 
+// OBRS-1734 — the range variant of the panel above, for `app-admin-date-range-picker`'s
+// `[numberOfMonths]="2"` popup. 576px = two of the single-month panel's own 280px plus the
+// gap PrimeNG's `.p-datepicker-group-container` puts between them. Collapses back to the
+// single-month width under the SAME 640px breakpoint the plain panel uses above, because the
+// picker's own `responsiveOptions` drops to `numberOfMonths: 1` there too — a wider panel
+// around one month would just leave dead space.
+// A range's value ("dd/mm/yyyy - dd/mm/yyyy", ~23 chars) overflows an unstyled
+// `.p-inputtext`'s browser-default width — every existing single-date field (a
+// 10-char value) happened to fit inside that default by accident, so nothing
+// upstream ever needed an explicit width until this, the first field whose
+// value can run longer than that. Measured clipped at 258px (showed
+// "01/09/2026 - 05/09/202"); 310px clears it with headroom.
+.p-datepicker.app-date-field.app-date-field--range {
+  min-width: 310px;
+}
+
+.app-date-field-panel.app-date-field-panel--range {
+  width: 576px !important;
+  min-width: 576px !important;
+}
+
+@media (max-width: 640px) {
+  .app-date-field-panel.app-date-field-panel--range {
+    width: min(280px, 100vw - 32px) !important;
+    min-width: min(280px, 100vw - 32px) !important;
+  }
+}
+
 .p-input-icon-left > i,
 .p-input-icon-left > .p-icon-wrapper,
 .p-input-icon-right > i,

@@ -11,7 +11,10 @@
     </div>
     <!-- LOGO WEBSITE -->
     <div class="logo-section mt-2">
-      <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
+      <!-- OBRS-714: the logo is the way home on a page with no navbar. -->
+      <app-auth-home-link>
+        <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
+      </app-auth-home-link>
     </div>
     <!-- HEADER TITLE -->
     <div class="welcome-text mt-2">
