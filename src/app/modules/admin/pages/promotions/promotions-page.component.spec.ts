@@ -7,6 +7,7 @@ import { BehaviorSubject, of, throwError } from 'rxjs';
 import { PromotionsPageComponent } from './promotions-page.component';
 import { AdminApiService, PromotionRespDto } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { PromotionsListStore } from './promotions-list.store';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 
@@ -58,7 +59,7 @@ function makeStoreStub() {
   };
 }
 
-function makeComponent(adminApi: Record<string, unknown>, store = makeStoreStub()) {
+function makeComponent(adminApi: Record<string, unknown>, store = makeStoreStub(), roles: string[] = ['admin']) {
   const alert = {
     success: jasmine.createSpy('success').and.resolveTo(undefined),
     error: jasmine.createSpy('error').and.resolveTo(undefined),
@@ -68,7 +69,8 @@ function makeComponent(adminApi: Record<string, unknown>, store = makeStoreStub(
     adminApi as any,
     alert as any,
     createTranslateStub(),
-    store as any
+    store as any,
+    { getRoles: () => roles } as any
   );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return { component: component as any, store, alert };
@@ -246,6 +248,8 @@ describe('PromotionsPageComponent template wiring to child components', () => {
         { provide: PromotionsListStore, useValue: store },
         { provide: AdminApiService, useValue: adminApi },
         { provide: AlertService, useValue: alert },
+        // OBRS-1495: PromotionsPageComponent reads the held role in its constructor.
+        { provide: AuthService, useValue: { getRoles: () => ['admin'] } },
       ],
     }).compileComponents();
 
@@ -312,5 +316,24 @@ describe('PromotionsPageComponent template wiring to child components', () => {
 
     expect((component as any).confirmDeactivate).toHaveBeenCalled();
     expect((component as any).closeDeactivateModal).toHaveBeenCalled();
+  });
+});
+
+
+// OBRS-1495 AC-6: the role rule itself, in BOTH directions. The held-role test
+// must stay `getRoles().includes('admin')` — `hasAnyRole(['admin'])` answers
+// true for an owner through `AuthService.ROLE_GRANTS`, so the column would
+// never hide for the one role it was meant to hide from (the OBRS-869 trap).
+describe('PromotionsPageComponent slug column rule (OBRS-1495)', () => {
+  const OWNER_ROLES = ['owner', 'salesperson', 'driver', 'customer'];
+
+  it('shows the slug column when the held role is admin', () => {
+    const { component } = makeComponent({}, makeStoreStub(), ['admin']);
+    expect((component as any).showSlugColumn).toBeTrue();
+  });
+
+  it('hides the slug column from an owner', () => {
+    const { component } = makeComponent({}, makeStoreStub(), OWNER_ROLES);
+    expect((component as any).showSlugColumn).toBeFalse();
   });
 });

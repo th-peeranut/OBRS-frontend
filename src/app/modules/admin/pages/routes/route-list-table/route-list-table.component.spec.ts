@@ -239,3 +239,70 @@ describe('RouteListTableComponent (template)', () => {
     expect(text).toContain('5');
   });
 });
+
+
+// OBRS-1495: the raw slug column is for platform admins; the parent hands the
+// decision down. Both directions are asserted deliberately — a test that only
+// proves the column disappears would pass just as happily on a column that
+// never renders at all, which is the opposite defect.
+describe('RouteListTableComponent slug column (OBRS-1495)', () => {
+  let fixture: ComponentFixture<RouteListTableComponent>;
+  let component: RouteListTableComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), AdminSharedModule],
+      declarations: [RouteListTableComponent],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RouteListTableComponent);
+    component = fixture.componentInstance;
+    component.isLoading = false;
+    component.routes = [makeRoute({ slug: 'nongchak-bangkok' })];
+  });
+
+  function headerCount(): number {
+    return fixture.debugElement.queryAll(By.css('thead th')).length;
+  }
+
+  function bodyCellCount(): number {
+    return fixture.debugElement.queryAll(By.css('tbody tr:not(.admin-empty-row) td')).length;
+  }
+
+  function emptyRowColspan(): string | null {
+    return fixture.debugElement
+      .query(By.css('tr.admin-empty-row td'))
+      .nativeElement.getAttribute('colspan');
+  }
+
+  it('keeps the slug header and cell when showSlugColumn is true (admin)', () => {
+    component.showSlugColumn = true;
+    fixture.detectChanges();
+
+    expect(headerCount()).toBe(5);
+    expect(bodyCellCount()).toBe(5);
+    expect(fixture.debugElement.nativeElement.textContent).toContain('nongchak-bangkok');
+  });
+
+  it('drops the slug header and cell when showSlugColumn is false (owner)', () => {
+    component.showSlugColumn = false;
+    fixture.detectChanges();
+
+    expect(headerCount()).toBe(4);
+    expect(bodyCellCount()).toBe(4);
+    expect(fixture.debugElement.nativeElement.textContent).not.toContain('nongchak-bangkok');
+  });
+
+  it('narrows the empty-row colspan so the no-data message still spans the table', () => {
+    component.routes = [];
+    component.hasError = false;
+
+    component.showSlugColumn = true;
+    fixture.detectChanges();
+    expect(emptyRowColspan()).toBe('5');
+
+    component.showSlugColumn = false;
+    fixture.detectChanges();
+    expect(emptyRowColspan()).toBe('4');
+  });
+});

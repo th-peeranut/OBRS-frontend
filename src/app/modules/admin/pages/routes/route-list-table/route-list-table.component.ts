@@ -16,6 +16,11 @@ export class RouteListTableComponent {
   @Input() selectedRouteSlug = '';
   @Input() isLoading = false;
   @Input() hasError = false;
+  // OBRS-1495: the parent decides from the held role, the same way
+  // `user-management-page` hands `canUnlock` to its list table — this component
+  // stays presentational. Defaults to the pre-1495 behaviour so an unbound
+  // usage still renders the column.
+  @Input() showSlugColumn = true;
   @Output() view = new EventEmitter<RouteRow>();
   @Output() edit = new EventEmitter<RouteRow>();
   @Output() delete = new EventEmitter<RouteRow>();

@@ -127,3 +127,70 @@ describe('PromotionListTableComponent (template)', () => {
     expect(deactivateSpy).toHaveBeenCalledWith(row);
   });
 });
+
+
+// OBRS-1495: the raw slug column is for platform admins; the parent hands the
+// decision down. Both directions are asserted deliberately — a test that only
+// proves the column disappears would pass just as happily on a column that
+// never renders at all, which is the opposite defect.
+describe('PromotionListTableComponent slug column (OBRS-1495)', () => {
+  let fixture: ComponentFixture<PromotionListTableComponent>;
+  let component: PromotionListTableComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [CommonModule, TranslateModule.forRoot()],
+      declarations: [PromotionListTableComponent],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PromotionListTableComponent);
+    component = fixture.componentInstance;
+    component.isLoading = false;
+    component.rows = [makeRow({ slug: 'songkran-2026' })];
+  });
+
+  function headerCount(): number {
+    return fixture.debugElement.queryAll(By.css('thead th')).length;
+  }
+
+  function bodyCellCount(): number {
+    return fixture.debugElement.queryAll(By.css('tbody tr:not(.admin-empty-row) td')).length;
+  }
+
+  function emptyRowColspan(): string | null {
+    return fixture.debugElement
+      .query(By.css('tr.admin-empty-row td'))
+      .nativeElement.getAttribute('colspan');
+  }
+
+  it('keeps the slug header and cell when showSlugColumn is true (admin)', () => {
+    component.showSlugColumn = true;
+    fixture.detectChanges();
+
+    expect(headerCount()).toBe(7);
+    expect(bodyCellCount()).toBe(7);
+    expect(fixture.debugElement.nativeElement.textContent).toContain('songkran-2026');
+  });
+
+  it('drops the slug header and cell when showSlugColumn is false (owner)', () => {
+    component.showSlugColumn = false;
+    fixture.detectChanges();
+
+    expect(headerCount()).toBe(6);
+    expect(bodyCellCount()).toBe(6);
+    expect(fixture.debugElement.nativeElement.textContent).not.toContain('songkran-2026');
+  });
+
+  it('narrows the empty-row colspan so the no-data message still spans the table', () => {
+    component.rows = [];
+    component.hasError = false;
+
+    component.showSlugColumn = true;
+    fixture.detectChanges();
+    expect(emptyRowColspan()).toBe('7');
+
+    component.showSlugColumn = false;
+    fixture.detectChanges();
+    expect(emptyRowColspan()).toBe('6');
+  });
+});

@@ -7,6 +7,7 @@ import {
   CreateLookupPayload,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import { LookupsStore } from './lookups.store';
@@ -49,13 +50,23 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
 
   private readonly subscriptions = new Subscription();
 
+  /**
+   * OBRS-1495: same rule and same held-role test as
+   * `RoutesPageComponent.showSlugColumn` — see the comment there for why this is
+   * `getRoles().includes('admin')` and not `hasAnyRole(['admin'])`, and why it
+   * is screen tidiness rather than an access control.
+   */
+  protected readonly showSlugColumn: boolean;
+
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly store: LookupsStore
+    private readonly store: LookupsStore,
+    private readonly authService: AuthService
   ) {
+    this.showSlugColumn = this.authService.getRoles().includes('admin');
     this.lookupForm = this.formBuilder.group({
       category: ['', [Validators.required, Validators.pattern(/^[a-z0-9_-]+$/)]],
       slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_-]+$/)]],
