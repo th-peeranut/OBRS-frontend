@@ -47,7 +47,8 @@ The app's own request was captured off the wire and is byte-identical to the abo
 | 9 | AC-6 | 360 px — the PAGE must not scroll sideways | `document.documentElement.scrollWidth` **360** vs `clientWidth` **360** → horizontal overflow **0 px**. Does not deepen OBRS-634 | **PASS** |
 | 10 | AC-6 | …while the strip itself does scroll | strip `scrollWidth` **504** vs `clientWidth` **328** → the strip scrolls; ≈4.5 chips visible with the next one cut at the edge as the affordance | **PASS** |
 | 11 | AC-7 | Dark mode is really applied (colours read, not assumed) | `body.is-dark` true, body `rgb(15,17,23)`. Chips: selected `bg rgb(75,194,247)` / `fg rgb(15,17,23)`; available `bg rgb(26,29,39)` / `fg rgb(232,234,240)`; unavailable `bg rgb(34,38,58)` / `fg rgb(154,163,184)` — all distinct from their light values | **PASS** |
-| 12 | AC-7 | Contrast, computed from the measured colours | light selected **5.33:1**, available **11.16:1**, unavailable **8.30:1**; dark selected **9.31:1**, available **13.98:1**, unavailable **5.91:1** — six of six pass WCAG AA | **PASS** |
+| 12 | AC-7 | Contrast of the LABEL against its own chip (WCAG 1.4.3) | light selected **5.33:1**, available **11.16:1**, unavailable **8.30:1**; dark selected **9.31:1**, available **13.98:1**, unavailable **5.91:1** — six of six pass WCAG AA | **PASS** |
+| 12b | AC-7 | Contrast of the chip's BOUNDARY against the page (WCAG 1.4.11) — **the half case 12 did not cover, and the half CI failed on** | The resting chip's fill IS the page (`#ffffff` on `#ffffff` = 1.00:1 light; `#1a1d27` on `#0f1117` = 1.12:1 dark), so its border carries the 3:1 floor alone — and it measured **1.88:1** light / **1.29:1** dark. Border repointed to `$text-lightblack` (light) and `$dk-text-muted` (dark); re-measured off the rendered page: `borderColor rgb(113,117,129)` = 4.60:1 and `rgb(154,163,184)` = 7.46:1 | **PASS after fix** |
 | 13 | AC-7 | No hardcoded hex | `grep -nE '#[0-9a-fA-F]{3,8}\b'` over the component SCSS → **no matches**; every colour is a token | **PASS** |
 | 14 | AC-4 | Round trip — tapping a day BEFORE the return date must not move the return | Depart `09-05`, return `09-07`; tapped `09-06` → departure `06/09/2026`, return **unchanged** `07/09/2026`; payload `{departureDate: 2026-09-06, returnDate: 2026-09-07}`; 1 search POST | **PASS** |
 | 15 | AC-4 | Round trip — tapping a day AFTER the return date must carry the return (never leave `departure > return`) | Tapped `09-10` → departure `10/09/2026`, return **carried to** `11/09/2026` (= departure + 1, `defaultReturnDate`); payload `{departureDate: 2026-09-10, returnDate: 2026-09-11}`; 1 search POST. The return leg does not drift and never goes stale | **PASS** |
@@ -67,6 +68,13 @@ Both rows are the same route, same day, same backend; only the worktree serving 
 | Searching **today** (`09-05`, empty) | "รอบของวันนี้ออกครบแล้ว" + generic "ลองดูรอบของวันถัดไป" + the OBRS-1217 blind "+1 day" button — it steps one day forward whether or not that day has trips | same block, but the hint **names the day**: "วันที่มีรอบเดินทางใกล้ที่สุดคือวันอาทิตย์ที่ 6 ก.ย." |
 | Searching **`09-08`** (empty, not today) | bare `.no-results` paragraph — **no control, no hint, no button.** A dead end | strip (with `09-10`/`09-11` selectable) + "วันที่มีรอบเดินทางใกล้ที่สุดคือวันพฤหัสบดีที่ 10 ก.ย." + the jump button "ดูรอบวันพฤหัสบดีที่ 10 ก.ย." (added by `e21f928c`; see Observation 1) |
 
+> ⚠️ The AFTER column was re-measured a SECOND time after the border fix (case 12b), against a
+> backend rebuilt from `origin/dev` on a fresh `obrs862qa` — `POST /api/schedules/availability`
+> answered `["2026-09-06","2026-09-07","2026-09-10","2026-09-11"], effectiveDays 7`, byte-identical
+> to the first run, so the two AFTER rounds are the same scenario and not two different worlds.
+> All 9 AFTER images on the card were re-captured from the fixed build and the previous nine
+> deleted. The three BEFORE attachments are still untouched.
+>
 > ⚠️ The AFTER column was re-measured after `e21f928c`. The AFTER screenshots on the Jira card were
 > re-captured from that same build and the pre-fix ones deleted, so the images and this table agree.
 > The three BEFORE attachments are untouched — `origin/dev` did not move.
@@ -100,6 +108,21 @@ Both rows are the same route, same day, same backend; only the worktree serving 
    the **BEFORE** worktree at `origin/dev`, so it is not a regression from this card. The handler
    itself is fine (`dispatchEvent('click')` toggles correctly), which is how both scripts here
    drive it. Worth its own card.
+
+3. **`.is-unavailable`'s BOUNDARY is below 3:1 in both themes, and that belongs to OBRS-772, not
+   here.** Measured: light fill and border are both `$primary-lightgrey` `#dddee1` on `#ffffff`
+   = **1.35:1**; dark is `$dk-bg-soft` fill / `$dk-border-muted` border on `$dk-bg` = **1.26:1**.
+   The contrast gate does not report either, and that is deliberate rather than a fixture hole:
+   `customer-contrast.ts:243` exempts every `[aria-disabled="true"]` element, and the file's own
+   header (`:77`) states the reason — *"WCAG 1.4.3/1.4.11 both exempt inactive components"*. The
+   chip is genuinely inactive (its click handler no-ops); `aria-disabled` rather than the native
+   `disabled` is used only so a keyboard user can still reach it and hear why.
+   It is also not unnamed debt: `my-bookings.component.scss:613-620` records that **OBRS-772 owns
+   the 1.4.11 boundary policy for the whole app** and already holds ~20 light-theme controls on
+   its register at ~1.28:1 for exactly this reason. This chip is one more of that family, not a
+   defect of this card — raised on OBRS-772 rather than fixed here, so the policy stays in one
+   place. Found by `obrs-scrutinize`; the exemption reasoning above was re-verified against the
+   files before accepting it.
 
 ## Artifacts
 

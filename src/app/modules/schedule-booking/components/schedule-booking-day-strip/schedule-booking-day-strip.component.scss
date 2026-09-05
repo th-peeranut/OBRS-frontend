@@ -42,7 +42,12 @@
   // $radius-md, not $radius-pill: the pill is the single-line form-control
   // shape, and a two-row day chip is the same case a textarea is.
   border-radius: $radius-md;
-  border: 1px solid $primary-grey;
+  // $text-lightblack, not $primary-grey: the chip's fill IS the page background
+  // ($primary-white on white, 1.00:1), so the border is the only thing marking
+  // the control's bounds and it carries the whole 3:1 non-text floor alone.
+  // $primary-grey measured 1.88:1 there; this token is recorded at 4.60:1
+  // (variables.scss:63).
+  border: 1px solid $text-lightblack;
   background-color: $primary-white;
   color: $text-black;
   font-family: inherit;
@@ -106,7 +111,15 @@
 :host-context(body.is-dark) {
   .day-strip__chip {
     background-color: $dk-bg-card;
-    border-color: $dk-border;
+    // Same reason as the light border above: $dk-bg-card on $dk-bg is 1.12:1,
+    // so the border alone carries the 3:1 floor, and $dk-border cannot — it is
+    // a hairline by design and composites to 1.29:1 over $dk-bg. $dk-text-muted
+    // is the token this codebase already uses when a control's boundary has to
+    // clear 1.4.11 against the page rather than against a card: see
+    // my-bookings.component.scss:613-620 (`.filter-pill`, 7.46:1) and the
+    // segmented date field in dark-theme.scss:625-630, both moved off
+    // $dk-border for exactly this reason.
+    border-color: $dk-text-muted;
     color: $dk-text;
 
     &:hover:not(.is-selected):not(.is-unavailable) {
