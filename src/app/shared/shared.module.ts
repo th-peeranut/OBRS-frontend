@@ -56,6 +56,9 @@ import { LoadingStateComponent } from './components/loading-state/loading-state.
 import { ArrivalDateNoticeComponent } from './components/arrival-date-notice/arrival-date-notice.component';
 import { ScheduleDelayNoticeComponent } from './components/schedule-delay-notice/schedule-delay-notice.component';
 import { StationLoadErrorComponent } from './components/station-load-error/station-load-error.component';
+// OBRS-714: the routerLink="/" wrapper for the brand logo on the 8 public auth
+// pages, which render no navbar and had no in-tab way back to the home page.
+import { AuthHomeLinkComponent } from './components/auth-home-link/auth-home-link.component';
 
 // Directives
 // OBRS-272: relocated here from `modules/admin/components/` — see the
@@ -89,6 +92,7 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,
     StationLoadErrorComponent,
+    AuthHomeLinkComponent,
     AdminModalBackdropDirective,
   ],
   imports: [
@@ -136,6 +140,7 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,
     StationLoadErrorComponent,
+    AuthHomeLinkComponent,
 
     // Directives
     AdminModalBackdropDirective,

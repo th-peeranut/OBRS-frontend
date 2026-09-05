@@ -1,0 +1,10 @@
+// The host sits where the bare <img> used to, inside `.logo-section`, which is a
+// centring flex container - so both levels stay flex or the logo shifts.
+:host {
+  display: flex;
+}
+
+.logo-home-link {
+  display: flex;
+  text-decoration: none;
+}
