@@ -3108,6 +3108,9 @@
     "SOLD_OUT_TODAY_HINT": "ลองดูรอบของวันถัดไป",
     "SOLD_OUT_TODAY_ACTION": "ดูรอบ{{date}}",
     "ESTIMATE_KM_UNIT": "กม.",
+    "PICKUP_STOP": "จุดขึ้น",
+    "DROPOFF_STOP": "จุดลง",
+    "OPEN_IN_MAPS": "เปิดในแผนที่",
     "RESTORED_UNAVAILABLE": "รอบการเดินทางที่คุณเลือกไว้ก่อนหน้านี้ไม่ว่างแล้ว กรุณาเลือกรอบใหม่"
   },
   "REVIEW_SCHEDULE_BOOKING": {

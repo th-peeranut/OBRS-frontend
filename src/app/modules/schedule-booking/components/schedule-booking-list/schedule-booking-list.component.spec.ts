@@ -225,7 +225,11 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
   function makeStop(
     slug: string,
     distanceKmFromOrigin: number,
-    offsetMinutesFromOrigin: number
+    offsetMinutesFromOrigin: number,
+    // OBRS-864: the fields the row now renders. Defaulted to the previous
+    // fixture values so every assertion written before this card still reads
+    // the same stop it did.
+    extra: Partial<RouteStop> = {}
   ): RouteStop {
     return {
       order: 1,
@@ -239,6 +243,7 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
       longitude: null,
       primaryPhotoUrl: null,
       googleMapsUrl: null,
+      ...extra,
     };
   }
 
@@ -252,8 +257,22 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
       originProvinceLabel: '',
       destinationProvinceLabel: '',
     },
-    pickup: [makeStop('chonburi-terminal', 0, 0)],
-    dropoff: [makeStop('bangkok-terminal', 90, 100)],
+    // OBRS-864: the outbound pair carries the two shapes that decide the row -
+    // a stop WITH a maps URL and one without (AC3).
+    pickup: [
+      makeStop('chonburi-terminal', 0, 0, {
+        name: 'Chonburi Terminal',
+        address: '111 Sukhumvit Rd',
+        googleMapsUrl: 'https://maps.google.com/?q=chonburi-terminal',
+      }),
+    ],
+    dropoff: [
+      makeStop('bangkok-terminal', 90, 100, {
+        name: 'Mo Chit 2',
+        address: '999 Kamphaeng Phet 2 Rd',
+        googleMapsUrl: null,
+      }),
+    ],
   };
 
   // Reverse route: `pickup[]` holds the destination-city (Bangkok) stops,
@@ -339,6 +358,121 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
     expect(text).not.toContain('100');
     expect(text).not.toContain('·');
     expect(text).not.toContain('ESTIMATE_MIN_UNIT');
+  });
+
+  // OBRS-864 -----------------------------------------------------------------
+
+  it('keeps the pickup/dropoff stops the departure estimate was measured between', () => {
+    expect(component.departureStops[10]?.pickup?.slug).toBe('chonburi-terminal');
+    expect(component.departureStops[10]?.dropoff?.slug).toBe('bangkok-terminal');
+  });
+
+  it('swaps the stops on the return leg, in the reverse route slug space (AC5)', () => {
+    expect(component.returnStops[20]?.pickup?.slug).toBe('bangkok-terminal');
+    expect(component.returnStops[20]?.dropoff?.slug).toBe('chonburi-terminal');
+  });
+
+  it('names the real stops - not the stations the filter echoes back', () => {
+    const rows = fixture.debugElement.queryAll(By.css('.stop-detail__row'));
+    // Two lines, once, for the whole outbound list: this fixture runs a single
+    // route, so the pair is a property of the result set and is headed above it.
+    // The return list is behind `isSelectFirst` and does not render here.
+    expect(rows.length).toBe(2);
+    const first = (rows[0].nativeElement.textContent || '').replace(/\s+/g, ' ');
+    const second = (rows[1].nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(first).toContain('Chonburi Terminal');
+    expect(first).toContain('111 Sukhumvit Rd');
+    expect(second).toContain('Mo Chit 2');
+    expect(second).toContain('999 Kamphaeng Phet 2 Rd');
+  });
+
+  it('links only the stop that actually has a googleMapsUrl, and never builds one (AC3)', () => {
+    const links = fixture.debugElement.queryAll(By.css('.stop-detail__link'));
+    expect(links.length).toBe(1);
+    expect(links[0].nativeElement.getAttribute('href')).toBe(
+      'https://maps.google.com/?q=chonburi-terminal'
+    );
+    // The stop without one is still named - as text, not as a dead link.
+    const plain = fixture.debugElement.queryAll(By.css('.stop-detail__text'));
+    expect(plain.length).toBe(1);
+    expect((plain[0].nativeElement.textContent || '')).toContain('Mo Chit 2');
+  });
+
+  it('heads the list with the pair once and leaves the rows silent, on a single-route leg (AC4)', () => {
+    expect(component.departureSharedRoute).toBe(true);
+    expect(fixture.debugElement.queryAll(By.css('.stop-detail--shared')).length).toBe(1);
+
+    const cards = fixture.debugElement.queryAll(By.css('.schedule-item'));
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      expect(card.query(By.css('.stop-detail'))).toBeNull();
+    }
+  });
+
+  it('falls back to the reserved per-row block when the leg runs more than one route', () => {
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: [
+        departureSchedule,
+        { ...departureSchedule, id: 11, routeSlug: 'chonburi-bangkok-via-si-racha' },
+      ],
+      arrivalSchedules: [returnSchedule],
+    } as ScheduleList);
+    store.refreshState();
+    fixture.detectChanges();
+
+    expect(component.departureSharedRoute).toBe(false);
+    expect(fixture.debugElement.queryAll(By.css('.stop-detail--shared')).length).toBe(0);
+
+    // The second route has no stub answer, so its stops never resolve - and the
+    // block still renders, still holding its height. That is the case the
+    // reservation exists for.
+    const cards = fixture.debugElement.queryAll(By.css('.schedule-item'));
+    expect(cards.length).toBe(2);
+    for (const card of cards) {
+      expect(card.query(By.css('.stop-detail'))).toBeTruthy();
+    }
+  });
+
+  it('treats a row with no routeSlug as a row that disagrees, not one to skip', () => {
+    // `routeSlug` is optional. `resolveLegEstimates` skips such a row, so its
+    // stops never resolve - calling the leg uniform on the slugs that DO exist
+    // would suppress the per-row block for the rows that resolved too, and head
+    // the list off a row that has nothing to say.
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: [
+        { ...departureSchedule, id: 12, routeSlug: undefined },
+        departureSchedule,
+      ],
+      arrivalSchedules: [returnSchedule],
+    } as ScheduleList);
+    store.refreshState();
+    fixture.detectChanges();
+
+    expect(component.departureSharedRoute).toBe(false);
+    expect(fixture.debugElement.queryAll(By.css('.stop-detail--shared')).length).toBe(0);
+    // The row that DID resolve still names its stops.
+    const rows = fixture.debugElement.queryAll(By.css('.stop-detail__row'));
+    expect(rows.length).toBe(2);
+  });
+
+  it('switches each leg on its own routes - the return does not inherit the outbound answer', () => {
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: [departureSchedule],
+      arrivalSchedules: [
+        returnSchedule,
+        { ...returnSchedule, id: 21, routeSlug: 'bangkok-chonburi-via-si-racha' },
+      ],
+    } as ScheduleList);
+    store.refreshState();
+    fixture.detectChanges();
+
+    expect(component.departureSharedRoute).toBe(true);
+    expect(component.returnSharedRoute).toBe(false);
+  });
+
+  it('reads no stop line at all before the route data resolves', () => {
+    expect(component.stopLines(undefined)).toEqual([]);
+    expect(component.stopLines({ pickup: null, dropoff: null })).toEqual([]);
   });
 });
 

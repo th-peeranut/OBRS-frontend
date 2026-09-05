@@ -45,6 +45,33 @@
           {{ "SCHEDULE_BOOKING.SUBHEADER_DEPARTURE" | translate }}
         </h3>
       }
+      <!-- OBRS-864: every round below leaves the same stop and arrives at the same
+           one - the filter fixed both before this list existed. Said once here, the
+           rows below say nothing; said on each row it is the same sentence three
+           times over, which is the complaint this card was opened on. Reads the
+           first row's entry because in this mode they are all the same object. -->
+      @if (departureSharedRoute) {
+        <div class="stop-detail stop-detail--shared">
+          @for (line of stopLines(departureStops[departureList[0].id]); track line.labelKey) {
+            <div class="stop-detail__row">
+              <i class="bi {{ line.icon }} stop-detail__icon" aria-hidden="true"></i>
+              <span class="stop-detail__label">{{ line.labelKey | translate }}</span>
+              @if (line.mapsUrl) {
+                <a
+                  class="stop-detail__link"
+                  [href]="line.mapsUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.title]="line.title"
+                  [attr.aria-label]="line.text + ' - ' + ('SCHEDULE_BOOKING.OPEN_IN_MAPS' | translate)"
+                  >{{ line.text }}</a>
+              } @else {
+                <span class="stop-detail__text" [attr.title]="line.title">{{ line.text }}</span>
+              }
+            </div>
+          }
+        </div>
+      }
       @for (departure of departureList; track trackById($index, departure)) {
         <div class="schedule-item mb-3">
           <!-- LEFT -->
@@ -81,6 +108,37 @@
                     ≈ {{ est.distanceKm }} {{ "SCHEDULE_BOOKING.ESTIMATE_KM_UNIT" | translate }}
                   </small>
                 }
+              }
+              <!-- OBRS-864: the stops this row actually uses. `resolveLegEstimates`
+                   already resolved both `RouteStop` objects in order to read two numbers
+                   off them, so naming them here adds no request. Rendered only when the
+                   rows can DISAGREE (more than one route in this leg); when they cannot,
+                   the list above already said it once and repeating it here is noise.
+                   The wrapper then renders unconditionally and reserves its height in
+                   CSS: the rows arrive after the route data does, and a block that
+                   appears out of nothing is what moves the card under the cursor of
+                   someone about to click it. -->
+              @if (!departureSharedRoute) {
+                <div class="stop-detail">
+                  @for (line of stopLines(departureStops[departure.id]); track line.labelKey) {
+                    <div class="stop-detail__row">
+                      <i class="bi {{ line.icon }} stop-detail__icon" aria-hidden="true"></i>
+                      <span class="stop-detail__label">{{ line.labelKey | translate }}</span>
+                      @if (line.mapsUrl) {
+                        <a
+                          class="stop-detail__link"
+                          [href]="line.mapsUrl"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          [attr.title]="line.title"
+                          [attr.aria-label]="line.text + ' - ' + ('SCHEDULE_BOOKING.OPEN_IN_MAPS' | translate)"
+                          >{{ line.text }}</a>
+                      } @else {
+                        <span class="stop-detail__text" [attr.title]="line.title">{{ line.text }}</span>
+                      }
+                    </div>
+                  }
+                </div>
               }
             </div>
             <div class="time">
@@ -196,6 +254,34 @@
             }
           </div>
         }
+        <!-- OBRS-864: same once-not-per-row reasoning as the outbound list above,
+             on this leg's own switch - the return boards a different stop from the
+             one the outbound drops at, so it must not read the outbound's. Sits
+             under the OBRS-1343 notice because that notice NAMES the change of
+             stop and this spells the stop out; the other order answers a question
+             the reader has not been given yet. -->
+        @if (returnSharedRoute) {
+          <div class="stop-detail stop-detail--shared">
+            @for (line of stopLines(returnStops[returnList[0].id]); track line.labelKey) {
+              <div class="stop-detail__row">
+                <i class="bi {{ line.icon }} stop-detail__icon" aria-hidden="true"></i>
+                <span class="stop-detail__label">{{ line.labelKey | translate }}</span>
+                @if (line.mapsUrl) {
+                  <a
+                    class="stop-detail__link"
+                    [href]="line.mapsUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    [attr.title]="line.title"
+                    [attr.aria-label]="line.text + ' - ' + ('SCHEDULE_BOOKING.OPEN_IN_MAPS' | translate)"
+                    >{{ line.text }}</a>
+                } @else {
+                  <span class="stop-detail__text" [attr.title]="line.title">{{ line.text }}</span>
+                }
+              </div>
+            }
+          </div>
+        }
       }
       @if (isSelectFirst) {
         @for (return of returnList; track trackById($index, return)) {
@@ -234,6 +320,37 @@
                       ≈ {{ est.distanceKm }} {{ "SCHEDULE_BOOKING.ESTIMATE_KM_UNIT" | translate }}
                     </small>
                   }
+                }
+                <!-- OBRS-864: the stops this row actually uses. `resolveLegEstimates`
+                     already resolved both `RouteStop` objects in order to read two numbers
+                     off them, so naming them here adds no request. Rendered only when the
+                     rows can DISAGREE (more than one route in this leg); when they cannot,
+                     the list above already said it once and repeating it here is noise.
+                     The wrapper then renders unconditionally and reserves its height in
+                     CSS: the rows arrive after the route data does, and a block that
+                     appears out of nothing is what moves the card under the cursor of
+                     someone about to click it. -->
+                @if (!returnSharedRoute) {
+                  <div class="stop-detail">
+                    @for (line of stopLines(returnStops[return.id]); track line.labelKey) {
+                      <div class="stop-detail__row">
+                        <i class="bi {{ line.icon }} stop-detail__icon" aria-hidden="true"></i>
+                        <span class="stop-detail__label">{{ line.labelKey | translate }}</span>
+                        @if (line.mapsUrl) {
+                          <a
+                            class="stop-detail__link"
+                            [href]="line.mapsUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            [attr.title]="line.title"
+                            [attr.aria-label]="line.text + ' - ' + ('SCHEDULE_BOOKING.OPEN_IN_MAPS' | translate)"
+                            >{{ line.text }}</a>
+                        } @else {
+                          <span class="stop-detail__text" [attr.title]="line.title">{{ line.text }}</span>
+                        }
+                      </div>
+                    }
+                  </div>
                 }
               </div>
               <div class="time">
