@@ -102,8 +102,8 @@ describe('usability-reports-page.mappers', () => {
       expect(detailStatusValuesFor(true, 'resolved')).toEqual(['in_review', 'resolved']);
     });
 
-    it('admin viewing a rejected report gets only the same-state note edit — rejected stays terminal', () => {
-      expect(detailStatusValuesFor(true, 'rejected')).toEqual(['rejected']);
+    it('admin viewing a rejected report gets the reopen plus the same-state note edit (OBRS-1733)', () => {
+      expect(detailStatusValuesFor(true, 'rejected')).toEqual(['in_review', 'rejected']);
     });
 
     it('admin viewing a dismissed or duplicate report gets exactly the pull-back option', () => {
@@ -148,9 +148,9 @@ describe('usability-reports-page.mappers', () => {
       ]);
       expect(ALLOWED_TARGETS.accepted).toEqual(['resolved', 'rejected', 'dismissed']);
       expect(ALLOWED_TARGETS.dismissed).toEqual(['in_review']);
-      // OBRS-1474 — the reopen edge, and the one status it deliberately skipped.
+      // OBRS-1474 — the reopen edge. OBRS-1733 — the status it skipped, opened too.
       expect(ALLOWED_TARGETS.resolved).toEqual(['in_review']);
-      expect(ALLOWED_TARGETS.rejected).toEqual([]);
+      expect(ALLOWED_TARGETS.rejected).toEqual(['in_review']);
       expect(ALLOWED_TARGETS.duplicate).toEqual(['in_review']);
     });
 

@@ -16,6 +16,9 @@ import { LangSwitcherComponent } from './components/lang-switcher/lang-switcher.
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { ReportUsabilityFabComponent } from './components/report-usability-fab/report-usability-fab.component';
 import { ExportButtonComponent } from './components/export-button/export-button.component';
+// OBRS-1734: the one combined date-range picker, replacing the two-separate-
+// `p-datePicker` pattern one report page at a time.
+import { DateRangePickerComponent } from './components/date-range-picker/date-range-picker.component';
 import { PromoCodeFieldComponent } from './components/promo-code-field/promo-code-field.component';
 import { BoardingListComponent } from './components/boarding-list/boarding-list.component';
 // OBRS-317: owner/staff in-app notification bell + inbox panel family.
@@ -53,6 +56,9 @@ import { LoadingStateComponent } from './components/loading-state/loading-state.
 import { ArrivalDateNoticeComponent } from './components/arrival-date-notice/arrival-date-notice.component';
 import { ScheduleDelayNoticeComponent } from './components/schedule-delay-notice/schedule-delay-notice.component';
 import { StationLoadErrorComponent } from './components/station-load-error/station-load-error.component';
+// OBRS-714: the routerLink="/" wrapper for the brand logo on the 8 public auth
+// pages, which render no navbar and had no in-tab way back to the home page.
+import { AuthHomeLinkComponent } from './components/auth-home-link/auth-home-link.component';
 
 // Directives
 // OBRS-272: relocated here from `modules/admin/components/` — see the
@@ -69,6 +75,7 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     ThemeToggleComponent,
     ReportUsabilityFabComponent,
     ExportButtonComponent,
+    DateRangePickerComponent,
     PromoCodeFieldComponent,
     BoardingListComponent,
     NotificationBellComponent,
@@ -85,6 +92,7 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,
     StationLoadErrorComponent,
+    AuthHomeLinkComponent,
     AdminModalBackdropDirective,
   ],
   imports: [
@@ -117,6 +125,7 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     ThemeToggleComponent,
     ReportUsabilityFabComponent,
     ExportButtonComponent,
+    DateRangePickerComponent,
     PromoCodeFieldComponent,
     BoardingListComponent,
     NotificationBellComponent,
@@ -131,6 +140,7 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,
     StationLoadErrorComponent,
+    AuthHomeLinkComponent,
 
     // Directives
     AdminModalBackdropDirective,
