@@ -279,6 +279,18 @@
       "why": "56 fulfilling routes. Its comment blamed a fake token for changing behaviour; OBRS-618 checked the code and nothing in src/app decodes a JWT -- AuthService treats it as an opaque string and reads roles from a separate localStorage key. The real cause was the OBRS-535 one: an unmocked authenticated call 401s and force-logs-out, which cannot happen in a lane with no backend. Promoted only after all 42 cases passed here."
     },
     {
+      "spec": "obrs-812-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs812capture.config.ts",
+      "why": "OBRS-812 AFTER evidence. CAPTURE and not GATE because the verdict belongs to staff-contrast-gate.spec.ts, which owns the staff debt register and fails the build; a second, weaker judge on the same question is worse than none. What it adds is the two things that lane cannot print: frames of the four staff pages showing the fixtures reach POPULATED screens rather than empty shells that happen to clear a floor (the OBRS-734/OBRS-795 failure), and a BEFORE that no longer exists on dev -- the pre-OBRS-797 boarding placeholder, reconstructed by removing the shipped rule from the live CSSOM exactly as the gate's mutation test does, with the measured ratio painted onto each frame. Asserts its population is non-empty and the theme applied, so a frame of nothing fails rather than being filed as proof. Hermetic on the gate lane's terms -- it reuses e2e/support/staff-pages.ts, which fulfils every /api/** call, and serves --configuration gate so a picture here and a number there describe the same build."
+    },
+    {
+      "spec": "staff-contrast-gate.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-812. The staff-shell half of OBRS-584's question, which nothing had ever asked: the customer gate's twenty entries are all customer routes, so every /staff/* contrast fix has shipped uncovered. Sweeps four staff pages in both themes and scores WCAG 1.4.3 and 1.4.11 through the same MEASURE, with its own page list, session and debt register -- separate because the OBRS-1435 stale/unmeasured verdict is computed per run against what THAT run scored, so one register read by two sweeps fails on the first push. Hermetic on the same terms as the customer gate: e2e/support/staff-pages.ts fulfils every /api/** call from inline fixtures, Maps is aborted, and the session is a synthetic localStorage token. Carries a mutation test that strips the OBRS-797 `.admin-field ::placeholder` rule out of the live CSSOM and requires the boarding scan box to fall back to 3.32:1 -- the value that card measured before its fix -- so a fixture that stops reaching the real control fails loudly instead of reporting a clean sweep. It needs the same DEVELOPMENT build the customer gate does."
+    },
+    {
       "spec": "customer-contrast-gate.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",

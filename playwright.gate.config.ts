@@ -152,6 +152,7 @@ export default defineConfig({
     // OBRS-575 shipped past a green CI. Hermetic on the same terms as the rest
     // of the lane: it stubs every /api/** call and aborts Maps.
     '**/customer-contrast-gate.spec.ts',
+    '**/staff-contrast-gate.spec.ts',
     // OBRS-753. The malformed-box defect that made `b2c-critical-path` the one red on
     // the first CI run of this lane. It is a MISSING `:host { display }`, so there is
     // nothing in any diff for a reviewer to catch and no stylesheet parser can tell an
