@@ -175,6 +175,17 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   departureStops: Record<number, LegStops> = {};
   returnStops: Record<number, LegStops> = {};
 
+  /** OBRS-864: true when every row of the leg runs the same route, which makes
+   *  the two stop lines a property of the RESULT SET, not of a row — the filter
+   *  fixed from/to before the first row existed, so repeating them per row says
+   *  the same sentence N times. Then the list heads them once and the rows say
+   *  nothing. Decided from `schedules` alone, synchronously, BEFORE
+   *  `getPickupDropoffCached` answers: the height has to be reserved in the
+   *  right place at first paint, and a mode that flipped mid-flight would move
+   *  the card under the cursor — the exact shift `.stop-detail` reserves against. */
+  departureSharedRoute = false;
+  returnSharedRoute = false;
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -566,6 +577,13 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     scheduleFilter: ScheduleFilter | null | undefined,
     stations: StationApi[] | null | undefined
   ): void {
+    // OBRS-864: set BEFORE the guards below. The flags describe the list that is
+    // about to render, and the list renders whether or not the filter resolves;
+    // left after an early return they would keep the previous search's answer
+    // and head a new list with the stops of the old one.
+    this.departureSharedRoute = this.hasSingleRoute(scheduleList?.departureSchedules ?? []);
+    this.returnSharedRoute = this.hasSingleRoute(scheduleList?.arrivalSchedules ?? []);
+
     if (!scheduleFilter) {
       return;
     }
@@ -598,6 +616,23 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       this.returnEstimates,
       this.returnStops
     );
+  }
+
+  /** OBRS-864: does EVERY row of this leg run the same, known route?
+   *  `resolveLegEstimates` looks the same two filter slugs up in every route
+   *  below, so one route means one resolved stop pair for the whole leg — the
+   *  rows cannot disagree. Two routes may still land on the same stops, and that
+   *  case falls back to per-row rather than wait for the resolution that would
+   *  prove it.
+   *
+   *  A row with no `routeSlug` counts as a row that disagrees, not one to skip:
+   *  the field is optional (`schedule.interface.ts:52`) and `resolveLegEstimates`
+   *  `continue`s past such a row, so its stops are never resolved. Counting only
+   *  the slugs that exist would call a mixed leg uniform and then suppress every
+   *  per-row block for it — including the rows whose stops DID resolve. */
+  private hasSingleRoute(schedules: Schedule[]): boolean {
+    const first = schedules[0]?.routeSlug;
+    return !!first && schedules.every((s) => s.routeSlug === first);
   }
 
   private resolveLegEstimates(

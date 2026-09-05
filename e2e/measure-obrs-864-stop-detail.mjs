@@ -2,7 +2,9 @@
  * OBRS-864 — measures the two claims the card refuses to take on trust, and
  * captures the screenshots for the board.
  *
- *   AC-4  the card must not change height when the stop data lands.
+ *   AC-4  nothing in the list may move when the stop data lands - no card
+ *         changing height, and no card changing POSITION either, which is the
+ *         way a block above the list would break it instead.
  *         `GET /api/routes/<slug>/pickup-dropoff` is held for OBRS_STOPS_DELAY_MS
  *         so there is a real window in which the rows exist and the stop lines
  *         do not. Every `.schedule-item` is measured inside that window and
@@ -104,14 +106,38 @@ async function searchFromHome(page, labels, onBeforeSearch) {
   await page.locator('.btn-search').click({ force: true });
 }
 
-const measureHeights = (page) =>
-  page.$$eval('.schedule-item', (cards) =>
-    cards.map((card, index) => ({
-      index,
-      height: Math.round(card.getBoundingClientRect().height * 100) / 100,
-      stopRows: card.querySelectorAll('.stop-detail__row').length,
-    }))
-  );
+// The stop lines live in ONE of two places: above the list when every round
+// runs the same route, on each card when they can differ. So height alone no
+// longer settles AC-4 - a list-level block that grew would leave every card its
+// exact height and push all of them down. Each card's TOP is recorded next to
+// it, and the block itself is measured separately.
+const measureLayout = (page) =>
+  page.evaluate(() => {
+    const round = (n) => Math.round(n * 100) / 100;
+    const shared = document.querySelector('.stop-detail--shared');
+    return {
+      shared: shared
+        ? {
+            height: round(shared.getBoundingClientRect().height),
+            stopRows: shared.querySelectorAll('.stop-detail__row').length,
+          }
+        : null,
+      cards: [...document.querySelectorAll('.schedule-item')].map((card, index) => {
+        const box = card.getBoundingClientRect();
+        return {
+          index,
+          height: round(box.height),
+          top: round(box.top + window.scrollY),
+          stopRows: card.querySelectorAll('.stop-detail__row').length,
+          // Recorded so a height that DOES change can be attributed. The "≈ N km"
+          // chip lands on the same subscription as the stops and reserves no
+          // height of its own - it predates this card and is not its to fix, but
+          // without this flag its shift reads as the stop block's.
+          chip: card.querySelector('.trip-estimate') !== null,
+        };
+      }),
+    };
+  });
 
 async function main() {
   await mkdir(OUT, { recursive: true });
@@ -166,26 +192,35 @@ async function main() {
   const frames = [];
   const deadline = Date.now() + DELAY_MS + 4000;
   while (Date.now() < deadline) {
-    frames.push({ t: Date.now(), cards: await measureHeights(page) });
+    frames.push({ t: Date.now(), ...(await measureLayout(page)) });
     await page.waitForTimeout(100);
   }
   const before = frames[0].cards;
   const after = frames[frames.length - 1].cards;
-  const framesWithNoStopRows = frames.filter((f) =>
-    f.cards.every((c) => c.stopRows === 0)
-  ).length;
-  const framesWithStopRows = frames.filter((f) =>
-    f.cards.every((c) => c.stopRows > 0)
-  ).length;
+  // Counted wherever the lines render, so the same two numbers keep their
+  // meaning in both modes: a frame in the window has none, a frame after it has
+  // all of them.
+  const stopRowsIn = (f) =>
+    (f.shared?.stopRows ?? 0) + f.cards.reduce((n, c) => n + c.stopRows, 0);
+  const framesWithNoStopRows = frames.filter((f) => stopRowsIn(f) === 0).length;
+  const framesWithStopRows = frames.filter((f) => stopRowsIn(f) > 0).length;
   const distinctHeights = before.map((_, i) => ({
     index: i,
     heights: [...new Set(frames.map((f) => f.cards[i]?.height).filter((h) => h !== undefined))],
+    tops: [...new Set(frames.map((f) => f.cards[i]?.top).filter((t) => t !== undefined))],
   }));
+  const sharedHeights = [
+    ...new Set(frames.map((f) => f.shared?.height).filter((h) => h !== undefined)),
+  ];
 
   const themeApplied = await page.evaluate(() => document.body.classList.contains('is-dark'));
 
   const shifted = before
     .map((row, i) => ({ index: i, from: row.height, to: after[i]?.height }))
+    .filter((row) => row.to !== undefined && row.from !== row.to);
+
+  const moved = before
+    .map((row, i) => ({ index: i, from: row.top, to: after[i]?.top }))
     .filter((row) => row.to !== undefined && row.from !== row.to);
 
   await page.screenshot({
@@ -205,10 +240,14 @@ async function main() {
     framesSampled: frames.length,
     framesWithNoStopRows,
     framesWithStopRows,
+    // Which mode the run exercised: a block above the list, or one per card.
+    sharedStopBlockRendered: frames[frames.length - 1].shared !== null,
+    distinctSharedBlockHeightsAcrossAllFrames: sharedHeights,
     distinctHeightsPerCardAcrossAllFrames: distinctHeights,
     heightsFirstFrame: before,
     heightsLastFrame: after,
     cardsThatChangedHeight: shifted,
+    cardsThatMoved: moved,
     apiRequestsTotal: requests.length,
     apiRequestsAfterSearch: requests.filter((r) => r.afterSearchMs !== null).length,
     apiRequestsByPath: requests.reduce((acc, r) => {
