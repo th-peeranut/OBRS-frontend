@@ -148,4 +148,42 @@ describe('NotificationPreferenceRowComponent (DOM — real p-toggleSwitch, OBRS-
     expect(host.row.smsEnabled).toBe(true);
     expect(switchEl(1).classList).toContain('p-toggleswitch-checked');
   }));
+
+  // OBRS-1744. The rule used to reach a screen reader by sitting in a <span>
+  // right under the row label; moving that sentence to one callout above the
+  // table breaks that proximity. PrimeNG's ToggleSwitch exposes no
+  // `ariaDescribedBy`, and its `Bind` host directive forwards only class/style,
+  // so an `[attr.aria-describedby]` written on `<p-toggleSwitch>` would land on
+  // the wrapper div and never reach the `<input role="switch">`. Hence the rule
+  // rides the switch's own name via the `ariaLabel` INPUT. These two assert on
+  // the input element itself, which is the only thing assistive tech reads.
+  function switchInput(index: number): HTMLInputElement {
+    return fixture.debugElement.queryAll(By.css('.p-toggleswitch input'))[index].nativeElement;
+  }
+
+  it('names the critical rows switches with the type, the channel AND the >=1-channel rule', () => {
+    for (const index of [0, 1]) {
+      const label = switchInput(index).getAttribute('aria-label');
+      expect(label).toContain('NOTIFICATION_PREFS.TYPE.PAYMENT_CONFIRMED');
+      expect(label).toContain('NOTIFICATION_PREFS.CRITICAL_MARK_LABEL');
+    }
+  });
+
+  it('leaves the rule out of a non-critical rows switch names', () => {
+    host.row = {
+      type: 'BOOKING_RESCHEDULED',
+      critical: false,
+      emailSupported: true,
+      smsSupported: true,
+      emailEnabled: true,
+      smsEnabled: false,
+    };
+    fixture.detectChanges();
+
+    for (const index of [0, 1]) {
+      const label = switchInput(index).getAttribute('aria-label');
+      expect(label).toContain('NOTIFICATION_PREFS.TYPE.BOOKING_RESCHEDULED');
+      expect(label).not.toContain('NOTIFICATION_PREFS.CRITICAL_MARK_LABEL');
+    }
+  });
 });

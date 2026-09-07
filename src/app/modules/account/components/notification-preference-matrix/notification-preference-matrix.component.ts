@@ -22,6 +22,14 @@ export class NotificationPreferenceMatrixComponent {
   @Input() warningType: string | null = null;
   @Output() readonly rowChange = new EventEmitter<NotificationPreferenceRowChange>();
 
+  /** OBRS-1744: the ≥1-channel rule is stated once above the table instead of
+   * once per critical row, so it only belongs on screen when some row carries
+   * it — the enum is the backend's, and a build with no critical type would
+   * otherwise leave a note pointing at asterisks that aren't there. */
+  get hasCriticalRow(): boolean {
+    return this.preferences.some((row) => row.critical);
+  }
+
   trackByType(_index: number, row: NotificationPreferenceRow): string {
     return row.type;
   }
