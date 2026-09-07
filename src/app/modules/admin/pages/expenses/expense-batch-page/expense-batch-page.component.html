@@ -75,12 +75,9 @@
         class="admin-btn admin-btn-primary"
         data-testid="envelope-save"
         [disabled]="isSubmitting"
+        [appPending]="isSubmitting"
         >
-        {{
-        isSubmitting
-        ? ('ADMIN.COMMON.SAVING' | translate)
-        : ('ADMIN.EXPENSES.BATCH.SAVE_ENVELOPE' | translate)
-        }}
+        {{ 'ADMIN.EXPENSES.BATCH.SAVE_ENVELOPE' | translate }}
       </button>
     </div>
   </div>

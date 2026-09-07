@@ -474,6 +474,7 @@
                     type="button"
                     class="admin-btn admin-btn-primary"
                     [disabled]="isSavingStatus || !selectedDetailStatus"
+                    [appPending]="isSavingStatus"
                     (click)="saveStatus()"
                     >
                     {{ 'ADMIN.USABILITY_REPORTS.STATUS.SAVE' | translate }}
@@ -495,6 +496,7 @@
                     type="button"
                     class="admin-btn admin-btn-primary"
                     [disabled]="isSavingStatus"
+                    [appPending]="isSavingStatus"
                     (click)="pullBackToReview()"
                     >
                     {{ 'ADMIN.USABILITY_REPORTS.DETAIL.PULL_BACK_TO_REVIEW' | translate }}

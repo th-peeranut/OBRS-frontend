@@ -134,14 +134,10 @@
           type="button"
           class="admin-btn admin-btn-primary"
           [disabled]="isSubmitting || form.invalid"
+          [appPending]="isSubmitting"
           (click)="onSubmit()"
           >
-          {{
-            (isSubmitting
-              ? 'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.SUBMITTING'
-              : 'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.SUBMIT_BTN'
-            ) | translate
-          }}
+          {{ 'ADMIN.PARCEL_CLAIM.APPROVE_MODAL.SUBMIT_BTN' | translate }}
         </button>
       </div>
     </div>

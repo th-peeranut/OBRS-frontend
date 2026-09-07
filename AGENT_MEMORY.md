@@ -1,5 +1,66 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-09-05 — SELF-FIXED (DRY, ~26 lines): OBRS-812 CSSOM placeholder-strip helper was a byte-identical copy in two spec files
+
+`staff-contrast-gate.spec.ts`'s mutation test and `obrs-812-capture.spec.ts`'s BEFORE/AFTER capture
+each carried their own ~26-line inline `strip()` walk that deletes every `.admin-field ... ::placeholder`
+rule from the live CSSOM — same code, same comments, both reconstructing the pre-OBRS-797 boarding
+placeholder for the same reason. Extracted to `stripAdminFieldPlaceholderRules()` in
+`e2e/support/staff-pages.ts` (same shape as `MEASURE` in `customer-contrast.ts` — a closure-free
+top-level function passed straight to `page.evaluate()`), and both call sites now do
+`await sheet.evaluate(stripAdminFieldPlaceholderRules)`. Verified `npx tsc --noEmit` shows the same
+2 pre-existing-shaped `evaluate(MEASURE)` overload errors in these two files before and after (that
+error is unrelated to this helper and already exists on `origin/dev` in four other capture specs) —
+the consolidation introduced no new type errors. Net line count across the three files went down,
+not up.
+
+Deliberately did NOT touch the ~100-line duplicated verdict/ledger block (`Row`, `fmt`, `record`,
+the `shortfalls`/`totals` accumulation, the `unmatched`/`unmeasured`/`stale` computation) between
+`staff-contrast-gate.spec.ts` and `customer-contrast-gate.spec.ts` — that duplication is real but
+consolidating it means editing `customer-contrast-gate.spec.ts`, which is the repo's live merge gate
+(`FRONTEND-GOTCHAS.md`: "`ng test` green is not a merge signal... relocating shared state breaks it
+loudly in one place and vacuously in another," 4 occurrences). A shared verdict function would also
+need `collapsed`/`measured` state passed in or module-scoped — module-scoped mutable state shared
+across two spec files in one worker process is the exact shape that made `host-boxes.ts`'s
+`activeFixture` unsafe to reuse here in the first place (see `staff-pages.ts`'s own docblock). Over
+30 lines and touches the passing merge gate for no test benefit to this card — left as a finding for
+the developer/a follow-up card, not self-fixed.
+
+## 2026-09-05 — SELF-FIXED: OBRS-1734 spec test asserted the OLD getter's behavior after the component was fixed to a plain field
+
+`date-range-picker.component.spec.ts`, the test `'exposes the from/to inputs as PrimeNG's own
+[start, end] range value'`: it set `component.from`/`component.to` directly, then asserted
+`(component as any).value` immediately reflected them, with no `fixture.detectChanges()` and no
+call to `ngOnChanges()`. That assertion was only ever true while `value` was a **getter** —
+`get value() { return [this.from, this.to]; }` — the exact reference-instability bug this card's
+underlying fix removed (a getter bound via `[ngModel]="value"` returns a new array every CD tick,
+which drove `NgModel`/PrimeNG into a synchronous change-detection loop that hung the browser tab).
+Once `value` became a plain field, refreshed only inside `ngOnChanges` when `changes['from']` /
+`changes['to']` is present, directly assigning `component.from`/`.to` in a test no longer updates
+`value` — Angular only calls `ngOnChanges` in response to an actual template-bound `@Input` change,
+never in response to a bare property write. Ran the spec file alone (`ng test --include=**/date-
+range-picker.component.spec.ts`) to confirm: 1 FAILED / 4 SUCCESS before the fix.
+
+**Lesson for next time:** whenever a getter that fed an input-bound field is replaced with an
+`ngOnChanges`-refreshed plain field, grep that field's existing spec for any test that pokes
+`@Input`s directly and reads a **derived** field back out in the same tick — it needs an explicit
+lifecycle-hook call to keep testing real behavior, not the getter's old shortcut.
+
+**Fix (5 lines, `date-range-picker.component.spec.ts`):** import `SimpleChange` from
+`@angular/core` and call `component.ngOnChanges({ from: new SimpleChange(null, component.from,
+true), to: new SimpleChange(null, component.to, true) })` right after setting `from`/`to`, the same
+way Angular's own change detection would invoke it after a bound input actually changes. Re-ran the
+spec file alone: 5/5 green. Re-ran the full suite afterward: 6716/6716 green (unchanged total — this
+fixed an existing failing test rather than adding one), and `npm run build` exit 0.
+
+Also fixed in the same pass, same card: `docs/design-system.md`'s new "Combined range picker"
+pattern-log entry described the new CSS as "a `.app-date-field-panel--range` width modifier" only —
+it omitted the `.app-date-field--range` **trigger** min-width modifier (`src/styles.scss`), which is
+actually the fix for the real bug this card also found (the combined range value, ~23 chars,
+clipping in the trigger's unstyled browser-default input width). Expanded the entry to name both
+modifiers, so a future reader grepping the pattern log for "why is there a min-width on the date
+field" finds it.
+
 ## 2026-08-30 — SELF-FIXED (cosmetic): OBRS-1569 new `data-testid` attribute split across three lines against the file's own one-line-attribute convention
 
 `business-policy.component.html`: the new `<p data-testid="business-policy-terms" [innerHTML]="…">`
@@ -4450,6 +4511,24 @@ just one a test can never catch.
   the kind of drift a type checker won't catch when the stub's parameter type is loosened to
   `unknown[]`.
 
+## OBRS-1730 scrutinize self-fix (auth.service.ts, currentRouteAllowsPreviewedRole, 2026-09-04)
+- The new walk that checks whether the previewed role still passes the route on screen used
+  `for (snapshot = root; snapshot; snapshot = snapshot.firstChild)` — primary-outlet-only.
+  `ActivatedRouteSnapshot.children` (not `firstChild`) is what actually carries every outlet's
+  branch, and this repo already has a documented lesson about exactly that gap:
+  `src/app/shared/lib/analytics-route-scope.ts`'s `childrenOf()` — "a named outlet branches the
+  tree, and a walk that only ever took `firstChild` would read a staff page sitting in a
+  secondary outlet as measurable" — prefers `children`, falling back to `firstChild` only for
+  snapshot-shaped test doubles. No route in this app uses a named outlet today, so the bug was
+  dormant, not live (`ng test` stayed green, `grep -rn "outlet:" src/app` was empty) — but the
+  fail direction is fail-OPEN: a route in a secondary outlet the previewed role can't pass would
+  silently stay on screen exactly like the pre-OBRS-1730 defect this card exists to fix. Changed
+  the loop to a BFS queue that prefers `snapshot.children` and falls back to `snapshot.firstChild`
+  when `children` is empty (same fallback rule as `childrenOf()`), so the existing spec doubles
+  (which only set `firstChild`) still pass unmodified. Lesson: `grep firstChild` across the repo
+  before writing a NEW `ActivatedRouteSnapshot` walk — this one exact trap was already fixed once
+  in `analytics-route-scope.ts` and the fix didn't carry over because nobody grepped for the
+  precedent.
 ## OBRS-1725 scrutinize self-fixes (vehicle-pl-report-page, 2026-09-04)
 - **Display bug in the largest-remainder rounding itself.** `roundedPercents` (built
   specifically to make the cost-mix legend sum to exactly 100.0, after an earlier capture
@@ -4477,3 +4556,51 @@ just one a test can never catch.
   `check-admin-theme-tokens.mjs`, contrast pre-measured and verified accurate against the
   actual hex values), but §12 step 2 ("add it here") was never done. Added a "Categorical
   (non-semantic) series palette" entry to the New pattern log.
+- **OBRS-913 — ⚠️ RETRACTED, and the retraction is the lesson. `tsc --noEmit` and `ng test`
+  are both BLIND to Angular's `@HostListener` `$event` typing; only `ng build` sees it.**
+  This entry originally read "a code comment stated a `TS2345` that does not actually occur",
+  and it was wrong. `sidebar-layout-base.component.ts`'s `onToggleShortcut` is typed
+  `event: Event` with a comment saying Angular types `$event` for the pseudo-event listener
+  `@HostListener('document:keydown.control.b', ['$event'])` as plain `Event`, so
+  `KeyboardEvent` is a `TS2345`. The comment was **right**. The scrutinize pass "disproved" it
+  with `npx tsc --noEmit -p tsconfig.json` (clean) and `ng test` (**6714/6714 SUCCESS on the
+  broken tree**), retyped the param to `KeyboardEvent` — and the very next `ng build` failed:
+  `X [ERROR] TS2345: Argument of type 'Event' is not assignable to parameter of type
+  'KeyboardEvent' … [plugin angular-compiler]` at that exact line. The check lives in the
+  **Angular compiler plugin**, which bare `tsc` does not load and karma's build does not run,
+  so both instruments answer a different question and answer it cleanly.
+  Reverted in `6b8baa8b`; the comment now names its own instrument so nobody re-disproves it
+  with the same blind tool. Two lessons, and the second is the expensive one:
+  **(a)** a claim in a comment is still a claim, verify it — that part stands;
+  **(b)** *"I ran a checker and it was clean"* is only evidence if that checker can see the
+  thing. Before calling a claim false, ask which tool would go red if the claim were TRUE —
+  here the answer was `npm run e2e:gate` / any `ng build`, and neither was run. A green result
+  from an instrument that is structurally unable to fail is indistinguishable from no test at
+  all (QA-HARNESS family: *you believe a result that is not true*).
+
+## OBRS-862 — scrutinize (day strip on /schedule-booking)
+
+- **A guard the sibling method 30 lines below already applies to the SAME field was not
+  copied into the new one.** `resolveSoldOutToday` reads `scheduleFilter.departureDate`
+  behind `if (!scheduleFilter?.departureDate || !searchedDate.isValid()) return null;`.
+  The new `nearestDay$` pipeline read the same field with a bare
+  `dayjs(scheduleFilter?.departureDate).format('YYYY-MM-DD')`. Two facts make that a live
+  wrong-statement bug rather than a style nit: (1) `dayjs(null).format(...)` and
+  `dayjs('').format(...)` both return the literal STRING `"Invalid Date"` — no throw, no
+  empty string, nothing a `?.` or a truthiness check would stop; (2) `"Invalid Date"` starts
+  with `I` (0x49) and every ISO date starts with a digit (0x32), so **every** available date
+  sorts BELOW it. `resolveNearestDay` therefore found nothing "after", fell through to
+  "before", and would have told the customer the FARTHEST day in the 7-day window was
+  "the nearest day with trips". The store CAN hold such a filter: `initialState` is
+  `restoreBookingFilter()`, which is `readBookingContext()?.filter` straight out of
+  localStorage with no shape validation, and `availabilityRequestFor` never looks at
+  `departureDate` at all, so the request still builds. Lesson: when you add a second reader
+  of a field an existing method in the same file already reads, diff the two guards — and
+  never let a `dayjs(x).format()` result reach a string comparison without an `isValid()`
+  in front of it, because the invalid case is a plausible-looking string, not a failure.
+- **6734/6734 stayed green across that behaviour change**, which is itself the finding:
+  `nearestDay$`, `showDay()` and `resolveNearestDay()` (~90 new lines carrying the card's
+  headline AC, "the nearest day with trips is …") have no unit test at all —
+  `createScheduleServiceStub().getAvailabilityCached` returns `of(null)`, so every existing
+  list spec exercises only the null branch. A green suite is not coverage of the branch a
+  stub never enters.

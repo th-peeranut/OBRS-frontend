@@ -6,6 +6,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
 import { UsabilityReportDuplicatePickerComponent } from './usability-report-duplicate-picker.component';
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
+import { PendingButtonDirective } from '../../../../../shared/directives/pending-button.directive';
 import { UsabilityReportSummary } from '../../../../../shared/interfaces/usability-report.interface';
 
 // OBRS-436: `UsabilityReportSummary.id` is now correctly typed `number`
@@ -49,7 +50,11 @@ describe('UsabilityReportDuplicatePickerComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
-      declarations: [UsabilityReportDuplicatePickerComponent, AdminModalBackdropDirective],
+      declarations: [
+        UsabilityReportDuplicatePickerComponent,
+        AdminModalBackdropDirective,
+        PendingButtonDirective,
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(UsabilityReportDuplicatePickerComponent);

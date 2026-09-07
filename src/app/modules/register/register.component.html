@@ -14,7 +14,10 @@
       </div>
       <!-- LOGO WEBSITE -->
       <div class="logo-section mt-5">
-        <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
+        <!-- OBRS-714: the logo is the way home on a page with no navbar. -->
+        <app-auth-home-link>
+          <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
+        </app-auth-home-link>
       </div>
       <!-- HEADER TITLE -->
       <div class="welcome-text mt-3">
@@ -469,7 +472,10 @@
                         <app-lang-switcher></app-lang-switcher>
                       </div>
                       <div class="logo-section mt-5">
-                        <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
+                        <!-- OBRS-714: the logo is the way home on a page with no navbar. -->
+                        <app-auth-home-link>
+                          <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
+                        </app-auth-home-link>
                       </div>
                       <div class="text-center mt-5">
                         <span class="material-symbols-outlined email-verify-icon" [attr.translate]="'no'">

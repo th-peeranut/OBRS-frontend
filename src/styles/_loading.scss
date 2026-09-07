@@ -47,6 +47,35 @@
   }
 }
 
+// OBRS-910: `PendingButtonDirective` marks its host button `.app-pending-slot`
+// and inserts an `<app-loading-state variant="inline">` as its first child.
+// Every button role already passes contrast for its OWN label color, so a
+// ring that reads `currentColor` from that same button inherits a
+// pre-validated color automatically, on every role/theme, with no new token.
+// This MUST live in a plain global stylesheet, not `loading-state.component.scss`:
+// Angular's emulated encapsulation stamps every selector in a compound with
+// the EMITTING component's own `[_ngcontent-*]` attribute, and the button
+// (`.app-pending-slot`) is emitted by a different template than the ring
+// (`.loading-state-ring`, emitted by loading-state's own template) — the same
+// compound written component-scoped would compile to two different
+// `[_ngcontent]` attributes on the one selector and never match.
+//
+// scrutinize (OBRS-910 review): a plain `.app-pending-slot .loading-state-ring`
+// is (0,2,0) specificity — EXACTLY equal to loading-state.component.scss's own
+// `.loading-state-ring[_ngcontent-%COMP%] { border-top-color: var(--accent, ...) }`
+// (1 class + 1 attribute selector is also (0,2,0)). Equal specificity is decided
+// by source order, and the component rule is injected into the document by
+// Angular at component-creation time, which always runs AFTER this global
+// stylesheet's `<link>` has already been parsed — so the component rule always
+// won and this override never actually applied. Repeating the class raises this
+// to (0,3,0), which beats the component rule regardless of injection order,
+// without `!important` and without touching loading-state.component.scss (whose
+// own `--accent` default must stay intact for its other, non-button call sites).
+.app-pending-slot.app-pending-slot .loading-state-ring {
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+}
+
 // Moved from admin-theme.scss (OBRS-907), byte-identical declarations.
 //
 // The two gradient stops are TRANSLUCENT on purpose, and that is the whole

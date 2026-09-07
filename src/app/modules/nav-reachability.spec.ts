@@ -28,7 +28,7 @@
  * discover in-app links by itself.
  */
 import { Route } from '@angular/router';
-import { Component, Type } from '@angular/core';
+import { Component, NO_ERRORS_SCHEMA, Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -50,6 +50,18 @@ import { createLanguageServiceStub } from '../testing/test-stubs';
 import { NotificationInboxService } from '../shared/services/notification-inbox.service';
 import { AdminApiService } from '../services/admin/admin-api.service';
 import { BadgeSocketService } from '../services/admin/badge-socket.service';
+// OBRS-714: the 8 public auth pages and the shared exit they now carry.
+import { AuthHomeLinkComponent } from '../shared/components/auth-home-link/auth-home-link.component';
+// A standalone pipe the otp-validate template uses; NO_ERRORS_SCHEMA does not cover pipes.
+import { PhoneFormatPipe } from '../shared/pipes/phone-format.pipe';
+import { LoginComponent } from './login/login.component';
+import { LoginMobileComponent } from './login-mobile/login-mobile.component';
+import { RegisterComponent } from './register/register.component';
+import { OtpValidateComponent } from './otp-validate/otp-validate.component';
+import { ForgetPasswordComponent } from './forget-password/forget-password.component';
+import { ResetPasswordComponent } from './reset-password/reset-password.component';
+import { VerifyEmailComponent } from './verify-email/verify-email.component';
+import { ChangeEmailConfirmComponent } from './change-email-confirm/change-email-confirm.component';
 
 @Component({
     selector: 'app-notification-bell', template: '',
@@ -507,5 +519,279 @@ describe('OBRS-1721 — view-as role preview', () => {
 
     auth.exitRolePreview();
     expect(auth.getRoles()).toEqual(['owner']);
+  });
+});
+
+/**
+ * OBRS-714 — the other half of "reachable": the 8 PUBLIC AUTH pages.
+ *
+ * OBRS-543 above guards the staff and admin shells, where a layout wraps every
+ * page and the layout carries `routerLink="/"`. The public auth pages have no
+ * shell: they render neither `<app-navbar>` nor `<app-footer>`, so each one
+ * carries its own exits or has none. Seven of the eight had none — their links
+ * pointed only at each other, a closed set with no edge to `/` — and
+ * `otp-validate` in its normal state had no in-tab link at all. An owner hit a
+ * backend error on `/otp/login/<phone>` and could only leave by editing the URL.
+ *
+ * <p>These specs render the REAL page templates and read the anchors the browser
+ * would give a user, then walk that graph to `/`. A page qualifies directly (it
+ * links to `/`) or transitively (it links to a page that does) — the same
+ * transitive rule as the shells above, for the same reason.
+ *
+ * <p><b>`target="_blank"` does not count.</b> `login` and `register` link to
+ * `/privacy-policy` in a new tab, deliberately (an in-tab routerLink would tear
+ * down a half-filled form). A new tab does not take THIS tab anywhere, so the
+ * detector drops those anchors — which is exactly why the closed set looked less
+ * closed than it was.
+ *
+ * <p><b>Limit, stated plainly (same shape as LINKED_FROM above):</b>
+ * {@link NAVBAR_PAGES} is hand-maintained — nothing in a route declares "this
+ * page renders the navbar" in a form a test can read. The partition sweep is
+ * what keeps it honest: every path in `appRoutes` must appear in exactly one of
+ * the three lists, so a new top-level route fails this file until somebody
+ * classifies it.
+ */
+
+/** The public auth pages, keyed by their `appRoutes` path. */
+const AUTH_PAGES: Record<string, Type<unknown>> = {
+  login: LoginComponent,
+  'login-mobile': LoginMobileComponent,
+  register: RegisterComponent,
+  'otp/:option/:phoneno': OtpValidateComponent,
+  'forget-password': ForgetPasswordComponent,
+  'reset-password': ResetPasswordComponent,
+  'verify-email': VerifyEmailComponent,
+  'change-email/confirm': ChangeEmailConfirmComponent,
+};
+
+/**
+ * Top-level routes that render `<app-navbar>`, whose logo is an
+ * `<a class="logo" routerLink="/">` (navbar.component.html:3) — so they reach
+ * the home page through it and are not this card's problem.
+ */
+const NAVBAR_PAGES = [
+  'schedule-booking',
+  'review-schedule-booking',
+  'passenger-info',
+  'payment',
+  'e-ticket',
+  'my-bookings',
+  'account',
+  'my-reports',
+  'parcel-booking',
+  'my-parcels',
+  'refund-policy',
+  'privacy-policy',
+  'business-policy',
+  'parcel-policy',
+  'how-to-book',
+  'find-booking',
+  'track-parcel',
+];
+
+/**
+ * Not pages: the two role shells (guarded by the OBRS-543 sweeps above, each via
+ * its own layout's `routerLink="/"`), the home page itself, and the catch-all
+ * that redirects to it.
+ */
+const NON_PAGE_ROUTES = ['admin', 'staff', '', '**'];
+
+/** The href a user would follow in THIS tab. `target="_blank"` is not an exit. */
+function inTabHrefs(root: HTMLElement): string[] {
+  return Array.from(root.querySelectorAll('a[href]'))
+    .filter((a) => (a as HTMLAnchorElement).getAttribute('target') !== '_blank')
+    .map((a) => (a as HTMLAnchorElement).getAttribute('href') ?? '');
+}
+
+/**
+ * Render a page with the REAL AuthHomeLinkComponent and read its in-tab anchors.
+ *
+ * `ngOnInit` is stubbed out on purpose: these pages fire OTP/verification calls
+ * and route guards on init, none of which decide whether an exit is in the
+ * template. Everything asserted here renders outside those branches — which is
+ * the point, an exit that only appears in one state is not an exit.
+ *
+ * `prime` sets fields on the instance before the first render, for the two pages
+ * that swap in a whole second screen (see the SUCCESS-state spec below).
+ */
+async function inTabHrefsOfPage(
+  page: Type<unknown>,
+  prime?: (instance: Record<string, unknown>) => void,
+): Promise<string[]> {
+  TestBed.resetTestingModule();
+  await TestBed.configureTestingModule({
+    declarations: [page, AuthHomeLinkComponent],
+    // Deliberately NO Forms modules: with them, `formControlName` on a PrimeNG
+    // control the schema below waves through has no value accessor and throws
+    // (NG01203). Nothing asserted here depends on a live form - the exits render
+    // outside every form control - so leaving the binding inert is the honest
+    // trade, not a workaround that weakens the assertion.
+    imports: [RouterTestingModule, HttpClientTestingModule, TranslateModule.forRoot(), PhoneFormatPipe],
+    providers: [
+      { provide: AlertService, useValue: { success: () => {}, error: () => {} } },
+      { provide: PrimeNG, useValue: { setTranslation: () => {} } },
+      { provide: LanguageService, useValue: createLanguageServiceStub() },
+      {
+        provide: ThemeService,
+        useValue: {
+          getStoredMode: () => 'light',
+          setMode: () => {},
+          toggle: () => {},
+          mode$: new BehaviorSubject<ThemeMode>('light').asObservable(),
+        },
+      },
+    ],
+    schemas: [NO_ERRORS_SCHEMA],
+  }).compileComponents();
+
+  const fixture = TestBed.createComponent(page);
+  const instance = fixture.componentInstance as { ngOnInit?: () => void };
+  if (typeof instance.ngOnInit === 'function') {
+    spyOn(instance as { ngOnInit: () => void }, 'ngOnInit');
+  }
+  prime?.(fixture.componentInstance as Record<string, unknown>);
+  fixture.detectChanges();
+  return inTabHrefs(fixture.nativeElement as HTMLElement);
+}
+
+/**
+ * `/login-mobile` -> the AUTH_PAGES key it names, or null if it leaves the set.
+ * Parameterised keys are matched by shape, so a future `/otp/login/0812345678`
+ * resolves to `otp/:option/:phoneno` instead of silently leaving the graph.
+ */
+function authKeyOf(href: string): string | null {
+  const path = href.replace(/^\//, '').split('?')[0];
+  return (
+    Object.keys(AUTH_PAGES).find(
+      (key) => key === path || new RegExp('^' + key.replace(/:[^/]+/g, '[^/]+') + '$').test(path),
+    ) ?? null
+  );
+}
+
+describe('OBRS-714 — public auth pages have an in-tab way home', () => {
+  /** path -> the in-tab hrefs that page renders, filled once for the whole suite. */
+  const hrefsByPage = new Map<string, string[]>();
+
+  beforeAll(async () => {
+    for (const [path, component] of Object.entries(AUTH_PAGES)) {
+      hrefsByPage.set(path, await inTabHrefsOfPage(component));
+    }
+  });
+
+  it('classifies every top-level route — a new one fails here until it is listed', () => {
+    const declared = [...Object.keys(AUTH_PAGES), ...NAVBAR_PAGES, ...NON_PAGE_ROUTES];
+    const actual = appRoutes.map((r) => r.path ?? '');
+
+    // Fail-closed in both directions: an unclassified route, and a classification
+    // naming a route that no longer exists (which would quietly shrink the sweep).
+    expect(actual.filter((p) => !declared.includes(p))).toEqual([]);
+    expect(declared.filter((p) => !actual.includes(p))).toEqual([]);
+    expect(Object.keys(AUTH_PAGES).length).toBe(8);
+  });
+
+  it('every public auth page reaches `/` — directly, or through one that does', () => {
+    const unreachable = Object.keys(AUTH_PAGES).filter((start) => {
+      const seen = new Set<string>();
+      const queue = [start];
+      while (queue.length) {
+        const at = queue.shift() as string;
+        if (seen.has(at)) continue;
+        seen.add(at);
+        for (const href of hrefsByPage.get(at) ?? []) {
+          if (href === '/') return false;
+          const next = authKeyOf(href);
+          if (next && !seen.has(next)) queue.push(next);
+        }
+      }
+      return true;
+    });
+
+    expect(unreachable).toEqual([]);
+  });
+
+  it('each of the 8 links to `/` DIRECTLY — one click, not a tour of the auth set', () => {
+    // Both this and the transitive spec above are needed, and they fail on
+    // different things. Transitivity is the structural invariant: it is what the
+    // pre-fix set violated (7 pages, every link pointing back inside). But it is
+    // satisfied by ONE surviving link anywhere in the set, so deleting the exit
+    // from a single page stays green under it — measured: stripping login's
+    // wrapper left the transitive sweep at 26/26 SUCCESS, because login still
+    // reached `/` through /register. AC-1 asks for an exit on each of the eight,
+    // and this is the spec that goes red when one of them loses it.
+    const withoutDirectExit = Object.keys(AUTH_PAGES).filter(
+      (path) => !(hrefsByPage.get(path) ?? []).includes('/'),
+    );
+
+    expect(withoutDirectExit).toEqual([]);
+  });
+
+  it('otp-validate offers a TEXT exit in its normal state, not just the logo', () => {
+    // The two exits OBRS-1072 added live inside *ngIf="phoneNotRegistered". A user
+    // who simply mistyped the number never sees that branch, so this asserts the
+    // one in the *ngIf="!phoneNotRegistered" form — the state a user who is simply
+    // waiting for a code is in — and asserts where it goes.
+    const hrefs = hrefsByPage.get('otp/:option/:phoneno') ?? [];
+    expect(hrefs).toContain('/login-mobile');
+  });
+
+  it('the two pages with a SUCCESS state carry the exit on that screen too', async () => {
+    // `register` and `forget-password` do not add a panel — they replace the whole
+    // screen (`@if (registrationEmailSent)` / `@if (linkSent)`), logo and all. The
+    // sweep above only ever renders their default branch, so deleting the wrapper
+    // from the second logo would stay green there. This is the spec that goes red.
+    for (const [component, flag] of [
+      [RegisterComponent, 'registrationEmailSent'],
+      [ForgetPasswordComponent, 'linkSent'],
+    ] as [Type<unknown>, string][]) {
+      const hrefs = await inTabHrefsOfPage(component, (instance) => (instance[flag] = true));
+      expect(hrefs)
+        .withContext(flag + ' branch')
+        .toContain('/');
+    }
+  });
+
+  it('the sweep is not vacuously green — it read real anchors from every page', () => {
+    expect(hrefsByPage.size).toBe(8);
+    for (const [path, hrefs] of hrefsByPage) {
+      expect(hrefs.length)
+        .withContext(path + ' rendered no in-tab anchors at all')
+        .toBeGreaterThan(0);
+    }
+  });
+});
+
+/**
+ * OBRS-714 AC-4 — the must-NOT-catch pair.
+ *
+ * A gate that cannot fail is a gate that is not there. These two components are
+ * the same logo section, one wrapped in `<app-auth-home-link>` and one left as
+ * the bare `<img>` the 8 pages used to carry, run through the SAME detector the
+ * sweep above uses. If the detector ever stops seeing the difference, the sweep
+ * above is decoration and this pair says so.
+ */
+@Component({
+  selector: 'app-fixture-with-exit',
+  template:
+    '<div class="logo-section">' +
+    '<app-auth-home-link><img class="logo-img" src="images/logo.svg" alt="Logo" /></app-auth-home-link>' +
+    '</div>',
+  standalone: false,
+})
+class FixtureWithExitComponent {}
+
+@Component({
+  selector: 'app-fixture-without-exit',
+  template: '<div class="logo-section"><img class="logo-img" src="images/logo.svg" alt="Logo" /></div>',
+  standalone: false,
+})
+class FixtureWithoutExitComponent {}
+
+describe('OBRS-714 — the reachability detector actually catches a missing exit', () => {
+  it('sees the exit when the logo is wrapped', async () => {
+    expect(await inTabHrefsOfPage(FixtureWithExitComponent)).toContain('/');
+  });
+
+  it('reports NO exit when the logo is a bare img — the pre-fix shape of all 8', async () => {
+    expect(await inTabHrefsOfPage(FixtureWithoutExitComponent)).toEqual([]);
   });
 });

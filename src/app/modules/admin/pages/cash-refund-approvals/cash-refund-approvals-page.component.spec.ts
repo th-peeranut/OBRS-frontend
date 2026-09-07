@@ -7,6 +7,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CashRefundApprovalsPageComponent } from './cash-refund-approvals-page.component';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { CashRefundApprovalRequest } from '../../../../shared/interfaces/my-booking.interface';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 
 const PENDING: CashRefundApprovalRequest = {
   id: 7,
@@ -32,7 +33,7 @@ describe('CashRefundApprovalsPageComponent (OBRS-844)', () => {
 
     await TestBed.configureTestingModule({
       imports: [CommonModule, TranslateModule.forRoot()],
-      declarations: [CashRefundApprovalsPageComponent],
+      declarations: [CashRefundApprovalsPageComponent, PendingButtonDirective],
       providers: [{ provide: AdminApiService, useValue: api }],
     }).compileComponents();
 

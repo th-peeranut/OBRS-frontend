@@ -1,0 +1,32 @@
+@if (isSearchable) {
+  <div
+    class="day-strip"
+    role="group"
+    [attr.aria-label]="'SCHEDULE_BOOKING.DAY_STRIP_LABEL' | translate"
+    [attr.aria-busy]="isAvailabilityInFlight"
+    data-testid="day-strip"
+  >
+    @for (day of days; track day.iso) {
+      <button
+        type="button"
+        class="day-strip__chip"
+        [class.is-selected]="day.state === 'selected'"
+        [class.is-unavailable]="day.state === 'unavailable'"
+        [attr.aria-pressed]="day.state === 'selected'"
+        [attr.aria-disabled]="day.state === 'unavailable'"
+        [attr.data-date]="day.iso"
+        data-testid="day-strip-chip"
+        #chip
+        (click)="selectDay(day)"
+      >
+        <span class="day-strip__weekday">{{ day.weekdayLabel }}</span>
+        <span class="day-strip__date">{{ day.dateLabel }}</span>
+        @if (day.state === 'unavailable') {
+          <span class="visually-hidden">{{
+            "SCHEDULE_BOOKING.DAY_STRIP_NO_TRIPS" | translate
+          }}</span>
+        }
+      </button>
+    }
+  </div>
+}

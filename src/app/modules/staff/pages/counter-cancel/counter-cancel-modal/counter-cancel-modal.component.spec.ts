@@ -9,6 +9,7 @@ import { By } from '@angular/platform-browser';
 import { Subject, of, throwError } from 'rxjs';
 import { CounterCancelModalComponent } from './counter-cancel-modal.component';
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
+import { PendingButtonDirective } from '../../../../../shared/directives/pending-button.directive';
 import { AppRefundDestinationFieldsComponent } from '../../../../../shared/components/refund-destination-fields/refund-destination-fields.component';
 import { StaffApiService, CounterBookingSearchResultDto } from '../../../../../services/staff/staff-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
@@ -101,6 +102,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
         CounterCancelModalComponent,
         AdminModalBackdropDirective,
         AppRefundDestinationFieldsComponent,
+        PendingButtonDirective,
       ],
       providers: [
         { provide: StaffApiService, useValue: api },
@@ -644,6 +646,7 @@ describe('CounterCancelModalComponent — cancel body byte-identity (OBRS-766 FE
         CounterCancelModalComponent,
         AdminModalBackdropDirective,
         AppRefundDestinationFieldsComponent,
+        PendingButtonDirective,
       ],
       providers: [
         { provide: AlertService, useValue: alert },

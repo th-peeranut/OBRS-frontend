@@ -11,6 +11,7 @@ import { CounterCancelResultListComponent } from './counter-cancel-result-list/c
 import { CounterCancelModalComponent } from './counter-cancel-modal/counter-cancel-modal.component';
 import { AdminPaginatorComponent } from '../../../admin/components/admin-paginator/admin-paginator.component';
 import { AdminModalBackdropDirective } from '../../../../shared/directives/admin-modal-backdrop.directive';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 import { AppRefundDestinationFieldsComponent } from '../../../../shared/components/refund-destination-fields/refund-destination-fields.component';
 import { StaffApiService, CounterBookingSearchResultDto } from '../../../../services/staff/staff-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
@@ -82,6 +83,7 @@ describe('CounterCancelPageComponent (OBRS-766)', () => {
         AdminPaginatorComponent,
         AdminModalBackdropDirective,
         AppRefundDestinationFieldsComponent,
+        PendingButtonDirective,
       ],
       providers: [
         { provide: StaffApiService, useValue: api },

@@ -280,6 +280,7 @@
             class="download-btn"
             (click)="downloadTicketImage()"
             [disabled]="isDownloadingTicket"
+            [appPending]="isDownloadingTicket"
             >
             <img src="icons/payment-download.svg" alt="" aria-hidden="true" />
             {{ "E_TICKET.DOWNLOAD" | translate }}

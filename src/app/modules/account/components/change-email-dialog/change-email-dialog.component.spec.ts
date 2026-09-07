@@ -8,6 +8,8 @@ import { AuthService } from '../../../../auth/auth.service';
 import { UserService } from '../../../../services/user/user.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { createTranslateStub } from '../../../../testing/test-stubs';
+import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 
 describe('ChangeEmailDialogComponent', () => {
   function create(): {
@@ -213,7 +215,7 @@ describe('ChangeEmailDialogComponent — password manager autofill tokens (OBRS-
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ChangeEmailDialogComponent],
+      declarations: [ChangeEmailDialogComponent, PendingButtonDirective, LoadingStateComponent],
       imports: [ReactiveFormsModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: {} },
@@ -241,5 +243,61 @@ describe('ChangeEmailDialogComponent — password manager autofill tokens (OBRS-
     }
 
     expect(el.getAttribute('autocomplete')).toBe('current-password');
+  });
+});
+
+// OBRS-910: the submit button's hand-rolled `<span class="spinner">` was replaced
+// with `[appPending]="isSubmitting"`.
+describe('ChangeEmailDialogComponent — OBRS-910 pending button state', () => {
+  let fixture: ComponentFixture<ChangeEmailDialogComponent>;
+  let component: ChangeEmailDialogComponent;
+  let submitButton: HTMLButtonElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ChangeEmailDialogComponent, PendingButtonDirective, LoadingStateComponent],
+      imports: [ReactiveFormsModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: {} },
+        { provide: UserService, useValue: { checkExistEmail: () => of(null) } },
+        { provide: AlertService, useValue: {} },
+      ],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ChangeEmailDialogComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    submitButton = (fixture.nativeElement as HTMLElement).querySelector(
+      'button[type="submit"]'
+    ) as HTMLButtonElement;
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+  });
+
+  it('adds aria-busy to the submit button while isSubmitting is true, and removes it once it is false (AC-2)', () => {
+    expect(submitButton.getAttribute('aria-busy')).toBeNull();
+
+    component.isSubmitting = true;
+    fixture.detectChanges();
+    expect(submitButton.getAttribute('aria-busy')).toBe('true');
+
+    component.isSubmitting = false;
+    fixture.detectChanges();
+    expect(submitButton.getAttribute('aria-busy')).toBeNull();
+  });
+
+  it('pins the ring to 16px via inline style while pending (AC-3)', () => {
+    // Note: this button's own LABEL TEXT swaps (SUBMIT -> SUBMIT_LOADING) while
+    // pending, a pre-existing, unrelated behavior — so its overall width is NOT
+    // asserted stable here; that invariant is covered on buttons whose label
+    // does not change (cancel-booking-modal, reschedule-estimate-summary).
+    component.isSubmitting = true;
+    fixture.detectChanges();
+    const ring = submitButton.querySelector('.loading-state-ring') as HTMLElement;
+    expect(getComputedStyle(ring).width).toBe('16px');
+    expect(getComputedStyle(ring).height).toBe('16px');
   });
 });

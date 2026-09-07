@@ -44,6 +44,7 @@
             type="button"
             class="admin-btn admin-btn-primary"
             [disabled]="isSubmitting || form.invalid"
+            [appPending]="isSubmitting"
             (click)="submit()"
             >
             {{ 'ADMIN.MANUAL_REFUNDS.MODAL.CONFIRM' | translate }}

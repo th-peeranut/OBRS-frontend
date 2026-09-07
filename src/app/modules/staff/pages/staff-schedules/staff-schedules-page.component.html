@@ -181,10 +181,7 @@
             <button class="btn btn-secondary" (click)="closeFormModal()" [disabled]="isSubmitting">
               {{ 'STAFF.SELL.BACK_BTN' | translate }}
             </button>
-            <button class="btn btn-primary" (click)="submitSchedule()" [disabled]="isSubmitting">
-              @if (isSubmitting) {
-                <span class="spinner-border spinner-border-sm me-1"></span>
-              }
+            <button class="btn btn-primary" (click)="submitSchedule()" [disabled]="isSubmitting" [appPending]="isSubmitting">
               {{ 'STAFF.SELL.CONFIRM_BTN' | translate }}
             </button>
           </div>

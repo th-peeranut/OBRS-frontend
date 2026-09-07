@@ -12,6 +12,7 @@ import { RefundVoidReportDto } from '../../../../shared/interfaces/refund-void-r
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { ExportButtonComponent } from '../../../../shared/components/export-button/export-button.component';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { ExportService } from '../../../../services/export/export.service';
@@ -347,7 +348,7 @@ describe('RefundVoidReportPageComponent (template rendering)', () => {
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
       // OBRS-442: the template now also renders <app-export-button>, so it must be declared
       // (with its own DI deps stubbed) or this block 304s on the unknown element.
-      declarations: [RefundVoidReportPageComponent, ExportButtonComponent],
+      declarations: [RefundVoidReportPageComponent, ExportButtonComponent, PendingButtonDirective],
       providers: [
         { provide: RefundVoidReportStore, useValue: storeStub },
         { provide: AuthService, useValue: jasmine.createSpyObj('AuthService', { hasAnyRole: true }) },
@@ -424,7 +425,7 @@ describe('RefundVoidReportPageComponent (export button, OBRS-442)', () => {
 
     TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
-      declarations: [RefundVoidReportPageComponent, ExportButtonComponent],
+      declarations: [RefundVoidReportPageComponent, ExportButtonComponent, PendingButtonDirective],
       providers: [
         { provide: RefundVoidReportStore, useValue: storeStub },
         { provide: AuthService, useValue: authServiceSpy },

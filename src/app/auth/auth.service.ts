@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRouteSnapshot, Router } from '@angular/router';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
@@ -383,13 +383,67 @@ export class AuthService {
 
     this.previewRole = role;
     this.previewRoleSubject.next(role);
+
+    // OBRS-1730: entering a preview IS a navigation decision, unlike leaving one.
+    // Nothing navigates when the preview starts, so AuthGuard never re-runs and
+    // the page already on screen stays there — an admin previewing as owner kept
+    // reading /admin/lookups (`requiredHeldRoles: ['admin']`) under the banner
+    // while its nav entry correctly vanished. Refreshing that same page DOES hit
+    // the guard and bounces; this makes the two agree.
+    if (!this.currentRouteAllowsPreviewedRole()) {
+      this.router.navigateByUrl(this.getHomeRoute());
+    }
+  }
+
+  /**
+   * OBRS-1730: would AuthGuard still admit the route currently on screen, now
+   * that `getRoles()` answers with the preview?
+   *
+   * The whole chain, not just the leaf: `/admin` carries `requiredRoles:
+   * ['admin']` on the shell entry (app-routing.module.ts) while its children
+   * carry their own `requiredHeldRoles`, and Angular does not inherit `data`
+   * down past a route that has a component (AdminLayoutComponent), so reading
+   * the leaf alone would miss the shell. The two predicates are exactly the ones
+   * auth.guard.ts applies; `customerArea` needs no branch here because those
+   * routes declare no roles and both predicates pass on an empty list.
+   *
+   * Walks `children` over `firstChild` for the same reason
+   * analytics-route-scope.ts does: a named outlet branches the tree, and
+   * `firstChild` alone only ever sees the primary branch. `firstChild` stays
+   * the fallback for snapshot-shaped test doubles that only build the primary
+   * chain (no app route uses a named outlet today).
+   */
+  private currentRouteAllowsPreviewedRole(): boolean {
+    const queue: ActivatedRouteSnapshot[] = [this.router.routerState.snapshot.root];
+
+    while (queue.length > 0) {
+      const snapshot = queue.shift() as ActivatedRouteSnapshot;
+      const requiredRoles = snapshot.data['requiredRoles'];
+      const requiredHeldRoles = snapshot.data['requiredHeldRoles'];
+      if (!this.hasAnyRole(Array.isArray(requiredRoles) ? requiredRoles : [])) {
+        return false;
+      }
+      if (!this.hasHeldRole(Array.isArray(requiredHeldRoles) ? requiredHeldRoles : [])) {
+        return false;
+      }
+
+      if (Array.isArray(snapshot.children) && snapshot.children.length > 0) {
+        queue.push(...snapshot.children);
+      } else if (snapshot.firstChild) {
+        queue.push(snapshot.firstChild);
+      }
+    }
+
+    return true;
   }
 
   /**
    * OBRS-1721: leave preview. Deliberately does NOT navigate. The real role
    * outranks every role it can preview, so it can reach every route the preview
    * could — a redirect here would move someone away from a page they are still
-   * allowed to be on. Do not "fix" this by adding one.
+   * allowed to be on. Do not "fix" this by adding one. The asymmetry with
+   * `startRolePreview` is the point: entering can only narrow, leaving can only
+   * widen, and only narrowing can strand someone on a page they no longer pass.
    */
   exitRolePreview(): void {
     if (!this.previewRole) {

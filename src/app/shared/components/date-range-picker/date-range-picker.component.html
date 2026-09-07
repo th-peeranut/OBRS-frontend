@@ -1,0 +1,18 @@
+<p-datePicker
+  selectionMode="range"
+  styleClass="app-date-field app-date-field--range"
+  panelStyleClass="app-date-field-panel app-date-field-panel--range"
+  dateFormat="dd/mm/yy"
+  [numberOfMonths]="numberOfMonths"
+  [responsiveOptions]="responsiveOptions"
+  [ngModel]="value"
+  (ngModelChange)="onValueChange($event)"
+  [showIcon]="true"
+  [iconDisplay]="'input'"
+  [showButtonBar]="true"
+  [placeholder]="'COMMON.DATE_RANGE_PLACEHOLDER' | translate"
+  >
+  <ng-template pTemplate="inputicon">
+    <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+  </ng-template>
+</p-datePicker>

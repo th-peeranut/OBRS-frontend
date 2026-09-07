@@ -1,5 +1,7 @@
 # "ดูในมุมมองของ…" — a frontend-only, read-only role preview (OBRS-1721)
 
+Amended 2026-09-04 by OBRS-1730 — see "Entering does".
+
 ## Context
 
 An owner or admin cannot see what a real salesperson sees, and the reason is a
@@ -103,6 +105,27 @@ The real role outranks every role it can preview, so it can reach every route
 the preview could. A redirect on exit would move someone away from a page they
 are still entitled to be on. This is deliberate; the code says so where somebody
 would otherwise "fix" it.
+
+### Entering does — amended by OBRS-1730
+
+The reverse direction is not symmetric, and the first version of this decision
+got it wrong by leaving it unstated. Entering a preview only ever *narrows*, so
+it can leave the viewer standing on a route the previewed role cannot reach.
+Nothing navigates when a preview starts, so `AuthGuard` never re-runs: an admin
+previewing as owner from `/admin/lookups` watched the nav entry disappear while
+the page itself stayed on screen. Refreshing that same page **does** hit the
+guard and bounces — two answers to one question.
+
+`startRolePreview()` therefore re-asks the guard's own question about the route
+already on screen, walking the whole `ActivatedRouteSnapshot` chain rather than
+the leaf (`/admin` carries `requiredRoles` on the shell entry while its children
+carry `requiredHeldRoles`, and Angular does not inherit `data` down past a route
+that has a component), and navigates to `getHomeRoute()` — the same destination
+`auth.guard.ts` picks when it refuses — when the answer is no.
+
+This is a *view* correction, not an access one: the viewer still holds the wider
+role and a refresh still returns them to it. The banner lives above the outlet in
+`app.component.html`, so it and its exit button follow them to wherever they land.
 
 ## Consequences
 

@@ -12,6 +12,7 @@ import { EodSalesReportDto } from '../../../../shared/interfaces/eod-sales-repor
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { ExportButtonComponent } from '../../../../shared/components/export-button/export-button.component';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { ExportService } from '../../../../services/export/export.service';
@@ -383,7 +384,7 @@ describe('EodSalesReportPageComponent (template rendering)', () => {
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
       // OBRS-442: the template now also renders <app-export-button>, so it must be declared
       // (with its own DI deps stubbed) or this block 304s on the unknown element.
-      declarations: [EodSalesReportPageComponent, ExportButtonComponent],
+      declarations: [EodSalesReportPageComponent, ExportButtonComponent, PendingButtonDirective],
       providers: [
         { provide: EodSalesReportStore, useValue: storeStub },
         { provide: AuthService, useValue: jasmine.createSpyObj('AuthService', { hasAnyRole: true }) },
@@ -452,7 +453,7 @@ describe('EodSalesReportPageComponent (export button, OBRS-442)', () => {
 
     TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
-      declarations: [EodSalesReportPageComponent, ExportButtonComponent],
+      declarations: [EodSalesReportPageComponent, ExportButtonComponent, PendingButtonDirective],
       providers: [
         { provide: EodSalesReportStore, useValue: storeStub },
         { provide: AuthService, useValue: authServiceSpy },

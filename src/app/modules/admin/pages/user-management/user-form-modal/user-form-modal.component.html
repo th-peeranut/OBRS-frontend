@@ -438,8 +438,8 @@
             <button type="button" class="user-editor-cancel" (click)="requestClose()">
               {{ 'ADMIN.COMMON.CANCEL' | translate }}
             </button>
-            <button type="button" class="user-editor-save" [disabled]="isSubmitting" (click)="submitUser()">
-              {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+            <button type="button" class="user-editor-save" [disabled]="isSubmitting" [appPending]="isSubmitting" (click)="submitUser()">
+              {{ 'ADMIN.COMMON.SAVE' | translate }}
             </button>
           </div>
         </div>

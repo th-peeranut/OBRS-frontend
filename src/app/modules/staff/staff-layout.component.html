@@ -25,21 +25,22 @@
             [attr.alt]="'STAFF.LAYOUT.BRAND' | translate"
             />
           </a>
-        </div>
 
-        <!-- TOGGLE BUTTON — collapses the expanded 280px column to a 76px icon
-        rail (or vice-versa) on explicit click. Always visible in both states.
-        align-self: controlled by CSS (centred in rail, right-aligned in expanded). -->
-        <button
-          type="button"
-          class="admin-sidebar-pin"
-          (click)="togglePin()"
-          [attr.aria-expanded]="isSidebarPinned"
-          [attr.aria-label]="(isSidebarPinned ? 'STAFF.LAYOUT.COLLAPSE_MENU' : 'STAFF.LAYOUT.EXPAND_MENU') | translate"
-          [attr.title]="(isSidebarPinned ? 'STAFF.LAYOUT.COLLAPSE_MENU' : 'STAFF.LAYOUT.EXPAND_MENU') | translate"
-          >
-          <span class="material-symbols-outlined" [attr.translate]="'no'">{{ toggleIconName }}</span>
-        </button>
+          <!-- TOGGLE BUTTON — collapses the expanded 280px column to a 76px icon
+          rail (or vice-versa) on explicit click. Always visible in both states.
+          Sits on the logo row (OBRS-913): stacked below it in the collapsed
+          rail, right-aligned beside it when expanded — controlled by CSS. -->
+          <button
+            type="button"
+            class="admin-sidebar-pin"
+            (click)="togglePin()"
+            [attr.aria-expanded]="isSidebarPinned"
+            [attr.aria-label]="(isSidebarPinned ? 'STAFF.LAYOUT.COLLAPSE_MENU' : 'STAFF.LAYOUT.EXPAND_MENU') | translate"
+            [attr.title]="(isSidebarPinned ? 'STAFF.LAYOUT.COLLAPSE_MENU_TITLE' : 'STAFF.LAYOUT.EXPAND_MENU_TITLE') | translate"
+            >
+            <span class="material-symbols-outlined" [attr.translate]="'no'">{{ toggleIconName }}</span>
+          </button>
+        </div>
 
         <!-- OBRS-543: routerLink takes the STRING form, not ['/staff', item.path].
         An array element is ONE path segment, so a multi-segment path like

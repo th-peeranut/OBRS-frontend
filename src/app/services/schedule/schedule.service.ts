@@ -6,17 +6,32 @@ import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
-import { Observable } from 'rxjs';
+import { catchError, map, Observable, of, shareReplay } from 'rxjs';
 import {
+  ScheduleAvailability,
+  ScheduleAvailabilityReq,
   ScheduleFilterPayload,
   ScheduleList,
   SeatMapRespDto,
 } from '../../shared/interfaces/schedule.interface';
+import { availabilityRequestKey } from '../../shared/lib/schedule-day-window';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ScheduleService {
+  /**
+   * OBRS-862. Session-scoped request dedup, same shape as
+   * `RouteMapService.sharedRequests` (the established precedent) and here for a
+   * concrete reason: TWO components consume the same answer — the results-page
+   * day strip and the list's empty state — so without it every search puts two
+   * byte-identical POSTs on the wire.
+   */
+  private availabilityRequests = new Map<
+    string,
+    Observable<ScheduleAvailability | null>
+  >();
+
   constructor(private http: HttpClient) {}
 
   getByFilter(scheduleFilter: ScheduleFilterPayload): Observable<ResponseAPI<ScheduleList>> {
@@ -24,6 +39,54 @@ export class ScheduleService {
       `${environment.apiUrl}/api/schedules/search`,
       scheduleFilter
     );
+  }
+
+  /**
+   * OBRS-862 — POST /api/schedules/availability (public, OBRS-1251): which of
+   * the next `days` days starting at `fromDate` have a sellable trip for this
+   * stop pair. The caller must have clamped `fromDate` into
+   * [today, today + maxAdvanceDays] already (see shared/lib/schedule-day-window).
+   *
+   * Silent on both counts, exactly as `getBlockedSeats` and
+   * `BookingPolicyService.getBookingPolicy` are: this is a background
+   * refinement of a page that already works, so the global loading overlay must
+   * not flash over it and a failure must not pop a modal over a good result
+   * list. A failure resolves to `null` — "we were told nothing" — never an
+   * error UI, and the key is dropped so the next search retries.
+   *
+   * Staleness is accepted, deliberately: seats sell while the page is open, so
+   * a day cached as available can go empty. Worst case the customer taps and
+   * meets the existing empty state — the pre-card behaviour for every day.
+   */
+  getAvailabilityCached(
+    request: ScheduleAvailabilityReq
+  ): Observable<ScheduleAvailability | null> {
+    const key = availabilityRequestKey(request);
+    const hit = this.availabilityRequests.get(key);
+    if (hit) {
+      return hit;
+    }
+
+    const request$ = this.http
+      .post<ResponseAPI<ScheduleAvailability>>(
+        `${environment.apiUrl}/api/schedules/availability`,
+        request,
+        {
+          context: new HttpContext()
+            .set(SKIP_GLOBAL_LOADING_ALERT, true)
+            .set(SKIP_GLOBAL_ERROR_ALERT, true),
+        }
+      )
+      .pipe(
+        map((response) => response.data ?? null),
+        catchError(() => {
+          this.availabilityRequests.delete(key);
+          return of(null);
+        }),
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    this.availabilityRequests.set(key, request$);
+    return request$;
   }
 
   /**

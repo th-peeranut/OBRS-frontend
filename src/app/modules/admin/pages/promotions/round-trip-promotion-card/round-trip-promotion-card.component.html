@@ -135,8 +135,8 @@
             }
           </div>
           <div class="admin-form-field full">
-            <button type="submit" class="admin-btn admin-btn-primary" [disabled]="isSaving">
-              {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+            <button type="submit" class="admin-btn admin-btn-primary" [disabled]="isSaving" [appPending]="isSaving">
+              {{ 'ADMIN.COMMON.SAVE' | translate }}
             </button>
           </div>
         </form>

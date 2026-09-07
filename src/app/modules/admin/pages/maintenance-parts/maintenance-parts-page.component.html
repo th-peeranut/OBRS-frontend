@@ -136,6 +136,7 @@
                     class="admin-btn admin-btn-small"
                     data-testid="part-toggle-active"
                     [disabled]="busyId === part.id"
+                    [appPending]="busyId === part.id"
                     (click)="toggleActive(part)"
                     >
                     {{
