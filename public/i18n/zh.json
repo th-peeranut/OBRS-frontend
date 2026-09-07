@@ -2815,7 +2815,7 @@
     "UNSAVED_CHANGES_CANCEL": "继续编辑",
     "ERROR": {
       "LOAD_FAILED": "无法加载您的通知偏好设置，请重试。",
-      "CRITICAL_LAST_CHANNEL": "此通知必须至少保留一个开启的渠道。",
+      "CRITICAL_LAST_CHANNEL": "无法关闭——这是此通知仅存的渠道。",
       "GENERIC": "发生错误，请重试。"
     },
     "TYPE": {

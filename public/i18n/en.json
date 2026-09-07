@@ -2815,7 +2815,7 @@
     "UNSAVED_CHANGES_CANCEL": "Keep editing",
     "ERROR": {
       "LOAD_FAILED": "Couldn't load your notification preferences. Please try again.",
-      "CRITICAL_LAST_CHANNEL": "At least one channel must stay on for this notification.",
+      "CRITICAL_LAST_CHANNEL": "Can't turn this off — it's the last channel left for this notification.",
       "GENERIC": "Something went wrong. Please try again."
     },
     "TYPE": {
