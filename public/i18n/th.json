@@ -2824,6 +2824,8 @@
       "SCHEDULE_CANCELLED": "ยกเลิกเที่ยวเดินทาง",
       "BOOKING_RESCHEDULED": "เปลี่ยนแปลงการจอง",
       "SCHEDULE_TIME_CHANGED": "เปลี่ยนแปลงเวลาเดินทาง",
+      "SCHEDULE_DELAYED": "เที่ยวรถล่าช้า",
+      "SCHEDULE_VEHICLE_CHANGED": "เปลี่ยนรถ",
       "PRE_DEPARTURE_REMINDER": "แจ้งเตือนก่อนเดินทาง",
       "BOARDING_REMINDER": "แจ้งเตือนขึ้นรถ"
     }
