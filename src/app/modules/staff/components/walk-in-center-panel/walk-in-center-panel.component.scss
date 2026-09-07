@@ -82,6 +82,27 @@
   }
 }
 
+// OBRS-1045: fare category (adult/child). Same accent language as .ptype-tile above — it sits
+// directly under that row and answers the neighbouring question, so it reads as one control group.
+.fare-tile {
+  border: 1px solid #dee2e6;
+  background-color: transparent;
+  font-size: 0.8rem;
+  color: #212529;
+  transition: border-color 0.15s, background-color 0.15s;
+
+  &:hover {
+    border-color: var(--accent-strong);
+    background-color: var(--accent-soft);
+  }
+
+  &--active {
+    border-color: var(--accent-strong) !important;
+    background-color: var(--accent-soft) !important;
+    font-weight: 600;
+  }
+}
+
 .ptype-icon {
   width: 40px;
   height: 40px;
@@ -113,6 +134,13 @@
     border-color: var(--admin-outline);
   }
   .ptype-label {
+    color: var(--admin-text);
+  }
+  // OBRS-1045: same treatment as .ptype-tile above — inactive follows the dark surface, the
+  // --active state keeps its accent.
+  .fare-tile {
+    background-color: var(--admin-surface-soft);
+    border-color: var(--admin-outline);
     color: var(--admin-text);
   }
   .ptype-icon-fallback {

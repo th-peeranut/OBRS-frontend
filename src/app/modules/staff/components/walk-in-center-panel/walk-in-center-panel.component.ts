@@ -64,6 +64,15 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   @Input() passengerCount = 1;
   @Output() passengerCountChange = new EventEmitter<number>();
 
+  // OBRS-1045: fare_category for the NEXT seat click — a separate dimension from
+  // `passengerGender` above (ADR-0046), so a child still has a gender and still colours the seat
+  // map. Owned by sell-page like every other capture on this panel.
+  @Input() fareCategory: 'adult' | 'child' = 'adult';
+  @Output() fareCategoryChange = new EventEmitter<'adult' | 'child'>();
+  /** OBRS-1045: OPEN-mode "how many of `passengerCount` are children" — owned by sell-page. */
+  @Input() childCount = 0;
+  @Output() childCountChange = new EventEmitter<number>();
+
   // OBRS-358: how many of the current sale's tickets spill into the jump
   // seat (walk-in-only, sold last) — owned/computed by sell-page
   // (`overflowUnits`), passed through for the inline warning hint below the
@@ -337,6 +346,24 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     if (this.passengerCount > 1) {
       this.passengerCountChange.emit(this.passengerCount - 1);
     }
+  }
+
+  // OBRS-1045: the child half of an OPEN sale. Bounded by the headcount above it, not by the
+  // vehicle's capacity — sell-page re-clamps on its side too, so a stale binding cannot get past.
+  protected incrementChildCount(): void {
+    if (this.childCount < this.passengerCount) {
+      this.childCountChange.emit(this.childCount + 1);
+    }
+  }
+
+  protected decrementChildCount(): void {
+    if (this.childCount > 0) {
+      this.childCountChange.emit(this.childCount - 1);
+    }
+  }
+
+  protected onSelectFareCategory(v: 'adult' | 'child'): void {
+    this.fareCategoryChange.emit(v);
   }
 
   protected get currentSeat(): string {
