@@ -2825,6 +2825,8 @@
       "SCHEDULE_CANCELLED": "Trip cancelled",
       "BOOKING_RESCHEDULED": "Booking rescheduled",
       "SCHEDULE_TIME_CHANGED": "Trip time changed",
+      "SCHEDULE_DELAYED": "Trip Delayed",
+      "SCHEDULE_VEHICLE_CHANGED": "Vehicle Changed",
       "PRE_DEPARTURE_REMINDER": "Pre-departure reminder",
       "BOARDING_REMINDER": "Boarding reminder"
     }
