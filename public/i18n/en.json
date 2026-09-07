@@ -3112,6 +3112,9 @@
     "DAY_STRIP_NO_TRIPS": "No trips",
     "NEAREST_DAY_HINT": "The nearest day with trips is {{date}}",
     "ESTIMATE_KM_UNIT": "km",
+    "PICKUP_STOP": "Pickup",
+    "DROPOFF_STOP": "Drop-off",
+    "OPEN_IN_MAPS": "Open in Maps",
     "RESTORED_UNAVAILABLE": "The trip you picked earlier is no longer available. Please choose another one."
   },
   "REVIEW_SCHEDULE_BOOKING": {
