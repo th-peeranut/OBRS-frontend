@@ -1387,6 +1387,32 @@ enforced rule with a test behind it.
   whose range can be one-sided/open (`config-change-history` was excluded
   for exactly that reason).
 
+- **Horizontally scrolling selection rail** (OBRS-862,
+  `app-schedule-booking-day-strip` on `/schedule-booking`): no existing
+  customer-shell control is a scrollable single-select rail —
+  `app-trip-type-toggle` is a fixed two-option pill pair, `nav-tabs` /
+  `.schedule-tabs` are admin-shell and read `--admin-*` (which does not resolve
+  outside `.admin-shell`), and PrimeNG ships no matching primitive. The rule:
+  **`overflow-x` goes on the inner flex row, never on `:host` and never on the
+  page**; `:host` is capped with `width: min(100%, <max>)`; items are
+  `flex: 0 0 auto` at ≥ 44×44 px with ≥ 8 px gaps; the partially-cut item at the
+  right edge is the scroll affordance (no arrows, no gradient mask, no JS). The
+  selected item reuses the `trip-type-toggle` selection look verbatim
+  (`$primary-blue` + `$text-white`; dark `$dk-accent` + `$dk-bg`), and that is a
+  SELECTION state, not a button role — §4's one-primary rule is untouched.
+  Locked by `customer-pages.ts`'s `schedule-booking-day-strip` entry, whose
+  `mustRender` scores both coloured states in both themes.
+
+- **"Unavailable" as a selection state** (OBRS-862, `.day-strip__chip.is-unavailable`):
+  light `$primary-lightgrey` fill + `$text-black` label (8.1:1), dark
+  `$dk-bg-soft` + `$dk-text-muted` (5.9:1). Three requirements travel with it and
+  none is optional: a **non-hue carrier** (here `line-through` on the date), a
+  visually-hidden reason so a screen reader hears WHY, and **`aria-disabled`
+  rather than the native `disabled`** — a disabled button leaves the tab order,
+  so a keyboard user can neither reach it nor hear the reason; the click handler
+  no-ops instead. Reuse this pair for the next option that must be shown-but-not-
+  choosable rather than inventing a second muted role.
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that

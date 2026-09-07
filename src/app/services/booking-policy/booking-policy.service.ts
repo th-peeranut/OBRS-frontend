@@ -1,6 +1,6 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { catchError, map, Observable, of, shareReplay, startWith } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
@@ -48,7 +48,42 @@ export const BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK = 60;
   providedIn: 'root',
 })
 export class BookingPolicyService {
-  constructor(private readonly http: HttpClient) {}
+  /**
+   * OBRS-862 — the advance-sale cap as a plain number, with the fallback, the
+   * failure handling and the "don't block on the fetch" `startWith` applied
+   * exactly ONCE.
+   *
+   * Every consumer that only wants the number reads THIS, never
+   * `getBookingPolicy()` + its own copy of the pipeline. Not a tidiness point:
+   * `/schedule-booking` renders the filter, the day strip and (when the list is
+   * empty) the nearest-day hint together, and three independent in-flight GETs
+   * can resolve at three different moments. While they disagree, the strip and
+   * the list compute different day windows and therefore different
+   * `availabilityRequestKey`s — which is precisely the dedup
+   * `shared/lib/schedule-day-window.ts` exists to guarantee. One shared,
+   * replayed source cannot disagree with itself.
+   *
+   * `refCount: false` so the answer survives the last unsubscribe: this is an
+   * owner-edited config read on nearly every customer screen, and the server
+   * re-validates the true cap on submit regardless. Built in the constructor
+   * body (not a field initializer) because `getBookingPolicy()` needs `http`,
+   * which class-field initialization order does not guarantee under
+   * `useDefineForClassFields`. Cold until the first subscriber, so declaring
+   * it fires no request on its own.
+   */
+  readonly maxAdvanceDays$: Observable<number>;
+
+  constructor(private readonly http: HttpClient) {
+    this.maxAdvanceDays$ = this.getBookingPolicy().pipe(
+      map(
+        (response) =>
+          response.data?.maxAdvanceDays ?? BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK
+      ),
+      catchError(() => of(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK)),
+      startWith(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+  }
 
   // Both consumers own their own failure UX and neither should block the page:
   // business-policy renders an inline error + retry in place of policy item 1,

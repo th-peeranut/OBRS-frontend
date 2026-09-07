@@ -10,6 +10,7 @@ import { ScheduleBookingFilterComponent } from './components/schedule-booking-fi
 import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownObrsPassengerComponent } from '../home/components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { ScheduleBookingListComponent } from './components/schedule-booking-list/schedule-booking-list.component';
+import { ScheduleBookingDayStripComponent } from './components/schedule-booking-day-strip/schedule-booking-day-strip.component';
 import { DropdownGroupObrsComponent } from '../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
 import { StationSwapButtonComponent } from '../../shared/components/station-swap-button/station-swap-button.component';
 import { TripTypeToggleComponent } from '../../shared/components/trip-type-toggle/trip-type-toggle.component';
@@ -33,6 +34,7 @@ const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
     ScheduleBookingComponent,
     ScheduleBookingFilterComponent,
     ScheduleBookingListComponent,
+    ScheduleBookingDayStripComponent,
   ],
   imports: [
     SharedModule,

@@ -1,11 +1,12 @@
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Store } from '@ngrx/store';
 import { Router } from '@angular/router';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import dayjs from 'dayjs';
 
 import { ScheduleBookingFilterComponent } from './schedule-booking-filter.component';
@@ -40,22 +41,38 @@ import { invokeGetScheduleListApi } from '../../../../shared/stores/schedule-lis
 // renders nothing and no assertion in this file changes.
 import { StationLoadErrorComponent } from '../../../../shared/components/station-load-error/station-load-error.component';
 
-/** OBRS-698: resolves the real, owner-editable advance-sale cap. */
+/** OBRS-698: resolves the real, owner-editable advance-sale cap.
+ *
+ *  OBRS-862 moved the fallback/`catchError` the component used to own onto
+ *  `BookingPolicyService.maxAdvanceDays$`, so this builds a REAL service over
+ *  a fake `HttpClient` rather than a hand-written object — a stub that
+ *  re-implemented that pipeline would assert against a copy of the code under
+ *  test. `undefined` still means "200 with no body", the arm that proves the
+ *  fallback covers a malformed response and not only a failed one. */
 function createBookingPolicyServiceStub(
   maxAdvanceDays?: number
 ): BookingPolicyService {
-  return {
-    getBookingPolicy: () =>
-      of(
-        maxAdvanceDays === undefined
-          ? { code: 200, message: 'OK' }
-          : {
-              code: 200,
-              message: 'OK',
-              data: { maxAdvanceDays, cutoffMinutes: 20 },
-            }
-      ),
-  } as unknown as BookingPolicyService;
+  return createBookingPolicyServiceResponseStub(
+    of(
+      maxAdvanceDays === undefined
+        ? { code: 200, message: 'OK' }
+        : {
+            code: 200,
+            message: 'OK',
+            data: { maxAdvanceDays, cutoffMinutes: 20 },
+          }
+    )
+  );
+}
+
+/** The same real service, driven by an arbitrary response stream — the failure
+ *  arm below needs `throwError`, which only the real pipeline can absorb. */
+function createBookingPolicyServiceResponseStub(
+  response$: Observable<unknown>
+): BookingPolicyService {
+  return new BookingPolicyService({
+    get: () => response$,
+  } as unknown as HttpClient);
 }
 
 /** OBRS-1701: `StationService` answering with NO province data — the ungrouped
@@ -183,9 +200,9 @@ describe('ScheduleBookingFilterComponent', () => {
       createStoreStub(),
       createTranslateStub(),
       alertService,
-      {
-        getBookingPolicy: () => throwError(() => new Error('offline')),
-      } as unknown as BookingPolicyService,
+      createBookingPolicyServiceResponseStub(
+        throwError(() => new Error('offline'))
+      ),
       createRouteMapServiceStub(),
       createStationServiceStub(),
       createLanguageServiceStub()

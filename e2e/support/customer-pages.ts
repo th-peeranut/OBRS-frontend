@@ -370,6 +370,14 @@ const FIXTURES: [RegExp, (m: RegExpExecArray) => unknown][] = [
   [/\/reschedule-policy$/, () => ok(RESCHEDULE_POLICY)],
   [/\/operations-policy$/, () => ok(OPERATIONS_POLICY)],
   [/\/parcel-policy$/, () => ok(PARCEL_POLICY)],
+  // OBRS-862. Relative to the RUN's today, not a literal: the day strip clamps
+  // its window to [today, today + cap], so a fixed date would answer for days
+  // the strip never asks about and every chip would render `unknown` -- i.e.
+  // available -- and the greyed state would go unmeasured again.
+  [
+    /\/schedules\/availability$/,
+    () => ok({ availableDates: [dayFromToday(1), dayFromToday(3)], effectiveDays: 7 }),
+  ],
   [/\/schedules\/search/, () => ok({ departureSchedules: SCHEDULES, arrivalSchedules: null })],
   [/\/routes\/[^/]+\/pickup-dropoff$/, () => ok({ route: ROUTE_META, pickup: PICKUP_STOPS, dropoff: DROPOFF_STOPS })],
   [/\/routes/, () => ROUTES],
@@ -517,6 +525,13 @@ export interface CustomerPage {
   storeOverride?: () => Record<string, unknown>;
 }
 
+/** OBRS-862. Local YYYY-MM-DD, `offset` days from today. */
+function dayFromToday(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /** Local YYYY-MM-DD. `toISOString()` is UTC and is the wrong day here for 7 hours a night. */
 function todayLocal(): string {
   const d = new Date();
@@ -627,6 +642,38 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     // The panel contributes no control in this state -- the filter form's are
     // covered by the two entries above.
     hoverTargets: [],
+  },
+  {
+    // OBRS-862. A FOURTH /schedule-booking entry, and it exists because the
+    // three above cannot render the day strip at all: STORE_SEED's filter
+    // carries station SLUGS where the app stores numeric ids, so
+    // `getStationSlugById` resolves nothing, `isSearchable` is false and the
+    // strip does not render. Every chip state would have gone unmeasured --
+    // the same blind spot that let `.no-results` ship at 4.45:1 for eleven
+    // months, restated one component over.
+    //
+    // `mustRender` pins the two states that carry their own colour pair: the
+    // SELECTED chip (fill inversion, both themes) and an UNAVAILABLE one
+    // (muted fill + muted label). The availability fixture above is what puts
+    // a greyed chip on the screen; if it ever stops matching, both selectors
+    // render zero times and this entry fails by name rather than sweeping a
+    // strip in which every chip is enabled.
+    key: 'schedule-booking-day-strip',
+    url: '/schedule-booking',
+    landsOn: '/schedule-booking',
+    seed: true,
+    storeOverride: () => ({
+      filter: {
+        ...STORE_SEED.filter,
+        startStationId: 1,
+        stopStationId: 4,
+        departureDate: todayLocal(),
+      },
+    }),
+    minText: 30,
+    minControls: 2,
+    mustRender: ['.day-strip__chip.is-selected', '.day-strip__chip.is-unavailable'],
+    hoverTargets: ['.day-strip__chip'],
   },
   {
     key: 'review-schedule-booking',

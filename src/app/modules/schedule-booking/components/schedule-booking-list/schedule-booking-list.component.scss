@@ -64,6 +64,14 @@
     gap: $space-2xs;
     text-align: center;
 
+    /* OBRS-862 wraps `.no-results` in this panel so the nearest-day hint can
+       sit under it. Zeroing the paragraph's own box keeps that render
+       pixel-identical to the pre-card one when there is no hint to show. */
+    .no-results {
+      margin: 0;
+      padding: 0;
+    }
+
     &__title {
       margin: 0;
       font-size: $font-size-md;

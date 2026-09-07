@@ -226,6 +226,7 @@ export const CUSTOMER_HOST: Record<string, string> = {
   // store differs, and a host box is a property of the route.
   'schedule-booking-empty': 'app-schedule-booking',
   'schedule-booking-no-results': 'app-schedule-booking',
+  'schedule-booking-day-strip': 'app-schedule-booking',
   'review-schedule-booking': 'app-review-schedule-booking',
   'passenger-info': 'app-passenger-info',
   payment: 'app-payment',

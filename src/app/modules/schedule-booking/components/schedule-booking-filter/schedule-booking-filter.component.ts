@@ -163,21 +163,17 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     // resolves (owner edits it at /admin/settings/booking-policy, OBRS-564 —
     // moved under the tabbed settings page by OBRS-702).
     // A failed fetch just keeps the fallback — the server is the real gate on
-    // submit either way, so there is nothing to retry here. The explicit
-    // no-op error callback is required, not stylistic: an observer without
-    // one lets the interceptor's rethrow surface as an RxJS unhandled error.
-    this.bookingPolicyService
-      .getBookingPolicy()
+    // submit either way, so there is nothing to retry here. Both the fallback
+    // and the failed-fetch handling (without which the interceptor's rethrow
+    // surfaces as an RxJS unhandled error) now live once on
+    // `BookingPolicyService.maxAdvanceDays$`, which OBRS-862 made the single
+    // source: this calendar's cap, the day strip's window and the list's
+    // nearest-day hint are three views of ONE number on one screen, and three
+    // separate GETs let them disagree while they resolved.
+    this.bookingPolicyService.maxAdvanceDays$
       .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          if (response.data) {
-            this.maxDate = dayjs(this.minDate)
-              .add(response.data.maxAdvanceDays, 'day')
-              .toDate();
-          }
-        },
-        error: () => undefined,
+      .subscribe((maxAdvanceDays) => {
+        this.maxDate = dayjs(this.minDate).add(maxAdvanceDays, 'day').toDate();
       });
 
     this.rawProvinceStationList
