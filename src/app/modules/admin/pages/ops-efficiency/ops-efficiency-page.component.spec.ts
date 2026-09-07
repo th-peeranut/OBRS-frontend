@@ -9,6 +9,7 @@ import { OpsEfficiencyStore } from './ops-efficiency.store';
 import { OpsEfficiencyDto } from '../../../../shared/interfaces/ops-efficiency.interface';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
+import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 function makeData(overrides: Partial<OpsEfficiencyDto> = {}): OpsEfficiencyDto {
   return {
@@ -53,16 +54,33 @@ describe('OpsEfficiencyPageComponent', () => {
     expect(c['pctDisplay'](75)).toBe('75.0%');
   });
 
+  it('accepts a range exactly at the 366-day cap and rejects one day past it', () => {
+    const store = makeStoreStub(makeData());
+    const c = new OpsEfficiencyPageComponent(store as unknown as OpsEfficiencyStore, createTranslateStub());
+    c.ngOnInit();
+    store.setRange.calls.reset();
+
+    // 2026-01-01 -> 2027-01-02 spans 366 days (2026 is not a leap year).
+    c['onRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 2) });
+    expect(c['rangeError']).toBe('');
+    expect(store.setRange).toHaveBeenCalledOnceWith('2026-01-01', '2027-01-02');
+
+    store.setRange.calls.reset();
+    c['onRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 3) });
+    expect(c['rangeError']).toBe('ADMIN.REPORTS.ERROR.RANGE_TOO_LARGE');
+    expect(store.setRange).not.toHaveBeenCalled();
+  });
+
   it('guards an invalid range and dispatches a valid one', () => {
     const store = makeStoreStub(makeData());
     const c = new OpsEfficiencyPageComponent(store as unknown as OpsEfficiencyStore, createTranslateStub());
     c.ngOnInit(); store.setRange.calls.reset();
     c['fromDate'] = new Date(2026, 6, 10); c['toDate'] = new Date(2026, 6, 1);
-    c['onFromDateChange'](c['fromDate']);
+    c['onRangeChange']({ from: c['fromDate'], to: c['toDate'] });
     expect(c['rangeError']).toBeTruthy();
     expect(store.setRange).not.toHaveBeenCalled();
     c['rangeError'] = ''; c['fromDate'] = new Date(2026, 6, 1); c['toDate'] = new Date(2026, 6, 5);
-    c['onToDateChange'](c['toDate']);
+    c['onRangeChange']({ from: c['fromDate'], to: c['toDate'] });
     expect(store.setRange).toHaveBeenCalledOnceWith('2026-07-01', '2026-07-05');
   });
 
@@ -71,7 +89,7 @@ describe('OpsEfficiencyPageComponent', () => {
     beforeEach(async () => {
       const store = makeStoreStub(makeData());
       await TestBed.configureTestingModule({
-        declarations: [OpsEfficiencyPageComponent],
+        declarations: [OpsEfficiencyPageComponent, DateRangePickerComponent],
         imports: [CommonModule, FormsModule, DatePickerModule, AdminSharedModule, TranslateModule.forRoot()],
         providers: [{ provide: OpsEfficiencyStore, useValue: store }],
       }).compileComponents();

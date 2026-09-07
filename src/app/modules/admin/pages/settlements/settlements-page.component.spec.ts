@@ -260,6 +260,29 @@ describe('SettlementsPageComponent', () => {
     expect((component as any).contentState).toBe('empty');
   });
 
+  it('accepts a range exactly at the 366-day cap and rejects one day past it', () => {
+    const store = makeStoreStub(null);
+    const component = new SettlementsPageComponent(
+      store as any,
+      driverCashDaysStoreStub as any,
+      makeAdminApiStub() as any,
+      makeAlertStub() as any,
+      createTranslateStub()
+    );
+    component.ngOnInit();
+    store.setRange.calls.reset();
+
+    // 2026-01-01 -> 2027-01-02 spans 366 days (2026 is not a leap year).
+    component['onRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 2) });
+    expect(component['rangeError']).toBe('');
+    expect(store.setRange).toHaveBeenCalledOnceWith('2026-01-01', '2027-01-02');
+
+    store.setRange.calls.reset();
+    component['onRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 3) });
+    expect(component['rangeError']).toBe('ADMIN.SETTLEMENTS.ERROR.RANGE_TOO_LARGE');
+    expect(store.setRange).not.toHaveBeenCalled();
+  });
+
   it('contentState is "invalid" when the range guard trips (from > to) and does not dispatch', () => {
     const store = makeStoreStub(makePage());
     const component = new SettlementsPageComponent(
@@ -271,8 +294,7 @@ describe('SettlementsPageComponent', () => {
     );
     component.ngOnInit();
 
-    component['onFromDateChange'](new Date(2026, 6, 10));
-    component['onToDateChange'](new Date(2026, 6, 1));
+    component['onRangeChange']({ from: new Date(2026, 6, 10), to: new Date(2026, 6, 1) });
 
     expect((component as any).contentState).toBe('invalid');
     expect(store.setRange).not.toHaveBeenCalled();
