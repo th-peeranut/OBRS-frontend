@@ -197,9 +197,17 @@
   .stop-detail--shared {
     margin: 0 0 16px;
 
+    /* $text-softblack, not the $text-lightblack the row copy carries, for the
+       reason `.no-results` above already spells out: hoisting the block out of
+       `.schedule-item` moves it off $primary-white and onto this panel's
+       #f6fcff tint, where $text-lightblack measures 4.45:1 against a 4.5 floor
+       and $text-softblack measures 6.77:1. The link needs no partner rule -
+       $primary-blue is 5.15:1 on the tint. The row copy keeps its token: on
+       white it is 4.60:1 and clears. */
     .stop-detail__row {
       justify-content: flex-start;
       text-align: left;
+      color: $text-softblack;
     }
   }
 
