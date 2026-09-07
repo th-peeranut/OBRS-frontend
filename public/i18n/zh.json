@@ -2818,6 +2818,8 @@
       "SCHEDULE_CANCELLED": "行程已取消",
       "BOOKING_RESCHEDULED": "预订已改期",
       "SCHEDULE_TIME_CHANGED": "行程时间已变更",
+      "SCHEDULE_DELAYED": "行程延误",
+      "SCHEDULE_VEHICLE_CHANGED": "车辆变更",
       "PRE_DEPARTURE_REMINDER": "出发前提醒",
       "BOARDING_REMINDER": "登车提醒"
     }
