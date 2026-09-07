@@ -9,6 +9,7 @@ import {
   OpsSeatUtilizationDto,
   OpsVehicleTypeRowDto,
 } from '../../../../shared/interfaces/ops-efficiency.interface';
+import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -64,8 +65,7 @@ export class OpsEfficiencyPageComponent implements OnInit, OnDestroy {
   protected formatCount(value: number): string { return new Intl.NumberFormat(this.translate.currentLang || 'en').format(value); }
   protected trackByType(_i: number, r: OpsVehicleTypeRowDto): string { return r.vehicleType; }
 
-  protected onFromDateChange(value: Date | null): void { this.fromDate = value; this.applyRange(); }
-  protected onToDateChange(value: Date | null): void { this.toDate = value; this.applyRange(); }
+  protected onRangeChange(range: DateRange): void { this.fromDate = range.from; this.toDate = range.to; this.applyRange(); }
 
   private applyRange(): void {
     this.rangeError = '';
