@@ -218,21 +218,61 @@ const INSPECTION_ITEMS = ok([
 /** One van, and it is the driver's own, so the picker defaults to it (OBRS-1332). */
 const INSPECTABLE_VEHICLES = ok([{ id: 1, label: 'BUS-01 / TH-8888', assignedToMe: true }]);
 
+/**
+ * One walk-in trip for the sell page, because OBRS-1752 made the checkout column
+ * conditional on a trip being selected. On the generic empty backend the page is
+ * now a trip browser and nothing else, which cleared neither floor and rendered
+ * `input.form-control.form-control-sm` zero times -- the gate's own shortfall
+ * report, not a guess. The `act` below picks this trip, which puts the checkout
+ * form back under the sweep.
+ */
+const WALK_IN_ONE_TRIP = ok([
+  {
+    routeSlug: 'cbr-bkk',
+    routeLabel: 'Chonburi - Bangkok',
+    trips: [
+      {
+        scheduleId: 4201,
+        vehicleType: 'bus',
+        licensePlate: 'TH-8888',
+        driverName: 'Somchai Jaidee',
+        departureDateTime: '2030-06-17T08:00:00+07:00',
+        arrivalDateTime: '2030-06-17T13:00:00+07:00',
+        pricePerSeat: '350.00',
+        capacity: 21,
+        availableCount: 21,
+        reservedUnpaidCount: 0,
+        soldPaidCount: 0,
+        availableSeatNumbers: [
+          '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11',
+          '12', '13', '14', '15', '16', '17', '18', '19', '20', '21',
+        ],
+      },
+    ],
+  },
+]);
+
 export const STAFF_PAGES: StaffPage[] = [
   {
-    // The walk-in counter, with the empty backend the rest of this lane uses: the
-    // trip browser renders its date/route filters and its empty result panel,
-    // which is the operator's first screen every shift and carries the Bootstrap
-    // form-control family the staff shell inherits.
+    // The walk-in counter, the operator's first screen every shift, carrying the
+    // Bootstrap form-control family the staff shell inherits. Since OBRS-1752 the
+    // checkout column is behind a trip selection, so this entry brings its own
+    // trip and clicks it -- the empty backend the rest of this lane uses would
+    // sweep a trip browser with no form on it.
     key: 'staff-sell',
     url: '/staff/sell',
     landsOn: '/staff/sell',
-    // Measured 2026-09-05 on this fixture: 44 text runs light / 48 dark, 10
-    // controls in both. The floors sit below the smaller of each pair, far enough
-    // to survive a copy change and not far enough to survive a page that did not
-    // render.
-    minText: 40,
-    minControls: 8,
+    fixture: [{ match: /\/private\/schedules\/walk-in$/, body: WALK_IN_ONE_TRIP }],
+    act: async (page) => {
+      await page.locator('.trip-row').first().click({ timeout: 10_000 });
+    },
+    // Measured 2026-09-07 on this fixture, with the trip selected: 76 text runs
+    // light / 81 dark, 16 controls in both. The floors sit below the smaller of
+    // each pair, far enough to survive a copy change and not far enough to
+    // survive a page that did not render -- or a trip click that stopped landing,
+    // which would drop this page back to the 32/3 the empty backend gives.
+    minText: 68,
+    minControls: 13,
     mustRender: ['app-sell-page', 'input.form-control.form-control-sm'],
   },
   {

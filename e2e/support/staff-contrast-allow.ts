@@ -3,7 +3,8 @@
  *
  * Same contract as `customer-contrast-allow.ts`, which should be read first: this
  * is a DEBT REGISTER, not an exemption list. Every entry below was measured on
- * 2026-09-05 by the gate that reads it, on `origin/dev` at 5950c448, and names
+ * 2026-09-05 by the gate that reads it, on `origin/dev` at 5950c448 -- the last
+ * seven on 2026-09-07, on `ao/obrs-1752-hide-checkout-until-trip` -- and names
  * the card that owns the fix. A NEW site below AA still turns the gate red.
  *
  * WHY THIS IS A SECOND REGISTER AND NOT MORE ROWS IN `CONTRAST_ALLOW`
@@ -38,9 +39,11 @@
  * spelling of exactly those three, and they wait on exactly that decision. A
  * second card would split one decision across two.
  *
- * NOT ONE OF THESE IS A TEXT OR PLACEHOLDER FINDING. All 28 are invariant B
- * (WCAG 1.4.11, control boundary). The staff shell's text and its `::placeholder`
- * colours clear AA on all four pages in both themes -- including the two OBRS-797
+ * 32 of the 35 are invariant B (WCAG 1.4.11, control boundary) and name OBRS-772.
+ * The other three are TEXT findings (invariant A, 4.5:1) and name OBRS-1760 --
+ * pre-existing colours on `/staff/sell` that this sweep only began to render once
+ * OBRS-1752 made its fixture select a trip. No `::placeholder` finding: those
+ * clear AA on all four pages in both themes -- including the two OBRS-797
  * fixed, which this sweep now measures at 7.18:1 in dark rather than taking on
  * trust from a probe that CI never ran.
  *
@@ -93,4 +96,31 @@ export const STAFF_CONTRAST_ALLOW: Record<string, string> = {
   // --- design-system dropdown trigger ---------------------------------------
   'light|button.admin-dropdown-trigger|boundary-on-#ffffff': '1.19:1 -- OBRS-772 .admin-dropdown-trigger boundary (staff schedules / inspection vehicle picker)',
   'dark|button.admin-dropdown-trigger|boundary-on-#1d2226': '2.36:1 -- OBRS-772 .admin-dropdown-trigger boundary (staff schedules / inspection vehicle picker)',
+
+  // --- surfaces the sell page only renders once a trip is selected ----------
+  // The same two ratios as the entries above, and for the route header the same
+  // mechanism: `.route-group-header` carries Bootstrap's own `border-bottom`
+  // utility, which reads `--bs-border-color`.
+  //
+  // `.ptype-tile` is the ratio WITHOUT the mechanism, and is filed here anyway
+  // with its difference written down rather than smoothed over. Its light border
+  // is `border: 1px solid #dee2e6` -- a bare literal at
+  // `walk-in-center-panel.component.scss:67`, the only one of the eight #dee2e6
+  // sites in `src/` that does not read `var(--bs-border-color, #dee2e6)`. It
+  // measures 1.30:1 because the literal happens to equal the token's value, so a
+  // token-level fix for OBRS-772 would repaint every other site and leave this
+  // one exactly where it is. Whoever takes OBRS-772 has to change that line by
+  // hand; its dark half needs nothing, already being on `--admin-outline`.
+  'light|div.route-group-header.sticky-top.bg-light|boundary-on-#ffffff': '1.30:1 -- OBRS-772 Bootstrap border boundary (staff sell, trip-browser route header)',
+  'dark|div.route-group-header.sticky-top.bg-light|boundary-on-#1d2226': '1.61:1 -- OBRS-772 Bootstrap border boundary (staff sell, trip-browser route header)',
+  'light|div.ptype-tile.d-flex.flex-column|boundary-on-#ffffff': '1.30:1 -- OBRS-772 Bootstrap border boundary (staff sell, passenger-type tile)',
+  'dark|div.ptype-tile.d-flex.flex-column|boundary-on-#1d2226': '1.61:1 -- OBRS-772 Bootstrap border boundary (staff sell, passenger-type tile)',
+
+  // --- the three TEXT findings, which are NOT OBRS-772 ----------------------
+  // Invariant A, WCAG 1.4.3, 4.5:1 for normal-size text. A darker red and a
+  // darker active-tab blue are a fix, not a design-system decision, so these
+  // name their own card.
+  'light|span.badge.bg-danger.bg-opacity-10|#dc3545-on-#f2e2e3': '3.61:1 -- OBRS-1760 danger badge text (staff sell, trip-row reserved count)',
+  'dark|span.badge.bg-danger.bg-opacity-10|#dc3545-on-#2f2328': '3.34:1 -- OBRS-1760 danger badge text (staff sell, trip-row reserved count)',
+  'light|p-tab.p-ripple.p-tab.p-tab-active|#3b82f6-on-#ffffff': '3.68:1 -- OBRS-1760 active tab label (staff sell, center panel)',
 };
