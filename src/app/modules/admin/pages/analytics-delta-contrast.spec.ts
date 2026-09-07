@@ -49,6 +49,7 @@ import { TranslateModule } from '@ngx-translate/core';
 // measuring a template that never rendered.
 import { DatePickerModule } from 'primeng/datepicker';
 
+import { DateRangePickerComponent } from '../../../shared/components/date-range-picker/date-range-picker.component';
 import { BookingTrendPageComponent } from './booking-trend/booking-trend-page.component';
 import { BookingTrendStore } from './booking-trend/booking-trend.store';
 import { RevenueAnalyticsPageComponent } from './revenue-analytics/revenue-analytics-page.component';
@@ -143,7 +144,10 @@ describe('analytics delta chips — contrast on the painted admin surface (OBRS-
   ): Promise<{ host: HTMLElement; teardown: () => void }> {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
-      declarations: [component],
+      // OBRS-1735: the pages under test now render app-admin-date-range-picker, which
+      // SharedModule declares — not AdminSharedModule. Declaring it here keeps the
+      // deliberate no-NO_ERRORS_SCHEMA stance above: the template really renders.
+      declarations: [component, DateRangePickerComponent],
       imports: [CommonModule, FormsModule, DatePickerModule, AdminSharedModule, TranslateModule.forRoot()],
       providers: [{ provide, useValue: store }],
     }).compileComponents();

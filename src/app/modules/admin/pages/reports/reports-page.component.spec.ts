@@ -21,6 +21,7 @@ import { PerHeadEarningsStore } from './per-head-earnings.store';
 import { ParcelShareClawbacksStore } from './parcel-share-clawbacks.store';
 import { ParcelShareClawbacksSectionComponent } from './parcel-share-clawbacks-section/parcel-share-clawbacks-section.component';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
+import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 function makeSummary(overrides: Partial<ReportsSummaryDto> = {}): ReportsSummaryDto {
   return {
@@ -232,8 +233,7 @@ describe('ReportsPageComponent', () => {
     const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
-    component['onFromDateChange'](new Date(2026, 6, 10));
-    component['onToDateChange'](new Date(2026, 6, 1));
+    component['onRangeChange']({ from: new Date(2026, 6, 10), to: new Date(2026, 6, 1) });
 
     expect((component as any).contentState).toBe('invalid');
   });
@@ -255,8 +255,7 @@ describe('ReportsPageComponent', () => {
     const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
-    component['onFromDateChange'](new Date(2026, 6, 10));
-    component['onToDateChange'](new Date(2026, 6, 1));
+    component['onRangeChange']({ from: new Date(2026, 6, 10), to: new Date(2026, 6, 1) });
 
     expect((component as any).rangeError).toBe('ADMIN.REPORTS.ERROR.RANGE_INVALID');
     expect(store.setRange).not.toHaveBeenCalled();
@@ -269,8 +268,7 @@ describe('ReportsPageComponent', () => {
     const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
-    component['onFromDateChange'](new Date(2020, 0, 1));
-    component['onToDateChange'](new Date(2026, 0, 1));
+    component['onRangeChange']({ from: new Date(2020, 0, 1), to: new Date(2026, 0, 1) });
 
     expect((component as any).rangeError).toBe('ADMIN.REPORTS.ERROR.RANGE_TOO_LARGE');
     expect(store.setRange).not.toHaveBeenCalled();
@@ -281,8 +279,7 @@ describe('ReportsPageComponent', () => {
     const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
-    component['onFromDateChange'](new Date(2026, 5, 1));
-    component['onToDateChange'](new Date(2026, 5, 10));
+    component['onRangeChange']({ from: new Date(2026, 5, 1), to: new Date(2026, 5, 10) });
 
     expect((component as any).rangeError).toBe('');
     expect(store.setRange).toHaveBeenCalledWith('2026-06-01', '2026-06-10');
@@ -407,6 +404,7 @@ describe('ReportsPageComponent (export button, OBRS-442)', () => {
     TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
       declarations: [
+        DateRangePickerComponent,
         ReportsPageComponent,
         ExportButtonComponent,
         ParcelShareClawbacksSectionComponent,

@@ -9,6 +9,7 @@ import { CashOnlineReconciliationReportStore } from './cash-online-reconciliatio
 import { CashOnlineReconciliationReportDto } from '../../../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
+import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 function makeReport(
   overrides: Partial<CashOnlineReconciliationReportDto> = {}
@@ -120,8 +121,7 @@ describe('CashOnlineReconciliationReportPageComponent', () => {
       );
       component.ngOnInit();
 
-      component['onFromDateChange'](new Date(2026, 6, 10));
-      component['onToDateChange'](new Date(2026, 6, 1));
+      component['onRangeChange']({ from: new Date(2026, 6, 10), to: new Date(2026, 6, 1) });
 
       expect((component as any).contentState).toBe('invalid');
       expect(store.setRange).not.toHaveBeenCalled();
@@ -199,8 +199,7 @@ describe('CashOnlineReconciliationReportPageComponent', () => {
       );
       component.ngOnInit();
 
-      component['onFromDateChange'](new Date(2026, 5, 1));
-      component['onToDateChange'](new Date(2026, 5, 10));
+      component['onRangeChange']({ from: new Date(2026, 5, 1), to: new Date(2026, 5, 10) });
 
       expect(store.setRange).toHaveBeenCalledWith('2026-06-01', '2026-06-10');
       expect((component as any).rangeError).toBe('');
@@ -214,12 +213,11 @@ describe('CashOnlineReconciliationReportPageComponent', () => {
       );
       component.ngOnInit();
 
-      // Set `to` FIRST (to a date before the default fromDate seeded by ngOnInit), so
-      // every intermediate state stays invalid — reversing this order would let the
-      // first change alone form a momentarily-valid range and legitimately dispatch
-      // setRange before the second change made it invalid.
-      component['onToDateChange'](new Date(2026, 5, 1));
-      component['onFromDateChange'](new Date(2026, 5, 10));
+      // OBRS-1735: the shared picker withholds the half-picked emit and hands the page one
+      // complete {from, to}, so a caller can no longer observe a one-ended range — which is
+      // what the "set `to` first" dance below used to be ordering around. The intermediate
+      // state still exists inside the picker; it just never reaches applyRange().
+      component['onRangeChange']({ from: new Date(2026, 5, 10), to: new Date(2026, 5, 1) });
 
       expect(store.setRange).not.toHaveBeenCalled();
       expect((component as any).rangeError).toBe(
@@ -235,8 +233,7 @@ describe('CashOnlineReconciliationReportPageComponent', () => {
       );
       component.ngOnInit();
 
-      component['onFromDateChange'](new Date(2025, 0, 1));
-      component['onToDateChange'](new Date(2026, 6, 1));
+      component['onRangeChange']({ from: new Date(2025, 0, 1), to: new Date(2026, 6, 1) });
 
       expect(store.setRange).not.toHaveBeenCalled();
       expect((component as any).rangeError).toBe(
@@ -252,7 +249,7 @@ describe('CashOnlineReconciliationReportPageComponent', () => {
       );
       component.ngOnInit();
 
-      component['onFromDateChange'](null);
+      component['onRangeChange']({ from: null, to: component['toDate'] });
 
       expect(store.setRange).not.toHaveBeenCalled();
     });
@@ -375,7 +372,7 @@ describe('CashOnlineReconciliationReportPageComponent (template rendering)', () 
 
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, AdminSharedModule],
-      declarations: [CashOnlineReconciliationReportPageComponent],
+      declarations: [CashOnlineReconciliationReportPageComponent, DateRangePickerComponent],
       providers: [{ provide: CashOnlineReconciliationReportStore, useValue: storeStub }],
     }).compileComponents();
 
