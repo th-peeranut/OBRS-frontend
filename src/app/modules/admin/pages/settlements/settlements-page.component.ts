@@ -92,6 +92,7 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
   protected driverCashDays: DriverCashDaySummaryRespDto[] = [];
   protected isDriverCashRefreshing = false;
   protected driverCashLoadError = '';
+  protected driverCashRangeError = '';
   protected driverCashFromDate: Date | null = null;
   protected driverCashToDate: Date | null = null;
 
@@ -518,6 +519,9 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
   }
 
   protected get driverCashContentState(): DriverCashDaysContentState {
+    if (this.driverCashRangeError) {
+      return 'invalid';
+    }
     if (this.isDriverCashLoading) {
       return 'loading';
     }
@@ -528,6 +532,10 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
       return 'empty';
     }
     return 'data';
+  }
+
+  protected get driverCashStateMessage(): string {
+    return this.driverCashRangeError || this.driverCashLoadError;
   }
 
   protected onDriverCashFromDateChange(value: Date | null): void {
@@ -541,12 +549,25 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
   }
 
   private applyDriverCashRange(): void {
+    this.driverCashRangeError = '';
+
     if (!this.driverCashFromDate || !this.driverCashToDate) {
       return;
     }
     const from = this.toDateInputValue(this.driverCashFromDate);
     const to = this.toDateInputValue(this.driverCashToDate);
     if (from > to) {
+      this.driverCashRangeError = this.translate.instant('ADMIN.SETTLEMENTS.ERROR.RANGE_INVALID');
+      return;
+    }
+    // OBRS-1736: the same 366-day cap applyRange() applies to this page's main range,
+    // and every other report page applies to its own. This was the last REPORT-style range without it;
+    // config-change-history (open-ended by design) and staff/my-earnings still have none.
+    const spanDays = Math.round(
+      (this.driverCashToDate.getTime() - this.driverCashFromDate.getTime()) / MS_PER_DAY
+    );
+    if (spanDays > MAX_RANGE_SPAN_DAYS) {
+      this.driverCashRangeError = this.translate.instant('ADMIN.SETTLEMENTS.ERROR.RANGE_TOO_LARGE');
       return;
     }
     this.driverCashDaysStore.setRange(from, to);

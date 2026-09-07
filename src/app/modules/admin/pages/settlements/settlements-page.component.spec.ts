@@ -283,6 +283,64 @@ describe('SettlementsPageComponent', () => {
     expect(store.setRange).not.toHaveBeenCalled();
   });
 
+  // OBRS-1736 — the driver-cash-days sub-filter is a second, independent range on this
+  // same page (OBRS-960). It checked from>to and then dispatched any span, while the main
+  // range above it has capped at 366 days all along. These pin the cap and its message.
+  describe('driver-cash-days range guard (OBRS-1736)', () => {
+    function makeComponent(): SettlementsPageComponent {
+      const store = makeStoreStub(null);
+      const component = new SettlementsPageComponent(
+        store as any,
+        driverCashDaysStoreStub as any,
+        makeAdminApiStub() as any,
+        makeAlertStub() as any,
+        createTranslateStub()
+      );
+      component.ngOnInit();
+      return component;
+    }
+
+    it('dispatches a span exactly at the 366-day cap', () => {
+      const component = makeComponent();
+
+      // 2026-01-01 -> 2027-01-02 spans 366 days (2026 is not a leap year).
+      component['onDriverCashFromDateChange'](new Date(2026, 0, 1));
+      driverCashDaysStoreStub.setRange.calls.reset();
+      component['onDriverCashToDateChange'](new Date(2027, 0, 2));
+
+      expect(component['driverCashRangeError']).toBe('');
+      expect(driverCashDaysStoreStub.setRange).toHaveBeenCalledOnceWith(
+        '2026-01-01',
+        '2027-01-02'
+      );
+    });
+
+    it('rejects a span one day past the cap, without dispatching', () => {
+      const component = makeComponent();
+
+      component['onDriverCashFromDateChange'](new Date(2026, 0, 1));
+      driverCashDaysStoreStub.setRange.calls.reset();
+      component['onDriverCashToDateChange'](new Date(2027, 0, 3));
+
+      expect(component['driverCashRangeError']).toBe('ADMIN.SETTLEMENTS.ERROR.RANGE_TOO_LARGE');
+      expect(driverCashDaysStoreStub.setRange).not.toHaveBeenCalled();
+      expect(component['driverCashContentState']).toBe('invalid');
+      expect(component['driverCashStateMessage']).toBe('ADMIN.SETTLEMENTS.ERROR.RANGE_TOO_LARGE');
+    });
+
+    it('rejects from > to, without dispatching', () => {
+      const component = makeComponent();
+
+      component['onDriverCashToDateChange'](new Date(2026, 5, 1));
+      driverCashDaysStoreStub.setRange.calls.reset();
+      component['onDriverCashFromDateChange'](new Date(2026, 5, 10));
+
+      expect(component['driverCashRangeError']).toBe('ADMIN.SETTLEMENTS.ERROR.RANGE_INVALID');
+      expect(driverCashDaysStoreStub.setRange).not.toHaveBeenCalled();
+      expect(component['driverCashContentState']).toBe('invalid');
+    });
+  });
+
   it('contentState is "invalid" when the range guard trips (from > to) and does not dispatch', () => {
     const store = makeStoreStub(makePage());
     const component = new SettlementsPageComponent(
