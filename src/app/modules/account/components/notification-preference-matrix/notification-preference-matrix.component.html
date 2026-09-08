@@ -1,4 +1,10 @@
 <div class="npref-matrix">
+  @if (hasCriticalRow) {
+    <p class="npref-matrix__critical-note" [id]="criticalNoteId">
+      {{ 'NOTIFICATION_PREFS.CRITICAL_HINT' | translate }}
+    </p>
+  }
+
   <div class="npref-matrix__header">
     <span class="npref-matrix__header-label"></span>
     <span class="npref-matrix__header-cell">{{ 'NOTIFICATION_PREFS.CHANNEL_EMAIL' | translate }}</span>
@@ -9,6 +15,7 @@
     <app-notification-preference-row
       [row]="row"
       [disabled]="disabled"
+      [criticalNoteId]="hasCriticalRow ? criticalNoteId : null"
       [showWarning]="warningType === row.type"
       (rowChange)="rowChange.emit($event)"
     ></app-notification-preference-row>

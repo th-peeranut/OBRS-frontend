@@ -24,6 +24,7 @@
     "test": "ng test",
     "test:local-env": "node scripts/check-local-env.mjs",
     "test:i18n": "node scripts/check-i18n-parity.mjs",
+    "test:notification-pref-types": "node scripts/check-notification-pref-types.mjs",
     "test:auth-layout": "node scripts/check-auth-layout-styles.mjs",
     "test:alert-i18n": "node scripts/check-alert-i18n.mjs",
     "test:theme-tokens": "node scripts/check-admin-theme-tokens.mjs",

@@ -2799,7 +2799,7 @@
     "CHANNEL_EMAIL": "Email",
     "CHANNEL_SMS": "SMS",
     "CHANNEL_NA": "Not available",
-    "CRITICAL_HINT": "At least one channel must stay on for this notification.",
+    "CRITICAL_HINT": "Notifications marked * must keep at least one channel on — you can't turn them all off.",
     "SAVE_BUTTON": "Save changes",
     "SAVE_SUCCESS": "Notification preferences saved.",
     "RETRY": "Try again",
@@ -2809,7 +2809,7 @@
     "UNSAVED_CHANGES_CANCEL": "Keep editing",
     "ERROR": {
       "LOAD_FAILED": "Couldn't load your notification preferences. Please try again.",
-      "CRITICAL_LAST_CHANNEL": "At least one channel must stay on for this notification.",
+      "CRITICAL_LAST_CHANNEL": "Can't turn this off — it's the last channel left for this notification.",
       "GENERIC": "Something went wrong. Please try again."
     },
     "TYPE": {
@@ -2818,6 +2818,8 @@
       "SCHEDULE_CANCELLED": "Trip cancelled",
       "BOOKING_RESCHEDULED": "Booking rescheduled",
       "SCHEDULE_TIME_CHANGED": "Trip time changed",
+      "SCHEDULE_DELAYED": "Trip Delayed",
+      "SCHEDULE_VEHICLE_CHANGED": "Vehicle Changed",
       "PRE_DEPARTURE_REMINDER": "Pre-departure reminder",
       "BOARDING_REMINDER": "Boarding reminder"
     }
