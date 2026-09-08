@@ -2658,6 +2658,29 @@ textarea.admin-field {
   }
 }
 
+// OBRS-1767: overlays that PrimeNG and SweetAlert2 append to `document.body` sit
+// outside `.admin-shell` entirely, so the shell-scoped `@media print` block in
+// staff-layout.component.scss cannot reach them — the exact objection Decision 1
+// of docs/adr/0015-boarding-manifest-print-isolation.md raises against hiding
+// chrome from inside the shell. A notification-bell panel or a trip-action menu
+// left open when the operator hits Print on the walk-in receipt lands on the
+// paper beside the slip. Measured (PrimeNG 21.1.9): a `[popup]` `p-menu` renders
+// `.p-menu-overlay` and `p-popover` renders `.p-popover`; both are used with
+// `appendTo="body"` on staff-reachable pages (notification-bell, export-button,
+// walk-in-trip-browser).
+//
+// Unconditional on purpose, and NOT the `body > *` shape of the two portal rules
+// above: this names only the overlay hosts, never `app-root`, so a native Ctrl+P
+// on a page with no portal still prints that page rather than a blank sheet.
+// None of these three is ever something anyone wants on paper.
+@media print {
+  .p-popover,
+  .p-menu-overlay,
+  .swal2-container {
+    display: none !important;
+  }
+}
+
 /* ── Categorical SERIES fills (OBRS-1725) ──
    The first chart surface in this app needs colours whose only job is to tell five
    slices APART. Every existing token names a meaning (danger / success / accepted /
