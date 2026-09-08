@@ -248,6 +248,8 @@ export const CUSTOMER_HOST: Record<string, string> = {
   register: 'app-register',
   'login-mobile': 'app-login-mobile',
   'forget-password': 'app-forget-password',
+  // OBRS-1530 joined CUSTOMER_PAGES, so it owes a row here too.
+  'my-parcels': 'app-my-parcels',
   'track-parcel': 'app-parcel-tracking-page',
 };
 
