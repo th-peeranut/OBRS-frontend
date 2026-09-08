@@ -23,6 +23,7 @@ import { NotificationPreferenceRow } from '../../../../shared/interfaces/notific
     <app-notification-preference-row
       [row]="row"
       [showWarning]="showWarning"
+      [criticalNoteId]="criticalNoteId"
       (rowChange)="onRowChange($event)"
     ></app-notification-preference-row>
   `,
@@ -38,6 +39,7 @@ class HostComponent {
     smsEnabled: false,
   };
   showWarning = false;
+  criticalNoteId: string | null = 'npref-critical-note';
 
   onRowChange(change: NotificationPreferenceRowChange): void {
     const otherChannelEnabled = change.channel === 'email' ? this.row.smsEnabled : this.row.emailEnabled;
@@ -149,27 +151,34 @@ describe('NotificationPreferenceRowComponent (DOM — real p-toggleSwitch, OBRS-
     expect(switchEl(1).classList).toContain('p-toggleswitch-checked');
   }));
 
-  // OBRS-1744. The rule used to reach a screen reader by sitting in a <span>
-  // right under the row label; moving that sentence to one callout above the
-  // table breaks that proximity. PrimeNG's ToggleSwitch exposes no
-  // `ariaDescribedBy`, and its `Bind` host directive forwards only class/style,
-  // so an `[attr.aria-describedby]` written on `<p-toggleSwitch>` would land on
-  // the wrapper div and never reach the `<input role="switch">`. Hence the rule
-  // rides the switch's own name via the `ariaLabel` INPUT. These two assert on
-  // the input element itself, which is the only thing assistive tech reads.
+  // OBRS-1744 AC-4. The rule used to reach a screen reader by sitting in a
+  // <span> right under the row label; moving that sentence to one callout above
+  // the table breaks that proximity, so the switches point at the callout with
+  // `aria-describedby` instead. PrimeNG's ToggleSwitch exposes no
+  // `ariaDescribedBy` input, and its `Bind` host directive forwards only
+  // class/style, so an `[attr.aria-describedby]` on `<p-toggleSwitch>` would
+  // land on the wrapper div and never reach the `<input role="switch">`. These
+  // assert on the input element itself, which is the only thing AT reads.
   function switchInput(index: number): HTMLInputElement {
     return fixture.debugElement.queryAll(By.css('.p-toggleswitch input'))[index].nativeElement;
   }
 
-  it('names the critical rows switches with the type, the channel AND the >=1-channel rule', () => {
+  it('points both switches of a critical row at the grouped callout', () => {
     for (const index of [0, 1]) {
-      const label = switchInput(index).getAttribute('aria-label');
-      expect(label).toContain('NOTIFICATION_PREFS.TYPE.PAYMENT_CONFIRMED');
-      expect(label).toContain('NOTIFICATION_PREFS.CRITICAL_MARK_LABEL');
+      expect(switchInput(index).getAttribute('aria-describedby')).toBe('npref-critical-note');
     }
   });
 
-  it('leaves the rule out of a non-critical rows switch names', () => {
+  it('still names each switch with its type and channel', () => {
+    expect(switchInput(0).getAttribute('aria-label')).toBe(
+      'NOTIFICATION_PREFS.TYPE.PAYMENT_CONFIRMED NOTIFICATION_PREFS.CHANNEL_EMAIL',
+    );
+    expect(switchInput(1).getAttribute('aria-label')).toBe(
+      'NOTIFICATION_PREFS.TYPE.PAYMENT_CONFIRMED NOTIFICATION_PREFS.CHANNEL_SMS',
+    );
+  });
+
+  it('leaves a non-critical rows switches undescribed', () => {
     host.row = {
       type: 'BOOKING_RESCHEDULED',
       critical: false,
@@ -181,9 +190,16 @@ describe('NotificationPreferenceRowComponent (DOM — real p-toggleSwitch, OBRS-
     fixture.detectChanges();
 
     for (const index of [0, 1]) {
-      const label = switchInput(index).getAttribute('aria-label');
-      expect(label).toContain('NOTIFICATION_PREFS.TYPE.BOOKING_RESCHEDULED');
-      expect(label).not.toContain('NOTIFICATION_PREFS.CRITICAL_MARK_LABEL');
+      expect(switchInput(index).hasAttribute('aria-describedby')).toBe(false);
+    }
+  });
+
+  it('drops the description when there is no callout on screen to point at', () => {
+    host.criticalNoteId = null;
+    fixture.detectChanges();
+
+    for (const index of [0, 1]) {
+      expect(switchInput(index).hasAttribute('aria-describedby')).toBe(false);
     }
   });
 });

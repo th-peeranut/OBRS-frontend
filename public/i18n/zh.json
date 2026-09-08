@@ -2800,7 +2800,6 @@
     "CHANNEL_SMS": "短信",
     "CHANNEL_NA": "不可用",
     "CRITICAL_HINT": "带 * 号的通知必须至少保留一个开启的渠道，无法全部关闭。",
-    "CRITICAL_MARK_LABEL": "必须至少保留一个渠道",
     "SAVE_BUTTON": "保存更改",
     "SAVE_SUCCESS": "通知偏好设置已保存。",
     "RETRY": "重试",

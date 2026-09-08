@@ -29,7 +29,8 @@
 // OBRS-1744: the per-row copy of the ≥1-channel sentence moved to a single
 // callout above the table; this asterisk is all that still marks which rows
 // the rule covers. Hidden from screen readers on purpose — a bare "*" read
-// aloud says nothing, so the rule rides the toggles' accessible name instead.
+// aloud says nothing; the rule reaches them through the callout instead, which
+// each critical row's switches point at with `aria-describedby` (AC-4).
 .npref-row__mark {
   font-size: $font-size-base;
   font-weight: $font-weight-semibold;

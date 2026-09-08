@@ -13,9 +13,9 @@
         #emailSwitch
         [ngModel]="row.emailEnabled"
         [disabled]="disabled"
+        [pt]="switchPassThrough"
         [ariaLabel]="
-          (('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_EMAIL' | translate))
-            + (row.critical ? ' ' + ('NOTIFICATION_PREFS.CRITICAL_MARK_LABEL' | translate) : '')
+          ('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_EMAIL' | translate)
         "
         (onChange)="onEmailChange($event)"
       ></p-toggleSwitch>
@@ -35,9 +35,9 @@
       #smsSwitch
       [ngModel]="row.smsEnabled"
       [disabled]="disabled"
+      [pt]="switchPassThrough"
       [ariaLabel]="
-        (('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_SMS' | translate))
-          + (row.critical ? ' ' + ('NOTIFICATION_PREFS.CRITICAL_MARK_LABEL' | translate) : '')
+        ('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_SMS' | translate)
       "
       (onChange)="onSmsChange($event)"
     ></p-toggleSwitch>

@@ -79,6 +79,41 @@ describe('NotificationPreferenceMatrixComponent (DOM — OBRS-1744 grouped ≥1-
     expect(marks().length).toBe(3);
   });
 
+  // OBRS-1744 AC-4. The two halves of the association are written in different
+  // components, so only a test that renders BOTH can prove the id a switch
+  // points at is the id the note actually carries. Resolving it through
+  // `getElementById` is the same lookup assistive tech does.
+  it('gives every critical rows switches an aria-describedby that resolves to the note', () => {
+    host.preferences = [
+      row('PAYMENT_CONFIRMED', true),
+      row('BOOKING_CANCELLED', true),
+      row('BOOKING_RESCHEDULED', false),
+    ];
+    fixture.detectChanges();
+
+    const switchesOfRow = (index: number): HTMLInputElement[] =>
+      fixture.debugElement
+        .queryAll(By.css('app-notification-preference-row'))
+        [index].queryAll(By.css('.p-toggleswitch input'))
+        .map((debugEl) => debugEl.nativeElement as HTMLInputElement);
+
+    const noteEl = fixture.nativeElement.querySelector('.npref-matrix__critical-note') as HTMLElement;
+    expect(noteEl.id).toBeTruthy();
+
+    for (const index of [0, 1]) {
+      for (const input of switchesOfRow(index)) {
+        const describedBy = input.getAttribute('aria-describedby');
+        expect(describedBy).toBe(noteEl.id);
+        const target = fixture.nativeElement.querySelector('#' + describedBy) as HTMLElement | null;
+        expect(target?.textContent?.trim()).toBeTruthy();
+      }
+    }
+
+    for (const input of switchesOfRow(2)) {
+      expect(input.hasAttribute('aria-describedby')).toBe(false);
+    }
+  });
+
   it('drops the note when no row carries the rule, so it never points at absent asterisks', () => {
     host.preferences = [row('BOOKING_RESCHEDULED', false), row('BOARDING_REMINDER', false)];
     fixture.detectChanges();

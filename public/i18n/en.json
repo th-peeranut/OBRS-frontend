@@ -2800,7 +2800,6 @@
     "CHANNEL_SMS": "SMS",
     "CHANNEL_NA": "Not available",
     "CRITICAL_HINT": "Notifications marked * must keep at least one channel on — you can't turn them all off.",
-    "CRITICAL_MARK_LABEL": "at least one channel required",
     "SAVE_BUTTON": "Save changes",
     "SAVE_SUCCESS": "Notification preferences saved.",
     "RETRY": "Try again",

@@ -4604,3 +4604,36 @@ just one a test can never catch.
   `createScheduleServiceStub().getAvailabilityCached` returns `of(null)`, so every existing
   list spec exercises only the null branch. A green suite is not coverage of the branch a
   stub never enters.
+
+## OBRS-1744 — PrimeNG pass-through CAN remove an attribute, but only if you null the key
+
+- **A "tried X, it doesn't work" code comment is a factual claim like any other.** While wiring
+  `aria-describedby` onto the `<input role="switch">` inside `p-toggleSwitch`, the imperative
+  `ViewChild` + `setAttribute`/`removeAttribute` version was kept and its doc comment justified
+  that with *"pass-through only ever ADDS attributes"*. **That sentence was false.** Reading
+  `primeng/fesm2022/primeng-bind.mjs`, the `Bind` host effect explicitly calls
+  `renderer.removeAttribute(...)` when a key's value is `null`/`undefined`.
+- **The real mechanism is key-absent vs. key-explicitly-null.** The effect iterates
+  `Object.entries()` of THIS render's merged pt object and keeps no memory of the previous
+  render's keys, so a branch returning `{}` never visits `'aria-describedby'` and a prior
+  render's attribute survives. Returning `{ 'aria-describedby': null }` instead hits the
+  removal branch.
+- **Measured both ways, same suite (6,823 specs).** `{}` ⇒ `TOTAL: 2 FAILED, 6821 SUCCESS`,
+  and the two reds are exactly the "row stops being critical" / "no callout on screen" cases.
+  Explicit `null` ⇒ `TOTAL: 6823 SUCCESS`. The declarative `[pt]` shipped and the imperative
+  `AfterViewInit`/`OnChanges`/`setAttribute` block was deleted.
+- **Lesson:** a blanket "only ever…" / "never…" in a comment gets taken as settled by the next
+  reader and stops them looking. Read the library source before shipping one — and when a
+  reviewer says the blanket claim is wrong, test their alternative instead of keeping the
+  code that the wrong claim was defending.
+- **A getter feeding a signal `[pt]`/`[pBind]` input must return a STABLE reference, not a
+  fresh literal.** `switchPassThrough` built `{ input: { 'aria-describedby': … } }` on every
+  call. PrimeNG's `pt`/`pBind` are `input()` signals compared by `Object.is` (reference), so a
+  new object every Angular change-detection tick (the row component is not `OnPush`, so this
+  is most ticks) marked the signal dirty every time, re-ran `Bind`'s effect, and re-issued
+  `setAttribute`/`removeAttribute` on the `<input>` for no reason — same end value, wasted
+  work every tick for as long as the row is on screen. Self-fixed by caching the returned
+  object and only replacing it when the derived `aria-describedby` value actually changes
+  (`notification-preference-row.component.ts`), so unrelated CD passes see the identical
+  reference and the effect doesn't re-run. Re-verified: scoped suite (17 specs across both
+  `notification-preference-*` dom.spec.ts files) `TOTAL: 17 SUCCESS`.

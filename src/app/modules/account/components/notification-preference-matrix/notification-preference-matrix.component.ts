@@ -22,6 +22,11 @@ export class NotificationPreferenceMatrixComponent {
   @Input() warningType: string | null = null;
   @Output() readonly rowChange = new EventEmitter<NotificationPreferenceRowChange>();
 
+  /** OBRS-1744 AC-4: the id the grouped note carries so a critical row's
+   * switches can point `aria-describedby` at it. One note per rendered
+   * matrix, and the account page renders exactly one matrix. */
+  readonly criticalNoteId = 'npref-critical-note';
+
   /** OBRS-1744: the ≥1-channel rule is stated once above the table instead of
    * once per critical row, so it only belongs on screen when some row carries
    * it — the enum is the backend's, and a build with no critical type would
