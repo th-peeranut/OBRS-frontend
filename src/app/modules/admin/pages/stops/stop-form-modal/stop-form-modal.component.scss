@@ -49,3 +49,18 @@
   pointer-events: none;
   opacity: 0.6;
 }
+
+// OBRS-1680: an operator reads the physical half instead of editing it, and the shared
+// `.admin-input` carries no `:disabled` treatment at all — measured on origin/dev, a disabled
+// field is pixel-identical to an editable one. Without this the screen tells an owner nothing
+// until they click into a box and nothing happens, which reads as a broken page rather than as
+// a boundary. Uses the admin theme's own tokens so it follows the dark shell rather than
+// hand-rolling a second surface the theme has never measured.
+.admin-input:disabled {
+  background: var(--admin-surface-soft);
+  color: var(--admin-muted);
+  cursor: not-allowed;
+  // Browsers grey a disabled control by default and the amount differs per engine; pinning
+  // opacity keeps the contrast the tokens above already measure.
+  opacity: 1;
+}
