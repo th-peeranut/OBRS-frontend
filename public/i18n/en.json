@@ -3262,8 +3262,7 @@
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_ROUND_TRIP": "Round-trip discount",
       "DISCOUNT": "Discount",
-      "TOTAL": "Total",
-      "CONFIRM": "Confirm payment"
+      "TOTAL": "Total"
     },
     "CREDIT_CARD": {
       "HOSTED_HINT": "Press pay and enter your card details in Omise's secure window. This site never sees or stores your card number.",

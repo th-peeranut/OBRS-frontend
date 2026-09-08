@@ -3262,8 +3262,7 @@
       "SUBTOTAL": "小计",
       "DISCOUNT_ROUND_TRIP": "往返折扣",
       "DISCOUNT": "折扣",
-      "TOTAL": "总计",
-      "CONFIRM": "确认付款"
+      "TOTAL": "总计"
     },
     "CREDIT_CARD": {
       "HOSTED_HINT": "点击付款后，请在 Omise 的安全窗口中输入卡片信息。本网站不会看到或保存您的卡号。",

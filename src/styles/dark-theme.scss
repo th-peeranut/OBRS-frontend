@@ -1389,12 +1389,17 @@ body.is-dark app-report-usability-fab {
 // one that would have grown 4px; dropping it for the reason above takes the last
 // geometry change out of this card with it.
 //
-// `payment-summary`'s `.btn-confirm` is a `<div>`, not a `<button>` -- brand
-// fill, `cursor: pointer`, no role and no tab stop. It is included here because
-// the customer sees a primary button and it must not be the one that looks
-// different. It is ALSO why the OBRS-584 gate never scored it: its CONTROLS
-// selector matches buttons, inputs and `a[class*="-btn"]`, not a bare div. That
-// is a separate a11y defect, left where it is.
+// OBRS-1532 corrects what this paragraph used to say. It claimed `.btn-confirm`
+// was included here for `payment-summary`'s `<div>` copy, "because the customer
+// sees a primary button". The customer never saw it: both call sites of
+// `<app-payment-summary>` pass `variant="inline"`, and only the 'default' arm
+// rendered that div, so it reached no screen. It was an inert CTA -- brand fill
+// and `cursor: pointer`, but no handler, no @Output, no role and no tab stop --
+// waiting for the next call site to forget the attribute, and OBRS-1532 deleted
+// it. The `.btn-confirm` member below is the real one and always was:
+// `review-schedule-booking-total.component.html`'s `<button type="button"
+// class="btn-confirm" (click)="onConfirm()">`, the 3.54:1 -> 9.31:1 measurement
+// OBRS-773 recorded.
 body.is-dark {
   .btn-search:not(:disabled),
   .select-btn:not(:disabled),
