@@ -242,6 +242,24 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   // controls untouched and make OBRS-772's twenty look like nineteen.
   'light|input.form-control|boundary-on-#ffffff': '1.35:1 -- OBRS-772 form field boundary (find-booking)',
   'dark|input.form-control|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 form field boundary (find-booking)',
+  // OBRS-795 is the OBRS-857 paragraph above happening again, and it is registered the same
+  // way for the same reason. That card seeded a SECOND passenger, which is what first put a
+  // `.seat-passenger-chip` AT REST on a swept page -- with one passenger the only chip that
+  // ever rendered was the `.active` one, whose border is $brand-customer-strong and passes.
+  // The rest chip's border is the same $primary-lightgrey #dddee1 in light and $dk-border
+  // #31343d in dark, and it measures the same 1.35:1 on both pages' backgrounds. Nothing
+  // about the colour is new; what is new is that a control wearing it is finally inside the
+  // sweep. Registered here rather than repainted in passenger-info-form.component.scss,
+  // because a page-local border would leave OBRS-772's other controls untouched and make its
+  // count look smaller than it is -- which is the exact trap OBRS-857 named.
+  //
+  // NOTE FOR THE OWNER: these two lines are the only place OBRS-795 touches the debt
+  // register. If the call is to repaint the chip instead, delete them and the gate goes red
+  // again at 1.35:1 with nothing else to undo.
+  'light|button.seat-passenger-chip|boundary-on-#ffffff':
+    '1.35:1 -- OBRS-772 control boundary (passenger-info rest chip, surfaced by OBRS-795)',
+  'dark|button.seat-passenger-chip|boundary-on-#1a1d27':
+    '1.35:1 -- OBRS-772 control boundary (passenger-info rest chip, surfaced by OBRS-795)',
   'light|input.form-check-input|boundary-on-#ffffff': '1.30:1 -- OBRS-772 checkbox/radio boundary',
   // OBRS-915 REKEYED, NOT REPAINTED. PrimeNG 19 adds `p-datepicker-input` to the
   // date field's class list, and the class list is half of this gate's key, so
