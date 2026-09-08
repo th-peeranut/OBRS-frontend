@@ -43,6 +43,19 @@ export class StopFormModalComponent {
   /** OBRS-1481: the pin choices, already including the saved value even when it is no
    *  longer eligible - StopsPageComponent owns that rule (toReturnStopOptions, AC-7). */
   @Input() returnStopOptions: ReturnStopOption[] = [];
+  /**
+   * OBRS-1680: may the caller edit the PLACE (slug, province, status, type, coordinates, the
+   * return pin, the photo), as opposed to their own sign on it?
+   *
+   * <p>False disables those inputs rather than removing them. An operator has to see which place
+   * they are re-signing — a form that hid the coordinates and the province would leave two stops
+   * called "the market" indistinguishable. It also hides the photo actions outright, because
+   * those are buttons rather than values: a disabled input still reads as information, a button
+   * that does nothing reads as broken.
+   */
+  @Input() canEditPhysical = true;
+  /** OBRS-1678: the form is opening a stop that does not exist yet. */
+  @Input() isCreating = false;
 
   @Output() closed = new EventEmitter<void>();
   @Output() save = new EventEmitter<void>();

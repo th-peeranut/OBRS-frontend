@@ -2,9 +2,11 @@
   <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="requestClose()">
     <div class="admin-modal admin-modal-lg">
       <h4 class="admin-modal-title">
-        {{ selected
-            ? ('ADMIN.STOPS.EDIT_TITLE' | translate: { slug: selected.slug })
-            : ('ADMIN.COMMON.LOADING' | translate) }}
+        {{ isCreating
+            ? ('ADMIN.STOPS.CREATE_TITLE' | translate)
+            : selected
+              ? ('ADMIN.STOPS.EDIT_TITLE' | translate: { slug: selected.slug })
+              : ('ADMIN.COMMON.LOADING' | translate) }}
       </h4>
 
       @if (isDetailLoading) {
@@ -18,6 +20,7 @@
                the key is absent, so it deliberately has no input in the form below: a form
                save must never be able to undo an upload (OBRS-580). Stays structurally
                OUTSIDE the <form> here, same as before the split. -->
+          @if (canEditPhysical && !isCreating) {
           <div class="stop-photo-block">
             <h5 class="admin-form-label">{{ 'ADMIN.STOPS.PHOTO_TITLE' | translate }}</h5>
             <p class="admin-muted small">{{ 'ADMIN.STOPS.PHOTO_HELPER' | translate }}</p>
@@ -59,13 +62,33 @@
               }
             </div>
           </div>
+          }
+
+          <!-- OBRS-1680: an operator is told, once and in words, why the boxes above the locale
+               blocks are grey - a disabled field with no explanation reads as a bug. -->
+          @if (!canEditPhysical) {
+            <p class="admin-muted small mt-3">{{ 'ADMIN.STOPS.PHYSICAL_READONLY' | translate }}</p>
+          }
 
           <form class="admin-form-grid mt-3" (ngSubmit)="save.emit()">
+            <!-- OBRS-1678: the slug is the stop's identity and the server takes it only on POST,
+                 so it is asked for exactly once, when the stop is created. -->
+            @if (isCreating) {
+              <div class="admin-form-field">
+                <label class="admin-form-label" for="stopSlug">
+                  {{ 'ADMIN.STOPS.SLUG' | translate }}
+                </label>
+                <input id="stopSlug" type="text" class="admin-input"
+                       [(ngModel)]="selected.slug" name="slug" required />
+                <small class="admin-hint">{{ 'ADMIN.STOPS.SLUG_HINT' | translate }}</small>
+              </div>
+            }
+
             <div class="admin-form-field">
               <label class="admin-form-label" for="stopProvince">
                 {{ 'ADMIN.STOPS.PROVINCE' | translate }}
               </label>
-              <select id="stopProvince" class="admin-input" [(ngModel)]="selected.provinceCode" name="provinceCode">
+              <select id="stopProvince" class="admin-input" [(ngModel)]="selected.provinceCode" name="provinceCode" [disabled]="!canEditPhysical">
                 @for (option of provinceOptions; track option.code) {
                   <option [value]="option.code">{{ option.label }}</option>
                 }
@@ -76,7 +99,7 @@
               <label class="admin-form-label" for="stopStatus">
                 {{ 'ADMIN.STOPS.COL_STATUS' | translate }}
               </label>
-              <select id="stopStatus" class="admin-input" [(ngModel)]="selected.statusCode" name="statusCode">
+              <select id="stopStatus" class="admin-input" [(ngModel)]="selected.statusCode" name="statusCode" [disabled]="!canEditPhysical">
                 @for (option of statusOptions; track option.code) {
                   <option [value]="option.code">{{ option.label }}</option>
                 }
@@ -87,7 +110,7 @@
               <label class="admin-form-label" for="stopType">
                 {{ 'ADMIN.STOPS.COL_TYPE' | translate }}
               </label>
-              <select id="stopType" class="admin-input" [(ngModel)]="selected.stopTypeCode" name="stopTypeCode">
+              <select id="stopType" class="admin-input" [(ngModel)]="selected.stopTypeCode" name="stopTypeCode" [disabled]="!canEditPhysical">
                 @for (option of stopTypeOptions; track option.code) {
                   <option [value]="option.code">{{ option.label }}</option>
                 }
@@ -104,7 +127,8 @@
                 {{ 'ADMIN.STOPS.RETURN_BOARDING_STOP' | translate }}
               </label>
               <select id="stopReturnStop" class="admin-input"
-                      [(ngModel)]="selected.returnStopId" name="returnStopId">
+                      [(ngModel)]="selected.returnStopId" name="returnStopId"
+                      [disabled]="!canEditPhysical">
                 <option [ngValue]="null">{{ 'ADMIN.STOPS.RETURN_BOARDING_STOP_NONE' | translate }}</option>
                 @for (option of returnStopOptions; track option.id) {
                   <option [ngValue]="option.id">{{ option.label }}</option>
@@ -116,13 +140,15 @@
             <div class="admin-form-field">
               <label class="admin-form-label" for="stopLat">{{ 'ADMIN.STOPS.LATITUDE' | translate }}</label>
               <input id="stopLat" type="number" step="any" class="admin-input"
-                     [(ngModel)]="selected.latitude" name="latitude" />
+                     [(ngModel)]="selected.latitude" name="latitude"
+                     [disabled]="!canEditPhysical" />
             </div>
 
             <div class="admin-form-field">
               <label class="admin-form-label" for="stopLng">{{ 'ADMIN.STOPS.LONGITUDE' | translate }}</label>
               <input id="stopLng" type="number" step="any" class="admin-input"
-                     [(ngModel)]="selected.longitude" name="longitude" />
+                     [(ngModel)]="selected.longitude" name="longitude"
+                     [disabled]="!canEditPhysical" />
             </div>
 
             <!-- PER-LOCALE CONTENT — all three locales always rendered, including the ones

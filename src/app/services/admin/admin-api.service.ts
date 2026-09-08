@@ -466,6 +466,20 @@ export interface AdminStopUpdatePayload {
   returnStopId: number | null;
 }
 
+/**
+ * OBRS-1679/1680: the body of `PUT /api/private/stops/{id}/labels` - the OWNER-gated half.
+ *
+ * <p>It carries the sign and nothing else. The physical stop (slug, province, status, type,
+ * coordinates, the photo, the return pin) is platform-wide reference data an operator may not
+ * move, so those fields have no representation here at all - there is nothing to forget to strip.
+ * The operator the rows are filed under is resolved server-side from the caller, which is why
+ * there is no `ownerId` either.
+ */
+export interface AdminStopLabelPayload {
+  addresses: Record<string, string>;
+  translations: AdminTranslationReqDto[];
+}
+
 export interface AdminStopPhotoDto {
   primaryPhotoUrl: string;
 }
@@ -1976,6 +1990,39 @@ export class AdminApiService {
 
   deleteStopPhoto(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/stops/${id}/photo`);
+  }
+
+  /**
+   * OBRS-1680: saves the CALLING operator's own name, boarding note and address for a stop.
+   *
+   * <p>A different endpoint from {@link updateStop}, not a narrower payload to the same one. That
+   * one is `hasRole('ADMIN')` and rewrites the central row every operator falls back to; this one
+   * is `hasRole('OWNER')` and rewrites only the rows filed under the caller. An owner sending the
+   * full-replace body would simply get a 403, which is the button this card exists to not have.
+   */
+  updateStopLabels(id: number, payload: AdminStopLabelPayload): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/stops/${id}/labels`, payload);
+  }
+
+  /**
+   * OBRS-1678: opens a new stop. `POST /private/stops` has existed since OBRS-1022 and no screen
+   * had ever called it - adding a stop was not possible from the UI for ANY role, ADMIN included.
+   */
+  createStop(payload: AdminStopUpdatePayload): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/stops`, payload);
+  }
+
+  /**
+   * OBRS-1678: deletes a stop. The other half of the same gap.
+   *
+   * <p>Nine foreign keys point at `stops` and every one of them is NO ACTION, so the database
+   * refuses to delete a stop any route, schedule, booking, ticket or sales point still names.
+   * That refusal surfaces as 409 CONFLICT (`ExceptionHttpStatusMapper` maps
+   * `DataIntegrityViolationException`), NOT the bare 500 this card was written against - the
+   * caller's job is to say what the 409 means, not to prevent it.
+   */
+  deleteStop(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/stops/${id}`);
   }
 
   getSegments(routeSlug: string): Observable<ResponseAPI<AdminSegmentDto>> {

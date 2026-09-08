@@ -1101,7 +1101,15 @@
       "PHOTO_REMOVE_CONFIRM": "Remove this photo from the stop? The route map will go back to showing no photo.",
       "PHOTO_REMOVE_FAILED": "Could not remove the photo.",
       "PHOTO_UPLOADED": "Photo uploaded.",
-      "PHOTO_UPLOAD_FAILED": "Could not upload the photo."
+      "PHOTO_UPLOAD_FAILED": "Could not upload the photo.",
+      "ADD": "Add stop",
+      "CREATE_TITLE": "Add a stop",
+      "SLUG": "Slug",
+      "SLUG_HINT": "Lower case and underscores, e.g. mo_chit. Cannot be changed afterwards.",
+      "DELETE_TITLE": "Delete stop",
+      "DELETE_CONFIRM": "Delete the stop \"{{name}}\"?",
+      "DELETE_IN_USE": "\"{{name}}\" cannot be deleted while a route, schedule, booking, ticket or sales point still refers to it.",
+      "PHYSICAL_READONLY": "The place itself — where it is and what kind of stop it is — is shared reference data only an administrator can change. The name, landmark and address below are yours to write."
     },
     "ROUTES": {
       "TITLE": "Route Management",
