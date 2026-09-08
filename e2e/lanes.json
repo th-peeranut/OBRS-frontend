@@ -9,6 +9,18 @@
   },
   "specs": [
     {
+      "spec": "obrs-772-boundary-mockup.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs772.config.ts",
+      "why": "OBRS-772. The card sat in Needs Decision for six weeks on a question a colour swatch cannot answer -- whether repainting every sub-3:1 control boundary makes the app look worse -- and the swatch sheet already attached to it says on its own face that it is not the app. This photographs four real screens in both themes three times each (today, option A = every boundary, option B = fields and icon-only buttons only), deriving the population it repaints the way invariant B derives its own: from each control's computed border, filtered to the ones actually below 3:1, so a policy is not judged against damage it does not do. CAPTURE and not GATE because it asserts nothing -- the enforcing checks are customer-contrast-gate.spec.ts and staff-contrast-gate.spec.ts, and this exists so the decision behind their allow registers is reviewable. It is a MOCK-UP: it repaints the live CSSOM, not the SCSS. Hermetic on the gate lane's terms -- it reuses seedCustomerSession / seedStaffSweepSession, so every /api/** call is fulfilled in-browser."
+    },
+    {
+      "spec": "obrs-772-after.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs772.config.ts",
+      "why": "OBRS-772 before/after evidence. The BEFORE frames are NOT re-created here and could not honestly be -- they were shot by obrs-772-boundary-mockup.spec.ts on this same lane before any SCSS on the branch was touched, and are kept at docs/manual-tests/assets/OBRS-772/before/. This shoots the same four screens with the same fixtures on the repainted build and pairs each with its saved BEFORE, so the only difference between the halves of a sheet is the code. A missing BEFORE file fails the run rather than producing a one-sided sheet. CAPTURE for the same reason as the entry above: the enforcing checks are the two contrast gates. Hermetic on the gate lane's terms."
+    },
+    {
       "spec": "obrs-1569-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1569.config.ts",

@@ -227,7 +227,9 @@
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid $primary-lightgrey;
+  // OBRS-772: icon-only (a bare `bi-three-dots-vertical`), so the boundary is
+  // the only thing that says a control is here.
+  border: 1px solid $control-border;
   border-radius: $radius-pill;
   background-color: $primary-white;
   color: $text-softblack;

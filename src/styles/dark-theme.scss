@@ -193,7 +193,10 @@ body.is-dark {
   // admin token palette, not the public dark-input palette.
   .form-control:not(.admin-shell .form-control) {
     background-color: $dk-bg-input !important;
-    border-color: $dk-border !important;
+    // OBRS-772: $dk-border is the SEPARATOR token and composited to 1.36:1 here.
+    // A field's boundary is the only thing identifying it, so it gets the
+    // control token instead. Separators elsewhere keep $dk-border.
+    border-color: $dk-control-border !important;
     color: $dk-text !important;
 
     // OBRS-797. The placeholder is NOT covered by the `color` above: an
@@ -233,7 +236,9 @@ body.is-dark {
   // OTP boxes
   .ngx-otp-input-box {
     background-color: $dk-bg-input !important;
-    border-color: $dk-border !important;
+    // OBRS-772: the dark half of the light rule in styles.scss -- an OTP box is
+    // an empty field in both themes.
+    border-color: $dk-control-border !important;
     color: $dk-text !important;
 
     &:focus {
@@ -617,7 +622,8 @@ body.is-dark {
   // It still dresses every standalone picker (payment expiry, admin) unchanged.
   .p-datepicker:not(.app-date-field--segment) .p-inputtext {
     background-color: $dk-bg-input !important;
-    border-color: $dk-border !important;
+    // OBRS-772, same call as `.form-control` above.
+    border-color: $dk-control-border !important;
     color: $dk-text !important;
   }
 

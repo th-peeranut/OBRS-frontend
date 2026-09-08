@@ -22,7 +22,8 @@
   // Defaults reproduce the previous values exactly, so every other call site is
   // byte-identical.
   &-border {
-    border: 1px solid $primary-lightgrey !important;
+    // OBRS-772: dropdown trigger = field, see dropdown-obrs.component.scss.
+    border: 1px solid $control-border !important;
     border-radius: var(--dropdown-toggle-radius, #{$radius-xl});
     width: var(--dropdown-toggle-width, auto);
     // OBRS-1189 made the floor overridable for the same reason OBRS-1038 made

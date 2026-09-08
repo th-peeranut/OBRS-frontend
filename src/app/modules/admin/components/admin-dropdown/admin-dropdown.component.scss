@@ -16,7 +16,11 @@
   width: 100%;
   min-height: 40px;
   gap: $space-xs;
-  border: 1px solid rgba(189, 200, 207, 0.35);
+  // OBRS-772: classed with the FIELDS, not with the labelled buttons. It shows a
+  // chosen value the way a field does, and its boundary is what says where the
+  // field ends -- the same call the customer shell already makes for
+  // `.btn.dropdown-btn.dropdown-toggle`.
+  border: 1px solid var(--control-outline, #{$control-border});
   border-radius: $radius-pill; // design-system §5: single input shape = pill, matches date/time fields
   // dark-mode (OBRS-127): theme with the shell surface/text tokens instead of raw
   // hex, so the trigger follows light/dark like .admin-field does.
