@@ -22,17 +22,18 @@
     </div>
 
     <!-- CENTER: Seat map / trip details / boarding.
-    The checkout column (right) is only meaningful for the Ticket Sales
-    tab (index 0) — on Trip Details/Boarding it's dead space that used to
-    squeeze the boarding manifest into a horizontal scroll. Reclaim it:
-    col-xl-5 (unchanged) on Ticket Sales, col-xl-9 (5+4, filling the
-    checkout column's freed 4) on the other tabs. Left stays col-xl-3
-    either way (3+9=12). On md the columns already stack full-width, so
-    this only affects the xl/lg breakpoints. -->
+    The checkout column (right) is only meaningful on the Ticket Sales
+    tab (index 0) with a trip picked — on Trip Details/Boarding it's dead
+    space that used to squeeze the boarding manifest into a horizontal
+    scroll, and before a trip is picked it is an empty form (OBRS-1752).
+    Reclaim it: col-xl-5 (unchanged) when checkout shows, col-xl-9 (5+4,
+    filling the checkout column's freed 4) when it doesn't. Left stays
+    col-xl-3 either way (3+9=12). On md the columns already stack
+    full-width, so this only affects the xl/lg breakpoints. -->
     <div
       class="col-lg-5 col-md-12"
-      [class.col-xl-5]="activeTabIndex === 0"
-      [class.col-xl-9]="activeTabIndex !== 0">
+      [class.col-xl-5]="showCheckout"
+      [class.col-xl-9]="!showCheckout">
       <div class="card h-100 border-0 shadow-sm">
         <div class="card-body p-2">
           <app-walk-in-center-panel
@@ -64,8 +65,9 @@
       </div>
     </div>
 
-    <!-- RIGHT: Checkout — only meaningful on the Ticket Sales tab. -->
-    @if (activeTabIndex === 0) {
+    <!-- RIGHT: Checkout — only meaningful on the Ticket Sales tab, and
+    only once a trip is selected. -->
+    @if (showCheckout) {
       <div class="col-xl-4 col-lg-4 col-md-12">
         <div class="card h-100 border-0 shadow-sm">
           <div class="card-body p-2">
