@@ -8,6 +8,7 @@ import {
   CustomerBehaviorDto,
   CustomerBehaviorRepeatBucketDto,
 } from '../../../../shared/interfaces/customer-behavior.interface';
+import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -75,8 +76,7 @@ export class CustomerBehaviorPageComponent implements OnInit, OnDestroy {
   protected trackByChannel(_i: number, c: CustomerBehaviorChannelDto): string { return c.channel; }
   protected trackByBucket(_i: number, b: CustomerBehaviorRepeatBucketDto): number { return b.bookings; }
 
-  protected onFromDateChange(value: Date | null): void { this.fromDate = value; this.applyRange(); }
-  protected onToDateChange(value: Date | null): void { this.toDate = value; this.applyRange(); }
+  protected onRangeChange(range: DateRange): void { this.fromDate = range.from; this.toDate = range.to; this.applyRange(); }
 
   private applyRange(): void {
     this.rangeError = '';

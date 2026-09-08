@@ -9,6 +9,7 @@ import { BookingTrendStore } from './booking-trend.store';
 import { BookingTrendDto } from '../../../../shared/interfaces/booking-trend.interface';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
+import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 function dow(d: number, bookingCount: number, sharePct: number) {
   return { dow: d, bookingCount, sharePct };
@@ -84,6 +85,23 @@ describe('BookingTrendPageComponent', () => {
     expect(Math.round(component['dowBarHeightPct'](dow(3, 4, 33.3)))).toBe(50);
   });
 
+  it('accepts a range exactly at the 366-day cap and rejects one day past it', () => {
+    const store = makeStoreStub(makeTrend());
+    const component = new BookingTrendPageComponent(store as unknown as BookingTrendStore, createTranslateStub());
+    component.ngOnInit();
+    store.setRange.calls.reset();
+
+    // 2026-01-01 -> 2027-01-02 spans 366 days (2026 is not a leap year).
+    component['onRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 2) });
+    expect(component['rangeError']).toBe('');
+    expect(store.setRange).toHaveBeenCalledOnceWith('2026-01-01', '2027-01-02');
+
+    store.setRange.calls.reset();
+    component['onRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 3) });
+    expect(component['rangeError']).toBe('ADMIN.REPORTS.ERROR.RANGE_TOO_LARGE');
+    expect(store.setRange).not.toHaveBeenCalled();
+  });
+
   it('guards an invalid range and dispatches a valid one', () => {
     const store = makeStoreStub(makeTrend());
     const component = new BookingTrendPageComponent(store as unknown as BookingTrendStore, createTranslateStub());
@@ -92,14 +110,14 @@ describe('BookingTrendPageComponent', () => {
 
     component['fromDate'] = new Date(2026, 6, 10);
     component['toDate'] = new Date(2026, 6, 1);
-    component['onFromDateChange'](component['fromDate']);
+    component['onRangeChange']({ from: component['fromDate'], to: component['toDate'] });
     expect(component['rangeError']).toBeTruthy();
     expect(store.setRange).not.toHaveBeenCalled();
 
     component['rangeError'] = '';
     component['fromDate'] = new Date(2026, 6, 1);
     component['toDate'] = new Date(2026, 6, 5);
-    component['onToDateChange'](component['toDate']);
+    component['onRangeChange']({ from: component['fromDate'], to: component['toDate'] });
     expect(store.setRange).toHaveBeenCalledOnceWith('2026-07-01', '2026-07-05');
   });
 
@@ -109,7 +127,7 @@ describe('BookingTrendPageComponent', () => {
     beforeEach(async () => {
       const store = makeStoreStub(makeTrend());
       await TestBed.configureTestingModule({
-        declarations: [BookingTrendPageComponent],
+        declarations: [BookingTrendPageComponent, DateRangePickerComponent],
         imports: [CommonModule, FormsModule, DatePickerModule, AdminSharedModule, TranslateModule.forRoot()],
         providers: [{ provide: BookingTrendStore, useValue: store }],
       }).compileComponents();

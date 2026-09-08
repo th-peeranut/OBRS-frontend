@@ -1440,8 +1440,6 @@
     },
     "REPORTS": {
       "SUBTITLE": "指定日期范围内的预订数、售出票数、座位使用率和收入。",
-      "FILTER_FROM": "起始日期",
-      "FILTER_TO": "结束日期",
       "EXPORT_REVENUE_DAILY": "每日营收",
       "EXPORT_REVENUE_PER_VEHICLE": "每车营收",
       "TILE": {
@@ -1957,8 +1955,6 @@
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "所选日期范围内的退款、待人工退款和作废票务汇总。",
-      "FILTER_FROM": "起始日期",
-      "FILTER_TO": "结束日期",
       "BASIS_NOTE": "退款、待人工退款和作废均按订单创建日期统计，而非退款或作废的处理日期，也不是出发日期。因此，今天为较早订单办理的退款会计入该订单的原始日期。",
       "PARTITION_NOTE": "作废分为已取消（人工取消）和已过期（未支付超时）两类，两者之和等于作废总额。",
       "CARD": {
@@ -1991,8 +1987,6 @@
     },
     "CASH_ONLINE_RECONCILIATION": {
       "SUBTITLE": "所选日期范围内收取的现金、线上和其他支付总额。",
-      "FILTER_FROM": "起始日期",
-      "FILTER_TO": "结束日期",
       "BASIS_NOTE": "现金、线上和其他按订单创建日期统计，而非出行日期。",
       "PARTITION_NOTE": "支付分为现金（人工收款）、线上（银行卡、PromptPay 及其他数字渠道）和其他（银行转账及杂项）三类，每笔已收款项仅归入其中一类。",
       "CARD": {

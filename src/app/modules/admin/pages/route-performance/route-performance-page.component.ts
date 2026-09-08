@@ -9,6 +9,7 @@ import {
   RoutePerformanceTotalsDto,
 } from '../../../../shared/interfaces/route-performance.interface';
 import { formatMoney } from '../../../../shared/lib/money-display';
+import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 const MAX_RANGE_SPAN_DAYS = 366;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -101,13 +102,9 @@ export class RoutePerformancePageComponent implements OnInit, OnDestroy {
     return row.routeId;
   }
 
-  protected onFromDateChange(value: Date | null): void {
-    this.fromDate = value;
-    this.applyRange();
-  }
-
-  protected onToDateChange(value: Date | null): void {
-    this.toDate = value;
+  protected onRangeChange(range: DateRange): void {
+    this.fromDate = range.from;
+    this.toDate = range.to;
     this.applyRange();
   }
 
