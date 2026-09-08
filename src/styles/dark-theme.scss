@@ -1106,12 +1106,13 @@ body.is-dark {
     color: $dk-text;
   }
 
-  .npref-row__hint,
+  .npref-matrix__critical-note,
   .npref-cell--na,
   .npref-row__cell-label {
     color: $dk-text-muted;
   }
 
+  .npref-row__mark,
   .npref-row__warning {
     color: $dk-danger;
   }

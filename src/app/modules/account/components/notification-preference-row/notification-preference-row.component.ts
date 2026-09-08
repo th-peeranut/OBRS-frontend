@@ -38,6 +38,13 @@ export class NotificationPreferenceRowComponent {
   /** True while the ≥1-channel warning for this row's type should render
    * (page-owned state — see `criticalWarningType` on the page component). */
   @Input() showWarning = false;
+  /**
+   * OBRS-1744 AC-4. Id of the single ≥1-channel callout the matrix renders above
+   * the table, or null when there is no such callout on screen. A critical row's
+   * switches point their `aria-describedby` at it, which is the association the
+   * per-row hint used to get for free by sitting next to the label.
+   */
+  @Input() criticalNoteId: string | null = null;
   @Output() readonly rowChange = new EventEmitter<NotificationPreferenceRowChange>();
 
   @ViewChild('emailSwitch') private readonly emailSwitch?: ToggleSwitch;
@@ -51,6 +58,40 @@ export class NotificationPreferenceRowComponent {
   onSmsChange(event: ToggleSwitchChangeEvent): void {
     this.rowChange.emit({ type: this.row.type, channel: 'sms', enabled: event.checked });
     this.resyncSwitch(this.smsSwitch, () => this.row.smsEnabled);
+  }
+
+  /**
+   * OBRS-1744 AC-4. PrimeNG's `ToggleSwitch` has `ariaLabel`/`ariaLabelledBy`
+   * inputs but no `ariaDescribedBy`, and its host `Bind` directive forwards
+   * only `class` and `style` — an `[attr.aria-describedby]` on
+   * `<p-toggleSwitch>` lands on the wrapper `<div>`, never on the
+   * `<input role="switch">` assistive tech reads. The pass-through API does
+   * reach it: the component's own template binds
+   * `<input #input [pBind]="ptm('input')">`.
+   *
+   * The `null` on the non-critical branch is load-bearing, not tidiness. `Bind`
+   * iterates only the keys present in THIS render's object and calls
+   * `removeAttribute` when a value is `null`/`undefined`; returning `{}`
+   * instead omits the key entirely, so a row that stops being critical keeps a
+   * stale `aria-describedby` pointing at a callout that may no longer be on
+   * screen. Measured: with `{}` the suite goes red on exactly the two removal
+   * cases in `notification-preference-row.component.dom.spec.ts`.
+   *
+   * Cached rather than a fresh literal every call: `pt` is a signal input, so
+   * PrimeNG compares by reference — a new object on every change-detection
+   * pass would mark it dirty each tick and re-run `Bind`'s attribute-write
+   * effect even though the target hasn't changed.
+   */
+  private cachedSwitchPassThrough: Record<string, Record<string, string | null>> = {
+    input: { 'aria-describedby': null },
+  };
+
+  get switchPassThrough(): Record<string, Record<string, string | null>> {
+    const describedBy = this.row?.critical && this.criticalNoteId ? this.criticalNoteId : null;
+    if (this.cachedSwitchPassThrough['input']['aria-describedby'] !== describedBy) {
+      this.cachedSwitchPassThrough = { input: { 'aria-describedby': describedBy } };
+    }
+    return this.cachedSwitchPassThrough;
   }
 
   /**

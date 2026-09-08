@@ -68,6 +68,16 @@ jobs:
       - name: i18n parity, policy-number and privacy-version gates
         run: npm run test:i18n
 
+      # Same shape, and the one drift the gate above cannot see (OBRS-1762). The list
+      # of switchable notification types lives in this repo AND in the backend enum,
+      # and test:i18n compares en/th/zh only to each other -- so when the backend added
+      # SCHEDULE_DELAYED / SCHEDULE_VEHICLE_CHANGED, all three files were missing the
+      # same two keys, parity stayed "OK", and customers read the raw key off the
+      # preferences page for two months (OBRS-1743). This step compares the labels to a
+      # committed list the backend mirrors in its own test.
+      - name: notification-preference type gate
+        run: npm run test:notification-pref-types
+
       # Same shape and same rationale (OBRS-463): a pure-node gate before npm ci.
       # An auth page that renders the split-layout shell without importing the
       # partial that styles it produces NO error at build or runtime -- it just
