@@ -10,11 +10,19 @@ export interface DateRange {
  * app's original pattern of two side-by-side `p-datePicker` fields (one
  * `fromDate`, one `toDate`) for a report's date-range filter.
  *
- * Presentational only: emits `{from, to}` on every PrimeNG range selection —
- * including the intermediate state where only the start has been picked —
- * and leaves validation (from<=to, a page's own max-span cap) to the caller.
- * Every report page already has that logic in its own `applyRange()`; this
- * component does not duplicate it.
+ * Presentational only: emits `{from, to}` once a range is complete, and leaves
+ * validation (from<=to, a page's own max-span cap) to the caller. Every report
+ * page already has that logic in its own `applyRange()`; this component does
+ * not duplicate it.
+ *
+ * OBRS-1735 — it deliberately does NOT emit the half-picked state (start
+ * chosen, end not yet), which it used to. Every caller's `applyRange()` clears
+ * its `rangeError` before its own null guard, so a half-picked emit wiped a
+ * message that was on screen and let the previous range's table come back with
+ * nothing saying why. Under the two-field pattern this component replaces, the
+ * other end was never null, so validation always re-ran in full — suppressing
+ * the partial emit is what keeps that behaviour. Clearing the range (both ends
+ * null) is still emitted: that IS a complete instruction.
  */
 @Component({
   selector: 'app-admin-date-range-picker',
@@ -49,6 +57,9 @@ export class DateRangePickerComponent implements OnChanges {
     const [from, to] = value ?? [null, null];
     this.from = from;
     this.to = to;
+    if (from && !to) {
+      return;
+    }
     this.rangeChange.emit({ from, to });
   }
 }

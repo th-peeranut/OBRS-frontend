@@ -53,14 +53,35 @@ describe('DateRangePickerComponent', () => {
     expect(emitted).toEqual([{ from, to }]);
   });
 
-  it('emits the intermediate state where only the start of the range has been picked', () => {
+  // OBRS-1735 — this used to assert the OPPOSITE (that the half-picked state IS
+  // emitted). It is inverted on purpose: every caller's applyRange() clears its
+  // rangeError before its own null guard, so emitting here wiped a message that
+  // was on screen and let the previous range's table return with nothing saying
+  // why. The picker still tracks the half-picked value for its own display —
+  // only the emit is withheld until the range is complete.
+  it('does NOT emit while only the start of the range has been picked', () => {
     const emitted: Array<{ from: Date | null; to: Date | null }> = [];
     component.rangeChange.subscribe((range) => emitted.push(range));
 
     const from = new Date(2026, 5, 1);
     (component as any).onValueChange([from, null]);
 
-    expect(emitted).toEqual([{ from, to: null }]);
+    expect(emitted).toEqual([]);
+    expect(component.from).toBe(from);
+    expect(component.to).toBeNull();
+  });
+
+  // The other end of the same rule: a page showing a range error must still be
+  // able to get back to a clean slate, so a CLEARED range is a complete
+  // instruction and is emitted.
+  it('still emits when the range is cleared, so a caller can reset its error', () => {
+    const emitted: Array<{ from: Date | null; to: Date | null }> = [];
+    (component as any).onValueChange([new Date(2026, 5, 1), new Date(2026, 5, 30)]);
+    component.rangeChange.subscribe((range) => emitted.push(range));
+
+    (component as any).onValueChange([null, null]);
+
+    expect(emitted).toEqual([{ from: null, to: null }]);
   });
 
   it('treats a null value (cleared range) as {from: null, to: null}', () => {
