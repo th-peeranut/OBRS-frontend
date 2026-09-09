@@ -111,6 +111,38 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
           <!-- Legible label, and 21:1 against the card. Neither invariant may fire. -->
           <p class="fine-copy" style="color:#ffffff">Readable copy on the dark card</p>
 
+          <!-- OBRS-1782, invariant B's second must-catch: WHICH of a control's two
+               numbers decides it. The .btn-search hexes, live on dark Home today
+               -- $brand fill 2.80:1 on the card, $dk-accent border 7.37:1
+               over it. §2.6 clause 2 says a control that paints a surface must
+               separate THAT surface, label or no label, so the border may not
+               answer for it. The old Math.max(fill, border) scored this 7.37 and
+               passed the very defect §2.6 names as the reason clause 2 exists. A
+               version that brings the max back fails HERE. -->
+          <button class="search-btn" style="background-color:#0772a2;border:1px solid #4bc2f7;color:#ffffff">
+            Search
+          </button>
+          <!-- The other side of the same line, and the reason it is a line and not
+               "any background-color at all". A dark field paints #161922 on a
+               #1a1d27 page: a fill different from the page, at 1.04:1, which no
+               one can see as a surface -- and it clears clause 1 on the 4.03:1
+               border OBRS-772 gave it three weeks before this card. Read literally
+               clause 2 would condemn it and retire that fix, so below 1.5:1 a fill
+               is a tint and the border still answers. -->
+          <div class="dark-page" style="background-color:#1a1d27;padding:8px">
+            <input class="tinted-field" style="background-color:#161922;border:1px solid #7a7c82;color:#e8eaf0" />
+          </div>
+          <!-- Faint fill and NO border at all. The skip above only fires for a
+               control with neither, so this one IS scored -- on its fill, because
+               there is nothing else to score. Calling it "via border" beside a
+               border of none would be this card's own defect one shape further
+               along, which is why the branch is pinned here. -->
+          <div class="pos-card" style="background-color:#1d2226;padding:8px">
+            <button class="borderless-tile" style="background-color:#23292e;border:0;color:#e7edf1">
+              Adult
+            </button>
+          </div>
+
           <!-- OBRS-797, invariant C. The two hex pairs are the ones the card was
                filed on, measured live on /register in dark mode: Bootstrap's
                theme-blind rgba(33,37,41,.75) over $dk-bg-input reads 1.10:1, and
@@ -160,6 +192,35 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
     const fixedText = textOf('fixed-pill');
     expect(fixedText!.ratio).toBeGreaterThanOrEqual(fixedText!.floor);
     expect(controlOf('fixed-pill')!.boundary).toBeGreaterThanOrEqual(AA_BOUNDARY);
+    expect(controlOf('fixed-pill')!.boundaryFrom).toBe('border');
+
+    // must-catch, invariant B under §2.6 clause 2 (OBRS-1782): a control that
+    // paints a real surface is judged on that surface, and a passing border may
+    // not answer for it. Under Math.max this scored 7.37 and passed.
+    const searchBtn = controlOf('search-btn');
+    expect(searchBtn, 'the filled search button was not scored for a boundary').toBeTruthy();
+    expect(searchBtn!.fillVsPage).toBeCloseTo(2.8, 1);
+    expect(searchBtn!.borderVsPage).toBeCloseTo(7.37, 1);
+    expect(searchBtn!.boundaryFrom).toBe('fill');
+    expect(searchBtn!.boundary).toBeCloseTo(2.8, 1);
+
+    // must-NOT-catch: a fill too faint to read as a surface at all. Clause 2 does
+    // not reach it, so its border answers -- which is what keeps OBRS-772's
+    // repainted fields fixed instead of re-condemning them at 1.04:1.
+    const tintedField = controlOf('tinted-field');
+    expect(tintedField, 'the tinted field was not scored for a boundary').toBeTruthy();
+    expect(tintedField!.fillVsPage).toBeCloseTo(1.04, 1);
+    expect(tintedField!.boundaryFrom).toBe('border');
+    expect(tintedField!.boundary).toBeCloseTo(4.03, 1);
+
+    // must-catch: the same faint fill with nothing else to score. Below the
+    // surface floor, so clause 2 does not reach it -- but there is no border to
+    // hand it to either, so the fill is the number AND has to be named as one.
+    const borderlessTile = controlOf('borderless-tile');
+    expect(borderlessTile, 'the borderless tile was not scored for a boundary').toBeTruthy();
+    expect(borderlessTile!.borderVsPage).toBeNull();
+    expect(borderlessTile!.boundaryFrom).toBe('fill');
+    expect(borderlessTile!.boundary).toBeCloseTo(1.09, 1);
 
     const copy = textOf('fine-copy');
     expect(copy!.ratio).toBeGreaterThanOrEqual(copy!.floor);
@@ -630,7 +691,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
               key: boundaryKey(theme, c),
               page: target.key,
               detail:
-                `boundary: fill ${c.fill ?? 'none'} (${c.fillVsPage.toFixed(2)}:1) / border ` +
+                `boundary via ${c.boundaryFrom}: fill ${c.fill ?? 'none'} (${c.fillVsPage.toFixed(2)}:1) / border ` +
                 `${c.border ?? 'none'} (${c.borderVsPage === null ? 'n/a' : c.borderVsPage.toFixed(2) + ':1'}) ` +
                 `on ${c.page} -- "${c.label}"  [${c.path}]`,
               ratio: c.boundary,
@@ -718,7 +779,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
                   key: boundaryKey(stateTheme, c),
                   page: target.key,
                   detail:
-                    `boundary: fill ${c.fill ?? 'none'} (${c.fillVsPage.toFixed(2)}:1) / border ` +
+                    `boundary via ${c.boundaryFrom}: fill ${c.fill ?? 'none'} (${c.fillVsPage.toFixed(2)}:1) / border ` +
                     `${c.border ?? 'none'} (${c.borderVsPage === null ? 'n/a' : c.borderVsPage.toFixed(2) + ':1'}) ` +
                     `on ${c.page} -- "${c.label}"  [${c.path}]`,
                   ratio: c.boundary,
