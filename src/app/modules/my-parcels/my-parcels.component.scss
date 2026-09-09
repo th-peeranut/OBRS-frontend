@@ -1,10 +1,22 @@
 @import "../../../styles/variables.scss";
+// OBRS-1530: the dark block below needs the $dk-* palette. Variables only, no CSS
+// emitted, which is what makes it safe in a component stylesheet (see that file).
+@import "../../../styles/dark-tokens";
 
 // Same cross-shell re-scoping idiom as `parcel-tracking-page.component.scss`
 // (design-system §12 new-pattern note) — the `.admin-status.is-*` chip and
 // the inline "unpaid" badge (`is-warning`) need their custom properties
 // re-declared here since this is a customer-shell page.
 :host {
+  // OBRS-1530. Found by the sweep this card joins, on its first run:
+  // `host-box-sweep.spec.ts` (OBRS-775) reported `app-my-parcels` as an INLINE host
+  // wrapping three in-flow block children (app-navbar, section.my-parcels, app-footer).
+  // A component that declares no `:host` display renders as `display: inline`, and an
+  // inline box may not contain block-level children. Same defect and same one-line
+  // remedy as OBRS-857 on /find-booking, and it is here rather than on the ALLOW list
+  // for the same reason: the page is a normal block page, not an exception.
+  display: block;
+
   --admin-neutral-bg: #e4e4e7;
   --admin-neutral-text: #3f3f46;
   --admin-warning-bg: #ffdcbe;
@@ -21,11 +33,123 @@
   --admin-success-text: #154c85;
 }
 
+// OBRS-1530. Before this block the four custom properties below were the ONLY
+// thing on this page that answered to the theme: the page kept $secondary-grey,
+// every card kept $primary-white, and every text run kept its light-mode ink,
+// while the navbar and footer above and below them went dark. Same shape as
+// OBRS-768's /my-bookings finding, and it survived this long for the reason
+// OBRS-1435 names -- e2e/support/customer-pages.ts sweeps twenty pages and this
+// is not one of them, so no gate was ever going to score it.
+//
+// Written here rather than in dark-theme.scss for the reason _dark-tokens.scss
+// sets out: emulated encapsulation rewrites `.parcel-card__meta dt` to carry the
+// host attribute, and a global `body.is-dark .parcel-card__meta dt` wins today
+// and loses the day either side nests one level deeper. `:host-context` carries
+// the host attribute and cannot lose that race.
 :host-context(body.is-dark) {
   --admin-neutral-bg: #333b42;
   --admin-neutral-text: #cdd8df;
   --admin-inreview-bg: #29323d;
   --admin-inreview-text: #c7d3de;
+
+  .my-parcels {
+    background-color: $dk-bg;
+  }
+
+  .my-parcels__header {
+    h1 {
+      color: $dk-text;
+    }
+
+    p {
+      color: $dk-text-muted;
+    }
+  }
+
+  .parcel-card,
+  .state-card,
+  .booking-card--skeleton {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+    box-shadow: none;
+  }
+
+  .parcel-card__route {
+    color: $dk-text;
+  }
+
+  .parcel-card__departure,
+  .parcel-card__pending {
+    color: $dk-text-muted;
+  }
+
+  .parcel-card__meta {
+    border-top-color: $dk-border;
+    border-bottom-color: $dk-border;
+
+    dt {
+      color: $dk-text-muted;
+    }
+
+    dd {
+      color: $dk-text;
+    }
+  }
+
+  .parcel-card__hint {
+    background: $dk-bg-soft;
+    color: $dk-text;
+  }
+
+  .icon-btn {
+    color: $dk-text-muted;
+  }
+
+  .state-card {
+    .material-symbols-outlined {
+      color: $dk-text-muted;
+    }
+
+    p {
+      color: $dk-text-muted;
+    }
+  }
+
+  // AC-2, and the measurement is the whole point of the rule. The fill and the
+  // white label do not move: #3b61a9 with #ffffff on it is 6.05:1 in either
+  // theme. What moves is the BOUNDARY, because the surface behind it does --
+  // #3b61a9 scored 6.05:1 against the white card and scores 2.78:1 against
+  // $dk-bg-card, under WCAG 1.4.11's 3:1. $dk-accent as the ring puts it at
+  // 8.29:1 on the card and 9.31:1 on the page.
+  //
+  // This is the ring dark-theme.scss section P applies to the parcel-BOOKING
+  // hosts and deliberately withholds from this page. The withholding was right
+  // and still is: on the LIGHT /my-parcels card that ring is 2.03:1, a
+  // regression on a 6.05:1 border. It is only correct inside this block, which
+  // is the only place the card behind it is dark.
+  .parcel-btn-primary {
+    border-color: $dk-accent;
+  }
+
+  .btn-secondary {
+    background-color: transparent;
+    border-color: $dk-accent;
+    color: $dk-accent;
+  }
+
+  .btn-link {
+    color: $dk-accent;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      $dk-bg-soft 25%,
+      $dk-bg-input 37%,
+      $dk-bg-soft 63%
+    );
+    background-size: 400% 100%;
+  }
 }
 
 .my-parcels {

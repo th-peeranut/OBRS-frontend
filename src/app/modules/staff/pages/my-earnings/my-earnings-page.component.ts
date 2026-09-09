@@ -9,6 +9,7 @@ import {
   PerHeadEarningsGranularity,
   PerHeadEarningsRespDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
+import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
 
 /**
  * OBRS-1147 AC-1 — "ค่าหัวฉันได้เท่าไร" for the person who earned it, per day /
@@ -171,8 +172,18 @@ export class MyEarningsPageComponent implements OnInit, OnDestroy {
     }
     const from = this.toDateInputValue(this.fromDate);
     const to = this.toDateInputValue(this.toDate);
-    if (from > to) {
-      this.rangeError = this.translate.instant('STAFF.MY_EARNINGS.ERROR.RANGE_INVALID');
+    // OBRS-1751: this screen had the order check but no CAP, so a staff member could ask the
+    // backend for an unbounded span - the one thing every report page guards against. Same rule,
+    // same helper, its own error prefix (OBRS-1754).
+    const errorKey = dateRangeErrorKey(
+      this.fromDate,
+      this.toDate,
+      from,
+      to,
+      'STAFF.MY_EARNINGS.ERROR'
+    );
+    if (errorKey) {
+      this.rangeError = this.translate.instant(errorKey);
       return;
     }
     this.store.setQuery(from, to, this.granularity);

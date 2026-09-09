@@ -304,9 +304,10 @@ describe('SettlementsPageComponent', () => {
       const component = makeComponent();
 
       // 2026-01-01 -> 2027-01-02 spans 366 days (2026 is not a leap year).
-      component['onDriverCashFromDateChange'](new Date(2026, 0, 1));
+      // OBRS-1753: one control, one event - the sub-filter no longer has a From and a To to
+      // change separately, so the range arrives complete or not at all.
       driverCashDaysStoreStub.setRange.calls.reset();
-      component['onDriverCashToDateChange'](new Date(2027, 0, 2));
+      component['onDriverCashRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 2) });
 
       expect(component['driverCashRangeError']).toBe('');
       expect(driverCashDaysStoreStub.setRange).toHaveBeenCalledOnceWith(
@@ -318,9 +319,8 @@ describe('SettlementsPageComponent', () => {
     it('rejects a span one day past the cap, without dispatching', () => {
       const component = makeComponent();
 
-      component['onDriverCashFromDateChange'](new Date(2026, 0, 1));
       driverCashDaysStoreStub.setRange.calls.reset();
-      component['onDriverCashToDateChange'](new Date(2027, 0, 3));
+      component['onDriverCashRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 3) });
 
       expect(component['driverCashRangeError']).toBe('ADMIN.SETTLEMENTS.ERROR.RANGE_TOO_LARGE');
       expect(driverCashDaysStoreStub.setRange).not.toHaveBeenCalled();
@@ -331,9 +331,8 @@ describe('SettlementsPageComponent', () => {
     it('rejects from > to, without dispatching', () => {
       const component = makeComponent();
 
-      component['onDriverCashToDateChange'](new Date(2026, 5, 1));
       driverCashDaysStoreStub.setRange.calls.reset();
-      component['onDriverCashFromDateChange'](new Date(2026, 5, 10));
+      component['onDriverCashRangeChange']({ from: new Date(2026, 5, 10), to: new Date(2026, 5, 1) });
 
       expect(component['driverCashRangeError']).toBe('ADMIN.SETTLEMENTS.ERROR.RANGE_INVALID');
       expect(driverCashDaysStoreStub.setRange).not.toHaveBeenCalled();

@@ -43,21 +43,17 @@ not a settlement "round" (different semantics), so its own date-range
 filter, own store, own list. Not a new tab/route — mirrors how
 ReportsPageComponent/ExpensesPageComponent already stack independent
 sections on one page. -->
+<!-- OBRS-1753: the same one-control range picker the main filter above uses. After OBRS-1735
+     swept the two-field pattern off every report page, this sub-filter was the last pair of
+     From/To boxes left in the app — and it sat on the one page that ALSO showed the swept
+     version, so the screen taught two patterns at once. The code was never confused
+     (rangeError / driverCashRangeError have always been separate); the screen was. -->
 <section class="admin-page-filters mt-4" data-testid="driver-cash-days-filter">
-  <p-datePicker styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
-    [ngModel]="driverCashFromDate" (ngModelChange)="onDriverCashFromDateChange($event)" [showIcon]="true" [iconDisplay]="'input'"
-    [showButtonBar]="true" [placeholder]="'ADMIN.SETTLEMENTS.FILTER_FROM' | translate">
-    <ng-template pTemplate="inputicon">
-      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-    </ng-template>
-  </p-datePicker>
-  <p-datePicker styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
-    [ngModel]="driverCashToDate" (ngModelChange)="onDriverCashToDateChange($event)" [showIcon]="true" [iconDisplay]="'input'"
-    [showButtonBar]="true" [placeholder]="'ADMIN.SETTLEMENTS.FILTER_TO' | translate">
-    <ng-template pTemplate="inputicon">
-      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-    </ng-template>
-  </p-datePicker>
+  <app-admin-date-range-picker
+    [from]="driverCashFromDate"
+    [to]="driverCashToDate"
+    (rangeChange)="onDriverCashRangeChange($event)"
+  ></app-admin-date-range-picker>
 </section>
 
 <app-driver-cash-days-list

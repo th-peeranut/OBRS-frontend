@@ -10,15 +10,18 @@ import {
   getAdminTranslationLabel,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import {
   Option,
   ReturnStopOption,
   StopDetailForm,
   StopRow,
+  emptyStopDetailForm,
   filterStopRows,
   toReturnStopOptions,
   toStopDetailForm,
+  toStopLabelPayload,
   toStopRow,
   toStopUpdatePayload,
 } from './stops.mappers';
@@ -47,6 +50,20 @@ import {
  * via {@link #onRowActivate}. This page still owns every behaviour — the fetch, the
  * optimistic open + staleness guard, save, the photo actions, and the `onLangChange`
  * re-fetch — the modal only renders what this page hands it.
+ *
+ * <p>OBRS-1680: the form has two halves with different owners. The PHYSICAL half (slug,
+ * province, status, type, coordinates, the photo) is platform-wide reference data, ADMIN-only
+ * since OBRS-830 and left that way by the owner's 2026-08-31 decision; the SIGN (label, boarding
+ * note, address) is the operator's, and they save it through a different endpoint that writes
+ * only their own rows. An operator still SEES the physical values — read-only, because they need
+ * to know which place they are re-signing — but every control that would 403 for them is either
+ * disabled or absent. {@link #canEditPhysical} is the one switch, and it asks `hasHeldRole`, not
+ * `hasAnyRole`: the latter expands ROLE_GRANTS, under which an owner satisfies `admin`, so it
+ * would hand the operator exactly the controls this card exists to withhold.
+ *
+ * <p>OBRS-1678: adding and deleting a stop. `POST` and `DELETE /private/stops` have existed
+ * since OBRS-1022 and nothing on this front end had ever called either, for any role — so no
+ * screen could open a stop or close one. Both are physical, so both live behind the same switch.
  */
 @Component({
   selector: 'app-stops-page',
@@ -75,6 +92,18 @@ export class StopsPageComponent implements OnInit, OnDestroy {
   protected isDetailLoading = false;
   protected isSaving = false;
   protected isPhotoBusy = false;
+  protected isDeleting = false;
+  /** OBRS-1678: true while the modal is opening a stop that does not exist yet. */
+  protected isCreating = false;
+
+  /**
+   * OBRS-1680: may this caller edit the PLACE, as opposed to their own sign on it?
+   *
+   * <p>Read once in the constructor rather than called from the template: a getter here would run
+   * on every change-detection pass of a screen that renders one row per stop, and the answer
+   * cannot change without a new sign-in or a role preview, both of which rebuild this component.
+   */
+  protected readonly canEditPhysical: boolean;
 
   protected provinceOptions: Option[] = [];
   // OBRS-1481: rebuilt in applyLocalization AND whenever a stop is opened, because the list
@@ -96,8 +125,10 @@ export class StopsPageComponent implements OnInit, OnDestroy {
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    authService: AuthService
   ) {
+    this.canEditPhysical = authService.hasHeldRole(['admin']);
     // Every label on this page is server-localized, and so is the CONTENT of the form
     // (the detail payload's translations map is complete, but the labels beside it are
     // not). Relabel from memory and reload the open stop.
@@ -170,9 +201,29 @@ export class StopsPageComponent implements OnInit, OnDestroy {
     void this.openStop(row.id);
   }
 
+  /**
+   * OBRS-1678: opens the SAME modal with an empty form. No fetch, so no skeleton and no
+   * staleness guard — `pendingStopId` is cleared so a detail response still in flight from a
+   * row clicked a moment ago cannot paint itself into the blank create form.
+   */
+  protected openCreate(): void {
+    this.pendingStopId = null;
+    this.isCreating = true;
+    this.isDetailLoading = false;
+    this.selectedStopId = null;
+    this.selected = emptyStopDetailForm(
+      this.provinceOptions[0]?.code ?? '',
+      this.statusOptions[0]?.code ?? '',
+      this.stopTypeOptions[0]?.code ?? ''
+    );
+    this.refreshReturnStopOptions();
+    this.isFormModalOpen = true;
+  }
+
   protected async openStop(id: number): Promise<void> {
     // Optimistic open (office memory, 6 archived occurrences): flip the flags BEFORE the
     // first await so the modal + skeleton paint immediately, not after the ~2-3s admin GET.
+    this.isCreating = false;
     this.isFormModalOpen = true;
     this.selectedStopId = id;
     this.isDetailLoading = true;
@@ -213,17 +264,42 @@ export class StopsPageComponent implements OnInit, OnDestroy {
     this.isFormModalOpen = false;
     this.selected = null;
     this.selectedStopId = null;
+    this.isCreating = false;
   }
 
+  /**
+   * Three saves behind one button, chosen by who is signed in and whether the stop exists yet.
+   *
+   * <p>OBRS-1678 create and OBRS-1680's operator save are not variations of the ADMIN update —
+   * they are different endpoints with different authority, and picking between them here is what
+   * keeps the modal presentational. An operator never reaches the two ADMIN branches: the create
+   * button is not rendered for them, and `canEditPhysical` is what routes their save.
+   */
   protected async save(): Promise<void> {
     if (!this.selected || this.isSaving) {
       return;
     }
     this.isSaving = true;
     try {
-      await firstValueFrom(
-        this.adminApiService.updateStop(this.selected.id, toStopUpdatePayload(this.selected))
-      );
+      if (this.isCreating) {
+        await firstValueFrom(this.adminApiService.createStop(toStopUpdatePayload(this.selected)));
+        await this.load();
+        this.closeDetail();
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
+        return;
+      }
+
+      if (this.canEditPhysical) {
+        await firstValueFrom(
+          this.adminApiService.updateStop(this.selected.id, toStopUpdatePayload(this.selected))
+        );
+      } else {
+        // OBRS-1680: the operator writes their own overlay. Their form never held an editable
+        // physical field, so there is nothing of the place in this body to drop.
+        await firstValueFrom(
+          this.adminApiService.updateStopLabels(this.selected.id, toStopLabelPayload(this.selected))
+        );
+      }
       await this.load();
       // Re-read the stop instead of trusting the local form: the PUT is a full replace and
       // the server normalizes (trims, drops blank-label locales), so what is on screen after
@@ -237,6 +313,53 @@ export class StopsPageComponent implements OnInit, OnDestroy {
     } finally {
       this.isSaving = false;
     }
+  }
+
+  /**
+   * OBRS-1678: closes a stop for good.
+   *
+   * <p>Nine foreign keys name `stops` and all nine are NO ACTION, so a stop any route, schedule,
+   * booking, ticket or sales point still refers to cannot be deleted — the database says so and
+   * the API answers 409. That is the normal outcome for most rows on this screen, not an edge
+   * case, so it gets its own sentence rather than the generic failure message: the operator has
+   * to be told the stop is in use, otherwise the button reads as broken.
+   */
+  protected async deleteStop(row: StopRow, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+    if (this.isDeleting) {
+      return;
+    }
+    const confirmed = await this.alertService.confirm({
+      title: this.translate.instant('ADMIN.STOPS.DELETE_TITLE'),
+      text: this.translate.instant('ADMIN.STOPS.DELETE_CONFIRM', { name: row.name }),
+      confirmButtonText: this.translate.instant('ADMIN.COMMON.DELETE'),
+      cancelButtonText: this.translate.instant('ADMIN.COMMON.CANCEL'),
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.isDeleting = true;
+    try {
+      await firstValueFrom(this.adminApiService.deleteStop(row.id));
+      if (this.selectedStopId === row.id) {
+        this.closeDetail();
+      }
+      await this.load();
+      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
+    } catch (error) {
+      await this.alertService.error(
+        this.isConflict(error)
+          ? this.translate.instant('ADMIN.STOPS.DELETE_IN_USE', { name: row.name })
+          : extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED')
+      );
+    } finally {
+      this.isDeleting = false;
+    }
+  }
+
+  private isConflict(error: unknown): boolean {
+    return (error as { status?: number } | null)?.status === 409;
   }
 
   protected async onPhotoSelected(event: Event): Promise<void> {

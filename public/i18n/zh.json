@@ -1101,7 +1101,15 @@
       "PHOTO_REMOVE_CONFIRM": "要从该站点删除这张照片吗？路线图将恢复为无照片状态。",
       "PHOTO_REMOVE_FAILED": "删除照片失败。",
       "PHOTO_UPLOADED": "照片已上传。",
-      "PHOTO_UPLOAD_FAILED": "上传照片失败。"
+      "PHOTO_UPLOAD_FAILED": "上传照片失败。",
+      "ADD": "新增站点",
+      "CREATE_TITLE": "新增站点",
+      "SLUG": "Slug（站点代码）",
+      "SLUG_HINT": "小写字母与下划线，例如 mo_chit。设定后无法更改。",
+      "DELETE_TITLE": "删除站点",
+      "DELETE_CONFIRM": "确定删除站点“{{name}}”吗？",
+      "DELETE_IN_USE": "仍有路线、班次、订单、车票或售票点引用“{{name}}”，因此无法删除。",
+      "PHYSICAL_READONLY": "站点的位置与类型属于共享的基础数据，只有系统管理员可以修改。下方的名称、标志物与地址由您自行填写。"
     },
     "ROUTES": {
       "TITLE": "路线管理",
@@ -1544,8 +1552,6 @@
     },
     "SETTLEMENTS": {
       "SUBTITLE": "确认每个已发车班次的现金与收入交接。",
-      "FILTER_FROM": "起始日期",
-      "FILTER_TO": "结束日期",
       "TABLE_TITLE": "待结算班次",
       "COL": {
         "ROUTE": "路线",
@@ -3264,8 +3270,7 @@
       "SUBTOTAL": "小计",
       "DISCOUNT_ROUND_TRIP": "往返折扣",
       "DISCOUNT": "折扣",
-      "TOTAL": "总计",
-      "CONFIRM": "确认付款"
+      "TOTAL": "总计"
     },
     "CREDIT_CARD": {
       "HOSTED_HINT": "点击付款后，请在 Omise 的安全窗口中输入卡片信息。本网站不会看到或保存您的卡号。",
@@ -4350,7 +4355,8 @@
         "AMOUNT": "金额（泰铢）"
       },
       "ERROR": {
-        "RANGE_INVALID": "开始日期不得晚于结束日期。"
+        "RANGE_INVALID": "开始日期不得晚于结束日期。",
+        "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。"
       }
     }
   },

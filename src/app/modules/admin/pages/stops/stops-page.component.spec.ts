@@ -43,7 +43,7 @@ const RETURN_STOP_OPTIONS = [
   { id: 3, slug: 'pt_srinakarin', translations: { th: { label: 'ปตท. ศรีนครินทร์' } } },
 ];
 
-function makeComponent(overrides: Record<string, unknown> = {}) {
+function makeComponent(overrides: Record<string, unknown> = {}, isAdmin = true) {
   const adminApi = {
     getStopsForAdmin: jasmine.createSpy('getStopsForAdmin').and.returnValue(of({ data: STOP_LIST })),
     getProvincesForAdmin: jasmine
@@ -67,6 +67,9 @@ function makeComponent(overrides: Record<string, unknown> = {}) {
       .createSpy('uploadStopPhoto')
       .and.returnValue(of({ data: { primaryPhotoUrl: 'https://sb.example/o/public/b/stops/7/x.jpg' } })),
     deleteStopPhoto: jasmine.createSpy('deleteStopPhoto').and.returnValue(of({ data: null })),
+    updateStopLabels: jasmine.createSpy('updateStopLabels').and.returnValue(of({ data: null })),
+    createStop: jasmine.createSpy('createStop').and.returnValue(of({ data: null })),
+    deleteStop: jasmine.createSpy('deleteStop').and.returnValue(of({ data: null })),
     ...overrides,
   };
   const alert = {
@@ -79,9 +82,20 @@ function makeComponent(overrides: Record<string, unknown> = {}) {
   // real data (every stop has a `th` label, most have no `en` one at all).
   const translate = createTranslateStub();
   translate.currentLang = 'th';
-  const component = new StopsPageComponent(adminApi as any, alert as any, translate);
+  // OBRS-1680: hasHeldRole, not hasAnyRole - the component must ask the one that does NOT
+  // expand ROLE_GRANTS, under which an owner satisfies 'admin'. A stub that answered the
+  // other question would make every test below pass for the wrong reason.
+  const authService = {
+    hasHeldRole: jasmine.createSpy('hasHeldRole').and.returnValue(isAdmin),
+  };
+  const component = new StopsPageComponent(
+    adminApi as any,
+    alert as any,
+    translate,
+    authService as any
+  );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { component: component as any, adminApi, alert, translate };
+  return { component: component as any, adminApi, alert, translate, authService };
 }
 
 function fileEvent(file: File | null): Event {
@@ -390,3 +404,106 @@ describe('StopsPageComponent (OBRS-1022)', () => {
     );
   });
 });
+
+describe('StopsPageComponent - the two halves of a stop (OBRS-1680)', () => {
+  it('asks hasHeldRole for admin, so a role preview or ROLE_GRANTS cannot widen the physical half', () => {
+    const { authService } = makeComponent();
+
+    expect(authService.hasHeldRole).toHaveBeenCalledWith(['admin']);
+  });
+
+  it('an operator saving a stop writes their own overlay, never the shared row', async () => {
+    const { component, adminApi } = makeComponent({}, false);
+    await component.load();
+    await component.openStop(7);
+
+    component.selected.translations[0].label = 'อัลฟ่า ประตู 3';
+    await component.save();
+
+    expect(adminApi.updateStopLabels).toHaveBeenCalled();
+    expect(adminApi.updateStop).not.toHaveBeenCalled();
+    const [id, payload] = adminApi.updateStopLabels.calls.mostRecent().args;
+    expect(id).toBe(7);
+    // The place is not in the body at all - not sent as null, not sent unchanged.
+    expect(Object.keys(payload).sort()).toEqual(['addresses', 'translations']);
+    expect(payload.translations[0].label).toBe('อัลฟ่า ประตู 3');
+  });
+
+  it('an admin saving a stop still writes the shared row through the full-replace PUT', async () => {
+    const { component, adminApi } = makeComponent();
+    await component.load();
+    await component.openStop(7);
+
+    await component.save();
+
+    expect(adminApi.updateStop).toHaveBeenCalled();
+    expect(adminApi.updateStopLabels).not.toHaveBeenCalled();
+  });
+
+  it('does not offer an operator the add button', () => {
+    const { component } = makeComponent({}, false);
+
+    expect(component.canEditPhysical).toBeFalse();
+  });
+});
+
+describe('StopsPageComponent - adding and deleting a stop (OBRS-1678)', () => {
+  it('opens an empty form seeded with the first option of each lookup, and POSTs it', async () => {
+    const { component, adminApi } = makeComponent();
+    await component.load();
+
+    component.openCreate();
+
+    expect(component.isCreating).toBeTrue();
+    expect(component.selected.slug).toBe('');
+    expect(component.selected.provinceCode).toBe('chonburi');
+    expect(component.selected.statusCode).toBe('active');
+
+    component.selected.slug = 'new_stop';
+    component.selected.translations[0].label = 'จุดใหม่';
+    await component.save();
+
+    expect(adminApi.createStop).toHaveBeenCalled();
+    expect(adminApi.createStop.calls.mostRecent().args[0].slug).toBe('new_stop');
+    // A create must not also fire the update path with the placeholder id 0.
+    expect(adminApi.updateStop).not.toHaveBeenCalled();
+    expect(component.isFormModalOpen).toBeFalse();
+  });
+
+  it('deletes a stop after confirmation and reloads the list', async () => {
+    const { component, adminApi, alert } = makeComponent();
+    await component.load();
+
+    await component.deleteStop({ id: 7, name: 'หนองชาก' } as any, stopEvent());
+
+    expect(adminApi.deleteStop).toHaveBeenCalledWith(7);
+    expect(alert.success).toHaveBeenCalled();
+  });
+
+  it('does not delete when the confirmation is dismissed', async () => {
+    const { component, adminApi, alert } = makeComponent();
+    alert.confirm.and.resolveTo(false);
+    await component.load();
+
+    await component.deleteStop({ id: 7, name: 'หนองชาก' } as any, stopEvent());
+
+    expect(adminApi.deleteStop).not.toHaveBeenCalled();
+  });
+
+  it('a 409 says the stop is still in use rather than the generic failure line', async () => {
+    const { component, alert } = makeComponent({
+      deleteStop: jasmine.createSpy('deleteStop').and.returnValue(throwError(() => ({ status: 409 }))),
+    });
+    await component.load();
+
+    await component.deleteStop({ id: 7, name: 'หนองชาก' } as any, stopEvent());
+
+    // The stub's `instant` echoes the key, so the key IS the assertion: the generic
+    // ADMIN.MESSAGES.DELETE_FAILED would not tell an operator the stop is still referenced.
+    expect(alert.error).toHaveBeenCalledWith('ADMIN.STOPS.DELETE_IN_USE');
+  });
+});
+
+function stopEvent(): MouseEvent {
+  return { stopPropagation: () => undefined } as unknown as MouseEvent;
+}
