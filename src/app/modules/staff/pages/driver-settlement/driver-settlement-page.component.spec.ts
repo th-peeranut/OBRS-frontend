@@ -313,6 +313,36 @@ describe('DriverSettlementPageComponent (OBRS-1756)', () => {
     expect(payload.repairBills[0].items[0].amount).toBe(3500);
   });
 
+  it('refuses an amount it cannot read instead of dropping that cost from the one submit', async () => {
+    await setUp();
+    pickVehicle();
+
+    // `1,200` is what a counter clerk types. `toCents` reads only `^\d+(\.\d{1,2})?$`, so
+    // buildPayload used to SKIP the row and settle the day 1,200 baht short, in silence.
+    component['expenseRows'].find((r) => r.category === 'FUEL')!.amountInput = '1,200';
+    fixture.detectChanges();
+
+    expect(component['canSubmit']).toBeFalse();
+    expect(component['blockedReasonKey']).toBe('STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID');
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="settlement-amount-invalid-FUEL"]'))
+    ).not.toBeNull();
+
+    component['onSubmit']();
+    expect(api.postDriverCashDaySettle).not.toHaveBeenCalled();
+
+    // Positive control: the same row typed correctly clears both the message and the block, so
+    // the assertions above are not passing over a screen that refuses everything.
+    component['expenseRows'].find((r) => r.category === 'FUEL')!.amountInput = '1200';
+    fixture.detectChanges();
+    expect(component['blockedReasonKey']).toBeNull();
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="settlement-amount-invalid-FUEL"]'))
+    ).toBeNull();
+    component['onSubmit']();
+    expect(api.postDriverCashDaySettle).toHaveBeenCalledTimes(1);
+  });
+
   it('reuses the SAME Idempotency-Key when the same payload is retried, and mints a new one once it changes', async () => {
     await setUp();
     api.postDriverCashDaySettle.and.returnValue(throwError(() => new Error('network')));

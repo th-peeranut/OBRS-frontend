@@ -373,6 +373,19 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
     return row.category === WAGE_CATEGORY;
   }
 
+  /**
+   * Typed something that is not a money value. `toCents` accepts only
+   * `^\d+(\.\d{1,2})?$`, so `1,200`, `฿1200`, `12.345` and `-50` all read as null — and
+   * `buildPayload` SKIPS a null row. Without this the one submit would settle the day with that
+   * cost silently missing, and `alreadySettled` then stands in the way of a clean redo. Said the
+   * same way the per-round `driver-cash-expense-form` has always said it (OBRS-960:
+   * `VALIDATION.AMOUNT_INVALID` under the field plus a refused button), reusing that key rather
+   * than minting a second wording for the same rule.
+   */
+  protected isAmountInvalid(row: SettlementExpenseRow): boolean {
+    return row.amountInput.trim().length > 0 && toCents(row.amountInput) === null;
+  }
+
   protected categoryLabel(category: string): string {
     return this.translate.instant(`ADMIN.EXPENSES.CATEGORIES.${category}`);
   }
@@ -433,6 +446,11 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
     }
     if (this.isDayReturned) {
       return 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED';
+    }
+    // Before the repair check, because an unparseable amount is the silent one: the row would be
+    // dropped from the payload and from the total, and the day would settle short.
+    if (this.visibleExpenseRows.some((row) => this.isAmountInvalid(row))) {
+      return 'STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID';
     }
     if (this.repairBills.some((bill) => !bill.valid || this.billTotal(bill) <= 0)) {
       return 'STAFF.SETTLEMENT.BLOCKED.INVALID_REPAIR_BILL';

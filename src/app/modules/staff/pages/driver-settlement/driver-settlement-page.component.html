@@ -220,6 +220,14 @@ overridable — `vehicles.assigned_driver_id` is a default, not a restriction (V
                     [(ngModel)]="row.amountInput"
                     [name]="'settlementAmount' + row.category"
                   />
+                  <!-- Same signal the per-round expense form gives (OBRS-960): a value `toCents`
+                  cannot read is otherwise dropped from the payload without a word. -->
+                  @if (isAmountInvalid(row)) {
+                    <small
+                      class="admin-error"
+                      [attr.data-testid]="'settlement-amount-invalid-' + row.category"
+                    >{{ 'STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID' | translate }}</small>
+                  }
                 </td>
                 <td>
                   <input
