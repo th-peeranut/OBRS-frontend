@@ -33,7 +33,9 @@
  *
  *   B. BOUNDARY (WCAG 1.4.11). An interactive control's own surface against the
  *      surface it sits on, 3.0:1, with a visible border allowed to carry the
- *      boundary instead of the fill. This is a DIFFERENT criterion and no
+ *      boundary for a control whose fill is too faint to read as a surface of its
+ *      own (below 1.5:1 on the page) -- but never for one that paints a real
+ *      surface (design-system §2.6 clause 2, OBRS-1782). This is a DIFFERENT criterion and no
  *      contrast-of-text check can see it: OBRS-746 measured `.btn-search` at
  *      2.80:1 fill-vs-page in dark mode with a perfectly legible white label.
  *      Before OBRS-752 that same button was the opposite -- boundary fine, label
@@ -128,6 +130,13 @@ export interface BoundaryFinding {
   fillVsPage: number;
   borderVsPage: number | null;
   boundary: number;
+  /**
+   * Which of the two numbers above `boundary` actually is, so a register entry can
+   * never again record a border ratio as the reason a FILL was accepted (OBRS-1782).
+   * `'fill'` means design-system §2.6 clause 2 decided this row; `'border'` means
+   * clause 1/3 did.
+   */
+  boundaryFrom: 'fill' | 'border';
   count: number;
 }
 
@@ -446,6 +455,38 @@ export const MEASURE = (only?: string): Sweep => {
     }
 
     const fillVsPage = fill ? ratio(fill, page) : 1;
+    // WHICH CLAUSE DECIDES THIS ROW (design-system §2.6, split out by OBRS-1782).
+    //
+    // This used to be `Math.max(fillVsPage, borderVsPage ?? 0)`, which quietly
+    // erased the line §2.6 draws on purpose: a control whose FILL fails clause 2
+    // passed on a border that clause 2 does not let it borrow, and the register
+    // then recorded the BORDER's ratio as the reason -- the wrong number under the
+    // wrong clause. `.btn-search` is the proof it mattered: fill 2.80:1, border
+    // 7.37:1, the one must-catch §2.6 names -- and until this split the live sweep
+    // scored it 7.37 and passed it every run.
+    //
+    // The trigger is "the fill is visible AS A SURFACE", not "has a
+    // background-color", and the difference is the whole of OBRS-1782's second
+    // half. Read literally, clause 2 condemns every dark field in the app (fill
+    // 1.04:1 on the page, border 4.03:1) -- controls OBRS-772 repainted three
+    // weeks earlier and clause 1 blesses in that exact shape. Clause 1 and clause
+    // 2 disagree about a faintly filled field, and `max()` was what kept the
+    // disagreement invisible.
+    //
+    // 1.5 is a house rule; WCAG has no such number and the owner set this one
+    // (2026-09-09). It is deliberately not fine-tuned: measured over both sweeps
+    // that day (458 controls), every sub-3:1 fill in the app sits at <=1.37 or at
+    // >=2.33 with nothing between, so any value in 1.38..2.33 picks the same
+    // population. What it fixes is the concept -- a surface you cannot see is not
+    // a surface. Inlined rather than imported because this function is serialised
+    // into the browser and closes over nothing; the same reason `3.0` and `4.5`
+    // are literals above.
+    const paintsFill = fill !== null && fillVsPage >= 1.5;
+    // A faint fill with NO border at all is still scored on its fill -- the skip
+    // above only fires when there is neither. Without this the row would be
+    // labelled "via border" beside a border of `none`, which is the same defect
+    // this card is fixing, one shape further along.
+    const scoredOnFill = paintsFill || borderVsPage === null;
     measuredControls++;
     controlRows.push({
       key: '',
@@ -456,7 +497,10 @@ export const MEASURE = (only?: string): Sweep => {
       page: hex(page),
       fillVsPage,
       borderVsPage,
-      boundary: Math.max(fillVsPage, borderVsPage ?? 0),
+      // The `??` is unreachable -- `scoredOnFill` is true whenever borderVsPage is
+      // null -- and is here to satisfy the type, not to cover a case.
+      boundary: scoredOnFill ? fillVsPage : borderVsPage ?? fillVsPage,
+      boundaryFrom: scoredOnFill ? 'fill' : 'border',
       count: 1,
     });
   }

@@ -54,6 +54,24 @@
  * have retired OBRS-746's `.btn-search` (fill 2.80:1 behind a legible white
  * label), the only must-catch invariant B has.
  *
+ * WHAT THE NUMBER IN AN ENTRY IS (OBRS-1782, and it was wrong before that card)
+ *
+ * Every ratio below is the ONE the gate scored, and the gate now picks it by
+ * clause rather than by size: a control that paints a fill visible AS A SURFACE
+ * (1.5:1 or better against its page -- the house rule §2.6 sets, and the reason it
+ * needs one) is scored on that FILL, and a passing border may not answer for it;
+ * everything else is scored on its BORDER (clauses 1 and 3). Read a number here as
+ * "the fill" or "the border" depending on which the entry's own reason names --
+ * they are different defects with different fixes.
+ *
+ * It used to be `Math.max(fillVsPage, borderVsPage)`, which erased that line: the
+ * two staff tile rows read 1.09:1 on their dark fill and were filed at the 1.61:1
+ * of a border, under clause 3's wording, while clause 2 was the clause that
+ * actually applied. Both halves of that -- the pass and the recorded reason --
+ * are what OBRS-1782 fixed. The run log now prints `boundary via fill|border`
+ * beside both numbers on every row, so an entry can be checked against the clause
+ * it claims without re-deriving anything.
+ *
  * 15 of the 18 are invariant B (WCAG 1.4.11, control boundary) and name OBRS-772.
  * The other three are TEXT findings (invariant A, 4.5:1) and name OBRS-1760 --
  * pre-existing colours on `/staff/sell` that this sweep only began to render once
@@ -168,32 +186,33 @@ export const STAFF_CONTRAST_ALLOW: Record<string, string> = {
   'light|div.route-group-header.sticky-top.bg-light|boundary-on-#ffffff': '1.30:1 -- OBRS-772 accepted: labelled surface (staff sell, trip-browser route header)',
   'dark|div.route-group-header.sticky-top.bg-light|boundary-on-#1d2226': '1.61:1 -- OBRS-772 accepted: labelled surface (staff sell, trip-browser route header)',
   'light|div.ptype-tile.d-flex.flex-column|boundary-on-#ffffff': '1.30:1 -- OBRS-772 accepted: labelled tile (staff sell, passenger-type tile)',
-  'dark|div.ptype-tile.d-flex.flex-column|boundary-on-#1d2226': '1.61:1 -- OBRS-772 accepted: labelled tile (staff sell, passenger-type tile)',
+  'dark|div.ptype-tile.d-flex.flex-column|boundary-on-#1d2226': '1.61:1 -- OBRS-772 accepted: labelled tile, no fill of its own since OBRS-1782 (staff sell, passenger-type tile)',
 
   // OBRS-1045 adds a second row of tiles directly under `.ptype-tile`, answering the
   // neighbouring question (adult/child) in the same accent language and with the same
-  // values, so it is registered on exactly the same footing -- and inherits the same two
-  // open questions rather than settling them. Written down because a register that only
-  // records the comfortable half is the thing 2.6 was written to stop:
+  // values, so it is registered on exactly the same footing.
   //
-  //   1. In LIGHT mode this is clause 3 and nothing more: a translated text label, no fill
-  //      of its own, a decorative border at 1.30:1.
-  //   2. In DARK mode both rows DO paint a fill (`--admin-surface-soft`, 1.09:1 on the
-  //      card), which clause 2 says must clear 3:1 "label or no label". The 1.61:1 below is
-  //      the BORDER, which is what `Math.max(fillVsPage, borderVsPage)` reports
-  //      (`customer-contrast.ts:459`) -- so this entry's number is not the number that
-  //      would decide it. That is OBRS-1782, opened against the family, not this card:
-  //      spot-fixing the newer tile would leave `.ptype-tile` behind and split a row pair
-  //      that is meant to read as one group.
-  //   3. The ACTIVE tile scores 2.47:1 under this same key. Its state carries an
-  //      `--accent-soft` fill, the accent border and `font-weight: 600`, but NO colour
-  //      change -- so unlike 2.6's worked example it has no signal that invariant A scores.
-  //      Nothing here measures whether that is enough; OBRS-1774's invariant D is what will.
+  // Both rows are clause 3 in BOTH themes now, and that took a fix. Until OBRS-1782 the
+  // dark halves painted a fill (`--admin-surface-soft`, 1.09:1 on the card) that clause 2
+  // says must clear 3:1 "label or no label" -- and they were nevertheless filed at the
+  // 1.61:1 BORDER, because the gate scored `Math.max(fillVsPage, borderVsPage)`. Two
+  // separate defects in one line: the fill passed on a boundary clause 2 does not let it
+  // borrow, and the register recorded the wrong number under the wrong clause's wording.
+  // OBRS-1782 split the score by clause (`customer-contrast.ts`, `boundaryFrom`) and the
+  // owner chose to drop the dark fill from both rows rather than repaint the shared token,
+  // so `--admin-outline` is now genuinely the whole boundary and 1.61:1 is genuinely the
+  // number that decides these rows. Both rows moved together on purpose: they read as one
+  // control group and spot-fixing the newer one would have split the pair.
   //
-  // Ratios measured 2026-09-09 (CI run 34308699575); the 1.09:1 fill computed from the
-  // dark tokens at `admin-theme.scss:277-279`.
+  // Still open and NOT settled here: the ACTIVE tile scores 2.47:1 under this same key.
+  // Its state carries an `--accent-soft` fill, the accent border and `font-weight: 600`,
+  // but NO colour change -- so unlike 2.6's worked example it has no signal that invariant
+  // A scores. Nothing here measures whether that is enough; OBRS-1774's invariant D will.
+  //
+  // Ratios measured 2026-09-09 (CI run 34308699575); the 1.09:1 fill that is now gone was
+  // computed from the dark tokens at `admin-theme.scss:277-279`.
   'light|button.fare-tile.rounded.px-3|boundary-on-#ffffff': '1.30:1 -- OBRS-772 accepted: labelled tile (staff sell, fare-category tile), added by OBRS-1045',
-  'dark|button.fare-tile.rounded.px-3|boundary-on-#1d2226': '1.61:1 -- OBRS-772 accepted: labelled tile (staff sell, fare-category tile), added by OBRS-1045',
+  'dark|button.fare-tile.rounded.px-3|boundary-on-#1d2226': '1.61:1 -- OBRS-772 accepted: labelled tile, no fill of its own since OBRS-1782 (staff sell, fare-category tile), added by OBRS-1045',
 
   // --- the three TEXT findings, which are NOT OBRS-772 ----------------------
   // Invariant A, WCAG 1.4.3, 4.5:1 for normal-size text. A darker red and a

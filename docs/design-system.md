@@ -350,6 +350,34 @@ runtime gate's invariant B has.
    pills, verdict buttons. The label identifies the control; the border is
    chrome. These are recorded in the two registers as *accepted*, not as *debt*.
 
+**Clause 2 and clause 3 are decided separately, and until OBRS-1782 the gate did
+not do that.** Invariant B scored `Math.max(fillVsPage, borderVsPage)`, so a
+control whose fill failed clause 2 passed on a border clause 2 does not let it
+borrow — and the register then wrote the border's ratio down as the reason, in
+clause 3's language, for a control that was painting a fill. `.btn-search` is the
+proof it mattered: fill 2.80:1, border 7.37:1, the one must-catch this section
+names — and the live sweep scored it 7.37 and passed it every run until the split.
+It now scores by clause, and every run prints `boundary via fill|border` beside
+both numbers so an entry can be read back against the clause it claims.
+
+**When a fill counts as a fill: 1.5:1 (owner, 2026-09-09), and it is a house rule
+with no standard behind it.** "Different from the page" cannot be read literally,
+because clause 1 and clause 2 then contradict each other: a dark input field
+paints `#161922` on a `#1a1d27` page — a different colour, at 1.04:1 — and clears
+clause 1 on the 4.03:1 border OBRS-772 gave it. Condemning that on clause 2 would
+retire OBRS-772's own fix. So a fill below **1.5:1 against the page** is a tint,
+not a surface: clause 2 does not reach it and its border answers instead — or the
+tint itself does, when the control has no border to hand it to. The number
+is deliberately coarse — measured across both sweeps on 2026-09-09 (458 controls),
+every sub-3:1 fill in the app sits at ≤1.37 or ≥2.33 with nothing in between, so
+any value in 1.38–2.33 selects the same population. What it fixes is the concept:
+a surface you cannot see is not a surface.
+
+The live example of the first half was the staff sell tiles (`.ptype-tile`,
+`.fare-tile`) at 1.09:1 fill / 1.61:1 border in dark, filed at the border's number
+under clause 3's wording. OBRS-1782 removed their dark fill, which is what moves
+them into clause 3 honestly rather than by arithmetic.
+
 **State is a separate question, and the gate has a real blind spot in it.** 1.4.11
 also requires 3:1 of *"visual information necessary to indicate state"*. Invariant
 B compares a control's fill to the **page**, never to a **sibling's** fill — so
