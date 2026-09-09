@@ -24,6 +24,17 @@ import { expectNoEscapedGateCalls, seedGateAdminSession } from '../support/gate-
 
 const ASSETS = 'e2e-evidence/obrs-1374';
 
+/**
+ * OBRS-1626: /admin/expenses now opens filtered to the CURRENT month, so a stub
+ * row dated in a fixed month falls outside the default filter as soon as that
+ * month passes and this capture photographs an empty table. The dates below are
+ * built from today's month for that reason - do not pin them back.
+ */
+const CAPTURE_MONTH = (() => {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+})();
+
 /** One four-line repair bill: three parts plus a labour line that has no part (AC-3). */
 const FOUR_LINE_BILL = {
   id: 4001,
@@ -33,7 +44,7 @@ const FOUR_LINE_BILL = {
   categoryOtherLabel: null,
   amount: 3100,
   vatAmount: 217,
-  expenseDate: '2026-08-20',
+  expenseDate: `${CAPTURE_MONTH}-20`,
   receiptNo: 'RC-8842',
   paidBy: 'อู่ช่างเล็ก',
   note: 'เข้าอู่หลังวิ่งรอบบ่าย',
@@ -56,7 +67,7 @@ const PLAIN_BILL = {
   categoryOtherLabel: null,
   amount: 1800,
   vatAmount: null,
-  expenseDate: '2026-08-19',
+  expenseDate: `${CAPTURE_MONTH}-19`,
   receiptNo: null,
   paidBy: 'เงินสดหน้าปั๊ม',
   note: null,

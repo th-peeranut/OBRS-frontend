@@ -7,11 +7,14 @@ import {
 } from '../../../../shared/interfaces/schedule.interface';
 import {
   combineLatest,
+  distinctUntilChanged,
   map,
   Observable,
+  of,
   startWith,
   Subject,
   Subscription,
+  switchMap,
   take,
   takeUntil,
 } from 'rxjs';
@@ -42,8 +45,17 @@ import {
   StationApi,
 } from '../../../../shared/interfaces/station.interface';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
+import { formatDayLabel } from '../../../../shared/lib/day-label';
+import { scheduleFilterForDay } from '../../../../shared/lib/schedule-day-jump';
+import {
+  availabilityRequestFor,
+  availabilityRequestKey,
+  buildDayWindow,
+} from '../../../../shared/lib/schedule-day-window';
+import { ScheduleService } from '../../../../services/schedule/schedule.service';
+import { BookingPolicyService } from '../../../../services/booking-policy/booking-policy.service';
 import { RouteMapService } from '../../../../services/route-map/route-map.service';
-import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
+import { RouteStop, TripEstimate } from '../../../../shared/interfaces/route-map.interface';
 import { LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
 import { AnalyticsService } from '../../../../services/analytics/analytics.service';
 import { AuthService } from '../../../../auth/auth.service';
@@ -51,6 +63,7 @@ import {
   isOnlineTicketBookingOpen,
   NJ_FACEBOOK_PAGE_URL,
 } from '../../../../shared/lib/online-booking-channel';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 /**
  * OBRS-1217: what the empty result list means when the customer searched TODAY.
@@ -64,6 +77,26 @@ export interface SoldOutTodayState {
    *  tomorrow can leave the return date BEFORE it, and this screen has no say
    *  over the return leg. Owner's call, 2026-08-10. */
   canJumpToNextDay: boolean;
+}
+
+/** OBRS-864: the two `RouteStop` objects a result row's estimate was derived
+ *  from. `resolveLegEstimates` already resolves both to read two numbers off
+ *  them and then drops them, so keeping them costs no extra request. */
+export interface LegStops {
+  pickup: RouteStop | null;
+  dropoff: RouteStop | null;
+}
+
+/** OBRS-864: one rendered stop line on a result row. */
+export interface StopLine {
+  labelKey: string;
+  icon: string;
+  /** "<name> · <address>", or just the name when the stop has no address. */
+  text: string;
+  /** Full address for the native tooltip, since the line itself is truncated. */
+  title: string | null;
+  /** Null renders plain text, never a dead link (AC3). */
+  mapsUrl: string | null;
 }
 
 @Component({
@@ -108,6 +141,20 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
    *  last bus has left, because the calendar defaults to today and the search
    *  filters departed rounds out in SQL (`ScheduleRepository:151`). */
   soldOutToday$: Observable<SoldOutTodayState | null>;
+  /** OBRS-862. The nearest day with trips INSIDE the strip's own 7-day window
+   *  — the same cached availability answer the strip renders, so one HTTP call
+   *  serves both. `null` when availability is unknown, empty, or holds only the
+   *  day already searched; the block then degrades to its pre-card copy and
+   *  makes no claim. Subscribed only from the empty-result branch of the
+   *  template, so a page whose search returned trips asks nothing extra. */
+  nearestDay$: Observable<{ iso: string; label: string } | null>;
+  /** OBRS-862. Gates the jump BUTTON in the plain empty-result branch — never
+   *  the hint, which names the nearest day for every trip type. Exactly the
+   *  predicate `resolveSoldOutToday` puts on `canJumpToNextDay` (owner's
+   *  2026-08-10 call: moving the outbound can leave the return date before it,
+   *  and this screen has no say over the return leg), reused rather than
+   *  restated so the two buttons cannot drift apart. */
+  canJumpToDay$: Observable<boolean>;
   /** The raw active language ('th' | 'en' | 'zh') — unlike `currentLocale$`,
    *  which deliberately narrows to the two locales station labels exist in. */
   private currentLang$: Observable<string>;
@@ -146,6 +193,25 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   departureEstimates: Record<number, TripEstimate> = {};
   returnEstimates: Record<number, TripEstimate> = {};
 
+  /** OBRS-864: the pickup/dropoff stops behind those same estimates, kept so
+   *  the row can name the stop the customer will actually stand at instead of
+   *  echoing back the stations they typed into the filter. Absent (no key)
+   *  until resolved, exactly like the estimate above — `.stop-detail` reserves
+   *  their height in CSS so the card does not grow when they land. */
+  departureStops: Record<number, LegStops> = {};
+  returnStops: Record<number, LegStops> = {};
+
+  /** OBRS-864: true when every row of the leg runs the same route, which makes
+   *  the two stop lines a property of the RESULT SET, not of a row — the filter
+   *  fixed from/to before the first row existed, so repeating them per row says
+   *  the same sentence N times. Then the list heads them once and the rows say
+   *  nothing. Decided from `schedules` alone, synchronously, BEFORE
+   *  `getPickupDropoffCached` answers: the height has to be reserved in the
+   *  right place at first paint, and a mode that flipped mid-flight would move
+   *  the card under the cursor — the exact shift `.stop-detail` reserves against. */
+  departureSharedRoute = false;
+  returnSharedRoute = false;
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -155,7 +221,9 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     private translateService: TranslateService,
     private routeMapService: RouteMapService,
     private analytics: AnalyticsService,
-    private authService: AuthService
+    private authService: AuthService,
+    private scheduleService: ScheduleService,
+    private bookingPolicyService: BookingPolicyService
   ) {
     this.scheduleList = this.store.pipe(select(selectScheduleList));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
@@ -213,6 +281,75 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       map(([scheduleList, scheduleFilter, lang]) =>
         this.resolveSoldOutToday(scheduleList, scheduleFilter, lang)
       )
+    );
+
+    // OBRS-862. Asked ONLY while the outbound list is empty — the one state
+    // this copy renders in — so a successful search costs no extra request at
+    // all, and when it does fire the day strip above has almost always already
+    // filled `getAvailabilityCached`'s entry for the identical key.
+    this.nearestDay$ = combineLatest([
+      this.scheduleList,
+      this.scheduleFilter,
+      this.rawProvinceStationList,
+      this.currentLang$,
+      this.bookingPolicyService.maxAdvanceDays$,
+    ]).pipe(
+      map(([scheduleList, scheduleFilter, stationList, lang, maxAdvanceDays]) => {
+        const departures = scheduleList?.departureSchedules;
+        if (!Array.isArray(departures) || departures.length > 0) {
+          return null;
+        }
+        // The SAME gate `resolveSoldOutToday` puts on the same field below, and
+        // it is not defensive dressing: `availabilityRequestFor` does not look
+        // at `departureDate`, so a restored filter without one still produces a
+        // request, and `dayjs(null).format(...)` is the literal STRING
+        // "Invalid Date" — which sorts ABOVE every ISO date ('I' 0x49 vs a
+        // leading digit 0x32), so nothing in the window is "after" it and the
+        // "before" arm takes over with the whole window to choose from.
+        // `resolveNearestDay`
+        // would then find nothing "after", take the last entry "before", and
+        // name the FARTHEST day in the window as the nearest one with trips.
+        const searchedDate = dayjs(scheduleFilter?.departureDate);
+        if (!scheduleFilter?.departureDate || !searchedDate.isValid()) {
+          return null;
+        }
+        const request = availabilityRequestFor(
+          scheduleFilter,
+          stationList,
+          buildDayWindow(scheduleFilter.departureDate, new Date(), maxAdvanceDays)
+        );
+        return request
+          ? {
+              request,
+              lang,
+              selected: searchedDate.format('YYYY-MM-DD'),
+            }
+          : null;
+      }),
+      distinctUntilChanged(
+        (previous, current) =>
+          `${availabilityRequestKey(previous?.request ?? null)}|${previous?.selected}|${previous?.lang}` ===
+          `${availabilityRequestKey(current?.request ?? null)}|${current?.selected}|${current?.lang}`
+      ),
+      switchMap((context) =>
+        context
+          ? this.scheduleService
+              .getAvailabilityCached(context.request)
+              .pipe(
+                map((availability) =>
+                  this.resolveNearestDay(
+                    availability?.availableDates ?? [],
+                    context.selected,
+                    context.lang
+                  )
+                )
+              )
+          : of(null)
+      )
+    );
+
+    this.canJumpToDay$ = this.scheduleFilter.pipe(
+      map((scheduleFilter) => !this.isRoundTrip(scheduleFilter))
     );
   }
 
@@ -376,6 +513,18 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     return parsePricePerSeat(value);
   }
 
+  /**
+   * Per-seat fare WITH its unit (OBRS-1592). Replaces the number-plus-
+   * `BAHT_UNIT`-key pair this template used to compose. An earlier version of
+   * this comment called that pair the ONLY money on any screen without a
+   * thousand separator; scrutinize found five more files composing the same
+   * number-plus-unit-key shape under different key names, and they are
+   * converted with it.
+   */
+  formatPricePerSeat(value: string | number | null | undefined): string {
+    return formatMoney(parsePricePerSeat(value), this.translateService.currentLang);
+  }
+
   isLowSeats(availableSeats: number | null | undefined): boolean {
     return isLowSeatCount(availableSeats, this.LOW_SEAT_THRESHOLD);
   }
@@ -407,7 +556,7 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     }
 
     return {
-      nextDayLabel: this.formatDayLabel(searchedDate.add(1, 'day').toDate(), lang),
+      nextDayLabel: formatDayLabel(searchedDate.add(1, 'day').toDate(), lang),
       canJumpToNextDay: !this.isRoundTrip(scheduleFilter),
     };
   }
@@ -432,15 +581,44 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this.store.dispatch(
-        invokeSetScheduleFilterApi({
-          schedule_filter: {
-            ...scheduleFilter,
-            departureDate: nextDay.format('YYYY-MM-DD'),
-          },
-        })
-      );
+      this.showDay(nextDay.format('YYYY-MM-DD'));
     });
+  }
+
+  /** OBRS-862: the same jump, aimed at a day availability actually named.
+   *  Both routes go through `scheduleFilterForDay` (shared/lib/schedule-day-jump)
+   *  so the outbound-only rule and the carried return date are written in ONE
+   *  place — see that file's header for AC#4's reasoning. */
+  showDay(day: string): void {
+    combineLatest([this.scheduleFilter, this.bookingPolicyService.maxAdvanceDays$])
+      .pipe(take(1))
+      .subscribe(([scheduleFilter, maxAdvanceDays]) => {
+        if (!scheduleFilter) {
+          return;
+        }
+        this.store.dispatch(
+          invokeSetScheduleFilterApi({
+            schedule_filter: scheduleFilterForDay(
+              scheduleFilter,
+              day,
+              dayjs().add(maxAdvanceDays, 'day').toDate()
+            ),
+          })
+        );
+      });
+  }
+
+  /** Forward wins ties by construction — a customer looking for a trip wants
+   *  the next one, not the one they have missed. */
+  private resolveNearestDay(
+    availableDates: string[],
+    selected: string,
+    lang: string
+  ): { iso: string; label: string } | null {
+    const after = availableDates.find((date) => date > selected);
+    const before = [...availableDates].reverse().find((date) => date < selected);
+    const iso = after ?? before ?? null;
+    return iso ? { iso, label: formatDayLabel(dayjs(iso).toDate(), lang) } : null;
   }
 
   /** `roundTrip` reaches the store as either the Dropdown or its bare id,
@@ -450,31 +628,6 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     const roundTrip = scheduleFilter?.roundTrip as { id?: number } | number | undefined;
     const roundTripId = typeof roundTrip === 'object' ? roundTrip?.id : roundTrip;
     return roundTripId === 2;
-  }
-
-  /** Weekday + day + short month in the ACTIVE language, via the platform's
-   *  own calendar data — no locale bundle to register and no fourth date
-   *  format to keep in sync. The year is left out on purpose: `th-TH` renders
-   *  it as a Buddhist-era year, which is right but noisy inside a button. */
-  private formatDayLabel(date: Date, lang: string): string {
-    const bcp47 = this.toBcp47(lang);
-    try {
-      return new Intl.DateTimeFormat(bcp47, {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'short',
-      }).format(date);
-    } catch {
-      // A locale the runtime rejects must not blank the button out.
-      return dayjs(date).format('D MMM');
-    }
-  }
-
-  private toBcp47(lang: string | null | undefined): string {
-    const normalized = (lang || '').toLowerCase();
-    if (normalized.startsWith('th')) return 'th-TH';
-    if (normalized.startsWith('zh')) return 'zh-CN';
-    return 'en-GB';
   }
 
   private getRouteFromFilter(
@@ -525,6 +678,13 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     scheduleFilter: ScheduleFilter | null | undefined,
     stations: StationApi[] | null | undefined
   ): void {
+    // OBRS-864: set BEFORE the guards below. The flags describe the list that is
+    // about to render, and the list renders whether or not the filter resolves;
+    // left after an early return they would keep the previous search's answer
+    // and head a new list with the stops of the old one.
+    this.departureSharedRoute = this.hasSingleRoute(scheduleList?.departureSchedules ?? []);
+    this.returnSharedRoute = this.hasSingleRoute(scheduleList?.arrivalSchedules ?? []);
+
     if (!scheduleFilter) {
       return;
     }
@@ -539,7 +699,8 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       scheduleList?.departureSchedules ?? [],
       fromSlug,
       toSlug,
-      this.departureEstimates
+      this.departureEstimates,
+      this.departureStops
     );
     // Return leg's routeSlug is the reverse route: its `pickup[]` holds the
     // destination-city stops and its `dropoff[]` holds the origin-city
@@ -553,15 +714,34 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       scheduleList?.arrivalSchedules ?? [],
       scheduleList?.returnBoardingStop?.slug || toSlug,
       fromSlug,
-      this.returnEstimates
+      this.returnEstimates,
+      this.returnStops
     );
+  }
+
+  /** OBRS-864: does EVERY row of this leg run the same, known route?
+   *  `resolveLegEstimates` looks the same two filter slugs up in every route
+   *  below, so one route means one resolved stop pair for the whole leg — the
+   *  rows cannot disagree. Two routes may still land on the same stops, and that
+   *  case falls back to per-row rather than wait for the resolution that would
+   *  prove it.
+   *
+   *  A row with no `routeSlug` counts as a row that disagrees, not one to skip:
+   *  the field is optional (`schedule.interface.ts:52`) and `resolveLegEstimates`
+   *  `continue`s past such a row, so its stops are never resolved. Counting only
+   *  the slugs that exist would call a mixed leg uniform and then suppress every
+   *  per-row block for it — including the rows whose stops DID resolve. */
+  private hasSingleRoute(schedules: Schedule[]): boolean {
+    const first = schedules[0]?.routeSlug;
+    return !!first && schedules.every((s) => s.routeSlug === first);
   }
 
   private resolveLegEstimates(
     schedules: Schedule[],
     pickupSlug: string,
     dropoffSlug: string,
-    target: Record<number, TripEstimate>
+    target: Record<number, TripEstimate>,
+    stopTarget: Record<number, LegStops>
   ): void {
     const scheduleIdsBySlug = new Map<string, number[]>();
     for (const schedule of schedules) {
@@ -586,9 +766,40 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
           const estimate = tripEstimateFromStops(pickupStop, dropoffStop);
           scheduleIds.forEach((id) => {
             target[id] = estimate;
+            // OBRS-864: same two objects, same subscription - the stops the
+            // estimate was measured between are the stops the row names.
+            stopTarget[id] = { pickup: pickupStop, dropoff: dropoffStop };
           });
         });
     });
+  }
+
+  /** OBRS-864: the stop lines for one row - empty until
+   *  `getPickupDropoffCached` answers for that row's route. */
+  stopLines(stops: LegStops | undefined): StopLine[] {
+    const lines: StopLine[] = [];
+    if (stops?.pickup) {
+      lines.push(this.toStopLine(stops.pickup, 'SCHEDULE_BOOKING.PICKUP_STOP', 'bi-geo-alt'));
+    }
+    if (stops?.dropoff) {
+      lines.push(this.toStopLine(stops.dropoff, 'SCHEDULE_BOOKING.DROPOFF_STOP', 'bi-flag'));
+    }
+    return lines;
+  }
+
+  private toStopLine(stop: RouteStop, labelKey: string, icon: string): StopLine {
+    const address = (stop.address || '').trim();
+    return {
+      labelKey,
+      icon,
+      text: address ? `${stop.name} · ${address}` : stop.name,
+      title: address || null,
+      // OBRS-864 AC3: the link exists only when the backend gave one. Nothing
+      // here composes a maps URL out of lat/lng - that is OBRS-269's separate
+      // "navigate from where I am" deep-link, a different destination and a
+      // decision this card explicitly leaves alone.
+      mapsUrl: stop.googleMapsUrl || null,
+    };
   }
 
   private normalizeLocale(locale: string | null | undefined): 'en' | 'th' {

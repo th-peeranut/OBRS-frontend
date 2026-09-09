@@ -1,0 +1,83 @@
+<div class="part-picker" [class.is-open]="isOpen" [class.is-disabled]="disabled">
+  <button
+    type="button"
+    class="part-picker-trigger"
+    data-testid="part-picker-trigger"
+    [disabled]="disabled"
+    [attr.aria-expanded]="isOpen"
+    (click)="toggle()"
+    >
+    <span class="part-picker-value" [class.is-placeholder]="!selectedLabel">
+      {{ selectedLabel || ('ADMIN.EXPENSES.BATCH.LINE_PART_NONE' | translate) }}
+    </span>
+    <span class="material-symbols-outlined part-picker-arrow" [attr.translate]="'no'">expand_more</span>
+  </button>
+
+  @if (isOpen) {
+    <div class="part-picker-panel">
+      <input
+        #queryInput
+        type="text"
+        class="admin-field part-picker-search"
+        data-testid="part-picker-search"
+        [attr.placeholder]="'ADMIN.EXPENSES.PART.SEARCH_PLACEHOLDER' | translate"
+        [ngModel]="query"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="onQueryChange($event)"
+        (keydown)="onQueryKeydown($event)"
+        />
+
+      <div class="part-picker-list">
+        <!-- OBRS-1374 AC3: a line that is not a part at all is a real answer, so it is an option
+        rather than a thing you achieve by deleting text. -->
+        <button
+          type="button"
+          class="part-picker-option is-none"
+          data-testid="part-picker-none"
+          (click)="clear()"
+          >
+          {{ 'ADMIN.EXPENSES.BATCH.LINE_PART_NONE' | translate }}
+        </button>
+
+        @for (part of visibleParts; track trackById($index, part); let i = $index) {
+          <button
+            type="button"
+            class="part-picker-option"
+            data-testid="part-picker-option"
+            [class.is-selected]="part.id === selectedId"
+            [class.is-active]="isActive(i)"
+            (click)="select(part)"
+            >
+            <span class="part-picker-option-name">{{ label(part) }}</span>
+            <span class="part-picker-kind">{{ kindLabel(part.kind) }}</span>
+          </button>
+        }
+      </div>
+
+      <!-- AC1: a name that is not on record yet gets added from HERE, without abandoning the bill.
+      Two buttons and not one: the server refuses a name that exists under the other kind (409 from
+      assertSameKind, which runs BEFORE its idempotent branch), so the kind cannot be guessed. -->
+      @if (showCreateOption) {
+        <div class="part-picker-create" data-testid="part-picker-create">
+          <p class="part-picker-create-text">
+            {{ 'ADMIN.EXPENSES.PART.NO_MATCH' | translate: { name: query.trim() } }}
+          </p>
+          <div class="part-picker-create-buttons">
+            @for (kind of kinds; track kind) {
+              <button
+                type="button"
+                class="admin-btn admin-btn-small"
+                data-testid="part-picker-create-button"
+                [attr.data-kind]="kind"
+                [disabled]="isCreating"
+                (click)="createFromQuery(kind)"
+                >
+                {{ 'ADMIN.EXPENSES.PART.ADD_AS' | translate: { kind: kindLabel(kind) } }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

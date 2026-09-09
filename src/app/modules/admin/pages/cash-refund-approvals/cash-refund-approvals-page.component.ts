@@ -9,6 +9,7 @@ import {
   toAmountNumber,
 } from '../../../../shared/interfaces/my-booking.interface';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 type ApprovalsContentState = 'loading' | 'error' | 'empty' | 'data';
 
@@ -129,10 +130,6 @@ export class CashRefundApprovalsPageComponent implements OnInit, OnDestroy {
   }
 
   protected formatCurrency(value: number | string): string {
-    return new Intl.NumberFormat('th-TH', {
-      style: 'currency',
-      currency: 'THB',
-      maximumFractionDigits: 2,
-    }).format(toAmountNumber(value));
+    return formatMoney(toAmountNumber(value), this.translate.currentLang);
   }
 }

@@ -12,6 +12,7 @@ import { ReportsSummaryDto } from '../../../../shared/interfaces/reports-summary
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { ExportButtonComponent } from '../../../../shared/components/export-button/export-button.component';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { ExportService } from '../../../../services/export/export.service';
@@ -20,6 +21,7 @@ import { PerHeadEarningsStore } from './per-head-earnings.store';
 import { ParcelShareClawbacksStore } from './parcel-share-clawbacks.store';
 import { ParcelShareClawbacksSectionComponent } from './parcel-share-clawbacks-section/parcel-share-clawbacks-section.component';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
+import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 function makeSummary(overrides: Partial<ReportsSummaryDto> = {}): ReportsSummaryDto {
   return {
@@ -231,8 +233,7 @@ describe('ReportsPageComponent', () => {
     const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
-    component['onFromDateChange'](new Date(2026, 6, 10));
-    component['onToDateChange'](new Date(2026, 6, 1));
+    component['onRangeChange']({ from: new Date(2026, 6, 10), to: new Date(2026, 6, 1) });
 
     expect((component as any).contentState).toBe('invalid');
   });
@@ -254,8 +255,7 @@ describe('ReportsPageComponent', () => {
     const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
-    component['onFromDateChange'](new Date(2026, 6, 10));
-    component['onToDateChange'](new Date(2026, 6, 1));
+    component['onRangeChange']({ from: new Date(2026, 6, 10), to: new Date(2026, 6, 1) });
 
     expect((component as any).rangeError).toBe('ADMIN.REPORTS.ERROR.RANGE_INVALID');
     expect(store.setRange).not.toHaveBeenCalled();
@@ -268,8 +268,7 @@ describe('ReportsPageComponent', () => {
     const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
-    component['onFromDateChange'](new Date(2020, 0, 1));
-    component['onToDateChange'](new Date(2026, 0, 1));
+    component['onRangeChange']({ from: new Date(2020, 0, 1), to: new Date(2026, 0, 1) });
 
     expect((component as any).rangeError).toBe('ADMIN.REPORTS.ERROR.RANGE_TOO_LARGE');
     expect(store.setRange).not.toHaveBeenCalled();
@@ -280,8 +279,7 @@ describe('ReportsPageComponent', () => {
     const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
     component.ngOnInit();
 
-    component['onFromDateChange'](new Date(2026, 5, 1));
-    component['onToDateChange'](new Date(2026, 5, 10));
+    component['onRangeChange']({ from: new Date(2026, 5, 1), to: new Date(2026, 5, 10) });
 
     expect((component as any).rangeError).toBe('');
     expect(store.setRange).toHaveBeenCalledWith('2026-06-01', '2026-06-10');
@@ -331,6 +329,43 @@ describe('ReportsPageComponent', () => {
     store.data$.next(makeSummary({ tiles: { bookingCount: 999, ticketsSold: 1, occupancyRatePct: 1 } }));
     expect((component as any).tiles.bookingCount).not.toBe(999);
   });
+
+  // OBRS-1631: `app-admin-dropdown` renders its own `[placeholder]` as a clickable row that emits
+  // `''` (admin-dropdown.component.html:42-57, mandated by design-system §3.1 item 2). `Number('')`
+  // is 0, not NaN, so the un-guarded handler asked the store for year 0 — measured on the deployed
+  // SIT frontend: GET .../parcel-share/monthly?year=0&month=8. Same fix as OBRS-1626 used on
+  // /admin/expenses, so the two screens behave identically.
+  // OBRS-1643: all three dropdowns on this page now pass [placeholderSelectable]="false", so the
+  // row that emitted '' is no longer rendered. These two specs stay as the second layer, for a
+  // call site added later that forgets the opt-out.
+  it('ignores the empty value the year/month dropdown placeholder emits', () => {
+    const store = makeStoreStub(makeSummary());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
+    parcelShareMonthlyStoreStub.setPeriod.calls.reset();
+    const { year, month } = parcelShareMonthlyStoreStub.period;
+
+    (component as any).onYearChange('');
+    (component as any).onMonthChange('');
+
+    expect((component as any).selectedYear).toBe(year);
+    expect((component as any).selectedMonth).toBe(month);
+    expect(parcelShareMonthlyStoreStub.setPeriod).not.toHaveBeenCalled();
+  });
+
+  // OBRS-1631: the same placeholder row on the per-head EARNINGS granularity dropdown, one section
+  // above. `'' as PerHeadEarningsGranularity` type-checks and reaches setQuery as a blank
+  // granularity — the cast is what hides it from the compiler.
+  it('ignores the empty value the granularity dropdown placeholder emits', () => {
+    const store = makeStoreStub(makeSummary());
+    const component = new ReportsPageComponent(store as any, parcelShareMonthlyStoreStub as any, perHeadEarningsStoreStub as any, createTranslateStub());
+    component.ngOnInit();
+    perHeadEarningsStoreStub.setQuery.calls.reset();
+
+    (component as any).onPerHeadGranularityChange('');
+
+    expect((component as any).perHeadGranularity).toBe('MONTH');
+    expect(perHeadEarningsStoreStub.setQuery).not.toHaveBeenCalled();
+  });
 });
 
 // OBRS-442: proves the export button is wired to the STORE's `range` getter (wire-format
@@ -368,7 +403,13 @@ describe('ReportsPageComponent (export button, OBRS-442)', () => {
 
     TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
-      declarations: [ReportsPageComponent, ExportButtonComponent, ParcelShareClawbacksSectionComponent],
+      declarations: [
+        DateRangePickerComponent,
+        ReportsPageComponent,
+        ExportButtonComponent,
+        ParcelShareClawbacksSectionComponent,
+        PendingButtonDirective,
+      ],
       providers: [
         { provide: ReportsStore, useValue: storeStub },
         // OBRS-960: ReportsPageComponent now also injects ParcelShareMonthlyStore

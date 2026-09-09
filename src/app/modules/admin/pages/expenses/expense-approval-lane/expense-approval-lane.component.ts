@@ -1,5 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { ExpenseRow } from '../expenses-page.mappers';
+import { formatMoney } from '../../../../../shared/lib/money-display';
 
 /**
  * OBRS-1356 — the owner's review queue, above the expense log.
@@ -24,6 +26,8 @@ export class ExpenseApprovalLaneComponent {
   @Input() rows: ExpenseRow[] = [];
   /** The id currently being approved/rejected — disables just that row's buttons. */
   @Input() busyId: number | null = null;
+
+  constructor(private readonly translate: TranslateService) {}
 
   @Output() approve = new EventEmitter<number>();
   @Output() reject = new EventEmitter<{ id: number; rejectionReason: string }>();
@@ -52,4 +56,12 @@ export class ExpenseApprovalLaneComponent {
   }
 
   protected trackById = (_index: number, row: ExpenseRow): number => row.id;
+  /** OBRS-1592: these cells printed `3,100.00` from a `| number` pipe — a fifth
+   * on-screen money format, and the only one with no unit at all. `TranslateService`
+   * is the one dependency this presentational component takes; it is a rendering
+   * concern, not the Store/HTTP access the class comment rules out. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translate.currentLang);
+  }
+
 }

@@ -48,6 +48,7 @@ import {
   DriverCashAdvanceReqDto,
   DriverCashDayRespDto,
   DriverCashExpenseReqDto,
+  DriverCashRepairBillReqDto,
   DriverCashPerHeadReqDto,
   PerHeadEarningsGranularity,
   PerHeadEarningsRespDto,
@@ -85,6 +86,18 @@ export interface ScheduleSearchResultDto {
 
 export interface WalkInBookingPassengerReqDto {
   passengerType: string;
+  /**
+   * OBRS-1045: `'adult'` | `'child'` — a `fare_category` lookup slug, a DIFFERENT dimension
+   * from `passengerType` above (ADR-0046). Omitted means adult: `FareCategoryService`
+   * resolves absent/blank to `'adult'`, which is what every walk-in sale sent before this
+   * card. The server prices off this field; `totalAmount` on the booking payload stays the
+   * GROSS adult figure regardless (`BookingService` compares it against `calculateTripFare`).
+   */
+  fareCategory?: string;
+  // OBRS-1666: the privacy-notice version the clerk had in front of them when the passenger gave
+  // explicit consent to a monk/nun answer. Null everywhere else; a monk/nun sent without it is
+  // dropped by the backend rather than stored, and the sale still goes through.
+  passengerTypeConsentVersion?: string | null;
   seatNumber: string;
   title: string;
   firstName: string;
@@ -185,6 +198,15 @@ export interface SegmentStopPairDto {
   toStop: SegmentStopRefDto;
   vehicleType: SegmentStopRefDto;
   fare: string;
+  /**
+   * OBRS-1045: what ONE child pays on this pair — the server's own
+   * `computeChildDiscount` output, not a rule this client re-derives (it is a flat
+   * configured fare clamped to never exceed `fare`, never a percentage).
+   * OPTIONAL: absent on a backend predating this card, and the sell page then prices
+   * every ticket as an adult — the same behaviour it had before this card, never a
+   * guessed discount.
+   */
+  childFare?: string;
   estimatedDurationMinutes: number;
 }
 
@@ -310,6 +332,10 @@ export interface DelayScheduleRespDto {
 export interface BoardingListItemDto {
   ticketId: number;
   ticketNumber: string;
+  /** OBRS-1659: the booking this seat belongs to. One booking can hold several seats on
+   * the same trip, so this is what groups a party together in the manifest — and what the
+   * client-side manifest search matches on. `undefined` on a fixture predating the field. */
+  bookingNumber?: string;
   seatNumber: string;
   /**
    * OBRS-1232: the title as a stable CODE ('MISS'), separate from the name and untranslated on the
@@ -355,6 +381,14 @@ export interface BoardingListItemDto {
    * just acted on" rule as `boardedByName` (see
    * `boarding-list.component.ts`). */
   childFareFlaggedByName?: string;
+  /**
+   * OBRS-1673: the number the driver calls to chase a passenger who has not boarded. It is the
+   * BOOKING's contact phone — the person who booked, NOT the passenger in this seat — so the
+   * manifest labels it as the booker's; the per-passenger number is never written server-side
+   * (OBRS-1672). `undefined` OUTSIDE the window around departure that the backend releases it in:
+   * the field is simply absent from the payload then, so there is nothing to hide client-side.
+   */
+  bookingContactPhone?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -483,6 +517,8 @@ export interface CounterBookingSearchJourneyDto {
 export interface CounterBookingSearchResultDto {
   bookingId: number;
   bookingNumber: string;
+  /** OBRS-1601 — title CODE, rendered through `titleLabel`; null when the contact gave none. */
+  contactTitle: string | null;
   contactName: string;
   contactPhoneMasked: string;
   status: string;
@@ -1183,6 +1219,22 @@ export class StaffApiService {
   ): Observable<ResponseAPI<DriverCashDayRespDto>> {
     return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
       `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/expense-paid`,
+      payload,
+      { context: this.driverCashActionContext }
+    );
+  }
+
+  /**
+   * OBRS-1630 — the repair bill, the one field cost that does not fit `expense-paid`'s single
+   * amount. Same `driverCashActionContext` as its sibling: this is a money write at the vehicle and
+   * it must not be swallowed by a generic interceptor banner.
+   */
+  postDriverCashRepairBill(
+    scheduleId: number,
+    payload: DriverCashRepairBillReqDto
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
+      `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/repair-bill`,
       payload,
       { context: this.driverCashActionContext }
     );

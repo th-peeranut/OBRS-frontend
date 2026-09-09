@@ -103,9 +103,10 @@
             type="button"
             class="admin-btn admin-btn-primary"
             [disabled]="isSavingSegmentEdit"
+            [appPending]="isSavingSegmentEdit"
             (click)="submitSegmentEdit()"
             >
-            {{ isSavingSegmentEdit ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+            {{ 'ADMIN.COMMON.SAVE' | translate }}
           </button>
         </div>
       </div>

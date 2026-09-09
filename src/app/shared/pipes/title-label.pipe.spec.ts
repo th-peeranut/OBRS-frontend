@@ -43,13 +43,31 @@ describe('TitleLabelPipe', () => {
   });
 
   it('renders ONE stored code as three different words as the language changes', () => {
-    expect(pipe.transform('MISS', 'กุลธิดา นาใจคง')).toBe('นางสาว กุลธิดา นาใจคง');
+    expect(pipe.transform('MISS', 'กุลธิดา นาใจคง')).toBe('นางสาวกุลธิดา นาใจคง');
 
     translate.use('en');
     expect(pipe.transform('MISS', 'กุลธิดา นาใจคง')).toBe('Miss กุลธิดา นาใจคง');
 
     translate.use('zh');
+    // OBRS-1644: the honorific stays IN FRONT here on purpose, and this is not OBRS-1601 debt.
+    // TitleLabel.withTitle — the method these screens mirror — puts every non-Thai label in front.
+    // Only TitleLabel.forGreeting moves it behind the name, and that renders the e-mail salutation,
+    // which none of these surfaces is.
     expect(pipe.transform('MISS', 'กุลธิดา นาใจคง')).toBe('小姐 กุลธิดา นาใจคง');
+  });
+
+  it('attaches a Thai title to a Thai name but not to a Latin one (OBRS-1644)', () => {
+    // The pipe fell out of step with the server when OBRS-1609 taught TitleLabel.separator that
+    // Thai joins the title to the name, and the same person was then spelled one way on screen and
+    // another in the e-mail. The rule reads the SCRIPT of BOTH halves, not the reader's language,
+    // so all four combinations are pinned here: the half that is not obvious is that a one-sided
+    // rule would produce 'นางสาวPassenger Name'.
+    expect(pipe.transform('MISS', 'กุลธิดา นาใจคง')).toBe('นางสาวกุลธิดา นาใจคง');
+    expect(pipe.transform('MISS', 'Passenger Name')).toBe('นางสาว Passenger Name');
+    expect(pipe.transform('Rev.', 'กุลธิดา นาใจคง')).toBe('Rev. กุลธิดา นาใจคง');
+
+    translate.use('en');
+    expect(pipe.transform('MISS', 'กุลธิดา นาใจคง')).toBe('Miss กุลธิดา นาใจคง');
   });
 
   it('is impure, so a language switch reaches the screen without a refetch', () => {
@@ -67,7 +85,9 @@ describe('TitleLabelPipe', () => {
   it('passes a legacy free-text value through verbatim (AC-5), never a missing-key string', () => {
     // The admin and account fields were free text for months and the migration deliberately left
     // whatever it could not map. Printing 'COMMON.TITLES.คุณ' would be worse than printing nothing.
-    expect(pipe.transform('คุณ', 'กุลธิดา')).toBe('คุณ กุลธิดา');
+    // OBRS-1644: the VALUE is still verbatim; only the join moved, so that a legacy free-text 'คุณ'
+    // attaches exactly as the catalogue's own 'นางสาว' does.
+    expect(pipe.transform('คุณ', 'กุลธิดา')).toBe('คุณกุลธิดา');
     expect(pipe.transform('Rev.')).toBe('Rev.');
   });
 

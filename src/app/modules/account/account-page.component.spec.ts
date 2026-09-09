@@ -12,6 +12,7 @@ describe('AccountPageComponent', () => {
       firstName: 'สมชาย',
       middleName: null,
       lastName: 'ใจดี',
+      nickname: null,
       email: 'user@example.com',
       phoneNumber: '0811111111',
       preferredLocale: 'th',
@@ -188,6 +189,41 @@ describe('AccountPageComponent', () => {
 
     expect(myAccountServiceStub.updateProfile).toHaveBeenCalledWith(
       jasmine.objectContaining({ middleName: null })
+    );
+  });
+
+  it('OBRS-1558: loads the stored nickname into the form and sends the edited one', () => {
+    const { component, myAccountServiceStub } = create('user@example.com', {
+      getProfile: jasmine.createSpy('getProfile').and.returnValue(
+        of({ code: 200, message: 'OK', data: profileOf({ nickname: 'ตุ๊ก' }) })
+      ),
+    });
+    component.ngOnInit();
+    component.startEditingProfile();
+    expect(component.profileForm.get('nickname')?.value).toBe('ตุ๊ก');
+
+    component.profileForm.patchValue({ nickname: ' หนึ่ง ' });
+    component.saveProfile();
+
+    expect(myAccountServiceStub.updateProfile).toHaveBeenCalledWith(
+      jasmine.objectContaining({ nickname: 'หนึ่ง' })
+    );
+  });
+
+  it('OBRS-1558: sends an emptied nickname as null - clearing it must reach the column', () => {
+    const { component, myAccountServiceStub } = create('user@example.com', {
+      getProfile: jasmine.createSpy('getProfile').and.returnValue(
+        of({ code: 200, message: 'OK', data: profileOf({ nickname: 'ตุ๊ก' }) })
+      ),
+    });
+    component.ngOnInit();
+    component.startEditingProfile();
+    component.profileForm.patchValue({ nickname: '' });
+
+    component.saveProfile();
+
+    expect(myAccountServiceStub.updateProfile).toHaveBeenCalledWith(
+      jasmine.objectContaining({ nickname: null })
     );
   });
 

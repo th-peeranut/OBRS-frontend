@@ -1,0 +1,107 @@
+@import "../../../../../styles/variables.scss";
+
+// OBRS-1613. The empty/status/retired treatments are the payee registry's, unchanged: the two
+// registries are the same kind of screen and an owner moves between them, so they must not look
+// like two different products.
+.part-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-2xs;
+  color: var(--admin-muted);
+  padding: $space-2xl $space-sm;
+  text-align: center;
+}
+
+.part-empty .material-symbols-outlined {
+  color: var(--admin-muted);
+  font-size: $font-size-2xl;
+}
+
+.part-empty-title {
+  margin: 0;
+  color: var(--admin-text);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+}
+
+.part-empty-body {
+  margin: 0;
+  font-size: $font-size-xs;
+}
+
+.part-name {
+  font-weight: $font-weight-bold;
+}
+
+.part-status {
+  display: inline-block;
+  border-radius: $radius-pill;
+  background: rgba(0, 102, 135, 0.12);
+  color: var(--admin-primary-fg);
+  padding: 2px 10px;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+}
+
+// A retired entry is dimmed rather than struck through or hidden: it is not wrong data, it is a
+// part this operator has stopped buying, and every plan and bill line that named it still points
+// here.
+.part-status.is-retired {
+  background: rgba(120, 132, 140, 0.16);
+  color: var(--admin-muted);
+}
+
+tr.is-retired .part-name {
+  color: var(--admin-muted);
+  font-weight: $font-weight-medium;
+}
+
+// Quieter than the status pill on purpose: it is provenance, not state. An owner scanning for what
+// is in use must not have to read past it on 13 of the rows.
+.part-seeded {
+  display: inline-block;
+  margin-left: $space-3xs;
+  border-radius: $radius-pill;
+  border: 1px solid var(--admin-outline-soft);
+  color: var(--admin-muted);
+  padding: 1px 8px;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  vertical-align: 1px;
+}
+
+// The only irreversible thing on this screen, so it gets the only warning band.
+.part-seeded-warning {
+  margin: 0 0 $space-sm;
+  border-left: 3px solid var(--admin-warning-text);
+  border-radius: 0 $radius-sm $radius-sm 0;
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
+  padding: $space-2xs $space-xs;
+  font-size: $font-size-xs;
+  line-height: 1.7;
+}
+
+// Not `.admin-error`: on create, a name already on record is not an error at all — the server hands
+// back the row that exists. Styling it red would say the save is blocked when it is not.
+.part-name-reuse {
+  display: block;
+  margin-top: $space-3xs;
+  color: var(--admin-muted);
+  font-size: $font-size-xs;
+  line-height: 1.6;
+}
+
+.part-retired-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-3xs;
+  color: var(--admin-text);
+  cursor: pointer;
+  font-size: $font-size-sm;
+}
+
+.part-retired-toggle input {
+  cursor: pointer;
+}

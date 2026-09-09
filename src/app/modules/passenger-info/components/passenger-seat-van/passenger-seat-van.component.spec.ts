@@ -349,4 +349,20 @@ describe('PassengerSeatVanComponent — duplicate track keys (OBRS-967)', () => 
 
     expect(readWarnings()).toEqual([]);
   });
+
+  describe('blocked seats (OBRS-1364)', () => {
+    it('blocks by the backend\'s plain seat number, never the seat already held, and nothing by default', () => {
+      const seatVan = new PassengerSeatVanComponent();
+
+      expect(seatVan.blockedSeats).toEqual([]);
+      expect(seatVan.isSeatBlocked('A2')).toBeFalse();
+
+      seatVan.blockedSeats = ['2'];
+      expect(seatVan.isSeatBlocked('A2')).toBeTrue();
+      expect(seatVan.isSeatBlocked('A3')).toBeFalse();
+
+      seatVan.currentSeat = 'A2';
+      expect(seatVan.isSeatBlocked('A2')).toBeFalse();
+    });
+  });
 });

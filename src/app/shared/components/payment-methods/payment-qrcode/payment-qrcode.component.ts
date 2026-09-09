@@ -23,6 +23,7 @@ import {
 } from '../../../../shared/interfaces/payment.interface';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 import { isHandledByBackendMessage } from '../../../../shared/lib/payment-error-codes';
+import { formatMoney } from '../../../lib/money-display';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 type PromptPayPaymentData = PaymentResponse | PaymentByBookingIdResponse;
@@ -60,7 +61,10 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   @Output() back = new EventEmitter<void>();
   @Output() paymentCompleted = new EventEmitter<void>();
 
-  amountDisplay = '0.00';
+  /** OBRS-1592: seeded in the constructor, not as a literal — a hardcoded `'0.00'`
+   * is the same raw money string this card removed everywhere else, and it is what
+   * the screen shows when a response carries no amount at all. */
+  amountDisplay = '';
   readonly qrImageAlt = 'PromptPay QR code';
   qrImageUrl = '';
   qrPaymentUrl = '';
@@ -99,7 +103,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     private paymentService: PaymentService,
     private alertService: AlertService,
     private translate: TranslateService
-  ) {}
+  ) {
+    this.amountDisplay = this.formatAmount(0);
+  }
 
   ngOnInit(): void {
     this.bookingNumber = this.bookingService.getActiveBookingNumber() ?? '';
@@ -599,8 +605,14 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * OBRS-1592: the amount the customer reads off the PromptPay screen before
+   * they pay. It printed `200.00` — no unit, no thousand separator — while the
+   * summary directly above it said `200 บาท`. `.toFixed(2)` is invisible to
+   * check-money-format.mjs, which is why this survived three passes.
+   */
   private formatAmount(value: number): string {
-    return Number.isFinite(value) ? value.toFixed(2) : '0.00';
+    return formatMoney(Number.isFinite(value) ? value : 0, this.translate.currentLang);
   }
 
   private startCountdown(): void {

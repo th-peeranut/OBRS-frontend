@@ -4,11 +4,10 @@ import { Subscription } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../../auth/auth.service';
 import { AdminScheduleDto, parseAdminStatus } from '../../../../services/admin/admin-api.service';
-import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { bangkokDayKey, formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import {
   bangkokInstantMs,
   controlValueToDateString,
-  splitApiOffsetDateTime,
 } from '../../../../shared/lib/api-date-time';
 import { DriverSchedulesStore } from '../driver-schedules/driver-schedules.store';
 import { StaffSchedulesStore } from '../staff-schedules/staff-schedules.store';
@@ -146,9 +145,12 @@ export class BoardingEntryPageComponent implements OnInit, OnDestroy {
   private applyFilter(): void {
     // OBRS-1584: unconditional. The "no day selected ⇒ keep every row" branch
     // that used to guard this line is the OBRS-33 symptom, one keystroke away.
+    // OBRS-1585: the day is read off the same clock the date column prints
+    // (Bangkok wall-clock), not off the raw string — a `Z` departure crosses
+    // the day boundary and used to disappear from the day its own cell shows.
     const dayKey = controlValueToDateString(this.selectedDate);
     this.filteredRows = this.rows
-      .filter((row) => splitApiOffsetDateTime(row.departure).date === dayKey)
+      .filter((row) => bangkokDayKey(row.departure) === dayKey)
       // Soonest departure first. A row whose departure cannot be parsed sorts
       // last rather than first: it cannot be the next trip to board.
       .sort(

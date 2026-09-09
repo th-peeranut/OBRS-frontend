@@ -314,6 +314,119 @@ entries is part of closing your card.
 
 ---
 
+### 2.6 Control boundaries — what this app requires of them (OBRS-772, decided 2026-09-08)
+
+The question this answers, asked by OBRS-772 and left open for six weeks: **a
+button already carries a readable label — does its faint 1px border still count
+as "visual information required to identify" the control?**
+
+**What the standard says.** W3C's Understanding for SC 1.4.11, under
+*Boundaries*: *"If a control has visible content (such as text or a sufficiently
+contrasting icon), which helps users identify the presence of the control, then a
+border or other indication of the overall boundary of the hit area is not
+required, as is therefore not subject to non-text contrast requirements."* And
+plainly: *"This success criterion does not require that controls have a visual
+boundary indicating the hit area."*
+
+So the literal answer is **no** — and that answer is not sufficient on its own,
+because the same sentence would exempt `.btn-search`, whose defect (OBRS-746,
+fill 2.80:1 behind a perfectly legible white label) is the only must-catch the
+runtime gate's invariant B has.
+
+**The rule, therefore, in three parts.**
+
+1. **A control with no visible content of its own — an empty field, a dropdown
+   trigger, an icon-only button — MUST have a boundary at 3:1.** Nothing else
+   says a control is there. This is the standard's own requirement, not a house
+   rule, and it is not negotiable per screen.
+2. **A control that paints a FILL different from the page MUST separate that fill
+   at 3:1, label or no label.** ⚠️ This half is **stricter than WCAG**, chosen
+   deliberately: a button whose surface is nearly invisible reads as half-rendered
+   even when its text is legible, and relaxing it would retire the OBRS-746
+   must-catch and with it the only thing in the repo that can see that defect
+   class. Do not describe this clause as "the standard requires it" — it does not.
+3. **A control that has a readable label and paints no surface of its own may
+   keep a decorative border below 3:1.** Ghost/secondary buttons, tabs, filter
+   pills, verdict buttons. The label identifies the control; the border is
+   chrome. These are recorded in the two registers as *accepted*, not as *debt*.
+
+**State is a separate question. It used to be unmeasured; OBRS-1774 measures it.**
+1.4.11 also requires 3:1 of *"visual information necessary to indicate state"*.
+Invariant B compares a control's fill to the **page**, never to a **sibling's**
+fill — so where "selected" is carried by a fill tint, the pair that actually
+matters is *selected fill vs unselected fill*, and until 2026-09-09 nothing in
+this repo measured it. **Invariant D** now does: it takes every element the app
+*marks* as selected (`.active`, `.selected`, `aria-selected`, `aria-pressed`,
+`aria-current`), finds the unselected sibling of the same tag it is hardest to
+tell apart from, and compares the surfaces actually painted. Reading the marker
+rather than guessing from colour is what keeps it from being circular.
+
+**What accepts a state, and what does not** — the rule above as the owner amended
+it on **2026-09-09**: *a carrier that paints a surface — fill, border, outline —
+must itself reach 3:1. The text **colour** carrier is not one of those; it keeps
+its own 2026-09-08 exemption below, and every other carrier still settles it on
+sight.* A row is a defect when nothing that separates the two members reaches
+3:1. Accepted, each for a named reason: a **weight**, an **underline** or a
+**shadow** change (not a colour question at all); a **colour** change (scored for
+legibility by invariant A — the 2026-09-08 clause above, and its soft edge is
+stated below); a **fill** at ≥3:1; a **border** or an **outline** whose two
+colours are ≥3:1 apart, or that appears where the sibling paints none, in which
+case invariant B owns it against the page.
+
+⚠️ **A carrier count is not a verdict, and assuming it was hid a real defect.**
+The first version of D accepted any second signal. The passenger-type tile on
+`/staff/sell` then passed in dark mode on a **1.09:1** fill and a **1.54:1**
+border — `--accent-strong` (`#0a6a5f`) sits that close to `--admin-outline`
+(`#3a444b`) — with no colour and no weight anywhere on it. Nothing reached 3:1.
+That is the faint-fill failure wearing a different property, so the carriers that
+have a ratio behind them are weighed rather than counted. The owner was asked
+before this shipped, not after: reading a 1.54:1 border delta as "a second
+signal" is an interpretation of the 2026-09-08 wording, not a deduction from it.
+Fixed the OBRS-755 way, in dark only: `--accent-text`, 6.73:1 against the
+unselected tile's border. **The outline was the same hole one property along** —
+weighed as of the same amendment, after review caught it still being accepted on
+presence while the border no longer was.
+
+**What D still does not tell you.** (a) Two text colours that both clear AA but
+barely differ *from each other* are accepted — the clause above is the owner's
+2026-09-08 decision, and no floor on that distance has been asked for. (b) The
+population is what the app marks. A state shown only by an injected icon — the
+seat map's centred check — carries no class D can see, and is out of its reach by
+construction. (c) It measures the 22 customer and 4 staff pages the two sweeps
+already visit, in both themes; a screen outside that list is unmeasured, not
+passing. Every comparison it makes, accepted ones included, is printed by
+`CONTRAST_CENSUS=1` and photographed by `obrs-1774-state-capture.spec.ts`.
+
+The worked example, and still not a defect. The Text/Camera
+segment on `/staff/boarding` registers a 1.18:1 boundary in both themes, but its
+selected state is carried by **three** things, not by that boundary
+(`boarding-list.component.scss:133`): a `--accent-soft` fill, an `--accent-text`
+colour, and `font-weight: 700`. The colour change is scored by invariant A and
+clears AA (it was the OBRS-755 fix that took it from 2.09:1), and the weight
+change is not a colour question at all. A state that rests on the faint fill
+**alone** would be a defect; this one does not.
+
+**Tokens.** Control boundaries have their own token, kept apart from the general
+outline tokens on purpose — `--admin-outline` / `$primary-lightgrey` also draw
+card edges, table rules and hairline separators, none of which 1.4.11 reaches, and
+`$primary-lightgrey` is `background` at 16 of its 96 call sites.
+
+| Shell | Light | Dark |
+|---|---|---|
+| customer (SCSS) | `$control-border` `#6c757d` | `$dk-control-border` `rgba(255,255,255,.42)` |
+| admin/staff (CSS var) | `--control-outline` `#6c757d` | `--control-outline` `rgba(255,255,255,.42)` |
+
+Measured: 4.69:1 on `#ffffff`, 4.47:1 on the `#f9f9ff` filter strip, 4.03:1 on
+`#1a1d27`, 4.09:1 on `#0f1117`. ⚠️ **Do not "optimise" these toward 3:1.** The
+lightest grey that clears it on white (`#949494`, 3.03:1) **fails** on `#f9f9ff`
+at 2.89:1 — a value tuned against one surface turns the gate red on another.
+
+**Separators keep the old tokens.** If you are drawing a line between two things
+rather than around a control, use `--admin-outline` / `$primary-lightgrey` /
+`$dk-border`. Reaching for the control token there is the mass-rewrite §1 forbids.
+
+---
+
 ## 3. Form controls — canonical components
 
 There are **three** dropdown implementations in the repo. Pick the canonical one;
@@ -321,9 +434,10 @@ do not add a fourth.
 
 | Need | Canonical component | Notes |
 |---|---|---|
-| **Select / dropdown in a form** | **`app-admin-dropdown`** | The only one with the placeholder-header contract (§3.1). Inputs: `[options]`, `[placeholder]`, `valueKey`, `labelKey`, `[icon]`, `[disabled]`, `formControlName`. |
+| **Select / dropdown in a form** | **`app-admin-dropdown`** | The only one with the placeholder-header contract (§3.1). Inputs: `[options]`, `[placeholder]`, `valueKey`, `labelKey`, `[icon]`, `[disabled]`, `[searchable]` (OBRS-1576, default `false` — type-to-filter trigger + keyboard navigation), `[placeholderSelectable]` (OBRS-1643, default `true` — set `false` on a field that cannot be empty, §3.1 item 2), `formControlName`. |
 | Localized name dropdown (stop/route pickers with i18n labels) | `app-dropdown-obrs` | Legacy Bootstrap dropdown; **no placeholder support**. Keep only where it's already wired for localized names; do **not** use for new plain selects. **Exception (OBRS-433):** a plain select on a **customer-shell** page that must not import `AdminSharedModule`/`AdminModule` (a lazy-module-boundary violation — `app-admin-dropdown` lives there and its styling depends on `--admin-*` vars only defined inside `.admin-shell`) may use the standalone `app-dropdown-obrs` instead, imported directly into that feature module's `imports`. See `docs/adr/0023-my-reports-customer-page.md`. Still **not** for a new select inside an admin/staff page — `app-admin-dropdown` remains canonical there. |
-| Date / time | PrimeNG `p-calendar` (date), the existing time control | Keep the **single input shape** (§5). |
+| Date / time | PrimeNG `p-datePicker` (date), the existing time control | Keep the **single input shape** (§5). |
+| **Date range filter** | **`app-admin-date-range-picker`** (`src/app/shared/components/date-range-picker/`) | OBRS-1734. One combined trigger, one popup, both ends — not two separate `p-datePicker` fields. Only for a range with a real start and end; a page whose range can be one-sided/open (e.g. `config-change-history`) keeps two separate `p-datePicker`s instead. |
 | **Export trigger** (download current view as CSV/Excel) | **`app-export-button`** (`src/app/shared/components/export-button/`) | Presentational, self-sufficient: `[datasetKey]`, `[requiredRole]`, `[params]`. Renders a **secondary** `admin-btn` (never `admin-btn-primary` — exporting is a supporting action) that opens a `p-menu[popup]` with CSV / Excel items, following the trigger-popup pattern already used by `walk-in-trip-browser.component` (not `p-splitButton` — unused in this codebase). **Hidden** (not disabled) when `authService.hasAnyRole([requiredRole])` is false, matching the staff-layout/navbar role-gating precedent. Success is silent (the browser download is the confirmation); errors branch on `ExportError.errorCode` via `AlertService.error()`. See `docs/adr/0001-export-button-component.md`. |
 | **Rich-content popup** (a trigger button opening a stateful, scrollable list — not a flat command menu) | **`p-overlayPanel`** | First used by `app-notification-bell` (OBRS-317) for the owner/staff notification inbox: `p-menu[popup]`'s `MenuItem[]` shape can't carry a row's message/timestamp/read-state/click-handler, so `p-overlayPanel` hosts the dumb `app-notification-inbox-panel` (→ `app-notification-inbox-row`) instead, keeping the same trigger-toggles-a-floating-panel model as the `app-export-button` precedent above (`appendTo="body"`). Use `p-menu[popup]` when the popup is a flat list of commands; reach for `p-overlayPanel` when it's a stateful list. See `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`. |
 | **Loading / busy indicator** (skeleton row, mid-panel spinner, or an in-button spinner) | **`app-loading-state`** (`src/app/shared/components/loading-state/`) | OBRS-907. Inputs: `[variant]` (`'skeleton' \| 'spinner' \| 'inline'`), `[graphic]` (`'ring' \| 'icon'`, spinner/inline only), `[icon]`, `[rows]`/`[skeletonShape]` (skeleton), `[sizePx]`/`[ringWidthPx]`/`[durationMs]` (pixel/ms overrides so a migrated call site can reproduce its exact prior look). `skeleton` reuses the existing global `.admin-skeleton` primitive (`src/styles/_loading.scss`) byte-identical; `graphic="icon"` reuses the existing global `.admin-loading-spinner` (`admin-theme.scss`); `graphic="ring"` (default) is the one NEW visual this card introduced, replacing the ~12 near-identical hand-rolled `.xxx__spinner` + `@keyframes xxx-spin` pairs across customer-shell dialogs — reach for it instead of hand-rolling a 15th. Renders `role="status"` + a translated, visually-hidden status message (`[messageKey]`, default `COMMON.LOADING`) with the graphic itself `aria-hidden="true"`; a visible caption stays owned by the call site. `prefers-reduced-motion: reduce` freezes every graphic this component can render without it disappearing (a static ring/icon remains visible) — locked by `e2e/tests/obrs-907-loading-state-reduced-motion.spec.ts` (GATE lane) rather than a unit test, since Karma's ChromeHeadless has no per-spec way to force the OS reduced-motion preference. Only 1 call site per shell was migrated as proof (`my-booking-ticket-modal` / `notification-inbox-panel`); sweeping the remaining ~28 hand-rolled spinner/skeleton sites onto this component is OBRS-909/910, not a blanket mandate to migrate on sight. |
@@ -334,8 +448,18 @@ Every form select **MUST**:
 
 1. Use `app-admin-dropdown` (or a component that renders the same placeholder-header).
 2. Pass a `[placeholder]` equal to the **field's name** (e.g. `Vehicle Type`,
-   `Vehicle`, `Driver`) — the component renders it as the top, selectable header row
-   with a checkmark when nothing is chosen.
+   `Vehicle`, `Driver`) — the component renders it as the top header row with a
+   checkmark when nothing is chosen. That row is **selectable by default**, and picking
+   it means "clear this field".
+   **A field that cannot be empty must opt out** with `[placeholderSelectable]="false"`
+   (OBRS-1643), which drops the row from the panel and from the keyboard path — the
+   trigger still shows the placeholder per item 3. A handler guard alone is not enough:
+   the control writes `selectedValue = ''` on itself *before* it emits, so a parent that
+   rejects `''` changes no binding, `writeValue()` never runs, and the button is left
+   reading the field's name over a table that still holds the old value (measured on
+   `/admin/expenses`, OBRS-1626/-1631). Keep the guard as a second layer; the opt-out is
+   the cut that leaves nothing to reject. A filter whose empty value legitimately means
+   **"all"** keeps the default `true` — that is a real choice, not an empty field.
 3. **MUST NOT pre-seed a default value** unless the spec explicitly requires one.
    The control starts **empty**, showing the placeholder, so the user makes an
    explicit choice — identical to every sibling field.
@@ -371,6 +495,13 @@ One color = one meaning. Never pick a button color for looks.
   brand primary; they should not be green in one place and `#0d6efd` blue in another.
 - **MUST NOT** use raw `btn-primary` (Bootstrap blue) on a themed surface — use the
   brand/accent primary.
+- **An icon-only control needs a hit target of at least 24x24 CSS px** (WCAG 2.2
+  SC 2.5.8), and the number that counts is the **rendered** one — a declared
+  `height`/`width` on a flex item inside an overflowing column is not what the user
+  gets. `.admin-sidebar-pin` declared 28x28 but rendered 20px tall once its column
+  overflowed (OBRS-913); the fix was `flex-shrink: 0`, not a bigger declared size.
+  This is a repo-wide expectation, not a repo-wide *gate* — the automated check for
+  it is OBRS-925, not this note.
 
 ---
 
@@ -562,6 +693,12 @@ Run this against any UI diff (and during the live-verify screenshot glance):
       neighbours. The admin desktop primitives are the deliberate exception
       (`.admin-icon-btn` 36 px, `.refund-void-info-btn` 22 px) — don't shrink a
       customer-facing control to match them.
+- [ ] **Icon-only controls render at ≥ 24×24 CSS px** (WCAG 2.2 SC 2.5.8) — §4 has the
+      rule and why *rendered* is the only number that counts. This floor is not a
+      customer-surface rule, so the 44 px exemption above does not carry over to it:
+      `.refund-void-info-btn` at 22 px is exempted from 44 but is **below 24 and
+      therefore unresolved**, not grandfathered. Whether to raise it is the owner's
+      call (raised on OBRS-913); the repo-wide check is OBRS-925.
 - [ ] **No layout jump:** anything arriving async reserves its space first — images and
       map tiles get explicit dimensions or `aspect-ratio`, and a list that will become
       rows renders the `skeleton` variant rather than collapsing to zero height.
@@ -670,6 +807,17 @@ enforced rule with a test behind it.
   `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`. Reuse
   `p-overlayPanel` for the next back-office popup that needs to host a stateful list,
   and the root-service shape for the next cross-cutting back-office signal.
+
+- **Button pending state, `[appPending]` (OBRS-910)**: the shared spinner slot a
+  submit/confirm button shows while its action is in flight, replacing the
+  hand-rolled `<span class="spinner">` / Bootstrap `.spinner-border` copies each
+  call site used to insert next to its own label. The pending-slot spinner
+  (`<app-loading-state variant="inline">`, `.loading-state-ring`) reads
+  `currentColor` from the button instead of a fixed accent token — every button
+  role already passes contrast for its own label color, so a ring that inherits
+  that same color is pre-validated on every role/theme with no new token. Reuse
+  `[appPending]` for the next submit/confirm button instead of hand-rolling
+  another spinner span.
 
 - **`.admin-kpi-icon.is-danger`** (OBRS-98, `RefundVoidReportPageComponent`'s Voided
   card): completes the `is-success`/`is-warning` KPI-icon modifier set with the existing
@@ -1282,6 +1430,101 @@ enforced rule with a test behind it.
   do NOT put an arrow on a column the backend cannot order by, or one whose
   ordering is arbitrary to the reader (an enum sorted by its stored English code
   behind a translated label).
+
+- **Headline text over a hero image — never inside it** (OBRS-1700,
+  `HomeBookingComponent`'s `.home-hero` / `.home-headline`): the home page's own
+  sentence used to be a single outlined `<path>` baked into `home-bg.svg`
+  (`<text>` 0, `<tspan>` 0, Thai characters 0 in a 394,864-byte file — that is
+  `git cat-file -s`, the portable figure; a Windows checkout reports 396,992
+  because `core.autocrlf` adds one byte per line), which is
+  why it stayed Thai for a visitor on English or 中文, why the site's front page
+  had no `<h1>` at all, and why changing the wording was a graphics job rather
+  than a JSON edit. **Any text a reader is meant to read belongs in the DOM
+  behind an i18n key — never in the asset**, however convenient the designer's
+  export is. The pattern for putting it back: wrap the `<img>` in a
+  `position: relative` box that IS the image box (do not use the section around
+  it — a percentage measured against a container that also holds the form drifts
+  as the form grows, and `object-fit: cover` at small widths defeats a `vw`
+  calculation), then place the heading in PERCENTAGES read off the deleted
+  artwork's own path data, and size it in `vw` so it tracks the image, with a
+  `max(…, 18px)` floor because `vw` alone is 8.7px on a 360px phone. Colour it
+  from a token rather than reproducing the artwork's gradient: a gradient stop
+  that was fine behind a picture (#4BC2F7, 1.8:1 on this sky) fails the moment a
+  contrast checker starts judging it as text. Lock it with the §12(3) assertion
+  — `expect(queryAll(By.css('h1')).length).toBe(1)` plus the TRANSLATED string,
+  not the key. Reuse this instead of shipping one asset per language: that was
+  the rejected option here at +~400 KB each, and it still leaves the page with
+  no heading.
+
+- **Categorical (non-semantic) series palette** (OBRS-1725, the vehicle P&L
+  cost-mix donut/legend and its swatches): the first chart on an admin page
+  needed five fills whose only job is telling slices apart, and every existing
+  `--admin-*` token names a MEANING (danger/success/warning/etc.), so reusing
+  one would say a cost category is good or bad, which a cost mix does not mean.
+  Declared as `--admin-series-1..5` in `admin-theme.scss`'s `.admin-shell` /
+  `.admin-shell.is-dark` blocks (same declare-in-both-blocks contract as every
+  other admin token, so `check-admin-theme-tokens.mjs` covers it), each pair
+  chosen for hue separation first (biggest two slices get the most different
+  hues) and measured contrast second (WCAG relative luminance against
+  `--admin-surface-card`, ~6.1–6.7:1 light / ~8.5–9.9:1 dark — legend text
+  carries the label, so a fill only needs to read as distinct, not as a text
+  foreground). Reuse these five for the next categorical (not status) chart on
+  an admin page instead of inventing a second set; add a `--admin-series-6`
+  pair, following the same two measurements, only when a chart genuinely needs
+  a sixth simultaneous category.
+
+- **Combined range picker** (OBRS-1734, `app-admin-date-range-picker`, proof
+  site the vehicle P&L report): a report's date-range filter was two separate
+  `p-datePicker` fields (`fromDate`/`toDate` side by side) on every report
+  page — the owner asked for one control instead, matching a reference
+  mockup's single "from – to" trigger opening one popup for both ends. Built
+  as a thin wrapper around `p-datePicker[selectionMode="range"]` with
+  `[numberOfMonths]="2"` (one popup, both months at once) and
+  `[responsiveOptions]="[{breakpoint:'640px', numMonths:1}]"` collapsing to
+  one month under the same breakpoint `.app-date-field-panel` already uses.
+  Keeps the app's existing Gregorian `dd/mm/yy` display — **not** the
+  mockup's Buddhist-era year — because `display-date-time.spec.ts` already
+  locks "not Buddhist era" as a tested contract and `schedule-booking-list.
+  component.ts` already omits a `th-TH`-rendered year specifically to avoid
+  it; reusing the mockup's *interaction*, not its date-text style, was the
+  owner's own call (OBRS-1734 card). New CSS is additive only, two width
+  modifiers in `src/styles.scss`: `.app-date-field--range` (310px min-width
+  on the trigger — the combined value, "dd/mm/yyyy - dd/mm/yyyy", clipped the
+  unstyled browser-default input width every single-date field happened to
+  fit inside by accident) and `.app-date-field-panel--range` (576px popup,
+  collapsing to the single-month 280px under the same 640px breakpoint) — the
+  existing `app-date-field`/`app-date-field-panel`/icon classes and the
+  page's own `applyRange()` validation are unchanged. Reuse this component
+  for the next report page's date-range filter (OBRS-1735 sweeps the other
+  9) instead of adding a 13th pair of separate fields; it is not for a page
+  whose range can be one-sided/open (`config-change-history` was excluded
+  for exactly that reason).
+
+- **Horizontally scrolling selection rail** (OBRS-862,
+  `app-schedule-booking-day-strip` on `/schedule-booking`): no existing
+  customer-shell control is a scrollable single-select rail —
+  `app-trip-type-toggle` is a fixed two-option pill pair, `nav-tabs` /
+  `.schedule-tabs` are admin-shell and read `--admin-*` (which does not resolve
+  outside `.admin-shell`), and PrimeNG ships no matching primitive. The rule:
+  **`overflow-x` goes on the inner flex row, never on `:host` and never on the
+  page**; `:host` is capped with `width: min(100%, <max>)`; items are
+  `flex: 0 0 auto` at ≥ 44×44 px with ≥ 8 px gaps; the partially-cut item at the
+  right edge is the scroll affordance (no arrows, no gradient mask, no JS). The
+  selected item reuses the `trip-type-toggle` selection look verbatim
+  (`$primary-blue` + `$text-white`; dark `$dk-accent` + `$dk-bg`), and that is a
+  SELECTION state, not a button role — §4's one-primary rule is untouched.
+  Locked by `customer-pages.ts`'s `schedule-booking-day-strip` entry, whose
+  `mustRender` scores both coloured states in both themes.
+
+- **"Unavailable" as a selection state** (OBRS-862, `.day-strip__chip.is-unavailable`):
+  light `$primary-lightgrey` fill + `$text-black` label (8.1:1), dark
+  `$dk-bg-soft` + `$dk-text-muted` (5.9:1). Three requirements travel with it and
+  none is optional: a **non-hue carrier** (here `line-through` on the date), a
+  visually-hidden reason so a screen reader hears WHY, and **`aria-disabled`
+  rather than the native `disabled`** — a disabled button leaves the tab order,
+  so a keyboard user can neither reach it nor hear the reason; the click handler
+  no-ops instead. Reuse this pair for the next option that must be shown-but-not-
+  choosable rather than inventing a second muted role.
 
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 

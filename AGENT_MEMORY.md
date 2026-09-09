@@ -1,6 +1,112 @@
 # Agent Memory — Scrutinize notes for developers
 
-## 2026-07-15 — SELF-FIXED: OBRS-370 duplicated HTML comment (copy-paste artifact)
+## 2026-09-05 — SELF-FIXED (DRY, ~26 lines): OBRS-812 CSSOM placeholder-strip helper was a byte-identical copy in two spec files
+
+`staff-contrast-gate.spec.ts`'s mutation test and `obrs-812-capture.spec.ts`'s BEFORE/AFTER capture
+each carried their own ~26-line inline `strip()` walk that deletes every `.admin-field ... ::placeholder`
+rule from the live CSSOM — same code, same comments, both reconstructing the pre-OBRS-797 boarding
+placeholder for the same reason. Extracted to `stripAdminFieldPlaceholderRules()` in
+`e2e/support/staff-pages.ts` (same shape as `MEASURE` in `customer-contrast.ts` — a closure-free
+top-level function passed straight to `page.evaluate()`), and both call sites now do
+`await sheet.evaluate(stripAdminFieldPlaceholderRules)`. Verified `npx tsc --noEmit` shows the same
+2 pre-existing-shaped `evaluate(MEASURE)` overload errors in these two files before and after (that
+error is unrelated to this helper and already exists on `origin/dev` in four other capture specs) —
+the consolidation introduced no new type errors. Net line count across the three files went down,
+not up.
+
+Deliberately did NOT touch the ~100-line duplicated verdict/ledger block (`Row`, `fmt`, `record`,
+the `shortfalls`/`totals` accumulation, the `unmatched`/`unmeasured`/`stale` computation) between
+`staff-contrast-gate.spec.ts` and `customer-contrast-gate.spec.ts` — that duplication is real but
+consolidating it means editing `customer-contrast-gate.spec.ts`, which is the repo's live merge gate
+(`FRONTEND-GOTCHAS.md`: "`ng test` green is not a merge signal... relocating shared state breaks it
+loudly in one place and vacuously in another," 4 occurrences). A shared verdict function would also
+need `collapsed`/`measured` state passed in or module-scoped — module-scoped mutable state shared
+across two spec files in one worker process is the exact shape that made `host-boxes.ts`'s
+`activeFixture` unsafe to reuse here in the first place (see `staff-pages.ts`'s own docblock). Over
+30 lines and touches the passing merge gate for no test benefit to this card — left as a finding for
+the developer/a follow-up card, not self-fixed.
+
+## 2026-09-05 — SELF-FIXED: OBRS-1734 spec test asserted the OLD getter's behavior after the component was fixed to a plain field
+
+`date-range-picker.component.spec.ts`, the test `'exposes the from/to inputs as PrimeNG's own
+[start, end] range value'`: it set `component.from`/`component.to` directly, then asserted
+`(component as any).value` immediately reflected them, with no `fixture.detectChanges()` and no
+call to `ngOnChanges()`. That assertion was only ever true while `value` was a **getter** —
+`get value() { return [this.from, this.to]; }` — the exact reference-instability bug this card's
+underlying fix removed (a getter bound via `[ngModel]="value"` returns a new array every CD tick,
+which drove `NgModel`/PrimeNG into a synchronous change-detection loop that hung the browser tab).
+Once `value` became a plain field, refreshed only inside `ngOnChanges` when `changes['from']` /
+`changes['to']` is present, directly assigning `component.from`/`.to` in a test no longer updates
+`value` — Angular only calls `ngOnChanges` in response to an actual template-bound `@Input` change,
+never in response to a bare property write. Ran the spec file alone (`ng test --include=**/date-
+range-picker.component.spec.ts`) to confirm: 1 FAILED / 4 SUCCESS before the fix.
+
+**Lesson for next time:** whenever a getter that fed an input-bound field is replaced with an
+`ngOnChanges`-refreshed plain field, grep that field's existing spec for any test that pokes
+`@Input`s directly and reads a **derived** field back out in the same tick — it needs an explicit
+lifecycle-hook call to keep testing real behavior, not the getter's old shortcut.
+
+**Fix (5 lines, `date-range-picker.component.spec.ts`):** import `SimpleChange` from
+`@angular/core` and call `component.ngOnChanges({ from: new SimpleChange(null, component.from,
+true), to: new SimpleChange(null, component.to, true) })` right after setting `from`/`to`, the same
+way Angular's own change detection would invoke it after a bound input actually changes. Re-ran the
+spec file alone: 5/5 green. Re-ran the full suite afterward: 6716/6716 green (unchanged total — this
+fixed an existing failing test rather than adding one), and `npm run build` exit 0.
+
+Also fixed in the same pass, same card: `docs/design-system.md`'s new "Combined range picker"
+pattern-log entry described the new CSS as "a `.app-date-field-panel--range` width modifier" only —
+it omitted the `.app-date-field--range` **trigger** min-width modifier (`src/styles.scss`), which is
+actually the fix for the real bug this card also found (the combined range value, ~23 chars,
+clipping in the trigger's unstyled browser-default input width). Expanded the entry to name both
+modifiers, so a future reader grepping the pattern log for "why is there a min-width on the date
+field" finds it.
+
+## 2026-08-30 — SELF-FIXED (cosmetic): OBRS-1569 new `data-testid` attribute split across three lines against the file's own one-line-attribute convention
+
+`business-policy.component.html`: the new `<p data-testid="business-policy-terms" [innerHTML]="…">`
+was written as `<p` / `data-testid="…"` / `[innerHTML]="…"` on three separate lines, each at the
+same indent. Every other `<p>` in this file (including the sibling `.policy-version` tag two lines
+above, which also carries a `data-testid`) keeps its attributes on the opening tag's own line.
+No functional difference (Angular ignores the extra whitespace) and no lint/format gate catches
+HTML template style in this repo, so this would have shipped silently. Collapsed back to one line
+to match. Nothing else about this card needed a fix — fixture shapes match `flush()` field-for-field,
+`rescheduleMaxCount: 0` was already an exercised branch (`RESCHEDULE_COUNT_UNLIMITED`, not a hidden
+paragraph), the two new regexes are anchored/ordered correctly, and the other four `CUSTOMER_PAGES`
+readers (consent-banner-reachability, lane-offline, dark-override-effective, host-box-sweep) check
+reachability/host-leaks/mounted-component, not this page's text count, so widening the fixture does
+not move what they measure.
+
+## 2026-08-25 — SELF-FIXED: OBRS-1576 `[searchable]` opt-in leaked a new highlight onto the 21 of 71 non-searchable `app-admin-dropdown` sites with no `[placeholder]`
+
+The card's own claim was "`[searchable]` is opt-in, the existing call sites unchanged" — and that
+claim was tested (`admin-dropdown.component.spec.ts` `describe('when [searchable] is not set …')`),
+but the test never set `placeholder` and never asserted on `isActive()`, so it missed this.
+
+`toggleDropdown()` — the plain `<button>` trigger's own click handler, used by every non-searchable
+site — sets `activeIndex = this.firstActiveIndex` on every open, unconditionally (not gated on
+`searchable`). `firstActiveIndex` is `placeholder && !query.trim() ? -1 : 0`. `placeholder` defaults
+to `''`. Grepping every `<app-admin-dropdown …>` block in `src/app` for one with no `[placeholder]`
+binding found **21 of 71** (re-measured on `origin/dev` 2026-08-25; the card's quoted "66 in 31 files" is the 2026-08-23 count and `dev` has moved since) (e.g. `schedules-page.component.html` ×6, `vehicle-form-modal` ×2,
+`route-form-modal`, `role-form-modal`, …). For all 21, `firstActiveIndex` returns `0` on every open,
+and the template's `[class.is-active]="isActive(i)"` (new CSS: `rgba(0,102,135,.12)` wash, added this
+card) then highlighted their first option the instant the dropdown opened — a real, new, visible
+behavior change on pre-existing screens this card was not supposed to touch.
+
+**Fix (1 line, `admin-dropdown.component.ts`):** gated `isActive()` on `this.searchable`. Safe because
+a plain `<button>` has no arrow-key handler wired (`(keydown)="onTriggerKeydown($event)"` is only on
+the searchable `<input>`), so `activeIndex` is never used for real keyboard navigation on the
+non-searchable path — only for this unintended paint. Re-ran `admin-dropdown.component.spec.ts` (14/14),
+plus `expense-bill-card` / `expense-batch-page` / `expense-payee-picker` / `nav-reachability` specs
+(49/49) — all still green.
+
+**Lesson for next time an existing shared component gains an opt-in `@Input`:** "the new `@Input` is
+`false`/unset at every old call site" is not the same claim as "every new code path this card adds is
+unreachable from an old call site." Here the new code path (`firstActiveIndex`/`isActive`) was reached
+from `toggleDropdown()`, which every old call site already calls — the gate needed to be on the
+*input flag itself* inside the new logic, not just on which trigger element renders. When a "byte-
+identical for non-opted-in callers" claim is made, grep for every new method the shared, ungated
+methods (the ones both branches call, like `toggleDropdown`) now touch, not just the new template
+branch.
 
 In `usability-reports-page.component.html` the OBRS-370 Jira-key-visibility
 comment block was pasted twice, back-to-back, above the
@@ -4313,3 +4419,242 @@ Reduced the block to a POINTER: keep the correction (COLLECTING vs SENDING) + pr
 (OBRS-1206/1539) + a qualitative "a few seconds", and defer the measurements/alternatives
 to `setSuspended` and ADR-0034 §10. Rule: a comment that documents someone else's measured
 fact should cite the owner, not restate the number — restated numbers drift.
+
+## OBRS-1592 (Scrutinize round 3) — enumerate the WHOLE money-render family in a file, not the "action" ones
+`parcel-verify-list-page.component.ts` had THREE `.toFixed(2)` money sites, not two. The round-2
+claim "both parcel-verify-list sites converted" counted only the two REJECT amounts (confirm
+dialog + toast) and missed `paidAmountLabel()` at line 128 — the paid-amount COLUMN, same
+`row.amount` field, rendered on every row via `{{ paidAmountLabel(row) }}`. Self-fixed to
+`formatMoney(row.amount, this.translate.currentLang)` (formatMoney already imported).
+Rule: when converting a file's money renders, grep the whole file for `.toFixed`/`toLocaleString`
+FIRST and convert every display site; the "money-moving action" sites are the ones you notice, the
+quiet column/label render is the one that ships. A `check-money-format` gate that only scans for
+Intl-currency/`| currency`/unit-word-i18n CANNOT see a `.toFixed(2)`-to-template render, so green
+gate + green tests is not proof the family is done.
+
+## OBRS-1592 (Scrutinize round 4) — a comment stating the OLD format is a false claim too
+`settlements-page.component.ts:323` still read `// Echo the exact counted cash, including
+"THB 0.00" for a zero drawer.` — but the line below it is `this.formatMoney(...)`, and
+`formatMoney(0)` now yields `THB 0` / `0 บาท` (no satang on a whole number, per `hasSatang`),
+never `THB 0.00`. The comment described the exact `0.00` format this card removed, and it
+also assumed English. Self-fixed (comment only) to stop it teaching the next reader the
+pre-card format. Rule for a format-migration card: after converting a render, grep the file's
+COMMENTS for the old format literal (`0.00`, `฿`, `THB x.xx`) as well as the code — a comment
+asserting the old shape is the same false-completeness claim as a `.toFixed` that survived,
+just one a test can never catch.
+
+## OBRS-1531 scrutinize self-fixes (e2e/support/lane-tree-guard.ts)
+- Fail-open closed: `Get-NetTCPConnection` finds a listener but `Win32_Process.CommandLine`
+  is null for an elevated/other-user process. The guard used to read that as "nothing on
+  the port" and PASS while reuseExistingServer attached to that foreign server. Now the PS
+  script emits `pid <n>` first, so a held-but-unnamed port comes back non-null and fails
+  closed (the whole point of the guard is not to go quiet). Pattern: a "is X present?"
+  probe that infers absence from an empty *secondary* lookup will report present-as-absent.
+- AC-5: the four `git` calls ran on CI before the `if (CI) return`. execFileSync('git')
+  throws on a non-zero exit (not a repo / git absent) and would have reddened the gate lane
+  on CI. Wrapped in try/catch that stands down loudly. Pattern: any command a globalSetup
+  runs BEFORE its CI early-return still runs on CI -- it must not be able to throw there.
+
+## OBRS-1577 re-review (Scrutinize self-fix, 2026-08-24)
+- Gating a create AFFORDANCE for a role the server refuses is not done until the COPY that points at that affordance is gated too. The fix hid the registry ADD button + the picker create for `admin` (correct), but `expense-payees-page.component.html` still rendered `ADMIN.EXPENSE_PAYEES.EMPTY_BODY` — copy that says "use the Add payee button, or type a new name while entering a bill" — to an admin for whom BOTH routes are now hidden. Wrapped that `<p>` in `@if (canCreate)` so admins see only the honest title. No invented copy, owners unaffected. Lesson: when you role-gate a button, grep the empty-state / hint / aria copy that references it — same family, different file.
+
+## OBRS-566 scrutinize self-fix (scripts/check-i18n-parity.mjs, 2026-08-25)
+- Gate 7's own rationale comment claimed "0 violations across 3 x 3,498 keys" but the script's
+  own printed count (`node scripts/check-i18n-parity.mjs` -> `en=3458 th=3458 zh=3458`) and the
+  commit message ("3 x 3,458 keys") both say 3,458. A transposed digit in a comment that exists
+  specifically to be the trustworthy record of what was measured is the exact failure mode
+  DEV-GOTCHAS warns about (a comment stating a wrong number becomes the next reader's false
+  belief) — fixed the comment to match the number the script itself prints. Not a logic bug,
+  the gate's behavior was unaffected; verified `node scripts/check-i18n-parity.mjs` still green
+  after the edit. Lesson: when a gate's comment quotes a measured count, that count is
+  independently checkable against the script's own console output — check it, don't trust the
+  commit message's copy of it.
+
+## OBRS-1662 scrutinize self-fix (user-form-modal.component.ts, 2026-08-31)
+- The sellable-owners save (`submitUser`, edit branch) was gated on `isPlatformAdmin &&
+  ownersLoadState === 'loaded'` only. `ownersLoadState` tracks the OWNER ROSTER fetch
+  (`GET /private/owners`), a global list independent of which user is open — it says nothing
+  about whether THIS user's real `sellableOwnerSlugs` has arrived yet from the separate,
+  awaited `getUserById` call. Until that resolves, the control holds `toUserDtoFallback`'s
+  fallback value, which has no sellable-owner data at all and so renders as `[]`. Because the
+  endpoint is `PUT /api/private/users/{id}/sellable-owners` with an unconditional-full-replace,
+  `[]`-really-means-nobody contract (by design — see the mapper comment), an admin who clicked
+  Save in the window after the (typically fast, small) owner roster loaded but before the
+  (typically slower, joins more tables) user detail loaded would silently wipe every real grant
+  the user had — with no error, no confirmation, nothing in the UI to suggest data was lost.
+  Fixed by adding `&& !this.isEditDetailLoading` to the same guard, so the write waits for the
+  real value to be in the form before treating an unticked box as an instruction to revoke.
+  Lesson for the next full-replace-write-on-its-own-endpoint (sales points already has this
+  shape too, pre-existing, not touched here): the write guard must include "has the FORM's OWN
+  data for this specific record finished loading", not just "has some unrelated options list
+  finished loading" — two different async fetches racing past each other is the trap, and
+  `ownersLoadState`/`salesPointsLoadState` only ever answer the second question.
+
+## OBRS-1701 scrutinize self-fix (schedule-booking-filter.component.spec.ts, 2026-09-01)
+- The new AC5 "province headings" test's `PROVINCES` fixture used `{ id, nameThai, nameEnglish,
+  stops }` — fields `toStationGroup()` (station-groups.ts) never reads. It reads
+  `province.slug` and `province.translations[locale].label`; both were absent, so every group
+  built from this fixture silently got `slug: '' / nameThai: '' / nameEnglish: ''`. The test
+  still passed because it only asserted `Array.isArray(g.stations)` and the flattened station
+  order — never the heading fields its own name claims to prove. Classic fixture-wrong-shape:
+  green test, wrong belief (this describe block's provinces exercised nothing about labels).
+  Fixed the fixture to the `slug`/`translations` shape the correct twin fixture in
+  home-booking.component.spec.ts already uses, and added `expect(groups.map(g =>
+  g.nameEnglish)).toEqual([...])` so the test actually checks what its title says. Also added a
+  test for the swap button clearing the far side (`onSwapStations` swapping onto a
+  dropoff-only stop, which is a real pickup-set miss, not a hand-picked edge case) — the
+  existing "AC3: swap re-narrows" test only used a pair where nothing needed clearing, so the
+  suite had zero coverage of `clearStopStation` reached via the swap entry point specifically
+  (only via `onStartStationChange`/`onEndStationChange`). Lesson: when a describe block borrows
+  a fixture shape from a sibling spec, diff the two fixtures field-by-field against the
+  interface both are supposed to satisfy — a same-named field one level up (`id` vs `slug`) is
+  the kind of drift a type checker won't catch when the stub's parameter type is loosened to
+  `unknown[]`.
+
+## OBRS-1730 scrutinize self-fix (auth.service.ts, currentRouteAllowsPreviewedRole, 2026-09-04)
+- The new walk that checks whether the previewed role still passes the route on screen used
+  `for (snapshot = root; snapshot; snapshot = snapshot.firstChild)` — primary-outlet-only.
+  `ActivatedRouteSnapshot.children` (not `firstChild`) is what actually carries every outlet's
+  branch, and this repo already has a documented lesson about exactly that gap:
+  `src/app/shared/lib/analytics-route-scope.ts`'s `childrenOf()` — "a named outlet branches the
+  tree, and a walk that only ever took `firstChild` would read a staff page sitting in a
+  secondary outlet as measurable" — prefers `children`, falling back to `firstChild` only for
+  snapshot-shaped test doubles. No route in this app uses a named outlet today, so the bug was
+  dormant, not live (`ng test` stayed green, `grep -rn "outlet:" src/app` was empty) — but the
+  fail direction is fail-OPEN: a route in a secondary outlet the previewed role can't pass would
+  silently stay on screen exactly like the pre-OBRS-1730 defect this card exists to fix. Changed
+  the loop to a BFS queue that prefers `snapshot.children` and falls back to `snapshot.firstChild`
+  when `children` is empty (same fallback rule as `childrenOf()`), so the existing spec doubles
+  (which only set `firstChild`) still pass unmodified. Lesson: `grep firstChild` across the repo
+  before writing a NEW `ActivatedRouteSnapshot` walk — this one exact trap was already fixed once
+  in `analytics-route-scope.ts` and the fix didn't carry over because nobody grepped for the
+  precedent.
+## OBRS-1725 scrutinize self-fixes (vehicle-pl-report-page, 2026-09-04)
+- **Display bug in the largest-remainder rounding itself.** `roundedPercents` (built
+  specifically to make the cost-mix legend sum to exactly 100.0, after an earlier capture
+  showed `50.2+19.3+14.2+8.0+8.4=100.1`) returns `tenths.map(v => v / 10)`. That's correct
+  arithmetic, but when a slice's tenths value is an exact multiple of 10 (e.g. `80`), `80/10`
+  is the JS number `8`, not `8.0` — and the template interpolated `{{ slice.percent }}%`
+  directly, so that one legend row rendered as `8%` while its siblings in the same list
+  rendered `50.2%`/`19.2%`/`14.2%`/`8.4%`. Same bug family as the one the rounding fix was
+  written to kill (a report whose whole job is arithmetic showing something that reads as a
+  mistake), just moved from "doesn't sum to 100" to "doesn't format consistently" — a number
+  can be arithmetically exact and still look wrong next to its neighbors. The component-level
+  tests never catch this because they assert on the numeric `percent` field (`8`, correctly),
+  never on rendered DOM text for that value. Fixed by formatting at the template boundary —
+  `{{ slice.percent.toFixed(1) }}%` — rather than changing what `percent` stores, since a test
+  sums `Math.round(share * 10)` over the raw numbers and would need reworking for no reason if
+  the field itself became a string. Lesson: any per-item numeric render inside a `@for` whose
+  values come from a rounding/distribution algorithm needs a DOM-text assertion on the case
+  that lands on a whole number, not just a component-state assertion — the two can disagree
+  and the state-only test is blind to it.
+- **Missing design-system.md pattern-log entry.** The five new `--admin-series-1..5` tokens
+  are "the first categorical/non-semantic palette in the app" by the diff's own code comment —
+  a genuinely new pattern under design-system.md §12, which requires logging it so the next
+  chart reuses these five instead of inventing a second set. The tokens themselves were
+  correctly declared (`.admin-shell` + `.admin-shell.is-dark`, gated by
+  `check-admin-theme-tokens.mjs`, contrast pre-measured and verified accurate against the
+  actual hex values), but §12 step 2 ("add it here") was never done. Added a "Categorical
+  (non-semantic) series palette" entry to the New pattern log.
+- **OBRS-913 — ⚠️ RETRACTED, and the retraction is the lesson. `tsc --noEmit` and `ng test`
+  are both BLIND to Angular's `@HostListener` `$event` typing; only `ng build` sees it.**
+  This entry originally read "a code comment stated a `TS2345` that does not actually occur",
+  and it was wrong. `sidebar-layout-base.component.ts`'s `onToggleShortcut` is typed
+  `event: Event` with a comment saying Angular types `$event` for the pseudo-event listener
+  `@HostListener('document:keydown.control.b', ['$event'])` as plain `Event`, so
+  `KeyboardEvent` is a `TS2345`. The comment was **right**. The scrutinize pass "disproved" it
+  with `npx tsc --noEmit -p tsconfig.json` (clean) and `ng test` (**6714/6714 SUCCESS on the
+  broken tree**), retyped the param to `KeyboardEvent` — and the very next `ng build` failed:
+  `X [ERROR] TS2345: Argument of type 'Event' is not assignable to parameter of type
+  'KeyboardEvent' … [plugin angular-compiler]` at that exact line. The check lives in the
+  **Angular compiler plugin**, which bare `tsc` does not load and karma's build does not run,
+  so both instruments answer a different question and answer it cleanly.
+  Reverted in `6b8baa8b`; the comment now names its own instrument so nobody re-disproves it
+  with the same blind tool. Two lessons, and the second is the expensive one:
+  **(a)** a claim in a comment is still a claim, verify it — that part stands;
+  **(b)** *"I ran a checker and it was clean"* is only evidence if that checker can see the
+  thing. Before calling a claim false, ask which tool would go red if the claim were TRUE —
+  here the answer was `npm run e2e:gate` / any `ng build`, and neither was run. A green result
+  from an instrument that is structurally unable to fail is indistinguishable from no test at
+  all (QA-HARNESS family: *you believe a result that is not true*).
+
+## OBRS-862 — scrutinize (day strip on /schedule-booking)
+
+- **A guard the sibling method 30 lines below already applies to the SAME field was not
+  copied into the new one.** `resolveSoldOutToday` reads `scheduleFilter.departureDate`
+  behind `if (!scheduleFilter?.departureDate || !searchedDate.isValid()) return null;`.
+  The new `nearestDay$` pipeline read the same field with a bare
+  `dayjs(scheduleFilter?.departureDate).format('YYYY-MM-DD')`. Two facts make that a live
+  wrong-statement bug rather than a style nit: (1) `dayjs(null).format(...)` and
+  `dayjs('').format(...)` both return the literal STRING `"Invalid Date"` — no throw, no
+  empty string, nothing a `?.` or a truthiness check would stop; (2) `"Invalid Date"` starts
+  with `I` (0x49) and every ISO date starts with a digit (0x32), so **every** available date
+  sorts BELOW it. `resolveNearestDay` therefore found nothing "after", fell through to
+  "before", and would have told the customer the FARTHEST day in the 7-day window was
+  "the nearest day with trips". The store CAN hold such a filter: `initialState` is
+  `restoreBookingFilter()`, which is `readBookingContext()?.filter` straight out of
+  localStorage with no shape validation, and `availabilityRequestFor` never looks at
+  `departureDate` at all, so the request still builds. Lesson: when you add a second reader
+  of a field an existing method in the same file already reads, diff the two guards — and
+  never let a `dayjs(x).format()` result reach a string comparison without an `isValid()`
+  in front of it, because the invalid case is a plausible-looking string, not a failure.
+- **6734/6734 stayed green across that behaviour change**, which is itself the finding:
+  `nearestDay$`, `showDay()` and `resolveNearestDay()` (~90 new lines carrying the card's
+  headline AC, "the nearest day with trips is …") have no unit test at all —
+  `createScheduleServiceStub().getAvailabilityCached` returns `of(null)`, so every existing
+  list spec exercises only the null branch. A green suite is not coverage of the branch a
+  stub never enters.
+
+## OBRS-1744 — PrimeNG pass-through CAN remove an attribute, but only if you null the key
+
+- **A "tried X, it doesn't work" code comment is a factual claim like any other.** While wiring
+  `aria-describedby` onto the `<input role="switch">` inside `p-toggleSwitch`, the imperative
+  `ViewChild` + `setAttribute`/`removeAttribute` version was kept and its doc comment justified
+  that with *"pass-through only ever ADDS attributes"*. **That sentence was false.** Reading
+  `primeng/fesm2022/primeng-bind.mjs`, the `Bind` host effect explicitly calls
+  `renderer.removeAttribute(...)` when a key's value is `null`/`undefined`.
+- **The real mechanism is key-absent vs. key-explicitly-null.** The effect iterates
+  `Object.entries()` of THIS render's merged pt object and keeps no memory of the previous
+  render's keys, so a branch returning `{}` never visits `'aria-describedby'` and a prior
+  render's attribute survives. Returning `{ 'aria-describedby': null }` instead hits the
+  removal branch.
+- **Measured both ways, same suite (6,823 specs).** `{}` ⇒ `TOTAL: 2 FAILED, 6821 SUCCESS`,
+  and the two reds are exactly the "row stops being critical" / "no callout on screen" cases.
+  Explicit `null` ⇒ `TOTAL: 6823 SUCCESS`. The declarative `[pt]` shipped and the imperative
+  `AfterViewInit`/`OnChanges`/`setAttribute` block was deleted.
+- **Lesson:** a blanket "only ever…" / "never…" in a comment gets taken as settled by the next
+  reader and stops them looking. Read the library source before shipping one — and when a
+  reviewer says the blanket claim is wrong, test their alternative instead of keeping the
+  code that the wrong claim was defending.
+- **A getter feeding a signal `[pt]`/`[pBind]` input must return a STABLE reference, not a
+  fresh literal.** `switchPassThrough` built `{ input: { 'aria-describedby': … } }` on every
+  call. PrimeNG's `pt`/`pBind` are `input()` signals compared by `Object.is` (reference), so a
+  new object every Angular change-detection tick (the row component is not `OnPush`, so this
+  is most ticks) marked the signal dirty every time, re-ran `Bind`'s effect, and re-issued
+  `setAttribute`/`removeAttribute` on the `<input>` for no reason — same end value, wasted
+  work every tick for as long as the row is on screen. Self-fixed by caching the returned
+  object and only replacing it when the derived `aria-describedby` value actually changes
+  (`notification-preference-row.component.ts`), so unrelated CD passes see the identical
+  reference and the effect doesn't re-run. Re-verified: scoped suite (17 specs across both
+  `notification-preference-*` dom.spec.ts files) `TOTAL: 17 SUCCESS`.
+
+- **OBRS-1774, Scrutinize self-fix: "colour" meant two different things four lines apart in the
+  same prose block, and it read as the amendment contradicting itself.** The owner's 2026-09-09
+  amendment to §2.6 was worded "a carrier that is a colour must itself reach 3:1; a carrier that
+  is not a colour still settles it on sight" — in `stateFails()`'s docstring and in
+  `docs/design-system.md` §2.6. Read on its own, "a carrier that is a colour" naturally includes
+  the `color` carrier (text foreground), but the code's very next line
+  (`if (f.carriers.includes('color')) return false`) exempts `color` from any ratio requirement
+  unconditionally — the amendment was actually about carriers that PAINT A SURFACE (fill, border,
+  outline), a different sense of "colour" than the named `color` carrier. A reader taking the
+  summary sentence at face value would expect `color` to need 3:1 and then hit a contradiction
+  three lines later. Self-fixed by rewording both write-ups to say "a carrier that paints a
+  surface (fill, border, outline)" and explicitly calling out that the text `color` carrier is
+  NOT one of those and keeps its separate 2026-09-08 exemption — same rule, no logic change,
+  just removing the overloaded word. Also dropped a stale "the two carriers this file can
+  actually weigh" (now three, after the outline fix) in favor of "the carriers," so the count
+  can't go stale again the next time a carrier is added. **Lesson:** when a word already has a
+  specific meaning in a nearby enum/type (here, `carriers: string[]` with a literal `'color'`
+  member), reusing that same word in looser prose one paragraph over reads as contradicting the
+  code, even when both are technically consistent once you trace the reasoning through. Prefer a
+  different word for the loose sense.

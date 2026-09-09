@@ -1,0 +1,167 @@
+@import "../../../../../../styles/variables.scss";
+
+// OBRS-1577. Deliberately the same shape/colour language as AdminDropdownComponent — this control
+// sits directly beside two of them on the bill form, and a picker that looked like a different KIND
+// of control would read as a different kind of answer.
+:host {
+  display: block;
+  min-width: 180px;
+}
+
+.part-picker {
+  position: relative;
+  width: 100%;
+}
+
+.part-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 40px;
+  gap: $space-xs;
+  border: 1px solid rgba(189, 200, 207, 0.35);
+  border-radius: $radius-pill;
+  background: var(--admin-surface-card);
+  color: var(--admin-text);
+  cursor: pointer;
+  padding: 0 14px;
+  text-align: left;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.part-picker-trigger:hover,
+.part-picker.is-open .part-picker-trigger {
+  border-color: var(--admin-primary-fg);
+  box-shadow: 0 0 0 3px rgba(77, 190, 239, 0.16);
+}
+
+.part-picker-value {
+  overflow: hidden;
+  color: var(--admin-text);
+  font-size: 13px;
+  font-weight: $font-weight-bold;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.part-picker-value.is-placeholder {
+  color: var(--admin-muted);
+  font-weight: $font-weight-bold;
+}
+
+.part-picker-arrow {
+  flex: 0 0 auto;
+  color: var(--admin-muted);
+  font-size: $font-size-lg;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.part-picker.is-open .part-picker-arrow {
+  color: var(--admin-primary-fg);
+  transform: rotate(180deg);
+}
+
+.part-picker-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 1250;
+  width: 100%;
+  min-width: 240px;
+  padding: $space-2xs;
+  border: 1px solid rgba(189, 200, 207, 0.3);
+  border-radius: $radius-md;
+  background: var(--admin-surface-card);
+  box-shadow: 0 12px 32px rgba(25, 28, 30, 0.08);
+}
+
+.part-picker-search {
+  width: 100%;
+  margin-bottom: $space-2xs;
+}
+
+.part-picker-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.part-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  gap: $space-xs;
+  border: 0;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: var(--admin-text);
+  cursor: pointer;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.part-picker-option:hover {
+  background: rgba(0, 102, 135, 0.12);
+  color: var(--admin-primary-fg);
+}
+
+// OBRS-1576: the arrow-key highlight. Same wash as :hover — pointer and keyboard point at the same
+// row, and two "this one" colours would read as two different states.
+.part-picker-option.is-active {
+  background: rgba(0, 102, 135, 0.12);
+  color: var(--admin-primary-fg);
+}
+
+.part-picker-option.is-selected {
+  background: rgba(0, 102, 135, 0.2);
+  color: var(--admin-primary-fg);
+  font-weight: $font-weight-extrabold;
+}
+
+.part-picker-option.is-none {
+  color: var(--admin-muted);
+  font-style: italic;
+}
+
+.part-picker-option-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.part-picker-kind {
+  flex: 0 0 auto;
+  color: var(--admin-muted);
+  font-size: $font-size-xs;
+}
+
+.part-picker-create {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-2xs;
+  border-top: 1px solid rgba(189, 200, 207, 0.3);
+  margin-top: $space-2xs;
+  padding: $space-xs 12px 8px;
+}
+
+.part-picker-create-text {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: $font-size-xs;
+}
+
+// Two create buttons where the payee picker has one - the kind cannot be inferred from a bill that
+// carries parts AND labour, so it is chosen. They wrap rather than shrink: a truncated kind label
+// on a button that writes the row permanently is not a saving worth making.
+.part-picker-create-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2xs;
+}
+
+.part-picker.is-disabled {
+  opacity: 0.65;
+}

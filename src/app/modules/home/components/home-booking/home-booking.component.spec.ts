@@ -1885,3 +1885,67 @@ describe('HomeBookingComponent — search bar actions (OBRS-1189)', () => {
       .not.toBeNull();
   });
 });
+
+describe('HomeBookingComponent — the hero headline is real translated text (OBRS-1700)', () => {
+  let fixture: ComponentFixture<HomeBookingComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+      ],
+    }).compileComponents();
+
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', {
+      HOME: { HOME_BOOKING: { HERO_HEADLINE: 'Book NJ Phuyaipu bus tickets online' } },
+    });
+    translate.use('en');
+
+    fixture = TestBed.createComponent(HomeBookingComponent);
+    fixture.detectChanges();
+  });
+
+  it('renders exactly one h1, and it carries the translated headline', () => {
+    // Both halves matter and neither implies the other. Before this card the
+    // headline existed only as outlined `<path>` data inside home-bg.svg: the
+    // page rendered the sentence and still had no heading at all, so a screen
+    // reader and a search engine saw a home page with no title, and a visitor
+    // on English saw Thai. Asserting on the TRANSLATED string (not the key) is
+    // what would have caught the version of this bug that ships an `<h1>`
+    // holding the literal "HOME.HOME_BOOKING.HERO_HEADLINE".
+    const headings = fixture.debugElement.queryAll(By.css('h1'));
+
+    expect(headings.length).toBe(1);
+    expect(headings[0].nativeElement.textContent.trim()).toBe(
+      'Book NJ Phuyaipu bus tickets online'
+    );
+  });
+
+  it('leaves the background image with nothing for a screen reader to announce', () => {
+    // The text moved out of the SVG, so what remains is illustration. An `alt`
+    // describing it would make every screen reader read a decoration out loud
+    // before the headline it sits behind.
+    const img = fixture.debugElement.query(By.css('img.home-bg')).nativeElement;
+
+    expect(img.getAttribute('alt')).toBe('');
+    expect(img.getAttribute('role')).toBe('presentation');
+  });
+});

@@ -147,6 +147,14 @@
             <div class="ticket-item full">
               <span class="label">{{ "E_TICKET.LABEL.PASSENGERS" | translate }}</span>
             </div>
+            <!-- OBRS-866 lifted this hint out of the (now removed) card-level QR footer
+            so it sits with the QRs it describes; OBRS-1781 then moved it above the list,
+            because a booking with several passengers left it far below the first QR it
+            explains. Here it also covers both legs of a round trip without repeating. -->
+            <div class="qr-hint">
+              {{ "E_TICKET.NOTE_LABEL" | translate }}<br />
+              {{ "E_TICKET.QR_HINT" | translate }}
+            </div>
 
             <!-- OBRS-873: one list PER LEG. A round trip issues a separate ticket per
             leg, so its return passengers need their own QRs — and need to be
@@ -251,14 +259,6 @@
                   </div>
                 }
               }
-
-              <!-- OBRS-866: the hint moved here from the (now removed) card-level QR
-              footer, so the sentence "scan this before boarding" sits with the
-              QRs it describes rather than under a QR that no longer exists. -->
-              <div class="qr-hint">
-                {{ "E_TICKET.NOTE_LABEL" | translate }}<br />
-                {{ "E_TICKET.QR_HINT" | translate }}
-              </div>
             </div>
         }
 
@@ -270,7 +270,7 @@
             <div class="ticket-total">
               <span class="label">{{ "E_TICKET.LABEL.TOTAL" | translate }}</span>
               <span class="value">
-                {{ totalAmount }} {{ "E_TICKET.LABEL.TOTAL_UNIT" | translate }}
+                {{ formatMoney(totalAmount) }}
               </span>
             </div>
           </div>
@@ -280,6 +280,7 @@
             class="download-btn"
             (click)="downloadTicketImage()"
             [disabled]="isDownloadingTicket"
+            [appPending]="isDownloadingTicket"
             >
             <img src="icons/payment-download.svg" alt="" aria-hidden="true" />
             {{ "E_TICKET.DOWNLOAD" | translate }}

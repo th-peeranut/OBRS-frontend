@@ -30,6 +30,7 @@ import {
   applyRefundDestinationRequired,
   toRefundDestinationPayload,
 } from '../../../../../shared/lib/refund-destination-form';
+import { formatMoney } from '../../../../../shared/lib/money-display';
 
 /**
  * OBRS-766 (QA-caught, see `api-error-code.ts`'s `errorCodeFromMessageKey`
@@ -312,6 +313,15 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
     return this.booking?.contactName ?? '-';
   }
 
+  /**
+   * OBRS-1601: the CODE only. The word is produced by `titleLabel` in the template, not composed
+   * here — the pipe is impure so the honorific follows a language switch, which a string built in
+   * this getter would not.
+   */
+  protected get contactTitle(): string | null {
+    return this.booking?.contactTitle ?? null;
+  }
+
   protected get refundLabel(): string {
     return this.formatCurrency(this.policy?.refundAmount ?? 0);
   }
@@ -321,11 +331,7 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
   }
 
   protected formatCurrency(value: number | string): string {
-    return new Intl.NumberFormat('th-TH', {
-      style: 'currency',
-      currency: 'THB',
-      maximumFractionDigits: 2,
-    }).format(toAmountNumber(value));
+    return formatMoney(toAmountNumber(value), this.translate.currentLang);
   }
 
   // ── Actions ──────────────────────────────────────────────────────────────
@@ -409,7 +415,7 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
     if (!result) {
       return this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.SUCCESS');
     }
-    const refund = formatRefundAmount(result.refundAmount);
+    const refund = formatRefundAmount(result.refundAmount, this.translate.currentLang);
     switch (refundLane(result.refundMethod)) {
       case 'CASH':
         return this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.SUCCESS_CASH', { refund });

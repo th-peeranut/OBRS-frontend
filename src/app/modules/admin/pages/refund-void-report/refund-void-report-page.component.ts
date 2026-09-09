@@ -8,9 +8,9 @@ import {
   RefundVoidReportDto,
   RefundVoidSummaryDto,
 } from '../../../../shared/interfaces/refund-void-report.interface';
-
-const MAX_RANGE_SPAN_DAYS = 366;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+import { formatMoney } from '../../../../shared/lib/money-display';
+import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
+import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
 
 @Component({
     selector: 'app-refund-void-report-page',
@@ -87,10 +87,6 @@ export class RefundVoidReportPageComponent implements OnInit, OnDestroy {
     return this.report?.daily ?? [];
   }
 
-  protected get currency(): string {
-    return this.summary?.currency ?? 'THB';
-  }
-
   /**
    * A 200 whose three partitions (refunded / manualRefundPending / voided) are all
    * zero-count is not an error — a friendly note, not a warning.
@@ -123,13 +119,9 @@ export class RefundVoidReportPageComponent implements OnInit, OnDestroy {
     return 'data';
   }
 
-  protected onFromDateChange(value: Date | null): void {
-    this.fromDate = value;
-    this.applyRange();
-  }
-
-  protected onToDateChange(value: Date | null): void {
-    this.toDate = value;
+  protected onRangeChange(range: DateRange): void {
+    this.fromDate = range.from;
+    this.toDate = range.to;
     this.applyRange();
   }
 
@@ -157,13 +149,9 @@ export class RefundVoidReportPageComponent implements OnInit, OnDestroy {
   // Copied verbatim from ReportsPageComponent/EodSalesReportPageComponent.formatMoney —
   // same money-string -> localized-currency formatting. Never do arithmetic on the
   // decimal-string amounts, only format for display.
-  protected formatMoney(value: string, currency: string): string {
+  protected formatMoney(value: string): string {
     const amount = Number(value);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(amount) ? amount : 0);
+    return formatMoney(Number.isFinite(amount) ? amount : 0, this.translate.currentLang);
   }
 
   // Client guard first (design-system §9-adjacent: never trust raw input into a
@@ -180,16 +168,15 @@ export class RefundVoidReportPageComponent implements OnInit, OnDestroy {
     const from = this.toDateInputValue(this.fromDate);
     const to = this.toDateInputValue(this.toDate);
 
-    if (from > to) {
-      this.rangeError = this.translate.instant('ADMIN.REFUND_VOID_REPORT.ERROR.RANGE_INVALID');
-      return;
-    }
-
-    const spanDays = Math.round((this.toDate.getTime() - this.fromDate.getTime()) / MS_PER_DAY);
-    if (spanDays > MAX_RANGE_SPAN_DAYS) {
-      this.rangeError = this.translate.instant(
-        'ADMIN.REFUND_VOID_REPORT.ERROR.RANGE_TOO_LARGE'
-      );
+    const errorKey = dateRangeErrorKey(
+      this.fromDate,
+      this.toDate,
+      from,
+      to,
+      'ADMIN.REFUND_VOID_REPORT.ERROR'
+    );
+    if (errorKey) {
+      this.rangeError = this.translate.instant(errorKey);
       return;
     }
 

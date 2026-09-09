@@ -101,7 +101,7 @@
             {{ "PARCEL_BOOKING.DETAILS.QUOTE_LOADING" | translate }}
           }
           @if (!isLoadingQuote && quote; as q) {
-            {{ "PARCEL_BOOKING.DETAILS.QUOTE_AMOUNT" | translate: { amount: q.amount } }}
+            {{ "PARCEL_BOOKING.DETAILS.QUOTE_AMOUNT" | translate: { amount: formatMoney(q.amount) } }}
           }
           @if (!isLoadingQuote && quoteErrorKey; as err) {
             <div class="text-error">{{ err | translate }}</div>

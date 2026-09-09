@@ -92,6 +92,33 @@ describe('WalkInCenterPanelComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('sensitive passenger type consent (OBRS-1666)', () => {
+    it('only monk and nun ask for consent', () => {
+      const comp = component as unknown as { passengerGender: string; isSensitivePassengerType: boolean };
+      comp.passengerGender = 'monk';
+      expect(comp.isSensitivePassengerType).toBeTrue();
+      comp.passengerGender = 'nun';
+      expect(comp.isSensitivePassengerType).toBeTrue();
+      comp.passengerGender = 'female';
+      expect(comp.isSensitivePassengerType).toBeFalse();
+      comp.passengerGender = '';
+      expect(comp.isSensitivePassengerType).toBeFalse();
+    });
+
+    it('does not hold the tick itself - it only reports it, so a completed sale cannot leave one behind', () => {
+      const comp = component as any;
+      const emitted: boolean[] = [];
+      component.passengerTypeConsentChange.subscribe((v) => emitted.push(v));
+
+      comp.onTogglePassengerTypeConsent(true);
+
+      expect(emitted).toEqual([true]);
+      // The box renders off the @Input, so what the sell page holds is what is shown - there is no
+      // second copy here to go stale after a sale.
+      expect(component.passengerTypeConsent).toBeFalse();
+    });
+  });
+
   describe('passengerTypeOptions', () => {
     it('defines 4 passenger type options (male, female, monk, nun)', () => {
       const values = (component as unknown as { passengerTypeOptions: { value: string }[] })
@@ -761,6 +788,42 @@ describe('WalkInCenterPanelComponent', () => {
       expect(updatedSpy).toHaveBeenCalled();
       expect(alertServiceSpy.success).toHaveBeenCalled();
       expect(internals().isEditMode).toBeTrue();
+    });
+  });
+
+  // OBRS-1603: `/private/schedules/{id}` sends the route as `{slug, translations[]}`
+  // (RouteRespDto) - no server-resolved `label`, unlike the booking-detail stops. So
+  // getAdminLookupLabel has to pick the leg by locale, and called without one it
+  // returned the FIRST translation the payload carried: the array order out of JPA,
+  // not the language the panel is in. Each case below is ordered so the right answer
+  // is NOT the first element, or the assertion would pass on the bug.
+  describe('trip details route name locale (OBRS-1603)', () => {
+    const TRIP_DETAILS_TAB = 1;
+    const TH = { locale: 'th', label: 'กรุงเทพฯ-เชียงใหม่' };
+    const EN = { locale: 'en', label: 'Bangkok-Chiang Mai' };
+
+    function routeNameFor(lang: string, translations: unknown[]): string {
+      adminApiServiceSpy.getScheduleById.and.returnValue(
+        of({
+          data: {
+            departureDateTime: '2026-07-01T08:00:00+07:00',
+            vehicleType: { slug: 'bus', totalSeats: 21 },
+            route: { slug: 'bkk-cnx', translations },
+          },
+        })
+      );
+      TestBed.inject(TranslateService).currentLang = lang;
+      component.selectedTrip = makeTrip();
+      (component as unknown as { onTabChange: (i: number) => void }).onTabChange(TRIP_DETAILS_TAB);
+      return (component as unknown as { editFormRouteName: string }).editFormRouteName;
+    }
+
+    it('names the route in Thai when the panel is Thai', () => {
+      expect(routeNameFor('th', [EN, TH])).toBe(TH.label);
+    });
+
+    it('names the route in English when the panel is English', () => {
+      expect(routeNameFor('en', [TH, EN])).toBe(EN.label);
     });
   });
 

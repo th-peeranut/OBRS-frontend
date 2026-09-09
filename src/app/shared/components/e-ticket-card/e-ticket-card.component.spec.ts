@@ -9,6 +9,8 @@ import { TicketService } from '../../../services/ticket/ticket.service';
 import { ETicketCardComponent } from './e-ticket-card.component';
 import { PhoneFormatPipe } from '../../pipes/phone-format.pipe';
 import { TitleLabelPipe } from '../../pipes/title-label.pipe';
+import { PendingButtonDirective } from '../../directives/pending-button.directive';
+import { createTranslateStub } from '../../../testing/test-stubs';
 
 function buildLeg(overrides: Partial<TicketLeg> = {}): TicketLeg {
   return {
@@ -76,7 +78,8 @@ describe('ETicketCardComponent', () => {
     component = new ETicketCardComponent(
       new BoardingQrService(
         createTicketServiceStub() as unknown as TicketService
-      )
+      ),
+      createTranslateStub()
     );
   });
 
@@ -137,7 +140,7 @@ describe('ETicketCardComponent — boarding QR (OBRS-866)', () => {
     ticketServiceStub = createTicketServiceStub();
 
     await TestBed.configureTestingModule({
-      declarations: [ETicketCardComponent],
+      declarations: [ETicketCardComponent, PendingButtonDirective],
       imports: [TitleLabelPipe, TranslateModule.forRoot(), PhoneFormatPipe],
       // The component's own `providers: [BoardingQrService]` resolves
       // TicketService from here, so the real QR pipeline runs over the stub.
@@ -356,7 +359,7 @@ describe('ETicketCardComponent — leg rendering', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ETicketCardComponent],
+      declarations: [ETicketCardComponent, PendingButtonDirective],
       imports: [TitleLabelPipe, TranslateModule.forRoot(), PhoneFormatPipe],
       providers: [{ provide: TicketService, useValue: createTicketServiceStub() }],
     }).compileComponents();
@@ -454,6 +457,30 @@ describe('ETicketCardComponent — leg rendering', () => {
     // leg's).
     expect(fixture.debugElement.queryAll(By.css('.passenger-row')).length).toBe(2);
     expect(fixture.debugElement.queryAll(By.css('.passenger-qr')).length).toBe(2);
+  });
+
+  it('OBRS-1781: the boarding-scan hint heads the passenger list instead of trailing it', () => {
+    component.legs = [
+      buildLeg({ passengers: [buildPassenger({ ticketId: 1, ticketNumber: 'T-1' })] }),
+      buildLeg({ passengers: [buildPassenger({ ticketId: 2, ticketNumber: 'T-2' })] }),
+    ];
+    component.ngOnChanges({
+      legs: {
+        currentValue: component.legs,
+        previousValue: [],
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
+    fixture.detectChanges();
+
+    const hint: HTMLElement = fixture.nativeElement.querySelector('.qr-hint');
+    const firstList: HTMLElement = fixture.nativeElement.querySelector('.passenger-list');
+    expect(hint).toBeTruthy();
+    expect(firstList).toBeTruthy();
+    // The reader meets "scan this before boarding" ahead of the QRs it
+    // describes, not one passenger block per traveller below them.
+    expect(hint.compareDocumentPosition(firstList) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('OBRS-269: hides the Navigate button for a leg with no pickup coords', () => {
@@ -569,7 +596,7 @@ describe('ETicketCardComponent — per-passenger SEAT cell (OBRS-1510 AC-8)', ()
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ETicketCardComponent],
+      declarations: [ETicketCardComponent, PendingButtonDirective],
       imports: [TitleLabelPipe, TranslateModule.forRoot(), PhoneFormatPipe],
       providers: [{ provide: TicketService, useValue: createTicketServiceStub() }],
     }).compileComponents();

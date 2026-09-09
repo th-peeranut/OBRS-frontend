@@ -34,7 +34,16 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { AA_BOUNDARY, MEASURE, boundaryKey, placeholderKey, textKey } from '../support/customer-contrast';
+import {
+  AA_BOUNDARY,
+  MEASURE,
+  boundaryKey,
+  keyIdentity,
+  placeholderKey,
+  stateFails,
+  stateKey,
+  textKey,
+} from '../support/customer-contrast';
 import {
   CUSTOMER_PAGES,
   customerSweepBudgetMs,
@@ -198,6 +207,218 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
     expect(textOf('broken-ph'), 'invariant A also scored an input -- the two now overlap').toBeFalsy();
   });
 
+  /**
+   * The property the OBRS-1435 verdict rests on, pinned against the REGISTER
+   * rather than against an example.
+   *
+   * `keyIdentity` decides whether an unmatched entry reads as "delete it" or as
+   * "the sweep never scored this". Two entries that share an identity vouch for
+   * each other: score one, and the other is pronounced paid without anybody
+   * measuring it -- which is the false delete this card exists to stop, arriving
+   * through its own fix. The first version of the function did exactly that. It
+   * dropped the surface from a boundary key, and three pairs in this register
+   * differ ONLY by their surface, because OBRS-970 brought the auth pages in and
+   * the same framework-default border sits on #1a1d27 and on #0f1117.
+   *
+   * No browser, no page loads: it reads the register and the pure function.
+   */
+  /**
+   * Invariant D's own must-catch / must-NOT-catch (OBRS-1774).
+   *
+   * The hex values are not invented. `#ddf0ee` is what `--accent-soft`,
+   * `rgba(13, 148, 136, 0.14)` at `admin-theme.scss:260`, composites to on a
+   * white card, and `1.18:1` against that card is the ratio the staff register
+   * has carried for `.admin-btn.is-active` since OBRS-772 -- so the pair below
+   * is the real boarding mode toggle, not a swatch chosen to make a point.
+   *
+   * The three groups are the whole rule in one page: the same two fills are
+   * ACCEPTED when the state also moves a colour and a weight, and are a DEFECT
+   * when they are all the state has. A change that quietly stops scoring one of
+   * them fails here rather than eight pages later, where it would look like
+   * good news.
+   */
+  test('invariant D fires on a state carried by the fill alone and stays quiet on the real toggle', async ({ page }) => {
+    await page.goto('about:blank');
+    await page.setContent(`
+      <body style="margin:0;background-color:#ffffff">
+        <!-- The boarding mode toggle as it ships: --accent-soft fill, --accent-text
+             colour, font-weight 700. 1.18:1 of fill separation, and NOT a defect. -->
+        <div class="seg-real">
+          <button class="seg-real-on active"
+                  style="background-color:#ddf0ee;color:#0d655e;font-weight:700;border:1px solid #dee2e6">Text</button>
+          <button class="seg-real-off"
+                  style="background-color:#ffffff;color:#212529;font-weight:400;border:1px solid #dee2e6">Camera</button>
+        </div>
+        <!-- The same two fills with the colour and the weight taken away. Nothing
+             but the fill now says which one is selected: 1.18:1, a defect. -->
+        <div class="seg-fill-only">
+          <button class="seg-fill-only-on active"
+                  style="background-color:#ddf0ee;color:#212529;font-weight:400;border:1px solid #dee2e6">Text</button>
+          <button class="seg-fill-only-off"
+                  style="background-color:#ffffff;color:#212529;font-weight:400;border:1px solid #dee2e6">Camera</button>
+        </div>
+        <!-- A state on the fill alone that CLEARS 3:1. Measured, and not a finding:
+             the floor is a floor, not a ban on carrying state in a fill. -->
+        <div class="seg-strong">
+          <button class="seg-strong-on active"
+                  style="background-color:#757575;color:#ffffff;font-weight:400;border:1px solid #dee2e6">Text</button>
+          <button class="seg-strong-off"
+                  style="background-color:#ffffff;color:#ffffff;font-weight:400;border:1px solid #dee2e6">Camera</button>
+        </div>
+        <!-- THE PHANTOM CARRIER. Both buttons have border-width 0, and their
+             border COLOURS differ. Nothing is painted, so the state still rests on
+             the fill alone and this must be a finding. The first version of the
+             carrier comparison read the two colours and called it a border carrier,
+             which would have rescued exactly this shape. -->
+        <div class="seg-phantom">
+          <button class="seg-phantom-on active"
+                  style="background-color:#ddf0ee;color:#212529;font-weight:400;border:0 solid #0d9488">Text</button>
+          <button class="seg-phantom-off"
+                  style="background-color:#ffffff;color:#212529;font-weight:400;border:0 solid #dee2e6">Camera</button>
+        </div>
+        <!-- The passenger-type tile on /staff/sell in DARK mode, at the ratios the
+             census measured: a 1.09:1 fill and a border that moves from
+             --admin-outline to --accent-strong, which in dark mode is 1.54:1 apart.
+             No colour, no weight. A rule that counts carriers passes this; nothing
+             on it reaches 3:1, so it must not. -->
+        <div class="seg-weak-border">
+          <button class="seg-weak-border-on active"
+                  style="background-color:#1b3234;color:#e8eaf0;font-weight:400;border:1px solid #0a6a5f">Male</button>
+          <button class="seg-weak-border-off"
+                  style="background-color:#23292e;color:#e8eaf0;font-weight:400;border:1px solid #3a444b">Female</button>
+        </div>
+        <!-- The same shape with a border that DOES separate: the light-mode half of
+             that tile, --accent-strong on #dee2e6 at 4.98:1. Accepted. -->
+        <div class="seg-strong-border">
+          <button class="seg-strong-border-on active"
+                  style="background-color:#ddf0ee;color:#212529;font-weight:400;border:1px solid #0a6a5f">Male</button>
+          <button class="seg-strong-border-off"
+                  style="background-color:#ffffff;color:#212529;font-weight:400;border:1px solid #dee2e6">Female</button>
+        </div>
+        <!-- The same argument one property along: an OUTLINE that differs by an
+             imperceptible amount is not a second signal either. This is the gap the
+             OBRS-1774 review caught -- the rule weighed the border and still waved
+             the outline through on presence. -->
+        <div class="seg-weak-outline">
+          <button class="seg-weak-outline-on active"
+                  style="background-color:#ddf0ee;color:#212529;font-weight:400;border:0;outline:2px solid #e3e6e8">Male</button>
+          <button class="seg-weak-outline-off"
+                  style="background-color:#ffffff;color:#212529;font-weight:400;border:0;outline:2px solid #dee2e6">Female</button>
+        </div>
+        <div class="seg-strong-outline">
+          <button class="seg-strong-outline-on active"
+                  style="background-color:#ddf0ee;color:#212529;font-weight:400;border:0;outline:2px solid #0a6a5f">Male</button>
+          <button class="seg-strong-outline-off"
+                  style="background-color:#ffffff;color:#212529;font-weight:400;border:0;outline:2px solid #dee2e6">Female</button>
+        </div>
+        <!-- Selected, with nothing to be selected AGAINST. Counted, never scored. -->
+        <div class="seg-lonely">
+          <button class="seg-only-one active"
+                  style="background-color:#ddf0ee;color:#212529;border:0">Only</button>
+        </div>
+        <!-- Selected and unselected compute identically here, so whatever shows the
+             state is somewhere this comparison cannot see. Counted, never scored --
+             calling it a defect would be inventing one. -->
+        <div class="seg-same">
+          <button class="seg-same-on active"
+                  style="background-color:#ffffff;color:#212529;border:0">A</button>
+          <button class="seg-same-off"
+                  style="background-color:#ffffff;color:#212529;border:0">B</button>
+        </div>
+      </body>
+    `);
+
+    const sweep = await page.evaluate(MEASURE);
+    const stateOf = (cls: string) => sweep.states.find((st) => st.path.includes(cls));
+
+    // MUST CATCH: the fill is the whole state, and it is 1.18:1.
+    const fillOnly = stateOf('seg-fill-only-on');
+    expect(fillOnly, 'invariant D did not score the fill-only state at all').toBeTruthy();
+    expect(fillOnly!.carriers).toEqual(['fill']);
+    expect(fillOnly!.fillVsSibling).toBeCloseTo(1.18, 2);
+    expect(fillOnly!.fillVsSibling).toBeLessThan(AA_BOUNDARY);
+
+    // MUST NOT CATCH: identical fills, but the state also moves colour and weight.
+    const real = stateOf('seg-real-on');
+    expect(real, 'the real toggle was not scored -- D cannot vouch for what it skipped').toBeTruthy();
+    expect(real!.fillVsSibling).toBeCloseTo(1.18, 2);
+    expect(real!.carriers).toEqual(['fill', 'color', 'weight']);
+
+    // MUST NOT CATCH: a fill that carries the state on its own, above the floor.
+    const strong = stateOf('seg-strong-on');
+    expect(strong!.carriers).toEqual(['fill']);
+    expect(strong!.fillVsSibling).toBeGreaterThanOrEqual(AA_BOUNDARY);
+
+    // MUST CATCH: a border colour behind `border-width: 0` paints nothing and may
+    // not count as a second signal.
+    const phantom = stateOf('seg-phantom-on');
+    expect(phantom, 'the phantom-carrier group was not scored').toBeTruthy();
+    expect(
+      phantom!.carriers,
+      'a border-color difference at width 0 was counted as a carrier -- it paints nothing'
+    ).toEqual(['fill']);
+    expect(phantom!.fillVsSibling).toBeLessThan(AA_BOUNDARY);
+
+    // MUST CATCH: two weak carriers are not one strong one. This is the dark
+    // passenger-type tile, and the row a carrier COUNT would have passed.
+    const weakBorder = stateOf('seg-weak-border-on');
+    expect(weakBorder, 'the weak-border group was not scored').toBeTruthy();
+    expect(weakBorder!.carriers).toEqual(['fill', 'border']);
+    expect(weakBorder!.fillVsSibling).toBeCloseTo(1.09, 2);
+    expect(weakBorder!.borderVsSibling).toBeCloseTo(1.54, 2);
+    expect(stateFails(weakBorder!), 'a 1.09:1 fill and a 1.54:1 border were accepted as a state').toBe(true);
+
+    // MUST NOT CATCH: the same shape with a border that actually separates.
+    const strongBorder = stateOf('seg-strong-border-on');
+    expect(strongBorder!.carriers).toEqual(['fill', 'border']);
+    expect(strongBorder!.borderVsSibling).toBeCloseTo(4.98, 2);
+    expect(stateFails(strongBorder!)).toBe(false);
+
+    // MUST CATCH / MUST NOT CATCH: the outline is weighed exactly like the border.
+    const weakOutline = stateOf('seg-weak-outline-on');
+    expect(weakOutline, 'the weak-outline group was not scored').toBeTruthy();
+    expect(weakOutline!.carriers).toEqual(['fill', 'outline']);
+    expect(weakOutline!.outlineVsSibling).not.toBeNull();
+    expect(weakOutline!.outlineVsSibling!).toBeLessThan(AA_BOUNDARY);
+    expect(stateFails(weakOutline!), 'a faint outline was accepted as a state on presence alone').toBe(true);
+
+    const strongOutline = stateOf('seg-strong-outline-on');
+    expect(strongOutline!.carriers).toEqual(['fill', 'outline']);
+    expect(strongOutline!.outlineVsSibling!).toBeGreaterThanOrEqual(AA_BOUNDARY);
+    expect(stateFails(strongOutline!)).toBe(false);
+
+    // The three verdicts above, taken through the same helper the gates use.
+    expect(stateFails(fillOnly!)).toBe(true);
+    expect(stateFails(phantom!)).toBe(true);
+    expect(stateFails(real!)).toBe(false);
+    expect(stateFails(strong!)).toBe(false);
+
+    // Both skips are counted, and neither produces a row.
+    expect(stateOf('seg-only-one'), 'a selected control with no peer was scored against nothing').toBeFalsy();
+    expect(sweep.skipped.stateNoPeer).toBeGreaterThan(0);
+    expect(stateOf('seg-same-on'), 'an identical pair was scored as a state').toBeFalsy();
+    expect(sweep.skipped.stateNoDelta).toBeGreaterThan(0);
+  });
+
+  test('no two CONTRAST_ALLOW entries share a keyIdentity', () => {
+    const byIdentity = new Map<string, string[]>();
+    for (const key of Object.keys(CONTRAST_ALLOW)) {
+      const id = keyIdentity(key);
+      byIdentity.set(id, [...(byIdentity.get(id) ?? []), key]);
+    }
+    const collided = [...byIdentity.entries()].filter(([, keys]) => keys.length > 1);
+
+    const report = collided.flatMap(([id, keys]) => ['  ' + id, ...keys.map((k) => '      ' + k)]);
+
+    expect(
+      report.join('\n'),
+      `\n${collided.length} keyIdentity collision(s). Each is a pair of entries that would vouch for\n` +
+        `each other: score either one and the gate pronounces the OTHER paid without measuring it,\n` +
+        `which is the OBRS-1435 false delete. Widen keyIdentity until they are distinct -- do not\n` +
+        `merge or delete the entries to make this pass.\n${report.join('\n')}\n`
+    ).toBe('');
+  });
+
   // Eight pages in two themes, sequentially, in one browser context. Splitting
   // them into a test each would read better in a report but makes the
   // stale-entry check impossible: an allowlist entry is only provably dead once
@@ -211,6 +432,20 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
     // One row per DEFECT, accumulated across all sixteen sweeps. The worst
     // sighting wins the printed detail; every sighting is counted.
     const collapsed = new Map<string, Row>();
+
+    /**
+     * Every identity the sweep actually SCORED, passing rows included -- which is
+     * why it cannot be derived from `collapsed`, which holds failures only.
+     *
+     * This is the denominator the stale-entry verdict was missing (OBRS-1435). An
+     * allow entry whose identity never appears here was not measured this run, and
+     * an element nobody measured cannot be evidence that its debt was paid. It is
+     * registered where the rows are read rather than inside MEASURE, so it counts
+     * what the VERDICT saw -- a page that `continue`s out above contributes
+     * nothing here, which is the property the split relies on.
+     */
+    const measured = new Set<string>();
+
     const record = (hit: { key: string; page: string; detail: string; ratio: number; floor: number }) => {
       const seen = collapsed.get(hit.key);
       if (!seen) {
@@ -252,17 +487,29 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
       return !!rest && rest.ratio <= ratio + 0.005;
     };
 
+    /**
+     * Every state comparison invariant D made, passing ones included. A count of
+     * 0 findings over a population nobody can see is the shape of a gate that
+     * measures nothing, and the two skip counters do not say WHICH groups they
+     * dropped. Printed under CONTRAST_CENSUS, so the evidence for "the selectors
+     * matched real groups" can be read off a run rather than taken on trust.
+     */
+    const stateCensus: string[] = [];
+
     const shortfalls: string[] = [];
     const totals = {
       text: 0,
       controls: 0,
       placeholders: 0,
+      states: 0,
       gradient: 0,
       opacity: 0,
       disabled: 0,
       invisible: 0,
       noSurface: 0,
       thirdParty: 0,
+      stateNoPeer: 0,
+      stateNoDelta: 0,
     };
 
     for (const target of CUSTOMER_PAGES) {
@@ -342,14 +589,18 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
           totals.text += sweep.measuredText;
           totals.controls += sweep.measuredControls;
           totals.placeholders += sweep.measuredPlaceholders;
+          totals.states += sweep.measuredStates;
           totals.gradient += sweep.skipped.gradient;
           totals.opacity += sweep.skipped.opacity;
           totals.disabled += sweep.skipped.disabled;
           totals.invisible += sweep.skipped.invisible;
           totals.noSurface += sweep.skipped.noSurface;
           totals.thirdParty += sweep.skipped.thirdParty;
+          totals.stateNoPeer += sweep.skipped.stateNoPeer;
+          totals.stateNoDelta += sweep.skipped.stateNoDelta;
 
           for (const f of sweep.text) {
+            measured.add(keyIdentity(textKey(theme, f)));
             if (f.ratio >= f.floor) continue;
             record({
               key: textKey(theme, f),
@@ -361,6 +612,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
           }
 
           for (const f of sweep.placeholders) {
+            measured.add(keyIdentity(placeholderKey(theme, f)));
             if (f.ratio >= f.floor) continue;
             record({
               key: placeholderKey(theme, f),
@@ -372,6 +624,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
           }
 
           for (const c of sweep.controls) {
+            measured.add(keyIdentity(boundaryKey(theme, c)));
             if (c.boundary >= AA_BOUNDARY) continue;
             record({
               key: boundaryKey(theme, c),
@@ -381,6 +634,37 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
                 `${c.border ?? 'none'} (${c.borderVsPage === null ? 'n/a' : c.borderVsPage.toFixed(2) + ':1'}) ` +
                 `on ${c.page} -- "${c.label}"  [${c.path}]`,
               ratio: c.boundary,
+              floor: AA_BOUNDARY,
+            });
+          }
+
+          // Invariant D (OBRS-1774). `stateFails` holds the whole rule and the
+          // argument for it; every row is measured and printed either way, so an
+          // accepted state stays visible in the census rather than vanishing.
+          for (const s of sweep.states) {
+            measured.add(keyIdentity(stateKey(theme, s)));
+            stateCensus.push(
+              `  ${s.fillVsSibling.toFixed(2)}:1  ${theme.padEnd(5)} [${s.carriers.join('+')}]  ` +
+                `${s.selectedFill} vs ${s.siblingFill}  border ${
+                  s.borderVsSibling === null ? 'n/a' : s.borderVsSibling.toFixed(2) + ':1'
+                }  outline ${
+                  s.outlineVsSibling === null ? 'n/a' : s.outlineVsSibling.toFixed(2) + ':1'
+                }  "${s.label}"  ${target.key}\n` +
+                `        ${s.path}\n        vs ${s.siblingPath}`
+            );
+            if (!stateFails(s)) continue;
+            record({
+              key: stateKey(theme, s),
+              page: target.key,
+              detail:
+                `state: selected fill ${s.selectedFill} vs unselected ${s.siblingFill} ` +
+                `(${s.fillVsSibling.toFixed(2)}:1), border delta ${
+                  s.borderVsSibling === null ? 'n/a' : s.borderVsSibling.toFixed(2) + ':1'
+                }, outline delta ${
+                  s.outlineVsSibling === null ? 'n/a' : s.outlineVsSibling.toFixed(2) + ':1'
+                }, carriers [${s.carriers.join('+')}] -- nothing reaches 3:1 -- "${s.label}"  ` +
+                `[${s.path}]  vs [${s.siblingPath}]`,
+              ratio: s.fillVsSibling,
               floor: AA_BOUNDARY,
             });
           }
@@ -403,6 +687,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
               const one = await sheet.evaluate(MEASURE, selector);
               const stateTheme = `${theme}:${state}`;
               for (const f of one.text) {
+                measured.add(keyIdentity(textKey(stateTheme, f)));
                 if (f.ratio >= f.floor) continue;
                 if (coveredAtRest(textKey(theme, f), f.ratio)) continue;
                 record({
@@ -414,6 +699,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
                 });
               }
               for (const f of one.placeholders) {
+                measured.add(keyIdentity(placeholderKey(stateTheme, f)));
                 if (f.ratio >= f.floor) continue;
                 if (coveredAtRest(placeholderKey(theme, f), f.ratio)) continue;
                 record({
@@ -425,6 +711,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
                 });
               }
               for (const c of one.controls) {
+                measured.add(keyIdentity(boundaryKey(stateTheme, c)));
                 if (c.boundary >= AA_BOUNDARY) continue;
                 if (coveredAtRest(boundaryKey(theme, c), c.boundary)) continue;
                 record({
@@ -451,27 +738,53 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
       }
     }
 
+    // Invariant D goes quiet when its selectors match nothing, and silence reads
+    // exactly like a pass -- the OBRS-734 shape. The floor is the WHOLE run, not
+    // a page: most pages legitimately have no group with a selected member on
+    // them, so a per-page minimum would be a constant tuned to today's fixtures.
+    if (totals.states === 0) {
+      shortfalls.push(
+        'invariant D scored 0 states across the entire sweep -- the selected-marker selectors matched ' +
+          'nothing, which is not a pass (OBRS-1774)'
+      );
+    }
+
     // --- the report, printed whether the run is green or red ----------------
     const findings = [...collapsed.values()];
     const allowed = findings.filter((f) => CONTRAST_ALLOW[f.key]);
     const unexpected = findings.filter((f) => !CONTRAST_ALLOW[f.key]);
-    const stale = Object.keys(CONTRAST_ALLOW).filter((k) => !collapsed.has(k));
+    // OBRS-1435. An entry that matched nothing used to be one verdict -- "the debt
+    // was paid, delete it" -- inferred from an absence that has two causes. The
+    // second cause is the dangerous one: an element the sweep never scored produces
+    // the same absence, and a reader who obeys retires a debt nobody paid. So the
+    // absence is split by the only evidence that separates them, whether the sweep
+    // measured that element AT ALL this run (`measured`, above).
+    const unmatched = Object.keys(CONTRAST_ALLOW).filter((k) => !collapsed.has(k));
+    const unmeasured = unmatched.filter((k) => !measured.has(keyIdentity(k)));
+    const stale = unmatched.filter((k) => measured.has(keyIdentity(k)));
 
     console.log('\ncustomer shell contrast gate (OBRS-584)');
     console.log(`  pages swept        : ${CUSTOMER_PAGES.length} x 2 themes`);
     console.log(`  text runs scored   : ${totals.text}`);
     console.log(`  controls scored    : ${totals.controls}`);
     console.log(`  placeholders scored: ${totals.placeholders} -- ::placeholder, composited (OBRS-797)`);
+    console.log(`  states scored      : ${totals.states} -- selected vs unselected sibling (OBRS-1774)`);
     console.log(`  skipped (gradient) : ${totals.gradient} -- backgroundColor is transparent under one, NOT a pass`);
     console.log(`  skipped (opacity)  : ${totals.opacity} -- composited by an opacity < 1, NOT a pass`);
     console.log(`  skipped (disabled) : ${totals.disabled} -- WCAG 1.4.3 / 1.4.11 exempt inactive components`);
     console.log(`  skipped (no surf.) : ${totals.noSurface} -- controls with neither fill nor border to bound`);
     console.log(`  skipped (3rd party): ${totals.thirdParty} -- markup this app does not own (Google Identity Services)`);
     console.log(`  skipped (hidden)   : ${totals.invisible}`);
+    console.log(`  skipped (no peer)  : ${totals.stateNoPeer} -- selected, but no unselected sibling on screen to compare with`);
+    console.log(`  skipped (no delta) : ${totals.stateNoDelta} -- selected and unselected compute identically HERE; the state is shown by a descendant`);
     console.log(`  known-open (ALLOW) : ${allowed.length} of ${Object.keys(CONTRAST_ALLOW).length} entries still hit`);
+    console.log(`  ALLOW not measured : ${unmeasured.length} -- element never scored this run, verdict withheld (OBRS-1435)`);
+    console.log(`  ALLOW stale        : ${stale.length} -- element WAS scored and no longer matches`);
     console.log(`  NEW below floor    : ${unexpected.length}`);
 
     if (process.env['CONTRAST_CENSUS']) {
+      console.log(`\n  --- every state comparison, invariant D (${stateCensus.length} rows) ---`);
+      for (const line of stateCensus) console.log(line);
       console.log('\n  --- every finding (CONTRAST_CENSUS=1) ---');
       for (const f of [...findings].sort((a, b) => a.ratio - b.ratio)) console.log(fmt(f));
     }
@@ -482,10 +795,25 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
         `false green, not a pass:\n${shortfalls.map((s) => '  - ' + s).join('\n')}\n`
     ).toBe('');
 
+    // Read before the stale check on purpose: this is the weaker claim, and a run
+    // that could not measure an element has not earned the right to make the
+    // stronger one about it.
+    expect(
+      unmeasured.join('\n'),
+      `\n${unmeasured.length} CONTRAST_ALLOW entr(ies) name an element this run NEVER MEASURED.\n` +
+        `DO NOT DELETE THEM -- nothing here says the debt was paid, only that the sweep did not\n` +
+        `score that element: the page rendered enough to clear its floors, but this element was\n` +
+        `absent, empty, hidden, faded or disabled at the moment the sweep read it. Find out why,\n` +
+        `then re-run. (OBRS-1435: obeying this as a delete instruction retired a live OBRS-1424\n` +
+        `debt on a flaky run.)\n${unmeasured.map((s) => '  - ' + s).join('\n')}\n`
+    ).toBe('');
+
     expect(
       stale.join('\n'),
-      `\n${stale.length} CONTRAST_ALLOW entr(ies) no longer match anything. Delete them -- a debt\n` +
-        `register that rots reads as a considered decision:\n${stale.map((s) => '  - ' + s).join('\n')}\n`
+      `\n${stale.length} CONTRAST_ALLOW entr(ies) were MEASURED this run and no longer match. Delete\n` +
+        `them -- a debt register that rots reads as a considered decision. The element was scored,\n` +
+        `so this is a repaint or a fix, not a page that failed to render:\n` +
+        `${stale.map((s) => '  - ' + s).join('\n')}\n`
     ).toBe('');
 
     expect(

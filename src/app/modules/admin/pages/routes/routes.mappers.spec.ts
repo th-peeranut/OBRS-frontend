@@ -44,11 +44,14 @@ describe('routes.mappers', () => {
     });
   });
 
+  // OBRS-1592: the fare matrix used to print `12.00`. It goes through the one
+  // formatter now, so satang appear only when there are satang and the unit is
+  // there. No `lang` argument means the code-first form.
   describe('formatFare', () => {
     it('formats to two decimal places', () => {
-      expect(formatFare(12)).toBe('12.00');
-      expect(formatFare(12.345)).toBe('12.35');
-      expect(formatFare(0)).toBe('0.00');
+      expect(formatFare(12)).toBe('THB 12');
+      expect(formatFare(12.345)).toBe('THB 12.35');
+      expect(formatFare(0)).toBe('THB 0');
     });
   });
 

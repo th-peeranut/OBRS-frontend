@@ -1,7 +1,9 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import dayjs from 'dayjs';
 import { RescheduleOption } from '../../../../../shared/interfaces/reschedule.interface';
 import { toAmountNumber } from '../../../../../shared/interfaces/my-booking.interface';
+import { formatMoney } from '../../../../../shared/lib/money-display';
 
 /** Dumb, radio-style selectable list of candidate departures. */
 @Component({
@@ -25,6 +27,8 @@ export class RescheduleOptionsListComponent {
   @Input() selectedScheduleId: number | null = null;
   @Output() readonly select = new EventEmitter<RescheduleOption>();
 
+  constructor(private readonly translate: TranslateService) {}
+
   onSelect(option: RescheduleOption): void {
     this.select.emit(option);
   }
@@ -39,10 +43,6 @@ export class RescheduleOptionsListComponent {
   }
 
   formatCurrency(value: number | string | undefined): string {
-    return new Intl.NumberFormat('th-TH', {
-      style: 'currency',
-      currency: 'THB',
-      maximumFractionDigits: 2,
-    }).format(toAmountNumber(value));
+    return formatMoney(toAmountNumber(value), this.translate.currentLang);
   }
 }

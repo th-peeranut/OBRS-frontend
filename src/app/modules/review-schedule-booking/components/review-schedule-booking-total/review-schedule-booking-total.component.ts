@@ -14,6 +14,7 @@ import { selectScheduleBooking } from '../../../../shared/stores/schedule-bookin
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
 import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 @Component({
     selector: 'app-review-schedule-booking-total',
@@ -105,4 +106,11 @@ export class ReviewScheduleBookingTotalComponent {
   onConfirm(): void {
     this.router.navigate(['/passenger-info']);
   }
+  /** OBRS-1592: this screen used to compose the raw number with a `*_UNIT`
+   * i18n key, which is the same shape the search page carried and printed
+   * `1850 บาท` — no thousand separator, satang whenever the API sent them. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translateService.currentLang);
+  }
+
 }

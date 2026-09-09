@@ -54,13 +54,11 @@ describe('RouteTravelSummaryComponent', () => {
     expect(component.dropoffCount).toBe(0);
   });
 
-  it('shows whole-route figures when no stops are selected', () => {
+  it('hides both figures when no stops are selected', () => {
     component.routeMeta = mockMeta;
     expect(component.isSegment).toBe(false);
+    expect(component.isDistanceSegment).toBe(false);
     expect(component.isDurationSegment).toBe(false);
-    expect(component.displayDistanceKm).toBe(120);
-    expect(component.displayDurationMin).toBe(90);
-    expect(component.displayDurationMax).toBe(150);
   });
 
   it('computes the raw |Δdistance|, not scaled against the route total', () => {
@@ -79,45 +77,80 @@ describe('RouteTravelSummaryComponent', () => {
     expect(component.displayDurationMinutes).toBe(45);
   });
 
-  it('falls back distance and duration independently on their own missing source field', () => {
+  it('hides distance and duration independently on their own missing source field', () => {
     // Distance resolvable (both distanceKmFromOrigin present), offset missing on one side.
     component.routeMeta = mockMeta;
     component.selectedPickupStop = makeStop(10, 15);
     component.selectedDropoffStop = makeStop(55, null);
 
+    expect(component.isDistanceSegment).toBe(true);
     expect(component.displayDistanceKm).toBe(45);
     expect(component.isDurationSegment).toBe(false);
-    expect(component.displayDurationMin).toBe(90);
-    expect(component.displayDurationMax).toBe(150);
     // isSegment stays true because distance did resolve to a segment value.
     expect(component.isSegment).toBe(true);
   });
 
-  it('falls back to route figures when only one stop is selected', () => {
+  it('hides both rows when only one stop is selected', () => {
     component.routeMeta = mockMeta;
     component.selectedPickupStop = makeStop(20, 20);
     expect(component.isSegment).toBe(false);
-    expect(component.displayDistanceKm).toBe(120);
-    expect(component.displayDurationMin).toBe(90);
+    expect(component.isDistanceSegment).toBe(false);
+    expect(component.isDurationSegment).toBe(false);
   });
 
-  it('falls back when a selected stop has no distance', () => {
+  it('hides the distance row when a selected stop has no distance', () => {
     component.routeMeta = mockMeta;
     component.selectedPickupStop = makeStop(null);
     component.selectedDropoffStop = makeStop(80);
+    expect(component.isDistanceSegment).toBe(false);
     expect(component.isSegment).toBe(false);
-    expect(component.displayDistanceKm).toBe(120);
   });
 
-  // OBRS-1341: whole-route and first-stop→last-stop describe the same journey, so they must
-  // print the same number. Every fixture above uses a whole-number total, which is why the raw
-  // fallback went unnoticed; the measured route totals are not whole numbers.
-  it('rounds the whole-route total the same way a segment is rounded', () => {
+  // OBRS-1718: hiding the row replaced the whole-route fallback, which is what OBRS-1341 had to
+  // keep rounded in step with the segment. The total must never reach the panel again.
+  it('never falls back to the whole-route total', () => {
     component.routeMeta = { ...mockMeta, totalDistanceKm: 133.13 };
-    expect(component.displayDistanceKm).toBe(133);
+    expect(component.isDistanceSegment).toBe(false);
+    expect(component.displayDistanceKm).not.toBe(133);
 
     component.selectedPickupStop = makeStop(0);
     component.selectedDropoffStop = makeStop(133.13);
+    expect(component.isDistanceSegment).toBe(true);
     expect(component.displayDistanceKm).toBe(133);
+  });
+
+  // OBRS-1496: the two top rows must name the chosen stop once it is chosen, and each
+  // row decides on its own input — exactly like the distance/duration rows below.
+  describe('selected stop names in the two top rows', () => {
+    const pickup = { ...makeStop(10, 15), name: 'หนองชาก' };
+    const dropoff = { ...makeStop(55, 60), name: 'แอร์พอร์ทลิงค์ลาดกระบัง' };
+
+    it('names neither row when nothing is selected', () => {
+      component.routeMeta = mockMeta;
+      expect(component.selectedPickupStopName).toBeNull();
+      expect(component.selectedDropoffStopName).toBeNull();
+    });
+
+    it('names only the pickup row when only the pickup is selected', () => {
+      component.routeMeta = mockMeta;
+      component.selectedPickupStop = pickup;
+      expect(component.selectedPickupStopName).toBe('หนองชาก');
+      expect(component.selectedDropoffStopName).toBeNull();
+    });
+
+    it('names only the drop-off row when only the drop-off is selected', () => {
+      component.routeMeta = mockMeta;
+      component.selectedDropoffStop = dropoff;
+      expect(component.selectedPickupStopName).toBeNull();
+      expect(component.selectedDropoffStopName).toBe('แอร์พอร์ทลิงค์ลาดกระบัง');
+    });
+
+    it('names both rows when both are selected', () => {
+      component.routeMeta = mockMeta;
+      component.selectedPickupStop = pickup;
+      component.selectedDropoffStop = dropoff;
+      expect(component.selectedPickupStopName).toBe('หนองชาก');
+      expect(component.selectedDropoffStopName).toBe('แอร์พอร์ทลิงค์ลาดกระบัง');
+    });
   });
 });

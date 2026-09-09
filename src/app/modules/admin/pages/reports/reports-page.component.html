@@ -11,37 +11,11 @@
 }
 
 <section class="admin-page-filters mt-3">
-  <p-datePicker
-    styleClass="app-date-field"
-    panelStyleClass="app-date-field-panel"
-    dateFormat="dd/mm/yy"
-    [ngModel]="fromDate"
-    (ngModelChange)="onFromDateChange($event)"
-    [showIcon]="true"
-    [iconDisplay]="'input'"
-    [showButtonBar]="true"
-    [placeholder]="'ADMIN.REPORTS.FILTER_FROM' | translate"
-    >
-    <ng-template pTemplate="inputicon">
-      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-    </ng-template>
-  </p-datePicker>
-
-  <p-datePicker
-    styleClass="app-date-field"
-    panelStyleClass="app-date-field-panel"
-    dateFormat="dd/mm/yy"
-    [ngModel]="toDate"
-    (ngModelChange)="onToDateChange($event)"
-    [showIcon]="true"
-    [iconDisplay]="'input'"
-    [showButtonBar]="true"
-    [placeholder]="'ADMIN.REPORTS.FILTER_TO' | translate"
-    >
-    <ng-template pTemplate="inputicon">
-      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-    </ng-template>
-  </p-datePicker>
+  <app-admin-date-range-picker
+    [from]="fromDate"
+    [to]="toDate"
+    (rangeChange)="onRangeChange($event)"
+  ></app-admin-date-range-picker>
 
   <app-export-button
     class="ms-auto"
@@ -182,7 +156,7 @@ and the daily table — never shown next to stale/zero numbers. -->
                   <td>{{ occupancyDisplay(row.occupancyRatePct) }}</td>
                   @if (showRevenue) {
                     <td>
-                      {{ row.revenue ? formatMoney(row.revenue.net, row.revenue.currency) : '-' }}
+                      {{ row.revenue ? formatMoney(row.revenue.net) : '-' }}
                     </td>
                   }
                 </tr>
@@ -218,6 +192,7 @@ round, so every line here is money the person already kept. -->
     <app-admin-dropdown
       [options]="perHeadGranularityOptions"
       [placeholder]="'ADMIN.REPORTS.PER_HEAD_EARNINGS.GRANULARITY.LABEL' | translate"
+      [placeholderSelectable]="false"
       valueKey="value"
       labelKey="label"
       [ngModel]="perHeadGranularity"
@@ -316,6 +291,7 @@ role selector — deliberately deferred: no chart, no export). -->
     <app-admin-dropdown
       [options]="yearOptions"
       [placeholder]="'ADMIN.REPORTS.PARCEL_SHARE_MONTHLY.YEAR_LABEL' | translate"
+      [placeholderSelectable]="false"
       valueKey="value"
       labelKey="label"
       [ngModel]="selectedYearStr"
@@ -324,6 +300,7 @@ role selector — deliberately deferred: no chart, no export). -->
     <app-admin-dropdown
       [options]="monthOptions"
       [placeholder]="'ADMIN.REPORTS.PARCEL_SHARE_MONTHLY.MONTH_LABEL' | translate"
+      [placeholderSelectable]="false"
       valueKey="value"
       labelKey="label"
       [ngModel]="selectedMonthStr"

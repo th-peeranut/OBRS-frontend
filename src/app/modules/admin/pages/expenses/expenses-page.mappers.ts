@@ -32,23 +32,15 @@ import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
  */
 export const VEHICLE_CENTRAL_SENTINEL = 'CENTRAL_NONE';
 
-/**
- * OBRS-1374: the same sentinel shape as `VEHICLE_CENTRAL_SENTINEL` above, for the same reason,
- * on the bill-line `part` dropdown. "Not a part" is a REAL answer here (labour, service,
- * sundry - AC3), and without an explicit option for it an owner who picked a part by mistake
- * could never take it back: `app-admin-dropdown` has no clear affordance, only a placeholder
- * that is unreachable once a value is set. Translated to a real `null` only in
- * `toExpensePayload()`, at the submit boundary.
- */
-export const EXPENSE_ITEM_PART_NONE_SENTINEL = 'PART_NONE';
-
-/** The 16 fixed `ExpenseCategory` enum codes (SA-locked contract) — a static
+/** The 21 fixed `ExpenseCategory` enum codes (SA-locked contract) — a static
  * list, not a Lookup-API fetch, mirroring `promotions-page`'s
  * `discountTypeOptions`.
  *
  * OBRS-961 added TOLL / PERMIT_FEE / DRIVER_WAGE / INSTALMENT, OBRS-1363
- * added PARKING_FEE and OBRS-1388 added PARCEL_COMPENSATION (the parcel
- * damage-claim payout, §5 `DriverCashService#recordParcelClaimPayout`). They
+ * added PARKING_FEE, OBRS-1388 added PARCEL_COMPENSATION (the parcel
+ * damage-claim payout, §5 `DriverCashService#recordParcelClaimPayout`) and
+ * OBRS-1732 added STAFF_WAGE / UTILITY / RENT / SECURITY / SOFTWARE_FEE, the
+ * five recurring central costs the owner's book kept in one lump. They
  * are appended BEFORE CENTRAL and OTHER on purpose: nothing the owner has
  * already learned the position of moves, and OTHER stays visually last as
  * the catch-all. This order must stay identical to the backend
@@ -69,6 +61,11 @@ export const EXPENSE_CATEGORY_CODES = [
   'INSTALMENT',
   'PARKING_FEE',
   'PARCEL_COMPENSATION',
+  'STAFF_WAGE',
+  'UTILITY',
+  'RENT',
+  'SECURITY',
+  'SOFTWARE_FEE',
   'CENTRAL',
   'OTHER',
 ] as const;
@@ -81,7 +78,7 @@ export interface Option {
 }
 
 /** Pre-resolved (`translate.instant()`-ed by the component) labels for the
- * 16 fixed category codes — kept out of this file so the mapper stays free
+ * 21 fixed category codes — kept out of this file so the mapper stays free
  * of any Angular/TranslateService dependency, mirroring
  * `promotions-page.mappers.ts`'s `PromotionOptionLabels`. */
 export interface ExpenseCategoryLabels {
@@ -99,6 +96,11 @@ export interface ExpenseCategoryLabels {
   instalment: string;
   parkingFee: string;
   parcelCompensation: string;
+  staffWage: string;
+  utility: string;
+  rent: string;
+  security: string;
+  softwareFee: string;
   central: string;
   other: string;
 }
@@ -119,6 +121,11 @@ export function toExpenseCategoryOptions(labels: ExpenseCategoryLabels): Option[
     { code: 'INSTALMENT', label: labels.instalment },
     { code: 'PARKING_FEE', label: labels.parkingFee },
     { code: 'PARCEL_COMPENSATION', label: labels.parcelCompensation },
+    { code: 'STAFF_WAGE', label: labels.staffWage },
+    { code: 'UTILITY', label: labels.utility },
+    { code: 'RENT', label: labels.rent },
+    { code: 'SECURITY', label: labels.security },
+    { code: 'SOFTWARE_FEE', label: labels.softwareFee },
     { code: 'CENTRAL', label: labels.central },
     { code: 'OTHER', label: labels.other },
   ];
@@ -183,6 +190,18 @@ export function vehicleIdentifier(vehicle: AdminVehicleDto): string {
   return [vehicle.vehicleNumber, vehicle.numberPlate].filter(Boolean).join(' / ') || `#${vehicle.id}`;
 }
 
+/** OBRS-1627: the vehicle label for a TABLE ROW — the plate alone. The owner
+ * reads rows by plate and `51-25 / 16-8368` spent half the column on the
+ * co-op number. `vehicleIdentifier` above is deliberately untouched: the
+ * vehicle FILTER dropdown and `schedules.mappers.ts` both render the joined
+ * form, and the filter staying a superset of the cell is what keeps a plate
+ * findable from it (AC-4). Same fallback shape as `vehicleIdentifier`, so a
+ * van with no plate recorded yet still identifies itself instead of rendering
+ * an empty cell. */
+export function vehiclePlateIdentifier(vehicle: AdminVehicleDto): string {
+  return vehicle.numberPlate || vehicle.vehicleNumber || `#${vehicle.id}`;
+}
+
 /** Table column 3 (§3.1): when `category === 'OTHER'`, append the free-text
  * label the admin typed — `"อื่นๆ (categoryOtherLabel)"` shape, generalized
  * to whatever locale's "Other" label is passed in. */
@@ -203,14 +222,15 @@ export interface ExpenseRow {
   /** OBRS-808. `null` only when the response predates V55 or the row's operator
    * is not in the roster this caller holds — never a real "no operator". */
   ownerId: number | null;
-  /** The operator's label for the admin-only table column and the edit modal's
-   * read-only line. Empty string when it cannot be resolved (an `owner` caller
-   * never fetches the roster at all — they get 403 — and does not render the
-   * column), so a template can test it directly. */
+  /** The operator's label for the edit modal's read-only line. The admin-only
+   * table COLUMN this also fed became a filter in OBRS-1627, so the modal is now
+   * the only reader. Empty string when it cannot be resolved (an `owner` caller
+   * never fetches the roster at all — they get 403), so a template can test it
+   * directly. */
   ownerLabel: string;
   vehicleId: number | null;
-  /** Table column 2: the vehicle identifier, or the muted "central" label
-   * when `vehicleId === null` — never blank. */
+  /** Table column 2: the vehicle's PLATE (OBRS-1627), or the muted "central"
+   * label when `vehicleId === null` — never blank. */
   vehicleLabel: string;
   category: string;
   categoryOtherLabel: string;
@@ -223,6 +243,15 @@ export interface ExpenseRow {
   expenseDateDisplay: string;
   receiptNo: string;
   paidBy: string;
+  /** OBRS-1577: the registry payee this bill was paid TO. `null` for every bill written before
+   * V119, and for a bill whose payee the owner deliberately left blank — the two are the same
+   * answer here and neither is guessed at. Not to be confused with `paidBy` above, which is who the
+   * money came FROM. */
+  payeeId: number | null;
+  /** OBRS-1577: the payee's name as resolved server-side, carried on the ROW because the pickers
+   * list ACTIVE payees only — a bill paid to a garage that has since been retired would otherwise
+   * render blank in both the table and the edit modal. `''` when there is no payee. */
+  payeeName: string;
   note: string;
   /** OBRS-960: `'FIELD'` (backend auto-created from a driver's cash-panel
    * expense entry) vs `'MANUAL'` (admin/owner-entered) — passed through
@@ -241,8 +270,14 @@ export interface ExpenseRow {
 export interface ExpenseItemRow {
   lineNo: number;
   part: string;
+  /** OBRS-1613: the registry row. `null` = this line is not a part at all. */
+  partId: number | null;
+  /** OBRS-1613: the registry row's name as the SERVER resolved it — see `AdminExpenseItemDto`. */
+  partName: string;
   description: string;
   quantity: number | null;
+  /** OBRS-1613: what `quantity` is counted in. `''` when the bill did not say. */
+  unit: string;
   unitPrice: number | null;
   amount: number;
 }
@@ -251,8 +286,11 @@ export function toExpenseItemRow(dto: AdminExpenseItemDto): ExpenseItemRow {
   return {
     lineNo: dto.lineNo,
     part: dto.part ?? '',
+    partId: dto.partId ?? null,
+    partName: dto.partName ?? '',
     description: dto.description ?? '',
     quantity: dto.quantity ?? null,
+    unit: dto.unit ?? '',
     unitPrice: dto.unitPrice ?? null,
     amount: dto.amount,
   };
@@ -274,7 +312,7 @@ export function toExpenseRow(
 ): ExpenseRow {
   const vehicle = dto.vehicleId !== null ? vehicles.find((v) => v.id === dto.vehicleId) : undefined;
   const vehicleLabel =
-    dto.vehicleId === null ? centralLabel : vehicle ? vehicleIdentifier(vehicle) : `#${dto.vehicleId}`;
+    dto.vehicleId === null ? centralLabel : vehicle ? vehiclePlateIdentifier(vehicle) : `#${dto.vehicleId}`;
   const categoryLabel = categoryOptions.find((option) => option.code === dto.category)?.label ?? dto.category;
 
   // OBRS-808: an unresolvable owner falls back to `#id` rather than a blank
@@ -301,6 +339,8 @@ export function toExpenseRow(
     expenseDateDisplay: formatDisplayDate(dto.expenseDate, dateLang),
     receiptNo: dto.receiptNo ?? '',
     paidBy: dto.paidBy ?? '',
+    payeeId: dto.payeeId ?? null,
+    payeeName: dto.payeeName ?? '',
     note: dto.note ?? '',
     source: dto.source ?? 'MANUAL',
     items: (dto.items ?? []).map(toExpenseItemRow),
@@ -329,6 +369,11 @@ export interface ExpenseFormValue {
   expenseDate: Date | string | null;
   receiptNo: string | null;
   paidBy: string | null;
+  /** OBRS-1577: the picker's value. A real number or `null` — unlike `ownerSelection` above this
+   * control is NOT string-coerced, because `ExpensePayeePickerComponent` writes the id it was given
+   * straight through rather than routing it via `String(x ?? '')` the way `app-admin-dropdown`
+   * does. There is therefore no empty-string case to unpick at the payload boundary. */
+  payeeId: number | null;
   note: string | null;
   /** OBRS-1374: the repeater's rows. Absent when the caller has no lines at all. */
   items?: ExpenseItemFormValue[];
@@ -337,9 +382,17 @@ export interface ExpenseFormValue {
 /** OBRS-1374: one repeater row, raw. Every numeric control can hold `''` because an emptied
  * number input reports one - that is what `toNullableNumber` below is for. */
 export interface ExpenseItemFormValue {
-  part: string;
+  /**
+   * OBRS-1613: the registry row this line is for. `null` = not a part at all (labour, sundry).
+   * Optional on this interface only because a raw form value is read before the array is filled;
+   * BOTH screens that write bills carry this control.
+   */
+  partId?: number | null;
   description: string | null;
   quantity: number | string | null;
+  /** OBRS-1613: the unit the quantity is counted in, free text off the paper bill. On both
+   * screens, and optional here for the same reason as `partId`. */
+  unit?: string | null;
   unitPrice: number | string | null;
   amount: number | string | null;
 }
@@ -402,7 +455,10 @@ export function toDateControlValue(dateValue: string | null | undefined): Date |
   return new Date(year, month - 1, day);
 }
 
-function toNullableNumber(value: number | string | null | undefined): number | null {
+/** OBRS-1630: exported so the staff repair box parses a form number by the SAME rule the admin
+ * bill screen does. An empty box is absent, not zero - `Number('')` is `0`, and a zero unit price
+ * is a different statement from "the garage did not write one". */
+export function toNullableNumber(value: number | string | null | undefined): number | null {
   if (value === null || value === undefined || value === '') {
     return null;
   }
@@ -444,14 +500,20 @@ export function toExpensePayload(formValue: ExpenseFormValue): CreateExpensePayl
     expenseDate: toIsoDateString(formValue.expenseDate),
     receiptNo: toNullableTrimmedString(formValue.receiptNo),
     paidBy: toNullableTrimmedString(formValue.paidBy),
+    payeeId: formValue.payeeId ?? null,
     note: toNullableTrimmedString(formValue.note),
-    // OBRS-1374: the ONE place the part sentinel becomes a real `null`, mirroring the vehicle
-    // sentinel above. An empty repeater sends `[]`, which the backend reads as "no breakdown".
+    // An empty repeater sends `[]`, which the backend reads as "no breakdown".
     items: (formValue.items ?? []).map((item) => ({
-      part:
-        !item.part || item.part === EXPENSE_ITEM_PART_NONE_SENTINEL ? null : item.part,
+      // OBRS-1613: always null. Both screens pick a registry ROW now; the frozen `EMaintenancePart`
+      // code is written server-side from the row `partId` resolved to, so no screen can express one
+      // and none should try. It stays on the payload as an explicit null rather than an omitted key
+      // because the backend still ACCEPTS a code from a client that has not been rebuilt, and
+      // "this line has no part" must not arrive looking like "this client cannot express one".
+      part: null,
+      partId: item.partId ?? null,
       description: String(item.description ?? '').trim(),
       quantity: toNullableNumber(item.quantity),
+      unit: toNullableTrimmedString(item.unit ?? null),
       unitPrice: toNullableNumber(item.unitPrice),
       amount: toNullableNumber(item.amount) ?? 0,
     })),
@@ -465,6 +527,11 @@ export interface ExpenseFilterOptions {
    * client-side predicate layered on top of the (unfiltered) server fetch —
    * NOT a separate query param. */
   centralOnly: boolean;
+  /** OBRS-1627: `''` = every operator. Replaces the operator COLUMN, which
+   * repeated one name down all 8,580 prod rows. Admin-only in practice — an
+   * `owner` never fetches the roster, so the page renders no control for them
+   * and this stays `''`. */
+  ownerId: string;
   from: Date | null;
   to: Date | null;
 }
@@ -487,6 +554,9 @@ export function filterExpensesByCategoryAndRange(
 
   return rows.filter((row) => {
     if (filters.centralOnly && row.vehicleId !== null) {
+      return false;
+    }
+    if (filters.ownerId && String(row.ownerId ?? '') !== filters.ownerId) {
       return false;
     }
     if (filters.category && row.category !== filters.category) {

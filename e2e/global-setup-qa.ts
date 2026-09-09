@@ -5,11 +5,18 @@
  */
 import { chromium, FullConfig } from '@playwright/test';
 import path from 'path';
+import laneTreeGuard from './support/lane-tree-guard';
 
 const AUTH_FILE = path.resolve(__dirname, 'fixtures/admin-auth.json');
 const BASE_URL = process.env['QA_BASE_URL'] ?? 'http://localhost:4201';
 
-async function globalSetup(_config: FullConfig): Promise<void> {
+async function globalSetup(config: FullConfig): Promise<void> {
+  // OBRS-1611: this lane brings its own globalSetup, so the tree guard is CALLED here
+  // rather than wired as the entry point -- same banner, same refusal, and it has to
+  // run before the login below, which would otherwise be typed into another tree.
+  laneTreeGuard(config);
+
+
   const browser = await chromium.launch({
     args: ['--disable-web-security', '--disable-features=IsolateOrigins,site-per-process'],
   });

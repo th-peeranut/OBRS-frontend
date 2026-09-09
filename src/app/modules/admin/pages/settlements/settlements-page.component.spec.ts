@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { SettlementsPageComponent } from './settlements-page.component';
 import {
@@ -259,6 +260,86 @@ describe('SettlementsPageComponent', () => {
     expect((component as any).contentState).toBe('empty');
   });
 
+  it('accepts a range exactly at the 366-day cap and rejects one day past it', () => {
+    const store = makeStoreStub(null);
+    const component = new SettlementsPageComponent(
+      store as any,
+      driverCashDaysStoreStub as any,
+      makeAdminApiStub() as any,
+      makeAlertStub() as any,
+      createTranslateStub()
+    );
+    component.ngOnInit();
+    store.setRange.calls.reset();
+
+    // 2026-01-01 -> 2027-01-02 spans 366 days (2026 is not a leap year).
+    component['onRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 2) });
+    expect(component['rangeError']).toBe('');
+    expect(store.setRange).toHaveBeenCalledOnceWith('2026-01-01', '2027-01-02');
+
+    store.setRange.calls.reset();
+    component['onRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 3) });
+    expect(component['rangeError']).toBe('ADMIN.SETTLEMENTS.ERROR.RANGE_TOO_LARGE');
+    expect(store.setRange).not.toHaveBeenCalled();
+  });
+
+  // OBRS-1736 — the driver-cash-days sub-filter is a second, independent range on this
+  // same page (OBRS-960). It checked from>to and then dispatched any span, while the main
+  // range above it has capped at 366 days all along. These pin the cap and its message.
+  describe('driver-cash-days range guard (OBRS-1736)', () => {
+    function makeComponent(): SettlementsPageComponent {
+      const store = makeStoreStub(null);
+      const component = new SettlementsPageComponent(
+        store as any,
+        driverCashDaysStoreStub as any,
+        makeAdminApiStub() as any,
+        makeAlertStub() as any,
+        createTranslateStub()
+      );
+      component.ngOnInit();
+      return component;
+    }
+
+    it('dispatches a span exactly at the 366-day cap', () => {
+      const component = makeComponent();
+
+      // 2026-01-01 -> 2027-01-02 spans 366 days (2026 is not a leap year).
+      // OBRS-1753: one control, one event - the sub-filter no longer has a From and a To to
+      // change separately, so the range arrives complete or not at all.
+      driverCashDaysStoreStub.setRange.calls.reset();
+      component['onDriverCashRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 2) });
+
+      expect(component['driverCashRangeError']).toBe('');
+      expect(driverCashDaysStoreStub.setRange).toHaveBeenCalledOnceWith(
+        '2026-01-01',
+        '2027-01-02'
+      );
+    });
+
+    it('rejects a span one day past the cap, without dispatching', () => {
+      const component = makeComponent();
+
+      driverCashDaysStoreStub.setRange.calls.reset();
+      component['onDriverCashRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 3) });
+
+      expect(component['driverCashRangeError']).toBe('ADMIN.SETTLEMENTS.ERROR.RANGE_TOO_LARGE');
+      expect(driverCashDaysStoreStub.setRange).not.toHaveBeenCalled();
+      expect(component['driverCashContentState']).toBe('invalid');
+      expect(component['driverCashStateMessage']).toBe('ADMIN.SETTLEMENTS.ERROR.RANGE_TOO_LARGE');
+    });
+
+    it('rejects from > to, without dispatching', () => {
+      const component = makeComponent();
+
+      driverCashDaysStoreStub.setRange.calls.reset();
+      component['onDriverCashRangeChange']({ from: new Date(2026, 5, 10), to: new Date(2026, 5, 1) });
+
+      expect(component['driverCashRangeError']).toBe('ADMIN.SETTLEMENTS.ERROR.RANGE_INVALID');
+      expect(driverCashDaysStoreStub.setRange).not.toHaveBeenCalled();
+      expect(component['driverCashContentState']).toBe('invalid');
+    });
+  });
+
   it('contentState is "invalid" when the range guard trips (from > to) and does not dispatch', () => {
     const store = makeStoreStub(makePage());
     const component = new SettlementsPageComponent(
@@ -270,8 +351,7 @@ describe('SettlementsPageComponent', () => {
     );
     component.ngOnInit();
 
-    component['onFromDateChange'](new Date(2026, 6, 10));
-    component['onToDateChange'](new Date(2026, 6, 1));
+    component['onRangeChange']({ from: new Date(2026, 6, 10), to: new Date(2026, 6, 1) });
 
     expect((component as any).contentState).toBe('invalid');
     expect(store.setRange).not.toHaveBeenCalled();
@@ -631,5 +711,107 @@ describe('SettlementsPageComponent', () => {
 
     store.data$.next(makePage([makeItem({ scheduleId: 999 })]));
     expect((component as any).items.find((i: SettlementPendingItemDto) => i.scheduleId === 999)).toBeUndefined();
+  });
+
+  // ── OBRS-1579: the owner puts a signed-off box back to OPEN ─────────────
+  describe('requestDayReopen', () => {
+    const REOPENED = {
+      dayId: 7,
+      status: 'OPEN',
+      reopenCount: 1,
+      expectedReturnAmount: '-1320.00',
+      returnedAmount: null,
+    };
+    const ROW = { dayId: 7, status: 'RETURNED', returnedAmount: '-120.00', discrepancy: null };
+
+    function makeComponentWithOpenDay(apiOverrides: Record<string, jasmine.Spy> = {}) {
+      const adminApi: any = makeAdminApiStub({
+        reopenDriverCashDay: jasmine.createSpy('reopenDriverCashDay').and.returnValue(of(ok(REOPENED))),
+        getDriverCashDayDetail: jasmine.createSpy('getDriverCashDayDetail').and.returnValue(of(ok(REOPENED))),
+        ...apiOverrides,
+      });
+      const alert = makeAlertStub();
+      const component = new SettlementsPageComponent(
+        makeStoreStub(null) as any,
+        driverCashDaysStoreStub as any,
+        adminApi as any,
+        alert as any,
+        createTranslateStub()
+      );
+      (component as any).openDayId = 7;
+      (component as any).dayModalSummary = ROW;
+      (component as any).dayModalDetail = { ...ROW, entries: [] };
+      return { component, adminApi, alert };
+    }
+
+    it('asks first, then posts the reason and swaps the open detail for the re-opened one', async () => {
+      const { component, adminApi, alert } = makeComponentWithOpenDay();
+
+      await (component as any).requestDayReopen('late fuel bill');
+
+      expect(alert.confirm).toHaveBeenCalled();
+      expect(adminApi.reopenDriverCashDay).toHaveBeenCalledWith(7, { reason: 'late fuel bill' });
+      expect((component as any).dayModalDetail).toEqual(REOPENED as any);
+      expect((component as any).isDayReopening).toBeFalse();
+      expect(alert.success).toHaveBeenCalled();
+    });
+
+    it('posts nothing when the owner cancels', async () => {
+      const { component, adminApi, alert } = makeComponentWithOpenDay();
+      alert.confirm.and.resolveTo(false);
+
+      await (component as any).requestDayReopen('late fuel bill');
+
+      expect(adminApi.reopenDriverCashDay).not.toHaveBeenCalled();
+    });
+
+    /**
+     * `requestDayReturn` filters the row OUT of the cached array, so after a
+     * sign-off the worklist no longer holds it. Mapping alone would then leave
+     * the owner looking at a list with nothing where a now-OPEN box belongs.
+     */
+    it('puts the row back into a list it had been filtered out of', async () => {
+      const { component } = makeComponentWithOpenDay();
+      driverCashDaysStoreStub.mutate.calls.reset();
+
+      await (component as any).requestDayReopen('late fuel bill');
+
+      const mutator = driverCashDaysStoreStub.mutate.calls.mostRecent().args[0] as (c: any[]) => any[];
+      expect(mutator([])).toEqual([
+        jasmine.objectContaining({ dayId: 7, status: 'OPEN', returnedAmount: null }),
+      ]);
+      expect(mutator([ROW])).toEqual([
+        jasmine.objectContaining({ dayId: 7, status: 'OPEN', returnedAmount: null }),
+      ]);
+    });
+
+    /** A 2xx with no body: the cache must be dropped AND the open modal
+     * re-fetched, or it keeps showing the box as still signed off. */
+    it('re-fetches the open modal when the re-open answers with no body', async () => {
+      const { component, adminApi } = makeComponentWithOpenDay({
+        reopenDriverCashDay: jasmine.createSpy('reopenDriverCashDay').and.returnValue(of(ok(null))),
+      });
+
+      await (component as any).requestDayReopen('late fuel bill');
+
+      expect(adminApi.getDriverCashDayDetail).toHaveBeenCalledWith(7);
+      expect((component as any).isDayReopening).toBeFalse();
+    });
+
+    it('names the refusal instead of saying "please try again"', async () => {
+      const { component, alert } = makeComponentWithOpenDay({
+        reopenDriverCashDay: jasmine.createSpy('reopenDriverCashDay').and.returnValue(
+          throwError(() => new HttpErrorResponse({
+            status: 409,
+            error: { errorCode: 'DRIVER_CASH_DAY_NOT_RETURNED' },
+          }))
+        ),
+      });
+
+      await (component as any).requestDayReopen('late fuel bill');
+
+      expect(alert.error).toHaveBeenCalledWith('ADMIN.SETTLEMENTS.DRIVER_CASH.ERROR.NOT_RETURNED');
+      expect((component as any).isDayReopening).toBeFalse();
+    });
   });
 });

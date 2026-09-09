@@ -54,12 +54,22 @@ interface AdminNavSection {
   items: AdminNavItem[];
 }
 
+// OBRS-1432 follow-up: 'system' moved to position 2 (right after 'overview'),
+// owner-decided 2026-08-20. The sidebar rail is 1.95x the 768px viewport, so
+// "ตั้งค่าระบบ" — the SOLE row this section renders (OBRS-702 collapsed 7
+// config pages into it; the 8 items buildSettingsTabItems() also produces are
+// search-only, per OBRS-1431, and never painted into the rail) — sat 1,699px
+// from the top and was permanently below the fold. Position 2 was chosen
+// over position 1 (would displace 'overview', everyone's first stop) and
+// position 3 (would need proving the first 10 rows still clear 768px);
+// position 2 needs no such proof because it costs exactly one row + one
+// section header. The other three sections keep their relative order.
 const SECTION_ORDER: { key: NavSectionKey; titleKey: string }[] = [
   { key: 'overview', titleKey: 'ADMIN.NAV.SECTION.OVERVIEW' },
+  { key: 'system', titleKey: 'ADMIN.NAV.SECTION.SYSTEM' },
   { key: 'master', titleKey: 'ADMIN.NAV.SECTION.MASTER_DATA' },
   { key: 'operations', titleKey: 'ADMIN.NAV.SECTION.OPERATIONS' },
   { key: 'reports', titleKey: 'ADMIN.NAV.SECTION.REPORTS' },
-  { key: 'system', titleKey: 'ADMIN.NAV.SECTION.SYSTEM' },
 ];
 
 // OBRS-939: the two `routerLinkActiveOptions` values, as module-level frozen
@@ -227,11 +237,31 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       // OBRS-884: per-vehicle P&L — same admin+owner audience (route
       // `requiredRoles: ['admin','owner']`) as cash-online-reconciliation-report above.
       { path: 'vehicle-pl-report', labelKey: 'ADMIN.PAGES.VEHICLE_PL_REPORT', icon: 'directions_bus', descriptionKey: 'ADMIN.VEHICLE_PL_REPORT.SUBTITLE', section: 'reports' },
+      { path: 'payee-spend-report', labelKey: 'ADMIN.PAGES.PAYEE_SPEND_REPORT', icon: 'store', descriptionKey: 'ADMIN.PAYEE_SPEND_REPORT.SUBTITLE', section: 'reports' },
+      // OBRS-1613: sits next to payee-spend-report because it answers the other half of the same
+      // question — same admin+owner audience (route `requiredRoles: ['admin','owner']`).
+      { path: 'part-unit-price-report', labelKey: 'ADMIN.PAGES.PART_UNIT_PRICE_REPORT', icon: 'monitoring', descriptionKey: 'ADMIN.PART_UNIT_PRICE_REPORT.SUBTITLE', section: 'reports' },
       // OBRS-685: vehicle/central expense log — admin+owner (route
       // `requiredRoles: ['admin','owner']`), same always-shown audience as
       // eod-sales-report above — operational record-keeping, not a report.
       { path: 'expenses', labelKey: 'ADMIN.PAGES.EXPENSES', icon: 'receipt_long', descriptionKey: 'ADMIN.EXPENSES.SUBTITLE', section: 'operations' },
     ];
+
+    // OBRS-1577: the payee registry — OWNER-only (route `requiredRoles: ['owner']`, and the backend
+    // is `hasRole('OWNER')` on every endpoint including the GET). Placed immediately after Expenses
+    // in the same `operations` section, which is the owner's own ruling on 2026-08-24: this is a
+    // screen you open while filing bills, not a one-off configuration screen.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({ path: 'expense-payees', labelKey: 'ADMIN.PAGES.EXPENSE_PAYEES', icon: 'storefront', descriptionKey: 'ADMIN.EXPENSE_PAYEES.SUBTITLE', section: 'operations' });
+    }
+
+    // OBRS-1613: the parts/labour registry - OWNER-only (route `requiredRoles: ['owner']`, backend
+    // `hasRole('OWNER')` on every endpoint including the GET). Immediately after the payee registry
+    // in the same `operations` section: the two are the same kind of screen, an owner opens both
+    // while filing bills, and putting them anywhere but side by side makes one of them hard to find.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({ path: 'maintenance-parts', labelKey: 'ADMIN.PAGES.MAINTENANCE_PARTS', icon: 'build', descriptionKey: 'ADMIN.MAINTENANCE_PARTS.SUBTITLE', section: 'operations' });
+    }
 
     if (this.authService.hasAnyRole(['owner'])) {
       items.push({ path: 'settlements', labelKey: 'ADMIN.PAGES.SETTLEMENTS', icon: 'point_of_sale', descriptionKey: 'ADMIN.SETTLEMENTS.SUBTITLE', section: 'operations' });
@@ -414,10 +444,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     // Build nav items before calling super so the route subscription (which
     // fires synchronously via startWith) already has navItems in place —
     // mirrors StaffLayoutComponent.ngOnInit's ordering.
-    this.navItems = this.buildNavItems();
-    this.navSearchCorpus = [...this.navItems, ...this.buildSettingsTabItems()];
-    this.filteredNavItems = this.navItems;
-    this.filteredNavSections = this.buildSections(this.navItems);
+    this.rebuildNav();
     super.ngOnInit();
     this.watchNewReportCount();
 
@@ -433,6 +460,21 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     this.translate.onLangChange
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.applyNavSearch(this.navSearchQuery));
+  }
+
+  // OBRS-1721: also re-run on entering/leaving a role preview. buildNavItems()
+  // asks hasHeldRole(['admin']) for the lookups/roles pair, which is the ONLY
+  // difference between the admin and owner menus (ADR-0040) — so without this
+  // an admin previewing as owner would see no change at all. The search state
+  // is reset alongside it because a query filtered against the previous role's
+  // items would otherwise keep showing entries the new nav no longer has —
+  // clearing the query is what keeps the box and the list telling the same story.
+  protected override rebuildNav(): void {
+    this.navItems = this.buildNavItems();
+    this.navSearchCorpus = [...this.navItems, ...this.buildSettingsTabItems()];
+    this.navSearchQuery = '';
+    this.filteredNavItems = this.navItems;
+    this.filteredNavSections = this.buildSections(this.navItems);
   }
 
   override ngOnDestroy(): void {

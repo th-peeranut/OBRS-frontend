@@ -95,9 +95,10 @@
             type="button"
             class="admin-btn admin-btn-primary"
             [disabled]="isSaving"
+            [appPending]="isSaving"
             (click)="submit()"
             >
-            {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+            {{ 'ADMIN.COMMON.SAVE' | translate }}
           </button>
         </div>
       </div>

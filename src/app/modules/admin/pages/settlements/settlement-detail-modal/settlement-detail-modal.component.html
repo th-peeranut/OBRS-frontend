@@ -61,15 +61,15 @@
             <div class="settlement-detail-totals mt-3">
               <div class="settlement-detail-row">
                 <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.TOTAL_AMOUNT' | translate }}</span>
-                <span class="admin-big-number">{{ formatMoney(detail.live.totalAmount, detail.currency) }}</span>
+                <span class="admin-big-number">{{ formatMoney(detail.live.totalAmount) }}</span>
               </div>
               <div class="settlement-detail-row">
                 <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.ON_SITE_TOTAL' | translate }}</span>
-                <span>{{ formatMoney(detail.live.onSiteTotal, detail.currency) }}</span>
+                <span>{{ formatMoney(detail.live.onSiteTotal) }}</span>
               </div>
               <div class="settlement-detail-row">
                 <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.AGENCY_TOTAL' | translate }}</span>
-                <span>{{ formatMoney(detail.live.agencyTotal, detail.currency) }}</span>
+                <span>{{ formatMoney(detail.live.agencyTotal) }}</span>
               </div>
               <div class="settlement-detail-row">
                 <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.TICKET_COUNT' | translate }}</span>
@@ -95,7 +95,7 @@
                     @for (row of detail.live.byChannel; track trackByChannel($index, row)) {
                       <tr>
                         <td>{{ channelLabel(row.channel) }}</td>
-                        <td>{{ formatMoney(row.amount, detail.currency) }}</td>
+                        <td>{{ formatMoney(row.amount) }}</td>
                         <td>{{ row.ticketCount }}</td>
                       </tr>
                     }
@@ -123,7 +123,7 @@
                     @for (row of detail.live.byMethod; track trackByMethod($index, row)) {
                       <tr>
                         <td>{{ methodLabel(row.method) }}</td>
-                        <td>{{ formatMoney(row.amount, detail.currency) }}</td>
+                        <td>{{ formatMoney(row.amount) }}</td>
                         <td>{{ row.ticketCount }}</td>
                       </tr>
                     }
@@ -156,18 +156,18 @@
                   </div>
                   <div class="settlement-detail-row">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COLLECTED' | translate }}</span>
-                    <span>{{ formatMoney(detail.live.notTravelled.collectedAmount, detail.currency) }}</span>
+                    <span>{{ formatMoney(detail.live.notTravelled.collectedAmount) }}</span>
                   </div>
                   <div class="settlement-detail-row">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.REFUNDED' | translate }}</span>
-                    <span>{{ formatMoney(detail.live.notTravelled.refundedAmount, detail.currency) }}</span>
+                    <span>{{ formatMoney(detail.live.notTravelled.refundedAmount) }}</span>
                   </div>
                   <div class="settlement-detail-row">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.RETAINED' | translate }}</span>
                     <span
                       class="admin-emphasis"
                       [class.settlement-nt-negative]="isNegativeMoney(detail.live.notTravelled.retainedAmount)"
-                    >{{ formatMoney(detail.live.notTravelled.retainedAmount, detail.currency) }}</span>
+                    >{{ formatMoney(detail.live.notTravelled.retainedAmount) }}</span>
                   </div>
                 </div>
                 <!-- By status: cancelled (part-refunded) vs no_show (100% forfeit) — AC 2. -->
@@ -188,9 +188,9 @@
                           <tr>
                             <td>{{ notTravelledStatusLabel(row.key) }}</td>
                             <td>{{ row.ticketCount }}</td>
-                            <td>{{ formatMoney(row.refundedAmount, detail.currency) }}</td>
+                            <td>{{ formatMoney(row.refundedAmount) }}</td>
                             <td [class.settlement-nt-negative]="isNegativeMoney(row.retainedAmount)">
-                              {{ formatMoney(row.retainedAmount, detail.currency) }}
+                              {{ formatMoney(row.retainedAmount) }}
                             </td>
                           </tr>
                         }
@@ -221,9 +221,9 @@
                           <tr>
                             <td>{{ methodLabel(row.key) }}</td>
                             <td>{{ row.ticketCount }}</td>
-                            <td>{{ formatMoney(row.refundedAmount, detail.currency) }}</td>
+                            <td>{{ formatMoney(row.refundedAmount) }}</td>
                             <td [class.settlement-nt-negative]="isNegativeMoney(row.retainedAmount)">
-                              {{ formatMoney(row.retainedAmount, detail.currency) }}
+                              {{ formatMoney(row.retainedAmount) }}
                             </td>
                           </tr>
                         }
@@ -282,7 +282,7 @@
                   the person about to sign. -->
                   <div class="settlement-detail-row" data-testid="settlement-per-head-deducted">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.PER_HEAD_DEDUCTED' | translate }}</span>
-                    <span>-{{ formatMoney(perHeadDeducted, detail.currency) }}</span>
+                    <span>-{{ formatMoney(perHeadDeducted) }}</span>
                   </div>
                   <!-- OBRS-1242: ticket cash this round is not asking for, because
                   the counter that took it transfers to the owner at close of day.
@@ -292,7 +292,7 @@
                   again" — which is how a real shortage stops being visible. -->
                   <div class="settlement-detail-row" data-testid="settlement-deferred-ticket-cash">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.DEFERRED_TICKET_CASH' | translate }}</span>
-                    <span>-{{ formatMoney(deferredTicketCash, detail.currency) }}</span>
+                    <span>-{{ formatMoney(deferredTicketCash) }}</span>
                   </div>
                   <!-- OBRS-1245: cash this round already paid out to the driver
                   as an advance. Its counterpart has been on the driver's own
@@ -301,11 +301,11 @@
                   for the same reason as both rows above it. -->
                   <div class="settlement-detail-row" data-testid="settlement-advance-paid-out">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.ADVANCE_PAID_OUT' | translate }}</span>
-                    <span>-{{ formatMoney(advancePaidOut, detail.currency) }}</span>
+                    <span>-{{ formatMoney(advancePaidOut) }}</span>
                   </div>
                   <div class="settlement-detail-row">
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.EXPECTED_CASH' | translate }}</span>
-                    <span data-testid="settlement-expected-cash">{{ formatMoney(expectedCashAmount(), detail.currency) }}</span>
+                    <span data-testid="settlement-expected-cash">{{ formatMoney(expectedCashAmount()) }}</span>
                   </div>
                   @if (discrepancyCents !== null) {
                     <div class="settlement-detail-row">
@@ -313,7 +313,7 @@
                       <span
                         class="admin-emphasis"
                         [class.settlement-nt-negative]="isNegativeMoney(discrepancyAmount())"
-                      >{{ formatMoney(discrepancyAmount(), detail.currency) }}</span>
+                      >{{ formatMoney(discrepancyAmount()) }}</span>
                     </div>
                   }
                 </div>
@@ -376,7 +376,7 @@
               <div class="settlement-detail-totals mt-3">
                 <div class="settlement-detail-row">
                   <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.TOTAL_AMOUNT' | translate }}</span>
-                  <span class="admin-big-number">{{ formatMoney(settled.totalAmount, detail.currency) }}</span>
+                  <span class="admin-big-number">{{ formatMoney(settled.totalAmount) }}</span>
                 </div>
               </div>
               <div class="mt-3">
@@ -393,7 +393,7 @@
                       @for (row of settled.byChannel; track trackByChannel($index, row)) {
                         <tr>
                           <td>{{ channelLabel(row.channel) }}</td>
-                          <td>{{ formatMoney(row.amount, detail.currency) }}</td>
+                          <td>{{ formatMoney(row.amount) }}</td>
                         </tr>
                       }
                       @if (settled.byChannel.length === 0) {
@@ -419,7 +419,7 @@
                       @for (row of settled.byMethod; track trackByMethod($index, row)) {
                         <tr>
                           <td>{{ methodLabel(row.method) }}</td>
-                          <td>{{ formatMoney(row.amount, detail.currency) }}</td>
+                          <td>{{ formatMoney(row.amount) }}</td>
                         </tr>
                       }
                       @if (settled.byMethod.length === 0) {
@@ -457,18 +457,18 @@
                       </div>
                       <div class="settlement-detail-row">
                         <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COLLECTED' | translate }}</span>
-                        <span>{{ formatMoney(nt.collectedAmount, detail.currency) }}</span>
+                        <span>{{ formatMoney(nt.collectedAmount) }}</span>
                       </div>
                       <div class="settlement-detail-row">
                         <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.REFUNDED' | translate }}</span>
-                        <span>{{ formatMoney(nt.refundedAmount, detail.currency) }}</span>
+                        <span>{{ formatMoney(nt.refundedAmount) }}</span>
                       </div>
                       <div class="settlement-detail-row">
                         <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.RETAINED' | translate }}</span>
                         <span
                           class="admin-emphasis"
                           [class.settlement-nt-negative]="isNegativeMoney(nt.retainedAmount)"
-                        >{{ formatMoney(nt.retainedAmount, detail.currency) }}</span>
+                        >{{ formatMoney(nt.retainedAmount) }}</span>
                       </div>
                     </div>
                   }
@@ -498,12 +498,12 @@
                   <div class="settlement-detail-totals">
                     <div class="settlement-detail-row">
                       <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.COUNTED_AMOUNT' | translate }}</span>
-                      <span>{{ formatMoney(settled.countedAmount, detail.currency) }}</span>
+                      <span>{{ formatMoney(settled.countedAmount) }}</span>
                     </div>
                     @if (settled.expectedCashAmount !== null) {
                       <div class="settlement-detail-row">
                         <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.EXPECTED_CASH_AMOUNT' | translate }}</span>
-                        <span>{{ formatMoney(settled.expectedCashAmount, detail.currency) }}</span>
+                        <span>{{ formatMoney(settled.expectedCashAmount) }}</span>
                       </div>
                     }
                     @if (settled.discrepancyAmount !== null) {
@@ -512,7 +512,7 @@
                         <span
                           class="admin-emphasis"
                           [class.settlement-nt-negative]="isNegativeMoney(settled.discrepancyAmount)"
-                        >{{ formatMoney(settled.discrepancyAmount, detail.currency) }}</span>
+                        >{{ formatMoney(settled.discrepancyAmount) }}</span>
                       </div>
                     }
                     @if (settled.discrepancyReason) {
@@ -548,7 +548,7 @@
                     <p class="admin-error">{{ 'ADMIN.SETTLEMENTS.DETAIL.DISCREPANCY_FOUND' | translate }}</p>
                     <div class="settlement-detail-row">
                       <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.DIFFERENCE_AMOUNT' | translate }}</span>
-                      <span>{{ formatMoney(discrepancy.deltaAmount, detail.currency) }}</span>
+                      <span>{{ formatMoney(discrepancy.deltaAmount) }}</span>
                     </div>
                   }
                 </div>

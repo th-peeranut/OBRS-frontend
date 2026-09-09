@@ -79,7 +79,7 @@
         }
         @if (carryOnPaid) {
           <div class="parcel-intake-result-paid-note" data-testid="parcel-carryon-paid-note">
-            {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.PAID' | translate: { amount: r.amount } }}
+            {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.PAID' | translate: { amount: formatMoney(r.amount) } }}
           </div>
         }
       }

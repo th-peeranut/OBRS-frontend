@@ -193,7 +193,10 @@ body.is-dark {
   // admin token palette, not the public dark-input palette.
   .form-control:not(.admin-shell .form-control) {
     background-color: $dk-bg-input !important;
-    border-color: $dk-border !important;
+    // OBRS-772: $dk-border is the SEPARATOR token and composited to 1.36:1 here.
+    // A field's boundary is the only thing identifying it, so it gets the
+    // control token instead. Separators elsewhere keep $dk-border.
+    border-color: $dk-control-border !important;
     color: $dk-text !important;
 
     // OBRS-797. The placeholder is NOT covered by the `color` above: an
@@ -233,7 +236,9 @@ body.is-dark {
   // OTP boxes
   .ngx-otp-input-box {
     background-color: $dk-bg-input !important;
-    border-color: $dk-border !important;
+    // OBRS-772: the dark half of the light rule in styles.scss -- an OTP box is
+    // an empty field in both themes.
+    border-color: $dk-control-border !important;
     color: $dk-text !important;
 
     &:focus {
@@ -617,7 +622,8 @@ body.is-dark {
   // It still dresses every standalone picker (payment expiry, admin) unchanged.
   .p-datepicker:not(.app-date-field--segment) .p-inputtext {
     background-color: $dk-bg-input !important;
-    border-color: $dk-border !important;
+    // OBRS-772, same call as `.form-control` above.
+    border-color: $dk-control-border !important;
     color: $dk-text !important;
   }
 
@@ -717,6 +723,22 @@ body.is-dark {
   // Re-assert the seat-scarcity status colour (OBRS-229), which the blanket
   // rule above would otherwise wash out to $dk-text.
   .schedule-item .seat-status--low { color: $dk-danger !important; }
+
+  // OBRS-864 - the pickup/drop-off maps link. On a result row the blanket
+  // `.schedule-item *` rule above paints every text node $dk-text, which would
+  // leave the one clickable thing on that line looking exactly like the address
+  // printed next to it. Left UNSCOPED because the same block also renders above
+  // the list, outside `.schedule-item`, where no rule above reaches it at all -
+  // the same two-surface shape the OBRS-1343 notice below is written for.
+  // `!important` for the same reason the rules around it carry one: these are
+  // component styles, so Angular emits the selector with an attribute on every
+  // part and the global rule loses on specificity.
+  .stop-detail__link { color: $dk-accent !important; }
+
+  // OBRS-864 - and the text beside that link, in the list-level copy only. The
+  // row copy already reads $dk-text from the blanket rule; this one is outside
+  // `.schedule-item` and would otherwise stay at its light $text-lightblack.
+  .stop-detail--shared .stop-detail__row { color: $dk-text !important; }
 
   // OBRS-1343 — the "your return leaves from another stop" notice. It renders
   // on TWO surfaces: the trip list, where it sits on the #f6fcff panel and none
@@ -908,7 +930,6 @@ body.is-dark app-route-map-home {
   .route-loading-text,
   .route-empty,
   .stop-address,
-  .stop-time,
   .summary-label,
   .summary-meta,
   .placeholder-text,
@@ -1091,12 +1112,13 @@ body.is-dark {
     color: $dk-text;
   }
 
-  .npref-row__hint,
+  .npref-matrix__critical-note,
   .npref-cell--na,
   .npref-row__cell-label {
     color: $dk-text-muted;
   }
 
+  .npref-row__mark,
   .npref-row__warning {
     color: $dk-danger;
   }
@@ -1374,12 +1396,17 @@ body.is-dark app-report-usability-fab {
 // one that would have grown 4px; dropping it for the reason above takes the last
 // geometry change out of this card with it.
 //
-// `payment-summary`'s `.btn-confirm` is a `<div>`, not a `<button>` -- brand
-// fill, `cursor: pointer`, no role and no tab stop. It is included here because
-// the customer sees a primary button and it must not be the one that looks
-// different. It is ALSO why the OBRS-584 gate never scored it: its CONTROLS
-// selector matches buttons, inputs and `a[class*="-btn"]`, not a bare div. That
-// is a separate a11y defect, left where it is.
+// OBRS-1532 corrects what this paragraph used to say. It claimed `.btn-confirm`
+// was included here for `payment-summary`'s `<div>` copy, "because the customer
+// sees a primary button". The customer never saw it: both call sites of
+// `<app-payment-summary>` pass `variant="inline"`, and only the 'default' arm
+// rendered that div, so it reached no screen. It was an inert CTA -- brand fill
+// and `cursor: pointer`, but no handler, no @Output, no role and no tab stop --
+// waiting for the next call site to forget the attribute, and OBRS-1532 deleted
+// it. The `.btn-confirm` member below is the real one and always was:
+// `review-schedule-booking-total.component.html`'s `<button type="button"
+// class="btn-confirm" (click)="onConfirm()">`, the 3.54:1 -> 9.31:1 measurement
+// OBRS-773 recorded.
 body.is-dark {
   .btn-search:not(:disabled),
   .select-btn:not(:disabled),

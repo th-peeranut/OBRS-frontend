@@ -25,21 +25,22 @@
             [attr.alt]="'ADMIN.LAYOUT.BRAND' | translate"
             />
           </a>
-        </div>
 
-        <!-- TOGGLE BUTTON — collapses the expanded 280px column to a 76px icon
-        rail (or vice-versa) on explicit click. Always visible in both states.
-        align-self: controlled by CSS (centred in rail, right-aligned in expanded). -->
-        <button
-          type="button"
-          class="admin-sidebar-pin"
-          (click)="togglePin()"
-          [attr.aria-expanded]="isSidebarPinned"
-          [attr.aria-label]="(isSidebarPinned ? 'ADMIN.LAYOUT.COLLAPSE_MENU' : 'ADMIN.LAYOUT.EXPAND_MENU') | translate"
-          [attr.title]="(isSidebarPinned ? 'ADMIN.LAYOUT.COLLAPSE_MENU' : 'ADMIN.LAYOUT.EXPAND_MENU') | translate"
-          >
-          <span class="material-symbols-outlined" [attr.translate]="'no'">{{ toggleIconName }}</span>
-        </button>
+          <!-- TOGGLE BUTTON — collapses the expanded 280px column to a 76px icon
+          rail (or vice-versa) on explicit click. Always visible in both states.
+          Sits on the logo row (OBRS-913): stacked below it in the collapsed
+          rail, right-aligned beside it when expanded — controlled by CSS. -->
+          <button
+            type="button"
+            class="admin-sidebar-pin"
+            (click)="togglePin()"
+            [attr.aria-expanded]="isSidebarPinned"
+            [attr.aria-label]="(isSidebarPinned ? 'ADMIN.LAYOUT.COLLAPSE_MENU' : 'ADMIN.LAYOUT.EXPAND_MENU') | translate"
+            [attr.title]="(isSidebarPinned ? 'ADMIN.LAYOUT.COLLAPSE_MENU_TITLE' : 'ADMIN.LAYOUT.EXPAND_MENU_TITLE') | translate"
+            >
+            <span class="material-symbols-outlined" [attr.translate]="'no'">{{ toggleIconName }}</span>
+          </button>
+        </div>
 
         <!-- OBRS-290: sidebar menu search — filters by menu name + description -->
         <div class="admin-nav-search">
@@ -209,6 +210,19 @@
                       <span class="material-symbols-outlined" [attr.translate]="'no'">badge</span>
                       <span>{{ 'ADMIN.LAYOUT.STAFF_AREA' | translate }}</span>
                     </a>
+                  }
+                  <!-- OBRS-1721: "ดูในมุมมองของ…". previewableRoles is empty for
+                  anyone but a HELD admin/owner, so this cannot appear for a role
+                  that merely GRANTS admin; it is also hidden while a preview is
+                  running — the banner owns the way out. -->
+                  @if (previewableRoles.length > 0 && !previewRole) {
+                    <span class="admin-profile-heading">{{ 'ROLE_PREVIEW.MENU' | translate }}</span>
+                    @for (role of previewableRoles; track role) {
+                      <button type="button" class="admin-profile-item" role="menuitem" (click)="onViewAs(role)">
+                        <span class="material-symbols-outlined" [attr.translate]="'no'">visibility</span>
+                        <span>{{ roleLabelKey(role) | translate }}</span>
+                      </button>
+                    }
                   }
                   <button type="button" class="admin-profile-item" role="menuitem" (click)="onLogout()">
                     <span class="material-symbols-outlined" [attr.translate]="'no'">logout</span>

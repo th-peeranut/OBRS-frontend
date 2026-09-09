@@ -72,10 +72,17 @@
 
 // OBRS-564: loading/error state for the SALES_CHANNELS paragraph (policy
 // item 1), rendered while its numbers are being fetched from the public
-// booking-policy API. This page has no `.admin-shell` ancestor, so it copies
-// the shimmer VALUES from `.skeleton` in my-bookings.component.scss (the
-// customer-shell precedent) rather than reaching for `.admin-skeleton`,
-// which is scoped under `.admin-shell` and would resolve to nothing here.
+// booking-policy API. It copies the shimmer VALUES from `.skeleton` in
+// my-bookings.component.scss (the customer-shell precedent) because this page
+// wants that OPAQUE three-grey sweep — NOT because the shared primitive is out
+// of reach. OBRS-1572 corrected that half: `.admin-skeleton` is a top-level
+// rule in `src/styles/_loading.scss` (OBRS-907 moved it out of
+// admin-theme.scss byte-identical), and the sibling refund-policy /
+// parcel-policy pages render it today through `<app-loading-state
+// variant="skeleton">`. The wording this replaces said it was scoped under
+// `.admin-shell` and "would resolve to nothing here" — the belief that sends
+// the next reader to hand-roll a 16th private shimmer, which is exactly what
+// check-loading-primitives.mjs exists to refuse.
 .policy-skeleton-block {
   display: flex;
   flex-direction: column;

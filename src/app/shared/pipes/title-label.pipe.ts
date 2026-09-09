@@ -5,6 +5,24 @@ import { TITLE_OPTIONS } from '../constants/title-options';
 
 const TITLE_CODES = new Set(TITLE_OPTIONS.map((option) => option.code));
 
+const THAI_SCRIPT_FIRST = /^[\u0E00-\u0E7F]/;
+
+/**
+ * OBRS-1644, mirroring the server's `TitleLabel.separator` (OBRS-1609): Thai writes the title
+ * attached to the given name — `นางสาวกุลธิดา นาใจคง` — because in Thai the space belongs between
+ * the given name and the surname, so a space after the title reads as a slip. BOTH sides have to
+ * be Thai script for that to hold: a legacy free-text `Rev.` keeps its space, and so does a Thai
+ * title in front of a Latin name (`นางสาว Passenger Name`), which is how Thai sets a Latin word
+ * inside Thai text.
+ *
+ * The test is the SCRIPT, not the reader's language: the column holds legacy values typed in Thai
+ * that no code matches, and those must attach exactly as the catalogue's own do — otherwise one
+ * passenger list spells `คุณ` two ways.
+ */
+function separator(label: string, name: string): string {
+  return THAI_SCRIPT_FIRST.test(label) && THAI_SCRIPT_FIRST.test(name) ? '' : ' ';
+}
+
 /**
  * OBRS-1232 — renders a PERSISTED title code (`MISS`) as the word for the active language
  * (`นางสาว` / `Miss` / `小姐`), the same FE-takeover pattern as role slug (OBRS-330) and status
@@ -30,10 +48,15 @@ export class TitleLabelPipe implements PipeTransform {
 
   /**
    * With no `name`, returns the title on its own (dropdown options). With a `name`, returns the two
-   * joined by a single space, skipping whichever is absent — so a passenger with no title never
-   * renders with a leading space, and the composition rule lives in ONE place instead of at each of
-   * the six surfaces that print a passenger's name. This mirrors the server's `TitleLabel.withTitle`
-   * for the two outputs no client can translate (boarding manifest, payment e-mail).
+   * joined as that script joins them (see `separator`), skipping whichever is absent — so a
+   * passenger with no title never renders with a leading space, and the composition rule lives in
+   * ONE place instead of at each of the six surfaces that print a passenger's name. This mirrors
+   * the server's `TitleLabel.withTitle` for the two outputs no client can translate (boarding
+   * manifest, payment e-mail).
+   *
+   * It mirrors `withTitle` and NOT `TitleLabel.forGreeting`. The greeting method is the one that
+   * supplies `คุณ` for a missing title and puts a Chinese honorific AFTER the name; it renders the
+   * e-mail salutation only, and none of the surfaces here is a salutation.
    */
   transform(code: string | null | undefined, name?: string | null): string {
     const trimmed = (code ?? '').trim();
@@ -45,6 +68,9 @@ export class TitleLabelPipe implements PipeTransform {
 
     if (name === undefined) return label;
 
-    return [label, (name ?? '').trim()].filter((part) => !!part).join(' ');
+    const safeName = (name ?? '').trim();
+    if (!label || !safeName) return label || safeName;
+
+    return label + separator(label, safeName) + safeName;
   }
 }

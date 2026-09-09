@@ -8,6 +8,11 @@ import { defineConfig, devices } from '@playwright/test';
  * same convention as playwright.obrs1308.config.ts.
  */
 export default defineConfig({
+  // OBRS-1616: no `webServer`, so nothing said which tree served these pages. This lane
+  // drives the stack the operator started by hand (see the header above), so a foreign
+  // tree on the port is the documented state -- the guard must name it, not refuse.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
+  metadata: { laneTree: 'attach-to-operator-stack' },
   testDir: './e2e/tests',
   testMatch: ['**/obrs-703-operations-config-qa.spec.ts'],
   timeout: 120_000,

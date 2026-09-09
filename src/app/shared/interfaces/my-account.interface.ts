@@ -15,6 +15,8 @@ export interface MyAccountProfile {
   firstName: string | null;
   middleName: string | null;
   lastName: string | null;
+  /** OBRS-1558: the name the LINE driver board calls this person by. Optional for everyone. */
+  nickname: string | null;
   email: string;
   phoneNumber: string | null;
   preferredLocale: string;
@@ -32,6 +34,8 @@ export interface MyAccountProfileUpdate {
   firstName: string;
   middleName?: string | null;
   lastName: string;
+  /** OBRS-1558: emptied field goes out as null, same as middleName — the API rejects "". */
+  nickname?: string | null;
   phoneNumber: string;
   preferredLocale: string;
 }

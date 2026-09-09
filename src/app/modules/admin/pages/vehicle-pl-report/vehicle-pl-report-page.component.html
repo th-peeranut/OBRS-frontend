@@ -11,37 +11,11 @@
 }
 
 <section class="admin-page-filters mt-3">
-  <p-datePicker
-    styleClass="app-date-field"
-    panelStyleClass="app-date-field-panel"
-    dateFormat="dd/mm/yy"
-    [ngModel]="fromDate"
-    (ngModelChange)="onFromDateChange($event)"
-    [showIcon]="true"
-    [iconDisplay]="'input'"
-    [showButtonBar]="true"
-    [placeholder]="'ADMIN.VEHICLE_PL_REPORT.FILTER_FROM' | translate"
-    >
-    <ng-template pTemplate="inputicon">
-      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-    </ng-template>
-  </p-datePicker>
-
-  <p-datePicker
-    styleClass="app-date-field"
-    panelStyleClass="app-date-field-panel"
-    dateFormat="dd/mm/yy"
-    [ngModel]="toDate"
-    (ngModelChange)="onToDateChange($event)"
-    [showIcon]="true"
-    [iconDisplay]="'input'"
-    [showButtonBar]="true"
-    [placeholder]="'ADMIN.VEHICLE_PL_REPORT.FILTER_TO' | translate"
-    >
-    <ng-template pTemplate="inputicon">
-      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-    </ng-template>
-  </p-datePicker>
+  <app-admin-date-range-picker
+    [from]="fromDate"
+    [to]="toDate"
+    (rangeChange)="onRangeChange($event)"
+  ></app-admin-date-range-picker>
 
   <app-export-button
     class="ms-auto"
@@ -81,7 +55,7 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
       <div>
         <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.CARD.REVENUE' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(totals?.revenue ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(totals?.revenue ?? '0.00') }}</p>
         }
         @if (isLoading) {
           <span class="admin-skeleton admin-skeleton--sm"></span>
@@ -93,10 +67,10 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
       <div>
         <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.CARD.EXPENSES' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(totals?.expenses ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(totals?.expenses ?? '0.00') }}</p>
           <p class="admin-muted vehicle-pl-sub-line">
             {{ 'ADMIN.VEHICLE_PL_REPORT.OF_WHICH_VAT' | translate }}:
-            {{ formatMoney(totals?.vat ?? '0.00', currency) }}
+            {{ formatMoney(totals?.vat ?? '0.00') }}
           </p>
         }
         @if (isLoading) {
@@ -110,7 +84,7 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
         <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.CARD.MARGIN' | translate }}</p>
         @if (!isLoading) {
           <p class="admin-big-number" [class.vehicle-pl-negative]="isNegative(totals?.margin ?? '0.00')">
-            {{ formatMoney(totals?.margin ?? '0.00', currency) }}
+            {{ formatMoney(totals?.margin ?? '0.00') }}
           </p>
         }
         @if (isLoading) {
@@ -125,7 +99,7 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
       <div>
         <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.CARD.PENDING_EXPENSES' | translate }}</p>
         @if (!isLoading) {
-          <p class="admin-big-number">{{ formatMoney(totals?.pendingExpenses ?? '0.00', currency) }}</p>
+          <p class="admin-big-number">{{ formatMoney(totals?.pendingExpenses ?? '0.00') }}</p>
           <p class="admin-muted vehicle-pl-sub-line">
             {{ 'ADMIN.VEHICLE_PL_REPORT.CARD.PENDING_EXPENSES_HINT' | translate }}
           </p>
@@ -134,6 +108,112 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
           <span class="admin-skeleton admin-skeleton--sm"></span>
         }
       </div>
+    </article>
+  </section>
+}
+
+<!-- OBRS-1725: the two pictures the owner asked for, and neither is a new number. The
+donut divides up exactly the `totals.expenses` the card above prints (the server builds
+that total and these category lines from the same rows), and the bars only re-order the
+`margin` column the table below prints. Drawn as SVG + CSS rather than pulled in behind a
+charting library: the page needs two shapes, not a plotting engine, and a library's own
+palette would not follow the admin theme into dark mode. -->
+@if (contentState === 'data') {
+  <section class="admin-grid vehicle-pl-chart-grid mt-3">
+    <article class="admin-card">
+      <div class="admin-card-head">
+        <h4>{{ 'ADMIN.VEHICLE_PL_REPORT.COST_MIX.TITLE' | translate }}</h4>
+      </div>
+      <p class="admin-muted vehicle-pl-sub-line">
+        {{ 'ADMIN.VEHICLE_PL_REPORT.COST_MIX.HINT' | translate }}
+      </p>
+      @if (costMix.length === 0) {
+        <p class="admin-muted vehicle-pl-sub-line">
+          {{ 'ADMIN.VEHICLE_PL_REPORT.COST_MIX.NONE' | translate }}
+        </p>
+      }
+      @if (costMix.length > 0) {
+        <div class="vehicle-pl-donut-wrap">
+          <svg
+            class="vehicle-pl-donut"
+            viewBox="0 0 160 160"
+            role="img"
+            [attr.aria-label]="'ADMIN.VEHICLE_PL_REPORT.COST_MIX.TITLE' | translate"
+            >
+            <!-- Rotated so the first (largest) slice starts at twelve o'clock, which is
+            where a reader looks for it. -->
+            <g transform="rotate(-90 80 80)">
+              @for (slice of costMix; track slice.seriesIndex) {
+                <circle
+                  class="vehicle-pl-donut-slice"
+                  [ngClass]="'is-series-' + slice.seriesIndex"
+                  cx="80"
+                  cy="80"
+                  [attr.r]="donutRadius"
+                  fill="none"
+                  [attr.stroke-dasharray]="slice.dash + ' ' + donutCircumference"
+                  [attr.stroke-dashoffset]="-slice.offset"
+                ></circle>
+              }
+            </g>
+          </svg>
+          <div class="vehicle-pl-donut-centre">
+            <p class="admin-muted vehicle-pl-sub-line">
+              {{ 'ADMIN.VEHICLE_PL_REPORT.CARD.EXPENSES' | translate }}
+            </p>
+            <p class="admin-emphasis">{{ formatMoney(totals?.expenses ?? '0.00') }}</p>
+          </div>
+        </div>
+        <ul class="vehicle-pl-legend">
+          @for (slice of costMix; track slice.seriesIndex) {
+            <li>
+              <span
+                class="vehicle-pl-swatch"
+                [ngClass]="'is-series-' + slice.seriesIndex"
+                aria-hidden="true"
+              ></span>
+              <span class="vehicle-pl-legend-label">{{ sliceLabel(slice) }}</span>
+              <span class="vehicle-pl-legend-value vehicle-pl-money">
+                {{ slice.percent.toFixed(1) }}% &middot; {{ formatMoney(slice.amount) }}
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </article>
+    <article class="admin-card">
+      <div class="admin-card-head">
+        <h4>{{ 'ADMIN.VEHICLE_PL_REPORT.TOP_MARGIN.TITLE' | translate }}</h4>
+      </div>
+      <!-- Says on the screen what the ranking leaves out, because a "top 5" that quietly
+      included the two vehicle-less lines would be ranking three different things. -->
+      <p class="admin-muted vehicle-pl-sub-line">
+        {{ 'ADMIN.VEHICLE_PL_REPORT.TOP_MARGIN.HINT' | translate }}
+      </p>
+      @if (marginBars.length === 0) {
+        <p class="admin-muted vehicle-pl-sub-line">
+          {{ 'ADMIN.VEHICLE_PL_REPORT.TOP_MARGIN.NONE' | translate }}
+        </p>
+      }
+      <ul class="vehicle-pl-bar-list">
+        @for (bar of marginBars; track bar.label) {
+          <li class="vehicle-pl-bar-row">
+            <span class="vehicle-pl-bar-label">{{ bar.label }}</span>
+            <span class="vehicle-pl-bar-track">
+              <span
+                class="vehicle-pl-bar-fill"
+                [class.is-negative]="bar.negative"
+                [style.width.%]="bar.widthPercent"
+              ></span>
+            </span>
+            <span
+              class="vehicle-pl-bar-value vehicle-pl-money"
+              [class.vehicle-pl-negative]="bar.negative"
+              >{{ formatMoney(bar.margin) }}</span
+            >
+          </li>
+        }
+      </ul>
     </article>
   </section>
 }
@@ -156,6 +236,17 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
               <th>{{ 'ADMIN.VEHICLE_PL_REPORT.COL.VEHICLE' | translate }}</th>
               <th class="vehicle-pl-money">{{ 'ADMIN.VEHICLE_PL_REPORT.COL.REVENUE' | translate }}</th>
               <th class="vehicle-pl-money">{{ 'ADMIN.VEHICLE_PL_REPORT.COL.EXPENSES' | translate }}</th>
+              <!-- The cost breakdown, one column per category that actually has money in
+              this period. A category nobody spent on gets no column at all rather than a
+              column of dashes, so the table stays as narrow as the data allows. -->
+              @for (category of costColumns; track category) {
+                <th class="vehicle-pl-money vehicle-pl-subcost">{{ categoryLabel(category) }}</th>
+              }
+              @if (foldedColumnCount > 0) {
+                <th class="vehicle-pl-money vehicle-pl-subcost">
+                  {{ 'ADMIN.VEHICLE_PL_REPORT.COL.OTHER_CATEGORIES' | translate:{ count: foldedColumnCount } }}
+                </th>
+              }
               <th class="vehicle-pl-money">{{ 'ADMIN.VEHICLE_PL_REPORT.COL.VAT' | translate }}</th>
               <th class="vehicle-pl-money">{{ 'ADMIN.VEHICLE_PL_REPORT.COL.MARGIN' | translate }}</th>
             </tr>
@@ -192,29 +283,58 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
                     }
                   </td>
                   <td class="vehicle-pl-money">
-                    {{ formatMoney(row.revenue, currency) }}
+                    {{ formatMoney(row.revenue) }}
                     @if (zeroRevenueReasonKey(row); as reasonKey) {
                       <span class="vehicle-pl-zero-reason">{{ reasonKey | translate }}</span>
                     }
                   </td>
                   <td class="vehicle-pl-money">
-                    {{ formatMoney(row.expenseTotal, currency) }}
+                    {{ formatMoney(row.expenseTotal) }}
                     @if (zeroExpenseReasonKey(row); as reasonKey) {
                       <span class="vehicle-pl-zero-reason">{{ reasonKey | translate }}</span>
                     }
                   </td>
-                  <td class="vehicle-pl-money">{{ formatMoney(row.vatTotal, currency) }}</td>
+                  @for (category of costColumns; track category) {
+                    <td class="vehicle-pl-money vehicle-pl-subcost">
+                      @if (categoryAmount(row, category); as amount) {
+                        {{ formatMoney(amount) }}
+                      } @else {
+                        <!-- NOT a zero. A zero on this screen means somebody entered one
+                        (ADR-0115 §3, and `zeroExpenseReasonKey` beside it); no line at all
+                        means nobody recorded anything in this category. -->
+                        <span
+                          class="vehicle-pl-no-entry"
+                          [attr.title]="'ADMIN.VEHICLE_PL_REPORT.NO_CATEGORY_ENTRY' | translate"
+                          >&mdash;</span
+                        >
+                      }
+                    </td>
+                  }
+                  @if (foldedColumnCount > 0) {
+                    <td class="vehicle-pl-money vehicle-pl-subcost">
+                      @if (foldedAmount(row); as amount) {
+                        {{ formatMoney(amount) }}
+                      } @else {
+                        <span
+                          class="vehicle-pl-no-entry"
+                          [attr.title]="'ADMIN.VEHICLE_PL_REPORT.NO_CATEGORY_ENTRY' | translate"
+                          >&mdash;</span
+                        >
+                      }
+                    </td>
+                  }
+                  <td class="vehicle-pl-money">{{ formatMoney(row.vatTotal) }}</td>
                   <td class="vehicle-pl-money" [class.vehicle-pl-negative]="isNegative(row.margin)">
-                    {{ formatMoney(row.margin, currency) }}
+                    {{ formatMoney(row.margin) }}
                   </td>
                 </tr>
                 @if (isExpanded(row)) {
                   <tr class="vehicle-pl-detail-row">
-                    <td [attr.colspan]="5">
+                    <td [attr.colspan]="columnCount">
                       @if (hasHistoricalRevenue(row)) {
                         <p class="admin-muted vehicle-pl-sub-line">
                           {{ 'ADMIN.VEHICLE_PL_REPORT.OF_WHICH_HISTORICAL' | translate }}:
-                          {{ formatMoney(row.historicalRevenue, currency) }}
+                          {{ formatMoney(row.historicalRevenue) }}
                           @if (row.historicalRevenueConflictCount > 0) {
                             <span class="admin-status is-warning vehicle-pl-badge">
                               {{ 'ADMIN.VEHICLE_PL_REPORT.HISTORICAL_CONFLICTS' | translate:{ count: row.historicalRevenueConflictCount } }}
@@ -231,7 +351,7 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
                         @for (line of row.expensesByCategory; track line.category) {
                           <span class="vehicle-pl-chip">
                             {{ categoryLabel(line.category) }}:
-                            {{ formatMoney(line.amount, currency) }} ({{ line.entryCount }})
+                            {{ formatMoney(line.amount) }} ({{ line.entryCount }})
                           </span>
                         }
                       </div>
@@ -259,7 +379,7 @@ inside the company totals above — counted exactly once, never averaged onto th
       </div>
       <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.UNASSIGNED.HINT' | translate }}</p>
       @if (unassignedRevenueRow; as unassigned) {
-        <p class="admin-big-number">{{ formatMoney(unassigned.revenue, currency) }}</p>
+        <p class="admin-big-number">{{ formatMoney(unassigned.revenue) }}</p>
       }
       @if (!unassignedRevenueRow) {
         <p class="admin-muted vehicle-pl-sub-line">
@@ -273,12 +393,12 @@ inside the company totals above — counted exactly once, never averaged onto th
       </div>
       <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.CENTRAL.HINT' | translate }}</p>
       @if (centralExpenseRow; as central) {
-        <p class="admin-big-number">{{ formatMoney(central.expenseTotal, currency) }}</p>
+        <p class="admin-big-number">{{ formatMoney(central.expenseTotal) }}</p>
         <div class="vehicle-pl-chip-list">
           @for (line of central.expensesByCategory; track line.category) {
             <span class="vehicle-pl-chip">
               {{ categoryLabel(line.category) }}:
-              {{ formatMoney(line.amount, currency) }} ({{ line.entryCount }})
+              {{ formatMoney(line.amount) }} ({{ line.entryCount }})
             </span>
           }
         </div>

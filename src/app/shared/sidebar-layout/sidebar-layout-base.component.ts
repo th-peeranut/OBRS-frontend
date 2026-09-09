@@ -1,6 +1,6 @@
 import { Directive, ElementRef, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
-import { filter, startWith, Subject, takeUntil } from 'rxjs';
+import { filter, skip, startWith, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
 import { ThemeService } from '../../shared/services/theme.service';
@@ -89,6 +89,18 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   // role-aware the dependency has to already be in scope.
   protected readonly personalMenuItems: PersonalMenuItem[] = buildPersonalMenuItems();
 
+  // ── Profile menu: "ดูในมุมมองของ…" (OBRS-1721) ──────────────────────────────
+  // The roles this user may preview, derived from the roles they HOLD — empty
+  // for anyone but a held admin or owner, which is what keeps the whole submenu
+  // off a salesperson's screen. Read once into a stable field for the same
+  // change-detection reason as personalMenuItems above; the held roles cannot
+  // change without a new sign-in, and a sign-in rebuilds the shell.
+  protected readonly previewableRoles: string[] = this.authService.getPreviewableRoles();
+
+  /** Null unless a preview is active. Bound by the templates to hide the
+   *  "view as" choices while one is already running — the banner owns the exit. */
+  protected previewRole: string | null = this.authService.getPreviewRole();
+
   protected get userInitials(): string {
     const username = this.authService.getUsername() ?? '';
     const namePart = username.split('@')[0] ?? '';
@@ -116,6 +128,18 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
     this.themeService.mode$.pipe(takeUntil(this.destroy$)).subscribe((mode) => {
       this.isDarkMode = mode === 'dark';
     });
+
+    // OBRS-1721: both shells build their nav ONCE, in ngOnInit, from
+    // authService.hasAnyRole/hasHeldRole. Entering or leaving a preview changes
+    // what those answer, so it has to redo exactly that work — hence rebuildNav().
+    // `skip(1)` drops the BehaviorSubject's replay: the child already built with
+    // the current value, before it called super.ngOnInit().
+    this.authService.previewRole$
+      .pipe(skip(1), takeUntil(this.destroy$))
+      .subscribe((role) => {
+        this.previewRole = role;
+        this.rebuildNav();
+      });
 
     this.router.events
       .pipe(
@@ -216,6 +240,22 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
     this.isProfileMenuOpen = false;
   }
 
+  // ── Role preview (OBRS-1721) ───────────────────────────────────────────────
+  /**
+   * Re-run whatever the child does to its nav in ngOnInit. Overridden by both
+   * shells; the base has nothing of its own to rebuild.
+   */
+  protected rebuildNav(): void {}
+
+  protected onViewAs(role: string): void {
+    this.isProfileMenuOpen = false;
+    this.authService.startRolePreview(role);
+  }
+
+  protected roleLabelKey(role: string): string {
+    return `ROLE_PREVIEW.ROLES.${role.toUpperCase()}`;
+  }
+
   // ── Logout ──────────────────────────────────────────────────────────────────
   protected onLogout(): void {
     this.isProfileMenuOpen = false;
@@ -228,6 +268,33 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   protected onEscape(): void {
     this.isSidebarOpen = false;
     this.isProfileMenuOpen = false;
+  }
+
+  /**
+   * Ctrl+B toggles the sidebar expand/collapse state (OBRS-913), mirroring the
+   * toggle button. Guarded against INPUT/TEXTAREA/contentEditable targets
+   * because the sidebar menu search (OBRS-900) lives inside this same shell —
+   * without the guard, Ctrl+B while filtering the menu would collapse the
+   * very menu being filtered.
+   */
+  // Typed `Event`, not `KeyboardEvent`. Angular's compiler types `$event` for a
+  // pseudo-event host listener (`keydown.control.b`) as plain `Event`, so
+  // `KeyboardEvent` here is a real `TS2345: Argument of type 'Event' is not
+  // assignable to parameter of type 'KeyboardEvent'`.
+  //
+  // ⚠️ `npx tsc --noEmit` does NOT reproduce it — the check lives in the Angular
+  // compiler plugin, not in bare tsc, so tsc is the wrong instrument for this
+  // question and reports a clean tree. It was used to "disprove" this comment
+  // once (OBRS-913 scrutinize pass); `npm run e2e:gate`'s ng build is what
+  // surfaced the error. `.target`/`.preventDefault()` are all this needs and
+  // both are on `Event`.
+  @HostListener('document:keydown.control.b', ['$event'])
+  protected onToggleShortcut(event: Event): void {
+    const el = event.target as HTMLElement | null;
+    const tag = el?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return;
+    event.preventDefault();
+    this.togglePin();
   }
 
   @HostListener('document:click', ['$event'])

@@ -48,6 +48,17 @@ export class PassengerSeatBusComponent implements OnChanges {
   /** Pre-translated aria-labels forwarded to every seat box's badge. */
   @Input() wheelchairBadgeAriaLabel: string = '';
   @Input() extraLegroomBadgeAriaLabel: string = '';
+  /**
+   * Seats this passenger may not take because of the monk/nun adjacency rule
+   * (OBRS-1364), as the backend's plain-numeric seat numbers — the same keying
+   * as `seatAttributes` above, so `normalizeSeatNumber('B7') === '7'`. Empty
+   * (the default) blocks nothing, which is every call site that does not ask
+   * the new endpoint. These seats are FREE: they are refused for this
+   * passenger only, which is why they are not folded into `takenSeats`.
+   */
+  @Input() blockedSeats: string[] = [];
+  /** Pre-translated aria-label for a blocked seat, forwarded to every box. */
+  @Input() blockedSeatAriaLabel: string = '';
 
   @Output() passengerSeatPositionOnChange = new EventEmitter<string>();
   @Output() seatClicked = new EventEmitter<string>();
@@ -75,6 +86,12 @@ export class PassengerSeatBusComponent implements OnChanges {
     }
 
     if (this.isSeatTakenByOther(passengerSeatPosition)) {
+      return;
+    }
+
+    // OBRS-1364: free, but not for this passenger. Refused here as well as in the
+    // seat box so a click can never arrive from anywhere else either.
+    if (this.isSeatBlocked(passengerSeatPosition)) {
       return;
     }
 
@@ -163,5 +180,18 @@ export class PassengerSeatBusComponent implements OnChanges {
 
   hasExtraLegroomBadge(label: string): boolean {
     return this.attributesFor(label).includes('EXTRA_LEGROOM');
+  }
+
+  /**
+   * OBRS-1364: whether the monk/nun adjacency rule closes this seat to the
+   * passenger being seated. The seat the passenger is already on is never
+   * blocked — otherwise re-opening the form would strand them on a seat they
+   * could not keep and could not re-pick.
+   */
+  isSeatBlocked(label: string): boolean {
+    if (!label || label === this.currentSeat) {
+      return false;
+    }
+    return this.blockedSeats.includes(normalizeSeatNumber(label));
   }
 }

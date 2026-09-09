@@ -1,19 +1,25 @@
 @if (isOpen) {
   <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="cancel.emit()">
     <div class="admin-modal admin-modal-confirm">
-      <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
+      <h4 class="admin-modal-title">{{ 'ADMIN.USERS.CLOSE_CONFIRM_TITLE' | translate }}</h4>
       <p class="admin-modal-subtitle">
-        {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
+        {{ 'ADMIN.USERS.CLOSE_CONFIRM_MESSAGE' | translate }}
         @if (user) {
           <strong>{{ user.title | titleLabel: user.fullName }}</strong>
         }
       </p>
+      <ul class="admin-modal-subtitle user-close-points">
+        <li>{{ 'ADMIN.USERS.CLOSE_POINT_LOGIN' | translate }}</li>
+        <li>{{ 'ADMIN.USERS.CLOSE_POINT_RECORDS' | translate }}</li>
+        <li>{{ 'ADMIN.USERS.CLOSE_POINT_EMAIL' | translate }}</li>
+      </ul>
+      <p class="admin-modal-subtitle">{{ 'ADMIN.USERS.CLOSE_IRREVERSIBLE' | translate }}</p>
       <div class="admin-modal-actions">
         <button type="button" class="admin-btn" (click)="cancel.emit()">
           {{ 'ADMIN.COMMON.CANCEL' | translate }}
         </button>
         <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirm.emit()">
-          {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
+          {{ isDeleting ? ('ADMIN.USERS.CLOSING' | translate) : ('ADMIN.USERS.CLOSE_BTN' | translate) }}
         </button>
       </div>
     </div>

@@ -18,6 +18,12 @@
  *     entries to be FIXED rather than tolerated.
  *   * An entry that stops matching anything FAILS the gate. A list that rots is
  *     worse than no list, because it reads as a considered decision.
+ *   * ...but "stopped matching" is TWO verdicts, and only one of them says to
+ *     delete (OBRS-1435). The gate now separates them: if it scored the element
+ *     and the pair moved, that is a repaint or a fix and the entry goes. If it
+ *     never scored the element at all, it says so and withholds the verdict --
+ *     an element nobody measured is not evidence that anybody paid. Obeying the
+ *     old single message on a flaky run would have retired a live OBRS-1424 debt.
  *
  * HOW THIS LIST WAS ARRIVED AT, since "53 known failures" deserves an argument
  * rather than an assertion:
@@ -195,48 +201,64 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   // The stale-entry check in this gate is what forced this edit; it fired the
   // moment the fix landed.
   //
-  // The LIGHT boundary row below is NOT that defect and is NOT fixed. It is
-  // $primary-lightgrey (#dddee1) on white, the app's default control border --
-  // the same framework-default question OBRS-772 owns for twenty other
-  // controls. Re-attributed to OBRS-772 rather than left pointing at a closed
-  // card, because an allow entry naming a card nobody will reopen is exactly
-  // the rot the check above exists to catch.
-  // -------------------------------------------------------------------------
-  'light|button.btn.dropdown-btn.dropdown-toggle|boundary-on-#ffffff':
-    '1.35:1 -- OBRS-772 control boundary (was filed under OBRS-563, closed by OBRS-811)',
-
-  // Two keys, ONE defect: the same #dddee1 border on white, on the same control,
-  // under two tag names. OBRS-1224 made the STATION pickers a typeable
-  // `<input role="combobox">` (the search box had to become the field), while every
-  // other dropdown-group-obrs / dropdown-obrs call site is still a `<button>` --
-  // which is why the row above still hits and this one appeared beside it rather
-  // than replacing it. Nothing about the colour changed, so this stays OBRS-772's
-  // twenty-control policy question and is not a debt this card created.
-  // Measured on this run: 1.35:1, x4 sightings across /home and /schedule-booking.
-  'light|input.btn.dropdown-btn.dropdown-toggle|boundary-on-#ffffff':
-    '1.35:1 -- OBRS-772 control boundary, combobox half of the row above (OBRS-1224)',
-
-  // -------------------------------------------------------------------------
-  // OBRS-772 -- WCAG 1.4.11 control boundaries below 3:1.
+  // The two LIGHT boundary rows that lived below are now FIXED too (OBRS-772,
+  // 2026-09-08), and it is worth saying why they did not simply inherit the
+  // "labelled control" exemption the decision hands to ghost buttons:
   //
-  // Every one of these is a real miss against the letter of 1.4.11, and every
-  // one is also a framework default (Bootstrap `#dee2e6`, the app's own
-  // $primary-lightgrey `#dddee1`). Twenty controls is not a bug list, it is a
-  // policy question -- does a faint border on a button with a legible label
-  // count as "visual information required to identify the component"? OBRS-772
-  // has to answer that IN WRITING before anyone repaints twenty controls, and
-  // it is explicitly forbidden from closing by quietly narrowing the gate.
+  //   light|button.btn.dropdown-btn.dropdown-toggle|boundary-on-#ffffff  1.35:1
+  //   light|input.btn.dropdown-btn.dropdown-toggle|boundary-on-#ffffff   1.35:1
+  //
+  // A dropdown trigger is classed with the FIELDS by design-system.md §2.6. The
+  // station name it displays is a VALUE, not a label -- it changes with the
+  // selection and is absent before one -- so the boundary is what says where the
+  // field is. Both took $control-border (#6c757d, 4.69:1 on white) in
+  // dropdown-obrs / dropdown-group-obrs / dropdown-obrs-passenger; the dark
+  // halves already carried $dk-text-muted for exactly this reason and never
+  // appeared here.
+  //
+  // Two keys for ONE control, retired together: OBRS-1224 made the STATION
+  // pickers a typeable `<input role="combobox">` while every other call site is
+  // still a `<button>`, so the same border was scored under two tag names.
   // -------------------------------------------------------------------------
-  'light|input.form-control.mt-1|boundary-on-#ffffff': '1.35:1 -- OBRS-772 form field boundary',
-  'dark|input.form-control.mt-1|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 form field boundary',
-  // OBRS-857 put /find-booking into the sweep and its two fields carry no `.mt-1`, so the same
-  // defect arrived under a new key. Same mechanism ($primary-lightgrey #dddee1 from
-  // styles.scss:72), same measured 1.35:1, same two surfaces -- registered against OBRS-772
-  // rather than repainted here, because a page-local border would leave the other nineteen
-  // controls untouched and make OBRS-772's twenty look like nineteen.
-  'light|input.form-control|boundary-on-#ffffff': '1.35:1 -- OBRS-772 form field boundary (find-booking)',
-  'dark|input.form-control|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 form field boundary (find-booking)',
-  'light|input.form-check-input|boundary-on-#ffffff': '1.30:1 -- OBRS-772 checkbox/radio boundary',
+
+  // -------------------------------------------------------------------------
+  // OBRS-772 -- WCAG 1.4.11 control boundaries. ANSWERED 2026-09-08.
+  //
+  // The policy question this block used to hold open -- does a faint border on a
+  // button with a legible label count as "visual information required to identify
+  // the component"? -- is answered in writing at `docs/design-system.md` §2.6,
+  // which is where the reasoning lives and the only place it should be restated.
+  // In one line: NO for a control that carries its own readable label (W3C's
+  // Understanding says so under "Boundaries"), YES for a control that has nothing
+  // else identifying it, and -- stricter than WCAG, deliberately -- YES for any
+  // control that paints a FILL of its own, which is what keeps OBRS-746's
+  // `.btn-search` catchable and is why invariant B was NOT narrowed.
+  //
+  // FIXED here, thirteen entries, each re-measured by this gate on the run that
+  // deleted it:
+  //
+  //   input.form-control.mt-1        1.35 (#ffffff) / 1.35 (#1a1d27) / 1.29 (#0f1117)
+  //   input.form-control             1.35 (#ffffff) / 1.35 (#1a1d27) / 1.29 (#0f1117)
+  //   input.form-check-input         1.30 (#ffffff)
+  //   input.p-datepicker-input...    1.35 (#ffffff), both the p-filled and
+  //                                  p-inputtext keys
+  //   button.theme-toggle-btn        1.36 (#ffffff) / 1.60 (#1a1d27) / 1.53 (#0f1117)
+  //   button.actions-menu-btn        1.35 (#ffffff)
+  //
+  // Fields and icon-only buttons, which is the whole of clause 1. They took
+  // $control-border / $dk-control-border, a token created for control boundaries
+  // and nothing else: $primary-lightgrey is `background` at 16 of its 96 call
+  // sites and draws separators at most of the rest, so changing ITS value would
+  // have repainted a mass of surfaces 1.4.11 never reaches -- the mass-rewrite
+  // design-system.md §1 forbids.
+  //
+  // `.form-check-input` needed a rule of its own: the pre-existing declaration in
+  // styles.scss only ever set the CHECKED colours, so the unchecked box -- which
+  // is the state with nothing else identifying it -- kept Bootstrap's #dee2e6.
+  //
+  // What is left below is not leftover. Every remaining row carries a readable
+  // label and is ACCEPTED under §2.6 clause 3, re-annotated to say so.
+  // -------------------------------------------------------------------------
   // OBRS-915 REKEYED, NOT REPAINTED. PrimeNG 19 adds `p-datepicker-input` to the
   // date field's class list, and the class list is half of this gate's key, so
   // both entries stopped matching on an upgrade that changed no colour. The
@@ -267,37 +289,50 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   // half already uses, which measures 5.90:1 on #22263a instead of 1.36:1. The
   // gate found them stale on the next run and said to delete them; keeping a
   // fixed debt registered is the mirror image of the mistake the note above
-  // refuses. The two LIGHT entries stay exactly as they are: $primary-lightgrey
-  // on #ffffff is untouched, still 1.35:1, and still OBRS-772's policy question.
-  'light|input.p-datepicker-input.p-component.p-filled|boundary-on-#ffffff': '1.35:1 -- OBRS-772 p-datepicker field boundary (home, pre-filled)',
-  'light|input.p-datepicker-input.p-component.p-inputtext|boundary-on-#ffffff': '1.35:1 -- OBRS-772 p-datepicker field boundary (schedule-booking, empty)',
-  'light|button.theme-toggle-btn|boundary-on-#ffffff': '1.36:1 -- OBRS-772 navbar icon button boundary',
-  'dark|button.theme-toggle-btn|boundary-on-#1a1d27': '1.60:1 -- OBRS-772 navbar icon button boundary',
-  'light|button.navbar-lang-trigger|boundary-on-#ffffff': '1.36:1 -- OBRS-772 navbar language trigger boundary',
-  'light|button.actions-menu-btn|boundary-on-#ffffff': '1.35:1 -- OBRS-772 ghost button boundary',
-  'light|button.back-btn|boundary-on-#ffffff': '1.35:1 -- OBRS-772 ghost button boundary',
-  'dark|button.back-btn|boundary-on-#0f1117': '1.29:1 -- OBRS-772 ghost button boundary',
-  'light|button.btn-back|boundary-on-#ffffff': '1.35:1 -- OBRS-772 ghost button boundary',
-  'dark|button.btn-back|boundary-on-#0f1117': '1.29:1 -- OBRS-772 ghost button boundary',
-  'light|button.btn-change-info|boundary-on-#ffffff': '1.35:1 -- OBRS-772 ghost button boundary',
-  'dark|button.btn-change-info|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 ghost button boundary',
-  'light|button.filter-pill|boundary-on-#f9f9ff': '1.28:1 -- OBRS-772 filter pill boundary',
-  'light|button.tab|boundary-on-#ffffff': '1.15:1 -- OBRS-772 payment tab boundary',
-  'dark|button.tab|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 payment tab boundary',
+  // refuses. OBRS-772 then took the two LIGHT entries the same way on 2026-09-08:
+  // a date field is a field, so $control-border replaced $primary-lightgrey and
+  // both keys went stale on the next run. Two upgrades' worth of rekeying was
+  // therefore spent on a debt that is now paid rather than on one that rotted --
+  // which is the outcome the note above was arguing for.
+  //
+  // --- what 1.4.11 does NOT require, and this app therefore accepts ----------
+  // Every row below carries its own readable text, so W3C's Understanding for
+  // 1.4.11 exempts its border in as many words ("Boundaries"). They are ACCEPTED
+  // under design-system.md §2.6 clause 3, not debt waiting on a decision, and
+  // they stay registered so the acceptance is visible and re-measured every run.
+  //
+  // `.navbar-lang-trigger` sits here rather than with the icon-only buttons that
+  // were repainted, and the difference is real: it renders the language endonym
+  // as text beside its globe, so something other than the border identifies it.
+  // `.theme-toggle-btn` next to it contains a bare `<span>` icon and nothing else,
+  // which is why one moved and the other did not.
+  'light|button.navbar-lang-trigger|boundary-on-#ffffff': '1.36:1 -- OBRS-772 accepted: labelled control, endonym beside the icon',
+  'light|button.back-btn|boundary-on-#ffffff': '1.35:1 -- OBRS-772 accepted: ghost button with a label',
+  'dark|button.back-btn|boundary-on-#0f1117': '1.29:1 -- OBRS-772 accepted: ghost button with a label',
+  'light|button.btn-back|boundary-on-#ffffff': '1.35:1 -- OBRS-772 accepted: ghost button with a label',
+  'dark|button.btn-back|boundary-on-#0f1117': '1.29:1 -- OBRS-772 accepted: ghost button with a label',
+  'light|button.btn-change-info|boundary-on-#ffffff': '1.35:1 -- OBRS-772 accepted: ghost button with a label',
+  'dark|button.btn-change-info|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 accepted: ghost button with a label',
+  'light|button.filter-pill|boundary-on-#f9f9ff': '1.28:1 -- OBRS-772 accepted: filter pill with a label',
+  'light|button.tab|boundary-on-#ffffff': '1.15:1 -- OBRS-772 accepted: payment tab with a label',
+  'dark|button.tab|boundary-on-#1a1d27': '1.35:1 -- OBRS-772 accepted: payment tab with a label',
 
-  // OBRS-970 brought /register, /login-mobile and /forget-password into the sweep,
-  // and the same 1.4.11 family arrived with them -- on a surface none of the rows
-  // above measure. Those three pages render their OWN layout rather than the
-  // customer shell, so the field sits on the dark PAGE (#0f1117) with no card
-  // between, and the framework default border reads 1.29:1 there instead of the
-  // 1.35:1 it reads on #1a1d27. Same defect, same owner, different pair -- which is
-  // exactly why this register keys on the colour pair rather than the selector.
-  'dark|input.form-control.mt-1|boundary-on-#0f1117':
-    '1.29:1 x7 -- OBRS-772 form field boundary on the auth-page background (register, login-mobile, forget-password)',
-  'dark|input.form-control|boundary-on-#0f1117':
-    "1.29:1 x2 -- OBRS-772 form field boundary, register's two password fields (no .mt-1, inside .password-container)",
-  'dark|button.theme-toggle-btn|boundary-on-#0f1117':
-    '1.53:1 x3 -- OBRS-772 ghost control boundary: the theme toggle in the language row of the three auth pages, no fill at all',
+  // OBRS-970's three rows are FIXED with the rest (2026-09-08). They were the
+  // same fields and the same theme toggle as the entries above, on a surface none
+  // of those measured: /register, /login-mobile and /forget-password render their
+  // OWN layout, so the control sits on the dark PAGE (#0f1117) with no card
+  // between and the framework default read 1.29:1 there instead of 1.35:1 on
+  // #1a1d27.
+  //
+  //   dark|input.form-control.mt-1|boundary-on-#0f1117      1.29:1 x7
+  //   dark|input.form-control|boundary-on-#0f1117           1.29:1 x2
+  //   dark|button.theme-toggle-btn|boundary-on-#0f1117      1.53:1 x3
+  //
+  // They needed no rule of their own: $dk-control-border is an ALPHA
+  // (rgba(255,255,255,.42)), so the one value clears 3:1 against both dark
+  // surfaces -- 4.03:1 on #1a1d27 and 4.09:1 on #0f1117. A hex tuned to either
+  // one would have left the other short, which is the trap this register's
+  // colour-pair keying was built to expose.
 
   // -------------------------------------------------------------------------
   // The five OBRS-773 entries are GONE because they are FIXED, not moved. The

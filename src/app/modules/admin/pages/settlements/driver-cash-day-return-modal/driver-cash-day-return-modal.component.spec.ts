@@ -99,6 +99,8 @@ const DETAIL: DriverCashDayRespDto = {
   discrepancy: null,
   discrepancyReason: null,
   perHeadRates: [],
+  reopenCount: 0,
+  reopens: [],
   hasUnmappedSalesPointRemit: true,
 };
 
@@ -313,7 +315,8 @@ describe('DriverCashDayReturnModalComponent', () => {
 
       setAmount('480.00');
       expect(discrepancyRow()).not.toBeNull();
-      expect(discrepancyRow()!.textContent).toContain('-20.00');
+      // OBRS-1592: rendered through the shared formatter — `THB -20`, sign kept.
+      expect(discrepancyRow()!.textContent).toContain('THB -20');
     });
 
     // The exact screen the owner was looking at: a salesperson whose per-head
@@ -508,7 +511,7 @@ describe('DriverCashDayReturnModalComponent', () => {
         '[data-testid="driver-cash-return-parcel-clawback"]'
       );
       expect(line).not.toBeNull();
-      expect(line.textContent).toContain('15.00');
+      expect(line.textContent).toContain('THB 15');
     });
 
     /** A breakdown line, never an addend: the sign-off must still measure the
@@ -523,6 +526,125 @@ describe('DriverCashDayReturnModalComponent', () => {
       setAmount('515.00');
 
       expect(component['hasDiscrepancy']()).toBeFalse();
+    });
+  });
+
+  // ── OBRS-1579: the box the owner has to open again ──────────────────────
+  // The driver's fuel bill reaches the counter the MORNING AFTER the round it
+  // paid for, by which time this box is signed off. Everything below is about
+  // the second sign-off being honest.
+  describe('re-open', () => {
+    const RETURNED: DriverCashDayRespDto = {
+      ...DETAIL,
+      status: 'RETURNED',
+      expectedReturnAmount: '-120.00',
+      returnedAmount: '-120.00',
+      returnedAt: '2026-08-24T19:00:00+07:00',
+      returnedByUserId: 9,
+      returnedByName: 'Owner',
+    };
+
+    it('offers the action only on a box that is actually signed off', () => {
+      component.detail = { ...RETURNED };
+      component.ngOnChanges({});
+      fixture.detectChanges();
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="driver-cash-reopen-open"]')
+      ).not.toBeNull();
+
+      component.detail = DETAIL; // OPEN
+      component.ngOnChanges({});
+      fixture.detectChanges();
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="driver-cash-reopen-open"]')
+      ).toBeNull();
+    });
+
+    it('refuses to submit without a reason - the reason IS the audit trail', () => {
+      component.detail = { ...RETURNED };
+      component.ngOnChanges({});
+      component['toggleReopenForm']();
+      fixture.detectChanges();
+
+      expect(component['canReopen']).toBeFalse();
+      component['reopenReasonInput'] = '   ';
+      expect(component['canReopen']).toBeFalse();
+
+      component['reopenReasonInput'] = 'บิลค่าน้ำมันเพิ่งมาถึงเช้านี้';
+      expect(component['canReopen']).toBeTrue();
+    });
+
+    it('emits the trimmed reason', () => {
+      const emitted: string[] = [];
+      component.reopenRequested.subscribe((r) => emitted.push(r));
+      component.detail = { ...RETURNED };
+      component.ngOnChanges({});
+      component['toggleReopenForm']();
+      component['reopenReasonInput'] = '  late fuel bill  ';
+      component['onReopenClick']();
+
+      expect(emitted).toEqual(['late fuel bill']);
+    });
+
+    it('shows the history, and keeps showing it after the box is signed off AGAIN', () => {
+      const reopened: DriverCashDayRespDto = {
+        ...RETURNED,
+        reopenCount: 1,
+        reopens: [{
+          reopenedAt: '2026-08-25T08:10:00+07:00',
+          reopenedByUserId: 9,
+          reopenedByName: 'Owner',
+          reason: 'late fuel bill',
+          prevReturnedAmount: '-120.00',
+          prevExpectedReturnAmount: '-120.00',
+          prevDiscrepancyReason: null,
+        }],
+      };
+      component.detail = reopened;
+      component.ngOnChanges({});
+      fixture.detectChanges();
+
+      const box = fixture.nativeElement.querySelector('[data-testid="driver-cash-reopen-history"]');
+      expect(box).not.toBeNull();
+      expect(box.textContent).toContain('late fuel bill');
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="driver-cash-reopen-prev-returned"]').textContent
+      ).toContain('120');
+    });
+
+    /**
+     * ⛔ The one that matters. `returnedAmount` is the CUMULATIVE total for the
+     * whole business date, not the increment the late bill added
+     * (`DriverCashService#reopenDay`'s contract). `prefillFromExpectedOnce` is
+     * keyed on `dayId`, and a re-open keeps the SAME dayId - so without the
+     * RETURNED -> OPEN reset the box would still hold the -120.00 the owner
+     * signed a moment ago, against an expectation that is now -1320.00. The
+     * form would then report a 1200.00 discrepancy that does not exist AND
+     * demand a written reason for it, putting an invented sentence into the
+     * very audit trail this card exists to make honest.
+     */
+    it('re-prefills from the NEW expected amount when the same box comes back OPEN', () => {
+      component.detail = DETAIL;
+      component.ngOnChanges({});
+      expect(component['returnedAmountInput']).toBe('500.00');
+
+      component.detail = { ...RETURNED };
+      component.ngOnChanges({});
+
+      component.detail = {
+        ...DETAIL,
+        status: 'OPEN',
+        expectedReturnAmount: '-1320.00',
+        returnedAmount: null,
+        reopenCount: 1,
+      };
+      component.ngOnChanges({});
+      fixture.detectChanges();
+
+      expect(component['returnedAmountInput']).toBe('-1320.00');
+      expect(component['hasDiscrepancy']()).toBeFalse();
+      expect(component['discrepancyReasonInput']).toBe('');
+      expect(component['canConfirm']).toBeTrue();
     });
   });
 });

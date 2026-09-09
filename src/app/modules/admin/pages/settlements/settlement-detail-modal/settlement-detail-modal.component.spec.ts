@@ -441,9 +441,11 @@ describe('SettlementDetailModalComponent', () => {
     expect(retried).toBeTrue();
   });
 
-  it('formats money with the given currency', () => {
+  // OBRS-1592: the currency argument is gone (the backend emits THB and nothing
+  // else), and a whole amount no longer carries `.00`. The stub reports `en`.
+  it('formats money through the one shared formatter', () => {
     const component = new SettlementDetailModalComponent(createTranslateStub());
-    expect(component['formatMoney']('0.00', 'THB')).toContain('0.00');
+    expect(component['formatMoney']('0.00')).toBe('THB 0');
   });
 
   it('resolves method/channel labels via the i18n key convention', () => {

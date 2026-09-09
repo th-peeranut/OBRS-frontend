@@ -286,6 +286,53 @@ export const MY_BOOKINGS = ok(
   ])
 );
 
+// OBRS-1530. `/my-parcels` was in EXCLUDED_CUSTOMER_ROUTES with "behind the same
+// parcel flag as /parcel-booking" as the reason, and that reason does not hold in
+// THIS lane: environment.gate.ts sets `onlineParcelBooking: true`, so the route's
+// featureEnabledGuard passes and the page renders. What was actually missing was
+// this fixture, and the page went unswept for a year because the note said flag
+// when it meant fixture. It is also how the page shipped never entering dark mode
+// at all -- nothing was looking.
+//
+// THREE deliveryStatus values on purpose, the same argument as MY_BOOKINGS above:
+// `parcelDeliveryStatusChip()` maps them to three different `.admin-status`
+// tokens (is-neutral / is-warning / is-success), and one row would have measured
+// one chip while claiming to have covered the screen. The `created` row also
+// carries `bookingStatus: 'pending'`, which is the only thing that renders the
+// unpaid `.parcel-card__pending` line and its `is-warning` badge.
+const myParcel = (
+  id: number,
+  deliveryStatus: string,
+  bookingStatus: string,
+  extra: Record<string, unknown> = {}
+) => ({
+  parcelId: id,
+  trackingNumber: `P-00${id}`,
+  bookingId: 900 + id,
+  bookingNumber: `B-000${900 + id}`,
+  amount: 120,
+  deliveryStatus,
+  bookingStatus,
+  collectionCode: deliveryStatus === 'arrived_notified' ? '123456' : null,
+  recipientName: 'Somchai Jaidee',
+  pickupStop: 'Nong Chak',
+  dropoffStop: 'Mo Chit 2 Terminal',
+  departureDateTime: '2030-06-17T08:00:00+07:00',
+  weightKg: 3,
+  expiresAt: null,
+  leftAtStopAt: null,
+  leftAtStopPhotoUrl: null,
+  ...extra,
+});
+
+const MY_PARCELS = ok(
+  pageOf([
+    myParcel(1, 'created', 'pending', { expiresAt: '2030-06-16T08:00:00+07:00' }),
+    myParcel(2, 'in_transit', 'confirmed'),
+    myParcel(3, 'collected', 'confirmed'),
+  ])
+);
+
 const TICKETS = ok([
   {
     ticketId: 777,
@@ -337,6 +384,19 @@ const CANCELLATION_POLICY = {
   manualRefundDueDays: 14,
 };
 const BOOKING_POLICY = { maxAdvanceDays: 30, cutoffMinutes: 60 };
+/**
+ * OBRS-1569. /business-policy forkJoins FOUR endpoints and shows one inline error if any
+ * of them resolves empty, so the two missing here put that page in its error branch on
+ * every run of this lane -- the terms themselves were never swept. Shapes copied from the
+ * four `flush()` calls in business-policy.component.spec.ts, the file that pins them.
+ */
+const RESCHEDULE_POLICY = {
+  rescheduleWindowHours: 2,
+  rescheduleMaxDaysAhead: 60,
+  rescheduleFeeLateThb: 30,
+  rescheduleMaxCount: 0,
+};
+const OPERATIONS_POLICY = { noShowCutoffMinutes: 10 };
 const PARCEL_POLICY = {
   maxWeightKg: 20,
   carryOnFreeSizeMaxInch: 24,
@@ -353,13 +413,25 @@ const FIXTURES: [RegExp, (m: RegExpExecArray) => unknown][] = [
   // swallow them the day one of these paths grows a segment.
   [/\/cancellation-policy$/, () => ok(CANCELLATION_POLICY)],
   [/\/booking-policy$/, () => ok(BOOKING_POLICY)],
+  // OBRS-1569. The other two thirds of /business-policy's forkJoin.
+  [/\/reschedule-policy$/, () => ok(RESCHEDULE_POLICY)],
+  [/\/operations-policy$/, () => ok(OPERATIONS_POLICY)],
   [/\/parcel-policy$/, () => ok(PARCEL_POLICY)],
+  // OBRS-862. Relative to the RUN's today, not a literal: the day strip clamps
+  // its window to [today, today + cap], so a fixed date would answer for days
+  // the strip never asks about and every chip would render `unknown` -- i.e.
+  // available -- and the greyed state would go unmeasured again.
+  [
+    /\/schedules\/availability$/,
+    () => ok({ availableDates: [dayFromToday(1), dayFromToday(3)], effectiveDays: 7 }),
+  ],
   [/\/schedules\/search/, () => ok({ departureSchedules: SCHEDULES, arrivalSchedules: null })],
   [/\/routes\/[^/]+\/pickup-dropoff$/, () => ok({ route: ROUTE_META, pickup: PICKUP_STOPS, dropoff: DROPOFF_STOPS })],
   [/\/routes/, () => ROUTES],
   [/\/stations/, () => ok(STATIONS)],
   [/\/stops/, () => ok(STATIONS)],
   [/\/bookings\/me/, () => MY_BOOKINGS],
+  [/\/parcels\/me/, () => MY_PARCELS],
   [/\/bookings\/\d+\/tickets/, () => TICKETS],
   [/\/tickets/, () => TICKETS],
 ];
@@ -501,6 +573,13 @@ export interface CustomerPage {
   storeOverride?: () => Record<string, unknown>;
 }
 
+/** OBRS-862. Local YYYY-MM-DD, `offset` days from today. */
+function dayFromToday(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /** Local YYYY-MM-DD. `toISOString()` is UTC and is the wrong day here for 7 hours a night. */
 function todayLocal(): string {
   const d = new Date();
@@ -613,6 +692,38 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     hoverTargets: [],
   },
   {
+    // OBRS-862. A FOURTH /schedule-booking entry, and it exists because the
+    // three above cannot render the day strip at all: STORE_SEED's filter
+    // carries station SLUGS where the app stores numeric ids, so
+    // `getStationSlugById` resolves nothing, `isSearchable` is false and the
+    // strip does not render. Every chip state would have gone unmeasured --
+    // the same blind spot that let `.no-results` ship at 4.45:1 for eleven
+    // months, restated one component over.
+    //
+    // `mustRender` pins the two states that carry their own colour pair: the
+    // SELECTED chip (fill inversion, both themes) and an UNAVAILABLE one
+    // (muted fill + muted label). The availability fixture above is what puts
+    // a greyed chip on the screen; if it ever stops matching, both selectors
+    // render zero times and this entry fails by name rather than sweeping a
+    // strip in which every chip is enabled.
+    key: 'schedule-booking-day-strip',
+    url: '/schedule-booking',
+    landsOn: '/schedule-booking',
+    seed: true,
+    storeOverride: () => ({
+      filter: {
+        ...STORE_SEED.filter,
+        startStationId: 1,
+        stopStationId: 4,
+        departureDate: todayLocal(),
+      },
+    }),
+    minText: 30,
+    minControls: 2,
+    mustRender: ['.day-strip__chip.is-selected', '.day-strip__chip.is-unavailable'],
+    hoverTargets: ['.day-strip__chip'],
+  },
+  {
     key: 'review-schedule-booking',
     url: '/review-schedule-booking',
     landsOn: '/review-schedule-booking',
@@ -720,12 +831,26 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     key: 'business-policy',
     url: '/business-policy',
     landsOn: '/business-policy',
-    minText: 25,
+    // OBRS-1569: re-read off a real run (2026-08-30, this lane) now that the fixture serves all
+    // four endpoints and the page reaches its CONTENT branch -- 40 scoreable text runs in both
+    // themes, cut to two thirds like every other floor in this file. The 25 it replaces was read
+    // off a run in the inline-error branch, so it was a floor over a retry link.
+    //
+    // MEASURED, and worth knowing before anyone trusts this number: the count does NOT move
+    // between the two branches. obrs-1569-capture.spec.ts scores 37 either way (its own harness
+    // seeds the consent bar away, which is the whole difference from the 40 here). The error
+    // branch spends its runs on an icon, a message, a Retry button; the terms branch spends them
+    // on three paragraphs. So a text floor CANNOT be what tells this page's two states apart, at
+    // any value -- that job belongs to the mustRender hook below, and this stays what it says it
+    // is: a floor under "the page rendered at all".
+    minText: 26,
     minControls: 3,
     // `.policy-version` is the OBRS-628 line that must never be re-typed into
-    // i18n. It is also the tell that the page rendered its CONTENT rather than
-    // its skeleton: the skeleton has no version stamp.
-    mustRender: ['.policy-card', '.policy-version'],
+    // i18n. OBRS-1569: it is NOT the tell that the content rendered, which is what
+    // the line it replaced claimed -- it is interpolated from a .ts file on disk, so
+    // it renders over the inline-error branch just as happily, and that is the branch
+    // this lane was passing over. The testid is the one inside `@if (policyParams)`.
+    mustRender: ['.policy-card', '.policy-version', '[data-testid="business-policy-terms"]'],
     hoverTargets: ['.policy-cross-link'],
   },
   {
@@ -799,6 +924,19 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     minPlaceholders: 1,
     mustRender: ['#email', '.login-btn'],
     hoverTargets: ['.login-btn'],
+  },
+  {
+    // OBRS-1530. The page that shipped with no dark mode at all and no gate to
+    // say so. Swept in its LOADED state: the three fixture rows above are what
+    // put a `.parcel-card` on the screen, and `mustRender` pins that rather than
+    // the empty state, which paints a different set of surfaces entirely.
+    key: 'my-parcels',
+    url: '/my-parcels',
+    landsOn: '/my-parcels',
+    minText: 24,
+    minControls: 3,
+    mustRender: ['.parcel-card', '.admin-status', '.parcel-card__meta'],
+    hoverTargets: ['.icon-btn', '.btn-link'],
   },
   {
     // Public parcel tracking (OBRS-305), swept AT REST like /find-booking above
@@ -925,10 +1063,6 @@ export const EXCLUDED_CUSTOMER_ROUTES: ExcludedCustomerRoute[] = [
       'NOT YET. A multi-step form behind featureEnabledGuard(onlineParcelBooking); the flag is ' +
       'true in the environment this lane builds, so it is reachable -- what it needs is the ' +
       'fixtures for the step it should be measured at, which is a choice nobody has made yet.',
-  },
-  {
-    path: '/my-parcels',
-    why: 'NOT YET. Same shape as /my-reports, behind the same parcel flag as /parcel-booking.',
   },
 ];
 

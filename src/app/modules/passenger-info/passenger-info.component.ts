@@ -339,6 +339,7 @@ export class PassengerInfoComponent {
   ): BookingSchedulePayload['passengers'] {
     return passengers.map((passenger) => ({
       passengerType: this.normalizePassengerType(passenger.gender),
+      passengerTypeConsentVersion: this.passengerTypeConsentVersion(passenger),
       seatNumber: this.normalizeSeatNumber(
         leg === 'inbound' ? passenger.passengerSeatReturn : passenger.passengerSeat
       ),
@@ -504,6 +505,19 @@ export class PassengerInfoComponent {
    * confirmation email. `PassengerReqDto.passengerType` dropped its `@NotBlank` in the same change
    * and `tickets.passenger_type_id` has been nullable since ADR-0061, so null survives end to end.
    */
+  /**
+   * OBRS-1666: the version of the notice the traveller actually saw, sent only when they ticked
+   * the consent box beside a monk/nun answer. Null for every other type - nothing asked for
+   * consent to 'male'/'female', which PDPA section 26 does not cover - and null when the box was
+   * left unticked, which the backend reads as a refusal and answers by dropping the type. The
+   * booking is never blocked either way: the field has been optional since OBRS-1357.
+   */
+  private passengerTypeConsentVersion(passenger: PassengerInfo): string | null {
+    const type = this.normalizePassengerType(passenger.gender);
+    const isSensitive = type === 'monk' || type === 'nun';
+    return isSensitive && passenger.passengerTypeConsent ? PRIVACY_POLICY_VERSION : null;
+  }
+
   private normalizePassengerType(gender?: string | null): string | null {
     const normalized = (gender ?? '').toString().trim().toLowerCase();
     if (

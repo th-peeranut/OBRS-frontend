@@ -6,6 +6,8 @@ import {
   toStopDetailForm,
   toStopRow,
   toStopUpdatePayload,
+  toStopLabelPayload,
+  emptyStopDetailForm,
 } from './stops.mappers';
 import {
   AdminStopDetailDto,
@@ -240,5 +242,51 @@ describe('stops.mappers (OBRS-1022)', () => {
 
       expect(options[2]).toEqual({ id: 404, label: '404' });
     });
+  });
+});
+
+describe('toStopLabelPayload (OBRS-1680)', () => {
+  const form = {
+    id: 7,
+    slug: 'nong_chak',
+    provinceCode: 'chonburi',
+    statusCode: 'active',
+    stopTypeCode: 'pickup',
+    latitude: 13.5,
+    longitude: 101.5,
+    primaryPhotoUrl: 'https://sb.example/x.jpg',
+    returnStopId: 3,
+    translations: [
+      { locale: 'th' as const, label: ' อัลฟ่า ประตู 3 ', description: ' ข้างร้านกาแฟ ', address: ' ถนนสุขุมวิท ' },
+      { locale: 'en' as const, label: '', description: 'ignored', address: 'ignored' },
+      { locale: 'zh' as const, label: '', description: '', address: '' },
+    ],
+  };
+
+  it('carries the sign and nothing about the place', () => {
+    expect(Object.keys(toStopLabelPayload(form)).sort()).toEqual(['addresses', 'translations']);
+  });
+
+  it('trims, and drops the locales with no label - the server rejects a blank one', () => {
+    const payload = toStopLabelPayload(form);
+
+    expect(payload.translations.length).toBe(1);
+    expect(payload.translations[0]).toEqual({
+      locale: 'th',
+      label: 'อัลฟ่า ประตู 3',
+      description: 'ข้างร้านกาแฟ',
+    });
+    expect(payload.addresses).toEqual({ th: 'ถนนสุขุมวิท' });
+  });
+});
+
+describe('emptyStopDetailForm (OBRS-1678)', () => {
+  it('offers all three locales blank so none of them is invisible in the create form', () => {
+    const form = emptyStopDetailForm('chonburi', 'active', 'pickup');
+
+    expect(form.translations.map((t) => t.locale)).toEqual(['th', 'en', 'zh']);
+    expect(form.translations.every((t) => t.label === '' && t.address === '')).toBeTrue();
+    expect(form.slug).toBe('');
+    expect(form.primaryPhotoUrl).toBeNull();
   });
 });

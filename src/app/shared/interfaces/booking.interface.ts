@@ -3,6 +3,12 @@ export interface BookingPassenger {
   // dropped its @NotBlank to match. Null means "not stated", which is a different fact from any
   // of the four slugs; there is deliberately no default.
   passengerType: string | null;
+  /**
+   * OBRS-1666: the privacy-notice version displayed when the traveller gave EXPLICIT consent to
+   * a `monk`/`nun` answer. Null everywhere else - including a monk/nun answer with the box left
+   * unticked, which the backend then drops rather than store (the booking still succeeds).
+   */
+  passengerTypeConsentVersion: string | null;
   seatNumber: string | null;
   // OBRS-1231: optional. `tickets.title_snapshot` has been nullable since V14, and
   // Ticket.getPassengerName() already filters empty parts out of the joined name.

@@ -39,6 +39,7 @@
           [label]="'NOTIFICATION_PREFS.SAVE_BUTTON' | translate"
           [disabled]="!isDirty || isSaving"
           [loading]="isSaving"
+          [attr.aria-busy]="isSaving"
           (onClick)="save()"
         ></p-button>
       </div>

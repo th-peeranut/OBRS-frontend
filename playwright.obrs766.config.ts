@@ -18,7 +18,13 @@ export default defineConfig({
   testMatch: '**/obrs766-*.spec.ts',
   // Frees seat inventory consumed by previous passes — without it the suite
   // is single-use and its third run fails at seeding, not at any assertion.
+  // OBRS-1616: that file also CALLS the lane-tree guard, because a config may
+  // name only one globalSetup and this lane already spends it.
   globalSetup: './e2e/support/obrs766-global-setup.ts',
+  // OBRS-1616: no `webServer`, so nothing said which tree served these pages. This lane
+  // drives the stack the operator started by hand (see the header above), so a foreign
+  // tree on the port is the documented state -- the guard must name it, not refuse.
+  metadata: { laneTree: 'attach-to-operator-stack' },
   timeout: 60_000,
   fullyParallel: false,
   workers: 1,

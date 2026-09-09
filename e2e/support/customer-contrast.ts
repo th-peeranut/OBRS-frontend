@@ -25,7 +25,7 @@
  * So: open the real pages in a real browser, in both themes, and read
  * `getComputedStyle`.
  *
- * WHAT IS MEASURED -- THREE INVARIANTS, NOT ONE
+ * WHAT IS MEASURED -- FOUR INVARIANTS, NOT ONE
  *
  *   A. TEXT (WCAG 1.4.3). Every element that renders its own text run, against
  *      the background actually painted behind it (composited up the ancestor
@@ -48,6 +48,27 @@
  *      not reachable by widening invariant A either: `ownsText()` looks for a
  *      child text node and an `<input>` has no children, so the sweep would have
  *      to be blind to placeholders even if the pseudo were read for free.
+ *
+ *   D. STATE (WCAG 1.4.11 again, the half invariant B cannot reach). 1.4.11 asks
+ *      3:1 of the visual information required to identify components "and
+ *      states". B compares a control's own surface to the PAGE it sits on, which
+ *      says nothing about whether the selected member of a group looks different
+ *      from the unselected ones -- the pair a user actually has to tell apart.
+ *      OBRS-772 measured that hole and wrote it down rather than fixing it
+ *      (docs/design-system.md 2.6); OBRS-1774 is the fix. So: find the element
+ *      the app marks as selected, find its unselected siblings, and compare the
+ *      surfaces actually painted.
+ *
+ *      The rule applied to the result is the one the owner decided in 2.6 on
+ *      2026-09-08, and it is NOT a straight reading of the standard: a state
+ *      that rests on a faint fill ALONE is a defect, and a state that also
+ *      carries a colour, a weight, a border or an underline is accepted --
+ *      because the second signal is what the user reads, and the colour half of
+ *      it is already scored by invariant A. Its known soft edge, stated rather
+ *      than hidden: two text colours that both clear AA but barely differ from
+ *      each other would be accepted here. Nothing in this file measures the
+ *      distance between them, and inventing a floor for it would be inventing a
+ *      rule the owner has not been asked about.
  *
  *      What it hid: eighteen customer fields at **1.10:1**. Bootstrap 5.3 paints
  *      `.form-control::placeholder` with `--bs-secondary-color` =
@@ -131,16 +152,44 @@ export interface BoundaryFinding {
   count: number;
 }
 
+/**
+ * One selected control, weighed against the unselected sibling it is hardest to
+ * tell apart from.
+ *
+ * `carriers` is the whole verdict, and it is computed here rather than on the
+ * node side because it needs `getComputedStyle` on both elements at once. It
+ * lists every signal that DIFFERS between the two -- `fill`, `color`, `weight`,
+ * `border`, `underline`, `shadow`, `outline`. A row whose only carrier is `fill`
+ * is the one the floor applies to.
+ */
+export interface StateFinding {
+  key: string;
+  path: string;
+  label: string;
+  selectedFill: string;
+  siblingFill: string;
+  siblingPath: string;
+  fillVsSibling: number;
+  /** Selected border against the sibling's border, or null when either paints none. */
+  borderVsSibling: number | null;
+  /** Selected outline against the sibling's outline, or null when either paints none. */
+  outlineVsSibling: number | null;
+  carriers: string[];
+  count: number;
+}
+
 export interface Sweep {
   href: string;
   bodyIsDark: boolean;
   text: TextFinding[];
   controls: BoundaryFinding[];
   placeholders: PlaceholderFinding[];
+  states: StateFinding[];
   /** Everything measured, not just what failed -- the denominator for the 0-match guard. */
   measuredText: number;
   measuredControls: number;
   measuredPlaceholders: number;
+  measuredStates: number;
   skipped: {
     gradient: number;
     opacity: number;
@@ -148,6 +197,16 @@ export interface Sweep {
     invisible: number;
     noSurface: number;
     thirdParty: number;
+    /** A selected control with no unselected sibling on screen to compare it to. */
+    stateNoPeer: number;
+    /**
+     * Selected and unselected compute IDENTICALLY on the marked element itself,
+     * so whatever shows the state lives somewhere this comparison cannot see: a
+     * descendant, a pseudo-element, an injected icon. Counted and printed, never
+     * scored -- calling it a defect would be inventing one, and folding it into
+     * the pass is the OBRS-734 failure.
+     */
+    stateNoDelta: number;
   };
 }
 
@@ -302,7 +361,16 @@ export const MEASURE = (only?: string): Sweep => {
     return false;
   };
 
-  const skipped = { gradient: 0, opacity: 0, disabled: 0, invisible: 0, noSurface: 0, thirdParty: 0 };
+  const skipped = {
+    gradient: 0,
+    opacity: 0,
+    disabled: 0,
+    invisible: 0,
+    noSurface: 0,
+    thirdParty: 0,
+    stateNoPeer: 0,
+    stateNoDelta: 0,
+  };
 
   const textScope = only
     ? Array.from(document.querySelectorAll(only)).flatMap((el) => [el, ...Array.from(el.querySelectorAll('*'))])
@@ -532,15 +600,250 @@ export const MEASURE = (only?: string): Sweep => {
     });
   }
 
+  // --- invariant D: a selected control against its unselected sibling -----
+  //
+  // The population is the elements the APP marks as selected, not the ones that
+  // look selected: `.active` (Bootstrap and this app's own tabs, pills and nav
+  // links), `.selected` (the seat map), and the three ARIA state attributes.
+  // Reading the marker rather than guessing from colour is what keeps this from
+  // being circular -- a gate that decided which element is selected by looking
+  // at its fill could never report that the fill says nothing.
+  const SELECTED =
+    '.active, .selected, [aria-selected="true"], [aria-pressed="true"], [aria-current]:not([aria-current="false"])';
+  const stateRows: StateFinding[] = [];
+  let measuredStates = 0;
+  // A state is a comparison BETWEEN siblings, and `only` narrows the DOM to one
+  // control and its descendants -- the siblings are outside the scope by
+  // construction. The hover / focus pass therefore contributes no state rows at
+  // all rather than a screenful of "no peer", which would be a measurement that
+  // does not exist dressed as a skip.
+  const stateScope = only ? [] : Array.from(document.querySelectorAll(SELECTED));
+  for (const el of stateScope) {
+    if (!visible(el)) {
+      skipped.invisible++;
+      continue;
+    }
+    if (thirdParty(el)) {
+      skipped.thirdParty++;
+      continue;
+    }
+    if (inactive(el)) {
+      skipped.disabled++;
+      continue;
+    }
+    if (faded(el)) {
+      skipped.opacity++;
+      continue;
+    }
+    if (overImage(el)) {
+      skipped.gradient++;
+      continue;
+    }
+
+    // Same tag as the selected element, same parent, not selected itself. The
+    // tag test is what stops a selected tab being compared with the `<hr>` or
+    // the heading that happens to share its parent: those are not the other
+    // options, and a ratio against them answers no question anyone has.
+    const peers = Array.from(el.parentElement ? el.parentElement.children : []).filter(
+      (p) =>
+        p !== el &&
+        p.tagName === el.tagName &&
+        !p.matches(SELECTED) &&
+        visible(p) &&
+        !inactive(p) &&
+        !faded(p) &&
+        !overImage(p)
+    );
+    if (!peers.length) {
+      skipped.stateNoPeer++;
+      continue;
+    }
+
+    const cs = getComputedStyle(el);
+    const selFill = paintedBg(el);
+    const page = paintedBg(el.parentElement);
+    const sides = ['Top', 'Right', 'Bottom', 'Left'];
+
+    /**
+     * A signature of the edge AS PAINTED. A side with no width or `style: none`
+     * contributes the string 'none' and its colour is dropped.
+     *
+     * That is not tidiness, it is the difference between a sound verdict and a
+     * false green. `border-color` and `outline-color` both initialise to
+     * `currentcolor`, so two siblings that differ ONLY in text colour compute
+     * different border and outline colours even with `border: 0` -- and the
+     * first version of this comparison read those as two extra carriers. The
+     * first census run showed exactly that: rows tagged `[color+border+outline]`
+     * where nothing but the colour was ever painted. Harmless there, because a
+     * colour carrier is accepted anyway; NOT harmless in the case this gate
+     * exists for, where a phantom border carrier would rescue a state that rests
+     * on a faint fill alone and turn the only defect class D can see green.
+     */
+    const edge = (style: CSSStyleDeclaration): string =>
+      sides
+        .map((side) => {
+          const r = style as unknown as Record<string, string>;
+          const w = parseFloat(r['border' + side + 'Width']) || 0;
+          const st = r['border' + side + 'Style'];
+          if (w <= 0 || st === 'none' || st === 'hidden') return 'none';
+          return w + ' ' + st + ' ' + r['border' + side + 'Color'];
+        })
+        .join('|');
+
+    /** The painted border of an element, composited over its own surface. */
+    const edgeColour = (style: CSSStyleDeclaration, over: number[]): number[] | null => {
+      let best: number[] | null = null;
+      let bestRatio = -1;
+      for (const side of sides) {
+        const r = style as unknown as Record<string, string>;
+        const w = parseFloat(r['border' + side + 'Width']) || 0;
+        const st = r['border' + side + 'Style'];
+        if (w <= 0 || st === 'none' || st === 'hidden') continue;
+        const c = rgba(r['border' + side + 'Color']);
+        if (c[3] <= 0) continue;
+        const composited = [
+          c[0] * c[3] + over[0] * (1 - c[3]),
+          c[1] * c[3] + over[1] * (1 - c[3]),
+          c[2] * c[3] + over[2] * (1 - c[3]),
+        ];
+        const rr = ratio(composited, over);
+        if (rr > bestRatio) {
+          bestRatio = rr;
+          best = composited;
+        }
+      }
+      return best;
+    };
+
+    const outlined = (style: CSSStyleDeclaration): string => {
+      const w = parseFloat(style.outlineWidth) || 0;
+      if (w <= 0 || style.outlineStyle === 'none') return 'none';
+      return w + ' ' + style.outlineStyle + ' ' + style.outlineColor;
+    };
+
+    /**
+     * An outline is drawn OUTSIDE the border edge, so it composites over the
+     * surface the control sits on, not over the control's own fill.
+     */
+    const outlineColour = (style: CSSStyleDeclaration, over: number[]): number[] | null => {
+      const w = parseFloat(style.outlineWidth) || 0;
+      if (w <= 0 || style.outlineStyle === 'none') return null;
+      const c = rgba(style.outlineColor);
+      if (c[3] <= 0) return null;
+      return [
+        c[0] * c[3] + over[0] * (1 - c[3]),
+        c[1] * c[3] + over[1] * (1 - c[3]),
+        c[2] * c[3] + over[2] * (1 - c[3]),
+      ];
+    };
+
+    /**
+     * Every unselected sibling is compared, and the HARDEST pair is the one
+     * recorded.
+     *
+     * The first version ranked peers by fill distance alone and then read the
+     * border of whichever peer won that -- so in a group of three or more, a
+     * weak border pairing against a DIFFERENT sibling went unmeasured. What
+     * ranks a pair now is the best separation it has by any measurable means, so
+     * the peer that survives is the one this control is genuinely hardest to
+     * tell apart from. Ties break on the fill, which is the carrier the register
+     * keys on.
+     */
+    interface Candidate {
+      peer: Element;
+      peerFill: number[];
+      carriers: string[];
+      fillVsSibling: number;
+      borderVsSibling: number | null;
+      outlineVsSibling: number | null;
+      rank: number;
+    }
+    let chosen: Candidate | null = null;
+    for (const p of peers) {
+      const ps = getComputedStyle(p);
+      const peerFill = paintedBg(p);
+
+      const carriers: string[] = [];
+      if (hex(selFill) !== hex(peerFill)) carriers.push('fill');
+      if (cs.color !== ps.color) carriers.push('color');
+      if (cs.fontWeight !== ps.fontWeight) carriers.push('weight');
+      if (edge(cs) !== edge(ps)) carriers.push('border');
+      if (cs.textDecorationLine !== ps.textDecorationLine) carriers.push('underline');
+      if (cs.boxShadow !== ps.boxShadow) carriers.push('shadow');
+      if (outlined(cs) !== outlined(ps)) carriers.push('outline');
+      // Nothing on this element differs from this sibling, so whatever shows the
+      // state is somewhere this comparison cannot see. Ranking it would put a
+      // measurement that does not exist at the top.
+      if (!carriers.length) continue;
+
+      const selEdge = edgeColour(cs, selFill);
+      const peerEdge = edgeColour(ps, peerFill);
+      const borderVsSibling = selEdge && peerEdge ? ratio(selEdge, peerEdge) : null;
+      const selOutline = outlineColour(cs, page);
+      const peerOutline = outlineColour(ps, page);
+      const outlineVsSibling = selOutline && peerOutline ? ratio(selOutline, peerOutline) : null;
+
+      // A carrier that is not a colour question, or one this file cannot weigh
+      // because the sibling paints nothing to weigh it against, settles the pair
+      // -- and a settled pair is the easiest to tell apart, not the hardest.
+      const settled =
+        carriers.some((c) => c === 'color' || c === 'weight' || c === 'underline' || c === 'shadow') ||
+        (carriers.includes('border') && borderVsSibling === null) ||
+        (carriers.includes('outline') && outlineVsSibling === null);
+      const rank = settled
+        ? Infinity
+        : Math.max(
+            carriers.includes('fill') ? ratio(selFill, peerFill) : 0,
+            carriers.includes('border') && borderVsSibling !== null ? borderVsSibling : 0,
+            carriers.includes('outline') && outlineVsSibling !== null ? outlineVsSibling : 0
+          );
+
+      const candidate: Candidate = {
+        peer: p,
+        peerFill,
+        carriers,
+        fillVsSibling: ratio(selFill, peerFill),
+        borderVsSibling,
+        outlineVsSibling,
+        rank,
+      };
+      if (!chosen || candidate.rank < chosen.rank || (candidate.rank === chosen.rank && candidate.fillVsSibling < chosen.fillVsSibling)) {
+        chosen = candidate;
+      }
+    }
+
+    if (!chosen) {
+      skipped.stateNoDelta++;
+      continue;
+    }
+
+    measuredStates++;
+    stateRows.push({
+      key: '',
+      path: pathOf(el),
+      label: (el.textContent || (el as HTMLInputElement).value || '').trim().replace(/\s+/g, ' ').slice(0, 30),
+      selectedFill: hex(selFill),
+      siblingFill: hex(chosen.peerFill),
+      siblingPath: pathOf(chosen.peer),
+      fillVsSibling: chosen.fillVsSibling,
+      borderVsSibling: chosen.borderVsSibling,
+      outlineVsSibling: chosen.outlineVsSibling,
+      carriers: chosen.carriers,
+      count: 1,
+    });
+  }
+
   return {
     href: location.pathname,
     bodyIsDark: document.body.classList.contains('is-dark'),
     text: textRows,
     controls: controlRows,
     placeholders: placeholderRows,
+    states: stateRows,
     measuredText,
     measuredControls,
     measuredPlaceholders,
+    measuredStates,
     skipped,
   };
 };
@@ -597,3 +900,116 @@ export const boundaryKey = (theme: string, f: { path: string; page: string }): s
  */
 export const placeholderKey = (theme: string, f: { path: string; fg: string; bg: string }): string =>
   `${theme}|${leafOf(f.path)}|placeholder|${f.fg}-on-${f.bg}`;
+
+/**
+ * A state key names the SIBLING SURFACE it was weighed against, for the same
+ * reason `boundaryKey` names the page: two members of different groups with the
+ * same class chain are different comparisons, and an entry written for one must
+ * not excuse the other. The selected element's own fill stays out of it -- it is
+ * the half a repaint changes, and the entry has to survive long enough for the
+ * stale check to say something about it.
+ */
+export const stateKey = (theme: string, f: { path: string; siblingFill: string }): string =>
+  `${theme}|${leafOf(f.path)}|state-vs-${f.siblingFill}`;
+
+/**
+ * The verdict on one state row, in ONE place because three readers need it: both
+ * gates and the capture spec that photographs what they scored.
+ *
+ * 2.6 decided the shape -- a state resting on a faint fill ALONE is a defect,
+ * and a second signal accepts it. What the first census run showed is that "a
+ * second signal" cannot be taken on the word `border`: the passenger-type tile
+ * on /staff/sell separates its selected member by a 1.09:1 fill and a 1.54:1
+ * border change in dark mode, with no colour and no weight anywhere. Under a
+ * carrier COUNT that passes; under 1.4.11 nothing on that tile reaches 3:1. So
+ * the carriers this file can actually weigh are weighed, and the rest are
+ * accepted for reasons named one by one below rather than by being unlisted.
+ *
+ * The owner was asked rather than assumed: 2.6 as written on 2026-09-08 accepts
+ * "several signals", and reading a 1.54:1 border delta as one of them is an
+ * interpretation, not a deduction. Amended 2026-09-09 -- a carrier that PAINTS A
+ * SURFACE (fill, border, outline) must itself reach 3:1 to accept a state. The
+ * text `color` carrier is NOT one of those -- it keeps its own 2026-09-08
+ * exemption below -- and every other carrier (weight, underline, shadow) still
+ * settles it on sight. Both halves are recorded in 2.6.
+ */
+export function stateFails(f: {
+  carriers: string[];
+  fillVsSibling: number;
+  borderVsSibling: number | null;
+  outlineVsSibling: number | null;
+}): boolean {
+  // Not a colour question at all. A weight, an underline or a shadow either
+  // shows or it does not, and 1.4.11 has nothing to say about the contrast of a
+  // change in stroke thickness.
+  if (f.carriers.some((c) => c === 'weight' || c === 'underline' || c === 'shadow')) return false;
+  // 2.6's explicit decision, and its stated soft edge: a text colour that moves
+  // is scored for legibility by invariant A, and the distance between the two
+  // colours is not something this file has been asked to floor.
+  if (f.carriers.includes('color')) return false;
+  // An outline or a border that APPEARS where the sibling has none is a ring the
+  // unselected member does not have; there is no second colour to weigh it
+  // against here, and its contrast against the surface is invariant B's job.
+  if (f.carriers.includes('border') && f.borderVsSibling === null) return false;
+  if (f.carriers.includes('outline') && f.outlineVsSibling === null) return false;
+  // What is left is the three carriers with a real ratio behind them. The
+  // outline is weighed and not waved through: it was the one carrier this
+  // function still accepted on presence after the border stopped being, which
+  // is the same defect family one property along (OBRS-1774 review).
+  if (f.carriers.includes('fill') && f.fillVsSibling >= AA_BOUNDARY) return false;
+  if (f.carriers.includes('border') && f.borderVsSibling !== null && f.borderVsSibling >= AA_BOUNDARY) return false;
+  if (f.carriers.includes('outline') && f.outlineVsSibling !== null && f.outlineVsSibling >= AA_BOUNDARY) return false;
+  return true;
+}
+
+/**
+ * A key with its FOREGROUND dropped and everything that says WHERE it was
+ * painted kept: theme, element, role, and the surface it sat on.
+ *
+ * The foreground belongs in the key -- a repaint has to invalidate the entry,
+ * which is the argument made at length above. But it also means "no key matches"
+ * has two causes that read identically, and OBRS-1435 is what that costs: the
+ * gate told a reader to delete a LIVE OBRS-1424 entry because the h1 that carried
+ * it was never scored on that run. An element the sweep did not measure says
+ * nothing about whether its debt was paid.
+ *
+ * Applied to both sides -- a CONTRAST_ALLOW key, and the key of a row the sweep
+ * actually scored, passing or failing -- this answers the narrower question the
+ * verdict needs first: did this run measure that element, in that theme, in that
+ * role, ON THAT SURFACE? `text` / `placeholder` / `boundary` stay apart for the
+ * same reason `placeholderKey` gives: different defects, different fixes.
+ *
+ * THE SURFACE IS NOT OPTIONAL, and the first version of this function dropped it.
+ * Measured against the register as it stands: collapsing a boundary key to
+ * `theme|leaf|boundary` gave 22 identities for 25 entries, and all three
+ * collisions were a control that carries the SAME framework-default border on two
+ * different backgrounds -- `input.form-control`, `input.form-control.mt-1` and
+ * `button.theme-toggle-btn`, each registered on both `#1a1d27` and `#0f1117` by
+ * OBRS-970. One twin being scored would then vouch for the other, so the entry
+ * whose element did not render would be pronounced paid: the exact false delete
+ * this card exists to stop, reintroduced by its own fix. With the surface kept:
+ * 25 identities, 0 collisions.
+ *
+ * A boundary key carries no foreground at all -- the fill/border ratio is not in
+ * it -- so it is kept whole. A repaint still invalidates it through `collapsed`:
+ * a control that now clears 3:1 stops being a finding while its identity stays in
+ * the measured set, which is `stale`, "delete it". The one case that reads
+ * differently after this is a fix that ALSO moves the surface: that lands in
+ * `unmeasured`, "go and look", rather than "delete". Never a false delete, which
+ * is the direction to be wrong in.
+ *
+ * Parsed rather than built a second time, so there is one definition of a key and
+ * not two that can drift. Safe because a colour pair contains no `|`, and `leafOf`
+ * returns a class chain joined by ' > ', which contains none either -- so the
+ * third field alone names the role.
+ */
+export function keyIdentity(key: string): string {
+  const parts = key.split('|');
+  const [theme, leaf] = parts;
+  const third = parts[2] ?? '';
+  if (third.startsWith('boundary-on-')) return `${theme}|${leaf}|${third}`;
+  if (third.startsWith('state-vs-')) return `${theme}|${leaf}|${third}`;
+  const role = third === 'placeholder' ? 'placeholder' : 'text';
+  const pair = role === 'placeholder' ? parts[3] ?? '' : third;
+  return `${theme}|${leaf}|${role}|on-${pair.split('-on-')[1] ?? ''}`;
+}

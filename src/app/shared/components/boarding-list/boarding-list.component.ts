@@ -156,6 +156,16 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
   @ViewChild('scanVideo') protected videoElement?: ElementRef<HTMLVideoElement>;
 
   protected items: BoardingListItemDto[] = [];
+
+  /** OBRS-1659: the manifest search box. The endpoint is unpaginated, so the whole
+   * manifest is already in `items` — filtering here rather than refetching keeps the
+   * search working at a roadside stop with no signal, matches a PARTIAL string (the
+   * driver types the last few characters), and covers booking number, passenger name,
+   * seat and ticket number at once. It replaces the server-side `?bookingNumber=`
+   * filter, which was exact-match on the booking number alone and which no client ever
+   * called. */
+  protected searchTerm = '';
+
   protected isRefreshing = false;
   protected errorMessage = '';
   protected readonly skeletonRows = Array.from({ length: 5 });
@@ -313,6 +323,10 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
       // tear it down BEFORE the store re-init runs.
       this.stopCameraStream();
       this.scanMode = 'text';
+      // OBRS-1659: same reason as the camera teardown above - the walk-in panel keeps this
+      // component mounted while the operator switches trips, so a term left in the search box
+      // would silently filter the NEXT trip's manifest and photograph as "this bus is empty".
+      this.searchTerm = '';
       this.store.setScheduleId(this.scheduleId);
       void this.store.refresh();
       void this.loadTripHeader(this.scheduleId);
@@ -628,6 +642,27 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
   /** OBRS-100: "Boarded" count for the print header — derived from `items`
    * (already held), not part of `tripHeader` (design-system §10: don't
    * duplicate state the component already has). */
+  /** OBRS-1659: what the on-screen table renders. The print template and `boardedCount`
+   * deliberately stay on the unfiltered `items` — a printed manifest and a boarded count
+   * must describe the whole bus, never whatever the driver last typed in the search box. */
+  protected get filteredItems(): BoardingListItemDto[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) {
+      return this.items;
+    }
+    return this.items.filter((item) =>
+      [item.bookingNumber, item.passengerName, item.seatNumber, item.ticketNumber].some(
+        (field) => field?.toLowerCase().includes(term)
+      )
+    );
+  }
+
+  /** OBRS-1659: the bus is not empty, the search just matched nothing — a different
+   * empty-state from `items.length === 0` (design-system §12). */
+  protected get hasNoSearchMatch(): boolean {
+    return this.items.length > 0 && this.filteredItems.length === 0;
+  }
+
   protected get boardedCount(): number {
     return this.items.filter((item) => this.isBoarded(item)).length;
   }

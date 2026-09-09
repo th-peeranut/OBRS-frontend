@@ -1,0 +1,169 @@
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div>
+      <app-admin-refresh-hint
+        [refreshing]="isRefreshing"
+        [failed]="false"
+        [loading]="isLoading"
+      ></app-admin-refresh-hint>
+    </div>
+  </section>
+}
+
+<!-- One control, and it is not a date. app-admin-dropdown, not a raw <select> (design-system.md
+3.1). The list holds only entries some bill actually named — offering the whole registry would be
+the picker answering "no bills" a dozen times before it answers anything. -->
+<section class="admin-page-filters mt-3">
+  <app-admin-dropdown
+    [value]="selectedPart"
+    [options]="partOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.PART_UNIT_PRICE_REPORT.FILTER_PART' | translate"
+    (valueChange)="onPartChange($event)"
+  ></app-admin-dropdown>
+</section>
+
+<!-- Said on the screen rather than left in a Jira comment: every sibling report has a period
+control and this one deliberately has none, so its absence has to read as a decision instead of as
+something missing. -->
+<p class="admin-muted part-price-scope-note mt-2">
+  {{ 'ADMIN.PART_UNIT_PRICE_REPORT.SCOPE_NOTE' | translate }}
+</p>
+
+@if (loadError) {
+  <p class="admin-error mt-3">{{ loadError }}</p>
+} @else if (isLoading) {
+  <div class="admin-table-wrap mt-3">
+    <table class="admin-table">
+      <tbody>
+        @for (row of skeletonRows; track $index) {
+          <tr><td><span class="admin-skeleton"></span></td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else {
+  <!-- AC5. Rendered before the chart and never behind a condition - not even the empty state.
+  A tree where no bill has named a registry entry yet is exactly the case where the coverage
+  figure matters MOST: every baht on record is uncomparable, and hiding the number there would
+  make the emptiest report the one that said least about why it was empty. -->
+  <section class="part-price-coverage mt-3">
+    <h3 class="part-price-coverage-title">
+      {{ 'ADMIN.PART_UNIT_PRICE_REPORT.COVERAGE_TITLE' | translate }}
+    </h3>
+    <p class="part-price-coverage-text">
+      {{
+        'ADMIN.PART_UNIT_PRICE_REPORT.COVERAGE_TEXT'
+          | translate
+            : {
+                total: money(report?.coverage?.totalAmount),
+                comparable: money(report?.coverage?.comparableAmount),
+                comparableLines: report?.coverage?.comparableLineCount,
+                totalLines: report?.coverage?.totalLineCount
+              }
+      }}
+    </p>
+    <p class="part-price-coverage-text admin-muted">
+      {{
+        'ADMIN.PART_UNIT_PRICE_REPORT.COVERAGE_EXCLUDED'
+          | translate
+            : {
+                unnamed: money(report?.coverage?.unnamedAmount),
+                unnamedLines: report?.coverage?.unnamedLineCount,
+                noPrice: money(report?.coverage?.excludedPriceAmount),
+                noPriceLines: report?.coverage?.excludedPriceLineCount
+              }
+      }}
+    </p>
+  </section>
+
+  @if (isEmptyReport) {
+    <p class="admin-muted mt-3">{{ 'ADMIN.PART_UNIT_PRICE_REPORT.EMPTY' | translate }}</p>
+  } @else if (renderedPartId === null) {
+    <p class="admin-muted mt-3">{{ 'ADMIN.PART_UNIT_PRICE_REPORT.PICK_A_PART' | translate }}</p>
+  } @else {
+    @if (hasComparison) {
+      <!-- Bars are scaled inside their own unit group, never across groups: ฿400 per กระป๋อง and
+      ฿480 per ลิตร share no axis, because they are not a price rise. -->
+      <section class="part-price-chart mt-3">
+        @for (group of unitGroups; track $index) {
+          @if (showsUnitHeadings) {
+            <h4 class="part-price-unit-heading">
+              {{
+                'ADMIN.PART_UNIT_PRICE_REPORT.UNIT_GROUP' | translate: { unit: unitLabel(group.unit) }
+              }}
+            </h4>
+          }
+          <!-- Tracked by index, not by expenseId: one bill can carry the same part on two lines. -->
+          @for (bar of group.bars; track $index) {
+            <div class="part-price-bar-row">
+              <span class="part-price-bar-who">
+                {{ payeeLabel(bar.payeeName) }} · {{ date(bar.expenseDate) }}
+              </span>
+              <span class="part-price-bar-track" role="presentation">
+                <span class="part-price-bar-fill" [style.width.%]="bar.widthPercent"></span>
+              </span>
+              <span class="part-price-bar-amount">{{ money(bar.unitPrice) }}</span>
+            </div>
+          }
+        }
+      </section>
+    } @else {
+      <!-- Two prices in two units are two prices and no comparison — a different situation from
+      having only one bill, and the one the unit column exists to catch. Drawing a single bar would
+      let either of them read as a trend. -->
+      <div class="part-price-no-comparison mt-3">
+        <strong>{{ 'ADMIN.PART_UNIT_PRICE_REPORT.NO_COMPARISON' | translate }}</strong>
+        @if (barCount >= 2) {
+          <span>{{ 'ADMIN.PART_UNIT_PRICE_REPORT.NO_COMPARISON_UNITS' | translate }}</span>
+        } @else {
+          <span>{{ 'ADMIN.PART_UNIT_PRICE_REPORT.NO_COMPARISON_ONE_BILL' | translate }}</span>
+        }
+      </div>
+    }
+
+    <div class="admin-table-wrap mt-3">
+      <table class="admin-table part-price-table">
+        <caption class="visually-hidden">
+          {{ 'ADMIN.PART_UNIT_PRICE_REPORT.TABLE_TITLE' | translate }}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'ADMIN.PART_UNIT_PRICE_REPORT.COL_DATE' | translate }}</th>
+            <th scope="col">{{ 'ADMIN.PART_UNIT_PRICE_REPORT.COL_PAYEE' | translate }}</th>
+            <th scope="col" class="text-end">
+              {{ 'ADMIN.PART_UNIT_PRICE_REPORT.COL_UNIT_PRICE' | translate }}
+            </th>
+            <th scope="col">{{ 'ADMIN.PART_UNIT_PRICE_REPORT.COL_STATUS' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- EVERY line, including the two kinds the chart refuses. The owner can see three bills
+          for this part and one bar; a table that showed only what was charted would leave him with
+          no way to find out where the other two went. -->
+          @for (line of lines; track $index) {
+            <tr [class.part-price-excluded]="line.status !== 'COMPARABLE'">
+              <td>{{ date(line.expenseDate) }}</td>
+              <td>{{ payeeLabel(line.payeeName) }}</td>
+              <td class="text-end">
+                @if (line.unitPrice === null) {
+                  <span class="admin-muted">&mdash;</span>
+                } @else {
+                  {{ pricePerUnit(line.unitPrice, line.unit) }}
+                }
+              </td>
+              <td>
+                <span
+                  class="part-price-status"
+                  [class.is-excluded]="line.status !== 'COMPARABLE'"
+                  >{{ statusLabel(line) }}</span
+                >
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

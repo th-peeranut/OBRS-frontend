@@ -20,6 +20,19 @@
     "BODY": "请通过 Facebook 专页联系我们订票：",
     "CHANNEL": "NJ Phuyaipu"
   },
+  "ROLE_PREVIEW": {
+    "MENU": "以其他角色查看…",
+    "ARIA_LABEL": "您正在以其他角色查看此页面",
+    "VIEWING_AS": "正在以此角色查看：{{role}}",
+    "OWN_DATA": "数据仍属于您本人的账户",
+    "EXIT": "退出此视图",
+    "BLOCKED": "您正在以其他角色预览，因此无法保存任何更改。请先退出预览。",
+    "ROLES": {
+      "OWNER": "运营方",
+      "SALESPERSON": "售票员",
+      "DRIVER": "司机"
+    }
+  },
   "USABILITY_REPORT": {
     "FAB": {
       "LABEL": "报告问题",
@@ -454,10 +467,12 @@
       "ASSOC_PROF": "副教授",
       "ASST_PROF": "助理教授"
     },
+    "APP_TITLE": "在线预订巴士车票 | NJ Phuyaipu",
     "NOT_SPECIFIED": "未填写",
     "THEME_TOGGLE": "切换深色模式",
     "CLEAR": "清除",
     "CALENDAR_ICON_ALT": "日历图标",
+    "DATE_RANGE_PLACEHOLDER": "选择日期范围",
     "SWAP_STATIONS": "交换出发地和目的地",
     "CLOSE": "关闭",
     "LOADING": "加载中…",
@@ -541,8 +556,12 @@
       "SYSTEM_SETTINGS": "系统设置",
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
+      "PAYEE_SPEND_REPORT": "按收款方统计支出",
+      "PART_UNIT_PRICE_REPORT": "配件单价",
       "VEHICLE_PL_REPORT": "单车损益",
       "EXPENSES": "费用",
+      "EXPENSE_PAYEES": "收款方名录",
+      "MAINTENANCE_PARTS": "配件／工时登记表",
       "MANUAL_REFUNDS": "人工退款",
       "CASH_REFUND_APPROVALS": "现金退款审批",
       "PARCEL_CLAIMS": "包裹索赔",
@@ -555,7 +574,8 @@
       "DRIVER_CASH_RATES": "司机现金费率",
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "取消与改签",
       "NOTIFICATION_MESSAGES": "通知消息",
-      "OPERATIONS_CONFIG": "运营"
+      "OPERATIONS_CONFIG": "运营",
+      "EXPENSE_BATCH": "批量录入单据"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -588,6 +608,8 @@
       "THEME_DARK": "深色模式",
       "COLLAPSE_MENU": "收起菜单",
       "EXPAND_MENU": "展开菜单",
+      "COLLAPSE_MENU_TITLE": "收起菜单 (Ctrl+B)",
+      "EXPAND_MENU_TITLE": "展开菜单 (Ctrl+B)",
       "PIN_MENU": "固定菜单展开",
       "UNPIN_MENU": "取消固定菜单"
     },
@@ -623,7 +645,8 @@
       "CANCEL_TRIP_REFUND_MESSAGE": "{{count}} 个预订将自动退款并收到通知。",
       "CANCEL_TRIP_NO_REFUND_MESSAGE": "行程将被取消，不会产生退款。",
       "CANCEL_TRIP_BTN": "取消行程",
-      "CANCELLING": "取消中..."
+      "CANCELLING": "取消中...",
+      "NO_MATCH": "无匹配项"
     },
     "VALIDATION": {
       "REQUIRED": "此字段为必填项。",
@@ -662,6 +685,7 @@
       "LOAD_MAINTENANCE_FAILED": "无法加载维护记录。",
       "LOAD_MAINTENANCE_PLANS_FAILED": "无法加载保养计划。",
       "LOAD_EXPENSES_FAILED": "无法加载费用数据",
+      "LOAD_EXPENSE_PAYEES_FAILED": "无法加载收款方名录",
       "DELETE_CONFIRM_BODY": "此操作无法撤销，是否继续？",
       "DELETE_BTN": "删除",
       "UNLOCK_SUCCESS": "账户解锁成功。",
@@ -808,6 +832,7 @@
       "FIRST_NAME": "名",
       "MIDDLE_NAME": "中间名",
       "LAST_NAME": "姓",
+      "NICKNAME": "昵称",
       "EMAIL": "电子邮件",
       "EMAIL_LOCKED_HINT": "此邮箱为登录凭据，无法在此处修改。账户持有人可在个人资料页自行更改，并通过邮件确认新地址。",
       "GUEST_ROW_LOCKED_HINT": "此行是线下订票生成的访客记录，因此只能修改姓名和状态。电话号码是日后与注册账户匹配的依据。",
@@ -822,12 +847,34 @@
       "UNLOCK_CONFIRM_MESSAGE": "解锁此账户后，以下用户将可立即登录：",
       "UNLOCK_BTN": "解锁",
       "UNLOCKING": "解锁中...",
+      "CLOSE_ACTION": "关闭账户",
+      "CLOSE_CONFIRM_TITLE": "确认关闭账户",
+      "CLOSE_CONFIRM_MESSAGE": "关闭账户并清除个人资料中的身份信息（姓名 · 邮箱 · 电话）：",
+      "CLOSE_POINT_LOGIN": "该账户将无法再登录，并从用户列表和司机指派名单中消失。",
+      "CLOSE_POINT_RECORDS": "订票记录和收据仍按会计法规保留 —— 这并非完全删除其数据。",
+      "CLOSE_POINT_EMAIL": "原邮箱地址将被释放，本人可用它重新注册。",
+      "CLOSE_IRREVERSIBLE": "此操作无法撤销。",
+      "CLOSE_BTN": "关闭账户",
+      "CLOSING": "正在关闭...",
+      "CLOSE_SUCCESS": "账户已关闭，身份信息已清除。订票记录仍保留。",
+      "CLOSE_FAILED": "无法关闭该账户。",
       "SALES_POINTS_SECTION_TITLE": "销售点",
       "ALLOWED_SALES_POINTS_LABEL": "允许的销售点",
       "ACTIVE_SALES_POINT_LABEL": "当前所在销售点",
       "ACTIVE_SALES_POINT_NONE": "未设定",
       "SALES_POINTS_EMPTY": "系统中尚未设置销售点",
-      "SALES_POINTS_UNAVAILABLE": "无法加载销售点列表，请重试"
+      "SALES_POINTS_UNAVAILABLE": "无法加载销售点列表，请重试",
+      "OPERATOR_SECTION_TITLE": "营运商",
+      "OPERATORS_UNAVAILABLE": "无法加载营运商列表，请重试",
+      "OPERATORS_EMPTY": "系统中尚无营运商",
+      "EMPLOYER_OWNER_LABEL": "雇主",
+      "EMPLOYER_OWNER_NONE": "无营运商",
+      "EMPLOYER_OWNER_HINT": "雇用此人的营运商。客户和管理员没有雇主。仅在创建账号时可修改。",
+      "SELLABLE_OWNERS_LABEL": "可代售车票的营运商",
+      "SELLABLE_OWNERS_HINT": "与雇主是两个不同的问题——共用售票柜台的售票员可以代售多家营运商的车票。未选择 = 不能代售任何一家。",
+      "PERSONAL_SECTION_TITLE": "个人信息",
+      "CREDENTIALS_SECTION_TITLE": "账户凭据",
+      "CONTACT_SECTION_TITLE": "联系方式与设置"
     },
     "VEHICLES": {
       "MONITORING": "车队监控已启用",
@@ -1054,7 +1101,15 @@
       "PHOTO_REMOVE_CONFIRM": "要从该站点删除这张照片吗？路线图将恢复为无照片状态。",
       "PHOTO_REMOVE_FAILED": "删除照片失败。",
       "PHOTO_UPLOADED": "照片已上传。",
-      "PHOTO_UPLOAD_FAILED": "上传照片失败。"
+      "PHOTO_UPLOAD_FAILED": "上传照片失败。",
+      "ADD": "新增站点",
+      "CREATE_TITLE": "新增站点",
+      "SLUG": "Slug（站点代码）",
+      "SLUG_HINT": "小写字母与下划线，例如 mo_chit。设定后无法更改。",
+      "DELETE_TITLE": "删除站点",
+      "DELETE_CONFIRM": "确定删除站点“{{name}}”吗？",
+      "DELETE_IN_USE": "仍有路线、班次、订单、车票或售票点引用“{{name}}”，因此无法删除。",
+      "PHYSICAL_READONLY": "站点的位置与类型属于共享的基础数据，只有系统管理员可以修改。下方的名称、标志物与地址由您自行填写。"
     },
     "ROUTES": {
       "TITLE": "路线管理",
@@ -1393,8 +1448,6 @@
     },
     "REPORTS": {
       "SUBTITLE": "指定日期范围内的预订数、售出票数、座位使用率和收入。",
-      "FILTER_FROM": "起始日期",
-      "FILTER_TO": "结束日期",
       "EXPORT_REVENUE_DAILY": "每日营收",
       "EXPORT_REVENUE_PER_VEHICLE": "每车营收",
       "TILE": {
@@ -1499,8 +1552,6 @@
     },
     "SETTLEMENTS": {
       "SUBTITLE": "确认每个已发车班次的现金与收入交接。",
-      "FILTER_FROM": "起始日期",
-      "FILTER_TO": "结束日期",
       "TABLE_TITLE": "待结算班次",
       "COL": {
         "ROUTE": "路线",
@@ -1632,16 +1683,30 @@
           "RETURNED_PLACEHOLDER": "0.00",
           "CONFIRM_BTN": "确认归还",
           "CONFIRM_TITLE": "确认司机现金归还？",
-          "CONFIRM_TEXT": "将记录归还金额为 {{amount}}，此操作无法撤销。",
+          "CONFIRM_TEXT": "将记录归还金额为 {{amount}}。如果之后出现当日的票据，车主可以在此页面重新打开该现金盒。",
           "SUCCESS": "司机现金日已标记为已归还。",
           "ALREADY_RETURNED": "该日已完成归还。",
           "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）",
           "PER_HEAD_PAY": "今日所得人头费（已在班次结算中扣除，不计入上方金额）"
         },
+        "REOPEN": {
+          "ACTION_LABEL": "重新打开此现金盒",
+          "HINT": "适用于该班次的票据在签署归还之后才送到柜台的情况。已签署的金额会保留在历史记录中，现金盒将恢复为未关闭状态。",
+          "REASON_LABEL": "原因",
+          "REASON_PLACEHOLDER": "例如：昨天班次的油费票据今早才送到",
+          "CONFIRM_BTN": "重新打开",
+          "CONFIRM_TITLE": "重新打开此现金盒？",
+          "CONFIRM_TEXT": "已签署的归还金额将被清除并保留在历史记录中。现金盒将恢复为未关闭状态，添加项目后需要重新签署归还。",
+          "SUCCESS": "现金盒已重新打开。",
+          "HISTORY_TITLE": "此现金盒已被重新打开 {{count}} 次",
+          "PREV_RETURNED": "此前签署的金额："
+        },
         "ERROR": {
           "REASON_REQUIRED": "归还金额与预期不符时必须填写原因。",
           "ALREADY_RETURNED": "该日已完成归还。",
-          "RETURN_FAILED": "无法记录此次归还。"
+          "RETURN_FAILED": "无法记录此次归还。",
+          "NOT_RETURNED": "此现金盒尚未签署归还，无需重新打开。",
+          "REOPEN_FAILED": "无法重新打开此现金盒。"
         },
         "COL": {
           "HOLDER": "持现金人",
@@ -1896,13 +1961,11 @@
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "所选日期范围内的退款、待人工退款和作废票务汇总。",
-      "FILTER_FROM": "起始日期",
-      "FILTER_TO": "结束日期",
-      "BASIS_NOTE": "退款和作废按处理日期统计，而非原订单日期或出发日期。",
+      "BASIS_NOTE": "退款、待人工退款和作废均按订单创建日期统计，而非退款或作废的处理日期，也不是出发日期。因此，今天为较早订单办理的退款会计入该订单的原始日期。",
       "PARTITION_NOTE": "作废分为已取消（人工取消）和已过期（未支付超时）两类，两者之和等于作废总额。",
       "CARD": {
-        "REFUNDED": "已退款（毛额）",
-        "REFUNDED_HINT": "扣除任何手续费之前退还给客户的总金额。",
+        "REFUNDED": "已退款",
+        "REFUNDED_HINT": "实际退还给客户的金额，按退款分类账逐笔汇总，包含部分退款。分类账建立之前发生的退款，按该笔付款的全额记录。仍在等待人工退款的金额单独计入待人工退款。",
         "MANUAL_PENDING": "待人工退款",
         "VOIDED": "已作废",
         "CANCELLED": "已取消",
@@ -1930,8 +1993,6 @@
     },
     "CASH_ONLINE_RECONCILIATION": {
       "SUBTITLE": "所选日期范围内收取的现金、线上和其他支付总额。",
-      "FILTER_FROM": "起始日期",
-      "FILTER_TO": "结束日期",
       "BASIS_NOTE": "现金、线上和其他按订单创建日期统计，而非出行日期。",
       "PARTITION_NOTE": "支付分为现金（人工收款）、线上（银行卡、PromptPay 及其他数字渠道）和其他（银行转账及杂项）三类，每笔已收款项仅归入其中一类。",
       "CARD": {
@@ -1957,10 +2018,74 @@
         "RANGE_TOO_LARGE": "所选日期范围过大，请选择366天以内的范围。"
       }
     },
+    "PAYEE_SPEND_REPORT": {
+      "SUBTITLE": "按收款方统计的支出——修车厂、加油站及其他收款方",
+      "FILTER_YEAR": "年份",
+      "YEAR_OPTION": "{{year}} · {{count}} 张单据 · {{amount}}",
+      "FILTER_MONTH": "月份",
+      "MONTH_NEEDS_YEAR": "请先选择年份，再选择月份",
+      "MONTHS": {
+        "1": "一月",
+        "2": "二月",
+        "3": "三月",
+        "4": "四月",
+        "5": "五月",
+        "6": "六月",
+        "7": "七月",
+        "8": "八月",
+        "9": "九月",
+        "10": "十月",
+        "11": "十一月",
+        "12": "十二月"
+      },
+      "FILTER_CATEGORY": "支出类别",
+      "SCOPE_NOTE": "本页回答钱付给了谁，不回答修车厂是否涨价——同一家修车厂的两张单据是不同的工作，金额无法直接比较。",
+      "LOAD_FAILED": "加载报表失败，请重试。",
+      "EMPTY": "所选期间没有支出",
+      "COVERAGE_TITLE": "本页涵盖了多少支出",
+      "COVERAGE_TEXT": "已记录收款方的支出为 {{assigned}}，占总支出 {{total}} 的 {{percent}}%。其余为系统尚无收款方字段时录入的单据。",
+      "TABLE_TITLE": "各收款方合计",
+      "COL_PAYEE": "收款方",
+      "COL_WORK": "所做工作",
+      "COL_BILLS": "单据数",
+      "COL_TOTAL": "合计",
+      "UNASSIGNED": "未记录收款方",
+      "UNASSIGNED_HINT": "系统尚无此字段时录入的单据",
+      "TOTAL_ROW": "总计",
+      "PERIOD_ALL": "当前显示：全部年份",
+      "PERIOD_YEAR": "当前显示：{{year}} 年全年",
+      "PERIOD_YEAR_MONTH": "当前显示：{{year}} 年 {{month}}"
+    },
+    "PART_UNIT_PRICE_REPORT": {
+      "SUBTITLE": "各配件／工时的单价——哪家车行收多少、何时收",
+      "FILTER_PART": "要比较的项目",
+      "PART_OPTION": "{{name}} · 可比较 {{comparable}}/{{lines}}",
+      "SCOPE_NOTE": "本页涵盖全部记录，并且刻意不设年份筛选——目前唯一可比较的价格都横跨 2025 与 2026 年，加上时间范围反而会把本页存在的意义清空。",
+      "LOAD_FAILED": "报表加载失败",
+      "EMPTY": "还没有账单指定登记表中的项目——只要录入账单时从登记表选择项目，本报表就会有可比较的数据。",
+      "PICK_A_PART": "选择一个项目，查看哪家车行收多少、何时收",
+      "COVERAGE_TITLE": "本报表能说明多少金额",
+      "COVERAGE_TEXT": "支出合计 {{total}} · 可按单价比较 {{comparable}}（{{totalLines}} 行中的 {{comparableLines}} 行）",
+      "COVERAGE_EXCLUDED": "无法比较：{{unnamed}}（{{unnamedLines}} 行）未指定任何项目，其中包含“多项一价”的行 · {{noPrice}}（{{noPriceLines}} 行）已指定项目，但账单未写单价，或写为 ฿0。",
+      "NO_COMPARISON": "暂时没有可比较的数据",
+      "NO_COMPARISON_UNITS": "此项目在多张账单上都有价格，但单位不同，无法并列比较——每罐的价格与每升的价格不是涨价。",
+      "NO_COMPARISON_ONE_BILL": "此项目目前只有一张账单的价格——出现第二张使用相同单位的账单后，图表就会显示。",
+      "UNIT_GROUP": "每 {{unit}}",
+      "UNIT_NONE": "未注明单位",
+      "PAYEE_UNKNOWN": "未记录收款方",
+      "TABLE_TITLE": "所选项目的全部明细",
+      "COL_DATE": "日期",
+      "COL_PAYEE": "车行／收款方",
+      "COL_UNIT_PRICE": "单价",
+      "COL_STATUS": "状态",
+      "STATUS": {
+        "COMPARABLE": "计入",
+        "EXCLUDED_ZERO_PRICE": "不计入 · 账单单价写为 ฿0",
+        "EXCLUDED_NO_UNIT_PRICE": "不计入 · 账单未写单价"
+      }
+    },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "按车辆统计的损益，来自车票收入与已记录的支出。",
-      "FILTER_FROM": "起始日期",
-      "FILTER_TO": "结束日期",
       "VAT_NOTE": "所有金额均已含增值税。车费免征增值税，因此进项税无法抵扣，是真实成本——增值税数字是金额中已包含的部分，不应再另外相加。",
       "MARGIN_NOTE": "每辆车的利润等于该车自身收入减去该车自身支出。中央成本不分摊到各车，只在公司合计中扣除一次。",
       "LOAD_FAILED": "报表加载失败，请重试。",
@@ -1971,6 +2096,7 @@
       "HISTORICAL_CONFLICTS": "有 {{count}} 天导入数据与实际销售冲突",
       "EXPAND_ARIA": "查看该车辆的支出明细",
       "COLLAPSE_ARIA": "隐藏该车辆的支出明细",
+      "NO_CATEGORY_ENTRY": "此类别没有记录（不是记录为 0）",
       "ERROR": {
         "RANGE_INVALID": "起始日期不能晚于结束日期。",
         "RANGE_TOO_LARGE": "日期范围不能超过 366 天。"
@@ -1987,7 +2113,19 @@
         "REVENUE": "收入",
         "EXPENSES": "支出",
         "VAT": "其中增值税",
-        "MARGIN": "利润"
+        "MARGIN": "利润",
+        "OTHER_CATEGORIES": "其他 {{count}} 个类别"
+      },
+      "COST_MIX": {
+        "TITLE": "成本构成",
+        "HINT": "本期公司全部成本按类别划分，含中央费用。",
+        "NONE": "本期尚无人记录任何支出。",
+        "FOLDED": "其他 {{count}} 个类别"
+      },
+      "TOP_MARGIN": {
+        "TITLE": "利润最高的 5 辆车",
+        "HINT": "按各车自身利润排序——未计入无车归属的收入和中央费用，因为两者都不属于某一辆车。",
+        "NONE": "此日期范围内没有车辆有数据。"
       },
       "COVERAGE": {
         "SERVICE_WINDOW_UNKNOWN": "运营区间未知",
@@ -2053,6 +2191,11 @@
         "INSTALMENT": "车辆分期付款",
         "PARKING_FEE": "停车费",
         "PARCEL_COMPENSATION": "包裹损坏赔偿",
+        "STAFF_WAGE": "站点员工工资",
+        "UTILITY": "水电通讯费",
+        "RENT": "站点租金",
+        "SECURITY": "治安费",
+        "SOFTWARE_FEE": "售票系统软件费",
         "CENTRAL": "中央",
         "OTHER": "其他"
       },
@@ -2060,7 +2203,28 @@
       "VAT_AMOUNT": "增值税金额(泰铢)",
       "EXPENSE_DATE": "支出日期",
       "RECEIPT_NO": "收据/税务发票号",
-      "PAID_BY": "付款人/账户",
+      "PAID_BY": "付款来源",
+      "PAID_BY_HINT": "这笔钱从哪个钱包或账户支出 — 不是收款方名称。",
+      "PAYEE": {
+        "LABEL": "付给谁",
+        "HINT": "收到这笔钱的修理厂、加油站或商店。可以留空 — 旧账单若无收款方记录，系统不会替您猜测。",
+        "PLACEHOLDER": "选择或输入名称",
+        "SEARCH_PLACEHOLDER": "输入修理厂或加油站名称",
+        "NONE": "未指定收款方",
+        "NO_MATCH": "名录中没有“{{name}}”",
+        "ADD_AS": "添加为{{type}}",
+        "FILTER_TYPE_ALL": "类型：全部",
+        "TYPES": {
+          "GARAGE": "修理厂",
+          "FUEL_STATION": "加油站",
+          "OTHER": "其他"
+        }
+      },
+      "PART": {
+        "SEARCH_PLACEHOLDER": "输入配件或工时名称",
+        "NO_MATCH": "名录中没有“{{name}}”",
+        "ADD_AS": "添加为{{kind}}"
+      },
       "NOTE": "备注",
       "NOTE_PLACEHOLDER": "补充说明(可选)",
       "ITEMS": {
@@ -2069,25 +2233,105 @@
         "ADD": "新增明细",
         "REMOVE": "删除",
         "PART": "配件",
-        "PART_NONE": "非配件（工时／服务／其他）",
         "DESCRIPTION": "单据上的文字",
         "QUANTITY": "数量",
         "UNIT_PRICE": "单价",
         "AMOUNT": "明细金额",
         "TOTAL": "明细合计",
-        "MISMATCH": "明细合计与单据总额不一致。请先修改明细或总额使两者一致，然后再保存。"
+        "MISMATCH": "明细合计与单据总额不一致。请先修改明细或总额使两者一致，然后再保存。",
+        "UNIT": "单位",
+        "UNIT_PLACEHOLDER": "张 / 个 / 平方英尺"
       },
       "FILTER_VEHICLE": "车辆:全部",
+      "FILTER_OWNER": "经营者：全部",
       "FILTER_VEHICLE_CENTRAL_ONLY": "仅中央/不绑定",
       "FILTER_CATEGORY": "类别:全部",
-      "FILTER_DATE_FROM": "起始日期",
-      "FILTER_DATE_TO": "截止日期",
+      "FILTER_YEAR": "年份",
+      "FILTER_MONTH": "月份",
       "EMPTY_TITLE": "暂无费用记录",
       "EMPTY_BODY": "点击\"添加费用\"开始记录车辆或中央支出",
       "NO_MATCH": "没有符合当前筛选条件的费用",
-      "SOURCE": "来源",
       "SOURCE_FIELD": "系统自动生成（来自司机）",
-      "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。"
+      "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。",
+      "BATCH": {
+        "OPEN": "批量录入单据",
+        "SUBTITLE": "一次保存整批单据",
+        "PAGE_PURPOSE": "修理厂往往一次交来多张单据。在这里全部录入后只需保存一次 —— 要么全部入账，要么一张也不入，不会只存一半。",
+        "BILL_N": "第 {{n}} 张",
+        "BILL_TOTAL": "本张合计",
+        "BILL_COUNT": "{{n}} 张单据",
+        "LINE_COUNT": "{{n}} 条明细",
+        "ADD_BILL": "+ 添加单据",
+        "ADD_LINE": "+ 添加明细",
+        "REMOVE_BILL": "删除本张单据",
+        "COLLAPSE": "收起",
+        "GARAGE": "修理厂",
+        "LINE_DESCRIPTION": "明细（按修理厂所写）",
+        "LINE_PART": "配件 / 工时",
+        "SAVE_ENVELOPE": "保存整批",
+        "SAVED": "已录入 {{n}} 张单据",
+        "OWNER_HINT": "本批单据均计入该运营商。",
+        "BILL_DATE": "单据日期",
+        "VEHICLE": "车牌",
+        "CATEGORY": "类别",
+        "PAID_BY": "付款方式",
+        "LINE_PART_NONE": "非配件"
+      }
+    },
+    "EXPENSE_PAYEES": {
+      "SUBTITLE": "我们付款的修理厂、加油站和商店",
+      "PAGE_PURPOSE": "本页是我们付款的修理厂、加油站和商店名录。账单保存的是收款方编号而非名称拼写，因此在此改名一次，所有历史账单同步更新。此处刻意没有删除按钮：收款方仍然是其收过的每一张账单的归属。请改用“停用”，停用后它不再出现在选择框中。",
+      "TABLE_TITLE": "收款方列表",
+      "ADD": "添加收款方",
+      "ADD_TITLE": "添加收款方",
+      "ADD_HINT": "请按您实际的称呼命名，方便录入账单时查找。",
+      "RENAME": "改名",
+      "RENAME_TITLE": "修改收款方名称",
+      "RENAME_HINT": "所有历史账单会同步更新 — 账单保存的是收款方编号，不是名称拼写。",
+      "RETIRE": "停用",
+      "RESTORE": "恢复使用",
+      "NAME": "名称",
+      "TYPE": "类型",
+      "STATUS": "状态",
+      "STATUS_ACTIVE": "使用中",
+      "STATUS_RETIRED": "已停用",
+      "SHOW_RETIRED": "显示已停用",
+      "EMPTY_TITLE": "名录中还没有收款方",
+      "EMPTY_BODY": "请点击“添加收款方”，或在录入账单时直接输入新名称，从那里即可添加。",
+      "NO_MATCH": "没有符合筛选条件的记录",
+      "NAME_TAKEN": "该名称已存在于名录中。系统不会自动合并两个收款方，因为合并无法撤销。"
+    },
+    "MAINTENANCE_PARTS": {
+      "SUBTITLE": "保养计划和维修账单共用的配件与工时项目清单",
+      "PAGE_PURPOSE": "这是您自己的配件／工时名称清单。保养计划和账单保存的是项目编号，不是名称拼写，所以在这里改一次名称，过往记录全部随之更新。这里没有删除按钮：停用的项目仍然拥有所有引用过它的价格记录，请改用「停用」，之后它就不会再出现在选择列表中。",
+      "TABLE_TITLE": "全部项目",
+      "ADD": "新增项目",
+      "ADD_TITLE": "新增项目",
+      "ADD_HINT": "请按账单上的写法命名，这样录入账单或设置保养计划时才找得到。",
+      "RENAME": "改名",
+      "RENAME_TITLE": "修改项目名称",
+      "RENAME_HINT": "所有保养计划和历史账单会立即随之更新，因为它们保存的是项目编号而不是名称。",
+      "RETIRE": "停用",
+      "RESTORE": "恢复使用",
+      "NAME": "名称",
+      "KIND": "配件／工时",
+      "STATUS": "状态",
+      "STATUS_ACTIVE": "使用中",
+      "STATUS_RETIRED": "已停用",
+      "SHOW_RETIRED": "显示已停用的项目",
+      "EMPTY_TITLE": "登记表中还没有项目",
+      "EMPTY_BODY": "可以用「新增项目」按钮添加，或者在录入账单时直接输入新名称，系统会从那里帮您加入。",
+      "NO_MATCH": "没有符合筛选条件的项目",
+      "NAME_TAKEN": "该名称已在登记表中。系统不会自动合并两个项目，因为合并无法撤销。",
+      "NAME_WILL_REUSE": "该名称已在登记表中。仍可保存：系统会沿用已有的项目，不会重复创建。",
+      "NAME_KIND_CONFLICT": "「{{name}}」已存在，类型为{{kind}}。同一个名称不能同时属于两种类型，否则会把两种不同的东西拿来比价。请换一个名称，例如「工时：更换……」。",
+      "SEEDED_BADGE": "内置 · 有翻译",
+      "SEEDED_RENAME_WARNING": "⚠️ 这是 13 个内置项目之一，带有英文和中文名称。改名后它会变成您自己输入的项目，翻译将永久丢失——英文界面会显示泰文名称，且无法从此页面恢复。",
+      "FILTER_KIND_ALL": "类型：全部",
+      "KINDS": {
+        "PART": "配件",
+        "LABOUR": "工时"
+      }
     },
     "MANUAL_REFUNDS": {
       "SUBTITLE": "等待人工退款转账的付款",
@@ -2491,7 +2735,6 @@
     "RESEND_EMAIL_REQUIRED": "请输入您的电子邮件",
     "RESEND_EMAIL_INVALID": "请输入有效的电子邮件",
     "RESEND_BUTTON": "重新发送验证邮件",
-    "RESEND_LOADING": "发送中...",
     "RESEND_SUCCESS": "验证邮件已重新发送，请检查您的收件箱。",
     "ERROR": {
       "TOKEN_MISSING": "未找到验证令牌，请检查邮件中的链接。",
@@ -2522,6 +2765,7 @@
     "PROFILE_FIRST_NAME_LABEL": "名字",
     "PROFILE_MIDDLE_NAME_LABEL": "中间名（可选）",
     "PROFILE_LAST_NAME_LABEL": "姓氏",
+    "PROFILE_NICKNAME_LABEL": "昵称（可选）",
     "PROFILE_EDIT_BUTTON": "编辑个人资料",
     "PROFILE_SAVE_BUTTON": "保存",
     "PROFILE_CANCEL_BUTTON": "取消",
@@ -2561,7 +2805,7 @@
     "CHANNEL_EMAIL": "电子邮件",
     "CHANNEL_SMS": "短信",
     "CHANNEL_NA": "不可用",
-    "CRITICAL_HINT": "此通知必须至少保留一个开启的渠道。",
+    "CRITICAL_HINT": "带 * 号的通知必须至少保留一个开启的渠道，无法全部关闭。",
     "SAVE_BUTTON": "保存更改",
     "SAVE_SUCCESS": "通知偏好设置已保存。",
     "RETRY": "重试",
@@ -2571,7 +2815,7 @@
     "UNSAVED_CHANGES_CANCEL": "继续编辑",
     "ERROR": {
       "LOAD_FAILED": "无法加载您的通知偏好设置，请重试。",
-      "CRITICAL_LAST_CHANNEL": "此通知必须至少保留一个开启的渠道。",
+      "CRITICAL_LAST_CHANNEL": "无法关闭——这是此通知仅存的渠道。",
       "GENERIC": "发生错误，请重试。"
     },
     "TYPE": {
@@ -2580,6 +2824,8 @@
       "SCHEDULE_CANCELLED": "行程已取消",
       "BOOKING_RESCHEDULED": "预订已改期",
       "SCHEDULE_TIME_CHANGED": "行程时间已变更",
+      "SCHEDULE_DELAYED": "行程延误",
+      "SCHEDULE_VEHICLE_CHANGED": "车辆变更",
       "PRE_DEPARTURE_REMINDER": "出发前提醒",
       "BOARDING_REMINDER": "登车提醒"
     }
@@ -2607,14 +2853,12 @@
     "NEW_EMAIL_REQUIRED": "请输入有效的电子邮件",
     "NEW_EMAIL_EXIST": "此电子邮件已被使用",
     "SUBMIT": "发送验证链接",
-    "SUBMIT_LOADING": "发送中...",
     "CANCEL": "取消",
     "CLOSE": "关闭",
     "SENT_TITLE": "验证链接已发送",
     "SENT_MESSAGE": "我们已向 {{email}} 发送了验证链接。",
     "SENT_NOTE": "在您通过链接确认之前，您的登录邮箱不会更改。",
     "RESEND_BUTTON": "重新发送链接",
-    "RESEND_LOADING": "发送中...",
     "RESEND_SUCCESS": "验证链接已重新发送，请检查您的收件箱。",
     "ERROR": {
       "INVALID_PASSWORD": "密码不正确，请重试。",
@@ -2661,7 +2905,6 @@
     "EMAIL_REQUIRED": "请输入电子邮箱",
     "EMAIL_INVALID": "电子邮箱格式不正确",
     "SEND_LINK": "发送重置链接",
-    "SEND_LINK_LOADING": "发送中...",
     "SENT_MESSAGE": "如果该邮箱已绑定账户，我们已向其发送重置密码的链接。请查收您的邮箱。",
     "BACK_TO_LOGIN": "返回登录"
   },
@@ -2674,7 +2917,6 @@
     "PASSWORD_RULE": "密码需为 8-128 个字符，并至少包含一个大写字母、一个小写字母和一个数字",
     "PASSWORD_MISMATCH": "两次输入的密码不一致",
     "SUBMIT": "设置新密码",
-    "SUBMIT_LOADING": "保存中...",
     "SUCCESS_TITLE": "密码已更改",
     "SUCCESS_MESSAGE": "您的密码已更改，现在可以使用新密码登录。",
     "SUCCESS_SIGNIN": "登录",
@@ -2715,6 +2957,7 @@
       "SIGNED_IN_AS": "当前登录账号"
     },
     "HOME_BOOKING": {
+      "HERO_HEADLINE": "在线预订 NJ Phuyaipu 巴士车票",
       "TRIP_TYPE": "行程类型",
       "ROUNDTRIP_1": "单程",
       "ROUNDTRIP_2": "往返",
@@ -2793,12 +3036,10 @@
       "SUMMARY_PICKUP_VALUE": "{{province}} {{count}} 站",
       "SUMMARY_DROPOFF_VALUE": "{{province}} {{count}} 站",
       "SUMMARY_DISTANCE": "约 {{distance}} 公里",
-      "SUMMARY_DURATION": "行程约 {{min}} - {{max}} 分钟",
       "SUMMARY_DURATION_SEGMENT": "预计行程时间约 {{duration}} 分钟",
       "SUMMARY_SEGMENT_NOTE": "针对您所选的上车点和下车点",
       "DETAIL_PICKUP_TITLE": "上车点详情 ({{province}})",
       "DETAIL_DROPOFF_TITLE": "下车点详情 ({{province}})",
-      "DETAIL_TIME": "预计时间 {{time}}",
       "DETAIL_LANDMARK_LABEL": "标志物",
       "DETAIL_NO_PHOTO": "尚无该站点的照片",
       "BTN_OPEN_MAPS": "在 Google 地图中打开",
@@ -2851,7 +3092,6 @@
     "TIME_UNIT": "",
     "HOUR_UNIT": "小时",
     "MINITE_UNIT": "分钟",
-    "BAHT_UNIT": "泰铢",
     "SEAT_REMAIN": "剩余",
     "SEAT_UNIT": "个座位",
     "SEAT_PER_PASSENGER": "/座位",
@@ -2869,7 +3109,14 @@
     "SOLD_OUT_TODAY_TITLE": "今天的班次均已发车",
     "SOLD_OUT_TODAY_HINT": "请查看次日的班次。",
     "SOLD_OUT_TODAY_ACTION": "查看{{date}}的班次",
+    "DAY_STRIP_LABEL": "选择出行日期",
+    "DAY_STRIP_TODAY": "今天",
+    "DAY_STRIP_NO_TRIPS": "无班次",
+    "NEAREST_DAY_HINT": "最近有班次的日期是{{date}}",
     "ESTIMATE_KM_UNIT": "公里",
+    "PICKUP_STOP": "上车点",
+    "DROPOFF_STOP": "下车点",
+    "OPEN_IN_MAPS": "在地图中打开",
     "RESTORED_UNAVAILABLE": "您之前选择的班次已无空位，请重新选择。"
   },
   "REVIEW_SCHEDULE_BOOKING": {
@@ -2896,11 +3143,10 @@
       "PASSENGER_UNIT": "人",
       "TICKET_PRICE": "票价",
       "TICKET_PRICE_RETURN": "往返票价",
-      "TICKET_UNIT": "泰铢/人",
+      "TICKET_UNIT": "/人",
       "SUBTOTAL": "小计",
       "PROMO_DISCOUNT": "促销折扣",
       "TOTAL": "总价",
-      "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认信息"
     }
   },
@@ -2966,6 +3212,8 @@
       "OPEN_SEAT_SECTION_HINT": "开放座位 — 按到达顺序上车。",
       "OPEN_SEAT_COUNT_LABEL": "乘客人数",
       "OPEN_SEAT_MAX_HINT": "乘客人数已达剩余座位上限（剩余 {{max}} 个）。",
+      "SENSITIVE_TYPE_CONSENT_LABEL": "本人明确同意收集并使用该乘客的僧侣/尼姑身份，用于显示在车票、确认邮件及本公司员工可见的订单列表中，并在指定座位号的班次上用于安排座位",
+      "SENSITIVE_TYPE_CONSENT_HINT": "不同意亦可正常订票，我们只是不会记录乘客类型",
       "SEAT_PREFERENCE_LABEL": "座位偏好（可选）",
       "SEAT_PREFERENCE_GROUP_ARIA": "选择座位偏好",
       "SEAT_PREFERENCE_WINDOW": "靠窗",
@@ -2981,7 +3229,9 @@
       "EXTRA_LEGROOM_BADGE_ARIA": "加大腿部空间座位",
       "LEGEND_TITLE": "座位图例",
       "LEGEND_WHEELCHAIR": "轮椅无障碍",
-      "LEGEND_EXTRA_LEGROOM": "加大腿部空间"
+      "LEGEND_EXTRA_LEGROOM": "加大腿部空间",
+      "BLOCKED_SEAT_ARIA": "此乘客不可选择",
+      "LEGEND_BLOCKED": "此乘客不可选择"
     },
     "GENDER": {
       "MALE": "男",
@@ -3016,13 +3266,11 @@
       "PASSENGER_UNIT": "人",
       "TICKET_PRICE_ONEWAY": "票价",
       "TICKET_PRICE_ROUNDTRIP": "往返票价",
-      "TICKET_UNIT": "泰铢/人",
+      "TICKET_UNIT": "/人",
       "SUBTOTAL": "小计",
       "DISCOUNT_ROUND_TRIP": "往返折扣",
       "DISCOUNT": "折扣",
-      "TOTAL": "总计",
-      "TOTAL_UNIT": "泰铢",
-      "CONFIRM": "确认付款"
+      "TOTAL": "总计"
     },
     "CREDIT_CARD": {
       "HOSTED_HINT": "点击付款后，请在 Omise 的安全窗口中输入卡片信息。本网站不会看到或保存您的卡号。",
@@ -3087,7 +3335,6 @@
       "PASSENGER_PHONE": "预订人电话号码",
       "PAYMENT_DATE": "付款日期/时间",
       "TOTAL": "总计",
-      "TOTAL_UNIT": "泰铢",
       "ESTIMATE_KM_UNIT": "公里",
       "LEG_OUTBOUND": "去程",
       "LEG_RETURN": "返程",
@@ -3185,7 +3432,7 @@
       "SELL_RECEIPT": "打印车票",
       "SCHEDULES": "班次管理",
       "DRIVER": "我的班次",
-      "BOARDING": "登车名单",
+      "BOARDING": "班次作业",
       "PARCEL_INTAKE": "包裹收件",
       "PARCEL_WAYBILL": "运单",
       "PARCEL_SCHEDULE": "班次包裹作业",
@@ -3208,6 +3455,8 @@
       "LOGOUT_SUCCESS": "退出成功",
       "COLLAPSE_MENU": "收起菜单",
       "EXPAND_MENU": "展开菜单",
+      "COLLAPSE_MENU_TITLE": "收起菜单 (Ctrl+B)",
+      "EXPAND_MENU_TITLE": "展开菜单 (Ctrl+B)",
       "PIN_MENU": "固定菜单展开",
       "UNPIN_MENU": "取消固定菜单",
       "THEME_TOGGLE": "切换深色模式"
@@ -3216,7 +3465,7 @@
       "SELL": "现场售票",
       "SCHEDULES": "班次",
       "MY_SCHEDULES": "我的班次",
-      "BOARDING": "登车名单",
+      "BOARDING": "班次作业",
       "PARCEL_CONSIGN": "寄送包裹",
       "PARCEL_SCHEDULE": "验收 / 交接",
       "INSPECTION": "车辆检查",
@@ -3289,13 +3538,20 @@
     },
     "BOARDING": {
       "TITLE": "登车名单",
-      "SUBTITLE": "管理本班次旅客登车情况",
+      "SUBTITLE": "本班次的旅客登车、司机现金箱、发车记录与打印",
       "TICKET_NO": "票号",
       "SEAT": "座位",
       "PASSENGER": "旅客",
       "FROM": "出发站",
       "TO": "到达站",
       "STATUS": "状态",
+      "SEARCH": {
+        "LABEL": "在本班次旅客名单中搜索",
+        "PLACEHOLDER": "订票号、姓名、座位或票号",
+        "CLEAR": "清除",
+        "NO_MATCH_TITLE": "未找到匹配的旅客",
+        "NO_MATCH_BODY": "本班车上没有与“{{term}}”匹配的记录。请与旅客核对订票号，可能属于其他班次。"
+      },
       "EMPTY_TITLE": "暂无旅客",
       "EMPTY_BODY": "本班次暂无登车记录。",
       "BOARDED": "已登车",
@@ -3304,6 +3560,7 @@
       "BOARDING_IN_PROGRESS": "登车处理中…",
       "BOARDED_AT": "登车时间",
       "BOARDED_BY": "登车登记人",
+      "CALL_BOOKER": "致电订票人",
       "UNBOARD_BTN": "取消登车",
       "UNBOARD_IN_PROGRESS": "取消登车处理中…",
       "UNBOARD_CONFIRM_TITLE": "确定要取消此旅客的登车记录吗？",
@@ -3523,6 +3780,11 @@
       "PASSENGER_COUNT_DECREASE": "减少乘客人数",
       "PASSENGER_COUNT_INCREASE": "增加乘客人数",
       "PASSENGER_COUNT_MAX": "最多可售 {{max}} 位乘客",
+      "DISCOUNT_CHILD_FARE": "儿童票折扣",
+      "FARE_CATEGORY_ADULT": "成人",
+      "FARE_CATEGORY_CHILD": "儿童",
+      "CHILD_COUNT_DECREASE": "减少儿童人数",
+      "CHILD_COUNT_INCREASE": "增加儿童人数",
       "JUMP_SEAT_OVERFLOW_HINT": "本次销售包含加座（无靠背）——该备用座位最后售出。",
       "JUMP_SEAT_CONFIRM_TITLE": "确认加座销售",
       "JUMP_SEAT_CONFIRM_TEXT": "该座位为无靠背加座，仅在普通座位售罄后由工作人员酌情出售。是否继续本次销售？",
@@ -3555,6 +3817,8 @@
       "PASSENGER_TYPE": "乘客类型",
       "PTYPE_MALE": "男性",
       "PTYPE_FEMALE": "女性",
+      "SENSITIVE_TYPE_CONSENT_LABEL": "乘客明确同意收集并使用其僧侣/尼姑身份，用于显示在车票与订单列表中，并在指定座位号的班次上用于安排座位",
+      "SENSITIVE_TYPE_CONSENT_HINT": "不勾选亦可正常售票，我们只是不会记录乘客类型",
       "PTYPE_MONK": "僧侣",
       "PTYPE_NUN": "尼姑",
       "FROM_LABEL": "从",
@@ -3622,7 +3886,7 @@
     },
     "BOARDING_ENTRY": {
       "TITLE": "选择班次",
-      "SUBTITLE": "选择班次以查看登车名单。",
+      "SUBTITLE": "选择班次以进入班次作业。",
       "EMPTY_TITLE": "暂无可用班次",
       "EMPTY_BODY": "您没有分配的班次，请稍后再查。"
     },
@@ -3736,7 +4000,7 @@
           "UNPAID_NOTE": "尚未付款 — 请在柜台收取现金（订单号 #{{bookingNumber}}）",
           "PAY_CASH_BUTTON": "收取现金",
           "PAYING": "正在记录付款…",
-          "PAID": "已付款 — 已收取现金 ฿{{amount}}"
+          "PAID": "已付款 — 已收取现金 {{amount}}"
         }
       },
       "SHARE_NOT_CONFIGURED": "尚未设置包裹收益分成——在业主设置之前将记为0%。",
@@ -3916,7 +4180,7 @@
       "SUBMITTING": "保存中…",
       "REJECT_CONFIRM": {
         "TITLE": "确认拒绝并退款",
-        "BODY": "拒绝包裹 {{tracking}} 并立即全额退款 {{amount}} 泰铢至寄件人付款时使用的支付渠道。此操作无法撤销。",
+        "BODY": "拒绝包裹 {{tracking}} 并立即全额退款 {{amount}} 至寄件人付款时使用的支付渠道。此操作无法撤销。",
         "CONFIRM_BTN": "拒绝并退款",
         "CANCEL_BTN": "取消"
       },
@@ -3928,8 +4192,8 @@
         "VALIDATION": "数据无效，请重新检查。"
       },
       "SUCCESS": {
-        "REJECTED_REFUNDED": "包裹已拒绝，已退款 {{amount}} 泰铢。",
-        "REJECTED_MANUAL_REFUND": "包裹已拒绝，自动退款未成功，请将 {{amount}} 泰铢现金亲手退还收件人。"
+        "REJECTED_REFUNDED": "包裹已拒绝，已退款 {{amount}}。",
+        "REJECTED_MANUAL_REFUND": "包裹已拒绝，自动退款未成功，请将 {{amount}} 现金亲手退还收件人。"
       }
     },
     "INSPECTION": {
@@ -4018,6 +4282,7 @@
         "PARCEL_REMIT": "包裹汇款",
         "PARCEL_CLAWBACK": "包裹分成追回"
       },
+      "BOX_DATE": "{{date}} 的现金盒",
       "ADVANCE": {
         "ACTION_LABEL": "现金预支",
         "AMOUNT_LABEL": "金额",
@@ -4035,13 +4300,21 @@
       },
       "EXPENSE": {
         "ACTION_LABEL": "现场支出",
+        "LANDS_IN_BOX": "此项目将记入 {{date}} 的现金盒",
         "CATEGORY_LABEL": "类别",
         "AMOUNT_LABEL": "金额",
         "AMOUNT_PLACEHOLDER": "0.00",
         "NOTE_LABEL": "备注（选填）",
         "NOTE_PLACEHOLDER": "例如收据编号",
+        "BILL_DATE_LABEL": "票据上的日期",
+        "BILL_DATE_MISMATCH": "票据日期与将要记入的现金盒不一致 — 此项目将记入 {{date}} 的现金盒。",
         "SUBMIT": "记录支出",
         "WAGE_PRICED_BY_OWNER": "工资按车主设定的每趟费率计算（1 趟 = 1 个班次），无需填写金额。"
+      },
+      "REPAIR": {
+        "ACTION_LABEL": "添加维修项目",
+        "LANDS_IN_BOX": "此维修账单将记入 {{date}} 的现金盒",
+        "SUBMIT": "记录维修账单"
       },
       "SUBMITTING": "提交中...",
       "VALIDATION": {
@@ -4051,7 +4324,9 @@
         "GENERIC": "无法记录此项目，请重试。",
         "WAGE_RATE_NOT_CONFIGURED": "尚未设置每趟工资费率。请先让车主在司机工资费率页面设置。",
         "SALES_POINT_FORBIDDEN": "您只能为从自己售票点发车的班次记录此项目。此班次不属于您。",
-        "PER_HEAD_SALES_POINT_FORBIDDEN": "您只能为属于自己售票点的站点记录人头费。"
+        "PER_HEAD_SALES_POINT_FORBIDDEN": "您只能为属于自己售票点的站点记录人头费。",
+        "DAY_ALREADY_RETURNED": "当日的现金盒已完成归还并签署，无法再添加项目。请让车主重新打开当日的现金盒，然后再录入此票据。",
+        "REPAIR_BILL_ZERO_TOTAL": "维修账单总额必须大于零。请至少为一行填写金额。"
       },
       "MY_DAY": {
         "TITLE": "我今日的现金",
@@ -4085,7 +4360,8 @@
         "AMOUNT": "金额（泰铢）"
       },
       "ERROR": {
-        "RANGE_INVALID": "开始日期不得晚于结束日期。"
+        "RANGE_INVALID": "开始日期不得晚于结束日期。",
+        "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。"
       }
     }
   },
@@ -4168,7 +4444,7 @@
       "DESCRIPTION": "物品描述",
       "PROHIBITED_ACK": "我已阅读上述违禁物品清单，并确认本包裹不含其中任何一项",
       "QUOTE_LOADING": "正在计算价格…",
-      "QUOTE_AMOUNT": "价格：{{amount}} 泰铢",
+      "QUOTE_AMOUNT": "价格：{{amount}}",
       "SUBMIT": "确认包裹信息",
       "SUBMITTING": "正在提交…"
     },

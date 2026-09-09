@@ -52,6 +52,18 @@ describe('ParcelTrackingPageComponent', () => {
     expect(component['result']?.trackingNumber).toBe('PCL-1');
   });
 
+  it('OBRS-1561: a deep link padded with whitespace is trimmed before it reaches the field or the API', () => {
+    const trackSpy = jasmine
+      .createSpy('track')
+      .and.returnValue(of({ code: 200, message: 'OK', data: { trackingNumber: 'P-ABCDEFGHIJ', deliveryStatus: 'accepted', recipientNameMasked: 'S***i' } }));
+    const component = makeComponent({ track: trackSpy as never }, '  P-ABCDEFGHIJ  ');
+
+    component.ngOnInit();
+
+    expect(component['form'].value.trackingNumber).toBe('P-ABCDEFGHIJ');
+    expect(trackSpy).toHaveBeenCalledWith('P-ABCDEFGHIJ');
+  });
+
   it('does not submit an empty tracking number', () => {
     const trackSpy = jasmine.createSpy('track');
     const component = makeComponent({ track: trackSpy as never });

@@ -3,20 +3,22 @@
     type="button"
     class="admin-btn export-button-trigger"
     aria-haspopup="true"
-    [attr.aria-busy]="loading"
     [disabled]="loading"
+    [appPending]="loading"
     (click)="menu.toggle($event)"
     >
-    @if (!loading) {
-      <span class="material-symbols-outlined" [attr.translate]="'no'">download</span>
-    }
-    @if (loading) {
-      <span
-        class="material-symbols-outlined admin-loading-spinner export-button-spinner" [attr.translate]="'no'"
-        aria-hidden="true"
-      >sync</span>
-    }
-    <span>{{ (loading ? 'COMMON.EXPORT.IN_PROGRESS' : (label || 'COMMON.EXPORT.BUTTON_LABEL')) | translate }}</span>
+    <!-- scrutinize (OBRS-910 review): [appPending] always inserts its spinner
+    slot, it never removes this icon, so both showed at once while loading.
+    Hidden with `visibility` (not `@if`/`display`) so the icon keeps its
+    layout box and the button's width stays identical loading vs idle (AC-3);
+    [appPendingIconOnly] was rejected here because it also hides the label,
+    which this button must keep visible while loading. -->
+    <span
+      class="material-symbols-outlined"
+      [attr.translate]="'no'"
+      [style.visibility]="loading ? 'hidden' : 'visible'"
+      >download</span>
+    <span>{{ (label || 'COMMON.EXPORT.BUTTON_LABEL') | translate }}</span>
     <span class="material-symbols-outlined" [attr.translate]="'no'">expand_more</span>
   </button>
   <p-menu #menu [popup]="true" [model]="menuItems" appendTo="body"></p-menu>

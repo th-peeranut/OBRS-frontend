@@ -9,6 +9,7 @@ import { By } from '@angular/platform-browser';
 import { Subject, of, throwError } from 'rxjs';
 import { CounterCancelModalComponent } from './counter-cancel-modal.component';
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
+import { PendingButtonDirective } from '../../../../../shared/directives/pending-button.directive';
 import { AppRefundDestinationFieldsComponent } from '../../../../../shared/components/refund-destination-fields/refund-destination-fields.component';
 import { StaffApiService, CounterBookingSearchResultDto } from '../../../../../services/staff/staff-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
@@ -16,6 +17,7 @@ import { AuthService } from '../../../../../auth/auth.service';
 import { CancellationPolicy } from '../../../../../shared/interfaces/my-booking.interface';
 import { AA_NORMAL_TEXT, contrast, effectiveBg, fgOf } from '../../../../../testing/contrast';
 import { errorCodeFromMessageKey } from '../../../../../shared/lib/api-error-code';
+import { TitleLabelPipe } from '../../../../../shared/pipes/title-label.pipe';
 
 // OBRS-766 (QA-caught): the wire `errorCode` field is derived from its
 // dotted messageKey (see `api-error-code.ts`'s `errorCodeFromMessageKey`
@@ -31,6 +33,7 @@ const REFUND_DESTINATION_INVALID_CODE = errorCodeFromMessageKey('cancel.error.re
 const BOOKING: CounterBookingSearchResultDto = {
   bookingId: 42,
   bookingNumber: 'B-000042',
+  contactTitle: 'MISS',
   contactName: 'Somchai Jaidee',
   contactPhoneMasked: '••••5678',
   status: 'confirmed',
@@ -94,11 +97,12 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
     auth.getUsername.and.returnValue('salesperson@obrs.test');
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
+      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot(), TitleLabelPipe],
       declarations: [
         CounterCancelModalComponent,
         AdminModalBackdropDirective,
         AppRefundDestinationFieldsComponent,
+        PendingButtonDirective,
       ],
       providers: [
         { provide: StaffApiService, useValue: api },
@@ -423,7 +427,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
       submitCash();
 
       const message = alert.success.calls.mostRecent().args[0] as string;
-      expect(message).toContain('450.00');
+      expect(message).toContain('THB 450');
       expect(message).toContain('in cash');
     });
 
@@ -450,7 +454,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
       (component as any).submit();
 
       const message = alert.success.calls.mostRecent().args[0] as string;
-      expect(message).toContain('450.00');
+      expect(message).toContain('THB 450');
       expect(message).toContain('transferred by the owner');
       expect(message).toContain('do not pay cash');
     });
@@ -463,7 +467,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
       (component as any).submit();
 
       const message = alert.success.calls.mostRecent().args[0] as string;
-      expect(message).toContain('450.00');
+      expect(message).toContain('THB 450');
       expect(message).toContain('refunded to the method the customer paid with');
     });
 
@@ -636,11 +640,13 @@ describe('CounterCancelModalComponent — cancel body byte-identity (OBRS-766 FE
     auth.getUsername.and.returnValue('salesperson@obrs.test');
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot(), HttpClientTestingModule],
+      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot(), HttpClientTestingModule,
+        TitleLabelPipe],
       declarations: [
         CounterCancelModalComponent,
         AdminModalBackdropDirective,
         AppRefundDestinationFieldsComponent,
+        PendingButtonDirective,
       ],
       providers: [
         { provide: AlertService, useValue: alert },

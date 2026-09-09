@@ -24,7 +24,8 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * THE THREE RULES THAT KEEP THIS LANE HONEST
  *
- * 1. NO `globalSetup`. The default config's global setup logs into live SIT to mint
+ * 1. NO `globalSetup` THAT DEPENDS ON ANYTHING OFF THIS BOX. The default config's
+ *    global setup logs into live SIT to mint
  *    `e2e/fixtures/admin-auth.json` (gitignored, never committed). That makes SIT a
  *    hard dependency of *every* test in that run — including the ones that mock 100%
  *    of their own traffic. A gate that a cold-starting Koyeb instance can turn red is
@@ -36,6 +37,14 @@ import { defineConfig, devices } from '@playwright/test';
  *    storageState file keys its localStorage to an absolute `origins` entry, so it would
  *    silently apply to nothing the day `E2E_GATE_PORT` changed. `addInitScript` has no
  *    such coupling; the shared helper is `e2e/support/gate-admin-session.ts`.)
+ *
+ *    OBRS-1531 ADDED ONE, and it is inside that rule rather than an exception to it.
+ *    `e2e/support/lane-tree-guard.ts` opens no socket and mints no artefact: it prints
+ *    the tree, sha and port this run is about to measure, and throws if the server
+ *    already answering that port belongs to a different worktree — which, with
+ *    `reuseExistingServer` on locally, is a run that would otherwise report a
+ *    neighbour's code as this card's evidence and say nothing (OBRS-773). Nothing off
+ *    this machine can turn it red, so the property rule 1 protects is untouched.
  *
  * 2. The frontend is served with the `gate` configuration, which is the DEFAULT (local)
  *    environment — `apiUrl` still points at `http://localhost:8080`, where nothing is
@@ -81,10 +90,19 @@ import { defineConfig, devices } from '@playwright/test';
  * hang an agent run, but a human running the gate deserves an exit code, not a server.
  */
 
+// OBRS-1531: `E2E_GATE_PORT` moves THIS lane and nothing else. Two other configs used
+// to read it — `playwright.obrs1207capture.config.ts` (same default, 4230) and
+// `playwright.obrs769.config.ts` — so setting it to escape a collision quietly moved
+// two lanes you were not thinking about. `scripts/check-e2e-lanes.mjs` now fails a
+// build that shares a port env var or a default port between two configs.
 const PORT = process.env['E2E_GATE_PORT'] ?? '4230';
 
 export default defineConfig({
   testDir: './e2e/tests',
+
+  // Rule 1's one inhabitant: names the tree this run measures and refuses a port that
+  // belongs to another worktree. Local-only; it stands down on CI. See the helper.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
 
   // Explicit allow-list, never a glob. Membership is the claim "this spec needs
   // nothing but a browser", and that claim should be made one file at a time by
@@ -134,6 +152,7 @@ export default defineConfig({
     // OBRS-575 shipped past a green CI. Hermetic on the same terms as the rest
     // of the lane: it stubs every /api/** call and aborts Maps.
     '**/customer-contrast-gate.spec.ts',
+    '**/staff-contrast-gate.spec.ts',
     // OBRS-753. The malformed-box defect that made `b2c-critical-path` the one red on
     // the first CI run of this lane. It is a MISSING `:host { display }`, so there is
     // nothing in any diff for a reviewer to catch and no stylesheet parser can tell an
@@ -239,6 +258,23 @@ export default defineConfig({
     // this lane is the merge gate: the drift it catches is a page shipping outside every
     // sweep above, and a check for that which does not run at merge is a comment.
     '**/obrs-970-route-population.spec.ts',
+    // OBRS-1704. The rendered WIDTH of the shell's checkboxes. `admin-theme.scss` gives
+    // every input under `.admin-shell` `width: auto !important`, which collapses an
+    // `appearance: none` control to 2px, and Karma's DOM never loads that stylesheet --
+    // so the defect passed every unit spec on those forms. OBRS-1693 fixed it with one
+    // `!important` declaration and shipped the check as a root capture script, which by
+    // this repo's convention has no lane and is called by nothing; deleting the
+    // declaration left CI green. Hermetic on the same terms as the rest: synthetic
+    // session, every call answered in-spec.
+    '**/obrs-1693-admin-shell-control-width.spec.ts',
+    // OBRS-913. The sidebar toggle's rendered SIZE, same argument one control over:
+    // `.admin-sidebar-pin` declares 28px and rendered 20px, because it is a
+    // `flex-shrink: 1` item of a column that overflows on a laptop-height viewport.
+    // A parser reads the declaration and passes it; Karma's 800px window never
+    // enters the `min-width: 1101px` block the rule lives in. This spec sets its own
+    // 1536x900 (the card's viewport) and asserts the overflow precondition before
+    // measuring, so it cannot go green without having reproduced the condition.
+    '**/obrs-913-sidebar-toggle-target-size.spec.ts',
   ],
 
   timeout: 60_000,

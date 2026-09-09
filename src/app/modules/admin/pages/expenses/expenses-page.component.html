@@ -12,6 +12,22 @@
 </section>
 
 <section class="admin-page-filters mt-3">
+  @if (isAdmin) {
+    <!-- OBRS-1627: the operator moved from a COLUMN to this filter. As a column it
+    printed one name on all 8,580 prod rows (distinct ownerId = 1); as a filter it
+    does nothing today and starts working the day a second operator exists, which
+    is the shape the owner asked for. Admin-only, exactly as the column was: the
+    roster endpoint 403s an owner, so `ownerOptions` is empty for them. -->
+    <app-admin-dropdown
+      [value]="selectedOwnerFilter"
+      [options]="ownerOptions"
+      valueKey="code"
+      labelKey="label"
+      [placeholder]="'ADMIN.EXPENSES.FILTER_OWNER' | translate"
+      (valueChange)="onOwnerFilterChange($event)"
+    ></app-admin-dropdown>
+  }
+
   <app-admin-dropdown
     [value]="selectedVehicleFilter"
     [options]="vehicleFilterOptions"
@@ -30,39 +46,34 @@
     (valueChange)="onCategoryFilterChange($event)"
   ></app-admin-dropdown>
 
-  <p-datePicker
-    styleClass="app-date-field"
-    panelStyleClass="app-date-field-panel"
-    dateFormat="dd/mm/yy"
-    [ngModel]="dateFrom"
-    (ngModelChange)="onFromDateChange($event)"
-    [showIcon]="true"
-    [iconDisplay]="'input'"
-    [showButtonBar]="true"
-    [placeholder]="'ADMIN.EXPENSES.FILTER_DATE_FROM' | translate"
-    >
-    <ng-template pTemplate="inputicon">
-      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-    </ng-template>
-  </p-datePicker>
+  <!-- OBRS-1626: was two free-form date pickers, both defaulting to null, so
+  opening the page rendered every row in the system (8,580 on prod, 18.5 s to
+  settle). Year + month defaulting to the current month is the pattern
+  /admin/reports already uses for its monthly section. -->
+  <app-admin-dropdown
+    [value]="selectedYear"
+    [options]="yearOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.EXPENSES.FILTER_YEAR' | translate"
+    [placeholderSelectable]="false"
+    (valueChange)="onYearChange($event)"
+  ></app-admin-dropdown>
 
-  <p-datePicker
-    styleClass="app-date-field"
-    panelStyleClass="app-date-field-panel"
-    dateFormat="dd/mm/yy"
-    [ngModel]="dateTo"
-    (ngModelChange)="onToDateChange($event)"
-    [showIcon]="true"
-    [iconDisplay]="'input'"
-    [showButtonBar]="true"
-    [placeholder]="'ADMIN.EXPENSES.FILTER_DATE_TO' | translate"
-    >
-    <ng-template pTemplate="inputicon">
-      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
-    </ng-template>
-  </p-datePicker>
+  <app-admin-dropdown
+    [value]="selectedMonth"
+    [options]="monthOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.EXPENSES.FILTER_MONTH' | translate"
+    [placeholderSelectable]="false"
+    (valueChange)="onMonthChange($event)"
+  ></app-admin-dropdown>
 
   @if (canWrite) {
+    <!-- OBRS-1576: two ways in, because there are two things to record. This one is one loose bill;
+    `รับซองบิล` beside it is the stack a garage hands over at once. Neither replaces the other — a
+    single slip through the envelope page is more clicks, not fewer. -->
     <button
       type="button"
       class="admin-btn admin-btn-primary ms-auto"
@@ -70,6 +81,15 @@
       >
       <span class="material-symbols-outlined" [attr.translate]="'no'">add</span>
       <span>{{ 'ADMIN.EXPENSES.ADD' | translate }}</span>
+    </button>
+    <button
+      type="button"
+      class="admin-btn"
+      data-testid="expenses-open-batch"
+      routerLink="/admin/expenses/batch"
+      >
+      <span class="material-symbols-outlined" [attr.translate]="'no'">receipt_long</span>
+      <span>{{ 'ADMIN.EXPENSES.BATCH.OPEN' | translate }}</span>
     </button>
   }
 </section>
@@ -89,7 +109,6 @@
   [errorMessage]="errorMessage"
   [isEmpty]="isEmpty"
   [canWrite]="canWrite"
-  [showOwnerColumn]="isAdmin"
   (edit)="openEditModal($event)"
   (delete)="openDeleteModal($event)"
 ></app-expense-list-table>
@@ -101,9 +120,15 @@
   [vehicleOptions]="vehicleOptions"
   [categoryOptions]="categoryOptions"
   [ownerOptions]="ownerOptions"
+  [payeeOptions]="payeeOptions"
+  [canCreatePayee]="canCreatePayee"
+  [partOptions]="partOptions"
+  [canCreatePart]="canCreatePart"
   [isAdmin]="isAdmin"
   [reloadStructure]="reloadStructureBound"
   (closed)="onFormModalClosed()"
+  (payeeCreated)="onPayeeCreated()"
+  (partCreated)="onPartCreated()"
 ></app-expense-form-modal>
 
 <app-expense-delete-modal

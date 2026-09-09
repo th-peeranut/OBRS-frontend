@@ -1,4 +1,5 @@
 import { Injectable, Signal, signal } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { TranslateService } from '@ngx-translate/core';
 // OBRS-915: `PrimeNGConfig` from 'primeng/api' became `PrimeNG` in
 // 'primeng/config' in v18. Same object, same `setTranslation` - only the name
@@ -93,7 +94,8 @@ export class LanguageService {
 
   constructor(
     private readonly translate: TranslateService,
-    private readonly primengConfig: PrimeNG
+    private readonly primengConfig: PrimeNG,
+    private readonly title: Title
   ) {}
 
   /** The persisted language, or the default when none has been stored yet. */
@@ -129,5 +131,15 @@ export class LanguageService {
     // Publishing first would let a re-render read the new format against the
     // OLD day names and print e.g. "Mon, 03/08/2026" in Thai.
     this.calendarDateFormatSource.set(withShortDayName(calendar?.dateFormat));
+    // OBRS-1700: the browser tab. `src/index.html` can ship only ONE <title>,
+    // and nothing had ever updated it, so the tab still read Thai for a
+    // visitor who had picked English or 中文 - the same complaint as the hero
+    // headline, a different mechanism. It belongs here for the reason the
+    // `lang` line above does: it is a thing that must always happen together
+    // with the language change, and a component that owns one page cannot own
+    // a tab title that survives every route.
+    this.title.setTitle(
+      await firstValueFrom(this.translate.get('COMMON.APP_TITLE'))
+    );
   }
 }

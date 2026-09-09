@@ -1,6 +1,24 @@
 <div class="booking-container">
-  <!-- MAIN BACKGROUND -->
-  <img class="home-bg" src="images/home-bg.svg" />
+  <!-- MAIN BACKGROUND. OBRS-1700 put a wrapper around the image so the
+  headline can be positioned in PERCENTAGES of the image box itself. The
+  positioning context has to be this element and not `.booking-container`:
+  that one also holds `.booking-section` below, so a percentage measured
+  against it would drift as the form grows, and at <=576px the image is
+  `min-height: 200px; object-fit: cover`, which the wrapper follows and a `vw`
+  calculation does not. -->
+  <div class="home-hero">
+    <!-- `alt=""` + `role="presentation"`: the only text this file used to
+    carry is the headline below, which is real translated text now, so what is
+    left is the illustration alone. -->
+    <img class="home-bg" src="images/home-bg.svg" alt="" role="presentation" />
+    <!-- OBRS-1700: this headline was outlined `<path>` data baked into
+    home-bg.svg, so it stayed Thai for a visitor who picked English or 中文,
+    and the home page had no `<h1>` at all. The paths are deleted from the
+    SVG; this is the one and only `<h1>` on the page. -->
+    <h1 class="home-headline">
+      {{ "HOME.HOME_BOOKING.HERO_HEADLINE" | translate }}
+    </h1>
+  </div>
 
   <div class="booking-section">
     @if (bookingForm) {

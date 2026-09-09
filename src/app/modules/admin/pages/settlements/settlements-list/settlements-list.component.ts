@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { SettlementPendingItemDto } from '../../../../../shared/interfaces/settlement.interface';
 import { formatDisplayDateTime } from '../../../../../shared/lib/display-date-time';
+import { formatMoney } from '../../../../../shared/lib/money-display';
 
 export type SettlementsContentState = 'loading' | 'invalid' | 'error' | 'empty' | 'data';
 
@@ -43,13 +44,9 @@ export class SettlementsListComponent {
     return formatDisplayDateTime(value, this.translate.currentLang);
   }
 
-  protected formatMoney(value: string, currency: string): string {
+  protected formatMoney(value: string): string {
     const amount = Number(value);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(amount) ? amount : 0);
+    return formatMoney(Number.isFinite(amount) ? amount : 0, this.translate.currentLang);
   }
 
   protected onRowActivate(scheduleId: number, event: MouseEvent): void {

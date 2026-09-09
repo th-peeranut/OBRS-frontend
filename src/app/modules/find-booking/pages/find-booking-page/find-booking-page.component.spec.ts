@@ -8,6 +8,9 @@ import { of, throwError } from 'rxjs';
 import { FindBookingPageComponent } from './find-booking-page.component';
 import { BookingLookupService } from '../../../../services/booking-lookup/booking-lookup.service';
 import { BookingLookupResult } from '../../../../shared/interfaces/booking-lookup.interface';
+// OBRS-1601: the template renders the contact's honorific through this pipe, and an unknown pipe is
+// a template COMPILE error that NO_ERRORS_SCHEMA does not suppress - so it belongs here, not as a stub.
+import { TitleLabelPipe } from '../../../../shared/pipes/title-label.pipe';
 
 describe('FindBookingPageComponent (OBRS-857)', () => {
   let fixture: ComponentFixture<FindBookingPageComponent>;
@@ -38,7 +41,7 @@ describe('FindBookingPageComponent (OBRS-857)', () => {
 
     await TestBed.configureTestingModule({
       declarations: [FindBookingPageComponent],
-      imports: [ReactiveFormsModule, TranslateModule.forRoot()],
+      imports: [ReactiveFormsModule, TranslateModule.forRoot(), TitleLabelPipe],
       providers: [{ provide: BookingLookupService, useValue: lookupService }],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();

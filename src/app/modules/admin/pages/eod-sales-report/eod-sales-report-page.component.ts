@@ -9,6 +9,7 @@ import {
   EodSalesReportDto,
   EodSalespersonTotalDto,
 } from '../../../../shared/interfaces/eod-sales-report.interface';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 // Sort/display order for the expandable per-row `byMethod` breakdown. Slugs not on this list
 // (a payment method the backend ships before this list catches up) sort after every known
@@ -196,13 +197,9 @@ export class EodSalesReportPageComponent implements OnInit, OnDestroy {
   // Copied verbatim from ReportsPageComponent.formatMoney (OBRS-40) — same money-string ->
   // localized-currency formatting, deliberately not shared as a util because ReportsPage's
   // copy is likewise inlined per-page rather than extracted.
-  protected formatMoney(value: string, currency: string): string {
+  protected formatMoney(value: string): string {
     const amount = Number(value);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(amount) ? amount : 0);
+    return formatMoney(Number.isFinite(amount) ? amount : 0, this.translate.currentLang);
   }
 
   private methodSortIndex(slug: string): number {

@@ -81,7 +81,7 @@
           </div>
           <div class="receipt-item">
             <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.AMOUNT_PAID' | translate }}</span>
-            <span class="value fw-bold">{{ amountPaid }} {{ 'E_TICKET.LABEL.TOTAL_UNIT' | translate }}</span>
+            <span class="value fw-bold">{{ formatMoney(amountPaid) }}</span>
           </div>
         </div>
         <div class="receipt-divider dotted"></div>
@@ -97,6 +97,13 @@
           <div class="receipt-tickets mt-3">
             <div class="receipt-item full">
               <span class="label">{{ 'STAFF.SELL_RECEIPT.LABEL.PASSENGERS' | translate }}</span>
+            </div>
+            <!-- OBRS-1781: the note explains the QRs under it, so it heads the list
+            instead of trailing it. On a torn 80mm slip the reader stops at their own
+            name, which is one whole passenger block above a footer. -->
+            <div class="qr-hint">
+              {{ 'E_TICKET.NOTE_LABEL' | translate }}<br />
+              {{ 'E_TICKET.QR_HINT' | translate }}
             </div>
             <div class="receipt-ticket-list">
               @for (ticket of tickets; track trackByIndex(i); let i = $index) {
@@ -141,10 +148,6 @@
                     </div>
                   </div>
                 }
-              </div>
-              <div class="qr-hint">
-                {{ 'E_TICKET.NOTE_LABEL' | translate }}<br />
-                {{ 'E_TICKET.QR_HINT' | translate }}
               </div>
             </div>
           }

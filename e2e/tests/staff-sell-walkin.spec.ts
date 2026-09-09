@@ -296,8 +296,10 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
   // ── AC-12  Old wizard selectors MUST NOT exist ───────────────────────────
 
   test('AC-12: old 5-step wizard selectors are absent from /staff/sell', async ({ page }) => {
+    // OBRS-1752: a trip-carrying response, because the checkout column below is
+    // only mounted once a trip is picked.
     await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
-      route.fulfill({ json: EMPTY_RESP })
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
     );
     await gotoSellPage(page);
 
@@ -310,6 +312,10 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     // New 3-column POS components are present
     await expect(page.locator('app-walk-in-trip-browser')).toBeVisible();
     await expect(page.locator('app-walk-in-center-panel')).toBeVisible();
+
+    // The third column is the checkout, and it appears with the trip (OBRS-1752).
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
     await expect(page.locator('app-walk-in-checkout')).toBeVisible();
   });
 
@@ -443,14 +449,17 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     );
     await gotoSellPage(page);
 
+    // OBRS-1752: the Sell button lives in the checkout column, which is not
+    // mounted before a trip is picked -- so the trip comes first, and the
+    // "initially disabled" state under test is trip-but-no-seat.
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
+
     const sellBtn = page.locator('button.btn-success');
 
     // Initially disabled (no seat, no form data)
     await expect(sellBtn).toBeDisabled({ timeout: 10_000 });
 
-    // Select trip and seat
-    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
-    await page.locator('.trip-row').first().click();
     const seatB1 = page.getByText('B1', { exact: true });
     await seatB1.waitFor({ timeout: 12_000 });
     await seatB1.click();
@@ -558,6 +567,11 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
       route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
     );
     await gotoSellPage(page);
+
+    // OBRS-1752: the payment tiles are part of the checkout column, which the
+    // trip selection mounts.
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
 
     // Cash tile: success styling
     const cashTile = page.locator('.payment-tile').filter({ hasText: 'Cash' });
@@ -1003,9 +1017,12 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
   test('Layout: Sell button is visible without scrolling the checkout card', async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
-      route.fulfill({ json: EMPTY_RESP })
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
     );
     await gotoSellPage(page);
+    // OBRS-1752: no checkout card at all until a trip is picked.
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
     const sell = page.locator('button.btn-success');
     await expect(sell).toBeVisible();
     // The checkout card scrolls; the action footer is sticky, so at scrollTop=0 the

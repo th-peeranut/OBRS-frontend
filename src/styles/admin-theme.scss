@@ -5,6 +5,11 @@
   --admin-surface-card: #ffffff;
   --admin-surface-soft: #f2f4f6;
   --admin-outline: #bdc8cf;
+  /* OBRS-772. The boundary of a CONTROL, kept apart from --admin-outline the way
+     $control-border is kept apart from $primary-lightgrey: --admin-outline also
+     draws card edges, table rules and popover chrome, none of which WCAG 1.4.11
+     reaches. 4.69:1 on --admin-surface-card, measured. */
+  --control-outline: #6c757d;
   --admin-muted: #55636c;
   --admin-text: #191c1e;
 
@@ -272,6 +277,8 @@
   --admin-surface-card: #1d2226;
   --admin-surface-soft: #23292e;
   --admin-outline: #3a444b;
+  /* OBRS-772 dark half. 4.03:1 on --admin-surface-card (#1d2226), measured. */
+  --control-outline: rgba(255, 255, 255, 0.42);
   --admin-text: #e7edf1;
   --admin-muted: #9fb0bb;
 
@@ -331,6 +338,25 @@
   --admin-outline: #bdc8cf;
   --admin-muted: #55636c;
   --admin-text: #191c1e;
+}
+
+/* OBRS-1721: the view-as strip (`app-role-preview-banner`) renders from
+   app.component.html, above the router outlet — i.e. OUTSIDE `.admin-shell`, and
+   on customer pages there is no `.admin-shell` on screen at all. Custom
+   properties inherit down the real DOM tree, so none of the tokens above are in
+   scope there; same relocation problem, same remedy as
+   `.notification-inbox-overlay` directly above.
+
+   Only the warning CHIP PAIR is re-declared, copied byte-for-byte from the light
+   block, and it needs NO `.is-dark` counterpart: that pair is deliberately
+   untouched in the dark block ("the chip pairs --admin-warning-bg/-text and
+   --admin-accepted-bg/-text are intentionally NOT touched here"), which is
+   exactly why it is the pair a strip rendering in BOTH shells can use. Measured
+   from these two declared values by the WCAG formula: #673a00 on #ffdcbe =
+   7.44:1, in both themes. */
+.role-preview-banner {
+  --admin-warning-bg: #ffdcbe;
+  --admin-warning-text: #673a00;
 }
 
 .notification-inbox-overlay.theme-admin {
@@ -486,7 +512,8 @@
   .form-select {
     background-color: var(--admin-surface-soft) !important;
     color: var(--admin-text);
-    border-color: var(--admin-outline) !important;
+    // OBRS-772: a field, so the boundary carries the identification.
+    border-color: var(--control-outline) !important;
   }
 
   .form-control::placeholder {
@@ -760,8 +787,28 @@
 .admin-shell select {
   font-size: 14px !important;
   color: var(--admin-text) !important;
-  width: auto !important;
+  // OBRS-1703: `width` is NOT `!important` and must not become one again. What it has to
+  // undo is `styles.scss` `label, input { width: 100% }`, which is not `!important`
+  // either, so this selector already wins that on specificity alone (0,1,1 vs 0,0,1).
+  // The `!important` bought nothing there and cost every component under the shell its
+  // own width, because `!important` beats non-`!important` at ANY specificity. Measured
+  // in a browser: `.user-role-chip input { width: 18px }` rendered 13 (native), and
+  // `.admin-search input { width: 100% }` rendered 154 of the 206 it asks for. Two
+  // earlier cards paid for the same wall by adding `!important` back one selector at a
+  // time - `.admin-chip input[type="checkbox"]` below, `.form-check-input` just under.
+  width: auto;
   margin-bottom: 0 !important;
+}
+
+// OBRS-1693: the rule above hands `width: auto` to every input under the
+// shell. A control drawn with `appearance: none` has no intrinsic width, so `auto`
+// collapses it - measured 2x14 px on /staff/parcels/consign and /staff/sell. `height`
+// survives because the shell never overrides it, which is why it renders as a thin bar
+// rather than vanishing. Still needed after OBRS-1703 dropped that `!important`: this
+// selector outranks the shell's on specificity (0,2,0 vs 0,1,1), and Bootstrap's own
+// `.form-check-input { width: 1em }` (0,1,0) does not.
+.admin-shell .form-check-input {
+  width: 1em !important;
 }
 
 .admin-shell .material-symbols-outlined {
@@ -1261,6 +1308,21 @@
 .is-dark .admin-profile-menu {
   border-color: var(--admin-outline);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* OBRS-1721: a non-interactive group label inside the profile menu (the
+   "ดูในมุมมองของ…" heading over the role choices). Deliberately NOT an
+   .admin-profile-item — it is not a menuitem and must not take the hover
+   affordance of one. --admin-muted is themed in both modes, so no .is-dark
+   counterpart is needed here. */
+.admin-profile-heading {
+  display: block;
+  padding: 8px 9px 2px;
+  color: var(--admin-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .admin-profile-item {
@@ -2081,7 +2143,10 @@
    as pills; the multi-line exception is textarea.admin-field below. 14px inline
    padding keeps text off the pill's rounded ends (mirrors the dropdown trigger). */
 .admin-field {
-  border: 1px solid rgba(189, 200, 207, 0.9);
+  // OBRS-772: an empty field has no visible content of its own, so this boundary
+  // is the whole of what says a control is here -- the one case WCAG 1.4.11's
+  // "Boundaries" paragraph does NOT exempt.
+  border: 1px solid var(--control-outline, #6c757d);
   border-radius: 999px;
   padding: 9px 14px;
   outline: 0;
@@ -2089,7 +2154,7 @@
 }
 
 .is-dark .admin-field {
-  border-color: var(--admin-outline);
+  border-color: var(--control-outline);
   color: var(--admin-text);
 
   /* OBRS-797. `.form-control::placeholder` was themed for the dark shell back in
@@ -2362,11 +2427,21 @@ textarea.admin-field {
   /* ── BRAND ── */
   .admin-brand {
     display: flex;
+    align-items: center;
     justify-content: center;
+    /* Collapsed rail: the toggle button now lives inside .admin-brand (OBRS-913),
+       and the 76px rail has no horizontal room beside the logo for a 28px
+       button, so stack them instead of sitting them on one row. */
+    flex-direction: column;
+    gap: 8px;
+    /* Sits in an overflowing sidebar column — without this it is a shrinkable
+       flex item and can be squeezed below its content height. */
+    flex-shrink: 0;
   }
 
   .admin-shell.is-sidebar-pinned .admin-brand {
-    justify-content: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
   }
 
   .admin-brand-logo {
@@ -2396,16 +2471,16 @@ textarea.admin-field {
     opacity: 1;
     pointer-events: auto;
     align-self: center;
+    /* OBRS-913: a squeezed flex item is how this declared 28px rendered as
+       20px — the sidebar panel overflows its column, and the default
+       flex-shrink: 1 let this button shrink along with it. Do not remove
+       this to "simplify" — it is the fix, not a redundant safety net. */
+    flex-shrink: 0;
     transition: background 0.15s ease, color 0.15s ease;
   }
 
   .admin-sidebar-pin .material-symbols-outlined {
     font-size: 18px;
-  }
-
-  /* Expanded: right-aligned at the top of the panel */
-  .admin-shell.is-sidebar-pinned .admin-sidebar-pin {
-    align-self: flex-end;
   }
 
   /* ── OBRS-755: `--accent-strong` is a FILL colour, not a foreground ───────────
@@ -2592,4 +2667,60 @@ textarea.admin-field {
   body.parcel-waybill-printing .parcel-waybill-print-portal {
     display: block !important;
   }
+}
+
+// OBRS-1767: overlays that PrimeNG and SweetAlert2 append to `document.body` sit
+// outside `.admin-shell` entirely, so the shell-scoped `@media print` block in
+// staff-layout.component.scss cannot reach them — the exact objection Decision 1
+// of docs/adr/0015-boarding-manifest-print-isolation.md raises against hiding
+// chrome from inside the shell. A notification-bell panel or a trip-action menu
+// left open when the operator hits Print on the walk-in receipt lands on the
+// paper beside the slip. Measured (PrimeNG 21.1.9): a `[popup]` `p-menu` renders
+// `.p-menu-overlay` and `p-popover` renders `.p-popover`; both are used with
+// `appendTo="body"` on staff-reachable pages (notification-bell, export-button,
+// walk-in-trip-browser).
+//
+// Unconditional on purpose, and NOT the `body > *` shape of the two portal rules
+// above: this names only the overlay hosts, never `app-root`, so a native Ctrl+P
+// on a page with no portal still prints that page rather than a blank sheet.
+// None of these three is ever something anyone wants on paper.
+@media print {
+  .p-popover,
+  .p-menu-overlay,
+  .swal2-container {
+    display: none !important;
+  }
+}
+
+/* ── Categorical SERIES fills (OBRS-1725) ──
+   The first chart surface in this app needs colours whose only job is to tell five
+   slices APART. Every existing token names a meaning (danger / success / accepted /
+   warning) and reusing them would say a cost category is bad or good, which is not
+   what a cost mix means.
+
+   These are FILLS with nothing read on top of them: the legend beside the donut
+   carries the label and the amount as ordinary body text, so the number that matters
+   is each fill's separation from the card behind it, not a text-contrast ratio.
+   Measured (WCAG relative luminance, computed from the declared values):
+   light 6.73 / 6.22 / 6.45 / 6.12 / 6.54 on --admin-surface-card #ffffff;
+   dark 9.36 / 9.45 / 9.45 / 9.92 / 8.53 on --admin-surface-card #1d2226 - the same
+   brightness step as the --admin-*-fg family (9.45:1) rather than a new one.
+
+   Hues are ordered so the two biggest slices are the two furthest apart (teal then
+   burnt orange); each pair also differs in lightness, so the set survives being read
+   as five greys. */
+.admin-shell {
+  --admin-series-1: #00647d;
+  --admin-series-2: #a1450f;
+  --admin-series-3: #2f6099;
+  --admin-series-4: #4c6b1f;
+  --admin-series-5: #6a4f9c;
+}
+
+.admin-shell.is-dark {
+  --admin-series-1: #62d4f5;
+  --admin-series-2: #ffb877;
+  --admin-series-3: #a8c8ff;
+  --admin-series-4: #b9d76a;
+  --admin-series-5: #cbb2f0;
 }

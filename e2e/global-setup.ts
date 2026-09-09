@@ -1,9 +1,16 @@
 import { chromium, FullConfig } from '@playwright/test';
 import path from 'path';
+import laneTreeGuard from './support/lane-tree-guard';
 
 const AUTH_FILE = path.resolve(__dirname, 'fixtures/admin-auth.json');
 
 async function globalSetup(config: FullConfig): Promise<void> {
+  // OBRS-1611: this lane brings its own globalSetup, so the tree guard is CALLED here
+  // rather than wired as the entry point -- same banner, same refusal, and it has to
+  // run before the login below, which would otherwise be typed into another tree.
+  laneTreeGuard(config);
+
+
   // config.use?.baseURL is not always populated in FullConfig for globalSetup;
   // fall back to the port configured in playwright.config.ts webServer.
   const baseURL = config.use?.baseURL ?? 'http://localhost:4202';

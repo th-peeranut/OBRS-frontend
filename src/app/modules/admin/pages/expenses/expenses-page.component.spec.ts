@@ -1,6 +1,11 @@
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { ExpensesPageComponent } from './expenses-page.component';
-import { AdminExpenseDto, AdminVehicleDto } from '../../../../services/admin/admin-api.service';
+import {
+  AdminExpenseDto,
+  AdminExpensePayeeDto,
+  AdminMaintenancePartDto,
+  AdminVehicleDto,
+} from '../../../../services/admin/admin-api.service';
 import { VEHICLE_CENTRAL_SENTINEL } from './expenses-page.mappers';
 import { VehiclesData } from '../vehicles/vehicles.store';
 import { createTranslateStub } from '../../../../testing/test-stubs';
@@ -55,6 +60,42 @@ function makeVehiclesStoreStub(vehicles: AdminVehicleDto[] = []) {
   };
 }
 
+/** OBRS-1577: the payee registry cache. Defaults to a loaded-but-empty list, which is the state an
+ * operator who has not added any garages yet is genuinely in. */
+/** OBRS-1613: the registry store hands down retired rows too — the registry SCREEN needs them. The
+ * retired row is in the default so this page's own ACTIVE filter is what the assertions exercise. */
+function makePartsStoreStub(
+  parts: AdminMaintenancePartDto[] = [
+    { id: 1, code: 'ENGINE_OIL', name: 'น้ำมันเครื่อง', kind: 'PART', active: true },
+    { id: 2, code: null, name: 'ค่าแรงเปลี่ยนสายพาน', kind: 'LABOUR', active: true },
+    { id: 3, code: null, name: 'อะไหล่ที่เลิกใช้แล้ว', kind: 'PART', active: false },
+  ]
+) {
+  const data$ = new BehaviorSubject<AdminMaintenancePartDto[] | null>(parts);
+  return {
+    data$,
+    refreshing$: new BehaviorSubject<boolean>(false),
+    error$: new BehaviorSubject<boolean>(false),
+    refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+    get hasValue() {
+      return data$.value !== null;
+    },
+  };
+}
+
+function makePayeesStoreStub(payees: AdminExpensePayeeDto[] = []) {
+  const data$ = new BehaviorSubject<AdminExpensePayeeDto[] | null>(payees);
+  return {
+    data$,
+    refreshing$: new BehaviorSubject<boolean>(false),
+    error$: new BehaviorSubject<boolean>(false),
+    refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+    get hasValue() {
+      return data$.value !== null;
+    },
+  };
+}
+
 function makeComponent(
   expensesStore: ReturnType<typeof makeExpensesStoreStub>,
   vehiclesStore = makeVehiclesStoreStub([{ id: 1, vehicleNumber: 'V1', numberPlate: 'ABC-123' }]),
@@ -62,7 +103,9 @@ function makeComponent(
   adminApi: Record<string, unknown> = {
     deleteExpense: jasmine.createSpy('deleteExpense').and.returnValue(of({ code: 200, message: 'OK', data: null })),
   },
-  roles: string[] = ['owner']
+  roles: string[] = ['owner'],
+  payeesStore = makePayeesStoreStub(),
+  maintenancePartsStore = makePartsStoreStub()
 ) {
   const alert = { success: () => Promise.resolve(), error: () => Promise.resolve() };
   const auth = {
@@ -72,6 +115,9 @@ function makeComponent(
     // see them — an admin-by-default stub would make every existing test a
     // silent admin test.
     getRoles: jasmine.createSpy('getRoles').and.returnValue(roles),
+    // OBRS-1577: the HELD role, with no ROLE_GRANTS expansion — `hasAnyRole(['owner'])` is true for
+    // an admin, and the create affordance this feeds must be false for them.
+    hasHeldRole: (required: string[]) => required.some((role) => roles.includes(role)),
   };
   return new ExpensesPageComponent(
     adminApi as any,
@@ -79,6 +125,8 @@ function makeComponent(
     createTranslateStub(),
     expensesStore as any,
     vehiclesStore as any,
+    payeesStore as any,
+    maintenancePartsStore as any,
     auth as any
   );
 }
@@ -150,6 +198,10 @@ describe('ExpensesPageComponent', () => {
       ]);
       const component = makeComponent(store);
       component.ngOnInit();
+      // OBRS-1626: the page now opens on the CURRENT month, and these rows are
+      // dated 2026-07 - pin the month so this test keeps testing the sentinel.
+      (component as any).onYearChange('2026');
+      (component as any).onMonthChange('7');
 
       (component as any).onVehicleFilterChange(VEHICLE_CENTRAL_SENTINEL);
 
@@ -159,7 +211,7 @@ describe('ExpensesPageComponent', () => {
     });
   });
 
-  describe('category / date-range filters (client-side, no network call)', () => {
+  describe('category / month filters (client-side, no network call)', () => {
     it('narrows by category without calling the store', () => {
       const store = makeExpensesStoreStub([
         expense({ id: 1, category: 'FUEL' }),
@@ -167,6 +219,8 @@ describe('ExpensesPageComponent', () => {
       ]);
       const component = makeComponent(store);
       component.ngOnInit();
+      (component as any).onYearChange('2026');
+      (component as any).onMonthChange('7');
       store.setVehicleFilter.calls.reset();
 
       (component as any).onCategoryFilterChange('FUEL');
@@ -175,19 +229,75 @@ describe('ExpensesPageComponent', () => {
       expect(store.setVehicleFilter).not.toHaveBeenCalled();
     });
 
-    it('narrows by date range without calling the store', () => {
+    // OBRS-1626 AC-2: opening the page used to render every row in the system.
+    it('opens on the CURRENT month, not on everything', () => {
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const store = makeExpensesStoreStub([
-        expense({ id: 1, expenseDate: '2026-07-01' }),
+        expense({ id: 1, expenseDate: '2024-03-11' }),
+        expense({ id: 2, expenseDate: `${thisMonth}-05` }),
+      ]);
+      const component = makeComponent(store);
+      component.ngOnInit();
+
+      expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([2]);
+      expect(store.setVehicleFilter).not.toHaveBeenCalled();
+    });
+
+    it('narrows to the picked year+month without calling the store', () => {
+      const store = makeExpensesStoreStub([
+        expense({ id: 1, expenseDate: '2026-06-30' }),
         expense({ id: 2, expenseDate: '2026-07-20' }),
+        expense({ id: 3, expenseDate: '2026-08-01' }),
       ]);
       const component = makeComponent(store);
       component.ngOnInit();
       store.setVehicleFilter.calls.reset();
 
-      (component as any).onFromDateChange(new Date(2026, 6, 10));
+      (component as any).onYearChange('2026');
+      (component as any).onMonthChange('7');
 
       expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([2]);
       expect(store.setVehicleFilter).not.toHaveBeenCalled();
+    });
+
+    // OBRS-1626: the dropdown's own placeholder row emits '' when clicked, and
+    // `Number('')` is 0, which `new Date` reads as the year 1900 - the table
+    // would empty itself with no explanation.
+    // OBRS-1643: these two dropdowns now pass [placeholderSelectable]="false", so nothing
+    // on screen can produce that '' any more. This stays as the second layer, for a call
+    // site added later that forgets the opt-out.
+    it('ignores the empty value the dropdown placeholder emits', () => {
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const store = makeExpensesStoreStub([expense({ id: 1, expenseDate: `${thisMonth}-05` })]);
+      const component = makeComponent(store);
+      component.ngOnInit();
+
+      (component as any).onYearChange('');
+      (component as any).onMonthChange('');
+
+      expect((component as any).selectedYear).toBe(String(now.getFullYear()));
+      expect((component as any).selectedMonth).toBe(String(now.getMonth() + 1));
+      expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([1]);
+    });
+
+    // OBRS-1626: /admin/reports builds its year list as `period.year - 2 + i`,
+    // which offers two years the expense data cannot reach. Copying that here
+    // was the trap; this test is what makes copying it fail.
+    it('offers the years the data actually has, and no future year', () => {
+      const store = makeExpensesStoreStub([
+        expense({ id: 1, expenseDate: '2024-03-11' }),
+        expense({ id: 2, expenseDate: '2025-11-02' }),
+      ]);
+      const component = makeComponent(store);
+      component.ngOnInit();
+
+      const years = (component as any).yearOptions.map((option: any) => option.code);
+      expect(years).toContain('2024');
+      expect(years).toContain('2025');
+      expect(years).toContain(String(new Date().getFullYear()));
+      expect(years).not.toContain(String(new Date().getFullYear() + 1));
     });
   });
 
@@ -246,6 +356,48 @@ describe('ExpensesPageComponent', () => {
       await Promise.resolve();
 
       expect((component as any).expenses[0].ownerLabel).toBe('Second Lines');
+    });
+
+    // OBRS-1627: the operator COLUMN became this filter. With one operator on
+    // prod it narrows nothing today, which is exactly why it needs a test - a
+    // control that quietly matched no rows would look identical.
+    it('narrows the table by operator, client-side and without a store call', async () => {
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const store = makeExpensesStoreStub([
+        expense({ id: 1, ownerId: 7, expenseDate: `${thisMonth}-05` }),
+        expense({ id: 2, ownerId: 9, expenseDate: `${thisMonth}-06` }),
+      ]);
+      const component = makeComponent(store, undefined, true, adminApiWithOwners(), ['admin']);
+
+      component.ngOnInit();
+      await Promise.resolve();
+      await Promise.resolve();
+      store.setVehicleFilter.calls.reset();
+
+      (component as any).onOwnerFilterChange('9');
+
+      expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([2]);
+      expect(store.setVehicleFilter).not.toHaveBeenCalled();
+    });
+
+    it('clearing the operator filter restores every operator, not none', async () => {
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const store = makeExpensesStoreStub([
+        expense({ id: 1, ownerId: 7, expenseDate: `${thisMonth}-05` }),
+        expense({ id: 2, ownerId: 9, expenseDate: `${thisMonth}-06` }),
+      ]);
+      const component = makeComponent(store, undefined, true, adminApiWithOwners(), ['admin']);
+
+      component.ngOnInit();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      (component as any).onOwnerFilterChange('9');
+      (component as any).onOwnerFilterChange('');
+
+      expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([1, 2]);
     });
 
     it('a failed roster fetch leaves the page usable and the options empty — no alert on load', async () => {

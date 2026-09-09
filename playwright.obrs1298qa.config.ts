@@ -29,6 +29,11 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = process.env['QA_1298_PORT'] ?? '4200';
 
 export default defineConfig({
+  // OBRS-1616: no `webServer`, so nothing said which tree served these pages. This lane
+  // drives the stack the operator started by hand (see ENVIRONMENT above), so a foreign
+  // tree on the port is the documented state -- the guard must name it, not refuse.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
+  metadata: { laneTree: 'attach-to-operator-stack' },
   testDir: './e2e',
   testMatch: ['**/obrs-1298-stops-modal.spec.ts'],
   timeout: 120_000,

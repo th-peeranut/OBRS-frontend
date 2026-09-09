@@ -92,16 +92,19 @@ test.describe('OBRS-884 per-vehicle P&L', () => {
   test('a ฿0 always says WHICH ฿0 it is, and a real figure says nothing extra', async ({ page }) => {
     // Earned and spent: no caveat anywhere on the row.
     const earner = await cellsOf(page, '8829');
-    expect(earner[1]).toContain('28,000.00');
-    expect(earner[2]).toContain('9,700.00');
+    // OBRS-1592: one shared formatter, and satang only when there are satang — these
+    // whole amounts read `28,000 บาท`, not `THB 28,000.00`. The screen is Thai (every
+    // other assertion here is), so the Thai spelling is the one to pin.
+    expect(earner[1]).toContain('28,000 บาท');
+    expect(earner[2]).toContain('9,700 บาท');
     expect(await rowFor(page, '8829').locator('.vehicle-pl-zero-reason').count()).toBe(0);
     expect(await rowFor(page, '8829').locator('.vehicle-pl-badge').count()).toBe(0);
 
     // Spent, no round recorded: revenue ฿0 says only that, cost is real.
     const parked = await cellsOf(page, '8747');
-    expect(parked[1]).toContain('0.00');
+    expect(parked[1]).toContain('0 บาท');
     expect(parked[1]).toContain('ไม่มีรอบที่บันทึกไว้ในช่วงนี้');
-    expect(parked[2]).toContain('600.00');
+    expect(parked[2]).toContain('600 บาท');
 
     // Neither ran nor spent: BOTH zeros carry their own, different reason.
     const idle = await cellsOf(page, '2733');

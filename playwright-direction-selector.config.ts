@@ -7,6 +7,8 @@ import { defineConfig, devices } from '@playwright/test';
  * localhost:4201 against the live SIT backend (CORS is pinned to :4200).
  */
 export default defineConfig({
+  // OBRS-1611: name the tree this run measures, and refuse a port another tree holds.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
   testDir: './e2e/tests',
   testMatch: '**/direction-selector.spec.ts',
   timeout: 90_000,

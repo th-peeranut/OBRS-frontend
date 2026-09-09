@@ -82,6 +82,31 @@
   }
 }
 
+// OBRS-1045: fare category (adult/child). Same accent language as .ptype-tile above — it sits
+// directly under that row and answers the neighbouring question, so it reads as one control group.
+.fare-tile {
+  // Reads the token, unlike .ptype-tile's bare literal two rules up. Same value today, so
+  // this changes nothing on screen — but it keeps the count in staff-contrast-allow.ts's
+  // OBRS-772 note honest (that literal is meant to be the LAST one) and means a future
+  // repaint of --bs-border-color moves this row with the other seven sites, not without them.
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  background-color: transparent;
+  font-size: 0.8rem;
+  color: #212529;
+  transition: border-color 0.15s, background-color 0.15s;
+
+  &:hover {
+    border-color: var(--accent-strong);
+    background-color: var(--accent-soft);
+  }
+
+  &--active {
+    border-color: var(--accent-strong) !important;
+    background-color: var(--accent-soft) !important;
+    font-weight: 600;
+  }
+}
+
 .ptype-icon {
   width: 40px;
   height: 40px;
@@ -112,7 +137,28 @@
     background-color: var(--admin-surface-soft);
     border-color: var(--admin-outline);
   }
+
+  // OBRS-1774, WCAG 1.4.11's state clause. Selected against unselected here is
+  // a 1.09:1 fill and — because `--accent-strong` (#0a6a5f) sits only 1.54:1
+  // from `--admin-outline` (#3a444b) — a 1.54:1 border, with no colour change
+  // and no weight change to carry it. Both measured by invariant D; nothing on
+  // the tile reaches 3:1. In light mode the same rule is fine (4.98:1 against
+  // #dee2e6), so this is the dark half only.
+  //
+  // Same shape as OBRS-755: `--accent-strong` is tuned for white text ON it and
+  // has no dark value, `--accent-text` is the token that carries one. 6.73:1
+  // against the unselected tile's border, measured.
+  .ptype-tile--active {
+    border-color: var(--accent-text) !important;
+  }
   .ptype-label {
+    color: var(--admin-text);
+  }
+  // OBRS-1045: same treatment as .ptype-tile above — inactive follows the dark surface, the
+  // --active state keeps its accent.
+  .fare-tile {
+    background-color: var(--admin-surface-soft);
+    border-color: var(--admin-outline);
     color: var(--admin-text);
   }
   .ptype-icon-fallback {

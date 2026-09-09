@@ -17,11 +17,10 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
-import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { bangkokDayKey, formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import {
   bangkokInstantMs,
   controlValueToDateString,
-  splitApiOffsetDateTime,
 } from '../../../../shared/lib/api-date-time';
 import {
   ScheduleDeleteModalMode,
@@ -400,10 +399,13 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
     const statusFilter = this.selectedStatusFilter;
     // OBRS-1584: unconditional. The "no day selected ⇒ keep every row" branch
     // that used to guard this line is the OBRS-33 symptom, one keystroke away.
+    // OBRS-1585: the day is read off the same clock the date column prints
+    // (Bangkok wall-clock), not off the raw string — a `Z` departure crosses
+    // the day boundary and used to disappear from the day its own cell shows.
     const dayKey = controlValueToDateString(this.selectedDate);
     this.filteredRows = this.rows
       .filter((row) => {
-        if (splitApiOffsetDateTime(row.departure).date !== dayKey) return false;
+        if (bangkokDayKey(row.departure) !== dayKey) return false;
         if (routeFilter && row.routeSlug.toLowerCase() !== routeFilter) return false;
         if (statusFilter && row.statusCode.toLowerCase() !== statusFilter) return false;
         if (!keyword) return true;

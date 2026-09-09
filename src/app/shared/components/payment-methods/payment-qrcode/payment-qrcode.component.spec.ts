@@ -784,7 +784,7 @@ describe('PaymentQrcodeComponent - the amount under the QR comes from the server
 
     await requestQr();
 
-    expect(component.amountDisplay).toBe('380.00');
+    expect(component.amountDisplay).toBe('THB 380');
   });
 
   it('takes the outstanding amount when the payload is the by-booking shape instead', async () => {
@@ -804,7 +804,7 @@ describe('PaymentQrcodeComponent - the amount under the QR comes from the server
       transactions: [],
     });
 
-    expect(component.amountDisplay).toBe('380.00');
+    expect(component.amountDisplay).toBe('THB 380');
   });
 
   it('leaves the amount alone when the response carries no amount at all', async () => {
@@ -812,7 +812,7 @@ describe('PaymentQrcodeComponent - the amount under the QR comes from the server
 
     await requestQr();
 
-    expect(component.amountDisplay).toBe('0.00');
+    expect(component.amountDisplay).toBe('THB 0');
   });
 
   /**

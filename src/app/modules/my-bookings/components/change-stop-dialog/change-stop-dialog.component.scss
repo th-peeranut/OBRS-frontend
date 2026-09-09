@@ -153,17 +153,3 @@
   }
 }
 
-.spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: $radius-circle;
-  animation: change-stop-spin 0.7s linear infinite;
-}
-
-@keyframes change-stop-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}

@@ -46,6 +46,17 @@ export class PassengerSeatBoxComponent implements OnChanges {
    *  TranslateModule dependency). */
   @Input() wheelchairBadgeAriaLabel: string = '';
   @Input() extraLegroomBadgeAriaLabel: string = '';
+  /**
+   * OBRS-1364: the seat is free, but this passenger may not take it — a monk
+   * beside a woman, or a nun beside a man. Deliberately NOT `isDisabled`: that
+   * one means "already booked", and wearing its look would tell the customer
+   * the seat is gone when search has just told them it is available. False (the
+   * default) leaves every existing call site untouched.
+   */
+  @Input() isBlocked: boolean = false;
+  /** Pre-translated aria-label read out on a blocked seat (host-supplied,
+   *  same dumb-leaf convention as the badge labels above). */
+  @Input() blockedSeatAriaLabel: string = '';
 
   @Output() passengerSeatOutput = new EventEmitter<string>();
 
@@ -54,7 +65,7 @@ export class PassengerSeatBoxComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {}
 
   setPassengerSeatOuput(passengerSeat: string) {
-    if (this.isDisabled) {
+    if (this.isDisabled || this.isBlocked) {
       return;
     }
     this.passengerSeatOutput.emit(passengerSeat);

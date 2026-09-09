@@ -14,6 +14,8 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = process.env['OBRS1499_PORT'] ?? '4266';
 
 export default defineConfig({
+  // OBRS-1611: name the tree this run measures, and refuse a port another tree holds.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
   testDir: './e2e/tests',
   testMatch: ['obrs-1499-capture.spec.ts'],
   fullyParallel: false,

@@ -20,6 +20,19 @@
     "BODY": "Please message us on our Facebook page:",
     "CHANNEL": "NJ Phuyaipu"
   },
+  "ROLE_PREVIEW": {
+    "MENU": "View as…",
+    "ARIA_LABEL": "You are viewing this screen as another role",
+    "VIEWING_AS": "Viewing as: {{role}}",
+    "OWN_DATA": "The data still belongs to your own account",
+    "EXIT": "Exit this view",
+    "BLOCKED": "You are viewing as another role, so nothing can be saved. Exit the preview first.",
+    "ROLES": {
+      "OWNER": "Owner",
+      "SALESPERSON": "Salesperson",
+      "DRIVER": "Driver"
+    }
+  },
   "USABILITY_REPORT": {
     "FAB": {
       "LABEL": "Report Issue",
@@ -454,10 +467,12 @@
       "ASSOC_PROF": "Associate Professor",
       "ASST_PROF": "Assistant Professor"
     },
+    "APP_TITLE": "Book bus tickets online | NJ Phuyaipu",
     "NOT_SPECIFIED": "Not specified",
     "THEME_TOGGLE": "Toggle dark mode",
     "CLEAR": "Clear",
     "CALENDAR_ICON_ALT": "Calendar Icon",
+    "DATE_RANGE_PLACEHOLDER": "Select date range",
     "SWAP_STATIONS": "Swap origin and destination",
     "CLOSE": "Close",
     "LOADING": "Loading…",
@@ -541,8 +556,12 @@
       "SYSTEM_SETTINGS": "System Settings",
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation",
+      "PAYEE_SPEND_REPORT": "Spend by payee",
+      "PART_UNIT_PRICE_REPORT": "Unit price by part",
       "VEHICLE_PL_REPORT": "Per-vehicle P&L",
       "EXPENSES": "Expenses",
+      "EXPENSE_PAYEES": "Payee Registry",
+      "MAINTENANCE_PARTS": "Parts & labour registry",
       "MANUAL_REFUNDS": "Manual Refunds",
       "CASH_REFUND_APPROVALS": "Cash refund approvals",
       "PARCEL_CLAIMS": "Parcel Claims",
@@ -555,7 +574,8 @@
       "DRIVER_CASH_RATES": "Driver Cash Rates",
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "Cancel & Reschedule",
       "NOTIFICATION_MESSAGES": "Notification Messages",
-      "OPERATIONS_CONFIG": "Operations"
+      "OPERATIONS_CONFIG": "Operations",
+      "EXPENSE_BATCH": "Envelope of bills"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -588,6 +608,8 @@
       "THEME_DARK": "Dark mode",
       "COLLAPSE_MENU": "Collapse menu",
       "EXPAND_MENU": "Expand menu",
+      "COLLAPSE_MENU_TITLE": "Collapse menu (Ctrl+B)",
+      "EXPAND_MENU_TITLE": "Expand menu (Ctrl+B)",
       "PIN_MENU": "Pin menu open",
       "UNPIN_MENU": "Unpin menu"
     },
@@ -623,7 +645,8 @@
       "CANCEL_TRIP_REFUND_MESSAGE": "{{count}} booking(s) will be automatically refunded and notified.",
       "CANCEL_TRIP_NO_REFUND_MESSAGE": "The trip will be cancelled. No refund will be issued.",
       "CANCEL_TRIP_BTN": "Cancel Trip",
-      "CANCELLING": "Cancelling..."
+      "CANCELLING": "Cancelling...",
+      "NO_MATCH": "No match"
     },
     "VALIDATION": {
       "REQUIRED": "This field is required.",
@@ -662,6 +685,7 @@
       "LOAD_MAINTENANCE_FAILED": "Unable to load maintenance records.",
       "LOAD_MAINTENANCE_PLANS_FAILED": "Unable to load maintenance plans.",
       "LOAD_EXPENSES_FAILED": "Unable to load expenses.",
+      "LOAD_EXPENSE_PAYEES_FAILED": "Unable to load the payee registry",
       "DELETE_CONFIRM_BODY": "This action cannot be undone. Do you want to continue?",
       "DELETE_BTN": "Delete",
       "UNLOCK_SUCCESS": "Account unlocked successfully.",
@@ -808,6 +832,7 @@
       "FIRST_NAME": "First Name",
       "MIDDLE_NAME": "Middle Name",
       "LAST_NAME": "Last Name",
+      "NICKNAME": "Nickname",
       "EMAIL": "Email",
       "EMAIL_LOCKED_HINT": "This email is the login credential, so it cannot be edited here. The account holder changes it from their own profile, confirming the new address by email.",
       "GUEST_ROW_LOCKED_HINT": "This is a guest record from an offline booking, so only the name and the status can be changed here. The phone number is how a later registration is matched to this record.",
@@ -822,12 +847,34 @@
       "UNLOCK_CONFIRM_MESSAGE": "Unlocking this account will grant immediate login access to",
       "UNLOCK_BTN": "Unlock",
       "UNLOCKING": "Unlocking...",
+      "CLOSE_ACTION": "Close account",
+      "CLOSE_CONFIRM_TITLE": "Confirm account closure",
+      "CLOSE_CONFIRM_MESSAGE": "Close the account and erase the identifying details in the profile (name · email · phone) of",
+      "CLOSE_POINT_LOGIN": "This account can no longer sign in, and disappears from the user list and the driver-assignment list.",
+      "CLOSE_POINT_RECORDS": "Booking history and receipts are kept as accounting records — this is not a full erasure of their data.",
+      "CLOSE_POINT_EMAIL": "The original email address is released; the person can sign up again with it.",
+      "CLOSE_IRREVERSIBLE": "This cannot be undone.",
+      "CLOSE_BTN": "Close account",
+      "CLOSING": "Closing...",
+      "CLOSE_SUCCESS": "Account closed and identifying details erased. Booking history is kept.",
+      "CLOSE_FAILED": "Could not close the account.",
       "SALES_POINTS_SECTION_TITLE": "Sales Points",
       "ALLOWED_SALES_POINTS_LABEL": "Allowed Sales Points",
       "ACTIVE_SALES_POINT_LABEL": "Active Sales Point",
       "ACTIVE_SALES_POINT_NONE": "Not set",
       "SALES_POINTS_EMPTY": "No sales points configured yet",
-      "SALES_POINTS_UNAVAILABLE": "Couldn't load sales points. Try again."
+      "SALES_POINTS_UNAVAILABLE": "Couldn't load sales points. Try again.",
+      "OPERATOR_SECTION_TITLE": "Operator",
+      "OPERATORS_UNAVAILABLE": "Couldn't load operators. Try again.",
+      "OPERATORS_EMPTY": "No operators configured yet",
+      "EMPLOYER_OWNER_LABEL": "Employer",
+      "EMPLOYER_OWNER_NONE": "No operator",
+      "EMPLOYER_OWNER_HINT": "The operator that employs this person. Customers and admins have none. Editable at creation only.",
+      "SELLABLE_OWNERS_LABEL": "May sell tickets for",
+      "SELLABLE_OWNERS_HINT": "A different question from the employer — a shared-counter salesperson sells for several operators. None selected = sells for nobody.",
+      "PERSONAL_SECTION_TITLE": "Personal Information",
+      "CREDENTIALS_SECTION_TITLE": "Account Credentials",
+      "CONTACT_SECTION_TITLE": "Contact & Settings"
     },
     "VEHICLES": {
       "MONITORING": "Fleet Monitoring Active",
@@ -1054,7 +1101,15 @@
       "PHOTO_REMOVE_CONFIRM": "Remove this photo from the stop? The route map will go back to showing no photo.",
       "PHOTO_REMOVE_FAILED": "Could not remove the photo.",
       "PHOTO_UPLOADED": "Photo uploaded.",
-      "PHOTO_UPLOAD_FAILED": "Could not upload the photo."
+      "PHOTO_UPLOAD_FAILED": "Could not upload the photo.",
+      "ADD": "Add stop",
+      "CREATE_TITLE": "Add a stop",
+      "SLUG": "Slug",
+      "SLUG_HINT": "Lower case and underscores, e.g. mo_chit. Cannot be changed afterwards.",
+      "DELETE_TITLE": "Delete stop",
+      "DELETE_CONFIRM": "Delete the stop \"{{name}}\"?",
+      "DELETE_IN_USE": "\"{{name}}\" cannot be deleted while a route, schedule, booking, ticket or sales point still refers to it.",
+      "PHYSICAL_READONLY": "The place itself — where it is and what kind of stop it is — is shared reference data only an administrator can change. The name, landmark and address below are yours to write."
     },
     "ROUTES": {
       "TITLE": "Route Management",
@@ -1393,8 +1448,6 @@
     },
     "REPORTS": {
       "SUBTITLE": "Bookings, tickets sold, occupancy, and revenue for a date range.",
-      "FILTER_FROM": "From",
-      "FILTER_TO": "To",
       "EXPORT_REVENUE_DAILY": "Daily revenue",
       "EXPORT_REVENUE_PER_VEHICLE": "Revenue per vehicle",
       "TILE": {
@@ -1499,8 +1552,6 @@
     },
     "SETTLEMENTS": {
       "SUBTITLE": "Confirm cash and revenue handover for each departed round.",
-      "FILTER_FROM": "From",
-      "FILTER_TO": "To",
       "TABLE_TITLE": "Rounds Pending Settlement",
       "COL": {
         "ROUTE": "Route",
@@ -1632,16 +1683,30 @@
           "RETURNED_PLACEHOLDER": "0.00",
           "CONFIRM_BTN": "Confirm return",
           "CONFIRM_TITLE": "Confirm driver cash return?",
-          "CONFIRM_TEXT": "Recording {{amount}} as returned. This cannot be undone.",
+          "CONFIRM_TEXT": "Recording {{amount}} as returned. If a bill for this day turns up later, the owner can re-open this box from this screen.",
           "SUCCESS": "Driver cash day marked as returned.",
           "ALREADY_RETURNED": "This day has already been returned.",
           "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)",
           "PER_HEAD_PAY": "Per-head pay earned today (already netted at the round, not in the amount above)"
         },
+        "REOPEN": {
+          "ACTION_LABEL": "Re-open this box",
+          "HINT": "For a bill from this round that reaches the counter after the box was signed off. The amount already signed for is kept in the history, and the box goes back to open.",
+          "REASON_LABEL": "Reason",
+          "REASON_PLACEHOLDER": "e.g. yesterday’s fuel bill only arrived this morning",
+          "CONFIRM_BTN": "Re-open box",
+          "CONFIRM_TITLE": "Re-open this cash box?",
+          "CONFIRM_TEXT": "The amount signed for is cleared and kept in the history. The box goes back to open, and has to be signed off again once the entry is added.",
+          "SUCCESS": "Cash box re-opened.",
+          "HISTORY_TITLE": "This box has been re-opened {{count}} time(s)",
+          "PREV_RETURNED": "Previously signed for:"
+        },
         "ERROR": {
           "REASON_REQUIRED": "A reason is required when the returned amount does not match.",
           "ALREADY_RETURNED": "This day was already returned.",
-          "RETURN_FAILED": "Unable to record this return."
+          "RETURN_FAILED": "Unable to record this return.",
+          "NOT_RETURNED": "This box is not signed off, so there is nothing to re-open.",
+          "REOPEN_FAILED": "Unable to re-open this cash box."
         },
         "COL": {
           "HOLDER": "Cash holder",
@@ -1896,13 +1961,11 @@
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "Refunded, pending-manual-refund, and voided ticket totals for a date range.",
-      "FILTER_FROM": "From",
-      "FILTER_TO": "To",
-      "BASIS_NOTE": "Refunded and Voided are bucketed by the date the refund or void was processed, not the original booking or departure date.",
+      "BASIS_NOTE": "Refunded, Refund pending (manual), and Voided are all bucketed by the date the booking was created - not the date the refund or void was processed, and not the departure date. A refund processed today for an older booking therefore lands on that booking's original date.",
       "PARTITION_NOTE": "Voided splits into Cancelled (staff-cancelled) and Expired (unpaid holds that timed out) — the two always sum to the Voided total.",
       "CARD": {
-        "REFUNDED": "Refunded (gross)",
-        "REFUNDED_HINT": "Gross amount refunded to customers, before any processing fees are deducted.",
+        "REFUNDED": "Refunded",
+        "REFUNDED_HINT": "Money actually paid back to customers, summed per refund from the refund ledger, including partial refunds. Refunds made before the ledger existed are carried at the payment's full amount. Amounts still awaiting a manual payout are counted separately under Refund pending (manual).",
         "MANUAL_PENDING": "Refund pending (manual)",
         "VOIDED": "Voided",
         "CANCELLED": "Cancelled",
@@ -1930,8 +1993,6 @@
     },
     "CASH_ONLINE_RECONCILIATION": {
       "SUBTITLE": "Cash, online, and other payment totals collected for a date range.",
-      "FILTER_FROM": "From",
-      "FILTER_TO": "To",
       "BASIS_NOTE": "Cash, Online, and Other are bucketed by the date the booking was created, not the travel date.",
       "PARTITION_NOTE": "Payments split into Cash (staff-collected), Online (card, PromptPay, and other digital gateways), and Other (bank transfer and miscellaneous) — every collected payment falls into exactly one bucket.",
       "CARD": {
@@ -1957,10 +2018,74 @@
         "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
       }
     },
+    "PAYEE_SPEND_REPORT": {
+      "SUBTITLE": "Spend grouped by who received the money — garages, fuel stations and other payees",
+      "FILTER_YEAR": "Year",
+      "YEAR_OPTION": "{{year}} · {{count}} bills · {{amount}}",
+      "FILTER_MONTH": "Month",
+      "MONTH_NEEDS_YEAR": "Pick a year before picking a month",
+      "MONTHS": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "FILTER_CATEGORY": "Expense category",
+      "SCOPE_NOTE": "This screen says where the money went, not whether a garage put its prices up — two bills from one garage are different work, so their totals are not comparable.",
+      "LOAD_FAILED": "Could not load the report. Please try again.",
+      "EMPTY": "No expenses in the selected period",
+      "COVERAGE_TITLE": "How much of the spend is on this screen",
+      "COVERAGE_TEXT": "{{assigned}} has a payee on record, out of {{total}} spent in total ({{percent}}%). The rest was entered before this system had a payee field.",
+      "TABLE_TITLE": "Total per payee",
+      "COL_PAYEE": "Payee",
+      "COL_WORK": "Work done",
+      "COL_BILLS": "Bills",
+      "COL_TOTAL": "Total",
+      "UNASSIGNED": "No payee on record",
+      "UNASSIGNED_HINT": "Bills entered before this field existed",
+      "TOTAL_ROW": "Total",
+      "PERIOD_ALL": "Showing: every year",
+      "PERIOD_YEAR": "Showing: {{year}}, whole year",
+      "PERIOD_YEAR_MONTH": "Showing: {{month}} {{year}}"
+    },
+    "PART_UNIT_PRICE_REPORT": {
+      "SUBTITLE": "Unit price per part or labour entry — which garage charged what, and when",
+      "FILTER_PART": "Entry to compare",
+      "PART_OPTION": "{{name}} · {{comparable}}/{{lines}} comparable",
+      "SCOPE_NOTE": "This screen covers everything on record and deliberately has no year filter — the only prices with anything to compare straddle 2025 and 2026, so a date range would empty exactly the chart this screen exists for.",
+      "LOAD_FAILED": "Could not load the report",
+      "EMPTY": "No bill has named a registry entry yet — once bills are entered by picking from the registry, this report starts having something to compare.",
+      "PICK_A_PART": "Pick one entry to see which garage charged what, and when",
+      "COVERAGE_TITLE": "How much of the money this report can speak for",
+      "COVERAGE_TEXT": "Total spend {{total}} · comparable by unit price {{comparable}} ({{comparableLines}} of {{totalLines}} lines)",
+      "COVERAGE_EXCLUDED": "Not comparable: {{unnamed}} ({{unnamedLines}} lines) name no entry at all, which includes lines covering several things for one price · {{noPrice}} ({{noPriceLines}} lines) name an entry but the bill wrote no unit price, or wrote ฿0.",
+      "NO_COMPARISON": "Nothing to compare yet",
+      "NO_COMPARISON_UNITS": "This entry has prices on several bills, but in different units, so they cannot be lined up — a price per can and a price per litre is not a price rise.",
+      "NO_COMPARISON_ONE_BILL": "This entry has a price on one bill so far — the chart appears once a second bill uses the same unit.",
+      "UNIT_GROUP": "Per {{unit}}",
+      "UNIT_NONE": "no unit given",
+      "PAYEE_UNKNOWN": "No payee on record",
+      "TABLE_TITLE": "Every line of the selected entry",
+      "COL_DATE": "Date",
+      "COL_PAYEE": "Garage / payee",
+      "COL_UNIT_PRICE": "Unit price",
+      "COL_STATUS": "Status",
+      "STATUS": {
+        "COMPARABLE": "Counted",
+        "EXCLUDED_ZERO_PRICE": "Not counted · the bill wrote ฿0 per unit",
+        "EXCLUDED_NO_UNIT_PRICE": "Not counted · the bill wrote no unit price"
+      }
+    },
     "VEHICLE_PL_REPORT": {
       "SUBTITLE": "Profit and loss for each vehicle, from ticket revenue and the recorded costs.",
-      "FILTER_FROM": "From",
-      "FILTER_TO": "To",
       "VAT_NOTE": "Every amount already includes VAT. Fares are VAT-exempt, so input VAT cannot be reclaimed and is a real cost - the VAT figure is the part already inside the amount, never something to add on top.",
       "MARGIN_NOTE": "A vehicle's margin is its own revenue minus its own costs. Central costs are not spread across the buses - they are subtracted exactly once, in the company total.",
       "LOAD_FAILED": "The report could not be loaded. Please try again.",
@@ -1971,6 +2096,7 @@
       "HISTORICAL_CONFLICTS": "{{count}} day(s) where imported figures clashed with real sales",
       "EXPAND_ARIA": "Show this vehicle's cost breakdown",
       "COLLAPSE_ARIA": "Hide this vehicle's cost breakdown",
+      "NO_CATEGORY_ENTRY": "Nothing recorded in this category (not a recorded zero)",
       "ERROR": {
         "RANGE_INVALID": "The start date must not be after the end date.",
         "RANGE_TOO_LARGE": "The date range must not exceed 366 days."
@@ -1987,7 +2113,19 @@
         "REVENUE": "Revenue",
         "EXPENSES": "Expenses",
         "VAT": "of which VAT",
-        "MARGIN": "Margin"
+        "MARGIN": "Margin",
+        "OTHER_CATEGORIES": "{{count}} other categories"
+      },
+      "COST_MIX": {
+        "TITLE": "Cost mix",
+        "HINT": "Every cost the company recorded in this period, by category, central costs included.",
+        "NONE": "Nobody has recorded any cost in this period.",
+        "FOLDED": "{{count}} other categories"
+      },
+      "TOP_MARGIN": {
+        "TITLE": "Top 5 vehicles by margin",
+        "HINT": "Ranked on each vehicle's own margin. Revenue with no vehicle and central costs are left out, because neither is a single bus.",
+        "NONE": "No vehicles have any figures in this date range."
       },
       "COVERAGE": {
         "SERVICE_WINDOW_UNKNOWN": "Service window unknown",
@@ -2053,6 +2191,11 @@
         "INSTALMENT": "Vehicle Instalment",
         "PARKING_FEE": "Parking Fee",
         "PARCEL_COMPENSATION": "Parcel Damage Compensation",
+        "STAFF_WAGE": "Counter Staff Wage",
+        "UTILITY": "Water / Power / Phone / Internet",
+        "RENT": "Counter Rent",
+        "SECURITY": "Security Fee",
+        "SOFTWARE_FEE": "Ticketing Software Fee",
         "CENTRAL": "Central",
         "OTHER": "Other"
       },
@@ -2060,7 +2203,28 @@
       "VAT_AMOUNT": "VAT Amount (THB)",
       "EXPENSE_DATE": "Expense Date",
       "RECEIPT_NO": "Receipt / Tax Invoice No.",
-      "PAID_BY": "Paid By",
+      "PAID_BY": "Paid from",
+      "PAID_BY_HINT": "Which pocket or account the money left — not the garage’s name.",
+      "PAYEE": {
+        "LABEL": "Paid to",
+        "HINT": "The garage, petrol station or shop that received this money. May be left blank — an older bill with no payee on record is not guessed at.",
+        "PLACEHOLDER": "Pick or type a name",
+        "SEARCH_PLACEHOLDER": "Type a garage or station name",
+        "NONE": "No payee",
+        "NO_MATCH": "\"{{name}}\" is not in the registry",
+        "ADD_AS": "Add as {{type}}",
+        "FILTER_TYPE_ALL": "Type: all",
+        "TYPES": {
+          "GARAGE": "Garage",
+          "FUEL_STATION": "Petrol station",
+          "OTHER": "Other"
+        }
+      },
+      "PART": {
+        "SEARCH_PLACEHOLDER": "Type a part or labour name",
+        "NO_MATCH": "\"{{name}}\" is not in the registry",
+        "ADD_AS": "Add as {{kind}}"
+      },
       "NOTE": "Note",
       "NOTE_PLACEHOLDER": "Additional details (optional)",
       "ITEMS": {
@@ -2069,25 +2233,105 @@
         "ADD": "Add line",
         "REMOVE": "Remove",
         "PART": "Part",
-        "PART_NONE": "Not a part (labour / service / other)",
         "DESCRIPTION": "What the bill says",
         "QUANTITY": "Qty",
         "UNIT_PRICE": "Unit price",
         "AMOUNT": "Line total",
         "TOTAL": "Lines add up to",
-        "MISMATCH": "The lines do not add up to the bill total. Fix a line or the total so the two agree before saving."
+        "MISMATCH": "The lines do not add up to the bill total. Fix a line or the total so the two agree before saving.",
+        "UNIT": "Unit",
+        "UNIT_PLACEHOLDER": "sheet / piece / sq.ft."
       },
       "FILTER_VEHICLE": "Vehicle: All",
+      "FILTER_OWNER": "Operator: All",
       "FILTER_VEHICLE_CENTRAL_ONLY": "Central / Not linked only",
       "FILTER_CATEGORY": "Category: All",
-      "FILTER_DATE_FROM": "From Date",
-      "FILTER_DATE_TO": "To Date",
+      "FILTER_YEAR": "Year",
+      "FILTER_MONTH": "Month",
       "EMPTY_TITLE": "No expenses recorded yet",
       "EMPTY_BODY": "Start logging vehicle or central expenses with the \"Add Expense\" button",
       "NO_MATCH": "No expenses match the current filters",
-      "SOURCE": "Source",
       "SOURCE_FIELD": "Auto-generated (from driver)",
-      "FIELD_ROW_IMMUTABLE": "This row was recorded automatically from a driver’s cash entry. It cannot be edited or deleted here."
+      "FIELD_ROW_IMMUTABLE": "This row was recorded automatically from a driver’s cash entry. It cannot be edited or deleted here.",
+      "BATCH": {
+        "OPEN": "Take an envelope of bills",
+        "SUBTITLE": "Record a whole stack of bills in one save",
+        "PAGE_PURPOSE": "A garage hands over several bills at once. Enter them all here and press save once — either every bill is recorded or none of them is, never half a stack.",
+        "BILL_N": "Bill {{n}}",
+        "BILL_TOTAL": "This bill",
+        "BILL_COUNT": "{{n}} bills",
+        "LINE_COUNT": "{{n}} lines",
+        "ADD_BILL": "+ Add a bill",
+        "ADD_LINE": "+ Add a line",
+        "REMOVE_BILL": "Remove this bill",
+        "COLLAPSE": "Collapse",
+        "GARAGE": "Garage",
+        "LINE_DESCRIPTION": "Line (as the garage wrote it)",
+        "LINE_PART": "Part / labour",
+        "SAVE_ENVELOPE": "Save the whole envelope",
+        "SAVED": "{{n}} bills recorded",
+        "OWNER_HINT": "Every bill in this envelope is filed against this operator.",
+        "BILL_DATE": "Bill date",
+        "VEHICLE": "Plate",
+        "CATEGORY": "Category",
+        "PAID_BY": "Paid by",
+        "LINE_PART_NONE": "Not a part"
+      }
+    },
+    "EXPENSE_PAYEES": {
+      "SUBTITLE": "The garages, petrol stations and shops we pay",
+      "PAGE_PURPOSE": "The list of garages, petrol stations and shops this operator pays. Bills store the payee’s ID, never its spelling, so correcting a name here corrects it on every past bill at once. There is deliberately no delete: a payee still owns every bill it was ever paid. Retire it instead and it stops appearing in the pickers.",
+      "TABLE_TITLE": "Payees",
+      "ADD": "Add payee",
+      "ADD_TITLE": "Add a payee",
+      "ADD_HINT": "Name it the way you actually refer to it, so you can find it while entering a bill.",
+      "RENAME": "Rename",
+      "RENAME_TITLE": "Rename payee",
+      "RENAME_HINT": "Every past bill changes with it — bills hold the payee’s ID, not its spelling.",
+      "RETIRE": "Retire",
+      "RESTORE": "Restore",
+      "NAME": "Name",
+      "TYPE": "Type",
+      "STATUS": "Status",
+      "STATUS_ACTIVE": "In use",
+      "STATUS_RETIRED": "Retired",
+      "SHOW_RETIRED": "Show retired",
+      "EMPTY_TITLE": "No payees on record yet",
+      "EMPTY_BODY": "Use \"Add payee\", or simply type a new name while entering a bill — it can be added from there.",
+      "NO_MATCH": "Nothing matches these filters",
+      "NAME_TAKEN": "That name is already in the registry. Two payees are never merged automatically, because merging cannot be undone."
+    },
+    "MAINTENANCE_PARTS": {
+      "SUBTITLE": "The parts and labour entries your maintenance plans and repair bills both draw from",
+      "PAGE_PURPOSE": "This is your own list of parts and labour. Plans and bills store an entry's ID, never its spelling, so correcting a name here corrects it everywhere at once. There is no delete on purpose: a retired entry still owns the price history of every line that named it. Retire it instead and it stops appearing in the pickers.",
+      "TABLE_TITLE": "All entries",
+      "ADD": "Add entry",
+      "ADD_TITLE": "Add a new entry",
+      "ADD_HINT": "Name it the way the bill does, so you can find it while entering a bill or setting up a plan.",
+      "RENAME": "Rename",
+      "RENAME_TITLE": "Rename entry",
+      "RENAME_HINT": "Every plan and every past bill follows immediately, because they store the entry's ID and not its spelling.",
+      "RETIRE": "Retire",
+      "RESTORE": "Restore",
+      "NAME": "Name",
+      "KIND": "Part / labour",
+      "STATUS": "Status",
+      "STATUS_ACTIVE": "In use",
+      "STATUS_RETIRED": "Retired",
+      "SHOW_RETIRED": "Show retired entries",
+      "EMPTY_TITLE": "No entries in the registry yet",
+      "EMPTY_BODY": "Add one with the \"Add entry\" button, or just type a new name while entering a bill and it will be added from there.",
+      "NO_MATCH": "No entry matches this filter",
+      "NAME_TAKEN": "That name is already in the registry. Entries are never merged automatically, because a merge cannot be undone.",
+      "NAME_WILL_REUSE": "That name is already in the registry. You can still save: the existing entry will be used rather than a duplicate created.",
+      "NAME_KIND_CONFLICT": "\"{{name}}\" already exists as {{kind}}. One name cannot be both, or two different things end up compared on price. Give it a distinct name, e.g. \"Labour: change …\".",
+      "SEEDED_BADGE": "Built in · translated",
+      "SEEDED_RENAME_WARNING": "⚠️ This is one of the 13 built-in entries and has English and Chinese names. Renaming it makes it an entry you typed and its translations are lost for good — English screens will show the Thai name, and this cannot be undone from here.",
+      "FILTER_KIND_ALL": "Type: all",
+      "KINDS": {
+        "PART": "Part",
+        "LABOUR": "Labour"
+      }
     },
     "MANUAL_REFUNDS": {
       "SUBTITLE": "Payments awaiting manual refund transfer",
@@ -2491,7 +2735,6 @@
     "RESEND_EMAIL_REQUIRED": "Please enter your email",
     "RESEND_EMAIL_INVALID": "Please enter a valid email",
     "RESEND_BUTTON": "Resend verification email",
-    "RESEND_LOADING": "Sending...",
     "RESEND_SUCCESS": "Verification email resent. Please check your inbox.",
     "ERROR": {
       "TOKEN_MISSING": "No verification token found. Please check the link in your email.",
@@ -2522,6 +2765,7 @@
     "PROFILE_FIRST_NAME_LABEL": "First name",
     "PROFILE_MIDDLE_NAME_LABEL": "Middle name (optional)",
     "PROFILE_LAST_NAME_LABEL": "Last name",
+    "PROFILE_NICKNAME_LABEL": "Nickname (optional)",
     "PROFILE_EDIT_BUTTON": "Edit personal details",
     "PROFILE_SAVE_BUTTON": "Save",
     "PROFILE_CANCEL_BUTTON": "Cancel",
@@ -2561,7 +2805,7 @@
     "CHANNEL_EMAIL": "Email",
     "CHANNEL_SMS": "SMS",
     "CHANNEL_NA": "Not available",
-    "CRITICAL_HINT": "At least one channel must stay on for this notification.",
+    "CRITICAL_HINT": "Notifications marked * must keep at least one channel on — you can't turn them all off.",
     "SAVE_BUTTON": "Save changes",
     "SAVE_SUCCESS": "Notification preferences saved.",
     "RETRY": "Try again",
@@ -2571,7 +2815,7 @@
     "UNSAVED_CHANGES_CANCEL": "Keep editing",
     "ERROR": {
       "LOAD_FAILED": "Couldn't load your notification preferences. Please try again.",
-      "CRITICAL_LAST_CHANNEL": "At least one channel must stay on for this notification.",
+      "CRITICAL_LAST_CHANNEL": "Can't turn this off — it's the last channel left for this notification.",
       "GENERIC": "Something went wrong. Please try again."
     },
     "TYPE": {
@@ -2580,6 +2824,8 @@
       "SCHEDULE_CANCELLED": "Trip cancelled",
       "BOOKING_RESCHEDULED": "Booking rescheduled",
       "SCHEDULE_TIME_CHANGED": "Trip time changed",
+      "SCHEDULE_DELAYED": "Trip delayed",
+      "SCHEDULE_VEHICLE_CHANGED": "Vehicle changed",
       "PRE_DEPARTURE_REMINDER": "Pre-departure reminder",
       "BOARDING_REMINDER": "Boarding reminder"
     }
@@ -2607,14 +2853,12 @@
     "NEW_EMAIL_REQUIRED": "Please enter a valid email",
     "NEW_EMAIL_EXIST": "This email is already in use",
     "SUBMIT": "Send verification link",
-    "SUBMIT_LOADING": "Sending...",
     "CANCEL": "Cancel",
     "CLOSE": "Close",
     "SENT_TITLE": "Verification link sent",
     "SENT_MESSAGE": "We sent a verification link to {{email}}.",
     "SENT_NOTE": "Your login email will not change until you confirm via the link.",
     "RESEND_BUTTON": "Resend link",
-    "RESEND_LOADING": "Sending...",
     "RESEND_SUCCESS": "Verification link resent. Please check your inbox.",
     "ERROR": {
       "INVALID_PASSWORD": "Incorrect password. Please try again.",
@@ -2661,7 +2905,6 @@
     "EMAIL_REQUIRED": "Please enter your email",
     "EMAIL_INVALID": "Please enter a valid email",
     "SEND_LINK": "Send reset link",
-    "SEND_LINK_LOADING": "Sending...",
     "SENT_MESSAGE": "If that email address belongs to an account, we have sent a password reset link to it. Please check your inbox.",
     "BACK_TO_LOGIN": "Back to sign in"
   },
@@ -2674,7 +2917,6 @@
     "PASSWORD_RULE": "Password must be 8-128 characters and contain an uppercase letter, a lowercase letter and a digit",
     "PASSWORD_MISMATCH": "The two passwords do not match",
     "SUBMIT": "Set new password",
-    "SUBMIT_LOADING": "Saving...",
     "SUCCESS_TITLE": "Password changed",
     "SUCCESS_MESSAGE": "Your password has been changed. You can now sign in with it.",
     "SUCCESS_SIGNIN": "Sign in",
@@ -2715,6 +2957,7 @@
       "SIGNED_IN_AS": "Signed in as"
     },
     "HOME_BOOKING": {
+      "HERO_HEADLINE": "Book NJ Phuyaipu bus tickets online",
       "TRIP_TYPE": "Trip type",
       "ROUNDTRIP_1": "One-way",
       "ROUNDTRIP_2": "Round-trip",
@@ -2793,12 +3036,10 @@
       "SUMMARY_PICKUP_VALUE": "{{province}} {{count}} stops",
       "SUMMARY_DROPOFF_VALUE": "{{province}} {{count}} stops",
       "SUMMARY_DISTANCE": "Approx. {{distance}} km",
-      "SUMMARY_DURATION": "Travel time approx. {{min}} - {{max}} min",
       "SUMMARY_DURATION_SEGMENT": "Travel time approx. {{duration}} min",
       "SUMMARY_SEGMENT_NOTE": "For your selected pickup and drop-off",
       "DETAIL_PICKUP_TITLE": "Pickup detail ({{province}})",
       "DETAIL_DROPOFF_TITLE": "Drop-off detail ({{province}})",
-      "DETAIL_TIME": "Approx. {{time}}",
       "DETAIL_LANDMARK_LABEL": "Landmark",
       "DETAIL_NO_PHOTO": "No photo of this stop yet",
       "BTN_OPEN_MAPS": "Open in Google Maps",
@@ -2851,7 +3092,6 @@
     "TIME_UNIT": "",
     "HOUR_UNIT": "hour",
     "MINITE_UNIT": "minute",
-    "BAHT_UNIT": "baht",
     "SEAT_REMAIN": "remaining",
     "SEAT_UNIT": "seats",
     "SEAT_PER_PASSENGER": "/seat",
@@ -2869,7 +3109,14 @@
     "SOLD_OUT_TODAY_TITLE": "Today's trips have all departed",
     "SOLD_OUT_TODAY_HINT": "Try the next day.",
     "SOLD_OUT_TODAY_ACTION": "Show trips on {{date}}",
+    "DAY_STRIP_LABEL": "Choose travel day",
+    "DAY_STRIP_TODAY": "Today",
+    "DAY_STRIP_NO_TRIPS": "No trips",
+    "NEAREST_DAY_HINT": "The nearest day with trips is {{date}}",
     "ESTIMATE_KM_UNIT": "km",
+    "PICKUP_STOP": "Pickup",
+    "DROPOFF_STOP": "Drop-off",
+    "OPEN_IN_MAPS": "Open in Maps",
     "RESTORED_UNAVAILABLE": "The trip you picked earlier is no longer available. Please choose another one."
   },
   "REVIEW_SCHEDULE_BOOKING": {
@@ -2896,11 +3143,10 @@
       "PASSENGER_UNIT": "Person",
       "TICKET_PRICE": "Ticket Price",
       "TICKET_PRICE_RETURN": "Round-trip ticket price",
-      "TICKET_UNIT": "baht/person",
+      "TICKET_UNIT": "/person",
       "SUBTOTAL": "Subtotal",
       "PROMO_DISCOUNT": "Promo discount",
       "TOTAL": "Total price",
-      "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm information"
     }
   },
@@ -2966,6 +3212,8 @@
       "OPEN_SEAT_SECTION_HINT": "Open seating — board in arrival order.",
       "OPEN_SEAT_COUNT_LABEL": "Number of passengers",
       "OPEN_SEAT_MAX_HINT": "Passenger count is capped at the remaining seats ({{max}} left).",
+      "SENSITIVE_TYPE_CONSENT_LABEL": "I give explicit consent to collecting and using this passenger's monk/nun status, to show it on the ticket, in the confirmation email and in the booking list our staff see, and to help arrange seats on services with numbered seats",
+      "SENSITIVE_TYPE_CONSENT_HINT": "Declining is fine - you can still book as usual, we simply do not record the passenger type",
       "SEAT_PREFERENCE_LABEL": "Seat preference (optional)",
       "SEAT_PREFERENCE_GROUP_ARIA": "Select seat preference",
       "SEAT_PREFERENCE_WINDOW": "Window",
@@ -2981,7 +3229,9 @@
       "EXTRA_LEGROOM_BADGE_ARIA": "Extra legroom seat",
       "LEGEND_TITLE": "Seat legend",
       "LEGEND_WHEELCHAIR": "Wheelchair accessible",
-      "LEGEND_EXTRA_LEGROOM": "Extra legroom"
+      "LEGEND_EXTRA_LEGROOM": "Extra legroom",
+      "BLOCKED_SEAT_ARIA": "Not available for this passenger",
+      "LEGEND_BLOCKED": "Not available for this passenger"
     },
     "GENDER": {
       "MALE": "Male",
@@ -3016,13 +3266,11 @@
       "PASSENGER_UNIT": "Person",
       "TICKET_PRICE_ONEWAY": "Ticket price",
       "TICKET_PRICE_ROUNDTRIP": "Round-trip ticket price",
-      "TICKET_UNIT": "baht/person",
+      "TICKET_UNIT": "/person",
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_ROUND_TRIP": "Round-trip discount",
       "DISCOUNT": "Discount",
-      "TOTAL": "Total",
-      "TOTAL_UNIT": "baht",
-      "CONFIRM": "Confirm payment"
+      "TOTAL": "Total"
     },
     "CREDIT_CARD": {
       "HOSTED_HINT": "Press pay and enter your card details in Omise's secure window. This site never sees or stores your card number.",
@@ -3087,7 +3335,6 @@
       "PASSENGER_PHONE": "Phone number of the booker",
       "PAYMENT_DATE": "Payment date/time",
       "TOTAL": "Total",
-      "TOTAL_UNIT": "baht",
       "ESTIMATE_KM_UNIT": "km",
       "LEG_OUTBOUND": "Outbound",
       "LEG_RETURN": "Return",
@@ -3117,7 +3364,7 @@
       "TITLE": "Privacy Policy",
       "VERSION_LINE": "Version {{version}} · In force from {{effectiveDate}}",
       "CONTENT_1": "&emsp;&emsp;&emsp;This notice explains how we collect, use, disclose and protect your personal data when you use our website, book a seat, send a parcel, contact us or travel with us, and it explains the rights you have under the Personal Data Protection Act B.E. 2562 (2019) and how to exercise them. <br /><br />&emsp;&emsp;&emsp;This notice is published in Thai and English. Where the two versions differ, the Thai version prevails.",
-      "CONTENT_2": "<h2>1. Who we are, and how to reach us</h2>\n<p>The data controller is <strong>N.J. Travel and Transport Limited Partnership</strong>, registration number 0203557004978, registered office at 3/5 Moo 3, Nong Chak Subdistrict, Ban Bueng District, Chon Buri 20170, Thailand.</p>\n<p>For anything about your personal data or your rights, contact the <strong>managing partner</strong> by email at <strong>contact@nj-phuyaipu.com</strong>, by telephone on <strong>08 1428 4492</strong>, or in person at the office above.</p>\n\n<h2>2. What we collect</h2>\n<ul>\n  <li><strong>Account details</strong> — your name, surname, email address, telephone number, password (stored as a one-way hash that cannot be turned back into your password) and a profile picture if you add one. If you sign in with Google, we receive your name and email address from Google.</li>\n  <li><strong>Travel details</strong> — route, date and time, boarding and drop-off points, seat number, and <strong>passenger type</strong> (male passenger, female passenger, monk or nun), which <strong>you may leave blank</strong> and which we use <strong>for display only</strong> — it appears on your ticket, in your confirmation email, and in the booking list our staff see. <strong>It is not used to arrange seating, and it is not used to calculate any discount.</strong></li>\n  <li><strong>Payment details</strong> — amount, method, status and the reference issued by our payment provider. <strong>We do not store your card number in our systems.</strong> When you pay by card, the card details are entered on our page and sent directly to the payment provider.</li>\n  <li><strong>Parcel details</strong> — the names and telephone numbers of the sender and the recipient, what is being sent, and the origin and destination.</li>\n  <li><strong>What you tell us</strong> — the issues you report, your messages, and any images you attach.</li>\n  <li><strong>Usage records</strong> — sign-in times, successful and failed sign-in attempts, and the actions taken in your account, kept for account security and for later investigation.</li>\n  <li><strong>Data stored in your browser</strong> — see section 7.</li>\n  <li><strong>Location</strong> — the site asks your browser for your position <strong>only when you press the button to find the nearest boarding point</strong>. That value is used on your own device to choose a stop; we do not send it to our systems and we do not store it. The coordinates our systems do store are the <strong>latest position of the vehicle</strong>, to show service status — not your position.</li>\n</ul>\n\n<h2>3. What we use it for, and on what legal basis</h2>\n<ul>\n  <li>Providing the booking and parcel service, issuing tickets, taking payment, making refunds and contacting you about your own journey — <strong>performance of a contract</strong> (section 24(3)).</li>\n  <li>Verifying identity, sending one-time passcodes, preventing account takeover and keeping the system secure — <strong>legitimate interest</strong> (section 24(5)).</li>\n  <li>Producing accounting and tax records and meeting our obligations as a licensed transport operator — <strong>legal obligation</strong> (section 24(6)).</li>\n  <li>Tracking vehicle position for operational safety and to show service status to passengers — <strong>legitimate interest</strong> (section 24(5)).</li>\n  <li>Measuring how the website is used, and recording screen activity (mouse movement, clicks and scrolling) for later replay, so we can find which steps are hard to use and fix the right ones — <strong>your consent only</strong> (section 19). You may decline, and declining does not affect searching, booking or payment in any way.</li>\n</ul>\n<p><strong>We do not use your data for marketing and we do not send advertising messages.</strong> Everything we send you is about your own transaction — one-time passcodes, booking confirmations, schedule changes and receipts. If we ever begin sending promotional messages, we will ask for your consent separately first.</p>\n\n<h2>4. Other people's data you give us, and data we receive about you</h2>\n<p>When you book for someone else or send a parcel to someone else, you must have that person's permission before giving us their details, and the permission of a parent or guardian if they are under 16.</p>\n<p>Conversely, if your details reached us because someone else booked a seat or sent a parcel for you, we received them from that person. We use them only as needed to deliver the service that was booked and for safety during the journey, on the basis of contract and legitimate interest — and you have the same rights under section 8 as a customer who contacted us directly.</p>\n\n<h2>5. Who we share it with, and whether it leaves Thailand</h2>\n<p><strong>We do not sell your personal data.</strong> We disclose only what is necessary to the following categories of service provider, who process it on our instructions:</p>\n<ul>\n  <li>Payment service provider (in Thailand)</li>\n  <li>SMS delivery provider (in Thailand)</li>\n  <li>Email delivery provider (outside Thailand)</li>\n  <li>Vehicle tracking provider (in Thailand)</li>\n  <li>Cloud infrastructure and database providers (outside Thailand)</li>\n  <li>Sign-in and mapping provider, only when you use those features (outside Thailand)</li>\n  <li><strong>Website analytics and screen-recording providers (outside Thailand) — only if you consent</strong></li>\n</ul>\n<p>Some of these providers are outside Thailand. Those transfers rely on the necessity of performing the contract you have with us, under section 28(3), and we send only what that service requires. You may ask us for the current list of providers in each category through the contact details in section 1.</p>\n<p>We may also disclose data where the law requires it, where a competent authority orders it, or where it is necessary to establish or defend a legal claim.</p>\n<p><strong>We do not send passenger or parcel-recipient data to our accountants.</strong> What they receive is daily income and expenditure per vehicle, which carries no name, telephone number or journey detail of any individual.</p>\n\n<h2>6. How long we keep it</h2>\n<ul>\n  <li><strong>Your account</strong> — until you close it, and for 90 days afterwards.</li>\n  <li><strong>Bookings, tickets, receipts and accounting records</strong> — 5 years from the <strong>end of the accounting year</strong> in which the transaction occurred. Our accounting year ends on 31 December (so a 2026 transaction is kept until 31 December 2031), as required by the Accounting Act B.E. 2543 and the Revenue Code.</li>\n  <li><strong>Messages you send us</strong> — what you reported, the text you wrote and the images you attached. We keep them until the matter is closed, and 90 days after that we delete the attached images and remove the text you wrote. If a matter is never closed, we delete them two years after you sent it.</li>\n  <li><strong>Usage records</strong> — 90 days.</li>\n  <li><strong>Data-export audit records</strong> — 1 year. We record which member of staff exported which dataset and when, so that improper access to personal data can be traced after the fact. The search filters used for the export are erased after 90 days.</li>\n  <li><strong>Vehicle position</strong> — our systems keep only the latest position of each vehicle, overwriting the previous one, so no route history exists in our systems.</li>\n  <li><strong>Website usage statistics</strong> — held by the analytics providers for the periods they set. You may withdraw your consent at any time under section 8.</li>\n</ul>\n<p>When you ask us to delete your data we act in two stages. First, we immediately delete or blank the details that identify you, such as name, email address and telephone number. Second, once the accounting retention period above has passed, we sever the link between the accounting records and the individual. <strong>Between those two stages the accounting records can still be traced back to you, as the law requires, so we do not describe the data in that period as anonymised.</strong></p>\n\n<h2>7. Cookies and data stored in your browser</h2>\n<p><strong>We set no cookies of our own.</strong> What our site keeps in your browser is:</p>\n<ul>\n  <li>Your sign-in state — token, username and role — until you sign out.</li>\n  <li>Display preferences such as language and theme, and the routes you searched most recently — until you clear site data.</li>\n  <li>Temporary values during a booking or payment — discarded when you close the tab.</li>\n  <li>Your answer about usage statistics — stored so we do not ask again, whether you accepted or declined.</li>\n</ul>\n<p>The site collects usage statistics only when <strong>analytics is switched on AND you consent</strong> — both, not either. <strong>While analytics is not switched on, nothing is collected and no analytics cookie is set on your device, whatever you answer.</strong> When both are true, the analytics providers set additional cookies on your device: <strong>_ga</strong> and <strong>_ga_</strong> followed by the measurement id (Google Analytics), <strong>_clck</strong> and <strong>_clsk</strong> (Microsoft Clarity), plus <strong>_cltk</strong> in the tab's temporary storage. That list comes from measuring the live page on 1 August 2026. <strong>Before you press accept, not one of them is on your device.</strong></p>\n<p>You can clear all of it from your browser settings, and <strong>while the site is collecting usage statistics you will find a withdraw button at the end of this page.</strong></p>\n\n<h2>8. Your rights, and how to use them</h2>\n<p>As a data subject you have the right to:</p>\n<ul>\n  <li><strong>Access your data and obtain a copy</strong>, including being told where we obtained it (section 30).</li>\n  <li><strong>Have your data transferred</strong> to another controller (section 31).</li>\n  <li><strong>Object</strong> to the collection, use or disclosure of your data (section 32).</li>\n  <li><strong>Have your data erased or destroyed</strong> (section 33). You can close your account yourself on the My Account page, which removes the details that identify you; booking history and receipts are retained as accounting law requires — see section 6.</li>\n  <li><strong>Have processing suspended</strong> (section 34).</li>\n  <li><strong>Have your data corrected and kept up to date</strong> (sections 35 and 36). You can change your name, surname, telephone number and email address yourself on the My Account page.</li>\n  <li><strong>Withdraw consent</strong> (section 19, paragraph five). For usage statistics, <strong>while the site is collecting, use the withdraw button at the end of this page</strong> (while analytics is not switched on there is no such button, because nothing is collected and there is no consent to withdraw). It takes effect immediately with no need to reload, and on your next visit the analytics scripts are not loaded at all. <strong>Withdrawing stops collection from that point on; it cannot recall data already sent</strong>, and it does not affect the lawfulness of processing carried out before it.</li>\n  <li><strong>Lodge a complaint</strong> with the Personal Data Protection Committee's office if you believe we are not complying with the law (section 73).</li>\n</ul>\n<p>Use the contact details in section 1. <strong>We will act within 30 days of receiving a complete request.</strong> Where a request is complex or involves a large volume of data we may extend that by up to a further 30 days, telling you and giving our reasons before the original deadline expires.</p>\n<p>For security we may ask you to confirm your identity first, and to protect other people we may have to redact third-party details from the copy we send you. An electronic copy is free of charge.</p>\n\n<h2>9. How we protect your data</h2>\n<p>We maintain reasonable and appropriate measures, including storing passwords as one-way hashes, temporarily locking an account after repeated failed sign-ins, transmitting data over an encrypted connection (HTTPS), not storing payment card numbers in our systems, and limiting access to those who need it for their work.</p>\n\n<h2>10. Changes to this notice</h2>\n<p>This notice carries a version number and effective date at the top of the page. When we change it in substance we publish a new version with its effective date, and the next time you use the service you will be shown the change and asked to confirm your consent to the new version.</p>\n<p>This notice does not yet cover in-vehicle camera recording. That section is being prepared and will be added in a future version.</p>"
+      "CONTENT_2": "<h2>1. Who we are, and how to reach us</h2>\n<p>The data controller is <strong>N.J. Travel and Transport Limited Partnership</strong>, registration number 0203557004978, registered office at 3/5 Moo 3, Nong Chak Subdistrict, Ban Bueng District, Chon Buri 20170, Thailand.</p>\n<p>For anything about your personal data or your rights, contact the <strong>managing partner</strong> by email at <strong>contact@nj-phuyaipu.com</strong>, by telephone on <strong>08 1428 4492</strong>, or in person at the office above.</p>\n\n<h2>2. What we collect</h2>\n<ul>\n  <li><strong>Account details</strong> — your name, surname, email address, telephone number, password (stored as a one-way hash that cannot be turned back into your password) and a profile picture if you add one. If you sign in with Google, we receive your name and email address from Google.</li>\n  <li><strong>Travel details</strong> — route, date and time, boarding and drop-off points, seat number, and <strong>passenger type</strong> (male passenger, female passenger, monk or nun), which <strong>you may leave blank</strong>. We use it to <strong>show your passenger type on your ticket, in your confirmation email, and in the booking list our staff see</strong>, and <strong>on services with numbered seats</strong> we also use it when seats are arranged, avoiding seating a monk next to a female passenger or a nun next to a male passenger. Some seats may therefore be closed to you, and where the system allocates a seat for you it avoids such a pairing <strong>as far as the free seats allow</strong>; where it cannot, it allocates a seat as usual without telling you. <strong>If you leave passenger type blank it is not used to arrange seating at all.</strong> <strong>It is not used to calculate any discount.</strong> Because <strong>monk</strong> and <strong>nun</strong> state a religious status, <strong>we collect and use those two answers only if you give explicit consent on the passenger details page</strong>. If you do not, you can still book as usual - we simply do not record your passenger type at all.</li>\n  <li><strong>Payment details</strong> — amount, method, status and the reference issued by our payment provider. <strong>We do not store your card number in our systems.</strong> When you pay by card, the card details are entered on our page and sent directly to the payment provider.</li>\n  <li><strong>Parcel details</strong> — the names and telephone numbers of the sender and the recipient, what is being sent, and the origin and destination.</li>\n  <li><strong>What you tell us</strong> — the issues you report, your messages, and any images you attach.</li>\n  <li><strong>Usage records</strong> — sign-in times, successful and failed sign-in attempts, and the actions taken in your account, kept for account security and for later investigation.</li>\n  <li><strong>Data stored in your browser</strong> — see section 7.</li>\n  <li><strong>Location</strong> — the site asks your browser for your position <strong>only when you press the button to find the nearest boarding point</strong>. That value is used on your own device to choose a stop; we do not send it to our systems and we do not store it. The coordinates our systems do store are the <strong>latest position of the vehicle</strong>, to show service status — not your position.</li>\n</ul>\n\n<h2>3. What we use it for, and on what legal basis</h2>\n<ul>\n  <li>Providing the booking and parcel service, issuing tickets, taking payment, making refunds and contacting you about your own journey — <strong>performance of a contract</strong> (section 24(3)).</li>\n  <li>Verifying identity, sending one-time passcodes, preventing account takeover and keeping the system secure — <strong>legitimate interest</strong> (section 24(5)).</li>\n  <li>Producing accounting and tax records and meeting our obligations as a licensed transport operator — <strong>legal obligation</strong> (section 24(6)).</li>\n  <li>Tracking vehicle position for operational safety and to show service status to passengers — <strong>legitimate interest</strong> (section 24(5)).</li>\n  <li>Measuring how the website is used, and recording screen activity (mouse movement, clicks and scrolling) for later replay, so we can find which steps are hard to use and fix the right ones — <strong>your consent only</strong> (section 19), <strong>and only while analytics is switched on — see section 7</strong>. You may decline, and declining does not affect searching, booking or payment in any way.</li>\n  <li>Collecting and using the passenger types <strong>monk</strong> and <strong>nun</strong>, which are <strong>sensitive data under section 26</strong> because they state a religious status, to show them on your ticket, in your confirmation email and in the booking list our staff see, and <strong>on services with numbered seats</strong> to help arrange seats as described in section 2 - <strong>your explicit consent only</strong> (section 26). You may decline, and declining does not affect searching, booking, seat selection or payment in any way.</li>\n</ul>\n<p><strong>We do not use your data for marketing and we do not send advertising messages.</strong> Everything we send you is about your own transaction — one-time passcodes, booking confirmations, schedule changes and receipts. If we ever begin sending promotional messages, we will ask for your consent separately first.</p>\n\n<h2>4. Other people's data you give us, and data we receive about you</h2>\n<p>When you book for someone else or send a parcel to someone else, you must have that person's permission before giving us their details, and the permission of a parent or guardian if they are under 16.</p>\n<p>Conversely, if your details reached us because someone else booked a seat or sent a parcel for you, we received them from that person. We use them only as needed to deliver the service that was booked and for safety during the journey, on the basis of contract and legitimate interest — and you have the same rights under section 8 as a customer who contacted us directly.</p>\n\n<h2>5. Who we share it with, and whether it leaves Thailand</h2>\n<p><strong>We do not sell your personal data.</strong> We disclose only what is necessary to the following categories of service provider, who process it on our instructions:</p>\n<ul>\n  <li>Payment service provider (in Thailand)</li>\n  <li>SMS delivery provider (in Thailand)</li>\n  <li>Email delivery provider (outside Thailand)</li>\n  <li>Vehicle tracking provider (in Thailand)</li>\n  <li>Cloud infrastructure and database providers (outside Thailand)</li>\n  <li>Sign-in and mapping provider, only when you use those features (outside Thailand)</li>\n  <li><strong>Website analytics and screen-recording providers (outside Thailand) — only if you consent</strong></li>\n</ul>\n<p>Some of these providers are outside Thailand. Those transfers rely on the necessity of performing the contract you have with us, under section 28(3), and we send only what that service requires. You may ask us for the current list of providers in each category through the contact details in section 1.</p>\n<p>We may also disclose data where the law requires it, where a competent authority orders it, or where it is necessary to establish or defend a legal claim.</p>\n<p><strong>We do not send passenger or parcel-recipient data to our accountants.</strong> What they receive is daily income and expenditure per vehicle, which carries no name, telephone number or journey detail of any individual.</p>\n\n<h2>6. How long we keep it</h2>\n<ul>\n  <li><strong>Your account</strong> — until you close it, and for 90 days afterwards.</li>\n  <li><strong>Bookings, tickets, receipts and accounting records</strong> — 5 years from the <strong>end of the accounting year</strong> in which the transaction occurred. Our accounting year ends on 31 December (so a 2026 transaction is kept until 31 December 2031), as required by the Accounting Act B.E. 2543 and the Revenue Code.</li>\n  <li><strong>Messages you send us</strong> — what you reported, the text you wrote and the images you attached. We keep them until the matter is closed, and 90 days after that we delete the attached images and remove the text you wrote. If a matter is never closed, we delete them two years after you sent it.</li>\n  <li><strong>Usage records</strong> — 90 days.</li>\n  <li><strong>Data-export audit records</strong> — 1 year. We record which member of staff exported which dataset and when, so that improper access to personal data can be traced after the fact. The search filters used for the export are erased after 90 days.</li>\n  <li><strong>Vehicle position</strong> — our systems keep only the latest position of each vehicle, overwriting the previous one, so no route history exists in our systems.</li>\n  <li><strong>Website usage statistics</strong> — <strong>if any is collected</strong>, held by the analytics providers for the periods they set, and you may withdraw your consent at any time under section 8. <strong>While analytics is not switched on there is none of this data at all.</strong></li>\n</ul>\n<p>When you ask us to delete your data we act in two stages. First, we immediately delete or blank the details that identify you, such as name, email address and telephone number. Second, once the accounting retention period above has passed, we sever the link between the accounting records and the individual. <strong>Between those two stages the accounting records can still be traced back to you, as the law requires, so we do not describe the data in that period as anonymised.</strong></p>\n\n<h2>7. Cookies and data stored in your browser</h2>\n<p><strong>We set no cookies of our own.</strong> What our site keeps in your browser is:</p>\n<ul>\n  <li>Your sign-in state — token, username and role — until you sign out.</li>\n  <li>Display preferences such as language and theme, and the routes you searched most recently — until you clear site data.</li>\n  <li>Temporary values during a booking or payment — discarded when you close the tab.</li>\n  <li>Your answer about usage statistics — stored so we do not ask again, whether you accepted or declined.</li>\n</ul>\n<p>The site collects usage statistics only when <strong>analytics is switched on AND you consent</strong> — both, not either. <strong>While analytics is not switched on, nothing is collected and no analytics cookie is set on your device, whatever you answer.</strong> When both are true, the analytics providers set additional cookies on your device: <strong>_ga</strong> and <strong>_ga_</strong> followed by the measurement id (Google Analytics), <strong>_clck</strong> and <strong>_clsk</strong> (Microsoft Clarity), plus <strong>_cltk</strong> in the tab's temporary storage. That list comes from measuring the live page on 1 August 2026. <strong>Before you press accept, not one of them is on your device.</strong></p>\n<p>You can clear all of it from your browser settings, and <strong>while the site is collecting usage statistics you will find a withdraw button at the end of this page.</strong></p>\n\n<h2>8. Your rights, and how to use them</h2>\n<p>As a data subject you have the right to:</p>\n<ul>\n  <li><strong>Access your data and obtain a copy</strong>, including being told where we obtained it (section 30).</li>\n  <li><strong>Have your data transferred</strong> to another controller (section 31).</li>\n  <li><strong>Object</strong> to the collection, use or disclosure of your data (section 32).</li>\n  <li><strong>Have your data erased or destroyed</strong> (section 33). You can close your account yourself on the My Account page, which removes the details that identify you; booking history and receipts are retained as accounting law requires — see section 6.</li>\n  <li><strong>Have processing suspended</strong> (section 34).</li>\n  <li><strong>Have your data corrected and kept up to date</strong> (sections 35 and 36). You can change your name, surname, telephone number and email address yourself on the My Account page.</li>\n  <li><strong>Withdraw consent</strong> (section 19, paragraph five). For usage statistics, <strong>while the site is collecting, use the withdraw button at the end of this page</strong> (while analytics is not switched on there is no such button, because nothing is collected and there is no consent to withdraw). It takes effect immediately with no need to reload, and on your next visit the analytics scripts are not loaded at all. <strong>Withdrawing stops collection from that point on; it cannot recall data already sent</strong>, and it does not affect the lawfulness of processing carried out before it.</li>\n  <li><strong>Lodge a complaint</strong> with the Personal Data Protection Committee's office if you believe we are not complying with the law (section 73).</li>\n</ul>\n<p>Use the contact details in section 1. <strong>We will act within 30 days of receiving a complete request.</strong> Where a request is complex or involves a large volume of data we may extend that by up to a further 30 days, telling you and giving our reasons before the original deadline expires.</p>\n<p>For security we may ask you to confirm your identity first, and to protect other people we may have to redact third-party details from the copy we send you. An electronic copy is free of charge.</p>\n\n<h2>9. How we protect your data</h2>\n<p>We maintain reasonable and appropriate measures, including storing passwords as one-way hashes, temporarily locking an account after repeated failed sign-ins, transmitting data over an encrypted connection (HTTPS), not storing payment card numbers in our systems, and limiting access to those who need it for their work.</p>\n\n<h2>10. Changes to this notice</h2>\n<p>This notice carries a version number and effective date at the top of the page. When we change it in substance we publish a new version with its effective date, and the next time you use the service you will be shown the change and asked to confirm your consent to the new version.</p>\n<p>This notice does not yet cover in-vehicle camera recording. That section is being prepared and will be added in a future version.</p>"
     },
     "BUSINESS": {
       "TITLE": "Terms and Conditions of Service",
@@ -3128,7 +3375,7 @@
       "CONTENT": "&emsp;&emsp;2. Changing your travel date\n      <br />&emsp;&emsp;&emsp;&emsp;• A change can be made up to {{rescheduleWindowHours}} hours before the bus departs from its origin.\n      <br />&emsp;&emsp;&emsp;&emsp;• A new travel date must always be specified, and it may be set within {{rescheduleMaxDaysAhead}} days of the date the change is made — we do not offer open-date tickets.\n      <br />&emsp;&emsp;&emsp;&emsp;• {{rescheduleCountRule}}\n      <br />&emsp;&emsp;&emsp;&emsp;• The change fee is {{rescheduleFeeLateThb}} THB per seat, charged on every change, however far ahead it is made.\n      <br />&emsp;&emsp;&emsp;&emsp;• Any fare difference between the old and the new trip is charged or refunded at the actual fare.\n      <br />&emsp;&emsp;&emsp;&emsp;• Changes can be made through 3 channels: our website, under \"My Bookings\" · the sales offices at all 3 stations · https://www.facebook.com/nj.phuyaipu\n      <br />&emsp;&emsp;3. Reprinting tickets is divided into 2 cases:\n      <br />&emsp;&emsp;&emsp;&emsp;• Reprint with fee: lost, torn, forgotten ticket, or tickets purchased and printed at another station, etc.\n      <br />&emsp;&emsp;&emsp;&emsp;• Reprint without fee: tickets purchased via internet channel, or printer problems during transaction, power outage, system failure, etc.\n      <br />&emsp;&emsp;4. Cancellation and refunds\n      <br />&emsp;&emsp;&emsp;&emsp;• You can cancel your own ticket on the website. No reason and no supporting document is required.\n      <br />&emsp;&emsp;&emsp;&emsp;• {{refundPercentEarly}}% of the fare is refunded when you cancel more than {{earlyWindowHours}} hours before the bus departs from its origin.\n      <br />&emsp;&emsp;&emsp;&emsp;• {{refundPercentLate}}% of the fare is refunded when you cancel between {{cancelWindowHours}} and {{earlyWindowHours}} hours before that departure.\n      <br />&emsp;&emsp;&emsp;&emsp;• Once fewer than {{cancelWindowHours}} hours remain before departure, a ticket can no longer be cancelled.\n      <br />&emsp;&emsp;&emsp;&emsp;• A ticket can also be cancelled at a sales office, under the same time conditions and the same refund rates as cancelling on the website.\n      <br />&emsp;&emsp;5. Fare discounts\n      <br />&emsp;&emsp;&emsp;&emsp;• Round-trip discount — applied automatically when the return trip is booked in the same order.\n      <br />&emsp;&emsp;&emsp;&emsp;• Child fare discount — ask about it and buy the ticket at a ticket sales point.",
       "SEE_REFUND_POLICY": "Read the full refund policy",
       "SEE_PARCEL_POLICY": "Read the parcel carriage terms",
-      "TRAVEL_CONDITIONS": "<br />&emsp;&emsp;&emsp;&emsp;Travel conditions for passengers\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;For your benefit, please read the following travel conditions:\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1. Passengers must comply with the Land Transport Act B.E. 2522 (1979), ministerial regulations, and other related transport laws\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2. Passengers must comply with the company?s transport conditions and acknowledge/accept these passenger travel announcements as stated herein\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;3. Passengers must be ready and arrive at the boarding point before the departure time shown on their ticket. Buses depart on time; a passenger arriving more than {{noShowCutoffMinutes}} minutes after that departure time is recorded as a no-show\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;4. The company will not accept baggage a passenger carries on board containing flammable objects, pets, illegal items, war weapons, strong-smelling food, objects containing liquid, fragile objects, improperly packed items, or oversized/heavy items unsuitable for transport\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;5. The company reserves the right to change unacceptable baggage categories without prior notice; in case of damage, the company is not liable and passengers are responsible for all damages. Items 4 and 5 apply only to baggage a passenger carries on board; a consigned parcel that carries a freight charge of its own is covered by the separate parcel carriage terms\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;6. The carrier is not liable for passengers or baggage due to delays, events beyond control, or inherent deterioration damage, etc.\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;7. If a passenger does not travel on the specified date/time in the agreed ticket, the travel right is considered forfeited",
+      "TRAVEL_CONDITIONS": "<br />&emsp;&emsp;&emsp;&emsp;Travel conditions for passengers\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;For your benefit, please read the following travel conditions:\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1. Passengers must comply with the Land Transport Act B.E. 2522 (1979), ministerial regulations, and other related transport laws\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2. Passengers must comply with the company's transport conditions and acknowledge/accept these passenger travel announcements as stated herein\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;3. Passengers must be ready and arrive at the boarding point before the departure time shown on their ticket. Buses depart on time; a passenger arriving more than {{noShowCutoffMinutes}} minutes after that departure time is recorded as a no-show\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;4. The company will not accept baggage a passenger carries on board containing flammable objects, pets, illegal items, war weapons, strong-smelling food, objects containing liquid, fragile objects, improperly packed items, or oversized/heavy items unsuitable for transport\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;5. The company reserves the right to change unacceptable baggage categories without prior notice; in case of damage, the company is not liable and passengers are responsible for all damages. Items 4 and 5 apply only to baggage a passenger carries on board; a consigned parcel that carries a freight charge of its own is covered by the separate parcel carriage terms\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;6. The carrier is not liable for passengers or baggage due to delays, events beyond control, or inherent deterioration damage, etc.\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;7. If a passenger does not travel on the specified date/time in the agreed ticket, the travel right is considered forfeited",
       "RESCHEDULE_COUNT_UNLIMITED": "A booking may be changed an unlimited number of times.",
       "RESCHEDULE_COUNT_LIMITED": "A booking may be changed at most {{rescheduleMaxCount}} time(s)."
     },
@@ -3185,7 +3432,7 @@
       "SELL_RECEIPT": "Print Ticket",
       "SCHEDULES": "Schedule Management",
       "DRIVER": "My Schedules",
-      "BOARDING": "Boarding List",
+      "BOARDING": "Schedule Operations",
       "PARCEL_INTAKE": "Parcel Intake",
       "PARCEL_WAYBILL": "Waybill",
       "PARCEL_SCHEDULE": "Parcel Handling",
@@ -3208,6 +3455,8 @@
       "LOGOUT_SUCCESS": "Signed out successfully",
       "COLLAPSE_MENU": "Collapse menu",
       "EXPAND_MENU": "Expand menu",
+      "COLLAPSE_MENU_TITLE": "Collapse menu (Ctrl+B)",
+      "EXPAND_MENU_TITLE": "Expand menu (Ctrl+B)",
       "PIN_MENU": "Pin menu open",
       "UNPIN_MENU": "Unpin menu",
       "THEME_TOGGLE": "Toggle dark mode"
@@ -3216,7 +3465,7 @@
       "SELL": "Walk-in Sales",
       "SCHEDULES": "Schedules",
       "MY_SCHEDULES": "My Schedules",
-      "BOARDING": "Boarding List",
+      "BOARDING": "Schedule Operations",
       "PARCEL_CONSIGN": "Consign Parcel",
       "PARCEL_SCHEDULE": "Verify & Handover",
       "INSPECTION": "Inspection",
@@ -3289,13 +3538,20 @@
     },
     "BOARDING": {
       "TITLE": "Boarding List",
-      "SUBTITLE": "Manage passenger check-ins for this schedule.",
+      "SUBTITLE": "Passenger check-in, driver cash box, departure record and printing for this schedule.",
       "TICKET_NO": "Ticket No.",
       "SEAT": "Seat",
       "PASSENGER": "Passenger",
       "FROM": "From",
       "TO": "To",
       "STATUS": "Status",
+      "SEARCH": {
+        "LABEL": "Search this manifest",
+        "PLACEHOLDER": "Booking no., name, seat or ticket no.",
+        "CLEAR": "Clear",
+        "NO_MATCH_TITLE": "No passenger matches that",
+        "NO_MATCH_BODY": "Nothing on this bus matches \"{{term}}\". Check the booking number with the passenger — it may be for a different trip."
+      },
       "EMPTY_TITLE": "No passengers yet",
       "EMPTY_BODY": "No boarding records found for this schedule.",
       "BOARDED": "Boarded",
@@ -3304,6 +3560,7 @@
       "BOARDING_IN_PROGRESS": "Boarding…",
       "BOARDED_AT": "Boarded at",
       "BOARDED_BY": "Boarded by",
+      "CALL_BOOKER": "Call booker",
       "UNBOARD_BTN": "Un-board",
       "UNBOARD_IN_PROGRESS": "Un-boarding…",
       "UNBOARD_CONFIRM_TITLE": "Un-board this passenger?",
@@ -3523,6 +3780,11 @@
       "PASSENGER_COUNT_DECREASE": "Decrease passenger count",
       "PASSENGER_COUNT_INCREASE": "Increase passenger count",
       "PASSENGER_COUNT_MAX": "Max {{max}} passengers available",
+      "DISCOUNT_CHILD_FARE": "Child fare discount",
+      "FARE_CATEGORY_ADULT": "Adult",
+      "FARE_CATEGORY_CHILD": "Child",
+      "CHILD_COUNT_DECREASE": "Decrease child count",
+      "CHILD_COUNT_INCREASE": "Increase child count",
       "JUMP_SEAT_OVERFLOW_HINT": "This sale includes the jump seat (no backrest) — the reserve seat sold last.",
       "JUMP_SEAT_CONFIRM_TITLE": "Confirm jump-seat sale",
       "JUMP_SEAT_CONFIRM_TEXT": "This seat is a backrest-free jump seat, sold at staff discretion once the normal seats are full. Continue with this sale?",
@@ -3555,6 +3817,8 @@
       "PASSENGER_TYPE": "Passenger Type",
       "PTYPE_MALE": "Male",
       "PTYPE_FEMALE": "Female",
+      "SENSITIVE_TYPE_CONSENT_LABEL": "The passenger gives explicit consent to collecting and using their monk/nun status, to show on the ticket and booking list and to help arrange seats on services with numbered seats",
+      "SENSITIVE_TYPE_CONSENT_HINT": "Leaving it unticked is fine - the sale goes through, we simply do not record the passenger type",
       "PTYPE_MONK": "Monk",
       "PTYPE_NUN": "Nun",
       "FROM_LABEL": "From",
@@ -3622,7 +3886,7 @@
     },
     "BOARDING_ENTRY": {
       "TITLE": "Select a Schedule",
-      "SUBTITLE": "Choose a schedule to view its boarding list.",
+      "SUBTITLE": "Choose a schedule to open its operations.",
       "EMPTY_TITLE": "No schedules available",
       "EMPTY_BODY": "No trips on the selected date. Pick another date."
     },
@@ -3736,7 +4000,7 @@
           "UNPAID_NOTE": "Not yet paid — collect cash at the counter (Booking #{{bookingNumber}})",
           "PAY_CASH_BUTTON": "Collect cash",
           "PAYING": "Recording payment…",
-          "PAID": "Paid — ฿{{amount}} collected"
+          "PAID": "Paid — {{amount}} collected"
         }
       },
       "SHARE_NOT_CONFIGURED": "Parcel revenue share is not configured — it will be recorded at 0% until the owner sets it up.",
@@ -3916,7 +4180,7 @@
       "SUBMITTING": "Saving…",
       "REJECT_CONFIRM": {
         "TITLE": "Confirm reject & refund",
-        "BODY": "Reject parcel {{tracking}} and immediately refund {{amount}} THB in full to the payment method the sender used. This action cannot be undone.",
+        "BODY": "Reject parcel {{tracking}} and immediately refund {{amount}} in full to the payment method the sender used. This action cannot be undone.",
         "CONFIRM_BTN": "Reject & refund",
         "CANCEL_BTN": "Cancel"
       },
@@ -3928,8 +4192,8 @@
         "VALIDATION": "Some values are invalid. Please check and try again."
       },
       "SUCCESS": {
-        "REJECTED_REFUNDED": "Parcel rejected. Refunded {{amount}} THB.",
-        "REJECTED_MANUAL_REFUND": "Parcel rejected. The automatic refund could not be processed — hand back {{amount}} THB to the recipient in cash."
+        "REJECTED_REFUNDED": "Parcel rejected. Refunded {{amount}}.",
+        "REJECTED_MANUAL_REFUND": "Parcel rejected. The automatic refund could not be processed — hand back {{amount}} to the recipient in cash."
       }
     },
     "INSPECTION": {
@@ -4018,6 +4282,7 @@
         "PARCEL_REMIT": "Parcel remit",
         "PARCEL_CLAWBACK": "Parcel clawback"
       },
+      "BOX_DATE": "Cash box for {{date}}",
       "ADVANCE": {
         "ACTION_LABEL": "Cash advance",
         "AMOUNT_LABEL": "Amount",
@@ -4035,13 +4300,21 @@
       },
       "EXPENSE": {
         "ACTION_LABEL": "Field expense",
+        "LANDS_IN_BOX": "This entry lands in the cash box for {{date}}",
         "CATEGORY_LABEL": "Category",
         "AMOUNT_LABEL": "Amount",
         "AMOUNT_PLACEHOLDER": "0.00",
         "NOTE_LABEL": "Note (optional)",
         "NOTE_PLACEHOLDER": "e.g. receipt number",
+        "BILL_DATE_LABEL": "Date on the bill",
+        "BILL_DATE_MISMATCH": "The bill is dated differently from the box it is going into — this entry will be recorded in the cash box for {{date}}.",
         "SUBMIT": "Record expense",
         "WAGE_PRICED_BY_OWNER": "The wage is priced from the owner's rate per leg (1 leg = 1 run), so there is no amount to enter."
+      },
+      "REPAIR": {
+        "ACTION_LABEL": "Add repair line",
+        "LANDS_IN_BOX": "This repair bill lands in the cash box for {{date}}",
+        "SUBMIT": "Record repair bill"
       },
       "SUBMITTING": "Submitting...",
       "VALIDATION": {
@@ -4051,7 +4324,9 @@
         "GENERIC": "Unable to record this entry. Please try again.",
         "WAGE_RATE_NOT_CONFIGURED": "No wage per leg has been set yet. Ask the owner to set it on the driver wage rate page first.",
         "SALES_POINT_FORBIDDEN": "You can only record this entry for rounds departing from your own sales point. This round is not yours.",
-        "PER_HEAD_SALES_POINT_FORBIDDEN": "You can only record heads for stops that belong to your own sales point."
+        "PER_HEAD_SALES_POINT_FORBIDDEN": "You can only record heads for stops that belong to your own sales point.",
+        "DAY_ALREADY_RETURNED": "That day’s cash box has already been returned and signed off, so entries can no longer be added to it. Ask the owner to re-open the box for that day, then key this bill again.",
+        "REPAIR_BILL_ZERO_TOTAL": "A repair bill must come to more than zero. Enter the amount on at least one line."
       },
       "MY_DAY": {
         "TITLE": "My cash box today",
@@ -4085,7 +4360,8 @@
         "AMOUNT": "Amount (THB)"
       },
       "ERROR": {
-        "RANGE_INVALID": "The start date must not be later than the end date."
+        "RANGE_INVALID": "The start date must not be later than the end date.",
+        "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
       }
     }
   },
@@ -4168,7 +4444,7 @@
       "DESCRIPTION": "Parcel description",
       "PROHIBITED_ACK": "I have read the prohibited-items list above and confirm this parcel contains none of them.",
       "QUOTE_LOADING": "Calculating price…",
-      "QUOTE_AMOUNT": "Price: {{amount}} THB",
+      "QUOTE_AMOUNT": "Price: {{amount}}",
       "SUBMIT": "Confirm parcel details",
       "SUBMITTING": "Submitting…"
     },

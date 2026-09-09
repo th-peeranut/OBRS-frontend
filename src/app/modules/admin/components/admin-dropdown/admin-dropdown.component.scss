@@ -16,7 +16,11 @@
   width: 100%;
   min-height: 40px;
   gap: $space-xs;
-  border: 1px solid rgba(189, 200, 207, 0.35);
+  // OBRS-772: classed with the FIELDS, not with the labelled buttons. It shows a
+  // chosen value the way a field does, and its boundary is what says where the
+  // field ends -- the same call the customer shell already makes for
+  // `.btn.dropdown-btn.dropdown-toggle`.
+  border: 1px solid var(--control-outline, #{$control-border});
   border-radius: $radius-pill; // design-system §5: single input shape = pill, matches date/time fields
   // dark-mode (OBRS-127): theme with the shell surface/text tokens instead of raw
   // hex, so the trigger follows light/dark like .admin-field does.
@@ -121,6 +125,35 @@
   flex: 0 0 auto;
   color: var(--admin-primary-fg);
   font-size: $font-size-md;
+}
+
+// OBRS-1576 AC5. The searchable trigger reuses .admin-dropdown-trigger wholesale so the two forms
+// of this control are the same object on screen; only what an <input> needs differently is set
+// here. No arrow chevron on this one on purpose - the caret already says "type here", and a
+// chevron next to a caret offers a click that does something the caret does not.
+.admin-dropdown-search-trigger {
+  font-size: 13px;
+  font-weight: $font-weight-bold;
+}
+
+.admin-dropdown-search-trigger::placeholder {
+  color: var(--admin-muted);
+  font-weight: $font-weight-bold;
+}
+
+// The arrow-key highlight. Same wash as :hover rather than a colour of its own: pointer and
+// keyboard are pointing at the same thing, and two different "this one" colours would read as two
+// different states.
+.admin-dropdown-option.is-active {
+  background: rgba(0, 102, 135, 0.12);
+  color: var(--admin-primary-fg);
+}
+
+.admin-dropdown-empty {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: $font-size-xs;
+  padding: 10px 12px;
 }
 
 .admin-dropdown.is-disabled {
