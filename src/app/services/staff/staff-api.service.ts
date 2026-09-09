@@ -86,6 +86,14 @@ export interface ScheduleSearchResultDto {
 
 export interface WalkInBookingPassengerReqDto {
   passengerType: string;
+  /**
+   * OBRS-1045: `'adult'` | `'child'` — a `fare_category` lookup slug, a DIFFERENT dimension
+   * from `passengerType` above (ADR-0046). Omitted means adult: `FareCategoryService`
+   * resolves absent/blank to `'adult'`, which is what every walk-in sale sent before this
+   * card. The server prices off this field; `totalAmount` on the booking payload stays the
+   * GROSS adult figure regardless (`BookingService` compares it against `calculateTripFare`).
+   */
+  fareCategory?: string;
   // OBRS-1666: the privacy-notice version the clerk had in front of them when the passenger gave
   // explicit consent to a monk/nun answer. Null everywhere else; a monk/nun sent without it is
   // dropped by the backend rather than stored, and the sale still goes through.
@@ -190,6 +198,15 @@ export interface SegmentStopPairDto {
   toStop: SegmentStopRefDto;
   vehicleType: SegmentStopRefDto;
   fare: string;
+  /**
+   * OBRS-1045: what ONE child pays on this pair — the server's own
+   * `computeChildDiscount` output, not a rule this client re-derives (it is a flat
+   * configured fare clamped to never exceed `fare`, never a percentage).
+   * OPTIONAL: absent on a backend predating this card, and the sell page then prices
+   * every ticket as an adult — the same behaviour it had before this card, never a
+   * guessed discount.
+   */
+  childFare?: string;
   estimatedDurationMinutes: number;
 }
 

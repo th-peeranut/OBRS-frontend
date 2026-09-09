@@ -12,3 +12,28 @@
 // which renders on a light surface. The logo displays in its natural colours —
 // no brightness/invert filter needed (the old filter was required only for the
 // bg-primary dark navbar that has been replaced).
+
+// OBRS-1767: nothing hid the staff shell on print, so `window.print()` from a
+// page inside it (the walk-in receipt at /staff/sell/receipt/:bookingId) put the
+// sidebar and the topbar — menu button, page title, theme toggle, notification
+// bell, avatar — on the paper above the document. The receipt component's own
+// `.no-print` cannot reach them: emulated encapsulation scopes it to that
+// component's template, and this chrome lives in THIS one.
+//
+// Deliberately NOT the `.*-print-portal` idiom of
+// docs/adr/0015-boarding-manifest-print-isolation.md. That idiom exists to
+// teleport a template that is NOT on screen out to `document.body`; here the
+// thing to print is already the router outlet's own content, so hiding the
+// chrome around it is the whole fix — no portal, no TypeScript, and no global
+// `body > *` hide rule that a native Ctrl+P elsewhere could match.
+@media print {
+  .admin-sidebar,
+  .admin-topbar {
+    display: none !important;
+  }
+
+  .admin-content {
+    padding: 0;
+    gap: 0;
+  }
+}
