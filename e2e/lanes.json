@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-1783-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1783capture.config.ts",
+      "why": "OBRS-1783 AC-4 evidence: under OPEN seating the 80mm slip now states the seat once beside the trip instead of once per passenger. CAPTURE and not GATE because the behaviour itself is held by four DOM assertions in sell-receipt-page.component.spec.ts, two of which were mutation-checked red; this exists so the owner can see the paper. Hermetic on the gate lane's terms: the two slip arms fulfil their own three endpoints and seed a salesperson session from addInitScript, and the e-ticket arm reuses seedCustomerSession, so every /api/** call is fulfilled in-browser. Three arms: OPEN slip (print + screen), ASSIGNED slip (AC-2, the branch that must not move), and the customer e-ticket, unchanged, for the side-by-side the card is about. The e-ticket arm goes through the My Bookings ticket modal rather than /e-ticket, for the reason measured on OBRS-1781."
+    },
+    {
       "spec": "obrs-1781-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1781capture.config.ts",
