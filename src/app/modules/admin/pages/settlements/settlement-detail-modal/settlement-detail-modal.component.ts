@@ -177,6 +177,15 @@ export class SettlementDetailModalComponent implements OnChanges {
   // fee, the driver's advance and deferred ticket cash all leave the drawer
   // without depending on how the passenger paid). The form flips to asking how
   // much was handed the other way, and applies the sign itself.
+  //
+  // ⚠️ The direction is settled BEFORE anyone can type, and that is a property
+  // of the template, not of this getter: the whole sign-off form lives inside
+  // `@if (detail && detail.status === 'PENDING')`, so the counted-cash field
+  // does not exist during the optimistic-open window when `detail` is still
+  // null and this would read `false` off the `'0.00'` fallback. Without that
+  // guard a detail arriving mid-typing would silently re-interpret a string
+  // already in the box as the opposite movement of money. Do not lift the form
+  // out of that block, and do not give this getter a `summary`-based fallback.
   protected get isTopUp(): boolean {
     const expected = this.expectedCents;
     return expected !== null && expected < 0;

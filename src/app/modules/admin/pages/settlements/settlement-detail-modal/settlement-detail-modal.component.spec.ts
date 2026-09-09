@@ -442,6 +442,33 @@ describe('SettlementDetailModalComponent', () => {
     expect(component['hasDiscrepancy']()).toBeFalse();
   });
 
+  // Scrutinize raised the one failure that would matter most here: the modal
+  // opens optimistically from `summary`, so could a detail arriving mid-typing
+  // flip `isTopUp` and silently re-read a string already in the box as the
+  // opposite movement of money? It cannot — the sign-off form is rendered
+  // inside `@if (detail && detail.status === 'PENDING')`, so the field does not
+  // exist during that window, and nothing can be submitted either. Pinned here
+  // so the day someone lifts the form out of that block, this goes red.
+  it('cannot submit — or even mean anything — while detail is still loading', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.summary = makeSummary();
+    component.detail = null;
+    component.isFetching = true;
+    component.ngOnChanges({});
+
+    expect(component['isTopUp']).toBeFalse();     // the '0.00' fallback, never a direction
+    expect(component['expectedCents']).toBe(0);
+    expect(component['countedCashInput']).toBe(''); // reset on open, nothing to reinterpret
+    expect(component['canConfirm']).toBeFalse();  // and no route to the server either
+
+    // The detail then lands negative: the direction is established with the
+    // field's first paint, not applied retroactively to something already typed.
+    component.detail = makeNegativeDetail();
+    component.ngOnChanges({});
+    expect(component['isTopUp']).toBeTrue();
+    expect(component['countedCashInput']).toBe('');
+  });
+
   it('the figure under the flipped label is a magnitude, not a minus sign', () => {
     const component = new SettlementDetailModalComponent(createTranslateStub());
     component.detail = makeNegativeDetail();
