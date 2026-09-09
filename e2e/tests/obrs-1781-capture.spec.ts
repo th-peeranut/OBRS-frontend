@@ -19,10 +19,17 @@ import { seedCustomerSession } from '../support/customer-pages';
  */
 const OUT_DIR = process.env['OBRS1781_OUT'] ?? 'captures/obrs-1781';
 
+// Every seat is null because that is the only shape production can reach: no
+// request DTO carries `seatingMode` (only `seatingCapacity`), so every schedule
+// created through the app keeps the V10 column default 'OPEN', and on an OPEN
+// schedule BookingService forces `p.setSeatNumber(null)` regardless of what the
+// client sent. A fixture with real seat numbers photographs a state this fleet
+// cannot produce -- the first reader of that screenshot asked whether the slip
+// had started printing reserved seats.
 const PASSENGERS = [
-  { id: 1, ticketNumber: 'T-260909-0042-1', passengerName: 'นาย สมชาย ใจดี', seatNumber: '12' },
-  { id: 2, ticketNumber: 'T-260909-0042-2', passengerName: 'นางสาว มาลี ศรีสุข', seatNumber: '13' },
-  { id: 3, ticketNumber: 'T-260909-0042-3', passengerName: 'นาย ประยุทธ์ มั่นคง', seatNumber: '14' },
+  { id: 1, ticketNumber: 'T-260909-0042-1', passengerName: 'นาย สมชาย ใจดี', seatNumber: null },
+  { id: 2, ticketNumber: 'T-260909-0042-2', passengerName: 'นางสาว มาลี ศรีสุข', seatNumber: null },
+  { id: 3, ticketNumber: 'T-260909-0042-3', passengerName: 'นาย ประยุทธ์ มั่นคง', seatNumber: null },
 ];
 
 const TICKETS_RESP = {
