@@ -314,6 +314,79 @@ entries is part of closing your card.
 
 ---
 
+### 2.6 Control boundaries — what this app requires of them (OBRS-772, decided 2026-09-08)
+
+The question this answers, asked by OBRS-772 and left open for six weeks: **a
+button already carries a readable label — does its faint 1px border still count
+as "visual information required to identify" the control?**
+
+**What the standard says.** W3C's Understanding for SC 1.4.11, under
+*Boundaries*: *"If a control has visible content (such as text or a sufficiently
+contrasting icon), which helps users identify the presence of the control, then a
+border or other indication of the overall boundary of the hit area is not
+required, as is therefore not subject to non-text contrast requirements."* And
+plainly: *"This success criterion does not require that controls have a visual
+boundary indicating the hit area."*
+
+So the literal answer is **no** — and that answer is not sufficient on its own,
+because the same sentence would exempt `.btn-search`, whose defect (OBRS-746,
+fill 2.80:1 behind a perfectly legible white label) is the only must-catch the
+runtime gate's invariant B has.
+
+**The rule, therefore, in three parts.**
+
+1. **A control with no visible content of its own — an empty field, a dropdown
+   trigger, an icon-only button — MUST have a boundary at 3:1.** Nothing else
+   says a control is there. This is the standard's own requirement, not a house
+   rule, and it is not negotiable per screen.
+2. **A control that paints a FILL different from the page MUST separate that fill
+   at 3:1, label or no label.** ⚠️ This half is **stricter than WCAG**, chosen
+   deliberately: a button whose surface is nearly invisible reads as half-rendered
+   even when its text is legible, and relaxing it would retire the OBRS-746
+   must-catch and with it the only thing in the repo that can see that defect
+   class. Do not describe this clause as "the standard requires it" — it does not.
+3. **A control that has a readable label and paints no surface of its own may
+   keep a decorative border below 3:1.** Ghost/secondary buttons, tabs, filter
+   pills, verdict buttons. The label identifies the control; the border is
+   chrome. These are recorded in the two registers as *accepted*, not as *debt*.
+
+**State is a separate question, and the gate has a real blind spot in it.** 1.4.11
+also requires 3:1 of *"visual information necessary to indicate state"*. Invariant
+B compares a control's fill to the **page**, never to a **sibling's** fill — so
+where "selected" is carried by a fill tint, the pair that actually matters is
+*selected fill vs unselected fill*, and nothing in this repo measures it. Do not
+read a green contrast gate as covering a selected/unselected pair.
+
+The one live example is not a defect, and it is worth knowing why. The Text/Camera
+segment on `/staff/boarding` registers a 1.18:1 boundary in both themes, but its
+selected state is carried by **three** things, not by that boundary
+(`boarding-list.component.scss:133`): a `--accent-soft` fill, an `--accent-text`
+colour, and `font-weight: 700`. The colour change is scored by invariant A and
+clears AA (it was the OBRS-755 fix that took it from 2.09:1), and the weight
+change is not a colour question at all. A state that rests on the faint fill
+**alone** would be a defect; this one does not.
+
+**Tokens.** Control boundaries have their own token, kept apart from the general
+outline tokens on purpose — `--admin-outline` / `$primary-lightgrey` also draw
+card edges, table rules and hairline separators, none of which 1.4.11 reaches, and
+`$primary-lightgrey` is `background` at 16 of its 96 call sites.
+
+| Shell | Light | Dark |
+|---|---|---|
+| customer (SCSS) | `$control-border` `#6c757d` | `$dk-control-border` `rgba(255,255,255,.42)` |
+| admin/staff (CSS var) | `--control-outline` `#6c757d` | `--control-outline` `rgba(255,255,255,.42)` |
+
+Measured: 4.69:1 on `#ffffff`, 4.47:1 on the `#f9f9ff` filter strip, 4.03:1 on
+`#1a1d27`, 4.09:1 on `#0f1117`. ⚠️ **Do not "optimise" these toward 3:1.** The
+lightest grey that clears it on white (`#949494`, 3.03:1) **fails** on `#f9f9ff`
+at 2.89:1 — a value tuned against one surface turns the gate red on another.
+
+**Separators keep the old tokens.** If you are drawing a line between two things
+rather than around a control, use `--admin-outline` / `$primary-lightgrey` /
+`$dk-border`. Reaching for the control token there is the mass-rewrite §1 forbids.
+
+---
+
 ## 3. Form controls — canonical components
 
 There are **three** dropdown implementations in the repo. Pick the canonical one;

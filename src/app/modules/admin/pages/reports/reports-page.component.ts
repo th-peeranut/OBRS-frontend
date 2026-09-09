@@ -17,9 +17,8 @@ import {
   PerHeadEarningsRespDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
 import { formatMoney } from '../../../../shared/lib/money-display';
-
-const MAX_RANGE_SPAN_DAYS = 366;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
+import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
 
 @Component({
     selector: 'app-reports-page',
@@ -179,13 +178,9 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     return 'data';
   }
 
-  protected onFromDateChange(value: Date | null): void {
-    this.fromDate = value;
-    this.applyRange();
-  }
-
-  protected onToDateChange(value: Date | null): void {
-    this.toDate = value;
+  protected onRangeChange(range: DateRange): void {
+    this.fromDate = range.from;
+    this.toDate = range.to;
     this.applyRange();
   }
 
@@ -220,14 +215,15 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     const from = this.toDateInputValue(this.fromDate);
     const to = this.toDateInputValue(this.toDate);
 
-    if (from > to) {
-      this.rangeError = this.translate.instant('ADMIN.REPORTS.ERROR.RANGE_INVALID');
-      return;
-    }
-
-    const spanDays = Math.round((this.toDate.getTime() - this.fromDate.getTime()) / MS_PER_DAY);
-    if (spanDays > MAX_RANGE_SPAN_DAYS) {
-      this.rangeError = this.translate.instant('ADMIN.REPORTS.ERROR.RANGE_TOO_LARGE');
+    const errorKey = dateRangeErrorKey(
+      this.fromDate,
+      this.toDate,
+      from,
+      to,
+      'ADMIN.REPORTS.ERROR'
+    );
+    if (errorKey) {
+      this.rangeError = this.translate.instant(errorKey);
       return;
     }
 

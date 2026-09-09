@@ -42,6 +42,18 @@ $primary-blue-hover: #065d85;   // white on it 7.21:1. L 0.0956 vs $primary-blue
 $primary-lightblue: #dbf3fd;
 $primary-grey: #babdc3;
 $primary-lightgrey: #dddee1;
+// OBRS-772. The boundary of a CONTROL -- a field, a dropdown trigger, an
+// icon-only button -- and nothing else. Deliberately a second token rather than
+// a new value for $primary-lightgrey: that one is used 96 times across 38 files
+// and 16 of those are `background`, so changing its value would repaint fills
+// and hairline separators that WCAG 1.4.11 never asked about (measured
+// 2026-09-05, OBRS-772 comment #1). Separators keep $primary-lightgrey.
+//
+// 4.69:1 on $primary-white and 4.47:1 on the #f9f9ff filter strip, both
+// measured. Not tuned to the 3:1 floor on purpose -- the first grey that clears
+// it on white (#949494, 3.03:1) FAILS on #f9f9ff at 2.89:1, so a value chosen
+// against one surface turns the gate red on the other.
+$control-border: #6c757d;
 $primary-white: #fff;
 $primary-black: #0d1525;
 

@@ -85,35 +85,6 @@ hr {
   margin: 0;
 }
 
-.btn-confirm {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  min-width: 100%;
-  height: 52px;
-
-  background: $primary-blue;
-  border-radius: $radius-xl;
-
-  margin-top: 24px;
-  padding: 25.5px 8px;
-
-  color: $text-white;
-  font-size: $font-size-base;
-  font-weight: bold;
-  text-align: center;
-
-  cursor: pointer;
-
-  &:hover {
-    transition: all 0.3s ease-in-out;
-  }
-
-  &.inline {
-    display: none;
-  }
-}
 
 @media (max-width: 1024px) {
   .card-container {
@@ -139,10 +110,6 @@ hr {
     font-size: $font-size-base;
   }
 
-  .btn-confirm {
-    height: 52px;
-    padding: $space-sm 8px;
-  }
 }
 
 @media (max-width: 576px) {

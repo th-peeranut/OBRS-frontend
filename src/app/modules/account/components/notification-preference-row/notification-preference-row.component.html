@@ -2,9 +2,7 @@
   <div class="npref-row__label">
     <span class="npref-row__type">{{ 'NOTIFICATION_PREFS.TYPE.' + row.type | translate }}</span>
     @if (row.critical) {
-      <span class="npref-row__hint">
-        {{ 'NOTIFICATION_PREFS.CRITICAL_HINT' | translate }}
-      </span>
+      <span class="npref-row__mark" aria-hidden="true">*</span>
     }
   </div>
 
@@ -15,8 +13,9 @@
         #emailSwitch
         [ngModel]="row.emailEnabled"
         [disabled]="disabled"
-        [attr.aria-label]="
-          (('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_EMAIL' | translate))
+        [pt]="switchPassThrough"
+        [ariaLabel]="
+          ('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_EMAIL' | translate)
         "
         (onChange)="onEmailChange($event)"
       ></p-toggleSwitch>
@@ -36,8 +35,9 @@
       #smsSwitch
       [ngModel]="row.smsEnabled"
       [disabled]="disabled"
-      [attr.aria-label]="
-        (('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_SMS' | translate))
+      [pt]="switchPassThrough"
+      [ariaLabel]="
+        ('NOTIFICATION_PREFS.TYPE.' + row.type | translate) + ' ' + ('NOTIFICATION_PREFS.CHANNEL_SMS' | translate)
       "
       (onChange)="onSmsChange($event)"
     ></p-toggleSwitch>

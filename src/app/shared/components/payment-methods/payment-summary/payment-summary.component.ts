@@ -22,7 +22,14 @@ import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.inte
     standalone: false
 })
 export class PaymentSummaryComponent {
-  @Input() variant: 'default' | 'inline' = 'default';
+  /**
+   * OBRS-1532: 'inline' by default. The 'default' arm used to end in a
+   * `<div class="btn-confirm">` that looked like the primary pay button and did
+   * nothing - no handler, no @Output, no role, no tab stop - and no call site
+   * ever rendered it. It is gone; what is left of the distinction is layout
+   * only, and the layout every caller asks for is the inline one.
+   */
+  @Input() variant: 'default' | 'inline' = 'inline';
   /**
    * OBRS-415: this component's default rendering derives the total entirely
    * from the seat-booking `scheduleBooking`/`scheduleFilter`/`booking` NgRx

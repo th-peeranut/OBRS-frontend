@@ -11,6 +11,14 @@
   box-shadow: 0 2px 10px rgba(13, 21, 37, 0.04);
 }
 
+// OBRS-1744: the ≥1-channel rule, said once for the whole table. It used to be
+// printed under every critical row, which put 3 identical copies on screen.
+.npref-matrix__critical-note {
+  margin: 0 0 $space-2xs;
+  font-size: $font-size-xs;
+  color: $text-lightblack;
+}
+
 // Column headers rendered once, above every row (design-system layout spec).
 .npref-matrix__header {
   display: grid;

@@ -313,6 +313,15 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.loadSegments(selection.routeSlug, selection.trip);
   }
 
+  /** OBRS-1752: the checkout column is an empty passenger form until a trip
+   * is picked, so it stays hidden. Hiding it with `@if` also destroys the
+   * component, which is what clears the previous customer's name/phone/ID
+   * after a sale (the page nulls `selectedTrip` on success and nothing else
+   * resets `contactForm`). */
+  protected get showCheckout(): boolean {
+    return this.activeTabIndex === 0 && this.selectedTrip !== null;
+  }
+
   // OBRS-324 (Epic OBRS-318 open seating, 318-d): the endpoint returns
   // seatingMode since OBRS-360, so this reflects the real mode. Missing/unknown
   // (a cached row predating it) safely resolves to false/ASSIGNED.

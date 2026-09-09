@@ -5,6 +5,11 @@
   --admin-surface-card: #ffffff;
   --admin-surface-soft: #f2f4f6;
   --admin-outline: #bdc8cf;
+  /* OBRS-772. The boundary of a CONTROL, kept apart from --admin-outline the way
+     $control-border is kept apart from $primary-lightgrey: --admin-outline also
+     draws card edges, table rules and popover chrome, none of which WCAG 1.4.11
+     reaches. 4.69:1 on --admin-surface-card, measured. */
+  --control-outline: #6c757d;
   --admin-muted: #55636c;
   --admin-text: #191c1e;
 
@@ -272,6 +277,8 @@
   --admin-surface-card: #1d2226;
   --admin-surface-soft: #23292e;
   --admin-outline: #3a444b;
+  /* OBRS-772 dark half. 4.03:1 on --admin-surface-card (#1d2226), measured. */
+  --control-outline: rgba(255, 255, 255, 0.42);
   --admin-text: #e7edf1;
   --admin-muted: #9fb0bb;
 
@@ -505,7 +512,8 @@
   .form-select {
     background-color: var(--admin-surface-soft) !important;
     color: var(--admin-text);
-    border-color: var(--admin-outline) !important;
+    // OBRS-772: a field, so the boundary carries the identification.
+    border-color: var(--control-outline) !important;
   }
 
   .form-control::placeholder {
@@ -2135,7 +2143,10 @@
    as pills; the multi-line exception is textarea.admin-field below. 14px inline
    padding keeps text off the pill's rounded ends (mirrors the dropdown trigger). */
 .admin-field {
-  border: 1px solid rgba(189, 200, 207, 0.9);
+  // OBRS-772: an empty field has no visible content of its own, so this boundary
+  // is the whole of what says a control is here -- the one case WCAG 1.4.11's
+  // "Boundaries" paragraph does NOT exempt.
+  border: 1px solid var(--control-outline, #6c757d);
   border-radius: 999px;
   padding: 9px 14px;
   outline: 0;
@@ -2143,7 +2154,7 @@
 }
 
 .is-dark .admin-field {
-  border-color: var(--admin-outline);
+  border-color: var(--control-outline);
   color: var(--admin-text);
 
   /* OBRS-797. `.form-control::placeholder` was themed for the dark shell back in

@@ -212,3 +212,87 @@ describe('StopFormModalComponent (OBRS-1298)', () => {
     expect(removeCount).toBe(1);
   });
 });
+
+describe('StopFormModalComponent - who may edit the place (OBRS-1680/1678)', () => {
+  let fixture: ComponentFixture<StopFormModalComponent>;
+  let component: StopFormModalComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [StopFormModalComponent, AdminModalBackdropDirective],
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(StopFormModalComponent);
+    component = fixture.componentInstance;
+    component.isOpen = true;
+    component.selected = { ...SELECTED, translations: SELECTED.translations.map((t) => ({ ...t })) };
+  });
+
+  function physicalInputs(): HTMLInputElement[] {
+    return ['stopProvince', 'stopStatus', 'stopType', 'stopReturnStop', 'stopLat', 'stopLng'].map(
+      (id) => fixture.nativeElement.querySelector('#' + id) as HTMLInputElement
+    );
+  }
+
+  // NgModel applies a [disabled] binding from a resolved microtask, not synchronously, so a
+  // single detectChanges() leaves every control still enabled - whenStable() is what makes the
+  // assertion measure the rendered form rather than the moment before it.
+  it('an operator sees the physical values but cannot change any of them', async () => {
+    component.canEditPhysical = false;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const inputs = physicalInputs();
+    // Present, not hidden - an operator has to know WHICH place they are re-signing.
+    expect(inputs.every((el) => el !== null)).toBeTrue();
+    expect(inputs.every((el) => el.disabled)).toBeTrue();
+  });
+
+  it('an operator keeps every label field writable - that half is theirs', async () => {
+    component.canEditPhysical = false;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    for (const locale of ['th', 'en', 'zh']) {
+      for (const field of ['stopLabel-', 'stopLandmark-', 'stopAddress-']) {
+        const el = fixture.nativeElement.querySelector('#' + field + locale) as HTMLInputElement;
+        expect(el).withContext(field + locale).not.toBeNull();
+        expect(el.disabled).withContext(field + locale).toBeFalse();
+      }
+    }
+  });
+
+  it('hides the photo actions from an operator - a dead button reads as broken, a grey field does not', () => {
+    component.canEditPhysical = false;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.stop-photo-block')).toBeNull();
+  });
+
+  it('leaves an admin every physical control enabled', async () => {
+    component.canEditPhysical = true;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(physicalInputs().every((el) => el.disabled)).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.stop-photo-block')).not.toBeNull();
+  });
+
+  it('asks for the slug only while creating, and offers no photo block for a stop that does not exist yet', () => {
+    component.isCreating = true;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#stopSlug')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.stop-photo-block')).toBeNull();
+
+    component.isCreating = false;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#stopSlug')).toBeNull();
+  });
+});

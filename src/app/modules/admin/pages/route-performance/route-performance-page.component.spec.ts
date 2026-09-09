@@ -9,6 +9,7 @@ import { RoutePerformanceStore } from './route-performance.store';
 import { RoutePerformanceDto } from '../../../../shared/interfaces/route-performance.interface';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
+import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 function makeData(overrides: Partial<RoutePerformanceDto> = {}): RoutePerformanceDto {
   return {
@@ -55,6 +56,23 @@ describe('RoutePerformancePageComponent', () => {
     expect(component['sharePctDisplay'](62.5)).toBe('62.5%');
   });
 
+  it('accepts a range exactly at the 366-day cap and rejects one day past it', () => {
+    const store = makeStoreStub(makeData());
+    const component = new RoutePerformancePageComponent(store as unknown as RoutePerformanceStore, createTranslateStub());
+    component.ngOnInit();
+    store.setRange.calls.reset();
+
+    // 2026-01-01 -> 2027-01-02 spans 366 days (2026 is not a leap year).
+    component['onRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 2) });
+    expect(component['rangeError']).toBe('');
+    expect(store.setRange).toHaveBeenCalledOnceWith('2026-01-01', '2027-01-02');
+
+    store.setRange.calls.reset();
+    component['onRangeChange']({ from: new Date(2026, 0, 1), to: new Date(2027, 0, 3) });
+    expect(component['rangeError']).toBe('ADMIN.REPORTS.ERROR.RANGE_TOO_LARGE');
+    expect(store.setRange).not.toHaveBeenCalled();
+  });
+
   it('guards an invalid range and dispatches a valid one', () => {
     const store = makeStoreStub(makeData());
     const component = new RoutePerformancePageComponent(store as unknown as RoutePerformanceStore, createTranslateStub());
@@ -62,13 +80,13 @@ describe('RoutePerformancePageComponent', () => {
     store.setRange.calls.reset();
     component['fromDate'] = new Date(2026, 6, 10);
     component['toDate'] = new Date(2026, 6, 1);
-    component['onFromDateChange'](component['fromDate']);
+    component['onRangeChange']({ from: component['fromDate'], to: component['toDate'] });
     expect(component['rangeError']).toBeTruthy();
     expect(store.setRange).not.toHaveBeenCalled();
     component['rangeError'] = '';
     component['fromDate'] = new Date(2026, 6, 1);
     component['toDate'] = new Date(2026, 6, 5);
-    component['onToDateChange'](component['toDate']);
+    component['onRangeChange']({ from: component['fromDate'], to: component['toDate'] });
     expect(store.setRange).toHaveBeenCalledOnceWith('2026-07-01', '2026-07-05');
   });
 
@@ -77,7 +95,7 @@ describe('RoutePerformancePageComponent', () => {
     beforeEach(async () => {
       const store = makeStoreStub(makeData());
       await TestBed.configureTestingModule({
-        declarations: [RoutePerformancePageComponent],
+        declarations: [RoutePerformancePageComponent, DateRangePickerComponent],
         imports: [CommonModule, FormsModule, DatePickerModule, AdminSharedModule, TranslateModule.forRoot()],
         providers: [{ provide: RoutePerformanceStore, useValue: store }],
       }).compileComponents();

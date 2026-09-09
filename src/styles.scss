@@ -72,8 +72,19 @@ hr {
 
 .form-control {
   background-color: $primary-white !important;
-  border: 1px solid $primary-lightgrey !important;
+  // OBRS-772. An empty field paints the same white as the page behind it, so
+  // this 1px outline is the whole of "a control is here" -- the case WCAG
+  // 1.4.11's Boundaries paragraph does NOT exempt, unlike a button that carries
+  // its own readable label. $primary-lightgrey was 1.35:1 here.
+  border: 1px solid $control-border !important;
   border-radius: 24px !important;
+}
+
+// OBRS-772: the UNCHECKED box, which the `:checked` rule below never reached.
+// Bootstrap's default #dee2e6 measured 1.30:1 on white, and an unchecked
+// checkbox has nothing else to identify it.
+.form-check-input {
+  border-color: $control-border;
 }
 
 .form-check-input:checked {
@@ -115,7 +126,8 @@ label {
   height: 60px !important;
   padding: 18px !important;
   font-size: 18px !important;
-  border: 1px solid $primary-lightgrey !important;
+  // OBRS-772: an OTP box is an empty field by definition.
+  border: 1px solid $control-border !important;
   border-radius: 24px !important;
 }
 
@@ -209,6 +221,9 @@ label.field-inline-label {
   height: 48px;
   border-radius: 24px;
   padding-left: 50px;
+  // OBRS-772: PrimeNG's own default measured 1.70:1 against the white page. Same
+  // argument as `.form-control` -- this is a field, its boundary identifies it.
+  border-color: $control-border;
 }
 
 // ============================================================================
@@ -282,7 +297,9 @@ $app-date-field-segment-inset: 38px;
   height: 48px;
   min-height: 48px;
   border-radius: $radius-pill;
-  border: 1px solid var(--admin-outline, #{$primary-lightgrey});
+  // OBRS-772: control boundary, so the control token rather than the shell's
+  // general outline (which also draws cards and separators).
+  border: 1px solid var(--control-outline, #{$control-border});
   background: var(--admin-surface-card, #{$primary-white});
   color: var(--admin-text, #{$text-black});
   padding-left: 46px;

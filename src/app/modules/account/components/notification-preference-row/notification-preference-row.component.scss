@@ -16,8 +16,8 @@
 
 .npref-row__label {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  gap: 4px;
 }
 
 .npref-row__type {
@@ -26,10 +26,16 @@
   color: $text-black;
 }
 
-// Always-visible hint (not a hover tooltip) — design-system a11y guidance.
-.npref-row__hint {
-  font-size: $font-size-xs;
-  color: $text-lightblack;
+// OBRS-1744: the per-row copy of the ≥1-channel sentence moved to a single
+// callout above the table; this asterisk is all that still marks which rows
+// the rule covers. Hidden from screen readers on purpose — a bare "*" read
+// aloud says nothing; the rule reaches them through the callout instead, which
+// each critical row's switches point at with `aria-describedby` (AC-4).
+.npref-row__mark {
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $text-red;
+  line-height: 1;
 }
 
 .npref-row__cell {

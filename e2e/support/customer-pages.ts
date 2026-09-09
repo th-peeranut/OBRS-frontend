@@ -286,6 +286,53 @@ export const MY_BOOKINGS = ok(
   ])
 );
 
+// OBRS-1530. `/my-parcels` was in EXCLUDED_CUSTOMER_ROUTES with "behind the same
+// parcel flag as /parcel-booking" as the reason, and that reason does not hold in
+// THIS lane: environment.gate.ts sets `onlineParcelBooking: true`, so the route's
+// featureEnabledGuard passes and the page renders. What was actually missing was
+// this fixture, and the page went unswept for a year because the note said flag
+// when it meant fixture. It is also how the page shipped never entering dark mode
+// at all -- nothing was looking.
+//
+// THREE deliveryStatus values on purpose, the same argument as MY_BOOKINGS above:
+// `parcelDeliveryStatusChip()` maps them to three different `.admin-status`
+// tokens (is-neutral / is-warning / is-success), and one row would have measured
+// one chip while claiming to have covered the screen. The `created` row also
+// carries `bookingStatus: 'pending'`, which is the only thing that renders the
+// unpaid `.parcel-card__pending` line and its `is-warning` badge.
+const myParcel = (
+  id: number,
+  deliveryStatus: string,
+  bookingStatus: string,
+  extra: Record<string, unknown> = {}
+) => ({
+  parcelId: id,
+  trackingNumber: `P-00${id}`,
+  bookingId: 900 + id,
+  bookingNumber: `B-000${900 + id}`,
+  amount: 120,
+  deliveryStatus,
+  bookingStatus,
+  collectionCode: deliveryStatus === 'arrived_notified' ? '123456' : null,
+  recipientName: 'Somchai Jaidee',
+  pickupStop: 'Nong Chak',
+  dropoffStop: 'Mo Chit 2 Terminal',
+  departureDateTime: '2030-06-17T08:00:00+07:00',
+  weightKg: 3,
+  expiresAt: null,
+  leftAtStopAt: null,
+  leftAtStopPhotoUrl: null,
+  ...extra,
+});
+
+const MY_PARCELS = ok(
+  pageOf([
+    myParcel(1, 'created', 'pending', { expiresAt: '2030-06-16T08:00:00+07:00' }),
+    myParcel(2, 'in_transit', 'confirmed'),
+    myParcel(3, 'collected', 'confirmed'),
+  ])
+);
+
 const TICKETS = ok([
   {
     ticketId: 777,
@@ -384,6 +431,7 @@ const FIXTURES: [RegExp, (m: RegExpExecArray) => unknown][] = [
   [/\/stations/, () => ok(STATIONS)],
   [/\/stops/, () => ok(STATIONS)],
   [/\/bookings\/me/, () => MY_BOOKINGS],
+  [/\/parcels\/me/, () => MY_PARCELS],
   [/\/bookings\/\d+\/tickets/, () => TICKETS],
   [/\/tickets/, () => TICKETS],
 ];
@@ -878,6 +926,19 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     hoverTargets: ['.login-btn'],
   },
   {
+    // OBRS-1530. The page that shipped with no dark mode at all and no gate to
+    // say so. Swept in its LOADED state: the three fixture rows above are what
+    // put a `.parcel-card` on the screen, and `mustRender` pins that rather than
+    // the empty state, which paints a different set of surfaces entirely.
+    key: 'my-parcels',
+    url: '/my-parcels',
+    landsOn: '/my-parcels',
+    minText: 24,
+    minControls: 3,
+    mustRender: ['.parcel-card', '.admin-status', '.parcel-card__meta'],
+    hoverTargets: ['.icon-btn', '.btn-link'],
+  },
+  {
     // Public parcel tracking (OBRS-305), swept AT REST like /find-booking above
     // and for the same reason: everything past a lookup response --
     // `.parcel-tracking-result`, `.parcel-tracking-timeline`, both not-found
@@ -1002,10 +1063,6 @@ export const EXCLUDED_CUSTOMER_ROUTES: ExcludedCustomerRoute[] = [
       'NOT YET. A multi-step form behind featureEnabledGuard(onlineParcelBooking); the flag is ' +
       'true in the environment this lane builds, so it is reachable -- what it needs is the ' +
       'fixtures for the step it should be measured at, which is a choice nobody has made yet.',
-  },
-  {
-    path: '/my-parcels',
-    why: 'NOT YET. Same shape as /my-reports, behind the same parcel flag as /parcel-booking.',
   },
 ];
 

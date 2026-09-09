@@ -116,14 +116,45 @@ describe('AnalyticsConsentBannerComponent', () => {
    * mechanism that gets it there, including the edges an E2E sweep cannot see.
    */
   describe('the room the bar occupies', () => {
-    /** ResizeObserver delivers before paint, so a frame or two — polled, not assumed. */
-    async function paddingSettlesAt(px: () => number): Promise<number> {
-      for (let i = 0; i < 30; i += 1) {
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-        const now = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
-        if (now === px()) return now;
-      }
+    /**
+     * ResizeObserver delivers before paint, so a frame or two — polled, not assumed.
+     *
+     * OBRS-1519 — two things this used to get wrong, and together they made a
+     * loaded runner report a wrong number instead of a spec that never settled.
+     *
+     * The ceiling is wall-clock now, not a frame count. A frame is however long
+     * the machine takes to draw one, so `30 frames` bought a comfortable wait
+     * here and almost none on a busy CI runner: the same code waiting a
+     * different amount on every machine.
+     *
+     * And running out of budget throws. It used to return whatever padding it
+     * could read at that moment, which the caller then compared against the
+     * expected height — so the failure read as an arithmetic mistake in the
+     * component, when the truth was that nothing had settled yet.
+     */
+    const SETTLE_TIMEOUT_MS = 2000;
+
+    function bodyPaddingBottom(): number {
       return parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
+    }
+
+    async function paddingSettlesAt(px: () => number): Promise<number> {
+      const startedAt = performance.now();
+      let frames = 0;
+      let last = bodyPaddingBottom();
+
+      while (performance.now() - startedAt < SETTLE_TIMEOUT_MS) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        frames += 1;
+        last = bodyPaddingBottom();
+        if (last === px()) return last;
+      }
+
+      throw new Error(
+        `body padding-bottom never settled at ${px()}px: waited ` +
+          `${Math.round(performance.now() - startedAt)}ms over ${frames} frame(s), ` +
+          `last read ${last}px`
+      );
     }
 
     it('reserves exactly what the bar covers, taken from the bar itself', async () => {

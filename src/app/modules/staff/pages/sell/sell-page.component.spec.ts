@@ -840,6 +840,30 @@ describe('SellPageComponent', () => {
     });
   });
 
+  describe('showCheckout getter (OBRS-1752)', () => {
+    it('is false before a trip is selected, even on the Ticket Sales tab', () => {
+      const comp = makeComponent();
+      (comp as any).activeTabIndex = 0;
+      expect((comp as any).showCheckout).toBeFalse();
+    });
+
+    it('is true on the Ticket Sales tab once a trip is selected', () => {
+      const comp = makeComponent();
+      (comp as any).activeTabIndex = 0;
+      (comp as any).selectedTrip = makeTrip();
+      expect((comp as any).showCheckout).toBeTrue();
+    });
+
+    it('is false on Trip Details/Boarding even with a trip selected', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).activeTabIndex = 1;
+      expect((comp as any).showCheckout).toBeFalse();
+      (comp as any).activeTabIndex = 2;
+      expect((comp as any).showCheckout).toBeFalse();
+    });
+  });
+
   // OBRS-324 (Epic OBRS-318 open seating, 318-d)
   describe('isOpenSeating getter', () => {
     it('is false when no trip is selected', () => {

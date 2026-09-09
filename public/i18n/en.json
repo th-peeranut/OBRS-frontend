@@ -1101,7 +1101,15 @@
       "PHOTO_REMOVE_CONFIRM": "Remove this photo from the stop? The route map will go back to showing no photo.",
       "PHOTO_REMOVE_FAILED": "Could not remove the photo.",
       "PHOTO_UPLOADED": "Photo uploaded.",
-      "PHOTO_UPLOAD_FAILED": "Could not upload the photo."
+      "PHOTO_UPLOAD_FAILED": "Could not upload the photo.",
+      "ADD": "Add stop",
+      "CREATE_TITLE": "Add a stop",
+      "SLUG": "Slug",
+      "SLUG_HINT": "Lower case and underscores, e.g. mo_chit. Cannot be changed afterwards.",
+      "DELETE_TITLE": "Delete stop",
+      "DELETE_CONFIRM": "Delete the stop \"{{name}}\"?",
+      "DELETE_IN_USE": "\"{{name}}\" cannot be deleted while a route, schedule, booking, ticket or sales point still refers to it.",
+      "PHYSICAL_READONLY": "The place itself — where it is and what kind of stop it is — is shared reference data only an administrator can change. The name, landmark and address below are yours to write."
     },
     "ROUTES": {
       "TITLE": "Route Management",
@@ -1440,8 +1448,6 @@
     },
     "REPORTS": {
       "SUBTITLE": "Bookings, tickets sold, occupancy, and revenue for a date range.",
-      "FILTER_FROM": "From",
-      "FILTER_TO": "To",
       "EXPORT_REVENUE_DAILY": "Daily revenue",
       "EXPORT_REVENUE_PER_VEHICLE": "Revenue per vehicle",
       "TILE": {
@@ -1546,8 +1552,6 @@
     },
     "SETTLEMENTS": {
       "SUBTITLE": "Confirm cash and revenue handover for each departed round.",
-      "FILTER_FROM": "From",
-      "FILTER_TO": "To",
       "TABLE_TITLE": "Rounds Pending Settlement",
       "COL": {
         "ROUTE": "Route",
@@ -1957,8 +1961,6 @@
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "Refunded, pending-manual-refund, and voided ticket totals for a date range.",
-      "FILTER_FROM": "From",
-      "FILTER_TO": "To",
       "BASIS_NOTE": "Refunded, Refund pending (manual), and Voided are all bucketed by the date the booking was created - not the date the refund or void was processed, and not the departure date. A refund processed today for an older booking therefore lands on that booking's original date.",
       "PARTITION_NOTE": "Voided splits into Cancelled (staff-cancelled) and Expired (unpaid holds that timed out) — the two always sum to the Voided total.",
       "CARD": {
@@ -1991,8 +1993,6 @@
     },
     "CASH_ONLINE_RECONCILIATION": {
       "SUBTITLE": "Cash, online, and other payment totals collected for a date range.",
-      "FILTER_FROM": "From",
-      "FILTER_TO": "To",
       "BASIS_NOTE": "Cash, Online, and Other are bucketed by the date the booking was created, not the travel date.",
       "PARTITION_NOTE": "Payments split into Cash (staff-collected), Online (card, PromptPay, and other digital gateways), and Other (bank transfer and miscellaneous) — every collected payment falls into exactly one bucket.",
       "CARD": {
@@ -2805,7 +2805,7 @@
     "CHANNEL_EMAIL": "Email",
     "CHANNEL_SMS": "SMS",
     "CHANNEL_NA": "Not available",
-    "CRITICAL_HINT": "At least one channel must stay on for this notification.",
+    "CRITICAL_HINT": "Notifications marked * must keep at least one channel on — you can't turn them all off.",
     "SAVE_BUTTON": "Save changes",
     "SAVE_SUCCESS": "Notification preferences saved.",
     "RETRY": "Try again",
@@ -2815,7 +2815,7 @@
     "UNSAVED_CHANGES_CANCEL": "Keep editing",
     "ERROR": {
       "LOAD_FAILED": "Couldn't load your notification preferences. Please try again.",
-      "CRITICAL_LAST_CHANNEL": "At least one channel must stay on for this notification.",
+      "CRITICAL_LAST_CHANNEL": "Can't turn this off — it's the last channel left for this notification.",
       "GENERIC": "Something went wrong. Please try again."
     },
     "TYPE": {
@@ -2824,6 +2824,8 @@
       "SCHEDULE_CANCELLED": "Trip cancelled",
       "BOOKING_RESCHEDULED": "Booking rescheduled",
       "SCHEDULE_TIME_CHANGED": "Trip time changed",
+      "SCHEDULE_DELAYED": "Trip delayed",
+      "SCHEDULE_VEHICLE_CHANGED": "Vehicle changed",
       "PRE_DEPARTURE_REMINDER": "Pre-departure reminder",
       "BOARDING_REMINDER": "Boarding reminder"
     }
@@ -3268,8 +3270,7 @@
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_ROUND_TRIP": "Round-trip discount",
       "DISCOUNT": "Discount",
-      "TOTAL": "Total",
-      "CONFIRM": "Confirm payment"
+      "TOTAL": "Total"
     },
     "CREDIT_CARD": {
       "HOSTED_HINT": "Press pay and enter your card details in Omise's secure window. This site never sees or stores your card number.",
@@ -4359,7 +4360,8 @@
         "AMOUNT": "Amount (THB)"
       },
       "ERROR": {
-        "RANGE_INVALID": "The start date must not be later than the end date."
+        "RANGE_INVALID": "The start date must not be later than the end date.",
+        "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
       }
     }
   },

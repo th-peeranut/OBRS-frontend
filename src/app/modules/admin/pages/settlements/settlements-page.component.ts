@@ -25,9 +25,8 @@ import {
   DriverCashDaySummaryRespDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
 import { formatMoney } from '../../../../shared/lib/money-display';
-
-const MAX_RANGE_SPAN_DAYS = 366;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
+import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
 
 const DRIVER_CASH_RETURN_ERROR_KEYS: Record<string, string> = {
   DRIVER_CASH_DISCREPANCY_REASON_REQUIRED: 'ADMIN.SETTLEMENTS.DRIVER_CASH.ERROR.REASON_REQUIRED',
@@ -91,6 +90,7 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
   protected driverCashDays: DriverCashDaySummaryRespDto[] = [];
   protected isDriverCashRefreshing = false;
   protected driverCashLoadError = '';
+  protected driverCashRangeError = '';
   protected driverCashFromDate: Date | null = null;
   protected driverCashToDate: Date | null = null;
 
@@ -243,13 +243,9 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
     return this.rangeError || this.loadError;
   }
 
-  protected onFromDateChange(value: Date | null): void {
-    this.fromDate = value;
-    this.applyRange();
-  }
-
-  protected onToDateChange(value: Date | null): void {
-    this.toDate = value;
+  protected onRangeChange(range: DateRange): void {
+    this.fromDate = range.from;
+    this.toDate = range.to;
     this.applyRange();
   }
 
@@ -462,14 +458,15 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
     const from = this.toDateInputValue(this.fromDate);
     const to = this.toDateInputValue(this.toDate);
 
-    if (from > to) {
-      this.rangeError = this.translate.instant('ADMIN.SETTLEMENTS.ERROR.RANGE_INVALID');
-      return;
-    }
-
-    const spanDays = Math.round((this.toDate.getTime() - this.fromDate.getTime()) / MS_PER_DAY);
-    if (spanDays > MAX_RANGE_SPAN_DAYS) {
-      this.rangeError = this.translate.instant('ADMIN.SETTLEMENTS.ERROR.RANGE_TOO_LARGE');
+    const errorKey = dateRangeErrorKey(
+      this.fromDate,
+      this.toDate,
+      from,
+      to,
+      'ADMIN.SETTLEMENTS.ERROR'
+    );
+    if (errorKey) {
+      this.rangeError = this.translate.instant(errorKey);
       return;
     }
 
@@ -521,6 +518,9 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
   }
 
   protected get driverCashContentState(): DriverCashDaysContentState {
+    if (this.driverCashRangeError) {
+      return 'invalid';
+    }
     if (this.isDriverCashLoading) {
       return 'loading';
     }
@@ -533,23 +533,39 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
     return 'data';
   }
 
-  protected onDriverCashFromDateChange(value: Date | null): void {
-    this.driverCashFromDate = value;
-    this.applyDriverCashRange();
+  protected get driverCashStateMessage(): string {
+    return this.driverCashRangeError || this.driverCashLoadError;
   }
 
-  protected onDriverCashToDateChange(value: Date | null): void {
-    this.driverCashToDate = value;
+  // OBRS-1753: one handler where there were two, because the sub-filter is now one control.
+  // Same shape as onRangeChange above - this page's two ranges stay independent, they just stop
+  // looking like two different products.
+  protected onDriverCashRangeChange(range: DateRange): void {
+    this.driverCashFromDate = range.from;
+    this.driverCashToDate = range.to;
     this.applyDriverCashRange();
   }
 
   private applyDriverCashRange(): void {
+    this.driverCashRangeError = '';
+
     if (!this.driverCashFromDate || !this.driverCashToDate) {
       return;
     }
     const from = this.toDateInputValue(this.driverCashFromDate);
     const to = this.toDateInputValue(this.driverCashToDate);
-    if (from > to) {
+    // OBRS-1736: the same 366-day cap applyRange() applies to this page's main range,
+    // and every other report page applies to its own. This was the last REPORT-style range without it;
+    // config-change-history (open-ended by design) and staff/my-earnings still have none.
+    const errorKey = dateRangeErrorKey(
+      this.driverCashFromDate,
+      this.driverCashToDate,
+      from,
+      to,
+      'ADMIN.SETTLEMENTS.ERROR'
+    );
+    if (errorKey) {
+      this.driverCashRangeError = this.translate.instant(errorKey);
       return;
     }
     this.driverCashDaysStore.setRange(from, to);
