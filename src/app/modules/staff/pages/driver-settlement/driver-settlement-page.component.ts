@@ -32,6 +32,7 @@ import {
   DriverCashDaySettleExpenseReqDto,
   DriverCashDaySettleReqDto,
   DriverCashDaySettleRepairBillReqDto,
+  DRIVER_CASH_NO_SCHEDULES_ERROR_CODE,
 } from '../../../../shared/interfaces/driver-cash.interface';
 import { extractApiErrorCode, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
@@ -79,7 +80,7 @@ const SETTLE_ERROR_KEYS: Record<string, string> = {
   DRIVER_CASH_SALES_POINT_FORBIDDEN: 'STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN',
   DRIVER_CASH_DAY_ALREADY_RETURNED: 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED',
   DRIVER_CASH_REPAIR_BILL_ZERO_TOTAL: 'STAFF.DRIVER_CASH.ERROR.REPAIR_BILL_ZERO_TOTAL',
-  DRIVER_CASH_NO_SCHEDULES_FOR_DAY: 'STAFF.SETTLEMENT.ERROR.NO_SCHEDULES',
+  [DRIVER_CASH_NO_SCHEDULES_ERROR_CODE]: 'STAFF.SETTLEMENT.ERROR.NO_SCHEDULES',
 };
 
 /** One editable cost line. Plain fields rather than a FormGroup: these rows have no cross-field
@@ -459,7 +460,12 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
   }
 
   protected get canSubmit(): boolean {
-    return !this.isSubmitting && !this.isContextLoading && this.blockedReasonKey === null;
+    return (
+      !this.isSubmitting &&
+      !this.isContextLoading &&
+      this.contextError === null &&
+      this.blockedReasonKey === null
+    );
   }
 
   /** What the counter is about to charge the box, wage included. */
