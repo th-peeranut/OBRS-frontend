@@ -112,7 +112,7 @@ jobs:
       # `51c561c0..c3274005  origin/dev -> sit` accepted. `adr-access-model-gate.yml` in this same
       # repo already pins `fetch-depth: 0` for the same class of reason.
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: main
           fetch-depth: 0
