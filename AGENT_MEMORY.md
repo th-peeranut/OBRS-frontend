@@ -1,5 +1,24 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-09-09 — SELF-FIXED (DRY, 7 lines): OBRS-1783 re-derived `isJourneyOpenSeating` instead of reusing it
+
+`sell-receipt-page.component.ts`'s new `applyTicketData` line computed the trip-level OPEN-seating flag
+as `this.tickets.length > 0 && this.tickets.every((t) => t.seatOpen)` — logically the same rule as
+`isJourneyOpenSeating()` in `booking-ticket-view.ts` (`tickets.length === 0 ? false : tickets.every(t =>
+!t.seatNumber?.trim())`), just re-expressed over the component's own mapped `ReceiptTicketRow[]` instead
+of the raw `journey.tickets`. Two independent expressions of one business rule ("a leg is open when it
+has tickets and none of them carry a seat_number") drift the moment one gets a follow-up fix (e.g. once
+OBRS-321's `seatingMode` field lands and the derivation stops being seatNumber-based) and only one call
+site gets updated. `isJourneyOpenSeating` was already `private` to its module and the component already
+had `journey: BookingTicketJourney | null` in scope at the exact point it needed the flag — so exported
+the function and called it there instead: `export function isJourneyOpenSeating(...)` in
+`booking-ticket-view.ts`, `import { isJourneyOpenSeating } from '../../../../shared/lib/booking-ticket-view'`
+and `this.isOpenSeating = journey ? isJourneyOpenSeating(journey) : false;` in the component. Verified
+`ng test --include='**/sell-receipt-page.component.spec.ts' --include='**/booking-ticket-view.spec.ts'`
+stayed 63/63 SUCCESS after the change (26 + 37, unchanged from before). The per-ticket `seatOpen` field
+on `ReceiptTicketRow` was left as-is — it is a genuinely different, still-needed per-passenger value
+consumed by the per-passenger seat row, not a second copy of the trip-level rule.
+
 ## 2026-09-05 — SELF-FIXED (DRY, ~26 lines): OBRS-812 CSSOM placeholder-strip helper was a byte-identical copy in two spec files
 
 `staff-contrast-gate.spec.ts`'s mutation test and `obrs-812-capture.spec.ts`'s BEFORE/AFTER capture

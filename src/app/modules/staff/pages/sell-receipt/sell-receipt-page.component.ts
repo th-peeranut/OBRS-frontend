@@ -12,6 +12,7 @@ import {
 } from '../../../../shared/interfaces/booking-ticket.interface';
 import { PaymentByBookingIdResponse, PaymentTransaction } from '../../../../shared/interfaces/payment.interface';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { isJourneyOpenSeating } from '../../../../shared/lib/booking-ticket-view';
 import { formatMoney } from '../../../../shared/lib/money-display';
 
 /** One printable ticket row: seat + passenger + this ticket's own boarding QR
@@ -51,6 +52,12 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
   protected amountPaid = '0.00';
   protected paidAtDisplay = '-';
   protected tickets: ReceiptTicketRow[] = [];
+  // OBRS-1783: true when this trip is OPEN seating - every ticket on it has no
+  // seat_number. Then the seat is a property of the TRIP, not of each passenger,
+  // so the slip states it once beside the route instead of repeating the same
+  // sentence under every name. Reuses `isJourneyOpenSeating` (booking-ticket-view.ts)
+  // rather than re-deriving it, so the two surfaces cannot drift apart.
+  protected isOpenSeating = false;
   protected readonly soldByUsername: string;
 
   private bookingId: number | null = null;
@@ -184,6 +191,7 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
         qrUnavailable: qrState?.qrUnavailable ?? false,
       };
     });
+    this.isOpenSeating = journey ? isJourneyOpenSeating(journey) : false;
   }
 
   private applyPaymentData(data: PaymentByBookingIdResponse): void {
