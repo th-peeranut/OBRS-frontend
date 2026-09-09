@@ -1552,8 +1552,6 @@
     },
     "SETTLEMENTS": {
       "SUBTITLE": "Confirm cash and revenue handover for each departed round.",
-      "FILTER_FROM": "From",
-      "FILTER_TO": "To",
       "TABLE_TITLE": "Rounds Pending Settlement",
       "COL": {
         "ROUTE": "Route",
@@ -4357,7 +4355,8 @@
         "AMOUNT": "Amount (THB)"
       },
       "ERROR": {
-        "RANGE_INVALID": "The start date must not be later than the end date."
+        "RANGE_INVALID": "The start date must not be later than the end date.",
+        "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
       }
     }
   },

@@ -1552,8 +1552,6 @@
     },
     "SETTLEMENTS": {
       "SUBTITLE": "确认每个已发车班次的现金与收入交接。",
-      "FILTER_FROM": "起始日期",
-      "FILTER_TO": "结束日期",
       "TABLE_TITLE": "待结算班次",
       "COL": {
         "ROUTE": "路线",
@@ -4357,7 +4355,8 @@
         "AMOUNT": "金额（泰铢）"
       },
       "ERROR": {
-        "RANGE_INVALID": "开始日期不得晚于结束日期。"
+        "RANGE_INVALID": "开始日期不得晚于结束日期。",
+        "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。"
       }
     }
   },
