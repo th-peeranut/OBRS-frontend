@@ -1,4 +1,13 @@
+import { CommonModule } from '@angular/common';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError, Subject } from 'rxjs';
+import { AuthService } from '../../../../auth/auth.service';
+import { BookingService } from '../../../../services/booking/booking.service';
+import { PaymentService } from '../../../../services/payment/payment.service';
+import { TicketService } from '../../../../services/ticket/ticket.service';
+import { TitleLabelPipe } from '../../../../shared/pipes/title-label.pipe';
 import { SellReceiptPageComponent } from './sell-receipt-page.component';
 import { BoardingQrService } from '../../../../shared/services/boarding-qr.service';
 import { BookingTicketsData } from '../../../../shared/interfaces/booking-ticket.interface';
@@ -353,6 +362,43 @@ describe('SellReceiptPageComponent', () => {
       const component = createComponent();
       component.ngOnInit();
       expect(() => component.ngOnDestroy()).not.toThrow();
+    });
+  });
+
+  // OBRS-1781: the only case here that renders the template. Every other one
+  // drives the component directly, which is why nothing noticed the
+  // boarding-scan hint sitting below every passenger block.
+  describe('template order (OBRS-1781)', () => {
+    let fixture: ComponentFixture<SellReceiptPageComponent>;
+
+    beforeEach(async () => {
+      await TestBed.configureTestingModule({
+        imports: [CommonModule, TranslateModule.forRoot(), TitleLabelPipe],
+        declarations: [SellReceiptPageComponent],
+        providers: [
+          { provide: ActivatedRoute, useValue: createActivatedRouteStub(1) },
+          { provide: Router, useValue: createRouterStub() },
+          { provide: BookingService, useValue: bookingServiceStub },
+          { provide: PaymentService, useValue: paymentServiceStub },
+          // BoardingQrService is component-scoped, so it takes TicketService
+          // from here rather than being handed over ready-made.
+          { provide: TicketService, useValue: ticketServiceStub },
+          { provide: AuthService, useValue: createAuthServiceStub() },
+        ],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(SellReceiptPageComponent);
+      fixture.detectChanges();
+    });
+
+    it('the boarding-scan hint heads the passenger list instead of trailing it', () => {
+      const paper: HTMLElement = fixture.nativeElement;
+      const hint = paper.querySelector('.qr-hint') as HTMLElement;
+      const list = paper.querySelector('.receipt-ticket-list') as HTMLElement;
+
+      expect(hint).toBeTruthy();
+      expect(list).toBeTruthy();
+      expect(hint.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
   });
 });
