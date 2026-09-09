@@ -137,6 +137,20 @@
     background-color: var(--admin-surface-soft);
     border-color: var(--admin-outline);
   }
+
+  // OBRS-1774, WCAG 1.4.11's state clause. Selected against unselected here is
+  // a 1.09:1 fill and — because `--accent-strong` (#0a6a5f) sits only 1.54:1
+  // from `--admin-outline` (#3a444b) — a 1.54:1 border, with no colour change
+  // and no weight change to carry it. Both measured by invariant D; nothing on
+  // the tile reaches 3:1. In light mode the same rule is fine (4.98:1 against
+  // #dee2e6), so this is the dark half only.
+  //
+  // Same shape as OBRS-755: `--accent-strong` is tuned for white text ON it and
+  // has no dark value, `--accent-text` is the token that carries one. 6.73:1
+  // against the unselected tile's border, measured.
+  .ptype-tile--active {
+    border-color: var(--accent-text) !important;
+  }
   .ptype-label {
     color: var(--admin-text);
   }

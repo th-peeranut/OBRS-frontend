@@ -4637,3 +4637,24 @@ just one a test can never catch.
   (`notification-preference-row.component.ts`), so unrelated CD passes see the identical
   reference and the effect doesn't re-run. Re-verified: scoped suite (17 specs across both
   `notification-preference-*` dom.spec.ts files) `TOTAL: 17 SUCCESS`.
+
+- **OBRS-1774, Scrutinize self-fix: "colour" meant two different things four lines apart in the
+  same prose block, and it read as the amendment contradicting itself.** The owner's 2026-09-09
+  amendment to §2.6 was worded "a carrier that is a colour must itself reach 3:1; a carrier that
+  is not a colour still settles it on sight" — in `stateFails()`'s docstring and in
+  `docs/design-system.md` §2.6. Read on its own, "a carrier that is a colour" naturally includes
+  the `color` carrier (text foreground), but the code's very next line
+  (`if (f.carriers.includes('color')) return false`) exempts `color` from any ratio requirement
+  unconditionally — the amendment was actually about carriers that PAINT A SURFACE (fill, border,
+  outline), a different sense of "colour" than the named `color` carrier. A reader taking the
+  summary sentence at face value would expect `color` to need 3:1 and then hit a contradiction
+  three lines later. Self-fixed by rewording both write-ups to say "a carrier that paints a
+  surface (fill, border, outline)" and explicitly calling out that the text `color` carrier is
+  NOT one of those and keeps its separate 2026-09-08 exemption — same rule, no logic change,
+  just removing the overloaded word. Also dropped a stale "the two carriers this file can
+  actually weigh" (now three, after the outline fix) in favor of "the carriers," so the count
+  can't go stale again the next time a carrier is added. **Lesson:** when a word already has a
+  specific meaning in a nearby enum/type (here, `carriers: string[]` with a literal `'color'`
+  member), reusing that same word in looser prose one paragraph over reads as contradicting the
+  code, even when both are technically consistent once you trace the reasoning through. Prefer a
+  different word for the loose sense.
