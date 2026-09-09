@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-1782-tiles-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1782capture.config.ts",
+      "why": "OBRS-1782 BEFORE/AFTER evidence for removing the dark fill from the staff sell tile rows. CAPTURE and not GATE because the verdict belongs to staff-contrast-gate.spec.ts and to the invariant-B self-test in customer-contrast-gate.spec.ts, which is where the clause split fails a build; this exists so the owner can see the two rows in both themes. It is a harder-working capture than most: BEFORE is reconstructed by injecting the removed declaration back into the live CSSOM, so each frame asserts the composited fill hex it was shot with, and the caption carries the MEASURED ratio -- a BEFORE that failed to reproduce the old surface, or an AFTER still painting one, fails here rather than producing a misleading pair. Hermetic on the gate lane's terms: it reuses e2e/support/staff-pages.ts, so every /api/** call is fulfilled in-browser."
+    },
+    {
       "spec": "obrs-1787-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1787capture.config.ts",

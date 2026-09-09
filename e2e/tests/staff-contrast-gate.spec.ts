@@ -361,7 +361,7 @@ test.describe('staff shell contrast gate (OBRS-812)', () => {
               key: boundaryKey(theme, c),
               page: target.key,
               detail:
-                `boundary: fill ${c.fill ?? 'none'} (${c.fillVsPage.toFixed(2)}:1) / border ` +
+                `boundary via ${c.boundaryFrom}: fill ${c.fill ?? 'none'} (${c.fillVsPage.toFixed(2)}:1) / border ` +
                 `${c.border ?? 'none'} (${c.borderVsPage === null ? 'n/a' : c.borderVsPage.toFixed(2) + ':1'}) ` +
                 `on ${c.page} -- "${c.label}"  [${c.path}]`,
               ratio: c.boundary,

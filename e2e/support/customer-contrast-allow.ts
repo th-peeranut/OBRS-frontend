@@ -344,5 +344,31 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   // select/payment rows here in the first place. Section P of
   // src/styles/dark-theme.scss carries the derivation, and why a ring beat
   // every fill change available.
+  //
+  // OBRS-1782 (2026-09-09) shows that half of that is not true, and the half it
+  // corrects is the important one. The ring is real and the hover argument still
+  // holds -- but the FILL those five rows were filed on never moved, and the ring
+  // is what the gate scored instead of it, because invariant B took
+  // `Math.max(fillVsPage, borderVsPage)`. §2.6 clause 2 does not let a border
+  // answer for a fill that reads as a surface, so with the clauses separated the
+  // three surviving members of that family come back below the floor on their own
+  // fills. They are DEBT naming OBRS-1785, not "OBRS-772 accepted": a fill at
+  // 2.33-2.80:1 is exactly the defect clause 2 exists to catch, and repainting the
+  // customer primary button in three places is a product decision of its own.
+  //
+  // Note WHICH state each one lands in, because it is the block above's own
+  // hover argument coming back with the sign flipped. `.btn-search` fails at REST.
+  // `.select-btn` and `.payment-btn` pass at rest and fail on `:hover` and
+  // `:focus`, where the fill drops to #065d85 -- the dimming that block cites as
+  // the reason those two were registered before the ring. The ring did stop the
+  // BORDER dimming; the fill still dims, and `max()` was reporting the ring.
+  //
+  // Measured 2026-09-09 on `ao/obrs-1782-contrast-clause-split`; the border ratios
+  // above are unchanged and are why these read green for as long as they did.
   // -------------------------------------------------------------------------
+  'dark:hover|button.select-btn|boundary-on-#1a1d27': '2.33:1 fill (#065d85) -- OBRS-1785: clause 2 debt on hover, the 8.29:1 ring is not the fill',
+  'dark:focus|button.select-btn|boundary-on-#1a1d27': '2.33:1 fill (#065d85) -- OBRS-1785: clause 2 debt on focus, the 8.29:1 ring is not the fill',
+  'dark:hover|button.payment-btn.app-pending-slot|boundary-on-#0f1117': '2.62:1 fill (#065d85) -- OBRS-1785: clause 2 debt on hover, the 9.31:1 ring is not the fill',
+  'dark:focus|button.payment-btn.app-pending-slot|boundary-on-#0f1117': '2.62:1 fill (#065d85) -- OBRS-1785: clause 2 debt on focus, the 9.31:1 ring is not the fill',
+  'dark|button.btn.btn-search|boundary-on-#22263a': '2.80:1 fill (#0772a2) -- OBRS-1785: clause 2 debt at rest, the 7.37:1 ring is not the fill; the must-catch §2.6 names',
 };

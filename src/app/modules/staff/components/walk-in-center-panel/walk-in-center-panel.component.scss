@@ -133,8 +133,18 @@
 // the customer dark structure with the admin surface tokens for shell consistency.
 :host-context(.admin-shell.is-dark) {
   // passenger-type selector tiles (inactive; --active keeps its teal accent-soft)
+  //
+  // OBRS-1782: neither row paints a fill here any more. Both used to sit on
+  // --admin-surface-soft (#23292e), which separates from the POS card (#1d2226)
+  // at 1.09:1 — design-system §2.6 clause 2 requires a control that paints a fill
+  // to clear 3:1 on that fill "label or no label", and the 1.61:1 the register
+  // carried was the BORDER's number, admitted only because the gate scored
+  // max(fill, border). Owner chose to drop the fill rather than repaint it, so
+  // the card shows through, --admin-outline is genuinely what bounds the tile,
+  // and clause 3 — a labelled control with no surface of its own — is what these
+  // rows are filed under. Both rows change together: they read as one control
+  // group and spot-fixing one would split the pair.
   .ptype-tile {
-    background-color: var(--admin-surface-soft);
     border-color: var(--admin-outline);
   }
 
@@ -154,10 +164,8 @@
   .ptype-label {
     color: var(--admin-text);
   }
-  // OBRS-1045: same treatment as .ptype-tile above — inactive follows the dark surface, the
-  // --active state keeps its accent.
+  // OBRS-1045: same treatment as .ptype-tile above — the --active state keeps its accent.
   .fare-tile {
-    background-color: var(--admin-surface-soft);
     border-color: var(--admin-outline);
     color: var(--admin-text);
   }
