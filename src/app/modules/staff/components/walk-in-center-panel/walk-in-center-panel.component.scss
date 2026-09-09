@@ -85,7 +85,11 @@
 // OBRS-1045: fare category (adult/child). Same accent language as .ptype-tile above — it sits
 // directly under that row and answers the neighbouring question, so it reads as one control group.
 .fare-tile {
-  border: 1px solid #dee2e6;
+  // Reads the token, unlike .ptype-tile's bare literal two rules up. Same value today, so
+  // this changes nothing on screen — but it keeps the count in staff-contrast-allow.ts's
+  // OBRS-772 note honest (that literal is meant to be the LAST one) and means a future
+  // repaint of --bs-border-color moves this row with the other seven sites, not without them.
+  border: 1px solid var(--bs-border-color, #dee2e6);
   background-color: transparent;
   font-size: 0.8rem;
   color: #212529;
