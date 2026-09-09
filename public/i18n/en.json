@@ -1648,7 +1648,12 @@
         "HANDER_PLACEHOLDER": "Select who handed over the cash",
         "HANDER_EMPTY": "No salespeople available to select.",
         "REASON_LABEL": "Reason for discrepancy",
-        "REASON_PLACEHOLDER": "Explain the difference (required)"
+        "REASON_PLACEHOLDER": "Explain the difference (required)",
+        "TOP_UP_NOTICE": "This round's drawer holds less than what comes out of it (per-head fee, driver advance, ticket cash transferred at end of day), so the owner pays the seller — not the other way round.",
+        "TOP_UP_EXPECTED": "Owner pays the seller",
+        "TOP_UP_COUNTED_LABEL": "Cash the owner paid the seller",
+        "TOP_UP_COUNTED_HELPER": "Enter a positive amount — no minus sign. The direction is recorded for you.",
+        "TOP_UP_DIALOG_TEXT": "Sign off this round with the owner paying the seller {{counted}}? This cannot be undone."
       },
       "METHOD": {
         "CASH": "Cash",
