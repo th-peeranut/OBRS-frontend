@@ -136,6 +136,14 @@ export default defineConfig({
     '**/report-usability-issue.spec.ts',
     '**/route-map.spec.ts',
     '**/b2c-critical-path.spec.ts',
+    // OBRS-36. The same walk carried to its end: the spec above stops with the pay button
+    // enabled, and nothing in this repo went past /payment -- /payment/result and
+    // /e-ticket had no automated visitor on any lane. This one reserves, pays (PromptPay,
+    // mocked as the card allows), returns to the gateway's return_uri and reads the
+    // issued ticket, asserting that all three screens name ONE booking id. It shares the
+    // first half with the spec above via e2e/support/b2c-booking-walk.ts rather than
+    // copying it. Hermetic on this lane's terms: every /api/** call is fulfilled in-spec.
+    '**/obrs-36-search-to-ticket.spec.ts',
     // OBRS-618. These three mocked all of their own traffic from the day they were
     // written; the only thing keeping them out was `storageState: admin-auth.json`,
     // minted by logging into live SIT. They seed a synthetic session in-browser now
