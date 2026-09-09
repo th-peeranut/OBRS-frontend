@@ -39,15 +39,23 @@ const REMOVED_RULE = `
   .admin-shell.is-dark .fare-tile { background-color: var(--admin-surface-soft) !important }
 `;
 
+/**
+ * Inserted INTO the flow directly above the tile rows, not pinned to the top of
+ * the viewport: the frame below is a clip of those two rows, and a `position:
+ * fixed` banner sits outside it -- which is a caption that exists on the page and
+ * not on the evidence.
+ */
 async function caption(page: import('@playwright/test').Page, text: string): Promise<void> {
   await page.evaluate((label) => {
+    const row = document.querySelector('.ptype-row');
+    if (!row) return;
     const el = document.createElement('div');
     el.textContent = label;
     el.style.cssText =
-      'position:fixed;left:0;right:0;top:0;z-index:2147483647;background:#111;color:#fff;' +
-      'font:600 14px/1.6 monospace;padding:8px 14px;letter-spacing:.2px';
+      'background:#111;color:#fff;font:600 12px/1.5 monospace;padding:6px 10px;' +
+      'letter-spacing:.2px;white-space:normal';
     el.id = 'obrs1782-caption';
-    document.body.appendChild(el);
+    row.parentElement!.insertBefore(el, row);
   }, text);
 }
 
@@ -64,11 +72,11 @@ async function shootTileRows(
   path: string
 ): Promise<void> {
   const box = await page.evaluate(() => {
-    const rows = ['.ptype-row', '.fare-category-row']
+    const rows = ['#obrs1782-caption', '.ptype-row', '.fare-category-row']
       .map((s) => document.querySelector(s))
       .filter((el): el is Element => el !== null)
       .map((el) => el.getBoundingClientRect());
-    if (rows.length < 2) return null;
+    if (rows.length < 3) return null;
     const pad = 24;
     const top = Math.min(...rows.map((r) => r.top)) - pad;
     const left = Math.min(...rows.map((r) => r.left)) - pad;
@@ -79,7 +87,11 @@ async function shootTileRows(
       height: Math.max(...rows.map((r) => r.bottom)) - Math.max(0, top) + pad,
     };
   });
-  expect(box, 'both tile rows must be on screen -- one row alone is the wrong evidence').toBeTruthy();
+  expect(
+    box,
+    'the caption and BOTH tile rows must be on screen -- one row alone, or a frame ' +
+      'without the ratio it was shot at, is the wrong evidence'
+  ).toBeTruthy();
   await page.screenshot({ path, clip: box! });
 }
 
@@ -159,16 +171,21 @@ test.describe('OBRS-1782 evidence', () => {
         // --- what the pair has to prove, asserted rather than eyeballed --------
         for (const row of ['ptype', 'fare'] as const) {
           if (dark) {
-            // BEFORE: a fill the page can barely tell from the card, scored on the
-            // border it is not entitled to borrow once the clauses are separated.
+            // What this pair does and does NOT prove, said plainly, because the
+            // owner's 1.5:1 surface floor moved the answer after the card was
+            // written. The tile fill is 1.09:1 -- BELOW that floor -- so the gate
+            // scores it on the border in both halves and the registered 1.61:1
+            // never changes. That is the point: removing the fill was the owner's
+            // design call, not a verdict the gate forced, and the register's
+            // "labelled tile, no fill of its own" is only literally true AFTER.
             expect(before[row].fill).toBe('#23292e');
             expect(before[row].fillVsPage).toBeCloseTo(1.09, 2);
-            expect(before[row].boundaryFrom).toBe('fill');
-            // AFTER: no surface of its own -- `fill` is null, not "the same colour
-            // as the card" -- so the border is genuinely the boundary.
             expect(after[row].fill).toBeNull();
-            expect(after[row].boundaryFrom).toBe('border');
-            expect(after[row].boundary).toBeCloseTo(1.61, 2);
+            // Same number, same clause, on both halves -- and now honestly so.
+            for (const half of [before[row], after[row]]) {
+              expect(half.boundaryFrom).toBe('border');
+              expect(half.boundary).toBeCloseTo(1.61, 2);
+            }
           } else {
             // Light mode was already clause 3 and this card must not have touched
             // it. Same number on both halves is the proof, not an assumption.

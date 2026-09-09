@@ -373,10 +373,13 @@ every sub-3:1 fill in the app sits at ≤1.37 or ≥2.33 with nothing in between
 any value in 1.38–2.33 selects the same population. What it fixes is the concept:
 a surface you cannot see is not a surface.
 
-The live example of the first half was the staff sell tiles (`.ptype-tile`,
-`.fare-tile`) at 1.09:1 fill / 1.61:1 border in dark, filed at the border's number
-under clause 3's wording. OBRS-1782 removed their dark fill, which is what moves
-them into clause 3 honestly rather than by arithmetic.
+The live example of the split is `.btn-search`. The staff sell tiles
+(`.ptype-tile`, `.fare-tile`) are the example of the *wording* going wrong without
+the verdict doing so: at 1.09:1 they sit under the surface floor, so clause 2 never
+reached them and the border decides them either way — but the register recorded
+that border as "labelled tile", clause 3's phrase, for tiles that were painting a
+surface. OBRS-1782 removed their dark fill, which makes that phrase literally true
+instead of true by the width of a threshold.
 
 **State is a separate question, and the gate has a real blind spot in it.** 1.4.11
 also requires 3:1 of *"visual information necessary to indicate state"*. Invariant

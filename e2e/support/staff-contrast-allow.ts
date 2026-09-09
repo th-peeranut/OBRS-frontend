@@ -60,15 +60,17 @@
  * clause rather than by size: a control that paints a fill visible AS A SURFACE
  * (1.5:1 or better against its page -- the house rule §2.6 sets, and the reason it
  * needs one) is scored on that FILL, and a passing border may not answer for it;
- * everything else is scored on its BORDER (clauses 1 and 3). Read a number here as
- * "the fill" or "the border" depending on which the entry's own reason names --
- * they are different defects with different fixes.
+ * everything else is scored on its BORDER (clauses 1 and 3), or on the faint fill
+ * itself when there is no border to hand it to. Read a number here as "the fill"
+ * or "the border" depending on which the entry's own reason names -- they are
+ * different defects with different fixes.
  *
- * It used to be `Math.max(fillVsPage, borderVsPage)`, which erased that line: the
- * two staff tile rows read 1.09:1 on their dark fill and were filed at the 1.61:1
- * of a border, under clause 3's wording, while clause 2 was the clause that
- * actually applied. Both halves of that -- the pass and the recorded reason --
- * are what OBRS-1782 fixed. The run log now prints `boundary via fill|border`
+ * It used to be `Math.max(fillVsPage, borderVsPage)`, which erased that line, and
+ * `.btn-search` is where it bit: fill 2.80:1, ring 7.37:1, scored 7.37 and passed
+ * every run. NOT the staff tile rows below -- their 1.09:1 fill is under the
+ * surface floor, so clause 2 never reached them and `max()` reported the same
+ * 1.61:1 the split does. What was wrong THERE was the recorded reason, not the
+ * number. The run log now prints `boundary via fill|border`
  * beside both numbers on every row, so an entry can be checked against the clause
  * it claims without re-deriving anything.
  *
@@ -192,17 +194,23 @@ export const STAFF_CONTRAST_ALLOW: Record<string, string> = {
   // neighbouring question (adult/child) in the same accent language and with the same
   // values, so it is registered on exactly the same footing.
   //
-  // Both rows are clause 3 in BOTH themes now, and that took a fix. Until OBRS-1782 the
-  // dark halves painted a fill (`--admin-surface-soft`, 1.09:1 on the card) that clause 2
-  // says must clear 3:1 "label or no label" -- and they were nevertheless filed at the
-  // 1.61:1 BORDER, because the gate scored `Math.max(fillVsPage, borderVsPage)`. Two
-  // separate defects in one line: the fill passed on a boundary clause 2 does not let it
-  // borrow, and the register recorded the wrong number under the wrong clause's wording.
-  // OBRS-1782 split the score by clause (`customer-contrast.ts`, `boundaryFrom`) and the
-  // owner chose to drop the dark fill from both rows rather than repaint the shared token,
-  // so `--admin-outline` is now genuinely the whole boundary and 1.61:1 is genuinely the
-  // number that decides these rows. Both rows moved together on purpose: they read as one
-  // control group and spot-fixing the newer one would have split the pair.
+  // Both rows are clause 3 in BOTH themes now, and the number below did not move to get
+  // there -- which is worth saying precisely, because the card that opened this (OBRS-1782)
+  // was written expecting it to.
+  //
+  // Until OBRS-1782 the dark halves painted `--admin-surface-soft`, 1.09:1 on the card, and
+  // were filed at the 1.61:1 BORDER while the register's reason said "labelled tile" --
+  // clause 3's wording for a tile that was painting a surface. The clause split landed, and
+  // with it the owner's 1.5:1 floor for when a fill IS a surface: 1.09 is under that floor,
+  // so clause 2 never reached these rows and the gate scores them on the border either way.
+  // The `Math.max` defect was real and `.btn-search` is where it bites (fill 2.80:1 passing
+  // on a 7.37:1 ring); on THESE rows it was the register's wording that was wrong, not the
+  // verdict.
+  //
+  // So dropping the dark fill was the owner's design call, not a fix the gate demanded, and
+  // what it buys is that "no fill of its own" is now literally true rather than true by the
+  // width of a threshold. Both rows moved together on purpose: they read as one control
+  // group and spot-fixing the newer one would have split the pair.
   //
   // Still open and NOT settled here: the ACTIVE tile scores 2.47:1 under this same key.
   // Its state carries an `--accent-soft` fill, the accent border and `font-weight: 600`,
