@@ -18,9 +18,9 @@ const SELECTED: StopDetailForm = {
   primaryPhotoUrl: null,
   returnStopId: null,
   translations: [
-    { locale: 'th', label: 'หนองชาก', description: '', address: '' },
-    { locale: 'en', label: '', description: '', address: '' },
-    { locale: 'zh', label: '', description: '', address: '' },
+    { locale: 'th', label: 'หนองชาก', description: '', address: '', boardingPoint: '' },
+    { locale: 'en', label: '', description: '', address: '', boardingPoint: '' },
+    { locale: 'zh', label: '', description: '', address: '', boardingPoint: '' },
   ],
 };
 

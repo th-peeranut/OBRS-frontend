@@ -25,6 +25,11 @@ export interface RouteStop {
    *  a stop with no note written yet arrives with the property ABSENT, not null, and
    *  that is the default state of every stop today — not an error to report. */
   description?: string | null;
+  /** OBRS-1777: where THIS route's operator boards inside the place ("ชานชาลา 43") — resolved
+   *  server-side against the route's owner, with a fallback to the central value. Optional AND
+   *  nullable for the same reason as `description`: the backend omits null keys, so a stop nobody
+   *  has published one for arrives with the property ABSENT, and that is the default state. */
+  boardingPoint?: string | null;
 }
 
 /** Authoritative pickup→dropoff span, derived from two `RouteStop` offsets

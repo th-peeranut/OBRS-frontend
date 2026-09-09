@@ -424,8 +424,10 @@ describe('StopsPageComponent - the two halves of a stop (OBRS-1680)', () => {
     expect(adminApi.updateStop).not.toHaveBeenCalled();
     const [id, payload] = adminApi.updateStopLabels.calls.mostRecent().args;
     expect(id).toBe(7);
-    // The place is not in the body at all - not sent as null, not sent unchanged.
-    expect(Object.keys(payload).sort()).toEqual(['addresses', 'translations']);
+    // The place is not in the body at all - not sent as null, not sent unchanged. OBRS-1777
+    // added boardingPoints and nothing more: an operator now owns which bay inside the place is
+    // theirs, and still owns nothing about the place.
+    expect(Object.keys(payload).sort()).toEqual(['addresses', 'boardingPoints', 'translations']);
     expect(payload.translations[0].label).toBe('อัลฟ่า ประตู 3');
   });
 
