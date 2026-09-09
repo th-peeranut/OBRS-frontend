@@ -459,6 +459,30 @@ describe('ETicketCardComponent — leg rendering', () => {
     expect(fixture.debugElement.queryAll(By.css('.passenger-qr')).length).toBe(2);
   });
 
+  it('OBRS-1781: the boarding-scan hint heads the passenger list instead of trailing it', () => {
+    component.legs = [
+      buildLeg({ passengers: [buildPassenger({ ticketId: 1, ticketNumber: 'T-1' })] }),
+      buildLeg({ passengers: [buildPassenger({ ticketId: 2, ticketNumber: 'T-2' })] }),
+    ];
+    component.ngOnChanges({
+      legs: {
+        currentValue: component.legs,
+        previousValue: [],
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
+    fixture.detectChanges();
+
+    const hint: HTMLElement = fixture.nativeElement.querySelector('.qr-hint');
+    const firstList: HTMLElement = fixture.nativeElement.querySelector('.passenger-list');
+    expect(hint).toBeTruthy();
+    expect(firstList).toBeTruthy();
+    // The reader meets "scan this before boarding" ahead of the QRs it
+    // describes, not one passenger block per traveller below them.
+    expect(hint.compareDocumentPosition(firstList) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('OBRS-269: hides the Navigate button for a leg with no pickup coords', () => {
     component.legs = [buildLeg({ pickupLatitude: null, pickupLongitude: null })];
     fixture.detectChanges();

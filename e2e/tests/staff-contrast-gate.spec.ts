@@ -52,7 +52,16 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { AA_BOUNDARY, MEASURE, boundaryKey, keyIdentity, placeholderKey, textKey } from '../support/customer-contrast';
+import {
+  AA_BOUNDARY,
+  MEASURE,
+  boundaryKey,
+  keyIdentity,
+  placeholderKey,
+  stateFails,
+  stateKey,
+  textKey,
+} from '../support/customer-contrast';
 import { STAFF_PAGES, seedStaffSweepSession, staffSweepBudgetMs, stripAdminFieldPlaceholderRules } from '../support/staff-pages';
 import { STAFF_CONTRAST_ALLOW } from '../support/staff-contrast-allow';
 
@@ -207,17 +216,29 @@ test.describe('staff shell contrast gate (OBRS-812)', () => {
       }
     };
 
+    /**
+     * Every state comparison invariant D made, passing ones included. A count of
+     * 0 findings over a population nobody can see is the shape of a gate that
+     * measures nothing, and the two skip counters do not say WHICH groups they
+     * dropped. Printed under CONTRAST_CENSUS, so the evidence for "the selectors
+     * matched real groups" can be read off a run rather than taken on trust.
+     */
+    const stateCensus: string[] = [];
+
     const shortfalls: string[] = [];
     const totals = {
       text: 0,
       controls: 0,
       placeholders: 0,
+      states: 0,
       gradient: 0,
       opacity: 0,
       disabled: 0,
       invisible: 0,
       noSurface: 0,
       thirdParty: 0,
+      stateNoPeer: 0,
+      stateNoDelta: 0,
     };
     const startedAt = Date.now();
 
@@ -299,12 +320,15 @@ test.describe('staff shell contrast gate (OBRS-812)', () => {
           totals.text += sweep.measuredText;
           totals.controls += sweep.measuredControls;
           totals.placeholders += sweep.measuredPlaceholders;
+          totals.states += sweep.measuredStates;
           totals.gradient += sweep.skipped.gradient;
           totals.opacity += sweep.skipped.opacity;
           totals.disabled += sweep.skipped.disabled;
           totals.invisible += sweep.skipped.invisible;
           totals.noSurface += sweep.skipped.noSurface;
           totals.thirdParty += sweep.skipped.thirdParty;
+          totals.stateNoPeer += sweep.skipped.stateNoPeer;
+          totals.stateNoDelta += sweep.skipped.stateNoDelta;
 
           for (const f of sweep.text) {
             measured.add(keyIdentity(textKey(theme, f)));
@@ -344,10 +368,52 @@ test.describe('staff shell contrast gate (OBRS-812)', () => {
               floor: AA_BOUNDARY,
             });
           }
+
+          // Invariant D (OBRS-1774). `stateFails` holds the whole rule and the
+          // argument for it; every row is measured and printed either way, so an
+          // accepted state stays visible in the census rather than vanishing.
+          for (const s of sweep.states) {
+            measured.add(keyIdentity(stateKey(theme, s)));
+            stateCensus.push(
+              `  ${s.fillVsSibling.toFixed(2)}:1  ${theme.padEnd(5)} [${s.carriers.join('+')}]  ` +
+                `${s.selectedFill} vs ${s.siblingFill}  border ${
+                  s.borderVsSibling === null ? 'n/a' : s.borderVsSibling.toFixed(2) + ':1'
+                }  outline ${
+                  s.outlineVsSibling === null ? 'n/a' : s.outlineVsSibling.toFixed(2) + ':1'
+                }  "${s.label}"  ${target.key}\n` +
+                `        ${s.path}\n        vs ${s.siblingPath}`
+            );
+            if (!stateFails(s)) continue;
+            record({
+              key: stateKey(theme, s),
+              page: target.key,
+              detail:
+                `state: selected fill ${s.selectedFill} vs unselected ${s.siblingFill} ` +
+                `(${s.fillVsSibling.toFixed(2)}:1), border delta ${
+                  s.borderVsSibling === null ? 'n/a' : s.borderVsSibling.toFixed(2) + ':1'
+                }, outline delta ${
+                  s.outlineVsSibling === null ? 'n/a' : s.outlineVsSibling.toFixed(2) + ':1'
+                }, carriers [${s.carriers.join('+')}] -- nothing reaches 3:1 -- "${s.label}"  ` +
+                `[${s.path}]  vs [${s.siblingPath}]`,
+              ratio: s.fillVsSibling,
+              floor: AA_BOUNDARY,
+            });
+          }
         } finally {
           await context.close();
         }
       }
+    }
+
+    // Invariant D goes quiet when its selectors match nothing, and silence reads
+    // exactly like a pass -- the OBRS-734 shape. The floor is the WHOLE run, not
+    // a page: most pages legitimately have no group with a selected member on
+    // them, so a per-page minimum would be a constant tuned to today's fixtures.
+    if (totals.states === 0) {
+      shortfalls.push(
+        'invariant D scored 0 states across the entire sweep -- the selected-marker selectors matched ' +
+          'nothing, which is not a pass (OBRS-1774)'
+      );
     }
 
     const findings = [...collapsed.values()];
@@ -363,18 +429,23 @@ test.describe('staff shell contrast gate (OBRS-812)', () => {
     console.log(`  text runs scored   : ${totals.text}`);
     console.log(`  controls scored    : ${totals.controls}`);
     console.log(`  placeholders scored: ${totals.placeholders} -- ::placeholder, composited (OBRS-797)`);
+    console.log(`  states scored      : ${totals.states} -- selected vs unselected sibling (OBRS-1774)`);
     console.log(`  skipped (gradient) : ${totals.gradient} -- backgroundColor is transparent under one, NOT a pass`);
     console.log(`  skipped (opacity)  : ${totals.opacity} -- composited by an opacity < 1, NOT a pass`);
     console.log(`  skipped (disabled) : ${totals.disabled} -- WCAG 1.4.3 / 1.4.11 exempt inactive components`);
     console.log(`  skipped (no surf.) : ${totals.noSurface} -- controls with neither fill nor border to bound`);
     console.log(`  skipped (3rd party): ${totals.thirdParty} -- markup this app does not own`);
     console.log(`  skipped (hidden)   : ${totals.invisible}`);
+    console.log(`  skipped (no peer)  : ${totals.stateNoPeer} -- selected, but no unselected sibling on screen to compare with`);
+    console.log(`  skipped (no delta) : ${totals.stateNoDelta} -- selected and unselected compute identically HERE; the state is shown by a descendant`);
     console.log(`  known-open (ALLOW) : ${allowed.length} of ${Object.keys(STAFF_CONTRAST_ALLOW).length} entries still hit`);
     console.log(`  ALLOW not measured : ${unmeasured.length} -- element never scored this run, verdict withheld (OBRS-1435)`);
     console.log(`  ALLOW stale        : ${stale.length} -- element WAS scored and no longer matches`);
     console.log(`  NEW below floor    : ${unexpected.length}`);
 
     if (process.env['CONTRAST_CENSUS']) {
+      console.log(`\n  --- every state comparison, invariant D (${stateCensus.length} rows) ---`);
+      for (const line of stateCensus) console.log(line);
       console.log('\n  --- every finding (CONTRAST_CENSUS=1) ---');
       for (const f of [...findings].sort((a, b) => a.ratio - b.ratio)) console.log(fmt(f));
     }

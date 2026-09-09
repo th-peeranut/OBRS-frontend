@@ -153,9 +153,14 @@ export const STAFF_CONTRAST_ALLOW: Record<string, string> = {
   // `font-weight: 700`. A state resting on the faint fill ALONE would be a
   // defect under 1.4.11's state clause; this one does not.
   //
-  // ⚠ What nothing here proves: invariant B compares a fill to the PAGE, never
-  // to a SIBLING's fill, so "selected fill vs unselected fill" is unmeasured by
-  // any gate in this repo. See design-system.md §2.6.
+  // ⚠ What nothing HERE proves, and what now proves it elsewhere: invariant B
+  // compares a fill to the PAGE, never to a SIBLING's fill. "Selected fill vs
+  // unselected fill" used to be unmeasured by any gate in this repo; OBRS-1774
+  // added invariant D, which measures exactly that pair and scores this toggle
+  // at 1.18:1 of fill separation in both themes -- accepted, for the reason
+  // above, and printed by CONTRAST_CENSUS=1 rather than left to this comment.
+  // A boundary entry below still says nothing about a state; the two are
+  // different questions on the same element. See design-system.md §2.6.
   'light|button.admin-btn|boundary-on-#ffffff': '1.29:1 -- OBRS-772 accepted: labelled button (boarding actions)',
   'dark|button.admin-btn|boundary-on-#1d2226': '1.61:1 -- OBRS-772 accepted: labelled button (boarding actions)',
   'light|button.admin-btn.admin-btn-small|boundary-on-#ffffff': '1.70:1 -- OBRS-772 accepted: labelled button (boarding scan mode toggle, unselected)',

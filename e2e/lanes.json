@@ -9,6 +9,18 @@
   },
   "specs": [
     {
+      "spec": "obrs-1783-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1783capture.config.ts",
+      "why": "OBRS-1783 AC-4 evidence: under OPEN seating the 80mm slip now states the seat once beside the trip instead of once per passenger. CAPTURE and not GATE because the behaviour itself is held by four DOM assertions in sell-receipt-page.component.spec.ts, two of which were mutation-checked red; this exists so the owner can see the paper. Hermetic on the gate lane's terms: the two slip arms fulfil their own three endpoints and seed a salesperson session from addInitScript, and the e-ticket arm reuses seedCustomerSession, so every /api/** call is fulfilled in-browser. Three arms: OPEN slip (print + screen), ASSIGNED slip (AC-2, the branch that must not move), and the customer e-ticket, unchanged, for the side-by-side the card is about. The e-ticket arm goes through the My Bookings ticket modal rather than /e-ticket, for the reason measured on OBRS-1781."
+    },
+    {
+      "spec": "obrs-1781-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1781capture.config.ts",
+      "why": "OBRS-1781 AFTER evidence for moving the boarding-scan note above the passenger list. CAPTURE and not GATE because it asserts nothing about order -- that is held by the two unit-test assertions this card added, one per surface; this exists so the owner can see the two surfaces agree. Hermetic on the gate lane's terms: the slip arm fulfils its own three endpoints and seeds a salesperson session from addInitScript, and the e-ticket arm reuses seedCustomerSession, so every /api/** call is fulfilled in-browser. The e-ticket arm goes through the My Bookings ticket modal rather than /e-ticket: measured on this branch, /e-ticket fed by seedStore alone renders the OBRS-1252 trip summary, which has no passenger block and therefore no .qr-hint to photograph, and the shared /bookings/:id/tickets fixture answers the contrast sweep's page-at-rest with every field blank, so this arm overrides it."
+    },
+    {
       "spec": "obrs-772-boundary-mockup.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs772.config.ts",
@@ -613,6 +625,12 @@
     "lane": "OWN-DB",
     "config": "playwright.obrs1578capture.config.ts",
     "why": "OBRS-1578. The report's two decisions only exist against a fleet whose spend has a particular SHAPE: the second-largest payee on record must have its only bill outside the current year (otherwise the every-year default looks like an arbitrary preference rather than the thing that keeps a supplier on screen), and some APPROVED money must belong to no payee at all (otherwise AC2's coverage banner has nothing to describe). Neither is orderable from a shared environment, so the lane provisions obrs1578qa from e2e/fixtures/obrs-1578-payee-spend-fixture.sql -- every name and figure invented, because this repository is public. OWN-DB and not CAPTURE even though it also saves the card's AFTER frames: it asserts the rendered period text, the payee ORDER, the unassigned row's presence and that a job billed twice is listed once, and it is expected to pass unattended. The screenshots are written only after those assertions, so an unasserted frame can never become the evidence. Never runnable against SIT -- the payee registry and the report endpoint are on this card's backend branch until it merges."
+  },
+  {
+    "spec": "obrs-1774-state-capture.spec.ts",
+    "lane": "CAPTURE",
+    "config": "playwright.obrs1774.config.ts",
+    "why": "OBRS-1774. Invariant D (selected fill vs unselected sibling fill) shipped GREEN, and a green new invariant is indistinguishable from selectors that match nothing. The two contrast gates print a census of every comparison D made under CONTRAST_CENSUS=1; this photographs the same groups on the real screens in both themes and burns the measured pair, the carrier list and the verdict into each frame, taking the numbers from the same MEASURE the gates run so an image and a verdict cannot drift apart. CAPTURE and not GATE because it asserts nothing -- the enforcing checks stay customer-contrast-gate.spec.ts and staff-contrast-gate.spec.ts. Hermetic on the gate lane's terms: it reuses seedCustomerSession / seedStaffSweepSession, so every /api/** call is fulfilled in-browser."
   }
   ]
 }

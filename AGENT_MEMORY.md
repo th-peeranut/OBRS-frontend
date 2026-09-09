@@ -1,5 +1,24 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-09-09 — SELF-FIXED (DRY, 7 lines): OBRS-1783 re-derived `isJourneyOpenSeating` instead of reusing it
+
+`sell-receipt-page.component.ts`'s new `applyTicketData` line computed the trip-level OPEN-seating flag
+as `this.tickets.length > 0 && this.tickets.every((t) => t.seatOpen)` — logically the same rule as
+`isJourneyOpenSeating()` in `booking-ticket-view.ts` (`tickets.length === 0 ? false : tickets.every(t =>
+!t.seatNumber?.trim())`), just re-expressed over the component's own mapped `ReceiptTicketRow[]` instead
+of the raw `journey.tickets`. Two independent expressions of one business rule ("a leg is open when it
+has tickets and none of them carry a seat_number") drift the moment one gets a follow-up fix (e.g. once
+OBRS-321's `seatingMode` field lands and the derivation stops being seatNumber-based) and only one call
+site gets updated. `isJourneyOpenSeating` was already `private` to its module and the component already
+had `journey: BookingTicketJourney | null` in scope at the exact point it needed the flag — so exported
+the function and called it there instead: `export function isJourneyOpenSeating(...)` in
+`booking-ticket-view.ts`, `import { isJourneyOpenSeating } from '../../../../shared/lib/booking-ticket-view'`
+and `this.isOpenSeating = journey ? isJourneyOpenSeating(journey) : false;` in the component. Verified
+`ng test --include='**/sell-receipt-page.component.spec.ts' --include='**/booking-ticket-view.spec.ts'`
+stayed 63/63 SUCCESS after the change (26 + 37, unchanged from before). The per-ticket `seatOpen` field
+on `ReceiptTicketRow` was left as-is — it is a genuinely different, still-needed per-passenger value
+consumed by the per-passenger seat row, not a second copy of the trip-level rule.
+
 ## 2026-09-05 — SELF-FIXED (DRY, ~26 lines): OBRS-812 CSSOM placeholder-strip helper was a byte-identical copy in two spec files
 
 `staff-contrast-gate.spec.ts`'s mutation test and `obrs-812-capture.spec.ts`'s BEFORE/AFTER capture
@@ -4637,3 +4656,24 @@ just one a test can never catch.
   (`notification-preference-row.component.ts`), so unrelated CD passes see the identical
   reference and the effect doesn't re-run. Re-verified: scoped suite (17 specs across both
   `notification-preference-*` dom.spec.ts files) `TOTAL: 17 SUCCESS`.
+
+- **OBRS-1774, Scrutinize self-fix: "colour" meant two different things four lines apart in the
+  same prose block, and it read as the amendment contradicting itself.** The owner's 2026-09-09
+  amendment to §2.6 was worded "a carrier that is a colour must itself reach 3:1; a carrier that
+  is not a colour still settles it on sight" — in `stateFails()`'s docstring and in
+  `docs/design-system.md` §2.6. Read on its own, "a carrier that is a colour" naturally includes
+  the `color` carrier (text foreground), but the code's very next line
+  (`if (f.carriers.includes('color')) return false`) exempts `color` from any ratio requirement
+  unconditionally — the amendment was actually about carriers that PAINT A SURFACE (fill, border,
+  outline), a different sense of "colour" than the named `color` carrier. A reader taking the
+  summary sentence at face value would expect `color` to need 3:1 and then hit a contradiction
+  three lines later. Self-fixed by rewording both write-ups to say "a carrier that paints a
+  surface (fill, border, outline)" and explicitly calling out that the text `color` carrier is
+  NOT one of those and keeps its separate 2026-09-08 exemption — same rule, no logic change,
+  just removing the overloaded word. Also dropped a stale "the two carriers this file can
+  actually weigh" (now three, after the outline fix) in favor of "the carriers," so the count
+  can't go stale again the next time a carrier is added. **Lesson:** when a word already has a
+  specific meaning in a nearby enum/type (here, `carriers: string[]` with a literal `'color'`
+  member), reusing that same word in looser prose one paragraph over reads as contradicting the
+  code, even when both are technically consistent once you trace the reasoning through. Prefer a
+  different word for the loose sense.

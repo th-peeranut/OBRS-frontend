@@ -241,7 +241,7 @@ function buildPassengers(journey: BookingTicketJourney | null): TicketPassenger[
  * empty-journey placeholder) is not "open" — it's the pre-existing "no data"
  * case and must keep showing the `'-'` placeholder unchanged.
  */
-function isJourneyOpenSeating(journey: BookingTicketJourney): boolean {
+export function isJourneyOpenSeating(journey: BookingTicketJourney): boolean {
   const tickets = journey.tickets ?? [];
   if (tickets.length === 0) {
     return false;

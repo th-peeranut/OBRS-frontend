@@ -381,14 +381,54 @@ that border as "labelled tile", clause 3's phrase, for tiles that were painting 
 surface. OBRS-1782 removed their dark fill, which makes that phrase literally true
 instead of true by the width of a threshold.
 
-**State is a separate question, and the gate has a real blind spot in it.** 1.4.11
-also requires 3:1 of *"visual information necessary to indicate state"*. Invariant
-B compares a control's fill to the **page**, never to a **sibling's** fill — so
-where "selected" is carried by a fill tint, the pair that actually matters is
-*selected fill vs unselected fill*, and nothing in this repo measures it. Do not
-read a green contrast gate as covering a selected/unselected pair.
+**State is a separate question. It used to be unmeasured; OBRS-1774 measures it.**
+1.4.11 also requires 3:1 of *"visual information necessary to indicate state"*.
+Invariant B compares a control's fill to the **page**, never to a **sibling's**
+fill — so where "selected" is carried by a fill tint, the pair that actually
+matters is *selected fill vs unselected fill*, and until 2026-09-09 nothing in
+this repo measured it. **Invariant D** now does: it takes every element the app
+*marks* as selected (`.active`, `.selected`, `aria-selected`, `aria-pressed`,
+`aria-current`), finds the unselected sibling of the same tag it is hardest to
+tell apart from, and compares the surfaces actually painted. Reading the marker
+rather than guessing from colour is what keeps it from being circular.
 
-The one live example is not a defect, and it is worth knowing why. The Text/Camera
+**What accepts a state, and what does not** — the rule above as the owner amended
+it on **2026-09-09**: *a carrier that paints a surface — fill, border, outline —
+must itself reach 3:1. The text **colour** carrier is not one of those; it keeps
+its own 2026-09-08 exemption below, and every other carrier still settles it on
+sight.* A row is a defect when nothing that separates the two members reaches
+3:1. Accepted, each for a named reason: a **weight**, an **underline** or a
+**shadow** change (not a colour question at all); a **colour** change (scored for
+legibility by invariant A — the 2026-09-08 clause above, and its soft edge is
+stated below); a **fill** at ≥3:1; a **border** or an **outline** whose two
+colours are ≥3:1 apart, or that appears where the sibling paints none, in which
+case invariant B owns it against the page.
+
+⚠️ **A carrier count is not a verdict, and assuming it was hid a real defect.**
+The first version of D accepted any second signal. The passenger-type tile on
+`/staff/sell` then passed in dark mode on a **1.09:1** fill and a **1.54:1**
+border — `--accent-strong` (`#0a6a5f`) sits that close to `--admin-outline`
+(`#3a444b`) — with no colour and no weight anywhere on it. Nothing reached 3:1.
+That is the faint-fill failure wearing a different property, so the carriers that
+have a ratio behind them are weighed rather than counted. The owner was asked
+before this shipped, not after: reading a 1.54:1 border delta as "a second
+signal" is an interpretation of the 2026-09-08 wording, not a deduction from it.
+Fixed the OBRS-755 way, in dark only: `--accent-text`, 6.73:1 against the
+unselected tile's border. **The outline was the same hole one property along** —
+weighed as of the same amendment, after review caught it still being accepted on
+presence while the border no longer was.
+
+**What D still does not tell you.** (a) Two text colours that both clear AA but
+barely differ *from each other* are accepted — the clause above is the owner's
+2026-09-08 decision, and no floor on that distance has been asked for. (b) The
+population is what the app marks. A state shown only by an injected icon — the
+seat map's centred check — carries no class D can see, and is out of its reach by
+construction. (c) It measures the 22 customer and 4 staff pages the two sweeps
+already visit, in both themes; a screen outside that list is unmeasured, not
+passing. Every comparison it makes, accepted ones included, is printed by
+`CONTRAST_CENSUS=1` and photographed by `obrs-1774-state-capture.spec.ts`.
+
+The worked example, and still not a defect. The Text/Camera
 segment on `/staff/boarding` registers a 1.18:1 boundary in both themes, but its
 selected state is carried by **three** things, not by that boundary
 (`boarding-list.component.scss:133`): a `--accent-soft` fill, an `--accent-text`

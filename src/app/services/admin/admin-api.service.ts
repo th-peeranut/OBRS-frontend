@@ -433,6 +433,13 @@ export interface AdminStopDetailDto {
   primaryPhotoUrl?: string | null;
   /** locale -> address; a locale with no address is absent, not null. */
   addresses?: Record<string, string> | null;
+  /** OBRS-1777: locale -> where the CALLER's own operator boards inside this place ("ชานชาลา 43").
+   *  Same absent-not-null rule as `addresses`, and the same per-caller resolution the labels get:
+   *  an operator sees the row THEY published, an admin sees the central one. It is deliberately
+   *  NOT pre-filled from the central row for an operator who published none - see
+   *  `StopLabelOverlayIT.stopDetailAnswersEachOperatorWithTheirOwnBoardingPoint`: a form that
+   *  showed someone else's value would copy it onto their row on the next save. */
+  boardingPoints?: Record<string, string> | null;
   /** OBRS-1481: where a round-trip customer boards for the way back after getting off
    *  HERE — the `stop_return_pairs` row keyed by this stop. `null` means no pin, and the
    *  server answers by distance instead. */
@@ -455,6 +462,9 @@ export interface AdminStopUpdatePayload {
   latitude: number | null;
   longitude: number | null;
   addresses: Record<string, string>;
+  /** OBRS-1777: locale -> the CENTRAL boarding point, for a station whose boarding point is the
+   *  same for every operator. An operator's own goes through `AdminStopLabelPayload` instead. */
+  boardingPoints: Record<string, string>;
   translations: AdminTranslationReqDto[];
   /**
    * OBRS-1481: the return boarding pin. Unlike `primaryPhotoUrl` above this key is ALWAYS
@@ -477,6 +487,8 @@ export interface AdminStopUpdatePayload {
  */
 export interface AdminStopLabelPayload {
   addresses: Record<string, string>;
+  /** OBRS-1777: locale -> where this operator's own passengers board inside the shared place. */
+  boardingPoints: Record<string, string>;
   translations: AdminTranslationReqDto[];
 }
 
