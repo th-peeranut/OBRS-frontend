@@ -81,8 +81,13 @@ const ADMIN_ROLES = ['admin', 'owner'];
 const STAFF_LINKED_FROM: Record<string, string> = {
   // sell-page.component.ts — router.navigate after a completed walk-in sale
   'sell/receipt/:bookingId': 'sell',
-  // boarding-entry-page — schedule picker drills into the list
-  'boarding/:scheduleId': 'boarding',
+  // OBRS-1756: the boarding-entry picker lost its nav item (replaced by
+  // 'settlement'), so the passenger list is now declared against the page that
+  // still links to it and IS in the nav — staff-schedules-page.component.ts:328's
+  // viewBoarding(). A driver reaches the same page from driver-schedules-page
+  // .component.ts:78 ('driver'), which this one-linker table cannot say twice;
+  // both paths are AC-5 and both are proven with screenshots on the card.
+  'boarding/:scheduleId': 'schedules',
   // parcel-intake-result-panel, rendered inside parcel-consign-page
   'parcels/:id/waybill': 'parcels/consign',
   // OBRS-574: parcel-schedule-entry-page drills into the tabbed page that
@@ -92,6 +97,21 @@ const STAFF_LINKED_FROM: Record<string, string> = {
   // leafRoutes() already excludes componentless routes, so they need no entry.
   'parcels/schedule/:scheduleId': 'parcels/schedule',
 };
+
+/**
+ * OBRS-1756 — routes kept ON PURPOSE with nothing linking to them.
+ *
+ * `boarding` is the boarding-entry date picker. Its nav item ("งานประจำรอบ") was
+ * REPLACED by `settlement`, on the owner's ruling that the counter wants a day to
+ * settle rather than a round-by-round picker. The route stays because the URL is
+ * bookmarked and because deleting it would take `boarding/:scheduleId` with it —
+ * and that page is still reached from ตารางเดินรถ and ตารางของฉัน (AC-5).
+ *
+ * ⛔ This is not a LINKED_FROM entry, and the difference matters: LINKED_FROM
+ * claims some reachable page links here, and nothing does. Putting it there would
+ * be a false statement the next reader would trust.
+ */
+const STAFF_UNLISTED: string[] = ['boarding'];
 
 /** Admin has no detail-page routes today; kept for symmetry and future ones. */
 const ADMIN_LINKED_FROM: Record<string, string> = {
@@ -249,7 +269,7 @@ function describeShell(
   roles: string[],
   linkedFrom: Record<string, string>,
   floors: { minRoutes: number; minNav: number },
-  featureFlaggedUnreachable: string[] = [],
+  intentionallyUnreachable: string[] = [],
 ): void {
   describe(`OBRS-543 — ${label} nav reachability`, () => {
     it('every routed page is reachable — via the nav, or via a page that is', async () => {
@@ -259,10 +279,12 @@ function describeShell(
         .map((r) => r.path!)
         .filter((path) => {
           if (inNav.has(path)) return false;
-          // OBRS-622: a route intentionally hidden behind a feature flag that
-          // currently reads false is not an orphan — see the constant's doc
-          // comment above.
-          if (featureFlaggedUnreachable.includes(path)) return false;
+          // A route the product DECIDED to stop offering is not an orphan — see
+          // STAFF_UNLISTED. (OBRS-622 introduced this escape for a route hidden
+          // behind a feature flag reading false; OBRS-1756 is the first caller to
+          // pass anything, and its reason is a retired nav item, so the parameter
+          // is named for the shape rather than for one of its two reasons.)
+          if (intentionallyUnreachable.includes(path)) return false;
           const linker = linkedFrom[path];
           // Not in the nav and not declared as linked from anywhere => orphan.
           // Declared, but its linker is itself unreachable => transitively orphaned.
@@ -371,6 +393,7 @@ describeShell(
   STAFF_ROLES,
   STAFF_LINKED_FROM,
   { minRoutes: 8, minNav: 5 },
+  STAFF_UNLISTED,
 );
 
 describeShell('admin', AdminLayoutComponent, adminRoutes, 'admin', ADMIN_ROLES, ADMIN_LINKED_FROM, {

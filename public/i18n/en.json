@@ -3442,7 +3442,8 @@
       "INSPECTION": "Vehicle Inspection",
       "FLEET_MAP": "Live Vehicle Locations",
       "CANCEL_BOOKING": "Cancel Booking",
-      "MY_EARNINGS": "My Per-Head Earnings"
+      "MY_EARNINGS": "My Per-Head Earnings",
+      "SETTLEMENT": "Driver Settlement"
     },
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
@@ -3468,7 +3469,7 @@
       "SELL": "Walk-in Sales",
       "SCHEDULES": "Schedules",
       "MY_SCHEDULES": "My Schedules",
-      "BOARDING": "Schedule Operations",
+      "SETTLEMENT": "Driver Settlement",
       "PARCEL_CONSIGN": "Consign Parcel",
       "PARCEL_SCHEDULE": "Verify & Handover",
       "INSPECTION": "Inspection",
@@ -4366,6 +4367,62 @@
         "RANGE_INVALID": "The start date must not be later than the end date.",
         "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
       }
+    },
+    "SETTLEMENT": {
+      "SUBTITLE": "Pick a date, a plate and a driver, then settle the whole day in one submit",
+      "FILTER": {
+        "DATE": "Date",
+        "VEHICLE": "Number plate",
+        "DRIVER": "Driver"
+      },
+      "ROUNDS": {
+        "TITLE": "Today's rounds",
+        "TOTAL_LEGS": "{{n}} legs for the day",
+        "EMPTY": "This vehicle and driver ran no rounds on the selected date",
+        "FIRST_ROUND": "First round",
+        "COL": {
+          "DEPARTURE": "Departs",
+          "ROUTE": "Route",
+          "LEG": "Leg"
+        }
+      },
+      "ADVANCE": {
+        "TITLE": "Cash advance",
+        "READ_ONLY_NOTE": "Recorded when the round went out; it cannot be edited here",
+        "EMPTY": "No cash advance recorded for this day"
+      },
+      "EXPENSES": {
+        "TITLE": "Expenses",
+        "COL": {
+          "ITEM": "Item",
+          "AMOUNT": "Amount",
+          "NOTE": "Note"
+        },
+        "WAGE_BASIS": "Priced at {{rate}} x {{legs}} legs"
+      },
+      "REPAIR": {
+        "TITLE": "Repairs",
+        "EMPTY": "No repair bill for this day",
+        "ADD_BILL": "+ Add repair bill",
+        "BILL_N": "Bill {{n}}",
+        "REMOVE_BILL": "Remove this bill"
+      },
+      "BANNER": {
+        "REOPENED": "The owner re-opened this cash box {{n}} time(s)",
+        "REOPEN_REASON": "Latest reason: {{reason}}",
+        "ALREADY_SETTLED": "This day has already been settled. Submitting again adds new entries on top of the existing ones - check before you do."
+      },
+      "BLOCKED": {
+        "PICK_VEHICLE_DRIVER": "Pick a date, a number plate and a driver before settling",
+        "NO_SCHEDULES": "This vehicle and driver ran no rounds on the selected date, so there is nothing to settle",
+        "INVALID_REPAIR_BILL": "A repair bill is incomplete - it needs a garage and lines totalling more than zero"
+      },
+      "ERROR": {
+        "NO_SCHEDULES": "This vehicle and driver ran no rounds on the selected date, so the day cannot be settled"
+      },
+      "TOTAL": "To be recorded",
+      "SUBMIT": "Settle the whole day",
+      "SUCCESS": "The day has been settled"
     }
   },
   "FIND_BOOKING": {
