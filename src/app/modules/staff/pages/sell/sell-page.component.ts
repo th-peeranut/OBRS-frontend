@@ -130,6 +130,19 @@ export class SellPageComponent implements OnInit, OnDestroy {
   // this map is a seat nobody consented for - which only matters for monk/nun.
   protected selectedPassengerTypeConsent = false;
   protected seatPassengerTypeConsents: Record<string, boolean> = {};
+  // OBRS-1045: fare_category is a SEPARATE per-passenger dimension from passenger_type
+  // (ADR-0046) — a child still has a gender, and the tile row above feeds the seat map's
+  // MALE/FEMALE/MONK token. Hence its own state, mirroring the passenger-type pair exactly:
+  // `selected*` is the value the NEXT seat click captures, `seat*` is what each seat captured.
+  protected selectedFareCategory: 'adult' | 'child' = 'adult';
+  protected seatFareCategories: Record<string, 'adult' | 'child'> = {};
+  /**
+   * OBRS-1045: how many of an OPEN trip's `passengerCount` are children. OPEN sells by headcount
+   * with no seat to key a per-seat category off, so the clerk states the total and then how many
+   * of it are children — which leaves every capacity/jump-seat computation reading
+   * `passengerCount` untouched.
+   */
+  protected openChildCount = 0;
   protected isSelling = false;
   protected bookingId: number | null = null;
   protected bookingNumber: string | null = null;
@@ -142,6 +155,9 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected popularPickupStops: StopOption[] = [];
   protected popularDropoffStops: StopOption[] = [];
   private fareMap = new Map<string, number>();
+  // OBRS-1045: same keying as fareMap, holding the SERVER's child price for the pair. A pair
+  // missing here (backend predating the field) prices as an adult rather than as a guess.
+  private childFareMap = new Map<string, number>();
   // Authoritative per-stop ordering + time offset from the route-stops endpoint
   // (GET /api/private/route-stops/{slug}), keyed by stop slug. Replaces
   // reconstructing route shape/timing from the sellable segment-pair graph.
@@ -276,6 +292,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.seatPassengerTypes = {};
     this.seatPassengerTypeConsents = {};
     this.selectedPassengerTypeConsent = false;
+    this._resetFareCategory();
     this.idempotencyKey = null;
     this.activeTabIndex = 0;
     this._resetSegments();
@@ -290,6 +307,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.seatPassengerTypes = {};
     this.seatPassengerTypeConsents = {};
     this.selectedPassengerTypeConsent = false;
+    this._resetFareCategory();
     this.idempotencyKey = null;
     this.activeTabIndex = 0;
     this.loadSegments(selection.routeSlug, selection.trip);
@@ -338,6 +356,32 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected onPassengerCountChanged(count: number): void {
     const max = Math.max(1, this.selectedTrip?.availableCount ?? count);
     this.passengerCount = Math.min(Math.max(1, count), max);
+    // OBRS-1045: dropping the headcount below the number of children already stated would
+    // otherwise leave a discount for tickets that no longer exist.
+    this.openChildCount = Math.min(this.openChildCount, this.passengerCount);
+  }
+
+  /**
+   * OBRS-1045: back to all-adult. Called wherever the seat/type maps are cleared — a fare category
+   * left standing after a trip change or a completed sale would price the NEXT sale.
+   */
+  private _resetFareCategory(): void {
+    this.seatFareCategories = {};
+    this.selectedFareCategory = 'adult';
+    this.openChildCount = 0;
+  }
+
+  /** OBRS-1045: OPEN-mode "how many of them are children", clamped to the headcount. */
+  protected onOpenChildCountChanged(count: number): void {
+    this.openChildCount = Math.min(Math.max(0, count), this.passengerCount);
+  }
+
+  /**
+   * OBRS-1045: mirrors onPassengerTypeChanged — only the NEXT seat click is affected, already
+   * -selected seats keep the category they were sold under.
+   */
+  protected onFareCategoryChanged(fareCategory: 'adult' | 'child'): void {
+    this.selectedFareCategory = fareCategory;
   }
 
   protected onPassengerTypeChanged(passengerType: string): void {
@@ -379,6 +423,10 @@ export class SellPageComponent implements OnInit, OnDestroy {
       const nextConsents = { ...this.seatPassengerTypeConsents };
       delete nextConsents[seat];
       this.seatPassengerTypeConsents = nextConsents;
+      // OBRS-1045: same lifecycle as the type map — a deselected seat must stop being billed.
+      const nextCategories = { ...this.seatFareCategories };
+      delete nextCategories[seat];
+      this.seatFareCategories = nextCategories;
     } else {
       // Adding seat: capture currently-active type.
       this.selectedSeats = [...this.selectedSeats, seat];
@@ -387,6 +435,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
         ...this.seatPassengerTypeConsents,
         [seat]: this.selectedPassengerTypeConsent,
       };
+      this.seatFareCategories = { ...this.seatFareCategories, [seat]: this.selectedFareCategory };
     }
   }
 
@@ -449,6 +498,38 @@ export class SellPageComponent implements OnInit, OnDestroy {
     return this.segmentFare ?? 0;
   }
 
+  /**
+   * OBRS-1045: what one child pays on the current pair. Falls back to the ADULT fare when the
+   * server sent no `childFare` for it — an old backend then simply prices everything as an adult
+   * instead of the counter inventing a discount it cannot honour.
+   */
+  protected get segmentChildFare(): number {
+    if (!this.pickupSlug || !this.dropoffSlug) return 0;
+    return this.childFareMap.get(`${this.pickupSlug}|${this.dropoffSlug}`) ?? this.pricePerSeat;
+  }
+
+  /** OBRS-1045: how many tickets in THIS sale are children — OPEN by headcount, ASSIGNED per seat. */
+  protected get childTicketCount(): number {
+    if (this.isOpenSeating) {
+      return Math.min(this.openChildCount, this.ticketCount);
+    }
+    // proto-key-ok: ADR-0028 -- seat labels this page's own seat map rendered from the server's
+    // seat list, the same family as seatPassengerTypes.
+    return this.selectedSeats.filter((s) => this.seatFareCategories[s] === 'child').length;
+  }
+
+  /**
+   * OBRS-1045: the baht the checkout column must take OFF the gross adult total so the clerk
+   * collects the right cash. Fed to `WalkInCheckoutComponent.discountAmount`, which already drives
+   * netAmount / changeDue / canSell — this card lights that input up rather than adding a parallel
+   * total. ⛔ It must NEVER be subtracted from the `totalAmount` sent to the API: `BookingService`
+   * compares that against `calculateTripFare` (gross adult × seats) and 400s on a mismatch.
+   */
+  protected get childDiscountTotal(): number {
+    const perChild = this.pricePerSeat - this.segmentChildFare;
+    return perChild > 0 ? perChild * this.childTicketCount : 0;
+  }
+
   protected async onSell(payload: WalkInCheckoutPayload): Promise<void> {
     if (!this.selectedTrip) return;
 
@@ -480,10 +561,11 @@ export class SellPageComponent implements OnInit, OnDestroy {
       ? Array.from({ length: this.passengerCount }, () => '')
       : this.selectedSeats;
 
-    const passengers = seatNumbers.map((seat) => {
+    const passengers = seatNumbers.map((seat, index) => {
       const p: {
         passengerType: string;
       passengerTypeConsentVersion?: string | null;
+        fareCategory: string;
         seatNumber: string;
         // OBRS-1231: nullable, and it arrives already normalised to null by
         // WalkInCheckoutComponent.onSell — this page must not turn it back into ''.
@@ -502,6 +584,15 @@ export class SellPageComponent implements OnInit, OnDestroy {
         // OBRS-1666: sent only for the two religious answers, and only when the box beside
         // them was ticked.
         passengerTypeConsentVersion: this.passengerTypeConsentVersionFor(seat),
+        // OBRS-1045: ASSIGNED reads the category the seat was clicked with; OPEN has no seat to
+        // key one off, so the clerk's child headcount fills the FIRST `openChildCount` tickets.
+        // Which of the identical OPEN tickets is the child does not matter — they carry no seat
+        // and the totals only depend on how many there are.
+        fareCategory: this.isOpenSeating
+          ? (index < this.childTicketCount ? 'child' : 'adult')
+          // proto-key-ok: ADR-0028 -- `seat` is a label this page's own seat map rendered from
+          // the server's seat list, the same family as seatPassengerTypes above.
+          : (this.seatFareCategories[seat] ?? 'adult'),
         // The seat maps render/select letter-prefixed labels (van "A1".."A13", bus
         // "B1".."B21" — see `selectedSeats` / `busSeatLabels` in
         // WalkInCenterPanelComponent), but the booking endpoint's
@@ -656,6 +747,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
                   this.seatPassengerTypes = {};
                   this.seatPassengerTypeConsents = {};
                   this.selectedPassengerTypeConsent = false;
+                  this._resetFareCategory();
                   // Staff POS: do NOT navigate to /e-ticket — it's a customerArea
                   // route, so AuthGuard bounces staff to their home and leaves the
                   // just-sold seat showing as available on the now-stale seat map
@@ -1022,6 +1114,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
       this.seatPassengerTypes = {};
       this.seatPassengerTypeConsents = {};
       this.selectedPassengerTypeConsent = false;
+      this._resetFareCategory();
       this.idempotencyKey = null;
       this.activeTabIndex = 0;
       this._resetSegments();
@@ -1247,12 +1340,18 @@ export class SellPageComponent implements OnInit, OnDestroy {
           }
 
           this.fareMap = new Map<string, number>();
+          this.childFareMap = new Map<string, number>();
           for (const p of pairs) {
             const fare = parseFloat(p.fare ?? '0');
-            this.fareMap.set(
-              `${p.fromStop.slug}|${p.toStop.slug}`,
-              Number.isFinite(fare) ? fare : 0
-            );
+            const key = `${p.fromStop.slug}|${p.toStop.slug}`;
+            this.fareMap.set(key, Number.isFinite(fare) ? fare : 0);
+            // OBRS-1045: only a value the server actually sent is stored. A missing/unparseable
+            // childFare leaves the key absent, and segmentChildFare then falls back to the adult
+            // fare — the counter under-charges nobody and the server stays authoritative.
+            const childFare = parseFloat(p.childFare ?? '');
+            if (Number.isFinite(childFare)) {
+              this.childFareMap.set(key, childFare);
+            }
           }
           this.orderedStops = this._buildOrderedStops(pairs);
           this._buildStopTimes(trip);
@@ -1361,6 +1460,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
   private _resetSegments(): void {
     this.orderedStops = [];
     this.fareMap = new Map<string, number>();
+    this.childFareMap = new Map<string, number>();
     this.stopOrderMap = new Map<string, number>();
     this.stopOffsetMap = new Map<string, number>();
     this.pickupSlug = '';
