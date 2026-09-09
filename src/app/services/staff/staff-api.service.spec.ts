@@ -151,6 +151,45 @@ describe('StaffApiService', () => {
     req.flush({ errorCode: 'INVALID_TICKET_TOKEN' }, { status: 400, statusText: 'Bad Request' });
   });
 
+  it('boardingScanBatch() posts the captured items to the batch endpoint and skips the force-logout', () => {
+    const items = [
+      {
+        clientRef: 'ref-1',
+        token: 'signed.jwt.token',
+        scheduleId: 42,
+        capturedAt: '2026-09-10T01:05:00.000Z',
+      },
+    ];
+    service.boardingScanBatch({ items }).subscribe((res) => {
+      expect(res).toBeTruthy();
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/tickets/boarding-scan/batch`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ items });
+    expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+    req.flush({
+      code: 200,
+      message: 'OK',
+      data: {
+        total: 1,
+        boardedCount: 1,
+        failedCount: 0,
+        results: [
+          {
+            index: 0,
+            clientRef: 'ref-1',
+            ticketId: 7,
+            ticketNumber: 'T-ABC123',
+            status: 'BOARDED',
+            message: 'Boarded',
+            boardedAt: '2026-09-10T01:05:00Z',
+          },
+        ],
+      },
+    });
+  });
+
   it('payWalkIn() sends Idempotency-Key header', () => {
     service.payWalkIn(1, 'test-key-123').subscribe((res) => {
       expect(res).toBeTruthy();

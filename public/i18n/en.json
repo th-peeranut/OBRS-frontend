@@ -3615,6 +3615,15 @@
         "RESULT_SEAT": "Seat",
         "RESULT_BOARDED_AT": "Boarded at",
         "DISMISS": "Dismiss",
+        "OFFLINE": {
+          "PENDING": "{{count}} scan(s) captured offline, waiting to be sent",
+          "SYNCING": "Sending {{count}} captured scan(s)…",
+          "CAPTURED_TITLE": "Captured — not boarded yet",
+          "CAPTURED_HINT": "No connection. This scan is saved on this device and will be sent for confirmation once you are back online.",
+          "CAPTURE_FAILED": "Couldn't save this scan on this device. Write the ticket down and board manually.",
+          "SYNC_BOARDED": "{{count}} captured scan(s) confirmed by the server",
+          "UNKNOWN_TICKET": "Unknown ticket"
+        },
         "ERROR": {
           "INVALID_TICKET_TOKEN": "This token isn't valid. Please check and try again.",
           "EXPIRED_TICKET_TOKEN": "This token has expired. Ask the passenger to refresh their e-ticket.",
@@ -3624,6 +3633,8 @@
           "ALREADY_BOARDED": "This ticket has already been boarded.",
           "TICKET_ERROR_ID_NOT_FOUND": "No ticket was found for this token.",
           "BOARDING_ROUND_ARRIVED": "This trip has already arrived — boarding is locked.",
+          "INVALID_CAPTURED_AT": "The time recorded for this offline scan is outside the trip's boarding window. Check this device's clock.",
+          "FORBIDDEN_DRIVER_SCOPE": "You aren't assigned to this trip, so this scan can't be boarded.",
           "GENERIC": "Validation failed. Please try again."
         }
       },

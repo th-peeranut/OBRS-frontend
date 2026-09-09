@@ -204,6 +204,16 @@
           </div>
         }
 
+        <!-- OBRS-142: how many scans this trip has captured but not yet had
+        confirmed by the server. Icon + text, never colour alone (§11). -->
+        @if (pendingSyncCount) {
+          <span class="admin-status is-warning admin-status--icon">
+            <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">cloud_off</span>
+            {{ (isSyncingOfflineQueue ? 'STAFF.BOARDING.SCAN.OFFLINE.SYNCING' : 'STAFF.BOARDING.SCAN.OFFLINE.PENDING')
+              | translate: { count: pendingSyncCount } }}
+          </span>
+        }
+
         <!-- Text-entry box — the fallback, always present/usable in BOTH modes. -->
         <div class="boarding-scan-input-row">
           <input
@@ -227,6 +237,49 @@
               {{ (isScanning ? 'STAFF.BOARDING.SCAN.VALIDATING' : 'STAFF.BOARDING.SCAN.BUTTON') | translate }}
             </button>
           </div>
+
+          <!-- OBRS-142: captured while offline. Deliberately NOT a success/
+          boarded banner — the server has not seen this token yet. -->
+          @if (offlineCaptured) {
+            <div class="boarding-scan-result" role="status">
+              <span class="admin-status is-info admin-status--icon">
+                <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">cloud_off</span>
+                {{ 'STAFF.BOARDING.SCAN.OFFLINE.CAPTURED_TITLE' | translate }}
+              </span>
+              <div class="boarding-scan-result-detail">
+                <span>{{ 'STAFF.BOARDING.SCAN.OFFLINE.CAPTURED_HINT' | translate }}</span>
+              </div>
+              <button type="button" class="admin-btn admin-btn-small" (click)="dismissScanResult()">
+                {{ 'STAFF.BOARDING.SCAN.DISMISS' | translate }}
+              </button>
+            </div>
+          }
+
+          <!-- OBRS-142: outcome of the last queue drain. -->
+          @if (syncBoardedCount || syncFailures.length) {
+            <div class="boarding-scan-result" role="status">
+              @if (syncBoardedCount) {
+                <span class="admin-status is-success admin-status--icon">
+                  <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">cloud_done</span>
+                  {{ 'STAFF.BOARDING.SCAN.OFFLINE.SYNC_BOARDED' | translate: { count: syncBoardedCount } }}
+                </span>
+              }
+              @for (failure of syncFailures; track $index) {
+                <span
+                  class="admin-status admin-status--icon"
+                  [class.is-danger]="failure.severity === 'danger'"
+                  [class.is-warning]="failure.severity === 'warning'"
+                  >
+                  <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">{{ failure.icon }}</span>
+                  {{ failure.ticketNumber ?? ('STAFF.BOARDING.SCAN.OFFLINE.UNKNOWN_TICKET' | translate) }}:
+                  {{ failure.messageKey | translate }}
+                </span>
+              }
+              <button type="button" class="admin-btn admin-btn-small" (click)="dismissSyncSummary()">
+                {{ 'STAFF.BOARDING.SCAN.DISMISS' | translate }}
+              </button>
+            </div>
+          }
 
           @if (scanResult) {
             <div class="boarding-scan-result" role="status">

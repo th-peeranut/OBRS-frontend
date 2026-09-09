@@ -49,8 +49,13 @@ import {
   splitApiOffsetDateTime,
   timeStringToControlValue,
 } from '../../lib/api-date-time';
-import { BoardingScanResultDto } from '../../interfaces/ticket-boarding.interface';
+import {
+  BOARDING_BATCH_BOARDED_STATUS,
+  BoardingBatchItemResult,
+  BoardingScanResultDto,
+} from '../../interfaces/ticket-boarding.interface';
 import { BoardingListItemDto, StaffApiService } from '../../../services/staff/staff-api.service';
+import { OfflineBoardingQueueService } from '../../../services/staff/offline-boarding-queue.service';
 import { BoardingListStore } from './boarding-list.store';
 
 /** OBRS-100: supplementary trip-header data for the print manifest (and,
@@ -112,6 +117,14 @@ export interface BoardingScanErrorResult {
   messageKey: string;
   severity: 'danger' | 'warning';
   icon: string;
+}
+
+/** OBRS-142: one replayed offline capture the server REFUSED, rendered in the
+ * sync summary. `ticketNumber` is whatever the server could resolve (null when
+ * the token never named a real ticket) — the batch result carries no
+ * passenger/seat, so the ticket number is the only identifier available. */
+export interface BoardingSyncFailure extends BoardingScanErrorResult {
+  ticketNumber: string | null;
 }
 
 /** OBRS-266: camera QR-scan lifecycle for the boarding-scan box.
@@ -255,6 +268,19 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
   protected scanResult: BoardingScanResultDto | null = null;
   protected scanError: BoardingScanErrorResult | null = null;
 
+  // OBRS-142: offline capture. `offlineCaptured` drives a banner that says the
+  // scan was CAPTURED — never that the passenger boarded; only the server
+  // decides that, and it hasn't been asked yet.
+  protected offlineCaptured = false;
+  protected pendingSyncCount = 0;
+  protected isSyncingOfflineQueue = false;
+  /** Outcome of the last drain — cleared by `dismissSyncSummary()`. */
+  protected syncBoardedCount = 0;
+  protected syncFailures: BoardingSyncFailure[] = [];
+  private readonly handleOnline = (): void => {
+    void this.syncOfflineQueue();
+  };
+
   // OBRS-272: "Mark delayed"/"Update ETA" dialog — inline, component-local
   // state (mirrors OBRS-256's onScheduleStatusAction(), not a separate
   // component/NgRx slice — see docs/adr/0017).
@@ -303,7 +329,8 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     private readonly viewContainerRef: ViewContainerRef,
     private readonly formBuilder: FormBuilder,
     private readonly ngZone: NgZone,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly offlineQueue: OfflineBoardingQueueService
   ) {
     this.canUnboard = this.authService.hasAnyRole(['salesperson']);
     this.canControlScheduleStatus = this.authService.hasAnyRole(['salesperson', 'driver']);
@@ -330,6 +357,10 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
       this.store.setScheduleId(this.scheduleId);
       void this.store.refresh();
       void this.loadTripHeader(this.scheduleId);
+      // OBRS-142: the pending indicator counts THIS trip's captures, so a
+      // re-bind must re-read it (and clear a previous trip's sync summary).
+      this.dismissSyncSummary();
+      void this.refreshPendingSyncCount();
     }
   }
 
@@ -367,9 +398,16 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
       .get('delayedTime')
       ?.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe(() => this.resetDelayEtaErrors());
+
+    // OBRS-142: drain whatever the last offline session captured — once now
+    // (no-op when the queue is empty or we are still offline), and again on
+    // every reconnect.
+    window.addEventListener('online', this.handleOnline);
+    void this.syncOfflineQueue();
   }
 
   ngOnDestroy(): void {
+    window.removeEventListener('online', this.handleOnline);
     this.subscriptions.unsubscribe();
     this.destroy$.next();
     this.destroy$.complete();
@@ -913,7 +951,18 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     this.isScanning = true;
     this.scanResult = null;
     this.scanError = null;
+    this.offlineCaptured = false;
     this.clearAutoDismissTimer();
+
+    // OBRS-142: no network — capture the scan on the device with the CURRENT
+    // moment as `capturedAt` and never call the live endpoint. This sits after
+    // the `isScheduleArrived` guard above, so the count-lock still blocks a
+    // capture exactly as it blocks a live scan.
+    if (!navigator.onLine) {
+      await this.captureOffline(token);
+      this.isScanning = false;
+      return;
+    }
 
     try {
       const response = await firstValueFrom(
@@ -934,6 +983,14 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
         }
       }
     } catch (error) {
+      // OBRS-142: status 0 means the request never reached the server — the
+      // connection died mid-request while `navigator.onLine` still said true,
+      // which is the realistic offline case on a moving bus. Same capture path
+      // as the branch above; the scan is NOT lost and NOT boarded.
+      if (error instanceof HttpErrorResponse && error.status === 0) {
+        await this.captureOffline(token);
+        return;
+      }
       // scanError is sticky in BOTH modes — never auto-dismissed on a timer,
       // a WRONG_SCHEDULE/NOT_CONFIRMED rejection must stay visible until the
       // operator acknowledges it (design-system: never hide a rejection).
@@ -952,6 +1009,120 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     this.clearAutoDismissTimer();
     this.scanResult = null;
     this.scanError = null;
+    this.offlineCaptured = false;
+  }
+
+  /** OBRS-142: separate from `dismissScanResult()` on purpose — the camera
+   * auto-dismiss timer clears the scan banner, and it must not take a sync
+   * summary listing refused captures with it. */
+  protected dismissSyncSummary(): void {
+    this.syncBoardedCount = 0;
+    this.syncFailures = [];
+  }
+
+  /**
+   * OBRS-142: queues one scan on the device. The banner it raises says
+   * CAPTURED, never boarded — the token has not been shown to the server yet,
+   * and the server is the only authority on whether it boards. A queue that
+   * could not store the row (no IndexedDB) says so instead of claiming a
+   * capture that does not exist.
+   */
+  private async captureOffline(token: string): Promise<void> {
+    const captured = await this.offlineQueue.enqueue({
+      token,
+      scheduleId: this.scheduleId,
+      capturedAt: new Date().toISOString(),
+    });
+
+    if (!captured) {
+      this.scanError = {
+        messageKey: 'STAFF.BOARDING.SCAN.OFFLINE.CAPTURE_FAILED',
+        severity: 'danger',
+        icon: 'cloud_off',
+      };
+      return;
+    }
+
+    this.scanToken = '';
+    this.offlineCaptured = true;
+    await this.refreshPendingSyncCount();
+  }
+
+  /**
+   * OBRS-142: replays this trip's captured scans in ONE batch call and
+   * reconciles the queue against what the server answered.
+   *
+   * Every item the server returned — `BOARDED` and every refusal alike — is
+   * settled server-side, so its row is removed. Keeping a refused row would
+   * replay it on every reconnect forever. Rows survive only when the whole
+   * HTTP call failed, which is the case the next `online` event retries.
+   *
+   * Not chunked: the ceiling is 500 items and a queue is scoped to one trip's
+   * seats, so it is not reachable.
+   */
+  private async syncOfflineQueue(): Promise<void> {
+    if (this.isSyncingOfflineQueue || !navigator.onLine) {
+      return;
+    }
+
+    const pending = await this.offlineQueue.list(this.scheduleId);
+    this.pendingSyncCount = pending.length;
+    if (!pending.length) {
+      return;
+    }
+
+    this.isSyncingOfflineQueue = true;
+    try {
+      const response = await firstValueFrom(
+        this.staffApiService.boardingScanBatch({ items: pending })
+      );
+      const results = response?.data?.results ?? [];
+      for (const result of results) {
+        if (result.clientRef) {
+          await this.offlineQueue.remove(result.clientRef);
+        }
+      }
+      this.applySyncResults(results);
+    } catch {
+      // The batch never landed — leave every row queued for the next reconnect.
+    } finally {
+      this.isSyncingOfflineQueue = false;
+      await this.refreshPendingSyncCount();
+    }
+  }
+
+  /**
+   * OBRS-142: renders the per-item outcomes. Anything the server settled as
+   * boarded (`BOARDED`, or `ALREADY_BOARDED` from a replay of a scan that had
+   * already landed) is reflected by refreshing the manifest rather than by
+   * mutating rows: `BoardingBatchItemResult` carries no `boardedAt` for an
+   * `ALREADY_BOARDED` item and no passenger/seat at all, so a per-row mutation
+   * would have to invent the values the refresh simply fetches.
+   */
+  private applySyncResults(results: BoardingBatchItemResult[]): void {
+    const isBoarded = (result: BoardingBatchItemResult): boolean =>
+      // ALREADY_BOARDED counts as boarded, not as a failure: the passenger IS
+      // aboard, the server just kept the original `boarded_at`.
+      result.status === BOARDING_BATCH_BOARDED_STATUS || result.status === 'ALREADY_BOARDED';
+    const boarded = results.filter(isBoarded);
+
+    this.syncBoardedCount = boarded.length;
+    this.syncFailures = results
+      .filter((result) => !isBoarded(result))
+      .map((result) => ({
+        ticketNumber: result.ticketNumber,
+        messageKey: mapBoardingScanErrorCode(result.status),
+        severity: boardingScanErrorSeverity(result.status),
+        icon: boardingScanErrorIcon(result.status),
+      }));
+
+    if (boarded.length) {
+      void this.store.refresh();
+    }
+  }
+
+  private async refreshPendingSyncCount(): Promise<void> {
+    this.pendingSyncCount = await this.offlineQueue.count(this.scheduleId);
   }
 
   private clearAutoDismissTimer(): void {

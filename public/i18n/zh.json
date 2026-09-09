@@ -3615,6 +3615,15 @@
         "RESULT_SEAT": "座位",
         "RESULT_BOARDED_AT": "登车时间",
         "DISMISS": "关闭",
+        "OFFLINE": {
+          "PENDING": "已离线记录 {{count}} 条扫描，等待发送确认",
+          "SYNCING": "正在发送 {{count}} 条已记录的扫描…",
+          "CAPTURED_TITLE": "已记录 — 尚未登车",
+          "CAPTURED_HINT": "当前无网络。此次扫描已保存在本设备，恢复联网后将发送给服务器确认。",
+          "CAPTURE_FAILED": "无法在本设备保存此次扫描。请记下票号并手动登车。",
+          "SYNC_BOARDED": "服务器已确认 {{count}} 条已记录的扫描",
+          "UNKNOWN_TICKET": "未知票号"
+        },
         "ERROR": {
           "INVALID_TICKET_TOKEN": "此令牌无效，请检查后重试。",
           "EXPIRED_TICKET_TOKEN": "此令牌已过期，请让乘客刷新电子票。",
@@ -3624,6 +3633,8 @@
           "ALREADY_BOARDED": "此票已登车。",
           "TICKET_ERROR_ID_NOT_FOUND": "未找到与此令牌对应的票。",
           "BOARDING_ROUND_ARRIVED": "本班次已到达，登车功能已锁定。",
+          "INVALID_CAPTURED_AT": "此次离线扫描记录的时间不在本班次的登车时间范围内。请检查本设备的时钟。",
+          "FORBIDDEN_DRIVER_SCOPE": "您未被指派驾驶本班次，因此无法确认此次登车。",
           "GENERIC": "验证失败，请重试。"
         }
       },

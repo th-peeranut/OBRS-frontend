@@ -20,6 +20,15 @@ export function mapBoardingScanErrorCode(errorCode: string | null | undefined): 
     // count-lock has already frozen boarding client-side, but the backend is
     // the source of truth (a stale tab or a race with another operator).
     BOARDING_ROUND_ARRIVED: 'STAFF.BOARDING.SCAN.ERROR.BOARDING_ROUND_ARRIVED',
+    // OBRS-142: reachable only through the offline replay batch (OBRS-243) —
+    // the device's captured timestamp was in the future or outside the
+    // departure day's capture window. The live scan path never stamps a
+    // client clock, so it cannot produce this.
+    INVALID_CAPTURED_AT: 'STAFF.BOARDING.SCAN.ERROR.INVALID_CAPTURED_AT',
+    // OBRS-142: the batch's own code for a driver-scope refusal — the live
+    // path surfaces the same refusal as a 403 the interceptor owns, so this
+    // key only ever renders for a replayed item.
+    FORBIDDEN_DRIVER_SCOPE: 'STAFF.BOARDING.SCAN.ERROR.FORBIDDEN_DRIVER_SCOPE',
   };
 
   // OBRS-601: `||` is no guard here — `knownCodes['constructor']` is the
@@ -43,6 +52,9 @@ const WARNING_ERROR_CODES: readonly string[] = [
   'ALREADY_BOARDED',
   // OBRS-256: an already-settled schedule state, not a hard-invalid token.
   'BOARDING_ROUND_ARRIVED',
+  // OBRS-142: a timing/clock rejection of a replayed capture, not a forged
+  // token — the ticket itself is fine.
+  'INVALID_CAPTURED_AT',
 ];
 
 export function boardingScanErrorSeverity(
@@ -60,6 +72,9 @@ const ICON_BY_ERROR_CODE: Record<string, string> = {
   ALREADY_BOARDED: 'how_to_reg',
   TICKET_ERROR_ID_NOT_FOUND: 'search_off',
   BOARDING_ROUND_ARRIVED: 'lock',
+  // OBRS-142 (offline replay only).
+  INVALID_CAPTURED_AT: 'update_disabled',
+  FORBIDDEN_DRIVER_SCOPE: 'person_off',
   GENERIC: 'error',
 };
 

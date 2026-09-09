@@ -10,6 +10,8 @@ import {
   SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import {
+  BoardingBatchRequest,
+  BoardingBatchResponse,
   BoardingScanRequest,
   BoardingScanResultDto,
 } from '../../shared/interfaces/ticket-boarding.interface';
@@ -588,6 +590,19 @@ export class StaffApiService {
   boardingScan(request: BoardingScanRequest): Observable<ResponseAPI<BoardingScanResultDto>> {
     return this.http.post<ResponseAPI<BoardingScanResultDto>>(
       `${environment.apiUrl}/api/private/tickets/boarding-scan`,
+      request,
+      { context: this.boardingScanContext }
+    );
+  }
+
+  /** OBRS-142: replays boarding scans captured while the device was offline
+   * (backend OBRS-243). The envelope is always 200 — every per-item outcome
+   * comes back in `results[]`, so reuse of `boardingScanContext` is for the
+   * same OBRS-187 reason as `boardingScan()` above: the call still carries a
+   * token, and a rejected one must never force-logout the operator. */
+  boardingScanBatch(request: BoardingBatchRequest): Observable<ResponseAPI<BoardingBatchResponse>> {
+    return this.http.post<ResponseAPI<BoardingBatchResponse>>(
+      `${environment.apiUrl}/api/private/tickets/boarding-scan/batch`,
       request,
       { context: this.boardingScanContext }
     );

@@ -8,6 +8,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { BoardingListComponent } from './boarding-list.component';
 import { BoardingListItemDto, StaffApiService } from '../../../services/staff/staff-api.service';
+import { IDB_FACTORY } from '../../../services/staff/offline-boarding-queue.service';
 import { AlertService } from '../../services/alert.service';
 import { AuthService } from '../../../auth/auth.service';
 import { BoardingListStore } from './boarding-list.store';
@@ -91,6 +92,45 @@ function createNgZoneStub(): any {
   return { run: (fn: () => unknown) => fn() };
 }
 
+// OBRS-142: the offline capture queue. Default stub = an empty queue that
+// accepts writes, so every pre-existing spec behaves exactly as before (the
+// component only reads it, and reads nothing).
+function createOfflineQueueStub(rows: any[] = [], canEnqueue = true): any {
+  return {
+    rows,
+    enqueue: jasmine.createSpy('enqueue').and.callFake((scan: any) => {
+      if (!canEnqueue) {
+        return Promise.resolve(false);
+      }
+      rows.push({ clientRef: `ref-${rows.length + 1}`, ...scan });
+      return Promise.resolve(true);
+    }),
+    list: jasmine
+      .createSpy('list')
+      .and.callFake((scheduleId?: number) =>
+        Promise.resolve(
+          scheduleId === undefined ? [...rows] : rows.filter((r) => r.scheduleId === scheduleId)
+        )
+      ),
+    count: jasmine
+      .createSpy('count')
+      .and.callFake((scheduleId?: number) =>
+        Promise.resolve(
+          scheduleId === undefined
+            ? rows.length
+            : rows.filter((r) => r.scheduleId === scheduleId).length
+        )
+      ),
+    remove: jasmine.createSpy('remove').and.callFake((clientRef: string) => {
+      const index = rows.findIndex((r) => r.clientRef === clientRef);
+      if (index >= 0) {
+        rows.splice(index, 1);
+      }
+      return Promise.resolve();
+    }),
+  };
+}
+
 function createComponent(
   staffApiServiceStub: any,
   storeStub: any = createStoreStub([buildItem()]),
@@ -103,7 +143,8 @@ function createComponent(
   // DOM isn't live, so a no-op stub is correct — these specs pre-assign
   // `videoElement` via withVideoElement(); the real-DOM path is covered by the
   // TestBed regression spec below.
-  cdrStub: any = { detectChanges: () => undefined, markForCheck: () => undefined }
+  cdrStub: any = { detectChanges: () => undefined, markForCheck: () => undefined },
+  offlineQueueStub: any = createOfflineQueueStub()
 ): BoardingListComponent {
   const component = new BoardingListComponent(
     staffApiServiceStub,
@@ -114,7 +155,8 @@ function createComponent(
     viewContainerRefStub,
     new FormBuilder(),
     ngZoneStub,
-    cdrStub
+    cdrStub,
+    offlineQueueStub
   );
   component.scheduleId = 42;
   component.ngOnChanges({ scheduleId: {} as any });
@@ -2042,6 +2084,9 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
+        // OBRS-142: no IDBFactory => the real OfflineBoardingQueueService is a
+        // no-op, so these TestBed suites never touch the runner's IndexedDB.
+        { provide: IDB_FACTORY, useValue: null },
         {
           provide: StaffApiService,
           useValue: {
@@ -2166,6 +2211,9 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
+        // OBRS-142: no IDBFactory => the real OfflineBoardingQueueService is a
+        // no-op, so these TestBed suites never touch the runner's IndexedDB.
+        { provide: IDB_FACTORY, useValue: null },
         {
           provide: StaffApiService,
           useValue: {
@@ -2346,6 +2394,9 @@ describe('BoardingListComponent — OBRS-272 delay pill / indicator / dialog (Te
       declarations: [BoardingListComponent, AdminModalBackdropDirective],
       providers: [
         BoardingListStore,
+        // OBRS-142: no IDBFactory => the real OfflineBoardingQueueService is a
+        // no-op, so these TestBed suites never touch the runner's IndexedDB.
+        { provide: IDB_FACTORY, useValue: null },
         {
           provide: StaffApiService,
           useValue: {
@@ -2474,6 +2525,9 @@ describe('BoardingListComponent — printManifest() portal lifecycle (OBRS-100, 
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
+        // OBRS-142: no IDBFactory => the real OfflineBoardingQueueService is a
+        // no-op, so these TestBed suites never touch the runner's IndexedDB.
+        { provide: IDB_FACTORY, useValue: null },
         {
           provide: StaffApiService,
           useValue: {
@@ -2676,6 +2730,9 @@ describe('BoardingListComponent — OBRS-1673 call-the-booker action (TestBed)',
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
+        // OBRS-142: no IDBFactory => the real OfflineBoardingQueueService is a
+        // no-op, so these TestBed suites never touch the runner's IndexedDB.
+        { provide: IDB_FACTORY, useValue: null },
         {
           provide: StaffApiService,
           useValue: {
@@ -2748,4 +2805,304 @@ describe('BoardingListComponent — OBRS-1673 call-the-booker action (TestBed)',
 
     expect(telLinks().length).toBe(0);
   }));
+});
+
+// OBRS-142: offline boarding-scan capture + deferred, server-authoritative replay.
+describe('BoardingListComponent — offline capture and batch replay (OBRS-142)', () => {
+  const created: BoardingListComponent[] = [];
+
+  function setOnline(value: boolean): void {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => value });
+  }
+
+  async function flush(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  function build(
+    staffApi: any,
+    queue: any,
+    store: any = createStoreStub([buildItem()])
+  ): BoardingListComponent {
+    const component = createComponent(
+      staffApi,
+      store,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      queue
+    );
+    created.push(component);
+    return component;
+  }
+
+  function batchResponse(results: any[]): any {
+    return of({
+      code: 200,
+      message: 'OK',
+      data: {
+        total: results.length,
+        boardedCount: results.filter((r) => r.status === 'BOARDED').length,
+        failedCount: results.filter((r) => r.status !== 'BOARDED').length,
+        results,
+      },
+    });
+  }
+
+  afterEach(() => {
+    // Bare instances never get torn down by TestBed — do it here so a leaked
+    // `online` listener can't drain a later spec's queue.
+    while (created.length) {
+      created.pop()?.ngOnDestroy();
+    }
+    delete (navigator as any).onLine;
+  });
+
+  it('offline: captures the scan locally, never calls the live endpoint, and does NOT claim the passenger boarded', async () => {
+    setOnline(false);
+    const queue = createOfflineQueueStub();
+    const staffApi = { boardingScan: jasmine.createSpy('boardingScan') };
+    const store = createStoreStub([buildItem({ ticketId: 7, boardedAt: undefined })]);
+    const component = build(staffApi, queue, store);
+
+    (component as any).scanToken = 'signed.jwt.token';
+    await component['validateScan']();
+
+    expect(staffApi.boardingScan).not.toHaveBeenCalled();
+    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+    const enqueued = queue.enqueue.calls.mostRecent().args[0];
+    expect(enqueued.token).toBe('signed.jwt.token');
+    expect(enqueued.scheduleId).toBe(42);
+    expect(typeof enqueued.capturedAt).toBe('string');
+
+    // The banner says CAPTURED — there is no boarded result and the manifest
+    // row is untouched, because the server has not seen this token yet.
+    expect((component as any).offlineCaptured).toBeTrue();
+    expect((component as any).scanResult).toBeNull();
+    expect((component as any).scanError).toBeNull();
+    expect(component['items'].find((item) => item.ticketId === 7)?.boardedAt).toBeUndefined();
+    expect((component as any).scanToken).toBe('');
+    expect((component as any).pendingSyncCount).toBe(1);
+  });
+
+  it('a mid-request network death (HTTP status 0) takes the same capture path', async () => {
+    setOnline(true);
+    const queue = createOfflineQueueStub();
+    const staffApi = {
+      boardingScan: jasmine
+        .createSpy('boardingScan')
+        .and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 }))),
+    };
+    const component = build(staffApi, queue);
+
+    (component as any).scanToken = 'signed.jwt.token';
+    await component['validateScan']();
+
+    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+    expect((component as any).offlineCaptured).toBeTrue();
+    expect((component as any).scanError).toBeNull();
+  });
+
+  it('a queue that cannot store the scan says so instead of claiming a capture', async () => {
+    setOnline(false);
+    const queue = createOfflineQueueStub([], false);
+    const component = build({ boardingScan: jasmine.createSpy('boardingScan') }, queue);
+
+    (component as any).scanToken = 'signed.jwt.token';
+    await component['validateScan']();
+
+    expect((component as any).offlineCaptured).toBeFalse();
+    expect((component as any).scanError?.messageKey).toBe(
+      'STAFF.BOARDING.SCAN.OFFLINE.CAPTURE_FAILED'
+    );
+    // The token stays in the box so the operator can retry / act on it.
+    expect((component as any).scanToken).toBe('signed.jwt.token');
+  });
+
+  it('the arrived count-lock blocks an offline capture exactly as it blocks a live scan', async () => {
+    setOnline(false);
+    const queue = createOfflineQueueStub();
+    const component = build({ boardingScan: jasmine.createSpy('boardingScan') }, queue);
+    (component as any).tripHeader = { statusCode: 'arrived' };
+
+    (component as any).scanToken = 'signed.jwt.token';
+    await component['validateScan']();
+
+    expect(queue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it('drains on init and dequeues EVERY settled item — a failed one too, or it would replay forever', async () => {
+    setOnline(true);
+    const rows = [
+      { clientRef: 'ref-1', token: 't1', scheduleId: 42, capturedAt: '2026-09-10T01:00:00.000Z' },
+      { clientRef: 'ref-2', token: 't2', scheduleId: 42, capturedAt: '2026-09-10T01:05:00.000Z' },
+    ];
+    const queue = createOfflineQueueStub(rows);
+    const staffApi = {
+      boardingScan: jasmine.createSpy('boardingScan'),
+      boardingScanBatch: jasmine.createSpy('boardingScanBatch').and.returnValue(
+        batchResponse([
+          {
+            index: 0,
+            clientRef: 'ref-1',
+            ticketId: 7,
+            ticketNumber: 'T-ABC123',
+            status: 'BOARDED',
+            message: 'Boarded',
+            boardedAt: '2026-09-10T01:00:00Z',
+          },
+          {
+            index: 1,
+            clientRef: 'ref-2',
+            ticketId: 8,
+            ticketNumber: 'T-DEF456',
+            status: 'EXPIRED_TICKET_TOKEN',
+            message: 'expired',
+            boardedAt: null,
+          },
+        ])
+      ),
+    };
+    const component = build(staffApi, queue);
+
+    await flush();
+
+    expect(staffApi.boardingScanBatch).toHaveBeenCalledTimes(1);
+    expect(staffApi.boardingScanBatch.calls.mostRecent().args[0].items.length).toBe(2);
+    expect(queue.remove).toHaveBeenCalledWith('ref-1');
+    expect(queue.remove).toHaveBeenCalledWith('ref-2');
+    expect(queue.rows.length).toBe(0);
+    expect((component as any).pendingSyncCount).toBe(0);
+
+    expect((component as any).syncBoardedCount).toBe(1);
+    expect((component as any).syncFailures).toEqual([
+      {
+        ticketNumber: 'T-DEF456',
+        messageKey: 'STAFF.BOARDING.SCAN.ERROR.EXPIRED_TICKET_TOKEN',
+        severity: 'warning',
+        icon: 'schedule',
+      },
+    ]);
+  });
+
+  it('ALREADY_BOARDED counts as boarded, not as a failure (the server kept the original boarded_at)', async () => {
+    setOnline(true);
+    const queue = createOfflineQueueStub([
+      { clientRef: 'ref-1', token: 't1', scheduleId: 42, capturedAt: '2026-09-10T01:00:00.000Z' },
+    ]);
+    const staffApi = {
+      boardingScan: jasmine.createSpy('boardingScan'),
+      boardingScanBatch: jasmine.createSpy('boardingScanBatch').and.returnValue(
+        batchResponse([
+          {
+            index: 0,
+            clientRef: 'ref-1',
+            ticketId: 7,
+            ticketNumber: 'T-ABC123',
+            status: 'ALREADY_BOARDED',
+            message: 'already',
+            boardedAt: null,
+          },
+        ])
+      ),
+    };
+    const component = build(staffApi, queue);
+
+    await flush();
+
+    expect((component as any).syncBoardedCount).toBe(1);
+    expect((component as any).syncFailures).toEqual([]);
+    expect(queue.remove).toHaveBeenCalledWith('ref-1');
+  });
+
+  it('a failed batch call keeps every row queued for the next reconnect', async () => {
+    setOnline(true);
+    const queue = createOfflineQueueStub([
+      { clientRef: 'ref-1', token: 't1', scheduleId: 42, capturedAt: '2026-09-10T01:00:00.000Z' },
+    ]);
+    const staffApi = {
+      boardingScan: jasmine.createSpy('boardingScan'),
+      boardingScanBatch: jasmine
+        .createSpy('boardingScanBatch')
+        .and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 }))),
+    };
+    const component = build(staffApi, queue);
+
+    await flush();
+
+    expect(queue.remove).not.toHaveBeenCalled();
+    expect(queue.rows.length).toBe(1);
+    expect((component as any).pendingSyncCount).toBe(1);
+  });
+
+  it('does not call the batch endpoint while offline, even with a non-empty queue', async () => {
+    setOnline(false);
+    const staffApi = {
+      boardingScan: jasmine.createSpy('boardingScan'),
+      boardingScanBatch: jasmine.createSpy('boardingScanBatch'),
+    };
+    build(
+      staffApi,
+      createOfflineQueueStub([
+        { clientRef: 'ref-1', token: 't1', scheduleId: 42, capturedAt: '2026-09-10T01:00:00.000Z' },
+      ])
+    );
+
+    await flush();
+
+    expect(staffApi.boardingScanBatch).not.toHaveBeenCalled();
+  });
+
+  it('the window `online` event drains the queue, and ngOnDestroy removes that listener', async () => {
+    setOnline(true);
+    const queue = createOfflineQueueStub();
+    const staffApi = {
+      boardingScan: jasmine.createSpy('boardingScan'),
+      boardingScanBatch: jasmine.createSpy('boardingScanBatch').and.returnValue(batchResponse([])),
+    };
+    const component = build(staffApi, queue);
+    await flush();
+    expect(staffApi.boardingScanBatch).not.toHaveBeenCalled();
+
+    queue.rows.push({
+      clientRef: 'ref-1',
+      token: 't1',
+      scheduleId: 42,
+      capturedAt: '2026-09-10T01:00:00.000Z',
+    });
+    window.dispatchEvent(new Event('online'));
+    await flush();
+
+    expect(staffApi.boardingScanBatch).toHaveBeenCalledTimes(1);
+
+    component.ngOnDestroy();
+    queue.rows.push({
+      clientRef: 'ref-2',
+      token: 't2',
+      scheduleId: 42,
+      capturedAt: '2026-09-10T01:00:00.000Z',
+    });
+    window.dispatchEvent(new Event('online'));
+    await flush();
+
+    expect(staffApi.boardingScanBatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('dismissSyncSummary() clears the drain summary without touching the scan banner', () => {
+    setOnline(true);
+    const component = build({ boardingScan: jasmine.createSpy() }, createOfflineQueueStub());
+    (component as any).syncBoardedCount = 2;
+    (component as any).syncFailures = [
+      { ticketNumber: 'T-1', messageKey: 'x', severity: 'danger', icon: 'error' },
+    ];
+    (component as any).scanError = { messageKey: 'y', severity: 'danger', icon: 'error' };
+
+    component['dismissSyncSummary']();
+
+    expect((component as any).syncBoardedCount).toBe(0);
+    expect((component as any).syncFailures).toEqual([]);
+    expect((component as any).scanError).not.toBeNull();
+  });
 });
