@@ -175,6 +175,31 @@ export const STAFF_CONTRAST_ALLOW: Record<string, string> = {
   'light|div.ptype-tile.d-flex.flex-column|boundary-on-#ffffff': '1.30:1 -- OBRS-772 accepted: labelled tile (staff sell, passenger-type tile)',
   'dark|div.ptype-tile.d-flex.flex-column|boundary-on-#1d2226': '1.61:1 -- OBRS-772 accepted: labelled tile (staff sell, passenger-type tile)',
 
+  // OBRS-1045 adds a second row of tiles directly under `.ptype-tile`, answering the
+  // neighbouring question (adult/child) in the same accent language and with the same
+  // values, so it is registered on exactly the same footing -- and inherits the same two
+  // open questions rather than settling them. Written down because a register that only
+  // records the comfortable half is the thing 2.6 was written to stop:
+  //
+  //   1. In LIGHT mode this is clause 3 and nothing more: a translated text label, no fill
+  //      of its own, a decorative border at 1.30:1.
+  //   2. In DARK mode both rows DO paint a fill (`--admin-surface-soft`, 1.09:1 on the
+  //      card), which clause 2 says must clear 3:1 "label or no label". The 1.61:1 below is
+  //      the BORDER, which is what `Math.max(fillVsPage, borderVsPage)` reports
+  //      (`customer-contrast.ts:459`) -- so this entry's number is not the number that
+  //      would decide it. That is OBRS-1782, opened against the family, not this card:
+  //      spot-fixing the newer tile would leave `.ptype-tile` behind and split a row pair
+  //      that is meant to read as one group.
+  //   3. The ACTIVE tile scores 2.47:1 under this same key. Its state carries an
+  //      `--accent-soft` fill, the accent border and `font-weight: 600`, but NO colour
+  //      change -- so unlike 2.6's worked example it has no signal that invariant A scores.
+  //      Nothing here measures whether that is enough; OBRS-1774's invariant D is what will.
+  //
+  // Ratios measured 2026-09-09 (CI run 34308699575); the 1.09:1 fill computed from the
+  // dark tokens at `admin-theme.scss:277-279`.
+  'light|button.fare-tile.rounded.px-3|boundary-on-#ffffff': '1.30:1 -- OBRS-772 accepted: labelled tile (staff sell, fare-category tile), added by OBRS-1045',
+  'dark|button.fare-tile.rounded.px-3|boundary-on-#1d2226': '1.61:1 -- OBRS-772 accepted: labelled tile (staff sell, fare-category tile), added by OBRS-1045',
+
   // --- the three TEXT findings, which are NOT OBRS-772 ----------------------
   // Invariant A, WCAG 1.4.3, 4.5:1 for normal-size text. A darker red and a
   // darker active-tab blue are a fix, not a design-system decision, so these
