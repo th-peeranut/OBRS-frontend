@@ -180,13 +180,32 @@
   text-align: center;
 }
 
-// Print surface (A4 default — 80mm thermal is a deferred follow-up, not built
-// here). Only `.receipt-paper` renders on paper; the on-screen toolbar/loading/
-// error states (`.no-print`) never print.
+// Print surface. OBRS-1763: the counter's only printer is an 80mm roll, and the
+// slip this replaces is itself a roll slip rather than a carbon multipart form,
+// so 80mm is now the ONLY print surface — there is no A4 path left to keep in
+// step. Only `.receipt-paper` renders on paper; the on-screen toolbar/loading/
+// error states (`.no-print`) never print, and the staff shell's own chrome is
+// hidden by staff-layout.component.scss — the only stylesheet that can reach it,
+// since this component's SCSS is encapsulated.
+//
+// ONE length and the `auto` keyword CANNOT be combined: `@page`'s grammar is
+// `<length>{1,2} | auto | ...`, so the `size: 80mm auto` that every thermal-CSS
+// snippet online reaches for is invalid and the whole declaration is dropped.
+// Measured with Playwright, reading the resolved /MediaBox out of the PDF rather
+// than trusting a narrow viewport screenshot:
+//   size: 80mm auto   -> 215.9 x 279.4 mm  (US Letter: the declaration was dropped)
+//   size: 80mm        ->  80.1 x  80.1 mm  (one length sets BOTH axes)
+//   size: 80mm 297mm  ->  80.1 x 297.0 mm  <- what this rule uses
+// 297mm holds the whole slip in one page for the 1-2 passenger bookings that are
+// the common case (measured: 234mm of roll for two), and a larger party paginates
+// with `break-inside: avoid` below keeping every QR whole.
+// ⚠️ 297mm is a page LENGTH, not a measurement of the counter's Epson: a roll
+// driver with auto-cut may feed the full page length and waste the tail. The real
+// value has to come off that printer, which is attached to another machine.
 @media print {
   @page {
-    size: A4;
-    margin: 12mm;
+    size: 80mm 297mm;
+    margin: 0;
   }
 
   .no-print {
@@ -197,12 +216,49 @@
     padding: 0;
   }
 
+  // 72mm = the 80mm roll less a 4mm quiet zone each side. NOT yet measured
+  // against the counter's Epson (it is attached to another machine), so this is
+  // the conventional 80mm printable width, not a value read off that printer.
   .receipt-paper {
-    width: 100%;
-    margin: 0;
+    width: 72mm;
+    margin: 0 auto;
+    padding: 3mm 0;
     border: none;
     box-shadow: none;
     border-radius: 0;
-    padding: 0;
+  }
+
+  // Two 34.5mm columns ((72mm - 3mm gap) / 2) fit the short label/value pairs
+  // the way the slip this replaces does; `.receipt-item.full` still spans both
+  // for a route name, which needs the whole width.
+  .receipt-grid {
+    gap: 1.5mm 3mm;
+  }
+
+  // A QR split across a page break is unscannable, and the boarding scan is the
+  // one thing on this slip that cannot degrade.
+  .receipt-ticket-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    padding: 2mm 0;
+  }
+
+  // The 8px white border is a screen affordance; on a 72mm slip it is 6% of the
+  // width. The quiet zone the scanner needs comes from the card padding instead.
+  .qr-code {
+    width: 26mm;
+    height: 26mm;
+    border: none;
+    border-radius: 0;
+  }
+
+  // On screen the card is 560px wide and `space-between` reads as a tidy row.
+  // At 72mm the same rule pushes index / name / seat to three separate edges
+  // with a hole in the middle — the exact complaint the A4 surface earned. Pull
+  // them together and let a real Thai full name wrap instead of overflowing.
+  .receipt-passenger-detail {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 1.5mm 4mm;
   }
 }
