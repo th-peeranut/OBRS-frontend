@@ -60,6 +60,8 @@ export interface StopTranslationForm {
   /** The landmark note — `stop_translations.description`. */
   description: string;
   address: string;
+  /** OBRS-1777: where this operator's passengers board inside the place — "ชานชาลา 43". */
+  boardingPoint: string;
 }
 
 export interface StopDetailForm {
@@ -103,6 +105,7 @@ export function toStopRow(dto: AdminStopSummaryDto, locale: string): StopRow {
  */
 export function toStopDetailForm(dto: AdminStopDetailDto): StopDetailForm {
   const addresses = dto.addresses ?? {};
+  const boardingPoints = dto.boardingPoints ?? {};
 
   return {
     id: dto.id,
@@ -124,6 +127,10 @@ export function toStopDetailForm(dto: AdminStopDetailDto): StopDetailForm {
         // deserialized from the API, so it inherits Object.prototype and a key of
         // `constructor` resolves to a FUNCTION that `??` cannot catch (OBRS-601).
         address: hasOwnKey(addresses, locale) ? String(addresses[locale] ?? '') : '',
+        // OBRS-1777: hasOwnKey for the same Object.prototype reason as the address above.
+        boardingPoint: hasOwnKey(boardingPoints, locale)
+          ? String(boardingPoints[locale] ?? '')
+          : '',
       };
     }),
   };
@@ -176,8 +183,10 @@ export function toStopUpdatePayload(form: StopDetailForm): AdminStopUpdatePayloa
   const filled = form.translations.filter((t) => t.label.trim().length > 0);
 
   const addresses: Record<string, string> = {};
+  const boardingPoints: Record<string, string> = {};
   for (const t of filled) {
     addresses[t.locale] = t.address.trim();
+    boardingPoints[t.locale] = t.boardingPoint.trim();
   }
 
   const translations: AdminTranslationReqDto[] = filled.map((t) => ({
@@ -194,6 +203,7 @@ export function toStopUpdatePayload(form: StopDetailForm): AdminStopUpdatePayloa
     latitude: form.latitude,
     longitude: form.longitude,
     addresses,
+    boardingPoints,
     translations,
     // OBRS-1481: sent ALWAYS, null included — see AdminStopUpdatePayload. The opposite of
     // primaryPhotoUrl above: that key must be absent so a save cannot erase an upload, this
@@ -214,12 +224,15 @@ export function toStopLabelPayload(form: StopDetailForm): AdminStopLabelPayload 
   const filled = form.translations.filter((t) => t.label.trim().length > 0);
 
   const addresses: Record<string, string> = {};
+  const boardingPoints: Record<string, string> = {};
   for (const t of filled) {
     addresses[t.locale] = t.address.trim();
+    boardingPoints[t.locale] = t.boardingPoint.trim();
   }
 
   return {
     addresses,
+    boardingPoints,
     translations: filled.map((t) => ({
       locale: t.locale,
       label: t.label.trim(),
@@ -251,6 +264,7 @@ export function emptyStopDetailForm(provinceCode: string, statusCode: string, st
       label: '',
       description: '',
       address: '',
+      boardingPoint: '',
     })),
   };
 }

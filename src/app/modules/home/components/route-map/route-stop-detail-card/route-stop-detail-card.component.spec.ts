@@ -134,4 +134,37 @@ describe('RouteStopDetailCardComponent', () => {
       expect(component.landmark).toBeNull();
     });
   });
+
+  /**
+   * OBRS-1777. Not a copy of the landmark block above: that one is a note about the
+   * surroundings, this one is where the passenger stands, and on a station several operators
+   * share they are different facts with different owners. Mo Chit sells for several queues from
+   * booth C5 while the NJ queue leaves from bay 43 — the address is true for everyone, the bay
+   * is not.
+   */
+  describe('boarding point (OBRS-1777)', () => {
+    it('returns the operator boarding point for THIS route', () => {
+      component.stop = { ...makeStop(), boardingPoint: 'ชานชาลา 43' };
+      expect(component.boardingPoint).toBe('ชานชาลา 43');
+    });
+
+    it('is null when the key is ABSENT — the default until an operator publishes one', () => {
+      const stop = makeStop();
+      expect('boardingPoint' in stop).toBeFalse();
+      component.stop = stop;
+      expect(component.boardingPoint).toBeNull();
+    });
+
+    it('is null for a whitespace-only value', () => {
+      // An empty "จุดขึ้นรถ:" on a shared station reads as "nothing special to find", which is
+      // the opposite of true — worse than showing no line.
+      component.stop = { ...makeStop(), boardingPoint: '  ' };
+      expect(component.boardingPoint).toBeNull();
+    });
+
+    it('is null when there is no stop', () => {
+      component.stop = null;
+      expect(component.boardingPoint).toBeNull();
+    });
+  });
 });

@@ -176,6 +176,17 @@
                 </label>
                 <input [id]="'stopAddress-' + t.locale" type="text" class="admin-input"
                        [(ngModel)]="t.address" [name]="'address-' + t.locale" />
+
+                <!-- OBRS-1777: the boarding point, and it is NOT disabled for an operator the way
+                     the physical fields are. That is the whole card: the station is shared (Mo Chit
+                     sells several queues from one booth) and the bay is not, so this is the one
+                     spatial fact an operator owns. -->
+                <label class="admin-form-label mt-2" [attr.for]="'stopBoardingPoint-' + t.locale">
+                  {{ 'ADMIN.STOPS.BOARDING_POINT' | translate }}
+                </label>
+                <input [id]="'stopBoardingPoint-' + t.locale" type="text" class="admin-input"
+                       [placeholder]="'ADMIN.STOPS.BOARDING_POINT_PLACEHOLDER' | translate"
+                       [(ngModel)]="t.boardingPoint" [name]="'boardingPoint-' + t.locale" />
               </fieldset>
             }
 
