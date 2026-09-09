@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-1781-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1781capture.config.ts",
+      "why": "OBRS-1781 AFTER evidence for moving the boarding-scan note above the passenger list. CAPTURE and not GATE because it asserts nothing about order -- that is held by the two unit-test assertions this card added, one per surface; this exists so the owner can see the two surfaces agree. Hermetic on the gate lane's terms: the slip arm fulfils its own three endpoints and seeds a salesperson session from addInitScript, and the e-ticket arm reuses seedCustomerSession, so every /api/** call is fulfilled in-browser. The e-ticket arm goes through the My Bookings ticket modal rather than /e-ticket: measured on this branch, /e-ticket fed by seedStore alone renders the OBRS-1252 trip summary, which has no passenger block and therefore no .qr-hint to photograph, and the shared /bookings/:id/tickets fixture answers the contrast sweep's page-at-rest with every field blank, so this arm overrides it."
+    },
+    {
       "spec": "obrs-772-boundary-mockup.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs772.config.ts",
