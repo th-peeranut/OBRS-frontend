@@ -102,6 +102,18 @@
               <span class="label">{{ 'FIND_BOOKING.RESULT.NET_AMOUNT' | translate }}</span>
               <span class="value fw-semibold">{{ booking.netAmount }}</span>
             </div>
+            <!-- OBRS-1787: an all-OPEN booking says the seat ONCE, here with the
+                 booking it belongs to, and the per-ticket rows below are
+                 suppressed. Until this card the row was simply dropped, so this
+                 was the one of the three seat surfaces that told the customer
+                 nothing at all about where to sit. Reuses the wording the
+                 e-ticket and the 80mm slip already print. -->
+            @if (isOpenSeating) {
+              <div class="find-booking-summary-row">
+                <span class="label">{{ 'FIND_BOOKING.RESULT.SEAT' | translate }}</span>
+                <span class="value">{{ 'E_TICKET.LABEL.SEAT_OPEN' | translate }}</span>
+              </div>
+            }
           </header>
 
           @if (hasTickets) {
@@ -129,11 +141,20 @@
                     <span class="value">{{ displayDateTime(ticket.departureDateTime) }}</span>
                   </div>
                   <!-- `null` on an OPEN-seating schedule, where the backend normalizes every
-                       seat away (OBRS-321/483) — showing "Seat: -" would read as a defect. -->
-                  @if (ticket.seatNumber) {
+                       seat away (OBRS-321/483) — showing "Seat: -" would read as a defect.
+                       OBRS-1787: guarded on the BOOKING flag, not on this ticket's own seat, so
+                       it is the exact complement of the summary line above. A mixed booking
+                       (outbound OPEN, return ASSIGNED) therefore keeps a row on every ticket and
+                       spells the empty ones out, rather than dropping the seats the summary line
+                       never covered. -->
+                  @if (!isOpenSeating) {
                     <div class="find-booking-ticket-row">
                       <span class="label">{{ 'FIND_BOOKING.RESULT.SEAT' | translate }}</span>
-                      <span class="value">{{ ticket.seatNumber }}</span>
+                      <span class="value">{{
+                        ticket.seatNumber?.trim()
+                          ? ticket.seatNumber
+                          : ('E_TICKET.LABEL.SEAT_OPEN' | translate)
+                      }}</span>
                     </div>
                   }
                   @if (ticket.vehicle?.numberPlate) {
