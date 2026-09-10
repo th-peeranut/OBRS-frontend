@@ -8,6 +8,7 @@ import { RouteRow, SegmentRow } from './routes.mappers';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { RoutesStore } from './routes.store';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 
@@ -33,7 +34,7 @@ function makeStoreStub() {
   };
 }
 
-function makeComponent() {
+function makeComponent(roles: string[] = ['admin']) {
   const adminApi = {
     deleteRouteById: jasmine
       .createSpy('deleteRouteById')
@@ -48,7 +49,8 @@ function makeComponent() {
     adminApi as any,
     alert as any,
     createTranslateStub(),
-    store as any
+    store as any,
+    { getRoles: () => roles } as any
   );
   return { component, adminApi, alert, store };
 }
@@ -193,7 +195,8 @@ describe('RoutesPageComponent null-handling (OBRS-506)', () => {
       adminApi as any,
       alert as any,
       createTranslateStub(),
-      store as any
+      store as any,
+      { getRoles: () => ['admin'] } as any
     );
     component.ngOnInit();
 
@@ -240,6 +243,8 @@ describe('RoutesPageComponent template wiring to child components', () => {
         { provide: RoutesStore, useValue: store },
         { provide: AdminApiService, useValue: adminApi },
         { provide: AlertService, useValue: alert },
+        // OBRS-1495: RoutesPageComponent reads the held role in its constructor.
+        { provide: AuthService, useValue: { getRoles: () => ['admin'] } },
       ],
     }).compileComponents();
 
@@ -334,5 +339,24 @@ describe('RoutesPageComponent template wiring to child components', () => {
     panel.triggerEventHandler('editSegment', segment);
 
     expect((component as any).openSegmentEditModal).toHaveBeenCalledWith(segment);
+  });
+});
+
+
+// OBRS-1495 AC-6: the role rule itself, in BOTH directions. The held-role test
+// must stay `getRoles().includes('admin')` — `hasAnyRole(['admin'])` answers
+// true for an owner through `AuthService.ROLE_GRANTS`, so the column would
+// never hide for the one role it was meant to hide from (the OBRS-869 trap).
+describe('RoutesPageComponent slug column rule (OBRS-1495)', () => {
+  const OWNER_ROLES = ['owner', 'salesperson', 'driver', 'customer'];
+
+  it('shows the slug column when the held role is admin', () => {
+    const { component } = makeComponent(['admin']);
+    expect((component as any).showSlugColumn).toBeTrue();
+  });
+
+  it('hides the slug column from an owner', () => {
+    const { component } = makeComponent(OWNER_ROLES);
+    expect((component as any).showSlugColumn).toBeFalse();
   });
 });

@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { AdminApiService, PromotionRespDto } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import { PromotionsListStore } from './promotions-list.store';
@@ -61,12 +62,22 @@ export class PromotionsPageComponent implements OnInit, OnDestroy {
 
   private rawPromotions: PromotionRespDto[] = [];
 
+  /**
+   * OBRS-1495: same rule and same held-role test as
+   * `RoutesPageComponent.showSlugColumn` — see the comment there for why this is
+   * `getRoles().includes('admin')` and not `hasAnyRole(['admin'])`, and why it
+   * is screen tidiness rather than an access control.
+   */
+  protected readonly showSlugColumn: boolean;
+
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly store: PromotionsListStore
+    private readonly store: PromotionsListStore,
+    private readonly authService: AuthService
   ) {
+    this.showSlugColumn = this.authService.getRoles().includes('admin');
     // Language change only swaps displayed translations; data is already
     // loaded, so re-derive the view locally instead of re-fetching.
     this.subscriptions.add(
