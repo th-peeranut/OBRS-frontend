@@ -1,6 +1,7 @@
 import { Component, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
@@ -60,7 +61,8 @@ export class FindBookingPageComponent implements OnDestroy {
   constructor(
     private readonly fb: FormBuilder,
     private readonly lookupService: BookingLookupService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly route: ActivatedRoute
   ) {
     this.form = this.fb.group({
       bookingNumber: ['', [Validators.required]],
@@ -70,6 +72,18 @@ export class FindBookingPageComponent implements OnDestroy {
       // exists to prevent, not one it may introduce.
       phoneNumber: ['', [Validators.required, Validators.pattern(/^\d{10,15}$/)]],
     });
+
+    // OBRS-868: the payment-confirmation email links here with ?bookingNumber=<n>, because that
+    // mail is the only copy of the ticket a customer keeps once the tab is closed. Pre-filling
+    // saves them retyping a reference they are looking at, and no more than that: the phone
+    // number is still typed here and nothing is submitted, so a link that reaches the wrong
+    // mailbox is not a ticket. Deliberately NOT auto-submitting for the same reason the page
+    // shows one neutral refusal - an automatic lookup on page load would turn the URL into a
+    // probe for which booking numbers exist.
+    const fromEmail = String(this.route.snapshot.queryParamMap.get('bookingNumber') ?? '').trim();
+    if (fromEmail) {
+      this.form.patchValue({ bookingNumber: fromEmail });
+    }
   }
 
   ngOnDestroy(): void {
