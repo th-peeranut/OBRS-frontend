@@ -43,6 +43,15 @@ export interface ParcelConsignedReqDto {
   paymentMethod: 'cash';
   seatCount: null;
   dimensions?: ParcelDimensionsReqDto;
+  /**
+   * OBRS-347 — the sender's advance consent to the driver leaving this parcel at the
+   * destination stop if nobody collects it. Optional on the wire and never required:
+   * `false` is a valid answer that must still let the intake through (a required tick
+   * would be consent extracted as the price of shipping — ปพพ. ม.625). Sent on every
+   * consigned intake so the counter's answer is explicit rather than inferred from an
+   * omitted key.
+   */
+  leaveAtStopConsent: boolean;
 }
 
 /**
@@ -236,6 +245,13 @@ export interface WaybillRespDto {
   departureAt: string;
   /** Encoded client-side as a QR on the waybill page ONLY — never on the public tracking response. */
   collectionToken: string;
+  /**
+   * OBRS-347 — true when the sender ticked the leave-at-stop consent at intake
+   * (`leave_consent_at != null` server-side). The waybill prints one extra line ABOVE the
+   * signature rule when true and prints NOTHING when false: a printed "did not consent"
+   * line would turn a blank answer into a recorded refusal the sender never gave.
+   */
+  leaveAtStopConsent: boolean;
 }
 
 export interface ParcelTrackRespDto {

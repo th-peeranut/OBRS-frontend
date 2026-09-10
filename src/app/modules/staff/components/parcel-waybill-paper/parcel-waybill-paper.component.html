@@ -69,6 +69,15 @@
           <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.TERMS_QR_HINT' | translate }}</div>
         </div>
       }
+      <!-- OBRS-347: printed ONLY when the sender consented, and it must sit ABOVE the signature
+           rule - the signature is what makes it the sender's own declaration rather than a line we
+           printed about them. Nothing is printed when they did not consent: a "did not consent"
+           line would record a refusal the sender never gave. -->
+      @if (waybill?.leaveAtStopConsent) {
+        <p class="parcel-waybill-leave-consent" data-testid="parcel-waybill-leave-consent">
+          {{ 'STAFF.PARCEL_WAYBILL.LEAVE_CONSENT_LINE' | translate }}
+        </p>
+      }
       <div class="parcel-waybill-signature">
         <span class="parcel-waybill-signature-label">{{ 'STAFF.PARCEL_WAYBILL.TERMS_SIGNATURE' | translate }}</span>
         <span class="parcel-waybill-signature-rule"></span>

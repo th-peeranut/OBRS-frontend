@@ -47,6 +47,13 @@ export interface ParcelConsignFormValue {
   weightKg: number;
   description: string;
   prohibitedAcknowledged: boolean;
+  /**
+   * OBRS-347 — consigned only. The sender's advance consent to the parcel being left at
+   * the destination stop if nobody collects it. Never required (see the wire DTO's note);
+   * the carry-on branch has no equivalent because a carry-on item never leaves the
+   * sender's side.
+   */
+  leaveAtStopConsent: boolean;
   dimensions?: { lengthCm: number; widthCm: number; heightCm: number };
 }
 
@@ -241,6 +248,9 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
         { validators: dimensionsAllOrNoneValidator() }
       ),
       prohibitedAcknowledged: [false, [Validators.requiredTrue]],
+      // OBRS-347: deliberately NO validator. requiredTrue here would make shipping
+      // conditional on consenting, which is exactly what ปพพ. ม.625 makes ineffective.
+      leaveAtStopConsent: [false],
       // OBRS-341 carry-on-only controls. Always present (simpler and safer
       // than conditionally adding/removing controls, which is exactly the
       // shape of the "debounced rebuild orphans mid-edit controls" family of
@@ -352,6 +362,7 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
       description: '',
       dimensions: { lengthCm: null, widthCm: null, heightCm: null },
       prohibitedAcknowledged: false,
+      leaveAtStopConsent: false,
       seatCount: null,
       specifySeats: false,
     });
@@ -539,6 +550,7 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
       description: string;
       dimensions: { lengthCm: number | null; widthCm: number | null; heightCm: number | null };
       prohibitedAcknowledged: boolean;
+      leaveAtStopConsent: boolean;
     };
 
     const payload: ParcelConsignFormValue = {
@@ -553,6 +565,7 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
       weightKg: Number(v.weightKg),
       description: v.description.trim(),
       prohibitedAcknowledged: v.prohibitedAcknowledged,
+      leaveAtStopConsent: v.leaveAtStopConsent,
     };
 
     if (v.dimensions.lengthCm != null && v.dimensions.widthCm != null && v.dimensions.heightCm != null) {
