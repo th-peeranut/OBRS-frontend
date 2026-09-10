@@ -165,6 +165,12 @@
       "why": "Booking path on fixture stations and schedules. OBRS-602 added the GET /api/routes stub that /home's route-map issues. OBRS-856 split it in two: the walk is anonymous only as far as the review page (still open to guests on purpose), after which one test seeds a customer session in localStorage and the other asserts the guest is sent to /login. Still hermetic -- the seeded token is never validated by anything, since every API call is intercepted."
     },
     {
+      "spec": "obrs-36-search-to-ticket.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-36. The card's whole chain in one walk -- search -> reserve -> payment -> ticket issuance -- and the only spec in the repo that goes past /payment. It reuses b2c-critical-path's first half through e2e/support/b2c-booking-walk.ts rather than copying it, so the two cannot drift, and adds the four calls no fixture in this lane answered before: create-booking, create-payment (+ its same-origin QR bytes), payments-by-booking, and the tickets call behind /e-ticket. GATE because every one of them is fulfilled in-spec: nothing here needs a backend, a database or a gateway. SCOPE BOUNDARY, stated here as well as in the spec so a reader of this file cannot miss it: the leg the browser spends OFF our origin is NOT walked -- obrs-732-3ds.spec.ts owns that with a real Omise charge on OWN-DB, and this walk resumes at /payment/result the way the gateway's return_uri does. And a green run here says the FRONTEND settles when the server says the payment settled; it says nothing about whether the server ever says so after a real 3DS charge, which needs Omise's inbound webhook and is OBRS-739."
+    },
+    {
       "spec": "obrs-854-account-deeplink.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
