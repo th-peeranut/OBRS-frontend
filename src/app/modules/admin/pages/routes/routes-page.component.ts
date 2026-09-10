@@ -6,6 +6,7 @@ import {
   AdminRouteDto,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import { RoutesStore } from './routes.store';
@@ -63,6 +64,22 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   @ViewChild(AddSegmentModalComponent) private addSegmentModal!: AddSegmentModalComponent;
   private readonly subscriptions = new Subscription();
 
+  /**
+   * OBRS-1495: the raw slug column is for platform admins, not for the operator
+   * running the buses — the owner asked for it hidden from `owner` and kept for
+   * `admin`, on all five admin tables that carry one.
+   *
+   * `getRoles().includes('admin')` is the HELD-role test, the same one
+   * `ExpensesPageComponent.isAdmin` and `UsabilityReportsPageComponent` use.
+   * Deliberately NOT `hasAnyRole(['admin'])`: `AuthService.ROLE_GRANTS` grants
+   * `admin` to `owner`, so that call answers true for an owner and the column
+   * would never hide (the OBRS-869 trap).
+   *
+   * Display only. The slug still ships in every API response — this is screen
+   * tidiness, not an access control. Withholding the value is a server concern.
+   */
+  protected readonly showSlugColumn: boolean;
+
   private rawRouteDtos: AdminRouteDto[] = [];
   private rawLookups: AdminLookupDto[] = [];
 
@@ -70,8 +87,10 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     private readonly adminApiService: AdminApiService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly store: RoutesStore
+    private readonly store: RoutesStore,
+    private readonly authService: AuthService
   ) {
+    this.showSlugColumn = this.authService.getRoles().includes('admin');
     // Language change relabels in memory; only the selected route's structure
     // (server-localized stop names) needs a refresh — not the whole route list.
     this.subscriptions.add(

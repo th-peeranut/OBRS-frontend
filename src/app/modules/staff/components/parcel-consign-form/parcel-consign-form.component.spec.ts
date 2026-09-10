@@ -1,6 +1,32 @@
-import { FormBuilder } from '@angular/forms';
-import { fakeAsync, tick } from '@angular/core/testing';
+import { FormBuilder, ReactiveFormsModule, ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { Component, NO_ERRORS_SCHEMA, forwardRef } from '@angular/core';
+import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
+
+// The three schedule/pickup/dropoff controls are bound to <app-admin-dropdown>,
+// a custom ControlValueAccessor. NO_ERRORS_SCHEMA ignores its unknown @Inputs,
+// but a form-bound element still needs SOME value accessor or Angular throws
+// NG01203 at render — so stand in a no-op CVA on the same selector for the
+// rendered-DOM tests below. (The customer twin doesn't need this: there
+// scheduleId is an @Input, not an in-form dropdown.)
+@Component({
+  selector: 'app-admin-dropdown',
+  template: '',
+  standalone: false,
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => AdminDropdownStubComponent),
+      multi: true,
+    },
+  ],
+})
+class AdminDropdownStubComponent implements ControlValueAccessor {
+  writeValue(): void {}
+  registerOnChange(): void {}
+  registerOnTouched(): void {}
+}
 import { ParcelConsignFormComponent } from './parcel-consign-form.component';
 import { ParcelPolicyDto, ParcelPolicyService } from '../../../../services/parcel-policy/parcel-policy.service';
 import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
@@ -152,6 +178,7 @@ describe('ParcelConsignFormComponent', () => {
       description: 'Documents',
       dimensions: { lengthCm: null, widthCm: null, heightCm: null },
       prohibitedAcknowledged: true,
+      leaveAtStopConsent: false,
       // OBRS-341: always-present carry-on-only controls (inert in consigned
       // mode) — FormGroup#setValue requires every control, unlike patchValue.
       seatCount: null,
@@ -175,6 +202,7 @@ describe('ParcelConsignFormComponent', () => {
       weightKg: 5,
       description: 'Documents',
       prohibitedAcknowledged: true,
+      leaveAtStopConsent: false,
     });
   });
 
@@ -445,6 +473,72 @@ describe('ParcelConsignFormComponent', () => {
       expect(c['prohibitedLoadFailed']).toBeTrue();
       expect(c['prohibitedCategories']).toEqual([]);
       c.ngOnDestroy();
+    });
+  });
+
+  // OBRS-641 AC-7 — staff-side keypad hints, read off the RENDERED template
+  // (TestBed) rather than the TS. Mutation-proven: drop inputmode from the .html
+  // and the matching expectation goes red. Twin of the customer-side block in
+  // parcel-details-form.component.spec.ts ('mobile keyboard + autofill hints').
+  describe('OBRS-641 AC-7 — phone inputmode on the rendered DOM', () => {
+    let fixture: ComponentFixture<ParcelConsignFormComponent>;
+
+    beforeEach(async () => {
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [ReactiveFormsModule, TranslateModule.forRoot()],
+        declarations: [ParcelConsignFormComponent, AdminDropdownStubComponent],
+        providers: [{ provide: ParcelPolicyService, useValue: policyServiceStub(DEFAULT_POLICY) }],
+        schemas: [NO_ERRORS_SCHEMA],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(ParcelConsignFormComponent);
+      fixture.detectChanges(); // default mode 'consigned' -> the recipient block renders
+    });
+
+    afterEach(() => {
+      fixture.componentInstance.ngOnDestroy();
+    });
+
+    function inputByFcn(fcn: string): HTMLInputElement {
+      const el = fixture.nativeElement.querySelector(
+        `input[formcontrolname="${fcn}"]`
+      ) as HTMLInputElement | null;
+      if (!el) {
+        throw new Error(`Input [formControlName="${fcn}"] not found in the rendered template`);
+      }
+      return el;
+    }
+
+    it('both phone fields open the telephone keypad (inputmode="tel")', () => {
+      expect(inputByFcn('senderPhone').getAttribute('inputmode')).toBe('tel');
+      expect(inputByFcn('recipientPhone').getAttribute('inputmode')).toBe('tel');
+    });
+
+    // Staff type the CUSTOMER's number, never their own. autocomplete="tel" would
+    // offer the salesperson's own number on every new parcel — a wrong suggestion
+    // that risks saving the wrong phone onto the waybill. inputmode only, no
+    // autocomplete (unlike the customer form, where senderPhone IS the filler's own).
+    it('neither phone field offers tel autofill (no autocomplete)', () => {
+      expect(inputByFcn('senderPhone').getAttribute('autocomplete')).toBeNull();
+      expect(inputByFcn('recipientPhone').getAttribute('autocomplete')).toBeNull();
+    });
+
+    // AC-4: the keypad is a hint, not a validator. The (focus)/(blur) grouping
+    // handlers still run — blur groups to 081-234-5678, focus strips back to raw
+    // digits — and the ^0\d{9}$ rule still rejects a short number.
+    it('keeps the (focus)/(blur) grouping handlers and the phone validator intact', () => {
+      const ctrl = fixture.componentInstance['form'].get('senderPhone');
+      ctrl?.setValue('0812345678');
+
+      fixture.componentInstance['onPhoneBlur']('senderPhone');
+      expect(ctrl?.value).toBe('081-234-5678');
+
+      fixture.componentInstance['onPhoneFocus']('senderPhone');
+      expect(ctrl?.value).toBe('0812345678');
+
+      ctrl?.setValue('0812');
+      expect(ctrl?.valid).toBeFalse();
     });
   });
 });

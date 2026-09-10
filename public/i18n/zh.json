@@ -3929,7 +3929,8 @@
         "WIDTH_CM": "宽度（厘米）",
         "HEIGHT_CM": "高度（厘米）",
         "PAYMENT_METHOD": "付款方式",
-        "PROHIBITED_ACK": "我确认此包裹不含任何违禁物品。"
+        "PROHIBITED_ACK": "我确认此包裹不含任何违禁物品。",
+        "LEAVE_CONSENT": "寄件人同意：车辆到站时如无人领取，司机可将本包裹放置于目的地停靠点。"
       },
       "PAYMENT_CASH": "现金",
       "CARGO": {
@@ -4012,7 +4013,13 @@
         }
       },
       "SHARE_NOT_CONFIGURED": "尚未设置包裹收益分成——在业主设置之前将记为0%。",
-      "SALES_POINT_NOT_MAPPED": "此站点尚未与售票点关联——业主的分成款项将计入司机名下。"
+      "SALES_POINT_NOT_MAPPED": "此站点尚未与售票点关联——业主的分成款项将计入司机名下。",
+      "LEAVE_CONSENT": {
+        "EFFECT_PHOTO": "司机会在放置处对包裹拍照存证，寄件人与收件人均可在包裹追踪页面查看该照片。",
+        "EFFECT_RISK": "停靠点为无人看管的公共场所。包裹放置并拍照后，其风险由寄件人承担。",
+        "EFFECT_NO_RETURN": "视为已按约定运送至目的地停靠点，故不退还运费。",
+        "OPTIONAL_HINT": "此项非必填——不勾选也可正常寄件。勾选前请向寄件人宣读。"
+      }
     },
     "PARCEL_WAYBILL": {
       "TERMS_TITLE": "包裹运输条款（简要版）",
@@ -4020,6 +4027,7 @@
       "TERMS_QR_LABEL": "完整条款",
       "TERMS_QR_ALT": "可打开完整包裹运输条款的二维码",
       "TERMS_QR_HINT": "扫描以阅读完整条款",
+      "LEAVE_CONSENT_LINE": "依第6条，寄件人同意：车辆到站时如无人领取，司机可将本包裹放置于目的地停靠点并拍照存证，此后风险由寄件人自行承担。",
       "TERMS_SIGNATURE": "寄件人签名",
       "SUBTITLE": "此包裹的可打印运单。",
       "TITLE": "运单",
@@ -4268,7 +4276,10 @@
         "ENGINE_ON": "引擎运转中",
         "ENGINE_OFF": "引擎已关闭",
         "DIRECTION": "朝{{direction}}行驶",
-        "DIRECTION_LAST_KNOWN": "最后已知方向：{{direction}}"
+        "DIRECTION_LAST_KNOWN": "最后已知方向：{{direction}}",
+        "NEXT_STOP": "下一站：{{name}}（第 {{order}} 站，共 {{total}} 站）",
+        "NEXT_STOP_LAST_KNOWN": "最后已知下一站：{{name}}（第 {{order}} 站，共 {{total}} 站）",
+        "DELAY": "晚点 {{minutes}} 分钟"
       },
       "COMPASS": {
         "N": "北",

@@ -27,7 +27,7 @@ function entry(partial: Partial<Entry>): Entry {
   };
 }
 
-function makeComponent() {
+function makeComponent(roles: string[] = ['admin']) {
   const adminApi = {
     updateLookup: jasmine
       .createSpy('updateLookup')
@@ -55,7 +55,8 @@ function makeComponent() {
     new FormBuilder(),
     alert as any,
     createTranslateStub() as any,
-    store as any
+    store as any,
+    { getRoles: () => roles } as any
   );
   return { component, adminApi, alert, store };
 }
@@ -175,7 +176,8 @@ describe('LookupSettingsPageComponent confirmDelete — composite category+slug 
       new FormBuilder(),
       alert as any,
       createTranslateStub() as any,
-      store as any
+      store as any,
+      { getRoles: () => ['admin'] } as any
     );
     return { component, store, alert, adminApi };
   }
@@ -244,4 +246,23 @@ describe('LookupSettingsPageComponent confirmDelete — composite category+slug 
       await done;
     }
   );
+});
+
+
+// OBRS-1495 AC-6: the role rule itself, in BOTH directions. The held-role test
+// must stay `getRoles().includes('admin')` — `hasAnyRole(['admin'])` answers
+// true for an owner through `AuthService.ROLE_GRANTS`, so the column would
+// never hide for the one role it was meant to hide from (the OBRS-869 trap).
+describe('LookupSettingsPageComponent slug column rule (OBRS-1495)', () => {
+  const OWNER_ROLES = ['owner', 'salesperson', 'driver', 'customer'];
+
+  it('shows the slug column when the held role is admin', () => {
+    const { component } = makeComponent(['admin']);
+    expect((component as any).showSlugColumn).toBeTrue();
+  });
+
+  it('hides the slug column from an owner', () => {
+    const { component } = makeComponent(OWNER_ROLES);
+    expect((component as any).showSlugColumn).toBeFalse();
+  });
 });

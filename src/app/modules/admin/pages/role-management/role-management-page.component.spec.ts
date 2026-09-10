@@ -51,7 +51,7 @@ function makeStoreStub() {
   return store;
 }
 
-function makeComponent(translateOverrides: Record<string, unknown> = {}) {
+function makeComponent(translateOverrides: Record<string, unknown> = {}, roles: string[] = ['admin']) {
   const adminApi = {
     deleteRoleById: jasmine.createSpy('deleteRoleById').and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null })),
   };
@@ -62,7 +62,7 @@ function makeComponent(translateOverrides: Record<string, unknown> = {}) {
   };
   const store = makeStoreStub();
   const translate = { ...createTranslateStub(), ...translateOverrides };
-  const component = new RoleManagementPageComponent(adminApi as any, alert as any, translate as any, store as any);
+  const component = new RoleManagementPageComponent(adminApi as any, alert as any, translate as any, store as any, { getRoles: () => roles } as any);
   // Subscribe the way ngOnInit does, without invoking ngOnInit's void
   // store.refresh() (irrelevant to these unit tests).
   store.data$.subscribe((data) => {
@@ -255,7 +255,8 @@ describe('RoleManagementPageComponent null-handling (OBRS-506)', () => {
       adminApi as any,
       alert as any,
       createTranslateStub() as any,
-      store as any
+      store as any,
+      { getRoles: () => ['admin'] } as any
     );
     component.ngOnInit();
 
@@ -270,5 +271,24 @@ describe('RoleManagementPageComponent null-handling (OBRS-506)', () => {
     expect((component as any).roles)
       .withContext('a null emission must not leave the previous session\'s rows on screen')
       .toEqual([]);
+  });
+});
+
+
+// OBRS-1495 AC-6: the role rule itself, in BOTH directions. The held-role test
+// must stay `getRoles().includes('admin')` — `hasAnyRole(['admin'])` answers
+// true for an owner through `AuthService.ROLE_GRANTS`, so the column would
+// never hide for the one role it was meant to hide from (the OBRS-869 trap).
+describe('RoleManagementPageComponent slug column rule (OBRS-1495)', () => {
+  const OWNER_ROLES = ['owner', 'salesperson', 'driver', 'customer'];
+
+  it('shows the slug column when the held role is admin', () => {
+    const { component } = makeComponent({}, ['admin']);
+    expect((component as any).showSlugColumn).toBeTrue();
+  });
+
+  it('hides the slug column from an owner', () => {
+    const { component } = makeComponent({}, OWNER_ROLES);
+    expect((component as any).showSlugColumn).toBeFalse();
   });
 });

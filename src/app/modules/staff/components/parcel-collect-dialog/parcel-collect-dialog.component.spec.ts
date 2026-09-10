@@ -1,4 +1,7 @@
-import { FormBuilder } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { TranslateModule } from '@ngx-translate/core';
 import { ParcelCollectDialogComponent } from './parcel-collect-dialog.component';
 
 function makeComponent(): ParcelCollectDialogComponent {
@@ -53,5 +56,34 @@ describe('ParcelCollectDialogComponent', () => {
     const spy = spyOn(component.dismiss, 'emit');
     component['onDismiss']();
     expect(spy).toHaveBeenCalled();
+  });
+
+  // OBRS-641 AC-7 — the collection code is six random 0-9 digits
+  // (NumberGenerator.generateParcelCollectionCode), so the field earns the
+  // numeric keypad — not tel (no +*#), and unlike the alphanumeric
+  // trackingNumber. Read off the rendered template; mutation-proven: drop
+  // inputmode from the .html and this goes red.
+  describe('OBRS-641 AC-7 — numeric keypad on the rendered DOM', () => {
+    let fixture: ComponentFixture<ParcelCollectDialogComponent>;
+
+    beforeEach(async () => {
+      await TestBed.configureTestingModule({
+        imports: [ReactiveFormsModule, TranslateModule.forRoot()],
+        declarations: [ParcelCollectDialogComponent],
+        schemas: [NO_ERRORS_SCHEMA],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(ParcelCollectDialogComponent);
+      fixture.componentInstance.isOpen = true; // the whole dialog is behind @if (isOpen)
+      fixture.detectChanges();
+    });
+
+    it('opens the numeric keypad for the 6-digit collection code (inputmode="numeric")', () => {
+      const el = fixture.nativeElement.querySelector(
+        'input[formcontrolname="collectionCode"]'
+      ) as HTMLInputElement | null;
+      expect(el).withContext('collectionCode input should render when isOpen').not.toBeNull();
+      expect(el?.getAttribute('inputmode')).toBe('numeric');
+    });
   });
 });

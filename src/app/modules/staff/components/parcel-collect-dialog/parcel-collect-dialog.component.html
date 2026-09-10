@@ -14,7 +14,7 @@
       <form [formGroup]="form" (ngSubmit)="onConfirm()">
         <div class="admin-modal-body">
           <label>{{ 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.CODE_LABEL' | translate }}</label>
-          <input type="text" class="admin-field" formControlName="collectionCode" />
+          <input type="text" inputmode="numeric" class="admin-field" formControlName="collectionCode" />
           @if (serverErrorKey) {
             <small class="admin-error">{{ serverErrorKey | translate: (serverErrorParams ?? {}) }}</small>
           }

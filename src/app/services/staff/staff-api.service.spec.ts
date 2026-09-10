@@ -175,6 +175,7 @@ describe('StaffApiService', () => {
       weightKg: 5,
       description: 'Documents',
       prohibitedAcknowledged: true,
+      leaveAtStopConsent: false,
       sender: { name: 'Somchai', phone: '0812345678' },
       recipient: { name: 'Somsri', phone: '0898765432' },
       paymentMethod: 'cash' as const,

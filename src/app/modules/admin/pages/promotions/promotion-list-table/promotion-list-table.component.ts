@@ -17,6 +17,9 @@ export class PromotionListTableComponent {
   @Input() isLoading = false;
   @Input() skeletonRows: unknown[] = Array.from({ length: 5 });
   @Input() hasError = false;
+  // OBRS-1495: decided by the parent from the held role, like `canUnlock` on
+  // UserListTableComponent. Defaults to the pre-1495 behaviour.
+  @Input() showSlugColumn = true;
   @Output() edit = new EventEmitter<PromotionRow>();
   @Output() deactivate = new EventEmitter<PromotionRow>();
 

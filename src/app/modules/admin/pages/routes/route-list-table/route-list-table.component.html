@@ -7,7 +7,9 @@
     <table class="admin-table">
       <thead>
         <tr>
-          <th>{{ 'ADMIN.ROUTES.SLUG' | translate }}</th>
+          @if (showSlugColumn) {
+            <th>{{ 'ADMIN.ROUTES.SLUG' | translate }}</th>
+          }
           <th>{{ 'ADMIN.ROUTES.NAME' | translate }}</th>
           <th>{{ 'ADMIN.ROUTES.STATUS' | translate }}</th>
           <th>{{ 'ADMIN.ROUTES.UPDATED_AT' | translate }}</th>
@@ -18,7 +20,9 @@
         @if (isLoading) {
           @for (row of skeletonRows; track $index) {
             <tr class="admin-skeleton-row" aria-hidden="true">
-              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              @if (showSlugColumn) {
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              }
               <td>
                 <div class="admin-cell-stack">
                   <span class="admin-skeleton"></span>
@@ -40,7 +44,9 @@
               [class.is-selected]="route.slug === selectedRouteSlug"
               (click)="onRowActivate(route, $event)"
               >
-              <td><code>{{ route.slug }}</code></td>
+              @if (showSlugColumn) {
+                <td><code>{{ route.slug }}</code></td>
+              }
               <td>
                 <div class="admin-cell-stack">
                   <span class="admin-emphasis">{{ route.label }}</span>
@@ -83,7 +89,7 @@
           }
           @if (routes.length === 0 && !hasError) {
             <tr class="admin-empty-row">
-              <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+              <td [attr.colspan]="showSlugColumn ? 5 : 4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
             </tr>
           }
         }

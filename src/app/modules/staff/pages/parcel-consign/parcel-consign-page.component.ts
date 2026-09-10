@@ -605,6 +605,7 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
       weightKg: value.weightKg,
       description: value.description,
       prohibitedAcknowledged: value.prohibitedAcknowledged,
+      leaveAtStopConsent: value.leaveAtStopConsent,
       sender: value.sender,
       recipient: value.recipient,
       paymentMethod: 'cash',
