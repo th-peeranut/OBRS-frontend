@@ -15,6 +15,12 @@
       "why": "OBRS-1782 BEFORE/AFTER evidence for removing the dark fill from the staff sell tile rows. CAPTURE and not GATE because the verdict belongs to staff-contrast-gate.spec.ts and to the invariant-B self-test in customer-contrast-gate.spec.ts, which is where the clause split fails a build; this exists so the owner can see the two rows in both themes. It is a harder-working capture than most: BEFORE is reconstructed by injecting the removed declaration back into the live CSSOM, so each frame asserts the composited fill hex it was shot with, and the caption carries the MEASURED ratio -- a BEFORE that failed to reproduce the old surface, or an AFTER still painting one, fails here rather than producing a misleading pair. Hermetic on the gate lane's terms: it reuses e2e/support/staff-pages.ts, so every /api/** call is fulfilled in-browser."
     },
     {
+      "spec": "obrs-1787-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1787capture.config.ts",
+      "why": "OBRS-1787 AC-4 evidence: the public /find-booking screen used to drop the seat row entirely when seat_number was null, so it was the one of the three seat surfaces that told an OPEN-seating customer nothing about where to sit. It now states it once in the booking summary and suppresses the per-ticket rows. CAPTURE and not GATE because the behaviour itself is held by four DOM assertions in find-booking-page.component.spec.ts, mutation-checked red; this exists so the owner can see the screen. Hermetic on the gate lane's terms: /find-booking is public (OBRS-857, no session to seed) and calls exactly one endpoint, which the spec fulfils in-browser. Three arms: an all-OPEN booking, an ASSIGNED booking (AC-2, the branch that must not move, proven byte-identical before/after), and a mixed outbound-OPEN/return-ASSIGNED booking (AC-3), which is the case that decides whether the summary guard and the per-ticket guard are really complements."
+    },
+    {
       "spec": "obrs-1783-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1783capture.config.ts",

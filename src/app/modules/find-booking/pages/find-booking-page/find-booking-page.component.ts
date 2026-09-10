@@ -15,6 +15,7 @@ import {
   bookingLookupStopLabel,
 } from '../../../../shared/lib/booking-lookup-status';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { isOpenSeatingSeats } from '../../../../shared/lib/booking-ticket-view';
 
 /**
  * `idle` before the first submit; `throttled` is its own state because it is the ONE failure a
@@ -135,5 +136,19 @@ export class FindBookingPageComponent implements OnDestroy {
   /** Empty rather than a dash: an OPEN-seating schedule normalizes every seat to null (OBRS-321/483). */
   protected get hasTickets(): boolean {
     return (this.result?.tickets?.length ?? 0) > 0;
+  }
+
+  /**
+   * OBRS-1787: true when EVERY ticket on this booking has no seat number, i.e.
+   * the whole booking sits on OPEN-seating schedules. Then the seat is a fact
+   * about the trip, not about each passenger, and the summary states it once
+   * instead of repeating one identical sentence per ticket — the shape the 80mm
+   * slip and the customer e-ticket already use. Deliberately false for a mixed
+   * booking (outbound OPEN, return ASSIGNED): the per-ticket rows below are
+   * guarded on `!isOpenSeating`, so the two guards are exact complements and no
+   * seat can fall between them.
+   */
+  protected get isOpenSeating(): boolean {
+    return isOpenSeatingSeats((this.result?.tickets ?? []).map((ticket) => ticket.seatNumber));
   }
 }
