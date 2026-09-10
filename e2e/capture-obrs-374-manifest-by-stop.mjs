@@ -10,6 +10,8 @@
  *   # AFTER -- worktree carrying the OBRS-374 change
  *   OBRS_VARIANT=AFTER  OBRS_OUT_DIR=e2e/out/obrs-374/after  node e2e/capture-obrs-374-manifest-by-stop.mjs
  *
+ * Add OBRS_VIEWPORT=mobile for the phone-width run (the shape staff actually use it in).
+ *
  * The seeded trip (schedule 1) deliberately INTERLEAVES its pickup stops against seat order --
  * seats 1/4/7 = Ban Bueng, 2/5/8 = Nong Chak, 3/6 = Chonburi -- so "ordered by seat" and "grouped
  * by stop" cannot photograph the same. That is the whole point of the fixture: on a trip whose
@@ -36,6 +38,16 @@ const PASSWORD = process.env.OBRS_QA_PASSWORD ?? 'P@ssw0rd';
 const EMAIL = process.env.OBRS_STAFF_EMAIL ?? 'driver@system.local';
 const SCHEDULE_ID = process.env.OBRS_SCHEDULE_ID ?? '1';
 const FILTER_STOP = process.env.OBRS_FILTER_STOP ?? 'Nong Chak';
+
+// A driver scanning at the kerb is holding a phone, not sitting at a 1440px desktop, so the same
+// evidence has to be readable at phone width. 390x844 CSS px is the modern mid-range iPhone/Android
+// viewport; it is written out here rather than pulled from a playwright device preset so the number
+// on the card is the number this file ran with.
+const VIEWPORTS = {
+  desktop: { viewport: { width: 1440, height: 1000 } },
+  mobile: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+};
+const VIEWPORT = (process.env.OBRS_VIEWPORT ?? 'desktop').toLowerCase();
 
 const measured = {};
 
@@ -71,10 +83,30 @@ async function readManifest(page) {
   });
 }
 
+/**
+ * At phone width the manifest sits inside bootstrap's `.table-responsive`, which scrolls sideways
+ * rather than reflowing. Whether the driver has to scroll -- and by how much -- is a number, not an
+ * impression, so read it instead of judging it from the picture.
+ */
+async function readOverflow(page) {
+  return page.evaluate(() => {
+    const box = document.querySelector('.table-responsive');
+    if (!box) return null;
+    const groupCell = document.querySelector('.boarding-stop-group-row td');
+    return {
+      viewportWidth: window.innerWidth,
+      boxClientWidth: box.clientWidth,
+      tableScrollWidth: box.scrollWidth,
+      overflowPx: box.scrollWidth - box.clientWidth,
+      groupHeaderVisibleWidth: groupCell ? Math.round(groupCell.getBoundingClientRect().width) : null,
+    };
+  });
+}
+
 async function main() {
   await mkdir(OUT, { recursive: true });
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const ctx = await browser.newContext(VIEWPORTS[VIEWPORT] ?? VIEWPORTS.desktop);
   await ctx.addInitScript(() => window.localStorage.setItem('app_language', 'th'));
   const page = await ctx.newPage();
 
@@ -83,6 +115,8 @@ async function main() {
   await page.locator('table tbody tr').first().waitFor({ timeout: 30000 });
 
   measured['1-manifest'] = await readManifest(page);
+  measured['overflow'] = await readOverflow(page);
+  console.log(`viewport=${VIEWPORT}  overflow = ${JSON.stringify(measured['overflow'])}`);
   await page.screenshot({ path: path.join(OUT, '1-manifest.png'), fullPage: true });
   console.log(`1-manifest.png  rows = ${JSON.stringify(measured['1-manifest'])}`);
 
@@ -135,6 +169,35 @@ async function main() {
       console.log(`3-scan-across-groups.png  filtered-before = ${JSON.stringify(before.filter((r) => r.header))}`);
       console.log(`3-scan-across-groups.png  headers-after   = ${JSON.stringify(measured['3-scan-across-groups'].filter((r) => r.header))}`);
     }
+  }
+
+  // Phone width is where the grouping has to survive a sideways scroll: the board button sits in the
+  // last column, so a driver reaching it pushes the stop name off the left edge. Capture the far
+  // right of the scroll AND record whether the group row still carries readable text there, instead
+  // of asserting from the un-scrolled picture that it does.
+  if (VIEWPORT === 'mobile') {
+    await page.locator('.boarding-stop-group-row').first().scrollIntoViewIfNeeded();
+    await page.evaluate(() => {
+      const box = document.querySelector('.table-responsive');
+      if (box) box.scrollLeft = box.scrollWidth;
+    });
+    await page.waitForTimeout(200);
+    measured['4-scrolled-right'] = await page.evaluate(() => {
+      const box = document.querySelector('.table-responsive');
+      // The band stretches the full table width, so asking whether the CELL is on screen always
+      // answers yes. The thing a driver actually needs is the stop NAME, so measure that element.
+      const name = document.querySelector('.boarding-stop-group-name');
+      const r = name?.getBoundingClientRect();
+      return {
+        scrollLeft: box ? Math.round(box.scrollLeft) : null,
+        groupNameText: name ? name.innerText.trim() : null,
+        groupNameRightPx: r ? Math.round(r.right) : null,
+        groupNameStillReadable: r ? r.right > 0 && r.left < window.innerWidth : null,
+        lastHeaderColumn: [...document.querySelectorAll('thead th')].pop()?.innerText.replace(/\s+/g, ' ').trim() ?? null,
+      };
+    });
+    await page.screenshot({ path: path.join(OUT, '4-scrolled-right.png'), fullPage: false });
+    console.log(`4-scrolled-right.png  ${JSON.stringify(measured['4-scrolled-right'])}`);
   }
 
   await writeFile(path.join(OUT, 'measured.json'), JSON.stringify({ variant: VARIANT, measured }, null, 2));
