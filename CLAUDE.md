@@ -218,7 +218,7 @@ The API contract (endpoint paths, request/response shapes, auth levels, error co
 ../OBRS-backend/docs/api/
 ```
 
-When you need to know what an endpoint returns, read those files. Do not assume backend behavior that is not documented there. `ResponseAPI<T>` (called `ApiResponse` in the domain glossary) has a fixed shape — `{ status, message, data }` — defined by the backend. Do not modify it.
+When you need to know what an endpoint returns, read those files. Do not assume backend behavior that is not documented there. `ResponseAPI<T>` (called `ApiResponse` in the domain glossary) has a fixed shape — `{ timestamp, code, message, data }`, where `code` is an integer HTTP status (e.g. `200`), not a `status` string — defined by the backend. Do not modify it.
 
 #### Rules
 
