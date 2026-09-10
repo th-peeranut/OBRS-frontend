@@ -262,3 +262,116 @@ describe('AppVehicleMaintenancePanelComponent — submitMaintenance() (AC8 inval
     expect((component as any).isFormModalOpen).toBeFalse();
   });
 });
+
+// OBRS-357: the create-form pre-fill the inspection-defect deep-link hands down.
+describe('AppVehicleMaintenancePanelComponent — createDraft (OBRS-357)', () => {
+  const DRAFT = {
+    reason: 'Repair from the vehicle inspection on 21 Jul 2026 10:00 (2 defect(s))',
+    notes: '• Brakes: worn\n• Tyres: bald',
+    sourceInspectionId: 5,
+  };
+
+  function withDraft(component: AppVehicleMaintenancePanelComponent) {
+    component.createDraft = DRAFT;
+    component.ngOnChanges({ createDraft: {} as any });
+    return component;
+  }
+
+  it('opens the create modal pre-filled with the server-composed reason and notes', () => {
+    const component = withDraft(createComponent());
+    const form = (component as any).maintenanceForm;
+
+    expect((component as any).isFormModalOpen).toBeTrue();
+    expect((component as any).isEditMode).toBeFalse();
+    expect(form.get('reason').value).toBe(DRAFT.reason);
+    expect(form.get('notes').value).toBe(DRAFT.notes);
+  });
+
+  // The repair's own decisions are still the owner's - design-system §3.1
+  // forbids a pre-seeded status, and a start date is not a fact of the sheet.
+  it('leaves startDate and maintenanceStatus empty, so the form is still invalid until filled', () => {
+    const component = withDraft(createComponent());
+    const form = (component as any).maintenanceForm;
+
+    expect(form.get('startDate').value).toBeNull();
+    expect(form.get('maintenanceStatus').value).toBe('');
+    expect(form.invalid).toBeTrue();
+  });
+
+  it('opens no modal for a reader (canWrite=false), exactly like the Add button', () => {
+    const component = withDraft(
+      createComponent({}, createStoreStub([]), createAlertServiceStub(), false)
+    );
+
+    expect((component as any).isFormModalOpen).toBeFalse();
+  });
+
+  it('create: sends sourceInspectionId so the record points back at the sheet', async () => {
+    const adminApiServiceStub = {
+      createVehicleMaintenance: jasmine
+        .createSpy('createVehicleMaintenance')
+        .and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    };
+    const component = withDraft(createComponent(adminApiServiceStub));
+    (component as any).maintenanceForm.patchValue({
+      startDate: new Date(2026, 6, 22),
+      maintenanceStatus: 'scheduled',
+    });
+
+    await component['submitMaintenance']();
+
+    expect(adminApiServiceStub.createVehicleMaintenance).toHaveBeenCalled();
+    const payload = adminApiServiceStub.createVehicleMaintenance.calls.mostRecent().args[1];
+    expect(payload.sourceInspectionId).toBe(5);
+    expect(payload.reason).toBe(DRAFT.reason);
+  });
+
+  // The draft belongs to the modal it opened. An "Add" straight afterwards is
+  // an ordinary create and must not inherit the link.
+  it('a plain Add after the deep-link create sends no sourceInspectionId and no draft text', async () => {
+    const adminApiServiceStub = {
+      createVehicleMaintenance: jasmine
+        .createSpy('createVehicleMaintenance')
+        .and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    };
+    const component = withDraft(createComponent(adminApiServiceStub));
+
+    component['openCreateModal']();
+    const form = (component as any).maintenanceForm;
+    expect(form.get('reason').value).toBe('');
+    expect(form.get('notes').value).toBe('');
+
+    form.patchValue({
+      reason: 'Oil change',
+      startDate: new Date(2026, 6, 22),
+      maintenanceStatus: 'scheduled',
+    });
+    await component['submitMaintenance']();
+
+    const payload = adminApiServiceStub.createVehicleMaintenance.calls.mostRecent().args[1];
+    expect(payload.sourceInspectionId).toBeUndefined();
+  });
+
+  it('an edit opened after the deep-link omits sourceInspectionId, preserving the record link', async () => {
+    const adminApiServiceStub = {
+      updateVehicleMaintenance: jasmine
+        .createSpy('updateVehicleMaintenance')
+        .and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    };
+    const component = withDraft(createComponent(adminApiServiceStub));
+
+    component['openEditModal']({
+      id: 1,
+      reason: 'Brake inspection',
+      startDate: '2026-07-01',
+      endDate: null,
+      nextDueDate: null,
+      statusCode: 'scheduled',
+      notes: '',
+    } as any);
+    await component['submitMaintenance']();
+
+    const payload = adminApiServiceStub.updateVehicleMaintenance.calls.mostRecent().args[2];
+    expect(payload.sourceInspectionId).toBeUndefined();
+  });
+});

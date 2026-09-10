@@ -2,8 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { By } from '@angular/platform-browser';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import { VehiclesPageComponent } from './vehicles-page.component';
 import { VehiclesData, VehiclesStore } from './vehicles.store';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
@@ -57,18 +58,48 @@ function makeAuthServiceStub(canWrite = true) {
   return { hasAnyRole: jasmine.createSpy('hasAnyRole').and.returnValue(canWrite) };
 }
 
+// OBRS-357: the page subscribes to queryParamMap (not the snapshot - a
+// param-only navigation reuses the component), so every construction needs a
+// route. An empty param map is the ordinary entry.
+function makeRouteStub(queryParams: Record<string, string> = {}) {
+  return { queryParamMap: of(convertToParamMap(queryParams)) };
+}
+
 function makeComponent(
   store: ReturnType<typeof makeStoreStub>,
-  adminApi: Record<string, unknown> = {}
+  adminApi: Record<string, unknown> = {},
+  route: ReturnType<typeof makeRouteStub> = makeRouteStub(),
+  alertOverride?: Record<string, unknown>
 ) {
-  const alert = { success: () => Promise.resolve(), error: () => Promise.resolve() };
+  const alert = alertOverride ?? { success: () => Promise.resolve(), error: () => Promise.resolve() };
   return new VehiclesPageComponent(
     adminApi as any,
     alert as any,
     createTranslateStub(),
     store as any,
-    makeAuthServiceStub() as any
+    makeAuthServiceStub() as any,
+    route as any
   );
+}
+
+// OBRS-357: what GET /api/private/inspections/{id}/maintenance-draft answers.
+function makeDraftApi(vehicleId = 1) {
+  return {
+    getInspectionMaintenanceDraft: jasmine
+      .createSpy('getInspectionMaintenanceDraft')
+      .and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            inspectionId: 5,
+            vehicleId,
+            suggestedReason: 'Repair from the vehicle inspection on 21 Jul 2026 10:00 (2 defect(s))',
+            suggestedNotes: '• Brakes: worn\n• Tyres: bald',
+          },
+        })
+      ),
+  };
 }
 
 describe('VehiclesPageComponent', () => {
@@ -219,7 +250,8 @@ describe('VehiclesPageComponent — Maintenance tab (OBRS-209)', () => {
       alert as any,
       createTranslateStub(),
       makeStoreStub(null) as any,
-      authService as any
+      authService as any,
+      makeRouteStub() as any
     );
 
     expect(authService.hasAnyRole).toHaveBeenCalledWith(['owner']);
@@ -341,6 +373,8 @@ describe('VehiclesPageComponent template wiring to child components', () => {
         { provide: AdminApiService, useValue: adminApi },
         { provide: AlertService, useValue: alert },
         { provide: AuthService, useValue: authService },
+        // OBRS-357: the page subscribes to the route's queryParamMap.
+        { provide: ActivatedRoute, useValue: makeRouteStub() },
       ],
     }).compileComponents();
 
@@ -421,5 +455,134 @@ describe('VehiclesPageComponent template wiring to child components', () => {
 
     expect((component as any).confirmDelete).toHaveBeenCalled();
     expect((component as any).closeDeleteModal).toHaveBeenCalled();
+  });
+});
+
+// OBRS-357: the INSPECTION_DEFECT_REPORTED notification deep-link's landing.
+describe('VehiclesPageComponent — inspection deep-link (?fromInspection, OBRS-357)', () => {
+  it('does not call the resolver on an ordinary entry with no query param', () => {
+    const adminApi = makeDraftApi();
+    const component = makeComponent(makeStoreStub(makeData()), adminApi);
+
+    component.ngOnInit();
+
+    expect(adminApi.getInspectionMaintenanceDraft).not.toHaveBeenCalled();
+    expect(component['activeTab']).toBe('list');
+  });
+
+  it('resolves the inspection id from the query param', () => {
+    const adminApi = makeDraftApi();
+    const component = makeComponent(
+      makeStoreStub(makeData()),
+      adminApi,
+      makeRouteStub({ fromInspection: '5' })
+    );
+
+    component.ngOnInit();
+
+    expect(adminApi.getInspectionMaintenanceDraft).toHaveBeenCalledWith(5);
+  });
+
+  // The likeliest real case: the bell is in the topbar of THIS page, so
+  // clicking the notification here is a param-only navigation that reuses the
+  // component - ngOnInit never runs a second time.
+  it('reacts to a query-param-only navigation while already on the vehicles page', () => {
+    const paramMap = new BehaviorSubject(convertToParamMap({}));
+    const adminApi = makeDraftApi();
+    const component = makeComponent(makeStoreStub(makeData()), adminApi, {
+      queryParamMap: paramMap,
+    });
+    component.ngOnInit();
+    expect(adminApi.getInspectionMaintenanceDraft).not.toHaveBeenCalled();
+
+    paramMap.next(convertToParamMap({ fromInspection: '5' }));
+
+    expect(adminApi.getInspectionMaintenanceDraft).toHaveBeenCalledWith(5);
+  });
+
+  it('ignores a non-numeric or non-positive fromInspection instead of calling the API', () => {
+    const adminApi = makeDraftApi();
+    const component = makeComponent(
+      makeStoreStub(makeData()),
+      adminApi,
+      makeRouteStub({ fromInspection: 'not-a-number' })
+    );
+
+    component.ngOnInit();
+
+    expect(adminApi.getInspectionMaintenanceDraft).not.toHaveBeenCalled();
+  });
+
+  it('focuses the vehicle, opens the maintenance tab and hands the panel the draft', async () => {
+    const component = makeComponent(
+      makeStoreStub(makeData()),
+      makeDraftApi(1),
+      makeRouteStub({ fromInspection: '5' })
+    );
+    component.ngOnInit();
+
+    await component['resolveInspectionDraft'](5);
+
+    expect(component['focusedVehicle']?.id).toBe(1);
+    expect(component['activeTab']).toBe('maintenance');
+    expect(component['maintenanceDraft']).toEqual({
+      reason: 'Repair from the vehicle inspection on 21 Jul 2026 10:00 (2 defect(s))',
+      notes: '• Brakes: worn\n• Tyres: bald',
+      sourceInspectionId: 5,
+    });
+  });
+
+  // The draft fetch and the vehicles list race. This is the order the other
+  // test cannot cover: the draft wins, and there is no row to focus yet.
+  it('waits for the vehicle rows when the draft resolves first, then focuses', async () => {
+    const store = makeStoreStub(null);
+    const component = makeComponent(store, makeDraftApi(1), makeRouteStub({ fromInspection: '5' }));
+    component.ngOnInit();
+
+    await component['resolveInspectionDraft'](5);
+
+    expect(component['focusedVehicle']).toBeNull();
+    expect(component['activeTab']).toBe('list');
+
+    store.data$.next(makeData());
+
+    expect(component['focusedVehicle']?.id).toBe(1);
+    expect(component['activeTab']).toBe('maintenance');
+  });
+
+  it('surfaces an error instead of silently ignoring the link when the resolver fails', async () => {
+    const error = jasmine.createSpy('error').and.resolveTo(undefined);
+    const adminApi = {
+      getInspectionMaintenanceDraft: jasmine
+        .createSpy('getInspectionMaintenanceDraft')
+        .and.returnValue(throwError(() => new Error('boom'))),
+    };
+    const component = makeComponent(
+      makeStoreStub(makeData()),
+      adminApi,
+      makeRouteStub({ fromInspection: '5' }),
+      { success: () => Promise.resolve(), error }
+    );
+    component.ngOnInit();
+
+    await component['resolveInspectionDraft'](5);
+
+    expect(error).toHaveBeenCalled();
+    expect(component['maintenanceDraft']).toBeNull();
+  });
+
+  it('clearing the focused vehicle drops the draft, so a manual re-focus opens no modal', async () => {
+    const component = makeComponent(
+      makeStoreStub(makeData()),
+      makeDraftApi(1),
+      makeRouteStub({ fromInspection: '5' })
+    );
+    component.ngOnInit();
+    await component['resolveInspectionDraft'](5);
+
+    component['clearFocusedVehicle']();
+
+    expect(component['maintenanceDraft']).toBeNull();
+    expect(component['activeTab']).toBe('list');
   });
 });

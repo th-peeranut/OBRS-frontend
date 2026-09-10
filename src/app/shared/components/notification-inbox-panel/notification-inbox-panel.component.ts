@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { NotificationItem } from '../../interfaces/notification.interface';
+import { isDeepLinkableNotification } from '../../lib/notification-deep-link';
 
 /**
  * OBRS-317: dumb/presentational inbox panel hosted inside the notification
@@ -24,12 +25,13 @@ export class NotificationInboxPanelComponent {
   @Output() markOne = new EventEmitter<number>();
   @Output() markAllRead = new EventEmitter<void>();
   @Output() retry = new EventEmitter<void>();
-  /** OBRS-1308: emitted when the opened row is a deep-linkable notification
-   * (currently only `NOTIF_MSG_OVERRIDE_PENDING`). The row itself still only
-   * ever emits an `id` (its own pinned contract — see
-   * notification-inbox-row.component.spec.ts; do not change that); this
+  /** OBRS-1308: emitted when the opened row is a deep-linkable notification.
+   * The row itself still only ever emits an `id` (its own pinned contract —
+   * see notification-inbox-row.component.spec.ts; do not change that); this
    * panel resolves the full item from its own `@Input() items` to decide
-   * whether a navigation applies. */
+   * whether a navigation applies. OBRS-357 moved *which* types qualify out of
+   * this file and into the shared `NOTIFICATION_DEEP_LINKS` table, so this
+   * panel and the bell that routes the event can never disagree about it. */
   @Output() navigate = new EventEmitter<{ type: string; id: number }>();
 
   // First-load spinner only — a background refresh with cached items must
@@ -55,7 +57,7 @@ export class NotificationInboxPanelComponent {
     this.markOne.emit(id);
 
     const item = this.items.find((i) => i.id === id);
-    if (item?.notificationType === 'NOTIF_MSG_OVERRIDE_PENDING' && item.relatedEntityId != null) {
+    if (item && item.relatedEntityId != null && isDeepLinkableNotification(item.notificationType)) {
       this.navigate.emit({ type: item.notificationType, id: item.relatedEntityId });
     }
   }
