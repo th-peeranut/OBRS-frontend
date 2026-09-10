@@ -1648,7 +1648,12 @@
         "HANDER_PLACEHOLDER": "选择交接现金的人员",
         "HANDER_EMPTY": "没有可选择的销售员。",
         "REASON_LABEL": "差异原因",
-        "REASON_PLACEHOLDER": "说明差异原因（必填）"
+        "REASON_PLACEHOLDER": "说明差异原因（必填）",
+        "TOP_UP_NOTICE": "本班次钱箱中的现金少于需扣除的金额（人头费、司机预支、日终转交的票款），因此由车主向售票员付款，而非售票员向车主交款。",
+        "TOP_UP_EXPECTED": "车主应付售票员",
+        "TOP_UP_COUNTED_LABEL": "车主付给售票员的现金",
+        "TOP_UP_COUNTED_HELPER": "请填写正数，无需负号。系统会自动记录方向。",
+        "TOP_UP_DIALOG_TEXT": "以车主付给售票员 {{counted}} 结算此班次吗？此操作无法撤销。"
       },
       "METHOD": {
         "CASH": "现金",

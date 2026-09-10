@@ -242,11 +242,22 @@ function buildPassengers(journey: BookingTicketJourney | null): TicketPassenger[
  * case and must keep showing the `'-'` placeholder unchanged.
  */
 export function isJourneyOpenSeating(journey: BookingTicketJourney): boolean {
-  const tickets = journey.tickets ?? [];
-  if (tickets.length === 0) {
+  return isOpenSeatingSeats((journey.tickets ?? []).map((ticket) => ticket.seatNumber));
+}
+
+/**
+ * OBRS-1787: the same rule, over the seat values alone. Three screens now state
+ * the OPEN seat once — the e-ticket, the 80mm slip and the public booking
+ * lookup — but the lookup reads `BookingLookupTicket`, which shares no type with
+ * `BookingTicketItem` (`id`/`ticketNumber` are required there and absent here).
+ * Taking the seats rather than the tickets is what lets one rule serve all three
+ * instead of a second copy drifting away from this one.
+ */
+export function isOpenSeatingSeats(seats: (string | null | undefined)[]): boolean {
+  if (seats.length === 0) {
     return false;
   }
-  return tickets.every((ticket) => !ticket.seatNumber?.trim());
+  return seats.every((seat) => !seat?.trim());
 }
 
 function buildSeatList(passengers: TicketPassenger[]): string {

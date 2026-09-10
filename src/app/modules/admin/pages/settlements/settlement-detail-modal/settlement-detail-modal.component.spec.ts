@@ -344,6 +344,140 @@ describe('SettlementDetailModalComponent', () => {
     expect(component['discrepancyCents']).toBeNull();
   });
 
+  // ── OBRS-1772 — a round whose expectation is BELOW zero ──────────────────
+  // The drawer pays out the per-head fee, the driver's advance and (at a
+  // deferring counter) the whole ticket-cash bucket regardless of how the
+  // passengers paid, so a mostly-transferred round expects less than nothing:
+  // the owner owes the seller. Every assertion below failed before this card.
+  function makeNegativeDetail(expected = '-260.00'): SettlementScheduleDetailDto {
+    const base = makeDetail();
+    return {
+      ...base,
+      live: { ...base.live, expectedCashAmount: expected, perHeadDeducted: '260.00' },
+    };
+  }
+
+  it('reads a negative expectation as itself — not as a zero (the OBRS-1772 bug)', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeNegativeDetail();
+    expect(component['expectedCents']).toBe(-26000);
+    expect(component['isTopUp']).toBeTrue();
+  });
+
+  it('an expectation of 0.00 or above is NOT top-up', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeNegativeDetail('0.00');
+    expect(component['expectedCents']).toBe(0);
+    expect(component['isTopUp']).toBeFalse();
+
+    component.detail = makeDetail(); // 600.00
+    expect(component['isTopUp']).toBeFalse();
+  });
+
+  // The old failure end to end: counting an empty drawer on a negative round
+  // used to read "discrepancy 0", open the confirm button, and then get a 400
+  // back for a discrepancy the screen never showed.
+  it('an empty drawer on a negative round is a discrepancy, not a reconciled count', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeNegativeDetail();
+    component['countedCashInput'] = '0.00';
+    component['handedOverById'] = 7;
+    expect(component['discrepancyCents']).toBe(26000);
+    expect(component['hasDiscrepancy']()).toBeTrue();
+    expect(component['canConfirm']).toBeFalse(); // reason still required
+  });
+
+  // The approved shape (comment 14236 §3): the field asks for a POSITIVE
+  // amount and the code applies the sign, so `toCents` keeps rejecting a typed
+  // minus and nobody has to enter one.
+  it('top-up mode signs the typed magnitude itself — no minus is ever typed', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeNegativeDetail();
+    component['countedCashInput'] = '260.00';
+    component['handedOverById'] = 7;
+
+    expect(component['countedMagnitudeCents']).toBe(26000);
+    expect(component['countedCents']).toBe(-26000);
+    expect(component['discrepancyCents']).toBe(0);
+    expect(component['hasDiscrepancy']()).toBeFalse();
+    expect(component['canConfirm']).toBeTrue(); // no reason needed — it reconciles
+  });
+
+  it('emits the top-up as a negative amount the backend already accepts', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    let payload: SettlementConfirmPayload | undefined;
+    component.confirmRequested.subscribe((p) => (payload = p));
+
+    component.detail = makeNegativeDetail();
+    component['countedCashInput'] = '260';
+    component['handedOverById'] = 7;
+    component['onConfirmClick']();
+
+    expect(payload).toEqual({
+      countedCashAmount: '-260.00',
+      handedOverBy: 7,
+      discrepancyReason: undefined,
+    });
+  });
+
+  it('paying the seller short in top-up mode still forces a reason', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeNegativeDetail();
+    component['countedCashInput'] = '200.00'; // 60 short of the 260 owed
+    component['handedOverById'] = 7;
+    expect(component['discrepancyCents']).toBe(6000);
+    expect(component['canConfirm']).toBeFalse();
+
+    component['discrepancyReasonInput'] = 'จ่ายไม่ครบ ขาด 60';
+    expect(component['canConfirm']).toBeTrue();
+  });
+
+  // AC-3: "cannot be parsed" and "is zero" must not collapse into one value.
+  it('an unparsable expectation leaves the discrepancy null, never 0', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeNegativeDetail('n/a');
+    component['countedCashInput'] = '600.00';
+    expect(component['expectedCents']).toBeNull();
+    expect(component['discrepancyCents']).toBeNull();
+    expect(component['hasDiscrepancy']()).toBeFalse();
+  });
+
+  // Scrutinize raised the one failure that would matter most here: the modal
+  // opens optimistically from `summary`, so could a detail arriving mid-typing
+  // flip `isTopUp` and silently re-read a string already in the box as the
+  // opposite movement of money? It cannot — the sign-off form is rendered
+  // inside `@if (detail && detail.status === 'PENDING')`, so the field does not
+  // exist during that window, and nothing can be submitted either. Pinned here
+  // so the day someone lifts the form out of that block, this goes red.
+  it('cannot submit — or even mean anything — while detail is still loading', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.summary = makeSummary();
+    component.detail = null;
+    component.isFetching = true;
+    component.ngOnChanges({});
+
+    expect(component['isTopUp']).toBeFalse();     // the '0.00' fallback, never a direction
+    expect(component['expectedCents']).toBe(0);
+    expect(component['countedCashInput']).toBe(''); // reset on open, nothing to reinterpret
+    expect(component['canConfirm']).toBeFalse();  // and no route to the server either
+
+    // The detail then lands negative: the direction is established with the
+    // field's first paint, not applied retroactively to something already typed.
+    component.detail = makeNegativeDetail();
+    component.ngOnChanges({});
+    expect(component['isTopUp']).toBeTrue();
+    expect(component['countedCashInput']).toBe('');
+  });
+
+  it('the figure under the flipped label is a magnitude, not a minus sign', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    component.detail = makeNegativeDetail();
+    expect(component['expectedDisplayAmount']()).toBe('260.00');
+
+    component.detail = makeDetail();
+    expect(component['expectedDisplayAmount']()).toBe('600.00');
+  });
+
   // A short drawer needs a reason before it can be signed off (mirrors the
   // backend's SETTLEMENT_DISCREPANCY_REASON_REQUIRED).
   it('a discrepancy blocks confirm until a reason is given', () => {

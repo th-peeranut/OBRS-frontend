@@ -250,9 +250,24 @@
               <p class="settlement-detail-label settlement-signoff-title">
                 {{ 'ADMIN.SETTLEMENTS.CONFIRM.SECTION_TITLE' | translate }}
               </p>
+              <!-- OBRS-1772: a round can expect LESS than nothing — the per-head
+              fee, the driver's advance and deferred ticket cash all leave the
+              drawer regardless of how the passengers paid. When that happens the
+              money moves the other way, so the form says so instead of printing
+              a minus sign under "cash to hand over", which is not an instruction
+              anyone can follow. -->
+              @if (isTopUp) {
+                <p class="admin-muted settlement-field-help" data-testid="settlement-top-up-notice">
+                  {{ 'ADMIN.SETTLEMENTS.CONFIRM.TOP_UP_NOTICE' | translate }}
+                </p>
+              }
               <div class="settlement-field">
                 <label class="settlement-field-label" for="counted-cash">
-                  {{ 'ADMIN.SETTLEMENTS.CONFIRM.COUNTED_LABEL' | translate }}
+                  @if (isTopUp) {
+                    {{ 'ADMIN.SETTLEMENTS.CONFIRM.TOP_UP_COUNTED_LABEL' | translate }}
+                  } @else {
+                    {{ 'ADMIN.SETTLEMENTS.CONFIRM.COUNTED_LABEL' | translate }}
+                  }
                 </label>
                 <input
                   id="counted-cash"
@@ -263,7 +278,11 @@
                   [(ngModel)]="countedCashInput"
                   />
                   <p class="admin-muted settlement-field-help">
-                    {{ 'ADMIN.SETTLEMENTS.CONFIRM.COUNTED_HELPER' | translate }}
+                    @if (isTopUp) {
+                      {{ 'ADMIN.SETTLEMENTS.CONFIRM.TOP_UP_COUNTED_HELPER' | translate }}
+                    } @else {
+                      {{ 'ADMIN.SETTLEMENTS.CONFIRM.COUNTED_HELPER' | translate }}
+                    }
                   </p>
                   @if (countedCashInput.trim().length > 0 && countedCents === null) {
                     <p
@@ -303,9 +322,19 @@
                     <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.ADVANCE_PAID_OUT' | translate }}</span>
                     <span>-{{ formatMoney(advancePaidOut) }}</span>
                   </div>
+                  <!-- OBRS-1772: the label carries the direction, the figure
+                  carries the magnitude — so a negative round reads as a
+                  sentence someone can act on rather than a minus sign under a
+                  line that tells them to hand cash over. -->
                   <div class="settlement-detail-row">
-                    <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.EXPECTED_CASH' | translate }}</span>
-                    <span data-testid="settlement-expected-cash">{{ formatMoney(expectedCashAmount()) }}</span>
+                    <span class="settlement-detail-label">
+                      @if (isTopUp) {
+                        {{ 'ADMIN.SETTLEMENTS.CONFIRM.TOP_UP_EXPECTED' | translate }}
+                      } @else {
+                        {{ 'ADMIN.SETTLEMENTS.CONFIRM.EXPECTED_CASH' | translate }}
+                      }
+                    </span>
+                    <span data-testid="settlement-expected-cash">{{ formatMoney(expectedDisplayAmount()) }}</span>
                   </div>
                   @if (discrepancyCents !== null) {
                     <div class="settlement-detail-row">
