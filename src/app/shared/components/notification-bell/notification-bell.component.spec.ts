@@ -113,9 +113,10 @@ describe('NotificationBellComponent', () => {
     expect(inboxServiceSpy.refreshOnOpen).toHaveBeenCalledTimes(1);
   });
 
-  // OBRS-1308: the inbox panel's new `navigate` output, currently only fired
-  // for a NOTIF_MSG_OVERRIDE_PENDING row.
-  describe('onNavigate (OBRS-1308)', () => {
+  // OBRS-1308: the inbox panel's `navigate` output. OBRS-357 moved the route
+  // itself into the shared NOTIFICATION_DEEP_LINKS table and added a second
+  // type, so navigate() is now always called with an extras argument.
+  describe('onNavigate (OBRS-1308, table since OBRS-357)', () => {
     it('closes the popover and navigates to the review detail route', () => {
       const navigateSpy = spyOn(router, 'navigate').and.resolveTo(true);
       const hideSpy = jasmine.createSpy('hide');
@@ -124,10 +125,37 @@ describe('NotificationBellComponent', () => {
       component['onNavigate']({ type: 'NOTIF_MSG_OVERRIDE_PENDING', id: 42 });
 
       expect(hideSpy).toHaveBeenCalled();
-      expect(navigateSpy).toHaveBeenCalledWith([
-        '/admin/settings/notification-messages/reviews',
-        42,
-      ]);
+      expect(navigateSpy).toHaveBeenCalledWith(
+        ['/admin/settings/notification-messages/reviews', 42],
+        {}
+      );
+    });
+
+    // OBRS-357: the inspection-defect row lands on the vehicles page carrying
+    // the INSPECTION id - the page resolves it into a vehicle server-side,
+    // because this table cannot know which vehicle the sheet belongs to.
+    it('sends an inspection-defect row to the vehicles page with ?fromInspection', () => {
+      const navigateSpy = spyOn(router, 'navigate').and.resolveTo(true);
+      const hideSpy = jasmine.createSpy('hide');
+      component.overlayPanel = { hide: hideSpy } as unknown as typeof component.overlayPanel;
+
+      component['onNavigate']({ type: 'INSPECTION_DEFECT_REPORTED', id: 5 });
+
+      expect(hideSpy).toHaveBeenCalled();
+      expect(navigateSpy).toHaveBeenCalledWith(['/admin/vehicles'], {
+        queryParams: { fromInspection: 5 },
+      });
+    });
+
+    it('navigates nowhere - and leaves the popover open - for a type with no mapping', () => {
+      const navigateSpy = spyOn(router, 'navigate').and.resolveTo(true);
+      const hideSpy = jasmine.createSpy('hide');
+      component.overlayPanel = { hide: hideSpy } as unknown as typeof component.overlayPanel;
+
+      component['onNavigate']({ type: 'SOME_UNMAPPED_TYPE', id: 1 });
+
+      expect(navigateSpy).not.toHaveBeenCalled();
+      expect(hideSpy).not.toHaveBeenCalled();
     });
   });
 

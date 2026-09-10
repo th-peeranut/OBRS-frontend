@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
@@ -26,6 +27,7 @@ import {
   MaintenancePartLabels,
   toPartOptions,
 } from './vehicle-maintenance-plan/vehicle-maintenance-plan.mappers';
+import { MaintenanceCreateDraft } from './vehicle-maintenance/vehicle-maintenance.mappers';
 
 /**
  * Vehicle management list + CRUD + maintenance focus (OBRS-91 / OBRS-209).
@@ -73,6 +75,10 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   // from the "Maintenance" tab's work-order log) is a fourth tab, same mechanic.
   protected activeTab: 'list' | 'maintenance' | 'inspections' | 'plans' = 'list';
   protected focusedVehicle: VehicleRow | null = null;
+  // OBRS-357: set only when this page was entered from an inspection-defect
+  // notification deep-link (?fromInspection=<id>), and passed straight down to
+  // the maintenance panel, which opens its create modal pre-filled.
+  protected maintenanceDraft: MaintenanceCreateDraft | null = null;
   protected maintenanceStatusOptions: AdminLookupDto[] = [];
   // OBRS-1333: unlike maintenanceStatusOptions above (a fetched Lookup
   // category), `part` is a static backend enum (`MAINTENANCE_PART_CODES`) —
@@ -97,6 +103,11 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
 
   private readonly subscriptions = new Subscription();
 
+  // OBRS-357: the resolved draft, held until the vehicle rows it must focus
+  // have arrived. The deep-link's fetch and the vehicles list race, and either
+  // can land first, so neither one alone may do the focusing.
+  private pendingMaintenanceDraft: MaintenanceCreateDraft & { vehicleId: number } | null = null;
+
   private rawVehicles: AdminVehicleDto[] = [];
   private rawVehicleTypes: AdminVehicleTypeDto[] = [];
   private rawLookups: AdminLookupDto[] = [];
@@ -106,7 +117,8 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
     private readonly store: VehiclesStore,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly route: ActivatedRoute
   ) {
     this.canWriteMaintenance = this.authService.hasAnyRole(['owner']);
 
@@ -148,6 +160,21 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
       })
     );
     void this.store.refresh();
+
+    // OBRS-357: the OBSERVABLE, not the snapshot. The owner who clicks an
+    // inspection-defect notification while already ON this page gets a
+    // query-param-only navigation, which Angular serves by REUSING this
+    // component - ngOnInit does not run again and a snapshot read would sit
+    // there doing nothing. That is the likeliest case, not an edge one: the
+    // bell lives in the admin topbar of every admin page, this one included.
+    this.subscriptions.add(
+      this.route.queryParamMap.subscribe((params) => {
+        const fromInspection = Number(params.get('fromInspection'));
+        if (Number.isInteger(fromInspection) && fromInspection > 0) {
+          void this.resolveInspectionDraft(fromInspection);
+        }
+      })
+    );
   }
 
   ngOnDestroy(): void {
@@ -213,6 +240,9 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected clearFocusedVehicle(): void {
     this.focusedVehicle = null;
     this.activeTab = 'list';
+    // OBRS-357: leaving the focused vehicle ends the deep-link's visit; a
+    // later re-focus by hand must not re-open a pre-filled modal.
+    this.maintenanceDraft = null;
   }
 
   protected openCreateModal(): void {
@@ -296,6 +326,64 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     this.vehicles = this.rawVehicles.map((vehicle) => toVehicleRow(vehicle, currentLocale));
     this.syncStatusFilterWithAvailableOptions();
     this.applyVehicleFilter();
+    // OBRS-357: runs on every data arrival, so a draft that resolved before
+    // the rows did still finds its vehicle.
+    this.focusPendingMaintenanceDraft();
+  }
+
+  /**
+   * OBRS-357: the INSPECTION_DEFECT_REPORTED deep-link's landing. The link
+   * carries an inspection id; this page is keyed by vehicle, so the server
+   * resolves one into the other (and composes the draft text - see
+   * `InspectionMaintenanceDraftRespDto`).
+   */
+  private async resolveInspectionDraft(inspectionId: number): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.adminApiService.getInspectionMaintenanceDraft(inspectionId)
+      );
+      const draft = response.data;
+      if (!draft) {
+        return;
+      }
+
+      this.pendingMaintenanceDraft = {
+        vehicleId: draft.vehicleId,
+        reason: draft.suggestedReason,
+        notes: draft.suggestedNotes,
+        sourceInspectionId: draft.inspectionId,
+      };
+      this.focusPendingMaintenanceDraft();
+    } catch (error) {
+      // The list itself is fine - only the deep-link failed. Say so instead of
+      // leaving the owner on a page that silently ignored the link they clicked.
+      const message =
+        extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.LOAD_VEHICLES_FAILED');
+      await this.alertService.error(message);
+    }
+  }
+
+  private focusPendingMaintenanceDraft(): void {
+    const pending = this.pendingMaintenanceDraft;
+    if (!pending) {
+      return;
+    }
+
+    const vehicle = this.vehicles.find((row) => row.id === pending.vehicleId);
+    if (!vehicle) {
+      // Rows not in yet (or the vehicle is gone) - stay put and let the next
+      // data arrival try again.
+      return;
+    }
+
+    this.pendingMaintenanceDraft = null;
+    this.focusedVehicle = vehicle;
+    this.activeTab = 'maintenance';
+    this.maintenanceDraft = {
+      reason: pending.reason,
+      notes: pending.notes,
+      sourceInspectionId: pending.sourceInspectionId,
+    };
   }
 
   // NOTE: `||` short-circuit is deliberate — translate.getDefaultLang() must

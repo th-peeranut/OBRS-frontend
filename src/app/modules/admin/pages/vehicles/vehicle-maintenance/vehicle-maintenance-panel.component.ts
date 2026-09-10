@@ -12,6 +12,7 @@ import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import { trimmedRequiredValidator } from '../../../../../shared/validators/trimmed-required.validator';
 import { VehicleMaintenanceStore } from './vehicle-maintenance.store';
 import {
+  MaintenanceCreateDraft,
   MaintenanceRow,
   MaintenanceStatusOption,
   hasMaintenanceDateRangeError,
@@ -49,6 +50,11 @@ export class AppVehicleMaintenancePanelComponent implements OnChanges, OnInit, O
   /** The pre-filtered (category === 'maintenance_status') raw Lookup rows —
    * localized here so relabeling on language change doesn't need a re-fetch. */
   @Input() statusOptions: AdminLookupDto[] = [];
+  /** OBRS-357: non-null only when the page was entered from an
+   * inspection-defect notification deep-link. Opens the create modal
+   * pre-filled instead of waiting for the "Add" button — the whole point of
+   * the link is that the owner arrives ready to act. */
+  @Input() createDraft: MaintenanceCreateDraft | null = null;
 
   protected rows: MaintenanceRow[] = [];
   protected statusDropdownOptions: MaintenanceStatusOption[] = [];
@@ -57,6 +63,10 @@ export class AppVehicleMaintenancePanelComponent implements OnChanges, OnInit, O
   protected readonly skeletonRows = Array.from({ length: 5 });
 
   protected isFormModalOpen = false;
+  // OBRS-357: the draft the CURRENTLY open create modal was seeded from -
+  // null for one opened by the "Add" button, so a manual add right after a
+  // deep-link never inherits the previous form's source inspection.
+  private activeDraft: MaintenanceCreateDraft | null = null;
   protected isSubmitting = false;
   protected isEditMode = false;
   protected selectedRecord: MaintenanceRow | null = null;
@@ -99,6 +109,12 @@ export class AppVehicleMaintenancePanelComponent implements OnChanges, OnInit, O
     if (changes['statusOptions']) {
       this.applyLocalization();
     }
+    // OBRS-357: last, so the modal opens over a panel already pointed at the
+    // right vehicle. A reader with no write access gets the focused vehicle
+    // and no modal — openCreateModal() enforces that, as it does for "Add".
+    if (changes['createDraft'] && this.createDraft) {
+      this.openCreateModal(this.createDraft);
+    }
   }
 
   ngOnInit(): void {
@@ -140,20 +156,25 @@ export class AppVehicleMaintenancePanelComponent implements OnChanges, OnInit, O
     return item.id;
   }
 
-  protected openCreateModal(): void {
+  protected openCreateModal(draft: MaintenanceCreateDraft | null = null): void {
     if (!this.canWrite) {
       return;
     }
 
+    this.activeDraft = draft;
     this.isEditMode = false;
     this.selectedRecord = null;
     this.maintenanceForm.reset({
-      reason: '',
+      // OBRS-357: the draft fills reason/notes only. startDate and
+      // maintenanceStatus stay empty on purpose - they are decisions about
+      // the repair, not facts about the inspection, and design-system §3.1
+      // forbids a pre-seeded status default.
+      reason: draft?.reason ?? '',
       startDate: null,
       endDate: null,
       nextDueDate: null,
       maintenanceStatus: '', // design-system §3.1: start on placeholder
-      notes: '',
+      notes: draft?.notes ?? '',
     });
     this.isFormModalOpen = true;
   }
@@ -167,6 +188,7 @@ export class AppVehicleMaintenancePanelComponent implements OnChanges, OnInit, O
       return;
     }
 
+    this.activeDraft = null;
     this.isEditMode = true;
     this.selectedRecord = record;
     this.maintenanceForm.reset({
@@ -210,7 +232,14 @@ export class AppVehicleMaintenancePanelComponent implements OnChanges, OnInit, O
 
     this.isSubmitting = true;
     try {
-      const payload = toMaintenancePayload(this.maintenanceForm.getRawValue());
+      // OBRS-357: the source link rides along on the create that the deep-link
+      // opened, and only that one - activeDraft is null for an Add-button
+      // create and for every edit, where omitting the field tells the backend
+      // to preserve whatever the record already points at.
+      const payload = toMaintenancePayload(
+        this.maintenanceForm.getRawValue(),
+        this.activeDraft?.sourceInspectionId
+      );
 
       if (this.isEditMode && this.selectedRecord) {
         await firstValueFrom(

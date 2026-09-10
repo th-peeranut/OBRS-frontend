@@ -6,6 +6,7 @@ import { takeUntil } from 'rxjs/operators';
 import { NotificationInboxService } from '../../services/notification-inbox.service';
 import { NotificationItem } from '../../interfaces/notification.interface';
 import { ThemeService } from '../../services/theme.service';
+import { NOTIFICATION_DEEP_LINKS } from '../../lib/notification-deep-link';
 
 /**
  * OBRS-317: notification bell + unread badge, mounted in the admin/staff
@@ -110,16 +111,25 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * OBRS-1308 — the inbox panel's new `navigate` output (currently only
-   * fires for a `NOTIF_MSG_OVERRIDE_PENDING` row). Mounted in BOTH
+   * OBRS-1308 — the inbox panel's `navigate` output. Mounted in BOTH
    * admin-layout and staff-layout, but the mapping stays shared rather than
-   * gated on `shellVariant`: business rule 8 only inserts this notification
-   * type for `ROLE_ADMIN` users, so a salesperson/driver session never
-   * receives one and this handler is simply never invoked there — a future
-   * admin-only type reuses this same mapping for free.
+   * gated on `shellVariant`: every type in the table is produced only for a
+   * back-office role that reaches `/admin`, so a session that cannot follow
+   * the link never receives the notification that offers it.
+   *
+   * OBRS-357 replaced the single hardcoded route with a lookup in
+   * `NOTIFICATION_DEEP_LINKS` — the same table the panel consults before
+   * emitting, so an unmapped type cannot reach here.
    */
   protected onNavigate(event: { type: string; id: number }): void {
+    const buildLink = NOTIFICATION_DEEP_LINKS[event.type];
+    if (!buildLink) {
+      return;
+    }
+
     this.overlayPanel?.hide();
-    void this.router.navigate(['/admin/settings/notification-messages/reviews', event.id]);
+    const link = buildLink(event.id);
+    // `?? {}` keeps ONE call shape for both mapped and unmapped-extras rows.
+    void this.router.navigate(link.commands, link.extras ?? {});
   }
 }
