@@ -4677,3 +4677,22 @@ just one a test can never catch.
   member), reusing that same word in looser prose one paragraph over reads as contradicting the
   code, even when both are technically consistent once you trace the reasoning through. Prefer a
   different word for the loose sense.
+
+## OBRS-1756 — Scrutinize self-fix: a free-text money field that silently drops the row
+
+The settlement screen typed its expense amounts into a plain `type="text"` input and validated
+them ONLY inside `buildPayload()`, with `if (cents === null || cents <= 0) continue;`. `toCents`
+reads `^\d+(\.\d{1,2})?$` and nothing else, so `1,200` — what a counter clerk types — parsed as
+null and the FUEL row was dropped from the payload AND from `settlementTotal`, with no message
+anywhere. The ONE submit then settled the day short, and `alreadySettled` stands in the way of a
+clean redo. `ng test` was green over it because no spec ever typed a bad amount.
+
+Fixed by borrowing the rule the per-round `driver-cash-expense-form` has had since OBRS-960:
+`isAmountInvalid(row)` gates the button through `blockedReasonKey` and renders the EXISTING
+`STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID` key under the field (no new i18n key — the same
+rule should not get a second wording). Spec added with a positive control so the refusal cannot
+pass over a screen that refuses everything.
+
+**Lesson:** a validator used only to DECIDE WHETHER TO SEND a value is a silent dropper. If a
+parse failure changes what goes on the wire, it must also change what is on the screen — and the
+skip-vs-refuse choice belongs in the submit gate, never buried in the payload builder.

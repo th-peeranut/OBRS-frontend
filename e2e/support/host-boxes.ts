@@ -494,6 +494,29 @@ export const ADMIN_SWEEP: SweepPage[] = [
     requires: 'app-my-earnings-page p-datepicker',
   },
 
+  // --- OBRS-1756 ------------------------------------------------------------
+  // The driver settlement screen that replaced the "งานประจำรอบ" nav item. Its
+  // date box is a `<p-datePicker>`, so the coverage gate named it on the first
+  // run after it landed -- the gate working, not a flake.
+  //
+  // Swept rather than excused in `NOT_SWEPT`: that list's bar is a component
+  // that genuinely cannot be reached without data this lane has no way to
+  // produce, and this page is one URL away under the session this sweep already
+  // holds. Admin reaches it for the same reason it reaches `/staff/sell`
+  // (OBRS-176 cross-portal access), so the route's requiredRoles: ['salesperson']
+  // does not bounce it.
+  //
+  // `requires` names the p-datepicker, not just the page: the date/van/driver
+  // row renders ABOVE every `@if` in the template, so this lane's empty backend
+  // still renders the host being measured. `app-driver-settlement-page` alone
+  // would pass on a page whose PrimeNG tag never rendered.
+  {
+    key: 'staff-settlement',
+    url: '/staff/settlement',
+    landsOn: /\/staff\/settlement$/,
+    requires: 'app-driver-settlement-page p-datepicker',
+  },
+
   // --- OBRS-941 -------------------------------------------------------------
   // The five analytics pages OBRS-151..155 added under the same `reports`
   // section of the admin nav, each with the identical

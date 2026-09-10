@@ -3447,7 +3447,8 @@
       "INSPECTION": "车辆检查",
       "FLEET_MAP": "车辆实时位置",
       "CANCEL_BOOKING": "取消订票",
-      "MY_EARNINGS": "我的人头费收入"
+      "MY_EARNINGS": "我的人头费收入",
+      "SETTLEMENT": "司机结算"
     },
     "LAYOUT": {
       "BRAND": "OBRS 员工",
@@ -3473,7 +3474,7 @@
       "SELL": "现场售票",
       "SCHEDULES": "班次",
       "MY_SCHEDULES": "我的班次",
-      "BOARDING": "班次作业",
+      "SETTLEMENT": "司机结算",
       "PARCEL_CONSIGN": "寄送包裹",
       "PARCEL_SCHEDULE": "验收 / 交接",
       "INSPECTION": "车辆检查",
@@ -4382,6 +4383,62 @@
         "RANGE_INVALID": "开始日期不得晚于结束日期。",
         "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。"
       }
+    },
+    "SETTLEMENT": {
+      "SUBTITLE": "选择日期、车牌和司机，一次结清全天费用",
+      "FILTER": {
+        "DATE": "日期",
+        "VEHICLE": "车牌",
+        "DRIVER": "司机"
+      },
+      "ROUNDS": {
+        "TITLE": "当天班次",
+        "TOTAL_LEGS": "全天共 {{n}} 趟",
+        "EMPTY": "所选日期内该车与该司机没有班次",
+        "FIRST_ROUND": "首班",
+        "COL": {
+          "DEPARTURE": "发车",
+          "ROUTE": "路线",
+          "LEG": "趟次"
+        }
+      },
+      "ADVANCE": {
+        "TITLE": "备用金",
+        "READ_ONLY_NOTE": "备用金在发车时录入，此页不可修改",
+        "EMPTY": "当天没有备用金记录"
+      },
+      "EXPENSES": {
+        "TITLE": "费用",
+        "COL": {
+          "ITEM": "项目",
+          "AMOUNT": "金额",
+          "NOTE": "备注"
+        },
+        "WAGE_BASIS": "按 {{rate}} x {{legs}} 趟计算"
+      },
+      "REPAIR": {
+        "TITLE": "维修费",
+        "EMPTY": "当天没有维修单",
+        "ADD_BILL": "+ 添加维修单",
+        "BILL_N": "第 {{n}} 张单",
+        "REMOVE_BILL": "删除此单"
+      },
+      "BANNER": {
+        "REOPENED": "车主已重新打开当天的现金箱 {{n}} 次",
+        "REOPEN_REASON": "最近原因：{{reason}}",
+        "ALREADY_SETTLED": "当天已经结算过。再次提交会在原有记录上追加新记录，请先核对。"
+      },
+      "BLOCKED": {
+        "PICK_VEHICLE_DRIVER": "请先选择日期、车牌和司机",
+        "NO_SCHEDULES": "所选日期内该车与该司机没有班次，无需结算",
+        "INVALID_REPAIR_BILL": "维修单填写不完整：需要修理厂，且明细合计必须大于零"
+      },
+      "ERROR": {
+        "NO_SCHEDULES": "所选日期内该车与该司机没有班次，无法结算当天"
+      },
+      "TOTAL": "将记录合计",
+      "SUBMIT": "结清全天",
+      "SUCCESS": "当天结算已保存"
     }
   },
   "FIND_BOOKING": {

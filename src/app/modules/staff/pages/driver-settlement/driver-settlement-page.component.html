@@ -1,0 +1,339 @@
+<!-- No in-body title (design-system §7): the shell topbar already renders the route's
+titleKey/subtitleKey (STAFF.PAGES.SETTLEMENT / STAFF.SETTLEMENT.SUBTITLE). -->
+
+<!-- Owner-locked order: วันที่ → ทะเบียนรถ → คนขับ. The driver is prefilled from the van and stays
+overridable — `vehicles.assigned_driver_id` is a default, not a restriction (V88, OBRS-1332). -->
+<section class="admin-page-filters mt-3">
+  <p-datePicker
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
+    dateFormat="dd/mm/yy"
+    [ngModel]="selectedDate"
+    (ngModelChange)="onDateChange($event)"
+    [showIcon]="true"
+    [iconDisplay]="'input'"
+    [showButtonBar]="true"
+    [placeholder]="'STAFF.SETTLEMENT.FILTER.DATE' | translate"
+    data-testid="settlement-date"
+    >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-datePicker>
+
+  <div class="ds-filter-field" data-testid="settlement-vehicle">
+    <app-admin-dropdown
+      [options]="vehicleOptions"
+      [placeholder]="'STAFF.SETTLEMENT.FILTER.VEHICLE' | translate"
+      valueKey="value"
+      labelKey="label"
+      [searchable]="true"
+      [ngModel]="selectedVehicleId"
+      (ngModelChange)="onVehicleChange($event)"
+      name="settlementVehicle"
+    ></app-admin-dropdown>
+  </div>
+
+  <div class="ds-filter-field" data-testid="settlement-driver">
+    <app-admin-dropdown
+      [options]="driverOptions"
+      [placeholder]="'STAFF.SETTLEMENT.FILTER.DRIVER' | translate"
+      valueKey="value"
+      labelKey="label"
+      [searchable]="true"
+      [ngModel]="selectedDriverId"
+      (ngModelChange)="onDriverChange($event)"
+      name="settlementDriver"
+    ></app-admin-dropdown>
+  </div>
+</section>
+
+@if (contextError; as err) {
+  <section class="admin-card mt-3">
+    <p class="admin-error" data-testid="settlement-context-error">{{ err | translate }}</p>
+  </section>
+}
+
+@if (!selectedVehicleId) {
+  <section class="admin-card mt-3">
+    <p class="admin-muted" data-testid="settlement-pick-vehicle">
+      {{ 'STAFF.SETTLEMENT.BLOCKED.PICK_VEHICLE_DRIVER' | translate }}
+    </p>
+  </section>
+}
+
+@if (selectedVehicleId && !contextError) {
+  <!-- OBRS-1579 AC-6: a box the owner re-opened after signing it off must never read as an
+  ordinary one, including once it is RETURNED again. -->
+  @if (isReopened) {
+    <section class="admin-card mt-3 ds-banner ds-banner-reopened" data-testid="settlement-reopened">
+      <p class="ds-banner-title">
+        {{ 'STAFF.SETTLEMENT.BANNER.REOPENED' | translate: { n: day?.reopenCount ?? 0 } }}
+      </p>
+      @if (latestReopenReason; as reason) {
+        <p class="admin-muted" data-testid="settlement-reopen-reason">
+          {{ 'STAFF.SETTLEMENT.BANNER.REOPEN_REASON' | translate: { reason: reason } }}
+        </p>
+      }
+    </section>
+  }
+
+  @if (isDayReturned) {
+    <section class="admin-card mt-3 ds-banner ds-banner-blocked" data-testid="settlement-returned">
+      {{ 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED' | translate }}
+    </section>
+  }
+
+  @if (context?.alreadySettled) {
+    <section class="admin-card mt-3 ds-banner ds-banner-warn" data-testid="settlement-already-settled">
+      {{ 'STAFF.SETTLEMENT.BANNER.ALREADY_SETTLED' | translate }}
+    </section>
+  }
+
+  <!-- Reused verbatim from the per-round panel: the same five running totals, read the same way. -->
+  <app-driver-cash-day-summary
+    [day]="day"
+    [isLoading]="isContextLoading"
+  ></app-driver-cash-day-summary>
+
+  <!-- ── รอบของวันนี้ (read only) ─────────────────────────────────────────── -->
+  <section class="admin-card mt-3" data-testid="settlement-rounds">
+    <div class="admin-card-head">
+      <h4>{{ 'STAFF.SETTLEMENT.ROUNDS.TITLE' | translate }}</h4>
+      <span class="admin-muted" data-testid="settlement-leg-count">
+        {{ 'STAFF.SETTLEMENT.ROUNDS.TOTAL_LEGS' | translate: { n: context?.legCount ?? 0 } }}
+      </span>
+    </div>
+
+    @if (isContextLoading) {
+      <span class="admin-skeleton admin-skeleton--sm"></span>
+    } @else if (schedules.length === 0) {
+      <p class="admin-muted" data-testid="settlement-rounds-empty">
+        {{ 'STAFF.SETTLEMENT.ROUNDS.EMPTY' | translate }}
+      </p>
+    } @else {
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>{{ 'STAFF.SETTLEMENT.ROUNDS.COL.DEPARTURE' | translate }}</th>
+              <th>{{ 'STAFF.SETTLEMENT.ROUNDS.COL.ROUTE' | translate }}</th>
+              <th>{{ 'STAFF.SETTLEMENT.ROUNDS.COL.LEG' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (schedule of schedules; track schedule.scheduleId) {
+              <tr [attr.data-testid]="'settlement-round-' + schedule.scheduleId">
+                <td>{{ displayTime(schedule.departureDateTime) }}</td>
+                <td>
+                  {{ schedule.routeName }}
+                  <!-- Why the ค่าจอดรถ row below is offered at all: the van ran a route's first
+                  round that day. Derived server-side from routeId + departure only. -->
+                  @if (schedule.firstRoundOfRoute) {
+                    <span class="ds-chip" data-testid="settlement-first-round">
+                      {{ 'STAFF.SETTLEMENT.ROUNDS.FIRST_ROUND' | translate }}
+                    </span>
+                  }
+                </td>
+                <td>{{ $index + 1 }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <!-- ── เบิกเงินทดรอง (READ ONLY — taken at the round, not here) ─────────── -->
+  <section class="admin-card mt-3" data-testid="settlement-advance">
+    <div class="admin-card-head">
+      <h4>{{ 'STAFF.SETTLEMENT.ADVANCE.TITLE' | translate }}</h4>
+      <strong data-testid="settlement-advance-total">{{ formatMoney(day?.advanceTotal ?? '0.00') }}</strong>
+    </div>
+    <p class="admin-muted">{{ 'STAFF.SETTLEMENT.ADVANCE.READ_ONLY_NOTE' | translate }}</p>
+
+    @if (advanceEntries.length === 0) {
+      <p class="admin-muted" data-testid="settlement-advance-empty">
+        {{ 'STAFF.SETTLEMENT.ADVANCE.EMPTY' | translate }}
+      </p>
+    } @else {
+      <ul class="ds-entry-list">
+        @for (entry of advanceEntries; track entry.id) {
+          <li>
+            <span>{{ formatMoney(entry.amount) }}</span>
+            @if (entry.note; as note) {
+              <span class="admin-muted">{{ note }}</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <!-- ── ค่าใช้จ่าย ───────────────────────────────────────────────────────── -->
+  <section class="admin-card mt-3" data-testid="settlement-expenses">
+    <div class="admin-card-head">
+      <h4>{{ 'STAFF.SETTLEMENT.EXPENSES.TITLE' | translate }}</h4>
+    </div>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'STAFF.SETTLEMENT.EXPENSES.COL.ITEM' | translate }}</th>
+            <th>{{ 'STAFF.SETTLEMENT.EXPENSES.COL.AMOUNT' | translate }}</th>
+            <th>{{ 'STAFF.SETTLEMENT.EXPENSES.COL.NOTE' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of visibleExpenseRows; track row.category) {
+            <tr [attr.data-testid]="'settlement-expense-row-' + row.category">
+              <td>{{ categoryLabel(row.category) }}</td>
+
+              @if (isWageRow(row)) {
+                <!-- OBRS-1356: the server prices this from the owner's rate per leg and writes one
+                entry per schedule, so there is no amount box. A missing rate is a STATE shown on
+                load, never ฿0 and never a surprise at submit. -->
+                <td colspan="2">
+                  @if (isWageRateMissing) {
+                    <span class="admin-error" data-testid="settlement-wage-not-configured">
+                      {{ 'STAFF.DRIVER_CASH.ERROR.WAGE_RATE_NOT_CONFIGURED' | translate }}
+                    </span>
+                  } @else {
+                    <strong data-testid="settlement-wage-total">{{ formatMoney(context?.driverWageTotal ?? '0.00') }}</strong>
+                    <span class="admin-muted ds-wage-basis">
+                      {{ 'STAFF.SETTLEMENT.EXPENSES.WAGE_BASIS' | translate: {
+                        rate: formatMoney(context?.driverWageRatePerLeg ?? '0.00'),
+                        legs: context?.legCount ?? 0
+                      } }}
+                    </span>
+                  }
+                </td>
+              } @else {
+                <td>
+                  <input
+                    type="text"
+                    inputmode="decimal"
+                    class="admin-field"
+                    [attr.aria-label]="categoryLabel(row.category)"
+                    [attr.data-testid]="'settlement-amount-' + row.category"
+                    [(ngModel)]="row.amountInput"
+                    [name]="'settlementAmount' + row.category"
+                  />
+                  <!-- Same signal the per-round expense form gives (OBRS-960): a value `toCents`
+                  cannot read is otherwise dropped from the payload without a word. -->
+                  @if (isAmountInvalid(row)) {
+                    <small
+                      class="admin-error"
+                      [attr.data-testid]="'settlement-amount-invalid-' + row.category"
+                    >{{ 'STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID' | translate }}</small>
+                  }
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    class="admin-field"
+                    maxlength="255"
+                    [attr.aria-label]="'STAFF.SETTLEMENT.EXPENSES.COL.NOTE' | translate"
+                    [attr.data-testid]="'settlement-note-' + row.category"
+                    [(ngModel)]="row.noteInput"
+                    [name]="'settlementNote' + row.category"
+                  />
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── ค่าซ่อม (0..N bills) ─────────────────────────────────────────────── -->
+  <section class="admin-card mt-3" data-testid="settlement-repair">
+    <div class="admin-card-head">
+      <h4>{{ 'STAFF.SETTLEMENT.REPAIR.TITLE' | translate }}</h4>
+    </div>
+
+    @if (repairBills.length === 0) {
+      <p class="admin-muted" data-testid="settlement-repair-empty">
+        {{ 'STAFF.SETTLEMENT.REPAIR.EMPTY' | translate }}
+      </p>
+    }
+
+    @for (bill of repairBills; track bill) {
+      <div class="ds-bill" [attr.data-testid]="'settlement-bill-' + $index">
+        <div class="ds-bill-head">
+          <h5>{{ 'STAFF.SETTLEMENT.REPAIR.BILL_N' | translate: { n: $index + 1 } }}</h5>
+          <div class="ds-bill-head-right">
+            <strong>{{ formatMoney(billTotal(bill)) }}</strong>
+            <button
+              type="button"
+              class="admin-btn admin-btn-small"
+              [attr.aria-label]="'STAFF.SETTLEMENT.REPAIR.REMOVE_BILL' | translate"
+              [attr.data-testid]="'settlement-bill-remove-' + $index"
+              (click)="removeRepairBill($index)"
+            >&#10005;</button>
+          </div>
+        </div>
+
+        <!-- The SAME card the per-round repair box embeds, in the same `field` variant: garage +
+        lines + parts, no date/van/category and no "จ่ายโดย" (the driver always fronts it here).
+        Both create flags are true because OBRS-1756 opened the two registry POSTs to SALESPERSON
+        on this branch. -->
+        <app-expense-bill-card
+          variant="field"
+          [billForm]="bill"
+          [index]="$index"
+          [payees]="payees"
+          [canCreatePayee]="true"
+          [parts]="parts"
+          [canCreatePart]="true"
+          [removable]="false"
+          (payeeCreated)="onPayeeCreated()"
+          (partCreated)="onPartCreated()"
+        ></app-expense-bill-card>
+      </div>
+    }
+
+    <button
+      type="button"
+      class="admin-btn"
+      data-testid="settlement-add-bill"
+      (click)="addRepairBill()"
+    >
+      {{ 'STAFF.SETTLEMENT.REPAIR.ADD_BILL' | translate }}
+    </button>
+  </section>
+
+  <!-- ── The ONE submit of the whole screen ───────────────────────────────── -->
+  <section class="admin-card mt-3 ds-submit-bar">
+    <div class="ds-submit-total">
+      <span class="admin-muted">{{ 'STAFF.SETTLEMENT.TOTAL' | translate }}</span>
+      <strong data-testid="settlement-total">{{ formatMoney(settlementTotal) }}</strong>
+    </div>
+
+    @if (settleSuccess) {
+      <p class="ds-success" data-testid="settlement-success">
+        {{ 'STAFF.SETTLEMENT.SUCCESS' | translate }}
+      </p>
+    }
+
+    @if (submitError; as err) {
+      <p class="admin-error" data-testid="settlement-submit-error">{{ err | translate }}</p>
+    }
+
+    @if (blockedReasonKey; as reasonKey) {
+      <p class="admin-muted" data-testid="settlement-blocked-reason">{{ reasonKey | translate }}</p>
+    }
+
+    <button
+      type="button"
+      class="admin-btn admin-btn-primary"
+      [disabled]="!canSubmit"
+      data-testid="settlement-submit"
+      (click)="onSubmit()"
+    >
+      {{ (isSubmitting ? 'STAFF.DRIVER_CASH.SUBMITTING' : 'STAFF.SETTLEMENT.SUBMIT') | translate }}
+    </button>
+  </section>
+}
