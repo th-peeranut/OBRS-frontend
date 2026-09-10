@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRouteSnapshot, Router } from '@angular/router';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
@@ -100,6 +100,31 @@ export class AuthService {
   // always authorized these roles on customer endpoints, so the frontend list
   // was a UX confinement and never a security boundary.
 
+  // OBRS-1721 — "ดูในมุมมองของ…" / view-as role preview.
+  //
+  // What may be previewed, keyed by the role actually HELD. Strictly below the
+  // holder, mirroring the backend hierarchy (ROLE_ADMIN > ROLE_OWNER >
+  // ROLE_SALESPERSON > ROLE_DRIVER), so the preview can only ever narrow.
+  //
+  // `customer` is deliberately absent, and not by oversight: auth.guard.ts's
+  // `customerArea: true` branch performs no role check at all, so previewing as
+  // customer would change nothing on screen while implying it had. See
+  // docs/adr/0042-view-as-role-preview.md.
+  private static readonly PREVIEWABLE_ROLES: Record<string, readonly string[]> = {
+    admin: ['owner', 'salesperson', 'driver'],
+    owner: ['salesperson', 'driver'],
+  };
+
+  // IN MEMORY ONLY — never localStorage. The REAL roles live there (ROLES_KEY);
+  // a persisted preview would be indistinguishable from them on the next read
+  // and could strand a user in a narrowed view across days. A refresh or a new
+  // tab is therefore the guaranteed way back to the real role.
+  private previewRole: string | null = null;
+  private previewRoleSubject = new BehaviorSubject<string | null>(null);
+  /** Emits the previewed role, or null when not previewing. The shells rebuild
+   *  their nav on each emission — both build it once in ngOnInit. */
+  previewRole$ = this.previewRoleSubject.asObservable();
+
   // Observable to track authentication status
   private authStatusSubject = new BehaviorSubject<boolean>(
     this.isAuthenticated()
@@ -182,6 +207,11 @@ export class AuthService {
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.USERNAME_KEY);
     localStorage.removeItem(this.ROLES_KEY);
+    // OBRS-1721: a preview must not outlive the roles it narrows. Placed here
+    // rather than in logout() so the interceptor's 401 force-logout path clears
+    // it too — a preview surviving a cleared role list would leave getRoles()
+    // answering with a role nobody holds any more.
+    this.exitRolePreview();
     this.authStatusSubject.next(false);
   }
 
@@ -284,7 +314,28 @@ export class AuthService {
     return localStorage.getItem(this.USERNAME_KEY);
   }
 
+  /**
+   * OBRS-1721: THE choke point. Everything that asks "what may this user see" —
+   * AuthGuard, hasAnyRole, hasHeldRole, getHomeRoute, both nav builders and the
+   * ~21 components that call `getRoles().includes(...)` directly — funnels
+   * through here, so overriding it is the whole of the view-as feature. Nothing
+   * downstream is special-cased; a page that needed special-casing would be a
+   * page bypassing this, which is a defect to report rather than to patch.
+   */
   getRoles(): string[] {
+    if (this.previewRole) {
+      return [this.previewRole];
+    }
+
+    return this.getHeldRoles();
+  }
+
+  /**
+   * OBRS-1721: the roles the signed-in user ACTUALLY holds, never the preview.
+   * This is what decides whether the "view as" menu is offered at all and what
+   * it may offer — asking `getRoles()` there would let a preview widen itself.
+   */
+  getHeldRoles(): string[] {
     const rawRoles = localStorage.getItem(this.ROLES_KEY);
     if (!rawRoles) {
       return [];
@@ -302,6 +353,105 @@ export class AuthService {
     } catch {
       return [];
     }
+  }
+
+  /** OBRS-1721: the previewed role, or null when the user is in their own view. */
+  getPreviewRole(): string | null {
+    return this.previewRole;
+  }
+
+  /**
+   * OBRS-1721: what this user may preview, derived from the roles they HOLD.
+   * Empty for everyone but a held admin or owner — which is what keeps the menu
+   * off a salesperson's screen. hasOwnKey for the same reason hasAnyRole uses
+   * it: the role strings come from user-editable localStorage (OBRS-601).
+   */
+  getPreviewableRoles(): string[] {
+    const held = this.getHeldRoles();
+    const holder = ['admin', 'owner'].find((role) => held.includes(role));
+    return holder && hasOwnKey(AuthService.PREVIEWABLE_ROLES, holder)
+      ? [...AuthService.PREVIEWABLE_ROLES[holder]]
+      : [];
+  }
+
+  /** OBRS-1721: enter preview. Ignores anything the holder may not preview, so
+   *  the AC-1 list is enforced here and not only in the menu that renders it. */
+  startRolePreview(role: string): void {
+    if (!this.getPreviewableRoles().includes(role)) {
+      return;
+    }
+
+    this.previewRole = role;
+    this.previewRoleSubject.next(role);
+
+    // OBRS-1730: entering a preview IS a navigation decision, unlike leaving one.
+    // Nothing navigates when the preview starts, so AuthGuard never re-runs and
+    // the page already on screen stays there — an admin previewing as owner kept
+    // reading /admin/lookups (`requiredHeldRoles: ['admin']`) under the banner
+    // while its nav entry correctly vanished. Refreshing that same page DOES hit
+    // the guard and bounces; this makes the two agree.
+    if (!this.currentRouteAllowsPreviewedRole()) {
+      this.router.navigateByUrl(this.getHomeRoute());
+    }
+  }
+
+  /**
+   * OBRS-1730: would AuthGuard still admit the route currently on screen, now
+   * that `getRoles()` answers with the preview?
+   *
+   * The whole chain, not just the leaf: `/admin` carries `requiredRoles:
+   * ['admin']` on the shell entry (app-routing.module.ts) while its children
+   * carry their own `requiredHeldRoles`, and Angular does not inherit `data`
+   * down past a route that has a component (AdminLayoutComponent), so reading
+   * the leaf alone would miss the shell. The two predicates are exactly the ones
+   * auth.guard.ts applies; `customerArea` needs no branch here because those
+   * routes declare no roles and both predicates pass on an empty list.
+   *
+   * Walks `children` over `firstChild` for the same reason
+   * analytics-route-scope.ts does: a named outlet branches the tree, and
+   * `firstChild` alone only ever sees the primary branch. `firstChild` stays
+   * the fallback for snapshot-shaped test doubles that only build the primary
+   * chain (no app route uses a named outlet today).
+   */
+  private currentRouteAllowsPreviewedRole(): boolean {
+    const queue: ActivatedRouteSnapshot[] = [this.router.routerState.snapshot.root];
+
+    while (queue.length > 0) {
+      const snapshot = queue.shift() as ActivatedRouteSnapshot;
+      const requiredRoles = snapshot.data['requiredRoles'];
+      const requiredHeldRoles = snapshot.data['requiredHeldRoles'];
+      if (!this.hasAnyRole(Array.isArray(requiredRoles) ? requiredRoles : [])) {
+        return false;
+      }
+      if (!this.hasHeldRole(Array.isArray(requiredHeldRoles) ? requiredHeldRoles : [])) {
+        return false;
+      }
+
+      if (Array.isArray(snapshot.children) && snapshot.children.length > 0) {
+        queue.push(...snapshot.children);
+      } else if (snapshot.firstChild) {
+        queue.push(snapshot.firstChild);
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * OBRS-1721: leave preview. Deliberately does NOT navigate. The real role
+   * outranks every role it can preview, so it can reach every route the preview
+   * could — a redirect here would move someone away from a page they are still
+   * allowed to be on. Do not "fix" this by adding one. The asymmetry with
+   * `startRolePreview` is the point: entering can only narrow, leaving can only
+   * widen, and only narrowing can strand someone on a page they no longer pass.
+   */
+  exitRolePreview(): void {
+    if (!this.previewRole) {
+      return;
+    }
+
+    this.previewRole = null;
+    this.previewRoleSubject.next(null);
   }
 
   hasAnyRole(requiredRoles: string[]): boolean {
@@ -335,6 +485,29 @@ export class AuthService {
 
     return requiredRoles.some((role) =>
       effectiveRoles.has(String(role ?? '').trim().toLowerCase())
+    );
+  }
+
+  /**
+   * OBRS-1498: does the user HOLD one of these roles — no ROLE_GRANTS expansion.
+   *
+   * `hasAnyRole` answers the FE's area-based question ("may they be in this
+   * portal"), where owner and admin grant each other and ['admin'] therefore
+   * admits an owner. That is deliberate (see ROLE_GRANTS above) and must stay.
+   * But the backend hierarchy runs ONE way — WebSecurityConfig.java has
+   * ROLE_ADMIN > ROLE_OWNER, not the reverse — so an endpoint written
+   * `hasRole('ADMIN')` 403s an owner. For a page whose every write goes through
+   * such an endpoint, `hasAnyRole` is the wrong question: it opens a page that
+   * cannot work. Ask this one instead.
+   */
+  hasHeldRole(requiredRoles: string[]): boolean {
+    if (!Array.isArray(requiredRoles) || requiredRoles.length === 0) {
+      return true;
+    }
+
+    const heldRoles = new Set(this.getRoles());
+    return requiredRoles.some((role) =>
+      heldRoles.has(String(role ?? '').trim().toLowerCase())
     );
   }
 

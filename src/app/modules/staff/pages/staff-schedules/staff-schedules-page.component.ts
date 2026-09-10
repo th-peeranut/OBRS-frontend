@@ -17,7 +17,11 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
-import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { bangkokDayKey, formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import {
+  bangkokInstantMs,
+  controlValueToDateString,
+} from '../../../../shared/lib/api-date-time';
 import {
   ScheduleDeleteModalMode,
   resolveScheduleDeleteModalMode,
@@ -73,6 +77,13 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
   protected searchKeyword = '';
   protected selectedRouteFilter = '';
   protected selectedStatusFilter = '';
+  // OBRS-33: the list used to render every schedule the API returned, oldest
+  // first, so the first row on prod was 19 days in the past. One day at a
+  // time, today by default. Past days stay reachable (no `minDate`) — the
+  // point is a default that is useful, not hiding history.
+  // OBRS-1584: non-null on purpose. There is always a day in effect, so there
+  // is no state this page can reach that renders every trip ever created.
+  protected selectedDate: Date = new Date();
 
   protected readonly scheduleItemForm: FormGroup;
   // OBRS-667: whole-trip cancel (deletable===false path below) issues a
@@ -327,6 +338,25 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
     this.applyFilter();
   }
 
+  // OBRS-1584: PrimeNG hands us `null` for anything the input cannot parse —
+  // an emptied field, but also every partial keystroke of a date being typed
+  // (`parseValueFromString('')` → null → `updateModel(null)`). Keeping the day
+  // already in effect covers both: the day window never lifts, and the model
+  // reference is deliberately left untouched so no repaint is pushed back into
+  // the input mid-typing, which is what would kill keyboard date entry.
+  protected onDateChange(value: Date | null): void {
+    if (value === null) return;
+    this.selectedDate = value;
+    this.applyFilter();
+  }
+
+  // OBRS-1584: the input can be left holding text that no longer describes the
+  // day the rows are filtered by. Re-emit the date actually in effect on the
+  // way out so the field and the list agree again.
+  protected onDateBlur(): void {
+    this.selectedDate = new Date(this.selectedDate);
+  }
+
   protected onStatusFilterChange(value: string): void {
     this.selectedStatusFilter = String(value ?? '').trim().toLowerCase();
     this.applyFilter();
@@ -367,12 +397,28 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
     const keyword = this.searchKeyword.trim().toLowerCase();
     const routeFilter = this.selectedRouteFilter;
     const statusFilter = this.selectedStatusFilter;
-    this.filteredRows = this.rows.filter((row) => {
-      if (routeFilter && row.routeSlug.toLowerCase() !== routeFilter) return false;
-      if (statusFilter && row.statusCode.toLowerCase() !== statusFilter) return false;
-      if (!keyword) return true;
-      return [row.tripId, row.route, row.driver, row.vehicle].join(' ').toLowerCase().includes(keyword);
-    });
+    // OBRS-1584: unconditional. The "no day selected ⇒ keep every row" branch
+    // that used to guard this line is the OBRS-33 symptom, one keystroke away.
+    // OBRS-1585: the day is read off the same clock the date column prints
+    // (Bangkok wall-clock), not off the raw string — a `Z` departure crosses
+    // the day boundary and used to disappear from the day its own cell shows.
+    const dayKey = controlValueToDateString(this.selectedDate);
+    this.filteredRows = this.rows
+      .filter((row) => {
+        if (bangkokDayKey(row.departure) !== dayKey) return false;
+        if (routeFilter && row.routeSlug.toLowerCase() !== routeFilter) return false;
+        if (statusFilter && row.statusCode.toLowerCase() !== statusFilter) return false;
+        if (!keyword) return true;
+        return [row.tripId, row.route, row.driver, row.vehicle].join(' ').toLowerCase().includes(keyword);
+      })
+      // OBRS-33: soonest departure first (the list used to arrive in id order).
+      // A row whose departure cannot be parsed sorts last rather than first:
+      // it cannot be the next trip to leave.
+      .sort(
+        (a, b) =>
+          (bangkokInstantMs(a.departure) ?? Number.MAX_SAFE_INTEGER) -
+          (bangkokInstantMs(b.departure) ?? Number.MAX_SAFE_INTEGER)
+      );
   }
 
   private get currentLocale(): string {

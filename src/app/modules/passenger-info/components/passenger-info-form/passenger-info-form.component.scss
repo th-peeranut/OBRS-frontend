@@ -208,6 +208,14 @@
   gap: $space-3xs;
 }
 
+// OBRS-1364: the blocked-seat marker, sized to sit on the legend line rather
+// than in the seat box — the icon itself is the same `block` glyph the seat
+// draws, so the legend row and the seat read as one thing.
+.seat-map-legend-blocked {
+  font-size: $font-size-base;
+  color: $primary-grey;
+}
+
 .seat-attribute-badge {
   display: inline-flex;
   align-items: center;

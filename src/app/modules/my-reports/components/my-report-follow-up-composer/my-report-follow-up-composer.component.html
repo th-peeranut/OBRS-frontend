@@ -23,12 +23,8 @@
   ></app-usability-report-image-picker>
 
   <div class="mr-follow-up-composer__actions mt-2">
-    <button type="submit" class="mr-btn-secondary" [disabled]="isSubmitting">
-      {{
-      isSubmitting
-      ? ('USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.SUBMITTING' | translate)
-      : ('USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.SUBMIT' | translate)
-      }}
+    <button type="submit" class="mr-btn-secondary" [disabled]="isSubmitting" [appPending]="isSubmitting">
+      {{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.SUBMIT' | translate }}
     </button>
   </div>
 </form>

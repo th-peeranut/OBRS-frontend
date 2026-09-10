@@ -1,4 +1,13 @@
 <form class="dcp-inline-form" (ngSubmit)="onSubmit()" data-testid="driver-cash-expense-form">
+  <!-- OBRS-1579: the form said nothing at all about which day's cash box it
+  was writing to, so a bill handed over the morning after its round was keyed
+  into today's box with nothing on screen to contradict it. -->
+  @if (businessDate) {
+    <p class="dcp-box-date-note" data-testid="driver-cash-expense-box-date">
+      {{ 'STAFF.DRIVER_CASH.EXPENSE.LANDS_IN_BOX' | translate: { date: displayDate(businessDate) } }}
+    </p>
+  }
+
   <div class="dcp-form-field">
     <label class="admin-form-label">{{ 'STAFF.DRIVER_CASH.EXPENSE.CATEGORY_LABEL' | translate }}</label>
     <app-admin-dropdown
@@ -68,6 +77,26 @@
           [(ngModel)]="noteInput"
           name="expenseNote"
           ></textarea>
+      </div>
+
+      <!-- OBRS-1579: warns, never blocks - see `hasBillDateMismatch`. -->
+      <div class="dcp-form-field">
+        <label class="admin-form-label" for="dcp-expense-bill-date">
+          {{ 'STAFF.DRIVER_CASH.EXPENSE.BILL_DATE_LABEL' | translate }}
+        </label>
+        <input
+          id="dcp-expense-bill-date"
+          type="date"
+          class="admin-field"
+          [(ngModel)]="billDateInput"
+          name="expenseBillDate"
+          data-testid="driver-cash-expense-bill-date"
+          />
+        @if (hasBillDateMismatch) {
+          <small class="dcp-bill-date-warning" data-testid="driver-cash-expense-bill-date-warning">
+            {{ 'STAFF.DRIVER_CASH.EXPENSE.BILL_DATE_MISMATCH' | translate: { date: displayDate(businessDate) } }}
+          </small>
+        }
       </div>
 
       @if (submitError; as err) {

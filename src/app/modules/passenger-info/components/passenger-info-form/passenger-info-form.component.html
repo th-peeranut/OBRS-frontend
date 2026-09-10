@@ -109,6 +109,7 @@
                         class="form-control mt-1"
                         id="firstName-{{ i }}"
                         formControlName="firstName"
+                        autocomplete="section-passenger-{{ i }} given-name"
                 [class.form-error]="
                   group.get('firstName')?.errors &&
                   (group.get('firstName')?.touched ||
@@ -136,6 +137,7 @@
                           class="form-control mt-1"
                           id="middleName-{{ i }}"
                           formControlName="middleName"
+                          autocomplete="section-passenger-{{ i }} additional-name"
                           />
                         </div>
                         <!-- Last name -->
@@ -155,6 +157,7 @@
                             class="form-control mt-1"
                             id="lastName-{{ i }}"
                             formControlName="lastName"
+                            autocomplete="section-passenger-{{ i }} family-name"
                 [class.form-error]="
                   group.get('lastName')?.errors &&
                   (group.get('lastName')?.touched ||
@@ -188,6 +191,8 @@
                             <input
                               class="form-control mt-1"
                               type="text"
+                              inputmode="tel"
+                              autocomplete="section-passenger-{{ i }} tel"
                               id="phoneNumber-{{ i }}"
                               formControlName="phoneNumber"
                               (focus)="onPassengerPhoneFocus(i)"
@@ -230,6 +235,7 @@
                                   id="gender_male-{{ i }}"
                                   formControlName="gender"
                                   value="MALE"
+                                  (change)="onPassengerTypeChanged(i)"
                                   />
                                   <label class="form-check-label" for="gender_male-{{ i }}">
                                     <img
@@ -248,6 +254,7 @@
                                       id="gender_female-{{ i }}"
                                       formControlName="gender"
                                       value="FEMALE"
+                                      (change)="onPassengerTypeChanged(i)"
                                       />
                                       <label class="form-check-label" for="gender_female-{{ i }}">
                                         <img
@@ -266,6 +273,7 @@
                                           id="gender_monk-{{ i }}"
                                           formControlName="gender"
                                           value="MONK"
+                                          (change)="onPassengerTypeChanged(i)"
                                           />
                                           <label class="form-check-label" for="gender_monk-{{ i }}">
                                             <img
@@ -276,7 +284,47 @@
                                               {{ "PASSENGER_INFO.GENDER.MONK" | translate }}
                                             </label>
                                           </div>
+                                          <!-- Nun -->
+                                          <div class="form-check form-check-inline">
+                                            <input
+                                              class="form-check-input"
+                                              type="radio"
+                                              id="gender_nun-{{ i }}"
+                                              formControlName="gender"
+                                              value="NUN"
+                                              (change)="onPassengerTypeChanged(i)"
+                                              />
+                                              <label class="form-check-label" for="gender_nun-{{ i }}">
+                                                <img
+                                                  class="passenger-nun-icon"
+                                                  src="icons/passenger-nun.svg"
+                                                  alt="Passenger Nun Icon"
+                                                  />
+                                                  {{ "PASSENGER_INFO.GENDER.NUN" | translate }}
+                                                </label>
+                                              </div>
                                         </div>
+                                        <!-- OBRS-1666: explicit consent (PDPA s.26). Shown ONLY
+                                        for monk/nun, never pre-ticked, and refusing it costs the
+                                        traveller nothing - the type is simply not recorded. -->
+                                        @if (isSensitivePassengerType(i)) {
+                                          <div class="col-12 mt-3">
+                                            <div class="form-check">
+                                              <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="passenger-type-consent-{{ i }}"
+                                                formControlName="passengerTypeConsent"
+                                                />
+                                                <label class="form-check-label" for="passenger-type-consent-{{ i }}">
+                                                  {{ "PASSENGER_INFO.FORM.SENSITIVE_TYPE_CONSENT_LABEL" | translate }}
+                                                </label>
+                                              </div>
+                                              <small class="text-muted d-block mt-1">
+                                                {{ "PASSENGER_INFO.FORM.SENSITIVE_TYPE_CONSENT_HINT" | translate }}
+                                              </small>
+                                            </div>
+                                          }
                                         <!-- Seat preference / requirement (OBRS-361) — optional,
                                         best-effort, never pre-selected (design-system §3.1). Hidden
                                         leg-aware via showSeatPreferenceFields(): every leg OPEN, or
@@ -468,6 +516,8 @@
                                                     [availableSeatNumbers]="availableSeatNumbers$ | async"
                                                     [seatOwners]="getSeatOwners()"
                                                     [seatAttributes]="seatAttributesOutbound$ | async"
+                                                    [blockedSeats]="blockedSeatsOutbound"
+                                                    [blockedSeatAriaLabel]="'PASSENGER_INFO.SEAT_MAP.BLOCKED_SEAT_ARIA' | translate"
                                                     [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
                                                     [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
                     (passengerSeatPositionOnChange)="
@@ -481,6 +531,8 @@
                                                     [takenSeats]="getTakenSeats(activeOutboundIndex)"
                                                     [seatOwners]="getSeatOwners()"
                                                     [seatAttributes]="seatAttributesOutbound$ | async"
+                                                    [blockedSeats]="blockedSeatsOutbound"
+                                                    [blockedSeatAriaLabel]="'PASSENGER_INFO.SEAT_MAP.BLOCKED_SEAT_ARIA' | translate"
                                                     [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
                                                     [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
                     (passengerSeatPositionOnChange)="
@@ -491,25 +543,34 @@
                                               </div>
                                             </div>
                                             <!-- Seat-feature legend (OBRS-362) — shown only when this leg
-                                            has at least one badge to explain. -->
-                                            @if (hasSeatAttributes(seatAttributesOutbound$ | async)) {
+                                            has at least one badge to explain. OBRS-1364 added a second
+                                            reason to open it: a crossed-out seat needs saying why. -->
+                                            @if (hasSeatAttributes(seatAttributesOutbound$ | async) || blockedSeatsOutbound.length) {
                                               <div
                                                 class="seat-map-legend mt-2"
                                                 >
                                                 <span class="seat-map-legend-title">{{ "PASSENGER_INFO.SEAT_MAP.LEGEND_TITLE" | translate }}</span>
-                                                <span class="seat-map-legend-item">
-                                                  <span class="seat-attribute-badge seat-attribute-badge-wheelchair" aria-hidden="true">
-                                                    <span class="material-symbols-outlined" [attr.translate]="'no'">accessible</span>
+                                                @if (hasSeatAttributes(seatAttributesOutbound$ | async)) {
+                                                    <span class="seat-map-legend-item">
+                                                    <span class="seat-attribute-badge seat-attribute-badge-wheelchair" aria-hidden="true">
+                                                      <span class="material-symbols-outlined" [attr.translate]="'no'">accessible</span>
+                                                    </span>
+                                                    {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_WHEELCHAIR" | translate }}
                                                   </span>
-                                                  {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_WHEELCHAIR" | translate }}
-                                                </span>
-                                                <span class="seat-map-legend-item">
-                                                  <span class="seat-attribute-badge seat-attribute-badge-legroom" aria-hidden="true">
-                                                    <span class="material-symbols-outlined" [attr.translate]="'no'">airline_seat_legroom_extra</span>
+                                                  <span class="seat-map-legend-item">
+                                                    <span class="seat-attribute-badge seat-attribute-badge-legroom" aria-hidden="true">
+                                                      <span class="material-symbols-outlined" [attr.translate]="'no'">airline_seat_legroom_extra</span>
+                                                    </span>
+                                                    {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_EXTRA_LEGROOM" | translate }}
                                                   </span>
-                                                  {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_EXTRA_LEGROOM" | translate }}
-                                                </span>
-                                              </div>
+                                                  }
+                                                  @if (blockedSeatsOutbound.length) {
+                                                    <span class="seat-map-legend-item">
+                                                      <span class="material-symbols-outlined seat-map-legend-blocked" [attr.translate]="'no'" aria-hidden="true">block</span>
+                                                      {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_BLOCKED" | translate }}
+                                                    </span>
+                                                  }
+                                                  </div>
                                             }
                                           } @else {
                                             <div class="col-12 mt-3">
@@ -584,6 +645,8 @@
                                                     [availableSeatNumbers]="availableSeatNumbersReturn$ | async"
                                                     [seatOwners]="getSeatOwnersReturn()"
                                                     [seatAttributes]="seatAttributesReturn$ | async"
+                                                    [blockedSeats]="blockedSeatsReturn"
+                                                    [blockedSeatAriaLabel]="'PASSENGER_INFO.SEAT_MAP.BLOCKED_SEAT_ARIA' | translate"
                                                     [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
                                                     [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
                       (passengerSeatPositionOnChange)="
@@ -597,6 +660,8 @@
                                                     [takenSeats]="getTakenSeatsReturn(activeReturnIndex)"
                                                     [seatOwners]="getSeatOwnersReturn()"
                                                     [seatAttributes]="seatAttributesReturn$ | async"
+                                                    [blockedSeats]="blockedSeatsReturn"
+                                                    [blockedSeatAriaLabel]="'PASSENGER_INFO.SEAT_MAP.BLOCKED_SEAT_ARIA' | translate"
                                                     [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
                                                     [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
                       (passengerSeatPositionOnChange)="
@@ -607,24 +672,32 @@
                                               </div>
                                             </div>
                                             <!-- Seat-feature legend (OBRS-362) — return leg. -->
-                                            @if (hasSeatAttributes(seatAttributesReturn$ | async)) {
+                                            @if (hasSeatAttributes(seatAttributesReturn$ | async) || blockedSeatsReturn.length) {
                                               <div
                                                 class="seat-map-legend mt-2"
                                                 >
                                                 <span class="seat-map-legend-title">{{ "PASSENGER_INFO.SEAT_MAP.LEGEND_TITLE" | translate }}</span>
-                                                <span class="seat-map-legend-item">
-                                                  <span class="seat-attribute-badge seat-attribute-badge-wheelchair" aria-hidden="true">
-                                                    <span class="material-symbols-outlined" [attr.translate]="'no'">accessible</span>
+                                                @if (hasSeatAttributes(seatAttributesReturn$ | async)) {
+                                                    <span class="seat-map-legend-item">
+                                                    <span class="seat-attribute-badge seat-attribute-badge-wheelchair" aria-hidden="true">
+                                                      <span class="material-symbols-outlined" [attr.translate]="'no'">accessible</span>
+                                                    </span>
+                                                    {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_WHEELCHAIR" | translate }}
                                                   </span>
-                                                  {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_WHEELCHAIR" | translate }}
-                                                </span>
-                                                <span class="seat-map-legend-item">
-                                                  <span class="seat-attribute-badge seat-attribute-badge-legroom" aria-hidden="true">
-                                                    <span class="material-symbols-outlined" [attr.translate]="'no'">airline_seat_legroom_extra</span>
+                                                  <span class="seat-map-legend-item">
+                                                    <span class="seat-attribute-badge seat-attribute-badge-legroom" aria-hidden="true">
+                                                      <span class="material-symbols-outlined" [attr.translate]="'no'">airline_seat_legroom_extra</span>
+                                                    </span>
+                                                    {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_EXTRA_LEGROOM" | translate }}
                                                   </span>
-                                                  {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_EXTRA_LEGROOM" | translate }}
-                                                </span>
-                                              </div>
+                                                  }
+                                                  @if (blockedSeatsReturn.length) {
+                                                    <span class="seat-map-legend-item">
+                                                      <span class="material-symbols-outlined seat-map-legend-blocked" [attr.translate]="'no'" aria-hidden="true">block</span>
+                                                      {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_BLOCKED" | translate }}
+                                                    </span>
+                                                  }
+                                                  </div>
                                             }
                                           } @else {
                                             <div class="col-12 mt-4">

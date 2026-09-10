@@ -31,10 +31,7 @@
               {{ "COMMON.CLOSE" | translate }}
             </button>
           } @else {
-            <button type="button" class="btn-secondary" [disabled]="availabilityLoading" (click)="onRetry()">
-              @if (availabilityLoading) {
-                <span class="spinner" aria-hidden="true"></span>
-              }
+            <button type="button" class="btn-secondary" [disabled]="availabilityLoading" [appPending]="availabilityLoading" (click)="onRetry()">
               {{ "MY_BOOKINGS.RETRY" | translate }}
             </button>
           }
@@ -87,10 +84,7 @@
             <button type="button" class="btn-secondary" (click)="close()">
               {{ "MY_BOOKINGS.CHANGE_SEAT.BACK_BUTTON" | translate }}
             </button>
-            <button type="button" class="btn-primary" [disabled]="submitting" (click)="onConfirm()">
-              @if (submitting) {
-                <span class="spinner" aria-hidden="true"></span>
-              }
+            <button type="button" class="btn-primary" [disabled]="submitting" [appPending]="submitting" (click)="onConfirm()">
               {{ "MY_BOOKINGS.CHANGE_SEAT.CONFIRM_BUTTON" | translate }}
             </button>
           </div>

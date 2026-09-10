@@ -7,6 +7,7 @@ import { ReminderConfigPageComponent } from '../reminder-config/reminder-config-
 import { ParcelShareConfigPageComponent } from '../parcel-share-config/parcel-share-config-page.component';
 import { DriverCashRatesPageComponent } from '../driver-cash-rates/driver-cash-rates-page.component';
 import { CancelReschedulePolicyConfigPageComponent } from '../cancel-reschedule-policy-config/cancel-reschedule-policy-config-page.component';
+import { OperationsConfigPageComponent } from '../operations-config/operations-config-page.component';
 import { NotificationMessagesTabPageComponent } from '../notification-messages/notification-messages-tab-page.component';
 import { NotificationMessageListPageComponent } from '../notification-messages/notification-message-list-page.component';
 import { NotificationMessageEditPageComponent } from '../notification-messages/notification-message-edit-page.component';
@@ -115,38 +116,44 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     component: BookingPolicyConfigPageComponent,
   },
   {
-    // OBRS-699: owner-only, new. OBRS-1432 moved it up here, next to
-    // booking-policy: both answer "what may a customer do to a ticket", and a
-    // group only collapses into one dropdown entry if its members are adjacent.
-    // Nothing but the rendered order changes — the path, the legacy redirect
-    // and the guard are the ones it shipped with.
+    // OBRS-699: new. OBRS-1432 moved it up here, next to booking-policy: both
+    // answer "what may a customer do to a ticket", and a group only collapses
+    // into one dropdown entry if its members are adjacent. Nothing but the
+    // rendered order changes — the path, the legacy redirect and the guard
+    // are the ones it shipped with.
+    // OBRS-1719: was ['owner'] — OwnerCancelReschedulePolicyConfigController
+    // now resolves ADMIN to the platform's sole owner instead of rejecting it.
     path: 'cancel-reschedule-policy',
     legacyPath: 'cancel-reschedule-policy-config', // no prior standalone page; kept for interface parity
     labelKey: 'ADMIN.PAGES.CANCEL_RESCHEDULE_POLICY_CONFIG',
     groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.SALES_POLICY',
     subtitleKey: 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.SUBTITLE',
-    requiredRoles: ['owner'],
+    requiredRoles: ['admin', 'owner'],
     component: CancelReschedulePolicyConfigPageComponent,
   },
   {
-    // OBRS-960: owner-only, new. The OBRS-960 pair keeps the adjacency it
-    // shipped with, and OBRS-1432 made that adjacency the group.
+    // OBRS-960: new. The OBRS-960 pair keeps the adjacency it shipped with,
+    // and OBRS-1432 made that adjacency the group.
+    // OBRS-1719: was ['owner'] — same backend reversal as
+    // cancel-reschedule-policy above (ParcelShareConfigController).
     path: 'parcel-share',
     legacyPath: 'parcel-share-config',
     labelKey: 'ADMIN.PAGES.PARCEL_SHARE_CONFIG',
     groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.REVENUE_SHARE',
     subtitleKey: 'ADMIN.PARCEL_SHARE_CONFIG.SUBTITLE',
-    requiredRoles: ['owner'],
+    requiredRoles: ['admin', 'owner'],
     component: ParcelShareConfigPageComponent,
   },
   {
-    // OBRS-960: owner-only, new.
+    // OBRS-960: new.
+    // OBRS-1719: was ['owner'] — same backend reversal as
+    // cancel-reschedule-policy above (DriverPerHeadRateService).
     path: 'driver-cash-rates',
     legacyPath: 'driver-cash-rates',
     labelKey: 'ADMIN.PAGES.DRIVER_CASH_RATES',
     groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.REVENUE_SHARE',
     subtitleKey: 'ADMIN.DRIVER_CASH_RATES.SUBTITLE',
-    requiredRoles: ['owner'],
+    requiredRoles: ['admin', 'owner'],
     component: DriverCashRatesPageComponent,
   },
   {
@@ -202,6 +209,28 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     // GET/PUT /private/admin/configs/jump-seat is hasRole('OWNER') now.
     requiredRoles: ['admin', 'owner'],
     component: JumpSeatConfigPageComponent,
+  },
+  {
+    // OBRS-703: new — sixth group. None of the five existing groups fit:
+    // SALES_POLICY is about a customer's rights over a ticket already booked
+    // (this is about the operational clock the platform runs on), and
+    // NOTIFICATIONS only ever admitted the one near-full alert, not the other
+    // three values PUT writes as a unit (BR-7 all-or-nothing), so splitting
+    // them across three existing groups isn't possible without breaking that
+    // atomicity's meaning on screen. Placed after jump-seat/SEATING and before
+    // the meta "history" tab below, which must stay last.
+    path: 'operations',
+    legacyPath: 'operations-config', // no prior standalone page; kept for interface parity
+    labelKey: 'ADMIN.PAGES.OPERATIONS_CONFIG',
+    groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.OPERATIONS',
+    subtitleKey: 'ADMIN.OPERATIONS_CONFIG.SUBTITLE',
+    // Owner-scoped endpoint (GET/PUT/DELETE /private/owner/configs/operations).
+    // OBRS-1719: was ['owner'] — the endpoint's 403 for ADMIN is gone
+    // (getCurrentOwnerId() now resolves ADMIN to the sole owner), so this is
+    // ['admin','owner'] like the other tabs above, not the exception it used
+    // to document.
+    requiredRoles: ['admin', 'owner'],
+    component: OperationsConfigPageComponent,
   },
   {
     // Last: the "meta" view over every other tab, same placement it held as the

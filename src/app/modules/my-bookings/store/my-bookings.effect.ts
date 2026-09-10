@@ -328,6 +328,6 @@ export class MyBookingsEffect {
   // OBRS-843: delegates to the shared formatter the counter and override cancel
   // dialogs now use, so one refund reads the same on all three surfaces.
   private formatCurrency(value: number | string): string {
-    return formatRefundAmount(value);
+    return formatRefundAmount(value, this.translate.currentLang);
   }
 }

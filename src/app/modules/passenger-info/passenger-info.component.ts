@@ -43,6 +43,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AnalyticsService } from '../../services/analytics/analytics.service';
 import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
 import { BUSINESS_POLICY_VERSION } from '../business-policy/business-policy.version';
+import { TITLE_OPTIONS } from '../../shared/constants/title-options';
 
 @Component({
     selector: 'app-passenger-info',
@@ -64,18 +65,6 @@ export class PassengerInfoComponent {
   // that wasn't confirmed — is ever sent on the create-booking call.
   private appliedPromoCode: string | null = null;
   rawProvinceStationList: Observable<StationApi[]>;
-  private readonly titleMap: Record<number, string> = {
-    1: 'Mr.',
-    2: 'Miss',
-    3: 'Mrs.',
-    4: 'Master',
-    5: 'Miss (Child)',
-    6: 'Dr.',
-    7: 'Professor',
-    8: 'Associate Professor',
-    9: 'Assistant Professor',
-  };
-
   constructor(
     private store: Store,
     private router: Router,
@@ -350,6 +339,7 @@ export class PassengerInfoComponent {
   ): BookingSchedulePayload['passengers'] {
     return passengers.map((passenger) => ({
       passengerType: this.normalizePassengerType(passenger.gender),
+      passengerTypeConsentVersion: this.passengerTypeConsentVersion(passenger),
       seatNumber: this.normalizeSeatNumber(
         leg === 'inbound' ? passenger.passengerSeatReturn : passenger.passengerSeat
       ),
@@ -483,6 +473,9 @@ export class PassengerInfoComponent {
     return digits.length > 0 ? digits : null;
   }
 
+  // OBRS-1232: sends the option's stable CODE ('MISS'), not its English label. The private
+  // English-only map this used to hold was the bug: it made `Miss กุลธิดา นาใจคง` the value
+  // stored on production, after which no reader in any language could be shown anything else.
   // OBRS-1231: no title is a legitimate answer, so this returns null rather than
   // inventing one. The three 'Mr.' fallbacks it used to have were not defaults in any
   // useful sense - nothing downstream needed a value (the backend joins the name parts
@@ -494,7 +487,7 @@ export class PassengerInfoComponent {
     }
 
     if (typeof title === 'number') {
-      return this.titleMap[title] ?? null;
+      return TITLE_OPTIONS.find((option) => option.id === title)?.code ?? null;
     }
 
     return null;
@@ -512,6 +505,19 @@ export class PassengerInfoComponent {
    * confirmation email. `PassengerReqDto.passengerType` dropped its `@NotBlank` in the same change
    * and `tickets.passenger_type_id` has been nullable since ADR-0061, so null survives end to end.
    */
+  /**
+   * OBRS-1666: the version of the notice the traveller actually saw, sent only when they ticked
+   * the consent box beside a monk/nun answer. Null for every other type - nothing asked for
+   * consent to 'male'/'female', which PDPA section 26 does not cover - and null when the box was
+   * left unticked, which the backend reads as a refusal and answers by dropping the type. The
+   * booking is never blocked either way: the field has been optional since OBRS-1357.
+   */
+  private passengerTypeConsentVersion(passenger: PassengerInfo): string | null {
+    const type = this.normalizePassengerType(passenger.gender);
+    const isSensitive = type === 'monk' || type === 'nun';
+    return isSensitive && passenger.passengerTypeConsent ? PRIVACY_POLICY_VERSION : null;
+  }
+
   private normalizePassengerType(gender?: string | null): string | null {
     const normalized = (gender ?? '').toString().trim().toLowerCase();
     if (

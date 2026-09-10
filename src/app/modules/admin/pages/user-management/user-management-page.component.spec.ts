@@ -254,7 +254,9 @@ describe('UserManagementPageComponent', () => {
       expect(deleteSpy).toHaveBeenCalledWith(1);
       const updated = store.data$.value as { users: AdminUserDto[] };
       expect(updated.users.length).toBe(0);
-      expect(alert.success).toHaveBeenCalled();
+      // OBRS-653: the row is anonymised and kept, so the toast the admin will
+      // quote back to the customer must not be the generic "deleted" one.
+      expect(alert.success).toHaveBeenCalledWith('ADMIN.USERS.CLOSE_SUCCESS');
     });
 
     it('confirmDelete() shows an error alert and does not mutate the list on failure', async () => {

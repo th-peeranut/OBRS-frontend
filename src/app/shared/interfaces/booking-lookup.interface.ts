@@ -27,6 +27,12 @@ export interface BookingLookupTicket {
    * Full, UNMASKED — these are the passengers the caller entered on their own booking, and the
    * driver checks the name against an ID card at the door. See `PublicBookingTicketRespDto`.
    */
+  /**
+   * OBRS-1232: the title as a stable CODE ('MISS'), separate from the name and untranslated on the
+   * wire. Render it with the `titleLabel` pipe so switching language changes the word without a
+   * refetch. A legacy free-text value the migration left alone comes through verbatim (AC-5).
+   */
+  passengerTitle?: string | null;
   passengerName?: string | null;
   /** `null` on an OPEN-seating schedule (OBRS-321/483), not merely omitted. */
   seatNumber?: string | null;
@@ -51,6 +57,11 @@ export interface BookingLookupResult {
   bookingNumber: string;
   /** Booking status slug — a cancelled booking IS returned, so the screen must render that. */
   status?: string | null;
+  /**
+   * OBRS-1601 — the contact's title CODE (`MISS`), never a word. Render it through `titleLabel` so
+   * the honorific follows the reader's language, exactly as the passenger's title already does.
+   */
+  contactTitle?: string | null;
   /** Full contact name. Unmasked by the same argument as `passengerName` above. */
   contactName?: string | null;
   /** `••••1234` — a confirmation that the phone matched, never a readback. */

@@ -79,6 +79,17 @@
   padding-left: 0.5rem;
 }
 
+// OBRS-1777: the same treatment as the landmark above, deliberately identical rather than louder.
+// The two lines are peers - one says what is around the stop, the other says where inside it to
+// stand - and the template already gives the boarding point the emphasis it needs by placing it
+// first. Styling it stronger than the landmark would be a second, weaker way of saying the same
+// thing, and it would put this line on a contrast pairing nobody has measured.
+.detail-boarding-point {
+  color: $text-softblack;
+  border-left: 3px solid $primary-blue;
+  padding-left: 0.5rem;
+}
+
 .detail-landmark-label {
   color: $secondary-blue;
   font-weight: $font-weight-semibold;

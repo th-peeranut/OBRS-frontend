@@ -26,6 +26,9 @@ import { CustomerBehaviorDto } from '../../shared/interfaces/customer-behavior.i
 import { OpsEfficiencyDto } from '../../shared/interfaces/ops-efficiency.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
+import { VehiclePlReportDto } from '../../shared/interfaces/vehicle-pl-report.interface';
+import { PayeeSpendReportDto } from '../../shared/interfaces/payee-spend-report.interface';
+import { PartUnitPriceReportDto } from '../../shared/interfaces/part-unit-price-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
@@ -45,6 +48,7 @@ import {
   ParcelClaimRespDto,
 } from '../../shared/interfaces/parcel-claim.interface';
 import {
+  DriverCashDayReopenReqDto,
   DriverCashDayRespDto,
   DriverCashDayReturnReqDto,
   DriverCashDayStatus,
@@ -121,6 +125,9 @@ export interface AdminUserDto {
   firstName?: string;
   middleName?: string;
   lastName?: string;
+  // OBRS-1558: the name the LINE driver board prints. Carried by both the list and the detail
+  // endpoint, so the edit modal can populate it from either.
+  nickname?: string | null;
   fullName?: string;
   email?: string;
   phoneNumber?: string;
@@ -143,6 +150,13 @@ export interface AdminUserDto {
   // default-pickup mechanism moved server-side to `RouteStopsDto.defaultPickupStopSlug`.
   salesPointCodes?: string[];
   activeSalesPointCode?: string | null;
+  // OBRS-1662: TWO different questions, deliberately two fields. `ownerSlug` is the EMPLOYER
+  // (`users.owner_id`, OBRS-756) — who this person works for, one operator or none.
+  // `sellableOwnerSlugs` is whose trips they may SELL, which the owner confirmed on OBRS-1656
+  // can be several at once: the salesperson at a shared counter like Mo Chit sells other
+  // operators' queues as well as their employer's. Only `ownerSlug` is `null` for a customer.
+  ownerSlug?: string | null;
+  sellableOwnerSlugs?: string[];
   // OBRS-1230 / ADR-0123: true for a guest shadow user (created from a
   // walk-in/offline booking, never authenticates, carries zero roles by
   // design). Sent by GET /private/users (UserSummaryResponse) — NOT by
@@ -229,6 +243,18 @@ export interface AdminVehicleDto {
    * to echo back until the detail fetch lands.
    */
   assignedDriverId?: number | null;
+  /**
+   * OBRS-885: the vehicle's service window, `"YYYY-MM-DD"` or null. The two nulls mean
+   * DIFFERENT things — a null `inServiceFrom` is NOT KNOWN (not "since forever"), a null
+   * `inServiceTo` is STILL IN SERVICE. The whole per-vehicle P&L rests on that difference,
+   * which is why the form's help text spells it out rather than leaving it to the reader.
+   *
+   * Rides the same detail-only narrowing as `gpsImei`/`assignedDriverId` above — the backend's
+   * `toDetailDto` is the only projection that carries it, so a form seeded from a list row has
+   * nothing to echo back until the detail fetch lands.
+   */
+  inServiceFrom?: string | null;
+  inServiceTo?: string | null;
 }
 
 /** OBRS-209: a single vehicle-maintenance record (backend OBRS-102).
@@ -407,6 +433,13 @@ export interface AdminStopDetailDto {
   primaryPhotoUrl?: string | null;
   /** locale -> address; a locale with no address is absent, not null. */
   addresses?: Record<string, string> | null;
+  /** OBRS-1777: locale -> where the CALLER's own operator boards inside this place ("ชานชาลา 43").
+   *  Same absent-not-null rule as `addresses`, and the same per-caller resolution the labels get:
+   *  an operator sees the row THEY published, an admin sees the central one. It is deliberately
+   *  NOT pre-filled from the central row for an operator who published none - see
+   *  `StopLabelOverlayIT.stopDetailAnswersEachOperatorWithTheirOwnBoardingPoint`: a form that
+   *  showed someone else's value would copy it onto their row on the next save. */
+  boardingPoints?: Record<string, string> | null;
   /** OBRS-1481: where a round-trip customer boards for the way back after getting off
    *  HERE — the `stop_return_pairs` row keyed by this stop. `null` means no pin, and the
    *  server answers by distance instead. */
@@ -429,6 +462,9 @@ export interface AdminStopUpdatePayload {
   latitude: number | null;
   longitude: number | null;
   addresses: Record<string, string>;
+  /** OBRS-1777: locale -> the CENTRAL boarding point, for a station whose boarding point is the
+   *  same for every operator. An operator's own goes through `AdminStopLabelPayload` instead. */
+  boardingPoints: Record<string, string>;
   translations: AdminTranslationReqDto[];
   /**
    * OBRS-1481: the return boarding pin. Unlike `primaryPhotoUrl` above this key is ALWAYS
@@ -438,6 +474,22 @@ export interface AdminStopUpdatePayload {
    * "leave it alone" and the owner could never unset a pin.
    */
   returnStopId: number | null;
+}
+
+/**
+ * OBRS-1679/1680: the body of `PUT /api/private/stops/{id}/labels` - the OWNER-gated half.
+ *
+ * <p>It carries the sign and nothing else. The physical stop (slug, province, status, type,
+ * coordinates, the photo, the return pin) is platform-wide reference data an operator may not
+ * move, so those fields have no representation here at all - there is nothing to forget to strip.
+ * The operator the rows are filed under is resolved server-side from the caller, which is why
+ * there is no `ownerId` either.
+ */
+export interface AdminStopLabelPayload {
+  addresses: Record<string, string>;
+  /** OBRS-1777: locale -> where this operator's own passengers board inside the shared place. */
+  boardingPoints: Record<string, string>;
+  translations: AdminTranslationReqDto[];
 }
 
 export interface AdminStopPhotoDto {
@@ -667,6 +719,12 @@ export interface AdminBookingTicketDto {
   id?: number;
   ticketNumber?: string;
   passengerType?: AdminStatusDto;
+  /**
+   * OBRS-1232: the title as a stable CODE ('MISS'), separate from the name and untranslated on the
+   * wire. Render it with the `titleLabel` pipe so switching language changes the word without a
+   * refetch. A legacy free-text value the migration left alone comes through verbatim (AC-5).
+   */
+  passengerTitle?: string | null;
   passengerName?: string;
   seatNumber?: string;
   // Ticket status is included for EVERY ticket on the booking, including
@@ -692,6 +750,8 @@ export interface AdminBookingActorDetailDto {
 }
 
 export interface AdminBookingContactDetailDto {
+  /** OBRS-1601 — title CODE, rendered through `titleLabel`; absent when the contact gave none. */
+  title?: string | null;
   fullName?: string;
   phoneNumber?: string;
 }
@@ -912,12 +972,20 @@ export interface CreateUserPayload {
   firstName: string;
   middleName?: string;
   lastName: string;
+  // OBRS-1558: omitted when blank, same reason as title above.
+  nickname?: string;
   email: string;
   phoneNumber: string;
   password: string;
   preferredLocale: string;
   status: string;
   roles: string[];
+  // OBRS-1662: both omitted for a caller who is not a platform ADMIN. An OWNER hires into
+  // their own company and the backend takes the employer from the security context, ignoring
+  // anything sent here; the operator picker they would need is `GET /private/owners`, which
+  // 403s them by design (see AdminOwnerDto).
+  ownerSlug?: string;
+  sellableOwnerSlugs?: string[];
   pdpaConsent: boolean;
 }
 
@@ -927,6 +995,8 @@ export interface UpdateUserPayload {
   firstName: string;
   middleName?: string;
   lastName: string;
+  // OBRS-1558: omitted when blank, same reason as title above.
+  nickname?: string;
   // OBRS-1255: the three keys a guest shadow row omits entirely (AC2 / owner's option C). Optional
   // in the TYPE so omitting them is a legal shape rather than a cast — and optional on the server
   // only under `UserUpdateReqDto.FullAccount`, a validation group it runs after loading the row.
@@ -946,6 +1016,13 @@ export interface UpdateUserPayload {
 export interface UpdateUserSalesPointsPayload {
   salesPointCodes: string[];
   activeSalesPointCode: string | null;
+}
+
+// OBRS-1662: `PUT /api/private/users/{id}/sellable-owners` — its own endpoint for the same
+// reason the sales-points one is (UpdateUserPayload cannot express a collection being cleared
+// to `[]`). `[]` is a real value meaning "sells for nobody", never "leave it alone".
+export interface UpdateUserSellableOwnersPayload {
+  ownerSlugs: string[];
 }
 
 // OBRS-316 Gap 1: PUT /api/private/vehicles/{id} is a full-replace, so the form
@@ -980,6 +1057,16 @@ export interface CreateVehiclePayload {
    * fourth of that shape). Always sent, for the same reason as `gpsImei` above.
    */
   assignedDriverId: number | null;
+  /**
+   * OBRS-885: the service window, `"YYYY-MM-DD"` or null. `null` CLEARS it back to "not
+   * known" / "still in service"; an absent key would mean "leave whatever is there"
+   * (`applyTo` is conditional on both fields — the fifth and sixth of that shape). Always
+   * sent, for the same reason as `gpsImei` above: the absent-preserves flag exists for
+   * curl/fixture callers that do not know the field, and this form is the one caller that
+   * DOES know it and whose admin may have blanked it on purpose.
+   */
+  inServiceFrom: string | null;
+  inServiceTo: string | null;
 }
 
 /** OBRS-209: create/update payload for a vehicle-maintenance record.
@@ -1045,6 +1132,35 @@ export interface CreateVehicleMaintenancePlanRespDto {
  * added by OBRS-961; `EXPENSE_CATEGORY_CODES` is the single list to read,
  * this comment is prose that can rot). Audit fields are `@JsonUnwrapped` on the backend DTO —
  * flattened here, read-only, never sent back by the form (§9 of the UX spec). */
+/**
+ * OBRS-1374: one line of a repair/gas bill. The BILL is still one `AdminExpenseDto` (its
+ * `amount` is the total); these are the lines written on it. `part` is `null` for the lines
+ * that are not a part at all - labour, service, sundry - which is a real answer, not missing
+ * data. The codes are `MAINTENANCE_PART_CODES`, shared verbatim with the maintenance-plan
+ * panel (OBRS-1333): a second parts vocabulary would give "how many times did we change the
+ * brake pads" two answers and no way to tell which is right.
+ */
+export interface AdminExpenseItemDto {
+  id: number;
+  lineNo: number;
+  /** OBRS-1613: frozen history — the old `EMaintenancePart` code. `partId` is what to read. */
+  part?: string | null;
+  /** OBRS-1613: the registry row this line is keyed against. `null` = not a part (labour, sundry). */
+  partId?: number | null;
+  /**
+   * OBRS-1613: the registry row's name, resolved by the server. Read it rather than looking
+   * `partId` up in the picker list: the pickers carry ACTIVE parts only, so a line whose part has
+   * since been retired resolves to nothing on this side and would render blank.
+   */
+  partName?: string | null;
+  description: string;
+  quantity?: number | null;
+  /** OBRS-1613: what `quantity` is counted in, as written on the paper bill (แผ่น / ตารางฟุต / ใบ). */
+  unit?: string | null;
+  unitPrice?: number | null;
+  amount: number;
+}
+
 export interface AdminExpenseDto {
   id: number;
   /** OBRS-791/808: the operator that BEARS this cost. NOT NULL on the backend
@@ -1064,6 +1180,16 @@ export interface AdminExpenseDto {
   expenseDate: string;
   receiptNo?: string | null;
   paidBy?: string | null;
+  /**
+   * OBRS-1577: who RECEIVED the money, by FK into the payee registry, plus the name resolved
+   * server-side. The NAME comes down with the row rather than being looked up client-side because
+   * the pickers list ACTIVE payees only — a bill paid to a garage that has since closed would
+   * otherwise render blank, and re-saving it from a form whose dropdown never held that id would
+   * silently drop the link. Optional: every bill written before V119 has no payee, and that is a
+   * real answer rather than a missing one.
+   */
+  payeeId?: number | null;
+  payeeName?: string | null;
   note?: string | null;
   createdByName?: string;
   createdAt?: string;
@@ -1086,6 +1212,12 @@ export interface AdminExpenseDto {
    * absence-reads-as-normal reason as `source` above.
    */
   approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  /**
+   * OBRS-1374: this bill's lines, in `lineNo` order. Absent or empty for every bill nobody
+   * broke down, which is most of them - the child table is never mandatory. Returned on the
+   * LIST too, because the edit modal opens straight from the row the list already holds.
+   */
+  items?: AdminExpenseItemDto[];
   rejectionReason?: string | null;
 }
 
@@ -1093,6 +1225,27 @@ export interface AdminExpenseDto {
  * (`toExpensePayload()` in `expenses-page.mappers.ts`). Every optional field
  * is an explicit key (`null` when blank), never omitted — same full-replace
  * contract as `CreateVehiclePayload` above, and PUT sends all 9 fields. */
+/** OBRS-1374: one line as SENT. No `id` and no `lineNo` - the server numbers the lines from
+ * their position and replaces the whole set, so there is nothing for a client to renumber. */
+export interface CreateExpenseItemPayload {
+  /**
+   * OBRS-1613: the legacy `EMaintenancePart` code. **No screen sends one any more** — both bill
+   * forms pick a registry row and the server writes this column from the row `partId` resolved to.
+   * It stays on the contract, always `null` from this client, because the backend still ACCEPTS a
+   * code from a client that has not been rebuilt (`partId` wins when both are present), and an
+   * explicit null keeps "this line has no part" distinct from "this client cannot express one".
+   */
+  part: string | null;
+  /** OBRS-1613: the registry row. `null` = this line is not a part at all (labour, sundry). */
+  partId: number | null;
+  description: string;
+  quantity: number | null;
+  /** OBRS-1613: free text off the paper bill. Without it a unit price cannot be compared. */
+  unit: string | null;
+  unitPrice: number | null;
+  amount: number;
+}
+
 export interface CreateExpensePayload {
   /** OBRS-808: which operator bears the cost. Read by the backend on **POST
    * from an ADMIN only** — for any other caller it is ignored (not rejected:
@@ -1110,12 +1263,89 @@ export interface CreateExpensePayload {
   expenseDate: string;
   receiptNo: string | null;
   paidBy: string | null;
+  /** OBRS-1577: which registry payee received this money. `null` is the normal case — a bill whose
+   * payee is not on record, which every row written before this card is. */
+  payeeId: number | null;
   note: string | null;
+  /** OBRS-1374: the bill's lines. `[]` means "this bill has no breakdown", which is the
+   * normal case and is accepted unchanged. When lines ARE sent their amounts must sum to
+   * `amount`, or the server answers 400 `EXPENSE_ITEMS_TOTAL_MISMATCH` - the modal blocks that
+   * before it can happen. */
+  items: CreateExpenseItemPayload[];
 }
 
 /** OBRS-685: `POST /api/private/expenses` 201 response body. */
 export interface CreateExpenseRespDto {
   expenseId: number;
+}
+
+/**
+ * OBRS-1576: one envelope of bills for `POST /api/private/expenses/batch`. Each entry is exactly
+ * the body the single-bill create takes, so the two screens that write this table cannot drift in
+ * what they send; what the batch adds is that the server writes all of them or none of them.
+ */
+export interface CreateExpenseBatchPayload {
+  bills: CreateExpensePayload[];
+}
+
+/** OBRS-1576: `POST /api/private/expenses/batch` 201 body — the ids it created, in the order the
+ * bills were sent. */
+export interface CreateExpenseBatchRespDto {
+  expenseIds: number[];
+}
+
+/**
+ * OBRS-1577: one row of the payee registry — a garage, a petrol station, a shop the operator's
+ * money goes to. `type` is what keeps them apart in the pickers (the owner's 2026-08-24 ruling:
+ * ONE table with a type column, because splitting one table later is a migration and merging two
+ * later is a reconciliation project).
+ */
+export interface AdminExpensePayeeDto {
+  id: number;
+  name: string;
+  type: 'GARAGE' | 'FUEL_STATION' | 'OTHER';
+  active: boolean;
+}
+
+/** OBRS-1577: `ExpensePayeeReqDto` — the body for create and for rename. */
+export interface CreateExpensePayeePayload {
+  name: string;
+  type: 'GARAGE' | 'FUEL_STATION' | 'OTHER';
+}
+
+/**
+ * OBRS-1613: one row of the parts/labour registry — the vocabulary a maintenance plan and a repair
+ * bill BOTH draw from, which is the whole point (`V113__create_expense_items.sql` wrote down why:
+ * two lists in one system means "how many times did I change the brake pads" has two answers).
+ *
+ * <p>`code` is the field with the rule on it. The 13 rows V125 seeded per owner carry their old
+ * `EMaintenancePart` code, and that code is still the i18n key
+ * (`ADMIN.VEHICLES.MAINTENANCE_PLAN.PARTS.*`) — so a row is translated if and only if `code` is
+ * non-null. Anything the owner typed has `code: null` and is shown verbatim in Thai on every
+ * locale, which is the owner's 2026-08-25 ruling. There is no third state and no per-row
+ * "translate me" flag to drift.
+ *
+ * <p>⚠️ Renaming a seeded row CLEARS its code server-side, permanently: the translations describe
+ * the old spelling and would be a lie against the new one. A screen offering rename on a seeded row
+ * is offering to discard its en/zh names, and has to say so.
+ */
+export interface AdminMaintenancePartDto {
+  id: number;
+  code: string | null;
+  name: string;
+  kind: 'PART' | 'LABOUR';
+  active: boolean;
+}
+
+/**
+ * OBRS-1613: `MaintenancePartReqDto` — the body for create and for rename.
+ *
+ * <p>No `code`, deliberately, and not an oversight to fix later: a caller that could set one would
+ * point a made-up entry at a translation key it has no relation to. Only the V125 seed writes codes.
+ */
+export interface CreateMaintenancePartPayload {
+  name: string;
+  kind: 'PART' | 'LABOUR';
 }
 
 /** OBRS-809: one operator, as returned by `GET /api/private/owners`.
@@ -1454,6 +1684,18 @@ export class AdminApiService {
     return this.putRequest<AdminUserDto>(`${this.baseUrl}/private/users/${id}/sales-points`, payload);
   }
 
+  /** OBRS-1662: whose trips this person may SELL — a different question from who employs
+   * them, and the only one of the two that a `PUT /private/users/{id}` cannot touch. */
+  updateUserSellableOwners(
+    id: number,
+    payload: UpdateUserSellableOwnersPayload
+  ): Observable<ResponseAPI<AdminUserDto>> {
+    return this.putRequest<AdminUserDto>(
+      `${this.baseUrl}/private/users/${id}/sellable-owners`,
+      payload
+    );
+  }
+
   deleteUser(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/users/${id}`);
   }
@@ -1760,6 +2002,39 @@ export class AdminApiService {
 
   deleteStopPhoto(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/stops/${id}/photo`);
+  }
+
+  /**
+   * OBRS-1680: saves the CALLING operator's own name, boarding note and address for a stop.
+   *
+   * <p>A different endpoint from {@link updateStop}, not a narrower payload to the same one. That
+   * one is `hasRole('ADMIN')` and rewrites the central row every operator falls back to; this one
+   * is `hasRole('OWNER')` and rewrites only the rows filed under the caller. An owner sending the
+   * full-replace body would simply get a 403, which is the button this card exists to not have.
+   */
+  updateStopLabels(id: number, payload: AdminStopLabelPayload): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/stops/${id}/labels`, payload);
+  }
+
+  /**
+   * OBRS-1678: opens a new stop. `POST /private/stops` has existed since OBRS-1022 and no screen
+   * had ever called it - adding a stop was not possible from the UI for ANY role, ADMIN included.
+   */
+  createStop(payload: AdminStopUpdatePayload): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/stops`, payload);
+  }
+
+  /**
+   * OBRS-1678: deletes a stop. The other half of the same gap.
+   *
+   * <p>Nine foreign keys point at `stops` and every one of them is NO ACTION, so the database
+   * refuses to delete a stop any route, schedule, booking, ticket or sales point still names.
+   * That refusal surfaces as 409 CONFLICT (`ExceptionHttpStatusMapper` maps
+   * `DataIntegrityViolationException`), NOT the bare 500 this card was written against - the
+   * caller's job is to say what the 409 means, not to prevent it.
+   */
+  deleteStop(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/stops/${id}`);
   }
 
   getSegments(routeSlug: string): Observable<ResponseAPI<AdminSegmentDto>> {
@@ -2114,6 +2389,61 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-841/OBRS-884: per-vehicle P&L — same [from, to] HttpParams shape as the other
+  // four reports (identical defaulting/range guards, ReportService#resolveRange).
+  getVehiclePlReport(from: string, to: string): Observable<ResponseAPI<VehiclePlReportDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<VehiclePlReportDto>(
+      `${this.baseUrl}/private/admin/reports/pl-per-vehicle`,
+      params
+    );
+  }
+
+  /**
+   * OBRS-1578: spend per payee. Every parameter is optional and omitting `year` means EVERY year —
+   * the screen's default. `month` is only ever sent alongside a year; the backend refuses the pair
+   * without one rather than guessing which of the two readings was meant.
+   */
+  getPayeeSpendReport(
+    year: number | null,
+    month: number | null,
+    category: string | null
+  ): Observable<ResponseAPI<PayeeSpendReportDto>> {
+    let params = new HttpParams();
+    if (year !== null) {
+      params = params.set('year', String(year));
+      if (month !== null) {
+        params = params.set('month', String(month));
+      }
+    }
+    if (category !== null) {
+      params = params.set('category', category);
+    }
+    return this.getRequest<PayeeSpendReportDto>(
+      `${this.baseUrl}/private/admin/reports/expense-by-payee`,
+      params
+    );
+  }
+
+  /**
+   * OBRS-1613: what one registry entry cost, per garage, over time.
+   *
+   * No date range at ALL, unlike every other report method here — the owner ruled that on
+   * 2026-08-25 because both parts on record with anything to compare straddle 2025/2026, so any
+   * default window would open the screen on an empty chart. `partId` omitted is the first paint:
+   * the picker's rows and the coverage figures come back without it.
+   */
+  getPartUnitPriceReport(partId: number | null): Observable<ResponseAPI<PartUnitPriceReportDto>> {
+    let params = new HttpParams();
+    if (partId !== null) {
+      params = params.set('partId', String(partId));
+    }
+    return this.getRequest<PartUnitPriceReportDto>(
+      `${this.baseUrl}/private/admin/reports/part-unit-price`,
+      params
+    );
+  }
+
   getCashOnlineReconciliationReport(
     from: string,
     to: string
@@ -2330,6 +2660,21 @@ export class AdminApiService {
     return this.postRequest<CreateExpenseRespDto>(`${this.baseUrl}/private/expenses`, payload);
   }
 
+  /**
+   * OBRS-1576: a whole envelope of repair bills in one call. Not a loop over `createExpense` on this
+   * side, and that is the point — a client-side loop would leave the owner with half a stack
+   * recorded the moment one bill is refused, which is precisely the state AC3 forbids. The server
+   * writes all of them in one transaction or none.
+   */
+  createExpenseBatch(
+    payload: CreateExpenseBatchPayload
+  ): Observable<ResponseAPI<CreateExpenseBatchRespDto>> {
+    return this.postRequest<CreateExpenseBatchRespDto>(
+      `${this.baseUrl}/private/expenses/batch`,
+      payload
+    );
+  }
+
   updateExpense(id: number, payload: CreateExpensePayload): Observable<ResponseAPI<unknown>> {
     return this.putRequest<unknown>(`${this.baseUrl}/private/expenses/${id}`, payload);
   }
@@ -2339,6 +2684,124 @@ export class AdminApiService {
   }
 
   // ── OBRS-1356: the owner's review of what a salesperson recorded in the field ──
+
+  /**
+   * OBRS-1577. `includeInactive` is what separates the two callers: a picker leaves it false and
+   * never offers a payee the owner retired, the registry screen sets it true because a screen that
+   * cannot see a retired row cannot un-retire it.
+   */
+  getExpensePayees(
+    type: AdminExpensePayeeDto['type'] | null,
+    includeInactive = false
+  ): Observable<ResponseAPI<AdminExpensePayeeDto[]>> {
+    let params = new HttpParams();
+    if (type) {
+      params = params.set('type', type);
+    }
+    if (includeInactive) {
+      params = params.set('includeInactive', 'true');
+    }
+    return this.getRequest<AdminExpensePayeeDto[]>(`${this.baseUrl}/private/expense-payees`, params);
+  }
+
+  /**
+   * OBRS-1577: 200, not 201, and it returns the ROW. The endpoint is idempotent by normalized name
+   * (trimmed, spaces removed, lower-cased), so asking for a garage that already exists hands back
+   * the one that exists rather than failing in the middle of entering a bill.
+   */
+  createExpensePayee(
+    payload: CreateExpensePayeePayload
+  ): Observable<ResponseAPI<AdminExpensePayeeDto>> {
+    return this.postRequest<AdminExpensePayeeDto>(`${this.baseUrl}/private/expense-payees`, payload);
+  }
+
+  updateExpensePayee(
+    id: number,
+    payload: CreateExpensePayeePayload
+  ): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/expense-payees/${id}`, payload);
+  }
+
+  /** OBRS-1577: retire/restore. There is no DELETE — a garage that closed still owns every bill it
+   * was ever paid, and there is no second place that history is written down. */
+  setExpensePayeeActive(id: number, active: boolean): Observable<ResponseAPI<unknown>> {
+    return this.patchRequest<unknown>(
+      `${this.baseUrl}/private/expense-payees/${id}/active`,
+      { active }
+    );
+  }
+
+  // ── OBRS-1613: the parts/labour registry ──
+
+  /**
+   * OBRS-1613. `includeInactive` separates the two callers exactly as it does for payees: a picker
+   * leaves it false and never offers an entry the owner retired, the registry screen sets it true
+   * because a screen that cannot see a retired row cannot un-retire it.
+   *
+   * <p>Merged rows are never returned on any of these calls — the server filters
+   * `merged_into_id IS NULL` everywhere — so no caller has to know the column exists.
+   */
+  getMaintenanceParts(
+    kind: AdminMaintenancePartDto['kind'] | null,
+    includeInactive = false
+  ): Observable<ResponseAPI<AdminMaintenancePartDto[]>> {
+    let params = new HttpParams();
+    if (kind) {
+      params = params.set('kind', kind);
+    }
+    if (includeInactive) {
+      params = params.set('includeInactive', 'true');
+    }
+    return this.getRequest<AdminMaintenancePartDto[]>(
+      `${this.baseUrl}/private/maintenance-parts`,
+      params
+    );
+  }
+
+  /**
+   * OBRS-1613: 200, not 201, and it returns the ROW — same shape as `createExpensePayee`. The
+   * endpoint is idempotent by normalized name, so asking for an entry that already exists hands back
+   * the one that exists rather than failing in the middle of writing a bill. A retired match is
+   * REACTIVATED and returned with its seeded `code` intact.
+   *
+   * <p>The one case that is a real error is a name that exists under the OTHER kind: one name cannot
+   * be both a part and a labour item, so that is a 409 and the registry screen is where it is sorted
+   * out.
+   */
+  createMaintenancePart(
+    payload: CreateMaintenancePartPayload
+  ): Observable<ResponseAPI<AdminMaintenancePartDto>> {
+    return this.postRequest<AdminMaintenancePartDto>(
+      `${this.baseUrl}/private/maintenance-parts`,
+      payload
+    );
+  }
+
+  /**
+   * OBRS-1613: rename, and change of kind on the same call. Every plan and every bill line follows
+   * it, because those rows hold this entry's id and never its spelling — which is the whole reason
+   * the FK exists.
+   *
+   * <p>⚠️ Two things this call does that the payload does not show: renaming onto a name already in
+   * the registry is a 409 and NOT a merge (merging re-points one entry's price history onto another
+   * with no undo, so it is its own deliberate action); and renaming a SEEDED row clears its `code`,
+   * dropping the en/zh translations for good.
+   */
+  updateMaintenancePart(
+    id: number,
+    payload: CreateMaintenancePartPayload
+  ): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/maintenance-parts/${id}`, payload);
+  }
+
+  /** OBRS-1613: retire/restore. No DELETE, for the payee registry's reason: this row is the only
+   * record tying every plan and every bill line that used it together. */
+  setMaintenancePartActive(id: number, active: boolean): Observable<ResponseAPI<unknown>> {
+    return this.patchRequest<unknown>(
+      `${this.baseUrl}/private/maintenance-parts/${id}/active`,
+      { active }
+    );
+  }
 
   getPendingExpenses(): Observable<ResponseAPI<AdminExpenseDto[]>> {
     return this.getRequest<AdminExpenseDto[]>(`${this.baseUrl}/private/expenses/pending`);
@@ -2488,6 +2951,27 @@ export class AdminApiService {
     );
   }
 
+  /**
+   * OBRS-1579 — OWNER-only re-open of a box that was already signed off, for
+   * the bill that reaches the counter the morning AFTER the round it paid for.
+   * Wipes the day's return snapshot into `driver_cash_day_reopens` and puts the
+   * day back to `OPEN`, so the late bill lands on the round that actually
+   * incurred it instead of on today's.
+   *
+   * No client-side role check guards the caller: `/admin/settlements` is
+   * already `requiredRoles: ['owner']` (admin.module.ts, and `ROLE_GRANTS` has
+   * admin granting owner), and the backend enforces `hasRole('OWNER')` itself.
+   */
+  reopenDriverCashDay(
+    dayId: number,
+    payload: DriverCashDayReopenReqDto
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    return this.postRequest<DriverCashDayRespDto>(
+      `${this.baseUrl}/private/driver-cash/days/${dayId}/reopen`,
+      payload
+    );
+  }
+
   // ── OBRS-960: owner settings — driver-cash per-head rates ────────────────
 
   getDriverCashRates(): Observable<ResponseAPI<DriverCashRateRowDto[]>> {
@@ -2586,6 +3070,32 @@ export class AdminApiService {
   > {
     return this.deleteRequest<OwnerCancelReschedulePolicyDto>(
       `${this.baseUrl}/private/owner/configs/cancel-reschedule-policy`
+    );
+  }
+
+  // ── OBRS-703: owner settings — operations ─────────────────────────────────
+
+  getOperationsOwnerConfig(): Observable<ResponseAPI<OwnerOperationsConfigDto>> {
+    return this.getRequest<OwnerOperationsConfigDto>(
+      `${this.baseUrl}/private/owner/configs/operations`
+    );
+  }
+
+  updateOperationsOwnerConfig(
+    payload: OperationsConfigReqDto
+  ): Observable<ResponseAPI<OwnerOperationsConfigDto>> {
+    return this.putRequest<OwnerOperationsConfigDto>(
+      `${this.baseUrl}/private/owner/configs/operations`,
+      payload
+    );
+  }
+
+  /** DELETE drops all four override rows as a unit and returns the re-read
+   * (now platform-default) config — there is no per-key delete (same BR-7
+   * shape as cancel-reschedule-policy above). */
+  resetOperationsOwnerConfig(): Observable<ResponseAPI<OwnerOperationsConfigDto>> {
+    return this.deleteRequest<OwnerOperationsConfigDto>(
+      `${this.baseUrl}/private/owner/configs/operations`
     );
   }
 
@@ -2789,9 +3299,44 @@ export type CancelReschedulePolicyReqDto = Omit<
   `${string}Overridden`
 >;
 
+/** `GET`/`PUT`/`DELETE /api/private/owner/configs/operations` — OBRS-703.
+ *
+ * Same `*Overridden` suffix convention as {@link OwnerCancelReschedulePolicyDto}
+ * (not the `*Configured` suffix parcel-share uses) — this is the owner-locked
+ * shape the backend answers with, not a frontend naming choice. */
+export interface OwnerOperationsConfigDto {
+  /** Minutes a chosen seat is held before release. Not retroactive: a
+   * reservation already in flight keeps the value it started with. */
+  seatReservationMinutes: number;
+  seatReservationMinutesOverridden: boolean;
+  /** Minutes to pay a reschedule's fare difference before it is dropped. */
+  reschedulePaymentTimeoutMinutes: number;
+  reschedulePaymentTimeoutMinutesOverridden: boolean;
+  /** Minutes after departure before a ticket is cut off as a no-show — the
+   * same number the customer-facing /business-policy and /how-to-book pages
+   * quote (OBRS-703 AC-10). A ticket cut off this way is NOT refunded. */
+  noShowCutoffMinutes: number;
+  noShowCutoffMinutesOverridden: boolean;
+  /** Percent full at which the near-full alert fires. 100 would mean "never
+   * alert", which is why the field's own range tops out at 99. */
+  nearFullAlertThresholdPercent: number;
+  nearFullAlertThresholdPercentOverridden: boolean;
+}
+
+/** The PUT body: the four values only, no flags — the endpoint writes all
+ * four or none (BR-7 shape). */
+export type OperationsConfigReqDto = Omit<
+  OwnerOperationsConfigDto,
+  `${string}Overridden`
+>;
+
 /** One row of `GET /api/private/owner/parcel-share/monthly` — OBRS-960. */
 export interface ParcelShareMonthlyRowDto {
-  payeeUserId: number;
+  /**
+   * OBRS-1009: null on a "no salesperson — the driver kept it" row. Those shares are reported as
+   * one line per cause instead of under the driver's name, so they name no person and carry no id.
+   */
+  payeeUserId: number | null;
   payeeName: string;
   total: string;
 }

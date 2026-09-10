@@ -12,6 +12,7 @@ describe('AccountPageComponent', () => {
       firstName: 'สมชาย',
       middleName: null,
       lastName: 'ใจดี',
+      nickname: null,
       email: 'user@example.com',
       phoneNumber: '0811111111',
       preferredLocale: 'th',
@@ -57,6 +58,46 @@ describe('AccountPageComponent', () => {
 
     return { component, myAccountServiceStub, alertServiceStub };
   }
+
+  // OBRS-1232: same dropdown swap as the admin user form, same risk. This customer's row may hold
+  // a value the migration could not map to a code (the field was free text for months); a select
+  // with no matching option would show blank and the next Save would silently drop it.
+  describe('title dropdown (OBRS-1232)', () => {
+    it('offers no extra option when the stored title is one of the nine codes', () => {
+      const { component } = create('user@example.com', {
+        getProfile: jasmine.createSpy('getProfile').and.returnValue(
+          of({ code: 200, message: 'OK', data: profileOf({ title: 'MR' }) })
+        ),
+      });
+
+      component.ngOnInit();
+
+      expect((component as any).legacyTitleValue).toBeNull();
+      expect(component.profileForm.get('title')!.value).toBe('MR');
+    });
+
+    it('keeps an unmappable legacy value as its own option, so a Save cannot drop it', () => {
+      const { component } = create('user@example.com', {
+        getProfile: jasmine.createSpy('getProfile').and.returnValue(
+          of({ code: 200, message: 'OK', data: profileOf({ title: 'คุณ' }) })
+        ),
+      });
+
+      component.ngOnInit();
+
+      expect((component as any).legacyTitleValue).toBe('คุณ');
+      expect(component.profileForm.get('title')!.value).toBe('คุณ');
+    });
+
+    it('accepts a blank title - length no longer rules a control the customer cannot type into', () => {
+      const { component } = create('user@example.com');
+      component.ngOnInit();
+
+      const ctrl = component.profileForm.get('title')!;
+      ctrl.setValue('');
+      expect(ctrl.valid).toBeTrue();
+    });
+  });
 
   it('should create', () => {
     const { component } = create('user@example.com');
@@ -148,6 +189,41 @@ describe('AccountPageComponent', () => {
 
     expect(myAccountServiceStub.updateProfile).toHaveBeenCalledWith(
       jasmine.objectContaining({ middleName: null })
+    );
+  });
+
+  it('OBRS-1558: loads the stored nickname into the form and sends the edited one', () => {
+    const { component, myAccountServiceStub } = create('user@example.com', {
+      getProfile: jasmine.createSpy('getProfile').and.returnValue(
+        of({ code: 200, message: 'OK', data: profileOf({ nickname: 'ตุ๊ก' }) })
+      ),
+    });
+    component.ngOnInit();
+    component.startEditingProfile();
+    expect(component.profileForm.get('nickname')?.value).toBe('ตุ๊ก');
+
+    component.profileForm.patchValue({ nickname: ' หนึ่ง ' });
+    component.saveProfile();
+
+    expect(myAccountServiceStub.updateProfile).toHaveBeenCalledWith(
+      jasmine.objectContaining({ nickname: 'หนึ่ง' })
+    );
+  });
+
+  it('OBRS-1558: sends an emptied nickname as null - clearing it must reach the column', () => {
+    const { component, myAccountServiceStub } = create('user@example.com', {
+      getProfile: jasmine.createSpy('getProfile').and.returnValue(
+        of({ code: 200, message: 'OK', data: profileOf({ nickname: 'ตุ๊ก' }) })
+      ),
+    });
+    component.ngOnInit();
+    component.startEditingProfile();
+    component.profileForm.patchValue({ nickname: '' });
+
+    component.saveProfile();
+
+    expect(myAccountServiceStub.updateProfile).toHaveBeenCalledWith(
+      jasmine.objectContaining({ nickname: null })
     );
   });
 

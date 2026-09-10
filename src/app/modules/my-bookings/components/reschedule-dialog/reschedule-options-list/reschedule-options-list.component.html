@@ -44,7 +44,9 @@
             <span class="reschedule-option-card__time">
               {{ formatTime(option.departureDateTime) }} – {{ formatTime(option.arrivalDateTime) }}
             </span>
-            <span class="reschedule-option-card__vehicle">{{ option.vehicleTypeName }}</span>
+            <!-- OBRS-1060: `.name` is the translated label, never `.slug` — the slug used to
+            arrive in this field and read as "minibus" between the Thai time and price. -->
+            <span class="reschedule-option-card__vehicle">{{ option.vehicleType?.name }}</span>
             <span class="reschedule-option-card__price">{{ formatCurrency(option.pricePerSeat) }}</span>
             <span class="reschedule-option-card__seats">
               {{ "MY_BOOKINGS.RESCHEDULE.SEATS" | translate }}: {{ option.availableSeats }}

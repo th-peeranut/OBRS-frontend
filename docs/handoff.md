@@ -163,20 +163,19 @@ admin/owner page had a WORKING flat all-stops mechanism before this fix.
 
 <!-- contract-request
 card: OBRS-151
-status: partially-resolved
-resolved: 2026-07-24 (foundation increment)
-absent: byRoute :: src/main/java/com/example/demo/dto/response/business/*RevenueAnalytics*.java
-absent: byPaymentMethod :: src/main/java/com/example/demo/dto/response/business/*RevenueAnalytics*.java
-note: absent: added 2026-08-01 (OBRS-936). Written before the gate accepted this status, so for a week the entry declared nothing checkable and the two breakdowns went unverified. Re-measured against origin/dev that day: 0 hits for either name in the RevenueAnalytics DTO. The foundation (totals + daily trend + period-over-period) IS shipped - that asymmetry is what partially-resolved means.
+status: resolved
+resolved: 2026-08-24 (OBRS-936: byRoute + byPaymentMethod landed, backend branch ao/obrs-151-155-analytics-fields)
 -->
 
-> **PARTIALLY RESOLVED 2026-07-24.** The **foundation** of this endpoint now exists and is documented:
-> backend `ao/obrs-151-revenue-analytics` `57a7cea6` ships `GET /api/private/admin/reports/revenue-analytics`
-> with **totals + daily net-revenue trend + period-over-period** (server-computed `netBarPct`/`netChangePct`),
-> built on the already-IT-covered `findDailyRevenue` query (ReportService +5 unit tests, 49/49 green). The
-> frontend page consuming it shipped on `ao/revenue-analytics-obrs151` (interface/service/store/page/chart/
-> i18n/route/nav + specs; ci-smoke green). **Still OPEN:** the **by-route** and **by-payment-method**
-> breakdowns below — they need their own native aggregation queries and are the next increment.
+> **RESOLVED 2026-08-24 (OBRS-936).** The two breakdowns below have landed on
+> `ao/obrs-151-155-analytics-fields` `e48ef198` (backend). Actual shipped shapes differ from the proposal below —
+> `byRoute` is `{ routeId, routeSlug, netRevenue, currency, revenueSharePct }` (ticket-grained,
+> `TicketRepository#findRevenueByRoute`, share against the sum of `byRoute` itself); `byPaymentMethod` is
+> `{ methodSlug, netRevenue, paidAmount, refundedAmount, currency, revenueSharePct }`
+> (`PaymentRepository#findRevenueByPaymentMethod`, the same paid/refunded ledger split `dailyTrend` uses,
+> grouped by method). Both are native aggregations with IT coverage (`RevenueAnalyticsIT`, 3/3 against
+> postgres:17-alpine). See `docs/api/reports.md` for the authoritative shape — do not build against the
+> proposal JSON further down this entry (kept for history).
 
 **Affected endpoint**: `GET /api/private/admin/reports/revenue-analytics?from&to` — **NEW, does not exist yet.**
 
@@ -249,18 +248,19 @@ endpoints should be verified against seeded/synthetic data, and the analytics in
 
 <!-- contract-request
 card: OBRS-152
-status: partially-resolved
-resolved: 2026-07-24 (daily increment)
-absent: granularity :: src/main/java/com/example/demo/dto/response/business/*BookingTrend*.java
-note: absent: added 2026-08-01 (OBRS-936). Daily series + 7-day moving average + day-of-week seasonality + period-over-period + peak are shipped; week/month bucketing is not. Re-measured against origin/dev: 0 hits across all 5 BookingTrend DTOs.
+status: resolved
+resolved: 2026-08-24 (OBRS-936: granularity landed, backend branch ao/obrs-151-155-analytics-fields)
 -->
 
-> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/booking-trend` now exists (backend
-> `ao/obrs-152-booking-trend` `cefc2894`, off the 151 branch — sequential lane) with the **daily** series +
-> 7-day moving average + day-of-week seasonality + period-over-period + peak, on the already-IT-covered
-> `findDailyVolume` query (ReportService +6 unit tests, 55/55 green). Frontend page on
-> `ao/booking-trend-obrs152` (interface/service/store/page/2 charts/i18n/route/nav + specs; ci-smoke green).
-> **Still OPEN:** `week`/`month` **granularity** bucketing — this increment is daily only.
+> **RESOLVED 2026-08-24 (OBRS-936).** `granularity` (query param, one of `day`/`week`/`month`, default
+> `day`; invalid value → `400 REPORT_GRANULARITY_INVALID`) has landed on `ao/obrs-151-155-analytics-fields` `e48ef198`
+> (backend), plus a `granularity` field on the response DTO echoing the resolved value. At `day` (default)
+> `series`/`byDayOfWeek` are unchanged (dense, zero-filled). At `week`/`month`, `series` switches to
+> `BookingRepository#findVolumeByGranularity`'s `date_trunc`-bucketed rows and is **sparse** (only buckets
+> with ≥ 1 booking appear); `byDayOfWeek`/`previousPeriod.totalBookings` stay daily-based regardless.
+> Native aggregation with IT coverage (`BookingTrendIT`, 5/5 against postgres:17-alpine). See
+> `docs/api/reports.md` for the authoritative shape — do not build against the proposal JSON further down
+> this entry (kept for history; note the real field name is `date`, not `bucket`).
 
 **Affected endpoint**: `GET /api/private/admin/reports/booking-trend?from&to&granularity=day|week|month` — **NEW.**
 **Request type**: new read-only aggregation (R1 additive). Depends on OBRS-151 lane landing first (sequential).
@@ -290,20 +290,21 @@ Server-computed: `movingAvg7`, `barPct` (bucket count / max bucket count × 100)
 
 <!-- contract-request
 card: OBRS-153
-status: partially-resolved
-resolved: 2026-07-24 (ticket-grained increment)
-absent: loadFactor :: src/main/java/com/example/demo/dto/response/business/*RoutePerformance*.java
-note: absent: added 2026-08-01 (OBRS-936). Departures + tickets sold + net revenue + revenueSharePct are shipped, ticket-grained; seat-level load factor / occupancy is not. Re-measured against origin/dev: 0 hits across the 3 RoutePerformance DTOs.
+status: resolved
+resolved: 2026-08-24 (OBRS-936: loadFactor landed, backend branch ao/obrs-151-155-analytics-fields)
 -->
 
-> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/route-performance` now exists
-> (backend `ao/obrs-153-route-performance` `551e1930`, off the 152 branch) with per-route **departures +
-> tickets sold + net revenue + revenueSharePct**, ticket-grained (each ticket carries route_id +
-> net_price_snapshot → revenue attributes unambiguously). Validated by a **real Testcontainers IT**
-> (`RoutePerformanceIT`, 4/4 against postgres:17-alpine) + ReportServiceTest +3. Frontend page on
-> `ao/route-performance-obrs153` (table + revenue-share bars + tiles; 7 specs, ci-smoke green).
-> **Still OPEN:** seat-level **load-factor / occupancy** — needs the seat-map + jump-seat + OPEN/ASSIGNED
-> semantics the /summary occupancy query carries.
+> **RESOLVED 2026-08-24 (OBRS-936).** `loadFactor` (per-route seat-level occupancy, 0–100 %) has landed on
+> `ao/obrs-151-155-analytics-fields` `e48ef198` (backend) as a trailing field on each `routes[]` row:
+> `soldSeats / totalCapacity × 100`, summed over every Schedule departing that route in the window
+> (`ScheduleRepository#findRouteLoadFactor`, same capacity COALESCE fallback and per-schedule
+> `COUNT(DISTINCT seat_number)`-before-summing shape as `/summary`'s occupancy query — not the full
+> seat-map/jump-seat/OPEN-ASSIGNED semantics originally scoped, which stayed unnecessary for a route-level
+> aggregate). `0.0`, never a divide-by-zero, when `totalCapacity` is `0`. Native aggregation with IT
+> coverage (`RoutePerformanceIT` +2, 6/6 total against postgres:17-alpine). See `docs/api/reports.md` for
+> the authoritative shape — do not build against the proposal JSON further down this entry (kept for
+> history; note the real field name is `loadFactor`, not `loadFactorPct`, and there is no
+> `cancellationRatePct`/`totals.loadFactorPct` in the shipped shape).
 
 **Affected endpoint**: `GET /api/private/admin/reports/route-performance?from&to` — **NEW.**
 **Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-152.
@@ -335,19 +336,19 @@ top-N-routes-by-revenue bar list. **Impact**: OBRS-153 page cannot be built. No-
 
 <!-- contract-request
 card: OBRS-154
-status: partially-resolved
-resolved: 2026-07-24 (counts-only increment)
-absent: leadTime :: src/main/java/com/example/demo/dto/response/business/*CustomerBehavior*.java
-note: absent: added 2026-08-01 (OBRS-936). Aggregate counts (distinct/returning, channel split, repeat histogram) are shipped; booking lead-time percentiles are not - PERCENTILE_CONT has 0 hits anywhere in backend src/main, and leadTime has 0 across the 3 CustomerBehavior DTOs. Re-measured against origin/dev.
+status: resolved
+resolved: 2026-08-24 (OBRS-936: leadTime landed, backend branch ao/obrs-151-155-analytics-fields)
 -->
 
-> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/customer-behavior` now exists
-> (backend `ao/obrs-154-customer-behavior` `ecacdcd6`, off the 153 branch) — aggregate-only (no PII):
-> total bookings, distinct/returning customers + rate, avg per customer, channel split, repeat
-> histogram. Two new native GROUP-BY queries; validated by a **real Testcontainers IT**
-> (`CustomerBehaviorIT`, 2/2 against postgres:17-alpine) + ReportServiceTest +4. Frontend on
-> `ao/customer-behavior-obrs154` (tiles + channel + repeat bars; 7 specs, ci-smoke green).
-> **Still OPEN:** booking **lead-time percentiles** (p50/p90) — needs a PERCENTILE_CONT aggregate.
+> **RESOLVED 2026-08-24 (OBRS-936).** `leadTime` has landed on `ao/obrs-151-155-analytics-fields` `e48ef198`
+> (backend) as a trailing field: `{ p50Hours, p90Hours, avgHours }` — HOURS (not days as originally
+> proposed), a native `PERCENTILE_CONT` aggregate over (earliest-leg `departure_date_time` − booking
+> `created_at`) for confirmed bookings in the window (`BookingRepository#findLeadTimeStats`, rounded to
+> 1 dp in SQL). All three fields are **`null`** (omitted, `@JsonInclude(NON_NULL)`) — never a misleading
+> `0` — when the window has no confirmed booking with a departure leg. Native aggregation with IT coverage
+> (`CustomerBehaviorIT` +2, 4/4 total against postgres:17-alpine). See `docs/api/reports.md` for the
+> authoritative shape — do not build against the proposal JSON further down this entry (kept for history;
+> note the real shape is `leadTime: {p50Hours, p90Hours, avgHours}`, not `leadTimeDays: {p50, p90, avg}`).
 
 **Affected endpoint**: `GET /api/private/admin/reports/customer-behavior?from&to` — **NEW.**
 **Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-153.
@@ -375,20 +376,18 @@ Server-computed: every `*Pct`, the percentiles, and `avgBookingsPerCustomer`. **
 
 <!-- contract-request
 card: OBRS-155
-status: partially-resolved
-resolved: 2026-07-24 (departures + seat-fill increment)
-absent: vehicleUtilization :: src/main/java/com/example/demo/dto/response/business/*OpsEfficiency*.java
-absent: refundRate :: src/main/java/com/example/demo/dto/response/business/*OpsEfficiency*.java
-note: absent: added 2026-08-01 (OBRS-936). Departure completion + seat fill + per-vehicle-type breakdown are shipped; fleet-vehicle utilization and refund rate are not. Re-measured against origin/dev: 0 hits for either in the OpsEfficiency DTO.
+status: resolved
+resolved: 2026-08-24 (OBRS-936: vehicleUtilization + refundRate landed, backend branch ao/obrs-151-155-analytics-fields)
 -->
 
-> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/ops-efficiency` now exists
-> (backend `ao/obrs-155-ops-efficiency` `0488907e`, off the 154 branch) — departure completion
-> (scheduled/completed/cancelled) + seat fill (sold/capacity) + per-vehicle-type breakdown. Two new
-> native queries merged by vehicle type; validated by a **real Testcontainers IT** (`OpsEfficiencyIT`,
-> 2/2 against postgres:17-alpine) + ReportServiceTest +3. Frontend on `ao/ops-efficiency-obrs155`
-> (tiles + per-type fill-rate table; 7 specs, ci-smoke green). **Still OPEN:** fleet-vehicle
-> **utilization** (utilized vs active vehicles) and **refund rate** — separate aggregates.
+> **RESOLVED 2026-08-24 (OBRS-936).** Both fields have landed on `ao/obrs-151-155-analytics-fields` `e48ef198`
+> (backend) as trailing fields on the response: `vehicleUtilization: { vehiclesUsed, totalVehicles,
+> utilizationPct }` — distinct vehicles ASSIGNED to a Schedule departing in the window vs `active` vehicles
+> fleet-wide (`ScheduleRepository#findVehicleUtilization`); `refundRate: { paidAmount, refundedAmount,
+> currency, refundRatePct }` — refunded / gross paid, same ledger semantics as `/revenue-analytics`
+> (`PaymentRepository#findRevenueTotals`). Both percentages are `0.0`, never a divide-by-zero, on an empty
+> denominator. Native aggregations with IT coverage (`OpsEfficiencyIT` +3, 5/5 total against
+> postgres:17-alpine). See `docs/api/reports.md` for the authoritative shape.
 
 **Affected endpoint**: `GET /api/private/admin/reports/ops-efficiency?from&to` — **NEW.**
 **Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-154; last in the lane.

@@ -1,5 +1,6 @@
 import { PassengerInfoComponent } from './passenger-info.component';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
+import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
 import {
   createAnalyticsServiceStub,
   createRouterStub,
@@ -216,6 +217,65 @@ describe('PassengerInfoComponent', () => {
       expect(summary.getAdultCount(passengers) + summary.getKidCount(passengers)).toBe(
         outbound.length
       );
+    });
+  });
+  describe('buildPassengersPayload() passengerTypeConsentVersion (OBRS-1666)', () => {
+    function buildPassenger(overrides: Partial<PassengerInfo> = {}): PassengerInfo {
+      return {
+        isAdult: true,
+        title: 1,
+        firstName: 'John',
+        middleName: '',
+        lastName: 'Doe',
+        phoneNumber: '',
+        gender: 'MALE',
+        isSelectSeat: true,
+        passengerSeat: '1',
+        passengerSeatReturn: '',
+        ...overrides,
+      };
+    }
+
+    it('sends the notice version when a monk consented', () => {
+      const payload = (component as any).buildPassengersPayload(
+        [buildPassenger({ gender: 'MONK', passengerTypeConsent: true })],
+        'outbound'
+      );
+
+      expect(payload[0].passengerType).toBe('monk');
+      expect(payload[0].passengerTypeConsentVersion).toBe(PRIVACY_POLICY_VERSION);
+    });
+
+    it('sends null when a monk did NOT consent - the backend then drops the type', () => {
+      const payload = (component as any).buildPassengersPayload(
+        [buildPassenger({ gender: 'MONK', passengerTypeConsent: false })],
+        'outbound'
+      );
+
+      expect(payload[0].passengerTypeConsentVersion).toBeNull();
+    });
+
+    it('sends null when the consent flag is simply absent (an untouched form)', () => {
+      const payload = (component as any).buildPassengersPayload(
+        [buildPassenger({ gender: 'NUN' })],
+        'outbound'
+      );
+
+      expect(payload[0].passengerTypeConsentVersion).toBeNull();
+    });
+
+    it('sends null for male/female even if a consent flag somehow got set - section 26 does not cover sex', () => {
+      const payload = (component as any).buildPassengersPayload(
+        [
+          buildPassenger({ gender: 'MALE', passengerTypeConsent: true }),
+          buildPassenger({ gender: 'FEMALE', passengerTypeConsent: true }),
+        ],
+        'outbound'
+      );
+
+      expect(payload[0].passengerType).toBe('male');
+      expect(payload[0].passengerTypeConsentVersion).toBeNull();
+      expect(payload[1].passengerTypeConsentVersion).toBeNull();
     });
   });
 });

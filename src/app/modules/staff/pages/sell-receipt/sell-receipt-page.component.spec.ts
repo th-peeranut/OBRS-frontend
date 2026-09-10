@@ -1,4 +1,13 @@
+import { CommonModule } from '@angular/common';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError, Subject } from 'rxjs';
+import { AuthService } from '../../../../auth/auth.service';
+import { BookingService } from '../../../../services/booking/booking.service';
+import { PaymentService } from '../../../../services/payment/payment.service';
+import { TicketService } from '../../../../services/ticket/ticket.service';
+import { TitleLabelPipe } from '../../../../shared/pipes/title-label.pipe';
 import { SellReceiptPageComponent } from './sell-receipt-page.component';
 import { BoardingQrService } from '../../../../shared/services/boarding-qr.service';
 import { BookingTicketsData } from '../../../../shared/interfaces/booking-ticket.interface';
@@ -353,6 +362,127 @@ describe('SellReceiptPageComponent', () => {
       const component = createComponent();
       component.ngOnInit();
       expect(() => component.ngOnDestroy()).not.toThrow();
+    });
+  });
+
+  // OBRS-1781: the only case here that renders the template. Every other one
+  // drives the component directly, which is why nothing noticed the
+  // boarding-scan hint sitting below every passenger block.
+  describe('template order (OBRS-1781)', () => {
+    let fixture: ComponentFixture<SellReceiptPageComponent>;
+
+    beforeEach(async () => {
+      await TestBed.configureTestingModule({
+        imports: [CommonModule, TranslateModule.forRoot(), TitleLabelPipe],
+        declarations: [SellReceiptPageComponent],
+        providers: [
+          { provide: ActivatedRoute, useValue: createActivatedRouteStub(1) },
+          { provide: Router, useValue: createRouterStub() },
+          { provide: BookingService, useValue: bookingServiceStub },
+          { provide: PaymentService, useValue: paymentServiceStub },
+          // BoardingQrService is component-scoped, so it takes TicketService
+          // from here rather than being handed over ready-made.
+          { provide: TicketService, useValue: ticketServiceStub },
+          { provide: AuthService, useValue: createAuthServiceStub() },
+        ],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(SellReceiptPageComponent);
+      fixture.detectChanges();
+    });
+
+    it('the boarding-scan hint heads the passenger list instead of trailing it', () => {
+      const paper: HTMLElement = fixture.nativeElement;
+      const hint = paper.querySelector('.qr-hint') as HTMLElement;
+      const list = paper.querySelector('.receipt-ticket-list') as HTMLElement;
+
+      expect(hint).toBeTruthy();
+      expect(list).toBeTruthy();
+      expect(hint.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+  });
+
+  /**
+   * OBRS-1783 — under OPEN seating the seat belongs to the trip, so the slip says
+   * it once beside the route and drops the per-passenger rows. The owner chose
+   * this over making the e-ticket repeat itself instead (option ก of four).
+   *
+   * These render the template, because the whole change is WHERE the row sits in
+   * the DOM; a component-level assertion on `isOpenSeating` cannot see it move.
+   */
+  describe('OPEN-seating seat line (OBRS-1783)', () => {
+    async function render(data: BookingTicketsData): Promise<HTMLElement> {
+      bookingServiceStub.getBookingTickets.and.returnValue(
+        of({ code: 200, message: 'OK', data })
+      );
+      await TestBed.configureTestingModule({
+        imports: [CommonModule, TranslateModule.forRoot(), TitleLabelPipe],
+        declarations: [SellReceiptPageComponent],
+        providers: [
+          { provide: ActivatedRoute, useValue: createActivatedRouteStub(1) },
+          { provide: Router, useValue: createRouterStub() },
+          { provide: BookingService, useValue: bookingServiceStub },
+          { provide: PaymentService, useValue: paymentServiceStub },
+          { provide: TicketService, useValue: ticketServiceStub },
+          { provide: AuthService, useValue: createAuthServiceStub() },
+        ],
+      }).compileComponents();
+      const fixture = TestBed.createComponent(SellReceiptPageComponent);
+      fixture.detectChanges();
+      return fixture.nativeElement;
+    }
+
+    /** The VALUE printed beside every seat label found under `scope`. The label is
+     *  matched on its exact resolved text so `SEAT_OPEN` is not counted as `SEAT`
+     *  (the translate stub is a passthrough, so the key is what renders). */
+    function seatValues(root: HTMLElement, scope: string): string[] {
+      return Array.from(root.querySelectorAll(`${scope} .label`))
+        .filter((el) => el.textContent?.trim() === 'E_TICKET.LABEL.SEAT')
+        .map((el) => (el.nextElementSibling as HTMLElement | null)?.textContent?.trim() ?? '');
+    }
+
+    function openSeatingData(): BookingTicketsData {
+      const data = buildTicketsData();
+      data.journeys![0].tickets!.forEach((t) => (t.seatNumber = undefined));
+      return data;
+    }
+
+    it('AC-1: states the seat once beside the trip and not once per passenger', async () => {
+      const root = await render(openSeatingData());
+
+      expect(seatValues(root, '.receipt-grid')).toEqual(['E_TICKET.LABEL.SEAT_OPEN']);
+      expect(seatValues(root, '.receipt-passenger-detail')).toEqual([]);
+      // The passengers themselves are untouched — this drops a repeated line, not people.
+      expect(root.querySelectorAll('.receipt-passenger-detail').length).toBe(2);
+    });
+
+    it('AC-2: an ASSIGNED trip is unchanged — no trip line, a seat number per passenger', async () => {
+      const root = await render(buildTicketsData());
+
+      expect(seatValues(root, '.receipt-grid')).toEqual([]);
+      expect(seatValues(root, '.receipt-passenger-detail')).toEqual(['1', '2']);
+    });
+
+    it('a mixed journey keeps every passenger row rather than dropping the uncovered ones', async () => {
+      const data = buildTicketsData();
+      data.journeys![0].tickets![0].seatNumber = undefined;
+      const root = await render(data);
+
+      expect(seatValues(root, '.receipt-grid')).toEqual([]);
+      expect(seatValues(root, '.receipt-passenger-detail')).toEqual(['E_TICKET.LABEL.SEAT_OPEN', '2']);
+    });
+
+    it('a journey with no tickets is "no data", not "open" — the trip line stays away', () => {
+      const data = buildTicketsData();
+      data.journeys![0].tickets = [];
+      bookingServiceStub.getBookingTickets.and.returnValue(
+        of({ code: 200, message: 'OK', data })
+      );
+
+      const component = createComponent();
+      component.ngOnInit();
+
+      expect((component as any).isOpenSeating).toBeFalse();
     });
   });
 });

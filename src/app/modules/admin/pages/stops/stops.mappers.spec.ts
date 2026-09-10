@@ -6,6 +6,8 @@ import {
   toStopDetailForm,
   toStopRow,
   toStopUpdatePayload,
+  toStopLabelPayload,
+  emptyStopDetailForm,
 } from './stops.mappers';
 import {
   AdminStopDetailDto,
@@ -53,13 +55,35 @@ describe('stops.mappers (OBRS-1022)', () => {
         label: 'หนองชาก',
         description: '',
         address: 'ถนนตัวอย่าง',
+        boardingPoint: '',
       });
       // EMPTY, not 'หนองชาก'. The shared getAdminTranslationLabel helper falls back to any
       // locale that has content — right for a table cell, destructive here: it would pre-fill
       // the English box with the Thai name and the owner's next save would store it as the
       // English translation.
-      expect(form.translations[1]).toEqual({ locale: 'en', label: '', description: '', address: '' });
-      expect(form.translations[2]).toEqual({ locale: 'zh', label: '', description: '', address: '' });
+      expect(form.translations[1]).toEqual({ locale: 'en', label: '', description: '', address: '', boardingPoint: '' });
+      expect(form.translations[2]).toEqual({ locale: 'zh', label: '', description: '', address: '', boardingPoint: '' });
+    });
+
+    /**
+     * OBRS-1777. The boarding point arrives per locale, exactly like the address, and an
+     * operator who published none for a locale must see an EMPTY box - not the central value.
+     * Pre-filling it would make their next save copy someone else's bay onto their own row.
+     */
+    it('reads the boarding point per locale, and leaves the box empty where none was published', () => {
+      const form = toStopDetailForm({
+        id: 9,
+        slug: 'mo_chit',
+        translations: { th: { label: 'MoChitTh' }, en: { label: 'Mo Chit' } },
+        boardingPoints: { th: 'BAY-43' },
+      } as never);
+
+      expect(form.translations[0]).toEqual(
+        jasmine.objectContaining({ locale: 'th', boardingPoint: 'BAY-43' }),
+      );
+      expect(form.translations[1]).toEqual(
+        jasmine.objectContaining({ locale: 'en', boardingPoint: '' }),
+      );
     });
 
     it('does not leak one locale\'s landmark note into another locale\'s box', () => {
@@ -102,9 +126,9 @@ describe('stops.mappers (OBRS-1022)', () => {
       primaryPhotoUrl: 'https://sb.example/storage/v1/object/public/b/stops/3/a.jpg',
       returnStopId: null,
       translations: [
-        { locale: 'th', label: 'หนองชาก', description: 'ติดร้านมือถือ', address: 'ถนนตัวอย่าง' },
-        { locale: 'en', label: 'Nong Chak', description: '', address: '' },
-        { locale: 'zh', label: '', description: '', address: '' },
+        { locale: 'th', label: 'หนองชาก', description: 'ติดร้านมือถือ', address: 'ถนนตัวอย่าง', boardingPoint: 'ชานชาลา 43' },
+        { locale: 'en', label: 'Nong Chak', description: '', address: '', boardingPoint: '' },
+        { locale: 'zh', label: '', description: '', address: '', boardingPoint: '' },
       ],
     });
 
@@ -240,5 +264,57 @@ describe('stops.mappers (OBRS-1022)', () => {
 
       expect(options[2]).toEqual({ id: 404, label: '404' });
     });
+  });
+});
+
+describe('toStopLabelPayload (OBRS-1680)', () => {
+  const form = {
+    id: 7,
+    slug: 'nong_chak',
+    provinceCode: 'chonburi',
+    statusCode: 'active',
+    stopTypeCode: 'pickup',
+    latitude: 13.5,
+    longitude: 101.5,
+    primaryPhotoUrl: 'https://sb.example/x.jpg',
+    returnStopId: 3,
+    translations: [
+      { locale: 'th' as const, label: ' อัลฟ่า ประตู 3 ', description: ' ข้างร้านกาแฟ ', address: ' ถนนสุขุมวิท ', boardingPoint: ' ชานชาลา 43 ' },
+      { locale: 'en' as const, label: '', description: 'ignored', address: 'ignored', boardingPoint: 'ignored' },
+      { locale: 'zh' as const, label: '', description: '', address: '', boardingPoint: '' },
+    ],
+  };
+
+  it('carries the sign and nothing about the place', () => {
+    // OBRS-1777 added boardingPoints and nothing else: the operator now owns one spatial fact
+    // about the place (which bay is theirs) and still owns none of the place itself.
+    expect(Object.keys(toStopLabelPayload(form)).sort())
+      .toEqual(['addresses', 'boardingPoints', 'translations']);
+  });
+
+  it('trims, and drops the locales with no label - the server rejects a blank one', () => {
+    const payload = toStopLabelPayload(form);
+
+    expect(payload.translations.length).toBe(1);
+    expect(payload.translations[0]).toEqual({
+      locale: 'th',
+      label: 'อัลฟ่า ประตู 3',
+      description: 'ข้างร้านกาแฟ',
+    });
+    expect(payload.addresses).toEqual({ th: 'ถนนสุขุมวิท' });
+    // OBRS-1777: trimmed, and only for the locale that survived the blank-label filter - the
+    // 'ignored' one must not ride in on a locale the server is not being sent a label for.
+    expect(payload.boardingPoints).toEqual({ th: 'ชานชาลา 43' });
+  });
+});
+
+describe('emptyStopDetailForm (OBRS-1678)', () => {
+  it('offers all three locales blank so none of them is invisible in the create form', () => {
+    const form = emptyStopDetailForm('chonburi', 'active', 'pickup');
+
+    expect(form.translations.map((t) => t.locale)).toEqual(['th', 'en', 'zh']);
+    expect(form.translations.every((t) => t.label === '' && t.address === '')).toBeTrue();
+    expect(form.slug).toBe('');
+    expect(form.primaryPhotoUrl).toBeNull();
   });
 });

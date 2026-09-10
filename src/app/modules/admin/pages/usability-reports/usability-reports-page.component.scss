@@ -194,6 +194,20 @@
   flex-wrap: wrap;
 }
 
+// OBRS-1517: this page's three `.btn-link`s are the only OTHER anchors under
+// `.admin-shell` with no colour of their own. The one in the table row measured
+// the same 3.56:1 the parcel-consign terms link did (#0d6efd on the dark #1d2226
+// surface); the two in the detail panel need a row click to render, so they were
+// not swept, but they carry the identical class and therefore the same colour.
+// Bootstrap
+// 5.3 derives `--bs-btn-color`/`-hover-color`/`-active-color` on `.btn-link` from
+// these two, so redeclaring the pair here themes every state at once instead of
+// out-specifying `.btn:hover` on a source-order tie.
+.btn-link {
+  --bs-link-color: var(--admin-link);
+  --bs-link-hover-color: var(--admin-link);
+}
+
 .ur-duplicate-link {
   margin-left: 8px;
   font-size: 0.8rem;

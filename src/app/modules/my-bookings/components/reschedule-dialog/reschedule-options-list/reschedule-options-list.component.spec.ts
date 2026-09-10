@@ -10,9 +10,12 @@ describe('RescheduleOptionsListComponent', () => {
   let fixture: ComponentFixture<RescheduleOptionsListComponent>;
   let component: RescheduleOptionsListComponent;
 
+  // OBRS-1060: the shape the endpoint really sends. The old fixture said `vehicleTypeName: 'Van'`
+  // — title-cased and prettier than the `"minibus"` the API actually returned, which is why no
+  // test here could go red while a Thai customer was reading a slug.
   const sampleOption: RescheduleOption = {
     scheduleId: 101,
-    vehicleTypeName: 'Van',
+    vehicleType: { slug: 'minibus', name: 'รถมินิบัส' },
     departureDateTime: '2026-12-21T09:00:00',
     arrivalDateTime: '2026-12-21T11:00:00',
     pricePerSeat: '220.00',
@@ -75,6 +78,23 @@ describe('RescheduleOptionsListComponent', () => {
     expect(selectSpy).toHaveBeenCalledWith(sampleOption);
   });
 
+  // OBRS-1060 AC-6. Two assertions on purpose: the first pins WHICH half of the pair renders,
+  // the second refuses anything SHAPED like a slug even if a future field carries one. Neither
+  // keys on `_` — `van`/`minibus` have none, which is exactly how this got past OBRS-636's AC3.
+  it('OBRS-1060 — the vehicle cell renders the translated label, and never a slug-shaped value', () => {
+    component.loading = false;
+    component.error = null;
+    component.options = [sampleOption];
+    fixture.detectChanges();
+
+    const vehicleText = textOf('.reschedule-option-card__vehicle');
+    expect(vehicleText).toBe('รถมินิบัส');
+    expect(vehicleText).not.toBe(sampleOption.vehicleType!.slug);
+    // "Looks like a slug" = all-lowercase ASCII with no whitespace and no Thai character. A
+    // rendered label fails this; `minibus`, `van` and every other slug in the table pass it.
+    expect(vehicleText).withContext(`rendered "${vehicleText}"`).not.toMatch(/^[a-z0-9-]+$/);
+  });
+
   it('shows a confirm-time error banner ALONGSIDE the (still-valid) options list — never in place of it', () => {
     component.loading = false;
     component.error = null;
@@ -113,7 +133,7 @@ describe('RescheduleOptionsListComponent (announced-delay disclosure, OBRS-1141)
 
   const onTime: RescheduleOption = {
     scheduleId: 201,
-    vehicleTypeName: 'Van',
+    vehicleType: { slug: 'minibus', name: 'รถมินิบัส' },
     departureDateTime: '2026-12-21T09:00:00',
     arrivalDateTime: '2026-12-21T11:00:00',
     pricePerSeat: '220.00',

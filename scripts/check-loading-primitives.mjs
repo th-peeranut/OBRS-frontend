@@ -145,9 +145,6 @@ const ALLOWED_FILES = new Set([
 // OBRS-907's branch point) -- registered here, not fixed here; OBRS-909/910 still owns
 // the sweep, this card only had to stop it from growing a 17th.
 const DEBT_REGISTER = {
-  'app/modules/account/components/change-email-dialog/change-email-dialog.component.scss': [
-    'change-email-spin',
-  ],
   'app/modules/account/components/close-account-dialog/close-account-dialog.component.scss': [
     'close-account-spin',
   ],
@@ -160,9 +157,6 @@ const DEBT_REGISTER = {
   ],
   'app/modules/my-bookings/components/change-seat-dialog/change-seat-dialog.component.scss': [
     'change-seat-spin',
-  ],
-  'app/modules/my-bookings/components/change-stop-dialog/change-stop-dialog.component.scss': [
-    'change-stop-spin',
   ],
   'app/modules/my-bookings/components/reschedule-dialog/reschedule-estimate-summary/reschedule-estimate-summary.component.scss':
     ['reschedule-estimate-spin'],

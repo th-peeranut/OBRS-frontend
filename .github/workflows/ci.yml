@@ -68,6 +68,16 @@ jobs:
       - name: i18n parity, policy-number and privacy-version gates
         run: npm run test:i18n
 
+      # Same shape, and the one drift the gate above cannot see (OBRS-1762). The list
+      # of switchable notification types lives in this repo AND in the backend enum,
+      # and test:i18n compares en/th/zh only to each other -- so when the backend added
+      # SCHEDULE_DELAYED / SCHEDULE_VEHICLE_CHANGED, all three files were missing the
+      # same two keys, parity stayed "OK", and customers read the raw key off the
+      # preferences page for two months (OBRS-1743). This step compares the labels to a
+      # committed list the backend mirrors in its own test.
+      - name: notification-preference type gate
+        run: npm run test:notification-pref-types
+
       # Same shape and same rationale (OBRS-463): a pure-node gate before npm ci.
       # An auth page that renders the split-layout shell without importing the
       # partial that styles it produces NO error at build or runtime -- it just
@@ -371,6 +381,17 @@ jobs:
       # exercised at a real size -- so the check has to read the stylesheets.
       - name: Leaflet marker position gate
         run: npm run test:marker-position
+
+      # One fare of 200 baht used to render four different ways: `฿200.00` on the
+      # reschedule dialog, `THB 200.00` on the settlement report, `200 บาท` with no
+      # thousand separator on the search page, and `200.00 บาท` in the confirmation
+      # email the same customer got a minute later (measured on dev 2026-08-24).
+      # None of it was one bad decision - it was one line copied into the next
+      # component twenty-four times, and every copy was self-consistent, so nothing
+      # ever went red. Only a scanner that reads the whole tree can see a format
+      # diverging, which is why the twenty-fifth copy has to be stopped here.
+      - name: Money format gate
+        run: npm run test:money-format
 
       - name: Install dependencies
         run: npm ci

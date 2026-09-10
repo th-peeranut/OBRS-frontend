@@ -226,6 +226,7 @@ export const CUSTOMER_HOST: Record<string, string> = {
   // store differs, and a host box is a property of the route.
   'schedule-booking-empty': 'app-schedule-booking',
   'schedule-booking-no-results': 'app-schedule-booking',
+  'schedule-booking-day-strip': 'app-schedule-booking',
   'review-schedule-booking': 'app-review-schedule-booking',
   'passenger-info': 'app-passenger-info',
   payment: 'app-payment',
@@ -247,6 +248,8 @@ export const CUSTOMER_HOST: Record<string, string> = {
   register: 'app-register',
   'login-mobile': 'app-login-mobile',
   'forget-password': 'app-forget-password',
+  // OBRS-1530 joined CUSTOMER_PAGES, so it owes a row here too.
+  'my-parcels': 'app-my-parcels',
   'track-parcel': 'app-parcel-tracking-page',
 };
 
@@ -390,6 +393,24 @@ const ONE_VEHICLE = ok([
     status: 'active',
   },
 ]);
+
+/**
+ * OBRS-885. The single-vehicle DETAIL row `GET /vehicles/{id}` answers, which is
+ * a different projection from the list above: `toDetailDto` is the only one that
+ * carries `gpsImei`, `assignedDriverId` and the service window. Present so
+ * `admin-vehicles-edit-modal` measures the modal's ordinary state -- the generic
+ * `ok(null)` would be a 2xx with an empty envelope, which the modal treats as a
+ * failed fetch.
+ */
+const ONE_VEHICLE_DETAIL = ok({
+  id: 1,
+  vehicleNumber: 'BUS-01',
+  numberPlate: 'TH-8888',
+  vehicleType: { id: 1, slug: 'bus', name: 'Bus' },
+  status: 'active',
+  inServiceFrom: '2024-07-17',
+  inServiceTo: null,
+});
 
 /**
  * The round-trip promotion singleton. Its whole form -- both calendars included
@@ -541,6 +562,56 @@ export const ADMIN_SWEEP: SweepPage[] = [
     requires: 'app-cash-online-reconciliation-report-page',
   },
   { key: 'admin-expenses', url: '/admin/expenses', landsOn: /\/admin\/expenses$/, requires: 'app-expenses-page' },
+
+  // --- OBRS-1576 ------------------------------------------------------------
+  // The envelope screen. Its `p-datepicker` is one per BILL, inside
+  // `app-expense-bill-card`, so no page already here can reach it -- and the
+  // coverage gate named the component on the first CI run after the page
+  // landed, which is the gate working rather than a flake.
+  //
+  // ADMIN_SWEEP and not OWNER_SWEEP for the reason spelled out on
+  // `admin-vehicle-pl-report` below: the route is requiredRoles:
+  // ['admin','owner'], so this sweep's ['admin'] session lands on it without
+  // widening the session. The admin-only owner picker above the bill cards is a
+  // dropdown, not a PrimeNG host, so the extra role hides nothing measured here.
+  //
+  // `requires` names the p-datepicker rather than the page selector alone, per
+  // `staff-my-earnings` above: the page opens with exactly one bill card and it
+  // starts EXPANDED (`collapsed = [false]`), and the bill date sits above every
+  // field that needs a loaded list -- so this lane's empty backend still
+  // RENDERS the host being measured.
+  {
+    key: 'admin-expenses-batch',
+    url: '/admin/expenses/batch',
+    landsOn: /\/admin\/expenses\/batch$/,
+    requires: 'app-expense-bill-card p-datepicker',
+  },
+
+  // --- OBRS-884 -------------------------------------------------------------
+  // The per-vehicle P&L screen carries the same two `p-datepicker`s as the
+  // filter rows above, and the coverage gate named it on the first CI run after
+  // it landed -- the gate working, not a flake. Its own OWN-DB lane is green and
+  // says nothing about this: that lane proves the numbers, this one proves the
+  // host box is measured before an app-wide rule moves it.
+  //
+  // ADMIN_SWEEP and not OWNER_SWEEP: the route is requiredRoles:
+  // ['admin','owner'], so this sweep's ['admin'] session lands on it without
+  // widening the session -- which is the whole reason OWNER_SWEEP exists as a
+  // separate list. Only the EXPORT BUTTON inside the page is owner-only, and a
+  // button that does not render cannot hide a PrimeNG host that is not in it.
+  //
+  // `requires` names the p-datepicker rather than the page selector alone, for
+  // the reason spelled out on `staff-my-earnings` above: the filter section
+  // renders unconditionally ABOVE every contentState branch, so this lane's
+  // empty backend still RENDERS the host being measured, while a bare
+  // `app-vehicle-pl-report-page` would pass on a page whose PrimeNG tag never
+  // rendered at all.
+  {
+    key: 'admin-vehicle-pl-report',
+    url: '/admin/vehicle-pl-report',
+    landsOn: /\/admin\/vehicle-pl-report$/,
+    requires: 'app-vehicle-pl-report-page p-datepicker',
+  },
   {
     key: 'admin-promotions',
     url: '/admin/promotions',
@@ -743,6 +814,36 @@ export const ADMIN_SWEEP: SweepPage[] = [
       await expect(page.locator('app-vehicle-maintenance-plan-panel')).toBeVisible({ timeout: 10_000 });
       await page.locator('app-vehicle-maintenance-plan-panel button.admin-btn-primary').first().click();
       await expect(page.locator('app-vehicle-maintenance-plan-panel .admin-modal')).toBeVisible({ timeout: 10_000 });
+    },
+  },
+  {
+    // OBRS-885. The vehicle EDIT modal, a third screen off the same page and a
+    // different component again from the two panels above -- its two
+    // `<p-datePicker>`s are the service window (in_service_from / in_service_to).
+    // Whole template is behind `@if (isOpen)`, so nothing of it exists until the
+    // row's edit icon is clicked.
+    //
+    // The detail row is fixtured rather than left to the generic `ok(null)`: a
+    // null envelope trips the modal's R1 fetch-fail guard, which measures the
+    // ERROR state of this screen and not the one an admin normally sees. The
+    // pickers render either way, which is exactly why leaving it to chance would
+    // have been invisible.
+    key: 'admin-vehicles-edit-modal',
+    url: '/admin/vehicles',
+    landsOn: /\/admin\/vehicles$/,
+    requires: 'app-vehicles-page',
+    fixture: [
+      { match: /\/vehicles$/, body: ONE_VEHICLE },
+      { match: /\/vehicles\/\d+$/, body: ONE_VEHICLE_DETAIL },
+    ],
+    act: async (page) => {
+      await page
+        .locator('app-vehicle-list-table button.admin-icon-btn')
+        .filter({ has: page.locator('span.material-symbols-outlined', { hasText: /^edit_square$/ }) })
+        .first()
+        .click();
+      await expect(page.locator('app-vehicle-form-modal .admin-modal')).toBeVisible({ timeout: 10_000 });
+      await expect(page.locator('app-vehicle-form-modal p-datepicker').first()).toBeVisible({ timeout: 10_000 });
     },
   },
 ];

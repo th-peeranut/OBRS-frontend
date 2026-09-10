@@ -7,6 +7,7 @@ import { AlertService } from '../../shared/services/alert.service';
 import { MyAccountProfile } from '../../shared/interfaces/my-account.interface';
 import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
 import { trimmedRequiredValidator } from '../../shared/validators/trimmed-required.validator';
+import { TITLE_OPTIONS } from '../../shared/constants/title-options';
 import {
   THAI_MOBILE_PATTERN,
   formatThaiMobile,
@@ -57,6 +58,24 @@ export function thaiMobileValidator(control: AbstractControl): ValidationErrors 
     standalone: false
 })
 export class AccountPageComponent implements OnInit {
+  /**
+   * OBRS-1232 AC-6: the nine codes the dropdown offers.
+   */
+  protected readonly titleOptions = TITLE_OPTIONS;
+
+  /**
+   * OBRS-1232 AC-5: this field was free text for months, so a row can hold a value that is not one
+   * of the nine codes ('คุณ', a typo) — the migration deliberately left those alone. Without an
+   * extra option carrying it, opening the form on such a row would show a blank select and a Save
+   * that changed nothing else would WIPE the value. That is the OBRS-1230 failure shape (a modal
+   * guessing at data it could not represent), so it is pinned here rather than left to chance.
+   */
+  protected get legacyTitleValue(): string | null {
+    const current = String(this.profileForm.get('title')?.value ?? '').trim();
+    if (!current) return null;
+    return TITLE_OPTIONS.some((option) => option.code === current) ? null : current;
+  }
+
   currentEmail: string | null = null;
   isChangeEmailDialogOpen = false;
   isCloseAccountDialogOpen = false;
@@ -86,10 +105,14 @@ export class AccountPageComponent implements OnInit {
     // this shape (OBRS-409) and is a strict subset of what the server accepts, so nothing the server
     // would have taken is rejected here.
     this.profileForm = this.fb.group({
-      title: ['', [Validators.minLength(2), Validators.maxLength(50)]],
+      // OBRS-1232: minLength went with the free-text input - see the admin user form for why.
+      title: ['', [Validators.maxLength(50)]],
       firstName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
       middleName: ['', [Validators.maxLength(50)]],
       lastName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
+      // OBRS-1558: optional, but 2-50 when filled in - the same bounds the backend enforces, so a
+      // 1-character nickname is refused here instead of coming back as a 400.
+      nickname: ['', [Validators.minLength(2), Validators.maxLength(50)]],
       phoneNumber: ['', [Validators.required, thaiMobileValidator]],
     });
   }
@@ -177,6 +200,7 @@ export class AccountPageComponent implements OnInit {
     this.isProfileSaving = true;
     const value = this.profileForm.value;
     const middleName = ((value.middleName as string) ?? '').trim();
+    const nickname = ((value.nickname as string) ?? '').trim();
 
     this.myAccountService
       .updateProfile({
@@ -186,6 +210,8 @@ export class AccountPageComponent implements OnInit {
         // field has to travel as null rather than "".
         middleName: middleName === '' ? null : middleName,
         lastName: (value.lastName as string).trim(),
+        // OBRS-1558: same reason as middleName above - clearing the field has to travel as null.
+        nickname: nickname === '' ? null : nickname,
         // The field may carry display dashes (080-000-0000); the backend stores canonical digits,
         // so strip them back out before the PUT.
         phoneNumber: stripPhoneSeparators(value.phoneNumber as string),
@@ -244,6 +270,7 @@ export class AccountPageComponent implements OnInit {
       firstName: this.profile.firstName ?? '',
       middleName: this.profile.middleName ?? '',
       lastName: this.profile.lastName ?? '',
+      nickname: this.profile.nickname ?? '',
       // Enter edit mode showing the grouped form; onPhoneFocus() peels the dashes off for typing.
       phoneNumber: formatThaiMobile(this.profile.phoneNumber),
     });

@@ -49,4 +49,16 @@ describe('ConfigSourceBadgeComponent (OBRS-699)', () => {
       'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.SOURCE.ARIA'
     );
   });
+
+  // OBRS-703: a second call site (operations-config) reuses this component via
+  // `[i18nPrefix]` instead of forking a copy — proves the input actually
+  // switches every key, not just the default's call sites above.
+  it('reads SOURCE keys from a call-site-supplied i18nPrefix', () => {
+    fixture.componentInstance.i18nPrefix = 'ADMIN.OPERATIONS_CONFIG';
+    fixture.componentInstance.overridden = true;
+    fixture.detectChanges();
+
+    expect(badge().textContent?.trim()).toBe('ADMIN.OPERATIONS_CONFIG.SOURCE.CUSTOM');
+    expect(badge().getAttribute('aria-label')).toContain('ADMIN.OPERATIONS_CONFIG.SOURCE.ARIA');
+  });
 });

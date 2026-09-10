@@ -15,3 +15,20 @@
   color: var(--admin-muted);
 }
 
+
+// OBRS-1579: says which day's cash box this entry lands in. Emphasised, not
+// muted - it is the fact the form was missing, not a footnote.
+.dcp-box-date-note {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+// A warning, not an error: the entry is still allowed to go through.
+.dcp-bill-date-warning {
+  color: var(--admin-warning-fg);
+  display: block;
+  font-weight: 600;
+  margin-top: 4px;
+}

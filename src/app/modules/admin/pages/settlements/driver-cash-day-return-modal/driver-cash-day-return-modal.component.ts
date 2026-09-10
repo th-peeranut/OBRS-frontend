@@ -2,11 +2,13 @@ import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from
 import { TranslateService } from '@ngx-translate/core';
 import {
   DriverCashDayRespDto,
+  DriverCashDayStatus,
   DriverCashDaySummaryRespDto,
   DriverCashEntryRespDto,
 } from '../../../../../shared/interfaces/driver-cash.interface';
-import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
+import { formatDisplayDate, formatDisplayDateTime } from '../../../../../shared/lib/display-date-time';
 import { centsToDecimalString, toSignedCents } from '../../../../../shared/lib/money-cents';
+import { formatMoney } from '../../../../../shared/lib/money-display';
 
 /** `confirmRequested` payload — `POST /api/private/driver-cash/days/{dayId}/return`. */
 export interface DriverCashDayReturnPayload {
@@ -66,10 +68,14 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
   @Input() isFetching = false;
   @Input() isConfirming = false;
   @Input() fetchError = '';
+  /** OBRS-1579 — the re-open POST is in flight. */
+  @Input() isReopening = false;
 
   @Output() closed = new EventEmitter<void>();
   @Output() confirmRequested = new EventEmitter<DriverCashDayReturnPayload>();
   @Output() retryFetch = new EventEmitter<void>();
+  /** OBRS-1579 — emits the mandatory reason. */
+  @Output() reopenRequested = new EventEmitter<string>();
 
   protected readonly skeletonRows = Array.from({ length: 3 });
 
@@ -77,8 +83,13 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
   protected returnedAmountInput = '';
   protected discrepancyReasonInput = '';
 
+  // ── OBRS-1579 re-open form (collapsed until the owner asks for it) ─────
+  protected isReopenFormOpen = false;
+  protected reopenReasonInput = '';
+
   private formDayId: number | null = null;
   private prefilledDayId: number | null = null;
+  private lastDetailStatus: DriverCashDayStatus | null = null;
 
   constructor(private readonly translate: TranslateService) {}
 
@@ -88,7 +99,34 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
       this.formDayId = dayId;
       this.resetForm();
     }
+    this.applyReopenTransition();
     this.prefillFromExpectedOnce(dayId);
+  }
+
+  /**
+   * OBRS-1579 — a re-open puts the SAME `dayId` back to `OPEN`, and
+   * `prefillFromExpectedOnce` is keyed on `dayId`, so an owner who returned a
+   * box and then re-opened it in the same modal would have kept the amount they
+   * signed a moment ago (e.g. `-120.00`) sitting in a box whose expectation is
+   * now `-1320.00`.
+   *
+   * ⛔ That is not a cosmetic staleness. `returnedAmount` is the CUMULATIVE
+   * total for the whole business date, not the increment the late bill added
+   * (`DriverCashService#reopenDay`'s contract). Confirming the stale figure
+   * would raise a discrepancy that does not exist, and the form then DEMANDS a
+   * reason for it - forcing an invented sentence into the very audit trail this
+   * card exists to make honest.
+   */
+  private applyReopenTransition(): void {
+    const status = this.detail?.status ?? null;
+    if (this.lastDetailStatus === 'RETURNED' && status === 'OPEN') {
+      this.prefilledDayId = null;
+      this.returnedAmountInput = '';
+      this.discrepancyReasonInput = '';
+      this.isReopenFormOpen = false;
+      this.reopenReasonInput = '';
+    }
+    this.lastDetailStatus = status;
   }
 
   /**
@@ -124,6 +162,44 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
     this.returnedAmountInput = '';
     this.discrepancyReasonInput = '';
     this.prefilledDayId = null;
+    this.lastDetailStatus = null;
+    this.isReopenFormOpen = false;
+    this.reopenReasonInput = '';
+  }
+
+  // ── OBRS-1579: re-open ─────────────────────────────────────────────────
+
+  /** ⛔ True stays true after the box is signed off AGAIN — a re-opened box
+   * must never read as an ordinary one. */
+  protected get hasReopens(): boolean {
+    return (this.detail?.reopenCount ?? 0) > 0;
+  }
+
+  protected get canReopen(): boolean {
+    return (
+      !this.isReopening &&
+      !!this.detail &&
+      this.detail.status === 'RETURNED' &&
+      this.reopenReasonInput.trim().length > 0
+    );
+  }
+
+  protected toggleReopenForm(): void {
+    this.isReopenFormOpen = !this.isReopenFormOpen;
+    if (!this.isReopenFormOpen) {
+      this.reopenReasonInput = '';
+    }
+  }
+
+  protected onReopenClick(): void {
+    if (!this.canReopen) {
+      return;
+    }
+    this.reopenRequested.emit(this.reopenReasonInput.trim());
+  }
+
+  protected displayDateTime(value: string | null | undefined): string {
+    return formatDisplayDateTime(value, this.translate.currentLang);
   }
 
   protected get returnedCents(): number | null {
@@ -241,4 +317,10 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
       discrepancyReason: this.hasDiscrepancy() ? reason : undefined,
     });
   }
+  /** OBRS-1592: driver-cash printed these decimal strings raw — no unit, no
+   * thousand separator, `.00` on every whole amount. Staff money is money. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translate.currentLang);
+  }
+
 }

@@ -66,7 +66,19 @@ describe('AdminLayoutComponent', () => {
     getUsername: () => 'admin@obrs.test',
     logout: jasmine.createSpy('logout'),
     hasAnyRole: (_roles: string[]) => false,
+    // OBRS-1498: gates the lookups/roles nav entries. A blunt fixture switch
+    // like hasAnyRole above, NOT a model of getRoles() below: the search and
+    // section specs here were written against a sidebar that HAS those two
+    // entries and match on 'lookups' by name. The gate itself is measured by
+    // flipping this, in the OBRS-1498 specs further down.
+    hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['owner'],
+    // OBRS-1721: the shell reads these three at construction and subscribes to
+    // the stream in ngOnInit. Never-previewing is the baseline every spec here
+    // was written against; the preview itself is measured in nav-reachability.spec.ts.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');
@@ -223,6 +235,42 @@ describe('AdminLayoutComponent', () => {
     expect(pinBtn).withContext('toggle button should exist inside .admin-sidebar-panel').toBeTruthy();
   });
 
+  it('renders the toggle button inside .admin-brand (OBRS-913: shares the logo row)', () => {
+    const pinBtn = fixture.debugElement.query(By.css('.admin-brand .admin-sidebar-pin'));
+    expect(pinBtn)
+      .withContext('toggle button should be a child of .admin-brand so it sits on the logo row')
+      .toBeTruthy();
+  });
+
+  it('Ctrl+B toggles the pinned state (OBRS-913)', () => {
+    const comp = fixture.componentInstance as AdminLayoutComponent & {
+      onToggleShortcut: (event: Event) => void;
+    };
+    const shell = fixture.debugElement.query(By.css('.admin-shell'));
+    const before = shell.nativeElement.classList.contains('is-sidebar-pinned');
+    const event = new KeyboardEvent('keydown', { key: 'b', ctrlKey: true });
+    comp.onToggleShortcut(event);
+    fixture.detectChanges();
+    expect(shell.nativeElement.classList.contains('is-sidebar-pinned'))
+      .withContext('Ctrl+B should flip is-sidebar-pinned')
+      .toBe(!before);
+  });
+
+  it('Ctrl+B is ignored when the event target is an <input> (OBRS-913: menu search)', () => {
+    const comp = fixture.componentInstance as AdminLayoutComponent & {
+      onToggleShortcut: (event: Event) => void;
+    };
+    const shell = fixture.debugElement.query(By.css('.admin-shell'));
+    const before = shell.nativeElement.classList.contains('is-sidebar-pinned');
+    const event = new KeyboardEvent('keydown', { key: 'b', ctrlKey: true });
+    Object.defineProperty(event, 'target', { value: document.createElement('input') });
+    comp.onToggleShortcut(event);
+    fixture.detectChanges();
+    expect(shell.nativeElement.classList.contains('is-sidebar-pinned'))
+      .withContext('Ctrl+B typed inside the sidebar menu search must not collapse the menu being filtered')
+      .toBe(before);
+  });
+
   it('the .admin-collapse-toggle button is absent (replaced by sidebar-pin toggle)', () => {
     const collapseBtn = fixture.debugElement.query(By.css('.admin-collapse-toggle'));
     expect(collapseBtn).withContext('old collapse toggle must not exist').toBeNull();
@@ -300,6 +348,39 @@ describe('AdminLayoutComponent', () => {
       );
     } finally {
       authStub.hasAnyRole = original;
+    }
+  });
+
+  // OBRS-1498 AC-3 — the nav half of hiding /admin/lookups and /admin/roles
+  // from an owner. Both directions, because a gate that hides the entry from
+  // everyone is as wrong as one that hides it from nobody: the route guard
+  // bounces an owner (admin-only-pages-route-guard.spec.ts) and an entry that
+  // outlived the guard would be a link straight into that bounce.
+  it('shows the lookups and roles nav items for a held admin', () => {
+    const comp = fixture.componentInstance as unknown as { navItems: Array<{ path: string }> };
+    const paths = comp.navItems.map((item) => item.path);
+    expect(paths).toContain('lookups');
+    expect(paths).toContain('roles');
+  });
+
+  it('hides the lookups and roles nav items when hasHeldRole(["admin"]) is false', () => {
+    const original = authStub.hasHeldRole;
+    authStub.hasHeldRole = (_roles: string[]) => false;
+    try {
+      const f = TestBed.createComponent(AdminLayoutComponent);
+      f.detectChanges();
+
+      const comp = f.componentInstance as unknown as { navItems: Array<{ path: string }> };
+      const paths = comp.navItems.map((item) => item.path);
+      expect(paths)
+        .withContext('every write on /admin/lookups is hasRole(ADMIN) — an owner would only find 403s')
+        .not.toContain('lookups');
+      expect(paths).not.toContain('roles');
+      // Not vacuous: the rest of the master section is untouched.
+      expect(paths).toContain('users');
+      expect(paths).toContain('routes');
+    } finally {
+      authStub.hasHeldRole = original;
     }
   });
 
@@ -750,11 +831,11 @@ describe('AdminLayoutComponent', () => {
       navSearchCorpus: Array<{ path: string; labelKey: string; descriptionKey?: string }>;
     };
 
-    // A tab whose requiredRoles are ['admin', 'owner'] and one whose roles are
-    // ['owner'] only, picked FROM the array so the role spec below keeps
-    // meaning what it says if a tab's roles ever change.
-    const sharedTab = SYSTEM_SETTINGS_TABS.find((t) => t.requiredRoles.includes('admin'))!;
-    const ownerOnlyTab = SYSTEM_SETTINGS_TABS.find((t) => !t.requiredRoles.includes('admin'))!;
+    // OBRS-1719 flipped the last tabs that used to be a real ['owner']-only
+    // literal to ['admin','owner'], so there is no longer a real tab in
+    // SYSTEM_SETTINGS_TABS this describe block can pick to prove "own roles,
+    // not the union" by CONTENT. The role spec below proves it by CALL SHAPE
+    // instead (see the AC3 test).
 
     /**
      * Builds the layout with a caller-supplied role predicate. The predicate is
@@ -819,20 +900,37 @@ describe('AdminLayoutComponent', () => {
         .toEqual(['seat']);
     });
 
-    it('reads the OWN requiredRoles of each tab, not the union the shell uses (AC3)', () => {
-      // Admits the shell and the shared tab, refuses the owner-only tabs.
-      const comp = buildWith((roles) => roles.includes('admin'));
-      const corpusPaths = comp.navSearchCorpus.map((i) => i.path);
+    it('calls hasAnyRole once per settings tab, in tab order, each with that tab\'s OWN requiredRoles (AC3)', () => {
+      // Every SYSTEM_SETTINGS_TABS entry now carries the identical ['admin',
+      // 'owner'] literal (OBRS-1719 closed the last real owner-only case), so
+      // a synthetic predicate can no longer discriminate tabs by CONTENT —
+      // admin-layout.component.ts:356 also gates the shell's own "settings"
+      // link with a role array that is now content-identical
+      // ([...SYSTEM_SETTINGS_ROLES]). What is still checkable, and is the
+      // actual mechanism this AC pins, is CALL SHAPE: buildSettingsTabItems()
+      // (:389-391) calls hasAnyRole once PER TAB, in array order, each with
+      // that tab's own (spread) requiredRoles — never once with the
+      // aggregate union. Those calls are exactly the trailing
+      // SYSTEM_SETTINGS_TABS.length calls, because buildNavItems() (which
+      // owns every earlier hasAnyRole call, including the shell's own union
+      // check) runs to completion before buildSettingsTabItems() is invoked
+      // (admin-layout.component.ts:447-448) — true regardless of how many
+      // calls buildNavItems happens to make.
+      const hasAnyRoleSpy = jasmine.createSpy('hasAnyRole').and.returnValue(true);
+      const comp = buildWith(hasAnyRoleSpy);
 
-      expect(corpusPaths)
-        .withContext(`a tab admitting admin (${sharedTab.path}) must be searchable`)
-        .toContain(`settings/${sharedTab.path}`);
-      expect(corpusPaths)
-        .withContext(
-          `an owner-only tab (${ownerOnlyTab.path}) must NOT be offered to an identity the ` +
-            'tab refuses — a result that 403s on click is worse than no result'
-        )
-        .not.toContain(`settings/${ownerOnlyTab.path}`);
+      const tabCount = SYSTEM_SETTINGS_TABS.length;
+      const tabCallArgs = hasAnyRoleSpy.calls.allArgs().slice(-tabCount).map((args) => args[0]);
+      expect(tabCallArgs)
+        .withContext('one call per tab, in tab order, each with that tab\'s own requiredRoles')
+        .toEqual(SYSTEM_SETTINGS_TABS.map((tab) => [...tab.requiredRoles]));
+
+      const corpusPaths = comp.navSearchCorpus.map((i) => i.path);
+      for (const tab of SYSTEM_SETTINGS_TABS) {
+        expect(corpusPaths)
+          .withContext(`tab ${tab.path} admitted by its own call must be searchable`)
+          .toContain(`settings/${tab.path}`);
+      }
     });
 
     it('derives every tab from SYSTEM_SETTINGS_TABS — a ninth tab needs no edit here', () => {
@@ -895,7 +993,15 @@ describe('AdminLayoutComponent — usability report badge', () => {
     getUsername: () => 'admin@obrs.test',
     logout: jasmine.createSpy('logout'),
     hasAnyRole: (_roles: string[]) => false,
+    // OBRS-1498: same blunt fixture switch as the outer describe's.
+    hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['owner'],
+    // OBRS-1721: the shell reads these three at construction and subscribes to
+    // the stream in ngOnInit. Never-previewing is the baseline every spec here
+    // was written against; the preview itself is measured in nav-reachability.spec.ts.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');
@@ -1141,7 +1247,12 @@ describe('AdminLayoutComponent — usability report badge (admin badgeStatus)', 
     getUsername: () => 'admin@obrs.test',
     logout: jasmine.createSpy('logout'),
     hasAnyRole: (_roles: string[]) => true,
+    hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['admin'],
+    // OBRS-1721 — see the note on the outer describe's stub.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');
@@ -1313,8 +1424,13 @@ describe('AdminLayoutComponent — personal menu (OBRS-1071)', () => {
   const authStub = {
     getUsername: () => 'admin@obrs.test',
     hasAnyRole: (_roles: string[]) => false,
+    hasHeldRole: (_roles: string[]) => true,
     getRoles: () => ['admin'],
     logout: jasmine.createSpy('logout'),
+    // OBRS-1721 — see the note on the outer describe's stub.
+    getPreviewRole: () => null,
+    getPreviewableRoles: () => [],
+    previewRole$: of<string | null>(null),
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');

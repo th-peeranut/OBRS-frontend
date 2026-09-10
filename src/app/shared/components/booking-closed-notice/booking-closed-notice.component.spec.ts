@@ -4,6 +4,8 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { NJ_FACEBOOK_PAGE_URL } from '../../lib/online-booking-channel';
 import { BookingClosedNoticeComponent } from './booking-closed-notice.component';
 
@@ -52,6 +54,10 @@ describe('BookingClosedNoticeComponent', () => {
       declarations: [BookingClosedNoticeComponent],
       imports: [TranslateModule.forRoot(), RouterTestingModule],
       providers: [
+        // OBRS-1583: the real AuthService, so the staff-preview arms below go
+        // through ROLE_GRANTS rather than through a canned boolean.
+        provideHttpClient(),
+        provideHttpClientTesting(),
         {
           provide: Router,
           useValue: {
@@ -74,10 +80,12 @@ describe('BookingClosedNoticeComponent', () => {
     originalOnlineTicketBooking = environment.features.onlineTicketBooking;
     routerEvents = new Subject<NavigationEnd>();
     routeSnapshotRoot = chain('');
+    localStorage.removeItem('auth_roles');
   });
 
   afterEach(() => {
     environment.features.onlineTicketBooking = originalOnlineTicketBooking;
+    localStorage.removeItem('auth_roles');
   });
 
   describe('flag OFF — booking is closed', () => {
@@ -167,6 +175,43 @@ describe('BookingClosedNoticeComponent', () => {
       navigate('/schedule-booking');
 
       expect(notice()).toBeNull();
+    });
+  });
+
+  /**
+   * OBRS-1583 — the banner is the other half of the same gate as the trip
+   * list's button and the three route guards. If it disagreed with them the
+   * screen would argue with itself: staff would reach the seat picker while a
+   * strip above it announced that booking was closed.
+   *
+   * `driver` is asserted apart from `salesperson` for the reason given in the
+   * trip-list spec: ROLE_GRANTS expands one way only.
+   */
+  describe('OBRS-1583 — flag OFF, staff preview', () => {
+    async function mountAs(roles: string[] | null): Promise<void> {
+      environment.features.onlineTicketBooking = false;
+      if (roles) {
+        localStorage.setItem('auth_roles', JSON.stringify(roles));
+      }
+      await mount();
+    }
+
+    ['owner', 'admin', 'salesperson', 'driver'].forEach((role) => {
+      it(`renders no notice for ${role} — the same answer the button gives`, async () => {
+        await mountAs([role]);
+        navigate('/');
+
+        expect(notice()).withContext(role).toBeNull();
+      });
+    });
+
+    [null, ['customer'], ['__proto__']].forEach((roles) => {
+      it(`still shows the notice to ${roles ? roles.join(',') : 'a signed-out visitor'}`, async () => {
+        await mountAs(roles);
+        navigate('/');
+
+        expect(notice()).withContext(String(roles)).not.toBeNull();
+      });
     });
   });
 });

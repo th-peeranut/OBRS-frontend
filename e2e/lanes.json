@@ -9,6 +9,60 @@
   },
   "specs": [
     {
+      "spec": "obrs-1782-tiles-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1782capture.config.ts",
+      "why": "OBRS-1782 BEFORE/AFTER evidence for removing the dark fill from the staff sell tile rows. CAPTURE and not GATE because the verdict belongs to staff-contrast-gate.spec.ts and to the invariant-B self-test in customer-contrast-gate.spec.ts, which is where the clause split fails a build; this exists so the owner can see the two rows in both themes. It is a harder-working capture than most: BEFORE is reconstructed by injecting the removed declaration back into the live CSSOM, so each frame asserts the composited fill hex it was shot with, and the caption carries the MEASURED ratio -- a BEFORE that failed to reproduce the old surface, or an AFTER still painting one, fails here rather than producing a misleading pair. Hermetic on the gate lane's terms: it reuses e2e/support/staff-pages.ts, so every /api/** call is fulfilled in-browser."
+    },
+    {
+      "spec": "obrs-1787-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1787capture.config.ts",
+      "why": "OBRS-1787 AC-4 evidence: the public /find-booking screen used to drop the seat row entirely when seat_number was null, so it was the one of the three seat surfaces that told an OPEN-seating customer nothing about where to sit. It now states it once in the booking summary and suppresses the per-ticket rows. CAPTURE and not GATE because the behaviour itself is held by four DOM assertions in find-booking-page.component.spec.ts, mutation-checked red; this exists so the owner can see the screen. Hermetic on the gate lane's terms: /find-booking is public (OBRS-857, no session to seed) and calls exactly one endpoint, which the spec fulfils in-browser. Three arms: an all-OPEN booking, an ASSIGNED booking (AC-2, the branch that must not move, proven byte-identical before/after), and a mixed outbound-OPEN/return-ASSIGNED booking (AC-3), which is the case that decides whether the summary guard and the per-ticket guard are really complements."
+    },
+    {
+      "spec": "obrs-1783-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1783capture.config.ts",
+      "why": "OBRS-1783 AC-4 evidence: under OPEN seating the 80mm slip now states the seat once beside the trip instead of once per passenger. CAPTURE and not GATE because the behaviour itself is held by four DOM assertions in sell-receipt-page.component.spec.ts, two of which were mutation-checked red; this exists so the owner can see the paper. Hermetic on the gate lane's terms: the two slip arms fulfil their own three endpoints and seed a salesperson session from addInitScript, and the e-ticket arm reuses seedCustomerSession, so every /api/** call is fulfilled in-browser. Three arms: OPEN slip (print + screen), ASSIGNED slip (AC-2, the branch that must not move), and the customer e-ticket, unchanged, for the side-by-side the card is about. The e-ticket arm goes through the My Bookings ticket modal rather than /e-ticket, for the reason measured on OBRS-1781."
+    },
+    {
+      "spec": "obrs-1781-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1781capture.config.ts",
+      "why": "OBRS-1781 AFTER evidence for moving the boarding-scan note above the passenger list. CAPTURE and not GATE because it asserts nothing about order -- that is held by the two unit-test assertions this card added, one per surface; this exists so the owner can see the two surfaces agree. Hermetic on the gate lane's terms: the slip arm fulfils its own three endpoints and seeds a salesperson session from addInitScript, and the e-ticket arm reuses seedCustomerSession, so every /api/** call is fulfilled in-browser. The e-ticket arm goes through the My Bookings ticket modal rather than /e-ticket: measured on this branch, /e-ticket fed by seedStore alone renders the OBRS-1252 trip summary, which has no passenger block and therefore no .qr-hint to photograph, and the shared /bookings/:id/tickets fixture answers the contrast sweep's page-at-rest with every field blank, so this arm overrides it."
+    },
+    {
+      "spec": "obrs-772-boundary-mockup.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs772.config.ts",
+      "why": "OBRS-772. The card sat in Needs Decision for six weeks on a question a colour swatch cannot answer -- whether repainting every sub-3:1 control boundary makes the app look worse -- and the swatch sheet already attached to it says on its own face that it is not the app. This photographs four real screens in both themes three times each (today, option A = every boundary, option B = fields and icon-only buttons only), deriving the population it repaints the way invariant B derives its own: from each control's computed border, filtered to the ones actually below 3:1, so a policy is not judged against damage it does not do. CAPTURE and not GATE because it asserts nothing -- the enforcing checks are customer-contrast-gate.spec.ts and staff-contrast-gate.spec.ts, and this exists so the decision behind their allow registers is reviewable. It is a MOCK-UP: it repaints the live CSSOM, not the SCSS. Hermetic on the gate lane's terms -- it reuses seedCustomerSession / seedStaffSweepSession, so every /api/** call is fulfilled in-browser."
+    },
+    {
+      "spec": "obrs-772-after.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs772.config.ts",
+      "why": "OBRS-772 before/after evidence. The BEFORE frames are NOT re-created here and could not honestly be -- they were shot by obrs-772-boundary-mockup.spec.ts on this same lane before any SCSS on the branch was touched, and are kept at docs/manual-tests/assets/OBRS-772/before/. This shoots the same four screens with the same fixtures on the repainted build and pairs each with its saved BEFORE, so the only difference between the halves of a sheet is the code. A missing BEFORE file fails the run rather than producing a one-sided sheet. CAPTURE for the same reason as the entry above: the enforcing checks are the two contrast gates. Hermetic on the gate lane's terms."
+    },
+    {
+      "spec": "obrs-1569-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1569.config.ts",
+      "why": "OBRS-1569. The before/after for a card whose subject IS the shared fixture, so neither arm may add endpoints of its own: the AFTER arm is plain seedCustomerSession, and the BEFORE arm reconstructs the previous behaviour by answering /reschedule-policy and /operations-policy the way the catch-all four lines below the fixture table answers an unmatched path (`data: null`). CAPTURE rather than GATE because the enforcing check is customer-contrast-gate.spec.ts, whose mustRender now names a hook that exists only in the resolved-terms branch; this exists to make the AFTER image checkable and to print the whole-page text-run count the minText floor is set from. Hermetic on the gate lane's terms -- it reuses seedCustomerSession, so every /api/** call is fulfilled in-browser."
+    },
+    {
+      "spec": "obrs-1521-disabled-census.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1521.config.ts",
+      "why": "OBRS-1521. Measures the ONE population customer-contrast-gate.spec.ts refuses to score: `MEASURE` skips every element under `[disabled]` and every element under `opacity < 1`, so PrimeNG's global `.p-disabled { opacity: .6 }` has never been scored on any page in either theme. CAPTURE rather than GATE because it reports composited ratios and screenshots for the card; it asserts only that the population is non-empty, since a census that measured nothing reads as a clean sweep. Hermetic on the gate lane's terms -- it reuses seedCustomerSession, so every /api/** call is fulfilled in-browser."
+    },
+    {
+      "spec": "obrs-641-input-hints-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs641.config.ts",
+      "why": "OBRS-641. Reads `inputmode`/`autocomplete` off the live DOM at a 390x844 phone viewport and paints what it read onto the page before shooting it. Seven frames: the FIVE pages the card changed (passenger-info, register, login-mobile, account, parcel-booking -- the last two walked to directly, because EXCLUDED_CUSTOMER_ROUTES parks them as 'NOT YET' and moving them into CUSTOMER_PAGES would change the OBRS-584 contrast gate's own population), plus find-booking and track-parcel as untouched controls. /parcel-booking reaches only its trip step here -- the details step with the two phone fields sits behind a trip selection this hermetic session cannot make, so THAT page's evidence is the unit spec in parcel-details-form.component.spec.ts, not this frame. The first version of this entry said 'the five customer pages that own a field the card touched' while shooting two pages the card never touched and missing two it did -- a screenshot cannot show a mobile OS keyboard, so the evidence has to be the attribute the keyboard is chosen from. CAPTURE rather than GATE because the enforcing tests are the unit specs in booker-info-form/passenger-info-form; this exists to make the AFTER image checkable. Hermetic on the gate lane's terms -- it reuses seedCustomerSession, so every /api/** call is fulfilled in-browser."
+    },
+    {
       "spec": "obrs-1388-qa-regression.spec.ts",
       "lane": "OWN-DB",
       "config": "playwright.obrs1388qa.config.ts",
@@ -27,6 +81,18 @@
       "why": "OBRS-1432. Screenshots only, and the requirement rather than a shortcut: it runs unchanged against a clean `dev` checkout on :4340 and this branch on :4341, so the BEFORE image is the real previous strip instead of a reconstruction. Every shot measures its own claim first (rows the strip wrapped into, entries it rendered) because a screenshot of a strip that happened to fit would look like proof of a fix that was never exercised. The regression lives in system-settings-page.component.spec.ts, which runs in CI."
     },
     {
+      "spec": "obrs-1693-admin-shell-control-width.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-1704. Measures the RENDERED WIDTH of every `.form-check-input` under `.admin-shell` on /staff/parcels/consign and /staff/sell, and fails under 10px. `admin-theme.scss` gives every input under the shell `width: auto !important`, which collapses an `appearance: none` control to 2px; OBRS-1693 bought it back with one `!important` declaration and nothing stopped that declaration being deleted again. GATE and not CAPTURE for the reason lanes.json gives against OBRS-1333: that spec cannot be a gate because 'intercepting the API would replace exactly the values under test', whereas the value under test HERE is a width the CSS cascade produces, so a mock destroys nothing. Not a unit test either -- Karma's DOM never loads admin-theme.scss, so a checkbox a clerk physically cannot read passes every spec in the repo. Hermetic on this lane's terms: seedGateAdminSession with the `salesperson` role both routes require, stubWalkInSellShell, and its own handlers for schedules/walk-in, segments, route-stops, share-config and the PUBLIC /api/parcel-policy. Fails a surface that yields zero controls, because an absent checkbox reads the same as a healthy one if you only look for 'nothing too small'."
+    },
+    {
+      "spec": "obrs-913-sidebar-toggle-target-size.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-913. Measures the RENDERED size of `.admin-sidebar-pin` against WCAG 2.2 SC 2.5.8's 24x24 floor, on AdminLayout and StaffLayout, expanded and collapsed. The declared size is 28x28 and the used size was 20px: the button is a shrinkable flex item of `.admin-sidebar-panel`, whose column overflows at laptop height (measured 2252 vs 900 at 1536x900). GATE and not CAPTURE for the same reason as obrs-1693 above -- the value under test is what the cascade produces, so mocking the API destroys nothing. Not a unit test either: Karma's 800px window never enters the `min-width: 1101px` block the rule lives in, and no stylesheet parser can see a used value. It sets its own 1536x900 rather than the lane's 1280x720 because that is the viewport the card measured, and it ASSERTS the overflow precondition before measuring anything, so it fails loudly rather than going green on a viewport where the squeeze cannot happen. Also covers the Ctrl+B shortcut, including that it does NOT fire from inside the sidebar menu search."
+    },
+    {
       "spec": "obrs-970-route-population.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
@@ -39,10 +105,22 @@
       "why": "Fulfils every /api/** call from its own fixture and seeds NO session at all -- signed-out is the assertion, not a shortcut, since the whole card is about a customer with no account. Proves what neither end can: that the navbar link on / actually resolves to the page, and that the phone number rides in the POST body rather than the URL."
     },
     {
+      "spec": "obrs-639-stepper-geometry.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-639. Fulfils every /api/** call from the shared public-page fixture plus the booking POST, and seeds its own customer session in-browser. Measures where the four stepper boxes land at 360 and 390 in both shipped label sets -- a cascade question (which media query wins, what flex leaves each step) that Karma's 800px window cannot ask. It has to walk the whole flow rather than visit one page because a stepper that fits only while step 1 is active still hides the step the customer is on later, and the pages after the first are unreachable on --configuration sit, where features.onlineTicketBooking is false (OBRS-1302)."
+    },
+    {
       "spec": "obrs-1038-station-seam.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
       "why": "Fulfils every /api/** call from its own fixture and seeds no session at all. Measures the station bar's geometry at this lane's pinned 1280px viewport -- the ROW layout the three Karma specs cannot reach, because their window is 800px and the 992px stack switch is a viewport query."
+    },
+    {
+      "spec": "obrs-1189-search-bar.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-1189. Fulfils every /api/** call from its own fixture and seeds no session -- same shape as obrs-1038-station-seam above, and here for the same reason one card further on: the date fields and the search button are segments of that bar now, and every claim about them is a cascade-at-a-viewport-width fact Karma's 800px window cannot ask. It also measures the one thing geometry alone misses, whether the VALUE fits the segment it was given (scrollWidth - clientWidth), which is how OBRS-1562's narrower field shipped reading a date with the year cut off."
     },
     {
       "spec": "obrs-1222-station-load-error.spec.ts",
@@ -85,6 +163,12 @@
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
       "why": "Booking path on fixture stations and schedules. OBRS-602 added the GET /api/routes stub that /home's route-map issues. OBRS-856 split it in two: the walk is anonymous only as far as the review page (still open to guests on purpose), after which one test seeds a customer session in localStorage and the other asserts the guest is sent to /login. Still hermetic -- the seeded token is never validated by anything, since every API call is intercepted."
+    },
+    {
+      "spec": "obrs-36-search-to-ticket.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-36. The card's whole chain in one walk -- search -> reserve -> payment -> ticket issuance -- and the only spec in the repo that goes past /payment. It reuses b2c-critical-path's first half through e2e/support/b2c-booking-walk.ts rather than copying it, so the two cannot drift, and adds the four calls no fixture in this lane answered before: create-booking, create-payment (+ its same-origin QR bytes), payments-by-booking, and the tickets call behind /e-ticket. GATE because every one of them is fulfilled in-spec: nothing here needs a backend, a database or a gateway. SCOPE BOUNDARY, stated here as well as in the spec so a reader of this file cannot miss it: the leg the browser spends OFF our origin is NOT walked -- obrs-732-3ds.spec.ts owns that with a real Omise charge on OWN-DB, and this walk resumes at /payment/result the way the gateway's return_uri does. And a green run here says the FRONTEND settles when the server says the payment settled; it says nothing about whether the server ever says so after a real 3DS charge, which needs Omise's inbound webhook and is OBRS-739."
     },
     {
       "spec": "obrs-854-account-deeplink.spec.ts",
@@ -147,10 +231,22 @@
       "why": "OBRS-629 card evidence: the parcel carriage terms page that did not exist, the footer link that was missing, the amended passenger-baggage clause on /business-policy, and the two consignment surfaces that now reach the terms before the sender pays. AFTER-only for /parcel-policy on purpose -- there is no BEFORE frame of a page that was never routed, and a 404 is not a comparison. Every shot asserts what it is about to photograph first, including the one that proves a FAILED config read prints an error rather than inventing a weight limit. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT. Every assertion that must keep holding lives in parcel-policy.component.spec.ts and in gate 6 of scripts/check-i18n-parity.mjs, both on CI."
     },
     {
+      "spec": "obrs-1374-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1374capture.config.ts",
+      "why": "OBRS-1374 AC-11 evidence: a four-line repair bill rendered as ONE row in the expenses list, the same bill's four lines in the form (the fourth carrying no part at all, AC-3), and the mismatch warning firing BEFORE save once a line is edited so the lines stop adding up (AC-5). AFTER-only on purpose -- the BEFORE state is a form with no repeater in it at all, which is a picture of an absence, and the absence is already stated by the card. The regressions worth pinning live in expense-form-modal.component.spec.ts and expenses-page.mappers.spec.ts, and the server-side half in ExpenseServiceTest.LineItemTests, whose AC-1 tripwire was walked red. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT and no database is involved."
+    },
+    {
       "spec": "obrs-1465-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1465capture.config.ts",
       "why": "OBRS-1465 AC-5 evidence: the account-number field caught MID-TYPING, which is the only state that shows the dashes arriving rather than a finished string that could have been pasted. The owner chose grouping PER BANK, so the run drives two banks through the same field -- กสิกรไทย (BOT 004) takes the 10-digit convention 148-0-62262-1, ออมสิน (030) its own 12-digit 0-5459005667-4 -- because one bank alone would prove nothing a flat every-N rule would not also prove. It also asserts the half no screenshot can carry: the POST body's accountNumber is bare digits (AC-2), read off the wire rather than off the form, since that string is what reaches manual_refund_requests.destination_account_number. Fixtures and the two-click path into the cancel modal come from obrs-813-cancel-offers-reschedule.spec.ts, which is in GATE, so nothing here reaches a backend: apiUrl points at localhost:8080 where nothing listens."
+    },
+    {
+      "spec": "obrs-1499-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1499capture.config.ts",
+      "why": "OBRS-1499 AC-6 evidence: the account-number field SHUT with its reason printed under it while no bank is chosen, and the same field OPEN the moment one is. Neither state can be read off a unit test, and a screenshot of only the shut one would not show that the gate lifts. The run then types a number and posts it, so the same evidence shows the gate cost OBRS-1465 nothing -- the digits still group per bank, changing the bank regroups rather than clears, and the POST body still carries bare digits, read off the wire rather than off the form. Fixtures and the path into the cancel modal come from e2e/support/refund-destination-modal.ts (extracted from the OBRS-1465 capture spec, which is in CAPTURE for the same modal), so nothing here reaches a backend: apiUrl points at localhost:8080 where nothing listens."
     },
     {
       "spec": "obrs-1477-capture.spec.ts",
@@ -159,10 +255,34 @@
       "why": "OBRS-1477 BEFORE/AFTER evidence for the trip-details capacity box, plus the one measurement a unit spec structurally cannot take. The regression worth pinning lives in walk-in-center-panel.component.spec.ts, which spies on updateSchedule -- one layer ABOVE the wire. This lane reads the body of the real PUT out of the browser, which is where 'pressing Save without editing anything turned inherit into a hard-coded 21' is actually visible, and it went red on the old code with 'Received: 21' the same way the unit spec did. Its third case gives the vehicle type a standing cap (ADR-0137) so the screen has to print two DIFFERENT numbers -- the override ceiling and the inherited value -- which no earlier picture could distinguish, because before the backend half they were the same 21. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT."
     },
     {
+      "spec": "obrs-1572-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1572capture.config.ts",
+      "why": "OBRS-1572 ships comments only, so a BEFORE/AFTER pair of the page would be two identical pictures. This lane proves the two claims those comments now make instead. First, that `.admin-skeleton` RENDERS on a customer-shell page: the wording this card replaces told the next reader it was scoped under `.admin-shell` and would resolve to nothing off the admin shell, so the spec asserts the bar is visible and non-zero on /refund-policy while asserting that page has no `.admin-shell` ancestor at all. Second, that it renders in BOTH themes with no `body.is-dark` rule of its own, which is the reason AC-3 was answered 'no dark pair' -- its rgba() stops composite against whatever surface is behind them, so the lane reads that surface and the gradient out of the browser rather than leaving the claim as arithmetic in a comment. The skeleton is only up while GET /api/cancellation-policy is in flight, so that one call is held open. Fully stubbed through seedCustomerSession: nothing reaches SIT."
+    },
+    {
+      "spec": "obrs-969-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs969capture.config.ts",
+      "why": "OBRS-969 BEFORE/AFTER evidence for the four policy pages in dark mode, cloned from obrs-768-capture.spec.ts because it is the same question on a different surface. All four are in CUSTOMER_PAGES since OBRS-970, so the contrast gate scores them every run -- and it measured them GREEN, which is exactly the point: their body text is $text-black on an unthemed white panel, a perfectly legible pair in both themes. A contrast floor cannot express 'the same colour in both themes', so this lane reads background-color/color/border-color off every surface in both themes and prints SAME or DIFFERS, and additionally prints the whole scored population under .policy-container so the new dark pairs carry their ratios. Runs the server with --configuration gate, unlike its 768 parent: analytics-consent-control renders only where environment.analytics has a measurement ID (OBRS-1179) and gate is the only committed environment that does -- on a default build AC-2's component would print ABSENT and prove nothing. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT."
+    },
+    {
+      "spec": "obrs-768-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs768capture.config.ts",
+      "why": "OBRS-768 BEFORE/AFTER evidence for /my-bookings and /e-ticket in dark mode, and the one measurement the GATE lane structurally cannot take. Both pages are in CUSTOMER_PAGES, so the contrast gate already scores every text run and control on them in both themes -- but this card is about the SURFACE, not the contrast, and a white page with dark text scores perfectly. The card's own evidence table is a list of IDENTITIES (the same computed colour in both themes), which a gate that prints only what fell below a floor can never print. This reads background-color/color/border-color directly off every element AC-1 names and prints SAME or DIFFERS per surface, so BEFORE and AFTER diff line for line. It also stubs a fourth booking with status pending on top of the shared /bookings/me fixture -- the only .is-warning of the four badge classes statusClass() returns -- rather than widening that fixture, which six other specs read. Asserts nothing about the floors on purpose: the verdict belongs to the gate, which owns the allowlist and fails the build. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT."
+    },
+    {
       "spec": "obrs-1424-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1424capture.config.ts",
       "why": "OBRS-1424 BEFORE/AFTER evidence for the /track-parcel card in dark mode, and the measurements the GATE lane structurally cannot take. That lane sweeps this page AT REST -- its CUSTOMER_PAGES entry says so in its own comment -- so the status chip, the timeline rows and the not-found line are never measured there, and those are exactly the surfaces the card background changes underneath. This drives all eight parcel_delivery_status slugs plus the 404, in both themes, and runs the SAME `MEASURE` the gate uses so a number printed here and a number printed there mean the same thing. It asserts nothing about the floors on purpose: the verdict belongs to the gate, which owns the allowlist and fails the build, and a second weaker judge on the same question is worse than none. Fully stubbed: apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT."
+    },
+    {
+      "spec": "obrs-773-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs773capture.config.ts",
+      "why": "OBRS-773 BEFORE/AFTER evidence for the $primary-blue customer button family in dark mode, across the six pages CUSTOMER_PAGES can reach it on. CAPTURE and not GATE because the verdict already belongs to the gate: customer-contrast-gate.spec.ts owns the allowlist and fails the build, and a second weaker judge on the same question is worse than none. What this adds is the two things that lane structurally cannot give the card. First, pictures -- AC-4 asks for the screen, and a ring is a change a human reviews by looking at it. Second, the PASSING rows: the gate reports only what breaches its allowlist, and four of the eight family members pass today at 3.15:1 / 3.54:1, so the gate is silent about them in BOTH trees, which is the wrong evidence for a change whose whole purpose for those four is to lift barely-passing to 8.29:1. It runs the SAME `MEASURE` the gate runs, narrowed per selector, so a number printed here and a number printed there mean the same thing, and it asserts only the two things that decide whether a frame is evidence at all: body.is-dark actually applied, and the button actually rendered. Hermetic on the gate lane's own terms -- it reuses e2e/support/customer-pages.ts, which fulfils every /api/** call, and apiUrl points at localhost:8080 where nothing listens, so nothing reaches SIT."
     },
     {
       "spec": "obrs-1402-capture.spec.ts",
@@ -205,6 +325,18 @@
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
       "why": "56 fulfilling routes. Its comment blamed a fake token for changing behaviour; OBRS-618 checked the code and nothing in src/app decodes a JWT -- AuthService treats it as an opaque string and reads roles from a separate localStorage key. The real cause was the OBRS-535 one: an unmocked authenticated call 401s and force-logs-out, which cannot happen in a lane with no backend. Promoted only after all 42 cases passed here."
+    },
+    {
+      "spec": "obrs-812-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs812capture.config.ts",
+      "why": "OBRS-812 AFTER evidence. CAPTURE and not GATE because the verdict belongs to staff-contrast-gate.spec.ts, which owns the staff debt register and fails the build; a second, weaker judge on the same question is worse than none. What it adds is the two things that lane cannot print: frames of the four staff pages showing the fixtures reach POPULATED screens rather than empty shells that happen to clear a floor (the OBRS-734/OBRS-795 failure), and a BEFORE that no longer exists on dev -- the pre-OBRS-797 boarding placeholder, reconstructed by removing the shipped rule from the live CSSOM exactly as the gate's mutation test does, with the measured ratio painted onto each frame. Asserts its population is non-empty and the theme applied, so a frame of nothing fails rather than being filed as proof. Hermetic on the gate lane's terms -- it reuses e2e/support/staff-pages.ts, which fulfils every /api/** call, and serves --configuration gate so a picture here and a number there describe the same build."
+    },
+    {
+      "spec": "staff-contrast-gate.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-812. The staff-shell half of OBRS-584's question, which nothing had ever asked: the customer gate's twenty entries are all customer routes, so every /staff/* contrast fix has shipped uncovered. Sweeps four staff pages in both themes and scores WCAG 1.4.3 and 1.4.11 through the same MEASURE, with its own page list, session and debt register -- separate because the OBRS-1435 stale/unmeasured verdict is computed per run against what THAT run scored, so one register read by two sweeps fails on the first push. Hermetic on the same terms as the customer gate: e2e/support/staff-pages.ts fulfils every /api/** call from inline fixtures, Maps is aborted, and the session is a synthetic localStorage token. Carries a mutation test that strips the OBRS-797 `.admin-field ::placeholder` rule out of the live CSSOM and requires the boarding scan box to fall back to 3.32:1 -- the value that card measured before its fix -- so a fixture that stops reaching the real control fails loudly instead of reporting a clean sweep. It needs the same DEVELOPMENT build the customer gate does."
     },
     {
       "spec": "customer-contrast-gate.spec.ts",
@@ -493,6 +625,30 @@
       "lane": "OWN-DB",
       "config": "playwright.obrs1258qa.config.ts",
       "why": "OBRS-1258 AC1-AC5 + AC7-AC9 -- the owner's sales-point picker in user-form-modal, the sell page's default pickup, and the EOD sales-point column. OWN-DB and NEVER runnable against SIT for a reason that is not a preference: SIT does not carry the OBRS-1260 backend contract this whole card depends on (measured 2026-08-16, `git merge-base --is-ancestor e68e48ae origin/sit` = false, origin/sit..origin/dev = 33 commits), so every assertion here would exercise the retired `salesPointStop` shape and pass or fail for the wrong reason. It also MUTATES a seeded salesperson's sales-point set and CREATES a user, with no sit-sweep teardown. Like playwright.obrs1298qa.config.ts and playwright.obrs1333.config.ts, the config does NOT provision anything -- it points at a stack the operator started first (backend :8080 on the obrs1258qa database built from schema.sql + lookups.sql + Flyway v96 + data.sql, ng serve :4200) and reuseExistingServer is unconditional. Not GATE for the load-bearing reason: `defaultPickupStopSlug` is resolved SERVER-side per caller from their active sales point, so intercepting /api/private/route-stops would replace the exact value under test and the assertion would restate its own fixture. Two harness traps are pinned in the file itself, both of which first read as product failures: a bare `.admin-dropdown-*` locator is a strict-mode violation (5 of them on this screen), and the route-group header in the trip browser is a COLLAPSE TOGGLE, so clicking it hides the trip you are about to select."
-    }
+    },
+  {
+    "spec": "obrs-703-operations-config-qa.spec.ts",
+    "lane": "CAPTURE",
+    "config": "playwright.obrs703qa.config.ts",
+    "why": "OBRS-703 AFTER evidence for the owner-scoped operations tab and the public no-show copy it feeds. NOT hermetic and never runnable against SIT: it needs a local backend on :8081 with the `dev,local` profiles over a dedicated obrs703qa database, because it writes system_config_overrides and mints a SECOND owner to prove the public readout takes the MIN across owners -- both of which would move state other sessions are watching in a shared environment. Every shot asserts its own claim before photographing it (the tab strip's row count is measured at 1366px and 390px, the admin pass reads the 403 panel rather than a spinner). The assertions that must keep holding live in operations-config-page.component.spec.ts, system-settings-page.component.spec.ts, how-to-book.component.spec.ts and gate 7 of scripts/check-i18n-parity.mjs on CI, and the server half in SchedulerConfigResolutionParityIT."
+  },
+  {
+    "spec": "obrs-884-vehicle-pl-report.spec.ts",
+    "lane": "OWN-DB",
+    "config": "playwright.obrs884.config.ts",
+    "why": "OBRS-884. The screen's whole job is telling three different meanings of a THB 0 apart -- service window unknown, outside the service window with money attributed anyway, and a real zero -- which means all three states have to exist in ONE period at once. A shared fleet cannot be in three states on demand, so the premise is only constructible on a database this lane owns (obrs884qa, e2e/fixtures/obrs-884-pl-fixture.sql, every figure invented). It also downloads the pl-per-vehicle export from the SAME backend the screen just read and compares the file's cells to the DOM's, which is AC 4: VehiclePlExportParityIT proves the file matches the service, and only this proves it matches the screen. Never runnable against SIT -- the export dataset is on this card's backend branch, and SIT's in_service_from values are the owner's real (and still unknown) ones."
+  },
+  {
+    "spec": "obrs-1578-payee-spend-report.spec.ts",
+    "lane": "OWN-DB",
+    "config": "playwright.obrs1578capture.config.ts",
+    "why": "OBRS-1578. The report's two decisions only exist against a fleet whose spend has a particular SHAPE: the second-largest payee on record must have its only bill outside the current year (otherwise the every-year default looks like an arbitrary preference rather than the thing that keeps a supplier on screen), and some APPROVED money must belong to no payee at all (otherwise AC2's coverage banner has nothing to describe). Neither is orderable from a shared environment, so the lane provisions obrs1578qa from e2e/fixtures/obrs-1578-payee-spend-fixture.sql -- every name and figure invented, because this repository is public. OWN-DB and not CAPTURE even though it also saves the card's AFTER frames: it asserts the rendered period text, the payee ORDER, the unassigned row's presence and that a job billed twice is listed once, and it is expected to pass unattended. The screenshots are written only after those assertions, so an unasserted frame can never become the evidence. Never runnable against SIT -- the payee registry and the report endpoint are on this card's backend branch until it merges."
+  },
+  {
+    "spec": "obrs-1774-state-capture.spec.ts",
+    "lane": "CAPTURE",
+    "config": "playwright.obrs1774.config.ts",
+    "why": "OBRS-1774. Invariant D (selected fill vs unselected sibling fill) shipped GREEN, and a green new invariant is indistinguishable from selectors that match nothing. The two contrast gates print a census of every comparison D made under CONTRAST_CENSUS=1; this photographs the same groups on the real screens in both themes and burns the measured pair, the carrier list and the verdict into each frame, taking the numbers from the same MEASURE the gates run so an image and a verdict cannot drift apart. CAPTURE and not GATE because it asserts nothing -- the enforcing checks stay customer-contrast-gate.spec.ts and staff-contrast-gate.spec.ts. Hermetic on the gate lane's terms: it reuses seedCustomerSession / seedStaffSweepSession, so every /api/** call is fulfilled in-browser."
+  }
   ]
 }

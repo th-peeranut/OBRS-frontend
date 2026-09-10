@@ -936,8 +936,8 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // (accepted/resolved/rejected/duplicate — PO-2).
   // OBRS-1473: this used to say "admin is never restricted (always
   // DETAIL_STATUS_VALUES)" — that was the bug. Admin is source-aware now too,
-  // so admin options collapse to [] on 'rejected' and to the single reopen
-  // option on 'resolved'. Kept a plain field, NOT a getter (CD-churn precedent documented at
+  // so admin options collapse to the single reopen option on 'resolved' and,
+  // since OBRS-1733, on 'rejected' as well. Kept a plain field, NOT a getter (CD-churn precedent documented at
   // admin-layout.component.ts:174) — called explicitly at the same three
   // sites seedStatus() already runs, BEFORE the seed (AMENDMENT A1).
   private rebuildDetailStatusOptions(sourceStatus: UsabilityReportStatus | ''): void {

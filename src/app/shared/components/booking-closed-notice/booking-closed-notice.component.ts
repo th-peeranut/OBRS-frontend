@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { map, Observable } from 'rxjs';
+import { AuthService } from '../../../auth/auth.service';
 import { AnalyticsRouteScopeService } from '../../../services/analytics/analytics-route-scope.service';
 import {
   isOnlineTicketBookingOpen,
@@ -61,11 +62,14 @@ export class BookingClosedNoticeComponent {
   /** Bound into the template so the URL is never spelled twice. */
   protected readonly facebookUrl = NJ_FACEBOOK_PAGE_URL;
 
-  constructor(private readonly scope: AnalyticsRouteScopeService) {
+  constructor(
+    private readonly scope: AnalyticsRouteScopeService,
+    private readonly auth: AuthService
+  ) {
     this.isVisible$ = this.scope.isMeasurable$.pipe(
       // `isOnlineTicketBookingOpen()` is called inside the pipe, not captured
       // outside it, so a spec that flips the flag between arms re-reads it.
-      map((onCustomerPage) => onCustomerPage && !isOnlineTicketBookingOpen())
+      map((onCustomerPage) => onCustomerPage && !isOnlineTicketBookingOpen(this.auth))
     );
   }
 }

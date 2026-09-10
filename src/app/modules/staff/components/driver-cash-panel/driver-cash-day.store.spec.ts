@@ -36,6 +36,8 @@ const DAY_RESP: DriverCashDayRespDto = {
   discrepancy: null,
   discrepancyReason: null,
   perHeadRates: [],
+  reopenCount: 0,
+  reopens: [],
   hasUnmappedSalesPointRemit: false,
 };
 

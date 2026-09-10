@@ -27,6 +27,10 @@ describe('DriverCashExpenseFormComponent', () => {
   // DRIVER_WAGE used to be excluded as "a cost a driver never pays roadside",
   // and the owner overturned exactly that on 2026-08-14. Leaving the old list
   // green beside a new one would keep both readings alive in the suite.
+  //
+  // OBRS-1630 CHANGES it again, the same way: REPAIR is OUT, on the owner's
+  // 2026-08-24 ruling that a repair bill gets its own box rather than a row
+  // here — a row carries one amount, a repair bill has lines and parts.
   it('builds category options from the existing ADMIN.EXPENSES.CATEGORIES i18n namespace', () => {
     const codes = component['categoryOptions'].map((o) => o.value);
     expect(codes).toEqual([
@@ -34,10 +38,16 @@ describe('DriverCashExpenseFormComponent', () => {
       'TOLL',
       'PERMIT_FEE',
       'DRIVER_WAGE',
-      'REPAIR',
       'PARKING_FEE',
       'OTHER',
     ]);
+  });
+
+  // AC3 stated as its own assertion, not as a side effect of the list above:
+  // the one thing the owner asked for by name is that REPAIR is not offered
+  // here, and a reordering of the list must not be able to lose it silently.
+  it('does not offer REPAIR — that bill has its own box (OBRS-1630 AC3)', () => {
+    expect(component['categoryOptions'].map((o) => o.value)).not.toContain('REPAIR');
   });
 
   // OBRS-1356 — the wage is priced server-side from the owner's rate per leg.
@@ -178,5 +188,69 @@ describe('DriverCashExpenseFormComponent', () => {
     expect(component['selectedCategory']).toBe('FUEL');
     expect(component['amountInput']).toBe('250.00');
     expect(component['noteInput']).toBe('note');
+  });
+
+  // ── OBRS-1579: the bill that arrives the morning after ──────────────────
+  describe('bill date', () => {
+    function bindBusinessDate(value: string | null, previous: string | null = null): void {
+      component.businessDate = value;
+      component.ngOnChanges({
+        businessDate: { previousValue: previous, currentValue: value, firstChange: previous === null, isFirstChange: () => previous === null },
+      } as any);
+      fixture.detectChanges();
+    }
+
+    it('starts on the box own date, so the ordinary same-day entry costs no keystroke', () => {
+      bindBusinessDate('2026-08-24');
+      expect(component['billDateInput']).toBe('2026-08-24');
+      expect(component['hasBillDateMismatch']).toBeFalse();
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="driver-cash-expense-bill-date-warning"]')
+      ).toBeNull();
+    });
+
+    it('warns - and does NOT block - when the bill is dated outside the box', () => {
+      bindBusinessDate('2026-08-25');
+      component['billDateInput'] = '2026-08-24';
+      component['onCategoryChange']('FUEL');
+      component['amountInput'] = '1200.00';
+      fixture.detectChanges();
+
+      expect(component['hasBillDateMismatch']).toBeTrue();
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="driver-cash-expense-bill-date-warning"]')
+      ).not.toBeNull();
+      // The entry is still allowed through: a bill from another day is
+      // sometimes exactly what is being keyed on purpose.
+      expect(component['canSubmit']).toBeTrue();
+      expect(submitBtn().disabled).toBeFalse();
+    });
+
+    it('says which box the entry lands in, in words', () => {
+      bindBusinessDate('2026-08-24');
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="driver-cash-expense-box-date"]')
+      ).not.toBeNull();
+    });
+
+    it('does not overwrite a date the user has already typed for THIS box', () => {
+      bindBusinessDate('2026-08-25');
+      component['billDateInput'] = '2026-08-24';
+      // Same input re-emitted (the panel re-binds on every store tick).
+      bindBusinessDate('2026-08-25', '2026-08-25');
+      expect(component['billDateInput']).toBe('2026-08-24');
+    });
+
+    it('re-seeds when the round changes', () => {
+      bindBusinessDate('2026-08-25');
+      bindBusinessDate('2026-08-26', '2026-08-25');
+      expect(component['billDateInput']).toBe('2026-08-26');
+    });
+
+    it('never warns while the box date is still unknown', () => {
+      component['billDateInput'] = '2026-08-24';
+      expect(component.businessDate).toBeNull();
+      expect(component['hasBillDateMismatch']).toBeFalse();
+    });
   });
 });

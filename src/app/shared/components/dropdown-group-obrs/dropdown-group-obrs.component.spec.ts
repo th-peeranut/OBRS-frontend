@@ -434,6 +434,55 @@ describe('DropdownGroupObrsComponent', () => {
       });
     });
 
+    // OBRS-1189 AC#1 — the label moved INSIDE the frame, and the card names the
+    // risk that move carries: OBRS-1028 had just finished repairing these
+    // controls' accessible names (both calendars shared one `inputId`, so two
+    // elements carried the same id and neither label was associated with
+    // anything), and relocating a label is exactly how a control goes back to
+    // being an unnamed text box. The third case below is the one that would go
+    // red on that regression while the other two still passed.
+    describe('inline label (OBRS-1189)', () => {
+      beforeEach(() => setup(true));
+
+      /** What a screen reader would announce, by the two routes this control offers. */
+      function accessibleName(el: HTMLElement): string {
+        const aria = el.getAttribute('aria-label')?.trim();
+        if (aria) return aria;
+
+        const bound: HTMLElement | null = el.id
+          ? fixture.nativeElement.querySelector(`label[for="${el.id}"]`)
+          : null;
+        return bound?.textContent?.trim() ?? '';
+      }
+
+      it('renders the label inside the field frame rather than above it', () => {
+        const frame: HTMLElement | null =
+          fixture.nativeElement.querySelector('.dropdown.has-inline-label');
+
+        expect(frame).withContext('the frame opts into the inline layout').not.toBeNull();
+        expect(frame!.querySelector('label.field-inline-label'))
+          .withContext('and the label lives inside it')
+          .not.toBeNull();
+        expect(fixture.nativeElement.querySelector('.form-group-obrs > label'))
+          .withContext('nothing is left standing above the frame')
+          .toBeNull();
+      });
+
+      it('leaves the control with an accessible name', () => {
+        expect(accessibleName(searchInput()!)).not.toBe('');
+      });
+
+      it('and that name does not depend on aria-label alone: the <label> is bound by for/id', () => {
+        const input = searchInput()!;
+        input.removeAttribute('aria-label');
+
+        expect(input.id).withContext('the control has an id to bind to').not.toBe('');
+        expect(accessibleName(input))
+          .withContext('a label that names nothing is the OBRS-1028 defect')
+          .not.toBe('');
+      });
+    });
+
     describe('searchable = false (default — e.g. parcel-trip-form scheduleId picker)', () => {
       beforeEach(() => setup(false));
 

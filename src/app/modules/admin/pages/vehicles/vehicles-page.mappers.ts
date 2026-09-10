@@ -145,6 +145,11 @@ export function buildVehicleFormValues(
     // above. '' rather than null so the select shows its placeholder — the payload mapper
     // turns it back into null, which is what UNASSIGN means on the wire.
     assignedDriverId: vehicleDetail.assignedDriverId != null ? String(vehicleDetail.assignedDriverId) : '',
+    // OBRS-885: detail-only and without a row fallback, same as gpsImei/assignedDriverId
+    // above. `null` (not '') because these two controls are p-datePickers, whose value is a
+    // Date object — the placeholder shows for null just as it does for '' on a select.
+    inServiceFrom: toDateControlValue(vehicleDetail.inServiceFrom),
+    inServiceTo: toDateControlValue(vehicleDetail.inServiceTo),
   };
 }
 
@@ -180,7 +185,42 @@ export function toVehiclePayload(rawFormValue: Record<string, unknown>): CreateV
     // backend an absent key means "leave the assignment alone", which is right for a curl
     // and wrong for a form the owner just emptied on purpose.
     assignedDriverId: nullableNumber(rawFormValue['assignedDriverId']),
+    // OBRS-885: always PRESENT, and `null` when the owner blanked the picker — on the backend
+    // an absent key means "leave the window alone" (VehicleReqDto's inServiceFromPresent flag),
+    // which is right for a curl and wrong for a form the owner just cleared on purpose. Blank
+    // START means NOT KNOWN, which is a real state the owner must be able to set back.
+    inServiceFrom: toDateInputValue(rawFormValue['inServiceFrom'] as Date | null) || null,
+    inServiceTo: toDateInputValue(rawFormValue['inServiceTo'] as Date | null) || null,
   };
+}
+
+/** "YYYY-MM-DD" string <-> local calendar Date for the OBRS-885 service-window pickers.
+ * A local copy of vehicle-maintenance.mappers.ts's pair, for the reason stated in that
+ * file's header — these are page-local mapper files, not a shared cross-page utility.
+ * Built from getFullYear/getMonth/getDate, NOT toISOString: at UTC+7 a Date parked on
+ * local midnight serializes to the PREVIOUS day in UTC, which would silently move every
+ * service window back one day. */
+export function toDateInputValue(value: Date | null): string {
+  if (!value || !Number.isFinite(value.getTime())) {
+    return '';
+  }
+
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+export function toDateControlValue(dateValue: string | null | undefined): Date | null {
+  const normalizedDate = String(dateValue ?? '').trim();
+  const [year, month, day] = normalizedDate.split('-').map((part) => Number(part));
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day);
 }
 
 function nullableTrimmedString(rawValue: unknown): string | null {

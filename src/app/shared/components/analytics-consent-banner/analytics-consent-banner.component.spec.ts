@@ -3,8 +3,38 @@ import { NavigationEnd, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
-import { AnalyticsConsentService } from '../../../services/analytics/analytics-consent.service';
+import { environment } from '../../../../environments/environment';
+import {
+  ANALYTICS_CONSENT_STORAGE_KEY,
+  AnalyticsConsentService,
+} from '../../../services/analytics/analytics-consent.service';
 import { AnalyticsConsentBannerComponent } from './analytics-consent-banner.component';
+
+/**
+ * OBRS-1179 — the bar only asks where something can be measured, and the Karma
+ * build (`environment.ts`) ships the blank IDs every checkout has. Without this
+ * every case in this file would be asserting the empty-build arm by accident,
+ * and the ask itself — which is what most of them are about — would go untested.
+ *
+ * Only GA4 is filled: AC-2 says either ID is enough, so the whole file doubles
+ * as the "Clarity blank, bar still owed" case. `environment.analytics` is a
+ * shared mutable object, so it is put back after every case.
+ */
+const originalAnalytics = { ...environment.analytics };
+
+function setMeasurementIds(ga4: string, clarity: string): void {
+  environment.analytics.ga4MeasurementId = ga4;
+  environment.analytics.clarityProjectId = clarity;
+}
+
+beforeEach(() => setMeasurementIds('G-OBRS1179TEST', ''));
+
+afterEach(() =>
+  setMeasurementIds(
+    originalAnalytics.ga4MeasurementId,
+    originalAnalytics.clarityProjectId
+  )
+);
 
 describe('AnalyticsConsentBannerComponent', () => {
   let fixture: ComponentFixture<AnalyticsConsentBannerComponent>;
@@ -86,14 +116,45 @@ describe('AnalyticsConsentBannerComponent', () => {
    * mechanism that gets it there, including the edges an E2E sweep cannot see.
    */
   describe('the room the bar occupies', () => {
-    /** ResizeObserver delivers before paint, so a frame or two — polled, not assumed. */
-    async function paddingSettlesAt(px: () => number): Promise<number> {
-      for (let i = 0; i < 30; i += 1) {
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-        const now = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
-        if (now === px()) return now;
-      }
+    /**
+     * ResizeObserver delivers before paint, so a frame or two — polled, not assumed.
+     *
+     * OBRS-1519 — two things this used to get wrong, and together they made a
+     * loaded runner report a wrong number instead of a spec that never settled.
+     *
+     * The ceiling is wall-clock now, not a frame count. A frame is however long
+     * the machine takes to draw one, so `30 frames` bought a comfortable wait
+     * here and almost none on a busy CI runner: the same code waiting a
+     * different amount on every machine.
+     *
+     * And running out of budget throws. It used to return whatever padding it
+     * could read at that moment, which the caller then compared against the
+     * expected height — so the failure read as an arithmetic mistake in the
+     * component, when the truth was that nothing had settled yet.
+     */
+    const SETTLE_TIMEOUT_MS = 2000;
+
+    function bodyPaddingBottom(): number {
       return parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
+    }
+
+    async function paddingSettlesAt(px: () => number): Promise<number> {
+      const startedAt = performance.now();
+      let frames = 0;
+      let last = bodyPaddingBottom();
+
+      while (performance.now() - startedAt < SETTLE_TIMEOUT_MS) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        frames += 1;
+        last = bodyPaddingBottom();
+        if (last === px()) return last;
+      }
+
+      throw new Error(
+        `body padding-bottom never settled at ${px()}px: waited ` +
+          `${Math.round(performance.now() - startedAt)}ms over ${frames} frame(s), ` +
+          `last read ${last}px`
+      );
     }
 
     it('reserves exactly what the bar covers, taken from the bar itself', async () => {
@@ -110,6 +171,77 @@ describe('AnalyticsConsentBannerComponent', () => {
       el.style.minHeight = `${before + 120}px`;
 
       expect(await paddingSettlesAt(() => el.offsetHeight)).toBe(before + 120);
+    });
+
+    /**
+     * OBRS-1524 — the same follow, watched for the error it fired on the way.
+     *
+     * Measured 2026-08-22: the write inside the callback is what makes the page
+     * long enough to scroll, the scrollbar takes 15px off the viewport, and the
+     * bar is `left: 0; right: 0` — so the callback resized the very element whose
+     * observation was being broadcast. The spec answers that by dropping the
+     * notification and reporting `ResizeObserver loop completed with undelivered
+     * notifications` at `window`, which Karma charges to whichever spec is
+     * running. Jasmine shuffles the spec order on every run (measured here:
+     * `random: true`, `seed: null` — nothing pins it), so which spec is running
+     * when it fires is a fresh draw: that is how it arrived as a red `Unit Tests`
+     * job on `dev` that belonged to no card, green on one attempt and red on a
+     * rerun of the same job on the same sha.
+     *
+     * The spacer puts the page exactly at that threshold on purpose. Without it
+     * the Karma page is far too short and this passes without proving anything —
+     * measured 2026-08-22, it walks red 3 times out of 3 with the defer removed.
+     */
+    it('does not resize the document from inside its own observer callback', async () => {
+      const el = banner()!;
+      const before = await paddingSettlesAt(() => el.offsetHeight);
+
+      // Exactly as tall as the viewport, room for the bar included, so the next
+      // pixels it asks for are the ones that turn the scrollbar on.
+      const page = document.documentElement;
+
+      // OBRS-1527 — the threshold below needs a scrollbar that *appears*, and
+      // this runner does not start without one. Measured 2026-08-22 on Windows
+      // Chrome Headless 151: the viewport already holds its 15px gutter open on
+      // the first frame (`clientWidth` 732 against `innerWidth` 747, nothing
+      // overflowing yet), so nothing the bar writes can take width off it and
+      // the assertion below could never hold — `Expected 732 to be less than
+      // 732`, on every Windows box, forever. Handing the gutter back restores
+      // the condition rather than excusing the runner from it: measured 747 →
+      // 732 with this line in, and the loop error 3 runs out of 3 once the
+      // defer is removed from the component.
+      const priorOverflowY = page.style.overflowY;
+      page.style.overflowY = 'auto';
+
+      const spacer = document.createElement('div');
+      const filled = document.body.getBoundingClientRect().height;
+      spacer.style.height = `${Math.max(0, page.clientHeight - filled)}px`;
+      document.body.appendChild(spacer);
+
+      const loops: string[] = [];
+      const onError = (event: ErrorEvent) => {
+        if (/ResizeObserver loop/.test(event.message)) loops.push(event.message);
+      };
+      window.addEventListener('error', onError);
+
+      try {
+        expect(page.scrollHeight).toBe(page.clientHeight);
+        const roomy = page.clientWidth;
+
+        el.style.minHeight = `${before + 120}px`;
+        await paddingSettlesAt(() => el.offsetHeight);
+
+        // Asserted, not assumed: the loop needs a scrollbar that takes width off
+        // the viewport. On a runner that draws overlay scrollbars there is no
+        // width to take, nothing below can arise, and this guard would pass
+        // without guarding — so it says so instead of going quietly green.
+        expect(page.clientWidth).toBeLessThan(roomy);
+        expect(loops).toEqual([]);
+      } finally {
+        window.removeEventListener('error', onError);
+        spacer.remove();
+        page.style.overflowY = priorOverflowY;
+      }
     });
 
     it('gives the room back the moment the question is answered', async () => {
@@ -301,5 +433,85 @@ describe('AnalyticsConsentBannerComponent — route scope', () => {
 
       expect(banner()).not.toBeNull();
     });
+  });
+});
+
+/**
+ * OBRS-1179 — the arm that did not exist: a build that measures nothing.
+ *
+ * BOTH arms, deliberately (AC-4). A single "it does not render" case passes just
+ * as well on a component that never renders at all, which is the vacuous green
+ * this repo has paid for before; the cases above are the other arm, and they run
+ * with an ID set for exactly that reason.
+ */
+describe('AnalyticsConsentBannerComponent — with nothing to measure', () => {
+  let fixture: ComponentFixture<AnalyticsConsentBannerComponent>;
+
+  function banner(): HTMLElement | null {
+    return fixture.nativeElement.querySelector('.consent-banner');
+  }
+
+  /** Built after the IDs are set — the component reads them as it renders. */
+  async function render(): Promise<void> {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      declarations: [AnalyticsConsentBannerComponent],
+      imports: [TranslateModule.forRoot(), RouterTestingModule],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(AnalyticsConsentBannerComponent);
+    fixture.detectChanges();
+  }
+
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('does not ask when neither ID is configured — there is nothing to consent to', async () => {
+    setMeasurementIds('', '');
+
+    await render();
+
+    expect(banner()).toBeNull();
+  });
+
+  it('does not ask for whitespace either — a blank-looking ID builds no tag URL', async () => {
+    // Same `?.trim()` the loader applies, so the two halves cannot disagree
+    // about what counts as configured.
+    setMeasurementIds('   ', '	');
+
+    await render();
+
+    expect(banner()).toBeNull();
+  });
+
+  it('still asks when only Clarity is configured — AC-2, either ID is enough', async () => {
+    setMeasurementIds('', 'obrs1179clarity');
+
+    await render();
+
+    expect(banner()).not.toBeNull();
+  });
+
+  it('still asks when only GA4 is configured', async () => {
+    setMeasurementIds('G-OBRS1179TEST', '');
+
+    await render();
+
+    expect(banner()).not.toBeNull();
+  });
+
+  /**
+   * AC-3. Hiding the ask is not the same as forgetting the answer. A visitor who
+   * declined before the IDs were removed has not withdrawn that refusal, and the
+   * day an ID is configured the bar must not reappear to re-ask them.
+   */
+  it('leaves a stored answer alone when it stops rendering', async () => {
+    localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'denied');
+    setMeasurementIds('', '');
+
+    await render();
+
+    expect(banner()).toBeNull();
+    expect(localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY)).toBe('denied');
   });
 });

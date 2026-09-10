@@ -36,6 +36,10 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = process.env['OBRS775_PORT'] ?? '4232';
 
 export default defineConfig({
+  // OBRS-1611: wired even though this lane sets reuseExistingServer: false -- the banner
+  // is the evidence half of the guard, and the invariant "webServer implies guard" is
+  // checkable by rule 7 of scripts/check-e2e-lanes.mjs only if it has no exceptions.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
   testDir: './e2e/tests',
   testMatch: ['obrs-775-geometry.spec.ts'],
   fullyParallel: false,

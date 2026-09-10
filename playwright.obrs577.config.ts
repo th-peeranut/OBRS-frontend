@@ -39,6 +39,8 @@ const BASE_URL = `http://localhost:${FRONTEND_PORT}`;
 const API_URL = `http://localhost:${BACKEND_PORT}`;
 
 export default defineConfig({
+  // OBRS-1611: name the tree this run measures, and refuse a port another tree holds.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
   testDir: './e2e/tests',
   testMatch: '**/obrs577-my-bookings-load-more.spec.ts',
   timeout: 90_000,

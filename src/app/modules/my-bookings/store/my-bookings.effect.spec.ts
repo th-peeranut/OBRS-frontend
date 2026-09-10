@@ -650,7 +650,7 @@ describe('MyBookingsEffect (OBRS-286)', () => {
       fireCancelSuccess({ refundMethod: 'MANUAL_REFUND_REQUIRED' });
 
       const message = alertService.success.calls.mostRecent().args[0] as string;
-      expect(message).toBe('Cancelled. Staff will transfer ฿400.00 to you.');
+      expect(message).toBe('Cancelled. Staff will transfer THB 400 to you.');
       expect(message).not.toContain('within');
       expect(message).not.toContain('{{');
     });

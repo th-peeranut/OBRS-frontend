@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Store, select } from '@ngrx/store';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import {
@@ -11,19 +11,21 @@ import {
   takeUntil,
 } from 'rxjs';
 import dayjs from 'dayjs';
-import { capitalizeVehicleType, parsePricePerSeat } from '../../shared/lib/trip-format';
-import { buildMapsDirectionsUrl } from '../../shared/lib/maps-directions-url';
-import html2canvas from 'html2canvas';
+import {
+  capitalizeVehicleType,
+  laterBangkokArrivalDay,
+  parsePricePerSeat,
+} from '../../shared/lib/trip-format';
 import { AuthService } from '../../auth/auth.service';
 import { BookingService } from '../../services/booking/booking.service';
 import { RouteMapService } from '../../services/route-map/route-map.service';
-import { BoardingQrService } from '../../shared/services/boarding-qr.service';
 import { BookingState } from '../../shared/interfaces/booking.interface';
 import {
   BookingTicketItem,
   BookingTicketJourney,
   BookingTicketsData,
 } from '../../shared/interfaces/booking-ticket.interface';
+import { TicketLeg, TicketPassenger } from '../../shared/interfaces/e-ticket.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 import { ScheduleBooking } from '../../shared/interfaces/schedule-booking.interface';
 import { Schedule, ScheduleFilter } from '../../shared/interfaces/schedule.interface';
@@ -41,53 +43,42 @@ import { invokeGetScheduleFilterApi } from '../../shared/stores/schedule-filter/
 import { selectScheduleFilter } from '../../shared/stores/schedule-filter/schedule-filter.selector';
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 import { selectProvinceWithStation } from '../../shared/stores/station/station.selector';
+import { TITLE_OPTIONS } from '../../shared/constants/title-options';
 
-interface TicketPassenger {
-  name: string;
-  phone: string;
-  seat: string;
-  /** OBRS-96: threaded through from `BookingTicketItem.id` so each row can
-   * fetch its own boarding-token QR. `null` for rows built before the ticket
-   * API response lands (store-only passengers have no ticket id yet). */
-  ticketId: number | null;
-  /** This ticket's own human-readable number (was previously only shown
-   * joined across the whole booking in the header). */
-  ticketNumber: string;
-  /** Data-URL of the QR rendered from this ticket's `boardingToken` — empty
-   * until the per-ticket fetch resolves. */
-  qrDataUrl: string;
-  /** True when the boarding-token fetch failed for this ticket specifically
-   * (e.g. 409 TICKET_NOT_CONFIRMED on a cancelled/refunded leg) — renders a
-   * placeholder instead of blanking the whole page (OBRS-96). */
-  qrUnavailable: boolean;
-  /** OBRS-325: true when this ticket's `seatNumber` is null (an open-seating
-   * schedule, `schedules.seating_mode = OPEN`, OBRS-321) — the template shows
-   * the open-seating label instead of `seat` (which stays `'-'`, same as the
-   * pre-existing "no data" placeholder). Always `false` before the ticket API
-   * response lands (store-only rows never have a real ticket seat yet). */
-  seatOpen: boolean;
-  /** OBRS-296: server-authoritative fare category — `null` on the
-   *  pre-API/store-only render (derived from `PassengerInfo.isAdult` there;
-   *  see `buildPassengerRows()`) until `buildPassengersFromApi()` overrides
-   *  it from the ticket response. */
-  fareCategory: 'adult' | 'child' | null;
-}
-
-/**
- * OBRS-873: one leg's ticket rows. A round trip issues a separate ticket per
- * leg, so its QRs have to be grouped and labelled by leg — the page used to
- * build rows from the outbound journey alone (`buildPassengersFromApi(outbound,
- * …)`), which left the return leg with no QR to scan at the gate at all.
- * Groups are only ever created non-empty, so `passengerGroups.length > 1` is
- * exactly "this booking shows both legs" and drives the heading.
- */
-interface TicketPassengerGroup {
-  /** `false` for the outbound leg (and for the single group a one-way booking
-   *  or the pre-API store render produces), `true` for the return leg. */
-  isReturn: boolean;
-  passengers: TicketPassenger[];
+/** The all-dashes leg. What a render with nothing in the store shows — the
+ *  same placeholders the booking-level scalars held before OBRS-260.
+ *  OBRS-1510: `distanceKm` stays `null` always (AC-9 — this page never shows
+ *  the distance chip) and `passengers` starts empty (filled in by the
+ *  caller — see `buildLegsFromSchedules`/`legFromJourney`). */
+function emptyLegView(): TicketLeg {
+  return {
+    travelDate: '-',
+    travelTime: '-',
+    arrivalDate: '',
+    route: '-',
+    origin: '-',
+    destination: '-',
+    vehicleType: '-',
+    vehiclePlate: '-',
+    seats: '-',
+    isOpenSeating: false,
+    distanceKm: null,
+    pickupLatitude: null,
+    pickupLongitude: null,
+    passengers: [],
+  };
 }
 type Locale = 'en' | 'th' | 'zh';
+
+/**
+ * OBRS-1502 — the two timestamps of one leg, which is all `arrivalDateWhenLater`
+ * reads. `Schedule` (store pass) and `BookingTicketJourney` (API pass) both
+ * satisfy it, so one builder serves both.
+ */
+interface TripTimestamps {
+  departureDateTime?: string;
+  arrivalDateTime?: string;
+}
 
 /**
  * OBRS-1249: the inputs of the "route" line, snapshotted by whichever render
@@ -107,35 +98,41 @@ interface RouteLineContext {
   inboundRouteName: string | null;
 }
 
+/**
+ * OBRS-1510: this page's job is finding the data — `.ticket-paper` markup
+ * (including the download button and per-passenger QR) now lives solely in
+ * `<app-e-ticket-card>`, which owns its own `BoardingQrService` instance and
+ * resolves the boarding QRs directly from `legs[].passengers[].ticketId`.
+ * This page's one real piece of work is the mapper below: store/API data ->
+ * `TicketLeg[]`.
+ */
 @Component({
     selector: 'app-e-ticket',
     templateUrl: './e-ticket.component.html',
     styleUrl: './e-ticket.component.scss',
-    // Component-scoped so its dedupe/cache state doesn't leak across page
-    // visits — see the class comment on BoardingQrService.
-    providers: [BoardingQrService],
     standalone: false
 })
 export class ETicketComponent implements OnInit, OnDestroy {
-  @ViewChild('ticketPaper') private ticketPaper?: ElementRef<HTMLElement>;
-
   bookingNumber = '-';
   ticketNumber = '-';
-  travelDate = '-';
-  travelTime = '-';
-  route = '-';
-  origin = '-';
-  destination = '-';
-  vehicleType = '-';
-  vehiclePlate = '-';
-  seats = '-';
-  /** OBRS-325: true when every ticket in the outbound journey has a null
-   *  `seatNumber` — mirrors `TicketLeg.isOpenSeating` on the shared card. */
-  seatsOpen = false;
+  /**
+   * OBRS-260: one entry per leg — length 1 for a one-way booking, 2 for a round
+   * trip. Every field in here used to be a booking-level scalar carrying
+   * `outbound / return`, which left the reader pairing up four parallel lines
+   * by position; OBRS-1502's arrival date is what made that unreadable out
+   * loud, printing `23 ส.ค. 2026 / -` on a trip that crossed midnight one way.
+   *
+   * Never empty — the placeholder leg is what keeps a render with nothing in
+   * the store showing dashes rather than nothing, exactly as the scalars did.
+   *
+   * OBRS-1510: now the shared `TicketLeg[]` shape (`<app-e-ticket-card>`'s own
+   * `@Input()`), each leg carrying its own `passengers` — see
+   * `buildLegsFromSchedules`/`legFromJourney`.
+   */
+  legs: TicketLeg[] = [emptyLegView()];
   passengerSummary = '-';
   paymentDate = '-';
   totalAmount = '0.00';
-  isDownloadingTicket = false;
   /**
    * OBRS-1246: true when this ticket's origin AND/OR destination could not be
    * resolved to a real station name — neither from the roster
@@ -191,20 +188,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
    * booking reference in the store already, so it never fires there either.
    */
   ticketIncomplete = false;
-  /** OBRS-269: outbound pickup-stop coords, threaded through from the tickets
-   *  API's `fromStop.latitude`/`longitude` in `applyApiOverrides()`. `null` until
-   *  the API response lands (store-only pre-API render) — the Navigate button
-   *  hides until then. */
-  originLatitude: number | null = null;
-  originLongitude: number | null = null;
-
-  /** OBRS-873: what the template renders — the per-leg groups. */
-  passengerGroups: TicketPassengerGroup[] = [];
-  /** Every group's rows flattened, in leg order. Derived — only ever written
-   *  by `setPassengerGroups`, so it cannot drift from `passengerGroups`. Used
-   *  for the boarding-token fetch (which must cover BOTH legs) and by the
-   *  seat/QR-state helpers. */
-  passengers: TicketPassenger[] = [];
   booker: TicketPassenger | null = null;
   private ticketApiData: BookingTicketsData | null = null;
   private latestLocale: Locale = 'en';
@@ -228,18 +211,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
   private readonly routeTitlesBySlug = new Map<string, Partial<Record<Locale, string>>>();
 
   private readonly destroy$ = new Subject<void>();
-  private readonly titleMap: Record<number, { en: string; th: string; zh: string }> = {
-    1: { en: 'Mr.', th: 'นาย', zh: '先生' },
-    2: { en: 'Miss', th: 'นางสาว', zh: '小姐' },
-    3: { en: 'Mrs.', th: 'นาง', zh: '女士' },
-    4: { en: 'Master', th: 'เด็กชาย', zh: '小弟' },
-    5: { en: 'Miss (Child)', th: 'เด็กหญิง', zh: '小妹' },
-    6: { en: 'Dr.', th: 'ดร.', zh: '博士' },
-    7: { en: 'Professor', th: 'ศ.', zh: '教授' },
-    8: { en: 'Associate Professor', th: 'รศ.', zh: '副教授' },
-    9: { en: 'Assistant Professor', th: 'ผศ.', zh: '助理教授' },
-  };
-
   private readonly scheduleBooking$: Observable<ScheduleBooking | null>;
   private readonly booking$: Observable<BookingState | null>;
   private readonly scheduleFilter$: Observable<ScheduleFilter | null>;
@@ -249,7 +220,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
   constructor(
     private store: Store,
     private bookingService: BookingService,
-    private boardingQrService: BoardingQrService,
     private translateService: TranslateService,
     // OBRS-858: read ONLY to decide whether the private ticket API can be called at all;
     // see loadTicketFromApi. Nothing on this page derives authorization from it.
@@ -311,74 +281,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  trackByIndex(index: number): number {
-    return index;
-  }
-
-  /** OBRS-269: opens Google Maps Directions from the user's current location to
-   *  the outbound pickup stop — a deep-link only (no Directions API call). The
-   *  template hides the button entirely when either coord is null, so this is a
-   *  defensive no-op rather than the primary gate. */
-  navigateToPickup(): void {
-    if (this.originLatitude == null || this.originLongitude == null) {
-      return;
-    }
-    const url = buildMapsDirectionsUrl(this.originLatitude, this.originLongitude);
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }
-
-  async downloadTicketImage(): Promise<void> {
-    const ticketElement = this.ticketPaper?.nativeElement;
-    if (!ticketElement || this.isDownloadingTicket) {
-      return;
-    }
-
-    this.isDownloadingTicket = true;
-
-    try {
-      const canvas = await html2canvas(ticketElement, {
-        backgroundColor: '#ffffff',
-        scale: Math.max(window.devicePixelRatio || 1, 2),
-        useCORS: true,
-        onclone: (clonedDocument) => {
-          clonedDocument
-            .querySelector('.ticket-paper')
-            ?.classList.add('is-exporting');
-        },
-        ignoreElements: (element) =>
-          element.classList.contains('download-btn') ||
-          element.classList.contains('ticket-nav-btn'),
-      });
-
-      const imageUrl = canvas.toDataURL('image/png');
-      this.triggerTicketDownload(imageUrl);
-    } catch (error) {
-      console.error('Download e-ticket image failed', error);
-    } finally {
-      this.isDownloadingTicket = false;
-    }
-  }
-
-  private triggerTicketDownload(imageUrl: string): void {
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = this.getTicketDownloadFilename();
-    link.rel = 'noopener';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  private getTicketDownloadFilename(): string {
-    const rawReference =
-      this.ticketNumber !== '-' ? this.ticketNumber : this.bookingNumber;
-    const safeReference = String(rawReference || 'ticket')
-      .trim()
-      .replace(/[^a-zA-Z0-9_-]/g, '-');
-
-    return `e-ticket-${safeReference || 'ticket'}.png`;
-  }
-
   private mapTicketFields(
     scheduleBooking: ScheduleBooking | null,
     booking: BookingState | null,
@@ -413,16 +315,29 @@ export class ETicketComponent implements OnInit, OnDestroy {
     // in advance rather than guessing at it.
     const ticketApiPassExpected = !!bookingId && this.authService.isAuthenticated();
     this.ticketIncomplete = this.bookingNumber === '-' && !ticketApiPassExpected;
-    this.ticketNumber =
-      this.bookingNumber !== '-'
-        ? this.bookingNumber
-        : this.buildTicketNumber(bookingId, departureSchedule);
-    this.travelDate = this.buildTravelDate(
-      departureSchedule?.departureDateTime,
-      returnSchedule?.departureDateTime,
+    // OBRS-1510 Scrutinize fix: the store pass is the ONLY pass a guest ever
+    // gets (OBRS-858), and `<app-e-ticket-card>` now gates its TICKET_NO row
+    // on `ticketNumber !== '-'` (AC-7). This used to backfill `ticketNumber`
+    // from `bookingNumber`/a synthesized `YYYYMMDD-<id>` string here — on the
+    // OLD page that string was never rendered (the page had no TICKET_NO row
+    // of its own; the only pre-card use of this field was the download
+    // filename). Feeding it to the card now would render a real row: either a
+    // duplicate of BOOKING_REF (same value, different label) on an ordinary
+    // guest ticket, or a synthetic number that LOOKS like a real ticket
+    // number on a hard-load guest can't even retrieve (OBRS-1252). So the
+    // store pass leaves `ticketNumber` untouched — it stays whatever it
+    // already was (the field default `'-'`, or a real number a PRIOR API
+    // pass already set — `applyApiOverrides` runs after this on every call
+    // and never resets it). Only `collectTicketNumbers` (API pass,
+    // `applyApiOverrides`) ever assigns a real value.
+    this.legs = this.buildLegsFromSchedules(
+      departureSchedule,
+      returnSchedule,
+      fromName,
+      toName,
+      ticketPassengers,
       locale
     );
-    this.travelTime = this.buildTravelTime(departureSchedule, returnSchedule);
     // OBRS-1249: this pass knows the stations the customer searched with, never
     // the route's name — the store keeps `routeSlug` and nothing else about the
     // route (schedule.interface.ts). So it paints the station pair now and
@@ -441,21 +356,12 @@ export class ETicketComponent implements OnInit, OnDestroy {
     };
     this.refreshRouteLine();
     this.loadRouteNames([departureSchedule, returnSchedule]);
-    this.origin = fromName || '-';
-    this.destination = toName || '-';
     // OBRS-1246: recorded from the STORE-only render, then cleared further down
     // by `applyApiOverrides` when the API supplies what the roster could not.
     // `-` is this page's generic "no data yet" placeholder, so it cannot be read
     // back as "the lookup failed" — the failure has to be captured here, at the
     // one place that knows the lookup returned nothing.
     this.stationLabelsUnresolved = !fromName || !toName;
-    this.vehicleType =
-      capitalizeVehicleType(departureSchedule?.vehicleType) || '-';
-    this.vehiclePlate = '-';
-    this.seats = this.buildSeatList(ticketPassengers);
-    // Pre-API render: the store only knows the booking's passenger form, which
-    // has no leg dimension at all — one unlabelled group, same as a one-way.
-    this.setPassengerGroups([{ isReturn: false, passengers: ticketPassengers }]);
     this.passengerSummary = this.buildPassengerSummary(scheduleFilter?.passengerInfo);
     this.paymentDate = this.formatDateTime(dayjs().toISOString(), locale);
     this.totalAmount = this.calculateTotalAmount(
@@ -475,52 +381,80 @@ export class ETicketComponent implements OnInit, OnDestroy {
     return schedule ?? [];
   }
 
-  private buildTicketNumber(
-    bookingId: number | null,
-    departureSchedule: Schedule | null
-  ): string {
-    const datePart = departureSchedule?.departureDateTime
-      ? dayjs(departureSchedule.departureDateTime).format('YYYYMMDD')
-      : dayjs().format('YYYYMMDD');
-
-    if (bookingId && bookingId > 0) {
-      return `${datePart}-${bookingId}`;
+  /**
+   * OBRS-260: the store pass's legs.
+   *
+   * The way home runs the customer's searched station pair backwards. The store
+   * holds exactly one pair (`ScheduleFilter.startStationId`/`stopStationId`) and
+   * has no second one to read, so reversing it is not a guess — it is the only
+   * reading there is, and it is what the return schedule in `schedules[1]`
+   * means.
+   */
+  private buildLegsFromSchedules(
+    departureSchedule: Schedule | null,
+    returnSchedule: Schedule | null,
+    fromName: string,
+    toName: string,
+    passengers: TicketPassenger[],
+    locale: Locale
+  ): TicketLeg[] {
+    // The store's passenger form has no leg dimension at all (see
+    // `buildPassengerRows`), so both legs carry the same seat list until the API
+    // pass replaces each with that leg's own tickets.
+    const seats = this.buildSeatList(passengers);
+    const legs = [
+      this.legFromSchedule(departureSchedule, fromName, toName, seats, locale),
+    ];
+    if (returnSchedule) {
+      legs.push(
+        this.legFromSchedule(returnSchedule, toName, fromName, seats, locale)
+      );
     }
+    // OBRS-1510/OBRS-873: same rule the flat `passengerGroups` used to encode —
+    // the store's passenger form has no leg dimension, so only the FIRST leg
+    // carries the rows (an unlabelled single list, since a lone non-empty leg
+    // never triggers the card's outbound/return heading). The second leg's
+    // `passengers` stays empty until the API pass supplies its own leg-specific
+    // rows (`legFromJourney`).
+    legs[0].passengers = passengers;
 
-    if (departureSchedule?.id) {
-      return `${datePart}-${String(departureSchedule.id).padStart(3, '0')}`;
-    }
-
-    return '-';
+    return legs;
   }
 
-  private buildTravelDate(
-    departureDateTime: string | undefined,
-    returnDateTime: string | undefined,
+  private legFromSchedule(
+    schedule: Schedule | null,
+    fromName: string,
+    toName: string,
+    seats: string,
+    locale: Locale
+  ): TicketLeg {
+    return {
+      ...emptyLegView(),
+      travelDate: this.formatDate(schedule?.departureDateTime, locale) || '-',
+      travelTime: this.formatScheduleTimeRange(schedule) || '-',
+      // OBRS-1502, now per leg: `''` when this leg lands on the day it left, so
+      // the cell is absent rather than holding a `-` to keep its position.
+      arrivalDate: this.arrivalDateWhenLater(schedule, locale),
+      // `route` is deliberately left at its placeholder: `refreshRouteLine()` is
+      // the ONE writer of that line (OBRS-1249) and runs straight after this,
+      // once for both legs.
+      origin: fromName || '-',
+      destination: toName || '-',
+      vehicleType: capitalizeVehicleType(schedule?.vehicleType) || '-',
+      seats,
+    };
+  }
+
+  private arrivalDateWhenLater(
+    trip: TripTimestamps | null | undefined,
     locale: Locale
   ): string {
-    const departureDate = this.formatDate(departureDateTime, locale);
-    const returnDate = this.formatDate(returnDateTime, locale);
+    const arrivalDay = laterBangkokArrivalDay(
+      trip?.departureDateTime,
+      trip?.arrivalDateTime
+    );
 
-    if (departureDate && returnDate && departureDate !== returnDate) {
-      return `${departureDate} / ${returnDate}`;
-    }
-
-    return departureDate || returnDate || '-';
-  }
-
-  private buildTravelTime(
-    departureSchedule: Schedule | null,
-    returnSchedule: Schedule | null
-  ): string {
-    const departureTime = this.formatScheduleTimeRange(departureSchedule);
-    const returnTime = this.formatScheduleTimeRange(returnSchedule);
-
-    if (departureTime && returnTime) {
-      return `${departureTime} / ${returnTime}`;
-    }
-
-    return departureTime || returnTime || '-';
+    return arrivalDay ? this.formatDate(arrivalDay, locale) : '';
   }
 
   private formatScheduleTimeRange(schedule: Schedule | null): string {
@@ -547,46 +481,22 @@ export class ETicketComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * OBRS-1249: the route's own name wins over the endpoint pair, PER LEG.
+   * OBRS-1249: re-renders each leg's route line from whatever has landed so
+   * far. Every writer of `routeLineContext` calls this instead of assigning a
+   * leg's `route`, so the store pass, the API overlay and the late-arriving
+   * public lookup all produce the line the same way.
    *
-   * Per leg rather than all-or-nothing because a route seeded on the way out
-   * but not on the way back is a real state (`route_translations` is written
-   * per route, and the two directions are two routes) — falling back to the
-   * pair for both would hide a name the owner did write. `'-'` stays the last
-   * resort, and the slug is never a candidate here: it is not passed in at all
-   * (OBRS-1216).
-   */
-  private buildRouteLabel(
-    fromName: string,
-    toName: string,
-    hasReturn: boolean,
-    outboundRouteName: string | null = null,
-    inboundRouteName: string | null = null
-  ): string {
-    const departurePair = fromName && toName ? `${fromName} - ${toName}` : fromName || toName;
-    const outbound = outboundRouteName?.trim() || departurePair;
-    if (!outbound) {
-      return '-';
-    }
-
-    if (!hasReturn) {
-      return outbound;
-    }
-
-    // Without both endpoints there is no pair to reverse, so a return leg with
-    // no name of its own contributes nothing rather than repeating one station
-    // back at itself — the pre-OBRS-1249 behaviour, kept byte-for-byte.
-    const returnPair = fromName && toName ? `${toName} - ${fromName}` : '';
-    const inbound = inboundRouteName?.trim() || returnPair;
-
-    return inbound ? `${outbound} / ${inbound}` : outbound;
-  }
-
-  /**
-   * OBRS-1249: re-renders the route line from whatever has landed so far. Every
-   * writer of `routeLineContext` calls this instead of assigning `this.route`,
-   * so the store pass, the API overlay and the late-arriving public lookup all
-   * produce the line the same way.
+   * The route's own name wins over the endpoint pair PER LEG — a route seeded
+   * on the way out but not on the way back is a real state (`route_translations`
+   * is written per route, and the two directions are two routes), so falling
+   * back to the pair for both would hide a name the owner did write. `'-'` stays
+   * the last resort, and the slug is never a candidate here: it is not passed in
+   * at all (OBRS-1216).
+   *
+   * OBRS-260 turned the one `A / B` line into one line per leg. Before, a return
+   * leg with neither a name nor a reversible pair contributed nothing and the
+   * line silently showed the outbound alone; now that leg prints `-` in its own
+   * cell, under its own heading, where it cannot be read as the outbound's.
    */
   private refreshRouteLine(): void {
     const context = this.routeLineContext;
@@ -594,13 +504,22 @@ export class ETicketComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.route = this.buildRouteLabel(
-      context.fromName,
-      context.toName,
-      context.hasReturn,
-      context.outboundRouteName ?? this.routeNameForSlug(context.outboundSlug, context.locale),
-      context.inboundRouteName ?? this.routeNameForSlug(context.inboundSlug, context.locale)
-    );
+    const { fromName, toName, locale } = context;
+    const outboundPair = fromName && toName ? `${fromName} - ${toName}` : fromName || toName;
+    // Without both endpoints there is no pair to reverse, so the way home falls
+    // through to `-` rather than repeating one station back at itself.
+    const inboundPair = fromName && toName ? `${toName} - ${fromName}` : '';
+    const outboundName =
+      context.outboundRouteName ?? this.routeNameForSlug(context.outboundSlug, locale);
+    const inboundName =
+      context.inboundRouteName ?? this.routeNameForSlug(context.inboundSlug, locale);
+
+    if (this.legs[0]) {
+      this.legs[0].route = outboundName?.trim() || outboundPair || '-';
+    }
+    if (this.legs[1]) {
+      this.legs[1].route = inboundName?.trim() || inboundPair || '-';
+    }
   }
 
   /**
@@ -675,25 +594,26 @@ export class ETicketComponent implements OnInit, OnDestroy {
   ): TicketPassenger[] {
     const passengers = passengerInfo ?? [];
     return passengers.map((passenger) => {
-      const title = this.resolveTitleLabel(passenger.title, locale);
       const nameParts = [
-        title,
         passenger.firstName,
         passenger.middleName,
         passenger.lastName,
       ].filter((part) => !!part && String(part).trim().length > 0);
 
       return {
+        // OBRS-1232: this used to resolve the label here, off a SECOND private title map that
+        // disagreed with title-options.ts on three Chinese words. The card carries the code and
+        // the `titleLabel` pipe renders it, so there is one catalogue and one composition rule.
+        title: TITLE_OPTIONS.find((option) => option.id === passenger.title)?.code ?? null,
         name: nameParts.join(' ').trim() || '-',
         phone: passenger.phoneNumber?.trim() || '-',
         seat: passenger.passengerSeat?.trim() || '-',
         // No ticket id exists yet at this stage — the store only carries the
-        // passenger-info form, not the created ticket. Real ticketId/QR data
-        // is filled in once `buildPassengersFromApi` runs (loadTicketFromApi).
+        // passenger-info form, not the created ticket. Real ticketId is
+        // filled in once `buildPassengersFromApi` runs (loadTicketFromApi);
+        // the boarding QR itself is now resolved entirely by the card.
         ticketId: null,
         ticketNumber: '-',
-        qrDataUrl: '',
-        qrUnavailable: false,
         // No ticket exists yet at this stage, so there is no real
         // seat_number to inspect — mirrors seat above (real value fills in
         // once buildPassengersFromApi runs).
@@ -753,14 +673,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
     }
 
     return getStationFallbackLabel(station, locale);
-  }
-
-  private resolveTitleLabel(titleCode: number | null, locale: Locale): string {
-    if (titleCode == null) {
-      return '';
-    }
-
-    return this.titleMap[titleCode]?.[locale] || this.titleMap[titleCode]?.en || '';
   }
 
   private formatDate(dateTime: string | undefined, locale: Locale): string {
@@ -841,7 +753,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
     // OBRS-858: a guest holds no token and this endpoint is under /api/private/**, so the
     // call could only ever 401. NOT calling it is the fix, not catching it: the interceptor
-    // turns a token-less 401 into a "Please sign in to continue" toast (OBRS-856) — exactly
+    // turns a token-less 401 into a "Please sign in to continue" toast (OBRS-856) - exactly
     // the wall guest checkout exists to remove, shown at the moment the customer has just
     // paid.
     //
@@ -849,7 +761,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
     // numbers, which this page OVERLAYS on top of a render already built from the store;
     // booking number, route, date, seats and total all come from the store and are
     // unaffected. The guest's authoritative copy is /find-booking (OBRS-857), which the
-    // retrieval note further down this page points at — ADR-0123 Decision 5's "retrievable,
+    // retrieval note further down this page points at - ADR-0123 Decision 5's "retrievable,
     // not merely delivered". That is why this returns quietly instead of erroring.
     if (!this.authService.isAuthenticated()) {
       return;
@@ -911,12 +823,34 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
     const fromName = outbound?.fromStop?.label?.trim() ?? '';
     const toName = outbound?.toStop?.label?.trim() ?? '';
-    if (fromName) {
-      this.origin = fromName;
-    }
-    if (toName) {
-      this.destination = toName;
-    }
+
+    // OBRS-873: BOTH legs, not just the outbound one. The return leg has its
+    // own tickets and therefore its own boarding QRs; building rows from
+    // `outbound` alone is what left a round-trip passenger with nothing to scan
+    // on the way home.
+    const outboundPassengers = this.buildPassengersFromApi(outbound, storePassengers);
+    const inboundPassengers = this.buildPassengersFromApi(inbound, storePassengers);
+
+    // OBRS-260: the legs, rebuilt from the authoritative copy and merged over
+    // what the store pass painted. The fallback per field is the same guard the
+    // flat fields each carried before this card — a response that arrives
+    // without a value must not wipe a good one — and the leg COUNT never
+    // shrinks, so a response with no journeys in it leaves a round trip still
+    // reading as one.
+    const apiLegs = [
+      { journey: outbound, passengers: outboundPassengers },
+      { journey: inbound, passengers: inboundPassengers },
+    ];
+    const legCount = Math.max(this.legs.length, inbound ? 2 : 1);
+    this.legs = Array.from({ length: legCount }, (_, index) =>
+      this.legFromJourney(
+        apiLegs[index]?.journey ?? null,
+        apiLegs[index]?.passengers ?? [],
+        this.legs[index] ?? emptyLegView(),
+        locale
+      )
+    );
+
     if (fromName || toName) {
       // OBRS-1249: same line, better inputs. `routeLabel` is the name OBRS-1219
       // resolved server-side; when it is null (route unseeded) the slug lookup
@@ -942,62 +876,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
       // beside a `-` is still a ticket the gate staff cannot read.
       this.stationLabelsUnresolved = false;
     }
-    this.originLatitude = outbound?.fromStop?.latitude ?? null;
-    this.originLongitude = outbound?.fromStop?.longitude ?? null;
-
-    const travelDate = this.buildTravelDate(
-      outbound?.departureDateTime,
-      inbound?.departureDateTime,
-      locale
-    );
-    if (travelDate !== '-') {
-      this.travelDate = travelDate;
-    }
-
-    const travelTime = this.buildJourneyTravelTime(outbound, inbound);
-    if (travelTime !== '-') {
-      this.travelTime = travelTime;
-    }
-
-    const vehicleType = outbound?.vehicle?.vehicleType?.label?.trim();
-    if (vehicleType) {
-      this.vehicleType = capitalizeVehicleType(vehicleType);
-    }
-
-    const vehiclePlate = this.buildVehiclePlate(
-      outbound?.vehicle?.vehicleNumber?.trim() ?? '',
-      outbound?.vehicle?.numberPlate?.trim() ?? ''
-    );
-    if (vehiclePlate) {
-      this.vehiclePlate = vehiclePlate;
-    }
-
-    // OBRS-873: BOTH legs, not just the outbound one. The return leg has its
-    // own tickets and therefore its own boarding QRs; building rows from
-    // `outbound` alone is what left a round-trip passenger with nothing to scan
-    // on the way home. Empty legs are dropped rather than rendered as a headed
-    // but empty list, so `passengerGroups.length > 1` means "both legs are
-    // shown" and is exactly the condition for labelling them.
-    const outboundPassengers = this.buildPassengersFromApi(outbound, storePassengers);
-    const inboundPassengers = this.buildPassengersFromApi(inbound, storePassengers);
-    const apiGroups: TicketPassengerGroup[] = [
-      { isReturn: false, passengers: outboundPassengers },
-      { isReturn: true, passengers: inboundPassengers },
-    ].filter((group) => group.passengers.length > 0);
-
-    if (apiGroups.length > 0) {
-      this.setPassengerGroups(apiGroups);
-      this.fetchBoardingTokensForPassengers();
-    }
-    if (outboundPassengers.length > 0) {
-      // The page's seat/open-seating summary is a single journey-level line and
-      // stays outbound-only, unchanged — the per-leg seat breakdown lives on
-      // the shared card (`TicketLeg.seats`), not on this flat page.
-      this.seats = this.buildSeatList(outboundPassengers);
-      // OBRS-325: every ticket on the outbound leg shares one schedule, so
-      // either all of them are open-seating or none are.
-      this.seatsOpen = outboundPassengers.every((passenger) => passenger.seatOpen);
-    }
 
     this.booker = this.buildBookerFromApi(data);
 
@@ -1018,8 +896,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
       seat: '-',
       ticketId: null,
       ticketNumber: '-',
-      qrDataUrl: '',
-      qrUnavailable: false,
       seatOpen: false,
       // OBRS-296: the booker row has no fare category of its own.
       fareCategory: null,
@@ -1057,24 +933,57 @@ export class ETicketComponent implements OnInit, OnDestroy {
     return numbers.join(', ');
   }
 
-  private buildJourneyTravelTime(
-    outbound: BookingTicketJourney | null,
-    inbound: BookingTicketJourney | null
-  ): string {
-    const departureTime = this.formatTimeRange(
-      outbound?.departureDateTime,
-      outbound?.arrivalDateTime
-    );
-    const returnTime = this.formatTimeRange(
-      inbound?.departureDateTime,
-      inbound?.arrivalDateTime
+  /**
+   * OBRS-260: one leg as the authoritative copy describes it, over `base` —
+   * the same leg as the store pass painted it. Every field falls back rather
+   * than overwriting with nothing, which is what the flat fields' individual
+   * `if (value)` guards did before this card: this response can arrive without
+   * timestamps, without a vehicle, or without stop labels, and none of those
+   * absences may wipe what the store already got right.
+   */
+  private legFromJourney(
+    journey: BookingTicketJourney | null,
+    passengers: TicketPassenger[],
+    base: TicketLeg,
+    locale: Locale
+  ): TicketLeg {
+    const vehicleType = journey?.vehicle?.vehicleType?.label?.trim();
+    const vehiclePlate = this.buildVehiclePlate(
+      journey?.vehicle?.vehicleNumber?.trim() ?? '',
+      journey?.vehicle?.numberPlate?.trim() ?? ''
     );
 
-    if (departureTime && returnTime) {
-      return `${departureTime} / ${returnTime}`;
-    }
-
-    return departureTime || returnTime || '-';
+    return {
+      ...base,
+      travelDate: this.formatDate(journey?.departureDateTime, locale) || base.travelDate,
+      travelTime:
+        this.formatTimeRange(journey?.departureDateTime, journey?.arrivalDateTime) ||
+        base.travelTime,
+      arrivalDate: this.arrivalDateWhenLater(journey, locale) || base.arrivalDate,
+      // `route` rides along in `base`: `refreshRouteLine()` owns that line and
+      // runs straight after this (OBRS-1249).
+      origin: journey?.fromStop?.label?.trim() || base.origin,
+      destination: journey?.toStop?.label?.trim() || base.destination,
+      vehicleType: vehicleType ? capitalizeVehicleType(vehicleType) : base.vehicleType,
+      vehiclePlate: vehiclePlate || base.vehiclePlate,
+      // OBRS-873: this leg's OWN tickets. The seat line was outbound-only for
+      // the whole ticket before OBRS-260, so a round trip printed the seats it
+      // was leaving in under the heading for the seats it was coming home in.
+      seats: passengers.length ? this.buildSeatList(passengers) : base.seats,
+      // OBRS-325: every ticket on a leg shares one schedule, so either all of
+      // them are open-seating or none are.
+      isOpenSeating: passengers.length
+        ? passengers.every((passenger) => passenger.seatOpen)
+        : base.isOpenSeating,
+      pickupLatitude: journey?.fromStop?.latitude ?? null,
+      pickupLongitude: journey?.fromStop?.longitude ?? null,
+      // OBRS-1510: this leg's own rows once the API supplies them; a response
+      // with nothing for this leg (yet) must not wipe what the store pass or a
+      // previous API pass already had.
+      passengers: passengers.length ? passengers : base.passengers,
+      // AC-9: this page never shows the distance chip.
+      distanceKm: null,
+    };
   }
 
   private buildPassengersFromApi(
@@ -1087,9 +996,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
       const seatOpen = !rawSeatNumber;
       const seat = rawSeatNumber || '-';
       const ticketId = Number.isFinite(ticket.id) && ticket.id > 0 ? ticket.id : null;
-      const qrState = ticketId !== null ? this.boardingQrService.getState(ticketId) : undefined;
 
       return {
+        title: ticket.passengerTitle ?? null,
         name: ticket.passengerName?.trim() || '-',
         phone: this.findPhoneForPassenger(
           ticket,
@@ -1101,8 +1010,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
         seat,
         ticketId,
         ticketNumber: ticket.ticketNumber?.trim() || '-',
-        qrDataUrl: qrState?.qrDataUrl ?? '',
-        qrUnavailable: qrState?.qrUnavailable ?? false,
         seatOpen,
         // OBRS-296: server-authoritative — replaces the pre-API isAdult-derived
         // guess from buildPassengerRows() once the ticket API response lands.
@@ -1185,49 +1092,5 @@ export class ETicketComponent implements OnInit, OnDestroy {
     }
 
     return vehicleNumber || numberPlate || '';
-  }
-
-  /**
-   * OBRS-96 / OBRS-221: fetch one boarding token per ticket and render each
-   * as its own QR — replaces the old single booking-level QR. Delegates the
-   * dedupe guard, per-ticket failure isolation, and QR rendering to
-   * `BoardingQrService` (shared verbatim with `SellReceiptPageComponent`),
-   * which no-ops (emits nothing) when every ticket here is already
-   * fetched/in-flight — including on a locale switch, since
-   * `applyApiOverrides` re-runs on every `combineLatest` emission.
-   */
-  private fetchBoardingTokensForPassengers(): void {
-    const ticketIds = this.passengers.map((passenger) => passenger.ticketId);
-
-    this.boardingQrService.fetchBoardingTokens(ticketIds, () =>
-      this.applyBoardingQrStates()
-    );
-  }
-
-  // Re-derive from the service's now-populated state rather than mutating
-  // passenger objects in place, so a stray re-render always reflects the
-  // latest resolved state.
-  private applyBoardingQrStates(): void {
-    this.setPassengerGroups(
-      this.passengerGroups.map((group) => ({
-        ...group,
-        passengers: group.passengers.map((passenger) => {
-          if (passenger.ticketId === null) {
-            return passenger;
-          }
-          const qrState = this.boardingQrService.getState(passenger.ticketId);
-          return qrState ? { ...passenger, ...qrState } : passenger;
-        }),
-      }))
-    );
-  }
-
-  /** OBRS-873: the ONE write path for the passenger rows — sets the per-leg
-   *  groups and re-derives the flat `passengers` list from them in the same
-   *  statement, so the two can never disagree about which tickets the page is
-   *  showing. */
-  private setPassengerGroups(groups: TicketPassengerGroup[]): void {
-    this.passengerGroups = groups;
-    this.passengers = groups.flatMap((group) => group.passengers);
   }
 }

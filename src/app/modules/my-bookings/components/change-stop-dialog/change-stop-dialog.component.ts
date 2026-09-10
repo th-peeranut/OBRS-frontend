@@ -42,6 +42,7 @@ import {
   selectChangeStopTicketsLoading,
   selectStopsLookup,
 } from '../../store/my-bookings.selector';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 type ChangeStopStep = 'pickup' | 'dropoff' | 'estimate' | 'payment' | 'error';
 type PaymentTab = 'creditcard' | 'qrcode';
@@ -185,11 +186,7 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
     this.changeStopEstimate$.pipe(takeUntil(this.destroy$)).subscribe((estimate) => {
       this.currentEstimate = estimate;
       this.paymentAmountLabel = estimate
-        ? new Intl.NumberFormat('th-TH', {
-            style: 'currency',
-            currency: 'THB',
-            maximumFractionDigits: 2,
-          }).format(Math.abs(toAmountNumber(estimate.netAmount)))
+        ? formatMoney(Math.abs(toAmountNumber(estimate.netAmount)), this.translate.currentLang)
         : '';
     });
 

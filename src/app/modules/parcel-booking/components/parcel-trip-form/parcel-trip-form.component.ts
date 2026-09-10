@@ -68,7 +68,6 @@ export class ParcelTripFormComponent implements OnInit, OnDestroy {
    *  B→B lookup whose response can land *after* the real one and overwrite it. */
   @Output() stationsSwap = new EventEmitter<ParcelStationSwap>();
   @Output() dateChange = new EventEmitter<Date>();
-  @Output() scheduleChange = new EventEmitter<number>();
   @Output() next = new EventEmitter<ParcelTripFormValue>();
 
   protected readonly form: FormGroup;
@@ -90,22 +89,26 @@ export class ParcelTripFormComponent implements OnInit, OnDestroy {
     this.form
       .get('fromStationId')
       ?.valueChanges.pipe(takeUntil(this.destroy$))
-      .subscribe((value: number) => this.fromStationChange.emit(value));
+      .subscribe((value: number) => {
+        this.clearSelectedSchedule();
+        this.fromStationChange.emit(value);
+      });
 
     this.form
       .get('toStationId')
       ?.valueChanges.pipe(takeUntil(this.destroy$))
-      .subscribe((value: number) => this.toStationChange.emit(value));
+      .subscribe((value: number) => {
+        this.clearSelectedSchedule();
+        this.toStationChange.emit(value);
+      });
 
     this.form
       .get('date')
       ?.valueChanges.pipe(takeUntil(this.destroy$))
-      .subscribe((value: Date) => this.dateChange.emit(value));
-
-    this.form
-      .get('scheduleId')
-      ?.valueChanges.pipe(takeUntil(this.destroy$))
-      .subscribe((value: number) => this.scheduleChange.emit(value));
+      .subscribe((value: Date) => {
+        this.clearSelectedSchedule();
+        this.dateChange.emit(value);
+      });
   }
 
   ngOnDestroy(): void {
@@ -135,6 +138,10 @@ export class ParcelTripFormComponent implements OnInit, OnDestroy {
    * `{ emitEvent: false }` is load-bearing, not an optimization: it suppresses
    * the two per-control outputs so the parent never sees the half-swapped pair
    * (see `stationsSwap`). The parent is told once, with the final pair.
+   *
+   * OBRS-1063: a swap is a route change too, and that same suppression means
+   * `clearSelectedSchedule()` never runs from here -- so the schedule picked
+   * for the old direction is cleared in this very patch.
    */
   protected onSwapStations(): void {
     if (!this.canSwapStations) return;
@@ -143,7 +150,7 @@ export class ParcelTripFormComponent implements OnInit, OnDestroy {
     const previousTo = this.form.get('toStationId')?.value;
 
     this.form.patchValue(
-      { fromStationId: previousTo, toStationId: previousFrom },
+      { fromStationId: previousTo, toStationId: previousFrom, scheduleId: '' },
       { emitEvent: false }
     );
 
@@ -160,6 +167,17 @@ export class ParcelTripFormComponent implements OnInit, OnDestroy {
 
   protected onScheduleSelect(option: ParcelScheduleOption): void {
     this.form.get('scheduleId')?.setValue(option.id);
+  }
+
+  /**
+   * OBRS-1063: the parent refetches the schedule list for the new route/date,
+   * so an id picked from the OLD list must not survive the change. The dropdown
+   * already drops back to its placeholder on its own (it cannot find the id in
+   * the new options) -- clearing the control is what makes the FORM say the
+   * same thing, and what keeps Next disabled until a new schedule is picked.
+   */
+  private clearSelectedSchedule(): void {
+    this.form.get('scheduleId')?.setValue('');
   }
 
   protected get canGoNext(): boolean {

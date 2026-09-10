@@ -1,0 +1,79 @@
+@import '../../../../styles/variables.scss';
+
+// OBRS-1721 — the "you are viewing as another role" strip.
+//
+// COLOUR: no value is declared here. The strip reads the existing
+// --admin-warning-bg / --admin-warning-text chip PAIR, used as a pair (a wash
+// with its own matching foreground), which is the only role that token pair is
+// safe in — see the DARK_EXEMPT note in admin-theme.scss and the standalone-text
+// misuse that shipped at 1.71:1 twice (OBRS-520 / OBRS-721).
+//
+// Those custom properties are declared on `.admin-shell` and this strip renders
+// ABOVE it, in the customer shell too, so admin-theme.scss re-declares the pair
+// scoped to `.role-preview-banner` — the same mechanism, in the same file, that
+// `.notification-inbox-overlay` already uses for a node outside that subtree.
+//
+// There is therefore no `:host-context(body.is-dark)` block and that is not an
+// omission: the warning chip pair is deliberately identical in both themes, so
+// the strip renders at the same measured contrast in light and dark. Adding a
+// dark override would be the one-sided override OBRS-520 warns about.
+//
+// NO `position: fixed`, matching `.booking-closed` (OBRS-1302): in normal flow
+// it cannot cover a control and needs no z-index.
+.role-preview-banner {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: $space-2xs $space-sm;
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
+  border-bottom: 1px solid var(--admin-warning-text);
+}
+
+.role-preview-banner__icon {
+  flex: 0 0 auto;
+  font-size: $font-size-md;
+}
+
+.role-preview-banner__text {
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: $font-size-sm;
+  line-height: $line-height-base;
+}
+
+.role-preview-banner__title {
+  display: block;
+  font-weight: $font-weight-semibold;
+}
+
+.role-preview-banner__body {
+  display: block;
+}
+
+.role-preview-banner__exit {
+  flex: 0 0 auto;
+  // ≥ 44px tall on customer surfaces (design-system §11 tap targets); the strip
+  // renders on the public shell too, so the admin desktop exception does not apply.
+  min-height: 44px;
+  padding: $space-3xs $space-sm;
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+}
+
+@media (max-width: 575.98px) {
+  .role-preview-banner {
+    padding: $space-3xs $space-xs;
+    gap: $space-2xs;
+  }
+
+  .role-preview-banner__text {
+    font-size: $font-size-xs;
+  }
+}

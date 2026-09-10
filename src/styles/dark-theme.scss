@@ -45,7 +45,15 @@ body.is-dark {
   // own label/input via admin-theme.scss (`.admin-shell label/input`), and
   // body.is-dark is now applied globally, so an unqualified rule here would
   // bleed the public palette into the admin/staff surfaces.
-  label:not(.admin-shell label),
+  //
+  // OBRS-1189 excluded `.field-inline-label` HERE rather than out-specifying it
+  // below. This selector scores (0,2,3) — `:not()` carries its argument's
+  // specificity, and `body`, `label` and the `label` inside `:not()` are three
+  // type selectors — so the rule that gives that label its own muted token had
+  // to reach (0,3,3) to be seen at all, and the only ways there are a third
+  // class it does not have or a `:not()` written purely for the score. Saying
+  // "this blanket does not cover that label" is the same fact and is checkable.
+  label:not(.admin-shell label):not(.field-inline-label),
   input:not(.admin-shell input) {
     color: $dk-text !important;
   }
@@ -185,7 +193,10 @@ body.is-dark {
   // admin token palette, not the public dark-input palette.
   .form-control:not(.admin-shell .form-control) {
     background-color: $dk-bg-input !important;
-    border-color: $dk-border !important;
+    // OBRS-772: $dk-border is the SEPARATOR token and composited to 1.36:1 here.
+    // A field's boundary is the only thing identifying it, so it gets the
+    // control token instead. Separators elsewhere keep $dk-border.
+    border-color: $dk-control-border !important;
     color: $dk-text !important;
 
     // OBRS-797. The placeholder is NOT covered by the `color` above: an
@@ -225,7 +236,9 @@ body.is-dark {
   // OTP boxes
   .ngx-otp-input-box {
     background-color: $dk-bg-input !important;
-    border-color: $dk-border !important;
+    // OBRS-772: the dark half of the light rule in styles.scss -- an OTP box is
+    // an empty field in both themes.
+    border-color: $dk-control-border !important;
     color: $dk-text !important;
 
     &:focus {
@@ -242,6 +255,28 @@ body.is-dark {
   // Link colour
   .obrs-link {
     color: $dk-accent;
+  }
+
+  // OBRS-1189 — the inline field label (styles.scss). Its light-theme colour is
+  // $text-lightblack, which variables.scss:101 already records as 3.25:1 on
+  // $dk-bg-soft — the booking card's dark surface, and under the 4.5:1 floor for
+  // text. $dk-text-muted is 5.90:1 there (derived, WCAG 1.4.3 formula on the two
+  // token hexes) and is the token this file already uses for every other muted
+  // foreground on that surface — the same pairing the station picker's own
+  // placeholder makes one component over. It belongs HERE and
+  // not in a component stylesheet because the base rule is global too, so this
+  // outranks it on specificity alone (2 vs 1) — the OBRS-767 trap needs an
+  // ENCAPSULATED base rule to spring, and there is none.
+  // `!important` is forced, not chosen: the light rule has to carry it to get
+  // past `label, input { color: … !important }` in styles.scss, and an important
+  // declaration is only ever beaten by another one.
+  //
+  // The `label` tag mirrors the light rule's selector so the two are read as a
+  // pair. What actually keeps this one alive is the `:not(.field-inline-label)`
+  // added to the blanket label rule at the top of this section — see the note
+  // there for why out-specifying it was the worse of the two options.
+  label.field-inline-label {
+    color: $dk-text-muted !important;
   }
 }
 
@@ -285,6 +320,61 @@ body.is-dark {
     background-color: $dk-bg-card;
     color: $dk-text;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  // My-bookings action-menu PANEL (OBRS-959). The tooltip rule below has been
+  // here since the menu was built and proves the relocation was understood —
+  // but it was the only dark rule this popup ever got, so the panel itself kept
+  // PrimeNG's light surface: measured on `origin/dev` 2026-08-22, background
+  // `rgb(255,255,255)` and label `rgb(53,60,68)` in BOTH modes, the two panel
+  // crops byte-identical. The component's own `.my-bookings-action-menu` rules
+  // (my-bookings.component.scss) are layout-only, so nothing else claims these
+  // properties. Unlayered on purpose: PrimeNG's own colours live in
+  // `@layer primeng`, which any unlayered rule beats regardless of specificity.
+  .my-bookings-action-menu {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+
+    .action-menu-item__label {
+      color: $dk-text;
+    }
+
+    .action-menu-item__icon-slot {
+      color: $dk-text-muted;
+    }
+
+    // OBRS-1521 removed PrimeNG's `.p-disabled` opacity from this menu (it put
+    // the LIGHT label at 3.48:1). That fade was also the only thing marking a
+    // disabled row in dark, so dark states its own de-emphasis here rather than
+    // inheriting an enabled row's colour. This also outranks the danger rule
+    // below by one class (0,5,1 vs 0,4,1), so a disabled Cancel goes muted
+    // rather than staying red -- derived from the selectors, NOT measured: the
+    // gate fixture has no booking mid-cancellation, which is the only state
+    // that produces a disabled danger row.
+    .p-menu-item.p-disabled .action-menu-item__label,
+    .p-menu-item.p-disabled .action-menu-item__icon-slot {
+      color: $dk-text-muted;
+    }
+
+    // Danger row (Cancel booking) — the light twin `$text-red` computes to
+    // 3.08:1 on `$dk-bg-card` (fails AA); `$dk-danger`, the token already used
+    // for destructive text in dark mode, gives 6.08:1.
+    .action-menu-item--danger .action-menu-item__label,
+    .action-menu-item--danger .action-menu-item__icon-slot {
+      color: $dk-danger;
+    }
+
+    // Hover and keyboard focus land on PrimeNG's own row wrapper. Without this
+    // the light theme's near-white highlight paints over the dark panel — the
+    // keyboard half matters here because the trigger opens on Enter/Space.
+    // PrimeNG 21 puts `.p-focus` on the `.p-menu-item` <li> (menustyle
+    // `classes.item`), NOT on `.p-menu-item-content` — so the focus half must
+    // read the class off the li and paint the child content div (OBRS-959 Scrutinize).
+    .p-menu-item:not(.p-disabled) > .p-menu-item-content:hover,
+    .p-menu-item.p-focus:not(.p-disabled) > .p-menu-item-content {
+      background-color: rgba(255, 255, 255, 0.08);
+    }
   }
 
   // My-bookings action-menu disabled-reason tooltip — same dark treatment as
@@ -521,10 +611,35 @@ body.is-dark {
 // it went red because a debt entry stopped matching, and the entry stopped
 // matching because the colour underneath had changed.
 body.is-dark {
-  .p-datepicker .p-inputtext {
+  // `:not(.app-date-field--segment)` is not decoration — OBRS-1189 added it
+  // because the segment rule below OVERRIDES this one wherever this lane can see
+  // a date field at all: every reachable customer-shell picker is now a segment
+  // of a booking bar. Left unscoped, all five of this rule's declarations were
+  // reported DEAD by `dark-override-effective.spec.ts` (x8 instances, home +
+  // three schedule-booking states) — a rule that parses, matches and paints
+  // nothing, which is the exact shape OBRS-767 exists to catch. Scoped, it does
+  // not match those elements at all, and an unmatched selector is not judged.
+  // It still dresses every standalone picker (payment expiry, admin) unchanged.
+  .p-datepicker:not(.app-date-field--segment) .p-inputtext {
     background-color: $dk-bg-input !important;
-    border-color: $dk-border !important;
+    // OBRS-772, same call as `.form-control` above.
+    border-color: $dk-control-border !important;
     color: $dk-text !important;
+  }
+
+  // OBRS-1189 — a date SEGMENT is part of the station bar, and a bar with two
+  // fills and two border colours is not a bar. Measured on the finished layout:
+  // the rule above paints these four fields $dk-bg-input behind a $dk-border
+  // outline, directly beside two station halves that are TRANSPARENT over the
+  // card ($dk-bg-soft) behind a $dk-text-muted one
+  // (dropdown-group-obrs.component.scss, which chose that token because
+  // $dk-border composites to 1.36:1 there — under the 3:1 WCAG 1.4.11 asks of a
+  // component boundary). Light mode has no such split: the card and the field
+  // are both $primary-white and the borders are both $primary-lightgrey. So this
+  // is what makes dark match light, not a second design for it.
+  .p-datepicker.app-date-field--segment .p-inputtext {
+    background-color: transparent !important;
+    border-color: $dk-text-muted !important;
   }
 
   .p-datepicker-panel {
@@ -608,6 +723,22 @@ body.is-dark {
   // Re-assert the seat-scarcity status colour (OBRS-229), which the blanket
   // rule above would otherwise wash out to $dk-text.
   .schedule-item .seat-status--low { color: $dk-danger !important; }
+
+  // OBRS-864 - the pickup/drop-off maps link. On a result row the blanket
+  // `.schedule-item *` rule above paints every text node $dk-text, which would
+  // leave the one clickable thing on that line looking exactly like the address
+  // printed next to it. Left UNSCOPED because the same block also renders above
+  // the list, outside `.schedule-item`, where no rule above reaches it at all -
+  // the same two-surface shape the OBRS-1343 notice below is written for.
+  // `!important` for the same reason the rules around it carry one: these are
+  // component styles, so Angular emits the selector with an attribute on every
+  // part and the global rule loses on specificity.
+  .stop-detail__link { color: $dk-accent !important; }
+
+  // OBRS-864 - and the text beside that link, in the list-level copy only. The
+  // row copy already reads $dk-text from the blanket rule; this one is outside
+  // `.schedule-item` and would otherwise stay at its light $text-lightblack.
+  .stop-detail--shared .stop-detail__row { color: $dk-text !important; }
 
   // OBRS-1343 — the "your return leaves from another stop" notice. It renders
   // on TWO surfaces: the trip list, where it sits on the #f6fcff panel and none
@@ -756,6 +887,14 @@ body.is-dark app-route-map-home {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
   }
 
+  // The error box's bare message <span> would otherwise inherit the component's
+  // light-mode $text-softblack (#535968), which is only 2.40:1 on $dk-bg-card —
+  // sub-AA. Lift it to $dk-text so both this section's load-failure box and the
+  // route-map-panel draw-failure box (OBRS-1085) stay readable in dark mode.
+  // The icon (.route-error-icon) and the retry p-button keep their own explicit
+  // colours, so only the message copy is affected.
+  .route-error { color: $dk-text !important; }
+
 
   // Map placeholder (shown before the map loads / on a map error)
   .route-map-placeholder {
@@ -791,7 +930,6 @@ body.is-dark app-route-map-home {
   .route-loading-text,
   .route-empty,
   .stop-address,
-  .stop-time,
   .summary-label,
   .summary-meta,
   .placeholder-text,
@@ -974,12 +1112,13 @@ body.is-dark {
     color: $dk-text;
   }
 
-  .npref-row__hint,
+  .npref-matrix__critical-note,
   .npref-cell--na,
   .npref-row__cell-label {
     color: $dk-text-muted;
   }
 
+  .npref-row__mark,
   .npref-row__warning {
     color: $dk-danger;
   }
@@ -1135,5 +1274,195 @@ body.is-dark app-report-usability-fab {
     background: $dk-accent !important;
     border-color: $dk-accent !important;
     color: #0f1117 !important; // $dk-bg — dark ink on the bright accent fill
+  }
+}
+
+// =============================================================================
+// P. The $primary-blue customer button family - dark-mode boundary (OBRS-773)
+// =============================================================================
+// Seven buttons, one button. .btn-search / .select-btn / .payment-btn /
+// .btn-confirm / .btn-next / .parcel-btn-primary / .promo-code-apply-btn all
+// declare the same $primary-blue fill (#0772a2, or $brand-customer, which IS
+// it), the same white label, and no border at all. In light mode the fill
+// carries its own WCAG 1.4.11 boundary -- 5.33:1 against a white page. In dark
+// mode it does not, and the OBRS-584 gate caught it failing in two states:
+//
+//   .btn-search   rest  #0772a2 on $dk-bg-soft  #22263a = 2.80:1  <- below 3.0
+//   .select-btn   hover #065d85 on $dk-bg-card  #1a1d27 = 2.33:1  <- below 3.0
+//   .payment-btn  hover #065d85 on $dk-bg       #0f1117 = 2.62:1  <- below 3.0
+//
+// Those three rows are the whole of what the gate found. THE OTHER FOUR MEMBERS
+// PASS TODAY, and it is worth being exact about why, because the obvious guess
+// is wrong: it is NOT that the sweep never hovers them (it hovers .btn-next, at
+// customer-pages.ts:630). It is that none of the four CHANGES ITS FILL ON HOVER
+// -- .btn-next, both .btn-confirm copies, .promo-code-apply-btn and
+// parcel-booking's .parcel-btn-primary each declare a :hover carrying nothing
+// but a `transition`. They stay $primary-blue in every state, so they never take
+// the drop to $primary-blue-hover that put .select-btn and .payment-btn on the
+// list, and at rest they clear the floor: 3.15:1 inside a $dk-bg-card #1a1d27
+// card, 3.54:1 for the ones that are siblings of that card and sit on $dk-bg
+// #0f1117 instead.
+//
+// So for those four the ring is a CONSISTENCY decision, not a defect fix --
+// owner, 2026-08-22, asked for the whole family rather than four ringed primary
+// buttons and four unringed ones in the same flow. It is not nothing, either:
+// 3.15:1 is 0.15 above a floor they only clear because OBRS-752 moved
+// $primary-blue, and the ring puts them at 8.29:1, where the next palette move
+// cannot quietly take them under.
+//
+// AC-1 ALSO NAMES `.login-btn`, AND IT IS DELIBERATELY NOT IN THE RULE BELOW.
+// Its 3.15:1 row was measured 2026-07-27 and does not reproduce anywhere today.
+// Measured again 2026-08-22 against the origin/dev tree, by
+// e2e/tests/obrs-773-capture.spec.ts:
+//
+//   /login            fill #4bc2f7 on #1a1d27 = 8.29:1   <- OBRS-774 gave it the
+//                                                           $dk-accent fill after
+//                                                           773 was written
+//   /login-mobile     fill #0772a2 on #0f1117 = 3.54:1
+//   /forget-password  fill #0772a2 on #0f1117 = 3.54:1
+//   /register         [disabled] in the sweep fixture -- not scored, not claimed
+//
+// Every reachable instance already clears 3.0, so there is nothing here for a
+// ring to fix. And section 5 of THIS FILE says it in as many words: OBRS-774
+// moved `.login-btn` out to login.component.scss because a rule here scores
+// (0,3,1) against the component's (0,6,0) and never painted anything, and it
+// ends "Do not re-add them here". `!important` would let this section win that
+// fight, which is exactly why declining to is a decision and not an oversight.
+// The auth pages are also already split by 774's own choice -- /login carries an
+// accent fill, its six siblings the brand blue -- and reconciling that is a
+// design call about pages this card does not own. Reported on the card.
+//
+// WHY A RING, AND NOT A DIFFERENT FILL. Invariant 2 of
+// scripts/check-brand-fill-contrast.mjs (OBRS-763, written after the OBRS-741
+// inversion) requires a hover fill to be DARKER than its rest fill. On a dark
+// page "darker" and "still 3:1 against the page" pull in opposite directions, so
+// no value of $primary-blue-hover satisfies both -- the hover rows above are
+// unreachable by any fill change. Brightening the REST fill instead is paid for
+// by the label, which needs 4.5:1 and has only 5.33:1 to spend. A ring is
+// outside that argument: it touches neither fill, so both criteria hold at once
+// and the hover direction invariant 2 checks is left exactly as it was.
+//
+// $dk-accent is the answer OBRS-746 already gave the usability FAB in section O
+// ("dark mode keeps a real ring, in $dk-accent"), so this family speaks that
+// same language instead of each button inventing a boundary of its own. A ring
+// is not a fill, so it does not dim on hover -- one value covers rest, hover and
+// focus on every surface these buttons land on:
+//
+//   $dk-accent #4bc2f7  vs $dk-bg-soft #22263a = 7.37:1
+//                       vs $dk-bg-card #1a1d27 = 8.29:1
+//                       vs $dk-bg      #0f1117 = 9.31:1
+//
+// `!important` for the reason section 14 spells out at length: these are
+// component styles, so Angular emits `.schedule-item[_ngcontent-x]
+// .select-btn[_ngcontent-x]` and the same rule written without it parses,
+// matches, and paints nothing -- the OBRS-767 shape this file keeps re-learning.
+//
+// `:not(:disabled)` because the disabled state is grey ($primary-lightgrey), not
+// brand-filled, so nothing above applies to it; a bright cyan ring around a
+// button that cannot be pressed would contradict the grey. Every disabled
+// variant in this family carries a real `[disabled]` attribute alongside its
+// class, so the attribute is enough and the `-diabled` class names (including
+// the `select-btn-diabled`-on-a-`.payment-btn` mismatch at
+// payment-creditcard.component.html:57) do not have to be named here.
+//
+// No `:not(.admin-shell ...)` guard, unlike section 14's rules on the
+// `.card-container` these sit inside: that container is shared with the staff
+// walk-in panel, but none of these seven classes appears in any admin or staff
+// template (grepped 2026-08-22). The guard would protect nothing and would read
+// as if it did.
+//
+// ONE OF THE SEVEN IS TWO BUTTONS. `.parcel-btn-primary` is declared four
+// times: parcel-booking's trip form, details form and success page give it
+// $brand-customer (which IS $primary-blue) with `border: none` and
+// `height: 48px`, and my-parcels.component.scss:197 gives a DIFFERENT button the
+// same class name -- $secondary-blue #3b61a9, padding-sized, and already
+// carrying `border: 1px solid $secondary-blue`. That page is also the one place
+// here that dark mode never reached: its only `:host-context(body.is-dark)` block
+// redefines four status-chip custom properties and nothing else, so
+// `.my-parcels` stays $secondary-grey and `.parcel-card` stays white while the
+// body class is on. Ringing it would have replaced a 6.05:1 border on a white
+// card with a 2.03:1 one -- a regression, dressed as this card's fix. So the
+// parcel member is scoped to the three parcel-BOOKING hosts by name. (The light
+// /my-parcels page in dark mode is a real defect and is NOT this card's; it is
+// the same shape as OBRS-768's /my-bookings finding.)
+//
+// GEOMETRY: nothing moves. `box-sizing: border-box` (Bootstrap reboot, global)
+// plus a declared `height` on every member -- 52px on .select-btn / .payment-btn /
+// .btn-confirm / .btn-next, 48px on .parcel-btn-primary, 44px on
+// .promo-code-apply-btn -- means the ring is drawn inside the box that is already
+// there. (.btn-search is 64px on the desktop search bar and 52px stacked since
+// OBRS-1189; what this paragraph depends on is that a height is DECLARED, not
+// which one, and both of those are.) `.login-btn` was the one member with no declared height, so it was the
+// one that would have grown 4px; dropping it for the reason above takes the last
+// geometry change out of this card with it.
+//
+// OBRS-1532 corrects what this paragraph used to say. It claimed `.btn-confirm`
+// was included here for `payment-summary`'s `<div>` copy, "because the customer
+// sees a primary button". The customer never saw it: both call sites of
+// `<app-payment-summary>` pass `variant="inline"`, and only the 'default' arm
+// rendered that div, so it reached no screen. It was an inert CTA -- brand fill
+// and `cursor: pointer`, but no handler, no @Output, no role and no tab stop --
+// waiting for the next call site to forget the attribute, and OBRS-1532 deleted
+// it. The `.btn-confirm` member below is the real one and always was:
+// `review-schedule-booking-total.component.html`'s `<button type="button"
+// class="btn-confirm" (click)="onConfirm()">`, the 3.54:1 -> 9.31:1 measurement
+// OBRS-773 recorded.
+body.is-dark {
+  .btn-search:not(:disabled),
+  .select-btn:not(:disabled),
+  .payment-btn:not(:disabled),
+  .btn-confirm:not(:disabled),
+  .btn-next:not(:disabled),
+  .promo-code-apply-btn:not(:disabled),
+  app-parcel-trip-form .parcel-btn-primary:not(:disabled),
+  app-parcel-details-form .parcel-btn-primary:not(:disabled),
+  app-parcel-booking-success-page .parcel-btn-primary:not(:disabled) {
+    border: 2px solid $dk-accent !important;
+  }
+}
+
+
+// =============================================================================
+// 17. Parcel booking page card
+//
+// `.parcel-booking-card` is `background: $primary-white` in its own stylesheet
+// (parcel-booking-page.component.scss:9) and had no dark override, so the whole
+// wizard sat on a WHITE card in dark mode while sections 1 and 4 painted its
+// headings, labels and inputs light. Measured on the gate build at 1280 before
+// this rule: the station value and the date value both **1.20:1** against that
+// white, the field labels 2.53:1, and the page title with them.
+//
+// OBRS-1189 is what forced the question rather than what caused it. The bar's
+// segments are TRANSPARENT by design -- they borrow the surface they stand on --
+// and when this card made the parcel date field a segment, the one field that
+// still carried its own dark box (section 4's `$dk-bg-input`) lost it. Putting
+// that box back alone would have left one dark field standing on a white card
+// beside two transparent ones: the defect is the surface, not the field.
+//
+// `$dk-bg-soft` and `!important` for exactly the reasons OBRS-217 gives for
+// `.booking-card` in section 6 -- same defect (an inner white card left behind
+// when its wrapper was themed), same token, and the component-scoped rule
+// carries Angular's `[_ngcontent]` attribute, which out-specifies a bare global
+// class selector.
+// =============================================================================
+body.is-dark {
+  .parcel-booking-card {
+    background-color: $dk-bg-soft !important;
+
+    // Changing the surface moves every light-mode token that was chosen against
+    // white. These four are the ones inside this card that carry their own
+    // colour: $text-lightblack is 4.60:1 on white and computes 3.24:1 on
+    // $dk-bg-soft (WCAG formula over the two measured values -- under the 4.5:1
+    // text floor), and $text-red is worse. Repointed to the tokens this file
+    // already uses for exactly this, in sections 1 and 14.
+    .parcel-trip-form__empty,
+    .parcel-details-form__help {
+      color: $dk-text-muted !important;
+    }
+
+    .parcel-trip-form__error,
+    .text-error {
+      color: $dk-danger !important;
+    }
   }
 }

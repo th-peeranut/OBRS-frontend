@@ -1,9 +1,27 @@
 <div class="form-group-obrs">
-  @if (isLabel) {
-    <label> {{ label | translate }} : </label>
-  }
+  <!-- OBRS-1189: the label moved INSIDE the frame, which is what all four
+  reference booking sites do and what the merged bar needs to be one bar when it
+  stacks — with the label above the field, the lower half's label lands between
+  the two boxes and there is no seam for the swap button to straddle (measured
+  15px below the upper field, OBRS-1038's own scope cut).
 
-  <div class="dropdown">
+  It is a slot spanning the field rather than a positioned <label>, for the same
+  reason `.combo-arrow-slot` below is: it re-uses `--dropdown-toggle-padding`, so
+  the label's left inset is the FIELD's left inset by construction — including on
+  the origin half, where OBRS-1038 widens that side to clear the swap disc.
+
+  `for` names the same id the input carries. The accessible name still comes from
+  `[attr.aria-label]` (OBRS-1028 debt), and the label element is now a second,
+  independent source of it — a test asserts both. -->
+  <div class="dropdown" [class.has-inline-label]="isLabel">
+    @if (isLabel) {
+      <span class="combo-label-slot">
+        <label class="field-inline-label" [attr.for]="'dropdownObrs' + label">
+          {{ label | translate }}
+        </label>
+      </span>
+    }
+
     @if (searchable) {
       <!-- No `data-bs-toggle="dropdown"` on this branch, deliberately, and it is the
       one line that cannot be restored without reintroducing the defect: Bootstrap

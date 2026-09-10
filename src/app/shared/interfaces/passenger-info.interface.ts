@@ -6,6 +6,12 @@ export interface PassengerInfo {
   lastName: string;
   phoneNumber: string;
   gender: string;
+  /**
+   * OBRS-1666: explicit consent to hold a monk/nun status (PDPA section 26). Only meaningful
+   * beside those two `gender` values; reset to false whenever the type changes, so it can never
+   * arrive already ticked. Becomes `passengerTypeConsentVersion` at the payload boundary.
+   */
+  passengerTypeConsent?: boolean;
   isSelectSeat: boolean;
   passengerSeat: string;
   /** Seat for the return (inbound) leg on round-trip bookings; unset for one-way. */

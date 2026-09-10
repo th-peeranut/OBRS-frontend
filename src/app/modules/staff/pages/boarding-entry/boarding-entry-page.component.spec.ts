@@ -100,6 +100,99 @@ describe('BoardingEntryPageComponent', () => {
     expect(navigateSpy).toHaveBeenCalledWith(['/staff/boarding', 42]);
   });
 
+  // OBRS-33: the list used to render every schedule the store held, in id
+  // order, so the first row on prod was a trip 19 days in the past.
+  describe('OBRS-33 one day at a time, soonest first', () => {
+    const TRIPS = [
+      { id: 1, departureDateTime: '2026-08-04T07:00:00+07:00', status: 'scheduled' },
+      { id: 2, departureDateTime: '2026-08-23T18:00:00+07:00', status: 'scheduled' },
+      { id: 3, departureDateTime: '2026-08-23T06:30:00+07:00', status: 'scheduled' },
+    ];
+
+    function componentWith(trips: unknown[]): any {
+      const component = new BoardingEntryPageComponent(
+        createRouterStub(),
+        createTranslateStub(),
+        createAuthStub(['driver']),
+        createDriverStoreStub(trips),
+        createStaffStoreStub()
+      );
+      component.ngOnInit();
+      return component;
+    }
+
+    it('keeps only the selected day and puts the soonest departure on top', () => {
+      const component = componentWith(TRIPS);
+      component.onDateChange(new Date(2026, 7, 23));
+      expect(component.filteredRows.map((r: { id: number }) => r.id)).toEqual([3, 2]);
+    });
+
+    it('a day with no trips is empty (the picker above it stays on screen)', () => {
+      const component = componentWith(TRIPS);
+      component.onDateChange(new Date(2026, 7, 22));
+      expect(component.filteredRows.length).toBe(0);
+      expect(component.isEmpty).toBe(true);
+    });
+
+    // OBRS-1584: this spec used to assert the opposite — clearing the field
+    // rendered every trip the store held, which is the OBRS-33 symptom one
+    // keystroke away. The day already in effect survives instead.
+    it('clearing the date keeps the day already in effect, never every trip', () => {
+      const component = componentWith(TRIPS);
+      component.onDateChange(new Date(2026, 7, 23));
+      component.onDateChange(null);
+      expect(component.filteredRows.map((r: { id: number }) => r.id)).toEqual([3, 2]);
+    });
+
+    it('defaults to today', () => {
+      const component = componentWith(TRIPS);
+      const today = new Date();
+      expect(component.selectedDate.toDateString()).toBe(today.toDateString());
+    });
+  });
+
+  // OBRS-1585: the filter used to cut the raw string at `T`, so a departure
+  // that arrives in any offset but +07:00 was filed under a different day than
+  // its own date column prints. 06:30 Bangkok is 23:30Z the day before — the
+  // early-morning departures this page exists to board.
+  describe('OBRS-1585 the day filter reads the same clock as the date column', () => {
+    // One instant — 06:30 on 21 Dec 2026 in Bangkok — in the four shapes the
+    // API has emitted for this field (see bangkokInstantMs, OBRS-574).
+    const TRIPS = [
+      { id: 11, departureDateTime: '2026-12-21T06:30:00+07:00', status: 'scheduled' },
+      { id: 12, departureDateTime: '2026-12-21T06:30:00', status: 'scheduled' },
+      { id: 13, departureDateTime: '2026-12-20T23:30:00Z', status: 'scheduled' },
+      { id: 14, departureDateTime: '2026-12-21 06:30:00', status: 'scheduled' },
+    ];
+
+    function componentWith(trips: unknown[]): any {
+      const component = new BoardingEntryPageComponent(
+        createRouterStub(),
+        createTranslateStub(),
+        createAuthStub(['driver']),
+        createDriverStoreStub(trips),
+        createStaffStoreStub()
+      );
+      component.ngOnInit();
+      return component;
+    }
+
+    it('keeps all four shapes on the day their column prints', () => {
+      const component = componentWith(TRIPS);
+      component.onDateChange(new Date(2026, 11, 21));
+      expect(component.filteredRows.map((r: { id: number }) => r.id)).toEqual([11, 12, 13, 14]);
+      for (const row of component.filteredRows) {
+        expect(component.displayDateTime(row.departure)).toBe('21 Dec 2026 06:30');
+      }
+    });
+
+    it('and none of them is filed under the previous day', () => {
+      const component = componentWith(TRIPS);
+      component.onDateChange(new Date(2026, 11, 20));
+      expect(component.filteredRows.length).toBe(0);
+    });
+  });
+
   it('cleans up subscriptions on destroy', () => {
     const component = new BoardingEntryPageComponent(
       createRouterStub(),

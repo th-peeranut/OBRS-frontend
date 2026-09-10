@@ -147,7 +147,7 @@ describe('ManualRefundWorklistPageComponent (OBRS-286)', () => {
     const store = makeStoreStub(null);
     const component = new ManualRefundWorklistPageComponent(store as any, createTranslateStub(), makeBankServiceStub() as any);
 
-    expect((component as any).formatMoney(undefined)).toContain('0.00');
+    expect((component as any).formatMoney(undefined)).toBe('THB 0');
   });
 
   it('openMarkRefunded / closeMarkRefunded toggle the modal row', () => {

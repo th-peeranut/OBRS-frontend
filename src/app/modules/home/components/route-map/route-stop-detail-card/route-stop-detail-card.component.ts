@@ -52,6 +52,16 @@ export class RouteStopDetailCardComponent {
     return value != null && value.trim() !== '' ? value : null;
   }
 
+  /** OBRS-1777: where this route's operator boards inside the place, or null.
+   *
+   *  Blank folds to null here as well as in the backend resolver, for the reason `landmark` above
+   *  spells out — and it matters more here, because an empty "จุดขึ้นรถ:" on a shared station is
+   *  read as "there is nothing special to find", which is the opposite of true. */
+  get boardingPoint(): string | null {
+    const value = this._stop?.boardingPoint;
+    return value != null && value.trim() !== '' ? value : null;
+  }
+
   /** OBRS-269: whether the selected stop has coordinates to navigate to (the
    *  pickup "Navigate" button is gated/disabled on this, distinct from the
    *  existing `googleMapsUrl` pin-view gate). */

@@ -14,7 +14,7 @@
         </div>
         <div class="ccm-summary-row">
           <dt>{{ 'STAFF.CANCEL_BOOKING.RESULTS.CUSTOMER' | translate }}</dt>
-          <dd>{{ contactName }}</dd>
+          <dd>{{ contactTitle | titleLabel: contactName }}</dd>
         </div>
         <div class="ccm-summary-row">
           <dt>{{ 'MY_BOOKINGS.TOTAL' | translate }}</dt>
@@ -81,12 +81,11 @@
                 type="button"
                 class="admin-btn admin-btn-small"
                 [disabled]="isSubmitting || approvalState === 'requesting'"
+                [appPending]="approvalState === 'requesting'"
                 (click)="requestApproval()"
                 >
                 {{
-                approvalState === 'requesting'
-                ? ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUESTING' | translate)
-                : approvalState === 'requested'
+                approvalState === 'requested'
                 ? ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUEST_AGAIN' | translate)
                 : ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUEST' | translate)
                 }}

@@ -132,6 +132,7 @@ export function mountInChain(
   if (dark) document.body.classList.add('is-dark');
   else document.body.classList.remove('is-dark');
 
+  const hostParent = hostElement.parentElement;
   const wrappers = chain.map((className) => {
     const div = document.createElement('div');
     div.className = dark && /\badmin-shell\b/.test(className) ? `${className} is-dark` : className;
@@ -144,7 +145,15 @@ export function mountInChain(
   (wrappers[wrappers.length - 1] ?? document.body).appendChild(hostElement);
 
   return () => {
-    wrappers[0]?.remove();
+    // OBRS-1527 — with an empty `chain` nothing is wrapped, so `wrappers[0]` is
+    // `undefined` and the host appended straight to `body` above was never taken
+    // back out. Measured 2026-08-22 in a full `ng test`: six
+    // `.p-menu.my-bookings-action-menu` hosts left standing at 48px each, which
+    // is enough to push the document past the viewport for whichever geometry
+    // spec the shuffle happened to run next.
+    if (wrappers.length > 0) wrappers[0].remove();
+    else if (hostParent) hostParent.appendChild(hostElement);
+    else hostElement.remove();
     if (bodyWasDark) document.body.classList.add('is-dark');
     else document.body.classList.remove('is-dark');
   };

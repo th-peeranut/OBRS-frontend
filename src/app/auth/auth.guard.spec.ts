@@ -38,8 +38,15 @@ describe('AuthGuard (area-based access)', () => {
       'isAuthenticated',
       'getHomeRoute',
       'hasAnyRole',
+      'hasHeldRole',
       'setPostLoginRedirectUrl',
     ]);
+    // OBRS-1498: every route in this suite carries no `requiredHeldRoles`, and
+    // the real hasHeldRole([]) is permissive — mirror that so the new branch is
+    // inert here and each test keeps measuring the hasAnyRole one it was written
+    // for. The held-role branch itself is measured in
+    // modules/admin/admin-only-pages-route-guard.spec.ts.
+    auth.hasHeldRole.and.returnValue(true);
     router = jasmine.createSpyObj<Router>('Router', ['parseUrl']);
     router.parseUrl.and.callFake(
       (url: string) => ({ url } as unknown as UrlTree)

@@ -101,9 +101,9 @@
                   </td>
                   <td>{{ row.bookingCount }}</td>
                   <td>{{ row.ticketsSold }}</td>
-                  <td class="eod-report-money admin-emphasis">{{ formatMoney(row.cashAmount, row.revenue.currency) }}</td>
-                  <td class="eod-report-money">{{ formatMoney(row.nonCashAmount, row.revenue.currency) }}</td>
-                  <td class="eod-report-money">{{ formatMoney(row.revenue.net, row.revenue.currency) }}</td>
+                  <td class="eod-report-money admin-emphasis">{{ formatMoney(row.cashAmount) }}</td>
+                  <td class="eod-report-money">{{ formatMoney(row.nonCashAmount) }}</td>
+                  <td class="eod-report-money">{{ formatMoney(row.revenue.net) }}</td>
                 </tr>
                 @if (isExpanded(row)) {
                   <tr class="eod-report-detail-row">
@@ -111,7 +111,7 @@
                       <div class="eod-report-method-list">
                         @for (method of methodEntries(row.byMethod); track trackByMethod($index, method)) {
                           <span class="eod-report-method-chip">
-                            {{ methodLabel(method.slug) }}: {{ formatMoney(method.amount, row.revenue.currency) }} ({{ method.count }})
+                            {{ methodLabel(method.slug) }}: {{ formatMoney(method.amount) }} ({{ method.count }})
                           </span>
                         }
                       </div>
@@ -124,9 +124,9 @@
                   <td class="admin-emphasis">{{ 'ADMIN.EOD_REPORT.GRAND_TOTAL' | translate }}</td>
                   <td>{{ grandTotal.bookingCount }}</td>
                   <td>{{ grandTotal.ticketsSold }}</td>
-                  <td class="eod-report-money eod-report-grand-cash">{{ formatMoney(grandTotal.cashAmount, grandTotal.revenue.currency) }}</td>
-                  <td class="eod-report-money">{{ formatMoney(grandTotal.nonCashAmount, grandTotal.revenue.currency) }}</td>
-                  <td class="eod-report-money admin-emphasis">{{ formatMoney(grandTotal.revenue.net, grandTotal.revenue.currency) }}</td>
+                  <td class="eod-report-money eod-report-grand-cash">{{ formatMoney(grandTotal.cashAmount) }}</td>
+                  <td class="eod-report-money">{{ formatMoney(grandTotal.nonCashAmount) }}</td>
+                  <td class="eod-report-money admin-emphasis">{{ formatMoney(grandTotal.revenue.net) }}</td>
                 </tr>
               }
             }

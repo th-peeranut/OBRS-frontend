@@ -50,6 +50,10 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   @Input() selectedSeats: string[] = [];
   /** passenger_type lookup slug (male|female|monk|nun); drives the seat-map icon for the NEXT seat. */
   @Input() passengerGender = 'male';
+  // OBRS-1666: driven by the sell page, never held here. A local copy survived a completed sale
+  // (nothing on this component clears it) and the next walk-in customer met a checkbox that was
+  // already ticked for a consent they had not given.
+  @Input() passengerTypeConsent = false;
 
   /** Per-seat passenger type map (seat label → passenger_type slug) for multi-select rendering. */
   @Input() seatPassengerTypes: Record<string, string> = {};
@@ -59,6 +63,15 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   // `isOpenSeating` is true.
   @Input() passengerCount = 1;
   @Output() passengerCountChange = new EventEmitter<number>();
+
+  // OBRS-1045: fare_category for the NEXT seat click — a separate dimension from
+  // `passengerGender` above (ADR-0046), so a child still has a gender and still colours the seat
+  // map. Owned by sell-page like every other capture on this panel.
+  @Input() fareCategory: 'adult' | 'child' = 'adult';
+  @Output() fareCategoryChange = new EventEmitter<'adult' | 'child'>();
+  /** OBRS-1045: OPEN-mode "how many of `passengerCount` are children" — owned by sell-page. */
+  @Input() childCount = 0;
+  @Output() childCountChange = new EventEmitter<number>();
 
   // OBRS-358: how many of the current sale's tickets spill into the jump
   // seat (walk-in-only, sold last) — owned/computed by sell-page
@@ -79,6 +92,11 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
 
   @Output() seatToggled = new EventEmitter<string>();
   @Output() passengerTypeChange = new EventEmitter<string>();
+
+  // OBRS-1666: the clerk's record that this passenger gave explicit consent to us holding their
+  // monk/nun status. Emitted (never held only here) because the sell page captures it per seat at
+  // click time, exactly like the type itself.
+  @Output() passengerTypeConsentChange = new EventEmitter<boolean>();
   @Output() pickupChange = new EventEmitter<string>();
   @Output() dropoffChange = new EventEmitter<string>();
 
@@ -176,7 +194,7 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     { value: 'male',   labelKey: 'STAFF.SELL.PTYPE_MALE',   icon: 'icons/passenger-male.svg' },
     { value: 'female', labelKey: 'STAFF.SELL.PTYPE_FEMALE', icon: 'icons/passenger-female.svg' },
     { value: 'monk',   labelKey: 'STAFF.SELL.PTYPE_MONK',   icon: 'icons/passenger-monk.svg' },
-    { value: 'nun',    labelKey: 'STAFF.SELL.PTYPE_NUN',    icon: '' },
+    { value: 'nun',    labelKey: 'STAFF.SELL.PTYPE_NUN',    icon: 'icons/passenger-nun.svg' },
   ];
 
   constructor(
@@ -245,8 +263,24 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     this.destroy$.complete();
   }
 
+
+  /**
+   * OBRS-1666: 'monk'/'nun' state a religious status and are the only two answers that ask for
+   * consent. 'male'/'female' do not - PDPA section 26 lists sexual behaviour, not sex.
+   */
+  protected get isSensitivePassengerType(): boolean {
+    const value = (this.passengerGender || '').toLowerCase();
+    return value === 'monk' || value === 'nun';
+  }
+
   protected onSelectPassengerType(v: string): void {
+    // OBRS-1666: the sell page clears the tick on this event and feeds it back down, so the box
+    // is never already ticked when it reappears for a different type.
     this.passengerTypeChange.emit(v);
+  }
+
+  protected onTogglePassengerTypeConsent(checked: boolean): void {
+    this.passengerTypeConsentChange.emit(checked);
   }
 
   /** Seat components expect an upper-case gender token (MALE|FEMALE|MONK). */
@@ -314,6 +348,24 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     }
   }
 
+  // OBRS-1045: the child half of an OPEN sale. Bounded by the headcount above it, not by the
+  // vehicle's capacity — sell-page re-clamps on its side too, so a stale binding cannot get past.
+  protected incrementChildCount(): void {
+    if (this.childCount < this.passengerCount) {
+      this.childCountChange.emit(this.childCount + 1);
+    }
+  }
+
+  protected decrementChildCount(): void {
+    if (this.childCount > 0) {
+      this.childCountChange.emit(this.childCount - 1);
+    }
+  }
+
+  protected onSelectFareCategory(v: 'adult' | 'child'): void {
+    this.fareCategoryChange.emit(v);
+  }
+
   protected get currentSeat(): string {
     return this.selectedSeats.length > 0 ? this.selectedSeats[0] : '';
   }
@@ -365,7 +417,10 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
             this.isDetailLoaded = true;
             this.cargoCapacityKgFromDetail = scheduleDetail.cargoCapacityKg ?? null;
             this.routeSlugForForm = scheduleDetail.route?.slug ?? '';
-            this.routeNameForForm = getAdminLookupLabel(scheduleDetail.route) ?? scheduleDetail.route?.slug ?? '';
+            this.routeNameForForm =
+              getAdminLookupLabel(scheduleDetail.route, this.translate.currentLang) ??
+              scheduleDetail.route?.slug ??
+              '';
             this.routeDateForForm = scheduleDetail.departureDateTime
               ? formatDisplayDate(scheduleDetail.departureDateTime, this.translate.currentLang)
               : '';

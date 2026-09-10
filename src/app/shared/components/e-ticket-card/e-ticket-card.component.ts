@@ -6,9 +6,11 @@ import {
   SimpleChanges,
   ViewChild,
 } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import html2canvas from 'html2canvas';
 import { TicketLeg, TicketPassenger } from '../../interfaces/e-ticket.interface';
 import { buildMapsDirectionsUrl } from '../../lib/maps-directions-url';
+import { formatMoney } from '../../lib/money-display';
 import {
   BoardingQrService,
   BoardingQrState,
@@ -67,7 +69,16 @@ export class ETicketCardComponent implements OnChanges {
   legPassengerRows: TicketPassengerRow[][] = [];
   isDownloadingTicket = false;
 
-  constructor(private readonly boardingQrService: BoardingQrService) {}
+  constructor(
+    private readonly boardingQrService: BoardingQrService,
+    private readonly translate: TranslateService
+  ) {}
+
+  /** OBRS-1592: the ticket used to print `{{ totalAmount }} {{ TOTAL_UNIT }}`,
+   * i.e. the raw `'0.00'`-shaped string with a `บาท` i18n key after it. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translate.currentLang);
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['legs']) {

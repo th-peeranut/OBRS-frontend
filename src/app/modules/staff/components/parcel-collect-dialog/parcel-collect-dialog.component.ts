@@ -27,6 +27,8 @@ export class ParcelCollectDialogComponent implements OnChanges {
   @Input() isOpen = false;
   @Input() isSubmitting = false;
   @Input() serverErrorKey: string | null = null;
+  /** OBRS-1553: interpolation values for `serverErrorKey`; only the rate-limit copy has any. */
+  @Input() serverErrorParams: { minutes: number } | null = null;
 
   @Output() dismiss = new EventEmitter<void>();
   @Output() confirm = new EventEmitter<string>();

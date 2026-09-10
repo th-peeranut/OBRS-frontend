@@ -137,6 +137,7 @@
   [isOpen]="collectDialogParcelId !== null"
   [isSubmitting]="isCollecting"
   [serverErrorKey]="collectErrorKey"
+  [serverErrorParams]="collectErrorParams"
   (dismiss)="closeCollectDialog()"
   (confirm)="confirmCollect($event)"
 ></app-parcel-collect-dialog>

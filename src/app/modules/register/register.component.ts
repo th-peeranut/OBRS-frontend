@@ -173,11 +173,11 @@ export class RegisterComponent implements OnDestroy {
       !this.phoneNumberIsExist
     ) {
       const formValue = this.registerForm.getRawValue();
-      const titleName = this.resolveTitleName(formValue.title);
+      const titleCode = this.resolveTitleCode(formValue.title);
 
       const registerPayload = {
         ...formValue,
-        title: titleName,
+        title: titleCode,
         // OBRS-691: the control may carry display dashes (regrouped on blur) —
         // the backend stores/validates bare digits only.
         phoneNumber: stripPhoneSeparators(formValue.phoneNumber),
@@ -205,17 +205,17 @@ export class RegisterComponent implements OnDestroy {
     }
   }
 
-  private resolveTitleName(title: unknown): string | null {
+  // OBRS-1232: was `englishName || thaiName`, i.e. English won every time and the English label
+  // is what got persisted - the whole defect. Now it resolves the option's stable CODE, whichever
+  // shape the dropdown handed over (it emits the option object; a reloaded form holds the id).
+  private resolveTitleCode(title: unknown): string | null {
     if (typeof title === 'string') {
       const normalized = title.trim();
       return normalized.length > 0 ? normalized : null;
     }
 
     if (typeof title === 'object' && title !== null) {
-      const option = title as Dropdown;
-      const englishName = option.nameEnglish?.trim();
-      const thaiName = option.nameThai?.trim();
-      return englishName || thaiName || null;
+      return (title as Dropdown).code?.trim() || null;
     }
 
     const titleId = Number(title);
@@ -223,14 +223,7 @@ export class RegisterComponent implements OnDestroy {
       return null;
     }
 
-    const option = this.titleOptions.find((item) => item.id === titleId);
-    if (!option) {
-      return null;
-    }
-
-    const englishName = option.nameEnglish?.trim();
-    const thaiName = option.nameThai?.trim();
-    return englishName || thaiName || null;
+    return this.titleOptions.find((item) => item.id === titleId)?.code?.trim() || null;
   }
 
   async checkDuplicateData(value: string, option: number) {

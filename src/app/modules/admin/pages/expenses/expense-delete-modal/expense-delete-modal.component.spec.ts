@@ -21,8 +21,11 @@ const ROW: ExpenseRow = {
   expenseDateDisplay: '24 ก.ค. 2026',
   receiptNo: '',
   paidBy: '',
+  payeeId: null,
+  payeeName: '',
   note: '',
   source: 'MANUAL',
+  items: [],
 };
 
 describe('ExpenseDeleteModalComponent', () => {

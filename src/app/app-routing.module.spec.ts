@@ -2,6 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { CanActivateFn, Route, Router, UrlTree } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+
 import { appRoutes } from './app-routing.module';
 import { environment } from '../environments/environment';
 
@@ -110,11 +113,19 @@ describe('appRoutes — online-booking flag boundary (OBRS-1302)', () => {
 
   beforeEach(async () => {
     originalOnlineTicketBooking = environment.features.onlineTicketBooking;
-    await TestBed.configureTestingModule({ imports: [RouterTestingModule] }).compileComponents();
+    localStorage.removeItem('auth_roles');
+    await TestBed.configureTestingModule({
+      imports: [RouterTestingModule],
+      // OBRS-1583: `onlineTicketBookingGuard` injects AuthService, which needs
+      // an HttpClient in the injector even though it never issues a request on
+      // this path.
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
   });
 
   afterEach(() => {
     environment.features.onlineTicketBooking = originalOnlineTicketBooking;
+    localStorage.removeItem('auth_roles');
   });
 
   /**
@@ -167,6 +178,64 @@ describe('appRoutes — online-booking flag boundary (OBRS-1302)', () => {
       it(`/${path} stays reachable even with the flag off`, () => {
         environment.features.onlineTicketBooking = false;
         expect(redirectsHome(path)).withContext(path).toBeFalse();
+      });
+    });
+  });
+
+  /**
+   * OBRS-1583 — the half of the gate that only the ROUTES can prove.
+   *
+   * The trip list's button and the notice banner read the predicate through
+   * `isOnlineTicketBookingOpen`; the routes reach it through a guard. Wiring
+   * one and not the other produces a screen that argues with itself — the
+   * button appears, the banner goes, and the click bounces straight back to
+   * '/'. Asserting the button and the banner cannot see that; running the real
+   * route's real guards can, which is what `redirectsHome` above does.
+   *
+   * `driver` is asserted apart from `salesperson`: ROLE_GRANTS expands a held
+   * role downwards only, so a preview list written `['salesperson']` would pass
+   * every assertion here except the driver ones.
+   */
+  describe('OBRS-1583 — with the flag still off, staff walk the funnel and nobody else does', () => {
+    ['owner', 'admin', 'salesperson', 'driver'].forEach((role) => {
+      CLOSED_BY_FLAG.forEach((path) => {
+        it(`/${path} activates for ${role}`, () => {
+          environment.features.onlineTicketBooking = false;
+          localStorage.setItem('auth_roles', JSON.stringify([role]));
+
+          expect(redirectsHome(path)).withContext(`${role} -> ${path}`).toBeFalse();
+        });
+      });
+    });
+
+    // The must-NOT-regress half, and the most important assertion on the card:
+    // a customer and a signed-out visitor must hit exactly the wall they hit
+    // today.
+    [null, ['customer'], ['__proto__']].forEach((roles) => {
+      CLOSED_BY_FLAG.forEach((path) => {
+        it(`/${path} still redirects ${roles ? roles.join(',') : 'a signed-out visitor'} home`, () => {
+          environment.features.onlineTicketBooking = false;
+          if (roles) {
+            localStorage.setItem('auth_roles', JSON.stringify(roles));
+          }
+
+          expect(redirectsHome(path)).withContext(`${String(roles)} -> ${path}`).toBeTrue();
+        });
+      });
+    });
+
+    // AC-6: reopening for real is still one value change, and the role
+    // condition must not become a NEW way to keep someone out.
+    [null, ['customer'], ['driver']].forEach((roles) => {
+      it(`flag ON lets ${roles ? roles.join(',') : 'a signed-out visitor'} into all three routes`, () => {
+        environment.features.onlineTicketBooking = true;
+        if (roles) {
+          localStorage.setItem('auth_roles', JSON.stringify(roles));
+        }
+
+        CLOSED_BY_FLAG.forEach((path) => {
+          expect(redirectsHome(path)).withContext(`${String(roles)} -> ${path}`).toBeFalse();
+        });
       });
     });
   });

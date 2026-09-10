@@ -48,6 +48,9 @@ import { OpsEfficiencyPageComponent } from './pages/ops-efficiency/ops-efficienc
 import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-report-page.component';
 import { RefundVoidReportPageComponent } from './pages/refund-void-report/refund-void-report-page.component';
 import { CashOnlineReconciliationReportPageComponent } from './pages/cash-online-reconciliation-report/cash-online-reconciliation-report-page.component';
+import { PayeeSpendReportPageComponent } from './pages/payee-spend-report/payee-spend-report-page.component';
+import { PartUnitPriceReportPageComponent } from './pages/part-unit-price-report/part-unit-price-report-page.component';
+import { VehiclePlReportPageComponent } from './pages/vehicle-pl-report/vehicle-pl-report-page.component';
 import { AppVehicleMaintenancePanelComponent } from './pages/vehicles/vehicle-maintenance/vehicle-maintenance-panel.component';
 import { AppVehicleInspectionPanelComponent } from './pages/vehicles/vehicle-inspection/vehicle-inspection-panel.component';
 import { AppVehicleMaintenancePlanPanelComponent } from './pages/vehicles/vehicle-maintenance-plan/vehicle-maintenance-plan-panel.component';
@@ -70,6 +73,9 @@ import { ExpenseListTableComponent } from './pages/expenses/expense-list-table/e
 import { ExpenseApprovalLaneComponent } from './pages/expenses/expense-approval-lane/expense-approval-lane.component';
 import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/expense-form-modal.component';
 import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
+import { ExpenseBatchPageComponent } from './pages/expenses/expense-batch-page/expense-batch-page.component';
+import { ExpensePayeesPageComponent } from './pages/expense-payees/expense-payees-page.component';
+import { MaintenancePartsPageComponent } from './pages/maintenance-parts/maintenance-parts-page.component';
 // OBRS-286 — manual refund worklist (AC-2/AC-3), owner-only.
 import { ManualRefundWorklistPageComponent } from './pages/manual-refund-worklist/manual-refund-worklist-page.component';
 import { CashRefundApprovalsPageComponent } from './pages/cash-refund-approvals/cash-refund-approvals-page.component';
@@ -84,6 +90,7 @@ import { ParcelShareConfigPageComponent } from './pages/parcel-share-config/parc
 import { DriverCashRatesPageComponent } from './pages/driver-cash-rates/driver-cash-rates-page.component';
 import { CancelReschedulePolicyConfigPageComponent } from './pages/cancel-reschedule-policy-config/cancel-reschedule-policy-config-page.component';
 import { ConfigSourceBadgeComponent } from './pages/cancel-reschedule-policy-config/config-source-badge/config-source-badge.component';
+import { OperationsConfigPageComponent } from './pages/operations-config/operations-config-page.component';
 // OBRS-1308 — owner-editable notification message overrides + admin approval.
 import { NotificationMessagesTabPageComponent } from './pages/notification-messages/notification-messages-tab-page.component';
 import { NotificationMessageListPageComponent } from './pages/notification-messages/notification-message-list-page.component';
@@ -101,6 +108,7 @@ import { NotificationMessageAccessDeniedComponent } from './pages/notification-m
 import { AuthGuard } from '../../auth/auth.guard';
 import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
 import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
+import { TitleLabelPipe } from '../../shared/pipes/title-label.pipe';
 
 // OBRS-543: exported (was module-private) so staff-nav-reachability.spec.ts can
 // assert against the REAL route list rather than a hand-mirrored copy — the same
@@ -118,14 +126,38 @@ export const adminRoutes: Routes = [
         data: { titleKey: 'ADMIN.PAGES.DASHBOARD', subtitleKey: 'ADMIN.DASHBOARD.SUBTITLE' },
       },
       {
+        // OBRS-1498: `requiredHeldRoles`, NOT `requiredRoles` — an owner must
+        // not reach this page. Every write on it (POST/PUT/DELETE on
+        // LookupController) is `hasRole('ADMIN')`, and the backend hierarchy in
+        // WebSecurityConfig.java only runs ROLE_ADMIN > ROLE_OWNER, so an owner
+        // got the whole screen and a 403 from every button. `requiredRoles:
+        // ['admin']` would NOT have kept them out: ROLE_GRANTS grants an owner
+        // 'admin' (see auth.service.ts), which is correct for area access and
+        // wrong here. Read the guard's `requiredHeldRoles` branch before
+        // "fixing" this back. Decision: OBRS-1498 AC-1, option (ก) — owner does
+        // not see the page at all. The nav entry is gated to match
+        // (admin-layout.component.ts).
         path: 'lookups',
         component: LookupSettingsPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', subtitleKey: 'ADMIN.LOOKUP.SUBTITLE' },
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.LOOKUP_SETTINGS',
+          subtitleKey: 'ADMIN.LOOKUP.SUBTITLE',
+          requiredHeldRoles: ['admin'],
+        },
       },
       {
+        // OBRS-1498: same shape and same reason as `lookups` above — every
+        // write on RoleController is `hasRole('ADMIN')` (its GET reaches OWNER,
+        // which is what made this a readable-but-unusable page for an owner).
         path: 'roles',
         component: RoleManagementPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', subtitleKey: 'ADMIN.ROLES.SUBTITLE' },
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.ROLE_MANAGEMENT',
+          subtitleKey: 'ADMIN.ROLES.SUBTITLE',
+          requiredHeldRoles: ['admin'],
+        },
       },
       {
         path: 'users',
@@ -366,6 +398,43 @@ export const adminRoutes: Routes = [
         },
       },
       {
+        // OBRS-1578: spend per payee. Same admin+owner audience as every other report on
+        // this nav (the endpoint 403s anyone else).
+        path: 'payee-spend-report',
+        component: PayeeSpendReportPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.PAYEE_SPEND_REPORT',
+          subtitleKey: 'ADMIN.PAYEE_SPEND_REPORT.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
+        // OBRS-1613: unit price per registry entry, across time and across garages — the other
+        // half of the question payee-spend-report above answers. Same admin+owner audience.
+        path: 'part-unit-price-report',
+        component: PartUnitPriceReportPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.PART_UNIT_PRICE_REPORT',
+          subtitleKey: 'ADMIN.PART_UNIT_PRICE_REPORT.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
+        // OBRS-884: per-vehicle P&L. Same admin+owner audience as every other report on
+        // this nav (the endpoint 403s anyone else), not a further-restricted owner-only
+        // page like settlements.
+        path: 'vehicle-pl-report',
+        component: VehiclePlReportPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.VEHICLE_PL_REPORT',
+          subtitleKey: 'ADMIN.VEHICLE_PL_REPORT.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
         // OBRS-685: vehicle/central expense log — admin+owner (backend 403s
         // salesperson on every endpoint), same audience/shape as
         // eod-sales-report above (whole always-shown admin+owner nav, not a
@@ -377,6 +446,65 @@ export const adminRoutes: Routes = [
           titleKey: 'ADMIN.PAGES.EXPENSES',
           subtitleKey: 'ADMIN.EXPENSES.SUBTITLE',
           requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
+        // OBRS-1576: the envelope screen. AHEAD of nothing and beside `expenses` rather than nested
+        // under it as a child route — it replaces the whole page while it is open (the owner is
+        // typing off paper and the log behind it is not something he is reading), so it has no use
+        // for the parent's filters, table or modals.
+        //
+        // Same audience as `expenses` above: the backend is `hasRole('OWNER')` on the endpoint, and
+        // the role hierarchy admits an admin through it. An admin who comes here gets the operator
+        // picker (OBRS-808's rule — they have no owner identity to derive), which is why the route
+        // is not narrowed to `['owner']`.
+        path: 'expenses/batch',
+        component: ExpenseBatchPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.EXPENSE_BATCH',
+          subtitleKey: 'ADMIN.EXPENSES.BATCH.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
+        // OBRS-1577: the payee registry that the expense form's picker draws from. OWNER-only
+        // (owner decision 3, 2026-08-24) because who an operator buys from is commercial
+        // information — the backend is `hasRole('OWNER')` on every endpoint INCLUDING the GET, so a
+        // salesperson 403s on all of it. `['owner']` and not `['admin', 'owner']` states that
+        // intent; per the settlements route above, AuthService.ROLE_GRANTS has admin granting
+        // owner, so the two are one predicate here and the narrower spelling is the honest one.
+        //
+        // Sits beside `expenses` rather than under system-settings: an owner comes here while
+        // filing bills, not while configuring the product once.
+        path: 'expense-payees',
+        component: ExpensePayeesPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.EXPENSE_PAYEES',
+          subtitleKey: 'ADMIN.EXPENSE_PAYEES.SUBTITLE',
+          requiredRoles: ['owner'],
+        },
+      },
+      {
+        // OBRS-1613: the parts/labour registry the maintenance plan and the repair bill BOTH draw
+        // from - one list, which is the point (V113__create_expense_items.sql wrote down why: two
+        // lists means "how many times did I change the brake pads" has two answers).
+        //
+        // OWNER-only, and `['owner']` rather than `['admin', 'owner']` for the reason the payee
+        // route above states: the backend is `hasRole('OWNER')` on every endpoint including the GET,
+        // AuthService.ROLE_GRANTS has admin granting owner, so the two spellings are one predicate
+        // and the narrower one is the honest description of who this is for.
+        //
+        // Sits beside `expense-payees`: both are lists an owner maintains while filing bills, not
+        // one-off product configuration.
+        path: 'maintenance-parts',
+        component: MaintenancePartsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.MAINTENANCE_PARTS',
+          subtitleKey: 'ADMIN.MAINTENANCE_PARTS.SUBTITLE',
+          requiredRoles: ['owner'],
         },
       },
       {
@@ -484,6 +612,9 @@ export const adminRoutes: Routes = [
     EodSalesReportPageComponent,
     RefundVoidReportPageComponent,
     CashOnlineReconciliationReportPageComponent,
+    PayeeSpendReportPageComponent,
+    PartUnitPriceReportPageComponent,
+    VehiclePlReportPageComponent,
     AppVehicleMaintenancePanelComponent,
     AppVehicleInspectionPanelComponent,
     AppVehicleMaintenancePlanPanelComponent,
@@ -502,6 +633,9 @@ export const adminRoutes: Routes = [
     ExpenseApprovalLaneComponent,
     ExpenseFormModalComponent,
     ExpenseDeleteModalComponent,
+    ExpenseBatchPageComponent,
+    ExpensePayeesPageComponent,
+    MaintenancePartsPageComponent,
     ManualRefundWorklistPageComponent,
     CashRefundApprovalsPageComponent,
     ParcelClaimsPageComponent,
@@ -513,6 +647,7 @@ export const adminRoutes: Routes = [
     DriverCashRatesPageComponent,
     CancelReschedulePolicyConfigPageComponent,
     ConfigSourceBadgeComponent,
+    OperationsConfigPageComponent,
     NotificationMessagesTabPageComponent,
     NotificationMessageListPageComponent,
     NotificationMessageListTableComponent,
@@ -528,6 +663,7 @@ export const adminRoutes: Routes = [
     NotificationMessageAccessDeniedComponent,
   ],
   imports: [
+    TitleLabelPipe,
     SharedModule,
     RouterModule.forChild(adminRoutes),
     DatePickerModule,

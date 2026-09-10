@@ -16,9 +16,16 @@
         (ngModelChange)="onSearchKeywordChange($event)"
         [attr.aria-label]="'ADMIN.STOPS.SEARCH_PLACEHOLDER' | translate"
       />
-      <button type="button" class="admin-btn" [disabled]="isLoading" (click)="load()">
+      <button type="button" class="admin-btn" [disabled]="isLoading" [appPending]="isLoading" (click)="load()">
         {{ 'ADMIN.COMMON.REFRESH' | translate }}
       </button>
+      <!-- OBRS-1678: POST /private/stops has existed since OBRS-1022 with nothing calling it.
+           ADMIN-only, because a stop is a place the whole platform shares (OBRS-830/1677). -->
+      @if (canEditPhysical) {
+        <button type="button" class="admin-btn admin-btn-primary" (click)="openCreate()">
+          {{ 'ADMIN.STOPS.ADD' | translate }}
+        </button>
+      }
     </div>
   </div>
 
@@ -64,6 +71,16 @@
                 <button type="button" class="admin-btn admin-btn-sm" (click)="openStop(row.id)">
                   {{ 'ADMIN.COMMON.EDIT' | translate }}
                 </button>
+                @if (canEditPhysical) {
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-sm"
+                    [disabled]="isDeleting"
+                    (click)="deleteStop(row, $event)"
+                  >
+                    {{ 'ADMIN.COMMON.DELETE' | translate }}
+                  </button>
+                }
               </td>
             </tr>
           }
@@ -88,6 +105,8 @@
   [statusOptions]="statusOptions"
   [stopTypeOptions]="stopTypeOptions"
   [returnStopOptions]="returnStopOptions"
+  [canEditPhysical]="canEditPhysical"
+  [isCreating]="isCreating"
   (closed)="closeDetail()"
   (save)="save()"
   (photoSelected)="onPhotoSelected($event)"

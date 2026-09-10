@@ -296,4 +296,35 @@ describe('PassengerSeatBusComponent — badge placement (real DOM, OBRS-362)', (
     expect(b2?.query(By.css('.seat-attribute-badge-wheelchair'))).not.toBeNull();
     expect(b2?.query(By.css('.seat-attribute-badge-legroom'))).not.toBeNull();
   });
+
+  describe('blocked seats (OBRS-1364)', () => {
+    it('matches the backend\'s plain seat numbers against the map\'s B-labels, and emits nothing on a click', () => {
+      const emitted: string[] = [];
+      component.gender = 'MONK';
+      component.blockedSeats = ['2'];
+      component.passengerSeatPositionOnChange.subscribe((v) => emitted.push(v));
+      fixture.detectChanges();
+
+      expect(component.isSeatBlocked('B2')).toBeTrue();
+      expect(component.isSeatBlocked('B3')).toBeFalse();
+
+      component.setPassengerSeatPosition('B2');
+      expect(emitted).toEqual([]);
+
+      component.setPassengerSeatPosition('B3');
+      expect(emitted).toEqual(['B3']);
+    });
+
+    it('never blocks the seat the passenger is already on', () => {
+      component.blockedSeats = ['2'];
+      component.currentSeat = 'B2';
+
+      expect(component.isSeatBlocked('B2')).toBeFalse();
+    });
+
+    it('blocks nothing by default, so every existing call site is unaffected', () => {
+      expect(component.blockedSeats).toEqual([]);
+      expect(component.isSeatBlocked('B2')).toBeFalse();
+    });
+  });
 });

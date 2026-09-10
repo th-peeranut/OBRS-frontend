@@ -1,4 +1,8 @@
-import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { AbstractControl, FormGroup, ValidationErrors, ValidatorFn } from '@angular/forms';
+import {
+  ExpenseFormValue,
+  expenseItemsMatchAmount,
+} from '../expenses-page.mappers';
 
 // UX-OBRS-685 §4.1: `amount` is REQUIRED (paired with Validators.required on
 // the control), > 0, up to 2 decimal places. `vatAmount` is OPTIONAL/nullable,
@@ -60,3 +64,19 @@ export function tooManyDecimalsValidator(maxDecimals: number): ValidatorFn {
     return null;
   };
 }
+
+/**
+ * OBRS-1374 AC5: a FORM-level validator, because the rule spans two controls that are far apart
+ * on screen - the bill total near the top, the lines at the bottom. Putting it on either control
+ * alone would leave the error attached to whichever one the owner did not touch last.
+ *
+ * No lines is never a mismatch (AC4): most bills are one number on a slip, and the repeater must
+ * stay optional. The backend makes the identical comparison; this one exists so the owner is told
+ * BEFORE they press save instead of by a 400 afterwards.
+ */
+export const itemsTotalMatchesAmountValidator: ValidatorFn = (
+  control: AbstractControl
+): ValidationErrors | null => {
+  const value = (control as FormGroup).getRawValue() as ExpenseFormValue;
+  return expenseItemsMatchAmount(value.items, value.amount) ? null : { itemsTotalMismatch: true };
+};

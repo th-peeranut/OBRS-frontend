@@ -1,5 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { ParcelCarryOnRespDto, ParcelConsignedRespDto } from '../../../../shared/interfaces/parcel.interface';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 /**
  * Dumb, presentational — shown after a successful walk-in intake POST.
@@ -77,4 +79,14 @@ export class ParcelIntakeResultPanelComponent {
     if (r.freeAisle) return true; // free-aisle: next item is the only action
     return this.carryOnPaid; // on-seat: primary once paid; secondary while the pay button is still the CTA
   }
+  constructor(private readonly translate: TranslateService) {}
+
+  /** OBRS-1592: the amount used to go into the sentence RAW, with the unit
+   * spelled inside the i18n value — `{{amount}} บาท`. That is the same
+   * number-plus-unit-word shape this card removed everywhere else, just
+   * hidden inside a format string. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translate.currentLang);
+  }
+
 }

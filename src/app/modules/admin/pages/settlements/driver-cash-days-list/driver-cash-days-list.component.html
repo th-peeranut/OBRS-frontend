@@ -87,7 +87,7 @@ same rule as app-settlements-list. -->
                       <span class="admin-status is-success">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.STATUS.RETURNED' | translate }}</span>
                     }
                   </td>
-                  <td>{{ item.expectedReturnAmount }}</td>
+                  <td>{{ formatMoney(item.expectedReturnAmount) }}</td>
                   <td>
                     <button
                       type="button"

@@ -6,6 +6,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { SellPageComponent } from './sell-page.component';
+import { PRIVACY_POLICY_VERSION } from '../../../privacy-policy/privacy-policy.version';
 import {
   StaffApiService,
   WalkInTripDto,
@@ -159,6 +160,14 @@ function setSegmentFare(comp: SellPageComponent, fare: number, pickup = 'stop_a'
   (comp as any).fareMap = new Map([[`${pickup}|${dropoff}`, fare]]);
   (comp as any).pickupSlug = pickup;
   (comp as any).dropoffSlug = dropoff;
+}
+
+/**
+ * OBRS-1045: the SERVER's child price for the same pair. Deliberately separate from
+ * setSegmentFare so a test can leave it unset and exercise the old-backend fallback.
+ */
+function setSegmentChildFare(comp: SellPageComponent, childFare: number, pickup = 'stop_a', dropoff = 'stop_b'): void {
+  (comp as any).childFareMap = new Map([[`${pickup}|${dropoff}`, childFare]]);
 }
 
 describe('SellPageComponent', () => {
@@ -394,6 +403,148 @@ describe('SellPageComponent', () => {
       const b2 = passengers.find((p) => p.seatNumber === '2');
       expect(b1?.passengerType).toBe('male');
       expect(b2?.passengerType).toBe('female');
+    });
+  });
+
+  // OBRS-1045: before this card the counter could not sell a child ticket at all — the payload
+  // carried no fareCategory and the server resolved every walk-in ticket to 'adult'.
+  describe('child fare (OBRS-1045)', () => {
+    it('ASSIGNED: each seat keeps the fare category it was clicked with, and the payload carries it', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).onFareCategoryChanged('adult');
+      (comp as any).onSeatToggled('B1');
+      (comp as any).onFareCategoryChanged('child');
+      (comp as any).onSeatToggled('B2');
+      setSegmentFare(comp, 300);
+      setSegmentChildFare(comp, 160);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      const passengers: { fareCategory: string; seatNumber: string }[] = callArg.departureSchedule.passengers;
+      expect(passengers.find((p) => p.seatNumber === '1')?.fareCategory).toBe('adult');
+      expect(passengers.find((p) => p.seatNumber === '2')?.fareCategory).toBe('child');
+    });
+
+    /**
+     * The trap this card had to avoid: BookingService compares reqDto.totalAmount against
+     * calculateTripFare (gross adult x seats) and 400s `booking.error.amount.mismatch` on any
+     * difference. Netting the child discount out of the payload would break EVERY mixed sale.
+     */
+    it('sends the GROSS adult total even when the sale contains a child', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).onFareCategoryChanged('child');
+      (comp as any).onSeatToggled('B1');
+      (comp as any).onFareCategoryChanged('adult');
+      (comp as any).onSeatToggled('B2');
+      setSegmentFare(comp, 300);
+      setSegmentChildFare(comp, 160);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect(callArg.totalAmount).toBe(600);
+    });
+
+    it('childDiscountTotal is the per-child difference times the number of children', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).onFareCategoryChanged('child');
+      (comp as any).onSeatToggled('B1');
+      (comp as any).onSeatToggled('B2');
+      (comp as any).onFareCategoryChanged('adult');
+      (comp as any).onSeatToggled('B3');
+      setSegmentFare(comp, 300);
+      setSegmentChildFare(comp, 160);
+
+      expect((comp as any).childTicketCount).toBe(2);
+      expect((comp as any).childDiscountTotal).toBe(280);
+    });
+
+    it('a segment cheaper than the child fare discounts nothing — the child pays the adult fare', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).onFareCategoryChanged('child');
+      (comp as any).onSeatToggled('B1');
+      setSegmentFare(comp, 80);
+      setSegmentChildFare(comp, 80);
+
+      expect((comp as any).childDiscountTotal).toBe(0);
+    });
+
+    it('a backend that sends no childFare prices the child as an adult, never as a guess', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).onFareCategoryChanged('child');
+      (comp as any).onSeatToggled('B1');
+      setSegmentFare(comp, 300);
+      // childFareMap deliberately left empty — an old backend.
+
+      expect((comp as any).segmentChildFare).toBe(300);
+      expect((comp as any).childDiscountTotal).toBe(0);
+    });
+
+    it('OPEN: the child headcount fills that many tickets and the rest are adults', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      (comp as any).onPassengerCountChanged(3);
+      (comp as any).onOpenChildCountChanged(2);
+      setSegmentFare(comp, 300);
+      setSegmentChildFare(comp, 160);
+
+      expect((comp as any).childTicketCount).toBe(2);
+      expect((comp as any).childDiscountTotal).toBe(280);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      const passengers: { fareCategory: string }[] = callArg.departureSchedule.passengers;
+      expect(passengers.length).toBe(3);
+      expect(passengers.filter((p) => p.fareCategory === 'child').length).toBe(2);
+      expect(passengers.filter((p) => p.fareCategory === 'adult').length).toBe(1);
+      // Still gross: 3 x 300, with the 280 taken off only on screen.
+      expect(callArg.totalAmount).toBe(900);
+    });
+
+    it('OPEN: lowering the headcount below the child count drags the child count down with it', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      (comp as any).onPassengerCountChanged(3);
+      (comp as any).onOpenChildCountChanged(3);
+      (comp as any).onPassengerCountChanged(1);
+
+      expect((comp as any).openChildCount).toBe(1);
+    });
+
+    it('deselecting a child seat stops it being discounted', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).onFareCategoryChanged('child');
+      (comp as any).onSeatToggled('B1');
+      (comp as any).onSeatToggled('B1');
+      setSegmentFare(comp, 300);
+      setSegmentChildFare(comp, 160);
+
+      expect((comp as any).childTicketCount).toBe(0);
+      expect((comp as any).childDiscountTotal).toBe(0);
+    });
+
+    it('selecting another trip resets the fare category so it cannot price the next sale', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).onFareCategoryChanged('child');
+      (comp as any).onSeatToggled('B1');
+
+      (comp as any).onTripSelected({ trip: makeTrip({ scheduleId: 2 }), routeSlug: 'route-a' });
+
+      expect((comp as any).selectedFareCategory).toBe('adult');
+      expect((comp as any).seatFareCategories).toEqual({});
+      expect((comp as any).openChildCount).toBe(0);
     });
   });
 
@@ -686,6 +837,30 @@ describe('SellPageComponent', () => {
       (comp as any).onSell(validPayload);
 
       expect((comp as any).seatPassengerTypes).toEqual({});
+    });
+  });
+
+  describe('showCheckout getter (OBRS-1752)', () => {
+    it('is false before a trip is selected, even on the Ticket Sales tab', () => {
+      const comp = makeComponent();
+      (comp as any).activeTabIndex = 0;
+      expect((comp as any).showCheckout).toBeFalse();
+    });
+
+    it('is true on the Ticket Sales tab once a trip is selected', () => {
+      const comp = makeComponent();
+      (comp as any).activeTabIndex = 0;
+      (comp as any).selectedTrip = makeTrip();
+      expect((comp as any).showCheckout).toBeTrue();
+    });
+
+    it('is false on Trip Details/Boarding even with a trip selected', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).activeTabIndex = 1;
+      expect((comp as any).showCheckout).toBeFalse();
+      (comp as any).activeTabIndex = 2;
+      expect((comp as any).showCheckout).toBeFalse();
     });
   });
 
@@ -1781,5 +1956,68 @@ describe('SellPageComponent — OBRS-667 owner-only cancel gate (DOM)', () => {
 
     expect(deleteSpy).toHaveBeenCalledWith(10);
     expect(cancelSpy).not.toHaveBeenCalled();
+  });
+  describe('sensitive passenger type consent (OBRS-1666)', () => {
+    it('captures the consent with the type, per seat, at click time', () => {
+      const comp: any = makeComponent();
+      comp.onPassengerTypeChanged('monk');
+      comp.onPassengerTypeConsentChanged(true);
+      comp.onSeatToggled('A1');
+
+      // The next passenger is a monk too, but this clerk did not tick the box.
+      comp.onPassengerTypeConsentChanged(false);
+      comp.onSeatToggled('A2');
+
+      expect(comp.passengerTypeConsentVersionFor('A1')).toBe(PRIVACY_POLICY_VERSION);
+      expect(comp.passengerTypeConsentVersionFor('A2')).toBeNull();
+    });
+
+    it('changing the type clears the consent, so the next seat cannot inherit it', () => {
+      const comp: any = makeComponent();
+      comp.onPassengerTypeChanged('monk');
+      comp.onPassengerTypeConsentChanged(true);
+
+      comp.onPassengerTypeChanged('nun');
+      comp.onSeatToggled('A1');
+
+      expect(comp.passengerTypeConsentVersionFor('A1')).toBeNull();
+    });
+
+    it('sends nothing for male/female - section 26 does not cover sex', () => {
+      const comp: any = makeComponent();
+      comp.onPassengerTypeChanged('female');
+      comp.onPassengerTypeConsentChanged(true);
+      comp.onSeatToggled('A1');
+
+      expect(comp.passengerTypeConsentVersionFor('A1')).toBeNull();
+    });
+
+    it('starting a new trip does not leave the previous tick behind for the next customer', () => {
+      const comp: any = makeComponent();
+      comp.ngOnInit();
+      comp.onPassengerTypeChanged('monk');
+      comp.onPassengerTypeConsentChanged(true);
+      comp.onSeatToggled('A1');
+      expect(comp.passengerTypeConsentVersionFor('A1')).toBe(PRIVACY_POLICY_VERSION);
+
+      // Every block that clears the per-seat map must clear the PENDING tick with it. Without
+      // that, the next customer's first seat click captures a consent nobody gave for them -
+      // and this one runs on the staff POS many times a shift.
+      comp.onTripSelected({ trip: makeTrip({ scheduleId: 77 }), routeSlug: 'bkk-cm' });
+      comp.onSeatToggled('A2');
+
+      expect(comp.selectedPassengerTypeConsent).toBeFalse();
+      expect(comp.passengerTypeConsentVersionFor('A2')).toBeNull();
+    });
+
+    it('deselecting a seat forgets its consent too', () => {
+      const comp: any = makeComponent();
+      comp.onPassengerTypeChanged('monk');
+      comp.onPassengerTypeConsentChanged(true);
+      comp.onSeatToggled('A1');
+      comp.onSeatToggled('A1');
+
+      expect(comp.seatPassengerTypeConsents['A1']).toBeUndefined();
+    });
   });
 });

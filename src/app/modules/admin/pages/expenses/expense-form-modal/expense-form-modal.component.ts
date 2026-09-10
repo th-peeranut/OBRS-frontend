@@ -7,27 +7,41 @@ import {
   Output,
   SimpleChanges,
 } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
-import { AdminApiService } from '../../../../../services/admin/admin-api.service';
+import {
+  AdminApiService,
+  AdminExpensePayeeDto,
+  AdminMaintenancePartDto,
+} from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import { trimmedRequiredValidator } from '../../../../../shared/validators/trimmed-required.validator';
 import {
   Option,
+  ExpenseItemFormValue,
+  ExpenseItemRow,
   ExpenseRow,
   VEHICLE_CENTRAL_SENTINEL,
+  expenseItemsTotal,
   toDateControlValue,
   toExpensePayload,
 } from '../expenses-page.mappers';
 import {
+  itemsTotalMatchesAmountValidator,
   nonNegativeAmountValidator,
   positiveAmountValidator,
   tooManyDecimalsValidator,
 } from './expense-form-modal.validators';
 
 const AMOUNT_MAX_DECIMALS = 2;
+
+// OBRS-1374 (schema.sql expense_items.description VARCHAR(255)).
+const ITEM_DESCRIPTION_MAX_LENGTH = 255;
+
+// OBRS-1613 (schema.sql expense_items.unit VARCHAR(20)).
+const ITEM_UNIT_MAX_LENGTH = 20;
 
 // Smart create/edit form modal (OBRS-685), mirroring VehicleFormModalComponent
 // (OBRS-261) / AppVehicleMaintenancePanelComponent's modal (OBRS-209). Owns
@@ -66,10 +80,26 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
    * silent, worse one.
    */
   @Input() isAdmin = false;
+  /** OBRS-1577: the ACTIVE rows of the payee registry, for the "จ่ายให้ใคร" picker. Empty is a
+   * working state, not a broken one — an operator with no payees on record yet gets a picker whose
+   * only offer is "add the one I am typing", which is exactly how the registry gets populated. */
+  @Input() payeeOptions: AdminExpensePayeeDto[] = [];
+  /** OBRS-1577: whether this caller may CREATE a payee from here. False for an admin — the backend
+   * refuses that one operation alone (see `ExpensesPageComponent.canCreatePayee`). */
+  @Input() canCreatePayee = true;
+  /** OBRS-1613: the parts/labour registry, ACTIVE rows only - the page filters. */
+  @Input() partOptions: AdminMaintenancePartDto[] = [];
+  @Input() canCreatePart = true;
   @Input() reloadStructure!: () => Promise<void>;
   @Output() closed = new EventEmitter<void>();
+  /** OBRS-1577: forwarded up from the picker so the page can revalidate the shared registry cache —
+   * a payee added from inside one bill must be offered on the next bill without a page reload. */
+  @Output() payeeCreated = new EventEmitter<AdminExpensePayeeDto>();
+  @Output() partCreated = new EventEmitter<AdminMaintenancePartDto>();
 
   protected readonly VEHICLE_CENTRAL_SENTINEL = VEHICLE_CENTRAL_SENTINEL;
+  protected readonly ITEM_DESCRIPTION_MAX_LENGTH = ITEM_DESCRIPTION_MAX_LENGTH;
+  protected readonly ITEM_UNIT_MAX_LENGTH = ITEM_UNIT_MAX_LENGTH;
   protected isSubmitting = false;
   protected readonly expenseForm: FormGroup;
 
@@ -102,8 +132,15 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
       expenseDate: [null, [Validators.required]],
       receiptNo: ['', [Validators.maxLength(100)]],
       paidBy: ['', [Validators.maxLength(255)]],
+      // OBRS-1577 AC1: optional by design. Every bill written before this card has no payee, and an
+      // owner who cannot remember who a bill went to must be able to say so by leaving it alone —
+      // a required field here would be answered with whichever name is nearest the top.
+      payeeId: [null],
       note: ['', [Validators.maxLength(500)]],
-    });
+      // OBRS-1374 AC4: starts EMPTY and may stay empty - a bill with no breakdown must save
+      // exactly as it did before this card.
+      items: this.formBuilder.array([]),
+    }, { validators: [itemsTotalMatchesAmountValidator] });
 
     // §4.1 field table: the instant `category` leaves 'OTHER', clear BOTH
     // the visible control's value AND its validator state in the same tick
@@ -143,6 +180,9 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
         this.initCreateForm();
       }
     } else {
+      // FormGroup.reset() blanks the controls a FormArray HOLDS, it does not remove them - a
+      // four-line bill would leave four empty rows behind for the next open. Clear it first.
+      this.itemsArray.clear();
       this.expenseForm.reset();
     }
   }
@@ -153,6 +193,88 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
 
   protected get showCategoryOtherLabel(): boolean {
     return this.expenseForm.get('category')?.value === 'OTHER';
+  }
+
+  /** OBRS-1577: the bill's category, fed live to the picker so the type it would create is always
+   * the one the bill is actually filed under (owner decision 1, 2026-08-24). */
+  protected get selectedCategory(): string {
+    return String(this.expenseForm.get('category')?.value ?? '');
+  }
+
+  /** OBRS-1577: the payee name carried on the row being edited. The picker offers ACTIVE payees
+   * only, so without this a bill paid to a since-retired garage would render as an empty field —
+   * which reads as "no payee" and is one save away from becoming true. */
+  protected get editingPayeeName(): string {
+    return this.selectedExpense?.payeeName ?? '';
+  }
+
+  protected get itemsArray(): FormArray {
+    return this.expenseForm.get('items') as FormArray;
+  }
+
+  /** OBRS-1374 AC9: what the lines add up to, shown live under the repeater. */
+  protected get itemsTotal(): number {
+    return expenseItemsTotal(this.itemsArray.getRawValue() as ExpenseItemFormValue[]);
+  }
+
+  /** OBRS-1374 AC9: the warning, and the reason submit is blocked. Deliberately NOT gated on
+   * dirty/touched like `isFieldInvalid` - an edit that opens on an already-mismatched bill must
+   * say so immediately, not wait for the owner to touch something. */
+  protected get itemsTotalMismatch(): boolean {
+    return this.expenseForm.hasError('itemsTotalMismatch');
+  }
+
+  protected addItem(): void {
+    this.itemsArray.push(this.buildItemGroup());
+  }
+
+  protected removeItem(index: number): void {
+    this.itemsArray.removeAt(index);
+  }
+
+  protected trackByIndex(index: number): number {
+    return index;
+  }
+
+  private buildItemGroup(item?: ExpenseItemRow): FormGroup {
+    return this.formBuilder.group({
+      // OBRS-1613: the registry id is the line's part now, on this screen as on the multi-bill one.
+      // It is NOT a hidden value carried past a dropdown the owner can still change: this modal's
+      // save is a full replace (ExpenseService#replaceItems deletes and reinserts the whole set),
+      // so a line loaded here and saved back must round-trip everything it arrived with - and a
+      // carried id would also WIN over the dropdown server-side (resolvePartForOwner takes partId
+      // first), silently discarding the change the owner just made.
+      partId: [item?.partId ?? null],
+      // OBRS-1613: display only, never sent - `toExpensePayload` names the fields it puts on the
+      // wire. It is the picker's fallback label for a part that has since been RETIRED: the picker
+      // is offered ACTIVE rows only, so without this the field renders blank on a line whose link
+      // is intact and the owner's natural repair is to overwrite it.
+      partName: [item?.partName ?? ''],
+      // AC3: blank is a real answer (labour, service, sundry), so no required validator - the
+      // "not a part" option is what lets an owner take a part back off a line.
+      //
+      // OBRS-1613: `part` is no longer a control. The enum it was picked from is frozen history;
+      // the payload sends the id and the server writes the code from the row it resolved. Keeping a
+      // second, narrower vocabulary on this screen is the "two lists in one system" the card's
+      // constraint 1 forbids - V113 wrote down why: the same question then has two answers.
+      // OBRS-1613: free text, and carried on edit for the same round-trip reason as partId above.
+      unit: [item?.unit ?? '', [Validators.maxLength(ITEM_UNIT_MAX_LENGTH)]],
+      description: [
+        item?.description ?? '',
+        [Validators.required, Validators.maxLength(ITEM_DESCRIPTION_MAX_LENGTH)],
+      ],
+      quantity: [item?.quantity ?? null, [positiveAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)]],
+      unitPrice: [item?.unitPrice ?? null, [nonNegativeAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)]],
+      amount: [
+        item?.amount ?? null,
+        [Validators.required, positiveAmountValidator, tooManyDecimalsValidator(AMOUNT_MAX_DECIMALS)],
+      ],
+    });
+  }
+
+  private setItems(items: ExpenseItemRow[]): void {
+    this.itemsArray.clear();
+    items.forEach((item) => this.itemsArray.push(this.buildItemGroup(item)));
   }
 
   /**
@@ -262,8 +384,10 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
       expenseDate: null,
       receiptNo: '',
       paidBy: '',
+      payeeId: null,
       note: '',
     });
+    this.setItems([]);
   }
 
   /**
@@ -307,7 +431,9 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
       expenseDate: toDateControlValue(expense.expenseDate),
       receiptNo: expense.receiptNo,
       paidBy: expense.paidBy,
+      payeeId: expense.payeeId,
       note: expense.note,
     });
+    this.setItems(expense.items ?? []);
   }
 }

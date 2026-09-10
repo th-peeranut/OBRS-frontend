@@ -4,7 +4,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { ActivatedRouteSnapshot, Router } from '@angular/router';
 
 import { AuthService } from './auth.service';
 import { Register } from '../shared/interfaces/auth.interface';
@@ -19,6 +19,17 @@ import {
   rememberBookingSelection,
 } from '../shared/lib/booking-context-storage';
 import { Schedule } from '../shared/interfaces/schedule.interface';
+
+/**
+ * OBRS-1730: the router snapshot chain AuthService walks, built from the `data`
+ * of each route level — root first. Only `data` and `firstChild` are read.
+ */
+function routeSnapshot(...data: Record<string, unknown>[]): ActivatedRouteSnapshot {
+  return data.reduceRight<ActivatedRouteSnapshot | null>(
+    (firstChild, level) => ({ data: level, firstChild } as unknown as ActivatedRouteSnapshot),
+    null
+  ) as ActivatedRouteSnapshot;
+}
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -37,6 +48,10 @@ describe('AuthService', () => {
           useValue: {
             navigate: jasmine.createSpy('navigate'),
             navigateByUrl: jasmine.createSpy('navigateByUrl'),
+            // OBRS-1730: startRolePreview() now reads the current route to decide
+            // whether the preview may stay on it. A bare root with no `data` is
+            // the "route declares no roles" case, which every predicate passes.
+            routerState: { snapshot: { root: routeSnapshot({}) } },
           },
         },
       ],
@@ -286,6 +301,80 @@ describe('AuthService', () => {
 
       // Restored — the collapse is back, so nothing leaks into later specs.
       expect(service.hasAnyRole(OWNER_ONLY)).toBe(true);
+    });
+  });
+
+  /**
+   * OBRS-1730 — starting a preview leaves a route the previewed role cannot pass.
+   *
+   * The route chain matters, not just the leaf: /admin/lookups is
+   * `requiredRoles: ['admin']` on the shell (app-routing.module.ts) and
+   * `requiredHeldRoles: ['admin']` on the child (admin.module.ts), and an owner
+   * passes the first and fails the second. Both levels are therefore built here.
+   */
+  describe('OBRS-1730 — entering a preview forces navigation off a now-forbidden route', () => {
+    const setRoles = (roles: string[]) =>
+      localStorage.setItem('auth_roles', JSON.stringify(roles));
+    const standOn = (...levels: Record<string, unknown>[]) => {
+      const router = TestBed.inject(Router);
+      (router.routerState.snapshot as { root: ActivatedRouteSnapshot }).root =
+        routeSnapshot(...levels);
+      return router;
+    };
+    const ADMIN_SHELL = { requiredRoles: ['admin'] };
+    const LOOKUPS = { requiredHeldRoles: ['admin'] };
+
+    it('an admin on /admin/lookups previewing as owner is sent to the previewed role\'s home', () => {
+      setRoles(['admin']);
+      const router = standOn(ADMIN_SHELL, LOOKUPS);
+
+      service.startRolePreview('owner');
+
+      // '/' is getHomeRoute() UNDER the preview — the same place auth.guard.ts
+      // sends them if they refresh that page while previewing.
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/');
+    });
+
+    it('leaves them where they are when the previewed role still passes the route', () => {
+      setRoles(['admin']);
+      // /admin/users: shell only, no held-role narrowing — an owner passes it.
+      const router = standOn(ADMIN_SHELL, { titleKey: 'ADMIN.PAGES.USERS' });
+
+      service.startRolePreview('owner');
+
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+      expect(service.getPreviewRole()).toBe('owner');
+    });
+
+    it('checks the whole chain, not the leaf — an owner previewing as driver leaves the admin shell', () => {
+      setRoles(['owner']);
+      // The leaf declares nothing; only the shell entry keeps a driver out.
+      const router = standOn(ADMIN_SHELL, { titleKey: 'ADMIN.PAGES.DASHBOARD' });
+
+      service.startRolePreview('driver');
+
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/staff');
+    });
+
+    it('does not navigate for a role the holder may not preview at all', () => {
+      setRoles(['owner']);
+      const router = standOn(ADMIN_SHELL, LOOKUPS);
+
+      service.startRolePreview('admin'); // upward preview — refused by AC-1
+
+      expect(service.getPreviewRole()).toBeNull();
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    it('leaving a preview still does not navigate (OBRS-1721 behaviour, unchanged)', () => {
+      setRoles(['admin']);
+      const router = standOn(ADMIN_SHELL, LOOKUPS);
+      service.startRolePreview('owner');
+      (router.navigateByUrl as jasmine.Spy).calls.reset();
+
+      service.exitRolePreview();
+
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
     });
   });
 

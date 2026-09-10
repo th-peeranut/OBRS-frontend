@@ -111,9 +111,14 @@
             (input)="onAccountNumberInput($any($event.target))"
             (blur)="onAccountNumberBlur()"
             [class.is-invalid]="isInvalid('accountNumber')"
-            [disabled]="disabled"
+            [disabled]="disabled || !bankCode"
             [placeholder]="'REFUND_DESTINATION.ACCOUNT_NUMBER' | translate"
             />
+            @if (!bankCode) {
+              <small class="rdf-hint">
+                {{ 'REFUND_DESTINATION.ACCOUNT_NUMBER_NEEDS_BANK' | translate }}
+              </small>
+            }
             @if (isInvalid('accountNumber')) {
               <small class="rdf-error">
                 {{ 'REFUND_DESTINATION.ERROR.REQUIRED' | translate }}

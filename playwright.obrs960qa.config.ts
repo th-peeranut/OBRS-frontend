@@ -10,6 +10,11 @@ import { defineConfig, devices } from '@playwright/test';
  * delete your Playwright specs after running them" — the orchestrator decides what is kept.
  */
 export default defineConfig({
+  // OBRS-1616: no `webServer`, so nothing said which tree served these pages. This lane
+  // drives the stack the QA session started by hand (see the header above), so a foreign
+  // tree on the port is the documented state -- the guard must name it, not refuse.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
+  metadata: { laneTree: 'attach-to-operator-stack' },
   testDir: './e2e',
   testMatch: ['**/obrs960-driver-cash-qa.spec.ts'],
   timeout: 30_000,

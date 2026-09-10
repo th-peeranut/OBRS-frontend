@@ -16,6 +16,7 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { formatMoney } from '../../../../shared/lib/money-display';
 
 // Pure mappers/formatters/normalizers extracted from RoutesPageComponent
 // (OBRS-208). No Angular/service dependencies — every locale-dependent or
@@ -89,8 +90,13 @@ export function statusClass(status: string): string {
   return 'is-danger';
 }
 
-export function formatFare(fare: number): string {
-  return fare.toFixed(2);
+/**
+ * OBRS-1592: the fare matrix printed `200.00` — a fifth on-screen money format,
+ * with no unit and no thousand separator. `.toFixed(2)` is invisible to
+ * check-money-format.mjs, which is how it survived three passes of this card.
+ */
+export function formatFare(fare: number, lang?: string | null): string {
+  return formatMoney(fare, lang);
 }
 
 export function formatStatusLabel(status: string): string {

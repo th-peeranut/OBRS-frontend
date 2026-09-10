@@ -267,13 +267,13 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       // Overlap the table revalidate with the success dialog (see the form
       // modal's submitUser).
       const refresh = this.store.refresh();
-      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
+      await this.alertService.success(this.translate.instant('ADMIN.USERS.CLOSE_SUCCESS'));
       await refresh;
     } catch (error) {
       this.closeDeleteModal(true);
       const message =
         extractApiErrorMessage(error) ||
-        this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+        this.translate.instant('ADMIN.USERS.CLOSE_FAILED');
       await this.alertService.error(message);
     } finally {
       this.isDeleting = false;

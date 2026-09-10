@@ -7,6 +7,10 @@ import { TripTrackService } from '../../../../services/trip-track/trip-track.ser
 import { pollWhileVisible } from '../../../admin/shared/admin-auto-refresh';
 import { resolveTripTrackView, TRIP_TRACK_POLL_ACTIVE_MS, TripTrackView } from '../../../../shared/lib/trip-track-view';
 
+/** Named once because it is now read from two places — the 403/404 handler and
+ * the language-change re-translation (OBRS-1096). */
+const UNAVAILABLE_KEY = 'MY_BOOKINGS.TRIP_TRACK.ERROR.UNAVAILABLE';
+
 /**
  * C1 (SPEC-OBRS-426) — smart panel owning polling, HTTP, error state, and
  * lane switching (BR-16: no state is terminal; polling stops ONLY on
@@ -42,7 +46,19 @@ export class TripTrackPanelComponent implements OnChanges, OnDestroy {
   constructor(
     private readonly tripTrackService: TripTrackService,
     private readonly translate: TranslateService
-  ) {}
+  ) {
+    // OBRS-1096 — `errorText` is a plain field holding an already-translated
+    // string, so no template binding re-renders it. Unlike the fleet map
+    // (OBRS-1082), no later poll tick repairs it either: the only path that
+    // sets it calls `stopPolling()` (BR-18), so without this the customer who
+    // switches language to understand the error keeps reading the old one
+    // until a full page reload.
+    this.translate.onLangChange.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      if (this.errorText) {
+        this.errorText = this.translate.instant(UNAVAILABLE_KEY);
+      }
+    });
+  }
 
   get canShowMap(): boolean {
     return !!this.maptilerKey;
@@ -134,7 +150,7 @@ export class TripTrackPanelComponent implements OnChanges, OnDestroy {
             // BR-18: byte-identical copy for both — neither is recoverable by
             // retrying, and a friendlier 404 vs 403 message would be a
             // working ticket-existence oracle for an IDOR probe.
-            this.errorText = this.translate.instant('MY_BOOKINGS.TRIP_TRACK.ERROR.UNAVAILABLE');
+            this.errorText = this.translate.instant(UNAVAILABLE_KEY);
             this.stopPolling();
             return;
           }

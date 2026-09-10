@@ -8,7 +8,7 @@ import {
   TicketLeg,
   TicketPassenger,
 } from '../interfaces/e-ticket.interface';
-import { tripEstimateFromStops } from './trip-format';
+import { laterBangkokArrivalDay, tripEstimateFromStops } from './trip-format';
 
 export type ETicketLocale = 'en' | 'th' | 'zh';
 
@@ -40,6 +40,10 @@ export function mapBookingTicketsToCard(
       travelDate: formatDate(journey.departureDateTime, locale) || '-',
       travelTime:
         formatTimeRange(journey.departureDateTime, journey.arrivalDateTime) || '-',
+      // OBRS-1510 (AC-2): filled only when this leg lands on a later Bangkok
+      // day than it left — same rule the e-ticket page has used since
+      // OBRS-1502, now on the shared card so the modal gets the same cell.
+      arrivalDate: arrivalDateWhenLater(journey, locale),
       // OBRS-1219: the route's own name when the backend could resolve one, and
       // OBRS-264's province pair when it could not (an unseeded locale — `zh` is
       // seeded in none today, OBRS-1046). Both halves are load-bearing: the owner
@@ -91,6 +95,21 @@ export function mapBookingTicketsToCard(
     paymentDate: '-',
     totalAmount: formatAmount(data.totalAmount),
   };
+}
+
+/** OBRS-1510: the same rule `e-ticket.component.ts`'s `arrivalDateWhenLater`
+ *  applies to the store pass — kept as its own function here (not exported)
+ *  because `BookingTicketJourney`'s field names differ from that page's
+ *  `TripTimestamps`, even though the two satisfy the same shape. */
+function arrivalDateWhenLater(
+  journey: BookingTicketJourney,
+  locale: ETicketLocale
+): string {
+  const arrivalDay = laterBangkokArrivalDay(
+    journey.departureDateTime,
+    journey.arrivalDateTime
+  );
+  return arrivalDay ? formatDate(arrivalDay, locale) : '';
 }
 
 function findJourney(
@@ -195,6 +214,8 @@ function collectTicketNumbers(journeys: BookingTicketJourney[]): string {
 function buildPassengers(journey: BookingTicketJourney | null): TicketPassenger[] {
   const tickets = journey?.tickets ?? [];
   return tickets.map((ticket) => ({
+    // OBRS-1232: the title travels beside the name as a code; the card's template composes them.
+    title: ticket.passengerTitle ?? null,
     name: ticket.passengerName?.trim() || '-',
     phone: '-',
     seat: ticket.seatNumber?.trim() || '-',
@@ -206,6 +227,8 @@ function buildPassengers(journey: BookingTicketJourney | null): TicketPassenger[
     // OBRS-296: server-authoritative — carried straight through, never
     // re-derived client-side.
     fareCategory: ticket.fareCategory ?? null,
+    // OBRS-1510 (AC-8): per-ticket, mirrors isJourneyOpenSeating's own signal.
+    seatOpen: !ticket.seatNumber?.trim(),
   }));
 }
 
@@ -218,12 +241,23 @@ function buildPassengers(journey: BookingTicketJourney | null): TicketPassenger[
  * empty-journey placeholder) is not "open" — it's the pre-existing "no data"
  * case and must keep showing the `'-'` placeholder unchanged.
  */
-function isJourneyOpenSeating(journey: BookingTicketJourney): boolean {
-  const tickets = journey.tickets ?? [];
-  if (tickets.length === 0) {
+export function isJourneyOpenSeating(journey: BookingTicketJourney): boolean {
+  return isOpenSeatingSeats((journey.tickets ?? []).map((ticket) => ticket.seatNumber));
+}
+
+/**
+ * OBRS-1787: the same rule, over the seat values alone. Three screens now state
+ * the OPEN seat once — the e-ticket, the 80mm slip and the public booking
+ * lookup — but the lookup reads `BookingLookupTicket`, which shares no type with
+ * `BookingTicketItem` (`id`/`ticketNumber` are required there and absent here).
+ * Taking the seats rather than the tickets is what lets one rule serve all three
+ * instead of a second copy drifting away from this one.
+ */
+export function isOpenSeatingSeats(seats: (string | null | undefined)[]): boolean {
+  if (seats.length === 0) {
     return false;
   }
-  return tickets.every((ticket) => !ticket.seatNumber?.trim());
+  return seats.every((seat) => !seat?.trim());
 }
 
 function buildSeatList(passengers: TicketPassenger[]): string {
@@ -238,7 +272,7 @@ function buildBooker(data: BookingTicketsData): TicketPassenger | null {
   // The booker is a contact row, not a traveller — it has no ticket of its
   // own, so `ticketId: null` (OBRS-866) keeps it out of the QR fetch entirely.
   return phone
-    ? { name: '-', phone, seat: '-', ticketId: null, ticketNumber: '-' }
+    ? { name: '-', phone, seat: '-', ticketId: null, ticketNumber: '-', seatOpen: false }
     : null;
 }
 

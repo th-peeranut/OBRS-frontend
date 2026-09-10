@@ -21,6 +21,8 @@ exact same DOM the previous hardcoded template did. -->
               [isDisabled]="isSeatDisabled(cell.label) && !isSeatActive(cell.label)"
               [ownerLabel]="ownerLabelFor(cell.label)"
               [isActiveOwner]="isActiveOwnerFor(cell.label)"
+              [isBlocked]="isSeatBlocked(cell.label)"
+              [blockedSeatAriaLabel]="blockedSeatAriaLabel"
               [hasWheelchairBadge]="hasWheelchairBadge(cell.label)"
               [hasExtraLegroomBadge]="hasExtraLegroomBadge(cell.label)"
               [wheelchairBadgeAriaLabel]="wheelchairBadgeAriaLabel"

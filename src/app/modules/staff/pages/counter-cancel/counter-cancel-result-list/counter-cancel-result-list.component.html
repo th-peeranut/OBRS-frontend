@@ -32,7 +32,8 @@
         @for (row of results; track trackByBookingId($index, row)) {
           <tr class="ccrl-row">
             <td class="admin-emphasis">{{ row.bookingNumber }}</td>
-            <td>{{ row.contactName }}</td>
+            <!-- OBRS-1601: title CODE resolved here, not server-side, so a language switch moves it. -->
+            <td>{{ row.contactTitle | titleLabel: row.contactName }}</td>
             <td class="ccrl-phone">{{ row.contactPhoneMasked }}</td>
             <td>
               @for (journey of row.journeys; track journey) {

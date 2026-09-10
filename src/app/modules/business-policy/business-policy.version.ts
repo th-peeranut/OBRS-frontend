@@ -63,5 +63,13 @@
 // 2026-08-27, and the ledger refuses an entry whose effectiveDate does not come AFTER the previous
 // entry's — a version cannot take force before the one ahead of it. 2026-08-28 is the earliest
 // date this entry can have while 1.2 stands. The backend change merges ON that date.
-export const BUSINESS_POLICY_VERSION = '1.3';
-export const BUSINESS_POLICY_EFFECTIVE_DATE = '2026-08-28';
+//
+// 1.4 (OBRS-703 AC-10): item 3 of TRAVEL_CONDITIONS no longer hardcodes the no-show grace period
+// as "10" — it interpolates {{noShowCutoffMinutes}} from the PUBLIC GET /api/operations-policy
+// endpoint (the strictest no-show cutoff across every owner), the same OBRS-564-shaped fix
+// SALES_CHANNELS already got at 1.0. worsensTerms: false — see scripts/check-i18n-parity.mjs's
+// BUSINESS_POLICY_LEDGER entry for why. effectiveDate is 2026-08-29, not the 2026-08-21 this PR
+// merges on: the ordering rule is unconditional and 1.3 is not itself in force until 2026-08-28,
+// so 1.4 cannot take effect before the version ahead of it does.
+export const BUSINESS_POLICY_VERSION = '1.4';
+export const BUSINESS_POLICY_EFFECTIVE_DATE = '2026-08-29';

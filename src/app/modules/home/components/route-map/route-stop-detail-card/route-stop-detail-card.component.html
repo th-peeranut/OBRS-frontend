@@ -59,11 +59,18 @@
         {{ landmark }}
       </div>
     }
-    <!-- APPROX TIME -->
-    <div class="mb-2 small">
-      <i class="bi bi-clock me-1 detail-meta"></i>
-      {{ 'HOME.ROUTE_MAP.DETAIL_TIME' | translate: { time: stop.approxTime } }}
-    </div>
+    <!-- BOARDING POINT -->
+    <!-- OBRS-1777: one station, several operators, different bays. The owner's own case: booth C5
+         at Mo Chit sells for several queues and the NJ queue leaves from bay 43, so the address
+         below is true for everyone and this line is the one that gets the passenger to the right
+         bus. Above the address deliberately - it is the more specific instruction. -->
+    @if (boardingPoint) {
+      <div class="detail-boarding-point mb-2 small">
+        <i class="bi bi-sign-turn-right me-1"></i>
+        <span class="detail-landmark-label">{{ 'HOME.ROUTE_MAP.DETAIL_BOARDING_POINT_LABEL' | translate }}:</span>
+        {{ boardingPoint }}
+      </div>
+    }
     <!-- ADDRESS -->
     @if (stop.address) {
       <div class="mb-3 small detail-meta">

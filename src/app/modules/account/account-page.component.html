@@ -25,6 +25,7 @@
           class="btn-primary"
           data-testid="reconsent-accept"
           [disabled]="isConsentSubmitting"
+          [appPending]="isConsentSubmitting"
           (click)="acceptCurrentPolicy()"
           >
           {{ "ACCOUNT.CONSENT_ACCEPT_BUTTON" | translate }}
@@ -60,9 +61,19 @@
             <div>
               <dt>{{ "ACCOUNT.PROFILE_NAME_LABEL" | translate }}</dt>
               <dd data-testid="profile-name">
-                {{ profile.title }} {{ profile.firstName }} {{ profile.middleName }} {{ profile.lastName }}
+                <!-- OBRS-1232: this line composes the name in the browser (it never used the
+                backend's fullName), so translating the title here is all it takes. -->
+                {{ profile.title | titleLabel }} {{ profile.firstName }} {{ profile.middleName }} {{ profile.lastName }}
               </dd>
             </div>
+            <!-- OBRS-1558: shown only when there is one - an empty row would read as a field
+            the account is missing, and most accounts have no nickname on purpose. -->
+            @if (profile.nickname) {
+              <div>
+                <dt>{{ "ACCOUNT.PROFILE_NICKNAME_LABEL" | translate }}</dt>
+                <dd data-testid="profile-nickname">{{ profile.nickname }}</dd>
+              </div>
+            }
             <div>
               <dt>{{ "ACCOUNT.PROFILE_PHONE_LABEL" | translate }}</dt>
               <dd data-testid="profile-phone">{{ formatPhone(profile.phoneNumber) }}</dd>
@@ -84,20 +95,24 @@
           <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
             <div class="mt-2">
               <label for="account-profile-title">{{ "ACCOUNT.PROFILE_TITLE_LABEL" | translate }}</label>
-              <input
+              <!-- OBRS-1232: was a free-text input. The VALUE is the stable code; the word comes
+              from COMMON.TITLES.* so it follows the language the customer picked.
+              OBRS-1231: optional - the blank option is selectable, not disabled. -->
+              <select
                 class="form-control mt-1"
-                type="text"
                 id="account-profile-title"
                 formControlName="title"
-                [class.form-error]="getForm('title')?.touched && getForm('title')?.errors"
-                />
-                <!-- OBRS-1231: title is optional here; only the length rule can fire,
-                so the message must not read as "you left this blank". -->
-                @if (getForm('title')?.touched && getForm('title')?.errors) {
-                  <div class="text-error">
-                    {{ "ACCOUNT.PROFILE_FIELD_LENGTH" | translate }}
-                  </div>
+                >
+                <option value="">{{ "COMMON.NOT_SPECIFIED" | translate }}</option>
+                @if (legacyTitleValue; as legacy) {
+                  <!-- OBRS-1232 AC-5: a value the migration could not map, kept so Save cannot
+                  silently drop what this customer typed before the field became a dropdown. -->
+                  <option [value]="legacy">{{ legacy }}</option>
                 }
+                @for (option of titleOptions; track option.code) {
+                  <option [value]="option.code">{{ option.code | titleLabel }}</option>
+                }
+              </select>
               </div>
               <div class="mt-2">
                 <label for="account-profile-first-name">{{ "ACCOUNT.PROFILE_FIRST_NAME_LABEL" | translate }}</label>
@@ -106,6 +121,7 @@
                   type="text"
                   id="account-profile-first-name"
                   formControlName="firstName"
+                  autocomplete="given-name"
                   [class.form-error]="getForm('firstName')?.touched && getForm('firstName')?.errors"
                   />
                   @if (getForm('firstName')?.touched && getForm('firstName')?.errors) {
@@ -121,6 +137,7 @@
                     type="text"
                     id="account-profile-middle-name"
                     formControlName="middleName"
+                    autocomplete="additional-name"
                     />
                   </div>
                   <div class="mt-2">
@@ -130,6 +147,7 @@
                       type="text"
                       id="account-profile-last-name"
                       formControlName="lastName"
+                      autocomplete="family-name"
                       [class.form-error]="getForm('lastName')?.touched && getForm('lastName')?.errors"
                       />
                       @if (getForm('lastName')?.touched && getForm('lastName')?.errors) {
@@ -139,10 +157,28 @@
                       }
                     </div>
                     <div class="mt-2">
+                      <label for="account-profile-nickname">{{ "ACCOUNT.PROFILE_NICKNAME_LABEL" | translate }}</label>
+                      <input
+                        class="form-control mt-1"
+                        type="text"
+                        id="account-profile-nickname"
+                        formControlName="nickname"
+                        autocomplete="nickname"
+                        [class.form-error]="getForm('nickname')?.touched && getForm('nickname')?.errors"
+                        />
+                        @if (getForm('nickname')?.touched && getForm('nickname')?.errors) {
+                          <div class="text-error">
+                            {{ "ACCOUNT.PROFILE_FIELD_LENGTH" | translate }}
+                          </div>
+                        }
+                      </div>
+                    <div class="mt-2">
                       <label for="account-profile-phone">{{ "ACCOUNT.PROFILE_PHONE_LABEL" | translate }}</label>
                       <input
                         class="form-control mt-1"
                         type="tel"
+                        inputmode="tel"
+                        autocomplete="tel"
                         id="account-profile-phone"
                         formControlName="phoneNumber"
                         (focus)="onPhoneFocus()"

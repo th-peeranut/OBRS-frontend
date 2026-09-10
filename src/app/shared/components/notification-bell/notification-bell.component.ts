@@ -18,9 +18,13 @@ import { ThemeService } from '../../services/theme.service';
  * Scrutinize fix (2026-07-14): `p-popover`'s `appendTo="body"` detaches
  * the panel from `.admin-shell`'s DOM subtree, so the `--admin-*`/`--accent-*`
  * CSS custom properties declared only on `.admin-shell`/`.admin-shell.is-dark`/
- * `.admin-shell.theme-*` (admin-theme.scss) never inherit down to it — mirrors
- * the same relocation issue already solved for `my-bookings-action-menu`
+ * `.admin-shell.theme-*` (admin-theme.scss) never inherit down to it — the same
+ * relocation issue as `my-bookings-action-menu`
  * (`my-bookings.component.scss` + `dark-theme.scss` §"My-bookings action-menu").
+ * OBRS-959: that one was NOT "already solved" when this was written — only its
+ * disabled-reason tooltip had a dark rule, and the panel itself kept PrimeNG's
+ * light surface until OBRS-959 (measured `rgb(255,255,255)` in both modes).
+ * This component was the complete treatment; that one has caught up since.
  * The panel now carries a `styleClass` combining a shell-agnostic base class
  * with the caller-supplied `[shellVariant]` and the live dark-mode state, and
  * `admin-theme.scss` re-declares the handful of tokens the panel/row need,

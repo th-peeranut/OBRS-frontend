@@ -13,7 +13,10 @@
     </div>
     <!-- LOGO WEBSITE -->
     <div class="logo-section mt-5">
-      <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
+      <!-- OBRS-714: the logo is the way home on a page with no navbar. -->
+      <app-auth-home-link>
+        <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
+      </app-auth-home-link>
     </div>
     <!-- HEADER TITLE -->
     <div class="welcome-text mt-3">
@@ -73,6 +76,16 @@
         {{ "LOGIN_BY_PHONE_NO.NO_OTP" | translate }}
         <a class="obrs-link" (click)="sendOtp()">
           {{ "LOGIN_BY_PHONE_NO.NO_OTP_LINK" | translate }}
+        </a>
+      </p>
+      <!-- OBRS-714: the only text exit in the NORMAL otp state. OBRS-1072 gave this
+           page two exits, but both sit in the `phoneNotRegistered` branch above, so a
+           user who merely mistyped the number - or met a backend error here - had
+           nothing to click. It points at the phone-number form rather than `/`
+           because the thing they need to fix is the field they got wrong. -->
+      <p class="register-link text-center mt-2">
+        <a class="obrs-link" [routerLink]="'/login-mobile'">
+          {{ "LOGIN_BY_PHONE_NO.NOT_REGISTERED_EDIT_PHONE" | translate }}
         </a>
       </p>
     </form>

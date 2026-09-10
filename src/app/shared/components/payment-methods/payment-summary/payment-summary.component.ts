@@ -6,6 +6,7 @@ import { Observable } from 'rxjs';
 import { BookingState } from '../../../../shared/interfaces/booking.interface';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { parsePricePerSeat } from '../../../../shared/lib/trip-format';
+import { formatMoney } from '../../../../shared/lib/money-display';
 import { ScheduleFilter, Schedule } from '../../../../shared/interfaces/schedule.interface';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectBooking } from '../../../../shared/stores/booking/booking.selector';
@@ -21,7 +22,14 @@ import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.inte
     standalone: false
 })
 export class PaymentSummaryComponent {
-  @Input() variant: 'default' | 'inline' = 'default';
+  /**
+   * OBRS-1532: 'inline' by default. The 'default' arm used to end in a
+   * `<div class="btn-confirm">` that looked like the primary pay button and did
+   * nothing - no handler, no @Output, no role, no tab stop - and no call site
+   * ever rendered it. It is gone; what is left of the distinction is layout
+   * only, and the layout every caller asks for is the inline one.
+   */
+  @Input() variant: 'default' | 'inline' = 'inline';
   /**
    * OBRS-415: this component's default rendering derives the total entirely
    * from the seat-booking `scheduleBooking`/`scheduleFilter`/`booking` NgRx
@@ -99,5 +107,12 @@ export class PaymentSummaryComponent {
 
   getPricePerSeat(value: string | number | null | undefined): number {
     return parsePricePerSeat(value);
+  }
+
+  /** OBRS-1592: this screen used to compose the raw number with a `*_UNIT`
+   * i18n key, which is the same shape the search page carried and printed
+   * `1850 บาท` — no thousand separator, satang whenever the API sent them. */
+  protected formatMoney(value: number | string | null | undefined): string {
+    return formatMoney(value, this.translateService.currentLang);
   }
 }

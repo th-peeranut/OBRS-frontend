@@ -24,6 +24,7 @@
     "test": "ng test",
     "test:local-env": "node scripts/check-local-env.mjs",
     "test:i18n": "node scripts/check-i18n-parity.mjs",
+    "test:notification-pref-types": "node scripts/check-notification-pref-types.mjs",
     "test:auth-layout": "node scripts/check-auth-layout-styles.mjs",
     "test:alert-i18n": "node scripts/check-alert-i18n.mjs",
     "test:theme-tokens": "node scripts/check-admin-theme-tokens.mjs",
@@ -52,7 +53,8 @@
     "e2e:ui": "playwright test --ui",
     "e2e:route-coverage": "node e2e/route-coverage.mjs",
     "test:brand-contrast": "node scripts/check-brand-fill-contrast.mjs",
-    "test:marker-position": "node scripts/check-leaflet-marker-position.mjs"
+    "test:marker-position": "node scripts/check-leaflet-marker-position.mjs",
+    "test:money-format": "node scripts/check-money-format.mjs"
   },
   "private": true,
   "dependencies": {

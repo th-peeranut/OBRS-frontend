@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { SimpleChange } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { Subject, of, throwError } from 'rxjs';
@@ -389,6 +390,11 @@ describe('VehicleFormModalComponent', () => {
         // OBRS-1332: present-and-null too — a new vehicle has no regular driver until
         // somebody picks one, and the key has to be there to say so.
         assignedDriverId: null,
+        // OBRS-885: present-and-null as well. Null is not a placeholder here — it is
+        // "start not known" and "still in service", which is the correct state for a
+        // vehicle nobody has dated yet, and what the P&L reads to skip it honestly.
+        inServiceFrom: null,
+        inServiceTo: null,
       });
     });
 
@@ -765,6 +771,132 @@ describe('VehicleFormModalComponent', () => {
       await (component as any).submitVehicle();
 
       expect(adminApi.updateVehicle).toHaveBeenCalled();
+    });
+  });
+  // ── OBRS-885: the service window, the first write path these two columns have had ──
+  //
+  // Until this card `in_service_from`/`in_service_to` were settable only by hand-running a
+  // PUT, so every vehicle added from this form was permanently "dates unknown" and the
+  // per-vehicle P&L reported SERVICE_WINDOW_UNKNOWN for a van bought yesterday.
+  describe('service window (OBRS-885)', () => {
+    it('loads the current window from the vehicle detail into the form', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(
+        detailResponse({ inServiceFrom: '2024-07-05', inServiceTo: '2026-06-17' })
+      );
+      getVehicleById$.complete();
+      await promise;
+
+      const from: Date = (component as any).vehicleForm.get('inServiceFrom').value;
+      const to: Date = (component as any).vehicleForm.get('inServiceTo').value;
+      // Asserted as (year, month, day) rather than against an ISO string on purpose: a
+      // Date built through UTC would still print 2024-07-05 in some zones and the wrong
+      // LOCAL day here, which is the failure this pair of helpers exists to prevent.
+      expect([from.getFullYear(), from.getMonth() + 1, from.getDate()]).toEqual([2024, 7, 5]);
+      expect([to.getFullYear(), to.getMonth() + 1, to.getDate()]).toEqual([2026, 6, 17]);
+    });
+
+    /** AC1: the point of the card — a date picked here must actually reach the server. */
+    it('sends the picked window on save', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse());
+      getVehicleById$.complete();
+      await promise;
+
+      (component as any).vehicleForm.patchValue({
+        inServiceFrom: new Date(2023, 8, 1),
+        inServiceTo: null,
+      });
+      await (component as any).submitVehicle();
+
+      const payload = adminApi.updateVehicle.calls.mostRecent().args[1];
+      expect(payload.inServiceFrom).toBe('2023-09-01');
+      expect(payload.inServiceTo).toBeNull();
+    });
+
+    /**
+     * AC4 — the regression this card is most at risk of causing. PUT is a full-replace and
+     * the backend's absent-preserves flag exists for callers that do not know these fields;
+     * this form now DOES know them, so it must echo back what it loaded. If it stops, an
+     * owner editing a colour silently resets the vehicle to "dates unknown" and the only
+     * symptom is a P&L row quietly changing months later.
+     */
+    it('keeps the loaded window when the admin edits an unrelated field', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(
+        detailResponse({ inServiceFrom: '2024-07-05', inServiceTo: '2026-06-17' })
+      );
+      getVehicleById$.complete();
+      await promise;
+
+      (component as any).vehicleForm.patchValue({ colour: 'ขาว' });
+      await (component as any).submitVehicle();
+
+      const payload = adminApi.updateVehicle.calls.mostRecent().args[1];
+      expect(payload.inServiceFrom).toBe('2024-07-05');
+      expect(payload.inServiceTo).toBe('2026-06-17');
+    });
+
+    /**
+     * AC2's other half: blank means NOT KNOWN, and "not known" is a state the owner has to
+     * be able to go back to — a mistyped year that cannot be un-typed is worse than a null.
+     * `null`, not '', because the key is always sent and only an explicit null clears.
+     */
+    it('sends null when the owner blanks the start date', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse({ inServiceFrom: '2024-07-05' }));
+      getVehicleById$.complete();
+      await promise;
+
+      (component as any).vehicleForm.patchValue({ inServiceFrom: null });
+      await (component as any).submitVehicle();
+
+      expect(adminApi.updateVehicle.calls.mostRecent().args[1].inServiceFrom).toBeNull();
+    });
+
+    /**
+     * AC3: the end-before-start rule lives on the backend (VehicleReqDto#isInServiceWindowValid,
+     * message key validation.vehicle.in-service-window.order, en/th/zh) and there is deliberately
+     * no second copy in this form. What the form owes is that the message REACHES the admin
+     * rather than being swallowed into the generic SAVE_FAILED.
+     */
+    it('shows the backend message when the window ends before it starts', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi, alert } = makeComponent(getVehicleById$);
+      adminApi.updateVehicle.and.returnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              error: { message: 'วันปลดระวางต้องไม่มาก่อนวันเริ่มให้บริการ' },
+            })
+        )
+      );
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse());
+      getVehicleById$.complete();
+      await promise;
+
+      (component as any).vehicleForm.patchValue({
+        inServiceFrom: new Date(2024, 6, 5),
+        inServiceTo: new Date(2024, 6, 1),
+      });
+      await (component as any).submitVehicle();
+
+      expect(alert.error).toHaveBeenCalledWith('วันปลดระวางต้องไม่มาก่อนวันเริ่มให้บริการ');
     });
   });
 });

@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DebugElement } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 
 import { of } from 'rxjs';
@@ -12,10 +13,19 @@ import {
   createRouterStub,
   createStoreStub,
   createTranslateStub,
+  createAuthServiceStub,
+  createScheduleServiceStub,
+  createBookingPolicyServiceStub,
 } from '../../../../testing/test-stubs';
-import { Schedule, ScheduleList } from '../../../../shared/interfaces/schedule.interface';
+import {
+  Schedule,
+  ScheduleAvailability,
+  ScheduleFilter,
+  ScheduleList,
+} from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
+import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { RouteMapService } from '../../../../services/route-map/route-map.service';
 import {
@@ -30,6 +40,12 @@ import { ScheduleDelayNoticeComponent } from '../../../../shared/components/sche
 // OBRS-1302: the flag and the fallback channel the two arms assert against.
 import { environment } from '../../../../../environments/environment';
 import { NJ_FACEBOOK_PAGE_URL } from '../../../../shared/lib/online-booking-channel';
+// OBRS-1583: the gate now asks AuthService as well as the flag.
+import { AuthService } from '../../../../auth/auth.service';
+import { ScheduleService } from '../../../../services/schedule/schedule.service';
+import { BookingPolicyService } from '../../../../services/booking-policy/booking-policy.service';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 // The component's own time formatter — see the AC-2 assertion for why the expected
 // value is computed and not written down.
 import { formatTimeHHMM } from '../../../../shared/lib/trip-format';
@@ -44,7 +60,10 @@ describe('ScheduleBookingListComponent', () => {
       createStoreStub(),
       createTranslateStub(),
       createRouteMapServiceStub(),
-      createAnalyticsServiceStub()
+      createAnalyticsServiceStub(),
+      createAuthServiceStub(),
+      createScheduleServiceStub(),
+      createBookingPolicyServiceStub()
     );
   });
 
@@ -84,6 +103,13 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
       .map((p) => (p.nativeElement.textContent || '').trim());
   }
 
+  // every rendered section heading, in document order.
+  function titleKeys(): string[] {
+    return fixture.debugElement
+      .queryAll(By.css('h3.title'))
+      .map((h) => (h.nativeElement.textContent || '').trim());
+  }
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [
@@ -95,6 +121,9 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -119,6 +148,45 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
   it('shows no message when both outbound and return schedules exist', () => {
     render({ departureSchedules: [sampleSchedule], arrivalSchedules: [sampleSchedule] });
     expect(noResultsKeys()).toEqual([]);
+  });
+
+  // OBRS-1574 pins the two shapes whose heading must NOT change while the
+  // sold-out outbound below stops printing one.
+  it('keeps the split departure heading for a round trip that HAS outbound trips', () => {
+    render({ departureSchedules: [sampleSchedule], arrivalSchedules: [sampleSchedule] });
+    expect(titleKeys()).toEqual(['SCHEDULE_BOOKING.SUBHEADER_DEPARTURE']);
+  });
+
+  it('keeps the single header for a one-way search that has trips', () => {
+    render({ departureSchedules: [sampleSchedule], arrivalSchedules: null });
+    expect(titleKeys()).toEqual(['SCHEDULE_BOOKING.HEADER']);
+  });
+
+  // OBRS-1654 — OBRS-1574's defect on the other leg. `isSelectFirst` is set the
+  // moment an outbound round is picked (component:267) and, on a round trip with
+  // no return rounds, the same call opens OBRS-1336's modal instead of navigating
+  // (component:295) — so this exact DOM is what the customer is left looking at
+  // through a 55%-opaque backdrop.
+  it('prints no return heading once an outbound is picked and the return list is empty', () => {
+    render({ departureSchedules: [sampleSchedule], arrivalSchedules: [] });
+    fixture.componentInstance.isSelectFirst = true;
+    fixture.detectChanges();
+
+    expect(noResultsKeys()).toContain('SCHEDULE_BOOKING.NO_RETURN_RESULTS');
+    expect(titleKeys()).toEqual(['SCHEDULE_BOOKING.HEADER']);
+  });
+
+  // AC-2: the shape that must not regress — a return leg that HAS rounds still
+  // gets its heading, and the outbound one OBRS-1574 fixed is still above it.
+  it('keeps the return heading once an outbound is picked and the return list has rounds', () => {
+    render({ departureSchedules: [sampleSchedule], arrivalSchedules: [sampleSchedule] });
+    fixture.componentInstance.isSelectFirst = true;
+    fixture.detectChanges();
+
+    expect(titleKeys()).toEqual([
+      'SCHEDULE_BOOKING.SUBHEADER_DEPARTURE',
+      'SCHEDULE_BOOKING.SUBHEADER_RETURN',
+    ]);
   });
 });
 
@@ -172,7 +240,11 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
   function makeStop(
     slug: string,
     distanceKmFromOrigin: number,
-    offsetMinutesFromOrigin: number
+    offsetMinutesFromOrigin: number,
+    // OBRS-864: the fields the row now renders. Defaulted to the previous
+    // fixture values so every assertion written before this card still reads
+    // the same stop it did.
+    extra: Partial<RouteStop> = {}
   ): RouteStop {
     return {
       order: 1,
@@ -186,6 +258,7 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
       longitude: null,
       primaryPhotoUrl: null,
       googleMapsUrl: null,
+      ...extra,
     };
   }
 
@@ -199,8 +272,22 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
       originProvinceLabel: '',
       destinationProvinceLabel: '',
     },
-    pickup: [makeStop('chonburi-terminal', 0, 0)],
-    dropoff: [makeStop('bangkok-terminal', 90, 100)],
+    // OBRS-864: the outbound pair carries the two shapes that decide the row -
+    // a stop WITH a maps URL and one without (AC3).
+    pickup: [
+      makeStop('chonburi-terminal', 0, 0, {
+        name: 'Chonburi Terminal',
+        address: '111 Sukhumvit Rd',
+        googleMapsUrl: 'https://maps.google.com/?q=chonburi-terminal',
+      }),
+    ],
+    dropoff: [
+      makeStop('bangkok-terminal', 90, 100, {
+        name: 'Mo Chit 2',
+        address: '999 Kamphaeng Phet 2 Rd',
+        googleMapsUrl: null,
+      }),
+    ],
   };
 
   // Reverse route: `pickup[]` holds the destination-city (Bangkok) stops,
@@ -238,6 +325,9 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: routeMapServiceStub },
+        { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
 
@@ -285,6 +375,121 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
     expect(text).not.toContain('100');
     expect(text).not.toContain('·');
     expect(text).not.toContain('ESTIMATE_MIN_UNIT');
+  });
+
+  // OBRS-864 -----------------------------------------------------------------
+
+  it('keeps the pickup/dropoff stops the departure estimate was measured between', () => {
+    expect(component.departureStops[10]?.pickup?.slug).toBe('chonburi-terminal');
+    expect(component.departureStops[10]?.dropoff?.slug).toBe('bangkok-terminal');
+  });
+
+  it('swaps the stops on the return leg, in the reverse route slug space (AC5)', () => {
+    expect(component.returnStops[20]?.pickup?.slug).toBe('bangkok-terminal');
+    expect(component.returnStops[20]?.dropoff?.slug).toBe('chonburi-terminal');
+  });
+
+  it('names the real stops - not the stations the filter echoes back', () => {
+    const rows = fixture.debugElement.queryAll(By.css('.stop-detail__row'));
+    // Two lines, once, for the whole outbound list: this fixture runs a single
+    // route, so the pair is a property of the result set and is headed above it.
+    // The return list is behind `isSelectFirst` and does not render here.
+    expect(rows.length).toBe(2);
+    const first = (rows[0].nativeElement.textContent || '').replace(/\s+/g, ' ');
+    const second = (rows[1].nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(first).toContain('Chonburi Terminal');
+    expect(first).toContain('111 Sukhumvit Rd');
+    expect(second).toContain('Mo Chit 2');
+    expect(second).toContain('999 Kamphaeng Phet 2 Rd');
+  });
+
+  it('links only the stop that actually has a googleMapsUrl, and never builds one (AC3)', () => {
+    const links = fixture.debugElement.queryAll(By.css('.stop-detail__link'));
+    expect(links.length).toBe(1);
+    expect(links[0].nativeElement.getAttribute('href')).toBe(
+      'https://maps.google.com/?q=chonburi-terminal'
+    );
+    // The stop without one is still named - as text, not as a dead link.
+    const plain = fixture.debugElement.queryAll(By.css('.stop-detail__text'));
+    expect(plain.length).toBe(1);
+    expect((plain[0].nativeElement.textContent || '')).toContain('Mo Chit 2');
+  });
+
+  it('heads the list with the pair once and leaves the rows silent, on a single-route leg (AC4)', () => {
+    expect(component.departureSharedRoute).toBe(true);
+    expect(fixture.debugElement.queryAll(By.css('.stop-detail--shared')).length).toBe(1);
+
+    const cards = fixture.debugElement.queryAll(By.css('.schedule-item'));
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      expect(card.query(By.css('.stop-detail'))).toBeNull();
+    }
+  });
+
+  it('falls back to the reserved per-row block when the leg runs more than one route', () => {
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: [
+        departureSchedule,
+        { ...departureSchedule, id: 11, routeSlug: 'chonburi-bangkok-via-si-racha' },
+      ],
+      arrivalSchedules: [returnSchedule],
+    } as ScheduleList);
+    store.refreshState();
+    fixture.detectChanges();
+
+    expect(component.departureSharedRoute).toBe(false);
+    expect(fixture.debugElement.queryAll(By.css('.stop-detail--shared')).length).toBe(0);
+
+    // The second route has no stub answer, so its stops never resolve - and the
+    // block still renders, still holding its height. That is the case the
+    // reservation exists for.
+    const cards = fixture.debugElement.queryAll(By.css('.schedule-item'));
+    expect(cards.length).toBe(2);
+    for (const card of cards) {
+      expect(card.query(By.css('.stop-detail'))).toBeTruthy();
+    }
+  });
+
+  it('treats a row with no routeSlug as a row that disagrees, not one to skip', () => {
+    // `routeSlug` is optional. `resolveLegEstimates` skips such a row, so its
+    // stops never resolve - calling the leg uniform on the slugs that DO exist
+    // would suppress the per-row block for the rows that resolved too, and head
+    // the list off a row that has nothing to say.
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: [
+        { ...departureSchedule, id: 12, routeSlug: undefined },
+        departureSchedule,
+      ],
+      arrivalSchedules: [returnSchedule],
+    } as ScheduleList);
+    store.refreshState();
+    fixture.detectChanges();
+
+    expect(component.departureSharedRoute).toBe(false);
+    expect(fixture.debugElement.queryAll(By.css('.stop-detail--shared')).length).toBe(0);
+    // The row that DID resolve still names its stops.
+    const rows = fixture.debugElement.queryAll(By.css('.stop-detail__row'));
+    expect(rows.length).toBe(2);
+  });
+
+  it('switches each leg on its own routes - the return does not inherit the outbound answer', () => {
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: [departureSchedule],
+      arrivalSchedules: [
+        returnSchedule,
+        { ...returnSchedule, id: 21, routeSlug: 'bangkok-chonburi-via-si-racha' },
+      ],
+    } as ScheduleList);
+    store.refreshState();
+    fixture.detectChanges();
+
+    expect(component.departureSharedRoute).toBe(true);
+    expect(component.returnSharedRoute).toBe(false);
+  });
+
+  it('reads no stop line at all before the route data resolves', () => {
+    expect(component.stopLines(undefined)).toEqual([]);
+    expect(component.stopLines({ pickup: null, dropoff: null })).toEqual([]);
   });
 });
 
@@ -341,6 +546,9 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -450,6 +658,9 @@ describe('ScheduleBookingListComponent (announced-delay disclosure, OBRS-1141)',
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -563,6 +774,19 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
    */
   const TONIGHT = new Date('2026-08-10T20:58:00');
 
+  // OBRS-1574: the return leg the owner's screenshot had under it - the
+  // outbound day is over, the return day is fully bookable.
+  const returnRound: Schedule = {
+    id: 2,
+    vehicleType: 'van',
+    departureDateTime: '2026-08-11T08:00:00+07:00',
+    arrivalDateTime: '2026-08-11T09:58:00+07:00',
+    pricePerSeat: '200',
+    availableSeats: 20,
+    availableSeatNumbers: ['1A'],
+    routeSlug: 'chonburi-bangkok',
+  };
+
   function filterFor(departureDate: string, roundTripId: number = 1): any {
     return {
       roundTrip: { id: roundTripId },
@@ -599,6 +823,9 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
@@ -626,7 +853,11 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
     render({ departureSchedules: [], arrivalSchedules: null }, filterFor('2026-08-15'));
 
     expect(textOf('.no-results')).toContain('SCHEDULE_BOOKING.NO_RESULTS');
-    expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeNull();
+    // OBRS-862 wraps `.no-results` in the same `.sold-out-today` panel so the
+    // nearest-day hint has somewhere to sit, so the panel DIV is no longer the
+    // branch discriminator — `__title` is, and it is what the contrast gate
+    // pins for this state too.
+    expect(fixture.debugElement.query(By.css('.sold-out-today__title'))).toBeNull();
   });
 
   it('shows the message but NO button for a round trip — moving the outbound could put it after the return', () => {
@@ -698,8 +929,21 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
     fixture.detectChanges();
 
     // 2026-08-10 is now YESTERDAY: it is no longer "today's rounds have left".
-    expect(fixture.debugElement.query(By.css('.sold-out-today'))).toBeNull();
+    // `__title` and not the panel div — see the OBRS-862 note above.
+    expect(fixture.debugElement.query(By.css('.sold-out-today__title'))).toBeNull();
     expect(textOf('.no-results')).toContain('SCHEDULE_BOOKING.NO_RESULTS');
+  });
+
+  // OBRS-1574 - same evening, round trip: the outbound answers `[]` while the
+  // return day still sells, so the outbound heading printed itself over an
+  // empty list directly under the sold-out copy.
+  it('prints no outbound heading when the sold-out leg has no rounds to head', () => {
+    render({ departureSchedules: [], arrivalSchedules: [returnRound] }, filterFor('2026-08-10', 2));
+
+    expect(textOf('.sold-out-today__title')).toEqual([
+      'SCHEDULE_BOOKING.SOLD_OUT_TODAY_TITLE',
+    ]);
+    expect(textOf('h3.title')).not.toContain('SCHEDULE_BOOKING.SUBHEADER_DEPARTURE');
   });
 });
 
@@ -755,13 +999,21 @@ describe('ScheduleBookingListComponent (OBRS-1302 — online booking closed)', (
       providers: [
         provideMockStore(),
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        // OBRS-1583: the REAL AuthService here, not the stub the other blocks
+        // use. What the staff-preview arms below have to prove is that a held
+        // role expands through ROLE_GRANTS the way the card claims — a stub
+        // returning a canned boolean would prove only that the stub was called.
+        provideHttpClient(),
+        provideHttpClientTesting(),
       ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
+    localStorage.removeItem('auth_roles');
   });
 
   afterEach(() => {
     environment.features.onlineTicketBooking = originalOnlineTicketBooking;
+    localStorage.removeItem('auth_roles');
   });
 
   describe('flag OFF', () => {
@@ -822,6 +1074,58 @@ describe('ScheduleBookingListComponent (OBRS-1302 — online booking closed)', (
       expect(fixture.debugElement.query(By.css('a.select-btn--closed'))).toBeNull();
     });
   });
+
+  /**
+   * OBRS-1583 — with the flag still OFF, a signed-in staff member sees the
+   * booking button and a customer does not.
+   *
+   * `driver` is asserted separately from `salesperson` on purpose: they are the
+   * pair the owner's decision moved. `salesperson` carries `driver` in
+   * ROLE_GRANTS but not the other way round, so a preview list written as
+   * `['salesperson']` would pass the salesperson case and silently drop every
+   * driver — the exact mistake this arm exists to catch.
+   */
+  describe('OBRS-1583 — flag OFF, staff preview', () => {
+    beforeEach(() => {
+      environment.features.onlineTicketBooking = false;
+    });
+
+    function renderAs(roles: string[] | null): void {
+      if (roles) {
+        localStorage.setItem('auth_roles', JSON.stringify(roles));
+      }
+      render();
+    }
+
+    ['owner', 'admin', 'salesperson', 'driver'].forEach((role) => {
+      it(`${role} gets the booking button, not the Facebook fallback`, () => {
+        renderAs([role]);
+
+        expect(fixture.debugElement.query(By.css('button.select-btn')))
+          .withContext(role)
+          .not.toBeNull();
+        expect(fixture.debugElement.query(By.css('a.select-btn--closed')))
+          .withContext(role)
+          .toBeNull();
+      });
+    });
+
+    // The must-NOT-regress half. Anyone who is not staff must see exactly what
+    // they see today, and "signed out" is the case a role check gets wrong by
+    // reading an empty list as permissive.
+    [null, ['customer'], ['__proto__']].forEach((roles) => {
+      it(`${roles ? roles.join(',') : 'signed out'} still gets the Facebook fallback and no button`, () => {
+        renderAs(roles);
+
+        expect(fixture.debugElement.query(By.css('button.select-btn')))
+          .withContext(String(roles))
+          .toBeNull();
+        expect(fixture.debugElement.query(By.css('a.select-btn--closed')))
+          .withContext(String(roles))
+          .not.toBeNull();
+      });
+    });
+  });
 });
 
 /**
@@ -865,7 +1169,10 @@ describe('ScheduleBookingListComponent (OBRS-1302 — selectSchedule side effect
       createStoreStub(),
       createTranslateStub(),
       createRouteMapServiceStub(),
-      analytics
+      analytics,
+      createAuthServiceStub(),
+      createScheduleServiceStub(),
+      createBookingPolicyServiceStub()
     );
   }
 
@@ -940,7 +1247,10 @@ describe('ScheduleBookingListComponent (OBRS-1336 — round trip with no return 
       createStoreStub(),
       createTranslateStub(),
       createRouteMapServiceStub(),
-      createAnalyticsServiceStub()
+      createAnalyticsServiceStub(),
+      createAuthServiceStub(),
+      createScheduleServiceStub(),
+      createBookingPolicyServiceStub()
     );
     component.scheduleList = of({
       departureSchedules: [trip],
@@ -1021,5 +1331,250 @@ describe('ScheduleBookingListComponent (OBRS-1336 — round trip with no return 
     expect(component.selectedSchedule).toEqual([]);
     expect(component.isSelectFirst).toBeFalse();
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * OBRS-862 (review finding 1) — the card's headline behaviour, which shipped
+ * with no unit test at all.
+ *
+ * Every other block in this file wires `createScheduleServiceStub()`, whose
+ * `getAvailabilityCached` answers `of(null)` — the "we were told nothing"
+ * branch — so `nearestDay$`, `showDay()` and `resolveNearestDay()` were only
+ * ever exercised down the path that returns `null` and renders nothing. The
+ * proof it was uncovered: a reviewer changed behaviour INSIDE
+ * `resolveNearestDay` and the suite did not move (6734 passing before and
+ * after). These arms feed it a real availability answer.
+ */
+describe('ScheduleBookingListComponent (OBRS-862 nearest day with trips)', () => {
+  let fixture: ComponentFixture<ScheduleBookingListComponent>;
+  let component: ScheduleBookingListComponent;
+  let store: MockStore;
+  let availability: ScheduleAvailability | null;
+
+  /**
+   * NO `+07:00`, for the reason the OBRS-1217 block above documents at length:
+   * the component compares `dayjs(date)` against `dayjs()`, both in the
+   * RUNNER's zone, so pinning an instant in ICT makes "which day is it" a
+   * different question here than in CI. A bare literal is parsed as LOCAL time.
+   */
+  const TONIGHT = new Date('2026-08-10T20:58:00');
+  /** 3 days out, so this is NOT the sold-out-today panel — it is the plain
+   *  empty-result state, the one the card's new copy had to fit into. */
+  const SEARCHED = '2026-08-13';
+  /** The window `buildDayWindow` produces for SEARCHED at TONIGHT:
+   *  2026-08-10 (today, the lower clamp) … 2026-08-16. */
+  const WINDOW_END = '2026-08-16';
+
+  const STATIONS = [
+    { id: 1, slug: 'nong_chak' },
+    { id: 4, slug: 'bts_mo_chit' },
+  ] as unknown as StationApi[];
+
+  function filterFor(
+    departureDate: string | null,
+    extra: Record<string, unknown> = {}
+  ): any {
+    return {
+      roundTrip: { id: 1 },
+      passengerInfo: [{ type: 'ADULT', count: 1 }],
+      startStationId: 1,
+      stopStationId: 4,
+      departureDate,
+      ...extra,
+    };
+  }
+
+  /** Through `Intl`, never a literal, so this stays a test of the component and
+   *  not of one runtime's ICU data — same reasoning as OBRS-1217's label test. */
+  function expectedLabel(iso: string): string {
+    return new Intl.DateTimeFormat('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+    }).format(new Date(iso + 'T00:00:00'));
+  }
+
+  function hint(iso: string): string {
+    return 'The nearest day with trips is ' + expectedLabel(iso);
+  }
+
+  function render(scheduleFilter: any) {
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: [],
+      arrivalSchedules: null,
+    } as unknown as ScheduleList);
+    store.overrideSelector(selectScheduleFilter, scheduleFilter);
+    store.overrideSelector(selectProvinceWithStation, STATIONS as never);
+    fixture = TestBed.createComponent(ScheduleBookingListComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
+  function hintText(): string | null {
+    const el = fixture.debugElement.query(By.css('.sold-out-today__hint'));
+    return el ? (el.nativeElement.textContent || '').trim() : null;
+  }
+
+  function actionButton(): DebugElement | null {
+    return fixture.debugElement.query(By.css('[data-testid="nearest-day-action"]'));
+  }
+
+  beforeEach(async () => {
+    availability = null;
+
+    await TestBed.configureTestingModule({
+      declarations: [
+        ScheduleBookingListComponent,
+        ScheduleDelayNoticeComponent,
+        ArrivalDateNoticeComponent,
+      ],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        provideMockStore(),
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub() },
+        {
+          provide: ScheduleService,
+          useValue: {
+            ...createScheduleServiceStub(),
+            // Read at subscribe time, so each arm sets `availability` first.
+            getAvailabilityCached: () => of(availability),
+          },
+        },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+      ],
+    }).compileComponents();
+
+    store = TestBed.inject(MockStore);
+
+    // The hint's whole point is the DATE it names, and an untranslated key
+    // renders WITHOUT its interpolation — so the copy has to be loaded for the
+    // assertion to be about anything at all. Only the two keys these arms read.
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', {
+      SCHEDULE_BOOKING: {
+        NEAREST_DAY_HINT: 'The nearest day with trips is {{date}}',
+        SOLD_OUT_TODAY_ACTION: 'Show trips on {{date}}',
+        NO_RESULTS: 'No trips found',
+      },
+    });
+    translate.use('en');
+
+    jasmine.clock().install();
+    jasmine.clock().mockDate(TONIGHT);
+  });
+
+  afterEach(() => {
+    jasmine.clock().uninstall();
+  });
+
+  it('names the nearest day AFTER the searched one when the result is empty', () => {
+    availability = { availableDates: ['2026-08-11', '2026-08-15'], effectiveDays: 7 };
+    render(filterFor(SEARCHED));
+
+    expect(hintText()).toBe(hint('2026-08-15'));
+  });
+
+  it('prefers a day AFTER the searched date over an equally near one before it', () => {
+    // 08-12 and 08-14 are both one day from 08-13. A customer looking for a
+    // trip wants the next one, not the one they have already missed.
+    availability = { availableDates: ['2026-08-12', '2026-08-14'], effectiveDays: 7 };
+    render(filterFor(SEARCHED));
+
+    expect(hintText()).toBe(hint('2026-08-14'));
+    expect(hintText()).not.toContain(expectedLabel('2026-08-12'));
+  });
+
+  it('falls back to the CLOSEST earlier day when nothing later has trips', () => {
+    availability = { availableDates: ['2026-08-10', '2026-08-11'], effectiveDays: 7 };
+    render(filterFor(SEARCHED));
+
+    // 08-11, not 08-10: the backward arm takes the LAST entry before the
+    // searched day, which is the nearest one and not the earliest.
+    expect(hintText()).toBe(hint('2026-08-11'));
+  });
+
+  it('showDay() dispatches the filter change and carries the return date', () => {
+    // The return date is set BEFORE the day being jumped to, so the carry rule
+    // has visible work to do. A jump that only spread the old filter and
+    // overwrote `departureDate` would leave 08-14 behind a 08-16 outbound —
+    // the pair the backend rejects — and would pass any arm where the return
+    // date happened to already be valid. `scheduleFilterForDay`'s own rules are
+    // pinned in schedule-day-jump.spec.ts; what this asserts is that showDay()
+    // goes THROUGH it rather than round the side of it.
+    availability = { availableDates: ['2026-08-16'], effectiveDays: 7 };
+    render(filterFor(SEARCHED, { roundTrip: { id: 2 }, returnDate: '2026-08-14' }));
+    const dispatch = spyOn(store, 'dispatch');
+
+    component.showDay('2026-08-16');
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    const action = dispatch.calls.mostRecent().args[0] as unknown as {
+      type: string;
+      schedule_filter: ScheduleFilter;
+    };
+    expect(action.type).toBe(invokeSetScheduleFilterApi.type);
+    expect(action.schedule_filter.departureDate).toBe('2026-08-16');
+    expect(action.schedule_filter.returnDate).toBe('2026-08-17');
+  });
+
+  // AC "พร้อมปุ่มกดไปวันนั้นเลย": the hint alone is not the deliverable. This is
+  // the plain empty-result branch (SEARCHED is 3 days out, so `soldOutToday$`
+  // is null) — the case the card was opened about, and the one that shipped
+  // with a hint and no way to act on it.
+  it('offers a jump button on the named day for a ONE-WAY empty result', () => {
+    availability = { availableDates: ['2026-08-15'], effectiveDays: 7 };
+    render(filterFor(SEARCHED));
+    const dispatch = spyOn(store, 'dispatch');
+
+    const button = actionButton();
+    expect(button).not.toBeNull();
+    expect((button!.nativeElement.textContent || '').trim()).toBe(
+      'Show trips on ' + expectedLabel('2026-08-15')
+    );
+
+    button!.nativeElement.click();
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    const action = dispatch.calls.mostRecent().args[0] as unknown as {
+      type: string;
+      schedule_filter: ScheduleFilter;
+    };
+    expect(action.type).toBe(invokeSetScheduleFilterApi.type);
+    // The day the hint named, not the day after the searched one — this button
+    // goes through showDay(nearestDay.iso), not showNextDay().
+    expect(action.schedule_filter.departureDate).toBe('2026-08-15');
+  });
+
+  // The other half of the same rule, and the half that is easy to break by
+  // "fixing" the asymmetry: the owner's 2026-08-10 call keeps the BUTTON
+  // one-way-only, while the HINT names the nearest day for every trip type.
+  // Asserting both in one arm is what stops a widened gate from passing (button
+  // appears) and a deleted hint from passing (hint gone) alike. The arm above
+  // is the positive control that proves this selector can match at all.
+  it('withholds the jump button for a ROUND TRIP but still names the day', () => {
+    availability = { availableDates: ['2026-08-15'], effectiveDays: 7 };
+    render(filterFor(SEARCHED, { roundTrip: { id: 2 }, returnDate: '2026-08-20' }));
+
+    expect(actionButton()).toBeNull();
+    expect(hintText()).toBe(hint('2026-08-15'));
+  });
+
+  // What commit 455f697e guards. `dayjs(null).format('YYYY-MM-DD')` is the
+  // literal string "Invalid Date", which sorts ABOVE every ISO date ('I' 0x49
+  // vs a leading digit 0x32) — so without the validity guard nothing in the
+  // window is "after" it, the backward arm takes over, and the hint names
+  // WINDOW_END: the FARTHEST day in the window, announced as the nearest.
+  it('renders the pre-card copy, and no hint, when the filter has no valid date', () => {
+    availability = { availableDates: ['2026-08-11', WINDOW_END], effectiveDays: 7 };
+    render(filterFor(null));
+
+    expect(fixture.debugElement.query(By.css('.sold-out-today__hint'))).toBeNull();
+    expect(
+      (
+        fixture.debugElement.query(By.css('.no-results')).nativeElement.textContent || ''
+      ).trim()
+    ).toBe('No trips found');
   });
 });

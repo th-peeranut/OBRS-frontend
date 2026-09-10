@@ -112,6 +112,23 @@ for (const lang of LANGS) {
       );
     }
   }
+  // OBRS-703 AC-10: HOW_TO_BOOK.TIP_1's no-show grace period must interpolate
+  // {{noShowCutoffMinutes}} from GET /api/operations-policy, never be typed
+  // back as a literal (the OBRS-620 defect this card removed). Its sibling
+  // POLICY.BUSINESS.TRAVEL_CONDITIONS is guarded by the business-policy
+  // fingerprint (BUSINESS_POLICY_FINGERPRINT_KEYS below); TIP_1 lives outside
+  // that ledger, so without its own gate re-hardcoding "10 minutes" here would
+  // pass every other check -- exactly the silent regression AC-10 forbids.
+  const tip1 = json?.HOW_TO_BOOK?.TIP_1;
+  if (typeof tip1 !== 'string') {
+    problems.push(
+      `[${lang}] HOW_TO_BOOK.TIP_1 is missing or not a string -- the how-to-book page renders the no-show cutoff from live config and cannot fall back (OBRS-703)`
+    );
+  } else if (!tip1.includes('{{noShowCutoffMinutes}}')) {
+    problems.push(
+      `[${lang}] HOW_TO_BOOK.TIP_1 is missing the {{noShowCutoffMinutes}} placeholder -- the no-show cutoff must interpolate from GET /api/operations-policy, never be typed in as a literal (OBRS-703 AC-10)`
+    );
+  }
 }
 
 // 3b) OBRS-658 AC 2 + AC 6 (ADR-0125): the booking terms must stay tied to a published version,
@@ -232,6 +249,39 @@ const BUSINESS_POLICY_LEDGER = [
     effectiveDate: '2026-08-28',
     worsensTerms: true,
     fingerprint: '0003a80bd49694ca0475cba3225c4641c4c4ca0571b6c6f7b8a5db5d48cb299c',
+  },
+  {
+    // OBRS-703 AC-10. Item 3 of TRAVEL_CONDITIONS ("...more than 10 minutes
+    // after that departure time...") stopped being a literal "10" and now
+    // interpolates {{noShowCutoffMinutes}} from the PUBLIC
+    // GET /api/operations-policy endpoint -- the strictest (lowest) no-show
+    // cutoff across every owner. Same defect shape gate 3 above already
+    // guards for SALES_CHANNELS (OBRS-564): the number was typed into i18n
+    // and could silently go wrong the moment an owner's real cutoff diverged
+    // from the literal "10" this page had quoted since 1.0.
+    //
+    // worsensTerms: false. The number itself is unchanged today (an owner who
+    // has never overridden noShowCutoffMinutes still gets 10), and going
+    // forward the page can only ever UNDERSTATE the grace period relative to
+    // any individual owner's true cutoff (it renders the STRICTEST value
+    // platform-wide, never the platform default) -- so the worst case for a
+    // customer is arriving earlier than strictly necessary, not losing a
+    // ticket the old hardcoded "10" would have told them they still had time
+    // to catch. A wording fix that can only make the promise MORE
+    // conservative is not a worsening of what a ticket holder relied on.
+    //
+    // ⚠️ effectiveDate is NOT publishedOn, even though worsensTerms is false --
+    // same forced gap as 1.3's own comment above: the ordering rule
+    // (`effectiveDate` must come strictly after the PREVIOUS entry's) is
+    // unconditional, and 1.3 is not itself in force until 2026-08-28. 1.4
+    // cannot take effect before the version ahead of it does, so 2026-08-29
+    // is the earliest date available while 1.3 stands, not a chosen notice
+    // period.
+    version: '1.4',
+    publishedOn: '2026-08-21',
+    effectiveDate: '2026-08-29',
+    worsensTerms: false,
+    fingerprint: '07a4da3484a127787b275070d4e85298242869b68ae182dbc1954356620fabe1',
   },
 ];
 
@@ -444,6 +494,86 @@ const PRIVACY_LEDGER = [
     version: '2.3',
     effectiveDate: '2026-08-10',
     fingerprint: '3e3ae981343e8237641c11b49535e2ded6f9e1e51c85ea30c217eac1f2335c73',
+  },
+  {
+    // OBRS-1528 + OBRS-1366, published together on the owner's decision of
+    // 2026-08-22 precisely BECAUSE this ledger refuses to let one version cover
+    // two texts: fixed separately they would have cost two bumps, and every bump
+    // re-asks every existing account for consent (OBRS-632). Three sentences that
+    // described something the code does not do:
+    //
+    // 1. The withdraw button (OBRS-1528). The notice pointed at it twice as plain
+    //    fact — "the button at the end of this page" — and OBRS-1179 correctly
+    //    stopped rendering it wherever no measurement ID is configured, which is
+    //    every build prod runs. A declared right with no mechanism is the OBRS-627
+    //    defect. Both sentences are now conditional on the site actually
+    //    collecting, which is true in both builds instead of neither.
+    //
+    // 2. The cookie paragraph (the half OBRS-1179 did not cause). It said consent
+    //    alone makes the analytics providers set _ga/_clck/_clsk; consent alone
+    //    does not, because `loadGa4()` returns early with no ID. It now states
+    //    both conditions and says plainly that without analytics switched on
+    //    nothing is collected whatever the visitor answers.
+    //
+    // 3. Passenger type (OBRS-1366). Section 2 said it is used "to arrange seating
+    //    and to apply the correct fare"; measured on the code prod runs, seat
+    //    assignment never reads it and no discount service reads it either. It is
+    //    display-only, so the notice now says display-only. The list also gains
+    //    "nun" (OBRS-1365 shipped that option) and records that the field is
+    //    optional (OBRS-1357 stopped requiring it).
+    //
+    // Deliberately NOT written: the gender-aware seating rules of OBRS-1364, which
+    // would make sentence 3 true again. A notice describes what the system does on
+    // its effective date, not what a card plans.
+    version: '2.4',
+    effectiveDate: '2026-08-22',
+    fingerprint: '88913a6ed309150e206ac58d55f7dced2b147a5a11540a9af71d3d22dc3591c1',
+  },
+  {
+    // 2.5 — two changes, one bump.
+    //
+    // 1. Passenger type and seating (OBRS-1364). This reverses the "Deliberately NOT
+    //    written" note on 2.4 above, and the reason it is not a contradiction is that
+    //    2.5 ships in the same commit as the rule itself: the code is in prod on this
+    //    entry's effective date, so the notice is still describing what the system
+    //    does, not what a card plans. `ScheduleService.getBlockedSeatsForPassengerType`
+    //    closes the seats beside a conflicting occupant, and
+    //    `BookingService.assignAutomaticSeats` avoids the same pairing on all three
+    //    allocation paths.
+    //
+    //    The sentence is CONDITIONAL ("only on services with numbered seats") because
+    //    under OPEN seating none of it runs — BookingService nulls every seat before
+    //    auto-assign is reachable, and getBlockedSeatsForPassengerType returns an empty
+    //    list. Conditional wording is true today AND after a schedule is set to
+    //    ASSIGNED, which is what makes this one bump instead of two. It also states the
+    //    limits that are actually in the code: the automatic allocation is best-effort
+    //    with a silent fallback, and a blank passenger type constrains nothing. The
+    //    closure is in the booking screen only — `verifySeatAvailability` checks
+    //    occupancy and nothing else — which is why the sentence says seats "may be
+    //    closed to you" rather than promising the pairing cannot happen.
+    //
+    //    ⚠️ NOT settled here: whether monk/nun is sensitive data under PDPA §26.
+    //    Section 3 still lists no §26 basis. That gap is older than OBRS-1364 — the
+    //    display purpose carries the same exposure — and is tracked as OBRS-1666.
+    //
+    // 2. Analytics conditionality (OBRS-1546). Sections 3 and 6 described analytics
+    //    unconditionally while 2.4 had made sections 7 and 8 conditional, so a reader
+    //    going in order met a contradiction. Both now carry the same condition. The
+    //    owner decided on 2026-08-22 that this may never ship alone, because it buys
+    //    readability only and would not be worth a re-consent round of its own; it
+    //    rides here.
+    version: '2.5',
+    effectiveDate: '2026-08-30',
+    fingerprint: '0dab69c2523d41dd0b87e39083ccde21d12126ef6c89e9aaf8ead339bbc13ec5',
+  },
+  {
+    // OBRS-1666. Section 3 named a legal basis for every purpose except one: nothing in the
+    // notice had ever mentioned section 26, while section 2 collected monk/nun - a religious
+    // status - under bases (24(3)/(5)) that section 26 puts out of reach. 2.6 says so, and the
+    // checkout screen now asks for the explicit consent that sentence promises.
+    version: '2.6',
+    effectiveDate: '2026-08-31',
+    fingerprint: 'a0cc3ffaf5717849621404be6ad9b7dd2f28f4af4b0aa9eda316ad101a02bbe4',
   },
 ];
 
@@ -884,13 +1014,113 @@ function parcelPolicyFingerprint(json) {
   }
 }
 
+// 7) OBRS-566: a character that was lost in an encoding round-trip.
+//
+//    The bundle was written through a pipeline that did not survive non-ASCII: a
+//    bullet U+2022 and a curly apostrophe U+2019 both came out the other side as a
+//    literal "?" (U+003F). Nothing caught it -- the JSON is valid, the key sets match,
+//    the lengths are right, and "?" prints back as "?" so reading the file cannot tell
+//    you it is wrong (see the mojibake lesson: assert the codepoint, do not look at it).
+//    Customers read "? Reprint with fee:" and "the company?s transport conditions".
+//
+//    Asserted as a property that must HOLD, not as a denylist of characters seen once:
+//    in this bundle a question mark is punctuation, so it always ENDS a clause. It never
+//    sits glued between two letters and it never opens a segment the way a bullet does.
+//    Measured on the fixed bundle: 0 violations across all 3,498 string leaves in each of the
+//    three files -- the 3,458 keys, with the five CALENDAR.* arrays expanded to the 45 strings
+//    they hold. The property is true today, so any new one is a regression, not an exception.
+//    Both shapes were tightened by scrutinize, each for a case it got wrong:
+//    digits are IN the glued class because policy text is full of them and "the 1990?s
+//    rate" would otherwise pass; the bullet shape anchors on `&emsp;` rather than on any
+//    `;` because `&nbsp;` ends in `;` too, so "Are you sure&nbsp;? Click yes." was a
+//    false CI failure waiting for whoever writes that sentence. The bundle indents every
+//    list item with `&emsp;`, so nothing real is lost by naming it.
+// Escapes, not literals: this file is ASCII apart from the historical strings in gate 3.
+const LETTER = 'A-Za-z0-9\\u0E00-\\u0E7F\\u4E00-\\u9FFF';
+const MOJIBAKE_GLUED = new RegExp(`[${LETTER}]\\?[${LETTER}]`);
+const MOJIBAKE_AS_BULLET = /(^|>|&emsp;)\s*\?\s/;
+
+/** Flatten a translation object into [dotted key, string value] pairs.
+ *  Array members are pairs too: CALENDAR.dayNames and its four siblings hold their strings in
+ *  arrays, and the key-set `flatten` above stops at the array because a key set is all it needs.
+ *  Stopping here as well would leave 15 customer-visible strings unscanned while the gate said
+ *  it had checked everything. */
+function flattenValues(obj, prefix = '', out = []) {
+  for (const [k, v] of Object.entries(obj)) {
+    const key = prefix ? `${prefix}.${k}` : k;
+    if (Array.isArray(v)) v.forEach((s, i) => typeof s === 'string' && out.push([`${key}[${i}]`, s]));
+    else if (v !== null && typeof v === 'object') flattenValues(v, key, out);
+    else if (typeof v === 'string') out.push([key, v]);
+  }
+  return out;
+}
+
+for (const lang of LANGS) {
+  const json = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8'));
+  for (const [key, value] of flattenValues(json)) {
+    if (/\uFFFD/.test(value)) {
+      problems.push(`[${lang}] ${key} contains U+FFFD -- the text was decoded with the wrong encoding somewhere in its path into this file (OBRS-566)`);
+    }
+    const glued = value.match(MOJIBAKE_GLUED);
+    if (glued) {
+      problems.push(`[${lang}] ${key} has "${glued[0]}" -- a "?" wedged between two word characters is a lost apostrophe or dash, not punctuation (OBRS-566)`);
+    }
+    if (MOJIBAKE_AS_BULLET.test(value)) {
+      problems.push(`[${lang}] ${key} opens a segment with "? " -- that is a lost bullet U+2022, which the other languages still have (OBRS-566)`);
+    }
+  }
+}
+
+// 8) OBRS-1690: a report's basis note must keep naming the basis its query actually uses.
+//
+//    Both /admin/refund-void-report and /admin/cash-online-reconciliation-report bucket every row
+//    by the BOOKING's created_at -- PaymentRepository.REFUND_DAILY_LEDGER_ARM /
+//    REFUND_DAILY_MANUAL_ARM and BookingRepository.VOIDED_DAILY_BODY all GROUP BY
+//    (b.created_at AT TIME ZONE 'Asia/Bangkok')::date. RefundVoidReportIT is the behavioural half
+//    of this pair: its refund-ledger rows are dated 25 days after their booking on purpose, and
+//    the money still reports on the booking's day.
+//
+//    The refund/void note said the OPPOSITE for as long as the screen existed -- "bucketed by the
+//    date the refund or void was processed, not the original booking date" -- so a refund issued
+//    today against a three-month-old booking landed in a month already closed while the screen
+//    assured the reader it had not, and nothing on the page could tell them otherwise. The sibling
+//    cash/online note had been stating the same basis honestly the whole time, which is why this
+//    gate holds BOTH to one phrase: two screens read one basis, and whoever moves it must find
+//    both notes.
+//
+//    Positive check, for the reason gate 3 spells out: a denylist of "processed date" phrasings
+//    would fire on the honest sentence, which has to name the processing date in order to rule it
+//    out. Escapes, not literals, per the file header.
+const BOOKING_CREATED_BASIS_PHRASE = {
+  en: 'the date the booking was created',
+  th: '\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E01\u0E32\u0E23\u0E08\u0E2D\u0E07',
+  zh: '\u8BA2\u5355\u521B\u5EFA\u65E5\u671F',
+};
+const BOOKING_CREATED_BASIS_NOTES = [
+  'ADMIN.REFUND_VOID_REPORT.BASIS_NOTE',
+  'ADMIN.CASH_ONLINE_RECONCILIATION.BASIS_NOTE',
+];
+
+for (const lang of LANGS) {
+  const json = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8'));
+  const phrase = BOOKING_CREATED_BASIS_PHRASE[lang];
+  for (const key of BOOKING_CREATED_BASIS_NOTES) {
+    const value = key.split('.').reduce((node, part) => (node == null ? node : node[part]), json);
+    if (typeof value !== 'string') {
+      problems.push(`[${lang}] ${key} is missing or not a string -- it is the only place the screen states which date the report buckets by (OBRS-1690)`);
+    } else if (!value.includes(phrase)) {
+      problems.push(`[${lang}] ${key} no longer says "${phrase}" -- both reports GROUP BY the booking's created_at, so this note must name that basis or the screen is lying about which month the money fell in (OBRS-1690)`);
+    }
+  }
+}
+
 const counts = LANGS.map((l) => `${l}=${keysByLang[l].size}`).join(' ');
 
 if (problems.length > 0) {
   console.error(`i18n parity gate FAILED (${counts}):`);
   for (const p of problems) console.error(`  - ${p}`);
   // GitHub Actions surfaces ::error:: lines in the PR checks summary.
-  console.error(`::error::i18n gate: ${problems.length} problem(s) in public/i18n/{en,th,zh}.json -- key-set drift (OBRS-469), hardcoded booking-policy numbers (OBRS-564), unpublished booking terms (OBRS-658), or an unpublished/truncated privacy notice (OBRS-628). Each line above says which.`);
+  console.error(`::error::i18n gate: ${problems.length} problem(s) in public/i18n/{en,th,zh}.json -- key-set drift (OBRS-469), hardcoded booking-policy numbers (OBRS-564), unpublished booking terms (OBRS-658), an unpublished/truncated privacy notice (OBRS-628), or a report basis note that no longer matches the date its query buckets by (OBRS-1690). Each line above says which.`);
   process.exit(1);
 }
 

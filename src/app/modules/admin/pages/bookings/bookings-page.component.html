@@ -99,7 +99,7 @@ longer entitled to see, plus filter/export controls acting on them. -->
                   >
                   <td class="admin-emphasis">{{ booking.bookingId }}</td>
                   <td>{{ booking.customer }}</td>
-                  <td>{{ booking.route }}</td>
+                  <td>{{ routeLabel(booking) }}</td>
                   <td>{{ displayDateTime(booking.bookingDate) }}</td>
                   <td>{{ displayDateTime(booking.departureTime) }}</td>
                   <td class="admin-emphasis">{{ booking.totalFare }}</td>
@@ -202,7 +202,10 @@ longer entitled to see, plus filter/export controls acting on them. -->
               <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.CONTACT' | translate }}</h5>
               <div class="bk-detail-row">
                 <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CONTACT_NAME' | translate }}</span>
-                <span>{{ detailBooking.contact?.fullName || '-' }}</span>
+                <!-- OBRS-1601: title CODE + name, joined by the impure `titleLabel` pipe so the
+                     honorific follows the reader's language. `|| '-'` still guards the empty case:
+                     with no title AND no name the pipe returns '', which must stay a dash. -->
+                <span>{{ (detailBooking.contact?.title | titleLabel: detailBooking.contact?.fullName) || '-' }}</span>
               </div>
               <div class="bk-detail-row">
                 <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CONTACT_PHONE' | translate }}</span>
@@ -267,7 +270,7 @@ longer entitled to see, plus filter/export controls acting on them. -->
                   <tbody>
                     @for (ticket of journey.tickets; track ticket) {
                       <tr>
-                        <td>{{ ticket.passengerName }}</td>
+                        <td>{{ ticket.passengerTitle | titleLabel: ticket.passengerName }}</td>
                         <td>{{ ticket.passengerType?.label || ticket.passengerType?.code }}</td>
                         <td class="admin-emphasis">{{ ticket.seatNumber }}</td>
                         <td><code>{{ ticket.ticketNumber }}</code></td>
@@ -289,19 +292,19 @@ longer entitled to see, plus filter/export controls acting on them. -->
             <div class="bk-payment-summary">
               <div>
                 <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.TOTAL_AMOUNT' | translate }}</span>
-                <span class="admin-emphasis">{{ formatMoney(detailBooking.payment?.totalAmount, detailBooking.payment?.currency) }}</span>
+                <span class="admin-emphasis">{{ formatMoney(detailBooking.payment?.totalAmount) }}</span>
               </div>
               <div>
                 <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.PAID_AMOUNT' | translate }}</span>
-                <span>{{ formatMoney(detailBooking.payment?.paidAmount, detailBooking.payment?.currency) }}</span>
+                <span>{{ formatMoney(detailBooking.payment?.paidAmount) }}</span>
               </div>
               <div>
                 <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.OUTSTANDING_AMOUNT' | translate }}</span>
-                <span>{{ formatMoney(detailBooking.payment?.outstandingAmount, detailBooking.payment?.currency) }}</span>
+                <span>{{ formatMoney(detailBooking.payment?.outstandingAmount) }}</span>
               </div>
               <div>
                 <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.REFUNDED_AMOUNT' | translate }}</span>
-                <span>{{ formatMoney(detailBooking.payment?.refundedAmount, detailBooking.payment?.currency) }}</span>
+                <span>{{ formatMoney(detailBooking.payment?.refundedAmount) }}</span>
               </div>
               @if (detailBooking.payment?.status) {
                 <span class="admin-status" [ngClass]="paymentClass(detailBooking.payment?.status ?? '')">
@@ -330,7 +333,7 @@ longer entitled to see, plus filter/export controls acting on them. -->
                     <tr>
                       <td>{{ displayDateTime(tx.paidAt) }}</td>
                       <td>{{ tx.paymentMethod }}</td>
-                      <td class="admin-emphasis">{{ formatMoney(tx.amount, tx.currency) }}</td>
+                      <td class="admin-emphasis">{{ formatMoney(tx.amount) }}</td>
                       <td>
                         <!-- OBRS-298: tx.status is the PER-TRANSACTION EPaymentStatus
                         vocabulary, distinct from the booking-level

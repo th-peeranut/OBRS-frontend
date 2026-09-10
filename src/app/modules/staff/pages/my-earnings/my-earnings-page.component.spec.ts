@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 // The real p-datePicker, not a schema-suppressed unknown element: [ngModel] on an
 // unknown tag has no value accessor and every test in this file dies at NG01203.
 import { DatePickerModule } from 'primeng/datepicker';
@@ -74,6 +74,28 @@ describe('MyEarningsPageComponent (OBRS-1147)', () => {
     expect(api.getDriverCashMyEarnings.calls.mostRecent().args.length).toBe(3);
   });
 
+  // OBRS-1593: the owner's standing rule is Gregorian years EVERYWHERE. This row was the last
+  // place in the app that disagreed - `th-TH` defaults to the Buddhist calendar, so a bucket that
+  // every other screen calls 2026 printed here as 2569. The assertion is on the RENDERED cell, not
+  // on the formatter, because the bug was visible only after the locale reached Intl.
+  it('prints the Gregorian year in Thai, never the Buddhist one', async () => {
+    TestBed.inject(TranslateService).currentLang = 'th';
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const label = fixture.debugElement
+      .query(By.css('[data-testid="bucket-2026-08"] td'))
+      .nativeElement.textContent as string;
+
+    expect(label).toContain('2026');
+    // 2569 is 2026 in the Buddhist era - the exact number this card exists to stop rendering.
+    expect(label).not.toContain('2569');
+    // The month name still comes out in Thai: this is a calendar change, not a language change.
+    expect(label).toContain('สิงหาคม');
+  });
+
   it('renders one row per bucket, most recent first', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
@@ -96,8 +118,12 @@ describe('MyEarningsPageComponent (OBRS-1147)', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
+    // OBRS-1592: the figure now carries its unit. This screen had its own
+    // `formatMoney` doing a bare two-decimal Intl — same name as the shared
+    // formatter, different output, no unit at all. `TranslateModule.forRoot()`
+    // here leaves `currentLang` unset, which is the code-leads-the-number form.
     const total = fixture.debugElement.query(By.css('[data-testid="my-earnings-total"]'));
-    expect(total.nativeElement.textContent.trim()).toBe('199.99');
+    expect(total.nativeElement.textContent.trim()).toBe('THB 199.99');
   });
 
   it('switching the grouping refetches with the new granularity', async () => {
@@ -162,5 +188,61 @@ describe('MyEarningsPageComponent (OBRS-1147)', () => {
 
     const row = fixture.debugElement.query(By.css('[data-testid="bucket-2026-08"]'));
     expect(row.nativeElement.textContent).toContain('—');
+  });
+
+  /**
+   * OBRS-1751. This screen had the order check and no CAP, so a staff member could ask the
+   * backend for an unbounded span — the one thing every report page guards. The boundary is what
+   * matters: 366 goes through, 367 does not, and a refusal must NOT dispatch.
+   */
+  describe('the 366-day cap (OBRS-1751)', () => {
+    async function settle(): Promise<void> {
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+
+    it('dispatches a span of exactly 366 days', async () => {
+      await settle();
+      api.getDriverCashMyEarnings.calls.reset();
+
+      // 2026-01-01 -> 2027-01-02 is 366 days (2026 is not a leap year).
+      component['onFromDateChange'](new Date(2026, 0, 1));
+      api.getDriverCashMyEarnings.calls.reset();
+      component['onToDateChange'](new Date(2027, 0, 2));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(component['rangeError']).toBe('');
+      const [from, to] = api.getDriverCashMyEarnings.calls.mostRecent().args;
+      expect(from).toBe('2026-01-01');
+      expect(to).toBe('2027-01-02');
+    });
+
+    it('refuses one day past the cap, and asks the backend for nothing', async () => {
+      await settle();
+
+      component['onFromDateChange'](new Date(2026, 0, 1));
+      api.getDriverCashMyEarnings.calls.reset();
+      component['onToDateChange'](new Date(2027, 0, 3));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(component['rangeError']).toBe('STAFF.MY_EARNINGS.ERROR.RANGE_TOO_LARGE');
+      expect(api.getDriverCashMyEarnings).not.toHaveBeenCalled();
+      expect(component['contentState']).toBe('invalid');
+    });
+
+    it('still refuses a reversed range, and says THAT rather than the cap', async () => {
+      await settle();
+
+      component['onToDateChange'](new Date(2026, 5, 1));
+      api.getDriverCashMyEarnings.calls.reset();
+      component['onFromDateChange'](new Date(2026, 5, 10));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(component['rangeError']).toBe('STAFF.MY_EARNINGS.ERROR.RANGE_INVALID');
+      expect(api.getDriverCashMyEarnings).not.toHaveBeenCalled();
+    });
   });
 });

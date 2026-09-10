@@ -76,25 +76,9 @@ describe('featureEnabledGuard', () => {
     });
   });
 
-  // OBRS-1302. Same two arms as above, and they carry more weight here than for
-  // the two scope-cut flags: this one closes a path that WORKS in production and
-  // charges live money, so "flag on restores it exactly" is the thing the owner
-  // is relying on to reopen without a code change.
-  describe('onlineTicketBooking', () => {
-    it('redirects to home when the flag is false', () => {
-      environment.features.onlineTicketBooking = false;
-
-      const result = runGuard('onlineTicketBooking');
-
-      expect(result).not.toBe(true);
-      const router = TestBed.inject(Router);
-      expect((result as UrlTree).toString()).toBe(router.parseUrl('/').toString());
-    });
-
-    it('allows activation when the flag is true', () => {
-      environment.features.onlineTicketBooking = true;
-
-      expect(runGuard('onlineTicketBooking')).toBe(true);
-    });
-  });
+  // OBRS-1583 moved the `onlineTicketBooking` arms to
+  // online-ticket-booking.guard.spec.ts along with the routes themselves. This
+  // guard is no longer wired to that flag anywhere, and a spec here asserting
+  // it would keep proving a wiring that does not exist. The flag stays in the
+  // save/restore above only because `FeatureFlag` still spans it.
 });

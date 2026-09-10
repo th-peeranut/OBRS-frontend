@@ -53,15 +53,19 @@
 // reason the vertical offset does: a per-call-site copy is how the three
 // screens drifted apart in the first place.
 //
-// WHAT IT STRADDLES HERE IS THE UPPER FIELD'S BOTTOM EDGE, not a seam — and
-// that is a consequence of this card's own scope cut, not an oversight.
-// Measured 2026-08-05 (`ng test`, Karma's 800px window, all three screens):
-// with the labels left ABOVE their fields, the gap between the two stacked
-// FIELD boxes is filled by the lower field's LABEL, and the midpoint of that
-// gap sits 15px below the upper field — inside the label's own text row. There
-// is no continuous bar to seam, so the button centres on the boundary line that
-// does exist and moves to the RIGHT end, where the left-aligned label has no
-// text. That is also where the same four reference sites put it on a phone.
+// WHAT IT STRADDLES HERE IS A REAL SEAM (OBRS-1189). It used to be the upper
+// field's bottom edge and nothing more, because OBRS-1038's scope cut left the
+// labels ABOVE their fields: measured 2026-08-05 (`ng test`, Karma's 800px
+// window, all three screens), the gap between the two stacked FIELD boxes was
+// filled by the lower field's LABEL and its midpoint sat 15px below the upper
+// field, inside that label's own text row. The labels are inside the frames now,
+// so the two boxes touch and this is the same 1px collapsed border the row mode
+// straddles, turned. Nothing about the rule below changed — the geometry it was
+// already stating became true.
+//
+// It still moves to the RIGHT end rather than the middle: that is where the
+// same four reference sites put it on a phone, and the seam is full-width here
+// so any point on it is a seam.
 @media (max-width: 992px) {
   :host {
     // Cross axis is horizontal in a column: flex-end is the right edge.

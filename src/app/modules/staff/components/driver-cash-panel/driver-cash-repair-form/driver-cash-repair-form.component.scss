@@ -1,0 +1,15 @@
+@use '../driver-cash-form' as *;
+
+// OBRS-775 host-box rule: an Angular host defaults to `display: inline`, so
+// wrapping an in-flow block child makes the host box malformed.
+:host {
+  display: block;
+}
+
+// OBRS-1630: the bill card was written for a back-office page ~1100px wide and
+// its line table does not fit a counter phone. Let it scroll sideways INSIDE
+// the box rather than letting the panel itself scroll — the sticky context
+// strip above is the one thing on this screen that must never move.
+::ng-deep .bill-items {
+  overflow-x: auto;
+}

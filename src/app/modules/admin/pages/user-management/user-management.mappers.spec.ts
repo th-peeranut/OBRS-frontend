@@ -382,6 +382,10 @@ describe('user-management.mappers', () => {
         firstName: 'Jane',
         middleName: '',
         lastName: 'Doe',
+        // OBRS-1558: the row above carries no nickname, and the fallback DTO must say so rather
+        // than drop the key - the edit modal reads it from here when the detail fetch has not
+        // answered yet.
+        nickname: undefined,
         guest: false,
       });
     });
@@ -686,6 +690,9 @@ describe('user-management.mappers', () => {
         title: 'Mr',
         firstName: 'John',
         middleName: undefined,
+        // OBRS-1558: absent from the input above, so absent here - the key exists on the payload
+        // type and an omitted nickname is how "none" travels.
+        nickname: undefined,
         lastName: 'Doe',
         email: 'john@example.com',
         phoneNumber: '0812345678',
@@ -709,6 +716,13 @@ describe('user-management.mappers', () => {
       const payload = toCreateUserPayload({ title: '   ', firstName: 'John' });
       expect(payload.title).toBeUndefined();
     });
+
+    // OBRS-1558: the nickname is optional and shares middleName's shape exactly - trimmed when
+    // typed, omitted when blank, because @Size(min = 2) refuses '' but skips an absent key.
+    it('sets a typed nickname and omits a blank one', () => {
+      expect(toCreateUserPayload({ nickname: ' ตุ๊ก ' }).nickname).toBe('ตุ๊ก');
+      expect(toCreateUserPayload({ nickname: '   ' }).nickname).toBeUndefined();
+    });
   });
 
   describe('toUpdateUserPayload', () => {
@@ -731,6 +745,8 @@ describe('user-management.mappers', () => {
         firstName: 'John',
         middleName: undefined,
         lastName: 'Doe',
+        // OBRS-1558: as in the create twin above.
+        nickname: undefined,
         email: 'john@example.com',
         phoneNumber: '0812345678',
         isPhoneNumberVerify: true,
@@ -751,6 +767,13 @@ describe('user-management.mappers', () => {
     it('omits title entirely when it is blank', () => {
       const payload = toUpdateUserPayload({ title: '', firstName: 'John', roles: [] });
       expect(payload.title).toBeUndefined();
+    });
+
+    // OBRS-1558: an owner clearing the nickname field means "this driver has no nickname any
+    // more", and an omitted key is what the backend reads as null on this full-replace payload.
+    it('sets a typed nickname and omits a cleared one', () => {
+      expect(toUpdateUserPayload({ nickname: ' ตุ๊ก ', roles: [] }).nickname).toBe('ตุ๊ก');
+      expect(toUpdateUserPayload({ nickname: '', roles: [] }).nickname).toBeUndefined();
     });
 
     // ── OBRS-1255 ────────────────────────────────────────────────────────────────────────────

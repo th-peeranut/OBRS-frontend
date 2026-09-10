@@ -4,7 +4,11 @@
 }
 
 .role-form-backdrop {
-  background: rgba(45, 49, 51, 0.4);
+  // OBRS-1234: the private rgba(45,49,51,0.4) that stood here is gone - the scrim colour now
+  // comes from `.admin-modal-backdrop` alone. It was 0.05 away from the shared value and read
+  // as a copy; once the shared one went to 0.75 the same copy became a 0.35 gap, so two
+  // dialogs on /admin/roles (this form vs role-delete-modal) dimmed the page by visibly
+  // different amounts. The blur is this backdrop's own idea and stays.
   backdrop-filter: blur(5px);
   padding: $space-lg;
 }
@@ -19,8 +23,10 @@
   border-radius: $radius-md;
   // OBRS-734: was rgba(255,255,255,.88) - a near-white panel that survived into dark mode
   // while the global theme flipped label text to #e7edf1, giving 1.03:1.
+  // OBRS-1234: the blur(20px) that stood here blurred what shows THROUGH the panel, and the
+  // panel is opaque now - nothing shows through, so it painted nothing and only cost a
+  // compositor layer.
   background: var(--admin-surface-modal);
-  backdrop-filter: blur(20px);
   box-shadow: 0 12px 32px rgba(25, 28, 30, 0.12);
 }
 

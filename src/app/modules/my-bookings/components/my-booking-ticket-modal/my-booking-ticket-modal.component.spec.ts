@@ -269,4 +269,81 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
       fixture.nativeElement.remove();
     }
   });
+
+  function changeBookingIdAndDetect(): void {
+    component.bookingId = 5;
+    component.ngOnChanges({
+      bookingId: {
+        currentValue: 5,
+        previousValue: null,
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
+    fixture.detectChanges();
+  }
+
+  // OBRS-1510 AC-7: unchanged for the modal — a signed-in customer's booking
+  // always has a real ticket number, so the card's new `ticketNumber !== '-'`
+  // gate must not hide this row here (it only ever hides it for a guest on
+  // the e-ticket page's default).
+  it('OBRS-1510 AC-7: still renders the TICKET_NO row (the card\'s new gate does not hide it for a real ticket number)', () => {
+    changeBookingIdAndDetect();
+
+    const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(text).toContain('E_TICKET.LABEL.TICKET_NO');
+    expect(text).toContain('T-1');
+  });
+
+  // OBRS-1510 AC-2: this is the intentional modal-side change the card
+  // consolidation buys — the modal never had an arrival-date cell before.
+  it('OBRS-1510 AC-2: shows the ARRIVAL_DATE cell when the booking\'s journey lands on a later day', () => {
+    const data = buildTicketsData();
+    // Offsets are explicit: the day is read at +07:00 whatever the runner's clock
+    // is, so an offset-less literal crosses midnight only on a +07:00 machine.
+    data.journeys![0].departureDateTime = '2026-12-20T23:30:00+07:00';
+    data.journeys![0].arrivalDateTime = '2026-12-21T01:05:00+07:00';
+    spyOn(TestBed.inject(BookingService), 'getBookingTickets').and.returnValue(
+      of({ code: 200, message: 'OK', data })
+    );
+
+    changeBookingIdAndDetect();
+
+    const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(text).toContain('E_TICKET.LABEL.ARRIVAL_DATE');
+  });
+
+  it('OBRS-1510 AC-2: no ARRIVAL_DATE cell for a same-day journey (unchanged)', () => {
+    changeBookingIdAndDetect();
+
+    const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(text).not.toContain('E_TICKET.LABEL.ARRIVAL_DATE');
+  });
+
+  // OBRS-1510 AC-8: also intentional — the modal never had a per-passenger
+  // SEAT row before (only the leg-level summary).
+  it('OBRS-1510 AC-8: hides this passenger\'s own SEAT cell under open seating (null seatNumber)', () => {
+    const data = buildTicketsData();
+    data.journeys![0].tickets![0].seatNumber = undefined;
+    spyOn(TestBed.inject(BookingService), 'getBookingTickets').and.returnValue(
+      of({ code: 200, message: 'OK', data })
+    );
+
+    changeBookingIdAndDetect();
+
+    const seatFields = fixture.debugElement
+      .queryAll(By.css('.passenger-field'))
+      .filter((el) => (el.nativeElement.textContent || '').includes('E_TICKET.LABEL.SEAT'));
+    expect(seatFields.length).toBe(0);
+  });
+
+  it('OBRS-1510 AC-8: shows this passenger\'s own SEAT cell with the real seat under assigned seating', () => {
+    changeBookingIdAndDetect();
+
+    const seatFields = fixture.debugElement
+      .queryAll(By.css('.passenger-field'))
+      .filter((el) => (el.nativeElement.textContent || '').includes('E_TICKET.LABEL.SEAT'));
+    expect(seatFields.length).toBe(1);
+    expect((seatFields[0].nativeElement.textContent || '')).toContain('1');
+  });
 });

@@ -161,8 +161,8 @@ npm start                          # Dev server on http://localhost:4200, agains
 npm run start:local                # Dev server against the local backend (http://localhost:8000)
 ng build                           # Production build
 ng build --configuration sit       # SIT build
-ng test --watch=false --browsers ChromeHeadless   # CI-safe test run
-ng test                            # Interactive test (opens browser)
+ng test --watch=false           # Unit tests; headless by default (angular.json pins browsers=ChromeHeadless, same as CI)
+ng test --watch=false --browsers Chrome            # Same run in a VISIBLE Chrome window - only when you need to debug by eye (OBRS-1563)
 npx tsc --noEmit -p tsconfig.app.json              # Authoritative type check
 ```
 
@@ -218,7 +218,7 @@ The API contract (endpoint paths, request/response shapes, auth levels, error co
 ../OBRS-backend/docs/api/
 ```
 
-When you need to know what an endpoint returns, read those files. Do not assume backend behavior that is not documented there. `ResponseAPI<T>` (called `ApiResponse` in the domain glossary) has a fixed shape — `{ status, message, data }` — defined by the backend. Do not modify it.
+When you need to know what an endpoint returns, read those files. Do not assume backend behavior that is not documented there. `ResponseAPI<T>` (called `ApiResponse` in the domain glossary) has a fixed shape — `{ timestamp, code, message, data }`, where `code` is an integer HTTP status (e.g. `200`), not a `status` string — defined by the backend. Do not modify it.
 
 #### Rules
 

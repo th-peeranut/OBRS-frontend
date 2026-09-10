@@ -4,9 +4,9 @@
      anyone editing this page: (1) never describe a step the UI only shows
      conditionally as if it always happens — that is how STEP_3 came to promise
      a seat picker that OPEN-seating trips never render; (2) TIP_1's grace
-     period mirrors the `no_show_cutoff_minutes` system config (default 10) and
-     is NOT interpolated yet, so changing that config silently makes this page
-     and /business-policy wrong — see the follow-up card on OBRS-620. -->
+     period is now interpolated live from `noShowCutoffMinutes`
+     (OperationsPolicyService, OBRS-703 AC-10) — never hardcode that number
+     back into this file. -->
 <section class="how-to-book-container">
   <div class="how-to-book-card">
     <h1>{{ "HOW_TO_BOOK.TITLE" | translate }}</h1>
@@ -34,7 +34,9 @@
 
     <h2>{{ "HOW_TO_BOOK.TIPS_TITLE" | translate }}</h2>
     <ul class="tips">
-      <li>{{ "HOW_TO_BOOK.TIP_1" | translate }}</li>
+      @if (noShowCutoffMinutes !== null) {
+        <li>{{ "HOW_TO_BOOK.TIP_1" | translate: { noShowCutoffMinutes: noShowCutoffMinutes } }}</li>
+      }
       <li>{{ "HOW_TO_BOOK.TIP_2" | translate }}</li>
       <li>{{ "HOW_TO_BOOK.TIP_3" | translate }}</li>
       <li>{{ "HOW_TO_BOOK.TIP_4" | translate }}</li>

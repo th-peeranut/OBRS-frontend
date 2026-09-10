@@ -7,6 +7,7 @@ import {
   CreateUserPayload,
   UpdateUserPayload,
   UpdateUserSalesPointsPayload,
+  UpdateUserSellableOwnersPayload,
   getAdminTranslationLabel,
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
@@ -47,6 +48,9 @@ export interface UserRow {
   firstName?: string;
   middleName?: string;
   lastName?: string;
+  // OBRS-1558: the LINE driver board's name for this person. Optional here for the same reason
+  // the four above are.
+  nickname?: string;
   // OBRS-1230 / ADR-0123: true for a guest shadow user — zero roles by
   // design (a row that can never authenticate carries no authority), so the
   // Roles column can render an explanatory chip instead of "-".
@@ -79,6 +83,14 @@ export interface StatusOption {
  * `UserFormModalComponent`'s form group / `initCreateForm` for where it's seeded.
  */
 export const SALES_POINT_ACTIVE_NONE = 'SALES_POINT_ACTIVE_NONE';
+
+/**
+ * OBRS-1662: the "no employer" resting value of the employer dropdown, seeded exactly like
+ * SALES_POINT_ACTIVE_NONE above and translated back to an omitted field at the wire boundary.
+ * A separate sentinel rather than the empty string because `users.owner_id` being NULL is a
+ * real, common answer here — every CUSTOMER has it — and not an unanswered question.
+ */
+export const EMPLOYER_OWNER_NONE = 'EMPLOYER_OWNER_NONE';
 
 export function statusClass(status: string): string {
   const normalizedStatus = status.toUpperCase();
@@ -262,6 +274,7 @@ export function toUserRow(
     firstName: String(user.firstName ?? '').trim(),
     middleName: String(user.middleName ?? '').trim(),
     lastName: String(user.lastName ?? '').trim(),
+    nickname: String(user.nickname ?? '').trim(),
     guest: user.guest ?? false,
   };
 }
@@ -280,6 +293,7 @@ export function toUserDtoFallback(user: UserRow): AdminUserDto {
     firstName: user.firstName,
     middleName: user.middleName,
     lastName: user.lastName,
+    nickname: user.nickname,
     guest: user.guest,
   };
 }
@@ -314,6 +328,7 @@ export function buildUserFormValues(
     firstName: String(userDetail.firstName ?? user.firstName ?? '').trim(),
     middleName: String(userDetail.middleName ?? user.middleName ?? '').trim(),
     lastName: String(userDetail.lastName ?? user.lastName ?? '').trim(),
+    nickname: String(userDetail.nickname ?? user.nickname ?? '').trim(),
     // OBRS-1255: `?? ''`, never `?? '-'`. An empty control is what "this account has no address"
     // looks like to a reader AND the only thing safe to hand to toUpdateUserPayload, which cannot
     // tell a placeholder from a value.
@@ -331,6 +346,10 @@ export function buildUserFormValues(
     // so the SALES_POINT_ACTIVE_NONE fallback is what a never-configured salesperson gets too.
     allowedSalesPointCodes: [...(userDetail.salesPointCodes ?? [])],
     activeSalesPointCode: userDetail.activeSalesPointCode ?? SALES_POINT_ACTIVE_NONE,
+    // OBRS-1662: the two operator axes. The employer falls back to the sentinel rather than ''
+    // for the same reason the active sales point does — "works for nobody" is an answer.
+    employerOwnerSlug: userDetail.ownerSlug ?? EMPLOYER_OWNER_NONE,
+    sellableOwnerSlugs: [...(userDetail.sellableOwnerSlugs ?? [])],
   };
 }
 
@@ -349,14 +368,51 @@ export function toSalesPointsPayload(raw: Record<string, unknown>): UpdateUserSa
   };
 }
 
-export function toCreateUserPayload(raw: Record<string, unknown>): CreateUserPayload {
+/**
+ * OBRS-1662: the pure payload half of the sellable-owners save. Always a full send of the
+ * control's value — `[]` really does mean "sells for nobody" on the wire, which is why this
+ * cannot ride on `PUT /private/users/{id}` (see UpdateUserSellableOwnersPayload).
+ */
+export function toSellableOwnersPayload(
+  raw: Record<string, unknown>
+): UpdateUserSellableOwnersPayload {
   return {
+    ownerSlugs: [...((raw['sellableOwnerSlugs'] as string[] | null | undefined) ?? [])],
+  };
+}
+
+/**
+ * `includeOperatorFields` is false for every caller who is not a platform ADMIN, and it is a
+ * parameter rather than a read of the form because the DIFFERENCE MATTERS ON THE WIRE: an
+ * omitted `sellableOwnerSlugs` means "whoever employs them" (the pre-OBRS-1662 behaviour that
+ * V132 backfilled), while `[]` means "sells for nobody". An OWNER's form never holds these
+ * controls — the operator picker behind them is ADMIN-only — so sending their empty value
+ * would silently create a salesperson who may sell for no one.
+ */
+export function toCreateUserPayload(
+  raw: Record<string, unknown>,
+  includeOperatorFields = false
+): CreateUserPayload {
+  const employerOwnerSlug = String(raw['employerOwnerSlug'] ?? EMPLOYER_OWNER_NONE);
+
+  return {
+    ...(includeOperatorFields
+      ? {
+          ownerSlug:
+            employerOwnerSlug === EMPLOYER_OWNER_NONE ? undefined : employerOwnerSlug,
+          sellableOwnerSlugs: [
+            ...((raw['sellableOwnerSlugs'] as string[] | null | undefined) ?? []),
+          ],
+        }
+      : {}),
     // OBRS-1231: `|| undefined` so a blank title is OMITTED, not sent as "". The same
     // shape middleName has used here all along, and the one @Size(min = 2) accepts.
     title: String(raw['title'] ?? '').trim() || undefined,
     firstName: String(raw['firstName'] ?? '').trim(),
     middleName: String(raw['middleName'] ?? '').trim() || undefined,
     lastName: String(raw['lastName'] ?? '').trim(),
+    // OBRS-1558: omitted when blank - same shape as middleName, same @Size(min = 2) reason.
+    nickname: String(raw['nickname'] ?? '').trim() || undefined,
     email: String(raw['email'] ?? '').trim(),
     // OBRS-691: the control may carry display dashes (regrouped on blur) —
     // the backend stores/validates bare digits only.
@@ -400,6 +456,9 @@ export function toUpdateUserPayload(
     firstName: String(raw['firstName'] ?? '').trim(),
     middleName: String(raw['middleName'] ?? '').trim() || undefined,
     lastName: String(raw['lastName'] ?? '').trim(),
+    // OBRS-1558: omitted when blank - and an omitted nickname CLEARS the stored one, which is the
+    // full-replace semantics every other name part on this payload already has.
+    nickname: String(raw['nickname'] ?? '').trim() || undefined,
     // OBRS-691: same rationale as toCreateUserPayload above.
     phoneNumber: stripPhoneSeparators(String(raw['phoneNumber'] ?? '')),
     preferredLocale: String(raw['preferredLocale'] ?? 'th').trim(),

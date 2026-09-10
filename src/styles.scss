@@ -72,8 +72,19 @@ hr {
 
 .form-control {
   background-color: $primary-white !important;
-  border: 1px solid $primary-lightgrey !important;
+  // OBRS-772. An empty field paints the same white as the page behind it, so
+  // this 1px outline is the whole of "a control is here" -- the case WCAG
+  // 1.4.11's Boundaries paragraph does NOT exempt, unlike a button that carries
+  // its own readable label. $primary-lightgrey was 1.35:1 here.
+  border: 1px solid $control-border !important;
   border-radius: 24px !important;
+}
+
+// OBRS-772: the UNCHECKED box, which the `:checked` rule below never reached.
+// Bootstrap's default #dee2e6 measured 1.30:1 on white, and an unchecked
+// checkbox has nothing else to identify it.
+.form-check-input {
+  border-color: $control-border;
 }
 
 .form-check-input:checked {
@@ -115,7 +126,8 @@ label {
   height: 60px !important;
   padding: 18px !important;
   font-size: 18px !important;
-  border: 1px solid $primary-lightgrey !important;
+  // OBRS-772: an OTP box is an empty field by definition.
+  border: 1px solid $control-border !important;
   border-radius: 24px !important;
 }
 
@@ -157,10 +169,61 @@ label {
   }
 }
 
+// ============================================================================
+// OBRS-1189 — the label INSIDE its field's frame.
+//
+// The LOOK lives here and the GEOMETRY does not: two very different frames use
+// this label (the station picker, whose slot derives its inset from the field's
+// own `--dropdown-toggle-padding`, and the date segment below), and the one
+// thing that must not differ between them is the type. A second copy of these
+// five declarations inside dropdown-group-obrs.component.scss is exactly how the
+// three copies of the station bar drifted apart before OBRS-1035/1038.
+//
+// A global rule reaches inside an encapsulated component's template; only the
+// component's OWN stylesheet is scoped. The dark counterpart is in
+// dark-theme.scss, which beats this on specificity (2 classes vs 1) with no
+// !important.
+//
+// The `!important` pair is not a shortcut past specificity — it is the only way
+// past `label, input { font-size: 18px !important; color: … !important }` at the
+// top of this file, which is what the labels MEASURED as on the first build of
+// this card (18px in $text-black, i.e. the above-the-frame styling it exists to
+// replace). `width: auto` is from the same rule's third declaration, which is
+// NOT important: `width: 100%` on an absolutely-positioned box overrides the
+// `left`/`right` pair below it, and that is what put the date label's right edge
+// 47px past its own field.
+//
+// The `label` tag in the selector is load-bearing for a second reason: it beats
+// `.form-group-obrs label` twenty lines up, which is (0,1,1). Matching that
+// score and standing later in the file settles it; a third class would have
+// beaten the dark rule in dark-theme.scss too, which is the opposite mistake.
+// ============================================================================
+label.field-inline-label {
+  font-size: $font-size-xs !important;
+  font-weight: $font-weight-regular;
+  line-height: 1;
+  color: $text-lightblack !important;
+  width: auto;
+
+  // The frame is a fixed height and the label shares it with the value, so a
+  // long label in another locale has to ellipsize rather than push the value
+  // out of the box.
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  // A click on the label belongs to the control underneath it (`for` still
+  // names that control for a screen reader).
+  pointer-events: none;
+}
+
 .p-datepicker .p-inputtext {
   height: 48px;
   border-radius: 24px;
   padding-left: 50px;
+  // OBRS-772: PrimeNG's own default measured 1.70:1 against the white page. Same
+  // argument as `.form-control` -- this is a field, its boundary identifies it.
+  border-color: $control-border;
 }
 
 // ============================================================================
@@ -187,6 +250,14 @@ label {
 // `body.is-dark .p-datepicker .p-inputtext` override (`!important`, still wins
 // here — no duplicate dark rule needed).
 // ============================================================================
+// OBRS-1189 — the left inset of a date SEGMENT: where its value starts and
+// therefore where its inline label starts, which is the only reason it is a
+// variable rather than two literals that stop agreeing. 38px against the
+// standalone field's 46px, because the segment shares one row with three other
+// fields and a button: measured at a 993px viewport, the 8px it gives back is
+// most of what stopped `อา., 23/08/2026` being clipped there.
+$app-date-field-segment-inset: 38px;
+
 .p-datepicker.app-date-field {
   position: relative;
   display: flex;
@@ -226,7 +297,9 @@ label {
   height: 48px;
   min-height: 48px;
   border-radius: $radius-pill;
-  border: 1px solid var(--admin-outline, #{$primary-lightgrey});
+  // OBRS-772: control boundary, so the control token rather than the shell's
+  // general outline (which also draws cards and separators).
+  border: 1px solid var(--control-outline, #{$control-border});
   background: var(--admin-surface-card, #{$primary-white});
   color: var(--admin-text, #{$text-black});
   padding-left: 46px;
@@ -240,6 +313,91 @@ label {
 .p-datepicker.app-date-field .p-inputtext:focus {
   border-color: var(--accent-strong, #{$primary-blue});
   box-shadow: 0 0 0 3px var(--accent-soft, #{rgba($primary-blue, 0.18)});
+}
+
+// ============================================================================
+// OBRS-1189 — a date field as a SEGMENT of the search bar.
+//
+// `app-date-field--segment` is opt-in: 45 pickers in the app carry
+// `app-date-field` and five carry this — the four in the two booking bars, plus
+// the parcel wizard's own date field, which is NOT a segment of anything and
+// takes the class for the taller frame and the inline label alone (it sets
+// `--date-segment-radius` back to round at both ends). Everything below is
+// additive to the canonical look above — same border, same icon, same panel —
+// so a segment and a standalone field are still the SAME field, at a different
+// height and with its label inside it.
+//
+// It lives in this global file for the reason the block above does: `.p-inputtext`
+// is created inside PrimeNG's own encapsulation and no component stylesheet can
+// reach it. The two things a CALL SITE has to vary — the corner radius at the
+// bar's ends — are a custom property instead, which inherits straight through
+// that boundary (the mechanism OBRS-1038 already uses on the station halves).
+// ============================================================================
+.form-group-obrs.has-inline-label {
+  position: relative;
+
+  > .field-inline-label {
+    position: absolute;
+    top: 9px;
+    // +1px is the field's own border: the label is positioned against the GROUP
+    // box, the value against the INPUT's padding box, and the border sits
+    // between them.
+    left: calc(#{$app-date-field-segment-inset} + 1px);
+    right: $space-xs;
+    z-index: 1;
+  }
+}
+
+.p-datepicker.app-date-field--segment {
+  .p-inputtext {
+    height: $field-height-inline-label;
+    min-height: $field-height-inline-label;
+    border-radius: var(--date-segment-radius, 0);
+
+    // The value drops to the lower half of the frame to clear the label row. An
+    // <input> centres its text in its CONTENT box, so these two paddings are
+    // what place it — there is no line-height to set.
+    padding-top: 26px;
+    padding-bottom: $space-2xs;
+    padding-left: $app-date-field-segment-inset;
+
+    // OBRS-1586 — reclaim the inset PrimeNG reserves for a TRAILING icon that
+    // this app does not have. `[showIcon]="true"` makes @primeuix pad the input
+    // by 40px on the inline-end for the icon it would park there, and all five
+    // `--segment` sites then hand that icon to `pTemplate="inputicon"` and pin
+    // it to the LEFT (`.app-date-field-icon` above, and OBRS-1003's
+    // `position: static` on the container that made that pin resolve). The
+    // reservation was never cancelled, so 40px of every segment paid for
+    // something that is drawn at the other end.
+    //
+    // Measured at a 993px viewport, the narrowest width the bar is still one
+    // row: content box 137px against `周六, 2026/08/29` at 139.05px -- CLIPPED.
+    // This gives the box back 28px (137 -> 165) and clips nothing in any of the
+    // three locales, and it costs no other element a pixel: the two station
+    // halves and the search button are the widths they were, because a segment's
+    // padding is inside a box whose width the flex row already fixed.
+    //
+    // ⚠️ This beats @primeuix on SOURCE ORDER, not on specificity. The rule it
+    // overrides is `.p-datepicker:has(.p-datepicker-input-icon-container)
+    // .p-datepicker-input` (@primeuix/styles/dist/datepicker), and `:has()`
+    // takes the specificity of its argument, so both selectors are (0,3,0) --
+    // and `padding-right` and `padding-inline-end` share one cascade in LTR.
+    // What settles it is that PrimeNG prepends its styles into <head>, so this
+    // file comes later. That is the same footing `padding-left` above has stood
+    // on since OBRS-1189, which is why this is documented rather than
+    // "hardened": adding a class here would lift the WHOLE block's specificity,
+    // including declarations no one asked this card to move. The 993px locale
+    // tests in obrs-1189-search-bar.spec.ts go red if the order ever flips.
+    padding-right: $space-xs;
+  }
+
+  // Centre the icon on the VALUE, not on the frame: the frame's own middle is
+  // now the gap between the label row and the value row. It moves in with the
+  // inset above — the two are one clearance, not two numbers.
+  .app-date-field-icon {
+    top: calc(#{$field-height-inline-label} / 2 + 9px);
+    left: $space-xs;
+  }
 }
 
 .app-date-field-panel {
@@ -285,6 +443,34 @@ label {
 
 @media (max-width: 640px) {
   .app-date-field-panel {
+    width: min(280px, 100vw - 32px) !important;
+    min-width: min(280px, 100vw - 32px) !important;
+  }
+}
+
+// OBRS-1734 — the range variant of the panel above, for `app-admin-date-range-picker`'s
+// `[numberOfMonths]="2"` popup. 576px = two of the single-month panel's own 280px plus the
+// gap PrimeNG's `.p-datepicker-group-container` puts between them. Collapses back to the
+// single-month width under the SAME 640px breakpoint the plain panel uses above, because the
+// picker's own `responsiveOptions` drops to `numberOfMonths: 1` there too — a wider panel
+// around one month would just leave dead space.
+// A range's value ("dd/mm/yyyy - dd/mm/yyyy", ~23 chars) overflows an unstyled
+// `.p-inputtext`'s browser-default width — every existing single-date field (a
+// 10-char value) happened to fit inside that default by accident, so nothing
+// upstream ever needed an explicit width until this, the first field whose
+// value can run longer than that. Measured clipped at 258px (showed
+// "01/09/2026 - 05/09/202"); 310px clears it with headroom.
+.p-datepicker.app-date-field.app-date-field--range {
+  min-width: 310px;
+}
+
+.app-date-field-panel.app-date-field-panel--range {
+  width: 576px !important;
+  min-width: 576px !important;
+}
+
+@media (max-width: 640px) {
+  .app-date-field-panel.app-date-field-panel--range {
     width: min(280px, 100vw - 32px) !important;
     min-width: min(280px, 100vw - 32px) !important;
   }

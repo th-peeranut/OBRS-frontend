@@ -1,7 +1,7 @@
 <section class="admin-card mt-3">
   <div class="admin-card-head">
     <h4>{{ 'ADMIN.CASH_REFUND_APPROVALS.SUBTITLE' | translate }}</h4>
-    <button type="button" class="admin-btn admin-btn-small" [disabled]="isLoading" (click)="load()">
+    <button type="button" class="admin-btn admin-btn-small" [disabled]="isLoading" [appPending]="isLoading" (click)="load()">
       {{ 'ADMIN.CASH_REFUND_APPROVALS.REFRESH' | translate }}
     </button>
   </div>

@@ -16,7 +16,7 @@
           <label>{{ 'STAFF.PARCEL_DELIVERY.COLLECT_DIALOG.CODE_LABEL' | translate }}</label>
           <input type="text" class="admin-field" formControlName="collectionCode" />
           @if (serverErrorKey) {
-            <small class="admin-error">{{ serverErrorKey | translate }}</small>
+            <small class="admin-error">{{ serverErrorKey | translate: (serverErrorParams ?? {}) }}</small>
           }
         </div>
         <div class="admin-modal-footer">

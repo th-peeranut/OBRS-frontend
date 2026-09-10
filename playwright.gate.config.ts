@@ -24,7 +24,8 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * THE THREE RULES THAT KEEP THIS LANE HONEST
  *
- * 1. NO `globalSetup`. The default config's global setup logs into live SIT to mint
+ * 1. NO `globalSetup` THAT DEPENDS ON ANYTHING OFF THIS BOX. The default config's
+ *    global setup logs into live SIT to mint
  *    `e2e/fixtures/admin-auth.json` (gitignored, never committed). That makes SIT a
  *    hard dependency of *every* test in that run — including the ones that mock 100%
  *    of their own traffic. A gate that a cold-starting Koyeb instance can turn red is
@@ -37,11 +38,26 @@ import { defineConfig, devices } from '@playwright/test';
  *    silently apply to nothing the day `E2E_GATE_PORT` changed. `addInitScript` has no
  *    such coupling; the shared helper is `e2e/support/gate-admin-session.ts`.)
  *
+ *    OBRS-1531 ADDED ONE, and it is inside that rule rather than an exception to it.
+ *    `e2e/support/lane-tree-guard.ts` opens no socket and mints no artefact: it prints
+ *    the tree, sha and port this run is about to measure, and throws if the server
+ *    already answering that port belongs to a different worktree — which, with
+ *    `reuseExistingServer` on locally, is a run that would otherwise report a
+ *    neighbour's code as this card's evidence and say nothing (OBRS-773). Nothing off
+ *    this machine can turn it red, so the property rule 1 protects is untouched.
+ *
  * 2. The frontend is served with the `gate` configuration, which is the DEFAULT (local)
  *    environment — `apiUrl` still points at `http://localhost:8080`, where nothing is
- *    listening — plus one file replacement: `src/styles/webfonts.scss` becomes
+ *    listening — plus two file replacements. `src/styles/webfonts.scss` becomes
  *    `webfonts.gate.scss`, so the app's two web fonts are served out of
- *    `e2e/fixtures/fonts/` rather than fetched from Google's CDN.
+ *    `e2e/fixtures/fonts/` rather than fetched from Google's CDN. And
+ *    `src/environments/environment.ts` becomes `environment.gate.ts`, which fills in
+ *    the two analytics measurement ids with fakes: since OBRS-1179 the consent
+ *    banner and the withdrawal control stand down when no id is configured, and
+ *    `environment.ts` configures none, so without this the specs that exist to
+ *    assert the banner is up would be asserting against a build that correctly
+ *    never shows it. The ids are fake; `--host-resolver-rules` still makes the
+ *    tag hosts unresolvable, so nothing is ever sent.
  *
  *    The dead `apiUrl` is the enforcement mechanism for everything that travels through
  *    it: a call this lane failed to intercept gets ECONNREFUSED instead of quietly
@@ -74,10 +90,19 @@ import { defineConfig, devices } from '@playwright/test';
  * hang an agent run, but a human running the gate deserves an exit code, not a server.
  */
 
+// OBRS-1531: `E2E_GATE_PORT` moves THIS lane and nothing else. Two other configs used
+// to read it — `playwright.obrs1207capture.config.ts` (same default, 4230) and
+// `playwright.obrs769.config.ts` — so setting it to escape a collision quietly moved
+// two lanes you were not thinking about. `scripts/check-e2e-lanes.mjs` now fails a
+// build that shares a port env var or a default port between two configs.
 const PORT = process.env['E2E_GATE_PORT'] ?? '4230';
 
 export default defineConfig({
   testDir: './e2e/tests',
+
+  // Rule 1's one inhabitant: names the tree this run measures and refuses a port that
+  // belongs to another worktree. Local-only; it stands down on CI. See the helper.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
 
   // Explicit allow-list, never a glob. Membership is the claim "this spec needs
   // nothing but a browser", and that claim should be made one file at a time by
@@ -89,6 +114,19 @@ export default defineConfig({
     // branch there. This lane pins 1280x720 (rule 3 above), which is the point.
     '**/obrs-857-find-booking.spec.ts',
     '**/obrs-1038-station-seam.spec.ts',
+    // OBRS-1189. The rest of the same bar: the date fields and the search button
+    // became segments of it, and every claim about that is a cascade-at-a-width
+    // fact for the reason the entry above gives. It also measures the one thing
+    // a geometry assertion can miss -- whether the value FITS the segment it was
+    // given (`scrollWidth - clientWidth`), which is how OBRS-1562's narrower
+    // field shipped reading `อา., 23/08/20`. Same fixture shape as 1038: every
+    // /api/** call is answered in-spec.
+    '**/obrs-1189-search-bar.spec.ts',
+    // OBRS-639. Same argument one page further in: the booking stepper's four boxes
+    // are laid out by a media query and a flex line, so where they land is a property
+    // of the cascade at a viewport width and nothing else. This spec sets its own
+    // 360 and 390 rather than using the pinned 1280 -- the card is about a phone.
+    '**/obrs-639-stepper-geometry.spec.ts',
     // OBRS-1222. The HTTP interceptor raises SweetAlert2 into document.body,
     // outside every Karma fixture, so "no modal reaches the page" is a claim
     // only a real app can settle -- and that seam is where OBRS-642 shipped.
@@ -98,6 +136,14 @@ export default defineConfig({
     '**/report-usability-issue.spec.ts',
     '**/route-map.spec.ts',
     '**/b2c-critical-path.spec.ts',
+    // OBRS-36. The same walk carried to its end: the spec above stops with the pay button
+    // enabled, and nothing in this repo went past /payment -- /payment/result and
+    // /e-ticket had no automated visitor on any lane. This one reserves, pays (PromptPay,
+    // mocked as the card allows), returns to the gateway's return_uri and reads the
+    // issued ticket, asserting that all three screens name ONE booking id. It shares the
+    // first half with the spec above via e2e/support/b2c-booking-walk.ts rather than
+    // copying it. Hermetic on this lane's terms: every /api/** call is fulfilled in-spec.
+    '**/obrs-36-search-to-ticket.spec.ts',
     // OBRS-618. These three mocked all of their own traffic from the day they were
     // written; the only thing keeping them out was `storageState: admin-auth.json`,
     // minted by logging into live SIT. They seed a synthetic session in-browser now
@@ -114,6 +160,7 @@ export default defineConfig({
     // OBRS-575 shipped past a green CI. Hermetic on the same terms as the rest
     // of the lane: it stubs every /api/** call and aborts Maps.
     '**/customer-contrast-gate.spec.ts',
+    '**/staff-contrast-gate.spec.ts',
     // OBRS-753. The malformed-box defect that made `b2c-critical-path` the one red on
     // the first CI run of this lane. It is a MISSING `:host { display }`, so there is
     // nothing in any diff for a reviewer to catch and no stylesheet parser can tell an
@@ -219,6 +266,23 @@ export default defineConfig({
     // this lane is the merge gate: the drift it catches is a page shipping outside every
     // sweep above, and a check for that which does not run at merge is a comment.
     '**/obrs-970-route-population.spec.ts',
+    // OBRS-1704. The rendered WIDTH of the shell's checkboxes. `admin-theme.scss` gives
+    // every input under `.admin-shell` `width: auto !important`, which collapses an
+    // `appearance: none` control to 2px, and Karma's DOM never loads that stylesheet --
+    // so the defect passed every unit spec on those forms. OBRS-1693 fixed it with one
+    // `!important` declaration and shipped the check as a root capture script, which by
+    // this repo's convention has no lane and is called by nothing; deleting the
+    // declaration left CI green. Hermetic on the same terms as the rest: synthetic
+    // session, every call answered in-spec.
+    '**/obrs-1693-admin-shell-control-width.spec.ts',
+    // OBRS-913. The sidebar toggle's rendered SIZE, same argument one control over:
+    // `.admin-sidebar-pin` declares 28px and rendered 20px, because it is a
+    // `flex-shrink: 1` item of a column that overflows on a laptop-height viewport.
+    // A parser reads the declaration and passes it; Karma's 800px window never
+    // enters the `min-width: 1101px` block the rule lives in. This spec sets its own
+    // 1536x900 (the card's viewport) and asserts the overflow precondition before
+    // measuring, so it cannot go green without having reproduced the condition.
+    '**/obrs-913-sidebar-toggle-target-size.spec.ts',
   ],
 
   timeout: 60_000,

@@ -91,4 +91,12 @@ export async function mockPublicPageApis(page: Page): Promise<void> {
       },
     })
   );
+
+  // OBRS-1364. The seat map asks which seats the monk/nun adjacency rule closes
+  // for the passenger type just chosen, so every flow that reaches
+  // /passenger-info hits this. The fixture seats nobody else, so nothing is
+  // blocked -- but the route has to exist, or the call leaves the hermetic lane.
+  await page.route('**/api/schedules/*/blocked-seats', (route) =>
+    route.fulfill({ json: { code: 200, message: 'OK', data: [] } })
+  );
 }

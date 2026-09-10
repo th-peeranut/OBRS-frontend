@@ -10,10 +10,15 @@ import {
   VEHICLE_CENTRAL_SENTINEL,
   filterExpensesByCategoryAndRange,
   ownerIdentifier,
+  vehicleIdentifier,
+  vehiclePlateIdentifier,
   toDateControlValue,
   toExpenseCategoryDisplay,
   toExpenseCategoryOptions,
   toExpensePayload,
+  toExpenseItemRow,
+  expenseItemsTotal,
+  expenseItemsMatchAmount,
   toExpenseRow,
   toExpenseVehicleOptions,
   toOwnerOptions,
@@ -51,6 +56,11 @@ const CATEGORY_LABELS = {
   instalment: 'Vehicle Instalment',
   parkingFee: 'Parking Fee',
   parcelCompensation: 'Parcel Damage Compensation',
+  staffWage: 'Counter Staff Wage',
+  utility: 'Utilities',
+  rent: 'Counter Rent',
+  security: 'Security Fee',
+  softwareFee: 'Ticketing Software Fee',
   central: 'Central',
   other: 'Other',
 };
@@ -65,7 +75,7 @@ function makeRow(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     ownerId: 7,
     ownerLabel: 'NJ Travel',
     vehicleId: 1,
-    vehicleLabel: 'V1 / ABC-123',
+    vehicleLabel: 'ABC-123',
     category: 'FUEL',
     categoryOtherLabel: '',
     categoryDisplay: 'Fuel',
@@ -75,8 +85,11 @@ function makeRow(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     expenseDateDisplay: '20 ก.ค. 2026',
     receiptNo: '',
     paidBy: '',
+    payeeId: null,
+    payeeName: '',
     note: '',
     source: 'MANUAL',
+    items: [],
     ...overrides,
   };
 }
@@ -108,7 +121,7 @@ describe('expenses-page.mappers', () => {
   });
 
   describe('toExpenseCategoryOptions', () => {
-    it('returns exactly the 16 fixed category codes, in EXPENSE_CATEGORY_CODES order', () => {
+    it('returns exactly the 21 fixed category codes, in EXPENSE_CATEGORY_CODES order', () => {
       const options = categoryOptions();
       expect(options.map((o) => o.code)).toEqual([...EXPENSE_CATEGORY_CODES]);
       expect(options.find((o) => o.code === 'OTHER')?.label).toBe('Other');
@@ -164,9 +177,12 @@ describe('expenses-page.mappers', () => {
       note: 'wash',
     };
 
-    it('resolves the vehicle label from the vehicles list', () => {
+    // OBRS-1627: the PLATE alone. Was 'V1 / ABC-123' - the co-op number spent
+    // half the column's width on a value the owner does not read rows by.
+    it('resolves the vehicle label from the vehicles list, as the plate alone', () => {
       const row = toExpenseRow(dto, [VAN, BUS], categoryOptions(), 'Central', 'th');
-      expect(row.vehicleLabel).toBe('V1 / ABC-123');
+      expect(row.vehicleLabel).toBe('ABC-123');
+      expect(row.vehicleLabel).not.toContain('V1');
       expect(row.categoryDisplay).toBe('Other (ล้างรถ)');
     });
 
@@ -315,6 +331,7 @@ describe('expenses-page.mappers', () => {
         expenseDate: new Date(2026, 6, 24),
         receiptNo: '',
         paidBy: '',
+        payeeId: null,
         note: '',
       });
 
@@ -328,7 +345,9 @@ describe('expenses-page.mappers', () => {
         expenseDate: '2026-07-24',
         receiptNo: null,
         paidBy: null,
+        payeeId: null,
         note: null,
+        items: [],
       });
     });
 
@@ -343,6 +362,7 @@ describe('expenses-page.mappers', () => {
         expenseDate: '2026-07-24',
         receiptNo: 'R-1',
         paidBy: 'Somchai',
+        payeeId: null,
         note: 'note',
       });
 
@@ -356,7 +376,9 @@ describe('expenses-page.mappers', () => {
         expenseDate: '2026-07-24',
         receiptNo: 'R-1',
         paidBy: 'Somchai',
+        payeeId: null,
         note: 'note',
+        items: [],
       });
     });
 
@@ -371,6 +393,7 @@ describe('expenses-page.mappers', () => {
         expenseDate: '2026-07-24',
         receiptNo: '',
         paidBy: '',
+        payeeId: null,
         note: '',
       });
 
@@ -390,10 +413,32 @@ describe('expenses-page.mappers', () => {
         expenseDate: '2026-07-24',
         receiptNo: '',
         paidBy: '',
+        payeeId: null,
         note: '',
       });
 
       expect(payload.categoryOtherLabel).toBeNull();
+    });
+  });
+
+  // OBRS-1627
+  describe('vehiclePlateIdentifier', () => {
+    it('is the plate alone, while vehicleIdentifier keeps the joined form the FILTER renders', () => {
+      // Both shapes on purpose (AC-4): the cell is short, the vehicle filter
+      // above the table stays a superset of it, so a plate seen in a row is
+      // still findable in the dropdown.
+      expect(vehiclePlateIdentifier(VAN)).toBe('ABC-123');
+      expect(vehicleIdentifier(VAN)).toBe('V1 / ABC-123');
+    });
+
+    it('falls back to the co-op number when no plate is recorded yet', () => {
+      // Not a blank cell: a van has a co-op number before it has a plate, and
+      // an empty identifier makes its expenses unattributable.
+      expect(vehiclePlateIdentifier({ ...VAN, numberPlate: undefined })).toBe('V1');
+    });
+
+    it('falls back to #id when neither is recorded', () => {
+      expect(vehiclePlateIdentifier(BUS)).toBe('#2');
     });
   });
 
@@ -409,6 +454,7 @@ describe('expenses-page.mappers', () => {
       const result = filterExpensesByCategoryAndRange(rows, {
         category: '',
         centralOnly: false,
+        ownerId: '',
         from: null,
         to: null,
       });
@@ -419,6 +465,7 @@ describe('expenses-page.mappers', () => {
       const result = filterExpensesByCategoryAndRange(rows, {
         category: 'FUEL',
         centralOnly: false,
+        ownerId: '',
         from: null,
         to: null,
       });
@@ -429,6 +476,7 @@ describe('expenses-page.mappers', () => {
       const result = filterExpensesByCategoryAndRange(rows, {
         category: '',
         centralOnly: true,
+        ownerId: '',
         from: null,
         to: null,
       });
@@ -439,6 +487,7 @@ describe('expenses-page.mappers', () => {
       const result = filterExpensesByCategoryAndRange(rows, {
         category: '',
         centralOnly: false,
+        ownerId: '',
         from: new Date(2026, 6, 5),
         to: new Date(2026, 6, 20),
       });
@@ -449,16 +498,102 @@ describe('expenses-page.mappers', () => {
       const result = filterExpensesByCategoryAndRange(rows, {
         category: 'FUEL',
         centralOnly: true,
+        ownerId: '',
         from: new Date(2026, 6, 1),
         to: new Date(2026, 6, 31),
       });
       expect(result.map((r) => r.id)).toEqual([4]);
     });
 
+    // OBRS-1627: the operator predicate. It replaces the operator COLUMN, so a
+    // filter that silently matched nothing would be worse than the column was.
+    it('narrows by operator', () => {
+      const withSecond = [...rows, makeRow({ id: 5, ownerId: 9, expenseDate: '2026-07-02' })];
+      const result = filterExpensesByCategoryAndRange(withSecond, {
+        category: '',
+        centralOnly: false,
+        ownerId: '9',
+        from: null,
+        to: null,
+      });
+      expect(result.map((r) => r.id)).toEqual([5]);
+    });
+
+    it("treats ownerId '' as every operator, not as 'no operator'", () => {
+      const withSecond = [...rows, makeRow({ id: 5, ownerId: 9, expenseDate: '2026-07-02' })];
+      const result = filterExpensesByCategoryAndRange(withSecond, {
+        category: '',
+        centralOnly: false,
+        ownerId: '',
+        from: null,
+        to: null,
+      });
+      expect(result.map((r) => r.id)).toEqual([1, 2, 3, 4, 5]);
+    });
+
     it('never mutates the input array', () => {
       const copy = [...rows];
-      filterExpensesByCategoryAndRange(rows, { category: 'FUEL', centralOnly: false, from: null, to: null });
+      filterExpensesByCategoryAndRange(rows, { category: 'FUEL', centralOnly: false, ownerId: '', from: null, to: null });
       expect(rows).toEqual(copy);
+    });
+  });
+
+  // OBRS-1374
+  describe('bill lines (expense_items)', () => {
+    it('maps a line with no part to \'\' — "not a part" is a real answer, not missing data', () => {
+      const row = toExpenseItemRow({ id: 1, lineNo: 1, part: null, description: 'ค่าแรง', amount: 600 });
+      expect(row.part).toBe('');
+      expect(row.quantity).toBeNull();
+      expect(row.unitPrice).toBeNull();
+    });
+
+    it('translates the part sentinel back to a real null at the submit boundary', () => {
+      const payload = toExpensePayload({
+        ownerSelection: '',
+        vehicleSelection: '1',
+        category: 'REPAIR',
+        categoryOtherLabel: '',
+        amount: 1600,
+        vatAmount: null,
+        expenseDate: '2026-08-21',
+        receiptNo: '',
+        paidBy: '',
+        payeeId: null,
+        note: '',
+        items: [
+          { partId: 7, description: '  ผ้าเบรกหน้า  ', quantity: 2, unit: 'ชิ้น', unitPrice: 500, amount: 1000 },
+          { partId: null, description: 'ค่าแรง', quantity: null, unit: '', unitPrice: null, amount: 600 },
+        ],
+      });
+
+      // OBRS-1613: `part` is always null now - both screens pick a registry ROW and the server
+      // writes the frozen code from it. It is still an explicit key rather than an omitted one, so
+      // "this line has no part" cannot arrive looking like "this client cannot express one".
+      expect(payload.items).toEqual([
+        { part: null, partId: 7, description: 'ผ้าเบรกหน้า', quantity: 2, unit: 'ชิ้น', unitPrice: 500, amount: 1000 },
+        { part: null, partId: null, description: 'ค่าแรง', quantity: null, unit: null, unitPrice: null, amount: 600 },
+      ]);
+    });
+
+    it('adds the lines up in satang, so float noise cannot invent a difference', () => {
+      // 0.1 + 0.2 is 0.30000000000000004 in a JS number. A naive reduce would report a
+      // mismatch of 4e-17 against a total the owner can see is identical.
+      const items = [
+        { part: '', description: 'a', quantity: null, unitPrice: null, amount: 0.1 },
+        { part: '', description: 'b', quantity: null, unitPrice: null, amount: 0.2 },
+      ];
+      expect(expenseItemsTotal(items)).toBe(0.3);
+      expect(expenseItemsMatchAmount(items, 0.3)).toBe(true);
+    });
+
+    it('no lines is never a mismatch — the child table is optional (AC4)', () => {
+      expect(expenseItemsMatchAmount([], 500)).toBe(true);
+      expect(expenseItemsMatchAmount(undefined, 500)).toBe(true);
+    });
+
+    it('lines that do not add up to the bill total ARE a mismatch', () => {
+      const items = [{ part: '', description: 'a', quantity: null, unitPrice: null, amount: 3150 }];
+      expect(expenseItemsMatchAmount(items, 3100)).toBe(false);
     });
   });
 });

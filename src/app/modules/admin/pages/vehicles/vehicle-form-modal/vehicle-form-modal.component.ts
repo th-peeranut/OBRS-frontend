@@ -130,6 +130,13 @@ export class VehicleFormModalComponent implements OnChanges {
       // regular driver is the state every row starts in, and clearing this is how an
       // owner takes a driver off a van.
       assignedDriverId: [''],
+      // OBRS-885: the service window. Both optional, and BLANK MEANS SOMETHING — a blank
+      // start is "not known" (not "since forever") and a blank end is "still in service".
+      // No client-side order validator: the backend already owns that rule
+      // (VehicleReqDto#isInServiceWindowValid) and answers with a localized message, which
+      // is what AC-3 asks to be shown. A second copy here would be a rule that can drift.
+      inServiceFrom: [null],
+      inServiceTo: [null],
     });
 
     // OBRS-842: vehicleNumber's validity depends on a SIBLING control, and Angular
@@ -278,6 +285,8 @@ export class VehicleFormModalComponent implements OnChanges {
       note: '',
       gpsImei: '',
       assignedDriverId: '',
+      inServiceFrom: null,
+      inServiceTo: null,
     });
   }
 

@@ -102,6 +102,17 @@ const stopToken = (s: RouteStop): string =>
 /** Maximum number of points per Directions API request (origin + N-2 waypoints + destination). */
 const DIRECTIONS_CHUNK_SIZE = 25;
 
+/**
+ * Max time to wait, after the map is expected to draw, for the `<google-map>`
+ * wrapper's `tilesloaded` event before treating the draw as failed (OBRS-1085
+ * AC#1). `mapsLoaded` only tracks whether the Maps JS bootstrap *script*
+ * resolved -- the actual `google.maps.Map` can still never draw a tile (e.g.
+ * `maps/vt` tile requests blocked) and nothing before this card ever caught
+ * that, leaving a blank white box with the overlay controls floating on it.
+ * 8s is the card's proposal.
+ */
+export const MAP_TILES_TIMEOUT_MS = 8000;
+
 // ---------------------------------------------------------------------------
 // Road-snapped path cache (OBRS-91)
 //
@@ -258,6 +269,29 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   mapsLoaded = false;
   mapsError = false;
 
+  /**
+   * True once the tiles watchdog times out with no `tilesloaded` event.
+   * Distinct from `mapsError` (the bootstrap *script* failed) and from a
+   * false `hasCoordinates`/`mapsApiKey` (a data/config state, not a draw
+   * failure) -- this is what drives the retry UI (OBRS-1085).
+   */
+  mapDrawFailed = false;
+
+  /** True once the currently-mounted map has actually drawn a tile. Reset to
+   * false whenever the map is unmounted (so a future re-mount is verified
+   * fresh) and read by {@link evaluateTilesWatchdog} to avoid re-arming a
+   * watchdog for a map that already proved itself. */
+  private tilesConfirmed = false;
+
+  /** Handle for the tiles-load watchdog timer; null when none is armed. */
+  private tilesWatchdogHandle: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * How many times the watchdog has tripped for this component instance. Drives
+   * the retry escalation in {@link retryMap} -- see the reasoning there.
+   */
+  private drawFailures = 0;
+
   // ---------------------------------------------------------------------------
   // "Use my location" state
   // ---------------------------------------------------------------------------
@@ -341,10 +375,18 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
    */
   private dirReqDispatchedSeq = -1;
 
-  constructor(private zone: NgZone) {}
+  constructor(
+    private zone: NgZone,
+    private host: ElementRef<HTMLElement>,
+  ) {}
 
   get showMap(): boolean {
-    return this.mapsLoaded && !!this.mapsApiKey && this.hasCoordinates;
+    return (
+      this.mapsLoaded &&
+      !!this.mapsApiKey &&
+      this.hasCoordinates &&
+      !this.mapDrawFailed
+    );
   }
 
   get hasCoordinates(): boolean {
@@ -562,6 +604,9 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
         ) {
           this.resolveDirections(this.dirReqSeq);
         }
+        // The script bootstrap resolving does not mean the Map actually drew
+        // (OBRS-1085) — arm the watchdog now that `showMap` may have flipped true.
+        this.evaluateTilesWatchdog();
       })
       .catch(() => {
         this.mapsError = true;
@@ -581,6 +626,10 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       // direction toggle) — recompute distances against the new stops so the
       // list badges and nearest-pickup highlight stay correct.
       this.emitDistances();
+      // A stop set arriving/changing can be what flips `hasCoordinates` (and so
+      // `showMap`) true for the first time — e.g. maps finished loading before
+      // the stops did. Re-evaluate so that mount is watched too (OBRS-1085).
+      this.evaluateTilesWatchdog();
     } else {
       // Selection-only changes: update only the affected marker array.
       // mapOptions/mapCenter must NOT be touched — unnecessary center re-apply would
@@ -594,7 +643,158 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {}
+  ngOnDestroy(): void {
+    this.clearTilesWatchdog();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tiles-drawn watchdog (OBRS-1085)
+  //
+  // `mapsLoaded` only means the Maps JS *script* resolved; it says nothing
+  // about whether `google.maps.Map` ever actually drew a tile (e.g. `maps/vt`
+  // requests blocked by the network). Before this, `showMap` going true was a
+  // one-way door — the `@else` placeholder in the template could never render
+  // again — so a draw failure left a permanent blank box. `mapDrawFailed`
+  // gives `showMap` a way back to false, and the retry button gives the user a
+  // way to try the mount again without a full page reload.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Fired by the `<google-map>` wrapper's `(tilesloaded)` output once tiles
+   * have actually drawn. `@angular/google-maps`'s `MapEventManager` already
+   * re-enters the Angular zone for every map event it forwards (it wraps each
+   * listener in `this._ngZone.run(...)`), so no explicit `NgZone.run` is
+   * needed here — the change only needs one here because it clears a timer,
+   * not because it flips state that must trigger change detection.
+   */
+  onTilesLoaded(): void {
+    this.tilesConfirmed = true;
+    this.clearTilesWatchdog();
+  }
+
+  /**
+   * Re-init the map after a draw failure (OBRS-1085 AC#2/AC#4). Resetting
+   * `mapDrawFailed` lets `showMap` re-evaluate true (assuming the key/coords
+   * that were already fine still are), which re-mounts a brand new
+   * `<google-map>` — the `@if`/`@else if` in the template destroys the old
+   * branch and creates a fresh component instance, so this is a genuine
+   * re-init, not just hiding the error — and `evaluateTilesWatchdog` arms a
+   * fresh watchdog for that new attempt.
+   */
+  retryMap(): void {
+    // Escalate on a repeat failure. Re-mounting recreates OUR component, which is
+    // enough when a single map instance died — but measured 2026-08-22 (OBRS-1085):
+    // once the Maps JS loader has failed to fetch its own `map.js` sub-module it
+    // never re-requests it, so no amount of re-mounting can bring the map back and
+    // the user would just watch the same error return 8s later. Only a fresh
+    // document re-runs their loader, which is why a refresh fixed the originally
+    // reported incident. So: first click re-mounts (cheap, no lost page state),
+    // a second failure earns the reload.
+    if (this.drawFailures >= 2) {
+      this.reloadPage();
+      return;
+    }
+    this.mapDrawFailed = false;
+    this.tilesConfirmed = false;
+    this.evaluateTilesWatchdog();
+  }
+
+  /** Seam so specs can assert the escalation without navigating the test runner. */
+  protected reloadPage(): void {
+    location.reload();
+  }
+
+  /**
+   * Is the map box showing the user *nothing*? This, not a missing `tilesloaded`,
+   * is the failure this card is about — the reported symptom was a box with no
+   * Google logo and no attribution bar, i.e. nothing drawn at all.
+   *
+   * Measured 2026-08-22, inducing two different Maps failures against this build:
+   *
+   * - tile requests (`maps/vt`) blocked → `tilesloaded` still FIRES, and the map
+   *   draws the basemap, our route polyline, our markers and the zoom controls
+   *   over a grey "no imagery" backdrop. Degraded, entirely usable.
+   * - the `map.js` sub-module blocked → `tilesloaded` never fires, but Google
+   *   falls back to a single `StaticMapService.GetMapImage` <img> of the same
+   *   area. No route line and no markers, but the user still sees where they are.
+   *
+   * Failing on the timer alone would have replaced BOTH of those with an error
+   * box — taking away a map the user could still read. So the timer only asks the
+   * question; this answers it by looking for any evidence something rendered.
+   *
+   * Scoped to the <google-map> element deliberately: our own locate-me and zoom
+   * controls live in a sibling `.map-overlay-controls` div, and counting their
+   * icons would make the box look occupied when it is empty.
+   */
+  private mapAreaIsBlank(): boolean {
+    const box = this.host.nativeElement.querySelector('google-map');
+    if (!box) {
+      return true;
+    }
+    if (box.querySelector('.gm-style')) {
+      return false;
+    }
+    if (
+      Array.from(box.querySelectorAll('canvas')).some((c) => c.width > 0 && c.height > 0)
+    ) {
+      return false;
+    }
+    return !Array.from(box.querySelectorAll('img')).some((i) => i.naturalWidth > 0);
+  }
+
+  /**
+   * (Re)synchronize the watchdog with the current `showMap` state. Idempotent
+   * — safe to call from any point that might change `showMap`'s inputs
+   * (bootstrap resolving, a stop-set change, or a retry): arms the watchdog
+   * only when the map is expected to be mounted and hasn't proven itself yet,
+   * and clears it (plus resets the "proven" flag) once the map is unmounted so
+   * the next mount is verified fresh rather than trusting a previous instance's
+   * success.
+   */
+  private evaluateTilesWatchdog(): void {
+    if (!this.showMap) {
+      this.tilesConfirmed = false;
+      this.clearTilesWatchdog();
+      return;
+    }
+    if (!this.tilesConfirmed && this.tilesWatchdogHandle === null) {
+      this.armTilesWatchdog();
+    }
+  }
+
+  private armTilesWatchdog(): void {
+    this.clearTilesWatchdog();
+    this.tilesWatchdogHandle = setTimeout(() => {
+      // The timer has now fired and is no longer pending — null the handle
+      // BEFORE flipping mapDrawFailed so a subsequent retryMap()'s
+      // evaluateTilesWatchdog() (which only arms when the handle is null)
+      // can actually re-arm a fresh watchdog instead of seeing a stale handle
+      // and silently declining to.
+      this.tilesWatchdogHandle = null;
+      // Scheduled from inside the Angular zone at every call site (the in-zone
+      // bootstrap promise, ngOnChanges, or a (click) handler), so zone.js's
+      // patched `setTimeout` already re-enters it — `zone.run` here is
+      // defensive, not load-bearing, so the state flip stays change-detected
+      // even if a future call site arms this from outside the zone.
+      this.zone.run(() => {
+        // A missing `tilesloaded` is NOT the same as "the user sees nothing", so
+        // the timer only opens the question — {@link mapAreaIsBlank} answers it.
+        if (!this.mapAreaIsBlank()) {
+          this.tilesConfirmed = true;
+          return;
+        }
+        this.drawFailures++;
+        this.mapDrawFailed = true;
+      });
+    }, MAP_TILES_TIMEOUT_MS);
+  }
+
+  private clearTilesWatchdog(): void {
+    if (this.tilesWatchdogHandle !== null) {
+      clearTimeout(this.tilesWatchdogHandle);
+      this.tilesWatchdogHandle = null;
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Private recompute methods

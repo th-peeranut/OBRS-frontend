@@ -2,6 +2,7 @@ import {
   AdminStopDetailDto,
   AdminStopSummaryDto,
   AdminTranslationDto,
+  AdminStopLabelPayload,
   AdminStopUpdatePayload,
   AdminTranslationReqDto,
   getAdminLookupCode,
@@ -59,6 +60,8 @@ export interface StopTranslationForm {
   /** The landmark note — `stop_translations.description`. */
   description: string;
   address: string;
+  /** OBRS-1777: where this operator's passengers board inside the place — "ชานชาลา 43". */
+  boardingPoint: string;
 }
 
 export interface StopDetailForm {
@@ -102,6 +105,7 @@ export function toStopRow(dto: AdminStopSummaryDto, locale: string): StopRow {
  */
 export function toStopDetailForm(dto: AdminStopDetailDto): StopDetailForm {
   const addresses = dto.addresses ?? {};
+  const boardingPoints = dto.boardingPoints ?? {};
 
   return {
     id: dto.id,
@@ -123,6 +127,10 @@ export function toStopDetailForm(dto: AdminStopDetailDto): StopDetailForm {
         // deserialized from the API, so it inherits Object.prototype and a key of
         // `constructor` resolves to a FUNCTION that `??` cannot catch (OBRS-601).
         address: hasOwnKey(addresses, locale) ? String(addresses[locale] ?? '') : '',
+        // OBRS-1777: hasOwnKey for the same Object.prototype reason as the address above.
+        boardingPoint: hasOwnKey(boardingPoints, locale)
+          ? String(boardingPoints[locale] ?? '')
+          : '',
       };
     }),
   };
@@ -175,8 +183,10 @@ export function toStopUpdatePayload(form: StopDetailForm): AdminStopUpdatePayloa
   const filled = form.translations.filter((t) => t.label.trim().length > 0);
 
   const addresses: Record<string, string> = {};
+  const boardingPoints: Record<string, string> = {};
   for (const t of filled) {
     addresses[t.locale] = t.address.trim();
+    boardingPoints[t.locale] = t.boardingPoint.trim();
   }
 
   const translations: AdminTranslationReqDto[] = filled.map((t) => ({
@@ -193,11 +203,69 @@ export function toStopUpdatePayload(form: StopDetailForm): AdminStopUpdatePayloa
     latitude: form.latitude,
     longitude: form.longitude,
     addresses,
+    boardingPoints,
     translations,
     // OBRS-1481: sent ALWAYS, null included — see AdminStopUpdatePayload. The opposite of
     // primaryPhotoUrl above: that key must be absent so a save cannot erase an upload, this
     // one must be present so a save CAN clear a pin the owner just unset.
     returnStopId: form.returnStopId,
+  };
+}
+
+/**
+ * OBRS-1680: the body an OPERATOR saves - their own sign on the stop, nothing else.
+ *
+ * <p>Shares {@link toStopUpdatePayload}'s blank-label rule and for the same server reason
+ * (`label` is `@NotBlank`), and deliberately shares nothing else: this payload has no slug, no
+ * province, no status, no type, no coordinates and no pin, because an operator may not move the
+ * place - only re-sign it (OBRS-1677, decided 2026-08-31).
+ */
+export function toStopLabelPayload(form: StopDetailForm): AdminStopLabelPayload {
+  const filled = form.translations.filter((t) => t.label.trim().length > 0);
+
+  const addresses: Record<string, string> = {};
+  const boardingPoints: Record<string, string> = {};
+  for (const t of filled) {
+    addresses[t.locale] = t.address.trim();
+    boardingPoints[t.locale] = t.boardingPoint.trim();
+  }
+
+  return {
+    addresses,
+    boardingPoints,
+    translations: filled.map((t) => ({
+      locale: t.locale,
+      label: t.label.trim(),
+      description: t.description.trim(),
+    })),
+  };
+}
+
+/**
+ * OBRS-1678: the empty form behind the "add a stop" button.
+ *
+ * <p>`id: 0` marks "not saved yet" - the same shape the edit form uses, so the modal renders one
+ * template rather than two. Nothing may POST with it: {@code StopsPageComponent#save} branches on
+ * {@code isCreating}, not on the id, so a 0 can never reach `PUT /private/stops/0`.
+ */
+export function emptyStopDetailForm(provinceCode: string, statusCode: string, stopTypeCode: string): StopDetailForm {
+  return {
+    id: 0,
+    slug: '',
+    provinceCode,
+    statusCode,
+    stopTypeCode,
+    latitude: null,
+    longitude: null,
+    primaryPhotoUrl: null,
+    returnStopId: null,
+    translations: STOP_LOCALES.map((locale) => ({
+      locale,
+      label: '',
+      description: '',
+      address: '',
+      boardingPoint: '',
+    })),
   };
 }
 

@@ -144,9 +144,28 @@
           <label class="admin-form-label">{{ 'ADMIN.EXPENSES.RECEIPT_NO' | translate }}</label>
           <input class="admin-field" formControlName="receiptNo" maxlength="100" />
         </div>
+        <!-- OBRS-1577 owner decision 2 (2026-08-24): these two fields stay side by side and are told
+        apart BY THEIR WORDS, because they are genuinely two facts — which pocket the money left, and
+        who received it. Before this card only the first existed and was doing duty for both, which
+        is why "how much did I pay this garage" had no answer. The hints are not decoration: two
+        similar-looking text controls next to each other is precisely how they get filled in
+        swapped. -->
         <div class="admin-form-field">
           <label class="admin-form-label">{{ 'ADMIN.EXPENSES.PAID_BY' | translate }}</label>
           <input class="admin-field" formControlName="paidBy" maxlength="255" />
+          <small class="admin-hint">{{ 'ADMIN.EXPENSES.PAID_BY_HINT' | translate }}</small>
+        </div>
+        <div class="admin-form-field" data-testid="expense-payee-field">
+          <label class="admin-form-label">{{ 'ADMIN.EXPENSES.PAYEE.LABEL' | translate }}</label>
+          <app-expense-payee-picker
+            formControlName="payeeId"
+            [payees]="payeeOptions"
+            [canCreate]="canCreatePayee"
+            [category]="selectedCategory"
+            [fallbackName]="editingPayeeName"
+            (payeeCreated)="payeeCreated.emit($event)"
+          ></app-expense-payee-picker>
+          <small class="admin-hint">{{ 'ADMIN.EXPENSES.PAYEE.HINT' | translate }}</small>
         </div>
         <div class="admin-form-field full">
           <label class="admin-form-label">{{ 'ADMIN.EXPENSES.NOTE' | translate }}</label>
@@ -157,6 +176,104 @@
             [placeholder]="'ADMIN.EXPENSES.NOTE_PLACEHOLDER' | translate"
           ></textarea>
         </div>
+        <!-- OBRS-1374 AC9: the bill's lines. Optional (AC4) - a bill with no breakdown saves
+        exactly as it did before this card, so the section opens with zero rows and no
+        required-marker. The running total and the mismatch warning sit directly under the rows,
+        where the number they are about is, and the warning appears BEFORE save rather than
+        arriving as a 400 afterwards. -->
+        <div class="admin-form-field full expense-items" formArrayName="items" data-testid="expense-items">
+          <div class="expense-items-head">
+            <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.TITLE' | translate }}</label>
+            <button
+              type="button"
+              class="admin-btn admin-btn-small"
+              data-testid="expense-item-add"
+              (click)="addItem()"
+              >
+              {{ 'ADMIN.EXPENSES.ITEMS.ADD' | translate }}
+            </button>
+          </div>
+          <small class="admin-hint">{{ 'ADMIN.EXPENSES.ITEMS.HINT' | translate }}</small>
+
+          @for (itemGroup of itemsArray.controls; track trackByIndex($index); let i = $index) {
+            <div class="expense-item-row" [formGroupName]="i" [attr.data-testid]="'expense-item-row-' + i">
+              <div class="expense-item-cell expense-item-part">
+                <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.PART' | translate }}</label>
+                <app-expense-part-picker
+                  formControlName="partId"
+                  [parts]="partOptions"
+                  [canCreate]="canCreatePart"
+                  [fallbackName]="itemGroup.get('partName')?.value ?? ''"
+                  (partCreated)="partCreated.emit($event)"
+                ></app-expense-part-picker>
+              </div>
+              <div class="expense-item-cell expense-item-description">
+                <label class="admin-form-label">
+                  {{ 'ADMIN.EXPENSES.ITEMS.DESCRIPTION' | translate }} <span class="admin-required">*</span>
+                </label>
+                <input class="admin-field" formControlName="description" [maxlength]="ITEM_DESCRIPTION_MAX_LENGTH" />
+                @if (itemGroup.get('description')?.invalid && itemGroup.get('description')?.touched) {
+                  <small class="admin-error">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</small>
+                }
+              </div>
+              <div class="expense-item-cell expense-item-number">
+                <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.QUANTITY' | translate }}</label>
+                <input type="number" class="admin-field" formControlName="quantity" min="0.01" step="0.01" />
+              </div>
+              <div class="expense-item-cell expense-item-number">
+                <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.UNIT' | translate }}</label>
+                <input
+                  class="admin-field"
+                  formControlName="unit"
+                  [maxlength]="ITEM_UNIT_MAX_LENGTH"
+                  [attr.placeholder]="'ADMIN.EXPENSES.ITEMS.UNIT_PLACEHOLDER' | translate"
+                  />
+              </div>
+              <div class="expense-item-cell expense-item-number">
+                <label class="admin-form-label">{{ 'ADMIN.EXPENSES.ITEMS.UNIT_PRICE' | translate }}</label>
+                <input type="number" class="admin-field" formControlName="unitPrice" min="0" step="0.01" />
+              </div>
+              <div class="expense-item-cell expense-item-number">
+                <label class="admin-form-label">
+                  {{ 'ADMIN.EXPENSES.ITEMS.AMOUNT' | translate }} <span class="admin-required">*</span>
+                </label>
+                <input type="number" class="admin-field" formControlName="amount" min="0.01" step="0.01" />
+                @if (itemGroup.get('amount')?.invalid && itemGroup.get('amount')?.touched) {
+                  <small class="admin-error">{{ 'ADMIN.VALIDATION.POSITIVE_NUMBER' | translate }}</small>
+                }
+              </div>
+              <div class="expense-item-cell expense-item-remove">
+                <button
+                  type="button"
+                  class="admin-btn admin-btn-small"
+                  [attr.data-testid]="'expense-item-remove-' + i"
+                  [attr.aria-label]="'ADMIN.EXPENSES.ITEMS.REMOVE' | translate"
+                  (click)="removeItem(i)"
+                  >
+                  {{ 'ADMIN.EXPENSES.ITEMS.REMOVE' | translate }}
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (itemsArray.length > 0) {
+            <p class="expense-items-total" data-testid="expense-items-total">
+              {{ 'ADMIN.EXPENSES.ITEMS.TOTAL' | translate }}
+              <!-- OBRS-1592 left this one on `| number` deliberately, while the two
+              expense TABLES moved to formatMoney(). This is a live sum sitting beside
+              the numeric inputs that feed it, and it exists to be compared digit for
+              digit against the amount the admin typed above (`itemsTotalMismatch`) —
+              a currency unit on it would be reading noise, and dropping the `.00` would
+              make the two halves of that comparison look different when they are not. -->
+              <strong>{{ itemsTotal | number: '1.2-2' }}</strong>
+            </p>
+            @if (itemsTotalMismatch) {
+              <small class="admin-error" data-testid="expense-items-mismatch">
+                {{ 'ADMIN.EXPENSES.ITEMS.MISMATCH' | translate }}
+              </small>
+            }
+          }
+        </div>
       </form>
       <div class="admin-modal-actions">
         <button type="button" class="admin-btn" (click)="requestClose()">
@@ -166,9 +283,10 @@
           type="button"
           class="admin-btn admin-btn-primary"
           [disabled]="isSubmitting"
+          [appPending]="isSubmitting"
           (click)="submitExpense()"
           >
-          {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+          {{ 'ADMIN.COMMON.SAVE' | translate }}
         </button>
       </div>
     </div>

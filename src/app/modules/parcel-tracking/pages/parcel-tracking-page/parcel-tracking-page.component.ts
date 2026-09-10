@@ -48,7 +48,7 @@ export class ParcelTrackingPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const deepLinkTrackingNumber = this.route.snapshot.paramMap.get('trackingNumber');
+    const deepLinkTrackingNumber = this.route.snapshot.paramMap.get('trackingNumber')?.trim();
     if (deepLinkTrackingNumber) {
       this.form.patchValue({ trackingNumber: deepLinkTrackingNumber });
       this.track();

@@ -17,6 +17,15 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
+  <!--
+    OBRS-1700: this is the PRE-BOOTSTRAP default only, and it is Thai for the
+    same reason `lang` above is - this file can ship exactly one value, and
+    DEFAULT_LANGUAGE is what it must agree with. From the first
+    LanguageService.switch() on (which AppComponent runs at startup), the tab
+    is retitled from COMMON.APP_TITLE in the selected locale. Keep this string
+    equal to the th value of that key: nothing enforces it, and a visitor on a
+    slow connection reads this one until the bundle lands.
+  -->
   <title>จองตั๋วออนไลน์ คิวรถ NJ ผู้ใหญ่ปู</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">

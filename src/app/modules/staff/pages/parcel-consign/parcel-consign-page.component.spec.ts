@@ -24,7 +24,26 @@ function createStaffApiStub(): any {
                 availableCount: 10,
                 reservedUnpaidCount: 0,
                 soldPaidCount: 0,
+                seatingMode: 'ASSIGNED',
                 availableSeatNumbers: ['A1', 'A2'],
+              },
+              // OBRS-615: an OPEN-seating trip that DOES carry a seat list — on OPEN the
+              // backend aggregates every seat on the vehicle however full it is, so a stub
+              // with an empty list here would prove nothing about the branch.
+              {
+                scheduleId: 43,
+                vehicleType: 'bus',
+                licensePlate: 'CD-5678',
+                driverName: 'Jane',
+                departureDateTime: '2026-07-14T09:30:00',
+                arrivalDateTime: '2026-07-14T19:30:00',
+                pricePerSeat: '300',
+                capacity: 21,
+                availableCount: 10,
+                reservedUnpaidCount: 0,
+                soldPaidCount: 0,
+                seatingMode: 'OPEN',
+                availableSeatNumbers: ['B1', 'B2'],
               },
             ],
           },
@@ -160,6 +179,7 @@ describe('ParcelConsignPageComponent', () => {
     expect(staffApi.getWalkInSchedules).toHaveBeenCalled();
     expect(component['scheduleOptions']).toEqual([
       { value: '42', label: 'Bangkok - Chiang Mai · 08:00 · bus' },
+      { value: '43', label: 'Bangkok - Chiang Mai · 09:30 · bus' },
     ]);
   });
 
@@ -220,7 +240,116 @@ describe('ParcelConsignPageComponent', () => {
     expect(component['dropoffOptions']).toEqual([]);
   });
 
+  // OBRS-1598: `loadSchedules()` rewrites `scheduleOptions` wholesale, so a
+  // round chosen for the OLD day survives in the child form's `scheduleId`
+  // unless this page clears it — the dropdown falls back to its placeholder
+  // (no option matches the stale id) while the form stays valid, so the next
+  // submit consigns the parcel onto the previous day's trip.
+  describe("onDateChange() - the previous day's round must not survive a date change (OBRS-1598)", () => {
+    it("clears the form's schedule selection BEFORE fetching the new day's schedules", () => {
+      const clearScheduleSelection = jasmine.createSpy('clearScheduleSelection');
+      component['formRef'] = { clearScheduleSelection, clearStopSelections: () => {} } as any;
+      component.ngOnInit();
+      component['onScheduleChange']('42');
+      staffApi.getWalkInSchedules.calls.reset();
+
+      component['onDateChange'](new Date(2026, 6, 15));
+
+      expect(clearScheduleSelection).toHaveBeenCalled();
+      expect(clearScheduleSelection).toHaveBeenCalledBefore(staffApi.getWalkInSchedules);
+    });
+
+    // PrimeNG fires (onSelect) on every day-cell click, the already-selected day
+    // included, so the clear must be conditional or dismissing the panel by
+    // re-clicking today would wipe a round, its stops and its quote for nothing.
+    it('does NOT clear when the same day is re-selected', () => {
+      const clearScheduleSelection = jasmine.createSpy('clearScheduleSelection');
+      component['formRef'] = { clearScheduleSelection, clearStopSelections: () => {} } as any;
+      component.ngOnInit(); // loads today's schedules
+      const sameDay = new Date(component['selectedDate']);
+
+      component['onDateChange'](sameDay);
+
+      expect(clearScheduleSelection).not.toHaveBeenCalled();
+      // still refetched — this guards the clear, not the load
+      expect(staffApi.getWalkInSchedules).toHaveBeenCalledTimes(2);
+    });
+
+    // The clear above emits, and THIS is what the emission buys: the cascade
+    // that drops everything the old round fed. Green before the fix too - it
+    // guards the handler the fix depends on, so a later `{ emitEvent: false }`
+    // or a trimmed handler cannot quietly re-strand this state.
+    it("drops every piece of state that hung off the old round when the cleared control emits ''", () => {
+      component.ngOnInit();
+      component['onScheduleChange']('42');
+      component['onPickupChange']('1');
+      component['quote'] = { amount: 100 } as any;
+      component['quoteErrorKey'] = 'STAFF.PARCEL_CONSIGN.ERROR.QUOTE_FAILED';
+      const clearStopSelections = jasmine.createSpy('clearStopSelections');
+      component['formRef'] = { clearStopSelections } as any;
+      cargoStore.setScheduleId.calls.reset();
+
+      component['onScheduleChange']('');
+
+      expect(component['pickupOptions']).toEqual([]);
+      expect(component['dropoffOptions']).toEqual([]);
+      expect(component['carryOnAvailableSeatNumbers']).toEqual([]);
+      expect(component['quote']).toBeNull();
+      expect(component['quoteErrorKey']).toBeNull();
+      expect(clearStopSelections).toHaveBeenCalled();
+      expect(cargoStore.setScheduleId).toHaveBeenCalledWith(null);
+    });
+  });
+
+  // OBRS-1606 (owner decision, option A): a submit error names the round it was
+  // raised for, so it must not outlive that round. Both a round change and a day
+  // change funnel through `onScheduleChange()`, so the clear lives there.
+  describe('OBRS-1606 - a submit error must not outlive the round it was raised for', () => {
+    it('clears serverErrorKey when the round changes', () => {
+      component.ngOnInit();
+      component['serverErrorKey'] = 'STAFF.PARCEL_CONSIGN.ERROR.CARGO_CAPACITY_EXCEEDED';
+
+      component['onScheduleChange']('43');
+
+      expect(component['serverErrorKey']).toBeNull();
+    });
+
+    // The day path reaches the same method only through the emission that
+    // `clearScheduleSelection()` triggers - this is what makes one clear cover both.
+    it('clears serverErrorKey when the day changes, via the schedule-clear emission', () => {
+      component['formRef'] = {
+        clearScheduleSelection: () => component['onScheduleChange'](''),
+        clearStopSelections: () => {},
+      } as any;
+      component.ngOnInit();
+      component['serverErrorKey'] = 'STAFF.PARCEL_CONSIGN.ERROR.CARGO_CAPACITY_EXCEEDED';
+
+      component['onDateChange'](new Date(2026, 6, 15));
+
+      expect(component['serverErrorKey']).toBeNull();
+    });
+
+    // OBRS-1598's guard: re-clicking the already-selected day is not a change, so
+    // it must not wipe the message the salesperson is still reading.
+    it('keeps serverErrorKey when the same day is re-selected', () => {
+      // The stub CLEARS, exactly as the real emission does - otherwise this test
+      // could not go red: a no-op stub leaves serverErrorKey untouched whether the
+      // guard holds or not, so it would pass even on a build that dropped the guard.
+      component['formRef'] = {
+        clearScheduleSelection: () => component['onScheduleChange'](''),
+        clearStopSelections: () => {},
+      } as any;
+      component.ngOnInit();
+      component['serverErrorKey'] = 'STAFF.PARCEL_CONSIGN.ERROR.CARGO_CAPACITY_EXCEEDED';
+
+      component['onDateChange'](new Date(component['selectedDate']));
+
+      expect(component['serverErrorKey']).toBe('STAFF.PARCEL_CONSIGN.ERROR.CARGO_CAPACITY_EXCEEDED');
+    });
+  });
+
   it('fetches a quote when quoteParamsChange emits complete params', () => {
+    component.ngOnInit(); // OBRS-616 — the quote pipeline is wired there
     component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
 
     expect(staffApi.getParcelQuote).toHaveBeenCalledWith({
@@ -241,12 +370,66 @@ describe('ParcelConsignPageComponent', () => {
   });
 
   it('maps a PARCEL_STOP_PAIR_NOT_PRICEABLE quote error to its i18n key', () => {
+    component.ngOnInit(); // OBRS-616 — the quote pipeline is wired there
     staffApi.getParcelQuote.and.returnValue(
       throwError(() => ({ error: { errorCode: 'PARCEL_STOP_PAIR_NOT_PRICEABLE' } }))
     );
     component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
 
     expect(component['quoteErrorKey']).toBe('STAFF.PARCEL_CONSIGN.ERROR.STOP_PAIR_NOT_PRICEABLE');
+  });
+
+  // OBRS-616 — two quote requests overlap whenever the salesperson changes a
+  // field faster than the API answers (debounce shortens that window, it does
+  // not close it). Which price the page ends up showing must be decided by
+  // which request was issued LAST, never by which response the network
+  // happened to deliver last. Walked red against the pre-fix plain
+  // `.subscribe()`: the stale 100 overwrote the fresh 180.
+  it('IGNORES an earlier quote response that arrives after a newer request was issued', () => {
+    component.ngOnInit();
+    const first$ = new Subject<any>();
+    const second$ = new Subject<any>();
+    staffApi.getParcelQuote.and.returnValues(first$.asObservable(), second$.asObservable());
+
+    component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
+    component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 9 });
+
+    second$.next({
+      code: 200,
+      message: 'OK',
+      data: { amount: 180, farePerUnit: 20, unitCount: 9, weightTierMultiplier: 1 },
+    });
+    first$.next({
+      code: 200,
+      message: 'OK',
+      data: { amount: 100, farePerUnit: 20, unitCount: 5, weightTierMultiplier: 1 },
+    });
+
+    expect(component['quote']).toEqual({ amount: 180, farePerUnit: 20, unitCount: 9, weightTierMultiplier: 1 });
+    expect(component['isLoadingQuote']).toBeFalse();
+  });
+
+  // OBRS-616 — same race, error branch: the stale response's own writer is
+  // `quote = null` + `quoteErrorKey`, so an earlier request FAILING late used
+  // to blank a price that the newer request had already answered correctly.
+  it('IGNORES an earlier quote ERROR that arrives after a newer request was issued', () => {
+    component.ngOnInit();
+    const first$ = new Subject<any>();
+    const second$ = new Subject<any>();
+    staffApi.getParcelQuote.and.returnValues(first$.asObservable(), second$.asObservable());
+
+    component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
+    component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 9 });
+
+    second$.next({
+      code: 200,
+      message: 'OK',
+      data: { amount: 180, farePerUnit: 20, unitCount: 9, weightTierMultiplier: 1 },
+    });
+    first$.error({ error: { errorCode: 'PARCEL_STOP_PAIR_NOT_PRICEABLE' } });
+
+    expect(component['quote']).toEqual({ amount: 180, farePerUnit: 20, unitCount: 9, weightTierMultiplier: 1 });
+    expect(component['quoteErrorKey']).toBeNull();
   });
 
   it('submits and sets the result on success (201)', () => {
@@ -423,6 +606,16 @@ describe('ParcelConsignPageComponent', () => {
     component['onScheduleChange']('42');
 
     expect(component['carryOnAvailableSeatNumbers']).toEqual(['A1', 'A2']);
+  });
+
+  it('onScheduleChange() offers NO seat numbers on an OPEN-seating trip, seat list or not (OBRS-615)', () => {
+    component.ngOnInit();
+    component['onScheduleChange']('42');
+    expect(component['carryOnAvailableSeatNumbers']).toEqual(['A1', 'A2']);
+
+    component['onScheduleChange']('43');
+
+    expect(component['carryOnAvailableSeatNumbers']).toEqual([]);
   });
 
   it('getParcelQuote() is called with parcelType=carry_on_seat once in carry-on mode', () => {

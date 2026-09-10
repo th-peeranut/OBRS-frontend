@@ -1,4 +1,8 @@
 @import "../../../styles/variables.scss";
+// OBRS-969: the dark block at the foot of this file needs the $dk-* palette. It declares
+// variables only and emits no CSS, which is why it is safe in a component stylesheet
+// (styles/_dark-tokens.scss says so in its own header).
+@import "../../../styles/dark-tokens";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -135,5 +139,46 @@
       font-size: $font-size-sm;
       line-height: $line-height-relaxed;
     }
+  }
+}
+
+// OBRS-969. The page was `$primary-white` in both themes: navbar and footer went dark
+// around it and the notice stayed a white sheet. Written here rather than in
+// dark-theme.scss because this component is encapsulated -- `.policy-card p` compiles to
+// (0,4,0) and a global `body.is-dark .policy-card p` scores (0,3,1) and loses silently
+// (OBRS-767). `:host-context` carries the host attribute and cannot lose that race.
+//
+// Every foreground below is one this card's own background change would otherwise break:
+// each is hard-coded to a light-mode value and would be dark ink on a near-black page.
+// Ratios are MEASURED by e2e/tests/obrs-969-capture.spec.ts, not computed here.
+:host-context(body.is-dark) {
+  .policy-container {
+    background-color: $dk-bg;
+  }
+
+  .policy-card {
+    color: $dk-text;
+
+    ::ng-deep .policy-body {
+      h2 {
+        color: $dk-text;
+      }
+
+      strong {
+        color: $dk-text;
+      }
+    }
+  }
+
+  // $text-red is #c33334, a dark red that only reads against a light wash.
+  .policy-inline-error,
+  .policy-inline-retry {
+    color: $dk-danger;
+  }
+
+  // $primary-blue is #0772a2 and was chosen to be dark enough for white behind it --
+  // variables.scss records that it USED to be #4bc2f7, which is $dk-accent today.
+  .policy-cross-link a {
+    color: $dk-accent;
   }
 }

@@ -42,7 +42,7 @@
             <tr [class.zebra]="i % 2 === 1">
               <td>
                 <div class="admin-cell-stack">
-                  <span class="admin-emphasis">{{ user.fullName }}</span>
+                  <span class="admin-emphasis">{{ user.title | titleLabel: user.fullName }}</span>
                   <span class="admin-muted">
                     {{ 'ADMIN.USERS.LAST_LOGIN' | translate }}:
                     {{ user.hasLoggedIn ? user.lastLogin : ('ADMIN.USERS.NEVER_LOGGED_IN' | translate) }}
@@ -109,10 +109,10 @@
                   <button
                     type="button"
                     class="admin-icon-btn danger"
-                    [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                    [attr.aria-label]="'ADMIN.USERS.CLOSE_ACTION' | translate"
                     (click)="delete.emit(user)"
                     >
-                    <span class="material-symbols-outlined" [attr.translate]="'no'">delete</span>
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">person_off</span>
                   </button>
                 </div>
               </td>

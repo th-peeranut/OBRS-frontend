@@ -388,6 +388,107 @@ describe('mapBookingTicketsToCard — isOpenSeating (OBRS-325)', () => {
   });
 });
 
+// OBRS-1510 AC-2/AC-3: `arrivalDate` moved onto `TicketLeg` itself, using the
+// same `laterBangkokArrivalDay` rule the e-ticket page has applied per leg
+// since OBRS-1502 — now the my-bookings modal gets the same cell.
+describe('mapBookingTicketsToCard — arrivalDate (OBRS-1510 AC-2)', () => {
+  it('is empty for a same-day journey', () => {
+    const card = mapBookingTicketsToCard(buildData(), 'en');
+
+    expect(card.legs[0].arrivalDate).toBe('');
+  });
+
+  it('names the day the journey actually lands, when it crosses into a later Bangkok day', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          departureDateTime: '2026-12-20T23:30:00+07:00',
+          arrivalDateTime: '2026-12-21T01:05:00+07:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].arrivalDate).toBe('21 Dec 2026');
+  });
+
+  it('round trip: derives each leg\'s arrivalDate independently', () => {
+    const data = buildRoundTripData();
+    data.journeys![0].departureDateTime = '2026-12-20T23:30:00+07:00';
+    data.journeys![0].arrivalDateTime = '2026-12-21T01:05:00+07:00';
+    // journeys[1] (the return leg) stays same-day.
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].arrivalDate).toBe('21 Dec 2026');
+    expect(card.legs[1].arrivalDate).toBe('');
+  });
+
+  it('the empty-journey placeholder leg has no arrivalDate', () => {
+    const card = mapBookingTicketsToCard(buildData({ journeys: [] }), 'en');
+
+    expect(card.legs[0].arrivalDate).toBe('');
+  });
+});
+
+// OBRS-1510 AC-8: `seatOpen` moved onto each `TicketPassenger` row, per ticket
+// — the my-bookings modal gets the same per-passenger SEAT cell the e-ticket
+// page's own passenger cards already had.
+describe('mapBookingTicketsToCard — passenger seatOpen (OBRS-1510 AC-8)', () => {
+  it('flags seatOpen true for a ticket with a null seatNumber', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: undefined, passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].passengers[0].seatOpen).toBeTrue();
+  });
+
+  it('flags seatOpen false for a ticket with a real seatNumber', () => {
+    const card = mapBookingTicketsToCard(buildData(), 'en');
+
+    expect(card.legs[0].passengers[0].seatOpen).toBeFalse();
+  });
+
+  it('is derived per PASSENGER, not per leg — a mixed leg flags each row independently', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: undefined, passengerName: 'Mr A' },
+            { id: 2, ticketNumber: 'T-2', seatNumber: '2', passengerName: 'Mrs B' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].passengers[0].seatOpen).toBeTrue();
+    expect(card.legs[0].passengers[1].seatOpen).toBeFalse();
+  });
+});
+
 describe('mapBookingTicketsToCard — province-level route heading (OBRS-264)', () => {
   it('uses the stop province names for the route line while keeping stop labels in origin/destination', () => {
     const data = buildData({
@@ -843,6 +944,7 @@ describe('mapBookingTicketsToTrackTargets', () => {
         seat: '-',
         ticketId: null,
         ticketNumber: '-',
+        seatOpen: false,
       },
       paymentDate: '-',
       totalAmount: '500.00',

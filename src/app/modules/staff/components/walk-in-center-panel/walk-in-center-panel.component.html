@@ -203,6 +203,57 @@
                   </div>
                 }
               </div>
+              <!-- OBRS-1045: fare category — a SEPARATE dimension from the gender tiles above
+              (ADR-0046), which is why it is its own row and not a fifth tile: a child still has a
+              gender and still colours the seat map. ASSIGNED only; an OPEN trip states its child
+              headcount in the stepper block below instead, having no seat to key a category off. -->
+              @if (!isOpenSeating) {
+                <!-- Styled with the panel's own `--active` idiom rather than Bootstrap's
+                `.btn.btn-primary`, deliberately: three Trip Details specs reach their Save button
+                with `querySelector('.btn.btn-primary')`, and a primary-styled control rendered
+                earlier in this template silently becomes the one they click. -->
+                <div class="fare-category-row d-flex flex-row gap-2 justify-content-center mb-3">
+                  <button type="button"
+                    class="fare-tile rounded px-3 py-1"
+                    [class.fare-tile--active]="fareCategory === 'adult'"
+                    [attr.aria-pressed]="fareCategory === 'adult'"
+                    (click)="onSelectFareCategory('adult')">
+                    {{ 'STAFF.SELL.FARE_CATEGORY_ADULT' | translate }}
+                  </button>
+                  <button type="button"
+                    class="fare-tile rounded px-3 py-1"
+                    [class.fare-tile--active]="fareCategory === 'child'"
+                    [attr.aria-pressed]="fareCategory === 'child'"
+                    (click)="onSelectFareCategory('child')">
+                    {{ 'STAFF.SELL.FARE_CATEGORY_CHILD' | translate }}
+                  </button>
+                </div>
+                @if (fareCategory === 'child') {
+                  <div class="text-muted small text-center mb-3">
+                    {{ 'PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT' | translate }}
+                  </div>
+                }
+              }
+              <!-- OBRS-1666: explicit consent (PDPA s.26) for monk/nun only. Never pre-ticked, and
+              cleared whenever the type changes. Refusing costs the passenger nothing - the type is
+              simply not recorded on the ticket. -->
+              @if (isSensitivePassengerType) {
+                <div class="form-check mb-3">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="walkin-passenger-type-consent"
+                    [checked]="passengerTypeConsent"
+                    (change)="onTogglePassengerTypeConsent($any($event.target).checked)"
+                    />
+                    <label class="form-check-label" for="walkin-passenger-type-consent">
+                      {{ "STAFF.SELL.SENSITIVE_TYPE_CONSENT_LABEL" | translate }}
+                    </label>
+                    <small class="text-muted d-block mt-1">
+                      {{ "STAFF.SELL.SENSITIVE_TYPE_CONSENT_HINT" | translate }}
+                    </small>
+                  </div>
+              }
               <!-- OBRS-324: OPEN schedules sell by passenger count only — no seat map/picker. -->
               @if (isOpenSeating) {
                 <div class="open-seating-count d-flex flex-column align-items-center gap-2 py-4">
@@ -225,6 +276,33 @@
                     </button>
                   </div>
                   <div class="text-muted small">{{ 'STAFF.SELL.PASSENGER_COUNT_MAX' | translate: { max: maxPassengerCount } }}</div>
+                  <!-- OBRS-1045: an OPEN trip has no seat to hang a per-passenger fare category on,
+                  so the clerk states the total above and then how many of it are children. Keeping
+                  the total as the one capacity number leaves every jump-seat/availability
+                  computation on this page reading `passengerCount` exactly as before. -->
+                  <div class="d-flex align-items-center gap-3 pt-2">
+                    <span class="text-muted small">{{ 'STAFF.SELL.FARE_CATEGORY_CHILD' | translate }}</span>
+                    <button type="button"
+                      class="btn btn-sm btn-outline-secondary rounded-circle"
+                      [disabled]="childCount <= 0"
+                      [attr.aria-label]="'STAFF.SELL.CHILD_COUNT_DECREASE' | translate"
+                      (click)="decrementChildCount()">
+                      <i class="bi bi-dash" aria-hidden="true"></i>
+                    </button>
+                    <span class="fs-5 fw-semibold text-center" style="min-width:2rem" aria-live="polite">{{ childCount }}</span>
+                    <button type="button"
+                      class="btn btn-sm btn-outline-secondary rounded-circle"
+                      [disabled]="childCount >= passengerCount"
+                      [attr.aria-label]="'STAFF.SELL.CHILD_COUNT_INCREASE' | translate"
+                      (click)="incrementChildCount()">
+                      <i class="bi bi-plus" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                  @if (childCount > 0) {
+                    <div class="text-muted small text-center">
+                      {{ 'PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT' | translate }}
+                    </div>
+                  }
                   <!-- OBRS-358: this sale reaches into the jump seat (walk-in-only,
                   no backrest, sold last) — a staff-facing hint only; the
                   acknowledgment prompt itself fires from sell-page's onSell(). -->

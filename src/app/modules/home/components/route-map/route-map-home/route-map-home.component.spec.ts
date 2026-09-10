@@ -10,6 +10,7 @@ import {
 import { RouteMapService } from '../../../../../services/route-map/route-map.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { APP_LANGUAGE_KEY } from '../../../../../shared/services/language.service';
 
 const mockPickupDropoffResponse: RoutePickupDropoffResponse = {
   status: 'success',
@@ -822,5 +823,253 @@ describe('RouteMapHomeComponent — revealMap() / onTabsValueChange() (OBRS-1211
 
     expect(component.activeTabIndex).toBe(1);
     expect(component.mapRevealed).toBeFalse();
+  });
+});
+
+// ── Language switch (OBRS-929) ───────────────────────────────────────────
+// Everything on this panel except the direction tabs is localized by the BACKEND from the
+// request's Accept-Language header, so a language switch is a re-fetch or it is nothing.
+describe('RouteMapHomeComponent — language switch (OBRS-929)', () => {
+  function localizedResponse(lang: 'th' | 'en'): RoutePickupDropoffResponse {
+    const stop = (slug: string, order: number, th: string, en: string): RouteStop =>
+      ({
+        order,
+        slug,
+        name: lang === 'en' ? en : th,
+        address: lang === 'en' ? 'Nong Chak, Ban Bueng' : 'ต.หนองชาก อ.บ้านบึง',
+        approxTime: '08:00',
+        latitude: null,
+        longitude: null,
+        primaryPhotoUrl: null,
+        googleMapsUrl: null,
+      }) as RouteStop;
+
+    return {
+      status: 'success',
+      message: 'ok',
+      data: {
+        route: {
+          ...mockPickupDropoffResponse.data.route,
+          originProvinceLabel: lang === 'en' ? 'Chonburi' : 'ชลบุรี',
+          destinationProvinceLabel: lang === 'en' ? 'Bangkok' : 'กรุงเทพมหานคร',
+        },
+        pickup: [stop('nong_chak', 1, 'หนองชาก', 'Nong Chak')],
+        dropoff: [stop('bts_mo_chit', 9, 'บีทีเอส หมอชิต', 'BTS Mo Chit')],
+      },
+    };
+  }
+
+  function componentOnLang(lang: { current: 'th' | 'en' }): {
+    component: RouteMapHomeComponent;
+    service: AnyStub;
+    translate: AnyStub;
+  } {
+    const service = createRouteMapServiceStub({
+      getPickupDropoff: () => of(localizedResponse(lang.current)),
+    });
+    const translate = createTranslateServiceStub();
+    const component = makeComponent(
+      service,
+      translate,
+      createBreakpointObserverStub()
+    );
+    component.ngOnInit();
+    return { component, service, translate };
+  }
+
+  it('re-fetches pickup-dropoff so province labels and stop names follow the language', () => {
+    const lang: { current: 'th' | 'en' } = { current: 'th' };
+    const { component, service, translate } = componentOnLang(lang);
+    expect(component.routeMeta?.originProvinceLabel).toBe('ชลบุรี');
+    expect(component.pickupStops[0].name).toBe('หนองชาก');
+    service.getPickupDropoff.calls.reset();
+
+    lang.current = 'en';
+    translate.currentLang = 'en';
+    translate.onLangChange.next({ lang: 'en', translations: {} });
+
+    expect(service.getPickupDropoff).toHaveBeenCalledWith('chonburi_bangkok');
+    expect(component.routeMeta?.originProvinceLabel).toBe('Chonburi');
+    expect(component.routeMeta?.destinationProvinceLabel).toBe('Bangkok');
+    expect(component.pickupStops[0].name).toBe('Nong Chak');
+    expect(component.dropoffStops[0].name).toBe('BTS Mo Chit');
+  });
+
+  // The summary card under each list renders the SELECTED stop object, not the list — it kept
+  // pointing at the old payload's object and stayed Thai while the list beside it turned English.
+  it('re-points the selected stops at the new payload, keeping the same slugs', () => {
+    const lang: { current: 'th' | 'en' } = { current: 'th' };
+    const { component, service, translate } = componentOnLang(lang);
+    component.onPickupStopSelected(component.pickupStops[0]);
+    component.onDropoffStopSelected(component.dropoffStops[0]);
+
+    lang.current = 'en';
+    translate.onLangChange.next({ lang: 'en', translations: {} });
+
+    expect(component.selectedPickupSlug).toBe('nong_chak');
+    expect(component.selectedDropoffSlug).toBe('bts_mo_chit');
+    expect(component.selectedPickupStop?.name).toBe('Nong Chak');
+    expect(component.selectedDropoffStop?.name).toBe('BTS Mo Chit');
+    expect(service.getPickupDropoff).toHaveBeenCalled();
+  });
+
+  // loadPickupDropoff() would have done the re-fetch in one line, but it flips loadState to
+  // 'loading', which unmounts the map panel and re-loads the paid Google Maps SDK (OBRS-1211).
+  it('stays loaded WHILE the re-fetch is in flight, so the map panel is not remounted', () => {
+    const lang: { current: 'th' | 'en' } = { current: 'th' };
+    const { component, service, translate } = componentOnLang(lang);
+    component.revealMap();
+
+    const pending = new Subject<RoutePickupDropoffResponse>();
+    service.getPickupDropoff.and.returnValue(pending);
+    translate.onLangChange.next({ lang: 'en', translations: {} });
+
+    // The assertion that matters: 'loading' here would unmount <app-route-map-panel>.
+    expect(component.loadState).toBe('loaded');
+    expect(component.pickupStops[0].name).toBe('หนองชาก');
+
+    pending.next(localizedResponse('en'));
+    pending.complete();
+
+    expect(component.loadState).toBe('loaded');
+    expect(component.pickupStops[0].name).toBe('Nong Chak');
+    expect(component.mapRevealed).toBeTrue();
+  });
+
+  it('a failed re-fetch leaves the page as it was instead of showing the error state', () => {
+    const service = createRouteMapServiceStub();
+    const translate = createTranslateServiceStub();
+    const component = makeComponent(
+      service,
+      translate,
+      createBreakpointObserverStub()
+    );
+    component.ngOnInit();
+    expect(component.loadState).toBe('loaded');
+
+    service.getPickupDropoff.and.callFake(() =>
+      throwError(() => new Error('network down'))
+    );
+    translate.onLangChange.next({ lang: 'en', translations: {} });
+
+    expect(component.loadState).toBe('loaded');
+    expect(component.pickupStops.length).toBe(1);
+  });
+
+  it('does not re-fetch when the panel never loaded', () => {
+    const service = createRouteMapServiceStub({
+      getActiveRoutes: () => throwError(() => new Error('network down')),
+    });
+    const translate = createTranslateServiceStub();
+    const component = makeComponent(
+      service,
+      translate,
+      createBreakpointObserverStub()
+    );
+    component.ngOnInit();
+    expect(component.loadState).toBe('error');
+    service.getPickupDropoff.calls.reset();
+
+    translate.onLangChange.next({ lang: 'en', translations: {} });
+
+    expect(service.getPickupDropoff).not.toHaveBeenCalled();
+  });
+});
+
+// ── Language switch DURING the first load (OBRS-1565) ────────────────────
+// OBRS-929 above covers "loaded, then switch". This is the other half of the same
+// bug: the switch happens BEFORE the first payload lands, so reloadLocalizedStops()
+// hits its `loadState !== 'loaded'` guard and returns — and nothing ever picks the
+// dropped switch up again. The request already on the wire carries the OLD
+// Accept-Language, so the stop list arrives in the language the user just left.
+describe('RouteMapHomeComponent — language switch during the first load (OBRS-1565)', () => {
+  function payload(lang: 'th' | 'en'): RoutePickupDropoffResponse {
+    const en = lang === 'en';
+    return {
+      ...mockPickupDropoffResponse,
+      data: {
+        ...mockPickupDropoffResponse.data,
+        route: {
+          ...mockPickupDropoffResponse.data.route,
+          originProvinceLabel: en ? 'Chonburi' : 'ชลบุรี',
+        },
+        pickup: [
+          {
+            ...mockPickupDropoffResponse.data.pickup[0],
+            slug: 'nong_chak',
+            name: en ? 'Nong Chak' : 'หนองชาก',
+          },
+        ],
+        dropoff: [
+          {
+            ...mockPickupDropoffResponse.data.dropoff[0],
+            slug: 'bts_mo_chit',
+            name: en ? 'BTS Mo Chit' : 'บีทีเอส หมอชิต',
+          },
+        ],
+      },
+    };
+  }
+
+  afterEach(() => {
+    localStorage.removeItem(APP_LANGUAGE_KEY);
+  });
+
+  it('applies the dropped switch once the in-flight payload lands, without returning to loading', () => {
+    localStorage.setItem(APP_LANGUAGE_KEY, 'th');
+    const firstLoad = new Subject<RoutePickupDropoffResponse>();
+    const reload = new Subject<RoutePickupDropoffResponse>();
+    let calls = 0;
+    const service = createRouteMapServiceStub({
+      getPickupDropoff: () => (++calls === 1 ? firstLoad : reload),
+    });
+    const translate = createTranslateServiceStub();
+    const component = makeComponent(
+      service,
+      translate,
+      createBreakpointObserverStub()
+    );
+    component.ngOnInit();
+    expect(component.loadState).toBe('loading');
+
+    // LanguageService.switch() persists the key BEFORE translate.use() emits, so
+    // inside onLangChange the stored language is already the new one.
+    localStorage.setItem(APP_LANGUAGE_KEY, 'en');
+    translate.currentLang = 'en';
+    translate.onLangChange.next({ lang: 'en', translations: {} });
+
+    // The request that was already on the wire still carried Accept-Language: th.
+    firstLoad.next(payload('th'));
+    firstLoad.complete();
+
+    expect(calls).toBe(2);
+    // AC-3: 'loading' here would unmount <app-route-map-panel> and re-load the
+    // paid Google Maps SDK (OBRS-1211).
+    expect(component.loadState).toBe('loaded');
+    expect(component.pickupStops[0].name).toBe('หนองชาก');
+
+    reload.next(payload('en'));
+    reload.complete();
+
+    expect(component.loadState).toBe('loaded');
+    expect(component.pickupStops[0].name).toBe('Nong Chak');
+    expect(component.dropoffStops[0].name).toBe('BTS Mo Chit');
+    expect(component.routeMeta?.originProvinceLabel).toBe('Chonburi');
+  });
+
+  it('does not re-fetch when the language was never touched during the load', () => {
+    localStorage.setItem(APP_LANGUAGE_KEY, 'th');
+    const service = createRouteMapServiceStub({
+      getPickupDropoff: () => of(payload('th')),
+    });
+    const component = makeComponent(
+      service,
+      createTranslateServiceStub(),
+      createBreakpointObserverStub()
+    );
+    component.ngOnInit();
+
+    expect(component.loadState).toBe('loaded');
+    expect(service.getPickupDropoff).toHaveBeenCalledTimes(1);
   });
 });

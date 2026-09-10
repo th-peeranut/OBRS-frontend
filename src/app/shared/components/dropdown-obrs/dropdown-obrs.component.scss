@@ -22,7 +22,10 @@
   background-color: transparent;
 
   &-border {
-    border: 1px solid $primary-lightgrey !important;
+    // OBRS-772: a dropdown trigger is classed with the FIELDS -- it shows a
+    // chosen value and its boundary is what says where the field ends. The dark
+    // half already took $dk-text-muted for this exact reason (see below).
+    border: 1px solid $control-border !important;
     border-radius: $radius-xl;
     min-width: 250px;
     height: 48px;

@@ -1,0 +1,151 @@
+@import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens.scss";
+
+// OBRS-775: a component that declares no `:host` display renders inline.
+// The width cap is what keeps AC#6 true — the strip can never exceed the
+// viewport, at any width, so it cannot deepen OBRS-634.
+:host {
+  display: block;
+  width: min(100%, 1200px);
+  margin: 0 auto;
+  padding-inline: $space-sm;
+  box-sizing: border-box;
+}
+
+// The overflow lives on the INNER flex row, never on the host or the page:
+// wide content scrolls, the shell never scrolls sideways. At a 360 px viewport
+// about 4.5 of the 7 chips are visible, so the partially-cut chip at the right
+// edge IS the scroll affordance — no arrows, no gradient mask, no JS.
+.day-strip {
+  display: flex;
+  gap: $space-2xs;
+  padding-block: $space-2xs;
+  overflow-x: auto;
+  overscroll-behavior-x: contain; // a horizontal fling is not a page/back gesture
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.day-strip__chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-3xs;
+
+  // Clears the 44x44 tap-target floor; 64 fits "10 ส.ค." at 14px Sarabun.
+  min-width: 64px;
+  min-height: 56px;
+  padding: $space-2xs $space-xs;
+
+  // $radius-md, not $radius-pill: the pill is the single-line form-control
+  // shape, and a two-row day chip is the same case a textarea is.
+  border-radius: $radius-md;
+  // $text-lightblack, not $primary-grey: the chip's fill IS the page background
+  // ($primary-white on white, 1.00:1), so the border is the only thing marking
+  // the control's bounds and it carries the whole 3:1 non-text floor alone.
+  // $primary-grey measured 1.88:1 there; this token is recorded at 4.60:1
+  // (variables.scss:63).
+  border: 1px solid $text-lightblack;
+  background-color: $primary-white;
+  color: $text-black;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background-color $duration-fast $easing-standard,
+    color $duration-fast $easing-standard;
+
+  &:hover:not(.is-selected):not(.is-unavailable) {
+    color: $primary-blue;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: $shadow-focus;
+  }
+
+  // Selection state, NOT a button role: the identical precedent is
+  // `app-trip-type-toggle .is-selected`, already $primary-blue-filled on this
+  // same page. The empty state's `.sold-out-today__action` remains the only
+  // primary. Fill + weight, never hue alone.
+  &.is-selected {
+    background-color: $primary-blue;
+    border-color: $primary-blue;
+    color: $text-white; // 5.33:1, recorded in variables.scss:25
+    font-weight: $font-weight-bold;
+  }
+
+  // $text-black and not $text-softblack: variables.scss:75-77 records that
+  // $text-softblack's only sub-AA sites sat on a grey of this family and were
+  // repointed to $text-black.
+  &.is-unavailable {
+    background-color: $primary-lightgrey;
+    border-color: $primary-lightgrey;
+    color: $text-black;
+    cursor: default;
+
+    .day-strip__date {
+      // The non-hue carrier: the state must not be readable by colour alone.
+      text-decoration: line-through;
+    }
+  }
+}
+
+.day-strip__weekday {
+  font-size: $font-size-xs;
+  line-height: 1.2;
+}
+
+.day-strip__date {
+  font-size: $font-size-sm;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Dark mode — component-owned :host-context, same mechanism as the sibling
+// trip-type-toggle.component.scss (OBRS-767: a global dark-theme.scss rule
+// cannot outrank this component's own emulated-encapsulation selectors).
+// ─────────────────────────────────────────────────────────────────────────
+:host-context(body.is-dark) {
+  .day-strip__chip {
+    background-color: $dk-bg-card;
+    // Same reason as the light border above: $dk-bg-card on $dk-bg is 1.12:1,
+    // so the border alone carries the 3:1 floor, and $dk-border cannot — it is
+    // a hairline by design and composites to 1.29:1 over $dk-bg. $dk-text-muted
+    // is the token this codebase already uses when a control's boundary has to
+    // clear 1.4.11 against the page rather than against a card: see
+    // my-bookings.component.scss:613-620 (`.filter-pill`, 7.46:1) and the
+    // segmented date field in dark-theme.scss:625-630, both moved off
+    // $dk-border for exactly this reason.
+    border-color: $dk-text-muted;
+    color: $dk-text;
+
+    &:hover:not(.is-selected):not(.is-unavailable) {
+      color: $dk-accent;
+    }
+
+    &:focus-visible {
+      // $shadow-focus is rgba($primary-blue, .2) and is invisible on $dk-bg.
+      box-shadow: none;
+      outline: 2px solid $dk-accent;
+      outline-offset: 2px;
+    }
+
+    // Inverted, not the light pair straight: $dk-bg on $dk-accent is 9.31:1,
+    // the recorded inversion dark-theme.scss already uses for
+    // `.sold-out-today__action`. $text-white on $dk-accent would be 2.03:1.
+    &.is-selected {
+      background-color: $dk-accent;
+      border-color: $dk-accent;
+      color: $dk-bg;
+    }
+
+    &.is-unavailable {
+      background-color: $dk-bg-soft;
+      border-color: $dk-border-muted;
+      color: $dk-text-muted;
+    }
+  }
+}

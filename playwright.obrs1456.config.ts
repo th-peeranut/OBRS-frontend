@@ -35,6 +35,8 @@ const FRONTEND_PORT = process.env['E2E_FRONTEND_PORT'] ?? '4256';
 const BASE_URL = `http://localhost:${FRONTEND_PORT}`;
 
 export default defineConfig({
+  // OBRS-1611: name the tree this run measures, and refuse a port another tree holds.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
   testDir: './e2e/tests',
   testMatch: '**/obrs-564-booking-policy.spec.ts',
   timeout: 90_000,

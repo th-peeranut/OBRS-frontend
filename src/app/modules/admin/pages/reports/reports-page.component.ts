@@ -16,9 +16,9 @@ import {
   PerHeadEarningsGranularity,
   PerHeadEarningsRespDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
-
-const MAX_RANGE_SPAN_DAYS = 366;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+import { formatMoney } from '../../../../shared/lib/money-display';
+import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
+import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
 
 @Component({
     selector: 'app-reports-page',
@@ -178,13 +178,9 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     return 'data';
   }
 
-  protected onFromDateChange(value: Date | null): void {
-    this.fromDate = value;
-    this.applyRange();
-  }
-
-  protected onToDateChange(value: Date | null): void {
-    this.toDate = value;
+  protected onRangeChange(range: DateRange): void {
+    this.fromDate = range.from;
+    this.toDate = range.to;
     this.applyRange();
   }
 
@@ -194,16 +190,12 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
 
   protected get revenueTileDisplay(): string {
     const revenue = this.tiles?.revenue;
-    return revenue ? this.formatMoney(revenue.net, revenue.currency) : '';
+    return revenue ? this.formatMoney(revenue.net) : '';
   }
 
-  protected formatMoney(value: string, currency: string): string {
+  protected formatMoney(value: string): string {
     const amount = Number(value);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(amount) ? amount : 0);
+    return formatMoney(Number.isFinite(amount) ? amount : 0, this.translate.currentLang);
   }
 
   protected trackByDate(_index: number, row: ReportsDailyRowDto): string {
@@ -223,14 +215,15 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     const from = this.toDateInputValue(this.fromDate);
     const to = this.toDateInputValue(this.toDate);
 
-    if (from > to) {
-      this.rangeError = this.translate.instant('ADMIN.REPORTS.ERROR.RANGE_INVALID');
-      return;
-    }
-
-    const spanDays = Math.round((this.toDate.getTime() - this.fromDate.getTime()) / MS_PER_DAY);
-    if (spanDays > MAX_RANGE_SPAN_DAYS) {
-      this.rangeError = this.translate.instant('ADMIN.REPORTS.ERROR.RANGE_TOO_LARGE');
+    const errorKey = dateRangeErrorKey(
+      this.fromDate,
+      this.toDate,
+      from,
+      to,
+      'ADMIN.REPORTS.ERROR'
+    );
+    if (errorKey) {
+      this.rangeError = this.translate.instant(errorKey);
       return;
     }
 
@@ -240,8 +233,14 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
 
   // ── OBRS-1147: per-head earnings by person ───────────────────────────────
 
+  // OBRS-1631: same placeholder row, and here the `as` cast is what hides the empty string from
+  // the compiler — `'' as PerHeadEarningsGranularity` reaches setQuery as a blank granularity.
   protected onPerHeadGranularityChange(value: string): void {
-    this.perHeadGranularity = value as PerHeadEarningsGranularity;
+    const granularity = String(value ?? '').trim();
+    if (!granularity) {
+      return;
+    }
+    this.perHeadGranularity = granularity as PerHeadEarningsGranularity;
     this.applyPerHeadRange();
   }
 
@@ -307,18 +306,36 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
 
   // ── OBRS-960: parcel-share monthly totals ────────────────────────────────
 
+  // OBRS-1631: `app-admin-dropdown` renders its own `[placeholder]` as a clickable row that emits
+  // `''`, and design-system §3.1 item 2 requires that row — so the guard belongs here, not there.
+  // `Number('')` is 0, not NaN, so without it a click on "ปี" asked for year 0. Same shape as the
+  // guard OBRS-1626 put on /admin/expenses, deliberately, so the two screens behave identically.
   protected onYearChange(value: string): void {
-    this.selectedYear = Number(value);
+    const year = String(value ?? '').trim();
+    if (!year) {
+      return;
+    }
+    this.selectedYear = Number(year);
     this.parcelShareMonthlyStore.setPeriod(this.selectedYear, this.selectedMonth);
   }
 
   protected onMonthChange(value: string): void {
-    this.selectedMonth = Number(value);
+    const month = String(value ?? '').trim();
+    if (!month) {
+      return;
+    }
+    this.selectedMonth = Number(month);
     this.parcelShareMonthlyStore.setPeriod(this.selectedYear, this.selectedMonth);
   }
 
-  protected trackByPayeeId(_index: number, row: ParcelShareMonthlyRowDto): number {
-    return row.payeeUserId;
+  /**
+   * OBRS-1009: `payeeUserId` is null on the report's "no salesperson — the driver kept it" rows,
+   * and a month can carry more than one of them (one per cause). Tracking by the id alone gave
+   * every such row the same key, which `@for` rejects as a duplicate — so the index is the
+   * tie-breaker for exactly those rows, and real payees keep their stable id.
+   */
+  protected trackByPayeeId(index: number, row: ParcelShareMonthlyRowDto): number | string {
+    return row.payeeUserId ?? `fallback-${index}`;
   }
 
   protected get selectedYearStr(): string {

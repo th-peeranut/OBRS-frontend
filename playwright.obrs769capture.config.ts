@@ -13,6 +13,11 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = process.env['OBRS769_PORT'] ?? '4762';
 
 export default defineConfig({
+  // OBRS-1616: no `webServer`, so nothing said which tree served the shots. The BEFORE
+  // phase points OBRS769_PORT at the throwaway worktree above, so a foreign tree on the
+  // port is what this lane ASKS for -- it needs the banner naming it, never the refusal.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
+  metadata: { laneTree: 'attach-to-operator-stack' },
   testDir: './e2e/tests',
   testMatch: ['**/obrs-769-capture.spec.ts'],
   timeout: 120_000,

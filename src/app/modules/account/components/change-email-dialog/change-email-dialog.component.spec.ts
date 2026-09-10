@@ -1,7 +1,15 @@
-import { FormBuilder } from '@angular/forms';
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { ChangeEmailDialogComponent } from './change-email-dialog.component';
+import { AuthService } from '../../../../auth/auth.service';
+import { UserService } from '../../../../services/user/user.service';
+import { AlertService } from '../../../../shared/services/alert.service';
 import { createTranslateStub } from '../../../../testing/test-stubs';
+import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 
 describe('ChangeEmailDialogComponent', () => {
   function create(): {
@@ -191,5 +199,105 @@ describe('ChangeEmailDialogComponent', () => {
 
       expect(spy).toHaveBeenCalled();
     });
+  });
+});
+
+/**
+ * OBRS-1559. Changing an email address re-asks for the account's EXISTING password, and with no
+ * token the manager could not fill it — the user had to go find a password they had already
+ * stored. `current-password`, not `new-password`: nothing here sets a password.
+ *
+ * Rendered rather than constructed, unlike the describes above, because the attribute only
+ * exists on a compiled element.
+ */
+describe('ChangeEmailDialogComponent — password manager autofill tokens (OBRS-1559)', () => {
+  let fixture: ComponentFixture<ChangeEmailDialogComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ChangeEmailDialogComponent, PendingButtonDirective, LoadingStateComponent],
+      imports: [ReactiveFormsModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: {} },
+        // Nothing is typed into the form here, so the debounced duplicate-check never fires.
+        { provide: UserService, useValue: { checkExistEmail: () => of(null) } },
+        { provide: AlertService, useValue: {} },
+      ],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ChangeEmailDialogComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+  });
+
+  it('asks the manager for the saved password of the account being changed', () => {
+    const el = (fixture.nativeElement as HTMLElement).querySelector(
+      '#change-email-current-password'
+    );
+    if (!el) {
+      throw new Error('Input #change-email-current-password not found in the rendered template');
+    }
+
+    expect(el.getAttribute('autocomplete')).toBe('current-password');
+  });
+});
+
+// OBRS-910: the submit button's hand-rolled `<span class="spinner">` was replaced
+// with `[appPending]="isSubmitting"`.
+describe('ChangeEmailDialogComponent — OBRS-910 pending button state', () => {
+  let fixture: ComponentFixture<ChangeEmailDialogComponent>;
+  let component: ChangeEmailDialogComponent;
+  let submitButton: HTMLButtonElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ChangeEmailDialogComponent, PendingButtonDirective, LoadingStateComponent],
+      imports: [ReactiveFormsModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: {} },
+        { provide: UserService, useValue: { checkExistEmail: () => of(null) } },
+        { provide: AlertService, useValue: {} },
+      ],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ChangeEmailDialogComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    submitButton = (fixture.nativeElement as HTMLElement).querySelector(
+      'button[type="submit"]'
+    ) as HTMLButtonElement;
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+  });
+
+  it('adds aria-busy to the submit button while isSubmitting is true, and removes it once it is false (AC-2)', () => {
+    expect(submitButton.getAttribute('aria-busy')).toBeNull();
+
+    component.isSubmitting = true;
+    fixture.detectChanges();
+    expect(submitButton.getAttribute('aria-busy')).toBe('true');
+
+    component.isSubmitting = false;
+    fixture.detectChanges();
+    expect(submitButton.getAttribute('aria-busy')).toBeNull();
+  });
+
+  it('pins the ring to 16px via inline style while pending (AC-3)', () => {
+    // Note: this button's own LABEL TEXT swaps (SUBMIT -> SUBMIT_LOADING) while
+    // pending, a pre-existing, unrelated behavior — so its overall width is NOT
+    // asserted stable here; that invariant is covered on buttons whose label
+    // does not change (cancel-booking-modal, reschedule-estimate-summary).
+    component.isSubmitting = true;
+    fixture.detectChanges();
+    const ring = submitButton.querySelector('.loading-state-ring') as HTMLElement;
+    expect(getComputedStyle(ring).width).toBe('16px');
+    expect(getComputedStyle(ring).height).toBe('16px');
   });
 });

@@ -1,0 +1,157 @@
+@if (isRefreshing && !isLoading) {
+  <section class="admin-page-intro">
+    <div>
+      <app-admin-refresh-hint
+        [refreshing]="isRefreshing"
+        [failed]="false"
+        [loading]="isLoading"
+      ></app-admin-refresh-hint>
+    </div>
+  </section>
+}
+
+<!-- app-admin-dropdown, not a raw <select> (design-system.md 3.1): the empty selection is the
+component's own placeholder-header row, which is exactly what "every year" is here — a real choice
+that happens to be the resting state, not an unmade one. -->
+<section class="admin-page-filters mt-3">
+  <app-admin-dropdown
+    [value]="selectedYear"
+    [options]="yearOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.PAYEE_SPEND_REPORT.FILTER_YEAR' | translate"
+    (valueChange)="onYearChange($event)"
+  ></app-admin-dropdown>
+
+  <app-admin-dropdown
+    [value]="selectedMonth"
+    [options]="monthOptions"
+    valueKey="code"
+    labelKey="label"
+    [disabled]="isMonthDisabled"
+    [placeholder]="'ADMIN.PAYEE_SPEND_REPORT.FILTER_MONTH' | translate"
+    (valueChange)="onMonthChange($event)"
+  ></app-admin-dropdown>
+
+  <app-admin-dropdown
+    [value]="selectedCategory"
+    [options]="categoryOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.PAYEE_SPEND_REPORT.FILTER_CATEGORY' | translate"
+    (valueChange)="onCategoryChange($event)"
+  ></app-admin-dropdown>
+</section>
+
+<!-- The window in words. The dropdowns carry their FIELD NAMES as placeholders (3.1 rule 2), so
+without this line the resting state would show "ปี" and leave the reader to infer that nothing
+selected means everything — the one inference this report cannot afford. -->
+<p class="payee-spend-period mt-2">
+  @if (isMonthDisabled) {
+    {{ 'ADMIN.PAYEE_SPEND_REPORT.PERIOD_ALL' | translate }}
+  } @else if (store.filter.month === null) {
+    {{ 'ADMIN.PAYEE_SPEND_REPORT.PERIOD_YEAR' | translate: { year: store.filter.year } }}
+  } @else {
+    {{
+      'ADMIN.PAYEE_SPEND_REPORT.PERIOD_YEAR_MONTH'
+        | translate: { year: store.filter.year, month: monthLabel(store.filter.month) }
+    }}
+  }
+  @if (isMonthDisabled) {
+    <span class="admin-muted"> · {{ 'ADMIN.PAYEE_SPEND_REPORT.MONTH_NEEDS_YEAR' | translate }}</span>
+  }
+</p>
+
+<!-- Why a bill total cannot answer "did this garage put its prices up" — said on the screen, not
+left in a Jira comment, because the chart that WOULD look like an answer is the one thing this
+report must never grow. -->
+<p class="admin-muted payee-spend-scope-note mt-2">
+  {{ 'ADMIN.PAYEE_SPEND_REPORT.SCOPE_NOTE' | translate }}
+</p>
+
+@if (loadError) {
+  <p class="admin-error mt-3">{{ loadError }}</p>
+} @else if (isLoading) {
+  <div class="admin-table-wrap mt-3">
+    <table class="admin-table">
+      <tbody>
+        @for (row of skeletonRows; track $index) {
+          <tr><td><span class="admin-skeleton"></span></td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else if (isEmptyReport) {
+  <p class="admin-muted mt-3">{{ 'ADMIN.PAYEE_SPEND_REPORT.EMPTY' | translate }}</p>
+} @else {
+  @if (hasCoverageGap) {
+    <section class="payee-spend-coverage mt-3">
+      <h3 class="payee-spend-coverage-title">
+        {{ 'ADMIN.PAYEE_SPEND_REPORT.COVERAGE_TITLE' | translate }}
+      </h3>
+      <div class="payee-spend-coverage-bar" role="presentation">
+        <span class="payee-spend-coverage-known" [style.width.%]="coveragePercent"></span>
+      </div>
+      <p class="payee-spend-coverage-text">
+        {{
+          'ADMIN.PAYEE_SPEND_REPORT.COVERAGE_TEXT'
+            | translate
+              : {
+                  assigned: money(report?.assignedTotalAmount),
+                  total: money(report?.totalAmount),
+                  percent: coveragePercent
+                }
+        }}
+      </p>
+    </section>
+  }
+
+  <div class="admin-table-wrap mt-3">
+    <table class="admin-table payee-spend-table">
+      <caption class="visually-hidden">
+        {{ 'ADMIN.PAYEE_SPEND_REPORT.TABLE_TITLE' | translate }}
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ 'ADMIN.PAYEE_SPEND_REPORT.COL_PAYEE' | translate }}</th>
+          <th scope="col">{{ 'ADMIN.PAYEE_SPEND_REPORT.COL_WORK' | translate }}</th>
+          <th scope="col" class="text-end">{{ 'ADMIN.PAYEE_SPEND_REPORT.COL_BILLS' | translate }}</th>
+          <th scope="col" class="text-end">{{ 'ADMIN.PAYEE_SPEND_REPORT.COL_TOTAL' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows; track row.payeeId) {
+          <tr>
+            <td class="payee-spend-name">{{ row.payeeName }}</td>
+            <td class="payee-spend-work">{{ workText(row) }}</td>
+            <td class="text-end">{{ row.billCount }}</td>
+            <td class="text-end">{{ money(row.totalAmount) }}</td>
+          </tr>
+        }
+        <!-- The bills nobody recorded a payee for. A ROW, deliberately: dropping it would make the
+        total above look like the whole of the period's spend. -->
+        @if (unassignedRow) {
+          <tr class="payee-spend-unassigned">
+            <td class="payee-spend-name">
+              {{ 'ADMIN.PAYEE_SPEND_REPORT.UNASSIGNED' | translate }}
+              <small class="admin-muted d-block">
+                {{ 'ADMIN.PAYEE_SPEND_REPORT.UNASSIGNED_HINT' | translate }}
+              </small>
+            </td>
+            <td></td>
+            <td class="text-end">{{ unassignedRow.billCount }}</td>
+            <td class="text-end">{{ money(unassignedRow.totalAmount) }}</td>
+          </tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>{{ 'ADMIN.PAYEE_SPEND_REPORT.TOTAL_ROW' | translate }}</td>
+          <td></td>
+          <td class="text-end">{{ report?.totalBillCount }}</td>
+          <td class="text-end">{{ money(report?.totalAmount) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+}

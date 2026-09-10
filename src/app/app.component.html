@@ -3,6 +3,10 @@ control, and being first in the DOM it is also first for a screen reader — the
 closure is the first thing announced on a customer page, not the last. Renders
 nothing at all on staff/admin pages or once the flag is flipped back on. -->
 <app-booking-closed-notice></app-booking-closed-notice>
+<!-- OBRS-1721: same placement, same reasons — normal flow above the outlet, and
+first in the DOM so a screen reader announces "you are viewing as X, the data is
+still yours" before the page it qualifies. Renders nothing unless a preview is on. -->
+<app-role-preview-banner></app-role-preview-banner>
 <router-outlet></router-outlet>
 <app-report-usability-fab></app-report-usability-fab>
 <!-- OBRS-867: renders only while the PDPA question is unanswered. -->

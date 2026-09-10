@@ -79,6 +79,7 @@ import { CounterCancelModalComponent } from './pages/counter-cancel/counter-canc
 
 // OBRS-960 — driver cash ledger panel (/staff/boarding/:scheduleId).
 import { DriverCashPanelComponent } from './components/driver-cash-panel/driver-cash-panel.component';
+import { DriverCashRepairFormComponent } from './components/driver-cash-panel/driver-cash-repair-form/driver-cash-repair-form.component';
 import { DriverCashDaySummaryComponent } from './components/driver-cash-panel/driver-cash-day-summary/driver-cash-day-summary.component';
 import { DriverCashAdvanceFormComponent } from './components/driver-cash-panel/driver-cash-advance-form/driver-cash-advance-form.component';
 import { DriverCashPerHeadFormComponent } from './components/driver-cash-panel/driver-cash-per-head-form/driver-cash-per-head-form.component';
@@ -86,6 +87,7 @@ import { DriverCashExpenseFormComponent } from './components/driver-cash-panel/d
 
 // OBRS-1147 — the holder's own per-head earnings (/staff/my-earnings).
 import { MyEarningsPageComponent } from './pages/my-earnings/my-earnings-page.component';
+import { TitleLabelPipe } from '../../shared/pipes/title-label.pipe';
 
 export const staffRoutes: Routes = [
   {
@@ -290,6 +292,7 @@ export const staffRoutes: Routes = [
     CounterCancelResultListComponent,
     CounterCancelModalComponent,
     DriverCashPanelComponent,
+    DriverCashRepairFormComponent,
     DriverCashDaySummaryComponent,
     DriverCashAdvanceFormComponent,
     DriverCashPerHeadFormComponent,
@@ -297,6 +300,7 @@ export const staffRoutes: Routes = [
     MyEarningsPageComponent,
   ],
   imports: [
+    TitleLabelPipe,
     SharedModule,
     RouterModule.forChild(staffRoutes),
     DatePickerModule,

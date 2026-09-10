@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { StationService } from '../../../../services/station/station.service';
 import { ParcelBookingService } from '../../../../services/parcel-booking/parcel-booking.service';
 import { BookingService } from '../../../../services/booking/booking.service';
@@ -319,6 +319,115 @@ describe('ParcelBookingPageComponent', () => {
     });
 
     expect((component as any).serverErrorKey).toBe('PARCEL_BOOKING.ERROR.GENERIC');
+  });
+
+  // OBRS-1552 — same race as OBRS-616 on the staff consign page, customer side:
+  // two quote requests overlap whenever the customer edits a field faster than
+  // the API answers (the details form's 400ms debounce shortens that window, it
+  // does not close it). The price on screen must be decided by which request was
+  // issued LAST, never by which response the network happened to deliver last.
+  // Walked red against the pre-fix plain `.subscribe()`: the stale 100 overwrote
+  // the fresh 180.
+  it('IGNORES an earlier quote response that arrives after a newer request was issued', () => {
+    const first$ = new Subject<any>();
+    const second$ = new Subject<any>();
+    parcelBookingService.getParcelQuote.and.returnValues(
+      first$.asObservable() as any,
+      second$.asObservable() as any
+    );
+
+    (component as any).onQuoteParamsChange({
+      scheduleId: 42,
+      pickupStopId: 1,
+      dropoffStopId: 2,
+      weightKg: 5,
+    });
+    (component as any).onQuoteParamsChange({
+      scheduleId: 42,
+      pickupStopId: 1,
+      dropoffStopId: 2,
+      weightKg: 9,
+    });
+
+    second$.next({
+      code: 200,
+      message: 'OK',
+      data: { amount: 180, farePerUnit: 20, unitCount: 9, weightTierMultiplier: 1 },
+    });
+    first$.next({
+      code: 200,
+      message: 'OK',
+      data: { amount: 100, farePerUnit: 20, unitCount: 5, weightTierMultiplier: 1 },
+    });
+
+    expect((component as any).quote).toEqual({
+      amount: 180,
+      farePerUnit: 20,
+      unitCount: 9,
+      weightTierMultiplier: 1,
+    });
+    expect((component as any).isLoadingQuote).toBeFalse();
+  });
+
+  // OBRS-1552 — same race, error branch: the stale response's own writer is
+  // `quote = null` + `quoteErrorKey`, so an earlier request FAILING late used to
+  // blank a price the newer request had already answered correctly — and put an
+  // error message under it.
+  it('IGNORES an earlier quote ERROR that arrives after a newer request was issued', () => {
+    const first$ = new Subject<any>();
+    const second$ = new Subject<any>();
+    parcelBookingService.getParcelQuote.and.returnValues(
+      first$.asObservable() as any,
+      second$.asObservable() as any
+    );
+
+    (component as any).onQuoteParamsChange({
+      scheduleId: 42,
+      pickupStopId: 1,
+      dropoffStopId: 2,
+      weightKg: 5,
+    });
+    (component as any).onQuoteParamsChange({
+      scheduleId: 42,
+      pickupStopId: 1,
+      dropoffStopId: 2,
+      weightKg: 9,
+    });
+
+    second$.next({
+      code: 200,
+      message: 'OK',
+      data: { amount: 180, farePerUnit: 20, unitCount: 9, weightTierMultiplier: 1 },
+    });
+    first$.error({ error: { errorCode: 'PARCEL_STOP_PAIR_NOT_PRICEABLE' } });
+
+    expect((component as any).quote).toEqual({
+      amount: 180,
+      farePerUnit: 20,
+      unitCount: 9,
+      weightTierMultiplier: 1,
+    });
+    expect((component as any).quoteErrorKey).toBeNull();
+  });
+
+  // The quote error path had no coverage on this page at all before OBRS-1552,
+  // and the fix moves its mapping into a `catchError` INSIDE the inner
+  // observable — this pins that the message still reaches the form.
+  it('maps a quote error to its i18n key', () => {
+    parcelBookingService.getParcelQuote.and.returnValue(
+      throwError(() => ({ error: { errorCode: 'PARCEL_STOP_PAIR_NOT_PRICEABLE' } })) as any
+    );
+
+    (component as any).onQuoteParamsChange({
+      scheduleId: 42,
+      pickupStopId: 1,
+      dropoffStopId: 2,
+      weightKg: 5,
+    });
+
+    expect((component as any).quote).toBeNull();
+    expect((component as any).quoteErrorKey).toBe('PARCEL_BOOKING.ERROR.STOP_PAIR_NOT_PRICEABLE');
+    expect((component as any).isLoadingQuote).toBeFalse();
   });
 
   it('onPaymentCompleted clears the active booking id as a safety net', () => {

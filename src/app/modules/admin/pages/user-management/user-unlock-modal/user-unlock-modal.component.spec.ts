@@ -5,6 +5,7 @@ import { By } from '@angular/platform-browser';
 import { UserUnlockModalComponent } from './user-unlock-modal.component';
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
 import { UserRow } from '../user-management.mappers';
+import { TitleLabelPipe } from '../../../../../shared/pipes/title-label.pipe';
 
 const LOCKED_ROW: UserRow = {
   id: 1,
@@ -26,7 +27,7 @@ describe('UserUnlockModalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CommonModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, CommonModule, TranslateModule.forRoot()],
       declarations: [UserUnlockModalComponent, AdminModalBackdropDirective],
     }).compileComponents();
 

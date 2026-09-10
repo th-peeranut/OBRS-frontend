@@ -7,6 +7,11 @@ import { defineConfig, devices } from '@playwright/test';
  * action on the staff delivery list, and /admin/parcel-claims does not exist.
  */
 export default defineConfig({
+  // OBRS-1611: this lane attaches to the stack the operator started by hand (see the
+  // header above). The guard still names the tree that served the pages, but for this
+  // one a foreign tree on the port is the documented state, so it must not refuse.
+  globalSetup: './e2e/support/lane-tree-guard.ts',
+  metadata: { laneTree: 'attach-to-operator-stack' },
   testDir: './e2e/tests',
   testMatch: ['**/obrs-1388-before-capture.spec.ts'],
   timeout: 60_000,

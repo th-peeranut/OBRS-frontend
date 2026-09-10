@@ -11,6 +11,7 @@ import { CloseAccountDialogComponent } from './components/close-account-dialog/c
 import { NotificationPreferenceMatrixComponent } from './components/notification-preference-matrix/notification-preference-matrix.component';
 import { NotificationPreferenceRowComponent } from './components/notification-preference-row/notification-preference-row.component';
 import { NotificationPreferencesPageComponent } from './pages/notification-preferences/notification-preferences-page.component';
+import { TitleLabelPipe } from '../../shared/pipes/title-label.pipe';
 
 const routes: Routes = [
   { path: '', component: AccountPageComponent },
@@ -31,6 +32,7 @@ const routes: Routes = [
     NotificationPreferenceRowComponent,
   ],
   imports: [
+    TitleLabelPipe,
     SharedModule,
     RouterModule.forChild(routes),
     ButtonModule,

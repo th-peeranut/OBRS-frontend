@@ -11,11 +11,13 @@ import { CounterCancelResultListComponent } from './counter-cancel-result-list/c
 import { CounterCancelModalComponent } from './counter-cancel-modal/counter-cancel-modal.component';
 import { AdminPaginatorComponent } from '../../../admin/components/admin-paginator/admin-paginator.component';
 import { AdminModalBackdropDirective } from '../../../../shared/directives/admin-modal-backdrop.directive';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 import { AppRefundDestinationFieldsComponent } from '../../../../shared/components/refund-destination-fields/refund-destination-fields.component';
 import { StaffApiService, CounterBookingSearchResultDto } from '../../../../services/staff/staff-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { errorCodeFromMessageKey } from '../../../../shared/lib/api-error-code';
+import { TitleLabelPipe } from '../../../../shared/pipes/title-label.pipe';
 
 // OBRS-766 (QA-caught): the wire `errorCode` is derived from its dotted
 // messageKey — see `api-error-code.ts`'s `errorCodeFromMessageKey` doc
@@ -27,6 +29,7 @@ function resultRow(overrides: Partial<CounterBookingSearchResultDto> = {}): Coun
   return {
     bookingId: 7,
     bookingNumber: 'B-000007',
+    contactTitle: null,
     contactName: 'Somchai Jaidee',
     contactPhoneMasked: '••••1234',
     status: 'confirmed',
@@ -71,7 +74,7 @@ describe('CounterCancelPageComponent (OBRS-766)', () => {
     auth.getUsername.and.returnValue('salesperson@obrs.test');
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
+      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot(), TitleLabelPipe],
       declarations: [
         CounterCancelPageComponent,
         CounterCancelSearchFormComponent,
@@ -80,6 +83,7 @@ describe('CounterCancelPageComponent (OBRS-766)', () => {
         AdminPaginatorComponent,
         AdminModalBackdropDirective,
         AppRefundDestinationFieldsComponent,
+        PendingButtonDirective,
       ],
       providers: [
         { provide: StaffApiService, useValue: api },

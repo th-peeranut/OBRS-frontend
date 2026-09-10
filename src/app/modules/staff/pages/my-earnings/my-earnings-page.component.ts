@@ -3,11 +3,13 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { MyEarningsStore } from './my-earnings.store';
+import { formatMoney } from '../../../../shared/lib/money-display';
 import {
   PerHeadEarningBucketDto,
   PerHeadEarningsGranularity,
   PerHeadEarningsRespDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
+import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
 
 /**
  * OBRS-1147 AC-1 — "ค่าหัวฉันได้เท่าไร" for the person who earned it, per day /
@@ -134,7 +136,13 @@ export class MyEarningsPageComponent implements OnInit, OnDestroy {
     if (!start) {
       return bucket.bucketKey;
     }
-    const locale = this.translate.currentLang === 'th' ? 'th-TH' : 'en-GB';
+    // OBRS-1593: `-u-ca-gregory` is what keeps the YEAR Gregorian while the month and day names
+    // stay Thai. Plain `th-TH` defaults to the Buddhist calendar, so this row was the last place in
+    // the app that printed 2569 where every other screen prints 2026 - measured 2026-08-24, a full
+    // census of `th-TH` in src/ found the other twelve hits are all Intl.NumberFormat (money, no
+    // calendar) plus one date formatter that omits the year on purpose. The owner's rule is
+    // Gregorian everywhere; a single screen disagreeing reads as a wrong number, not as a locale.
+    const locale = this.translate.currentLang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB';
     if (this.granularity === 'YEAR') {
       return start.toLocaleDateString(locale, { year: 'numeric' });
     }
@@ -144,15 +152,16 @@ export class MyEarningsPageComponent implements OnInit, OnDestroy {
     return start.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
+  /** OBRS-1592: this had the same NAME as the shared formatter and a different
+   * output — always two decimals, never a unit — which is the worst combination
+   * to leave behind: a reader who greps `formatMoney` finds it and moves on.
+   * The `null -> '—'` arm is this screen's own and stays: an unearned bucket is
+   * not zero baht. */
   protected formatMoney(value: string | null): string {
     if (value === null) {
       return '—';
     }
-    const amount = Number(value);
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(Number.isFinite(amount) ? amount : 0);
+    return formatMoney(value, this.translate.currentLang);
   }
 
   protected trackByBucketKey(_index: number, bucket: PerHeadEarningBucketDto): string {
@@ -169,8 +178,18 @@ export class MyEarningsPageComponent implements OnInit, OnDestroy {
     }
     const from = this.toDateInputValue(this.fromDate);
     const to = this.toDateInputValue(this.toDate);
-    if (from > to) {
-      this.rangeError = this.translate.instant('STAFF.MY_EARNINGS.ERROR.RANGE_INVALID');
+    // OBRS-1751: this screen had the order check but no CAP, so a staff member could ask the
+    // backend for an unbounded span - the one thing every report page guards against. Same rule,
+    // same helper, its own error prefix (OBRS-1754).
+    const errorKey = dateRangeErrorKey(
+      this.fromDate,
+      this.toDate,
+      from,
+      to,
+      'STAFF.MY_EARNINGS.ERROR'
+    );
+    if (errorKey) {
+      this.rangeError = this.translate.instant(errorKey);
       return;
     }
     this.store.setQuery(from, to, this.granularity);

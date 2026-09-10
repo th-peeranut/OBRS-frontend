@@ -194,6 +194,40 @@ describe('AlertService', () => {
       expect(close).not.toHaveBeenCalled();
     });
 
+    it('puts the real title on its own overlay when the i18n bundle lands late (OBRS-930)', () => {
+      const update = spyOn(Swal, 'update');
+      const showLoading = spyOn(Swal, 'showLoading');
+      spyOn(Swal, 'getPopup').and.returnValue(popupWith('swal-global-loading'));
+
+      // The interceptor opens it title-less rather than showing `COMMON.LOADING`.
+      service.showLoading('');
+      service.updateLoadingTitle('กำลังโหลด…');
+
+      expect(update).toHaveBeenCalledWith({ title: 'กำลังโหลด…' });
+      // Swal.update() re-renders and drops the spinner; an overlay with no
+      // spinner reads as finished-but-stuck while the request is still running.
+      expect(showLoading).toHaveBeenCalled();
+    });
+
+    it('does not retitle a popup it did not open, or one that is not on screen (OBRS-930)', () => {
+      const update = spyOn(Swal, 'update');
+      spyOn(Swal, 'showLoading');
+      const getPopup = spyOn(Swal, 'getPopup').and.returnValue(
+        popupWith('some-other-dialog')
+      );
+
+      // Nothing up at all: a bundle that lands after the request finished.
+      service.updateLoadingTitle('กำลังโหลด…');
+      expect(update).not.toHaveBeenCalled();
+
+      // Up, but ours was replaced by an error dialog while the bundle was in
+      // flight — retitling that one would overwrite what the customer must read.
+      service.showLoading('');
+      service.updateLoadingTitle('กำลังโหลด…');
+      expect(update).not.toHaveBeenCalled();
+      expect(getPopup).toHaveBeenCalled();
+    });
+
     it('keeps the overlay up while another request is still in flight', () => {
       const close = spyOn(Swal, 'close');
       spyOn(Swal, 'getPopup').and.returnValue(popupWith('swal-global-loading'));

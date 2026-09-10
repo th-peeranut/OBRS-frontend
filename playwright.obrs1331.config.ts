@@ -24,6 +24,13 @@ import { defineConfig, devices } from '@playwright/test';
  * No `webServer` (one config cannot start two trees) and no `globalSetup` (the session is
  * synthetic — e2e/support/gate-admin-session.ts).
  *
+ * NO LANE-TREE GUARD EITHER, decided in OBRS-1616 AC-5 rather than overlooked.
+ * `e2e/support/lane-tree-guard.ts` attributes ONE port, read from `webServer.url` or this
+ * config's `baseURL`; this lane has neither, because its two ports live as full URLs
+ * inside the spec. A banner naming the runner's tree would be right for the AFTER half and
+ * wrong for the BEFORE, and a wrong attribution is worse than none. Rule 7 of
+ * scripts/check-e2e-lanes.mjs therefore does not ask for one here.
+ *
  * 1280x720 is not a default: it is the window the owner reported the wrap at, and the
  * whole defect is width-dependent, so shooting it at anything else would prove nothing.
  */

@@ -25,9 +25,14 @@ export class ConfigSourceBadgeComponent {
    * still inherited from the platform default. */
   @Input() overridden = false;
 
+  /** OBRS-703: which page's `SOURCE.{DEFAULT,CUSTOM,ARIA}` keys to read.
+   * Defaults to the cancel/reschedule page this component shipped with, so
+   * every existing call site stays byte-identical without passing it. */
+  @Input() i18nPrefix = 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG';
+
   protected get sourceKey(): string {
     return this.overridden
-      ? 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.SOURCE.CUSTOM'
-      : 'ADMIN.CANCEL_RESCHEDULE_POLICY_CONFIG.SOURCE.DEFAULT';
+      ? `${this.i18nPrefix}.SOURCE.CUSTOM`
+      : `${this.i18nPrefix}.SOURCE.DEFAULT`;
   }
 }

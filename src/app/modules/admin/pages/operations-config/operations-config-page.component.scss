@@ -1,0 +1,40 @@
+// OBRS-775 host-box rule: an Angular host defaults to `display: inline`, so
+// wrapping an in-flow block child makes the host box malformed.
+:host {
+  display: block;
+}
+
+// OBRS-703 — persistent field/takeover warnings. Chip-pair-as-a-block, same
+// usage as `.cancel-reschedule-policy-takeover` / `.parcel-share-config-warning`:
+// bg + text TOGETHER on one element (design-system §2.4.0), plus an icon so
+// the state is never colour alone (design-system §11).
+.operations-config-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
+  font-size: 0.875rem;
+
+  .material-symbols-outlined {
+    font-size: 1.1rem;
+    line-height: 1.4;
+  }
+}
+
+// Same shape as `bookings-page.component.scss`'s `.bk-forbidden` (OBRS-727) —
+// a denial is not a load failure and must not look like one.
+.operations-config-forbidden {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--admin-danger-border);
+  border-radius: 8px;
+  background: var(--admin-danger-surface);
+  color: var(--admin-danger-fg);
+}

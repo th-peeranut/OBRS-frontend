@@ -9,6 +9,7 @@ import { AlertService } from '../../services/alert.service';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { CommonModule } from '@angular/common';
 import { UsabilityReportReceipt } from '../../interfaces/usability-report.interface';
+import { PendingButtonDirective } from '../../directives/pending-button.directive';
 
 describe('ReportUsabilityFabComponent', () => {
   let fixture: ComponentFixture<ReportUsabilityFabComponent>;
@@ -22,7 +23,7 @@ describe('ReportUsabilityFabComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot(), SelectButtonModule],
-      declarations: [ReportUsabilityFabComponent],
+      declarations: [ReportUsabilityFabComponent, PendingButtonDirective],
       providers: [
         { provide: UsabilityReportService, useValue: usabilityReportServiceSpy },
         { provide: AlertService, useValue: alertServiceSpy },

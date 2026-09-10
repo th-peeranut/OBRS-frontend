@@ -5,6 +5,7 @@
         type="text"
         class="promo-code-input"
         name="promoCode"
+        autocomplete="off"
         [(ngModel)]="code"
         (ngModelChange)="onInputChange()"
         [disabled]="disabled || isApplying"

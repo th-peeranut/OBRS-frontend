@@ -13,6 +13,7 @@ import { AuthService } from '../../../auth/auth.service';
 import { BoardingListStore } from './boarding-list.store';
 import { AdminModalBackdropDirective } from '../../directives/admin-modal-backdrop.directive';
 import { createTranslateStub } from '../../../testing/test-stubs';
+import { TitleLabelPipe } from '../../pipes/title-label.pipe';
 
 function createAlertServiceStub(confirmResult = true): any {
   return {
@@ -2037,7 +2038,7 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
   }): void {
     const roles = opts.roles ?? (opts.canControl ? ['salesperson'] : []);
     TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2161,7 +2162,7 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
   // existing behavior this card deliberately preserves rather than replaces.
   it('OBRS-451 AC: tripHeader === null (self-fetch failed) hides the transition button for a DRIVER', fakeAsync(() => {
     TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2341,7 +2342,7 @@ describe('BoardingListComponent — OBRS-272 delay pill / indicator / dialog (Te
   }): void {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent, AdminModalBackdropDirective],
       providers: [
         BoardingListStore,
@@ -2469,7 +2470,7 @@ describe('BoardingListComponent — printManifest() portal lifecycle (OBRS-100, 
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2564,4 +2565,187 @@ describe('BoardingListComponent — printManifest() portal lifecycle (OBRS-100, 
 
     expect(document.querySelectorAll('.boarding-manifest-print-portal').length).toBe(1);
   });
+});
+
+describe('BoardingListComponent — manifest search (OBRS-1659)', () => {
+  function searchComponent() {
+    return createComponent({ getScheduleById: jasmine.createSpy() }, createStoreStub([
+      buildItem({ ticketId: 1, ticketNumber: 'T-AAA111', bookingNumber: 'BK-ABC123', seatNumber: '1', passengerName: 'Mr. Somchai Jaidee' }),
+      buildItem({ ticketId: 2, ticketNumber: 'T-BBB222', bookingNumber: 'BK-ABC123', seatNumber: '2', passengerName: 'Ms. Malee Thongdee' }),
+      buildItem({ ticketId: 3, ticketNumber: 'T-CCC333', bookingNumber: 'BK-XYZ789', seatNumber: '9', passengerName: 'Mr. Wichai Sukjai' }),
+    ]));
+  }
+
+  it('an empty search term leaves the whole manifest visible', () => {
+    const component = searchComponent();
+
+    component['searchTerm'] = '   ';
+
+    expect(component['filteredItems'].length).toBe(3);
+    expect(component['hasNoSearchMatch']).toBeFalse();
+  });
+
+  it('a booking number returns EVERY seat on that booking — the party that booked together, not one passenger', () => {
+    const component = searchComponent();
+
+    component['searchTerm'] = 'BK-ABC123';
+
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([1, 2]);
+  });
+
+  it('matches a PARTIAL, case-insensitive string — the driver types the last few characters, not the whole number', () => {
+    const component = searchComponent();
+
+    component['searchTerm'] = 'xyz78';
+
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([3]);
+  });
+
+  it('also matches passenger name, seat and ticket number — not the booking number alone', () => {
+    const component = searchComponent();
+
+    component['searchTerm'] = 'malee';
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([2]);
+
+    component['searchTerm'] = 'T-CCC333';
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([3]);
+  });
+
+  it('a term matching nothing reports hasNoSearchMatch — distinct from an empty bus', () => {
+    const component = searchComponent();
+
+    component['searchTerm'] = 'BK-NOPE';
+
+    expect(component['filteredItems']).toEqual([]);
+    expect(component['hasNoSearchMatch']).toBeTrue();
+  });
+
+  it('an empty bus is NOT a no-match — the two empty-states must not collide', () => {
+    const component = createComponent({ getScheduleById: jasmine.createSpy() }, createStoreStub([]));
+
+    component['searchTerm'] = 'BK-ABC123';
+
+    expect(component['hasNoSearchMatch']).toBeFalse();
+  });
+
+  it('a row with no bookingNumber does not break the search (older fixture / parcel-era ticket)', () => {
+    const component = createComponent({ getScheduleById: jasmine.createSpy() }, createStoreStub([
+      buildItem({ ticketId: 4, bookingNumber: undefined, passengerName: 'Mr. No Booking' }),
+    ]));
+
+    component['searchTerm'] = 'no booking';
+
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([4]);
+  });
+
+  it('switching to another trip clears the search - the walk-in panel keeps this component mounted, so a stale term would filter the NEXT bus', () => {
+    const component = searchComponent();
+    component['searchTerm'] = 'BK-ABC123';
+    expect(component['filteredItems'].length).toBe(2);
+
+    component.scheduleId = 99;
+    component.ngOnChanges({ scheduleId: {} as any });
+
+    expect(component['searchTerm']).toBe('');
+    expect(component['hasNoSearchMatch']).toBeFalse();
+  });
+
+  it('the print header count stays on the WHOLE bus while a search is active', () => {
+    const component = createComponent({ getScheduleById: jasmine.createSpy() }, createStoreStub([
+      buildItem({ ticketId: 1, bookingNumber: 'BK-ABC123', boardedAt: '2026-07-10T08:00:00Z' }),
+      buildItem({ ticketId: 2, bookingNumber: 'BK-XYZ789', boardedAt: '2026-07-10T09:00:00Z' }),
+    ]));
+
+    component['searchTerm'] = 'BK-ABC123';
+
+    expect(component['filteredItems'].length).toBe(1);
+    expect(component['boardedCount']).toBe(2);
+  });
+});
+
+// OBRS-1673: the call action. The window is the BACKEND's - it either sends
+// `bookingContactPhone` or it does not - so what is testable here is that the
+// row offers a `tel:` link exactly when the field arrived, and never invents
+// one. There is deliberately no client-side clock to test.
+describe('BoardingListComponent — OBRS-1673 call-the-booker action (TestBed)', () => {
+  let fixture: ComponentFixture<BoardingListComponent>;
+
+  function render(items: BoardingListItemDto[]): void {
+    TestBed.configureTestingModule({
+      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      declarations: [BoardingListComponent],
+      providers: [
+        BoardingListStore,
+        {
+          provide: StaffApiService,
+          useValue: {
+            getBoardingList: () => of({ code: 200, message: 'OK', data: items }),
+            getScheduleById: () =>
+              of({ code: 200, message: 'OK', data: { id: 42, status: 'scheduled' } }),
+          },
+        },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+        {
+          provide: AuthService,
+          useValue: {
+            hasAnyRole: () => true,
+            getRoles: () => ['salesperson'],
+            getUsername: () => 'operator1',
+            authStatus$: of(true),
+          },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(BoardingListComponent);
+    fixture.componentInstance.scheduleId = 42;
+    fixture.componentInstance.ngOnChanges({ scheduleId: {} as any });
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  function telLinks(): HTMLAnchorElement[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('.boarding-actions a[href^="tel:"]')
+    ) as HTMLAnchorElement[];
+  }
+
+  it('dials the booking contact phone the backend sent for a passenger who has not boarded', fakeAsync(() => {
+    render([buildItem({ ticketId: 1, boardedAt: undefined, bookingContactPhone: '0899990823' })]);
+    tick();
+    fixture.detectChanges();
+
+    const links = telLinks();
+    expect(links.length).toBe(1);
+    expect(links[0].getAttribute('href')).toBe('tel:0899990823');
+    // The number itself must be reachable to a screen reader / on hover, since the
+    // visible label only says WHOSE number it is.
+    expect(links[0].getAttribute('title')).toBe('0899990823');
+  }));
+
+  it('offers nothing to dial when the response carried no number — outside the window', fakeAsync(() => {
+    render([buildItem({ ticketId: 1, boardedAt: undefined, bookingContactPhone: undefined })]);
+    tick();
+    fixture.detectChanges();
+
+    expect(telLinks().length).toBe(0);
+  }));
+
+  it('does not offer the call on a row that has already boarded', fakeAsync(() => {
+    render([
+      buildItem({
+        ticketId: 1,
+        boardedAt: '2026-07-10T08:00:00Z',
+        bookingContactPhone: '0899990823',
+      }),
+    ]);
+    tick();
+    fixture.detectChanges();
+
+    expect(telLinks().length).toBe(0);
+  }));
 });

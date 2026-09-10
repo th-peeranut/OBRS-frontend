@@ -60,8 +60,11 @@
                 ></app-dropdown-group-obrs>
               </div>
             }
-            <!-- DEPARTURE DATE -->
-            <div class="form-group-obrs">
+            <!-- DEPARTURE DATE. OBRS-1189 — see the identical block in
+            home-booking.component.html: this filter bar is a copy of that form,
+            and a segment that is a segment on only one of the two screens is the
+            OBRS-1021/1023/1028/1036 drift all over again. -->
+            <div class="form-group-obrs has-inline-label">
               <!-- LABEL. OBRS-1021 — see the identical block in
               home-booking.component.html. This filter bar is a copy of that
               form and carried the same two-identical-labels bug; fixing only
@@ -73,8 +76,8 @@
               `inputId="templatedisplay"` and a label bound to nothing. The ids
               are prefixed `filter-` rather than reusing the Home ones so that
               the pair stays unique even if the two forms ever share a page. -->
-              <label for="filter-departure-date">
-                {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }} :
+              <label class="field-inline-label" for="filter-departure-date">
+                {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }}
               </label>
               <!-- CALENDAR MAIN ELEMENT
 
@@ -92,7 +95,7 @@
               markup is exactly what does NOT propagate between two copies —
               the whole lesson of OBRS-1021/1028/1023 on these four lines. -->
               <p-datePicker
-                styleClass="app-date-field"
+                styleClass="app-date-field app-date-field--segment"
                 panelStyleClass="app-date-field-panel"
                 [dateFormat]="calendarDateFormat()"
                 [readonlyInput]="true"
@@ -117,10 +120,10 @@
               @if (isRoundTripReturn) {
                 <!-- RETURN DATE (OBRS-1021 — was labelled DEPARTURE DATE, in
                 the comment and on screen, because the block is a copy). -->
-                <div class="form-group-obrs">
+                <div class="form-group-obrs has-inline-label">
                   <!-- LABEL (OBRS-1028) -->
-                  <label for="filter-return-date">
-                    {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }} :
+                  <label class="field-inline-label" for="filter-return-date">
+                    {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }}
                   </label>
                   <!-- CALENDAR MAIN ELEMENT (OBRS-1023, OBRS-1036 — see the
                   twin block in home-booking.component.html.
@@ -131,7 +134,7 @@
                   or a customer refining a round trip on this results page
                   hits the exact server 400 OBRS-1185 exists to prevent.) -->
                   <p-datePicker
-                    styleClass="app-date-field"
+                    styleClass="app-date-field app-date-field--segment"
                     panelStyleClass="app-date-field-panel"
                     [dateFormat]="calendarDateFormat()"
                     [readonlyInput]="true"
@@ -153,12 +156,18 @@
                     </p-datePicker>
                   </div>
                 }
-              </div>
-              <!-- SEARCH BUTTON -->
-              <div class="d-flex justify-content-end w-100">
-                <button class="btn btn-search" type="button" (click)="onSearch()">
+                <!-- SEARCH — the last SEGMENT of the bar (OBRS-1189 AC#3), the
+                twin of the block in home-booking.component.html. The
+                `d-flex justify-content-end w-100` wrapper that used to hold it
+                is gone: a 100%-wide row is exactly what put the button on a line
+                of its own, which is the thing this card removes. -->
+                <button class="btn btn-search" type="button" (click)="onSearch()"
+                        [attr.aria-label]="'HOME.HOME_BOOKING.SEARCH' | translate">
                   <img src="icons/search.svg" alt="Search Icon" />
-                  {{ "HOME.HOME_BOOKING.SEARCH" | translate }}
+                  <!-- Hidden between 993 and 1199 -- see the twin block in
+                  home-booking.component.html for why, and why the aria-label
+                  above is unconditional. -->
+                  <span class="btn-search__label">{{ "HOME.HOME_BOOKING.SEARCH" | translate }}</span>
                 </button>
               </div>
             </div>

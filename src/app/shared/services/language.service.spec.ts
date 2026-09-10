@@ -16,9 +16,18 @@ const SHIPPED_DATE_FORMATS: ReadonlyArray<[string, string, string]> = [
   ['zh', 'yy/mm/dd', 'D, yy/mm/dd'],
 ];
 
+/** The `COMMON.APP_TITLE` each shipped locale declares, read out of
+ *  `public/i18n/*.json` — NOT invented here, same rule as the table above. */
+const SHIPPED_APP_TITLES: ReadonlyArray<[string, string]> = [
+  ['th', 'จองตั๋วออนไลน์ คิวรถ NJ ผู้ใหญ่ปู'],
+  ['en', 'Book bus tickets online | NJ Phuyaipu'],
+  ['zh', '在线预订巴士车票 | NJ Phuyaipu'],
+];
+
 describe('LanguageService', () => {
   let translate: any;
   let primeng: any;
+  let title: any;
   let service: LanguageService;
 
   beforeEach(() => {
@@ -27,7 +36,8 @@ describe('LanguageService', () => {
       get: jasmine.createSpy('get').and.returnValue(of({ dayNames: [] })),
     };
     primeng = { setTranslation: jasmine.createSpy('setTranslation') };
-    service = new LanguageService(translate, primeng);
+    title = { setTitle: jasmine.createSpy('setTitle') };
+    service = new LanguageService(translate, primeng, title);
     localStorage.removeItem(APP_LANGUAGE_KEY);
   });
 
@@ -107,6 +117,42 @@ describe('LanguageService', () => {
       await service.switch('zh');
 
       expect(document.documentElement.lang).toBe('zh');
+    });
+  });
+
+  // OBRS-1700 ------------------------------------------------------------
+  describe('browser tab title', () => {
+    beforeEach(() => {
+      // Key-aware, because this is the one block that cares WHICH key was
+      // asked for: `switch()` reads CALENDAR and COMMON.APP_TITLE off the same
+      // spy, and a single blanket return value cannot tell them apart.
+      translate.get.and.callFake((key: string) =>
+        of(
+          key === 'COMMON.APP_TITLE'
+            ? (SHIPPED_APP_TITLES.find(
+                ([lang]) => lang === localStorage.getItem(APP_LANGUAGE_KEY)
+              ) ?? [])[1]
+            : { dayNames: [] }
+        )
+      );
+    });
+
+    SHIPPED_APP_TITLES.forEach(([lang, shipped]) => {
+      it(`sets the tab title to the ${lang} string when switching to ${lang}`, async () => {
+        await service.switch(lang);
+
+        expect(title.setTitle).toHaveBeenCalledWith(shipped);
+      });
+    });
+
+    it('re-titles on every switch, so a second language change cannot leave a stale tab', async () => {
+      // index.html ships ONE hardcoded Thai <title> and nothing ever updated
+      // it — that is the whole bug. From the first switch on, this is the only
+      // thing keeping the tab on the language the visitor picked.
+      await service.switch('en');
+      await service.switch('zh');
+
+      expect(title.setTitle).toHaveBeenCalledWith(SHIPPED_APP_TITLES[2][1]);
     });
   });
 

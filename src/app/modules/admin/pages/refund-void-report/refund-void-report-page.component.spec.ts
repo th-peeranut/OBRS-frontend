@@ -12,9 +12,11 @@ import { RefundVoidReportDto } from '../../../../shared/interfaces/refund-void-r
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { ExportButtonComponent } from '../../../../shared/components/export-button/export-button.component';
+import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
 import { AuthService } from '../../../../auth/auth.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { ExportService } from '../../../../services/export/export.service';
+import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 function makeReport(overrides: Partial<RefundVoidReportDto> = {}): RefundVoidReportDto {
   return {
@@ -123,8 +125,7 @@ describe('RefundVoidReportPageComponent', () => {
       const component = new RefundVoidReportPageComponent(store as any, createTranslateStub());
       component.ngOnInit();
 
-      component['onFromDateChange'](new Date(2026, 6, 10));
-      component['onToDateChange'](new Date(2026, 6, 1));
+      component['onRangeChange']({ from: new Date(2026, 6, 10), to: new Date(2026, 6, 1) });
 
       expect((component as any).contentState).toBe('invalid');
       expect(store.setRange).not.toHaveBeenCalled();
@@ -191,8 +192,7 @@ describe('RefundVoidReportPageComponent', () => {
       const component = new RefundVoidReportPageComponent(store as any, createTranslateStub());
       component.ngOnInit();
 
-      component['onFromDateChange'](new Date(2026, 5, 1));
-      component['onToDateChange'](new Date(2026, 5, 10));
+      component['onRangeChange']({ from: new Date(2026, 5, 1), to: new Date(2026, 5, 10) });
 
       expect(store.setRange).toHaveBeenCalledWith('2026-06-01', '2026-06-10');
       expect((component as any).rangeError).toBe('');
@@ -203,12 +203,11 @@ describe('RefundVoidReportPageComponent', () => {
       const component = new RefundVoidReportPageComponent(store as any, createTranslateStub());
       component.ngOnInit();
 
-      // Set `to` FIRST (to a date before the default fromDate seeded by ngOnInit), so
-      // every intermediate state stays invalid — reversing this order would let the
-      // first change alone form a momentarily-valid range and legitimately dispatch
-      // setRange before the second change made it invalid.
-      component['onToDateChange'](new Date(2026, 5, 1));
-      component['onFromDateChange'](new Date(2026, 5, 10));
+      // OBRS-1735: the shared picker withholds the half-picked emit and hands the page one
+      // complete {from, to}, so a caller can no longer observe a one-ended range — which is
+      // what the "set `to` first" dance below used to be ordering around. The intermediate
+      // state still exists inside the picker; it just never reaches applyRange().
+      component['onRangeChange']({ from: new Date(2026, 5, 10), to: new Date(2026, 5, 1) });
 
       expect(store.setRange).not.toHaveBeenCalled();
       expect((component as any).rangeError).toBe('ADMIN.REFUND_VOID_REPORT.ERROR.RANGE_INVALID');
@@ -219,8 +218,7 @@ describe('RefundVoidReportPageComponent', () => {
       const component = new RefundVoidReportPageComponent(store as any, createTranslateStub());
       component.ngOnInit();
 
-      component['onFromDateChange'](new Date(2025, 0, 1));
-      component['onToDateChange'](new Date(2026, 6, 1));
+      component['onRangeChange']({ from: new Date(2025, 0, 1), to: new Date(2026, 6, 1) });
 
       expect(store.setRange).not.toHaveBeenCalled();
       expect((component as any).rangeError).toBe(
@@ -233,7 +231,7 @@ describe('RefundVoidReportPageComponent', () => {
       const component = new RefundVoidReportPageComponent(store as any, createTranslateStub());
       component.ngOnInit();
 
-      component['onFromDateChange'](null);
+      component['onRangeChange']({ from: null, to: component['toDate'] });
 
       expect(store.setRange).not.toHaveBeenCalled();
     });
@@ -281,7 +279,7 @@ describe('RefundVoidReportPageComponent', () => {
     const component = new RefundVoidReportPageComponent(store as any, createTranslateStub());
     component.ngOnInit();
 
-    expect((component as any).formatMoney('not-a-number', 'THB')).toContain('0.00');
+    expect((component as any).formatMoney('not-a-number')).toBe('THB 0');
   });
 
   it('unsubscribes on destroy', () => {
@@ -347,7 +345,7 @@ describe('RefundVoidReportPageComponent (template rendering)', () => {
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
       // OBRS-442: the template now also renders <app-export-button>, so it must be declared
       // (with its own DI deps stubbed) or this block 304s on the unknown element.
-      declarations: [RefundVoidReportPageComponent, ExportButtonComponent],
+      declarations: [RefundVoidReportPageComponent, ExportButtonComponent, PendingButtonDirective, DateRangePickerComponent],
       providers: [
         { provide: RefundVoidReportStore, useValue: storeStub },
         { provide: AuthService, useValue: jasmine.createSpyObj('AuthService', { hasAnyRole: true }) },
@@ -424,7 +422,7 @@ describe('RefundVoidReportPageComponent (export button, OBRS-442)', () => {
 
     TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), DatePickerModule, MenuModule, AdminSharedModule],
-      declarations: [RefundVoidReportPageComponent, ExportButtonComponent],
+      declarations: [RefundVoidReportPageComponent, ExportButtonComponent, PendingButtonDirective, DateRangePickerComponent],
       providers: [
         { provide: RefundVoidReportStore, useValue: storeStub },
         { provide: AuthService, useValue: authServiceSpy },

@@ -60,6 +60,11 @@ $dk-bg-soft: #22263a;
 $dk-bg-input: #161922;
 $dk-border: rgba(255, 255, 255, 0.1);
 $dk-border-muted: rgba(255, 255, 255, 0.06);
+// OBRS-772, the dark half of $control-border. Alpha rather than a hex so the one
+// value clears 3:1 on both dark surfaces it lands on: 4.03:1 on the dark card
+// (#1a1d27) and 4.09:1 on the dark page (#0f1117), both measured. $dk-border
+// stays where it is -- it is the separator token, and 1.4.11 does not reach it.
+$dk-control-border: rgba(255, 255, 255, 0.42);
 $dk-text: #e8eaf0;
 $dk-text-muted: #9aa3b8;
 $dk-accent: #4bc2f7;
