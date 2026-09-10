@@ -283,6 +283,15 @@ export default defineConfig({
     // 1536x900 (the card's viewport) and asserts the overflow precondition before
     // measuring, so it cannot go green without having reproduced the condition.
     '**/obrs-913-sidebar-toggle-target-size.spec.ts',
+    // OBRS-568. The dropdown geometry contract, asked of all four families instead
+    // of one. Every other dropdown spec here measures `app-dropdown-group-obrs`
+    // alone, so "are they all the same" -- the question the owner actually asked --
+    // had no home. Same argument as the two entries above for why it is a browser
+    // test: the bounds under test are `60vh` and a <=576px media block, neither of
+    // which means anything in Karma's fixed 800px window. Hermetic on the same
+    // terms as the rest: public fixtures for three families, a synthetic session
+    // for the admin one.
+    '**/obrs-568-dropdown-panel-geometry.spec.ts',
   ],
 
   timeout: 60_000,
