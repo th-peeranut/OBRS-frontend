@@ -146,3 +146,70 @@ describe('RoleListTableComponent (template)', () => {
     expect(deleteSpy).toHaveBeenCalledWith(row);
   });
 });
+
+
+// OBRS-1495: the raw slug column is for platform admins; the parent hands the
+// decision down. Both directions are asserted deliberately — a test that only
+// proves the column disappears would pass just as happily on a column that
+// never renders at all, which is the opposite defect.
+describe('RoleListTableComponent slug column (OBRS-1495)', () => {
+  let fixture: ComponentFixture<RoleListTableComponent>;
+  let component: RoleListTableComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [CommonModule, TranslateModule.forRoot()],
+      declarations: [RoleListTableComponent],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RoleListTableComponent);
+    component = fixture.componentInstance;
+    component.isLoading = false;
+    component.rows = [makeRow({ slug: 'salesperson' })];
+  });
+
+  function headerCount(): number {
+    return fixture.debugElement.queryAll(By.css('thead th')).length;
+  }
+
+  function bodyCellCount(): number {
+    return fixture.debugElement.queryAll(By.css('tbody tr:not(.admin-empty-row) td')).length;
+  }
+
+  function emptyRowColspan(): string | null {
+    return fixture.debugElement
+      .query(By.css('tr.admin-empty-row td'))
+      .nativeElement.getAttribute('colspan');
+  }
+
+  it('keeps the slug header and cell when showSlugColumn is true (admin)', () => {
+    component.showSlugColumn = true;
+    fixture.detectChanges();
+
+    expect(headerCount()).toBe(5);
+    expect(bodyCellCount()).toBe(5);
+    expect(fixture.debugElement.nativeElement.textContent).toContain('salesperson');
+  });
+
+  it('drops the slug header and cell when showSlugColumn is false (owner)', () => {
+    component.showSlugColumn = false;
+    fixture.detectChanges();
+
+    expect(headerCount()).toBe(4);
+    expect(bodyCellCount()).toBe(4);
+    expect(fixture.debugElement.nativeElement.textContent).not.toContain('salesperson');
+  });
+
+  it('narrows the empty-row colspan so the no-data message still spans the table', () => {
+    component.rows = [];
+    component.hasError = false;
+
+    component.showSlugColumn = true;
+    fixture.detectChanges();
+    expect(emptyRowColspan()).toBe('5');
+
+    component.showSlugColumn = false;
+    fixture.detectChanges();
+    expect(emptyRowColspan()).toBe('4');
+  });
+});

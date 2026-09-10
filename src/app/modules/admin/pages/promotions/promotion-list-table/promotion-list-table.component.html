@@ -8,7 +8,9 @@
       <thead>
         <tr>
           <th>{{ 'ADMIN.PROMOTIONS.CODE' | translate }}</th>
-          <th>{{ 'ADMIN.PROMOTIONS.SLUG' | translate }}</th>
+          @if (showSlugColumn) {
+            <th>{{ 'ADMIN.PROMOTIONS.SLUG' | translate }}</th>
+          }
           <th>{{ 'ADMIN.PROMOTIONS.DISCOUNT_AMOUNT' | translate }}</th>
           <th>{{ 'ADMIN.PROMOTIONS.STATUS' | translate }}</th>
           <th>{{ 'ADMIN.PROMOTIONS.AUTO_APPLY' | translate }}</th>
@@ -21,7 +23,9 @@
           @for (row of skeletonRows; track $index) {
             <tr class="admin-skeleton-row" aria-hidden="true">
               <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              @if (showSlugColumn) {
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              }
               <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
               <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
               <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
@@ -35,7 +39,9 @@
           @for (row of rows; track trackById(i, row); let i = $index) {
             <tr [class.zebra]="i % 2 === 1">
               <td class="admin-emphasis"><code>{{ row.code }}</code></td>
-              <td>{{ row.slug || '-' }}</td>
+              @if (showSlugColumn) {
+                <td>{{ row.slug || '-' }}</td>
+              }
               <td>
                 <div class="admin-cell-stack">
                   <span>{{ row.discountTypeLabel }}</span>
@@ -78,7 +84,7 @@
           }
           @if (rows.length === 0 && !hasError) {
             <tr class="admin-empty-row">
-              <td colspan="7">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+              <td [attr.colspan]="showSlugColumn ? 7 : 6">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
             </tr>
           }
         }

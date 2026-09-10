@@ -7,7 +7,9 @@
     <table class="admin-table">
       <thead>
         <tr>
-          <th>{{ 'ADMIN.ROLES.SLUG' | translate }}</th>
+          @if (showSlugColumn) {
+            <th>{{ 'ADMIN.ROLES.SLUG' | translate }}</th>
+          }
           <th>{{ 'ADMIN.ROLES.NAME' | translate }}</th>
           <th>{{ 'ADMIN.USERS.STATUS' | translate }}</th>
           <th>{{ 'ADMIN.ROLES.UPDATED_AT' | translate }}</th>
@@ -18,7 +20,9 @@
         @if (isLoading) {
           @for (row of skeletonRows; track $index) {
             <tr class="admin-skeleton-row" aria-hidden="true">
-              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              @if (showSlugColumn) {
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              }
               <td>
                 <div class="admin-cell-stack">
                   <span class="admin-skeleton"></span>
@@ -35,9 +39,11 @@
         @if (!isLoading) {
           @for (role of rows; track role; let i = $index) {
             <tr [class.zebra]="i % 2 === 1">
-              <td>
-                <code>{{ role.slug }}</code>
-              </td>
+              @if (showSlugColumn) {
+                <td>
+                  <code>{{ role.slug }}</code>
+                </td>
+              }
               <td>
                 <div class="admin-cell-stack">
                   <span class="admin-emphasis">EN: {{ role.enLabel }}</span>
@@ -72,7 +78,7 @@
           }
           @if (rows.length === 0 && !hasError) {
             <tr class="admin-empty-row">
-              <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+              <td [attr.colspan]="showSlugColumn ? 5 : 4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
             </tr>
           }
         }
