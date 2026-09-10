@@ -3935,7 +3935,8 @@
         "WIDTH_CM": "Width (cm)",
         "HEIGHT_CM": "Height (cm)",
         "PAYMENT_METHOD": "Payment method",
-        "PROHIBITED_ACK": "I confirm this parcel does not contain any prohibited item."
+        "PROHIBITED_ACK": "I confirm this parcel does not contain any prohibited item.",
+        "LEAVE_CONSENT": "The sender consents to the driver leaving this parcel at the destination stop if nobody is there to collect it when the bus arrives."
       },
       "PAYMENT_CASH": "Cash",
       "CARGO": {
@@ -4018,7 +4019,13 @@
         }
       },
       "SHARE_NOT_CONFIGURED": "Parcel revenue share is not configured — it will be recorded at 0% until the owner sets it up.",
-      "SALES_POINT_NOT_MAPPED": "This stop is not yet linked to a sales point — the owner’s share will be recorded as the driver’s cash."
+      "SALES_POINT_NOT_MAPPED": "This stop is not yet linked to a sales point — the owner’s share will be recorded as the driver’s cash.",
+      "LEAVE_CONSENT": {
+        "EFFECT_PHOTO": "The driver photographs the parcel where it was left, as evidence; sender and recipient can both see that photo on the tracking page.",
+        "EFFECT_RISK": "A stop is a public place with no staff watching it. Once the parcel has been left and photographed, the risk is the sender’s.",
+        "EFFECT_NO_RETURN": "Carriage to the destination stop counts as performed, so the freight charge is not refunded.",
+        "OPTIONAL_HINT": "Optional — the parcel ships normally without it. Read this to the sender before ticking."
+      }
     },
     "PARCEL_WAYBILL": {
       "TERMS_TITLE": "Parcel carriage terms (short form)",
@@ -4026,6 +4033,7 @@
       "TERMS_QR_LABEL": "Full terms",
       "TERMS_QR_ALT": "QR code that opens the full parcel carriage terms",
       "TERMS_QR_HINT": "Scan to read the full terms",
+      "LEAVE_CONSENT_LINE": "Under clause 6 the sender consents to the driver leaving this parcel at the destination stop and photographing it as evidence if nobody collects it when the bus arrives, and accepts the risk from that moment.",
       "TERMS_SIGNATURE": "Sender signature",
       "SUBTITLE": "Printable waybill for this parcel.",
       "TITLE": "Waybill",
@@ -4274,7 +4282,10 @@
         "ENGINE_ON": "Engine on",
         "ENGINE_OFF": "Engine off",
         "DIRECTION": "Heading {{direction}}",
-        "DIRECTION_LAST_KNOWN": "Last known direction: {{direction}}"
+        "DIRECTION_LAST_KNOWN": "Last known direction: {{direction}}",
+        "NEXT_STOP": "Next stop: {{name}} ({{order}} of {{total}})",
+        "NEXT_STOP_LAST_KNOWN": "Last known next stop: {{name}} ({{order}} of {{total}})",
+        "DELAY": "Behind schedule by {{minutes}} min"
       },
       "COMPASS": {
         "N": "north",

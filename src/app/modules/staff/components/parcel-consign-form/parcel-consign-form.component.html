@@ -360,6 +360,40 @@
                       </p>
                     </div>
 
+                    <!-- OBRS-347 (ADR-0064 §4, rewritten 2026-09-10): the sender's advance consent
+                         to the driver leaving the parcel at the destination stop. Consigned only -
+                         a carry-on item never leaves the sender's side. Boxed rather than a bare
+                         checkbox because the tick has three consequences the sender must see
+                         BEFORE ticking (photo evidence, risk passes, no return / no refund) and a
+                         one-line label cannot carry them; the owner picked this layout 2026-09-10.
+                         Deliberately NOT required: refusing must still let the intake through. -->
+                    @if (!isCarryOnMode) {
+                      <div class="col-12">
+                        <section class="parcel-consign-form__leave-consent" data-testid="parcel-leave-consent-block">
+                          <div class="form-check">
+                            <input
+                              type="checkbox"
+                              class="form-check-input"
+                              id="leaveAtStopConsent"
+                              formControlName="leaveAtStopConsent"
+                              data-testid="parcel-leave-consent-checkbox"
+                              />
+                            <label class="form-check-label fw-bold" for="leaveAtStopConsent">
+                              {{ 'STAFF.PARCEL_CONSIGN.FIELD.LEAVE_CONSENT' | translate }}
+                            </label>
+                          </div>
+                          <ul class="parcel-consign-form__leave-consent-effects">
+                            <li>{{ 'STAFF.PARCEL_CONSIGN.LEAVE_CONSENT.EFFECT_PHOTO' | translate }}</li>
+                            <li>{{ 'STAFF.PARCEL_CONSIGN.LEAVE_CONSENT.EFFECT_RISK' | translate }}</li>
+                            <li>{{ 'STAFF.PARCEL_CONSIGN.LEAVE_CONSENT.EFFECT_NO_RETURN' | translate }}</li>
+                          </ul>
+                          <small class="parcel-consign-form__leave-consent-optional">
+                            {{ 'STAFF.PARCEL_CONSIGN.LEAVE_CONSENT.OPTIONAL_HINT' | translate }}
+                          </small>
+                        </section>
+                      </div>
+                    }
+
                     @if (shareNotConfigured) {
                       <div class="col-12">
                         <div class="parcel-consign-indicator is-warning" data-testid="parcel-share-not-configured-banner">

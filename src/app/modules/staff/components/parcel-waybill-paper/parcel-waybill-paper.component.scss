@@ -73,3 +73,12 @@
   height: 1px;
   max-width: 320px;
 }
+
+// OBRS-347: the sender's consent, printed directly above the signature rule so the
+// signature below it is what the sender is signing. Rendered only when they consented.
+.parcel-waybill-leave-consent {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--admin-text, #191c1e);
+}

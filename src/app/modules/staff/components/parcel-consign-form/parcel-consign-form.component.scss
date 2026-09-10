@@ -108,3 +108,32 @@
     text-decoration: underline;
   }
 }
+
+// OBRS-347: the sender's leave-at-stop consent. Deliberately the SAME box treatment as
+// .parcel-consign-form__prohibited above - both are "read this to the sender before they
+// tick", so they should not look like different kinds of thing. It is not tinted as a
+// warning: consenting is a normal, expected answer, not a hazard.
+.parcel-consign-form__leave-consent {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid var(--admin-outline);
+  border-radius: 12px;
+  background: var(--admin-surface-soft);
+  color: var(--admin-text);
+}
+
+.parcel-consign-form__leave-consent-effects {
+  margin: 10px 0 0;
+  padding-left: 20px;
+
+  li {
+    padding: 2px 0;
+    color: var(--admin-text-secondary);
+  }
+}
+
+.parcel-consign-form__leave-consent-optional {
+  display: block;
+  margin-top: 10px;
+  color: var(--admin-muted);
+}

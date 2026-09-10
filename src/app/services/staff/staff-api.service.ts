@@ -488,6 +488,16 @@ export interface FleetPositionRespDto {
   stale: boolean;
   deviceOnline: boolean | null;
   gpsImeiConfigured: boolean;
+  // OBRS-1083 — which trip the van is on and which stop it is heading to. All five are null
+  // TOGETHER when it has no active trip, and the popup drops the whole line rather than
+  // rendering a zero. `nextStopOrder` is the stop's 1-BASED POSITION in the trip, not the
+  // backend's `stop_order` column (which is gapped by design), so `nextStopOrder`/`totalStops`
+  // always reads as a sane "3 of 4".
+  activeScheduleId: number | null;
+  nextStopName: string | null;
+  nextStopOrder: number | null;
+  totalStops: number | null;
+  scheduleDelayMinutes: number | null;
 }
 
 // ---------------------------------------------------------------------------

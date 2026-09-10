@@ -412,12 +412,16 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
     const timeLabel = fleetRelativeTimeLabel(fleetRelativeTime(vehicle.recordedAt, new Date()));
     const timeText = this.translate.instant(timeLabel.key, timeLabel.params);
     const directionText = this.buildDirectionText(vehicle, status);
+    const nextStopText = this.buildNextStopText(vehicle, status);
+    const delayText = this.buildDelayText(vehicle);
 
     const rows = [
       `<p class="fleet-marker-popup-plate">${escapeHtml(vehicle.numberPlate)}</p>`,
       `<p class="fleet-marker-popup-status">${escapeHtml(statusLabel)}</p>`,
       speedLabel ? `<p>${escapeHtml(speedLabel)}</p>` : '',
       directionText ? `<p>${escapeHtml(directionText)}</p>` : '',
+      nextStopText ? `<p class="fleet-marker-popup-next-stop">${escapeHtml(nextStopText)}</p>` : '',
+      delayText ? `<p class="fleet-marker-popup-delay">${escapeHtml(delayText)}</p>` : '',
       engineLabel ? `<p>${escapeHtml(engineLabel)}</p>` : '',
       `<p class="fleet-marker-popup-time">${escapeHtml(timeText)}</p>`,
     ].filter((row) => row.length > 0);
@@ -446,5 +450,42 @@ export class FleetMapPanelComponent implements OnChanges, AfterViewInit, OnDestr
     return status === 'LIVE'
       ? this.translate.instant('STAFF.FLEET_MAP.POPUP.DIRECTION', { direction })
       : this.translate.instant('STAFF.FLEET_MAP.POPUP.DIRECTION_LAST_KNOWN', { direction });
+  }
+
+  /** OBRS-1083 AC3/AC4 — the stop the van is heading to, or NOTHING. A van with no active
+   * trip gets `nextStopName === null` and this returns '', so the row is dropped upstream
+   * rather than rendering "stop 0 of 0" (AC3: the whole line disappears, it does not go
+   * blank). `nextStopOrder`/`totalStops` are checked too, not just the name: they arrive as
+   * one set, and rendering "Sriracha ( / )" out of a half-set would be worse than silence.
+   *
+   * AC4 borrows OBRS-905's split verbatim — a GPS_LOST/OFFLINE van keeps the line but takes
+   * last-known phrasing, because the stop it was heading to at its last fix is still the most
+   * useful thing on the popup, and present-tense wording over a two-hour-old fix is the exact
+   * staleness lie OBRS-905 was written to stop. */
+  private buildNextStopText(vehicle: FleetPositionRespDto, status: FleetVehicleStatus): string {
+    if (vehicle.nextStopName === null || vehicle.nextStopOrder === null || vehicle.totalStops === null) {
+      return '';
+    }
+    const params = {
+      name: vehicle.nextStopName,
+      order: vehicle.nextStopOrder,
+      total: vehicle.totalStops,
+    };
+    return status === 'LIVE'
+      ? this.translate.instant('STAFF.FLEET_MAP.POPUP.NEXT_STOP', params)
+      : this.translate.instant('STAFF.FLEET_MAP.POPUP.NEXT_STOP_LAST_KNOWN', params);
+  }
+
+  /** OBRS-1083 — "behind schedule by N minutes", and only when there is a delay to report.
+   * The backend floors this at 0, and 0 means "not overdue at its next stop", which is the
+   * ordinary case: printing "behind by 0 min" on every van on time would bury the handful
+   * that are not. Not gated on status — the delay is a property of the trip, and the
+   * last-known wording on the line above already carries the freshness caveat for both. */
+  private buildDelayText(vehicle: FleetPositionRespDto): string {
+    const minutes = vehicle.scheduleDelayMinutes;
+    if (minutes === null || minutes <= 0) {
+      return '';
+    }
+    return this.translate.instant('STAFF.FLEET_MAP.POPUP.DELAY', { minutes });
   }
 }
