@@ -211,3 +211,92 @@ describe('ParcelConsignFormComponent (OBRS-1598 schedule reset on a date change 
     expect(fixture.componentInstance['form'].get('scheduleId')?.value).toBe('9001');
   });
 });
+
+/**
+ * OBRS-347 — the sender's leave-at-stop consent tick.
+ *
+ * Every assertion here is about the ONE property that makes this consent legally
+ * usable: that it is optional. A tick the sender cannot refuse is consent extracted
+ * as the price of shipping, which is what ปพพ. ม.625 makes ineffective — so
+ * "submit stays enabled while unticked" is the load-bearing test, not a nicety.
+ */
+describe('ParcelConsignFormComponent (OBRS-347 leave-at-stop consent — DOM)', () => {
+  let fixture: ComponentFixture<ParcelConsignFormComponent>;
+
+  beforeEach(async () => {
+    await configureFormTestBed();
+    fixture = TestBed.createComponent(ParcelConsignFormComponent);
+  });
+
+  function fillValidConsigned(): void {
+    fixture.componentInstance['form'].patchValue({
+      senderName: 'ผู้ส่ง ทดสอบ',
+      senderPhone: '0812345678',
+      recipientName: 'ผู้รับ ทดสอบ',
+      recipientPhone: '0898765432',
+      scheduleId: '9001',
+      pickupStopId: '1',
+      dropoffStopId: '2',
+      weightKg: 5,
+      description: 'กล่องพัสดุ',
+      prohibitedAcknowledged: true,
+    });
+  }
+
+  function consentCheckbox(): HTMLInputElement | null {
+    const de = fixture.debugElement.query(By.css('[data-testid="parcel-leave-consent-checkbox"]'));
+    return de ? (de.nativeElement as HTMLInputElement) : null;
+  }
+
+  it('renders the consent block in consigned mode, with the three consequences of ticking', () => {
+    fixture.componentInstance.mode = 'consigned';
+    fixture.detectChanges();
+
+    const block = fixture.debugElement.query(By.css('[data-testid="parcel-leave-consent-block"]'));
+    expect(block).toBeTruthy();
+    // Untranslated in the test bed, so each consequence renders as its own key -
+    // asserting the keys pins that all three are present, not just the checkbox.
+    const text = block.nativeElement.textContent as string;
+    expect(text).toContain('STAFF.PARCEL_CONSIGN.LEAVE_CONSENT.EFFECT_PHOTO');
+    expect(text).toContain('STAFF.PARCEL_CONSIGN.LEAVE_CONSENT.EFFECT_RISK');
+    expect(text).toContain('STAFF.PARCEL_CONSIGN.LEAVE_CONSENT.EFFECT_NO_RETURN');
+  });
+
+  it('does NOT render the consent block in carry-on mode — a carry-on item never leaves the sender', () => {
+    fixture.componentInstance.mode = 'carry_on_seat';
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('[data-testid="parcel-leave-consent-block"]')).length).toBe(0);
+  });
+
+  it('starts unticked and leaves submit ENABLED — refusing consent must never block the intake', () => {
+    fixture.componentInstance.mode = 'consigned';
+    fixture.detectChanges();
+    fillValidConsigned();
+    fixture.detectChanges();
+
+    expect(consentCheckbox()!.checked).toBeFalse();
+    const submit = fixture.debugElement.query(By.css('button[type="submit"]')).nativeElement as HTMLButtonElement;
+    expect(submit.disabled).toBeFalse();
+  });
+
+  it('emits leaveAtStopConsent false when untouched and true once ticked', () => {
+    fixture.componentInstance.mode = 'consigned';
+    fixture.detectChanges();
+    fillValidConsigned();
+    fixture.detectChanges();
+
+    const emitted: Array<{ leaveAtStopConsent?: boolean }> = [];
+    fixture.componentInstance.submitForm.subscribe((v) => emitted.push(v as { leaveAtStopConsent?: boolean }));
+
+    fixture.debugElement.query(By.css('form')).triggerEventHandler('ngSubmit', {});
+    expect(emitted[0].leaveAtStopConsent).toBeFalse();
+
+    const box = consentCheckbox()!;
+    box.click();
+    fixture.detectChanges();
+    fixture.debugElement.query(By.css('form')).triggerEventHandler('ngSubmit', {});
+    expect(emitted[1].leaveAtStopConsent).toBeTrue();
+  });
+});
+

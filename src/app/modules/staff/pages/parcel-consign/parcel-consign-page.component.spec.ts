@@ -443,6 +443,7 @@ describe('ParcelConsignPageComponent', () => {
       weightKg: 5,
       description: 'Documents',
       prohibitedAcknowledged: true,
+      leaveAtStopConsent: false,
     });
 
     expect(staffApi.createConsignedParcel).toHaveBeenCalledWith(
@@ -471,6 +472,7 @@ describe('ParcelConsignPageComponent', () => {
         weightKg: 5,
         description: 'Documents',
         prohibitedAcknowledged: true,
+        leaveAtStopConsent: false,
       });
       expect(component['serverErrorKey']).toBe(expectedKey);
       expect(component['result']).toBeNull();
@@ -528,6 +530,7 @@ describe('ParcelConsignPageComponent', () => {
         weightKg: 5,
         description: 'Documents',
         prohibitedAcknowledged: true,
+        leaveAtStopConsent: false,
       });
       component['onModeChange']('carry_on_seat');
       late$.next({ code: 201, message: 'Created', data: { parcelId: 1, trackingNumber: 'PCL-LATE' } });

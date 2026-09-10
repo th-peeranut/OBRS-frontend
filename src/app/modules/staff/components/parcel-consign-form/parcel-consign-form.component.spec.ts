@@ -152,6 +152,7 @@ describe('ParcelConsignFormComponent', () => {
       description: 'Documents',
       dimensions: { lengthCm: null, widthCm: null, heightCm: null },
       prohibitedAcknowledged: true,
+      leaveAtStopConsent: false,
       // OBRS-341: always-present carry-on-only controls (inert in consigned
       // mode) — FormGroup#setValue requires every control, unlike patchValue.
       seatCount: null,
@@ -175,6 +176,7 @@ describe('ParcelConsignFormComponent', () => {
       weightKg: 5,
       description: 'Documents',
       prohibitedAcknowledged: true,
+      leaveAtStopConsent: false,
     });
   });
 
