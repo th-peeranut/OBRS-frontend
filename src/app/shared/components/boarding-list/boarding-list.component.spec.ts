@@ -14,6 +14,9 @@ import { BoardingListStore } from './boarding-list.store';
 import { AdminModalBackdropDirective } from '../../directives/admin-modal-backdrop.directive';
 import { createTranslateStub } from '../../../testing/test-stubs';
 import { TitleLabelPipe } from '../../pipes/title-label.pipe';
+// OBRS-374: real app-admin-dropdown for the pickup-stop-filter wiring test below —
+// exercises the actual module resolution (SharedModule now imports AdminSharedModule).
+import { AdminSharedModule } from '../../../modules/admin/admin-shared.module';
 
 function createAlertServiceStub(confirmResult = true): any {
   return {
@@ -2747,5 +2750,425 @@ describe('BoardingListComponent — OBRS-1673 call-the-booker action (TestBed)',
     fixture.detectChanges();
 
     expect(telLinks().length).toBe(0);
+  }));
+});
+
+describe('BoardingListComponent — OBRS-374 pickup-stop filter (unit)', () => {
+  function stopComponent(items = [
+    buildItem({ ticketId: 1, fromStop: 'Stop B', bookingNumber: 'BK-1', passengerName: 'Mr. Somchai Jaidee' }),
+    buildItem({ ticketId: 2, fromStop: 'Stop A', bookingNumber: 'BK-2', passengerName: 'Ms. Malee Thongdee' }),
+    buildItem({ ticketId: 3, fromStop: 'Stop B', bookingNumber: 'BK-3', passengerName: 'Mr. Wichai Sukjai' }),
+    buildItem({ ticketId: 4, fromStop: 'Stop C', bookingNumber: 'BK-4', passengerName: 'Ms. Nid Sukjai' }),
+  ]) {
+    return createComponent({ getScheduleById: jasmine.createSpy() }, createStoreStub(items));
+  }
+
+  it('stopOptions is distinct, first-appearance order — no .sort()', () => {
+    const component = stopComponent();
+
+    expect(component['stopOptions']).toEqual([{ value: 'Stop B' }, { value: 'Stop A' }, { value: 'Stop C' }]);
+  });
+
+  it('stopOptions stays derived from items, not filteredItems, so it does not shrink while filtered (the driver can still get back to "all stops")', () => {
+    const component = stopComponent();
+
+    component['stopFilter'] = 'Stop A';
+
+    expect(component['stopOptions']).toEqual([{ value: 'Stop B' }, { value: 'Stop A' }, { value: 'Stop C' }]);
+  });
+
+  it('narrows the table to only the chosen stop, compared with === on the raw value', () => {
+    const component = stopComponent();
+
+    component['stopFilter'] = 'Stop B';
+
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([1, 3]);
+  });
+
+  it('composes with searchTerm — a row must pass BOTH filters', () => {
+    const component = stopComponent();
+
+    component['stopFilter'] = 'Stop B';
+    component['searchTerm'] = 'BK-3';
+
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([3]);
+  });
+
+  it('clearing stopFilter back to \'\' (picking the dropdown placeholder) restores every stop', () => {
+    const component = stopComponent();
+    component['stopFilter'] = 'Stop A';
+    expect(component['filteredItems'].length).toBe(1);
+
+    component['stopFilter'] = '';
+
+    expect(component['filteredItems'].length).toBe(4);
+  });
+
+  it('ngOnChanges (re-bind to a new schedule) resets stopFilter — a stale stop filter would render "this bus has nobody on it" for the new trip', () => {
+    const component = stopComponent();
+    component['stopFilter'] = 'Stop A';
+
+    component.scheduleId = 99;
+    component.ngOnChanges({ scheduleId: {} as any });
+
+    expect(component['stopFilter']).toBe('');
+  });
+
+  it('board() still lands on a row the active stop filter has hidden (AC-7 — scan/board stays independent of the filter/group)', async () => {
+    const store = createStoreStub([buildItem({ ticketId: 7, fromStop: 'Stop B' })]);
+    const staffApiServiceStub = {
+      board: jasmine.createSpy('board').and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    };
+    const component = createComponent(staffApiServiceStub, store, createAlertServiceStub(), createAuthServiceStub({ username: 'jane.doe' }));
+
+    component['stopFilter'] = 'Stop A'; // hides the only item (fromStop = 'Stop B')
+    expect(component['filteredItems'].length).toBe(0);
+
+    await component['board'](store.value[0]);
+
+    expect(staffApiServiceStub.board).toHaveBeenCalledWith(7);
+    expect(component['items'][0].boardedAt).toBeTruthy();
+  });
+
+  it('groupTotalCount / groupBoardedCount count within one stop only', () => {
+    const component = stopComponent([
+      buildItem({ ticketId: 1, fromStop: 'Stop B', boardedAt: '2026-07-10T08:00:00Z' }),
+      buildItem({ ticketId: 2, fromStop: 'Stop A' }),
+      buildItem({ ticketId: 3, fromStop: 'Stop B' }),
+    ]);
+
+    expect(component['groupTotalCount'](component['items'], 'Stop B')).toBe(2);
+    expect(component['groupBoardedCount'](component['items'], 'Stop B')).toBe(1);
+    expect(component['groupTotalCount'](component['items'], 'Stop A')).toBe(1);
+    expect(component['groupBoardedCount'](component['items'], 'Stop A')).toBe(0);
+  });
+});
+
+// OBRS-374: renders the REAL template (group headers + real app-admin-dropdown) — a
+// bare `new BoardingListComponent(...)` never resolves NgModule declarations, so the
+// module-wiring fix (SharedModule importing AdminSharedModule) is only provable here.
+describe('BoardingListComponent — OBRS-374 group headers + stop-filter dropdown (TestBed)', () => {
+  let fixture: ComponentFixture<BoardingListComponent>;
+  let component: BoardingListComponent;
+
+  function render(items: BoardingListItemDto[]): void {
+    TestBed.configureTestingModule({
+      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot(), AdminSharedModule],
+      declarations: [BoardingListComponent],
+      providers: [
+        BoardingListStore,
+        {
+          provide: StaffApiService,
+          useValue: {
+            getBoardingList: () => of({ code: 200, message: 'OK', data: items }),
+            getScheduleById: () => of({ code: 200, message: 'OK', data: null }),
+          },
+        },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+        {
+          provide: AuthService,
+          useValue: {
+            hasAnyRole: () => false,
+            getRoles: () => [],
+            getUsername: () => 'operator1',
+            authStatus$: of(true),
+          },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(BoardingListComponent);
+    component = fixture.componentInstance;
+    component.scheduleId = 42;
+    component.ngOnChanges({ scheduleId: {} as any });
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  function dataRows(): HTMLTableRowElement[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('tbody tr:not(.boarding-stop-group-row)'));
+  }
+
+  function groupRows(): HTMLTableRowElement[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('tbody tr.boarding-stop-group-row'));
+  }
+
+  // Deliberately NOT contiguous (A, A, B, A) — proves the header is a plain
+  // previous-row comparison with no client-side grouping/sorting: three headers,
+  // in exactly backend order, not two.
+  const NON_CONTIGUOUS = [
+    buildItem({ ticketId: 1, fromStop: 'Stop A', ticketNumber: 'T1' }),
+    buildItem({ ticketId: 2, fromStop: 'Stop A', ticketNumber: 'T2', boardedAt: '2026-07-10T08:00:00Z' }),
+    buildItem({ ticketId: 3, fromStop: 'Stop B', ticketNumber: 'T3' }),
+    buildItem({ ticketId: 4, fromStop: 'Stop A', ticketNumber: 'T4' }),
+  ];
+
+  it('renders one group header per contiguous run, in backend order, immediately before that run\'s first row', fakeAsync(() => {
+    render(NON_CONTIGUOUS);
+    tick();
+    fixture.detectChanges();
+
+    const groups = groupRows();
+    expect(groups.length).toBe(3);
+    expect(groups.map((r) => r.querySelector('.boarding-stop-group-name')?.textContent?.trim())).toEqual([
+      'Stop A',
+      'Stop B',
+      'Stop A',
+    ]);
+    expect(dataRows().length).toBe(4);
+
+    // Order in the DOM: group(A), T1, T2, group(B), T3, group(A), T4.
+    const rows = Array.from(fixture.nativeElement.querySelectorAll('tbody tr')) as HTMLTableRowElement[];
+    const shape = rows.map((r) => (r.classList.contains('boarding-stop-group-row') ? 'group' : 'data'));
+    expect(shape).toEqual(['group', 'data', 'data', 'group', 'data', 'group', 'data']);
+  }));
+
+  it('still renders the single group header when the stop filter narrows to one stop — the driver\'s confirmation the filter took', fakeAsync(() => {
+    render(NON_CONTIGUOUS);
+    tick();
+    fixture.detectChanges();
+
+    component['stopFilter'] = 'Stop B';
+    fixture.detectChanges();
+
+    expect(groupRows().length).toBe(1);
+    expect(groupRows()[0].querySelector('.boarding-stop-group-name')?.textContent?.trim()).toBe('Stop B');
+    expect(dataRows().length).toBe(1);
+  }));
+
+  function dropdownTrigger(): HTMLButtonElement {
+    return fixture.nativeElement.querySelector('[data-testid="boarding-stop-filter"] .admin-dropdown-trigger');
+  }
+
+  function dropdownOptions(): HTMLButtonElement[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('[data-testid="boarding-stop-filter"] .admin-dropdown-option'));
+  }
+
+  it('the real app-admin-dropdown narrows the table on selection and the placeholder row clears it back to "all stops"', fakeAsync(() => {
+    render(NON_CONTIGUOUS);
+    tick();
+    fixture.detectChanges();
+
+    expect(dataRows().length).toBe(4);
+
+    dropdownTrigger().click();
+    fixture.detectChanges();
+
+    // First option is the placeholder ("all stops"); the rest are stopOptions in
+    // first-appearance order — Stop A, Stop B (not Stop A twice).
+    const options = dropdownOptions();
+    expect(options.map((o) => o.querySelector('span')?.textContent?.trim())).toEqual([
+      'STAFF.BOARDING.STOP_FILTER.PLACEHOLDER',
+      'Stop A',
+      'Stop B',
+    ]);
+
+    options[2].click(); // "Stop B"
+    fixture.detectChanges();
+
+    expect(component['stopFilter']).toBe('Stop B');
+    expect(dataRows().length).toBe(1);
+    expect(dataRows()[0].textContent).toContain('T3');
+
+    dropdownTrigger().click();
+    fixture.detectChanges();
+    dropdownOptions()[0].click(); // placeholder row = clear
+    fixture.detectChanges();
+
+    expect(component['stopFilter']).toBe('');
+    expect(dataRows().length).toBe(4);
+  }));
+
+  it('empty state: the stop filter ALONE (no search term) emptying the table shows NO_MATCH_TITLE without interpolating an empty search term', fakeAsync(() => {
+    render(NON_CONTIGUOUS);
+    tick();
+    fixture.detectChanges();
+
+    component['stopFilter'] = 'Stop C'; // matches none of NON_CONTIGUOUS's stops
+    expect(component['searchTerm']).toBe('');
+    fixture.detectChanges();
+
+    const title = fixture.nativeElement.querySelector('td.text-center .fw-semibold');
+    expect(title?.textContent?.trim()).toBe('STAFF.BOARDING.SEARCH.NO_MATCH_TITLE');
+    // NO_MATCH_BODY interpolates {{ term: searchTerm }} — with searchTerm '' it must not
+    // render at all (design item 8), not render as an empty string.
+    expect(fixture.nativeElement.querySelector('td.text-center .text-muted.small')).toBeFalsy();
+  }));
+});
+
+// OBRS-374/OBRS-1659: the print sheet is locked to `items`, never `filteredItems` —
+// verified end-to-end through the real CDK portal (same harness as the
+// printManifest() lifecycle suite above), with the on-screen filter deliberately
+// left ACTIVE so a regression that swaps in `filteredItems` fails loudly.
+describe('BoardingListComponent — OBRS-374 print manifest keeps every stop while the screen is filtered', () => {
+  let fixture: ComponentFixture<BoardingListComponent>;
+  let component: BoardingListComponent;
+
+  const ITEMS = [
+    buildItem({ ticketId: 1, fromStop: 'Stop A', ticketNumber: 'T1' }),
+    buildItem({ ticketId: 2, fromStop: 'Stop B', ticketNumber: 'T2', boardedAt: '2026-07-10T08:00:00Z' }),
+  ];
+
+  beforeEach(fakeAsync(() => {
+    TestBed.configureTestingModule({
+      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      declarations: [BoardingListComponent],
+      providers: [
+        BoardingListStore,
+        {
+          provide: StaffApiService,
+          useValue: {
+            getBoardingList: () => of({ code: 200, message: 'OK', data: ITEMS }),
+            getScheduleById: () => of({ code: 200, message: 'OK', data: null }),
+          },
+        },
+        { provide: AlertService, useValue: {} },
+        {
+          provide: AuthService,
+          useValue: {
+            hasAnyRole: () => false,
+            getRoles: () => [],
+            getUsername: () => 'operator1',
+            authStatus$: of(true),
+          },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(BoardingListComponent);
+    component = fixture.componentInstance;
+    component.scheduleId = 42;
+    // TestBed root component has no host binding, so Angular never invokes
+    // ngOnChanges on its own — call it explicitly (same as the OBRS-256 render
+    // suite above) so store.setScheduleId()/refresh() actually populate `items`.
+    component.ngOnChanges({ scheduleId: {} as any });
+    tick();
+    fixture.detectChanges();
+  }));
+
+  afterEach(() => {
+    document.querySelectorAll('.boarding-manifest-print-portal').forEach((el) => el.remove());
+    document.body.classList.remove('boarding-manifest-printing');
+  });
+
+  it('prints a group header for every stop even though the on-screen filter narrows to one', fakeAsync(() => {
+    spyOn(window, 'print');
+    component['stopFilter'] = 'Stop A'; // on-screen table would show only Stop A now
+
+    component['printManifest']();
+
+    const portal = document.querySelector('.boarding-manifest-print-portal') as HTMLElement;
+    const groups = Array.from(portal.querySelectorAll('.boarding-manifest-print-group-row .boarding-stop-group-name'));
+    expect(groups.map((el) => el.textContent?.trim())).toEqual(['Stop A', 'Stop B']);
+    // colspan="8" — the print table has no actions column.
+    expect(portal.querySelector('.boarding-manifest-print-group-row td')?.getAttribute('colspan')).toBe('8');
+  }));
+});
+
+// OBRS-374: measured, not by eye — reference technique is the 6 dark-mode specs in
+// override-cancel-modal.component.spec.ts (mount the real fixture inside a real
+// `.admin-shell.is-dark`, read getComputedStyle).
+describe('BoardingListComponent — OBRS-374 group header dark theme (measured)', () => {
+  let fixture: ComponentFixture<BoardingListComponent>;
+  let shell: HTMLElement | null = null;
+
+  const ITEMS = [
+    buildItem({ ticketId: 1, fromStop: 'Stop A', ticketNumber: 'T1' }),
+    buildItem({ ticketId: 2, fromStop: 'Stop A', ticketNumber: 'T2' }),
+  ];
+
+  function render(): void {
+    // A single test mounts this twice (light, then dark) — TestBed refuses a second
+    // configureTestingModule() once a component has been created off the first.
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      declarations: [BoardingListComponent],
+      providers: [
+        BoardingListStore,
+        {
+          provide: StaffApiService,
+          useValue: {
+            getBoardingList: () => of({ code: 200, message: 'OK', data: ITEMS }),
+            getScheduleById: () => of({ code: 200, message: 'OK', data: null }),
+          },
+        },
+        { provide: AlertService, useValue: {} },
+        {
+          provide: AuthService,
+          useValue: {
+            hasAnyRole: () => false,
+            getRoles: () => [],
+            getUsername: () => 'operator1',
+            authStatus$: of(true),
+          },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(BoardingListComponent);
+    fixture.componentInstance.scheduleId = 42;
+    fixture.componentInstance.ngOnChanges({ scheduleId: {} as any });
+    tick();
+    fixture.detectChanges();
+  }
+
+  /** Move the component host inside a real .admin-shell so --admin-* resolves. */
+  function mountInShell(dark: boolean): void {
+    shell = document.createElement('div');
+    shell.className = dark ? 'admin-shell theme-admin is-dark' : 'admin-shell theme-admin';
+    document.body.appendChild(shell);
+    shell.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    shell?.remove();
+    shell = null;
+    fixture?.destroy();
+  });
+
+  function headerTd(): HTMLElement {
+    return fixture.nativeElement.querySelector('.boarding-stop-group-row td') as HTMLElement;
+  }
+
+  function headerName(): HTMLElement {
+    return fixture.nativeElement.querySelector('.boarding-stop-group-name') as HTMLElement;
+  }
+
+  it('the header background/text actually differ between the light and dark shell (not just declared — measured)', fakeAsync(() => {
+    render();
+    mountInShell(false);
+    const bgLight = getComputedStyle(headerTd()).backgroundColor;
+    const colorLight = getComputedStyle(headerName()).color;
+
+    shell?.remove();
+    shell = null;
+    fixture.destroy();
+
+    render();
+    mountInShell(true);
+    const bgDark = getComputedStyle(headerTd()).backgroundColor;
+    const colorDark = getComputedStyle(headerName()).color;
+
+    expect(bgDark).not.toBe(bgLight);
+    expect(colorDark).not.toBe(colorLight);
+  }));
+
+  it('in the light shell the header text colour is not identical to a plain row\'s (an undeclared token would silently inherit and match)', fakeAsync(() => {
+    render();
+    mountInShell(false);
+
+    const plainRowCell = fixture.nativeElement.querySelector(
+      'tbody tr:not(.boarding-stop-group-row) td'
+    ) as HTMLElement;
+
+    expect(getComputedStyle(headerName()).color).not.toBe(getComputedStyle(plainRowCell).color);
   }));
 });
