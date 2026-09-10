@@ -48,7 +48,7 @@
             "styles": [
               "src/styles/webfonts.scss",
               "node_modules/bootstrap/dist/css/bootstrap.min.css",
-              "node_modules/bootstrap-icons/font/bootstrap-icons.css",
+              "src/styles/bootstrap-icons-subset.scss",
               "node_modules/leaflet/dist/leaflet.css",
               "src/styles/variables.scss",
               "src/styles.scss"
@@ -164,7 +164,7 @@
               "styles": [
                 "src/styles/webfonts.gate.scss",
                 "node_modules/bootstrap/dist/css/bootstrap.min.css",
-                "node_modules/bootstrap-icons/font/bootstrap-icons.css",
+                "src/styles/bootstrap-icons-subset.scss",
                 "node_modules/leaflet/dist/leaflet.css",
                 "src/styles/variables.scss",
                 "src/styles.scss"
@@ -230,7 +230,7 @@
             "styles": [
               "src/styles/webfonts.scss",
               "node_modules/bootstrap/dist/css/bootstrap.min.css",
-              "node_modules/bootstrap-icons/font/bootstrap-icons.css",
+              "src/styles/bootstrap-icons-subset.scss",
               "node_modules/leaflet/dist/leaflet.css",
               "src/styles/variables.scss",
               "src/styles.scss"
