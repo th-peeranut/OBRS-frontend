@@ -326,10 +326,29 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
 
     // Echo the exact counted cash through the one formatter — even a zero
     // drawer (e.g. `THB 0` / `0 บาท`), so the sign-off dialog states the amount.
-    const countedText = this.formatMoney(payload.countedCashAmount);
+    //
+    // OBRS-1772: a negative payload is the owner paying the seller, not a
+    // drawer counted below zero. The last screen before an irreversible
+    // sign-off must not be the one place that still says "counted -260 in the
+    // drawer" — so the direction moves into the sentence and the figure stays
+    // a magnitude, exactly as the form above it reads.
+    //
+    // Scrutinize/OBRS-1772: derived from `detail.live.expectedCashAmount` (the
+    // SAME signal the modal's own `isTopUp` uses), not from the payload's
+    // sign — a payload of exactly "0.00" on a genuine top-up round (owner
+    // handed over nothing) is non-negative but is still a top-up.
+    const isTopUp = Number(detail.live.expectedCashAmount) < 0;
+    const countedText = this.formatMoney(
+      isTopUp ? String(Math.abs(Number(payload.countedCashAmount))) : payload.countedCashAmount
+    );
     const confirmed = await this.alertService.confirm({
       title: this.translate.instant('ADMIN.SETTLEMENTS.CONFIRM.TITLE'),
-      text: this.translate.instant('ADMIN.SETTLEMENTS.CONFIRM.DIALOG_TEXT', { counted: countedText }),
+      text: this.translate.instant(
+        isTopUp
+          ? 'ADMIN.SETTLEMENTS.CONFIRM.TOP_UP_DIALOG_TEXT'
+          : 'ADMIN.SETTLEMENTS.CONFIRM.DIALOG_TEXT',
+        { counted: countedText }
+      ),
       confirmButtonText: this.translate.instant('ADMIN.SETTLEMENTS.CONFIRM.CONFIRM_BTN'),
       cancelButtonText: this.translate.instant('ADMIN.COMMON.CANCEL'),
     });

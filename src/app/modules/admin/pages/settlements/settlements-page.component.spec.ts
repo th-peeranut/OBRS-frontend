@@ -559,6 +559,56 @@ describe('SettlementsPageComponent', () => {
     expect(adminApi.confirmSettlement).toHaveBeenCalledWith(1, shortPayload);
   });
 
+  // OBRS-1772: the last screen before an irreversible sign-off must not be the
+  // one place that still reads "counted -260.00 in the drawer". A negative
+  // payload is the owner paying the seller, so the direction moves into the
+  // sentence and the figure stays a magnitude.
+  it('a negative counted amount asks the confirm question the other way round', async () => {
+    const topUpPayload: SettlementConfirmPayload = {
+      countedCashAmount: '-260.00',
+      handedOverBy: 7,
+    };
+    const store = makeStoreStub(makePage());
+    // Scrutinize/OBRS-1772: the discriminator is `detail.live.expectedCashAmount`
+    // (what the modal itself flips `isTopUp` on), not the payload's sign — so the
+    // stubbed detail must actually be a negative round, matching `topUpPayload`.
+    const adminApi = makeAdminApiStub({
+      getSettlementSchedule: jasmine
+        .createSpy('getSettlementSchedule')
+        .and.returnValue(of(ok(makeDetail({ live: { ...makeDetail().live, expectedCashAmount: '-260.00' } })))),
+      confirmSettlement: jasmine.createSpy('confirmSettlement').and.returnValue(of(ok(makeSettledDetail()))),
+    });
+    const alert = makeAlertStub();
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, alert as any, createTranslateStub());
+    component.ngOnInit();
+    component['openDetail'](1);
+
+    await component['requestConfirm'](topUpPayload);
+
+    expect(alert.confirm).toHaveBeenCalledWith(
+      jasmine.objectContaining({ text: 'ADMIN.SETTLEMENTS.CONFIRM.TOP_UP_DIALOG_TEXT' })
+    );
+    // The amount still posts signed — only the wording flipped.
+    expect(adminApi.confirmSettlement).toHaveBeenCalledWith(1, topUpPayload);
+  });
+
+  it('a normal counted amount keeps the original confirm question', async () => {
+    const store = makeStoreStub(makePage());
+    const adminApi = makeAdminApiStub({
+      confirmSettlement: jasmine.createSpy('confirmSettlement').and.returnValue(of(ok(makeSettledDetail()))),
+    });
+    const alert = makeAlertStub();
+    const component = new SettlementsPageComponent(store as any, driverCashDaysStoreStub as any, adminApi as any, alert as any, createTranslateStub());
+    component.ngOnInit();
+    component['openDetail'](1);
+
+    await component['requestConfirm'](PAYLOAD);
+
+    expect(alert.confirm).toHaveBeenCalledWith(
+      jasmine.objectContaining({ text: 'ADMIN.SETTLEMENTS.CONFIRM.DIALOG_TEXT' })
+    );
+  });
+
   it('SETTLEMENT_ALREADY_SETTLED: refetches, swaps to the settled view, shows info (not error), and removes the row', async () => {
     const store = makeStoreStub(makePage());
     const adminApi = makeAdminApiStub({

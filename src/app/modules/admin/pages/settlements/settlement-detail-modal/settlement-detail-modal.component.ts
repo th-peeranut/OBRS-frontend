@@ -154,20 +154,72 @@ export class SettlementDetailModalComponent implements OnChanges {
     return this.detail?.live.advancePaidOut ?? '0.00';
   }
 
-  // Cents of the counted input, or null when it isn't a valid money string.
-  protected get countedCents(): number | null {
+  // OBRS-1772: the expectation in integer cents, parsed WITHOUT `toCents`.
+  // `toCents` is the validator for a physical cash COUNT and rejects a leading
+  // minus by design (OBRS-1144) — running the server's expectation through it
+  // turned every negative round into `null`, which a `?? 0` then read as "the
+  // drawer reconciles". The screen said "discrepancy 0", let the owner press
+  // confirm, and the backend refused the sign-off over a discrepancy the
+  // screen had never shown. Nobody types this value, so it is not validated:
+  // it is parsed, and an unparsable one stays `null` instead of collapsing
+  // into a zero that means something else entirely.
+  protected get expectedCents(): number | null {
+    const raw = this.expectedCashAmount().trim();
+    if (raw === '') {
+      return null;
+    }
+    const amount = Number(raw);
+    return Number.isFinite(amount) ? Math.round(amount * 100) : null;
+  }
+
+  // OBRS-1772: a round whose expectation is below zero is not asking anyone to
+  // produce negative cash — it means the OWNER owes the seller (the per-head
+  // fee, the driver's advance and deferred ticket cash all leave the drawer
+  // without depending on how the passenger paid). The form flips to asking how
+  // much was handed the other way, and applies the sign itself.
+  //
+  // ⚠️ The direction is settled BEFORE anyone can type, and that is a property
+  // of the template, not of this getter: the whole sign-off form lives inside
+  // `@if (detail && detail.status === 'PENDING')`, so the counted-cash field
+  // does not exist during the optimistic-open window when `detail` is still
+  // null and this would read `false` off the `'0.00'` fallback. Without that
+  // guard a detail arriving mid-typing would silently re-interpret a string
+  // already in the box as the opposite movement of money. Do not lift the form
+  // out of that block, and do not give this getter a `summary`-based fallback.
+  protected get isTopUp(): boolean {
+    const expected = this.expectedCents;
+    return expected !== null && expected < 0;
+  }
+
+  // What the person typed, as a non-negative magnitude — still guarded by
+  // `toCents`. OBRS-1772 deliberately leaves that validator alone: a stack of
+  // notes in someone's hand still cannot be negative, and nobody has to type a
+  // minus sign for a negative round to be signed off.
+  protected get countedMagnitudeCents(): number | null {
     return SettlementDetailModalComponent.toCents(this.countedCashInput);
   }
 
-  // Signed counted − expected, in cents; null while the counted input is
-  // invalid/blank so the template can hide the discrepancy line until there is
-  // something to compare.
-  protected get discrepancyCents(): number | null {
-    const counted = this.countedCents;
-    if (counted === null) {
+  // Cents of the counted input as a SIGNED movement — negative in top-up mode,
+  // where the field asks what the owner paid out. Null when the input isn't a
+  // valid money string.
+  protected get countedCents(): number | null {
+    const magnitude = this.countedMagnitudeCents;
+    if (magnitude === null) {
       return null;
     }
-    const expected = SettlementDetailModalComponent.toCents(this.expectedCashAmount()) ?? 0;
+    return this.isTopUp ? -magnitude : magnitude;
+  }
+
+  // Signed counted − expected, in cents; null while either side is unknown, so
+  // the template can hide the discrepancy line until there is something to
+  // compare. OBRS-1772: "not typed yet" and "unparsable" stay null here — only
+  // a genuine reconcile returns 0, which is what `hasDiscrepancy` reads.
+  protected get discrepancyCents(): number | null {
+    const counted = this.countedCents;
+    const expected = this.expectedCents;
+    if (counted === null || expected === null) {
+      return null;
+    }
     return counted - expected;
   }
 
@@ -175,6 +227,14 @@ export class SettlementDetailModalComponent implements OnChanges {
   // mandatory exactly when this is true.
   protected hasDiscrepancy(): boolean {
     return this.discrepancyCents !== null && this.discrepancyCents !== 0;
+  }
+
+  // OBRS-1772: the expectation as the magnitude the flipped label describes.
+  // In the normal direction this is the expectation itself; in top-up mode the
+  // label already says who pays whom, so the figure under it is positive.
+  protected expectedDisplayAmount(): string {
+    const cents = this.expectedCents;
+    return cents === null ? this.expectedCashAmount() : (Math.abs(cents) / 100).toFixed(2);
   }
 
   // The signed discrepancy as a money string (e.g. "-200.00"), for formatMoney
