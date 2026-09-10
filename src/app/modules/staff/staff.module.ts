@@ -35,6 +35,7 @@ import { InspectionPageComponent } from './pages/inspection/inspection-page.comp
 import { ParcelConsignPageComponent } from './pages/parcel-consign/parcel-consign-page.component';
 import { ParcelConsignFormComponent } from './components/parcel-consign-form/parcel-consign-form.component';
 import { ParcelIntakeResultPanelComponent } from './components/parcel-intake-result-panel/parcel-intake-result-panel.component';
+import { ParcelPolicyContentModule } from '../parcel-policy/parcel-policy-content.module';
 import { ParcelWaybillPageComponent } from './pages/parcel-waybill/parcel-waybill-page.component';
 import { ParcelWaybillPaperComponent } from './components/parcel-waybill-paper/parcel-waybill-paper.component';
 import { ParcelDeliveryListPageComponent } from './pages/parcel-delivery-list/parcel-delivery-list-page.component';
@@ -313,6 +314,10 @@ export const staffRoutes: Routes = [
     AdminSharedModule,
     PassengerSeatModule,
     PhoneFormatPipe,
+
+    // OBRS-1808: the waybill's "full terms" modal renders the very component /parcel-policy
+    // routes to, so the counter and the published terms cannot drift apart.
+    ParcelPolicyContentModule,
 
     // Station list (stop dropdowns on the sell search step). Registered per
     // lazy module — same pattern as the public booking modules.

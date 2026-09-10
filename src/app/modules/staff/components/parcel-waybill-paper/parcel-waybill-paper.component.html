@@ -36,13 +36,6 @@
         <div class="fw-semibold">{{ w.departureAt }}</div>
       </div>
     </div>
-    @if (qrDataUrl) {
-      <div class="parcel-waybill-qr">
-        <div class="parcel-waybill-qr-for">{{ 'STAFF.PARCEL_WAYBILL.QR_FOR_RECIPIENT' | translate }}</div>
-        <img [src]="qrDataUrl" [attr.alt]="'STAFF.PARCEL_WAYBILL.QR_ALT' | translate" />
-        <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.QR_HINT' | translate }}</div>
-      </div>
-    }
     @if (trackQrDataUrl) {
       <div class="parcel-waybill-qr">
         <div class="parcel-waybill-qr-for">{{ 'STAFF.PARCEL_WAYBILL.TRACK_QR_FOR_SENDER' | translate }}</div>
@@ -55,19 +48,40 @@
          carries a short form of the terms, and that a QR opens the full version. All three had to
          exist here before that clause could be published — a clause describing a document that
          does not do what it says is the OBRS-627 defect, reintroduced.
-         ⛔ The third QR must not be confused with the two above it: `qrDataUrl` is the recipient's
-         collectionToken (a secret) and `trackQrDataUrl` is the sender's tracking link. This one
-         encodes a public policy page and is the only one of the three that is the same URL on
-         every waybill ever printed. -->
+         ⛔ This QR is the only one on the paper that is the same URL on every waybill ever
+         printed; `trackQrDataUrl` above is per-parcel. They must never swap. -->
     <section class="parcel-waybill-terms" data-testid="parcel-waybill-terms">
       <h5 class="fw-bold">{{ 'STAFF.PARCEL_WAYBILL.TERMS_TITLE' | translate }}</h5>
-      <p class="parcel-waybill-terms-summary">{{ 'STAFF.PARCEL_WAYBILL.TERMS_SUMMARY' | translate }}</p>
-      @if (termsQrDataUrl) {
-        <div class="parcel-waybill-qr">
-          <div class="parcel-waybill-qr-for">{{ 'STAFF.PARCEL_WAYBILL.TERMS_QR_LABEL' | translate }}</div>
-          <img [src]="termsQrDataUrl" [attr.alt]="'STAFF.PARCEL_WAYBILL.TERMS_QR_ALT' | translate" />
-          <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.TERMS_QR_HINT' | translate }}</div>
-        </div>
+      <!-- OBRS-1808: one clause per line. As a single paragraph the three ran together into a
+           three-line block nobody read, which for a term the sender is about to sign is the
+           whole point of printing it. The "(1)"/"(2)"/"(3)" markers stay INSIDE the strings —
+           they are the published wording of clause 10's short form, not list decoration. -->
+      <p class="parcel-waybill-terms-summary">{{ 'STAFF.PARCEL_WAYBILL.TERMS_SUMMARY_LEAD' | translate }}</p>
+      <ol class="parcel-waybill-terms-list">
+        <li>{{ 'STAFF.PARCEL_WAYBILL.TERMS_SUMMARY_1' | translate }}</li>
+        <li>{{ 'STAFF.PARCEL_WAYBILL.TERMS_SUMMARY_2' | translate }}</li>
+        <li>{{ 'STAFF.PARCEL_WAYBILL.TERMS_SUMMARY_3' | translate }}</li>
+      </ol>
+      <!-- OBRS-1808: paper keeps the QR because clause 10 requires it; the screen, which clause
+           10 does not describe, opens the same page in place. A reader looking at a monitor
+           cannot scan the monitor. -->
+      @if (variant === 'print') {
+        @if (termsQrDataUrl) {
+          <div class="parcel-waybill-qr">
+            <div class="parcel-waybill-qr-for">{{ 'STAFF.PARCEL_WAYBILL.TERMS_QR_LABEL' | translate }}</div>
+            <img [src]="termsQrDataUrl" [attr.alt]="'STAFF.PARCEL_WAYBILL.TERMS_QR_ALT' | translate" />
+            <div class="text-muted small">{{ 'STAFF.PARCEL_WAYBILL.TERMS_QR_HINT' | translate }}</div>
+          </div>
+        }
+      } @else {
+        <button
+          type="button"
+          class="parcel-waybill-terms-link"
+          data-testid="parcel-waybill-terms-link"
+          (click)="openTerms.emit()"
+          >
+          {{ 'STAFF.PARCEL_WAYBILL.TERMS_LINK' | translate }}
+        </button>
       }
       <!-- OBRS-347: printed ONLY when the sender consented, and it must sit ABOVE the signature
            rule - the signature is what makes it the sender's own declaration rather than a line we
