@@ -23,6 +23,12 @@ function makeRow(overrides: Partial<FleetPositionRespDto> = {}): FleetPositionRe
     stale: false,
     deviceOnline: true,
     gpsImeiConfigured: true,
+    // OBRS-1083 — "no active trip" is the default; neither of these surfaces reads the fields.
+    activeScheduleId: null,
+    nextStopName: null,
+    nextStopOrder: null,
+    totalStops: null,
+    scheduleDelayMinutes: null,
     ...overrides,
   };
 }

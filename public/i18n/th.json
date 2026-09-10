@@ -4268,7 +4268,10 @@
         "ENGINE_ON": "เครื่องยนต์ทำงาน",
         "ENGINE_OFF": "เครื่องยนต์ดับ",
         "DIRECTION": "มุ่งหน้าทิศ{{direction}}",
-        "DIRECTION_LAST_KNOWN": "ทิศทางล่าสุด: {{direction}}"
+        "DIRECTION_LAST_KNOWN": "ทิศทางล่าสุด: {{direction}}",
+        "NEXT_STOP": "จุดจอดถัดไป: {{name}} (จุดที่ {{order}} จาก {{total}})",
+        "NEXT_STOP_LAST_KNOWN": "จุดจอดถัดไปล่าสุด: {{name}} (จุดที่ {{order}} จาก {{total}})",
+        "DELAY": "ช้ากว่าตาราง {{minutes}} นาที"
       },
       "COMPASS": {
         "N": "เหนือ",

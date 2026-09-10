@@ -4268,7 +4268,10 @@
         "ENGINE_ON": "引擎运转中",
         "ENGINE_OFF": "引擎已关闭",
         "DIRECTION": "朝{{direction}}行驶",
-        "DIRECTION_LAST_KNOWN": "最后已知方向：{{direction}}"
+        "DIRECTION_LAST_KNOWN": "最后已知方向：{{direction}}",
+        "NEXT_STOP": "下一站：{{name}}（第 {{order}} 站，共 {{total}} 站）",
+        "NEXT_STOP_LAST_KNOWN": "最后已知下一站：{{name}}（第 {{order}} 站，共 {{total}} 站）",
+        "DELAY": "晚点 {{minutes}} 分钟"
       },
       "COMPASS": {
         "N": "北",

@@ -4268,7 +4268,10 @@
         "ENGINE_ON": "Engine on",
         "ENGINE_OFF": "Engine off",
         "DIRECTION": "Heading {{direction}}",
-        "DIRECTION_LAST_KNOWN": "Last known direction: {{direction}}"
+        "DIRECTION_LAST_KNOWN": "Last known direction: {{direction}}",
+        "NEXT_STOP": "Next stop: {{name}} ({{order}} of {{total}})",
+        "NEXT_STOP_LAST_KNOWN": "Last known next stop: {{name}} ({{order}} of {{total}})",
+        "DELAY": "Behind schedule by {{minutes}} min"
       },
       "COMPASS": {
         "N": "north",

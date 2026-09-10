@@ -30,6 +30,9 @@ const FLEET_MAP_EN = {
         ENGINE_OFF: 'Engine off',
         DIRECTION: 'Heading {{direction}}',
         DIRECTION_LAST_KNOWN: 'Last known direction: {{direction}}',
+        NEXT_STOP: 'Next stop: {{name}} ({{order}} of {{total}})',
+        NEXT_STOP_LAST_KNOWN: 'Last known next stop: {{name}} ({{order}} of {{total}})',
+        DELAY: 'Behind schedule by {{minutes}} min',
       },
       COMPASS: {
         N: 'north',
@@ -70,6 +73,9 @@ const FLEET_MAP_TH = {
         ENGINE_OFF: 'เครื่องยนต์ดับ',
         DIRECTION: 'มุ่งหน้าทิศ{{direction}}',
         DIRECTION_LAST_KNOWN: 'ทิศทางล่าสุด: {{direction}}',
+        NEXT_STOP: 'จุดจอดถัดไป: {{name}} (จุดที่ {{order}} จาก {{total}})',
+        NEXT_STOP_LAST_KNOWN: 'จุดจอดถัดไปล่าสุด: {{name}} (จุดที่ {{order}} จาก {{total}})',
+        DELAY: 'ช้ากว่าตาราง {{minutes}} นาที',
       },
       COMPASS: {
         N: 'เหนือ',
@@ -101,6 +107,13 @@ function makeRow(overrides: Partial<FleetPositionRespDto> = {}): FleetPositionRe
     stale: false,
     deviceOnline: true,
     gpsImeiConfigured: true,
+    // OBRS-1083 — "no active trip" is the default on purpose: every test written before this
+    // card keeps meaning exactly what it meant, and the new line has to be opted into.
+    activeScheduleId: null,
+    nextStopName: null,
+    nextStopOrder: null,
+    totalStops: null,
+    scheduleDelayMinutes: null,
     ...overrides,
   };
 }
@@ -712,6 +725,114 @@ describe('FleetMapPanelComponent', () => {
 
       expect(() => translate.use('th')).not.toThrow();
       expect(markersOf().size).toBe(0);
+    });
+  });
+
+  describe('OBRS-1083 — which trip, and which stop next', () => {
+    function firstSync(vehicles: FleetPositionRespDto[]): void {
+      component.maptilerKey = 'test-key';
+      component.vehicles = vehicles;
+      component.ngOnChanges();
+      fixture.detectChanges();
+    }
+
+    const onATrip = {
+      activeScheduleId: 7001,
+      nextStopName: 'Nong Sam Sak',
+      nextStopOrder: 3,
+      totalStops: 24,
+      scheduleDelayMinutes: 12,
+    };
+
+    it('AC1: a van on a trip shows the stop it is heading to, as "3 of 24", plus how late it is', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40, ...onATrip })]);
+
+      const popupHtml = (markersOf().get(1) as L.Marker).getPopup()?.getContent() as string;
+
+      expect(popupHtml).toContain('Next stop: Nong Sam Sak (3 of 24)');
+      expect(popupHtml).toContain('Behind schedule by 12 min');
+    });
+
+    it('AC3: a van with NO active trip drops both lines entirely - no "0 of 0", no empty row', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40 })]);
+
+      const popupHtml = (markersOf().get(1) as L.Marker).getPopup()?.getContent() as string;
+
+      expect(popupHtml).not.toContain('Next stop');
+      expect(popupHtml).not.toContain('Behind schedule');
+      expect(popupHtml).not.toContain('0 of 0');
+      // The rest of the popup is untouched - dropping the line must not drop the card.
+      expect(popupHtml).toContain('40-1234');
+      expect(popupHtml).toContain('Speed: 40 km/h');
+    });
+
+    it('AC3: a half-populated set (name present, order/total null) still renders NOTHING rather than a gap', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40, activeScheduleId: 7001, nextStopName: 'Nong Sam Sak' })]);
+
+      const popupHtml = (markersOf().get(1) as L.Marker).getPopup()?.getContent() as string;
+
+      expect(popupHtml).not.toContain('Nong Sam Sak');
+    });
+
+    it('AC4: a GPS_LOST van keeps the line but takes LAST-KNOWN wording, exactly as OBRS-905 does for direction', () => {
+      firstSync([
+        makeRow({ vehicleId: 1, speed: 40, ...onATrip }),
+        makeRow({ vehicleId: 2, speed: 40, stale: true, deviceOnline: true, ...onATrip }),
+      ]);
+
+      const live = (markersOf().get(1) as L.Marker).getPopup()?.getContent() as string;
+      const gpsLost = (markersOf().get(2) as L.Marker).getPopup()?.getContent() as string;
+
+      expect(live).toContain('Next stop: Nong Sam Sak (3 of 24)');
+      expect(live).not.toContain('Last known next stop');
+      expect(gpsLost).toContain('Last known next stop: Nong Sam Sak (3 of 24)');
+    });
+
+    it('a van that is not overdue (0 min) prints no delay line - only the ones that ARE late say so', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40, ...onATrip, scheduleDelayMinutes: 0 })]);
+
+      const popupHtml = (markersOf().get(1) as L.Marker).getPopup()?.getContent() as string;
+
+      expect(popupHtml).toContain('Next stop: Nong Sam Sak (3 of 24)');
+      expect(popupHtml).not.toContain('Behind schedule');
+    });
+
+    it('AC7 + OBRS-1082: the new lines follow a language switch without a poll, like every other string on the marker', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40, ...onATrip })]);
+
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('th', FLEET_MAP_TH, true);
+      translate.use('th');
+
+      const popupHtml = (markersOf().get(1) as L.Marker).getPopup()?.getContent() as string;
+      expect(popupHtml).toContain('จุดจอดถัดไป: Nong Sam Sak (จุดที่ 3 จาก 24)');
+      expect(popupHtml).toContain('ช้ากว่าตาราง 12 นาที');
+    });
+
+    it('OBRS-1070 AC6 stays green: the trip line is CONTENT, so a later tick rebuilds no marker and calls no setIcon()', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40, ...onATrip })]);
+
+      const marker = markersOf().get(1) as L.Marker;
+      const setIconSpy = spyOn(marker, 'setIcon').and.callThrough();
+
+      component.vehicles = [
+        makeRow({ vehicleId: 1, speed: 40, ...onATrip, nextStopOrder: 4, scheduleDelayMinutes: 31 }),
+      ];
+      component.ngOnChanges();
+
+      expect(markersOf().get(1)).toBe(marker);
+      expect(setIconSpy).not.toHaveBeenCalled();
+      expect((marker.getPopup()?.getContent() as string)).toContain('Next stop: Nong Sam Sak (4 of 24)');
+      expect((marker.getPopup()?.getContent() as string)).toContain('Behind schedule by 31 min');
+    });
+
+    it('the always-on label is deliberately left alone - OBRS-1070 AC3 caps it at two short tokens', () => {
+      firstSync([makeRow({ vehicleId: 1, speed: 40, ...onATrip })]);
+
+      const labelHtml = (labelsOf().get(1) as L.Tooltip).getContent() as string;
+
+      expect(labelHtml).toContain('40-1234');
+      expect(labelHtml).not.toContain('Nong Sam Sak');
     });
   });
 });
