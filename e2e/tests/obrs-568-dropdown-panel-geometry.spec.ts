@@ -476,7 +476,9 @@ test.describe('OBRS-568 -- admin-dropdown (driver picker in the trip-details for
       await page.setViewportSize(viewport);
       await openTripDetailsForm(page);
 
-      // The driver picker is the last of the form's four selects.
+      // The driver picker is the last of the form's three app-admin-dropdowns
+      // (vehicleType, vehicleId, driverId -- the other fields are p-datePicker
+      // and p-inputNumber, which are not dropdown panels).
       const driverDropdown = page.locator('app-trip-details-edit-form app-admin-dropdown').last();
       await driverDropdown.locator('button.admin-dropdown-trigger').click();
       const panel = driverDropdown.locator('div.admin-dropdown-menu');

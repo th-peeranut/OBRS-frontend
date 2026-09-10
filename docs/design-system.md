@@ -461,7 +461,10 @@ rather than around a control, use `--admin-outline` / `$primary-lightgrey` /
 ## 3. Form controls — canonical components
 
 There are **three** dropdown implementations in the repo. Pick the canonical one;
-do not add a fourth.
+do not add a fourth. (Three *choices for a new select*. §3.2 counts **four** panel
+**families** — the two bespoke ones, `dropdown-group-obrs` and
+`dropdown-obrs-passenger`, are existing controls nobody may reach for again, but
+their open panels still have to obey the same geometry.)
 
 | Need | Canonical component | Notes |
 |---|---|---|
