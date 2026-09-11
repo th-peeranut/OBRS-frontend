@@ -269,7 +269,7 @@ export class ETicketCardComponent implements OnChanges {
         bookingNumber
       );
     } catch (error) {
-      this.reportFailure(error);
+      this.reportFailure(error, true);
     }
   }
 
@@ -284,18 +284,38 @@ export class ETicketCardComponent implements OnChanges {
   }
 
   /**
-   * ONE refusal for a 404, saying nothing about WHICH half was wrong. The
-   * backend answers "no such booking number" and "wrong phone" with the same
-   * byte-identical 404 precisely so the endpoint cannot be used to confirm which
-   * booking numbers exist (the same rule `/find-booking` is built on); splitting
-   * it here - even into a friendlier message - would rebuild that oracle on the
-   * client. Every other failure gets the one generic toast.
+   * ONE refusal for a 404 on the credential lane, saying nothing about WHICH
+   * half was wrong. The backend answers "no such booking number" and "wrong
+   * phone" with the same byte-identical 404 precisely so the endpoint cannot be
+   * used to confirm which booking numbers exist (the same rule `/find-booking`
+   * is built on); splitting it here - even into a friendlier message - would
+   * rebuild that oracle on the client.
+   *
+   * <p>`fromCredentialLane` is NOT a second variant of the refusal: it selects
+   * which lane's copy is TRUE. `DOWNLOAD_NOT_FOUND` names the booking reference
+   * and the phone number, and on lanes 1/2 the customer typed neither - telling
+   * them to "check both" would be a claim about input that does not exist on
+   * that screen. The branch reads a fact this client already knows (which
+   * credential IT chose), never anything the server disclosed, so it leaks
+   * nothing.
+   *
+   * <p>A 429 is checked FIRST and on every lane, because it is the one failure
+   * where the generic copy does not merely under-inform, it MISDIRECTS:
+   * `DOWNLOAD_FAILED` says "please try again", and a throttled customer obeying
+   * that extends their own throttle window. Saying so carries no oracle risk at
+   * all - it is a fact about THIS caller's request rate, not about whether the
+   * booking exists, which is the same adjudication `/find-booking` records at
+   * `find-booking-page.component.ts:116` on this very quota. Every other failure
+   * gets the one generic toast.
    */
-  private reportFailure(error: unknown): void {
+  private reportFailure(error: unknown, fromCredentialLane = false): void {
+    const status = this.errorOf(error)?.status;
     const key =
-      this.errorOf(error)?.status === 404
-        ? 'E_TICKET.DOWNLOAD_NOT_FOUND'
-        : 'E_TICKET.DOWNLOAD_FAILED';
+      status === 429
+        ? 'E_TICKET.DOWNLOAD_RATE_LIMITED'
+        : fromCredentialLane && status === 404
+          ? 'E_TICKET.DOWNLOAD_NOT_FOUND'
+          : 'E_TICKET.DOWNLOAD_FAILED';
     this.alertService.toast(this.translate.instant(key), 'error');
   }
 

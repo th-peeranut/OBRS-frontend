@@ -4677,3 +4677,30 @@ just one a test can never catch.
   member), reusing that same word in looser prose one paragraph over reads as contradicting the
   code, even when both are technically consistent once you trace the reasoning through. Prefer a
   different word for the loose sense.
+
+- **OBRS-1802, Scrutinize self-fix: the neutral 404 copy was TRUE on lane 3 and FALSE on lanes
+  1 and 2, because it names input only lane 3 asks for.** `reportFailure()` mapped *every* 404
+  to `E_TICKET.DOWNLOAD_NOT_FOUND` — "No booking matches that booking reference and phone
+  number. Please check both and try again." That is exactly right for the credential lane, where
+  the customer just typed both. But lane 1 (signed-in, `/api/private/bookings/{id}/e-ticket`)
+  and lane 2 (guest + `X-Guest-Payment-Token`) reach a 404 too — the card's own brief lists "a
+  valid token naming a different booking" and "a parcel booking" as neutral-404 cases — and
+  those customers typed *nothing*. They would be told to check two fields that are not on the
+  screen. Self-fixed by adding `fromCredentialLane = false` to `reportFailure()`, passed `true`
+  from the lane-3 catch only; the by-id lanes now get the generic `DOWNLOAD_FAILED`. Pinned with
+  a new spec ("a 404 on the BY-ID lane does not tell a customer to check input they never
+  typed"). **This is not a second variant of the refusal and does not rebuild the enumeration
+  oracle:** the branch reads which credential *this client* chose before it ever sent the
+  request, never anything the server disclosed, so no response can be distinguished from another
+  response. Within lane 3, wrong-number and wrong-phone still converge byte-for-byte.
+  **Lesson (a confirmed FRONTEND-GOTCHAS family — "An i18n key written to be true on one lane
+  can carry a false claim when reused verbatim on a sibling lane"):** when one error handler
+  serves several lanes, check each lane against the literal words of the copy, not just against
+  the status code. "One neutral message" is a constraint on what the message may *disclose*; it
+  was never a licence for the message to describe a form the caller never saw. The tell: copy
+  that names a field, and a lane that has no such field.
+  Two smaller ones in the same pass: a `.scss` comment still pointed at `ignoreElements` in the
+  deleted `downloadTicketImage()`, and ADR-0041 still justified keeping `ETicketCardModule` out
+  of eager `SharedModule` on "its `html2canvas`/`qrcode` dependencies" — a dependency-removal
+  card has to sweep the PROSE that named the dependency, not only the code that imported it
+  (`grep` the dep name across `docs/` and `*.scss`, not just `src/**/*.ts`).

@@ -3355,6 +3355,7 @@
     "DOWNLOAD_CONFIRM_BODY": "To protect booking {{bookingNumber}}, please confirm the phone number used to make it.",
     "DOWNLOAD_CONFIRM_PHONE_LABEL": "Phone number used to book",
     "DOWNLOAD_CONFIRM_SUBMIT": "Download e-ticket",
+    "DOWNLOAD_RATE_LIMITED": "Too many download attempts. Please wait a few minutes before trying again - trying again now only makes the wait longer.",
     "DOWNLOAD_NOT_FOUND": "No booking matches that booking reference and phone number. Please check both and try again.",
     "DOWNLOAD": "Download e-ticket",
     "NOTE_LABEL": "Note:",

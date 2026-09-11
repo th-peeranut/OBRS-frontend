@@ -757,7 +757,9 @@ whose only copy of the ticket is that screen. Its only gate is the `bookingId`
 the no-token lane asks for is used once and **never persisted or prefilled**
 (PDPA), and a `404` renders the single neutral `E_TICKET.DOWNLOAD_NOT_FOUND` with
 no variant wording — the server refuses to be an enumeration oracle and the client
-must not rebuild one.
+must not rebuild one. A `429` is the one failure with copy of its own
+(`E_TICKET.DOWNLOAD_RATE_LIMITED`): the generic "please try again" would tell a
+throttled customer to do the one thing that extends their throttle window.
 
 Any new "backend returns bytes, frontend saves them" caller should use
 `shared/lib/blob-download.ts` (`parseContentDispositionFilename`, `saveBlob`,

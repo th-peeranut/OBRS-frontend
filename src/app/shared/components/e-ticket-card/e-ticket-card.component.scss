@@ -155,8 +155,9 @@
 // OBRS-269: per-leg "Navigate to pickup" button. Static tokens only ($primary-blue /
 // $primary-white) — the ticket card is intentionally exempt from dark theming
 // (dark-theme.scss §15 paper look), same as .ticket-leg-heading/.trip-estimate above —
-// do NOT use a runtime --accent* var. Excluded from the downloaded PNG via
-// `ignoreElements` in downloadTicketImage() (same treatment as .download-btn).
+// do NOT use a runtime --accent* var. (OBRS-1802: it used to also need excluding from a
+// client-side PNG rasterisation of this card; the download is the backend's PDF now, so
+// nothing on screen has to be hidden from it.)
 .ticket-nav-btn {
   display: inline-flex;
   align-items: center;

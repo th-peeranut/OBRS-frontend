@@ -10,6 +10,7 @@ import { ETicketCardComponent } from './e-ticket-card.component';
 import { PhoneFormatPipe } from '../../pipes/phone-format.pipe';
 import { TitleLabelPipe } from '../../pipes/title-label.pipe';
 import { PendingButtonDirective } from '../../directives/pending-button.directive';
+import { LoadingStateComponent } from '../loading-state/loading-state.component';
 import { createTranslateStub } from '../../../testing/test-stubs';
 import {
   BookingService,
@@ -276,6 +277,13 @@ describe('ETicketCardComponent', () => {
           await component.downloadTicketPdf();
 
           expect(alertServiceStub.promptText).toHaveBeenCalledTimes(1);
+          // Scrutinize: the COUNT, not only the value. `toHaveBeenCalledWith`
+          // alone passes for an implementation that called the credential lane
+          // twice, or that toasted a generic failure AND a variant beside it -
+          // exactly the shape a "helpful" extra branch would have.
+          expect(
+            bookingServiceStub.downloadETicketPdfByCredential
+          ).toHaveBeenCalledTimes(1);
           expect(
             bookingServiceStub.downloadETicketPdfByCredential
           ).toHaveBeenCalledWith('BK-7', '0812345678');
@@ -336,6 +344,7 @@ describe('ETicketCardComponent', () => {
 
         await component.downloadTicketPdf();
 
+        expect(alertServiceStub.toast).toHaveBeenCalledTimes(1);
         expect(alertServiceStub.toast).toHaveBeenCalledWith(
           'E_TICKET.DOWNLOAD_NOT_FOUND',
           'error'
@@ -343,15 +352,66 @@ describe('ETicketCardComponent', () => {
       }
     });
 
-    it('a 429 is not mistaken for a refusal', async () => {
+    /**
+     * Scrutinize (OBRS-1802): the neutral refusal names the booking reference
+     * AND the phone number, so it is only TRUE on the lane where the customer
+     * typed them. A signed-in customer (or a token-holding guest) typed neither,
+     * and must not be told to "check both". This is not a second variant of the
+     * refusal — the branch reads which credential THIS client chose, never
+     * anything the server disclosed, so no enumeration oracle is rebuilt.
+     */
+    it('a 404 on the BY-ID lane does not tell a customer to check input they never typed', async () => {
+      bookingServiceStub.canDownloadETicketByBookingId.and.returnValue(true);
+      bookingServiceStub.downloadETicketPdf.and.returnValue(
+        throwError(() => pdfError(404, 'BOOKING_NOT_FOUND'))
+      );
+
+      await component.downloadTicketPdf();
+
+      expect(alertServiceStub.promptText).not.toHaveBeenCalled();
+      expect(alertServiceStub.toast).toHaveBeenCalledTimes(1);
+      expect(alertServiceStub.toast).toHaveBeenCalledWith(
+        'E_TICKET.DOWNLOAD_FAILED',
+        'error'
+      );
+    });
+
+    /**
+     * Owner decision on the open question this card left behind (2026-09-11).
+     * A 429 gets its OWN copy, and the reason is not symmetry with
+     * `/find-booking`: `DOWNLOAD_FAILED` reads "please try again", and a
+     * throttled customer who obeys it extends their own throttle window. It is
+     * the one failure where the generic toast actively misdirects. Pinning the
+     * distinct key is what stops a later "simplification" back into the generic
+     * one, which would go unnoticed - both toasts look equally plausible.
+     */
+    it('a 429 says WAIT, not "try again" — obeying the generic copy extends the throttle', async () => {
       bookingServiceStub.downloadETicketPdfByCredential.and.returnValue(
         throwError(() => pdfError(429, 'TOO_MANY_REQUESTS'))
       );
 
       await component.downloadTicketPdf();
 
+      expect(alertServiceStub.toast).toHaveBeenCalledTimes(1);
       expect(alertServiceStub.toast).toHaveBeenCalledWith(
-        'E_TICKET.DOWNLOAD_FAILED',
+        'E_TICKET.DOWNLOAD_RATE_LIMITED',
+        'error'
+      );
+    });
+
+    /** The throttle is a fact about this caller's request rate on either lane,
+     *  so the by-id lane must not fall back to the misdirecting copy either. */
+    it('a 429 on the BY-ID lane gets the same wait copy', async () => {
+      bookingServiceStub.canDownloadETicketByBookingId.and.returnValue(true);
+      bookingServiceStub.downloadETicketPdf.and.returnValue(
+        throwError(() => pdfError(429, 'TOO_MANY_REQUESTS'))
+      );
+
+      await component.downloadTicketPdf();
+
+      expect(alertServiceStub.toast).toHaveBeenCalledTimes(1);
+      expect(alertServiceStub.toast).toHaveBeenCalledWith(
+        'E_TICKET.DOWNLOAD_RATE_LIMITED',
         'error'
       );
     });
@@ -971,7 +1031,27 @@ describe('ETicketCardComponent — download button visibility (OBRS-1802)', () =
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ETicketCardComponent, PendingButtonDirective],
+      // `LoadingStateComponent` is declared because this is the ONLY describe in
+      // this file that actually renders the download button, and `[appPending]`
+      // instantiates that component imperatively
+      // (`pending-button.directive.ts:74 viewContainerRef.createComponent`). It
+      // is `standalone: false` and its template uses the `translate` pipe, so
+      // without it in THIS TestBed's scope the pipe cannot resolve - the house
+      // pattern every other pending-button spec follows
+      // (`cancel-booking-modal.component.spec.ts:56-60`).
+      //
+      // Worth knowing WHY this was not caught by the first full-suite run, which
+      // was green: a TestBed `declarations` entry patches the component class's
+      // cached `ɵcmp` scope, and that patch outlives the spec file that made it.
+      // So in a whole-suite run these three specs were passing on an EARLIER
+      // file's leftovers, and only `ng test --include` on this file alone showed
+      // the truth. A green full suite is not evidence that a spec stands up by
+      // itself.
+      declarations: [
+        ETicketCardComponent,
+        PendingButtonDirective,
+        LoadingStateComponent,
+      ],
       imports: [TitleLabelPipe, TranslateModule.forRoot(), PhoneFormatPipe],
       providers: [
         { provide: TicketService, useValue: createTicketServiceStub() },

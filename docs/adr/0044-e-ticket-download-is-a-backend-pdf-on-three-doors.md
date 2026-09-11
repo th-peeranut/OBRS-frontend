@@ -79,6 +79,24 @@ per-reason field state. A spec asserts that two *different* 404 error codes
 produce the byte-identical message, which is the form of that claim a test can
 actually go red on.
 
+`fromCredentialLane` is **not** a second variant of that refusal: it selects
+which lane's copy is *true*. `DOWNLOAD_NOT_FOUND` names the booking reference and
+the phone number, and on lanes 1/2 the customer typed neither, so telling them to
+"check both" would be a claim about input that does not exist on that screen. The
+branch reads which credential *this client* chose — never anything the server
+disclosed.
+
+### A 429 gets its own copy, checked first and on every lane
+
+Owner decision, 2026-09-11. The reason is **not** symmetry with `/find-booking`:
+`DOWNLOAD_FAILED` reads *"please try again"*, and a throttled customer who obeys
+it **extends their own throttle window**. It is the one failure where the generic
+toast does not merely under-inform — it misdirects. `E_TICKET.DOWNLOAD_RATE_LIMITED`
+explains the wait instead of inviting an immediate retry. Oracle risk is nil and
+already adjudicated on this exact quota at `find-booking-page.component.ts:116`:
+a 429 is a fact about *this caller's request rate*, not about whether the booking
+exists.
+
 ### The save path: one mechanism, no iOS branch — and why
 
 `saveBlob()` (blob → object URL → `<a download>` → revoke), lifted verbatim out of

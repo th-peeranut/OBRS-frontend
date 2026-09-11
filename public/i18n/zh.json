@@ -3355,6 +3355,7 @@
     "DOWNLOAD_CONFIRM_BODY": "为保护订单 {{bookingNumber}}，请确认下单时使用的手机号码。",
     "DOWNLOAD_CONFIRM_PHONE_LABEL": "下单时使用的手机号码",
     "DOWNLOAD_CONFIRM_SUBMIT": "下载电子票",
+    "DOWNLOAD_RATE_LIMITED": "下载请求过于频繁。请等待几分钟后再试，立即重试只会让等待时间更长。",
     "DOWNLOAD_NOT_FOUND": "未找到与该订单编号和手机号码匹配的订单，请核对后重试。",
     "DOWNLOAD": "下载电子票",
     "NOTE_LABEL": "注意：",
