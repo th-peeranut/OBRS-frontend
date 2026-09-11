@@ -263,30 +263,18 @@
 
 // Sticky bottom bar: the single primary Submit button, always reachable.
 //
-// QA/owner review (real screenshot): the global "Report Issue" FAB
-// (`ReportUsabilityFabComponent`, `position: fixed; bottom: 24px; right: 24px;
-// z-index: 900` — shared/components/report-usability-fab/
-// report-usability-fab.component.scss) sits on top of this bar's right end,
-// a tap-target collision with the page's PRIMARY action. Fixed entirely on
-// this side (the FAB is a shared, app-wide component — not touched): reserve
-// enough right-side padding on the bar that the Submit button's box never
-// extends into the FAB's footprint. The two breakpoint values mirror the
-// FAB's OWN breakpoint (576px, where it collapses from a labeled pill to a
-// 48×48 circle) — if that breakpoint or size ever changes, re-check this.
+// OBRS-1832 gave this bar its right edge back. It used to reserve 210px (88px
+// below 576px) of empty padding so the Submit button could not grow into the
+// footprint of the global report FAB — a fixed element this page did not own and
+// could not move. There is no floating element over this bar any more, so the
+// padding that dodged it is gone with it; the rest of the rule is unchanged.
 .inspection-bottom-bar {
   position: sticky;
   bottom: 0;
   z-index: 5;
   padding: 12px;
-  padding-right: 210px; // clears the desktop/tablet FAB pill (~150px wide + 24px inset + gap)
   background: var(--admin-surface-card);
   border-top: 1px solid var(--admin-outline);
-}
-
-@media (max-width: 576px) {
-  .inspection-bottom-bar {
-    padding-right: 88px; // clears the mobile 48×48 FAB circle (24px inset + 48px + gap)
-  }
 }
 
 .inspection-submit-btn {

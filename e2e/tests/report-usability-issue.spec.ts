@@ -2,7 +2,7 @@
  * QA: Report a Usability Issue — E2E + Regression
  *
  * Coverage:
- *  1. FAB presence on home, search/booking, and anonymous routes
+ *  1. Trigger presence on home, search/booking, and anonymous routes
  *  2. Modal open/close behaviour — synchronous open, scroll lock/unlock
  *  3. Form validation — empty / whitespace-only description blocks submit
  *  4. Image client pre-checks — too-many, too-large, wrong type
@@ -10,7 +10,7 @@
  *  6. Success flow (stubbed) — 201 receipt → toast + modal close
  *  7. i18n — Thai and Chinese translations rendered (no raw KEY.PATH text)
  *  8. Admin triage (stubbed) — empty state, populated rows, detail modal, status save
- *  9. Regression — FAB z-index / overlap on seat-picker, lang-switcher, existing flows
+ *  9. Regression — where the trigger sits, and that it is reachable
  */
 
 import { test, expect, Page } from '@playwright/test';
@@ -202,8 +202,11 @@ async function stubAdminList(page: Page, response: unknown): Promise<void> {
   });
 }
 
-// OBRS-882. File-scope, so it reaches every describe below rather than the four that
-// happened to go red. The FAB lives at `z-index: 900` in the bottom-right corner and
+// OBRS-882, and kept after OBRS-1832 retired the FAB this was written for. It reads
+// as history now for the banner half, but the seeding still matters: several cases
+// below measure a layout, and the banner changes one.
+//
+// The original: the FAB lived at `z-index: 900` in the bottom-right corner and
 // OBRS-867's consent banner sits at `z-index: 1000` across the bottom edge — its SCSS
 // says outranking the FAB was the intent, "while the question is unanswered this one is
 // the more urgent". So on a fresh context the FAB is genuinely unclickable, and eleven
@@ -246,9 +249,9 @@ async function settleScheduleList(page: Page): Promise<void> {
   await page.locator('.select-btn').first().waitFor({ state: 'visible', timeout: 15_000 });
 }
 
-// ── Section 1: FAB visibility ─────────────────────────────────────────────────
+// ── Section 1: trigger visibility ─────────────────────────────────────────────
 
-test.describe('FAB — visibility on all routes', () => {
+test.describe('report trigger — visibility on all routes', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'en'); });
     // Stub stops and schedules so pages load without needing the real backend
@@ -256,14 +259,14 @@ test.describe('FAB — visibility on all routes', () => {
     await page.route('**/api/schedules/search', (route) => route.fulfill({ json: schedulesFixture }));
   });
 
-  test('FAB is visible on the home page (anonymous)', async ({ page }) => {
+  test('the trigger is visible on the home page (anonymous)', async ({ page }) => {
     await page.goto('/');
-    const fab = page.locator('.report-fab');
+    const fab = page.locator('.navbar-tools .report-trigger');
     await fab.waitFor({ state: 'visible', timeout: 15_000 });
     await expect(fab).toBeVisible();
   });
 
-  test('FAB is visible on the schedule-booking page (anonymous)', async ({ page }) => {
+  test('the trigger is visible on the schedule-booking page (anonymous)', async ({ page }) => {
     // Navigate through the booking funnel so Angular's router lands on /schedule-booking
     await page.goto('/');
     await page.locator('[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]').waitFor();
@@ -277,37 +280,43 @@ test.describe('FAB — visibility on all routes', () => {
     await page.locator('.btn-search').click();
     await page.waitForURL('**/schedule-booking');
 
-    const fab = page.locator('.report-fab');
+    const fab = page.locator('.navbar-tools .report-trigger');
     await fab.waitFor({ state: 'visible', timeout: 10_000 });
     await expect(fab).toBeVisible();
   });
 
-  test('FAB is visible on the login page (logged-out route)', async ({ page }) => {
+  test('the trigger is visible on the login page — a route with NO navbar (OBRS-1832)', async ({ page }) => {
+    // The point of the case: /login renders no <app-navbar> at all, so there is no
+    // `.navbar-tools` here and asserting one would only ever prove the page is
+    // missing a navbar. The auth pages mount the trigger in their OWN top-right
+    // cluster, `.change-language` -- ADR-0044's answer to ADR-006's objection that
+    // per-shell mounting "cannot serve anonymous routes that have no shell".
     await page.goto('/login');
-    const fab = page.locator('.report-fab');
-    await fab.waitFor({ state: 'visible', timeout: 10_000 });
-    await expect(fab).toBeVisible();
+    await expect(page.locator('.navbar-tools')).toHaveCount(0);
+    const trigger = page.locator('.change-language .report-trigger');
+    await trigger.waitFor({ state: 'visible', timeout: 10_000 });
+    await expect(trigger).toBeVisible();
   });
 });
 
 // ── Section 2: Modal open / close behaviour ───────────────────────────────────
 
-test.describe('FAB modal — open, defaults, close', () => {
+test.describe('report modal — open, defaults, close', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'en'); });
     await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
     await page.goto('/');
-    await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
+    await page.locator('.navbar-tools .report-trigger').waitFor({ state: 'visible', timeout: 15_000 });
   });
 
-  test('modal opens synchronously on FAB click (no fetch gating)', async ({ page }) => {
+  test('modal opens synchronously on trigger click (no fetch gating)', async ({ page }) => {
     // Listen for any network request to the usability endpoint BEFORE clicking
     let networkRequestFired = false;
     page.on('request', (req) => {
       if (req.url().includes('usability-reports')) networkRequestFired = true;
     });
 
-    await page.locator('.report-fab').click();
+    await page.locator('.navbar-tools .report-trigger').click();
 
     // Modal must be visible in the same tick — no wait for network
     const modal = page.locator('.report-modal-backdrop');
@@ -318,7 +327,7 @@ test.describe('FAB modal — open, defaults, close', () => {
   });
 
   test('category defaults to "bug" (select button first option selected)', async ({ page }) => {
-    await page.locator('.report-fab').click();
+    await page.locator('.navbar-tools .report-trigger').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
 
     // OBRS-915: `aria-pressed`, not `aria-checked`. The comment this replaces
@@ -339,7 +348,7 @@ test.describe('FAB modal — open, defaults, close', () => {
   });
 
   test('close button hides modal and unlocks body scroll', async ({ page }) => {
-    await page.locator('.report-fab').click();
+    await page.locator('.navbar-tools .report-trigger').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
 
     // Verify body is scroll-locked
@@ -356,7 +365,7 @@ test.describe('FAB modal — open, defaults, close', () => {
   });
 
   test('backdrop click closes modal', async ({ page }) => {
-    await page.locator('.report-fab').click();
+    await page.locator('.navbar-tools .report-trigger').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
 
     // Click on the backdrop (not the modal itself) at corner coordinates
@@ -367,13 +376,13 @@ test.describe('FAB modal — open, defaults, close', () => {
 
 // ── Section 3: Validation — empty / whitespace description ────────────────────
 
-test.describe('FAB modal — description validation', () => {
+test.describe('report modal — description validation', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'en'); });
     await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
     await page.goto('/');
-    await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.locator('.report-fab').click();
+    await page.locator('.navbar-tools .report-trigger').waitFor({ state: 'visible', timeout: 15_000 });
+    await page.locator('.navbar-tools .report-trigger').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
   });
 
@@ -415,7 +424,7 @@ test.describe('FAB modal — description validation', () => {
 
 // ── Section 4: Image client-side pre-checks ───────────────────────────────────
 
-test.describe('FAB modal — image client-side pre-checks', () => {
+test.describe('report modal — image client-side pre-checks', () => {
   let tmpDir: string;
 
   test.beforeEach(async ({ page }) => {
@@ -424,8 +433,8 @@ test.describe('FAB modal — image client-side pre-checks', () => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'en'); });
     await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
     await page.goto('/');
-    await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.locator('.report-fab').click();
+    await page.locator('.navbar-tools .report-trigger').waitFor({ state: 'visible', timeout: 15_000 });
+    await page.locator('.navbar-tools .report-trigger').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
   });
 
@@ -479,13 +488,13 @@ test.describe('FAB modal — image client-side pre-checks', () => {
 
 // ── Section 5: errorCode mapping ─────────────────────────────────────────────
 
-test.describe('FAB modal — errorCode mapping (stubbed)', () => {
+test.describe('report modal — errorCode mapping (stubbed)', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'en'); });
     await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
     await page.goto('/');
-    await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.locator('.report-fab').click();
+    await page.locator('.navbar-tools .report-trigger').waitFor({ state: 'visible', timeout: 15_000 });
+    await page.locator('.navbar-tools .report-trigger').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
   });
 
@@ -531,7 +540,7 @@ test.describe('FAB modal — errorCode mapping (stubbed)', () => {
 
 // ── Section 6: Success flow ───────────────────────────────────────────────────
 
-test.describe('FAB modal — success flow (stubbed)', () => {
+test.describe('report modal — success flow (stubbed)', () => {
   test('201 response → success toast + modal closes', async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'en'); });
     await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
@@ -546,8 +555,8 @@ test.describe('FAB modal — success flow (stubbed)', () => {
     });
 
     await page.goto('/');
-    await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.locator('.report-fab').click();
+    await page.locator('.navbar-tools .report-trigger').waitFor({ state: 'visible', timeout: 15_000 });
+    await page.locator('.navbar-tools .report-trigger').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
 
     await page.locator('#report-description').fill('Everything looks great but this button is odd');
@@ -566,42 +575,61 @@ test.describe('FAB modal — success flow (stubbed)', () => {
 
 // ── Section 7: i18n ───────────────────────────────────────────────────────────
 
-test.describe('FAB + modal — i18n translations', () => {
+test.describe('report trigger + modal — i18n translations', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
   });
 
-  test('Thai (th): FAB label and modal title are translated', async ({ page }) => {
+  test('Thai (th): the trigger name and the modal title are translated', async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'th'); });
     await page.goto('/');
 
-    const fab = page.locator('.report-fab');
-    await fab.waitFor({ state: 'visible', timeout: 15_000 });
+    const trigger = page.locator('.navbar-tools .report-trigger');
+    await trigger.waitFor({ state: 'visible', timeout: 15_000 });
 
-    // FAB label should be Thai, not the key
-    const fabLabel = page.locator('.report-fab__label');
-    await expect(fabLabel).toContainText('รายงานปัญหา');
-    await expect(fabLabel).not.toContainText('USABILITY_REPORT');
+    // OBRS-1832: the icon carries no visible text, so its accessible name IS the
+    // translation — an untranslated key here reaches a screen reader, silently.
+    await expect(trigger).toHaveAttribute('aria-label', 'รายงานปัญหาการใช้งาน');
+    await expect(trigger).toHaveAttribute('title', 'รายงานปัญหาการใช้งาน');
+
+    // The labelled row in the mobile panel is where the visible string lives.
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.locator('.navbar-hamburger').click();
+    const row = page.locator('.navbar-mobile-panel .report-trigger');
+    await expect(row).toContainText('รายงานปัญหา');
+    await expect(row).not.toContainText('USABILITY_REPORT');
+    await page.locator('.navbar-hamburger').click();
+    await page.setViewportSize({ width: 1280, height: 800 });
 
     // Open modal and verify title
-    await fab.click();
+    await trigger.click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
     await expect(page.locator('.report-modal__title')).toContainText('รายงานปัญหาการใช้งาน');
     await expect(page.locator('.report-modal__title')).not.toContainText('USABILITY_REPORT');
   });
 
-  test('Chinese (zh): FAB label and modal title are translated', async ({ page }) => {
+  test('Chinese (zh): the trigger name and the modal title are translated', async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'zh'); });
     await page.goto('/');
 
-    const fab = page.locator('.report-fab');
-    await fab.waitFor({ state: 'visible', timeout: 15_000 });
+    const trigger = page.locator('.navbar-tools .report-trigger');
+    await trigger.waitFor({ state: 'visible', timeout: 15_000 });
 
-    const fabLabel = page.locator('.report-fab__label');
-    await expect(fabLabel).toContainText('报告问题');
-    await expect(fabLabel).not.toContainText('USABILITY_REPORT');
+    // OBRS-1832: the icon carries no visible text, so its accessible name IS the
+    // translation — an untranslated key here reaches a screen reader, silently.
+    await expect(trigger).toHaveAttribute('aria-label', '报告可用性问题');
+    await expect(trigger).toHaveAttribute('title', '报告可用性问题');
 
-    await fab.click();
+    // The labelled row in the mobile panel is where the visible string lives.
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.locator('.navbar-hamburger').click();
+    const row = page.locator('.navbar-mobile-panel .report-trigger');
+    await expect(row).toContainText('报告问题');
+    await expect(row).not.toContainText('USABILITY_REPORT');
+    await page.locator('.navbar-hamburger').click();
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    await trigger.click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
     await expect(page.locator('.report-modal__title')).toContainText('报告可用性问题');
     await expect(page.locator('.report-modal__title')).not.toContainText('USABILITY_REPORT');
@@ -816,9 +844,9 @@ test.describe('Admin usability-reports triage page (stubbed)', () => {
   });
 });
 
-// ── Section 9: Regression — FAB does NOT obstruct existing UI ─────────────────
+// ── Section 9: Regression — the entry point's position ────────────────────────
 
-test.describe('Regression — FAB z-index / overlap', () => {
+test.describe('Regression — report entry point, position and reachability', () => {
   test.afterEach(({ page }) => expectNoEscapedPrivateCalls(page));
 
   test.beforeEach(async ({ page }) => {
@@ -857,28 +885,33 @@ test.describe('Regression — FAB z-index / overlap', () => {
    * viewports. Those are position claims, not occlusion claims, and neither
    * depends on the scroll offset.
    */
-  test('FAB sits in the bottom-right corner on home (desktop)', async ({ page }) => {
+  test('the trigger sits in the TOP-right cluster on home (desktop), not floating over the page', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
-    await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
+    const trigger = page.locator('.navbar-tools .report-trigger');
+    await trigger.waitFor({ state: 'visible', timeout: 15_000 });
 
-    const fabBox = await page.locator('.report-fab').boundingBox();
-    expect(fabBox).not.toBeNull();
-    expect(fabBox!.x).toBeGreaterThan(1280 / 2);
-    expect(fabBox!.y).toBeGreaterThan(800 / 2);
+    const box = await trigger.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThan(1280 / 2);
+    // OBRS-1832: the whole card in one assertion. The old FAB lived in the
+    // bottom-right corner over the content; the trigger lives in the bar, which
+    // owns its own pixels — so a control underneath it is no longer possible.
+    expect(box!.y).toBeLessThan(100);
+    expect(await trigger.evaluate((el) => getComputedStyle(el).position)).not.toBe('fixed');
   });
 
-  test('B2C booking search → schedule-booking: FAB present throughout, and a 48px corner target on mobile', async ({
+  test('B2C booking search → schedule-booking: the trigger is present throughout, at the same place at 375px', async ({
     page,
   }) => {
-    // The FAB is present through the stub-based portion of the B2C funnel. (The
-    // full booking flow including review/passenger-info is covered by
+    // Present through the stub-based portion of the B2C funnel. (The full booking
+    // flow including review/passenger-info is covered by
     // e2e/tests/b2c-critical-path.spec.ts.)
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
     await page.locator('[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]').waitFor();
 
-    await expect(page.locator('.report-fab')).toBeVisible();
+    await expect(page.locator('.navbar-tools .report-trigger')).toBeVisible();
 
     await page.locator('#dropdownObrsPassenger').click();
     await page.getByAltText('Passenger Add Icon').first().click();
@@ -891,17 +924,22 @@ test.describe('Regression — FAB z-index / overlap', () => {
     await page.waitForURL('**/schedule-booking');
     await settleScheduleList(page);
 
-    const fab = page.locator('.report-fab');
-    await expect(fab).toBeVisible();
+    const trigger = page.locator('.navbar-tools .report-trigger');
+    await expect(trigger).toBeVisible();
 
-    // On mobile it collapses to a 48×48 circle pinned to the bottom-right.
-    const fabBox = await fab.boundingBox();
-    expect(fabBox).not.toBeNull();
-    expect(fabBox!.x + fabBox!.width).toBeGreaterThan(375 - 80);
-    expect(fabBox!.y + fabBox!.height).toBeGreaterThan(667 - 120);
+    // At 375px the desktop cluster is hidden outright (`.navbar-desktop-only`),
+    // which is why the trigger is NOT inside it: it stays on the bar next to the
+    // hamburger, at the same top-right place it holds at 1280px.
+    const box = await trigger.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x + box!.width).toBeGreaterThan(375 - 120);
+    expect(box!.y).toBeLessThan(100);
+    // The 44x44 tap floor OBRS-640 pinned, which an icon-only control must meet.
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
   });
 
-  test('admin shell renders FAB + new "Usability Reports" nav item without breakage', async ({ page }) => {
+  test('admin shell renders the report trigger + new "Usability Reports" nav item without breakage', async ({ page }) => {
     await injectAdminAuth(page);
 
     // Stub admin list so the page loads
@@ -915,8 +953,11 @@ test.describe('Regression — FAB z-index / overlap', () => {
     await page.goto('/admin/usability-reports');
     await page.waitForLoadState('networkidle');
 
-    // FAB must be visible over the admin shell
-    await expect(page.locator('.report-fab')).toBeVisible({ timeout: 10_000 });
+    // OBRS-1832: in the admin shell the entry point is the first item of the
+    // topbar cluster — the same position it holds on the customer bar — and the
+    // labelled twin sits in the sidebar footer, which is the drawer at <=1100px.
+    await expect(page.locator('.admin-topbar-actions .report-trigger')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.admin-sidebar-footer .report-trigger')).toHaveCount(1);
 
     // "Usability Reports" page heading must appear
     await expect(page.locator('h2, h3, h4', { hasText: 'Usability Reports' }).first()).toBeVisible({

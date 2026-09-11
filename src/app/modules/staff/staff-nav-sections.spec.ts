@@ -30,6 +30,7 @@ import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 import { environment } from '../../../environments/environment';
+import { ReportTriggerComponent } from '../../shared/components/report-trigger/report-trigger.component';
 
 @Component({
     selector: 'app-notification-bell', template: '',
@@ -50,7 +51,12 @@ const PARCELS = 'STAFF.NAV.SECTION.PARCELS';
 async function renderNav(layout: Type<unknown>, roles: readonly string[]): Promise<HTMLElement> {
   TestBed.resetTestingModule();
   await TestBed.configureTestingModule({
-    declarations: [layout, LangSwitcherComponent, NotificationBellStubComponent],
+    declarations: [
+      layout,
+      LangSwitcherComponent,
+      NotificationBellStubComponent,
+      ReportTriggerComponent,
+    ],
     imports: [RouterTestingModule, TranslateModule.forRoot()],
     providers: [
       {

@@ -22,8 +22,9 @@
  * Absolutely positioned, fixed and floated boxes are taken out of the normal
  * flow before the inline box is ever split, so an inline host whose only
  * block-level child is `position: absolute` is well-formed. That is not a
- * technicality: `app-report-usability-fab` is on the card's list of 25 and its
- * only child is `.report-fab { position: fixed }`, so it never needed fixing.
+ * technicality: `app-report-usability-fab` was on the card's list of 25 and its
+ * only child was `.report-fab { position: fixed }`, so it never needed fixing.
+ * (OBRS-1832 retired that host; the example is kept because the RULE is the point.)
  * Counting it would have put a fictional entry on the allow-list, and an
  * allow-list with fictional entries on it is how a gate stops being believed.
  *

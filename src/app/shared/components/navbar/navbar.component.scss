@@ -64,12 +64,22 @@ a.logo {
   }
 }
 
+// OBRS-1832: the tools cluster. It owns the auto margin now, not the two boxes
+// inside it — two `margin-left: auto` siblings SPLIT the free space between
+// them, which would have parked the report trigger in the middle of the bar at
+// mobile widths instead of next to the hamburger.
+.navbar-tools {
+  display: flex;
+  align-items: center;
+  column-gap: 10px;
+  margin-left: auto;
+}
+
 .button-container {
   display: flex;
   align-items: center;
   column-gap: 10px;
   height: 80px;
-  margin-left: auto; // push language switcher + auth to the far right (desktop only)
 }
 
 .btn-signin {
@@ -177,7 +187,6 @@ a.logo {
   color: #506068;
   cursor: pointer;
   flex-shrink: 0;
-  margin-left: auto;
 
   .material-symbols-outlined { @extend %mat-icon; font-size: 22px; }
   &:hover { background: rgba(77, 190, 239, 0.08); color: #005f7e; }

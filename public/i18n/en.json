@@ -34,7 +34,7 @@
     }
   },
   "USABILITY_REPORT": {
-    "FAB": {
+    "TRIGGER": {
       "LABEL": "Report Issue",
       "ARIA_LABEL": "Report a usability issue"
     },

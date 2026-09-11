@@ -34,7 +34,7 @@
     }
   },
   "USABILITY_REPORT": {
-    "FAB": {
+    "TRIGGER": {
       "LABEL": "รายงานปัญหา",
       "ARIA_LABEL": "รายงานปัญหาการใช้งาน"
     },

@@ -7,6 +7,8 @@ import { BehaviorSubject, of } from 'rxjs';
 import { NavbarComponent } from './navbar.component';
 import { LangSwitcherComponent } from '../lang-switcher/lang-switcher.component';
 import { ThemeToggleComponent } from '../theme-toggle/theme-toggle.component';
+import { ReportTriggerComponent } from '../report-trigger/report-trigger.component';
+import { ReportUsabilityModalService } from '../../services/report-usability-modal.service';
 import { AuthService } from '../../../auth/auth.service';
 import { AlertService } from '../../services/alert.service';
 import { LanguageService } from '../../services/language.service';
@@ -258,7 +260,12 @@ describe('NavbarComponent template', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NavbarComponent, LangSwitcherComponent, ThemeToggleComponent],
+      declarations: [
+        NavbarComponent,
+        LangSwitcherComponent,
+        ThemeToggleComponent,
+        ReportTriggerComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
@@ -323,7 +330,12 @@ describe('NavbarComponent template (logged in)', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NavbarComponent, LangSwitcherComponent, ThemeToggleComponent],
+      declarations: [
+        NavbarComponent,
+        LangSwitcherComponent,
+        ThemeToggleComponent,
+        ReportTriggerComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
@@ -407,7 +419,12 @@ describe('OBRS-622 — My Parcels links gated behind environment.features.online
 
   async function createNavbar(): Promise<void> {
     await TestBed.configureTestingModule({
-      declarations: [NavbarComponent, LangSwitcherComponent, ThemeToggleComponent],
+      declarations: [
+        NavbarComponent,
+        LangSwitcherComponent,
+        ThemeToggleComponent,
+        ReportTriggerComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
@@ -484,7 +501,12 @@ describe('NavbarComponent hamburger menu', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NavbarComponent, LangSwitcherComponent, ThemeToggleComponent],
+      declarations: [
+        NavbarComponent,
+        LangSwitcherComponent,
+        ThemeToggleComponent,
+        ReportTriggerComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
@@ -654,6 +676,59 @@ describe('NavbarComponent hamburger menu', () => {
     expect(component.isMobileMenuOpen).toBe(false);
   });
 
+  // ── OBRS-1832: the report entry point on the customer bar ───────────────────
+  //
+  // The rule is a POSITION, so these pin a position. The icon's one hard
+  // requirement is that it must NOT be inside `.navbar-desktop-only`: that class
+  // is `display: none !important` at ≤992px, and the whole point of the card is
+  // that the control is in the same place at every width. `.navbar-mobile-link`
+  // shipped once as a fix that existed only above the breakpoint (OBRS-1069), so
+  // this is the assertion the shell has already got wrong once.
+  it('puts the report icon first in the tools cluster, OUTSIDE the desktop-only block', () => {
+    const tools = fixture.debugElement.query(By.css('.navbar-tools'));
+    expect(tools).withContext('the cluster itself must exist').toBeTruthy();
+    expect(tools.nativeElement.firstElementChild.tagName.toLowerCase())
+      .withContext('the trigger is the left-most item of the cluster, every shell')
+      .toBe('app-report-trigger');
+
+    const icon = tools.query(By.directive(ReportTriggerComponent));
+    expect(icon.componentInstance.variant).toBe('icon');
+    expect(icon.nativeElement.closest('.navbar-desktop-only'))
+      .withContext('hidden at ≤992px is exactly what this card refuses')
+      .toBeNull();
+  });
+
+  it('adds a labelled report row to the mobile panel, and keeps the icon visible beside it', () => {
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    const row = panel.query(By.directive(ReportTriggerComponent));
+    expect(row).withContext('the labelled twin lives in the panel').toBeTruthy();
+    expect(row.componentInstance.variant).toBe('row');
+
+    // Both entry points on screen at once is the accepted cost, not a bug:
+    // hiding the icon while the menu is open would make it a control that
+    // appears and disappears with state — the behaviour being retired here.
+    expect(fixture.debugElement.query(By.css('.navbar-tools app-report-trigger')))
+      .withContext('the icon stays put while the panel is open')
+      .toBeTruthy();
+  });
+
+  it('opens the modal and closes the panel when the labelled row is used', () => {
+    const opened = spyOn(TestBed.inject(ReportUsabilityModalService), 'open');
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    (panel.query(By.directive(ReportTriggerComponent)).nativeElement.querySelector('button') as HTMLElement).click();
+
+    expect(opened).toHaveBeenCalledTimes(1);
+    expect(component.isMobileMenuOpen)
+      .withContext('the panel would otherwise stay open behind the dialog')
+      .toBeFalse();
+  });
+
   it('selecting a language inside the mobile panel does NOT close the panel', () => {
     component.isMobileMenuOpen = true;
     fixture.detectChanges();
@@ -684,7 +759,12 @@ describe('OBRS-1069 — signed-in identity in the ≤992px mobile panel', () => 
   ): Promise<ComponentFixture<NavbarComponent>> {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
-      declarations: [NavbarComponent, LangSwitcherComponent, ThemeToggleComponent],
+      declarations: [
+        NavbarComponent,
+        LangSwitcherComponent,
+        ThemeToggleComponent,
+        ReportTriggerComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         {
