@@ -51,6 +51,19 @@
                         {{ paymentFlag.i18nKey | translate }}
                       </span>
                     }
+                    <!-- OBRS-1811: the recipient may never have been reached. The
+                         backend already recorded this failure; nothing read it
+                         back until this card, so the row looked identical to a
+                         delivered notification. Absent = no badge, never a
+                         claimed success. -->
+                    @if (arrivalNotificationWarning(row); as notifyWarningKey) {
+                      <span
+                        class="admin-status is-danger ms-1"
+                        [attr.data-testid]="'notify-warning-' + row.parcelId"
+                        >
+                        {{ notifyWarningKey | translate }}
+                      </span>
+                    }
                   </td>
                   <td>
                     @if (row.deliveryStatus === 'accepted') {
@@ -101,6 +114,19 @@
                           (change)="onLeaveAtStopPhotoChosen(row, $event)"
                           />
                       </label>
+                      <!-- OBRS-1811: the recovery door. Only on an arrived row,
+                           which is exactly when the server allows it - there is
+                           nothing to announce before arrival and nobody left to
+                           announce it to after collection. -->
+                      <button
+                        class="admin-btn admin-btn-small ms-1"
+                        [disabled]="isRowBusy(row.parcelId) || isRowBlocked(row)"
+                        [title]="isRowBlocked(row) ? ('STAFF.PARCEL_DELIVERY.ERROR.BOOKING_NOT_CONFIRMED' | translate) : ''"
+                        [attr.data-testid]="'resend-notification-' + row.parcelId"
+                        (click)="openResendDialog(row)"
+                        >
+                        {{ 'STAFF.PARCEL_DELIVERY.ACTION.RESEND_NOTIFICATION' | translate }}
+                      </button>
                     }
                     @if (row.deliveryStatus === 'left_at_stop' && row.leftAtStopPhotoUrl) {
                       <a
@@ -141,6 +167,15 @@
   (dismiss)="closeCollectDialog()"
   (confirm)="confirmCollect($event)"
 ></app-parcel-collect-dialog>
+
+<app-parcel-resend-notification-dialog
+  [isOpen]="resendDialogParcel !== null"
+  [parcel]="resendDialogParcel"
+  [isSubmitting]="isResending"
+  [serverErrorKey]="resendErrorKey"
+  (dismiss)="closeResendDialog()"
+  (confirm)="confirmResend($event)"
+></app-parcel-resend-notification-dialog>
 
 <app-parcel-claim-dialog
   [isOpen]="claimDialogParcel !== null"

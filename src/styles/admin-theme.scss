@@ -1814,7 +1814,7 @@
   justify-content: center;
   border-radius: 999px;
   padding: 5px 10px;
-  font-size: 11px;
+  font-size: $font-size-xs; // OBRS-640: was 11px, under the 12px floor
   font-weight: 700;
   letter-spacing: 0.03em;
 }
