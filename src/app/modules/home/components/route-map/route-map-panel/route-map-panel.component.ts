@@ -28,9 +28,26 @@ interface GoogleWindow {
   };
 }
 
+/**
+ * OBRS-1838: exactly the four AdvancedMarkerElement fields the template binds
+ * INDIVIDUALLY, and every one of them required.
+ *
+ * Not `AdvancedMarkerElementOptions`: there every field is optional, so the
+ * template needed a `!` on each binding to satisfy strictTemplates -- twelve
+ * assertions that would keep compiling if a builder below ever stopped setting
+ * one. Declaring what the builders actually guarantee moves that check to the
+ * one place that can be wrong.
+ */
+interface MarkerPin {
+  position: google.maps.LatLngLiteral;
+  content: HTMLElement;
+  zIndex: number;
+  title: string;
+}
+
 interface MarkerEntry {
   slug: string;
-  options: google.maps.marker.AdvancedMarkerElementOptions;
+  options: MarkerPin;
 }
 
 /**
@@ -342,7 +359,7 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   userLocation: google.maps.LatLngLiteral | null = null;
 
   /** Stable marker options for the user pin — only reassigned when userLocation changes. */
-  userMarkerOptions: google.maps.marker.AdvancedMarkerElementOptions | null = null;
+  userMarkerOptions: MarkerPin | null = null;
 
   // Precomputed stable fields — only reassigned when the underlying inputs change.
   // Keeping them as fields (not getters) prevents @angular/google-maps from seeing
@@ -575,9 +592,7 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     return 2 * R * Math.asin(Math.sqrt(h));
   }
 
-  private buildUserMarkerOptions(
-    pos: google.maps.LatLngLiteral
-  ): google.maps.marker.AdvancedMarkerElementOptions {
+  private buildUserMarkerOptions(pos: google.maps.LatLngLiteral): MarkerPin {
     return {
       position: pos,
       content: this.buildMarkerContent(this.buildUserMarkerUrl(), 28, true),
@@ -645,10 +660,14 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
 
-    // OBRS-1838: mutated in place, not reassigned — `mapOptions` is a stable
-    // reference on purpose (see the field's own comment), and nothing has read
-    // it yet: `showMap` is still false until `mapsLoaded` flips below, so the
-    // Map is constructed after this line, never before it.
+    // OBRS-1838: mutated in place here, and nothing has read it yet — `showMap`
+    // is still false until `mapsLoaded` flips below, so the Map is constructed
+    // after this line, never before it. `mapOptions` is NOT otherwise a stable
+    // reference, though: `recomputeMapData()` reassigns it on every camera-key
+    // change (OBRS-1362), including on an ngOnChanges that can fire again
+    // before the Maps script finishes loading — that rebuild carries mapId
+    // forward itself now, so this one-time mutation is defense for the very
+    // first assignment only, not the only place mapId is set.
     //
     // Guarded because an empty string is not the same as an absent key: it
     // would be sent to Google as a Map ID to look up, and fail as one.
@@ -909,6 +928,12 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
         fullscreenControl: false,
         cameraControl: false,
         zoomControl: false,
+        // OBRS-1838: carry mapId forward on every reassignment, not just the
+        // ngOnInit mutation -- this rebuild can run again (a direction toggle,
+        // a re-selected route) before the Maps script has finished loading and
+        // the Map is actually constructed, and a reassignment here that
+        // dropped mapId would silently outrun ngOnInit's one-time mutation.
+        ...(this.mapsMapId ? { mapId: this.mapsMapId } : {}),
       };
     }
 
@@ -997,7 +1022,7 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     stop: RouteStop,
     selectedSlug: string | null,
     color: string
-  ): google.maps.marker.AdvancedMarkerElementOptions {
+  ): MarkerPin {
     const isSelected = stop.slug === selectedSlug;
     const size = isSelected ? 44 : 36;
     return {

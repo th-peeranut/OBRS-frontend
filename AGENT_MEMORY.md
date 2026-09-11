@@ -4714,3 +4714,45 @@ pass over a screen that refuses everything.
 **Lesson:** a validator used only to DECIDE WHETHER TO SEND a value is a silent dropper. If a
 parse failure changes what goes on the wire, it must also change what is on the screen — and the
 skip-vs-refuse choice belongs in the submit gate, never buried in the payload builder.
+
+## OBRS-1838 — Scrutinize self-fix: `MapAdvancedMarker`'s `[options]` input is NOT reactive
+
+The Marker -> AdvancedMarkerElement migration kept the legacy `<map-marker [options]="m.options">`
+binding shape, now `<map-advanced-marker [options]="m.options">`. That shape was safe under the
+legacy `MapMarker` wrapper, whose `ngOnChanges` explicitly does
+`if (changes['options']) { marker.setOptions(this._combineOptions()); }` — any options change
+propagates. `@angular/google-maps` 21.2.14's `MapAdvancedMarker.ngOnChanges` (read straight out
+of `node_modules/@angular/google-maps/fesm2022/google-maps.mjs`, not guessed) has NO such branch:
+it only reacts to `changes['title']`, `changes['gmpDraggable']`, `changes['content']`,
+`changes['position']`, `changes['zIndex']` — the four/five inputs meant to be bound individually.
+`options` only feeds `_combineOptions()` once, inside `_initialize()` at first render. So with
+only `[options]` bound, every later recompute (a stop gets selected and its pin should grow
+36px->44px and jump to zIndex 100; the user re-locates and the pin should move) built a new
+options object that the live `google.maps.marker.AdvancedMarkerElement` never saw — the marker
+silently stayed exactly as first drawn. The unit tests didn't catch it because they assert
+directly on `component.pickupMarkers[0].options...`, never on what the Angular wrapper actually
+applied to a live marker.
+
+Fixed in `route-map-panel.component.html`: bind `[position]`, `[content]`, `[zIndex]` and
+`[title]` individually, and drop `[options]` entirely.
+
+The first cut of that fix read `m.options.xxx!` / `userMarkerOptions.xxx!`, because every field
+of `AdvancedMarkerElementOptions` is optional and the non-`!` version failed
+`ng build --configuration=development` with six `strictTemplates` TS2322s. Twelve non-null
+assertions that keep compiling if a builder later stops setting one of the four is the wrong
+place for that check, so the shipped fix instead declares a `MarkerPin` interface whose four
+fields are REQUIRED — which is what `buildMarkerOptions`/`buildUserMarkerOptions` already
+guarantee — and `MarkerEntry.options`/`userMarkerOptions` carry that type. Zero `!` in the
+template, and the guarantee is now checked in the one place that can break it.
+
+Verified: `ng build --configuration=development` exit 0, `ng test` Executed 7021 of 7021
+SUCCESS (0 skipped). Measured on a real map, both builds served at the SIT origin with a stop
+clicked: pins `36,36,36 -> 36,36,36` (frozen) before the fix, `36,36,36 -> 44,36,36` after.
+
+**Lesson:** when a component migration swaps one Angular CDK/Material/google-maps wrapper
+directive for a sibling one (`MapMarker` -> `MapAdvancedMarker`, or any pair that looks like it
+should share a binding contract), read that sibling's OWN `ngOnChanges` before assuming an
+`[options]`-object binding pattern carries over — two wrapper directives over the same vendor
+library are not guaranteed to treat the same-named input reactively the same way, and nothing
+about the TypeScript types would flag the difference; it only shows up by tracing the actual
+lifecycle-hook body.

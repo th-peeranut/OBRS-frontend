@@ -53,9 +53,7 @@ const mockMapsLib = {};
  * ONE place. `options.content` is typed `Node | PinElement | null`, so without
  * this every assertion about a pin's pixels would carry its own cast.
  */
-function markerImage(marker: {
-  options: google.maps.marker.AdvancedMarkerElementOptions;
-}): HTMLImageElement {
+function markerImage(marker: { options: { content: HTMLElement } }): HTMLImageElement {
   return marker.options.content as HTMLImageElement;
 }
 
