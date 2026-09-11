@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-640-mobile-tap-typography.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs640audit.config.ts",
+      "why": "OBRS-640 Phase A: a hit-tested mobile tap-target (>=44x44) + rendered-text-size (>=12px) sweep of six customer routes, plus the my-bookings overflow menu and e-ticket modal. CAPTURE and not GATE because the owner's own call (docs/prod/LANE-BRIEFS.md#obrs-640) is that this lands silently for now -- Phase A measures the baseline, Phase B (a separate card) fixes it, and only then does a gate belong here. Run on the unfixed tree most of its cases fail on purpose; that failure, with the full population/violation detail the console prints, IS the AC-1 baseline. Hermetic on the gate lane's terms: it reuses e2e/support/customer-pages.ts's seedCustomerSession/seedStore, with two endpoints (/users/me, /bookings/501/tickets) fulfilled locally for the two entries that map does not carry."
+    },
+    {
       "spec": "obrs-1782-tiles-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1782capture.config.ts",
