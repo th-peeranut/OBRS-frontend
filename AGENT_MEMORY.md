@@ -4704,3 +4704,23 @@ just one a test can never catch.
   of eager `SharedModule` on "its `html2canvas`/`qrcode` dependencies" — a dependency-removal
   card has to sweep the PROSE that named the dependency, not only the code that imported it
   (`grep` the dep name across `docs/` and `*.scss`, not just `src/**/*.ts`).
+
+## OBRS-1802 scrutinize self-fix, round 2 (e-ticket-card.component.ts, 2026-09-12)
+
+- **A new member inserted directly ABOVE an existing method lands between that method and its
+  docblock, and silently re-points the docblock at the newcomer.** `canAttemptDownload` (getter +
+  its own 23-line docblock) was added just before `async downloadTicketPdf()`, so the file read:
+  old docblock, new docblock, getter, method. TSDoc and every IDE attach the *nearest* preceding
+  block, so the getter carried two docblocks — one of them describing the PDF lanes, the "do not
+  reintroduce a client-side canvas rasteriser" warning and the `isDownloadingTicket` pending
+  affordance, none of which the getter does — while `downloadTicketPdf()`, the method that
+  warning exists to protect, was left undocumented. Nothing goes red: comments do not compile and
+  no gate reads them (full suite after the fix: `Executed 6984 of 6984 SUCCESS`, measured with
+  `npx ng test --watch=false --progress=false`). Self-fixed by moving those 20 comment lines back
+  down to sit directly above the method (20 insertions, 20 deletions, zero code). **Lesson (the
+  confirmed DEV-GOTCHAS family "a comment/javadoc stating the WRONG MECHANISM for a right
+  conclusion becomes the next reader's false belief" — this is its placement variant):** when you
+  insert a member, look at the line ABOVE the insertion point before you commit. If it is `*/`,
+  you have just stolen someone's docblock; put the new member below the documented one, or carry
+  the old block down with it. `git show <sha> -- <file>` makes this visible in one line of
+  context, which a diff read hunk-by-hunk does not.
