@@ -1,8 +1,21 @@
-<app-navbar></app-navbar>
+<!-- OBRS-1808: `embedded` renders the same clauses inside the staff waybill's terms modal.
+     Page chrome is what a modal must not repeat — the navbar, the footer, the page's outer
+     padding and its own title. `.policy-card` deliberately STAYS: it is not chrome, it is where
+     every heading/paragraph rule in this component's stylesheet lives, and dropping it left the
+     modal rendering browser-default headings. The clauses themselves are byte-identical either
+     way, because they are this one template rather than a copy of it. -->
+@if (!embedded) {
+  <app-navbar></app-navbar>
+}
 
-<section class="policy-container">
+<section [class.policy-container]="!embedded">
   <div class="policy-card">
-    <h1>{{ "POLICY.PARCEL.TITLE" | translate }}</h1>
+    <!-- The modal that embeds this already names the document in its own header; printing the
+         title twice, one above the other, reads as a bug. The version stamp below stays either
+         way — it says WHICH wording the reader is looking at. -->
+    @if (!embedded) {
+      <h1>{{ "POLICY.PARCEL.TITLE" | translate }}</h1>
+    }
 
     <!-- OBRS-629: version + date come from parcel-policy.version.ts, never from a translation
          file. Deliberately OUTSIDE the `limits` gate below — this states which WORDING the reader
@@ -77,4 +90,6 @@
   </div>
 </section>
 
-<app-footer></app-footer>
+@if (!embedded) {
+  <app-footer></app-footer>
+}

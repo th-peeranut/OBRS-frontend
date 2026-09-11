@@ -920,12 +920,25 @@ const PARCEL_POLICY_LEDGER = [
   },
 ];
 
+// OBRS-1808 split the waybill's short form into a lead-in plus one key per clause, so the three
+// clauses could be printed on separate lines. The WORDING did not change — joining the four back
+// with single spaces reproduces the old single string byte for byte, which is why the fingerprint
+// below is unchanged and no new version was published. That is the point of doing it this way:
+// had a single character of the contract text moved, this gate would still have refused.
+const WAYBILL_SUMMARY_KEYS = [
+  'TERMS_SUMMARY_LEAD',
+  'TERMS_SUMMARY_1',
+  'TERMS_SUMMARY_2',
+  'TERMS_SUMMARY_3',
+];
+
 function parcelPolicyFingerprint(json) {
   const p = json?.POLICY?.PARCEL;
-  const waybillSummary = json?.STAFF?.PARCEL_WAYBILL?.TERMS_SUMMARY;
-  if (!p || typeof waybillSummary !== 'string') {
+  const summaryParts = WAYBILL_SUMMARY_KEYS.map((k) => json?.STAFF?.PARCEL_WAYBILL?.[k]);
+  if (!p || summaryParts.some((v) => typeof v !== 'string')) {
     return null;
   }
+  const waybillSummary = summaryParts.join(' ');
   const values = PARCEL_POLICY_FINGERPRINTED_KEYS.map((k) => p[k]);
   if (values.some((v) => typeof v !== 'string')) {
     return null;
@@ -1006,7 +1019,7 @@ function parcelPolicyFingerprint(json) {
   // Thai is the source language for these terms; en/zh are translations of it.
   const actual = parcelPolicyFingerprint(JSON.parse(readFileSync(join(I18N_DIR, 'th.json'), 'utf8')));
   if (actual === null) {
-    problems.push(`[th] POLICY.PARCEL.* or STAFF.PARCEL_WAYBILL.TERMS_SUMMARY is missing or not a string -- the parcel terms cannot be versioned if their text is not there (OBRS-629)`);
+    problems.push(`[th] POLICY.PARCEL.* or STAFF.PARCEL_WAYBILL.TERMS_SUMMARY_LEAD/_1/_2/_3 are missing or not a string -- the parcel terms cannot be versioned if their text is not there (OBRS-629)`);
   } else if (actual !== published.fingerprint) {
     problems.push(
       `[th] parcel terms text no longer matches published version ${published.version}. Its fingerprint is now ${actual}. Publish it: append {version, publishedOn, effectiveDate, fingerprint} to PARCEL_POLICY_LEDGER in this file and set the same version/effectiveDate in parcel-policy.version.ts (OBRS-629)`
