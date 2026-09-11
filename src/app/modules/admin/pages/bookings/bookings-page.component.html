@@ -332,7 +332,7 @@ longer entitled to see, plus filter/export controls acting on them. -->
                   @for (tx of paymentTransactions; track tx) {
                     <tr>
                       <td>{{ displayDateTime(tx.paidAt) }}</td>
-                      <td>{{ tx.paymentMethod }}</td>
+                      <td>{{ transactionMethodLabel(tx.paymentMethod) }}</td>
                       <td class="admin-emphasis">{{ formatMoney(tx.amount) }}</td>
                       <td>
                         <!-- OBRS-298: tx.status is the PER-TRANSACTION EPaymentStatus
