@@ -161,7 +161,7 @@ npm start                          # Dev server on http://localhost:4200, agains
 npm run start:local                # Dev server against the local backend (http://localhost:8000)
 ng build                           # Production build
 ng build --configuration sit       # SIT build
-ng test --watch=false           # Unit tests; headless by default (angular.json pins browsers=ChromeHeadless, same as CI)
+ng test --watch=false           # Unit tests; headless by default (karma.conf.js picks the launcher - ChromeHeadless, or ChromeHeadlessNoSandbox when running as root in a container. It used to be pinned in angular.json, which meant a container could not select a sandbox-less launcher at all - OBRS-1841)
 ng test --watch=false --browsers Chrome            # Same run in a VISIBLE Chrome window - only when you need to debug by eye (OBRS-1563)
 npx tsc --noEmit -p tsconfig.app.json              # Authoritative type check
 ```
