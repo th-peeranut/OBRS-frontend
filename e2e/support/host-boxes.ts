@@ -674,14 +674,18 @@ export const ADMIN_SWEEP: SweepPage[] = [
   // template root of each is `<div *ngIf="isOpen">`, so the `p-datepicker` inside
   // renders only once the modal opens. Both open from the page's own Add button
   // with no seeded data at all, which is what makes them worth one click each:
-  // `expense-form-modal` is the ONLY place in the app that renders a
-  // `p-datepicker` with `styleClass="schedule-calendar-filter"` on a page this
-  // lane can reach, and that is a materially different box from the
-  // `app-date-field` one -- `.p-datepicker.app-date-field` is `display: flex` in
-  // styles.scss and blockifies PrimeNG's inner span, while
-  // `schedule-calendar-filter` matches no rule anywhere and leaves it
-  // `inline-flex`. Without these two entries the global rule would be shipped
-  // over a variant nothing had measured.
+  // a picker that only exists behind a click is one this lane would otherwise
+  // never measure at all.
+  //
+  // OBRS-1814 REMOVED THE REASON THIS COMMENT USED TO GIVE. Until then
+  // `expense-form-modal` was the only lane-reachable `p-datepicker` carrying
+  // `styleClass="schedule-calendar-filter"` -- a class OBRS-185 had already
+  // stripped every rule from, so it left PrimeNG's inner span `inline-flex`
+  // where `.p-datepicker.app-date-field` (`display: flex; width: 100%` in
+  // styles.scss) blockifies it. That class is now gone from the tree
+  // (`git grep 'schedule-calendar-filter' -- 'src/**'` = 0) and both modals
+  // render the canonical `app-date-field` box. The entries stay for the
+  // renders-only-on-open reason above, which is the one that outlived it.
   {
     key: 'admin-expenses-modal',
     url: '/admin/expenses',
@@ -983,11 +987,12 @@ export interface PrimengHostUser {
    * container, so a class matters here IF AND ONLY IF something sets `display`
    * through it. `.p-datepicker.app-date-field` is `display: flex; width: 100%` in
    * styles.scss and is exactly what blockifies the span, so `app-date-field` is
-   * a real variant. `schedule-calendar-filter` matches no rule anywhere in the
-   * tree, and `center-tabview` is styled through `::ng-deep` for backgrounds,
-   * padding and flex-wrap but never `display` -- keeping either in the key would
-   * demand a screen for a distinction that does not exist, and a check that
-   * fails on a correct tree is a check that gets deleted.
+   * a real variant. `center-tabview` is styled through `::ng-deep` for
+   * backgrounds, padding and flex-wrap but never `display` -- keeping it in the
+   * key would demand a screen for a distinction that does not exist, and a check
+   * that fails on a correct tree is a check that gets deleted. (The other
+   * example this used to name, `schedule-calendar-filter`, was removed from the
+   * tree by OBRS-1814 and is no longer reachable to filter out.)
    */
   variants: string[];
 }

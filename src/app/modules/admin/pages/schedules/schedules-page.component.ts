@@ -294,7 +294,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.selectedSchedule = null;
     this.departureTimesInvalid = false;
 
-    const today = this.getTodayDateInputValue();
+    const today = toDateControlValue(this.getTodayDateInputValue());
     this.scheduleForm.reset({
       startDate: today,
       endDate: today,
@@ -410,8 +410,8 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   ): void {
     const status = parseStatus(scheduleSet.status, this.getCurrentLocale());
     const values = {
-      startDate: scheduleSet.startDate ?? schedule.startDate,
-      endDate: scheduleSet.endDate ?? schedule.endDate,
+      startDate: toDateControlValue(scheduleSet.startDate ?? schedule.startDate),
+      endDate: toDateControlValue(scheduleSet.endDate ?? schedule.endDate),
       departureTimesText: toDepartureTimesText(scheduleSet.departureTimes),
       frequency: scheduleSet.frequency ?? schedule.frequency,
       status: status.code,
@@ -540,8 +540,8 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   }
 
   protected hasDateRangeError(): boolean {
-    const startDate = String(this.scheduleForm.value['startDate'] ?? '');
-    const endDate = String(this.scheduleForm.value['endDate'] ?? '');
+    const startDate = toDateInputValue((this.scheduleForm.value['startDate'] as Date | null) ?? null);
+    const endDate = toDateInputValue((this.scheduleForm.value['endDate'] as Date | null) ?? null);
     return !!startDate && !!endDate && startDate > endDate;
   }
 
@@ -752,7 +752,13 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   // own `payload.departureTimes.length === 0` check right after this call).
   private toSchedulePayload(): CreateScheduleSetPayload {
     const raw = this.scheduleForm.getRawValue();
-    const { payload, departureTimesValid } = toSchedulePayloadValue(raw);
+    // OBRS-1814: the two date controls hold a Date now. The mapper's contract is
+    // still the "YYYY-MM-DD" the API takes, so convert at this one boundary.
+    const { payload, departureTimesValid } = toSchedulePayloadValue({
+      ...raw,
+      startDate: toDateInputValue((raw['startDate'] as Date | null) ?? null),
+      endDate: toDateInputValue((raw['endDate'] as Date | null) ?? null),
+    });
     if (!departureTimesValid) {
       this.departureTimesInvalid = true;
     }

@@ -365,7 +365,19 @@
             <label class="admin-form-label">
               {{ 'ADMIN.SCHEDULES.START_DATE' | translate }} <span class="admin-required">*</span>
             </label>
-            <input class="admin-field" type="date" formControlName="startDate" />
+            <p-datePicker
+              formControlName="startDate"
+              styleClass="app-date-field"
+              panelStyleClass="app-date-field-panel"
+              [showIcon]="true"
+              [iconDisplay]="'input'"
+              [showButtonBar]="true"
+              [placeholder]="'ADMIN.SCHEDULES.START_DATE' | translate"
+            >
+              <ng-template pTemplate="inputicon">
+                <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+              </ng-template>
+            </p-datePicker>
             @if (isFieldInvalid('startDate')) {
               <small class="admin-error">
                 {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
@@ -376,7 +388,19 @@
             <label class="admin-form-label">
               {{ 'ADMIN.SCHEDULES.END_DATE' | translate }} <span class="admin-required">*</span>
             </label>
-            <input class="admin-field" type="date" formControlName="endDate" />
+            <p-datePicker
+              formControlName="endDate"
+              styleClass="app-date-field"
+              panelStyleClass="app-date-field-panel"
+              [showIcon]="true"
+              [iconDisplay]="'input'"
+              [showButtonBar]="true"
+              [placeholder]="'ADMIN.SCHEDULES.END_DATE' | translate"
+            >
+              <ng-template pTemplate="inputicon">
+                <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+              </ng-template>
+            </p-datePicker>
             @if (isFieldInvalid('endDate')) {
               <small class="admin-error">
                 {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
