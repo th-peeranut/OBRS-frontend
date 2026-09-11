@@ -2099,6 +2099,7 @@
       "TABLE_TITLE": "Profit and loss by vehicle",
       "EMPTY": "No vehicles have any figures in this date range.",
       "OF_WHICH_VAT": "of which VAT",
+      "COMPARED_WITH": "vs {{from}} – {{to}}",
       "OF_WHICH_HISTORICAL": "of which imported historical revenue",
       "HISTORICAL_CONFLICTS": "{{count}} day(s) where imported figures clashed with real sales",
       "EXPAND_ARIA": "Show this vehicle's cost breakdown",
@@ -2112,15 +2113,18 @@
         "REVENUE": "Total revenue",
         "EXPENSES": "Total expenses",
         "MARGIN": "Margin",
+        "MARGIN_PCT": "Net margin",
         "PENDING_EXPENSES": "Costs awaiting approval",
         "PENDING_EXPENSES_HINT": "Not yet subtracted from the margin"
       },
       "COL": {
         "VEHICLE": "Vehicle",
+        "TRIPS": "Trips",
         "REVENUE": "Revenue",
         "EXPENSES": "Expenses",
         "VAT": "of which VAT",
         "MARGIN": "Margin",
+        "MARGIN_PCT": "Margin %",
         "OTHER_CATEGORIES": "{{count}} other categories"
       },
       "COST_MIX": {

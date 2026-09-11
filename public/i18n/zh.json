@@ -2099,6 +2099,7 @@
       "TABLE_TITLE": "按车辆的损益",
       "EMPTY": "该日期范围内没有任何车辆的数据。",
       "OF_WHICH_VAT": "其中增值税",
+      "COMPARED_WITH": "对比 {{from}} – {{to}}",
       "OF_WHICH_HISTORICAL": "其中导入的历史收入",
       "HISTORICAL_CONFLICTS": "有 {{count}} 天导入数据与实际销售冲突",
       "EXPAND_ARIA": "查看该车辆的支出明细",
@@ -2112,15 +2113,18 @@
         "REVENUE": "总收入",
         "EXPENSES": "总支出",
         "MARGIN": "利润",
+        "MARGIN_PCT": "净利润率",
         "PENDING_EXPENSES": "待审批支出",
         "PENDING_EXPENSES_HINT": "尚未从利润中扣除"
       },
       "COL": {
         "VEHICLE": "车辆",
+        "TRIPS": "车次",
         "REVENUE": "收入",
         "EXPENSES": "支出",
         "VAT": "其中增值税",
         "MARGIN": "利润",
+        "MARGIN_PCT": "利润率 %",
         "OTHER_CATEGORIES": "其他 {{count}} 个类别"
       },
       "COST_MIX": {

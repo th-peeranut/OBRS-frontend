@@ -47,6 +47,34 @@
   font-size: 0.8rem;
 }
 
+// OBRS-1726 — the period-over-period delta under a KPI figure.
+//
+// `is-good` / `is-bad` and NOT `is-up` / `is-down`, because the same direction means
+// opposite things on this screen: revenue rising is good news and expenses rising is not,
+// so the component decides which it is (`deltaTone(value, riseIsGood)`) and the stylesheet
+// only paints the verdict. Naming these by direction would push that decision into whoever
+// reads the class next.
+//
+// `--admin-success-fg` / `--admin-danger-fg`, NOT the `*-text` halves: those are the dark
+// side of a pastel chip pair and are only legible on their own `*-bg` (design-system.md
+// §2.4.0) — the same reason `.vehicle-pl-negative` above takes `-fg`. This text sits
+// directly on the card surface with no fill of its own.
+//
+// A delta with no tone (no movement, or no previous figure to compare against) inherits the
+// muted colour of the `.admin-muted` line it sits in, which is the correct reading: neither
+// good nor bad happened.
+.vehicle-pl-delta {
+  .is-good {
+    color: var(--admin-success-fg);
+    font-weight: 500;
+  }
+
+  .is-bad {
+    color: var(--admin-danger-fg);
+    font-weight: 500;
+  }
+}
+
 // Reused pattern (design-system.md §12, OBRS-231 "Expandable per-row detail"): the
 // `.admin-icon-btn` chevron + sibling detail row on the same "structural, not data"
 // surface already used for `.admin-table thead`.
