@@ -1120,7 +1120,11 @@ describe('ETicketComponent — AC-7 TICKET_NO gate on the REAL card (Scrutinize 
   let fixture: ComponentFixture<ETicketComponent>;
   let component: ETicketComponent;
   let ticketServiceStub: { getBoardingToken: jasmine.Spy };
-  let bookingServiceStub2: { getActiveBookingId: jasmine.Spy; getBookingTickets: jasmine.Spy };
+  let bookingServiceStub2: {
+    getActiveBookingId: jasmine.Spy;
+    getBookingTickets: jasmine.Spy;
+    canDownloadETicketByBookingId: jasmine.Spy;
+  };
   let authStub2: { isAuthenticated: jasmine.Spy };
 
   beforeEach(async () => {
@@ -1130,6 +1134,14 @@ describe('ETicketComponent — AC-7 TICKET_NO gate on the REAL card (Scrutinize 
     bookingServiceStub2 = {
       getActiveBookingId: jasmine.createSpy('getActiveBookingId').and.returnValue(null),
       getBookingTickets: jasmine.createSpy('getBookingTickets').and.returnValue(of(null)),
+      // OBRS-1802 follow-up: the REAL card reads this during change detection
+      // now (`canAttemptDownload` gates its download button on which lane is
+      // open), so a bed that mounts the real card has to answer it or every
+      // render in this describe dies on a TypeError. `false` is the weakest
+      // answer and keeps this describe about the TICKET_NO row, nothing else.
+      canDownloadETicketByBookingId: jasmine
+        .createSpy('canDownloadETicketByBookingId')
+        .and.returnValue(false),
     };
     authStub2 = {
       isAuthenticated: jasmine.createSpy('isAuthenticated').and.returnValue(false),

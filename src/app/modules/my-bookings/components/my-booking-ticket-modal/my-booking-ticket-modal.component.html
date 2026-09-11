@@ -35,6 +35,7 @@
       @if (!loading && !error && card) {
         <app-e-ticket-card
           [bookingNumber]="card.bookingNumber"
+          [bookingId]="bookingId"
           [ticketNumber]="card.ticketNumber"
           [legs]="card.legs"
           [paymentDate]="card.paymentDate"

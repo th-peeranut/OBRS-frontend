@@ -35,7 +35,6 @@
             "allowedCommonJsDependencies": [
               "dayjs",
               "qrcode",
-              "html2canvas",
               "sweetalert2",
               "@stomp/stompjs"
             ],

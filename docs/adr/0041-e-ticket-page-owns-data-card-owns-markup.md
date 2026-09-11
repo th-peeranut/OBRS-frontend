@@ -121,7 +121,10 @@ Concretely:
 - **The page module now imports `ETicketCardModule` directly.** `SharedModule`
   deliberately excludes it (its `html2canvas`/`qrcode` dependencies stay out
   of the eager bundle) — this page joins `my-bookings.module.ts` as its second
-  consumer.
+  consumer. **Amended by ADR-0044 (OBRS-1802):** `html2canvas` is out of the
+  tree entirely; the lazy-chunk rationale now rests on `qrcode` alone. The
+  decision — import the module directly, keep it out of eager `SharedModule` —
+  is unchanged.
 
 ## Considered alternatives
 

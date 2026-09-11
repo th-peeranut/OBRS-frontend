@@ -154,6 +154,52 @@ export class AlertService {
   }
 
   /**
+   * OBRS-1802: `confirm()` plus one free-text field — the same popup, the same
+   * theme, the same cancel affordance, so it is not a second overlay mechanism.
+   * Added rather than folding an `input` option into `confirm()` because
+   * `confirm()` answers `boolean` and every one of its callers reads it that way.
+   *
+   * Resolves the TRIMMED value, or `null` when the customer cancels/dismisses or
+   * leaves the field blank — a blank submit is a change of mind, not a request
+   * worth sending. The value is returned and not retained anywhere: the only
+   * caller hands it straight to one HTTP call and drops it (PDPA).
+   *
+   * @param inputType `tel` surfaces the numeric keypad on a phone; `text` otherwise.
+   */
+  async promptText(options: {
+    title: string;
+    text: string;
+    inputLabel: string;
+    confirmButtonText: string;
+    cancelButtonText: string;
+    inputType?: 'text' | 'tel';
+    icon?: SweetAlertIcon;
+  }): Promise<string | null> {
+    this.resetLoadingState();
+    const result = await Swal.fire({
+      icon: options.icon ?? 'question',
+      title: options.title,
+      // `text`, never `html`: whatever the caller interpolates into this string
+      // (the booking number) lands as textContent and can never be markup.
+      text: options.text,
+      input: options.inputType ?? 'text',
+      inputLabel: options.inputLabel,
+      inputAttributes: { autocomplete: 'off' },
+      showCancelButton: true,
+      confirmButtonText: options.confirmButtonText,
+      cancelButtonText: options.cancelButtonText,
+      reverseButtons: true,
+      theme: this.theme,
+    });
+
+    if (!result.isConfirmed) {
+      return null;
+    }
+
+    return String(result.value ?? '').trim() || null;
+  }
+
+  /**
    * @param title       spinner title, already translated by the caller. Defaults to
    *                    NO title (OBRS-930): it used to default to the English
    *                    'Loading...', which is a word the caller reaches only when it
