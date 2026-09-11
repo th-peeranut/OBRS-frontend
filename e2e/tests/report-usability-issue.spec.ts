@@ -286,10 +286,16 @@ test.describe('report trigger — visibility on all routes', () => {
   });
 
   test('the trigger is visible on the login page — a route with NO navbar (OBRS-1832)', async ({ page }) => {
+    // The point of the case: /login renders no <app-navbar> at all, so there is no
+    // `.navbar-tools` here and asserting one would only ever prove the page is
+    // missing a navbar. The auth pages mount the trigger in their OWN top-right
+    // cluster, `.change-language` -- ADR-0044's answer to ADR-006's objection that
+    // per-shell mounting "cannot serve anonymous routes that have no shell".
     await page.goto('/login');
-    const fab = page.locator('.navbar-tools .report-trigger');
-    await fab.waitFor({ state: 'visible', timeout: 10_000 });
-    await expect(fab).toBeVisible();
+    await expect(page.locator('.navbar-tools')).toHaveCount(0);
+    const trigger = page.locator('.change-language .report-trigger');
+    await trigger.waitFor({ state: 'visible', timeout: 10_000 });
+    await expect(trigger).toBeVisible();
   });
 });
 
