@@ -37,21 +37,27 @@ function changes<T>(key: string, current: T, previous?: T): SimpleChanges {
 }
 
 // ---------------------------------------------------------------------------
-// Minimal google.maps stub — only what buildMarkerOptions() needs.
-// The real API is not available in Karma/ChromeHeadless, so tests that invoke
-// the precompute path that calls new google.maps.Size/Point must set this up.
+// Minimal google.maps stub.
+//
+// OBRS-1838: this used to carry Size/Point classes because the legacy
+// `icon: {scaledSize, anchor}` constructed them. AdvancedMarkerElement has
+// neither -- its content is a plain DOM element -- so the stub is now only a
+// PRESENCE sentinel: recomputePickupMarkers()/recomputeDropoffMarkers() bail
+// out early on a falsy `window.google.maps` and would silently produce zero
+// markers, which is a vacuous pass, not a failure.
 // ---------------------------------------------------------------------------
-interface MockSize { w: number; h: number }
-interface MockPoint { x: number; y: number }
+const mockMapsLib = {};
 
-const mockMapsLib = {
-  Size: class implements MockSize {
-    constructor(public w: number, public h: number) {}
-  },
-  Point: class implements MockPoint {
-    constructor(public x: number, public y: number) {}
-  },
-};
+/**
+ * OBRS-1838: the <img> that AdvancedMarkerElement draws, with the cast kept in
+ * ONE place. `options.content` is typed `Node | PinElement | null`, so without
+ * this every assertion about a pin's pixels would carry its own cast.
+ */
+function markerImage(marker: {
+  options: google.maps.marker.AdvancedMarkerElementOptions;
+}): HTMLImageElement {
+  return marker.options.content as HTMLImageElement;
+}
 
 function installGoogleMock(): void {
   (window as unknown as Record<string, unknown>)['google'] = { maps: mockMapsLib };
@@ -405,13 +411,20 @@ describe('RouteMapPanelComponent', () => {
     it('selected marker uses larger icon size (44) than unselected (36)', () => {
       component.pickupStops = [makeStop(1, true)];
       component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
-      const normalSize = (component.pickupMarkers[0].options.icon as google.maps.Icon).scaledSize as unknown as MockSize;
-      expect(normalSize.w).toBe(36);
+      expect(markerImage(component.pickupMarkers[0]).width).toBe(36);
 
       component.selectedPickupSlug = 'stop-1';
       component.ngOnChanges(changes('selectedPickupSlug', 'stop-1', null));
-      const selectedSize = (component.pickupMarkers[0].options.icon as google.maps.Icon).scaledSize as unknown as MockSize;
-      expect(selectedSize.w).toBe(44);
+      expect(markerImage(component.pickupMarkers[0]).width).toBe(44);
+    });
+
+    // OBRS-1838. The legacy anchor was (size/2, size) = bottom-centre, which is
+    // also AdvancedMarkerElement's default, so a stop pin must carry NO
+    // transform -- a translateY here would move every pin off its stop.
+    it('stop pins are not shifted off the default bottom-centre anchor', () => {
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      expect(markerImage(component.pickupMarkers[0]).style.transform).toBe('');
     });
 
     it('selected marker has higher zIndex (100) than unselected (order value)', () => {
@@ -439,16 +452,14 @@ describe('RouteMapPanelComponent', () => {
       component.dropoffStops = [makeStop(1, true)];
       component.ngOnChanges(changes('dropoffStops', component.dropoffStops, []));
 
-      const icon = component.dropoffMarkers[0].options.icon as google.maps.Icon;
-      expect(icon.url).toContain('%233B61A9'); // URL-encoded #3B61A9 -- = $secondary-blue
+      expect(markerImage(component.dropoffMarkers[0]).src).toContain('%233B61A9'); // URL-encoded #3B61A9 -- = $secondary-blue
     });
 
     it('pickupMarkers uses the brand blue (#0772A2) in the SVG url', () => {
       component.pickupStops = [makeStop(1, true)];
       component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
 
-      const icon = component.pickupMarkers[0].options.icon as google.maps.Icon;
-      expect(icon.url).toContain('%230772A2'); // URL-encoded #0772A2 -- = $primary-blue
+      expect(markerImage(component.pickupMarkers[0]).src).toContain('%230772A2'); // URL-encoded #0772A2 -- = $primary-blue
     });
 
     // OBRS-752. The two assertions above pin a literal, which is what let the
@@ -476,7 +487,7 @@ describe('RouteMapPanelComponent', () => {
       expect(markers.length).toBe(2); // guard: an empty list would pass vacuously
 
       for (const marker of markers) {
-        const url = decodeURIComponent((marker.options.icon as google.maps.Icon).url);
+        const url = decodeURIComponent(markerImage(marker).src);
         // The circle's fill is the pin colour; the <text> fill is #fff.
         const fill = /<circle[^>]*fill="(#[0-9a-fA-F]{6})"/.exec(url)?.[1];
         expect(fill).withContext(`no circle fill found in ${url}`).toBeTruthy();
@@ -500,72 +511,66 @@ describe('RouteMapPanelComponent', () => {
 
   describe('Directions road-snapping', () => {
     /**
-     * Minimal LatLng mock: exposes .lat() and .lng() methods as the real API
-     * does, allowing the component to read overview_path entries correctly.
+     * Minimal LatLngAltitude mock: exposes `.lat`/`.lng` as plain GETTER
+     * PROPERTIES, matching the real `google.maps.routes.Route.path` element
+     * type (OBRS-1838: computeRoutes's `path` is `LatLngAltitude[]`, unlike the
+     * legacy `overview_path`'s `LatLng[]`, whose `.lat()`/`.lng()` were methods
+     * — confirmed against `@types/google.maps`'s `LatLngAltitude` class, not
+     * guessed).
      */
-    class MockLatLng {
-      constructor(private _lat: number, private _lng: number) {}
-      lat(): number { return this._lat; }
-      lng(): number { return this._lng; }
+    class MockLatLngAltitude {
+      constructor(public lat: number, public lng: number) {}
     }
 
     /**
-     * Build a mock DirectionsResult with a simple two-point overview_path.
+     * Build a mock computeRoutes() success result with a simple two-point path.
      */
-    function mockDirectionsResult(
-      overviewPoints: Array<{ lat: number; lng: number }>
-    ): google.maps.DirectionsResult {
+    function mockComputeRoutesResult(
+      pathPoints: Array<{ lat: number; lng: number }>
+    ): { routes: google.maps.routes.Route[] } {
       return {
         routes: [
           {
-            overview_path: overviewPoints.map(
-              (p) => new MockLatLng(p.lat, p.lng) as unknown as google.maps.LatLng
-            ),
-          } as unknown as google.maps.DirectionsRoute,
+            path: pathPoints.map((p) => new MockLatLngAltitude(p.lat, p.lng)),
+          } as unknown as google.maps.routes.Route,
         ],
-      } as unknown as google.maps.DirectionsResult;
+      };
     }
 
     /**
-     * Install a google.maps mock that includes a DirectionsService whose
-     * `route()` callback is controlled by `respondWith`.
+     * Install a google.maps mock whose `importLibrary('routes')` resolves to a
+     * `Route` class whose static `computeRoutes()` is controlled by `respondWith`.
      *
-     * @param respondWith  Null ⇒ call callback with (null, errorStatus).
-     *                     DirectionsResult ⇒ call callback with (result, 'OK').
-     * @param errorStatus  Status string used when respondWith is null.
+     * @param respondWith  Null ⇒ computeRoutes() REJECTS (mirrors the real API's
+     *                     promise-rejection failure mode — no route found, quota,
+     *                     API not enabled, etc. — replacing the legacy callback's
+     *                     non-OK status branch).
+     *                     Result object ⇒ computeRoutes() resolves with it.
      */
     function installMockWithDirections(
-      respondWith: google.maps.DirectionsResult | null,
-      errorStatus = 'REQUEST_DENIED'
+      respondWith: { routes: google.maps.routes.Route[] } | null
     ): jasmine.Spy {
-      const routeSpy = jasmine
-        .createSpy('route')
-        .and.callFake(
-          (
-            _req: google.maps.DirectionsRequest,
-            cb: (
-              r: google.maps.DirectionsResult | null,
-              s: google.maps.DirectionsStatus
-            ) => void
-          ) => {
-            if (respondWith) {
-              cb(respondWith, 'OK' as google.maps.DirectionsStatus);
-            } else {
-              cb(null, errorStatus as google.maps.DirectionsStatus);
-            }
-          }
-        );
+      const computeRoutesSpy = jasmine
+        .createSpy('computeRoutes')
+        .and.callFake(() => {
+          return respondWith
+            ? Promise.resolve(respondWith)
+            : Promise.reject(new Error('mock computeRoutes failure'));
+        });
 
       (window as unknown as Record<string, unknown>)['google'] = {
         maps: {
           ...mockMapsLib,
-          DirectionsService: class {
-            route = routeSpy;
-          },
+          importLibrary: (name: string) =>
+            name === 'routes'
+              ? Promise.resolve({
+                  Route: { computeRoutes: computeRoutesSpy },
+                })
+              : Promise.reject(new Error(`unmocked library: ${name}`)),
         },
       };
 
-      return routeSpy;
+      return computeRoutesSpy;
     }
 
     afterEach(() => {
@@ -597,7 +602,7 @@ describe('RouteMapPanelComponent', () => {
     });
 
     it('(b) polylinePath is upgraded to road-snapped path when DirectionsService returns OK', async () => {
-      const roadResult = mockDirectionsResult([
+      const roadResult = mockComputeRoutesResult([
         { lat: 14.0, lng: 101.0 },
         { lat: 14.5, lng: 101.5 },
       ]);
@@ -620,7 +625,7 @@ describe('RouteMapPanelComponent', () => {
     });
 
     it('(c) polylinePath stays as straight path when DirectionsService returns REQUEST_DENIED', async () => {
-      installMockWithDirections(null, 'REQUEST_DENIED');
+      installMockWithDirections(null);
 
       component.pickupStops = [makeStop(1, true), makeStop(2, true)];
       component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
@@ -638,7 +643,7 @@ describe('RouteMapPanelComponent', () => {
     });
 
     it('(c) polylinePath stays as straight path when DirectionsService returns ZERO_RESULTS', async () => {
-      installMockWithDirections(null, 'ZERO_RESULTS');
+      installMockWithDirections(null);
 
       component.pickupStops = [makeStop(1, true), makeStop(3, true)];
       component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
@@ -661,7 +666,7 @@ describe('RouteMapPanelComponent', () => {
 
     it('stale-response guard: direction toggle discards slow response for previous direction', async () => {
       // First direction: two pickup stops.
-      const roadResult1 = mockDirectionsResult([
+      const roadResult1 = mockComputeRoutesResult([
         { lat: 10.0, lng: 100.0 },
         { lat: 10.5, lng: 100.5 },
       ]);
@@ -671,7 +676,7 @@ describe('RouteMapPanelComponent', () => {
       component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
 
       // Immediately change direction (new stops) before first response settles.
-      const roadResult2 = mockDirectionsResult([
+      const roadResult2 = mockComputeRoutesResult([
         { lat: 20.0, lng: 100.0 },
         { lat: 20.5, lng: 100.5 },
       ]);
@@ -694,7 +699,7 @@ describe('RouteMapPanelComponent', () => {
     // -----------------------------------------------------------------------
 
     it('caches the road-snapped path so a later panel skips the Directions call', async () => {
-      const roadResult = mockDirectionsResult([
+      const roadResult = mockComputeRoutesResult([
         { lat: 14.0, lng: 101.0 },
         { lat: 14.5, lng: 101.5 },
       ]);
@@ -725,7 +730,7 @@ describe('RouteMapPanelComponent', () => {
     // rebuilds `dropoffStops` with `.filter()`, a new array reference even when
     // every member is identical, and the map went diagonal until a reload.
     it('[OBRS-1340] a re-fire with the SAME stop set keeps the road path and issues no second Directions call', async () => {
-      const roadResult = mockDirectionsResult([
+      const roadResult = mockComputeRoutesResult([
         { lat: 14.0, lng: 101.0 },
         { lat: 14.5, lng: 101.5 },
       ]);
@@ -755,7 +760,7 @@ describe('RouteMapPanelComponent', () => {
     });
 
     it('a changed stop coordinate invalidates the cache and re-queries Directions', async () => {
-      const roadResult = mockDirectionsResult([
+      const roadResult = mockComputeRoutesResult([
         { lat: 14.0, lng: 101.0 },
         { lat: 14.5, lng: 101.5 },
       ]);
@@ -777,7 +782,7 @@ describe('RouteMapPanelComponent', () => {
 
     it('ignores a corrupt localStorage cache entry and still road-snaps', async () => {
       window.localStorage.setItem('obrs.dirPathCache.v1', '{ not valid json');
-      const roadResult = mockDirectionsResult([
+      const roadResult = mockComputeRoutesResult([
         { lat: 14.0, lng: 101.0 },
         { lat: 14.5, lng: 101.5 },
       ]);
@@ -828,6 +833,26 @@ describe('RouteMapPanelComponent', () => {
       expect(component.userMarkerOptions).not.toBeNull();
       expect(component.locating).toBeFalse();
       expect(component.locationError).toBeNull();
+    });
+
+    // OBRS-1838. The counterpart of the stop-pin test above, and the half that
+    // actually moves: the legacy icon anchored at (14, 14) -- its CENTRE -- but
+    // AdvancedMarkerElement anchors content by its bottom edge, so the 28px pin
+    // has to be pushed down 14px or it floats a full radius above the user.
+    it('user pin is shifted back onto its own centre (28px icon, 14px down)', () => {
+      component.pickupStops = [makeStop(1, true)];
+      const userPos = {
+        coords: { latitude: 13.1, longitude: 100.1 },
+      } as GeolocationPosition;
+      spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
+        (success: PositionCallback) => success(userPos)
+      );
+
+      component.useMyLocation();
+
+      const img = markerImage({ options: component.userMarkerOptions! });
+      expect(img.width).toBe(28);
+      expect(img.style.transform).toBe('translateY(14px)');
     });
 
     it('skips stops without coordinates when finding the nearest', () => {
