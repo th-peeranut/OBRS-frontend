@@ -134,7 +134,7 @@ Recorded here because the paragraphs above would otherwise teach the wrong fix t
 `9f03dd8c` did exactly what QA recommended: it gated the button on `!ticketIncomplete` via a new
 `@Input()`. **Review rejected it, and the rejection was verified against the code rather than argued.**
 `ticketIncomplete` is not a predicate for *"can this click succeed"* — it is computed from whether the
-**private tickets API** pass is coming (`e-ticket.component.ts:325-326`, which only asks
+**private tickets API** pass is coming (`e-ticket.component.ts:331-332`, which only asks
 `isAuthenticated()`), so it cannot see lane 2 at all:
 
 - `canDownloadETicketByBookingId()` is `isAuthenticated() || !!getGuestPaymentToken()?.trim()`
@@ -154,7 +154,7 @@ their button and sent them to `/find-booking` to supply a reference that is not 
 is worse than the defect it set out to fix.
 
 **What shipped instead** (`8f7f4103`) is a card-local predicate — `canAttemptDownload` at
-`e-ticket-card.component.ts:220-226` — gating on *which lane is open* rather than on the render:
+`e-ticket-card.component.ts:200-206` — gating on *which lane is open* rather than on the render:
 `bookingId != null && (canDownloadETicketByBookingId() || resolveBookingNumber() !== '')`. Measured in
 a browser on a gate build, three arms: `LANE banner=0 btn=1 authToken=true grant=null` ·
 `NO-CRED banner=1 btn=0 grant=null` · `LIVE-TOKEN banner=1 btn=1 grant=probe-live-token`. The third arm
