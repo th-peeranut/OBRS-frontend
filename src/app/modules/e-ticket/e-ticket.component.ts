@@ -114,6 +114,14 @@ interface RouteLineContext {
 })
 export class ETicketComponent implements OnInit, OnDestroy {
   bookingNumber = '-';
+  /**
+   * OBRS-1802: the same id `loadTicketFromApi` already resolves, now also handed
+   * to `<app-e-ticket-card>` so its Download button can ask the backend to
+   * render the PDF. `null` is what hides that button — and it is exactly the
+   * state `ticketIncomplete` already warns about, since without an id there is
+   * no booking for the server to print.
+   */
+  bookingId: number | null = null;
   ticketNumber = '-';
   /**
    * OBRS-260: one entry per leg — length 1 for a one-way booking, 2 for a round
@@ -293,6 +301,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
     const departureSchedule = schedules[0] ?? null;
     const returnSchedule = schedules[1] ?? null;
     const bookingId = this.getBookingId(booking?.bookingId);
+    this.bookingId = bookingId;
     const bookingNumber = this.normalizeBookingNumber(booking?.bookingNumber);
     const ticketPassengers = this.buildPassengerRows(passengerInfo, locale);
 

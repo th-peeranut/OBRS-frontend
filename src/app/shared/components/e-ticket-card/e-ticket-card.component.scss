@@ -54,17 +54,6 @@
   opacity: 0.35;
 }
 
-.ticket-paper.is-exporting {
-  .download-btn {
-    display: none;
-  }
-
-  .ticket-logo {
-    width: min(104px, 38%);
-    height: auto;
-  }
-}
-
 .ticket-header {
   text-align: center;
   display: flex;

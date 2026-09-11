@@ -1080,6 +1080,15 @@ export async function seedCustomerSession(page: Page, dark: boolean): Promise<vo
   await page.addInitScript(
     ([isDark, recent]) => {
       localStorage.setItem('app_language', 'en');
+      // OBRS-1802: `/e-ticket`'s Download button is gated on a booking id (with
+      // none there is nothing for the backend to render), and this lane names
+      // `.download-btn` as a hover target below. The sweep SKIPS a hover target
+      // it cannot find -- `if ((await control.count()) === 0) continue;` -- so
+      // without this the gate would have gone on reporting green while no longer
+      // measuring that control at all. Seeded here rather than in the e-ticket
+      // entry because `seedStore` dispatches into NgRx and this key is read
+      // straight off localStorage by `BookingService.getActiveBookingId()`.
+      localStorage.setItem('active_booking_id', '123');
       localStorage.setItem('auth_token', 'obrs-584-contrast-gate-token');
       localStorage.setItem('auth_username', 'customer@system.local');
       localStorage.setItem('auth_roles', JSON.stringify(['user']));

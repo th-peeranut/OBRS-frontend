@@ -89,8 +89,8 @@
 }
 
 // OBRS-857: the "you can get this back" note under the ticket paper. It lives OUTSIDE
-// `.ticket-paper` — html2canvas captures that element and nothing else — so it does not inherit
-// the ticket's deliberate dark-theme exemption and needs its own surface.
+// `.ticket-paper`, so it does not inherit the ticket's deliberate dark-theme exemption and
+// needs its own surface.
 .ticket-retrieval-note {
   width: min(420px, 100%);
   display: flex;

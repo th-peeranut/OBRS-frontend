@@ -11,6 +11,12 @@ import { PhoneFormatPipe } from '../../pipes/phone-format.pipe';
 import { TitleLabelPipe } from '../../pipes/title-label.pipe';
 import { PendingButtonDirective } from '../../directives/pending-button.directive';
 import { createTranslateStub } from '../../../testing/test-stubs';
+import {
+  BookingService,
+  ETicketPdfDownload,
+  ETicketPdfError,
+} from '../../../services/booking/booking.service';
+import { AlertService } from '../../services/alert.service';
 
 function buildLeg(overrides: Partial<TicketLeg> = {}): TicketLeg {
   return {
@@ -65,6 +71,72 @@ function createTicketServiceStub(): { getBoardingToken: jasmine.Spy } {
   };
 }
 
+/**
+ * OBRS-1802. The card now asks `BookingService` for the backend-rendered PDF and
+ * `AlertService` for the phone-confirm dialog. Stubbed rather than wired to the
+ * real services: WHICH URL each lane hits is pinned in
+ * `booking.service.spec.ts`, and what belongs here is the card's own decision —
+ * which lane it asks for, what it saves, and what it says when refused.
+ */
+function pdfDownload(filename: string): ETicketPdfDownload {
+  return { blob: new Blob(['%PDF-1.4'], { type: 'application/pdf' }), filename };
+}
+
+function pdfError(status: number, errorCode = 'ETICKET_PDF_ERROR'): ETicketPdfError {
+  return { status, errorCode };
+}
+
+interface BookingServiceStub {
+  canDownloadETicketByBookingId: jasmine.Spy;
+  downloadETicketPdf: jasmine.Spy;
+  downloadETicketPdfByCredential: jasmine.Spy;
+  getActiveBookingNumber: jasmine.Spy;
+}
+
+function createBookingServiceStub(): BookingServiceStub {
+  return {
+    canDownloadETicketByBookingId: jasmine
+      .createSpy('canDownloadETicketByBookingId')
+      .and.returnValue(true),
+    downloadETicketPdf: jasmine
+      .createSpy('downloadETicketPdf')
+      .and.returnValue(of(pdfDownload('e-ticket-BK-7.pdf'))),
+    downloadETicketPdfByCredential: jasmine
+      .createSpy('downloadETicketPdfByCredential')
+      .and.returnValue(of(pdfDownload('e-ticket-BK-7.pdf'))),
+    getActiveBookingNumber: jasmine
+      .createSpy('getActiveBookingNumber')
+      .and.returnValue(null),
+  };
+}
+
+interface AlertServiceStub {
+  toast: jasmine.Spy;
+  promptText: jasmine.Spy;
+}
+
+function createAlertServiceStub(): AlertServiceStub {
+  return {
+    toast: jasmine.createSpy('toast'),
+    promptText: jasmine.createSpy('promptText').and.resolveTo('0812345678'),
+  };
+}
+
+/** The download name the browser was actually handed. `saveBlob` builds a real
+ *  `<a download>` and clicks it, so the assertion has to read that anchor —
+ *  nothing else in this flow records the filename. */
+function captureSavedAnchor(): HTMLAnchorElement {
+  const anchor = document.createElement('a');
+  const realCreateElement = document.createElement.bind(document);
+  spyOn(anchor, 'click');
+  spyOn(document, 'createElement').and.callFake((tag: string) =>
+    tag === 'a' ? anchor : realCreateElement(tag)
+  );
+  spyOn(URL, 'createObjectURL').and.returnValue('blob:e-ticket');
+  spyOn(URL, 'revokeObjectURL');
+  return anchor;
+}
+
 /** Let the `forkJoin` subscription + the real `QRCode.toDataURL` promise settle
  *  — the same wait the e-ticket page's own QR specs use. */
 function settleQr(): Promise<void> {
@@ -73,28 +145,239 @@ function settleQr(): Promise<void> {
 
 describe('ETicketCardComponent', () => {
   let component: ETicketCardComponent;
+  let bookingServiceStub: BookingServiceStub;
+  let alertServiceStub: AlertServiceStub;
 
   beforeEach(() => {
+    bookingServiceStub = createBookingServiceStub();
+    alertServiceStub = createAlertServiceStub();
     component = new ETicketCardComponent(
       new BoardingQrService(
         createTicketServiceStub() as unknown as TicketService
       ),
-      createTranslateStub()
+      createTranslateStub(),
+      bookingServiceStub as unknown as BookingService,
+      alertServiceStub as unknown as AlertService
     );
+    component.bookingId = 7;
+    component.bookingNumber = 'BK-7';
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('builds a filesystem-safe download name from the ticket number', () => {
-    component.ticketNumber = 'T-ABC, T-DEF';
+  /**
+   * OBRS-1802 replaced the client-side PNG with the backend's PDF, so the
+   * filename is no longer something this component composes — it is the one the
+   * server put in `Content-Disposition`. The test it replaces asserted
+   * `e-ticket-T-ABC--T-DEF.png` out of a private `getTicketDownloadFilename()`
+   * that no longer exists.
+   */
+  it('saves under the filename the SERVER sent', async () => {
+    const anchor = captureSavedAnchor();
 
-    const filename = (component as unknown as {
-      getTicketDownloadFilename: () => string;
-    }).getTicketDownloadFilename();
+    await component.downloadTicketPdf();
 
-    expect(filename).toBe('e-ticket-T-ABC--T-DEF.png');
+    expect(bookingServiceStub.downloadETicketPdf).toHaveBeenCalledWith(7);
+    expect(anchor.download).toBe('e-ticket-BK-7.pdf');
+  });
+
+  it('falls back to the booking number when the response carried no filename', async () => {
+    bookingServiceStub.downloadETicketPdf.and.returnValue(of(pdfDownload('')));
+    const anchor = captureSavedAnchor();
+
+    await component.downloadTicketPdf();
+
+    expect(anchor.download).toBe('e-ticket-BK-7.pdf');
+  });
+
+  it('does nothing at all without a bookingId — there is nothing to ask for', async () => {
+    component.bookingId = null;
+
+    await component.downloadTicketPdf();
+
+    expect(bookingServiceStub.downloadETicketPdf).not.toHaveBeenCalled();
+    expect(alertServiceStub.promptText).not.toHaveBeenCalled();
+  });
+
+  it('is re-entrancy guarded: a second click while one is in flight is ignored', async () => {
+    component.isDownloadingTicket = true;
+
+    await component.downloadTicketPdf();
+
+    expect(bookingServiceStub.downloadETicketPdf).not.toHaveBeenCalled();
+  });
+
+  describe('lane selection (OBRS-1802)', () => {
+    it('a credential-holding customer is asked NOTHING — one call, no dialog', async () => {
+      captureSavedAnchor();
+
+      await component.downloadTicketPdf();
+
+      expect(alertServiceStub.promptText).not.toHaveBeenCalled();
+      expect(
+        bookingServiceStub.downloadETicketPdfByCredential
+      ).not.toHaveBeenCalled();
+    });
+
+    it('a guest holding no token is asked for the phone, then POSTs the pair', async () => {
+      bookingServiceStub.canDownloadETicketByBookingId.and.returnValue(false);
+      captureSavedAnchor();
+
+      await component.downloadTicketPdf();
+
+      expect(bookingServiceStub.downloadETicketPdf).not.toHaveBeenCalled();
+      expect(alertServiceStub.promptText).toHaveBeenCalledTimes(1);
+      expect(
+        bookingServiceStub.downloadETicketPdfByCredential
+      ).toHaveBeenCalledWith('BK-7', '0812345678');
+    });
+
+    it('the phone dialog never arrives prefilled', async () => {
+      bookingServiceStub.canDownloadETicketByBookingId.and.returnValue(false);
+      captureSavedAnchor();
+
+      await component.downloadTicketPdf();
+
+      const options = alertServiceStub.promptText.calls.mostRecent()
+        .args[0] as Record<string, unknown>;
+      // Whatever else the dialog carries, it must not carry a phone number to
+      // start from — the app does not persist one and must not look like it does.
+      expect(Object.keys(options)).not.toContain('inputValue');
+      expect(JSON.stringify(options)).not.toContain('081');
+    });
+
+    it('a dismissed phone dialog sends nothing and leaves the button usable', async () => {
+      bookingServiceStub.canDownloadETicketByBookingId.and.returnValue(false);
+      alertServiceStub.promptText.and.resolveTo(null);
+
+      await component.downloadTicketPdf();
+
+      expect(
+        bookingServiceStub.downloadETicketPdfByCredential
+      ).not.toHaveBeenCalled();
+      expect(component.isDownloadingTicket).toBeFalse();
+    });
+
+    /**
+     * An aged-out guest token (60-minute TTL, ADR-0123 D6) must fall THROUGH to
+     * the phone step rather than dead-end — which is what the server copy for
+     * these two codes already tells the customer to do.
+     */
+    ['GUEST_PAYMENT_TOKEN_EXPIRED', 'GUEST_PAYMENT_TOKEN_INVALID'].forEach(
+      (errorCode) => {
+        it(`falls through to the phone step on ${errorCode}`, async () => {
+          bookingServiceStub.downloadETicketPdf.and.returnValue(
+            throwError(() => pdfError(400, errorCode))
+          );
+          captureSavedAnchor();
+
+          await component.downloadTicketPdf();
+
+          expect(alertServiceStub.promptText).toHaveBeenCalledTimes(1);
+          expect(
+            bookingServiceStub.downloadETicketPdfByCredential
+          ).toHaveBeenCalledWith('BK-7', '0812345678');
+          // And it must not ALSO toast a failure on the way through.
+          expect(alertServiceStub.toast).not.toHaveBeenCalled();
+        });
+      }
+    );
+
+    it('does NOT fall through on any other failure — that would loop a dialog forever', async () => {
+      bookingServiceStub.downloadETicketPdf.and.returnValue(
+        throwError(() => pdfError(409, 'NO_PRINTABLE_TICKET'))
+      );
+
+      await component.downloadTicketPdf();
+
+      expect(alertServiceStub.promptText).not.toHaveBeenCalled();
+      expect(alertServiceStub.toast).toHaveBeenCalledWith(
+        'E_TICKET.DOWNLOAD_FAILED',
+        'error'
+      );
+    });
+  });
+
+  describe('the 404 refusal says nothing about WHICH half was wrong (OBRS-1802)', () => {
+    beforeEach(() => {
+      bookingServiceStub.canDownloadETicketByBookingId.and.returnValue(false);
+    });
+
+    it('renders the one neutral message', async () => {
+      bookingServiceStub.downloadETicketPdfByCredential.and.returnValue(
+        throwError(() => pdfError(404, 'BOOKING_NOT_FOUND'))
+      );
+
+      await component.downloadTicketPdf();
+
+      expect(alertServiceStub.toast).toHaveBeenCalledTimes(1);
+      expect(alertServiceStub.toast).toHaveBeenCalledWith(
+        'E_TICKET.DOWNLOAD_NOT_FOUND',
+        'error'
+      );
+    });
+
+    /**
+     * The enumeration oracle the backend spent a whole service class closing: a
+     * wrong booking number and a wrong phone come back as the same 404, and the
+     * client must not split them apart again. Asserting that two DIFFERENT 404
+     * codes produce the byte-identical message is the form of that claim a test
+     * can actually go red on — a spec that only checks one key cannot see a
+     * second variant being added beside it.
+     */
+    it('two different 404 codes produce the SAME message', async () => {
+      for (const errorCode of ['BOOKING_NOT_FOUND', 'PHONE_MISMATCH']) {
+        alertServiceStub.toast.calls.reset();
+        bookingServiceStub.downloadETicketPdfByCredential.and.returnValue(
+          throwError(() => pdfError(404, errorCode))
+        );
+
+        await component.downloadTicketPdf();
+
+        expect(alertServiceStub.toast).toHaveBeenCalledWith(
+          'E_TICKET.DOWNLOAD_NOT_FOUND',
+          'error'
+        );
+      }
+    });
+
+    it('a 429 is not mistaken for a refusal', async () => {
+      bookingServiceStub.downloadETicketPdfByCredential.and.returnValue(
+        throwError(() => pdfError(429, 'TOO_MANY_REQUESTS'))
+      );
+
+      await component.downloadTicketPdf();
+
+      expect(alertServiceStub.toast).toHaveBeenCalledWith(
+        'E_TICKET.DOWNLOAD_FAILED',
+        'error'
+      );
+    });
+  });
+
+  /**
+   * PDPA. The phone number is read from one dialog, handed to one request and
+   * dropped. This is the assertion that rots quietly if nobody writes it: a
+   * `localStorage.setItem` added later for "convenience" breaks nothing visible.
+   */
+  it('retains the phone number NOWHERE after a credential download', async () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    bookingServiceStub.canDownloadETicketByBookingId.and.returnValue(false);
+    captureSavedAnchor();
+
+    await component.downloadTicketPdf();
+
+    const dump = (store: Storage): string =>
+      Object.keys(store)
+        .map((key) => `${key}=${store.getItem(key)}`)
+        .join('|');
+
+    expect(dump(localStorage)).not.toContain('0812345678');
+    expect(dump(sessionStorage)).not.toContain('0812345678');
+    expect(JSON.stringify(component)).not.toContain('0812345678');
   });
 
   it('navigateToPickup opens the Google Maps directions deep-link for the leg pickup coords', () => {
@@ -144,7 +427,11 @@ describe('ETicketCardComponent — boarding QR (OBRS-866)', () => {
       imports: [TitleLabelPipe, TranslateModule.forRoot(), PhoneFormatPipe],
       // The component's own `providers: [BoardingQrService]` resolves
       // TicketService from here, so the real QR pipeline runs over the stub.
-      providers: [{ provide: TicketService, useValue: ticketServiceStub }],
+      providers: [
+        { provide: TicketService, useValue: ticketServiceStub },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ETicketCardComponent);
@@ -361,7 +648,11 @@ describe('ETicketCardComponent — leg rendering', () => {
     await TestBed.configureTestingModule({
       declarations: [ETicketCardComponent, PendingButtonDirective],
       imports: [TitleLabelPipe, TranslateModule.forRoot(), PhoneFormatPipe],
-      providers: [{ provide: TicketService, useValue: createTicketServiceStub() }],
+      providers: [
+        { provide: TicketService, useValue: createTicketServiceStub() },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ETicketCardComponent);
@@ -598,7 +889,11 @@ describe('ETicketCardComponent — per-passenger SEAT cell (OBRS-1510 AC-8)', ()
     await TestBed.configureTestingModule({
       declarations: [ETicketCardComponent, PendingButtonDirective],
       imports: [TitleLabelPipe, TranslateModule.forRoot(), PhoneFormatPipe],
-      providers: [{ provide: TicketService, useValue: createTicketServiceStub() }],
+      providers: [
+        { provide: TicketService, useValue: createTicketServiceStub() },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ETicketCardComponent);
@@ -654,5 +949,87 @@ describe('ETicketCardComponent — per-passenger SEAT cell (OBRS-1510 AC-8)', ()
 
     expect(seatCells().length).toBe(1);
     expect(seatCells()[0]).toContain('B2');
+  });
+});
+
+/**
+ * OBRS-1802 AC: the Download button is visible to a GUEST (owner decision
+ * 2026-09-11). `/e-ticket` is a public route — `customerArea: true` with NO
+ * `requireAuth` — so the customer standing in front of this card immediately
+ * after paying usually has no account at all, and that is precisely the person
+ * whose only copy of the ticket is this screen.
+ *
+ * No `isAuthenticated()` condition exists anywhere in this template; the only
+ * gate is `bookingId`, because with no id there is nothing to ask the backend to
+ * render. Both directions are pinned — the positive one would pass on its own
+ * even if someone re-added an auth condition that happened to be true in the
+ * fixture.
+ */
+describe('ETicketCardComponent — download button visibility (OBRS-1802)', () => {
+  let fixture: ComponentFixture<ETicketCardComponent>;
+  let component: ETicketCardComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ETicketCardComponent, PendingButtonDirective],
+      imports: [TitleLabelPipe, TranslateModule.forRoot(), PhoneFormatPipe],
+      providers: [
+        { provide: TicketService, useValue: createTicketServiceStub() },
+        {
+          provide: BookingService,
+          // A guest holding no token: the weakest caller there is. If even this
+          // one sees the button, no authentication is being required.
+          useValue: {
+            ...createBookingServiceStub(),
+            canDownloadETicketByBookingId: jasmine
+              .createSpy('canDownloadETicketByBookingId')
+              .and.returnValue(false),
+          },
+        },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ETicketCardComponent);
+    component = fixture.componentInstance;
+  });
+
+  function downloadButton(): HTMLButtonElement | null {
+    const el = fixture.debugElement.query(By.css('button.download-btn'));
+    return el ? (el.nativeElement as HTMLButtonElement) : null;
+  }
+
+  it('renders for a guest — no authentication of any kind', () => {
+    component.bookingId = 7;
+    fixture.detectChanges();
+
+    const button = downloadButton();
+    expect(button).not.toBeNull();
+    expect(button?.disabled).toBeFalse();
+  });
+
+  /** Kept as the class name, not renamed: `e2e/support/customer-pages.ts` names
+   *  `.download-btn` in the contrast gate's hover sweep, and that job cannot be
+   *  seen from `ng test` at all. */
+  it('keeps the `.download-btn` class and the E_TICKET.DOWNLOAD key', () => {
+    component.bookingId = 7;
+    fixture.detectChanges();
+
+    expect(downloadButton()?.textContent).toContain('E_TICKET.DOWNLOAD');
+  });
+
+  it('is absent with no bookingId', () => {
+    component.bookingId = null;
+    fixture.detectChanges();
+
+    expect(downloadButton()).toBeNull();
+  });
+
+  it('shows the pending affordance while a download is in flight', () => {
+    component.bookingId = 7;
+    component.isDownloadingTicket = true;
+    fixture.detectChanges();
+
+    expect(downloadButton()?.disabled).toBeTrue();
   });
 });

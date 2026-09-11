@@ -730,6 +730,42 @@ alone, so an unrelated status-filter switch that also changes `hasMore` can
 never be mistaken for a Load more click that never happened) — otherwise the
 browser would drop focus to `<body>`.
 
+## E-Ticket — downloading it is a backend PDF (OBRS-1802)
+
+The Download button on `<app-e-ticket-card>` — the **only** download
+implementation in the frontend, mounted by both the public `/e-ticket` page and
+the My Bookings ticket modal — fetches the PDF the backend renders. It no longer
+rasterises the card client-side, and the canvas library it used for that is out
+of `package.json` and out of `angular.json`'s `allowedCommonJsDependencies`.
+
+Three endpoints, one document, and the **credential** picks which one:
+`BookingService.downloadETicketPdf(bookingId)` goes to
+`/api/private/bookings/{id}/e-ticket` for a signed-in customer (no extra header)
+or to the public `/api/bookings/{id}/e-ticket` with `X-Guest-Payment-Token` for a
+guest still holding the booking-scoped token checkout gave them;
+`downloadETicketPdfByCredential(bookingNumber, phoneNumber)` POSTs to
+`/api/bookings/e-ticket` for a guest who no longer holds one. Reuse
+`canDownloadETicketByBookingId()` rather than re-deriving that choice — picking
+the lane twice is how the two answers drift apart, and the guest header must
+never reach a `/api/private/` URL.
+
+The button is visible to **guests** (owner decision 2026-09-11): `/e-ticket` is a
+public route, and the customer who has just paid as a guest is exactly the one
+whose only copy of the ticket is that screen. Its only gate is the `bookingId`
+`@Input()` — pass the booking the surface is actually showing, never
+`getActiveBookingId()` (that holds whatever checkout last wrote). The phone number
+the no-token lane asks for is used once and **never persisted or prefilled**
+(PDPA), and a `404` renders the single neutral `E_TICKET.DOWNLOAD_NOT_FOUND` with
+no variant wording — the server refuses to be an enumeration oracle and the client
+must not rebuild one.
+
+Any new "backend returns bytes, frontend saves them" caller should use
+`shared/lib/blob-download.ts` (`parseContentDispositionFilename`, `saveBlob`,
+`parseBlobErrorCode`) rather than a second copy — with `responseType: 'blob'` the
+*error* body is a Blob too, so the global error interceptor cannot read it and the
+code has to be parsed locally. See `docs/adr/0044-e-ticket-download-is-a-backend-pdf-on-three-doors.md`,
+including why no iOS Web-Share branch was added.
+
 ## E-Ticket — open-seating display (OBRS-325)
 
 Both e-ticket surfaces — the shared `app-e-ticket-card` (used by the My

@@ -1,9 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { BookingService } from './booking.service';
+import {
+  BookingService,
+  ETICKET_PDF_GENERIC_ERROR_CODE,
+  ETicketPdfError,
+} from './booking.service';
 import { BookingPayload } from '../../shared/interfaces/booking.interface';
 import { environment } from '../../../environments/environment';
-import { SKIP_AUTH_LOGOUT } from '../../shared/interceptors/http-context-tokens';
+import {
+  SKIP_AUTH_LOGOUT,
+  SKIP_GLOBAL_ERROR_ALERT,
+  SKIP_REQUEST_TIMEOUT,
+} from '../../shared/interceptors/http-context-tokens';
 import { AuthService } from '../../auth/auth.service';
 
 const PAYLOAD: BookingPayload = {
@@ -291,6 +299,194 @@ describe('BookingService', () => {
       service.clearActiveBookingId();
 
       expect(service.getActiveBookingNumber()).toBeNull();
+    });
+  });
+
+  /**
+   * OBRS-1802. One document, three doors, and the CREDENTIAL picks the door. Both
+   * directions of the header are pinned, not just the guest one: only the guest
+   * half would pass if someone "simplified" this into always sending the header,
+   * and a booking-scoped guest capability travelling to `/api/private/**` is the
+   * shape that makes a reader believe the app has two session tokens.
+   */
+  describe('e-ticket PDF (OBRS-1802)', () => {
+    const PDF = () => new Blob(['%PDF-1.4'], { type: 'application/pdf' });
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it('an AUTHENTICATED customer goes to the private URL with NO token header', () => {
+      authStub.isAuthenticated = () => true;
+      // Present on purpose: a leftover token from a guest booking earlier in this
+      // browser must not change the lane OR leak onto a private URL.
+      service.setGuestPaymentToken('left.over.token');
+
+      service.downloadETicketPdf(42).subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/bookings/42/e-ticket`
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.responseType).toBe('blob');
+      expect(req.request.headers.has('X-Guest-Payment-Token')).toBeFalse();
+      req.flush(PDF());
+    });
+
+    it('a GUEST holding a token goes to the PUBLIC URL carrying it', () => {
+      authStub.isAuthenticated = () => false;
+      service.setGuestPaymentToken('signed.booking.token');
+
+      service.downloadETicketPdf(42).subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/bookings/42/e-ticket`
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.headers.get('X-Guest-Payment-Token')).toBe(
+        'signed.booking.token'
+      );
+      req.flush(PDF());
+    });
+
+    it('canDownloadETicketByBookingId is false only for a guest with no token', () => {
+      authStub.isAuthenticated = () => false;
+      expect(service.canDownloadETicketByBookingId()).toBeFalse();
+
+      service.setGuestPaymentToken('tok');
+      expect(service.canDownloadETicketByBookingId()).toBeTrue();
+
+      localStorage.clear();
+      authStub.isAuthenticated = () => true;
+      expect(service.canDownloadETicketByBookingId()).toBeTrue();
+    });
+
+    it('the credential lane POSTs the pair and sends no token header', () => {
+      authStub.isAuthenticated = () => false;
+
+      service.downloadETicketPdfByCredential('BK-9', '0812345678').subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/bookings/e-ticket`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        bookingNumber: 'BK-9',
+        phoneNumber: '0812345678',
+      });
+      expect(req.request.headers.has('X-Guest-Payment-Token')).toBeFalse();
+      req.flush(PDF());
+    });
+
+    it('the PDF request is exempt from the global error alert and the GET timeout', () => {
+      authStub.isAuthenticated = () => true;
+
+      service.downloadETicketPdf(42).subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/bookings/42/e-ticket`
+      );
+      expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
+      // The wait here is the backend RENDERING the PDF, so the 30s idempotent-GET
+      // ceiling would cancel a healthy slow render (OBRS-642's reasoning, restated).
+      expect(req.request.context.get(SKIP_REQUEST_TIMEOUT)).toBeTrue();
+      req.flush(PDF());
+    });
+
+    it('takes the filename from Content-Disposition', (done) => {
+      authStub.isAuthenticated = () => true;
+
+      service.downloadETicketPdf(42).subscribe((result) => {
+        expect(result.filename).toBe('e-ticket-BK-42.pdf');
+        done();
+      });
+
+      httpMock
+        .expectOne(`${environment.apiUrl}/api/private/bookings/42/e-ticket`)
+        .flush(PDF(), {
+          headers: {
+            'Content-Disposition': 'attachment; filename="e-ticket-BK-42.pdf"',
+          },
+        });
+    });
+
+    it('leaves the filename EMPTY when the header is absent, so the caller owns the fallback', (done) => {
+      authStub.isAuthenticated = () => true;
+
+      service.downloadETicketPdf(42).subscribe((result) => {
+        expect(result.filename).toBe('');
+        done();
+      });
+
+      httpMock
+        .expectOne(`${environment.apiUrl}/api/private/bookings/42/e-ticket`)
+        .flush(PDF());
+    });
+
+    /**
+     * The trap `ExportService` already solved once: with `responseType: 'blob'`
+     * the ERROR body is a Blob too, so nothing upstream can read it. Surfaced as
+     * a stable UPPER_SNAKE code plus the status — never as the server's message.
+     */
+    it('reads the errorCode out of a BLOB error body', (done) => {
+      authStub.isAuthenticated = () => false;
+      service.setGuestPaymentToken('stale.token');
+
+      service.downloadETicketPdf(42).subscribe({
+        error: (error: ETicketPdfError) => {
+          expect(error.errorCode).toBe('GUEST_PAYMENT_TOKEN_EXPIRED');
+          expect(error.status).toBe(400);
+          done();
+        },
+      });
+
+      httpMock.expectOne(`${environment.apiUrl}/api/bookings/42/e-ticket`).flush(
+        new Blob(
+          [
+            JSON.stringify({
+              errorCode: 'GUEST_PAYMENT_TOKEN_EXPIRED',
+              message: 'ลิงก์หมดอายุ',
+            }),
+          ],
+          { type: 'application/json' }
+        ),
+        { status: 400, statusText: 'Bad Request' }
+      );
+    });
+
+    it('falls back to the generic code when the error blob is not the JSON envelope', (done) => {
+      authStub.isAuthenticated = () => true;
+
+      service.downloadETicketPdf(42).subscribe({
+        error: (error: ETicketPdfError) => {
+          expect(error.errorCode).toBe(ETICKET_PDF_GENERIC_ERROR_CODE);
+          expect(error.status).toBe(500);
+          done();
+        },
+      });
+
+      httpMock
+        .expectOne(`${environment.apiUrl}/api/private/bookings/42/e-ticket`)
+        .flush(new Blob(['<html>502</html>'], { type: 'text/html' }), {
+          status: 500,
+          statusText: 'Server Error',
+        });
+    });
+
+    it('carries the 404 status through, which is all the neutral refusal needs', (done) => {
+      authStub.isAuthenticated = () => false;
+
+      service.downloadETicketPdfByCredential('BK-9', '0812345678').subscribe({
+        error: (error: ETicketPdfError) => {
+          expect(error.status).toBe(404);
+          done();
+        },
+      });
+
+      httpMock.expectOne(`${environment.apiUrl}/api/bookings/e-ticket`).flush(
+        new Blob([JSON.stringify({ errorCode: 'BOOKING_NOT_FOUND' })], {
+          type: 'application/json',
+        }),
+        { status: 404, statusText: 'Not Found' }
+      );
     });
   });
 });
