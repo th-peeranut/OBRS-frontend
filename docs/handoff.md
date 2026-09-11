@@ -98,6 +98,35 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-09-11 — `Idempotency-Key` on `POST /api/bookings` (booking creation)
+
+<!-- contract-request
+card: production-readiness review 2026-09-11 (no Jira card yet)
+status: open
+-->
+
+**Affected endpoint**: `POST /api/bookings` (`BookingController`, customer booking intake).
+
+**Request type**: additive (R1) — accept an optional `Idempotency-Key` request header; no change to the
+request body or the response shape.
+
+**Why**: booking creation is the one money-adjacent POST in the customer flow that is not idempotent.
+`POST /api/private/payments` already honours `Idempotency-Key` (and `PaymentDoubleSubmitConcurrencyIT`
+proves it), but a retried or duplicated `POST /api/bookings` — a double tap, a mobile network that
+resends after a timeout — creates **two seat holds** for the same passenger, each with its own 15-minute
+expiry. The frontend now single-flights the submit (`PassengerInfoComponent.isSubmitting`, this same
+date), which closes the double-tap but not the network-retry case; only the server can close that.
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| Accept `Idempotency-Key: <uuid>` on `POST /api/bookings`; same key within its TTL returns the **same** `201` body (`bookingId`, `bookingNumber`) without creating a second hold | `BookingController` / `BookingService#createBooking` | Retry-safe booking creation; mirrors the payment path's existing `idempotency_keys` mechanism |
+| Document the header in `docs/api/booking.md` (scope: per user or per guest token + path, TTL ≥ the 15-minute hold) | `docs/api/booking.md` | The frontend may only send what the contract documents |
+
+Once documented, the frontend will generate the key with `generateIdempotencyKey()` when the passenger
+form validates and send it on `BookingService.createBooking`, exactly as `payment.service.ts` does today.
+
+
 ### [Frontend] 2026-08-02 — Driver-cash daily-return close endpoints (OBRS-960): RESOLVED
 
 <!-- contract-request

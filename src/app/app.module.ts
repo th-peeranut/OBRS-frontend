@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { ErrorHandler, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import {
   provideHttpClient,
@@ -64,6 +64,7 @@ import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
+import { GlobalErrorHandler } from './shared/services/global-error-handler.service';
 import { appReducer } from './shared/stores/app.reducer';
 // OBRS-867: registered at the ROOT, not in a feature module. A search is
 // dispatched from the home page and from the results page, and `forFeature`
@@ -110,11 +111,17 @@ export function HttpLoaderFactory(http: HttpClient) {
       appState: appReducer,
       [STATION_LOAD_STATUS_FEATURE_KEY]: StationLoadStatusReducer,
     }),
-    StoreDevtoolsModule.instrument({ maxAge: 25, logOnly: environment.production }),
+    // 2026-09-11 review: the devtools bridge used to ship in the prod bundle (logOnly). Not
+    // instrumented at all when production is true - one less script surface on a page that
+    // takes card payments, and a smaller initial chunk.
+    ...(environment.production
+      ? []
+      : [StoreDevtoolsModule.instrument({ maxAge: 25 })]),
 
     SharedModule,
   ],
   providers: [
+    { provide: ErrorHandler, useClass: GlobalErrorHandler },
     AuthService,
     AuthGuard,
     // OBRS-1721: previewReadonlyInterceptor is LAST on purpose — it is the
