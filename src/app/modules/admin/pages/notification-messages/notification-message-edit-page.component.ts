@@ -44,6 +44,14 @@ export class NotificationMessageEditPageComponent implements OnInit, OnDestroy {
   protected submitting = false;
   protected validationError: PlaceholderErrorDto | null = null;
   protected loadFailed = false;
+  // OBRS-1550: the body held back while the credit-rise dialog is open, and the
+  // two figures as they read at the moment Save was clicked. The figures are
+  // snapshotted rather than bound live because `creditRise` is evaluated once,
+  // here — a debounced preview landing while the dialog is open would otherwise
+  // move the numbers under a title that says the cost went up.
+  protected creditRiseBody: string | null = null;
+  protected creditRiseFrom: number | null = null;
+  protected creditRiseTo: number | null = null;
 
   private readonly creditPreviewBody$ = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
@@ -104,6 +112,41 @@ export class NotificationMessageEditPageComponent implements OnInit, OnDestroy {
     if (this.showCreditPanel) {
       this.creditPreviewBody$.next(body);
     }
+  }
+
+  /**
+   * OBRS-1550 AC-2/AC-4 — a rise has to be acknowledged; a fall or no change
+   * saves exactly as before. `credits` is a whole segment count, so `> 0` is
+   * the only threshold there is: there is no fractional rise to filter out.
+   */
+  protected get creditRise(): boolean {
+    if (!this.showCreditPanel || !this.creditEstimate) {
+      return false;
+    }
+    return (this.creditEstimate.credits ?? 0) - (this.creditEstimate.baselineCredits ?? 0) > 0;
+  }
+
+  protected onSaveRequested(body: string): void {
+    if (this.creditRise) {
+      this.creditRiseBody = body;
+      this.creditRiseFrom = this.creditEstimate?.baselineCredits ?? null;
+      this.creditRiseTo = this.creditEstimate?.credits ?? null;
+      return;
+    }
+    void this.onSave(body);
+  }
+
+  protected onCreditRiseConfirm(): void {
+    const body = this.creditRiseBody;
+    this.creditRiseBody = null;
+    if (body !== null) {
+      void this.onSave(body);
+    }
+  }
+
+  /** AC-3: nothing is submitted and the typed text is left untouched. */
+  protected onCreditRiseCancel(): void {
+    this.creditRiseBody = null;
   }
 
   protected async onSave(body: string): Promise<void> {

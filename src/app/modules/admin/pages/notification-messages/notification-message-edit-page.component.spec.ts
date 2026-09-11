@@ -234,6 +234,125 @@ describe('NotificationMessageEditPageComponent', () => {
     });
   });
 
+  // OBRS-1550 — a rise has to be acknowledged before it is submitted. The
+  // estimate is a whole-segment count, so `> 0` is the whole threshold.
+  describe('credit-rise confirm dialog', () => {
+    function makeSavableComponent(creditEstimate: unknown) {
+      const key = { ...KEY, locales: { ...KEY.locales, th: { ...KEY.locales.th, creditEstimate } } };
+      const submit = jasmine
+        .createSpy('submitNotificationMessage')
+        .and.returnValue(of({ code: 200, message: 'OK', data: null }));
+      const { component } = makeComponent({
+        getNotificationMessageByCode: jasmine
+          .createSpy()
+          .and.returnValue(of({ code: 200, message: 'OK', data: key })),
+        previewNotificationMessageCredit: jasmine.createSpy().and.returnValue(new Subject<any>()),
+        submitNotificationMessage: submit,
+      });
+      component.ngOnInit();
+      return { component, submit };
+    }
+
+    it('holds the submit back and opens the dialog when the cost went up', () => {
+      const { component, submit } = makeSavableComponent({ credits: 3, baselineCredits: 2, encoding: 'GSM7' });
+
+      component['onSaveRequested']('longer text');
+
+      expect(component['creditRise']).toBeTrue();
+      expect(component['creditRiseBody']).toBe('longer text');
+      expect(submit).not.toHaveBeenCalled();
+    });
+
+    // The figures are snapshotted at click time: a preview landing while the
+    // dialog is open must not move the numbers under a "cost went up" title.
+    it('freezes the figures shown in the dialog at the moment Save was clicked', () => {
+      const { component } = makeSavableComponent({ credits: 3, baselineCredits: 2, encoding: 'GSM7' });
+
+      component['onSaveRequested']('longer text');
+      component['creditEstimate'] = { credits: 1, baselineCredits: 2, encoding: 'GSM7' } as any;
+
+      expect(component['creditRiseFrom']).toBe(2);
+      expect(component['creditRiseTo']).toBe(3);
+    });
+
+    it('a one-credit rise is enough — there is no sub-credit rise to wave through', () => {
+      const { component, submit } = makeSavableComponent({ credits: 2, baselineCredits: 1, encoding: 'UCS2' });
+
+      component['onSaveRequested']('one segment longer');
+
+      expect(component['creditRiseBody']).toBe('one segment longer');
+      expect(submit).not.toHaveBeenCalled();
+    });
+
+    it('submits the held-back body on confirm', async () => {
+      const { component, submit } = makeSavableComponent({ credits: 3, baselineCredits: 2, encoding: 'GSM7' });
+      component['onSaveRequested']('longer text');
+
+      component['onCreditRiseConfirm']();
+      await Promise.resolve();
+
+      expect(submit).toHaveBeenCalledWith({
+        messageCode: 'notification.sms.payment.confirmed',
+        locale: 'th',
+        body: 'longer text',
+      });
+      expect(component['creditRiseBody']).toBeNull();
+    });
+
+    it('cancel submits nothing and closes the dialog (the typed text is never touched)', () => {
+      const { component, submit } = makeSavableComponent({ credits: 3, baselineCredits: 2, encoding: 'GSM7' });
+      component['onSaveRequested']('longer text');
+
+      component['onCreditRiseCancel']();
+
+      expect(submit).not.toHaveBeenCalled();
+      expect(component['creditRiseBody']).toBeNull();
+    });
+
+    it('a FALL saves straight through with no dialog', async () => {
+      const { component, submit } = makeSavableComponent({ credits: 1, baselineCredits: 3, encoding: 'GSM7' });
+
+      component['onSaveRequested']('shorter text');
+      await Promise.resolve();
+
+      expect(component['creditRise']).toBeFalse();
+      expect(component['creditRiseBody']).toBeNull();
+      expect(submit).toHaveBeenCalled();
+    });
+
+    it('NO CHANGE saves straight through with no dialog', async () => {
+      const { component, submit } = makeSavableComponent({ credits: 2, baselineCredits: 2, encoding: 'GSM7' });
+
+      component['onSaveRequested']('same cost text');
+      await Promise.resolve();
+
+      expect(component['creditRise']).toBeFalse();
+      expect(submit).toHaveBeenCalled();
+    });
+
+    it('a non-SMS key never opens the dialog even if an estimate somehow arrived', async () => {
+      const key = {
+        ...KEY,
+        channels: ['EMAIL'],
+        locales: { ...KEY.locales, th: { ...KEY.locales.th, creditEstimate: { credits: 3, baselineCredits: 2, encoding: 'GSM7' } } },
+      };
+      const submit = jasmine
+        .createSpy('submitNotificationMessage')
+        .and.returnValue(of({ code: 200, message: 'OK', data: null }));
+      const { component } = makeComponent({
+        getNotificationMessageByCode: jasmine.createSpy().and.returnValue(of({ code: 200, message: 'OK', data: key })),
+        submitNotificationMessage: submit,
+      });
+      component.ngOnInit();
+
+      component['onSaveRequested']('body');
+      await Promise.resolve();
+
+      expect(component['creditRise']).toBeFalse();
+      expect(submit).toHaveBeenCalled();
+    });
+  });
+
   it('cancel navigates back to the list', () => {
     const getByCode = jasmine.createSpy().and.returnValue(of({ code: 200, message: 'OK', data: KEY }));
     const { component, router } = makeComponent({ getNotificationMessageByCode: getByCode });

@@ -99,6 +99,7 @@ import { NotificationMessageEditPageComponent } from './pages/notification-messa
 import { NotificationMessageEditFormComponent } from './pages/notification-messages/notification-message-edit-form/notification-message-edit-form.component';
 import { NotificationMessagePreviewPanelComponent } from './pages/notification-messages/notification-message-preview-panel/notification-message-preview-panel.component';
 import { NotificationMessageCreditPanelComponent } from './pages/notification-messages/notification-message-credit-panel/notification-message-credit-panel.component';
+import { NotificationMessageCreditRiseDialogComponent } from './pages/notification-messages/notification-message-credit-rise-dialog/notification-message-credit-rise-dialog.component';
 import { NotificationMessageReviewQueuePageComponent } from './pages/notification-messages/notification-message-review-queue-page.component';
 import { NotificationMessageReviewQueueTableComponent } from './pages/notification-messages/notification-message-review-queue-table/notification-message-review-queue-table.component';
 import { NotificationMessageReviewDetailPageComponent } from './pages/notification-messages/notification-message-review-detail-page.component';
@@ -655,6 +656,7 @@ export const adminRoutes: Routes = [
     NotificationMessageEditFormComponent,
     NotificationMessagePreviewPanelComponent,
     NotificationMessageCreditPanelComponent,
+    NotificationMessageCreditRiseDialogComponent,
     NotificationMessageReviewQueuePageComponent,
     NotificationMessageReviewQueueTableComponent,
     NotificationMessageReviewDetailPageComponent,
