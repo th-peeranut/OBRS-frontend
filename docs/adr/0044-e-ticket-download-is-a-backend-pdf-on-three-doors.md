@@ -148,6 +148,43 @@ rather than a statement — which is the part worth fixing.
   guessing. The dialog's prefill is unchanged; it is the *request* that no longer
   falls back.
 
+### The one coupling left open, and why it is a card rather than a fix here
+
+**Today's behaviour is correct, and provably so. This is about a future change.**
+
+Lane selection and bearer attachment are two independent decisions that happen to
+agree:
+
+| | decides | expression |
+| --- | --- | --- |
+| lane | `booking.service.ts:299` (`downloadETicketPdf`) | `authService.isAuthenticated()` |
+| bearer | `auth.interceptor.ts:100-101`, from the token read at `:68` | `!!authService.getToken()` — **no URL predicate at all** |
+
+They cannot disagree at the moment this is written, because `isAuthenticated()` is
+literally `return !!this.getToken()` (`auth.service.ts:570-572`). So both reduce
+to `!!localStorage['auth_token']` and the guest lane is only ever taken when no
+bearer exists. Nothing attaches `X-Guest-Payment-Token` globally either — it is
+set per request in exactly two places (`booking.service.ts:309`,
+`payment.service.ts:59`).
+
+What that is, though, is **a coincidence of two implementations agreeing, not a
+gate**. The day `isAuthenticated()` starts checking the JWT's `exp` — which it
+arguably should — an expired token sends the caller down the *guest* lane while
+the interceptor still sees `getToken()` as truthy, and one request goes out
+carrying a bearer token *and* a booking-scoped guest capability. No spec in this
+repo can catch that regression: `HttpTestingController` does not run
+interceptors.
+
+**OBRS-1839 owns turning it into a gate** — a `SKIP_AUTH_HEADER`
+`HttpContextToken` the interceptor reads, set on both guest lanes. It is a
+separate card, not part of this one, for the reason the owner split it out: the
+shape predates this work (`payment.service.ts:53-59`, OBRS-858, chose its lane the
+same way), so it is not this card's defect, and one gate in the interceptor
+closes both call sites where two local fixes would close one and leave the other.
+Anyone reading this file before touching either guest lane should read that card
+first; do not re-derive the analysis, and do not "tidy" the predicate on one side
+only — making the two expressions differ is precisely the change that breaks it.
+
 ## Consequences
 
 - The frontend no longer decides what an e-ticket looks like when printed; the
