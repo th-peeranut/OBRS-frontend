@@ -28,6 +28,7 @@ export const environment = {
     id: prodEnv.promptpayId,
   },
   mapsApiKey: prodEnv.mapsApiKey,
+  mapsMapId: prodEnv.mapsMapId,
   googleClientId: prodEnv.googleClientId,
   maptilerKey: prodEnv.maptilerKey,
   // OBRS-867. Deliberately NOT on prod-config-guard.ts's refuse-to-boot list:

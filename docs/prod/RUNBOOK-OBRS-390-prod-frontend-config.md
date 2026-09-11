@@ -71,7 +71,7 @@ the two gates saying the same sentence.
 
 ### The optional vars — read this before deciding you don't need them
 
-`inject-prod-env.js` reads three more variables that are **deliberately not in the
+`inject-prod-env.js` reads four more variables that are **deliberately not in the
 failure check**, because their absence costs a map or a chart, never a payment, and
 they must not be able to fail a prod build:
 
@@ -79,12 +79,42 @@ they must not be able to fail a prod build:
 export PROD_MAPTILER_API_KEY='<key of obrs-frontend-prod, see below>'  # OBRS-424 / OBRS-831
 export PROD_GA4_MEASUREMENT_ID='G-…'                              # OBRS-867
 export PROD_CLARITY_PROJECT_ID='<project id>'                     # OBRS-867
+export PROD_MAPS_MAP_ID='<Map ID of PROD's own Cloud project>'    # OBRS-1838
 ```
 
 Unset means the generated file gets `''`, the build stays green, and the feature
 degrades silently: a blank `maptilerKey` makes `FleetMapPanelComponent.canShowMap`
 false, so every map surface renders the `MAP_UNAVAILABLE` placeholder, and blank
 analytics IDs inject no tag at all.
+
+#### ⚠️ `PROD_MAPS_MAP_ID` is the one whose absence does NOT announce itself (OBRS-1838)
+
+The other three degrade visibly or harmlessly: a blank MapTiler key paints the
+`MAP_UNAVAILABLE` placeholder, blank analytics IDs simply inject nothing. A blank
+`mapsMapId` does neither. `AdvancedMarkerElement` — which the route map has used since
+OBRS-1838 retired the deprecated `google.maps.Marker` — refuses to draw on a Map that
+was constructed without a `mapId`.
+
+Measured 2026-09-12 by building this bundle with `mapsMapId: ''` and serving it at the
+SIT origin: **the map draws (3 canvases, 43 tiles) and the road-snapped polyline draws,
+and `gmp-advanced-marker` count is 0** — a working-looking map of a route with no stops.
+Nothing on the page says so; there is no `canShowMap`-style placeholder gate on this
+value the way there is on `maptilerKey`.
+
+**It is loud in DevTools, though, so check there before you conclude the data is wrong.**
+The same run logged `console.error` **24 times** — once per marker that could not be
+created — with Google's own text:
+
+    The map is initialized without a valid Map ID, which will prevent use of Advanced Markers.
+
+24 of the 26 console messages on the page were that line. An earlier draft of this
+section claimed "nothing logs"; that was asserted, not measured, and it was wrong.
+
+Get the value from **prod's own** Cloud project, not SIT's: a Map ID is project-scoped
+and SIT's `6b1b77b585b50c8668808c25` will not resolve against a prod key. Create it at
+Google Maps Platform -> Map Management -> Create Map ID, map type **JavaScript** (Raster
+is enough; Vector is only needed for `collisionBehavior`/altitude, neither of which this
+map uses). A Map ID is a public identifier, not a credential — it ships in the bundle.
 
 **Silently is the problem.** Until 2026-07-30 this runbook listed only the five
 required vars, so anyone following it produced a prod bundle whose maps could never
