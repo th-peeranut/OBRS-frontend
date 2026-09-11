@@ -14,6 +14,32 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ## Pending Changes (Backend → Frontend)
 
+## [Backend] 2026-09-11 — security chain is deny-by-default; an undeclared `/api/...` path answers `401`, not `404` (ADR-0153)
+**Risk level**: R1 (behavioural, no field or endpoint changed)
+**Triggered by**: security review 2026-09-11, backend finding B-M1.
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| every documented public endpoint | none | still anonymous; each is now listed explicitly in `PublicEndpointConstant.PUBLIC_PATTERNS` |
+| any path NOT documented in `docs/api/` | status changed | anonymous call now gets `401 UNAUTHORIZED` (was `404`); an authenticated call still gets `404` |
+| `POST /api/external/sms/send/test` | availability | `dev` profile only (was on SIT/prod behind `hasRole('OWNER')`); the frontend never called it |
+
+### Response shapes before / after
+- Unchanged for every endpoint the frontend calls.
+
+### Action required in frontend
+- [ ] None today — every `/api/...` URL the app calls was cross-checked against the declaration.
+- [ ] Be aware when adding a call to a NEW backend endpoint: if the backend forgot to declare it
+      public, an anonymous call answers `401`, and `auth.interceptor.ts` treats a `401` on a
+      credentialed request as a session loss. A surprise logout on a new public page is the symptom;
+      the fix is on the backend (add the path to `PublicEndpointConstant`), not here.
+
+### Still unfinished on backend
+- None — see `../OBRS-backend/docs/adr/0153-deny-by-default-security-chain-with-declared-public-surface.md`.
+
+---
+
 ## [Backend] 2026-08-20 — `userName` added to `GET/PUT /api/private/admin/usability-reports` (list + detail)
 **Risk level**: R1 (additive)
 **Triggered by**: bug report — the `/admin/usability-reports` page showed the raw numeric `userId` (e.g. `1`, `2`) in the reporter column/detail instead of a name.
