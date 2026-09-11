@@ -72,6 +72,7 @@
 
     text-decoration: none;
     cursor: pointer;
+    @include tap-target-min; // OBRS-640: was 39.1px tall, just under the floor
 
     .sales-icon {
       flex-shrink: 0;
@@ -124,6 +125,16 @@
     display: inline-block;
 
     cursor: pointer;
+
+    // OBRS-640: was 18px tall. padding-block grows the box to 44px; margin-bottom
+    // claws back MOST (not all -- measured live, canceling the full 26px made this
+    // link's bottom edge land 10px past the next `.mt-3` link's top, an overlap) of
+    // that growth without touching margin-top, so the `.mt-3` gap above is untouched.
+    // -10px leaves a 6px real gap between links (44 + -10 + next 16px margin-top =
+    // 50 > 44) -- some visible growth versus the original 34px top-to-top rhythm
+    // (+16px per link) is the accepted trade-off per the card's own footer note.
+    padding-block: 13px;
+    margin-bottom: -10px;
   }
 }
 
@@ -151,6 +162,13 @@
     font-weight: $font-weight-regular;
     text-decoration: none;
     cursor: pointer;
+
+    // OBRS-640: was 18px tall. Same technique as .menu-text, but this column mixes
+    // `.mt-3` (facebook) and `.mt-2` (instagram/phone, 8px) neighbours -- the -4px
+    // here is sized against that tighter 8px gap (44 + -4 + next 8px margin-top = 48
+    // > 44), not the same -10px .menu-text uses, which would overlap here.
+    padding-block: 13px;
+    margin-bottom: -4px;
 
     .contact-icon {
       flex-shrink: 0;
@@ -330,7 +348,7 @@
     padding-bottom: 20px;
 
     .copyright-text {
-      font-size: 11px;
+      font-size: $font-size-xs; // OBRS-640: was 11px, under the 12px floor
     }
   }
 }

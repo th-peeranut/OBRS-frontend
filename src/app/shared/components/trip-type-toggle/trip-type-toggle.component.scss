@@ -32,6 +32,7 @@
   gap: $space-3xs;
 
   padding: $space-2xs $space-sm;
+  @include tap-target-min; // OBRS-640
   border: none;
   border-radius: $radius-pill;
 

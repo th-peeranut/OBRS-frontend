@@ -120,6 +120,7 @@
   align-items: center;
   gap: $space-3xs;
   padding: $space-3xs $space-sm;
+  @include tap-target-min; // OBRS-640
   border-radius: $radius-pill;
   border: 1px solid $primary-lightgrey;
   background: $primary-white;
