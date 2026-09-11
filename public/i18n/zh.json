@@ -4071,8 +4071,25 @@
         "COLLECT": "取件",
         "LEAVE_AT_STOP": "放置在站点并拍照",
         "VIEW_DROP_OFF_PHOTO": "查看放置照片",
-        "FILE_CLAIM": "提交索赔"
+        "FILE_CLAIM": "提交索赔",
+        "RESEND_NOTIFICATION": "重新发送通知"
       },
+        "NOTIFY": {
+        "FAILED": "通知发送失败",
+        "NO_PHONE": "无收件人号码",
+        "RESEND_OK": "已再次向收件人发送到达短信",
+        "RESEND_NOT_SENT": "短信服务商拒绝了该消息，请检查号码后重试"
+        },
+        "RESEND_DIALOG": {
+        "TITLE": "重新发送到达通知",
+        "HINT": "系统将把含取件码的到达短信再次发送到下方号码。若号码有误，可在此更正，短信将发往新号码。",
+        "PHONE_LABEL": "收件人电话",
+        "PHONE_INVALID": "须为泰国手机号码，例如 0812345678",
+        "CORRECTION_WARNING": "更改此项将更新该包裹的收件人号码，并记录更改人",
+        "CANCEL": "取消",
+        "CONFIRM": "重新发送",
+        "SUBMITTING": "发送中…"
+        },
       "COLLECT_DIALOG": {
         "TITLE": "取件",
         "CODE_LABEL": "取件码",
@@ -4118,6 +4135,11 @@
         "ALREADY_COLLECTED": "此包裹已被取走。",
         "WRONG_STATE": "此包裹状态与预期不符，列表已刷新。",
         "BOOKING_NOT_CONFIRMED": "此包裹尚未付款。交付前请先在预订上收款。",
+        "RESEND_PHONE_INVALID": "收件人电话须为泰国手机号码，短信将发送至该号码",
+        "RESEND_PHONE_REQUIRED": "该包裹没有收件人号码，请先填写号码再重发",
+        "RESEND_LIMIT_PHONE": "该号码今日重发次数已达上限，请明天再试",
+        "RESEND_LIMIT_GLOBAL": "重发已达今日系统上限，请明天再试",
+        "RESEND_GENERIC": "重新发送通知失败，请重试",
         "ALREADY_LEFT_AT_STOP": "此包裹已被记录为放置在站点。",
         "PHOTO_TOO_LARGE": "照片超过 10 MB，请重新拍摄。",
         "PHOTO_UNSUPPORTED": "不支持的照片格式，请使用 JPEG、PNG 或 WebP。",

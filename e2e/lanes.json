@@ -667,6 +667,12 @@
     "lane": "CAPTURE",
     "config": "playwright.obrs1808capture.config.ts",
     "why": "OBRS-1808 AFTER evidence for the waybill: the recipient collectionToken QR removed from both surfaces, the full-terms QR replaced on SCREEN by a link that opens the /parcel-policy component in a modal (clause 10 keeps the QR on the PRINTED copy), and the three-clause short form broken onto three lines. CAPTURE and not GATE because the verdict belongs to parcel-waybill-paper.component.spec.ts, whose 0-count assertions fail a build; this exists so the owner can see the paper and the screen side by side. Hermetic on the gate lane's terms: it seeds a synthetic staff session and fulfils every /api/** call it makes, so nothing reaches a backend. The BEFORE half is shot from a second worktree at origin/dev with an uncommitted twin of this spec, because a committed spec asserting the old DOM would fail on this branch."
+  },
+  {
+    "spec": "obrs-1811-capture.spec.ts",
+    "lane": "CAPTURE",
+    "config": "playwright.obrs1811capture.config.ts",
+    "why": "OBRS-1811 AFTER evidence for the staff delivery list: which recipients were never reached (the failure the backend already recorded and nothing read back), the resend action on every arrived row, the dialog pre-filled with the parcel's current number, the warning that appears only once that number is CHANGED, and the row after a corrected resend. CAPTURE and not GATE because the verdict belongs to parcel-delivery-list-page.component.spec.ts and to the backend's ParcelConsignedDeliveryIT, whose assertions fail a build; this exists so the owner can see the screen. Hermetic: it seeds a synthetic staff session and fulfils every /api/** call it makes, so nothing reaches a backend. The BEFORE half is shot from a second worktree at origin/dev with an uncommitted twin of this spec, because a committed spec asserting the old DOM would fail on this branch."
   }
   ]
 }
