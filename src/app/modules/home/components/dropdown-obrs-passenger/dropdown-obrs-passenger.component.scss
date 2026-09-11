@@ -75,6 +75,16 @@
 
 .dropdown-menu {
   min-width: 300px;
+
+  // OBRS-568 rule 3 — every dropdown panel is bounded and scrolls. Measured on
+  // this branch before the line was added: computed max-height was `none` at both
+  // 390x844 and 1280x720, the last of the four families with no bound at all.
+  // This panel is two rows plus an occasional hint, so nothing is scrolling today
+  // and nothing about it looks different; the bound is what stops the next row
+  // added here from repeating OBRS-561's 1138px panel. 60vh is the same figure the
+  // two shared families use, which is the point of the card.
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
 .passenger-icon.passenger-add.disabled {
@@ -108,10 +118,22 @@ li {
     }
   }
 
+  // OBRS-568 rule 4 — the panel's width is its own, never the trigger's.
+  // `width: 100%; min-width: 0` here overrode the 300px floor set at base and
+  // resolved against `.dropdown`, so the panel came out at the TRIGGER's width.
+  // Measured on `/` at 390x844 before this change: panel 140px, both rows painting
+  // outside it (`scrollWidth - clientWidth` = 44px and 145px) because Bootstrap's
+  // `.dropdown-item { white-space: nowrap }` will not wrap them. That is OBRS-561
+  // exactly -- same two declarations, same shrink-to-fit parent, same text drawn
+  // over whatever is behind the panel -- one component over, on the home page.
+  // A control arm proved it predates this card: reverting the height bound added
+  // above in the live CSSOM left both overflows byte-identical.
+  // Same shape of fix as `dropdown-group-obrs`/`dropdown-obrs`: size to content,
+  // keep the floor, and stop at the screen edge.
   .dropdown-menu {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
+    width: max-content;
+    min-width: 300px;
+    max-width: calc(100vw - #{$space-md * 2});
   }
 
   .dropdown-passenger {

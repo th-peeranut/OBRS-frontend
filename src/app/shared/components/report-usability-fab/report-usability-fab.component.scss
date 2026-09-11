@@ -315,3 +315,22 @@
   color: var(--bs-danger, #dc3545);
   font-size: 0.875rem;
 }
+
+// OBRS-637 -- /passenger-info and /schedule-booking pin their primary CTA to the
+// bottom of the screen below 768px and mark the body while they are open. The
+// pill's corner lands on top of that bar, and the yield above does NOT save the
+// case: `isClickableUnderFab` triggers on the CANDIDATE'S CENTRE falling inside
+// the pill -- a measured choice, see the note on that method -- and a bar that
+// spans the screen has its centre in the middle of it. So the FAB would keep its
+// clicks while covering the right end of the one button those pages exist to get
+// pressed. Step over the bar rather than onto it.
+//
+// 84px is what the bar occupies, and is the same sum those two pages add to
+// their own `:host` as bottom padding: $space-sm inset + 52px button + $space-sm
+// gap. `env()` is deliberately NOT added on top -- the bar already absorbs the
+// safe-area inset, so adding it here again would double it.
+@media (max-width: 768px) {
+  :host-context(body.has-sticky-cta) .report-fab {
+    bottom: calc(#{$space-lg} + 84px);
+  }
+}

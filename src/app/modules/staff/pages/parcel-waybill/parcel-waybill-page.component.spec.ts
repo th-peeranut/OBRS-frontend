@@ -41,7 +41,12 @@ describe('ParcelWaybillPageComponent (constructed directly — load/QR logic)', 
     expect(component['isLoading']).toBeFalse();
   });
 
-  it('loads the waybill and renders a QR for the collectionToken', async () => {
+  // OBRS-1808: the response still CARRIES collectionToken - `collect` accepts it (ADR-0073 §5)
+  // and removing the field is a backend contract change this card did not make. What changed is
+  // that the page no longer turns it into a QR, because nothing in this product reads QRs. The
+  // assertion is on the encoder's arguments rather than on the DOM: a QR that is built and then
+  // hidden is still a secret rendered into the page.
+  it('loads the waybill and builds NO QR from the collectionToken', async () => {
     const qrSpy = spyOn(QRCode, 'toDataURL').and.callThrough() as unknown as jasmine.Spy;
     const staffApi = {
       getWaybill: jasmine.createSpy().and.returnValue(of({ code: 200, message: 'OK', data: SAMPLE_WAYBILL })),
@@ -55,16 +60,16 @@ describe('ParcelWaybillPageComponent (constructed directly — load/QR logic)', 
     expect(component['hasError']).toBeFalse();
 
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(qrSpy).toHaveBeenCalledWith(
-      'signed-collection-token',
-      jasmine.objectContaining({ width: 140, margin: 1, errorCorrectionLevel: 'M' })
-    );
-    expect(component['qrDataUrl']).toContain('data:image');
+    const encoded = qrSpy.calls.allArgs().map((args) => args[0] as string);
+    expect(encoded).not.toContain('signed-collection-token');
+    // …and the two that remain are both public URLs, not per-parcel secrets.
+    expect(encoded).toContain(`${window.location.origin}/track-parcel/PCL-1`);
+    expect(encoded).toContain(`${window.location.origin}/parcel-policy`);
   });
 
   // OBRS-1353: the sender's channel. A cash walk-in has no account and no LINE
   // userId, so this QR on their own waybill is the only thing that reaches them.
-  it('renders a SECOND QR holding the public tracking URL, distinct from the collection-token QR', async () => {
+  it('renders the public tracking URL as a QR', async () => {
     const qrSpy = spyOn(QRCode, 'toDataURL').and.callThrough() as unknown as jasmine.Spy;
     const staffApi = {
       getWaybill: () => of({ code: 200, message: 'OK', data: SAMPLE_WAYBILL }),
@@ -79,9 +84,25 @@ describe('ParcelWaybillPageComponent (constructed directly — load/QR logic)', 
       jasmine.objectContaining({ width: 140, margin: 1, errorCorrectionLevel: 'M' })
     );
     expect(component['trackQrDataUrl']).toContain('data:image');
-    // The whole risk of putting two QRs on one sheet: swap them and the
-    // recipient's collection token becomes the public link.
-    expect(component['trackQrDataUrl']).not.toEqual(component['qrDataUrl']);
+    // The whole risk of putting two QRs on one sheet: swap them and the sender's
+    // per-parcel tracking link goes out under the "full terms" label.
+    expect(component['trackQrDataUrl']).not.toEqual(component['termsQrDataUrl']);
+  });
+
+  // OBRS-1808: the screen's replacement for the terms QR. Closed on arrival - a modal that
+  // opens itself would sit between the staff member and the waybill they navigated here for.
+  it('opens and closes the full-terms modal', () => {
+    const staffApi = {
+      getWaybill: () => of({ code: 200, message: 'OK', data: SAMPLE_WAYBILL }),
+    } as unknown as StaffApiService;
+    const component = new ParcelWaybillPageComponent(makeRouteStub('1'), staffApi, {} as never);
+    component.ngOnInit();
+
+    expect(component['isTermsOpen']).toBeFalse();
+    component['openTerms']();
+    expect(component['isTermsOpen']).toBeTrue();
+    component['closeTerms']();
+    expect(component['isTermsOpen']).toBeFalse();
   });
 
   it('sets hasError on a failed fetch', () => {
