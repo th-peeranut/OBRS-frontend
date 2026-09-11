@@ -15,6 +15,12 @@
       "why": "OBRS-640 Phase A: a hit-tested mobile tap-target (>=44x44) + rendered-text-size (>=12px) sweep of six customer routes, plus the my-bookings overflow menu and e-ticket modal. CAPTURE and not GATE because the owner's own call (docs/prod/LANE-BRIEFS.md#obrs-640) is that this lands silently for now -- Phase A measures the baseline, Phase B (a separate card) fixes it, and only then does a gate belong here. Run on the unfixed tree most of its cases fail on purpose; that failure, with the full population/violation detail the console prints, IS the AC-1 baseline. Hermetic on the gate lane's terms: it reuses e2e/support/customer-pages.ts's seedCustomerSession/seedStore, with two endpoints (/users/me, /bookings/501/tickets) fulfilled locally for the two entries that map does not carry."
     },
     {
+      "spec": "obrs-1832-report-trigger.capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1832capture.config.ts",
+      "why": "OBRS-1832 AFTER evidence for retiring the floating report FAB: one frame per mount point the card claims, at the width where that mount point is the one a user meets -- the customer bar with the menu shut and open, the /my-bookings corner the pill used to hold, the desktop navbar cluster, the modal opened by an anonymous visitor (ADR-006's requirement, kept by ADR-0044), /login which has no navbar at all, the staff topbar, and the staff drawer at 1000px. CAPTURE and not GATE because the verdict already has two owners: the per-shell unit specs assert the trigger's POSITION (first child of the cluster, outside .navbar-desktop-only), and the OBRS-640 audit is what measures that the four OBRS-1828 hit-test violations on /my-bookings are gone; this exists so the card carries a picture of the same claim. Hermetic on the gate lane's terms: it reuses e2e/support/customer-pages.ts and e2e/support/gate-admin-session.ts, so every /api/** call is fulfilled in-browser."
+    },
+    {
       "spec": "obrs-1782-tiles-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1782capture.config.ts",

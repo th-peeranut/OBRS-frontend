@@ -13,11 +13,11 @@ import { seedGateAdminSession } from '../support/gate-admin-session';
  * same claim those make in text.
  */
 
-const OUT = 'e2e-evidence/obrs-1832';
+const ASSETS = 'e2e-evidence/obrs-1832';
 
 test.describe('OBRS-1832 capture', () => {
   test.beforeAll(() => {
-    mkdirSync(OUT, { recursive: true });
+    mkdirSync(ASSETS, { recursive: true });
   });
 
   test.describe('customer', () => {
@@ -32,12 +32,12 @@ test.describe('OBRS-1832 capture', () => {
       await page.locator('.navbar-tools .report-trigger').waitFor({ state: 'visible' });
       await page.waitForTimeout(1200);
 
-      await page.screenshot({ path: `${OUT}/OBRS-1832-AFTER-390px-1-bar-menu-closed.png` });
+      await page.screenshot({ path: `${ASSETS}/OBRS-1832-AFTER-390px-1-bar-menu-closed.png` });
 
       await page.locator('.navbar-hamburger').click();
       await page.locator('.navbar-mobile-panel .report-trigger').waitFor({ state: 'visible' });
       await page.waitForTimeout(400);
-      await page.screenshot({ path: `${OUT}/OBRS-1832-AFTER-390px-2-menu-open-both-entries.png` });
+      await page.screenshot({ path: `${ASSETS}/OBRS-1832-AFTER-390px-2-menu-open-both-entries.png` });
     });
 
     test('my-bookings: the corner the FAB used to hold', async ({ page }) => {
@@ -58,7 +58,7 @@ test.describe('OBRS-1832 capture', () => {
         }
       });
       await page.waitForTimeout(300);
-      await page.screenshot({ path: `${OUT}/OBRS-1832-AFTER-390px-3-my-bookings-corner-is-empty.png` });
+      await page.screenshot({ path: `${ASSETS}/OBRS-1832-AFTER-390px-3-my-bookings-corner-is-empty.png` });
     });
   });
 
@@ -74,7 +74,7 @@ test.describe('OBRS-1832 capture', () => {
       await page.locator('.navbar-tools .report-trigger').waitFor({ state: 'visible' });
       await page.waitForTimeout(1200);
       await page.screenshot({
-        path: `${OUT}/OBRS-1832-AFTER-1280px-4-navbar-cluster.png`,
+        path: `${ASSETS}/OBRS-1832-AFTER-1280px-4-navbar-cluster.png`,
         clip: { x: 640, y: 0, width: 640, height: 120 },
       });
 
@@ -83,12 +83,12 @@ test.describe('OBRS-1832 capture', () => {
       await page.locator('.navbar-tools .report-trigger').click();
       await page.locator('.report-modal').waitFor({ state: 'visible' });
       await page.waitForTimeout(400);
-      await page.screenshot({ path: `${OUT}/OBRS-1832-AFTER-1280px-5-modal-open.png` });
+      await page.screenshot({ path: `${ASSETS}/OBRS-1832-AFTER-1280px-5-modal-open.png` });
 
       await page.goto('/login', { waitUntil: 'domcontentloaded' });
       await page.locator('.change-language .report-trigger').waitFor({ state: 'visible' });
       await page.waitForTimeout(800);
-      await page.screenshot({ path: `${OUT}/OBRS-1832-AFTER-1280px-6-login-no-navbar.png` });
+      await page.screenshot({ path: `${ASSETS}/OBRS-1832-AFTER-1280px-6-login-no-navbar.png` });
     });
   });
 
@@ -103,7 +103,7 @@ test.describe('OBRS-1832 capture', () => {
       await page.locator('.admin-topbar-actions .report-trigger').waitFor({ state: 'visible' });
       await page.waitForTimeout(1500);
       await page.screenshot({
-        path: `${OUT}/OBRS-1832-AFTER-1280px-7-staff-topbar.png`,
+        path: `${ASSETS}/OBRS-1832-AFTER-1280px-7-staff-topbar.png`,
         clip: { x: 640, y: 0, width: 640, height: 120 },
       });
 
@@ -114,7 +114,7 @@ test.describe('OBRS-1832 capture', () => {
       await page.locator('.admin-menu-toggle').click();
       await page.locator('.admin-sidebar-footer .report-trigger').waitFor({ state: 'visible' });
       await page.waitForTimeout(600);
-      await page.screenshot({ path: `${OUT}/OBRS-1832-AFTER-1000px-8-staff-drawer.png` });
+      await page.screenshot({ path: `${ASSETS}/OBRS-1832-AFTER-1000px-8-staff-drawer.png` });
     });
   });
 });

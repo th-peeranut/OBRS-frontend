@@ -198,7 +198,11 @@ test.describe('Analytics consent banner — the undecided state', () => {
     );
     await page.locator(TRIGGER).click();
     await expect(page.locator('.report-modal, [role="dialog"]').first()).toBeVisible();
-    await page.keyboard.press('Escape');
+    // Closed by its own close button, not Escape: this modal has never bound a
+    // key (checked against origin/dev -- ADR-006 shipped it without one), and a
+    // backdrop left open swallows the Decline click below.
+    await page.locator('.report-modal__close').click();
+    await expect(page.locator('.report-modal-backdrop')).toHaveCount(0);
 
     await page.locator(DECLINE).click();
     await expect(page.locator(BANNER)).toHaveCount(0);
