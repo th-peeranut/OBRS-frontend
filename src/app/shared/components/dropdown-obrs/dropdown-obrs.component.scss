@@ -83,6 +83,20 @@
   min-width: 200px;
 }
 
+// OBRS-568 rule 3 — bound the panel at EVERY width, not only on a phone.
+// OBRS-561 put `max-height: 60vh` in the <=576px block below and nowhere else, so
+// measured on /register at 1280x720 the computed max-height of this panel was
+// `none`: the mobile defect was fixed and the same unbounded panel stayed on every
+// desktop. Its sibling `dropdown-group-obrs` already bounds at base for exactly
+// this reason ("Bounding it here rather than only in the mobile block keeps one
+// rule for both"); this is that same line, one component over. Width is untouched,
+// so nothing about the panel's appearance changes below 60vh.
+.dropdown-menu,
+.dropdown-menu-border {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
 li {
   font-size: $font-size-md;
   color: $text-black;
@@ -111,14 +125,13 @@ li {
   // way `dropdown-group-obrs` did — every consumer gives `.dropdown` a full-width
   // parent, so the panel came out at 200px with zero text overflow. What it *did*
   // share is an unbounded panel height, so keep the 200px floor as a guard against a
-  // future flex-row consumer and bound the height like its sibling.
+  // future flex-row consumer. The height bound that used to be repeated here moved
+  // to the base rule above (OBRS-568) and applies at this width too.
   .dropdown-menu,
   .dropdown-menu-border {
     width: 100%;
     min-width: 200px;
     max-width: calc(100vw - #{$space-md * 2});
-    max-height: 60vh;
-    overflow-y: auto;
   }
 }
 
