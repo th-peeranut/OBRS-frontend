@@ -446,7 +446,7 @@
     "today": "今天",
     "clear": "清除",
     "weekHeader": "周",
-    "dateFormat": "yy/mm/dd"
+    "dateFormat": "yy'年'm'月'd'日'"
   },
   "SHARED": {
     "NO_CONTENT": "未找到数据",

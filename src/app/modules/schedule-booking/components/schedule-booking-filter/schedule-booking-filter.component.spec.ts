@@ -559,14 +559,29 @@ describe('ScheduleBookingFilterComponent — date format follows the chosen lang
   let component: ScheduleBookingFilterComponent;
   let languageService: LanguageService;
 
-  const CALENDARS: Record<string, { dateFormat: string; dayNamesShort: string[] }> = {
+  const CALENDARS: Record<
+    string,
+    { dateFormat: string; dayNamesShort: string[]; monthNamesShort: string[] }
+  > = {
     th: {
-      dateFormat: 'dd/mm/yy',
+      dateFormat: 'd M yy',
       dayNamesShort: ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'],
+      // OBRS-1815: `M` resolves against `monthNamesShort` exactly as `D` does
+      // against `dayNamesShort`. Both are the shipped arrays, duplicated here
+      // for the same reason `dateFormat` is — so an edit to the locale file
+      // that these assertions no longer describe turns them red.
+      monthNamesShort: [
+        'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+        'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+      ],
     },
     en: {
-      dateFormat: 'mm/dd/yy',
+      dateFormat: 'M d, yy',
       dayNamesShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      monthNamesShort: [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ],
     },
   };
 
@@ -643,9 +658,9 @@ describe('ScheduleBookingFilterComponent — date format follows the chosen lang
     // Vacuous-pass guard — an empty list satisfies every assertion below.
     expect(formats.length).toBe(2);
     for (const format of formats) {
-      expect(format).not.toBe('dd/mm/yy');
+      expect(format).not.toBe('d M yy');
       expect(format).toContain('D');
-      expect(format).toBe('D, mm/dd/yy');
+      expect(format).toBe('D, M d, yy');
     }
   });
 
@@ -659,15 +674,21 @@ describe('ScheduleBookingFilterComponent — date format follows the chosen lang
     await languageService.switch('en');
     component.bookingForm.get('departureDate')?.setValue(MONDAY.toDate());
     fixture.detectChanges();
-    expect(renderedInputValues()).toEqual([`Mon, ${MONDAY.format('MM/DD/YYYY')}`]);
+    expect(renderedInputValues()).toEqual([`Mon, ${MONDAY.format('MMM D, YYYY')}`]);
 
     await languageService.switch('th');
     fixture.detectChanges();
 
     // Field order AND day name must both move. PrimeNG's own translation
     // subscription moves neither for text already rendered.
-    expect(renderedInputValues()).toEqual([`จ., ${MONDAY.format('DD/MM/YYYY')}`]);
-    expect(boundFormats()).toEqual(['D, dd/mm/yy']);
+    // The Thai month name comes from the table above, not from dayjs: dayjs
+    // ships English month names unless a locale bundle is loaded, and loading
+    // one would mean asserting PrimeNG's output against a second formatter's
+    // idea of Thai rather than against the array the app actually ships.
+    expect(renderedInputValues()).toEqual([
+      `จ., ${MONDAY.date()} ${CALENDARS['th'].monthNamesShort[MONDAY.month()]} ${MONDAY.year()}`,
+    ]);
+    expect(boundFormats()).toEqual(['D, d M yy']);
   });
 });
 
@@ -711,7 +732,7 @@ describe('ScheduleBookingFilterComponent — a date can only be chosen from the 
         { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub(45) },
         {
           provide: LanguageService,
-          useValue: createLanguageServiceStub('D, dd/mm/yy'),
+          useValue: createLanguageServiceStub('D, d M yy'),
         },
       ],
     }).compileComponents();

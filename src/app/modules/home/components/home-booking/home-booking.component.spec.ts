@@ -735,14 +735,29 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
    *  `dateFormat` values are the ones in `public/i18n/*.json`; `dayNamesShort`
    *  is what PrimeNG's `D` token resolves against. Indices are day-of-week
    *  starting Sunday, matching `Date.getDay()`. */
-  const CALENDARS: Record<string, { dateFormat: string; dayNamesShort: string[] }> = {
+  const CALENDARS: Record<
+    string,
+    { dateFormat: string; dayNamesShort: string[]; monthNamesShort: string[] }
+  > = {
     th: {
-      dateFormat: 'dd/mm/yy',
+      dateFormat: 'd M yy',
       dayNamesShort: ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'],
+      // OBRS-1815: `M` resolves against `monthNamesShort` exactly as `D` does
+      // against `dayNamesShort`. Both are the shipped arrays, duplicated here
+      // for the same reason `dateFormat` is — so an edit to the locale file
+      // that these assertions no longer describe turns them red.
+      monthNamesShort: [
+        'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+        'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+      ],
     },
     en: {
-      dateFormat: 'mm/dd/yy',
+      dateFormat: 'M d, yy',
       dayNamesShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      monthNamesShort: [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ],
     },
   };
 
@@ -829,10 +844,10 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
     expect(formats.length).toBe(2);
     for (const format of formats) {
       // The bug, stated directly: the Thai field order reaching an en visitor.
-      expect(format).not.toBe('dd/mm/yy');
+      expect(format).not.toBe('d M yy');
       // AC#2 — the weekday is the part of a bus date a passenger decides on.
       expect(format).toContain('D');
-      expect(format).toBe('D, mm/dd/yy');
+      expect(format).toBe('D, M d, yy');
     }
   });
 
@@ -851,7 +866,7 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
     // just that a format string was assigned. The digits come from dayjs, an
     // independent formatter, so this pins the ORDER without re-implementing
     // PrimeNG's jQuery-derived one.
-    expect(renderedInputValues()).toEqual([`Mon, ${MONDAY.format('MM/DD/YYYY')}`]);
+    expect(renderedInputValues()).toEqual([`Mon, ${MONDAY.format('MMM D, YYYY')}`]);
   });
 
   it('repaints a date already in the box when the language changes mid-page (AC#3)', async () => {
@@ -862,7 +877,7 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
     fixture.detectChanges();
     component.bookingForm.get('departureDate')?.setValue(MONDAY.toDate());
     fixture.detectChanges();
-    expect(renderedInputValues()).toEqual([`Mon, ${MONDAY.format('MM/DD/YYYY')}`]);
+    expect(renderedInputValues()).toEqual([`Mon, ${MONDAY.format('MMM D, YYYY')}`]);
 
     await languageService.switch('th');
     fixture.detectChanges();
@@ -871,8 +886,14 @@ describe('HomeBookingComponent — date format follows the chosen language (OBRS
     // DAY NAME (from dayNamesShort). PrimeNG's own translation subscription
     // moves neither for text already rendered, so a fix that only re-pushed
     // translations would leave the English rendering sitting here.
-    expect(renderedInputValues()).toEqual([`จ., ${MONDAY.format('DD/MM/YYYY')}`]);
-    expect(boundFormats()).toEqual(['D, dd/mm/yy']);
+    // The Thai month name comes from the table above, not from dayjs: dayjs
+    // ships English month names unless a locale bundle is loaded, and loading
+    // one would mean asserting PrimeNG's output against a second formatter's
+    // idea of Thai rather than against the array the app actually ships.
+    expect(renderedInputValues()).toEqual([
+      `จ., ${MONDAY.date()} ${CALENDARS['th'].monthNamesShort[MONDAY.month()]} ${MONDAY.year()}`,
+    ]);
+    expect(boundFormats()).toEqual(['D, d M yy']);
   });
 
   it('can still PARSE back exactly what it displays — the day name does not break the round trip', async () => {
@@ -976,7 +997,7 @@ describe('HomeBookingComponent — a date can only be chosen from the calendar (
         { provide: RouteMapService, useValue: createRouteMapServiceStub() },
         {
           provide: LanguageService,
-          useValue: createLanguageServiceStub('D, dd/mm/yy'),
+          useValue: createLanguageServiceStub('D, d M yy'),
         },
       ],
     }).compileComponents();

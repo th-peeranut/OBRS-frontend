@@ -446,7 +446,7 @@
     "today": "Today",
     "clear": "Clear",
     "weekHeader": "Wk",
-    "dateFormat": "mm/dd/yy"
+    "dateFormat": "M d, yy"
   },
   "SHARED": {
     "NO_CONTENT": "No data found",
