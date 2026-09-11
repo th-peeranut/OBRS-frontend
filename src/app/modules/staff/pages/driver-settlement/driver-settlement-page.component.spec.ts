@@ -130,6 +130,7 @@ function context(
     parkingFeeEligible: true,
     day: day(),
     alreadySettled: false,
+    lastSubmission: null,
     ...overrides,
   };
 }
@@ -437,5 +438,117 @@ describe('DriverSettlementPageComponent (OBRS-1756)', () => {
     expect(
       fixture.debugElement.query(By.css('[data-testid="settlement-rounds-empty"]'))
     ).not.toBeNull();
+  });
+
+  it('OBRS-1803: opens the form on what was LAST SENT, and the one button says it will CORRECT it', async () => {
+    await setUp(
+      context({
+        alreadySettled: true,
+        lastSubmission: {
+          businessDate: '2026-09-08',
+          vehicleId: 3,
+          driverId: 44,
+          expenses: [
+            { category: 'DRIVER_WAGE', amount: null, note: null },
+            { category: 'FUEL', amount: '1200.00', note: 'เติมบางจาก' },
+          ],
+          repairBills: [
+            {
+              payeeId: 7,
+              note: null,
+              items: [
+                {
+                  part: null,
+                  partId: null,
+                  description: 'ยางหน้า',
+                  quantity: 2,
+                  unit: null,
+                  unitPrice: 1500,
+                  amount: 3000,
+                },
+              ],
+            },
+          ],
+        },
+      })
+    );
+    pickVehicle();
+
+    const rows = component['expenseRows'];
+    expect(rows.find((row) => row.category === 'FUEL')?.amountInput).toBe('1200.00');
+    expect(rows.find((row) => row.category === 'FUEL')?.noteInput).toBe('เติมบางจาก');
+    // The wage row stays blank on purpose: its amount is the server's (OBRS-1356) and the
+    // submission carries null for it, so there is nothing of the counter's to show back.
+    expect(rows.find((row) => row.category === 'DRIVER_WAGE')?.amountInput).toBe('');
+    // A category that was NOT sent stays empty rather than inheriting a neighbour's figure.
+    expect(rows.find((row) => row.category === 'PARKING_FEE')?.amountInput).toBe('');
+
+    expect(component['repairBills'].length).toBe(1);
+    const bill = component['repairBills'][0].getRawValue() as {
+      payeeId: number;
+      items: { description: string; amount: number | string }[];
+    };
+    expect(bill.payeeId).toBe(7);
+    expect(bill.items.length).toBe(1);
+    expect(bill.items[0].description).toBe('ยางหน้า');
+
+    expect(component['isAmending']).toBeTrue();
+    expect(component['submitLabelKey']).toBe('STAFF.SETTLEMENT.SUBMIT_AMEND');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="settlement-already-settled"]')
+    ).not.toBeNull();
+  });
+
+  it('OBRS-1803: a box with entries but NO submission behind it still warns that a submit ADDS rows', async () => {
+    await setUp(context({ alreadySettled: true, lastSubmission: null }));
+    pickVehicle();
+
+    // Nothing to correct - a day settled before this card, or costs the boarding screen keyed
+    // round by round. The old warning is still the true one there.
+    expect(component['isAmending']).toBeFalse();
+    expect(component['submitLabelKey']).toBe('STAFF.SETTLEMENT.SUBMIT');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="settlement-entries-exist"]')
+    ).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="settlement-already-settled"]')
+    ).toBeNull();
+  });
+
+  it('OBRS-1803: the cost fields are locked while the day is loading, so an arriving prefill cannot wipe them', async () => {
+    await setUp();
+    pickVehicle();
+
+    // The context answer REPLACES these rows (it may carry a previous submission to open on), so
+    // anything typed during the ~2s the call takes would otherwise vanish without a word.
+    component['isContextLoading'] = true;
+    fixture.detectChanges();
+    // NgModel applies a [disabled] binding through a resolved promise, not synchronously, so one
+    // detectChanges() is not enough to see it on the DOM node.
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const amount: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="settlement-amount-FUEL"]'
+    );
+    const note: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="settlement-note-FUEL"]'
+    );
+    const addBill: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-testid="settlement-add-bill"]'
+    );
+    expect(amount.disabled).toBeTrue();
+    expect(note.disabled).toBeTrue();
+    expect(addBill.disabled).toBeTrue();
+
+    // Positive control: they are editable again the moment the answer has landed.
+    component['isContextLoading'] = false;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(
+      (fixture.nativeElement.querySelector('[data-testid="settlement-amount-FUEL"]') as HTMLInputElement)
+        .disabled
+    ).toBeFalse();
   });
 });
