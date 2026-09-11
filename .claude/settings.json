@@ -1,0 +1,14 @@
+{
+  "extraKnownMarketplaces": {
+    "obrs-office": {
+      "source": {
+        "source": "url",
+        "url": "https://github.com/th-peeranut/obrs-agent-office.git",
+        "sha": "cfc6bf6534c4a4c46cd63e1753a2b1765060ca76"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "obrs-skills@obrs-office": true
+  }
+}
