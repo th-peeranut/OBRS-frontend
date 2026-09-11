@@ -4346,6 +4346,7 @@
         "SALES_POINT_FORBIDDEN": "您只能为从自己售票点发车的班次记录此项目。此班次不属于您。",
         "PER_HEAD_SALES_POINT_FORBIDDEN": "您只能为属于自己售票点的站点记录人头费。",
         "DAY_ALREADY_RETURNED": "当日的现金盒已完成归还并签署，无法再添加项目。请让车主重新打开当日的现金盒，然后再录入此票据。",
+        "DAY_ALREADY_SETTLED": "未做任何记录：当天金额与已提交的完全相同。如需修改，请先更改数字再提交。",
         "REPAIR_BILL_ZERO_TOTAL": "维修账单总额必须大于零。请至少为一行填写金额。"
       },
       "MY_DAY": {
@@ -4426,7 +4427,8 @@
       "BANNER": {
         "REOPENED": "车主已重新打开当天的现金箱 {{n}} 次",
         "REOPEN_REASON": "最近原因：{{reason}}",
-        "ALREADY_SETTLED": "当天已经结算过。再次提交会在原有记录上追加新记录，请先核对。"
+        "ALREADY_SETTLED": "当天金额已提交过。下方表单中是最近一次提交的数字，修改后再次提交将更正原记录，而不是新增一笔。",
+        "ENTRIES_EXIST": "当天已经结算过。再次提交会在原有记录上追加新记录，请先核对。"
       },
       "BLOCKED": {
         "PICK_VEHICLE_DRIVER": "请先选择日期、车牌和司机",
@@ -4438,6 +4440,7 @@
       },
       "TOTAL": "将记录合计",
       "SUBMIT": "结清全天",
+      "SUBMIT_AMEND": "更正当天金额",
       "SUCCESS": "当天结算已保存"
     }
   },

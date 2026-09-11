@@ -4346,6 +4346,7 @@
         "SALES_POINT_FORBIDDEN": "You can only record this entry for rounds departing from your own sales point. This round is not yours.",
         "PER_HEAD_SALES_POINT_FORBIDDEN": "You can only record heads for stops that belong to your own sales point.",
         "DAY_ALREADY_RETURNED": "That day’s cash box has already been returned and signed off, so entries can no longer be added to it. Ask the owner to re-open the box for that day, then key this bill again.",
+        "DAY_ALREADY_SETTLED": "Nothing was recorded: this day already carries exactly these figures. Change something first, then submit again.",
         "REPAIR_BILL_ZERO_TOTAL": "A repair bill must come to more than zero. Enter the amount on at least one line."
       },
       "MY_DAY": {
@@ -4426,7 +4427,8 @@
       "BANNER": {
         "REOPENED": "The owner re-opened this cash box {{n}} time(s)",
         "REOPEN_REASON": "Latest reason: {{reason}}",
-        "ALREADY_SETTLED": "This day has already been settled. Submitting again adds new entries on top of the existing ones - check before you do."
+        "ALREADY_SETTLED": "This day has already been settled. The form below holds the figures that were sent - change what needs changing and submit again to CORRECT them, not to add a second set.",
+        "ENTRIES_EXIST": "This day has already been settled. Submitting again adds new entries on top of the existing ones - check before you do."
       },
       "BLOCKED": {
         "PICK_VEHICLE_DRIVER": "Pick a date, a number plate and a driver before settling",
@@ -4438,6 +4440,7 @@
       },
       "TOTAL": "To be recorded",
       "SUBMIT": "Settle the whole day",
+      "SUBMIT_AMEND": "Correct this day's settlement",
       "SUCCESS": "The day has been settled"
     }
   },
