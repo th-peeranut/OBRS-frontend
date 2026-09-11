@@ -203,7 +203,7 @@ describe('AlertService', () => {
       service.showLoading('');
       service.updateLoadingTitle('กำลังโหลด…');
 
-      expect(update).toHaveBeenCalledWith({ title: 'กำลังโหลด…' });
+      expect(update).toHaveBeenCalledWith({ titleText: 'กำลังโหลด…' });
       // Swal.update() re-renders and drops the spinner; an overlay with no
       // spinner reads as finished-but-stuck while the request is still running.
       expect(showLoading).toHaveBeenCalled();

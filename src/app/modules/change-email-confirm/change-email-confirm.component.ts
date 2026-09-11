@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
+import { stripQueryParamFromAddressBar } from '../../shared/lib/strip-query-param';
 
 export type ChangeEmailConfirmState = 'confirming' | 'success' | 'invalid' | 'targetTaken';
 
@@ -40,6 +41,9 @@ export class ChangeEmailConfirmComponent implements OnInit, OnDestroy {
       this.confirmState = 'invalid';
       return;
     }
+    // Security review 2026-09 (FE-2): one-time credential - out of the address bar and history
+    // as soon as it is in memory. Analytics stays off this route via `analyticsRestricted`.
+    stripQueryParamFromAddressBar('token');
 
     try {
       const res = await this.authService.confirmEmailChange({ token });

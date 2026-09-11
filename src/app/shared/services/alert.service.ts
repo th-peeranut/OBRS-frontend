@@ -35,6 +35,12 @@ const LOADING_POPUP_CLASS = 'swal-global-loading';
   providedIn: 'root',
 })
 export class AlertService {
+  // Security review 2026-09 (FE-1). SweetAlert2 renders `title` as HTML (DOMParser +
+  // appendChild — a <script> stays inert, an <img onerror> does not). Every message that
+  // reaches this service is data: a backend error message, an i18n string interpolated with a
+  // stop name an admin typed, a booking number. `titleText` / `text` are the library's
+  // text-only options, so nothing that arrives here is ever parsed as markup. Prod's enforcing
+  // CSP would have blocked an inline handler; SIT's Report-Only one would not.
   private loadingCount = 0;
   private isLoadingVisible = false;
   /** Bumped per overlay opened, so a `didClose` can tell whether it is still the
@@ -76,12 +82,12 @@ export class AlertService {
 
   success(message: string) {
     this.resetLoadingState();
-    return Swal.fire({ icon: 'success', title: message, theme: this.theme });
+    return Swal.fire({ icon: 'success', titleText: message, theme: this.theme });
   }
 
   error(message: string) {
     this.resetLoadingState();
-    return Swal.fire({ icon: 'error', title: message, theme: this.theme });
+    return Swal.fire({ icon: 'error', titleText: message, theme: this.theme });
   }
 
   /**
@@ -96,7 +102,7 @@ export class AlertService {
     this.resetLoadingState();
     return Swal.fire({
       icon: 'error',
-      title: message,
+      titleText: message,
       customClass: { container: 'swal-guard-backdrop' },
       theme: this.theme,
     });
@@ -104,12 +110,12 @@ export class AlertService {
 
   info(message: string) {
     this.resetLoadingState();
-    return Swal.fire({ icon: 'info', title: message, theme: this.theme });
+    return Swal.fire({ icon: 'info', titleText: message, theme: this.theme });
   }
 
   warning(message: string) {
     this.resetLoadingState();
-    return Swal.fire({ icon: 'warning', title: message, theme: this.theme });
+    return Swal.fire({ icon: 'warning', titleText: message, theme: this.theme });
   }
 
   toast(message: string, icon: SweetAlertIcon = 'info'): void {
@@ -118,7 +124,7 @@ export class AlertService {
       position: 'top-end',
       theme: this.theme,
       icon,
-      title: message,
+      titleText: message,
       showConfirmButton: false,
       timer: 3000,
       timerProgressBar: true,
@@ -140,7 +146,7 @@ export class AlertService {
     this.resetLoadingState();
     const result = await Swal.fire({
       icon: options.icon ?? 'warning',
-      title: options.title,
+      titleText: options.title,
       text: options.text,
       showCancelButton: true,
       confirmButtonText: options.confirmButtonText,
@@ -183,7 +189,7 @@ export class AlertService {
     // every later `hideLoading()` returns at its own guard and nothing closes it.
     const generation = ++this.loadingGeneration;
     void Swal.fire({
-      title,
+      titleText: title,
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
@@ -232,7 +238,7 @@ export class AlertService {
     if (!Swal.getPopup()?.classList.contains(LOADING_POPUP_CLASS)) {
       return;
     }
-    Swal.update({ title });
+    Swal.update({ titleText: title });
     // Swal.update() re-renders the popup and drops the spinner — same reason
     // armEscapeHatch puts it back.
     Swal.showLoading();

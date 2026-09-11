@@ -10,7 +10,10 @@ import {
 } from '../shared/interceptors/http-context-tokens';
 import { hasOwnKey } from '../shared/lib/own-key';
 import { clearTtl, readWithTtl, writeWithTtl } from '../shared/lib/ttl-storage';
-import { clearBookingContext } from '../shared/lib/booking-context-storage';
+import {
+  clearActiveBookingStorage,
+  clearBookingContext,
+} from '../shared/lib/booking-context-storage';
 import {
   EmailChangeConfirmResponse,
   EmailChangeRequestResponse,
@@ -549,6 +552,10 @@ export class AuthService {
     // login retry (`callLogin`) and inside the interceptor's 401 handling, where
     // wiping the customer's trip selection would recreate this very bug.
     clearBookingContext();
+    // Security review 2026-09 (FE-4): the booking-in-payment and its guest payment grant are a
+    // capability to pay for (and fetch the QR of) that booking; on a shared machine they must
+    // not outlive the sign-out either. Same placement reasoning as clearBookingContext() above.
+    clearActiveBookingStorage();
 
     if (refreshToken) {
       this.http

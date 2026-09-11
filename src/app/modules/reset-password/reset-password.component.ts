@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
+import { stripQueryParamFromAddressBar } from '../../shared/lib/strip-query-param';
 
 export type ResetPasswordState = 'form' | 'success' | 'noToken';
 
@@ -54,7 +55,12 @@ export class ResetPasswordComponent implements OnInit {
 
     if (!this.token || !this.token.trim()) {
       this.state = 'noToken';
+      return;
     }
+    // Security review 2026-09 (FE-2): the token is a one-time credential. Once it is in memory
+    // it has no business staying in the address bar or browser history. Analytics is kept off
+    // this route separately (`analyticsRestricted` in app-routing).
+    stripQueryParamFromAddressBar('token');
   }
 
   createForm() {

@@ -83,7 +83,7 @@
         severity="secondary"
         size="small"
         [label]="'HOME.ROUTE_MAP.BTN_OPEN_MAPS' | translate"
-        [disabled]="!stop.googleMapsUrl"
+        [disabled]="!canOpenMaps"
         (onClick)="openMaps()"
         >
         <ng-template pTemplate="icon">

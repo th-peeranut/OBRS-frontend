@@ -32,6 +32,28 @@ import { clearTtl, readWithTtl, writeWithTtl } from './ttl-storage';
  * the entry names no person, so letting the TTL retire it is the safe order.
  */
 export const BOOKING_CONTEXT_KEY = 'obrs.booking_context';
+
+/**
+ * The three keys `BookingService` uses for the booking currently being paid for. Declared here,
+ * beside the booking context, so that `AuthService.logout()` can clear them without depending on
+ * `BookingService` (security review 2026-09, FE-4): on a shared or kiosk browser the guest
+ * payment grant (`active_booking_payment_grant`) is a capability to pay for - and fetch the
+ * PromptPay QR of - the previous person's booking, and it used to survive sign-out.
+ */
+export const ACTIVE_BOOKING_ID_KEY = 'active_booking_id';
+export const ACTIVE_BOOKING_NUMBER_KEY = 'active_booking_number';
+export const ACTIVE_BOOKING_PAYMENT_GRANT_KEY = 'active_booking_payment_grant';
+
+/** Forgets the booking-in-payment and its guest payment grant (FE-4). */
+export function clearActiveBookingStorage(): void {
+  try {
+    localStorage.removeItem(ACTIVE_BOOKING_ID_KEY);
+    localStorage.removeItem(ACTIVE_BOOKING_NUMBER_KEY);
+    localStorage.removeItem(ACTIVE_BOOKING_PAYMENT_GRANT_KEY);
+  } catch {
+    // storage unavailable (private mode / blocked): nothing to clear
+  }
+}
 const BOOKING_CONTEXT_VERSION = 1;
 
 /**

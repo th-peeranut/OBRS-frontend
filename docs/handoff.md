@@ -14,6 +14,35 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ## Pending Changes (Backend → Frontend)
 
+## [Backend] 2026-09-11 — security review #3: signup OTP-gated guest claim, OTP attempt cap, staff schedule detail gated, page size cap
+**Risk level**: R1 (additive request fields; new 409/401 error codes; one endpoint newly role-gated)
+**Triggered by**: backend security review 2026-09-11 (report #3; findings B2-H1, B2-H2, B2-F2, B2-L5), branch `claude/determined-ride-lvjeoh`.
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| `POST /api/auth/signup` | Optional request fields added | `otpToken` (string ≤ 64) and `otpPin` (4-8 digits). Needed ONLY when `phoneNumber` is held by a guest shadow row (a number someone booked with without an account). |
+| `POST /api/auth/signup` | New error | `409` `AUTH_SIGNUP_ERROR_PHONE_GUEST_CLAIM_REQUIRES_OTP` when the number is a guest number and the pair is absent. Before: the row (and its bookings) was claimed silently on the phone number alone. |
+| `POST /api/auth/login/otp`, `POST /api/external/otp/verify` | New error | `401` `OTP_VERIFY_TOO_MANY_ATTEMPTS` after 5 wrong PINs on one token. Remedy: request a new code. |
+| `GET /api/private/schedules/{id}` | Authorization | Now `DRIVER` or `SALESPERSON` (was: any signed-in user). Customer pages never called it (verified by grep); admin/staff pages unaffected. |
+| every paged endpoint | Limit | `size` is capped at 100 (`spring.data.web.pageable.max-page-size`). The largest page the app asks for is 100. |
+| `POST /api/private/payments/walk-in` | New error | `404` `BOOKING_ERROR_ID_NOT_FOUND` when the booking belongs to another operator (tenant scope, same answer as cancel). |
+| `POST /api/private/parcels/{id}/*`, `GET /api/private/parcels/{id}/waybill`, `GET /api/private/schedules/{id}/parcels/*`, parcel claims | New errors | `404` for a parcel/schedule outside the caller's operator; `403` `PARCEL_ERROR_UNAUTHORIZED` for a pure driver not assigned to that schedule. Mirrors the boarding-list rule. |
+| `POST /api/usability-reports` | Validation | `description` is now capped at 5000 characters (`400 VALIDATION_FAILED` beyond it). |
+
+### Response shapes before / after
+- Unchanged. Validation errors on `password`/`pin`/`otp`/`token`/card fields now return `rejectedValue: null` (the field name and message are unchanged).
+
+### Action required in frontend
+- [ ] Register form: on `409 AUTH_SIGNUP_ERROR_PHONE_GUEST_CLAIM_REQUIRES_OTP`, run the existing OTP request/verify step for the typed number and resubmit the signup body with `otpToken` + `otpPin`. Until this lands, a customer who booked as a guest and now registers with the same number sees the backend's 409 message (localized) instead of silently inheriting the bookings. The i18n keys already exist server-side in th/en/zh.
+- [ ] OTP screens: surface the backend message for `OTP_VERIFY_TOO_MANY_ATTEMPTS` (it is a normal `OtpException`; the global error alert already shows it) and offer "request a new code".
+- [ ] Nothing for the other rows.
+
+### Still unfinished on backend
+- None for these rows. See `../OBRS-backend/docs/adr/0154-client-ip-comes-from-the-proxy-only.md` and the review report `../OBRS-backend/docs/security/2026-09-11-security-review-3.md`.
+
+---
+
 ## [Backend] 2026-08-20 — `userName` added to `GET/PUT /api/private/admin/usability-reports` (list + detail)
 **Risk level**: R1 (additive)
 **Triggered by**: bug report — the `/admin/usability-reports` page showed the raw numeric `userId` (e.g. `1`, `2`) in the reporter column/detail instead of a name.
