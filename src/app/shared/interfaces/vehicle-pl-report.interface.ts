@@ -56,6 +56,20 @@ export interface VehiclePlRowDto {
   vatTotal: string;
   expenseEntryCount: number;
   margin: string;
+  /**
+   * OBRS-1726 — rounds this vehicle actually RAN in the period, CANCELLED excluded (owner
+   * ruling 2026-09-04). **Not `ranInPeriod` counted up**: that boolean goes true for a
+   * cancelled round because it is built from the revenue matrix, so a reader who treats one
+   * as the other is wrong by exactly the cancellations. `0` on both vehicle-less kinds.
+   */
+  tripCount: number;
+  /**
+   * OBRS-1726 — `margin` as a share of `revenue`, 2 dp, computed server-side.
+   * **`null` when there is no revenue**, and that null must render as a dash, never as
+   * `0.00%`: no revenue means the percentage is undefined, which is a different fact from
+   * breaking even. `CENTRAL_EXPENSE` rows therefore always carry null.
+   */
+  marginPct: string | null;
 }
 
 /**
@@ -73,6 +87,33 @@ export interface VehiclePlTotalsDto {
   margin: string;
   currency: string;
   pendingExpenses: string;
+  /** OBRS-1726 — the sum of the vehicle rows' `tripCount`, and nothing else. */
+  tripCount: number;
+  /** OBRS-1726 — company margin as a share of company revenue; null when revenue is 0. */
+  marginPct: string | null;
+}
+
+/**
+ * OBRS-1726 — the window this report is compared against, and the comparison.
+ *
+ * The window is the SAME NUMBER OF DAYS immediately before the report's `from`, never a
+ * calendar word: the filter above the screen takes an arbitrary range, so "last month" would
+ * simply be false on most of them. `from`/`to` are on the wire so the screen prints the real
+ * dates instead.
+ *
+ * Each `*ChangePct` is a signed percentage at 2 dp and is **null when the previous figure was
+ * zero** — undefined, not "no change". Render a null as a dash; a `0.00%` there would claim a
+ * period held steady against a period that had nothing.
+ */
+export interface VehiclePlPreviousDto {
+  from: string;
+  to: string;
+  revenue: string;
+  expenses: string;
+  margin: string;
+  revenueChangePct: string | null;
+  expenseChangePct: string | null;
+  marginChangePct: string | null;
 }
 
 export interface VehiclePlReportDto {
@@ -83,4 +124,5 @@ export interface VehiclePlReportDto {
   vatIncludedInAmounts: boolean;
   rows: VehiclePlRowDto[];
   totals: VehiclePlTotalsDto;
+  previous: VehiclePlPreviousDto;
 }
