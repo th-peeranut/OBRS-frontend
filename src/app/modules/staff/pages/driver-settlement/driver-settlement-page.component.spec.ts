@@ -27,6 +27,7 @@ import { StaffApiService } from '../../../../services/staff/staff-api.service';
 import { StaffSchedulesStore } from '../staff-schedules/staff-schedules.store';
 import { ExpensePayeesStore } from '../../../admin/pages/expense-payees/expense-payees.store';
 import { MaintenancePartsStore } from '../../../admin/pages/maintenance-parts/maintenance-parts.store';
+import { toIsoDateString } from '../../../admin/pages/expenses/expenses-page.mappers';
 import {
   DriverCashDayContextRespDto,
   DriverCashDayRespDto,
@@ -211,9 +212,30 @@ describe('DriverSettlementPageComponent (OBRS-1756)', () => {
     expect(selected.getDate()).toBe(expected.getDate());
     // Positive control: the default is genuinely NOT today, so an implementation that
     // forgot to subtract a day cannot pass the three assertions above by coincidence.
-    expect(component['businessDate']).not.toBe(
-      new Date().toISOString().slice(0, 10)
-    );
+    expect(component['businessDate']).not.toBe(toIsoDateString(new Date()));
+  });
+
+  // The control above used to be decided by the hour the suite ran: a UTC "today" made it red
+  // every night between 00:00 and 07:00 Bangkok and green the rest of the day. Freezing the clock
+  // takes the hour out of the verdict on every machine — the first expectation below is the local
+  // calendar answer and holds at any offset. 00:05 rather than any later hour because the second
+  // expectation, the control itself, can only catch a relapse into a UTC comparison where the two
+  // days actually differ: that is a host east of UTC, and at 00:05 an offset of minutes is enough
+  // (Bangkok, +07:00, is where this was measured). A runner sitting AT UTC cannot go red here —
+  // there the UTC day IS the local day, so the buggy comparison is not wrong in the first place
+  // (OBRS-1819).
+  it('defaults to yesterday, control included, with the clock frozen at 00:05 local (OBRS-1819)', async () => {
+    jasmine.clock().install();
+    try {
+      // No trailing Z: parsed as local time, which is what a staff device reads off the wall.
+      jasmine.clock().mockDate(new Date('2026-09-11T00:05:00'));
+      await setUp();
+
+      expect(component['businessDate']).toBe('2026-09-10');
+      expect(component['businessDate']).not.toBe(toIsoDateString(new Date()));
+    } finally {
+      jasmine.clock().uninstall();
+    }
   });
 
   it('asks day-context with NO driverId when a plate is picked, then prefills the driver from the answer — and the driver stays editable', async () => {
