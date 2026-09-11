@@ -55,7 +55,8 @@
     "e2e:obrs640-audit": "playwright test --config=playwright.obrs640audit.config.ts",
     "test:brand-contrast": "node scripts/check-brand-fill-contrast.mjs",
     "test:marker-position": "node scripts/check-leaflet-marker-position.mjs",
-    "test:money-format": "node scripts/check-money-format.mjs"
+    "test:money-format": "node scripts/check-money-format.mjs",
+    "test:calendar-date-format": "node scripts/check-calendar-date-format.mjs"
   },
   "private": true,
   "dependencies": {

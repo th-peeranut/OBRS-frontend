@@ -9,11 +9,24 @@ import {
 
 /** The `CALENDAR.dateFormat` each shipped locale actually declares, read out of
  *  `public/i18n/*.json` — NOT invented here. If one of those files changes, this
- *  table is what makes the spec notice. */
+ *  table is what makes the spec notice.
+ *
+ *  OBRS-1815: column 2 is the INPUT GRAMMAR, column 3 the DISPLAY format.
+ *  PrimeNG resolves ONE string for both directions (`getDateFormat()` =
+ *  `this.dateFormat || getTranslation('dateFormat')`), so whatever sits in
+ *  `CALENDAR.dateFormat` is the grammar every typeable picker parses against —
+ *  and `parseDate` `case 'D'` goes through `getName()`, which THROWS on text
+ *  carrying no day name, which `onUserInput` answers by writing `null` into the
+ *  model. Nobody types the weekday of a date they are still choosing, so no
+ *  value in column 2 may contain `D`. That is what keeps the pairing here
+ *  load-bearing instead of decorative: `withShortDayName` adds the weekday for
+ *  the DISPLAY-only pickers, which are exactly the ones carrying
+ *  `[readonlyInput]="true"`. `calendar-date-format.spec.ts` is the gate that
+ *  proves column 2 parses back what a person writes. */
 const SHIPPED_DATE_FORMATS: ReadonlyArray<[string, string, string]> = [
-  ['th', 'dd/mm/yy', 'D, dd/mm/yy'],
-  ['en', 'mm/dd/yy', 'D, mm/dd/yy'],
-  ['zh', 'yy/mm/dd', 'D, yy/mm/dd'],
+  ['th', 'd M yy', 'D, d M yy'],
+  ['en', 'M d, yy', 'D, M d, yy'],
+  ['zh', "yy'年'm'月'd'日'", "D, yy'年'm'月'd'日'"],
 ];
 
 /** The `COMMON.APP_TITLE` each shipped locale declares, read out of

@@ -393,6 +393,21 @@ jobs:
       - name: Money format gate
         run: npm run test:money-format
 
+      # OBRS-1815. PrimeNG resolves ONE format string for both rendering and
+      # parsing (`getDateFormat()` = `this.dateFormat || getTranslation(...)`),
+      # so `CALENDAR.dateFormat` is not a display preference - it is the grammar
+      # every typeable picker parses input against. Its `case 'D'` runs through
+      # `getName()`, which THROWS on text with no day name, and `onUserInput`
+      # answers a throw by writing null: the field empties itself while the
+      # customer watches. That shipped once already (OBRS-1036, four customer
+      # pickers) and was paid for with `[readonlyInput]="true"`, which is the
+      # invariant this gate holds - the weekday-bearing format only ever reaches
+      # a field the keyboard cannot. The unit spec proves the mechanism on the
+      # three shipped grammars; only a scanner can prove that none of the other
+      # ~26 templates reintroduced a hardcoded format or an unguarded binding.
+      - name: Calendar date format gate
+        run: npm run test:calendar-date-format
+
       - name: Install dependencies
         run: npm ci
 

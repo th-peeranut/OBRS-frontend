@@ -446,7 +446,7 @@
     "today": "วันนี้",
     "clear": "ล้าง",
     "weekHeader": "สัปดาห์",
-    "dateFormat": "dd/mm/yy"
+    "dateFormat": "d M yy"
   },
   "SHARED": {
     "NO_CONTENT": "ไม่พบข้อมูล",
