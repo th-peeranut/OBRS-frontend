@@ -61,7 +61,7 @@
               <tr [class.zebra]="i % 2 === 1">
                 <td>{{ row.bookingNumber ?? row.bookingId }}</td>
                 <td class="mrw-money">{{ formatMoney(row.amountOwed) }}</td>
-                <td>{{ row.paymentMethod }}</td>
+                <td>{{ methodLabel(row.paymentMethod) }}</td>
                 <td>
                   @if (hasDestination(row)) {
                     @if (row.destinationType === 'bank_account') {
