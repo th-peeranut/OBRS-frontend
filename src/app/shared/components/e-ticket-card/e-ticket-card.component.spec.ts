@@ -1149,6 +1149,28 @@ describe('ETicketCardComponent — download button visibility (OBRS-1802)', () =
     expect(downloadButton()).toBeNull();
   });
 
+  /**
+   * OBRS-1802 follow-up: `/e-ticket`'s degenerate render reaches here WITH an id
+   * — a guest hard load takes one from `getActiveBookingId()` while the booking
+   * reference stays `-` — so the `bookingId` gate above lets it straight through
+   * and the button was live. It could only ever fail: no reference means lane 3
+   * is the only door and `resolveBookingNumber()` returns `''` by design
+   * (security review L3), so the click ends in `E_TICKET.DOWNLOAD_FAILED` and a
+   * retry cannot change that. The second arm is this assertion's own positive
+   * control: the same id, only the flag moved, and the button comes back — so a
+   * fixture that had stopped rendering the button at all cannot pass the first.
+   */
+  it('is absent on the degenerate render and present as soon as it is not — the same bookingId throughout', () => {
+    component.bookingId = 7;
+    component.ticketIncomplete = true;
+    fixture.detectChanges();
+    expect(downloadButton()).toBeNull();
+
+    component.ticketIncomplete = false;
+    fixture.detectChanges();
+    expect(downloadButton()).not.toBeNull();
+  });
+
   it('shows the pending affordance while a download is in flight', () => {
     component.bookingId = 7;
     component.isDownloadingTicket = true;

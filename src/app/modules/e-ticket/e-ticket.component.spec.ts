@@ -1073,6 +1073,24 @@ describe('ETicketComponent — template (OBRS-1510)', () => {
     expect(el.properties['totalAmount']).toBe('500.00');
   });
 
+  /**
+   * OBRS-1802 follow-up: the card gates its download button on this, and cannot
+   * work it out for itself — `bookingNumber === '-'` is also the signed-in state
+   * where the tickets API is about to fill the reference in. If this one binding
+   * went missing the card would fall back to its `false` default, the button
+   * would come back on the degenerate render, and no other assertion in either
+   * suite would move. So the wiring is asserted, not implied.
+   */
+  it('OBRS-1802: hands the card its own ticketIncomplete, which is what gates the download button', () => {
+    component.ticketIncomplete = true;
+    fixture.detectChanges();
+    expect(cardEl().properties['ticketIncomplete']).toBeTrue();
+
+    component.ticketIncomplete = false;
+    fixture.detectChanges();
+    expect(cardEl().properties['ticketIncomplete']).toBeFalse();
+  });
+
   it('OBRS-1246: shows app-station-load-error only while stationLabelsUnresolved is true', () => {
     component.stationLabelsUnresolved = true;
     fixture.detectChanges();

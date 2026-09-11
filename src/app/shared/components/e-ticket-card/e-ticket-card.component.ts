@@ -73,11 +73,32 @@ export class ETicketCardComponent implements OnChanges {
    * that key holds whatever checkout last wrote, which is the wrong booking
    * whenever this card is the My Bookings modal showing an older row.
    *
-   * `null` hides the button entirely: with no id there is nothing to ask for,
-   * and on `/e-ticket` that state is exactly the incomplete-ticket render the
-   * page already warns about.
+   * `null` hides the button entirely: with no id there is nothing to ask for.
+   * It is NOT the same state as `ticketIncomplete` below — a guest hard-loading
+   * `/e-ticket` takes an id from `getActiveBookingId()` while the booking
+   * reference stays `-`, so both the id and the incomplete render are present at
+   * once. That is why there are two gates and not one.
    */
   @Input() bookingId: number | null = null;
+
+  /**
+   * OBRS-1802 follow-up: this render cannot produce a download, so the button is
+   * not offered. True only on `/e-ticket`'s degenerate render (`ticketIncomplete`
+   * there), where the booking reference is `-` and no API pass is coming: lane 3
+   * is the only door left open to that visitor and `resolveBookingNumber()`
+   * returns `''` by design (security review L3), so the click can only ever end
+   * in `E_TICKET.DOWNLOAD_FAILED` — a retry that cannot change its outcome. The
+   * same screen already renders the answer, the `/find-booking` link in its
+   * `.ticket-incomplete` banner.
+   *
+   * The card cannot derive this itself: `bookingNumber === '-'` is also the
+   * signed-in state where the tickets API is about to fill the reference in, and
+   * there lane 1 downloads by id and needs no reference at all. Only the host
+   * knows whether a pass is coming. Defaults `false`, so the My Bookings modal —
+   * which never binds it, and whose rows always carry a real reference — renders
+   * exactly as before.
+   */
+  @Input() ticketIncomplete = false;
 
   @Input() ticketNumber = '-';
   @Input() legs: TicketLeg[] = [];
