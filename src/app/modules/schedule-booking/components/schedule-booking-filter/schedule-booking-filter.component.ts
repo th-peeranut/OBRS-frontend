@@ -355,6 +355,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       this.alertService.warning(
         this.translate.instant('HOME.HOME_BOOKING.SEARCH_VALIDATION')
       );
+      this.scrollToFirstMissingField(payload);
       return;
     }
 
@@ -369,6 +370,29 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
         schedule_filter: formValue,
       })
     );
+  }
+
+  // OBRS-637 (AC#4). Below 768px this button is fixed to the bottom of the
+  // screen, so it can be pressed while the field it is complaining about is
+  // entirely off-screen - the warning would name a field the customer cannot
+  // see. Bring that field into view as well as saying so.
+  //
+  // The order mirrors `isSearchable()` below, which is the only thing that can
+  // have rejected the press: stations first, passenger count second.
+  private scrollToFirstMissingField(payload: ScheduleFilterPayload): void {
+    const selector =
+      !payload.fromStop || !payload.toStop
+        ? '.station-group'
+        : 'app-dropdown-obrs-passenger';
+
+    // Queried off `document` rather than through an injected `ElementRef`: the
+    // spec constructs this component with `new` and positional arguments in
+    // three places, so a new constructor parameter is a compile error in a file
+    // this card has no business editing. The host selector scopes it - the only
+    // other copy of this bar is `app-home-booking`, a different component.
+    document
+      .querySelector('app-schedule-booking-filter ' + selector)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   // Mirrors the backend ScheduleSearchReqDto required fields: origin, destination

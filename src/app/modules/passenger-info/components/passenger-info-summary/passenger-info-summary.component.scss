@@ -304,9 +304,33 @@ hr {
     flex-wrap: wrap;
   }
 
+  // OBRS-637. Below 768px the pair leaves the flow and floats above the page, so
+  // the primary action is reachable at any scroll offset -- the card measured
+  // `next` at y=3100 on a 390x664 viewport, about 5 screens down. Inset rather
+  // than a full-width bar: both buttons are already opaque pills carrying their
+  // own light and dark fills, so no new bar surface has to be invented and the
+  // dark block at the foot of this file needs nothing added.
+  //
+  // `flex-direction: column` stood here and is gone with the flow position: two
+  // stacked 52px buttons would be a 116px bar over a 664px screen. The base
+  // rule's row + `.summary-action-item { flex: 1 1 50% }` split it in half
+  // instead, and each half is still >= 44px tall (AC3).
+  //
+  // The page gives back the height these no longer occupy -- see the matching
+  // breakpoint in passenger-info.component.scss (AC2).
   .summary-actions {
-    flex-direction: column;
-    gap: $space-xs;
+    position: fixed;
+    left: $space-sm;
+    right: $space-sm;
+    bottom: calc(#{$space-sm} + env(safe-area-inset-bottom, 0px));
+    z-index: 100;
+    margin-top: 0;
+    gap: $space-2xs;
+  }
+
+  .btn-next,
+  .btn-back {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   }
 }
 

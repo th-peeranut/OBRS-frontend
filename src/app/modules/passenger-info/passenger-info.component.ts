@@ -78,7 +78,18 @@ export class PassengerInfoComponent {
     );
   }
 
+  // OBRS-637. The summary's action bar is `position: fixed` below 768px, and the
+  // report-usability FAB is parked in the same corner at `z-index: 900` -- above
+  // it. The FAB steps aside for a clickable element under it, but only when that
+  // element's CENTRE is under the pill, which a full-width bar's never is. The
+  // class is what tells the FAB to sit higher while this page is open; it is
+  // removed on destroy because the FAB outlives this component (app.component).
+  ngOnDestroy(): void {
+    document.body.classList.remove('has-sticky-cta');
+  }
+
   ngOnInit(): void {
+    document.body.classList.add('has-sticky-cta');
     // OBRS-867 funnel step 4. This is the step the card names as decisive for
     // OBRS-872: it is the first screen behind AuthGuard's `requireAuth` path
     // that a customer meets after choosing a trip, so the gap between
