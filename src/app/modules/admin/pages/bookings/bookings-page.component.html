@@ -358,7 +358,11 @@ longer entitled to see, plus filter/export controls acting on them. -->
           <section class="mt-3">
             <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.TIMELINE' | translate }}</h5>
             <ul class="bk-timeline">
-              @for (event of timelineEvents; track event) {
+              <!-- OBRS-1825: timelineEvents allocates fresh objects on every read, so
+                   tracking the object itself rebuilt the whole list each CD cycle. The
+                   events carry no unique natural key (two payments share a labelKey and
+                   the pinned status entry has a null time), so position is the key. -->
+              @for (event of timelineEvents; track $index) {
                 <li>
                   <span class="bk-timeline-dot" aria-hidden="true"></span>
                   <span>{{ event.labelKey | translate: event.params }}</span>
