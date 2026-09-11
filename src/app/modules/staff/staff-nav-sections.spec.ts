@@ -30,6 +30,7 @@ import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 import { environment } from '../../../environments/environment';
+import { ReportTriggerComponent } from '../../shared/components/report-trigger/report-trigger.component';
 
 @Component({
     selector: 'app-notification-bell', template: '',
@@ -50,7 +51,12 @@ const PARCELS = 'STAFF.NAV.SECTION.PARCELS';
 async function renderNav(layout: Type<unknown>, roles: readonly string[]): Promise<HTMLElement> {
   TestBed.resetTestingModule();
   await TestBed.configureTestingModule({
-    declarations: [layout, LangSwitcherComponent, NotificationBellStubComponent],
+    declarations: [
+      layout,
+      LangSwitcherComponent,
+      NotificationBellStubComponent,
+      ReportTriggerComponent,
+    ],
     imports: [RouterTestingModule, TranslateModule.forRoot()],
     providers: [
       {
@@ -158,6 +164,43 @@ describe('OBRS-573 — staff sidebar sections', () => {
     expect(nav.querySelectorAll('button, details, summary').length)
       .withContext('a section header must not be clickable — that is the extra click we refused')
       .toBe(0);
+  });
+});
+
+describe('OBRS-1756 — "งานประจำรอบ" is replaced by the settlement screen', () => {
+  function hrefs(nav: HTMLElement): string[] {
+    return Array.from(nav.querySelectorAll('.admin-nav-link')).map(
+      (a) => a.getAttribute('href') ?? '',
+    );
+  }
+
+  it('offers a salesperson the settlement item and no longer offers boarding', async () => {
+    const nav = await renderNav(StaffLayoutComponent, ['salesperson']);
+    const links = hrefs(nav);
+
+    expect(links.some((href) => href.endsWith('/staff/settlement')))
+      .withContext('the new item must be in the DOM, not merely in the nav model')
+      .toBeTrue();
+    // The ROUTE survives (staff.module.ts) — this is only about the menu door.
+    expect(links.some((href) => href.endsWith('/staff/boarding')))
+      .withContext('the boarding entry picker is no longer offered from the sidebar')
+      .toBeFalse();
+    // Not emptied: my-earnings shares this section and must be untouched by the swap.
+    expect(links.some((href) => href.endsWith('/staff/my-earnings'))).toBeTrue();
+    expect(headersAlwaysHaveItems(nav)).toEqual([]);
+  });
+
+  it('never offers the settlement item to a driver — settling is counter work', async () => {
+    const nav = await renderNav(StaffLayoutComponent, ['driver']);
+    const links = hrefs(nav);
+
+    expect(links.some((href) => href.endsWith('/staff/settlement')))
+      .withContext('the route is requiredRoles: [salesperson]; a link a driver would be bounced off is worse than no link')
+      .toBeFalse();
+    // Positive control: the driver's own menu is still populated, so the assertion above
+    // is not passing over an empty sidebar.
+    expect(links.some((href) => href.endsWith('/staff/driver'))).toBeTrue();
+    expect(headersAlwaysHaveItems(nav)).toEqual([]);
   });
 });
 

@@ -8,7 +8,12 @@ import {
   ExpenseItemFormValue,
   Option,
   expenseItemsTotal,
+  toNullableNumber,
 } from '../expenses-page.mappers';
+import {
+  DriverCashDaySettleRepairBillReqDto,
+  DriverCashRepairBillItemReqDto,
+} from '../../../../../shared/interfaces/driver-cash.interface';
 import {
   nonNegativeAmountValidator,
   positiveAmountValidator,
@@ -205,6 +210,66 @@ export function buildFieldRepairBillGroup(formBuilder: FormBuilder): FormGroup {
     payeeId: [null, [Validators.required]],
     items: formBuilder.array([buildItemGroup(formBuilder)], [Validators.minLength(1)]),
   });
+}
+
+/**
+ * OBRS-1803: the same field bill, rebuilt from a submission the server already holds — what makes
+ * the settlement screen open on the counter's own previous figures instead of on an empty form.
+ *
+ * <p>It lives beside the empty builder for that builder's own stated reason: the code that BUILDS
+ * the group and the code that fills it must not drift. Notice it goes through `buildItemGroup` per
+ * line rather than constructing controls of its own, so a validator added to a line is added here.
+ */
+export function buildFieldRepairBillGroupFrom(
+  formBuilder: FormBuilder,
+  bill: DriverCashDaySettleRepairBillReqDto
+): FormGroup {
+  const group = buildFieldRepairBillGroup(formBuilder);
+  group.patchValue({ payeeId: bill.payeeId });
+  const items = group.get('items') as FormArray;
+  items.clear();
+  for (const line of bill.items ?? []) {
+    const lineGroup = buildItemGroup(formBuilder);
+    lineGroup.patchValue({
+      partId: line.partId ?? null,
+      description: line.description ?? '',
+      quantity: line.quantity ?? null,
+      unit: line.unit ?? '',
+      unitPrice: line.unitPrice ?? null,
+      amount: line.amount ?? null,
+    });
+    items.push(lineGroup);
+  }
+  if (items.length === 0) {
+    items.push(buildItemGroup(formBuilder));
+  }
+  return group;
+}
+
+/**
+ * OBRS-1756: the `field` variant's items, as the driver-cash wire wants them.
+ *
+ * <p>Extracted from `DriverCashRepairFormComponent#onSubmit`, which was the only caller until the
+ * settlement screen became a second one. It lives beside `buildFieldRepairBillGroup` for that
+ * builder's own reason — the code that BUILDS the group and the code that reads it back must not
+ * drift, and two copies of this mapping in two files is exactly how they would. Behaviour is
+ * byte-identical to the block it replaces.
+ *
+ * <p>`part` is always null: the line carries a registry id and the frozen code is the server's to
+ * write (OBRS-1613, the same translation `toBillPayload` makes on the back-office path).
+ */
+export function toFieldRepairBillItems(
+  items: ExpenseItemFormValue[]
+): DriverCashRepairBillItemReqDto[] {
+  return items.map((item) => ({
+    part: null,
+    partId: item.partId ?? null,
+    description: String(item.description ?? '').trim(),
+    quantity: toNullableNumber(item.quantity),
+    unit: String(item.unit ?? '').trim() || null,
+    unitPrice: toNullableNumber(item.unitPrice),
+    amount: toNullableNumber(item.amount) ?? 0,
+  }));
 }
 
 /** One line of a bill. Mirrors the single-bill modal's row: `part` optional (AC3 — labour and

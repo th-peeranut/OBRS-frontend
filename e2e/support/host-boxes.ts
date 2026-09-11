@@ -22,8 +22,9 @@
  * Absolutely positioned, fixed and floated boxes are taken out of the normal
  * flow before the inline box is ever split, so an inline host whose only
  * block-level child is `position: absolute` is well-formed. That is not a
- * technicality: `app-report-usability-fab` is on the card's list of 25 and its
- * only child is `.report-fab { position: fixed }`, so it never needed fixing.
+ * technicality: `app-report-usability-fab` was on the card's list of 25 and its
+ * only child was `.report-fab { position: fixed }`, so it never needed fixing.
+ * (OBRS-1832 retired that host; the example is kept because the RULE is the point.)
  * Counting it would have put a fictional entry on the allow-list, and an
  * allow-list with fictional entries on it is how a gate stops being believed.
  *
@@ -492,6 +493,29 @@ export const ADMIN_SWEEP: SweepPage[] = [
     url: '/staff/my-earnings',
     landsOn: /\/staff\/my-earnings$/,
     requires: 'app-my-earnings-page p-datepicker',
+  },
+
+  // --- OBRS-1756 ------------------------------------------------------------
+  // The driver settlement screen that replaced the "งานประจำรอบ" nav item. Its
+  // date box is a `<p-datePicker>`, so the coverage gate named it on the first
+  // run after it landed -- the gate working, not a flake.
+  //
+  // Swept rather than excused in `NOT_SWEPT`: that list's bar is a component
+  // that genuinely cannot be reached without data this lane has no way to
+  // produce, and this page is one URL away under the session this sweep already
+  // holds. Admin reaches it for the same reason it reaches `/staff/sell`
+  // (OBRS-176 cross-portal access), so the route's requiredRoles: ['salesperson']
+  // does not bounce it.
+  //
+  // `requires` names the p-datepicker, not just the page: the date/van/driver
+  // row renders ABOVE every `@if` in the template, so this lane's empty backend
+  // still renders the host being measured. `app-driver-settlement-page` alone
+  // would pass on a page whose PrimeNG tag never rendered.
+  {
+    key: 'staff-settlement',
+    url: '/staff/settlement',
+    landsOn: /\/staff\/settlement$/,
+    requires: 'app-driver-settlement-page p-datepicker',
   },
 
   // --- OBRS-941 -------------------------------------------------------------

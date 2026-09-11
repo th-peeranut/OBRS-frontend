@@ -8,6 +8,7 @@ import { hasDestination, queueAgeDays, queueAgeSeverity } from './manual-refund-
 import { BankService } from '../../../../services/bank/bank.service';
 import { BankDto, bankNameFor } from '../../../../shared/interfaces/bank.interface';
 import { formatMoney } from '../../../../shared/lib/money-display';
+import { paymentMethodLabel } from '../../../../shared/lib/payment-method-label';
 
 type WorklistContentState = 'loading' | 'error' | 'empty' | 'data';
 
@@ -128,6 +129,12 @@ export class ManualRefundWorklistPageComponent implements OnInit, OnDestroy {
     }
     const known = this.banks.find((candidate) => candidate.code === bank);
     return known ? bankNameFor(known, this.translate.currentLang) : bank;
+  }
+
+  /** OBRS-1800: the column header is translated, so the value beside it must be
+   * too — this cell printed the raw `EPaymentMethod` slug in every language. */
+  protected methodLabel(method: string | undefined): string {
+    return paymentMethodLabel(method, (key) => this.translate.instant(key));
   }
 
   protected queueAgeDays(row: PendingRefund): number | null {

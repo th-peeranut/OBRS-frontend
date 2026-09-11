@@ -1221,3 +1221,45 @@ gains `searchBookings()`/`getCancelPolicy()`/`cancelCounterBooking()`, and
 optional `approverEmail?`/`approverPassword?` fields additively — the same
 extend-don't-fork pattern OBRS-286 used for `refundDestination?` on the same
 interface.
+
+## Driver settlement — one day, one submit (`/staff/settlement`, OBRS-1756)
+
+Salesperson-only page (`requiredRoles: ['salesperson']`) that **replaced the
+"งานประจำรอบ" sidebar item**: pick a date (defaults to **yesterday**), a number
+plate and a driver, and settle everything that driver ran that day in a single
+`POST /api/private/driver-cash/days/settle`, guarded by an `Idempotency-Key`.
+
+⛔ **The `/staff/boarding` routes were NOT removed — only the nav item was.** The
+passenger list stays reachable from *ตารางเดินรถ* and *ตารางของฉัน*
+(`staff-schedules-page.component.ts:328`, `driver-schedules-page.component.ts:78`),
+and `/staff/boarding` itself still resolves for a bookmarked URL. It is declared in
+`nav-reachability.spec.ts`'s `STAFF_UNLISTED` — deliberately not in
+`STAFF_LINKED_FROM`, which would claim a linking page that does not exist.
+
+Screen order is owner-locked: filters → running-totals pills → **รอบของวันนี้**
+(read-only) → **เบิกเงินทดรอง** (read-only; the advance is taken at the round) →
+**ค่าใช้จ่าย** → **ค่าซ่อม** → the one submit.
+
+- The driver dropdown is **prefilled** from the van's `assigned_driver_id` and stays
+  overridable — a default, not a restriction (V88, OBRS-1332). The prefill is the
+  one place design-system §3.1's no-pre-seeded-default rule yields, because the spec
+  requires it.
+- Expenses are **fixed rows, not a category dropdown**: `DRIVER_WAGE` (row 1,
+  read-only, priced server-side per leg) · `FUEL` · `TOLL` · `PERMIT_FEE` ·
+  `PARKING_FEE`. The parking row appears only when the day's `parkingFeeEligible`
+  is true; the "เที่ยวแรก" chip on the rounds table is what explains why.
+- `driverWageRateConfigured: false` renders the **not-configured state on load** and
+  refuses submit. It is never ฿0 — settling would 409
+  `DRIVER_WAGE_RATE_NOT_CONFIGURED`.
+- Repairs are **0..N** `app-expense-bill-card variant="field"` cards (the same
+  component the per-round `driver-cash-repair-form` embeds), starting at zero, with a
+  "+ เพิ่มบิลซ่อม" button. No date / van / category / "จ่ายโดย" — the box owns all
+  four. `[canCreatePayee]`/`[canCreatePart]` are now **true** on both this screen and
+  the per-round form, because OBRS-1756 opened both registry POSTs to SALESPERSON.
+- A box the owner re-opened renders a badge plus the latest reason, and never reads
+  as an ordinary one (OBRS-1579 AC-6).
+- The `Idempotency-Key` is **one per attempt of the same content**: minted on the
+  first press, reused verbatim on a retry of the same payload so the retry replays
+  instead of double-writing, and dropped after a success or a payload change.
+
+Rationale, and the reuse-vs-new ledger: `docs/adr/0043-day-level-driver-settlement-page-and-nav-replacement.md`.

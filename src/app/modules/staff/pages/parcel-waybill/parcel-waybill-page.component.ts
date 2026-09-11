@@ -37,11 +37,11 @@ export class ParcelWaybillPageComponent implements OnInit, OnDestroy {
   @ViewChild('printTemplate') printTemplate!: TemplateRef<unknown>;
 
   protected waybill: WaybillRespDto | null = null;
-  protected qrDataUrl = '';
   protected trackQrDataUrl = '';
   protected termsQrDataUrl = '';
   protected isLoading = true;
   protected hasError = false;
+  protected isTermsOpen = false;
 
   private printPortalHost: HTMLElement | null = null;
   private printPortalOutlet: DomPortalOutlet | null = null;
@@ -77,11 +77,6 @@ export class ParcelWaybillPageComponent implements OnInit, OnDestroy {
           this.waybill = resp?.data ?? null;
           this.isLoading = false;
           this.hasError = !this.waybill;
-          if (this.waybill?.collectionToken) {
-            void this.renderQr(this.waybill.collectionToken).then((url) => {
-              this.qrDataUrl = url;
-            });
-          }
           if (this.waybill?.trackingNumber) {
             void this.renderQr(this.trackUrl(this.waybill.trackingNumber)).then((url) => {
               this.trackQrDataUrl = url;
@@ -121,6 +116,20 @@ export class ParcelWaybillPageComponent implements OnInit, OnDestroy {
     } catch {
       return '';
     }
+  }
+
+  /**
+   * OBRS-1808: the screen's replacement for the terms QR. It opens the SAME
+   * `ParcelPolicyComponent` the `/parcel-policy` route renders — not a second copy of the
+   * wording — so the terms the staff member reads here cannot drift from the published ones
+   * (the OBRS-564 defect: a number stated in one place and enforced from another).
+   */
+  protected openTerms(): void {
+    this.isTermsOpen = true;
+  }
+
+  protected closeTerms(): void {
+    this.isTermsOpen = false;
   }
 
   protected printWaybill(): void {

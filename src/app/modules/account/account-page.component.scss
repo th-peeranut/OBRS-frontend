@@ -127,6 +127,16 @@
     font-size: $font-size-sm;
     color: $text-softblack;
   }
+
+  // OBRS-640: the "read the privacy notice" link, was 21px tall. Same
+  // padding-block/margin-bottom cancel as footer.component.scss's links --
+  // grows the hit area without shifting this element's own top position or
+  // the button beside it.
+  a {
+    display: inline-block;
+    padding-block: 11.5px;
+    margin-bottom: -23px;
+  }
 }
 
 // OBRS-632: the close-account card is the only irreversible action on this page, so it is set

@@ -224,6 +224,116 @@ export interface DriverCashDayReturnReqDto {
   discrepancyReason?: string;
 }
 
+// ── OBRS-1756: the day-level settlement screen (`/staff/settlement`) ──
+
+/**
+ * One round the (vehicle, driver) pair ran on the business date, as
+ * `GET /driver-cash/day-context` returns it — ordered by departure.
+ *
+ * `firstRoundOfRoute` is the earliest departure of ITS OWN route on that date, and
+ * it is the only reason the screen can explain why the ค่าจอดรถ row is offered
+ * (owner: "ค่าจอดรถขึ้นเฉพาะรถที่ออกเที่ยวแรก"). ⛔ It is computed from
+ * `routeId` + `departureDateTime`; there is no route slug to match on and nothing
+ * in the UI may hardcode one.
+ */
+export interface DriverCashDayContextScheduleDto {
+  scheduleId: number;
+  departureDateTime: string;
+  routeId: number;
+  routeName: string;
+  firstRoundOfRoute: boolean;
+}
+
+/**
+ * `GET /api/private/driver-cash/day-context?businessDate=&vehicleId=&driverId=`
+ * — everything the settlement screen needs to draw one day for one van and one
+ * driver, in ONE round trip (the SIT floor is ~2s per request, DEV-GOTCHAS).
+ *
+ * `driverId` is optional on the wire: omitted, the server answers with the
+ * vehicle's assigned driver, which is what prefills the driver dropdown. The
+ * assignment is A DEFAULT, NOT A RESTRICTION (V88, OBRS-1332) — `assignedDriverId`
+ * and `driverId` are separate fields precisely so an overridden driver can be
+ * told apart from the default one.
+ */
+export interface DriverCashDayContextRespDto {
+  /** `LocalDate` on the wire — `yyyy-MM-dd`. */
+  businessDate: string;
+  vehicleId: number;
+  /** ⛔ The bare stored `number_plate` (`16-8747`), no province component. Never
+   * normalized or rewritten anywhere in the UI: it is a unique key and the
+   * back-dated bill importer matches on it. */
+  vehiclePlate: string;
+  assignedDriverId: number | null;
+  assignedDriverName: string | null;
+  driverId: number | null;
+  driverName: string | null;
+  schedules: DriverCashDayContextScheduleDto[];
+  /** `schedules.length` — the leg count OBRS-1356's wage rate multiplies by. */
+  legCount: number;
+  /**
+   * False ⇒ the wage row renders the not-configured STATE on load. It is not
+   * ฿0: settling would 409 `DRIVER_WAGE_RATE_NOT_CONFIGURED`, and the screen
+   * says so before the button is pressed rather than after.
+   */
+  driverWageRateConfigured: boolean;
+  driverWageRatePerLeg: string | null;
+  /** `driverWageRatePerLeg × legCount`, server-computed. */
+  driverWageTotal: string | null;
+  parkingFeeEligible: boolean;
+  /** The existing box for (driver, businessDate) — null when none exists yet. */
+  day: DriverCashDayRespDto | null;
+  /** True when the box already holds EXPENSE_PAID entries for these schedules. */
+  alreadySettled: boolean;
+  /**
+   * OBRS-1803: the settle request that produced `day`, verbatim as it was sent — null until the
+   * day has been settled once. The screen fills its form from this instead of opening empty, so the
+   * counter sees their OWN previous figures before deciding what to change, and a second submit
+   * CORRECTS that submission rather than charging the box twice.
+   */
+  lastSubmission: DriverCashDaySettleReqDto | null;
+}
+
+/**
+ * One expense row of the single settle payload. `amount` is null ONLY for
+ * `DRIVER_WAGE`, which the server prices from the owner's rate per leg and writes
+ * once per schedule (OBRS-1356) — sending a number there would be sending one the
+ * server discards.
+ *
+ * Optional values are explicit `null`, never `undefined`: the submit's replay
+ * guard compares a serialized payload, and `JSON.stringify` DROPS undefined keys,
+ * so two materially different payloads could serialize byte-identically
+ * (FRONTEND-GOTCHAS, `JSON.stringify` drops `undefined` keys).
+ */
+export interface DriverCashDaySettleExpenseReqDto {
+  category: string;
+  amount: string | null;
+  note: string | null;
+  categoryOtherLabel?: string | null;
+}
+
+/** One repair bill of the settle payload — the same lines `repair-bill` takes today. */
+export interface DriverCashDaySettleRepairBillReqDto {
+  payeeId: number;
+  note: string | null;
+  items: DriverCashRepairBillItemReqDto[];
+}
+
+/**
+ * `POST /api/private/driver-cash/days/settle` — the whole day in ONE
+ * transaction, guarded by an `Idempotency-Key` header. Responds with the
+ * refreshed `DriverCashDayRespDto`.
+ */
+export interface DriverCashDaySettleReqDto {
+  businessDate: string;
+  vehicleId: number;
+  driverId: number;
+  expenses: DriverCashDaySettleExpenseReqDto[];
+  repairBills: DriverCashDaySettleRepairBillReqDto[];
+}
+
+/** OBRS-1756 — a day with no rounds behind it is never settled; the server 409s. */
+export const DRIVER_CASH_NO_SCHEDULES_ERROR_CODE = 'DRIVER_CASH_NO_SCHEDULES_FOR_DAY';
+
 /**
  * `POST /api/private/driver-cash/days/{dayId}/reopen` — OWNER-only
  * (`@PreAuthorize("hasRole('OWNER')")`). The reason is mandatory server-side

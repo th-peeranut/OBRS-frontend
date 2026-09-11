@@ -4,6 +4,7 @@ import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { VehiclePlReportStore } from './vehicle-pl-report.store';
 import {
+  VehiclePlPreviousDto,
   VehiclePlReportDto,
   VehiclePlRowDto,
   VehiclePlTotalsDto,
@@ -143,6 +144,11 @@ export class VehiclePlReportPageComponent implements OnInit, OnDestroy {
 
   protected get totals(): VehiclePlTotalsDto | null {
     return this.report?.totals ?? null;
+  }
+
+  /** OBRS-1726 — the compared window and the deltas; null until the first response lands. */
+  protected get previous(): VehiclePlPreviousDto | null {
+    return this.report?.previous ?? null;
   }
 
   /** The fleet lines only — the two vehicle-less kinds are rendered separately below. */
@@ -297,9 +303,55 @@ export class VehiclePlReportPageComponent implements OnInit, OnDestroy {
     return centsToDecimalString(folded.reduce((sum, line) => sum + this.cents(line.amount), 0));
   }
 
-  /** The skeleton and detail rows span the whole table, and its width is now data-driven. */
+  /** The skeleton and detail rows span the whole table, and its width is now data-driven.
+   * OBRS-1726 added two fixed columns (trips, margin %), so the constant is 7, not 5. */
   protected get columnCount(): number {
-    return 5 + this.costColumns.length + (this.foldedColumnCount > 0 ? 1 : 0);
+    return 7 + this.costColumns.length + (this.foldedColumnCount > 0 ? 1 : 0);
+  }
+
+  /**
+   * OBRS-1726 — a server-computed percentage, formatted for display and NOTHING else.
+   *
+   * A null means undefined (no revenue to be a share of, or a change against a zero), and it
+   * renders as an em dash. It must never fall through to `0.00%`: that would state "broke
+   * even" or "held steady" about a period that had neither. No arithmetic happens here — the
+   * value arrives ready, like every money string on this screen.
+   */
+  protected formatPct(value: string | null | undefined): string {
+    if (value === null || value === undefined || value === '') {
+      return '—';
+    }
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) {
+      return '—';
+    }
+    return `${amount.toFixed(2)}%`;
+  }
+
+  /**
+   * The sign a delta should be READ with, for colouring — not for deciding the text.
+   *
+   * `direction` is deliberately separate from `good`: on the expenses card a rise is the bad
+   * one, and hard-coding "up is green" would paint a cost blow-out as good news. The caller
+   * passes which way is favourable for that particular figure.
+   */
+  protected deltaTone(value: string | null | undefined, riseIsGood: boolean): '' | 'is-good' | 'is-bad' {
+    if (value === null || value === undefined || value === '') {
+      return '';
+    }
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount === 0) {
+      return '';
+    }
+    return amount > 0 === riseIsGood ? 'is-good' : 'is-bad';
+  }
+
+  /** A leading `+` on a rise, so a delta is never ambiguous beside a formatted percentage. */
+  protected deltaSign(value: string | null | undefined): string {
+    if (value === null || value === undefined || value === '') {
+      return '';
+    }
+    return Number(value) > 0 ? '+' : '';
   }
 
   protected isNegative(value: string): boolean {

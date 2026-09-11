@@ -47,7 +47,10 @@ function usedIconNames(dir = SRC_DIR) {
 /** [name, codepoint] for every rule the generated stylesheet declares. */
 function definedRules() {
   const out = [];
-  const lines = readFileSync(SCSS_OUT, 'utf8').split('\n');
+  // Split on \r?\n, not \n: git rewrites this LF blob to CRLF on a Windows checkout (core.autocrlf,
+  // no .gitattributes), and a trailing \r makes both $-anchored regexes below miss EVERY line, so a
+  // correct subset reads as all 39 used icons missing and every `npm run build*` fails (OBRS-1822).
+  const lines = readFileSync(SCSS_OUT, 'utf8').split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
     const head = /^\.bi-([a-z0-9-]+)::before \{$/.exec(lines[i]);
     const body = head && /^ {2}content: "(.)([0-9a-f]+)";$/.exec(lines[i + 1] ?? '');

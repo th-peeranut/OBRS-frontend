@@ -39,7 +39,6 @@
     "test:omise-key": "node scripts/check-omise-key-format.mjs",
     "test:index-lang": "node scripts/check-index-html-lang.mjs",
     "test:icon-translate": "node scripts/check-icon-translate.mjs",
-    "test:fab-yield-selector": "node scripts/check-fab-yield-selector.mjs",
     "test:netlify-ignore": "node scripts/check-netlify-ignore.mjs",
     "test:i18n-cache": "node scripts/check-i18n-cache-headers.mjs",
     "test:station-surface": "node scripts/check-station-load-surface.mjs",
@@ -52,6 +51,7 @@
     "pree2e:ui": "node scripts/check-local-env.mjs --require-local",
     "e2e:ui": "playwright test --ui",
     "e2e:route-coverage": "node e2e/route-coverage.mjs",
+    "e2e:obrs640-audit": "playwright test --config=playwright.obrs640audit.config.ts",
     "test:brand-contrast": "node scripts/check-brand-fill-contrast.mjs",
     "test:marker-position": "node scripts/check-leaflet-marker-position.mjs",
     "test:money-format": "node scripts/check-money-format.mjs"

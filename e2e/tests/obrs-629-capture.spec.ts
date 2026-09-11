@@ -135,7 +135,7 @@ test.describe('OBRS-629 — parcel carriage terms', () => {
     await page.screenshot({ path: `${ASSETS}/OBRS-629-AFTER-4-consign-form-terms-link.png` });
   });
 
-  test('AFTER-5: the waybill prints the short-form terms, a third QR to the full text, and a signature line', async ({ page }) => {
+  test('AFTER-5: the waybill prints the short-form terms, a QR to the full text, and a signature line', async ({ page }) => {
     await seedGateAdminSession(page, { username: 'staff@system.local', roles: ['salesperson'], language: 'th' });
     await page.route('**/api/private/parcels/1/waybill', (route) =>
       route.fulfill(
@@ -158,8 +158,12 @@ test.describe('OBRS-629 — parcel carriage terms', () => {
     await expect(terms).toBeVisible();
     await expect(terms).toContainText('500');
     await expect(page.locator('.parcel-waybill-signature-rule')).toBeVisible();
-    // Three QRs, and the third is the only one that is not per-parcel.
-    await expect(page.locator('.parcel-waybill-paper .parcel-waybill-qr img')).toHaveCount(3);
+    // OBRS-1808: this was three. The recipient's collectionToken QR is gone from both surfaces
+    // (nothing in this product reads a QR), and the terms QR is now printed only — on screen it
+    // is a link that opens the same page in a modal. Clause 10 still holds: what it describes is
+    // the PRINTED waybill, which keeps it. So the on-screen count here is 1.
+    await expect(page.locator('.parcel-waybill-paper .parcel-waybill-qr img')).toHaveCount(1);
+    await expect(page.locator('[data-testid="parcel-waybill-terms-link"]')).toBeVisible();
 
     await page.screenshot({ path: `${ASSETS}/OBRS-629-AFTER-5-waybill-terms-and-qr.png`, fullPage: true });
   });

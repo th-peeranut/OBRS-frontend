@@ -224,14 +224,6 @@ export default defineConfig({
     // that went wrong on the equivalent claim one page over (OBRS-564). Hermetic
     // on the same terms as the rest: every /api/** call is fulfilled in-spec.
     '**/obrs-627-refund-policy.spec.ts',
-    // OBRS-1207. Replaces the two FAB-overlap cases in report-usability-issue.spec.ts,
-    // which compared a `position: fixed` box against a scrolling one and never pinned
-    // the scroll — so their verdict was a function of where the page came to rest. The
-    // same tree passed on PR #167, went red on the `dev` merge `8c43dcec`, and passed
-    // 6/6 locally. This one SOLVES for the scroll offsets that collide instead of
-    // sampling them, and asks `document.elementFromPoint()` rather than comparing
-    // rectangles. Hermetic on the same terms as the rest — it reuses those fixtures.
-    '**/obrs-1207-fab-occlusion.spec.ts',
     // OBRS-1224. The claim is a DISTANCE in px between the box you type into and
     // the field you clicked, with the panel flipped upward by Popper — so it needs
     // a real layout engine, a real 60vh and a real viewport height. Karma has none
@@ -283,6 +275,15 @@ export default defineConfig({
     // 1536x900 (the card's viewport) and asserts the overflow precondition before
     // measuring, so it cannot go green without having reproduced the condition.
     '**/obrs-913-sidebar-toggle-target-size.spec.ts',
+    // OBRS-568. The dropdown geometry contract, asked of all four families instead
+    // of one. Every other dropdown spec here measures `app-dropdown-group-obrs`
+    // alone, so "are they all the same" -- the question the owner actually asked --
+    // had no home. Same argument as the two entries above for why it is a browser
+    // test: the bounds under test are `60vh` and a <=576px media block, neither of
+    // which means anything in Karma's fixed 800px window. Hermetic on the same
+    // terms as the rest: public fixtures for three families, a synthetic session
+    // for the admin one.
+    '**/obrs-568-dropdown-panel-geometry.spec.ts',
   ],
 
   timeout: 60_000,

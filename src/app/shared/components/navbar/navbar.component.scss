@@ -35,6 +35,16 @@
   flex-shrink: 0;
 }
 
+// OBRS-640: the anchor's own hit area, not the image it wraps -- `img.logo` shares this
+// class for sizing only and must stay 80x35 (a bigger clickable box, not a bigger brand
+// mark). `min-height` floors the anchor without touching the `height` above; `display:
+// flex` re-centres the image inside the now-taller box.
+a.logo {
+  @include tap-target-min;
+  display: flex;
+  align-items: center;
+}
+
 .menu-font {
   font-size: $font-size-md;
   font-weight: $font-weight-regular;
@@ -54,12 +64,22 @@
   }
 }
 
+// OBRS-1832: the tools cluster. It owns the auto margin now, not the two boxes
+// inside it — two `margin-left: auto` siblings SPLIT the free space between
+// them, which would have parked the report trigger in the middle of the bar at
+// mobile widths instead of next to the hamburger.
+.navbar-tools {
+  display: flex;
+  align-items: center;
+  column-gap: 10px;
+  margin-left: auto;
+}
+
 .button-container {
   display: flex;
   align-items: center;
   column-gap: 10px;
   height: 80px;
-  margin-left: auto; // push language switcher + auth to the far right (desktop only)
 }
 
 .btn-signin {
@@ -154,13 +174,19 @@
   justify-content: center;
   width: 40px;
   height: 40px;
+  @include tap-target-min; // OBRS-640: 40x40 was under the 44x44 floor
   border: 1px solid rgba(189, 200, 207, 0.6);
-  border-radius: 10px;
+  // OBRS-640: a fixed 10px radius on a square box leaves cut corners that a
+  // literal corner probe (0.5px inset from the box edge) always lands outside
+  // of, at any box size -- growing to 44x44 alone was not enough. $radius-
+  // circle matches this app's other icon-only round buttons (actions-menu-btn,
+  // ticket-modal__close) and is >= half the box, which is what the audit's own
+  // round-shape detection needs to switch to circle probing.
+  border-radius: $radius-circle;
   background: #fff;
   color: #506068;
   cursor: pointer;
   flex-shrink: 0;
-  margin-left: auto;
 
   .material-symbols-outlined { @extend %mat-icon; font-size: 22px; }
   &:hover { background: rgba(77, 190, 239, 0.08); color: #005f7e; }

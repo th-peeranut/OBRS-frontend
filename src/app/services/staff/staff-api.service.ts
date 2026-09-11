@@ -22,6 +22,8 @@ import {
 } from '../../shared/interfaces/my-booking.interface';
 import {
   CargoAvailabilityRespDto,
+  ParcelArrivalResendReqDto,
+  ParcelArrivalResendRespDto,
   ParcelCarryOnReqDto,
   ParcelCarryOnRespDto,
   ParcelCollectReqDto,
@@ -46,7 +48,9 @@ import {
 } from '../../shared/interfaces/parcel-claim.interface';
 import {
   DriverCashAdvanceReqDto,
+  DriverCashDayContextRespDto,
   DriverCashDayRespDto,
+  DriverCashDaySettleReqDto,
   DriverCashExpenseReqDto,
   DriverCashRepairBillReqDto,
   DriverCashPerHeadReqDto,
@@ -900,6 +904,31 @@ export class StaffApiService {
   }
 
   /**
+   * POST /api/private/parcels/{id}/arrival-notification/resend — OBRS-1811.
+   *
+   * Sends the arrival SMS again, optionally correcting the recipient's number
+   * first. Omitting `recipientPhone` re-sends to the number already on the
+   * parcel (the handset-was-off case); supplying one corrects the parcel and
+   * texts the new number (the mistyped-at-the-counter case, which a plain
+   * resend can never fix because the provider accepts a well-formed wrong
+   * number and reports it as sent).
+   *
+   * Same `parcelActionContext` as the sibling transitions above, so a 409/429
+   * surfaces through the shared parcel-action error handling rather than the
+   * generic interceptor toast.
+   */
+  resendParcelArrivalNotification(
+    parcelId: number,
+    payload: ParcelArrivalResendReqDto = {}
+  ): Observable<ResponseAPI<ParcelArrivalResendRespDto>> {
+    return this.http.post<ResponseAPI<ParcelArrivalResendRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/arrival-notification/resend`,
+      payload,
+      { context: this.parcelActionContext }
+    );
+  }
+
+  /**
    * POST /api/private/parcels/{id}/leave-at-stop — arrived_notified →
    * left_at_stop (CAS). OBRS-1345.
    *
@@ -1247,6 +1276,62 @@ export class StaffApiService {
       `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/repair-bill`,
       payload,
       { context: this.driverCashActionContext }
+    );
+  }
+
+  // ── OBRS-1756: the day-level settlement screen (/staff/settlement) ──
+  // The two per-schedule POSTs above STAY — /staff/boarding/:scheduleId still
+  // uses them, and this pair is a second entry point onto the same box, not a
+  // replacement for them.
+
+  /**
+   * OBRS-1756 — one round trip for the whole screen: the rounds that (vehicle,
+   * driver) ran on `businessDate`, the wage rate in force, whether the parking
+   * row applies, and the box itself.
+   *
+   * `driverId` is omitted rather than sent empty when the caller has not chosen
+   * one: that is what makes the server answer with the vehicle's assigned driver,
+   * which is the prefill.
+   *
+   * `skipContext` (not `driverCashActionContext`): this is a READ that fires on
+   * every date/van/driver change, so a global banner on each one would be noise —
+   * the screen renders its own message. Nothing is written here.
+   */
+  getDriverCashDayContext(
+    businessDate: string,
+    vehicleId: number,
+    driverId: number | null
+  ): Observable<ResponseAPI<DriverCashDayContextRespDto>> {
+    const params: Record<string, string> = {
+      businessDate,
+      vehicleId: String(vehicleId),
+    };
+    if (driverId !== null) {
+      params['driverId'] = String(driverId);
+    }
+    return this.http.get<ResponseAPI<DriverCashDayContextRespDto>>(
+      `${environment.apiUrl}/api/private/driver-cash/day-context`,
+      { params, context: this.skipContext }
+    );
+  }
+
+  /**
+   * OBRS-1756 — the whole day in ONE all-or-nothing transaction.
+   *
+   * The `Idempotency-Key` header is the same shape `payWalkIn` uses. It is the
+   * CALLER's to own across a retry: the server replays the stored response for a
+   * repeated key with a matching request, so a network retry of the same payload
+   * must reuse the key rather than mint a new one, or the day is written twice.
+   */
+  postDriverCashDaySettle(
+    payload: DriverCashDaySettleReqDto,
+    idempotencyKey: string
+  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
+    const headers = new HttpHeaders({ 'Idempotency-Key': idempotencyKey });
+    return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
+      `${environment.apiUrl}/api/private/driver-cash/days/settle`,
+      payload,
+      { context: this.driverCashActionContext, headers }
     );
   }
 

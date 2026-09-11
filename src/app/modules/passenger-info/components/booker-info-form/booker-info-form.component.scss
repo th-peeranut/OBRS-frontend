@@ -60,6 +60,16 @@
   height: 48px;
 }
 
+// OBRS-640 round 2 (AC-2). The gender radio's own glyph stays 18x18 -- Bootstrap's
+// `appearance: none` input cannot grow past its border without growing the visible
+// circle -- so the invisible tap target grows on the associated <label> instead
+// (`for`/`id` already ties them together above). A single row of inline options, not
+// a stacked list, so unlike the footer this needs no negative-margin clawback: growing
+// one row's height does not compound into its neighbours. Rule shared with
+// passenger-info-form via `form-check-inline-tap-target` (variables.scss) rather than
+// pasted here a second time.
+@include form-check-inline-tap-target;
+
 @media (max-width: 992px) {
   .card-container {
     padding: $space-md;

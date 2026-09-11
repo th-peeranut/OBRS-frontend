@@ -206,6 +206,22 @@ describe('NotificationInboxPanelComponent', () => {
       expect(component.navigate.emit).not.toHaveBeenCalled();
     });
 
+    // OBRS-357: the second entry in the table. Same resolution path, so this
+    // pins that the panel reads the table rather than one hardcoded type.
+    it('emits navigate for INSPECTION_DEFECT_REPORTED with a relatedEntityId', () => {
+      component.items = [
+        { ...makeItem(9), notificationType: 'INSPECTION_DEFECT_REPORTED', relatedEntityId: 5 },
+      ];
+      spyOn(component.navigate, 'emit');
+
+      component['onRowOpen'](9);
+
+      expect(component.navigate.emit).toHaveBeenCalledWith({
+        type: 'INSPECTION_DEFECT_REPORTED',
+        id: 5,
+      });
+    });
+
     it('still emits markOne alongside navigate — mark-read behaviour is unchanged', () => {
       component.items = [{ ...makeItem(9), notificationType: 'NOTIF_MSG_OVERRIDE_PENDING', relatedEntityId: 77 }];
       spyOn(component.markOne, 'emit');

@@ -157,6 +157,7 @@
   border-radius: $radius-pill !important;
   font-weight: $font-weight-semibold;
   padding: 0.5rem 1.1rem;
+  @include tap-target-min; // OBRS-640: was 40px tall
 }
 
 :host ::ng-deep .p-selectbutton .p-togglebutton.p-togglebutton-checked {
@@ -239,6 +240,11 @@
   background-color: $primary-blue;
   height: 3px;
   border-radius: 3px 3px 0 0;
+  // OBRS-640: purely decorative (the active tab's own background already shows
+  // which is selected) but it sits ON TOP of the tab's bottom edge, so it was
+  // stealing the bottom row of tap probes from the tab underneath. A real tap
+  // there should reach the tab, not this underline.
+  pointer-events: none;
 }
 
 :host ::ng-deep .p-tabpanels {
