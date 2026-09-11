@@ -452,6 +452,12 @@ interface ProbeOutcome {
    *  The caller counts and prints this separately (`satisfiedViaLabel=N`) so it can
    *  never become a silent blanket exemption. */
   satisfiedViaLabel: boolean;
+  /** Count of probe corners `hitTestBox` skipped as off-screen at the viewport's own
+   *  edge (`VIEWPORT_EDGE_EPS`). Reporting-only (AC-5): does not change which elements
+   *  are skipped, just makes a previously-silent skip counted and printed like every
+   *  other exclusion reason, so an element that drifts onto this edge later shows up
+   *  in the count instead of vanishing from it. */
+  viewportEdgeSkips: number;
 }
 
 /**
@@ -464,13 +470,17 @@ function probeTaggedTapElement(args: { idx: number; minTapPx: number }): ProbeOu
   if (!el) return null;
 
   const cs0 = getComputedStyle(el);
-  if (cs0.display === 'none') return { violation: null, excludedReason: 'displayNone', satisfiedViaLabel: false };
-  if (cs0.visibility === 'hidden' || cs0.visibility === 'collapse') {
-    return { violation: null, excludedReason: 'visibilityHidden', satisfiedViaLabel: false };
+  if (cs0.display === 'none') {
+    return { violation: null, excludedReason: 'displayNone', satisfiedViaLabel: false, viewportEdgeSkips: 0 };
   }
-  if (Number(cs0.opacity) === 0) return { violation: null, excludedReason: 'opacityZero', satisfiedViaLabel: false };
+  if (cs0.visibility === 'hidden' || cs0.visibility === 'collapse') {
+    return { violation: null, excludedReason: 'visibilityHidden', satisfiedViaLabel: false, viewportEdgeSkips: 0 };
+  }
+  if (Number(cs0.opacity) === 0) {
+    return { violation: null, excludedReason: 'opacityZero', satisfiedViaLabel: false, viewportEdgeSkips: 0 };
+  }
   if (cs0.pointerEvents === 'none') {
-    return { violation: null, excludedReason: 'pointerEventsNone', satisfiedViaLabel: false };
+    return { violation: null, excludedReason: 'pointerEventsNone', satisfiedViaLabel: false, viewportEdgeSkips: 0 };
   }
 
   const pathOf = (n0: Element): string => {
@@ -512,7 +522,9 @@ function probeTaggedTapElement(args: { idx: number; minTapPx: number }): ProbeOu
    * is held to the exact same probe geometry and roundness handling a plain tap target
    * answers to, never a softer one.
    */
-  const hitTestBox = (target: Element): { probed: number; misses: string[]; rect: DOMRect } => {
+  const hitTestBox = (
+    target: Element
+  ): { probed: number; misses: string[]; rect: DOMRect; edgeSkips: number } => {
     // 0.5px inset from the theoretical box edge: `getBoundingClientRect`'s bottom/right
     // are EXCLUSIVE at the sub-pixel level, so probing an element sized exactly
     // minTapPx (44.0, measured live on /account's "Edit personal details" et al.) at
@@ -583,6 +595,7 @@ function probeTaggedTapElement(args: { idx: number; minTapPx: number }): ProbeOu
 
     const misses: string[] = [];
     let probed = 0;
+    let edgeSkips = 0;
     for (const [x, y] of probes) {
       // Off the CURRENT viewport is off the physical screen, not a defect the box owns
       // -- elementFromPoint answers null there regardless of the element's own size.
@@ -591,20 +604,27 @@ function probeTaggedTapElement(args: { idx: number; minTapPx: number }): ProbeOu
         y < 0 ||
         x >= window.innerWidth - VIEWPORT_EDGE_EPS ||
         y >= window.innerHeight - VIEWPORT_EDGE_EPS
-      )
+      ) {
+        edgeSkips++;
         continue;
+      }
       probed++;
       const hit = document.elementFromPoint(x, y);
       if (!hit || !(hit === target || target.contains(hit))) {
         misses.push(`(${Math.round(x)},${Math.round(y)})->${hit ? pathOf(hit) : 'nothing'}`);
       }
     }
-    return { probed, misses, rect };
+    return { probed, misses, rect, edgeSkips };
   };
 
   const primary = hitTestBox(el);
   if (primary.probed > 0 && primary.misses.length === 0) {
-    return { violation: null, excludedReason: null, satisfiedViaLabel: false };
+    return {
+      violation: null,
+      excludedReason: null,
+      satisfiedViaLabel: false,
+      viewportEdgeSkips: primary.edgeSkips,
+    };
   }
 
   // OBRS-640 round 2 (AC-2: "a real radio's tap area is the input plus its associated
@@ -622,10 +642,17 @@ function probeTaggedTapElement(args: { idx: number; minTapPx: number }): ProbeOu
       label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
     }
   }
+  let labelEdgeSkips = 0;
   if (label) {
     const viaLabel = hitTestBox(label);
+    labelEdgeSkips = viaLabel.edgeSkips;
     if (viaLabel.probed > 0 && viaLabel.misses.length === 0) {
-      return { violation: null, excludedReason: null, satisfiedViaLabel: true };
+      return {
+        violation: null,
+        excludedReason: null,
+        satisfiedViaLabel: true,
+        viewportEdgeSkips: primary.edgeSkips + labelEdgeSkips,
+      };
     }
   }
 
@@ -638,6 +665,7 @@ function probeTaggedTapElement(args: { idx: number; minTapPx: number }): ProbeOu
       },
       excludedReason: null,
       satisfiedViaLabel: false,
+      viewportEdgeSkips: primary.edgeSkips + labelEdgeSkips,
     };
   }
   return {
@@ -651,6 +679,7 @@ function probeTaggedTapElement(args: { idx: number; minTapPx: number }): ProbeOu
     },
     excludedReason: null,
     satisfiedViaLabel: false,
+    viewportEdgeSkips: primary.edgeSkips + labelEdgeSkips,
   };
 }
 
@@ -805,10 +834,17 @@ test.describe('OBRS-640 mobile tap-target + typography audit (Phase A baseline)'
           // AC-6: counted and printed separately from `violations`/`measuredTotal` so a
           // credited input can never disappear into either silently.
           let tapSatisfiedViaLabel = 0;
+          // AC-5: the viewport-edge probe skip (`VIEWPORT_EDGE_EPS`) counted and printed
+          // like every other exclusion reason, not silent -- reporting-only, so it is
+          // tracked apart from `tapExcluded`/`tapMeasuredTotal` and never subtracts from
+          // either (the element itself is still measured; only some of its probe corners
+          // were skipped as off-screen).
+          let tapViewportEdgeSkips = 0;
           for (let i = 0; i < c.measuredCount; i++) {
             await page.locator(`[data-obrs640-tap="${i}"]`).scrollIntoViewIfNeeded();
             const outcome = await page.evaluate(probeTaggedTapElement, { idx: i, minTapPx: MIN_TAP_PX });
             if (!outcome) continue;
+            tapViewportEdgeSkips += outcome.viewportEdgeSkips;
             if (outcome.excludedReason) {
               tapExcluded[outcome.excludedReason] = (tapExcluded[outcome.excludedReason] ?? 0) + 1;
               tapMeasuredTotal--;
@@ -817,12 +853,13 @@ test.describe('OBRS-640 mobile tap-target + typography audit (Phase A baseline)'
             if (outcome.satisfiedViaLabel) tapSatisfiedViaLabel++;
             if (outcome.violation) tapViolations.push(outcome.violation);
           }
-          const tap: SweepResult & { satisfiedViaLabel: number } = {
+          const tap: SweepResult & { satisfiedViaLabel: number; viewportEdgeSkips: number } = {
             populationTotal: c.populationTotal,
             measuredTotal: tapMeasuredTotal,
             excluded: tapExcluded,
             violations: tapViolations,
             satisfiedViaLabel: tapSatisfiedViaLabel,
+            viewportEdgeSkips: tapViewportEdgeSkips,
           };
           const t = text as SweepResult;
 
@@ -837,6 +874,7 @@ test.describe('OBRS-640 mobile tap-target + typography audit (Phase A baseline)'
               `(swal=${swal}, doc=${dims.documentHeight}px, viewport=${dims.viewportHeight}px)\n` +
               `  TAP  population=${tap.populationTotal} measured=${tap.measuredTotal} ` +
               `violations=${tap.violations.length} satisfiedViaLabel=${tap.satisfiedViaLabel} ` +
+              `viewportEdge=${tap.viewportEdgeSkips} ` +
               `excluded{${fmtExcluded(tap.excluded)}}\n` +
               tap.violations.map((v) => `    TAP  ${v.selector} "${v.text}" -- ${v.detail}`).join('\n') +
               (tap.violations.length ? '\n' : '') +

@@ -65,13 +65,10 @@
 // circle -- so the invisible tap target grows on the associated <label> instead
 // (`for`/`id` already ties them together above). A single row of inline options, not
 // a stacked list, so unlike the footer this needs no negative-margin clawback: growing
-// one row's height does not compound into its neighbours.
-.form-check-inline .form-check-label {
-  display: inline-flex;
-  align-items: center;
-  column-gap: $space-3xs;
-  @include tap-target-min;
-}
+// one row's height does not compound into its neighbours. Rule shared with
+// passenger-info-form via `form-check-inline-tap-target` (variables.scss) rather than
+// pasted here a second time.
+@include form-check-inline-tap-target;
 
 @media (max-width: 992px) {
   .card-container {

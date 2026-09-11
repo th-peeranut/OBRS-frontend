@@ -1,5 +1,23 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-09-11 — SELF-FIXED (DRY, ~15 lines): OBRS-640 pasted the same `.form-check-inline .form-check-label` tap-target rule into two component scss files
+
+`booker-info-form.component.scss` and `passenger-info-form.component.scss` each added a byte-identical
+`.form-check-inline .form-check-label { display: inline-flex; align-items: center; column-gap:
+$space-3xs; @include tap-target-min; }` block (round 2's label-actuated tap-target fix for the gender/
+fare-category radios). AC-4 on this same card exists specifically to stop "value copied to N places,
+breaks again at N+1" — the mixin call inside the block was shared, but the block itself, including its
+selector, was pasted a second time, which is the same anti-pattern one level down. Both files already
+`@import` `src/styles/variables.scss`, so added `@mixin form-check-inline-tap-target { .form-check-
+inline .form-check-label { ... } }` there (next to `$tap-target-min`/`tap-target-min`) and replaced both
+component blocks with a single `@include form-check-inline-tap-target;`. Verified with
+`npx sass --load-path=src --quiet <file>.scss` on both files before and after — compiled CSS output is
+byte-identical (same `.form-check-inline .form-check-label { ...; min-width: 44px; min-height: 44px; }`
+in both). Did not fold this into a single *global* selector (e.g. `styles.scss`) — `.form-check-inline
+.form-check-label` is a Bootstrap pattern also used by admin/staff dense table forms, and growing hit
+areas there was flagged on the card as a separate, deliberate, un-made call; a mixin two customer forms
+both `@include` keeps the blast radius exactly where it was.
+
 ## 2026-09-09 — SELF-FIXED (DRY, 7 lines): OBRS-1783 re-derived `isJourneyOpenSeating` instead of reusing it
 
 `sell-receipt-page.component.ts`'s new `applyTicketData` line computed the trip-level OPEN-seating flag
