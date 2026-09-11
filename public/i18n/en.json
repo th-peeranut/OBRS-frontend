@@ -3447,7 +3447,8 @@
       "INSPECTION": "Vehicle Inspection",
       "FLEET_MAP": "Live Vehicle Locations",
       "CANCEL_BOOKING": "Cancel Booking",
-      "MY_EARNINGS": "My Per-Head Earnings"
+      "MY_EARNINGS": "My Per-Head Earnings",
+      "SETTLEMENT": "Driver Settlement"
     },
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
@@ -3473,7 +3474,7 @@
       "SELL": "Walk-in Sales",
       "SCHEDULES": "Schedules",
       "MY_SCHEDULES": "My Schedules",
-      "BOARDING": "Schedule Operations",
+      "SETTLEMENT": "Driver Settlement",
       "PARCEL_CONSIGN": "Consign Parcel",
       "PARCEL_SCHEDULE": "Verify & Handover",
       "INSPECTION": "Inspection",
@@ -4029,7 +4030,10 @@
     },
     "PARCEL_WAYBILL": {
       "TERMS_TITLE": "Parcel carriage terms (short form)",
-      "TERMS_SUMMARY": "By signing below the sender confirms they have read and accepted the parcel carriage terms, in particular: (1) if nobody collects the parcel at the destination stop, the driver leaves it there and photographs it as evidence, and the risk then passes to the sender; (2) the company is liable for the loss actually proven, but not more than 500 baht per parcel, and does not accept a declared value to raise that ceiling; (3) a claim must be made within 1 day of delivery being complete, with the original waybill, at a company ticket counter.",
+      "TERMS_SUMMARY_LEAD": "By signing below the sender confirms they have read and accepted the parcel carriage terms, in particular:",
+      "TERMS_SUMMARY_1": "(1) if nobody collects the parcel at the destination stop, the driver leaves it there and photographs it as evidence, and the risk then passes to the sender;",
+      "TERMS_SUMMARY_2": "(2) the company is liable for the loss actually proven, but not more than 500 baht per parcel, and does not accept a declared value to raise that ceiling;",
+      "TERMS_SUMMARY_3": "(3) a claim must be made within 1 day of delivery being complete, with the original waybill, at a company ticket counter.",
       "TERMS_QR_LABEL": "Full terms",
       "TERMS_QR_ALT": "QR code that opens the full parcel carriage terms",
       "TERMS_QR_HINT": "Scan to read the full terms",
@@ -4044,9 +4048,8 @@
       "WEIGHT": "Weight",
       "AMOUNT": "Amount",
       "DEPARTURE": "Departure",
-      "QR_FOR_RECIPIENT": "For the recipient",
-      "QR_ALT": "Collection QR code",
-      "QR_HINT": "Present this QR code, or the collection code, on delivery.",
+      "TERMS_LINK": "Read the full terms",
+      "TERMS_MODAL_TITLE": "Parcel carriage terms (full)",
       "TRACK_QR_FOR_SENDER": "For the sender",
       "TRACK_QR_ALT": "Parcel tracking QR code",
       "TRACK_QR_HINT": "Scan to follow this parcel and to see the photo taken if it is left at the stop.",
@@ -4388,6 +4391,62 @@
         "RANGE_INVALID": "The start date must not be later than the end date.",
         "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
       }
+    },
+    "SETTLEMENT": {
+      "SUBTITLE": "Pick a date, a plate and a driver, then settle the whole day in one submit",
+      "FILTER": {
+        "DATE": "Date",
+        "VEHICLE": "Number plate",
+        "DRIVER": "Driver"
+      },
+      "ROUNDS": {
+        "TITLE": "Today's rounds",
+        "TOTAL_LEGS": "{{n}} legs for the day",
+        "EMPTY": "This vehicle and driver ran no rounds on the selected date",
+        "FIRST_ROUND": "First round",
+        "COL": {
+          "DEPARTURE": "Departs",
+          "ROUTE": "Route",
+          "LEG": "Leg"
+        }
+      },
+      "ADVANCE": {
+        "TITLE": "Cash advance",
+        "READ_ONLY_NOTE": "Recorded when the round went out; it cannot be edited here",
+        "EMPTY": "No cash advance recorded for this day"
+      },
+      "EXPENSES": {
+        "TITLE": "Expenses",
+        "COL": {
+          "ITEM": "Item",
+          "AMOUNT": "Amount",
+          "NOTE": "Note"
+        },
+        "WAGE_BASIS": "Priced at {{rate}} x {{legs}} legs"
+      },
+      "REPAIR": {
+        "TITLE": "Repairs",
+        "EMPTY": "No repair bill for this day",
+        "ADD_BILL": "+ Add repair bill",
+        "BILL_N": "Bill {{n}}",
+        "REMOVE_BILL": "Remove this bill"
+      },
+      "BANNER": {
+        "REOPENED": "The owner re-opened this cash box {{n}} time(s)",
+        "REOPEN_REASON": "Latest reason: {{reason}}",
+        "ALREADY_SETTLED": "This day has already been settled. Submitting again adds new entries on top of the existing ones - check before you do."
+      },
+      "BLOCKED": {
+        "PICK_VEHICLE_DRIVER": "Pick a date, a number plate and a driver before settling",
+        "NO_SCHEDULES": "This vehicle and driver ran no rounds on the selected date, so there is nothing to settle",
+        "INVALID_REPAIR_BILL": "A repair bill is incomplete - it needs a garage and lines totalling more than zero"
+      },
+      "ERROR": {
+        "NO_SCHEDULES": "This vehicle and driver ran no rounds on the selected date, so the day cannot be settled"
+      },
+      "TOTAL": "To be recorded",
+      "SUBMIT": "Settle the whole day",
+      "SUCCESS": "The day has been settled"
     }
   },
   "FIND_BOOKING": {

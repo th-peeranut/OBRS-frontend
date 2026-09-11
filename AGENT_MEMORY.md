@@ -1,5 +1,23 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-09-11 — SELF-FIXED (DRY, ~15 lines): OBRS-640 pasted the same `.form-check-inline .form-check-label` tap-target rule into two component scss files
+
+`booker-info-form.component.scss` and `passenger-info-form.component.scss` each added a byte-identical
+`.form-check-inline .form-check-label { display: inline-flex; align-items: center; column-gap:
+$space-3xs; @include tap-target-min; }` block (round 2's label-actuated tap-target fix for the gender/
+fare-category radios). AC-4 on this same card exists specifically to stop "value copied to N places,
+breaks again at N+1" — the mixin call inside the block was shared, but the block itself, including its
+selector, was pasted a second time, which is the same anti-pattern one level down. Both files already
+`@import` `src/styles/variables.scss`, so added `@mixin form-check-inline-tap-target { .form-check-
+inline .form-check-label { ... } }` there (next to `$tap-target-min`/`tap-target-min`) and replaced both
+component blocks with a single `@include form-check-inline-tap-target;`. Verified with
+`npx sass --load-path=src --quiet <file>.scss` on both files before and after — compiled CSS output is
+byte-identical (same `.form-check-inline .form-check-label { ...; min-width: 44px; min-height: 44px; }`
+in both). Did not fold this into a single *global* selector (e.g. `styles.scss`) — `.form-check-inline
+.form-check-label` is a Bootstrap pattern also used by admin/staff dense table forms, and growing hit
+areas there was flagged on the card as a separate, deliberate, un-made call; a mixin two customer forms
+both `@include` keeps the blast radius exactly where it was.
+
 ## 2026-09-09 — SELF-FIXED (DRY, 7 lines): OBRS-1783 re-derived `isJourneyOpenSeating` instead of reusing it
 
 `sell-receipt-page.component.ts`'s new `applyTicketData` line computed the trip-level OPEN-seating flag
@@ -4677,3 +4695,22 @@ just one a test can never catch.
   member), reusing that same word in looser prose one paragraph over reads as contradicting the
   code, even when both are technically consistent once you trace the reasoning through. Prefer a
   different word for the loose sense.
+
+## OBRS-1756 — Scrutinize self-fix: a free-text money field that silently drops the row
+
+The settlement screen typed its expense amounts into a plain `type="text"` input and validated
+them ONLY inside `buildPayload()`, with `if (cents === null || cents <= 0) continue;`. `toCents`
+reads `^\d+(\.\d{1,2})?$` and nothing else, so `1,200` — what a counter clerk types — parsed as
+null and the FUEL row was dropped from the payload AND from `settlementTotal`, with no message
+anywhere. The ONE submit then settled the day short, and `alreadySettled` stands in the way of a
+clean redo. `ng test` was green over it because no spec ever typed a bad amount.
+
+Fixed by borrowing the rule the per-round `driver-cash-expense-form` has had since OBRS-960:
+`isAmountInvalid(row)` gates the button through `blockedReasonKey` and renders the EXISTING
+`STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID` key under the field (no new i18n key — the same
+rule should not get a second wording). Spec added with a positive control so the refusal cannot
+pass over a screen that refuses everything.
+
+**Lesson:** a validator used only to DECIDE WHETHER TO SEND a value is a silent dropper. If a
+parse failure changes what goes on the wire, it must also change what is on the screen — and the
+skip-vs-refuse choice belongs in the submit gate, never buried in the payload builder.

@@ -18,15 +18,35 @@
       </button>
     </div>
     <div class="card shadow-sm border-0">
-      <app-parcel-waybill-paper [waybill]="waybill" [qrDataUrl]="qrDataUrl" [trackQrDataUrl]="trackQrDataUrl" [termsQrDataUrl]="termsQrDataUrl"></app-parcel-waybill-paper>
+      <app-parcel-waybill-paper variant="screen" [waybill]="waybill" [trackQrDataUrl]="trackQrDataUrl" (openTerms)="openTerms()"></app-parcel-waybill-paper>
     </div>
   }
 </div>
+
+<!-- OBRS-1808: the full terms, over the waybill rather than in a new tab — a staff member who
+     follows a link away from this page has to find the parcel again. `app-parcel-policy` is the
+     very component `/parcel-policy` routes to, in `embedded` mode (no navbar, no page card), so
+     there is one wording and one live `GET /api/parcel-policy` behind both surfaces. -->
+@if (isTermsOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="closeTerms()">
+    <div class="admin-modal parcel-waybill-terms-modal" data-testid="parcel-waybill-terms-modal">
+      <div class="admin-modal-header">
+        <h5 class="admin-modal-title">{{ 'STAFF.PARCEL_WAYBILL.TERMS_MODAL_TITLE' | translate }}</h5>
+        <button type="button" class="admin-icon-btn" (click)="closeTerms()" [attr.aria-label]="'COMMON.CLOSE' | translate">
+          <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
+        </button>
+      </div>
+      <div class="admin-modal-body">
+        <app-parcel-policy [embedded]="true"></app-parcel-policy>
+      </div>
+    </div>
+  </div>
+}
 
 <!-- OBRS-305: print-only copy, teleported to document.body on printWaybill()
 via DomPortalOutlet (docs/adr/0015-boarding-manifest-print-isolation.md
 idiom). Reuses the SAME dumb paper component/inputs as the on-screen card
 above — one "paper" look, not a second markup copy. -->
 <ng-template #printTemplate>
-  <app-parcel-waybill-paper [waybill]="waybill" [qrDataUrl]="qrDataUrl" [trackQrDataUrl]="trackQrDataUrl" [termsQrDataUrl]="termsQrDataUrl"></app-parcel-waybill-paper>
+  <app-parcel-waybill-paper variant="print" [waybill]="waybill" [trackQrDataUrl]="trackQrDataUrl" [termsQrDataUrl]="termsQrDataUrl"></app-parcel-waybill-paper>
 </ng-template>

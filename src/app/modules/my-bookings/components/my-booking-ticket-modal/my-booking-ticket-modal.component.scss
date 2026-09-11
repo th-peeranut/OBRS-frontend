@@ -26,6 +26,7 @@
   z-index: 2;
   width: 36px;
   height: 36px;
+  @include tap-target-min; // OBRS-640
   border: none;
   border-radius: $radius-circle;
   background: $primary-white;

@@ -1,0 +1,112 @@
+/* OBRS-1756 — page-local only. Everything structural (admin-card, admin-table,
+   admin-page-filters, admin-btn, admin-field) comes from the shared admin surface
+   classes the rest of the staff portal already uses; nothing here restyles them.
+   Every colour reads an --admin-* token, so light/dark and the staff accent are the
+   shell's decision, not this page's. No raw hex (design-system §2.2/§11). */
+
+.ds-filter-field {
+  min-width: 12rem;
+}
+
+/* One banner shape, three meanings — separated by a left rule and a soft surface, never
+   by colour alone. */
+.ds-banner {
+  border-left: 4px solid var(--admin-outline);
+  background: var(--admin-surface-soft);
+}
+
+.ds-banner-title {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+/* OBRS-1579 AC-6: a re-opened box must not read like an ordinary one. */
+.ds-banner-reopened {
+  border-left-color: var(--admin-inreview-text);
+  background: var(--admin-inreview-bg);
+}
+
+.ds-banner-warn {
+  border-left-color: var(--admin-warning-text);
+  background: var(--admin-warning-bg);
+}
+
+.ds-banner-blocked {
+  border-left-color: var(--admin-danger-fg);
+  background: var(--admin-danger-surface);
+}
+
+/* "เที่ยวแรก" — why the ค่าจอดรถ row is offered on this day. */
+.ds-chip {
+  display: inline-block;
+  margin-inline-start: 0.4rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: var(--admin-neutral-bg);
+  color: var(--admin-neutral-text);
+}
+
+.ds-entry-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+
+  li {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--admin-outline-soft);
+  }
+}
+
+.ds-wage-basis {
+  margin-inline-start: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.ds-bill {
+  margin-bottom: 1rem;
+}
+
+.ds-bill-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+
+  h5 {
+    margin: 0;
+  }
+}
+
+.ds-bill-head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* The one submit of the whole screen. */
+.ds-submit-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.ds-submit-total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 1.125rem;
+}
+
+/* --admin-success-fg, NOT --admin-success-text: the latter is the dark half of a pastel
+   CHIP pair and is only legible on its own --admin-success-bg. Standing alone on the card
+   surface it measures 1.3-1.7:1 in dark mode (design-system §2.4.0; caught by
+   check-admin-theme-tokens.mjs, which is why the wrong token never reached a screenshot). */
+.ds-success {
+  color: var(--admin-success-fg);
+  margin: 0;
+}

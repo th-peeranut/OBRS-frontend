@@ -15,6 +15,7 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { formatMoney } from '../../../../shared/lib/money-display';
+import { paymentMethodLabel } from '../../../../shared/lib/payment-method-label';
 
 interface TimelineEvent {
   time: string | null;
@@ -281,6 +282,12 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
     return this.lookupStatusLabel(status, ['ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES']);
   }
 
+  // OBRS-1800: same reason as the status cell next to it — `tx.paymentMethod` is an
+  // EPaymentMethod slug, and the header above it is translated, so the value is too.
+  protected transactionMethodLabel(method: string | null | undefined): string {
+    return paymentMethodLabel(method, (key) => this.translate.instant(key));
+  }
+
   private lookupStatusLabel(status: string | null | undefined, namespaces: string[]): string {
     const code = (status ?? '').trim().replace(/\s+/g, '_').toLowerCase();
     if (code) {
@@ -494,7 +501,9 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
         events.push({
           time: tx.paidAt,
           labelKey: 'ADMIN.BOOKINGS.DETAIL.EVENT.PAYMENT',
-          params: { method: tx.paymentMethod ?? '-' },
+          // OBRS-1800: the timeline sentence is translated, so the method inside its
+          // {{method}} slot is too - it is the same slug as the transaction row above.
+          params: { method: this.transactionMethodLabel(tx.paymentMethod) || '-' },
         });
       }
     }

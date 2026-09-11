@@ -3,6 +3,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { FindBookingPageComponent } from './find-booking-page.component';
@@ -36,19 +37,32 @@ describe('FindBookingPageComponent (OBRS-857)', () => {
     ],
   };
 
-  beforeEach(async () => {
+  // OBRS-868: the payment-confirmation email links here with ?bookingNumber=<n>; every other
+  // entry to this page carries no params at all.
+  const routeStub = (queryParams: Record<string, string> = {}) => ({
+    snapshot: { queryParamMap: convertToParamMap(queryParams) },
+  });
+
+  const buildComponent = async (queryParams: Record<string, string> = {}) => {
     lookupService = jasmine.createSpyObj<BookingLookupService>('BookingLookupService', ['lookup']);
 
     await TestBed.configureTestingModule({
       declarations: [FindBookingPageComponent],
       imports: [ReactiveFormsModule, TranslateModule.forRoot(), TitleLabelPipe],
-      providers: [{ provide: BookingLookupService, useValue: lookupService }],
+      providers: [
+        { provide: BookingLookupService, useValue: lookupService },
+        { provide: ActivatedRoute, useValue: routeStub(queryParams) },
+      ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
     fixture = TestBed.createComponent(FindBookingPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+  };
+
+  beforeEach(async () => {
+    await buildComponent();
   });
 
   const asAny = () => component as unknown as Record<string, any>;
@@ -237,6 +251,42 @@ describe('FindBookingPageComponent (OBRS-857)', () => {
 
       expect(asAny()['isOpenSeating']).toBeFalse();
       expect(seatValues(root, '.find-booking-summary')).toEqual([]);
+    });
+  });
+  // OBRS-868 — the payment-confirmation email is the only copy of the ticket a customer keeps
+  // once the tab is closed, and it now links here carrying the booking number.
+  describe('?bookingNumber pre-fill (OBRS-868)', () => {
+    it('pre-fills the booking number from the query string', async () => {
+      TestBed.resetTestingModule();
+      await buildComponent({ bookingNumber: 'B-ABC234' });
+
+      expect(asAny()['form'].value.bookingNumber).toBe('B-ABC234');
+    });
+
+    it('trims a padded value rather than failing the required check on whitespace', async () => {
+      TestBed.resetTestingModule();
+      await buildComponent({ bookingNumber: '  B-ABC234  ' });
+
+      expect(asAny()['form'].value.bookingNumber).toBe('B-ABC234');
+    });
+
+    // The link is a convenience, never a credential: the phone stays empty, the form stays
+    // invalid, and nothing is looked up until the customer types it. An automatic lookup on load
+    // would turn the URL into a probe for which booking numbers exist - the exact oracle the
+    // single neutral refusal was built to close.
+    it('leaves the phone empty, submits nothing, and stays idle', async () => {
+      TestBed.resetTestingModule();
+      await buildComponent({ bookingNumber: 'B-ABC234' });
+
+      expect(asAny()['form'].value.phoneNumber).toBe('');
+      expect(asAny()['form'].invalid).toBeTrue();
+      expect(lookupService.lookup).not.toHaveBeenCalled();
+      expect(asAny()['contentState']).toBe('idle');
+    });
+
+    it('leaves the field empty when the page is entered with no query string', () => {
+      expect(asAny()['form'].value.bookingNumber).toBe('');
+      expect(lookupService.lookup).not.toHaveBeenCalled();
     });
   });
 });

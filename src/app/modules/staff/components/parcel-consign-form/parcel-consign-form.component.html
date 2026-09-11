@@ -14,6 +14,7 @@
       <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.SENDER_PHONE' | translate }}</label>
       <input
         type="text"
+        inputmode="tel"
         class="admin-field"
         formControlName="senderPhone"
         (focus)="onPhoneFocus('senderPhone')"
@@ -44,6 +45,7 @@
           <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.RECIPIENT_PHONE' | translate }}</label>
           <input
             type="text"
+            inputmode="tel"
             class="admin-field"
             formControlName="recipientPhone"
             (focus)="onPhoneFocus('recipientPhone')"

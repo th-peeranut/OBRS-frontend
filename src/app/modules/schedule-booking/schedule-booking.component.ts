@@ -14,8 +14,17 @@ export class ScheduleBookingComponent {
   constructor(private store: Store) {}
 
   ngOnInit(): void {
+    // OBRS-637. See the twin block in passenger-info.component.ts: the search
+    // button is `position: fixed` below 768px and the report-usability FAB is
+    // parked in the same corner above it, so the FAB is told to sit higher for
+    // as long as this page is open.
+    document.body.classList.add('has-sticky-cta');
     this.store.dispatch(invokeGetAllProvinceWithStationApi());
     this.store.dispatch(invokeGetScheduleFilterApi());
+  }
+
+  ngOnDestroy(): void {
+    document.body.classList.remove('has-sticky-cta');
   }
 }
 

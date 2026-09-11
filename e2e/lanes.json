@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-640-mobile-tap-typography.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs640audit.config.ts",
+      "why": "OBRS-640 Phase A: a hit-tested mobile tap-target (>=44x44) + rendered-text-size (>=12px) sweep of six customer routes, plus the my-bookings overflow menu and e-ticket modal. CAPTURE and not GATE because the owner's own call (docs/prod/LANE-BRIEFS.md#obrs-640) is that this lands silently for now -- Phase A measures the baseline, Phase B (a separate card) fixes it, and only then does a gate belong here. Run on the unfixed tree most of its cases fail on purpose; that failure, with the full population/violation detail the console prints, IS the AC-1 baseline. Hermetic on the gate lane's terms: it reuses e2e/support/customer-pages.ts's seedCustomerSession/seedStore, with two endpoints (/users/me, /bookings/501/tickets) fulfilled locally for the two entries that map does not carry."
+    },
+    {
       "spec": "obrs-1782-tiles-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1782capture.config.ts",
@@ -91,6 +97,12 @@
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
       "why": "OBRS-913. Measures the RENDERED size of `.admin-sidebar-pin` against WCAG 2.2 SC 2.5.8's 24x24 floor, on AdminLayout and StaffLayout, expanded and collapsed. The declared size is 28x28 and the used size was 20px: the button is a shrinkable flex item of `.admin-sidebar-panel`, whose column overflows at laptop height (measured 2252 vs 900 at 1536x900). GATE and not CAPTURE for the same reason as obrs-1693 above -- the value under test is what the cascade produces, so mocking the API destroys nothing. Not a unit test either: Karma's 800px window never enters the `min-width: 1101px` block the rule lives in, and no stylesheet parser can see a used value. It sets its own 1536x900 rather than the lane's 1280x720 because that is the viewport the card measured, and it ASSERTS the overflow precondition before measuring anything, so it fails loudly rather than going green on a viewport where the squeeze cannot happen. Also covers the Ctrl+B shortcut, including that it does NOT fire from inside the sidebar menu search."
+    },
+    {
+      "spec": "obrs-568-dropdown-panel-geometry.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-568. Asks ONE geometry contract of all four dropdown families -- dropdown-group-obrs, dropdown-obrs-passenger, dropdown-obrs and admin-dropdown -- where every other dropdown spec in this repo measures dropdown-group-obrs and nothing else, so the owner's actual question ('are they all the same') had no home. Per family and per viewport it asserts the panel's computed max-height is not none, its computed overflow-y is auto/scroll, its rendered height fits the viewport, its box stays on screen horizontally, and no row's scrollWidth exceeds its clientWidth -- the last being the OBRS-561 defect itself. GATE and not CAPTURE for the same reason as obrs-1693 and obrs-913 above: the values under test are what the cascade produces, so mocking the API destroys nothing. Not a unit test either -- `60vh` is not a number without a real viewport height and the <=576px media block never applies in Karma's fixed 800px window, which is exactly how OBRS-561 shipped past a green unit suite. Each arm asserts its own row count first, because an empty panel satisfies every 'nothing is too big' bound trivially; the station and driver arms stub 24 stops and 30 drivers, because a short list never reaches max-height and would pass on a build with no bound at all. Rules 1-2 (open down, flip only when below does not fit) are asserted for the Popper families only: admin-dropdown positions its own panel absolutely and cannot flip, which this card measured and recorded in design-system.md 3.2 rather than changing across 39 call sites. Hermetic on this lane's terms: mockPublicPageApis and seedCustomerSession for the three customer families, seedGateAdminSession + stubWalkInSellShell + its own handlers for the admin one."
     },
     {
       "spec": "obrs-970-route-population.spec.ts",
@@ -649,6 +661,18 @@
     "lane": "CAPTURE",
     "config": "playwright.obrs1774.config.ts",
     "why": "OBRS-1774. Invariant D (selected fill vs unselected sibling fill) shipped GREEN, and a green new invariant is indistinguishable from selectors that match nothing. The two contrast gates print a census of every comparison D made under CONTRAST_CENSUS=1; this photographs the same groups on the real screens in both themes and burns the measured pair, the carrier list and the verdict into each frame, taking the numbers from the same MEASURE the gates run so an image and a verdict cannot drift apart. CAPTURE and not GATE because it asserts nothing -- the enforcing checks stay customer-contrast-gate.spec.ts and staff-contrast-gate.spec.ts. Hermetic on the gate lane's terms: it reuses seedCustomerSession / seedStaffSweepSession, so every /api/** call is fulfilled in-browser."
+  },
+  {
+    "spec": "obrs-637-capture.spec.ts",
+    "lane": "CAPTURE",
+    "config": "playwright.obrs637capture.config.ts",
+    "why": "OBRS-637 BEFORE/AFTER evidence for pinning the primary CTA to the bottom of the screen below 768px, plus the measurements the card's ACs ask for: the CTA's box at five scroll offsets (AC1), its height (AC3), the last footer link still being the thing under its own centre at maximum scroll (AC2), and the CTA's computed position at 1280x720 (AC5). It also records where the report-usability FAB sits and what is under ITS centre -- the FAB is fixed in the same corner at z-index 900, and its yield only fires when the candidate's CENTRE is under the pill, which a bar spanning the screen never is. CAPTURE and not GATE because it has to run UNCHANGED against both runtimes: the claim is that the same question answers differently on the two trees, so an assertion true of only one of them would turn the BEFORE arm red instead of recording it. Two servers started by hand -- :4637 a detached worktree at the origin/dev this branch is merged up to, :4638 this branch -- which is why it declares laneTree: attach-to-operator-stack. Hermetic otherwise: it reuses e2e/support/customer-pages.ts, which fulfils every /api/** call."
+  },
+  {
+    "spec": "obrs-1808-capture.spec.ts",
+    "lane": "CAPTURE",
+    "config": "playwright.obrs1808capture.config.ts",
+    "why": "OBRS-1808 AFTER evidence for the waybill: the recipient collectionToken QR removed from both surfaces, the full-terms QR replaced on SCREEN by a link that opens the /parcel-policy component in a modal (clause 10 keeps the QR on the PRINTED copy), and the three-clause short form broken onto three lines. CAPTURE and not GATE because the verdict belongs to parcel-waybill-paper.component.spec.ts, whose 0-count assertions fail a build; this exists so the owner can see the paper and the screen side by side. Hermetic on the gate lane's terms: it seeds a synthetic staff session and fulfils every /api/** call it makes, so nothing reaches a backend. The BEFORE half is shot from a second worktree at origin/dev with an uncommitted twin of this spec, because a committed spec asserting the old DOM would fail on this branch."
   }
   ]
 }

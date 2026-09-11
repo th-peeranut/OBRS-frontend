@@ -1080,6 +1080,25 @@ export interface CreateVehicleMaintenancePayload {
   nextDueDate?: string | null;
   maintenanceStatus: string;
   notes?: string | null;
+  /** OBRS-357: set only when the form was opened from an inspection-defect
+   * notification deep-link, so the record it creates points back at the sheet
+   * that prompted it (`vehicle_maintenances.source_inspection_id`, shipped by
+   * OBRS-312 and until now unreachable from this client). Omitted on an
+   * ordinary create — and on every PUT, where omitting it PRESERVES the
+   * existing link (`VehicleMaintenanceService#updateVehicleMaintenanceById`). */
+  sourceInspectionId?: number | null;
+}
+
+/** OBRS-357: `GET /api/private/inspections/{id}/maintenance-draft` — resolves an
+ * inspection id ALONE (all an `INSPECTION_DEFECT_REPORTED` inbox row carries)
+ * into the vehicle it belongs to plus the server-composed draft text for the
+ * maintenance form the deep-link opens. The wording and the `reason` 255-char
+ * ceiling are the server's, never re-derived here. */
+export interface AdminInspectionMaintenanceDraftDto {
+  inspectionId: number;
+  vehicleId: number;
+  suggestedReason: string;
+  suggestedNotes: string;
 }
 
 /**
@@ -1834,6 +1853,17 @@ export class AdminApiService {
   ): Observable<ResponseAPI<VehicleInspectionDetailDto>> {
     return this.getRequest<VehicleInspectionDetailDto>(
       `${this.baseUrl}/private/vehicles/${vehicleId}/inspections/${id}`
+    );
+  }
+
+  // OBRS-357: the notification deep-link's resolver. Flat (not vehicle-nested)
+  // on purpose - the caller has the inspection id and nothing else, which is
+  // exactly why getVehicleInspectionById() above cannot serve this.
+  getInspectionMaintenanceDraft(
+    inspectionId: number
+  ): Observable<ResponseAPI<AdminInspectionMaintenanceDraftDto>> {
+    return this.getRequest<AdminInspectionMaintenanceDraftDto>(
+      `${this.baseUrl}/private/inspections/${inspectionId}/maintenance-draft`
     );
   }
 

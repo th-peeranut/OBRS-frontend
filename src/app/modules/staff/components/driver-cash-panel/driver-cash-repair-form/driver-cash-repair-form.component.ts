@@ -18,11 +18,13 @@ import { ExpensePayeesStore } from '../../../../admin/pages/expense-payees/expen
 import { sortPayeesByName } from '../../../../admin/pages/expense-payees/expense-payees.mappers';
 import { MaintenancePartsStore } from '../../../../admin/pages/maintenance-parts/maintenance-parts.store';
 import { sortMaintenancePartsByName } from '../../../../admin/pages/maintenance-parts/maintenance-parts.mappers';
-import { buildFieldRepairBillGroup } from '../../../../admin/pages/expenses/expense-bill-card/expense-bill-card.component';
+import {
+  buildFieldRepairBillGroup,
+  toFieldRepairBillItems,
+} from '../../../../admin/pages/expenses/expense-bill-card/expense-bill-card.component';
 import {
   ExpenseItemFormValue,
   expenseItemsTotal,
-  toNullableNumber,
 } from '../../../../admin/pages/expenses/expenses-page.mappers';
 import { DriverCashRepairBillItemReqDto } from '../../../../../shared/interfaces/driver-cash.interface';
 import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
@@ -147,17 +149,9 @@ export class DriverCashRepairFormComponent implements OnInit, OnChanges, OnDestr
     };
     this.submitRepairBill.emit({
       payeeId: raw.payeeId,
-      items: raw.items.map((item) => ({
-        // OBRS-1613: the same translation `toBillPayload` makes on the back-office path — the line
-        // carries a registry id, and the frozen code is the server's to write.
-        part: null,
-        partId: item.partId ?? null,
-        description: String(item.description ?? '').trim(),
-        quantity: toNullableNumber(item.quantity),
-        unit: String(item.unit ?? '').trim() || null,
-        unitPrice: toNullableNumber(item.unitPrice),
-        amount: toNullableNumber(item.amount) ?? 0,
-      })),
+      // OBRS-1756: the mapping moved to `toFieldRepairBillItems`, beside the group builder above,
+      // when the settlement screen became a second caller of it. Unchanged in behaviour.
+      items: toFieldRepairBillItems(raw.items),
     });
   }
 }

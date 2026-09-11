@@ -133,12 +133,13 @@ export function hasMaintenanceDateRangeError(rawFormValue: Record<string, unknow
 }
 
 export function toMaintenancePayload(
-  rawFormValue: Record<string, unknown>
+  rawFormValue: Record<string, unknown>,
+  sourceInspectionId?: number | null
 ): CreateVehicleMaintenancePayload {
   const endDate = toDateInputValue(rawFormValue['endDate'] as Date | null);
   const nextDueDate = toDateInputValue(rawFormValue['nextDueDate'] as Date | null);
 
-  return {
+  const payload: CreateVehicleMaintenancePayload = {
     reason: String(rawFormValue['reason'] ?? '').trim(),
     startDate: toDateInputValue(rawFormValue['startDate'] as Date | null),
     endDate: endDate || null,
@@ -146,4 +147,27 @@ export function toMaintenancePayload(
     maintenanceStatus: String(rawFormValue['maintenanceStatus'] ?? '').trim(),
     notes: String(rawFormValue['notes'] ?? '').trim() || null,
   };
+
+  // OBRS-357: OMITTED, not sent as null, when there is no source inspection —
+  // on PUT the backend PRESERVES an existing link when the field is absent and
+  // would clear nothing, but an explicit null is a different statement. The
+  // ordinary create/edit path must keep sending exactly what it sent before.
+  if (sourceInspectionId != null) {
+    payload.sourceInspectionId = sourceInspectionId;
+  }
+
+  return payload;
+}
+
+/**
+ * OBRS-357: a create-form pre-fill handed to the maintenance panel by the page
+ * when it was entered from an inspection-defect notification deep-link. The
+ * text is the SERVER's (`GET /api/private/inspections/{id}/maintenance-draft`),
+ * never composed here — `vehicle_maintenances.reason` is VARCHAR(255) and one
+ * side had to own that ceiling.
+ */
+export interface MaintenanceCreateDraft {
+  reason: string;
+  notes: string;
+  sourceInspectionId: number;
 }

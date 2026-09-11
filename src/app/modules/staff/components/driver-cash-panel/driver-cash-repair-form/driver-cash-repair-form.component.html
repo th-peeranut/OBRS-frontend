@@ -10,15 +10,20 @@
   @if (billForm) {
     <!-- OBRS-1630 AC2: the back-office bill card itself, in its `field` variant — the van, the date
     and the category are the box's, so the card shows the garage and the lines and nothing else.
-    `canCreatePayee` is false: adding a garage to the registry is still the owner's (the POST is
-    `hasRole('OWNER')`), and a button that 403s is worse than no button. -->
+    OBRS-1756: both create flags are TRUE now. They were false because "a button that 403s is worse
+    than no button" — `ExpensePayeeController.createPayee` and `MaintenancePartController.createPart`
+    were `hasRole('OWNER')`. That reason expired in this card: both POSTs were opened to
+    `hasAnyRole('OWNER','SALESPERSON')` on the same branch, so the button no longer 403s for the
+    person standing at the counter with an unregistered garage's slip. Rename/deactivate stay
+    OWNER-only, and both services are idempotent on the normalized name, so a duplicate press
+    resolves to the existing row rather than creating a second one. -->
     <app-expense-bill-card
       variant="field"
       [billForm]="billForm"
       [payees]="payees"
-      [canCreatePayee]="false"
+      [canCreatePayee]="true"
       [parts]="parts"
-      [canCreatePart]="false"
+      [canCreatePart]="true"
       [removable]="false"
     ></app-expense-bill-card>
   }

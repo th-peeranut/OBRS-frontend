@@ -461,7 +461,10 @@ rather than around a control, use `--admin-outline` / `$primary-lightgrey` /
 ## 3. Form controls — canonical components
 
 There are **three** dropdown implementations in the repo. Pick the canonical one;
-do not add a fourth.
+do not add a fourth. (Three *choices for a new select*. §3.2 counts **four** panel
+**families** — the two bespoke ones, `dropdown-group-obrs` and
+`dropdown-obrs-passenger`, are existing controls nobody may reach for again, but
+their open panels still have to obey the same geometry.)
 
 | Need | Canonical component | Notes |
 |---|---|---|
@@ -503,6 +506,69 @@ Every form select **MUST**:
 
 **Lock:** a spec asserting that, on open with no selection, each select renders its
 placeholder (not an option value). See §12 for the locking-spec convention.
+
+### 3.2 Dropdown panel geometry (OBRS-568)
+
+§3.1 says which component to use and what its trigger shows. This says what the
+**open panel** must do, and it is the same for every family — the owner's ask behind
+OBRS-568 was *"อยากให้ dropdown list ทั้งหมดในเว็บเหมือนกันทั้งหมด"*.
+
+1. **Open downward by default** (`bottom-start`).
+2. **Flip up only when below does not fit and above does.** Popper does this for
+   free; nothing needs writing for a Bootstrap dropdown.
+3. **Always `max-height` + `overflow-y: auto`,** at *every* width, so the panel can
+   never be taller than the viewport.
+4. **Width comes from the panel's own content,** with a floor, and never past the
+   screen edge. **Never bind the panel's width to the trigger's** — `width: 100%` +
+   `min-width: 0` on a panel whose `.dropdown` is a shrink-to-fit flex item is the
+   exact shape that caused OBRS-561.
+
+> **Why the direction is a rule and not a fixed choice.** A fixed direction is always
+> wrong at one end of the screen: pinned down it breaks at the foot of the page,
+> pinned up it breaks at the head. Measured on `/schedule-booking`, iPhone 13
+> 390×664, with the station button at y=449 of 664: flipping up shows **~10 rows** of
+> 28, forcing it down shows **~4** in the 167px left below. Rule 3 is what makes rule
+> 2 *reachable* — before OBRS-561 the panel was 1138px, which fits neither side, so
+> Popper never flipped and the panel simply ran off the screen. Do not "fix" a flip
+> by forbidding it (`data-bs-display="static"`, or shrinking `max-height` until it
+> stops): that was option C on OBRS-568 and it is rejected. If a flipped panel puts a
+> control out of reach, move the control to the trigger — that is what OBRS-1224 did.
+
+**Where each family stands** — measured 2026-09-11 on `origin/dev` `6e20f0ab`, by
+reading `getComputedStyle` in a real browser at 390×844 and 1280×720, not by reading
+the SCSS:
+
+| family | rule 3 | rule 4 | rules 1–2 |
+| --- | --- | --- | --- |
+| `dropdown-group-obrs` | `60vh` at base | ✅ | Popper |
+| `dropdown-obrs` | `60vh` at base **(OBRS-568; was mobile-only)** | ✅ | Popper |
+| `dropdown-obrs-passenger` | `60vh` **(added by OBRS-568)** | ✅ | Popper |
+| `admin-dropdown` | `280px` | ✅ | **no flip — see below** |
+
+Two things that table is deliberately not hiding:
+
+- **`admin-dropdown` does not obey rules 1–2 and cannot.** It is not a Popper
+  dropdown: it positions its own panel with `position: absolute; top: calc(100% + 8px)`,
+  so it always opens downward and never flips. That is a real deviation, left alone
+  rather than changed under a card that did not ask for it — changing it moves 39 call
+  sites. Rules 3 and 4 it does obey, which is the half that protects the screen.
+- **`280px` is not `60vh`.** Rule 3 asks for *a* bound, and both are bounds; it does
+  not ask every shell to use the same number. The admin shell is a desktop back-office
+  surface with its own density.
+
+**PrimeNG:** there is **no** `p-select` / `p-dropdown` anywhere in the app —
+measured `git grep -E "<p-(select|dropdown)([ >]|$)" -- 'src/**/*.html'` → 0 hits on
+`origin/dev` (the 4 hits for `p-selectButton` are a toggle group, not a panel).
+`SelectModule` is imported by `staff.module.ts` and used by no template. The PrimeNG
+overlays that *are* in use are `p-menu`, `p-popover` and `p-datePicker`, which are not
+option lists; if a `p-select` is ever introduced, it comes under these four rules and
+is bounded through a central override, not per page.
+
+**Lock:** `e2e/tests/obrs-568-dropdown-panel-geometry.spec.ts` (GATE lane) asserts
+rules 3–4 on all four families and rules 1–2 on the Popper ones, at 390×844 and
+1280×720. It is a browser test and not a unit test on purpose: `60vh` is not a number
+without a real viewport height, and a `@media (max-width: 576px)` block never applies
+in Karma's fixed 800px window — which is how OBRS-561 shipped past a green unit suite.
 
 ---
 

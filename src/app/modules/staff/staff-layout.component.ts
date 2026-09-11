@@ -85,6 +85,16 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
       if (environment.features.fleetMap) {
         items.push({ path: 'fleet-map', labelKey: 'STAFF.NAV.FLEET_MAP', icon: 'map', section: 'operations' });
       }
+      // OBRS-1756: REPLACES the 'boarding' entry that stood in the shared
+      // salesperson+driver block below. Salesperson-only, matching the route's own
+      // requiredRoles — nav-reachability.spec.ts enforces that pairing, and settling
+      // a day is counter work a driver never does.
+      //
+      // ⛔ The /staff/boarding routes are NOT removed. The passenger list is still
+      // reached from ตารางเดินรถ and ตารางของฉัน (staff-schedules-page:328,
+      // driver-schedules-page:78) — only the menu door closed, because the counter
+      // wanted a DAY to settle, not a round-by-round picker.
+      items.push({ path: 'settlement', labelKey: 'STAFF.NAV.SETTLEMENT', icon: 'receipt_long', section: 'operations' });
     }
 
     if (isDriver) {
@@ -92,13 +102,13 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
     }
 
     if (isSalesperson || isDriver) {
-      items.push({ path: 'boarding', labelKey: 'STAFF.NAV.BOARDING', icon: 'how_to_reg', section: 'operations' });
       // OBRS-1147: the holder's own ค่าหัว. Both roles, matching the route's own
       // requiredRoles exactly — nav-reachability.spec.ts enforces that pairing,
       // and AC-4 is the reason the driver is included (a driver simply has no
       // PER_HEAD lines today and sees zero, which is the truthful answer).
-      // Filed under 'operations' rather than a new one-item section: it is the
-      // only nav entry both roles share besides boarding.
+      // Filed under 'operations' rather than a new one-item section. OBRS-1756: it
+      // is now the ONLY nav entry both roles share in this section — 'boarding' used
+      // to be the other one and its item was replaced by 'settlement' above.
       items.push({ path: 'my-earnings', labelKey: 'STAFF.NAV.MY_EARNINGS', icon: 'payments', section: 'operations' });
     }
 

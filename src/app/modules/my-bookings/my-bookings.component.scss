@@ -67,6 +67,7 @@
   font-size: $font-size-sm;
   cursor: pointer;
   transition: all 0.15s ease;
+  @include tap-target-min; // OBRS-640
 
   &:hover {
     border-color: $primary-blue;
@@ -226,6 +227,7 @@
   justify-content: center;
   width: 36px;
   height: 36px;
+  @include tap-target-min; // OBRS-640
   padding: 0;
   // OBRS-772: icon-only (a bare `bi-three-dots-vertical`), so the boundary is
   // the only thing that says a control is here.
@@ -265,6 +267,12 @@
   gap: $space-2xs;
   padding: $space-3xs $space-xs; // tight + equal vertical (top==bottom)
   width: 100%;
+  // OBRS-640: rows measured 29px. +1px over the floor -- these rows stack
+  // with zero gap between them, and a probe exactly on an exact-44px row's
+  // shared boundary with the next row lands ambiguously between the two
+  // (measured live: the audit's own 0.5px inset margin, sized for an
+  // isolated control, is not enough at a shared edge).
+  @include tap-target-min($tap-target-min + 1px);
 
   &__icon-slot {
     flex: 0 0 auto;
