@@ -166,6 +166,12 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * called. */
   protected searchTerm = '';
 
+  /** OBRS-374: pickup-stop filter for the on-screen table (`app-admin-dropdown` as a
+   * plain filter, not a form control). `''` means "all stops" — same empty-is-all
+   * mechanic as `searchTerm`, and matches the placeholder-selectable dropdown's own
+   * clear-back-to-'' behaviour. */
+  protected stopFilter = '';
+
   protected isRefreshing = false;
   protected errorMessage = '';
   protected readonly skeletonRows = Array.from({ length: 5 });
@@ -327,6 +333,9 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
       // component mounted while the operator switches trips, so a term left in the search box
       // would silently filter the NEXT trip's manifest and photograph as "this bus is empty".
       this.searchTerm = '';
+      // OBRS-374: same reason — a stale stop filter naming a stop the new trip doesn't
+      // have would render an empty table that photographs as "this bus has nobody on it".
+      this.stopFilter = '';
       this.store.setScheduleId(this.scheduleId);
       void this.store.refresh();
       void this.loadTripHeader(this.scheduleId);
@@ -646,15 +655,33 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * deliberately stay on the unfiltered `items` — a printed manifest and a boarded count
    * must describe the whole bus, never whatever the driver last typed in the search box. */
   protected get filteredItems(): BoardingListItemDto[] {
+    const base = this.stopFilter ? this.items.filter((i) => i.fromStop === this.stopFilter) : this.items;
     const term = this.searchTerm.trim().toLowerCase();
     if (!term) {
-      return this.items;
+      return base;
     }
-    return this.items.filter((item) =>
+    return base.filter((item) =>
       [item.bookingNumber, item.passengerName, item.seatNumber, item.ticketNumber].some(
         (field) => field?.toLowerCase().includes(term)
       )
     );
+  }
+
+  /** OBRS-374: distinct pickup stops, first-appearance order (matches the order the
+   * on-screen groups render in — no `.sort()`). Derived from `items`, NOT
+   * `filteredItems`: the dropdown's own options must not shrink once a stop is picked,
+   * or the driver would have no way back to "all stops". `this.items` is read only —
+   * never mutated (the store owns that array reference). */
+  protected get stopOptions(): { value: string }[] {
+    const seen = new Set<string>();
+    const options: { value: string }[] = [];
+    for (const item of this.items) {
+      if (!seen.has(item.fromStop)) {
+        seen.add(item.fromStop);
+        options.push({ value: item.fromStop });
+      }
+    }
+    return options;
   }
 
   /** OBRS-1659: the bus is not empty, the search just matched nothing — a different
@@ -665,6 +692,18 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
 
   protected get boardedCount(): number {
     return this.items.filter((item) => this.isBoarded(item)).length;
+  }
+
+  /** OBRS-374: per-stop-group counts for the group header row (on-screen and print).
+   * Takes `source` rather than reading `items`/`filteredItems` itself so the SAME
+   * helper serves the on-screen header (passed `filteredItems`) and the print header
+   * (passed `items`, per OBRS-1659's whole-bus rule for the print sheet). */
+  protected groupTotalCount(source: BoardingListItemDto[], stop: string): number {
+    return source.filter((i) => i.fromStop === stop).length;
+  }
+
+  protected groupBoardedCount(source: BoardingListItemDto[], stop: string): number {
+    return source.filter((i) => i.fromStop === stop && this.isBoarded(i)).length;
   }
 
   protected isUnboarding(item: BoardingListItemDto): boolean {

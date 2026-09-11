@@ -3561,6 +3561,12 @@
         "NO_MATCH_TITLE": "未找到匹配的旅客",
         "NO_MATCH_BODY": "本班车上没有与“{{term}}”匹配的记录。请与旅客核对订票号，可能属于其他班次。"
       },
+      "STOP_FILTER": {
+        "PLACEHOLDER": "接载站点：全部"
+      },
+      "STOP_GROUP": {
+        "COUNT": "已上车 {{boarded}}/{{total}}"
+      },
       "EMPTY_TITLE": "暂无旅客",
       "EMPTY_BODY": "本班次暂无登车记录。",
       "BOARDED": "已登车",

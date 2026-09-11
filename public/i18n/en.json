@@ -3561,6 +3561,12 @@
         "NO_MATCH_TITLE": "No passenger matches that",
         "NO_MATCH_BODY": "Nothing on this bus matches \"{{term}}\". Check the booking number with the passenger — it may be for a different trip."
       },
+      "STOP_FILTER": {
+        "PLACEHOLDER": "Pickup stop: All"
+      },
+      "STOP_GROUP": {
+        "COUNT": "{{boarded}}/{{total}} boarded"
+      },
       "EMPTY_TITLE": "No passengers yet",
       "EMPTY_BODY": "No boarding records found for this schedule.",
       "BOARDED": "Boarded",
