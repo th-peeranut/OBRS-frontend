@@ -1,6 +1,7 @@
 import {
   parseBlobErrorCode,
   parseContentDispositionFilename,
+  sanitizeDownloadFilename,
   saveBlob,
 } from './blob-download';
 
@@ -123,6 +124,61 @@ describe('parseBlobErrorCode', () => {
   });
 });
 
+/**
+ * OBRS-1802 security review, L1. Every name these functions save came off the
+ * wire, and what kept that safe was a sanitiser in the BACKEND
+ * (`ETicketPdfService.java`'s `replaceAll("[^A-Za-z0-9_-]", "-")`) — a real
+ * protection, but an invariant of another repository that nothing here stated.
+ *
+ * ⚠️ Scope, stated rather than implied: these specs assert the SANITISER's
+ * output. They do not test what a real browser does with a `download` attribute
+ * — Karma cannot observe the file that lands on disk, and `anchor.download`
+ * reads back whatever was assigned. The claim being locked is "this string never
+ * reaches the attribute", not "the browser would have written it safely".
+ */
+describe('sanitizeDownloadFilename', () => {
+  it('strips forward slashes, so a relative path cannot survive as one', () => {
+    expect(sanitizeDownloadFilename('../../etc/passwd')).toBe('..-..-etc-passwd');
+  });
+
+  it('strips backslashes too — the separator on the platform this app is built on', () => {
+    expect(sanitizeDownloadFilename('..\\..\\Windows\\System32\\x.dll')).toBe(
+      '..-..-Windows-System32-x.dll'
+    );
+  });
+
+  /** CR and LF live in the C0 range. A name carrying them is how a header or a
+   *  log line gets a second line injected into it downstream. */
+  it('strips CR, LF, NUL and the rest of the C0 range', () => {
+    expect(sanitizeDownloadFilename('tick\r\net.pdf')).toBe('tick--et.pdf');
+    expect(sanitizeDownloadFilename('tick\u0000et.pdf')).toBe('tick-et.pdf');
+    expect(sanitizeDownloadFilename('tick\u001bet.pdf')).toBe('tick-et.pdf');
+  });
+
+  /**
+   * The other half of the claim, and the reason this is a deny list of two
+   * dangerous classes rather than an allow list of safe ones: this app ships
+   * Thai and Chinese documents, and an allow list would have to enumerate every
+   * script a filename may legitimately be written in.
+   */
+  it('leaves a legitimate name completely alone', () => {
+    for (const name of [
+      'e-ticket-BK-42.pdf',
+      'bookings report.csv',
+      'bookings-2026-07-08.csv',
+      'ตั๋ว.pdf',
+      '电子票.pdf',
+      'rapport-café.xlsx',
+    ]) {
+      expect(sanitizeDownloadFilename(name)).toBe(name);
+    }
+  });
+
+  it('is a no-op on an empty name', () => {
+    expect(sanitizeDownloadFilename('')).toBe('');
+  });
+});
+
 describe('saveBlob', () => {
   it('hands the browser an object URL on a download anchor and revokes it', () => {
     const anchor = document.createElement('a');
@@ -142,5 +198,22 @@ describe('saveBlob', () => {
     expect(anchor.download).toBe('e-ticket-BK-42.pdf');
     expect(click).toHaveBeenCalledTimes(1);
     expect(revoke).toHaveBeenCalledWith('blob:saved');
+  });
+
+  /** Sanitised HERE, at the one place the value reaches the browser, so a later
+   *  caller cannot forget to do it. */
+  it('never hands the browser an unsanitised server filename', () => {
+    const anchor = document.createElement('a');
+    const realCreateElement = document.createElement.bind(document);
+    spyOn(anchor, 'click');
+    spyOn(document, 'createElement').and.callFake((tag: string) =>
+      tag === 'a' ? anchor : realCreateElement(tag)
+    );
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:saved');
+    spyOn(URL, 'revokeObjectURL');
+
+    saveBlob(new Blob(['x']), '../../e-ticket\r\n.pdf');
+
+    expect(anchor.download).toBe('..-..-e-ticket--.pdf');
   });
 });

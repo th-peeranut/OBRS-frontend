@@ -249,6 +249,50 @@ describe('ETicketCardComponent', () => {
       expect(JSON.stringify(options)).not.toContain('081');
     });
 
+    /**
+     * OBRS-1802 security review, L3. The request used to fall back to
+     * `localStorage['active_booking_number']` — whatever checkout last wrote —
+     * when the card had no number of its own. Not an escalation (both bookings
+     * are this browser's and the server still matches the phone), but it sent the
+     * customer's phone number paired with an identifier they did not choose, and
+     * spent their own per-IP quota on the wrong lookup. Lane 3 now refuses
+     * instead of guessing.
+     */
+    it('never asks about a booking other than the one on the card', async () => {
+      bookingServiceStub.canDownloadETicketByBookingId.and.returnValue(false);
+      bookingServiceStub.getActiveBookingNumber.and.returnValue('BK-SOMEONE-ELSES');
+      component.bookingNumber = '-';
+
+      await component.downloadTicketPdf();
+
+      expect(alertServiceStub.promptText).not.toHaveBeenCalled();
+      expect(
+        bookingServiceStub.downloadETicketPdfByCredential
+      ).not.toHaveBeenCalled();
+      // The stored number must not be reachable from this lane at all — not as a
+      // request argument, and not as dialog copy either.
+      expect(bookingServiceStub.getActiveBookingNumber).not.toHaveBeenCalled();
+      expect(alertServiceStub.toast).toHaveBeenCalledTimes(1);
+      expect(alertServiceStub.toast).toHaveBeenCalledWith(
+        'E_TICKET.DOWNLOAD_FAILED',
+        'error'
+      );
+      expect(component.isDownloadingTicket).toBeFalse();
+    });
+
+    it('asks about the card\'s own booking even when a DIFFERENT one is stored', async () => {
+      bookingServiceStub.canDownloadETicketByBookingId.and.returnValue(false);
+      bookingServiceStub.getActiveBookingNumber.and.returnValue('BK-SOMEONE-ELSES');
+      component.bookingNumber = 'BK-ON-SCREEN';
+      captureSavedAnchor();
+
+      await component.downloadTicketPdf();
+
+      expect(
+        bookingServiceStub.downloadETicketPdfByCredential
+      ).toHaveBeenCalledOnceWith('BK-ON-SCREEN', '0812345678');
+    });
+
     it('a dismissed phone dialog sends nothing and leaves the button usable', async () => {
       bookingServiceStub.canDownloadETicketByBookingId.and.returnValue(false);
       alertServiceStub.promptText.and.resolveTo(null);

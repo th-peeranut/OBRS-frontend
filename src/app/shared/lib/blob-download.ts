@@ -30,14 +30,44 @@ export function parseContentDispositionFilename(header: string | null): string |
   return plainMatch ? plainMatch[1].trim() : null;
 }
 
-/** blob -> object URL -> hidden `<a download>` -> revoke. */
+/**
+ * Path separators and control characters, stripped from any filename that came
+ * off the wire (OBRS-1802 security review, L1).
+ *
+ * <p>The names these functions save are SERVER-supplied - they arrive in
+ * `Content-Disposition` - and what kept that safe was a sanitiser at the other
+ * end of the wire (`ETicketPdfService.java`'s
+ * `replaceAll("[^A-Za-z0-9_-]", "-")`). That is a real protection, but it is an
+ * invariant of a different repository that nothing on this side states, so this
+ * side states it: separators close traversal, and the C0 range (which includes
+ * CR and LF) closes header/line injection into the saved name.
+ *
+ * <p>Deliberately a DENY list of the two dangerous classes, not an allow list:
+ * an allow list would have to know every script a filename may legitimately be
+ * written in, and this app ships Thai and Chinese documents. Spaces, dots,
+ * accents and CJK all survive untouched.
+ */
+const UNSAFE_FILENAME_CHARS = /[\\/\x00-\x1f]/g;
+
+/**
+ * blob -> object URL -> hidden `<a download>` -> revoke.
+ *
+ * <p>`filename` is sanitised here rather than at each call site: this is the one
+ * place the value reaches the browser, so a later caller cannot forget.
+ */
 export function saveBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = filename;
+  anchor.download = sanitizeDownloadFilename(filename);
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+/** Exported for its own spec - `anchor.download` cannot be read back through a
+ *  meaningful assertion about what a real browser would then write to disk. */
+export function sanitizeDownloadFilename(filename: string): string {
+  return filename.replace(UNSAFE_FILENAME_CHARS, '-');
 }
 
 /**

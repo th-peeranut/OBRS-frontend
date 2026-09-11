@@ -121,6 +121,33 @@ recorded instead of guessed at:
 Both are one real-device check, and both are cheaper to fix once observed than to
 pre-empt with a branch nobody can test. QA owns that check.
 
+### Two invariants this side now states itself (security review, 2026-09-11)
+
+Both were safe before, and in both cases what made them safe was a coincidence
+rather than a statement — which is the part worth fixing.
+
+- **The saved filename is sanitised here, not only in the backend.** `saveBlob`
+  strips path separators and the C0 range (CR/LF/NUL included) via
+  `sanitizeDownloadFilename`. Traversal and extension-spoofing were already
+  closed by `ETicketPdfService.java`'s `replaceAll("[^A-Za-z0-9_-]", "-")` — a
+  real protection, but an invariant of *another repository* that nothing on this
+  side asserted, on a value that arrives over the wire. A deny list of the two
+  dangerous classes, deliberately not an allow list: this app ships Thai and
+  Chinese documents, and an allow list would have to enumerate every script a
+  filename may legitimately use. ⚠️ The specs assert the **sanitiser's output**.
+  They do not test what a browser does with a `download` attribute — Karma cannot
+  see the file that lands on disk. The claim locked is "this string never reaches
+  the attribute", not "the browser would have written it safely".
+- **Lane 3 asks only about the booking on the card.** It used to fall back to
+  `localStorage['active_booking_number']`, i.e. whatever checkout last wrote. Not
+  an escalation — both bookings are this browser's and the server still has to
+  match the phone — but it let a customer type the phone for the booking in front
+  of them while the request asked about a different one, sending PII paired with
+  an identifier they did not choose and spending their own per-IP quota on the
+  wrong lookup. With no number on the card, lane 3 now refuses instead of
+  guessing. The dialog's prefill is unchanged; it is the *request* that no longer
+  falls back.
+
 ## Consequences
 
 - The frontend no longer decides what an e-ticket looks like when printed; the

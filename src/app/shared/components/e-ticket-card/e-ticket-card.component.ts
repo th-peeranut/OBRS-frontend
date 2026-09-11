@@ -332,12 +332,26 @@ export class ETicketCardComponent implements OnChanges {
       : null;
   }
 
-  /** The number on the card if it has one, else the one checkout last wrote. */
+  /**
+   * The booking number ON THIS CARD, or `''`. No fallback (OBRS-1802 security
+   * review, L3).
+   *
+   * <p>It used to fall back to `BookingService.getActiveBookingNumber()`, i.e.
+   * `localStorage['active_booking_number']`, i.e. whatever checkout last wrote.
+   * That is not a privilege escalation - both bookings belong to this browser and
+   * the server still has to match the phone number - but it let a customer type
+   * the phone for the booking IN FRONT OF THEM while the request asked about a
+   * different one. Two concrete costs: their phone number (PII) goes out paired
+   * with an identifier they did not choose, and the lookup spends their own
+   * per-IP quota on the wrong booking, so the 429 lands on the request they
+   * actually wanted.
+   *
+   * <p>The card always has this number when it is rendering a ticket, so `''` is
+   * the degenerate render - and `downloadByCredential` refuses rather than
+   * guessing.
+   */
   private resolveBookingNumber(): string {
     const onCard = this.bookingNumber?.trim();
-    if (onCard && onCard !== '-') {
-      return onCard;
-    }
-    return this.bookingService.getActiveBookingNumber() ?? '';
+    return onCard && onCard !== '-' ? onCard : '';
   }
 }
