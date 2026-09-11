@@ -649,6 +649,12 @@
     "lane": "CAPTURE",
     "config": "playwright.obrs1774.config.ts",
     "why": "OBRS-1774. Invariant D (selected fill vs unselected sibling fill) shipped GREEN, and a green new invariant is indistinguishable from selectors that match nothing. The two contrast gates print a census of every comparison D made under CONTRAST_CENSUS=1; this photographs the same groups on the real screens in both themes and burns the measured pair, the carrier list and the verdict into each frame, taking the numbers from the same MEASURE the gates run so an image and a verdict cannot drift apart. CAPTURE and not GATE because it asserts nothing -- the enforcing checks stay customer-contrast-gate.spec.ts and staff-contrast-gate.spec.ts. Hermetic on the gate lane's terms: it reuses seedCustomerSession / seedStaffSweepSession, so every /api/** call is fulfilled in-browser."
+  },
+  {
+    "spec": "obrs-637-capture.spec.ts",
+    "lane": "CAPTURE",
+    "config": "playwright.obrs637capture.config.ts",
+    "why": "OBRS-637 BEFORE/AFTER evidence for pinning the primary CTA to the bottom of the screen below 768px, plus the measurements the card's ACs ask for: the CTA's box at five scroll offsets (AC1), its height (AC3), the last footer link still being the thing under its own centre at maximum scroll (AC2), and the CTA's computed position at 1280x720 (AC5). It also records where the report-usability FAB sits and what is under ITS centre -- the FAB is fixed in the same corner at z-index 900, and its yield only fires when the candidate's CENTRE is under the pill, which a bar spanning the screen never is. CAPTURE and not GATE because it has to run UNCHANGED against both runtimes: the claim is that the same question answers differently on the two trees, so an assertion true of only one of them would turn the BEFORE arm red instead of recording it. Two servers started by hand -- :4637 a detached worktree at the origin/dev this branch is merged up to, :4638 this branch -- which is why it declares laneTree: attach-to-operator-stack. Hermetic otherwise: it reuses e2e/support/customer-pages.ts, which fulfils every /api/** call."
   }
   ]
 }

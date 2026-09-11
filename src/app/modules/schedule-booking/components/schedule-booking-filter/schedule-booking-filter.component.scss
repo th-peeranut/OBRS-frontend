@@ -43,11 +43,23 @@
 // The page gives back the height it no longer occupies -- see the matching
 // breakpoint in schedule-booking.component.scss (AC2).
 @media (max-width: 768px) {
+  // `--app-bottom-reserved` is the PDPA consent bar's own measured height,
+  // published on `body` by analytics-consent-banner.component.ts. That bar is
+  // `position: fixed; z-index: 1000`, i.e. over this one, and the padding it puts
+  // on `body` moves flow content only -- it cannot move anything fixed. Without
+  // this term the primary button is BEHIND the consent bar for every first-time
+  // visitor on a phone, which is how obrs-639-stepper-geometry.spec.ts found it:
+  // four mobile cases timed out clicking `.btn-next` with
+  // `consent-banner__btn--accept ... intercepts pointer events`. The fallback is
+  // `0px`, which is every visit after the question is answered.
   .station-section > .btn-search {
     position: fixed;
     left: $space-sm;
     right: $space-sm;
-    bottom: calc(#{$space-sm} + env(safe-area-inset-bottom, 0px));
+    bottom: calc(
+      #{$space-sm} + env(safe-area-inset-bottom, 0px) +
+        var(--app-bottom-reserved, 0px)
+    );
     width: auto;
     margin-top: 0;
     z-index: 100;

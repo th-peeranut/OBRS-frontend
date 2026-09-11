@@ -78,17 +78,14 @@ export class PassengerInfoComponent {
     );
   }
 
-  // OBRS-637. The summary's action bar is `position: fixed` below 768px, and the
-  // report-usability FAB is parked in the same corner at `z-index: 900` -- above
-  // it. The FAB steps aside for a clickable element under it, but only when that
-  // element's CENTRE is under the pill, which a full-width bar's never is. The
-  // class is what tells the FAB to sit higher while this page is open; it is
-  // removed on destroy because the FAB outlives this component (app.component).
-  ngOnDestroy(): void {
-    document.body.classList.remove('has-sticky-cta');
-  }
-
   ngOnInit(): void {
+    // OBRS-637. The summary's action bar is `position: fixed` below 768px, and
+    // the report-usability FAB is parked in the same corner at `z-index: 900` --
+    // above it. The FAB does step aside for a clickable element under it, but
+    // only when that element's CENTRE is under the pill, which a bar spanning
+    // the screen never is. This class is what tells the FAB to sit higher while
+    // this page is open; `ngOnDestroy` takes it off again, because the FAB
+    // outlives this component (it is rendered by app.component).
     document.body.classList.add('has-sticky-cta');
     // OBRS-867 funnel step 4. This is the step the card names as decisive for
     // OBRS-872: it is the first screen behind AuthGuard's `requireAuth` path
@@ -106,6 +103,10 @@ export class PassengerInfoComponent {
     // — so a selection restored from the pre-login tab is re-checked here before
     // any seat is offered (AC3). No-op for a selection made in this tab.
     this.store.dispatch(revalidateRestoredScheduleBooking());
+  }
+
+  ngOnDestroy(): void {
+    document.body.classList.remove('has-sticky-cta');
   }
 
   onPassengerFormValidityChange(isValid: boolean): void {
