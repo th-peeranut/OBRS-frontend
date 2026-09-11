@@ -176,26 +176,6 @@ export class ETicketCardComponent implements OnChanges {
   }
 
   /**
-   * OBRS-1802. The e-ticket is now the PDF the BACKEND renders, not a
-   * client-side rasterisation of this card - so what the customer keeps is the
-   * printable document the server is the authority on, identical on every
-   * device, instead of a screenshot of whatever this browser happened to lay
-   * out. It replaces `downloadTicketImage()`, whose client-side canvas-
-   * rasteriser dependency left the tree with it (OBRS-1802 - do not reintroduce
-   * one; `git log -S` on this file names it).
-   *
-   * <p>Three doors, one document, and the CREDENTIAL picks the door - see
-   * `BookingService.downloadETicketPdf`. A guest who is still holding the token
-   * checkout handed them types nothing at all; one who is not (came back later,
-   * another device) is asked for the phone number they booked with, and so is a
-   * guest whose token has aged out mid-session.
-   *
-   * <p>The pending affordance is the existing one verbatim
-   * (`isDownloadingTicket` -> `[disabled]` + `[appPending]`), set before the
-   * first call and cleared in `finally` so it also clears when the customer
-   * dismisses the phone dialog.
-   */
-  /**
    * Whether a download could actually succeed — which is what decides whether
    * the button is offered at all (OBRS-1802 follow-up). It asks which LANE is
    * still open, not whether this render looks complete.
@@ -225,6 +205,26 @@ export class ETicketCardComponent implements OnChanges {
     );
   }
 
+  /**
+   * OBRS-1802. The e-ticket is now the PDF the BACKEND renders, not a
+   * client-side rasterisation of this card - so what the customer keeps is the
+   * printable document the server is the authority on, identical on every
+   * device, instead of a screenshot of whatever this browser happened to lay
+   * out. It replaces `downloadTicketImage()`, whose client-side canvas-
+   * rasteriser dependency left the tree with it (OBRS-1802 - do not reintroduce
+   * one; `git log -S` on this file names it).
+   *
+   * <p>Three doors, one document, and the CREDENTIAL picks the door - see
+   * `BookingService.downloadETicketPdf`. A guest who is still holding the token
+   * checkout handed them types nothing at all; one who is not (came back later,
+   * another device) is asked for the phone number they booked with, and so is a
+   * guest whose token has aged out mid-session.
+   *
+   * <p>The pending affordance is the existing one verbatim
+   * (`isDownloadingTicket` -> `[disabled]` + `[appPending]`), set before the
+   * first call and cleared in `finally` so it also clears when the customer
+   * dismisses the phone dialog.
+   */
   async downloadTicketPdf(): Promise<void> {
     if (this.bookingId == null || this.isDownloadingTicket) {
       return;
