@@ -405,4 +405,117 @@ describe('ParcelDeliveryListPageComponent', () => {
     component.ngOnInit();
     expect(() => component.ngOnDestroy()).not.toThrow();
   });
+
+  // ---- OBRS-1811: resend the arrival notification -----------------------------------------
+
+  describe('OBRS-1811 — arrival-notification resend', () => {
+    function componentWith(staffApi: any, store: any, alertService: any = makeAlertStub()) {
+      const component = new ParcelDeliveryListPageComponent(
+        makeRouteStub('42'),
+        staffApi,
+        alertService,
+        createTranslateStub(),
+        store
+      );
+      component.ngOnInit();
+      return component;
+    }
+
+    it('badges a failed notification, and stays SILENT when no attempt was recorded — absent is not success', () => {
+      const component = componentWith({} as any, makeStoreStub());
+
+      expect(component['arrivalNotificationWarning'](makeRow({ arrivalNotificationResult: 'failed' })))
+        .toBe('STAFF.PARCEL_DELIVERY.NOTIFY.FAILED');
+      expect(component['arrivalNotificationWarning'](makeRow({ arrivalNotificationResult: 'no_phone' })))
+        .toBe('STAFF.PARCEL_DELIVERY.NOTIFY.NO_PHONE');
+      expect(component['arrivalNotificationWarning'](makeRow({ arrivalNotificationResult: 'sent' })))
+        .toBeNull();
+      // The row a pre-migration backend sends: no field at all.
+      expect(component['arrivalNotificationWarning'](makeRow())).toBeNull();
+      expect(component['arrivalNotificationWarning'](makeRow({ arrivalNotificationResult: null })))
+        .toBeNull();
+    });
+
+    it('sends an EMPTY body when the number was not changed — a no-op "correction" would write an audit row claiming an edit that never happened', () => {
+      const staffApi = {
+        resendParcelArrivalNotification: jasmine.createSpy().and.returnValue(
+          of({ code: 200, message: 'OK', data: { result: 'sent', attemptNo: 2, recipientPhone: '0898765432', phoneCorrected: false } })
+        ),
+      } as any;
+      const component = componentWith(staffApi, makeStoreStub([makeRow({ deliveryStatus: 'arrived_notified' })]));
+
+      component['openResendDialog'](makeRow({ deliveryStatus: 'arrived_notified' }));
+      component['confirmResend']('0898765432');
+
+      expect(staffApi.resendParcelArrivalNotification).toHaveBeenCalledWith(1, {});
+    });
+
+    it('sends the corrected number when it differs, and writes the SERVER echo back into the row', () => {
+      const staffApi = {
+        resendParcelArrivalNotification: jasmine.createSpy().and.returnValue(
+          of({ code: 200, message: 'OK', data: { result: 'sent', attemptNo: 2, recipientPhone: '0866666666', phoneCorrected: true } })
+        ),
+      } as any;
+      const store = makeStoreStub([makeRow({ deliveryStatus: 'arrived_notified' })]);
+      const component = componentWith(staffApi, store);
+
+      component['openResendDialog'](makeRow({ deliveryStatus: 'arrived_notified' }));
+      component['confirmResend']('0866666666');
+
+      expect(staffApi.resendParcelArrivalNotification)
+        .toHaveBeenCalledWith(1, { recipientPhone: '0866666666' });
+      expect(component['rows'][0].recipientPhone).toBe('0866666666');
+      expect(component['rows'][0].arrivalNotificationResult).toBe('sent');
+      expect(component['resendDialogParcel']).toBeNull();
+    });
+
+    it('a provider refusal is reported as an ERROR toast and leaves the row badged failed — never "sent"', () => {
+      const alertService = makeAlertStub();
+      const staffApi = {
+        resendParcelArrivalNotification: jasmine.createSpy().and.returnValue(
+          of({ code: 200, message: 'OK', data: { result: 'failed', attemptNo: 2, recipientPhone: '0898765432', phoneCorrected: false } })
+        ),
+      } as any;
+      const component = componentWith(staffApi, makeStoreStub([makeRow({ deliveryStatus: 'arrived_notified' })]), alertService);
+
+      component['openResendDialog'](makeRow({ deliveryStatus: 'arrived_notified' }));
+      component['confirmResend']('0898765432');
+
+      expect(component['rows'][0].arrivalNotificationResult).toBe('failed');
+      expect(alertService.toast).toHaveBeenCalledWith(
+        'STAFF.PARCEL_DELIVERY.NOTIFY.RESEND_NOT_SENT',
+        'error'
+      );
+    });
+
+    it('maps the daily-cap 429 to its own copy, keeps the dialog open, and does NOT mutate the row', () => {
+      const store = makeStoreStub([makeRow({ deliveryStatus: 'arrived_notified' })]);
+      const staffApi = {
+        resendParcelArrivalNotification: jasmine.createSpy().and.returnValue(
+          throwError(() => ({
+            error: { errorCode: errorCodeFromMessageKey('parcel.resend.daily-limit-phone') },
+          }))
+        ),
+      } as any;
+      const component = componentWith(staffApi, store);
+
+      component['openResendDialog'](makeRow({ deliveryStatus: 'arrived_notified' }));
+      component['confirmResend']('0898765432');
+
+      expect(component['resendErrorKey']).toBe('STAFF.PARCEL_DELIVERY.ERROR.RESEND_LIMIT_PHONE');
+      expect(component['resendDialogParcel']).not.toBeNull();
+      expect(component['isResending']).toBeFalse();
+      expect(store.mutate).not.toHaveBeenCalled();
+    });
+
+    it('refuses to open on an unpaid row — the guard lives in the component, not only in a disabled attribute', () => {
+      const staffApi = { resendParcelArrivalNotification: jasmine.createSpy() } as any;
+      const component = componentWith(staffApi, makeStoreStub());
+
+      component['openResendDialog'](makeRow({ deliveryStatus: 'arrived_notified', bookingStatus: 'expired' }));
+
+      expect(component['resendDialogParcel']).toBeNull();
+      expect(staffApi.resendParcelArrivalNotification).not.toHaveBeenCalled();
+    });
+  });
 });

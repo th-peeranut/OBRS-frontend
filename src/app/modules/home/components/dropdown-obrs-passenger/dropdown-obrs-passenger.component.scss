@@ -8,6 +8,7 @@
 
   min-width: 120px;
   padding: $space-xs;
+  @include tap-target-min; // OBRS-640: was 26px tall
 
   background-color: transparent;
 

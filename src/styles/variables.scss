@@ -215,6 +215,27 @@ $radius-xl:     24px;
 $radius-pill:   999px;   // the single input shape (design-system §5)
 $radius-circle: 50%;
 
+// Tap target — OBRS-640 mobile floor. Card AC: interactive control >= 44x44,
+// invisible expansion (padding/hit-area) preferred over a bigger glyph.
+$tap-target-min: 44px;
+
+@mixin tap-target-min($size: $tap-target-min) {
+  min-width: $size;
+  min-height: $size;
+}
+
+// OBRS-640 round 2 (AC-2/AC-4). The `.form-check-inline .form-check-label` tap-target
+// rule needed by every Bootstrap inline radio/checkbox row -- shared here so the two
+// consumer components include one rule instead of each pasting its own copy.
+@mixin form-check-inline-tap-target {
+  .form-check-inline .form-check-label {
+    display: inline-flex;
+    align-items: center;
+    column-gap: $space-3xs;
+    @include tap-target-min;
+  }
+}
+
 // Field height — OBRS-1189. The search bar's segments carry their label INSIDE
 // the frame, which is a second text row the 48px field never had to hold. One
 // token because four places have to agree on it or the bar stops being a bar:

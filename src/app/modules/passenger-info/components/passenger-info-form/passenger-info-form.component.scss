@@ -73,6 +73,17 @@
   height: 48px;
 }
 
+// OBRS-640 round 2 (AC-2). Covers the fare-category radios, the "use booker info"
+// checkbox and the gender radios below -- all the same `.form-check.form-check-inline`
+// pattern, all with a `for`/`id`-associated label already. The glyph stays 18x18 --
+// Bootstrap's `appearance: none` input cannot grow past its border without growing the
+// visible circle -- so the invisible tap target grows on the label instead. A single
+// row of inline options, not a stacked list, so unlike the footer this needs no
+// negative-margin clawback: growing one row's height does not compound into its
+// neighbours. Rule shared with booker-info-form via `form-check-inline-tap-target`
+// (variables.scss) rather than pasted here a second time.
+@include form-check-inline-tap-target;
+
 .line {
   flex: 1;
   height: 1px;
@@ -120,6 +131,7 @@
   align-items: center;
   gap: $space-3xs;
   padding: $space-3xs $space-sm;
+  @include tap-target-min; // OBRS-640
   border-radius: $radius-pill;
   border: 1px solid $primary-lightgrey;
   background: $primary-white;

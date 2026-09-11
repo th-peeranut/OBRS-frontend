@@ -86,6 +86,19 @@
   padding: 0;
   border: 0;
   line-height: 0;
+  position: relative; // OBRS-640: anchor for the tap-target overlay below
+
+  // OBRS-640: the button's own box drives the seam-straddling margin math above
+  // (half its own width/height), so growing IT would desync that geometry. An
+  // invisible overlay reaches the 44x44 floor without changing the disc's own
+  // size -- `inset` is negative (grows outward) whenever the disc is smaller
+  // than the floor, and 0 (a no-op) if a call site ever sizes it at/above 44px.
+  &::before {
+    content: "";
+    position: absolute;
+    inset: min(0px, calc((var(--station-swap-icon-size, 32px) - $tap-target-min) / 2));
+    background: transparent;
+  }
 
   // OBRS-1038: an opaque disc, not a transparent slot. It is what breaks the
   // seam line visually — that interruption is the whole reason the reference

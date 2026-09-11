@@ -129,7 +129,12 @@
   }
 
   .label {
-    font-size: 11px;
+    font-size: $font-size-xs; // OBRS-640: was 11px, under the 12px floor
+    // OBRS-640: the label grew from 11 to 12px with only $space-3xs (4px) between
+    // it and .value below -- Thai/Chinese tone marks and upper vowels are taller
+    // than Latin at the same px, so the default line-height left too little
+    // clearance. 1.3 matches passenger-field's own fix just below.
+    line-height: 1.3;
     color: $text-lightblack;
   }
 
@@ -159,7 +164,7 @@
 
 .trip-estimate {
   display: block;
-  font-size: 11px;
+  font-size: $font-size-xs; // OBRS-640: was 11px, under the 12px floor
   color: $text-lightblack; // static token: the ticket card is intentionally exempt from dark theming (dark-theme.scss §15 paper look) — matches sibling captions, do NOT use a runtime --accent* var
 }
 
@@ -254,7 +259,8 @@
   gap: $space-3xs;
 
   .label {
-    font-size: 11px;
+    font-size: $font-size-xs; // OBRS-640: was 11px, under the 12px floor
+    line-height: 1.3; // OBRS-640: see .ticket-item .label
     color: $text-lightblack;
   }
 
@@ -274,7 +280,7 @@
 .child-fare-note {
   display: block;
   grid-column: 1 / -1;
-  font-size: 11px;
+  font-size: $font-size-xs; // OBRS-640: was 11px, under the 12px floor
   color: $text-lightblack;
 }
 
@@ -293,7 +299,7 @@
     text-align: right;
 
     .label {
-      font-size: 11px;
+      font-size: $font-size-xs; // OBRS-640: was 11px, under the 12px floor
       color: $text-lightblack;
     }
 
@@ -341,7 +347,7 @@
 }
 
 .qr-unavailable-text {
-  font-size: 11px;
+  font-size: $font-size-xs; // OBRS-640: was 11px, under the 12px floor
   font-weight: $font-weight-semibold;
   color: $text-red;
   text-align: center;
@@ -349,7 +355,7 @@
 }
 
 .qr-hint {
-  font-size: 11px;
+  font-size: $font-size-xs; // OBRS-640: was 11px, under the 12px floor
   color: $text-lightblack;
   text-align: center;
 }
