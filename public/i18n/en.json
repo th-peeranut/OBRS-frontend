@@ -3351,6 +3351,7 @@
     "QR_HINT": "QR code is used for identity verification before boarding only.",
     "QR_UNAVAILABLE": "This ticket cannot be used to board (cancelled, refunded, or no longer valid).",
     "DOWNLOAD_FAILED": "Could not download your e-ticket. Please try again.",
+    "DOWNLOAD_NEEDS_RETRIEVAL": "This screen no longer holds your booking reference, so the e-ticket cannot be downloaded from here. Retrieve it with your booking reference and the phone number you booked with.",
     "DOWNLOAD_CONFIRM_TITLE": "Confirm your phone number",
     "DOWNLOAD_CONFIRM_BODY": "To protect booking {{bookingNumber}}, please confirm the phone number used to make it.",
     "DOWNLOAD_CONFIRM_PHONE_LABEL": "Phone number used to book",

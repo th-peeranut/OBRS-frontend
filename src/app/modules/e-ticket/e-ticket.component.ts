@@ -117,9 +117,15 @@ export class ETicketComponent implements OnInit, OnDestroy {
   /**
    * OBRS-1802: the same id `loadTicketFromApi` already resolves, now also handed
    * to `<app-e-ticket-card>` so its Download button can ask the backend to
-   * render the PDF. `null` is what hides that button — and it is exactly the
-   * state `ticketIncomplete` already warns about, since without an id there is
-   * no booking for the server to print.
+   * render the PDF. `null` hides that button, since without an id there is no
+   * booking for the server to print.
+   *
+   * <p>It is NOT the same state as `ticketIncomplete`, and the two must not be
+   * read as one: a guest hard-loading this URL takes an id from
+   * `getActiveBookingId()` while the booking reference stays `-`, so the id is
+   * here and the incomplete render is too. Whether a download can succeed from
+   * there depends on which LANE is still open, which is the card's own
+   * `canAttemptDownload` — this page does not decide it.
    */
   bookingId: number | null = null;
   ticketNumber = '-';

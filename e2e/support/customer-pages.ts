@@ -1089,6 +1089,14 @@ export async function seedCustomerSession(page: Page, dark: boolean): Promise<vo
       // entry because `seedStore` dispatches into NgRx and this key is read
       // straight off localStorage by `BookingService.getActiveBookingId()`.
       localStorage.setItem('active_booking_id', '123');
+      // OBRS-1802 follow-up, measured on this branch (gate build, lane seeding +
+      // seedStore): `banner=0 download-btn=1 ref=-`. The booking REFERENCE on the
+      // e-ticket card is still `-` here, so the line above is necessary and not
+      // sufficient -- the button survives the `canAttemptDownload` gate only
+      // because this token makes `canDownloadETicketByBookingId()` true. Clearing
+      // `auth_token` from this fixture therefore costs the `.download-btn`
+      // measurement as well as the signed-in sweep, silently, by the skip quoted
+      // above. OBRS-1850 owns making that loud instead of commented.
       localStorage.setItem('auth_token', 'obrs-584-contrast-gate-token');
       localStorage.setItem('auth_username', 'customer@system.local');
       localStorage.setItem('auth_roles', JSON.stringify(['user']));

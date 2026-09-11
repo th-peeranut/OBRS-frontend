@@ -3351,6 +3351,7 @@
     "QR_HINT": "二维码仅用于登车前的身份验证。",
     "QR_UNAVAILABLE": "此票无法用于登车（已取消、已退款或已失效）。",
     "DOWNLOAD_FAILED": "无法下载电子票，请重试。",
+    "DOWNLOAD_NEEDS_RETRIEVAL": "此页面已没有您的订单编号，无法在这里下载电子票。请使用订单编号和预订手机号码查询车票。",
     "DOWNLOAD_CONFIRM_TITLE": "确认您的手机号码",
     "DOWNLOAD_CONFIRM_BODY": "为保护订单 {{bookingNumber}}，请确认下单时使用的手机号码。",
     "DOWNLOAD_CONFIRM_PHONE_LABEL": "下单时使用的手机号码",

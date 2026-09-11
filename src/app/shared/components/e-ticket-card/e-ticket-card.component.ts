@@ -74,31 +74,9 @@ export class ETicketCardComponent implements OnChanges {
    * whenever this card is the My Bookings modal showing an older row.
    *
    * `null` hides the button entirely: with no id there is nothing to ask for.
-   * It is NOT the same state as `ticketIncomplete` below — a guest hard-loading
-   * `/e-ticket` takes an id from `getActiveBookingId()` while the booking
-   * reference stays `-`, so both the id and the incomplete render are present at
-   * once. That is why there are two gates and not one.
+   * It is a necessary condition, not the whole gate — see `canAttemptDownload`.
    */
   @Input() bookingId: number | null = null;
-
-  /**
-   * OBRS-1802 follow-up: this render cannot produce a download, so the button is
-   * not offered. True only on `/e-ticket`'s degenerate render (`ticketIncomplete`
-   * there), where the booking reference is `-` and no API pass is coming: lane 3
-   * is the only door left open to that visitor and `resolveBookingNumber()`
-   * returns `''` by design (security review L3), so the click can only ever end
-   * in `E_TICKET.DOWNLOAD_FAILED` — a retry that cannot change its outcome. The
-   * same screen already renders the answer, the `/find-booking` link in its
-   * `.ticket-incomplete` banner.
-   *
-   * The card cannot derive this itself: `bookingNumber === '-'` is also the
-   * signed-in state where the tickets API is about to fill the reference in, and
-   * there lane 1 downloads by id and needs no reference at all. Only the host
-   * knows whether a pass is coming. Defaults `false`, so the My Bookings modal —
-   * which never binds it, and whose rows always carry a real reference — renders
-   * exactly as before.
-   */
-  @Input() ticketIncomplete = false;
 
   @Input() ticketNumber = '-';
   @Input() legs: TicketLeg[] = [];
@@ -217,6 +195,36 @@ export class ETicketCardComponent implements OnChanges {
    * first call and cleared in `finally` so it also clears when the customer
    * dismisses the phone dialog.
    */
+  /**
+   * Whether a download could actually succeed — which is what decides whether
+   * the button is offered at all (OBRS-1802 follow-up). It asks which LANE is
+   * still open, not whether this render looks complete.
+   *
+   * <p>The distinction is load-bearing. A guest who paid and then hard-reloads
+   * `/e-ticket` inside the 60-minute token TTL (ADR-0123 D6) has an empty store,
+   * so no booking reference reaches this card — and still holds a LIVE
+   * `guestPaymentToken`, because it lives in `localStorage` beside
+   * `active_booking_id` and `clearActiveBookingId()` is the only thing that
+   * clears either, which `/e-ticket` never calls (its one non-spec caller is
+   * `parcel-booking-page.component.ts`). Lane 2 needs nothing but the id, so
+   * that download works. Hiding the button there would send the customer to
+   * `/find-booking` to type a reference their screen does not show.
+   *
+   * <p>So: an id, plus EITHER a credential the server accepts on the id alone
+   * (lanes 1/2 — `canDownloadETicketByBookingId()`, the same answer that picks
+   * the lane) OR the booking reference lane 3 has to ask with. With neither,
+   * `downloadByCredential()` can only refuse — `resolveBookingNumber()` returns
+   * `''` by design (security review L3) — and a control whose every outcome is a
+   * refusal is not a control. That is the state QA measured on `/e-ticket`.
+   */
+  get canAttemptDownload(): boolean {
+    return (
+      this.bookingId != null &&
+      (this.bookingService.canDownloadETicketByBookingId() ||
+        this.resolveBookingNumber() !== '')
+    );
+  }
+
   async downloadTicketPdf(): Promise<void> {
     if (this.bookingId == null || this.isDownloadingTicket) {
       return;
@@ -259,7 +267,18 @@ export class ETicketCardComponent implements OnChanges {
   private async downloadByCredential(): Promise<void> {
     const bookingNumber = this.resolveBookingNumber();
     if (!bookingNumber) {
-      this.reportFailure(null);
+      // Reachable with the button visible in exactly one state: a guest whose
+      // `guestPaymentToken` has aged out (so `canAttemptDownload` was true when
+      // the button rendered) and whose store is empty, so there is no reference
+      // for lane 3 to ask with. Nothing here can tell a live token from an
+      // expired one before the request, so the button cannot be gated on it -
+      // the COPY is what has to be true. `DOWNLOAD_FAILED` says "please try
+      // again", which for this customer is an instruction that cannot work;
+      // retrieval is the one thing that can.
+      this.alertService.toast(
+        this.translate.instant('E_TICKET.DOWNLOAD_NEEDS_RETRIEVAL'),
+        'error'
+      );
       return;
     }
 

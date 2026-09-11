@@ -278,10 +278,10 @@
           <!-- OBRS-1802: no `isAuthenticated()` condition (owner decision
           2026-09-11) - a guest downloads their own ticket too, proving the
           booking with the token checkout gave them or, failing that, the phone
-          number they booked with. Two gates: with no id there is nothing to ask
-          the backend to render, and on the degenerate render there is no booking
-          reference to ask WITH - see the `ticketIncomplete` input. -->
-          @if (bookingId != null && !ticketIncomplete) {
+          number they booked with. The gate is `canAttemptDownload`: an id, plus a
+          lane that is actually open - see that getter for why "does this render
+          look complete" is the wrong question. -->
+          @if (canAttemptDownload) {
             <button
               type="button"
               class="download-btn"

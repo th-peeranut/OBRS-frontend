@@ -273,8 +273,11 @@ describe('ETicketCardComponent', () => {
       // request argument, and not as dialog copy either.
       expect(bookingServiceStub.getActiveBookingNumber).not.toHaveBeenCalled();
       expect(alertServiceStub.toast).toHaveBeenCalledTimes(1);
+      // Not `DOWNLOAD_FAILED`: this refusal is permanent for this screen, so
+      // "please try again" would be an instruction that cannot work. The only
+      // way left in is retrieval, and the copy says so.
       expect(alertServiceStub.toast).toHaveBeenCalledWith(
-        'E_TICKET.DOWNLOAD_FAILED',
+        'E_TICKET.DOWNLOAD_NEEDS_RETRIEVAL',
         'error'
       );
       expect(component.isDownloadingTicket).toBeFalse();
@@ -336,6 +339,35 @@ describe('ETicketCardComponent', () => {
         });
       }
     );
+
+    /**
+     * The one path that still reaches a dead end with the button legitimately on
+     * screen (OBRS-1802 follow-up): the token was in hand when the button
+     * rendered, so `canAttemptDownload` was true, and it had aged out by the time
+     * it was used — with an empty store behind it, so lane 3 has no reference to
+     * ask with either. Nothing can tell a live token from an expired one before
+     * the request, so the fix is the COPY: `DOWNLOAD_FAILED` would tell this
+     * customer to try again, which is the one thing that cannot work.
+     */
+    it('points an expired token with no reference at retrieval, not at "try again"', async () => {
+      bookingServiceStub.downloadETicketPdf.and.returnValue(
+        throwError(() => pdfError(400, 'GUEST_PAYMENT_TOKEN_EXPIRED'))
+      );
+      component.bookingNumber = '-';
+
+      await component.downloadTicketPdf();
+
+      expect(alertServiceStub.promptText).not.toHaveBeenCalled();
+      expect(
+        bookingServiceStub.downloadETicketPdfByCredential
+      ).not.toHaveBeenCalled();
+      expect(alertServiceStub.toast).toHaveBeenCalledTimes(1);
+      expect(alertServiceStub.toast).toHaveBeenCalledWith(
+        'E_TICKET.DOWNLOAD_NEEDS_RETRIEVAL',
+        'error'
+      );
+      expect(component.isDownloadingTicket).toBeFalse();
+    });
 
     it('does NOT fall through on any other failure — that would loop a dialog forever', async () => {
       bookingServiceStub.downloadETicketPdf.and.returnValue(
@@ -1072,8 +1104,19 @@ describe('ETicketCardComponent — per-passenger SEAT cell (OBRS-1510 AC-8)', ()
 describe('ETicketCardComponent — download button visibility (OBRS-1802)', () => {
   let fixture: ComponentFixture<ETicketCardComponent>;
   let component: ETicketCardComponent;
+  let canDownloadByBookingId: jasmine.Spy;
 
   beforeEach(async () => {
+    // The service's single answer for "does this browser hold a credential the
+    // server accepts on the booking id alone" — true for a signed-in customer
+    // AND for a guest whose `guestPaymentToken` is still in hand
+    // (`booking.service.ts#canDownloadETicketByBookingId`). The card cannot tell
+    // those two apart and must not try: the service owns that decision because
+    // it is the same one that picks the lane.
+    canDownloadByBookingId = jasmine
+      .createSpy('canDownloadETicketByBookingId')
+      .and.returnValue(false);
+
     await TestBed.configureTestingModule({
       // `LoadingStateComponent` is declared because this is the ONLY describe in
       // this file that actually renders the download button, and `[appPending]`
@@ -1102,12 +1145,11 @@ describe('ETicketCardComponent — download button visibility (OBRS-1802)', () =
         {
           provide: BookingService,
           // A guest holding no token: the weakest caller there is. If even this
-          // one sees the button, no authentication is being required.
+          // one sees the button, no authentication is being required. Individual
+          // cases below raise it with `canDownloadByBookingId.and.returnValue`.
           useValue: {
             ...createBookingServiceStub(),
-            canDownloadETicketByBookingId: jasmine
-              .createSpy('canDownloadETicketByBookingId')
-              .and.returnValue(false),
+            canDownloadETicketByBookingId: canDownloadByBookingId,
           },
         },
         { provide: AlertService, useValue: createAlertServiceStub() },
@@ -1123,8 +1165,18 @@ describe('ETicketCardComponent — download button visibility (OBRS-1802)', () =
     return el ? (el.nativeElement as HTMLButtonElement) : null;
   }
 
+  /**
+   * The owner's 2026-09-11 decision: the button is about AUTHENTICATION, and
+   * requires none. `canDownloadByBookingId` stays `false` here — no account, no
+   * guest token — and the booking reference is what lane 3 asks with, which the
+   * realistic guest state has (ADR-0123 D6: a customer who just paid is looking
+   * at their own reference). It used to leave `bookingNumber` at `'-'`, which is
+   * not that state: it is the one where no lane is open at all, so the test was
+   * asserting that a button which can only fail should be shown.
+   */
   it('renders for a guest — no authentication of any kind', () => {
     component.bookingId = 7;
+    component.bookingNumber = 'B-29RGZW';
     fixture.detectChanges();
 
     const button = downloadButton();
@@ -1137,42 +1189,51 @@ describe('ETicketCardComponent — download button visibility (OBRS-1802)', () =
    *  seen from `ng test` at all. */
   it('keeps the `.download-btn` class and the E_TICKET.DOWNLOAD key', () => {
     component.bookingId = 7;
+    component.bookingNumber = 'B-29RGZW';
     fixture.detectChanges();
 
     expect(downloadButton()?.textContent).toContain('E_TICKET.DOWNLOAD');
   });
 
+  /** The id is a necessary condition of its own: a reference on the card does not
+   *  substitute for it, because every lane addresses a booking. */
   it('is absent with no bookingId', () => {
     component.bookingId = null;
+    component.bookingNumber = 'B-29RGZW';
     fixture.detectChanges();
 
     expect(downloadButton()).toBeNull();
   });
 
   /**
-   * OBRS-1802 follow-up: `/e-ticket`'s degenerate render reaches here WITH an id
-   * — a guest hard load takes one from `getActiveBookingId()` while the booking
-   * reference stays `-` — so the `bookingId` gate above lets it straight through
-   * and the button was live. It could only ever fail: no reference means lane 3
-   * is the only door and `resolveBookingNumber()` returns `''` by design
-   * (security review L3), so the click ends in `E_TICKET.DOWNLOAD_FAILED` and a
-   * retry cannot change that. The second arm is this assertion's own positive
-   * control: the same id, only the flag moved, and the button comes back — so a
-   * fixture that had stopped rendering the button at all cannot pass the first.
+   * The state QA measured on `/e-ticket` (OBRS-1802 follow-up): a guest hard load
+   * takes an id from `getActiveBookingId()`, so the id gate passes, while an
+   * empty store leaves the reference at `'-'`. With no credential either, every
+   * lane is shut — lane 3's `resolveBookingNumber()` is `''` by design (security
+   * review L3) — so the click could only ever raise a refusal, and the page's own
+   * `/find-booking` banner is already the answer.
+   *
+   * Second arm, its own positive control: the SAME two fields, only the
+   * credential moves, and the button comes back — so a fixture that had stopped
+   * rendering the button at all cannot pass the first arm. It is also the guest
+   * whose `guestPaymentToken` is still live: lane 2 carries that token and needs
+   * nothing but the id, so hiding the button from them would be the worse bug.
    */
-  it('is absent on the degenerate render and present as soon as it is not — the same bookingId throughout', () => {
+  it('is absent when no lane is open, and present on a credential alone — no reference either way', () => {
     component.bookingId = 7;
-    component.ticketIncomplete = true;
+    component.bookingNumber = '-';
+    canDownloadByBookingId.and.returnValue(false);
     fixture.detectChanges();
     expect(downloadButton()).toBeNull();
 
-    component.ticketIncomplete = false;
+    canDownloadByBookingId.and.returnValue(true);
     fixture.detectChanges();
     expect(downloadButton()).not.toBeNull();
   });
 
   it('shows the pending affordance while a download is in flight', () => {
     component.bookingId = 7;
+    component.bookingNumber = 'B-29RGZW';
     component.isDownloadingTicket = true;
     fixture.detectChanges();
 
