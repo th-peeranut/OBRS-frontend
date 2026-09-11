@@ -33,7 +33,7 @@ const SHOOT = ['home', 'passenger-info', 'payment', 'schedule-booking'];
 
 async function settleAtBottom(page: Page): Promise<void> {
   // Bootstrap's reboot sets `scroll-behavior: smooth`, so a plain scrollTo starts
-  // an animation and the shutter can beat it -- see e2e/support/fab-occlusion.ts
+  // an animation and the shutter can beat it -- see e2e/support/viewport-scroll.ts
   // for the measurements that cost.
   await page.addStyleTag({ content: '*, *::before, *::after, :root { scroll-behavior: auto !important }' });
   await page.evaluate(() =>

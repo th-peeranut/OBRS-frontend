@@ -54,15 +54,14 @@ async function chooseFromDropdown(page: Page, index: number, optionText: string)
 }
 
 /**
- * `.report-fab` is the app-wide "รายงานปัญหา" button: `position: fixed; bottom: 24px; right: 24px`
- * from `report-usability-fab.component.scss`, on every admin page, with nothing anywhere in `src/`
- * reserving clearance for it. It therefore paints over the last table rows in a full-page capture,
- * including the grand total. Hiding it is a decision about the EVIDENCE, not about the screen --
- * the overlap is pre-existing global chrome, not something this card introduced, and it is called
- * out on the card so it is not quietly airbrushed away.
+ * `.report-trigger` is the app-wide "รายงานปัญหา" control. Until OBRS-1832 it was a
+ * `position: fixed` FAB in the bottom-right corner that painted over the last table rows
+ * of a full-page capture, grand total included -- which is why this helper exists. It now
+ * sits in the admin topbar and covers nothing, so hiding it is only about keeping the
+ * BEFORE and AFTER captures on this card comparable. Kept, not deleted, for that reason.
  */
 async function hideGlobalChrome(page: Page): Promise<void> {
-  await page.addStyleTag({ content: '.report-fab { display: none !important; }' });
+  await page.addStyleTag({ content: '.report-trigger { display: none !important; }' });
 }
 
 function save(dir: string): string {

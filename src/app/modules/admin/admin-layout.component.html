@@ -132,6 +132,17 @@
           </nav>
 
           <div class="admin-sidebar-footer">
+            <!-- OBRS-1832: the labelled twin of the topbar icon, for the drawer this
+                 sidebar becomes at <=1100px. It lives in the footer rather than inside
+                 `<nav class="admin-nav">` because that nav is filtered by the search box
+                 above it, and a way to report a problem must not be searchable away.
+                 `admin-nav-link` is a GLOBAL class (src/styles/admin-theme.scss), so the
+                 trigger wears this shell's own skin, dark mode included. -->
+            <app-report-trigger
+              variant="row"
+              buttonClass="admin-nav-link admin-nav-btn"
+              (triggered)="onNavLinkClick()"
+            ></app-report-trigger>
             <button class="admin-nav-link admin-nav-btn" type="button">
               <span class="material-symbols-outlined" [attr.translate]="'no'">help_outline</span>
               <span>{{ 'ADMIN.LAYOUT.SUPPORT' | translate }}</span>
@@ -162,6 +173,11 @@
           </div>
 
           <div class="admin-topbar-actions">
+            <!-- OBRS-1832: first item of the cluster, the same position it holds on the
+                 customer bar. `.admin-topbar-actions` is never hidden by width (it only
+                 wraps), so this one entry point serves every breakpoint. -->
+            <app-report-trigger variant="icon" buttonClass="admin-icon-btn"></app-report-trigger>
+
             <button
               type="button"
               class="admin-icon-btn"

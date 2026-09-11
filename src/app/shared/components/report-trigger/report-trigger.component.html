@@ -1,0 +1,15 @@
+<button
+  type="button"
+  class="report-trigger"
+  [class.report-trigger--icon]="variant === 'icon' && !buttonClass"
+  [class.report-trigger--row]="variant === 'row' && !buttonClass"
+  [ngClass]="buttonClass"
+  [attr.aria-label]="'USABILITY_REPORT.TRIGGER.ARIA_LABEL' | translate"
+  [attr.title]="variant === 'icon' ? ('USABILITY_REPORT.TRIGGER.ARIA_LABEL' | translate) : null"
+  (click)="onClick()"
+  >
+  <span class="material-symbols-outlined" [attr.translate]="'no'">flag</span>
+  @if (variant === 'row') {
+    <span>{{ 'USABILITY_REPORT.TRIGGER.LABEL' | translate }}</span>
+  }
+</button>

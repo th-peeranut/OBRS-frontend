@@ -567,12 +567,6 @@
       "why": "OBRS-627. /refund-policy is linked from every page's footer and from /payment, so a customer reads it before paying, and until this card it described a refund the system has never performed -- original paper ticket, ID copies, in-person cash pickup, forfeiture after 7 days -- while naming no refund rate at all. The rates now render from GET /api/cancellation-policy. Three things live only in the assembled app and are why this needs a browser rather than more unit tests: whether the shipped page calls that endpoint at all, whether a raw {{refundRateEarlyPercent}} can reach a customer, and whether the retired clauses are gone from the REAL public/i18n/th.json rather than from a TestBed fixture -- all three are what went wrong on the identical claim one page over (OBRS-564). The wire values are 36h/3h/90%/45%, deliberately not the shipped 24/2/80/50, so 'rendered from the wire' cannot be confused with 'rendered from a literal'. Also pins AC-3: a failed config read shows an inline error and states NO rate, never a hardcoded fallback. Hermetic on the same terms as the rest of the lane -- every /api/** call fulfilled by the spec, no backend, no session."
     },
     {
-      "spec": "obrs-1207-fab-occlusion.spec.ts",
-      "lane": "GATE",
-      "config": "playwright.gate.config.ts",
-      "why": "OBRS-1207. Replaces the two FAB-overlap cases in report-usability-issue.spec.ts, which compared the `position: fixed` FAB's viewport box against `.select-btn`'s and never pinned the scroll -- so the verdict was a function of where the page came to rest, not of the code. Proven, not argued: the byte-identical tree 098022f8 passed on PR #167, went red on the dev merge 8c43dcec, and passed 6/6 locally, having been green for months while the defect was present. This spec SOLVES for the scroll offsets at which an element's click point falls inside the FAB band -- a closed interval per element, so no offset can slip between samples -- then scrolls there and asks document.elementFromPoint(), the only oracle that accounts for z-index, stacking contexts, pointer-events and transforms at once. Hermetic on the same terms as the rest of the lane: it reuses report-usability-issue's stations/schedules fixtures and stubs every /api/** call it makes."
-    },
-    {
       "spec": "obrs-1224-origin-combobox.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",

@@ -15,6 +15,8 @@ import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 import { environment } from '../../../environments/environment';
+import { ReportTriggerComponent } from '../../shared/components/report-trigger/report-trigger.component';
+import { ReportUsabilityModalService } from '../../shared/services/report-usability-modal.service';
 
 // OBRS-317: stub the bell selector so this layout-chrome spec stays scoped
 // to the layout itself (same approach as admin-layout.component.spec.ts).
@@ -53,7 +55,12 @@ describe('StaffLayoutComponent', () => {
   beforeEach(async () => {
     clearSidebarStorage();
     await TestBed.configureTestingModule({
-      declarations: [StaffLayoutComponent, LangSwitcherComponent, NotificationBellStubComponent],
+      declarations: [
+        StaffLayoutComponent,
+        LangSwitcherComponent,
+        NotificationBellStubComponent,
+        ReportTriggerComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
@@ -76,6 +83,47 @@ describe('StaffLayoutComponent', () => {
 
   it('should create', () => {
     expect(fixture.componentInstance).toBeTruthy();
+  });
+
+  // ── OBRS-1832: the report entry point, in this shell ────────────────────────
+  //
+  // The card's rule is a position, so these assert a position and not merely
+  // presence: the icon is the FIRST child of the top-right cluster in all three
+  // shells, and the labelled row lives where the sidebar's other rows do. A test
+  // that only asked "is there a trigger somewhere" would stay green through the
+  // exact regression the rule exists to prevent.
+  it('puts the report icon first in the topbar actions cluster', () => {
+    const actions = fixture.debugElement.query(By.css('.admin-topbar-actions'));
+    expect(actions).withContext('the cluster itself must exist').toBeTruthy();
+    expect(actions.nativeElement.firstElementChild.tagName.toLowerCase())
+      .withContext('the trigger is the left-most item of the cluster, every shell')
+      .toBe('app-report-trigger');
+    const trigger = actions.query(By.directive(ReportTriggerComponent));
+    expect(trigger.componentInstance.variant).toBe('icon');
+    expect(trigger.componentInstance.buttonClass).toBe('admin-icon-btn');
+  });
+
+  it('puts a labelled report row in the sidebar footer, which is the drawer at <=1100px', () => {
+    const footer = fixture.debugElement.query(By.css('.admin-sidebar-footer'));
+    const trigger = footer.query(By.directive(ReportTriggerComponent));
+    expect(trigger).withContext('the labelled twin must be reachable from the drawer').toBeTruthy();
+    expect(trigger.componentInstance.variant).toBe('row');
+    const button: HTMLElement = trigger.nativeElement.querySelector('button');
+    expect(button.classList).withContext('wears this shell’s own row skin').toContain('admin-nav-link');
+  });
+
+  it('opens the modal and closes the drawer from the sidebar row', () => {
+    const service = TestBed.inject(ReportUsabilityModalService);
+    const opened = spyOn(service, 'open');
+    fixture.componentInstance['isSidebarOpen'] = true;
+
+    const footer = fixture.debugElement.query(By.css('.admin-sidebar-footer'));
+    (footer.query(By.directive(ReportTriggerComponent)).nativeElement.querySelector('button') as HTMLElement).click();
+
+    expect(opened).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance['isSidebarOpen'])
+      .withContext('a drawer left open would sit under the dialog it just opened')
+      .toBeFalse();
   });
 
   it('renders a link back to the public home page', () => {
@@ -357,7 +405,12 @@ describe('StaffLayoutComponent — personal menu (OBRS-1071)', () => {
 
   async function createStaffLayout(): Promise<ComponentFixture<StaffLayoutComponent>> {
     await TestBed.configureTestingModule({
-      declarations: [StaffLayoutComponent, LangSwitcherComponent, NotificationBellStubComponent],
+      declarations: [
+        StaffLayoutComponent,
+        LangSwitcherComponent,
+        NotificationBellStubComponent,
+        ReportTriggerComponent,
+      ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
