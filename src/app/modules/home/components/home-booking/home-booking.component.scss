@@ -83,6 +83,19 @@
 
   background-color: $secondary-lightgrey;
 
+  // OBRS-640: `.home-hero` (sibling, above) is `position: relative` for its own
+  // absolutely-positioned headline. A positioned box always paints AFTER a
+  // static sibling regardless of DOM order (CSS2.1 Appendix E), so `.home-bg`
+  // was painting on top of `.booking-card` wherever the card's `margin-top:
+  // -80px`/`-40px` overlap put them in the same spot -- invisible while the
+  // card's own tap targets were small enough to sit outside that overlap, but
+  // the 44px floor grows them into it. `position: relative` with no z-index
+  // lifts this section into the same (positioned, z-index:auto) paint step,
+  // where DOM order decides and this section -- the later sibling -- wins, so
+  // the opaque card now actually paints over the image as the negative-margin
+  // overlap always intended.
+  position: relative;
+
   .booking-card {
     display: flex;
     flex-direction: column;
