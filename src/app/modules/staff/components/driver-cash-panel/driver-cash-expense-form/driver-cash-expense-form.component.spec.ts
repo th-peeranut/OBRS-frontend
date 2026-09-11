@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { DatePickerModule } from 'primeng/datepicker';
 import { TranslateModule } from '@ngx-translate/core';
 import { DriverCashExpenseFormComponent } from './driver-cash-expense-form.component';
 import { AdminDropdownComponent } from '../../../../admin/components/admin-dropdown/admin-dropdown.component';
@@ -10,7 +11,7 @@ describe('DriverCashExpenseFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FormsModule, TranslateModule.forRoot()],
+      imports: [FormsModule, TranslateModule.forRoot(), DatePickerModule],
       declarations: [DriverCashExpenseFormComponent, AdminDropdownComponent],
     }).compileComponents();
     fixture = TestBed.createComponent(DriverCashExpenseFormComponent);
