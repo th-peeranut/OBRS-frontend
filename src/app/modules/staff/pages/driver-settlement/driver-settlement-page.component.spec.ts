@@ -199,6 +199,15 @@ describe('DriverSettlementPageComponent (OBRS-1756)', () => {
     fixture.detectChanges();
   }
 
+  /** `businessDate` is a LOCAL calendar day (`toIsoDateString`), so anything compared against
+   * it has to be one too. `toISOString().slice(0, 10)` is the UTC day, which between 00:00 and
+   * 07:00 Bangkok IS the local yesterday — the very day the screen defaults to (OBRS-1819). */
+  function localIsoDate(date: Date): string {
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+  }
+
   it('defaults the date to YESTERDAY, not today (AC-3)', async () => {
     await setUp();
 
@@ -211,9 +220,25 @@ describe('DriverSettlementPageComponent (OBRS-1756)', () => {
     expect(selected.getDate()).toBe(expected.getDate());
     // Positive control: the default is genuinely NOT today, so an implementation that
     // forgot to subtract a day cannot pass the three assertions above by coincidence.
-    expect(component['businessDate']).not.toBe(
-      new Date().toISOString().slice(0, 10)
-    );
+    expect(component['businessDate']).not.toBe(localIsoDate(new Date()));
+  });
+
+  // The control above used to be decided by the hour the suite ran: a UTC "today" made it red
+  // every night between 00:00 and 07:00 Bangkok and green the rest of the day. Freezing the clock
+  // inside that window pins the case that was red, so a regression back to a cross-timezone
+  // comparison fails here at any hour (OBRS-1819).
+  it('defaults to yesterday, control included, with the clock frozen at 03:00 local (OBRS-1819)', async () => {
+    jasmine.clock().install();
+    try {
+      // No trailing Z: parsed as local time, which is what a staff device reads off the wall.
+      jasmine.clock().mockDate(new Date('2026-09-11T03:00:00'));
+      await setUp();
+
+      expect(component['businessDate']).toBe('2026-09-10');
+      expect(component['businessDate']).not.toBe(localIsoDate(new Date()));
+    } finally {
+      jasmine.clock().uninstall();
+    }
   });
 
   it('asks day-context with NO driverId when a plate is picked, then prefills the driver from the answer — and the driver stays editable', async () => {
