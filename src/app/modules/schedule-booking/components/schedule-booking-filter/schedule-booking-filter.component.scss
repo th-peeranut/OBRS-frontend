@@ -25,3 +25,44 @@
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   }
 }
+
+// OBRS-637. Below 768px the search button leaves the filter bar and floats above
+// the page. On this screen the button is not only deep -- the card measured the
+// first result at y=865 on a 390x664 viewport, so a customer reading results is
+// two screens BELOW it and has to scroll back up to the top of the form to
+// change anything. Fixed, it is in reach from either end.
+//
+// The selector matches `.station-section > .btn-search` because that is what the
+// 992px block in the imported home-booking stylesheet uses; a bare `.btn-search`
+// here loses to it on specificity and the button would stay in the flow. The
+// import is this file's first line, so source order settles the tie.
+//
+// `width: auto` because `left`/`right` size it now; `width: 100%` from the 992px
+// block would make it a viewport wide and push it off the right edge.
+//
+// The page gives back the height it no longer occupies -- see the matching
+// breakpoint in schedule-booking.component.scss (AC2).
+@media (max-width: 768px) {
+  // `--app-bottom-reserved` is the PDPA consent bar's own measured height,
+  // published on `body` by analytics-consent-banner.component.ts. That bar is
+  // `position: fixed; z-index: 1000`, i.e. over this one, and the padding it puts
+  // on `body` moves flow content only -- it cannot move anything fixed. Without
+  // this term the primary button is BEHIND the consent bar for every first-time
+  // visitor on a phone, which is how obrs-639-stepper-geometry.spec.ts found it:
+  // four mobile cases timed out clicking `.btn-next` with
+  // `consent-banner__btn--accept ... intercepts pointer events`. The fallback is
+  // `0px`, which is every visit after the question is answered.
+  .station-section > .btn-search {
+    position: fixed;
+    left: $space-sm;
+    right: $space-sm;
+    bottom: calc(
+      #{$space-sm} + env(safe-area-inset-bottom, 0px) +
+        var(--app-bottom-reserved, 0px)
+    );
+    width: auto;
+    margin-top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  }
+}

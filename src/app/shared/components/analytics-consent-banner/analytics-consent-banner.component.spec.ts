@@ -253,6 +253,11 @@ describe('AnalyticsConsentBannerComponent', () => {
       // Removed, not zeroed: a page with no bar is a page this component never
       // touched.
       expect(document.body.style.paddingBottom).toBe('');
+      // OBRS-637: the custom property is the same reservation published for
+      // `position: fixed` furniture, so it has to be given back on the same edge.
+      // A stale value here leaves the sticky CTA floating a bar's height above
+      // the bottom of the screen forever after the question is answered.
+      expect(document.body.style.getPropertyValue('--app-bottom-reserved')).toBe('');
     });
   });
 

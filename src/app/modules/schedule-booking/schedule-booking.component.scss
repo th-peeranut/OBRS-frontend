@@ -1,3 +1,5 @@
+@import "../../../styles/variables.scss";
+
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
 // below it: the browser splits it and wraps them in anonymous blocks, after
@@ -12,4 +14,16 @@
 // of components someone checked once.
 :host {
   display: block;
+}
+
+/* OBRS-637. The search button is `position: fixed` below 768px
+   (schedule-booking-filter.component.scss), so it reserves no height of its own
+   and would otherwise sit on top of the footer's last row. Give the page back
+   exactly what the button takes: bottom inset + button height + one gap (AC2).
+   52px is `.btn-search`'s declared height in home-booking.component.scss, the
+   stylesheet the filter imports. */
+@media (max-width: 768px) {
+  :host {
+    padding-bottom: calc(#{$space-sm} + 52px + #{$space-sm} + env(safe-area-inset-bottom, 0px));
+  }
 }

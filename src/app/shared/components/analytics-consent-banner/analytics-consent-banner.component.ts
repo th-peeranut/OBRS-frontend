@@ -1,5 +1,13 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, ElementRef, Inject, OnDestroy, Renderer2, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Inject,
+  OnDestroy,
+  Renderer2,
+  RendererStyleFlags2,
+  ViewChild,
+} from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { combineLatest, Observable } from 'rxjs';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -209,8 +217,25 @@ export class AnalyticsConsentBannerComponent implements OnDestroy {
     const body = this.document.body;
     if (heightPx > 0) {
       this.renderer.setStyle(body, 'padding-bottom', `${Math.ceil(heightPx)}px`);
+      // OBRS-637. The same number, published for anything that is positioned
+      // against the bottom of the SCREEN rather than laid out in the flow -- the
+      // padding above moves content, and moves nothing that is `position: fixed`.
+      // /passenger-info and /schedule-booking pin their primary button there
+      // below 768px, and this bar is z-index 1000 over it: without this the
+      // button a first-time visitor came to press is behind the bar, and the
+      // second design decision at the top of this file ("it does not block the
+      // page ... a visitor who ignores it entirely can still search, book and
+      // pay") would be false on a phone. Read with
+      // `var(--app-bottom-reserved, 0px)`.
+      this.renderer.setStyle(
+        body,
+        '--app-bottom-reserved',
+        `${Math.ceil(heightPx)}px`,
+        RendererStyleFlags2.DashCase
+      );
     } else {
       this.renderer.removeStyle(body, 'padding-bottom');
+      this.renderer.removeStyle(body, '--app-bottom-reserved', RendererStyleFlags2.DashCase);
     }
   }
 }

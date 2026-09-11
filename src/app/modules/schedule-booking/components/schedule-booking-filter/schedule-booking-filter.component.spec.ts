@@ -139,6 +139,81 @@ describe('ScheduleBookingFilterComponent', () => {
     expect(dispatchSpy).not.toHaveBeenCalled();
   });
 
+  // OBRS-637 AC#4. Below 768px the search button is fixed to the bottom of the
+  // screen, so it can be pressed while the field the warning names is entirely
+  // off-screen -- on a 390x664 viewport the station group measured 596px above
+  // the button's own top once the results list is scrolled. A message about a
+  // field the customer cannot see is the "silent press" the AC rules out, so the
+  // refusal has to move the page as well as speak.
+  describe('OBRS-637: a refused search brings the field it names into view', () => {
+    let host: HTMLElement;
+    let stationGroup: HTMLElement;
+    let scrollSpy: jasmine.Spy;
+
+    beforeEach(() => {
+      host = document.createElement('app-schedule-booking-filter');
+      stationGroup = document.createElement('div');
+      stationGroup.className = 'station-group';
+      host.appendChild(stationGroup);
+      document.body.appendChild(host);
+      scrollSpy = spyOn(stationGroup, 'scrollIntoView');
+    });
+
+    afterEach(() => host.remove());
+
+    it('scrolls to the station group when no stations are chosen', () => {
+      spyOn(alertService, 'warning');
+
+      component.onSearch();
+
+      expect(scrollSpy).toHaveBeenCalled();
+    });
+
+    it('scrolls to the passenger dropdown when only the passenger count is missing', () => {
+      // The second branch of the same helper. Without this the pair above would
+      // pass over a helper that always aimed at the stations, which on a form
+      // whose stations are already filled is a scroll to a field that is not the
+      // one being complained about.
+      const passengerBox = document.createElement('app-dropdown-obrs-passenger');
+      host.appendChild(passengerBox);
+      const passengerScrollSpy = spyOn(passengerBox, 'scrollIntoView');
+      spyOn(alertService, 'warning');
+      (component as any).allProvinceStationList = [
+        { id: 1, slug: 'station-a' },
+        { id: 2, slug: 'station-b' },
+      ];
+      component.bookingForm.patchValue({
+        startStationId: 1,
+        stopStationId: 2,
+        passengerInfo: [{ type: 'ADULT', count: 0 }],
+      });
+
+      component.onSearch();
+
+      expect(passengerScrollSpy).toHaveBeenCalled();
+      expect(scrollSpy).not.toHaveBeenCalled();
+    });
+
+    it('does NOT scroll when the search is accepted', () => {
+      // The must-not half: a search that goes through must leave the page where
+      // the customer put it. Without this, a spy that fires on every press would
+      // pass the case above while being a bug of its own.
+      (component as any).allProvinceStationList = [
+        { id: 1, slug: 'station-a' },
+        { id: 2, slug: 'station-b' },
+      ];
+      component.bookingForm.patchValue({
+        startStationId: 1,
+        stopStationId: 2,
+        passengerInfo: [{ type: 'ADULT', count: 1 }],
+      });
+
+      component.onSearch();
+
+      expect(scrollSpy).not.toHaveBeenCalled();
+    });
+  });
+
   it('dispatches the search when origin, destination and a passenger are set', () => {
     (component as any).allProvinceStationList = [
       { id: 1, slug: 'station-a' },

@@ -70,4 +70,13 @@
   .summary-container {
     order: 2;
   }
+
+  /* OBRS-637. `.summary-actions` is `position: fixed` at this breakpoint
+     (passenger-info-summary.component.scss), so it reserves no height of its own
+     and would otherwise sit on top of the footer's last row. Give the page back
+     exactly what the bar takes: bottom inset + button height + one gap (AC2).
+     52px is `.btn-next`/`.btn-back`'s declared height in that same file. */
+  :host {
+    padding-bottom: calc(#{$space-sm} + 52px + #{$space-sm} + env(safe-area-inset-bottom, 0px));
+  }
 }
