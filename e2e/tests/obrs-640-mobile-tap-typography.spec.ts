@@ -445,6 +445,13 @@ interface ProbeOutcome {
    *  so the sweep never judges an element against a state it was not actually in when
    *  probed. Counted under the same exclusion reasons as phase 1, never silently. */
   excludedReason: string | null;
+  /** OBRS-640 round 2 (AC-2 label credit). True only when `el` missed its OWN hit-test
+   *  but an associated `<label for="...">` -- the association read from the DOM, never
+   *  assumed from proximity -- was ITSELF hit-tested to >=minTapPx square and credited
+   *  instead. Always false on a `violation: null` outcome that passed on its own box.
+   *  The caller counts and prints this separately (`satisfiedViaLabel=N`) so it can
+   *  never become a silent blanket exemption. */
+  satisfiedViaLabel: boolean;
 }
 
 /**
@@ -457,12 +464,14 @@ function probeTaggedTapElement(args: { idx: number; minTapPx: number }): ProbeOu
   if (!el) return null;
 
   const cs0 = getComputedStyle(el);
-  if (cs0.display === 'none') return { violation: null, excludedReason: 'displayNone' };
+  if (cs0.display === 'none') return { violation: null, excludedReason: 'displayNone', satisfiedViaLabel: false };
   if (cs0.visibility === 'hidden' || cs0.visibility === 'collapse') {
-    return { violation: null, excludedReason: 'visibilityHidden' };
+    return { violation: null, excludedReason: 'visibilityHidden', satisfiedViaLabel: false };
   }
-  if (Number(cs0.opacity) === 0) return { violation: null, excludedReason: 'opacityZero' };
-  if (cs0.pointerEvents === 'none') return { violation: null, excludedReason: 'pointerEventsNone' };
+  if (Number(cs0.opacity) === 0) return { violation: null, excludedReason: 'opacityZero', satisfiedViaLabel: false };
+  if (cs0.pointerEvents === 'none') {
+    return { violation: null, excludedReason: 'pointerEventsNone', satisfiedViaLabel: false };
+  }
 
   const pathOf = (n0: Element): string => {
     const parts: string[] = [];
@@ -484,85 +493,143 @@ function probeTaggedTapElement(args: { idx: number; minTapPx: number }): ProbeOu
       .replace(/\s+/g, ' ')
       .slice(0, 40);
 
-  // 0.5px inset from the theoretical box edge: `getBoundingClientRect`'s bottom/right are
-  // EXCLUSIVE at the sub-pixel level, so probing an element sized exactly minTapPx (44.0,
-  // measured live on /account's "Edit personal details" et al.) at the literal edge missed
-  // 3/8 corners on a button that already meets the floor -- a false violation manufactured
-  // by the probe, not a real one. Anything genuinely smaller still misses: a 40px button's
-  // edge is 2px inboard of a 21.5px-inset probe, well past this margin.
-  const half = args.minTapPx / 2 - 0.5;
-  const rect = el.getBoundingClientRect();
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
+  // OBRS-640 round 2, confirmed live: a box whose true (sub-pixel) edge lands within
+  // ~1px of the viewport's far boundary -- observed as low as 0.1875px past
+  // `window.innerHeight` on the footer's "Refund Policy" link once the sweep's own
+  // scrollIntoViewIfNeeded chain happened to rest it flush against the bottom edge --
+  // makes `elementFromPoint` return null there even though a REAL click at that exact
+  // pixel does activate the element (dispatched via page.mouse and verified to
+  // navigate). `elementFromPoint` is stricter at its own boundary than the browser's
+  // real input hit-test; probing right up against it manufactures a violation a finger
+  // would never hit. A 1px margin (5x the largest overflow measured) folds this into
+  // the SAME "off the physical screen" case inside `hitTestBox` below, rather than a
+  // second rule.
+  const VIEWPORT_EDGE_EPS = 1;
 
-  // A `border-radius:50%` icon button (the report-usability-fab on mobile, 48x48) does not
-  // just LOOK round -- Chromium's own hit-testing excludes the corners a bounding-box
-  // probe would still ask about, which is correct engine behaviour, not a defect: a 48px
-  // circle already clears the 44px floor and a real finger meets it exactly where the
-  // probe below checks. Squaring the corners on a shape whose actual reachable area is a
-  // circle inscribed in that square is a guaranteed false miss for anything under ~61px in
-  // diameter (corner distance (half)*sqrt(2) > a radius below that) -- confirmed live on
-  // /account's FAB via `elementsFromPoint`, which returned the button dead-center and at
-  // every edge midpoint, but the plain div behind it at all four corners. Detected by
-  // reading the box's own corner radii rather than assuming from a class name: "round" only
-  // when EVERY corner covers at least half the box's shorter side, so a merely pill-shaped
-  // wide button (rounded ends, flat middle) is unaffected -- its own centre sits on the flat
-  // part either way.
-  const minDim = Math.min(rect.width, rect.height);
-  // `getComputedStyle` does NOT resolve a percentage border-radius to px (percentages stay
-  // percentages in the computed value, since the used value depends on which axis of the
-  // box is asked) -- confirmed live: `border-radius: 50%` on the FAB's 48x48 box reads back
-  // as "50%", not "24px", so a px-only regex silently measured every round corner as 0 and
-  // never once triggered this branch. Resolved against `minDim` here, which is exact for a
-  // circle (width===height) and merely approximate for a rounded ellipse -- fine for a
-  // heuristic that only decides which of two already-correct probe shapes to use.
-  const cornerRadiusPx = (v: string): number => {
-    const m = /^([\d.]+)(px|%)/.exec(v);
-    if (!m) return 0;
-    const n = parseFloat(m[1]);
-    return m[2] === '%' ? (n / 100) * minDim : n;
+  /**
+   * Hit-tests ONE box -- the tap candidate's own, or (OBRS-640 round 2, AC-2 label
+   * credit) an associated `<label>`'s -- against `args.minTapPx`. Extracted so a label
+   * is held to the exact same probe geometry and roundness handling a plain tap target
+   * answers to, never a softer one.
+   */
+  const hitTestBox = (target: Element): { probed: number; misses: string[]; rect: DOMRect } => {
+    // 0.5px inset from the theoretical box edge: `getBoundingClientRect`'s bottom/right
+    // are EXCLUSIVE at the sub-pixel level, so probing an element sized exactly
+    // minTapPx (44.0, measured live on /account's "Edit personal details" et al.) at
+    // the literal edge missed 3/8 corners on a button that already meets the floor -- a
+    // false violation manufactured by the probe, not a real one. Anything genuinely
+    // smaller still misses: a 40px button's edge is 2px inboard of a 21.5px-inset
+    // probe, well past this margin.
+    const half = args.minTapPx / 2 - 0.5;
+    const rect = target.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    // A `border-radius:50%` icon button (the report-usability-fab on mobile, 48x48)
+    // does not just LOOK round -- Chromium's own hit-testing excludes the corners a
+    // bounding-box probe would still ask about, which is correct engine behaviour, not
+    // a defect: a 48px circle already clears the 44px floor and a real finger meets it
+    // exactly where the probe below checks. Squaring the corners on a shape whose
+    // actual reachable area is a circle inscribed in that square is a guaranteed false
+    // miss for anything under ~61px in diameter (corner distance (half)*sqrt(2) > a
+    // radius below that) -- confirmed live on /account's FAB via `elementsFromPoint`,
+    // which returned the button dead-center and at every edge midpoint, but the plain
+    // div behind it at all four corners. Detected by reading the box's own corner radii
+    // rather than assuming from a class name: "round" only when EVERY corner covers at
+    // least half the box's shorter side, so a merely pill-shaped wide button (rounded
+    // ends, flat middle) is unaffected -- its own centre sits on the flat part either
+    // way.
+    const minDim = Math.min(rect.width, rect.height);
+    // `getComputedStyle` does NOT resolve a percentage border-radius to px (percentages
+    // stay percentages in the computed value, since the used value depends on which
+    // axis of the box is asked) -- confirmed live: `border-radius: 50%` on the FAB's
+    // 48x48 box reads back as "50%", not "24px", so a px-only regex silently measured
+    // every round corner as 0 and never once triggered this branch. Resolved against
+    // `minDim` here, which is exact for a circle (width===height) and merely
+    // approximate for a rounded ellipse -- fine for a heuristic that only decides which
+    // of two already-correct probe shapes to use.
+    const cornerRadiusPx = (v: string): number => {
+      const m = /^([\d.]+)(px|%)/.exec(v);
+      if (!m) return 0;
+      const n = parseFloat(m[1]);
+      return m[2] === '%' ? (n / 100) * minDim : n;
+    };
+    const csT = getComputedStyle(target);
+    const isRound =
+      minDim > 0 &&
+      Math.min(
+        cornerRadiusPx(csT.borderTopLeftRadius),
+        cornerRadiusPx(csT.borderTopRightRadius),
+        cornerRadiusPx(csT.borderBottomRightRadius),
+        cornerRadiusPx(csT.borderBottomLeftRadius)
+      ) >=
+        minDim / 2 - 1;
+
+    const probes: [number, number][] = isRound
+      ? [0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
+          const rad = (deg * Math.PI) / 180;
+          return [cx + half * Math.cos(rad), cy + half * Math.sin(rad)] as [number, number];
+        })
+      : [
+          [cx - half, cy - half],
+          [cx + half, cy - half],
+          [cx - half, cy + half],
+          [cx + half, cy + half],
+          [cx, cy - half],
+          [cx, cy + half],
+          [cx - half, cy],
+          [cx + half, cy],
+        ];
+
+    const misses: string[] = [];
+    let probed = 0;
+    for (const [x, y] of probes) {
+      // Off the CURRENT viewport is off the physical screen, not a defect the box owns
+      // -- elementFromPoint answers null there regardless of the element's own size.
+      if (
+        x < 0 ||
+        y < 0 ||
+        x >= window.innerWidth - VIEWPORT_EDGE_EPS ||
+        y >= window.innerHeight - VIEWPORT_EDGE_EPS
+      )
+        continue;
+      probed++;
+      const hit = document.elementFromPoint(x, y);
+      if (!hit || !(hit === target || target.contains(hit))) {
+        misses.push(`(${Math.round(x)},${Math.round(y)})->${hit ? pathOf(hit) : 'nothing'}`);
+      }
+    }
+    return { probed, misses, rect };
   };
-  const cs2 = getComputedStyle(el);
-  const isRound =
-    minDim > 0 &&
-    Math.min(
-      cornerRadiusPx(cs2.borderTopLeftRadius),
-      cornerRadiusPx(cs2.borderTopRightRadius),
-      cornerRadiusPx(cs2.borderBottomRightRadius),
-      cornerRadiusPx(cs2.borderBottomLeftRadius)
-    ) >=
-      minDim / 2 - 1;
 
-  const probes: [number, number][] = isRound
-    ? [0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
-        const rad = (deg * Math.PI) / 180;
-        return [cx + half * Math.cos(rad), cy + half * Math.sin(rad)] as [number, number];
-      })
-    : [
-        [cx - half, cy - half],
-        [cx + half, cy - half],
-        [cx - half, cy + half],
-        [cx + half, cy + half],
-        [cx, cy - half],
-        [cx, cy + half],
-        [cx - half, cy],
-        [cx + half, cy],
-      ];
+  const primary = hitTestBox(el);
+  if (primary.probed > 0 && primary.misses.length === 0) {
+    return { violation: null, excludedReason: null, satisfiedViaLabel: false };
+  }
 
-  const misses: string[] = [];
-  let probed = 0;
-  for (const [x, y] of probes) {
-    // Off the CURRENT viewport is off the physical screen, not a defect the box owns --
-    // elementFromPoint answers null there regardless of the element's own size.
-    if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) continue;
-    probed++;
-    const hit = document.elementFromPoint(x, y);
-    if (!hit || !(hit === el || el.contains(hit))) {
-      misses.push(`(${Math.round(x)},${Math.round(y)})->${hit ? pathOf(hit) : 'nothing'}`);
+  // OBRS-640 round 2 (AC-2: "a real radio's tap area is the input plus its associated
+  // label -- tapping the label actuates the control"). Restricted to <input>, the one
+  // HTML relationship where clicking a DIFFERENT element is guaranteed to activate this
+  // one. The association is read from the DOM (`for`/`id`, the markup this card
+  // requires at every site it touches), never assumed from proximity or class name, and
+  // the label is hit-tested by the exact same `hitTestBox` any other tap candidate
+  // answers to -- a label under 44x44 still fails, same as any other candidate; nothing
+  // here is inferred from CSS.
+  let label: Element | null = null;
+  if (el.tagName === 'INPUT') {
+    const id = el.getAttribute('id');
+    if (id) {
+      label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
+    }
+  }
+  if (label) {
+    const viaLabel = hitTestBox(label);
+    if (viaLabel.probed > 0 && viaLabel.misses.length === 0) {
+      return { violation: null, excludedReason: null, satisfiedViaLabel: true };
     }
   }
 
-  if (probed === 0) {
+  if (primary.probed === 0) {
     return {
       violation: {
         selector: pathOf(el),
@@ -570,22 +637,21 @@ function probeTaggedTapElement(args: { idx: number; minTapPx: number }): ProbeOu
         detail: `unprobeable: entire ${args.minTapPx}x${args.minTapPx} box fell outside the viewport even after scrollIntoViewIfNeeded`,
       },
       excludedReason: null,
+      satisfiedViaLabel: false,
     };
   }
-  if (misses.length > 0) {
-    return {
-      violation: {
-        selector: pathOf(el),
-        text: snippet(el),
-        detail:
-          `box ${rect.width.toFixed(1)}x${rect.height.toFixed(1)} at ` +
-          `(${rect.left.toFixed(0)},${rect.top.toFixed(0)}); ${misses.length}/${probed} probes missed: ` +
-          misses.join(', '),
-      },
-      excludedReason: null,
-    };
-  }
-  return { violation: null, excludedReason: null };
+  return {
+    violation: {
+      selector: pathOf(el),
+      text: snippet(el),
+      detail:
+        `box ${primary.rect.width.toFixed(1)}x${primary.rect.height.toFixed(1)} at ` +
+        `(${primary.rect.left.toFixed(0)},${primary.rect.top.toFixed(0)}); ${primary.misses.length}/${primary.probed} probes missed: ` +
+        primary.misses.join(', '),
+    },
+    excludedReason: null,
+    satisfiedViaLabel: false,
+  };
 }
 
 /** The text-size sweep (AC-3), one full pass over `scope`. No scrolling needed: font-size
@@ -736,6 +802,9 @@ test.describe('OBRS-640 mobile tap-target + typography audit (Phase A baseline)'
           const tapViolations: Violation[] = [];
           const tapExcluded = { ...c.excluded };
           let tapMeasuredTotal = c.measuredCount;
+          // AC-6: counted and printed separately from `violations`/`measuredTotal` so a
+          // credited input can never disappear into either silently.
+          let tapSatisfiedViaLabel = 0;
           for (let i = 0; i < c.measuredCount; i++) {
             await page.locator(`[data-obrs640-tap="${i}"]`).scrollIntoViewIfNeeded();
             const outcome = await page.evaluate(probeTaggedTapElement, { idx: i, minTapPx: MIN_TAP_PX });
@@ -745,13 +814,15 @@ test.describe('OBRS-640 mobile tap-target + typography audit (Phase A baseline)'
               tapMeasuredTotal--;
               continue;
             }
+            if (outcome.satisfiedViaLabel) tapSatisfiedViaLabel++;
             if (outcome.violation) tapViolations.push(outcome.violation);
           }
-          const tap: SweepResult = {
+          const tap: SweepResult & { satisfiedViaLabel: number } = {
             populationTotal: c.populationTotal,
             measuredTotal: tapMeasuredTotal,
             excluded: tapExcluded,
             violations: tapViolations,
+            satisfiedViaLabel: tapSatisfiedViaLabel,
           };
           const t = text as SweepResult;
 
@@ -765,7 +836,8 @@ test.describe('OBRS-640 mobile tap-target + typography audit (Phase A baseline)'
             `[OBRS-640] ${surface.route} > ${surface.key} @ ${vp.name}px ` +
               `(swal=${swal}, doc=${dims.documentHeight}px, viewport=${dims.viewportHeight}px)\n` +
               `  TAP  population=${tap.populationTotal} measured=${tap.measuredTotal} ` +
-              `violations=${tap.violations.length} excluded{${fmtExcluded(tap.excluded)}}\n` +
+              `violations=${tap.violations.length} satisfiedViaLabel=${tap.satisfiedViaLabel} ` +
+              `excluded{${fmtExcluded(tap.excluded)}}\n` +
               tap.violations.map((v) => `    TAP  ${v.selector} "${v.text}" -- ${v.detail}`).join('\n') +
               (tap.violations.length ? '\n' : '') +
               `  TEXT population=${t.populationTotal} measured=${t.measuredTotal} ` +
