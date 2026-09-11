@@ -14,6 +14,29 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ## Pending Changes (Backend → Frontend)
 
+## [Backend] 2026-09-11 — `409` for `PAYMENT_CHARGE_RECONCILIATION_REQUIRED`; `429` on `GET /api/users/check-duplicate/*`
+**Risk level**: R1 (status-code change on one error code; new rate limit on two public endpoints)
+**Triggered by**: production-readiness review 2026-09-11 (B2 charge reconciliation, S3 enumeration limiter).
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| `POST /api/private/payments`, `POST /api/payments` (guest) | Status code | `errorCode: "PAYMENT_CHARGE_RECONCILIATION_REQUIRED"` is now answered **`409 Conflict`** (was `400`). Body shape unchanged. The message text (`payment.charge.reconciliation-required`, th/en/zh) now says the gateway is being checked and to wait a few minutes before retrying — a background job resolves the stuck attempt within ~5 minutes, so "contact support, do not retry" is no longer the advice. |
+| `GET /api/users/check-duplicate/email/{email}`, `GET /api/users/check-duplicate/phoneNumber/{phoneNumber}` | Rate limit | Per client IP, 60 calls per 15 minutes across both. Over the cap: **`429`** with message key `user.check-duplicate.rate-limited` (th/en/zh). |
+
+### Response shapes before / after
+- **Before**: `400 { "code": 400, "errorCode": "PAYMENT_CHARGE_RECONCILIATION_REQUIRED", "message": "...do not retry - contact support..." }`
+- **After**: `409 { "code": 409, "errorCode": "PAYMENT_CHARGE_RECONCILIATION_REQUIRED", "message": "...wait a few minutes and try again..." }`
+
+### Action required in frontend
+- [ ] Confirm the payment page's error path treats a `409` on the pay request like the `400` it handled before (the global `errorInterceptor` already surfaces the body message; check nothing keys on `status === 400` for this code).
+- [x] Register form: a `429` from the on-blur duplicate check does NOT block the form — `RegisterComponent.checkDuplicateData` already swallows errors, and `UserService` now sends both checks with `SKIP_GLOBAL_ERROR_ALERT` + `SKIP_GLOBAL_LOADING_ALERT` so the refusal is silent (2026-09-11).
+
+### Still unfinished on backend
+- None. See `../OBRS-backend/docs/api/payment.md` and `docs/api/admin.md`.
+
+---
+
 ## [Backend] 2026-08-20 — `userName` added to `GET/PUT /api/private/admin/usability-reports` (list + detail)
 **Risk level**: R1 (additive)
 **Triggered by**: bug report — the `/admin/usability-reports` page showed the raw numeric `userId` (e.g. `1`, `2`) in the reporter column/detail instead of a name.
