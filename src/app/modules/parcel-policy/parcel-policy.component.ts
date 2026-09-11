@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ParcelPolicyService } from '../../services/parcel-policy/parcel-policy.service';
@@ -40,6 +40,13 @@ export interface ParcelPolicyLimits {
     standalone: false
 })
 export class ParcelPolicyComponent implements OnInit, OnDestroy {
+  /**
+   * OBRS-1808: true when this is rendered inside the staff waybill's terms modal instead of at
+   * `/parcel-policy`. It drops the page chrome only — navbar, footer, the page card — and never
+   * the clauses, so the modal cannot become a shorter version of the published terms.
+   */
+  @Input() embedded = false;
+
   // Assigned ONCE when the API resolves, then read by an impure TranslatePipe that re-interpolates
   // it on every language change — so this object must survive a language switch untouched (the
   // config values are locale-independent). Same contract as BusinessPolicyComponent#policyParams.

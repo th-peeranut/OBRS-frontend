@@ -655,6 +655,12 @@
     "lane": "CAPTURE",
     "config": "playwright.obrs637capture.config.ts",
     "why": "OBRS-637 BEFORE/AFTER evidence for pinning the primary CTA to the bottom of the screen below 768px, plus the measurements the card's ACs ask for: the CTA's box at five scroll offsets (AC1), its height (AC3), the last footer link still being the thing under its own centre at maximum scroll (AC2), and the CTA's computed position at 1280x720 (AC5). It also records where the report-usability FAB sits and what is under ITS centre -- the FAB is fixed in the same corner at z-index 900, and its yield only fires when the candidate's CENTRE is under the pill, which a bar spanning the screen never is. CAPTURE and not GATE because it has to run UNCHANGED against both runtimes: the claim is that the same question answers differently on the two trees, so an assertion true of only one of them would turn the BEFORE arm red instead of recording it. Two servers started by hand -- :4637 a detached worktree at the origin/dev this branch is merged up to, :4638 this branch -- which is why it declares laneTree: attach-to-operator-stack. Hermetic otherwise: it reuses e2e/support/customer-pages.ts, which fulfils every /api/** call."
+  },
+  {
+    "spec": "obrs-1808-capture.spec.ts",
+    "lane": "CAPTURE",
+    "config": "playwright.obrs1808capture.config.ts",
+    "why": "OBRS-1808 AFTER evidence for the waybill: the recipient collectionToken QR removed from both surfaces, the full-terms QR replaced on SCREEN by a link that opens the /parcel-policy component in a modal (clause 10 keeps the QR on the PRINTED copy), and the three-clause short form broken onto three lines. CAPTURE and not GATE because the verdict belongs to parcel-waybill-paper.component.spec.ts, whose 0-count assertions fail a build; this exists so the owner can see the paper and the screen side by side. Hermetic on the gate lane's terms: it seeds a synthetic staff session and fulfils every /api/** call it makes, so nothing reaches a backend. The BEFORE half is shot from a second worktree at origin/dev with an uncommitted twin of this spec, because a committed spec asserting the old DOM would fail on this branch."
   }
   ]
 }
