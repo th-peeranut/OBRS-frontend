@@ -93,9 +93,22 @@ The other three degrade visibly or harmlessly: a blank MapTiler key paints the
 `MAP_UNAVAILABLE` placeholder, blank analytics IDs simply inject nothing. A blank
 `mapsMapId` does neither. `AdvancedMarkerElement` — which the route map has used since
 OBRS-1838 retired the deprecated `google.maps.Marker` — refuses to draw on a Map that
-was constructed without a `mapId`, so **the map renders normally, the road-snapped
-polyline renders, and every pickup/drop-off pin is simply missing.** Nothing logs, no
-placeholder appears, and the page looks like a working map of a route with no stops.
+was constructed without a `mapId`.
+
+Measured 2026-09-12 by building this bundle with `mapsMapId: ''` and serving it at the
+SIT origin: **the map draws (3 canvases, 43 tiles) and the road-snapped polyline draws,
+and `gmp-advanced-marker` count is 0** — a working-looking map of a route with no stops.
+Nothing on the page says so; there is no `canShowMap`-style placeholder gate on this
+value the way there is on `maptilerKey`.
+
+**It is loud in DevTools, though, so check there before you conclude the data is wrong.**
+The same run logged `console.error` **24 times** — once per marker that could not be
+created — with Google's own text:
+
+    The map is initialized without a valid Map ID, which will prevent use of Advanced Markers.
+
+24 of the 26 console messages on the page were that line. An earlier draft of this
+section claimed "nothing logs"; that was asserted, not measured, and it was wrong.
 
 Get the value from **prod's own** Cloud project, not SIT's: a Map ID is project-scoped
 and SIT's `6b1b77b585b50c8668808c25` will not resolve against a prod key. Create it at
