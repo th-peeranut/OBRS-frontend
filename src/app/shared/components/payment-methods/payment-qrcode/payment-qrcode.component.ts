@@ -24,6 +24,10 @@ import {
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 import { isHandledByBackendMessage } from '../../../../shared/lib/payment-error-codes';
 import { formatMoney } from '../../../lib/money-display';
+import {
+  isTrustedPaymentRedirect,
+  paymentRedirectOriginForLog,
+} from '../../../lib/payment-redirect';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 type PromptPayPaymentData = PaymentResponse | PaymentByBookingIdResponse;
@@ -160,7 +164,29 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       return;
     }
 
-    window.location.href = this.qrPaymentUrl;
+    // Security review 2026-09 (M4): same allow-list as the card flow (pay.omise.co /
+    // api.omise.co). The QR itself stays on screen; only the hand-off is refused - and the
+    // passenger may already have paid by scanning, so the QR wording (REDIRECT_BLOCKED_QR)
+    // must not claim otherwise. Only the refused ORIGIN is logged.
+    if (!isTrustedPaymentRedirect(this.qrPaymentUrl)) {
+      console.error(
+        'Refusing payment redirect to an untrusted origin',
+        paymentRedirectOriginForLog(this.qrPaymentUrl)
+      );
+      this.alertService.error(this.translate.instant('PAYMENT.ALERT.REDIRECT_BLOCKED_QR'));
+      return;
+    }
+
+    this.navigateToGateway(this.qrPaymentUrl);
+  }
+
+  /**
+   * The one full-page navigation this component makes. A method rather than an inline
+   * assignment so the specs can spy on it: a test that really assigned `location.href` would
+   * take the Karma page with it.
+   */
+  protected navigateToGateway(url: string): void {
+    window.location.href = url;
   }
 
   private async ensurePromptPayQrCode(showMissingBookingAlert = false): Promise<void> {

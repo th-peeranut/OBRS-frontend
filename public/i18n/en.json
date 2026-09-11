@@ -3314,7 +3314,9 @@
       "SUCCESS": "Payment complete. Your ticket is ready.",
       "PENDING": "We're waiting for your payment to be confirmed. This page updates on its own once the money arrives.",
       "FAILED": "The payment didn't go through. Please check your card details or account balance and try again.",
-      "QR_UNAVAILABLE": "We couldn't create the QR code. Please tap Refresh QR to try again."
+      "QR_UNAVAILABLE": "We couldn't create the QR code. Please tap Refresh QR to try again.",
+      "REDIRECT_BLOCKED": "We couldn't open the card verification page because its address isn't a recognised payment gateway. No money has been taken. Please try again or choose another payment method.",
+      "REDIRECT_BLOCKED_QR": "We couldn't open the payment confirmation page because its address isn't a recognised payment gateway. If you have already paid by scanning the QR, the payment is still recorded once your bank confirms it. Check your booking shortly or contact our staff."
     },
     "RESULT": {
       "FAILED_REDIRECT": "Payment failed. Please select a schedule and book again."

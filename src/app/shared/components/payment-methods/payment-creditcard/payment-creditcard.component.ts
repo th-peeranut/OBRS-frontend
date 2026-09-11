@@ -25,6 +25,10 @@ import {
 } from '../../../../shared/interfaces/payment.interface';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 import { isHandledByBackendMessage } from '../../../../shared/lib/payment-error-codes';
+import {
+  isTrustedPaymentRedirect,
+  paymentRedirectOriginForLog,
+} from '../../../lib/payment-redirect';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 
@@ -233,6 +237,15 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     return { amountSubunits: Math.round(outstanding * 100), currency };
   }
 
+  /**
+   * The one full-page navigation this component makes. A method rather than an inline
+   * assignment so the specs can spy on it: a test that really assigned `location.href` would
+   * take the Karma page with it.
+   */
+  protected navigateToGateway(url: string): void {
+    window.location.href = url;
+  }
+
   private handlePaymentResponse(payment: PaymentResponse | null | undefined): void {
     if (this.isPaidStatus(payment?.status)) {
       this.completePayment();
@@ -240,7 +253,19 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     }
 
     if (payment?.authorizeUri) {
-      window.location.href = payment.authorizeUri;
+      // Security review 2026-09 (M4): the gateway URL is followed only when its host is on the
+      // allow-list (pay.omise.co / api.omise.co). A value that fails the check is treated like
+      // a failed payment: the passenger is told, nothing is navigated, and only the refused
+      // ORIGIN is logged - the full authorize URI is a capability URL.
+      if (!isTrustedPaymentRedirect(payment.authorizeUri)) {
+        console.error(
+          'Refusing payment redirect to an untrusted origin',
+          paymentRedirectOriginForLog(payment.authorizeUri)
+        );
+        this.alertService.error(this.translate.instant('PAYMENT.ALERT.REDIRECT_BLOCKED'));
+        return;
+      }
+      this.navigateToGateway(payment.authorizeUri);
       return;
     }
 
