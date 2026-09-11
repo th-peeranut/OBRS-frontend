@@ -2099,6 +2099,7 @@
       "TABLE_TITLE": "กำไร-ขาดทุนรายคัน",
       "EMPTY": "ไม่มีรถคันไหนมีตัวเลขในช่วงวันที่นี้",
       "OF_WHICH_VAT": "ในนี้เป็น VAT",
+      "COMPARED_WITH": "เทียบช่วง {{from}} – {{to}}",
       "OF_WHICH_HISTORICAL": "ในนี้เป็นรายได้ย้อนหลังที่นำเข้า",
       "HISTORICAL_CONFLICTS": "มี {{count}} วันที่ยอดนำเข้าชนกับยอดขายจริง",
       "EXPAND_ARIA": "ดูรายละเอียดรายจ่ายของรถคันนี้",
@@ -2112,15 +2113,18 @@
         "REVENUE": "รายได้รวม",
         "EXPENSES": "รายจ่ายรวม",
         "MARGIN": "กำไรขั้นต้น",
+        "MARGIN_PCT": "อัตรากำไรสุทธิ",
         "PENDING_EXPENSES": "รายจ่ายรออนุมัติ",
         "PENDING_EXPENSES_HINT": "ยังไม่ถูกหักออกจากกำไร"
       },
       "COL": {
         "VEHICLE": "รถ",
+        "TRIPS": "เที่ยววิ่ง",
         "REVENUE": "รายได้",
         "EXPENSES": "รายจ่าย",
         "VAT": "ในนี้เป็น VAT",
         "MARGIN": "กำไร",
+        "MARGIN_PCT": "อัตรากำไร %",
         "OTHER_CATEGORIES": "อีก {{count}} หมวดรวมกัน"
       },
       "COST_MIX": {
