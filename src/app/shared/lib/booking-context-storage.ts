@@ -35,10 +35,16 @@ export const BOOKING_CONTEXT_KEY = 'obrs.booking_context';
 
 /**
  * The three keys `BookingService` uses for the booking currently being paid for. Declared here,
- * beside the booking context, so that `AuthService.logout()` can clear them without depending on
+ * beside the booking context, so that the session-ending paths can clear them without depending on
  * `BookingService` (security review 2026-09, FE-4): on a shared or kiosk browser the guest
  * payment grant (`active_booking_payment_grant`) is a capability to pay for - and fetch the
  * PromptPay QR of - the previous person's booking, and it used to survive sign-out.
+ *
+ * ⛔ **There are three such paths, not one** (OBRS-1854 — FE-4 first shipped with only the first):
+ * `AuthService.logout()` (the staff/admin shell and the close-account dialog — its only two
+ * callers), `NavbarComponent.onLogout()` (the CUSTOMER's sign-out button,
+ * which calls `clearAuthData()` directly and never reaches `logout()`), and the interceptor's
+ * forced logout on a real 401. Add a fourth session-ending path and it has to call this too.
  */
 export const ACTIVE_BOOKING_ID_KEY = 'active_booking_id';
 export const ACTIVE_BOOKING_NUMBER_KEY = 'active_booking_number';

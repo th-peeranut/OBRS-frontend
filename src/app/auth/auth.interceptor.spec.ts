@@ -24,6 +24,11 @@ import {
   SKIP_GLOBAL_ERROR_ALERT,
 } from '../shared/interceptors/http-context-tokens';
 import { environment } from '../../environments/environment';
+import {
+  ACTIVE_BOOKING_ID_KEY,
+  ACTIVE_BOOKING_NUMBER_KEY,
+  ACTIVE_BOOKING_PAYMENT_GRANT_KEY,
+} from '../shared/lib/booking-context-storage';
 
 // Regression for OBRS-181/OBRS-187: SKIP_AUTH_LOGOUT (not SKIP_GLOBAL_ERROR_ALERT)
 // governs whether a 401 forces logout. A silent-toast request (SKIP_GLOBAL_ERROR_ALERT
@@ -93,6 +98,41 @@ describe('authInterceptor — SKIP_AUTH_LOGOUT governs force-logout (OBRS-181/OB
     expect(clearSpy).toHaveBeenCalled();
     expect(alertWarningSpy).toHaveBeenCalled();
     tick(); // flush the setTimeout navigate so the module auth-error guard resets
+  }));
+
+  // Security review 2026-09 (FE-4) / OBRS-1854. FE-4 put the guest-payment-grant clear inside
+  // AuthService.logout(), which this path never calls — a session that dies here left the
+  // capability to pay for (and fetch the QR of) the booking in flight sitting in localStorage on
+  // a shared machine. The trip selection deliberately still survives: wiping THAT on a 401 is the
+  // OBRS-903 bug AuthService#logout's own comment warns about.
+  it('OBRS-1854: a real 401 that ends the session also clears the guest payment grant', fakeAsync(() => {
+    localStorage.setItem(ACTIVE_BOOKING_ID_KEY, '4021');
+    localStorage.setItem(ACTIVE_BOOKING_NUMBER_KEY, 'BK-4021');
+    localStorage.setItem(ACTIVE_BOOKING_PAYMENT_GRANT_KEY, 'grant.jwt.value');
+
+    http.get('/api/private/bookings').subscribe({ next: fail, error: () => {} });
+    httpTesting
+      .expectOne('/api/private/bookings')
+      .flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    expect(localStorage.getItem(ACTIVE_BOOKING_ID_KEY)).toBeNull();
+    expect(localStorage.getItem(ACTIVE_BOOKING_NUMBER_KEY)).toBeNull();
+    expect(localStorage.getItem(ACTIVE_BOOKING_PAYMENT_GRANT_KEY)).toBeNull();
+    tick();
+  }));
+
+  it('OBRS-1854: a silent 401 that is NOT an auth verdict leaves the payment grant alone', fakeAsync(() => {
+    localStorage.setItem(ACTIVE_BOOKING_PAYMENT_GRANT_KEY, 'grant.jwt.value');
+
+    http
+      .post('/api/private/promotions/validate', { code: 'CHILD50', amount: 200 }, { context: skipAuthLogoutCtx() })
+      .subscribe({ next: fail, error: () => {} });
+    httpTesting
+      .expectOne('/api/private/promotions/validate')
+      .flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    expect(localStorage.getItem(ACTIVE_BOOKING_PAYMENT_GRANT_KEY)).toBe('grant.jwt.value');
+    tick();
   }));
 
   it('OBRS-187: 401 on a protected admin-style call that only suppresses the toast (SKIP_GLOBAL_ERROR_ALERT) still force-logouts', fakeAsync(() => {

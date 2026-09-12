@@ -16,6 +16,7 @@ import { APP_LANGUAGE_KEY, DEFAULT_LANGUAGE } from '../shared/services/language.
 import { SKIP_AUTH_LOGOUT } from '../shared/interceptors/http-context-tokens';
 import { AlertService } from '../shared/services/alert.service';
 import { hasOwnKey } from '../shared/lib/own-key';
+import { clearActiveBookingStorage } from '../shared/lib/booking-context-storage';
 
 let isHandlingAuthError = false;
 
@@ -247,6 +248,12 @@ function handleUnauthorized(
   // and it is what made the flow feel like it had thrown away something real.
   if (sentCredential) {
     authService.clearAuthData();
+    // Security review 2026-09 (FE-4, OBRS-1854): a session that dies here is over just as
+    // finally as one the user signed out of, so the guest payment grant has to go with it.
+    // Deliberately NOT clearBookingContext() — wiping the trip selection on a 401 is the
+    // OBRS-903 bug AuthService#logout's comment warns about. The grant carries no such
+    // restore-what-they-picked duty; it is a capability, and it dies with the session.
+    clearActiveBookingStorage();
   }
 
   // OBRS-601 (Scrutinize): `appLanguage` is a RAW `localStorage.getItem()` —

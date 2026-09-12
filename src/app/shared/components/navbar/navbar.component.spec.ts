@@ -174,6 +174,35 @@ describe('NavbarComponent', () => {
     expect(navSpy).toHaveBeenCalledWith(['/']);
   });
 
+  // Security review 2026-09 (FE-4) / OBRS-1854. FE-4 cleared the guest payment grant in
+  // AuthService.logout(), but THIS button — the only sign-out a customer ever presses, and the
+  // customer is the only role that holds a grant — calls clearAuthData() directly and never goes
+  // through logout(). The capability to pay for the previous person's booking outlived the press.
+  it('OBRS-1854: sign out drops the guest payment grant of the booking in flight', async () => {
+    localStorage.setItem('active_booking_id', '4021');
+    localStorage.setItem('active_booking_number', 'BK-4021');
+    localStorage.setItem('active_booking_payment_grant', 'grant.jwt.value');
+
+    const router = createRouterStub();
+    spyOn(router, 'navigate').and.resolveTo(true);
+    const auth: any = createAuthStub();
+    auth.clearAuthData = () => {};
+    const comp = new NavbarComponent(
+      createTranslateStub(),
+      {} as never,
+      createElementRefStub(),
+      auth,
+      router,
+      { success: () => {} } as never
+    );
+
+    await comp.onLogout();
+
+    expect(localStorage.getItem('active_booking_id')).toBeNull();
+    expect(localStorage.getItem('active_booking_number')).toBeNull();
+    expect(localStorage.getItem('active_booking_payment_grant')).toBeNull();
+  });
+
   it('scrolls to the footer contact section', () => {
     const target = document.createElement('div');
     target.id = 'footer-contact';

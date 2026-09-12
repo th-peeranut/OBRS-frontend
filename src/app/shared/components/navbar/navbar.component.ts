@@ -13,6 +13,7 @@ import { AuthService } from '../../../auth/auth.service';
 import { Router } from '@angular/router';
 import { AlertService } from '../../services/alert.service';
 import { PersonalMenuItem, buildPersonalMenuItems } from '../../lib/personal-menu-items';
+import { clearActiveBookingStorage } from '../../lib/booking-context-storage';
 
 @Component({
     selector: 'app-navbar',
@@ -209,6 +210,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.isMobileMenuOpen = false;
 
     this.authService.clearAuthData();
+    // Security review 2026-09 (FE-4, OBRS-1854): this is the CUSTOMER's sign-out button, and the
+    // customer is the only role that ever holds a guest payment grant. It does not go through
+    // AuthService.logout(), so the clear placed there never ran here — the capability to pay for
+    // (and fetch the QR of) the booking in flight outlived the press on a shared machine.
+    clearActiveBookingStorage();
     this.alertService.success(
       this.translate.instant('HOME.NAVBAR.SIGNOUT_SUCCESS')
     );

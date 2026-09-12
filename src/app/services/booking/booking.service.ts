@@ -495,7 +495,8 @@ export class BookingService {
     // would mean the next booking's payment could be attempted with the previous booking's token,
     // which the server refuses (GuestPaymentService compares the two ids) — as a confusing error
     // rather than the obvious "no token" the flow should have produced.
-    // Security review 2026-09 (FE-4): the same three keys are also cleared by AuthService.logout().
+    // Security review 2026-09 (FE-4): the same three keys are also cleared by every session-ending
+    // path - booking-context-storage.ts has the list of them (OBRS-1854).
     clearActiveBookingStorage();
   }
 
