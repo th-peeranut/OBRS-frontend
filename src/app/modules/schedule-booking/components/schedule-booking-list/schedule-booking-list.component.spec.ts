@@ -415,6 +415,27 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
     expect((plain[0].nativeElement.textContent || '')).toContain('Mo Chit 2');
   });
 
+  it('drops a maps URL that is not a Google Maps link, so the stop renders as text (security review 2026-09, FE-5)', () => {
+    type StopLineBuilder = {
+      toStopLine(stop: RouteStop, labelKey: string, icon: string): { mapsUrl: string | null };
+    };
+    const builder = component as unknown as StopLineBuilder;
+
+    const refused = builder.toStopLine(
+      makeStop('x', 0, 0, { googleMapsUrl: 'https://phish.example/maps' }),
+      'K',
+      'i'
+    );
+    expect(refused.mapsUrl).toBeNull();
+
+    const allowed = builder.toStopLine(
+      makeStop('y', 0, 0, { googleMapsUrl: 'https://maps.google.com/?q=y' }),
+      'K',
+      'i'
+    );
+    expect(allowed.mapsUrl).toBe('https://maps.google.com/?q=y');
+  });
+
   it('heads the list with the pair once and leaves the rows silent, on a single-route leg (AC4)', () => {
     expect(component.departureSharedRoute).toBe(true);
     expect(fixture.debugElement.queryAll(By.css('.stop-detail--shared')).length).toBe(1);

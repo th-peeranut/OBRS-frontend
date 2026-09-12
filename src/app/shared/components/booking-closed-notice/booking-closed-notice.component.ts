@@ -39,7 +39,10 @@ import {
  * definition of "portal page" (`shared/lib/analytics-route-scope.ts`), reached
  * through {@link AnalyticsRouteScopeService}. It is named for analytics because
  * that is what first needed it; the predicate itself is about route shape
- * (`requiredRoles`), not measurement.
+ * (`requiredRoles`), not measurement. Since the 2026-09 security review it also
+ * answers `true` for the three token-in-URL pages (`analyticsRestricted`), so
+ * the notice stays off `/reset-password`, `/verify-email` and
+ * `/change-email/confirm` as well — a deliberate, documented side effect.
  *
  * **It waits for `measurable` rather than merely "not restricted".** That is the
  * opposite choice from the consent bar, deliberately. The consent bar shows

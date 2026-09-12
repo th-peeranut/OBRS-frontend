@@ -6,6 +6,7 @@ import { select, Store } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { Station, StationApi } from '../../../../shared/interfaces/station.interface';
+import { isTrustedMapsUrl } from '../../../../shared/lib/trusted-maps-url';
 
 @Component({
     selector: 'app-station-home',
@@ -79,7 +80,8 @@ export class StationHomeComponent implements OnInit, OnDestroy {
   }
 
   navMap(url: string) {
-    if (!url) return;
+    // Security review 2026-09 (FE-5): admin-typed URL, opened only when it is a Google Maps link.
+    if (!isTrustedMapsUrl(url)) return;
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 

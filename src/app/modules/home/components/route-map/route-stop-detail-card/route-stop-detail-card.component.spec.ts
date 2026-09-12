@@ -33,6 +33,19 @@ describe('RouteStopDetailCardComponent', () => {
     expect(openSpy).not.toHaveBeenCalled();
   });
 
+  it('canOpenMaps and openMaps refuse a non-Google-Maps URL (security review 2026-09, FE-5)', () => {
+    component.stop = { ...makeStop(), googleMapsUrl: 'https://phish.example/maps' };
+    const openSpy = spyOn(window, 'open');
+    expect(component.canOpenMaps).toBeFalse();
+    component.openMaps();
+    expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  it('canOpenMaps is true for a Google Maps URL', () => {
+    component.stop = makeStop();
+    expect(component.canOpenMaps).toBeTrue();
+  });
+
   it('hasPickupCoords is true when both latitude and longitude are present', () => {
     component.stop = makeStop();
     expect(component.hasPickupCoords).toBeTrue();

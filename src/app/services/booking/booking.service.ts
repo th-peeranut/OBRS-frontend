@@ -35,6 +35,12 @@ import {
 } from '../../shared/interceptors/http-context-tokens';
 import { normalizeSeatAssignments } from '../../shared/lib/seat-number';
 import { map, Observable } from 'rxjs';
+import {
+  ACTIVE_BOOKING_ID_KEY,
+  ACTIVE_BOOKING_NUMBER_KEY,
+  ACTIVE_BOOKING_PAYMENT_GRANT_KEY,
+  clearActiveBookingStorage,
+} from '../../shared/lib/booking-context-storage';
 
 export interface RescheduleEstimateParams {
   newScheduleId: number;
@@ -100,15 +106,15 @@ export interface ConfirmChangeStopPayload {
   providedIn: 'root',
 })
 export class BookingService {
-  private readonly BOOKING_ID_KEY = 'active_booking_id';
+  private readonly BOOKING_ID_KEY = ACTIVE_BOOKING_ID_KEY;
   // OBRS-1204: the human-facing half of the same identity. The id addresses the booking
   // over the API; this is the number the customer quotes and the one booking search
   // resolves, so the payment screen can print a reference before any transaction exists.
-  private readonly BOOKING_NUMBER_KEY = 'active_booking_number';
+  private readonly BOOKING_NUMBER_KEY = ACTIVE_BOOKING_NUMBER_KEY;
   // OBRS-858 (ADR-0123 Decision 6). Deliberately NOT named *_token in a way that resembles
   // `auth_token`: it is a capability for one booking, not a session, and a reader skimming
   // localStorage should not mistake one for the other.
-  private readonly GUEST_PAYMENT_TOKEN_KEY = 'active_booking_payment_grant';
+  private readonly GUEST_PAYMENT_TOKEN_KEY = ACTIVE_BOOKING_PAYMENT_GRANT_KEY;
 
   // OBRS-858: read ONLY to pick between the private and public booking-create endpoints
   // in createBooking. Nothing here derives authorization from it - the server does that.
@@ -485,13 +491,12 @@ export class BookingService {
   }
 
   clearActiveBookingId(): void {
-    localStorage.removeItem(this.BOOKING_ID_KEY);
-    localStorage.removeItem(this.BOOKING_NUMBER_KEY);
     // OBRS-858: the token belongs to the booking it names, so it dies with it. Leaving it behind
     // would mean the next booking's payment could be attempted with the previous booking's token,
     // which the server refuses (GuestPaymentService compares the two ids) — as a confusing error
     // rather than the obvious "no token" the flow should have produced.
-    localStorage.removeItem(this.GUEST_PAYMENT_TOKEN_KEY);
+    // Security review 2026-09 (FE-4): the same three keys are also cleared by AuthService.logout().
+    clearActiveBookingStorage();
   }
 
   /**
