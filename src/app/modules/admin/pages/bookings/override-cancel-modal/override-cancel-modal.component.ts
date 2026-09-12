@@ -3,11 +3,13 @@ import {
   EventEmitter,
   Input,
   OnChanges,
+  OnDestroy,
   Output,
   SimpleChanges,
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { Subject, firstValueFrom } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import {
   AdminApiService,
@@ -81,7 +83,8 @@ type RefundMethodState = 'loading' | 'resolved' | 'error';
     styleUrl: './override-cancel-modal.component.scss',
     standalone: false
 })
-export class OverrideCancelModalComponent implements OnChanges {
+export class OverrideCancelModalComponent implements OnChanges, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
   @Input() isOpen = false;
   @Input() booking: AdminBookingDetailDto | null = null;
   /** Emitted after a successful override-cancel — parent revalidates the list. */
@@ -123,6 +126,11 @@ export class OverrideCancelModalComponent implements OnChanges {
     });
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     if (!changes['isOpen']) {
       return;
@@ -158,7 +166,10 @@ export class OverrideCancelModalComponent implements OnChanges {
     this.refundMethodState = 'loading';
     // Loading: nothing mounted either way, Confirm blocked by canSubmit —
     // do NOT pre-apply a required/optional validator yet (Flow A3 step 3).
-    this.adminApiService.getBookingRefundMethod(booking.id).subscribe({
+    this.adminApiService
+      .getBookingRefundMethod(booking.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
       next: (response) => {
         this.destinationRequired = response.data?.destinationRequired ?? true;
         this.cancellationDeadline = response.data?.cancellationDeadline ?? null;

@@ -60,6 +60,14 @@ export class PassengerInfoComponent {
   passengerInfoSummaryComponent?: PassengerInfoSummaryComponent;
   isPassengerFormValid = false;
   isBookerFormValid = false;
+  /**
+   * 2026-09-11 review: POST /api/bookings carries no Idempotency-Key (see docs/handoff.md contract
+   * request) and this page had no in-flight guard - a double tap or a retried request on a flaky
+   * mobile link could create two seat holds for the same passenger. Until the backend accepts a
+   * key, the submit is single-flight on the client: the Next button is disabled while a create is
+   * outstanding and a re-entrant call returns without sending.
+   */
+  isSubmitting = false;
   // OBRS-109 (#37): the confirmed-applied promo code (from the summary
   // sidebar's instant preview). Only this value — never a guessed/typed one
   // that wasn't confirmed — is ever sent on the create-booking call.
@@ -121,6 +129,9 @@ export class PassengerInfoComponent {
   }
 
   async onSubmitPassengerInfo(): Promise<void> {
+    if (this.isSubmitting) {
+      return;
+    }
     const passengerInfo =
       this.passengerInfoFormComponent?.validateAndGetPassengerInfo();
     const booker = this.bookerInfoFormComponent?.validateAndGetBooker();
@@ -129,6 +140,18 @@ export class PassengerInfoComponent {
       return;
     }
 
+    this.isSubmitting = true;
+    try {
+      await this.submitPassengerInfo(passengerInfo, booker);
+    } finally {
+      this.isSubmitting = false;
+    }
+  }
+
+  private async submitPassengerInfo(
+    passengerInfo: PassengerInfo[],
+    booker: PassengerInfo
+  ): Promise<void> {
     this.store.dispatch(invokeSetPassengerInfo({ passengerInfo }));
 
     const bookingPayload = await this.buildBookingPayload(passengerInfo, booker);

@@ -1,7 +1,7 @@
 # CLAUDE.md (OBRS Frontend)
 
 ## 1. Project Overview
-OBRS (Online Bus Reservation System) frontend is an Angular 18 single-page application serving two distinct user groups: **B2C Travelers** for searching and booking intercity bus tickets, and **Internal Staff** (Admins) for managing schedules, fleet operations, bookings, and pricing.
+OBRS (Online Bus Reservation System) frontend is an Angular 21 single-page application serving two distinct user groups: **B2C Travelers** for searching and booking intercity bus tickets, and **Internal Staff** (Admins) for managing schedules, fleet operations, bookings, and pricing.
 
 ### Core Goals:
 - **Reactive State**: All cross-page state flows through NgRx; local component state is for UI-only concerns (loading toggles, form state, visibility flags).
@@ -9,9 +9,9 @@ OBRS (Online Bus Reservation System) frontend is an Angular 18 single-page appli
 - **API Transparency**: All backend communication goes through typed services using the `ResponseAPI<T>` envelope; no raw HTTP calls in components.
 
 ## 2. Tech Stack
-- **Core**: Angular 18, TypeScript 5.5 (strict mode), RxJS 7
-- **State**: NgRx 18 (Store, Effects, Selectors)
-- **UI**: PrimeNG 17 (complex widgets) + Bootstrap 5 (layout and utilities)
+- **Core**: Angular 21, TypeScript 5.9 (strict mode), RxJS 7
+- **State**: NgRx 21 (Store, Effects, Selectors)
+- **UI**: PrimeNG 21 (complex widgets, `providePrimeNG` + `@primeuix/themes` Lara preset) + Bootstrap 5 (layout and utilities)
 - **i18n**: `ngx-translate` with JSON files in `public/i18n/`
 - **Alerts**: SweetAlert2 via `AlertService` (never import SweetAlert2 directly in components)
 - **Date**: `dayjs` for all date formatting and manipulation
@@ -99,7 +99,7 @@ Global NgRx slices live in `src/app/shared/stores/` (`booking`, `station`, `sche
 > truth (tokens, the `app-admin-dropdown` contract, button roles, input shape, the §11
 > review rubric). This section is the quick reference; `design-system.md` is the contract.
 - **Layout**: Bootstrap 5 grid and utilities (not component library — just CSS).
-- **Complex widgets**: PrimeNG 17 (Calendar, Dropdown, DataTable, Dialog, etc.).
+- **Complex widgets**: PrimeNG 21 (Calendar, Dropdown, DataTable, Dialog, etc.).
 - **Icons**: **Material Symbols Outlined** (`.material-symbols-outlined`) is canonical (see `design-system.md` §5). Some legacy Bootstrap Icons remain in older components (consolidation debt) — don't add new ones.
 - **Typography**: Sarabun font (handles Thai script).
 - **SCSS**: Component-scoped `.component.scss` files. Global variables in `src/styles/`.

@@ -49,7 +49,7 @@
     </h3>
 
     <app-passenger-info-summary
-      [isNextDisabled]="!isPassengerFormValid || !isBookerFormValid"
+      [isNextDisabled]="!isPassengerFormValid || !isBookerFormValid || isSubmitting"
       (next)="onSubmitPassengerInfo()"
       (back)="onBack()"
       (promoApplied)="onPromoApplied($event)"

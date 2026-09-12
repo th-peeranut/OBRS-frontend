@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { ActivatedRouteSnapshot, Router } from '@angular/router';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, firstValueFrom, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import {
@@ -144,12 +144,13 @@ export class AuthService {
     email: string;
     password: string;
   }): Promise<ResponseAPI<LoginResponseData>> {
-    return this.http
-      .post<ResponseAPI<LoginResponseData>>(
-        `${environment.apiUrl}/api/auth/login`,
-        payload
-      )
-      .toPromise()
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<LoginResponseData>>(
+          `${environment.apiUrl}/api/auth/login`,
+          payload
+        )
+    )
       .then((response) => {
         if (response?.code === 200) {
           const token = response?.data?.accessToken;
@@ -593,12 +594,13 @@ export class AuthService {
       pdpaConsentVersion: PRIVACY_POLICY_VERSION,
     };
 
-    return this.http
-      .post<ResponseAPI<unknown>>(
-        `${environment.apiUrl}/api/auth/signup`,
-        signUpPayload
-      )
-      .toPromise()
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<unknown>>(
+          `${environment.apiUrl}/api/auth/signup`,
+          signUpPayload
+        )
+    )
       .then((response) => response)
       .catch((err) => err);
   }
@@ -609,12 +611,12 @@ export class AuthService {
       : '/api/auth/login/otp';
 
     return (
-      this.http
-        .post<ResponseAPI<LoginResponseData>>(
+      firstValueFrom(
+        this.http.post<ResponseAPI<LoginResponseData>>(
           `${environment.apiUrl}${endpoint}`,
           payload
         )
-        .toPromise()
+      )
         .then((response) => {
           if (response?.code === 200) {
             const token = response?.data?.accessToken;
@@ -637,15 +639,16 @@ export class AuthService {
     idToken: string;
     pdpaConsent: boolean;
   }): Promise<ResponseAPI<LoginResponseData> | undefined> {
-    return this.http
-      .post<ResponseAPI<LoginResponseData>>(
-        `${environment.apiUrl}/api/auth/social/google`,
-        // OBRS-632: same stamp as the email signup above — the Google button sits beside the same
-        // consent box, so it must record the same fact.
-        { ...payload, pdpaConsentVersion: PRIVACY_POLICY_VERSION },
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise()
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<LoginResponseData>>(
+          `${environment.apiUrl}/api/auth/social/google`,
+          // OBRS-632: same stamp as the email signup above — the Google button sits beside the same
+          // consent box, so it must record the same fact.
+          { ...payload, pdpaConsentVersion: PRIVACY_POLICY_VERSION },
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    )
       .then((response) => {
         if (response?.code === 200) {
           const token = response?.data?.accessToken;
@@ -660,36 +663,39 @@ export class AuthService {
   verifyEmail(payload: {
     token: string;
   }): Promise<ResponseAPI<unknown> | undefined> {
-    return this.http
-      .post<ResponseAPI<unknown>>(
-        `${environment.apiUrl}/api/auth/verify-email`,
-        payload,
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise();
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<unknown>>(
+          `${environment.apiUrl}/api/auth/verify-email`,
+          payload,
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    );
   }
 
   resendVerification(payload: {
     email: string;
   }): Promise<ResponseAPI<unknown> | undefined> {
-    return this.http
-      .post<ResponseAPI<unknown>>(
-        `${environment.apiUrl}/api/auth/verify-email/resend`,
-        payload,
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise();
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<unknown>>(
+          `${environment.apiUrl}/api/auth/verify-email/resend`,
+          payload,
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    );
   }
 
   forgetPassword(payload: {
     email: string;
   }): Promise<ResponseAPI<PasswordResetRequestResponse> | undefined> {
-    return this.http
-      .post<ResponseAPI<PasswordResetRequestResponse>>(
-        `${environment.apiUrl}/api/auth/password-reset/request`,
-        payload
-      )
-      .toPromise()
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<PasswordResetRequestResponse>>(
+          `${environment.apiUrl}/api/auth/password-reset/request`,
+          payload
+        )
+    )
       .then((response) => response);
   }
 
@@ -701,13 +707,14 @@ export class AuthService {
     token: string;
     newPassword: string;
   }): Promise<ResponseAPI<PasswordResetConfirmResponse> | undefined> {
-    return this.http
-      .post<ResponseAPI<PasswordResetConfirmResponse>>(
-        `${environment.apiUrl}/api/auth/password-reset/confirm`,
-        payload,
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise()
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<PasswordResetConfirmResponse>>(
+          `${environment.apiUrl}/api/auth/password-reset/confirm`,
+          payload,
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    )
       .then((response) => response);
   }
 
@@ -718,22 +725,23 @@ export class AuthService {
     currentPassword: string;
     newEmail: string;
   }): Promise<ResponseAPI<EmailChangeRequestResponse> | undefined> {
-    return this.http
-      .post<ResponseAPI<EmailChangeRequestResponse>>(
-        `${environment.apiUrl}/api/private/users/me/email/change-request`,
-        payload,
-        {
-          // SKIP_AUTH_LOGOUT: a wrong-current-password response must NOT
-          // force-logout the user out of their own account settings
-          // (OBRS-187 lesson). SKIP_GLOBAL_ERROR_ALERT: the dialog renders
-          // the error inline under the relevant field instead of a global
-          // toast.
-          context: new HttpContext()
-            .set(SKIP_AUTH_LOGOUT, true)
-            .set(SKIP_GLOBAL_ERROR_ALERT, true),
-        }
-      )
-      .toPromise();
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<EmailChangeRequestResponse>>(
+          `${environment.apiUrl}/api/private/users/me/email/change-request`,
+          payload,
+          {
+            // SKIP_AUTH_LOGOUT: a wrong-current-password response must NOT
+            // force-logout the user out of their own account settings
+            // (OBRS-187 lesson). SKIP_GLOBAL_ERROR_ALERT: the dialog renders
+            // the error inline under the relevant field instead of a global
+            // toast.
+            context: new HttpContext()
+              .set(SKIP_AUTH_LOGOUT, true)
+              .set(SKIP_GLOBAL_ERROR_ALERT, true),
+          }
+        )
+    );
   }
 
   // Public endpoint (the confirmation link is opened logged-out or with a
@@ -744,25 +752,27 @@ export class AuthService {
   confirmEmailChange(payload: {
     token: string;
   }): Promise<ResponseAPI<EmailChangeConfirmResponse> | undefined> {
-    return this.http
-      .post<ResponseAPI<EmailChangeConfirmResponse>>(
-        `${environment.apiUrl}/api/auth/change-email/confirm`,
-        payload,
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise();
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<EmailChangeConfirmResponse>>(
+          `${environment.apiUrl}/api/auth/change-email/confirm`,
+          payload,
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    );
   }
 
   // No SKIP_AUTH_LOGOUT: unlike requestEmailChange, a real 401 here means the
   // session is genuinely dead — force-logout is the correct behavior.
   resendEmailChangeVerification(): Promise<ResponseAPI<unknown> | undefined> {
-    return this.http
-      .post<ResponseAPI<unknown>>(
-        `${environment.apiUrl}/api/auth/change-email/resend`,
-        {},
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise();
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<unknown>>(
+          `${environment.apiUrl}/api/auth/change-email/resend`,
+          {},
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    );
   }
 
   private isAuthPage(url: string): boolean {

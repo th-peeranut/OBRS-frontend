@@ -12,7 +12,7 @@ When coding with AI here, **read this repo's own skills first, then align to the
 
 ## Quick Reference
 
-- **Stack**: Angular 18, TypeScript 5.5 (strict), RxJS 7, NgRx 18 (Store/Effects/Selectors), PrimeNG 17 + Bootstrap 5, `ngx-translate` (TH/EN/ZH), Playwright E2E.
+- **Stack**: Angular 21, TypeScript 5.9 (strict), RxJS 7, NgRx 21 (Store/Effects/Selectors), PrimeNG 21 + Bootstrap 5, `ngx-translate` (TH/EN/ZH), Playwright E2E.
 - **Architecture**: Reactive state through NgRx; component-local state only for UI concerns. All backend calls go through typed services using the `ResponseAPI<T>` envelope — no raw HTTP in components.
 - **i18n**: Every new key must include all three locales (TH, EN, ZH); ZH is a known gap — do not leave it empty.
 - **API contract**: The contract is owned by the backend (`../OBRS-backend/docs/api/`). Do not assume undocumented endpoints/fields; use `docs/handoff.md` for contract requests.
