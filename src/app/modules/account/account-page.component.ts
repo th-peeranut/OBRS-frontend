@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../auth/auth.service';
@@ -57,7 +59,7 @@ export function thaiMobileValidator(control: AbstractControl): ValidationErrors 
     styleUrl: './account-page.component.scss',
     standalone: false
 })
-export class AccountPageComponent implements OnInit {
+export class AccountPageComponent implements OnInit, OnDestroy {
   /**
    * OBRS-1232 AC-6: the nine codes the dropdown offers.
    */
@@ -90,6 +92,8 @@ export class AccountPageComponent implements OnInit {
   readonly currentPolicyVersion = PRIVACY_POLICY_VERSION;
 
   profileForm: FormGroup;
+
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
     private readonly fb: FormBuilder,
@@ -177,7 +181,10 @@ export class AccountPageComponent implements OnInit {
     this.isProfileLoading = true;
     this.isProfileLoadFailed = false;
 
-    this.myAccountService.getProfile().subscribe({
+    this.myAccountService
+      .getProfile()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
       next: (res) => {
         this.isProfileLoading = false;
         this.profile = res?.data ?? null;
@@ -219,6 +226,7 @@ export class AccountPageComponent implements OnInit {
         // anything else here would silently override the choice made there.
         preferredLocale: this.profile.preferredLocale,
       })
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           this.isProfileSaving = false;
@@ -247,7 +255,10 @@ export class AccountPageComponent implements OnInit {
 
     this.isConsentSubmitting = true;
 
-    this.myAccountService.acceptCurrentPrivacyPolicy().subscribe({
+    this.myAccountService
+      .acceptCurrentPrivacyPolicy()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
       next: () => {
         this.isConsentSubmitting = false;
         this.alertService.success(this.translate.instant('ACCOUNT.CONSENT_ACCEPT_SUCCESS'));
@@ -274,5 +285,10 @@ export class AccountPageComponent implements OnInit {
       // Enter edit mode showing the grouped form; onPhoneFocus() peels the dashes off for typing.
       phoneNumber: formatThaiMobile(this.profile.phoneNumber),
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

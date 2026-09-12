@@ -116,7 +116,7 @@ export class ExpensePayeesPageComponent implements OnInit, OnDestroy {
         // rows is the refresh hint's job, not a wall that hides data the owner can still read.
         this.errorMessage =
           failed && !this.hasLoadedOnce
-            ? this.translate.instant('ADMIN.MESSAGES.LOAD_FAILED')
+            ? this.translate.instant('ADMIN.MESSAGES.LOAD_EXPENSE_PAYEES_FAILED')
             : '';
       })
     );

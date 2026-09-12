@@ -16,6 +16,7 @@ import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { localizedDropdownName } from '../../lib/localized-dropdown-name';
+import { translationLabel } from '../../lib/translation-label';
 
 @Component({
     selector: 'app-dropdown-obrs',
@@ -149,39 +150,11 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges, O
 
     const locale = this.translate.currentLang === 'th' ? 'th' : 'en';
     const localizedLabel =
-      this.getTranslationLabel(option.display, locale) ??
-      this.getTranslationLabel(option.translations, locale) ??
-      this.getTranslationLabel(option.display, 'en') ??
-      this.getTranslationLabel(option.translations, 'en');
+      translationLabel(option.display, locale) ??
+      translationLabel(option.translations, locale) ??
+      translationLabel(option.display, 'en') ??
+      translationLabel(option.translations, 'en');
 
     return localizedLabel ?? option.label ?? option.name ?? option.slug ?? option.code ?? '';
-  }
-
-  private getTranslationLabel(
-    translations: unknown,
-    locale: string
-  ): string | null {
-    if (!translations) {
-      return null;
-    }
-
-    if (Array.isArray(translations)) {
-      const matched = translations.find(
-        (item: any) => String(item?.locale ?? '').toLowerCase() === locale
-      );
-
-      return matched?.label ?? translations.find((item: any) => item?.label)?.label ?? null;
-    }
-
-    if (typeof translations === 'object') {
-      const translationMap = translations as Record<string, any>;
-      return (
-        translationMap[locale]?.label ??
-        Object.values(translationMap).find((item: any) => item?.label)?.label ??
-        null
-      );
-    }
-
-    return null;
   }
 }

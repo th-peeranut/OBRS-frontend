@@ -21,6 +21,7 @@ import {
   CargoCapacityValidationErrorCode,
   validateCargoCapacityKgInput,
 } from '../cargo-capacity/cargo-capacity.validators';
+import { splitDateTime, toDateInputValue, toDateControlValue, toTimeInputValue, toTimeControlValue } from '../../../../shared/lib/date-input-value';
 
 // Pure mappers/formatters/normalizers extracted from SchedulesPageComponent
 // (OBRS-214, mirroring OBRS-208's routes.mappers.ts). No Angular/service
@@ -109,76 +110,6 @@ export function parseDepartureTimes(value: unknown): { times: string[]; valid: b
 
 export function toDepartureTimesText(times: string[] | null | undefined): string {
   return (times ?? []).map((time) => String(time).slice(0, 5)).join(', ');
-}
-
-export function splitDateTime(value: string | null | undefined): { date: string; time: string } {
-  const normalizedValue = String(value ?? '').trim();
-  if (!normalizedValue) {
-    return { date: '', time: '' };
-  }
-
-  const [date, rawTime = ''] = normalizedValue.includes('T')
-    ? normalizedValue.split('T')
-    : normalizedValue.split(/\s+/);
-
-  return {
-    date,
-    time: rawTime.slice(0, 5),
-  };
-}
-
-export function toDateInputValue(value: Date | null): string {
-  if (!value || !Number.isFinite(value.getTime())) {
-    return '';
-  }
-
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
-
-export function toDateControlValue(dateValue: string | null | undefined): Date | null {
-  const normalizedDate = String(dateValue ?? '').trim();
-  const [year, month, day] = normalizedDate.split('-').map((part) => Number(part));
-
-  if (!year || !month || !day) {
-    return null;
-  }
-
-  return new Date(year, month - 1, day);
-}
-
-export function toTimeInputValue(value: Date | null): string {
-  if (!value || !Number.isFinite(value.getTime())) {
-    return '';
-  }
-
-  const hours = String(value.getHours()).padStart(2, '0');
-  const minutes = String(value.getMinutes()).padStart(2, '0');
-
-  return `${hours}:${minutes}`;
-}
-
-export function toTimeControlValue(timeValue: string | null | undefined): Date | null {
-  const normalizedTime = String(timeValue ?? '').trim().slice(0, 5);
-  const [hours, minutes] = normalizedTime.split(':').map((part) => Number(part));
-
-  if (
-    !Number.isFinite(hours) ||
-    !Number.isFinite(minutes) ||
-    hours < 0 ||
-    hours > 23 ||
-    minutes < 0 ||
-    minutes > 59
-  ) {
-    return null;
-  }
-
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return date;
 }
 
 export function toDateValue(value: unknown): Date | null {
@@ -527,3 +458,5 @@ export function toScheduleItemUpdatePayload(
     cargoCapacityKg: payload.cargoCapacityKg ?? null,
   };
 }
+
+export { splitDateTime, toDateInputValue, toDateControlValue, toTimeInputValue, toTimeControlValue };

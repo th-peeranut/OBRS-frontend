@@ -46,15 +46,6 @@ export function isTerminalRescheduleError(errorCode: string | null | undefined):
   return !!errorCode && TERMINAL_ERROR_CODES.includes(errorCode);
 }
 
-/** `errorCode`s that should bounce the dialog back to the options list rather
- * than staying on the estimate step (the chosen candidate is no longer
- * viable, but the booking itself can still be rescheduled to another one). */
-const RETURN_TO_OPTIONS_ERROR_CODES: readonly string[] = ['RESCHEDULE_ERROR_NO_SEATS'];
-
-export function shouldReturnToOptions(errorCode: string | null | undefined): boolean {
-  return !!errorCode && RETURN_TO_OPTIONS_ERROR_CODES.includes(errorCode);
-}
-
 /** Extracts `error.error.errorCode` from a failed reschedule HTTP call. */
 export function extractRescheduleErrorCode(error: unknown): RescheduleErrorCode {
   return extractApiErrorCode(error, 'GENERIC') as RescheduleErrorCode;

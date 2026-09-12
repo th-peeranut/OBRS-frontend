@@ -10,6 +10,7 @@ import {
 } from '../../../../shared/interfaces/customer-behavior.interface';
 import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
+import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
 
 /**
  * OBRS-154 — customer behavior page (aggregate-only). Same range filter + SWR store as the other
@@ -35,8 +36,8 @@ export class CustomerBehaviorPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const range = this.store.range;
-    this.fromDate = this.parseDateInputValue(range.from);
-    this.toDate = this.parseDateInputValue(range.to);
+    this.fromDate = toDateControlValue(range.from);
+    this.toDate = toDateControlValue(range.to);
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((d) => (this.data = d));
     this.store.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((r) => (this.isRefreshing = r));
     this.store.error$.pipe(takeUntil(this.destroy$)).subscribe((f) => (this.loadError = this.resolveLoadError(f)));
@@ -79,8 +80,8 @@ export class CustomerBehaviorPageComponent implements OnInit, OnDestroy {
   private applyRange(): void {
     this.rangeError = '';
     if (!this.fromDate || !this.toDate) return;
-    const from = this.toDateInputValue(this.fromDate);
-    const to = this.toDateInputValue(this.toDate);
+    const from = toDateInputValue(this.fromDate);
+    const to = toDateInputValue(this.toDate);
     const errorKey = dateRangeErrorKey(this.fromDate, this.toDate, from, to, 'ADMIN.REPORTS.ERROR');
     if (errorKey) { this.rangeError = this.translate.instant(errorKey); return; }
     this.store.setRange(from, to);
@@ -92,18 +93,5 @@ export class CustomerBehaviorPageComponent implements OnInit, OnDestroy {
     if (code === 'REPORT_RANGE_INVALID') return this.translate.instant('ADMIN.REPORTS.ERROR.RANGE_INVALID');
     if (code === 'REPORT_RANGE_TOO_LARGE') return this.translate.instant('ADMIN.REPORTS.ERROR.RANGE_TOO_LARGE');
     return this.translate.instant('ADMIN.CUSTOMER_BEHAVIOR.LOAD_FAILED');
-  }
-
-  private toDateInputValue(value: Date): string {
-    const y = value.getFullYear();
-    const m = String(value.getMonth() + 1).padStart(2, '0');
-    const d = String(value.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-  private parseDateInputValue(value: string): Date | null {
-    const p = value.split('-');
-    if (p.length !== 3) return null;
-    const [y, m, d] = p.map(Number);
-    return new Date(y, m - 1, d);
   }
 }

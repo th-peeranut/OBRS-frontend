@@ -14,6 +14,27 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ## Pending Changes (Backend → Frontend)
 
+## [Backend] 2026-09-12 — `POST/PUT /api/private/schedule-set` start-after-end now answers a localized 400
+**Risk level**: R1 (error contract only; success shapes unchanged)
+**Triggered by**: code-quality pass — the check threw a raw `IllegalArgumentException` with an English message, which no handler mapped, so it surfaced as HTTP 500 `UNEXPECTED_ERROR` while `docs/api/scheduling.md` promised a 400.
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| `POST /api/private/schedule-set`, `PUT /api/private/schedule-set/{id}` | Error changed | `startDate` after `endDate` → HTTP **400**, `errorCode: "SCHEDULE_SET_RANGE_INVALID"`, message localized via `schedule.set.error.range-invalid` (was HTTP 500 `UNEXPECTED_ERROR`) |
+
+### Response shapes before / after
+- **Before**: `500 { "code": 500, "errorCode": "UNEXPECTED_ERROR", "message": "…" }`
+- **After**: `400 { "code": 400, "errorCode": "SCHEDULE_SET_RANGE_INVALID", "message": "The start date must not be later than the end date." }` (TH/ZH per `Accept-Language`)
+
+### Action required in frontend
+- [ ] None required — the global error interceptor already shows the backend message. Optionally branch on `SCHEDULE_SET_RANGE_INVALID` in the schedules page if a field-level hint is wanted.
+
+### Still unfinished on backend
+- None — see `../OBRS-backend/docs/api/scheduling.md` `POST /api/private/schedule-set`.
+
+---
+
 ## [Backend] 2026-08-20 — `userName` added to `GET/PUT /api/private/admin/usability-reports` (list + detail)
 **Risk level**: R1 (additive)
 **Triggered by**: bug report — the `/admin/usability-reports` page showed the raw numeric `userId` (e.g. `1`, `2`) in the reporter column/detail instead of a name.

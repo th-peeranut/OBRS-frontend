@@ -8,6 +8,7 @@ import {
   getAdminTranslationLabel,
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
+import { toDateInputValue, toDateControlValue } from '../../../../shared/lib/date-input-value';
 
 // Pure mappers/formatters/normalizers extracted from VehiclesPageComponent
 // (OBRS-244, mirroring OBRS-208's routes.mappers.ts, OBRS-214's
@@ -194,35 +195,6 @@ export function toVehiclePayload(rawFormValue: Record<string, unknown>): CreateV
   };
 }
 
-/** "YYYY-MM-DD" string <-> local calendar Date for the OBRS-885 service-window pickers.
- * A local copy of vehicle-maintenance.mappers.ts's pair, for the reason stated in that
- * file's header — these are page-local mapper files, not a shared cross-page utility.
- * Built from getFullYear/getMonth/getDate, NOT toISOString: at UTC+7 a Date parked on
- * local midnight serializes to the PREVIOUS day in UTC, which would silently move every
- * service window back one day. */
-export function toDateInputValue(value: Date | null): string {
-  if (!value || !Number.isFinite(value.getTime())) {
-    return '';
-  }
-
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
-
-export function toDateControlValue(dateValue: string | null | undefined): Date | null {
-  const normalizedDate = String(dateValue ?? '').trim();
-  const [year, month, day] = normalizedDate.split('-').map((part) => Number(part));
-
-  if (!year || !month || !day) {
-    return null;
-  }
-
-  return new Date(year, month - 1, day);
-}
-
 function nullableTrimmedString(rawValue: unknown): string | null {
   const trimmed = String(rawValue ?? '').trim();
   return trimmed.length > 0 ? trimmed : null;
@@ -299,3 +271,5 @@ export function isVehicleStatusFilterStale(
     !statusOptions.some((option) => option.code.trim().toLowerCase() === statusFilter)
   );
 }
+
+export { toDateInputValue, toDateControlValue };

@@ -13,6 +13,7 @@ import { formatMoney } from '../../../../shared/lib/money-display';
 import { centsToDecimalString, toSignedCents } from '../../../../shared/lib/money-cents';
 import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
+import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
 
 /**
  * OBRS-1725 - how many cost categories get a slice of the donut and a column of the
@@ -109,8 +110,8 @@ export class VehiclePlReportPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const range = this.store.range;
-    this.fromDate = this.parseDateInputValue(range.from);
-    this.toDate = this.parseDateInputValue(range.to);
+    this.fromDate = toDateControlValue(range.from);
+    this.toDate = toDateControlValue(range.to);
 
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       const rows = data?.rows ?? null;
@@ -530,8 +531,8 @@ export class VehiclePlReportPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const from = this.toDateInputValue(this.fromDate);
-    const to = this.toDateInputValue(this.toDate);
+    const from = toDateInputValue(this.fromDate);
+    const to = toDateInputValue(this.toDate);
 
     const errorKey = dateRangeErrorKey(
       this.fromDate,
@@ -553,20 +554,5 @@ export class VehiclePlReportPageComponent implements OnInit, OnDestroy {
       return '';
     }
     return this.translate.instant('ADMIN.VEHICLE_PL_REPORT.LOAD_FAILED');
-  }
-
-  private toDateInputValue(value: Date): string {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private parseDateInputValue(value: string): Date | null {
-    const [year, month, day] = value.split('-').map(Number);
-    if (!year || !month || !day) {
-      return null;
-    }
-    return new Date(year, month - 1, day);
   }
 }

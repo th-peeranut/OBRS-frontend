@@ -122,7 +122,7 @@ export class MaintenancePartsPageComponent implements OnInit, OnDestroy {
         // rows is the refresh hint's job, not a wall over data the owner can still read.
         this.errorMessage =
           failed && !this.hasLoadedOnce
-            ? this.translate.instant('ADMIN.MESSAGES.LOAD_FAILED')
+            ? this.translate.instant('ADMIN.MESSAGES.LOAD_MAINTENANCE_PARTS_FAILED')
             : '';
       })
     );

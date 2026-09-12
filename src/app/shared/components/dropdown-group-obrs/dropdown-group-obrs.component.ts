@@ -19,6 +19,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { localizedDropdownName } from '../../lib/localized-dropdown-name';
+import { translationLabel } from '../../lib/translation-label';
 
 /**
  * One rendered group: the group object the header is drawn from, plus the
@@ -477,10 +478,10 @@ export class DropdownGroupObrsComponent
 
     const locale = this.translate.currentLang === 'th' ? 'th' : 'en';
     const localizedLabel =
-      this.getTranslationLabel(option.display, locale) ??
-      this.getTranslationLabel(option.translations, locale) ??
-      this.getTranslationLabel(option.display, 'en') ??
-      this.getTranslationLabel(option.translations, 'en');
+      translationLabel(option.display, locale) ??
+      translationLabel(option.translations, locale) ??
+      translationLabel(option.display, 'en') ??
+      translationLabel(option.translations, 'en');
 
     return localizedLabel ?? option.label ?? option.name ?? option.slug ?? option.code ?? '';
   }
@@ -656,33 +657,5 @@ export class DropdownGroupObrsComponent
 
   getGroupStations(group: any): any[] {
     return Array.isArray(group?.stations) ? group.stations : [];
-  }
-
-  private getTranslationLabel(
-    translations: unknown,
-    locale: string
-  ): string | null {
-    if (!translations) {
-      return null;
-    }
-
-    if (Array.isArray(translations)) {
-      const matched = translations.find(
-        (item: any) => String(item?.locale ?? '').toLowerCase() === locale
-      );
-
-      return matched?.label ?? translations.find((item: any) => item?.label)?.label ?? null;
-    }
-
-    if (typeof translations === 'object') {
-      const translationMap = translations as Record<string, any>;
-      return (
-        translationMap[locale]?.label ??
-        Object.values(translationMap).find((item: any) => item?.label)?.label ??
-        null
-      );
-    }
-
-    return null;
   }
 }

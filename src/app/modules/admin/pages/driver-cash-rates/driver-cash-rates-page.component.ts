@@ -12,6 +12,7 @@ import {
   DriverWageRateRowDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
 import { DriverCashRatesStore } from './driver-cash-rates.store';
+import { toDateInputValue } from '../../../../shared/lib/date-input-value';
 
 const CREATE_ERROR_KEYS: Record<string, string> = {
   [DRIVER_CASH_RATE_DUPLICATE_ERROR_CODE]: 'ADMIN.DRIVER_CASH_RATES.ERROR.DUPLICATE',
@@ -129,7 +130,7 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
       await firstValueFrom(
         this.adminApiService.createDriverCashRate({
           salesPointId,
-          effectiveFrom: this.toDateInputValue(this.effectiveFromDate),
+          effectiveFrom: toDateInputValue(this.effectiveFromDate),
           ratePerHead: this.ratePerHeadInput.trim(),
         })
       );
@@ -161,7 +162,7 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
     try {
       await firstValueFrom(
         this.adminApiService.createDriverWageRate({
-          effectiveFrom: this.toDateInputValue(this.wageEffectiveFromDate),
+          effectiveFrom: toDateInputValue(this.wageEffectiveFromDate),
           ratePerLeg: this.ratePerLegInput.trim(),
         })
       );
@@ -181,7 +182,7 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
 
   /** The wage table has ONE series, so "current" is just the latest already-effective row. */
   protected isCurrentWage(row: DriverWageRateRowDto): boolean {
-    const today = this.toDateInputValue(new Date());
+    const today = toDateInputValue(new Date());
     if (row.effectiveFrom > today) {
       return false;
     }
@@ -197,7 +198,7 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
 
   /** "current" chip: the LATEST row per SALES POINT with `effectiveFrom <= today`. */
   protected isCurrent(row: DriverCashRateRowDto): boolean {
-    const today = this.toDateInputValue(new Date());
+    const today = toDateInputValue(new Date());
     if (row.effectiveFrom > today) {
       return false;
     }
@@ -209,12 +210,5 @@ export class DriverCashRatesPageComponent implements OnInit, OnDestroy {
 
   protected trackById(_index: number, row: DriverCashRateRowDto): number {
     return row.id;
-  }
-
-  private toDateInputValue(value: Date): string {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
   }
 }

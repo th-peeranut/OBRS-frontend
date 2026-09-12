@@ -10,6 +10,7 @@ import {
   PerHeadEarningsRespDto,
 } from '../../../../shared/interfaces/driver-cash.interface';
 import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
+import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
 
 /**
  * OBRS-1147 AC-1 — "ค่าหัวฉันได้เท่าไร" for the person who earned it, per day /
@@ -132,7 +133,7 @@ export class MyEarningsPageComponent implements OnInit, OnDestroy {
    * a second, silently drifting copy of the backend's bucketing rule.
    */
   protected bucketLabel(bucket: PerHeadEarningBucketDto): string {
-    const start = this.parseIsoDate(bucket.bucketStart);
+    const start = toDateControlValue(bucket.bucketStart);
     if (!start) {
       return bucket.bucketKey;
     }
@@ -176,8 +177,8 @@ export class MyEarningsPageComponent implements OnInit, OnDestroy {
     if (!this.fromDate || !this.toDate) {
       return;
     }
-    const from = this.toDateInputValue(this.fromDate);
-    const to = this.toDateInputValue(this.toDate);
+    const from = toDateInputValue(this.fromDate);
+    const to = toDateInputValue(this.toDate);
     // OBRS-1751: this screen had the order check but no CAP, so a staff member could ask the
     // backend for an unbounded span - the one thing every report page guards against. Same rule,
     // same helper, its own error prefix (OBRS-1754).
@@ -193,20 +194,5 @@ export class MyEarningsPageComponent implements OnInit, OnDestroy {
       return;
     }
     this.store.setQuery(from, to, this.granularity);
-  }
-
-  private toDateInputValue(value: Date): string {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private parseIsoDate(value: string): Date | null {
-    const [year, month, day] = value.split('-').map(Number);
-    if (!year || !month || !day) {
-      return null;
-    }
-    return new Date(year, month - 1, day);
   }
 }

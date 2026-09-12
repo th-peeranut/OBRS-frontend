@@ -3,6 +3,7 @@ import {
   CreateVehicleMaintenancePlanPayload,
 } from '../../../../../services/admin/admin-api.service';
 import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
+import { toDateInputValue, toDateControlValue } from '../../../../../shared/lib/date-input-value';
 
 // Pure mappers/formatters for AppVehicleMaintenancePlanPanelComponent
 // (OBRS-1333), following the pattern established by
@@ -139,32 +140,6 @@ export function toPlanRow(
   };
 }
 
-/** "YYYY-MM-DD" string <-> local calendar Date, mirroring
- * `vehicle-maintenance.mappers.ts`'s `toDateInputValue()`/`toDateControlValue()`
- * (kept as a local copy — same per-page-mappers convention). */
-export function toDateInputValue(value: Date | null): string {
-  if (!value || !Number.isFinite(value.getTime())) {
-    return '';
-  }
-
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
-
-export function toDateControlValue(dateValue: string | null | undefined): Date | null {
-  const normalizedDate = String(dateValue ?? '').trim();
-  const [year, month, day] = normalizedDate.split('-').map((part) => Number(part));
-
-  if (!year || !month || !day) {
-    return null;
-  }
-
-  return new Date(year, month - 1, day);
-}
-
 function hasValue(rawValue: unknown): boolean {
   return rawValue !== null && rawValue !== undefined && String(rawValue).trim() !== '';
 }
@@ -196,3 +171,5 @@ export function toPlanPayload(
     lastDoneDate: toDateInputValue(rawFormValue['lastDoneDate'] as Date | null) || null,
   };
 }
+
+export { toDateInputValue, toDateControlValue };

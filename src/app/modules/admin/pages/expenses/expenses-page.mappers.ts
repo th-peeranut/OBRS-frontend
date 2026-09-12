@@ -6,6 +6,7 @@ import {
   CreateExpensePayload,
 } from '../../../../services/admin/admin-api.service';
 import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
+import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
 
 // Pure mappers/formatters for ExpensesPageComponent (OBRS-685), following the
 // pattern established by schedules.mappers.ts / vehicle-maintenance.mappers.ts:
@@ -425,34 +426,10 @@ export function expenseItemsMatchAmount(
   return Math.round(expenseItemsTotal(items) * 100) === Math.round((toNullableNumber(amount) ?? 0) * 100);
 }
 
-/** "YYYY-MM-DD" string <-> local calendar Date — mirrors
- * `vehicle-maintenance.mappers.ts`'s `toDateInputValue`/`toDateControlValue`
- * (kept as a local copy, same per-page-mappers convention). */
+/** `Date` (or an already-formatted string, passed through) -> "YYYY-MM-DD"; the parse side is
+ * `toDateControlValue` from `shared/lib/date-input-value`, re-exported below for this page's callers. */
 export function toIsoDateString(value: Date | string | null | undefined): string {
-  if (!value) {
-    return '';
-  }
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (!Number.isFinite(value.getTime())) {
-    return '';
-  }
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-export function toDateControlValue(dateValue: string | null | undefined): Date | null {
-  const normalizedDate = String(dateValue ?? '').trim();
-  const [year, month, day] = normalizedDate.split('-').map((part) => Number(part));
-
-  if (!year || !month || !day) {
-    return null;
-  }
-
-  return new Date(year, month - 1, day);
+  return typeof value === 'string' ? value : toDateInputValue(value);
 }
 
 /** OBRS-1630: exported so the staff repair box parses a form number by the SAME rule the admin
@@ -571,3 +548,5 @@ export function filterExpensesByCategoryAndRange(
     return true;
   });
 }
+
+export { toDateControlValue };

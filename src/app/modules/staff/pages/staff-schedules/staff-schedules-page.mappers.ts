@@ -13,6 +13,7 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
+import { splitDateTime, toDateInputValue, toDateControlValue, toTimeInputValue, toTimeControlValue } from '../../../../shared/lib/date-input-value';
 
 // Pure mappers/formatters/normalizers extracted from StaffSchedulesPageComponent
 // (OBRS-249, mirroring OBRS-214's admin schedules.mappers.ts). No Angular/service
@@ -58,57 +59,6 @@ export interface ScheduleFormValues {
   vehicleType: string;
   vehicleId: string;
   driverId: string;
-}
-
-export function splitDateTime(value: string | null | undefined): { date: string; time: string } {
-  const normalizedValue = String(value ?? '').trim();
-  if (!normalizedValue) {
-    return { date: '', time: '' };
-  }
-
-  const [date, rawTime = ''] = normalizedValue.includes('T')
-    ? normalizedValue.split('T')
-    : normalizedValue.split(/\s+/);
-
-  return {
-    date,
-    time: rawTime.slice(0, 5),
-  };
-}
-
-export function toDateInputValue(value: Date | null): string {
-  if (!value || !Number.isFinite(value.getTime())) {
-    return '';
-  }
-
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
-
-export function toDateControlValue(dateStr: string | null | undefined): Date | null {
-  const s = String(dateStr ?? '').trim();
-  const [y, m, d] = s.split('-').map(Number);
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d);
-}
-
-export function toTimeInputValue(value: Date | null): string {
-  if (!value || !Number.isFinite(value.getTime())) {
-    return '';
-  }
-  return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
-}
-
-export function toTimeControlValue(timeStr: string | null | undefined): Date | null {
-  const s = String(timeStr ?? '').trim().slice(0, 5);
-  const [h, min] = s.split(':').map(Number);
-  if (!Number.isFinite(h) || !Number.isFinite(min) || h < 0 || h > 23 || min < 0 || min > 59) return null;
-  const date = new Date();
-  date.setHours(h, min, 0, 0);
-  return date;
 }
 
 export function toDateValue(value: unknown): Date | null {
@@ -249,3 +199,5 @@ export function toScheduleStatusOptions(lookups: AdminLookupDto[], locale: strin
       label: getAdminTranslationLabel(l.translations, locale) ?? l.slug,
     }));
 }
+
+export { splitDateTime, toDateInputValue, toDateControlValue, toTimeInputValue, toTimeControlValue };

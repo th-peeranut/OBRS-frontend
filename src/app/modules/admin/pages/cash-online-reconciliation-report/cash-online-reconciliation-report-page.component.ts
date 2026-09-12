@@ -11,6 +11,7 @@ import {
 import { formatMoney } from '../../../../shared/lib/money-display';
 import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
+import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
 
 /**
  * Mirrors `RefundVoidReportPageComponent` (OBRS-98) 1:1 — same store contract,
@@ -52,8 +53,8 @@ export class CashOnlineReconciliationReportPageComponent implements OnInit, OnDe
 
   ngOnInit(): void {
     const range = this.store.range;
-    this.fromDate = this.parseDateInputValue(range.from);
-    this.toDate = this.parseDateInputValue(range.to);
+    this.fromDate = toDateControlValue(range.from);
+    this.toDate = toDateControlValue(range.to);
 
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       const daily = data?.daily ?? null;
@@ -168,8 +169,8 @@ export class CashOnlineReconciliationReportPageComponent implements OnInit, OnDe
       return;
     }
 
-    const from = this.toDateInputValue(this.fromDate);
-    const to = this.toDateInputValue(this.toDate);
+    const from = toDateInputValue(this.fromDate);
+    const to = toDateInputValue(this.toDate);
 
     const errorKey = dateRangeErrorKey(
       this.fromDate,
@@ -194,20 +195,5 @@ export class CashOnlineReconciliationReportPageComponent implements OnInit, OnDe
       return '';
     }
     return this.translate.instant('ADMIN.CASH_ONLINE_RECONCILIATION.LOAD_FAILED');
-  }
-
-  private toDateInputValue(value: Date): string {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private parseDateInputValue(value: string): Date | null {
-    const [year, month, day] = value.split('-').map(Number);
-    if (!year || !month || !day) {
-      return null;
-    }
-    return new Date(year, month - 1, day);
   }
 }

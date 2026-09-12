@@ -1,4 +1,6 @@
-import { Component, ElementRef, HostListener, Input, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, Input, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { FormGroup } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { BankService } from '../../../services/bank/bank.service';
@@ -42,7 +44,7 @@ import {
     styleUrl: './refund-destination-fields.component.scss',
     standalone: false
 })
-export class AppRefundDestinationFieldsComponent implements OnInit {
+export class AppRefundDestinationFieldsComponent implements OnInit, OnDestroy {
   @Input({ required: true }) formGroup!: FormGroup;
   @Input() disabled = false;
 
@@ -51,6 +53,8 @@ export class AppRefundDestinationFieldsComponent implements OnInit {
   protected bankListOpen = false;
   /** What the user has typed to filter with — empty means "show the whole list". */
   protected bankQuery = '';
+
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
     private readonly bankService: BankService,
@@ -64,7 +68,10 @@ export class AppRefundDestinationFieldsComponent implements OnInit {
 
   protected loadBanks(): void {
     this.banksState = 'loading';
-    this.bankService.getBanks().subscribe({
+    this.bankService
+      .getBanks()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
       next: (banks) => {
         this.banks = banks;
         this.banksState = 'ready';
@@ -208,5 +215,10 @@ export class AppRefundDestinationFieldsComponent implements OnInit {
   private closeBankList(): void {
     this.bankListOpen = false;
     this.bankQuery = '';
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }
