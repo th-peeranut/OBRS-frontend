@@ -7,6 +7,8 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
 import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
+// Re-exported under the names this page's components and specs already import.
+export { toDateControlValue };
 
 // Pure mappers/formatters for ExpensesPageComponent (OBRS-685), following the
 // pattern established by schedules.mappers.ts / vehicle-maintenance.mappers.ts:
@@ -548,5 +550,3 @@ export function filterExpensesByCategoryAndRange(
     return true;
   });
 }
-
-export { toDateControlValue };

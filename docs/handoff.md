@@ -16,15 +16,15 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ## [Backend] 2026-09-12 — `POST/PUT /api/private/schedule-set` start-after-end now answers a localized 400
 **Risk level**: R1 (error contract only; success shapes unchanged)
-**Triggered by**: code-quality pass — the check threw a raw `IllegalArgumentException` with an English message, which no handler mapped, so it surfaced as HTTP 500 `UNEXPECTED_ERROR` while `docs/api/scheduling.md` promised a 400.
+**Triggered by**: code-quality pass — the check threw a raw `IllegalArgumentException`, which the status mapper already turned into a 400 but only as the generic `UNEXPECTED_ERROR` with the generic message (plus an ERROR-level stack trace in the backend log). It is now a specific, localized `DomainException`.
 
 ### What changed in the contract
 | Endpoint | Change type | Detail |
 |---|---|---|
-| `POST /api/private/schedule-set`, `PUT /api/private/schedule-set/{id}` | Error changed | `startDate` after `endDate` → HTTP **400**, `errorCode: "SCHEDULE_SET_RANGE_INVALID"`, message localized via `schedule.set.error.range-invalid` (was HTTP 500 `UNEXPECTED_ERROR`) |
+| `POST /api/private/schedule-set`, `PUT /api/private/schedule-set/{id}` | Error changed | `startDate` after `endDate` → HTTP 400, `errorCode: "SCHEDULE_SET_RANGE_INVALID"`, message localized via `schedule.set.error.range-invalid` (was HTTP 400 `UNEXPECTED_ERROR` with the generic message) |
 
 ### Response shapes before / after
-- **Before**: `500 { "code": 500, "errorCode": "UNEXPECTED_ERROR", "message": "…" }`
+- **Before**: `400 { "code": 400, "errorCode": "UNEXPECTED_ERROR", "message": "<generic unexpected-error text>" }`
 - **After**: `400 { "code": 400, "errorCode": "SCHEDULE_SET_RANGE_INVALID", "message": "The start date must not be later than the end date." }` (TH/ZH per `Accept-Language`)
 
 ### Action required in frontend

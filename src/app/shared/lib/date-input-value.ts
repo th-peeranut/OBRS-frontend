@@ -1,11 +1,14 @@
 /**
- * The one owner of the `YYYY-MM-DD` / `HH:mm` <-> `Date` conversions every date-range report page,
- * settlement filter and schedule/vehicle form used to carry as a private copy.
+ * The `YYYY-MM-DD` / `HH:mm` <-> `Date` conversions behind every `p-datePicker` date-range filter,
+ * settlement filter and schedule/vehicle/expense form.
  *
- * <p>Before this file `toDateInputValue` existed 18 times (13 private component copies plus 5
- * exported mapper copies) and its inverse 12 times, with three slightly different null guards on
- * the parse side. Same rationale as `date-range-guard.ts` (OBRS-1754): the next bug in this family
- * must be one edit, not eighteen.
+ * <p>Before this file the same bodies existed as 13 private component copies of `toDateInputValue`,
+ * 12 of its inverse (with three slightly different guards on the parse side), five exported
+ * per-page mapper copies, and once more in `api-date-time.ts` under the `controlValueTo*` /
+ * `*ToControlValue` names - which now re-export from here. Same rationale as
+ * `date-range-guard.ts` (OBRS-1754): the next bug in this family must be one edit, not twenty.
+ * (A handful of one-off inline `getFullYear()/padStart` formatters in the report stores remain
+ * and are candidates for the same treatment.)
  *
  * <p>Behaviour is that of the exported mapper copies, which were the strictest: `toDateInputValue`
  * returns `''` for a missing or invalid `Date`, and `toDateControlValue` returns `null` for

@@ -6,6 +6,8 @@ import {
 } from '../../../../../services/admin/admin-api.service';
 import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
 import { toDateInputValue, toDateControlValue } from '../../../../../shared/lib/date-input-value';
+// Re-exported under the names this page's components and specs already import.
+export { toDateInputValue, toDateControlValue };
 
 // Pure mappers/formatters for AppVehicleMaintenancePanelComponent (OBRS-209),
 // following the pattern established by schedules.mappers.ts (OBRS-214): no
@@ -146,5 +148,3 @@ export interface MaintenanceCreateDraft {
   notes: string;
   sourceInspectionId: number;
 }
-
-export { toDateInputValue, toDateControlValue };

@@ -21,7 +21,21 @@ import {
   CargoCapacityValidationErrorCode,
   validateCargoCapacityKgInput,
 } from '../cargo-capacity/cargo-capacity.validators';
-import { splitDateTime, toDateInputValue, toDateControlValue, toTimeInputValue, toTimeControlValue } from '../../../../shared/lib/date-input-value';
+import {
+  splitDateTime,
+  toDateInputValue,
+  toDateControlValue,
+  toTimeInputValue,
+  toTimeControlValue,
+} from '../../../../shared/lib/date-input-value';
+// Re-exported under the names this page's components and specs already import.
+export {
+  splitDateTime,
+  toDateInputValue,
+  toDateControlValue,
+  toTimeInputValue,
+  toTimeControlValue,
+};
 
 // Pure mappers/formatters/normalizers extracted from SchedulesPageComponent
 // (OBRS-214, mirroring OBRS-208's routes.mappers.ts). No Angular/service
@@ -458,5 +472,3 @@ export function toScheduleItemUpdatePayload(
     cargoCapacityKg: payload.cargoCapacityKg ?? null,
   };
 }
-
-export { splitDateTime, toDateInputValue, toDateControlValue, toTimeInputValue, toTimeControlValue };

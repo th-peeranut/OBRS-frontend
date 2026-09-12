@@ -4,6 +4,8 @@ import {
 } from '../../../../../services/admin/admin-api.service';
 import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
 import { toDateInputValue, toDateControlValue } from '../../../../../shared/lib/date-input-value';
+// Re-exported under the names this page's components and specs already import.
+export { toDateInputValue, toDateControlValue };
 
 // Pure mappers/formatters for AppVehicleMaintenancePlanPanelComponent
 // (OBRS-1333), following the pattern established by
@@ -171,5 +173,3 @@ export function toPlanPayload(
     lastDoneDate: toDateInputValue(rawFormValue['lastDoneDate'] as Date | null) || null,
   };
 }
-
-export { toDateInputValue, toDateControlValue };

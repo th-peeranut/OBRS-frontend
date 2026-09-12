@@ -185,16 +185,16 @@ export class AccountPageComponent implements OnInit, OnDestroy {
       .getProfile()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-      next: (res) => {
-        this.isProfileLoading = false;
-        this.profile = res?.data ?? null;
-        this.patchFormFromProfile();
-      },
-      error: () => {
-        this.isProfileLoading = false;
-        this.isProfileLoadFailed = true;
-      },
-    });
+        next: (res) => {
+          this.isProfileLoading = false;
+          this.profile = res?.data ?? null;
+          this.patchFormFromProfile();
+        },
+        error: () => {
+          this.isProfileLoading = false;
+          this.isProfileLoadFailed = true;
+        },
+      });
   }
 
   saveProfile(): void {
@@ -259,16 +259,16 @@ export class AccountPageComponent implements OnInit, OnDestroy {
       .acceptCurrentPrivacyPolicy()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-      next: () => {
-        this.isConsentSubmitting = false;
-        this.alertService.success(this.translate.instant('ACCOUNT.CONSENT_ACCEPT_SUCCESS'));
-        this.loadProfile();
-      },
-      error: () => {
-        this.isConsentSubmitting = false;
-        this.alertService.error(this.translate.instant('ACCOUNT.CONSENT_ACCEPT_ERROR'));
-      },
-    });
+        next: () => {
+          this.isConsentSubmitting = false;
+          this.alertService.success(this.translate.instant('ACCOUNT.CONSENT_ACCEPT_SUCCESS'));
+          this.loadProfile();
+        },
+        error: () => {
+          this.isConsentSubmitting = false;
+          this.alertService.error(this.translate.instant('ACCOUNT.CONSENT_ACCEPT_ERROR'));
+        },
+      });
   }
 
   private patchFormFromProfile(): void {

@@ -13,7 +13,21 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
-import { splitDateTime, toDateInputValue, toDateControlValue, toTimeInputValue, toTimeControlValue } from '../../../../shared/lib/date-input-value';
+import {
+  splitDateTime,
+  toDateInputValue,
+  toDateControlValue,
+  toTimeInputValue,
+  toTimeControlValue,
+} from '../../../../shared/lib/date-input-value';
+// Re-exported under the names this page's components and specs already import.
+export {
+  splitDateTime,
+  toDateInputValue,
+  toDateControlValue,
+  toTimeInputValue,
+  toTimeControlValue,
+};
 
 // Pure mappers/formatters/normalizers extracted from StaffSchedulesPageComponent
 // (OBRS-249, mirroring OBRS-214's admin schedules.mappers.ts). No Angular/service
@@ -199,5 +213,3 @@ export function toScheduleStatusOptions(lookups: AdminLookupDto[], locale: strin
       label: getAdminTranslationLabel(l.translations, locale) ?? l.slug,
     }));
 }
-
-export { splitDateTime, toDateInputValue, toDateControlValue, toTimeInputValue, toTimeControlValue };

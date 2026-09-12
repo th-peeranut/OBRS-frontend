@@ -9,6 +9,8 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { toDateInputValue, toDateControlValue } from '../../../../shared/lib/date-input-value';
+// Re-exported under the names this page's components and specs already import.
+export { toDateInputValue, toDateControlValue };
 
 // Pure mappers/formatters/normalizers extracted from VehiclesPageComponent
 // (OBRS-244, mirroring OBRS-208's routes.mappers.ts, OBRS-214's
@@ -271,5 +273,3 @@ export function isVehicleStatusFilterStale(
     !statusOptions.some((option) => option.code.trim().toLowerCase() === statusFilter)
   );
 }
-
-export { toDateInputValue, toDateControlValue };

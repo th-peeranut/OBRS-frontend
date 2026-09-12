@@ -72,15 +72,15 @@ export class AppRefundDestinationFieldsComponent implements OnInit, OnDestroy {
       .getBanks()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-      next: (banks) => {
-        this.banks = banks;
-        this.banksState = 'ready';
-      },
-      error: () => {
-        this.banks = [];
-        this.banksState = 'error';
-      },
-    });
+        next: (banks) => {
+          this.banks = banks;
+          this.banksState = 'ready';
+        },
+        error: () => {
+          this.banks = [];
+          this.banksState = 'error';
+        },
+      });
   }
 
   protected retryBanks(): void {
