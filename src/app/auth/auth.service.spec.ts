@@ -591,6 +591,32 @@ describe('AuthService', () => {
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ refreshToken: 'refresh-1' });
       req.flush({ code: 200 });
+      // OBRS-1855 moved the revoke out into endSession(); the redirect is the ONLY thing
+      // that stayed behind in logout(), and nothing in this suite asserted it - a split
+      // that dropped it would have gone green.
+      expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/login']);
+    });
+
+    it('endSession revokes server-side and clears local state, WITHOUT navigating (OBRS-1855)', () => {
+      // The reason this method exists. `logout()` ends on /login, so the customer's own
+      // sign-out button (which lands on /) could not call it and called `clearAuthData()`
+      // instead — leaving the refresh token behind it live on the server for its full week.
+      localStorage.setItem('auth_token', 'access-1');
+      localStorage.setItem('auth_refresh_token', 'refresh-1');
+      const router = TestBed.inject(Router);
+
+      service.endSession();
+
+      expect(localStorage.getItem('auth_token')).toBeNull();
+      expect(localStorage.getItem('auth_refresh_token')).toBeNull();
+
+      const req = httpTesting.expectOne(`${environment.apiUrl}/api/auth/logout`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ refreshToken: 'refresh-1' });
+      req.flush({ code: 200 });
+
+      // The redirect belongs to the caller, and that is the whole point of the split.
+      expect(router.navigate).not.toHaveBeenCalled();
     });
 
     it('logout issues no request when there is no refresh token to revoke', () => {
