@@ -3976,8 +3976,10 @@
         },
         "CLASSIFICATION": {
           "FREE_AISLE": "免费 — 不占用座位",
-          "FREE_AISLE_NOTE": "免费随身物品每趟限 10 件。",
-          "ON_SEAT": "此物品需占用一个座位并需收费。"
+          "FREE_AISLE_NOTE": "免费随身物品每趟限 {{max}} 件。",
+          "ON_SEAT": "此物品需占用一个座位并需收费。",
+          "RETRY": "重试",
+          "UNAVAILABLE": "无法加载随身物品尺寸上限，暂时无法判断此物品是免费还是需占座。"
         },
         "VALIDATION": {
           "SEAT_COUNT_REQUIRED": "请输入此物品需要的座位数量。"

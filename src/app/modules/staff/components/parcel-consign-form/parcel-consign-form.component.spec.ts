@@ -259,6 +259,82 @@ describe('ParcelConsignFormComponent', () => {
       expect(component['carryOnClassification']).toBe('on_seat');
       expect(component['isOnSeat']).toBeTrue();
     });
+
+    // OBRS-611 AC-2 at the component level: the SAME item flips sides when the
+    // served config moves, with nothing rebuilt. 71.12cm was free-aisle above
+    // against the seeded 28in; against a 20in config it needs a seat.
+    it('follows the served threshold rather than a compiled-in 28in', () => {
+      const moved = makeComponent({ ...DEFAULT_POLICY, carryOnFreeSizeMaxInch: 20 });
+      switchToCarryOn(moved);
+      moved['dimensionsGroup'].setValue({ lengthCm: 71.12, widthCm: 10, heightCm: 10 });
+
+      expect(moved['carryOnClassification']).toBe('on_seat');
+    });
+  });
+
+  // OBRS-611 — the failure path the threshold introduces. Unlike the weight cap
+  // (which degrades open because it only relaxes a client-side limit), a missing
+  // threshold means the form cannot pick between two payload shapes, so it must
+  // refuse rather than send a coin flip.
+  describe('carry-on with no served size threshold (failed policy read)', () => {
+    let offline: ParcelConsignFormComponent;
+
+    beforeEach(() => {
+      offline = makeComponent('error');
+      switchToCarryOn(offline);
+      offline['dimensionsGroup'].setValue({ lengthCm: 30, widthCm: 10, heightCm: 10 });
+    });
+
+    it('classifies nothing — not even an item that is obviously under any plausible cap', () => {
+      expect(offline['carryOnClassification']).toBeNull();
+    });
+
+    it('flags the threshold unavailable so the template can offer a retry', () => {
+      expect(offline['carryOnThresholdUnavailable']).toBeTrue();
+    });
+
+    it('blocks carry-on submit rather than guessing a payload shape', () => {
+      expect(offline['canSubmit']).toBeFalse();
+    });
+
+    it('leaves consigned intake — the same form, other mode — selling', () => {
+      expect(makeComponent('error')['carryOnThresholdUnavailable']).toBeFalse();
+    });
+
+    it('recovers on retry, with no page reload', () => {
+      // Fails the first read and succeeds the second — a transient outage, which
+      // is the case the retry button exists for.
+      let call = 0;
+      const flaky = {
+        getParcelPolicy: () =>
+          ++call === 1
+            ? throwError(() => new Error('parcel-policy unavailable'))
+            : of({ code: 200, message: 'OK', data: DEFAULT_POLICY } as ResponseAPI<ParcelPolicyDto>),
+      } as ParcelPolicyService;
+      const recovering = new ParcelConsignFormComponent(new FormBuilder(), flaky);
+      recovering.ngOnInit();
+      switchToCarryOn(recovering);
+      expect(recovering['carryOnThresholdUnavailable']).toBeTrue();
+
+      recovering['retryParcelPolicy']();
+      recovering['dimensionsGroup'].setValue({ lengthCm: 30, widthCm: 10, heightCm: 10 });
+
+      expect(recovering['carryOnThresholdUnavailable']).toBeFalse();
+      expect(recovering['carryOnClassification']).toBe('free_aisle');
+    });
+  });
+
+  // OBRS-611 — FREE_AISLE_NOTE said "capped at 10 per trip" in all three locales
+  // while parcel.carry_on.free_aisle_max_per_trip decided the real cap.
+  describe('freeAisleMaxParams — the per-trip cap the note interpolates', () => {
+    it('carries the served cap', () => {
+      expect(component['freeAisleMaxParams'].max).toBe(10);
+      expect(makeComponent({ ...DEFAULT_POLICY, carryOnFreeAisleMaxPerTrip: 4 })['freeAisleMaxParams'].max).toBe(4);
+    });
+
+    it('stays 0 on a failed read, which is the template guard that drops the note', () => {
+      expect(makeComponent('error')['freeAisleMaxParams'].max).toBe(0);
+    });
   });
 
   describe('carryOnDisplayAmount — farePerUnit x seatCount, NOT quote.amount', () => {

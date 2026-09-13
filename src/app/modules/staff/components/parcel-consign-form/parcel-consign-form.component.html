@@ -182,6 +182,22 @@
                   }
                 </div>
 
+                <!-- OBRS-611: the threshold this hint compares against is
+                parcel.carry_on.free_size_max_inch from GET /api/parcel-policy. Without it
+                the form cannot tell which of two payload shapes to submit, so it says so
+                and offers the re-read instead of guessing. Consigned mode never reaches
+                this block and keeps selling through the same failure. -->
+                @if (carryOnThresholdUnavailable) {
+                  <div class="col-12">
+                    <div class="parcel-consign-indicator is-error" data-testid="parcel-carryon-threshold-error">
+                      {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.CLASSIFICATION.UNAVAILABLE' | translate }}
+                      <button type="button" class="btn btn-link p-0" (click)="retryParcelPolicy()">
+                        {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.CLASSIFICATION.RETRY' | translate }}
+                      </button>
+                    </div>
+                  </div>
+                }
+
                 <!-- OBRS-341: live client-side classification hint, mirroring the
                 server's rule (shared/lib/parcel-carry-on-classification.ts).
                 Shown only once all three dimensions are usable numbers. -->
@@ -190,7 +206,12 @@
                     @if (classification === 'free_aisle') {
                       <div class="parcel-consign-indicator">
                         {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.CLASSIFICATION.FREE_AISLE' | translate }}
-                        <div class="parcel-carryon-free-note">{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.CLASSIFICATION.FREE_AISLE_NOTE' | translate }}</div>
+                        <!-- OBRS-611: the per-trip cap is served, not typed. Dropped entirely
+                             rather than printed as "0" if the response omitted it - the item is
+                             still free either way, and a wrong cap is worse than no cap. -->
+                        @if (freeAisleMaxParams.max > 0) {
+                          <div class="parcel-carryon-free-note">{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.CLASSIFICATION.FREE_AISLE_NOTE' | translate: freeAisleMaxParams }}</div>
+                        }
                       </div>
                     }
                     @if (classification === 'on_seat') {

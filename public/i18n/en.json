@@ -3976,8 +3976,10 @@
         },
         "CLASSIFICATION": {
           "FREE_AISLE": "Free — no charge, no seat used",
-          "FREE_AISLE_NOTE": "Free carry-on items are capped at 10 per trip.",
-          "ON_SEAT": "This item needs its own seat and will be charged."
+          "FREE_AISLE_NOTE": "Free carry-on items are capped at {{max}} per trip.",
+          "ON_SEAT": "This item needs its own seat and will be charged.",
+          "RETRY": "Try again",
+          "UNAVAILABLE": "Could not load the carry-on size limit, so this item cannot be classified as free or on-seat yet."
         },
         "VALIDATION": {
           "SEAT_COUNT_REQUIRED": "Enter how many seats this item needs."

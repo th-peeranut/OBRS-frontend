@@ -5,35 +5,36 @@
  * the item's LARGEST dimension compared against
  * `parcel.carry_on.free_size_max_inch`, a `SystemConfig` row (default 28in).
  *
- * This constant mirrors that default so the form can show a LIVE hint
- * ("free" vs "needs a seat") as the salesperson types dimensions, without a
- * network round trip per keystroke. **The server remains authoritative** —
- * no endpoint exposes `parcel.carry_on.free_size_max_inch` today (a follow-up
- * card to expose it is tracked as a sibling of OBRS-438). If an operator ever
- * changes that config away from 28in, this hint silently drifts from the
- * server's real threshold — the failure mode is NOT a mischarge: the server
- * re-validates independently and answers `400 PARCEL_SEAT_COUNT_REQUIRED` (a
- * carry-on this hint called "free" that the server classifies on-seat) or
- * `400 PARCEL_SEAT_COUNT_NOT_ALLOWED` (the reverse), surfaced to the
- * salesperson via the normal submit-error path rather than silently
- * mis-charging. See the OBRS-341 card brief.
+ * The mirror exists so the form can show a LIVE hint ("free" vs "needs a
+ * seat") as the salesperson types dimensions, without a network round trip
+ * per keystroke. **The server remains authoritative** — it re-validates
+ * independently and answers `400 PARCEL_SEAT_COUNT_REQUIRED` /
+ * `400 PARCEL_SEAT_COUNT_NOT_ALLOWED` if the two ever disagree.
+ *
+ * OBRS-611: the threshold is a PARAMETER, not a constant here. It used to be
+ * `CARRY_ON_FREE_SIZE_MAX_INCH = 28` typed into this file because no endpoint
+ * served the config; `GET /api/parcel-policy` (OBRS-629) now does, so the
+ * caller passes the served value and an operator moving the config moves the
+ * hint without a deploy. There is deliberately NO default argument — a
+ * default would be the same hardcoded 28 wearing a different hat, and would
+ * let a caller that forgot to wire the config silently drift again.
  */
-export const CARRY_ON_FREE_SIZE_MAX_INCH = 28;
-
-/** 28in * 2.54 cm/in, computed once — the exact boundary the backend compares
- * against (`parcels.md`: "Strictly greater -> on-seat. Less-or-equal ->
- * free-aisle."). 71.12cm is free-aisle; 71.13cm is on-seat. */
-export const CARRY_ON_FREE_SIZE_MAX_CM = CARRY_ON_FREE_SIZE_MAX_INCH * 2.54;
-
 export type ParcelCarryOnClassification = 'free_aisle' | 'on_seat';
 
 /**
  * `largestDimensionCm` must already be the MAX of length/width/height — this
  * function does not take the three separately so it can't accidentally
- * compare the wrong one. Strictly greater than the threshold classifies
- * on-seat; equal-or-under is free-aisle (matches the backend exactly, see
- * the boundary note above).
+ * compare the wrong one. `freeSizeMaxInch` is `parcel.carry_on.free_size_max_inch`
+ * as served by `GET /api/parcel-policy`; it is converted here (x2.54) so the
+ * one place that knows the unit boundary is the one place that compares.
+ * Strictly greater than the threshold classifies on-seat; equal-or-under is
+ * free-aisle — matches the backend exactly (`parcels.md`: "Strictly greater ->
+ * on-seat. Less-or-equal -> free-aisle."), so at 28in 71.12cm is free-aisle
+ * and 71.13cm is on-seat.
  */
-export function classifyCarryOn(largestDimensionCm: number): ParcelCarryOnClassification {
-  return largestDimensionCm > CARRY_ON_FREE_SIZE_MAX_CM ? 'on_seat' : 'free_aisle';
+export function classifyCarryOn(
+  largestDimensionCm: number,
+  freeSizeMaxInch: number
+): ParcelCarryOnClassification {
+  return largestDimensionCm > freeSizeMaxInch * 2.54 ? 'on_seat' : 'free_aisle';
 }

@@ -216,7 +216,21 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
   protected policyLoaded = false;
   /** Stable object identity for the `{{max}}` interpolation; mutated in place. */
   protected readonly weightMaxParams: { max: number } = { max: 0 };
+  /* OBRS-611 — same idiom, for FREE_AISLE_NOTE. That string read "capped at 10
+   * per trip" in all three locales while parcel.carry_on.free_aisle_max_per_trip
+   * decided the real cap: the OBRS-564 defect exactly (a limit a customer reads,
+   * typed into a translation file), and on the counter's only parcel channel. */
+  protected readonly freeAisleMaxParams: { max: number } = { max: 0 };
   private maxWeightKg: number | null = null;
+  /* OBRS-611 — parcel.carry_on.free_size_max_inch, served by the SAME
+   * GET /api/parcel-policy call that already brings the weight cap and the
+   * prohibited list down. Null until it arrives (and after a failed load):
+   * `carryOnClassification` answers null rather than guessing, because
+   * unlike the weight cap this value does not merely relax a client-side
+   * limit — it decides which of two DIFFERENT payload shapes the form
+   * submits (on-seat carries `seatCount`, free-aisle must omit it), so a
+   * fallback would not degrade the hint, it would send the wrong request. */
+  private carryOnFreeSizeMaxInch: number | null = null;
 
   private readonly destroy$ = new Subject<void>();
 
@@ -293,7 +307,15 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
    * tick an attestation on the sender's behalf, so a plausible-but-stale list is
    * worse than an honest "we could not load it", and a silent empty list would
    * read as "nothing is prohibited". The weight cap simply stays uncapped
-   * client-side — validateWeight still rejects at intake. */
+   * client-side — validateWeight still rejects at intake.
+   *
+   * OBRS-611 — the carry-on size threshold is the one value here that CANNOT
+   * degrade open the way the weight cap does: it selects the payload shape
+   * (see `carryOnFreeSizeMaxInch` above), so on a failed load carry-on submit
+   * blocks behind an explicit retry rather than sending a coin-flip request
+   * the server answers with a 400 the salesperson cannot act on. Consigned
+   * intake — the other mode of this same form — is untouched by the failure
+   * and keeps selling. */
   private loadParcelPolicy(): void {
     this.parcelPolicyService
       .getParcelPolicy()
@@ -307,6 +329,12 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
             this.maxWeightKg = policy.maxWeightKg;
             this.weightMaxParams.max = policy.maxWeightKg;
             this.form.get('weightKg')?.updateValueAndValidity({ emitEvent: false });
+          }
+          if (typeof policy?.carryOnFreeSizeMaxInch === 'number') {
+            this.carryOnFreeSizeMaxInch = policy.carryOnFreeSizeMaxInch;
+          }
+          if (typeof policy?.carryOnFreeAisleMaxPerTrip === 'number') {
+            this.freeAisleMaxParams.max = policy.carryOnFreeAisleMaxPerTrip;
           }
         },
         error: () => {
@@ -447,15 +475,37 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
   /** OBRS-341 — mirrors the server's classification (see
    * `shared/lib/parcel-carry-on-classification.ts`) from the CURRENT
    * dimensions values, live as the salesperson types. `null` while any of
-   * the three is not yet a usable positive number (incomplete input). */
+   * the three is not yet a usable positive number (incomplete input), and
+   * OBRS-611: also null until the served threshold is in hand. */
   protected get carryOnClassification(): ParcelCarryOnClassification | null {
+    if (this.carryOnFreeSizeMaxInch == null) {
+      return null;
+    }
     const length = Number(this.dimensionsGroup.get('lengthCm')?.value);
     const width = Number(this.dimensionsGroup.get('widthCm')?.value);
     const height = Number(this.dimensionsGroup.get('heightCm')?.value);
     if (![length, width, height].every((v) => Number.isFinite(v) && v > 0)) {
       return null;
     }
-    return classifyCarryOn(Math.max(length, width, height));
+    return classifyCarryOn(Math.max(length, width, height), this.carryOnFreeSizeMaxInch);
+  }
+
+  /** OBRS-611 — carry-on mode with the policy read settled but no threshold in
+   * it (a failed fetch, or a response missing the field). Drives the inline
+   * "cannot classify, retry" message; distinct from "still loading", which
+   * shows nothing because it resolves on its own in a moment. */
+  protected get carryOnThresholdUnavailable(): boolean {
+    return this.isCarryOnMode && this.policyLoaded && this.carryOnFreeSizeMaxInch == null;
+  }
+
+  /** OBRS-611 — the retry the message above offers. Same re-fetch the parcel
+   * terms page gives the public (ParcelPolicyComponent#retryPolicy): the read
+   * is idempotent and unauthenticated, so re-running it costs nothing and is
+   * the only recovery that does not need a page reload mid-intake. */
+  protected retryParcelPolicy(): void {
+    this.prohibitedLoadFailed = false;
+    this.policyLoaded = false;
+    this.loadParcelPolicy();
   }
 
   protected get isCarryOnMode(): boolean {
