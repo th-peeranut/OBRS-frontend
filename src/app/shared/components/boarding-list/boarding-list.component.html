@@ -289,6 +289,19 @@
             {{ 'STAFF.BOARDING.SEARCH.CLEAR' | translate }}
           </button>
         }
+        <!-- OBRS-374: plain filter (no formControlName — precedent:
+        staff-schedules-page.component.html). valueKey/labelKey both point at "value"
+        because the option's label IS the raw stop string; placeholderSelectable stays
+        default true so picking the placeholder row clears back to "all stops". -->
+        <app-admin-dropdown
+          class="boarding-stop-filter"
+          data-testid="boarding-stop-filter"
+          [options]="stopOptions"
+          valueKey="value"
+          labelKey="value"
+          [placeholder]="'STAFF.BOARDING.STOP_FILTER.PLACEHOLDER' | translate"
+          (valueChange)="stopFilter = $event">
+        </app-admin-dropdown>
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
@@ -328,12 +341,30 @@
                   <td colspan="9" class="text-center py-5">
                     <span class="material-symbols-outlined text-muted d-block mb-2" [attr.translate]="'no'" style="font-size:48px">search_off</span>
                     <div class="fw-semibold">{{ 'STAFF.BOARDING.SEARCH.NO_MATCH_TITLE' | translate }}</div>
-                    <div class="text-muted small">{{ 'STAFF.BOARDING.SEARCH.NO_MATCH_BODY' | translate: { term: searchTerm } }}</div>
+                    @if (searchTerm) {
+                      <div class="text-muted small">{{ 'STAFF.BOARDING.SEARCH.NO_MATCH_BODY' | translate: { term: searchTerm } }}</div>
+                    }
                   </td>
                 </tr>
               }
               @if (!isLoading) {
-                @for (item of filteredItems; track item) {
+                @for (item of filteredItems; track item; let i = $index) {
+                  <!-- OBRS-374: group header immediately before the first row of each
+                  contiguous run of the same fromStop. No grouping data structure — the
+                  backend returns same-stop rows contiguously and filtering preserves
+                  relative order, so a previous-row comparison is sufficient. Still renders
+                  when the filter narrows to one stop (the driver's confirmation the filter
+                  took). -->
+                  @if (i === 0 || filteredItems[i - 1].fromStop !== item.fromStop) {
+                    <tr class="boarding-stop-group-row">
+                      <td colspan="9" class="boarding-stop-group-cell">
+                        <span class="boarding-stop-group-name">{{ item.fromStop }}</span>
+                        <span class="boarding-stop-group-count text-muted small">
+                          {{ 'STAFF.BOARDING.STOP_GROUP.COUNT' | translate: { boarded: groupBoardedCount(filteredItems, item.fromStop), total: groupTotalCount(filteredItems, item.fromStop) } }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
                   <tr>
                     <td class="fw-semibold">
                       {{ item.ticketNumber }}
@@ -619,7 +650,21 @@
           </tr>
         </thead>
         <tbody>
-          @for (item of items; track item) {
+          @for (item of items; track item; let i = $index) {
+            <!-- OBRS-374: locked by OBRS-1659's comment above — the print sheet keeps
+            iterating `items`, never `filteredItems`, and its counts stay whole-bus too:
+            a printed manifest describes the whole bus, not whatever the driver last
+            filtered. -->
+            @if (i === 0 || items[i - 1].fromStop !== item.fromStop) {
+              <tr class="boarding-stop-group-row boarding-manifest-print-group-row">
+                <td colspan="8" class="boarding-stop-group-cell">
+                  <span class="boarding-stop-group-name">{{ item.fromStop }}</span>
+                  <span class="boarding-stop-group-count">
+                    {{ 'STAFF.BOARDING.STOP_GROUP.COUNT' | translate: { boarded: groupBoardedCount(items, item.fromStop), total: groupTotalCount(items, item.fromStop) } }}
+                  </span>
+                </td>
+              </tr>
+            }
             <tr>
               <td>{{ item.ticketNumber }}</td>
               <td>{{ item.seatNumber }}</td>
