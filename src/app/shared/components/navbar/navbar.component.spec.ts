@@ -57,6 +57,9 @@ describe('NavbarComponent', () => {
         }
         return required.some((role) => effective.has(role));
       },
+      // OBRS-1855: onLogout() calls this now, so every stub needs it - a spec that only
+      // stubs clearAuthData() dies on `endSession is not a function`.
+      endSession: () => {},
     };
   }
 
@@ -153,26 +156,38 @@ describe('NavbarComponent', () => {
     expect(component.isDriver).toBe(false);
   });
 
-  it('clears auth and navigates to /home on sign out', async () => {
-    // Parity with the admin topbar: sign-out must navigate away, not leave the
-    // user on the current (possibly auth-gated) page.
+  it('ends the session server-side and navigates to /home on sign out', async () => {
+    // OBRS-1855. `endSession()` is the assertion, not `clearAuthData()`: this button used
+    // to call the latter, which only empties localStorage — the refresh token behind it
+    // stayed usable on the server for the rest of its 7 days. Parity with the admin topbar
+    // on the rest: sign-out must navigate away, not leave the user on the current
+    // (possibly auth-gated) page.
     const router = createRouterStub();
     const navSpy = spyOn(router, 'navigate').and.resolveTo(true);
     const auth: any = createAuthStub();
     auth.clearAuthData = () => {};
+    const endSpy = spyOn(auth, 'endSession');
     const clearSpy = spyOn(auth, 'clearAuthData');
+    const alert: any = { success: () => {} };
+    const alertSpy = spyOn(alert, 'success');
     const comp = new NavbarComponent(
       createTranslateStub(),
       {} as never,
       createElementRefStub(),
       auth,
       router,
-      { success: () => {} } as never
+      alert
     );
 
     await comp.onLogout();
 
-    expect(clearSpy).toHaveBeenCalled();
+    expect(endSpy).toHaveBeenCalled();
+    // The local-only clear is NOT an acceptable substitute: reaching it directly from here
+    // is exactly the bug, and `endSession()` does its own clearing internally.
+    expect(clearSpy).not.toHaveBeenCalled();
+    // Unchanged by this card, and asserted so a later edit cannot quietly swap this button
+    // for `logout()` — that one redirects to /login.
+    expect(alertSpy).toHaveBeenCalledWith('HOME.NAVBAR.SIGNOUT_SUCCESS');
     expect(navSpy).toHaveBeenCalledWith(['/']);
   });
 
