@@ -3,6 +3,7 @@ import { BookingsPageComponent } from './bookings-page.component';
 import { BookingRow, BookingsData } from './bookings.store';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminBookingDetailDto } from '../../../../services/admin/admin-api.service';
+import enI18n from '../../../../../../public/i18n/en.json';
 
 function makeRows(count: number): BookingRow[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -377,6 +378,14 @@ describe('BookingsPageComponent', () => {
       'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.overpaid': 'Overpaid',
       'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.refund_required': 'Refund Pending',
       'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.refund_processed': 'Refunded',
+      // OBRS-614, in the OBRS-1152 shape: this ONE entry is read from the
+      // SHIPPED bundle rather than hand-typed, so the literal assertion below
+      // goes red if the key is renamed or its copy reworded. The parity gate
+      // only proves en/th/zh carry the same KEYS — nothing was checking that
+      // this map still says what the owner reads, and `refunded_partial`
+      // above has already drifted away from en.json.
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.payment_load_failed': (enI18n as any).ADMIN
+        .BOOKINGS.PAYMENT_STATUS_CODES.payment_load_failed,
       'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.unknown': 'Unknown',
       'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.pending': 'Pending',
       'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.paid': 'Paid',
@@ -433,12 +442,11 @@ describe('BookingsPageComponent', () => {
       expect((component as any).paymentStatusLabel('some_future_code')).toBe('Unknown');
     });
 
-    // The row badge is fed by THREE vocabularies, not one. BookingsStore
+    // The row badge is fed by more than one vocabulary. BookingsStore
     // .toBookingRow falls back from the EOverallPaymentStatus code to
-    // booking.payment?.status (EPaymentStatus) and then to
-    // inferPaymentStatusFromBookingStatus(), which returns FAILED/SUCCESS/
-    // PENDING. Translating only the booking-level codes would have turned
-    // every one of those into "Unknown" — a regression caused by this fix.
+    // booking.payment?.status (EPaymentStatus). Translating only the
+    // booking-level codes would have turned every one of those into
+    // "Unknown" — a regression caused by this fix.
     it('still labels the EPaymentStatus fallback that BookingsStore drops into the same badge', () => {
       const component = setupComponent();
       expect((component as any).paymentStatusLabel('paid')).toBe('Paid');
@@ -451,12 +459,22 @@ describe('BookingsPageComponent', () => {
       );
     });
 
-    it('still labels the inferred FAILED/SUCCESS/PENDING values, in the humanised shape the store emits', () => {
+    it('still labels the bare uppercase EPaymentStatus words, in the humanised shape the store emits', () => {
       const component = setupComponent();
-      // inferPaymentStatusFromBookingStatus returns these bare uppercase words
       expect((component as any).paymentStatusLabel('FAILED')).toBe('Failed');
       expect((component as any).paymentStatusLabel('SUCCESS')).toBe('Paid');
       expect((component as any).paymentStatusLabel('PENDING')).toBe('Pending');
+    });
+
+    // OBRS-614: the sentinel that replaced the fabricated value needs its own
+    // entry, or it would land on the SAME 'Unknown' as a no-data row and the
+    // two states the fix exists to separate would read identically again.
+    it('labels LOAD_FAILED distinctly from the plain unknown row (OBRS-614)', () => {
+      const component = setupComponent();
+      expect((component as any).paymentStatusLabel('PAYMENT_LOAD_FAILED')).toBe(
+        'Payment Status Unavailable'
+      );
+      expect((component as any).paymentStatusLabel('UNKNOWN')).toBe('Unknown');
     });
   });
 
@@ -514,6 +532,24 @@ describe('BookingsPageComponent', () => {
       expect((component as any).paymentClass('refunded_partial')).toBe('is-success');
       expect((component as any).paymentClass('REFUNDED PARTIAL')).toBe('is-success');
       expect((component as any).paymentClass('partial_paid')).toBe('is-warning');
+    });
+  });
+
+  describe('paymentClass() absent payment status (OBRS-614)', () => {
+    // The colour is the half a user reads without focusing. A row we simply
+    // have no payment data for must not wear the same red as a payment that
+    // genuinely failed — that red was the fabricated CANCELLED->FAILED value.
+    it('gives both no-data sentinels the neutral chip, while a real failure stays red', () => {
+      const component = new BookingsPageComponent(
+        createTranslateStub(),
+        makeStoreStub(makeData(0)) as any,
+        makeAdminApiServiceStub() as any,
+        makeAuthStub() as any
+      );
+      expect((component as any).paymentClass('UNKNOWN')).toBe('is-neutral');
+      expect((component as any).paymentClass('PAYMENT_LOAD_FAILED')).toBe('is-neutral');
+      expect((component as any).paymentClass('PAYMENT LOAD FAILED')).toBe('is-neutral');
+      expect((component as any).paymentClass('failed')).toBe('is-danger');
     });
   });
 

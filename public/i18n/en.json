@@ -1279,6 +1279,7 @@
         "overpaid": "Overpaid",
         "refund_required": "Refund Pending",
         "refund_processed": "Refunded",
+        "payment_load_failed": "Payment Status Unavailable",
         "unknown": "Unknown"
       },
       "TRANSACTION_STATUS_CODES": {

@@ -28,7 +28,18 @@ export interface BookingRow {
   departureTime: string;
   totalFare: string;
   bookingStatus: string;
+  /** A payment status a server actually reported, or one of the two OBRS-614
+   * sentinels — 'PAYMENT_LOAD_FAILED' (the payments call errored) / 'UNKNOWN' (it
+   * answered with no payment). Never derived from `bookingStatus`. */
   paymentStatus: string;
+}
+
+/** OBRS-614: what the payments endpoint told us about one booking. `failed`
+ * is the distinction a bare `status: string | null` could not carry — "the
+ * call errored" vs "the call answered, there is no payment". */
+interface PaymentLookup {
+  status: string | null;
+  failed: boolean;
 }
 
 export interface StatusOption {
@@ -79,8 +90,8 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
 
   private async loadPaymentStatusMap(
     bookings: AdminBookingDto[]
-  ): Promise<Map<number, string>> {
-    const statusMap = new Map<number, string>();
+  ): Promise<Map<number, PaymentLookup>> {
+    const statusMap = new Map<number, PaymentLookup>();
 
     const paymentRequests = bookings
       .filter((booking) => Number.isFinite(booking.id))
@@ -88,9 +99,7 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
 
     const paymentResults = await Promise.all(paymentRequests);
     for (const result of paymentResults) {
-      if (result.status) {
-        statusMap.set(result.bookingId, result.status);
-      }
+      statusMap.set(result.bookingId, { status: result.status, failed: result.failed });
     }
 
     return statusMap;
@@ -98,14 +107,14 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
 
   private async loadPaymentStatusByBookingId(
     bookingId: number
-  ): Promise<{ bookingId: number; status: string | null }> {
+  ): Promise<{ bookingId: number } & PaymentLookup> {
     try {
       const response = await firstValueFrom(this.adminApiService.getBookingPayments(bookingId));
       const payment = response?.data;
       const status = this.extractPaymentStatus(payment);
-      return { bookingId, status };
+      return { bookingId, status, failed: false };
     } catch {
-      return { bookingId, status: null };
+      return { bookingId, status: null, failed: true };
     }
   }
 
@@ -121,7 +130,7 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
 
   private toBookingRow(
     booking: AdminBookingDto,
-    paymentStatus: string | null | undefined
+    paymentLookup: PaymentLookup | undefined
   ): BookingRow {
     const firstSchedule = booking.journeys?.[0] ?? booking.bookingSchedules?.[0];
 
@@ -153,27 +162,30 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
       departureTime: departureDateTimeRaw ?? '',
       totalFare,
       bookingStatus: bookingStatus.name,
-      paymentStatus: (
-        paymentStatus ??
-        booking.payment?.status ??
-        this.inferPaymentStatusFromBookingStatus(bookingStatus.code)
-      )
-        .replace(/_/g, ' ')
-        .toUpperCase(),
+      paymentStatus: this.resolvePaymentStatus(booking, paymentLookup),
     };
   }
 
-  private inferPaymentStatusFromBookingStatus(status: string | null | undefined): string {
-    const normalizedStatus = (status ?? '').toUpperCase();
-    if (normalizedStatus === 'CANCELLED') {
-      return 'FAILED';
+  /**
+   * OBRS-614: only a server may say what was paid. The two real sources are
+   * tried in the order they always were; when neither answers, the row says
+   * WHICH kind of "no data" this is instead of deriving one from the BOOKING
+   * status. That derivation (CANCELLED->FAILED, CONFIRMED|COMPLETED->SUCCESS,
+   * else PENDING) was not merely vague: a CANCELLED booking may have been paid
+   * in full and refunded, so 'FAILED' asserted something untrue — and because
+   * loadPaymentStatusByBookingId swallows every error, it spoke loudest
+   * exactly while the payments endpoint was down and staff needed the truth.
+   */
+  private resolvePaymentStatus(
+    booking: AdminBookingDto,
+    paymentLookup: PaymentLookup | undefined
+  ): string {
+    const reported = paymentLookup?.status ?? booking.payment?.status;
+    if (reported) {
+      return reported.replace(/_/g, ' ').toUpperCase();
     }
 
-    if (normalizedStatus === 'CONFIRMED' || normalizedStatus === 'COMPLETED') {
-      return 'SUCCESS';
-    }
-
-    return 'PENDING';
+    return paymentLookup?.failed ? 'PAYMENT_LOAD_FAILED' : 'UNKNOWN';
   }
 
   private parseStatus(value: string | AdminStatusDto | null | undefined): {

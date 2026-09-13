@@ -245,6 +245,15 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
       return 'is-warning';
     }
 
+    // OBRS-614: "we have no payment status" is not a payment that failed.
+    // The two sentinels the store emits get the grey chip (§2.4), so an
+    // absence can never be read off the colour as a bad outcome the way the
+    // fabricated red FAILED was. An unrecognised code still falls through to
+    // is-danger below, exactly as before this card.
+    if (normalizedStatus === 'UNKNOWN' || normalizedStatus === 'PAYMENT_LOAD_FAILED') {
+      return 'is-neutral';
+    }
+
     return 'is-danger';
   }
 
@@ -255,14 +264,16 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
   // .replace(/_/g, ' ').toUpperCase():
   //   1. the API's EOverallPaymentStatus code   -> unpaid/partial_paid/...
   //   2. booking.payment?.status                -> EPaymentStatus (paid/...)
-  //   3. inferPaymentStatusFromBookingStatus()  -> FAILED/SUCCESS/PENDING
+  //   3. OBRS-614 RETIRED this one: it fabricated FAILED/SUCCESS/PENDING out
+  //      of the BOOKING status. The store now emits 'PAYMENT_LOAD_FAILED'/'UNKNOWN'
+  //      instead, which are looked up like any other code.
   // Only (1) is the booking-level vocabulary this card is about, but all
   // three land in the same badge, so translating only (1) would have turned
   // the other two into "Unknown" — a regression introduced by the fix. Look
   // the code up in the booking-level map first, then the transaction-level
   // map, and only then fall back to a translated "unknown" (never a bare
-  // key). Source (3) fabricating a payment status out of a BOOKING status is
-  // its own defect and has its own card — it is not papered over here.
+  // key). The EPaymentStatus words in (2) still include failed/success/
+  // pending, so those entries stay live — they are just no longer invented.
   //
   // The detail-modal summary passes the raw "partial_paid" straight through,
   // so normalise both shapes back to lower_snake_case before the lookup.

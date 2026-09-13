@@ -1279,6 +1279,7 @@
         "overpaid": "ชำระเกิน",
         "refund_required": "รอคืนเงิน",
         "refund_processed": "คืนเงินแล้ว",
+        "payment_load_failed": "โหลดสถานะการชำระเงินไม่ได้",
         "unknown": "ไม่ทราบสถานะ"
       },
       "TRANSACTION_STATUS_CODES": {

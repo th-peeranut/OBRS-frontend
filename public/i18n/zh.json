@@ -1279,6 +1279,7 @@
         "overpaid": "多付款",
         "refund_required": "待退款",
         "refund_processed": "已退款",
+        "payment_load_failed": "无法加载付款状态",
         "unknown": "未知状态"
       },
       "TRANSACTION_STATUS_CODES": {
