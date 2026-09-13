@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../auth/auth.service';
@@ -57,7 +59,8 @@ export function thaiMobileValidator(control: AbstractControl): ValidationErrors 
     styleUrl: './account-page.component.scss',
     standalone: false
 })
-export class AccountPageComponent implements OnInit {
+export class AccountPageComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
   /**
    * OBRS-1232 AC-6: the nine codes the dropdown offers.
    */
@@ -115,6 +118,11 @@ export class AccountPageComponent implements OnInit {
       nickname: ['', [Validators.minLength(2), Validators.maxLength(50)]],
       phoneNumber: ['', [Validators.required, thaiMobileValidator]],
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   ngOnInit(): void {
@@ -177,7 +185,10 @@ export class AccountPageComponent implements OnInit {
     this.isProfileLoading = true;
     this.isProfileLoadFailed = false;
 
-    this.myAccountService.getProfile().subscribe({
+    this.myAccountService
+      .getProfile()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
       next: (res) => {
         this.isProfileLoading = false;
         this.profile = res?.data ?? null;
@@ -219,6 +230,10 @@ export class AccountPageComponent implements OnInit {
         // anything else here would silently override the choice made there.
         preferredLocale: this.profile.preferredLocale,
       })
+      // OBRS-1853: NO takeUntil here. This is a PUT. Unsubscribing aborts the XHR, so
+      // leaving the page mid-save would cancel a request the server may already have
+      // committed, and the user would never see success or failure. Same asymmetry the
+      // 30s timeout in error.interceptor.ts applies to GET/HEAD only, for the same reason.
       .subscribe({
         next: () => {
           this.isProfileSaving = false;
@@ -247,7 +262,11 @@ export class AccountPageComponent implements OnInit {
 
     this.isConsentSubmitting = true;
 
-    this.myAccountService.acceptCurrentPrivacyPolicy().subscribe({
+    this.myAccountService
+      .acceptCurrentPrivacyPolicy()
+      // OBRS-1853: NO takeUntil — a POST recording PDPA consent. Aborting it client-side
+      // would leave the consent stored server-side with the user told nothing. See the PUT above.
+      .subscribe({
       next: () => {
         this.isConsentSubmitting = false;
         this.alertService.success(this.translate.instant('ACCOUNT.CONSENT_ACCEPT_SUCCESS'));

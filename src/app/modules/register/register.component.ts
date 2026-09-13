@@ -238,6 +238,18 @@ export class RegisterComponent implements OnDestroy {
         res = await firstValueFrom(this.usersService.checkExistPhoneNumber(value));
       }
     } catch {
+      // OBRS-1853: fail OPEN. The hint is rate-limited per IP since the 2026-09-11
+      // review (429 after 60 calls / 15 min) and is now opted out of the global error
+      // alert, so a failure is silent. Leaving the previous `true` here would keep the
+      // inline "already exists" message under an address the user has since corrected,
+      // and register() above refuses to submit while the flag is set — a form that
+      // dead-ends with nothing on screen. Clearing it hands the decision to
+      // /api/auth/signup, which is the only authority anyway.
+      if (option === REGISTER_OPTION.EMAIL) {
+        this.emailIsExist = false;
+      } else if (option === REGISTER_OPTION.PHONENUMBER) {
+        this.phoneNumberIsExist = false;
+      }
       return;
     }
 

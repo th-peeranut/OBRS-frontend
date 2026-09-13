@@ -4,7 +4,7 @@ Angular frontend for the Online Bus Reservation System (OBRS).
 
 ## Tech Stack
 
-- Angular 18
+- Angular 21
 - TypeScript 5
 - NgRx
 - PrimeNG + Bootstrap
