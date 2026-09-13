@@ -20,11 +20,20 @@ import {
  * call this lane answers is fulfilled instantly, and OBRS-908 also added a 300ms grace
  * period before the overlay opens -- so a spec that simply walked the app would pass on
  * a tree with the OLD default too, proving nothing. Every response here is therefore
- * held for SLOW_RESPONSE_MS, comfortably past that grace period. Both tests were run
- * against a tree with the interceptor deliberately reverted to the old default, and they
- * went red counting 1 overlay on the home page and 3 across the customer walk -- fewer
- * than the call count because AlertService coalesces concurrent requests behind one
- * popup, which is exactly why the number to assert is 0 rather than a specific N.
+ * held for SLOW_RESPONSE_MS, comfortably past that grace period.
+ *
+ * BOTH TESTS WERE RUN AGAINST UNTOUCHED `origin/dev` (b9c4f7c3) before this card landed,
+ * and the two results are deliberately different:
+ *
+ *   - AC1 PASSED there already. OBRS-642 had opted the home page's own calls out BY HAND
+ *     (station.effect, provinces/stops, routes, booking-policy), which is the card's own
+ *     point restated -- the fix existed, one call site at a time. This test is the
+ *     regression guard for that, not the proof of this card.
+ *   - AC2 FAILED there, counting 3 overlays. That is this card's actual measured
+ *     before/after: 3 -> 0 across search -> trip -> passenger form. Three rather than one
+ *     per call because AlertService coalesces concurrent requests behind one popup, which
+ *     is why the number to assert is 0 and not some specific N.
+ *
  * Removing the delay silently turns both tests into tautologies.
  *
  * COUNTED, NOT SAMPLED. `expect(locator).toHaveCount(0)` asks what is on screen at the
