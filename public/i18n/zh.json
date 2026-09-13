@@ -4527,7 +4527,8 @@
         "RATE": "每人 {{rate}}",
         "HEAD_COUNT": "人头数",
         "OVERRIDDEN": "已改为 {{typed}} 人 · 系统统计为 {{system}}",
-        "SYSTEM_MATCHES": "系统统计为 {{system}} 人 · 一致"
+        "SYSTEM_MATCHES": "系统统计为 {{system}} 人 · 一致",
+        "OTHER_COUNTERS": "上述金额中包含其他柜台在同一班次记录的人头费"
       },
       "TOTAL": {
         "HAND_OVER": "应点交给业主的现金",

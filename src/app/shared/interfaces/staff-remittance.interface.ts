@@ -150,6 +150,29 @@ export interface StaffRemittanceDto {
   advance: StaffRemittanceAdvanceDto;
   perHeadLines: StaffRemittancePerHeadLineDto[];
   hasPerHead: boolean;
+
+  /**
+   * OBRS-1755 F1 — the ค่าหัว on this round that `perHeadLines` does NOT show:
+   * another counter's stop, or a row with no stop at all.
+   *
+   * <p>ONE OPAQUE NUMBER, never a breakdown — a salesperson may not see another
+   * counter's takings. The invariant the client may rely on is:
+   *
+   * <pre>perHeadDeducted === Σ perHeadLines[].recordedAmount + perHeadOtherCountersAmount</pre>
+   *
+   * <p><b>Why it exists.</b> `deductions.perHeadDeducted` is the WHOLE ROUND's
+   * (BR-3) while `perHeadLines` is caller-scoped, so a screen that rebuilt the
+   * figure from its own lines alone landed exactly this amount short of the
+   * server — and every submit came back `SETTLEMENT_SUBMIT_AMOUNT_STALE`
+   * quoting a number the counter had no way to compute, with resubmitting
+   * unable to close the gap (QA F1, 2026-09-13: screen 638.00, server 626.00).
+   *
+   * <p>⛔ The remedy is to SUBTRACT this alongside the visible lines — never to
+   * narrow `perHeadDeducted` to the caller, which BR-3 forbids and which would
+   * stop the round's own expectation reconciling for the owner.
+   */
+  perHeadOtherCountersAmount: string;
+
   deductions: StaffRemittanceDeductionsDto;
   /** SIGNED (BR-4). Negative = the owner owes the salesperson. ⛔ never clamped, never recomputed here. */
   myExpectedCash: string;

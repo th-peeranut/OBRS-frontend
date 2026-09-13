@@ -4527,7 +4527,8 @@
         "RATE": "{{rate}} per head",
         "HEAD_COUNT": "Heads",
         "OVERRIDDEN": "Overridden to {{typed}} heads · the system counted {{system}}",
-        "SYSTEM_MATCHES": "The system counted {{system}} heads · matches"
+        "SYSTEM_MATCHES": "The system counted {{system}} heads · matches",
+        "OTHER_COUNTERS": "Included in the figure above: per-head fees another counter recorded on this same round"
       },
       "TOTAL": {
         "HAND_OVER": "Cash to count out to the owner",

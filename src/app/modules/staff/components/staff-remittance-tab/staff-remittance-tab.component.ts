@@ -297,14 +297,42 @@ export class StaffRemittanceTabComponent implements OnChanges, OnDestroy {
     return this.recordedAdvanceCents + this.typedAdvanceCents;
   }
 
-  /** What the server has recorded for the per-head fee, in satang. */
-  protected get recordedPerHeadCents(): number {
-    return toSignedCents(this.remittance?.deductions.perHeadDeducted);
+  /**
+   * OBRS-1755 F1 — ค่าหัว recorded on this round that this counter cannot see:
+   * another counter's stop, or a row with no stop. An opaque lump by design.
+   *
+   * <p>It is deducted from the round NO MATTER WHAT the clerk types, because
+   * nothing on this screen can change another counter's rows. Typing only ever
+   * moves the VISIBLE half.
+   */
+  protected get otherCountersPerHeadCents(): number {
+    return toSignedCents(this.remittance?.perHeadOtherCountersAmount);
   }
 
-  /** The per-head fee implied by the head counts currently on screen. */
-  protected get pendingPerHeadCents(): number {
-    if (!this.showPerHeadBox) return this.recordedPerHeadCents;
+  /** True when another counter has ค่าหัว on this round — the screen says so. */
+  protected get hasOtherCountersPerHead(): boolean {
+    return this.showPerHeadBox && this.otherCountersPerHeadCents !== 0;
+  }
+
+  /**
+   * What the server has recorded for the per-head fee ON THE LINES THIS SCREEN
+   * SHOWS, in satang — `Σ perHeadLines[].recordedAmount`.
+   *
+   * <p>⛔ NOT `deductions.perHeadDeducted`. That is the WHOLE ROUND's figure
+   * (BR-3) and includes {@link otherCountersPerHeadCents}; using it as the
+   * baseline that typing replaces is precisely the shape that produced the
+   * unfixable stale-409 in QA F1 — the client offered `round − own` while the
+   * server computed `round − whole`.
+   */
+  protected get recordedVisiblePerHeadCents(): number {
+    return this.perHeadLines.reduce(
+      (sum, line) => sum + toSignedCents(line.recordedAmount),
+      0
+    );
+  }
+
+  /** The per-head fee implied by the head counts currently in the boxes. */
+  protected get typedVisiblePerHeadCents(): number {
     return this.perHeadLines
       .filter((line) => line.configured)
       .reduce(
@@ -314,19 +342,43 @@ export class StaffRemittanceTabComponent implements OnChanges, OnDestroy {
   }
 
   /**
+   * The per-head deduction row as it will read once this submit lands —
+   * WHOLE-ROUND (BR-3), so the opaque other-counter half is inside it.
+   */
+  protected get pendingPerHeadCents(): number {
+    if (!this.showPerHeadBox) return toSignedCents(this.remittance?.deductions.perHeadDeducted);
+    return this.typedVisiblePerHeadCents + this.otherCountersPerHeadCents;
+  }
+
+  /**
    * What the clerk is about to hand over, in satang.
    *
    * ⛔ NOT a re-derivation of BR-4. It starts from the server's own
    * `myExpectedCash` and applies only the deltas the server has not seen yet —
-   * the advance about to be written, and any head-count correction. With
-   * nothing typed it equals the server's figure exactly.
+   * the advance about to be written, and any head-count correction.
+   *
+   * <p><b>The per-head delta is over the VISIBLE lines only</b> (OBRS-1755 F1).
+   * The server, after writing, recomputes
+   * `Σ typedVisible + otherCounters`, against a `perHeadDeducted` that was
+   * `Σ recordedVisible + otherCounters` — so the opaque other-counter term
+   * CANCELS in the difference and must not appear here. Subtracting it a second
+   * time (by using the whole-round `perHeadDeducted` as the baseline) is what
+   * made every submit fail the stale check by exactly that amount in QA F1.
+   *
+   * <p>Because the delta cancels, a screen nobody has typed into sends the
+   * server's own figure back unchanged — except where a head count is PREFILLED
+   * over a stop with nothing recorded yet, which is a real pending write and
+   * has to be priced in, or the very first submit at a DAY counter would be
+   * refused as stale.
    *
    * SIGNED throughout: a round where the drawer paid out more than it took in is
    * a correct state (BR-4), not an error to clamp.
    */
   protected get pendingExpectedCents(): number {
     const server = toSignedCents(this.remittance?.myExpectedCash);
-    const perHeadDelta = this.pendingPerHeadCents - this.recordedPerHeadCents;
+    const perHeadDelta = this.showPerHeadBox
+      ? this.typedVisiblePerHeadCents - this.recordedVisiblePerHeadCents
+      : 0;
     return server - this.typedAdvanceCents - perHeadDelta;
   }
 

@@ -51,6 +51,7 @@ function roundPayload(overrides: Partial<StaffRemittanceDto> = {}): StaffRemitta
     advance: { allowed: true, recordedCount: 1, recordedAmount: '500.00', blockedReason: null },
     perHeadLines: [],
     hasPerHead: false,
+    perHeadOtherCountersAmount: '0.00',
     deductions: { perHeadDeducted: '0.00', advancePaidOut: '500.00', deferredTicketCash: '0.00' },
     myExpectedCash: '1680.00',
     roundExpectedCash: '1680.00',
@@ -73,15 +74,65 @@ function dayPayload(overrides: Partial<StaffRemittanceDto> = {}): StaffRemittanc
         ratePerHead: '20.00',
         configured: true,
         systemHeadCount: 12,
-        recordedHeadCount: 0,
-        recordedAmount: '0.00',
+        recordedHeadCount: 12,
+        recordedAmount: '240.00',
       },
     ],
+    // INVARIANT (asserted below): perHeadDeducted == sum(recordedAmount) + other.
+    perHeadOtherCountersAmount: '0.00',
     deductions: { perHeadDeducted: '240.00', advancePaidOut: '0.00', deferredTicketCash: '0.00' },
+    // 2180.00 cash in - 240.00 per head.
     myExpectedCash: '1940.00',
     roundExpectedCash: '1940.00',
     ...overrides,
   });
+}
+
+/**
+ * OBRS-1755 F1 - the same DAY counter, on a round where ANOTHER counter has
+ * also recorded ค่าหัว. This is the shape QA hit: `perHeadDeducted` is the whole
+ * round's (360.00) while `perHeadLines` shows only this counter's (240.00), and
+ * the 120.00 difference is reachable ONLY through `perHeadOtherCountersAmount`.
+ *
+ * บ้านบึง / หมอชิต are the counters this can happen at - they are the ones with
+ * a per-head box on screen at all (BR-6).
+ */
+function dayPayloadWithOtherCounter(
+  overrides: Partial<StaffRemittanceDto> = {},
+): StaffRemittanceDto {
+  return dayPayload({
+    perHeadOtherCountersAmount: '120.00',
+    deductions: { perHeadDeducted: '360.00', advancePaidOut: '0.00', deferredTicketCash: '0.00' },
+    // 2180.00 cash in - 360.00 whole-round per head.
+    myExpectedCash: '1820.00',
+    roundExpectedCash: '1820.00',
+    ...overrides,
+  });
+}
+
+/**
+ * What the SERVER will compute after it writes `headCounts`, derived from the
+ * fixture by BR-4 - an independent oracle, not a restatement of the component.
+ * The client's `expectedCashAmount` has to equal this or the submit is refused
+ * as stale (the server recomputes AFTER writing, spec BR-15).
+ */
+function serverExpectedAfterWrite(
+  payload: StaffRemittanceDto,
+  headCounts: Record<number, number>,
+  newAdvance = 0,
+): string {
+  const money = (value: string) => Math.round(Number(value) * 100);
+  const perHeadWritten = payload.perHeadLines
+    .filter((line) => line.configured)
+    .reduce((sum, line) => sum + headCounts[line.stopId] * money(line.ratePerHead), 0);
+  const perHeadDeducted = perHeadWritten + money(payload.perHeadOtherCountersAmount);
+  const cents =
+    money(payload.myTickets.cashAmount) +
+    money(payload.returnLeg.cashAmount) -
+    perHeadDeducted -
+    (money(payload.deductions.advancePaidOut) + Math.round(newAdvance * 100)) -
+    money(payload.deductions.deferredTicketCash);
+  return (cents / 100).toFixed(2);
 }
 
 /** The envelope both endpoints answer in — not the bare DTO (a stub shaped as the
@@ -559,6 +610,103 @@ describe('StaffRemittanceTabComponent', () => {
   });
 
   // ── Load failure ────────────────────────────────────────────────────────
+
+  // ── OBRS-1755 F1: ค่าหัว recorded by ANOTHER counter on the same round ───
+  //
+  // QA, 2026-09-13 (HIGH): pressing "ส่งยอดใหม่" without touching a head count
+  // was refused 409 SETTLEMENT_SUBMIT_AMOUNT_STALE quoting a figure the counter
+  // could not derive, and no number of retries could close the gap - the screen
+  // offered `round − own ค่าหัว` while the server computed `round − whole`.
+  // `perHeadDeducted` is whole-round by BR-3 and stays that way; the missing
+  // half now travels as its own opaque field.
+  describe('OBRS-1755 F1 — another counter\'s per-head on the same round', () => {
+    it('the fixtures obey the server\'s invariant, so the tests below mean something', () => {
+      for (const payload of [dayPayload(), dayPayloadWithOtherCounter()]) {
+        const money = (value: string) => Math.round(Number(value) * 100);
+        const visible = payload.perHeadLines.reduce(
+          (sum, line) => sum + money(line.recordedAmount),
+          0,
+        );
+        expect(money(payload.deductions.perHeadDeducted))
+          .withContext('perHeadDeducted == Σ perHeadLines[].recordedAmount + other')
+          .toBe(visible + money(payload.perHeadOtherCountersAmount));
+      }
+    });
+
+    // The exact QA reproduction. Under the pre-fix arithmetic this sent
+    // 1940.00 against a server figure of 1820.00 - short by the other
+    // counter's 120.00, every single time.
+    it('re-submits an untouched round at the server\'s OWN figure', () => {
+      const payload = dayPayloadWithOtherCounter({
+        submission: {
+          submittedAt: '2026-09-13T07:12:00+07:00',
+          submittedExpectedCash: '1820.00',
+          stale: true,
+        },
+      });
+      open(payload);
+      api.postRemittanceSubmit.and.returnValue(resp(payload));
+
+      component['onSubmit']();
+
+      const sent = api.postRemittanceSubmit.calls.mostRecent().args[1];
+      expect(sent.expectedCashAmount).toBe(serverExpectedAfterWrite(payload, { 11: 12 }));
+      expect(sent.expectedCashAmount).toBe('1820.00');
+    });
+
+    it('keeps matching the server once a head count IS edited', () => {
+      const payload = dayPayloadWithOtherCounter();
+      open(payload);
+      api.postRemittanceSubmit.and.returnValue(resp(payload));
+      component['onHeadCountInput'](11, '10');
+
+      component['onSubmit']();
+
+      const sent = api.postRemittanceSubmit.calls.mostRecent().args[1];
+      // 2180.00 − (10 × 20.00 + 120.00) = 1860.00
+      expect(sent.expectedCashAmount).toBe(serverExpectedAfterWrite(payload, { 11: 10 }));
+      expect(sent.expectedCashAmount).toBe('1860.00');
+    });
+
+    // Rule 3: with nothing typed the figure IS the server's, to the satang.
+    it('shows the server figure untouched when nothing has been typed', () => {
+      const payload = dayPayloadWithOtherCounter();
+      open(payload);
+
+      expect(component['pendingExpectedCents']).toBe(182000);
+    });
+
+    // The opaque half is never cancelled by typing - only the visible half is.
+    it('subtracts the other counter even while a head count is being edited', () => {
+      open(dayPayloadWithOtherCounter());
+
+      component['onHeadCountInput'](11, '10');
+
+      expect(component['otherCountersPerHeadCents']).toBe(12000);
+      // Row stays WHOLE-ROUND (BR-3): 10 × 20.00 typed + 120.00 opaque.
+      expect(component['pendingPerHeadCents']).toBe(32000);
+      expect(component['pendingExpectedCents']).toBe(186000);
+    });
+
+    it('names the other counter\'s share so the row does not read as bad arithmetic', () => {
+      open(dayPayloadWithOtherCounter());
+      fixture.detectChanges();
+      expect(present('remittance-per-head-other-counters')).toBeTrue();
+
+      open(dayPayload({ scheduleId: 44 }));
+      fixture.detectChanges();
+      expect(present('remittance-per-head-other-counters'))
+        .withContext('no other counter on this round — no line')
+        .toBeFalse();
+    });
+
+    // A ROUND counter has no per-head box at all, so nothing here may disturb it.
+    it('leaves a ROUND-cadence round exactly as it was', () => {
+      open(roundPayload());
+      expect(component['pendingExpectedCents']).toBe(168000);
+      expect(present('remittance-per-head-other-counters')).toBeFalse();
+    });
+  });
 
   it('renders a retryable message instead of an empty tab when the read fails', () => {
     api.getMyRemittance.and.returnValue(throwError(() => apiError('SETTLEMENT_SCOPE_FORBIDDEN')));

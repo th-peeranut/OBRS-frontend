@@ -200,10 +200,21 @@ re-derived. -->
       }
 
       @if (showPerHeadBox) {
+        <!-- WHOLE-ROUND (BR-3), so it can be larger than the head counts below
+        add up to: another counter's ค่าหัว on the same round is inside it and
+        this counter may not see the breakdown. The sub-line below names that
+        gap rather than leaving the arithmetic on screen looking broken. -->
         <div class="srt-eq-row srt-minus">
           <span>{{ 'STAFF.REMITTANCE.EQUATION.LESS_PER_HEAD' | translate }}</span>
           <span data-testid="remittance-eq-per-head">−{{ formatMoney(pendingPerHeadCents / 100) }}</span>
         </div>
+
+        @if (hasOtherCountersPerHead) {
+          <div class="srt-eq-row srt-info" data-testid="remittance-per-head-other-counters">
+            <span>{{ 'STAFF.REMITTANCE.PER_HEAD.OTHER_COUNTERS' | translate }}</span>
+            <span>{{ formatMoney(otherCountersPerHeadCents / 100) }}</span>
+          </div>
+        }
 
         @for (line of perHeadLines; track line.stopId) {
           <div class="srt-eq-row srt-info" [attr.data-testid]="'remittance-per-head-' + line.stopId">
