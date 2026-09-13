@@ -20,7 +20,7 @@ import {
 } from '../../../../shared/interfaces/staff-remittance.interface';
 import { extractApiErrorCode, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
-import { toCents } from '../../../../shared/lib/money-cents';
+import { toCents, toSignedCents as parseSignedCents } from '../../../../shared/lib/money-cents';
 import { formatMoney } from '../../../../shared/lib/money-display';
 import { formatDisplayTime } from '../../../../shared/lib/display-date-time';
 import { confirmDiscardUnsavedSettings } from '../../../admin/pages/system-settings/unsaved-settings-prompt';
@@ -57,10 +57,16 @@ const ADVANCE_BLOCKED_KEYS: Record<string, string> = {
   NOT_DEPARTED: 'STAFF.REMITTANCE.ADVANCE.BLOCKED.NOT_DEPARTED',
 };
 
-/** Decimal string → integer satang. Accepts the MINUS the money regex refuses (see `expectedCents`). */
+/**
+ * Decimal string → integer satang, defaulting to 0 for null/undefined (data not
+ * loaded yet) or a malformed value. Delegates to the shared `toSignedCents`
+ * (money-cents.ts, OBRS-1144) rather than re-deriving the same regex+rounding —
+ * that one already accepts the MINUS `toCents` refuses, which every field this
+ * wraps needs (BR-4/BR-19: these are server balances, never a physical count).
+ */
 function toSignedCents(value: string | null | undefined): number {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
+  if (value === null || value === undefined) return 0;
+  return parseSignedCents(value) ?? 0;
 }
 
 /**
