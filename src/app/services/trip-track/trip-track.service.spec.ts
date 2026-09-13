@@ -3,9 +3,9 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { TripTrackService } from './trip-track.service';
 import { environment } from '../../../environments/environment';
 import {
+  SHOW_BLOCKING_LOADING,
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 
 describe('TripTrackService', () => {
@@ -41,12 +41,12 @@ describe('TripTrackService', () => {
   // the global loader, but a genuine 401 must still force-logout — verified
   // here at the layer that actually sets the HttpContext, since a
   // component-level test with a stubbed service can't see the real context.
-  it('U19: sets SKIP_GLOBAL_ERROR_ALERT and SKIP_GLOBAL_LOADING_ALERT, and does NOT set SKIP_AUTH_LOGOUT', () => {
+  it('U19: sets SKIP_GLOBAL_ERROR_ALERT, never opts into the blocking overlay, and does NOT set SKIP_AUTH_LOGOUT', () => {
     service.getVehiclePosition(1).subscribe();
 
     const req = httpMock.expectOne(`${environment.apiUrl}/api/private/tickets/1/vehicle-position`);
     expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
-    expect(req.request.context.get(SKIP_GLOBAL_LOADING_ALERT)).toBeTrue();
+    expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeFalse();
     // Default token value (false) = a 401 DOES force logout — the token must
     // never be flipped true here, or a real expired session on this poll
     // would sit logged-out-but-looking-fine (OBRS-187).

@@ -17,8 +17,8 @@ import {
   ApiRequestOutcome,
 } from '../../services/analytics/api-latency-telemetry.service';
 import {
+  SHOW_BLOCKING_LOADING,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
   SKIP_REQUEST_TIMEOUT,
 } from './http-context-tokens';
 
@@ -60,6 +60,22 @@ import {
  */
 export const IDEMPOTENT_REQUEST_TIMEOUT_MS = 30_000;
 
+/**
+ * How long a request carrying `SHOW_BLOCKING_LOADING` must still be in flight before
+ * the overlay is allowed on screen (OBRS-908).
+ *
+ * Without it the overlay opened and closed inside one frame for every fast response:
+ * the prod baseline for `GET /api/stops` is 0.15-0.26s TTFB (curl, 3 runs, 2026-08-10,
+ * recorded on IDEMPOTENT_REQUEST_TIMEOUT_MS above), so a normal answer arrives around
+ * the same order as the overlay's own open animation — a flash with nothing to read.
+ *
+ * 300 ms is the threshold the card specifies. It is not measured from this app; it is
+ * the long-standing UI convention that anything under ~0.3s reads as instantaneous, so
+ * announcing it costs the customer a flicker and tells them nothing. What IS measured
+ * is the shape it fixes, above.
+ */
+export const BLOCKING_LOADING_DELAY_MS = 300;
+
 export const errorInterceptor: HttpInterceptorFn = (
   req: HttpRequest<any>,
   next: HttpHandlerFn
@@ -76,11 +92,22 @@ export const errorInterceptor: HttpInterceptorFn = (
   // Mirrors the same cycle-avoidance auth.interceptor documents.
   const translate = isApiRequest ? inject(TranslateService) : null;
   const skipGlobalErrorAlert = req.context.get(SKIP_GLOBAL_ERROR_ALERT);
-  const skipGlobalLoadingAlert = req.context.get(SKIP_GLOBAL_LOADING_ALERT);
-  const shouldShowLoading = isApiRequest && !skipGlobalLoadingAlert;
+  // OBRS-908. Opt-IN, and the inversion is the card: this used to read
+  // `isApiRequest && !<the old skip token>`, i.e. every /api/ request covered the
+  // screen unless its caller remembered to say otherwise. See SHOW_BLOCKING_LOADING
+  // for what earns the overlay and the count that showed the old default was wrong.
+  const shouldShowLoading = isApiRequest && req.context.get(SHOW_BLOCKING_LOADING);
   const shouldShowError = isApiRequest && !skipGlobalErrorAlert;
   /** Live language binding for this request's overlay title — see below (OBRS-930). */
   let titleSub: Subscription | null = null;
+  /** The pending delay timer (OBRS-908); non-null only while it has yet to fire. */
+  let openTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Whether the overlay actually opened. `hideLoading()` DECREMENTS a counter, so
+   * calling it for a request whose overlay never opened would cancel somebody else's
+   * — this flag, not `shouldShowLoading`, is what the ending below is allowed to read.
+   */
+  let overlayOpened = false;
 
   if (shouldShowLoading) {
     // AlertService.showLoading() used to default its title to the English
@@ -125,27 +152,36 @@ export const errorInterceptor: HttpInterceptorFn = (
       const value = translate.instant(key);
       return value && value !== key ? value : undefined;
     };
-    const initialTitle = inChosenLanguage('COMMON.LOADING');
-    alertService.showLoading(
-      initialTitle,
-      inChosenLanguage('COMMON.LOADING_SLOW'),
-      inChosenLanguage('COMMON.CLOSE')
-    );
-    // ...and a title read once stays wrong: the bundle lands a second later, the
-    // whole page turns, and the overlay is still holding the string it was given
-    // at open. `onLangChange` is exactly that moment — `changeLang()` fires it
-    // when a pending bundle finishes loading and on every later switch — and the
-    // title is RE-RESOLVED through the same gate rather than taken from the
-    // event, whose payload carries the default-language fallback too.
-    // `finalize` drops the subscription with the overlay it belongs to.
-    if (translate) {
-      titleSub = translate.onLangChange.subscribe(() => {
-        const title = inChosenLanguage('COMMON.LOADING');
-        if (title && title !== initialTitle) {
-          alertService.updateLoadingTitle(title);
-        }
-      });
-    }
+    // OBRS-908: nothing above has opened anything yet. The overlay is scheduled,
+    // not shown — a request that finishes inside BLOCKING_LOADING_DELAY_MS has its
+    // timer cleared in `finalize` and puts NOTHING on screen. The title is also
+    // resolved in here rather than out there, so a bundle that lands during the
+    // delay is already the answer by the time the overlay opens.
+    openTimer = setTimeout(() => {
+      openTimer = null;
+      overlayOpened = true;
+      const initialTitle = inChosenLanguage('COMMON.LOADING');
+      alertService.showLoading(
+        initialTitle,
+        inChosenLanguage('COMMON.LOADING_SLOW'),
+        inChosenLanguage('COMMON.CLOSE')
+      );
+      // ...and a title read once stays wrong: the bundle lands a second later, the
+      // whole page turns, and the overlay is still holding the string it was given
+      // at open. `onLangChange` is exactly that moment — `changeLang()` fires it
+      // when a pending bundle finishes loading and on every later switch — and the
+      // title is RE-RESOLVED through the same gate rather than taken from the
+      // event, whose payload carries the default-language fallback too.
+      // `finalize` drops the subscription with the overlay it belongs to.
+      if (translate) {
+        titleSub = translate.onLangChange.subscribe(() => {
+          const title = inChosenLanguage('COMMON.LOADING');
+          if (title && title !== initialTitle) {
+            alertService.updateLoadingTitle(title);
+          }
+        });
+      }
+    }, BLOCKING_LOADING_DELAY_MS);
   }
 
   // OBRS-642: idempotent requests get a hard ceiling; mutations deliberately do not.
@@ -238,7 +274,16 @@ export const errorInterceptor: HttpInterceptorFn = (
       // binding has to be dropped with the overlay itself — same place, same
       // ending, or every /api/ call in the session leaves one behind.
       titleSub?.unsubscribe();
-      if (shouldShowLoading) {
+      // OBRS-908: the request beat the delay, so the overlay must never appear —
+      // dropping the timer here is what makes a fast response silent rather than a
+      // flash. This runs on every ending, an abandoned request included, so a
+      // component destroyed mid-flight cannot leave a timer that opens an overlay
+      // nothing will ever close.
+      if (openTimer !== null) {
+        clearTimeout(openTimer);
+        openTimer = null;
+      }
+      if (overlayOpened) {
         alertService.hideLoading();
       }
 

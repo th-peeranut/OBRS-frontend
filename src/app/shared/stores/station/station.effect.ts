@@ -56,10 +56,10 @@ export class ProvinceEffect {
         mergeMap(() => {
           if (sessionRevalidated) return EMPTY;
 
-          // OBRS-642: `skipLoadingAlert` = no global blocking overlay. This is a
-          // page-load lookup on the customer's first screen, and the overlay it used to
-          // raise covered the booking form it exists to fill, with no way off it while
-          // the request was in flight.
+          // OBRS-642 measured that the global blocking overlay covered the booking form
+          // this page-load lookup exists to fill, with no way off it while the request
+          // was in flight, and this call opted out by hand. OBRS-908 made that the
+          // default for every page-load fetch, so the opt-out is gone from here.
           //
           // OBRS-1222: `skipErrorAlert` too — but ONLY because this effect now ships a
           // replacement. `station.reducer.ts` hydrates the roster from localStorage
@@ -71,7 +71,7 @@ export class ProvinceEffect {
           // `selectStationLoadFailed` below. Deleting either half of that pair
           // re-creates a lie: the flag without the surface is silence, the surface
           // without the flag is a modal on top of it.
-          return this.service.getAll({ skipLoadingAlert: true, skipErrorAlert: true }).pipe(
+          return this.service.getAll({ skipErrorAlert: true }).pipe(
             map((response) => this.extractStations(response)),
             tap((stations) => this.persistToCache(stations)),
             map((stations) => invokeGetAllProvinceWithStationApiSuccess({ stations })),

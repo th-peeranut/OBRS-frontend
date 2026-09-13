@@ -32,7 +32,10 @@ export const invokeLoadMyBookingsApi = createAction(
   // (the existing, locked behavior); the 6 post-mutation reload sites pass
   // `true` so the effect refetches however many pages were already loaded in
   // ONE request instead of visibly truncating the list back to page 1.
-  props<{ status?: string | null; showLoading?: boolean; preserveWindow?: boolean }>()
+  // OBRS-908 dropped `showLoading`: it only ever chose whether this list fetch
+  // raised the global blocking dialog, and that dialog is opt-in now — a list
+  // fetch never opts in, so the flag had nothing left to switch.
+  props<{ status?: string | null; preserveWindow?: boolean }>()
 );
 
 export const invokeLoadMyBookingsApiSuccess = createAction(

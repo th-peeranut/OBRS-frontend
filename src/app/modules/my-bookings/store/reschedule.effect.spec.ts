@@ -85,17 +85,15 @@ describe('RescheduleEffect', () => {
     store.resetSelectors();
   });
 
-  // OBRS-1056: pins the ARGUMENT at this call site. StationService's own spec
-  // proves `{ skipLoadingAlert: true }` sets SKIP_GLOBAL_LOADING_ALERT; only this
-  // assertion catches someone dropping it here and bringing back the blocking
-  // popup that covered this dialog and swallowed its Escape key. Its sibling
-  // `getBookingTickets(bookingId, true)` has always been silent — this is the
-  // half of the pair that was not.
+  // OBRS-1056 pinned a `skipLoadingAlert: true` argument here, because dropping it
+  // brought back the blocking popup that covered this dialog and swallowed its
+  // Escape key. OBRS-908 deleted the flag by making the overlay opt-in, so what is
+  // pinned now is that this lane asks for NOTHING.
   //
-  // OBRS-1222 AC4: and it now pins the ABSENCE of `skipErrorAlert` just as hard —
+  // OBRS-1222 AC4: and it still pins the ABSENCE of `skipErrorAlert` just as hard —
   // see the twin assertion in change-stop.effect.spec.ts for why this lane must
   // keep the global error modal that `ProvinceEffect` gave up.
-  it('loadStopsLookup$ loads the stops lookup without the global loading popup, but KEEPS the error alert', () => {
+  it('loadStopsLookup$ loads the stops lookup with no blocking overlay, but KEEPS the error alert', () => {
     const stationService = TestBed.inject(StationService) as jasmine.SpyObj<StationService>;
     stationService.getAll.and.returnValue(of({ code: 200, message: 'OK', data: [] } as ResponseAPI<StationApi[]>));
 
@@ -103,7 +101,7 @@ describe('RescheduleEffect', () => {
 
     actionsSubject.next(openRescheduleDialog({ bookingId: 5 }));
 
-    expect(stationService.getAll).toHaveBeenCalledWith({ skipLoadingAlert: true });
+    expect(stationService.getAll).toHaveBeenCalledWith();
     const options = stationService.getAll.calls.mostRecent().args[0] ?? {};
     expect(options.skipErrorAlert).toBeUndefined();
   });

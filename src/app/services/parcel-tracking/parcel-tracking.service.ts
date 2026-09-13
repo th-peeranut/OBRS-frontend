@@ -6,7 +6,6 @@ import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import { ParcelTrackRespDto } from '../../shared/interfaces/parcel.interface';
 
@@ -24,14 +23,14 @@ export class ParcelTrackingService {
    * an EXPIRED token would otherwise be force-logged-out by a 401 on a page
    * that never required auth (the route is `customerArea: true`, no
    * `requireAuth`). `SKIP_AUTH_LOGOUT` immunizes this call — a guest sending
-   * no bearer is unaffected either way. `SKIP_GLOBAL_ERROR_ALERT`/
-   * `SKIP_GLOBAL_LOADING_ALERT` let the tracking page render its own inline
-   * "not found" state instead of the global toast/spinner for an unknown
-   * tracking number (404).
+   * no bearer is unaffected either way. `SKIP_GLOBAL_ERROR_ALERT` lets the
+   * tracking page render its own inline "not found" state instead of the global
+   * toast for an unknown tracking number (404); OBRS-908 removed the companion
+   * spinner opt-out, since the blocking overlay is opt-in now and this is not
+   * one of the three actions that opt in.
    */
   private readonly publicContext = new HttpContext()
     .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true)
     .set(SKIP_AUTH_LOGOUT, true);
 
   constructor(private readonly http: HttpClient) {}
