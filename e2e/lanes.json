@@ -15,6 +15,12 @@
       "why": "OBRS-640 Phase A: a hit-tested mobile tap-target (>=44x44) + rendered-text-size (>=12px) sweep of six customer routes, plus the my-bookings overflow menu and e-ticket modal. CAPTURE and not GATE because the owner's own call (docs/prod/LANE-BRIEFS.md#obrs-640) is that this lands silently for now -- Phase A measures the baseline, Phase B (a separate card) fixes it, and only then does a gate belong here. Run on the unfixed tree most of its cases fail on purpose; that failure, with the full population/violation detail the console prints, IS the AC-1 baseline. Hermetic on the gate lane's terms: it reuses e2e/support/customer-pages.ts's seedCustomerSession/seedStore, with two endpoints (/users/me, /bookings/501/tickets) fulfilled locally for the two entries that map does not carry."
     },
     {
+      "spec": "obrs-1832-report-trigger.capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1832capture.config.ts",
+      "why": "OBRS-1832 AFTER evidence for retiring the floating report FAB: one frame per mount point the card claims, at the width where that mount point is the one a user meets -- the customer bar with the menu shut and open, the /my-bookings corner the pill used to hold, the desktop navbar cluster, the modal opened by an anonymous visitor (ADR-006's requirement, kept by ADR-0044), /login which has no navbar at all, the staff topbar, and the staff drawer at 1000px. CAPTURE and not GATE because the verdict already has two owners: the per-shell unit specs assert the trigger's POSITION (first child of the cluster, outside .navbar-desktop-only), and the OBRS-640 audit is what measures that the four OBRS-1828 hit-test violations on /my-bookings are gone; this exists so the card carries a picture of the same claim. Hermetic on the gate lane's terms: it reuses e2e/support/customer-pages.ts and e2e/support/gate-admin-session.ts, so every /api/** call is fulfilled in-browser."
+    },
+    {
       "spec": "obrs-1782-tiles-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1782capture.config.ts",
@@ -565,12 +571,6 @@
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
       "why": "OBRS-627. /refund-policy is linked from every page's footer and from /payment, so a customer reads it before paying, and until this card it described a refund the system has never performed -- original paper ticket, ID copies, in-person cash pickup, forfeiture after 7 days -- while naming no refund rate at all. The rates now render from GET /api/cancellation-policy. Three things live only in the assembled app and are why this needs a browser rather than more unit tests: whether the shipped page calls that endpoint at all, whether a raw {{refundRateEarlyPercent}} can reach a customer, and whether the retired clauses are gone from the REAL public/i18n/th.json rather than from a TestBed fixture -- all three are what went wrong on the identical claim one page over (OBRS-564). The wire values are 36h/3h/90%/45%, deliberately not the shipped 24/2/80/50, so 'rendered from the wire' cannot be confused with 'rendered from a literal'. Also pins AC-3: a failed config read shows an inline error and states NO rate, never a hardcoded fallback. Hermetic on the same terms as the rest of the lane -- every /api/** call fulfilled by the spec, no backend, no session."
-    },
-    {
-      "spec": "obrs-1207-fab-occlusion.spec.ts",
-      "lane": "GATE",
-      "config": "playwright.gate.config.ts",
-      "why": "OBRS-1207. Replaces the two FAB-overlap cases in report-usability-issue.spec.ts, which compared the `position: fixed` FAB's viewport box against `.select-btn`'s and never pinned the scroll -- so the verdict was a function of where the page came to rest, not of the code. Proven, not argued: the byte-identical tree 098022f8 passed on PR #167, went red on the dev merge 8c43dcec, and passed 6/6 locally, having been green for months while the defect was present. This spec SOLVES for the scroll offsets at which an element's click point falls inside the FAB band -- a closed interval per element, so no offset can slip between samples -- then scrolls there and asks document.elementFromPoint(), the only oracle that accounts for z-index, stacking contexts, pointer-events and transforms at once. Hermetic on the same terms as the rest of the lane: it reuses report-usability-issue's stations/schedules fixtures and stubs every /api/** call it makes."
     },
     {
       "spec": "obrs-1224-origin-combobox.spec.ts",

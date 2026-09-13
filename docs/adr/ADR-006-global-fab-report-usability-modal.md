@@ -1,7 +1,28 @@
 # ADR-006 — Global FAB + Report Usability Modal
 
 **Date:** 2026-06-30
-**Status:** Accepted
+**Status:** Superseded 2026-09-11 by
+[0044-report-entry-point-lives-in-the-chrome.md](./0044-report-entry-point-lives-in-the-chrome.md)
+(OBRS-1832)
+
+> **What was superseded, and what was not.** Only the first decision below — a global
+> floating button mounted above `<router-outlet>` — is overturned. The modal itself is
+> still mounted exactly where this ADR put it, and every other decision here still
+> holds: anonymous submit, the inline body-scroll lock, synchronous open with no
+> pre-flight HTTP, the SWR triage store and the error-code mapping.
+>
+> The rejected alternative in "Global FAB mounted at `AppComponent` level" — per-shell
+> mounting — is the one 0044 adopts, and it answers the two objections recorded there:
+> the mount points stay in sync because they are one component driven by one service
+> (`ReportUsabilityModalService`), each pinned by a unit spec; and the anonymous routes
+> that have no shell (the eight auth pages) get the same control in the tools cluster
+> they already carry.
+>
+> Why this had to change: the floating button coexisted with the rest of the app by
+> GUESSING at runtime (`elementsFromPoint` on every animation frame, yielding only when
+> it covered another control's centre). Every threshold leaves a remainder, and the
+> remainder was OBRS-1828: four controls on `/my-bookings` still losing probes at 390px
+> and 360px. See 0044.
 
 ---
 

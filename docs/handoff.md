@@ -34,10 +34,42 @@ Full contract reference: `../OBRS-backend/docs/api/`
   HTTP status nor `errorCode`. The one `status === 400` in the app is `boarding-list.component.ts:620`
   (boarding scan, unrelated). `api-error.ts` special-cases only 0/429/502/503/504, so a `409` falls through
   to `extractApiErrorMessage` and the backend's own message reaches the customer verbatim.
-- [x] Register form: a `429` from the on-blur duplicate check does NOT block the form — `RegisterComponent.checkDuplicateData` already swallows errors, and `UserService` now sends both checks with `SKIP_GLOBAL_ERROR_ALERT` + `SKIP_GLOBAL_LOADING_ALERT` so the refusal is silent (2026-09-11).
+- [x] Register form: a `429` from the on-blur duplicate check does NOT block the form — `UserService` sends
+  both checks with `SKIP_GLOBAL_ERROR_ALERT` + `SKIP_GLOBAL_LOADING_ALERT` so the refusal is silent
+  (2026-09-11), and `RegisterComponent.checkDuplicateData` CLEARS `emailIsExist`/`phoneNumberIsExist` on
+  failure (2026-09-12, OBRS-1853). ⚠️ The second half is what makes the first half safe: it used to leave
+  the previous value, so a 429 arriving after a genuine duplicate froze the inline warning on and
+  `register()` — which refuses to submit while that flag is set, with no else branch — dead-ended the form
+  silently. `/api/auth/signup` is the authority on duplicates and now gets the decision.
 
 ### Still unfinished on backend
 - None. See `../OBRS-backend/docs/api/payment.md` and `docs/api/admin.md`.
+
+---
+
+## [Backend] 2026-09-11 — security chain is deny-by-default; an undeclared `/api/...` path answers `401`, not `404` (ADR-0153)
+**Risk level**: R1 (behavioural, no field or endpoint changed)
+**Triggered by**: security review 2026-09-11, backend finding B-M1.
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| every documented public endpoint | none | still anonymous; each is now listed explicitly in `PublicEndpointConstant.PUBLIC_PATTERNS` |
+| any path NOT documented in `docs/api/` | status changed | anonymous call now gets `401 UNAUTHORIZED` (was `404`); an authenticated call still gets `404` |
+| `POST /api/external/sms/send/test` | availability | `dev` profile only (was on SIT/prod behind `hasRole('OWNER')`); the frontend never called it |
+
+### Response shapes before / after
+- Unchanged for every endpoint the frontend calls.
+
+### Action required in frontend
+- [ ] None today — every `/api/...` URL the app calls was cross-checked against the declaration.
+- [ ] Be aware when adding a call to a NEW backend endpoint: if the backend forgot to declare it
+      public, an anonymous call answers `401`, and `auth.interceptor.ts` treats a `401` on a
+      credentialed request as a session loss. A surprise logout on a new public page is the symptom;
+      the fix is on the backend (add the path to `PublicEndpointConstant`), not here.
+
+### Still unfinished on backend
+- None — see `../OBRS-backend/docs/adr/0153-deny-by-default-security-chain-with-declared-public-surface.md`.
 
 ---
 

@@ -32,7 +32,7 @@ async function shoot(page: Page, name: string): Promise<void> {
   await page.screenshot({ path: path.join(OUT, `OBRS-1207-${TAG}-${name}.png`) });
 }
 
-/** Instant, and settled — the page ships `scroll-behavior: smooth` (see fab-occlusion.ts). */
+/** Instant, and settled — the page ships `scroll-behavior: smooth` (see viewport-scroll.ts). */
 async function pin(page: Page, y: number): Promise<void> {
   await page.addStyleTag({ content: `*, :root { scroll-behavior: auto !important; }` });
   await page.evaluate((top) => window.scrollTo({ top, left: 0, behavior: 'instant' as ScrollBehavior }), y);

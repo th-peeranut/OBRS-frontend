@@ -284,6 +284,13 @@ export interface DriverCashDayContextRespDto {
   day: DriverCashDayRespDto | null;
   /** True when the box already holds EXPENSE_PAID entries for these schedules. */
   alreadySettled: boolean;
+  /**
+   * OBRS-1803: the settle request that produced `day`, verbatim as it was sent — null until the
+   * day has been settled once. The screen fills its form from this instead of opening empty, so the
+   * counter sees their OWN previous figures before deciding what to change, and a second submit
+   * CORRECTS that submission rather than charging the box twice.
+   */
+  lastSubmission: DriverCashDaySettleReqDto | null;
 }
 
 /**

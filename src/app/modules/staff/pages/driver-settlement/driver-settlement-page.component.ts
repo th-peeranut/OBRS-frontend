@@ -18,6 +18,7 @@ import { MaintenancePartsStore } from '../../../admin/pages/maintenance-parts/ma
 import { sortMaintenancePartsByName } from '../../../admin/pages/maintenance-parts/maintenance-parts.mappers';
 import {
   buildFieldRepairBillGroup,
+  buildFieldRepairBillGroupFrom,
   toFieldRepairBillItems,
 } from '../../../admin/pages/expenses/expense-bill-card/expense-bill-card.component';
 import {
@@ -80,6 +81,7 @@ const SETTLE_ERROR_KEYS: Record<string, string> = {
   DRIVER_CASH_SALES_POINT_FORBIDDEN: 'STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN',
   DRIVER_CASH_DAY_ALREADY_RETURNED: 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED',
   DRIVER_CASH_REPAIR_BILL_ZERO_TOTAL: 'STAFF.DRIVER_CASH.ERROR.REPAIR_BILL_ZERO_TOTAL',
+  DRIVER_CASH_DAY_ALREADY_SETTLED: 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_SETTLED',
   [DRIVER_CASH_NO_SCHEDULES_ERROR_CODE]: 'STAFF.SETTLEMENT.ERROR.NO_SCHEDULES',
 };
 
@@ -313,6 +315,39 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
     if (context?.driverId != null) {
       this.selectedDriverId = String(context.driverId);
     }
+    this.prefillFromLastSubmission(context?.lastSubmission ?? null);
+  }
+
+  /**
+   * OBRS-1803: open the form on what was LAST SENT for this (date, van, driver) instead of on an
+   * empty screen. The owner's condition for allowing a second submit at all was that the counter
+   * sees their own previous figures first - a blank form beside a "already settled" banner is how
+   * somebody re-types a day from memory and sends a different one by accident.
+   *
+   * <p>Safe to call from every context load: each of them is preceded by `resetEntryState()` (a
+   * changed date, van or driver) or by a successful submit, so there is never a half-typed row here
+   * to overwrite. That is also why it rebuilds the rows rather than merging into them.
+   */
+  private prefillFromLastSubmission(submission: DriverCashDaySettleReqDto | null): void {
+    this.resetExpenseRows();
+    this.repairBills = [];
+    if (!submission) {
+      return;
+    }
+    const sentByCategory = new Map<string, DriverCashDaySettleExpenseReqDto>(
+      (submission.expenses ?? []).map((expense) => [expense.category, expense])
+    );
+    this.expenseRows = this.expenseRows.map((row) => {
+      const sent = sentByCategory.get(row.category);
+      // The wage row is deliberately left blank: its amount is the server's (OBRS-1356), and the
+      // submission carries null for it precisely because a number there would be discarded.
+      return sent
+        ? { category: row.category, amountInput: sent.amount ?? '', noteInput: sent.note ?? '' }
+        : row;
+    });
+    this.repairBills = (submission.repairBills ?? []).map((bill) =>
+      buildFieldRepairBillGroupFrom(this.formBuilder, bill)
+    );
   }
 
   // ── Derived view state ───────────────────────────────────────────────────
@@ -457,6 +492,23 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
       return 'STAFF.SETTLEMENT.BLOCKED.INVALID_REPAIR_BILL';
     }
     return null;
+  }
+
+  /**
+   * OBRS-1803: this box already reflects a submission, so the button CORRECTS it rather than
+   * sending a second one. Keyed on `lastSubmission` and not on `alreadySettled`: a box can hold
+   * EXPENSE_PAID entries the boarding screen wrote, and those are not a submission to amend.
+   */
+  protected get isAmending(): boolean {
+    return this.context?.lastSubmission != null && !this.isDayReturned;
+  }
+
+  /** The one button says which of the two things it is about to do. */
+  protected get submitLabelKey(): string {
+    if (this.isSubmitting) {
+      return 'STAFF.DRIVER_CASH.SUBMITTING';
+    }
+    return this.isAmending ? 'STAFF.SETTLEMENT.SUBMIT_AMEND' : 'STAFF.SETTLEMENT.SUBMIT';
   }
 
   protected get canSubmit(): boolean {

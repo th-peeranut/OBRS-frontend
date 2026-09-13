@@ -1141,11 +1141,15 @@ body.is-dark {
 }
 
 // =============================================================================
-// O. App-wide usability report FAB + its dialog (OBRS-520)
+// O. App-wide usability report dialog (OBRS-520, re-hosted by OBRS-1832)
 // =============================================================================
-// The FAB (`app-report-usability-fab`) is mounted in app.component.html as a
-// SIBLING of <router-outlet>, so it renders on every route — including the
+// The dialog (`app-report-usability-modal`) is mounted in app.component.html as
+// a SIBLING of <router-outlet>, so it can open on every route — including the
 // admin/staff routes — while sitting OUTSIDE the `.admin-shell` DOM subtree.
+// OBRS-1832 removed the floating button that used to live in the same host; the
+// triggers now sit in each shell's chrome and carry their own dark treatment in
+// report-trigger.component.scss, which is encapsulated and cannot be reached
+// from here (see this file's own header for why).
 // That is why it was missed twice: it is not "a public page" (so it was never
 // reviewed with dark-theme.scss) and it is not inside the shell (so none of the
 // `--admin-*` custom properties are in scope for it, and `.admin-shell.is-dark`
@@ -1161,43 +1165,7 @@ body.is-dark {
 // Scoped to the component host on purpose: section 13's `app-route-map-home`
 // block notes that global `.p-selectbutton` rules must not leak between these
 // two components, and the same applies in reverse.
-body.is-dark app-report-usability-fab {
-  // --- the FAB itself (OBRS-740) ---
-  // OBRS-520 wrote the scoping fact down in the comment above but only restyled
-  // the DIALOG; the button that opens it was never touched, so `grep report-fab
-  // src/styles` returned 0 hits and the pill stayed white-on-#4dbeef (2.12:1)
-  // in dark mode too.
-  //
-  // Dark mode reuses the light fill/text pair as-is and overrides only what the
-  // page behind it forces.
-  //
-  // OBRS-746 -- this block used to COLLAPSE the border into the fill, because
-  // the fill was the brand cyan and cyan is 8.92:1 against the $dk-bg page. The
-  // fill is now $primary-blue (746 aligned the pill with the customer primary
-  // buttons), and $primary-blue is 3.54:1 against $dk-bg at rest and
-  // $primary-blue-hover (#065d85, OBRS-763) is
-  // 2.62:1 on hover -- collapsing the border today would put the pill's outer
-  // edge BELOW the 3:1 WCAG 1.4.11 floor on hover, and nothing would say so,
-  // because a text-contrast gate never looks at a boundary. Same shape as the
-  // rationale 746 came here to retire: the sentence stayed true-looking while
-  // the value under it moved.
-  //
-  // So dark mode keeps a real ring, in $dk-accent -- #4bc2f7, this theme's own
-  // accent and the one place the old brand cyan still belongs. 9.31:1 against
-  // $dk-bg in BOTH states, above the 8.92 / 6.91 the previous treatment carried,
-  // so the boundary half of OBRS-740's table comes out ahead rather than intact.
-  .report-fab {
-    border-color: $dk-accent; // vs $dk-bg = 9.31:1
-
-    &:hover {
-      border-color: $dk-accent; // the fill darkens on hover; the ring must not follow it down
-    }
-
-    &:focus-visible {
-      outline-color: #ffffff; // 18.87:1 against the dark page
-    }
-  }
-
+body.is-dark app-report-usability-modal {
   // --- dialog surface ---
   .report-modal {
     background: $dk-bg-card;
