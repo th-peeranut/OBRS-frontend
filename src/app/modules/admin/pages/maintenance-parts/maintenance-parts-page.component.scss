@@ -57,6 +57,26 @@ tr.is-retired .part-name {
   font-weight: $font-weight-medium;
 }
 
+// OBRS-1634 AC8: "merged" is a distinct token from "retired" (`.is-info`'s blue-grey, not the
+// grey `.is-retired` already on this page) so the two states read apart by more than a label —
+// design-system.md §11 rubric, "distinguish states by more than colour alone" is satisfied by the
+// pill's own text ("Merged" vs "Retired") plus this second, different hue.
+.part-status.is-merged {
+  background: var(--admin-inreview-bg);
+  color: var(--admin-inreview-text);
+}
+
+tr.is-merged .part-name {
+  color: var(--admin-muted);
+}
+
+.part-merged-into {
+  display: block;
+  margin-top: $space-3xs;
+  color: var(--admin-muted);
+  font-size: $font-size-xs;
+}
+
 // Quieter than the status pill on purpose: it is provenance, not state. An owner scanning for what
 // is in use must not have to read past it on 13 of the rows.
 .part-seeded {
