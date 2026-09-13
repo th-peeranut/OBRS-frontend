@@ -11,6 +11,7 @@ import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { SharedModule } from '../../shared/shared.module';
 import { AuthGuard } from '../../auth/auth.guard';
+import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
 import { AuthService } from '../../auth/auth.service';
 import { featureEnabledGuard } from '../../shared/guards/feature-flag.guard';
 import { AdminSharedModule } from '../admin/admin-shared.module';
@@ -87,6 +88,9 @@ import { DriverCashAdvanceFormComponent } from './components/driver-cash-panel/d
 import { DriverCashPerHeadFormComponent } from './components/driver-cash-panel/driver-cash-per-head-form/driver-cash-per-head-form.component';
 import { DriverCashExpenseFormComponent } from './components/driver-cash-panel/driver-cash-expense-form/driver-cash-expense-form.component';
 
+// OBRS-1755 — the 4th tab of /staff/sell (ส่งยอด).
+import { StaffRemittanceTabComponent } from './components/staff-remittance-tab/staff-remittance-tab.component';
+
 // OBRS-1147 — the holder's own per-head earnings (/staff/my-earnings).
 import { MyEarningsPageComponent } from './pages/my-earnings/my-earnings-page.component';
 
@@ -113,6 +117,10 @@ export const staffRoutes: Routes = [
         path: 'sell',
         component: SellPageComponent,
         canActivate: [AuthGuard],
+        // OBRS-1755 (BR-18): the ส่งยอด tab can be holding cash the server has
+        // not been told about. SellPageComponent.canDeactivate() answers `true`
+        // synchronously in every other case, so the sell flow is unchanged.
+        canDeactivate: [CanDeactivateGuard],
         data: { requiredRoles: ['salesperson'], titleKey: 'STAFF.PAGES.SELL', subtitleKey: 'STAFF.SELL.SUBTITLE' },
       },
       {
@@ -321,6 +329,7 @@ export const staffRoutes: Routes = [
     DriverCashAdvanceFormComponent,
     DriverCashPerHeadFormComponent,
     DriverCashExpenseFormComponent,
+    StaffRemittanceTabComponent,
     MyEarningsPageComponent,
     DriverSettlementPageComponent,
   ],
