@@ -69,6 +69,7 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
 
   isDesktop = true;
   mapsApiKey = environment.mapsApiKey;
+  mapsMapId = environment.mapsMapId;
   activeTabIndex: number = 0;
 
   /**

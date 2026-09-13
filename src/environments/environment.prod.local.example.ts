@@ -15,6 +15,10 @@ export const prodEnv = {
   omisePublicKey: '',
   promptpayId: '',
   mapsApiKey: '',
+  // OBRS-1838: prod's own Map ID, from prod's own Cloud project. Like
+  // maptilerKey and unlike the values above it is NOT on inject-prod-env.js's
+  // required list -- a missing Map ID costs markers, not a payment.
+  mapsMapId: '',
   googleClientId: '',
   // OBRS-424: optional — a blank value degrades to the MAP_UNAVAILABLE
   // placeholder (FleetMapPanelComponent.canShowMap), never a build failure.

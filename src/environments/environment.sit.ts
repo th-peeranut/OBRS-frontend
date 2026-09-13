@@ -30,6 +30,7 @@ export const environment = {
   // second source of truth saying the same thing. ADR-0031's "single point of
   // truth" is `environment.base.ts` again.
   mapsApiKey: localEnv.mapsApiKey,
+  mapsMapId: localEnv.mapsMapId,
   googleClientId: localEnv.googleClientId,
   maptilerKey: localEnv.maptilerKey,
   // OBRS-867 AC-6: SIT is where the events are proven to arrive before prod
