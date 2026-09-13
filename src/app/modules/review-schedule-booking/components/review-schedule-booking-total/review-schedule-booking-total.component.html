@@ -82,3 +82,9 @@
 <button type="button" class="btn-confirm" (click)="onConfirm()">
   {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.CONFIRM" | translate }}
 </button>
+
+<!-- OBRS-643 AC-3 -->
+<app-email-verify-block-modal
+  [isOpen]="showEmailVerifyBlock"
+  (closed)="showEmailVerifyBlock = false"
+  ></app-email-verify-block-modal>

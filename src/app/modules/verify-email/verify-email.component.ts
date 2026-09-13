@@ -47,12 +47,17 @@ export class VerifyEmailComponent implements OnInit, OnDestroy {
       const res = await this.authService.verifyEmail({ token });
       if (res?.code === 200) {
         this.verifyState = 'success';
+        // OBRS-643: the flag this session stored at login is still `false` until
+        // the next login/refresh rewrites it - flip it locally now so a banner/
+        // block elsewhere in the app stops accusing an account that just complied.
+        this.authService.markEmailVerified();
       }
     } catch (err: unknown) {
       const errorCode = (err as { error?: { errorCode?: string } })?.error
         ?.errorCode;
       if (errorCode === 'VERIFICATION_TOKEN_ALREADY_USED') {
         this.verifyState = 'success';
+        this.authService.markEmailVerified();
       } else if (errorCode === 'VERIFICATION_TOKEN_EXPIRED') {
         this.verifyState = 'failed';
         this.errorMessageKey = 'VERIFY_EMAIL.ERROR.VERIFICATION_TOKEN_EXPIRED';

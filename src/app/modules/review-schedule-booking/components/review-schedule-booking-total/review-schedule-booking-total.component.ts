@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
+import { AuthService } from '../../../../auth/auth.service';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { parsePricePerSeat } from '../../../../shared/lib/trip-format';
 import {
@@ -27,11 +28,16 @@ export class ReviewScheduleBookingTotalComponent {
   scheduleFilter: Observable<ScheduleFilter>;
   passengerInfo$: Observable<PassengerInfo[] | null>;
 
+  /** OBRS-643 AC-3: shown INSTEAD of navigating to /passenger-info while the
+   *  signed-in customer's email is unverified. */
+  showEmailVerifyBlock = false;
+
   constructor(
     private store: Store,
     private router: Router,
     private appStore: Store<Appstate>,
-    private translateService: TranslateService
+    private translateService: TranslateService,
+    private authService: AuthService
   ) {
     this.scheduleBooking = this.store.pipe(select(selectScheduleBooking));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
@@ -104,6 +110,13 @@ export class ReviewScheduleBookingTotalComponent {
   }
 
   onConfirm(): void {
+    // OBRS-643 AC-3: reads isEmailVerified() fresh on every click rather than
+    // a cached field, so it re-answers the moment a resend on the modal below
+    // flips it.
+    if (!this.authService.isEmailVerified()) {
+      this.showEmailVerifyBlock = true;
+      return;
+    }
     this.router.navigate(['/passenger-info']);
   }
   /** OBRS-1592: this screen used to compose the raw number with a `*_UNIT`

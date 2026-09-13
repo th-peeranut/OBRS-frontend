@@ -488,3 +488,10 @@ return leg. Same modal chrome as cancel-booking-modal / change-stop-dialog
     </div>
   </div>
 }
+
+<!-- OBRS-643 AC-3 -->
+<app-email-verify-block-modal
+  [isOpen]="showEmailVerifyBlock"
+  (closed)="showEmailVerifyBlock = false"
+  ></app-email-verify-block-modal>
+

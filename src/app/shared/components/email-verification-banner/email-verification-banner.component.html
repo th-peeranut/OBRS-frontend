@@ -1,0 +1,37 @@
+<!-- OBRS-643 AC-2: rendered only for a signed-in customer with a KNOWN-false
+email-verify flag. See the component for why "absent" and "signed out" both
+render nothing. Non-blocking, in normal document flow — same shape as
+booking-closed-notice, not a modal. -->
+@if (isVisible$ | async) {
+  <div
+    class="email-verify-banner"
+    role="region"
+    [attr.aria-label]="'EMAIL_VERIFY_BANNER.ARIA_LABEL' | translate"
+    >
+    <span
+      class="email-verify-banner__icon material-symbols-outlined"
+      aria-hidden="true"
+      [attr.translate]="'no'"
+      >mark_email_unread</span
+    >
+    <p class="email-verify-banner__text">
+      <span class="email-verify-banner__title">{{ 'EMAIL_VERIFY_BANNER.TITLE' | translate }}</span>
+      <span class="email-verify-banner__body">
+        {{ 'EMAIL_VERIFY_BANNER.BODY' | translate }}
+        <!-- AC-7: the way in for someone who never received the mail. -->
+        <a class="email-verify-banner__link" routerLink="/verify-email">
+          {{ 'EMAIL_VERIFY_BANNER.VERIFY_LINK' | translate }}
+        </a>
+      </span>
+    </p>
+    <button
+      type="button"
+      class="email-verify-banner__btn"
+      [disabled]="isResendLoading"
+      [appPending]="isResendLoading"
+      (click)="resend()"
+      >
+      {{ 'EMAIL_VERIFY_BANNER.RESEND_BUTTON' | translate }}
+    </button>
+  </div>
+}

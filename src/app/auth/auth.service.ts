@@ -37,6 +37,9 @@ export class AuthService {
   private readonly REFRESH_TOKEN_KEY = 'auth_refresh_token';
   private readonly USERNAME_KEY = 'auth_username';
   private readonly ROLES_KEY = 'auth_roles';
+  // OBRS-643: mirrors `LoginUser.isEmailVerify` from the login/refresh response.
+  // Write-or-remove like REFRESH_TOKEN_KEY above - see storeAuthData().
+  private readonly EMAIL_VERIFIED_KEY = 'auth_email_verified';
   /**
    * OBRS-187 created this; OBRS-903 moved it out of `sessionStorage`.
    *
@@ -131,6 +134,15 @@ export class AuthService {
   );
   authStatus$ = this.authStatusSubject.asObservable();
 
+  // OBRS-643: mirrors isEmailVerified() reactively so a banner/guard driven off
+  // it (rather than a one-shot read) updates the moment storeAuthData/
+  // clearAuthData/markEmailVerified touch EMAIL_VERIFIED_KEY - e.g. the instant
+  // a resend's VERIFICATION_ALREADY_VERIFIED response flips it.
+  private emailVerifiedSubject = new BehaviorSubject<boolean>(
+    this.isEmailVerified()
+  );
+  emailVerified$ = this.emailVerifiedSubject.asObservable();
+
   constructor(private http: HttpClient, private router: Router) {}
 
   login(payload: {
@@ -155,7 +167,13 @@ export class AuthService {
           const token = response?.data?.accessToken;
           const username = response?.data?.user?.email ?? payload.email;
           const roles = response?.data?.user?.roles;
-          this.storeAuthData(token, username, roles, response?.data?.refreshToken);
+          this.storeAuthData(
+            token,
+            username,
+            roles,
+            response?.data?.refreshToken,
+            response?.data?.user?.isEmailVerify
+          );
         }
         return response;
       })
@@ -172,7 +190,8 @@ export class AuthService {
     token: string | null | undefined,
     username: string | null | undefined,
     roles?: string[] | null | undefined,
-    refreshToken?: string | null | undefined
+    refreshToken?: string | null | undefined,
+    isEmailVerify?: boolean | null | undefined
   ): void {
     if (!token) return;
     localStorage.setItem(this.TOKEN_KEY, token);
@@ -199,6 +218,18 @@ export class AuthService {
       : [];
     localStorage.setItem(this.ROLES_KEY, JSON.stringify(normalizedRoles));
 
+    // OBRS-643: WRITE-OR-REMOVE, same discipline as refreshToken above. An
+    // absent flag (this endpoint's backend deploy hasn't reached this session
+    // yet) must not leave a stale value behind - isEmailVerified() below reads
+    // "absent" as verified, and removing here is what keeps that true even
+    // after a flag that was once written flips server-side and back to absent.
+    if (typeof isEmailVerify === 'boolean') {
+      localStorage.setItem(this.EMAIL_VERIFIED_KEY, String(isEmailVerify));
+    } else {
+      localStorage.removeItem(this.EMAIL_VERIFIED_KEY);
+    }
+    this.emailVerifiedSubject.next(this.isEmailVerified());
+
     this.authStatusSubject.next(true);
   }
 
@@ -207,6 +238,8 @@ export class AuthService {
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.USERNAME_KEY);
     localStorage.removeItem(this.ROLES_KEY);
+    localStorage.removeItem(this.EMAIL_VERIFIED_KEY);
+    this.emailVerifiedSubject.next(true);
     // OBRS-1721: a preview must not outlive the roles it narrows. Placed here
     // rather than in logout() so the interceptor's 401 force-logout path clears
     // it too — a preview surviving a cleared role list would leave getRoles()
@@ -302,7 +335,8 @@ export class AuthService {
             accessToken,
             response?.data?.user?.email ?? this.getUsername(),
             response?.data?.user?.roles,
-            response?.data?.refreshToken
+            response?.data?.refreshToken,
+            response?.data?.user?.isEmailVerify
           );
 
           return accessToken;
@@ -312,6 +346,33 @@ export class AuthService {
 
   getUsername(): string | null {
     return localStorage.getItem(this.USERNAME_KEY);
+  }
+
+  /**
+   * OBRS-643 - advisory only. The server (`POST /api/.../book`, per the SA spec)
+   * stays the real decider; this only lets the frontend warn BEFORE the 19-field
+   * form instead of after it. "Absent" (key never written, or written by a
+   * backend deploy that predates this flag) reads as verified on purpose - see
+   * storeAuthData()'s write-or-remove note - so the rollout window does not
+   * accuse every signed-in customer of an unverified email. A Google account
+   * reaches this the same way any other does: SocialAuthService sets
+   * `isEmailVerify: true` on social signup, so it is simply never `'false'`
+   * here - there is no separate auth-provider branch.
+   */
+  isEmailVerified(): boolean {
+    return localStorage.getItem(this.EMAIL_VERIFIED_KEY) !== 'false';
+  }
+
+  /**
+   * OBRS-643 - flips the stored flag the instant this session learns the email
+   * is verified (verify-email.component's own success path, or a resend that
+   * comes back VERIFICATION_ALREADY_VERIFIED), rather than leaving the customer
+   * looking at a banner/block that is already wrong until the next login or
+   * token refresh rewrites it.
+   */
+  markEmailVerified(): void {
+    localStorage.setItem(this.EMAIL_VERIFIED_KEY, 'true');
+    this.emailVerifiedSubject.next(true);
   }
 
   /**
@@ -620,7 +681,13 @@ export class AuthService {
             const token = response?.data?.accessToken;
             const username = response?.data?.user?.email;
             const roles = response?.data?.user?.roles;
-            this.storeAuthData(token, username, roles, response?.data?.refreshToken);
+            this.storeAuthData(
+              token,
+              username,
+              roles,
+              response?.data?.refreshToken,
+              response?.data?.user?.isEmailVerify
+            );
           }
           return response;
         })
@@ -651,7 +718,13 @@ export class AuthService {
           const token = response?.data?.accessToken;
           const username = response?.data?.user?.email;
           const roles = response?.data?.user?.roles;
-          this.storeAuthData(token, username, roles, response?.data?.refreshToken);
+          this.storeAuthData(
+            token,
+            username,
+            roles,
+            response?.data?.refreshToken,
+            response?.data?.user?.isEmailVerify
+          );
         }
         return response;
       });

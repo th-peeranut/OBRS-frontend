@@ -1,0 +1,38 @@
+<!-- OBRS-643 AC-3: shown INSTEAD of navigating past `เลือก`/`ยืนยันข้อมูล` while
+the signed-in customer's email is unverified. Same modal chrome as
+schedule-booking-list's `.nrc-*` no-return-confirm dialog, copied as `.evb-*`. -->
+@if (isOpen) {
+  <div class="evb-backdrop">
+    <div
+      class="evb-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'EMAIL_VERIFY_BLOCK.TITLE' | translate"
+      >
+      <h2 class="evb-modal__title">
+        {{ 'EMAIL_VERIFY_BLOCK.TITLE' | translate }}
+      </h2>
+      <p class="evb-modal__body">
+        {{ 'EMAIL_VERIFY_BLOCK.BODY' | translate }}
+      </p>
+      <div class="evb-modal__actions">
+        <!-- AC-7: the way in for someone who never received the mail. -->
+        <a class="evb-modal__link" routerLink="/verify-email" (click)="dismiss()">
+          {{ 'EMAIL_VERIFY_BLOCK.VERIFY_LINK' | translate }}
+        </a>
+        <button type="button" class="btn-secondary" (click)="dismiss()">
+          {{ 'EMAIL_VERIFY_BLOCK.CANCEL' | translate }}
+        </button>
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="isResendLoading"
+          [appPending]="isResendLoading"
+          (click)="resend()"
+          >
+          {{ 'EMAIL_VERIFY_BLOCK.RESEND_BUTTON' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

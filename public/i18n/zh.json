@@ -2726,8 +2726,9 @@
     "LOGIN_LINK_CLICK": "在此登录",
     "REGISTER_SUCCESS": "注册成功",
     "REGISTER_FAIL": "遇到错误，注册失败。",
-    "EMAIL_VERIFY_SENT": "我们已向您的邮箱发送了一封验证邮件。请检查您的邮箱并点击链接完成注册。",
-    "EMAIL_VERIFY_SIGNIN": "登录"
+    "EMAIL_VERIFY_SENT": "我们已向您的邮箱发送了一封验证邮件。您的注册已完成，现在即可登录——请在预订车票前完成邮箱验证。",
+    "EMAIL_VERIFY_SIGNIN": "登录",
+    "EMAIL_VERIFY_RESEND_LINK": "没有收到邮件？在此验证您的邮箱"
   },
   "VERIFY_EMAIL": {
     "VERIFYING": "正在验证您的电子邮件...",
@@ -2751,6 +2752,32 @@
       "VERIFICATION_ALREADY_VERIFIED": "此电子邮件已完成验证。",
       "RESEND_RATE_LIMITED": "发送请求过于频繁，请稍候再试。",
       "GENERIC": "发生错误，请重试。"
+    }
+  },
+  "EMAIL_VERIFY_BANNER": {
+    "ARIA_LABEL": "邮箱验证提醒",
+    "TITLE": "验证您的邮箱",
+    "BODY": "您的邮箱尚未验证。您可以正常登录，但需要先验证邮箱才能预订车票。",
+    "VERIFY_LINK": "验证您的邮箱",
+    "RESEND_BUTTON": "重新发送验证邮件",
+    "RESEND_SUCCESS": "验证邮件已重新发送，请查收您的邮箱。",
+    "ALREADY_VERIFIED": "您的邮箱已验证。",
+    "ERROR": {
+      "GENERIC": "出现错误，请重试。",
+      "RATE_LIMITED": "请求过于频繁，请稍后重试。"
+    }
+  },
+  "EMAIL_VERIFY_BLOCK": {
+    "TITLE": "请先验证邮箱",
+    "BODY": "您的邮箱尚未验证，暂时无法完成预订。请先验证邮箱，然后返回继续。",
+    "VERIFY_LINK": "验证我的邮箱",
+    "RESEND_BUTTON": "重新发送验证邮件",
+    "CANCEL": "关闭",
+    "RESEND_SUCCESS": "验证邮件已重新发送，请查收您的邮箱。",
+    "ALREADY_VERIFIED": "您的邮箱已验证，可以继续了。",
+    "ERROR": {
+      "GENERIC": "出现错误，请重试。",
+      "RATE_LIMITED": "请求过于频繁，请稍后重试。"
     }
   },
   "ACCOUNT": {

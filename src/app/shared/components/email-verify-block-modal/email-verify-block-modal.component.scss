@@ -1,0 +1,114 @@
+@import '../../../../styles/variables.scss';
+@import '../../../../styles/dark-tokens.scss';
+
+// OBRS-643. `evb-` = Email Verify Block. Chrome copied from
+// schedule-booking-list.component.scss's `.nrc-*` no-return-confirm dialog
+// (itself copied from cancel-booking-modal's `.crdm-*`) — design-system §6
+// keeps the customer-facing dialogs on one pattern rather than a fourth one.
+.evb-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-xl 16px;
+  background: rgba(13, 21, 37, 0.55);
+  overflow-y: auto;
+}
+
+.evb-modal {
+  width: min(480px, 100%);
+  margin: auto;
+  background: white;
+  border-radius: 16px;
+  padding: $space-xl;
+
+  &__title {
+    font-weight: $font-weight-semibold;
+    color: $text-black;
+    margin-bottom: $space-xs;
+  }
+
+  &__body {
+    color: $text-black;
+    line-height: $line-height-base;
+    margin-bottom: $space-lg;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-xs;
+    flex-wrap: wrap;
+  }
+
+  &__link {
+    margin-right: auto;
+    color: $primary-blue;
+    font-weight: $font-weight-semibold;
+    text-decoration: underline;
+
+    &:hover {
+      color: $primary-blue-hover;
+    }
+  }
+}
+
+.evb-modal .btn-primary,
+.evb-modal .btn-secondary {
+  border-radius: 26px;
+  padding: 6px 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s ease;
+  min-width: 136px;
+  height: 52px;
+}
+
+.evb-modal .btn-primary {
+  background: $primary-blue;
+  color: white;
+  border: none;
+
+  &:hover {
+    background: $primary-blue-hover;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+.evb-modal .btn-secondary {
+  background: white;
+  color: $text-black;
+  border: 1px solid $text-black;
+}
+
+:host-context(body.is-dark) {
+  .evb-modal {
+    background: $dk-bg-card;
+  }
+
+  .evb-modal__title,
+  .evb-modal__body {
+    color: $dk-text;
+  }
+
+  .evb-modal__link {
+    color: #f0c078;
+
+    &:hover {
+      color: #f7d7a4;
+    }
+  }
+
+  .evb-modal .btn-secondary {
+    background: $dk-bg-card;
+    color: $dk-text;
+    border-color: $dk-border;
+  }
+}

@@ -10,6 +10,12 @@ export interface LoginUser {
   preferredLocale: string;
   status: string;
   roles: string[];
+  // OBRS-643: optional for the same reason `refreshToken` is on
+  // LoginResponseData below - the field is only as old as the backend deploy
+  // that adds it, so a frontend that lands first must not claim it is always
+  // there. Absent is treated as verified (no nag banner) by
+  // AuthService.isEmailVerified() until that deploy catches up.
+  isEmailVerify?: boolean;
 }
 
 export interface LoginResponseData {

@@ -1,0 +1,119 @@
+@import '../../../../styles/variables.scss';
+@import '../../../../styles/dark-tokens.scss';
+
+// OBRS-643 — the "verify your email before booking" strip. Same amber-wash
+// chrome as booking-closed-notice.component.scss (design-system §6: reuse the
+// chrome rather than invent a third pattern) — an amber wash reads as "action
+// needed, nothing is broken", which is exactly this banner's message.
+//
+// Dark mode lives here rather than in dark-theme.scss for the same
+// encapsulation reason booking-closed-notice documents: this component's own
+// selectors outscore a global `body.is-dark .a .b` rule.
+
+.email-verify-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-xs;
+  padding: $space-xs $space-sm;
+
+  background: #fff4e0;
+  border-bottom: 1px solid #e8b465;
+}
+
+.email-verify-banner__icon {
+  flex: 0 0 auto;
+  font-size: $font-size-md;
+  line-height: $line-height-base;
+}
+
+.email-verify-banner__text {
+  flex: 1 1 240px;
+  min-width: 0;
+  margin: 0;
+  font-size: $font-size-sm;
+  line-height: $line-height-base;
+}
+
+.email-verify-banner__title {
+  display: block;
+  font-weight: $font-weight-semibold;
+  color: $text-black; // 10.24:1 on #fff4e0
+}
+
+.email-verify-banner__body {
+  display: block;
+  color: $text-softblack; // 6.43:1 on #fff4e0
+}
+
+.email-verify-banner__link {
+  color: $primary-blue; // 4.89:1 on #fff4e0
+  font-weight: $font-weight-semibold;
+  text-decoration: underline;
+
+  &:hover {
+    color: $primary-blue-hover;
+  }
+}
+
+.email-verify-banner__btn {
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 26px;
+  padding: 6px $space-sm;
+  background: $primary-blue;
+  color: white;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+  transition: background 0.3s ease;
+
+  &:hover {
+    background: $primary-blue-hover;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .email-verify-banner {
+    padding: $space-2xs $space-xs;
+    gap: $space-2xs;
+  }
+
+  .email-verify-banner__text {
+    font-size: $font-size-xs;
+  }
+
+  .email-verify-banner__btn {
+    width: 100%;
+  }
+}
+
+:host-context(body.is-dark) {
+  .email-verify-banner {
+    background: #2e2312;
+    border-bottom-color: rgba(232, 180, 101, 0.35);
+  }
+
+  .email-verify-banner__title {
+    color: $dk-text;
+  }
+
+  .email-verify-banner__body {
+    color: $dk-text-muted;
+  }
+
+  .email-verify-banner__link {
+    // $primary-blue fails on a dark wash (matches booking-closed-notice's
+    // measured 2.88:1 on the same #2e2312) — the amber the strip is already
+    // built from carries over instead, 9.17:1.
+    color: #f0c078;
+
+    &:hover {
+      color: #f7d7a4;
+    }
+  }
+}

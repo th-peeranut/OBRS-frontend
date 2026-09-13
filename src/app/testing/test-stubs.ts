@@ -124,10 +124,17 @@ export function createBookingPolicyServiceStub(
  *  existing single-arg call site (`createAuthServiceStub(true)`) stays
  *  byte-identical. Pass `true` for an owner/admin-equivalent stub, `false`
  *  for salesperson/driver, or a predicate `(roles) => boolean` for a case
- *  that cares which roles were asked for. */
+ *  that cares which roles were asked for.
+ *
+ *  OBRS-643: `isEmailVerified` is an optional 3rd param, default `true`
+ *  (matching `AuthService.isEmailVerified()`'s own "absent reads as
+ *  verified" default), so every existing 1- and 2-arg call site keeps
+ *  passing the schedule-booking-list / review-schedule-booking-total AC-3
+ *  guard unchanged. */
 export function createAuthServiceStub(
   isAuthenticated = false,
-  hasAnyRole: boolean | ((roles: string[]) => boolean) = false
+  hasAnyRole: boolean | ((roles: string[]) => boolean) = false,
+  isEmailVerified = true
 ): any {
   return {
     authStatus$: new BehaviorSubject<boolean>(isAuthenticated),
@@ -135,6 +142,7 @@ export function createAuthServiceStub(
     hasAnyRole: jasmine.createSpy('hasAnyRole').and.callFake(
       typeof hasAnyRole === 'function' ? hasAnyRole : () => hasAnyRole
     ),
+    isEmailVerified: () => isEmailVerified,
   };
 }
 

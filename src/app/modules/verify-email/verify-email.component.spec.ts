@@ -16,6 +16,7 @@ describe('VerifyEmailComponent', () => {
   const authServiceStub = {
     verifyEmail: () => Promise.resolve({ code: 200, message: 'ok' }),
     resendVerification: () => Promise.resolve({ code: 200, message: 'ok' }),
+    markEmailVerified: () => void 0,
   };
 
   const alertServiceStub = {
@@ -48,5 +49,25 @@ describe('VerifyEmailComponent', () => {
     spyOn(authServiceStub, 'resendVerification').and.callThrough();
     await component.resend();
     expect(authServiceStub.resendVerification).not.toHaveBeenCalled();
+  });
+
+  it('OBRS-643: marks the email verified locally on a successful verify, so a banner/block elsewhere stops accusing it', async () => {
+    const tokenRouteStub = {
+      snapshot: { queryParamMap: { get: (_key: string) => 'sometoken' } },
+    };
+    const markEmailVerified = jasmine.createSpy('markEmailVerified');
+    const comp = new VerifyEmailComponent(
+      tokenRouteStub as never,
+      createRouterStub(),
+      new FormBuilder(),
+      { ...authServiceStub, markEmailVerified } as never,
+      alertServiceStub as never,
+      createTranslateStub(),
+    );
+
+    await comp.ngOnInit();
+
+    expect(comp.verifyState).toBe('success');
+    expect(markEmailVerified).toHaveBeenCalled();
   });
 });

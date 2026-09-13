@@ -603,6 +603,94 @@ describe('AuthService', () => {
     });
   });
 
+  // OBRS-643. Same write-or-remove discipline as the refresh-token block
+  // above, plus the "absent reads as verified" default that lets this
+  // frontend land before the backend deploy that emits the flag.
+  describe('isEmailVerify storage and isEmailVerified()', () => {
+    const loginBody = (isEmailVerify?: boolean) => ({
+      code: 200,
+      data: {
+        accessToken: 'access-1',
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        user: {
+          id: 1,
+          fullName: 'R',
+          email: 'rider@example.com',
+          preferredLocale: 'th',
+          status: 'ACTIVE',
+          roles: ['user'],
+          ...(isEmailVerify !== undefined ? { isEmailVerify } : {}),
+        },
+      },
+    });
+
+    it('isEmailVerified() defaults to true when the key was never written', () => {
+      expect(service.isEmailVerified()).toBeTrue();
+    });
+
+    it('a login response with isEmailVerify:false stores it and isEmailVerified() reflects it', async () => {
+      const promise = service.login({ email: 'rider@example.com', password: 'pw' });
+      httpTesting.expectOne(`${environment.apiUrl}/api/auth/login`).flush(loginBody(false));
+      await promise;
+
+      expect(localStorage.getItem('auth_email_verified')).toBe('false');
+      expect(service.isEmailVerified()).toBeFalse();
+    });
+
+    it('a login response with isEmailVerify:true (a Google account) stores it as verified', async () => {
+      const promise = service.login({ email: 'rider@example.com', password: 'pw' });
+      httpTesting.expectOne(`${environment.apiUrl}/api/auth/login`).flush(loginBody(true));
+      await promise;
+
+      expect(service.isEmailVerified()).toBeTrue();
+    });
+
+    it('a login response with NO isEmailVerify field REMOVES any stored value rather than leaving it stale', async () => {
+      localStorage.setItem('auth_email_verified', 'false');
+
+      const promise = service.login({ email: 'rider@example.com', password: 'pw' });
+      httpTesting.expectOne(`${environment.apiUrl}/api/auth/login`).flush(loginBody());
+      await promise;
+
+      expect(localStorage.getItem('auth_email_verified')).toBeNull();
+      expect(service.isEmailVerified()).toBeTrue();
+    });
+
+    it('markEmailVerified() flips the stored flag to true', () => {
+      localStorage.setItem('auth_email_verified', 'false');
+
+      service.markEmailVerified();
+
+      expect(localStorage.getItem('auth_email_verified')).toBe('true');
+      expect(service.isEmailVerified()).toBeTrue();
+    });
+
+    it('emailVerified$ emits the new value the instant storeAuthData/markEmailVerified run', async () => {
+      const seen: boolean[] = [];
+      service.emailVerified$.subscribe((v) => seen.push(v));
+
+      const promise = service.login({ email: 'rider@example.com', password: 'pw' });
+      httpTesting.expectOne(`${environment.apiUrl}/api/auth/login`).flush(loginBody(false));
+      await promise;
+
+      service.markEmailVerified();
+
+      // Initial (true, nothing stored yet) -> false (login) -> true (marked).
+      expect(seen).toEqual([true, false, true]);
+    });
+
+    it('clearAuthData removes the stored flag and reports verified again', () => {
+      localStorage.setItem('auth_token', 'access-1');
+      localStorage.setItem('auth_email_verified', 'false');
+
+      service.clearAuthData();
+
+      expect(localStorage.getItem('auth_email_verified')).toBeNull();
+      expect(service.isEmailVerified()).toBeTrue();
+    });
+  });
+
   // OBRS-903. The destination is written by AuthGuard in the tab the customer
   // was bounced from, and read in the tab the e-mail verification link opened —
   // a different tab. Every case below is about that boundary, plus the TTL that

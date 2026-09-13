@@ -2726,8 +2726,9 @@
     "LOGIN_LINK_CLICK": "Signin here",
     "REGISTER_SUCCESS": "Successful registration",
     "REGISTER_FAIL": "Error found. Registration failed.",
-    "EMAIL_VERIFY_SENT": "We have sent a verification email to your inbox. Please check your email and click the link to complete registration.",
-    "EMAIL_VERIFY_SIGNIN": "Sign in"
+    "EMAIL_VERIFY_SENT": "We have sent a verification email to your inbox. Your registration is complete and you can sign in now - please verify your email before booking a ticket.",
+    "EMAIL_VERIFY_SIGNIN": "Sign in",
+    "EMAIL_VERIFY_RESEND_LINK": "Didn't get the email? Verify your email here"
   },
   "VERIFY_EMAIL": {
     "VERIFYING": "Verifying your email address...",
@@ -2751,6 +2752,32 @@
       "VERIFICATION_ALREADY_VERIFIED": "This email address has already been verified.",
       "RESEND_RATE_LIMITED": "Too many resend attempts. Please wait before trying again.",
       "GENERIC": "Something went wrong. Please try again."
+    }
+  },
+  "EMAIL_VERIFY_BANNER": {
+    "ARIA_LABEL": "Email verification reminder",
+    "TITLE": "Verify your email",
+    "BODY": "Your email isn't verified yet. You can sign in as usual, but you'll need to verify it before booking a ticket.",
+    "VERIFY_LINK": "Verify your email",
+    "RESEND_BUTTON": "Resend verification email",
+    "RESEND_SUCCESS": "Verification email resent. Please check your inbox.",
+    "ALREADY_VERIFIED": "Your email is already verified.",
+    "ERROR": {
+      "GENERIC": "Something went wrong. Please try again.",
+      "RATE_LIMITED": "Too many resend attempts. Please wait before trying again."
+    }
+  },
+  "EMAIL_VERIFY_BLOCK": {
+    "TITLE": "Verify your email to continue",
+    "BODY": "Your email isn't verified yet, so this booking can't go through. Verify your email, then come back to continue.",
+    "VERIFY_LINK": "Verify my email",
+    "RESEND_BUTTON": "Resend verification email",
+    "CANCEL": "Close",
+    "RESEND_SUCCESS": "Verification email resent. Please check your inbox.",
+    "ALREADY_VERIFIED": "Your email is already verified - you're all set.",
+    "ERROR": {
+      "GENERIC": "Something went wrong. Please try again.",
+      "RATE_LIMITED": "Too many resend attempts. Please wait before trying again."
     }
   },
   "ACCOUNT": {

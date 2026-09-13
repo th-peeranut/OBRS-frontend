@@ -59,6 +59,12 @@ import { StationLoadErrorComponent } from './components/station-load-error/stati
 // OBRS-714: the routerLink="/" wrapper for the brand logo on the 8 public auth
 // pages, which render no navbar and had no in-tab way back to the home page.
 import { AuthHomeLinkComponent } from './components/auth-home-link/auth-home-link.component';
+// OBRS-643: the "verify your email" banner (AC-2) and the block modal (AC-3)
+// that stands in for `เลือก`/`ยืนยันข้อมูล`. Mounted per-page, not in
+// app.component.html, because AC-2/AC-3 name specific pages rather than every
+// customer route.
+import { EmailVerificationBannerComponent } from './components/email-verification-banner/email-verification-banner.component';
+import { EmailVerifyBlockModalComponent } from './components/email-verify-block-modal/email-verify-block-modal.component';
 
 // Directives
 // OBRS-272: relocated here from `modules/admin/components/` — see the
@@ -95,6 +101,8 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     ScheduleDelayNoticeComponent,
     StationLoadErrorComponent,
     AuthHomeLinkComponent,
+    EmailVerificationBannerComponent,
+    EmailVerifyBlockModalComponent,
     AdminModalBackdropDirective,
     PendingButtonDirective,
   ],
@@ -144,6 +152,8 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     ScheduleDelayNoticeComponent,
     StationLoadErrorComponent,
     AuthHomeLinkComponent,
+    EmailVerificationBannerComponent,
+    EmailVerifyBlockModalComponent,
 
     // Directives
     AdminModalBackdropDirective,

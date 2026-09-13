@@ -1,5 +1,6 @@
 import { ReviewScheduleBookingTotalComponent } from './review-schedule-booking-total.component';
 import {
+  createAuthServiceStub,
   createRouterStub,
   createStoreStub,
   createTranslateStub,
@@ -9,18 +10,57 @@ import { Schedule, ScheduleFilter } from '../../../../shared/interfaces/schedule
 
 describe('ReviewScheduleBookingTotalComponent', () => {
   let component: ReviewScheduleBookingTotalComponent;
+  let routerStub: ReturnType<typeof createRouterStub>;
 
   beforeEach(() => {
+    routerStub = createRouterStub();
+    spyOn(routerStub, 'navigate').and.callThrough();
     component = new ReviewScheduleBookingTotalComponent(
       createStoreStub(),
-      createRouterStub(),
+      routerStub,
       createStoreStub(),
-      createTranslateStub()
+      createTranslateStub(),
+      createAuthServiceStub()
     );
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  /** OBRS-643 AC-3: `ยืนยันข้อมูล` must not reach /passenger-info while the
+   *  signed-in customer's email is unverified — same guard shape as the
+   *  `เลือก` button in schedule-booking-list.component.ts. */
+  describe('onConfirm — email-verify block (OBRS-643)', () => {
+    it('navigates to /passenger-info when the email is verified', () => {
+      component = new ReviewScheduleBookingTotalComponent(
+        createStoreStub(),
+        routerStub,
+        createStoreStub(),
+        createTranslateStub(),
+        createAuthServiceStub(true, false, true)
+      );
+
+      component.onConfirm();
+
+      expect(routerStub.navigate).toHaveBeenCalledWith(['/passenger-info']);
+      expect(component.showEmailVerifyBlock).toBeFalse();
+    });
+
+    it('blocks and shows the modal instead of navigating when the email is unverified', () => {
+      component = new ReviewScheduleBookingTotalComponent(
+        createStoreStub(),
+        routerStub,
+        createStoreStub(),
+        createTranslateStub(),
+        createAuthServiceStub(true, false, false)
+      );
+
+      component.onConfirm();
+
+      expect(routerStub.navigate).not.toHaveBeenCalled();
+      expect(component.showEmailVerifyBlock).toBeTrue();
+    });
   });
 
   /**

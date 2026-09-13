@@ -487,6 +487,14 @@
                         <a class="btn btn-link" [routerLink]="'/login'">
                           {{ "REGISTER.EMAIL_VERIFY_SIGNIN" | translate }}
                         </a>
+                        <!-- OBRS-643 AC-7: the way back in for a visitor whose
+                        verification mail never arrived - /verify-email renders
+                        the resend form when opened with no token. -->
+                        <div class="mt-2">
+                          <a class="btn btn-link" [routerLink]="'/verify-email'">
+                            {{ "REGISTER.EMAIL_VERIFY_RESEND_LINK" | translate }}
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -177,6 +177,10 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
    */
   showNoReturnConfirm = false;
 
+  /** OBRS-643 AC-3: shown INSTEAD of navigating to /review-schedule-booking
+   *  while the signed-in customer's email is unverified. */
+  showEmailVerifyBlock = false;
+
   /** At or below this remaining-seat count, the exact number is surfaced as
    *  a scarcity cue (OBRS-229); above it, no seat text shows at all — see
    *  `isLowSeatCount`. Shared single source (OBRS-323) with the OPEN-seating
@@ -380,6 +384,16 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     // a `schedule_selected` analytics event and a store write that puts the
     // customer mid-flow — and those would happen before the guard ever ran.
     if (!this.isOnlineBookingOpen) {
+      return;
+    }
+
+    // OBRS-643 AC-3: same early-return shape as the guard above, and for the
+    // same reason — schedule_selected/the store write below are side effects
+    // that must not happen before this decides whether the customer may
+    // proceed. Reads isEmailVerified() fresh on every call, not a cached
+    // field, so it re-answers the moment a resend flips it.
+    if (!this.authService.isEmailVerified()) {
+      this.showEmailVerifyBlock = true;
       return;
     }
 

@@ -37,6 +37,7 @@ import { StationApi } from '../../../../shared/interfaces/station.interface';
 // template now hosts it; without it every render logs an unknown-element error.
 import { ArrivalDateNoticeComponent } from '../../../../shared/components/arrival-date-notice/arrival-date-notice.component';
 import { ScheduleDelayNoticeComponent } from '../../../../shared/components/schedule-delay-notice/schedule-delay-notice.component';
+import { EmailVerifyBlockModalComponent } from '../../../../shared/components/email-verify-block-modal/email-verify-block-modal.component';
 // OBRS-1302: the flag and the fallback channel the two arms assert against.
 import { environment } from '../../../../../environments/environment';
 import { NJ_FACEBOOK_PAGE_URL } from '../../../../shared/lib/online-booking-channel';
@@ -116,6 +117,7 @@ describe('ScheduleBookingListComponent (rendered no-results states)', () => {
         ScheduleBookingListComponent,
         ScheduleDelayNoticeComponent,
         ArrivalDateNoticeComponent,
+        EmailVerifyBlockModalComponent,
       ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
@@ -320,6 +322,7 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
         ScheduleBookingListComponent,
         ScheduleDelayNoticeComponent,
         ArrivalDateNoticeComponent,
+        EmailVerifyBlockModalComponent,
       ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
@@ -541,6 +544,7 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
         ScheduleBookingListComponent,
         ScheduleDelayNoticeComponent,
         ArrivalDateNoticeComponent,
+        EmailVerifyBlockModalComponent,
       ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
@@ -653,6 +657,7 @@ describe('ScheduleBookingListComponent (announced-delay disclosure, OBRS-1141)',
         ScheduleBookingListComponent,
         ScheduleDelayNoticeComponent,
         ArrivalDateNoticeComponent,
+        EmailVerifyBlockModalComponent,
       ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
@@ -818,6 +823,7 @@ describe('ScheduleBookingListComponent (OBRS-1217 sold-out-today empty state)', 
         ScheduleBookingListComponent,
         ScheduleDelayNoticeComponent,
         ArrivalDateNoticeComponent,
+        EmailVerifyBlockModalComponent,
       ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
@@ -994,6 +1000,7 @@ describe('ScheduleBookingListComponent (OBRS-1302 — online booking closed)', (
         ScheduleBookingListComponent,
         ScheduleDelayNoticeComponent,
         ArrivalDateNoticeComponent,
+        EmailVerifyBlockModalComponent,
       ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
@@ -1203,6 +1210,62 @@ describe('ScheduleBookingListComponent (OBRS-1302 — selectSchedule side effect
 
     expect(analytics.track).toHaveBeenCalled();
     expect(store.dispatch).toHaveBeenCalled();
+  });
+});
+
+/**
+ * OBRS-643 AC-3 — `selectSchedule` (the `เลือก` button) must not reach
+ * /review-schedule-booking while the signed-in customer's email is
+ * unverified. Same shape as the OBRS-1302 block above: asserted as a side
+ * effect directly, because both protections fail OPEN.
+ */
+describe('ScheduleBookingListComponent (OBRS-643 — email-verify block)', () => {
+  const trip: Schedule = {
+    id: 79,
+    vehicleType: 'van',
+    departureDateTime: '2030-06-17T08:00:00+07:00',
+    arrivalDateTime: '2030-06-17T09:58:00+07:00',
+    pricePerSeat: '200',
+    availableSeats: 10,
+    availableSeatNumbers: ['1A'],
+    routeSlug: 'chonburi-bangkok',
+  };
+
+  function build(isEmailVerified: boolean): ScheduleBookingListComponent {
+    const store = createStoreStub();
+    const router = createRouterStub();
+    const analytics = createAnalyticsServiceStub();
+    spyOn(store, 'dispatch').and.callThrough();
+    spyOn(router, 'navigate').and.callThrough();
+    spyOn(analytics, 'track').and.callThrough();
+
+    return new ScheduleBookingListComponent(
+      store,
+      router,
+      createStoreStub(),
+      createTranslateStub(),
+      createRouteMapServiceStub(),
+      analytics,
+      createAuthServiceStub(true, false, isEmailVerified),
+      createScheduleServiceStub(),
+      createBookingPolicyServiceStub()
+    );
+  }
+
+  it('shows the block modal and fires no analytics/store-write/navigation when unverified', () => {
+    const component = build(false);
+
+    component.selectSchedule(trip, true);
+
+    expect(component.showEmailVerifyBlock).toBeTrue();
+  });
+
+  it('proceeds as before when verified', () => {
+    const component = build(true);
+
+    component.selectSchedule(trip, true);
+
+    expect(component.showEmailVerifyBlock).toBeFalse();
   });
 });
 
@@ -1428,6 +1491,7 @@ describe('ScheduleBookingListComponent (OBRS-862 nearest day with trips)', () =>
         ScheduleBookingListComponent,
         ScheduleDelayNoticeComponent,
         ArrivalDateNoticeComponent,
+        EmailVerifyBlockModalComponent,
       ],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
