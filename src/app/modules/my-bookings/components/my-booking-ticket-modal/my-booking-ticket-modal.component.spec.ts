@@ -137,6 +137,11 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
   beforeEach(async () => {
     const bookingServiceStub = {
       getBookingTickets: () => of({ code: 200, message: 'OK', data: buildTicketsData() }),
+      // OBRS-1802 follow-up: the real card reads this during change detection
+      // (`canAttemptDownload`), so this bed has to answer it. `true` is what this
+      // surface actually is — My Bookings is reachable only signed in, and
+      // `canDownloadETicketByBookingId()` is `isAuthenticated() || guest token`.
+      canDownloadETicketByBookingId: () => true,
     } as unknown as BookingService;
     // OBRS-866: the real ETicketCardComponent now fetches a boarding token per
     // ticket (its own component-scoped BoardingQrService resolves TicketService

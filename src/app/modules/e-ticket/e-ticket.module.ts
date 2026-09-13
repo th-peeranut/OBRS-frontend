@@ -17,9 +17,9 @@ import { ProvinceEffect } from '../../shared/stores/station/station.effect';
 import { ProvinceReducer } from '../../shared/stores/station/station.reducer';
 // OBRS-1510: this page's own ticket markup is gone — `<app-e-ticket-card>` (its
 // only consumer, along with the my-bookings ticket modal) needs its own module
-// import here since SharedModule deliberately excludes it (its heavy deps —
-// html2canvas, qrcode — stay out of the eager chunk; see ETicketCardModule's
-// class comment).
+// import here since SharedModule deliberately excludes it (its heavy dep —
+// `qrcode` — stays out of the eager chunk; see ETicketCardModule's class
+// comment).
 import { ETicketCardModule } from '../../shared/components/e-ticket-card/e-ticket-card.module';
 
 const routes: Routes = [{ path: '', component: ETicketComponent }];

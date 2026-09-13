@@ -139,6 +139,128 @@ describe('AlertService', () => {
     });
   });
 
+  /**
+   * OBRS-1802. `promptText()` is `confirm()` plus one free-text field, added as a
+   * sibling rather than an option on `confirm()` because `confirm()` answers
+   * `boolean` and every one of its callers reads it that way. Its only caller
+   * asks a guest for the phone number their booking was made with, so three of
+   * these assertions are about what must NOT happen to that value.
+   *
+   * Same harness as the rest of this file: `Swal.fire` is spied for the whole
+   * suite, so what is asserted is the OPTION OBJECT handed to sweetalert2 and the
+   * value handed back to the caller. Nothing here asserts a mock's own behaviour
+   * — `result.value` is sweetalert2's documented shape and the service's handling
+   * of it is the code under test.
+   */
+  describe('promptText (OBRS-1802)', () => {
+    const OPTIONS = {
+      title: 'T',
+      text: 'Confirm the phone used for BK-7',
+      inputLabel: 'Phone',
+      confirmButtonText: 'Download',
+      cancelButtonText: 'Close',
+    };
+
+    /** What the caller would have to re-type by hand otherwise. */
+    const lastOptions = (): Record<string, unknown> =>
+      fire.calls.mostRecent().args[0] as Record<string, unknown>;
+
+    const resolveWith = (result: Record<string, unknown>): void => {
+      fire.and.returnValue(
+        Promise.resolve(result) as unknown as ReturnType<typeof Swal.fire>
+      );
+    };
+
+    it('opens one cancellable input popup carrying the app theme', async () => {
+      resolveWith({ isConfirmed: true, value: '0812345678' });
+      theme.setMode('dark');
+
+      await service.promptText(OPTIONS);
+
+      const opts = lastOptions();
+      expect(opts['input']).toBe('text');
+      expect(opts['showCancelButton']).toBeTrue();
+      expect(opts['inputLabel']).toBe('Phone');
+      expect(opts['confirmButtonText']).toBe('Download');
+      expect(opts['cancelButtonText']).toBe('Close');
+      expect(opts['theme']).toBe('dark');
+    });
+
+    it('passes inputType through — `tel` is what surfaces a numeric keypad', async () => {
+      resolveWith({ isConfirmed: true, value: '0812345678' });
+
+      await service.promptText({ ...OPTIONS, inputType: 'tel' });
+
+      expect(lastOptions()['input']).toBe('tel');
+    });
+
+    /**
+     * The XSS guard the service's own comment claims, as an assertion that can go
+     * red. The caller interpolates a booking number into `text`; sweetalert2
+     * renders `text` as textContent and `html` as markup, so a later "let's allow
+     * a bit of formatting" swap would turn a server-supplied string into a markup
+     * sink. `html` must be absent, not merely unused.
+     */
+    it('renders the interpolated body as TEXT, never as html', async () => {
+      resolveWith({ isConfirmed: true, value: '0812345678' });
+
+      await service.promptText({
+        ...OPTIONS,
+        text: 'Booking <img src=x onerror=alert(1)> BK-7',
+      });
+
+      const opts = lastOptions();
+      expect(opts['text']).toBe('Booking <img src=x onerror=alert(1)> BK-7');
+      expect(opts['html']).toBeUndefined();
+      expect(Object.keys(opts)).not.toContain('html');
+    });
+
+    it('resolves the TRIMMED value — a pasted number brings whitespace with it', async () => {
+      resolveWith({ isConfirmed: true, value: '  0812345678  ' });
+
+      await expectAsync(service.promptText(OPTIONS)).toBeResolvedTo('0812345678');
+    });
+
+    it('resolves null when the customer cancels', async () => {
+      resolveWith({ isDismissed: true, isConfirmed: false });
+
+      await expectAsync(service.promptText(OPTIONS)).toBeResolvedTo(null);
+    });
+
+    /** A blank submit is a change of mind, not a request worth sending — the
+     *  caller treats null as "do nothing", so it must not see `''`. */
+    it('resolves null for a blank or whitespace-only submit', async () => {
+      resolveWith({ isConfirmed: true, value: '   ' });
+      await expectAsync(service.promptText(OPTIONS)).toBeResolvedTo(null);
+
+      resolveWith({ isConfirmed: true, value: '' });
+      await expectAsync(service.promptText(OPTIONS)).toBeResolvedTo(null);
+
+      resolveWith({ isConfirmed: true });
+      await expectAsync(service.promptText(OPTIONS)).toBeResolvedTo(null);
+    });
+
+    /** Autofill would put a phone number into a field the app deliberately does
+     *  not persist, which is the appearance of storing it even when it does not. */
+    it('turns autocomplete off on the field', async () => {
+      resolveWith({ isConfirmed: true, value: '0812345678' });
+
+      await service.promptText(OPTIONS);
+
+      expect(lastOptions()['inputAttributes']).toEqual({ autocomplete: 'off' });
+    });
+
+    it('never pre-seeds the field', async () => {
+      resolveWith({ isConfirmed: true, value: '0812345678' });
+
+      await service.promptText(OPTIONS);
+
+      const opts = lastOptions();
+      expect(opts['inputValue']).toBeUndefined();
+      expect(Object.keys(opts)).not.toContain('inputValue');
+    });
+  });
+
   describe('toast', () => {
     it('passes the current theme through Swal.mixin', () => {
       const mixin = spyOn(Swal, 'mixin').and.returnValue({

@@ -8,7 +8,7 @@
       />
     </div>
 
-    <article #ticketPaper class="ticket-paper">
+    <article class="ticket-paper">
       <div class="ticket-header">
         <img
           class="ticket-logo"
@@ -275,15 +275,23 @@
             </div>
           </div>
 
-          <button
-            type="button"
-            class="download-btn"
-            (click)="downloadTicketImage()"
-            [disabled]="isDownloadingTicket"
-            [appPending]="isDownloadingTicket"
-            >
-            <img src="icons/payment-download.svg" alt="" aria-hidden="true" />
-            {{ "E_TICKET.DOWNLOAD" | translate }}
-          </button>
+          <!-- OBRS-1802: no `isAuthenticated()` condition (owner decision
+          2026-09-11) - a guest downloads their own ticket too, proving the
+          booking with the token checkout gave them or, failing that, the phone
+          number they booked with. The gate is `canAttemptDownload`: an id, plus a
+          lane that is actually open - see that getter for why "does this render
+          look complete" is the wrong question. -->
+          @if (canAttemptDownload) {
+            <button
+              type="button"
+              class="download-btn"
+              (click)="downloadTicketPdf()"
+              [disabled]="isDownloadingTicket"
+              [appPending]="isDownloadingTicket"
+              >
+              <img src="icons/payment-download.svg" alt="" aria-hidden="true" />
+              {{ "E_TICKET.DOWNLOAD" | translate }}
+            </button>
+          }
         </article>
       </div>

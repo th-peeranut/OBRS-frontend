@@ -1,20 +1,32 @@
-import {
-  Component,
-  ElementRef,
-  Input,
-  OnChanges,
-  SimpleChanges,
-  ViewChild,
-} from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import html2canvas from 'html2canvas';
+import { firstValueFrom } from 'rxjs';
+import {
+  BookingService,
+  ETicketPdfDownload,
+  ETicketPdfError,
+} from '../../../services/booking/booking.service';
 import { TicketLeg, TicketPassenger } from '../../interfaces/e-ticket.interface';
+import { saveBlob } from '../../lib/blob-download';
 import { buildMapsDirectionsUrl } from '../../lib/maps-directions-url';
 import { formatMoney } from '../../lib/money-display';
+import { AlertService } from '../../services/alert.service';
 import {
   BoardingQrService,
   BoardingQrState,
 } from '../../services/boarding-qr.service';
+
+/**
+ * The two lane-2 rejections that are NOT dead ends: the booking-scoped guest
+ * token has simply aged out (60-minute TTL, ADR-0123 D6) or been invalidated, so
+ * the customer can still prove the booking is theirs with the phone number they
+ * booked with. Falling through to that step is what the server copy for these
+ * codes already tells them to do.
+ */
+const GUEST_TOKEN_REJECTED_CODES = [
+  'GUEST_PAYMENT_TOKEN_EXPIRED',
+  'GUEST_PAYMENT_TOKEN_INVALID',
+];
 
 /** One rendered passenger row: the input row plus its resolved boarding-QR
  *  state. Kept out of `TicketPassenger` itself so the mapper that produces the
@@ -52,9 +64,20 @@ export type TicketPassengerRow = TicketPassenger & BoardingQrState;
     standalone: false
 })
 export class ETicketCardComponent implements OnChanges {
-  @ViewChild('ticketPaper') private ticketPaper?: ElementRef<HTMLElement>;
-
   @Input() bookingNumber = '-';
+
+  /**
+   * OBRS-1802: which booking the download button asks the backend to render.
+   * Booking-scoped, so it cannot live on `legs` (those are per-leg), and it is
+   * passed in rather than read from `BookingService.getActiveBookingId()` -
+   * that key holds whatever checkout last wrote, which is the wrong booking
+   * whenever this card is the My Bookings modal showing an older row.
+   *
+   * `null` hides the button entirely: with no id there is nothing to ask for.
+   * It is a necessary condition, not the whole gate — see `canAttemptDownload`.
+   */
+  @Input() bookingId: number | null = null;
+
   @Input() ticketNumber = '-';
   @Input() legs: TicketLeg[] = [];
   @Input() paymentDate = '-';
@@ -71,7 +94,9 @@ export class ETicketCardComponent implements OnChanges {
 
   constructor(
     private readonly boardingQrService: BoardingQrService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly bookingService: BookingService,
+    private readonly alertService: AlertService
   ) {}
 
   /** OBRS-1592: the ticket used to print `{{ totalAmount }} {{ TOTAL_UNIT }}`,
@@ -150,54 +175,223 @@ export class ETicketCardComponent implements OnChanges {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 
-  async downloadTicketImage(): Promise<void> {
-    const ticketElement = this.ticketPaper?.nativeElement;
-    if (!ticketElement || this.isDownloadingTicket) {
+  /**
+   * Whether a download could actually succeed — which is what decides whether
+   * the button is offered at all (OBRS-1802 follow-up). It asks which LANE is
+   * still open, not whether this render looks complete.
+   *
+   * <p>The distinction is load-bearing. A guest who paid and then hard-reloads
+   * `/e-ticket` inside the 60-minute token TTL (ADR-0123 D6) has an empty store,
+   * so no booking reference reaches this card — and still holds a LIVE
+   * `guestPaymentToken`, because it lives in `localStorage` beside
+   * `active_booking_id` and `clearActiveBookingId()` is the only thing that
+   * clears either, which `/e-ticket` never calls (its one non-spec caller is
+   * `parcel-booking-page.component.ts`). Lane 2 needs nothing but the id, so
+   * that download works. Hiding the button there would send the customer to
+   * `/find-booking` to type a reference their screen does not show.
+   *
+   * <p>So: an id, plus EITHER a credential the server accepts on the id alone
+   * (lanes 1/2 — `canDownloadETicketByBookingId()`, the same answer that picks
+   * the lane) OR the booking reference lane 3 has to ask with. With neither,
+   * `downloadByCredential()` can only refuse — `resolveBookingNumber()` returns
+   * `''` by design (security review L3) — and a control whose every outcome is a
+   * refusal is not a control. That is the state QA measured on `/e-ticket`.
+   */
+  get canAttemptDownload(): boolean {
+    return (
+      this.bookingId != null &&
+      (this.bookingService.canDownloadETicketByBookingId() ||
+        this.resolveBookingNumber() !== '')
+    );
+  }
+
+  /**
+   * OBRS-1802. The e-ticket is now the PDF the BACKEND renders, not a
+   * client-side rasterisation of this card - so what the customer keeps is the
+   * printable document the server is the authority on, identical on every
+   * device, instead of a screenshot of whatever this browser happened to lay
+   * out. It replaces `downloadTicketImage()`, whose client-side canvas-
+   * rasteriser dependency left the tree with it (OBRS-1802 - do not reintroduce
+   * one; `git log -S` on this file names it).
+   *
+   * <p>Three doors, one document, and the CREDENTIAL picks the door - see
+   * `BookingService.downloadETicketPdf`. A guest who is still holding the token
+   * checkout handed them types nothing at all; one who is not (came back later,
+   * another device) is asked for the phone number they booked with, and so is a
+   * guest whose token has aged out mid-session.
+   *
+   * <p>The pending affordance is the existing one verbatim
+   * (`isDownloadingTicket` -> `[disabled]` + `[appPending]`), set before the
+   * first call and cleared in `finally` so it also clears when the customer
+   * dismisses the phone dialog.
+   */
+  async downloadTicketPdf(): Promise<void> {
+    if (this.bookingId == null || this.isDownloadingTicket) {
       return;
     }
 
     this.isDownloadingTicket = true;
 
     try {
-      const canvas = await html2canvas(ticketElement, {
-        backgroundColor: '#ffffff',
-        scale: Math.max(window.devicePixelRatio || 1, 2),
-        useCORS: true,
-        onclone: (clonedDocument) => {
-          clonedDocument
-            .querySelector('.ticket-paper')
-            ?.classList.add('is-exporting');
-        },
-        ignoreElements: (element) =>
-          element.classList.contains('download-btn') ||
-          element.classList.contains('ticket-nav-btn'),
-      });
+      if (!this.bookingService.canDownloadETicketByBookingId()) {
+        await this.downloadByCredential();
+        return;
+      }
 
-      this.triggerTicketDownload(canvas.toDataURL('image/png'));
-    } catch (error) {
-      console.error('Download e-ticket image failed', error);
+      try {
+        await this.save(
+          await firstValueFrom(
+            this.bookingService.downloadETicketPdf(this.bookingId)
+          )
+        );
+      } catch (error) {
+        if (this.isGuestTokenRejected(error)) {
+          await this.downloadByCredential();
+          return;
+        }
+        this.reportFailure(error);
+      }
     } finally {
       this.isDownloadingTicket = false;
     }
   }
 
-  private triggerTicketDownload(imageUrl: string): void {
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = this.getTicketDownloadFilename();
-    link.rel = 'noopener';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  /**
+   * Lane 3. The phone number is read from one dialog, handed to one request and
+   * dropped: it is deliberately never written to `localStorage`, to
+   * `sessionStorage`, or to a field on this component, and it is never prefilled
+   * (PDPA - the app does not persist it today and this card does not start).
+   * The booking NUMBER is shown read-only inside the dialog copy instead, since
+   * it is already on screen on this very card.
+   */
+  private async downloadByCredential(): Promise<void> {
+    const bookingNumber = this.resolveBookingNumber();
+    if (!bookingNumber) {
+      // Reachable with the button visible in exactly one state: a guest whose
+      // `guestPaymentToken` has aged out (so `canAttemptDownload` was true when
+      // the button rendered) and whose store is empty, so there is no reference
+      // for lane 3 to ask with. Nothing here can tell a live token from an
+      // expired one before the request, so the button cannot be gated on it -
+      // the COPY is what has to be true. `DOWNLOAD_FAILED` says "please try
+      // again", which for this customer is an instruction that cannot work;
+      // retrieval is the one thing that can.
+      this.alertService.toast(
+        this.translate.instant('E_TICKET.DOWNLOAD_NEEDS_RETRIEVAL'),
+        'error'
+      );
+      return;
+    }
+
+    const phoneNumber = await this.alertService.promptText({
+      title: this.translate.instant('E_TICKET.DOWNLOAD_CONFIRM_TITLE'),
+      text: this.translate.instant('E_TICKET.DOWNLOAD_CONFIRM_BODY', {
+        bookingNumber,
+      }),
+      inputLabel: this.translate.instant('E_TICKET.DOWNLOAD_CONFIRM_PHONE_LABEL'),
+      confirmButtonText: this.translate.instant('E_TICKET.DOWNLOAD_CONFIRM_SUBMIT'),
+      // The adopted dialog idiom's own close affordance, not a new `_CANCEL` key.
+      cancelButtonText: this.translate.instant('COMMON.CLOSE'),
+      inputType: 'tel',
+    });
+
+    if (!phoneNumber) {
+      return;
+    }
+
+    try {
+      await this.save(
+        await firstValueFrom(
+          this.bookingService.downloadETicketPdfByCredential(
+            bookingNumber,
+            phoneNumber
+          )
+        ),
+        bookingNumber
+      );
+    } catch (error) {
+      this.reportFailure(error, true);
+    }
   }
 
-  private getTicketDownloadFilename(): string {
-    const rawReference =
-      this.ticketNumber !== '-' ? this.ticketNumber : this.bookingNumber;
-    const safeReference = String(rawReference || 'ticket')
-      .trim()
-      .replace(/[^a-zA-Z0-9_-]/g, '-');
+  private async save(
+    download: ETicketPdfDownload,
+    bookingNumber = this.resolveBookingNumber()
+  ): Promise<void> {
+    saveBlob(
+      download.blob,
+      download.filename || `e-ticket-${bookingNumber || 'ticket'}.pdf`
+    );
+  }
 
-    return `e-ticket-${safeReference || 'ticket'}.png`;
+  /**
+   * ONE refusal for a 404 on the credential lane, saying nothing about WHICH
+   * half was wrong. The backend answers "no such booking number" and "wrong
+   * phone" with the same byte-identical 404 precisely so the endpoint cannot be
+   * used to confirm which booking numbers exist (the same rule `/find-booking`
+   * is built on); splitting it here - even into a friendlier message - would
+   * rebuild that oracle on the client.
+   *
+   * <p>`fromCredentialLane` is NOT a second variant of the refusal: it selects
+   * which lane's copy is TRUE. `DOWNLOAD_NOT_FOUND` names the booking reference
+   * and the phone number, and on lanes 1/2 the customer typed neither - telling
+   * them to "check both" would be a claim about input that does not exist on
+   * that screen. The branch reads a fact this client already knows (which
+   * credential IT chose), never anything the server disclosed, so it leaks
+   * nothing.
+   *
+   * <p>A 429 is checked FIRST and on every lane, because it is the one failure
+   * where the generic copy does not merely under-inform, it MISDIRECTS:
+   * `DOWNLOAD_FAILED` says "please try again", and a throttled customer obeying
+   * that extends their own throttle window. Saying so carries no oracle risk at
+   * all - it is a fact about THIS caller's request rate, not about whether the
+   * booking exists, which is the same adjudication `/find-booking` records at
+   * `find-booking-page.component.ts:116` on this very quota. Every other failure
+   * gets the one generic toast.
+   */
+  private reportFailure(error: unknown, fromCredentialLane = false): void {
+    const status = this.errorOf(error)?.status;
+    const key =
+      status === 429
+        ? 'E_TICKET.DOWNLOAD_RATE_LIMITED'
+        : fromCredentialLane && status === 404
+          ? 'E_TICKET.DOWNLOAD_NOT_FOUND'
+          : 'E_TICKET.DOWNLOAD_FAILED';
+    this.alertService.toast(this.translate.instant(key), 'error');
+  }
+
+  private isGuestTokenRejected(error: unknown): boolean {
+    const code = this.errorOf(error)?.errorCode;
+    return !!code && GUEST_TOKEN_REJECTED_CODES.includes(code);
+  }
+
+  private errorOf(error: unknown): ETicketPdfError | null {
+    const candidate = error as Partial<ETicketPdfError> | null;
+    return typeof candidate?.errorCode === 'string' &&
+      typeof candidate?.status === 'number'
+      ? (candidate as ETicketPdfError)
+      : null;
+  }
+
+  /**
+   * The booking number ON THIS CARD, or `''`. No fallback (OBRS-1802 security
+   * review, L3).
+   *
+   * <p>It used to fall back to `BookingService.getActiveBookingNumber()`, i.e.
+   * `localStorage['active_booking_number']`, i.e. whatever checkout last wrote.
+   * That is not a privilege escalation - both bookings belong to this browser and
+   * the server still has to match the phone number - but it let a customer type
+   * the phone for the booking IN FRONT OF THEM while the request asked about a
+   * different one. Two concrete costs: their phone number (PII) goes out paired
+   * with an identifier they did not choose, and the lookup spends their own
+   * per-IP quota on the wrong booking, so the 429 lands on the request they
+   * actually wanted.
+   *
+   * <p>The card always has this number when it is rendering a ticket, so `''` is
+   * the degenerate render - and `downloadByCredential` refuses rather than
+   * guessing.
+   */
+  private resolveBookingNumber(): string {
+    const onCard = this.bookingNumber?.trim();
+    return onCard && onCard !== '-' ? onCard : '';
   }
 }

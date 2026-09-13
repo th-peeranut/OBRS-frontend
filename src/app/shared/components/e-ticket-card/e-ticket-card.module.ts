@@ -8,8 +8,11 @@ import { SharedModule } from '../../shared.module';
 
 /**
  * Standalone-feature module for the shared e-ticket card. Kept out of
- * SharedModule (which is eager) so its heavy deps (html2canvas, qrcode) stay in
- * the lazy chunks of the feature modules that import it.
+ * SharedModule (which is eager) so its heavy dep (`qrcode`, which
+ * `BoardingQrService` uses to render the per-passenger boarding QRs client-side)
+ * stays in the lazy chunks of the feature modules that import it. OBRS-1802
+ * removed the second one - a canvas rasteriser - along with the client-side PNG
+ * export it existed for; the lazy-chunk rationale stands on the one that is left.
  */
 @NgModule({
   declarations: [ETicketCardComponent],

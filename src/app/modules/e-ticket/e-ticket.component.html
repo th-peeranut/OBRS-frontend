@@ -6,10 +6,10 @@
   <!-- OBRS-1246. The surface OBRS-1222 built, gated a second time by
   `stationLabelsUnresolved` so it speaks only when THIS ticket is actually
   missing its stations — see the field's comment for why bare is wrong here.
-  Sits OUTSIDE `#ticketPaper`: `downloadTicketImage()` rasterises that element,
-  so a notice placed inside it would be baked into the PNG the customer keeps.
-  Its own slot rather than a child of `.ticket-stage`, which is a flex ROW and
-  would put the notice BESIDE the ticket (the trap home-booking records). -->
+  Sits OUTSIDE the ticket paper, which is what the printable document shows: a
+  notice about THIS render is not part of the ticket. Its own slot rather than a
+  child of `.ticket-stage`, which is a flex ROW and would put the notice BESIDE
+  the ticket (the trap home-booking records). -->
   <div class="station-load-error-slot">
     @if (stationLabelsUnresolved) {
       <app-station-load-error></app-station-load-error>
@@ -23,11 +23,11 @@
   this card that produced a page reading "Total 400.00 baht" over a booking
   reference of `-`, with nobody's name on it and nothing on screen saying why.
 
-  Placed in its own slot OUTSIDE `<article #ticketPaper>` for the same two
-  reasons the notice above it is: `downloadTicketImage()` rasterises that element
-  alone, so a notice inside would be baked into the PNG the customer keeps and
-  its link would be dead there; and `.ticket-stage` is a flex ROW, which would
-  put the banner BESIDE the ticket instead of over it. -->
+  Placed in its own slot OUTSIDE the ticket paper for the same two reasons the
+  notice above it is: the paper is what the printable document shows, and a
+  banner about this render (with a link that a PDF could not follow) is not part
+  of the ticket; and `.ticket-stage` is a flex ROW, which would put the banner
+  BESIDE the ticket instead of over it. -->
   <div class="ticket-incomplete-slot">
     @if (ticketIncomplete) {
       <aside class="ticket-incomplete" role="status" data-testid="eticket-unavailable">
@@ -42,8 +42,8 @@
   </div>
 
   <div class="ticket-stage">
-    <!-- OBRS-1510: `.ticket-shell`/`<article #ticketPaper>` and everything they
-    used to hold moved into `<app-e-ticket-card>`, which owns its own shell/
+    <!-- OBRS-1510: `.ticket-shell`/`<article class="ticket-paper">` and
+    everything they used to hold moved into `<app-e-ticket-card>`, which owns its own shell/
     width/centering AND the boarding-QR fetch (its own `BoardingQrService`
     instance resolves straight from `legs[].passengers[].ticketId` — this page
     no longer fetches a boarding token itself). This plain wrapper (no class,
@@ -53,6 +53,7 @@
     <div>
       <app-e-ticket-card
         [bookingNumber]="bookingNumber"
+        [bookingId]="bookingId"
         [ticketNumber]="ticketNumber"
         [legs]="legs"
         [booker]="booker"
@@ -66,9 +67,9 @@
            be in front of them. Telling them the number is retrievable is what turns it
            from a receipt into a key.
 
-           Placed OUTSIDE `<app-e-ticket-card>` deliberately: that component's own
-           `downloadTicketImage()` rasterises only ITS `.ticket-paper`, and a hyperlink is
-           dead in a PNG. The booking number itself IS inside the captured area already.
+           Placed OUTSIDE `<app-e-ticket-card>` deliberately: the printable e-ticket is
+           the ticket, and a hyperlink is dead in a downloaded document. The booking number
+           itself IS on the ticket already.
 
            OBRS-1252 gates it on `!ticketIncomplete`: this note interpolates the booking
            number, so on the one render where there ISN'T one it read "Keep your booking

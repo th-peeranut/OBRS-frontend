@@ -1,5 +1,12 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpContext,
+  HttpErrorResponse,
+  HttpHeaders,
+  HttpParams,
+  HttpResponse,
+} from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import {
@@ -32,9 +39,37 @@ import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
+  SKIP_REQUEST_TIMEOUT,
 } from '../../shared/interceptors/http-context-tokens';
+import {
+  parseBlobErrorCode,
+  parseContentDispositionFilename,
+} from '../../shared/lib/blob-download';
 import { normalizeSeatAssignments } from '../../shared/lib/seat-number';
-import { map, Observable } from 'rxjs';
+import { catchError, from, map, mergeMap, Observable, of, throwError } from 'rxjs';
+
+/**
+ * OBRS-1802. Emitted on the error channel of the two e-ticket-PDF calls.
+ * `errorCode` is the stable UPPER_SNAKE code from the JSON envelope the backend
+ * still sends on failure (even though the success body is a blob); `status` is
+ * carried alongside it because two of the cases the card must branch on are
+ * statuses rather than codes - the neutral 404 refusal and the lane-3 429.
+ * Never the server's localized `message` (design-system.md §9).
+ */
+export interface ETicketPdfError {
+  errorCode: string;
+  status: number;
+}
+
+/** `filename` is `''` when the response carried no usable `Content-Disposition`
+ *  - the CALLER owns the fallback, because only it knows the booking number the
+ *  fallback name is built from. */
+export interface ETicketPdfDownload {
+  blob: Blob;
+  filename: string;
+}
+
+export const ETICKET_PDF_GENERIC_ERROR_CODE = 'ETICKET_PDF_ERROR';
 
 export interface RescheduleEstimateParams {
   newScheduleId: number;
@@ -224,6 +259,170 @@ export class BookingService {
     return this.http.get<ResponseAPI<BookingTicketsData>>(
       `${environment.apiUrl}/api/private/bookings/${bookingId}/tickets`,
       silent ? { context: this.silentContext() } : {}
+    );
+  }
+
+  /**
+   * OBRS-1802: true when this browser can ask for the e-ticket PDF with nothing
+   * but the booking id - i.e. it holds a credential the server will accept.
+   * A signed-in customer always can; a guest can only while the booking-scoped
+   * `guestPaymentToken` they were handed at checkout is still in hand.
+   *
+   * <p>Lives here rather than in the card because the CREDENTIAL is what picks
+   * the lane (see `downloadETicketPdf`), and the two answers have to come from
+   * the same place or they can disagree. `false` is the card's signal to ask for
+   * the phone number instead (lane 3) - not an error state.
+   */
+  canDownloadETicketByBookingId(): boolean {
+    return (
+      this.authService.isAuthenticated() ||
+      !!this.getGuestPaymentToken()?.trim()
+    );
+  }
+
+  /**
+   * OBRS-1802 lanes 1 and 2: the printable e-ticket as a PDF the BACKEND
+   * renders, addressed by booking id.
+   *
+   * <p>The lane is chosen on the CREDENTIAL, exactly as `createBooking` and
+   * `payment.service.ts#createPayment` choose theirs: a signed-in customer goes
+   * to `/api/private/**` with no extra header, a guest goes to the public twin
+   * carrying `X-Guest-Payment-Token`. Deliberately NOT sniffed off a path the
+   * server handed us (`getQrImage` does that, and must, because there the server
+   * chose the path) - here the caller chooses the path, so the header has to be
+   * attached by the same decision that picked it. The header must never reach a
+   * `/api/private/` URL.
+   *
+   * <p>Errors surface as `ETicketPdfError`, never as a rendered server message.
+   */
+  downloadETicketPdf(bookingId: number): Observable<ETicketPdfDownload> {
+    if (this.authService.isAuthenticated()) {
+      return this.requestETicketPdf(
+        `${environment.apiUrl}/api/private/bookings/${bookingId}/e-ticket`
+      );
+    }
+
+    const guestToken = this.getGuestPaymentToken()?.trim();
+    return this.requestETicketPdf(
+      `${environment.apiUrl}/api/bookings/${bookingId}/e-ticket`,
+      guestToken
+        ? new HttpHeaders().set('X-Guest-Payment-Token', guestToken)
+        : undefined
+    );
+  }
+
+  /**
+   * OBRS-1802 lane 3: the same document for a guest who no longer holds a token
+   * (came back later, or on another device), proved by the booking number plus
+   * the phone number the booking was made with.
+   *
+   * <p>`phoneNumber` is passed in per call and is never stored anywhere - see
+   * the caller's comment in `e-ticket-card.component.ts`. Do not add a cache, a
+   * default or a "remember me" here.
+   */
+  downloadETicketPdfByCredential(
+    bookingNumber: string,
+    phoneNumber: string
+  ): Observable<ETicketPdfDownload> {
+    return this.requestETicketPdf(
+      `${environment.apiUrl}/api/bookings/e-ticket`,
+      undefined,
+      { bookingNumber, phoneNumber }
+    );
+  }
+
+  /**
+   * The blob half, shared by all three lanes. Modelled on
+   * `ExportService.export()` (OBRS-642), this repo's worked example of the same
+   * problem:
+   *
+   * <ul>
+   *   <li>`responseType: 'blob'` + `observe: 'response'` - the filename is in a
+   *       header, so the body alone is not enough.</li>
+   *   <li>`SKIP_REQUEST_TIMEOUT` because the latency here IS the work: the
+   *       backend is rendering the PDF, and the 30s idempotent-GET ceiling would
+   *       cancel a healthy slow render and report it as a plain failure.</li>
+   *   <li>`SKIP_GLOBAL_ERROR_ALERT` because with `responseType: 'blob'` the
+   *       ERROR body is a Blob too, so `errorInterceptor` cannot read it - it is
+   *       parsed locally into a code instead.</li>
+   * </ul>
+   */
+  private requestETicketPdf(
+    url: string,
+    headers?: HttpHeaders,
+    body?: { bookingNumber: string; phoneNumber: string }
+  ): Observable<ETicketPdfDownload> {
+    const options = {
+      headers,
+      responseType: 'blob' as const,
+      observe: 'response' as const,
+      context: new HttpContext()
+        .set(SKIP_GLOBAL_ERROR_ALERT, true)
+        .set(SKIP_REQUEST_TIMEOUT, true)
+        // A guest lane cannot produce a session 401 worth logging out for, and
+        // the authenticated lane must not turn a stale-token PDF attempt into a
+        // logout in the middle of the customer reading their own ticket.
+        .set(SKIP_AUTH_LOGOUT, true),
+    };
+
+    const request$ = body
+      ? this.http.post(url, body, options)
+      : this.http.get(url, options);
+
+    return request$.pipe(
+      // Sits directly on the raw source so it only ever converts a transport
+      // failure - it must not also swallow the synthetic empty-body failure
+      // raised below.
+      catchError((error: HttpErrorResponse) => this.toETicketPdfError(error)),
+      mergeMap((response: HttpResponse<Blob>) => {
+        const blob = response.body;
+        if (!blob) {
+          return throwError(
+            () =>
+              ({
+                errorCode: ETICKET_PDF_GENERIC_ERROR_CODE,
+                status: response.status,
+              }) as ETicketPdfError
+          );
+        }
+
+        return of({
+          blob,
+          filename:
+            parseContentDispositionFilename(
+              response.headers.get('Content-Disposition')
+            ) ?? '',
+        });
+      })
+    );
+  }
+
+  private toETicketPdfError(error: HttpErrorResponse): Observable<never> {
+    const errorBody: unknown = error.error;
+
+    if (!(errorBody instanceof Blob)) {
+      return throwError(
+        () =>
+          ({
+            errorCode: ETICKET_PDF_GENERIC_ERROR_CODE,
+            status: error.status,
+          }) as ETicketPdfError
+      );
+    }
+
+    return from(errorBody.text()).pipe(
+      mergeMap((text) =>
+        throwError(
+          () =>
+            ({
+              errorCode: parseBlobErrorCode(
+                text,
+                ETICKET_PDF_GENERIC_ERROR_CODE
+              ),
+              status: error.status,
+            }) as ETicketPdfError
+        )
+      )
     );
   }
 

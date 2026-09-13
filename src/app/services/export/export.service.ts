@@ -13,6 +13,11 @@ import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_REQUEST_TIMEOUT,
 } from '../../shared/interceptors/http-context-tokens';
+import {
+  parseBlobErrorCode,
+  parseContentDispositionFilename,
+  saveBlob,
+} from '../../shared/lib/blob-download';
 
 export type ExportFormat = 'csv' | 'xlsx';
 
@@ -84,9 +89,9 @@ export class ExportService {
     }
 
     const filename =
-      this.parseFilename(response.headers.get('Content-Disposition')) ??
+      parseContentDispositionFilename(response.headers.get('Content-Disposition')) ??
       `${datasetKey}-${format}`;
-    this.saveBlob(blob, filename);
+    saveBlob(blob, filename);
     return of(undefined);
   }
 
@@ -106,45 +111,6 @@ export class ExportService {
   }
 
   private parseErrorBody(text: string): ExportError {
-    try {
-      const parsed: unknown = JSON.parse(text);
-      const errorCode =
-        typeof (parsed as { errorCode?: unknown })?.errorCode === 'string' &&
-        (parsed as { errorCode: string }).errorCode.length > 0
-          ? (parsed as { errorCode: string }).errorCode
-          : GENERIC_ERROR_CODE;
-      return { errorCode };
-    } catch {
-      return { errorCode: GENERIC_ERROR_CODE };
-    }
-  }
-
-  /** Parses `filename="..."` or the RFC 5987 `filename*=UTF-8''...` form from
-   *  a Content-Disposition header. Returns null if neither is present. */
-  private parseFilename(header: string | null): string | null {
-    if (!header) {
-      return null;
-    }
-
-    const encodedMatch = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(header);
-    if (encodedMatch) {
-      try {
-        return decodeURIComponent(encodedMatch[1].trim());
-      } catch {
-        return encodedMatch[1].trim();
-      }
-    }
-
-    const plainMatch = /filename\s*=\s*"?([^";]+)"?/i.exec(header);
-    return plainMatch ? plainMatch[1].trim() : null;
-  }
-
-  private saveBlob(blob: Blob, filename: string): void {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    return { errorCode: parseBlobErrorCode(text, GENERIC_ERROR_CODE) };
   }
 }
